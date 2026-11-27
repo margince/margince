@@ -92,7 +92,7 @@ func (s *Service) CreateRole(ctx context.Context, actor Identity, copyFrom, name
 	}
 	var created roleRow
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		live, err := lockAsRoleAdmin(ctx, tx, actor, principal.ActionCreate)
+		live, err := lockAsRoleAdmin(ctx, tx, s.rbac, actor, principal.ActionCreate)
 		if err != nil {
 			return err
 		}
@@ -185,7 +185,7 @@ func (s *Service) UpdateRole(ctx context.Context, actor Identity, key string, ch
 	}
 	var updated roleRow
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		live, err := lockAsRoleAdmin(ctx, tx, actor, principal.ActionUpdate)
+		live, err := lockAsRoleAdmin(ctx, tx, s.rbac, actor, principal.ActionUpdate)
 		if err != nil {
 			return err
 		}
@@ -267,7 +267,7 @@ func (s *Service) ArchiveRole(ctx context.Context, actor Identity, key string) (
 	}
 	var out roleRow
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if _, err := lockAsRoleAdmin(ctx, tx, actor, principal.ActionDelete); err != nil {
+		if _, err := lockAsRoleAdmin(ctx, tx, s.rbac, actor, principal.ActionDelete); err != nil {
 			return err
 		}
 		var err error
@@ -333,7 +333,7 @@ func (s *Service) RestoreRole(ctx context.Context, actor Identity, key string) (
 	}
 	var out roleRow
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		live, err := lockAsRoleAdmin(ctx, tx, actor, principal.ActionDelete)
+		live, err := lockAsRoleAdmin(ctx, tx, s.rbac, actor, principal.ActionDelete)
 		if err != nil {
 			return err
 		}

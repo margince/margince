@@ -94,6 +94,7 @@ func grantWithServedQuestion(t *testing.T, e *apptest.AppEnv, token string) {
 // with the purpose's stored label. Recording the served text for that answer
 // would name words the subject never saw. The link stays unspent.
 func TestAPageOlderThanItsQuestionIsRefusedNotRecorded(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	if status := c.Call(t, "PATCH", "/v1/installation/settings",
 		AnyMap{"base_language": "de"}, nil, nil); status != http.StatusOK {
@@ -124,6 +125,7 @@ func TestAPageOlderThanItsQuestionIsRefusedNotRecorded(t *testing.T) {
 
 // The proof records the question the page served, word for word.
 func TestAGrantNamesThePublishedQuestionItAnswered(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	token := mintAConfirmLink(t, c)
 	served := servedQuestion(t, c.AppEnv, token)
@@ -171,6 +173,7 @@ func TestAGrantNamesThePublishedQuestionItAnswered(t *testing.T) {
 // double-opt-in consents actually arrive through. Fixing only the other would
 // have left the defect standing where it matters most.
 func TestADedicatedConsentLinkBindsTheQuestionToo(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 
 	// A double-opt-in link is minted for one purpose and asks only about that.
@@ -229,6 +232,7 @@ func TestADedicatedConsentLinkBindsTheQuestionToo(t *testing.T) {
 // bookkeeping, so they record the client's sentence exactly as before — and
 // name no published row, which says plainly that nothing was checked.
 func TestALinkThatPinnedNoQuestionStillRecordsTheGrant(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	token := mintAConfirmLink(t, c)
 
@@ -261,6 +265,7 @@ func TestALinkThatPinnedNoQuestionStillRecordsTheGrant(t *testing.T) {
 // name. The page shows that same sentence (frontend/src/features/privacy/confirm.test.tsx),
 // so what the proof says the subject read is what they read.
 func TestAGermanConsentLinkRecordsTheSentenceThePageShows(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	if status := c.Call(t, "PATCH", "/v1/installation/settings",
 		AnyMap{"base_language": "de"}, nil, nil); status != http.StatusOK {

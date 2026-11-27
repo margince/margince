@@ -88,6 +88,7 @@ func stepRows(t *testing.T, e *Env, step, condition string) int {
 }
 
 func TestMarkedStepsStayUnfinishedWhileALockIsBusyAndFinishOnceItIsFree(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	weekly, request := markedWeeklyCopies(t, e), markedRequestCopies(t, e)
 	busy := e.SeedContact(t, "Busy Contact", nil)
@@ -152,6 +153,7 @@ func TestMarkedStepsStayUnfinishedWhileALockIsBusyAndFinishOnceItIsFree(t *testi
 }
 
 func TestRetentionGoesOnWhenAMarkedCorrectionLockIsBusyAndCorrectsOnTheNextRun(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	weekly, request := markedWeeklyCopies(t, e), markedRequestCopies(t, e)
@@ -179,7 +181,7 @@ func TestRetentionGoesOnWhenAMarkedCorrectionLockIsBusyAndCorrectsOnTheNextRun(t
 	if _, err := holder.Exec(context.Background(), `UPDATE contact SET legal_hold=false WHERE id=$1`, busy); err != nil {
 		t.Fatal(err)
 	}
-	if err := service.EvaluateInstallation(RetentionPassCtx(e.WS)); err != nil {
+	if err := service.EvaluateInstallation(RetentionPassCtx(context.Background(), e.WS)); err != nil {
 		t.Fatalf("a busy correction lock failed the retention run: %v", err)
 	}
 	if e.WsCount(t, `SELECT count(*) FROM event_outbox WHERE id=$1`, aged) != 0 {
@@ -191,7 +193,7 @@ func TestRetentionGoesOnWhenAMarkedCorrectionLockIsBusyAndCorrectsOnTheNextRun(t
 	if err := holder.Rollback(context.Background()); err != nil {
 		t.Fatal(err)
 	}
-	if err := service.EvaluateInstallation(RetentionPassCtx(e.WS)); err != nil {
+	if err := service.EvaluateInstallation(RetentionPassCtx(context.Background(), e.WS)); err != nil {
 		t.Fatal(err)
 	}
 	if n := markedImages(t, e, weekly, request); n != 0 {
@@ -200,6 +202,7 @@ func TestRetentionGoesOnWhenAMarkedCorrectionLockIsBusyAndCorrectsOnTheNextRun(t
 }
 
 func TestAHeldRecordKeepsItsCopyAndTheNextRetentionPassCorrectsItOnceTheHoldLifts(t *testing.T) {
+	t.Parallel()
 	for _, source := range []struct {
 		name  string
 		seed  func(*testing.T, *Env) ids.UUID
@@ -233,7 +236,7 @@ func TestAHeldRecordKeepsItsCopyAndTheNextRetentionPassCorrectsItOnceTheHoldLift
 			}
 			e.WsExec(t, `UPDATE contact SET legal_hold=false WHERE id=$1`, held)
 			service := compose.NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
-			if err := service.EvaluateInstallation(RetentionPassCtx(e.WS)); err != nil {
+			if err := service.EvaluateInstallation(RetentionPassCtx(context.Background(), e.WS)); err != nil {
 				t.Fatal(err)
 			}
 			if n := e.WsCount(t, source.count, record); n != 0 {

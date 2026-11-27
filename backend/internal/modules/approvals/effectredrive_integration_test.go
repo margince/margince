@@ -24,6 +24,7 @@ import (
 )
 
 func TestADecisionWhoseEffectFailedIsRedrivenByDecidingAgain(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	// The effect fails once and then works — a transient fault, which is the
 	// case this exists for. A permanently broken effect is told about twice and
@@ -72,6 +73,7 @@ func TestADecisionWhoseEffectFailedIsRedrivenByDecidingAgain(t *testing.T) {
 // consumed approval would apply its write twice, and several of these effects
 // are not remotely idempotent.
 func TestAConsumedApprovalStillRefusesASecondDecision(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	runs := 0
 	e.svc.WithEffect(kindSiteLead, func(ctx context.Context, id ids.ApprovalID, _ json.RawMessage, diffHash string) error {
@@ -103,6 +105,7 @@ func TestAConsumedApprovalStillRefusesASecondDecision(t *testing.T) {
 // succeeded, and an approve arriving on one is a real conflict about the
 // verdict rather than a retry of the work.
 func TestARejectedApprovalIsNotRedrivenByApprovingIt(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	runs := 0
 	e.svc.WithEffect(kindSiteLead, func(context.Context, ids.ApprovalID, json.RawMessage, string) error {

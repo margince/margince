@@ -17,6 +17,7 @@ import (
 // A list under a record answers 404 for an id no record holds, even to a caller
 // who sees every record. A record that exists answers its list.
 func TestARecordsSubListAnswersNotFoundForARecordThatDoesNotExist(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Missing Parent", "missing-parent@fable.test", "Admin")
 	stages := apptest.DiscoverSeededPipeline(t, e)

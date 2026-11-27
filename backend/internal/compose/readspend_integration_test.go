@@ -81,6 +81,7 @@ func cachedPanels(t *testing.T, o *offeringEnv) map[string]panelRead {
 }
 
 func TestAnAgentWithoutEnrichReadsAPanelWithoutStartingAModelCall(t *testing.T) {
+	t.Parallel()
 	o := setupOffering(t)
 	for name, read := range cachedPanels(t, o) {
 		t.Run(name, func(t *testing.T) {
@@ -105,6 +106,7 @@ func TestAnAgentWithoutEnrichReadsAPanelWithoutStartingAModelCall(t *testing.T) 
 // A floor written because the model call failed is served but never cached.
 // The next read asks the model again, so an outage does not outlast itself.
 func TestAFailedModelCallLeavesNoPanelInTheCache(t *testing.T) {
+	t.Parallel()
 	o := setupOffering(t)
 	for name, read := range cachedPanels(t, o) {
 		t.Run(name, func(t *testing.T) {
@@ -128,6 +130,7 @@ func TestAFailedModelCallLeavesNoPanelInTheCache(t *testing.T) {
 // A room brief is written anew on every read, so only a caller who may spend
 // starts its model call.
 func TestARoomBriefStartsAModelCallOnlyForACallerWhoMaySpend(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	perms := integration.AdminPerms
 	perms.Objects = maps.Clone(perms.Objects)

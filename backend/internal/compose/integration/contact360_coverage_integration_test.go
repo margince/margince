@@ -21,6 +21,7 @@ import (
 )
 
 func TestContactEvidenceSurvivesAnUnavailableCaptureObservation(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	id := e.SeedContact(t, "Coverage Fixture", &e.Rep1)
 	clock := func() time.Time { return roomFixedNow }

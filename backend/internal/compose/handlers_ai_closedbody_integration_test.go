@@ -20,6 +20,7 @@ import (
 )
 
 func TestAnUnknownNestedKeyIsRefusedNamingItsPathOnEveryRoutingWrite(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	settings := NewSettingsStore(e.Pool)
 	store := ai.NewRoutingStore(settings, StoredConfig(e.Pool))
@@ -77,6 +78,7 @@ func TestAnUnknownNestedKeyIsRefusedNamingItsPathOnEveryRoutingWrite(t *testing.
 }
 
 func TestAVertexProviderEntryWithAHostIsRefusedNamingTheEntry(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	h := aiRoutingHandlers{store: ai.NewRoutingStore(NewSettingsStore(e.Pool), StoredConfig(e.Pool))}
 

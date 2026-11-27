@@ -14,7 +14,6 @@ package consent
 import (
 	"context"
 	"errors"
-	"os"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -41,13 +40,9 @@ type leadConsentEnv struct {
 
 func setupLeadConsent(t *testing.T) *leadConsentEnv {
 	t.Helper()
-	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
-	appDSN := os.Getenv("MARGINCE_TEST_APP_DSN")
-	if ownerDSN == "" || appDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
+	db := testdb.New(t)
 	ctx := context.Background()
-	owner, err := pgx.Connect(ctx, ownerDSN)
+	owner, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -56,19 +51,6 @@ func setupLeadConsent(t *testing.T) *leadConsentEnv {
 			t.Errorf("closing owner connection: %v", err)
 		}
 	})
-	// To head before anything else touches this database: testdb.Pool refuses
-	// until EnsureSchema has run, and EnsureSchema still REBUILDS whenever it
-	// cannot prove the database is a fresh lane clone — so a seed written
-	// before it would be dropped rather than reset.
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
-	// Every test in this package seeds its own workspace into ONE database, so
-	// the separation between them has to be real: reset before seeding, as
-	// compose/integration's harness does.
-	if err := testdb.Reset(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
 
 	e := &leadConsentEnv{
 		owner: owner,
@@ -99,14 +81,12 @@ func setupLeadConsent(t *testing.T) *leadConsentEnv {
 		t.Fatal(err)
 	}
 
-	pool, err := testdb.Pool(ctx, appDSN)
+	pool, err := testdb.Pool(ctx, db.AppDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// Registered where the pool is handed out, before the test adds any cleanup
 	// of its own, so it runs last and sees a package that has genuinely stopped.
-	// The pool outlives the test now, so a goroutine still holding a connection
-	// would go on writing into the database the NEXT test just reset.
 	testdb.AssertPoolsQuiesced(t)
 	e.store = NewStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](e.ws)))
 
@@ -127,6 +107,7 @@ func setupLeadConsent(t *testing.T) *leadConsentEnv {
 }
 
 func TestLeadScopedConsentRecordsProofAndReadsBack(t *testing.T) {
+	t.Parallel()
 	e := setupLeadConsent(t)
 
 	state, err := e.store.Record(e.ctx, RecordInput{
@@ -188,6 +169,7 @@ func TestLeadScopedConsentRecordsProofAndReadsBack(t *testing.T) {
 }
 
 func TestLeadScopedDOIGrantWithoutALinkIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupLeadConsent(t)
 	_, err := e.store.Record(e.ctx, RecordInput{
 		LeadID: e.lead, PurposeID: e.doiNews, NewState: "granted",
@@ -199,6 +181,7 @@ func TestLeadScopedDOIGrantWithoutALinkIsRefused(t *testing.T) {
 }
 
 func TestOutboundGateAcceptsTheLeadArm(t *testing.T) {
+	t.Parallel()
 	e := setupLeadConsent(t)
 	gate := NewGate(e.store)
 
@@ -231,6 +214,7 @@ func TestOutboundGateAcceptsTheLeadArm(t *testing.T) {
 // rollout step meant to tighten marketing would have silently stopped ordinary
 // correspondence with every unpromoted lead.
 func TestTheEngineAnswersAboutALeadRatherThanShrugging(t *testing.T) {
+	t.Parallel()
 	e := setupLeadConsent(t)
 	gate := NewGate(e.store)
 	recipient := connector.Recipient{Email: e.leadEmail}
@@ -287,6 +271,7 @@ func TestTheEngineAnswersAboutALeadRatherThanShrugging(t *testing.T) {
 // two answers, and the one that stopped matching would look exactly like the
 // one that still did.
 func TestTheEngineAndTheLegacyGateAgreeAboutALead(t *testing.T) {
+	t.Parallel()
 	e := setupLeadConsent(t)
 	gate := NewGate(e.store)
 	recipient := connector.Recipient{Email: e.leadEmail}
@@ -336,6 +321,7 @@ func TestTheEngineAndTheLegacyGateAgreeAboutALead(t *testing.T) {
 // discloses. It is also the difference between a refusal a rollout mode may
 // soften and one it may not.
 func TestAWithdrawnLeadIsNotReportedAsNeverGranted(t *testing.T) {
+	t.Parallel()
 	e := setupLeadConsent(t)
 	gate := NewGate(e.store)
 	recipient := connector.Recipient{Email: e.leadEmail}
@@ -377,6 +363,7 @@ func TestAWithdrawnLeadIsNotReportedAsNeverGranted(t *testing.T) {
 // And the converse, or the test above would pass with every refusal renamed: a
 // lead who never granted anything is still an absence.
 func TestALeadWhoNeverGrantedIsReportedAsAnAbsence(t *testing.T) {
+	t.Parallel()
 	e := setupLeadConsent(t)
 	gate := NewGate(e.store)
 
@@ -439,6 +426,7 @@ func (e *leadConsentEnv) leadActorContext() context.Context {
 // a lead's inbound mail is actually recorded: activity_participant has no
 // lead_id column at all.
 func TestALeadWhoWroteToUsCanBeAnsweredWithoutAGrant(t *testing.T) {
+	t.Parallel()
 	e := setupLeadConsent(t)
 	gate := NewGate(e.store)
 	ctx := e.leadActorContext()
@@ -498,6 +486,7 @@ func TestALeadWhoWroteToUsCanBeAnsweredWithoutAGrant(t *testing.T) {
 // a purpose key IS supplied and no grant exists for it, so the old order —
 // purpose row, then grant — denied. Evidence must be consulted first and win.
 func TestALeadsEvidenceOutranksAnUngrantedPurpose(t *testing.T) {
+	t.Parallel()
 	e := setupLeadConsent(t)
 	gate := NewGate(e.store)
 	ctx := e.leadActorContext()
@@ -538,6 +527,7 @@ func TestALeadsEvidenceOutranksAnUngrantedPurpose(t *testing.T) {
 // evidence here and no lead grant, so the only way this can come back allow is
 // if somebody reroutes the lead arm through the contact one.
 func TestALeadTakesNoAuthorityFromATransactionalPurpose(t *testing.T) {
+	t.Parallel()
 	e := setupLeadConsent(t)
 	gate := NewGate(e.store)
 	ctx := e.leadActorContext()
@@ -579,6 +569,7 @@ func TestALeadTakesNoAuthorityFromATransactionalPurpose(t *testing.T) {
 // cannot be re-derived there, the message is authorized at staging and parked at
 // transmit, which reads to a rep as the same refusal the fix removed.
 func TestALeadsReplyIsStillAllowedAtTransmit(t *testing.T) {
+	t.Parallel()
 	e := setupLeadConsent(t)
 	gate := NewGate(e.store)
 	ctx := e.leadActorContext()
@@ -648,6 +639,7 @@ func TestALeadsReplyIsStillAllowedAtTransmit(t *testing.T) {
 // on every non-contact before that arm could run, so a lead who wrote to us last
 // week was refused for want of a grant.
 func TestALeadWhoWroteRecentlyCanBeFollowedUp(t *testing.T) {
+	t.Parallel()
 	e := setupLeadConsent(t)
 	gate := NewGate(e.store)
 	ctx := e.leadActorContext()
@@ -682,6 +674,7 @@ func TestALeadWhoWroteRecentlyCanBeFollowedUp(t *testing.T) {
 // to a lead who wrote in is refused. Any other contradicted claim yields but
 // stays on the row.
 func TestALeadsClaimIsPutToTheEvidence(t *testing.T) {
+	t.Parallel()
 	cases := map[commsauthz.Category]commsauthz.Verdict{
 		commsauthz.CategoryMarketing:         commsauthz.VerdictDeny,
 		commsauthz.CategoryRequestedFollowup: commsauthz.VerdictAllow,

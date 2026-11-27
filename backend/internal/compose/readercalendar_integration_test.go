@@ -46,6 +46,7 @@ func listCalendarAtBothDoors(t *testing.T, e *integration.Env, kind crmcontracts
 }
 
 func TestBothDoorsSayWhetherTheReadersCalendarFeedsAMeetingList(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name    string
 		connect bool
@@ -76,6 +77,7 @@ func TestBothDoorsSayWhetherTheReadersCalendarFeedsAMeetingList(t *testing.T) {
 
 // A list that cannot be read as the diary owes no calendar answer at either door.
 func TestAnEmailListCarriesNoCalendarAnswer(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 
 	rest, tool := listCalendarAtBothDoors(t, e, crmcontracts.ListActivitiesParamsKindEmail)
@@ -88,6 +90,7 @@ func TestAnEmailListCarriesNoCalendarAnswer(t *testing.T) {
 // The window rule, over the function both doors are wired to. A list of every
 // kind reads as the diary with a window, and a list of named kinds when it holds meetings.
 func TestAListOfEveryKindReadsAsTheDiaryOnlyOverAWindow(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	calendar := activityListCalendar(captureHealthRegistry(e.DB()))
 	ctx := horizonReader(e)

@@ -30,6 +30,7 @@ import (
 const liftedAddress = "zurueck@betroffene.example"
 
 func TestALiftedAddressMayBeStoredAgain(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	armForLift(t)
 	if !addressRefused(t, e) {
@@ -44,6 +45,7 @@ func TestALiftedAddressMayBeStoredAgain(t *testing.T) {
 }
 
 func TestASecondErasureArmsALiftedAddressAgain(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	armForLift(t)
 	liftAddress(t, e)
@@ -57,6 +59,7 @@ func TestASecondErasureArmsALiftedAddressAgain(t *testing.T) {
 }
 
 func TestALinkLiftsOneErasureOnce(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	armForLift(t)
 	erasedAt := erasedAtOf(t, e, liftedAddress)
@@ -77,6 +80,7 @@ func TestALinkLiftsOneErasureOnce(t *testing.T) {
 // lift is their request to be stored from now on, not a pardon for that record.
 // One address is held by one live contact at a time, so the two run in turn.
 func TestAReplayErasesWhatCameBackAndKeepsTheSignup(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	eraser := compose.ComposedEraser(e.Pool, nil)
 	armForLift(t)
@@ -91,6 +95,7 @@ func TestAReplayErasesWhatCameBackAndKeepsTheSignup(t *testing.T) {
 // The journal carries the lift across a restore that took the list with it.
 // A contact from before the lift is erased again.
 func TestTheJournalErasesWhatCameFromBeforeTheLift(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	eraser := compose.ComposedEraser(e.Pool, blobstore.NewMemory())
 	armForLift(t)
@@ -102,6 +107,7 @@ func TestTheJournalErasesWhatCameFromBeforeTheLift(t *testing.T) {
 }
 
 func TestTheJournalKeepsWhatCameAfterTheLift(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	eraser := compose.ComposedEraser(e.Pool, blobstore.NewMemory())
 	armForLift(t)
@@ -114,6 +120,7 @@ func TestTheJournalKeepsWhatCameAfterTheLift(t *testing.T) {
 
 // A journal exported before the lift is older than the list, and the list wins.
 func TestAJournalOlderThanTheLiftDoesNotEraseTheSignup(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	eraser := compose.ComposedEraser(e.Pool, blobstore.NewMemory())
 	armForLift(t)
@@ -129,6 +136,7 @@ func TestAJournalOlderThanTheLiftDoesNotEraseTheSignup(t *testing.T) {
 // A journal newer than a restored lift holds a second erasure the restore
 // rolled back, and the replay applies it.
 func TestAJournalNewerThanARestoredLiftErasesAgain(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	eraser := compose.ComposedEraser(e.Pool, blobstore.NewMemory())
 	armForLift(t)
@@ -136,7 +144,7 @@ func TestAJournalNewerThanARestoredLiftErasesAgain(t *testing.T) {
 	owner := OwnerConn(t)
 	var erasedAt, liftedAt time.Time
 	var consent, contact ids.UUID
-	hash := storekit.SuppressionHash(liftedAddress)
+	hash := storekit.SuppressionHash(t.Context(), liftedAddress)
 	if err := owner.QueryRow(context.Background(),
 		`SELECT created_at, lifted_at, lift_consent_event_id, lift_contact_id FROM erasure_suppression WHERE value_hash = $1`,
 		hash).Scan(&erasedAt, &liftedAt, &consent, &contact); err != nil {
@@ -160,13 +168,13 @@ func TestAJournalNewerThanARestoredLiftErasesAgain(t *testing.T) {
 // The rekey moves a lifted row to its keyed hash with its lift. A subject who
 // came back before the key was bound is not refused after it.
 func TestTheRekeyKeepsALift(t *testing.T) {
-	apptest.BindEnv(t, nil)
+	t.Parallel()
 	e := Setup(t)
 	eraseForLift(t, e, contactHolding(t, e, "Erased Subject"))
 	liftAddress(t, e)
 
-	apptest.BindEnv(t, []string{"MARGINCE_KEYVAULT_ROOT_KEY=" + returnRootKey})
-	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
+	keyed := compose.ConfigContext(e.Admin(), apptest.LoadEnv(t, []string{"MARGINCE_KEYVAULT_ROOT_KEY=" + returnRootKey}))
+	ctx := principal.SystemActing(keyed, "system:datatask-test")
 	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := privacy.RekeySuppressionListPageTx(ctx, tx, privacy.SuppressionCursor{}, 100)
 		return err
@@ -177,7 +185,7 @@ func TestTheRekeyKeepsALift(t *testing.T) {
 	if n := e.WsCount(t, `SELECT count(*) FROM erasure_suppression WHERE key_id IS NOT NULL AND lifted_at IS NOT NULL`); n != 1 {
 		t.Fatalf("%d keyed rows carry the lift after the rekey, want 1", n)
 	}
-	if addressRefused(t, e) {
+	if addressRefusedIn(keyed, t, e) {
 		t.Fatal("the rekey dropped the lift, and the address is refused again")
 	}
 }
@@ -187,7 +195,7 @@ func armForLift(t *testing.T) {
 	t.Helper()
 	if _, err := OwnerConn(t).Exec(context.Background(),
 		`INSERT INTO erasure_suppression (kind, value_hash, key_id) VALUES ('email', $1, $2)`,
-		storekit.SuppressionHash(liftedAddress), storekit.SuppressionKeyID()); err != nil {
+		storekit.SuppressionHash(t.Context(), liftedAddress), storekit.SuppressionKeyID(t.Context())); err != nil {
 		t.Fatalf("arming the erasure list: %v", err)
 	}
 }
@@ -235,8 +243,14 @@ func assertReplayKeeps(t *testing.T, e *Env, eraser *privacy.Eraser, contact ids
 
 func addressRefused(t *testing.T, e *Env) bool {
 	t.Helper()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		return storekit.RefuseErasedEmail(e.Admin(), tx, "email", liftedAddress)
+	return addressRefusedIn(e.Admin(), t, e)
+}
+
+// addressRefusedIn is addressRefused for the program ctx serves.
+func addressRefusedIn(ctx context.Context, t *testing.T, e *Env) bool {
+	t.Helper()
+	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		return storekit.RefuseErasedEmail(ctx, tx, "email", liftedAddress)
 	})
 	if _, isErased := errors.AsType[*storekit.ErasedIdentifierError](err); err != nil && !isErased {
 		t.Fatalf("asking the erasure list: %v", err)

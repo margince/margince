@@ -49,6 +49,7 @@ func auditReaderContext(t *testing.T, e *apptest.AppEnv) context.Context {
 }
 
 func TestABuyersAuditRowNamesTheParticipant(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	room := openRoomWithABuyer(t, e)
@@ -101,6 +102,7 @@ func TestABuyersAuditRowNamesTheParticipant(t *testing.T) {
 // its audit rows, a restore that brought back less than it took. An invented
 // name would be worse than none, and the human join already takes that posture.
 func TestAnAuditRowForAnUnknownParticipantKeepsTheRowAndLosesTheName(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	openRoomWithABuyer(t, e)

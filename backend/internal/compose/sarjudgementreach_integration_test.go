@@ -67,6 +67,7 @@ func judgedInboundFrom(t *testing.T, e *integration.Env, address string) ids.UUI
 }
 
 func TestTheAccessExportCarriesStageEvidenceFromAMeetingTheSubjectSpokeIn(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := seedContactWithAddress(t, e, "Alice Kessler", aliceAddress)
 	spoken := seedTranscript(t, e, "1: Tom: Where are we on terms?\n2: "+quotedAcceptance)
@@ -88,6 +89,7 @@ func TestTheAccessExportCarriesStageEvidenceFromAMeetingTheSubjectSpokeIn(t *tes
 }
 
 func TestTheAccessExportGivesTheReplyVerdictToItsAuthorAndNotToACcRecipient(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	alice := seedContactWithAddress(t, e, "Alice Kessler", aliceAddress)
 	bob := seedContactWithAddress(t, e, "Bob Ferrer", bobAddress)
@@ -105,6 +107,7 @@ func TestTheAccessExportGivesTheReplyVerdictToItsAuthorAndNotToACcRecipient(t *t
 }
 
 func TestTheAccessExportWithholdsTheSnippetOfALimitedMessage(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := seedContactWithAddress(t, e, "Alice Kessler", aliceAddress)
 	limited := seedTranscript(t, e, "1: Tom: Where are we on terms?\n2: "+quotedAcceptance)
@@ -123,6 +126,7 @@ func TestTheAccessExportWithholdsTheSnippetOfALimitedMessage(t *testing.T) {
 }
 
 func TestTheAccessExportDoesNotFollowAnAddressAnotherLiveContactHolds(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	alice := seedContactWithAddress(t, e, "Alice Kessler", aliceAddress)
 	// Alice used to hold the address; Carol holds it now.

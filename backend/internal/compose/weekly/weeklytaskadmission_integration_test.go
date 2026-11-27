@@ -19,6 +19,7 @@ import (
 )
 
 func TestWeeklyCountsExcludeUnadoptedHistoricalAutomaticWork(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	old := time.Date(2024, 1, 2, 12, 0, 0, 0, time.UTC)
 	source, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{Kind: "meeting", Subject: new("Previous account review"), OccurredAt: &old, Source: "manual"})

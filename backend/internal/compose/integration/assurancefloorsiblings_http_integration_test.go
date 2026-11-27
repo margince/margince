@@ -57,6 +57,7 @@ func openDealOf(t *testing.T, e *apptest.AppEnv, owner string) string {
 // A preview that raises nothing still counts the deals it checked. With one
 // colleague's deal and none of the reader's, that count is the colleague's.
 func TestIndividualPerformanceOffRefusesAPreviewOfOneColleaguesDeals(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupAppWithOptions(t, compose.WithAssuranceRun(nil))
 	_, colleague, _ := twoSellerTeam(t, e, "preview-eligible")
 	openDealOf(t, e, colleague)
@@ -76,6 +77,7 @@ func TestIndividualPerformanceOffRefusesAPreviewOfOneColleaguesDeals(t *testing.
 // the call. The reader's own call on a team of the reader and one colleague
 // shows that colleague's moves, though the whole list is safe.
 func TestIndividualPerformanceOffRefusesACallFindingOfOneColleaguesMoves(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "call-finding-floor", "read")
 	d.e.DescribeCompany(t)
 	me := signedInUser(t, d.e)
@@ -117,6 +119,7 @@ func TestIndividualPerformanceOffRefusesACallFindingOfOneColleaguesMoves(t *test
 // The whole list is safe with three colleagues. A figure drawn from one of them
 // alone is still that colleague's: a finding type, or a type in one currency.
 func TestIndividualPerformanceOffRefusesAFindingGroupOfOneColleague(t *testing.T) {
+	t.Parallel()
 	alone := map[string]func(deal string, amount int64) assurance.Finding{
 		"a type": func(deal string, amount int64) assurance.Finding {
 			return assurance.Finding{Type: assurance.TypeClosePast, SubjectID: deal, Severity: "high", AffectedMinor: &amount, Currency: "EUR"}
@@ -147,6 +150,7 @@ func TestIndividualPerformanceOffRefusesAFindingGroupOfOneColleague(t *testing.T
 // deal and none of the reader's, the count is the colleague's, on the route
 // and on the tool.
 func TestIndividualPerformanceOffRefusesACheckRunOfOneColleaguesDeals(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "run-floor", "read")
 	d.e.DescribeCompany(t)
 	colleague := addColleagues(t, d.e, "run-floor", 1)[0]
@@ -173,6 +177,7 @@ func TestIndividualPerformanceOffRefusesACheckRunOfOneColleaguesDeals(t *testing
 // With only a colleague's deal behind it, it is the colleague's. While the
 // switch is off the stage shows no recorded outcome on the route or the tool.
 func TestIndividualPerformanceOffLeavesOutStageOutcomesOfOneColleaguesDeals(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "chances-floor", "read")
 	d.e.DescribeCompany(t)
 	colleague := addColleagues(t, d.e, "chances-floor", 1)[0]

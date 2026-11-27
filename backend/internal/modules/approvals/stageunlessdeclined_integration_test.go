@@ -18,7 +18,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -40,13 +39,9 @@ type stagingEnv struct {
 
 func setupStaging(t *testing.T) *stagingEnv {
 	t.Helper()
-	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
-	appDSN := os.Getenv("MARGINCE_TEST_APP_DSN")
-	if ownerDSN == "" || appDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
+	db := testdb.New(t)
 	ctx := context.Background()
-	owner, err := pgx.Connect(ctx, ownerDSN)
+	owner, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -55,21 +50,6 @@ func setupStaging(t *testing.T) *stagingEnv {
 			t.Errorf("closing owner connection: %v", err)
 		}
 	})
-	// To head before anything else touches this database: testdb.Pool refuses
-	// until EnsureSchema has run, and EnsureSchema still REBUILDS whenever it
-	// cannot prove the database is a fresh lane clone — so a seed written
-	// before it would be dropped rather than reset.
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
-	// The isolation the fresh workspace id above only looks like. `approval`
-	// carries no workspace_id and this tree has no row-level security, so an
-	// installation-wide reader — MarkLapsedRedemptions, ExpireDue — sees every
-	// row any earlier case in this package left. The harness beside this one,
-	// compose/integration.Setup, resets for the same reason.
-	if err := testdb.Reset(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
 
 	e := &stagingEnv{owner: owner, ws: ids.NewV7(), rep: ids.NewV7()}
 	if _, err := owner.Exec(ctx,
@@ -80,14 +60,12 @@ func setupStaging(t *testing.T) *stagingEnv {
 		`INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Rep')`, e.rep, "rep-"+e.rep.String()+"@st.test"); err != nil {
 		t.Fatal(err)
 	}
-	pool, err := testdb.Pool(ctx, appDSN)
+	pool, err := testdb.Pool(ctx, db.AppDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// Registered where the pool is handed out, before the test adds any cleanup
 	// of its own, so it runs last and sees a package that has genuinely stopped.
-	// The pool outlives the test now, so a goroutine still holding a connection
-	// would go on writing into the database the NEXT test just reset.
 	testdb.AssertPoolsQuiesced(t)
 	e.pool, e.svc = pool, NewService(database.BindTo(pool, ids.From[ids.WorkspaceKind](e.ws)))
 	e.svc.WithEffectActor(func(_ context.Context, _ pgx.Tx, by StagedBy) (principal.Principal, error) {
@@ -122,6 +100,7 @@ func (e *stagingEnv) as() context.Context {
 // Without the identity lock taken FIRST, this staging reads past the block: its
 // `FOR UPDATE` finds no rows to lock, and it stages. That is the defect.
 func TestStageUnlessDeclinedWaitsForACompetingPassBeforeReading(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	ctx := e.as()
 	// A real company: the staging path resolves its target's version, so a
@@ -250,6 +229,7 @@ func waitForLockWaiter(t *testing.T, e *stagingEnv, done <-chan struct{}) {
 // else about the same proposal behaves exactly as Stage does, which is what makes
 // StageUnlessDeclined safe to use in place of it.
 func TestStageUnlessDeclinedStagesWhenNothingWasRefused(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	target := ids.NewV7()
 	if _, err := e.owner.Exec(context.Background(), `
@@ -316,6 +296,7 @@ func TestStageUnlessDeclinedStagesWhenNothingWasRefused(t *testing.T) {
 // The non-joining form takes the same refusal check: a caller that does not want
 // its proposal joined to a standing one still must not re-offer a refused one.
 func TestStageUnlessDeclinedRefusesWithoutJoinPending(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	target := ids.NewV7()
 	if _, err := e.owner.Exec(context.Background(), `

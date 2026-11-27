@@ -24,7 +24,6 @@ package comms
 import (
 	"context"
 	"errors"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -66,13 +65,9 @@ type storeEnv struct {
 
 func setupStore(t *testing.T) *storeEnv {
 	t.Helper()
-	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
-	appDSN := os.Getenv("MARGINCE_TEST_APP_DSN")
-	if ownerDSN == "" || appDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
+	db := testdb.New(t)
 	ctx := context.Background()
-	owner, err := pgx.Connect(ctx, ownerDSN)
+	owner, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -81,13 +76,6 @@ func setupStore(t *testing.T) *storeEnv {
 			t.Errorf("closing owner connection: %v", err)
 		}
 	})
-	// To head before anything else touches this database: testdb.Pool refuses
-	// until EnsureSchema has run, and EnsureSchema still REBUILDS whenever it
-	// cannot prove the database is a fresh lane clone — so a seed written
-	// before it would be dropped rather than reset.
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
 
 	e := &storeEnv{
 		owner:      owner,
@@ -96,12 +84,6 @@ func setupStore(t *testing.T) *storeEnv {
 		activity:   ids.New[ids.ActivityKind](),
 		activity2:  ids.New[ids.ActivityKind](),
 		clockValue: time.Date(2026, 7, 28, 9, 0, 0, 0, time.UTC),
-	}
-	// Every test in this package seeds its own workspace into ONE database, so
-	// the separation between them has to be real: reset before seeding, as
-	// compose/integration's harness does.
-	if err := testdb.Reset(ctx, owner); err != nil {
-		t.Fatal(err)
 	}
 
 	if _, err := owner.Exec(ctx,
@@ -120,14 +102,12 @@ func setupStore(t *testing.T) *storeEnv {
 		}
 	}
 
-	pool, err := testdb.Pool(ctx, appDSN)
+	pool, err := testdb.Pool(ctx, db.AppDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// Registered where the pool is handed out, before the test adds any cleanup
 	// of its own, so it runs last and sees a package that has genuinely stopped.
-	// The pool outlives the test now, so a goroutine still holding a connection
-	// would go on writing into the database the NEXT test just reset.
 	testdb.AssertPoolsQuiesced(t)
 	e.store = NewStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](e.ws)), func() time.Time { return e.clockValue }, honouredIdentity{})
 	e.ctx = actorCtx(e.ws, e.user)
@@ -180,6 +160,7 @@ func (e *storeEnv) baseInput(activity ids.ActivityID, messageID string) StageInp
 // StageTx writes a row every field of Load reads back, and Load's first
 // call counts the attempt that is about to be made (attempts: 0 → 1).
 func TestStageThenLoadRoundTripsEveryFieldAndCountsTheAttempt(t *testing.T) {
+	t.Parallel()
 	e := setupStore(t)
 	in := e.baseInput(e.activity, "msg-roundtrip@example.com")
 	in.HTMLBody, in.InlineLogoKey = "<p>Hello</p>", "logos/a.png"
@@ -230,6 +211,7 @@ func TestStageThenLoadRoundTripsEveryFieldAndCountsTheAttempt(t *testing.T) {
 // gate asks about an empty list and answers no — so it is refused here, in the
 // caller's own transaction, rather than staged as a row that will park.
 func TestStagingADeliveryWithNoAddresseeIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupStore(t)
 	in := e.baseInput(e.activity, "msg-noaddressee@example.com")
 	in.Recipients, in.Cc = nil, nil
@@ -248,6 +230,7 @@ func TestStagingADeliveryWithNoAddresseeIsRefused(t *testing.T) {
 // from a list that was written empty. The columns are lists, and both the writer
 // and the schema say so.
 func TestStagedListColumnsAreArraysEvenWhenTheCallerPassedNone(t *testing.T) {
+	t.Parallel()
 	e := setupStore(t)
 	in := e.baseInput(e.activity, "msg-nolists@example.com")
 	in.Cc, in.References = nil, nil
@@ -267,6 +250,7 @@ func TestStagedListColumnsAreArraysEvenWhenTheCallerPassedNone(t *testing.T) {
 // …and the schema refuses the shape independently of the writer, so a second
 // writer cannot reintroduce it.
 func TestTheSchemaRefusesANonArrayInAListColumn(t *testing.T) {
+	t.Parallel()
 	e := setupStore(t)
 	_, err := e.owner.Exec(context.Background(), `
 		INSERT INTO comms_outbound
@@ -283,6 +267,7 @@ func TestTheSchemaRefusesANonArrayInAListColumn(t *testing.T) {
 // A second Load on the same still-pending delivery counts a second attempt
 // — the redelivery-without-a-claim case this store accepts by design.
 func TestLoadCountsEveryAttemptWhileStillPending(t *testing.T) {
+	t.Parallel()
 	e := setupStore(t)
 	id := e.stage(t, e.baseInput(e.activity, "msg-retry@example.com"))
 
@@ -302,6 +287,7 @@ func TestLoadCountsEveryAttemptWhileStillPending(t *testing.T) {
 // there is nothing pending to load, and the caller must stop rather than
 // dereference a row that is not there.
 func TestLoadOfAnUnstagedIDIsTerminal(t *testing.T) {
+	t.Parallel()
 	e := setupStore(t)
 	if _, err := e.store.Load(e.ctx, ids.NewV7()); err != ErrTerminal {
 		t.Fatalf("Load of an unstaged id: got %v, want ErrTerminal", err)
@@ -312,6 +298,7 @@ func TestLoadOfAnUnstagedIDIsTerminal(t *testing.T) {
 // receipt; a further Load then reports ErrTerminal — a redelivered job must
 // stop rather than transmit twice.
 func TestRecordSentClosesTheDeliveryAndLoadThenReportsTerminal(t *testing.T) {
+	t.Parallel()
 	e := setupStore(t)
 	id := e.stage(t, e.baseInput(e.activity, "msg-sent@example.com"))
 	if _, err := e.store.Load(e.ctx, id); err != nil {
@@ -347,6 +334,7 @@ func TestRecordSentClosesTheDeliveryAndLoadThenReportsTerminal(t *testing.T) {
 // Park ends a delivery no retry repairs and records why; a further Load
 // then reports ErrTerminal for the same reason as a sent delivery.
 func TestParkClosesTheDeliveryWithAReasonAndLoadThenReportsTerminal(t *testing.T) {
+	t.Parallel()
 	e := setupStore(t)
 	id := e.stage(t, e.baseInput(e.activity, "msg-parked@example.com"))
 	if _, err := e.store.Load(e.ctx, id); err != nil {
@@ -377,6 +365,7 @@ func TestParkClosesTheDeliveryWithAReasonAndLoadThenReportsTerminal(t *testing.T
 // RecordFailure notes a transient fault WITHOUT ending the delivery: status
 // stays pending, so River's redelivery — and the next Load — still see it.
 func TestRecordFailureLeavesTheDeliveryPendingForRetry(t *testing.T) {
+	t.Parallel()
 	e := setupStore(t)
 	id := e.stage(t, e.baseInput(e.activity, "msg-transient@example.com"))
 	if _, err := e.store.Load(e.ctx, id); err != nil {
@@ -413,6 +402,7 @@ func TestRecordFailureLeavesTheDeliveryPendingForRetry(t *testing.T) {
 // transaction must leave no delivery row behind, exactly as it leaves no
 // activity row behind — the two commit or fail together.
 func TestStageTxRollsBackWithItsCallerTransaction(t *testing.T) {
+	t.Parallel()
 	e := setupStore(t)
 	in := e.baseInput(e.activity, "msg-rollback@example.com")
 	err := database.WithWorkspaceTx(e.ctx, e.store.db.Pool(), func(tx pgx.Tx) error {
@@ -444,6 +434,7 @@ func TestStageTxRollsBackWithItsCallerTransaction(t *testing.T) {
 // schema behind it — the same posture the no-actor guard takes a few lines
 // above it in the store.
 func TestStagingTheSameMessageIDTwiceConflicts(t *testing.T) {
+	t.Parallel()
 	e := setupStore(t)
 	in := e.baseInput(e.activity, "msg-dupe@example.com")
 	e.stage(t, in)
@@ -464,6 +455,7 @@ func TestStagingTheSameMessageIDTwiceConflicts(t *testing.T) {
 
 // A recorded decision cannot authorize a delivery that was never staged.
 func TestADirectedDecisionNeedsAStagedDelivery(t *testing.T) {
+	t.Parallel()
 	e := setupStore(t)
 	err := database.WithWorkspaceTx(e.ctx, e.store.db.Pool(), func(tx pgx.Tx) error {
 		return e.store.RecordDirectedExecutionTx(e.ctx, tx, ids.NewV7(), ids.NewV7())

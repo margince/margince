@@ -28,6 +28,7 @@ import (
 // last" with the same two dates, and the set read leaves out what the record
 // read would refuse: a colleague's private account, and an archived one.
 func TestTheSetLastTouchAgreesWithTheCompanyPage(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
@@ -88,6 +89,7 @@ func TestTheSetLastTouchAgreesWithTheCompanyPage(t *testing.T) {
 // A caller who may not read activity is refused outright, which is what the
 // queue reports as a withheld pair rather than an account nobody wrote to.
 func TestTheSetLastTouchRefusesAReaderWithoutTheActivityGrant(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := e.SeedCompany(t, "Scale Commerce", &e.Rep1)
 	noActivity := principal.Permissions{
@@ -129,6 +131,7 @@ func lastTouchFor(ctx context.Context, t *testing.T, e *integration.Env, compani
 // ways. The tile said the account had gone quiet while the inbound clock read
 // the date of a meeting nobody attended.
 func TestACalledOffMeetingMovesNeitherDirectionClock(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	company := e.SeedCompany(t, "Scale Commerce", &e.Rep1)
@@ -168,6 +171,7 @@ func TestACalledOffMeetingMovesNeitherDirectionClock(t *testing.T) {
 // nobody writing, so the "they wrote" clock stays on their reply, as the
 // contact page's does.
 func TestAMeetingThatHappenedIsTheLastContactButNoLetter(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	company := e.SeedCompany(t, "Scale Commerce", &e.Rep1)
@@ -217,6 +221,7 @@ func setMeeting(t *testing.T, owner *pgx.Conn, id ids.UUID, status string) {
 // read over several companies. A contact who left an account for another one
 // moves the new account's clocks and no longer moves the old one's.
 func TestTheSetLastTouchReadsEachCompanysOwnRoster(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)

@@ -25,6 +25,7 @@ import (
 // the projected voice names. The rows come from the real capture, import and
 // logging paths.
 func TestTheStoredWriterSideIsTheProjectedVoicesSide(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	buyer := o.contact(t, "Alma Buyer", "buyer@alpha.test")
 	importer := o.e.As(o.e.AdminUser, nil, importerPerms())

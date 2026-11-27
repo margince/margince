@@ -16,6 +16,7 @@ import (
 )
 
 func TestCurrentMovesFollowTheOwnerWithoutAWrittenOrReadableCache(t *testing.T) {
+	t.Parallel()
 	for _, cache := range []string{"absent", "obsolete", "unreadable"} {
 		t.Run(cache, func(t *testing.T) {
 			e := setupVerdicts(t)

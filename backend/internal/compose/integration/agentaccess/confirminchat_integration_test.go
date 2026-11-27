@@ -95,6 +95,7 @@ func (e *confirmEnv) count(t *testing.T, query string, args ...any) int {
 // files nothing and stages nothing. The user's yes then files it once, the audit
 // row names the code, and the code does not work twice.
 func TestAProjectFilingIsConfirmedInTheConversationNotTheInbox(t *testing.T) {
+	t.Parallel()
 	e := setupConfirm(t)
 	access, _ := e.connect(t)
 	args, activity := e.fileOnProject(t, access)
@@ -132,6 +133,7 @@ func TestAProjectFilingIsConfirmedInTheConversationNotTheInbox(t *testing.T) {
 // A passport minted for a script has no connection, so nobody is in a
 // conversation to say yes. Its call waits in the inbox and gets no code.
 func TestAPassportWithoutAConnectionStillWaitsInTheInbox(t *testing.T) {
+	t.Parallel()
 	e := setupConfirm(t)
 	var minted struct {
 		Token string `json:"token"`
@@ -152,6 +154,7 @@ func TestAPassportWithoutAConnectionStillWaitsInTheInbox(t *testing.T) {
 // The yes covers the activity as the preview read it. An edit in between moves
 // its version, so the confirmed write is refused and files nothing.
 func TestAConfirmedFilingRefusesAnActivityThatMovedSinceThePreview(t *testing.T) {
+	t.Parallel()
 	e := setupConfirm(t)
 	access, _ := e.connect(t)
 	args, activity := e.fileOnProject(t, access)

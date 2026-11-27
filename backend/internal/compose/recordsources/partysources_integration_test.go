@@ -45,6 +45,7 @@ func partyOrigin(t *testing.T, e *integration.Env, table string, id ids.UUID) [2
 // Each older word lands on its channel, and the connector or writer it named
 // moves to source_system. A system the writer already named is kept.
 func TestTheTaskMovesOlderContactsAndCompaniesOntoAChannel(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	csv, crm := "mirror:csv:bundle", "ext:billing:crm"
@@ -105,6 +106,7 @@ func TestTheTaskMovesOlderContactsAndCompaniesOntoAChannel(t *testing.T) {
 // A writer still passing a mailbox stamp gets a captured contact naming its
 // connector, and the address the stamp was copied to keeps the stamp.
 func TestACaptureStampIsStoredAsTheChannelAndTheConnector(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	made, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{
 		FullName: "Ines Huber", Source: "gmail:msg-42",
@@ -127,6 +129,7 @@ func TestACaptureStampIsStoredAsTheChannelAndTheConnector(t *testing.T) {
 // An older row is judged by the unvalidated check on its next write. An edit
 // before the task goes through and moves the row onto its channel.
 func TestAnEditBeforeTheTaskMovesAnOlderContactOntoItsChannel(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	older := olderParty(t, integration.OwnerConn(t), "contact", "imap:msg-3", nil)
 	name := "Renamed Contact"
@@ -141,6 +144,7 @@ func TestAnEditBeforeTheTaskMovesAnOlderContactOntoItsChannel(t *testing.T) {
 // The mailbox purge selects what capture made. It finds a contact the task has
 // not reached, and the task's own audit row does not count as somebody's work.
 func TestTheMailboxPurgeFindsCapturedContactsBeforeAndAfterTheTask(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	captured := integration.SeedBeforeSourceCheck(t, owner, "contact",
@@ -173,6 +177,7 @@ func TestTheMailboxPurgeFindsCapturedContactsBeforeAndAfterTheTask(t *testing.T)
 // A feed may adopt a company capture made, whose source_system names only the
 // connector. One an import or an integration named stays refused.
 func TestAFeedAdoptsACapturedCompanyAndNotAnImportedOne(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	captured, err := e.Contacts.CreateCompany(e.Admin(), contacts.CreateCompanyInput{DisplayName: "Captured Co", Source: "gmail:msg-6"})
 	if err != nil {

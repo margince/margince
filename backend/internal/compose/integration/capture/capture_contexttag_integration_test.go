@@ -42,6 +42,7 @@ func putWord(t *testing.T, env captureEnv, name string, archived bool) ids.UUID 
 }
 
 func TestAConnectorTakesAWordTheVocabularyCarries(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	word := putWord(t, env, "Nord inbox", false)
 
@@ -75,6 +76,7 @@ func TestAConnectorTakesAWordTheVocabularyCarries(t *testing.T) {
 // are one fact — the word they named is not one this connector can file under
 // — and telling them apart would say which archived words exist.
 func TestAConnectorRefusesAWordTheVocabularyDoesNotOffer(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name string
 		word func(t *testing.T, env captureEnv) ids.UUID
@@ -103,6 +105,7 @@ func TestAConnectorRefusesAWordTheVocabularyDoesNotOffer(t *testing.T) {
 // than going quiet with nothing to see. That is the whole reason the flag is on
 // the wire: an operator whose filing stopped needs to know why.
 func TestAWordArchivedAfterwardsIsReportedOnTheConnection(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	word := putWord(t, env, "Nord inbox", false)
 	if _, err := env.registry.SetContextTag(seatContext(env.e, env.e.Rep1), capturemod.ProviderMailbox("gmail"), &word); err != nil {

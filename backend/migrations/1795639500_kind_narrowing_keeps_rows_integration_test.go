@@ -18,6 +18,7 @@ import (
 // were narrowed upgrades without losing one. signal and user_record_view are
 // not seeded: their entity shape CHECKs never let an extension kind be stored.
 func TestNarrowingTheKindColumnsKeepsStoredExtensionRows(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	resetSchema(t, conn)
@@ -95,6 +96,7 @@ func TestNarrowingTheKindColumnsKeepsStoredExtensionRows(t *testing.T) {
 // database migrated under an earlier number is in that state. The dedupe pair
 // columns are gone by then, so the up file must not parse a statement naming them.
 func TestNarrowingTheKindColumnsRunsAgainOverItsOwnResult(t *testing.T) {
+	t.Parallel()
 	conn := connect(t, ownerDSNOf(t))
 	headSchema(t, conn)
 	ctx := context.Background()

@@ -14,6 +14,7 @@ import (
 )
 
 func TestSuggestionLinksExistingDealWithoutCreatingAnother(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	e.now = time.Date(2026, 6, 15, 12, 0, 0, 0, time.UTC)
 	company := e.SeedCompany(t, "Maple Studio", nil)

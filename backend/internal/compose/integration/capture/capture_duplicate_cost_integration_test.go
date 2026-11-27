@@ -31,6 +31,7 @@ const duplicateExchangesPerMessage = 110
 var contentTablesADuplicateLeavesAlone = []string{"raw_capture", "activity", "attachment", "embedding"}
 
 func TestASecondMailboxDeliveringKnownMailStoresNoContentAndStaysWithinItsBudget(t *testing.T) {
+	t.Parallel()
 	const count = 40
 	env := newCaptureEnv(t)
 	e := env.e

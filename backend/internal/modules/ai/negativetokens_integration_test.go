@@ -15,6 +15,7 @@ import (
 // after a real one. The day's totals keep the real call's tokens, and the
 // negative call's own row reads zero, so the budget never moves down.
 func TestANegativeProviderCountLowersNoTotal(t *testing.T) {
+	t.Parallel()
 	ledger := newSpendLedger(t, setupRateStore(t))
 	day := time.Date(2026, 7, 10, 9, 0, 0, 0, time.UTC)
 	ledger.at(day).call(TaskSummarize, TierCheapCloud, spendUnpricedModel, 100, 50, false)

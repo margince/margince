@@ -9,6 +9,7 @@ package approvals
 // this one carries a setting the reader holds about themselves.
 
 import (
+	"context"
 	"net/http"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -43,7 +44,7 @@ func (h Handlers) writeAutonomy(w http.ResponseWriter, r *http.Request, settings
 	}
 	wire := autonomyWire(settings)
 	wire.AutoApplyEnabled = on
-	wire.Locks = h.installationLocks()
+	wire.Locks = h.installationLocks(r.Context())
 	httperr.WriteJSON(w, http.StatusOK, wire)
 }
 
@@ -66,16 +67,16 @@ func (h Handlers) UpdateAutoApplyInstallation(w http.ResponseWriter, r *http.Req
 		httperr.Write(w, r, err)
 		return
 	}
-	req.Locks = h.installationLocks()
+	req.Locks = h.installationLocks(r.Context())
 	httperr.WriteJSON(w, http.StatusOK, req)
 }
 
 // installationLocks names the boot source that sets the switch, if one does.
-func (h Handlers) installationLocks() *[]crmcontracts.SettingLock {
+func (h Handlers) installationLocks(ctx context.Context) *[]crmcontracts.SettingLock {
 	if h.locks == nil {
 		return nil
 	}
-	return h.locks([]config.Any{AutoApplyEnabled})
+	return h.locks(ctx, []config.Any{AutoApplyEnabled})
 }
 
 // WithSettings binds the stored configuration the installation switch lives in.
@@ -85,7 +86,7 @@ func (h Handlers) WithSettings(cfg *config.Config) Handlers {
 }
 
 // WithLocks binds what reports the settings a boot source sets.
-func (h Handlers) WithLocks(locks func(surface []config.Any) *[]crmcontracts.SettingLock) Handlers {
+func (h Handlers) WithLocks(locks func(ctx context.Context, surface []config.Any) *[]crmcontracts.SettingLock) Handlers {
 	h.locks = locks
 	return h
 }

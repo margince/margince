@@ -16,15 +16,11 @@ import (
 // that DOES declare a FanOutTo must NOT be in this list — its own row still
 // carries no workspace, but its children (a different kind) are the real
 // signal, and counting the dispatcher's row too would double the pass.
-//
-// Walks allSpecs() (core plus any composed/extension declarations), not the
-// core-only specs map, so an extension's own collapsed pass is held to the
-// same rule.
 func TestStandaloneFleetKindsSelectsExactlyTheCollapsedPasses(t *testing.T) {
 	t.Parallel()
 
 	var dispatchers, standalone int
-	for kind, spec := range allSpecs() {
+	for kind, spec := range specs {
 		if !spec.Fleet {
 			continue
 		}

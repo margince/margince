@@ -15,7 +15,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/modules/identity/internal/policy"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -24,30 +23,13 @@ import (
 
 var _ authz.Resolver = (*Service)(nil)
 
-// RBACObjectGrantable reports whether an object name is one a role document may
-// grant at all. Identity owns that vocabulary (internal/policy's coreObjects,
-// which Parse rejects a document for stepping outside), so it is the only module
-// that can answer.
-//
-// It is exported for the gates that derive an authority requirement somewhere
-// else and must prove the requirement is SATISFIABLE before certifying whatever
-// depends on it. An object outside this set is allowed by no principal that can
-// exist, so a requirement naming one is not a strict rule — it is a permanent
-// refusal, and a gate reading only the requirement's presence cannot tell the two
-// apart. The confirm-first decidability gate is the caller today: an approval
-// whose decision demands an ungrantable object can never be released or rejected
-// by anyone.
-func RBACObjectGrantable(object string) bool {
-	return policy.IsGrantableObject(object)
-}
-
 // EffectiveRBAC reads the human's CURRENT role grants + teams. A user who
 // is archived, suspended, or outside the context workspace resolves to
 // ErrNotFound — absence of authority is denial, not empty permission.
 func (s *Service) EffectiveRBAC(ctx context.Context, workspaceID, humanID ids.UUID) (authz.RBAC, error) {
 	var out authz.RBAC
 	err := s.liveUserTx(ctx, workspaceID, humanID, func(tx pgx.Tx, _ string) error {
-		_, teams, perms, err := loadGrants(ctx, tx, ids.From[ids.UserKind](humanID))
+		_, teams, perms, err := loadGrants(ctx, tx, s.rbac, ids.From[ids.UserKind](humanID))
 		if err != nil {
 			return err
 		}
@@ -76,7 +58,7 @@ func (s *Service) EffectiveAuthority(ctx context.Context, workspaceID, humanID i
 	)
 	err := s.liveUserTx(ctx, workspaceID, humanID, func(tx pgx.Tx, seatType string) error {
 		var err error
-		rbac, seat, err = authorityIn(ctx, tx, humanID, seatType)
+		rbac, seat, err = authorityIn(ctx, tx, s.rbac, humanID, seatType)
 		return err
 	})
 	return rbac, seat, err
@@ -90,30 +72,30 @@ func HoldAuthorizationTx(ctx context.Context, tx pgx.Tx) error {
 
 // EffectiveAuthorityTx holds live authority until the caller's transaction ends.
 // Take it before member and record locks, as authorization writers do.
-func EffectiveAuthorityTx(ctx context.Context, tx pgx.Tx, humanID ids.UUID) (authz.RBAC, principal.SeatType, error) {
+func EffectiveAuthorityTx(ctx context.Context, tx pgx.Tx, rbac RbacObjects, humanID ids.UUID) (authz.RBAC, principal.SeatType, error) {
 	if err := HoldAuthorizationTx(ctx, tx); err != nil {
 		return authz.RBAC{}, "", err
 	}
-	return readEffectiveAuthorityTx(ctx, tx, humanID)
+	return readEffectiveAuthorityTx(ctx, tx, rbac, humanID)
 }
 
 // ReadAuthorityTx reads a member's authority without the authorization lock,
 // for a read check that runs after its transaction locked rows. It holds
 // nothing, so a role change may commit before the caller does.
-func ReadAuthorityTx(ctx context.Context, tx pgx.Tx, humanID ids.UUID) (authz.RBAC, principal.SeatType, error) {
-	return readEffectiveAuthorityTx(ctx, tx, humanID)
+func ReadAuthorityTx(ctx context.Context, tx pgx.Tx, rbac RbacObjects, humanID ids.UUID) (authz.RBAC, principal.SeatType, error) {
+	return readEffectiveAuthorityTx(ctx, tx, rbac, humanID)
 }
 
-func readEffectiveAuthorityTx(ctx context.Context, tx pgx.Tx, humanID ids.UUID) (authz.RBAC, principal.SeatType, error) {
+func readEffectiveAuthorityTx(ctx context.Context, tx pgx.Tx, rbac RbacObjects, humanID ids.UUID) (authz.RBAC, principal.SeatType, error) {
 	seatType, err := liveSeatType(ctx, tx, humanID)
 	if err != nil {
 		return authz.RBAC{}, "", err
 	}
-	return authorityIn(ctx, tx, humanID, seatType)
+	return authorityIn(ctx, tx, rbac, humanID, seatType)
 }
 
-func authorityIn(ctx context.Context, tx pgx.Tx, humanID ids.UUID, seatType string) (authz.RBAC, principal.SeatType, error) {
-	_, teams, perms, err := loadGrants(ctx, tx, ids.From[ids.UserKind](humanID))
+func authorityIn(ctx context.Context, tx pgx.Tx, rbac RbacObjects, humanID ids.UUID, seatType string) (authz.RBAC, principal.SeatType, error) {
+	_, teams, perms, err := loadGrants(ctx, tx, rbac, ids.From[ids.UserKind](humanID))
 	if err != nil {
 		return authz.RBAC{}, "", err
 	}
@@ -156,7 +138,7 @@ func (s *Service) AdmittedAuthority(ctx context.Context, workspaceID, humanID, p
 				return err
 			}
 		}
-		_, teams, perms, err := loadGrants(ctx, tx, ids.From[ids.UserKind](humanID))
+		_, teams, perms, err := loadGrants(ctx, tx, s.rbac, ids.From[ids.UserKind](humanID))
 		if err != nil {
 			return err
 		}
@@ -232,7 +214,7 @@ func liveSeatType(ctx context.Context, tx pgx.Tx, humanID ids.UUID) (string, err
 // transaction. It holds that authority until the transaction ends, so no role,
 // assignment, team or seat change commits in between. Call it before the write
 // locks any row of its own.
-func (*Service) EffectiveAuthorityTx(ctx context.Context, tx pgx.Tx, humanID ids.UUID) (authz.RBAC, principal.SeatType, error) {
+func (s *Service) EffectiveAuthorityTx(ctx context.Context, tx pgx.Tx, humanID ids.UUID) (authz.RBAC, principal.SeatType, error) {
 	// The order every authorization change takes too: the authorization lock,
 	// then app_user, then records. A change that moves deals cannot deadlock it.
 	if err := HoldAuthorizationTx(ctx, tx); err != nil {
@@ -241,7 +223,7 @@ func (*Service) EffectiveAuthorityTx(ctx context.Context, tx pgx.Tx, humanID ids
 	if err := holdMemberRow(ctx, tx, humanID); err != nil {
 		return authz.RBAC{}, "", err
 	}
-	return readEffectiveAuthorityTx(ctx, tx, humanID)
+	return readEffectiveAuthorityTx(ctx, tx, s.rbac, humanID)
 }
 
 // HeldAuthorityTx is EffectiveAuthorityTx without the member's app_user row
@@ -249,15 +231,15 @@ func (*Service) EffectiveAuthorityTx(ctx context.Context, tx pgx.Tx, humanID ids
 // on their row locks, so two such writes holding one each would deadlock. The
 // authorization lock alone still holds the authority until commit: every
 // authorization change takes it exclusively.
-func (*Service) HeldAuthorityTx(ctx context.Context, tx pgx.Tx, humanID ids.UUID) (authz.RBAC, principal.SeatType, error) {
-	return HeldAuthorityTx(ctx, tx, humanID)
+func (s *Service) HeldAuthorityTx(ctx context.Context, tx pgx.Tx, humanID ids.UUID) (authz.RBAC, principal.SeatType, error) {
+	return HeldAuthorityTx(ctx, tx, s.rbac, humanID)
 }
 
 // HeldAuthorityTx is the method of the same name for a caller that holds no
 // Service, such as a verdict deciding inside another module's transaction.
-func HeldAuthorityTx(ctx context.Context, tx pgx.Tx, humanID ids.UUID) (authz.RBAC, principal.SeatType, error) {
+func HeldAuthorityTx(ctx context.Context, tx pgx.Tx, rbac RbacObjects, humanID ids.UUID) (authz.RBAC, principal.SeatType, error) {
 	if err := HoldAuthorizationTx(ctx, tx); err != nil {
 		return authz.RBAC{}, "", err
 	}
-	return readEffectiveAuthorityTx(ctx, tx, humanID)
+	return readEffectiveAuthorityTx(ctx, tx, rbac, humanID)
 }

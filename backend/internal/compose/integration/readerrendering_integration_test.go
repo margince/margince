@@ -78,6 +78,7 @@ func asReader(ctx context.Context, locale string) context.Context {
 }
 
 func TestTheAuthorSeesTheirNoteInTheirLanguageAndNothingIsWritten(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
 	contact := e.SeedContact(t, "Lena Vogt", &e.Rep1)
@@ -113,6 +114,7 @@ func TestTheAuthorSeesTheirNoteInTheirLanguageAndNothingIsWritten(t *testing.T) 
 }
 
 func TestATextTheCallerMayNotReadIsNotFoundAndNeverReachesTheModel(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
 	colleague := e.As(e.Rep3, []ids.UUID{e.Team2}, activityLifecyclePerms)
@@ -158,6 +160,7 @@ func TestATextTheCallerMayNotReadIsNotFoundAndNeverReachesTheModel(t *testing.T)
 }
 
 func TestAMessageHeldUnderARetentionObligationIsNotFound(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedRestrictionFixture(t, e)
 	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(e.Admin(), f.contact, "test"); err != nil {
@@ -174,6 +177,7 @@ func TestAMessageHeldUnderARetentionObligationIsNotFound(t *testing.T) {
 }
 
 func TestARowThatMovedWhileTheModelWroteShowsNoRendering(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
 	colleague := e.As(e.Rep3, []ids.UUID{e.Team2}, activityLifecyclePerms)

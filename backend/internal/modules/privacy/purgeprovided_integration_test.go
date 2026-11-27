@@ -13,6 +13,7 @@ import (
 
 // A purge that cannot run reports it, so an erasure never claims what it did not delete.
 func TestPurgingProvidedValuesReportsAFailedStatement(t *testing.T) {
+	t.Parallel()
 	e := setupSARIdentifiers(t)
 	tx, err := e.owner.Begin(e.ctx)
 	if err != nil {

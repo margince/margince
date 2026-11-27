@@ -47,6 +47,7 @@ func meteredIdentityPool(t *testing.T, base *pgxpool.Pool) (*pgxpool.Pool, func(
 }
 
 func TestAuthenticateStaysWithinItsStatementAndRoundTripBudgets(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "auth-cost")
 	// Every real seat holds a role, and a role with a mask is the costliest.
 	role := e.customRole(t, "Masked sales", "rep", nil)
@@ -99,6 +100,7 @@ func TestAuthenticateStaysWithinItsStatementAndRoundTripBudgets(t *testing.T) {
 }
 
 func TestAuthenticateWritesTheSessionStampOncePerInterval(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "stamp-interval")
 	token := e.signIn(t, "device")
 	stampAge := func(age string) {

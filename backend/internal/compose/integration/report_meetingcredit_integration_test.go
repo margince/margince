@@ -21,6 +21,7 @@ import (
 // answer later turns tentative, the held meeting stays in Rep2's figures on
 // every surface that reads it, and the surfaces agree.
 func TestMeetingConversionListsAMeetingUnderEveryCreditedColleagueAndCountsItOnce(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 	subject, start, booked := "Shared call", clocktest.Now(t).Add(-72*time.Hour), "booked"

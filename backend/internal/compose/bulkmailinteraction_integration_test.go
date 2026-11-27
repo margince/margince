@@ -57,6 +57,7 @@ func requireBulkStamp(t *testing.T, f *relationshipFixture, activity ids.UUID) {
 // shows on every timeline marked as bulk. A reply without the header moves
 // every reading.
 func TestANewsletterIsNoExchangeButStaysOnTheTimeline(t *testing.T) {
+	t.Parallel()
 	f := newRelationshipFixture(t)
 	before := f.humanExchange(t)
 	assertReading(t, "two humans writing", f.read(t), before)
@@ -116,6 +117,7 @@ func assertMarkedBulk(t *testing.T, surface string, rows []crmcontracts.Activity
 // An edge folded while a newsletter still counted heals on the nightly
 // rebuild, with no data task.
 func TestTheNightlyRebuildDropsANewslettersEdgeCount(t *testing.T) {
+	t.Parallel()
 	f := newRelationshipFixture(t)
 	f.humanExchange(t)
 	newsletter := f.mail(t, "client-newsletter", f.contactAddr, f.seatAddr, "", 4, newsletterBody("Our autumn newsletter.")...)

@@ -53,6 +53,7 @@ func declaredFromFile(t *testing.T) yaml.Node {
 }
 
 func TestADeclaredBindingSeedsAnInstallationThatHoldsNone(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 
@@ -80,6 +81,7 @@ func TestADeclaredBindingSeedsAnInstallationThatHoldsNone(t *testing.T) {
 // through the API — but the operator must be told, or their file says sovereign
 // while their text goes to whatever the surviving row names.
 func TestADeclarationRefusedByAnExistingBindingIsReported(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 

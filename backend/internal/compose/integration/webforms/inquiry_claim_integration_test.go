@@ -6,7 +6,6 @@
 package webforms
 
 import (
-	"context"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -87,6 +86,7 @@ func applyInquiryAssignment(t *testing.T, seat *apptest.AppEnv, mode string, pre
 }
 
 func TestTakingAnInquiryClaimsItsLeadAndOnlyItsTask(t *testing.T) {
+	t.Parallel()
 	f := setupInquiryClaim(t)
 	var work crmcontracts.Worklist
 	if status := f.rep.Call(t, "GET", "/v1/worklist?scope=all&view=today&filter=website_inquiries", nil, nil, nil); status != http.StatusForbidden {
@@ -131,6 +131,7 @@ func TestTakingAnInquiryClaimsItsLeadAndOnlyItsTask(t *testing.T) {
 }
 
 func TestAStaleInquiryTaskDoesNotClaimItsLead(t *testing.T) {
+	t.Parallel()
 	f := setupInquiryClaim(t)
 	preview := f.preview(t)
 	if status := f.admin.Call(t, "PATCH", "/v1/activities/"+f.tasks[0].Id.String(), integration.AnyMap{"subject": "Review this inquiry first"}, map[string]string{"If-Match": strconv.FormatInt(int64(*preview.Task.Version), 10)}, nil); status != http.StatusOK {
@@ -149,17 +150,13 @@ func TestAStaleInquiryTaskDoesNotClaimItsLead(t *testing.T) {
 }
 
 func TestAFailedInquiryTaskMoveRollsBackItsLeadClaim(t *testing.T) {
+	t.Parallel()
 	f := setupInquiryClaim(t)
 	preview := f.preview(t)
 	if _, err := f.admin.Owner.Exec(t.Context(), `CREATE FUNCTION refuse_inquiry_move() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'injected task move failure'; END $$;
  CREATE TRIGGER refuse_inquiry_move BEFORE UPDATE OF assignee_id ON activity FOR EACH ROW WHEN (OLD.assignee_id IS DISTINCT FROM NEW.assignee_id) EXECUTE FUNCTION refuse_inquiry_move()`); err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() {
-		if _, err := f.admin.Owner.Exec(context.Background(), `DROP TRIGGER refuse_inquiry_move ON activity; DROP FUNCTION refuse_inquiry_move()`); err != nil {
-			t.Error(err)
-		}
-	})
 	var auditBefore, eventBefore int
 	if err := f.admin.Owner.QueryRow(t.Context(), `SELECT (SELECT count(*) FROM audit_log),(SELECT count(*) FROM event_outbox)`).Scan(&auditBefore, &eventBefore); err != nil {
 		t.Fatal(err)
@@ -178,6 +175,7 @@ func TestAFailedInquiryTaskMoveRollsBackItsLeadClaim(t *testing.T) {
 }
 
 func TestConcurrentInquiryClaimsHaveOneWinner(t *testing.T) {
+	t.Parallel()
 	f := setupInquiryClaim(t)
 	first := f.preview(t)
 	var other crmcontracts.User
@@ -226,6 +224,7 @@ func TestConcurrentInquiryClaimsHaveOneWinner(t *testing.T) {
 }
 
 func TestACoordinatorCanTakeTheLeadOfTheirOwnInquiryTask(t *testing.T) {
+	t.Parallel()
 	f := setupInquiryClaim(t)
 	actor := apptest.SessionUserID(t, f.admin)
 	var preview crmcontracts.WebsiteInquiryAssignment
@@ -245,6 +244,7 @@ func TestACoordinatorCanTakeTheLeadOfTheirOwnInquiryTask(t *testing.T) {
 }
 
 func TestAssigningAndFollowingUpMovesOnlyTheReviewedInquiry(t *testing.T) {
+	t.Parallel()
 	f := setupInquiryClaim(t)
 	var preview crmcontracts.WebsiteInquiryAssignment
 	path := "/v1/activities/" + f.tasks[0].Id.String() + "/inquiry-assignment"
@@ -267,6 +267,7 @@ func TestAssigningAndFollowingUpMovesOnlyTheReviewedInquiry(t *testing.T) {
 }
 
 func TestTakingAContactInquiryKeepsTheContactOwner(t *testing.T) {
+	t.Parallel()
 	f := setupInquiryRecipient(t)
 	engine := compose.NewWorkflowEngine(f.e.DB())
 	if err := engine.HandleEvent(t.Context(), f.event); err != nil {
@@ -309,6 +310,7 @@ func TestTakingAContactInquiryKeepsTheContactOwner(t *testing.T) {
 }
 
 func TestAnInquiryClaimRejectsAnotherRecordAtTheSameVersion(t *testing.T) {
+	t.Parallel()
 	f := setupInquiryClaim(t)
 	preview := f.preview(t)
 	preview.RecordId = crmcontracts.Id(ids.NewV7())
@@ -325,6 +327,7 @@ func TestAnInquiryClaimRejectsAnotherRecordAtTheSameVersion(t *testing.T) {
 }
 
 func TestAReadShareOnAnInquiryLeadDoesNotHandItOver(t *testing.T) {
+	t.Parallel()
 	f := setupInquiryClaim(t)
 	admin := apptest.SessionUserID(t, f.admin)
 	var taken crmcontracts.WebsiteInquiryAssignment

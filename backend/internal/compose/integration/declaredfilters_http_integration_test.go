@@ -78,6 +78,7 @@ func createdRecord(t *testing.T, e *apptest.AppEnv, path string, body AnyMap) st
 }
 
 func TestTheContactListNarrowsByTagOnTheWire(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -113,6 +114,7 @@ func TestTheContactListNarrowsByTagOnTheWire(t *testing.T) {
 }
 
 func TestTheCompanyListNarrowsByDomainOnTheWire(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -130,6 +132,7 @@ func TestTheCompanyListNarrowsByDomainOnTheWire(t *testing.T) {
 }
 
 func TestTheContactListNarrowsToTheContactsAroundOneOnTheWire(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -145,6 +148,7 @@ func TestTheContactListNarrowsToTheContactsAroundOneOnTheWire(t *testing.T) {
 }
 
 func TestTheActivityListNarrowsByAssigneeOnTheWire(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -170,6 +174,7 @@ func TestTheActivityListNarrowsByAssigneeOnTheWire(t *testing.T) {
 }
 
 func TestThePipelineListAnswersIncludeArchivedOnTheWire(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -224,6 +229,7 @@ func callerUserID(t *testing.T, e *apptest.AppEnv) string {
 }
 
 func TestTheContactListNarrowsToTheUnownedQueueOnTheWire(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	owner := callerUserID(t, e)
@@ -239,6 +245,7 @@ func TestTheContactListNarrowsToTheUnownedQueueOnTheWire(t *testing.T) {
 }
 
 func TestTheLeadListNarrowsToTheUnownedQueueOnTheWire(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	owner := callerUserID(t, e)
@@ -253,6 +260,7 @@ func TestTheLeadListNarrowsToTheUnownedQueueOnTheWire(t *testing.T) {
 }
 
 func TestTheOwnerDialsRefuseEachOtherOnTheWire(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	owner := callerUserID(t, e)
@@ -271,6 +279,7 @@ func TestTheOwnerDialsRefuseEachOtherOnTheWire(t *testing.T) {
 // under none — and the scoped page must be exactly the first and the third: a
 // handler that drops `project_id` answers all three with the right shape.
 func TestTheActivityListNarrowsByProjectOnTheWire(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -318,6 +327,7 @@ func TestTheActivityListNarrowsByProjectOnTheWire(t *testing.T) {
 // `occurred_before` drops its own (exclusive), which is what makes a calendar
 // day spell as [day 00:00, next day 00:00) without double-counting midnight.
 func TestTheActivityListNarrowsByDateRangeOnTheWire(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -370,6 +380,7 @@ func TestTheActivityListNarrowsByDateRangeOnTheWire(t *testing.T) {
 // list's page after that cursor starts exactly where the section stopped, and
 // nothing is shown twice or skipped. 27 mails, a 25-row section.
 func TestTheContact360TimelineCursorContinuesIntoTheActivityList(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 

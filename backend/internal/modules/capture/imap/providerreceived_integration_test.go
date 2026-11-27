@@ -17,6 +17,7 @@ import (
 )
 
 func TestStandingSyncStoresArrivalWithoutReplacingItOnReplay(t *testing.T) {
+	t.Parallel()
 	mailbox := capturetest.NewMailbox(t, "imap", memUser)
 	raw := []byte(strings.ReplaceAll(string(inboundFixture()), "me@myco.com", memUser))
 	addr, user := startMemServer(t, 0)

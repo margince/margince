@@ -39,6 +39,7 @@ func owesMeetingFollowUp(t *testing.T, s *Store, e *loadEnv, meeting ids.UUID) b
 }
 
 func TestAMeetingWithNothingSentSinceIsAFollowUp(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	s := storeAddressing(e, readerAddress)
 
@@ -57,6 +58,7 @@ func TestAMeetingWithNothingSentSinceIsAFollowUp(t *testing.T) {
 }
 
 func TestAMeetingFollowUpNeedsAHeldMeetingOfTheReadersWithNothingSent(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	s := storeAddressing(e, readerAddress)
 
@@ -81,6 +83,7 @@ func TestAMeetingFollowUpNeedsAHeldMeetingOfTheReadersWithNothingSent(t *testing
 // Importing a copy of a colleague's meeting is not taking part in it, so it
 // owes no follow-up. Being recorded as an attendee is, whoever hosted it.
 func TestAMeetingTheReaderOnlyImportedIsNotTheirsButOneTheyAttendedIs(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	s := storeAddressing(e, readerAddress)
 	imported := e.metWith(t, e.customerAt(t, "customer"), e.other, "held", 3*24*time.Hour)
@@ -97,6 +100,7 @@ func TestAMeetingTheReaderOnlyImportedIsNotTheirsButOneTheyAttendedIs(t *testing
 
 // A message sent while the meeting was still on is not the follow-up after it.
 func TestAMessageSentDuringTheMeetingDoesNotSettleIt(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	s := storeAddressing(e, readerAddress)
 	contact := e.customerAt(t, "customer")
@@ -115,6 +119,7 @@ func TestAMessageSentDuringTheMeetingDoesNotSettleIt(t *testing.T) {
 // whether or not anyone reported it held. One still to come, a canceled one
 // and a no-show settle nothing.
 func TestALaterMeetingInTouchSettlesAMeetingFollowUp(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	s := storeAddressing(e, readerAddress)
 

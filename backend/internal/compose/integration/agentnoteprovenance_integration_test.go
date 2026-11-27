@@ -65,6 +65,7 @@ func riskNote(ctx context.Context, t *testing.T, e *Env, body string) (datasourc
 }
 
 func TestAToolReadSaysAnAssistantWroteItsNote(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	assistant := e.AgentFor(t, e.AdminUser, nil, AdminPerms)
 
@@ -90,6 +91,7 @@ func TestAToolReadSaysAnAssistantWroteItsNote(t *testing.T) {
 }
 
 func TestAToolReadSaysNoAssistantWroteATypedNote(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	created, err := riskNote(e.Admin(), t, e, "Spoke to them at the fair.")
 	if err != nil {
@@ -103,6 +105,7 @@ func TestAToolReadSaysNoAssistantWroteATypedNote(t *testing.T) {
 }
 
 func TestAScheduledRunsNoteWithoutABodyIsRefused(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	run := principal.WithAgentRunID(e.AgentFor(t, e.AdminUser, nil, AdminPerms), ids.NewV7())
 

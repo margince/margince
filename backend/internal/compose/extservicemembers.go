@@ -51,7 +51,7 @@ func EnsureExtensionServiceMembers(ctx context.Context, pool *pgxpool.Pool, log 
 		log.Info("extension service members not made: the installation has not described its company yet")
 		return nil
 	}
-	made, err := identity.NewService(pool).EnsureServiceMembers(ctx, want)
+	made, err := IdentityService(pool).EnsureServiceMembers(ctx, want)
 	if err != nil {
 		return err
 	}

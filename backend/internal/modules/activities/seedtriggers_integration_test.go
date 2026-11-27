@@ -7,15 +7,17 @@ package activities
 
 import (
 	"context"
-	"os"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/platform/testdb"
 )
 
 // The seed skips triggers for its own inserts only. A caller's later writes
 // in the same transaction, and every other connection, must still run them.
 func TestSeedingAMailboxSkipsNoTriggerBeyondItsOwnInserts(t *testing.T) {
+	t.Parallel()
 	e := setupPromises(t)
 	ctx := context.Background()
 	tx, err := e.owner.Begin(ctx)
@@ -27,7 +29,7 @@ func TestSeedingAMailboxSkipsNoTriggerBeyondItsOwnInserts(t *testing.T) {
 			t.Errorf("rolling back the seeded mailbox: %v", err)
 		}
 	})
-	other, err := pgx.Connect(ctx, os.Getenv("MARGINCE_TEST_DSN"))
+	other, err := pgx.Connect(ctx, testdb.For(t).OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}

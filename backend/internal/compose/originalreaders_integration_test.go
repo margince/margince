@@ -22,6 +22,7 @@ import (
 )
 
 func TestMailCopyRepairKeepsTheIdentityOfAnOffloadedOriginal(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	blob := &failingOriginalBlob{Store: blobstore.NewMemory()}
 	ctx := originalstore.Bind(e.Admin(), e.DB(), blob)

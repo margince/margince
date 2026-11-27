@@ -101,6 +101,7 @@ func (e movePipelineEnv) stored(t *testing.T) movedRow {
 }
 
 func TestMovingToAnotherPipelineLandsOnItsFirstOpenStageAndUndoReturns(t *testing.T) {
+	t.Parallel()
 	e := setupMovePipelineEnv(t)
 	before := e.stored(t)
 
@@ -137,6 +138,7 @@ func TestMovingToAnotherPipelineLandsOnItsFirstOpenStageAndUndoReturns(t *testin
 }
 
 func TestAnUndoIsRefusedOnceTheDealMovedSince(t *testing.T) {
+	t.Parallel()
 	e := setupMovePipelineEnv(t)
 	if _, err := e.store.MoveDealToPipeline(e.asDealWriter(), e.deal, MoveDealPipelineInput{PipelineID: e.target}); err != nil {
 		t.Fatalf("moving the deal: %v", err)
@@ -153,12 +155,14 @@ func TestAnUndoIsRefusedOnceTheDealMovedSince(t *testing.T) {
 }
 
 func TestAnUndoIsRefusedWhenNoMoveBetweenPipelinesIsLatest(t *testing.T) {
+	t.Parallel()
 	e := setupMovePipelineEnv(t)
 	_, err := e.store.UndoDealPipelineMove(e.asDealWriter(), e.deal, nil)
 	requireFault(t, err, "move_not_undoable")
 }
 
 func TestAStaleVersionIsAConflictBeforeAnyRefusal(t *testing.T) {
+	t.Parallel()
 	e := setupMovePipelineEnv(t)
 	stale := int64(999)
 	for name, in := range map[string]MoveDealPipelineInput{
@@ -177,6 +181,7 @@ func TestAStaleVersionIsAConflictBeforeAnyRefusal(t *testing.T) {
 }
 
 func TestADealWithUnmetExitCriteriaMovesAndTheFirstGatedStageIsEntered(t *testing.T) {
+	t.Parallel()
 	e := setupMovePipelineEnv(t)
 	addCriterion(t, e.configEnv, e.sourceStage, "buyer_confirmed")
 	if _, err := e.store.CreateStageExitCriterion(e.as(), CreateCriterionInput{
@@ -229,6 +234,7 @@ func (e movePipelineEnv) moveBehindLock(t *testing.T, change func(tx pgx.Tx)) er
 }
 
 func TestARetirementThatRacesAMoveIsHonoured(t *testing.T) {
+	t.Parallel()
 	e := setupMovePipelineEnv(t)
 	err := e.moveBehindLock(t, func(tx pgx.Tx) {
 		if _, err := tx.Exec(t.Context(), `UPDATE pipeline SET archived_at = now() WHERE id = $1`, e.target); err != nil {
@@ -242,6 +248,7 @@ func TestARetirementThatRacesAMoveIsHonoured(t *testing.T) {
 }
 
 func TestAReorderThatRacesAMoveChoosesTheNewFirstStage(t *testing.T) {
+	t.Parallel()
 	e := setupMovePipelineEnv(t)
 	later := e.stageNamed(t, e.target, "Later")
 	if err := e.moveBehindLock(t, func(tx pgx.Tx) {
@@ -257,6 +264,7 @@ func TestAReorderThatRacesAMoveChoosesTheNewFirstStage(t *testing.T) {
 }
 
 func TestMovingToAnotherPipelineIsRefusedWhenItCannotHold(t *testing.T) {
+	t.Parallel()
 	e := setupMovePipelineEnv(t)
 	noOpen := e.pipelineWith(t)
 	retired := e.pipelineWith(t, StageInput{Name: "Open", Position: 0, Semantic: string(SemanticOpen), WinProbability: 10})
@@ -284,6 +292,7 @@ func TestMovingToAnotherPipelineIsRefusedWhenItCannotHold(t *testing.T) {
 }
 
 func TestAClosedDealStaysInItsPipeline(t *testing.T) {
+	t.Parallel()
 	e := setupMovePipelineEnv(t)
 	lost := e.stageNamed(t, e.source, "Lost")
 	code := "other"
@@ -295,6 +304,7 @@ func TestAClosedDealStaysInItsPipeline(t *testing.T) {
 }
 
 func TestMovingPipelineNeedsWriteOnTheDeal(t *testing.T) {
+	t.Parallel()
 	e := setupMovePipelineEnv(t)
 	_, err := e.store.MoveDealToPipeline(e.asScopedStranger(), e.deal, MoveDealPipelineInput{PipelineID: e.target})
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {

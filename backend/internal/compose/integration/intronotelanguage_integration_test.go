@@ -59,6 +59,7 @@ func seedInboundGerman(t *testing.T, e *apptest.AppEnv, contact ids.UUID, body s
 }
 
 func TestTheIntroNoteIsWrittenInTheLanguageTheContactWroteIn(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	seat := bootstrapSeat(t, e)
@@ -98,6 +99,7 @@ func TestTheIntroNoteIsWrittenInTheLanguageTheContactWroteIn(t *testing.T) {
 
 // With nothing the contact has written, the note falls back and says so.
 func TestAnIntroNoteWithNoCorrespondenceSaysTheLanguageIsUndetermined(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	seat := bootstrapSeat(t, e)

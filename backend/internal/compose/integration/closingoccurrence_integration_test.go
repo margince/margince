@@ -22,6 +22,7 @@ import (
 )
 
 func TestAClosingOccurrenceNamesTheMoveThatClosedTheDeal(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, won := DealFixture(t, e)
 	admin := e.Admin()
@@ -59,6 +60,7 @@ func TestAClosingOccurrenceNamesTheMoveThatClosedTheDeal(t *testing.T) {
 
 // The case the whole design exists for.
 func TestReopeningAndReclosingIsADifferentClosing(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, won := DealFixture(t, e)
 	admin := e.Admin()
@@ -107,6 +109,7 @@ func TestReopeningAndReclosingIsADifferentClosing(t *testing.T) {
 // could be passing because the occurrence changes on any write at all, which
 // would make every review stale the moment somebody fixed a typo.
 func TestAnUnrelatedEditLeavesTheClosingWhereItIs(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, won := DealFixture(t, e)
 	admin := e.Admin()

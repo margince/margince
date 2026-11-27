@@ -20,6 +20,7 @@ import (
 )
 
 func TestAllowanceWriteIsLiveAuditedAndRevisionGuarded(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	store := ai.NewAdminStore(e.DB(), NewSettingsStore(e.Pool), StoredConfig(e.Pool), budgetFullUsers, aiDeferredWork(e.Pool))
@@ -69,6 +70,7 @@ func TestAllowanceWriteIsLiveAuditedAndRevisionGuarded(t *testing.T) {
 }
 
 func TestConcurrentAllowanceEditsHaveOneWinner(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	store := ai.NewAdminStore(e.DB(), NewSettingsStore(e.Pool), StoredConfig(e.Pool), budgetFullUsers, aiDeferredWork(e.Pool))
 	before, err := store.ReadBudget(e.Admin())
@@ -102,6 +104,7 @@ func TestConcurrentAllowanceEditsHaveOneWinner(t *testing.T) {
 }
 
 func TestAllowanceAndAuditRollBackWhenItsEventCannotCommit(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	store := ai.NewAdminStore(e.DB(), NewSettingsStore(e.Pool), StoredConfig(e.Pool), budgetFullUsers, aiDeferredWork(e.Pool))
@@ -113,11 +116,6 @@ func TestAllowanceAndAuditRollBackWhenItsEventCannotCommit(t *testing.T) {
 	if _, err := owner.Exec(ctx, `ALTER TABLE event_outbox ADD CONSTRAINT refuse_budget_test CHECK (envelope->>'type' <> 'ai_budget.updated') NOT VALID`); err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() {
-		if _, err := owner.Exec(context.Background(), `ALTER TABLE event_outbox DROP CONSTRAINT refuse_budget_test`); err != nil {
-			t.Error(err)
-		}
-	})
 	_, err = store.ReplaceBudget(ctx, ai.BudgetChange{ExpectedRevision: before.Revision, Config: ai.BudgetConfig{TokensPerFullUser: 1234}})
 	if err == nil {
 		t.Fatal("outbox refusal did not abort the change")

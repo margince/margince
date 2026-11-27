@@ -181,6 +181,7 @@ func (e *closeDateEnv) addAddressParticipant(t *testing.T, dealID ids.UUID, addr
 // every quiet deal — a sentence with no fact in it. It must name who is
 // waiting, and it must say the silence is ours to break.
 func TestQuietReviewNamesTheContactWhoIsWaitingForAReply(t *testing.T) {
+	t.Parallel()
 	e := setupCloseDate(t)
 	e.grantOwnerRealPermissions(t, e.Rep1)
 	id := e.seedSweepDeal(t, "Gone quiet", e.late, new(95), new(-30), 90)
@@ -206,6 +207,7 @@ func TestQuietReviewNamesTheContactWhoIsWaitingForAReply(t *testing.T) {
 // The other direction is a different finding and a different next action: the
 // prospect went cold, and nobody here dropped anything.
 func TestQuietReviewSaysWeGotNoReplyWhenWeWroteLast(t *testing.T) {
+	t.Parallel()
 	e := setupCloseDate(t)
 	e.grantOwnerRealPermissions(t, e.Rep1)
 	id := e.seedSweepDeal(t, "No reply", e.late, new(95), new(-30), 90)
@@ -225,6 +227,7 @@ func TestQuietReviewSaysWeGotNoReplyWhenWeWroteLast(t *testing.T) {
 // A deal with no correspondence at all still gets a reason, and it says so
 // rather than inventing one.
 func TestQuietReviewSaysSoWhenThereIsNoCorrespondence(t *testing.T) {
+	t.Parallel()
 	e := setupCloseDate(t)
 	// The owner is granted for real: without a grant the review would refuse the
 	// read and fall back, which is a DIFFERENT sentence with its own test. This
@@ -248,6 +251,7 @@ func TestQuietReviewSaysSoWhenThereIsNoCorrespondence(t *testing.T) {
 // than under the sweep's own unbounded system principal, which would resolve
 // any name in the workspace into a payload other contacts later read.
 func TestQuietReviewOnAnUnownedDealNamesNobody(t *testing.T) {
+	t.Parallel()
 	e := setupCloseDate(t)
 	id := e.seedSweepDeal(t, "Orphaned", e.late, new(95), new(-30), 90)
 	e.seedDealEmail(t, id, "inbound", "Anna Weber", 90)
@@ -274,6 +278,7 @@ func TestQuietReviewOnAnUnownedDealNamesNobody(t *testing.T) {
 // reader can check against the thread and find misleading, so group
 // correspondence reports its dates with no name attached.
 func TestQuietReviewNamesNobodyOnGroupCorrespondence(t *testing.T) {
+	t.Parallel()
 	e := setupCloseDate(t)
 	e.grantOwnerRealPermissions(t, e.Rep1)
 	id := e.seedSweepDeal(t, "Group thread", e.late, new(95), new(-30), 90)
@@ -301,6 +306,7 @@ func TestQuietReviewNamesNobodyOnGroupCorrespondence(t *testing.T) {
 // share — the same misnaming the group rule exists to prevent, reached by the
 // half of the data that is easy to forget.
 func TestQuietReviewCountsUnmatchedAddressesAsParticipants(t *testing.T) {
+	t.Parallel()
 	e := setupCloseDate(t)
 	e.grantOwnerRealPermissions(t, e.Rep1)
 	id := e.seedSweepDeal(t, "Mixed thread", e.late, new(95), new(-30), 90)
@@ -329,6 +335,7 @@ func TestQuietReviewCountsUnmatchedAddressesAsParticipants(t *testing.T) {
 // correspondence, who it was with belongs to the contact record, and losing the
 // second is no reason to throw away the first.
 func TestQuietReviewWithoutContactReadGivesDatesButNoName(t *testing.T) {
+	t.Parallel()
 	e := setupCloseDate(t)
 	e.grantOwnerWithoutContacts(t, e.Rep1)
 	id := e.seedSweepDeal(t, "Gone quiet", e.late, new(95), new(-30), 90)
@@ -352,6 +359,7 @@ func TestQuietReviewWithoutContactReadGivesDatesButNoName(t *testing.T) {
 // only the first, so an owner with no activity grant would otherwise still have
 // their correspondence read and its dates written into the card.
 func TestQuietReviewWithoutActivityReadReadsNoCorrespondence(t *testing.T) {
+	t.Parallel()
 	e := setupCloseDate(t)
 	e.grantOwnerRole(t, e.Rep1, `{"objects":{"deal":{"read":true,"update":true},
 		   "contact":{"read":true},"company":{"read":true}},"row_scope":"all"}`)
@@ -376,6 +384,7 @@ func TestQuietReviewWithoutActivityReadReadsNoCorrespondence(t *testing.T) {
 // The quiet tier repairs an overdue date to a future estimate. A valid future
 // date is retained; only a replacement should be marked provisional.
 func TestQuietReviewRedatesAwayFromTheDateTheDealCarried(t *testing.T) {
+	t.Parallel()
 	e := setupCloseDate(t)
 	originalDate := today().AddDate(0, 0, -30)
 	id := e.seedSweepDeal(t, "Gone quiet", e.late, new(95), new(-30), 90)
@@ -403,6 +412,7 @@ func TestQuietReviewRedatesAwayFromTheDateTheDealCarried(t *testing.T) {
 // forecast and what tells the reader the number came from a sweep rather than
 // from them.
 func TestAQuietRedateIsMarkedProvisional(t *testing.T) {
+	t.Parallel()
 	e := setupCloseDate(t)
 	id := e.seedSweepDeal(t, "Gone quiet", e.late, new(95), new(-30), 90)
 
@@ -424,6 +434,7 @@ func TestAQuietRedateIsMarkedProvisional(t *testing.T) {
 // who inherits the deal would otherwise be handed a name they were never
 // entitled to see, by a panel that exists to be trusted.
 func TestAReceiptOnAnInheritedDealWithholdsTheReasonItWasComposedFor(t *testing.T) {
+	t.Parallel()
 	e := setupCloseDate(t)
 	e.grantOwnerRealPermissions(t, e.Rep1)
 	id := e.seedSweepDeal(t, "Handed over", e.late, new(95), new(-30), 90)

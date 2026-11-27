@@ -19,7 +19,7 @@ import (
 func TestJobMetricsNameTheWorkspaceThatOwnsTheWorkAndLeaveItEmptyForADispatcher(t *testing.T) {
 	ws := "6f1a0d64-9d3f-4d63-9c4a-2f0f3b8a1c77"
 	var buf bytes.Buffer
-	if err := writeJobMetrics(&buf, jobs.Snapshot{Rows: []jobs.StateRow{
+	if err := writeJobMetrics(&buf, jobs.Composed{}, jobs.Snapshot{Rows: []jobs.StateRow{
 		{Queue: "default", Kind: "tenant_pass", WorkspaceID: ws, State: "available", Count: 2},
 		{Queue: "default", Kind: "the_dispatcher", Untenanted: true, State: "available", Count: 1},
 	}}); err != nil {
@@ -44,7 +44,7 @@ func TestJobMetricsNameTheWorkspaceThatOwnsTheWorkAndLeaveItEmptyForADispatcher(
 // catch.
 func TestQueueDepthSumsEveryStateAJobCanBeWaitingIn(t *testing.T) {
 	var buf bytes.Buffer
-	if err := writeJobMetrics(&buf, jobs.Snapshot{Rows: []jobs.StateRow{
+	if err := writeJobMetrics(&buf, jobs.Composed{}, jobs.Snapshot{Rows: []jobs.StateRow{
 		{Queue: "default", Kind: "k", Untenanted: true, State: "available", Count: 1},
 		{Queue: "default", Kind: "k", Untenanted: true, State: "scheduled", Count: 2},
 		{Queue: "default", Kind: "k", Untenanted: true, State: "retryable", Count: 4},
@@ -67,7 +67,7 @@ func TestQueueDepthSumsEveryStateAJobCanBeWaitingIn(t *testing.T) {
 // or which kind is actually running, needs the kind on the wire too.
 func TestQueueDepthAndRunningAreKeyedByKindToo(t *testing.T) {
 	var buf bytes.Buffer
-	if err := writeJobMetrics(&buf, jobs.Snapshot{Rows: []jobs.StateRow{
+	if err := writeJobMetrics(&buf, jobs.Composed{}, jobs.Snapshot{Rows: []jobs.StateRow{
 		{Queue: "default", Kind: "site_deep_read", Untenanted: true, State: "available", Count: 3},
 		{Queue: "default", Kind: "geocode_lookup", Untenanted: true, State: "available", Count: 5},
 		{Queue: "default", Kind: "site_deep_read", Untenanted: true, State: "running", Count: 1},
@@ -93,7 +93,7 @@ func TestQueueDepthAndRunningAreKeyedByKindToo(t *testing.T) {
 // will never run" is a question about the kind, not the lane it sat in.
 func TestDiscardedAndCancelledAreReportedApartAndKeyedByKind(t *testing.T) {
 	var buf bytes.Buffer
-	if err := writeJobMetrics(&buf, jobs.Snapshot{Rows: []jobs.StateRow{
+	if err := writeJobMetrics(&buf, jobs.Composed{}, jobs.Snapshot{Rows: []jobs.StateRow{
 		{Queue: "default", Kind: "retention", Untenanted: true, State: "discarded", Count: 3},
 		{Queue: "default", Kind: "retention", Untenanted: true, State: "cancelled", Count: 5},
 	}}); err != nil {
@@ -117,7 +117,7 @@ func TestDiscardedAndCancelledAreReportedApartAndKeyedByKind(t *testing.T) {
 // work visible, not invisible.
 func TestAStateTheRendererHasNeverHeardOfIsReportedRatherThanDropped(t *testing.T) {
 	var buf bytes.Buffer
-	if err := writeJobMetrics(&buf, jobs.Snapshot{Rows: []jobs.StateRow{
+	if err := writeJobMetrics(&buf, jobs.Composed{}, jobs.Snapshot{Rows: []jobs.StateRow{
 		{Queue: "default", Kind: "k", Untenanted: true, State: "hibernating", Count: 7},
 	}}); err != nil {
 		t.Fatalf("writeJobMetrics: %v", err)
@@ -132,7 +132,7 @@ func TestAStateTheRendererHasNeverHeardOfIsReportedRatherThanDropped(t *testing.
 // read rather than the worst would make the number depend on row order.
 func TestTheOldestQueuedAgeIsTheWorstCaseAcrossTheQueuesKinds(t *testing.T) {
 	var buf bytes.Buffer
-	if err := writeJobMetrics(&buf, jobs.Snapshot{Rows: []jobs.StateRow{
+	if err := writeJobMetrics(&buf, jobs.Composed{}, jobs.Snapshot{Rows: []jobs.StateRow{
 		{Queue: "default", Kind: "slow", Untenanted: true, State: "available", Count: 1, OldestRunnableAgeSeconds: new(900.0)},
 		{Queue: "default", Kind: "fast", Untenanted: true, State: "available", Count: 1, OldestRunnableAgeSeconds: new(5.0)},
 	}}); err != nil {
@@ -148,7 +148,7 @@ func TestTheOldestQueuedAgeIsTheWorstCaseAcrossTheQueuesKinds(t *testing.T) {
 // alert cannot compare them.
 func TestTheSweepPairIsRenderedPerFanOutKind(t *testing.T) {
 	var buf bytes.Buffer
-	if err := writeJobMetrics(&buf, jobs.Snapshot{Sweeps: []jobs.SweepPass{
+	if err := writeJobMetrics(&buf, jobs.Composed{}, jobs.Snapshot{Sweeps: []jobs.SweepPass{
 		{Kind: "privacy_retention_workspace", Workspaces: 42, Failed: 3},
 	}}); err != nil {
 		t.Fatalf("writeJobMetrics: %v", err)
@@ -170,7 +170,7 @@ func TestTheSweepPairIsRenderedPerFanOutKind(t *testing.T) {
 // it the two pairs are indistinguishable in a dashboard.
 func TestTheSweepUnitPairIsRenderedAtTheDeclaredGrain(t *testing.T) {
 	var buf bytes.Buffer
-	if err := writeJobMetrics(&buf, jobs.Snapshot{Units: []jobs.SweepUnit{
+	if err := writeJobMetrics(&buf, jobs.Composed{}, jobs.Snapshot{Units: []jobs.SweepUnit{
 		{Kind: "capture_sync", Unit: jobs.FanOutConnection, Units: 9, Failed: 2},
 	}}); err != nil {
 		t.Fatalf("writeJobMetrics: %v", err)
@@ -201,12 +201,12 @@ func TestEverySeriesIsWrittenInAStableOrder(t *testing.T) {
 		},
 	}
 	var first bytes.Buffer
-	if err := writeJobMetrics(&first, snap); err != nil {
+	if err := writeJobMetrics(&first, jobs.Composed{}, snap); err != nil {
 		t.Fatalf("writeJobMetrics: %v", err)
 	}
 	for range 20 {
 		var again bytes.Buffer
-		if err := writeJobMetrics(&again, snap); err != nil {
+		if err := writeJobMetrics(&again, jobs.Composed{}, snap); err != nil {
 			t.Fatalf("writeJobMetrics: %v", err)
 		}
 		if again.String() != first.String() {
@@ -227,7 +227,7 @@ func TestEverySeriesIsWrittenInAStableOrder(t *testing.T) {
 // be graphed before its first series exists.
 func TestAnEmptySnapshotWritesEveryFamilyHeaderAndNoSeries(t *testing.T) {
 	var buf bytes.Buffer
-	if err := writeJobMetrics(&buf, jobs.Snapshot{}); err != nil {
+	if err := writeJobMetrics(&buf, jobs.Composed{}, jobs.Snapshot{}); err != nil {
 		t.Fatalf("writeJobMetrics: %v", err)
 	}
 	for _, family := range []string{
@@ -274,7 +274,7 @@ func TestARefusedWriteSurfacesRatherThanBeingRenderedPast(t *testing.T) {
 	var everSucceeded bool
 	for n := range 256 {
 		w := &failingWriter{failOn: n, err: refused}
-		err := writeJobMetrics(w, snap)
+		err := writeJobMetrics(w, jobs.Composed{}, snap)
 		if err == nil {
 			everSucceeded = true
 			continue
@@ -310,7 +310,7 @@ func (w *failingWriter) Write(p []byte) (int, error) {
 // the one gauge meant to notice work is stuck.
 func TestAQueueHoldingOnlyDeadWorkReportsNoAgeAtAll(t *testing.T) {
 	var buf bytes.Buffer
-	if err := writeJobMetrics(&buf, jobs.Snapshot{Rows: []jobs.StateRow{
+	if err := writeJobMetrics(&buf, jobs.Composed{}, jobs.Snapshot{Rows: []jobs.StateRow{
 		{Queue: "graveyard", Kind: "k", Untenanted: true, State: "discarded", Count: 50},
 		{Queue: "graveyard", Kind: "k", Untenanted: true, State: "cancelled", Count: 2},
 	}}); err != nil {
@@ -331,7 +331,7 @@ func TestAQueueHoldingOnlyDeadWorkReportsNoAgeAtAll(t *testing.T) {
 // escape rejects the ENTIRE scrape — every metric, not the one series.
 func TestALabelValueCannotBreakTheWholeExposition(t *testing.T) {
 	var buf bytes.Buffer
-	if err := writeJobMetrics(&buf, jobs.Snapshot{Rows: []jobs.StateRow{
+	if err := writeJobMetrics(&buf, jobs.Composed{}, jobs.Snapshot{Rows: []jobs.StateRow{
 		{Queue: "default", Kind: "k", WorkspaceID: "a\tb\x00c", State: "available", Count: 1},
 		{Queue: `qu"ote`, Kind: "k", WorkspaceID: "x\ny", State: "available", Count: 1},
 		{Queue: "default", Kind: `back\slash`, WorkspaceID: "", State: "discarded", Count: 1},
@@ -368,7 +368,7 @@ func TestTheJobSectionWritesNothingWhenTheReadFails(t *testing.T) {
 	}
 	var buf bytes.Buffer
 
-	if err := jobMetricsSection(unreadable)(context.Background(), &buf); err != nil {
+	if err := jobMetricsSection(jobs.Composed{}, unreadable)(context.Background(), &buf); err != nil {
 		t.Fatalf("an unreadable section must not fail the whole scrape: %v", err)
 	}
 	if buf.Len() != 0 {
@@ -385,7 +385,7 @@ func TestTheJobSectionWritesNothingWhenTheReadFails(t *testing.T) {
 // surfaces must not disagree about the same table.
 func TestAQueueHoldingOnlyRunningWorkReportsNoAgeEither(t *testing.T) {
 	var buf bytes.Buffer
-	if err := writeJobMetrics(&buf, jobs.Snapshot{Rows: []jobs.StateRow{
+	if err := writeJobMetrics(&buf, jobs.Composed{}, jobs.Snapshot{Rows: []jobs.StateRow{
 		{Queue: "busy", Kind: "k", Untenanted: true, State: "running", Count: 4},
 	}}); err != nil {
 		t.Fatalf("writeJobMetrics: %v", err)
@@ -406,7 +406,7 @@ func TestAQueueHoldingOnlyRunningWorkReportsNoAgeEither(t *testing.T) {
 // the two surfaces at odds.
 func TestAQueueOfFutureScheduledWorkReportsNoAgeSeries(t *testing.T) {
 	var buf bytes.Buffer
-	if err := writeJobMetrics(&buf, jobs.Snapshot{Rows: []jobs.StateRow{
+	if err := writeJobMetrics(&buf, jobs.Composed{}, jobs.Snapshot{Rows: []jobs.StateRow{
 		{
 			Queue: "nightly", Kind: "k", Untenanted: true, State: "scheduled", Count: 4,
 			OldestRunnableAgeSeconds: nil,
@@ -429,7 +429,7 @@ func TestAQueueOfFutureScheduledWorkReportsNoAgeSeries(t *testing.T) {
 // be visible AS malformed instead of silently joining the dispatcher series.
 func TestAPresentButEmptyWorkspaceIsNotCountedAsADispatcher(t *testing.T) {
 	var buf bytes.Buffer
-	if err := writeJobMetrics(&buf, jobs.Snapshot{Rows: []jobs.StateRow{
+	if err := writeJobMetrics(&buf, jobs.Composed{}, jobs.Snapshot{Rows: []jobs.StateRow{
 		{Queue: "default", Kind: "k", Untenanted: true, State: "available", Count: 1},
 		// Present but empty: NOT untenanted, and not a real workspace either.
 		{Queue: "default", Kind: "k", WorkspaceID: "", Untenanted: false, State: "available", Count: 9},
@@ -454,7 +454,7 @@ func TestAPresentButEmptyWorkspaceIsNotCountedAsADispatcher(t *testing.T) {
 // is the exact failure the escaping exists to prevent.
 func TestTwoLabelsDifferingOnlyByAControlCharacterStayDistinct(t *testing.T) {
 	var buf bytes.Buffer
-	if err := writeJobMetrics(&buf, jobs.Snapshot{Rows: []jobs.StateRow{
+	if err := writeJobMetrics(&buf, jobs.Composed{}, jobs.Snapshot{Rows: []jobs.StateRow{
 		{Queue: "q", Kind: "k", WorkspaceID: "ab", State: "available", Count: 1},
 		{Queue: "q", Kind: "k", WorkspaceID: "a\tb", State: "available", Count: 2},
 	}}); err != nil {
@@ -483,7 +483,7 @@ func TestTwoLabelsDifferingOnlyByAControlCharacterStayDistinct(t *testing.T) {
 // being implied by the control-character test next door.
 func TestALiteralEscapeSequenceDoesNotCollideWithTheCharacterItEncodes(t *testing.T) {
 	var buf bytes.Buffer
-	if err := writeJobMetrics(&buf, jobs.Snapshot{Rows: []jobs.StateRow{
+	if err := writeJobMetrics(&buf, jobs.Composed{}, jobs.Snapshot{Rows: []jobs.StateRow{
 		{Queue: "q", Kind: "k", WorkspaceID: "<0x09>", State: "available", Count: 1},
 		{Queue: "q", Kind: "k", WorkspaceID: "\t", State: "available", Count: 2},
 	}}); err != nil {

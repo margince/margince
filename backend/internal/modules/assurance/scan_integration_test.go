@@ -16,7 +16,6 @@ package assurance
 import (
 	"context"
 	"errors"
-	"os"
 	"testing"
 	"time"
 
@@ -46,14 +45,9 @@ type scanEnv struct {
 
 func setupScan(t *testing.T) *scanEnv {
 	t.Helper()
-	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
-	appDSN := os.Getenv("MARGINCE_TEST_APP_DSN")
-	if ownerDSN == "" || appDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN not set — run `make db-up` " +
-			"(integration tests fail loudly, they never skip)")
-	}
+	db := testdb.New(t)
 	ctx := context.Background()
-	owner, err := pgx.Connect(ctx, ownerDSN)
+	owner, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -62,9 +56,6 @@ func setupScan(t *testing.T) *scanEnv {
 			t.Errorf("closing owner connection: %v", err)
 		}
 	})
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
 	typed := ids.New[ids.WorkspaceKind]()
 	e := &scanEnv{owner: owner, ws: typed.UUID, wsTyped: typed, rep: ids.NewV7()}
 	if _, err := owner.Exec(ctx, `INSERT INTO workspace (id) VALUES ($1)`, e.ws); err != nil {
@@ -75,7 +66,7 @@ func setupScan(t *testing.T) *scanEnv {
 		e.rep, "rep-"+e.rep.String()+"@assurance.test"); err != nil {
 		t.Fatal(err)
 	}
-	pool, err := testdb.Pool(ctx, appDSN)
+	pool, err := testdb.Pool(ctx, db.AppDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -475,8 +466,6 @@ func (e *scanEnv) seedDealOwnedBy(t *testing.T, owner ids.UUID) string {
 	if e.pipeline == ids.Nil {
 		e.pipeline, e.stage = ids.NewV7(), ids.NewV7()
 		if _, err := e.owner.Exec(ctx,
-			// Named for this env: pipeline names are unique estate-wide and
-			// these tests run in parallel against one database.
 			`INSERT INTO pipeline (id, name) VALUES ($1, $2)`,
 			e.pipeline, "Assurance "+e.pipeline.String()); err != nil {
 			t.Fatalf("seeding the pipeline: %v", err)

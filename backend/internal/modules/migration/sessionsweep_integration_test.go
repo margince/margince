@@ -35,6 +35,7 @@ type sweptRun struct {
 }
 
 func TestEachSweepRuleSettlesOnlyTheRunsItNames(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	const week = 7 * 24 * time.Hour
@@ -80,6 +81,7 @@ func TestEachSweepRuleSettlesOnlyTheRunsItNames(t *testing.T) {
 }
 
 func TestOneSweepPassSettlesAtMostOneBatch(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	for range sweepBatch + 1 {

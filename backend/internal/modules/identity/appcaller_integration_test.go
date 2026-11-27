@@ -37,6 +37,7 @@ func (e *revocationEnv) appPassports(t *testing.T, subject string) int {
 }
 
 func TestAnAppCallerGetsOnePassportForTheMemberItNames(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "app-caller-mint")
 	first, err := e.svc.AuthenticateAppCaller(e.appCtx(), e.appCaller("u-1", e.member.Email))
 	if err != nil {
@@ -67,6 +68,7 @@ func TestAnAppCallerGetsOnePassportForTheMemberItNames(t *testing.T) {
 }
 
 func TestARevokedAppPassportStaysRefused(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "app-caller-revoked")
 	agent, err := e.svc.AuthenticateAppCaller(e.appCtx(), e.appCaller("u-1", e.member.Email))
 	if err != nil {
@@ -84,6 +86,7 @@ func TestARevokedAppPassportStaysRefused(t *testing.T) {
 }
 
 func TestAChangedEmailIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "app-caller-email")
 	if _, err := e.svc.AuthenticateAppCaller(e.appCtx(), e.appCaller("u-1", e.member.Email)); err != nil {
 		t.Fatal(err)
@@ -101,6 +104,7 @@ func TestAChangedEmailIsRefused(t *testing.T) {
 }
 
 func TestAnAddressNoMemberHoldsHasNoSeat(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "app-caller-noseat")
 	if _, err := e.svc.AuthenticateAppCaller(e.appCtx(), e.appCaller("u-9", "nobody@elsewhere.test")); !errors.Is(err, ErrNoSeat) {
 		t.Fatalf("an unknown address answered %v, want ErrNoSeat", err)
@@ -111,6 +115,7 @@ func TestAnAddressNoMemberHoldsHasNoSeat(t *testing.T) {
 }
 
 func TestAnExpiredAppPassportIsRenewedForTheSameMemberOnly(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "app-caller-expired")
 	first, err := e.svc.AuthenticateAppCaller(e.appCtx(), e.appCaller("u-1", e.member.Email))
 	if err != nil {
@@ -138,6 +143,7 @@ func TestAnExpiredAppPassportIsRenewedForTheSameMemberOnly(t *testing.T) {
 }
 
 func TestAReleasedAppPassportLetsItsUserBeBoundAgain(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "app-caller-release")
 	agent, err := e.svc.AuthenticateAppCaller(e.appCtx(), e.appCaller("u-1", e.member.Email))
 	if err != nil {
@@ -167,6 +173,7 @@ func TestAReleasedAppPassportLetsItsUserBeBoundAgain(t *testing.T) {
 }
 
 func TestAnAdminMayReleaseAMembersAppPassport(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "app-caller-release-admin")
 	agent, err := e.svc.AuthenticateAppCaller(e.appCtx(), e.appCaller("u-1", e.member.Email))
 	if err != nil {

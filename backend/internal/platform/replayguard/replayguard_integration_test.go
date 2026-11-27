@@ -13,6 +13,7 @@ import (
 )
 
 func TestAReleasedIDCanBeUsedOnceMore(t *testing.T) {
+	t.Parallel()
 	guard := New(redistest.Client(t))
 	ctx := t.Context()
 	for i, want := range []bool{true, false} {

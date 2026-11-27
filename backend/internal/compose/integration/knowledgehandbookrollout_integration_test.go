@@ -55,6 +55,7 @@ func (ie *ingestEnv) pageStatus(t *testing.T, page ids.UUID) (status string, chu
 }
 
 func TestAPageReplacedWhileAnOlderWorkerIngestsItIsNotMarkedDoneByThatWorker(t *testing.T) {
+	t.Parallel()
 	ie := newIngestEnv(t)
 	page, current, _ := ie.filedHandbookPage(t)
 	old, err := ie.store.BeginIngest(ie.ctx, page)
@@ -91,6 +92,7 @@ func TestAPageReplacedWhileAnOlderWorkerIngestsItIsNotMarkedDoneByThatWorker(t *
 }
 
 func TestOnlyAReleaseMismatchFailureIsQueuedAgainByTheNextBoot(t *testing.T) {
+	t.Parallel()
 	ie := newIngestEnv(t)
 	page, current, q := ie.filedHandbookPage(t)
 	boot := func() []ids.UUID {
@@ -115,6 +117,7 @@ func TestOnlyAReleaseMismatchFailureIsQueuedAgainByTheNextBoot(t *testing.T) {
 }
 
 func TestADownloadOfAHandbookPageThisBinaryHoldsDifferentlyIsNotFound(t *testing.T) {
+	t.Parallel()
 	ie := newIngestEnv(t)
 	page, current, _ := ie.filedHandbookPage(t)
 	_, body, err := ie.store.OpenForDownload(ie.ctx, page)

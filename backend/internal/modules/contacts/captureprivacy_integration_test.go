@@ -22,7 +22,6 @@ package contacts
 import (
 	"context"
 	"errors"
-	"os"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -49,13 +48,9 @@ type privacyEnv struct {
 
 func setupCapturePrivacy(t *testing.T) *privacyEnv {
 	t.Helper()
-	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
-	appDSN := os.Getenv("MARGINCE_TEST_APP_DSN")
-	if ownerDSN == "" || appDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
+	db := testdb.New(t)
 	ctx := context.Background()
-	conn, err := pgx.Connect(ctx, ownerDSN)
+	conn, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -64,19 +59,6 @@ func setupCapturePrivacy(t *testing.T) *privacyEnv {
 			t.Errorf("closing owner connection: %v", err)
 		}
 	})
-	// To head before anything else touches this database: testdb.Pool refuses
-	// until EnsureSchema has run, and EnsureSchema still REBUILDS whenever it
-	// cannot prove the database is a fresh lane clone — so a seed written
-	// before it would be dropped rather than reset.
-	if err := testdb.EnsureSchema(ctx, conn); err != nil {
-		t.Fatal(err)
-	}
-	// Every test in this package seeds its own workspace into ONE database, so
-	// the separation between them has to be real: reset before seeding, as
-	// compose/integration's harness does.
-	if err := testdb.Reset(ctx, conn); err != nil {
-		t.Fatal(err)
-	}
 
 	e := &privacyEnv{
 		ws: ids.NewV7(), team: ids.NewV7(),
@@ -108,14 +90,12 @@ func setupCapturePrivacy(t *testing.T) *privacyEnv {
 		}
 	}
 
-	pool, err := testdb.Pool(ctx, appDSN)
+	pool, err := testdb.Pool(ctx, db.AppDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// Registered where the pool is handed out, before the test adds any cleanup
 	// of its own, so it runs last and sees a package that has genuinely stopped.
-	// The pool outlives the test now, so a goroutine still holding a connection
-	// would go on writing into the database the NEXT test just reset.
 	testdb.AssertPoolsQuiesced(t)
 	e.store = NewStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](e.ws))).
 		WithInstallationRenamer(ignoreInstallationName).WithSenderStamp(noSenderStamp)
@@ -198,6 +178,7 @@ func (e *privacyEnv) listsIt(ctx context.Context, t *testing.T, id ids.ContactID
 }
 
 func TestAnUnpromotedCapturedContactIsTheCapturingUsersAlone(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	captured := e.captureContact(t, "owner")
 
@@ -238,6 +219,7 @@ func TestAnUnpromotedCapturedContactIsTheCapturingUsersAlone(t *testing.T) {
 }
 
 func TestPromotionReleasesACapturedContactToTheWorkspace(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	// The same row, written 'workspace' — the state a human edit or approval
 	// promotes it into. Nothing else about the row differs, so a teammate
@@ -259,6 +241,7 @@ func TestPromotionReleasesACapturedContactToTheWorkspace(t *testing.T) {
 }
 
 func TestAnOutOfTeamRepReachesOnlyThePromotedRow(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	captured := e.captureContact(t, "owner")
 	promoted := e.captureContact(t, "workspace")

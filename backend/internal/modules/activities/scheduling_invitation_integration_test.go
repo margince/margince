@@ -81,6 +81,7 @@ func (c *invitationCalendar) Cancel(context.Context, ids.UserID, string, string,
 }
 
 func TestInvitationDeliveryKeepsOneActivityAndOneProviderIdentity(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	clock := time.Date(2026, 10, 5, 6, 0, 0, 0, time.UTC)
@@ -183,6 +184,7 @@ func TestInvitationDeliveryKeepsOneActivityAndOneProviderIdentity(t *testing.T) 
 }
 
 func TestAnInvitationOutsideTheCallersAudienceReadsAsNotFound(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	host := e.as(principal.RowScopeAll)
 	clock := time.Date(2026, 10, 5, 6, 0, 0, 0, time.UTC)
@@ -236,6 +238,7 @@ func TestAnInvitationOutsideTheCallersAudienceReadsAsNotFound(t *testing.T) {
 }
 
 func TestInvitationPolicyRejectsBusyAndOutOfHoursBeforeWriting(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	now := monday(6)

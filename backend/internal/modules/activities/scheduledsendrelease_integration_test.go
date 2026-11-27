@@ -19,6 +19,7 @@ import (
 // Moving a held message back to scheduled sends it at the new moment, so the
 // reschedule route asks the same question the held-message card does.
 func TestRescheduleReleasesAHeldMessageOnlyForWhoMaySendIt(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	id := scheduleBerlinSend(t, e)
 	store := draftStore(e)

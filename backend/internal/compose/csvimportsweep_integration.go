@@ -14,8 +14,6 @@ import (
 	"github.com/riverqueue/river/riverdriver/riverpgxv5"
 	"github.com/riverqueue/river/rivertest"
 	"github.com/riverqueue/river/rivertype"
-
-	"github.com/margince/margince/backend/internal/modules/identity"
 )
 
 // DriveImportRunSweepForTest runs one sweep pass through the production
@@ -26,7 +24,7 @@ func DriveImportRunSweepForTest(ctx context.Context, pool *pgxpool.Pool) error {
 	if err != nil {
 		return err
 	}
-	worker := &importRunSweepWorker{identity: identity.NewService(pool), pool: pool, log: slog.New(slog.DiscardHandler)}
+	worker := &importRunSweepWorker{identity: IdentityService(pool), pool: pool, log: slog.New(slog.DiscardHandler)}
 	return worker.Work(rivertest.WorkContext(ctx, client),
 		&river.Job[ImportRunSweepArgs]{JobRow: &rivertype.JobRow{Attempt: 1, MaxAttempts: 1}})
 }

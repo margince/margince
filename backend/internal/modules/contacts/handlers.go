@@ -25,12 +25,13 @@ import (
 	"github.com/margince/margince/backend/internal/platform/recordmerge"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/signature"
+	"github.com/margince/margince/backend/internal/shared/ports/companytypes"
 )
 
 type Handlers struct {
 	// locks reports the settings a boot source sets on each settings response;
 	// nil leaves the field out.
-	locks func(surface []config.Any) *[]crmcontracts.SettingLock
+	locks func(ctx context.Context, surface []config.Any) *[]crmcontracts.SettingLock
 	// stageMatches turns suggested LinkedIn matches into approvals. See
 	// WithMatchStager for why it is injected.
 	stageMatches func(context.Context) error
@@ -132,6 +133,13 @@ func (h Handlers) WithBlobstore(blob blobstore.Store) Handlers {
 // modules/customfields' Service here.
 func (h Handlers) WithFieldCatalog(catalog storekit.FieldCatalog) Handlers {
 	h.store = h.store.WithFieldCatalog(catalog)
+	return h
+}
+
+// WithCompanyTypes wires the composition's extension company types into the
+// transport's store (see Store.WithCompanyTypes).
+func (h Handlers) WithCompanyTypes(declared companytypes.Registry) Handlers {
+	h.store = h.store.WithCompanyTypes(declared)
 	return h
 }
 

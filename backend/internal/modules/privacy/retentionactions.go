@@ -21,6 +21,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/sweepreach"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	extdecl "github.com/margince/margince/backend/pkg/extension/privacy"
 )
@@ -186,8 +187,8 @@ func anonymizeContactRecord(ctx context.Context, tx pgx.Tx, id ids.UUID, eraser 
 		  source_author_name = NULL, greeting_register = NULL,
 		  anonymized_address_hashes = $3, anonymized_address_key_id = $4,
 		  archived_at = coalesce(archived_at, now())%s
-		WHERE id = $1`, nullColumnAssignments(contactCustom)), id, erasedName, addressHashes(subjectEmails),
-		storekit.SuppressionKeyID())
+		WHERE id = $1`, nullColumnAssignments(contactCustom)), id, erasedName, addressHashes(ctx, subjectEmails),
+		storekit.SuppressionKeyID(ctx))
 	if err == nil {
 		err = deleteConsentCredentials(ctx, tx, id)
 	}
@@ -218,7 +219,7 @@ func anonymizeContactRecord(ctx context.Context, tx pgx.Tx, id ids.UUID, eraser 
 		err = deleteIdentifyingSatellites(ctx, tx, id)
 	}
 	if err == nil {
-		err = purgeAnonymizedContactJudgments(ctx, tx, id, subjectEmails)
+		err = purgeAnonymizedContactJudgments(ctx, tx, eraser.extensions.Reach(), id, subjectEmails)
 	}
 	if err == nil {
 		// Against the addresses READ AT THE TOP, not a subquery over
@@ -256,32 +257,12 @@ func anonymizeContactRecord(ctx context.Context, tx pgx.Tx, id ids.UUID, eraser 
 	return err
 }
 
-func purgeAnonymizedContactJudgments(ctx context.Context, tx pgx.Tx, id ids.UUID, subjectEmails []string) error {
-	if err := redactSubjectReporting(ctx, tx, ids.From[ids.ContactKind](id), subjectEmails); err != nil {
-		return err
-	}
-	if err := redactIntroductionRequests(ctx, tx, ids.From[ids.ContactKind](id)); err != nil {
-		return err
-	}
-	// The cached brief is the broadest judgement of the set: a model's prose.
-	if err := purgeSubjectBriefCache(ctx, tx, ids.From[ids.ContactKind](id)); err != nil {
-		return err
-	}
-	if err := deleteSubjectRecordLinks(ctx, tx, id); err != nil {
-		return err
-	}
-	var err error
-	// The JUDGEMENTS made about them: what a classifier concluded their replies
-	// meant with every human correction of it, what was read out of their
-	// conversations as promised or asked or decided, and the handoffs naming
-	// them. The activity TEXT survives an anonymize — no floor applies — so a
-	// conclusion left beside those words goes on reading as a live claim about
-	// somebody the row no longer names, and a CLAIM carries the sentence it was
-	// read from, which makes it the subject's own words rather than only our
-	// reading of them.
-	if err == nil {
-		err = deleteReplyVerdictHistoryFor(ctx, tx, id)
-	}
+// deleteSubjectJudgements deletes what was concluded about a subject: reply
+// verdicts, claims read from their conversations, and handoffs naming them.
+// The activity text survives an anonymize, so a conclusion left beside it would
+// still read as a live claim about the subject.
+func deleteSubjectJudgements(ctx context.Context, tx pgx.Tx, id ids.UUID, subjectEmails []string) error {
+	err := deleteReplyVerdictHistoryFor(ctx, tx, id)
 	if err == nil {
 		err = deleteTagInterestReadsFor(ctx, tx, id)
 	}
@@ -297,6 +278,24 @@ func purgeAnonymizedContactJudgments(ctx context.Context, tx pgx.Tx, id ids.UUID
 	if err == nil {
 		err = deleteSubjectHandoffs(ctx, tx, id)
 	}
+	return err
+}
+
+func purgeAnonymizedContactJudgments(ctx context.Context, tx pgx.Tx, reached sweepreach.Set, id ids.UUID, subjectEmails []string) error {
+	if err := redactSubjectReporting(ctx, tx, ids.From[ids.ContactKind](id), subjectEmails); err != nil {
+		return err
+	}
+	if err := redactIntroductionRequests(ctx, tx, ids.From[ids.ContactKind](id)); err != nil {
+		return err
+	}
+	// The cached brief is the broadest judgement of the set: a model's prose.
+	if err := purgeSubjectBriefCache(ctx, tx, ids.From[ids.ContactKind](id)); err != nil {
+		return err
+	}
+	if err := deleteSubjectRecordLinks(ctx, tx, id); err != nil {
+		return err
+	}
+	err := deleteSubjectJudgements(ctx, tx, id, subjectEmails)
 	if err == nil {
 		// The contact alone: this anonymize leaves the leads it came from as
 		// they are, so their Shortlists stay theirs.
@@ -311,7 +310,7 @@ func purgeAnonymizedContactJudgments(ctx context.Context, tx pgx.Tx, id ids.UUID
 		// the two acts differ only by the suppression list. Nothing cascades to
 		// these rows. An anonymize that skipped them would leave the subject's
 		// name beside an "Erased Subject" record.
-		err = redactDeclaredTables(ctx, tx, ids.From[ids.ContactKind](id))
+		err = redactDeclaredTables(ctx, tx, reached, ids.From[ids.ContactKind](id))
 	}
 	if err == nil {
 		_, err = tx.Exec(ctx,

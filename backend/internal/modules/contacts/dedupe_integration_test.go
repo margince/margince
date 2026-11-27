@@ -15,7 +15,6 @@ package contacts
 import (
 	"context"
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -37,13 +36,9 @@ type dedupeEnv struct {
 
 func setupDedupe(t *testing.T) *dedupeEnv {
 	t.Helper()
-	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
-	appDSN := os.Getenv("MARGINCE_TEST_APP_DSN")
-	if ownerDSN == "" || appDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
+	db := testdb.New(t)
 	ctx := context.Background()
-	owner, err := pgx.Connect(ctx, ownerDSN)
+	owner, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -52,19 +47,6 @@ func setupDedupe(t *testing.T) *dedupeEnv {
 			t.Errorf("closing owner connection: %v", err)
 		}
 	})
-	// To head before anything else touches this database: testdb.Pool refuses
-	// until EnsureSchema has run, and EnsureSchema still REBUILDS whenever it
-	// cannot prove the database is a fresh lane clone — so a seed written
-	// before it would be dropped rather than reset.
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
-	// Every test in this package seeds its own workspace into ONE database, so
-	// the separation between them has to be real: reset before seeding, as
-	// compose/integration's harness does.
-	if err := testdb.Reset(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
 
 	e := &dedupeEnv{ws: ids.NewV7(), rep: ids.NewV7()}
 	if _, err := owner.Exec(ctx,
@@ -84,14 +66,12 @@ func setupDedupe(t *testing.T) *dedupeEnv {
 		t.Fatal(err)
 	}
 
-	pool, err := testdb.Pool(ctx, appDSN)
+	pool, err := testdb.Pool(ctx, db.AppDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// Registered where the pool is handed out, before the test adds any cleanup
 	// of its own, so it runs last and sees a package that has genuinely stopped.
-	// The pool outlives the test now, so a goroutine still holding a connection
-	// would go on writing into the database the NEXT test just reset.
 	testdb.AssertPoolsQuiesced(t)
 	e.store = NewStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](e.ws))).
 		WithInstallationRenamer(ignoreInstallationName).WithSenderStamp(noSenderStamp)
@@ -237,6 +217,7 @@ func (e *dedupeEnv) dedupeCompanyInTx(ctx context.Context, t *testing.T, c Compa
 }
 
 func TestDedupeContactExactTierFindsAClaimedEmail(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	janeID, _ := e.seedEmployedContact(ctx, t, "Jane Doe", "jane.doe@acme.test", "Acme GmbH", "acme.test")
@@ -256,6 +237,7 @@ func TestDedupeContactExactTierFindsAClaimedEmail(t *testing.T) {
 }
 
 func TestDedupeContactFuzzyTierReproducesTheSpecWorkedExamples(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	johnID, acmeID := e.seedEmployedContact(ctx, t, "John Doe", "john.doe@acme.test", "Acme GmbH", "acme.test")
@@ -314,6 +296,7 @@ func TestDedupeContactFuzzyTierReproducesTheSpecWorkedExamples(t *testing.T) {
 }
 
 func TestDedupeContactNamelessCandidateNeverFuzzyMatches(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	_, acmeID := e.seedEmployedContact(ctx, t, "John Doe", "john@nameless.test", "Nameless GmbH", "nameless.test")
@@ -330,6 +313,7 @@ func TestDedupeContactNamelessCandidateNeverFuzzyMatches(t *testing.T) {
 }
 
 func TestDedupeCompanyExactTierFindsAClaimedDomain(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	company, err := e.store.CreateCompany(ctx, CreateCompanyInput{
@@ -357,6 +341,7 @@ func TestDedupeCompanyExactTierFindsAClaimedDomain(t *testing.T) {
 // spelling. A provider claim carries whatever the vendor spelled, and the
 // company was filed under whatever its own site was read as.
 func TestABoughtEmployersDomainResolvesAcrossSpellings(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	company, err := e.store.CreateCompany(ctx, CreateCompanyInput{
@@ -385,6 +370,7 @@ func TestABoughtEmployersDomainResolvesAcrossSpellings(t *testing.T) {
 // since the constraint keys each spelling apart. Such a domain resolves to
 // neither: guessing between them states an employment nobody observed.
 func TestABoughtEmployersSplitDomainResolvesToNoCompany(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	if _, err := e.store.CreateCompany(ctx, CreateCompanyInput{
@@ -424,6 +410,7 @@ func TestABoughtEmployersSplitDomainResolvesToNoCompany(t *testing.T) {
 // of one internationalized domain are one domain, so the exact tier must route
 // to the company already holding the other one.
 func TestDedupeCompanyExactTierFindsTheOtherSpellingOfADomain(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	company, err := e.store.CreateCompany(ctx, CreateCompanyInput{
@@ -446,6 +433,7 @@ func TestDedupeCompanyExactTierFindsTheOtherSpellingOfADomain(t *testing.T) {
 }
 
 func TestDedupeCompanyFuzzyTierMeetsAcrossLegalSuffixes(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	company, err := e.store.CreateCompany(ctx, CreateCompanyInput{
@@ -509,6 +497,7 @@ func (e *dedupeEnv) asOther() context.Context {
 // A bought employment carries the bought title as its role, so the company's
 // contact list names it. An empty title leaves the role empty.
 func TestABoughtEmploymentCarriesItsTitleAsRole(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	company, err := e.store.CreateCompany(ctx, CreateCompanyInput{DisplayName: "Initech", Source: "manual"})

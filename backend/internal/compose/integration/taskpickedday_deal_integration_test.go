@@ -20,6 +20,7 @@ import (
 // The Progress work list gives a deal's next task its picked date, so a reader
 // in any zone prints the chosen day.
 func TestTheProgressWorkListCarriesATasksPickedDate(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	stages := apptest.DiscoverSeededPipeline(t, e)

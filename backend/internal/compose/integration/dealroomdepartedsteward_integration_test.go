@@ -15,6 +15,7 @@ import (
 )
 
 func TestADeactivatedStewardLeavesAVisibleRepairWithoutClosingTheBuyersRoom(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	e.DescribeCompany(t)
@@ -128,6 +129,7 @@ func TestADeactivatedStewardLeavesAVisibleRepairWithoutClosingTheBuyersRoom(t *t
 }
 
 func TestARoomWithoutAContactAsksForOne(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	dealID := apptest.CreateOpenDeal(t, e, apptest.DiscoverSeededPipeline(t, e))

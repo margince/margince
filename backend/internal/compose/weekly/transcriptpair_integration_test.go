@@ -23,6 +23,7 @@ import (
 // week. It counts once on its day and once held. Its follow-up is that
 // meeting's next step.
 func TestAMeetingAndItsTranscriptCountOnceInTheWeek(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 	now := clocktest.Now(t).UTC()
 	booked, subject, start := string(crmcontracts.ActivityMeetingStatusBooked), "Quarterly review", now.Add(-time.Hour)
@@ -79,6 +80,7 @@ func TestAMeetingAndItsTranscriptCountOnceInTheWeek(t *testing.T) {
 // Notes typed against a task, with no source_system and no outcome, are a
 // meeting of their own. The test for a transcript pair must not drop them.
 func TestAMeetingAnsweringATaskWithNoSourceSystemCountsInTheWeek(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 	now := clocktest.Now(t).UTC()
 	taskSubject, notes, start := "Call the buyer", "Buyer wants a demo.", now.Add(-time.Hour)

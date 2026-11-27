@@ -45,6 +45,7 @@ func setRunColumn(ctx context.Context, t *testing.T, db *database.DB, id RunID, 
 }
 
 func TestAnUndoSliceRefusesALeaseThatIsNotUndoing(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	commit := approvedRun(ctx, t, s)
@@ -59,6 +60,7 @@ func TestAnUndoSliceRefusesALeaseThatIsNotUndoing(t *testing.T) {
 }
 
 func TestAStaleUndoLeaseNeitherReversesNorFailsTheRun(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	current := undoingLease(ctx, t, s, "row-1")
@@ -80,6 +82,7 @@ func TestAStaleUndoLeaseNeitherReversesNorFailsTheRun(t *testing.T) {
 }
 
 func TestOnlyACommitOrAnUndoLeaseHasAFailedState(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	run := completeCSVRun(ctx, t, s)
@@ -94,6 +97,7 @@ func TestOnlyACommitOrAnUndoLeaseHasAFailedState(t *testing.T) {
 }
 
 func TestAnUndoingRunWithNoRecordedProgressNeitherSlicesNorRestarts(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	l := undoingLease(ctx, t, s, "row-1")
@@ -112,6 +116,7 @@ func TestAnUndoingRunWithNoRecordedProgressNeitherSlicesNorRestarts(t *testing.T
 }
 
 func TestAnUndoWhoseProgressCannotBeReadIsNotRestarted(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	l := undoingLease(ctx, t, s, "row-1")
@@ -143,6 +148,7 @@ func (w *cancellingUndoWriters) Reverse(ctx context.Context, object string, nati
 }
 
 func TestAnUndoStoppedMidSliceKeepsWhatItReversed(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	l := undoingLease(ctx, t, s, "row-1", "row-2", "row-3")

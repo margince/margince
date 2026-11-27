@@ -44,7 +44,7 @@ func NewSeatBudget(pool *pgxpool.Pool) ai.BudgetPolicy { return seatBudget{pool:
 func (b seatBudget) MonthlyTokenBudget(ctx context.Context, workspaceID ids.WorkspaceID) (int64, error) {
 	var monthly int64
 	err := database.WithWorkspaceTx(principal.WithWorkspaceID(ctx, workspaceID.UUID), b.pool, func(tx pgx.Tx) error {
-		budget, err := config.StoredApplyTx(ctx, tx, loadedConfig(), ai.BudgetSettings)
+		budget, err := config.StoredApplyTx(ctx, tx, loadedConfig(ctx), ai.BudgetSettings)
 		if err != nil {
 			return err
 		}

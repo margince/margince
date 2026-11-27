@@ -148,6 +148,7 @@ func (c *telegramEnv) assertNothingStored(t *testing.T, m businessMessage) {
 }
 
 func TestACustomerMessageAndTheOwnersReplyFileInOneThreadOnOneContact(t *testing.T) {
+	t.Parallel()
 	c := setupTelegramConnected(t)
 	runner, sub := newTelegramWorker(t, c, compose.JobRunnerConfig{})
 	startTelegramWorker(t, runner)
@@ -193,6 +194,7 @@ func TestACustomerMessageAndTheOwnersReplyFileInOneThreadOnOneContact(t *testing
 }
 
 func TestAMessageOnALinkThatIsNotConnectedStoresNothing(t *testing.T) {
+	t.Parallel()
 	for _, status := range []string{"pending_approval", "disconnected"} {
 		t.Run(status, func(t *testing.T) {
 			c := setupTelegramConnected(t)
@@ -209,6 +211,7 @@ func TestAMessageOnALinkThatIsNotConnectedStoresNothing(t *testing.T) {
 }
 
 func TestABusinessMessageNamingNoKnownLinkOrAGroupStoresNothing(t *testing.T) {
+	t.Parallel()
 	c := setupTelegramConnected(t)
 	runner, sub := newTelegramWorker(t, c, compose.JobRunnerConfig{})
 	startTelegramWorker(t, runner)
@@ -224,6 +227,7 @@ func TestABusinessMessageNamingNoKnownLinkOrAGroupStoresNothing(t *testing.T) {
 }
 
 func TestTwoBusinessAccountsOnOneBotKeepTheSameChatAndMessageIDApart(t *testing.T) {
+	t.Parallel()
 	c := setupTelegramConnected(t)
 	runner, sub := newTelegramWorker(t, c, compose.JobRunnerConfig{})
 	startTelegramWorker(t, runner)
@@ -248,6 +252,7 @@ func TestTwoBusinessAccountsOnOneBotKeepTheSameChatAndMessageIDApart(t *testing.
 }
 
 func TestAReconnectedAccountKeepsItsKeys(t *testing.T) {
+	t.Parallel()
 	c := setupTelegramConnected(t)
 	runner, sub := newTelegramWorker(t, c, compose.JobRunnerConfig{})
 	startTelegramWorker(t, runner)
@@ -274,6 +279,7 @@ func TestAReconnectedAccountKeepsItsKeys(t *testing.T) {
 }
 
 func TestABusinessThreadCannotBeRepliedToAndABotThreadCan(t *testing.T) {
+	t.Parallel()
 	c := setupTelegramConnected(t)
 	runner, sub := newTelegramWorker(t, c, compose.JobRunnerConfig{SendRegistry: c.sendRegistry()})
 	startTelegramWorker(t, runner)
@@ -318,6 +324,7 @@ func TestABusinessThreadCannotBeRepliedToAndABotThreadCan(t *testing.T) {
 }
 
 func TestAMessageToTheBotStillFilesInTheBotsOwnNamespace(t *testing.T) {
+	t.Parallel()
 	c := setupTelegramConnected(t)
 	runner, sub := newTelegramWorker(t, c, compose.JobRunnerConfig{})
 	startTelegramWorker(t, runner)
@@ -333,6 +340,7 @@ func TestAMessageToTheBotStillFilesInTheBotsOwnNamespace(t *testing.T) {
 }
 
 func TestALinkSwitchedOffAfterThePollAdmittedAMessageFilesNothingAndKeepsNoOriginal(t *testing.T) {
+	t.Parallel()
 	cases := map[string]string{
 		"owner turned it off": `UPDATE channel_connection SET status = 'disconnected' WHERE channel_id = $1`,
 		"admin disconnected":  `UPDATE channel_connection SET status = 'disconnected', archived_at = now() WHERE channel_id = $1`,
@@ -382,6 +390,7 @@ func TestALinkSwitchedOffAfterThePollAdmittedAMessageFilesNothingAndKeepsNoOrigi
 }
 
 func TestABatchAppliesALinkChangeBeforeAdmittingTheMessagesAfterIt(t *testing.T) {
+	t.Parallel()
 	const account, connection = 880061, "bc-order"
 	change := func(id int64, enabled bool) businessUpdate {
 		return businessUpdate{updateID: id, connectionID: connection, ownerID: account, firstName: "Ola", enabled: enabled}

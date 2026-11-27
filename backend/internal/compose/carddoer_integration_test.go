@@ -41,6 +41,7 @@ func stagedPromiseCard(t *testing.T) (*integration.Env, ids.ApprovalID, map[stri
 // The colleague who made a promise may hand it to a teammate as they accept
 // it. The task is the teammate's, and the card is spent.
 func TestTheAccepterHandsAPromiseToAColleague(t *testing.T) {
+	t.Parallel()
 	e, id, change := stagedPromiseCard(t)
 	e.GrantRole(t, e.Rep1, "rep")
 	change[approvals.DoerField] = e.Rep1.String()
@@ -65,6 +66,7 @@ func TestTheAccepterHandsAPromiseToAColleague(t *testing.T) {
 // The card names the colleague it will go to, read from the doer member: the
 // chosen one once the accepter picked somebody, else the promiser.
 func TestThePromiseCardNamesTheColleagueChosenToDoIt(t *testing.T) {
+	t.Parallel()
 	e, id, _ := stagedPromiseCard(t)
 	promiser := e.As(e.Rep2, []ids.UUID{e.Team1}, integration.AdminPerms)
 	card, err := NewApprovalsServiceWithEffects(e.Pool).GetWire(promiser, id)
@@ -98,6 +100,7 @@ func TestThePromiseCardNamesTheColleagueChosenToDoIt(t *testing.T) {
 // A colleague who cannot hold work is refused before the decision commits, so
 // the card stays pending and nothing is written.
 func TestAPromiseCannotBeHandedToAColleagueWhoLeft(t *testing.T) {
+	t.Parallel()
 	e, id, change := stagedPromiseCard(t)
 	e.WsExec(t, `UPDATE app_user SET status = 'deactivated' WHERE id = $1`, e.Rep1)
 	change[approvals.DoerField] = e.Rep1.String()
@@ -127,6 +130,7 @@ const teamDealPolicy = `{"objects":{"activity":{"create":true,"read":true,"updat
 // A colleague who cannot open the deal is refused. The task carries the deal's
 // name and its latest conversation. One not signed in yet is refused too.
 func TestTheDealOwnerHandsAFollowUpToAColleague(t *testing.T) {
+	t.Parallel()
 	for name, c := range map[string]struct {
 		prepare func(e *reconcileEnv) ids.UUID
 		refused bool
@@ -176,6 +180,7 @@ func TestTheDealOwnerHandsAFollowUpToAColleague(t *testing.T) {
 
 // Both card payloads name their doer in the one member approvals leaves free.
 func TestBothCardsNameTheirDoerInTheMemberApprovalsFrees(t *testing.T) {
+	t.Parallel()
 	for name, payload := range map[string]any{
 		"promise":   CommitmentTaskProposal{},
 		"follow-up": deals.FollowUpProposal{},

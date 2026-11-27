@@ -34,6 +34,7 @@ func (f *websiteReadFixture) liveItem(t *testing.T) aiactivity.Item {
 }
 
 func TestARunningWebsiteReadSurfacesItsPageCountWithoutATotal(t *testing.T) {
+	t.Parallel()
 	f := newWebsiteReadFixture(t)
 	claim, err := f.env.Contacts.BeginSiteRead(f.worker, f.readID, siteReadLease)
 	if err != nil {
@@ -71,6 +72,7 @@ func TestARunningWebsiteReadSurfacesItsPageCountWithoutATotal(t *testing.T) {
 }
 
 func TestASettledWebsiteReadCarriesNoCount(t *testing.T) {
+	t.Parallel()
 	f := newWebsiteReadFixture(t)
 	claim, err := f.env.Contacts.BeginSiteRead(f.worker, f.readID, siteReadLease)
 	if err != nil {
@@ -125,6 +127,7 @@ func (f *websiteReadFixture) facts(t *testing.T) siteReadFacts {
 }
 
 func TestProgressFromAReclaimedAttemptIsRefusedAndChangesNothing(t *testing.T) {
+	t.Parallel()
 	f := newWebsiteReadFixture(t)
 	first, err := f.env.Contacts.BeginSiteRead(f.worker, f.readID, siteReadLease)
 	if err != nil {
@@ -145,6 +148,7 @@ func TestProgressFromAReclaimedAttemptIsRefusedAndChangesNothing(t *testing.T) {
 }
 
 func TestAnInvalidLeaseMutatesNeitherTheDossierNorTheProjection(t *testing.T) {
+	t.Parallel()
 	f := newWebsiteReadFixture(t)
 	claim, err := f.env.Contacts.BeginSiteRead(f.worker, f.readID, siteReadLease)
 	if err != nil {
@@ -163,6 +167,7 @@ func TestAnInvalidLeaseMutatesNeitherTheDossierNorTheProjection(t *testing.T) {
 }
 
 func TestACrawlStartCommitsItsDossierLedgerAndOutboxRowsTogether(t *testing.T) {
+	t.Parallel()
 	f := newWebsiteReadFixture(t)
 	claim, err := f.env.Contacts.BeginSiteRead(f.worker, f.readID, siteReadLease)
 	if err != nil {

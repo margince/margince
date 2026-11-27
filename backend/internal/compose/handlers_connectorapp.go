@@ -66,6 +66,8 @@ type connectorAppHandlers struct {
 	// unitCallbackAPIBase and unitCallbackPublicBase build a unit app's
 	// callback URL from the bases the consent flow itself builds it from.
 	unitCallbackAPIBase, unitCallbackPublicBase string
+	// extensions is the composition whose units may declare an OAuth app.
+	extensions *Extensions
 }
 
 // composeEnvApp records the app THIS process was composed with for one vendor.
@@ -121,7 +123,7 @@ func (h connectorAppHandlers) ListOauthApps(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	providers := capture.AppProviders()
-	for _, app := range composedOAuthApps() {
+	for _, app := range h.extensions.oauthApps() {
 		providers = append(providers, capture.AppProvider(app.Provider))
 	}
 	list := crmcontracts.ConnectorAppList{Data: make([]crmcontracts.ConnectorApp, 0, len(providers))}
@@ -143,7 +145,7 @@ func (h connectorAppHandlers) view(ctx context.Context, p capture.AppProvider) (
 	if err != nil {
 		return crmcontracts.ConnectorApp{}, err
 	}
-	unit, app, isUnitApp := composedOAuthApp(string(p))
+	unit, app, isUnitApp := h.extensions.oauthApp(string(p))
 	composed := h.composed[p]
 	if isUnitApp {
 		composed = connectorAppComposition{}
@@ -159,7 +161,7 @@ func (h connectorAppHandlers) view(ctx context.Context, p capture.AppProvider) (
 	}
 	locks := []crmcontracts.SettingLock{}
 	// Built here, not by Locks: a connector app is no registered setting.
-	if lock, ok := h.envLock(p); ok {
+	if lock, ok := h.envLock(ctx, p); ok {
 		locks = append(locks, crmcontracts.SettingLock{Key: lock.Key, Origin: settingOrigin(lock.Origin)})
 	}
 	view.Locks = &locks
@@ -180,7 +182,7 @@ func (h connectorAppHandlers) SetOauthApp(w http.ResponseWriter, r *http.Request
 	if !httperr.Decode(w, r, &body) {
 		return
 	}
-	if err := h.locked(p); err != nil {
+	if err := h.locked(r.Context(), p); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
@@ -201,7 +203,7 @@ func (h connectorAppHandlers) DeleteOauthApp(w http.ResponseWriter, r *http.Requ
 	if !ok {
 		return
 	}
-	if err := h.locked(p); err != nil {
+	if err := h.locked(r.Context(), p); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
@@ -226,7 +228,7 @@ func (h connectorAppHandlers) ready(
 	if !h.authorize(w, r, action) {
 		return "", false
 	}
-	p, err := knownAppProvider(provider)
+	p, err := h.knownAppProvider(provider)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return "", false
@@ -243,8 +245,8 @@ func (h connectorAppHandlers) admit(w http.ResponseWriter, r *http.Request, acti
 }
 
 // knownAppProvider reads a core vendor or a composed unit's app off the wire.
-func knownAppProvider(provider string) (capture.AppProvider, error) {
-	if _, _, ok := composedOAuthApp(provider); ok {
+func (h connectorAppHandlers) knownAppProvider(provider string) (capture.AppProvider, error) {
+	if _, _, ok := h.extensions.oauthApp(provider); ok {
 		return capture.AppProvider(provider), nil
 	}
 	return capture.ParseAppProvider(provider)
@@ -295,8 +297,8 @@ var envAppSettings = map[capture.AppProvider]struct {
 // locked refuses a change to an app the deployment composed. That app is the
 // one every connect uses, so a stored one would be saved and never read. The
 // lock comes after the grant and the body, and before the value is judged.
-func (h connectorAppHandlers) locked(p capture.AppProvider) error {
-	if lock, ok := h.envLock(p); ok {
+func (h connectorAppHandlers) locked(ctx context.Context, p capture.AppProvider) error {
+	if lock, ok := h.envLock(ctx, p); ok {
 		return lock
 	}
 	return nil
@@ -304,12 +306,12 @@ func (h connectorAppHandlers) locked(p capture.AppProvider) error {
 
 // envLock is the lock the deployment's app puts on the stored one, named by
 // the client id's source. A read reports it and a write is refused with it.
-func (h connectorAppHandlers) envLock(p capture.AppProvider) (config.LockedError, bool) {
+func (h connectorAppHandlers) envLock(ctx context.Context, p capture.AppProvider) (config.LockedError, bool) {
 	if h.composed[p].envClientID == "" {
 		return config.LockedError{}, false
 	}
 	app := envAppSettings[p]
-	origin, set := loadedConfig().Locked(app.clientID.Key())
+	origin, set := loadedConfig(ctx).Locked(ctx, app.clientID.Key())
 	if !set {
 		origin = config.Origin{Source: config.SourceEnv, Name: app.clientID.Env()}
 	}

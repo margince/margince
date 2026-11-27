@@ -239,6 +239,7 @@ func starts(free []slot) []time.Time {
 }
 
 func TestATeamLinkOffersOnlyTheTimesEveryMemberIsFree(t *testing.T) {
+	t.Parallel()
 	f := newTeamFixture(t)
 	busy := f.colleague(t, "Busy Colleague")
 	f.calendar.busyOf[busy] = []connector.CalendarInterval{{Start: monday(10), End: monday(11)}}
@@ -280,6 +281,7 @@ func (f *teamFixture) invitationRow(t *testing.T, id ids.UUID) invitationRow {
 }
 
 func TestThreeMembersLeaveOnlyTheTimeNoneOfThemHolds(t *testing.T) {
+	t.Parallel()
 	f := newTeamFixture(t)
 	a, b, c := f.colleague(t, "A"), f.colleague(t, "B"), f.colleague(t, "C")
 	f.calendar.busyOf[a] = []connector.CalendarInterval{{Start: monday(9), End: monday(10)}}
@@ -294,6 +296,7 @@ func TestThreeMembersLeaveOnlyTheTimeNoneOfThemHolds(t *testing.T) {
 }
 
 func TestEachMemberIsReadInTheirOwnTimeZone(t *testing.T) {
+	t.Parallel()
 	f := newTeamFixture(t)
 	newYork, err := time.LoadLocation("America/New_York")
 	if err != nil {
@@ -311,6 +314,7 @@ func TestEachMemberIsReadInTheirOwnTimeZone(t *testing.T) {
 }
 
 func TestATeamLinkWaitsForEveryMemberToConfirm(t *testing.T) {
+	t.Parallel()
 	f := newTeamFixture(t)
 	first, second := f.colleague(t, "First"), f.colleague(t, "Second")
 	f.name(t, false, first, second)
@@ -369,6 +373,7 @@ func TestATeamLinkWaitsForEveryMemberToConfirm(t *testing.T) {
 // A member taken off the link has their request settled, and is asked again
 // when named again. The member kept on the list hears nothing new.
 func TestAMemberTakenOffTheLinkHasTheRequestSettled(t *testing.T) {
+	t.Parallel()
 	f := newTeamFixture(t)
 	kept, removed := f.colleague(t, "Kept"), f.colleague(t, "Removed")
 	f.name(t, false, kept, removed)
@@ -391,6 +396,7 @@ func memberStates(members []crmcontracts.SchedulingTeamMember) []string {
 }
 
 func TestTheOwnerCannotConfirmForAMember(t *testing.T) {
+	t.Parallel()
 	f := newTeamFixture(t)
 	member := f.colleague(t, "Member")
 	f.name(t, false, member)
@@ -413,6 +419,7 @@ func TestTheOwnerCannotConfirmForAMember(t *testing.T) {
 }
 
 func TestAMemberWhoLeftTheWorkspaceStopsTheLink(t *testing.T) {
+	t.Parallel()
 	f := newTeamFixture(t)
 	member := f.colleague(t, "Leaver")
 	f.name(t, true, member)
@@ -432,6 +439,7 @@ func TestAMemberWhoLeftTheWorkspaceStopsTheLink(t *testing.T) {
 }
 
 func TestOnlyAColleagueWithAReadableCalendarCanBeNamed(t *testing.T) {
+	t.Parallel()
 	f := newTeamFixture(t)
 	readable, unreadable := f.colleague(t, "Readable"), f.colleague(t, "Unreadable")
 	f.calendar.unreadable[unreadable] = true
@@ -449,6 +457,7 @@ func TestOnlyAColleagueWithAReadableCalendarCanBeNamed(t *testing.T) {
 }
 
 func TestTwoLinksCannotTakeOneMembersTime(t *testing.T) {
+	t.Parallel()
 	f := newTeamFixture(t)
 	member := f.colleague(t, "Shared")
 	f.name(t, true, member)
@@ -473,6 +482,7 @@ func TestTwoLinksCannotTakeOneMembersTime(t *testing.T) {
 // A time the member's own page took is not on any provider calendar yet. Only
 // the hold taken under the member's lock refuses the team booking.
 func TestATeamBookingRefusesATimeTheMembersOwnPageHolds(t *testing.T) {
+	t.Parallel()
 	f := newTeamFixture(t)
 	member := f.colleague(t, "Shared")
 	f.name(t, true, member)
@@ -487,6 +497,7 @@ func TestATeamBookingRefusesATimeTheMembersOwnPageHolds(t *testing.T) {
 }
 
 func TestATeamBookingClosesEachMembersOpenTask(t *testing.T) {
+	t.Parallel()
 	f := newTeamFixture(t)
 	member := f.colleague(t, "Member")
 	f.name(t, true, member)
@@ -533,6 +544,7 @@ func (f *teamFixture) move(meeting crmcontracts.MeetingInvitation, start time.Ti
 // The colleague's copy of the meeting has an event id of its own, so only its
 // time tells it apart from a meeting of theirs.
 func TestATeamMeetingMovesOverTheColleaguesOwnCopyOfIt(t *testing.T) {
+	t.Parallel()
 	f := newTeamFixture(t)
 	member := f.colleague(t, "Member")
 	f.name(t, true, member)
@@ -544,6 +556,7 @@ func TestATeamMeetingMovesOverTheColleaguesOwnCopyOfIt(t *testing.T) {
 }
 
 func TestAMoveIsRefusedWhileAColleaguesCalendarCannotBeRead(t *testing.T) {
+	t.Parallel()
 	f := newTeamFixture(t)
 	member := f.colleague(t, "Member")
 	f.name(t, true, member)
@@ -556,6 +569,7 @@ func TestAMoveIsRefusedWhileAColleaguesCalendarCannotBeRead(t *testing.T) {
 }
 
 func TestAMoveDropsAColleagueWhoLeftAfterTheBooking(t *testing.T) {
+	t.Parallel()
 	f := newTeamFixture(t)
 	member := f.colleague(t, "Leaver")
 	f.name(t, true, member)
@@ -570,6 +584,7 @@ func TestAMoveDropsAColleagueWhoLeftAfterTheBooking(t *testing.T) {
 }
 
 func TestDaylightSavingIsReadInEachColleaguesOwnZone(t *testing.T) {
+	t.Parallel()
 	f := newTeamFixture(t)
 	berlin, err := time.LoadLocation("Europe/Berlin")
 	if err != nil {
@@ -596,6 +611,7 @@ func TestDaylightSavingIsReadInEachColleaguesOwnZone(t *testing.T) {
 }
 
 func TestABookingOutsideAColleaguesHoursIsRefusedWithoutNamingThem(t *testing.T) {
+	t.Parallel()
 	f := newTeamFixture(t)
 	newYork, err := time.LoadLocation("America/New_York")
 	if err != nil {
@@ -621,6 +637,7 @@ func (f *teamFixture) openTeam(t *testing.T) []teamCalendar {
 }
 
 func TestADepartingColleagueIsMarkedOnEveryLinkThatNamesThem(t *testing.T) {
+	t.Parallel()
 	f := newTeamFixture(t)
 	member := f.colleague(t, "Leaver")
 	f.name(t, true, member)
@@ -640,6 +657,7 @@ func TestADepartingColleagueIsMarkedOnEveryLinkThatNamesThem(t *testing.T) {
 }
 
 func TestARescheduleReadsOnlyTheMembersStillOnTheLink(t *testing.T) {
+	t.Parallel()
 	f := newTeamFixture(t)
 	member := f.colleague(t, "Leaver")
 	f.name(t, true, member)
@@ -660,6 +678,7 @@ func TestARescheduleReadsOnlyTheMembersStillOnTheLink(t *testing.T) {
 // A booking takes its team from the page it opened. A member who leaves before
 // the booking commits is seen again under the page lock.
 func TestABookingRefusesAMemberWhoLeftAfterThePageOpened(t *testing.T) {
+	t.Parallel()
 	f := newTeamFixture(t)
 	member := f.colleague(t, "Leaver")
 	f.name(t, true, member)
@@ -679,6 +698,7 @@ func TestABookingRefusesAMemberWhoLeftAfterThePageOpened(t *testing.T) {
 // host is rescheduled. A move that took the host's lock first would hold it
 // while it waits, and the second lock below would never be granted.
 func TestARescheduleTakesItsLocksInTheBookingsOrder(t *testing.T) {
+	t.Parallel()
 	f := newTeamFixture(t)
 	member := f.colleagueWithID(t, "Early", ids.MustParse("00000000-0000-7000-8000-000000000001"))
 	f.name(t, true, member)
@@ -721,6 +741,7 @@ func TestARescheduleTakesItsLocksInTheBookingsOrder(t *testing.T) {
 
 // A colleague reads only their own request, as it stands on the live link.
 func TestOnlyTheNamedColleagueReadsTheirRequest(t *testing.T) {
+	t.Parallel()
 	f := newTeamFixture(t)
 	member := f.colleague(t, "Member")
 	f.name(t, false, member)

@@ -39,6 +39,7 @@ func seedHistoricalWorkedLead(ctx context.Context, t *testing.T, e *Env, contact
 // With no address to match it by, only the link finds it, so erasing the
 // contact has to follow the link or the copy outlives the erasure.
 func TestErasingAContactAnonymizesTheLeadWorkedFromIt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	title := "Head of Logistics"
 	contact, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{
@@ -72,6 +73,7 @@ func TestErasingAContactAnonymizesTheLeadWorkedFromIt(t *testing.T) {
 // Merging the contact a lead was worked from carries the link to the survivor,
 // so the survivor's page offers that lead instead of a second one.
 func TestAMergedContactsLeadIsWorkedFromTheSurvivor(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	source, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{FullName: "Dana Example", Source: "manual"})
 	if err != nil {
@@ -97,6 +99,7 @@ func TestAMergedContactsLeadIsWorkedFromTheSurvivor(t *testing.T) {
 // A lead merged into another hands over the contact it was worked from, so the
 // surviving lead is the one that contact is worked through.
 func TestAMergedLeadHandsItsContactToTheSurvivor(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contact, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{FullName: "Dana Example", Source: "manual"})
 	if err != nil {
@@ -123,6 +126,7 @@ func TestAMergedLeadHandsItsContactToTheSurvivor(t *testing.T) {
 // When both merged contacts were already worked through a live lead, the
 // merged-away one keeps its link, and erasing the survivor still reaches it.
 func TestErasingTheSurvivorReachesTheMergedAwayContactsLead(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	var contactIDs [2]ids.ContactID
 	var leadIDs [2]ids.UUID
@@ -159,6 +163,7 @@ func TestErasingTheSurvivorReachesTheMergedAwayContactsLead(t *testing.T) {
 // A reader who cannot open the contact a lead was worked from reads the lead
 // without its id, and cannot find the lead by it either.
 func TestALeadWithholdsAContactItsReaderCannotOpen(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	// Capture-private: only its owner opens it, whatever anybody else's scope.
 	private := ids.NewV7()

@@ -127,14 +127,14 @@ func (d extensionNoticeDoor) actingMemberCanOpen(ctx context.Context, in extensi
 	if err != nil {
 		return err
 	}
-	consented, err := memberConnectedTx(ctx, d.core.tx, d.core.unit, member)
+	consented, err := memberConnectedTx(ctx, d.core.tx, d.core.deps.composed, d.core.unit, member)
 	if err != nil {
 		return portRefusal(err)
 	}
 	if !consented {
 		return fmt.Errorf("%w: ActAs names a member who has not connected this unit or who has left", extension.ErrForbidden)
 	}
-	seat, err := identity.SeatActor(ctx, d.core.tx, member)
+	seat, err := identity.SeatActor(ctx, d.core.tx, d.core.deps.composed.RbacObjects(), member)
 	if err != nil {
 		return extension.ErrForbidden
 	}
@@ -190,7 +190,7 @@ func (d extensionNoticeDoor) deliver(ctx context.Context, in extension.NoticeReq
 	store := notices.NewStore(InstallationDB(d.core.deps.pool))
 	sent := 0
 	for _, user := range candidates {
-		seat, err := identity.SeatActor(ctx, d.core.tx, user)
+		seat, err := identity.SeatActor(ctx, d.core.tx, d.core.deps.composed.RbacObjects(), user)
 		if err != nil {
 			return 0, err
 		}

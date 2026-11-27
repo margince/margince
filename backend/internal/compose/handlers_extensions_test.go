@@ -145,15 +145,14 @@ func TestExtensionInventoryOfAVanillaInstallationIsEmptyNotNull(t *testing.T) {
 }
 
 // The accessor and the boot must agree. RegisterExtensions records the declared
-// set, and the inventory reads it back: without this, ComposedExtensions could
-// silently answer the previous boot's set (or none) and the handler would report
-// an installation that is not the one serving.
+// set in the composition it answers, and the inventory reads it back. Without
+// this, the handler could report an installation that is not the one serving.
 func TestRegisterExtensionsRecordsTheSetTheInventoryReadsBack(t *testing.T) {
-	t.Cleanup(func() { setComposedExtensions(nil) })
-	if err := RegisterExtensions(composableAll([]extension.Extension{{Name: "inv-unit", Version: "9.9.9"}}), nil, nil); err != nil {
+	composed, err := RegisterExtensions(composableAll([]extension.Extension{{Name: "inv-unit", Version: "9.9.9"}}), nil, nil)
+	if err != nil {
 		t.Fatalf("RegisterExtensions: %v", err)
 	}
-	got := ComposedExtensions()
+	got := composed.Units()
 	if len(got) != 1 || got[0].Name != "inv-unit" || got[0].Version != "9.9.9" {
 		t.Fatalf("ComposedExtensions() = %v, want the set RegisterExtensions was handed", got)
 	}
@@ -223,13 +222,13 @@ func TestASetupItemIsMissingUntilItsValueIsStored(t *testing.T) {
 // A unit that declares nothing to set up is ready, and the list says so with an
 // empty array rather than leaving the field out.
 func TestAUnitWithNothingToSetUpIsListedReady(t *testing.T) {
-	t.Cleanup(func() { setComposedExtensions(nil) })
-	setComposedExtensions([]extension.Extension{{Name: "plain", Version: "1.0.0"}})
+	t.Parallel()
+	composed := &Extensions{units: []extension.Extension{{Name: "plain", Version: "1.0.0"}}}
 	ctx := principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalHuman, Permissions: principal.Permissions{Objects: map[string]principal.ObjectGrant{"extension_access": {Read: true}}},
 	})
 	rec := httptest.NewRecorder()
-	extensionsHandlers{}.ListExtensions(rec, httptest.NewRequest(http.MethodGet, "/v1/extensions", nil).WithContext(ctx))
+	extensionsHandlers{extensions: composed}.ListExtensions(rec, httptest.NewRequest(http.MethodGet, "/v1/extensions", nil).WithContext(ctx))
 	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"setup_missing":[]`) {
 		t.Errorf("list → %d %s, want the unit with an empty setup_missing", rec.Code, rec.Body.String())
 	}
@@ -263,17 +262,17 @@ func TestASetupPartTheCallerMayNotReadIsLeftOut(t *testing.T) {
 // A reader with the inventory grant alone may read neither part, so the list
 // cannot call the unit ready and leaves the field out.
 func TestAnInventoryReaderIsNotToldWhetherAUnitIsReady(t *testing.T) {
-	t.Cleanup(func() { setComposedExtensions(nil) })
-	setComposedExtensions([]extension.Extension{{
+	t.Parallel()
+	composed := &Extensions{units: []extension.Extension{{
 		Name: "feed", Version: "1.0.0",
 		Secrets:   []extension.SecretsRequest{{Key: "api-key", Scope: extension.SecretScopeWorkspace}},
 		OAuthApps: []extension.OAuthApp{{Provider: "acme", Title: "Acme CRM"}},
-	}})
+	}}}
 	ctx := principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalHuman, Permissions: principal.Permissions{Objects: map[string]principal.ObjectGrant{"extension_access": {Read: true}}},
 	})
 	rec := httptest.NewRecorder()
-	extensionsHandlers{}.ListExtensions(rec, httptest.NewRequest(http.MethodGet, "/v1/extensions", nil).WithContext(ctx))
+	extensionsHandlers{extensions: composed}.ListExtensions(rec, httptest.NewRequest(http.MethodGet, "/v1/extensions", nil).WithContext(ctx))
 	if rec.Code != http.StatusOK || strings.Contains(rec.Body.String(), "setup_missing") {
 		t.Errorf("list → %d %s, want no setup_missing for a reader of neither setting", rec.Code, rec.Body.String())
 	}

@@ -39,6 +39,7 @@ func resolveInTx(t *testing.T, e *integration.Env, period CompanyRollupPeriod, a
 // installation's zone. The start months other than January share no boundary
 // with the calendar quarters, so a cut that ignored the setting fails them.
 func TestTheRollupWithNoPeriodSumsTheFiscalQuarterUnderWay(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	losAngeles, err := time.LoadLocation("America/Los_Angeles")
 	if err != nil {
@@ -90,6 +91,7 @@ func TestTheRollupWithNoPeriodSumsTheFiscalQuarterUnderWay(t *testing.T) {
 // A named period is read in the spelling the installation's reports render,
 // and steps to its neighbours in that spelling.
 func TestARolledUpPeriodIsReadInTheInstallationsSpelling(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	zone, err := time.LoadLocation("Asia/Ho_Chi_Minh")
 	if err != nil {
@@ -123,6 +125,7 @@ func TestARolledUpPeriodIsReadInTheInstallationsSpelling(t *testing.T) {
 // period that has not begun. Each names the parameter, rather than reading as
 // zero won sales.
 func TestARollupPeriodNoReportRendersIsRefused(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := time.Date(2026, 10, 30, 9, 0, 0, 0, time.UTC)
 	for _, tc := range []struct {

@@ -63,6 +63,7 @@ func calendarDescriptionEstimate(ctx context.Context, t *testing.T, e *integrati
 }
 
 func TestTheCalendarDescriptionTaskRendersOnlyStoredHTML(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 
@@ -193,6 +194,7 @@ func TestTheCalendarDescriptionTaskRendersOnlyStoredHTML(t *testing.T) {
 }
 
 func TestTheCalendarDescriptionTaskRollsBackWithItsProgress(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	stored := calendarHeader + "\n\n<p>Rollback agenda</p>"

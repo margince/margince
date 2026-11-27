@@ -22,6 +22,7 @@ import (
 )
 
 func TestSharedTrigramsKeepTheCandidateLimitAndItsIdOrder(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.plainContact(ctx, t, "Someone Else", "other@ranked.test")
@@ -154,6 +155,7 @@ func seedRankedContacts(t *testing.T, e *dedupeEnv, names ...string) []ids.UUID 
 }
 
 func TestRankedNamesPreserveReviewConfidenceAndTheRivalLimit(t *testing.T) {
+	t.Parallel()
 	for _, name := range []string{"Björn Example", "O'Hara Example"} {
 		t.Run(name, func(t *testing.T) {
 			e := setupDedupe(t)
@@ -184,6 +186,7 @@ func TestRankedNamesPreserveReviewConfidenceAndTheRivalLimit(t *testing.T) {
 }
 
 func TestEmployerDomainsHaveAStableOrderAtTheCandidateCut(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	contacts := seedRankedContacts(t, e, "Mara Example")

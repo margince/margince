@@ -26,6 +26,7 @@ import (
 )
 
 func TestAReviewedOldInquiryRunsOnceAfterItsEarlierUnmatchedEvent(t *testing.T) {
+	t.Parallel()
 	e := setupFormsApp(t)
 	form := createForm(t, e, integration.AnyMap{"name": "Inquiries", "sender": "browser", "allowed_origins": []string{siteOrigin}})
 	answer := browserPost(t, e, form.FormKey, url.Values{"email": {"old@visitor.example"}, "message": {"A private old question"}}, siteOrigin)

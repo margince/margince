@@ -29,6 +29,7 @@ import (
 // An all-day calendar event states a date, so it lands as a day meeting. The
 // meeting lane hands that on to the Worklist row.
 func TestAnAllDayCalendarEventIsADayMeeting(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	allDay, ok := meetingmap.AllDayStart(laneDay.Format(time.DateOnly))
 	if !ok {
@@ -87,6 +88,7 @@ func readMeetingTime(t *testing.T, e *integration.Env, id ids.UUID) (time.Time, 
 // meeting's anchor and its precision together. Both calendar doors do it: the
 // replay of a captured event and the move of one past the horizon.
 func TestAMeetingFollowsItsEventBetweenAnHourAndAWholeDay(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	id := captureMeeting(t, e, e.AdminUser)
 	ctx := calendarOwnerCtx(e, e.AdminUser)
@@ -175,6 +177,7 @@ func lastUpdate(t *testing.T, e *integration.Env, id ids.UUID) map[string]any {
 // An all-day event is stored at noon UTC of its date, whatever the installation
 // zone. In Auckland that noon is the next morning, and the date still holds.
 func TestAnAllDayEventIsStoredAtNoonUTCOfItsDate(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	e.WsExec(t, `UPDATE setting SET value = '"Pacific/Auckland"'::jsonb WHERE key = 'installation.timezone'`)
 	allDay, _ := meetingmap.AllDayStart("2026-03-09")

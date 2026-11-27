@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/chatlinks"
 	"github.com/margince/margince/backend/internal/modules/chatlinks/dispact"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/webhooks"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
@@ -51,6 +52,8 @@ type LiveChats struct {
 	DB    *database.DB
 	Vault func() keyvault.Vault
 	HTTP  dispact.HTTPDoer
+	// Rbac is the vocabulary a summary's readers are judged under.
+	Rbac identity.RbacObjects
 }
 
 // Open implements chatlinks.Chats.
@@ -125,8 +128,8 @@ func (c BotCheck) Confirm(ctx context.Context, address, token string) (capture.C
 }
 
 // Wire builds the chat links store and the session opener over db, with the
-// flush scheduled through enqueuer.
-func Wire(db *database.DB, vault func() keyvault.Vault, enqueuer Enqueuer, allowPrivate bool) (*chatlinks.Store, LiveChats) {
-	chats := LiveChats{DB: db, Vault: vault, HTTP: HTTPClient(allowPrivate)}
-	return chatlinks.NewStore(db, chats, enqueuer, Viewers), chats
+// flush scheduled through enqueuer and viewers judged under rbac.
+func Wire(db *database.DB, rbac identity.RbacObjects, vault func() keyvault.Vault, enqueuer Enqueuer, allowPrivate bool) (*chatlinks.Store, LiveChats) {
+	chats := LiveChats{DB: db, Vault: vault, HTTP: HTTPClient(allowPrivate), Rbac: rbac}
+	return chatlinks.NewStore(db, chats, enqueuer, Viewers(rbac)), chats
 }

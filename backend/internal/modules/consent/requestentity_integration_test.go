@@ -17,6 +17,7 @@ import (
 )
 
 func TestARecordedRequestServesItsSendingEntityOnly(t *testing.T) {
+	t.Parallel()
 	for _, scenario := range []struct {
 		name   string
 		branch bool

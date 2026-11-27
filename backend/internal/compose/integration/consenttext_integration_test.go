@@ -23,6 +23,7 @@ import (
 // plan shipped exactly that shape: a writer with no production caller, tests
 // green, found only in review.
 func TestBootstrapPublishesTheInstallationsWording(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 

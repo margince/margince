@@ -17,6 +17,7 @@ import (
 // rule. The rule reads one number; this is where that number is decided, and
 // the four cases differ only in the evidence attached.
 func TestACriterionCountsAsMetOnlyOnUnrefutedEvidenceSayingSo(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	ctx := context.Background()

@@ -73,7 +73,7 @@ func (s *Store) applyVerdictStageMove(
 	if err != nil || !allowed {
 		return VerdictDroppedSwitch, current, ids.Nil, err
 	}
-	installationOn, err := config.StoredApplyTx(ctx, tx, config.Bound(), StageAutopilotEnabled)
+	installationOn, err := config.StoredApplyTx(ctx, tx, config.Bound(ctx), StageAutopilotEnabled)
 	if err != nil || !installationOn {
 		return VerdictDroppedSwitch, current, ids.Nil, err
 	}

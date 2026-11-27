@@ -26,6 +26,7 @@ import (
 )
 
 func TestTheReviewPackReadsOnlyTheDealsOwnAgreementsTouchesAndTasks(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	reader := legalreviewrecords.New(e.Contracts, e.Activities)
 	company := e.SeedCompany(t, "Pack Holdings", nil)
@@ -118,6 +119,7 @@ func packDeal(t *testing.T, e *Env) ids.UUID {
 // colleague. The pack freezes only what the requester read, and a reviewer
 // outside the audience gets no id, kind or time of it.
 func TestThePackLeavesOutMailOutsideTheRequestersAndTheReviewersAudience(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	reader := legalreviewrecords.New(e.Contracts, e.Activities)
 	deal := packDeal(t, e)
@@ -157,6 +159,7 @@ func TestThePackLeavesOutMailOutsideTheRequestersAndTheReviewersAudience(t *test
 // Automatic mail is filtered in the query, so a run of it newer than a manual
 // touch cannot push the touch out of the five.
 func TestTheLatestTouchesSkipAutomaticMailBeforeCounting(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	reader := legalreviewrecords.New(e.Contracts, e.Activities)
 	deal := packDeal(t, e)
@@ -186,6 +189,7 @@ func TestTheLatestTouchesSkipAutomaticMailBeforeCounting(t *testing.T) {
 // still opens by id, and more than a page of ids is read in full. The read
 // keeps the deal, archive, grant and row-scope rules.
 func TestAFrozenAgreementOpensPastTheDealsNewestPage(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	reader := legalreviewrecords.New(e.Contracts, e.Activities)
 	pipeline, open, _ := DealFixture(t, e)

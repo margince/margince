@@ -99,6 +99,7 @@ func confirmationFor(t *testing.T, seat *apptest.AppEnv, review string) AnyMap {
 // Mutation: drop the recordReviewForHoldTx call from the fire's deferred hold
 // (scheduledsendfire.go) and this fails on the review count.
 func TestARefusalAtFireOpensAReviewTheRepCanConfirm(t *testing.T) {
+	t.Parallel()
 	p, id := heldByAnObjectionAtFire(t)
 
 	status, reason := p.scheduledStatus(t, id)
@@ -179,6 +180,7 @@ func TestARefusalAtFireOpensAReviewTheRepCanConfirm(t *testing.T) {
 
 // A retried alarm keeps one review: the row is already held, so nothing fires.
 func TestARefusalFiredAgainKeepsOneReview(t *testing.T) {
+	t.Parallel()
 	p, id := heldByAnObjectionAtFire(t)
 	p.fire(t, id)
 	p.fire(t, id)
@@ -195,6 +197,7 @@ func TestARefusalFiredAgainKeepsOneReview(t *testing.T) {
 // surface offers work it cannot reach. Refused again at the new moment, it
 // opens one fresh review.
 func TestAMovedUndecidedMessageOpensAFreshReviewWhenRefusedAgain(t *testing.T) {
+	t.Parallel()
 	p, id := heldByAnObjectionAtFire(t)
 	p.rescheduleTo(t, id, time.Now().Add(time.Hour))
 	if all, live := p.reviewsFor(t, id); all != 1 || live != 0 {
@@ -233,6 +236,7 @@ func (p *preflightEnv) interruptConfirmation(t *testing.T, review string) {
 // A decision recorded before a move is kept, and the fire at the new moment
 // spends it: the message goes once, under that decision.
 func TestAMovedMessageSpendsTheDecisionAlreadyRecorded(t *testing.T) {
+	t.Parallel()
 	p, id := heldByAnObjectionAtFire(t)
 	review := p.liveReviewFor(t, id)
 	p.interruptConfirmation(t, review)
@@ -263,6 +267,7 @@ func TestAMovedMessageSpendsTheDecisionAlreadyRecorded(t *testing.T) {
 // A cancellation racing the fire ends cancelled with no live review and no
 // delivery, whichever of the two commits first.
 func TestACancelRacingARefusedFireLeavesNoLiveReview(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	id := p.scheduleFor(t, time.Now().Add(2*time.Hour))
@@ -304,6 +309,7 @@ func TestACancelRacingARefusedFireLeavesNoLiveReview(t *testing.T) {
 // A message rescheduled before its alarm rings is not held or reviewed under
 // the old moment; the alarm snoozes to the new one.
 func TestARescheduleBeforeTheFireOpensNoReview(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	id := p.scheduleFor(t, time.Now().Add(2*time.Hour))
@@ -322,6 +328,7 @@ func TestARescheduleBeforeTheFireOpensNoReview(t *testing.T) {
 // A technical fault and a missed window hold with their own reasons and open
 // no review: nothing about them is the engine's to decide.
 func TestHoldsThatAreNotRefusalsOpenNoReview(t *testing.T) {
+	t.Parallel()
 	t.Run("technical fault", func(t *testing.T) {
 		p := setupPreflight(t)
 		p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
@@ -368,6 +375,7 @@ func TestHoldsThatAreNotRefusalsOpenNoReview(t *testing.T) {
 // A row held at fire takes a spelling correction under the same approval, as
 // a row held at the keyboard does. An interrupted send leaves the approval open.
 func TestARowHeldAtFireTakesAWordingCorrection(t *testing.T) {
+	t.Parallel()
 	p, id := heldByAnObjectionAtFire(t)
 	review := p.liveReviewFor(t, id)
 	p.interruptConfirmation(t, review)
@@ -398,6 +406,7 @@ func TestARowHeldAtFireTakesAWordingCorrection(t *testing.T) {
 // Mutation: drop both author checks (directableReview.admits and
 // refuseAnotherSeatsHold) and the second seat sends the message.
 func TestOnlyTheSenderConfirmsAMessageHeldAtItsScheduledTime(t *testing.T) {
+	t.Parallel()
 	p, id := heldByAnObjectionAtFire(t)
 	review := p.liveReviewFor(t, id)
 	p.DescribeCompany(t)

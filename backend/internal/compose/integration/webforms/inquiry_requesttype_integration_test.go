@@ -26,6 +26,7 @@ import (
 )
 
 func TestInquiryWorklistUsesValidatedSubmittedTypesAndTheSavedChoice(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupAppWithOptions(t, compose.WithKeyvault(keyvault.NewMemory()), compose.WithSchemaPool(integration.SchemaPool(t)))
 	e.BootstrapWorkspace(t)
 	field := apptest.CreateCustomField(t, e, integration.AnyMap{"object": "lead", "label": "Request type", "type": "picklist", "options": []string{"Quote", "Support"}, "source": "manual"})
@@ -112,6 +113,7 @@ func inquiryEventByID(t *testing.T, e *apptest.AppEnv, id crmcontracts.Id, kind 
 }
 
 func TestInquiryWorklistShowsHandlingWithoutSettingsAccessAndWithholdsPrivateReceipt(t *testing.T) {
+	t.Parallel()
 	f := setupInquiryRecipient(t)
 	if err := compose.NewWorkflowEngine(f.e.DB()).HandleEvent(t.Context(), f.event); err != nil {
 		t.Fatal(err)

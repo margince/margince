@@ -49,6 +49,7 @@ var noLinksRestore = storekit.RestoreWith{
 // An all-rows editor who did not write the note restores none. A delete
 // holder restores any archive.
 func TestAnActivityRestoreAsksTheArchivesOwnAuthority(t *testing.T) {
+	t.Parallel()
 	e := setupPromises(t)
 	note := e.seedLinkedNote(t, e.rep)
 	e.exec(t, `UPDATE activity SET source = 'manual', captured_by = $2 WHERE id = $1`, note, "human:"+e.rep.String())

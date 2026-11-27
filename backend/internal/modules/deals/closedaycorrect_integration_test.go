@@ -99,6 +99,7 @@ func (e closeDayEnv) stored(t *testing.T) storedClose {
 }
 
 func TestCorrectingTheCloseDayMovesClosedAtAndFreezesTheRateOfThatDay(t *testing.T) {
+	t.Parallel()
 	e := setupClosedDealEnv(t)
 	if got := e.stored(t); got.base != 6000 {
 		t.Fatalf("precondition: the real close froze %d base units, want 6000 at the newer rate", got.base)
@@ -125,6 +126,7 @@ func TestCorrectingTheCloseDayMovesClosedAtAndFreezesTheRateOfThatDay(t *testing
 }
 
 func TestCorrectingToTheDayItClosedOnChangesNothing(t *testing.T) {
+	t.Parallel()
 	e := setupClosedDealEnv(t)
 	before := e.stored(t)
 	if _, err := e.store.CorrectCloseDay(e.asDealWriter(), e.deal, CorrectCloseDayInput{ClosedOn: e.today}); err != nil {
@@ -136,6 +138,7 @@ func TestCorrectingToTheDayItClosedOnChangesNothing(t *testing.T) {
 }
 
 func TestACloseDayCorrectionRefusesWhatItCannotHold(t *testing.T) {
+	t.Parallel()
 	e := setupClosedDealEnv(t)
 	agent := principal.WithActor(e.asDealWriter(), principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:x", UserID: e.admin,
@@ -175,6 +178,7 @@ func TestACloseDayCorrectionRefusesWhatItCannotHold(t *testing.T) {
 }
 
 func TestAnOpenDealHasNoCloseDayToCorrect(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	e.store = NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)), Installation{
 		TimezoneApplied: func(context.Context, pgx.Tx) (string, error) { return "UTC", nil },
@@ -189,6 +193,7 @@ func TestAnOpenDealHasNoCloseDayToCorrect(t *testing.T) {
 // The rate a close froze is part of what a deal is, on the single read and on
 // a list row alike. A reopened deal carries none.
 func TestAClosedForeignDealCarriesTheRateItFroze(t *testing.T) {
+	t.Parallel()
 	e := setupClosedDealEnv(t)
 
 	read, err := e.store.GetDeal(e.asDealWriter(), e.deal, storekit.LiveOnly)

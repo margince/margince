@@ -29,6 +29,7 @@ type contactAgreement struct {
 // pair can share. Each writes the held record through the store, asks both, and
 // retires it, so the next case meets an estate without it.
 func TestTheLadderAndItsBatchHalfAgree(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	inTx := func(fn func(pgx.Tx) error) error { return e.store.tx(ctx, fn) }
@@ -155,6 +156,7 @@ func (e *dedupeEnv) retire(ctx context.Context, t *testing.T, table string, id i
 // files. That holds for the employer a row names and for the employer of a
 // contact the row updates.
 func TestAHiddenEmployerLendsTheBatchNoDomain(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	owner := e.as()
 	hidden, err := e.store.CreateCompany(owner, CreateCompanyInput{

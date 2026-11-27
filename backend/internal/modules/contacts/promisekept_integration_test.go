@@ -96,6 +96,7 @@ func (f looksKeptFixture) claimRead(t *testing.T) crmcontracts.ConversationClaim
 }
 
 func TestAnAcceptedLaterMeetingClosesTheOwnersPromiseAndNamesTheEvidence(t *testing.T) {
+	t.Parallel()
 	f := ownedPromise(t)
 	f.sweep(t)
 	if got := f.status(t); got != "done" {
@@ -117,6 +118,7 @@ func TestAnAcceptedLaterMeetingClosesTheOwnersPromiseAndNamesTheEvidence(t *test
 }
 
 func TestTheAuditRowOfAnAutomaticCloseNamesNoMeetingOrGuest(t *testing.T) {
+	t.Parallel()
 	f := ownedPromise(t)
 	f.sweep(t)
 	for _, leak := range []string{"Riley", f.meeting.String(), "meeting"} {
@@ -138,6 +140,7 @@ func (nobodyOwns) Owner(context.Context, pgx.Tx, ids.UUID, *ids.UUID) (ids.UUID,
 }
 
 func TestAPromiseNobodyIsResponsibleForIsOnlyHinted(t *testing.T) {
+	t.Parallel()
 	f := looksKeptPromise(t)
 	f.sweepWith(t, nobodyOwns{ownerIs{f}})
 	if got := f.status(t); got != "open" {
@@ -149,6 +152,7 @@ func TestAPromiseNobodyIsResponsibleForIsOnlyHinted(t *testing.T) {
 }
 
 func TestOnlyTheRightGuestAndMeetingClosesAPromise(t *testing.T) {
+	t.Parallel()
 	for name, change := range map[string]string{
 		"a guest at no shared company":     `DELETE FROM relationship WHERE contact_id = $1 AND $2::uuid IS NOT NULL`,
 		"a meeting before the promise":     `UPDATE activity SET occurred_at = now() - interval '10 days' WHERE id = $2 AND $1::uuid IS NOT NULL`,
@@ -166,6 +170,7 @@ func TestOnlyTheRightGuestAndMeetingClosesAPromise(t *testing.T) {
 }
 
 func TestAnAutomaticCloseReopensWhenItsEvidenceGoes(t *testing.T) {
+	t.Parallel()
 	for name, change := range map[string]string{
 		"declined":      `UPDATE activity_participant SET response = 'declined' WHERE activity_id = $1 AND response IS NOT NULL`,
 		"guest removed": `DELETE FROM activity_participant WHERE activity_id = $1 AND response IS NOT NULL`,
@@ -188,6 +193,7 @@ func TestAnAutomaticCloseReopensWhenItsEvidenceGoes(t *testing.T) {
 }
 
 func TestAHumanCloseIsNotReopenedByADecline(t *testing.T) {
+	t.Parallel()
 	f := ownedPromise(t)
 	if err := f.e.store.SettleConversationClaim(f.ctx, f.claim, "done"); err != nil {
 		t.Fatal(err)
@@ -200,6 +206,7 @@ func TestAHumanCloseIsNotReopenedByADecline(t *testing.T) {
 }
 
 func TestUndoReopensTheClaimAndChangesNothingElse(t *testing.T) {
+	t.Parallel()
 	f := ownedPromise(t)
 	task := ids.NewV7()
 	f.e.execAs(f.ctx, t, `INSERT INTO activity (id, kind, subject, source, captured_by, occurred_at, is_done, assignee_id)
@@ -241,6 +248,7 @@ func (f looksKeptFixture) rowText(t *testing.T, sql string) string {
 }
 
 func TestUndoRefusesAHumansCloseAndHidesAClaimOutsideTheReadersScope(t *testing.T) {
+	t.Parallel()
 	f := ownedPromise(t)
 	f.sweep(t)
 	f.e.execAs(f.ctx, t, `UPDATE activity SET audience = 'participants' WHERE id = $1`, f.source)
@@ -282,6 +290,7 @@ func (f looksKeptFixture) colleagueAtTheGuestsCompany(t *testing.T, name string)
 }
 
 func TestTwoContactsOfTheGuestsNameAtTheCompanyNameNobody(t *testing.T) {
+	t.Parallel()
 	f := ownedPromise(t)
 	f.colleagueAtTheGuestsCompany(t, "Riley Reed")
 	if got := f.hint(t); got != nil {
@@ -294,6 +303,7 @@ func TestTwoContactsOfTheGuestsNameAtTheCompanyNameNobody(t *testing.T) {
 }
 
 func TestEveryInviteeTheClaimNamesMustHaveAcceptedTheSameMeeting(t *testing.T) {
+	t.Parallel()
 	f := ownedPromise(t)
 	f.e.execAs(f.ctx, t, `UPDATE conversation_claim SET body = 'I will invite Riley Reed and Sam Lee to the demo' WHERE id = $1`, f.claim)
 	sam := f.colleagueAtTheGuestsCompany(t, "Sam Lee")
@@ -309,6 +319,7 @@ func TestEveryInviteeTheClaimNamesMustHaveAcceptedTheSameMeeting(t *testing.T) {
 }
 
 func TestAnotherLaterMeetingWithTheSameGuestLeavesTheEarliestAsEvidence(t *testing.T) {
+	t.Parallel()
 	f := ownedPromise(t)
 	later := ids.NewV7()
 	f.e.execAs(f.ctx, t, `INSERT INTO activity (id, kind, subject, source, captured_by, occurred_at, meeting_status)
@@ -326,6 +337,7 @@ func TestAnotherLaterMeetingWithTheSameGuestLeavesTheEarliestAsEvidence(t *testi
 }
 
 func TestATaskLinkedAfterTheCloseDoesNotHideWhoClosedIt(t *testing.T) {
+	t.Parallel()
 	f := ownedPromise(t)
 	f.sweep(t)
 	task := ids.NewV7()
@@ -345,6 +357,7 @@ func TestATaskLinkedAfterTheCloseDoesNotHideWhoClosedIt(t *testing.T) {
 }
 
 func TestAMergedContactKeepsWhoClosedItsPromise(t *testing.T) {
+	t.Parallel()
 	f := ownedPromise(t)
 	f.sweep(t)
 	survivor := ids.NewV7()
@@ -368,6 +381,7 @@ func TestAMergedContactKeepsWhoClosedItsPromise(t *testing.T) {
 // A decline still uncommitted when the sweep reads the evidence holds the
 // guests' rows. The close waits for it and sees the answer it left.
 func TestADeclineCommittingDuringTheCloseIsSeen(t *testing.T) {
+	t.Parallel()
 	f := ownedPromise(t)
 	declined, release := make(chan struct{}), make(chan struct{})
 	done := make(chan error, 1)

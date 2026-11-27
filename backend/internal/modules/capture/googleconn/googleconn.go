@@ -36,7 +36,12 @@ import (
 const httpTimeout = 30 * time.Second
 
 // BoundedClient returns an HTTP client with the standard Google-call timeout.
-func BoundedClient() *http.Client { return &http.Client{Timeout: httpTimeout} }
+func BoundedClient() *http.Client { return BoundedClientOver(nil) }
+
+// BoundedClientOver is BoundedClient over transport; nil is net/http's default.
+func BoundedClientOver(transport http.RoundTripper) *http.Client {
+	return &http.Client{Timeout: httpTimeout, Transport: transport}
+}
 
 // The package sentinels wrap the shared connector vocabulary (ADR-0063) so the
 // registry classifies a failure without knowing the provider: a rejected auth

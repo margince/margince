@@ -60,6 +60,7 @@ func changesOf(ctx context.Context, t *testing.T, e *Env, contact ids.ContactID,
 // The quiet count starts from the touch the page prints, and a message a
 // colleague wrote on a shared thread is not the contact writing.
 func TestQuietCountStartsFromTheOwnersLastTouchAndIgnoresAColleaguesMessage(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	mine := e.SeedContact(t, "Anna Weber", &e.Rep1)

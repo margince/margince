@@ -17,6 +17,7 @@ import (
 // A question the contract does not accept is refused, never answered as "not
 // covered": that outcome is a statement about the corpus.
 func TestAskingACorpusHoldsTheContractsQuestionLimits(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupAppWithOptions(t,
 		compose.WithCorpusAsk(unaskableEmbedder{}, nil, apptest.QuietAskLog()))
 	e.BootstrapWorkspace(t)

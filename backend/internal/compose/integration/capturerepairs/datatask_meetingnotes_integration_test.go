@@ -41,6 +41,7 @@ func storedAutomaticNotes(t *testing.T, e *integration.Env, status string) (ids.
 }
 
 func TestStoredAutomaticNotesRecordTheMeetingWithoutReplacingAnOutcome(t *testing.T) {
+	t.Parallel()
 	for _, status := range []string{"booked", "held", "canceled", "no_show"} {
 		t.Run(status, func(t *testing.T) {
 			e := integration.Setup(t)
@@ -92,6 +93,7 @@ func TestStoredAutomaticNotesRecordTheMeetingWithoutReplacingAnOutcome(t *testin
 }
 
 func TestStoredNotesRepairRollsBackAndSkipsUntrustedOrImmutableRecords(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	meeting, transcript := storedAutomaticNotes(t, e, "booked")

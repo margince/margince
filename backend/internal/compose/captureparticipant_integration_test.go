@@ -115,6 +115,7 @@ func captureMail(t *testing.T, e *integration.Env, owner ids.UUID, sourceID, dir
 }
 
 func TestCapturedMailRecordsTheMailboxOwnerAsAParticipant(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := e.Rep1
 
@@ -140,6 +141,7 @@ func TestCapturedMailRecordsTheMailboxOwnerAsAParticipant(t *testing.T) {
 }
 
 func TestTheCounterpartyIsRecordedBeforeAnyContactExists(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	// The address arm is not a fallback, it is the honest answer: capture
 	// decides whether to create a contact AFTER this transaction commits, and
@@ -159,6 +161,7 @@ func TestTheCounterpartyIsRecordedBeforeAnyContactExists(t *testing.T) {
 }
 
 func TestReplayingACapturedMailAddsNoParticipants(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := e.Rep1
 
@@ -209,6 +212,7 @@ func assertParticipant(t *testing.T, rows []participantRow, role string, user *i
 // match_status = 'confirmed', which the shape CHECK refuses. Neither failure was
 // visible from the graph tests, because nothing in them ever deleted anybody.
 func TestDeletingAContactOrAUserIsNotBlockedByGraphRows(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := context.Background()
 
@@ -289,6 +293,7 @@ func TestDeletingAContactOrAUserIsNotBlockedByGraphRows(t *testing.T) {
 // and that row would then be rewritten to name a contact who was never in the
 // conversation.
 func TestRelinkRepointsOnlyTheContactItDisplaced(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := context.Background()
 

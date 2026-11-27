@@ -38,6 +38,7 @@ func scheduledSeen(ctx context.Context, t *testing.T, store *activities.Store, i
 }
 
 func TestTheListAndTheDetailOfScheduledMailAnswerTheSame(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	id := p.scheduleForTheUser(t)
 	store := activities.NewStore(p.DB())

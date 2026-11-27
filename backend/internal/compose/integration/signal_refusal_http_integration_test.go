@@ -17,6 +17,7 @@ import (
 // files nothing. A subject type outside the signal's set is the caller's
 // mistake, so it must never read as a server fault.
 func TestASignalTheStoreRefusesAnswers422NamingTheField(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Signal Refusals", "admin@signalrefusals.test", "Admin")
 

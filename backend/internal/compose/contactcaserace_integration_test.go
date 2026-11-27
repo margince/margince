@@ -60,6 +60,7 @@ func oneMergeWon(t *testing.T, errs [2]error) {
 }
 
 func TestACaseMergeAndAPairMergeOfOnePairQueue(t *testing.T) {
+	t.Parallel()
 	c := setupCases(t)
 	members := c.seedCase(t, c.e.Rep1, c.e.Rep1)
 	read := c.read(c.e.Admin(), t, members[0])
@@ -76,6 +77,7 @@ func TestACaseMergeAndAPairMergeOfOnePairQueue(t *testing.T) {
 }
 
 func TestADirectMergeAndAPairMergeOfOnePairQueue(t *testing.T) {
+	t.Parallel()
 	c := setupCases(t)
 	members := c.seedCase(t, c.e.Rep1, c.e.Rep1)
 	pair, winner := ids.UUID(c.read(c.e.Admin(), t, members[0]).Edges[0].PairId), members[0]

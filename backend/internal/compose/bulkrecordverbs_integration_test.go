@@ -61,6 +61,7 @@ func bulkTagPerms() principal.Permissions {
 }
 
 func TestABulkTagPutsATagOnTheSelectionAndItsUndoTakesOffOnlyWhatItAdded(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	tag := seedBulkTag(t, e)
 	items := seedBulkContacts(t, e, e.Rep1, 3)
@@ -106,6 +107,7 @@ func TestABulkTagPutsATagOnTheSelectionAndItsUndoTakesOffOnlyWhatItAdded(t *test
 // A tag somebody took off and put back after the batch is their assignment,
 // not the batch's: the undo leaves it and says why.
 func TestUndoingABulkTagLeavesATagSomebodyPutBackSince(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	tag := seedBulkTag(t, e)
 	items := seedBulkContacts(t, e, e.Rep1, 2)
@@ -138,6 +140,7 @@ func TestUndoingABulkTagLeavesATagSomebodyPutBackSince(t *testing.T) {
 }
 
 func TestABulkRemoveTagAndItsUndoPutsItBack(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	tag := seedBulkTag(t, e)
 	items := seedBulkContacts(t, e, e.Rep1, 2)
@@ -176,6 +179,7 @@ func TestABulkRemoveTagAndItsUndoPutsItBack(t *testing.T) {
 // The per-row write check: a rep may tag their own team's contact and not a
 // contact they may only read, and a record nobody can find is not found.
 func TestABulkTagLeavesARecordTheCallerMayOnlyReadAlone(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	tag := seedBulkTag(t, e)
 	own := seedBulkContacts(t, e, e.Rep1, 1)
@@ -197,6 +201,7 @@ func TestABulkTagLeavesARecordTheCallerMayOnlyReadAlone(t *testing.T) {
 }
 
 func TestATagVerbNamingNoLiveTagIsRefusedBeforeAnyRowIsTried(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	items := seedBulkContacts(t, e, e.Rep1, 1)
 	retired := seedBulkTag(t, e)
@@ -230,6 +235,7 @@ func tasksFiled(t *testing.T, e *integration.Env, batch openapi_types.UUID) int 
 }
 
 func TestABulkCreateTaskFilesOneTaskPerRecordAndItsUndoArchivesThem(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	items := seedBulkContacts(t, e, e.Rep1, 3)
 	engine := bulkEngineFor(e)
@@ -277,6 +283,7 @@ func TestABulkCreateTaskFilesOneTaskPerRecordAndItsUndoArchivesThem(t *testing.T
 }
 
 func TestABulkCreateTaskRefusesAnAssigneeWhoCannotHoldWork(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	items := seedBulkContacts(t, e, e.Rep1, 1)
 	nobody := ids.NewV7()
@@ -292,6 +299,7 @@ func TestABulkCreateTaskRefusesAnAssigneeWhoCannotHoldWork(t *testing.T) {
 // The per-row read check: a task is filed only under a record the caller can
 // see. Contacts are readable by every seat, so the hidden one is capture-private.
 func TestABulkCreateTaskSkipsARecordTheCallerCannotSee(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	own := seedBulkContacts(t, e, e.Rep1, 1)
 	foreign := seedBulkContacts(t, e, e.Rep3, 1)
@@ -332,6 +340,7 @@ func seedBulkLeads(t *testing.T, e *integration.Env, owner ids.UUID, n int) []cr
 // A lead known only by its address is still a row of the batch, labelled by
 // that address, rather than a NULL that aborts every other row.
 func TestABulkChangeOverAnUnnamedLeadLabelsItByItsAddress(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	email := "unnamed-" + ids.NewV7().String()[:8] + "@example.com"
 	ownerID := ids.From[ids.UserKind](e.Rep1)
@@ -357,6 +366,7 @@ func TestABulkChangeOverAnUnnamedLeadLabelsItByItsAddress(t *testing.T) {
 }
 
 func TestLeadsTakeEveryBulkVerbButArchive(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	engine := bulkEngineFor(e)
 	leads := seedBulkLeads(t, e, e.Rep1, 2)

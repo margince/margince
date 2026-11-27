@@ -16,7 +16,6 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
-	"os"
 	"regexp"
 	"slices"
 	"strings"
@@ -74,6 +73,7 @@ type columnType struct {
 }
 
 func TestEveryColumnTypeExportsAsTheValueItHolds(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	pool := censusPool(ctx, t)
 	census := schemaColumnTypes(ctx, t, pool)
@@ -179,10 +179,7 @@ func sampleRow(ctx context.Context, t *testing.T, pool *pgxpool.Pool, selects []
 // with the type map production reads with.
 func censusPool(ctx context.Context, t *testing.T) *pgxpool.Pool {
 	t.Helper()
-	ownerDSN, appDSN := os.Getenv("MARGINCE_TEST_DSN"), os.Getenv("MARGINCE_TEST_APP_DSN")
-	if ownerDSN == "" || appDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
+	ownerDSN, appDSN := testdb.For(t).OwnerDSN, testdb.For(t).AppDSN
 	owner, err := pgx.Connect(ctx, ownerDSN)
 	if err != nil {
 		t.Fatal(err)

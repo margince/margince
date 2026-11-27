@@ -22,6 +22,7 @@ import (
 // then recomputes its audience. A party admission waits for that import before
 // its link insert shares the activity. So the recompute never waits on it.
 func TestAnImportRecomputesBesideAPartyAdmissionWaitingForIt(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	sink := newCaptureSink(e.Pool, CaptureConfig{})
 	ref := capturePartiesMailUsing(t, e, sink.WithEnsurer(nil, nil), partyMailProof{outbound: true, sentByOwner: true},

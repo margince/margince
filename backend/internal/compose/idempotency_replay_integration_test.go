@@ -43,6 +43,7 @@ func keyedTemplateCall(ctx context.Context, r chi.Router, key string) *httptest.
 
 // The first request's context ends as it answers; its answer is still recorded.
 func TestIdempotencyReplayRepeatsTheRecordedContentType(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin() // ONE principal: the claim is scoped per (workspace, principal, key, path)
 	ending, end := context.WithCancel(ctx)
@@ -77,6 +78,7 @@ func TestIdempotencyReplayRepeatsTheRecordedContentType(t *testing.T) {
 
 // The first attempt's context ends before it answers; its key is still released.
 func TestIdempotencyFailedAttemptRetryIsAFreshExecution(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ending, end := context.WithCancel(e.Admin())
 
@@ -106,6 +108,7 @@ func TestIdempotencyFailedAttemptRetryIsAFreshExecution(t *testing.T) {
 
 // A refusal after a committed write keeps its key: the retry must not save twice.
 func TestARefusalAfterACommittedWriteIsNotRunAgain(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ending, end := context.WithCancel(e.Admin())
 	calls := 0
@@ -146,6 +149,7 @@ func keyedContactCall(ctx context.Context, r chi.Router, contact ids.UUID, key s
 // the authority it was produced under. A caller who can no longer see the
 // record gets the read path's 404, not the bytes.
 func TestReplayRefusesOnceTheCallerHasLostSightOfTheRecord(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	rep1 := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.RepPerms)
 	contact := e.SeedContact(t, "Visible then not", &e.Rep1)

@@ -27,6 +27,7 @@ import (
 // contexts, must each be attributed their OWN user_id — proof the value
 // written always tracks whichever principal actually made the call.
 func TestStageTxStampsUserIDFromTheAuthenticatedPrincipalNeverFromInput(t *testing.T) {
+	t.Parallel()
 	e := setupStore(t)
 	user2 := ids.New[ids.UserKind]()
 	if _, err := e.owner.Exec(context.Background(),
@@ -65,6 +66,7 @@ func TestStageTxStampsUserIDFromTheAuthenticatedPrincipalNeverFromInput(t *testi
 // No authenticated actor bound to ctx at all: StageTx must refuse before
 // writing anything, not proceed with a zero-value or borrowed identity.
 func TestStageTxFailsClosedWithoutAnAuthenticatedActor(t *testing.T) {
+	t.Parallel()
 	e := setupStore(t)
 	noActor := principal.WithWorkspaceID(context.Background(), e.ws)
 	in := e.baseInput(e.activity, "msg-no-actor@example.com")
@@ -95,6 +97,7 @@ func TestStageTxFailsClosedWithoutAnAuthenticatedActor(t *testing.T) {
 // A system principal carries no app_user identity; sending is a human act,
 // so StageTx must refuse rather than write a zero-value user_id.
 func TestStageTxRefusesASystemPrincipalWithNoAppUserIdentity(t *testing.T) {
+	t.Parallel()
 	e := setupStore(t)
 	systemCtx := principal.WithWorkspaceID(context.Background(), e.ws)
 	systemCtx = principal.WithActor(systemCtx, principal.Principal{Type: principal.PrincipalSystem})

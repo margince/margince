@@ -137,6 +137,7 @@ func (e proofEnv) installationZone(t *testing.T) *time.Location {
 }
 
 func TestFulfillingAnErasureWritesOneProofWithTheErasuresOwnAccount(t *testing.T) {
+	t.Parallel()
 	e := setupProofs(t)
 	contact := e.SeedContact(t, "Henrike Proofsubject", nil)
 	subject, body := "Loeschantrag Henrike", "Bitte alles loeschen, Ihre Henrike"
@@ -202,6 +203,7 @@ func (f failingAfterErase) EraseContactCounted(ctx context.Context, contact ids.
 }
 
 func TestARetriedCloseStoresTheFirstErasuresAccount(t *testing.T) {
+	t.Parallel()
 	e := setupProofs(t)
 	contact := e.SeedContact(t, "Retried Subject", nil)
 	e.seedNoteFor(t, contact, "Bitte loeschen", "Bitte loeschen Sie alles")
@@ -227,6 +229,7 @@ func TestARetriedCloseStoresTheFirstErasuresAccount(t *testing.T) {
 }
 
 func TestARequestWhoseIdentityWasNotCheckedCannotBeFulfilled(t *testing.T) {
+	t.Parallel()
 	e := setupProofs(t)
 	contact := e.SeedContact(t, "Unverified Subject", nil)
 	for kind, subjectRef := range map[string]string{"access": "unverified@proof.test", "erasure": contact.String()} {
@@ -253,6 +256,7 @@ func TestARequestWhoseIdentityWasNotCheckedCannotBeFulfilled(t *testing.T) {
 }
 
 func TestARejectedRequestKeepsAProofThatErasedNothing(t *testing.T) {
+	t.Parallel()
 	e := setupProofs(t)
 	request := e.openRequest(t, "access", "rejected@proof.test")
 	e.patch(t, request, `{"status":"rejected","resolution":"not the subject","identity_check":"not_verified"}`)
@@ -266,6 +270,7 @@ func TestARejectedRequestKeepsAProofThatErasedNothing(t *testing.T) {
 }
 
 func TestClosingARequestFiledByHandNeedsTheIdentityCheck(t *testing.T) {
+	t.Parallel()
 	e := setupProofs(t)
 	contact := e.SeedContact(t, "Unchecked Subject", nil)
 	request := e.openRequest(t, "erasure", contact.String())
@@ -282,6 +287,7 @@ func TestClosingARequestFiledByHandNeedsTheIdentityCheck(t *testing.T) {
 }
 
 func TestAClosedRequestReadsAndExportsOnlyItsSubjectsProof(t *testing.T) {
+	t.Parallel()
 	e := setupProofs(t)
 	subjectContact, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{FullName: "Exported subject", Source: "manual", Emails: []contacts.ContactEmailInput{{Email: "subject@demo.test", EmailType: "work", IsPrimary: true}}})
 	if err != nil {

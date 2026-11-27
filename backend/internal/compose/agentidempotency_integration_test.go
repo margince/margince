@@ -46,6 +46,7 @@ func claimState(ctx context.Context, t *testing.T, claims agents.Idempotency, to
 }
 
 func TestAToolsRetryKeyRunsItsCallOnceAndReplaysTheResult(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	claims := toolIdempotency(e.Pool)
 	ctx := agentCtxAs(e, "agent:"+ids.NewV7().String())
@@ -82,6 +83,7 @@ func TestAToolsRetryKeyRunsItsCallOnceAndReplaysTheResult(t *testing.T) {
 }
 
 func TestAToolsRetryKeyRefusesADifferentCall(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	claims := toolIdempotency(e.Pool)
 	ctx := agentCtxAs(e, "agent:"+ids.NewV7().String())
@@ -109,6 +111,7 @@ func TestAToolsRetryKeyRefusesADifferentCall(t *testing.T) {
 // loop depends on it — a staged refusal releases, the human approves, and the
 // retry executes under the key it already used.
 func TestAReleasedKeyIsClaimableAgain(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	claims := toolIdempotency(e.Pool)
 	ctx := agentCtxAs(e, "agent:"+ids.NewV7().String())
@@ -129,6 +132,7 @@ func TestAReleasedKeyIsClaimableAgain(t *testing.T) {
 // turn a completed call into one that executes a second time — the exact
 // failure the key exists to prevent.
 func TestReleasingASettledKeyDoesNotDiscardItsResult(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	claims := toolIdempotency(e.Pool)
 	ctx := agentCtxAs(e, "agent:"+ids.NewV7().String())
@@ -151,6 +155,7 @@ func TestReleasingASettledKeyDoesNotDiscardItsResult(t *testing.T) {
 // if the corresponding column were dropped from the key, and each collision
 // would hand one caller another's recorded answer.
 func TestOneKeyIsThreeDifferentClaims(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	claims := toolIdempotency(e.Pool)
 	const key = "shared-key"
@@ -187,6 +192,7 @@ func TestOneKeyIsThreeDifferentClaims(t *testing.T) {
 // rather than released: the key stays spent, and the caller is told what the
 // surface actually knows.
 func TestAFailedRunIsRecordedAndItsKeyIsNotReusable(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	claims := toolIdempotency(e.Pool)
 	ctx := agentCtxAs(e, "agent:"+ids.NewV7().String())
@@ -214,6 +220,7 @@ func TestAFailedRunIsRecordedAndItsKeyIsNotReusable(t *testing.T) {
 // A claim scoped to nobody would be one row every such caller shares, so the
 // adapter refuses it rather than writing an empty principal.
 func TestAClaimWithNoPrincipalIsRefused(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	claims := toolIdempotency(e.Pool)
 	for _, tc := range []struct {
@@ -242,6 +249,7 @@ func TestAClaimWithNoPrincipalIsRefused(t *testing.T) {
 
 // A refused reuse names when the key was first spent and how that call stands.
 func TestAKeyHeldForDifferentArgumentsSaysWhenAndHowItWasFirstUsed(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name   string
 		settle func(ctx context.Context, claims agentClaims, attempt string) error

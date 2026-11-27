@@ -36,7 +36,7 @@ func TestDispatchWithEnqueuesTheWholeFleetInOneInsert(t *testing.T) {
 		return nil
 	}
 
-	if err := dispatchWith(context.Background(), fleet, insert, workspaceSweepOpts(GmailWatchRenewArgs{}.Kind()), gmailWatchRenewArgsFor); err != nil {
+	if err := dispatchWith(context.Background(), jobs.Composed{}, fleet, insert, workspaceSweepOpts(jobs.Composed{}, GmailWatchRenewArgs{}.Kind()), gmailWatchRenewArgsFor); err != nil {
 		t.Fatalf("dispatching a healthy fleet: %v", err)
 	}
 	if calls != 1 {
@@ -60,7 +60,7 @@ func TestDispatchWithFailsTheDispatcherWhenTheInsertIsRefused(t *testing.T) {
 	refused := errors.New("insert refused")
 	insert := func(context.Context, []river.InsertManyParams) error { return refused }
 
-	err := dispatchWith(context.Background(), fleet, insert, workspaceSweepOpts(GmailWatchRenewArgs{}.Kind()), gmailWatchRenewArgsFor)
+	err := dispatchWith(context.Background(), jobs.Composed{}, fleet, insert, workspaceSweepOpts(jobs.Composed{}, GmailWatchRenewArgs{}.Kind()), gmailWatchRenewArgsFor)
 	if err == nil {
 		t.Fatal("a refused fan-out must surface, so the dispatcher row fails and the tick retries")
 	}
@@ -77,7 +77,7 @@ func TestDispatchWithEnqueuesNothingForAnEmptyFleet(t *testing.T) {
 		called = true
 		return nil
 	}
-	if err := dispatchWith(context.Background(), nil, insert, workspaceSweepOpts(GmailWatchRenewArgs{}.Kind()), gmailWatchRenewArgsFor); err != nil {
+	if err := dispatchWith(context.Background(), jobs.Composed{}, nil, insert, workspaceSweepOpts(jobs.Composed{}, GmailWatchRenewArgs{}.Kind()), gmailWatchRenewArgsFor); err != nil {
 		t.Fatalf("an empty fleet is not a failure: %v", err)
 	}
 	if called {
@@ -89,7 +89,7 @@ func TestDispatchWithEnqueuesNothingForAnEmptyFleet(t *testing.T) {
 // number typed at the call site can drift from the one api/jobs.yaml
 // publishes, and nothing would notice.
 func TestWorkspaceSweepOptsReadsTheDeclaredQueueAndAttempts(t *testing.T) {
-	opts := workspaceSweepOpts(GmailWatchRenewArgs{}.Kind())
+	opts := workspaceSweepOpts(jobs.Composed{}, GmailWatchRenewArgs{}.Kind())
 
 	if opts.Queue != "default" {
 		t.Errorf("Queue = %q, want the declared default", opts.Queue)
@@ -101,7 +101,7 @@ func TestWorkspaceSweepOptsReadsTheDeclaredQueueAndAttempts(t *testing.T) {
 }
 
 func TestWorkspaceSweepOptsTagsEveryFanOutChild(t *testing.T) {
-	opts := workspaceSweepOpts(GmailWatchRenewArgs{}.Kind())
+	opts := workspaceSweepOpts(jobs.Composed{}, GmailWatchRenewArgs{}.Kind())
 
 	if !slices.Contains(opts.Tags, jobs.SweepTag) {
 		t.Errorf("Tags = %v, want jobs.SweepTag — an untagged child is invisible to both sweep gauges", opts.Tags)
@@ -112,7 +112,7 @@ func TestWorkspaceSweepOptsTagsEveryFanOutChild(t *testing.T) {
 // for every fan-out child, and by ARGS because one workspace's job is
 // otherwise indistinguishable from another's.
 func TestWorkspaceSweepOptsDedupesByArgsOnActiveStates(t *testing.T) {
-	opts := workspaceSweepOpts(CaptureSyncArgs{}.Kind())
+	opts := workspaceSweepOpts(jobs.Composed{}, CaptureSyncArgs{}.Kind())
 
 	if !opts.UniqueOpts.ByArgs {
 		t.Fatal("uniqueness must be by args, or one workspace's job is indistinguishable from another's — the whole fleet would collapse to one queued child")
@@ -133,7 +133,7 @@ func TestWorkspaceSweepOptsRefusesAKindNoDispatcherFansOutTo(t *testing.T) {
 			t.Error("a kind no declared dispatcher names in fans_out_to must not get fan-out opts")
 		}
 	}()
-	workspaceSweepOpts("site_deep_read") // enqueued by a human, fanned out to by nobody
+	workspaceSweepOpts(jobs.Composed{}, "site_deep_read") // enqueued by a human, fanned out to by nobody
 }
 
 // The helper supplies a queue and an attempt cap. Handing them to a kind
@@ -146,7 +146,7 @@ func TestWorkspaceSweepOptsRefusesAKindWhoseOptsItDoesNotOwn(t *testing.T) {
 			t.Error("a kind whose opts_owner is not fan_out must not silently get fan-out opts")
 		}
 	}()
-	workspaceSweepOpts(TelegramPollArgs{}.Kind()) // opts_owner: args
+	workspaceSweepOpts(jobs.Composed{}, TelegramPollArgs{}.Kind()) // opts_owner: args
 }
 
 // The args-owned posture, which is the one a well-meaning conversion breaks:
@@ -285,8 +285,8 @@ func TestDispatchWithMarksEveryChildAsOneWorkspacesShareOfAFleetPass(t *testing.
 	}
 	fleet := []ids.UUID{ids.NewV7(), ids.NewV7()}
 
-	if err := dispatchWith(context.Background(), fleet, insert,
-		workspaceSweepOpts(GmailWatchRenewArgs{}.Kind()), gmailWatchRenewArgsFor); err != nil {
+	if err := dispatchWith(context.Background(), jobs.Composed{}, fleet, insert,
+		workspaceSweepOpts(jobs.Composed{}, GmailWatchRenewArgs{}.Kind()), gmailWatchRenewArgsFor); err != nil {
 		t.Fatalf("dispatchWith: %v", err)
 	}
 
@@ -309,7 +309,7 @@ func TestDispatchWithMarksEveryChildAsOneWorkspacesShareOfAFleetPass(t *testing.
 // it in place would accumulate one tag per workspace on a struct the caller
 // still owns.
 func TestTheFanOutTagDoesNotMutateTheCallersInsertOpts(t *testing.T) {
-	opts := workspaceSweepOpts(GmailWatchRenewArgs{}.Kind())
+	opts := workspaceSweepOpts(jobs.Composed{}, GmailWatchRenewArgs{}.Kind())
 	// Spare CAPACITY is the case a length check cannot see: append would
 	// write into the caller's own backing array and leave len unchanged, so
 	// the aliasing this test exists to catch would go unnoticed.
@@ -319,7 +319,7 @@ func TestTheFanOutTagDoesNotMutateTheCallersInsertOpts(t *testing.T) {
 	insert := func(context.Context, []river.InsertManyParams) error { return nil }
 
 	for range 3 {
-		if err := dispatchWith(context.Background(), []ids.UUID{ids.NewV7()}, insert, opts,
+		if err := dispatchWith(context.Background(), jobs.Composed{}, []ids.UUID{ids.NewV7()}, insert, opts,
 			gmailWatchRenewArgsFor); err != nil {
 			t.Fatalf("dispatchWith: %v", err)
 		}
@@ -344,7 +344,7 @@ func TestTheFanOutTagDoesNotMutateTheCallersInsertOpts(t *testing.T) {
 // uniqueness window would change how the fleet is enqueued in order to
 // describe it, which is the one thing an observability change may not do.
 func TestTheFanOutTagCarriesTheCallersEnqueuePolicyThrough(t *testing.T) {
-	opts := workspaceSweepOpts(CaptureSyncArgs{}.Kind())
+	opts := workspaceSweepOpts(jobs.Composed{}, CaptureSyncArgs{}.Kind())
 	marked := markedAsFleetPass(opts)
 
 	if marked.Queue != opts.Queue {

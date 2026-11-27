@@ -49,6 +49,7 @@ func jsonExportColumn(t *testing.T, raw []byte, column string) []string {
 // A lead export keeps the company name typed on the lead, which an import
 // writes back. Beside it, it names the linked company as it is called now.
 func TestALeadExportKeepsTheTypedNameAndAddsTheLinkedCompanysCurrentOne(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	company := e.SeedID(t, `INSERT INTO company (id, display_name, source, captured_by)
 		VALUES ($1, 'Falkenberg Maschinenbau', 'manual', 'human:x')`)
@@ -88,6 +89,7 @@ func TestALeadExportKeepsTheTypedNameAndAddsTheLinkedCompanysCurrentOne(t *testi
 
 // The current name of a company the exporter may not open leaves with its id.
 func TestALeadExportWithholdsTheNameOfACompanyTheExporterCannotOpen(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	hidden := e.SeedID(t, `INSERT INTO company (id, display_name, owner_id, visibility, source, captured_by)
 		VALUES ($1, 'Meridian Labs', $2, 'owner', 'manual', 'human:x')`, e.Rep3)

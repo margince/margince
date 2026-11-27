@@ -17,6 +17,7 @@ import (
 )
 
 func TestAGrantWithAWriteAndNoReadIsRefusedUnlessTheObjectOffersNoRead(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "role-write-needs-read")
 	ctx := e.wsCtx(e.admin)
 	custom := e.customRole(t, "Contact editors", "rep", nil)
@@ -35,8 +36,9 @@ func TestAGrantWithAWriteAndNoReadIsRefusedUnlessTheObjectOffersNoRead(t *testin
 }
 
 func TestRestoringShippedGrantsReturnsASystemRoleToItsSeed(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "role-restore")
-	registerExtObject(t)
+	e.registerExtObject(t)
 	ctx := e.wsCtx(e.admin)
 
 	if _, err := e.svc.SetRoleObjectGrant(ctx, e.admin, "rep", "contact", storedGrant{}, nil); err != nil {
@@ -57,7 +59,7 @@ func TestRestoringShippedGrantsReturnsASystemRoleToItsSeed(t *testing.T) {
 	if _, kept := restored.Objects[extObject]; kept {
 		t.Error("an extension object with no shipped default survived the restore")
 	}
-	want := shippedObjects("rep")
+	want := shippedObjects(e.svc.rbac, "rep")
 	if !reflect.DeepEqual(restored.Objects, want) {
 		t.Errorf("restored objects differ from the shipped set")
 	}
@@ -71,6 +73,7 @@ func TestRestoringShippedGrantsReturnsASystemRoleToItsSeed(t *testing.T) {
 }
 
 func TestRestoringShippedGrantsRefusesACustomRoleAndAWideningNonAdmin(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "role-restore-refusals")
 	ctx := e.wsCtx(e.admin)
 	custom := e.customRole(t, "Field sales", "rep", nil)
@@ -97,6 +100,7 @@ func TestRestoringShippedGrantsRefusesACustomRoleAndAWideningNonAdmin(t *testing
 // The request's identity is read before the lock. A caller demoted in that
 // window holds the old identity, and every role write must see the new one.
 func TestARoleWriteByACallerDemotedBeforeTheLockIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "role-demoted-caller")
 	ctx := e.wsCtx(e.admin)
 	custom := e.customRole(t, "Field sales", "rep", nil)
@@ -126,6 +130,7 @@ func TestARoleWriteByACallerDemotedBeforeTheLockIsRefused(t *testing.T) {
 }
 
 func TestRestoringShippedGrantsNeedsTheVersionTheReaderSaw(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "role-restore-version")
 	ctx := e.wsCtx(e.admin)
 	var parse *values.ParseError

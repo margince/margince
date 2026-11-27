@@ -78,6 +78,7 @@ func provisionalOf(ctx context.Context, t *testing.T, db *database.DB, keys []st
 }
 
 func TestAFileStoredForACaptureThatFailsAfterNamingItIsDeleted(t *testing.T) {
+	t.Parallel()
 	ctx, db, tag := captureWorkspace(t)
 	blob := &prestageBlob{Store: blobstore.NewMemory()}
 	failed := errors.New("the capture fails after naming its files")
@@ -95,6 +96,7 @@ func TestAFileStoredForACaptureThatFailsAfterNamingItIsDeleted(t *testing.T) {
 }
 
 func TestAFileStoredBeforeItsThreadTurnedPrivateIsDeleted(t *testing.T) {
+	t.Parallel()
 	ctx, db, tag := captureWorkspace(t)
 	threadKey := "turning-private-" + tag
 	blob := &prestageBlob{Store: blobstore.NewMemory()}

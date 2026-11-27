@@ -26,6 +26,7 @@ import (
 )
 
 func TestTeamDecisionResponsibilityTracksLiveMembership(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := time.Date(2026, 10, 18, 12, 0, 0, 0, time.UTC)
 	pipeline, open, _ := integration.DealFixture(t, e)
@@ -96,6 +97,7 @@ func TestTeamDecisionResponsibilityTracksLiveMembership(t *testing.T) {
 }
 
 func TestTeamWorklistExcludesUnlinkedOutsideTasksAndRefusesTheirOwner(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := time.Date(2026, 10, 18, 12, 0, 0, 0, time.UTC)
 	tasks := make(map[ids.UUID]string)
@@ -157,6 +159,7 @@ func TestTeamWorklistExcludesUnlinkedOutsideTasksAndRefusesTheirOwner(t *testing
 }
 
 func TestTeamBoardCountsOnlyReadableWaitingMail(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	var recipient string
 	if err := integration.OwnerConn(t).QueryRow(t.Context(), `SELECT email FROM app_user WHERE id=$1`, e.Rep1).Scan(&recipient); err != nil {

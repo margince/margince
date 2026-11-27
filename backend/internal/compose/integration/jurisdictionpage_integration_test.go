@@ -19,6 +19,7 @@ import (
 )
 
 func TestTheJurisdictionPageReadsBackAChange(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 

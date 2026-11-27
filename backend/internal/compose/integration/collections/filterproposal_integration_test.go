@@ -99,6 +99,7 @@ func cannedProposal(column string) string {
 // The proposal is checked before it is answered, lands in the shape the preview
 // evaluates, reads no record, and writes nothing.
 func TestAPlainWordsProposalIsCheckedAndPreviewable(t *testing.T) {
+	t.Parallel()
 	lane := &recordingLane{}
 	e := proposalEnv(t, lane)
 	column := seedContactsWithTier(t, e, 3, 2)
@@ -152,6 +153,7 @@ func TestAPlainWordsProposalIsCheckedAndPreviewable(t *testing.T) {
 
 // A deployment with no model answers a problem the builder can show, never a 500.
 func TestAPlainWordsProposalWithNoModelSaysOneIsNeeded(t *testing.T) {
+	t.Parallel()
 	e := proposalEnv(t, nil)
 	var got proposalBody
 	status := e.Call(t, "POST", "/v1/filters/propose", integration.AnyMap{
@@ -165,6 +167,7 @@ func TestAPlainWordsProposalWithNoModelSaysOneIsNeeded(t *testing.T) {
 // A caller who may not read the record type is refused before any model call:
 // the budget is not spent to tell somebody they could not have used the answer.
 func TestAPlainWordsProposalNeedsReadOnTheRecordType(t *testing.T) {
+	t.Parallel()
 	lane := &recordingLane{reply: `{"groups":[],"join":"and","unsupported":[]}`}
 	e := proposalEnv(t, lane)
 	if _, err := e.Owner.Exec(context.Background(), `
@@ -187,6 +190,7 @@ func TestAPlainWordsProposalNeedsReadOnTheRecordType(t *testing.T) {
 
 // The sentence is bounded the way the contract declares, and refused by name.
 func TestAPlainWordsProposalRefusesAnEmptyOrOversizedSentence(t *testing.T) {
+	t.Parallel()
 	lane := &recordingLane{reply: `{"groups":[],"join":"and","unsupported":[]}`}
 	e := proposalEnv(t, lane)
 	for name, text := range map[string]string{"blank": "   ", "too long": strings.Repeat("a", 501)} {
@@ -219,6 +223,7 @@ func revokeObjectRead(t *testing.T, e *apptest.AppEnv, object string) {
 // The company context is a help and never a precondition: a caller who may read
 // contacts and lists but not companies still gets a contact proposal, without it.
 func TestAPlainWordsProposalNeedsNoCompanyRead(t *testing.T) {
+	t.Parallel()
 	lane := &recordingLane{reply: `{"groups":[],"join":"and","unsupported":[]}`}
 	e := proposalEnv(t, lane)
 	revokeObjectRead(t, e, "company")
@@ -237,6 +242,7 @@ func TestAPlainWordsProposalNeedsNoCompanyRead(t *testing.T) {
 // A reader without custom_field:read is sent a custom picklist with no options,
 // so a value on it cannot be checked, and is declined rather than trusted.
 func TestAPlainWordsProposalDeclinesAPicklistValueItCannotCheck(t *testing.T) {
+	t.Parallel()
 	lane := &recordingLane{}
 	e := proposalEnv(t, lane)
 	var field integration.AnyMap

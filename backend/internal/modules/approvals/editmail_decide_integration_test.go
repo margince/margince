@@ -16,6 +16,7 @@ import (
 // A mail edit that blanks, drops or mistypes the subject or body is refused
 // through Decide, and the row stays pending with its staged text.
 func TestDecideRefusesAMailEditWithoutAWrittenSubjectAndBody(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	ctx := e.asHumanWith(grantsFor(map[string]principal.ObjectGrant{
 		objectActivity: {Create: true, Read: true},

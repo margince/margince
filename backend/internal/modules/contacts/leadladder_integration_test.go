@@ -23,6 +23,7 @@ import (
 )
 
 func TestLadderClimbsFromActivityAndNeverDescends(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	now := time.Now().UTC()
 	lead := e.seedLeadCreatedAt(t, "ladder@example.test", now.Add(-time.Hour))
@@ -81,6 +82,7 @@ func TestLadderClimbsFromActivityAndNeverDescends(t *testing.T) {
 // proves engagement earns engaged, if it was current when captured. An outbound touch or a note a human logged
 // earns contacted, and nothing else earns a step.
 func TestLadderStepForReadsTheTouch(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		name string
 		t    leadResponseTouch
@@ -115,6 +117,7 @@ func TestLadderStepForReadsTheTouch(t *testing.T) {
 // on through the settings write turns all three on, and the target is the
 // installation's number.
 func TestFirstResponseTargetIsOptIn(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	now := time.Now().UTC()
 	overdue := e.seedLeadCreatedAt(t, "overdue@example.test", now.Add(-DefaultFirstResponseTarget-time.Hour))

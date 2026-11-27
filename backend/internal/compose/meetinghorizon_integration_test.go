@@ -69,6 +69,7 @@ func seedCalendar(t *testing.T, e *integration.Env, provider, status string, fai
 }
 
 func TestTheReadersCalendarSaysWhetherItFeedsTheMeetingsCount(t *testing.T) {
+	t.Parallel()
 	type connection struct {
 		provider, status string
 		failing          bool
@@ -145,6 +146,7 @@ func bookMeetingFor(
 // internal ones and the cancelled one before it, and names only the attendees
 // the reader may see in the room.
 func TestAnEmptyDayNamesTheNextCustomerMeetingWithOnlyVisibleAttendees(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := todayAt(9 * time.Hour)
 	visible, hidden := horizonContacts(t, e)
@@ -174,6 +176,7 @@ func TestAnEmptyDayNamesTheNextCustomerMeetingWithOnlyVisibleAttendees(t *testin
 // Past the thirty-day window is not "next", and a meeting left today is the
 // next conversation already, so neither points anywhere.
 func TestNoNextMeetingPastTheWindowOrBesideOneLeftToday(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name string
 		at   time.Duration

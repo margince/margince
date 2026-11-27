@@ -21,6 +21,7 @@ import (
 )
 
 func TestProgressScenariosAreTheMonthsForecastAndClosedIsItsWonMoney(t *testing.T) {
+	t.Parallel()
 	e, owner, month := scenarioMonth(t)
 	now := clocktest.Now(t)
 
@@ -106,6 +107,7 @@ func scenarioMonth(t *testing.T) (*apptest.AppEnv, string, string) {
 // The same month answers cases before the role narrows, so the absence is the
 // role's doing.
 func TestProgressStatesNoScenariosToASeatThatCannotReadTheirAmounts(t *testing.T) {
+	t.Parallel()
 	for name, narrow := range map[string]func(*testing.T, *apptest.AppEnv){
 		"an amount mask": func(t *testing.T, e *apptest.AppEnv) {
 			narrowSignedInRole(t, e, "scenario_amount_mask", `{}`)

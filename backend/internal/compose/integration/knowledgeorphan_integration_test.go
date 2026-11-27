@@ -121,6 +121,7 @@ func (c *countingBlobstore) orphans(named map[string]bool) []string {
 // it refuses before Put and so never leaves anything behind. Asserting on it
 // would pass without the cleanup code existing at all.
 func TestAWriteThatFailsAfterStoringItsBytesRemovesThem(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	blobs := newCountingBlobstore()
 	h := &knowledgeHTTP{}

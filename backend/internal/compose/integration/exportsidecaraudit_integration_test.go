@@ -17,6 +17,7 @@ import (
 // A caller's export carries the audit rows of profile fields and facts of the
 // companies they may see. It carries none of another rep's private company.
 func TestABoundedExportCarriesTheSidecarAuditRowsOfVisibleCompanies(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	f := e.seedExportFixture(t)
 	if _, err := e.Owner.Exec(context.Background(),

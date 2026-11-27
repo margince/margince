@@ -97,6 +97,7 @@ func valuationPlan(project ids.ProjectID) string {
 }
 
 func TestProjectAndBoardValuesAndReportsExposeMissingPrices(t *testing.T) {
+	t.Parallel()
 	f := setupValuation(t)
 	f.rate(t, "USD", "0.5", valuationDate)
 	f.rate(t, "JPY", "0.006", valuationDate)
@@ -158,6 +159,7 @@ func TestProjectAndBoardValuesAndReportsExposeMissingPrices(t *testing.T) {
 }
 
 func TestAnUnpricedProjectAmountIsNullWhileAnAmountlessDealIsNotAnFxGap(t *testing.T) {
+	t.Parallel()
 	f := setupValuation(t)
 	f.deal(t, "GBP", new(int64(70000)), f.e.Rep1)
 	f.deal(t, "JPY", nil, f.e.Rep1)
@@ -192,6 +194,7 @@ func TestAnUnpricedProjectAmountIsNullWhileAnAmountlessDealIsNotAnFxGap(t *testi
 }
 
 func TestWonProjectAndCompanyValuesKeepTheActualCloseTimeFreeze(t *testing.T) {
+	t.Parallel()
 	f := setupValuation(t)
 	f.rate(t, "USD", "0.5", valuationDate)
 	deal := f.deal(t, "USD", new(int64(20001)), f.e.Rep1)
@@ -216,6 +219,7 @@ func TestWonProjectAndCompanyValuesKeepTheActualCloseTimeFreeze(t *testing.T) {
 }
 
 func TestMaskedDealAmountsRevealNeitherValueNorMissingPriceInProjectTotals(t *testing.T) {
+	t.Parallel()
 	f := setupValuation(t)
 	f.deal(t, "EUR", new(int64(10000)), f.e.Rep1)
 	f.deal(t, "GBP", new(int64(70000)), f.e.Rep3)
@@ -245,6 +249,7 @@ func (f valuationFixture) close(t *testing.T, deal ids.DealID) {
 }
 
 func TestALegacyWonAmountWithoutItsFreezeStillUsesTheSharedValuation(t *testing.T) {
+	t.Parallel()
 	f := setupValuation(t)
 	f.rate(t, "USD", "0.5", valuationDate)
 	deal := f.deal(t, "USD", new(int64(20001)), f.e.Rep1)
@@ -262,6 +267,7 @@ func TestALegacyWonAmountWithoutItsFreezeStillUsesTheSharedValuation(t *testing.
 }
 
 func TestLegacyUnpriceableWinsStayUnknownAcrossProjectAndCompanyTotals(t *testing.T) {
+	t.Parallel()
 	f := setupValuation(t)
 	f.rate(t, "USD", "0.5", valuationDate)
 	deal := f.deal(t, "USD", new(int64(20001)), f.e.Rep1)

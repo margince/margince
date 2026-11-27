@@ -34,6 +34,7 @@ import (
 )
 
 func TestTheWindowReadExcludesALimitedMessageOfItsOwnAccord(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	ctx := context.Background()

@@ -40,6 +40,7 @@ func (r checkRefusal) names(field, code string) bool {
 }
 
 func TestADealPicklistValueOutsideItsOptionsNamesTheField(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	deal := apptest.CreateOpenDeal(t, e, apptest.DiscoverSeededPipeline(t, e))
@@ -54,6 +55,7 @@ func TestADealPicklistValueOutsideItsOptionsNamesTheField(t *testing.T) {
 }
 
 func TestAnOverlongDealCustomTextFieldSaysWhichFieldIsTooLong(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupAppWithOptions(t, compose.WithSchemaPool(SchemaPool(t)))
 	e.BootstrapWorkspace(t)
 	var field struct {
@@ -82,6 +84,7 @@ func TestAnOverlongDealCustomTextFieldSaysWhichFieldIsTooLong(t *testing.T) {
 // The package's tests share one database, so the CHECK refuses only events that
 // name this test's deal, and it is dropped when the test ends.
 func TestACheckOnARowTheCallerNeverWroteIsAServerFault(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	deal := ids.MustParse(apptest.CreateOpenDeal(t, e, apptest.DiscoverSeededPipeline(t, e)))

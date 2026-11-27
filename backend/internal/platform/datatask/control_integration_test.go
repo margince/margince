@@ -15,6 +15,7 @@ import (
 )
 
 func TestControlPreservesProgressAcrossPauseAndResume(t *testing.T) {
+	t.Parallel()
 	ctx, pool, e, _ := executorFixture(t)
 	before := progressFor(ctx, t, e)
 	if before.RunID.IsZero() {
@@ -61,6 +62,7 @@ func TestControlPreservesProgressAcrossPauseAndResume(t *testing.T) {
 }
 
 func TestEstimateRefusalLeavesPreviousEstimateAndAuditIntact(t *testing.T) {
+	t.Parallel()
 	ctx, pool, e, _ := executorFixture(t)
 	p := progressFor(ctx, t, e)
 	e.tasks[0].Steps[0].Estimate = func(context.Context, Querier, int64) (int64, bool, error) {
@@ -102,6 +104,7 @@ func TestEstimateRefusalLeavesPreviousEstimateAndAuditIntact(t *testing.T) {
 }
 
 func TestControlsRefuseUnknownAndUnauthorizedWork(t *testing.T) {
+	t.Parallel()
 	ctx, _, e, _ := executorFixture(t)
 	before := progressFor(ctx, t, e)
 	for _, target := range [][2]string{{"core/0_unknown", before.Step}, {before.TaskID, "unknown"}} {

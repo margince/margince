@@ -18,6 +18,7 @@ import (
 )
 
 func TestAListChangeAgainstAStaleVersionIsRefusedAndEveryChangeIsARevision(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := collections.NewStore(e.DB())
 	rep1 := e.As(e.Rep1, []ids.UUID{e.Team1}, listPerms())
@@ -49,6 +50,7 @@ func TestAListChangeAgainstAStaleVersionIsRefusedAndEveryChangeIsARevision(t *te
 }
 
 func TestAnArchivedListIsReadOnlyUntilItIsRestored(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := collections.NewStore(e.DB())
 	rep1 := e.As(e.Rep1, []ids.UUID{e.Team1}, listPerms())

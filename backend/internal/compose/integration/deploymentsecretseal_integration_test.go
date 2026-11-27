@@ -157,6 +157,7 @@ func sealedBefore(t *testing.T, e *Env, vault keyvault.Vault, entry *settings.En
 }
 
 func TestADeclaredRelayPasswordIsReadAndNeverSealed(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	vault := realVault(t, e)
 	log := slog.New(slog.DiscardHandler)
@@ -192,6 +193,7 @@ func TestADeclaredRelayPasswordIsReadAndNeverSealed(t *testing.T) {
 // one. The installation that dropped its variable after that release keeps its
 // relay.
 func TestACopySealedBeforeIsAnsweredOnceTheDeclarationIsGone(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	vault := realVault(t, e)
 	log := slog.New(slog.DiscardHandler)
@@ -217,6 +219,7 @@ func TestACopySealedBeforeIsAnsweredOnceTheDeclarationIsGone(t *testing.T) {
 // Destroying it would let one boot with a stale variable or a botched pipeline
 // irreversibly destroy a credential it never meant to replace.
 func TestADeclarationWinsOverACopySealedBeforeAndLeavesIt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	vault := realVault(t, e)
 	log := slog.New(slog.DiscardHandler)
@@ -246,6 +249,7 @@ func TestADeclarationWinsOverACopySealedBeforeAndLeavesIt(t *testing.T) {
 // installation told it has no license looks for a token it was already issued,
 // and in production that refusal blocks the boot.
 func TestAnUnopenableVaultNamesItselfRatherThanReportingNoLicense(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	log := slog.New(slog.DiscardHandler)
 	sealedBefore(t, e, realVault(t, e), identity.LicenseTokenRef, "a-license-token")
@@ -265,6 +269,7 @@ func TestAnUnopenableVaultNamesItselfRatherThanReportingNoLicense(t *testing.T) 
 }
 
 func TestTheSealedLicenseSourceUsesTheCurrentReadContext(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	source := compose.SealedLicenseTokenSource(e.Pool, realVault(t, e), licenseConfig(t, ""), slog.New(slog.DiscardHandler))
 	ctx, cancel := context.WithCancel(t.Context())
@@ -278,6 +283,7 @@ func TestTheSealedLicenseSourceUsesTheCurrentReadContext(t *testing.T) {
 // Two roles booting at once with a declared password seal nothing between
 // them: no copy to race over, and no ciphertext to strand.
 func TestTwoRolesBootingAtOnceSealNothing(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	vault := realVault(t, e)
 	log := slog.New(slog.DiscardHandler)
@@ -313,6 +319,7 @@ func TestTwoRolesBootingAtOnceSealNothing(t *testing.T) {
 // other: admin-readable over /audit-log and exportable. Careful everywhere else
 // and verbatim here is careful nowhere.
 func TestTheLedgerRecordsTheSealWithoutTheAddress(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ref := sealedBefore(t, e, realVault(t, e), identity.SMTPPasswordRef, "a-relay-password")
 	if ref == "" {

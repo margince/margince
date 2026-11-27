@@ -26,11 +26,13 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestAReplyPublishesAContactKeptOnlyBecauseNobodyHadAnswered(t *testing.T) {
+	t.Parallel()
 	e := setupWithOwnMailbox(t)
 	const email = "buyer@coldlead.example"
 	judge(t, e, email, capture.KindContact, seedThreadedMailHeldBy(t, e, e.Rep1, email, "Intro", "outbound", "thr-cold"))
@@ -55,6 +57,7 @@ func TestAReplyPublishesAContactKeptOnlyBecauseNobodyHadAnswered(t *testing.T) {
 // The reply is asked the question the verdict asks before it narrows: an
 // answer on a held thread may not publish its counterparty.
 func TestAReplyOnAHeldThreadDoesNotPublish(t *testing.T) {
+	t.Parallel()
 	e := setupWithOwnMailbox(t)
 	const email = "buyer@heldreply.example"
 	judge(t, e, email, capture.KindContact, seedThreadedMailHeldBy(t, e, e.Rep1, email, "Intro", "outbound", "thr-reply-held"))
@@ -70,6 +73,7 @@ func TestAReplyOnAHeldThreadDoesNotPublish(t *testing.T) {
 // working with them, so the contact the verdict judged a business counterparty
 // is published by that reply, in the colleague's own mailbox.
 func TestAReplyToAColleaguePublishesAContactNobodyHadAnswered(t *testing.T) {
+	t.Parallel()
 	e := setupWithSecondMailbox(t)
 	const email = "buyer@twoseats.example"
 	judge(t, e, email, capture.KindContact, seedThreadedMailHeldBy(t, e, e.Rep1, email, "Intro", "outbound", "thr-two-seats"))
@@ -88,6 +92,7 @@ func TestAReplyToAColleaguePublishesAContactNobodyHadAnswered(t *testing.T) {
 // worker's pass. The same pass repairs a contact narrowed before a reply to a
 // colleague counted.
 func TestTheVerdictPassPublishesAContactWhoseAddressAnsweredAColleague(t *testing.T) {
+	t.Parallel()
 	e := setupWithSecondMailbox(t)
 	const email = "buyer@colleaguesreply.example"
 	judge(t, e, email, capture.KindContact, seedThreadedMailHeldBy(t, e, e.Rep1, email, "Intro", "outbound", "thr-col"))
@@ -106,6 +111,7 @@ func TestTheVerdictPassPublishesAContactWhoseAddressAnsweredAColleague(t *testin
 // The verdict reads the evidence the reply hook publishes on, so a reply on a
 // held thread is no answer at verdict time either.
 func TestAVerdictDoesNotCountAReplyOnAHeldThread(t *testing.T) {
+	t.Parallel()
 	e := setupWithOwnMailbox(t)
 	const email = "buyer@heldanswer.example"
 	activity := seedThreadedMailHeldBy(t, e, e.Rep1, email, "Intro", "outbound", "thr-open-intro")
@@ -121,6 +127,7 @@ func TestAVerdictDoesNotCountAReplyOnAHeldThread(t *testing.T) {
 // A held mailbox promises its mail is shared with nobody, so a reply captured
 // into it publishes nobody: not the owner's own contact.
 func TestAReplyInTheOwnersHeldMailboxDoesNotPublish(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	connectSeatMailbox(t, e, e.Rep1, "a@authz.test", "held")
 	const email = "buyer@ownerheld.example"
@@ -133,6 +140,7 @@ func TestAReplyInTheOwnersHeldMailboxDoesNotPublish(t *testing.T) {
 
 // The same promise from a colleague's held mailbox.
 func TestAReplyInAColleaguesHeldMailboxDoesNotPublish(t *testing.T) {
+	t.Parallel()
 	e := setupWithOwnMailbox(t)
 	connectSeatMailbox(t, e, e.Rep2, "b@authz.test", "held")
 	const email = "buyer@colleagueheldbox.example"
@@ -148,6 +156,7 @@ func TestAReplyInAColleaguesHeldMailboxDoesNotPublish(t *testing.T) {
 // A reply imported under the held posture stays no evidence after the mailbox
 // is later opened: the import recorded the promise.
 func TestAReplyImportedWhileHeldStaysNoEvidenceOnceTheMailboxOpens(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	connectSeatMailbox(t, e, e.Rep1, "a@authz.test", "held")
 	const email = "buyer@heldthenshared.example"
@@ -162,6 +171,7 @@ func TestAReplyImportedWhileHeldStaysNoEvidenceOnceTheMailboxOpens(t *testing.T)
 // A mailbox switched to held before the reconciling pass reaches its reply
 // publishes nothing from it either.
 func TestAReplyInAMailboxHeldSinceItsImportIsNoEvidence(t *testing.T) {
+	t.Parallel()
 	e := setupWithOwnMailbox(t)
 	const email = "buyer@sharedthenheld.example"
 	judge(t, e, email, capture.KindContact, seedThreadedMailHeldBy(t, e, e.Rep1, email, "Intro", "outbound", "thr-shared-then"))
@@ -176,6 +186,7 @@ func TestAReplyInAMailboxHeldSinceItsImportIsNoEvidence(t *testing.T) {
 // A colleague's reply ends only the reason that says nobody answered. An
 // advisor is the owner's whoever the address writes to.
 func TestAReplyToAColleagueDoesNotPublishAnAdvisor(t *testing.T) {
+	t.Parallel()
 	e := setupWithSecondMailbox(t)
 	const email = "taxadvisor@colleague.example"
 	judge(t, e, email, capture.KindAdvisor, seedThreadedMailHeldBy(t, e, e.Rep1, email, "Your return", "inbound", "thr-adv-col"))
@@ -191,6 +202,7 @@ func TestAReplyToAColleagueDoesNotPublishAnAdvisor(t *testing.T) {
 // A reply to a colleague on a held thread is no evidence, as it is for the
 // owner.
 func TestAReplyToAColleagueOnAHeldThreadDoesNotPublish(t *testing.T) {
+	t.Parallel()
 	e := setupWithSecondMailbox(t)
 	const email = "buyer@colleagueheld.example"
 	judge(t, e, email, capture.KindContact, seedThreadedMailHeldBy(t, e, e.Rep1, email, "Intro", "outbound", "thr-col-held"))
@@ -207,6 +219,7 @@ func TestAReplyToAColleagueOnAHeldThreadDoesNotPublish(t *testing.T) {
 // the thread again at reply time would find nothing and publish; the recorded
 // reason is what still refuses.
 func TestAReplyDoesNotPublishAContactAHoldNarrowedEvenOnceTheHoldIsLifted(t *testing.T) {
+	t.Parallel()
 	e := setupWithOwnMailbox(t)
 	const email = "counsel@heldmatter.example"
 	activity := seedThreadedMailHeldBy(t, e, e.Rep1, email, "The matter", "inbound", "thr-hold")
@@ -223,6 +236,7 @@ func TestAReplyDoesNotPublishAContactAHoldNarrowedEvenOnceTheHoldIsLifted(t *tes
 // Mail we sent on a held thread is both outbound-unanswered and held. The hold
 // is what gets recorded, or the reply would publish what the hold keeps quiet.
 func TestOutboundMailOnAHeldThreadRecordsTheHold(t *testing.T) {
+	t.Parallel()
 	e := setupWithOwnMailbox(t)
 	const email = "partner@heldoutbound.example"
 	activity := seedThreadedMailHeldBy(t, e, e.Rep1, email, "Terms", "outbound", "thr-held-out")
@@ -233,6 +247,7 @@ func TestOutboundMailOnAHeldThreadRecordsTheHold(t *testing.T) {
 }
 
 func TestAReplyDoesNotPublishAnAdvisor(t *testing.T) {
+	t.Parallel()
 	e := setupWithOwnMailbox(t)
 	const email = "taxadvisor@ownbooks.example"
 	judge(t, e, email, capture.KindAdvisor, seedThreadedMailHeldBy(t, e, e.Rep1, email, "Your return", "inbound", "thr-adv"))
@@ -244,6 +259,7 @@ func TestAReplyDoesNotPublishAnAdvisor(t *testing.T) {
 }
 
 func TestAReplyDoesNotPublishAContactAHumanMadePrivate(t *testing.T) {
+	t.Parallel()
 	e := setupWithOwnMailbox(t)
 	const email = "friend@ownchoice.example"
 	judge(t, e, email, capture.KindContact, seedThreadedMailHeldBy(t, e, e.Rep1, email, "Hello", "inbound", "thr-human"))
@@ -265,6 +281,7 @@ func TestAReplyDoesNotPublishAContactAHumanMadePrivate(t *testing.T) {
 // The sink usually mints the record before any verdict arrives, so the
 // decision's reason has to land on a row that already exists.
 func TestAVerdictRecordsItsReasonOnTheRecordTheSinkMintedFirst(t *testing.T) {
+	t.Parallel()
 	e := setupWithOwnMailbox(t)
 	const email = "notary@ownaffairs.example"
 	seatHoldsSeeded(t, e, e.Rep1, seedAttestedOutbound(t, e, "sink-first-out", email, "thr-sink-first"))
@@ -276,7 +293,7 @@ func TestAVerdictRecordsItsReasonOnTheRecordTheSinkMintedFirst(t *testing.T) {
 	if !queued {
 		t.Fatal("no verdict was opened for the sender the sink minted")
 	}
-	runVerdict(t, e, &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindAdvisor}})
+	runVerdict(t, e, &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN, verdicts: map[string]string{dispositionID.String(): capture.KindAdvisor}})
 	requireNarrowed(t, e, email, contacts.NarrowedAdvisor)
 
 	replyOnFreshThread(t, e, email, "thr-sink-first-reply")
@@ -287,6 +304,7 @@ func TestAVerdictRecordsItsReasonOnTheRecordTheSinkMintedFirst(t *testing.T) {
 // A row narrowed before the reason existed records none. Absent is not
 // outbound_no_answer, so it refuses rather than guessing.
 func TestAReplyDoesNotPublishAContactThatRecordsNoReason(t *testing.T) {
+	t.Parallel()
 	e := setupWithOwnMailbox(t)
 	const email = "prospect@beforethecolumn.example"
 	judge(t, e, email, capture.KindContact, seedThreadedMailHeldBy(t, e, e.Rep1, email, "Intro", "outbound", "thr-legacy"))
@@ -303,6 +321,7 @@ func TestAReplyDoesNotPublishAContactThatRecordsNoReason(t *testing.T) {
 // A reply on a held thread stays no evidence when a later message from the
 // same address lands on a thread nothing holds.
 func TestAHeldReplyDoesNotPublishOnALaterUnheldMessage(t *testing.T) {
+	t.Parallel()
 	e := setupWithOwnMailbox(t)
 	const email = "buyer@heldthenopen.example"
 	judge(t, e, email, capture.KindContact, seedThreadedMailHeldBy(t, e, e.Rep1, email, "Intro", "outbound", "thr-held-first"))
@@ -317,6 +336,7 @@ func TestAHeldReplyDoesNotPublishOnALaterUnheldMessage(t *testing.T) {
 // The live hook is not the only chance. A reply whose promotion failed is
 // published by the verdict worker's pass.
 func TestTheVerdictPassPublishesWhatTheLiveHookFailedToPublish(t *testing.T) {
+	t.Parallel()
 	e := setupWithOwnMailbox(t)
 	const email = "buyer@lostpromotion.example"
 	loseTheLivePromotion(t, e, email, "thr-lost")
@@ -331,13 +351,14 @@ func TestTheVerdictPassPublishesWhatTheLiveHookFailedToPublish(t *testing.T) {
 // One contact whose publication fails must not hold back the others on every
 // tick; the pass still reports the failure.
 func TestOneFailingContactDoesNotStopTheVerdictPass(t *testing.T) {
+	t.Parallel()
 	e := setupWithOwnMailbox(t)
 	const stuck, fine = "buyer@stuckpromotion.example", "buyer@finepromotion.example"
 	loseTheLivePromotion(t, e, stuck, "thr-stuck")
 	loseTheLivePromotion(t, e, fine, "thr-fine")
 	refuseUpdates(t, "contact", fmt.Sprintf("OLD.id = '%s'", contactIDFor(t, e, stuck)))
 
-	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{}, CaptureConfig{}, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN}, CaptureConfig{}, slog.Default())
 	if err := engine.PublishAnsweredContactsWorkspace(principal.WithWorkspaceID(context.Background(), e.WS)); err == nil {
 		t.Error("the pass swallowed the failed publication")
 	}
@@ -351,6 +372,7 @@ func TestOneFailingContactDoesNotStopTheVerdictPass(t *testing.T) {
 // A run of contacts that keep failing does not hide the ones after it. The
 // pass moves past them and reaches the rest, more than a page later.
 func TestFailingContactsDoNotStarveTheContactsBehindThem(t *testing.T) {
+	t.Parallel()
 	e := setupWithOwnMailbox(t)
 	stuck := []string{"one@stuckfirst.example", "two@stuckfirst.example", "three@stuckfirst.example"}
 	fine := []string{"four@finelater.example", "five@finelater.example"}
@@ -362,7 +384,7 @@ func TestFailingContactsDoNotStarveTheContactsBehindThem(t *testing.T) {
 		}
 	}
 	refuseUpdates(t, "contact", "OLD.id IN ("+strings.Join(refused, ", ")+")")
-	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{}, CaptureConfig{}, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN}, CaptureConfig{}, slog.Default())
 	engine.answeredPage = 2
 
 	// Two pages hold a failure each; the third holds only a contact that lands.
@@ -383,6 +405,7 @@ func TestFailingContactsDoNotStarveTheContactsBehindThem(t *testing.T) {
 // A pass that reaches the end starts over, so a contact skipped for a failure
 // is published once it stops failing.
 func TestThePassStartsOverAndRetriesASkippedContact(t *testing.T) {
+	t.Parallel()
 	e := setupWithOwnMailbox(t)
 	emails := []string{"first@wraparound.example", "second@wraparound.example", "third@wraparound.example"}
 	for i, email := range emails {
@@ -390,7 +413,7 @@ func TestThePassStartsOverAndRetriesASkippedContact(t *testing.T) {
 	}
 	first := contactIDFor(t, e, emails[0])
 	refuseUpdates(t, "contact", fmt.Sprintf("OLD.id = '%s' AND NEW.title IS DISTINCT FROM 'publishable'", first))
-	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{}, CaptureConfig{}, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN}, CaptureConfig{}, slog.Default())
 	engine.answeredPage = 2
 	pass := func() error {
 		return engine.PublishAnsweredContactsWorkspace(principal.WithWorkspaceID(context.Background(), e.WS))
@@ -438,6 +461,7 @@ func withoutContactUpdate(ctx context.Context) context.Context {
 // Upgrade state: a row narrowed before reasons existed. A later verdict judging
 // the sender a contact must not publish it, since its reason may be a hold.
 func TestALegacyNarrowingIsNotPublishedByALaterVerdict(t *testing.T) {
+	t.Parallel()
 	e := setupWithOwnMailbox(t)
 	const email = "counsel@legacyhold.example"
 	judge(t, e, email, capture.KindContact, seedThreadedMailHeldBy(t, e, e.Rep1, email, "Intro", "outbound", "thr-legacy-v"))
@@ -454,6 +478,7 @@ func TestALegacyNarrowingIsNotPublishedByALaterVerdict(t *testing.T) {
 // Upgrade state again: a later narrowing decision does not guess a legacy
 // row's reason, so it cannot turn one into something a reply may publish.
 func TestALegacyNarrowingKeepsItsUnknownReason(t *testing.T) {
+	t.Parallel()
 	e := setupWithOwnMailbox(t)
 	const email = "counsel@legacyreason.example"
 	judge(t, e, email, capture.KindContact, seedThreadedMailHeldBy(t, e, e.Rep1, email, "Intro", "outbound", "thr-legacy-r"))
@@ -503,7 +528,7 @@ func connectSeatMailbox(t *testing.T, e *integration.Env, seat ids.UUID, address
 // publishAnswered runs the verdict worker's reconciling pass.
 func publishAnswered(t *testing.T, e *integration.Env) {
 	t.Helper()
-	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{}, CaptureConfig{}, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN}, CaptureConfig{}, slog.Default())
 	if err := engine.PublishAnsweredContactsWorkspace(principal.WithWorkspaceID(context.Background(), e.WS)); err != nil {
 		t.Fatalf("publishing answered contacts: %v", err)
 	}
@@ -513,7 +538,7 @@ func publishAnswered(t *testing.T, e *integration.Env) {
 func judge(t *testing.T, e *integration.Env, email, kind string, activity ids.UUID) {
 	t.Helper()
 	id := seedPendingDisposition(t, e, email, email[strings.LastIndex(email, "@")+1:], activity)
-	runVerdict(t, e, &scriptedVerdictBrain{verdicts: map[string]string{id.String(): kind}})
+	runVerdict(t, e, &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN, verdicts: map[string]string{id.String(): kind}})
 }
 
 // replyOnFreshThread is the address answering mail we sent on a thread nothing
@@ -565,6 +590,7 @@ func narrowingReasonOf(t *testing.T, e *integration.Env, email string) *string {
 // owner holds because nobody had answered. Once the reply published it, there
 // is nothing left to ask.
 func TestOnlyAContactNobodyHadAnsweredAwaitsAnAnswer(t *testing.T) {
+	t.Parallel()
 	e := setupWithOwnMailbox(t)
 	const email = "buyer@awaits.example"
 	judge(t, e, email, capture.KindContact, seedThreadedMailHeldBy(t, e, e.Rep1, email, "Intro", "outbound", "thr-awaits"))

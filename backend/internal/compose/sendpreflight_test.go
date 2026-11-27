@@ -187,7 +187,7 @@ func assertLookupsAsked(t *testing.T, grants *stubGrants, provider string, wantG
 	if grants.calls != wantGrantCalls {
 		t.Fatalf("the grant lookup was asked %d time(s), want %d", grants.calls, wantGrantCalls)
 	}
-	_, capability := comms.SendScopeFor(provider)
+	_, capability := comms.SendScopeFor(provider, comms.PreRegistryChannelSending)
 	wantChannelCalls := 0
 	if capability == comms.SendsWithoutScope && actorPresent {
 		wantChannelCalls = 1
@@ -239,9 +239,9 @@ func TestSendCapableAsksTheUnitRatherThanTheWorkspaceBotTable(t *testing.T) {
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			declaresTransport(t, "mine", tc.channel)
+			composed := declaresTransport("mine", tc.channel)
 			grants := &stubGrants{channelBound: true}
-			authority := mailboxAuthority{grants: grants, mailAppConfigured: func(context.Context, string) (bool, error) { return false, nil }}
+			authority := mailboxAuthority{grants: grants, composed: composed, mailAppConfigured: func(context.Context, string) (bool, error) { return false, nil }}
 
 			got, err := authority.SendCapable(human, "mine_chat")
 
@@ -274,7 +274,7 @@ func TestSendableMailProviderNamesAMailboxTheSenderCanActuallySendFrom(t *testin
 	sendable := func(providers ...string) map[string][]string {
 		out := map[string][]string{}
 		for _, p := range providers {
-			scope, _ := comms.SendScopeFor(p)
+			scope, _ := comms.SendScopeFor(p, comms.PreRegistryChannelSending)
 			out[p] = []string{scope}
 		}
 		return out
@@ -377,7 +377,7 @@ func TestAStoredAppInstallationPassesTheSendPreflight(t *testing.T) {
 	human := principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:x", UserID: ids.NewV7(),
 	})
-	scope, _ := comms.SendScopeFor(providerGmail)
+	scope, _ := comms.SendScopeFor(providerGmail, comms.PreRegistryChannelSending)
 	s := Server{googleAppResolver: func(context.Context) (capture.ConnectorApp, bool, error) {
 		return capture.ConnectorApp{ClientID: "stored-id", ClientSecretRef: "stored-secret"}, true, nil
 	}}
@@ -495,7 +495,7 @@ func TestWorkerMailAuthorityAnswersFromItsRegistry(t *testing.T) {
 		"a connector never registered": {withGoogle, "no_such_mailbox", false},
 	} {
 		t.Run(name, func(t *testing.T) {
-			got, err := workerMailAuthority(tc.registry).mailAppConfigured(context.Background(), tc.provider)
+			got, err := workerMailAuthority(tc.registry, nil).mailAppConfigured(context.Background(), tc.provider)
 			if err != nil {
 				t.Fatalf("mailAppConfigured: %v", err)
 			}

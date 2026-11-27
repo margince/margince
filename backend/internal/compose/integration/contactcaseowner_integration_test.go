@@ -92,6 +92,7 @@ func (c ownerCase) merge(t *testing.T) (ids.UUID, error) {
 }
 
 func TestACaseMergeAcceptsAnInvitedColleagueAsOwnerLikeThePairMerge(t *testing.T) {
+	t.Parallel()
 	for name, size := range map[string]int{"a case of three": 3, "a case of two": 2} {
 		t.Run(name, func(t *testing.T) {
 			c := seedOwnerCase(t, size, "+493055509101")
@@ -119,6 +120,7 @@ func TestACaseMergeAcceptsAnInvitedColleagueAsOwnerLikeThePairMerge(t *testing.T
 }
 
 func TestACaseMergeRefusesAnOwnerWhoIsNotAColleague(t *testing.T) {
+	t.Parallel()
 	for name, set := range map[string]string{
 		"a deactivated seat": "status = 'deactivated'",
 		"an agent seat":      "is_agent = true",
@@ -138,6 +140,7 @@ func TestACaseMergeRefusesAnOwnerWhoIsNotAColleague(t *testing.T) {
 }
 
 func TestAnInvitedOwnerOnTheLosingSideKeepsAccessAndPreviewAgrees(t *testing.T) {
+	t.Parallel()
 	c := seedOwnerCase(t, 3, "+493055509104")
 	c.seat(t, "status = 'invited'")
 	read, err := c.store.GetContactCase(c.rep, c.members[1])
@@ -166,6 +169,7 @@ func TestAnInvitedOwnerOnTheLosingSideKeepsAccessAndPreviewAgrees(t *testing.T) 
 }
 
 func TestAMergeThatOnlyMovesAnEmailMovesTheSurvivorsVersion(t *testing.T) {
+	t.Parallel()
 	c := seedOwnerCase(t, 2, "+493055509105")
 	target := ids.From[ids.ContactKind](c.members[1])
 	before, err := c.store.GetContact(c.e.Admin(), target, storekit.LiveOnly)

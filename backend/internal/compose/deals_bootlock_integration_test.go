@@ -19,14 +19,14 @@ import (
 )
 
 // Maintenance switched off at boot stops the sweep's write over a saved row
-// that leaves it on. Not parallel: the binding is the process's own.
+// that leaves it on.
 func TestABootSetMaintenanceOffStopsTheSweepsWrite(t *testing.T) {
+	t.Parallel()
 	e := setupCloseDate(t)
 	e.seedSweepDeal(t, "Overdue with maintenance off at boot", e.early, nil, new(-12), 3)
-	UseConfig(bootConfigForTest(t, config.RoleWorker, "MARGINCE_DEALS_MAINTENANCE_WRITES_ENABLED=false"))
-	t.Cleanup(func() { UseConfig(nil) })
+	boot := ConfigContext(e.sweepCtx(), bootConfigForTest(t, config.RoleWorker, "MARGINCE_DEALS_MAINTENANCE_WRITES_ENABLED=false"))
 
-	if err := e.sweep(); err != nil {
+	if err := e.corrector.SweepWorkspace(boot); err != nil {
 		t.Fatal(err)
 	}
 	swept := e.readSwept(t, e.firstDealID(t))
@@ -38,11 +38,12 @@ func TestABootSetMaintenanceOffStopsTheSweepsWrite(t *testing.T) {
 // A deployment's seed of legal review off writes no row under a boot value,
 // which would act only once that value is gone.
 func TestABootSetLegalReviewIsNotSeeded(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
-	bindForTest(t, "MARGINCE_DEALS_LEGAL_REVIEW_ENABLED=true")
+	ctx := apiBootCtx(e.Admin(), t, "MARGINCE_DEALS_LEGAL_REVIEW_ENABLED=true")
 	off := false
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		return seedLegalReview(e.Admin(), tx, deployconfig.Seeds{LegalReview: &off})
+	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		return seedLegalReview(ctx, tx, deployconfig.Seeds{LegalReview: &off})
 	}); err != nil {
 		t.Fatalf("seeding legal review off under a boot value: %v", err)
 	}

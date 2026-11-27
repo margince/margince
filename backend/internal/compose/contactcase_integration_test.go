@@ -155,6 +155,7 @@ func uuidsOf(in []openapi_types.UUID) []ids.UUID {
 }
 
 func TestEveryOwnerSeesTheSameContactCase(t *testing.T) {
+	t.Parallel()
 	c := setupCases(t)
 	members := c.seedCase(t, c.e.Rep1, c.e.Rep2, c.e.Rep3)
 	anchor := slices.MinFunc(members, func(a, b ids.UUID) int { return slices.Compare(a[:], b[:]) })
@@ -186,6 +187,7 @@ func TestEveryOwnerSeesTheSameContactCase(t *testing.T) {
 }
 
 func TestACaseMergeOfColleaguesContactsNeedsThePolicy(t *testing.T) {
+	t.Parallel()
 	c := setupCases(t)
 	members := c.seedCase(t, c.e.Rep1, c.e.Rep2, c.e.Rep3)
 	rep := c.rep(c.e.Rep1)
@@ -244,6 +246,7 @@ func grantAccess(t *testing.T, e *integration.Env, record, user ids.UUID) string
 }
 
 func TestACaseMergeKeepsEachFormerOwnerAtTheirSeat(t *testing.T) {
+	t.Parallel()
 	c := setupCases(t)
 	owner := integration.OwnerConn(t)
 	gone := ids.NewV7()
@@ -288,6 +291,7 @@ func TestACaseMergeKeepsEachFormerOwnerAtTheirSeat(t *testing.T) {
 }
 
 func TestASubsetMergeLeavesTheRestAsAnOpenPairWithTheSurvivor(t *testing.T) {
+	t.Parallel()
 	c := setupCases(t)
 	members := c.seedCase(t, c.e.Rep1, c.e.Rep2, c.e.Rep3)
 	c.setPolicy(t, true)
@@ -321,6 +325,7 @@ func memberIDs(c crmcontracts.ContactCase) []openapi_types.UUID {
 }
 
 func TestACaseMergeRefusesASelectionTheCaseCannotTake(t *testing.T) {
+	t.Parallel()
 	c := setupCases(t)
 	members := c.seedCase(t, c.e.Rep1, c.e.Rep1, c.e.Rep1)
 	stranger := c.seedCase(t, c.e.Rep1, c.e.Rep1)
@@ -368,6 +373,7 @@ func otherThan(members []ids.UUID, pair crmcontracts.ContactCaseEdge) ids.UUID {
 }
 
 func TestUndoingADismissalReshapesTheCase(t *testing.T) {
+	t.Parallel()
 	c := setupCases(t)
 	members := c.seedCase(t, c.e.Rep1, c.e.Rep1, c.e.Rep1)
 	rep := c.rep(c.e.Rep1)

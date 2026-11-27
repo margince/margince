@@ -3,81 +3,55 @@
 
 //go:build integration
 
+// Package testdb gives each integration test a database of its own, a copy of
+// the migrated template (New, For). Its pools fit the lane's budget.
 package testdb
 
 import (
 	"context"
-	"fmt"
+	"sync"
+	"sync/atomic"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/dbmigrate"
-	"github.com/margince/margince/backend/internal/platform/sweepreach"
 	"github.com/margince/margince/backend/migrations"
 )
 
-// EnsureSchema brings the test database to this binary's head exactly once per
-// process. Every later test in the same process is a no-op here and resets via
-// Reset. Any caller may pass any owner connection to the same database — the
-// work runs on whichever connection wins the race to the sync.Once, and the
-// result is the same schema for all of them.
-//
-// The lane hands most processes a database that is ALREADY at head: each
-// package gets a CREATE DATABASE ... TEMPLATE copy of the migrated
-// margince_test (scripts/lib-testdb.sh), and dropping that schema to rebuild it
-// from the same migrations cost ~1.3 s per package process — attributed by
-// go test to whichever test happened to run first. reusableClone establishes
-// when the copy can be taken at its word instead; see CloneDBEnv for what has
-// to be true, and why every one of those conditions is load-bearing rather than
-// defensive.
+var (
+	migrateOnce sync.Once
+	migrateErr  error
+
+	// schemaReady reports that EnsureSchema has migrated this process's
+	// database. Pool refuses a pool on a database that is not a test's copy
+	// until then.
+	schemaReady atomic.Bool
+)
+
+// EnsureSchema drops and rebuilds the schema of a database that is not a
+// test's copy, once per process. A copy is at head already. The bench targets
+// (InPlaceEnv) and a suite that makes its own database rely on the rebuild.
 func EnsureSchema(ctx context.Context, owner *pgx.Conn) error {
-	// A suite merges and erases on a test database without booting; one that
-	// needs the declared tables installs them itself (integration.Setup).
-	sweepreach.InstallForTestDatabase()
+	if isCopy(owner.Config().Database) {
+		return nil
+	}
 	migrateOnce.Do(func() {
-		reusable, reason, err := reusableClone(ctx, owner)
-		if err != nil {
+		if err := rebuildSchema(ctx, owner); err != nil {
 			migrateErr = err
 			return
 		}
-		if !reusable {
-			if reason != "" {
-				migrateErr = fmt.Errorf("testdb: refusing to rebuild a declared clone: %s", reason)
-				return
-			}
-			if err := rebuildSchema(ctx, owner); err != nil {
-				migrateErr = err
-				return
-			}
-		}
-		// The schema is at head and provably empty exactly here — either
-		// because it was just rebuilt, or because reusableClone proved both —
-		// which is the only moment a per-table "this is what zero rows costs"
-		// baseline can be taken.
-		sizes, err := tableSizes(ctx, owner)
-		if err != nil {
-			migrateErr = fmt.Errorf("recording empty-schema sizes: %w", err)
-			return
-		}
-		emptySizes.Store(&sizes)
-		// The drift lane's database applier, before anything can connect. A
-		// per-database search_path reaches connections opened after it is set, and
-		// schemaReady below holds every test pool back until here. So the shadow is on
-		// the path of every test connection, or of none. A no-op under other appliers.
+		// The drift lane's clock shadow is per database and reaches connections
+		// opened after it, so it goes on before any pool is released.
 		if err := installClockShadow(ctx, owner); err != nil {
 			migrateErr = err
 			return
 		}
-		// Last, and only on the success path: Pool refuses to hand out a
-		// connection until this is set, so a pool can never predate the schema
-		// drop in rebuildSchema.
 		schemaReady.Store(true)
 	})
 	return migrateErr
 }
 
-// rebuildSchema prepares databases the lane did not declare as clones.
-// Declared clones must pass the reuse checks before any schema write.
+// rebuildSchema drops the schema and applies every embedded migration.
 func rebuildSchema(ctx context.Context, owner *pgx.Conn) error {
 	if err := dropPublicSchema(ctx, owner); err != nil {
 		return err

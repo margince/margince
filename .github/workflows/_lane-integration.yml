@@ -226,6 +226,7 @@ jobs:
       # definition instead of hand-mirrored GH service containers; the lane's
       # database admin goes through cmd/migrate's db verbs on the test DSN
       # (scripts/lib-testdb.sh db_admin), so no host psql is assumed.
+      # The lanes use postgres-test, the in-RAM server dev machines use too.
       - name: Start the dev infra stack (compose + app role)
         env:
           PG_FSYNC: "off"
@@ -334,6 +335,9 @@ jobs:
           # starts stalling on reclaim again is this value asking to come down
           # further, and the log says so on every run without anyone bisecting.
           INTEGRATION_JOBS: 8
+          # One test of a package at a time. On a 4-core runner eight packages
+          # already fill the cores, and more tests at once measured slower.
+          LANE_TEST_PARALLEL: 1
         # The probe runs BESIDE the shard rather than around it because the
         # failure it exists to explain takes the runner with it: these shards are
         # killed mid-run with `exit 143`, and the job then skips every remaining

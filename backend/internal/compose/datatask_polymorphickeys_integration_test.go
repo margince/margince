@@ -61,6 +61,7 @@ func writeBeforeTheKeys(t *testing.T, owner *pgx.Conn, write func(pgx.Tx) error)
 }
 
 func TestThePolymorphicKeysTaskKeysLiveRowsAndEndsTheRest(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	owner := integration.OwnerConn(t)
@@ -212,6 +213,7 @@ func readLifecycleFinding(ctx context.Context, t *testing.T, e *integration.Env,
 
 // RecordVisit keys the mark it writes, so a delete reaches a mark made today.
 func TestAVisitMarkGoesWithItsRecord(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := e.SeedCompany(t, "Brandt Logistik AG", nil)
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {

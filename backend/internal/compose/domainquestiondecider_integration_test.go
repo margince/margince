@@ -26,6 +26,7 @@ import (
 // with their own tests. This test owns who is asked once a row carries one. Each seat that received the mail also holds the reader
 // row the old routing read.
 func TestEveryPendingDomainReasonAsksOnlyItsDecider(t *testing.T) {
+	t.Parallel()
 	reasons := []string{
 		contacts.PendingUnevidenced, contacts.PendingStaleEvidence,
 		contacts.PendingNearDuplicate, contacts.PendingForwardedIdentity,
@@ -90,6 +91,7 @@ func TestEveryPendingDomainReasonAsksOnlyItsDecider(t *testing.T) {
 // captured the mail. Freshness comes from the newest mail the decider reads,
 // so a missing reader row cannot hold the question aside for good.
 func TestNewerMailReturnsADeferredQuestionToADeciderWithNoReaderRow(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := pinClock(t, e)
 	rep1 := e.As(e.Rep1, nil, integration.AdminPerms)

@@ -94,6 +94,7 @@ func assertOfferMoneyImage(t *testing.T, img *offerMoneyImage, side string, net,
 // Adding a line moves the offer's money. The audit row says what it moved
 // FROM, and says separately — in evidence — that a line was what moved it.
 func TestAddOfferLineItemAuditsTheTotalsTheLineMoved(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, OfferDeskPerms)
 	offerID := baseDraftOffer(ctx, t, e, "Line-add audit deal")
@@ -119,6 +120,7 @@ func TestAddOfferLineItemAuditsTheTotalsTheLineMoved(t *testing.T) {
 // where that claim is written down: before and after hold the same three
 // numbers, which is only readable because both images are recorded.
 func TestAddStagedOfferLinesAuditsTheTotalsItLeftStanding(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, OfferDeskPerms)
 	offerID := baseDraftOffer(ctx, t, e, "Staged-audit deal")
@@ -174,6 +176,7 @@ func lineEvidenceSide(t *testing.T, evidence map[string]any, side string) map[st
 // offer's totals moved from, and the line's own field patch — which is not a
 // field of the offer — is in evidence.
 func TestUpdateOfferLineItemAuditsTheTotalsTheEditMoved(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, OfferDeskPerms)
 	offerID := baseDraftOffer(ctx, t, e, "Line-edit audit deal")
@@ -202,6 +205,7 @@ func TestUpdateOfferLineItemAuditsTheTotalsTheEditMoved(t *testing.T) {
 // from a recorded pair, and field history emits nothing for a key that is
 // equal on both sides, so the row costs the screen nothing.
 func TestUpdateOfferLineItemAuditsTheTotalsARenameLeftStanding(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, OfferDeskPerms)
 	offerID := baseDraftOffer(ctx, t, e, "Line-rename audit deal")
@@ -225,6 +229,7 @@ func TestUpdateOfferLineItemAuditsTheTotalsARenameLeftStanding(t *testing.T) {
 // on acceptance; the state the line came from is line context, not an offer
 // field.
 func TestAcceptOfferLineItemAuditsTheTotalsItBrought(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, OfferDeskPerms)
 	offerID := baseDraftOffer(ctx, t, e, "Line-accept audit deal")
@@ -255,6 +260,7 @@ func TestAcceptOfferLineItemAuditsTheTotalsItBrought(t *testing.T) {
 // Removing the only line empties the offer's money, and the audit row is the
 // only place the numbers it took away survive.
 func TestRemoveOfferLineItemAuditsTheTotalsItTookAway(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, OfferDeskPerms)
 	offerID := baseDraftOffer(ctx, t, e, "Line-remove audit deal")

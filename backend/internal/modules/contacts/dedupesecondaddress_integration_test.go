@@ -44,6 +44,7 @@ func pairEvidence(ctx context.Context, t *testing.T, e *dedupeEnv, created ids.U
 }
 
 func TestATaggedAddressIsAReviewPairWithItsBase(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		name, incumbent, candidate string
 	}{
@@ -73,6 +74,7 @@ func TestATaggedAddressIsAReviewPairWithItsBase(t *testing.T) {
 }
 
 func TestATaggedAddressNeverAnswersARoutingCaller(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.plainContact(ctx, t, "Ab", "ab@example.com")
@@ -86,6 +88,7 @@ func TestATaggedAddressNeverAnswersARoutingCaller(t *testing.T) {
 }
 
 func TestAnUnrelatedAddressOnTheSameDomainIsNoVariant(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.plainContact(ctx, t, "Ab", "ab@example.com")
@@ -98,6 +101,7 @@ func TestAnUnrelatedAddressOnTheSameDomainIsNoVariant(t *testing.T) {
 }
 
 func TestCreatingATaggedAddressFilesTheAddressPair(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	incumbent := e.plainContact(ctx, t, "Ab", "ab@example.com")
@@ -118,6 +122,7 @@ func TestCreatingATaggedAddressFilesTheAddressPair(t *testing.T) {
 }
 
 func TestATaggedVCardIsReportedAsAPossibleDuplicate(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	incumbent := e.plainContact(ctx, t, "Ab", "ab@example.com")
@@ -134,6 +139,7 @@ func TestATaggedVCardIsReportedAsAPossibleDuplicate(t *testing.T) {
 }
 
 func TestCapturingATaggedAddressFilesOnePair(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	incumbent := e.plainContact(ctx, t, "Ab", "ab@example.com")
@@ -154,6 +160,7 @@ func TestCapturingATaggedAddressFilesOnePair(t *testing.T) {
 // The Go rule and the SQL expression must give one answer. Otherwise the lane
 // compares a key no address is stored under.
 func TestTheAddressBaseAgreesInGoAndSQL(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	for _, c := range correspondencetest.BaseAddressCases {
@@ -172,6 +179,7 @@ func TestTheAddressBaseAgreesInGoAndSQL(t *testing.T) {
 }
 
 func TestASubdomainOfTheEmployersDomainCountsAsTheSameEmployer(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	incumbent, employer := e.seedEmployedContact(ctx, t, "Bernd Beispiel", "bb@example.com", "Company A", "company-a.test")
@@ -183,6 +191,7 @@ func TestASubdomainOfTheEmployersDomainCountsAsTheSameEmployer(t *testing.T) {
 }
 
 func TestASubdomainOfAConsumerMailHostIsNoEmployer(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.plainContact(ctx, t, "Bernd Beispiel", "bernd@gmail.com")
@@ -199,6 +208,7 @@ func TestASubdomainOfAConsumerMailHostIsNoEmployer(t *testing.T) {
 }
 
 func TestATransliteratedUmlautIsTheSameName(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		incumbent, candidate string
 		want                 DedupeDecision
@@ -242,6 +252,7 @@ var digraphEqualNamePairs = []goEqualNamePair{
 }
 
 func TestTheDigraphArmAdmitsEveryDigraphEqualPair(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	for _, tc := range digraphEqualNamePairs {
@@ -266,6 +277,7 @@ func TestTheDigraphArmAdmitsEveryDigraphEqualPair(t *testing.T) {
 // With the trigram arm switched off, the pair still reaches the name lane, so
 // the digraph arm is present in the real candidate query.
 func TestTheDigraphArmIsInTheCandidateQuery(t *testing.T) {
+	t.Parallel()
 	for _, tc := range digraphEqualNamePairs {
 		t.Run(tc.name, func(t *testing.T) {
 			e := setupDedupe(t)
@@ -292,6 +304,7 @@ func TestTheDigraphArmIsInTheCandidateQuery(t *testing.T) {
 }
 
 func TestACompanyOnASubdomainOfAHeldDomainIsAReviewPair(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	holder := e.createNamedCompany(ctx, t, "Example Group", "example-group.test")
@@ -307,6 +320,7 @@ func TestACompanyOnASubdomainOfAHeldDomainIsAReviewPair(t *testing.T) {
 }
 
 func TestACompanyOnSubdomainsOfTwoHeldDomainsListsBoth(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	first := e.createNamedCompany(ctx, t, "Example Group", "example-group.test")
@@ -324,6 +338,7 @@ func TestACompanyOnSubdomainsOfTwoHeldDomainsListsBoth(t *testing.T) {
 }
 
 func TestACompanyOnItsOwnRegistrableDomainHasNoSubdomainPair(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.createNamedCompany(ctx, t, "Example Group", "example-group.test")
@@ -370,6 +385,7 @@ func (e *dedupeEnv) beginHeldAddressCreate(t *testing.T, name, email string) (pg
 // Two creates of ab@ and ab+x@ at once: the second waits for the first and
 // files the pair, rather than both reading no incumbent.
 func TestATaggedCreateRacingItsBaseStillFilesThePair(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	first, firstID, pid := e.beginHeldAddressCreate(t, "Ab", "ab@example.com")

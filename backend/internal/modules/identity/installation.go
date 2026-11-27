@@ -120,7 +120,7 @@ func (s *Service) BootstrapInstallation(ctx context.Context, create func() (Inst
 		if err != nil {
 			return err
 		}
-		wsID, err = createInstallation(ctx, tx, s.config, in, originConfigured, seed, &discarded)
+		wsID, err = createInstallation(ctx, tx, s.rbac, s.config, in, originConfigured, seed, &discarded)
 		created = err == nil
 		return err
 	})
@@ -224,8 +224,8 @@ func (in InstallationBootstrap) underClaimedZone(ctx context.Context, tx pgx.Tx,
 // untouched error paths into lines that read as changed to anything comparing
 // against the previous revision. The values it collects are a second OUTCOME of
 // a successful create, not a second result of the call.
-func createInstallation(ctx context.Context, tx pgx.Tx, c *config.Config, in InstallationBootstrap, origin provisioningOrigin, seed func(ctx context.Context, tx pgx.Tx) error, discarded *[]string) (ids.WorkspaceID, error) {
-	in, err := in.underBootValues(c).underClaimedZone(ctx, tx, origin)
+func createInstallation(ctx context.Context, tx pgx.Tx, rbac RbacObjects, c *config.Config, in InstallationBootstrap, origin provisioningOrigin, seed func(ctx context.Context, tx pgx.Tx) error, discarded *[]string) (ids.WorkspaceID, error) {
+	in, err := in.underBootValues(ctx, c).underClaimedZone(ctx, tx, origin)
 	if err != nil {
 		return ids.WorkspaceID{}, err
 	}
@@ -243,8 +243,8 @@ func createInstallation(ctx context.Context, tx pgx.Tx, c *config.Config, in Ins
 	if err != nil {
 		return ids.WorkspaceID{}, err
 	}
-	if origin == originClaimed && in.Country == nil {
-		return ids.WorkspaceID{}, settings.InvalidValue{Setting: Country.Key(), Code: countryUnchosen, Reason: "choose a jurisdiction, or no jurisdiction pack"}
+	if err := requireClaimedCountry(in, origin); err != nil {
+		return ids.WorkspaceID{}, err
 	}
 	hash, err := password.Hash(boot.AdminPassword)
 	if err != nil {
@@ -286,7 +286,7 @@ func createInstallation(ctx context.Context, tx pgx.Tx, c *config.Config, in Ins
 	if err := storekit.CaptureFactsChanged(ctx, tx); err != nil {
 		return ids.WorkspaceID{}, err
 	}
-	if err := seedSystemRolesForBootstrap(ctx, tx, userID); err != nil {
+	if err := seedSystemRolesForBootstrap(ctx, tx, rbac, userID); err != nil {
 		return ids.WorkspaceID{}, err
 	}
 	// Any outstanding claim credential is retired here, on BOTH paths. The
@@ -300,24 +300,7 @@ func createInstallation(ctx context.Context, tx pgx.Tx, c *config.Config, in Ins
 	if err := retireSetupTokens(ctx, tx); err != nil {
 		return ids.WorkspaceID{}, err
 	}
-	// Who did this. A configured bootstrap is a SYSTEM event — no human signed
-	// in, and naming one would make the record assert something false. A CLAIM
-	// is the opposite: someone presented the operator's token and chose their
-	// own credential in that same request, so the record names the admin it
-	// created (ADR-0105 §4). The module seeds written inside this transaction
-	// stay `system:seed` on both paths (B37) — a claimant chose a company
-	// name, not a default pipeline's stages.
-	actorType, actorID := "system", "installation-bootstrap"
-	if origin == originClaimed {
-		// 'human' is the vocabulary the audit surface already speaks
-		// (human|agent|connector|system); a claim is a human acting, so it
-		// takes the existing word rather than widening the enum for one row.
-		actorType, actorID = "human", userID.String()
-	}
-	if _, err := tx.Exec(ctx,
-		`INSERT INTO system_log (actor_type, actor_id, action, detail)
-		 VALUES ($1, $2, 'installation_bootstrap', jsonb_build_object('admin_user_id', $3::text))`,
-		actorType, actorID, userID.String()); err != nil {
+	if err := logBootstrap(ctx, tx, origin, userID); err != nil {
 		return ids.WorkspaceID{}, err
 	}
 
@@ -331,6 +314,31 @@ func createInstallation(ctx context.Context, tx pgx.Tx, c *config.Config, in Ins
 		}
 	}
 	return wsID, nil
+}
+
+// requireClaimedCountry refuses a claim that chose no jurisdiction.
+func requireClaimedCountry(in InstallationBootstrap, origin provisioningOrigin) error {
+	if origin == originClaimed && in.Country == nil {
+		return settings.InvalidValue{Setting: Country.Key(), Code: countryUnchosen, Reason: "choose a jurisdiction, or no jurisdiction pack"}
+	}
+	return nil
+}
+
+// logBootstrap records who created the installation. A configured bootstrap
+// is a system event, because no human signed in. A claim names the admin it
+// created, who presented the token and chose the credential.
+func logBootstrap(ctx context.Context, tx pgx.Tx, origin provisioningOrigin, userID ids.UserID) error {
+	actorType, actorID := "system", "installation-bootstrap"
+	if origin == originClaimed {
+		actorType, actorID = "human", userID.String()
+	}
+	if _, err := tx.Exec(ctx,
+		`INSERT INTO system_log (actor_type, actor_id, action, detail)
+		 VALUES ($1, $2, 'installation_bootstrap', jsonb_build_object('admin_user_id', $3::text))`,
+		actorType, actorID, userID.String()); err != nil {
+		return err
+	}
+	return nil
 }
 
 // resolveBasis settles what the installation is measured in — the currency
@@ -384,14 +392,14 @@ func resolveBasis(in InstallationBootstrap, origin provisioningOrigin) (currency
 
 // underBootValues replaces what a boot source sets, so the bootstrap writes
 // and reports the value every reader answers.
-func (in InstallationBootstrap) underBootValues(c *config.Config) InstallationBootstrap {
-	if name, ok := config.BootVal(c, Name); ok {
+func (in InstallationBootstrap) underBootValues(ctx context.Context, c *config.Config) InstallationBootstrap {
+	if name, ok := config.BootVal(ctx, c, Name); ok {
 		in.CompanyName = name
 	}
-	if language, ok := config.BootVal(c, BaseLanguage); ok {
+	if language, ok := config.BootVal(ctx, c, BaseLanguage); ok {
 		in.BaseLanguage = language
 	}
-	if country, ok := config.BootVal(c, Country); ok {
+	if country, ok := config.BootVal(ctx, c, Country); ok {
 		in.Country = &country
 	}
 	return in
@@ -438,7 +446,7 @@ func seedInstallationIdentity(ctx context.Context, tx pgx.Tx, boot *config.Confi
 			return nil, err
 		}
 		// A boot-set key is neither seeded nor reported.
-		if _, locked := boot.Locked(key); !stored && !locked {
+		if _, locked := boot.Locked(ctx, key); !stored && !locked {
 			discarded = append(discarded, key)
 		}
 	}

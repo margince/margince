@@ -26,6 +26,7 @@ import (
 )
 
 func TestTheShippedSetCannotBeArchivedButKeepsItsEdits(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	bootCtx := handbookBootCtx(e.WS)
 	store := knowledge.NewStore(e.DB())
@@ -80,6 +81,7 @@ func TestTheShippedSetCannotBeArchivedButKeepsItsEdits(t *testing.T) {
 // An upload into the shipped set is refused. Otherwise a failed page's row is
 // swapped for an unshipped copy, and the next boot's reconcile fails on it.
 func TestAnUploadCannotReplaceAFailedShippedPage(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	bootCtx := handbookBootCtx(e.WS)
 	store := knowledge.NewStore(e.DB()).WithBlobstore(blobstore.NewMemory())
@@ -123,6 +125,7 @@ func TestAnUploadCannotReplaceAFailedShippedPage(t *testing.T) {
 // A live document set's name is held once, compared trimmed and ignoring case.
 // The shipped set's name is held against the sets a workspace makes.
 func TestADocumentSetNameIsHeldOnceAmongLiveSets(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	bootCtx := handbookBootCtx(e.WS)
 	store := knowledge.NewStore(e.DB())

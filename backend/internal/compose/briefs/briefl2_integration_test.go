@@ -49,6 +49,7 @@ func (b scriptedBrain) Complete(_ context.Context, _ model.Request) (model.Respo
 // it. The deterministic engine on the same seed yields [A, B] — proving
 // the re-order is the model's, bounded by the same candidates.
 func TestBriefL2ReordersWithinTheCandidateSet(t *testing.T) {
+	t.Parallel()
 	b := setupBrief(t)
 
 	deterministic, err := b.engine.Rank(b.repCtx, briefClock)
@@ -83,6 +84,7 @@ func TestBriefL2ReordersWithinTheCandidateSet(t *testing.T) {
 // the honest-short bar (not a candidate) and a fabricated id is unknown —
 // the model naming both cannot pull either into the queue.
 func TestBriefL2CannotBreachTheCutoffOrInventDeals(t *testing.T) {
+	t.Parallel()
 	b := setupBrief(t)
 
 	// d3 and d4 are refs the request never showed: Deal C is no candidate, and
@@ -109,6 +111,7 @@ func TestBriefL2CannotBreachTheCutoffOrInventDeals(t *testing.T) {
 // An unavailable model degrades to the deterministic composite order — the
 // AI-off fallback rank (§10.1), never a failed brief.
 func TestBriefL2FallsBackToTheDeterministicOrder(t *testing.T) {
+	t.Parallel()
 	b := setupBrief(t)
 
 	l2 := NewBriefEngine(b.Pool, b.Contacts).WithL2Ranker(scriptedBrain{err: errors.New("model unavailable")}, nil)

@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -82,6 +83,7 @@ func noticeIDs(rows []crmcontracts.WorklistItem) []string {
 }
 
 func TestHomeNoticeAgendaUsesResponsibilityAndOpenableContacts(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	private := homeNotice(t, e, e.Rep1, true, homeReadTime.Add(-48*time.Hour))
 	for i := range 9 {
@@ -141,6 +143,7 @@ func TestHomeNoticeAgendaUsesResponsibilityAndOpenableContacts(t *testing.T) {
 }
 
 func TestNoticeAgendaWithoutContactReadCannotOfferContactLinks(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	homeNotice(t, e, e.AdminUser, false, homeReadTime)
 	perms := integration.AdminPerms
@@ -153,12 +156,13 @@ func TestNoticeAgendaWithoutContactReadCannotOfferContactLinks(t *testing.T) {
 }
 
 func TestCounterpartyReviewRemainsWithItsImportingSeat(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	activity := seedCapturedMail(t, e, "review@agenda.example", "A possible new contact")
 	disposition := seedPendingDisposition(t, e, "review@agenda.example", "agenda.example", activity)
 	retireToUnsure(t, e, disposition)
 	engine := NewCounterpartyVerdictEngine(
-		e.Pool, &scriptedVerdictBrain{}, CaptureConfig{}, slog.Default(),
+		e.Pool, &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN}, CaptureConfig{}, slog.Default(),
 	)
 	if err := seedLegacySenderReviews(t, e, engine); err != nil {
 		t.Fatal(err)
@@ -210,6 +214,7 @@ func TestCounterpartyReviewRemainsWithItsImportingSeat(t *testing.T) {
 }
 
 func TestHomeTeamDutiesAreBoundedAfterMembership(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	for i := range 9 {
 		homeNotice(t, e, e.Rep3, false, homeReadTime.Add(time.Duration(i-24)*time.Hour))
@@ -227,6 +232,7 @@ func TestHomeTeamDutiesAreBoundedAfterMembership(t *testing.T) {
 }
 
 func TestArchivedContactsLeaveTheHomeAgendaButKeepTheirComplianceCase(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	duty := homeNotice(t, e, e.AdminUser, false, homeReadTime)
 	if _, err := e.Contacts.ArchiveContact(e.Admin(), duty.ContactID, nil); err != nil {
@@ -243,6 +249,7 @@ func TestArchivedContactsLeaveTheHomeAgendaButKeepTheirComplianceCase(t *testing
 }
 
 func TestNoticeLaneRejectsAMissingNamedOwner(t *testing.T) {
+	t.Parallel()
 	_, err := (attentionNoticeCases{}).OpenDueSoonest(context.Background(), 8, attention.TasksOwnedBy, ids.Nil, nil)
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("missing named owner = %v", err)
@@ -250,6 +257,7 @@ func TestNoticeLaneRejectsAMissingNamedOwner(t *testing.T) {
 }
 
 func TestUnownedDisclosureDutyAppearsOnlyInUnassignedHome(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	duty := homeNotice(t, e, ids.Nil, false, homeReadTime)
 	feed := newAttentionService(e.Pool, approvals.NewService(e.DB()), func() time.Time { return homeReadTime })

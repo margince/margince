@@ -101,6 +101,7 @@ func (e *dedupeEnv) assertStoredIsLive(t *testing.T, what string, contactID ids.
 }
 
 func TestTheStoredStrengthDatesAreTheLiveFold(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	now := present()
 	day := func(ago int) time.Time { return now.AddDate(0, 0, -ago) }
@@ -144,6 +145,7 @@ func TestTheStoredStrengthDatesAreTheLiveFold(t *testing.T) {
 // Every writer that can lower a date recomputes it. Every one that adds a date
 // merges it. After each the stored dates are the history's.
 func TestEveryWriterKeepsTheStoredDatesAtTheFold(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	now := present()
 	day := func(ago int) time.Time { return now.AddDate(0, 0, -ago) }
@@ -196,6 +198,7 @@ func TestEveryWriterKeepsTheStoredDatesAtTheFold(t *testing.T) {
 // An address another contact comes to hold no longer proves who wrote mail
 // that carries no sender row. So the first contact's inbound date comes down.
 func TestAnAddressReassignedLowersTheStoredInbound(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	now := present()
 	ann := e.seedVisibleContact(t, "Ann Address")
@@ -218,6 +221,7 @@ func TestAnAddressReassignedLowersTheStoredInbound(t *testing.T) {
 // A read whose now runs ahead of the database's may already count what the
 // stored dates have not, so it folds the history. One behind it reads the row.
 func TestAReadAheadOfTheDatabaseFoldsTheHistory(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	now := present()
 	contact := e.seedVisibleContact(t, "Clock Contact")
@@ -253,6 +257,7 @@ func present() time.Time { return time.Now().UTC().Truncate(time.Microsecond) }
 // An import writes a batch of messages in a few statements. Each statement
 // moves the contact's stored dates in one UPDATE, whatever the batch size.
 func TestAnImportBatchUpdatesTheContactOncePerStatement(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	now := present()
 	contact := e.seedVisibleContact(t, "Batch Contact")
@@ -302,6 +307,7 @@ func TestAnImportBatchUpdatesTheContactOncePerStatement(t *testing.T) {
 // one seat and the seat of another side by side. Each seat's hold must reach
 // the mail that seat imported on that thread, and no other pair.
 func TestAStatementHoldingSeveralSeatsThreadsLowersEachContact(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	now := present()
 	day := func(ago int) time.Time { return now.AddDate(0, 0, -ago) }

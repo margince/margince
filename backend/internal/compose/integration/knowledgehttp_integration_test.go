@@ -67,6 +67,7 @@ func newKnowledgeHTTPWithBlobs(e *Env, blobs blobstore.Store) *knowledgeHTTP {
 }
 
 func TestKnowledgeHandlersHTTPRoundTrip(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	h := newKnowledgeHTTP(e)
 	ctx := e.As(e.Rep1, nil, corpusAdminPerms)
@@ -186,6 +187,7 @@ func TestKnowledgeHandlersHTTPRoundTrip(t *testing.T) {
 // A file this product has no reader for is 415 naming the kinds it takes, not
 // a 422 about a form field and not a 500. The refusal is about the file.
 func TestUploadingAPDFOverHTTPIs415NamingTheAcceptedTypes(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	h := newKnowledgeHTTP(e)
 	ctx := e.As(e.Rep1, nil, corpusAdminPerms)
@@ -224,6 +226,7 @@ func TestUploadingAPDFOverHTTPIs415NamingTheAcceptedTypes(t *testing.T) {
 // A request with no file part is a 422 about the FIELD, which is a different
 // refusal from the 415 above and must not be collapsed into it.
 func TestUploadingWithNoFilePartIs422(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	h := newKnowledgeHTTP(e)
 	ctx := e.As(e.Rep1, nil, corpusAdminPerms)
@@ -248,6 +251,7 @@ func TestUploadingWithNoFilePartIs422(t *testing.T) {
 // blaming the caller's file. Carrying on would write a row promising bytes that
 // are nowhere.
 func TestUploadingWithNoObjectStoreWiredDoesNotBlameTheCaller(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	h := knowledge.NewHandlers(e.DB()).
 		WithUploadLimit(knowledgeUploadCeiling).
@@ -274,6 +278,7 @@ func TestUploadingWithNoObjectStoreWiredDoesNotBlameTheCaller(t *testing.T) {
 // will ever read. An accepted upload that is never ingested reads to the
 // uploader exactly like success.
 func TestUploadingWithNoJobRunnerRefusesRatherThanAcceptingTheFile(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	h := knowledge.NewHandlers(e.DB()).
 		WithUploadLimit(knowledgeUploadCeiling).
@@ -302,6 +307,7 @@ func TestUploadingWithNoJobRunnerRefusesRatherThanAcceptingTheFile(t *testing.T)
 // An unknown set is 404 on every operation that names one, and the same 404 a
 // foreign tenant's id would get: existence stays hidden.
 func TestKnowledgeOperationsOnAnUnknownSetAre404(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	h := newKnowledgeHTTP(e)
 	ctx := e.As(e.Rep1, nil, corpusAdminPerms)
@@ -333,6 +339,7 @@ func TestKnowledgeOperationsOnAnUnknownSetAre404(t *testing.T) {
 // authorization one rather than a 404: the object gate denies, and hiding the
 // OBJECT's existence would be a different claim from hiding a row's.
 func TestARepIsRefused403OnEveryKnowledgeWrite(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	h := newKnowledgeHTTP(e)
 	admin := e.As(e.Rep1, nil, corpusAdminPerms)
@@ -380,6 +387,7 @@ func httpCorpus(ctx context.Context, t *testing.T, h *knowledgeHTTP) crmcontract
 // A program renamed to .md is refused with 415, like any file that is not
 // text. Nothing is queued for ingest.
 func TestUploadingAProgramNamedMarkdownOverHTTPIs415(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	h := newKnowledgeHTTP(e)
 	ctx := e.As(e.Rep1, nil, corpusAdminPerms)

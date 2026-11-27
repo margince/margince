@@ -16,6 +16,7 @@ import (
 )
 
 func TestEveryEventOfAnImportedWonDealNamesTheRunSoNoAutomationOrCommissionStarts(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	pipeline, open, won, _ := seededStages(t, e)
 	run, _ := importDeals(t, e, map[string]string{
@@ -53,6 +54,7 @@ func TestEveryEventOfAnImportedWonDealNamesTheRunSoNoAutomationOrCommissionStart
 }
 
 func TestTheArchiveAnUndoWritesOnAnImportedDealNamesTheRunToo(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	pipeline, open, _, _ := seededStages(t, e)
 	run, _ := importDeals(t, e, map[string]string{

@@ -129,6 +129,7 @@ func (q targetQuarter) comparisonFor(reader context.Context, t *testing.T, selec
 // A 760k call stays 760k beside 420k won: 40k short of 800k, and 1.36m open
 // covers the 380k left to win 3.6 times.
 func TestTheQuarterReviewSampleIsFortyThousandShortAtThreePointSixCoverage(t *testing.T) {
+	t.Parallel()
 	q := seedTargetQuarter(t)
 	evaluation, got := q.comparison(t, q.selection())
 	if got.Status != "compared" || *got.Basis != "manager_call" || *got.Landing != 76_000_000 || *got.Won != 42_000_000 {
@@ -148,6 +149,7 @@ func TestTheQuarterReviewSampleIsFortyThousandShortAtThreePointSixCoverage(t *te
 }
 
 func TestAComparisonTheQuarterCannotSupportSaysWhyAndOffersOneItCan(t *testing.T) {
+	t.Parallel()
 	q := seedTargetQuarter(t)
 	month := q.selection()
 	month.Period, month.TargetBasis = "this_month", "month"
@@ -200,6 +202,7 @@ func comparisonCSV(t *testing.T, evaluation crmcontracts.ReportingEvaluation) ma
 }
 
 func TestASentEditionKeepsTheTargetComparisonItWasEvaluatedWith(t *testing.T) {
+	t.Parallel()
 	q := seedTargetQuarter(t)
 	reportingWorkerIdentity(t, q.env)
 	_, live := q.comparison(t, q.selection())

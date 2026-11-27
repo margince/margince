@@ -58,7 +58,7 @@ func newDataTaskEngine(pool *pgxpool.Pool, release string, now func() time.Time)
 func dataTaskFailureNotice(pool *pgxpool.Pool) func(context.Context, pgx.Tx, datatask.Progress) error {
 	return func(ctx context.Context, tx pgx.Tx, p datatask.Progress) error {
 		ctx = datatask.Acting(ctx, p.TaskID)
-		recipients, err := identity.DataTaskOperatorsTx(ctx, tx)
+		recipients, err := identity.DataTaskOperatorsTx(ctx, tx, installedRbacObjects())
 		if err != nil {
 			return err
 		}
@@ -150,7 +150,7 @@ func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {
 		provensenders.DataTask(),
 		importscopes.DataTask(),
 		invitationsenders.DataTask(),
-		meetingrosters.GraphGuestsDataTask(identity.NewService(pool), installationContext(pool)), meetingrosters.BirthRostersDataTask(), meetingrosters.SeatSetsDataTask(),
+		meetingrosters.GraphGuestsDataTask(IdentityService(pool), installationContext(pool)), meetingrosters.BirthRostersDataTask(), meetingrosters.SeatSetsDataTask(),
 		credentialrepair.DataTask(capture.NewPendingStore(InstallationDB(pool)).PurgeRawCaptureTx),
 		erasedseattraces.DataTask(),
 		newslettersDataTask(pool),

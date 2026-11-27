@@ -37,7 +37,7 @@ const (
 
 // sdrTeamMemberRows is how many member rows a review reads and returns. Only
 // those members' figures are aggregated, whatever the team's size.
-var sdrTeamMemberRows = 100
+const sdrTeamMemberRows = 100
 
 // GetSdrTeamReview implements GET /analytics/sdr-team.
 func (h sdrSummaryHandlers) GetSdrTeamReview(w http.ResponseWriter, r *http.Request, params crmcontracts.GetSdrTeamReviewParams) {
@@ -55,7 +55,7 @@ func (h sdrSummaryHandlers) GetSdrTeamReview(w http.ResponseWriter, r *http.Requ
 	// Every figure is read from one snapshot, so they agree with one as_of.
 	err := h.db.TxIsolated(ctx, pgx.RepeatableRead, func(tx pgx.Tx) error {
 		var err error
-		out, err = readSdrTeamReview(ctx, tx, h.targets, requested, period, h.now().UTC())
+		out, err = readSdrTeamReview(ctx, tx, h.targets, requested, period, h.now().UTC(), h.memberRows)
 		return err
 	})
 	if err != nil {
@@ -68,7 +68,7 @@ func (h sdrSummaryHandlers) GetSdrTeamReview(w http.ResponseWriter, r *http.Requ
 // sdrTeamWindow is the half-open span a review counts events in.
 type sdrTeamWindow struct{ from, to time.Time }
 
-func readSdrTeamReview(ctx context.Context, tx pgx.Tx, targets sdrTeamTargets, requested RequestedScope, period crmcontracts.ReportingSelectionPeriod, at time.Time) (crmcontracts.SdrTeamReview, error) {
+func readSdrTeamReview(ctx context.Context, tx pgx.Tx, targets sdrTeamTargets, requested RequestedScope, period crmcontracts.ReportingSelectionPeriod, at time.Time, memberRows int) (crmcontracts.SdrTeamReview, error) {
 	// No history of team membership is kept, so a team's figures follow its
 	// members today, and the answer says so.
 	out := crmcontracts.SdrTeamReview{
@@ -126,7 +126,7 @@ func readSdrTeamReview(ctx context.Context, tx pgx.Tx, targets sdrTeamTargets, r
 	if owners.IndividualOff {
 		return out, nil
 	}
-	out.Members, out.MembersTruncated, err = readSdrTeamMembers(ctx, tx, requested, owners, window, at, mayReadHandoffs(ctx))
+	out.Members, out.MembersTruncated, err = readSdrTeamMembers(ctx, tx, requested, owners, window, at, mayReadHandoffs(ctx), memberRows)
 	if err != nil {
 		return out, err
 	}
@@ -395,8 +395,8 @@ func readHandoffReasons(ctx context.Context, tx pgx.Tx, requested RequestedScope
 // are credited with, so the rows can add up to more than the team.
 // Without handoff read no handoff statement runs, and the handoff counts are
 // absent.
-func readSdrTeamMembers(ctx context.Context, tx pgx.Tx, requested RequestedScope, owners reporting.MeasurableOwners, window sdrTeamWindow, at time.Time, handoffs bool) ([]crmcontracts.SdrTeamMember, bool, error) {
-	members, truncated, err := sdrTeamMemberPage(ctx, tx, requested, owners)
+func readSdrTeamMembers(ctx context.Context, tx pgx.Tx, requested RequestedScope, owners reporting.MeasurableOwners, window sdrTeamWindow, at time.Time, handoffs bool, memberRows int) ([]crmcontracts.SdrTeamMember, bool, error) {
+	members, truncated, err := sdrTeamMemberPage(ctx, tx, requested, owners, memberRows)
 	out := []crmcontracts.SdrTeamMember{}
 	if err != nil || len(members) == 0 {
 		return out, truncated, err
@@ -453,9 +453,9 @@ func sdrTeamMemberHandoffsSQL(b *reportingBindings, seats string, window sdrTeam
  `
 }
 
-// sdrTeamMemberPage is the first sdrTeamMemberRows members of the scope the
-// reader may measure one by one, in name order, and whether more exist.
-func sdrTeamMemberPage(ctx context.Context, tx pgx.Tx, requested RequestedScope, owners reporting.MeasurableOwners) ([]ids.UUID, bool, error) {
+// sdrTeamMemberPage is the first rows members of the scope the reader may
+// measure one by one, in name order, and whether more exist.
+func sdrTeamMemberPage(ctx context.Context, tx pgx.Tx, requested RequestedScope, owners reporting.MeasurableOwners, rows int) ([]ids.UUID, bool, error) {
 	var b reportingBindings
 	_, population, err := analyticsPopulationExpression(ctx, tx, requested, "u.id", b.arg, unownedIsExcluded)
 	if err != nil {
@@ -465,14 +465,14 @@ func sdrTeamMemberPage(ctx context.Context, tx pgx.Tx, requested RequestedScope,
 	if !owners.Every {
 		measurable = "u.id=ANY(" + b.add(owners.Members) + ")"
 	}
-	rows, err := tx.Query(ctx, "SELECT u.id FROM app_user u WHERE "+identity.LiveMemberSQL("u")+" AND NOT u.is_agent AND "+
-		orUnnarrowed(population)+" AND "+measurable+" ORDER BY lower(COALESCE(u.display_name,'')),u.id LIMIT "+b.add(sdrTeamMemberRows+1), b.values...)
+	found, err := tx.Query(ctx, "SELECT u.id FROM app_user u WHERE "+identity.LiveMemberSQL("u")+" AND NOT u.is_agent AND "+
+		orUnnarrowed(population)+" AND "+measurable+" ORDER BY lower(COALESCE(u.display_name,'')),u.id LIMIT "+b.add(rows+1), b.values...)
 	if err != nil {
 		return nil, false, err
 	}
-	members, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
-	if err != nil || len(members) <= sdrTeamMemberRows {
+	members, err := pgx.CollectRows(found, pgx.RowTo[ids.UUID])
+	if err != nil || len(members) <= rows {
 		return members, false, err
 	}
-	return members[:sdrTeamMemberRows], true, nil
+	return members[:rows], true, nil
 }

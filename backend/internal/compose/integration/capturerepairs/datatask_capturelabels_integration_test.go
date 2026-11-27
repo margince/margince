@@ -22,6 +22,7 @@ import (
 )
 
 func TestOtherCaptureLabelsSurvivePagingRollbackAndReplay(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	var legacy []ids.UUID

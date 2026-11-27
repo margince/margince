@@ -33,6 +33,7 @@ import (
 )
 
 func TestASystemMintedReminderIsNeverTheOwedPromise(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := seedLinkedContact(t, e, "erinnert@kunde.example")
 	company := seedEmployerOf(t, e, contact, "Erinnert GmbH")
@@ -104,6 +105,7 @@ func TestASystemMintedReminderIsNeverTheOwedPromise(t *testing.T) {
 // review_commitments sweep, which must tell the reader the same thing the
 // card does.
 func TestAPageOfRemindersDoesNotBuryTheOnePromise(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := seedLinkedContact(t, e, "verschuettet@kunde.example")
 	company := seedEmployerOf(t, e, contact, "Verschuettet GmbH")
@@ -161,6 +163,7 @@ func TestAPageOfRemindersDoesNotBuryTheOnePromise(t *testing.T) {
 // account owing more than a page of tasks that row is exactly the one a cut
 // at the page would drop.
 func TestTheAccountCardSeesThePromiseThatSlippedLast(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := seedLinkedContact(t, e, "vielversprochen@kunde.example")
 	company := seedEmployerOf(t, e, contact, "Vielversprochen GmbH")

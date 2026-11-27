@@ -83,6 +83,7 @@ func importDeals(t *testing.T, e *apptest.AppEnv, files map[string]string, parts
 }
 
 func TestAnImportedWonDealClosesInThePastThroughTheAdvance(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	pipeline, open, won, lost := seededStages(t, e)
 	_, report := importDeals(t, e, map[string]string{"deals.csv": "ref,name,pipeline,stage,amount,currency,close_date,lost_reason\n" +
@@ -108,6 +109,7 @@ func TestAnImportedWonDealClosesInThePastThroughTheAdvance(t *testing.T) {
 }
 
 func TestTheLiveCreateStillRefusesAPastCloseDate(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	var pipelines struct {
 		Data []struct {
@@ -126,6 +128,7 @@ func TestTheLiveCreateStillRefusesAPastCloseDate(t *testing.T) {
 }
 
 func TestADealLinksToACompanyAndAContactInTheSameZip(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	pipeline, open, _, _ := seededStages(t, e)
 	existing := createdID(t, e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Eve Held", "emails": []AnyMap{{"email": "eve@deal-links.example", "email_type": "work", "is_primary": true}}})
@@ -170,6 +173,7 @@ func TestADealLinksToACompanyAndAContactInTheSameZip(t *testing.T) {
 }
 
 func TestADealLinkToAContactTheCallerCannotSeeIsNotFound(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	pipeline, open, _, _ := seededStages(t, e)
 	e.DescribeCompany(t)
@@ -197,6 +201,7 @@ func TestADealLinkToAContactTheCallerCannotSeeIsNotFound(t *testing.T) {
 }
 
 func TestADealRowWithoutAStageIsSkippedWithItsReason(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	parts := []AnyMap{{"file": "deals.csv", "object": "deal", "mapping": AnyMap{"ref": "ref", "name": "name"}}}
 	_, report := importDeals(t, e, map[string]string{"deals.csv": "ref,name\nD-1,No stage\n"}, parts)
@@ -206,6 +211,7 @@ func TestADealRowWithoutAStageIsSkippedWithItsReason(t *testing.T) {
 }
 
 func TestACorrectedFileUpdatesAMovesAndRefusesWhatTheStoreWould(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	pipeline, open, won, _ := seededStages(t, e)
 	first := "ref,name,pipeline,stage,close_date\n" +
@@ -240,6 +246,7 @@ func TestACorrectedFileUpdatesAMovesAndRefusesWhatTheStoreWould(t *testing.T) {
 }
 
 func TestAnOpenDealIsNotGivenAPastCloseDateByAFileWithNoStageColumn(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	pipeline, open, _, _ := seededStages(t, e)
 	importDeals(t, e, map[string]string{"deals.csv": "ref,name,pipeline,stage,close_date\n" +
@@ -255,6 +262,7 @@ func TestAnOpenDealIsNotGivenAPastCloseDateByAFileWithNoStageColumn(t *testing.T
 }
 
 func TestUndoArchivesImportedDealsBeforeContacts(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	pipeline, open, _, _ := seededStages(t, e)
 	run, _ := importDeals(t, e, map[string]string{
@@ -272,6 +280,7 @@ func TestUndoArchivesImportedDealsBeforeContacts(t *testing.T) {
 }
 
 func TestUndoKeepsADealSomeoneEditedSinceTheImport(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	pipeline, open, _, _ := seededStages(t, e)
 	run, _ := importDeals(t, e, map[string]string{"deals.csv": "ref,name,pipeline,stage\n" +
@@ -317,6 +326,7 @@ func stakeholderShape(t *testing.T, e *apptest.AppEnv, dealName string) edgeShap
 }
 
 func TestPromotionAndImportWriteTheStakeholderEdgeThroughOneFunction(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	pipeline, open, _, _ := seededStages(t, e)
 	leadID := createdID(t, e, "/v1/leads", AnyMap{"source": "manual", "full_name": "Promoted Pia", "email": "pia@one-writer.example"})
@@ -335,6 +345,7 @@ func TestPromotionAndImportWriteTheStakeholderEdgeThroughOneFunction(t *testing.
 }
 
 func TestTheDryRunSkipsAClosedDealInACurrencyWithNoRateForTheReasonTheCommitGives(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	pipeline, _, won, _ := seededStages(t, e)
 	header := "ref,name,pipeline,stage,close_date,amount,currency"

@@ -73,6 +73,7 @@ func earliestExpiry(rows []crmcontracts.Approval) *time.Time {
 // rows. A third of them sit on a deal the own-scope reader cannot see. A count
 // capped at one batch, or one that skips expiry or decidability, fails here.
 func TestPendingCountAgreesWithEveryPageOfTheInboxForEachReader(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	seeder := newDealSeeder(t, e)
 	colleague := e.secondRep(t)
@@ -149,6 +150,7 @@ func TestPendingCountAgreesWithEveryPageOfTheInboxForEachReader(t *testing.T) {
 }
 
 func TestPendingCountEndpointAnswersTheEngineCount(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	seeder := newDealSeeder(t, e)
 	deal := seeder.dealOwnedBy(t, &e.rep)
@@ -199,6 +201,7 @@ func (e *stagingEnv) stageAdvance(t *testing.T, deal ids.UUID, hash string, ttl 
 // A count inside a composed read answers from that read's snapshot. A staging
 // committed meanwhile is missing from it and present in the next fresh count.
 func TestPendingCountReadsTheSnapshotItIsCalledIn(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	deal := newDealSeeder(t, e).dealOwnedBy(t, &e.rep)
 	e.stageAdvance(t, deal, "snapshot-0", nil)
@@ -231,6 +234,7 @@ func TestPendingCountReadsTheSnapshotItIsCalledIn(t *testing.T) {
 // The clock steps past the row's expiry on every read. A count that judged
 // expiry on a later read than as_of would leave out a row pending at as_of.
 func TestPendingCountJudgesExpiryAtTheInstantItReports(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	deal := newDealSeeder(t, e).dealOwnedBy(t, &e.rep)
 	ttl := time.Hour

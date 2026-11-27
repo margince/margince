@@ -157,6 +157,7 @@ func meetingFiling(t *testing.T, e *integration.SearchEnv, activity ids.Activity
 // born readable by the workspace — a meeting with a record behind it is not the
 // link-less mail the audience limiter exists to hold.
 func TestACapturedMeetingIsFiledUnderTheAttendeeWhoIsAContact(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 
 	// Through the real contacts store, not a hand-built INSERT: the resolution
@@ -196,6 +197,7 @@ func TestACapturedMeetingIsFiledUnderTheAttendeeWhoIsAContact(t *testing.T) {
 // An invite is still not correspondence: this path must not create a contact to
 // have something to link.
 func TestACapturedMeetingWithNoKnownAttendeeIsHeldToItsParticipants(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 
 	activity := syncOneGcalMeeting(t, e)

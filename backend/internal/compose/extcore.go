@@ -124,7 +124,7 @@ func (a extensionActivities) Create(ctx context.Context, in crm.CreateActivityRe
 	// one is the dangerous half: the published request carries channel_provider,
 	// so without this a unit could name a core connector's transport and mint a
 	// valid send anchor for a conversation it does not own.
-	if err := refuseUndeclaredTransport(a.core.unit, string(request.Kind), providerNamed(request.ChannelProvider)); err != nil {
+	if err := refuseUndeclaredTransport(a.core.deps.composed, a.core.unit, string(request.Kind), providerNamed(request.ChannelProvider)); err != nil {
 		return crm.Activity{}, err
 	}
 	mapped, err := activities.LogActivityInputFrom(request)

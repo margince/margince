@@ -68,6 +68,7 @@ func (e *forecastEnv) reportReaderCtx() context.Context {
 }
 
 func TestAGenericQueryCompilesToValidSQLAndCounts(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	amount := int64(100_000)
 	for range 7 {
@@ -105,6 +106,7 @@ func TestAGenericQueryCompilesToValidSQLAndCounts(t *testing.T) {
 const countRowsColumnName = "_rows"
 
 func TestASmallGroupIsWithheldAndSoIsItsComplement(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	big, small := int64(100_000), int64(1_000)
 	// Six deals owned by one rep, two by another. Grouped by owner, the second
@@ -146,6 +148,7 @@ func TestASmallGroupIsWithheldAndSoIsItsComplement(t *testing.T) {
 }
 
 func TestACallerWithoutThePopulationsGrantIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	amount := int64(100_000)
 	e.seedOpenDeal(t, "Deal", 20, &e.Rep1, &amount)
@@ -182,6 +185,7 @@ func TestACallerWithoutThePopulationsGrantIsRefused(t *testing.T) {
 }
 
 func TestAFilterThatSeparatesOutTooFewRecordsIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	big, small := int64(100_000), int64(1_000)
 	// Six deals for one rep, two for another. Each ungrouped answer covers a
@@ -239,6 +243,7 @@ func TestAFilterThatSeparatesOutTooFewRecordsIsRefused(t *testing.T) {
 }
 
 func TestAFilterThatSeparatesOutEnoughIsStillAnswered(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	amount := int64(100_000)
 	// Six and six. Filtering either out excludes six, which clears the floor,
@@ -265,6 +270,7 @@ func TestAFilterThatSeparatesOutEnoughIsStillAnswered(t *testing.T) {
 }
 
 func TestAWithheldGroupKeepsNoKeysEither(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	amount := int64(100_000)
 	// One deal per owner: every group is of size one, so every group is under
@@ -320,6 +326,7 @@ func (e *forecastEnv) explainCell(
 }
 
 func TestACellOpensToTheRecordsItWasComputedFrom(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	amount := int64(100_000)
 	for range 6 {
@@ -362,6 +369,7 @@ func TestACellOpensToTheRecordsItWasComputedFrom(t *testing.T) {
 // A cell naming fewer group values than the question grouped by is refused as
 // malformed. The floor never matches it against the answer's rows.
 func TestACellMissingAGroupValueIsRefusedAsMalformed(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	amount := int64(100_000)
 	for range 2 {
@@ -383,6 +391,7 @@ func TestACellMissingAGroupValueIsRefusedAsMalformed(t *testing.T) {
 }
 
 func TestAWithheldCellExplainsToWithheldRatherThanToNothing(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	amount := int64(100_000)
 	// Two deals for one rep. Under the floor, so the answer withholds the
@@ -419,6 +428,7 @@ func TestAWithheldCellExplainsToWithheldRatherThanToNothing(t *testing.T) {
 }
 
 func TestAnExplanationCannotOutSeeTheNumberItExplains(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	amount := int64(100_000)
 	for range 6 {
@@ -503,6 +513,7 @@ func (e *forecastEnv) ownLensRepCtx(user ids.UUID) context.Context {
 // neither count is withheld and the number that comes back says which
 // population was measured rather than which rows survived a floor.
 func TestATypedQueryAnswersTheAskersOwnPopulation(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	amount := int64(100_000)
 	for range 7 {
@@ -530,6 +541,7 @@ func TestATypedQueryAnswersTheAskersOwnPopulation(t *testing.T) {
 // whole workspace. A narrower answer than the one asked for looks the same as
 // a small one.
 func TestATypedQueryRefusesAPopulationTheAskerCannotMeasure(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	amount := int64(100_000)
 	for range 7 {
@@ -566,6 +578,7 @@ func TestATypedQueryRefusesAPopulationTheAskerCannotMeasure(t *testing.T) {
 // default (self, or a team manager's own managed-teams default) admits an
 // unowned row — never an explicitly named owner or team.
 func TestATypedQueryNamingAColleagueExcludesAnUnownedRow(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	amount := int64(100_000)
 	// Five of Rep3's own, clearing analyticsquery.DefaultFloor, plus one
@@ -597,6 +610,7 @@ func TestATypedQueryNamingAColleagueExcludesAnUnownedRow(t *testing.T) {
 // never the caller's own managed-teams default: an unowned deal must not
 // count toward a specific team's named commitment either.
 func TestATypedQueryNamingATeamExcludesAnUnownedRow(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	amount := int64(100_000)
 	// Five of Team1's own (Rep1), clearing analyticsquery.DefaultFloor, plus
@@ -652,6 +666,7 @@ func (e *forecastEnv) wideLensCtx(user ids.UUID) context.Context {
 // follows here — the stored one is reported for comparison and never used to
 // judge the answer being served.
 func TestASavedRunIsReAskedUnderTheReadersOwnLens(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	amount := int64(100_000)
 	for range 7 {
@@ -707,6 +722,7 @@ func TestASavedRunIsReAskedUnderTheReadersOwnLens(t *testing.T) {
 // A team's numbers keep counting the open deals of a member who left. The total
 // does not drop the day they leave.
 func TestATeamsNumbersKeepCountingADepartedMembersDeals(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	amount := int64(100_000)
 	for range 5 {

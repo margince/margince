@@ -47,6 +47,7 @@ func companyContextOf(t *testing.T, e *Env, meeting ids.UUID) (text string, with
 // received. It leaves out what this reader may not open. It also leaves out a
 // booking tool's confirmation mail.
 func TestMeetingBriefTellsWhatTheCompanyAlreadyReceivedFromOtherContacts(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	company := companyIDOf(e.SeedCompany(t, "Northwind", &e.Rep1))
@@ -104,6 +105,7 @@ func TestMeetingBriefTellsWhatTheCompanyAlreadyReceivedFromOtherContacts(t *test
 // A quoted line is credited to the writer who wrote it. A note the reader
 // logged names the reader as its author, whatever the contact it sits on.
 func TestVoicesByIDNameTheReaderAsTheAuthorOfTheirOwnNote(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contact := e.SeedContact(t, "Ana Roth", &e.Rep1)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)

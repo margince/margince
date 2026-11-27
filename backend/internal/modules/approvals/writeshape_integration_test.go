@@ -67,6 +67,7 @@ func (e *stagingEnv) decidedEvent(t *testing.T, id ids.ApprovalID) map[string]an
 }
 
 func TestADecidedApprovalWritesTheSameRowShapeEveryModuleDoes(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	ctx := e.asHumanWith(decidesEverything())
 	company := e.company(t)
@@ -116,6 +117,7 @@ func TestADecidedApprovalWritesTheSameRowShapeEveryModuleDoes(t *testing.T) {
 // the audit id, so every approval event in the product started a new chain
 // whatever caused it.
 func TestAnApprovalDecidedByAnotherEventNamesItAsTheCause(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	ctx := e.asHumanWith(decidesEverything())
 	company := e.company(t)

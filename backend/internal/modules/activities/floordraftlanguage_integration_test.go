@@ -23,6 +23,7 @@ import (
 // With no model bound, the floor writes the reply. It still writes in the
 // language the rep chose, and reports the language it wrote in.
 func TestTheFloorReplyWritesInTheChosenLanguage(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	anchor := e.seedAnchor(t, "", "")

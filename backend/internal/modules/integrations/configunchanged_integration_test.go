@@ -16,6 +16,7 @@ import (
 )
 
 func TestAConfigurationSaveOfTheStoredSettingsChangesNothing(t *testing.T) {
+	t.Parallel()
 	e := setupRuns(t, runsConfig{})
 	actor, ok := principal.Actor(e.ctx)
 	if !ok {
@@ -68,6 +69,7 @@ func TestAConfigurationSaveOfTheStoredSettingsChangesNothing(t *testing.T) {
 // A save that resends the pool budgets already stored is compared with the
 // stored budgets, so it changes nothing either.
 func TestAConfigurationSaveOfTheStoredBudgetsChangesNothing(t *testing.T) {
+	t.Parallel()
 	e := setupRuns(t, runsConfig{ceilings: map[string]int{"email": 10}})
 	actor, ok := principal.Actor(e.ctx)
 	if !ok {

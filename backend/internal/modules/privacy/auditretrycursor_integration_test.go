@@ -20,6 +20,7 @@ import (
 )
 
 func TestAuditRetryCursorCountsHeldRowsAgainstItsPageAndContinues(t *testing.T) {
+	t.Parallel()
 	e := setupAuditBoundary(t)
 	withAuditRetryFixture(t, e, func(ctx context.Context) {
 		var start, boundary, later ids.UUID
@@ -76,6 +77,7 @@ func TestAuditRetryCursorCountsHeldRowsAgainstItsPageAndContinues(t *testing.T) 
 }
 
 func TestAuditRetrySweepReturnsToHeldLinkedCopiesAfterRelease(t *testing.T) {
+	t.Parallel()
 	e := setupAuditBoundary(t)
 	withAuditRetryFixture(t, e, func(ctx context.Context) {
 		var original, subject ids.UUID
@@ -116,6 +118,7 @@ func TestAuditRetrySweepReturnsToHeldLinkedCopiesAfterRelease(t *testing.T) {
 // Each phase reads only the audit rows it can act on. A history of ordinary
 // writes with no erasure in it costs one page per phase.
 func TestAnAuditPassOverOrdinaryWritesTakesOnePagePerPhase(t *testing.T) {
+	t.Parallel()
 	e := setupAuditBoundary(t)
 	withAuditRetryFixture(t, e, func(ctx context.Context) {
 		start := ids.NewV7()

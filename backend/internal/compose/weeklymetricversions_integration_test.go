@@ -13,6 +13,7 @@ import (
 )
 
 func TestWeeklyDoesNotCompareDifferentAnalyticsDefinitions(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	human := reportingActor(e)
 	engine := weekly.NewEngine(e.Pool, newTeammatesSeam(e.Pool)).WithNumeric(weeklyNumericEvaluator{})

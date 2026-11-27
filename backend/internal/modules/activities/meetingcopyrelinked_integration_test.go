@@ -20,6 +20,7 @@ import (
 // A meeting copy's guest a member relinked reaches the survivor still marked,
 // so no calendar roster on the survivor retires the member's link.
 func TestAFoldedCopyCarriesAGuestsRelinkMark(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := context.Background()
 	meeting := func() ids.UUID {
@@ -66,6 +67,7 @@ func TestAFoldedCopyCarriesAGuestsRelinkMark(t *testing.T) {
 // so that guest stays until both calendars dropped them. A row no roster wrote
 // on the survivor stays a member's, and a colleague's own row stays their calendar's.
 func TestAFoldedCopyCarriesItsCalendarToTheSurvivorsGuests(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := context.Background()
 	meeting := func() ids.UUID {
@@ -115,6 +117,7 @@ func TestAFoldedCopyCarriesItsCalendarToTheSurvivorsGuests(t *testing.T) {
 // A copy's guest stored before addresses were held lowercase reaches the
 // survivor in lowercase, so the fold does not fail on the older row.
 func TestAFoldedCopyCarriesAnOlderGuestInLowercase(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := context.Background()
 	var survivor, duplicate ids.UUID
@@ -150,6 +153,7 @@ func TestAFoldedCopyCarriesAnOlderGuestInLowercase(t *testing.T) {
 // A carry whose context ended stops at the fold and reports it, before any
 // guest is copied.
 func TestACopyCarryReportsAFoldItCouldNotRun(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.ws), "system:meeting-fold")
 	stopped, stop := context.WithCancel(ctx)

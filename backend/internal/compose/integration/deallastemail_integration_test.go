@@ -25,6 +25,7 @@ import (
 )
 
 func TestDealLastEmail_TheNewestWorkspaceMailAndOnlyThat(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open := pipelineFixtureFor(e.Admin(), t, e.Deals)
 	mailed, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
@@ -133,6 +134,7 @@ func listDealsByID(t *testing.T, e *Env) map[ids.UUID]crmcontracts.Deal {
 // Mail no human wrote is not the deal's last email. A notice and the product's
 // own mail leave the card on the human exchange; the next reply moves it.
 func TestDealLastEmailPassesOverMailNoHumanWrote(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open := pipelineFixtureFor(e.Admin(), t, e.Deals)
 	deal, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{

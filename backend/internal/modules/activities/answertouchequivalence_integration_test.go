@@ -149,6 +149,7 @@ func readTouchAnswers(ctx context.Context, t *testing.T, tx pgx.Tx, sql string, 
 }
 
 func TestTheContactFirstTouchArmsAnswerExactlyWhatTheFlatOnesDo(t *testing.T) {
+	t.Parallel()
 	e := setupPromises(t)
 	ctx := context.Background()
 	tx, err := e.owner.Begin(ctx)

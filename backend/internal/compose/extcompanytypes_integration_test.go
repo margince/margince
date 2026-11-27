@@ -16,27 +16,19 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/ports/companytypes"
 	"github.com/margince/margince/backend/pkg/extension"
 	"github.com/margince/margince/backend/pkg/extension/crm"
 )
 
 // composeTypeUnits declares `notes` (the unit the fixture runs as) and a second
 // unit that declares the same type name.
-func composeTypeUnits(t *testing.T) {
+func composeTypeUnits(t *testing.T) *Extensions {
 	t.Helper()
 	notes := extension.Extension{Name: coreUnit, CompanyTypes: []extension.CompanyType{
 		{Type: "reseller", Label: "Reseller"}, {Type: "distributor", Label: "Distributor"},
 	}}
 	other := extension.Extension{Name: "other", CompanyTypes: []extension.CompanyType{{Type: "reseller", Label: "Other reseller"}}}
-	setComposedExtensions([]extension.Extension{notes, other})
-	companytypes.Reset()
-	companytypes.Register(notes.Name, notes.CompanyTypes)
-	companytypes.Register(other.Name, other.CompanyTypes)
-	t.Cleanup(func() {
-		setComposedExtensions(nil)
-		companytypes.Reset()
-	})
+	return &Extensions{units: []extension.Extension{notes, other}}
 }
 
 func (e coreEnv) seedCompany(t *testing.T) ids.UUID {
@@ -84,8 +76,9 @@ func (e coreEnv) liveTypes(t *testing.T, company ids.UUID) []string {
 }
 
 func TestAUnitSetsItsDeclaredCompanyTypesUnderItsOwnName(t *testing.T) {
+	t.Parallel()
 	e := setupCore(t)
-	composeTypeUnits(t)
+	e.composed = composeTypeUnits(t)
 	company := e.seedCompany(t)
 
 	got, err := e.setTypes(t, company, []string{"reseller"})
@@ -105,8 +98,9 @@ func TestAUnitSetsItsDeclaredCompanyTypesUnderItsOwnName(t *testing.T) {
 }
 
 func TestAUnitReplacesOnlyItsOwnValuesAndKeepsAnotherUnits(t *testing.T) {
+	t.Parallel()
 	e := setupCore(t)
-	composeTypeUnits(t)
+	e.composed = composeTypeUnits(t)
 	company := e.seedCompany(t)
 	if _, err := e.owner.Exec(context.Background(),
 		`INSERT INTO company_relationship_type (company_id, relationship_type, source, captured_by)
@@ -129,8 +123,9 @@ func TestAUnitReplacesOnlyItsOwnValuesAndKeepsAnotherUnits(t *testing.T) {
 }
 
 func TestAUnitCannotSetATypeItDidNotDeclare(t *testing.T) {
+	t.Parallel()
 	e := setupCore(t)
-	composeTypeUnits(t)
+	e.composed = composeTypeUnits(t)
 	company := e.seedCompany(t)
 
 	for _, bad := range []string{"wholesaler", "ext:other:reseller", "ext:notes:reseller", ""} {
@@ -144,8 +139,9 @@ func TestAUnitCannotSetATypeItDidNotDeclare(t *testing.T) {
 }
 
 func TestSettingTypesOnACompanyThatIsNotThereIsNotFound(t *testing.T) {
+	t.Parallel()
 	e := setupCore(t)
-	composeTypeUnits(t)
+	e.composed = composeTypeUnits(t)
 
 	if _, err := e.setTypes(t, ids.NewV7(), []string{"reseller"}); !errors.Is(err, extension.ErrNotFound) {
 		t.Fatalf("err = %v, want ErrNotFound", err)

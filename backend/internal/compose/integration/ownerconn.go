@@ -7,11 +7,11 @@ package integration
 
 import (
 	"context"
-	"os"
 	"sync"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 )
 
 // OwnerConn is the schema-owner connection tests use to shift timestamps the
@@ -23,7 +23,7 @@ import (
 func OwnerConn(t *testing.T) *pgx.Conn {
 	t.Helper()
 	conn := sharedOwnerConn(t)
-	if conn != nil && ownerConnIdle(conn) {
+	if conn != nil && ownerConnIdle(conn) && conn.Config().Database == testdb.For(t).Name {
 		return conn
 	}
 	return FreshOwnerConn(t)
@@ -67,11 +67,7 @@ func ownerConnIdle(conn *pgx.Conn) bool {
 // the test ends. It is never the one OwnerConn shares.
 func FreshOwnerConn(t *testing.T) *pgx.Conn {
 	t.Helper()
-	dsn := os.Getenv("MARGINCE_TEST_DSN")
-	if dsn == "" {
-		t.Fatal("MARGINCE_TEST_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
-	conn, err := pgx.Connect(context.Background(), dsn)
+	conn, err := pgx.Connect(context.Background(), testdb.For(t).OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -109,6 +109,7 @@ func (f fixture) previewCount(t *testing.T, definition map[string]any) int {
 }
 
 func TestALiveListPastAThousandMatchesIsCompleteAndEqualsItsPreview(t *testing.T) {
+	t.Parallel()
 	f := setupFixture(t)
 	column := f.defineField(t, customfieldsmod.FieldSpec{Label: "Cohort Big", Type: customfieldsmod.TypeText})
 	const matching = 1010
@@ -140,6 +141,7 @@ func TestALiveListPastAThousandMatchesIsCompleteAndEqualsItsPreview(t *testing.T
 }
 
 func TestARelativeDateSelectsAgainstToday(t *testing.T) {
+	t.Parallel()
 	f := setupFixture(t)
 	column := f.defineField(t, customfieldsmod.FieldSpec{Label: "Last Touch Rel", Type: customfieldsmod.TypeDate})
 	recent, stale := f.seedTwoContacts(t, "Touch")
@@ -165,6 +167,7 @@ func TestARelativeDateSelectsAgainstToday(t *testing.T) {
 }
 
 func TestExplainAgreesWithMembershipForEveryRecord(t *testing.T) {
+	t.Parallel()
 	f := setupFixture(t)
 	tier := f.defineField(t, customfieldsmod.FieldSpec{Label: "Explain Tier", Type: customfieldsmod.TypeText})
 	score := f.defineField(t, customfieldsmod.FieldSpec{Label: "Explain Score", Type: customfieldsmod.TypeNumber})
@@ -221,6 +224,7 @@ func TestExplainAgreesWithMembershipForEveryRecord(t *testing.T) {
 }
 
 func TestAMaskedFieldIsHiddenInTheWhy(t *testing.T) {
+	t.Parallel()
 	f := setupFixture(t)
 	secret := f.defineField(t, customfieldsmod.FieldSpec{Label: "Masked Margin", Type: customfieldsmod.TypeText})
 	target, _ := f.seedTwoContacts(t, "Masked")

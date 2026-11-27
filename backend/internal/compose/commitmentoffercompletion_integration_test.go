@@ -25,6 +25,7 @@ import (
 )
 
 func TestSettledClaimWithdrawsItsUnacceptedTaskAndStaysSettledOnRereading(t *testing.T) {
+	t.Parallel()
 	for _, outcome := range []string{claimStatusDone, claimStatusDismissed} {
 		t.Run(outcome, func(t *testing.T) {
 			e := setupCompletionTranscript(t, transcriptBody)
@@ -80,6 +81,7 @@ func setupCompletionTranscript(t *testing.T, body string) *transcriptEnv {
 }
 
 func TestCompletingOnePromiseKeepsAnotherAskFromTheSameMeetingPending(t *testing.T) {
+	t.Parallel()
 	e := setupCompletionTranscript(t, transcriptBody+"\nPriya Raman: I'll send the security checklist.")
 	linkInes(t, e)
 	steps := []proposedStep{
@@ -119,6 +121,7 @@ func TestCompletingOnePromiseKeepsAnotherAskFromTheSameMeetingPending(t *testing
 }
 
 func TestAClaimCompletedBeforeExtractionCreatesNoTaskOrProposal(t *testing.T) {
+	t.Parallel()
 	e := setupCompletionTranscript(t, transcriptBody)
 	linkInes(t, e)
 	customer, err := ids.Parse(e.wsString(t, `SELECT id::text FROM contact WHERE full_name = $1`, "Ines Huber"))
@@ -146,6 +149,7 @@ func TestAClaimCompletedBeforeExtractionCreatesNoTaskOrProposal(t *testing.T) {
 }
 
 func TestCompletedTaskWithoutAContactWithdrawsItsMatchingProposal(t *testing.T) {
+	t.Parallel()
 	settled, proposal := seedTaskWithProposal(t)
 	e := settled.transcriptEnv
 	reader := e.As(e.Rep2, []ids.UUID{e.Team1}, transcriptPerms)
@@ -208,6 +212,7 @@ func assertSettledCommitmentNoticeGone(t *testing.T, e *transcriptEnv) {
 }
 
 func TestAnOldTaskCompletionDoesNotSettleAReopenedPromise(t *testing.T) {
+	t.Parallel()
 	k := seedKeptCommitment(t)
 	k.setDone(t, true)
 	event := k.newest(t, eventActivityUpdated, `envelope->'entity'->>'id' = $2`, k.task.String())
@@ -219,6 +224,7 @@ func TestAnOldTaskCompletionDoesNotSettleAReopenedPromise(t *testing.T) {
 }
 
 func TestDelayedClaimSettlementCannotWithdrawAnUnreadableProposal(t *testing.T) {
+	t.Parallel()
 	e := setupCompletionTranscript(t, transcriptBody)
 	customer := linkInes(t, e)
 	e.WsExec(t, `UPDATE contact SET owner_id = $2 WHERE id = $1`, customer, e.Rep3)
@@ -282,6 +288,7 @@ func seedTaskWithProposal(t *testing.T) (keptCommitment, ids.ApprovalID) {
 }
 
 func TestWithdrawalRechecksATaskChangedAfterItsCompletionWasRead(t *testing.T) {
+	t.Parallel()
 	for _, reopen := range []bool{false, true} {
 		t.Run(map[bool]string{false: "edited", true: "reopened"}[reopen], func(t *testing.T) {
 			k, proposal := seedTaskWithProposal(t)
@@ -317,6 +324,7 @@ func TestWithdrawalRechecksATaskChangedAfterItsCompletionWasRead(t *testing.T) {
 }
 
 func TestWithdrawalRechecksAClaimReopenedAfterSettlementWasRead(t *testing.T) {
+	t.Parallel()
 	e := setupCompletionTranscript(t, transcriptBody)
 	linkInes(t, e)
 	reading := e.readAt(t, cannedBrain{reply: attributedReply(t, "Priya Raman", "seat:"+e.Rep2.String(), 0.75)}, func() time.Time { return completionReadTime })

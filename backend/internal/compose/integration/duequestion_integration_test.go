@@ -98,6 +98,7 @@ func dueOf(t *testing.T, key string) (set bool, year string) {
 }
 
 func TestAFarDueDateOnACapturedTaskIsAskedOnceAndKeptByTheOwner(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	far := clocktest.Now(t).AddDate(15, 0, 0)
 	id, _ := askedFarDate(t, e, "far", far)
@@ -119,6 +120,7 @@ func TestAFarDueDateOnACapturedTaskIsAskedOnceAndKeptByTheOwner(t *testing.T) {
 }
 
 func TestTheOwnerMayClearOrReplaceTheDate(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	id, payload := askedFarDate(t, e, "clear", clocktest.Now(t).AddDate(15, 0, 0))
 	if err := decideEdited(e, e.Rep1, id, payload, map[string]any{"due_date": ""}); err != nil {
@@ -142,6 +144,7 @@ func replaceTheDate(t *testing.T, e *Env) {
 }
 
 func TestATamperedAnswerOrAnotherReaderIsRefused(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	id, payload := askedFarDate(t, e, "tamper", clocktest.Now(t).AddDate(15, 0, 0))
 	other := clocktest.Now(t).AddDate(20, 0, 0).Format(time.DateOnly)
@@ -160,6 +163,7 @@ func TestATamperedAnswerOrAnotherReaderIsRefused(t *testing.T) {
 }
 
 func TestAnAnswerAfterTheTaskChangedWritesNothing(t *testing.T) {
+	t.Parallel()
 	for name, change := range map[string]struct {
 		sql   string
 		value func(t *testing.T, e *Env) any
@@ -189,6 +193,7 @@ func TestAnAnswerAfterTheTaskChangedWritesNothing(t *testing.T) {
 }
 
 func TestTheQuestionNamesTheDayInTheInstallationZone(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	e.WsExec(t, `UPDATE setting SET value = '"America/Los_Angeles"'::jsonb WHERE key = 'installation.timezone'`)
 	day := clocktest.Now(t).AddDate(15, 0, 0).UTC().Truncate(24 * time.Hour)
@@ -199,6 +204,7 @@ func TestTheQuestionNamesTheDayInTheInstallationZone(t *testing.T) {
 }
 
 func TestADueDateInsideTheWindowOrWithNoOwnerAsksNobody(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	if err := fileExtensionTask(t, e, "near", e.Rep1, clocktest.Now(t).AddDate(0, 0, 7)); err != nil {
 		t.Fatal(err)

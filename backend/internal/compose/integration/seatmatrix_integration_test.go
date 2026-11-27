@@ -102,6 +102,7 @@ func seatActions() []seatAction {
 }
 
 func TestTheSeatCeilingHoldsForEverySeededRoleAndAction(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Seat Matrix", "seat@fable.test", "Admin")
 	fixtures := seedSeatFixtures(t, e)
@@ -173,6 +174,7 @@ func TestTheSeatCeilingHoldsForEverySeededRoleAndAction(t *testing.T) {
 // The receiving half of the same ceiling (AAD-AC-4): a read seat may be
 // handed a record to read, never one to write.
 func TestAWriteGrantIsRefusedToAReadSeat(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Seat Grant", "seat-grant@fable.test", "Admin")
 	fixtures := seedSeatFixtures(t, e)
@@ -230,6 +232,7 @@ func TestAWriteGrantIsRefusedToAReadSeat(t *testing.T) {
 // The stored access is read back as well as the status, because a refusal owes
 // the row no residue whatever order the statements ran in.
 func TestAReAssertCannotWalkAWriteGrantPastTheSeatCeiling(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Seat Grant Reassert", "seat-reassert@fable.test", "Admin")
 	fixtures := seedSeatFixtures(t, e)

@@ -169,12 +169,10 @@ backend/internal/platform/dbmigrate/extensionnamespaces_test.go core 0010
 backend/internal/platform/dbmigrate/extensionnamespaces_test.go core 0020
 backend/internal/platform/dbmigrate/extensionnamespaces_test.go migration 0010
 backend/internal/platform/dbmigrate/extensionnamespaces_test.go migration 0020
-backend/internal/platform/events/bus_integration_test.go core 0015
 backend/internal/platform/events/relay.go migration 0016
 backend/internal/platform/httperr/constraintfault.go migration 0289
 backend/internal/platform/jobs/jobs_integration_test.go core 0015
 backend/internal/platform/jobs/migrate.go migration 0015
-backend/internal/platform/testdb/reset_integration_test.go migration 0240
 backend/internal/shared/kernel/pipelinetrace/registry.go migration 0258
 backend/internal/shared/ports/datasource/datasource.go core 0171
 backend/internal/shared/ports/extraction/extraction.go core 0252

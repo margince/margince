@@ -110,6 +110,7 @@ func boundIndexedColumns(t *testing.T, pool *pgxpool.Pool) *regexp.Regexp {
 // The reads that reuse generic plans spell every partial-index predicate as a
 // literal. That lets a generic plan keep the index.
 func TestTheReadsThatReuseGenericPlansBindNoPartialIndexPredicate(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	sent := &sentStatements{}
 	config := e.Pool.Config()
@@ -221,6 +222,7 @@ func TestTheReadsThatReuseGenericPlansBindNoPartialIndexPredicate(t *testing.T) 
 }
 
 func TestAWholeWorklistReadReusesPlansWithoutBindingPartialIndexPredicates(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	sent := &sentStatements{}
 	config := e.Pool.Config()

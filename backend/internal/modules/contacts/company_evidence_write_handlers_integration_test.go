@@ -21,6 +21,7 @@ import (
 )
 
 func TestUpdateCompanyProfileFieldHandler(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := seedCompanyWithEvidence(ctx, t, e)
@@ -71,6 +72,7 @@ func TestUpdateCompanyProfileFieldHandler(t *testing.T) {
 }
 
 func TestConfirmCompanyProfileFieldHandler(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := seedCompanyWithEvidence(ctx, t, e)
@@ -128,6 +130,7 @@ func TestConfirmCompanyProfileFieldHandler(t *testing.T) {
 }
 
 func TestUpdateCompanyFactHandler(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := seedCompanyWithEvidence(ctx, t, e)
@@ -176,6 +179,7 @@ func TestUpdateCompanyFactHandler(t *testing.T) {
 }
 
 func TestConfirmCompanyFactHandler(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := seedCompanyWithEvidence(ctx, t, e)
@@ -217,6 +221,7 @@ func TestConfirmCompanyFactHandler(t *testing.T) {
 // Both upserts guard on `source NOT IN ('human', 'agent')`. This drives the
 // real ApplyDeepRead, because that query is where the rule lives.
 func TestACorrectedFactSurvivesTheNextDeepRead(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := seedCompanyWithEvidence(ctx, t, e)
@@ -266,6 +271,7 @@ func TestACorrectedFactSurvivesTheNextDeepRead(t *testing.T) {
 // correct a fact, so a nightly re-read that reclaimed it would discard the work
 // the passport was granted for. The sibling above covers a contact's.
 func TestAnAgentCorrectedFactSurvivesTheNextDeepRead(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	companyID := seedCompanyWithEvidence(e.as(), t, e)
 
@@ -312,6 +318,7 @@ func TestAnAgentCorrectedFactSurvivesTheNextDeepRead(t *testing.T) {
 // silently drop the human's agreement. Both sidecars run through the real
 // ApplyDeepRead with a proposal that differs from the stored value.
 func TestAConfirmedClaimSurvivesTheNextDeepRead(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := seedCompanyWithEvidence(ctx, t, e)

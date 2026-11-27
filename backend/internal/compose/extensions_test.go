@@ -62,7 +62,7 @@ func composableAll(exts []extension.Extension) []extension.Extension {
 }
 
 func TestRegisterExtensionsAppliesDeclaredCapabilities(t *testing.T) {
-	err := RegisterExtensions(composableAll([]extension.Extension{{
+	_, err := RegisterExtensions(composableAll([]extension.Extension{{
 		Name:          "reg-ok",
 		Version:       "0.0.1",
 		Jurisdictions: []jurisdiction.Pack{fakePack{code: "zx"}},
@@ -98,7 +98,7 @@ func TestRegisterExtensionsAppliesDeclaredCapabilities(t *testing.T) {
 // above does, and why a new case here takes a new code rather than reusing one.
 func TestRegisterExtensionsAppliesDeclaredMessagingRules(t *testing.T) {
 	const replyWindow = 9 * 24 * time.Hour
-	err := RegisterExtensions(composableAll([]extension.Extension{{
+	_, err := RegisterExtensions(composableAll([]extension.Extension{{
 		Name:          "msg-ok",
 		Version:       "0.0.1",
 		Jurisdictions: []jurisdiction.Pack{fakePack{code: "zw"}},
@@ -138,7 +138,7 @@ func TestRegisterExtensionsAppliesDeclaredMessagingRules(t *testing.T) {
 // TestRegisterExtensionsRejectsAnInvalidUnitName beside it asserts the error and
 // nothing about the registry, which is the shape this must not take.
 func TestNoMessagingRulesApplyWhenTheSetIsInvalid(t *testing.T) {
-	err := RegisterExtensions(composableAll([]extension.Extension{{
+	_, err := RegisterExtensions(composableAll([]extension.Extension{{
 		Name:          "undeclared-job-msg",
 		Version:       "0.0.1",
 		Jurisdictions: []jurisdiction.Pack{fakePack{code: "zp"}},
@@ -158,21 +158,21 @@ func TestNoMessagingRulesApplyWhenTheSetIsInvalid(t *testing.T) {
 }
 
 func TestRegisterExtensionsRejectsAnInvalidUnitName(t *testing.T) {
-	err := RegisterExtensions(composableAll([]extension.Extension{{Name: "Bad_Name"}}), nil, nil)
+	_, err := RegisterExtensions(composableAll([]extension.Extension{{Name: "Bad_Name"}}), nil, nil)
 	if err == nil || !strings.Contains(err.Error(), "not a valid unit name") {
 		t.Fatalf("err = %v, want the unit-name rejection", err)
 	}
 }
 
 func TestRegisterExtensionsRejectsAPrivacyTableOutsideTheUnitsNamespace(t *testing.T) {
-	err := RegisterExtensions(composableAll([]extension.Extension{{Name: "demo", Version: "0.0.1", Privacy: []privacy.Table{{Name: "ext_other_note"}}}}), nil, nil)
+	_, err := RegisterExtensions(composableAll([]extension.Extension{{Name: "demo", Version: "0.0.1", Privacy: []privacy.Table{{Name: "ext_other_note"}}}}), nil, nil)
 	if err == nil || !strings.Contains(err.Error(), "ext_other_note") {
 		t.Fatalf("err = %v, want the namespace refusal", err)
 	}
 }
 
 func TestRegisterExtensionsRejectsADuplicateUnit(t *testing.T) {
-	err := RegisterExtensions(composableAll([]extension.Extension{
+	_, err := RegisterExtensions(composableAll([]extension.Extension{
 		{Name: "twice", Version: "0.0.1"},
 		{Name: "twice", Version: "0.0.2"},
 	}), nil, nil)
@@ -184,7 +184,7 @@ func TestRegisterExtensionsRejectsADuplicateUnit(t *testing.T) {
 func TestRegisterExtensionsRejectsAMissingVersion(t *testing.T) {
 	// NOT through composable: the empty version is this test's subject, and a
 	// helper that filled it would assert the refusal of a unit that has one.
-	err := RegisterExtensions([]extension.Extension{
+	_, err := RegisterExtensions([]extension.Extension{
 		{Name: "unversioned", Description: "A unit composed by a test."},
 	}, nil, nil)
 	if err == nil || !strings.Contains(err.Error(), "version is empty") {
@@ -193,7 +193,7 @@ func TestRegisterExtensionsRejectsAMissingVersion(t *testing.T) {
 }
 
 func TestRegisterExtensionsPreflightsDuplicateJurisdictions(t *testing.T) {
-	err := RegisterExtensions(composableAll([]extension.Extension{
+	_, err := RegisterExtensions(composableAll([]extension.Extension{
 		{Name: "first", Version: "0.0.1", Jurisdictions: []jurisdiction.Pack{fakePack{code: "zv"}}},
 		{Name: "second", Version: "0.0.1", Jurisdictions: []jurisdiction.Pack{fakePack{code: "zv"}}},
 	}), nil, nil)
@@ -212,7 +212,7 @@ func TestRegisterExtensionsRejectsABadNeed(t *testing.T) {
 		"empty reason":       {{Capability: extension.CapabilityModels}},
 		"declared twice":     {good, good},
 	} {
-		err := RegisterExtensions(composableAll([]extension.Extension{{Name: "needy", Version: "0.0.1", Needs: needs}}), nil, nil)
+		_, err := RegisterExtensions(composableAll([]extension.Extension{{Name: "needy", Version: "0.0.1", Needs: needs}}), nil, nil)
 		if err == nil || !strings.Contains(err.Error(), `extension "needy"`) {
 			t.Errorf("%s: err = %v, want the boot to refuse the unit", name, err)
 		}
@@ -224,7 +224,7 @@ func TestRegisterExtensionsRejectsABadNeed(t *testing.T) {
 // or invented class would be a statutory floor that looks registered
 // while no engine ever consults it, so the boot refuses it.
 func TestRegisterExtensionsRejectsAnUnknownRetentionClass(t *testing.T) {
-	err := RegisterExtensions(composableAll([]extension.Extension{{
+	_, err := RegisterExtensions(composableAll([]extension.Extension{{
 		Name:    "typo-floor",
 		Version: "0.0.1",
 		Jurisdictions: []jurisdiction.Pack{fakePack{
@@ -244,7 +244,7 @@ func TestRegisterExtensionsRejectsAnUnknownRetentionClass(t *testing.T) {
 // anchor its cutoff in the future and silently shrink statutory
 // protection — the boot refuses the set.
 func TestRegisterExtensionsRejectsANegativePeriod(t *testing.T) {
-	err := RegisterExtensions(composableAll([]extension.Extension{{
+	_, err := RegisterExtensions(composableAll([]extension.Extension{{
 		Name:    "future-floor",
 		Version: "0.0.1",
 		Jurisdictions: []jurisdiction.Pack{fakePack{
@@ -264,7 +264,7 @@ func TestRegisterExtensionsRejectsANegativePeriod(t *testing.T) {
 // set — an invented anchor would be a floor whose start the engine
 // silently misreads.
 func TestRegisterExtensionsRejectsAnUnknownAnchor(t *testing.T) {
-	err := RegisterExtensions(composableAll([]extension.Extension{{
+	_, err := RegisterExtensions(composableAll([]extension.Extension{{
 		Name:    "odd-anchor",
 		Version: "0.0.1",
 		Jurisdictions: []jurisdiction.Pack{fakePack{
@@ -284,7 +284,7 @@ func TestRegisterExtensionsRejectsAnUnknownAnchor(t *testing.T) {
 // floor — a pack declaring the same class twice with different
 // Keep/Anchor values would leave the engine picking one silently.
 func TestRegisterExtensionsRejectsADuplicateRetentionClass(t *testing.T) {
-	err := RegisterExtensions(composableAll([]extension.Extension{{
+	_, err := RegisterExtensions(composableAll([]extension.Extension{{
 		Name:    "double-floor",
 		Version: "0.0.1",
 		Jurisdictions: []jurisdiction.Pack{fakePack{
@@ -308,7 +308,7 @@ func TestRegisterExtensionsRejectsADuplicateRetentionClass(t *testing.T) {
 // Tool.Validate, and a verb declared twice in one unit is rejected — the
 // fail-closed boundary holds at boot, not only at gen time.
 func TestRegisterExtensionsPreflightsTools(t *testing.T) {
-	badTier := RegisterExtensions(composableAll([]extension.Extension{{
+	_, badTier := RegisterExtensions(composableAll([]extension.Extension{{
 		Name:    "bad-tier-tool",
 		Version: "0.0.1",
 		Tools:   []extension.Tool{{Name: "ping", Handle: servedHandle}},
@@ -317,7 +317,7 @@ func TestRegisterExtensionsPreflightsTools(t *testing.T) {
 		t.Fatalf("err = %v, want the tier rejection", badTier)
 	}
 
-	dup := RegisterExtensions(composableAll([]extension.Extension{{
+	_, dup := RegisterExtensions(composableAll([]extension.Extension{{
 		Name:    "dup-tool",
 		Version: "0.0.1",
 		Tools: []extension.Tool{
@@ -334,7 +334,7 @@ func TestRegisterExtensionsPreflightsTools(t *testing.T) {
 	// it at the declaration's line; a set assembled outside that path has to be
 	// refused here, or a capability nothing published would be registered into
 	// the same registry the core tools ride.
-	undeclared := RegisterExtensions(composableAll([]extension.Extension{{
+	_, undeclared := RegisterExtensions(composableAll([]extension.Extension{{
 		Name:    "undeclared-tool",
 		Version: "0.0.1",
 		Tools:   []extension.Tool{{Name: "ping", Handle: servedHandle}},
@@ -349,7 +349,7 @@ func TestRegisterExtensionsPreflightsTools(t *testing.T) {
 // later unit fails validation, or a crash-looping process would leave
 // half-registered state behind.
 func TestNoCapabilityAppliesWhenTheSetIsInvalid(t *testing.T) {
-	err := RegisterExtensions(composableAll([]extension.Extension{
+	_, err := RegisterExtensions(composableAll([]extension.Extension{
 		{Name: "clean", Version: "0.0.1", Jurisdictions: []jurisdiction.Pack{fakePack{code: "zy"}}},
 		{Name: "Invalid Name"},
 	}), nil, nil)

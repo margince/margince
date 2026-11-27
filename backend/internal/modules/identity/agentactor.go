@@ -49,7 +49,7 @@ func (s *Service) agentsUser(ctx context.Context) (Identity, error) {
 	}
 	var id Identity
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		id, err = liveMemberIdentity(ctx, tx, wsID, ids.From[ids.UserKind](p.OnBehalfOf))
+		id, err = liveMemberIdentity(ctx, tx, s.rbac, wsID, ids.From[ids.UserKind](p.OnBehalfOf))
 		return err
 	})
 	if errors.Is(err, pgx.ErrNoRows) {

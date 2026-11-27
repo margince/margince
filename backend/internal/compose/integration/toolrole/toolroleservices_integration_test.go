@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration"
@@ -43,7 +44,6 @@ func init() {
 func toolRoleApp(t *testing.T, slug string, more ...compose.Option) *apptest.TwoDoors {
 	t.Helper()
 	jobs, embeddings := apptest.InsertOnlyRunner(t), apptest.EmbedReindexRouter(t, "tool-role-embed")
-	sweepEmbedder = embeddings
 	models, err := compose.NewLocalModelPath(ai.FakeRoutingConfig(), ai.WithFakeClient(ai.NewFakeClient()), ai.WithoutResultCache())
 	if err != nil {
 		t.Fatalf("starting the fake model path: %v", err)
@@ -61,7 +61,7 @@ func toolRoleApp(t *testing.T, slug string, more ...compose.Option) *apptest.Two
 	if err != nil {
 		t.Fatalf("starting the card photo's fake model path: %v", err)
 	}
-	sweepVoiceModel, err = compose.NewLocalModelPath(ai.FakeRoutingConfig(),
+	voiceModel, err := compose.NewLocalModelPath(ai.FakeRoutingConfig(),
 		ai.WithFakeClient(ai.NewFakeClient().Script(slices.Repeat([]string{voiceInferenceReply}, 512)...)), ai.WithoutResultCache())
 	if err != nil {
 		t.Fatalf("starting the voice build's fake model path: %v", err)
@@ -72,10 +72,6 @@ func toolRoleApp(t *testing.T, slug string, more ...compose.Option) *apptest.Two
 	}
 	vault := keyvault.NewMemory()
 	calendar := apptest.NewBookingProvider(sweepGmail{next: http.DefaultTransport})
-	sweepCalendar = calendar
-	previous := http.DefaultTransport
-	http.DefaultTransport = calendar
-	t.Cleanup(func() { http.DefaultTransport = previous })
 	// Each role's seat signs in from its own address through the loopback, so
 	// no seat spends another's sign-in budget.
 	loopback, err := httpserver.ParseTrustedProxies("127.0.0.1/32")
@@ -89,6 +85,7 @@ func toolRoleApp(t *testing.T, slug string, more ...compose.Option) *apptest.Two
 		compose.WithChatLinks(jobs, true, sweepLane{reply: sweepChatSummaryReply}), compose.WithGmailCapture(compose.GmailConfig{
 			ClientID: "calendar-fixture", ClientSecret: "calendar-fixture",
 			StateKey: "0123456789abcdef0123456789abcdef", PublicBaseURL: "https://mail.example.test",
+			Transport: calendar,
 		}, compose.CaptureConfig{}), compose.WithCaptureBackfill(jobs),
 		compose.WithTranscriptRead(jobs), compose.WithDocumentRead(jobs), compose.WithDeepRead(jobs, siteReads.ColdStart),
 		compose.WithRoleProposals(models.ProposeRoles), compose.WithEmbedReindex(embeddings, jobs),
@@ -98,8 +95,7 @@ func toolRoleApp(t *testing.T, slug string, more ...compose.Option) *apptest.Two
 		compose.WithProvider(providers, vault, jobs), compose.WithSchemaPool(integration.SchemaPool(t)),
 		compose.WithRateRefresh(jobs), compose.WithFinanceSources(jobs),
 	}, more...), "read", "write", "send", "draft", "enrich")
-	// The VAT queue binds the stores compose builds anywhere in the process.
-	t.Cleanup(func() { compose.BindVatChecking(nil) })
+	sweepServices.keep(t, d.E, sweepAppServices{embedder: embeddings, calendar: calendar, voiceModel: voiceModel})
 	// Boot binds the embedding model an installation runs; the harness does not boot.
 	apptest.SeedRouterBinding(t, d.E, embeddings)
 	d.E.Vault = vault
@@ -160,16 +156,47 @@ func callThroughApproval(t *testing.T, e *apptest.AppEnv, client *apptest.MCPCli
 	return client.Call(t, verb, released), nil
 }
 
-// sweepEmbedder is the embedding lane of the last sweep app, which a seed's
-// reindex worker embeds with.
-var sweepEmbedder search.Embedder
+// sweepAppServices are the fakes one sweep app was composed with, which a seed
+// works the app's queued jobs through.
+type sweepAppServices struct {
+	// embedder is the lane a reindex worker embeds with.
+	embedder search.Embedder
+	// calendar is the Google calendar an invitation's seed puts the event on.
+	calendar *apptest.BookingProvider
+	// voiceModel is the model a voice build is worked on.
+	voiceModel compose.ModelPath
+}
 
-// sweepCalendar is the Google calendar of the last sweep app, which an
-// invitation's seed puts the invited event on.
-var sweepCalendar *apptest.BookingProvider
+// sweepServices finds each running app's services by its pool, which every
+// seat signed in to that app shares and no other app does.
+var sweepServices = &appServices{byPool: map[*pgxpool.Pool]sweepAppServices{}}
 
-// sweepVoiceModel is the model the last sweep app's voice builds are worked on.
-var sweepVoiceModel compose.ModelPath
+type appServices struct {
+	mu     sync.Mutex
+	byPool map[*pgxpool.Pool]sweepAppServices
+}
+
+func (a *appServices) keep(t *testing.T, e *apptest.AppEnv, services sweepAppServices) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.byPool[e.Pool] = services
+	t.Cleanup(func() {
+		a.mu.Lock()
+		defer a.mu.Unlock()
+		delete(a.byPool, e.Pool)
+	})
+}
+
+func (a *appServices) of(t *testing.T, e *apptest.AppEnv) sweepAppServices {
+	t.Helper()
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	services, ok := a.byPool[e.Pool]
+	if !ok {
+		t.Fatal("this app was not composed by toolRoleApp, so it runs no sweep services")
+	}
+	return services
+}
 
 // sweepBlobs is the object store every sweep app keeps its files in, so a seed
 // can park what a worker would have stored.

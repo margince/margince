@@ -41,6 +41,7 @@ func seedPipeline(t *testing.T, e *apptest.AppEnv, name string) (id string, vers
 }
 
 func TestRetireAndRestoreAPipelineOverTheWire(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Pipelines E2E", "pipes@fable.test", "Admin")
 

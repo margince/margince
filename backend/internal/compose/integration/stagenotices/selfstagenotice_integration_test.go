@@ -24,6 +24,7 @@ import (
 )
 
 func TestStageNotificationsAgreeAcrossDeliveryHistoryAndPreview(t *testing.T) {
+	t.Parallel()
 	f := newStageNoticeFixture(t, "Qualified", "Proposal", "Renewal")
 	if err := f.db.Tx(f.ctx, func(tx pgx.Tx) error { return automation.SeedStarterAutomationsTx(f.ctx, tx) }); err != nil {
 		t.Fatal(err)

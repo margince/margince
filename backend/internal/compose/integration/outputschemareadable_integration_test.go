@@ -21,6 +21,7 @@ import (
 // Every core tool the registry serves has one the checker reads; a unit's verb
 // is refused at boot without one (buildExtensionTools).
 func TestEveryServedOutputSchemaIsReadableByTheChecker(t *testing.T) {
+	t.Parallel()
 	specs := compose.NewRegistry(nil, compose.SendPath{}).Specs()
 	checked := 0
 	for _, spec := range specs {
@@ -40,6 +41,7 @@ func TestEveryServedOutputSchemaIsReadableByTheChecker(t *testing.T) {
 // A unit verb whose output schema the checker cannot read is refused at boot,
 // before RegisterExtensions applies anything, so a refused call leaves nothing.
 func TestAUnitVerbWithAnUnreadableOutputSchemaIsRefusedAtBoot(t *testing.T) {
+	t.Parallel()
 	verb := extension.Verb{
 		Unit: "demo", Contract: "crm.yaml", OperationID: "listNotesOp", Route: "/ext/demo/list-notes",
 		Method: http.MethodPost, Tool: "list_notes", Version: "1.0.0",
@@ -47,7 +49,7 @@ func TestAUnitVerbWithAnUnreadableOutputSchemaIsRefusedAtBoot(t *testing.T) {
 		Tier:        extension.TierAutoExecute, RequestedScope: extension.ScopeRead,
 		OutputSchema: json.RawMessage(`{"type":"object","properties":{"note":{"type":["string","null"]}}}`),
 	}
-	if err := compose.RegisterExtensions(nil, []extension.Verb{verb}, nil); err == nil || !strings.Contains(err.Error(), "not readable") {
+	if _, err := compose.RegisterExtensions(nil, []extension.Verb{verb}, nil); err == nil || !strings.Contains(err.Error(), "not readable") {
 		t.Fatalf("the unreadable output schema was admitted: %v", err)
 	}
 }

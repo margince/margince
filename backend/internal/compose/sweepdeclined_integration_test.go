@@ -53,6 +53,7 @@ func (b *withholdingWhere) Complete(ctx context.Context, req model.Request) (mod
 }
 
 func TestTheOwedPassJudgesPastAMessageTheModelsDecline(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	hostile := seedWaitingMail(t, e, "Invoice "+hostileMarker)
 	ordinary := seedWaitingMail(t, e, "Monatsreporting Juli")
@@ -72,6 +73,7 @@ func TestTheOwedPassJudgesPastAMessageTheModelsDecline(t *testing.T) {
 }
 
 func TestTheClassifyPassLabelsPastAMessageTheModelsDecline(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	hostile := seedUnlabeledEmail(t, e, "Invoice "+hostileMarker)
 	ordinary := seedUnlabeledEmail(t, e, "please send the offer")
@@ -94,6 +96,7 @@ func TestTheClassifyPassLabelsPastAMessageTheModelsDecline(t *testing.T) {
 }
 
 func TestTheSettlePassJudgesPastAConversationTheModelsDecline(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	hostile := seedAnsweredRequest(t, e, "Invoice "+hostileMarker)
 	ordinary := seedAnsweredRequest(t, e, "Monatsreporting Juli")
@@ -123,6 +126,7 @@ func TestTheSettlePassJudgesPastAConversationTheModelsDecline(t *testing.T) {
 // backlog it would be the oldest row forever, re-read with nine fresh messages
 // every iteration and splitting each batch it rode in into single calls.
 func TestTheClassifyPassAsksADeclinedMessageOnceAcrossPasses(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	hostile := seedUnlabeledEmail(t, e, "Invoice "+hostileMarker)
 	var ordinary []ids.UUID
@@ -151,6 +155,7 @@ func TestTheClassifyPassAsksADeclinedMessageOnceAcrossPasses(t *testing.T) {
 }
 
 func TestTheOwedPassAsksADeclinedMessageOnceAcrossPasses(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	hostile := seedWaitingMail(t, e, "Invoice "+hostileMarker)
 	var ordinary []ids.UUID
@@ -192,6 +197,7 @@ func sentCarrying(prompts []string, text string) int {
 // A message whose solo answer stays below the floor is asked in one batch and
 // once alone. It is not asked again under the same prompt.
 func TestTheClassifyPassAsksAnUnsureMessageOnceAcrossPasses(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	unsure := seedUnlabeledEmail(t, e, "Note "+unsureMarker)
 	ordinary := seedUnlabeledEmail(t, e, "please send the offer")
@@ -214,6 +220,7 @@ func TestTheClassifyPassAsksAnUnsureMessageOnceAcrossPasses(t *testing.T) {
 }
 
 func TestTheOwedPassAsksAnUnsureMessageOnceAcrossPasses(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	unsure := seedWaitingMail(t, e, "Note "+unsureMarker)
 	ordinary := seedWaitingMail(t, e, "Monatsreporting Juli")
@@ -239,6 +246,7 @@ func TestTheOwedPassAsksAnUnsureMessageOnceAcrossPasses(t *testing.T) {
 // A full batch of unsure messages at the head of the backlog does not end the
 // pass. Once they are stamped, the newer message behind them is labeled.
 func TestTenUnsureMessagesDoNotHoldBackANewerOne(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	brain := &scriptedClassifyBrain{confidence: map[string]float64{}, soloStaysLow: true}
 	for i := range classifyBatchSize {
@@ -259,6 +267,7 @@ func TestTenUnsureMessagesDoNotHoldBackANewerOne(t *testing.T) {
 // A verdict reached under a retired prompt is re-judged once. An unsure answer
 // under the current one leaves the old verdict standing and is not asked again.
 func TestTheRejudgeSweepAsksAnUnsureMessageOnce(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	stale := seedWaitingMail(t, e, "Note "+unsureMarker)
 	store := activities.NewStore(InstallationDB(e.Pool))
@@ -280,6 +289,7 @@ func TestTheRejudgeSweepAsksAnUnsureMessageOnce(t *testing.T) {
 // A stamp answers for the text the model read. Once a member edits the
 // subject, both sweeps ask about the message again.
 func TestAnEditedMessageIsAskedAgainAfterAnUnsureAnswer(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	unlabeled := seedUnlabeledEmail(t, e, "FYI "+unsureMarker)
 	waiting := seedWaitingMail(t, e, "FYI "+unsureMarker)
@@ -321,6 +331,7 @@ func (b *standInBrain) Complete(context.Context, model.Request) (model.Response,
 // about any message. Recording it as the models' decline would strand the whole
 // backlog on the day a provider is bound, so the pass stops instead.
 func TestAPassWithNoProviderBoundDeclinesNothing(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	waiting := seedWaitingMail(t, e, "Monatsreporting Juli")
 	unlabeled := seedUnlabeledEmail(t, e, "please send the offer")

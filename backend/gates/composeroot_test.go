@@ -34,7 +34,7 @@ const composeRootDir = "internal/compose"
 // The ceilings below hold develop and main together: each side's additions
 // stayed under its own ceilings, and the two sets of additions sum to these.
 const (
-	composeRootProductionFiles = 1386
+	composeRootProductionFiles = 1390
 	// Raised by 2 files for the extension mail-file read cases and the purge
 	// receipt cases, which drive this package's unexported seams. Raised by 1
 	// production and 1 test file for the series-split fold and its cases.
@@ -120,8 +120,10 @@ const (
 	// context; the cases drive the contact page.
 	// Raised by 197 test lines for the re-ingest vector reuse cases, which drive
 	// the unexported knowledge ingest worker and its embedder fixture.
-	composeRootProductionLines = 231_477
-	composeRootTestLines       = 362_414
+	// Raised by 288 production and 4040 test lines for the state each
+	// composition owns, which lets every root compose test run in parallel.
+	composeRootProductionLines = 231_750
+	composeRootTestLines       = 366_503
 )
 
 // A read under these floors stopped early or read the wrong place, and would

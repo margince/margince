@@ -44,6 +44,7 @@ func storedRefoldMark(ctx context.Context, t *testing.T, tx pgx.Tx) ClockRefoldM
 }
 
 func TestARefoldWithNoMarkStartsWhenTheClockMigrationRan(t *testing.T) {
+	t.Parallel()
 	ctx, tx := refoldMarkTx(t)
 	var migrated time.Time
 	if err := tx.QueryRow(ctx, `SELECT applied_at FROM schema_migrations_core WHERE version = $1`,
@@ -58,6 +59,7 @@ func TestARefoldWithNoMarkStartsWhenTheClockMigrationRan(t *testing.T) {
 }
 
 func TestTheClockRefoldMarkAdvancesAndNeverMovesBack(t *testing.T) {
+	t.Parallel()
 	ctx, tx := refoldMarkTx(t)
 	instant := time.Date(2026, 5, 4, 9, 30, 0, 123456000, time.UTC)
 	low := ids.MustParse("00000000-0000-7000-8000-000000000001")

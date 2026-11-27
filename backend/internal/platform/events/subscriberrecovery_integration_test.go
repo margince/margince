@@ -25,6 +25,7 @@ import (
 )
 
 func TestSubscriberSurvivesItsGroupBeingPurged(t *testing.T) {
+	t.Parallel()
 	ctx, rdb := purgeTestRedis(t)
 	group := probeGroup(t)
 

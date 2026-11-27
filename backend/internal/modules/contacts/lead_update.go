@@ -15,7 +15,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/textbounds"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
@@ -248,7 +247,7 @@ func (s *Store) writeLeadInTx(
 		return none, err
 	}
 	in.Clear = storekit.CoreFieldClears(in.Clear, active, in.CustomFields)
-	p, resumeRecompute, err := buildLeadPatch(current, in)
+	p, resumeRecompute, err := buildLeadPatch(current, in, slaNow(ctx))
 	if err != nil {
 		return none, err
 	}
@@ -366,109 +365,6 @@ func recordRescoreHistory(
 		return appendOverrideScoreHistory(ctx, tx, id)
 	}
 	return nil
-}
-
-// buildLeadPatch folds the caller's sparse update onto the current lead
-// as a field patch, and reports whether the caller must resume recompute
-// (a cleared score override). The Commercial Judgement score override
-// (formulas §3.1, A68/ADR-0053) is sticky: setting a score demands a
-// written reason and retains the machine value; clearing the reason
-// resumes recompute.
-func buildLeadPatch(current crmcontracts.Lead, in UpdateLeadInput) (*storekit.Patch, bool, error) {
-	p := storekit.NewPatch()
-	clears, scoreNamed := withoutScoreOverrideClears(in.Clear)
-	in.ClearScoreOverride = in.ClearScoreOverride || scoreNamed
-	if err := storekit.ApplyClears(p, clears, clearableLeadColumns(current)); err != nil {
-		return nil, false, err
-	}
-	if in.FullName != nil {
-		name, err := requireLeadName(*in.FullName)
-		if err != nil {
-			return nil, false, err
-		}
-		p.Set("full_name", current.FullName, name)
-	}
-	if in.Email != nil {
-		parsed, err := values.ParseEmail(*in.Email)
-		if err != nil {
-			return nil, false, err
-		}
-		p.Set("email", current.Email, parsed.String())
-	}
-	if in.Phone != nil {
-		parsed, err := values.ParsePhone(*in.Phone)
-		if err != nil {
-			return nil, false, err
-		}
-		p.Set(leadPhoneColumn, current.Phone, parsed.String())
-	}
-	if in.Title != nil {
-		p.Set("title", current.Title, *in.Title)
-	}
-	if in.CompanyName != nil {
-		p.Set("company_name", current.CompanyName, *in.CompanyName)
-	}
-	if in.Industry != nil {
-		industry, err := leadIndustryWrite(in.Industry)
-		if err != nil {
-			return nil, false, err
-		}
-		p.Set(leadIndustryField, current.Industry, industry)
-	}
-	if in.LinkedInURL != nil {
-		normalized, err := leadLinkedInForUpdate(*in.LinkedInURL, current.LinkedinUrl)
-		if err != nil {
-			return nil, false, err
-		}
-		p.Set(linkedinURLField, current.LinkedinUrl, normalized)
-	}
-	setLeadReferences(p, current, in)
-	if in.Status != nil {
-		status, err := parseWritableLeadStatus(*in.Status)
-		if err != nil {
-			return nil, false, err
-		}
-		p.Set(leadStatusColumn, current.Status, string(status))
-	}
-	// Margince writes how a row arrived. A client may echo the stored value
-	// back; any other value would let a caller rewrite "Added via".
-	if in.Source != nil && strings.TrimSpace(*in.Source) != current.Source {
-		return nil, false, &values.ParseError{
-			Field: "source", Code: "read_only",
-			Message: "source records how the lead reached Margince and cannot be changed; set origin to say where it came from",
-		}
-	}
-	if err := setLeadOrigin(p, current, in); err != nil {
-		return nil, false, err
-	}
-	resumeRecompute, err := applyScoreOverride(p, current, in)
-	if err != nil {
-		return nil, false, err
-	}
-	if in.OwnerID != nil {
-		p.Set("owner_id", current.OwnerId, *in.OwnerID)
-		// Taking on an UNOWNED lead starts its response clock.
-		//
-		// The clock reads COALESCE(routed_at, created_at), so a lead that sat
-		// unowned for a week is already a week overdue the moment somebody
-		// picks it up — they inherit a breach earned while the row was nobody's.
-		// The routing automation stamps this for the same reason when it
-		// assigns; this is the hand-assignment half of the same rule.
-		//
-		// Only on the first owner. A reassignment between contacts keeps the
-		// original clock: the customer has been waiting since we took the lead
-		// on, and passing it along is not an answer.
-		//
-		// Through the patch rather than startLeadResponseClockTx, which the
-		// claim path uses: this write is already inside a patch that carries
-		// the audit image, and a second statement beside it would put the stamp
-		// outside the record of the change that caused it. The two agree on the
-		// condition: no owner yet, and no clock yet.
-		if current.RoutedAt == nil && current.OwnerId == nil {
-			stampArrival(p, *in.OwnerID, leadSLAClock().UTC())
-		}
-	}
-	return p, resumeRecompute, nil
 }
 
 func stampStatusSetBy(ctx context.Context, p *storekit.Patch, current crmcontracts.Lead, in UpdateLeadInput) error {

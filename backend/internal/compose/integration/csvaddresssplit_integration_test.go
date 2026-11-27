@@ -49,6 +49,7 @@ func partText(s *string) string {
 }
 
 func TestCSVImportSplitsAWholeAddressMappedToLineOne(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	const file = "Company,Address\n" +
 		`Splitwerk GmbH,"Example Street 4, 12345 Example City, Germany"` + "\n" +
@@ -84,6 +85,7 @@ func TestCSVImportSplitsAWholeAddressMappedToLineOne(t *testing.T) {
 }
 
 func TestCSVImportKeepsLineOneAsWrittenWhenTheCityIsMapped(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	const file = "Company,Street,City\n" + `Mapwerk GmbH,"Example Street 4, 12345 Example City",Example City` + "\n"
 	profile, _ := importjobtest.UploadCSV(t, e, "company", file)
@@ -98,6 +100,7 @@ func TestCSVImportKeepsLineOneAsWrittenWhenTheCityIsMapped(t *testing.T) {
 }
 
 func TestCSVUpdateWithASplitLineOneClearsTheStaleParts(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	const full = "Company,Street,Suite,Region,Postal,City,Country\n" +
 		"Movewerk GmbH,Old Road 2,Old Suite,CA,94043,Mountain View,US\n"
@@ -157,6 +160,7 @@ func assertCountryNamesStoredAsDE(t *testing.T, e *apptest.AppEnv) {
 }
 
 func TestCSVImportReadsCountryNamesAsCodesThroughPreviewApprovalAndCommit(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	profile, _ := importjobtest.UploadCSV(t, e, "company", countryNameFile)
 	run, _ := importjobtest.CreateRunWithMapping(t, e, "company", profile.SourceRef,
@@ -171,6 +175,7 @@ func TestCSVImportReadsCountryNamesAsCodesThroughPreviewApprovalAndCommit(t *tes
 }
 
 func TestZipImportReadsCountryNamesAsCodesThroughPreviewApprovalAndCommit(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	upload := uploadZip(t, e, "names.zip", zipBytes(t, map[string]string{"companies.csv": countryNameFile}))
 	run := stageBundle(t, e, upload.SourceRef, "names", []AnyMap{{
@@ -185,6 +190,7 @@ func TestZipImportReadsCountryNamesAsCodesThroughPreviewApprovalAndCommit(t *tes
 }
 
 func TestCSVImportRefusesAnUnknownCountryNameNamingItsRowAndColumn(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	profile, _ := importjobtest.UploadCSV(t, e, "company", "Company,Country\nLostwerk,Atlantis\n")
 	run, _ := importjobtest.CreateRunWithMapping(t, e, "company", profile.SourceRef,

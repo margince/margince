@@ -29,6 +29,7 @@ import (
 )
 
 func TestTheSweepFindsTheContactsOwedARepairAndThenStops(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -70,6 +71,7 @@ func TestTheSweepFindsTheContactsOwedARepairAndThenStops(t *testing.T) {
 // loop: the repair writes the link under the SURVIVOR, so a selector comparing
 // the source's own id finds the same row on every pass, forever.
 func TestTheSweepDrainsAContactWhoseParticipantRowPredatesAMerge(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 

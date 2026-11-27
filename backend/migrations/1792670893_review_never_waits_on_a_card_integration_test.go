@@ -18,6 +18,7 @@ import (
 // A review still waiting on a card goes back to the rep, with one audit entry,
 // and the column naming the card goes. The down migration then restores it.
 func TestAReviewWaitingOnACardGoesBackToTheRep(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	resetSchema(t, conn)

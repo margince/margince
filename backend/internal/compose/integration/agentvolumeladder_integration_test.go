@@ -100,6 +100,7 @@ func callTool(t *testing.T, e *apptest.AppEnv, bearer map[string]string, tool st
 // reaches the human who lent the passport. Their approval widens that window,
 // and the same passport changes again through the same door.
 func TestAWritePastItsThresholdIsReleasedByTheHumanWhoLentThePassport(t *testing.T) {
+	t.Parallel()
 	e, meter := ladderApp(t, "ladder-write", agentvolume.Limits{Writes: 10})
 	bearer, passport := apptest.PassportWithID(t, e, "writing agent", "read", "write")
 	spendCounter(t, e, meter, passport, agentvolume.Writes, 12)
@@ -139,6 +140,7 @@ func TestAWritePastItsThresholdIsReleasedByTheHumanWhoLentThePassport(t *testing
 // more allowance, so the agent that spends it is refused again and its human is
 // asked again.
 func TestOneReleaseIsOneMoreAllowanceAndNotAStandingPermission(t *testing.T) {
+	t.Parallel()
 	e, meter := ladderApp(t, "ladder-once", agentvolume.Limits{Writes: 10})
 	bearer, passport := apptest.PassportWithID(t, e, "writing agent", "read", "write")
 	spendCounter(t, e, meter, passport, agentvolume.Writes, 12)
@@ -161,6 +163,7 @@ func TestOneReleaseIsOneMoreAllowanceAndNotAStandingPermission(t *testing.T) {
 // BYO-STEP-4: a spent CALL ceiling suspends the passport for every verb and
 // reaches no inbox. Releasing it would release every other counter at once.
 func TestASpentCallCeilingAsksNobodyAnything(t *testing.T) {
+	t.Parallel()
 	e, meter := ladderApp(t, "ladder-calls", agentvolume.Limits{Calls: 5})
 	bearer, passport := apptest.PassportWithID(t, e, "calling agent", "read", "write")
 	seedContacts(t, e, 2)
@@ -187,6 +190,7 @@ func TestASpentCallCeilingAsksNobodyAnything(t *testing.T) {
 // thing the meter will do, so staging it would put a question in front of a
 // human whose answer changes nothing — and leave the agent waiting for it.
 func TestASpentEgressCeilingAsksNobodyAnything(t *testing.T) {
+	t.Parallel()
 	e, meter := ladderApp(t, "ladder-egress", agentvolume.Limits{Egress: 1})
 	bearer, passport := apptest.PassportWithID(t, e, "sending agent", "read", "send")
 	spendCounter(t, e, meter, passport, agentvolume.Egress, 5)

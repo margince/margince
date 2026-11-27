@@ -83,6 +83,7 @@ func settingsLists(pipelineID string) []settingsList {
 }
 
 func TestSettingsListTwinsAreRenamedBeforeEachNameIsHeldOnce(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	headSchema(t, conn)
@@ -191,6 +192,7 @@ func expectRefusal(t *testing.T, conn *pgx.Conn, list settingsList, name, why st
 }
 
 func TestALeadNameIsHeldToALabelAndAnEarlierLongerOneStays(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	headSchema(t, conn)

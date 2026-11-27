@@ -27,7 +27,6 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"github.com/margince/margince/backend/internal/compose"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/notices"
 )
 
@@ -45,7 +44,7 @@ func startApprovalNoticeRetract(
 	stdout io.Writer,
 ) {
 	retract := compose.NewApprovalNoticeRetract(
-		pool, notices.NewStore(compose.InstallationDB(pool)), identity.NewService(pool), logger)
+		pool, notices.NewStore(compose.InstallationDB(pool)), compose.IdentityService(pool), logger)
 	_, _ = fmt.Fprintln(stdout,
 		"worker taking back settled cards' decision notices (cg:approval-notice-retract)")
 	background.Go(func() {

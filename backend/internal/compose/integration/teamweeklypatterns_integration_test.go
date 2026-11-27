@@ -29,6 +29,7 @@ import (
 // The roster keeps the member whose week could not be read, the reps carry
 // their patterns, and the quality figures are measured rather than absent.
 func TestTheTeamWeekFreezesItsRosterPatternsAndQuality(t *testing.T) {
+	t.Parallel()
 	e := setupTeamWeekly(t)
 	writeRepWeek(t, e, e.Rep1)
 
@@ -68,6 +69,7 @@ func TestTheTeamWeekFreezesItsRosterPatternsAndQuality(t *testing.T) {
 
 // A rep frozen before patterns were kept reads its focus as the one pattern.
 func TestALegacyRepReadsItsFocusAsItsPattern(t *testing.T) {
+	t.Parallel()
 	e := setupTeamWeekly(t)
 	writeRepWeek(t, e, e.Rep1)
 	if _, _, err := e.engine.AssembleTeamFor(e.leadCtx, e.Team1, "Team One", members(e), teamClock); err != nil {
@@ -88,6 +90,7 @@ func TestALegacyRepReadsItsFocusAsItsPattern(t *testing.T) {
 // A snapshot nobody could be counted in is replaced once a member's week is
 // read, and none of its children survive into the replacement.
 func TestTheReplacedSnapshotKeepsNoChildOfTheFirst(t *testing.T) {
+	t.Parallel()
 	e := setupTeamWeekly(t)
 	spy := &teamScopeSpy{outlooks: oneTeamHorizon(), coverage: []weekly.Coverage{
 		weekly.CoverageRefused("month", "EUR"),
@@ -126,6 +129,7 @@ func TestTheReplacedSnapshotKeepsNoChildOfTheFirst(t *testing.T) {
 // The coverage the forecast close hands back is frozen. A horizon at risk
 // against a named basis raises the replan flag and names its basis.
 func TestTheTeamWeekFreezesItsCoverage(t *testing.T) {
+	t.Parallel()
 	e := setupTeamWeekly(t)
 	writeRepWeek(t, e, e.Rep1)
 	month := weekly.Coverage{
@@ -158,6 +162,7 @@ func TestTheTeamWeekFreezesItsCoverage(t *testing.T) {
 // A reader without forecast read gets no coverage figure and no summary
 // sentence built from one. The call it was measured against needs that grant.
 func TestAReaderWithoutForecastReadGetsNoCoverageFigure(t *testing.T) {
+	t.Parallel()
 	e := setupTeamWeekly(t)
 	writeRepWeek(t, e, e.Rep1)
 	month := weekly.Coverage{
@@ -199,6 +204,7 @@ func TestAReaderWithoutForecastReadGetsNoCoverageFigure(t *testing.T) {
 // The real forecast close answers coverage for the month and the quarter. A
 // fresh workspace has neither a call nor history, which is an absence.
 func TestTheRealForecastCloseAnswersCoverage(t *testing.T) {
+	t.Parallel()
 	e := setupTeamWeekly(t)
 	writeRepWeek(t, e, e.Rep1)
 	engine := weekly.NewEngine(e.Pool, identity.NewService(e.Pool)).
@@ -221,6 +227,7 @@ func TestTheRealForecastCloseAnswersCoverage(t *testing.T) {
 
 // The database refuses a coverage row whose flag does not follow its figures.
 func TestTheDatabaseRefusesAMalformedCoverageRow(t *testing.T) {
+	t.Parallel()
 	e := setupTeamWeekly(t)
 	writeRepWeek(t, e, e.Rep1)
 	written, _, err := e.engine.AssembleTeamFor(e.leadCtx, e.Team1, "Team One", members(e), teamClock)
@@ -257,6 +264,7 @@ func TestTheDatabaseRefusesAMalformedCoverageRow(t *testing.T) {
 // The live findings follow the deal's owner now, not the owner the finding
 // was first raised under.
 func TestTheTeamsExceptionsFollowTheDealsLiveOwner(t *testing.T) {
+	t.Parallel()
 	e := setupTeamWeekly(t)
 	writeRepWeek(t, e, e.Rep1)
 	engine := weekly.NewEngine(e.Pool, identity.NewService(e.Pool)).WithAttention(compose.WeeklyAttention{})
@@ -293,6 +301,7 @@ func TestTheTeamsExceptionsFollowTheDealsLiveOwner(t *testing.T) {
 
 // A deal quiet past the stalled period appears live, quietest first.
 func TestTheTeamsStalledDealsAreReadLive(t *testing.T) {
+	t.Parallel()
 	e := setupTeamWeekly(t)
 	writeRepWeek(t, e, e.Rep1)
 	engine := weekly.NewEngine(e.Pool, identity.NewService(e.Pool)).WithAttention(compose.WeeklyAttention{})
@@ -317,6 +326,7 @@ func TestTheTeamsStalledDealsAreReadLive(t *testing.T) {
 // A member who moved to another team takes their live items with them. The
 // old team's lead, opening the old week, sees none of the deals they own now.
 func TestALiveListIsNarrowedToWhoIsOnTheTeamNow(t *testing.T) {
+	t.Parallel()
 	e := setupTeamWeekly(t)
 	writeRepWeek(t, e, e.Rep1)
 	writeRepWeek(t, e, e.Rep2)
@@ -362,6 +372,7 @@ func TestALiveListIsNarrowedToWhoIsOnTheTeamNow(t *testing.T) {
 // The funnel credits each move to its owner at the time. A move whose pipeline
 // was not recorded counts on neither side.
 func TestTheFunnelAttributesEachMoveToItsOwnerThen(t *testing.T) {
+	t.Parallel()
 	e := setupTeamWeekly(t)
 	pipeline, open := defaultOpenStages(t, e)
 	entered, next := open[0], open[1]
@@ -409,6 +420,7 @@ func TestTheFunnelAttributesEachMoveToItsOwnerThen(t *testing.T) {
 
 // Below five entries a stage is left out.
 func TestAThinStageIsNotAFunnelDeviation(t *testing.T) {
+	t.Parallel()
 	e := setupTeamWeekly(t)
 	pipeline, open := defaultOpenStages(t, e)
 	seedFunnel(t, e, e.Rep1, pipeline, open[0], open[1], 4, 0, e.Rep1)
@@ -425,6 +437,7 @@ func TestAThinStageIsNotAFunnelDeviation(t *testing.T) {
 
 // An agent's change a member undid counts; a colleague's does not.
 func TestTheTeamCountsTheAutomaticChangesItUndid(t *testing.T) {
+	t.Parallel()
 	e := setupTeamWeekly(t)
 	writeRepWeek(t, e, e.Rep1)
 	inWeek := teamClock.AddDate(0, 0, -5)

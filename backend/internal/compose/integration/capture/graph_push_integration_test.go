@@ -43,6 +43,7 @@ func graphNotification(email string) []byte {
 }
 
 func TestGraphNotificationRoutesToTheConnection(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	const mailbox = "outlook-owner@ws.example"
 
@@ -81,7 +82,7 @@ func TestGraphNotificationRoutesToTheConnection(t *testing.T) {
 		t.Fatal(err)
 	}
 	const token = "graph-secret"
-	handler := compose.New(e.Pool, quiet, compose.WithGraphPush(inserter, compose.GraphPushConfig{Token: token}))
+	handler := compose.New(e.Pool, quiet, nil, compose.WithGraphPush(inserter, compose.GraphPushConfig{Token: token}))
 	srv := httptest.NewServer(handler)
 	defer srv.Close()
 

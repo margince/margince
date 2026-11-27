@@ -53,6 +53,7 @@ func (e *scoutEnv) onlySuggestion(ctx context.Context, t *testing.T, company ids
 }
 
 func TestADismissalHidesTheSuggestionFromEveryoneAndIsAudited(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	acme := e.SeedCompany(t, "Acme GmbH", nil)
 	dana := e.employee(t, "Dana Buyer", acme)
@@ -78,6 +79,7 @@ func TestADismissalHidesTheSuggestionFromEveryoneAndIsAudited(t *testing.T) {
 }
 
 func TestADismissalReArmsOnlyForNewerEvidence(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	acme := e.SeedCompany(t, "Acme GmbH", nil)
 	dana := e.employee(t, "Dana Buyer", acme)
@@ -115,6 +117,7 @@ func TestADismissalReArmsOnlyForNewerEvidence(t *testing.T) {
 }
 
 func TestAcceptingOpensTheDealWithTheRepsCorrections(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	acme := e.SeedCompany(t, "Acme GmbH", nil)
 	dana := e.employee(t, "Dana Buyer", acme)
@@ -178,6 +181,7 @@ func TestAcceptingOpensTheDealWithTheRepsCorrections(t *testing.T) {
 }
 
 func TestAcceptingWithoutADateLeavesTheSuggestionsOwn(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	acme := e.SeedCompany(t, "Acme GmbH", nil)
 	dana := e.employee(t, "Dana Buyer", acme)
@@ -203,6 +207,7 @@ func TestAcceptingWithoutADateLeavesTheSuggestionsOwn(t *testing.T) {
 }
 
 func TestASuggestionIsShownOnlyToAReaderWhoMaySeeAllOfItsEvidence(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	acme := e.SeedCompany(t, "Acme GmbH", nil)
 	dana := e.employee(t, "Dana Buyer", acme)
@@ -237,6 +242,7 @@ func TestASuggestionIsShownOnlyToAReaderWhoMaySeeAllOfItsEvidence(t *testing.T) 
 }
 
 func TestASuggestionWhoseEvidenceIsArchivedIsHiddenAndThenRetired(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	acme := e.SeedCompany(t, "Acme GmbH", nil)
 	dana := e.employee(t, "Dana Buyer", acme)
@@ -260,6 +266,7 @@ func TestASuggestionWhoseEvidenceIsArchivedIsHiddenAndThenRetired(t *testing.T) 
 }
 
 func TestAnOpenDealSupersedesTheSuggestion(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	acme := e.SeedCompany(t, "Acme GmbH", nil)
 	dana := e.employee(t, "Dana Buyer", acme)
@@ -281,6 +288,7 @@ func TestAnOpenDealSupersedesTheSuggestion(t *testing.T) {
 }
 
 func TestASuggestionFromSignalsIsHiddenWhenAMessageTheyCiteIsLimited(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	acme := e.SeedCompany(t, "Acme GmbH", nil)
 	rep1, rep3 := e.rep(e.Rep1, e.Team1), e.rep(e.Rep3, e.Team2)

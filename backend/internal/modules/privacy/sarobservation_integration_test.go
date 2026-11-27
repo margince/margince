@@ -84,6 +84,7 @@ func seedSupersededHistory(ctx context.Context, t *testing.T, owner *pgx.Conn, c
 // TestTheExportCarriesTheValueANewerStatementReplaced asserts the profile-field
 // section hands over both assertions and both dates.
 func TestTheExportCarriesTheValueANewerStatementReplaced(t *testing.T) {
+	t.Parallel()
 	e := setupSARIdentifiers(t)
 	seedSupersededHistory(e.ctx, t, e.owner, e.contact)
 
@@ -138,6 +139,7 @@ func TestTheExportCarriesTheValueANewerStatementReplaced(t *testing.T) {
 // The column holds a row id. Exporting it raw would satisfy a census and tell
 // the subject nothing, so the obligation is the NUMBER.
 func TestTheExportNamesTheNumberANewerOneReplaced(t *testing.T) {
+	t.Parallel()
 	e := setupSARIdentifiers(t)
 	seedSupersededHistory(e.ctx, t, e.owner, e.contact)
 
@@ -172,6 +174,7 @@ func TestTheExportNamesTheNumberANewerOneReplaced(t *testing.T) {
 // JOIN — the easy edit — would silently drop every number that replaced nothing,
 // which is most of them.
 func TestAPhoneThatReplacedNothingStillReachesTheExport(t *testing.T) {
+	t.Parallel()
 	e := setupSARIdentifiers(t)
 	seedSupersededHistory(e.ctx, t, e.owner, e.contact)
 
@@ -202,6 +205,7 @@ func TestAPhoneThatReplacedNothingStillReachesTheExport(t *testing.T) {
 // followed it would hand this subject a number belonging to somebody else —
 // the single worst thing a privacy export can do.
 func TestTheExportNeverNamesAStrangersReplacedNumber(t *testing.T) {
+	t.Parallel()
 	e := setupSARIdentifiers(t)
 
 	// A second contact, holding the number, whose live row is then re-homed to
@@ -266,6 +270,7 @@ func TestTheExportNeverNamesAStrangersReplacedNumber(t *testing.T) {
 // reader can see, which is the whole difference between an omission and a
 // judgement.
 func TestEveryHeldColumnReachesTheExport(t *testing.T) {
+	t.Parallel()
 	e := setupSARIdentifiers(t)
 	seedSupersededHistory(e.ctx, t, e.owner, e.contact)
 

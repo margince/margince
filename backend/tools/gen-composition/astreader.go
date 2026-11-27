@@ -348,7 +348,7 @@ func (r *unitReader) readExtensionField(elt ast.Expr, file *ast.File, m *unitMan
 	case "Jurisdictions", "Messaging", "SubjectRights", "Documents", "Reach", "Privacy":
 		// Recognized and skipped. All six are policy or content the core
 		// consults. None is an operation an operator resolves, so none
-		// contributes a manifest entry. The boot's corereach.Install refuses a
+		// contributes a manifest entry. The boot's corereach.Set refuses a
 		// malformed Reach table, and extensionprivacy.Preflight a malformed
 		// Privacy table.
 		//

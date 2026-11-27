@@ -47,7 +47,7 @@ func newWaitingHorizonRefreshWorker(pool *pgxpool.Pool, log *slog.Logger) *waiti
 	return &waitingHorizonRefreshWorker{
 		activities: activities.NewStore(db).WithOwnDomains(
 			ownDomainReader{store: capture.NewOwnDomainStore(db)}),
-		identity: identity.NewService(pool),
+		identity: IdentityService(pool),
 		log:      log,
 	}
 }

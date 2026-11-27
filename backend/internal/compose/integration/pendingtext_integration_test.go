@@ -15,6 +15,7 @@ import (
 // embedding, so an embedded row with a large body must neither count nor
 // contribute its length, while an unembedded one counts with its full text.
 func TestPendingCountsOnlyUnembeddedActivitiesAndTheirText(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	ctx := context.Background()
 	const identity = "fake/pending-text@1024"

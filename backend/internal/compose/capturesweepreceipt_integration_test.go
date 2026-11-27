@@ -147,15 +147,10 @@ func refuseUpdates(t *testing.T, table, when string) {
 		EXECUTE FUNCTION %[1]s();`, name, table, when)); err != nil {
 		t.Fatalf("installing the refusal on %s: %v", table, err)
 	}
-	t.Cleanup(func() {
-		if _, err := owner.Exec(ctx, fmt.Sprintf(
-			`DROP TRIGGER %[1]s ON %[2]s; DROP FUNCTION %[1]s();`, name, table)); err != nil {
-			t.Errorf("removing the refusal on %s: %v", table, err)
-		}
-	})
 }
 
 func TestEveryPassLeavesAnOKReceiptForEachWorkspace(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedFiledHeldMeetings(t, e, 1)
 	ctx := context.Background()
@@ -187,6 +182,7 @@ func TestEveryPassLeavesAnOKReceiptForEachWorkspace(t *testing.T) {
 }
 
 func TestAFailedPassRecordsItsClassAndWhatItCommitted(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedFiledHeldMeetings(t, e, 2)
 	// The pass lifts newest first; the older meeting's write is refused, so
@@ -213,6 +209,7 @@ func TestAFailedPassRecordsItsClassAndWhatItCommitted(t *testing.T) {
 }
 
 func TestAPassBehindAFailedStageIsRecordedSkipped(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	// A thread that spent its attempts, so the retiring stage has a row to
 	// write — and the write is refused.
@@ -236,6 +233,7 @@ func TestAPassBehindAFailedStageIsRecordedSkipped(t *testing.T) {
 // skipped — written after the cancellation, because a pass that ran out of
 // time is the one an administrator most needs to see.
 func TestATurnCancelledBeforeItsFirstStageRecordsItsPassesSkipped(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
@@ -251,6 +249,7 @@ func TestATurnCancelledBeforeItsFirstStageRecordsItsPassesSkipped(t *testing.T) 
 }
 
 func TestAPassStoppedAtItsBoundIsPartialAndTheCountSeesPastIt(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedFiledHeldMeetings(t, e, liftFiledMeetingHoldsPerTick+1)
 
@@ -301,6 +300,7 @@ func (l *refusingFirstReceipt) RecordSweep(ctx context.Context, r capture.SweepR
 }
 
 func TestAReceiptThatCannotBeWrittenIsReportedAndTheNextWorkspaceRuns(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	w := newTestConfidentialityWorker(e)
 	w.receipts.ledger = &refusingFirstReceipt{real: capture.NewSweepLedger(InstallationDB(e.Pool))}
@@ -318,6 +318,7 @@ func TestAReceiptThatCannotBeWrittenIsReportedAndTheNextWorkspaceRuns(t *testing
 }
 
 func TestPruningKeepsTheLastSuccessThroughAnyRunOfFailures(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ledger := capture.NewSweepLedger(InstallationDB(e.Pool))
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
@@ -363,6 +364,7 @@ func TestPruningKeepsTheLastSuccessThroughAnyRunOfFailures(t *testing.T) {
 }
 
 func TestEverySweepAndOutcomeIsAcceptedByTheTable(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ledger := capture.NewSweepLedger(InstallationDB(e.Pool))
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
@@ -390,6 +392,7 @@ func TestEverySweepAndOutcomeIsAcceptedByTheTable(t *testing.T) {
 // A pass that panics has committed what it committed. The receipt says it
 // failed and how far it got, and the panic still reaches River.
 func TestAPanickingPassLeavesAFailedReceiptAndStillPanics(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	recorder := newSweepRecorder(e.Pool)
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)

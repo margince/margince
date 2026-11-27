@@ -51,6 +51,7 @@ func projectIDsOf(ctx context.Context, t *testing.T, e *Env, in projects.ListPro
 }
 
 func TestTheDealListNarrowsToOneTeamAndToTheUnownedQueue(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	// Rep1 and Rep2 share Team1; Rep3 sits in Team2.
@@ -91,6 +92,7 @@ func TestTheDealListNarrowsToOneTeamAndToTheUnownedQueue(t *testing.T) {
 // rest of the where chain: the rows this caller's unfiltered list shows. The
 // archived project is the row a dial that replaced the chain would return.
 func TestTheProjectOwnerDialsOnlyEverSubtractFromTheCallersList(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Owner Dial Co", nil)
 	mine := seedProject(e.Admin(), t, e, "Owned By Rep1", company, &e.Rep1)
@@ -139,6 +141,7 @@ func TestTheProjectOwnerDialsOnlyEverSubtractFromTheCallersList(t *testing.T) {
 // seats are named against their id order, so an id sort comes out reversed.
 // The deal list's own case is in dealsortvocabulary_integration_test.go.
 func TestSortingByOwnerOrdersByTheOwnersName(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owners := []ids.UUID{e.Rep1, e.Rep2, e.Rep3}
 	slices.SortFunc(owners, func(a, b ids.UUID) int { return bytes.Compare(a[:], b[:]) })
@@ -188,6 +191,7 @@ func TestSortingByOwnerOrdersByTheOwnersName(t *testing.T) {
 // team filter must name nobody through it either. Archived through the real
 // team writer.
 func TestTheTeamFilterNamesNobodyThroughAnArchivedTeam(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	e.SeedDeal(t, "Owned By Rep1", pipeline, open, &e.Rep1)
@@ -217,6 +221,7 @@ func TestTheTeamFilterNamesNobodyThroughAnArchivedTeam(t *testing.T) {
 // the page cursor. So an archived owner sorts as no name at all: last.
 // No product path archives a seat, so the row is stamped directly.
 func TestAnArchivedOwnerSortsLastWithNoName(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	e.WsExec(t, `UPDATE app_user SET display_name = 'Aaron' WHERE id = $1`, e.Rep1)
 	e.WsExec(t, `UPDATE app_user SET display_name = 'Zoe' WHERE id = $1`, e.Rep2)

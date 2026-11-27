@@ -10,7 +10,6 @@ package search
 
 import (
 	"context"
-	"os"
 	"slices"
 	"strings"
 	"testing"
@@ -29,7 +28,7 @@ const planDemoTable = "ext_plandemo_thing"
 func planDemoKind(t *testing.T) (*pgx.Conn, recordkinds.Declared) {
 	t.Helper()
 	ctx := context.Background()
-	conn, err := pgx.Connect(ctx, os.Getenv("MARGINCE_TEST_DSN"))
+	conn, err := pgx.Connect(ctx, testdb.For(t).OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -81,6 +80,7 @@ func extensionBranch(t *testing.T, kind recordkinds.Declared, query string) (str
 }
 
 func TestAnExtensionKindSearchUsesItsTrigramIndex(t *testing.T) {
+	t.Parallel()
 	conn, kind := planDemoKind(t)
 	ctx := context.Background()
 	tx, err := conn.Begin(ctx)
@@ -111,6 +111,7 @@ func TestAnExtensionKindSearchUsesItsTrigramIndex(t *testing.T) {
 }
 
 func TestAWildcardInAnExtensionKindSearchMatchesItself(t *testing.T) {
+	t.Parallel()
 	conn, kind := planDemoKind(t)
 	branch, args := extensionBranch(t, kind, "50%")
 	rows, err := conn.Query(context.Background(), "SELECT title FROM ("+branch+") hit", args...)

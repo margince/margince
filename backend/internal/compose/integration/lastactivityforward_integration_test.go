@@ -23,6 +23,7 @@ import (
 // The stored clocks are set past every activity first. A fold on insert would
 // pull them back to the newest activity, and an advance leaves them be.
 func TestALinkMovesTheClockForwardWithoutFoldingTheHistory(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := context.Background()
 	owner := OwnerConn(t)
@@ -102,6 +103,7 @@ func TestALinkMovesTheClockForwardWithoutFoldingTheHistory(t *testing.T) {
 // there. A new link advances that clock by the rule a refold reads. A note filed
 // on the account itself carries no such bound.
 func TestALinkAdvancesAnEmployerOnlyInsideTheEmployment(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Newco", nil)
 	contact := e.SeedContact(t, "Ann", nil)

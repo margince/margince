@@ -118,6 +118,7 @@ func (env *teamRequestMailEnv) memberAddress(t *testing.T) string {
 // The mail goes to the member and names the link as it stands when it leaves,
 // not as it stood when the member was added.
 func TestATeamRequestMailNamesTheLinkAsItStandsWhenItLeaves(t *testing.T) {
+	t.Parallel()
 	env := setupTeamRequestMail(t)
 	env.saveLink(t, "Intro call", env.e.Rep2)
 	env.saveLink(t, "Renewal call", env.e.Rep2)
@@ -143,6 +144,7 @@ func TestATeamRequestMailNamesTheLinkAsItStandsWhenItLeaves(t *testing.T) {
 // A member taken off the link after the mail was claimed and before the relay
 // is dialled is sent nothing.
 func TestATeamRequestTakenBackAfterItsClaimIsNotSent(t *testing.T) {
+	t.Parallel()
 	env := setupTeamRequestMail(t)
 	env.saveLink(t, "Intro call", env.e.Rep2)
 	ctx := principal.WithActor(principal.WithWorkspaceID(context.Background(), env.e.WS),
@@ -163,6 +165,7 @@ func TestATeamRequestTakenBackAfterItsClaimIsNotSent(t *testing.T) {
 // A member named again after a removal gets their line back with the link's
 // current title.
 func TestATeamRequestOpenedAgainNamesTheCurrentTitle(t *testing.T) {
+	t.Parallel()
 	env := setupTeamRequestMail(t)
 	env.saveLink(t, "Intro call", env.e.Rep2)
 	env.saveLink(t, "Intro call")
@@ -181,6 +184,7 @@ func TestATeamRequestOpenedAgainNamesTheCurrentTitle(t *testing.T) {
 // A send reserved against a team request is refused when the request moved
 // after the payload was read.
 func TestATeamRequestThatMovedAfterItsReadRefusesTheReservation(t *testing.T) {
+	t.Parallel()
 	env := setupTeamRequestMail(t)
 	env.saveLink(t, "Intro call", env.e.Rep2)
 	ctx := principal.WithWorkspaceID(context.Background(), env.e.WS)
@@ -229,6 +233,7 @@ func (env *teamRequestMailEnv) noticeOn(t *testing.T, link ids.UUID) ids.UUID {
 // Each mail is checked against its own team link. A colleague taken off one of
 // a host's two links hears nothing more about it, and is still told of the other.
 func TestEachTeamRequestMailReadsItsOwnTeamLink(t *testing.T) {
+	t.Parallel()
 	env := setupTeamRequestMail(t)
 	env.saveLink(t, "Intro call", env.e.Rep2)
 	first := env.link

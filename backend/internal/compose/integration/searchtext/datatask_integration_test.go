@@ -43,6 +43,7 @@ func storeAsBefore(t *testing.T, rows []ids.UUID) {
 }
 
 func TestStoredMailLosesItsQuotedTextFromSearchAcrossPagingRollbackAndReplay(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	reply := logMail(t, e, "Re: Cabinets", ownWords+quotedReply)

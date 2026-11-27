@@ -29,6 +29,7 @@ import (
 )
 
 func TestTheTenantPassClosesAbandonedRunsAndLeavesTheRestAlone(t *testing.T) {
+	t.Parallel()
 	re := setupRunner(t)
 
 	// Four rows the sweep must treat differently, each seeded by AGE because the

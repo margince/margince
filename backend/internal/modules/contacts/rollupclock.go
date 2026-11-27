@@ -14,17 +14,27 @@ package contacts
 // the day from it (occurredday.TodaySQL), so no reader here picks a calendar day
 // itself.
 //
-// A package var rather than a field, matching leadSLAClock beside it. Both are
-// read by free functions on a transaction, not by methods. Threading a clock
-// through them would change every signature to say what one line says here.
+// So the caller binds the instant from one clock, the store's. Each company
+// read samples it once and pins it on its context. The sort expression that
+// reads it is a free function with no store in hand.
 
-import "time"
+import (
+	"context"
+	"time"
+)
 
-// rollupClock is the clock the as-of instant comes from. Overridden in tests,
-// and nowhere else; a second production writer would be a second clock.
-var rollupClock = time.Now
+type rollupAsOfKey struct{}
 
-// rollupAsOf is the instant the conversion is asked for, sampled once per read.
-func rollupAsOf() time.Time {
-	return rollupClock()
+// withRollupAsOf pins the instant, by this store's clock, for everything built
+// from ctx. The count, the total and the sort then agree on one FX day.
+func (s *Store) withRollupAsOf(ctx context.Context) context.Context {
+	return context.WithValue(ctx, rollupAsOfKey{}, s.clock())
+}
+
+// rollupAsOf is the pinned instant, or now for a caller that pinned none.
+func rollupAsOf(ctx context.Context) time.Time {
+	if pinned, ok := ctx.Value(rollupAsOfKey{}).(time.Time); ok {
+		return pinned
+	}
+	return time.Now()
 }

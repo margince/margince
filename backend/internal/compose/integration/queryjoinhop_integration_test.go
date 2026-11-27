@@ -86,6 +86,7 @@ func (q *queryEnv) seedEmployments(t *testing.T) employmentFixture {
 // named city. The employment lives in `relationship`, so neither record carries
 // a column that could express it.
 func TestAContactIsSelectedByTheirEmployersAttributes(t *testing.T) {
+	t.Parallel()
 	q := setupQuery(t)
 	f := q.seedEmployments(t)
 
@@ -126,6 +127,7 @@ func TestAContactIsSelectedByTheirEmployersAttributes(t *testing.T) {
 // The inverse of the same edge, which is the question the employment table was
 // built to answer.
 func TestACompanyIsSelectedByItsContacts(t *testing.T) {
+	t.Parallel()
 	q := setupQuery(t)
 	f := q.seedEmployments(t)
 
@@ -143,6 +145,7 @@ func TestACompanyIsSelectedByItsContacts(t *testing.T) {
 // The half nobody had noticed was missing: an activity can name the contact it
 // is about, through `activity_link`.
 func TestAnActivityIsSelectedByTheContactItLinks(t *testing.T) {
+	t.Parallel()
 	q := setupQuery(t)
 	f := q.seedEmployments(t)
 
@@ -161,6 +164,7 @@ func TestAnActivityIsSelectedByTheContactItLinks(t *testing.T) {
 // scope. The join table must not become a channel onto a company the
 // caller cannot see — and the count is the disclosure, not just the rows.
 func TestAJoinHopCannotSelectThroughARecordTheCallerCannotSee(t *testing.T) {
+	t.Parallel()
 	q := setupQuery(t)
 	f := q.seedEmployments(t)
 	// Rep1 captured the Stuttgart company privately. A company is
@@ -212,6 +216,7 @@ func TestAJoinHopCannotSelectThroughARecordTheCallerCannotSee(t *testing.T) {
 // Proved against real grants rather than a stub, because the claim is about
 // what a role configured through `setRoleObjectGrant` can actually reach.
 func TestARoleRefusedTheEdgeObjectCannotTraverseTheEmploymentEdge(t *testing.T) {
+	t.Parallel()
 	q := setupQuery(t)
 	f := q.seedEmployments(t)
 

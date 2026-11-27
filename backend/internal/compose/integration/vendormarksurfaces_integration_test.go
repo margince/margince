@@ -30,6 +30,7 @@ func markAsVendor(t *testing.T, contact ids.UUID) {
 }
 
 func TestAMarkedContactsMailDoesNotReachTheirEmployersAccount(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	vendorCo := seedEmployerOnDomain(t, e, "Vendorco", "vendorco.test")
 	mail := seedMailFrom(t, "val@vendorco.test", mailAtTheNewJob)
@@ -46,6 +47,7 @@ func TestAMarkedContactsMailDoesNotReachTheirEmployersAccount(t *testing.T) {
 }
 
 func TestAMarkedCoworkerIsNotDrawnOnTheAccountArm(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	company := e.SeedCompany(t, "ScaleCommerce", &e.Rep1)
@@ -81,6 +83,7 @@ func TestAMarkedCoworkerIsNotDrawnOnTheAccountArm(t *testing.T) {
 }
 
 func TestAMarkedPeerIsNotObservedWithTheAnchor(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	anchor := e.SeedContact(t, "Anna Weber", &e.Rep1)
 	peer := e.SeedContact(t, "Marked Peer", &e.Rep1)

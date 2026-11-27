@@ -117,6 +117,7 @@ func (e *flushEnv) linkState(t *testing.T, link ids.UUID) (retired bool, deal, p
 }
 
 func TestArchivingADealFreesItsChannelForAnotherDeal(t *testing.T) {
+	t.Parallel()
 	e := setupFlush(t)
 	e.handle(t, "deal.stage_changed", "deal", e.deal, `{"to_stage_name":"Proposal"}`)
 	e.archiveDeal(t, e.deal)
@@ -142,6 +143,7 @@ func TestArchivingADealFreesItsChannelForAnotherDeal(t *testing.T) {
 }
 
 func TestArchivingAProjectFreesItsChannelForAnotherProject(t *testing.T) {
+	t.Parallel()
 	e := setupFlush(t)
 	e.chat.AddChannel("rollout")
 	first, second := e.seedProject(t, "Rollout"), e.seedProject(t, "Rollout two")
@@ -160,6 +162,7 @@ func TestArchivingAProjectFreesItsChannelForAnotherProject(t *testing.T) {
 }
 
 func TestAChannelADealSharesWithItsProjectStaysWithTheOneStillLive(t *testing.T) {
+	t.Parallel()
 	e := setupFlush(t)
 	e.chat.AddChannel("shared")
 	project := e.seedProject(t, "Rollout")

@@ -100,8 +100,8 @@ func (h Handlers) WithLinkBase(base string) Handlers {
 }
 
 // returnLinkSignerNow is the signer under the installation's current root key.
-func returnLinkSignerNow() returnlink.Signer {
-	return returnlink.NewSigner(keyvault.DerivedKey(config.Bound(), returnlink.KeyLabel))
+func returnLinkSignerNow(ctx context.Context) returnlink.Signer {
+	return returnlink.NewSigner(keyvault.DerivedKey(config.Bound(ctx), returnlink.KeyLabel))
 }
 
 // returnNameLimit is the longest name the ask takes, as the contract says.
@@ -170,7 +170,7 @@ func (h Handlers) mailReturnLink(ctx context.Context, request returnlink.Request
 	}
 	words := mailcopy.For(string(identity.BaseLanguageForPrompt(ctx, h.pool)))
 	request.Wording, request.PolicyVersion = words.ReturnConsentWording, mailcopy.ReturnConsentVersion
-	token, err := returnLinkSignerNow().Sign(request, h.now().Add(returnlink.Lifetime))
+	token, err := returnLinkSignerNow(ctx).Sign(request, h.now().Add(returnlink.Lifetime))
 	if err != nil {
 		return err
 	}
@@ -203,7 +203,7 @@ func (h Handlers) PreviewBookingReturn(w http.ResponseWriter, r *http.Request, h
 // currentLink answers the request a link carries while it still works. It must
 // be signed here, unexpired, for this page, and for the erasure that stands now.
 func (h Handlers) currentLink(ctx context.Context, token, hostSlug string) (returnlink.Request, bool) {
-	request, err := returnLinkSignerNow().Verify(token, h.now())
+	request, err := returnLinkSignerNow(ctx).Verify(token, h.now())
 	if err != nil || !strings.EqualFold(request.Slug, hostSlug) {
 		return returnlink.Request{}, false
 	}
@@ -225,7 +225,7 @@ func (h Handlers) ConfirmBookingReturn(w http.ResponseWriter, r *http.Request, h
 	if !httperr.Decode(w, r, &body) {
 		return
 	}
-	request, err := returnLinkSignerNow().Verify(body.Token, h.now())
+	request, err := returnLinkSignerNow(r.Context()).Verify(body.Token, h.now())
 	if err != nil || !strings.EqualFold(request.Slug, hostSlug) {
 		writeReturnLinkSpent(w, r)
 		return

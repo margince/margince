@@ -34,6 +34,7 @@ func (e *relEnv) billingContact(t *testing.T, body AnyMap) (status int, id, deta
 }
 
 func TestABillingContactMustSayInWhatCapacity(t *testing.T) {
+	t.Parallel()
 	e := setupRelationships(t)
 
 	// No role at all. The database CHECK would refuse this too, but the point
@@ -67,6 +68,7 @@ func TestABillingContactMustSayInWhatCapacity(t *testing.T) {
 }
 
 func TestOneContactCanHoldSeveralBillingRolesButNotTheSameOneTwice(t *testing.T) {
+	t.Parallel()
 	e := setupRelationships(t)
 
 	if status, _, _ := e.billingContact(t, AnyMap{"role": "recipient"}); status != http.StatusCreated {
@@ -89,6 +91,7 @@ func TestOneContactCanHoldSeveralBillingRolesButNotTheSameOneTwice(t *testing.T)
 }
 
 func TestABillingRoleCannotBePatchedToAWordTheCreatePathRefuses(t *testing.T) {
+	t.Parallel()
 	e := setupRelationships(t)
 
 	status, id, _ := e.billingContact(t, AnyMap{"role": "recipient"})
@@ -110,6 +113,7 @@ func TestABillingRoleCannotBePatchedToAWordTheCreatePathRefuses(t *testing.T) {
 }
 
 func TestAnEmploymentRoleStaysFreeText(t *testing.T) {
+	t.Parallel()
 	e := setupRelationships(t)
 
 	// The billing rule is asked per KIND, not of the column. A role vocabulary
@@ -123,6 +127,7 @@ func TestAnEmploymentRoleStaysFreeText(t *testing.T) {
 }
 
 func TestTheCompanyPageAndTheFinanceCardNameTheSameBillingContacts(t *testing.T) {
+	t.Parallel()
 	e := setupRelationships(t)
 
 	for _, role := range []string{"accounts_payable", "recipient"} {
@@ -198,6 +203,7 @@ func TestTheCompanyPageAndTheFinanceCardNameTheSameBillingContacts(t *testing.T)
 }
 
 func TestArchivingABillingContactFreesTheRoleAndKeepsTheHistory(t *testing.T) {
+	t.Parallel()
 	e := setupRelationships(t)
 
 	status, id, _ := e.billingContact(t, AnyMap{"role": "recipient"})

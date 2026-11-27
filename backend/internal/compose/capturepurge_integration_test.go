@@ -37,6 +37,7 @@ import (
 )
 
 func TestAPurgeDestroysOnlyWhatThisConnectionBroughtIn(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	// Two messages from the same sender: one only this seat imported, one a
 	// colleague imported too.
@@ -69,6 +70,7 @@ func TestAPurgeDestroysOnlyWhatThisConnectionBroughtIn(t *testing.T) {
 }
 
 func TestAPreviewChangesNothing(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	id := seedPurgeableMail(t, e, "reise@buero.example", "Flug", e.Rep1)
 	rule := seedOwnExclusion(t, e, e.Rep1, capture.ExclusionKindAddress, "reise@buero.example")
@@ -90,6 +92,7 @@ func TestAPreviewChangesNothing(t *testing.T) {
 }
 
 func TestAPurgeIsIdempotent(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedPurgeableMail(t, e, "schule@example.test", "Elternabend", e.Rep1)
 	rule := seedOwnExclusion(t, e, e.Rep1, capture.ExclusionKindAddress, "schule@example.test")
@@ -107,6 +110,7 @@ func TestAPurgeIsIdempotent(t *testing.T) {
 }
 
 func TestAPurgeRefusesARuleThatIsNotYours(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedPurgeableMail(t, e, "privat@example.test", "Familie", e.Rep1)
 	rule := seedOwnExclusion(t, e, e.Rep1, capture.ExclusionKindAddress, "privat@example.test")
@@ -118,6 +122,7 @@ func TestAPurgeRefusesARuleThatIsNotYours(t *testing.T) {
 }
 
 func TestAPurgeSkipsARestrictedMessageAndSaysSo(t *testing.T) {
+	t.Parallel()
 	// A statutory hold or an open erasure outranks an owner's rule: the row is
 	// somebody else's obligation until that lifts, and an owner told their mail
 	// is gone must not find it still there.
@@ -284,6 +289,7 @@ func importCount(t *testing.T, e *integration.Env, activityID, user ids.UUID) in
 }
 
 func TestADomainRuleDoesNotReachALookalikeDomain(t *testing.T) {
+	t.Parallel()
 	// `kanzlei.example` must reach `mail.kanzlei.example` and must NOT reach
 	// `evil-kanzlei.example`. The leading `@` and `.` in the LIKE pattern are
 	// the whole difference: without them a rule would match any domain ENDING
@@ -312,6 +318,7 @@ func TestADomainRuleDoesNotReachALookalikeDomain(t *testing.T) {
 }
 
 func TestAPurgeAsksTheStatutoryFloorBeforeDestroying(t *testing.T) {
+	t.Parallel()
 	// GoBD §147 AO: a Handelsbrief must be kept for years, and the nightly
 	// retention evaluator refuses to touch one inside its window. A purge is a
 	// destructive activity path like any other and applies the same shield —
@@ -461,6 +468,7 @@ func seedSubjectRefOnlyRequest(t *testing.T, e *integration.Env, address string,
 // This test keeps a later rewrite of the id comparison from dropping that arm.
 // The capitalised case keeps the guard from narrowing back to lower case.
 func TestAnOpenRequestCarryingOnlyASubjectRefStillShields(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name  string
 		upper bool
@@ -497,6 +505,7 @@ func TestAnOpenRequestCarryingOnlyASubjectRefStillShields(t *testing.T) {
 // lawyer's address, the request waits for an assignee, and the seat purges its
 // own rule for that domain in the meantime.
 func TestAPurgeSkipsAMessageAnOpenRequestIsAbout(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	evidence := seedRequestAgainstLawyer(t, e, "open", "")
 
@@ -519,6 +528,7 @@ func TestAPurgeSkipsAMessageAnOpenRequestIsAbout(t *testing.T) {
 // address the installation has ever had a case about, permanently, and would
 // look identical to a working shield from the test above.
 func TestAPurgeIsNotShieldedByAFinishedRequest(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedRequestAgainstLawyer(t, e, "fulfilled", "done")
 
@@ -538,6 +548,7 @@ func TestAPurgeIsNotShieldedByAFinishedRequest(t *testing.T) {
 // it must not outrank a statutory duty.
 
 func TestAMailboxSideDeletionDestroysAMessageNobodyElseHas(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	mine := captureProviderMail(t, e, "freundin@example.com", "privat", e.Rep1)
 
@@ -550,6 +561,7 @@ func TestAMailboxSideDeletionDestroysAMessageNobodyElseHas(t *testing.T) {
 }
 
 func TestAMailboxSideDeletionLeavesAColleaguesCopyAlone(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	shared := captureProviderMail(t, e, "kunde@example.com", "auch bei der Kollegin", e.Rep1, e.Rep2)
 
@@ -565,6 +577,7 @@ func TestAMailboxSideDeletionLeavesAColleaguesCopyAlone(t *testing.T) {
 }
 
 func TestAMailboxSideDeletionDoesNotOutrankTheStatutoryFloor(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	shielded := captureProviderMail(t, e, "kunde@example.com", "Handelsbrief", e.Rep1)
 	restrict(t, e, shielded)
@@ -597,6 +610,7 @@ func providerIDOf(t *testing.T, e *integration.Env, activityID ids.UUID) string 
 // narrowest: it speaks about THAT message and no other. The cases below are the
 // three outcomes PurgeRemoved sorts a removal into, and two of them keep it.
 func TestAMailboxDeletionDestroysOnlyTheOwnersSoleCopy(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	mine := captureProviderMail(t, e, "anwalt@kanzlei.example", "nur meine", e.Rep1)
 
@@ -618,6 +632,7 @@ func TestAMailboxDeletionDestroysOnlyTheOwnersSoleCopy(t *testing.T) {
 // reach into somebody else's timeline, and this falls out of SharedImports
 // rather than being special-cased.
 func TestAMailboxDeletionLeavesAColleaguesCopyStanding(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	shared := captureProviderMail(t, e, "anwalt@kanzlei.example", "auch bei der Kollegin", e.Rep1, e.Rep2)
 
@@ -638,6 +653,7 @@ func TestAMailboxDeletionLeavesAColleaguesCopyStanding(t *testing.T) {
 // does not hold is the ordinary case, not an error to report — a connector
 // that failed its whole pull over one such key would stop syncing entirely.
 func TestAMailboxDeletionForUncapturedMailIsNotAnError(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 
 	if err := purgerFor(t, e).PurgeRemoved(
@@ -650,6 +666,7 @@ func TestAMailboxDeletionForUncapturedMailIsNotAnError(t *testing.T) {
 // scoped to the seat whose connection reported it. A connector speaking for a
 // mailbox it does not own cannot reach a colleague's copy through this door.
 func TestAMailboxDeletionCannotReachAnotherSeatsImport(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	theirs := captureProviderMail(t, e, "anwalt@kanzlei.example", "der Kollegin ihre", e.Rep2)
 
@@ -671,6 +688,7 @@ func TestAMailboxDeletionCannotReachAnotherSeatsImport(t *testing.T) {
 // hold lifts when somebody lifts it, a statutory window expires on a date, and
 // an open request closes when it is finished.
 func TestAPurgeSaysWhyItKeptWhatItKept(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	held := seedPurgeableMail(t, e, "gegner@example.test", "Klage", e.Rep1)
 	restrict(t, e, held)
@@ -694,6 +712,7 @@ func TestAPurgeSaysWhyItKeptWhatItKept(t *testing.T) {
 // correctly leaves a Handelsbrief standing looks, from their side, exactly like
 // one that silently failed.
 func TestAPurgeNamesTheStatutoryClassThatKeptTheMail(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	brief := seedPurgeableMail(t, e, "einkauf@kunde.example", "Auftragsbestätigung", e.Rep1)
 	stampCommercialCorrespondence(t, e, brief)
@@ -726,6 +745,7 @@ func TestAPurgeNamesTheStatutoryClassThatKeptTheMail(t *testing.T) {
 // A request still being answered needs the mail to answer with, which is a
 // different fact from a hold and lifts on a different day.
 func TestAPurgeSeparatesAnOpenRequestFromAHold(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedRequestAgainstLawyer(t, e, "open", "")
 	rule := seedOwnExclusion(t, e, e.Rep1, capture.ExclusionKindDomain, "kanzlei.example")
@@ -739,6 +759,7 @@ func TestAPurgeSeparatesAnOpenRequestFromAHold(t *testing.T) {
 // The receipt and the audit row are one set of numbers. A trail that disagreed
 // with the screen would make both unbelievable — worse than either alone.
 func TestThePurgeReceiptAndTheAuditRowCannotDisagree(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	held := seedPurgeableMail(t, e, "gegner@example.test", "Klage", e.Rep1)
 	restrict(t, e, held)
@@ -767,6 +788,7 @@ func TestThePurgeReceiptAndTheAuditRowCannotDisagree(t *testing.T) {
 // A preview did nothing, so it certifies nothing: writing a receipt row for one
 // would put an act in the trail that never happened.
 func TestAPreviewWritesNoReceipt(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedPurgeableMail(t, e, "gegner@example.test", "Klage", e.Rep1)
 	rule := seedOwnExclusion(t, e, e.Rep1, capture.ExclusionKindAddress, "gegner@example.test")
@@ -786,6 +808,7 @@ const destroyedReceipts = `SELECT count(*) FROM audit_log WHERE entity_type = 'c
 
 // A message the cascade skips is not certified as destroyed.
 func TestTheReceiptCountsWhatTheCascadeDeleted(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	gone := seedPurgeableMail(t, e, sweepAddress, "Eins", e.Rep1)
 	skipped := seedPurgeableMail(t, e, sweepAddress, "Zwei", e.Rep1)
@@ -806,6 +829,7 @@ func TestTheReceiptCountsWhatTheCascadeDeleted(t *testing.T) {
 
 // A purge run has no bulk_operation row, so the undo refuses it.
 func TestAPurgeRunCannotBeUndoneAsABulkChange(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedPurgeableMail(t, e, sweepAddress, "Eins", e.Rep1)
 	rule := seedOwnExclusion(t, e, e.Rep1, capture.ExclusionKindAddress, sweepAddress)
@@ -818,6 +842,7 @@ func TestAPurgeRunCannotBeUndoneAsABulkChange(t *testing.T) {
 }
 
 func TestThePurgeEndpointAnswersWhatTheReceiptStores(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	restrict(t, e, seedPurgeableMail(t, e, sweepAddress, "Klage", e.Rep1))
 	seedPurgeableMail(t, e, sweepAddress, "Zweite", e.Rep1)
@@ -842,6 +867,7 @@ func TestThePurgeEndpointAnswersWhatTheReceiptStores(t *testing.T) {
 }
 
 func TestTheVerdictWorkerCertifiesAStoppedPurge(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	mail := seedPurgeableMail(t, e, sweepAddress, "Eins", e.Rep1)
 	rule, purger := seedOwnExclusion(t, e, e.Rep1, capture.ExclusionKindAddress, sweepAddress), purgerFor(t, e)

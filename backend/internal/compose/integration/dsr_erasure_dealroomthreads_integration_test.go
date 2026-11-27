@@ -22,6 +22,7 @@ import (
 // A thread the buyer opened records their choices, so it goes with them, and
 // the seller's reply in it goes too. The seller's own thread stays.
 func TestErasingABuyerDeletesTheThreadsTheirSeatOpened(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	buyer := seedBuyerInARoom(t, e, "thread.owner@acme.test")
 	doc := roomDocument(t, e, buyer)
@@ -75,6 +76,7 @@ func TestErasingABuyerDeletesTheThreadsTheirSeatOpened(t *testing.T) {
 // thread it lands in. The reply holds the thread's lock, as replyTx does, and
 // commits only once the erasure waits on it.
 func TestASellerReplyInFlightDuringTheErasureIsTombstoned(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	buyer := seedBuyerInARoom(t, e, "racing.thread@acme.test")
 	sess := signedInBuyer(t, e, buyer)
@@ -124,6 +126,7 @@ func TestASellerReplyInFlightDuringTheErasureIsTombstoned(t *testing.T) {
 // A session's audit rows name the seat, the room and the expiry, so the erasure
 // that deletes the session tombstones its history too.
 func TestErasingABuyerRedactsTheirSessionsAuditHistory(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	buyer := seedBuyerInARoom(t, e, "session.owner@acme.test")
 	signedInBuyer(t, e, buyer)

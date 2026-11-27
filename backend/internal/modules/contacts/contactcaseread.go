@@ -48,7 +48,7 @@ func (s *Store) GetContactCase(ctx context.Context, contactID ids.UUID) (crmcont
 // contactCaseView renders a case for its reader: the policy and what this
 // reader may do with the case under it.
 func (s *Store) contactCaseView(ctx context.Context, tx pgx.Tx, c contactCase) (crmcontracts.ContactCase, error) {
-	policy, err := config.StoredApplyTx(ctx, tx, s.bootConfig(), SharedMergeReviews)
+	policy, err := config.StoredApplyTx(ctx, tx, s.bootConfig(ctx), SharedMergeReviews)
 	if err != nil {
 		return crmcontracts.ContactCase{}, err
 	}

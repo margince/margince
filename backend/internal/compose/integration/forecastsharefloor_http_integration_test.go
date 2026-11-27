@@ -31,6 +31,7 @@ func issueTeamShare(t *testing.T, e *apptest.AppEnv, team string, body AnyMap) s
 // A share of a team of the reader and one colleague answers that colleague's
 // figures. While the switch is off, opening it and its export are refused.
 func TestIndividualPerformanceOffRefusesATwoMemberTeamsShare(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	e.DescribeCompany(t)

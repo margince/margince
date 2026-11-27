@@ -96,6 +96,7 @@ func listedLabelKeys(t *testing.T) []string {
 }
 
 func TestEveryShippedLabelKeyIsOneTheFrontendRenders(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	headSchema(t, conn)
@@ -120,6 +121,7 @@ func TestEveryShippedLabelKeyIsOneTheFrontendRenders(t *testing.T) {
 // An administrator's relabel is their own words in every language, so it hides
 // the key; putting the shipped words back shows it again.
 func TestARelabelHidesTheShippedLabelKeyUntilTheShippedWordsReturn(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	headSchema(t, conn)
@@ -160,6 +162,7 @@ func TestARelabelHidesTheShippedLabelKeyUntilTheShippedWordsReturn(t *testing.T)
 // A built-in question follows the same rule inside its template, and a save
 // cannot hand a question a key of its own choosing.
 func TestARewordedReviewQuestionReadsTranslatedOnceItsShippedWordsReturn(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	headSchema(t, conn)

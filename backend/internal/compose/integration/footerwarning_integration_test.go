@@ -45,6 +45,7 @@ func footerWarning(t *testing.T, e *apptest.AppEnv) *crmcontracts.HealthFinding 
 // Mutation: drop RecordFooterHoldTx from consent.Gate.RecordRefusal and this
 // fails.
 func TestAHeldSendWarnsAdminsUntilTheCompanyDetailIsStated(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	p.stakeADeal(t)

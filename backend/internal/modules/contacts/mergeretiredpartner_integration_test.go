@@ -49,6 +49,7 @@ func (e *dedupeEnv) retireProgramme(ctx context.Context, t *testing.T, company i
 // invariant exists to make impossible: the table stays consistent and the
 // product stops being.
 func TestMergingIntoARetiredPartnerLeavesTheSurvivorUntyped(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := asAdmin(e)
 
@@ -95,6 +96,7 @@ func TestMergingIntoARetiredPartnerLeavesTheSurvivorUntyped(t *testing.T) {
 // the extension row with nothing naming it — the opposite half of the same
 // invariant, and exactly what ADR-0079 amended into place.
 func TestMergingALivePartnerMakesTheSurvivorOne(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := asAdmin(e)
 

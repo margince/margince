@@ -79,6 +79,7 @@ var maxUUID = ids.MustParse("ffffffff-ffff-ffff-ffff-ffffffffffff")
 // unrelated by the classifier and audited as the recheck. The answer is
 // remembered, so a second pass asks nothing.
 func TestTheRecheckMarksALinkTheMailIsNotAbout(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
@@ -110,6 +111,7 @@ func TestTheRecheckMarksALinkTheMailIsNotAbout(t *testing.T) {
 // A colleague's mark stands. The recheck asks the model nothing about a link
 // a colleague judged, and the classifier's own writer refuses to change it.
 func TestTheClassifierNeverChangesAColleaguesMark(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
@@ -141,6 +143,7 @@ func TestTheClassifierNeverChangesAColleaguesMark(t *testing.T) {
 // With no answer the link stays, and a later pass asks again. A colleague's
 // own filing is never asked about.
 func TestTheRecheckKeepsALinkWithoutAnAnswerAndLeavesColleaguesAlone(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
@@ -167,6 +170,7 @@ func TestTheRecheckKeepsALinkWithoutAnAnswerAndLeavesColleaguesAlone(t *testing.
 
 // The recheck reaches back 90 days from its pass and no further.
 func TestTheRecheckWindowIsNinetyDays(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
@@ -186,6 +190,7 @@ func TestTheRecheckWindowIsNinetyDays(t *testing.T) {
 // a confident "not about it" unrelated. The answer is remembered, so the
 // recheck does not ask about it again.
 func TestTheRecheckMarksALinkByItsAnswer(t *testing.T) {
+	t.Parallel()
 	for _, c := range []struct {
 		name       string
 		verdict    string
@@ -220,6 +225,7 @@ func TestTheRecheckMarksALinkByItsAnswer(t *testing.T) {
 // colleague marks our mail not about that deal, the reply's link rests on
 // nothing but a suggestion, so the recheck asks about it.
 func TestTheRecheckAsksAboutAReplyWhoseThreadWasMarkedNotAboutTheDeal(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
@@ -246,6 +252,7 @@ func TestTheRecheckAsksAboutAReplyWhoseThreadWasMarkedNotAboutTheDeal(t *testing
 // A recheck every model declines is remembered like a doubtful answer: the
 // link stands, and a second recheck under the same prompt asks nothing.
 func TestTheRecheckAsksADeclinedMailOnce(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	w := newDealWorld(t, env.e)
 	w.employee(t, "alice@acme.example", w.customer)
@@ -265,6 +272,7 @@ func TestTheRecheckAsksADeclinedMailOnce(t *testing.T) {
 // The refile pass remembers a decline too: a mail the models declined is not
 // asked about again on the next pass.
 func TestTheRefilePassAsksADeclinedMailOnce(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	w := newDealWorld(t, env.e)
 	w.employee(t, "alice@acme.example", w.customer)

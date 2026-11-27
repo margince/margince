@@ -71,6 +71,7 @@ func (e hiddenPartnerEnv) blindReader() context.Context {
 // question, so excluding its deal buys no privacy and costs the reader 90000
 // of their own pipeline.
 func TestAStageTotalKeepsADealWhosePartnerTheReaderCannotOpen(t *testing.T) {
+	t.Parallel()
 	e := seedHiddenPartner(t)
 
 	result := e.runReport(e.blindReader(), t, "deals-by-stage",
@@ -96,6 +97,7 @@ func TestAStageTotalKeepsADealWhosePartnerTheReaderCannotOpen(t *testing.T) {
 // widen it: an aggregate has no per-row place to write "withheld", and folding
 // those deals under a null key would still say that some partner brought them.
 func TestGroupingByPartnerStillExcludesThePartnerTheReaderCannotOpen(t *testing.T) {
+	t.Parallel()
 	e := seedHiddenPartner(t)
 
 	result := e.runReport(e.blindReader(), t, "deals-by-stage",
@@ -130,6 +132,7 @@ func TestGroupingByPartnerStillExcludesThePartnerTheReaderCannotOpen(t *testing.
 // Both arms, because the refusal alone is green against an engine that answers
 // nobody: the readable partner's own filter must still return their deal.
 func TestFilteringByAPartnerIsScopedLikeGroupingByOne(t *testing.T) {
+	t.Parallel()
 	e := seedHiddenPartner(t)
 	reader := e.blindReader()
 
@@ -167,6 +170,7 @@ func TestFilteringByAPartnerIsScopedLikeGroupingByOne(t *testing.T) {
 // row on every company in the installation — including one captured into
 // a colleague's mailbox and never promoted.
 func TestADefaultGroupByIsScopedLikeAnAskedForOne(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	hidden := e.seedID(t, `INSERT INTO company (id, owner_id, display_name, visibility, source, captured_by)
 		VALUES ($1, $2, 'Hidden Customer', 'owner', 'manual', 'human:x')`, e.Rep3)
@@ -209,6 +213,7 @@ func TestADefaultGroupByIsScopedLikeAnAskedForOne(t *testing.T) {
 // it also NAMES the dimension, the drill-through cannot tell this report from
 // one grouped by stage, and opens deals the count never counted.
 func TestTheResultHandleExplainsThePopulationItsHeadlineReported(t *testing.T) {
+	t.Parallel()
 	e := seedHiddenPartner(t)
 	reader := e.blindReader()
 
@@ -245,6 +250,7 @@ func TestTheResultHandleExplainsThePopulationItsHeadlineReported(t *testing.T) {
 // not a filter, which made a filtered count answer whether a capture-private
 // company exists and how many deals point at it.
 func TestAnAnalyticsFilterOnAReferenceIsScoped(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	hidden := e.seedID(t, `INSERT INTO company (id, owner_id, display_name, visibility, source, captured_by)
 		VALUES ($1, $2, 'Hidden Customer', 'owner', 'manual', 'human:x')`, e.Rep3)
@@ -300,6 +306,7 @@ func TestAnAnalyticsFilterOnAReferenceIsScoped(t *testing.T) {
 // said 1 and clicking it opened 2. Both numbers are now 2, and they are read
 // from the same handle the response minted.
 func TestTheDrillThroughOpensExactlyWhatTheStageCounted(t *testing.T) {
+	t.Parallel()
 	e := seedHiddenPartner(t)
 	reader := e.blindReader()
 
@@ -323,6 +330,7 @@ func TestTheDrillThroughOpensExactlyWhatTheStageCounted(t *testing.T) {
 // and its ROW STAYS — which is what an ordinary read of the same deal does
 // (deals/fieldmask.go blanks the reference and keeps the deal).
 func TestTheDrillThroughBlanksAnUnreadablePartnerAndKeepsItsRow(t *testing.T) {
+	t.Parallel()
 	e := seedHiddenPartner(t)
 	reader := e.blindReader()
 
@@ -363,6 +371,7 @@ func TestTheDrillThroughBlanksAnUnreadablePartnerAndKeepsItsRow(t *testing.T) {
 // above would pass against an engine that blanked partner_company_id for every
 // caller, which is a different product and not a privacy boundary.
 func TestTheOwnerOfACapturedPartnerStillSeesItNamed(t *testing.T) {
+	t.Parallel()
 	e := seedHiddenPartner(t)
 	owner := e.dealReadCtx(e.Rep3, nil, principal.RowScopeAll)
 
@@ -385,6 +394,7 @@ func TestTheOwnerOfACapturedPartnerStillSeesItNamed(t *testing.T) {
 // company. The drill-through rows carry that company beside the partner,
 // blanked where the reader cannot open it and named where they can.
 func TestThePipelineDrillThroughNamesEachDealsOwnCompany(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	hidden := e.seedID(t, `INSERT INTO company (id, owner_id, display_name, visibility, source, captured_by)
 		VALUES ($1, $2, 'Hidden Account', 'owner', 'manual', 'human:x')`, e.Rep3)
@@ -434,6 +444,7 @@ func TestThePipelineDrillThroughNamesEachDealsOwnCompany(t *testing.T) {
 // first assertion and break the report: the readable company's band must still
 // carry its own deal.
 func TestGroupingByAJoinedAttributeIsScopedLikeTheIdItHangsOff(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	// Capture-private to Rep3, exactly as seedHiddenPartner's is: readable to
 	// its owner and invisible to every other seat.
@@ -506,6 +517,7 @@ func TestGroupingByAJoinedAttributeIsScopedLikeTheIdItHangsOff(t *testing.T) {
 // small-group refusal can never stand in for the row scope and pass this for
 // the wrong reason.
 func TestTheAnalyticsSurfaceScopesAJoinedAttributeToo(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	hidden := e.seedID(t, `INSERT INTO company (id, owner_id, display_name, size_band, visibility, source, captured_by)
 		VALUES ($1, $2, 'Hidden Enterprise', '1001-5000', 'owner', 'manual', 'human:x')`, e.Rep3)

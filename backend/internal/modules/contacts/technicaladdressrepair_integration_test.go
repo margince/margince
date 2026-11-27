@@ -44,11 +44,12 @@ func contactIsArchived(ctx context.Context, t *testing.T, e *dedupeEnv, id ids.U
 // A contact edited between the page read and the write is read again and
 // archived, not passed over: the cursor moves past it either way.
 func TestATechnicalContactEditedMidPageIsStillArchived(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	logger := legacyMachineContact(ctx, t, e, "4711@bcc.hubspot.com")
 	edits := 0
-	beforeTechnicalWrite = func(_ context.Context, id ids.ContactID) {
+	e.store.beforeTechnicalWrite = func(_ context.Context, id ids.ContactID) {
 		if id.UUID != logger || edits > 0 {
 			return
 		}
@@ -60,7 +61,6 @@ func TestATechnicalContactEditedMidPageIsStillArchived(t *testing.T) {
 			t.Errorf("editing the contact meanwhile: %v", err)
 		}
 	}
-	t.Cleanup(func() { beforeTechnicalWrite = nil })
 
 	page := correctTechnicalPage(ctx, t, e)
 	if edits != 1 {
@@ -75,6 +75,7 @@ func TestATechnicalContactEditedMidPageIsStillArchived(t *testing.T) {
 // Legal hold changes nothing: a held contact keeps its technical address even
 // beside a real one, and is only named for review.
 func TestAMixedContactOnLegalHoldKeepsEveryAddress(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	made, err := e.store.CreateContact(ctx, CreateContactInput{

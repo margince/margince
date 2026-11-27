@@ -22,6 +22,7 @@ import (
 )
 
 func TestAWebhookSubscriptionPatchOfNoFieldIsRefused(t *testing.T) {
+	t.Parallel()
 	cipher, err := webhooks.NewCipher(bytes.Repeat([]byte{0x5a}, webhooks.WebhookKeyBytes))
 	if err != nil {
 		t.Fatalf("cipher: %v", err)

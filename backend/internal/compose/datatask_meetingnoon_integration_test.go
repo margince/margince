@@ -128,6 +128,7 @@ func (f noonFixture) version(id ids.ActivityID) int {
 }
 
 func TestTheNoonTaskRestoresOnlyStartsAnOutcomeSaveMovedBeforeTheCutoff(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	e.WsExec(t, `UPDATE setting SET value = to_jsonb($1::text) WHERE key = 'installation.timezone'`, noonZone)
@@ -219,6 +220,7 @@ func TestTheNoonTaskRestoresOnlyStartsAnOutcomeSaveMovedBeforeTheCutoff(t *testi
 // that made a timed meeting a day meeting looks like the old dialog's noon
 // move. The task must leave it alone.
 func TestTheNoonTaskLeavesADayMeetingAtItsNoon(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	e.WsExec(t, `UPDATE setting SET value = to_jsonb('UTC'::text) WHERE key = 'installation.timezone'`)
@@ -251,6 +253,7 @@ func TestTheNoonTaskLeavesADayMeetingAtItsNoon(t *testing.T) {
 // A meeting damaged while live and archived later is restored too, so a later
 // restore of the record shows the meeting when it was. It stays archived.
 func TestTheNoonTaskRestoresAMeetingArchivedAfterTheDamage(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	e.WsExec(t, `UPDATE setting SET value = to_jsonb($1::text) WHERE key = 'installation.timezone'`, noonZone)
@@ -294,6 +297,7 @@ func TestTheNoonTaskRestoresAMeetingArchivedAfterTheDamage(t *testing.T) {
 // The batch itself pages, replays from a nil cursor without writing again, and
 // refuses a cursor it cannot read.
 func TestTheNoonBatchPagesReplaysAndRefusesAMalformedCursor(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	e.WsExec(t, `UPDATE setting SET value = to_jsonb($1::text) WHERE key = 'installation.timezone'`, noonZone)
@@ -340,6 +344,7 @@ func TestTheNoonBatchPagesReplaysAndRefusesAMalformedCursor(t *testing.T) {
 
 // A batch that fails after its writes takes the archived restore back with it.
 func TestTheNoonRepairOfAnArchivedMeetingRollsBackWithItsBatch(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	e.WsExec(t, `UPDATE setting SET value = to_jsonb($1::text) WHERE key = 'installation.timezone'`, noonZone)
@@ -373,6 +378,7 @@ func TestTheNoonRepairOfAnArchivedMeetingRollsBackWithItsBatch(t *testing.T) {
 // the invitation was canceled. Erasing the guest then archived the meeting and
 // erased the invitation, and the task still restores the start.
 func TestTheNoonTaskRestoresAMeetingWhoseInvitationWasErased(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	e.WsExec(t, `UPDATE setting SET value = to_jsonb($1::text) WHERE key = 'installation.timezone'`, noonZone)
@@ -397,6 +403,7 @@ func TestTheNoonTaskRestoresAMeetingWhoseInvitationWasErased(t *testing.T) {
 // noon whose original start comes later. Restoring that start books it again,
 // live or archived, so the task finishes and leaves no outcome ahead of a start.
 func TestTheNoonTaskBooksAMeetingWhoseRestoredStartHasNotCome(t *testing.T) {
+	t.Parallel()
 	afternoon := time.Date(2099, 7, 15, 13, 0, 0, 0, time.UTC)
 	noon := time.Date(2099, 7, 15, 10, 0, 0, 0, time.UTC)
 	for name, archive := range map[string]bool{"live": false, "archived": true} {

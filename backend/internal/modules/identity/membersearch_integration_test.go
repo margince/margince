@@ -14,6 +14,7 @@ import (
 )
 
 func TestMemberSearchTreatsUnderscoreAsTypedText(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "roster-member-search")
 	for _, in := range []InviteUserInput{
 		{Email: "snake_case@acme.test", DisplayName: "Snake Sam", Role: "rep"},
@@ -41,6 +42,7 @@ func TestMemberSearchTreatsUnderscoreAsTypedText(t *testing.T) {
 // The assignment picker asks for invited seats, and it searches with or
 // without the marks a name was typed in.
 func TestMemberSearchFoldsDiacriticsAndOffersInvitedSeatsWhenAsked(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "roster-member-fold")
 	invited := InviteUserInput{Email: "thang.tran@acme.test", DisplayName: "Trần Văn Thắng", Role: "rep"}
 	if _, _, err := e.svc.InviteUser(e.wsCtx(e.admin), e.admin, invited); err != nil {
@@ -81,6 +83,7 @@ func TestMemberSearchFoldsDiacriticsAndOffersInvitedSeatsWhenAsked(t *testing.T)
 }
 
 func TestTeamSearchFoldsDiacritics(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "roster-team-fold")
 	if _, err := e.svc.CreateTeam(e.wsCtx(e.admin), e.admin, "Đội Hà Nội"); err != nil {
 		t.Fatalf("creating the team: %v", err)

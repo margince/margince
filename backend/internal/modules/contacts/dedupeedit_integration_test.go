@@ -18,6 +18,7 @@ import (
 )
 
 func TestReplacingAnAddressWithATaggedTwinFilesOnePair(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	incumbent := e.plainContact(ctx, t, "Ab", "ab@example.com")
@@ -49,6 +50,7 @@ func TestReplacingAnAddressWithATaggedTwinFilesOnePair(t *testing.T) {
 }
 
 func TestReplacingAnAddressWithAnUnrelatedOneFilesNothing(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.plainContact(ctx, t, "Ab", "ab@example.com")
@@ -65,6 +67,7 @@ func TestReplacingAnAddressWithAnUnrelatedOneFilesNothing(t *testing.T) {
 }
 
 func TestAddingASubdomainOfAHeldDomainToACompanyFilesOnePair(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	holder := e.createNamedCompany(ctx, t, "Example Group", "example-group.test")
@@ -88,6 +91,7 @@ func TestAddingASubdomainOfAHeldDomainToACompanyFilesOnePair(t *testing.T) {
 }
 
 func TestAddingAnUnrelatedDomainToACompanyFilesNothing(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.createNamedCompany(ctx, t, "Example Group", "example-group.test")
@@ -106,6 +110,7 @@ func TestAddingAnUnrelatedDomainToACompanyFilesNothing(t *testing.T) {
 // A rename that ends the name match withdraws the pair it made; a rename that
 // keeps the brand keeps it.
 func TestRenamingACompanyAwayFromItsTwinClosesTheirPair(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	twin := e.plainCompany(ctx, t, "Kranbau Nord")

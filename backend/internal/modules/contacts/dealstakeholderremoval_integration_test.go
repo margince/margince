@@ -65,6 +65,7 @@ func (e *edgeAnchorEnv) countRows(t *testing.T, sql string, args ...any) int {
 // Whoever may write a deal may take a stakeholder off it, with no relationship
 // delete grant, and the removal commits its audit and outbox rows.
 func TestADealWriterRemovesAStakeholderWithoutTheDeleteGrant(t *testing.T) {
+	t.Parallel()
 	e := setupEdgeAnchor(t)
 	me := e.asMember(e.me)
 	deal := e.seedDeal(t, e.me)
@@ -98,6 +99,7 @@ func TestADealWriterRemovesAStakeholderWithoutTheDeleteGrant(t *testing.T) {
 // The deal's row authority still decides. A member who cannot write the deal is
 // refused, and any other kind of edge keeps needing the delete grant.
 func TestStakeholderRemovalStillNeedsWriteOnTheDeal(t *testing.T) {
+	t.Parallel()
 	e := setupEdgeAnchor(t)
 	theirDeal := e.seedDeal(t, e.them)
 	edge := e.seedEdgeOn(t, theirDeal, e.them)
@@ -134,6 +136,7 @@ func (e *edgeAnchorEnv) seedEdgeOn(t *testing.T, deal ids.DealID, owner ids.UUID
 // A seat that can write deals but read no relationship learns nothing from the
 // archive. An edge that exists and an id that does not answer the same.
 func TestArchiveAnswersAlikeForAnEdgeAndAMissingIdWithoutReadGrant(t *testing.T) {
+	t.Parallel()
 	e := setupEdgeAnchor(t)
 	edge := e.seedEdgeAsMe(e.as(e.me), t)
 
@@ -159,6 +162,7 @@ func TestArchiveAnswersAlikeForAnEdgeAndAMissingIdWithoutReadGrant(t *testing.T)
 // The list carries an archive answer per edge. It is true on a deal the caller
 // writes and false on another rep's deal.
 func TestTheListSaysWhichStakeholdersTheCallerMayRemove(t *testing.T) {
+	t.Parallel()
 	e := setupEdgeAnchor(t)
 	mine := e.seedEdgeOn(t, e.seedDeal(t, e.me), e.me)
 	theirs := e.seedEdgeOn(t, e.seedDeal(t, e.them), e.them)

@@ -83,6 +83,7 @@ func accountMoment(ctx context.Context, t *testing.T, svc *company360.Service, c
 }
 
 func TestTheAccountCardAsksDoneAndNotYetBringsThePromiseBack(t *testing.T) {
+	t.Parallel()
 	e, p, company, reply, now := promiseAtAccount(t)
 	svc := accountPageAsOf(e, now)
 	asked := accountMoment(e.Admin(), t, svc, company)
@@ -100,6 +101,7 @@ func TestTheAccountCardAsksDoneAndNotYetBringsThePromiseBack(t *testing.T) {
 // An agent reads the account card as its user left it, and what it puts away its
 // user finds put away.
 func TestAnAgentSharesItsUsersSetAsidesOnTheAccountCard(t *testing.T) {
+	t.Parallel()
 	e, _, company, _, now := promiseAtAccount(t)
 	svc := accountPageAsOf(e, now)
 	agent := e.AgentFor(t, e.AdminUser, nil, integration.AdminPerms)
@@ -131,6 +133,7 @@ func TestAnAgentSharesItsUsersSetAsidesOnTheAccountCard(t *testing.T) {
 // The account card and the contact page ask one question about one claim, so
 // a Not yet on either page puts it away on both.
 func TestNotYetToDoneOnOnePageHoldsOnTheOther(t *testing.T) {
+	t.Parallel()
 	for _, answeredOn := range []string{"the account card", "the contact page"} {
 		t.Run(answeredOn, func(t *testing.T) {
 			e, p, company, _, now := promiseAtAccount(t)
@@ -163,6 +166,7 @@ func TestNotYetToDoneOnOnePageHoldsOnTheOther(t *testing.T) {
 // One claim, and the mail that follows it, raises the same question on both
 // pages, or none on either.
 func TestBothPagesAskDoneAboutTheSameClaims(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		name  string
 		later func(t *testing.T, e *integration.Env, p integration.PromiseThread)
@@ -212,6 +216,7 @@ func sameQuestion(a, b crmcontracts.ContactMoment) bool {
 // company page's row asks it. It asks on no other page that lists the task,
 // and never a reader who may not complete it.
 func TestATaskAsksOnlyTheRecipientOurMailReachedAndAReaderWhoMayCompleteIt(t *testing.T) {
+	t.Parallel()
 	e, p, company := promiseThreadAtAccount(t)
 	jonas := e.SeedThreadContact(t, "Jonas Kunde", "jonas@kunde.example")
 	cc := e.SeedThreadContact(t, "Carla Kunde", "carla@kunde.example")

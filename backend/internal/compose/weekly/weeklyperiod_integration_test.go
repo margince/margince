@@ -21,6 +21,7 @@ import (
 // UTC+12 its stored noon is already the next Monday, so a week bounded on that
 // noon would hand it to the following review. Instants keep their own time.
 func TestASundayDayMeetingCountsInItsOwnWeek(t *testing.T) {
+	t.Parallel()
 	for _, zone := range []string{"Pacific/Auckland", "Pacific/Kiritimati"} {
 		t.Run(zone, func(t *testing.T) {
 			e := setupWeekly(t)

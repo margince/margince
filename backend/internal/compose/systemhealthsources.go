@@ -40,10 +40,7 @@ func (s Server) jobsSummary(ctx context.Context) (crmcontracts.HealthSource, []c
 	source.ObservedAt = &now
 	source.Condition, source.Code = healthUnknown, "queue_checked"
 	source.Availability = healthUnobserved
-	source, findings, err := summarizeJobKinds(source, rows)
-	if err != nil {
-		return source, nil, err
-	}
+	source, findings := summarizeJobKinds(source, s.jobTable, rows)
 	fellBack, err := healthTx(ctx, s.jobHealthHandlers.pool, identity.ZoneFallsBackTx)
 	if err != nil || !fellBack {
 		return source, findings, err
@@ -65,15 +62,15 @@ func zoneFinding(source crmcontracts.HealthSource) crmcontracts.HealthFinding {
 	return f
 }
 
-func summarizeJobKinds(source crmcontracts.HealthSource, rows []jobs.KindHealth) (crmcontracts.HealthSource, []crmcontracts.HealthFinding, error) {
+func summarizeJobKinds(source crmcontracts.HealthSource, table jobs.Composed, rows []jobs.KindHealth) (crmcontracts.HealthSource, []crmcontracts.HealthFinding) {
 	groups := map[jobHealthGroupKey]*jobHealthSummaryGroup{}
 	for _, row := range rows {
-		assessments := []jobs.HealthAssessment{jobs.AssessHealth(row)}
+		assessments := []jobs.HealthAssessment{table.AssessHealth(row)}
 		if assessments[0].Code != "queue_retrying" {
 			retrying := row
 			retrying.Discarded = 0
 			retrying.OldestWaitingAgeSeconds = nil
-			if assessment := jobs.AssessHealth(retrying); assessment.Code == "queue_retrying" {
+			if assessment := table.AssessHealth(retrying); assessment.Code == "queue_retrying" {
 				assessments = append(assessments, assessment)
 			}
 		}
@@ -103,7 +100,7 @@ func summarizeJobKinds(source crmcontracts.HealthSource, rows []jobs.KindHealth)
 		}
 	}
 	source, findings := groupedJobHealth(source, groups)
-	return source, findings, nil
+	return source, findings
 }
 
 type jobHealthGroupKey struct {

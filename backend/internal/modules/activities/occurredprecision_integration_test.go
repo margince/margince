@@ -91,6 +91,7 @@ func lastUpdatedPrecision(t *testing.T, e *sendEnv, id crmcontracts.Activity) st
 // A day entry is stored at noon UTC of its date, whatever the installation
 // zone, and reads back as that date.
 func TestADayEntryIsStoredAtNoonUTCOfItsDate(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	want := time.Date(2026, 3, 9, 12, 0, 0, 0, time.UTC)
@@ -114,6 +115,7 @@ func TestADayEntryIsStoredAtNoonUTCOfItsDate(t *testing.T) {
 // The writer's own offset names the date: late on 9 March in Honolulu is 10
 // March in UTC, and the entry still files under the 9th.
 func TestTheWritersOffsetNamesTheDate(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	lateEvening := time.Date(2026, 3, 9, 23, 0, 0, 0, time.FixedZone("HST", -10*3600))
@@ -126,6 +128,7 @@ func TestTheWritersOffsetNamesTheDate(t *testing.T) {
 // An instant made a day takes the day it falls on in the installation zone, so
 // a store without that zone refuses rather than guessing.
 func TestAnInstantMadeADayOnAStoreWithoutTheZoneIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	note := loggedNote(ctx, t, e)
@@ -137,6 +140,7 @@ func TestAnInstantMadeADayOnAStoreWithoutTheZoneIsRefused(t *testing.T) {
 }
 
 func TestAnActivityLoggedWithoutAPrecisionIsAnInstant(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	note := loggedNote(ctx, t, e)
@@ -146,6 +150,7 @@ func TestAnActivityLoggedWithoutAPrecisionIsAnInstant(t *testing.T) {
 }
 
 func TestADayWithNoDateIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	subject := "Call back"
@@ -163,6 +168,7 @@ func TestADayWithNoDateIsRefused(t *testing.T) {
 }
 
 func TestAPatchedTimeAloneIsAnInstant(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	store := e.zonedStore(time.UTC)
@@ -187,6 +193,7 @@ func TestAPatchedTimeAloneIsAnInstant(t *testing.T) {
 // A day sent alone keeps the date the stored instant falls on in the
 // installation zone, and moves the time to that date's anchor.
 func TestAPatchedPrecisionAloneAnchorsTheStoredDate(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	zone := zoneNamed(t, "Pacific/Auckland")
@@ -213,6 +220,7 @@ func TestAPatchedPrecisionAloneAnchorsTheStoredDate(t *testing.T) {
 // An instant given a new date as a day lands on that date's anchor, and the
 // event names the precision that changed.
 func TestAPatchedTimeAndDayMoveTogether(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	store := e.zonedStore(zoneNamed(t, "America/New_York"))
@@ -231,6 +239,7 @@ func TestAPatchedTimeAndDayMoveTogether(t *testing.T) {
 }
 
 func TestAPrecisionOutsideTheListIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	note := loggedNote(ctx, t, e)
@@ -245,6 +254,7 @@ func TestAPrecisionOutsideTheListIsRefused(t *testing.T) {
 // A meeting holding its host's slot is what the overlap guard compares hours
 // on, so neither door may make it a day.
 func TestAMeetingHoldingASlotCannotBeADay(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	store := e.zonedStore(time.UTC)
@@ -276,6 +286,7 @@ func TestAMeetingHoldingASlotCannotBeADay(t *testing.T) {
 // A meeting an invitation went out for holds the host's hour as well. It is
 // refused a day as a claimed slot is, before the invitation guard answers.
 func TestAnInvitedMeetingCannotBeADay(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	store := e.zonedStore(time.UTC)
@@ -300,6 +311,7 @@ func TestAnInvitedMeetingCannotBeADay(t *testing.T) {
 // A day becomes an instant only with the time it happened. Its stored noon
 // would otherwise read as a real 12:00.
 func TestADayMadeAnInstantWithoutATimeIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	store := e.zonedStore(time.UTC)
@@ -314,6 +326,7 @@ func TestADayMadeAnInstantWithoutATimeIsRefused(t *testing.T) {
 // A day moved to another date audits the precision beside the time. Its event
 // names the precision beside the time too, so a consumer reads a date.
 func TestADayMovedToAnotherDateKeepsItsPrecisionInTheTrail(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	store := e.zonedStore(time.UTC)
@@ -337,6 +350,7 @@ func TestADayMovedToAnotherDateKeepsItsPrecisionInTheTrail(t *testing.T) {
 // occurredday.EndSQL and occurredday.Ended agree: a day entry ends when its
 // date ends in the installation zone, east and west of UTC.
 func TestADayEntryEndsWithItsDateInSQLAsInGo(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	meeting := logDayMeeting(ctx, t, e.store(nil), pastDay)
@@ -360,6 +374,7 @@ func TestADayEntryEndsWithItsDateInSQLAsInGo(t *testing.T) {
 // occurredday.HappenedSQL answers the cases occurredday.Happened and the
 // frontend's activityHasHappened share, so the clocks and the screens agree.
 func TestHappenedSQLAnswersTheSharedCases(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	raw, err := os.ReadFile("../../shared/kernel/occurredday/testdata/happened.json")
 	if err != nil {
@@ -398,6 +413,7 @@ func TestHappenedSQLAnswersTheSharedCases(t *testing.T) {
 // occurredday.AnswersSQL answers the tie cases occurredday.Answers and the
 // frontend's activityAnswers share, so every reader of a tie agrees.
 func TestAnswersSQLAnswersTheSharedCases(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	raw, err := os.ReadFile("../../shared/kernel/occurredday/testdata/answers.json")
 	if err != nil {
@@ -443,6 +459,7 @@ func setInstallationZone(t *testing.T, e *sendEnv, name string) {
 // occurredday.WithinSQL answers the shared period cases: a day entry falls in
 // the period whose local dates hold its date, from UTC-12 to UTC+14.
 func TestWithinSQLAnswersTheSharedCases(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	raw, err := os.ReadFile("../../shared/kernel/occurredday/testdata/within.json")
 	if err != nil {
@@ -476,6 +493,7 @@ func TestWithinSQLAnswersTheSharedCases(t *testing.T) {
 // occurredday.LatestPrecisionSQL names the precision behind max(occurred_at),
 // instant on a tie with a day's noon, and nothing when the filter admits no row.
 func TestLatestPrecisionNamesTheNewestAdmittedRow(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	noon := time.Date(2026, 10, 22, 12, 0, 0, 0, time.UTC)
 	for _, c := range []struct{ name, filter, want string }{
@@ -500,6 +518,7 @@ func TestLatestPrecisionNamesTheNewestAdmittedRow(t *testing.T) {
 
 // occurredday.LatestAnswerPrecisionSQL reads a day entry that ties an instant as day: the row that answers there.
 func TestLatestAnswerPrecisionNamesTheDayEntryAtATie(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	noon := time.Date(2026, 10, 22, 12, 0, 0, 0, time.UTC)
 	for _, c := range []struct{ name, filter, want string }{
@@ -524,6 +543,7 @@ func TestLatestAnswerPrecisionNamesTheDayEntryAtATie(t *testing.T) {
 // the edge's start date, or once its date begins after capture saw the edge.
 // In Auckland a day entry's stored noon falls on the next local date.
 func TestAnEmploymentIsInPlaceForADayEntryByItsDate(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	setInstallationZone(t, e, "Pacific/Auckland")
 	auckland := zoneNamed(t, "Pacific/Auckland")

@@ -47,6 +47,7 @@ func profileFieldsTheAPIAccepts(t *testing.T) []string {
 
 // Every field the API accepts shows in both histories, old value and new.
 func TestEveryProfileFieldAUserCanEditAppearsInTheCompanyHistory(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "History Check GmbH", &e.Rep3)
 	companyID := ids.From[ids.CompanyKind](company)
@@ -105,6 +106,7 @@ func TestEveryProfileFieldAUserCanEditAppearsInTheCompanyHistory(t *testing.T) {
 }
 
 func TestACompanyFactChangeAndRemovalAppearInItsHistory(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Fact History GmbH", &e.Rep3)
 	companyID := ids.From[ids.CompanyKind](company)
@@ -157,6 +159,7 @@ func TestACompanyFactChangeAndRemovalAppearInItsHistory(t *testing.T) {
 // The verb filter reads the verb the line shows, which is an update for every
 // sidecar row, whatever the sidecar row itself did.
 func TestTheVerbFilterReadsTheVerbASidecarLineShows(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Verb Filter GmbH", &e.Rep3)
 	companyID := ids.From[ids.CompanyKind](company)
@@ -199,6 +202,7 @@ func TestTheVerbFilterReadsTheVerbASidecarLineShows(t *testing.T) {
 // survivor, and their History moves with them. Where the survivor already
 // answered, its own value stays and the retired copy is dropped.
 func TestAMergeCarriesTheSidecarHistoryToTheSurvivor(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	retired := ids.From[ids.CompanyKind](e.SeedCompany(t, "Retired GmbH", &e.Rep3))
 	survivor := ids.From[ids.CompanyKind](e.SeedCompany(t, "Survivor GmbH", &e.Rep3))

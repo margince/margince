@@ -19,6 +19,7 @@ import (
 var zeroWidth = string(rune(0x200B))
 
 func TestPipelineAndStageNamesAreRefusedWhenTakenOrBlank(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Names E2E", "names@fable.test", "Admin")
 
@@ -70,6 +71,7 @@ func TestPipelineAndStageNamesAreRefusedWhenTakenOrBlank(t *testing.T) {
 }
 
 func TestTeamNamesAreRefusedWhenTakenOrInvisible(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Teams E2E", "teams@fable.test", "Admin")
 

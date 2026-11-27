@@ -79,6 +79,7 @@ func userRoles(rows []participantRow) map[ids.UUID]string {
 }
 
 func TestAHandLoggedMeetingStampsTheCallerAsOurSide(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	contact := e.seedContact(t, "Counterparty")
 
@@ -94,6 +95,7 @@ func TestAHandLoggedMeetingStampsTheCallerAsOurSide(t *testing.T) {
 }
 
 func TestAnImportedMeetingStampsItsAuthorSeatNotTheImporter(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	contact := e.seedContact(t, "Counterparty")
 	author := e.other
@@ -117,6 +119,7 @@ func TestAnImportedMeetingStampsItsAuthorSeatNotTheImporter(t *testing.T) {
 }
 
 func TestAnImportedMeetingNamingOnlyAnAuthorNameStampsNoUser(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	contact := e.seedContact(t, "Counterparty")
 	name := "Someone Elsewhere"

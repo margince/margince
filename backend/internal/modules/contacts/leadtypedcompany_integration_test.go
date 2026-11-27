@@ -63,6 +63,7 @@ func proposedCompanyFact(ctx context.Context, t *testing.T, e *dedupeEnv, contac
 }
 
 func TestQualifyingAPersonalAddressProposesTheTypedCompany(t *testing.T) {
+	t.Parallel()
 	for name, email := range map[string]*string{"personal address": new("dana.buyer@gmail.com"), "no address": nil} {
 		t.Run(name, func(t *testing.T) {
 			e := setupDedupe(t)
@@ -82,6 +83,7 @@ func TestQualifyingAPersonalAddressProposesTheTypedCompany(t *testing.T) {
 }
 
 func TestQualifyingAPersonalAddressWithCreateCompanyLinksTheTypedCompany(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	out := e.qualifyTypedLead(ctx, t, new("dana.buyer@gmail.com"), new("Harbor Analytics"), true)
@@ -94,6 +96,7 @@ func TestQualifyingAPersonalAddressWithCreateCompanyLinksTheTypedCompany(t *test
 }
 
 func TestQualifyingABusinessAddressLinksTheCompanyHoldingItsDomain(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	held := e.createNamedCompany(ctx, t, "Harbor Holdings", "harbor-analytics.test")
@@ -107,6 +110,7 @@ func TestQualifyingABusinessAddressLinksTheCompanyHoldingItsDomain(t *testing.T)
 }
 
 func TestQualifyingABusinessAddressNamesTheNewCompanyAsTyped(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	out := e.qualifyTypedLead(ctx, t, new("dana@harbor-analytics.test"), new("Harbor Analytics"), false)
@@ -119,6 +123,7 @@ func TestQualifyingABusinessAddressNamesTheNewCompanyAsTyped(t *testing.T) {
 }
 
 func TestQualifyingWithoutATypedCompanyProposesNothing(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	out := e.qualifyTypedLead(ctx, t, new("dana@harbor-analytics.test"), nil, false)

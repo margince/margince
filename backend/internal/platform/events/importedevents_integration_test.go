@@ -65,6 +65,7 @@ func (c *collector) has(id ids.UUID) bool {
 }
 
 func TestAnImportedEventReachesOnlyTheGroupsThatKeepImportedEvents(t *testing.T) {
+	t.Parallel()
 	e := setup(t)
 	imported := e.stageDealEvent(t, "deal.stage_changed", `{"to_stage_id":"`+ids.NewV7().String()+`","import_run_id":"`+ids.NewV7().String()+`","imported":true}`)
 	ordinary := e.stageDealEvent(t, "deal.stage_changed", `{"to_stage_id":"`+ids.NewV7().String()+`"}`)

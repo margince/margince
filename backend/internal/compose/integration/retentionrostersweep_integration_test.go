@@ -49,6 +49,7 @@ func rowStillThere(t *testing.T, row ids.UUID) bool {
 // archived record, matching its archived binding would delete the live contact's
 // rows — on a sweep that named only the archived one.
 func TestTheSweepDoesNotReachARosterRowNowHeldByALiveContact(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	SeedRetentionPolicies(t, e)
 	owner := OwnerConn(t)
@@ -69,7 +70,7 @@ func TestTheSweepDoesNotReachARosterRowNowHeldByALiveContact(t *testing.T) {
 	theirs := seedRosterOn(t, "acct-shared")
 
 	svc := compose.NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(os.Stderr, nil)))
-	if err := svc.EvaluateInstallation(RetentionPassCtx(e.WS)); err != nil {
+	if err := svc.EvaluateInstallation(RetentionPassCtx(context.Background(), e.WS)); err != nil {
 		t.Fatalf("retention pass: %v", err)
 	}
 

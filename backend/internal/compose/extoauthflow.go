@@ -38,7 +38,7 @@ func (h connectorHandlers) grantsFor(unit extension.Name) extOAuthGrants {
 	if h.extOAuthGrants != nil {
 		return h.extOAuthGrants(string(unit))
 	}
-	return newExtOAuthGrants(string(unit), boundExtensionRuntime())
+	return newExtOAuthGrants(string(unit), h.extensions.binding())
 }
 
 func (h connectorHandlers) extCallbackURL(provider string) string {
@@ -56,7 +56,7 @@ func (h connectorHandlers) ConnectExtOauth(w http.ResponseWriter, r *http.Reques
 		httperr.Write(w, r, err)
 		return
 	}
-	unit, app, declared := composedOAuthApp(provider)
+	unit, app, declared := h.extensions.oauthApp(provider)
 	if !declared {
 		httperr.Write(w, r, apperrors.ErrNotFound)
 		return
@@ -94,7 +94,7 @@ func (h connectorHandlers) ConnectExtOauth(w http.ResponseWriter, r *http.Reques
 func (h connectorHandlers) ExtOauthCallback(
 	w http.ResponseWriter, r *http.Request, provider string, params crmcontracts.ExtOauthCallbackParams,
 ) {
-	unit, app, ok := composedOAuthApp(provider)
+	unit, app, ok := h.extensions.oauthApp(provider)
 	if !ok {
 		httperr.Write(w, r, apperrors.ErrNotFound)
 		return
@@ -136,7 +136,7 @@ func (h connectorHandlers) completeExtOAuth(
 		slog.ErrorContext(ctx, "extension oauth callback: completing consent failed", "err", err, "provider", app.Provider)
 		return extExchangeOutcome(err)
 	}
-	if err := runOnGrant(runCtx, unit, app, boundExtensionRuntime(), extraParams(r)); err != nil {
+	if err := runOnGrant(runCtx, unit, app, h.extensions.binding(), extraParams(r)); err != nil {
 		slog.ErrorContext(ctx, "extension oauth callback: the unit refused the grant", "err", err, "provider", app.Provider)
 		if forgetErr := grants.forget(runCtx, app.Provider); forgetErr != nil {
 			slog.ErrorContext(ctx, "extension oauth callback: forgetting the refused grant", "err", forgetErr, "provider", app.Provider)

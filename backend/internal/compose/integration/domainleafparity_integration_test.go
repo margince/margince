@@ -27,6 +27,7 @@ import (
 )
 
 func TestADomainFilterAnswersTheSameAccountOnBothSurfaces(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 	lists := collections.NewStore(e.DB())
@@ -74,6 +75,7 @@ func TestADomainFilterAnswersTheSameAccountOnBothSurfaces(t *testing.T) {
 // Empty would bind and match nothing, which reads to a caller exactly like a
 // domain nobody uses — and in a saved view the mistake would stay invisible.
 func TestASegmentRefusesAValueThatIsNotADomain(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	lists := collections.NewStore(e.DB())
 
@@ -107,6 +109,7 @@ func seedCompanyWithDomain(t *testing.T, e *Env, name, domain string) ids.UUID {
 // A row an older release stored in Unicode is found by either spelling on the
 // list and on a saved view. A `neq` leaf leaves it out.
 func TestALegacyUnicodeDomainRowIsFoundAndExcludedOnBothSurfaces(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 	lists := collections.NewStore(e.DB())
@@ -154,6 +157,7 @@ func TestALegacyUnicodeDomainRowIsFoundAndExcludedOnBothSurfaces(t *testing.T) {
 // A lead's company key is found in either spelling. The row may have been
 // written folded or, before keys were folded, in Unicode. A slug matches as typed.
 func TestALeadCompanyKeyFilterMatchesBothSpellings(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 	lists := collections.NewStore(e.DB())

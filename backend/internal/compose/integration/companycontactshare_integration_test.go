@@ -27,6 +27,7 @@ import (
 )
 
 func TestSharingCompanyContactsGrantsOnlyTheReadableCurrentContactsTheCallerMayShare(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := companyIDOf(e.SeedCompany(t, "Current employer", &e.Rep1))
 	owned := []ids.UUID{}
@@ -105,6 +106,7 @@ func shareCompanyEmployee(t *testing.T, e *Env, company ids.CompanyID, contact i
 }
 
 func TestSharingCompanyContactsValidatesRecipientsWithoutEligibleContacts(t *testing.T) {
+	t.Parallel()
 	for _, populated := range []bool{false, true} {
 		for _, missing := range []bool{false, true} {
 			t.Run(fmt.Sprintf("contacts=%t/missing_recipient=%t", populated, missing), func(t *testing.T) {
@@ -143,6 +145,7 @@ func TestSharingCompanyContactsValidatesRecipientsWithoutEligibleContacts(t *tes
 }
 
 func TestSharingCompanyContactsRestatesAnExistingMemberGrantAtTheChosenLevel(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := companyIDOf(e.SeedCompany(t, "Shared account", &e.Rep1))
 	contact := e.SeedContact(t, "Shared employee", &e.Rep1)
@@ -177,6 +180,7 @@ func TestSharingCompanyContactsRestatesAnExistingMemberGrantAtTheChosenLevel(t *
 }
 
 func TestSharingCompanyContactsThroughTheHTTPRoute(t *testing.T) {
+	t.Parallel()
 	e := setupRelationships(t)
 	contacts := []string{e.contactID}
 	for _, name := range []string{"Account engineer", "Account finance"} {
@@ -230,6 +234,7 @@ func TestSharingCompanyContactsThroughTheHTTPRoute(t *testing.T) {
 }
 
 func TestSharingCompanyContactsThroughTheOwnersAgent(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := companyIDOf(e.SeedCompany(t, "Owner's account", &e.Rep1))
 	contact := e.SeedContact(t, "Owner's employee", &e.Rep1)

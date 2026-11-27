@@ -198,6 +198,7 @@ func (f *reportingBusinessFixture) selection() crmcontracts.ReportingSelection {
 }
 
 func TestReportingBusinessFixtureReconcilesEveryChartWithItsEvidence(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	selection := f.selection()
 	result, err := f.service.Evaluate(f.human, selection)
@@ -258,6 +259,7 @@ func TestReportingBusinessFixtureReconcilesEveryChartWithItsEvidence(t *testing.
 }
 
 func TestReportingPresetsAnswerEveryMetricTheyAskOnAPopulatedFixture(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	actor, ok := principal.Actor(f.human)
 	if !ok {
@@ -302,6 +304,7 @@ func TestReportingPresetsAnswerEveryMetricTheyAskOnAPopulatedFixture(t *testing.
 }
 
 func TestSearchWonDealsUsesTheReportingCountAndTheMembersScope(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	selection := f.selection()
 	selection.PipelineId = nil
@@ -399,6 +402,7 @@ func TestSearchWonDealsUsesTheReportingCountAndTheMembersScope(t *testing.T) {
 }
 
 func TestANameOnlyCSVContactLandsWithAChannelWarning(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := importAdmin(e)
 	runs := migration.NewRunStore(e.DB())
@@ -439,6 +443,7 @@ func TestANameOnlyCSVContactLandsWithAChannelWarning(t *testing.T) {
 }
 
 func TestSearchRecordsPreserveTheQueryToolsHydratedResults(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	server := Server{toolRegistry: f.env.toolRegistry()}
 	plan, err := searchplan.Admit(searchplan.Plan{Engine: "records", Arguments: `{"plan":{"version":"v1","target":"deal","where":[{"field":"status","op":"eq","value":"open"},{"field":"currency","op":"eq","value":"EUR"},{"field":"amount_minor","op":"gt","value":50000},{"field":"expected_close_date","op":"gte","value":"2026-09-01"},{"field":"expected_close_date","op":"lt","value":"2026-10-01"}]}}`}, "Which deals close this month over EUR 50k?", `{"context":{"base_currency":"EUR"}}`)
@@ -472,6 +477,7 @@ func TestSearchRecordsPreserveTheQueryToolsHydratedResults(t *testing.T) {
 }
 
 func TestSearchAnalyticsUsesTheExistingQueryAndAnswerLabels(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	handler := newAnalyticsQueryHandlers(InstallationDB(f.env.Pool), analyticsquery.DefaultFloor, nil)
 	server := Server{analyticsQueryHandlers: handler}

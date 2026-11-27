@@ -16,6 +16,7 @@ import (
 // Dating it before that issue would fail the lifetime check and roll back the
 // fresh mint with it.
 func TestAFreshLinkSupersedesOneStampedByAFasterClock(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	issueLink(t, e)
 	if _, err := e.owner.Exec(context.Background(),

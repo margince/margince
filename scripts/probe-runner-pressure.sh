@@ -54,12 +54,19 @@ while :; do
     psi_avg10=$(awk '/^some/ { for (i = 2; i <= NF; i++) if ($i ~ /^avg10=/) { sub("avg10=", "", $i); print $i; exit } }' /proc/pressure/memory)
     psi_total=$(awk '/^some/ { for (i = 2; i <= NF; i++) if ($i ~ /^total=/) { sub("total=", "", $i); print $i; exit } }' /proc/pressure/memory)
   fi
-  printf 'runner-pressure %s mem_avail_kb=%s swap_free_kb=%s psi_mem_some_avg10=%s psi_mem_some_total_us=%s load=%s\n' \
+  # CPU PSI says whether runnable work waited for a core, which load cannot
+  # tell apart from tasks sleeping in the kernel.
+  psi_cpu='?'
+  if [[ -r /proc/pressure/cpu ]]; then
+    psi_cpu=$(awk '/^some/ { for (i = 2; i <= NF; i++) if ($i ~ /^avg10=/) { sub("avg10=", "", $i); print $i; exit } }' /proc/pressure/cpu)
+  fi
+  printf 'runner-pressure %s mem_avail_kb=%s swap_free_kb=%s psi_mem_some_avg10=%s psi_mem_some_total_us=%s psi_cpu_some_avg10=%s load=%s\n' \
     "$(date -u +%H:%M:%S)" \
     "$(field /proc/meminfo MemAvailable)" \
     "$(field /proc/meminfo SwapFree)" \
     "$psi_avg10" \
     "$psi_total" \
+    "$psi_cpu" \
     "$(cut -d' ' -f1-3 /proc/loadavg 2>/dev/null || printf '?')"
   sleep "$interval"
 done

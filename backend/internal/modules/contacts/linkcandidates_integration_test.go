@@ -18,6 +18,7 @@ import (
 // Creating a company with domain D offers the live contacts on D, and linking
 // writes edges for the ticked ones only.
 func TestANewCompanyOffersItsDomainContactsAndLinksOnlyTheTickedOnes(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	// The company carries a consumer domain too: an address there must never match.
@@ -75,6 +76,7 @@ func TestANewCompanyOffersItsDomainContactsAndLinksOnlyTheTickedOnes(t *testing.
 // One non-candidate refuses the whole batch by name, and nothing is written for
 // the candidate beside it. An unreadable contact reads like any non-candidate.
 func TestLinkingANonCandidateWritesNothing(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	company := e.createNamedCompany(ctx, t, "Batchco", "batchco.test")
@@ -102,6 +104,7 @@ func TestLinkingANonCandidateWritesNothing(t *testing.T) {
 // The list matches a domain as the daily plant does: a subdomain address is a
 // candidate, a lookalike ending is not.
 func TestASubdomainAddressIsALinkCandidateOfTheParentDomain(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	company := e.createNamedCompany(ctx, t, "Acme", "acme.example")
@@ -124,6 +127,7 @@ func TestASubdomainAddressIsALinkCandidateOfTheParentDomain(t *testing.T) {
 // A workspace seat on the company's domain is a colleague the plant never attaches.
 // The list never offers them, and the link refuses them.
 func TestAWorkspaceSeatIsNoLinkCandidate(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	company := e.createNamedCompany(ctx, t, "Seatco", "seatco.test")
@@ -146,6 +150,7 @@ func TestAWorkspaceSeatIsNoLinkCandidate(t *testing.T) {
 
 // A seat stored under the Unicode spelling of its domain is still a seat.
 func TestASeatAtAUnicodeDomainIsNoLinkCandidate(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	company := e.createNamedCompany(ctx, t, "Bücher", "xn--bcher-kva.example")
@@ -169,6 +174,7 @@ func TestASeatAtAUnicodeDomainIsNoLinkCandidate(t *testing.T) {
 // A contact shared read-only can be read but not given an edge. It is not offered,
 // and the link refuses it like any other non-candidate.
 func TestAReadOnlyShareIsNoLinkCandidate(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.asRepOwnRows()
 	company := e.createNamedCompany(ctx, t, "Shareco", "shareco.test")
@@ -198,6 +204,7 @@ func TestAReadOnlyShareIsNoLinkCandidate(t *testing.T) {
 
 // A caller the link would refuse outright is offered no one.
 func TestACallerWhoMayNotLinkIsOfferedNoCandidates(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	company := e.createNamedCompany(e.as(), t, "Viewco", "viewco.test")
 	e.legacyUnlinkedDomainContact(e.as(), t, "Vic Viewed", "vic@viewco.test")

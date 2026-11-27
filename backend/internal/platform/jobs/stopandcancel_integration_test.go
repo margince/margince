@@ -43,6 +43,7 @@ func (w *stuckWorker) Work(ctx context.Context, _ *river.Job[stuckArgs]) error {
 }
 
 func TestStopAndCancelEndsAJobThatOutlastsTheDrain(t *testing.T) {
+	t.Parallel()
 	stuck := &stuckWorker{started: make(chan struct{}), returned: make(chan struct{})}
 	r, _ := migratedAppPool(t, func(w *river.Workers) { river.AddWorker(w, stuck) })
 	ctx := t.Context()
@@ -94,6 +95,7 @@ func TestStopAndCancelEndsAJobThatOutlastsTheDrain(t *testing.T) {
 // that fails in turn is what tells a role it is about to close the bus and the
 // pool underneath running jobs. A bare context error would not name the step.
 func TestStopAndCancelWrapsItsOwnFailure(t *testing.T) {
+	t.Parallel()
 	stuck := &stuckWorker{started: make(chan struct{}), returned: make(chan struct{})}
 	r, _ := migratedAppPool(t, func(w *river.Workers) { river.AddWorker(w, stuck) })
 	ctx := t.Context()

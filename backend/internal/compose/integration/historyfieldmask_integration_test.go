@@ -99,6 +99,7 @@ func seededFigures() []string {
 }
 
 func TestAMaskedAmountIsGoneFromADealsFieldHistory(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	reader, mine, theirs := maskedMoneyReader(t, e)
 
@@ -139,6 +140,7 @@ func TestAMaskedAmountIsGoneFromADealsFieldHistory(t *testing.T) {
 // An agent on its user's passport reads the trail its user reads, under the
 // same mask. A role without the record's read grant reads none.
 func TestAnAgentReadsTheFieldHistoryItsUserReads(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	reader, _, theirs := maskedMoneyReader(t, e)
 	agent, _ := principal.Actor(reader)
@@ -168,6 +170,7 @@ func TestAnAgentReadsTheFieldHistoryItsUserReads(t *testing.T) {
 }
 
 func TestAMaskedAmountIsGoneFromADealsRecordHistoryImages(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	reader, _, theirs := maskedMoneyReader(t, e)
 
@@ -231,6 +234,7 @@ func maskedTierReader(t *testing.T, e *Env) (reader context.Context, company ids
 }
 
 func TestAMaskedMarginTierIsGoneFromItsCompanysFieldHistory(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	reader, company := maskedTierReader(t, e)
 
@@ -264,6 +268,7 @@ func TestAMaskedMarginTierIsGoneFromItsCompanysFieldHistory(t *testing.T) {
 }
 
 func TestAMaskedMarginTierIsGoneFromItsCompanysRecordHistoryImages(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	reader, company := maskedTierReader(t, e)
 

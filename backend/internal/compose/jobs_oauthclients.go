@@ -43,7 +43,7 @@ func addUnusedClientSweepJob(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunner
 		retention = identity.DefaultUnusedDynamicClientRetention
 	}
 	addDeclaredWorker[OAuthClientUnusedSweepArgs](reg, &unusedClientSweepWorker{
-		identity: identity.NewService(pool), retention: retention, log: log,
+		identity: IdentityService(pool), retention: retention, log: log,
 	})
 	return periodicFor(cfg, OAuthClientUnusedSweepArgs{})
 }

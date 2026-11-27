@@ -8,7 +8,6 @@ package privacy
 import (
 	"context"
 	"errors"
-	"os"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -25,12 +24,10 @@ import (
 // floor. A two-year-old row is kept where such records are kept six years, and
 // due where no floor is set.
 func TestTheFloorOfAnExtensionTablesClassKeepsAYoungerRow(t *testing.T) {
-	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
-	if ownerDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
+	t.Parallel()
+	db := testdb.New(t)
 	ctx := context.Background()
-	owner, err := pgx.Connect(ctx, ownerDSN)
+	owner, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -39,9 +36,6 @@ func TestTheFloorOfAnExtensionTablesClassKeepsAYoungerRow(t *testing.T) {
 			t.Errorf("closing owner connection: %v", err)
 		}
 	})
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
 	table := extdecl.Table{
 		Name: "ext_probe_floor", Links: []extdecl.Link{{Column: "contact_id", Record: extdecl.Contact}},
 		Personal: []string{"body"}, Retention: jurisdiction.CommercialCorrespondence, AgeColumn: "kept_at",

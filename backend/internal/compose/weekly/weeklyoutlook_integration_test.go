@@ -86,6 +86,7 @@ func oneHorizon(openingID, closingID ids.UUID) *stubForecast {
 // still report the same figures, because a retrospective that empties out is
 // not a record.
 func TestDeletingTheSnapshotsLeavesTheReviewsOutlookReadable(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 	opening, closing := ids.NewV7(), ids.NewV7()
 	e.engine = e.engine.WithForecast(oneHorizon(opening, closing))
@@ -127,6 +128,7 @@ func TestDeletingTheSnapshotsLeavesTheReviewsOutlookReadable(t *testing.T) {
 // An absent Monday snapshot is an ABSENCE, never a zero. A zero opening draws a
 // week that started from nothing and made everything.
 func TestAMissingMondaySnapshotLeavesTheOpeningSideAbsentNotSubstituted(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 	stub := oneHorizon(ids.Nil, ids.NewV7())
 	stub.outlooks[0].Opening = OutlookSide{}
@@ -157,6 +159,7 @@ func TestAMissingMondaySnapshotLeavesTheOpeningSideAbsentNotSubstituted(t *testi
 // get the same one. The bars are stored unordered and come back in the bridge's
 // own drawing order.
 func TestTheFrozenBarsComeBackInDrawingOrder(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 	stub := oneHorizon(ids.NewV7(), ids.NewV7())
 	// Written in an order no reader should ever see.
@@ -198,6 +201,7 @@ func TestTheFrozenBarsComeBackInDrawingOrder(t *testing.T) {
 // An installation with no forecast composed still gets its review. The
 // retrospective of what a rep DID does not depend on forecasting anything.
 func TestAnAbsentForecastSeamStillWritesTheReview(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 
 	written, created, err := e.engine.AssembleFor(e.repCtx, weekClock)
@@ -217,6 +221,7 @@ func TestAnAbsentForecastSeamStillWritesTheReview(t *testing.T) {
 // arbiter returns first. This case holds that path — the cheap one, and the one
 // the dispatcher's extra ticks actually take.
 func TestASecondAssemblyWritesNoSecondOutlook(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 	e.engine = e.engine.WithForecast(oneHorizon(ids.NewV7(), ids.NewV7()))
 
@@ -239,6 +244,7 @@ func TestASecondAssemblyWritesNoSecondOutlook(t *testing.T) {
 // returns before this, so without a direct case the ON CONFLICT is untested and
 // a retry inside one transaction would double every bar.
 func TestFreezingAnOutlookTwiceLeavesOneSetOfBars(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 	stub := oneHorizon(ids.NewV7(), ids.NewV7())
 	e.engine = e.engine.WithForecast(stub)

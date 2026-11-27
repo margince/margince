@@ -74,6 +74,7 @@ func setUpRetry(company, approval string) string {
 }
 
 func TestAnApprovedAssistantSetUpStartsAProgramWithNoTier(t *testing.T) {
+	t.Parallel()
 	c := setupChannelSendNoGmail(t)
 	invoke := c.partnerSetUpInvoker(t)
 	company := c.enrichTarget(t)
@@ -100,6 +101,7 @@ func TestAnApprovedAssistantSetUpStartsAProgramWithNoTier(t *testing.T) {
 }
 
 func TestAnAssistantSetUpNamingATierStagesNothing(t *testing.T) {
+	t.Parallel()
 	c := setupChannelSendNoGmail(t)
 	invoke := c.partnerSetUpInvoker(t)
 	company := c.enrichTarget(t)
@@ -112,6 +114,7 @@ func TestAnAssistantSetUpNamingATierStagesNothing(t *testing.T) {
 }
 
 func TestAnAssistantSetUpOnAnExistingProgramIsRefusedBeforeStaging(t *testing.T) {
+	t.Parallel()
 	c := setupChannelSendNoGmail(t)
 	invoke := c.partnerSetUpInvoker(t)
 	company := c.enrichTarget(t)
@@ -125,6 +128,7 @@ func TestAnAssistantSetUpOnAnExistingProgramIsRefusedBeforeStaging(t *testing.T)
 }
 
 func TestASetUpApprovedBeforeAHumanSetsUpTheProgramIsRefusedAndChangesNothing(t *testing.T) {
+	t.Parallel()
 	c := setupChannelSendNoGmail(t)
 	invoke := c.partnerSetUpInvoker(t)
 	company := c.enrichTarget(t)
@@ -146,6 +150,7 @@ func TestASetUpApprovedBeforeAHumanSetsUpTheProgramIsRefusedAndChangesNothing(t 
 }
 
 func TestASetUpOnAnArchivedProgramStartsFromTheDefaults(t *testing.T) {
+	t.Parallel()
 	c := setupChannelSendNoGmail(t)
 	invoke := c.partnerSetUpInvoker(t)
 	company := c.enrichTarget(t)

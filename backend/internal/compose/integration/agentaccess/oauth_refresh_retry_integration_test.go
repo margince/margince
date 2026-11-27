@@ -45,6 +45,7 @@ func (o *oauthEnv) createContactTool(t *testing.T, accessToken, name, key string
 }
 
 func TestAToolRetryAfterATokenRefreshReplaysTheFirstWrite(t *testing.T) {
+	t.Parallel()
 	o := setupOAuth(t)
 	access, refresh := o.connect(t)
 	name := "Refresh Retry Tool Contact " + ids.NewV7().String()
@@ -60,6 +61,7 @@ func TestAToolRetryAfterATokenRefreshReplaysTheFirstWrite(t *testing.T) {
 }
 
 func TestARESTRetryAfterATokenRefreshReplaysTheFirstWrite(t *testing.T) {
+	t.Parallel()
 	o := setupOAuth(t)
 	access, refresh := o.connect(t)
 	name := "Refresh Retry REST Contact " + ids.NewV7().String()
@@ -90,6 +92,7 @@ func TestARESTRetryAfterATokenRefreshReplaysTheFirstWrite(t *testing.T) {
 var taskHandle = regexp.MustCompile(`"taskId":"([0-9a-f-]{36})"`)
 
 func TestATaskHandleOutlivesItsConnectionsTokenRefresh(t *testing.T) {
+	t.Parallel()
 	o := setupOAuth(t)
 	code := o.authorize(t, url.Values{"scope": {"read enrich offline_access"}})
 	_, tokens := o.exchange(t, url.Values{"code": {code}})

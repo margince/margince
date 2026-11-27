@@ -78,8 +78,9 @@ func (a extJobWorkspaceArgs) WorkspaceID() ids.UUID { return a.Workspace }
 
 // extJobDispatcherWorker fans one composed job out over the fleet.
 type extJobDispatcherWorker struct {
-	pool *pgxpool.Pool
-	decl extension.JobDeclaration
+	pool     *pgxpool.Pool
+	jobTable jobs.Composed
+	decl     extension.JobDeclaration
 }
 
 // Work enqueues one child per live workspace, as ONE atomic insert.
@@ -112,7 +113,7 @@ func (w *extJobDispatcherWorker) Work(ctx context.Context, _ *river.Job[extJobDi
 	// holds a pool and a declaration and never the unit's handler, so every error
 	// below is compose's own and no declared failure class can reach here. Asking
 	// for kind-verification would be asking about a value that cannot arrive.
-	return jobs.FaultContext(ctx, dispatchWith(ctx, workspaces, clientInsertMany(ctx), workspaceSweepOpts(child),
+	return jobs.FaultContext(ctx, dispatchWith(ctx, w.jobTable, workspaces, clientInsertMany(ctx), workspaceSweepOpts(w.jobTable, child),
 		func(ws ids.UUID) river.JobArgs {
 			return extJobWorkspaceArgs{JobKind: child, Workspace: ws}
 		}))
@@ -156,10 +157,13 @@ func extensionJobPrincipal(decl extension.JobDeclaration) principal.Principal {
 
 // extJobWorkspaceWorker runs ONE workspace's tick of one composed job.
 type extJobWorkspaceWorker struct {
-	pool   *pgxpool.Pool
-	decl   extension.JobDeclaration
-	handle extension.JobHandler
-	log    *slog.Logger
+	pool *pgxpool.Pool
+	// composed is the composition that served the job, whose runtime binding
+	// every tick's Runtime is built over.
+	composed *Extensions
+	decl     extension.JobDeclaration
+	handle   extension.JobHandler
+	log      *slog.Logger
 }
 
 func (w *extJobWorkspaceWorker) Work(ctx context.Context, job *river.Job[extJobWorkspaceArgs]) error {
@@ -174,15 +178,12 @@ func (w *extJobWorkspaceWorker) Work(ctx context.Context, job *river.Job[extJobW
 	}
 	wsCtx = principal.WithActor(wsCtx, extensionJobPrincipal(w.decl))
 	wsCtx = principal.WithCorrelationID(wsCtx, ids.NewV7())
-	// FaultForKind, on the CHILD's kind, because w.tick is the one call here that
-	// runs the UNIT's code and so the one that can return a declared failure
-	// class. A class is honoured only when it is exactly one this installation
-	// registered for this kind; see jobs.FaultForKind for why the write path
-	// verifies rather than trusts.
+	// FaultForKind on the child's kind, because w.tick runs the unit's code and
+	// so can return a declared failure class. Only a class the composition
+	// declared for this kind is honoured.
 	//
-	// On wsCtx: the log line is written from this context, and jobs.FaultForKind
-	// reads the correlation id and the workspace off it. ctx carries neither.
-	return jobs.FaultForKind(wsCtx, w.decl.ChildKind(), w.tick(wsCtx))
+	// On wsCtx: FaultForKind logs the correlation id and workspace from it.
+	return jobs.FaultForKind(wsCtx, w.composed.declaredJobs(), w.decl.ChildKind(), w.tick(wsCtx))
 }
 
 // tick mints the call-scoped Runtime, runs the unit's handler with it, and
@@ -210,7 +211,7 @@ func (w *extJobWorkspaceWorker) Work(ctx context.Context, job *river.Job[extJobW
 //     is precisely the text that must not land there. Converting it to an error
 //     here puts it back on the path every other worker's failure takes.
 func (w *extJobWorkspaceWorker) tick(ctx context.Context) (err error) {
-	deps := boundExtensionRuntime()
+	deps := w.composed.binding()
 	// No version: a job declaration carries none, and a tick writes no core
 	// record to attribute (Core refuses one outright), so the surface alone is
 	// the whole of what a tick's provenance could say.

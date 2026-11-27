@@ -20,6 +20,7 @@ import (
 )
 
 func TestAnUpdateOfANoteNamesTheTaskFieldItCannotCarry(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	note := ids.From[ids.ActivityKind](ids.UUID(loggedNote(ctx, t, e).Id))

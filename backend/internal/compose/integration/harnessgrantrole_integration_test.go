@@ -26,6 +26,7 @@ import (
 )
 
 func TestGrantRoleRefusesARoleTheInstallationDidNotShip(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	// A role a fixture could plausibly create: the key of a shipped one with a
 	// suffix, a policy of its own, and ASSIGNED to the seat — which is the

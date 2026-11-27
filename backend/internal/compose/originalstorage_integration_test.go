@@ -69,6 +69,7 @@ func readOriginalBytes(ctx context.Context, t *testing.T, db *database.DB, id id
 }
 
 func TestLargeCapturedOriginalsStayAppendOnceAndReplayExactly(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	blob := blobstore.NewMemory()
 	ctx := originalstore.Bind(asConnectorFor(e.Admin(), "connector:imap", e.AdminUser), e.DB(), blob)
@@ -100,6 +101,7 @@ func TestLargeCapturedOriginalsStayAppendOnceAndReplayExactly(t *testing.T) {
 }
 
 func TestRawRedeliveryRetiresItsOldObjectAndRollbackKeepsAnIntent(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := originalstore.Bind(e.Admin(), e.DB(), blobstore.NewMemory())
 	payload := []byte(`{"text":"` + strings.Repeat("a", originalstore.InlineLimit) + `"}`)
@@ -159,6 +161,7 @@ func TestRawRedeliveryRetiresItsOldObjectAndRollbackKeepsAnIntent(t *testing.T) 
 }
 
 func TestTheOriginalSweepResumesAndChecksSmallLegacyRowsOnce(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "original_offload_fixture")
 	blob := blobstore.NewMemory()
@@ -201,6 +204,7 @@ func TestTheOriginalSweepResumesAndChecksSmallLegacyRowsOnce(t *testing.T) {
 }
 
 func TestOversizedOriginalsKeepTheDatabaseAdmissionRules(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	blob := &failingOriginalBlob{Store: blobstore.NewMemory()}
 	ctx := originalstore.Bind(asConnectorFor(e.Admin(), "connector:imap", e.AdminUser), e.DB(), blob)

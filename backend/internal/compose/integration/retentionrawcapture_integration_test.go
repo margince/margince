@@ -39,6 +39,7 @@ import (
 )
 
 func TestTheRetentionSweepDestroysTheProviderOriginalToo(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	activity := ids.NewV7()
 	const sourceSystem, sourceID = "gmail", "msg-aged-out"
@@ -79,7 +80,7 @@ func TestTheRetentionSweepDestroysTheProviderOriginalToo(t *testing.T) {
 
 	svc := compose.NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	SettleIntoInstall(t, e)
-	if err := svc.EvaluateInstallation(RetentionPassCtx(e.WS)); err != nil {
+	if err := svc.EvaluateInstallation(RetentionPassCtx(context.Background(), e.WS)); err != nil {
 		t.Fatalf("running the retention sweep: %v", err)
 	}
 
@@ -142,6 +143,7 @@ func TestTheRetentionSweepDestroysTheProviderOriginalToo(t *testing.T) {
 // comment is written to avoid. So the aged-out activity must still be intact
 // after the refusal, which is only true while the check precedes the work.
 func TestAPassMissingItsPurgerRefusesBeforeDestroyingAnything(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
@@ -163,7 +165,7 @@ func TestAPassMissingItsPurgerRefusesBeforeDestroyingAnything(t *testing.T) {
 	// the value compose never passes.
 	bare := privacy.NewRetentionService(e.DB(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)), nil)
 	SettleIntoInstall(t, e)
-	err := bare.EvaluateInstallation(RetentionPassCtx(e.WS))
+	err := bare.EvaluateInstallation(RetentionPassCtx(context.Background(), e.WS))
 	if !errors.Is(err, privacy.ErrRetentionSeamMissing) {
 		t.Fatalf("a pass with no raw-capture purger returned %v, want ErrRetentionSeamMissing — "+
 			"it must refuse, because the provider original has no other way to age out", err)

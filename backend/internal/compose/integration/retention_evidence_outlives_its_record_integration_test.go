@@ -29,6 +29,7 @@ import (
 // refused, leaving a project a controller cannot remove for a reason that names
 // no project.
 func TestDeletingTwoSameNamedProjectsLeavesBothEvidenceRowsStanding(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedProjectStampFixture(t, e)
 
@@ -69,6 +70,7 @@ func TestDeletingTwoSameNamedProjectsLeavesBothEvidenceRowsStanding(t *testing.T
 // writer reached through a different event: a project qualifies correspondence
 // when the LINK is written, a deal when it CONCLUDES.
 func TestDeletingTwoSameNamedDealsLeavesBothEvidenceRowsStanding(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedProjectStampFixture(t, e)
 
@@ -115,6 +117,7 @@ func TestDeletingTwoSameNamedDealsLeavesBothEvidenceRowsStanding(t *testing.T) {
 // the name it freezes. This guard is what refuses a writer that stops doing so,
 // and without it the index would admit the duplicate it exists to prevent.
 func TestDerivedEvidenceMustNameTheRecordItIsDerivedFrom(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedProjectStampFixture(t, e)
 
@@ -150,6 +153,7 @@ func TestDerivedEvidenceMustNameTheRecordItIsDerivedFrom(t *testing.T) {
 // ON DELETE SET NULL fires once the parent is already gone, which is what lets
 // one condition tell the two apart.
 func TestAnEvidenceReferenceIsClearedByItsForeignKeyOrNotAtAll(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedProjectStampFixture(t, e)
 

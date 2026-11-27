@@ -88,6 +88,7 @@ func vacuumListed(report crmcontracts.VacuumRecommendations, table string) *crmc
 // The test tables are a few megabytes, so the byte floor is lowered to one
 // megabyte; the share threshold is the shipped one.
 func TestATableWithMostRowsDeletedIsRecommendedAndALightlyChurnedOneIsNot(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	heavy := churnedTable(t, e, 60)
@@ -117,6 +118,7 @@ func TestATableWithMostRowsDeletedIsRecommendedAndALightlyChurnedOneIsNot(t *tes
 }
 
 func TestOnlyAdminsAndOpsReadTheVacuumRecommendations(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	var report crmcontracts.VacuumRecommendations
@@ -136,6 +138,7 @@ func TestOnlyAdminsAndOpsReadTheVacuumRecommendations(t *testing.T) {
 // adds up the widths reads about a quarter of this packed file as empty.
 // One updated row brings it past the read's filter for tables never changed.
 func TestAFreshlyLoadedTableWithPaddedColumnsIsNotRecommended(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	padded := probeTable(t, e, `a bool, b int8, c bool, d int8, f bool, g int8, h bool, i int8`,
@@ -153,6 +156,7 @@ func TestAFreshlyLoadedTableWithPaddedColumnsIsNotRecommended(t *testing.T) {
 // The size must come from that same ANALYZE, or the new rows read as empty space.
 // The share threshold is 10% with no byte floor, under the 13% such a read would show.
 func TestRowsAddedSinceTheLastAnalyzeAreNotReadAsWaste(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	grown := probeTable(t, e, `id int PRIMARY KEY, body text NOT NULL`,

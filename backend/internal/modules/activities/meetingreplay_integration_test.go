@@ -78,6 +78,7 @@ func eventKinds(t *testing.T, e *sendEnv, activityID ids.ActivityID) []string {
 // canceled is a vocabulary that exists to change over time, and nothing on this
 // side of the connector can know it did.
 func TestARedeliveredMeetingCarriesItsNewStatus(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	start := time.Now().Add(48 * time.Hour)
 	first := deliverMeeting(t, e, "evt-cancel-1", "Northgate review", start,
@@ -133,6 +134,7 @@ func TestARedeliveredMeetingCarriesItsNewStatus(t *testing.T) {
 // constantly, and a transition recorded per delivery would make "booked" a
 // countable event that happened four times.
 func TestARedeliveredMeetingThatDidNotMoveWritesNothing(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	start := time.Now().Add(48 * time.Hour)
 	first := deliverMeeting(t, e, "evt-same-1", "Kestrel sync", start,
@@ -160,6 +162,7 @@ func TestARedeliveredMeetingThatDidNotMoveWritesNothing(t *testing.T) {
 // calendar sends its own version again — which is why this moves the status
 // alone rather than patching every mutable field.
 func TestARedeliveryLeavesTheSubjectAContactCorrected(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	start := time.Now().Add(-48 * time.Hour)
 	first := deliverMeeting(t, e, "evt-subject-1", "mtg", start,

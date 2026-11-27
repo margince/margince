@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"sync"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
@@ -25,27 +24,6 @@ import (
 type composedJob struct {
 	decl   extension.JobDeclaration
 	handle extension.JobHandler
-}
-
-// composedJobs holds the served set of this boot, written once by
-// RegisterExtensions before any runner is built. Same shape and same reason as
-// composedTools: the mutex guards the write-then-read ordering across the
-// boot/serve boundary, not concurrent registrations.
-var composedJobs struct {
-	mu   sync.RWMutex
-	jobs []composedJob
-}
-
-func setComposedJobs(set []composedJob) {
-	composedJobs.mu.Lock()
-	defer composedJobs.mu.Unlock()
-	composedJobs.jobs = set
-}
-
-func servedExtensionJobs() []composedJob {
-	composedJobs.mu.RLock()
-	defer composedJobs.mu.RUnlock()
-	return composedJobs.jobs
 }
 
 // buildExtensionJobs joins every handler-bearing Jobs entry to the declaration
@@ -130,10 +108,9 @@ func refuseUnrunnableJob(d extension.JobDeclaration) error {
 	return nil
 }
 
-// composedJobSpecs is the declaration table the composed set contributes: two
-// Specs per served job, which jobs.RegisterComposed puts behind SpecFor so a
-// composed kind answers the same questions a core one does — its wall clock,
-// its queue, its attempt cap, who fans out to it.
+// composedJobSpecs is the declaration table the composed set contributes, two
+// Specs per served job. jobs.NewComposed puts them behind SpecFor. A composed
+// kind so answers its wall clock, queue, attempt cap and fan-out as a core one.
 func composedJobSpecs(set []composedJob) []jobs.Spec {
 	specs := make([]jobs.Spec, 0, 2*len(set))
 	for _, j := range set {
@@ -187,17 +164,12 @@ func composedJobSpecs(set []composedJob) []jobs.Spec {
 }
 
 // composedFailureClasses is the failure vocabulary the composed set
-// contributes, keyed by River kind — the shape jobs.RegisterComposedFailureClasses
-// takes, because the READ starts from a row and a row carries a kind, not a unit.
+// contributes, keyed by River kind. A read starts from a row, and a row
+// carries a kind, not a unit.
 //
-// The CHILD kind only, not the dispatcher's. A dispatcher runs no unit code —
-// it holds a pool and a declaration, never the unit's handler — so no declared
-// class can ever reach a dispatcher row, and a vocabulary registered for that
-// kind would be a table entry nothing could ever read.
-//
-// A unit that declared no classes contributes no entry rather than an empty
-// one, which is what keeps ComposedFailureKinds a list of kinds that actually
-// have a vocabulary.
+// The child kind only. A dispatcher runs no unit code, so no declared class can
+// reach a dispatcher row. A unit that declared no classes contributes no entry,
+// so FailureKinds lists only kinds that have a vocabulary.
 func composedFailureClasses(exts []extension.Extension, set []composedJob) map[string][]extension.FailureClass {
 	byUnit := make(map[extension.Name][]extension.FailureClass, len(exts))
 	for _, e := range exts {
@@ -224,8 +196,8 @@ func composedFailureClasses(exts []extension.Extension, set []composedJob) map[s
 // process: the ext_ queues, kinds and ticks simply do not exist there, and that
 // is what keeps the composed lane a superset of the vanilla one rather than a
 // different program.
-func addExtensionJobs(reg *jobRegistry, pool *pgxpool.Pool, book *ScheduleBook, log *slog.Logger) []*river.PeriodicJob {
-	set := servedExtensionJobs()
+func addExtensionJobs(reg *jobRegistry, composed *Extensions, pool *pgxpool.Pool, book *ScheduleBook, log *slog.Logger) []*river.PeriodicJob {
+	set := composed.servedJobs()
 	if len(set) == 0 {
 		return nil
 	}
@@ -233,10 +205,10 @@ func addExtensionJobs(reg *jobRegistry, pool *pgxpool.Pool, book *ScheduleBook, 
 	for _, j := range set {
 		addComposedWorker(reg,
 			extJobDispatcherArgs{JobKind: j.decl.DispatcherKind()},
-			&extJobDispatcherWorker{pool: pool, decl: j.decl})
+			&extJobDispatcherWorker{pool: pool, jobTable: composed.declaredJobs(), decl: j.decl})
 		addComposedWorker(reg,
 			extJobWorkspaceArgs{JobKind: j.decl.ChildKind()},
-			&extJobWorkspaceWorker{pool: pool, decl: j.decl, handle: j.handle, log: log})
+			&extJobWorkspaceWorker{pool: pool, composed: composed, decl: j.decl, handle: j.handle, log: log})
 		periodic = append(periodic, periodicForComposed(book, j.decl))
 	}
 	return periodic
@@ -270,16 +242,14 @@ func composedCadence(d extension.JobDeclaration) jobs.Cadence {
 // declaredJobArgs and cannot be: the args VALUE carries the kind, so the
 // registration has to pass one rather than let River instantiate the zero type.
 //
-// Everything else is addGovernedWorker's: the worker reaches River as
+// Everything else is addGovernedWorker's. The worker reaches River as
 // jobs.WorkOnly wrapped in jobs.Govern, so it answers none of River's option
-// methods for itself, and the kind is recorded for jobs.MustBeTotal — which now
-// finds it, because RegisterExtensions declared it through jobs.RegisterComposed
-// before this runs.
+// methods for itself. The kind is recorded for MustBeTotal.
 func addComposedWorker[T river.JobArgs](reg *jobRegistry, args T, w jobs.WorkOnly[T]) {
 	kind := args.Kind()
 	reg.kinds = append(reg.kinds, kind)
 	reg.wired[kind] = wiredWorker{args: args, worker: w}
-	spec, _ := jobs.SpecFor(kind)
+	spec, _ := reg.jobTable.SpecFor(kind)
 	//nolint:forbidigo // the ONE sanctioned AddWorkerArgs: a composed kind lives in the args value, not the type, so River must be handed the value — still wrapped in jobs.Govern and still recorded for MustBeTotal
 	river.AddWorkerArgs(reg.workers, args, jobs.Govern[T](w, spec))
 }

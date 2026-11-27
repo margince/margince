@@ -35,6 +35,7 @@ func (e *resolveEnv) livesIn(t *testing.T, code string) {
 // Mutation: drop the requireConsentWhereNothingStandsIn call from the contact
 // arm of decideOneIn and the consent-only cases keep no_marketing_consent.
 func TestNoExceptionStandsInForMarketingConsentWhereTheCountryRequiresIt(t *testing.T) {
+	t.Parallel()
 	testMessagingRules(t, messagingrules.Rules{Jurisdiction: "zq", Version: 1, ConsentOnly: true})
 	testMessagingRules(t, messagingrules.Rules{Jurisdiction: "zr", Version: 1})
 
@@ -74,6 +75,7 @@ func TestNoExceptionStandsInForMarketingConsentWhereTheCountryRequiresIt(t *test
 // Mutation: move the requireConsentWhereNothingStandsIn call below the override
 // arm and the override allows the send.
 func TestAnOverrideDoesNotStandInForConsentWhereTheCountryRequiresIt(t *testing.T) {
+	t.Parallel()
 	testMessagingRules(t, messagingrules.Rules{Jurisdiction: "zs", Version: 1, ConsentOnly: true})
 	e := setupResolve(t)
 	e.seedPurpose(t, "newsletter", "marketing")
@@ -92,6 +94,7 @@ func TestAnOverrideDoesNotStandInForConsentWhereTheCountryRequiresIt(t *testing.
 // Mutation: drop the requireConsentWhereNothingStandsIn call from the lead arm
 // of decideOneIn and the lead keeps no_marketing_consent.
 func TestALeadIsHeldToConsentWhereTheCountryRequiresIt(t *testing.T) {
+	t.Parallel()
 	testMessagingRules(t, messagingrules.Rules{Jurisdiction: "zt", Version: 1, ConsentOnly: true})
 	e := setupLeadConsent(t)
 	company := ids.NewV7()

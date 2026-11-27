@@ -20,6 +20,7 @@ import (
 )
 
 func TestMailApprovalSignsOnlyAsItsActualHumanSender(t *testing.T) {
+	t.Parallel()
 	for _, mode := range []string{"own", "other_reviewer", "agent"} {
 		t.Run(mode, func(t *testing.T) {
 			e := integration.Setup(t)

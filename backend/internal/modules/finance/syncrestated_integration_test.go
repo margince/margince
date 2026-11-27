@@ -14,7 +14,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // Only a source that restates what it said reaches the mirror's update arms.
@@ -23,14 +22,14 @@ import (
 // The fixture source never changes its mind, so it cannot reach these paths.
 // The double stands at the provider seam only; the store, SQL and audit writer are real.
 func TestARestatedSourceAuditsTheUpdateWithBothImages(t *testing.T) {
+	t.Parallel()
 	e := setupFinance(t)
 	source := restatingSource(e.external)
-	mark := auditWatermark(e.ctx, t, e)
 
 	if _, err := e.store.SyncConnection(e.ctx, source); err != nil {
 		t.Fatalf("first sync: %v", err)
 	}
-	created := auditRowsByEntity(e.ctx, t, e, mark)
+	created := auditRowsByEntity(e.ctx, t, e)
 
 	// A tax correction that keeps gross at 11900 (net 10000 to 11000, tax 1900 to
 	// 900), plus a restated payment and a renamed customer. With gross fixed, an
@@ -45,7 +44,7 @@ func TestARestatedSourceAuditsTheUpdateWithBothImages(t *testing.T) {
 	}
 
 	for _, entity := range []string{entityInvoice, entityPayment, entityExternalCustomer} {
-		if got, want := auditRowsByEntity(e.ctx, t, e, mark)[entity], created[entity]+1; got != want {
+		if got, want := auditRowsByEntity(e.ctx, t, e)[entity], created[entity]+1; got != want {
 			t.Errorf("%d audit rows for %s after the source restated it, want %d",
 				got, entity, want)
 		}
@@ -54,7 +53,7 @@ func TestARestatedSourceAuditsTheUpdateWithBothImages(t *testing.T) {
 	// The before image has to be what the row held, not the source's new
 	// figures rendered twice. A writer that rebuilt it from the source would
 	// pass every count above and record a change that did not happen.
-	before, after := updateImages(e.ctx, t, e, entityInvoice, mark)
+	before, after := updateImages(e.ctx, t, e, entityInvoice)
 	if before["net_minor"] != float64(10000) || after["net_minor"] != float64(11000) {
 		t.Errorf("the invoice's update reads net %v → %v, want 10000 → 11000",
 			before["net_minor"], after["net_minor"])
@@ -63,26 +62,22 @@ func TestARestatedSourceAuditsTheUpdateWithBothImages(t *testing.T) {
 		t.Errorf("gross moved (%v → %v) and this case is about the columns that move UNDER a fixed gross",
 			before["gross_minor"], after["gross_minor"])
 	}
-	before, after = updateImages(e.ctx, t, e, entityPayment, mark)
+	before, after = updateImages(e.ctx, t, e, entityPayment)
 	if before["amount_minor"] != float64(5000) || after["amount_minor"] != float64(6000) {
 		t.Errorf("the payment's update reads %v → %v, want 5000 → 6000",
 			before["amount_minor"], after["amount_minor"])
 	}
 }
 
-// updateImages reads the one update row this run wrote for entityType, fenced on
-// the watermark auditRowsByEntity uses. The package's tests share a database.
-// An unfenced read could return another test's update, and assert its images.
-func updateImages(
-	ctx context.Context, t *testing.T, e *financeEnv, entityType string, since ids.UUID,
-) (before, after map[string]any) {
+// updateImages reads the one update row this test wrote for entityType.
+func updateImages(ctx context.Context, t *testing.T, e *financeEnv, entityType string) (before, after map[string]any) {
 	t.Helper()
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		var beforeRaw, afterRaw []byte
 		if err := tx.QueryRow(ctx, `
 			SELECT before, after FROM audit_log
-			 WHERE entity_type = $1 AND action = 'update' AND id > $2`,
-			entityType, since).Scan(&beforeRaw, &afterRaw); err != nil {
+			 WHERE entity_type = $1 AND action = 'update'`,
+			entityType).Scan(&beforeRaw, &afterRaw); err != nil {
 			return err
 		}
 		if err := json.Unmarshal(beforeRaw, &before); err != nil {

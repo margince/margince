@@ -18,7 +18,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/transcriptaudience"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/corefeatures"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -87,25 +86,25 @@ func addDatabaseOnlySweepJobs(
 		pool: pool, sweeper: NewIdempotencyRetentionSweeper(pool, log),
 	})
 	addDeclaredWorker[AgentTaskRetentionArgs](reg, &agentTaskRetentionWorker{
-		sweeper: NewAgentTaskRetentionSweeper(pool, log), identity: identity.NewService(pool),
+		sweeper: NewAgentTaskRetentionSweeper(pool, log), identity: IdentityService(pool),
 	})
 	addDeclaredWorker[ApprovalNoticeReconcileArgs](reg, newApprovalNoticeReconcileWorker(pool))
 	addDeclaredWorker[ApprovalOwnerNoticeArgs](reg, &approvalOwnerNoticeWorker{pool: pool, now: time.Now})
 	addDeclaredWorker[ApprovalExpiryArgs](reg, &approvalExpiryWorker{
-		pool: pool, identity: identity.NewService(pool), log: log,
+		pool: pool, identity: IdentityService(pool), log: log,
 	})
 	addDeclaredWorker[IntroExpiryArgs](reg, &introExpiryWorker{
-		pool: pool, identity: identity.NewService(pool), log: log,
+		pool: pool, identity: IdentityService(pool), log: log,
 	})
 	addDeclaredWorker[ApprovalAutoApplyArgs](reg, &approvalAutoApplyWorker{
-		pool: pool, identity: identity.NewService(pool), log: log,
+		pool: pool, identity: IdentityService(pool), log: log,
 	})
 	addDeclaredWorker[PastActivityClockRefoldArgs](reg, &pastActivityClockWorker{
-		pool: pool, identity: identity.NewService(pool), log: log,
+		pool: pool, identity: IdentityService(pool), log: log,
 	})
 	addAIActivitySweepJobs(reg, pool, log)
 	addDeclaredWorker[MailDraftRetentionArgs](reg, &mailDraftRetentionWorker{
-		drafts: activities.NewStore(InstallationDB(pool)), identity: identity.NewService(pool), log: log,
+		drafts: activities.NewStore(InstallationDB(pool)), identity: IdentityService(pool), log: log,
 	})
 	addDeclaredWorker[RequestProofExpiryArgs](reg, newRequestProofExpiryWorker(pool, time.Now, log))
 	addDeclaredWorker[WaitingHorizonRefreshArgs](reg, newWaitingHorizonRefreshWorker(pool, log))
@@ -130,7 +129,7 @@ func NewPromiseKeptSweep(pool *pgxpool.Pool) promisekept.Sweep {
 		asked, _, err := commitmentAskedOf(ctx, tx, Commitment{SourceActivityID: source, Seat: seat})
 		return asked, err
 	}
-	return promisekept.Sweep{Pool: pool, Store: contacts.NewStore(InstallationDB(pool)), AskedOf: askedOf}
+	return promisekept.Sweep{Pool: pool, Store: contacts.NewStore(InstallationDB(pool)), AskedOf: askedOf, Rbac: installedRbacObjects()}
 }
 
 func (w promiseKeptWorker) Work(ctx context.Context, _ *river.Job[PromiseKeptSweepArgs]) error {

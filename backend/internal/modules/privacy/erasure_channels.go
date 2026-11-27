@@ -130,8 +130,8 @@ func eraseChannelIdentities(ctx context.Context, tx pgx.Tx, identities []channel
 			identity.Provider, identity.ChannelUserID); err != nil {
 			return 0, err
 		}
-		hash := storekit.ChannelIdentityHash(identity.Provider, identity.ChannelUserID)
-		if err := armSuppression(ctx, tx, "channel_identity", []string{hash}, storekit.SuppressionKeyID()); err != nil {
+		hash := storekit.ChannelIdentityHash(ctx, identity.Provider, identity.ChannelUserID)
+		if err := armSuppression(ctx, tx, "channel_identity", []string{hash}, storekit.SuppressionKeyID(ctx)); err != nil {
 			return 0, err
 		}
 	}

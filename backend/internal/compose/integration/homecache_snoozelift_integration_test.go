@@ -134,6 +134,7 @@ func (s snoozedDeal) assertOwnerReadsTheItemAgain(t *testing.T) {
 }
 
 func TestACapturedReplyEndsTheSnoozeOwnersKeptHomeAnswer(t *testing.T) {
+	t.Parallel()
 	s := briefItemOnADeal(t)
 	s.snooze(t, values.ReopenOnReply, nil)
 	s.captureMail(t, "reply", connector.DirectionInbound, s.deal)
@@ -142,6 +143,7 @@ func TestACapturedReplyEndsTheSnoozeOwnersKeptHomeAnswer(t *testing.T) {
 
 // A meeting that ends by the clock alone is not tested: the database clock cannot move between keep and lookup.
 func TestACalendarCancellationEndsTheMeetingSnoozeOwnersKeptHomeAnswer(t *testing.T) {
+	t.Parallel()
 	s := briefItemOnADeal(t)
 	meeting := CalendarMeeting{Event: "demo", At: s.now.AddDate(0, 0, 2)}
 	id := meeting.Capture(t, s.e)
@@ -152,6 +154,7 @@ func TestACalendarCancellationEndsTheMeetingSnoozeOwnersKeptHomeAnswer(t *testin
 
 // Our own chaser does not lift a reply snooze, so it leaves the kept answer.
 func TestAMailThatLiftsNoSnoozeLeavesTheKeptHomeAnswer(t *testing.T) {
+	t.Parallel()
 	s := briefItemOnADeal(t)
 	s.snooze(t, values.ReopenOnReply, nil)
 	s.captureMail(t, "chaser", connector.DirectionOutbound, s.deal)
@@ -163,6 +166,7 @@ func TestAMailThatLiftsNoSnoozeLeavesTheKeptHomeAnswer(t *testing.T) {
 // A lifted snooze stays on its row, so an answer read after the lift already
 // shows the item and is kept as any other.
 func TestAnAnswerReadAfterTheLiftIsKept(t *testing.T) {
+	t.Parallel()
 	s := briefItemOnADeal(t)
 	s.snooze(t, values.ReopenOnReply, nil)
 	s.captureMail(t, "reply", connector.DirectionInbound, s.deal)
@@ -174,6 +178,7 @@ func TestAnAnswerReadAfterTheLiftIsKept(t *testing.T) {
 
 // A reply on another deal of the owner's lifts nothing on this one.
 func TestAReplyOnAnotherDealLeavesTheKeptHomeAnswer(t *testing.T) {
+	t.Parallel()
 	s := briefItemOnADeal(t)
 	other, _ := s.seedDeal(t)
 	s.snooze(t, values.ReopenOnReply, nil)

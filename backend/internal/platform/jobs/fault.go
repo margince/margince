@@ -50,7 +50,7 @@ func Fault(err error) error { return FaultContext(context.Background(), err) }
 // error arriving here is not lost — it falls through to the core sentinel
 // underneath it, exactly as it did before classes existed.
 func FaultContext(ctx context.Context, err error) error {
-	return faultFor(ctx, "", err)
+	return Composed{}.faultFor(ctx, "", err)
 }
 
 // FaultForKind is FaultContext for a worker that knows the River kind it is
@@ -69,13 +69,16 @@ func FaultContext(ctx context.Context, err error) error {
 // fault gets, and the cause goes to the log. That is a real loss of detail for
 // the operator and it is the right trade: the alternative is a fleet-visible,
 // unscoped column holding text nobody reviewed.
-func FaultForKind(ctx context.Context, kind string, err error) error {
-	return faultFor(ctx, kind, err)
+//
+// table is the composition's job table, whose vocabulary the class is checked
+// against.
+func FaultForKind(ctx context.Context, table Composed, kind string, err error) error {
+	return table.faultFor(ctx, kind, err)
 }
 
-// faultFor is the one body both entry points share, so the two cannot drift into
-// two different orderings of the same decisions.
-func faultFor(ctx context.Context, kind string, err error) error {
+// faultFor is the body both entry points share, so both take the same
+// decisions in the same order.
+func (c Composed) faultFor(ctx context.Context, kind string, err error) error {
 	if err == nil {
 		return nil
 	}
@@ -120,7 +123,7 @@ func faultFor(ctx context.Context, kind string, err error) error {
 	// nothing: an undeclared class must cost the failure the unit's detail, not a
 	// classification it would have had anyway.
 	if class, ok := extension.FailureClassOf(err); ok {
-		if registered, found := registeredFailureClass(kind, class); found {
+		if registered, found := c.registeredFailureClass(kind, class); found {
 			if in, asked := extension.RescheduleAfter(err); asked {
 				return rescheduleFor(ctx, kind, registered.Class, in, err)
 			}

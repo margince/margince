@@ -78,6 +78,7 @@ func (w dealEvidenceWorld) viabilityReasons(t *testing.T) []viability.Reason {
 // A meeting with the buyer marked private on the rep's calendar is still the
 // buyer moving the deal. An accepted one ahead still defers it.
 func TestABusinessMeetingMarkedPrivateIsCustomerProgress(t *testing.T) {
+	t.Parallel()
 	w := newSilentDealWorld(t)
 	w.meeting(t, "budget review", w.now.AddDate(0, 0, -2), true)
 	if reasons := w.viabilityReasons(t); slices.Contains(reasons, viability.ReasonCustomerSilent) {
@@ -86,6 +87,7 @@ func TestABusinessMeetingMarkedPrivateIsCustomerProgress(t *testing.T) {
 }
 
 func TestAnAcceptedPrivateMarkedMeetingAheadDefersTheSilentDeal(t *testing.T) {
+	t.Parallel()
 	w := newSilentDealWorld(t)
 	address := "ada-" + ids.NewV7().String() + "@buyer.test"
 	buyer, err := w.e.Contacts.CreateContact(w.e.Admin(), contacts.CreateContactInput{

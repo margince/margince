@@ -10,7 +10,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/customfields"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/platform/database"
 )
@@ -28,7 +27,7 @@ import (
 // sharing one across the api and the worker would make a bootstrap race in one
 // role visible as a stale answer in the other.
 func InstallationDB(pool *pgxpool.Pool) *database.DB {
-	svc := identity.NewService(pool)
+	svc := IdentityService(pool)
 	return database.Bind(pool, svc.InstallationWorkspace)
 }
 

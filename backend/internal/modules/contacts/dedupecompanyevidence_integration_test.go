@@ -51,6 +51,7 @@ func (e *dedupeEnv) statePhone(ctx context.Context, t *testing.T, company ids.Co
 }
 
 func TestASimilarCompanyNameFilesOnlyWithASharedFact(t *testing.T) {
+	t.Parallel()
 	if score := bestCompanyNamePairing(brandName, "", lineName, ""); score.Confidence < dedupeReviewThreshold || score.SameBrand {
 		t.Fatalf("the pair scores %.4f (same brand %v); this test needs a similar name that is not one brand",
 			score.Confidence, score.SameBrand)
@@ -112,6 +113,7 @@ func TestASimilarCompanyNameFilesOnlyWithASharedFact(t *testing.T) {
 // One street address is a shared fact; one city or postal code is not, and
 // two suites at one street are two addresses.
 func TestASimilarCompanyNameAtOneStreetAddressIsFiled(t *testing.T) {
+	t.Parallel()
 	for name, tc := range map[string]struct {
 		brandStreet, brandSuite, lineStreet, lineSuite string
 		filed                                          bool
@@ -138,6 +140,7 @@ func TestASimilarCompanyNameAtOneStreetAddressIsFiled(t *testing.T) {
 // One live domain belongs to one company, so a shared domain is a nested one,
 // and the subdomain lane files it whatever the names say.
 func TestASimilarCompanyNameOnANestedDomainIsFiled(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.createNamedCompany(ctx, t, brandName, "fabrikam.example")
@@ -151,6 +154,7 @@ func TestASimilarCompanyNameOnANestedDomainIsFiled(t *testing.T) {
 // Names equal once the legal form is removed file on create, where the new
 // company has nothing stored to share yet.
 func TestOneBrandFilesOnTheNameAlone(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	for incumbent, created := range map[string]string{"Fabrikam GmbH": "Fabrikam", "Acme Inc.": "ACME"} {
@@ -168,6 +172,7 @@ func TestOneBrandFilesOnTheNameAlone(t *testing.T) {
 // The nightly close step asks the filing rule's own question. An open pair
 // filed on a name alone closes; the same pair with a shared fact stays.
 func TestTheRecheckClosesASimilarNamePairWithNoSharedFact(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	brand, line := e.createNamedCompany(ctx, t, brandName), e.createNamedCompany(ctx, t, lineName)

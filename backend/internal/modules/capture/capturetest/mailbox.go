@@ -8,7 +8,6 @@ package capturetest
 
 import (
 	"context"
-	"os"
 	"testing"
 	"time"
 
@@ -32,11 +31,8 @@ type Mailbox struct {
 func NewMailbox(t *testing.T, provider, address string) Mailbox {
 	t.Helper()
 	ctx := context.Background()
-	ownerDSN, appDSN := os.Getenv("MARGINCE_TEST_DSN"), os.Getenv("MARGINCE_TEST_APP_DSN")
-	if ownerDSN == "" || appDSN == "" {
-		t.Fatal("integration database is required; run make test-it")
-	}
-	owner, err := pgx.Connect(ctx, ownerDSN)
+	db := testdb.New(t)
+	owner, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -45,12 +41,6 @@ func NewMailbox(t *testing.T, provider, address string) Mailbox {
 			t.Error(err)
 		}
 	})
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
-	if err := testdb.Reset(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
 	workspace, seat := ids.NewV7(), ids.NewV7()
 	if _, err := owner.Exec(ctx, `INSERT INTO workspace (id) VALUES ($1)`, workspace); err != nil {
 		t.Fatal(err)
@@ -62,7 +52,7 @@ func NewMailbox(t *testing.T, provider, address string) Mailbox {
 	if _, err := owner.Exec(ctx, `INSERT INTO capture_connection (user_id,provider,status,credential_ref,account_label) VALUES ($1,$2,'connected','vault:test',$3)`, seat, provider, address); err != nil {
 		t.Fatal(err)
 	}
-	pool, err := testdb.Pool(ctx, appDSN)
+	pool, err := testdb.Pool(ctx, db.AppDSN)
 	if err != nil {
 		t.Fatal(err)
 	}

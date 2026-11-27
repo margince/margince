@@ -135,6 +135,7 @@ func (r relistEnv) cancelled(t *testing.T, event string) int {
 }
 
 func TestAFullRelistRetiresTheFutureMeetingsItNoLongerHolds(t *testing.T) {
+	t.Parallel()
 	r := newRelistEnv(t)
 	if got := countRows(t, r.env.e, `SELECT count(*) FROM activity WHERE source_system = 'gcal' AND meeting_status IS NULL`); got != 3 {
 		t.Fatalf("the first sync stored %d open meetings, want 3", got)
@@ -156,6 +157,7 @@ func TestAFullRelistRetiresTheFutureMeetingsItNoLongerHolds(t *testing.T) {
 }
 
 func TestAnInterruptedRelistRetiresNothing(t *testing.T) {
+	t.Parallel()
 	r := newRelistEnv(t)
 
 	if err := r.relist(true); err == nil {
@@ -192,6 +194,7 @@ func (r relistEnv) fixtureMailboxConnection(t *testing.T) ids.UUID {
 // Another seat imports the meeting and is still a guest. It is on that seat's
 // calendar, so one calendar leaving it out does not call it off.
 func TestARelistDoesNotCancelAMeetingAnotherSeatHolds(t *testing.T) {
+	t.Parallel()
 	r := newRelistEnv(t)
 	meeting := r.droppedMeeting(t)
 	exec(t, r.env.e, `INSERT INTO capture_import (activity_id, user_id) VALUES ($1, $2)`, meeting, r.env.e.Rep3)
@@ -210,6 +213,7 @@ func TestARelistDoesNotCancelAMeetingAnotherSeatHolds(t *testing.T) {
 // still decides who reads it. A from or to row records whose calendar the
 // meeting came off, and is no attendance. Neither keeps the meeting open.
 func TestARelistCancelsAMeetingWhoseOtherImporterLeftTheGuestList(t *testing.T) {
+	t.Parallel()
 	p := newPairEnv(t)
 	p.bookOrganizedBy(wallDay(5), relistOrganizer)
 	p.sync(t, "b")
@@ -237,6 +241,7 @@ func TestARelistCancelsAMeetingWhoseOtherImporterLeftTheGuestList(t *testing.T) 
 // its address is a guest, in either spelling of its domain, and not once the
 // address is gone.
 func TestARelistKeepsAMeetingASharedMailboxGuestImports(t *testing.T) {
+	t.Parallel()
 	const (
 		unicodeLabel  = "desk@bücher.example"
 		punycodeGuest = "desk@xn--bcher-kva.example"
@@ -317,6 +322,7 @@ func (r relistEnv) relistPast(t *testing.T, held heldImport) error {
 // meeting's locks. The re-list waits for it, and then sees the other seat and
 // takes only its own seat off the meeting.
 func TestARelistWaitsForAnImportOfTheMeetingInFlight(t *testing.T) {
+	t.Parallel()
 	r := newRelistEnv(t)
 	meeting := r.droppedMeeting(t)
 	held := holdImport(t, meeting, func(ctx context.Context, tx pgx.Tx) error {
@@ -349,6 +355,7 @@ func TestARelistWaitsForAnImportOfTheMeetingInFlight(t *testing.T) {
 // The seat's second calendar importing the meeting while the first relists
 // keeps it: once the import commits, the seat still holds the meeting.
 func TestARelistWaitsForTheSeatsOtherCalendarImportingTheMeeting(t *testing.T) {
+	t.Parallel()
 	r := newRelistEnv(t)
 	meeting := r.droppedMeeting(t)
 	var second ids.UUID
@@ -446,6 +453,7 @@ func (p *pairEnv) cancelled(t *testing.T, meeting ids.UUID) bool {
 // The seat whose calendar left the meeting out joined a row another seat's
 // calendar stored, under an event id of its own.
 func TestARelistTakesTheSeatOffAMeetingAnotherSeatStored(t *testing.T) {
+	t.Parallel()
 	p := newPairEnv(t)
 	p.bookOrganizedBy(wallDay(5), relistOrganizer)
 	p.sync(t, "b")
@@ -468,6 +476,7 @@ func TestARelistTakesTheSeatOffAMeetingAnotherSeatStored(t *testing.T) {
 // The organizer's calendar leaving a meeting out is no cancellation while
 // another seat's calendar holds it.
 func TestAnOrganizersRelistDoesNotCancelAMeetingAnotherSeatHolds(t *testing.T) {
+	t.Parallel()
 	p := newPairEnv(t)
 	p.book(wallDay(5))
 	p.sync(t, "a")
@@ -487,6 +496,7 @@ func TestAnOrganizersRelistDoesNotCancelAMeetingAnotherSeatHolds(t *testing.T) {
 // One of a seat's two calendars leaving a meeting out keeps it: the other
 // still lists it.
 func TestARelistOfOneOfASeatsCalendarsKeepsWhatTheOtherHolds(t *testing.T) {
+	t.Parallel()
 	p := newPairEnv(t)
 	start := wallDay(5)
 	p.bookOrganizedBy(start, relistOrganizer)

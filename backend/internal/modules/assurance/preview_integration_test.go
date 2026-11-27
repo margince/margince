@@ -54,6 +54,7 @@ func previewCoverage() CoverageFunc {
 // latest run — and would enrol the workspace in the nightly cadence by being
 // looked at, which is the decision it exists to ASK for.
 func TestAPreviewRecordsNothing(t *testing.T) {
+	t.Parallel()
 	// NOT parallel, and the reason is the assertion itself: assurance tables
 	// carry no workspace column — the module is installation-wide — so counting
 	// them counts every sibling test's rows too. Go holds parallel tests until
@@ -94,6 +95,7 @@ func TestAPreviewRecordsNothing(t *testing.T) {
 // check or a recheck, and the nightly sweep reads the same fact to decide
 // whether this workspace is its business at all.
 func TestAWorkspaceSaysWhetherItHasEverBeenChecked(t *testing.T) {
+	t.Parallel()
 	// Sequential for the same reason TestAPreviewRecordsNothing is: enrolment
 	// is read off assurance_run, which carries no workspace column, so a
 	// sibling test's pass would answer this one's question for it.

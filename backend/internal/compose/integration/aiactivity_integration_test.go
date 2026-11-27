@@ -135,6 +135,7 @@ func (a *aiActivityEnv) read(t *testing.T) projected {
 // refuses the re-queue and pins the row at a running nobody holds, which is
 // precisely the stale state the design exists to prevent.
 func TestAIActivityAReleasedAttemptReopensTheOccurrence(t *testing.T) {
+	t.Parallel()
 	env := newAIActivityEnv(t)
 	env.apply(t, change{attempt: 1, state: "queued"})
 	env.apply(t, change{attempt: 1, state: "running"})
@@ -154,6 +155,7 @@ func TestAIActivityAReleasedAttemptReopensTheOccurrence(t *testing.T) {
 // Within one attempt, settled is terminal. A redelivered running for the same
 // attempt must not resurrect a finished occurrence.
 func TestAIActivityALateRunningCannotResurrectASettledAttempt(t *testing.T) {
+	t.Parallel()
 	env := newAIActivityEnv(t)
 	env.apply(t, change{attempt: 1, state: "queued"})
 	env.apply(t, change{attempt: 1, state: "running"})
@@ -169,6 +171,7 @@ func TestAIActivityALateRunningCannotResurrectASettledAttempt(t *testing.T) {
 
 // A higher attempt outranks a settled lower one: the document was read again.
 func TestAIActivityAHigherAttemptSupersedesASettledLowerOne(t *testing.T) {
+	t.Parallel()
 	env := newAIActivityEnv(t)
 	env.apply(t, change{attempt: 1, state: "queued"})
 	env.apply(t, change{attempt: 1, state: "failed", degradeReason: "extraction_timeout"})
@@ -185,6 +188,7 @@ func TestAIActivityAHigherAttemptSupersedesASettledLowerOne(t *testing.T) {
 // An exact redelivery — same attempt, same state — is a no-op. The bus is
 // at-least-once, so this is the ordinary case, not the exotic one.
 func TestAIActivityAnExactRedeliveryChangesNothing(t *testing.T) {
+	t.Parallel()
 	env := newAIActivityEnv(t)
 	env.apply(t, change{attempt: 1, state: "running"})
 	before := env.read(t)
@@ -200,6 +204,7 @@ func TestAIActivityAnExactRedeliveryChangesNothing(t *testing.T) {
 // Every applied write takes a strictly higher seq, and a refused one takes
 // none. Without that the delta cursor either misses a change or replays one.
 func TestAIActivitySeqAdvancesOnlyOnAnAppliedWrite(t *testing.T) {
+	t.Parallel()
 	env := newAIActivityEnv(t)
 	env.apply(t, change{attempt: 1, state: "queued"})
 	first := env.read(t).Seq
@@ -230,6 +235,7 @@ func (a *aiActivityEnv) leasedUntil(d time.Duration) *time.Time {
 // lease to be sized for the longest work it could cover, which is exactly how
 // long a dead process then goes on being displayed as working.
 func TestAIActivityARenewalExtendsALiveLease(t *testing.T) {
+	t.Parallel()
 	env := newAIActivityEnv(t)
 	env.apply(t, change{attempt: 1, state: "running", staleAfter: env.leasedUntil(5 * time.Minute)})
 	before := env.read(t)
@@ -255,6 +261,7 @@ func TestAIActivityARenewalExtendsALiveLease(t *testing.T) {
 // row and its seq alone, or a redelivery would shorten a lease a later renewal
 // had already extended.
 func TestAIActivityARenewalDeliveredLateChangesNothing(t *testing.T) {
+	t.Parallel()
 	env := newAIActivityEnv(t)
 	env.apply(t, change{attempt: 1, state: "running", staleAfter: env.leasedUntil(10 * time.Minute)})
 	before := env.read(t)
@@ -278,6 +285,7 @@ func TestAIActivityARenewalDeliveredLateChangesNothing(t *testing.T) {
 // renewal must not become the way a late running reopens it: the settled row's
 // stale_after is NULL, and nothing compares later than that.
 func TestAIActivityASettledOccurrenceCannotBeRenewedBackToLife(t *testing.T) {
+	t.Parallel()
 	env := newAIActivityEnv(t)
 	env.apply(t, change{attempt: 1, state: "running", staleAfter: env.leasedUntil(5 * time.Minute)})
 	env.apply(t, change{attempt: 1, state: "done"})
@@ -298,6 +306,7 @@ func TestAIActivityASettledOccurrenceCannotBeRenewedBackToLife(t *testing.T) {
 // erase an occurrence its source still holds a claim on, and the reconciler
 // would keep putting it back.
 func TestAIActivityThePurgeTakesSettledRowsOnly(t *testing.T) {
+	t.Parallel()
 	env := newAIActivityEnv(t)
 	env.apply(t, change{attempt: 1, state: "running"})
 

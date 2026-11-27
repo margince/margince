@@ -21,6 +21,7 @@ import (
 // A pending stage-move card expires through the approvals writer, with an
 // audit row. A decided card and a card of another kind stay as they are.
 func TestThePendingStageCardsExpire(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	pipeline, open, _ := integration.DealFixture(t, e)
 	deal := e.SeedDeal(t, "Warehouse rollout", pipeline, open, &e.AdminUser)

@@ -26,6 +26,7 @@ type resumeProbe struct {
 func (resumeProbe) Kind() string { return "budget_resume_probe" }
 
 func TestBudgetRecoveryPreservesJobAttemptsAndIsolation(t *testing.T) {
+	t.Parallel()
 	ctx, pool := quiesceTestPool(t)
 	runner := quiesceTestRunner(t, pool)
 	for _, state := range []string{"scheduled", "retryable", "available", "running", "completed", "cancelled", "discarded"} {
@@ -77,6 +78,7 @@ func TestBudgetRecoveryPreservesJobAttemptsAndIsolation(t *testing.T) {
 }
 
 func TestBudgetJobRecoveryRollsBackWithItsCarrier(t *testing.T) {
+	t.Parallel()
 	ctx, pool := quiesceTestPool(t)
 	runner := quiesceTestRunner(t, pool)
 	args := resumeProbe{Workspace: ids.NewV7(), Carrier: ids.NewV7()}
@@ -104,6 +106,7 @@ func TestBudgetJobRecoveryRollsBackWithItsCarrier(t *testing.T) {
 }
 
 func TestFailedCarrierSavepointRollsBackOnlyItsRetriedJob(t *testing.T) {
+	t.Parallel()
 	ctx, pool := quiesceTestPool(t)
 	runner := quiesceTestRunner(t, pool)
 	workspace := ids.NewV7()

@@ -85,6 +85,7 @@ func rateAudits(e *Env, t *testing.T) int {
 }
 
 func TestSyncPricesWritesTheBoundAndSheetModelsOnceOnly(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	today := pinnedRateDay()
 	store := ai.NewRateStore(e.DB()).SetClock(func() time.Time { return today })
@@ -140,6 +141,7 @@ func TestSyncPricesWritesTheBoundAndSheetModelsOnceOnly(t *testing.T) {
 // A price scheduled for tomorrow is somebody's decision, and the refresh writes
 // today's row beside it rather than over it.
 func TestSyncPricesLeavesAFutureDatedPriceAlone(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	today := pinnedRateDay()
 	store := ai.NewRateStore(e.DB()).SetClock(func() time.Time { return today })
@@ -177,6 +179,7 @@ func TestSyncPricesLeavesAFutureDatedPriceAlone(t *testing.T) {
 }
 
 func TestSyncPricesWritesNothingWhenTheListCannotBeRead(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	today := pinnedRateDay()
 	store := ai.NewRateStore(e.DB()).SetClock(func() time.Time { return today })
@@ -200,6 +203,7 @@ func TestSyncPricesWritesNothingWhenTheListCannotBeRead(t *testing.T) {
 
 // A decision model the broker prices as variable (-1) stays a manual price.
 func TestSyncPricesReportsAModelTheListDoesNotPriceAsNotAvailable(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := ai.NewRateStore(e.DB()).SetClock(pinnedRateDay)
 	cfg := ai.RoutingConfig{Decisions: &ai.DecisionsConfig{
@@ -223,6 +227,7 @@ func TestSyncPricesReportsAModelTheListDoesNotPriceAsNotAvailable(t *testing.T) 
 // One transaction: a principal who may insert but not overwrite is refused at
 // the overwrite, and the insert that came before it in the same run rolls back.
 func TestSyncPricesIsAllOrNothingAndHonoursTheWriteGrants(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	today := pinnedRateDay()
 	store := ai.NewRateStore(e.DB()).SetClock(func() time.Time { return today })
@@ -244,6 +249,7 @@ func TestSyncPricesIsAllOrNothingAndHonoursTheWriteGrants(t *testing.T) {
 }
 
 func TestSyncPricesRefusesAPrincipalWithoutTheSheet(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := ai.NewRateStore(e.DB())
 	reader := e.As(e.Rep1, nil, ReadOnlyPerms)
@@ -257,6 +263,7 @@ func TestSyncPricesRefusesAPrincipalWithoutTheSheet(t *testing.T) {
 
 // A read-only passport is refused before the handler runs.
 func TestRefreshAiModelRatesRefusesAReadOnlyAgentOverHTTP(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	var minted struct {
@@ -282,6 +289,7 @@ func TestRefreshAiModelRatesRefusesAReadOnlyAgentOverHTTP(t *testing.T) {
 // A misspelt bound id is neither priced nor "set by hand": the list simply does
 // not name it, and the report must say so and carry the id.
 func TestSyncPricesNamesABoundModelTheListDoesNotHave(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := ai.NewRateStore(e.DB()).SetClock(pinnedRateDay)
 
@@ -309,6 +317,7 @@ func TestSyncPricesNamesABoundModelTheListDoesNotHave(t *testing.T) {
 
 // Rows on the sheet under a host the refresh does not serve stay as typed.
 func TestSyncPricesLeavesASelfHostedSheetRowAlone(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	today := pinnedRateDay()
 	store := ai.NewRateStore(e.DB()).SetClock(func() time.Time { return today })

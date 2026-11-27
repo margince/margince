@@ -78,6 +78,7 @@ func teamRequestMails(t *testing.T, e *apptest.AppEnv) int {
 // nobody else is. A save that keeps them on the list tells them nothing new,
 // and their answer, given by the link's id, takes the line back.
 func TestAColleagueNamedOnATeamLinkIsToldInTheAppAndByMail(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupBookingApp(t)
 	e.DescribeCompany(t)
 	member, colleague := bookingColleague(t, e, "member@team-notice.test", "Mia")
@@ -120,6 +121,7 @@ func TestAColleagueNamedOnATeamLinkIsToldInTheAppAndByMail(t *testing.T) {
 // A colleague taken off a team link loses the line, and named again gets it
 // back unread rather than a second one.
 func TestAColleagueTakenOffALinkLosesTheRequestUntilNamedAgain(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupBookingApp(t)
 	e.DescribeCompany(t)
 	member, _ := bookingColleague(t, e, "removed@team-notice.test", "Remy")
@@ -139,6 +141,7 @@ func TestAColleagueTakenOffALinkLosesTheRequestUntilNamedAgain(t *testing.T) {
 // Two team links that name one colleague ask twice, each in its own line, and
 // answering one link leaves the other's line standing.
 func TestTwoTeamLinksEachAskTheColleague(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupBookingApp(t)
 	e.DescribeCompany(t)
 	member, colleague := bookingColleague(t, e, "twice@team-notice.test", "Tess")
@@ -157,6 +160,7 @@ func TestTwoTeamLinksEachAskTheColleague(t *testing.T) {
 // Only the host who made a team link changes or deletes it. A member gets 404,
 // and the personal page refuses a team.
 func TestOnlyTheOwnerChangesATeamLink(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupBookingApp(t)
 	e.DescribeCompany(t)
 	member, colleague := bookingColleague(t, e, "owner@team-notice.test", "Olli")
@@ -190,6 +194,7 @@ func TestOnlyTheOwnerChangesATeamLink(t *testing.T) {
 // works. Its answer confirms every team link of that host that waits for it.
 // Only a caller that no link of that host names is not found.
 func TestTheAnswerByHostConfirmsEveryTeamLinkOfThatHost(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupBookingApp(t)
 	e.DescribeCompany(t)
 	member, colleague := bookingColleague(t, e, "byhost@team-notice.test", "Hal")

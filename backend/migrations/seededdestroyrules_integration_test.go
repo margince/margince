@@ -23,6 +23,7 @@ type policyState struct {
 }
 
 func TestTheSeededRulesThatDestroyAnOldRecordAreSwitchedOff(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	headSchema(t, conn)

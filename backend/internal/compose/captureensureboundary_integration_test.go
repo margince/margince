@@ -60,7 +60,7 @@ func (f *edgeEnsurer) EnsureCounterpartyTx(ctx context.Context, tx pgx.Tx, in ca
 func realEnsurer(t *testing.T, e *integration.Env) contactsEnsurer {
 	quiet := slog.New(slog.NewTextHandler(io.Discard, nil))
 	return contactsEnsurer{
-		store: newCounterpartyStoreAt(e.Pool, func() time.Time { return clocktest.Now(t) }), pool: e.Pool,
+		store: newCounterpartyStoreAt(e.Pool, func() time.Time { return clocktest.Now(t) }, nil), pool: e.Pool,
 		triage: newDomainTriageTrigger(e.Pool, quiet, true), log: quiet,
 	}
 }
@@ -100,6 +100,7 @@ func captureWithReply(t *testing.T, e *integration.Env, sink *capture.Sink, addr
 }
 
 func TestAnEnsureFaultRollsBackItsWritesAndKeepsTheMail(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	faulty := &edgeEnsurer{delegate: realEnsurer(t, e), fail: true}
 	sink := newCaptureSink(e.Pool, CaptureConfig{}).WithEnsurer(faulty, capture.NewTransactionalList(nil, nil))
@@ -130,6 +131,7 @@ func TestAnEnsureFaultRollsBackItsWritesAndKeepsTheMail(t *testing.T) {
 }
 
 func TestAnEnsuresAfterCommitWorkWaitsForTheCaptureToCommit(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	reply := captureWithReply(t, e, newCaptureSink(e.Pool, CaptureConfig{}), "rollback-buyer@supplier.test")
 	ctx, cancel := context.WithCancel(threadConnectorCtx(e, e.AdminUser))
@@ -186,6 +188,7 @@ func (m *meetAtTheEnsure) EnsureCounterpartyTx(ctx context.Context, tx pgx.Tx, i
 // order first, so neither waits on the other in a cycle. Two seats, because
 // one seat's captures queue behind each other.
 func TestMailsNamingOnePairInSwappedRolesCommitWithoutALockCycle(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const a, b = "pair-a@supplier.test", "pair-b@supplier.test"
 	for _, address := range []string{a, b} {

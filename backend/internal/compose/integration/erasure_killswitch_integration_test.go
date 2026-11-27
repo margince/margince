@@ -63,6 +63,7 @@ func (m refusingMailbox) ResolveChannel(context.Context, ids.UserID, string) (co
 // compose assembles, not one rebuilt here — AFTER the subject is erased, and
 // proves the provider is never reached.
 func TestErasingASubjectNeutralizesTheirQueuedSend(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contact := seedMailRecipient(t, e)
 	// Aged past the statutory correspondence floor: a fresh fixture would be

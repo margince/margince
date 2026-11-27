@@ -30,6 +30,7 @@ import (
 )
 
 func TestAllowanceRecoveryAdvancesBothWebsiteClocksAndIsIdempotent(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	grantBudgetRequester(t, e, e.Rep1)
 	company := insertCompany(t, e, e.Rep1, "acme.example", "")
@@ -91,6 +92,7 @@ func TestAllowanceRecoveryAdvancesBothWebsiteClocksAndIsIdempotent(t *testing.T)
 }
 
 func TestRecoveryPagesContainFailuresAndReachLaterRows(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	idsToVisit := make([]ids.UUID, 205)
@@ -163,6 +165,7 @@ func recoveryAdminIdentity(e *integration.Env) identity.Identity {
 }
 
 func TestAllowanceRecoveryRequeuesVoiceBuildWithoutResettingItsAttempt(t *testing.T) {
+	t.Parallel()
 	env, build := seedVoiceBuild(t, "A recovery quote.", 6)
 	grantBudgetRequester(t, env.e, env.e.Rep1)
 	ctx := env.workerCtx(t)
@@ -217,6 +220,7 @@ func setRecoveryAllowance(t *testing.T, e *integration.Env, tokens int64) {
 // A step the router declines reaches the runner as the runner's own refusal,
 // so the run says why no provider was called. A call that was made is not one.
 func TestAnAgentStepTheRouterDeclinedReachesTheRunnerAsItsReason(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.WithWorkspaceID(t.Context(), e.WS)
 	meter := ai.NewMeter(InstallationDB(e.Pool))

@@ -18,6 +18,7 @@ import (
 )
 
 func TestAnApprovedExistingDealIsPreviewedAndReplayedOnBothDoors(t *testing.T) {
+	t.Parallel()
 	for _, rest := range []bool{false, true} {
 		t.Run(fmt.Sprintf("rest=%t", rest), func(t *testing.T) {
 			p := newPinnedPromotion(t, rest, "human_qualify")

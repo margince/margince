@@ -22,7 +22,6 @@ package activities
 import (
 	"context"
 	"errors"
-	"os"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -45,13 +44,9 @@ type factsEnv struct {
 
 func setupFacts(t *testing.T) *factsEnv {
 	t.Helper()
-	ownerDSN, appDSN := os.Getenv("MARGINCE_TEST_DSN"), os.Getenv("MARGINCE_TEST_APP_DSN")
-	if ownerDSN == "" || appDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN not set — run `make db-up` " +
-			"(integration tests fail loudly, they never skip)")
-	}
+	db := testdb.New(t)
 	ctx := context.Background()
-	owner, err := pgx.Connect(ctx, ownerDSN)
+	owner, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -60,25 +55,15 @@ func setupFacts(t *testing.T) *factsEnv {
 			t.Errorf("closing owner connection: %v", err)
 		}
 	})
-	// To head before anything else touches this database: testdb.Pool refuses
-	// until EnsureSchema has run, and EnsureSchema still REBUILDS whenever it
-	// cannot prove the database is a fresh lane clone — so a seed written
-	// before it would be dropped rather than reset.
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
-	emptyDatabase(t)
 	e := &factsEnv{owner: owner, ws: ids.NewV7(), user: ids.NewV7()}
 	e.exec(t, `INSERT INTO workspace (id) VALUES ($1)`, e.ws)
 	e.exec(t, `INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Rep')`, e.user, "rep-"+e.user.String()+"@facts.test")
-	pool, err := testdb.Pool(ctx, appDSN)
+	pool, err := testdb.Pool(ctx, db.AppDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// Registered where the pool is handed out, before the test adds any cleanup
 	// of its own, so it runs last and sees a package that has genuinely stopped.
-	// The pool outlives the test now, so a goroutine still holding a connection
-	// would go on writing into the database the NEXT test just reset.
 	testdb.AssertPoolsQuiesced(t)
 	e.store = NewStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](e.ws)))
 	return e
@@ -155,6 +140,7 @@ func (e *factsEnv) seed(t *testing.T, row capturedRow) ids.UUID {
 }
 
 func TestTheBacklogAndTheExplanationAgreeOnEveryExclusion(t *testing.T) {
+	t.Parallel()
 	e := setupFacts(t)
 	ctx := e.as()
 
@@ -193,8 +179,7 @@ func TestTheBacklogAndTheExplanationAgreeOnEveryExclusion(t *testing.T) {
 	}
 
 	// Half one: of the rows seeded here, the classifier's own backlog selects
-	// the eligible one and no other. The package shares one database, so a sibling
-	// test's rows are in the backlog too and are not this test's to count.
+	// the eligible one and no other.
 	backlog, err := e.store.UnlabeledCaptureMessages(ctx, rulesetNew, 200, 200)
 	if err != nil {
 		t.Fatalf("reading the backlog: %v", err)
@@ -236,6 +221,7 @@ func TestTheBacklogAndTheExplanationAgreeOnEveryExclusion(t *testing.T) {
 }
 
 func TestTheContactLinkIsWhatTheContactCreationRungReads(t *testing.T) {
+	t.Parallel()
 	// The contact-creation rung is derived by elimination, and the link is the
 	// only durable signal it has — the same signal the nightly reconcile scans
 	// for. If this read stopped seeing it, the rung would report "no contact
@@ -257,6 +243,7 @@ func TestTheContactLinkIsWhatTheContactCreationRungReads(t *testing.T) {
 }
 
 func TestReadingPipelineFactsTakesTheRowScopeNotJustTheGrant(t *testing.T) {
+	t.Parallel()
 	// The object grant and the row scope are two different gates, and the
 	// sibling below only removes the first. Every principal there reads the
 	// seed's links, against which EnsureActivityContentVisible is a no-op by
@@ -301,6 +288,7 @@ func TestReadingPipelineFactsTakesTheRowScopeNotJustTheGrant(t *testing.T) {
 }
 
 func TestReadingPipelineFactsTakesTheActivityGate(t *testing.T) {
+	t.Parallel()
 	// The compose assembler gates the activity first, and that is still not
 	// enough: a guard the caller supplies is one the next caller can forget.
 	e := setupFacts(t)
@@ -325,14 +313,13 @@ func TestReadingPipelineFactsTakesTheActivityGate(t *testing.T) {
 // and re-labels a message whose text the worklist's readers may no longer open
 // — and nothing clears it a second time, because the narrowing already ran.
 func TestTheLabelWriteLosesToANarrowingThatLandedWhileTheModelThought(t *testing.T) {
+	t.Parallel()
 	e := setupFacts(t)
 	ctx := e.as()
 
 	open := e.seed(t, capturedRow{kind: "email"})
 	// The row is OFFERED, which is what makes the write below a race rather
-	// than a refusal that never had a chance. Asked of this row rather than of
-	// the backlog's size: the package shares one database, so a sibling test's
-	// rows are in it too and a count assertion would fail for their reason.
+	// than a refusal that never had a chance.
 	backlog, err := e.store.UnlabeledCaptureMessages(ctx, rulesetNew, 200, 200)
 	if err != nil {
 		t.Fatalf("reading the backlog: %v", err)
@@ -383,6 +370,7 @@ func TestTheLabelWriteLosesToANarrowingThatLandedWhileTheModelThought(t *testing
 // shared worklist, which is the same defect the narrowing case above describes
 // with a different cause.
 func TestTheLabelWriteLosesToAnArchiveThatLandedWhileTheModelThought(t *testing.T) {
+	t.Parallel()
 	e := setupFacts(t)
 	ctx := e.as()
 

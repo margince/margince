@@ -74,7 +74,7 @@ func keptHashes(ctx context.Context, t *testing.T, tx pgx.Tx) map[string]int {
 // address match (storekit.StopOnAddressesSQL) finds for one address.
 func stopsOnAddress(ctx context.Context, t *testing.T, tx pgx.Tx, address string) int {
 	t.Helper()
-	lowered, hashes := storekit.StopAddressArgs(address)
+	lowered, hashes := storekit.StopAddressArgs(ctx, address)
 	var n int
 	if err := tx.QueryRow(ctx, `
 		SELECT count(*) FROM communication_suppression s
@@ -86,6 +86,7 @@ func stopsOnAddress(ctx context.Context, t *testing.T, tx pgx.Tx, address string
 }
 
 func TestAnAnonymizeKeepsAStopAsTheHashOfEachAddress(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	tx := subjectColumnsTx(ctx, t)
 	contact := keptStopSubject(ctx, t, tx)
@@ -99,9 +100,9 @@ func TestAnAnonymizeKeepsAStopAsTheHashOfEachAddress(t *testing.T) {
 
 	kept := keptHashes(ctx, t, tx)
 	for _, address := range []string{"ines@anon.test", "ines.other@anon.test"} {
-		if kept[storekit.SuppressionHash(address)] != 1 {
+		if kept[storekit.SuppressionHash(ctx, address)] != 1 {
 			t.Errorf("the stop is kept %d time(s) on the hash of %s, want once (kept: %v)",
-				kept[storekit.SuppressionHash(address)], address, kept)
+				kept[storekit.SuppressionHash(ctx, address)], address, kept)
 		}
 	}
 	if n := stopsOnAddress(ctx, t, tx, " Ines@Anon.test "); n != 1 {
@@ -112,6 +113,7 @@ func TestAnAnonymizeKeepsAStopAsTheHashOfEachAddress(t *testing.T) {
 // After a wrong merge one human's stop and withdrawal must not land on the
 // other human's address. The merge bound both to the record they were made on.
 func TestAnAnonymizePinsABoundStopAndWithdrawalOnlyToTheirOwnAddresses(t *testing.T) {
+	t.Parallel()
 	ctx := principal.WithActor(context.Background(),
 		principal.Principal{Type: principal.PrincipalSystem, ID: "system:retention"})
 	tx := subjectColumnsTx(ctx, t)
@@ -133,10 +135,10 @@ func TestAnAnonymizePinsABoundStopAndWithdrawalOnlyToTheirOwnAddresses(t *testin
 	}
 
 	kept := keptHashes(ctx, t, tx)
-	if n := kept[storekit.SuppressionHash("ines@anon.test")]; n != 0 {
+	if n := kept[storekit.SuppressionHash(ctx, "ines@anon.test")]; n != 0 {
 		t.Errorf("%d stop(s) landed on the address the merge did not bind them to, want 0", n)
 	}
-	if n := kept[storekit.SuppressionHash("ines.other@anon.test")]; n != 2 {
+	if n := kept[storekit.SuppressionHash(ctx, "ines.other@anon.test")]; n != 2 {
 		t.Errorf("%d stop(s) kept on the bound address, want the stop and the withdrawal", n)
 	}
 	var stillBound int
@@ -158,6 +160,7 @@ func TestAnAnonymizePinsABoundStopAndWithdrawalOnlyToTheirOwnAddresses(t *testin
 // Mutation: drop the erasure_suppression insert from anonymizeSubjectRows and
 // the address is accepted again.
 func TestErasingAnAnonymizedContactKeepsItsAddressesRefused(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	tx := subjectColumnsTx(ctx, t)
 	contact := keptStopSubject(ctx, t, tx)

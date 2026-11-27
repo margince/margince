@@ -131,6 +131,7 @@ func refusalFor(t *testing.T, review Review, address string) RefusedRecipient {
 // One message to a German and a Vietnamese recipient: each refusal and each
 // footer finding names the law of that recipient's own market.
 func TestEachRecipientIsCitedFromTheirOwnMarket(t *testing.T) {
+	t.Parallel()
 	e := citedEnv(t)
 	e.secondContactWhoWroteAMonthAgo(t, kaiAddress)
 	e.liveIn(t, e.address, citingPack(t, germanLaw, reviewedOnce, germanLaw.instrument()))
@@ -171,6 +172,7 @@ func TestEachRecipientIsCitedFromTheirOwnMarket(t *testing.T) {
 // so the sender reads the facts and no law. A missing review is not such a
 // reason.
 func TestACitationThatMayNotBeShownLeavesTheRefusalUncited(t *testing.T) {
+	t.Parallel()
 	overdue := reviewedOnce
 	overdue.SourceCheckedAt, overdue.ReviewedAt, overdue.ReviewDue =
 		citedAt.AddDate(-2, 0, 0), citedAt.AddDate(-2, 0, 0), citedAt.AddDate(0, 0, -1)
@@ -224,6 +226,7 @@ func TestACitationThatMayNotBeShownLeavesTheRefusalUncited(t *testing.T) {
 // and the recipient moved to a market with other law. The review still names
 // the first law and no other.
 func TestAReviewKeepsTheCitationItWasAssessedWith(t *testing.T) {
+	t.Parallel()
 	e := citedEnv(t)
 	e.liveIn(t, e.address, citingPack(t, germanLaw, reviewedOnce, germanLaw.instrument()))
 	assessed := e.refuseNewsletter(t, e.address)
@@ -248,6 +251,7 @@ func TestAReviewKeepsTheCitationItWasAssessedWith(t *testing.T) {
 
 // The draft check cites each recipient's pack for its own finding.
 func TestADraftFindingCitesTheRecipientsOwnMarket(t *testing.T) {
+	t.Parallel()
 	e := citedEnv(t)
 	e.secondContactWhoWroteAMonthAgo(t, kaiAddress)
 	foreignAdvertiser := func(law lawOf) jurisdiction.Code {

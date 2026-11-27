@@ -15,6 +15,7 @@ import (
 // settled. A discount or write-off leaves payments short of the gross, and a
 // settled dispute is still settled; the row must read paid and owe nothing.
 func TestAnInvoiceTheSourceCallsSettledIsMirroredPaid(t *testing.T) {
+	t.Parallel()
 	e := setupFinance(t)
 	source := restatingSource(e.external)
 	settled := source.ledger.Invoices[0].IssuedOn.AddDate(0, 0, 10)

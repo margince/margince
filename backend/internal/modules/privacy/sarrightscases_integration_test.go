@@ -34,10 +34,7 @@ func seedRightsCase(
 	kind, status, resolution string,
 ) string {
 	t.Helper()
-	// RETURNED, so a test reads back the row IT planted. These tests share a
-	// database, and matching on kind finds another test's case — which reads as
-	// "the erasure did nothing" and is really "you asked about somebody else's
-	// row".
+	// RETURNED, so a test reads back the row IT planted.
 	receipt := "RCPT-" + ids.NewV7().String()
 	if _, err := owner.Exec(ctx, `
 		INSERT INTO data_subject_request
@@ -74,6 +71,7 @@ func seedWithdrawalCredential(
 // appeal it, and the one an export that showed only fulfilled requests would
 // quietly drop.
 func TestTheExportCarriesTheSubjectsOwnRightsRequests(t *testing.T) {
+	t.Parallel()
 	e := setupSARIdentifiers(t)
 	seedRightsCase(e.ctx, t, e.owner, e.contact, "erasure", "rejected",
 		"Rejected: an open contract requires us to keep the billing record.")
@@ -109,6 +107,7 @@ func TestTheExportCarriesTheSubjectsOwnRightsRequests(t *testing.T) {
 
 // TestTheExportCarriesTheLinksThatCanStopOurMail, and never their tokens.
 func TestTheExportCarriesTheLinksThatCanStopOurMail(t *testing.T) {
+	t.Parallel()
 	e := setupSARIdentifiers(t)
 	seedWithdrawalCredential(e.ctx, t, e.owner, e.contact, "all_marketing")
 
@@ -143,6 +142,7 @@ func TestTheExportCarriesTheLinksThatCanStopOurMail(t *testing.T) {
 // controller unable to show it answered the request — including a refusal,
 // where the record is what an appeal would ask to see.
 func TestErasureRetiresARightsCaseAndKeepsTheRecordThatItHappened(t *testing.T) {
+	t.Parallel()
 	e := setupSARIdentifiers(t)
 	receipt := seedRightsCase(e.ctx, t, e.owner, e.contact, "erasure", "rejected",
 		"Rejected: Anna Schmidt said she wanted only the newsletter stopped.")
@@ -185,6 +185,7 @@ func TestErasureRetiresARightsCaseAndKeepsTheRecordThatItHappened(t *testing.T) 
 // TestTheErasedCaseKeepsItsDeadline is the accountability half stated as a
 // test: a controller must be able to show it answered within the month.
 func TestTheErasedCaseKeepsItsDeadline(t *testing.T) {
+	t.Parallel()
 	e := setupSARIdentifiers(t)
 	receipt := seedRightsCase(e.ctx, t, e.owner, e.contact, "access", "fulfilled", "Sent.")
 
@@ -263,6 +264,7 @@ func eraseCapabilities(
 // So a case an officer opened by hand carried its subject forever: keyed on the
 // link alone, the erasure never saw it and neither did the export.
 func TestAnOfficerOpenedCaseIsRetiredToo(t *testing.T) {
+	t.Parallel()
 	e := setupSARIdentifiers(t)
 	receipt := "RCPT-" + ids.NewV7().String()
 	if _, err := e.owner.Exec(e.ctx, `
@@ -296,6 +298,7 @@ func TestAnOfficerOpenedCaseIsRetiredToo(t *testing.T) {
 // subject could see the requests they made online and not the ones somebody
 // recorded for them.
 func TestTheExportShowsACaseAnOfficerOpened(t *testing.T) {
+	t.Parallel()
 	e := setupSARIdentifiers(t)
 	if _, err := e.owner.Exec(e.ctx, `
 		INSERT INTO data_subject_request

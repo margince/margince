@@ -15,13 +15,13 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
-	"os"
 	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 )
 
@@ -60,6 +60,7 @@ func stagedContactCreated(t *testing.T, owner *pgx.Conn) stagedEnvelope {
 }
 
 func TestWriteStagesOneCompleteEnvelope(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -77,7 +78,7 @@ func TestWriteStagesOneCompleteEnvelope(t *testing.T) {
 		t.Fatalf("create contact status = %d, body %v", status, contact)
 	}
 
-	owner, err := pgx.Connect(t.Context(), os.Getenv("MARGINCE_TEST_DSN"))
+	owner, err := pgx.Connect(t.Context(), testdb.For(t).OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -123,6 +124,7 @@ func TestWriteStagesOneCompleteEnvelope(t *testing.T) {
 }
 
 func TestFailedLoginIsAuditedAndThrottled(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Fable E2E", "ada@example.com", "Admin")
 
@@ -132,7 +134,7 @@ func TestFailedLoginIsAuditedAndThrottled(t *testing.T) {
 		t.Fatalf("bad login status = %d, want 401", status)
 	}
 
-	owner, err := pgx.Connect(t.Context(), os.Getenv("MARGINCE_TEST_DSN"))
+	owner, err := pgx.Connect(t.Context(), testdb.For(t).OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -188,6 +190,7 @@ func TestFailedLoginIsAuditedAndThrottled(t *testing.T) {
 // Server-Timing rides the signed-in answer only: a failed login, which no
 // session answers, carries the id and no timing.
 func TestResponseRequestIDJoinsTheWriteItCaused(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -214,7 +217,7 @@ func TestResponseRequestIDJoinsTheWriteItCaused(t *testing.T) {
 		t.Errorf("signed-in answer Server-Timing = %q, want total;dur=<ms>", created.Get("Server-Timing"))
 	}
 
-	owner, err := pgx.Connect(t.Context(), os.Getenv("MARGINCE_TEST_DSN"))
+	owner, err := pgx.Connect(t.Context(), testdb.For(t).OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}

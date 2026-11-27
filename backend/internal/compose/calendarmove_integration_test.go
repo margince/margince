@@ -86,6 +86,7 @@ func (o *owedEnv) move(t *testing.T, message ids.UUID) crmcontracts.EmailSummary
 }
 
 func TestACapturedInvitationWaitsOnNobodyEitherWay(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	o.now = clocktest.Now(t)
 	o.contact(t, "Pat Buyer", "pat@customer.example")
@@ -133,6 +134,7 @@ func TestACapturedInvitationWaitsOnNobodyEitherWay(t *testing.T) {
 // Their reply ends the wait on our mail. A reply the reader may not read does
 // not end it, or the badge would tell them a message they cannot open exists.
 func TestTheirReplyEndsTheWaitOnlyWhenTheReaderMayReadIt(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	o.now = clocktest.Now(t)
 	o.contact(t, "Pat Buyer", "pat@customer.example")
@@ -176,6 +178,7 @@ func TestTheirReplyEndsTheWaitOnlyWhenTheReaderMayReadIt(t *testing.T) {
 // it still waits. The outbound walk keeps its own place: an inbound marker
 // newer than our mail must not make the walk skip it.
 func TestTheBackfillReadsTheMethodOfOurOwnLegacyInvitation(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	o.now = clocktest.Now(t)
 	o.contact(t, "Pat Buyer", "pat@customer.example")

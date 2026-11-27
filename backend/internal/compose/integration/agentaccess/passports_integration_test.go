@@ -14,7 +14,6 @@ package agentaccess
 import (
 	"context"
 	"errors"
-	"os"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -40,14 +39,10 @@ type passportsEnv struct {
 
 func setupPassports(t *testing.T) *passportsEnv {
 	t.Helper()
-	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
-	appDSN := os.Getenv("MARGINCE_TEST_APP_DSN")
-	if ownerDSN == "" || appDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
+	db := testdb.New(t)
 	ctx := context.Background()
 
-	owner, err := pgx.Connect(ctx, ownerDSN)
+	owner, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -56,12 +51,6 @@ func setupPassports(t *testing.T) *passportsEnv {
 			t.Errorf("closing owner connection: %v", err)
 		}
 	})
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
-	if err := testdb.Reset(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
 
 	e := &passportsEnv{owner: owner, WS: ids.NewV7(), alice: ids.NewV7(), bob: ids.NewV7()}
 	if _, err := owner.Exec(ctx,
@@ -76,7 +65,7 @@ func setupPassports(t *testing.T) *passportsEnv {
 	}
 
 	var pool *pgxpool.Pool
-	pool, err = testdb.OwnPool(ctx, appDSN)
+	pool, err = testdb.OwnPool(ctx, db.AppDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -110,6 +99,7 @@ func (e *passportsEnv) ctx() context.Context {
 // A user lists exactly their own passports, an administrator included: which
 // agents act for a human is that human's own business; the rows are metadata only.
 func TestListPassportsScopesToOwnerEvenForAdmin(t *testing.T) {
+	t.Parallel()
 	e := setupPassports(t)
 	ctx := e.ctx()
 
@@ -150,6 +140,7 @@ func TestListPassportsScopesToOwnerEvenForAdmin(t *testing.T) {
 // A revoked passport stays listed with its revoked_at stamped — the
 // Settings surface shows the kill switch took, it does not hide history.
 func TestListPassportsShowsRevocation(t *testing.T) {
+	t.Parallel()
 	e := setupPassports(t)
 	ctx := e.ctx()
 
@@ -189,6 +180,7 @@ func TestListPassportsShowsRevocation(t *testing.T) {
 // this is the question the seam answers; the gate acting on the refusal is
 // pinned by its own suite, against a resolver that returns it.
 func TestRevocationReachesARunAlreadyInFlight(t *testing.T) {
+	t.Parallel()
 	e := setupPassports(t)
 	ctx := e.ctx()
 	id := e.identityFor(e.alice, []string{"rep"})
@@ -230,6 +222,7 @@ func TestRevocationReachesARunAlreadyInFlight(t *testing.T) {
 // answers to somebody else must not keep admitting calls bounded by the
 // authority of the human it left — their seat, their grants, their teams.
 func TestAPassportRegrantedElsewhereStopsActingForTheHumanItLeft(t *testing.T) {
+	t.Parallel()
 	e := setupPassports(t)
 	ctx := e.ctx()
 	id := e.identityFor(e.alice, []string{"rep"})
@@ -270,6 +263,7 @@ func TestAPassportRegrantedElsewhereStopsActingForTheHumanItLeft(t *testing.T) {
 // passport must resolve on the human alone — and if it did not, both would be
 // refused every call.
 func TestAPrincipalWithNoPassportIsAnsweredOnItsHumansAuthority(t *testing.T) {
+	t.Parallel()
 	e := setupPassports(t)
 	if _, _, err := e.svc.AdmittedAuthority(e.ctx(), e.WS, e.alice, ids.UUID{}); err != nil {
 		t.Errorf("a principal holding no passport was refused (%v) — the extension tick and the auto-apply actor both hold none", err)

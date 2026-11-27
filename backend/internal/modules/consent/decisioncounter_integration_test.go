@@ -45,6 +45,7 @@ var allowedRecordConfirmation = DecisionCount{
 }
 
 func TestATransmitDecisionIsCountedOnce(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	delivery := e.plantDelivery(t)
 	before := countedNow(t, allowedRecordConfirmation)
@@ -65,6 +66,7 @@ func TestATransmitDecisionIsCountedOnce(t *testing.T) {
 // One address reached twice in a single decision set is one row, and must be
 // one count. This is the case the ON CONFLICT exists for.
 func TestARecipientNamedTwiceIsCountedOnce(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	delivery := e.plantDelivery(t)
 	before := countedNow(t, allowedRecordConfirmation)
@@ -87,6 +89,7 @@ func TestARecipientNamedTwiceIsCountedOnce(t *testing.T) {
 // the after-commit counting this test reports one, and the refusal rate an
 // operator alerts on climbs on rows that do not exist.
 func TestARolledBackTransmitCountsNothing(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	delivery := e.plantDelivery(t)
 	before := countedNow(t, allowedRecordConfirmation)

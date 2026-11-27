@@ -39,6 +39,7 @@ func databaseNow(t *testing.T, e *integration.Env) time.Time {
 // Kiritimati, fourteen hours east of UTC, its stored noon is still ahead all
 // day. The last touch, the account's last contact and the stored clock count it.
 func TestADayEntryDatedTodayHasHappenedBeforeItsStoredNoon(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	kiritimati := setInstallationZone(t, e, "Pacific/Kiritimati")
 	now := databaseNow(t, e)
@@ -103,6 +104,7 @@ func TestADayEntryDatedTodayHasHappenedBeforeItsStoredNoon(t *testing.T) {
 // stored noon in Auckland. The morning after, it is no longer the next
 // meeting, and a day meeting comes before an hour on the following date.
 func TestTheNextMeetingFollowsTheDatesInTheZone(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	auckland := setInstallationZone(t, e, "Pacific/Auckland")
 	contact, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{FullName: "Harbour Buyer"})
@@ -170,6 +172,7 @@ func dayMeetingOwingAFollowUp(t *testing.T, e *integration.Env, zone *time.Locat
 // A follow-up sent on the morning of a day meeting's date answers it. The
 // date ends at midnight, so measuring from the end missed that morning.
 func TestAFollowUpOnADayMeetingsDateAnswersIt(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	auckland := setInstallationZone(t, e, "Pacific/Auckland")
 	dated, attendee, owed := dayMeetingOwingAFollowUp(t, e, auckland)
@@ -186,6 +189,7 @@ func TestAFollowUpOnADayMeetingsDateAnswersIt(t *testing.T) {
 // is not a follow-up, though in Auckland its stored noon falls after the
 // meeting's date begins. Dated the meeting's own date, it is one.
 func TestADayCallDatedBeforeADayMeetingIsNotItsFollowUp(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	auckland := setInstallationZone(t, e, "Pacific/Auckland")
 	dated, attendee, owed := dayMeetingOwingAFollowUp(t, e, auckland)
@@ -214,6 +218,7 @@ func TestADayCallDatedBeforeADayMeetingIsNotItsFollowUp(t *testing.T) {
 // On a busy day the meetings lane still opens with the day meeting. The day
 // meeting takes no timed meeting's place, because each is read to its own limit.
 func TestABusyDayKeepsTheDayMeetingOnTheLane(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	for i := range 13 {
 		bookMeeting(t, e, fmt.Sprintf("Slot %02d", i), laneDay.Add(time.Duration(10+i*20)*time.Minute), "")

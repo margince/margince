@@ -29,6 +29,7 @@ func holdsTaxRateGrant(t *testing.T, conn *pgx.Conn, key string) bool {
 // The tax rate up grants admin the sheet. Its down takes the grant away again,
 // so the next up grants it afresh instead of finding a stale key and skipping.
 func TestTheTaxRateDownTakesBackTheGrantItsUpGave(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	resetSchema(t, conn)

@@ -79,6 +79,7 @@ func enableLeadRouting(t *testing.T, e *SearchEnv, params map[string]any) {
 }
 
 func TestWorkflowRouteLeadAssignsExactlyOnce(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	enableLeadRouting(t, e, map[string]any{"owners": []string{e.Rep1.String()}})
 	leadID := e.SeedID(t, `INSERT INTO lead (id, full_name, source, captured_by) VALUES ($1, 'Fresh Lead', 'manual', 'human:x')`)
@@ -149,6 +150,7 @@ func TestWorkflowRouteLeadAssignsExactlyOnce(t *testing.T) {
 // nothing, a paused instance fires nothing, and enabling flips it live
 // on the very next event (no cache) with its params applied.
 func TestWorkflowEngineHonorsAutomationInstances(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	engine := compose.NewWorkflowEngine(e.DB())
 
@@ -229,6 +231,7 @@ func TestWorkflowEngineHonorsAutomationInstances(t *testing.T) {
 }
 
 func TestWorkflowStageChangeMatchGuardsSemantic(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	seedStarterAutomations(t, e)
 	// stage_change_create_task is authorable but not one of the six

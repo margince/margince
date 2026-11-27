@@ -70,6 +70,7 @@ func verdictAndRuleset(t *testing.T, e *loadEnv, id ids.UUID) (verdict, ruleset 
 // one, so the gate that exempted it no longer applies, and an audit row saying
 // a field changed without saying from what is not recoverable afterwards.
 func TestAVerdictUnderAnOlderRulesetIsReplaced(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	store := storeKnowing(e)
 	activity := e.waitingFrom(t, "Dienstag 14 Uhr", "buyer@customer.test", e.buyer(t))
@@ -103,6 +104,7 @@ func TestAVerdictUnderAnOlderRulesetIsReplaced(t *testing.T) {
 
 // The same rules judging twice is still two opinions, and the first stands.
 func TestAVerdictUnderTheSameRulesetDoesNotOverwrite(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	store := storeKnowing(e)
 	activity := e.waitingFrom(t, "Anything", "buyer@customer.test", e.buyer(t))
@@ -132,6 +134,7 @@ func TestAVerdictUnderTheSameRulesetDoesNotOverwrite(t *testing.T) {
 // strictly newer answer with a strictly older one. Difference is not order; the
 // read instant is what supplies the order.
 func TestAStaleWorkerDoesNotOverwriteANewerVerdict(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	store := storeKnowing(e)
 	activity := e.waitingFrom(t, "Anything", "buyer@customer.test", e.buyer(t))
@@ -163,6 +166,7 @@ func TestAStaleWorkerDoesNotOverwriteANewerVerdict(t *testing.T) {
 // every verdict — so the UPDATE below is the honest way to seed the one row
 // shape that only history can make.
 func TestALegacyVerdictWithNoRulesetIsStale(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	store := storeKnowing(e)
 	activity := e.waitingFrom(t, "Judged long ago", "buyer@customer.test", e.buyer(t))
@@ -188,6 +192,7 @@ func TestALegacyVerdictWithNoRulesetIsStale(t *testing.T) {
 // on the queue, the sweep could never reach the rows it exists to correct, and
 // the wrong verdict would keep itself wrong forever.
 func TestTheSweepReachesARowTheQueueWouldNotShow(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	store := storeKnowing(e)
 	// Older than any horizon the queue derives, and judged informs_us with no
@@ -214,6 +219,7 @@ func TestTheSweepReachesARowTheQueueWouldNotShow(t *testing.T) {
 
 // A row already judged under the current rules is left alone.
 func TestACurrentVerdictIsNotSweptAgain(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	store := storeKnowing(e)
 	activity := e.waitingFrom(t, "Anything", "buyer@customer.test", e.buyer(t))
@@ -242,6 +248,7 @@ func containsCandidate(rows []OwedCandidate, id ids.UUID) bool {
 // A judged row the models declined to RE-judge keeps its verdict against the
 // prompt they declined, and is offered again once the prompt moves.
 func TestARestaleDeclineStandsOnlyForThePromptThatWasDeclined(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	store := storeKnowing(e)
 	activity := e.waitingFrom(t, "Judged, then declined", "buyer@customer.test", e.buyer(t))

@@ -35,6 +35,7 @@ func listMail(deliveredTo string, aboveReceived bool, msgID string) []byte {
 }
 
 func TestListMailDeliveredToTheSeatIsRecordedAsTheirImport(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 
 	env.sync(t, listMail(captureOwner, true, "list-1@customer.example"))
@@ -47,6 +48,7 @@ func TestListMailDeliveredToTheSeatIsRecordedAsTheirImport(t *testing.T) {
 // A Delivered-To below the receiving hop is the sender's own text, and proves
 // nothing about whose mailbox the message reached.
 func TestAForgedDeliveredToRecordsNoImport(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 
 	env.sync(t, listMail(captureOwner, false, "list-2@customer.example"))

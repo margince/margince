@@ -44,6 +44,7 @@ func taxedOffer(t *testing.T, e *Env, deal ids.UUID) crmcontracts.Offer {
 // A deal closed before its offer was accepted is re-priced on the offer's net,
 // and its frozen base value is converted from that net.
 func TestAcceptingATaxedOfferOntoAClosedDealFreezesItsNet(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, won := DealFixture(t, e)
 	deal := e.SeedDeal(t, "Closed before the offer", pipeline, open, &e.Rep1)
@@ -71,6 +72,7 @@ func TestAcceptingATaxedOfferOntoAClosedDealFreezesItsNet(t *testing.T) {
 // A legacy-mode deal that took an accepted taxed offer's net reads that basis,
 // not "unknown". Only legacy-mode deals are read against their offers.
 func TestADealPricedFromATaxedAcceptedOfferReadsTheNetBasis(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	deal := e.SeedDeal(t, "Net basis", pipeline, open, &e.Rep1)

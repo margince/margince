@@ -31,7 +31,7 @@ func TestEverySourceHasAContractName(t *testing.T) {
 // Locks names only what a boot source sets, and says "nothing" as an empty
 // list rather than null.
 func TestLocksNameOnlyTheBootSetSettings(t *testing.T) {
-	if got := Locks(unsetConfig(), StoredSettings()); got == nil || len(got) != 0 {
+	if got := Locks(t.Context(), unsetConfig(), StoredSettings()); got == nil || len(got) != 0 {
 		t.Fatalf("an unbound configuration locks %v, want []", got)
 	}
 }

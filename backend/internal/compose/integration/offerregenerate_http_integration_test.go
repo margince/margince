@@ -44,7 +44,7 @@ import (
 // scripted candidate needs to cite a source_id minted during that seed).
 func setupWithOfferDraft(t *testing.T) (*apptest.AppEnv, *ai.FakeClient) {
 	t.Helper()
-	pool, err := testdb.OwnPool(context.Background(), apptest.AppDSN(t))
+	pool, err := testdb.OwnPool(context.Background(), testdb.For(t).AppDSN)
 	if err != nil {
 		t.Fatalf("opening the offer-draft retriever's pool: %v", err)
 	}
@@ -145,6 +145,7 @@ func containsDescription(descriptions []string, want string) bool {
 }
 
 func TestOfferRegenerateHTTP_GroundedAIDraftStagesAndDisclosesWithoutMovingTotals(t *testing.T) {
+	t.Parallel()
 	e, fake := setupWithOfferDraft(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Offer Regen AI", "offerai@fable.test", "Admin")
 	wsID := apptest.InstallationWorkspaceID(context.Background(), t, e.Owner)
@@ -200,6 +201,7 @@ func TestOfferRegenerateHTTP_GroundedAIDraftStagesAndDisclosesWithoutMovingTotal
 }
 
 func TestOfferRegenerateHTTP_UngroundedCandidateFallsBackToMechanicalCloneOnly(t *testing.T) {
+	t.Parallel()
 	e, fake := setupWithOfferDraft(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Offer Regen Ungrounded", "ungrounded@fable.test", "Admin")
 	wsID := apptest.InstallationWorkspaceID(context.Background(), t, e.Owner)
@@ -245,6 +247,7 @@ func TestOfferRegenerateHTTP_UngroundedCandidateFallsBackToMechanicalCloneOnly(t
 // is ever consulted — a draft offer has nothing to regenerate from,
 // whether or not an AI brain is wired.
 func TestOfferRegenerateHTTP_NonSentOfferRefusesMechanically(t *testing.T) {
+	t.Parallel()
 	e, _ := setupWithOfferDraft(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Offer Regen Not Sent", "notsent@fable.test", "Admin")
 	dealID := offerFixture(t, e)
@@ -271,6 +274,7 @@ func TestOfferRegenerateHTTP_NonSentOfferRefusesMechanically(t *testing.T) {
 // warning and serves the mechanical mint that already committed — the
 // caller never loses the revision it just minted behind a 500.
 func TestOfferRegenerateHTTP_MalformedModelResponseFallsBackToMechanicalClone(t *testing.T) {
+	t.Parallel()
 	e, fake := setupWithOfferDraft(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Offer Regen Malformed", "malformed@fable.test", "Admin")
 	wsID := apptest.InstallationWorkspaceID(context.Background(), t, e.Owner)

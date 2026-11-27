@@ -145,6 +145,7 @@ func (f *authorshipFixture) corrections(evidence ids.UUID) int {
 }
 
 func TestStageEvidenceFollowsAnOwnDomainAddedAndRemoved(t *testing.T) {
+	t.Parallel()
 	f := newAuthorshipFixture(t)
 	fromBuyer := f.inboundMail("cfo@buyer-corp.test")
 	fromOther := f.inboundMail("ops@other-customer.test")
@@ -236,6 +237,7 @@ func (f *authorshipFixture) unmetForAssurance() int {
 }
 
 func TestAnAdminDomainChangeCorrectsEvidenceAtOnce(t *testing.T) {
+	t.Parallel()
 	f := newAuthorshipFixture(t)
 	fromBuyer := f.inboundMail("cfo@buyer-corp.test")
 	budget := f.claim(fromBuyer, "budget")
@@ -275,6 +277,7 @@ func TestAnAdminDomainChangeCorrectsEvidenceAtOnce(t *testing.T) {
 // carries on from there. Without that a ledger longer than one run's reach
 // never gets past its own prefix.
 func TestTheAuthorshipPassCarriesOnFromWhereItStopped(t *testing.T) {
+	t.Parallel()
 	f := newAuthorshipFixture(t)
 	first := f.claim(f.inboundMail("cfo@buyer-corp.test"), "budget")
 	second := f.claim(f.inboundMail("ops@buyer-corp.test"), "notes")
@@ -307,6 +310,7 @@ func TestTheAuthorshipPassCarriesOnFromWhereItStopped(t *testing.T) {
 // the place the hourly pass keeps, which would step that pass over every row
 // between the two.
 func TestAScopedRunLeavesTheHourlyPlaceAlone(t *testing.T) {
+	t.Parallel()
 	f := newAuthorshipFixture(t)
 	held := f.claim(f.inboundMail("cfo@buyer-corp.test"), "budget")
 	f.WsExec(t, `INSERT INTO installation_state (key, value)

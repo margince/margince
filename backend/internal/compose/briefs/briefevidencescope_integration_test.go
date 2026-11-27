@@ -46,6 +46,7 @@ func queuedEvidence(t *testing.T, ranking BriefRanking, dealID ids.UUID) []ids.U
 }
 
 func TestTheRankingDoesNotRestOnAnActivityTheRepIsNotInTheAudienceOf(t *testing.T) {
+	t.Parallel()
 	b := setupBrief(t)
 
 	// The positive control first: the same rep, the same activity, cited while
@@ -73,6 +74,7 @@ func TestTheRankingDoesNotRestOnAnActivityTheRepIsNotInTheAudienceOf(t *testing.
 }
 
 func TestAServedBriefDropsAnActivityNarrowedAfterTheRunCitedIt(t *testing.T) {
+	t.Parallel()
 	b := setupBrief(t)
 
 	run, err := b.engine.SnapshotRun(b.repCtx, briefClock)
@@ -104,6 +106,7 @@ func TestAServedBriefDropsAnActivityNarrowedAfterTheRunCitedIt(t *testing.T) {
 }
 
 func TestAServedFindingFollowsItsEvidenceAudience(t *testing.T) {
+	t.Parallel()
 	b := setupBrief(t)
 	run, err := b.engine.SnapshotRun(b.repCtx, briefClock)
 	if err != nil {

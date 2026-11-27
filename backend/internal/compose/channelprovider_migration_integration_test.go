@@ -20,6 +20,7 @@ import (
 )
 
 func TestActivityKindAndChannelProviderAreSeededByMigration(t *testing.T) {
+	t.Parallel()
 	integration.Setup(t) // triggers EnsureSchema — the migration this test asserts on
 	owner := integration.OwnerConn(t)
 	ctx := context.Background()
@@ -68,6 +69,7 @@ func TestActivityKindAndChannelProviderAreSeededByMigration(t *testing.T) {
 // The FK is what does the real work: an unregistered kind is refused by the
 // database, not by an application-side list somebody has to remember.
 func TestActivityKindFKRefusesAnUnregisteredKind(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 
 	_, err := integration.OwnerConn(t).Exec(ctx, `

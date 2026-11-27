@@ -23,6 +23,7 @@ import (
 const germanNewLeadTask = "Beim neuen Lead nachfassen"
 
 func TestATaskMarginceWroteIsNamedInTheReadersLanguageEverywhere(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Initech", nil)
 	deal := e.SeedOpenDealOn(t, "Initech rollout", company)

@@ -32,6 +32,7 @@ import (
 )
 
 func TestARetentionHeldActivityAnswers423NotNotFoundOnWrite(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedRestrictionFixture(t, e)
 	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(e.Admin(), f.contact, "test"); err != nil {
@@ -107,6 +108,7 @@ func TestARetentionHeldActivityAnswers423NotNotFoundOnWrite(t *testing.T) {
 // the "held" case relinkActivityRow itself distinguishes throughout is
 // discarded past the return, this test's real subject.
 func TestARelinkAlreadyPresentOnAHeldRowStillReadsBack(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedRestrictionFixture(t, e)
 	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(e.Admin(), f.contact, "test"); err != nil {
@@ -164,6 +166,7 @@ func TestARelinkAlreadyPresentOnAHeldRowStillReadsBack(t *testing.T) {
 // endpoint instead. A held row's request is never fixable that way, so 423
 // must win.
 func TestSetAudienceOnAHeldCapturedRowAnswers423NotCapturedAudienceError(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 
@@ -215,6 +218,7 @@ func TestSetAudienceOnAHeldCapturedRowAnswers423NotCapturedAudienceError(t *test
 // thing this test needs is a row that already carries restricted_at and
 // archived_at, linked to a contact the caller cannot write.
 func TestARetentionHeldRowStaysHiddenFromAnUnrelatedWriter(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 
@@ -277,6 +281,7 @@ func TestARetentionHeldRowStaysHiddenFromAnUnrelatedWriter(t *testing.T) {
 // principal, so an unbounded human being waved past the ownership check
 // (auth.Unbounded's own short-circuit) must not also be waved past this.
 func TestAnUnboundedCallerStillFacesTheAudienceArmOnAHeldRow(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 

@@ -65,6 +65,7 @@ func (f *invitationFixture) queue(t *testing.T, hours ...int) []crmcontracts.Id 
 // worker holds parks itself when its own attempt ends, and joins that episode.
 // Once the calendar can take bookings again, the next pass sends them all on.
 func TestARefusedCalendarParksTheQueueOnceAndResumesIt(t *testing.T) {
+	t.Parallel()
 	f := newInvitationFixture(t)
 	told := &attentionRecorder{}
 	f.store = f.store.WithInvitationAttention(told)
@@ -117,6 +118,7 @@ func TestARefusedCalendarParksTheQueueOnceAndResumesIt(t *testing.T) {
 // An ordinary failure waits on its own after the fifth attempt, says why, and
 // a retry clears the reason.
 func TestTheFifthOrdinaryFailureSaysWhyAndARetryClearsIt(t *testing.T) {
+	t.Parallel()
 	f := newInvitationFixture(t)
 	told := &attentionRecorder{}
 	f.store = f.store.WithInvitationAttention(told)
@@ -167,6 +169,7 @@ func (f *invitationFixture) deliver(t *testing.T) {
 // the host has since reconnected. It parks nothing and tells nobody; the row is
 // retried. A refusal after the resume is a new disconnect, told once more.
 func TestAStaleRefusalParksNothingAndANewOneIsANewEpisode(t *testing.T) {
+	t.Parallel()
 	f := newInvitationFixture(t)
 	told := &attentionRecorder{}
 	f.store = f.store.WithInvitationAttention(told)
@@ -200,6 +203,7 @@ func TestAStaleRefusalParksNothingAndANewOneIsANewEpisode(t *testing.T) {
 // A refusal while a meeting moves or is canceled parks the change, and the
 // reconnect sends the same change on.
 func TestARefusedMoveAndCancelParkAndResumeAsThemselves(t *testing.T) {
+	t.Parallel()
 	for _, action := range []string{"reschedule", invitationCancel} {
 		t.Run(action, func(t *testing.T) {
 			f := newInvitationFixture(t)
@@ -230,6 +234,7 @@ func TestARefusedMoveAndCancelParkAndResumeAsThemselves(t *testing.T) {
 // A reconnect resumes the disconnect's rows only: an invitation that failed on
 // its own keeps waiting for its retry.
 func TestAReconnectLeavesADeliveryFailureWaiting(t *testing.T) {
+	t.Parallel()
 	f := newInvitationFixture(t)
 	failed := f.queue(t, 10)[0]
 	f.calendar.fail = true
@@ -254,6 +259,7 @@ func TestAReconnectLeavesADeliveryFailureWaiting(t *testing.T) {
 // The calendar is judged under the host's lock, so a disconnect cannot park
 // rows between the judgement and the resume it allows.
 func TestAResumeJudgesTheCalendarUnderTheHostsLock(t *testing.T) {
+	t.Parallel()
 	f := newInvitationFixture(t)
 	f.queue(t, 10)
 	f.calendar.checkErr = connector.ErrAuthRejected
@@ -275,6 +281,7 @@ func TestAResumeJudgesTheCalendarUnderTheHostsLock(t *testing.T) {
 
 // A retry answers the row as stored, without the reason it no longer has.
 func TestARetryAnswersWithoutTheReason(t *testing.T) {
+	t.Parallel()
 	f := newInvitationFixture(t)
 	id := f.queue(t, 10)[0]
 	f.calendar.fail = true

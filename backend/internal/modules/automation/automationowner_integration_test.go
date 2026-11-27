@@ -22,6 +22,7 @@ import (
 // moves the owner and counts as a change of the rule. It refuses a seat the
 // caller could not make an owner.
 func TestAnAutomationCanBeHandedToAnotherMember(t *testing.T) {
+	t.Parallel()
 	fx := setupAutomationDB(t)
 	db := database.BindTo(fx.pool, ids.From[ids.WorkspaceKind](fx.ws))
 	ctx := fx.humanCtx(fx.rep1, principal.RowScopeAll)
@@ -64,6 +65,7 @@ func TestAnAutomationCanBeHandedToAnotherMember(t *testing.T) {
 // A rule saved before its kind required a param is still handed on. The new
 // owner's grants decide the hand-on; the stored params are not judged again.
 func TestAnEnabledRuleSavedUnderOlderParamRulesCanStillBeHandedOn(t *testing.T) {
+	t.Parallel()
 	fx := setupAutomationDB(t)
 	db := database.BindTo(fx.pool, ids.From[ids.WorkspaceKind](fx.ws))
 	fx.seedAutomationWithOwner(t, noActivityReminderName, fx.rep1)
@@ -96,6 +98,7 @@ func (s stagesHiddenFrom) StageSemantic(ctx context.Context, _ ids.UUID) (string
 
 // The new owner of a handed-on rule must be able to use every record it names.
 func TestHandingOnAStageRuleToSomeoneWhoCannotSeeItsStagesIsRefused(t *testing.T) {
+	t.Parallel()
 	fx := setupAutomationDB(t)
 	db := database.BindTo(fx.pool, ids.From[ids.WorkspaceKind](fx.ws))
 	pipeline, stage := ids.NewV7(), ids.NewV7()

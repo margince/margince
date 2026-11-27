@@ -15,7 +15,6 @@ package costestimate
 
 import (
 	"context"
-	"os"
 	"testing"
 	"time"
 
@@ -51,13 +50,9 @@ type estEnv struct {
 
 func setupEstimator(t *testing.T) *estEnv {
 	t.Helper()
-	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
-	appDSN := os.Getenv("MARGINCE_TEST_APP_DSN")
-	if ownerDSN == "" || appDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
+	db := testdb.New(t)
 	ctx := context.Background()
-	owner, err := pgx.Connect(ctx, ownerDSN)
+	owner, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -66,14 +61,8 @@ func setupEstimator(t *testing.T) *estEnv {
 			t.Errorf("closing owner connection: %v", err)
 		}
 	})
-	// Every test in this package seeds its own workspace into ONE database, so
-	// the separation between them has to be real: reset before seeding, as
-	// compose/integration's harness does.
-	if err := testdb.Reset(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
 
-	pool, err := testdb.OwnPool(ctx, appDSN)
+	pool, err := testdb.OwnPool(ctx, db.AppDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -220,6 +209,7 @@ func (e *estEnv) insertRate(t *testing.T, model string, in, out int64) {
 // floors the enrich estimate instead of pricing it, is
 // TestEstimatorEnrichFloorsWhenContactsCreatedZero.
 func TestEstimatorPricesObservedHistory(t *testing.T) {
+	t.Parallel()
 	e := setupEstimator(t)
 	ws, wsCtx := e.seedWorkspace(t)
 	user := e.seedUser(t, ws)
@@ -276,6 +266,7 @@ func TestEstimatorPricesObservedHistory(t *testing.T) {
 // observed from that run; the zero-contacts enrich must force the whole estimate
 // heuristic while leaving it priced.
 func TestEstimatorEnrichFloorsWhenContactsCreatedZero(t *testing.T) {
+	t.Parallel()
 	e := setupEstimator(t)
 	ws, wsCtx := e.seedWorkspace(t)
 	user := e.seedUser(t, ws)
@@ -317,6 +308,7 @@ func TestEstimatorEnrichFloorsWhenContactsCreatedZero(t *testing.T) {
 // excluded from the cost and the estimate is heuristic, but the priced slice
 // still contributes.
 func TestEstimatorExcludesRatelessModelAndFlagsHeuristic(t *testing.T) {
+	t.Parallel()
 	e := setupEstimator(t)
 	ws, wsCtx := e.seedWorkspace(t)
 	user := e.seedUser(t, ws)
@@ -362,6 +354,7 @@ func TestEstimatorExcludesRatelessModelAndFlagsHeuristic(t *testing.T) {
 // work-shape floor and the cost would be a tiny floor figure instead of the
 // large observed one this asserts.
 func TestEstimatorCountsMeteringFailedRows(t *testing.T) {
+	t.Parallel()
 	e := setupEstimator(t)
 	ws, wsCtx := e.seedWorkspace(t)
 	user := e.seedUser(t, ws)
@@ -397,6 +390,7 @@ func TestEstimatorCountsMeteringFailedRows(t *testing.T) {
 // never dividing the retry cost back out. Enrich is isolated on cheap_cloud
 // (the only rated model) so classify/embeddings floor unpriced and add no cost.
 func TestEstimatorEnrichMeteringFailedRetryDoesNotInflateDenominator(t *testing.T) {
+	t.Parallel()
 	e := setupEstimator(t)
 	ws, wsCtx := e.seedWorkspace(t)
 	user := e.seedUser(t, ws)
@@ -434,6 +428,7 @@ func TestEstimatorEnrichMeteringFailedRetryDoesNotInflateDenominator(t *testing.
 // that has since left the ladder reprices at cheap_cloud's CURRENT binding
 // (which is rated), never the $0 local head — the cloud cost survives a swap.
 func TestEstimatorRepricesSinceUnboundSlice(t *testing.T) {
+	t.Parallel()
 	e := setupEstimator(t)
 	ws, wsCtx := e.seedWorkspace(t)
 	user := e.seedUser(t, ws)
@@ -465,6 +460,7 @@ func TestEstimatorRepricesSinceUnboundSlice(t *testing.T) {
 // TestEstimatorNoHistoryUsesFloor: a workspace with a connection but no ai_call,
 // no labeled activity and no backfill falls entirely to the work-shape floor.
 func TestEstimatorNoHistoryUsesFloor(t *testing.T) {
+	t.Parallel()
 	e := setupEstimator(t)
 	ws, wsCtx := e.seedWorkspace(t)
 	user := e.seedUser(t, ws)
@@ -488,6 +484,7 @@ func TestEstimatorNoHistoryUsesFloor(t *testing.T) {
 // completed backfill. Previewing the SECOND must use floor units — never the
 // first connection's yields (no cross-connection blend).
 func TestEstimatorConnectionScopedYields(t *testing.T) {
+	t.Parallel()
 	e := setupEstimator(t)
 	ws, wsCtx := e.seedWorkspace(t)
 	user := e.seedUser(t, ws)

@@ -15,6 +15,7 @@ import (
 )
 
 func TestSourceAssessmentDowngradeRefusesToDiscardEvidence(t *testing.T) {
+	t.Parallel()
 	for _, state := range []string{"source_review", "assessed_indirect", "assessed_direct"} {
 		t.Run(state, func(t *testing.T) {
 			dsn, _ := dsns(t)
@@ -50,6 +51,7 @@ func TestSourceAssessmentDowngradeRefusesToDiscardEvidence(t *testing.T) {
 }
 
 func TestSourceReferenceDowngradeKeepsAnAssessmentWithoutATypedNote(t *testing.T) {
+	t.Parallel()
 	dsn, _ := dsns(t)
 	conn := connect(t, dsn)
 	headSchema(t, conn)

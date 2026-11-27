@@ -24,6 +24,7 @@ import (
 // A task a rep archived stays archived: reading the meeting again neither
 // writes it again nor asks about it.
 func TestAnArchivedCommitmentTaskIsNotWrittenAgain(t *testing.T) {
+	t.Parallel()
 	e := setupTranscript(t)
 	e.WsExec(t, `UPDATE app_user SET display_name = 'Priya Raman' WHERE id = $1`, e.Rep2)
 	e.read(t, cannedBrain{reply: attributedReply(t, "Priya Raman", "seat:"+e.Rep2.String(), 0.9)})
@@ -48,6 +49,7 @@ func TestAnArchivedCommitmentTaskIsNotWrittenAgain(t *testing.T) {
 // A reading that words the promise differently still finds it: the task is
 // keyed on who promised and the lines it was said on, not on the summary.
 func TestARewordedPromiseIsTheSamePromise(t *testing.T) {
+	t.Parallel()
 	e := setupTranscript(t)
 	e.WsExec(t, `UPDATE app_user SET display_name = 'Priya Raman' WHERE id = $1`, e.Rep2)
 	e.read(t, cannedBrain{reply: attributedReply(t, "Priya Raman", "seat:"+e.Rep2.String(), 0.9)})
@@ -63,6 +65,7 @@ func TestARewordedPromiseIsTheSamePromise(t *testing.T) {
 // A customer's promise a rep dismissed stays dismissed, and is not filed again
 // beside the dismissed one.
 func TestADismissedCustomerPromiseIsNotFiledAgain(t *testing.T) {
+	t.Parallel()
 	e := setupTranscript(t)
 	contact, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{FullName: "Frédéric de Gombert"})
 	if err != nil {
@@ -89,6 +92,7 @@ func TestADismissedCustomerPromiseIsNotFiledAgain(t *testing.T) {
 // A promise a human turned down as a proposal is not written as a task when a
 // later reading of the same words is surer of it.
 func TestARefusedPromiseIsNotWrittenWhenAReadingIsSurer(t *testing.T) {
+	t.Parallel()
 	e := setupTranscript(t)
 	e.WsExec(t, `UPDATE app_user SET display_name = 'Priya Raman' WHERE id = $1`, e.Rep2)
 	read := e.read(t, cannedBrain{reply: attributedReply(t, "Priya Raman", "seat:"+e.Rep2.String(), 0.75)})
@@ -111,6 +115,7 @@ func TestARefusedPromiseIsNotWrittenWhenAReadingIsSurer(t *testing.T) {
 // A promise still waiting on a human is not written around them when a later
 // reading of the same words is surer of it.
 func TestAWaitingPromiseIsNotWrittenWhenAReadingIsSurer(t *testing.T) {
+	t.Parallel()
 	e := setupTranscript(t)
 	e.WsExec(t, `UPDATE app_user SET display_name = 'Priya Raman' WHERE id = $1`, e.Rep2)
 	if read := e.read(t, cannedBrain{reply: attributedReply(t, "Priya Raman", "seat:"+e.Rep2.String(), 0.75)}); len(read.ProposalIDs) != 1 {
@@ -127,6 +132,7 @@ func TestAWaitingPromiseIsNotWrittenWhenAReadingIsSurer(t *testing.T) {
 // colleague. Nobody can be named as the promiser, so nobody is asked, and the
 // finding stays on the meeting.
 func TestACustomerSharingAColleaguesNameIsNotTakenForThem(t *testing.T) {
+	t.Parallel()
 	e := setupTranscript(t)
 	e.WsExec(t, `UPDATE app_user SET display_name = 'Priya Raman' WHERE id = $1`, e.Rep2)
 	contact, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{FullName: "Priya Raman"})
@@ -161,6 +167,7 @@ func linkInes(t *testing.T, e *transcriptEnv) ids.UUID {
 // as well, dated as the meeting said, and the claim points at the task it
 // became — so their record shows the promise and opens the task.
 func TestOurPromiseIsFiledOnTheCustomerItWasMadeTo(t *testing.T) {
+	t.Parallel()
 	e := setupTranscript(t)
 	e.WsExec(t, `UPDATE app_user SET display_name = 'Priya Raman' WHERE id = $1`, e.Rep2)
 	customer := linkInes(t, e)
@@ -190,6 +197,7 @@ func TestOurPromiseIsFiledOnTheCustomerItWasMadeTo(t *testing.T) {
 // A promise of ours a rep dismissed from the customer's record is not proposed
 // again when the meeting is read again.
 func TestADismissedPromiseOfOursIsNotProposedAgain(t *testing.T) {
+	t.Parallel()
 	e := setupTranscript(t)
 	e.WsExec(t, `UPDATE app_user SET display_name = 'Priya Raman' WHERE id = $1`, e.Rep2)
 	linkInes(t, e)
@@ -218,6 +226,7 @@ func TestADismissedPromiseOfOursIsNotProposedAgain(t *testing.T) {
 
 // Two customers of one name tie a promise to neither, and nobody is asked.
 func TestTwoCustomersOfOneNameTieThePromiseToNeither(t *testing.T) {
+	t.Parallel()
 	e := setupTranscript(t)
 	linkInes(t, e)
 	linkInes(t, e)
@@ -233,6 +242,7 @@ func TestTwoCustomersOfOneNameTieThePromiseToNeither(t *testing.T) {
 // A proposal whose source conversation is gone by the time a human accepts it
 // is refused, not written as a task nobody can check.
 func TestAProposalWhoseConversationIsGoneIsNotAccepted(t *testing.T) {
+	t.Parallel()
 	e := setupTranscript(t)
 	e.WsExec(t, `UPDATE app_user SET display_name = 'Priya Raman' WHERE id = $1`, e.Rep2)
 	read := e.read(t, cannedBrain{reply: attributedReply(t, "Priya Raman", "seat:"+e.Rep2.String(), 0.75)})
@@ -253,6 +263,7 @@ func TestAProposalWhoseConversationIsGoneIsNotAccepted(t *testing.T) {
 // A card decided under the retired transcript_proposal kind stays readable to
 // the rep it was staged for, though nothing stages or applies that kind now.
 func TestADecidedRetiredTranscriptCardStaysReadable(t *testing.T) {
+	t.Parallel()
 	e := setupTranscript(t)
 	id := integration.SeedIDRow(t, e.owner, `INSERT INTO approval
 		(id, kind, status, proposed_by, on_behalf_of, proposed_change, diff_hash, expires_at, decided_at,
@@ -267,6 +278,7 @@ func TestADecidedRetiredTranscriptCardStaysReadable(t *testing.T) {
 // A pending card of the retired kind is refused on approval: nothing would
 // apply it, and a recorded yes that does nothing would read as done.
 func TestAPendingRetiredTranscriptCardCannotBeApproved(t *testing.T) {
+	t.Parallel()
 	e := setupTranscript(t)
 	id := integration.SeedIDRow(t, e.owner, `INSERT INTO approval
 		(id, kind, status, proposed_by, on_behalf_of, proposed_change, diff_hash, expires_at,

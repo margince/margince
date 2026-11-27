@@ -14,7 +14,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"os"
 	"testing"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -52,6 +51,7 @@ func jobRowState(ctx context.Context, t *testing.T, pool *pgxpool.Pool, id int64
 }
 
 func TestADriftSweepWhoseWorkerDiedDoesNotBlockTheNextOrLeaveItsRowRunning(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := context.Background()
 	w := &embedDriftSweepWorker{
@@ -107,6 +107,7 @@ func TestADriftSweepWhoseWorkerDiedDoesNotBlockTheNextOrLeaveItsRowRunning(t *te
 // A second sweep in that window must not take the first's row for a dead
 // worker's. The first records its own completion while it still holds the lock.
 func TestASweepStartingBeforeRiverRecordsTheLastLeavesItCompleted(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := context.Background()
 	w := &embedDriftSweepWorker{
@@ -143,6 +144,7 @@ func TestASweepStartingBeforeRiverRecordsTheLastLeavesItCompleted(t *testing.T) 
 // it as a dead worker's. The write is refused once the lock is free, so a sweep
 // that let go first fails here.
 func TestASweepRecordsItsRowBeforeItLetsGoOfTheLock(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := context.Background()
 	w := &embedDriftSweepWorker{
@@ -172,6 +174,7 @@ func TestASweepRecordsItsRowBeforeItLetsGoOfTheLock(t *testing.T) {
 }
 
 func TestADriftSweepTickNamesNoUniquenessSoADeadRowCannotAbsorbIt(t *testing.T) {
+	t.Parallel()
 	opts := periodicInsertOpts(EmbedDriftSweepArgs{})
 	if opts.UniqueOpts.ByArgs || len(opts.UniqueOpts.ByState) != 0 {
 		t.Errorf("the drift sweep tick dedupes over %v, so a dead running row would absorb every later tick", opts.UniqueOpts.ByState)
@@ -184,7 +187,7 @@ func TestADriftSweepTickNamesNoUniquenessSoADeadRowCannotAbsorbIt(t *testing.T) 
 func poisonedPool(t *testing.T, e *integration.Env) *pgxpool.Pool {
 	t.Helper()
 	ctx := context.Background()
-	cfg, err := database.PoolConfig(os.Getenv("MARGINCE_TEST_APP_DSN"))
+	cfg, err := database.PoolConfig(testdb.For(t).AppDSN)
 	if err != nil {
 		t.Fatalf("parsing the pool config: %v", err)
 	}
@@ -211,6 +214,7 @@ func poisonedPool(t *testing.T, e *integration.Env) *pgxpool.Pool {
 }
 
 func TestAHoldOnADeadConnectionFailsInsteadOfReadingAsAHeldLock(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := context.Background()
 

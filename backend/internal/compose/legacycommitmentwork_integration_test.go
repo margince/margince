@@ -27,6 +27,7 @@ import (
 )
 
 func TestLegacyClaimsRemainHistoryWithoutAssigningTheContactOwner(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := time.Date(2026, 10, 21, 12, 0, 0, 0, time.UTC)
 	old := now.AddDate(-2, 0, 0)
@@ -85,6 +86,7 @@ func TestLegacyClaimsRemainHistoryWithoutAssigningTheContactOwner(t *testing.T) 
 }
 
 func TestHistoricalAutomaticTasksRequireCurrentEvidenceOrHumanAdoption(t *testing.T) {
+	t.Parallel()
 	for _, state := range []string{"automatic", "undated automatic", "imported", "manual", "edited", "reopened", "pinned", "reassigned"} {
 		t.Run(state, func(t *testing.T) {
 			e := integration.Setup(t)
@@ -203,6 +205,7 @@ func TestHistoricalAutomaticTasksRequireCurrentEvidenceOrHumanAdoption(t *testin
 }
 
 func TestHistoricalClaimBatchUndoStillRestoresItsRecord(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Account buyer", &e.Rep1)
 	promise := seedWorklistPromise(t, e, contact, "A colleague will send the plan")
@@ -233,6 +236,7 @@ func TestHistoricalClaimBatchUndoStillRestoresItsRecord(t *testing.T) {
 }
 
 func TestCurrentNativePromiseLeavesWorkWhenItsMeaningIsCompleted(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := time.Date(2026, 10, 21, 12, 0, 0, 0, time.UTC)
 	at, quote := now.Add(-time.Hour), "I will send the account plan."
@@ -303,6 +307,7 @@ func legacyImportContext(t *testing.T, e *integration.Env) context.Context {
 }
 
 func TestImportedTeamClaimsDoNotBecomeCurrentBecauseAHumanRanTheImport(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Imported account contact", &e.AdminUser)
 	old := time.Date(2024, 10, 21, 12, 0, 0, 0, time.UTC)

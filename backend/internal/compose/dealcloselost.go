@@ -53,7 +53,7 @@ func newSilentDealCloser(pool *pgxpool.Pool, log *slog.Logger) silentDealCloser 
 	return silentDealCloser{
 		pool:       pool,
 		deals:      deals.NewStore(InstallationDB(pool), DealsInstallation()),
-		users:      identity.NewService(pool),
+		users:      IdentityService(pool),
 		activities: activities.NewStore(InstallationDB(pool)),
 		now:        func() time.Time { return time.Now().UTC() },
 		log:        log,
@@ -169,7 +169,7 @@ func (c silentDealCloser) recordOnTimeline(ctx context.Context, tx pgx.Tx, decis
 // only when it is not nil. The run and the re-check under the row lock both
 // read it.
 func closeDecisions(ctx context.Context, tx pgx.Tx, now time.Time, only []ids.UUID) ([]closeDecision, error) {
-	threshold, err := config.StoredApplyTx(ctx, tx, config.Bound(), deals.SilentCloseDays)
+	threshold, err := config.StoredApplyTx(ctx, tx, config.Bound(ctx), deals.SilentCloseDays)
 	if err != nil {
 		return nil, fmt.Errorf("compose: reading the silent close threshold: %w", err)
 	}

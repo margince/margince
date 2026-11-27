@@ -34,6 +34,7 @@ func connectedAt(t *testing.T, e *integration.Env, owner, company ids.UUID, name
 }
 
 func TestAnAccountAskNamesTheFunctionAndNoConnection(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := company360Service(e)
 	company, _ := seedRoleDeal(t, e)
@@ -61,6 +62,7 @@ func TestAnAccountAskNamesTheFunctionAndNoConnection(t *testing.T) {
 }
 
 func TestAnAccountAskRefusesAColleagueWithNoReachThere(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := company360Service(e)
 	company, _ := seedRoleDeal(t, e)
@@ -83,6 +85,7 @@ func TestAnAccountAskRefusesAColleagueWithNoReachThere(t *testing.T) {
 // A function with one connection is not on the reach answer, so an ask for it
 // would name the one contact behind that title.
 func TestAnAccountAskRefusesAFunctionTheReachAnswerDoesNotShow(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := company360Service(e)
 	company, _ := seedRoleDeal(t, e)
@@ -100,6 +103,7 @@ func TestAnAccountAskRefusesAFunctionTheReachAnswerDoesNotShow(t *testing.T) {
 }
 
 func TestAnAccountAskRefusesTheReaderAsTheirOwnIntroducer(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := company360Service(e)
 	company, _ := seedRoleDeal(t, e)
@@ -117,6 +121,7 @@ func TestAnAccountAskRefusesTheReaderAsTheirOwnIntroducer(t *testing.T) {
 // dropped without a word, and the reader would send an ask that says less than
 // they chose.
 func TestAFunctionWithANamedContactIsRefused(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := company360Service(e)
 	company, _ := seedRoleDeal(t, e)

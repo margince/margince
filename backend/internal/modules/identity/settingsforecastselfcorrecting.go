@@ -28,7 +28,7 @@ var ForecastSelfCorrecting = config.DefineStored(config.Spec[bool]{
 // ForecastSelfCorrectingTx reads the switch inside a transaction the caller
 // already holds, ungated: every forecast obeys it, whatever the reader's grants.
 func ForecastSelfCorrectingTx(ctx context.Context, tx pgx.Tx) (bool, error) {
-	return config.StoredApplyTx(ctx, tx, config.Bound(), ForecastSelfCorrecting)
+	return config.StoredApplyTx(ctx, tx, config.Bound(ctx), ForecastSelfCorrecting)
 }
 
 func (s *InstallationSettingsStore) readForecastSelfCorrecting(ctx context.Context, out *InstallationSettings) error {

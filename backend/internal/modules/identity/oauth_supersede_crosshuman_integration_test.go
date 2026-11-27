@@ -32,6 +32,7 @@ import (
 )
 
 func TestReconsentByADifferentHumanLeavesTheFirstHumansConnectionAlive(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "oauth-supersede-cross-human")
 
 	first := e.connectOAuthFor(t, e.admin)
@@ -52,6 +53,7 @@ func TestReconsentByADifferentHumanLeavesTheFirstHumansConnectionAlive(t *testin
 // two unrelated colleagues. Both connections are theirs and neither consent is
 // news to the other.
 func TestTwoHumansOnOneCIMDRegistrationKeepSeparateSeats(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "oauth-supersede-cimd")
 
 	// An https URL with a path, which is what makes an id a CIMD id, and the
@@ -90,6 +92,7 @@ func TestTwoHumansOnOneCIMDRegistrationKeepSeparateSeats(t *testing.T) {
 // TestARevokeRacingARotationNeverDeadlocksOrLeavesACredentialLive,
 // oauth_lockorder_integration_test.go).
 func TestTwoConsentsRacingOneHumansSeatNeverLeaveTwoActiveGrants(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "oauth-supersede-race")
 
 	const attempts = 12
@@ -114,6 +117,7 @@ func TestTwoConsentsRacingOneHumansSeatNeverLeaveTwoActiveGrants(t *testing.T) {
 // consents serialize on nothing in common, and neither may cost the other its
 // connection.
 func TestTwoHumansRacingOneRegistrationEachKeepTheirOwnSeat(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "oauth-supersede-race-cross-human")
 
 	const attempts = 12
@@ -144,6 +148,7 @@ func TestTwoHumansRacingOneRegistrationEachKeepTheirOwnSeat(t *testing.T) {
 // before issueGrant runs) must not still mint a grant because the lock query
 // only checked client_id existed.
 func TestIssueGrantRefusesAClientDisabledUnderTheLock(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "oauth-supersede-disabled-client")
 
 	clientID := "client-" + ids.NewV7().String()
@@ -263,6 +268,7 @@ func (e *revocationEnv) connectOAuthWithClient(t *testing.T, consenter Identity,
 }
 
 func TestOneHumanDisconnectingLeavesAColleaguesConnectionAlive(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "oauth-disconnect-cross-human")
 
 	clientID := fmt.Sprintf("https://client.example/%s/oauth-client-metadata", ids.NewV7())

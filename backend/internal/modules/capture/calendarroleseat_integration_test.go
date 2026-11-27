@@ -19,6 +19,7 @@ import (
 // connected (sales@, support@) is attested too, and its answer is the team's,
 // not that member's, so it binds nobody.
 func TestARoleMailboxAnswerOnAMeetingBindsNoSeat(t *testing.T) {
+	t.Parallel()
 	ctx, pool := meetingTenureEnv(t)
 	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
 		seat, login := seedSeat(ctx, t, tx, "active")

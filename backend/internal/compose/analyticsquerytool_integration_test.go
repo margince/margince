@@ -41,6 +41,7 @@ func seedToolDeals(t *testing.T, e *integration.Env) {
 }
 
 func TestTheAnalyticsToolAndTheHTTPEngineServeOneAnswer(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedToolDeals(t, e)
 	ctx := e.Admin()
@@ -94,6 +95,7 @@ func TestTheAnalyticsToolAndTheHTTPEngineServeOneAnswer(t *testing.T) {
 // names: the schema lives at a resource such a client cannot open, so a
 // refusal that only points there is a dead end.
 func TestAnUnknownPopulationIsRefusedWithTheAllowedSet(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	run := analyticsQueryToolRunner(e.DB())
@@ -111,6 +113,7 @@ func TestAnUnknownPopulationIsRefusedWithTheAllowedSet(t *testing.T) {
 
 // An argument key the engine does not serve is refused by name, not dropped.
 func TestTheAnalyticsToolRefusesAnUnservedArgument(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	run := analyticsQueryToolRunner(e.DB())
@@ -124,6 +127,7 @@ func TestTheAnalyticsToolRefusesAnUnservedArgument(t *testing.T) {
 // Exactly one JSON value: trailing content is a caller who thinks they sent
 // something this never read.
 func TestTheAnalyticsToolRefusesTrailingContent(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	run := analyticsQueryToolRunner(e.DB())
 	if _, err := run(e.Admin(), json.RawMessage(
@@ -147,6 +151,7 @@ func TestTheAnalyticsToolRefusesTrailingContent(t *testing.T) {
 // column left out of columnValueShapes shows up as a refusal a caller can
 // act on rather than as a fault.
 func TestNoDimensionAnswersAJSONNumberWithAServerFault(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedToolDeals(t, e)
 	ctx := e.Admin()
@@ -186,6 +191,7 @@ func TestNoDimensionAnswersAJSONNumberWithAServerFault(t *testing.T) {
 // exists to remove, because the literal is admitted and then cannot bind. Only
 // the database can settle which, so the case asks it.
 func TestATypedDimensionTakesTheLiteralItsTypePromises(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedToolDeals(t, e)
 	ctx := e.Admin()
@@ -245,6 +251,7 @@ func TestATypedDimensionTakesTheLiteralItsTypePromises(t *testing.T) {
 const notAnID = "1"
 
 func TestNoDimensionAnswersAStringItCannotHoldWithAServerFault(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedToolDeals(t, e)
 	ctx := e.Admin()

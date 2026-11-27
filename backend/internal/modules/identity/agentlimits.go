@@ -35,7 +35,7 @@ func callingAgent(ctx context.Context) (principal.Principal, bool) {
 // refuseAgentMemberReach refuses an agent acting on its own user's seat or on
 // an administrator's. It holds the authorization lock first, because some
 // callers do not, and a promotion must not land between this read and the act.
-func refuseAgentMemberReach(ctx context.Context, tx pgx.Tx, target ids.UserID) error {
+func refuseAgentMemberReach(ctx context.Context, tx pgx.Tx, rbac RbacObjects, target ids.UserID) error {
 	p, isAgent := callingAgent(ctx)
 	if !isAgent {
 		return nil
@@ -43,7 +43,7 @@ func refuseAgentMemberReach(ctx context.Context, tx pgx.Tx, target ids.UserID) e
 	if err := lockAuthorization(ctx, tx); err != nil {
 		return err
 	}
-	_, roles, err := loadRoleDocuments(ctx, tx, []ids.UUID{target.UUID})
+	roles, err := loadRoleDocuments(ctx, tx, rbac, []ids.UUID{target.UUID})
 	if err != nil {
 		return err
 	}
@@ -62,7 +62,7 @@ func refuseAgentReachOf(p principal.Principal, target ids.UUID, roles []string) 
 
 // refuseAgentTeamReach refuses an agent archiving or restoring a team holding a
 // member it may not act on. Either act switches that member's team reach.
-func refuseAgentTeamReach(ctx context.Context, tx pgx.Tx, team ids.UUID) error {
+func refuseAgentTeamReach(ctx context.Context, tx pgx.Tx, rbac RbacObjects, team ids.UUID) error {
 	p, isAgent := callingAgent(ctx)
 	if !isAgent {
 		return nil
@@ -75,7 +75,7 @@ func refuseAgentTeamReach(ctx context.Context, tx pgx.Tx, team ids.UUID) error {
 	if err != nil {
 		return err
 	}
-	_, roles, err := loadRoleDocuments(ctx, tx, members)
+	roles, err := loadRoleDocuments(ctx, tx, rbac, members)
 	if err != nil {
 		return err
 	}

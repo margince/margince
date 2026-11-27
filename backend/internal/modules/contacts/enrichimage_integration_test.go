@@ -58,6 +58,7 @@ func companyAuditImages(ctx context.Context, t *testing.T, e *dedupeEnv, company
 // A column nobody claimed is the enrichment's to fill, and the row now says what
 // it was — which, for a fill, is the absence it replaced.
 func TestAnEnrichmentRecordsTheEmptyColumnItFilled(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	_, companyID := e.seedEmployedContact(ctx, t,
@@ -92,6 +93,7 @@ func TestAnEnrichmentRecordsTheEmptyColumnItFilled(t *testing.T) {
 // human-typed column, precedence would flip silently, and no test of the gate
 // itself would notice.
 func TestAnEnrichmentDoesNotRecordAColumnAHumanTyped(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	_, companyID := e.seedEmployedContact(ctx, t,

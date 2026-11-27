@@ -19,6 +19,7 @@ import (
 // A day holds one current rate however often it is corrected. The earlier
 // versions stay, and the database refuses a second current row.
 func TestADayHoldsExactlyOneCurrentRate(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	for _, rate := range []string{"0.5", "0.9", "0.7"} {
 		if _, err := e.Deals.SetFxRate(e.Admin(), deals.SetFxRateInput{FromCurrency: "USD", Rate: rate}); err != nil {
@@ -46,6 +47,7 @@ func TestADayHoldsExactlyOneCurrentRate(t *testing.T) {
 // commits mid-report is invisible to it. A later detail at that revision reads
 // the rate the report used.
 func TestASnapshotPinsTheRateRevisionItSawAcrossACommittedCorrection(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.Admin()
 	set := func(rate string) {
@@ -101,6 +103,7 @@ func TestASnapshotPinsTheRateRevisionItSawAcrossACommittedCorrection(t *testing.
 // Removing a currency keeps its versions, so a figure pinned to a revision
 // from before the removal still finds the rate it used.
 func TestARemovedCurrencyKeepsTheRateAPinnedFigureUsed(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.Admin()
 	if _, err := e.Deals.SetFxRate(ctx, deals.SetFxRateInput{FromCurrency: "JPY", Rate: "0.0060"}); err != nil {
@@ -137,6 +140,7 @@ func TestARemovedCurrencyKeepsTheRateAPinnedFigureUsed(t *testing.T) {
 // revision. A new report then stops converting with the removed rate. A figure
 // pinned before the removal still does.
 func TestARemovalMovesTheSheetRevisionPastTheRemovedRate(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.Admin()
 	for _, in := range []deals.SetFxRateInput{{FromCurrency: "JPY", Rate: "0.0060"}, {FromCurrency: "USD", Rate: "0.9"}} {

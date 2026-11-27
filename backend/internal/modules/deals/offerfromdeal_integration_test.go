@@ -20,6 +20,7 @@ import (
 // with the deal line it came from. A later change to the deal leaves the
 // offer as it was until the draft is refreshed.
 func TestAnOfferCopiesTheDealsLinesAtOneRevision(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	dealID, _, _ := twoStagePipeline(t, e.configEnv)
 	bananas := seedPricedProduct(t, e, "Bananas", 200, "EUR")
@@ -89,6 +90,7 @@ func TestAnOfferCopiesTheDealsLinesAtOneRevision(t *testing.T) {
 // deal priced from lines refuses lines typed on a new offer, and an offer
 // without its revision.
 func TestAnOfferFromTheDealRefusesItsOwnLines(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	dealID, _, _ := twoStagePipeline(t, e.configEnv)
 	bananas := seedPricedProduct(t, e, "Bananas", 200, "EUR")
@@ -117,6 +119,7 @@ func TestAnOfferFromTheDealRefusesItsOwnLines(t *testing.T) {
 // Accepting an offer made from revision R after the deal moved on records the
 // acceptance and leaves the deal's value to its lines.
 func TestAcceptingAnOlderSnapshotLeavesTheDealsValue(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	dealID, _, _ := twoStagePipeline(t, e.configEnv)
 	bananas := seedPricedProduct(t, e, "Bananas", 200, "EUR")
@@ -142,6 +145,7 @@ func TestAcceptingAnOlderSnapshotLeavesTheDealsValue(t *testing.T) {
 // A deal not priced from lines keeps the offer it always had: typed lines,
 // and the accepted net, without tax, on the deal.
 func TestADealWithoutLinesKeepsItsOfferBehaviour(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	dealID, _, _ := twoStagePipeline(t, e.configEnv)
 	_, err := e.store.CreateOffer(e.productCtx(), dealID, CreateOfferInput{Currency: "EUR", Source: "manual", FromDealRevision: new(int64(0))})
@@ -162,6 +166,7 @@ func TestADealWithoutLinesKeepsItsOfferBehaviour(t *testing.T) {
 // The approval preview of an offer from the deal shows the lines and totals
 // the create then writes: recurring, taxed and several lines alike.
 func TestThePreviewOfAnOfferFromTheDealIsTheOfferCreated(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	dealID, _, _ := twoStagePipeline(t, e.configEnv)
 	bananas := seedPricedProduct(t, e, "Bananas", 200, "EUR")

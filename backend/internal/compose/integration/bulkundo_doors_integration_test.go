@@ -107,6 +107,7 @@ func contactsLive(t *testing.T, e *apptest.AppEnv, items []bulkItemDTO) int {
 }
 
 func TestBothDoorsUndoABulkArchiveOnce(t *testing.T) {
+	t.Parallel()
 	e, doors := bulkUndoApp(t, "bulk-undo")
 	for _, door := range doors {
 		items := seedBulkContacts(t, e, 3)
@@ -131,6 +132,7 @@ func TestBothDoorsUndoABulkArchiveOnce(t *testing.T) {
 }
 
 func TestBothDoorsNeedTheUndoPreviewsTokenAboveTen(t *testing.T) {
+	t.Parallel()
 	e, doors := bulkUndoApp(t, "bulk-undo-token")
 	colleague := seedColleague(t, e)
 	for _, door := range doors {
@@ -158,6 +160,7 @@ func TestBothDoorsNeedTheUndoPreviewsTokenAboveTen(t *testing.T) {
 }
 
 func TestTheStatusReadAnswersWhatABatchDidAndWhoUndidIt(t *testing.T) {
+	t.Parallel()
 	e, doors := bulkUndoApp(t, "bulk-status")
 	web := doors[0]
 	archived, refusal := web.execute(t, AnyMap{"record_type": "contact", "verb": "archive", "items": seedBulkContacts(t, e, 2)}, "")

@@ -121,6 +121,7 @@ func (s *scenario) runImport(t *testing.T, csv string) importOutcome {
 // them exactly. A preview that is roughly right is a preview nobody can approve
 // against.
 func TestCase3ThePreviewTellsTheTruth(t *testing.T) {
+	t.Parallel()
 	s := bootWithImports(t)
 
 	preview := s.previewImport(t, tradeFairCSV)
@@ -172,6 +173,7 @@ func TestCase3ThePreviewTellsTheTruth(t *testing.T) {
 //
 // "I think I sent you that already, do it again to be safe" must be safe.
 func TestCase3ImportingTheSameFileTwiceChangesNothing(t *testing.T) {
+	t.Parallel()
 	s := bootWithImports(t)
 
 	first := s.runImport(t, tradeFairCSV)
@@ -223,6 +225,7 @@ func TestCase3ImportingTheSameFileTwiceChangesNothing(t *testing.T) {
 // Not all of them, and not a duplicate. And the country column, which the
 // correction did not touch, is left exactly as it was.
 func TestCase3ChangingOneRowUpdatesOneRecord(t *testing.T) {
+	t.Parallel()
 	s := bootWithImports(t)
 	s.runImport(t, tradeFairCSV)
 
@@ -271,6 +274,7 @@ func TestCase3ChangingOneRowUpdatesOneRecord(t *testing.T) {
 // duplicate either. The reason names the LINE, because a user has to be able to
 // find and fix it.
 func TestCase3ABadRowIsSkippedWithAReasonAndTheRestStillImport(t *testing.T) {
+	t.Parallel()
 	s := bootWithImports(t)
 
 	// The third data row carries no name at all — nothing the import can file.

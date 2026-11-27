@@ -34,6 +34,7 @@ func searchTitles(t *testing.T, e *integration.Env, perms principal.Permissions,
 	return out
 }
 
+//testdb:serial registers into a process-wide unit registry
 func TestAnExtensionKindIsSearchableByItsTitleForACallerWhoMayReadIt(t *testing.T) {
 	e := integration.Setup(t)
 	registerHistoryVisits(t)
@@ -67,6 +68,7 @@ func TestAnExtensionKindIsSearchableByItsTitleForACallerWhoMayReadIt(t *testing.
 	}
 }
 
+//testdb:serial registers into a process-wide unit registry
 func TestAnExtensionKindIsInTheDefaultTypesOnlyWhenAskedFor(t *testing.T) {
 	e := integration.Setup(t)
 	registerHistoryVisits(t)
@@ -85,6 +87,7 @@ func TestAnExtensionKindIsInTheDefaultTypesOnlyWhenAskedFor(t *testing.T) {
 }
 
 func TestExcludedIdsAreDroppedBeforeRankingAndCounting(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	keep := e.SeedContact(t, "Ines Vogel", nil)
 	drop := e.SeedContact(t, "Ines Vogt", nil)

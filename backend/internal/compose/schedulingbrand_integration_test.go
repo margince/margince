@@ -28,6 +28,7 @@ import (
 )
 
 func TestBookingBrandUsesTheCurrentAnchorAndServesItsLogoWithoutLogin(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	blob := blobstore.NewMemory()
 	theCompanyExists(t, e)
@@ -44,7 +45,7 @@ func TestBookingBrandUsesTheCurrentAnchorAndServesItsLogoWithoutLogin(t *testing
 	if profile.CompanyName == nil || *profile.CompanyName != "Acme GmbH" || profile.LogoUrl == nil {
 		t.Fatalf("profile did not use anchor identity: %+v", profile)
 	}
-	server := New(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), withConnectedCalendar(), WithBlobstore(blob))
+	server := New(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), nil, withConnectedCalendar(), WithBlobstore(blob))
 	logo := httptest.NewRecorder()
 	server.ServeHTTP(logo, httptest.NewRequest(http.MethodGet, *profile.LogoUrl, nil))
 	if logo.Code != http.StatusOK || logo.Header().Get("Content-Type") != "image/png" {
@@ -90,6 +91,7 @@ func TestBookingBrandUsesTheCurrentAnchorAndServesItsLogoWithoutLogin(t *testing
 }
 
 func TestBookingBrandWithoutAnAnchorDoesNotReuseObsoleteOverrides(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	name, url := "Former company", "https://old.example/logo.png"
 	profile, err := e.Activities.SaveSchedulingProfile(e.Admin(), crmcontracts.SchedulingProfile{
@@ -109,6 +111,7 @@ func TestBookingBrandWithoutAnAnchorDoesNotReuseObsoleteOverrides(t *testing.T) 
 }
 
 func TestBookingBrandTrimsLegacyLogosWithoutAuthorizingPublicWrites(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	blob := blobstore.NewMemory()
 	theCompanyExists(t, e)
@@ -121,7 +124,7 @@ func TestBookingBrandTrimsLegacyLogosWithoutAuthorizingPublicWrites(t *testing.T
 	if _, err := e.Contacts.SetAnchorCompanyLogo(e.Admin(), contacts.LogoWide, key, "legacy.png"); err != nil {
 		t.Fatal(err)
 	}
-	server := New(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), withConnectedCalendar(), WithBlobstore(blob))
+	server := New(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), nil, withConnectedCalendar(), WithBlobstore(blob))
 	response := httptest.NewRecorder()
 	server.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/v1/public/booking/company-logo", nil))
 	picture, err := png.Decode(response.Body)
@@ -146,6 +149,7 @@ func TestBookingBrandTrimsLegacyLogosWithoutAuthorizingPublicWrites(t *testing.T
 }
 
 func TestBookingBrandFollowsTheAnchorOnPersonalProposals(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	theCompanyExists(t, e)
 	blob := blobstore.NewMemory()
@@ -161,7 +165,7 @@ func TestBookingBrandFollowsTheAnchorOnPersonalProposals(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	server := New(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), withConnectedCalendar(), WithBlobstore(blob), WithKeyvault(vault), WithPublicBaseURL("https://crm.example.test"))
+	server := New(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), nil, withConnectedCalendar(), WithBlobstore(blob), WithKeyvault(vault), WithPublicBaseURL("https://crm.example.test"))
 	response := httptest.NewRecorder()
 	server.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/v1/public/proposal/"+strings.Split(proposal.URL, "proposal-")[1], nil))
 	var public crmcontracts.PublicMeetingProposal
@@ -181,6 +185,7 @@ func (b *unavailableBookingBrand) PublicBookingBrand(context.Context, ids.UserID
 }
 
 func TestBookingBrandFailureDoesNotFailCommittedSettingsOrAvailability(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	brand := &unavailableBookingBrand{}
 	now := time.Date(2026, 10, 5, 6, 0, 0, 0, time.UTC)
@@ -206,6 +211,7 @@ func TestBookingBrandFailureDoesNotFailCommittedSettingsOrAvailability(t *testin
 // booking page, and an entity's logo is served without login. An entity with no
 // logo shows its name and borrows no other entity's.
 func TestBookingBrandFollowsTheLegalEntityTheHostWorksFor(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	blob := blobstore.NewMemory()
 	handlers := companyHandlers{store: e.Contacts, blob: blob}
@@ -242,7 +248,7 @@ func TestBookingBrandFollowsTheLegalEntityTheHostWorksFor(t *testing.T) {
 		t.Fatalf("a Vienna host: %q %q, want Wien and its own logo", deref(viennaHost.CompanyName), deref(viennaHost.LogoUrl))
 	}
 
-	server := New(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), withConnectedCalendar(), WithBlobstore(blob))
+	server := New(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), nil, withConnectedCalendar(), WithBlobstore(blob))
 	logo := httptest.NewRecorder()
 	server.ServeHTTP(logo, httptest.NewRequest(http.MethodGet, *viennaHost.LogoUrl, nil))
 	if logo.Code != http.StatusOK || logo.Header().Get("Content-Type") != "image/png" {

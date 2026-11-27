@@ -24,6 +24,7 @@ import (
 // Mutation: drop the OmitsAdvertisingDuties check in stageDecisions and this
 // fails.
 func TestStagingRefusesAdvertisingComposedWithoutItsDuties(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	for _, tc := range []struct {
 		name    string
@@ -59,6 +60,7 @@ func TestStagingRefusesAdvertisingComposedWithoutItsDuties(t *testing.T) {
 //
 // Mutation: re-read the country inside applyFrequencyCap and this fails.
 func TestACountryEditMidSendCannotSplitTheDecision(t *testing.T) {
+	t.Parallel()
 	e := setupCap(t)
 	e.seedMarketingSubject(t)
 	gate := e.cappedGate(t, 1)

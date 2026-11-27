@@ -3,7 +3,7 @@
 
 //go:build integration
 
-package database
+package database_test
 
 // The typed-id ↔ pgx contract, proven against a real connection BEFORE
 // any module migrates onto ID[K]: scalar bind + scan, NULL through the
@@ -12,19 +12,17 @@ package database
 
 import (
 	"context"
-	"os"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func TestTypedIDsRoundTripThroughPgx(t *testing.T) {
-	dsn := os.Getenv("MARGINCE_TEST_DSN")
-	if dsn == "" {
-		t.Fatal("MARGINCE_TEST_DSN is not set — run `make db-up` and try again (integration tests fail loudly, they never skip)")
-	}
+	t.Parallel()
 	ctx := context.Background()
-	pool, err := NewPool(ctx, dsn)
+	pool, err := database.NewPool(ctx, testdb.For(t).OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}

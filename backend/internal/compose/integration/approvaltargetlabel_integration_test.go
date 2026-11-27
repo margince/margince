@@ -56,6 +56,7 @@ func stagedLabel(t *testing.T, e *Env, svc *approvals.Service, kind, targetType 
 // Without it the reader of an untyped kind gets a verb and a uuid, and decides
 // on the verb alone.
 func TestAStagedProposalRemembersWhatItsTargetIsCalled(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	deal := e.SeedDeal(t, "Weber GmbH — Phase 2", pipeline, open, &e.Rep1)
@@ -73,6 +74,7 @@ func TestAStagedProposalRemembersWhatItsTargetIsCalled(t *testing.T) {
 // resolved then would put a word in front of the approver that the proposal was
 // never about.
 func TestTheLabelIsTheNameTheProposalWasStagedAgainst(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	pipeline, open, _ := DealFixture(t, e)
@@ -116,6 +118,7 @@ func TestTheLabelIsTheNameTheProposalWasStagedAgainst(t *testing.T) {
 // A TARGET TYPE WITH NO NAME RECORDS NOTHING, rather than a blank or an
 // "unknown": absence is what tells the card to say nothing at all.
 func TestATargetWithNoNameRecordsNoLabel(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	activity := ids.NewV7()

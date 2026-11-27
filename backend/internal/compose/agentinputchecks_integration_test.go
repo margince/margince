@@ -39,6 +39,7 @@ func (c *capturingEnqueuer) EnqueueTxUnique(_ context.Context, _ pgx.Tx, args ri
 
 // A check the agent starts is its own, and its job says so.
 func TestAnAgentStartsAnInputCheckThatNamesIt(t *testing.T) {
+	t.Parallel()
 	v := setupViability(t)
 	agent := agentOfTheAdmin(t, v.Env)
 	queue := &capturingEnqueuer{}

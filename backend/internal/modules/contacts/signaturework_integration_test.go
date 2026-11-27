@@ -16,6 +16,7 @@ import (
 )
 
 func TestSignatureWorkKeepsArrivalsDuringARead(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	contact, err := e.store.CreateContact(e.as(), CreateContactInput{FullName: "Pending correspondent", Source: "manual"})
 	if err != nil {
@@ -73,6 +74,7 @@ func TestSignatureWorkKeepsArrivalsDuringARead(t *testing.T) {
 }
 
 func TestMergedSignatureWorkStartsBeyondBothPriorGenerationRanges(t *testing.T) {
+	t.Parallel()
 	for _, test := range []struct {
 		name           string
 		source, target int
@@ -139,6 +141,7 @@ func TestMergedSignatureWorkStartsBeyondBothPriorGenerationRanges(t *testing.T) 
 }
 
 func TestLiveSignatureRequestsPrecedeAnOlderHistoricalBacklog(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := principal.SystemActing(e.as(), "agent:enrich")
 	var historical []ids.ContactID

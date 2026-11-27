@@ -21,6 +21,7 @@ import (
 )
 
 func TestCurrentMovesStopNamingWorkAfterItsAudienceNarrows(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	pipeline, stage, _ := integration.DealFixture(t, e)
 	deal := e.SeedDeal(t, "Renewal", pipeline, stage, &e.Rep1)
@@ -59,6 +60,7 @@ func TestCurrentMovesStopNamingWorkAfterItsAudienceNarrows(t *testing.T) {
 }
 
 func TestCurrentMovesWithholdAdviceWhenTheActivityGrantIsLost(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	pipeline, stage, _ := integration.DealFixture(t, e)
 	deal := e.SeedDeal(t, "Renewal", pipeline, stage, &e.Rep1)
@@ -81,6 +83,7 @@ func TestCurrentMovesWithholdAdviceWhenTheActivityGrantIsLost(t *testing.T) {
 }
 
 func TestCurrentMovesStopNamingAContactAfterCapturePrivacyChanges(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	pipeline, stage, _ := integration.DealFixture(t, e)
 	deal := ids.From[ids.DealKind](e.SeedDeal(t, "Renewal", pipeline, stage, &e.Rep1))
@@ -123,6 +126,7 @@ func TestCurrentMovesStopNamingAContactAfterCapturePrivacyChanges(t *testing.T) 
 }
 
 func TestCurrentMeetingFollowUpChangesAfterTheActualMailWriterRuns(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	pipeline, stage, _ := integration.DealFixture(t, e)
 	deal := e.SeedDeal(t, "Renewal", pipeline, stage, &e.Rep1)

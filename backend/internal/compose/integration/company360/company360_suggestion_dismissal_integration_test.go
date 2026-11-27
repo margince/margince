@@ -47,6 +47,7 @@ const wellFormedFingerprint = "0123456789abcdef0123456789abcdef0123456789abcdef0
 // five suggestions on a busy account ends up with an empty card and stalled
 // deals they were never shown.
 func TestDismissingASuggestionRevealsTheNextOne(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := company360Service(e)
 	pipelineID, stage, _ := integration.DealFixture(t, e)
@@ -107,6 +108,7 @@ func stalledFingerprints(found []crmcontracts.Company360Suggestion) []string {
 // ones and bring that advice back. A rep who works through a busy account has to
 // be able to reach the end of it.
 func TestNoDismissalIsEverResurrected(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := company360Service(e)
 	pipelineID, stage, _ := integration.DealFixture(t, e)
@@ -165,6 +167,7 @@ func TestNoDismissalIsEverResurrected(t *testing.T) {
 // The unit test pins the fingerprint; this pins that the read produces the
 // changed one, so the two halves cannot pass while disagreeing.
 func TestADismissedStallReturnsWhenTheDealStallsAgain(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := company360Service(e)
 	pipelineID, stage, _ := integration.DealFixture(t, e)
@@ -218,6 +221,7 @@ func TestADismissedStallReturnsWhenTheDealStallsAgain(t *testing.T) {
 // they may have been shown again in between. The fingerprint carries only the idle
 // instant, which activities advance with greatest() and nothing lowers.
 func TestADeferralNeverResurrectsADismissal(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := company360Service(e)
 	pipelineID, stage, _ := integration.DealFixture(t, e)
@@ -294,6 +298,7 @@ func TestADeferralNeverResurrectsADismissal(t *testing.T) {
 // It goes through deals.AdvanceDeal rather than an UPDATE, because what the episode
 // counts is the history row that path writes.
 func TestAdvancingADealReArmsDismissedStallAdvice(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := company360Service(e)
 	pipelineID, stage, _ := integration.DealFixture(t, e)
@@ -396,6 +401,7 @@ func secondOpenStage(t *testing.T, e *integration.Env, pipelineID ids.PipelineID
 // judged, so a dismissal has to re-arm. A fingerprint built from a fetched page
 // would stay in force over a pipeline the account no longer has.
 func TestNoNextStepFingerprintFollowsUnlistedDeals(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := company360Service(e)
 	pipelineID, stage, _ := integration.DealFixture(t, e)
@@ -454,6 +460,7 @@ func fingerprintOfKind(
 // A dismissal belongs to the rep who made it. One rep judging a suggestion
 // must not decide it for their colleague, who has never seen it.
 func TestSuggestionDismissalIsPerUser(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := company360Service(e)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme", &e.Rep1))
@@ -510,6 +517,7 @@ func TestSuggestionDismissalIsPerUser(t *testing.T) {
 // situation holds and stops applying when the situation is genuinely a new
 // one. Without that, the surface would get quieter the longer it ran.
 func TestSuggestionDismissalReArmsWhenTheEvidenceChanges(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := company360Service(e)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme", &e.Rep1))
@@ -549,6 +557,7 @@ func TestSuggestionDismissalReArmsWhenTheEvidenceChanges(t *testing.T) {
 // A dismissal names a record, so it is a read: an account this caller cannot
 // see must refuse rather than confirm it exists.
 func TestSuggestionDismissalRefusesAnInvisibleAccount(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := company360Service(e)
 	// Capture-private to Rep3: the one state that hides an account from
@@ -572,6 +581,7 @@ func TestSuggestionDismissalRefusesAnInvisibleAccount(t *testing.T) {
 // An agent has no opinion to record. Consuming a human's dismissal on their
 // behalf would silence advice that human never saw.
 func TestSuggestionDismissalRefusesAnAgent(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := company360Service(e)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme", &e.Rep1))
@@ -590,6 +600,7 @@ func TestSuggestionDismissalRefusesAnAgent(t *testing.T) {
 // dismiss, and saying which reason would answer a question the caller has no
 // business asking.
 func TestSuggestionDismissalStoresNothingForASuggestionTheAccountDoesNotRaise(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := company360Service(e)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme", &e.Rep1))
@@ -628,6 +639,7 @@ func TestSuggestionDismissalStoresNothingForASuggestionTheAccountDoesNotRaise(t 
 // checked after the record gate, so the refusal cannot double as an existence
 // probe.
 func TestSuggestionDismissalRefusesAMalformedFingerprint(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := company360Service(e)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme", &e.Rep1))
@@ -662,6 +674,7 @@ func TestSuggestionDismissalRefusesAMalformedFingerprint(t *testing.T) {
 // and not sending it must leave the card alone — otherwise the first half would
 // pass against a dismissal that fired on any fingerprint at all.
 func TestASuggestionDismissedOnAScopedPageStaysDismissed(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := company360Service(e)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme", &e.Rep1))

@@ -118,6 +118,7 @@ func cohortGen(e *integration.Env) *CohortPromoteGen {
 // That is the shape the defect had in production — links written, then undone,
 // forever — so the test reproduces the mechanism rather than only the symptom.
 func TestAContactEventFilesTheMeetingTheirAddressAttended(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact, meeting := seedStrandedMeeting(t, e, "attendee@example.test")
 
@@ -142,6 +143,7 @@ func TestAContactEventFilesTheMeetingTheirAddressAttended(t *testing.T) {
 // else's retry as readily as its own, so a second pass must add nothing rather
 // than a second link.
 func TestARedeliveredContactEventRepairsTheCohortOnce(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact, meeting := seedStrandedMeeting(t, e, "repeat@example.test")
 
@@ -171,6 +173,7 @@ func TestARedeliveredContactEventRepairsTheCohortOnce(t *testing.T) {
 // repair for every contact behind it — which is the failure this consumer spent
 // its first months in.
 func TestAnUnrelatedEventLeavesTheCohortAlone(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact, meeting := seedStrandedMeeting(t, e, "untouched@example.test")
 

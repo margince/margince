@@ -18,12 +18,9 @@
 #     template's migrations grant the cluster-level margince_app role USAGE + table
 #     privileges (migration 0015), which the clone inherits, so the app role can
 #     connect and query without any per-clone GRANT.
-#   - Redis is a single shared instance, isolated by logical db rather than by
-#     instance: the parallel runner assigns each package its own index through
-#     MARGINCE_TEST_REDIS_DB and every Redis-using fixture reads it through
-#     testdb.RedisDB. More than one package touches Redis now, and the ones that
-#     do FLUSHDB between tests — so a shared index is a corruption, not
-#     contention. See REDIS_DBS in scripts/test-integration-parallel.sh.
+#   - Redis is the redis-test server. Each test leases a logical database of
+#     its own through testdb.RedisDB, so the runner assigns none: the lease
+#     holds across every process that uses the server.
 
 # shellcheck source=scripts/lib-diskspace.sh
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib-diskspace.sh"
@@ -88,13 +85,12 @@ lane_drop_timed_out() { # divergence-file timedout-file
 # this file, so both routes now settle it in one place instead of one of them
 # inheriting it by accident.
 #
-# REDIS_PORT is the same knob the Makefile and the compose file turn, read from
-# the environment so an override reaches both routes. The literal default is the
+# TEST_REDIS_PORT is the same knob the Makefile turns, read from the
+# environment so an override reaches both routes. The literal default is the
 # Makefile's, and test-testdb-redis.sh compares them rather than a comment
 # promising they agree.
 resolve_test_redis() {
-  export MARGINCE_TEST_REDIS="${MARGINCE_TEST_REDIS:-localhost:${REDIS_PORT:-16379}}"
-  export MARGINCE_TEST_REDIS_DB="${MARGINCE_TEST_REDIS_DB:-15}"
+  export MARGINCE_TEST_REDIS="${MARGINCE_TEST_REDIS:-localhost:${TEST_REDIS_PORT:-16380}}"
 }
 
 # parse_test_dsn: split MARGINCE_TEST_DSN (owner) and MARGINCE_TEST_APP_DSN (app)
@@ -102,8 +98,8 @@ resolve_test_redis() {
 # at the same template db in normal use; we only ever swap the db name segment,
 # never the credentials/host.
 parse_test_dsn() {
-  local owner="${MARGINCE_TEST_DSN:-postgres://margince_owner:dev@localhost:15432/margince}"
-  local app="${MARGINCE_TEST_APP_DSN:-postgres://margince_app:margince_app_dev@localhost:15432/margince}"
+  local owner="${MARGINCE_TEST_DSN:-postgres://margince_owner:dev@localhost:15433/margince}"
+  local app="${MARGINCE_TEST_APP_DSN:-postgres://margince_app:margince_app_dev@localhost:15433/margince}"
 
   # Owner: peel scheme://user:pass@host:port | /db?query
   local o_body="${owner#*://}"
@@ -157,45 +153,36 @@ db_admin() {
 #
 #   LANE_POOL_MAX_CONNS   ceiling for EACH pool the shared harness opens, handed
 #                         to it as MARGINCE_TEST_POOL_MAX_CONNS (testdb's
-#                         PoolMaxConnsEnv). 8 rather than database.NewPool's 16
-#                         because the measured high-water mark for a WHOLE
-#                         package at 16 jobs is 16 connections — both shared
-#                         pools and every ad-hoc connection together.
-#                         It travels as an ENV VAR and not in the DSN: cmd/migrate
-#                         and every bare pgx connection a fixture opens parse the
-#                         same DSNs with pgx.ParseConfig, which forwards an
-#                         unknown pool_* key to the server as a startup parameter
-#                         and dies with `FATAL: unrecognized configuration
-#                         parameter`.
-#   LANE_CONNS_PER_PACKAGE  what one package may hold at once. A SUM, because the
-#                         parts are bounded by different things:
-#                           2 x LANE_POOL_MAX_CONNS = 16, the two pools testdb
-#                             keys by DSN (owner + app) — this part is ENFORCED;
-#                           + 8 for everything the pin does not reach. That is
-#                             not only the ad-hoc pgx connections a fixture
-#                             opens: 49 integration test files build their OWN
-#                             pool from the same DSNs, and those keep
-#                             database.NewPool's fallback of 16. So this term is
-#                             a MEASURED budget, not a proved ceiling — the
-#                             high-water mark for one package is 16 with the pin
-#                             applied, and 24 is that plus half again. #1744
-#                             carries bringing those pools under the pin, which
-#                             is what would make this a ceiling.
-#                         It must EXCEED the measured peak, not equal it: a
-#                         budget equal to its own measurement is not a budget.
-#   LANE_FIXED_CONNS      what the lane costs beyond the packages: one admin
-#                         connection per slot for CREATE/DROP DATABASE is counted
-#                         per job below (cmd/migrate's db verbs open one
-#                         connection each, not a pool, and at a slot handover
-#                         jobs of them overlap); this covers the template migrate
-#                         (2), superuser_reserved_connections (3), and an
+#                         PoolMaxConnsEnv). It travels as an ENV VAR and not in
+#                         the DSN: cmd/migrate and every bare pgx connection a
+#                         fixture opens parse the same DSNs with pgx.ParseConfig,
+#                         which forwards an unknown pool_* key to the server and
+#                         dies with `FATAL: unrecognized configuration parameter`.
+#   LANE_TEST_PARALLEL_MAX  the most tests of one package that run at once,
+#                         handed to go test as -parallel. Each test has a
+#                         database of its own, so each opens its own pools. A
+#                         caller may set LANE_TEST_PARALLEL lower, as CI does.
+#   LANE_CONNS_PER_PACKAGE  what one package may hold at once:
+#                           LANE_TEST_PARALLEL_MAX x (2 x LANE_POOL_MAX_CONNS + 8)
+#                           = 3 x (2 x 8 + 8) = 72. Per test that is the owner
+#                           and app pools testdb keys by DSN, plus 8 for the
+#                           connections a fixture dials itself.
+#   LANE_ADMIN_CONNS      the admin connections one package holds for CREATE
+#                         and DROP DATABASE: one copies the next test's database
+#                         while the rest drop finished ones. Handed to testdb as
+#                         MARGINCE_TEST_ADMIN_CONNS.
+#   LANE_FIXED_CONNS      what the lane costs beyond the packages: the template
+#                         migrate (2), superuser_reserved_connections (3), and an
 #                         operator's own psql or a metrics scrape while the lane
 #                         runs (3).
 #
+# At 8 jobs: 8 x (72 + 4) + 8 = 616, under the 640 postgres-test allows.
 # Raise the concurrency and every term moves with it. That is the point: the
 # guard reads these, not a number somebody wrote down once.
 LANE_POOL_MAX_CONNS=8
-LANE_CONNS_PER_PACKAGE=24
+LANE_TEST_PARALLEL_MAX=3
+LANE_CONNS_PER_PACKAGE=72
+LANE_ADMIN_CONNS=4
 LANE_FIXED_CONNS=8
 
 # declare_lane_budget <jobs> — export the ceiling the harness applies and the
@@ -211,9 +198,16 @@ LANE_FIXED_CONNS=8
 # like a passing one, and the serial lane fails outright on any SKIP.
 declare_lane_budget() {
   local jobs="${1:?declare_lane_budget needs a job count}"
-  LANE_CONN_BUDGET=$(( jobs * (LANE_CONNS_PER_PACKAGE + 1) + LANE_FIXED_CONNS ))
+  LANE_TEST_PARALLEL="${LANE_TEST_PARALLEL:-$LANE_TEST_PARALLEL_MAX}"
+  if ! [[ "$LANE_TEST_PARALLEL" =~ ^[1-9][0-9]*$ ]] || (( LANE_TEST_PARALLEL > LANE_TEST_PARALLEL_MAX )); then
+    echo "LANE_TEST_PARALLEL=$LANE_TEST_PARALLEL must be a count from 1 to $LANE_TEST_PARALLEL_MAX: the connection budget is sized for that ceiling" >&2
+    exit 1
+  fi
+  LANE_CONN_BUDGET=$(( jobs * (LANE_CONNS_PER_PACKAGE + LANE_ADMIN_CONNS) + LANE_FIXED_CONNS ))
   export LANE_CONN_BUDGET
   export MARGINCE_TEST_POOL_MAX_CONNS="$LANE_POOL_MAX_CONNS"
+  export MARGINCE_TEST_ADMIN_CONNS="$LANE_ADMIN_CONNS"
+  export LANE_TEST_PARALLEL
 }
 # ---------------------------------------------------------------------------
 
@@ -551,21 +545,17 @@ stale_repeated_gates() { # seen-file...
   ( cd "$ROOT/backend" && go run ./tools/sql-census stale -allow "$REPEATED_GATES_ALLOW" "$@" )
 }
 
-# A foreground xargs waits for every package before the next batch reuses Redis.
-# Global indices keep clone names, shard filters and logs stable across batches.
+# run_integration_packages WORK JOBS OUTDIR — run each line of WORK as
+# `run_one LINE n OUTDIR`, up to JOBS at once. The line number n names the
+# package's clone, shard filter and log.
 run_integration_packages() {
-  local work="$1" jobs="$2" capacity="$3" outdir="$4"
-  if [[ ! "$jobs" =~ ^[1-9][0-9]*$ || ! "$capacity" =~ ^[1-9][0-9]*$ ]]; then
-    echo "FAIL: integration jobs and Redis capacity must be positive integers" >&2
+  local work="$1" jobs="$2" outdir="$3"
+  if [[ ! "$jobs" =~ ^[1-9][0-9]*$ ]]; then
+    echo "FAIL: integration jobs must be a positive integer" >&2
     return 1
   fi
-  local count first last
-  count=$(wc -l < "$work")
-  for ((first=1; first<=count; first+=capacity)); do
-    last=$((first + capacity - 1))
-    nl -ba -w1 -s'|' "$work" | sed -n "${first},${last}p" \
-      | xargs -P "$jobs" -I{} bash -c 'line="$1"; idx="${line%%|*}"; rest="${line#*|}"; run_one "$rest" "$idx" "$2"' _ {} "$outdir" || return
-  done
+  nl -ba -w1 -s'|' "$work" \
+    | xargs -P "$jobs" -I{} bash -c 'line="$1"; idx="${line%%|*}"; rest="${line#*|}"; run_one "$rest" "$idx" "$2"' _ {} "$outdir"
 }
 
 # The migrator holds the composed set; test packages receive that exact source manifest.

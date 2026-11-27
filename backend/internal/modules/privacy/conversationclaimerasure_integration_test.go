@@ -44,6 +44,7 @@ var claimErasers = map[string]func(context.Context, pgx.Tx, ids.ContactID) error
 }
 
 func TestBothActsDestroyTheClaimsReadOutOfASubjectsConversations(t *testing.T) {
+	t.Parallel()
 	for name, erase := range claimErasers {
 		t.Run(name, func(t *testing.T) {
 			ctx := context.Background()

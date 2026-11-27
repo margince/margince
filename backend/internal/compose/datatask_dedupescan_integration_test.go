@@ -48,6 +48,7 @@ func scannedPairs(t *testing.T, e *integration.Env) int {
 }
 
 func TestTheDuplicateScanTaskFilesPairsWrittenBeforeTheRuleAndReplaysSafely(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	seedPreRuleDuplicates(t, e)
@@ -87,6 +88,7 @@ func TestTheDuplicateScanTaskFilesPairsWrittenBeforeTheRuleAndReplaysSafely(t *t
 }
 
 func TestTheDuplicateScanTaskRollsBackWithItsBatch(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	seedPreRuleDuplicates(t, e)
@@ -110,6 +112,7 @@ func TestTheDuplicateScanTaskRollsBackWithItsBatch(t *testing.T) {
 }
 
 func TestTheDuplicateScanTaskRefusesAMalformedCursor(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
@@ -124,6 +127,7 @@ func TestTheDuplicateScanTaskRefusesAMalformedCursor(t *testing.T) {
 // Two contacts stored under two Gmail spellings of one mailbox before the rule
 // folded them get one pair. Dots at another host still name two mailboxes.
 func TestTheGmailScanTaskFilesStoredSpellingsOnceAndReplaysSafely(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	for name, email := range map[string]string{
@@ -160,6 +164,7 @@ func TestTheGmailScanTaskFilesStoredSpellingsOnceAndReplaysSafely(t *testing.T) 
 // contact's check takes. Pairs the queue holds are left out before that cap, so
 // one pass files every pair.
 func TestTheGmailScanTaskFilesEveryPairOnABaseCrowdedPastTheRivalCap(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	addresses := []string{
@@ -197,6 +202,7 @@ func TestTheGmailScanTaskFilesEveryPairOnABaseCrowdedPastTheRivalCap(t *testing.
 // The nightly job files the pairs of records changed since its last pass, and
 // only after the open queue has been re-checked.
 func TestTheNightlyDuplicateJobFilesThePairsOfChangedRecords(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedPreRuleDuplicates(t, e)
 	worker := &dedupeRecheckWorker{pool: e.Pool}

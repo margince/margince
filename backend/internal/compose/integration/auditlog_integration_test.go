@@ -26,6 +26,7 @@ import (
 )
 
 func TestAuditLogReadRequiresAdminHuman(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 
 	e.SeedContact(t, "Audit Subject", nil)
@@ -78,6 +79,7 @@ func TestAuditLogReadRequiresAdminHuman(t *testing.T) {
 }
 
 func TestAuditLogFiltersAndKeysetWalk(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 
 	var contactIDs []ids.UUID
@@ -152,6 +154,7 @@ func TestAuditLogFiltersAndKeysetWalk(t *testing.T) {
 // — an auditor asking what happened since Monday is shown everything before it.
 // Only a real row on a real clock separates the two.
 func TestAuditLogNarrowsByActorAndByWindow(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	subject := e.SeedContact(t, "Window Subject", nil)
 	admin := e.Admin()
@@ -238,6 +241,7 @@ func TestAuditLogNarrowsByActorAndByWindow(t *testing.T) {
 // filter's two meanings. A member includes the rows an agent wrote for them,
 // and an agent matches only its own rows.
 func TestAuditLogActorFilterIncludesWhatAnAgentDidForTheMember(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contactID := e.SeedContact(t, "Delegation Subject", nil)
 	base := time.Date(2026, 8, 1, 9, 0, 0, 0, time.UTC)
@@ -299,6 +303,7 @@ func carriesRow(entries []privacy.AuditEntry, id ids.UUID) bool {
 // granting human does, and an id no app_user matches resolves to nothing at all
 // rather than to an invented or guessed name.
 func TestAuditLogResolvesTheHumanBehindEveryRow(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 
 	// Seeded through the real writer: SeedContact goes via contacts.CreateContact,
@@ -401,6 +406,7 @@ func TestAuditLogResolvesTheHumanBehindEveryRow(t *testing.T) {
 // defect, so the actor, action, entity and timestamp are all answered and only
 // the IMAGE is withheld.
 func TestAuditLogWithholdsALimitedActivitysImageFromOutsideItsAudience(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
 	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
@@ -454,6 +460,7 @@ func TestAuditLogWithholdsALimitedActivitysImageFromOutsideItsAudience(t *testin
 // The mirror. An arm that withheld from EVERYONE would pass the test above
 // while destroying the compliance read, and nothing else here would notice.
 func TestAuditLogKeepsTheImageForAReaderInsideTheAudience(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
 	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
@@ -489,6 +496,7 @@ func TestAuditLogKeepsTheImageForAReaderInsideTheAudience(t *testing.T) {
 // what proves the entity_type test in the join is load-bearing rather than
 // decorative.
 func TestAuditLogLeavesANonActivityImageAlone(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
 

@@ -92,6 +92,7 @@ type sharedProgress struct {
 // An open-to-open move runs on either door: the deal moves, the note is logged,
 // and the audit and outbox rows of both name the agent.
 func TestTheProgressRouteMovesADealAsTheToolDoes(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "progress-doors", "read", "write")
 	stages := apptest.DiscoverSeededPipeline(t, d.e)
 	next := openStages(t, d.e)[1]
@@ -124,6 +125,7 @@ func TestTheProgressRouteMovesADealAsTheToolDoes(t *testing.T) {
 // colleague could in the app. The progress and advance routes and their tools
 // all close the deal, and none of them stages an approval.
 func TestAWonMoveOnAColleaguesPassportRunsAtOnceOnEitherDoor(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "progress-won", "read", "write")
 	stages := apptest.DiscoverSeededPipeline(t, d.e)
 	win := AnyMap{"to_stage_id": stages.Won, "won_without_contract_reason": "verbal"}
@@ -164,6 +166,7 @@ type sharedQualification struct {
 // A lead with a corporate address and no company gets its company from the
 // domain on either door, and the update names the agent.
 func TestTheQualifyRouteFillsALeadAsTheToolDoes(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "qualify-doors", "read", "write")
 	viaREST := createdID(t, d.e, "/v1/leads", AnyMap{
 		"full_name": "Ana Kessler", "email": "ana@kessler-maschinenbau.de", "source": "manual",
@@ -187,6 +190,7 @@ func TestTheQualifyRouteFillsALeadAsTheToolDoes(t *testing.T) {
 // rather than per path. A key the tool spent over MCP replays its answer on the
 // route, and the same key on a second lead is a conflict.
 func TestTheQualifyRoutesRetryKeyIsTheTools(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "qualify-key", "read", "write")
 	first := createdID(t, d.e, "/v1/leads", AnyMap{
 		"full_name": "Dora Kessler", "email": "dora@kessler-maschinenbau.de", "source": "manual",
@@ -252,6 +256,7 @@ func notesOn(t *testing.T, e *apptest.AppEnv, deal string) int {
 // longer quiet, so the second door drafts on the next one. A REST retry under
 // the same Idempotency-Key answers the first drafts and writes none.
 func TestTheFollowUpRouteDraftsAsTheToolDoesAndARetryWritesNothing(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "follow-up-doors", "read", "draft")
 	stages := apptest.DiscoverSeededPipeline(t, d.e)
 	winter := quietDeal(t, d.e, stages, "Quiet since winter", 120)
@@ -289,6 +294,7 @@ func TestTheFollowUpRouteDraftsAsTheToolDoesAndARetryWritesNothing(t *testing.T)
 // A passport lent without the scope a write needs is refused on the route as on
 // the tool. A record that does not exist is not found on either.
 func TestTheWriteRoutesRefuseAsTheirToolsDo(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "write-refusals", "read")
 	stages := apptest.DiscoverSeededPipeline(t, d.e)
 	deal := openDeal(t, d.e, stages, "Untouched renewal")

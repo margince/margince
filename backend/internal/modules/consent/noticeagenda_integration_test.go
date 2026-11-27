@@ -18,6 +18,7 @@ import (
 // A disclosure on its way is not asked for again, and one that bounced is.
 // Both stay owed in law; the agenda is what a rep is asked to act on.
 func TestASentNoticeLeavesTheAgendaAndABouncedOneReturns(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	now := time.Now()
 	record := func(acq ids.UUID, state NoticeState) {
@@ -52,6 +53,7 @@ func TestASentNoticeLeavesTheAgendaAndABouncedOneReturns(t *testing.T) {
 // The agenda says when each duty was recorded, so a reader can tell a duty
 // imported after its deadline from one that fell due while recorded.
 func TestTheAgendaSaysWhenADutyWasRecorded(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	acq := seedAcquisition(t, e, "referral")
 	due := time.Date(2020, 2, 20, 0, 0, 0, 0, time.UTC)
@@ -72,6 +74,7 @@ func TestTheAgendaSaysWhenADutyWasRecorded(t *testing.T) {
 // The agenda and the queue say what each deadline rests on: how the contact
 // arrived, when, and who recorded it.
 func TestADutyCarriesTheAcquisitionItsDeadlineRunsFrom(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	acquired := time.Date(2025, 3, 31, 9, 0, 0, 0, time.UTC)
 	var acq ids.UUID

@@ -66,6 +66,7 @@ func recordHold(t *testing.T, e *channelConsentEnv, store *Store, set commsauthz
 //
 // Mutation: drop the DisclosuresFor answer from FooterGapsTx and this fails.
 func TestOnlyASeatThatMayChangeTheParticularsReadsTheGaps(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
 		_, err := e.store.FooterGapsTx(e.ctx, tx)
@@ -77,6 +78,7 @@ func TestOnlyASeatThatMayChangeTheParticularsReadsTheGaps(t *testing.T) {
 }
 
 func TestAMissingCompanyDetailIsAGapUntilItIsStated(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	store := inFreeJurisdiction(t, e,
 		messagingrules.Disclosure{Kind: messagingrules.ControllerIdentity},
@@ -101,6 +103,7 @@ func TestAMissingCompanyDetailIsAGapUntilItIsStated(t *testing.T) {
 // Mutation: skip the row, count rows instead of intents, drop the occurred_at
 // window or the particularFor filter, and this fails.
 func TestAHeldSendCountsInItsEntitysGapUntilTheDetailsChange(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	store := inFreeJurisdiction(t, e, messagingrules.Disclosure{Kind: messagingrules.ObjectionRoute, MarketingOnly: true})
 	home := defaultEntity(t, e)

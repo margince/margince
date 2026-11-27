@@ -76,6 +76,7 @@ func postureOf(t *testing.T, e *integration.SearchEnv, user ids.UUID) string {
 }
 
 func TestAConnectionIsBornClassified(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 
@@ -88,6 +89,7 @@ func TestAConnectionIsBornClassified(t *testing.T) {
 }
 
 func TestAClassifiedMailboxBirthsEveryMessageHeld(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 
@@ -99,6 +101,7 @@ func TestAClassifiedMailboxBirthsEveryMessageHeld(t *testing.T) {
 }
 
 func TestASharedMailboxNeedsTheWorkspaceOptIn(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	// Refused while the workspace has not opted in. Not a 403: the seat's
@@ -123,6 +126,7 @@ func TestASharedMailboxNeedsTheWorkspaceOptIn(t *testing.T) {
 }
 
 func TestNarrowingAMailboxNeverNeedsTheOptIn(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	// A seat may always ask for MORE privacy than the workspace requires.
@@ -136,6 +140,7 @@ func TestNarrowingAMailboxNeverNeedsTheOptIn(t *testing.T) {
 }
 
 func TestASharedMailboxBirthsAMessageOpen(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	allowSharedPosture(t, e)
@@ -155,6 +160,7 @@ func TestASharedMailboxBirthsAMessageOpen(t *testing.T) {
 // column, so an owner who held such a thread was told their own intact
 // message had been erased.
 func TestAnOwnerHoldOnAMessageBornOpenStillShowsItsEvidence(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	allowSharedPosture(t, e)
@@ -195,6 +201,7 @@ func TestAnOwnerHoldOnAMessageBornOpenStillShowsItsEvidence(t *testing.T) {
 }
 
 func TestTheWorkspaceFloorOutranksASharedMailbox(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	allowSharedPosture(t, e)
@@ -211,6 +218,7 @@ func TestTheWorkspaceFloorOutranksASharedMailbox(t *testing.T) {
 }
 
 func TestAConfidentialMarkerHoldsTheMessageInsideTheCaptureTransaction(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	allowSharedPosture(t, e)
@@ -244,6 +252,7 @@ func TestAConfidentialMarkerHoldsTheMessageInsideTheCaptureTransaction(t *testin
 }
 
 func TestACounterpartyHoldBirthsTheMessageHeld(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	allowSharedPosture(t, e)
@@ -260,6 +269,7 @@ func TestACounterpartyHoldBirthsTheMessageHeld(t *testing.T) {
 }
 
 func TestAnAddressHoldCoversThatAddressAndNotItsDomain(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	allowSharedPosture(t, e)
@@ -282,6 +292,7 @@ func TestAnAddressHoldCoversThatAddressAndNotItsDomain(t *testing.T) {
 }
 
 func TestACounterpartyHoldIsOneSeatsAlone(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	allowSharedPosture(t, e)
@@ -300,6 +311,7 @@ func TestACounterpartyHoldIsOneSeatsAlone(t *testing.T) {
 }
 
 func TestACaptureWithNoIdentifiableConnectionIsBornHeld(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	allowSharedPosture(t, e)
@@ -324,6 +336,7 @@ func TestACaptureWithNoIdentifiableConnectionIsBornHeld(t *testing.T) {
 }
 
 func TestACalendarEventFollowsTheWorkspaceDefaultNotTheMailPosture(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, syncAsKind := env.e, env.syncAsKind
 	setPosture(t, env, e.Rep1, capturemod.PostureHeld)
@@ -388,6 +401,7 @@ func composeSettingsStore(e *integration.SearchEnv) *settings.Store {
 }
 
 func TestApplyingAPostureToHistoryNarrowsOnlyBackwards(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	allowSharedPosture(t, e)
@@ -435,6 +449,7 @@ func openActivityCount(t *testing.T, e *integration.SearchEnv) int {
 }
 
 func TestNarrowingToClassifiedNeverLoosensAHeldMessage(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	allowSharedPosture(t, e)
@@ -482,6 +497,7 @@ func importPostureOf(t *testing.T, e *integration.SearchEnv, activityID, user id
 }
 
 func TestASecondMailboxDoesNotLendItsPostureToTheFirst(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	allowSharedPosture(t, e)
@@ -514,6 +530,7 @@ func TestASecondMailboxDoesNotLendItsPostureToTheFirst(t *testing.T) {
 }
 
 func TestACounterpartyHoldSurvivesAnotherSeatsClearedVerdict(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	syncSecond := secondMailbox(t, e, e.Rep3)
@@ -596,6 +613,7 @@ func setImportVerdictKeepingPosture(t *testing.T, e *integration.SearchEnv, acti
 }
 
 func TestAClearedThreadIsInheritedOnlyBySendersTheVerdictSaw(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	allowSharedPosture(t, e)
@@ -682,6 +700,7 @@ func threadVerdictStatus(t *testing.T, e *integration.SearchEnv, user ids.UUID, 
 // change that made every hold clearable would publish the messages a sender
 // explicitly marked.
 func TestAClassifierVerdictIsNotASendersMarking(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	allowSharedPosture(t, e)
@@ -824,6 +843,7 @@ func recomputeAudience(t *testing.T, e *integration.SearchEnv, seat, activityID 
 // The three that must NOT move are asserted beside it, because a clear that was
 // one word too wide would publish mail nobody decided to publish.
 func TestAnOwnerShareLiftsAVerdictHoldAndNothingElse(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	allowSharedPosture(t, e)
@@ -912,6 +932,7 @@ func setImportVerdictReason(
 // An agent holds a thread of its user's mailbox as its user does, and the ledger
 // names the same seat.
 func TestAnAgentHoldsAThreadOfItsUsersMailbox(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	allowSharedPosture(t, e)

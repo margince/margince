@@ -37,6 +37,7 @@ func (f taskClockFixture) logMeetingOnAll(t *testing.T, status string, at time.T
 }
 
 func TestAMeetingAheadOrCalledOffLeavesTheProjectClockAlone(t *testing.T) {
+	t.Parallel()
 	f := newTaskClockFixture(t)
 	f.logMeetingOnAll(t, "booked", f.now.AddDate(0, 0, 7))
 	f.assertAll(t, f.mailed, "a meeting next week has not happened")
@@ -46,6 +47,7 @@ func TestAMeetingAheadOrCalledOffLeavesTheProjectClockAlone(t *testing.T) {
 }
 
 func TestTheRefoldJobMovesTheProjectClockOnceAMeetingStarts(t *testing.T) {
+	t.Parallel()
 	f := newTaskClockFixture(t)
 	meetsAt := f.now.AddDate(0, 0, 2)
 	f.logMeetingOnAll(t, "booked", meetsAt)
@@ -69,6 +71,7 @@ func (f taskClockFixture) rekind(t *testing.T, activity ids.UUID, kind string) {
 }
 
 func TestReKindingAnActivityRefoldsTheProjectClock(t *testing.T) {
+	t.Parallel()
 	f := newTaskClockFixture(t)
 	at := f.now.Add(-time.Hour)
 	subject := "Re-kinded row"
@@ -88,6 +91,7 @@ func TestReKindingAnActivityRefoldsTheProjectClock(t *testing.T) {
 // A repair over a table of correct records and one wrong one far behind them
 // reads bounded pages to the end and repairs that one.
 func TestTheClockRepairReadsBoundedPagesToAWrongRecordFarBehind(t *testing.T) {
+	t.Parallel()
 	f := newTaskClockFixture(t)
 	for range 24 {
 		f.e.SeedContact(t, "Correct clock", nil)

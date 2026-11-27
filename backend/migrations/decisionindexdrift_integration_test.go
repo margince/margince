@@ -85,6 +85,7 @@ func inferOnDecisionSet(ctx context.Context, conn *pgx.Conn) error {
 // nothing without the first. A repair asserted only against a database that was
 // never broken is asserting that a no-op is a no-op.
 func TestTheRepairRestoresTheInferenceASendDependsOn(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	ctx := context.Background()
@@ -112,6 +113,7 @@ func TestTheRepairRestoresTheInferenceASendDependsOn(t *testing.T) {
 // decision index is already the one 1788407500 ships today, and the attempt
 // index has never existed.
 func TestTheRepairIsANoOpOnADatabaseThatWasNeverDrifted(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	ctx := context.Background()

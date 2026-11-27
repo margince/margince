@@ -80,6 +80,7 @@ func bodiesRead(t *testing.T, e *integration.Env, request ids.UUID, counterparty
 // settleThreadMessages of it — and the pass sends every body to the model as
 // context for the stranger's request. The correspondent is what refuses it.
 func TestTheSettlementWindowNeverReadsAnotherCustomersMail(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const thread = "forged-references-root"
 	const stranger = "stranger@elsewhere.test"
@@ -104,6 +105,7 @@ func TestTheSettlementWindowNeverReadsAnotherCustomersMail(t *testing.T) {
 // A guard that refused everything would pass the test above and silently stop
 // the pass judging anything, which no other assertion here would catch.
 func TestTheSettlementWindowStillReadsOurOwnReply(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const thread = "an-honest-thread"
 	const customer = "buyer@customer.test"
@@ -126,6 +128,7 @@ func TestTheSettlementWindowStillReadsOurOwnReply(t *testing.T) {
 // attestation is the provider's own record of having sent there, which is what
 // makes the pairing forgery-resistant rather than merely present.
 func TestTheSettlementWindowRefusesAnUnattestedOutbound(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const thread = "unattested-outbound"
 	const customer = "buyer@customer.test"

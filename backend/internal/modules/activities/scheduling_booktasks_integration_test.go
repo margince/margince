@@ -86,6 +86,7 @@ func (f *invitationFixture) systemCtx() context.Context {
 }
 
 func TestABookingThroughThePageClosesTheOpenTasksOnTheBookedLead(t *testing.T) {
+	t.Parallel()
 	f := newInvitationFixture(t)
 	lead := f.seedLead(t, "guest@example.test")
 	other := f.seedLead(t, "other@example.test")
@@ -129,6 +130,7 @@ func TestABookingThroughThePageClosesTheOpenTasksOnTheBookedLead(t *testing.T) {
 }
 
 func TestABookingThroughThePageClosesTheOpenTasksOnTheBookedContactOnly(t *testing.T) {
+	t.Parallel()
 	f := newInvitationFixture(t)
 	contact := ids.UUID(f.request.ContactId)
 	mine := f.handTask(t, "Call the guest", "contact", contact)
@@ -154,6 +156,7 @@ func TestABookingThroughThePageClosesTheOpenTasksOnTheBookedContactOnly(t *testi
 }
 
 func TestABookingMadeByTheUserClosesNoTask(t *testing.T) {
+	t.Parallel()
 	f := newInvitationFixture(t)
 	mine := f.handTask(t, "Call the guest", "contact", ids.UUID(f.request.ContactId))
 	if _, err := f.store.CreateInvitation(f.ctx, f.request); err != nil {
@@ -165,6 +168,7 @@ func TestABookingMadeByTheUserClosesNoTask(t *testing.T) {
 }
 
 func TestACanceledBookingReopensTheTasksItClosedUnlessTheUserTouchedThem(t *testing.T) {
+	t.Parallel()
 	f := newInvitationFixture(t)
 	contact := ids.UUID(f.request.ContactId)
 	untouched := f.handTask(t, "Call the guest", "contact", contact)
@@ -205,6 +209,7 @@ func (readOnlyHost) HostMayWrite(context.Context, pgx.Tx, ids.UserID, string, id
 }
 
 func TestABookingOnARecordTheHostCannotWriteClosesNothing(t *testing.T) {
+	t.Parallel()
 	f := newInvitationFixture(t)
 	mine := f.handTask(t, "Call the guest", "contact", ids.UUID(f.request.ContactId))
 	f.store = f.store.WithSchedulingCalendar(readOnlyHost{f.calendar})
@@ -215,6 +220,7 @@ func TestABookingOnARecordTheHostCannotWriteClosesNothing(t *testing.T) {
 }
 
 func TestACanceledBookingLeavesATaskTheHostWroteToSince(t *testing.T) {
+	t.Parallel()
 	f := newInvitationFixture(t)
 	mine := f.handTask(t, "Call the guest", "contact", ids.UUID(f.request.ContactId))
 	meeting := f.bookThroughThePage(t, invitationIntent{})
@@ -241,6 +247,7 @@ func (f *invitationFixture) cancelBooking(t *testing.T, meeting crmcontracts.Mee
 }
 
 func TestACanceledBookingLeavesATaskALaterAnswerClosedAgain(t *testing.T) {
+	t.Parallel()
 	f := newInvitationFixture(t)
 	mine := f.handTask(t, "Call the guest", "contact", ids.UUID(f.request.ContactId))
 	canceled := f.cancelBooking(t, f.bookThroughThePage(t, invitationIntent{}))
@@ -264,6 +271,7 @@ func TestACanceledBookingLeavesATaskALaterAnswerClosedAgain(t *testing.T) {
 // The host's edit holds the task's row lock while the reopen waits on it, then
 // commits. The reopen must see that edit and leave the task done.
 func TestACanceledBookingLeavesATaskTheHostEditsWhileTheReopenWaits(t *testing.T) {
+	t.Parallel()
 	f := newInvitationFixture(t)
 	mine := f.handTask(t, "Call the guest", "contact", ids.UUID(f.request.ContactId))
 	canceled := f.cancelBooking(t, f.bookThroughThePage(t, invitationIntent{}))

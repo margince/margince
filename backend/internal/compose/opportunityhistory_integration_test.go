@@ -18,6 +18,7 @@ import (
 )
 
 func TestMailboxHistoryKeepsAQualifiedOpportunityAsHistoricalRecovery(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	e.GrantRole(t, e.Rep1, "rep")
 	e.now = baselineAsOf

@@ -44,6 +44,7 @@ func newPromoteIdentityEnv(t *testing.T) (context.Context, *Store) {
 }
 
 func TestPromotingALeadThatNamesNobodyIsRefused(t *testing.T) {
+	t.Parallel()
 	ctx, store := newPromoteIdentityEnv(t)
 
 	for _, tc := range []struct {
@@ -109,6 +110,7 @@ func TestPromotingALeadThatNamesNobodyIsRefused(t *testing.T) {
 // still promote — the guard refuses leads that name nobody, not leads that are
 // merely unnamed.
 func TestALeadNamedOnlyByItsEmailStillPromotes(t *testing.T) {
+	t.Parallel()
 	ctx, store := newPromoteIdentityEnv(t)
 
 	lead, _, err := store.CreateLead(ctx, CreateLeadInput{

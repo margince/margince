@@ -24,6 +24,7 @@ func seedContact(t *testing.T, e *SearchEnv, name string) string {
 }
 
 func TestAMissingLetterOffersTheClosestNames(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	anna := seedContact(t, e, "Anna Kowalczyk")
 
@@ -53,6 +54,7 @@ func TestAMissingLetterOffersTheClosestNames(t *testing.T) {
 }
 
 func TestNearMatchesCarryTheCallersRowScopeAndSkipArchivedAndOwnCompany(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	e.SeedID(t, `INSERT INTO contact (id, full_name, owner_id, visibility, source, captured_by) VALUES ($1, 'Scoped Kowalczyk', $2, 'owner', 'manual', 'human:x')`, e.Rep3)
 	e.SeedID(t, `INSERT INTO contact (id, full_name, source, captured_by, archived_at) VALUES ($1, 'Archived Kowalczyk', 'manual', 'human:x', now())`)
@@ -75,6 +77,7 @@ func TestNearMatchesCarryTheCallersRowScopeAndSkipArchivedAndOwnCompany(t *testi
 }
 
 func TestNearMatchesRunOnlyOnAPlainEmptyFirstPage(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	for i := range 7 {
 		seedContact(t, e, fmt.Sprintf("Kowalczyk%c", 'a'+i))
@@ -121,6 +124,7 @@ func TestNearMatchesRunOnlyOnAPlainEmptyFirstPage(t *testing.T) {
 }
 
 func TestEveryNearMatchPredicateReadsItsTrigramIndex(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	ctx := context.Background()
 	for _, entity := range search.NearNamedBranches() {

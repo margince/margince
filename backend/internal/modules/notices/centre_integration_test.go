@@ -27,6 +27,7 @@ import (
 )
 
 func TestNotificationCentreShowsTheReadersOwnHistoryAndPagesIt(t *testing.T) {
+	t.Parallel()
 	e := setupNotices(t)
 	mine := []ids.UUID{
 		e.seedNotice(t, e.recipient, "First"),
@@ -97,6 +98,7 @@ func TestNotificationCentreShowsTheReadersOwnHistoryAndPagesIt(t *testing.T) {
 }
 
 func TestNotificationCentreSettlesEverythingOnceAndOnlyForItsReader(t *testing.T) {
+	t.Parallel()
 	e := setupNotices(t)
 	e.seedNotice(t, e.recipient, "First")
 	e.seedNotice(t, e.recipient, "Second")
@@ -236,6 +238,7 @@ func TestNotificationCentreSettlesEverythingOnceAndOnlyForItsReader(t *testing.T
 // interrupt somebody — the Worklist's lane and the badge over it — do not
 // count it.
 func TestAMutedClassIsListedInTheCentreAndReachesNoLane(t *testing.T) {
+	t.Parallel()
 	e := setupNotices(t)
 	if _, err := e.store.SaveNotificationPreference(
 		e.asUser(e.recipient), classAutomation, DeliveryOff); err != nil {
@@ -309,6 +312,7 @@ func TestAMutedClassIsListedInTheCentreAndReachesNoLane(t *testing.T) {
 // exceed the badge it replaces, or a reader watching "1" is told three things
 // were answered.
 func TestSettlingTheCentreClearsMutedLinesAndCountsOnlyTheBadge(t *testing.T) {
+	t.Parallel()
 	e := setupNotices(t)
 	if _, err := e.store.SaveNotificationPreference(
 		e.asUser(e.recipient), classAutomation, DeliveryOff); err != nil {
@@ -344,6 +348,7 @@ func TestSettlingTheCentreClearsMutedLinesAndCountsOnlyTheBadge(t *testing.T) {
 // seat's notices are that human's own acts, the same ruling their notification
 // settings make about the same inbox.
 func TestNotificationCentreRefusesAPrincipalThatIsNotTheSeat(t *testing.T) {
+	t.Parallel()
 	e := setupNotices(t)
 	e.seedNotice(t, e.recipient, "First")
 
@@ -378,6 +383,7 @@ func TestNotificationCentreRefusesAPrincipalThatIsNotTheSeat(t *testing.T) {
 // 500 for everything else, so a wrapped one would send an operator looking for
 // an outage that is not there.
 func TestNotificationCentreRefusesACursorItNeverMinted(t *testing.T) {
+	t.Parallel()
 	e := setupNotices(t)
 	_, err := e.store.ListFor(e.asUser(e.recipient), 10, "not-a-token-this-package-minted")
 	if _, ok := errors.AsType[*storekit.MalformedCursorError](err); !ok {

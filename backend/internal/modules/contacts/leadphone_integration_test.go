@@ -67,6 +67,7 @@ func (e *promoteConsentEnv) seedLeadWithPhone(t *testing.T, email, phone string)
 }
 
 func TestALeadsNumberIsStoredInE164(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	lead := e.seedLeadWithPhone(t, "dialled@example.test", "+49 30 1234567")
 
@@ -76,6 +77,7 @@ func TestALeadsNumberIsStoredInE164(t *testing.T) {
 }
 
 func TestANumberTypedWithoutACountryCodeIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	lead := e.seedLead(t, "local@example.test")
 
@@ -89,6 +91,7 @@ func TestANumberTypedWithoutACountryCodeIsRefused(t *testing.T) {
 }
 
 func TestAPromotedLeadsNumberReachesTheContactItBecomes(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	lead := e.seedLeadWithPhone(t, "fresh.number@example.test", "+493011112222")
 
@@ -104,6 +107,7 @@ func TestAPromotedLeadsNumberReachesTheContactItBecomes(t *testing.T) {
 }
 
 func TestAPromotedLeadsNumberReachesTheContactItMergesInto(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	const shared = "known.number@example.test"
 	existing, err := e.store.CreateContact(e.ctx, CreateContactInput{

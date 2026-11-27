@@ -16,6 +16,7 @@ import (
 // statement binds it. Bound, Postgres refuses it as a database fault whose
 // answer is value_wrong_type and whose cause the server logs as an ERROR.
 func TestAMalformedIDFilterIsRefusedBeforeTheReportStatementRuns(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "report-id-filter", "read")
 
 	for _, filter := range []string{"pipeline_id", "owner_id", "company_id"} {

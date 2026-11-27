@@ -21,6 +21,7 @@ func refusedAsUnassigned(err error) bool {
 // A product edit judges a currency it changes to, and lets an edit resend the
 // code already stored, even one ISO no longer assigns.
 func TestAProductEditJudgesOnlyACurrencyItChangesTo(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	ctx := humanWith(e.ws, e.admin, map[string]principal.ObjectGrant{"product": {Create: true, Read: true, Update: true}})
 	product := seedKindProduct(t, e, "Licence", "software")
@@ -39,6 +40,7 @@ func TestAProductEditJudgesOnlyACurrencyItChangesTo(t *testing.T) {
 
 // A draft offer cannot be moved to a currency its deal could not take.
 func TestADraftOfferCannotMoveToAnUnassignedCurrency(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	_, offer, _, _ := approvedDealWithOffer(t, e)
 	unassigned := "ZZZ"

@@ -123,6 +123,7 @@ func (d *draftHandoverEnv) draftsWrittenBy(t *testing.T, author string) int {
 // A colleague and an admin get the 404 a draft nobody saved gets, over the API
 // and over the agent's tool. So neither learns that a draft exists.
 func TestOnlyItsAuthorReachesASavedDraft(t *testing.T) {
+	t.Parallel()
 	d := setupDraftHandover(t)
 	draft := saveContactDraft(t, d.leaver, d.adopt, "Half a thought")
 
@@ -153,6 +154,7 @@ func TestOnlyItsAuthorReachesASavedDraft(t *testing.T) {
 // The successor reads the leaver's drafts as their own and the leaver no longer
 // does. Where the successor already had a draft in the same place, theirs stays.
 func TestAHandoverMovesTheLeaversDraftsToTheSuccessor(t *testing.T) {
+	t.Parallel()
 	d := setupDraftHandover(t)
 	shared := d.contact(t, "Shared Buyer", "shared@drafthandover.test")
 	saveContactDraft(t, d.leaver, d.adopt, "The leaver's words")
@@ -186,6 +188,7 @@ func TestAHandoverMovesTheLeaversDraftsToTheSuccessor(t *testing.T) {
 // An admin who hands an active colleague's work to themselves gets the records
 // and not the drafts: those stay with their author, counted as left.
 func TestAnAdminCannotTakeAnActiveColleaguesDrafts(t *testing.T) {
+	t.Parallel()
 	d := setupDraftHandover(t)
 	saveContactDraft(t, d.leaver, d.adopt, "Not for the admin")
 
@@ -203,6 +206,7 @@ func TestAnAdminCannotTakeAnActiveColleaguesDrafts(t *testing.T) {
 }
 
 func TestAHandoverOfAMemberWithNoDraftsMovesNone(t *testing.T) {
+	t.Parallel()
 	d := setupDraftHandover(t)
 	moved, left := d.handOver(t, "draft-handover-none")
 	if moved.MailDraft != 0 || left.MailDraft != 0 || moved.Contact != 1 {
@@ -214,6 +218,7 @@ func TestAHandoverOfAMemberWithNoDraftsMovesNone(t *testing.T) {
 // Removing a member who left moves their drafts with the rest of their work.
 // A saved draft is never a reason the removal must wait.
 func TestRemovingAMemberWhoLeftMovesTheirDrafts(t *testing.T) {
+	t.Parallel()
 	d := setupDraftHandover(t)
 	saveContactDraft(t, d.leaver, d.adopt, "The leaver's words")
 	d.leaverLeaves(t)

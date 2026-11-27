@@ -20,7 +20,11 @@ import (
 const extensionManifestEnv = "MARGINCE_TEST_EXTENSION_MANIFEST"
 
 func testExtensionNamespaces() ([]dbmigrate.Namespace, error) {
-	path := os.Getenv(extensionManifestEnv)
+	return extensionNamespacesIn(os.Getenv(extensionManifestEnv))
+}
+
+// extensionNamespacesIn reads the composed migration manifest at path.
+func extensionNamespacesIn(path string) ([]dbmigrate.Namespace, error) {
 	if path == "" {
 		return nil, errors.New("the composed test migration manifest is missing; run make test-it or make test-integration from this worktree")
 	}

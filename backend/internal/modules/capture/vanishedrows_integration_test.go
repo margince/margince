@@ -36,6 +36,7 @@ func vanishedRowsTx(t *testing.T, body func(ctx context.Context, tx pgx.Tx)) {
 // A connection disconnected or erased between scheduling and running has no
 // row left to read; the run answers not-found rather than reading nothing.
 func TestARunOnAConnectionThatIsGoneAnswersNotFound(t *testing.T) {
+	t.Parallel()
 	ctx, pool := meetingTenureEnv(t)
 	ws, _ := principal.WorkspaceID(ctx)
 	r := NewRegistry(database.BindTo(pool, ids.From[ids.WorkspaceKind](ws)), nil, nil, nil)
@@ -56,6 +57,7 @@ func TestARunOnAConnectionThatIsGoneAnswersNotFound(t *testing.T) {
 // open transaction, the release fails the whole write rather than leaving a
 // stale anchor behind a stored cursor.
 func TestAnAnchorThatCannotBeReleasedFailsTheWatermark(t *testing.T) {
+	t.Parallel()
 	vanishedRowsTx(t, func(ctx context.Context, tx pgx.Tx) {
 		if err := releaseSyncAnchor(ctx, tx, ids.NewV7(), 1); !errors.Is(err, apperrors.ErrConflict) {
 			t.Errorf("releasing the anchor of a moved row answered %v, want a conflict", err)
@@ -66,6 +68,7 @@ func TestAnAnchorThatCannotBeReleasedFailsTheWatermark(t *testing.T) {
 // A shared mailbox run has no member behind it, so the row itself is the
 // authority; without it the write is refused.
 func TestASharedMailboxRunWithoutItsRowMayNotWrite(t *testing.T) {
+	t.Parallel()
 	vanishedRowsTx(t, func(ctx context.Context, tx pgx.Tx) {
 		if err := sharedMailboxAllowedTx(ctx, tx, ids.NewV7()); !errors.Is(err, apperrors.ErrPermissionDenied) {
 			t.Errorf("a run of a missing shared mailbox answered %v, want a permission refusal", err)
@@ -76,6 +79,7 @@ func TestASharedMailboxRunWithoutItsRowMayNotWrite(t *testing.T) {
 // An admin edit is checked against the mailbox it read. If the row changed in
 // between, the edit is a conflict and not a silent write over the newer state.
 func TestASharedMailboxEditRacedByAnotherIsAConflict(t *testing.T) {
+	t.Parallel()
 	vanishedRowsTx(t, func(ctx context.Context, tx pgx.Tx) {
 		team, reader := ids.NewV7(), ids.NewV7()
 		seed := []struct {
@@ -104,6 +108,7 @@ func TestASharedMailboxEditRacedByAnotherIsAConflict(t *testing.T) {
 // Re-reading stored mail as sent mail writes on the seat's behalf. It needs a
 // pass to narrow to that seat, and with none it refuses before any write.
 func TestReclaimingSentMailWithoutABoundPassIsRefused(t *testing.T) {
+	t.Parallel()
 	vanishedRowsTx(t, func(ctx context.Context, tx pgx.Tx) {
 		seat := ids.NewV7()
 		address := "seat-" + seat.String() + "@seller.example"

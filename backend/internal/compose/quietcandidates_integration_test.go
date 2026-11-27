@@ -41,6 +41,7 @@ func quietCandidates(t *testing.T, e *integration.Env, read search.QuietRead) []
 // recently touched one spend no slot, however strong. A tie goes to the older
 // silence, and the owner's read and the unnarrowed read agree.
 func TestTheQuietLimitKeepsTheStrongestRelationshipsThatAreReallyQuiet(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	excluded := e.SeedContact(t, "Strongest but set aside", &e.Rep1)
 	touched := e.SeedContact(t, "Strong but written to last week", &e.Rep1)
@@ -79,6 +80,7 @@ func TestTheQuietLimitKeepsTheStrongestRelationshipsThatAreReallyQuiet(t *testin
 // A deactivated colleague's exchange does not keep a relationship current. The
 // contact went quiet for every live seat, so it stays a candidate.
 func TestAnExchangeOnlyADeactivatedColleagueHadLeavesTheContactQuiet(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Quiet but for a departed colleague", &e.Rep1)
 	seedQuietExchange(t, e, e.Rep1, ids.UUID{}, contact, 70)

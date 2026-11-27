@@ -25,6 +25,7 @@ import (
 	"mime/multipart"
 	"net/mail"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -114,6 +115,7 @@ func (l *confirmLaneEnv) livesIn(t *testing.T, code jurisdiction.Code) {
 // TestAConfirmLinkStagesADeliveryADecisionAndATimelineRow is the central claim:
 // the installation's own mail leaves the same evidence every other message does.
 func TestAConfirmLinkStagesADeliveryADecisionAndATimelineRow(t *testing.T) {
+	t.Parallel()
 	l := setupConfirmLane(t)
 
 	issued, err := l.store.IssueConfirmToken(l.ctx, ids.From[ids.ContactKind](l.contact), "")
@@ -153,6 +155,7 @@ func TestAConfirmLinkStagesADeliveryADecisionAndATimelineRow(t *testing.T) {
 // same reason it is legal_obligation in the validator: a confirmation that
 // rested on consent could never be sent to somebody who has not consented yet.
 func TestTheEngineAllowsAConfirmationOnItsOwnEvidence(t *testing.T) {
+	t.Parallel()
 	l := setupConfirmLane(t)
 
 	if _, err := l.store.IssueConfirmToken(l.ctx, ids.From[ids.ContactKind](l.contact), ""); err != nil {
@@ -182,6 +185,7 @@ func TestTheEngineAllowsAConfirmationOnItsOwnEvidence(t *testing.T) {
 // TestTheStagedMessageCarriesNoLiveLink holds the plaintext out of every row a
 // human or an export can read.
 func TestTheStagedMessageCarriesNoLiveLink(t *testing.T) {
+	t.Parallel()
 	l := setupConfirmLane(t)
 
 	if _, err := l.store.IssueConfirmToken(l.ctx, ids.From[ids.ContactKind](l.contact), ""); err != nil {
@@ -256,14 +260,21 @@ func lastIndex(s, sub string) int {
 // here cannot collide with a compiled-in pack.
 const ackJurisdiction jurisdiction.Code = "qz"
 
+// Each fixture code is registered once per process, because the registry
+// refuses a second set for one code.
+var registerAckRules, registerPlainAckRules sync.Once
+
 // TestAOnePurposeUnsubscribeIsAcknowledgedThroughTheRealEngine presses the
 // unsubscribe link a marketing send carries, under a pack that owes an
 // acknowledgement. The press writes a withdrawal and no suppression, and the
 // engine must still admit the acknowledgement it owes.
 func TestAOnePurposeUnsubscribeIsAcknowledgedThroughTheRealEngine(t *testing.T) {
+	t.Parallel()
 	l := setupConfirmLane(t)
-	messagingrules.Register(messagingrules.Rules{
-		Jurisdiction: ackJurisdiction, Version: 1, OptOutAcknowledgement: true, OptOutAcknowledgementWithin: 24 * time.Hour,
+	registerAckRules.Do(func() {
+		messagingrules.Register(messagingrules.Rules{
+			Jurisdiction: ackJurisdiction, Version: 1, OptOutAcknowledgement: true, OptOutAcknowledgementWithin: 24 * time.Hour,
+		})
 	})
 	// The receipt is owed under the subject's own country.
 	l.livesIn(t, ackJurisdiction)
@@ -312,6 +323,7 @@ func TestAOnePurposeUnsubscribeIsAcknowledgedThroughTheRealEngine(t *testing.T) 
 }
 
 func TestControllerAlternativesAreStagedWithoutPersonalMaterial(t *testing.T) {
+	t.Parallel()
 	lane := setupConfirmLane(t)
 	if _, err := lane.store.IssueConfirmToken(lane.ctx, ids.From[ids.ContactKind](lane.contact), ""); err != nil {
 		t.Fatal(err)
@@ -330,6 +342,7 @@ func TestControllerAlternativesAreStagedWithoutPersonalMaterial(t *testing.T) {
 func (v *sealingVault) Get(context.Context, string) (string, error) { return v.sealed, nil }
 
 func TestControllerStagingReachesReceivedAlternativesAndRetiresItsLink(t *testing.T) {
+	t.Parallel()
 	lane := setupConfirmLane(t)
 	if _, err := lane.store.IssueConfirmToken(lane.ctx, ids.From[ids.ContactKind](lane.contact), ""); err != nil {
 		t.Fatal(err)
@@ -342,7 +355,7 @@ func TestControllerStagingReachesReceivedAlternativesAndRetiresItsLink(t *testin
 	}
 	relay := testsmtp.Start(t, false)
 	host, port := relay.Address(t)
-	dispatcher := newSendDispatcher(lane.e.Pool, nil, sendPace{limit: 10, window: time.Minute, maxAge: time.Hour}, nil, nil, nil).
+	dispatcher := newSendDispatcher(lane.e.Pool, nil, nil, sendPace{limit: 10, window: time.Minute, maxAge: time.Hour}, nil, nil, nil).
 		WithControllerRelay(ControllerRelayFor(mailer.SMTP{Host: host, Port: port, FromAddress: "privacy@example.test"}), lane.vault)
 	outcome, _, err := dispatcher.DispatchWithWait(sendWorkerScope(lane.ctx), deliveryID)
 	if err != nil || outcome != comms.OutcomeSent {
@@ -384,6 +397,7 @@ func TestControllerStagingReachesReceivedAlternativesAndRetiresItsLink(t *testin
 }
 
 func TestControllerHTMLCannotChangeAfterStagingAuthorization(t *testing.T) {
+	t.Parallel()
 	lane := setupConfirmLane(t)
 	if _, err := lane.store.IssueConfirmToken(lane.ctx, ids.From[ids.ContactKind](lane.contact), ""); err != nil {
 		t.Fatal(err)
@@ -393,7 +407,7 @@ func TestControllerHTMLCannotChangeAfterStagingAuthorization(t *testing.T) {
 		t.Fatal(err)
 	}
 	relay := &countingMailer{}
-	dispatcher := newSendDispatcher(lane.e.Pool, nil, sendPace{limit: 10, window: time.Minute, maxAge: time.Hour}, nil, nil, nil).
+	dispatcher := newSendDispatcher(lane.e.Pool, nil, nil, sendPace{limit: 10, window: time.Minute, maxAge: time.Hour}, nil, nil, nil).
 		WithControllerRelay(ControllerRelayFor(relay), lane.vault)
 	outcome, _, err := dispatcher.DispatchWithWait(sendWorkerScope(lane.ctx), id)
 	if err != nil || outcome != comms.OutcomeParked || relay.count() != 0 {
@@ -402,9 +416,12 @@ func TestControllerHTMLCannotChangeAfterStagingAuthorization(t *testing.T) {
 }
 
 func TestAReceiptPreparationSQLFailureCannotRollBackTheWithdrawal(t *testing.T) {
+	t.Parallel()
 	lane := setupConfirmLane(t)
 	const country jurisdiction.Code = "qh"
-	messagingrules.Register(messagingrules.Rules{Jurisdiction: country, Version: 1, OptOutAcknowledgement: true})
+	registerPlainAckRules.Do(func() {
+		messagingrules.Register(messagingrules.Rules{Jurisdiction: country, Version: 1, OptOutAcknowledgement: true})
+	})
 	lane.livesIn(t, country)
 	store := lane.store.
 		WithMailLanguage(consent.MailLanguageFunc(func(ctx context.Context, tx pgx.Tx) (string, error) {
@@ -427,6 +444,7 @@ func TestAReceiptPreparationSQLFailureCannotRollBackTheWithdrawal(t *testing.T) 
 // The logo is staged with the notice and attached at send. A logo removed
 // between staging and sending leaves the company's name.
 func TestAPrivacyNoticeShowsTheCompanyLogoUntilItIsRemoved(t *testing.T) {
+	t.Parallel()
 	for _, removed := range []bool{false, true} {
 		lane := setupConfirmLane(t)
 		blob := blobstore.NewMemory()
@@ -452,7 +470,7 @@ func TestAPrivacyNoticeShowsTheCompanyLogoUntilItIsRemoved(t *testing.T) {
 		}
 		relay := testsmtp.Start(t, false)
 		host, port := relay.Address(t)
-		dispatcher := newSendDispatcher(lane.e.Pool, nil, sendPace{limit: 10, window: time.Minute, maxAge: time.Hour}, blob, nil, nil).
+		dispatcher := newSendDispatcher(lane.e.Pool, nil, nil, sendPace{limit: 10, window: time.Minute, maxAge: time.Hour}, blob, nil, nil).
 			WithControllerRelay(ControllerRelayFor(mailer.SMTP{Host: host, Port: port, FromAddress: "privacy@example.test"}), lane.vault)
 		if outcome, _, err := dispatcher.DispatchWithWait(sendWorkerScope(lane.ctx), deliveryID); err != nil || outcome != comms.OutcomeSent {
 			t.Fatalf("controller dispatch: %s %v", outcome, err)

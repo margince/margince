@@ -21,6 +21,7 @@ import (
 // A seat holds the message through the mailbox it arrived in, and the email
 // details name that address, not the seat's login.
 func TestEmailDetailsNameTheMailboxAMessageArrivedIn(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	const mailbox = "colleague+second@myco.example"

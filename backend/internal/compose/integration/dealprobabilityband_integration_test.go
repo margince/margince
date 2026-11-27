@@ -43,6 +43,7 @@ func (f probabilityFixture) named(t *testing.T, low, high *int) []string {
 }
 
 func TestTheProbabilityBandsPartitionTheOpenPipeline(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	store := deals.NewStore(e.DB(), installseam.Deals())

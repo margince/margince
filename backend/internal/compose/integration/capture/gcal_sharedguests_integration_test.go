@@ -191,6 +191,7 @@ func (s sharedGuests) bothList(t *testing.T, organizer string) ids.UUID {
 }
 
 func TestAGuestTwoCalendarsListStaysUntilBothDropThem(t *testing.T) {
+	t.Parallel()
 	s := newSharedGuests(t)
 	e := s.e
 	meeting := s.bothList(t, sharedGuestHost)
@@ -220,6 +221,7 @@ func TestAGuestTwoCalendarsListStaysUntilBothDropThem(t *testing.T) {
 // A colleague's decline reaches one calendar before the other. The calendar
 // whose copy does not show it yet must not seat the colleague again.
 func TestACalendarThatMissedADeclineDoesNotSeatTheColleagueAgain(t *testing.T) {
+	t.Parallel()
 	s := newSharedGuests(t)
 	e := s.e
 	meeting := s.bothList(t, sharedGuestHost)
@@ -248,6 +250,7 @@ func TestACalendarThatMissedADeclineDoesNotSeatTheColleagueAgain(t *testing.T) {
 // The organizer's calendar speaks for the meeting: a colleague it removed
 // loses the meeting at once, whatever an attendee's older copy lists.
 func TestAColleagueTheOrganizerRemovedLosesTheMeetingAtOnce(t *testing.T) {
+	t.Parallel()
 	s := newSharedGuests(t)
 	e := s.e
 	organizer := s.address[e.Rep1]
@@ -266,6 +269,7 @@ func TestAColleagueTheOrganizerRemovedLosesTheMeetingAtOnce(t *testing.T) {
 // A calendar that holds no live connection will not report a removal, so it
 // keeps no guest on the meeting.
 func TestADisconnectedCalendarKeepsNoGuestOnTheMeeting(t *testing.T) {
+	t.Parallel()
 	s := newSharedGuests(t)
 	e := s.e
 	meeting := s.bothList(t, sharedGuestHost)
@@ -284,6 +288,7 @@ func TestADisconnectedCalendarKeepsNoGuestOnTheMeeting(t *testing.T) {
 // A calendar whose copy is gone stops holding the guests another calendar
 // lists, so that calendar alone decides when they leave.
 func TestACalendarThatLeftNoLongerHoldsTheGuestsAnotherCalendarLists(t *testing.T) {
+	t.Parallel()
 	s := newSharedGuests(t)
 	e := s.e
 	meeting := s.bothList(t, sharedGuestHost)
@@ -305,6 +310,7 @@ func TestACalendarThatLeftNoLongerHoldsTheGuestsAnotherCalendarLists(t *testing.
 // A calendar whose copy is gone grants nothing any more. A colleague only it
 // listed loses the meeting; an outside guest only it listed stays as history.
 func TestACalendarThatLeftTakesTheColleaguesOnlyItListed(t *testing.T) {
+	t.Parallel()
 	s := newSharedGuests(t)
 	e := s.e
 	const visitor = "visitor@customer.test"
@@ -334,6 +340,7 @@ func TestACalendarThatLeftTakesTheColleaguesOnlyItListed(t *testing.T) {
 // A disconnected calendar reports no change, so a colleague it still lists
 // grants nothing once the last live calendar listing them leaves.
 func TestACalendarThatLeftTakesAColleagueOnlyADisconnectedCalendarAlsoLists(t *testing.T) {
+	t.Parallel()
 	s := newSharedGuests(t)
 	e := s.e
 	meeting := s.bothList(t, sharedGuestHost)
@@ -355,6 +362,7 @@ func TestACalendarThatLeftTakesAColleagueOnlyADisconnectedCalendarAlsoLists(t *t
 // A row no roster wrote is a member's. A calendar that lists the same address
 // never claims it, so dropping the address later does not retire it.
 func TestACalendarNeverRetiresAGuestAMemberAdded(t *testing.T) {
+	t.Parallel()
 	s := newSharedGuests(t)
 	e := s.e
 	const added = "added@customer.test"
@@ -397,6 +405,7 @@ func olderSharedRows(t *testing.T, e *integration.Env, meeting ids.UUID) {
 }
 
 func TestAnOlderGuestRowIsRetiredByItsCalendarBeforeAndAfterTheCopy(t *testing.T) {
+	t.Parallel()
 	for name, copyFirst := range map[string]bool{"before the copy task": false, "after the copy task": true} {
 		t.Run(name, func(t *testing.T) {
 			s := newSharedGuests(t)
@@ -430,6 +439,7 @@ func TestAnOlderGuestRowIsRetiredByItsCalendarBeforeAndAfterTheCopy(t *testing.T
 
 // The older column and the set never both state a roster once a calendar wrote the row again.
 func TestASecondCalendarJoinsAnOlderGuestRow(t *testing.T) {
+	t.Parallel()
 	s := newSharedGuests(t)
 	e := s.e
 	meeting := s.sync(t, e.Rep1, sharedGuestHost, s.everyone()...)

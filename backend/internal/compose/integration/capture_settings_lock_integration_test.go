@@ -28,6 +28,7 @@ func settingRows(t *testing.T, e *apptest.AppEnv, key string) int {
 // Capture settings the api's environment sets read as that value, refuse a
 // change, and let a form that resends them save its other fields.
 func TestCaptureSettingsSetByEnvAreLockedAgainstAChange(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupAppWithEnv(t, []string{
 		"MARGINCE_CAPTURE_AUTO_ENRICH=false",
 		"MARGINCE_CAPTURE_SITE_READ_MAX_PAGES=10",

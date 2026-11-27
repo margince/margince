@@ -51,6 +51,7 @@ func (o *owedEnv) completeness(t *testing.T, message ids.UUID) string {
 }
 
 func TestAPromiseReadOnlyInPartIsNotCurrentWork(t *testing.T) {
+	t.Parallel()
 	promise := "I will send the pricing by Friday."
 	for _, tc := range []struct {
 		name, body, completeness string
@@ -108,6 +109,7 @@ func TestAPromiseReadOnlyInPartIsNotCurrentWork(t *testing.T) {
 }
 
 func TestARequestIsNotJudgedFromAMailReadOnlyInPart(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name, body string
 		offered    bool
@@ -141,6 +143,7 @@ func TestARequestIsNotJudgedFromAMailReadOnlyInPart(t *testing.T) {
 // A re-ask after our reply is what keeps a request owed. Read only in part, it
 // may be one, so the conversation is not judged at all.
 func TestARequestWithAMessageReadOnlyInPartIsNotSettled(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name, body string
 		judged     bool
@@ -197,6 +200,7 @@ func TestARequestWithAMessageReadOnlyInPartIsNotSettled(t *testing.T) {
 // Requests the pass refuses to judge never reach the candidate list, so they
 // cannot fill every batch ahead of one it can judge.
 func TestRequestsBlockedOnPartialMailDoNotStarveSettlement(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	o.now = clocktest.Now(t)
 	o.contact(t, "Pat Buyer", "pat@customer.example")
@@ -252,6 +256,7 @@ func TestRequestsBlockedOnPartialMailDoNotStarveSettlement(t *testing.T) {
 // The window marks a message read only in part, so the reading refuses the
 // conversation rather than presenting the rest of it as current.
 func TestTheEventWindowMarksAMessageReadOnlyInPart(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	ctx := context.Background()
@@ -294,6 +299,7 @@ func TestTheEventWindowMarksAMessageReadOnlyInPart(t *testing.T) {
 // A forward that says nothing of its own carries the original's words, which
 // are never read as a promise of the mail's sender.
 func TestAForwardedOriginalIsNotItsSendersPromise(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	o.now = clocktest.Now(t)
 	o.contact(t, "Pat Buyer", "pat@customer.example")
@@ -327,6 +333,7 @@ func TestAForwardedOriginalIsNotItsSendersPromise(t *testing.T) {
 // Our own last message is the context a request is judged in. Read only in
 // part, it may hold the very answer, so the request is not judged on it.
 func TestARequestIsNotJudgedAgainstOurLastMessageReadOnlyInPart(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name, body string
 		offered    bool

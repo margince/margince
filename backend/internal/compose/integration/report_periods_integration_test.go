@@ -66,6 +66,7 @@ var (
 )
 
 func TestAWinAtHalfPastElevenOnNewYearsEveInBerlinCountsInThatYear(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	st := seedRollupStages(t, e)
 	company := seedRollupCompany(t, e, "Period Customer", &e.Rep1, nil)
@@ -78,6 +79,7 @@ func TestAWinAtHalfPastElevenOnNewYearsEveInBerlinCountsInThatYear(t *testing.T)
 }
 
 func TestActivitiesCountInThePeriodTheyHappenedInTheInstallationZone(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 	for _, at := range []time.Time{berlinNewYearsEve, berlinNewYearsDay, berlinLastOfMarch, berlinFirstOfApril} {
@@ -98,6 +100,7 @@ func TestActivitiesCountInThePeriodTheyHappenedInTheInstallationZone(t *testing.
 // A date-only entry is stored at noon UTC of its date. Read as an instant in a
 // zone fourteen hours ahead, 31 December would land on 1 January.
 func TestADateOnlyActivityCountsOnItsOwnDate(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 	subject := "dated, not timed"
@@ -114,6 +117,7 @@ func TestADateOnlyActivityCountsOnItsOwnDate(t *testing.T) {
 }
 
 func TestActivityPeriodsFollowTheFinancialYear(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 	fileActivity(admin, t, e, "meeting", time.Date(2026, 3, 15, 12, 0, 0, 0, time.UTC), nil)
@@ -130,6 +134,7 @@ func TestActivityPeriodsFollowTheFinancialYear(t *testing.T) {
 // A task filed on a company only its owner may see counts for that owner. A
 // colleague counts only the meeting both may see, in the same month.
 func TestAnActivityPeriodCountsOnlyWhatTheReaderMaySee(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 	hidden := seedRollupCompany(t, e, "Rep3's account", &e.Rep3, nil)
@@ -186,6 +191,7 @@ func keptYearCount(ctx context.Context, t *testing.T, e *Env, zone string) strin
 // A saved period filter keeps the dates it named under the zone it was saved
 // in, for a timed meeting and a date-only one alike.
 func TestAKeptActivityPeriodKeepsItsDatesWhenTheZoneMoves(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 	fileActivity(admin, t, e, "meeting", berlinNewYearsEve, nil)

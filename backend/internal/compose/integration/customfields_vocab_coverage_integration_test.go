@@ -27,6 +27,7 @@ import (
 // own cursor shape — the nil-ListSort branch of EncodePageCursor and
 // KeysetClause that a cf_-sorted walk never exercises.
 func TestCustomFieldVocab_DefaultSortPaginatesWithCursor(t *testing.T) {
+	t.Parallel()
 	f := setupCFV(t)
 	first, err := f.store.CreateContact(f.ctx, contacts.CreateContactInput{FullName: "First", Source: "manual"})
 	if err != nil {
@@ -62,6 +63,7 @@ func TestCustomFieldVocab_DefaultSortPaginatesWithCursor(t *testing.T) {
 // (a single trailing NULL) cannot reach, since there is no further page
 // once the lone NULL row is served.
 func TestCustomFieldVocab_SortPaginatesThroughNullTailContinuation(t *testing.T) {
+	t.Parallel()
 	f := setupDealCFV(t)
 	score := f.defineDealField(t, customfields.FieldSpec{Object: "deal", Label: "Score", Type: customfields.TypeNumber, Source: "manual"})
 	a := f.seedScoredDeal(t, "A", map[string]any{score: float64(1)})
@@ -93,6 +95,7 @@ func TestCustomFieldVocab_SortPaginatesThroughNullTailContinuation(t *testing.T)
 // takes the other comparison direction in KeysetClause's continuation
 // clause, so it needs its own coverage.
 func TestCustomFieldVocab_DescendingSortPaginatesStably(t *testing.T) {
+	t.Parallel()
 	f := setupDealCFV(t)
 	score := f.defineDealField(t, customfields.FieldSpec{Object: "deal", Label: "Score", Type: customfields.TypeNumber, Source: "manual"})
 	a := f.seedScoredDeal(t, "A", map[string]any{score: float64(1)})
@@ -129,6 +132,7 @@ func TestCustomFieldVocab_DescendingSortPaginatesStably(t *testing.T) {
 // the refusal happens somewhere upstream of a query — which was already known
 // and did not need a migrated Postgres to say.
 func TestCustomFieldVocab_FilterByCurrencyDateEquality(t *testing.T) {
+	t.Parallel()
 	f := setupDealCFV(t)
 	eur := "EUR"
 	budget := f.defineDealField(t, customfields.FieldSpec{Object: "deal", Label: "Budget", Type: customfields.TypeCurrency, Currency: &eur, Source: "manual"})
@@ -152,6 +156,7 @@ func TestCustomFieldVocab_FilterByCurrencyDateEquality(t *testing.T) {
 // owner's name, which is an expression and not a column of the row. So the
 // second page walks KeysetClause through that expression and its tie-break.
 func TestCustomFieldVocab_SortByOwnerIDWithCursor(t *testing.T) {
+	t.Parallel()
 	f := setupCFV(t)
 	owner := ids.From[ids.UserKind](f.e.Rep1)
 	first, err := f.store.CreateContact(f.ctx, contacts.CreateContactInput{FullName: "First", Source: "manual", OwnerID: &owner})
@@ -190,6 +195,7 @@ func TestCustomFieldVocab_SortByOwnerIDWithCursor(t *testing.T) {
 // — the one shape that drives a real Postgres-emitted timestamptz text
 // key through parsesAsKind/listBindCast's timestamp branch.
 func TestCustomFieldVocab_SortByCreatedAtWithCursor(t *testing.T) {
+	t.Parallel()
 	f := setupCFV(t)
 	first, err := f.store.CreateContact(f.ctx, contacts.CreateContactInput{FullName: "First", Source: "manual"})
 	if err != nil {

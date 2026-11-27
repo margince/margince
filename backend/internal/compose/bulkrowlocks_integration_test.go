@@ -19,6 +19,7 @@ import (
 )
 
 func TestBulkUndoHoldsEveryContactBeforeTakingIdentityLocks(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	contacts := seedSurroundedContacts(t, e, 2)

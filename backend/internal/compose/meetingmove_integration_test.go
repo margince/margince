@@ -45,6 +45,7 @@ func readMeetingStart(t *testing.T, e *integration.Env, id ids.UUID) time.Time {
 
 // The same event delivered again with a new start moves the captured meeting.
 func TestARescheduledEventMovesTheCapturedMeeting(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	id := captureMeeting(t, e, e.AdminUser)
 	moved := meetingStart.Add(7 * 24 * time.Hour)
@@ -71,6 +72,7 @@ func TestARescheduledEventMovesTheCapturedMeeting(t *testing.T) {
 // An event past the horizon is handed over as a move: a meeting captured
 // earlier takes the new date; nothing is created for one never captured.
 func TestAMoveReachesOnlyAMeetingCapturedEarlier(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	id := captureMeeting(t, e, e.AdminUser)
 	farOut := meetingStart.AddDate(2, 0, 0)
@@ -100,6 +102,7 @@ func TestAMoveReachesOnlyAMeetingCapturedEarlier(t *testing.T) {
 // A slot redelivered with nanoseconds past the stored microsecond is the
 // stored start: no write, no audit row, no event, no history row.
 func TestASlotOnlyNanosecondsPastTheStoredStartIsNoMove(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	id := captureMeeting(t, e, e.AdminUser)
 	trail := func() int {
@@ -124,6 +127,7 @@ func TestASlotOnlyNanosecondsPastTheStoredStartIsNoMove(t *testing.T) {
 
 // Another provider's connector may not move a calendar's meeting.
 func TestAnotherConnectorCannotMoveACalendarMeeting(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	id := captureMeeting(t, e, e.AdminUser)
 
@@ -140,6 +144,7 @@ func TestAnotherConnectorCannotMoveACalendarMeeting(t *testing.T) {
 // A start outside the storable range moves nothing, as a start the calendar
 // could not state moves nothing: the stored start is the better answer.
 func TestAnEventMovedPastTheStorableRangeKeepsTheStoredStart(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	id := captureMeeting(t, e, e.AdminUser)
 
@@ -165,6 +170,7 @@ func TestAnEventMovedPastTheStorableRangeKeepsTheStoredStart(t *testing.T) {
 // A cancellation that states a start outside the storable range still cancels.
 // Its history row records no scheduled start, as for a start it could not read.
 func TestACancellationPastTheStorableRangeRecordsNoScheduledStart(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	id := captureMeeting(t, e, e.AdminUser)
 	far := time.Date(9999, 12, 31, 23, 0, 0, 0, time.UTC)
@@ -189,6 +195,7 @@ func TestACancellationPastTheStorableRangeRecordsNoScheduledStart(t *testing.T) 
 // with no duration. Stored as sent, it fails the insert, and the calendar sync
 // for that seat stops on it for good.
 func TestAMeetingTooLongToStoreIsCapturedWithNoDuration(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	decades := 3_000_000_000
 	ref, err := calendarSink(e).Upsert(calendarOwnerCtx(e, e.AdminUser), connector.NormalizedRecord{
@@ -221,6 +228,7 @@ func TestAMeetingTooLongToStoreIsCapturedWithNoDuration(t *testing.T) {
 // A held meeting the calendar moves stays held only where its new start has
 // taken place. Moved ahead, it is booked again, and the history and the event say so.
 func TestACalendarMoveKeepsAnOutcomeOnlyWhereTheMeetingTookPlace(t *testing.T) {
+	t.Parallel()
 	for name, tc := range map[string]struct {
 		start     time.Time
 		want      string

@@ -25,6 +25,7 @@ import (
 )
 
 func TestQuietPipelineSelectionRunsBeforeThePageLimit(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	pipeline, open, _ := integration.DealFixture(t, e)
 	other, err := e.Deals.CreatePipeline(e.Admin(), deals.CreatePipelineInput{Name: "Other sales", Stages: []deals.StageInput{
@@ -59,6 +60,7 @@ func TestQuietPipelineSelectionRunsBeforeThePageLimit(t *testing.T) {
 }
 
 func TestQuietCustomerListNeedsNoOpenDealAndSharesReminderSuppression(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	visible := e.SeedContact(t, "Selected customer", nil)
 	private := e.SeedContact(t, "Private selected customer", &e.Rep2)

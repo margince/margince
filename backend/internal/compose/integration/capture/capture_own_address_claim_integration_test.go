@@ -160,6 +160,7 @@ func archiveRows(t *testing.T, e *integration.SearchEnv, contact ids.UUID) int {
 }
 
 func TestClaimingAProvenAddressArchivesItsMintedContactAndRefilesItsMail(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	contact := claimMintFormerContact(t, env)
@@ -199,6 +200,7 @@ func TestClaimingAProvenAddressArchivesItsMintedContactAndRefilesItsMail(t *test
 
 // A typed address proves nothing: a member could type a customer's address.
 func TestATypedClaimOfACustomersAddressArchivesNothing(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	contact := claimMintFormerContact(t, env)
@@ -241,6 +243,7 @@ func readableBy(reader context.Context, t *testing.T, e *integration.SearchEnv) 
 }
 
 func TestRefilingKeepsWhoMayReadTheMail(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	claimMintFormerContact(t, env)
@@ -275,6 +278,7 @@ func TestRefilingKeepsWhoMayReadTheMail(t *testing.T) {
 // The claim hook runs as the system, which sees every contact. The two contacts
 // then differ only in who owns them.
 func TestTheHookLeavesAContactAColleagueOwns(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	mine := claimMintFormerContact(t, env)
@@ -317,6 +321,7 @@ func TestTheHookLeavesAContactAColleagueOwns(t *testing.T) {
 }
 
 func TestAnAddressAColleagueOwnsAMailboxForIsLeftToThem(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	contact := claimMintFormerContact(t, env)
@@ -330,6 +335,7 @@ func TestAnAddressAColleagueOwnsAMailboxForIsLeftToThem(t *testing.T) {
 }
 
 func TestAContactTwoSeatsClaimIsLeft(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	contact := claimMintFormerContact(t, env)
@@ -343,6 +349,7 @@ func TestAContactTwoSeatsClaimIsLeft(t *testing.T) {
 }
 
 func TestAContactWithAColleaguesOrHandLoggedMailIsLeftWhole(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	contact := claimMintFormerContact(t, env)
@@ -366,6 +373,7 @@ func TestAContactWithAColleaguesOrHandLoggedMailIsLeftWhole(t *testing.T) {
 }
 
 func TestAContactWithANonMailActivityIsLeftWhole(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	contact := claimMintFormerContact(t, env)
@@ -383,6 +391,7 @@ func TestAContactWithANonMailActivityIsLeftWhole(t *testing.T) {
 // A held message is archived with its hold, so the refile never reads it. Its
 // link stays where the hold put it, and the rest of the contact's mail moves.
 func TestAHeldMessageKeepsItsLinkWhenTheContactIsArchived(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	contact := claimMintFormerContact(t, env)
@@ -404,6 +413,7 @@ func TestAHeldMessageKeepsItsLinkWhenTheContactIsArchived(t *testing.T) {
 }
 
 func TestAContactWithAMemberOnItsMailIsLeftWhole(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	contact := claimMintFormerContact(t, env)
@@ -419,6 +429,7 @@ func TestAContactWithAMemberOnItsMailIsLeftWhole(t *testing.T) {
 }
 
 func TestAContactInADealOrARelationshipIsLeftWhole(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	contact := claimMintFormerContact(t, env)
@@ -434,6 +445,7 @@ func TestAContactInADealOrARelationshipIsLeftWhole(t *testing.T) {
 }
 
 func TestAContactAUserEditedIsLeftWhole(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	contact := claimMintFormerContact(t, env)
@@ -452,6 +464,7 @@ func TestAContactAUserEditedIsLeftWhole(t *testing.T) {
 }
 
 func TestAContactPublishedToTheWorkspaceIsLeftWhole(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	contact := claimMintFormerContact(t, env)
@@ -478,6 +491,7 @@ func seedBulkMail(t *testing.T, e *integration.SearchEnv, contact ids.UUID, n in
 }
 
 func TestAContactWithExactlyTheLimitOfMailIsRefiled(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	contact := claimMintFormerContact(t, env)
@@ -491,6 +505,7 @@ func TestAContactWithExactlyTheLimitOfMailIsRefiled(t *testing.T) {
 }
 
 func TestAContactOverTheLimitOfMailIsLeftWhole(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	contact := claimMintFormerContact(t, env)
@@ -505,6 +520,7 @@ func TestAContactOverTheLimitOfMailIsLeftWhole(t *testing.T) {
 }
 
 func TestClaimingTheSameAddressAgainChangesNothing(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	contact := claimMintFormerContact(t, env)
@@ -523,6 +539,7 @@ func TestClaimingTheSameAddressAgainChangesNothing(t *testing.T) {
 }
 
 func TestWithdrawingAClaimPutsTheContactAndItsMailBack(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	contact := claimMintFormerContact(t, env)
@@ -553,6 +570,7 @@ func TestWithdrawingAClaimPutsTheContactAndItsMailBack(t *testing.T) {
 // A claim made on rows stored before addresses were held lowercase keeps their
 // images as typed. Withdrawing it puts each row back with its address lowercase.
 func TestWithdrawingAClaimPutsAnOlderAddressBackInLowercase(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	contact := claimMintFormerContact(t, env)
@@ -590,6 +608,7 @@ func TestWithdrawingAClaimPutsAnOlderAddressBackInLowercase(t *testing.T) {
 // Putting a withdrawn claim back is judged like declaring it. The contact is
 // live again, so the product asks first and changes nothing until it is answered.
 func TestPuttingAWithdrawnClaimBackAsksAboutTheLiveContact(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	contact := claimMintFormerContact(t, env)
@@ -612,6 +631,7 @@ func TestPuttingAWithdrawnClaimBackAsksAboutTheLiveContact(t *testing.T) {
 // A contact a verdict retracts is capture's own: its mint row names the mailbox
 // owner in on_behalf_of and must not count as somebody's work.
 func TestACaptureMintedContactIsRetractableByAVerdict(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	contact := claimMintFormerContact(t, env)

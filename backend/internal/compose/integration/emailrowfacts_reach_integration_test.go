@@ -16,6 +16,7 @@ import (
 )
 
 func TestEmailAudienceReachSkipsOneStatementForNonTeamPages(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	author := onFullSeat(e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms))
 	contact := e.SeedContact(t, "Audience cost contact", &e.Rep1)
@@ -53,6 +54,7 @@ func TestEmailAudienceReachSkipsOneStatementForNonTeamPages(t *testing.T) {
 }
 
 func TestMixedEmailAudienceBadgesMatchPresentation(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	author := onFullSeat(e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms))
 	colleague := onFullSeat(e.As(e.Rep2, []ids.UUID{e.Team1}, activityLifecyclePerms))

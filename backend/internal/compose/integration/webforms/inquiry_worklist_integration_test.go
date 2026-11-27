@@ -21,6 +21,7 @@ import (
 )
 
 func TestWebsiteInquiryWorklistShowsAcceptedWorkBeforeItsDeadline(t *testing.T) {
+	t.Parallel()
 	for _, days := range []int{1, 30} {
 		t.Run(strconv.Itoa(days), func(t *testing.T) {
 			e := setupFormsApp(t)

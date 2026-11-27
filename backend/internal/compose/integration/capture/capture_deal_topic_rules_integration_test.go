@@ -19,6 +19,7 @@ import (
 // The model sees a candidate's project name only where the capturing seat
 // may read projects.
 func TestTheTopicCheckShowsAProjectNameOnlyUnderTheProjectGrant(t *testing.T) {
+	t.Parallel()
 	for _, c := range []struct {
 		name     string
 		revoked  bool
@@ -51,6 +52,7 @@ func TestTheTopicCheckShowsAProjectNameOnlyUnderTheProjectGrant(t *testing.T) {
 
 // The memo names the whole input, so a renamed deal asks again.
 func TestAChangedDealAsksTheTopicCheckAgain(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
@@ -76,6 +78,7 @@ func TestAChangedDealAsksTheTopicCheckAgain(t *testing.T) {
 // An answer is for the input the model read. When the deal changes while the
 // model answers, the second transaction files nothing.
 func TestAnAnswerForAnInputThatChangedFilesNothing(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)

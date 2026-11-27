@@ -19,6 +19,7 @@ import (
 // An unattributed promise asks nobody. Once a reading names the colleague who
 // made it, it is put to them, and only to them.
 func TestAPromiseIsPutToItsPromiserOnlyOnceItIsAttributed(t *testing.T) {
+	t.Parallel()
 	e := setupTranscript(t)
 	e.WsExec(t, `UPDATE app_user SET display_name='Priya Raman' WHERE id=$1`, e.Rep2)
 	first := e.read(t, cannedBrain{reply: ownedReply(t, "Priya Raman", 0.95)})
@@ -38,6 +39,7 @@ func TestAPromiseIsPutToItsPromiserOnlyOnceItIsAttributed(t *testing.T) {
 }
 
 func TestLosingPromiserAttributionDoesNotRepeatExistingWork(t *testing.T) {
+	t.Parallel()
 	for _, state := range []string{"direct", "pending", "rejected", "approved"} {
 		t.Run(state, func(t *testing.T) {
 			e := setupTranscript(t)
@@ -65,6 +67,7 @@ func TestLosingPromiserAttributionDoesNotRepeatExistingWork(t *testing.T) {
 }
 
 func TestRereadingAnApprovedPromiseDoesNotBypassItsFailedEffect(t *testing.T) {
+	t.Parallel()
 	e := setupTranscript(t)
 	e.WsExec(t, `UPDATE app_user SET display_name='Priya Raman' WHERE id=$1`, e.Rep2)
 	first := e.read(t, cannedBrain{reply: attributedReply(t, "Priya Raman", "seat:"+e.Rep2.String(), 0.75)})

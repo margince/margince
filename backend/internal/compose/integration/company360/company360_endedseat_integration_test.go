@@ -19,6 +19,7 @@ import (
 // the same seats. Counting an ended seat in the total alone would report it as
 // a seat the reader may not see.
 func TestTheAccountCommitteeCountsOnlyCurrentSeats(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	company := e.SeedCompany(t, "Brandt GmbH", nil)

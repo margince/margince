@@ -79,6 +79,7 @@ func seedAnswered(t *testing.T, e *loadEnv, contact ids.UUID, ago, after time.Du
 // answered messages with one outlier is the smallest fixture where the two
 // answers differ enough to tell apart.
 func TestTheResponseTimeIsTheMedianRatherThanTheMean(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := ids.NewV7()
 	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
@@ -98,10 +99,8 @@ func TestTheResponseTimeIsTheMedianRatherThanTheMean(t *testing.T) {
 	if got.Answered < 3 {
 		t.Fatalf("counted %d answered, wanted at least the three seeded", got.Answered)
 	}
-	// Asserted as a RANGE because the lane template is shared: another test's
-	// answered thread shifts the median, and a fixed number would pass or fail
-	// on which tests ran. The mean of this fixture is ~2000 minutes, so any
-	// figure this low proves the percentile is what ran.
+	// The mean of this fixture is ~2000 minutes, so any figure this low proves
+	// the percentile is what ran.
 	if got.MedianMinutes > 400 {
 		t.Fatalf("the median came back %d minutes — a mean over these waits would be "+
 			"about 2000, so this is not a median", got.MedianMinutes)
@@ -114,6 +113,7 @@ func TestTheResponseTimeIsTheMedianRatherThanTheMean(t *testing.T) {
 // of the whole conversation, so a customer answered in an hour and talked to
 // for a week would read as a week-long wait.
 func TestTheWaitIsMeasuredToTheFirstReplyNotTheLast(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := ids.NewV7()
 	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
@@ -154,6 +154,7 @@ func TestTheWaitIsMeasuredToTheFirstReplyNotTheLast(t *testing.T) {
 // admitted threads with no reply at all would count them at some default and
 // report the workspace as answering everything.
 func TestAnUnansweredThreadIsNotCountedAsAnswered(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := ids.NewV7()
 	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
@@ -185,6 +186,7 @@ func TestAnUnansweredThreadIsNotCountedAsAnswered(t *testing.T) {
 // window needs — and a metric read off the state table would fall as readers
 // tidied up, reporting less judgement the more of it happened.
 func TestDispositionsAreCountedFromTheAuditRowRatherThanTheStateTable(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := ids.NewV7()
 	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
@@ -226,6 +228,7 @@ func TestDispositionsAreCountedFromTheAuditRowRatherThanTheStateTable(t *testing
 // together would make a fortnight of ordinary tidying look like a fortnight of
 // customers being written off.
 func TestOnlyTheWorkspaceWideJudgementCountsAsNotSales(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := ids.NewV7()
 	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
@@ -261,6 +264,7 @@ func TestOnlyTheWorkspaceWideJudgementCountsAsNotSales(t *testing.T) {
 // message, so counting the action alone would report every edit as a rep putting
 // work down.
 func TestAnOrdinaryActivityUpdateIsNotADisposition(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := ids.NewV7()
 	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
@@ -291,6 +295,7 @@ func TestAnOrdinaryActivityUpdateIsNotADisposition(t *testing.T) {
 // Zeros would read as a quiet fortnight, which is the under-reporting direction
 // every figure in this family has to fail away from.
 func TestABackwardsWindowIsRefusedRatherThanAnsweredWithZeros(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	now := time.Now()
 
@@ -319,6 +324,7 @@ func TestABackwardsWindowIsRefusedRatherThanAnsweredWithZeros(t *testing.T) {
 // comment that this is a security control. This case is what keeps the
 // restatement here honest.
 func TestAReplyOnAnotherMediumDoesNotAnswerAForgedMailThread(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := ids.NewV7()
 	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
@@ -367,6 +373,7 @@ func TestAReplyOnAnotherMediumDoesNotAnswerAForgedMailThread(t *testing.T) {
 // The defect is in which states the reader counts, so a test that hand-writes
 // the audit row is a test agreeing with itself about what the writer produces.
 func TestSettingARowAsideAndTakingItBackCountsAsNoDisposition(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := ids.NewV7()
 	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
@@ -403,6 +410,7 @@ func TestSettingARowAsideAndTakingItBackCountsAsNoDisposition(t *testing.T) {
 
 // The same for the workspace-wide judgement, which has its own undo verb.
 func TestTakingBackANotSalesCountsAsNoFurtherJudgement(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := ids.NewV7()
 	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
@@ -451,6 +459,7 @@ func TestTakingBackANotSalesCountsAsNoFurtherJudgement(t *testing.T) {
 // and no audience membership for them, is the case that tells the two apart. It
 // is invisible to `e.rep` and its judgement must be too.
 func TestAJudgementOnAnUnreadableConversationCountsForNobody(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := ids.NewV7()
 	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
@@ -496,6 +505,7 @@ func TestAJudgementOnAnUnreadableConversationCountsForNobody(t *testing.T) {
 // And the admit case, without which the test above passes against a count that
 // refuses EVERYTHING. The same fixture, readable: the judgement lands.
 func TestAJudgementOnAReadableConversationIsStillCounted(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := ids.NewV7()
 	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
@@ -535,6 +545,7 @@ func TestAJudgementOnAReadableConversationIsStillCounted(t *testing.T) {
 // That is the same defect reading from activity_reader_state had, reached by a
 // different route, and it is the direction this figure must not fail in.
 func TestArchivingAThreadDoesNotUnmakeTheJudgementOnIt(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := ids.NewV7()
 	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)

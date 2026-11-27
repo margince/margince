@@ -49,6 +49,7 @@ func contactName(t *testing.T, e *integration.SearchEnv, id ids.UUID) (first, la
 // The sync-time ordering: the attendee is already a contact when the meeting
 // lands, and the invitation completes the name their address could not.
 func TestACalendarInvitationNamesAContactItsAddressCouldNot(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 
 	// Through the real contacts store, with only the local part for a name AND
@@ -88,6 +89,7 @@ func TestACalendarInvitationNamesAContactItsAddressCouldNot(t *testing.T) {
 // guard is completeContactName's, shared with the mail ladder, and this is the
 // case that proves the calendar path did not route around it.
 func TestAnInvitationNeverRenamesAContactAHumanNamed(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 
 	store := contacts.NewStore(e.DB())

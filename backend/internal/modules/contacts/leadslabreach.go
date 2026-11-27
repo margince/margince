@@ -63,7 +63,7 @@ func (s *Store) ScanLeadSLA(ctx context.Context, now time.Time) ([]SLABreach, er
 	}
 	var breaches []SLABreach
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		policy, err := loadLeadSLAPolicy(ctx, tx, s.bootConfig())
+		policy, err := loadLeadSLAPolicy(ctx, tx, s.bootConfig(ctx))
 		if err != nil {
 			return err
 		}

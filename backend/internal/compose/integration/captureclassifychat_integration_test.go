@@ -45,6 +45,7 @@ func (b *refusingMeetingBrain) Complete(_ context.Context, req model.Request) (m
 // chat line read without the line it answers cannot carry a refusal that may
 // close the deal as lost.
 func TestAConnectorCapturedChatMessageIsLabelledAndTakesNoReplyVerdict(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	chat := ids.NewV7()
 	e.WsExec(t, `

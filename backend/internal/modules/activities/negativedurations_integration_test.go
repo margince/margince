@@ -74,6 +74,7 @@ func clearDurations(t *testing.T, e *sendEnv) int {
 }
 
 func TestANegativeDurationBecomesUnknownAndOtherDurationsStay(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	calls := seedDurations(t, -60, -1, 0, 300)
 	negative, alsoNegative, zero, measured := calls[0], calls[1], calls[2], calls[3]
@@ -106,6 +107,7 @@ func TestANegativeDurationBecomesUnknownAndOtherDurationsStay(t *testing.T) {
 // An old negative row stays editable before the task reaches it: the edit
 // clears the duration it carries. A new negative duration is still refused.
 func TestAnEditClearsAnOldNegativeDurationAndANewOneIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	calls := seedDurations(t, -60, 120)
 	negative, measured := calls[0], calls[1]
@@ -129,6 +131,7 @@ func TestAnEditClearsAnOldNegativeDurationAndANewOneIsRefused(t *testing.T) {
 // A restricted row is immutable, so the task passes it and finishes. The
 // erasure that lifts its restriction clears the duration in the same update.
 func TestARestrictedNegativeDurationWaitsForItsLift(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	held := ids.NewV7()
 	testdb.WithNegativeCountFloorsLifted(t, func(tx pgx.Tx) error {

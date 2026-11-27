@@ -44,6 +44,7 @@ func setupProviderKeyApp(t *testing.T) *apptest.AppEnv {
 }
 
 func TestTheKeyIsWriteOnlyOverHTTP(t *testing.T) {
+	t.Parallel()
 	e := setupProviderKeyApp(t)
 
 	if code := e.Call(t, "PUT", "/v1/ai/provider-keys/gemini",
@@ -76,6 +77,7 @@ func TestTheKeyIsWriteOnlyOverHTTP(t *testing.T) {
 }
 
 func TestTheListSaysWhichVendorsAreConfigured(t *testing.T) {
+	t.Parallel()
 	e := setupProviderKeyApp(t)
 
 	var before struct {
@@ -169,6 +171,7 @@ func TestTheListSaysWhichVendorsAreConfigured(t *testing.T) {
 }
 
 func TestRemovingOverHTTPIsIdempotent(t *testing.T) {
+	t.Parallel()
 	e := setupProviderKeyApp(t)
 
 	if code := e.Call(t, "PUT", "/v1/ai/provider-keys/anthropic",
@@ -186,6 +189,7 @@ func TestRemovingOverHTTPIsIdempotent(t *testing.T) {
 }
 
 func TestAVendorThatTakesNoKeyIsRefusedOverHTTP(t *testing.T) {
+	t.Parallel()
 	e := setupProviderKeyApp(t)
 	if code := e.Call(t, "PUT", "/v1/ai/provider-keys/ollama",
 		AnyMap{"api_key": "sk-local-needs-none"}, nil, nil); code != http.StatusUnprocessableEntity {

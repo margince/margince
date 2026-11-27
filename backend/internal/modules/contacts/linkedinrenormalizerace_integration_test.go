@@ -21,6 +21,7 @@ import (
 // write. Acted on blind, the pass folds a row that is no longer a duplicate into
 // another connection and deletes it, and nothing brings that row back.
 func TestARowWhoseCompanyMovedIsNotCollapsedOnTheOldGrouping(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -119,6 +120,7 @@ func groupingAsRead(ctx context.Context, t *testing.T, e *dedupeEnv) ([]ghostKey
 // raw names would read that as a row that moved and leave the duplicate standing every
 // pass, which is the backlog this sweep exists to drain.
 func TestACosmeticRenameStillCollapsesWithItsGroup(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 

@@ -44,6 +44,7 @@ func logReplyMessage(ctx context.Context, t *testing.T, e *integration.Env, thre
 }
 
 func TestReplyDraftUsesOnlyTheSelectedMessageForItsTopic(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	anchor := logReplyMessage(ctx, t, e, "pricing", "Re: RE: Pricing", "Selected proposal", 0)
@@ -96,6 +97,7 @@ func TestReplyDraftUsesOnlyTheSelectedMessageForItsTopic(t *testing.T) {
 }
 
 func TestAReplyRewriteCarriesTheDraftOnScreenIntoThePrompt(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	anchor := logReplyMessage(e.Admin(), t, e, "pricing", "Pricing", "Selected proposal", 0)
 	brain := &replyBrainStub{response: model.Response{Text: `{"subject":"Pricing","body":"Shorter."}`}}
@@ -117,6 +119,7 @@ func TestAReplyRewriteCarriesTheDraftOnScreenIntoThePrompt(t *testing.T) {
 }
 
 func TestAShortReplyToAnEnglishThreadIsDraftedInEnglishWhateverTheAppLanguage(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	logReplyMessage(ctx, t, e, "pilot", "Pilot", "Thanks for the update, we plan to review the proposal with our team next week and come back to you.", 0)
@@ -140,6 +143,7 @@ func (plainReplyStub) DraftEmail(context.Context, ids.UUID, string) (string, str
 }
 
 func TestReplyEndpointNormalizesTheSubjectForEveryDraftAdapter(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	anchor := logReplyMessage(e.Admin(), t, e, "", "Re: Pricing", "Selected proposal", 0)
 	for name, drafter := range map[string]activities.EmailDrafter{
@@ -164,6 +168,7 @@ func TestReplyEndpointNormalizesTheSubjectForEveryDraftAdapter(t *testing.T) {
 }
 
 func TestAnOldInboundMessageStillDecidesTheReplyLanguageBehindManyNewerOutboundOnes(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	e := o.e
 	at := time.Date(2026, 9, 1, 9, 0, 0, 0, time.UTC)
@@ -190,6 +195,7 @@ func TestAnOldInboundMessageStillDecidesTheReplyLanguageBehindManyNewerOutboundO
 }
 
 func TestAReadableCopiedContactDoesNotSetTheReplyLanguageWhenTheSenderIsPrivate(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	e := o.e
 	copied := replyLangContact(t, e, "Anne Copied", "anne@copied.test")
@@ -225,6 +231,7 @@ func TestAReadableCopiedContactDoesNotSetTheReplyLanguageWhenTheSenderIsPrivate(
 }
 
 func TestAnOlderInboundMaterialsRequestKeepsItsTopicPastNewerMail(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	e := o.e
 	o.contact(t, "Alex Buyer", replyCorrespondent)
@@ -262,6 +269,7 @@ func TestAnOlderInboundMaterialsRequestKeepsItsTopicPastNewerMail(t *testing.T) 
 }
 
 func TestNewerMailInTheSameConversationSuppliesReplyLanguage(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	o.contact(t, "Alex Buyer", replyCorrespondent)
 	selected := o.capture(t, owedMail{from: replyCorrespondent, to: o.seat, subject: "Product materials", body: replyLangEnglish, messageID: "materials-request@customer.test", at: replyLangStart, authenticated: true})

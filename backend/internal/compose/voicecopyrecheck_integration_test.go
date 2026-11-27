@@ -59,6 +59,7 @@ func deliverOutboxFor(t *testing.T, l learnedMail, activityID ids.UUID) int {
 }
 
 func TestAVoiceSampleFollowsItsMailOnceItStopsBeingLearnable(t *testing.T) {
+	t.Parallel()
 	for name, change := range map[string]func(t *testing.T, l learnedMail){
 		"limited to its participants": func(t *testing.T, l learnedMail) {
 			decideThread(t, l.env.e, l.o.owner, threadOf(t, l.o, l.mail), false)
@@ -92,6 +93,7 @@ func TestAVoiceSampleFollowsItsMailOnceItStopsBeingLearnable(t *testing.T) {
 
 // A mail still learnable keeps its sample through the same recheck.
 func TestAnUnrelatedChangeKeepsTheVoiceSample(t *testing.T) {
+	t.Parallel()
 	l := voiceLearnedFromMail(t)
 	deliverOutboxFor(t, l, l.mail)
 	if n := l.o.count(t, `SELECT count(*) FROM voice_corpus_source WHERE source_ref = $1
@@ -103,6 +105,7 @@ func TestAnUnrelatedChangeKeepsTheVoiceSample(t *testing.T) {
 // A mailbox two seats hold is shared. Its sent mail carries the connecting
 // seat as sender, but it is not that seat's own writing to learn from.
 func TestASharedMailboxsSentMailTeachesNoVoice(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	o.e.WsExec(t, `UPDATE capture_connection SET account_label = $2 WHERE user_id = $1`, o.owner, "sales@ws.example")
 	o.seat = "sales@ws.example"

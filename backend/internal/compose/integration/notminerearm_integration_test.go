@@ -44,6 +44,7 @@ func seedOwnedContact(t *testing.T, e *Env, owner ids.UUID) ids.UUID {
 }
 
 func TestAHandOffGivesTheMessageBackToEveryoneButItsNewOwner(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	// The contact is owned by Rep2 — they are who it was just handed to.
 	contact := seedOwnedContact(t, e, e.Rep2)
@@ -85,6 +86,7 @@ func TestAHandOffGivesTheMessageBackToEveryoneButItsNewOwner(t *testing.T) {
 // whose routing has not run yet, and re-arming every Worklist on the way past
 // would be work nobody asked for.
 func TestAnUnownedRecordEndsNobodysJudgement(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contact := seedWaitingContact(t, e)
 	seedWaitingMessageLinked(t, e, "thread-unowned", "inbound", "Re: the pilot",
@@ -114,6 +116,7 @@ func TestAnUnownedRecordEndsNobodysJudgement(t *testing.T) {
 // hand somebody back work they had deliberately put down until Thursday, which
 // is a different judgement about a different question.
 func TestAHandOffLeavesASnoozeAlone(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contact := seedOwnedContact(t, e, e.Rep2)
 	seedWaitingMessageLinked(t, e, "thread-handoff-snooze", "inbound", "Re: the invoice",
@@ -148,6 +151,7 @@ func TestAHandOffLeavesASnoozeAlone(t *testing.T) {
 // look exactly like one a hand-off produced, which is what makes the refusal
 // worth a test rather than a comment.
 func TestAHumanMayNotReArmAColleaguesSetAside(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contact := seedOwnedContact(t, e, e.Rep2)
 	seedWaitingMessageLinked(t, e, "thread-handoff-human", "inbound", "Re: the contract",

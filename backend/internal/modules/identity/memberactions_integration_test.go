@@ -86,7 +86,7 @@ func callMemberVerb(e *revocationEnv, h Handlers, caller Identity, action member
 	case actionHandOver:
 		// The handover is served outside this module, behind this gate.
 		ctx := actorCtx(e.wsCtx(caller), caller)
-		if err := e.svc.db.Tx(ctx, func(tx pgx.Tx) error { return AdmitMemberHandover(ctx, tx, target) }); err != nil {
+		if err := e.svc.db.Tx(ctx, func(tx pgx.Tx) error { return AdmitMemberHandover(ctx, tx, RbacObjects{}, target) }); err != nil {
 			return http.StatusForbidden
 		}
 		return http.StatusOK
@@ -126,6 +126,7 @@ func assertOfferAgrees(t *testing.T, e *revocationEnv, h Handlers, caller Identi
 }
 
 func TestTheRosterOffersADelegatedAdministratorExactlyTheVerbsTheHandlersAccept(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "allowed-actions")
 	h := mailingRoster(e)
 	delegate := e.customRole(t, "Member admin", "rep", map[string]storedGrant{objectUserAdmin: fullGrant})
@@ -167,6 +168,7 @@ func TestTheRosterOffersADelegatedAdministratorExactlyTheVerbsTheHandlersAccept(
 // verbs that would leave nobody able to administer members, and the handlers
 // refuse them.
 func TestTheRosterWithholdsWhatWouldRemoveTheLastAdmin(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "allowed-last-admin")
 	h := NewHandlers(e.svc).WithPasswordLinkBase("https://crm.example.test")
 	offered := rosterActions(t, e, h, e.admin)[e.admin.UserID.UUID]
@@ -184,6 +186,7 @@ func TestTheRosterWithholdsWhatWouldRemoveTheLastAdmin(t *testing.T) {
 // An installation with no public base URL builds no link, so the roster never
 // offers one.
 func TestTheRosterOffersNoPasswordLinkWithoutABaseURL(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "allowed-no-base")
 	offers := rosterActions(t, e, NewHandlers(e.svc), e.admin)
 	for user, offered := range offers {
@@ -199,6 +202,7 @@ func TestTheRosterOffersNoPasswordLinkWithoutABaseURL(t *testing.T) {
 // A caller holding one user_admin verb is offered exactly the actions that
 // verb opens, and the handlers agree for the ones it does not.
 func TestTheRosterOffersOnlyTheVerbsTheCallerHolds(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "allowed-verbs")
 	h := mailingRoster(e)
 	repCopy := e.customRole(t, "Rep copy", "rep", nil)
@@ -227,6 +231,7 @@ func TestTheRosterOffersOnlyTheVerbsTheCallerHolds(t *testing.T) {
 // keeps an administrator; the roster offers the change, and every other
 // choice for them is refused.
 func TestTheRosterOffersTheSoleAdminARoleChangeThatKeepsAdmin(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "allowed-sole-admin-extra")
 	h := NewHandlers(e.svc).WithPasswordLinkBase("https://crm.example.test")
 	extra := e.customRole(t, "Extra", "rep", nil)
@@ -252,6 +257,7 @@ func TestTheRosterOffersTheSoleAdminARoleChangeThatKeepsAdmin(t *testing.T) {
 // blocks it on anyone else, and an offer there opens a dialog that cannot
 // confirm.
 func TestTheRosterOffersRemovalOnlyOnADeactivatedMember(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "allowed-remove")
 	h := NewHandlers(e.svc)
 	active := e.seat(t, "remove-active", "rep")

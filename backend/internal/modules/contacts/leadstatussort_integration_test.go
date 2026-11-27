@@ -13,6 +13,7 @@ import (
 // Sorting the lead list by status follows the ladder a lead climbs, not the
 // alphabet of its keys, on every page the cursor walks.
 func TestTheLeadListSortsStatusInLadderOrder(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := asStageAdmin(e, stageAdminGrants())
 	for _, status := range []LeadStatus{LeadStatusEngaged, LeadStatusContacted, LeadStatusNew} {

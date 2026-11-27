@@ -39,10 +39,12 @@ import (
 )
 
 // extensionsHandlers serves the inventory. What a unit is comes from the
-// process-level accessors. The pool and the app store answer only which
-// declared setup an admin has done (setupMissing).
+// composition. The pool and the app store answer only which declared setup an
+// admin has done (setupMissing).
 type extensionsHandlers struct {
-	pool *pgxpool.Pool
+	// extensions is the composition the inventory describes.
+	extensions *Extensions
+	pool       *pgxpool.Pool
 	// apps is nil where no key vault is wired, so no OAuth app can be stored.
 	apps *capture.ConnectorAppStore
 }
@@ -68,7 +70,7 @@ func (h extensionsHandlers) ListExtensions(w http.ResponseWriter, r *http.Reques
 		httperr.Write(w, r, err)
 		return
 	}
-	exts := ComposedExtensions()
+	exts := h.extensions.Units()
 	missing := make(map[string]*[]crmcontracts.ComposedExtensionSetupItem, len(exts))
 	for _, e := range exts {
 		items, known, err := h.setupMissing(r.Context(), e)
@@ -80,7 +82,7 @@ func (h extensionsHandlers) ListExtensions(w http.ResponseWriter, r *http.Reques
 			missing[string(e.Name)] = &items
 		}
 	}
-	units := composedExtensionInventory(exts, ComposedVerbs(), servedExtensionJobs())
+	units := composedExtensionInventory(exts, h.extensions.Verbs(), h.extensions.servedJobs())
 	for i := range units {
 		units[i].SetupMissing = missing[units[i].Name]
 	}
@@ -220,10 +222,10 @@ func unitMailHooks(h extension.MailHooks) *crmcontracts.ComposedExtensionMailHoo
 
 // unitRbacObjects collects the distinct objects this unit's operations gate on.
 //
-// Read off the VERBS rather than off the RBAC registry, deliberately. The
-// registry (policy.RegisteredObjects) knows every registered name but not which
-// unit declared it — the `ext_<unit>_` prefix looks like it would answer that
-// and does not, because the namespace is not injective: a hyphenated unit name
+// Read off the verbs rather than off the RBAC vocabulary. The vocabulary
+// (identity.RbacObjects) knows every registered name but not which unit
+// declared it. The `ext_<unit>_` prefix does not answer that, because the
+// namespace is not injective: a hyphenated unit name
 // underscores, so `crm-demo`/`widget` and `crm`/`demo_widget` derive one name
 // (see extrbac.go). Splitting the prefix back apart would attribute an object to
 // the wrong unit; the verb carries its declaring unit as data and cannot.

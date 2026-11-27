@@ -222,6 +222,7 @@ func daysAgo(days int) time.Time {
 // "economic_buyer, not engaged" against an id has not told a rep who to bring
 // into the room. The data was correct and unusable in a sentence.
 func TestCase5EveryStakeholderIsNamedNotJustIdentified(t *testing.T) {
+	t.Parallel()
 	s := boot(t, scopesRead)
 	f := s.seedMeetingAccount(t)
 
@@ -280,6 +281,7 @@ func TestCase5EveryStakeholderIsNamedNotJustIdentified(t *testing.T) {
 // back — a loop over an empty list asserts nothing, and risk generation could
 // be deleted without this test noticing.
 func TestCase5AFindingNamesTheContactsItIsAbout(t *testing.T) {
+	t.Parallel()
 	s := boot(t, scopesRead)
 	f := s.seedMeetingAccount(t)
 
@@ -324,6 +326,7 @@ func TestCase5AFindingNamesTheContactsItIsAbout(t *testing.T) {
 // the first tells a rep whether to worry. The fixture's last touch is old
 // enough to be cold and recent enough that the number is checkable.
 func TestCase5AColdAccountReportsHowManyDays(t *testing.T) {
+	t.Parallel()
 	s := boot(t, scopesRead)
 	f := s.seedColdAccount(t)
 
@@ -358,6 +361,7 @@ func TestCase5AColdAccountReportsHowManyDays(t *testing.T) {
 // PREFERS the record when the two disagree is the weekly lane's question; this
 // pins that the date is there to prefer.
 func TestCase5EveryEventCarriesTheDateItHappened(t *testing.T) {
+	t.Parallel()
 	s := boot(t, scopesRead)
 	f := s.seedMeetingAccount(t)
 

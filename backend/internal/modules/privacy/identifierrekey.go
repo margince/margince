@@ -38,7 +38,7 @@ func RekeySuppressionListPageTx(ctx context.Context, tx pgx.Tx, after Suppressio
 	if err := auth.RequireSystem(ctx); err != nil {
 		return nil, err
 	}
-	keyID := storekit.SuppressionKeyID()
+	keyID := storekit.SuppressionKeyID(ctx)
 	if keyID == nil {
 		return nil, nil
 	}
@@ -66,7 +66,7 @@ func RekeySuppressionListPageTx(ctx context.Context, tx pgx.Tx, after Suppressio
 			rows.Close()
 			return nil, err
 		}
-		hash, _ := storekit.RekeySuppressionHash(row.Hash)
+		hash, _ := storekit.RekeySuppressionHash(ctx, row.Hash)
 		page, kinds, unkeyed, keyed, erasedAt = append(page, row), append(kinds, row.Kind),
 			append(unkeyed, row.Hash), append(keyed, hash), append(erasedAt, at)
 		liftedAt, liftConsents, liftContacts = append(liftedAt, lifted), append(liftConsents, consent), append(liftContacts, contact)
@@ -107,7 +107,7 @@ func RekeyAnonymizedAddressesPageTx(ctx context.Context, tx pgx.Tx, after ids.UU
 	if err := auth.RequireSystem(ctx); err != nil {
 		return nil, err
 	}
-	keyID := storekit.SuppressionKeyID()
+	keyID := storekit.SuppressionKeyID(ctx)
 	if keyID == nil {
 		return nil, nil
 	}
@@ -133,7 +133,7 @@ func RekeyAnonymizedAddressesPageTx(ctx context.Context, tx pgx.Tx, after ids.UU
 	for _, contact := range contacts {
 		rekeyed := make([]string, len(contact.hashes))
 		for i, hash := range contact.hashes {
-			rekeyed[i], _ = storekit.RekeySuppressionHash(hash)
+			rekeyed[i], _ = storekit.RekeySuppressionHash(ctx, hash)
 		}
 		if _, err := tx.Exec(ctx, `UPDATE contact SET anonymized_address_hashes = @hashes,
 			anonymized_address_key_id = @key WHERE id = @id`,

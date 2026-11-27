@@ -11,11 +11,15 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"slices"
+	"sync"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/extensionprivacy"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/extprivacy"
+	"github.com/margince/margince/backend/internal/shared/ports/companytypes"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -24,9 +28,8 @@ import (
 // grants, and the service member of each unit that lands records.
 //
 // One function because the ordering between them is not a caller's to choose.
-// The reconcile reads ComposedExtensions() and refuses a unit that shadows a
-// core transport, so it belongs after the set is observed and before anything
-// serves. A role that wired only the inventory would boot with units installed
+// The reconcile reads the composed set and refuses a unit that shadows a core
+// transport. So it belongs after the set is observed and before anything serves. A role that wired only the inventory would boot with units installed
 // and their transports unregistered. This step exists to make that state
 // unreachable.
 //
@@ -34,18 +37,19 @@ import (
 // anything. Server assembly loads the transport directory from the rows written
 // here.
 func RecordComposition(
-	ctx context.Context, pool *pgxpool.Pool, log *slog.Logger, exts []extension.Extension,
+	ctx context.Context, pool *pgxpool.Pool, log *slog.Logger, composed *Extensions,
 ) error {
-	if err := ObserveExtensionInventory(ctx, pool, log, exts); err != nil {
+	exts := composed.Units()
+	if err := ObserveExtensionInventory(ctx, pool, log, exts, composed.binding().blob); err != nil {
 		return fmt.Errorf("compose: recording the composed extension set: %w", err)
 	}
 	if err := VerifyExtensionPrivacy(ctx, pool, exts); err != nil {
 		return fmt.Errorf("compose: checking the extensions' privacy declarations: %w", err)
 	}
-	if err := ReconcileChannelProviders(ctx, pool); err != nil {
+	if err := ReconcileChannelProviders(ctx, pool, composed); err != nil {
 		return fmt.Errorf("compose: registering this binary's channel vocabulary: %w", err)
 	}
-	if err := FillExtensionRbacDefaults(ctx, pool, log); err != nil {
+	if err := FillExtensionRbacDefaults(ctx, pool, log, composed); err != nil {
 		return fmt.Errorf("compose: filling the units' default role grants: %w", err)
 	}
 	if err := EnsureExtensionServiceMembers(ctx, pool, log, exts); err != nil {
@@ -54,8 +58,68 @@ func RecordComposition(
 	return nil
 }
 
+// extensionData holds the composed units, the RBAC vocabulary built from them
+// and their privacy registry. RegisterExtensions installs it in its apply
+// phase, and the mutex orders that write against every later read.
+var extensionData struct {
+	mu        sync.RWMutex
+	installed bool
+	units     []extension.Extension
+	rbac      identity.RbacObjects
+	registry  extprivacy.Registry
+}
+
+func installExtensionData(composed *Extensions, registry extprivacy.Registry) {
+	extensionData.mu.Lock()
+	defer extensionData.mu.Unlock()
+	extensionData.installed, extensionData.registry = true, registry
+	extensionData.units, extensionData.rbac = composed.units, composed.rbac
+}
+
+// installedRbacObjects is the RBAC vocabulary of the installed composition, for
+// the identity services built where no composition is in reach.
+func installedRbacObjects() identity.RbacObjects {
+	extensionData.mu.RLock()
+	defer extensionData.mu.RUnlock()
+	return extensionData.rbac
+}
+
+// coreData is the registry of a process that composed nothing: no unit tables,
+// and the core modules' own reach. Those are fixed in the source, so a refusal
+// is a build defect.
+var coreData = sync.OnceValue(func() extprivacy.Registry {
+	registry, err := extensionprivacy.Registry(nil)
+	if err != nil {
+		panic("compose: the core modules' reach declarations: " + err.Error())
+	}
+	return registry
+})
+
 // ExtensionData is the registry every eraser, export and merge store outside a test is handed.
-func ExtensionData() extprivacy.Registry { return extensionprivacy.Registry(ComposedExtensions()) }
+func ExtensionData() extprivacy.Registry {
+	extensionData.mu.RLock()
+	defer extensionData.mu.RUnlock()
+	if !extensionData.installed {
+		return coreData()
+	}
+	return extensionData.registry
+}
+
+// installedUnits is the units of the installed composition, for the capture
+// hooks, which are built where no composition is in reach.
+func installedUnits() []extension.Extension {
+	extensionData.mu.RLock()
+	defer extensionData.mu.RUnlock()
+	return slices.Clone(extensionData.units)
+}
+
+// installedCompanyTypes is the company types the installed units declare, for
+// the record provider, which is built where no composition is in reach.
+func installedCompanyTypes() companytypes.Registry {
+	extensionData.mu.RLock()
+	defer extensionData.mu.RUnlock()
+	return companytypes.Of(extensionData.units)
+}
 
 // VerifyExtensionPrivacy checks the units' declarations at boot (extensionprivacy.Verify).
 func VerifyExtensionPrivacy(ctx context.Context, pool *pgxpool.Pool, exts []extension.Extension) error {

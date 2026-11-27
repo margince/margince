@@ -19,6 +19,7 @@ import (
 )
 
 func TestSystemHealthFixtureOverviewAgreesWithDiagnostics(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	var me crmcontracts.MeResponse
@@ -94,6 +95,7 @@ func assertFixtureHealthSummary(t *testing.T, overview crmcontracts.SystemHealth
 }
 
 func TestSystemHealthFixtureRejectsAnEmptyBenchmark(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	workspace := apptest.InstallationWorkspaceUUID(t.Context(), t, e.Pool)

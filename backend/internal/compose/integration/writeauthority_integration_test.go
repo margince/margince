@@ -109,6 +109,7 @@ func (f sharedContactFixture) share(t *testing.T, access string) {
 // The pair is the point: the same row, the same caller, the same grant, and
 // only the seat moves.
 func TestAWriteShareIsInertOnAReadSeat(t *testing.T) {
+	t.Parallel()
 	f := seedSharedContact(t, "Downgraded Holder")
 	store := contacts.NewStore(f.env.DB())
 	id := ContactIDOf(f.contact)
@@ -139,6 +140,7 @@ func TestAWriteShareIsInertOnAReadSeat(t *testing.T) {
 }
 
 func TestAReadShareOpensAContactButCannotEditIt(t *testing.T) {
+	t.Parallel()
 	f := seedSharedContact(t, "Read Share Subject")
 	store := contacts.NewStore(f.env.DB())
 	id := ContactIDOf(f.contact)
@@ -184,6 +186,7 @@ func TestAReadShareOpensAContactButCannotEditIt(t *testing.T) {
 }
 
 func TestAReadShareCannotArchiveOrEraseTheContactItOpens(t *testing.T) {
+	t.Parallel()
 	f := seedSharedContact(t, "Destructible Subject")
 	store := contacts.NewStore(f.env.DB())
 	eraser := privacy.NewEraser(f.env.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities)
@@ -217,6 +220,7 @@ func TestAReadShareCannotArchiveOrEraseTheContactItOpens(t *testing.T) {
 // looked stricter than the plain probe. A manual scoring input is one of them,
 // and it changes what the pipeline says a lead is worth.
 func TestAReadShareOfALeadCannotScoreIt(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	lead := e.SeedID(t,
 		`INSERT INTO lead (id, full_name, owner_id, source, captured_by)
@@ -281,6 +285,7 @@ func leadActor(e *SearchEnv, user ids.UUID, scope principal.RowScope, teams []id
 // A survivor the caller cannot see answers a bare conflict, since naming it
 // would disclose it. One they may only read answers 403 with the reason.
 func TestAMergeNeedsWriteAuthorityOnBothEnds(t *testing.T) {
+	t.Parallel()
 	f := seedSharedContact(t, "Merge Source")
 	e := f.env
 	survivor := e.SeedID(t,
@@ -358,6 +363,7 @@ func shareWith(owner context.Context, t *testing.T, e *SearchEnv, record, subjec
 // checked expiry; the write arm has to check it too, or a share that lapsed
 // would keep conferring the wider half of what it once granted.
 func TestAnExpiredWriteShareConfersNothing(t *testing.T) {
+	t.Parallel()
 	f := seedSharedContact(t, "Lapsed Share Subject")
 	store := contacts.NewStore(f.env.DB())
 	f.share(t, "write")
@@ -386,6 +392,7 @@ func TestAnExpiredWriteShareConfersNothing(t *testing.T) {
 // it. This is the arm the contact suite above cannot reach: the probe there is
 // not on the record being written but on the record it belongs to.
 func TestAReadShareOfADealCannotEditItsOffer(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	pipeline := e.SeedID(t, `INSERT INTO pipeline (id, name, is_default, position)
 		VALUES ($1, 'Sales', true, 0)`)

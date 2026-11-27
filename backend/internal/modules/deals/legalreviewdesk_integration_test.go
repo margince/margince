@@ -40,6 +40,7 @@ func (d *recordingDesk) Settle(_ context.Context, _ pgx.Tx, id ids.UUID) error {
 }
 
 func TestOnlySeatsOnTheOtherSideOfTheDealAreToldAReviewWaits(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	dealID, _, _ := gatedDeal(t, e)
 	owner := ids.NewV7()
@@ -71,6 +72,7 @@ func TestOnlySeatsOnTheOtherSideOfTheDealAreToldAReviewWaits(t *testing.T) {
 }
 
 func TestAnsweringOrWithdrawingAReviewSettlesTheWordToReviewers(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	dealID, _, _ := gatedDeal(t, e)
 	e.desk.reviewers = []ids.UUID{e.reviewer}
@@ -91,6 +93,7 @@ func TestAnsweringOrWithdrawingAReviewSettlesTheWordToReviewers(t *testing.T) {
 }
 
 func TestAFreshRequestAfterAWithdrawalAnnouncesAgainAndSettlesCleanly(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	dealID, _, _ := gatedDeal(t, e)
 	e.desk.reviewers = []ids.UUID{e.reviewer}

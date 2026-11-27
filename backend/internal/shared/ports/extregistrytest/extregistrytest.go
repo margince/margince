@@ -9,13 +9,12 @@ package extregistrytest
 import (
 	"testing"
 
-	"github.com/margince/margince/backend/internal/shared/ports/companytypes"
 	"github.com/margince/margince/backend/internal/shared/ports/recordkinds"
 	"github.com/margince/margince/backend/internal/shared/ports/signaltypes"
 )
 
-// Reset empties the record kind, link type, signal type and company type
-// registries now and again when t ends.
+// Reset empties the record kind, link type and signal type registries now and
+// again when t ends. Company types belong to the composition, not the process.
 func Reset(t testing.TB) {
 	t.Helper()
 	resetAll()
@@ -25,5 +24,4 @@ func Reset(t testing.TB) {
 func resetAll() {
 	recordkinds.Reset()
 	signaltypes.Reset()
-	companytypes.Reset()
 }

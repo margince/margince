@@ -73,6 +73,7 @@ func grantLiveByID(t *testing.T, o *oauthEnv, grantID string) bool {
 // cascade must reach the credential, not only the grant row: a live access
 // token under a revoked grant is authority nothing can end.
 func TestReconsentSupersedesTheSameClientsGrant(t *testing.T) {
+	t.Parallel()
 	o := setupOAuth(t)
 
 	firstAccess, _ := o.connect(t)
@@ -99,6 +100,7 @@ func TestReconsentSupersedesTheSameClientsGrant(t *testing.T) {
 // Supersede is keyed on client_id and must not fold them: connecting a
 // laptop cannot silently kill the desktop.
 func TestTwoRegistrationsOfOneProductSurviveEachOther(t *testing.T) {
+	t.Parallel()
 	o := setupOAuth(t)
 
 	laptopAccess, _ := o.connect(t)

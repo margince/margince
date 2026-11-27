@@ -22,6 +22,7 @@ import (
 // is not in it. The family reads the same before the function keeps its plan, after it, and
 // after a rollback.
 func TestAMemberIdentityFamilyReadsTheSameAcrossItsPlanChange(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	resetSchema(t, conn)

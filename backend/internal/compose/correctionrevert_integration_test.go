@@ -60,6 +60,7 @@ func (e *closeDateEnv) correctionAuditIDFor(t *testing.T, dealID ids.UUID) ids.U
 // The undo the generic restore path could not perform. rejectPastCloseDate refuses
 // a past close date, and the image filter refuses close_date_provisional; every tier touches both.
 func TestACorrectionIsTakenBackWithEveryFieldItMoved(t *testing.T) {
+	t.Parallel()
 	e := setupCloseDate(t)
 	deal := e.seedSweepDeal(t, "Rolled forward overnight", e.early, nil, new(-12), 3)
 	wasClosing := today().AddDate(0, 0, -12)
@@ -110,6 +111,7 @@ func TestACorrectionIsTakenBackWithEveryFieldItMoved(t *testing.T) {
 // all. So a rep could undo a correction and watch the identical one reappear on
 // the next pass, their answer lasting exactly until the sweep ran again.
 func TestAReversedCorrectionIsNotReappliedTomorrow(t *testing.T) {
+	t.Parallel()
 	e := setupCloseDate(t)
 	deal := e.seedSweepDeal(t, "Undone and left alone", e.early, nil, new(-12), 3)
 	wasClosing := today().AddDate(0, 0, -12)
@@ -138,6 +140,7 @@ func TestAReversedCorrectionIsNotReappliedTomorrow(t *testing.T) {
 // A contact's later edit is not overwritten by an undo, and the check is per
 // FIELD: renaming the deal leaves the undo available, re-dating it does not.
 func TestATakenBackCorrectionRefusesToOverwriteALaterEdit(t *testing.T) {
+	t.Parallel()
 	e := setupCloseDate(t)
 	deal := e.seedSweepDeal(t, "Corrected then re-dated", e.early, nil, new(-12), 3)
 
@@ -166,6 +169,7 @@ func TestATakenBackCorrectionRefusesToOverwriteALaterEdit(t *testing.T) {
 
 // Undo twice is one reversal, not a toggle.
 func TestTakingACorrectionBackTwiceIsOneReversal(t *testing.T) {
+	t.Parallel()
 	e := setupCloseDate(t)
 	deal := e.seedSweepDeal(t, "Undone twice", e.early, nil, new(-12), 3)
 
@@ -197,6 +201,7 @@ func TestTakingACorrectionBackTwiceIsOneReversal(t *testing.T) {
 // in closeDateConfirmEffect stands behind it. TestAReversedCorrectionIsNotReappliedTomorrow
 // fails when the memory itself is broken.
 func TestConfirmingACardAfterAnUndoDoesNotReapplyIt(t *testing.T) {
+	t.Parallel()
 	e := setupCloseDate(t)
 	deal := e.seedSweepDeal(t, "Confirmed after being undone", e.early, nil, new(-12), 3)
 	wasClosing := today().AddDate(0, 0, -12)
@@ -259,6 +264,7 @@ func (e *closeDateEnv) magicReceipt(t *testing.T, since time.Time) (crmcontracts
 // undone" — which is the hardcoded false this replaced, arrived at by a longer
 // route.
 func TestTheReceiptOffersUndoOnARealCorrection(t *testing.T) {
+	t.Parallel()
 	e := setupCloseDate(t)
 	e.seedSweepDeal(t, "Corrected overnight", e.early, nil, new(-12), 3)
 	if err := e.sweep(); err != nil {
@@ -312,6 +318,7 @@ func TestTheReceiptOffersUndoOnARealCorrection(t *testing.T) {
 // A later human edit of the corrected field takes the Undo away on the
 // receipt, as it does on the deal's own list. The writer would refuse it.
 func TestTheReceiptRefusesUndoOnACorrectionEditedSince(t *testing.T) {
+	t.Parallel()
 	e := setupCloseDate(t)
 	deal := e.seedSweepDeal(t, "Corrected, then edited by hand", e.early, nil, new(-12), 3)
 	if err := e.sweep(); err != nil {
@@ -354,6 +361,7 @@ func magicLineByID(receipt crmcontracts.MagicReceipt, auditID ids.UUID) (crmcont
 // refused it every time — the generic evaluator refuses exactly what a
 // correction writes.
 func TestTheGenericRestoreRouteHonorsACorrectionTheReceiptOffersUndoOn(t *testing.T) {
+	t.Parallel()
 	e := setupCloseDate(t)
 	deal := e.seedSweepDeal(t, "Corrected overnight, undone through the real route", e.early, nil, new(-12), 3)
 	wasClosing := today().AddDate(0, 0, -12)
@@ -408,6 +416,7 @@ func TestTheGenericRestoreRouteHonorsACorrectionTheReceiptOffersUndoOn(t *testin
 // calling it) must reach the caller as the same 409 shape too, not the raw
 // *deals.CorrectionReversalError a 500 would fall through to.
 func TestTheGenericRestoreRouteRefusesACorrectionOverwrittenByALaterEdit(t *testing.T) {
+	t.Parallel()
 	e := setupCloseDate(t)
 	deal := e.seedSweepDeal(t, "Corrected then re-dated, undone through the real route", e.early, nil, new(-12), 3)
 
@@ -454,6 +463,7 @@ func TestTheGenericRestoreRouteRefusesACorrectionOverwrittenByALaterEdit(t *test
 // looked at, not any one field, and a stale one must refuse regardless of
 // which field moved under it.
 func TestTheGenericRestoreRouteRefusesAStaleVersionOnACorrection(t *testing.T) {
+	t.Parallel()
 	e := setupCloseDate(t)
 	deal := e.seedSweepDeal(t, "Corrected, then renamed by someone else", e.early, nil, new(-12), 3)
 

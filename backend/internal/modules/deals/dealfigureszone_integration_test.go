@@ -20,6 +20,7 @@ import (
 // at 18:30 UTC on the 15th. The same deal is overdue on the Hanoi rep's own list
 // and on time on a screen that reads the installation's Berlin day.
 func TestADealCloseDateIsOverdueInTheZoneTheScreenReadsIn(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	at := time.Date(2026, 6, 15, 18, 30, 0, 0, time.UTC)
 	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)), Installation{

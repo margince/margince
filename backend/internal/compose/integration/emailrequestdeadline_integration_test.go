@@ -82,6 +82,7 @@ func installationDayEnd(t *testing.T, e *integration.Env, day string) time.Time 
 }
 
 func TestARequestThatStatesADeadlineIsDueAtTheEndOfThatDay(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	sent := time.Date(2026, 9, 13, 9, 0, 0, 0, time.UTC)
 	due := requestTaskDue(t, e, "Please send the logo | Deadline: 17 September", sent)
@@ -92,6 +93,7 @@ func TestARequestThatStatesADeadlineIsDueAtTheEndOfThatDay(t *testing.T) {
 }
 
 func TestARequestWithNoOrAPastDeadlineStaysUndated(t *testing.T) {
+	t.Parallel()
 	sent := time.Date(2026, 9, 13, 9, 0, 0, 0, time.UTC)
 	for name, subject := range map[string]string{
 		"no date":      "Please send the logo",

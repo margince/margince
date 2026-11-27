@@ -26,6 +26,7 @@ import (
 )
 
 func TestADeclaredImporterNamesTheAuthorOnEveryRecordWire(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	importer := e.As(e.AdminUser, nil, importerPerms())
 	seat := openapi_types.UUID(e.Rep2)
@@ -76,6 +77,7 @@ func TestADeclaredImporterNamesTheAuthorOnEveryRecordWire(t *testing.T) {
 // Under an ORDINARY source system, so the namespace check has nothing to
 // refuse: the author alone is what these callers are refused for.
 func TestAnAuthorIsRefusedToEveryoneButTheImporter(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	name := "Anna Müller"
 	callers := map[string]context.Context{
@@ -92,6 +94,7 @@ func TestAnAuthorIsRefusedToEveryoneButTheImporter(t *testing.T) {
 }
 
 func TestAnAuthorSeatThatDoesNotExistIsTheCallersMistake(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	importer := e.As(e.AdminUser, nil, importerPerms())
 	ghost := openapi_types.UUID(ids.NewV7())
@@ -107,6 +110,7 @@ func TestAnAuthorSeatThatDoesNotExistIsTheCallersMistake(t *testing.T) {
 // its lead twin, and on the note filed only under them. Seeded through the real
 // create wires, because a hand-written UPDATE proves nothing about them.
 func TestErasingTheSubjectClearsTheAuthorTheImporterWrote(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	importer := e.As(e.AdminUser, nil, importerPerms())
 	system := "mirror:hubspot"

@@ -98,6 +98,7 @@ func startReportingBackfill(t *testing.T, e *integration.SearchEnv, prov *report
 }
 
 func TestBackfillProgressIsVisibleWhileThePageRuns(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	prov := &reportingConnector{pagedConnector: &pagedConnector{messages: 20, pageSize: 10}}
 	registry, grantCtx, runID := startReportingBackfill(t, e, prov, 0)
@@ -156,6 +157,7 @@ func TestBackfillProgressIsVisibleWhileThePageRuns(t *testing.T) {
 }
 
 func TestBackfillProgressIsPacedRatherThanWrittenPerMessage(t *testing.T) {
+	t.Parallel()
 	// A real import is thousands of messages. Written unpaced, that is one row
 	// update per message purely so a number can move faster than anyone reads
 	// it. Under a pacing longer than the page takes, only the first report is
@@ -189,6 +191,7 @@ func TestBackfillProgressIsPacedRatherThanWrittenPerMessage(t *testing.T) {
 }
 
 func TestBackfillProgressDiesWithTheFailedPage(t *testing.T) {
+	t.Parallel()
 	// A page that fails transiently is retried from the committed cursor, so
 	// its partial tally must not survive — kept, it would be added to the same
 	// messages when the retry counts them for real.
@@ -217,6 +220,7 @@ func TestBackfillProgressDiesWithTheFailedPage(t *testing.T) {
 }
 
 func TestBackfillProgressIsFencedByTheConnectionGeneration(t *testing.T) {
+	t.Parallel()
 	// The connection goes away under the running page. Its commit is already
 	// fenced off, and the live tally must be fenced the same way — otherwise
 	// the screen keeps counting up mail from an account this run no longer has,
@@ -259,6 +263,7 @@ func TestBackfillProgressIsFencedByTheConnectionGeneration(t *testing.T) {
 }
 
 func TestCancelClearsTheLiveTallyAndTheRunningPageCannotWriteItBack(t *testing.T) {
+	t.Parallel()
 	// The user stops the import while a page is still walking. Cancel is
 	// terminal and its counts are what they keep, so the page's live tally must
 	// go with it — and the messages the page keeps walking afterwards must not

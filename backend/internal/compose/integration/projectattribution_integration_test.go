@@ -159,6 +159,7 @@ func filingAnnouncements(t *testing.T, e *Env, sources ...string) (events, audit
 }
 
 func TestAFailedAttributionIsRetriedByTheNextCapture(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	matcher := &failingOnceMatcher{project: seedAttributionProject(t, e, "retry")}
 	sink := attributionSinkOn(e, matcher)
@@ -188,6 +189,7 @@ func TestAFailedAttributionIsRetriedByTheNextCapture(t *testing.T) {
 }
 
 func TestACaptureOfAnAlreadyFiledActivityStillStamps(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	project := seedAttributionProject(t, e, "retry")
 	matcher := &failingOnceMatcher{project: project, calls: 1}
@@ -221,6 +223,7 @@ func TestACaptureOfAnAlreadyFiledActivityStillStamps(t *testing.T) {
 }
 
 func TestARetriedAttributionAnnouncesItsLinkOnce(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	project := seedAttributionProject(t, e, "retry")
 	sink := attributionSinkOn(e, &failingOnceMatcher{project: project})
@@ -241,6 +244,7 @@ func TestARetriedAttributionAnnouncesItsLinkOnce(t *testing.T) {
 }
 
 func TestAnActivityAlreadyFiledIsNotRefiledByTheLadder(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	mine, other := seedAttributionProject(t, e, "mine"), seedAttributionProject(t, e, "other")
 	sink := attributionSinkOn(e, &failingOnceMatcher{project: other, calls: 1})
@@ -267,6 +271,7 @@ func TestAnActivityAlreadyFiledIsNotRefiledByTheLadder(t *testing.T) {
 // linked to a contact another seat owns, so no arm of the authority check
 // admits the mailbox's own-scope principal.
 func TestAMailboxWithoutAuthorityOverTheActivityFilesNothing(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	project := seedAttributionProject(t, e, "retry")
 	activity := ids.NewV7()
@@ -297,6 +302,7 @@ func TestAMailboxWithoutAuthorityOverTheActivityFilesNothing(t *testing.T) {
 // A project the mailbox owner can no longer reach is not filed, even when the
 // ladder names it.
 func TestAProjectTheMailboxCannotReachIsNotFiled(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	project := seedAttributionProject(t, e, "retry")
 	e.WsExec(t, `UPDATE project SET archived_at = now() WHERE id = $1`, project)
@@ -313,6 +319,7 @@ func TestAProjectTheMailboxCannotReachIsNotFiled(t *testing.T) {
 }
 
 func TestTwoCapturesNamingOneProjectAtOnceBothFileWithoutALockCycle(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
@@ -340,6 +347,7 @@ func TestTwoCapturesNamingOneProjectAtOnceBothFileWithoutALockCycle(t *testing.T
 }
 
 func TestALockCycleInTheLadderRerunsTheCapture(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	matcher := &cycleOnceMatcher{project: seedAttributionProject(t, e, "cycle")}
 	sink := attributionSinkOn(e, matcher)

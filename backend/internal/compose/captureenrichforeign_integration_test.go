@@ -67,6 +67,7 @@ func signatureWrites(t *testing.T, e *integration.Env, contact ids.UUID) string 
 }
 
 func TestSignatureEnrichReadsOnlyTheContactsOwnSignature(t *testing.T) {
+	t.Parallel()
 	for name, tc := range map[string]struct{ body, reply string }{
 		"another signer's block beside only the contact's address": {aliceBlock + "bob@example.org", aliceReply},
 		"another signer's block with both addresses":               {aliceBlock + "alice@example.com\nbob@example.org", aliceReply},
@@ -101,6 +102,7 @@ func TestSignatureEnrichReadsOnlyTheContactsOwnSignature(t *testing.T) {
 }
 
 func TestTheRepairTakesBackAnotherParticipantsSignatureAndKeepsTheirOwn(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	apply := func(contact ids.UUID, given, family, display string) {
 		name := func(field, value string) contacts.SignatureField {

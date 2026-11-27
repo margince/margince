@@ -21,6 +21,7 @@ import (
 )
 
 func TestTheRecordAndBatchShareTheSameRecommendationBasis(t *testing.T) {
+	t.Parallel()
 	for _, scenario := range []string{"empty", "champion", "outreach", "task", "meeting", "far_meeting", "meeting_followup"} {
 		t.Run(scenario, func(t *testing.T) {
 			e := integration.Setup(t)

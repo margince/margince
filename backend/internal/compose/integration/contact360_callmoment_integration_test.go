@@ -19,6 +19,7 @@ import (
 // and the same task filed from a note does not. The source is the writer's
 // SourceActivityID, so the test runs the page's own reply_channel read.
 func TestAPromiseFiledFromACallLeadsTheMomentWithTheCall(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	cases := []struct {
 		name, sourceKind string

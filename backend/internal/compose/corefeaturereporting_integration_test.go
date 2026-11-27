@@ -16,6 +16,7 @@ import (
 )
 
 func TestDisabledReportSelectionsHideKeptEditionsUntilReenabled(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	handler := reportingHTTPRouter(f)
 	input := crmcontracts.ReportingReportInput{Name: "Kept report", Audience: "workspace", Selection: f.selection()}
@@ -49,6 +50,7 @@ func TestDisabledReportSelectionsHideKeptEditionsUntilReenabled(t *testing.T) {
 }
 
 func TestAnEnabledActivityReportOmitsTheDisabledDealPopulation(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	selection := f.selection()
 	selection.PipelineId = nil

@@ -21,6 +21,7 @@ import (
 // The migration how-to tells an author to take both guards off activity before
 // a bounded column goes. This holds the two facts that recipe rests on.
 func TestABoundedColumnIsDroppedOnlyAfterItsGuardsAreTakenOff(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	tx, err := SchemaPool(t).Begin(ctx)
 	if err != nil {
@@ -44,6 +45,7 @@ func TestABoundedColumnIsDroppedOnlyAfterItsGuardsAreTakenOff(t *testing.T) {
 }
 
 func TestATextListKeepsAnEarlierLongEntryAndRefusesANewOne(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	tx, err := SchemaPool(t).Begin(ctx)
 	if err != nil {

@@ -67,6 +67,7 @@ func (e *recencyEnv) repairNewsletterReminders(t *testing.T) int {
 }
 
 func TestTheRepairReopensAReminderTheEngineClosedOnANewsletter(t *testing.T) {
+	t.Parallel()
 	e := setupRecency(t)
 	deal := e.seedQuietDeal(t, pinnedQuiet)
 	reminder := e.seedQuietReminder(t, deal, pinnedQuiet)
@@ -85,6 +86,7 @@ func TestTheRepairReopensAReminderTheEngineClosedOnANewsletter(t *testing.T) {
 }
 
 func TestTheRepairLeavesEveryOtherClosedReminderAlone(t *testing.T) {
+	t.Parallel()
 	for _, test := range []struct {
 		name  string
 		close func(e *recencyEnv, t *testing.T, deal, reminder ids.UUID)
@@ -141,6 +143,7 @@ func TestTheRepairLeavesEveryOtherClosedReminderAlone(t *testing.T) {
 // The engine's own door already refuses a newsletter, so nothing new needs
 // the repair.
 func TestANewsletterAnswersNoQuietReminder(t *testing.T) {
+	t.Parallel()
 	e := setupRecency(t)
 	deal := e.seedQuietDeal(t, pinnedQuiet)
 	reminder := e.seedQuietReminder(t, deal, pinnedQuiet)
@@ -156,6 +159,7 @@ func TestANewsletterAnswersNoQuietReminder(t *testing.T) {
 }
 
 func TestANewsletterMovesNoDealClock(t *testing.T) {
+	t.Parallel()
 	e := setupRecency(t)
 	deal := e.seedQuietDeal(t, pinnedQuiet)
 	e.seedNewsletter(t, deal, pinnedQuiet.AddDate(0, 0, 89))
@@ -167,6 +171,7 @@ func TestANewsletterMovesNoDealClock(t *testing.T) {
 // A newsletter reaches an account's reminder through the contact it employs,
 // the walk the engine's completion took.
 func TestTheRepairReopensAnAccountReminderANewsletterReachedThroughItsContact(t *testing.T) {
+	t.Parallel()
 	e := setupRecency(t)
 	company, contact, reminder := ids.NewV7(), ids.NewV7(), ids.NewV7()
 	e.exec(t, `INSERT INTO company (id, display_name, source, captured_by) VALUES ($1, 'Quiet Co', 'manual', 'human:seed')`, company)

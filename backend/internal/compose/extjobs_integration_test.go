@@ -48,10 +48,8 @@ func testJobDecl() extension.JobDeclaration {
 	}
 }
 
-// composeJob registers one served extension job into this process's composed
-// set and restores the empty set afterwards. The set is process-wide (it is a
-// boot binding), so a test that left it behind would compose a phantom job into
-// every suite that ran after it.
+// composeJob registers one served extension job and answers the composition
+// that serves it, whose own job table declares the job's kinds.
 //
 // classes are the unit's declared failure vocabulary, and they go through the
 // real RegisterExtensions rather than being poked into the job table: only a
@@ -60,9 +58,9 @@ func testJobDecl() extension.JobDeclaration {
 // production fills that way.
 func composeJob(t *testing.T, decl extension.JobDeclaration, handle extension.JobHandler,
 	classes ...extension.FailureClass,
-) {
+) *Extensions {
 	t.Helper()
-	err := RegisterExtensions(
+	composed, err := RegisterExtensions(
 		[]extension.Extension{{
 			Name:           decl.Unit,
 			Version:        "0.1.0",
@@ -76,27 +74,22 @@ func composeJob(t *testing.T, decl extension.JobDeclaration, handle extension.Jo
 	if err != nil {
 		t.Fatalf("RegisterExtensions: %v", err)
 	}
-	t.Cleanup(func() {
-		setComposedJobs(nil)
-		if err := jobs.RegisterComposed(nil); err != nil {
-			t.Errorf("restoring the composed job table: %v", err)
-		}
-	})
+	return composed
 }
 
-// startRunner boots a runner carrying this process's composed set and returns
+// startRunner boots a runner carrying the composition's served jobs and returns
 // its completed-job channel. Every core cadence is an hour, so the only ticks
 // in flight are the RunOnStart ones.
-func startRunner(t *testing.T, pool *pgxpool.Pool) (*jobs.Runner, <-chan *river.Event) {
+func startRunner(t *testing.T, pool *pgxpool.Pool, composed *Extensions) (*jobs.Runner, <-chan *river.Event) {
 	t.Helper()
-	return startRunnerLogging(t, pool, slog.New(slog.DiscardHandler))
+	return startRunnerLogging(t, pool, composed, slog.New(slog.DiscardHandler))
 }
 
 // startRunnerLogging is startRunner with the process logger under the test's
 // control, for the one assertion that is ABOUT what was logged.
-func startRunnerLogging(t *testing.T, pool *pgxpool.Pool, log *slog.Logger) (*jobs.Runner, <-chan *river.Event) {
+func startRunnerLogging(t *testing.T, pool *pgxpool.Pool, composed *Extensions, log *slog.Logger) (*jobs.Runner, <-chan *river.Event) {
 	t.Helper()
-	runner, err := NewJobRunner(pool, log, JobRunnerConfig{})
+	runner, err := NewJobRunner(pool, log, JobRunnerConfig{Extensions: composed})
 	if err != nil {
 		t.Fatalf("NewJobRunner: %v", err)
 	}
@@ -198,13 +191,14 @@ func awaitRows(t *testing.T, pool *pgxpool.Pool, kind string, want int) int {
 // no per-tenant switch for the tick to consult, and a fan-out that reached only
 // some of them would be enablement by accident.
 func TestDispatcherEnqueuesOneChildPerWorkspace(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	integration.ApplyRiverSchema(t)
 	live := seedWorkspaces(t, e, 2)
 
 	decl := testJobDecl()
-	composeJob(t, decl, func(context.Context, extension.Runtime) error { return nil })
-	startRunner(t, e.Pool)
+	composed := composeJob(t, decl, func(context.Context, extension.Runtime) error { return nil })
+	startRunner(t, e.Pool, composed)
 
 	if got := awaitRows(t, e.Pool, decl.ChildKind(), len(live)); got != len(live) {
 		t.Fatalf("child rows: got %d, want exactly one per live workspace (%d)", got, len(live))
@@ -234,13 +228,14 @@ func TestDispatcherEnqueuesOneChildPerWorkspace(t *testing.T) {
 // subject did not disappear; its answer inverted, which is why it is rewritten
 // rather than deleted.
 func TestAnInstallationWithNoAgentSeatStillTicks(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	integration.ApplyRiverSchema(t)
 	archiveTheAgentSeat(t, seedAgentSeat(t))
 
 	decl := testJobDecl()
 	ticked := make(chan principal.Principal, 1)
-	composeJob(t, decl, func(ctx context.Context, _ extension.Runtime) error {
+	composed := composeJob(t, decl, func(ctx context.Context, _ extension.Runtime) error {
 		actor, ok := principal.Actor(ctx)
 		if !ok {
 			return errors.New("the tick ran with no actor bound")
@@ -251,7 +246,7 @@ func TestAnInstallationWithNoAgentSeatStillTicks(t *testing.T) {
 		}
 		return nil
 	})
-	startRunner(t, e.Pool)
+	startRunner(t, e.Pool, composed)
 
 	awaitRows(t, e.Pool, decl.ChildKind(), 1)
 
@@ -299,14 +294,15 @@ func TestAnInstallationWithNoAgentSeatStillTicks(t *testing.T) {
 // would still pass if the seam stopped calling this builder, and the
 // consequence alone would not say which of the two builders produced it.
 func TestChildrenUseByArgsUniqueness(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	integration.ApplyRiverSchema(t)
 	live := seedWorkspaces(t, e, 2)
 
 	decl := testJobDecl()
-	composeJob(t, decl, func(context.Context, extension.Runtime) error { return nil })
+	composed := composeJob(t, decl, func(context.Context, extension.Runtime) error { return nil })
 
-	opts := workspaceSweepOpts(decl.ChildKind())
+	opts := workspaceSweepOpts(composed.declaredJobs(), decl.ChildKind())
 	if !opts.UniqueOpts.ByArgs {
 		t.Fatal("the child's insert options do not deduplicate ByArgs — every workspace's child would share one unique key and the fan-out would collapse to a single row")
 	}
@@ -317,7 +313,7 @@ func TestChildrenUseByArgsUniqueness(t *testing.T) {
 		t.Fatal("sweepInsertOpts now deduplicates ByArgs — this test's whole premise is that it does not; re-read the fan-out's uniqueness argument")
 	}
 
-	startRunner(t, e.Pool)
+	startRunner(t, e.Pool, composed)
 	if got := awaitRows(t, e.Pool, decl.ChildKind(), len(live)); got != len(live) {
 		t.Fatalf("child rows: got %d, want %d — a collapse to 1 is the ByState-only signature", got, len(live))
 	}
@@ -329,6 +325,7 @@ func TestChildrenUseByArgsUniqueness(t *testing.T) {
 // arrives on a request whose tenant authentication already resolved, and a tick
 // has no caller at all, so if the runner did not pin it nothing would.
 func TestHandlerSeesAPinnedWorkspace(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	integration.ApplyRiverSchema(t)
 	live := seedWorkspaces(t, e, 1)
@@ -337,7 +334,7 @@ func TestHandlerSeesAPinnedWorkspace(t *testing.T) {
 	var mu sync.Mutex
 	pinned := map[ids.UUID]bool{}
 	unpinned := 0
-	composeJob(t, decl, func(ctx context.Context, _ extension.Runtime) error {
+	composed := composeJob(t, decl, func(ctx context.Context, _ extension.Runtime) error {
 		ws, ok := principal.WorkspaceID(ctx)
 		mu.Lock()
 		defer mu.Unlock()
@@ -348,7 +345,7 @@ func TestHandlerSeesAPinnedWorkspace(t *testing.T) {
 		pinned[ws] = true
 		return nil
 	})
-	_, sub := startRunner(t, e.Pool)
+	_, sub := startRunner(t, e.Pool, composed)
 	awaitKindCompleted(t, sub, decl.ChildKind())
 	// Every tick of the fan-out, not just the first: one pinned handler and one
 	// unpinned would still satisfy an any-of assertion.
@@ -375,16 +372,17 @@ func TestHandlerSeesAPinnedWorkspace(t *testing.T) {
 // radius of a bad tick is ONE attempt of ONE workspace's row, and every other
 // kind on the same process keeps being worked.
 func TestPanickingTickFailsOneAttemptNotTheWorker(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	integration.ApplyRiverSchema(t)
 	seedWorkspaces(t, e, 0)
 
 	decl := testJobDecl()
-	composeJob(t, decl, func(context.Context, extension.Runtime) error {
+	composed := composeJob(t, decl, func(context.Context, extension.Runtime) error {
 		panic("the unit's tick exploded")
 	})
 	logged := &syncBuffer{}
-	runner, sub := startRunnerLogging(t, e.Pool, slog.New(slog.NewJSONHandler(logged, nil)))
+	runner, sub := startRunnerLogging(t, e.Pool, composed, slog.New(slog.NewJSONHandler(logged, nil)))
 
 	// The row records the failure: River never marks a panicking attempt
 	// completed.
@@ -442,9 +440,10 @@ func TestPanickingTickFailsOneAttemptNotTheWorker(t *testing.T) {
 // and no one whose decision would be recorded, so the refusal does not wait on
 // a staging seam that may one day be wired.
 func TestConfirmFirstJobIsRefusedAtBoot(t *testing.T) {
+	t.Parallel()
 	decl := testJobDecl()
 	decl.Tier = extension.TierConfirmationRequired
-	err := RegisterExtensions(
+	composed, err := RegisterExtensions(
 		[]extension.Extension{{Name: decl.Unit, Version: "0.1.0", Description: "A unit composed by a test.", Jobs: []extension.Job{{
 			Name: decl.Job, Handle: func(context.Context, extension.Runtime) error { return nil },
 		}}}},
@@ -452,10 +451,10 @@ func TestConfirmFirstJobIsRefusedAtBoot(t *testing.T) {
 	if err == nil {
 		t.Fatal("the boot accepted a confirm-first job — a tick nobody can be asked about must not be registered")
 	}
-	// The composed set must be untouched by a refused registration: a boot that
-	// aborts must leave nothing half-applied.
-	if got := servedExtensionJobs(); len(got) != 0 {
-		t.Fatalf("a refused boot left %d job(s) in the composed set", len(got))
+	// A refused registration answers no composition: a boot that aborts must
+	// serve nothing half-applied.
+	if composed != nil {
+		t.Fatalf("a refused boot answered a composition serving %d job(s)", len(composed.servedJobs()))
 	}
 }
 
@@ -465,11 +464,12 @@ func TestConfirmFirstJobIsRefusedAtBoot(t *testing.T) {
 // stage; a JOB cannot hold that tier at all (see above), so the only thing left
 // to grant is outbound authority with no human anywhere in the loop.
 func TestEgressScopedJobIsRefusedAtBoot(t *testing.T) {
+	t.Parallel()
 	for _, scope := range []extension.Scope{extension.ScopeSend, extension.ScopeEnrich} {
 		t.Run(string(scope), func(t *testing.T) {
 			decl := testJobDecl()
 			decl.RequestedScope = scope
-			err := RegisterExtensions(
+			composed, err := RegisterExtensions(
 				[]extension.Extension{{Name: decl.Unit, Version: "0.1.0", Description: "A unit composed by a test.", Jobs: []extension.Job{{
 					Name: decl.Job, Handle: func(context.Context, extension.Runtime) error { return nil },
 				}}}},
@@ -477,8 +477,8 @@ func TestEgressScopedJobIsRefusedAtBoot(t *testing.T) {
 			if err == nil {
 				t.Fatalf("the boot accepted a %s-scoped job — a scheduled pass may not leave the workspace", scope)
 			}
-			if got := servedExtensionJobs(); len(got) != 0 {
-				t.Fatalf("a refused boot left %d job(s) in the composed set", len(got))
+			if composed != nil {
+				t.Fatalf("a refused boot answered a composition serving %d job(s)", len(composed.servedJobs()))
 			}
 		})
 	}
@@ -486,7 +486,9 @@ func TestEgressScopedJobIsRefusedAtBoot(t *testing.T) {
 	// the egress rule and not a rule against every job.
 	decl := testJobDecl()
 	decl.RequestedScope = extension.ScopeWrite
-	composeJob(t, decl, func(context.Context, extension.Runtime) error { return nil })
+	if composeJob(t, decl, func(context.Context, extension.Runtime) error { return nil }) == nil {
+		t.Fatal("a write-scoped job composed no composition")
+	}
 }
 
 // TestOverlappingTicksAreBounded asserts the two bounds rather than inheriting
@@ -495,14 +497,15 @@ func TestEgressScopedJobIsRefusedAtBoot(t *testing.T) {
 // dispatcher's own tick, and an unset uniqueness window lets every tick stack a
 // second pass on a tenant whose first one is still running.
 func TestOverlappingTicksAreBounded(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	integration.ApplyRiverSchema(t)
 	seedWorkspaces(t, e, 0)
 	decl := testJobDecl()
-	composeJob(t, decl, func(context.Context, extension.Runtime) error { return nil })
+	table := composeJob(t, decl, func(context.Context, extension.Runtime) error { return nil }).declaredJobs()
 
 	// The declared attempt cap reaches the row, not River's ladder.
-	spec, ok := jobs.SpecFor(decl.ChildKind())
+	spec, ok := table.SpecFor(decl.ChildKind())
 	if !ok {
 		t.Fatal("the composed child kind is not declared — the seam registered a kind SpecFor cannot answer for")
 	}
@@ -532,7 +535,7 @@ func TestOverlappingTicksAreBounded(t *testing.T) {
 	// is the same window plus ByArgs.
 	child := extJobWorkspaceArgs{JobKind: decl.ChildKind(), Workspace: e.WS}
 	for range 2 {
-		if err := inserter.Enqueue(ctx, child, workspaceSweepOpts(decl.ChildKind())); err != nil {
+		if err := inserter.Enqueue(ctx, child, workspaceSweepOpts(table, decl.ChildKind())); err != nil {
 			t.Fatalf("enqueueing the child: %v", err)
 		}
 	}
@@ -542,7 +545,7 @@ func TestOverlappingTicksAreBounded(t *testing.T) {
 	// A DIFFERENT workspace is not suppressed — the window bounds overlap, it
 	// does not bound the fan-out.
 	other := extJobWorkspaceArgs{JobKind: decl.ChildKind(), Workspace: ids.NewV7()}
-	if err := inserter.Enqueue(ctx, other, workspaceSweepOpts(decl.ChildKind())); err != nil {
+	if err := inserter.Enqueue(ctx, other, workspaceSweepOpts(table, decl.ChildKind())); err != nil {
 		t.Fatalf("enqueueing a second workspace's child: %v", err)
 	}
 	if got := countJobRows(t, e.Pool, decl.ChildKind()); got != 2 {

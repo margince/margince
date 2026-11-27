@@ -20,6 +20,7 @@ import (
 // The Progress work list names a deal's next task as History does: a task
 // Margince wrote reads in the language the screen asks for.
 func TestTheProgressWorkListNamesATaskMarginceWroteInTheReadersLanguage(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	stages := apptest.DiscoverSeededPipeline(t, e)

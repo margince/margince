@@ -28,6 +28,7 @@ import (
 )
 
 func TestHeldLeadMeetingsUseTheQualificationWriterAndDeduplicate(t *testing.T) {
+	t.Parallel()
 	l := setupLeadMail(t)
 	lead := l.ownedLead(t, "lena@prospect.example", l.e.Rep2)
 	now := clocktest.Now(t)
@@ -60,6 +61,7 @@ func TestHeldLeadMeetingsUseTheQualificationWriterAndDeduplicate(t *testing.T) {
 }
 
 func TestLegacyQualificationRepairKeepsTheNewestAndTranslatesUneditedTitles(t *testing.T) {
+	t.Parallel()
 	l := setupLeadMail(t)
 	lead := l.ownedLead(t, "lena@prospect.example", l.e.Rep2)
 	system := principal.SystemActing(l.e.Admin(), leadRepliedActor)
@@ -120,6 +122,7 @@ func legacyQualificationTasks(t *testing.T, l *leadMailEnv, lead ids.LeadID, cou
 }
 
 func TestQualificationAndTextRepairsRollBackTheirWritesAndRejectInvalidCursors(t *testing.T) {
+	t.Parallel()
 	for _, kind := range []string{"qualification", "text"} {
 		t.Run(kind, func(t *testing.T) {
 			l := setupLeadMail(t)
@@ -169,6 +172,7 @@ func TestQualificationAndTextRepairsRollBackTheirWritesAndRejectInvalidCursors(t
 }
 
 func TestLegacyQualificationTextDistinguishesAnUnnamedLeadFromAName(t *testing.T) {
+	t.Parallel()
 	for _, name := range []string{"unnamed", "named"} {
 		t.Run(name, func(t *testing.T) {
 			l := setupLeadMail(t)

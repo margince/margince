@@ -53,6 +53,7 @@ func (e *revocationEnv) asMember() context.Context {
 func (e *revocationEnv) asAdmin() context.Context { return withHumanPrincipal(e.wsOnlyCtx(), e.admin) }
 
 func TestListSessionsReturnsNewestActivityFirstMarkingTheCurrentOne(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "sessions-list")
 	ctx := e.asMember()
 
@@ -113,6 +114,7 @@ func (e *revocationEnv) setLastSeen(t *testing.T, token string, at time.Time) {
 }
 
 func TestListSessionsExcludesRevoked(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "sessions-live-only")
 	ctx := e.asMember()
 
@@ -142,6 +144,7 @@ func TestListSessionsExcludesRevoked(t *testing.T) {
 }
 
 func TestRevokeSessionEndsAccessAndIsIdempotent(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "sessions-revoke")
 	ctx := e.asMember()
 
@@ -167,6 +170,7 @@ func TestRevokeSessionEndsAccessAndIsIdempotent(t *testing.T) {
 }
 
 func TestRevokeSessionRefusesAnotherMembersSession(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "sessions-scope")
 
 	// The admin's own session, opened through the real login path.
@@ -194,6 +198,7 @@ func TestRevokeSessionRefusesAnotherMembersSession(t *testing.T) {
 }
 
 func TestSessionsOverHTTPMarkCurrentRevokeAndNeverLeakIP(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "sessions-http")
 	h := NewHandlers(e.svc)
 	// The request arrives as admission would leave it: the member's identity and
@@ -245,6 +250,7 @@ func TestSessionsOverHTTPMarkCurrentRevokeAndNeverLeakIP(t *testing.T) {
 }
 
 func TestChangePasswordSessionRecordsItsDevice(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "sessions-changepw")
 	h := NewHandlers(e.svc)
 

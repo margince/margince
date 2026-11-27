@@ -72,6 +72,7 @@ func postProjectReport(ctx context.Context, e *integration.Env, report, body str
 }
 
 func TestProjectsByPhaseCountsEveryReadableProjectForATeamManager(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedOutsideProjects(t, e)
 
@@ -87,6 +88,7 @@ func TestProjectsByPhaseCountsEveryReadableProjectForATeamManager(t *testing.T) 
 // The default plan groups by owner_id beside the project's own id, so each row
 // is one project the manager may open, owner and all: a listing, not narrowed.
 func TestProjectCommitmentsListsEveryReadableProjectForATeamManager(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seeded := seedOutsideProjects(t, e)
 
@@ -99,6 +101,7 @@ func TestProjectCommitmentsListsEveryReadableProjectForATeamManager(t *testing.T
 // pins its project's own id, so opening one reads one project the manager may
 // open, whoever owns it.
 func TestAListingsRowHandlesOpenForTheCallerTheyWereServedTo(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seeded := seedOutsideProjects(t, e)
 
@@ -124,6 +127,7 @@ func TestAListingsRowHandlesOpenForTheCallerTheyWereServedTo(t *testing.T) {
 }
 
 func TestProjectsGoneQuietListsEveryReadableProjectForATeamManager(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seeded := seedOutsideProjects(t, e)
 	// Backdated well past the default 30-day quiet threshold, with no activity
@@ -139,6 +143,7 @@ func TestProjectsGoneQuietListsEveryReadableProjectForATeamManager(t *testing.T)
 // install-wide report that is a refusal for a manager of another team, not
 // an empty list.
 func TestAProjectReportFilteredToAnotherTeamsOwnerIsRefused(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedOutsideProjects(t, e)
 

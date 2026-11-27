@@ -20,12 +20,13 @@ import (
 // writes nothing, a rebooted unchanged set writes nothing, and install /
 // upgrade / removal each write exactly one attributable row.
 func TestExtensionInventoryLogsOnlyChanges(t *testing.T) {
+	t.Parallel()
 	env := Setup(t)
 	ctx := context.Background()
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	observe := func(exts ...extension.Extension) {
 		t.Helper()
-		if err := compose.ObserveExtensionInventory(ctx, env.Pool, logger, exts); err != nil {
+		if err := compose.ObserveExtensionInventory(ctx, env.Pool, logger, exts, nil); err != nil {
 			t.Fatalf("ObserveExtensionInventory: %v", err)
 		}
 	}

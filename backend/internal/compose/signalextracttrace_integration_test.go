@@ -93,6 +93,7 @@ func offeredKeys(t *testing.T, e *integration.Env) map[string]bool {
 // every arm of the offer is satisfied. Both halves matter: the second without
 // the first would pass over a fixture the pass ignores.
 func TestTheTraceAgreesWithTheQueueOnAConversationItWouldRead(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	const key = "thread-trace-offered"
@@ -132,6 +133,7 @@ func TestTheTraceAgreesWithTheQueueOnAConversationItWouldRead(t *testing.T) {
 // rather than reporting it as unread — which is the whole difference between a
 // state and a silence.
 func TestTheTraceNamesTheArmThatKeptAConversationOffTheQueue(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	const key = "thread-trace-moving"
@@ -164,6 +166,7 @@ func TestTheTraceNamesTheArmThatKeptAConversationOffTheQueue(t *testing.T) {
 // and the trace names that arm. This is the one refusal a member is most likely
 // to ask about, because nothing else on the screen explains it.
 func TestTheTraceNamesALimitedMessageAsTheRefusal(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	const key = "thread-trace-limited"
@@ -188,6 +191,7 @@ func TestTheTraceNamesALimitedMessageAsTheRefusal(t *testing.T) {
 // A thread key nothing was captured under is not a conversation, and the read
 // says so rather than answering about an empty aggregate.
 func TestATraceReadOfAThreadWithNoConversationIsNotKnown(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	reading, err := NewThreadReadings(e.DB(), func() time.Time { return traceReadClock }).
 		ReadThread(e.Admin(), "thread-that-never-existed", ids.NewV7().String())
@@ -202,6 +206,7 @@ func TestATraceReadOfAThreadWithNoConversationIsNotKnown(t *testing.T) {
 // A promise read from a thread with routine-private mail stays with that mail:
 // the dispatch refuses it and the legacy conversion reads nothing.
 func TestAPromiseInRoutinePrivateMailIsNeverFiled(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	at := traceReadClock.Add(-48 * time.Hour)

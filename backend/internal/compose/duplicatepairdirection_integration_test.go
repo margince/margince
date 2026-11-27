@@ -20,6 +20,7 @@ import (
 )
 
 func TestACasePairMergeKeepsTheColleaguesRecordAndItsOwner(t *testing.T) {
+	t.Parallel()
 	c := setupCases(t)
 	cased := c.seedCase(t, c.e.Rep1, c.e.Rep2)
 	mine, theirs := cased[0], cased[1]
@@ -105,6 +106,7 @@ func (l leadPairs) ownerOf(t *testing.T, lead ids.LeadID) string {
 }
 
 func TestTheOwnerOfOneLeadOfAFiledPairOnlyGivesTheirsAway(t *testing.T) {
+	t.Parallel()
 	c := setupCases(t)
 	l := newLeadPairs(c)
 
@@ -190,6 +192,7 @@ func (c *caseEnv) listedFlags(ctx context.Context, t *testing.T, status string, 
 }
 
 func TestEveryRouteThatAnswersAPairTellsTheSameAuthority(t *testing.T) {
+	t.Parallel()
 	c := setupCases(t)
 	half := c.seedCase(t, c.e.Rep1, c.e.Rep2)
 	halfPair := c.pairID(t, half[0], half[1])

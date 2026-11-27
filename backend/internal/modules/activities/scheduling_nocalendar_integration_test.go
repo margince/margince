@@ -24,6 +24,7 @@ import (
 // A host with no calendar provider is told to connect one. The tool door reads
 // the same store error as the REST door.
 func TestReliableAvailabilityWithoutACalendarAsksForOne(t *testing.T) {
+	t.Parallel()
 	f := newInvitationFixture(t)
 	profile := defaultSchedulingProfile()
 	profile.Provider = ""
@@ -47,6 +48,7 @@ func TestReliableAvailabilityWithoutACalendarAsksForOne(t *testing.T) {
 // An installation with no calendar service is not the host's to fix, so the
 // answer is the calendar-unavailable refusal, as for a booking page.
 func TestReliableAvailabilityWithoutACalendarServiceIsNotTheHostsToFix(t *testing.T) {
+	t.Parallel()
 	f := newInvitationFixture(t)
 	status, body := reliableStatus(f, f.store.WithSchedulingCalendar(nil))
 	if status != http.StatusBadGateway || !strings.Contains(body, connector.CalendarUnavailableCode) || strings.Contains(body, "Connect a calendar") {
@@ -63,6 +65,7 @@ func reliableStatus(f *invitationFixture, store *Store) (int, string) {
 }
 
 func TestReliableAvailabilityOfAnotherUsersCalendarStaysForbidden(t *testing.T) {
+	t.Parallel()
 	f := newInvitationFixture(t)
 	other := openapi_types.UUID(ids.NewV7())
 	reliable := true
@@ -77,6 +80,7 @@ func TestReliableAvailabilityOfAnotherUsersCalendarStaysForbidden(t *testing.T) 
 // A proposal link belongs to a guest who cannot connect the host's calendar,
 // so a host without one answers as a paused booking page does.
 func TestProposalAvailabilityOfAHostWithoutACalendarAnswersNotFound(t *testing.T) {
+	t.Parallel()
 	f := newInvitationFixture(t)
 	link, err := f.store.CreateProposal(f.ctx, crmcontracts.MeetingProposalRequest{ContactId: f.request.ContactId, AttendeeEmail: f.request.AttendeeEmail, Subject: f.request.Subject, DurationMinutes: 30})
 	if err != nil {

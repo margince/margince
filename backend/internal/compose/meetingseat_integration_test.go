@@ -64,6 +64,7 @@ func seatOnMeeting(t *testing.T, e *integration.Env, activity ids.UUID, seat ids
 }
 
 func TestTheCapturingSeatHoldsTheMeeting(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	captured := captureMeeting(t, e, e.AdminUser)
 
@@ -73,6 +74,7 @@ func TestTheCapturingSeatHoldsTheMeeting(t *testing.T) {
 }
 
 func TestAStrangerSeatDoesNotHoldTheMeeting(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	captured := captureMeeting(t, e, e.AdminUser)
 
@@ -88,6 +90,7 @@ func TestAStrangerSeatDoesNotHoldTheMeeting(t *testing.T) {
 // captured it loses its connection, which is the defect the cancel verb exists
 // to close.
 func TestAParticipantSeatHoldsTheMeeting(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	captured := captureMeeting(t, e, e.AdminUser)
 	// A real seeded seat, not a fresh UUID: activity_participant.user_id is a
@@ -105,6 +108,7 @@ func TestAParticipantSeatHoldsTheMeeting(t *testing.T) {
 // "I cannot tell who this is" must never read as "the same seat". A principal
 // with no grantor behind it holds nothing, including another copy of itself.
 func TestASeatlessPrincipalHoldsNothing(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	captured := captureMeeting(t, e, e.AdminUser)
 
@@ -117,6 +121,7 @@ func TestASeatlessPrincipalHoldsNothing(t *testing.T) {
 // seat's meeting: the provider check binds the key to the acting CONNECTOR,
 // never to the seat whose calendar is syncing.
 func TestAStrangerCalendarDoesNotCancelThisSeatsMeeting(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	captured := captureMeeting(t, e, e.AdminUser)
 
@@ -134,6 +139,7 @@ func TestAStrangerCalendarDoesNotCancelThisSeatsMeeting(t *testing.T) {
 // the meeting still closes it. Refusing them would leave the row booked forever
 // whenever the seat who captured it loses its connection.
 func TestAParticipantSeatCancelsTheMeeting(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	captured := captureMeeting(t, e, e.AdminUser)
 	colleague := e.Rep2
@@ -154,6 +160,7 @@ func TestAParticipantSeatCancelsTheMeeting(t *testing.T) {
 // touch is still a row under the key, and reading the refusal as absence would
 // send the cancellation to a different meeting entirely.
 func TestARefusedCancelDoesNotOpenTheIdentityFallback(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	captured := captureMeeting(t, e, e.AdminUser)
 	imported := importMeeting(t, e, "human:"+e.AdminUser.String())
@@ -180,6 +187,7 @@ func TestARefusedCancelDoesNotOpenTheIdentityFallback(t *testing.T) {
 // fallback whenever a row exists in any state — so an end-to-end test through
 // the Sink cannot tell a correct zero id apart from the found row's real one.
 func TestARefusedCancelReturnsTheZeroActivityID(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	captureMeeting(t, e, e.AdminUser)
 
@@ -209,6 +217,7 @@ func TestARefusedCancelReturnsTheZeroActivityID(t *testing.T) {
 // holding the row would make the guard answer true anyway, and this test would
 // keep passing over the very regression it exists to catch.
 func TestTheBackfillWriterStillCancelsWithoutASeat(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	captured := captureMeeting(t, e, e.Rep1)
 
@@ -228,6 +237,7 @@ func TestTheBackfillWriterStillCancelsWithoutASeat(t *testing.T) {
 // The same forged id, the other verb: a calendar that does not hold the
 // meeting must not reschedule it either.
 func TestAStrangerCalendarDoesNotMoveThisSeatsMeeting(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	captured := captureMeeting(t, e, e.AdminUser)
 	moved := meetingStart.Add(72 * time.Hour)
@@ -243,6 +253,7 @@ func TestAStrangerCalendarDoesNotMoveThisSeatsMeeting(t *testing.T) {
 }
 
 func TestAParticipantSeatMovesTheMeeting(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	captured := captureMeeting(t, e, e.AdminUser)
 	// A real seeded seat, not a fresh UUID: activity_participant.user_id is a
@@ -283,6 +294,7 @@ func replayMeetingUpsert(start time.Time) connector.NormalizedRecord {
 // through MoveMeeting directly: a colleague who holds the meeting still moves
 // it when a replay reschedules the event.
 func TestAParticipantSeatMovesTheMeetingOnReplay(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	captured := captureMeeting(t, e, e.AdminUser)
 	colleague := e.Rep1
@@ -303,6 +315,7 @@ func TestAParticipantSeatMovesTheMeetingOnReplay(t *testing.T) {
 // does not move the meeting: content proves only that the two mailboxes
 // describe the same event, never that this seat has standing on this row.
 func TestAStrangerSeatDoesNotMoveTheMeetingOnReplay(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	captured := captureMeeting(t, e, e.AdminUser)
 	moved := meetingStart.Add(7 * 24 * time.Hour)
@@ -322,6 +335,7 @@ func TestAStrangerSeatDoesNotMoveTheMeetingOnReplay(t *testing.T) {
 // calendar holds the meeting. A seat named organizer by another calendar's
 // copy does not take the meeting, even when its own sync asks.
 func TestAnOrganizerWhoseCalendarLacksTheMeetingDoesNotHostIt(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	captured := captureMeeting(t, e, e.AdminUser)
 	keep := keepOrganizerHost(activities.NewStore(InstallationDB(e.Pool)))

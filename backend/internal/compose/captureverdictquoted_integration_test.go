@@ -53,6 +53,7 @@ func (b *literalConfidenceBrain) Complete(_ context.Context, req model.Request) 
 }
 
 func TestVerdictDecidesOnAQuotedConfidence(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	activityID := seedCapturedMail(t, e, "ada@quoted.example", "quote request")
 	dispositionID := seedPendingDisposition(t, e, "ada@quoted.example", "quoted.example", activityID)
@@ -80,6 +81,7 @@ func TestVerdictDecidesOnAQuotedConfidence(t *testing.T) {
 // The control: a confidence the decoder genuinely cannot read takes the branch
 // a quoted number used to take — the row is left undecided for a later pass.
 func TestVerdictDefersAnUnreadableConfidence(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	activityID := seedCapturedMail(t, e, "ada@unreadable.example", "quote request")
 	dispositionID := seedPendingDisposition(t, e, "ada@unreadable.example", "unreadable.example", activityID)

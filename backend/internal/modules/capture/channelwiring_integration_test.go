@@ -25,6 +25,7 @@ import (
 // missing public address does: an opaque 500 sends whoever is looking at the
 // screen to read a server log they may not have.
 func TestAVaultLessDeploymentRefusesConnectByName(t *testing.T) {
+	t.Parallel()
 	api := newFakeTelegram()
 	token, _ := api.withNewBot("vaultless_bot")
 	replacement, _ := api.withNewBot("vaultless_replacement")

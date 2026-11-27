@@ -103,6 +103,7 @@ func (e *revocationEnv) enrolMemberMFA(t *testing.T) string {
 }
 
 func TestLoginWithAConfirmedFactorRequiresTheSecondStep(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "mfa-login-svc")
 	e.withVault()
 	base := time.Unix(1_760_000_000, 0)
@@ -144,6 +145,7 @@ func TestLoginWithAConfirmedFactorRequiresTheSecondStep(t *testing.T) {
 }
 
 func TestACompletedChallengeCannotBeSpentTwice(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "mfa-challenge-replay")
 	e.withVault()
 	base := time.Unix(1_760_000_000, 0)
@@ -176,6 +178,7 @@ func TestACompletedChallengeCannotBeSpentTwice(t *testing.T) {
 }
 
 func TestLoginWithoutAFactorStillSignsInOnThePassword(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "mfa-none")
 	e.withVault()
 	// No enrolment: the member signs in on the password alone.
@@ -186,6 +189,7 @@ func TestLoginWithoutAFactorStillSignsInOnThePassword(t *testing.T) {
 }
 
 func TestMFALoginChallengeOverHTTP(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "mfa-login-http")
 	e.withVault()
 	base := time.Unix(1_760_000_000, 0)
@@ -238,6 +242,7 @@ func TestMFALoginChallengeOverHTTP(t *testing.T) {
 }
 
 func TestMfaCompletionFailuresAreRateLimitedPerAccount(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "mfa-throttle")
 	e.withVault()
 	base := time.Unix(1_760_000_000, 0)

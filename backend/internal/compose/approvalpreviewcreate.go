@@ -14,7 +14,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/customfields"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -222,7 +221,7 @@ func (r approvalPreviewReader) creationAuthority(ctx context.Context, approval c
 	if !ok || approval.TargetEntityType == nil {
 		return actor, apperrors.ErrInvalidArgument
 	}
-	rbac, seat, err := identity.NewService(r.db.Pool()).EffectiveAuthority(ctx, workspace, actor.UserID)
+	rbac, seat, err := IdentityService(r.db.Pool()).EffectiveAuthority(ctx, workspace, actor.UserID)
 	if err != nil {
 		return principal.Principal{}, err
 	}

@@ -346,7 +346,7 @@ func liveStopsOf(ctx context.Context, tx pgx.Tx, sub subject) (string, []any, er
 	if err != nil {
 		return "", nil, fmt.Errorf("consent: reading the subject's addresses: %w", err)
 	}
-	lowered, hashes := storekit.StopAddressArgs(held...)
+	lowered, hashes := storekit.StopAddressArgs(ctx, held...)
 	return `s.revoked_at IS NULL
 		   AND (s.` + sub.column + ` = $1 OR ` + storekit.StopOnAddressesSQL("s", "$2", "$3") + `)`,
 		[]any{lowered, hashes}, nil

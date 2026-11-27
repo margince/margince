@@ -45,31 +45,6 @@ func stageAdminGrants() map[string]principal.ObjectGrant {
 	}
 }
 
-// keepPartnerStagesAsSeeded puts the stage list back when the test ends. A
-// reset keeps the list, as it keeps every administered vocabulary, so an edit
-// here would otherwise change the next test's ladder.
-func keepPartnerStagesAsSeeded(t *testing.T, e *dedupeEnv) {
-	t.Helper()
-	t.Cleanup(func() {
-		ctx := asStageAdmin(e, stageAdminGrants())
-		if err := e.store.tx(ctx, func(tx pgx.Tx) error {
-			for _, statement := range []string{
-				`UPDATE partner SET relationship_stage = 'research'
-				  WHERE relationship_stage IN (SELECT key FROM partner_stage WHERE NOT system)`,
-				`DELETE FROM partner_stage WHERE NOT system`,
-				`UPDATE partner_stage SET active = true, label = shipped_label`,
-			} {
-				if _, err := tx.Exec(ctx, statement); err != nil {
-					return err
-				}
-			}
-			return nil
-		}); err != nil {
-			t.Errorf("restoring the partner stage list: %v", err)
-		}
-	})
-}
-
 func stageByKey(ctx context.Context, t *testing.T, e *dedupeEnv, key string) crmcontracts.PartnerStage {
 	t.Helper()
 	list, err := e.store.ListPartnerStages(ctx)
@@ -117,8 +92,8 @@ func fieldCode(err error) string {
 }
 
 func TestThePartnerStageListRefusesWhatTheContractPromises(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
-	keepPartnerStagesAsSeeded(t, e)
 	ctx := asStageAdmin(e, stageAdminGrants())
 
 	created, err := e.store.CreatePartnerStage(ctx, CreatePartnerStageInput{Label: "Scouting", Meaning: crmcontracts.PartnerStageMeaningCandidate})
@@ -174,8 +149,8 @@ func TestThePartnerStageListRefusesWhatTheContractPromises(t *testing.T) {
 }
 
 func TestTheLastCandidateStageCannotBeTakenAway(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
-	keepPartnerStagesAsSeeded(t, e)
 	ctx := asStageAdmin(e, stageAdminGrants())
 	retired := false
 	for _, key := range []string{"identified", "contacted", "in_conversation", "fit_confirmed", "agreement_pending"} {
@@ -194,8 +169,8 @@ func TestTheLastCandidateStageCannotBeTakenAway(t *testing.T) {
 }
 
 func TestAPartnerMovesOnALadderTheAdministratorReshaped(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
-	keepPartnerStagesAsSeeded(t, e)
 	ctx := asStageAdmin(e, stageAdminGrants())
 	if _, err := e.store.CreatePartnerStage(ctx, CreatePartnerStageInput{Label: "Long list", Meaning: "candidate", SortOrder: 5}); err != nil {
 		t.Fatalf("adding a first stage: %v", err)
@@ -237,8 +212,8 @@ func TestAPartnerMovesOnALadderTheAdministratorReshaped(t *testing.T) {
 }
 
 func TestAPartnerStandsOnAnActiveStageOnlyOnceActivated(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
-	keepPartnerStagesAsSeeded(t, e)
 	ctx := asStageAdmin(e, stageAdminGrants())
 	companyID, _ := newPartnerCompany(ctx, t, e, "Not Yet GmbH", UpsertPartnerInput{PartnerRole: "hosting", RelationshipStage: new("ready")})
 
@@ -264,8 +239,8 @@ func TestAPartnerStandsOnAnActiveStageOnlyOnceActivated(t *testing.T) {
 }
 
 func TestMeaningFiltersHoldAfterEveryStageIsRenamed(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
-	keepPartnerStagesAsSeeded(t, e)
 	ctx := asStageAdmin(e, stageAdminGrants())
 	signedID, _ := newPartnerCompany(ctx, t, e, "Signed AG", UpsertPartnerInput{PartnerRole: "hosting", RelationshipStage: new("contract_signed")})
 	candidateID, _ := newPartnerCompany(ctx, t, e, "Candidate AG", UpsertPartnerInput{PartnerRole: "strategic"})
@@ -297,6 +272,7 @@ func TestMeaningFiltersHoldAfterEveryStageIsRenamed(t *testing.T) {
 }
 
 func TestAPartnerHoldsSeveralKinds(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := asStageAdmin(e, stageAdminGrants())
 	companyID, partner := newPartnerCompany(ctx, t, e, "Many Kinds GmbH",
@@ -325,6 +301,7 @@ func TestAPartnerHoldsSeveralKinds(t *testing.T) {
 }
 
 func TestASeatThatCannotReadPartnersSeesCompaniesWithoutTheirProgramme(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	admin := asStageAdmin(e, stageAdminGrants())
 	companyID, _ := newPartnerCompany(admin, t, e, "Hidden Terms AG", UpsertPartnerInput{PartnerRole: "consulting"})
@@ -351,8 +328,8 @@ func TestASeatThatCannotReadPartnersSeesCompaniesWithoutTheirProgramme(t *testin
 }
 
 func TestThePartnerStageListHoldsEachLabelOnce(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
-	keepPartnerStagesAsSeeded(t, e)
 	ctx := asStageAdmin(e, stageAdminGrants())
 	stages := vocabularyList{
 		name: "partner stage", keyed: true,

@@ -68,6 +68,7 @@ func gateTestEnvelope(ws ids.UUID) kevents.Envelope {
 // pinned "activity"/create permission, so the firing must land 'blocked'
 // with a reason and the effect must never reach Apply.
 func TestMatchTimeGateBlocksAFiringWhoseOwnerLostThePermission(t *testing.T) {
+	t.Parallel()
 	fx := setupAutomationDB(t)
 	applyCalls := 0
 	handler := scriptedWorkflow{
@@ -114,6 +115,7 @@ func TestMatchTimeGateBlocksAFiringWhoseOwnerLostThePermission(t *testing.T) {
 // effect's permission, so the firing must proceed to Apply and land
 // 'applied' exactly like today.
 func TestMatchTimeGateAllowsAFiringWhoseOwnerStillHasThePermission(t *testing.T) {
+	t.Parallel()
 	fx := setupAutomationDB(t)
 	applyCalls := 0
 	handler := scriptedWorkflow{
@@ -153,6 +155,7 @@ func TestMatchTimeGateAllowsAFiringWhoseOwnerStillHasThePermission(t *testing.T)
 // test if the gate ever touched it, so a passing 'applied' outcome proves
 // the gate never called EffectiveRBAC for this firing.
 func TestMatchTimeGateSkipsASeededAutomationWithNoOwner(t *testing.T) {
+	t.Parallel()
 	fx := setupAutomationDB(t)
 	applyCalls := 0
 	handler := scriptedWorkflow{

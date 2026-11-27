@@ -68,6 +68,7 @@ func stageMailedProposal(t *testing.T) mailedProposal {
 // The account counts the commitment while it waits, for the product's own pass
 // as for anyone who may read the whole account.
 func TestAWaitingMailedCommitmentIsCountedOnItsAccount(t *testing.T) {
+	t.Parallel()
 	m := stageMailedProposal(t)
 	pass := principal.SystemActing(principal.WithWorkspaceID(context.Background(), m.WS), signalScanActor)
 	company, err := ids.Parse(m.WsScalar(t, `SELECT company_id::text FROM relationship WHERE contact_id = $1`, m.customer))
@@ -94,6 +95,7 @@ func (m mailedProposal) accept() error {
 // The colleague accepts their own commitment from a thread that is still
 // shared, and it becomes their task.
 func TestAColleagueAcceptsTheirMailedCommitment(t *testing.T) {
+	t.Parallel()
 	m := stageMailedProposal(t)
 	if err := m.accept(); err != nil {
 		t.Fatalf("accepting: %v", err)
@@ -107,6 +109,7 @@ func TestAColleagueAcceptsTheirMailedCommitment(t *testing.T) {
 // one the rule reads, and acceptance is refused rather than guessing who may
 // read the task.
 func TestAMailedCommitmentWhoseThreadChangedIsNotAccepted(t *testing.T) {
+	t.Parallel()
 	m := stageMailedProposal(t)
 	other := m.SeedCompany(t, "Beta", &m.Rep1)
 	m.WsExec(t, `INSERT INTO relationship (kind, contact_id, company_id, source, captured_by)
@@ -122,6 +125,7 @@ func TestAMailedCommitmentWhoseThreadChangedIsNotAccepted(t *testing.T) {
 // A thread made private to another member while the card waited narrows the
 // commitment to that member, so the colleague may not accept it.
 func TestAMailedCommitmentMadePrivateSinceIsTheOwnersToAccept(t *testing.T) {
+	t.Parallel()
 	m := stageMailedProposal(t)
 	m.WsExec(t, `UPDATE contact SET visibility = 'owner', owner_id = $2 WHERE id = $1`, m.customer, m.Rep1)
 	err := m.accept()

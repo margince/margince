@@ -23,6 +23,7 @@ import (
 )
 
 func TestAnUnrelatedLaterEmailDoesNotSuggestTheTaskWasCompleted(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const address = "anna@kunde.example"
 	contact := seedLinkedContact(t, e, address)
@@ -49,6 +50,7 @@ func TestAnUnrelatedLaterEmailDoesNotSuggestTheTaskWasCompleted(t *testing.T) {
 }
 
 func TestAnEmailNeverMakesAColleaguesTaskTheReadersToComplete(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	perms := principal.Permissions{
 		RoleKeys: []string{"rep"},

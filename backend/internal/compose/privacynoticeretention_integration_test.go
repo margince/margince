@@ -22,6 +22,7 @@ import (
 // link through the public edge and the handlers the server assembles. The page
 // must show the reader's own kinds and the retention rules that reach them.
 func TestThePrivacyPageShowsWhatThePrivacyModuleHoldsForTheReader(t *testing.T) {
+	t.Parallel()
 	l := setupConfirmLane(t)
 	rules := privacy.NewPolicyStore(InstallationDB(l.e.Pool))
 	author := l.e.As(l.e.AdminUser, nil, principal.Permissions{

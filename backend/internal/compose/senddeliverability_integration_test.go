@@ -29,6 +29,7 @@ import (
 const toolSurfaceBaseURL = "https://mail.example.test"
 
 func TestToolSurfaceSendCarriesTheUnsubscribeSurface(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	consentStore := consent.NewStore(InstallationDB(e.Pool))
 	admin := e.Admin()
@@ -64,7 +65,7 @@ func TestToolSurfaceSendCarriesTheUnsubscribeSurface(t *testing.T) {
 	stager := &recordingStager{}
 	// The SAME constructor registry.go builds the tool surface's seam with,
 	// carrying the SAME configuration the api role supplies.
-	adapter := newCommsAdapter(e.Pool, nil, SendPath{
+	adapter := newCommsAdapter(e.Pool, nil, nil, SendPath{
 		PublicBaseURL: toolSurfaceBaseURL,
 		Delivery:      stager,
 	})

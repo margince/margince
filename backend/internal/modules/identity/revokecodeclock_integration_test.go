@@ -23,6 +23,7 @@ import (
 // creation, which the lifetime check refuses. The whole revocation would then
 // roll back with the code still usable.
 func TestARevocationEndsACodeIssuedAfterItBegan(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "revoke-code-clock")
 	ctx := e.wsCtx(e.member)
 	codeID := ids.NewV7()

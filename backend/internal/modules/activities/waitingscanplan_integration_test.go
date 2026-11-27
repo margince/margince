@@ -14,7 +14,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
 	"strings"
 	"testing"
 
@@ -100,8 +99,8 @@ func explainOnMailbox(t *testing.T, extra, setting, explain, statement string, a
 const pinnedTables = "relkind = 'r' AND relnamespace = 'public'::regnamespace"
 
 // pinNeverAnalyzed gives the planner the table sizes of a database nothing has
-// analyzed. Earlier tests in the same process may have left small statistics.
-// Those steer a plan test to a scan the seeded rows do not warrant.
+// analyzed. Small statistics would steer a plan test to a scan the seeded rows
+// do not warrant.
 //
 // The update holds each table's pg_class row until rollback, and an autovacuum
 // pass waits on that row while it holds its table. A later ANALYZE in this
@@ -128,6 +127,7 @@ func decodePlan(t *testing.T, raw string) planNode {
 }
 
 func TestTheSalesArmFindsAWorkingLeadByIndexAlone(t *testing.T) {
+	t.Parallel()
 	ctx := principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + ids.NewV7().String(),
 		Permissions: principal.Permissions{
@@ -168,6 +168,7 @@ func TestTheSalesArmFindsAWorkingLeadByIndexAlone(t *testing.T) {
 }
 
 func TestTheWaitingHorizonReadsAHeldRequestByItsID(t *testing.T) {
+	t.Parallel()
 	plan := explainWithoutSeqScans(t, "", `SELECT a.id FROM activity a
 		WHERE a.direction = 'inbound' AND a.archived_at IS NULL
 		  AND `+withinWaitingHorizonSQL("$1::timestamptz", "90"), clocktest.Now(t))
@@ -192,12 +193,13 @@ func TestTheWaitingHorizonReadsAHeldRequestByItsID(t *testing.T) {
 }
 
 func TestASeatsMailCandidatesUseTimeAndHeldIDIndexes(t *testing.T) {
+	t.Parallel()
 	seat := ids.NewV7()
 	statement := `SELECT ` + storekit.DirectMailActivitiesSQL(
 		"jsonb_build_object($1::text, jsonb_build_array($2::text))", "$1::uuid", "$3::timestamptz", heldRequestIDsSQL())
 	// Ten team addresses share the inbound mail, and the 90-day window holds a
 	// quarter of it: an empty window prices every path the same. ANALYZE fixes
-	// the statistics, so earlier tests in the shared database cannot move the plan.
+	// the statistics the plan is chosen from.
 	plan := explainOnMailbox(t, `
 		UPDATE activity_participant p SET address = 'rep'||i.g % 10||'@work.test'
 		  FROM mailbox_inbound i WHERE p.activity_id = i.id AND p.role = 'to' AND i.g % 10 <> 0;
@@ -231,6 +233,7 @@ func TestASeatsMailCandidatesUseTimeAndHeldIDIndexes(t *testing.T) {
 // top-level test, and Postgres runs it first. The probe stands in for the
 // subqueries a full waiting scan carries.
 func TestTheWaitingHorizonRunsBeforeAnyPerMessageSubquery(t *testing.T) {
+	t.Parallel()
 	at := clocktest.Now(t)
 	plan := explainOnMailbox(t, "", "SET LOCAL enable_bitmapscan = off; SET LOCAL max_parallel_workers_per_gather = 0",
 		"EXPLAIN (ANALYZE, FORMAT JSON) ", `SELECT a.id FROM activity a
@@ -260,6 +263,7 @@ func TestTheWaitingHorizonRunsBeforeAnyPerMessageSubquery(t *testing.T) {
 // the index's raw bound can still fail its day test, so the bound is loose.
 // The page order must not depend on the planner choosing incremental sorting.
 func TestThePageScanJudgesNoMoreYoungMailThanItsCap(t *testing.T) {
+	t.Parallel()
 	const pageCap = 3
 	eligible := waitingPlanProbeFromSQL
 	if carried := strings.Count(waitingCappedArmsSQL, waitingEligibleFromSQL); carried != 1 {
@@ -306,6 +310,7 @@ func TestThePageScanJudgesNoMoreYoungMailThanItsCap(t *testing.T) {
 // The marked-sender check runs once per walked mail. Planned as a join, a
 // generic plan that expects one mail scans every participant for each one.
 func TestTheMarkedSenderCheckLooksUpEachMailByItsID(t *testing.T) {
+	t.Parallel()
 	statement := `SELECT a.id FROM activity a
 		WHERE a.kind = 'email' AND a.direction = 'inbound' AND a.archived_at IS NULL
 		  AND ` + relationshipmark.SenderMayRaiseWorkSQL("a") + `
@@ -332,9 +337,10 @@ func TestTheMarkedSenderCheckLooksUpEachMailByItsID(t *testing.T) {
 // That pass queues behind the pinned tables, so the test's own ANALYZE
 // finishes without a deadlock.
 func TestAConcurrentAnalyzeQueuesBehindThePins(t *testing.T) {
+	t.Parallel()
 	e := setupPromises(t)
 	ctx := context.Background()
-	racer, err := pgx.Connect(ctx, os.Getenv("MARGINCE_TEST_DSN"))
+	racer, err := pgx.Connect(ctx, testdb.For(t).OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}

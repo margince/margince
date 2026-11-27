@@ -96,21 +96,21 @@ func NewPassCaps(db *database.DB) *PassCaps { return &PassCaps{db: db} }
 // Verdict is the cap of the counterparty verdict run.
 func (p *PassCaps) Verdict(ctx context.Context) (int, error) {
 	return readPassCap(ctx, p.db, VerdictPassCap.Key(), func(tx pgx.Tx) (int, error) {
-		return config.StoredApplyTx(ctx, tx, config.Bound(), VerdictPassCap)
+		return config.StoredApplyTx(ctx, tx, config.Bound(ctx), VerdictPassCap)
 	})
 }
 
 // Classify is the cap of the capture label run.
 func (p *PassCaps) Classify(ctx context.Context) (int, error) {
 	return readPassCap(ctx, p.db, ClassifyPassCap.Key(), func(tx pgx.Tx) (int, error) {
-		return config.StoredApplyTx(ctx, tx, config.Bound(), ClassifyPassCap)
+		return config.StoredApplyTx(ctx, tx, config.Bound(ctx), ClassifyPassCap)
 	})
 }
 
 // OwedClassify is the cap of the owed-reply run.
 func (p *PassCaps) OwedClassify(ctx context.Context) (int, error) {
 	return readPassCap(ctx, p.db, OwedClassifyPassCap.Key(), func(tx pgx.Tx) (int, error) {
-		return config.StoredApplyTx(ctx, tx, config.Bound(), OwedClassifyPassCap)
+		return config.StoredApplyTx(ctx, tx, config.Bound(ctx), OwedClassifyPassCap)
 	})
 }
 

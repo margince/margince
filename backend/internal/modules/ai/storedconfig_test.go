@@ -65,11 +65,11 @@ func TestABootValueASaveWouldAcceptLocksItsSetting(t *testing.T) {
 		`MARGINCE_AI_PRICE_SYNC={"auto_sync":false}`,
 	)
 	for _, key := range []string{BudgetKey, TaskOverridesKey, PriceSyncKey} {
-		if _, locked := cfg.Locked(key); !locked {
+		if _, locked := cfg.Locked(t.Context(), key); !locked {
 			t.Errorf("%s is not locked by the value the environment sets", key)
 		}
 	}
-	if _, locked := cfg.Locked(RoutingKey); locked {
+	if _, locked := cfg.Locked(t.Context(), RoutingKey); locked {
 		t.Error("ai.routing is locked with no source setting it")
 	}
 }
@@ -116,7 +116,7 @@ func loadBudget(t *testing.T, file string, environ []string) (BudgetConfig, erro
 	if err != nil {
 		return BudgetConfig{}, err
 	}
-	budget, ok := config.BootVal(cfg, BudgetSettings)
+	budget, ok := config.BootVal(t.Context(), cfg, BudgetSettings)
 	if !ok {
 		t.Fatalf("the budget %q / %v set no boot value", file, environ)
 	}
@@ -138,7 +138,7 @@ func TestTaskOverridesLoadFromTheFileByTheirAPINames(t *testing.T) {
 	if err != nil {
 		t.Fatalf("loading %q: %v", file, err)
 	}
-	got, ok := config.BootVal(cfg, TaskOverridesSetting)
+	got, ok := config.BootVal(t.Context(), cfg, TaskOverridesSetting)
 	if !ok {
 		t.Fatal("the file set no task overrides")
 	}

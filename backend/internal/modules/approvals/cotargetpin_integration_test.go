@@ -26,9 +26,7 @@ import (
 )
 
 // seedTag mints one word. The name carries part of the id because uq_tag_name
-// is unique on lower(name) across the whole database, and these cases share
-// one — two of them seeding "SkewSource" collide on the second, which says
-// nothing about pins.
+// is unique on lower(name), and one test may seed the same word twice.
 //
 // The TAIL of the id, not the head: a uuidv7 opens with its timestamp, so two
 // minted in the same millisecond agree on their first eight characters and the
@@ -62,6 +60,7 @@ func (e *stagingEnv) mergeCall(source, survivor ids.UUID) StageInput {
 // The reported reproduction, end to end: rename the SURVIVOR while the card is
 // pending and the redemption must refuse.
 func TestRenamingTheWordAMergeFoldsIntoRefusesTheRedemption(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	passport := e.seedPassport(t)
 	source := e.seedTag(t, "SkewSource")
@@ -99,6 +98,7 @@ func TestRenamingTheWordAMergeFoldsIntoRefusesTheRedemption(t *testing.T) {
 // The mirror: an untouched survivor redeems. Without this the case above is
 // satisfied by a check that refuses everything.
 func TestAMergeWhoseBothWordsHeldStillRedeems(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	passport := e.seedPassport(t)
 	source := e.seedTag(t, "SkewSource")
@@ -119,6 +119,7 @@ func TestAMergeWhoseBothWordsHeldStillRedeems(t *testing.T) {
 // A co-target of a type that carries no version column cannot be pinned, and
 // minting a pin redemption could never verify is worse than refusing to stage.
 func TestACoTargetThatCannotBePinnedIsRefusedAtStaging(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	passport := e.seedPassport(t)
 	source := e.seedTag(t, "SkewSource")

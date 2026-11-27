@@ -112,6 +112,7 @@ func domainFixture(t *testing.T) (context.Context, *database.DB) {
 }
 
 func TestConsumerMailListRefusesOwnDomainAndShippedDomainAndAsksForACompany(t *testing.T) {
+	t.Parallel()
 	ctx, db := domainFixture(t)
 	store := capture.NewFreemailDomains(db)
 
@@ -146,6 +147,7 @@ func TestConsumerMailListRefusesOwnDomainAndShippedDomainAndAsksForACompany(t *t
 }
 
 func TestOtherAddressesRefuseConsumerDomainAndAskForCustomerValues(t *testing.T) {
+	t.Parallel()
 	ctx, db := domainFixture(t)
 	store := capture.NewOwnerIdentityStore(db)
 
@@ -181,6 +183,7 @@ func TestOtherAddressesRefuseConsumerDomainAndAskForCustomerValues(t *testing.T)
 }
 
 func TestOwnDomainListStillRefusesConsumerMail(t *testing.T) {
+	t.Parallel()
 	ctx, db := domainFixture(t)
 	_, err := capture.NewOwnDomainStore(db).Add(ctx, "gmail.com")
 	if !errors.Is(err, capture.ErrConsumerMailDomain) {
@@ -196,6 +199,7 @@ func TestOwnDomainListStillRefusesConsumerMail(t *testing.T) {
 }
 
 func TestAnUnreadableCompanyIsNeitherNamedNorAskedAbout(t *testing.T) {
+	t.Parallel()
 	base, db := bootstrapInternalMailWorkspace(t, "ours.test")
 	seedDemoCustomer(base, t, db)
 	identities := capture.NewOwnerIdentityStore(db)
@@ -210,6 +214,7 @@ func TestAnUnreadableCompanyIsNeitherNamedNorAskedAbout(t *testing.T) {
 }
 
 func TestACompanyOutsideTheSeatsRowScopeIsNeitherNamedNorAskedAbout(t *testing.T) {
+	t.Parallel()
 	base, db := bootstrapInternalMailWorkspace(t, "ours.test")
 	if err := database.WithWorkspaceTx(base, db.Pool(), func(tx pgx.Tx) error {
 		var owner, company ids.UUID
@@ -237,6 +242,7 @@ func TestACompanyOutsideTheSeatsRowScopeIsNeitherNamedNorAskedAbout(t *testing.T
 }
 
 func TestACompanyOnAParentOrChildDomainIsAskedAbout(t *testing.T) {
+	t.Parallel()
 	ctx, db := domainFixture(t)
 	store := capture.NewOwnerIdentityStore(db)
 
@@ -260,6 +266,7 @@ func TestACompanyOnAParentOrChildDomainIsAskedAbout(t *testing.T) {
 }
 
 func TestAContactAddressIsFoundInEitherSpellingOfItsDomain(t *testing.T) {
+	t.Parallel()
 	ctx, db := domainFixture(t)
 	if err := database.WithWorkspaceTx(ctx, db.Pool(), func(tx pgx.Tx) error {
 		var contact ids.UUID
@@ -283,6 +290,7 @@ func TestAContactAddressIsFoundInEitherSpellingOfItsDomain(t *testing.T) {
 }
 
 func TestAPunycodeContactAddressIsFoundByItsUnicodeSpelling(t *testing.T) {
+	t.Parallel()
 	ctx, db := domainFixture(t)
 	if err := database.WithWorkspaceTx(ctx, db.Pool(), func(tx pgx.Tx) error {
 		var contact ids.UUID
@@ -303,6 +311,7 @@ func TestAPunycodeContactAddressIsFoundByItsUnicodeSpelling(t *testing.T) {
 }
 
 func TestARestoredIdentityIsJudgedAgain(t *testing.T) {
+	t.Parallel()
 	ctx, db := domainFixture(t)
 	store := capture.NewOwnerIdentityStore(db)
 	declared, err := store.Add(ctx, capture.IdentityKindDomain, "later.example")
@@ -368,6 +377,7 @@ func waitsOnAnAdvisoryLock(ctx context.Context, t *testing.T, tx pgx.Tx, finishe
 // The consumer-list writer queues behind a company-domain writer that holds the
 // domain, so one of them sees the other's row.
 func TestTheConsumerListWaitsForTheCompanyDomainWriter(t *testing.T) {
+	t.Parallel()
 	ctx, db := domainFixture(t)
 	finished := make(chan struct{})
 	var addErr error

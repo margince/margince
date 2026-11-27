@@ -65,11 +65,12 @@ func (p *singleRecordHistory) BackfillPage(ctx context.Context, _ connector.Auth
 }
 
 func TestACommittedCreationIsCreditedAfterItsImportIsCancelled(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	record := partiesMailRecord(t, e, partyMailProof{outbound: true, sentByOwner: true}, "", "", "Please send the product requirements.")
 	quiet := slog.New(slog.NewTextHandler(io.Discard, nil))
 	ensurer := &cancelAfterCreation{delegate: contactsEnsurer{
-		store: newCounterpartyStoreAt(e.Pool, func() time.Time { return clocktest.Now(t) }), pool: e.Pool,
+		store: newCounterpartyStoreAt(e.Pool, func() time.Time { return clocktest.Now(t) }, nil), pool: e.Pool,
 		triage: newDomainTriageTrigger(e.Pool, quiet, true), log: quiet,
 	}}
 	sink := newCaptureSink(e.Pool, CaptureConfig{}).WithEnsurer(ensurer, capture.NewTransactionalList(nil, nil))

@@ -21,6 +21,7 @@ import (
 )
 
 func TestAutomationCatalogAndCRUD(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupAppWithOptions(t, compose.WithListsEnabled(true))
 	e.BootstrapWorkspace(t)
 
@@ -201,6 +202,7 @@ func createPausedAutomation(t *testing.T, e *apptest.AppEnv) string {
 // An automation an agent sets up starts paused, so nothing runs until it is
 // enabled, and its tool says to ask before that. A read-only passport sets up none.
 func TestAnAgentsAutomationStartsPaused(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -241,6 +243,7 @@ func TestAnAgentsAutomationStartsPaused(t *testing.T) {
 // An automation always has a name, params and a status. A null on one is
 // refused by name, never answered 200 with nothing changed.
 func TestAnAutomationRefusesANullItCannotHold(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	createdID := createPausedAutomation(t, e)

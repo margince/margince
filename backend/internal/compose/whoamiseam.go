@@ -32,7 +32,7 @@ import (
 // the honest empty for a contact who never chose, and this seam turns that into
 // the answer the agent can act on.
 func actingIdentity(pool *pgxpool.Pool) agents.IdentityReader {
-	service := identity.NewService(pool)
+	service := IdentityService(pool)
 	return func(ctx context.Context) (agents.ActingIdentity, error) {
 		profile, err := service.ActorProfile(ctx)
 		if err != nil {
@@ -66,7 +66,7 @@ func proseLanguage(ctx context.Context, pool *pgxpool.Pool, locale string) strin
 // colleague's name and work address — who_knows and company_coverage already
 // answer to any authenticated reader.
 func colleagueLister(pool *pgxpool.Pool) agents.ColleagueLister {
-	service := identity.NewService(pool)
+	service := IdentityService(pool)
 	return func(ctx context.Context, q agents.ColleagueQuery) ([]agents.Colleague, bool, error) {
 		if q.IncludeInactive || q.IncludeInvited {
 			return widenedRoster(ctx, service, q)

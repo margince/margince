@@ -8,7 +8,6 @@ package main
 import (
 	"io"
 	"log/slog"
-	"os"
 	"strconv"
 	"testing"
 
@@ -22,11 +21,8 @@ import (
 // With every bus connection taken, a shared ceiling must still answer: it rides
 // its own client, not the bus pool.
 func TestCeilingsStillAnswerWhileEveryBusConnectionIsTaken(t *testing.T) {
-	addr := os.Getenv("MARGINCE_TEST_REDIS")
-	if addr == "" {
-		t.Skip("MARGINCE_TEST_REDIS not set")
-	}
-	cfg := workerConfig{redisAddr: addr + "/" + strconv.Itoa(testdb.RedisDB(t))}
+	t.Parallel()
+	cfg := workerConfig{redisAddr: testdb.RedisAddr(t) + "/" + strconv.Itoa(testdb.RedisBusDB(t))}
 	bus, coordination, err := openBus(t.Context(), cfg)
 	if err != nil {
 		t.Fatalf("open bus: %v", err)

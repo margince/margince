@@ -27,6 +27,7 @@ import (
 var consultedAt = time.Date(2026, 8, 20, 9, 30, 0, 0, time.UTC)
 
 func TestEveryVatCheckStatementRunsAgainstTheRealSchema(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -98,6 +99,7 @@ func TestEveryVatCheckStatementRunsAgainstTheRealSchema(t *testing.T) {
 // store refuses it first with a sentence. Both matter: one is the guarantee,
 // the other is what a caller reads.
 func TestAReceiptCannotBeStoredForALookupNobodyMade(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -136,6 +138,7 @@ func TestAReceiptCannotBeStoredForALookupNobodyMade(t *testing.T) {
 // CORRECTED one is. The join answering that is the whole trigger for the lane,
 // and getting it backwards either re-asks forever or never asks at all.
 func TestOnlyAnUncheckedNumberIsWorthConsulting(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -208,6 +211,7 @@ func TestOnlyAnUncheckedNumberIsWorthConsulting(t *testing.T) {
 // for good. Recording `unavailable` and then treating it like an answer is how
 // one transient 502 costs a company its VAT check forever.
 func TestAnUnansweredConsultationIsAskedAgain(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -246,6 +250,7 @@ func TestAnUnansweredConsultationIsAskedAgain(t *testing.T) {
 // surrounding whitespace must not consult as a different company from the one
 // already checked, or every enqueue spends another consultation forever.
 func TestWhitespaceDoesNotMakeANumberLookUnchecked(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 

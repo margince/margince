@@ -20,6 +20,7 @@ import (
 )
 
 func TestAnActiveAgentCanHoldAResponsibilityWithoutGainingAccess(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	memberManagerFor(t, e)
 	agent := declareSignatureServiceMember(t, e)

@@ -19,6 +19,7 @@ import (
 )
 
 func TestAPersonalMutePreservesAnotherReadersQueueAndTheSharedProposal(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	ctx := e.asRep(e.rep)
 	other := e.secondRep(t)
@@ -99,6 +100,7 @@ func TestAPersonalMutePreservesAnotherReadersQueueAndTheSharedProposal(t *testin
 }
 
 func TestMuteFilteringPrecedesPaginationAndNeverHidesPassportRows(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	ctx := e.asRep(e.rep)
 	seed := newDealSeeder(t, e)
@@ -131,6 +133,7 @@ func TestMuteFilteringPrecedesPaginationAndNeverHidesPassportRows(t *testing.T) 
 }
 
 func TestUnsafeApprovalKindsCannotBeMuted(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	ctx := e.asRep(e.rep)
 	// Direct sends, bookings and merges have no shared approval effect classifier; exercise their public kind contracts here.
@@ -145,6 +148,7 @@ func TestUnsafeApprovalKindsCannotBeMuted(t *testing.T) {
 }
 
 func TestAMixedBundleKeepsItsNonMuteableMembers(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	ctx := e.asHumanWith(decidesEverything())
 	company, bundle := e.company(t), ids.NewV7()
@@ -167,6 +171,7 @@ func TestAMixedBundleKeepsItsNonMuteableMembers(t *testing.T) {
 }
 
 func TestASoleDecidersMutedProposalRemainsReachableAndExpiresNormally(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	target := newDealSeeder(t, e).deal(t)
 	reader := seatFor(e.ws, e.rep, tableDeal, objectActivity, tableContact)

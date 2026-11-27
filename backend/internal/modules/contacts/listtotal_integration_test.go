@@ -82,6 +82,7 @@ func totalOf(ctx context.Context, t *testing.T, e *privacyEnv, in ListContactsIn
 }
 
 func TestAListTotalCountsTheWholeSetRatherThanThePage(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	const seeded = 30
 	seedContacts(t, e, e.owner, seeded)
@@ -107,6 +108,7 @@ func TestAListTotalCountsTheWholeSetRatherThanThePage(t *testing.T) {
 }
 
 func TestAListCountsOnItsFirstPageOnly(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	const seeded = 30
 	seedContacts(t, e, e.owner, seeded)
@@ -136,6 +138,7 @@ func TestAListCountsOnItsFirstPageOnly(t *testing.T) {
 }
 
 func TestAListTotalCountsOnlyTheRowsTheReaderMaySee(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	seedContacts(t, e, e.owner, 5)
 	// One capture-private row: connector-created, visibility='owner', and so
@@ -160,6 +163,7 @@ func TestAListTotalCountsOnlyTheRowsTheReaderMaySee(t *testing.T) {
 }
 
 func TestAListTotalCountsTheFilteredSet(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	seedContacts(t, e, e.owner, 5)
 	seedContacts(t, e, e.admin, 7)
@@ -180,6 +184,7 @@ func TestAListTotalCountsTheFilteredSet(t *testing.T) {
 // wired only into listPage would leave the list most readers actually open
 // with no count at all. That is exactly how this shipped the first time.
 func TestTheLeadWorkQueueCountsItsWholeSetToo(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	const seeded = 12
 	seedLeads(t, e, e.owner, seeded)

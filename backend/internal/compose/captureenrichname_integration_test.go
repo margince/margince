@@ -108,6 +108,7 @@ func str(p *string) string {
 }
 
 func TestAFamilyNameFirstSignatureFillsLastNameWithTheFamilyName(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := seedNamedContact(t, e, "mai@acme.example", "Mai", "connector:gmail")
 
@@ -126,6 +127,7 @@ func TestAFamilyNameFirstSignatureFillsLastNameWithTheFamilyName(t *testing.T) {
 }
 
 func TestTheDisplayRefreshDoesNotReverseAPrintedName(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := seedNamedContact(t, e, "mai2@acme.example", "Mai Lê", "connector:gmail")
 
@@ -153,6 +155,7 @@ func TestTheDisplayRefreshDoesNotReverseAPrintedName(t *testing.T) {
 }
 
 func TestAnUnclearOrderWritesNoNameAndStillMarksTheMailRead(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := seedNamedContact(t, e, "mai3@acme.example", "Mai", "connector:gmail")
 
@@ -169,6 +172,7 @@ func TestAnUnclearOrderWritesNoNameAndStillMarksTheMailRead(t *testing.T) {
 }
 
 func TestAUserSetDisplayNameIsNotReplacedBySignature(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := seedNamedContact(t, e, "mai4@acme.example", "Mai", "user:colleague")
 
@@ -180,6 +184,7 @@ func TestAUserSetDisplayNameIsNotReplacedBySignature(t *testing.T) {
 }
 
 func TestACorrectedNameIsNotOverwrittenBySignature(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := seedNamedContact(t, e, "mai5@acme.example", "Mai", "connector:gmail")
 	for _, field := range []string{contacts.FieldFirstName, contacts.FieldLastName} {

@@ -18,6 +18,7 @@ import (
 )
 
 func TestCapturedPartiesMeetingNeedsTheCapturingSeatsAttendance(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name, ownerResponse, guestResponse, guest, visibility string
 		organizes, canceled, want                             bool
@@ -98,6 +99,7 @@ func TestCapturedPartiesMeetingNeedsTheCapturingSeatsAttendance(t *testing.T) {
 }
 
 func TestCapturedPartiesHonorsGraphCalendarSensitivity(t *testing.T) {
+	t.Parallel()
 	for _, sensitivity := range []string{"normal", "private", "confidential", "personal"} {
 		t.Run(sensitivity, func(t *testing.T) {
 			e := integration.Setup(t)

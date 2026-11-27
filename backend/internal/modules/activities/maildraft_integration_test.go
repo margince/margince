@@ -13,7 +13,6 @@ package activities
 import (
 	"context"
 	"errors"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -105,6 +104,7 @@ func (e *sendEnv) draftTrail(t *testing.T, id ids.UUID) (actions []string, image
 }
 
 func TestASavedDraftReadsBackToItsAuthorAsTyped(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	anchor := replyAnchor(e.seedAnchor(t, "", ""))
@@ -131,6 +131,7 @@ func TestASavedDraftReadsBackToItsAuthorAsTyped(t *testing.T) {
 }
 
 func TestNoDraftForAnAnchorIsNotFound(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := MailDraftAnchor{Type: crmcontracts.MailDraftAnchorTypeContact, ID: e.seedContact(t, "Buyer")}
 
@@ -144,6 +145,7 @@ func TestNoDraftForAnAnchorIsNotFound(t *testing.T) {
 // second "create" where a draft already exists, is refused rather than
 // silently overwriting another composer's text.
 func TestADraftIsReplacedOnlyAtTheVersionTheComposerRead(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	anchor := MailDraftAnchor{Type: crmcontracts.MailDraftAnchorTypeContact, ID: e.seedContact(t, "Buyer")}
@@ -176,6 +178,7 @@ func TestADraftIsReplacedOnlyAtTheVersionTheComposerRead(t *testing.T) {
 // can neither read it, overwrite it, nor discard it, and learns only "not
 // found" — the answer a missing draft gives.
 func TestAColleagueCannotReachSomebodyElsesDraft(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := replyAnchor(e.seedAnchor(t, "", ""))
 	mine := saveDraft(e.as(principal.RowScopeAll), t, e, anchor)
@@ -202,6 +205,7 @@ func TestAColleagueCannotReachSomebodyElsesDraft(t *testing.T) {
 // author cannot see answers not found, whether it always was out of reach or
 // fell out of reach after the draft was written.
 func TestADraftAnswersToItsAnchorsRowScope(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeOwn)
 	hidden := replyAnchor(e.seedAnchor(t, "", ""))
@@ -223,6 +227,7 @@ func TestADraftAnswersToItsAnchorsRowScope(t *testing.T) {
 // word the rep wrote: the compliance log learns a draft existed, not what it
 // said.
 func TestADraftsTrailRecordsEachActWithoutItsContent(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	anchor := replyAnchor(e.seedAnchor(t, "", ""))
@@ -250,6 +255,7 @@ func TestADraftsTrailRecordsEachActWithoutItsContent(t *testing.T) {
 }
 
 func TestSendingARepliesDraftDiscardsItInTheSameTransaction(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	anchor := e.seedAnchor(t, "", "")
@@ -272,6 +278,7 @@ func TestSendingARepliesDraftDiscardsItInTheSameTransaction(t *testing.T) {
 // The draft goes with a COMMITTED send only. A send that fails unwinds, and
 // the rep is still in the composer with what they wrote.
 func TestARefusedSendKeepsTheDraft(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	anchor := e.seedAnchor(t, "", "")
@@ -292,6 +299,7 @@ func TestARefusedSendKeepsTheDraft(t *testing.T) {
 // A consent refusal freezes the message for review and answers the rep with
 // the refusal. They are still in the composer, so the draft stays too.
 func TestAConsentRefusalHeldForReviewKeepsTheDraft(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	anchor := e.seedAnchor(t, "", "")
@@ -316,6 +324,7 @@ func TestAConsentRefusalHeldForReviewKeepsTheDraft(t *testing.T) {
 }
 
 func TestSchedulingADraftDiscardsItInTheSameTransaction(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	anchor := e.seedAnchor(t, "", "")
@@ -342,6 +351,7 @@ func TestSchedulingADraftDiscardsItInTheSameTransaction(t *testing.T) {
 // place, or one named by an agent acting for the rep, is ignored rather than
 // refused — a stale id must never stop a message — and the draft survives.
 func TestASendDiscardsOnlyItsOwnAnchorsDraftAndOnlyForAHuman(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	anchor := e.seedAnchor(t, "", "")
@@ -384,6 +394,7 @@ func discardInOwnTx(ctx context.Context, t *testing.T, e *sendEnv, id ids.UUID, 
 // Addresses are kept the way the send path compares them, so the erasure and
 // the subject export find a draft by the address they hold.
 func TestADraftKeepsItsAddressesTrimmedAndLowercased(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	anchor := replyAnchor(e.seedAnchor(t, "", ""))
@@ -402,6 +413,7 @@ func TestADraftKeepsItsAddressesTrimmedAndLowercased(t *testing.T) {
 // A draft nobody saves again for the retention window is deleted, whatever
 // became of its anchor; a newer one stays. Only the system sweeps.
 func TestTheRetentionSweepDeletesOnlyDraftsPastTheWindow(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	stale := saveDraft(ctx, t, e, replyAnchor(e.seedAnchor(t, "", "")))
@@ -436,6 +448,7 @@ func TestTheRetentionSweepDeletesOnlyDraftsPastTheWindow(t *testing.T) {
 // commits its own batch, so a pass the job's timeout cuts short has still kept
 // what it deleted, and the next one starts where it stopped.
 func TestAStaleBacklogDeeperThanOnePassDrainsOldestFirst(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	var backlog []ids.UUID
@@ -467,6 +480,7 @@ func TestAStaleBacklogDeeperThanOnePassDrainsOldestFirst(t *testing.T) {
 }
 
 func TestDraftEditorStateSurvivesSaveReadAndReplacement(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	anchor := replyAnchor(e.seedAnchor(t, "", ""))
@@ -503,6 +517,7 @@ func TestDraftEditorStateSurvivesSaveReadAndReplacement(t *testing.T) {
 // A draft saved while the sweep waits on it is fresh again, so the sweep leaves it and
 // counts nothing it did not delete.
 func TestTheRetentionSweepLeavesADraftSavedWhileItWaited(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	draft := saveDraft(ctx, t, e, replyAnchor(e.seedAnchor(t, "", "")))
@@ -510,7 +525,7 @@ func TestTheRetentionSweepLeavesADraftSavedWhileItWaited(t *testing.T) {
 		draft.ID, draftClock.Add(-MailDraftRetention-time.Hour)); err != nil {
 		t.Fatal(err)
 	}
-	saver, err := pgx.Connect(context.Background(), os.Getenv("MARGINCE_TEST_DSN"))
+	saver, err := pgx.Connect(context.Background(), testdb.For(t).OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -561,6 +576,7 @@ func forwardAnchor(id ids.ActivityID) MailDraftAnchor {
 // A reply and a forward of one message are two messages, so each keeps its own
 // draft and saving one never replaces the other.
 func TestAForwardKeepsItsOwnDraftBesideTheReplysDraft(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	message := e.seedAnchor(t, "", "")
@@ -586,6 +602,7 @@ func TestAForwardKeepsItsOwnDraftBesideTheReplysDraft(t *testing.T) {
 // A forward quotes the message, so its draft passes the message's content gate
 // like a reply's, on save and on every read after.
 func TestAForwardDraftAnswersToTheMessagesRowScope(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeOwn)
 	hidden := e.seedAnchor(t, "", "")
@@ -605,6 +622,7 @@ func TestAForwardDraftAnswersToTheMessagesRowScope(t *testing.T) {
 // A forward goes out as a new conversation, so the send that carries it takes
 // its draft; a reply naming that draft does not.
 func TestSendingAForwardDiscardsItsDraftAndAReplyDoesNot(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	message := e.seedAnchor(t, "", "")

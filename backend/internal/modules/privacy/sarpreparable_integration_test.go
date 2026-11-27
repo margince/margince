@@ -27,7 +27,6 @@ package privacy
 
 import (
 	"context"
-	"os"
 	"strings"
 	"testing"
 
@@ -39,12 +38,10 @@ import (
 )
 
 func TestEverySARSectionStatementResolvesAgainstTheSchema(t *testing.T) {
-	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
-	if ownerDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
+	t.Parallel()
+	db := testdb.New(t)
 	ctx := context.Background()
-	owner, err := pgx.Connect(ctx, ownerDSN)
+	owner, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -53,9 +50,6 @@ func TestEverySARSectionStatementResolvesAgainstTheSchema(t *testing.T) {
 			t.Errorf("closing owner connection: %v", err)
 		}
 	})
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
 
 	// The real gather list, built the way the export builds it. Asking
 	// sarSections rather than listing queries here is the point: a section

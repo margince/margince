@@ -30,14 +30,14 @@ func TestOfferedVerbsDropWhatNoShippedRoleHolds(t *testing.T) {
 }
 
 func TestAnExtensionObjectOffersAllFourVerbs(t *testing.T) {
-	t.Cleanup(ResetRegisteredForTest)
-	if err := Register("ext_demo_ledger"); err != nil {
+	vocabulary, err := NewVocabulary("ext_demo_ledger")
+	if err != nil {
 		t.Fatal(err)
 	}
 	if got := OfferedVerbs("ext_demo_ledger"); len(got) != 4 {
 		t.Errorf("an extension object offers %v, want all four", got)
 	}
-	if _, ok := OfferedVerbsByObject()["ext_demo_ledger"]; !ok {
+	if _, ok := OfferedVerbsByObject(vocabulary)["ext_demo_ledger"]; !ok {
 		t.Error("the verb catalog omits a registered extension object")
 	}
 }

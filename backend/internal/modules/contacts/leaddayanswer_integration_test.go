@@ -75,6 +75,7 @@ func (e *promoteConsentEnv) dayAnswerCandidatesAt(t *testing.T, now time.Time, a
 // stamp, so the sweep never reads it. A lead with no enquiry and a day call is
 // read, as the subscriber would stamp it.
 func TestTheDaySweepReadsOnlyLeadsADayTouchCanAnswer(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	date := time.Date(2026, 3, 9, 0, 0, 0, 0, time.UTC)
 	enquiryOnly := e.seedBareLead(t, "enquiry@day.test", date)
@@ -113,6 +114,7 @@ func TestTheDaySweepReadsOnlyLeadsADayTouchCanAnswer(t *testing.T) {
 // mayAnswerSQL is isFirstResponseActivity in SQL. Postgres judges each touch of
 // the grid as the Go rule does, for a lead that wrote in and one that did not.
 func TestMayAnswerSQLAgreesWithTheGoRule(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	date := time.Date(2026, 3, 9, 0, 0, 0, 0, time.UTC)
 	wroteIn := e.seedBareLead(t, "wrote@day.test", date)

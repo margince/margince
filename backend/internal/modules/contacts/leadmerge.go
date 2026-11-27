@@ -184,7 +184,7 @@ func (s *Store) carryLeadToLeadTx(ctx context.Context, tx pgx.Tx, sourceID, targ
 	// The contact and company merges have always called this. The lead merge
 	// did not. So six kinds of row stayed where no read returns them: drafts,
 	// verdicts, notices, attachments, commitments and signals.
-	if err := recordmerge.MoveKindIDRows(ctx, tx, entityLead, sourceID.UUID, targetID.UUID); err != nil {
+	if err := recordmerge.MoveKindIDRows(ctx, tx, s.extensions.Reach(), entityLead, sourceID.UUID, targetID.UUID); err != nil {
 		return fmt.Errorf("carry the merged-away lead's references by kind and id: %w", err)
 	}
 	return recordmerge.RelinkMemberships(ctx, tx, entityLead, sourceID.UUID, targetID.UUID)

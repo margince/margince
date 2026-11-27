@@ -19,6 +19,7 @@ import (
 // A stored role is free text, so a seat typed " Economic_Buyer " or padded with
 // a tab is the deal's economic buyer. It raises no no_economic_buyer finding.
 func TestTheInputCheckReadsAnEconomicBuyerInAnyCase(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	typedOn := map[string]string{}

@@ -69,6 +69,7 @@ func namedRows(t *testing.T, e *integration.SearchEnv, meeting ids.UUID, address
 }
 
 func TestAColleagueRemovedFromAnOlderEventLosesTheMeetingOnceItsRosterIsNamed(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	meeting, colleague, syncWithoutColleague := olderReview(t, env)
@@ -97,6 +98,7 @@ func TestAColleagueRemovedFromAnOlderEventLosesTheMeetingOnceItsRosterIsNamed(t 
 
 // The task names a roster only on a row the calendar provably wrote.
 func TestARowTheCalendarDidNotProvablyWriteKeepsNoRoster(t *testing.T) {
+	t.Parallel()
 	for name, alter := range map[string]func(t *testing.T, e *integration.SearchEnv, meeting ids.UUID){
 		"a row written after the meeting was made": func(t *testing.T, e *integration.SearchEnv, meeting ids.UUID) {
 			ownerExec(t, e, `UPDATE activity_participant SET created_at = created_at + interval '1 hour'
@@ -164,6 +166,7 @@ func matchedGraphMeeting(t *testing.T, env captureEnv, listed ...string) ids.UUI
 }
 
 func TestAStoredMicrosoftEventGivesItsMatchedMeetingTheGuests(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	meeting := matchedGraphMeeting(t, env, captureOwner, guestKnown, guestUnread)
 
@@ -185,6 +188,7 @@ func TestAStoredMicrosoftEventGivesItsMatchedMeetingTheGuests(t *testing.T) {
 // A guest's copy names no calendar, so it is read only when one connected
 // address is on it.
 func TestAStoredMicrosoftEventThatProvesNoCalendarAddsNobody(t *testing.T) {
+	t.Parallel()
 	for name, seed := range map[string]func(t *testing.T, env captureEnv) ids.UUID{
 		"the stamping calendar is not on the event": func(t *testing.T, env captureEnv) ids.UUID {
 			return matchedGraphMeeting(t, env, guestKnown, guestUnread)

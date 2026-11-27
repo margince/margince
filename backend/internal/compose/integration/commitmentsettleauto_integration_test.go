@@ -19,6 +19,7 @@ import (
 // A trigger over no database fails if it tries to settle anything. A clean
 // return shows an automatic close reaches no task and no offer.
 func TestAnAutomaticCloseRetiresNoTaskAndNoOffer(t *testing.T) {
+	t.Parallel()
 	trigger := compose.NewCommitmentSettleTrigger(nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	env := events.Envelope{
 		Type:    "conversation_claim.changed",

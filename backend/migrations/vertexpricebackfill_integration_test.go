@@ -72,6 +72,7 @@ func vertexRates(ctx context.Context, t *testing.T, conn *pgx.Conn) map[string]i
 // row, audited; running it again copies nothing more, and rolling it back
 // removes only the copies nobody has touched.
 func TestAnEmptyVertexSheetTakesACopyOfGeminisPricesOnce(t *testing.T) {
+	t.Parallel()
 	dsn, _ := dsns(t)
 	conn := connect(t, dsn)
 	headSchema(t, conn)
@@ -109,6 +110,7 @@ func TestAnEmptyVertexSheetTakesACopyOfGeminisPricesOnce(t *testing.T) {
 // A copy carries the lane and all four price buckets, and its audit row
 // records the price the upgrade wrote.
 func TestACopiedVertexRowCarriesEveryPriceColumn(t *testing.T) {
+	t.Parallel()
 	dsn, _ := dsns(t)
 	conn := connect(t, dsn)
 	headSchema(t, conn)
@@ -144,6 +146,7 @@ func TestACopiedVertexRowCarriesEveryPriceColumn(t *testing.T) {
 // A copy an administrator edited after the upgrade is theirs: rolling back
 // keeps it, whatever order the two audit ids happen to sort in.
 func TestRollingBackKeepsACopyEditedSince(t *testing.T) {
+	t.Parallel()
 	dsn, _ := dsns(t)
 	conn := connect(t, dsn)
 	headSchema(t, conn)
@@ -171,6 +174,7 @@ func TestRollingBackKeepsACopyEditedSince(t *testing.T) {
 
 // An installation that already prices Vertex keeps exactly what it has.
 func TestAVertexSheetWithPricesIsLeftAlone(t *testing.T) {
+	t.Parallel()
 	dsn, _ := dsns(t)
 	conn := connect(t, dsn)
 	headSchema(t, conn)
@@ -192,6 +196,7 @@ func TestAVertexSheetWithPricesIsLeftAlone(t *testing.T) {
 // upgrade copies nothing there; its other models take Gemini's price through
 // the live fallback instead.
 func TestASeededVertexSheetTakesNoCopy(t *testing.T) {
+	t.Parallel()
 	dsn, _ := dsns(t)
 	conn := connect(t, dsn)
 	headSchema(t, conn)

@@ -47,6 +47,7 @@ func asPassport(e *integration.Env, passport ids.UUID) context.Context {
 }
 
 func TestATaskHandleIsAnsweredToThePassportThatHoldsItAndToNoOther(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	tasks := toolTasks(e.Pool)
 	approvalID := stageApprovalForTask(t, e)
@@ -126,6 +127,7 @@ func seedTaskPassport(t *testing.T, e *integration.Env, label string) ids.UUID {
 // A refresh mints a new passport under the same grant, and the task store still
 // answers that agent's handle. Another connection of the same human gets nothing.
 func TestATaskHandleOutlivesItsConnectionsRefresh(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	tasks := toolTasks(e.Pool)
 	first, grant := seedConnectionPassport(t, e)

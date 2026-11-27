@@ -72,6 +72,7 @@ func refusedForKind(t *testing.T, what string, body []byte) {
 }
 
 func TestAMeetingOnlyFieldIsRefusedOnACallAtEveryDoor(t *testing.T) {
+	t.Parallel()
 	d, fieldID, column := visitReportDoors(t)
 	held := decodeActivity(t, d.restStatus(t, "POST", "/v1/activities", AnyMap{
 		"kind": "call", "subject": "Call before the narrowing", "source": "manual", column: "logged while it applied",
@@ -108,6 +109,7 @@ func TestAMeetingOnlyFieldIsRefusedOnACallAtEveryDoor(t *testing.T) {
 }
 
 func TestTheFieldSettingsRefuseKindsTheFieldCannotTake(t *testing.T) {
+	t.Parallel()
 	d, fieldID, _ := visitReportDoors(t)
 	if status := d.e.Call(t, "PATCH", "/v1/custom-fields/"+fieldID, AnyMap{"activity_kinds": []string{"visit"}}, nil, nil); status != http.StatusUnprocessableEntity {
 		t.Errorf("a kind outside the activity kinds → %d, want 422", status)
@@ -130,6 +132,7 @@ func TestTheFieldSettingsRefuseKindsTheFieldCannotTake(t *testing.T) {
 }
 
 func TestListRecordsNarrowsActivitiesByACustomField(t *testing.T) {
+	t.Parallel()
 	d, _, column := visitReportDoors(t)
 	wanted := decodeActivity(t, d.restStatus(t, "POST", "/v1/activities", AnyMap{
 		"kind": "meeting", "subject": "Plant walk-through", "source": "manual", column: "north gate",
@@ -159,6 +162,7 @@ func TestListRecordsNarrowsActivitiesByACustomField(t *testing.T) {
 }
 
 func TestTheContactTimelineCarriesActivityCustomFieldValues(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store, column := visitNoteStore(t, e)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)

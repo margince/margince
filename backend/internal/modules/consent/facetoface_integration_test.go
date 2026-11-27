@@ -114,6 +114,7 @@ func (e *resolveEnv) answerRefusedSend(ctx context.Context, t *testing.T, met ti
 // officer's writer. A rep without the notice-case grant leaves it for the
 // officer.
 func TestAMeetingFaceToFaceQualifiesTheSameMailThroughEitherDoor(t *testing.T) {
+	t.Parallel()
 	now := clocktest.Now(t).UTC()
 	met := now.Add(-24 * time.Hour).Truncate(time.Second)
 	settled := noticeAfter{state: NoticeExemptWithReason, rule: RuleNone, routes: []string{}}
@@ -169,6 +170,7 @@ func TestAMeetingFaceToFaceQualifiesTheSameMailThroughEitherDoor(t *testing.T) {
 // The source review settles. No exchange is recorded, because the verdict
 // would never read one that old.
 func TestAMeetingOlderThanTheReplyWindowQualifiesNothingAndOwesNoNotice(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	review := e.unassessedSource(t)
 	now := clocktest.Now(t).UTC()

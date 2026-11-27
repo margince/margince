@@ -135,6 +135,7 @@ func requireLocation(t *testing.T, rec *httptest.ResponseRecorder, want string) 
 }
 
 func TestAConnectImportUnderTheCapStartsInTheCallback(t *testing.T) {
+	t.Parallel()
 	c := setupChainWire(t)
 	jar := browserJar{}
 
@@ -155,6 +156,7 @@ func TestAConnectImportUnderTheCapStartsInTheCallback(t *testing.T) {
 // Above the cap nothing is spent before the reader sees the count: no run, no
 // audit, no job. The landing names the held window so its row can offer it.
 func TestAConnectImportOverTheCapLandsHeldWithItsEstimate(t *testing.T) {
+	t.Parallel()
 	c := setupChainWire(t)
 	c.gmail.messages = autoImportCap + 1
 	jar := browserJar{}
@@ -185,6 +187,7 @@ func TestAConnectImportOverTheCapLandsHeldWithItsEstimate(t *testing.T) {
 // grant is stored either way, so the landing is a plain success with the one run
 // and its one pager untouched.
 func TestAConnectImportThatCannotStartStillLandsConnected(t *testing.T) {
+	t.Parallel()
 	c := setupChainWire(t)
 	if code, _ := c.do(c.human, t, c.startBackfill(crmcontracts.CaptureProviderGmail), `{"window":"6m"}`, nil); code != http.StatusAccepted {
 		t.Fatalf("opening the live run = %d, want 202", code)
@@ -207,6 +210,7 @@ func TestAConnectImportThatCannotStartStillLandsConnected(t *testing.T) {
 // there costs only the calendar: the mailbox stays connected and its import
 // queued, and no second consent opens.
 func TestAnUntickedCalendarOnTheSharedScreenKeepsTheMailboxAndItsImport(t *testing.T) {
+	t.Parallel()
 	c := setupChainWire(t)
 	jar := browserJar{}
 
@@ -228,6 +232,7 @@ func TestAnUntickedCalendarOnTheSharedScreenKeepsTheMailboxAndItsImport(t *testi
 // With both ticked, the one callback connects the calendar from the mail leg's
 // grant: one exchange, and the calendar row records what Google granted.
 func TestOneSharedConsentConnectsTheMailboxAndItsCalendar(t *testing.T) {
+	t.Parallel()
 	c := setupChainWire(t)
 	c.google.granted = append(slices.Clone(gmailScopes), gcal.ConsentScopes()...)
 	jar := browserJar{}

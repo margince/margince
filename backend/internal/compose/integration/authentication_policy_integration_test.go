@@ -61,6 +61,7 @@ func (e *SearchEnv) authPolicyCtx(grants map[string]principal.ObjectGrant) conte
 }
 
 func TestSignInPolicyAnswersItsOwnGrantAndRefusesWithoutIt(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	store := identity.NewInstallationSettings(e.DB(), compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
 
@@ -90,6 +91,7 @@ func TestSignInPolicyAnswersItsOwnGrantAndRefusesWithoutIt(t *testing.T) {
 // reporting currency with it, and every role that reads amounts is looking at a
 // permission error instead.
 func TestTheInstallationReadSurvivesWithoutTheSignInGrant(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	store := identity.NewInstallationSettings(e.DB(), compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
 
@@ -113,6 +115,7 @@ func TestTheInstallationReadSurvivesWithoutTheSignInGrant(t *testing.T) {
 // projection on installation_settings — and every other test here would still
 // pass.
 func TestTheInstallationGrantDoesNotOpenTheSignInPolicy(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	store := identity.NewInstallationSettings(e.DB(), compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
 
@@ -129,6 +132,7 @@ func TestTheInstallationGrantDoesNotOpenTheSignInPolicy(t *testing.T) {
 // read reports it, and the login gate's own anonymous read sees the same value —
 // the three surfaces resolving one stored answer.
 func TestRequireSSORoundTripsThroughThePolicy(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	store := identity.NewInstallationSettings(e.DB(), compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
 
@@ -188,6 +192,7 @@ func TestRequireSSORoundTripsThroughThePolicy(t *testing.T) {
 // Until then it asserts the leak is still exactly where it is: no narrower, so
 // nobody believes the split is finished, and no wider.
 func TestTheAggregateStillCarriesTheSignInProvidersUntilItIsDeprecated(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	store := identity.NewInstallationSettings(e.DB(), compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
 
@@ -231,6 +236,7 @@ func TestTheAggregateStillCarriesTheSignInProvidersUntilItIsDeprecated(t *testin
 // Like its read counterpart this is written to FAIL when the gap closes, so the
 // change that finally gates the write is told to come back and delete it.
 func TestTheSettingsPatchStillChangesSignInProvidersUntilItIsSplit(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	store := identity.NewInstallationSettings(e.DB(), compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
 
@@ -296,6 +302,7 @@ func loginScreenKeys(t *testing.T, e *apptest.AppEnv) []string {
 // listed in sign_in_providers and absent from sign_in_screen. It is spelled []
 // rather than null, so the admin screen can say it is waiting for its app.
 func TestTheSignInScreenLeavesOutAChosenProviderWithNoClient(t *testing.T) {
+	t.Parallel()
 	e := signInFixture(t, "", "")
 
 	raw, _ := signInScreen(t, e)
@@ -319,6 +326,7 @@ func TestTheSignInScreenLeavesOutAChosenProviderWithNoClient(t *testing.T) {
 // The policy read and the login screen give one answer, before and after the
 // admin switches the provider off.
 func TestTheSignInScreenIsTheLoginScreensAnswer(t *testing.T) {
+	t.Parallel()
 	e := signInFixture(t, "gcid", "gsecret")
 
 	if _, keys := signInScreen(t, e); !slices.Equal(keys, []string{"google"}) {
@@ -344,6 +352,7 @@ func TestTheSignInScreenIsTheLoginScreensAnswer(t *testing.T) {
 // installation patch must not let ops turn a registration method back on,
 // and an admin's grant does.
 func TestTheRegistrationSwitchesAskTheirOwnGrant(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	store := identity.NewInstallationSettings(e.DB(), compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
 	off := false

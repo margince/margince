@@ -107,6 +107,7 @@ func (d *deliveryEnv) timelineRow(who context.Context, t *testing.T, activity id
 // message that was only logged is a third: it has no delivery to report, which
 // is not the same as one that has not left yet.
 func TestTheTimelineTellsAParkedMessageFromADeliveredOne(t *testing.T) {
+	t.Parallel()
 	d := setupDelivery(t)
 
 	delivered := d.sent(t, "The proposal")
@@ -148,6 +149,7 @@ func TestTheTimelineTellsAParkedMessageFromADeliveredOne(t *testing.T) {
 // so comms_outbound keeps `sent` — and the mail did not arrive, which is the
 // one thing that status can never say.
 func TestABouncedMessageIsNotReportedAsSent(t *testing.T) {
+	t.Parallel()
 	d := setupDelivery(t)
 
 	returned := d.sent(t, "The proposal")
@@ -189,6 +191,7 @@ func TestABouncedMessageIsNotReportedAsSent(t *testing.T) {
 // so archiving the document afterwards changes the library and changes nothing
 // about what already went out.
 func TestTheTimelineSaysWhatAMessageCarriedAfterTheDocumentIsArchived(t *testing.T) {
+	t.Parallel()
 	d := setupDelivery(t)
 
 	carried := d.sent(t, "The signed contract")
@@ -231,6 +234,7 @@ func TestTheTimelineSaysWhatAMessageCarriedAfterTheDocumentIsArchived(t *testing
 // was parked because the recipient blocked us" is that content in smaller
 // print — as is the name of the file it carried.
 func TestAWithheldRowSaysNothingAboutDelivery(t *testing.T) {
+	t.Parallel()
 	d := setupDelivery(t)
 	colleague := d.As(d.Rep3, []ids.UUID{d.Team2}, activityLifecyclePerms)
 

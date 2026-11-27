@@ -99,6 +99,7 @@ func (confirmationRequiredStagingProbe) IdempotencyKey(ev workflow.Event) string
 }
 
 func TestConfirmationRequiredActionStagesARealApprovalAndRejectionBlocksTheRun(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	pipeline, open, _ := DealFixture(t, e)

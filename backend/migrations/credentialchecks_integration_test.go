@@ -18,6 +18,7 @@ import (
 // row a check exists to refuse. Postgres tests a CHECK before the foreign keys,
 // so the parent ids can be random: the refusal must name the check.
 func TestACredentialOrRateRowTheWritersRefuseIsRefusedByTheDatabase(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	headSchema(t, conn)

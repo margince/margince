@@ -32,6 +32,7 @@ func (re *runnerEnv) answerGrant(t *testing.T, granted bool) int {
 }
 
 func TestGrantingMintsTheRepsOwnCredentialAndNothingWider(t *testing.T) {
+	t.Parallel()
 	re := setupRunner(t)
 	if status := re.answerGrant(t, true); status != http.StatusOK {
 		t.Fatalf("grant → %d", status)
@@ -86,6 +87,7 @@ func TestGrantingMintsTheRepsOwnCredentialAndNothingWider(t *testing.T) {
 // what actually happened: the rows were written by an older build and no
 // migration or renewal path touches them.
 func TestAGrantMintedBeforeTheAgentGrewReportsItselfShort(t *testing.T) {
+	t.Parallel()
 	re := setupRunner(t)
 	if status := re.answerGrant(t, true); status != http.StatusOK {
 		t.Fatalf("grant → %d", status)
@@ -132,6 +134,7 @@ func TestAGrantMintedBeforeTheAgentGrewReportsItselfShort(t *testing.T) {
 }
 
 func TestWithdrawingEndsTheAuthorityRatherThanTheReference(t *testing.T) {
+	t.Parallel()
 	re := setupRunner(t)
 	if status := re.answerGrant(t, true); status != http.StatusOK {
 		t.Fatalf("grant → %d", status)
@@ -166,6 +169,7 @@ func TestWithdrawingEndsTheAuthorityRatherThanTheReference(t *testing.T) {
 }
 
 func TestReGrantingLeavesExactlyOneLiveCredential(t *testing.T) {
+	t.Parallel()
 	re := setupRunner(t)
 	for pass := range 3 {
 		if status := re.answerGrant(t, true); status != http.StatusOK {
@@ -194,6 +198,7 @@ func TestReGrantingLeavesExactlyOneLiveCredential(t *testing.T) {
 }
 
 func TestTwoSimultaneousAnswersStillLeaveOneLiveCredential(t *testing.T) {
+	t.Parallel()
 	re := setupRunner(t)
 
 	// The race the advisory lock exists for: both calls read "no live
@@ -235,6 +240,7 @@ func TestTwoSimultaneousAnswersStillLeaveOneLiveCredential(t *testing.T) {
 }
 
 func TestAnUnknownAgentIsRefusedRatherThanGranted(t *testing.T) {
+	t.Parallel()
 	re := setupRunner(t)
 	status := re.Call(t, "PUT", "/v1/me/agent-grants/not_an_agent",
 		integration.AnyMap{"granted": true}, nil, nil)

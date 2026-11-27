@@ -132,6 +132,7 @@ func dealListShows(t *testing.T, e *apptest.AppEnv, deal string) bool {
 // stakeholder and its live list membership come back. The list archived since
 // stays retired and is named in the answer. deal.restored goes out.
 func TestRestoringAnArchivedDealBringsBackWhatItsArchiveTookDown(t *testing.T) {
+	t.Parallel()
 	e := listsOnApp(t)
 	f := archiveADealOnTwoLists(t, e, "Harbour retrofit")
 	if dealListShows(t, e, f.deal) {
@@ -180,6 +181,7 @@ func TestRestoringAnArchivedDealBringsBackWhatItsArchiveTookDown(t *testing.T) {
 // with the reason the history shows them. An archive entry of another deal
 // answers 404, so the route never says whether it exists.
 func TestADealRestoreIsRefusedToAColleagueAndToAnotherDealsEntry(t *testing.T) {
+	t.Parallel()
 	e := listsOnApp(t)
 	f := archiveADealOnTwoLists(t, e, "Quay lighting")
 	other := archiveADealOnTwoLists(t, e, "Pier signage")
@@ -228,6 +230,7 @@ func repDeal(t *testing.T, owner *apptest.AppEnv, name string) bulkItemDTO {
 // that archive. An archive a manager made of the rep's deal stays, and the
 // rep is told only its archiver or a manager can restore it.
 func TestARepRestoresTheirOwnArchiveAndNotAManagers(t *testing.T) {
+	t.Parallel()
 	e := listsOnApp(t)
 	e.DescribeCompany(t)
 	owner := repSeat(t, e, "owner@deal-restore.test")
@@ -270,6 +273,7 @@ func TestARepRestoresTheirOwnArchiveAndNotAManagers(t *testing.T) {
 // The bulk undo of an archive is one restore per row, and asks what each
 // restore asks. So a rep who archived their own deals in bulk undoes it.
 func TestARepUndoesTheirOwnBulkArchive(t *testing.T) {
+	t.Parallel()
 	e := listsOnApp(t)
 	e.DescribeCompany(t)
 	owner := repSeat(t, e, "bulk-owner@deal-restore.test")

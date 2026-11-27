@@ -26,9 +26,9 @@ import (
 // sha256 of the trimmed, lowercased value. Without a bound key it is the sha256.
 // Writer and reader must normalize identically or a stray space resurrects an
 // erased subject. A writer stamps SuppressionKeyID beside it.
-func SuppressionHash(value string) string {
+func SuppressionHash(ctx context.Context, value string) string {
 	digest := identifierDigest(value)
-	if key, ok := currentIdentifierKey(); ok {
+	if key, ok := currentIdentifierKey(ctx); ok {
 		return key.keyed(digest)
 	}
 	return digest
@@ -74,7 +74,7 @@ func SuppressedEmails(ctx context.Context, tx pgx.Tx, emails []string) (map[stri
 	if len(emails) == 0 {
 		return result, nil
 	}
-	args := []any{EmailSuppressionForms(emails...)}
+	args := []any{EmailSuppressionForms(ctx, emails...)}
 	rows, err := tx.Query(ctx, fmt.Sprintf(`SELECT value_hash FROM erasure_suppression WHERE kind='email' AND value_hash=ANY($%d::text[]) AND lifted_at IS NULL`, len(args)), args...)
 	if err != nil {
 		return nil, err
@@ -89,7 +89,7 @@ func SuppressedEmails(ctx context.Context, tx pgx.Tx, emails []string) (map[stri
 	}
 	// An address erased in one spelling of its domain is erased in the other.
 	for _, email := range emails {
-		for _, form := range EmailSuppressionForms(email) {
+		for _, form := range EmailSuppressionForms(ctx, email) {
 			if held[form] {
 				result[strings.ToLower(strings.TrimSpace(email))] = true
 			}
@@ -100,8 +100,8 @@ func SuppressedEmails(ctx context.Context, tx pgx.Tx, emails []string) (map[stri
 
 // EmailSuppressionForms answers the hashes the erasure list holds addresses
 // under: each spelling of the domain, keyed and unkeyed.
-func EmailSuppressionForms(emails ...string) []string {
-	return SuppressionForms(EmailLookups(emails...)...)
+func EmailSuppressionForms(ctx context.Context, emails ...string) []string {
+	return SuppressionForms(ctx, EmailLookups(emails...)...)
 }
 
 // ErasedIdentifierCode is the contract's machine code for a write refused
@@ -182,13 +182,13 @@ func RefuseErasedEmails(ctx context.Context, tx pgx.Tx, field string, emails []s
 // erased subject's next message would resurrect them, with nothing
 // erroring and nothing logged. contact_channel_identity's unique key omits
 // the bot id for the same reason (0152).
-func ChannelIdentityHash(provider, channelUserID string) string {
-	return SuppressionHash(channelIdentityValue(provider, channelUserID))
+func ChannelIdentityHash(ctx context.Context, provider, channelUserID string) string {
+	return SuppressionHash(ctx, channelIdentityValue(provider, channelUserID))
 }
 
 // ChannelIdentityForms is SuppressionForms for a channel account.
-func ChannelIdentityForms(provider, channelUserID string) []string {
-	return SuppressionForms(channelIdentityValue(provider, channelUserID))
+func ChannelIdentityForms(ctx context.Context, provider, channelUserID string) []string {
+	return SuppressionForms(ctx, channelIdentityValue(provider, channelUserID))
 }
 
 func channelIdentityValue(provider, channelUserID string) string {
@@ -204,7 +204,7 @@ func ChannelIdentitySuppressed(ctx context.Context, tx pgx.Tx, provider, channel
 	var suppressed bool
 	err := tx.QueryRow(ctx,
 		`SELECT EXISTS (SELECT 1 FROM erasure_suppression WHERE kind = 'channel_identity' AND value_hash = ANY($1) AND lifted_at IS NULL)`,
-		ChannelIdentityForms(provider, channelUserID)).Scan(&suppressed)
+		ChannelIdentityForms(ctx, provider, channelUserID)).Scan(&suppressed)
 	return suppressed, err
 }
 

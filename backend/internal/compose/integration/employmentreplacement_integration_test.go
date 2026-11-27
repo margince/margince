@@ -22,6 +22,7 @@ import (
 )
 
 func TestANewerDatedRoleRetiresTheUndatedRoleAndUndoRestoresIt(t *testing.T) {
+	t.Parallel()
 	for _, edit := range []string{"unchanged", "signature", "human", "human then signature"} {
 		t.Run(edit, func(t *testing.T) {
 			e := Setup(t)

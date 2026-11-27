@@ -25,7 +25,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"os"
 	"testing"
 	"time"
 
@@ -62,17 +61,16 @@ type coreEnv struct {
 	// user is the human the invocation acts as: a core write resolves its
 	// actor from the context, and captured_by is stamped from it.
 	user ids.UUID
+	// composed is the composition the unit was declared in. Nil declares
+	// nothing.
+	composed *Extensions
 }
 
 func setupCore(t *testing.T) coreEnv {
 	t.Helper()
+	db := testdb.New(t)
 	ctx := context.Background()
-	ownerDSN, appDSN := os.Getenv("MARGINCE_TEST_DSN"), os.Getenv("MARGINCE_TEST_APP_DSN")
-	if ownerDSN == "" || appDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN not set — run `make db-up` " +
-			"(integration tests fail loudly, they never skip)")
-	}
-	owner, err := pgx.Connect(ctx, ownerDSN)
+	owner, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -81,12 +79,6 @@ func setupCore(t *testing.T) coreEnv {
 			t.Errorf("closing the owner connection: %v", err)
 		}
 	})
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
-	if err := testdb.Reset(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
 
 	e := coreEnv{owner: owner, ws: ids.NewV7(), subject: ids.NewV7(), user: ids.NewV7()}
 	if _, err := owner.Exec(ctx, `INSERT INTO workspace (id) VALUES ($1)`, e.ws); err != nil {
@@ -103,7 +95,7 @@ func setupCore(t *testing.T) coreEnv {
 		t.Fatalf("seeding the subject: %v", err)
 	}
 
-	cfg, err := pgxpool.ParseConfig(appDSN)
+	cfg, err := pgxpool.ParseConfig(db.AppDSN)
 	if err != nil {
 		t.Fatalf("parsing the app DSN: %v", err)
 	}
@@ -147,7 +139,7 @@ func (e coreEnv) runtime(t *testing.T) (*callRuntime, context.Context, context.C
 	t.Helper()
 	ctx, cancel := context.WithTimeout(e.invocation(), coreBudget)
 	return runtimeFor(ctx, coreUnit, coreVersion, coreVia,
-		extensionRuntimeBinding{pool: e.pool}), ctx, cancel
+		extensionRuntimeBinding{pool: e.pool, composed: e.composed}), ctx, cancel
 }
 
 // aNote is the request a unit files: a `note`, which names no transport, so the
@@ -192,6 +184,7 @@ func (e coreEnv) count(t *testing.T, query string, args ...any) int {
 
 // The whole write, committed together.
 func TestAUnitsFilingLandsTheActivityItsAuditRowAndItsEvent(t *testing.T) {
+	t.Parallel()
 	e := setupCore(t)
 
 	filed, err := e.file(t, e.subject, nil)
@@ -257,6 +250,7 @@ func TestAUnitsFilingLandsTheActivityItsAuditRowAndItsEvent(t *testing.T) {
 // what a failed insert in the unit's own table does — the callback returns,
 // and the transaction the port ran on is the caller's to roll back.
 func TestAUnitsLaterFailureTakesTheFiledActivityWithIt(t *testing.T) {
+	t.Parallel()
 	e := setupCore(t)
 	unitFailed := errors.New("the unit's own row could not be written")
 
@@ -283,6 +277,7 @@ func TestAUnitsLaterFailureTakesTheFiledActivityWithIt(t *testing.T) {
 // port inherits the store's row-scope gate rather than re-implementing it, and
 // this is what says the gate is actually reached.
 func TestFilingAgainstASubjectThatDoesNotExistIsRefusedAndWritesNothing(t *testing.T) {
+	t.Parallel()
 	e := setupCore(t)
 
 	_, err := e.file(t, ids.NewV7(), nil)
@@ -306,6 +301,7 @@ func TestFilingAgainstASubjectThatDoesNotExistIsRefusedAndWritesNothing(t *testi
 // the pool goes back to the shipped sixteen, all four cases keep passing, and
 // the cover disappears with nothing to say so.
 func TestTheCoreSuiteRunsOnOneConnection(t *testing.T) {
+	t.Parallel()
 	e := setupCore(t)
 	if got := e.pool.Config().MaxConns; got != 1 {
 		t.Fatalf("the suite's pool holds %d connections, want 1 — with more than one, a verb that "+

@@ -40,6 +40,7 @@ func (e proofEnv) proofLine(t *testing.T, request ids.UUID) string {
 }
 
 func TestTheProofBackfillRebuildsWhatTheRecordsHoldAndReplaysSafely(t *testing.T) {
+	t.Parallel()
 	e := setupProofs(t)
 	contact := e.SeedContact(t, "Earlier Subject", nil)
 	erasure := e.openRequest(t, "erasure", contact.String())
@@ -87,6 +88,7 @@ func TestTheProofBackfillRebuildsWhatTheRecordsHoldAndReplaysSafely(t *testing.T
 }
 
 func TestTheProofBackfillNamesTheLatestCloseOfAReopenedRequest(t *testing.T) {
+	t.Parallel()
 	e := setupProofs(t)
 	request := e.closeAccess(t, "reopened@proof.test")
 	// The status machine refuses a reopen today; an earlier writer did not,
@@ -120,6 +122,7 @@ func TestTheProofBackfillNamesTheLatestCloseOfAReopenedRequest(t *testing.T) {
 }
 
 func TestTheProofBackfillFindsTheErasureOfARequestWhoseReferenceIsTombstoned(t *testing.T) {
+	t.Parallel()
 	e := setupProofs(t)
 	contact := e.SeedContact(t, "Long Ago Subject", nil)
 	e.seedNoteFor(t, contact, "Bitte loeschen", "Bitte loeschen Sie alles")
@@ -142,6 +145,7 @@ func TestTheProofBackfillFindsTheErasureOfARequestWhoseReferenceIsTombstoned(t *
 }
 
 func TestTheProofBackfillOfARequestClosedWithoutAnAuditRowNamesNoCloser(t *testing.T) {
+	t.Parallel()
 	e := setupProofs(t)
 	request := e.openRequest(t, "access", "unaudited@proof.test")
 	e.WsExec(t, `UPDATE data_subject_request SET status = 'rejected', resolution = 'declined' WHERE id = $1`, request)

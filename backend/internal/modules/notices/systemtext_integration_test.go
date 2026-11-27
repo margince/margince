@@ -19,6 +19,7 @@ import (
 )
 
 func TestNoticePresentationUsesTheReaderLanguageWithoutChangingItsIdentity(t *testing.T) {
+	t.Parallel()
 	e := setupNotices(t)
 	for _, base := range textlang.Shipped {
 		subject := fmt.Sprintf(systemtext.Copy("lead.reply", base), "Example")
@@ -60,6 +61,7 @@ func TestNoticePresentationUsesTheReaderLanguageWithoutChangingItsIdentity(t *te
 }
 
 func TestNoticeLimitsKeepEveryLanguageAndEditsRetireMetadata(t *testing.T) {
+	t.Parallel()
 	e := setupNotices(t)
 	label := strings.Repeat("長", subjectBound)
 	subject := fmt.Sprintf(systemtext.Copy("lead.reply", textlang.English), label)
@@ -91,6 +93,7 @@ func TestNoticeLimitsKeepEveryLanguageAndEditsRetireMetadata(t *testing.T) {
 }
 
 func TestInvalidNoticeMetadataCannotPreventAValidNotice(t *testing.T) {
+	t.Parallel()
 	e := setupNotices(t)
 	_, err := e.store.Create(e.engineCtx(), NewNotice{Recipient: e.recipient, Kind: "automation", Subject: "Caption", SystemText: &systemtext.Message{Subject: systemtext.Sentence("missing")}})
 	if err != nil {
@@ -103,6 +106,7 @@ func TestInvalidNoticeMetadataCannotPreventAValidNotice(t *testing.T) {
 }
 
 func TestARetractedHumanCaptionDoesNotGainASystemOrigin(t *testing.T) {
+	t.Parallel()
 	e := setupNotices(t)
 	id, err := e.store.Create(e.engineCtx(), NewNotice{Recipient: e.recipient, Kind: "automation", Subject: "Proposal removed"})
 	if err != nil {

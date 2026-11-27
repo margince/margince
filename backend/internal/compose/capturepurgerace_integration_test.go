@@ -118,6 +118,7 @@ var colleagueWorkKinds = map[string]func(t *testing.T, e *integration.Env, conta
 // reaches the contact. The purge waits for it, sees the work, and keeps the
 // contact.
 func TestASenderPurgeWaitsForWorkInFlightAndKeepsTheContact(t *testing.T) {
+	t.Parallel()
 	for name, prepare := range colleagueWorkKinds {
 		t.Run(name, func(t *testing.T) {
 			e := integration.Setup(t)
@@ -160,6 +161,7 @@ func TestASenderPurgeWaitsForWorkInFlightAndKeepsTheContact(t *testing.T) {
 // waits for the scrub, then finds the contact gone: it is refused, or it leaves
 // the contact out.
 func TestWorkWrittenDuringASenderPurgesScrubWaitsAndMissesTheContact(t *testing.T) {
+	t.Parallel()
 	for name, prepare := range colleagueWorkKinds {
 		t.Run(name, func(t *testing.T) {
 			e := integration.Setup(t)

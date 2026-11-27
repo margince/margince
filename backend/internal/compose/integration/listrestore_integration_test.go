@@ -14,6 +14,7 @@ import (
 // A contact's first numbers can be taken back, as the edit dialog can remove
 // every number by hand.
 func TestEndToEnd_addingTheFirstNumbersIsUndoneToNone(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 

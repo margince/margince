@@ -78,6 +78,7 @@ func filedUnder(filed []ids.UUID, want ids.UUID) bool {
 // walks activity_link — their timeline, and the consent gate's qualifying
 // event — could see a message they were plainly on.
 func TestACcdContactIsFiledUnderTheirOwnRecord(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 
@@ -106,6 +107,7 @@ func TestACcdContactIsFiledUnderTheirOwnRecord(t *testing.T) {
 // put a bulk sender's mail on a contact's timeline and hand it the Art 6(1)(f)
 // qualifying event that judgement just refused.
 func TestASuppressedMessageIsFiledUnderNobodyItCopies(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 
@@ -128,6 +130,7 @@ func TestASuppressedMessageIsFiledUnderNobodyItCopies(t *testing.T) {
 // even where a record holds the suppressed sender's address. That holds once
 // the trace sweep has removed the ladder's trace of the first capture too.
 func TestASecondMailboxJoiningASuppressedMessageFilesItUnderNobody(t *testing.T) {
+	t.Parallel()
 	for _, swept := range []bool{false, true} {
 		t.Run(map[bool]string{false: "trace kept", true: "trace swept"}[swept], func(t *testing.T) {
 			env := newCaptureEnv(t)
@@ -163,6 +166,7 @@ func TestASecondMailboxJoiningASuppressedMessageFilesItUnderNobody(t *testing.T)
 // An introduction whose copied outsider the ladder suppressed stays unfiled
 // after the trace sweep, though the stored counterparty is the colleague.
 func TestAJoinedIntroductionWithASuppressedOutsiderStaysUnfiledAfterTheSweep(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	syncSecond := secondMailbox(t, e, e.Rep3)
@@ -195,6 +199,7 @@ func TestAJoinedIntroductionWithASuppressedOutsiderStaysUnfiledAfterTheSweep(t *
 // A mail that only copies an address the ladder once suppressed is not itself
 // suppressed. A join still files it under the joining seat's own contact.
 func TestAJoinedMailCopyingASuppressedAddressIsStillFiled(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	syncSecond := secondMailbox(t, e, e.Rep3)
@@ -217,6 +222,7 @@ func TestAJoinedMailCopyingASuppressedAddressIsStillFiled(t *testing.T) {
 // A sender the ladder once suppressed is spared once the workspace writes to
 // it. A join then files its later mail as the first capture would.
 func TestAJoinFilesMailFromASuppressedSenderTheWorkspaceLaterWroteTo(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	syncSecond := secondMailbox(t, e, e.Rep3)
@@ -250,6 +256,7 @@ func TestAJoinFilesMailFromASuppressedSenderTheWorkspaceLaterWroteTo(t *testing.
 // A join files under a lead that holds an address on the mail, once, however
 // many mailboxes deliver it.
 func TestAJoinFilesALeadOnce(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	syncSecond := secondMailbox(t, e, e.Rep3)
@@ -270,6 +277,7 @@ func TestAJoinFilesALeadOnce(t *testing.T) {
 // A mailbox the mail was never delivered to gains no import and files nothing
 // when it presents the same message.
 func TestAMailboxThatWasNotARecipientFilesNothingOnAJoin(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	syncSecond := secondMailbox(t, e, e.Rep3)
@@ -290,6 +298,7 @@ func TestAMailboxThatWasNotARecipientFilesNothingOnAJoin(t *testing.T) {
 // A join files nothing on a thread the joining seat judged its private life.
 // The same seat's next business mail still reaches its private contact.
 func TestAJoinFilesNothingOnAThreadTheSeatHoldsPrivate(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	syncSecond := secondMailbox(t, e, e.Rep3)
@@ -318,6 +327,7 @@ func TestAJoinFilesNothingOnAThreadTheSeatHoldsPrivate(t *testing.T) {
 // need, as a new capture does. A mail copying more contacts than the ceiling
 // holds is filed up to that reservation, and the join adds nothing past it.
 func TestAJoinLeavesTheLinksTheLaterWritersNeed(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	syncSecond := secondMailbox(t, e, e.Rep3)
@@ -355,6 +365,7 @@ func TestAJoinLeavesTheLinksTheLaterWritersNeed(t *testing.T) {
 // links ARE written, so the assertion is about a message that was actually
 // filed.
 func TestFilingAConfidentialMessageDoesNotWidenWhoMayReadIt(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 

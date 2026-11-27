@@ -61,6 +61,7 @@ func scriptedFailing(fx *autoFixture, name string, replays bool, fault error) (*
 }
 
 func TestAReplayingHandlerIsRunAgainByTheRedeliveryOfAFailedApply(t *testing.T) {
+	t.Parallel()
 	fx := setupAutomationDB(t)
 	fx.seedAutomation(t, "replays")
 	engine, calls := scriptedFailing(fx, "replays", true, errors.New("the downstream service was unreachable"))
@@ -75,6 +76,7 @@ func TestAReplayingHandlerIsRunAgainByTheRedeliveryOfAFailedApply(t *testing.T) 
 }
 
 func TestARefusalIsNotReplayedWhateverItsWording(t *testing.T) {
+	t.Parallel()
 	fx := setupAutomationDB(t)
 	fx.seedAutomation(t, "refused")
 	engine, calls := scriptedFailing(fx, "refused", true, apperrors.ErrInvalidArgument)
@@ -88,6 +90,7 @@ func TestARefusalIsNotReplayedWhateverItsWording(t *testing.T) {
 }
 
 func TestAHandlerThatDoesNotDeclareReplayIsNotReplayed(t *testing.T) {
+	t.Parallel()
 	fx := setupAutomationDB(t)
 	fx.seedAutomation(t, "no_flag")
 	engine, calls := scriptedFailing(fx, "no_flag", false, errors.New("the downstream service was unreachable"))
@@ -101,6 +104,7 @@ func TestAHandlerThatDoesNotDeclareReplayIsNotReplayed(t *testing.T) {
 }
 
 func TestARunWithAppliedOutputOrPastTheWindowIsNotReplayed(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name, set string
 		replayed  bool
@@ -144,6 +148,7 @@ func (p *createProvider) Create(context.Context, datasource.CreateInput) (dataso
 // bus redelivery. Replaying it would fold on that claim and report success for
 // a record nobody wrote, so such a handler stays terminal after one failure.
 func TestACreateThroughTheEffectClaimIsNotReplayedOverItsOwnClaim(t *testing.T) {
+	t.Parallel()
 	fx := setupAutomationDB(t)
 	fx.seedAutomation(t, "creates")
 	db := database.BindTo(fx.pool, ids.From[ids.WorkspaceKind](fx.ws))
@@ -200,6 +205,7 @@ func (n *keyedNotifier) Notify(_ context.Context, _ ids.UUID, _, _ string, _ dat
 }
 
 func TestTheStageChangeNotificationIsRetriedAfterATransientNoticeFailure(t *testing.T) {
+	t.Parallel()
 	fx := setupAutomationDB(t)
 	fx.seedAutomation(t, stageChangeNotifyName)
 	owner := fx.rep1

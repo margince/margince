@@ -164,6 +164,7 @@ func (o *orphanIngest) setChecksum(t *testing.T, sum string) (was string) {
 }
 
 func TestAHandbookPageLeftRunningByAKilledWorkerIsReadAgainAtTheNextBoot(t *testing.T) {
+	t.Parallel()
 	o := newHandbookIngest(t)
 	ctx := context.Background()
 	inserter, err := jobs.NewInserter(o.e.Pool, slog.Default())
@@ -194,6 +195,7 @@ func TestAHandbookPageLeftRunningByAKilledWorkerIsReadAgainAtTheNextBoot(t *test
 
 // Older bytes than the row names wait, never ingest; a failed page is queued by the next boot.
 func TestAWorkerHoldingOlderHandbookBytesThanTheRowNamesNeverIngestsThem(t *testing.T) {
+	t.Parallel()
 	for _, age := range []time.Duration{time.Minute, 2 * knowledgeIngestSnoozeWindow} {
 		t.Run(age.String(), func(t *testing.T) {
 			o := newHandbookIngest(t)
@@ -218,6 +220,7 @@ func TestAWorkerHoldingOlderHandbookBytesThanTheRowNamesNeverIngestsThem(t *test
 }
 
 func TestAJobForADocumentAlreadyReadEndsWithoutReadingItAgain(t *testing.T) {
+	t.Parallel()
 	embedder := &gatedEmbedder{}
 	o := newOrphanIngest(t, embedder)
 	if err := o.work(t); err != nil {
@@ -236,6 +239,7 @@ func TestAJobForADocumentAlreadyReadEndsWithoutReadingItAgain(t *testing.T) {
 }
 
 func TestAnIngestWhoseHoldingConnectionDiedDoesNotBlockTheNext(t *testing.T) {
+	t.Parallel()
 	o := newOrphanIngest(t, &gatedEmbedder{})
 	ctx := context.Background()
 	release, held, err := holdIngest(ctx, o.e.Pool, o.doc, slog.Default())
@@ -272,6 +276,7 @@ func TestAnIngestWhoseHoldingConnectionDiedDoesNotBlockTheNext(t *testing.T) {
 }
 
 func TestTwoRunsOfOneDocumentEmbedItsPassagesOnce(t *testing.T) {
+	t.Parallel()
 	embedder := &gatedEmbedder{entered: make(chan struct{}), release: make(chan struct{})}
 	o := newOrphanIngest(t, embedder)
 
@@ -309,6 +314,7 @@ func TestTwoRunsOfOneDocumentEmbedItsPassagesOnce(t *testing.T) {
 // A run that cannot take a connection for its lock reports a fault, and leaves
 // the document as it was for the retry.
 func TestAnIngestThatCannotTakeItsLockFailsAndLeavesTheDocument(t *testing.T) {
+	t.Parallel()
 	o := newOrphanIngest(t, &gatedEmbedder{})
 	cancelled, cancel := context.WithCancel(context.Background())
 	cancel()

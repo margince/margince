@@ -90,6 +90,7 @@ func (f *leadTaskFixture) limit(t *testing.T, task ids.ActivityID) {
 // limited tasks drop out where the card says so, for every reader and every
 // read the lead list offers.
 func TestALeadCardCountsItsOpenTasksAndNamesTheNextReadableOne(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	f := &leadTaskFixture{e: e, now: clocktest.Now(t), names: map[crmcontracts.Id]string{}}
 	day := func(n int) *time.Time { return new(f.now.AddDate(0, 0, n)) }

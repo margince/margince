@@ -35,6 +35,7 @@ func embedStateOf(ctx context.Context, t *testing.T, store *knowledge.Store, cor
 // Every state a corpus can report, walked on one corpus. No model bound, work
 // owed, work done, then work owed again when the bound model moves.
 func TestACorpusSaysWhyItsPassagesAreOrAreNotSearchable(t *testing.T) {
+	t.Parallel()
 	ee := newEmbedEnv(t)
 	bound := ee.store.WithEmbedIdentity(func() string { return ee.embedder.identity })
 
@@ -97,6 +98,7 @@ func readEmbedAgreement(t *testing.T, e *apptest.AppEnv) (bool, string) {
 // Wired the way cmd/api wires both, so the two pages are proven to read one
 // embed lane.
 func TestKnowledgeAndSystemHealthAgreeWhetherAnEmbeddingModelIsBound(t *testing.T) {
+	t.Parallel()
 	quiet := slog.New(slog.NewTextHandler(io.Discard, nil))
 
 	t.Run("unbound", func(t *testing.T) {
@@ -125,6 +127,7 @@ func TestKnowledgeAndSystemHealthAgreeWhetherAnEmbeddingModelIsBound(t *testing.
 // The routing watcher rebinds a running role, so a lane bound or unbound after
 // boot moves both pages together.
 func TestKnowledgeAndSystemHealthAgreeAcrossARebind(t *testing.T) {
+	t.Parallel()
 	quiet := slog.New(slog.NewTextHandler(io.Discard, nil))
 	modelPath, err := compose.NewLocalModelPath(ai.FakeRoutingConfig(), ai.WithoutResultCache())
 	if err != nil {

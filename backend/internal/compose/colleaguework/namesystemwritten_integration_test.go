@@ -22,6 +22,7 @@ import (
 // A meeting Margince wrote is named in the report's language on the colleague
 // work figure, as every other word of that report is.
 func TestAColleagueWorkFactMarginceWroteIsNamedInTheReportsLanguage(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	subject := systemtext.Literal("automation.new_lead")
 	meeting, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{

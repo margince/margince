@@ -62,6 +62,7 @@ func readersOf(t *testing.T, e *integration.SearchEnv, activity ids.UUID) []ids.
 }
 
 func TestAChatMessageFollowsItsContactsSharingExactlyAsMailDoes(t *testing.T) {
+	t.Parallel()
 	for _, seat := range []struct {
 		name, posture string
 		team          bool

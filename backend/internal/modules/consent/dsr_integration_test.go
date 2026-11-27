@@ -28,7 +28,6 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -55,13 +54,9 @@ type dsrEnv struct {
 
 func setupDSR(t *testing.T) *dsrEnv {
 	t.Helper()
-	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
-	appDSN := os.Getenv("MARGINCE_TEST_APP_DSN")
-	if ownerDSN == "" || appDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
+	db := testdb.New(t)
 	ctx := context.Background()
-	owner, err := pgx.Connect(ctx, ownerDSN)
+	owner, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -70,19 +65,6 @@ func setupDSR(t *testing.T) *dsrEnv {
 			t.Errorf("closing owner connection: %v", err)
 		}
 	})
-	// To head before anything else touches this database: testdb.Pool refuses
-	// until EnsureSchema has run, and EnsureSchema still REBUILDS whenever it
-	// cannot prove the database is a fresh lane clone — so a seed written
-	// before it would be dropped rather than reset.
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
-	// Every test in this package seeds its own workspace into ONE database, so
-	// the separation between them has to be real: reset before seeding, as
-	// compose/integration's harness does.
-	if err := testdb.Reset(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
 
 	e := &dsrEnv{owner: owner, ws: ids.NewV7(), user: ids.NewV7()}
 	if _, err := owner.Exec(ctx,
@@ -94,14 +76,12 @@ func setupDSR(t *testing.T) *dsrEnv {
 		t.Fatal(err)
 	}
 
-	pool, err := testdb.Pool(ctx, appDSN)
+	pool, err := testdb.Pool(ctx, db.AppDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// Registered where the pool is handed out, before the test adds any cleanup
 	// of its own, so it runs last and sees a package that has genuinely stopped.
-	// The pool outlives the test now, so a goroutine still holding a connection
-	// would go on writing into the database the NEXT test just reset.
 	testdb.AssertPoolsQuiesced(t)
 	e.pool = pool
 	e.store = NewStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](e.ws)))
@@ -147,6 +127,7 @@ var idDocumentChecked = ProofStatement{IdentityCheck: new("id_document")}
 // the status pre-supplied — a store-only test still passes if the handler
 // drops the parameter on the floor.
 func TestListDSRsNarrowsByStatus(t *testing.T) {
+	t.Parallel()
 	e := setupDSR(t)
 	stayOpen := e.mustCreate(t, "access", "open@dsr.test")
 	toClose := e.mustCreate(t, "access", "closed@dsr.test")
@@ -183,6 +164,7 @@ func TestListDSRsNarrowsByStatus(t *testing.T) {
 // guard: a value outside the closed queue-state vocabulary is a client
 // error, not a filter that happens to match nothing.
 func TestListDataSubjectRequestsRejectsAnUnknownStatus(t *testing.T) {
+	t.Parallel()
 	e := setupDSR(t)
 	h := NewHandlers(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
 	r := httptest.NewRequest(http.MethodGet, "/v1/data-subject-requests", nil).WithContext(e.ctx)
@@ -201,6 +183,7 @@ func TestListDataSubjectRequestsRejectsAnUnknownStatus(t *testing.T) {
 // would accept a resolution of pure whitespace as a real answer, closing
 // the request with nothing anyone actually wrote.
 func TestClosingWithAWhitespaceOnlyResolutionIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupDSR(t)
 	req := e.mustCreate(t, "access", "blank-resolution@dsr.test")
 	blank := "   "
@@ -242,6 +225,7 @@ func listDSRsOverHTTP(t *testing.T, h Handlers, r *http.Request, params crmcontr
 }
 
 func TestFulfillErasureHTTPRefusesAnUnresolvableSubject(t *testing.T) {
+	t.Parallel()
 	e := setupDSR(t)
 	req := e.mustCreate(t, "erasure", "anna.weber@brandt-automotive.de")
 
@@ -281,6 +265,7 @@ func TestFulfillErasureHTTPRefusesAnUnresolvableSubject(t *testing.T) {
 // the officer typed an answer. An erasure answers from its own fixed list, so
 // typed text is refused before EraseContact is called, not thrown away after.
 func TestFulfillErasureHTTPRefusesTypedAnswer(t *testing.T) {
+	t.Parallel()
 	e := setupDSR(t)
 	req := e.mustCreate(t, "erasure", ids.NewV7().String())
 
@@ -315,6 +300,7 @@ func TestFulfillErasureHTTPRefusesTypedAnswer(t *testing.T) {
 // must be caught ahead of EraseContact, not discovered afterward by
 // UpdateDSR once the contact is already gone.
 func TestFulfillErasureHTTPRefusesAnAlreadyRejectedRequest(t *testing.T) {
+	t.Parallel()
 	e := setupDSR(t)
 	req := e.mustCreate(t, "erasure", ids.NewV7().String())
 	answer := "the subject withdrew the request"

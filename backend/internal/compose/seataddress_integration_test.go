@@ -96,6 +96,7 @@ func isInternal(t *testing.T, e *integration.Env, address string) bool {
 // An invited colleague's login is internal from the invitation on. The
 // invitation grants no stored mailbox history; redeeming it does.
 func TestAnInvitedColleaguesLoginIsInternalBeforeAndAfterActivation(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const address = "invited@colleague.example"
 	users, seat, token := invitedColleague(t, e, address)
@@ -121,6 +122,7 @@ func TestAnInvitedColleaguesLoginIsInternalBeforeAndAfterActivation(t *testing.T
 // An invited login reserves its address. Another seat's typed alias for it no
 // longer makes that seat answer its mail, and the invitation owes no answer.
 func TestAnInvitedLoginReservesItsAddressFromAnotherSeatsAlias(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const address = "shared@colleague.example"
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
@@ -149,6 +151,7 @@ func seatAnswers(seats map[string][]string, seat, address string) bool {
 
 // A revoked invitation makes the address an outside party again.
 func TestARevokedInvitationMakesTheAddressOutsideAgain(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const address = "revoked@colleague.example"
 	users, seat, _ := invitedColleague(t, e, address)
@@ -166,6 +169,7 @@ func TestARevokedInvitationMakesTheAddressOutsideAgain(t *testing.T) {
 // An invitation whose email is corrected before redemption moves the internal
 // address with it.
 func TestAnInvitationsChangedEmailMovesTheInternalAddress(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const before, after = "typo@colleague.example", "fixed@colleague.example"
 	users, seat, _ := invitedColleague(t, e, before)
@@ -218,6 +222,7 @@ func memberUpdatedAt(t *testing.T, e *integration.Env, member ids.UserID) time.T
 // Each writer that adds, moves or withdraws an invited login waits for a seat
 // check of that address already in flight. The check never sees half of it.
 func TestInvitationWritersWaitForASeatCheckInFlight(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	users, seat, _ := invitedColleague(t, e, "held@colleague.example")
 	admin := recoveryAdminIdentity(e)
@@ -324,6 +329,7 @@ func writerWaitsForCheck(t *testing.T, e *integration.Env, address string, write
 // A disconnected mailbox's label proves nothing for a decision made now, for
 // any seat, while the history reader still knows the mail it received.
 func TestAWithdrawnMailboxLabelDecidesNothingNewAndKeepsItsHistory(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const address = "rep2.old@mailbox.example"
 	connectSeatMailbox(t, e, e.Rep2, address, "shared")
@@ -352,6 +358,7 @@ func TestAWithdrawnMailboxLabelDecidesNothingNewAndKeepsItsHistory(t *testing.T)
 // A mailbox waiting for reauth is not withdrawn: its label stays the seat's
 // own address, as a typed one is, and history keeps it.
 func TestAMailboxAwaitingReauthKeepsItsLabelAsTheSeatsOwn(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const address = "rep2.paused@mailbox.example"
 	connectSeatMailbox(t, e, e.Rep2, address, "shared")
@@ -372,6 +379,7 @@ func TestAMailboxAwaitingReauthKeepsItsLabelAsTheSeatsOwn(t *testing.T) {
 // The review-queue accept of a seat's address keeps the ledger `real` with the
 // seat reason, creates nothing, and releases none of the held mail.
 func TestAcceptingASeatAddressInTheReviewQueueCreatesNothingAndReleasesNothing(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const address = "rep2.private@home.example"
 	connectSeatMailbox(t, e, e.Rep2, address, "shared")
@@ -409,6 +417,7 @@ func TestAcceptingASeatAddressInTheReviewQueueCreatesNothingAndReleasesNothing(t
 // that address must wait for it and then refuse. Without the shared lock the
 // check mints the contact first.
 func TestACounterpartyCheckWaitsForAnAliasClaimInFlight(t *testing.T) {
+	t.Parallel()
 	for name, spelling := range map[string]struct{ claimed, checked string }{
 		"one spelling":          {"rep1.second@home.example", "rep1.second@home.example"},
 		"another case":          {"Rep1.Second@Home.Example", "rep1.second@home.example"},
@@ -491,6 +500,7 @@ func claimInFlight(t *testing.T, e *integration.Env, address string) (release fu
 // waits for the claim. The ledger then asks nothing about the address, and no
 // participant row names it as an outside party.
 func TestACaptureWaitsForAnAliasClaimOfItsSender(t *testing.T) {
+	t.Parallel()
 	e := setupWithOwnMailbox(t)
 	const alias = "rep1.home@home.example"
 	release, claimed := claimInFlight(t, e, alias)
@@ -537,6 +547,7 @@ func TestACaptureWaitsForAnAliasClaimOfItsSender(t *testing.T) {
 // takes the address's check lock first, so the claim waits for it. The claim
 // then settles the row instead of leaving an open review behind.
 func TestAnAliasClaimSettlesARowRetiringToUnsure(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := context.Background()
 	const alias = "rep1.retiring@home.example"

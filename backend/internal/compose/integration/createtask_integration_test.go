@@ -16,6 +16,7 @@ import (
 )
 
 func TestATaskCreatedThroughItsOwnDoorIsATaskOnTheTimeline(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	stages := apptest.DiscoverSeededPipeline(t, e)

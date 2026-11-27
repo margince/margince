@@ -337,9 +337,9 @@ func purgeDerivedTraces(ctx context.Context, tx pgx.Tx, contactID ids.ContactID,
 	}
 	hashes := make([]string, 0, len(emails))
 	for _, email := range emails {
-		hashes = append(hashes, storekit.SuppressionHash(email))
+		hashes = append(hashes, storekit.SuppressionHash(ctx, email))
 	}
-	if err := armSuppression(ctx, tx, "email", hashes, storekit.SuppressionKeyID()); err != nil {
+	if err := armSuppression(ctx, tx, "email", hashes, storekit.SuppressionKeyID(ctx)); err != nil {
 		return 0, 0, err
 	}
 	return rawPurged, aiPayloadsPurged, nil

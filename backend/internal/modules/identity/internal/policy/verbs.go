@@ -66,9 +66,10 @@ func RequiresRead(object string) bool {
 	return slices.Contains(OfferedVerbs(object), principal.ActionRead)
 }
 
-// OfferedVerbsByObject is OfferedVerbs for every object a role may be granted.
-func OfferedVerbsByObject() map[string][]principal.Action {
-	objects := append(slices.Clone(coreObjects), RegisteredObjects()...)
+// OfferedVerbsByObject is OfferedVerbs for every object a role may be granted
+// under vocabulary.
+func OfferedVerbsByObject(vocabulary Vocabulary) map[string][]principal.Action {
+	objects := append(slices.Clone(coreObjects), vocabulary.Registered()...)
 	out := make(map[string][]principal.Action, len(objects))
 	for _, object := range objects {
 		out[object] = OfferedVerbs(object)

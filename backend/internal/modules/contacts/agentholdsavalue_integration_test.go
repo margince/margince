@@ -34,6 +34,7 @@ func (e *dedupeEnv) asUsersAgent(t *testing.T) context.Context {
 }
 
 func TestASiteReadLeavesTheDescriptionAUsersAgentWrote(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	company, err := e.store.CreateCompany(e.as(), CreateCompanyInput{DisplayName: "Agent Held GmbH", Source: "manual"})
 	if err != nil {
@@ -57,6 +58,7 @@ func TestASiteReadLeavesTheDescriptionAUsersAgentWrote(t *testing.T) {
 }
 
 func TestALogoIsHeldByAUsersAgentAndNotByAutomaticWork(t *testing.T) {
+	t.Parallel()
 	passport := "agent:" + ids.NewV7().String()
 	for stamp, want := range map[string]bool{passport: true, "agent:enrich": false} {
 		t.Run(stamp, func(t *testing.T) {
@@ -84,6 +86,7 @@ func TestALogoIsHeldByAUsersAgentAndNotByAutomaticWork(t *testing.T) {
 }
 
 func TestATechnicalValueAUsersAgentCorrectedIsNotAReplacedMachineValue(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := seedTechnicalCompany(ctx, t, e, "Entschieden GmbH", "entschieden.de")
@@ -126,6 +129,7 @@ func TestATechnicalValueAUsersAgentCorrectedIsNotAReplacedMachineValue(t *testin
 }
 
 func TestTheRequesterVatNumberTrustsAUsersAgentAndNotAutomaticWork(t *testing.T) {
+	t.Parallel()
 	passport := "agent:" + ids.NewV7().String()
 	for name, tc := range map[string]struct {
 		source, stamp, want string
@@ -159,6 +163,7 @@ func TestTheRequesterVatNumberTrustsAUsersAgentAndNotAutomaticWork(t *testing.T)
 }
 
 func TestAnAnchorLogoNamesTheAgentThatSetIt(t *testing.T) {
+	t.Parallel()
 	e := newAnchorEnv(t)
 	actor, ok := principal.Actor(e.ctx)
 	if !ok {
@@ -188,6 +193,7 @@ func TestAnAnchorLogoNamesTheAgentThatSetIt(t *testing.T) {
 }
 
 func TestAColleaguesWorkCountsThroughTheirAgentAndNotThroughAutomaticWork(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	var before time.Time
 	worked := func(t *testing.T, id ids.ContactID) bool {

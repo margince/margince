@@ -18,6 +18,7 @@ import (
 )
 
 func TestACardPressRepeatedUnderOneKeyCoinsOneTag(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	registry := compose.NewRegistry(e.Pool, compose.SendPath{})
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, AdminPerms)

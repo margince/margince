@@ -46,6 +46,7 @@ func (e *introEnv) readableBySQL(reader context.Context, t *testing.T, id ids.UU
 // ReadableSQL and load are one rule in two spellings. Every origin, party and
 // contact visibility must get the same answer from both.
 func TestReadableSQLAgreesWithLoad(t *testing.T) {
+	t.Parallel()
 	e := setupIntro(t)
 	askSeen, err := e.store.Create(e.asUser(e.requester), e.ask())
 	if err != nil {

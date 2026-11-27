@@ -121,6 +121,7 @@ func onlyQuestion(t *testing.T, edition crmcontracts.ReportingEdition) crmcontra
 // later erases it. Under one, the sender reads back the answer they were
 // given, resting on the records it counted.
 func TestASentEditionKeepsItsQuestionAnswerUnderARetentionPolicy(t *testing.T) {
+	t.Parallel()
 	q := newQuestionEditions(t)
 
 	unkept := onlyQuestion(t, q.send(t))
@@ -150,6 +151,7 @@ func TestASentEditionKeepsItsQuestionAnswerUnderARetentionPolicy(t *testing.T) {
 // A reader who may measure only their own deals cannot ask about Rep1's, so
 // nothing of the answer Rep1 was given reaches them.
 func TestAKeptAnswerShowsNothingToAReaderWhoMayNotAskIt(t *testing.T) {
+	t.Parallel()
 	q := newQuestionEditions(t)
 	q.keepForAYear(t)
 	edition := q.send(t)
@@ -179,6 +181,7 @@ func TestAKeptAnswerShowsNothingToAReaderWhoMayNotAskIt(t *testing.T) {
 // expiring. The chart contributions are removed first, so only the answer's
 // records can hold it. Once the hold lifts, expiry removes the answer.
 func TestALegalHoldBehindAKeptAnswerHoldsItsEdition(t *testing.T) {
+	t.Parallel()
 	q := newQuestionEditions(t)
 	q.keepForAYear(t)
 	edition := q.send(t)
@@ -220,6 +223,7 @@ func TestALegalHoldBehindAKeptAnswerHoldsItsEdition(t *testing.T) {
 // Subject access hands over each kept answer row a record about the subject
 // was counted in, and the subject's erasure removes the edition's answers.
 func TestASubjectsKeptAnswersAreHandedOverAndErased(t *testing.T) {
+	t.Parallel()
 	q := newQuestionEditions(t)
 	q.keepForAYear(t)
 	edition := q.send(t)
@@ -262,6 +266,7 @@ func privacyController(e *forecastEnv) context.Context {
 // reader's population. Here one counted deal moves to another owner and leaves
 // the report's scope. Even the sender is then shown nothing of the answer.
 func TestAKeptAnswerIsWithheldOnceOneOfItsRecordsLeavesTheReadersReach(t *testing.T) {
+	t.Parallel()
 	q := newQuestionEditions(t)
 	q.keepForAYear(t)
 	edition := q.send(t)
@@ -277,6 +282,7 @@ func TestAKeptAnswerIsWithheldOnceOneOfItsRecordsLeavesTheReadersReach(t *testin
 // A record that stays readable but moves to another group no longer vouches
 // for its row. The kept answer is then withheld.
 func TestAKeptAnswerIsWithheldOnceOneOfItsRecordsChangesGroup(t *testing.T) {
+	t.Parallel()
 	q := newQuestionEditions(t)
 	q.keepForAYear(t)
 	edition := q.send(t)
@@ -319,6 +325,7 @@ const (
 // over the bound that the row limit leaves out does not stop the answer being
 // kept.
 func TestTheRecordBoundCountsOnlyTheRecordsBehindShownRows(t *testing.T) {
+	t.Parallel()
 	q := newQuestionEditionsShowing(t, new(1))
 	q.keepForAYear(t)
 	q.seedCompanyDeals(t, smallCompany, 6)
@@ -339,6 +346,7 @@ func TestTheRecordBoundCountsOnlyTheRecordsBehindShownRows(t *testing.T) {
 
 // A shown row over the bound still stops the answer being kept.
 func TestAnAnswerShowingMoreRecordsThanAnEditionKeepsIsNotKept(t *testing.T) {
+	t.Parallel()
 	q := newQuestionEditionsShowing(t, new(2))
 	q.keepForAYear(t)
 	q.seedCompanyDeals(t, smallCompany, 6)

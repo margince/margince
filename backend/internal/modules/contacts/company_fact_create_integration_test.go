@@ -47,6 +47,7 @@ func factRow(ctx context.Context, t *testing.T, e *dedupeEnv, companyID ids.Comp
 }
 
 func TestAStatedFactIsHumanOwnedFromBirth(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := seedCompanyWithEvidence(ctx, t, e)
@@ -78,6 +79,7 @@ func TestAStatedFactIsHumanOwnedFromBirth(t *testing.T) {
 }
 
 func TestAStatedFactDerivesItsOwnDedupeKey(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := seedCompanyWithEvidence(ctx, t, e)
@@ -106,6 +108,7 @@ func TestAStatedFactDerivesItsOwnDedupeKey(t *testing.T) {
 }
 
 func TestStatingAFactTheCompanyAlreadyStatesIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := seedCompanyWithEvidence(ctx, t, e)
@@ -128,6 +131,7 @@ func TestStatingAFactTheCompanyAlreadyStatesIsRefused(t *testing.T) {
 }
 
 func TestAFactOutsideTheVocabularyIsRefusedBeforeTheCheckConstraint(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := seedCompanyWithEvidence(ctx, t, e)
@@ -153,6 +157,7 @@ func TestAFactOutsideTheVocabularyIsRefusedBeforeTheCheckConstraint(t *testing.T
 }
 
 func TestRemovingAFactLeavesTheRestOfTheEvidenceStanding(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := seedCompanyWithEvidence(ctx, t, e)
@@ -182,6 +187,7 @@ func TestRemovingAFactLeavesTheRestOfTheEvidenceStanding(t *testing.T) {
 }
 
 func TestRemovingAFactRecordsWhatWasRemoved(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := seedCompanyWithEvidence(ctx, t, e)
@@ -225,6 +231,7 @@ func TestRemovingAFactRecordsWhatWasRemoved(t *testing.T) {
 }
 
 func TestRemovingAFactHonoursTheVersionTheCallerSaw(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := seedCompanyWithEvidence(ctx, t, e)
@@ -244,6 +251,7 @@ func TestRemovingAFactHonoursTheVersionTheCallerSaw(t *testing.T) {
 }
 
 func TestRemovingAFactThatIsNotThereIsNotFound(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := seedCompanyWithEvidence(ctx, t, e)

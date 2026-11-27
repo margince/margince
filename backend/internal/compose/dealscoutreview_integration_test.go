@@ -28,6 +28,7 @@ import (
 )
 
 func TestAProposalIsNamedByAWordOfItsFileName(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	const pdf = "application/pdf"
 	cases := []struct {
@@ -73,6 +74,7 @@ func TestAProposalIsNamedByAWordOfItsFileName(t *testing.T) {
 }
 
 func TestTheCapChoosesAmongCompaniesWhoseEvidenceQualifies(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	acme := e.SeedCompany(t, "Acme GmbH", nil)
 	dana := e.employee(t, "Dana Buyer", acme)
@@ -108,6 +110,7 @@ func (e *scoutEnv) withoutGrant(user, team ids.UUID, object string) context.Cont
 }
 
 func TestAReaderWithoutTheGrantForAKindOfEvidenceSeesNoSuggestionCitingIt(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	met := e.SeedCompany(t, "Met GmbH", nil)
 	dana := e.employee(t, "Dana Buyer", met)
@@ -142,6 +145,7 @@ func TestAReaderWithoutTheGrantForAKindOfEvidenceSeesNoSuggestionCitingIt(t *tes
 }
 
 func TestAcceptingAfterADealWasOpenedByHandOpensNoSecondDeal(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	acme := e.SeedCompany(t, "Acme GmbH", nil)
 	dana := e.employee(t, "Dana Buyer", acme)
@@ -170,6 +174,7 @@ func TestAcceptingAfterADealWasOpenedByHandOpensNoSecondDeal(t *testing.T) {
 }
 
 func TestAMessageCitedByALiveSignalGoingAwayRetiresTheSuggestion(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	acme := e.SeedCompany(t, "Acme GmbH", nil)
 	cited, buyer := e.buyingEmail(t, acme, e.daysAgo(6))
@@ -190,6 +195,7 @@ func TestAMessageCitedByALiveSignalGoingAwayRetiresTheSuggestion(t *testing.T) {
 }
 
 func TestAcceptingWithNoAmountDropsTheSuggestedOne(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	priced := e.SeedCompany(t, "Priced GmbH", nil)
 	proposal := e.document(t, e.email(t, "Angebot", "outbound", priced, e.daysAgo(2)), "Angebot.pdf", "application/pdf")

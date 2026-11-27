@@ -11,7 +11,6 @@ package unitsql_test
 import (
 	"context"
 	"errors"
-	"os"
 	"strings"
 	"testing"
 
@@ -29,12 +28,9 @@ const ownTable = "ext.ext_alpha_scratch"
 // unit's own table in place. configure adjusts the connection, as a test needs.
 func appConn(t *testing.T, configure func(*pgx.ConnConfig)) *pgx.Conn {
 	t.Helper()
+	db := testdb.For(t)
 	ctx := context.Background()
-	ownerDSN, appDSN := os.Getenv("MARGINCE_TEST_DSN"), os.Getenv("MARGINCE_TEST_APP_DSN")
-	if ownerDSN == "" || appDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
-	owner, err := pgx.Connect(ctx, ownerDSN)
+	owner, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -43,11 +39,8 @@ func appConn(t *testing.T, configure func(*pgx.ConnConfig)) *pgx.Conn {
 			t.Errorf("closing the owner connection: %v", err)
 		}
 	}()
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
 	unitsqltest.ScratchTable(t, ownTable)
-	config, err := pgx.ParseConfig(appDSN)
+	config, err := pgx.ParseConfig(db.AppDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -86,6 +79,7 @@ func rowCount(t *testing.T, app *pgx.Conn) int {
 }
 
 func TestAUnitReadsAndWritesItsOwnTable(t *testing.T) {
+	t.Parallel()
 	app := appConn(t, asConfigured)
 	err := inTx(t, app, func(ctx context.Context, sql unitsql.Tx, _ pgx.Tx) error {
 		if _, err := sql.Exec(ctx, `INSERT INTO `+ownTable+` (id, body) VALUES (gen_random_uuid(), $1)`, "kept"); err != nil {
@@ -115,6 +109,7 @@ func TestAUnitReadsAndWritesItsOwnTable(t *testing.T) {
 // Every statement here names a table outside schema ext. The last two build
 // the name at run time, which the static gate on unit SQL cannot read.
 func TestAStatementOnACoreTableIsRefused(t *testing.T) {
+	t.Parallel()
 	app := appConn(t, asConfigured)
 	for name, run := range map[string]func(ctx context.Context, sql unitsql.Tx) error{
 		"Exec": func(ctx context.Context, sql unitsql.Tx) error {
@@ -163,6 +158,7 @@ func TestAStatementOnACoreTableIsRefused(t *testing.T) {
 // so the check after the statement sees nothing. Each call takes one, even on
 // a connection whose default is the simple protocol, which runs a string.
 func TestAStringOfStatementsIsRefused(t *testing.T) {
+	t.Parallel()
 	app := appConn(t, func(c *pgx.ConnConfig) { c.DefaultQueryExecMode = pgx.QueryExecModeSimpleProtocol })
 	escape := `RESET ROLE; INSERT INTO ` + ownTable + ` (id) VALUES (gen_random_uuid()); SET LOCAL ROLE ` + unitsql.Role
 	if err := inTx(t, app, func(ctx context.Context, sql unitsql.Tx, _ pgx.Tx) error {
@@ -179,6 +175,7 @@ func TestAStringOfStatementsIsRefused(t *testing.T) {
 // A statement that ends in another role is caught, and its transaction cannot
 // commit, even when the unit swallows the error.
 func TestAStatementThatLeavesTheRoleCannotCommit(t *testing.T) {
+	t.Parallel()
 	app := appConn(t, asConfigured)
 	err := inTx(t, app, func(ctx context.Context, sql unitsql.Tx, _ pgx.Tx) error {
 		_, stmtErr := sql.Exec(ctx, `DO $$ BEGIN SET LOCAL ROLE margince_app; INSERT INTO `+ownTable+` (id) VALUES (gen_random_uuid()); END $$`)
@@ -198,6 +195,7 @@ func TestAStatementThatLeavesTheRoleCannotCommit(t *testing.T) {
 // The transaction is back on the application role after each verb. That holds
 // on success, on an empty match, and on an error the client raises before sending.
 func TestTheRoleIsLiftedAfterEveryStatement(t *testing.T) {
+	t.Parallel()
 	app := appConn(t, asConfigured)
 	err := inTx(t, app, func(ctx context.Context, sql unitsql.Tx, raw pgx.Tx) error {
 		var body string
@@ -264,6 +262,7 @@ func (c *cancelAfter) TraceQueryEnd(_ context.Context, _ *pgx.Conn, _ pgx.TraceQ
 // A check that cannot run proves nothing, so the transaction must not commit,
 // even when the unit swallows the error its statement answered.
 func TestACancelledCheckRefusesTheCommit(t *testing.T) {
+	t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	write := `INSERT INTO ` + ownTable + ` (id) VALUES (gen_random_uuid())`

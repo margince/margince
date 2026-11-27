@@ -149,6 +149,7 @@ func addParty(t *testing.T, e *SearchEnv, meeting ids.UUID, role string, contact
 // The headline case: a meeting that names a deal is prepped against the deal,
 // and everything else it named is reported rather than dropped.
 func TestAMeetingPrepsAgainstItsLinkedDealAndNamesTheRest(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	f := seedMeetingFixture(t, e)
 	meeting := seedMeeting(t, e, "Renewal review")
@@ -204,6 +205,7 @@ func TestAMeetingPrepsAgainstItsLinkedDealAndNamesTheRest(t *testing.T) {
 // With no links at all, the contacts on the invitation are the subjects — and
 // the one who convened it is the subject the prep is built around.
 func TestAMeetingWithOnlyAttendeesPrepsAgainstTheOrganizer(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	f := seedMeetingFixture(t, e)
 	meeting := seedMeeting(t, e, "Intro call")
@@ -228,6 +230,7 @@ func TestAMeetingWithOnlyAttendeesPrepsAgainstTheOrganizer(t *testing.T) {
 // so a prep against one names the lead rather than nothing, even though a lead
 // has no timeline of its own to walk.
 func TestAMeetingLinkedOnlyToALeadPrepsAgainstTheLead(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	seedMeetingFixture(t, e)
 	lead := e.SeedID(t, `INSERT INTO lead (id, owner_id, full_name, source, captured_by)
@@ -255,6 +258,7 @@ func TestAMeetingLinkedOnlyToALeadPrepsAgainstTheLead(t *testing.T) {
 // An event this workspace holds no record for still answers, and the answer is
 // who was on it. Silence would be the one response an agent cannot act on.
 func TestAMeetingThatNamesNoRecordStillNamesWhoWasOnIt(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	seedMeetingFixture(t, e)
 	meeting := seedMeeting(t, e, "Cold intro")
@@ -281,6 +285,7 @@ func TestAMeetingThatNamesNoRecordStillNamesWhoWasOnIt(t *testing.T) {
 // readable by both reps — the activity link-walk scope is an ANY-link rule —
 // and neither may learn anything about the other team's records through it.
 func TestAMeetingNeverDisclosesTheRecordBehindALinkTheCallerCannotSee(t *testing.T) {
+	t.Parallel()
 	// A record the caller cannot see that would NOT have been the subject
 	// anyway: it must be absent, not merely unchosen. This is the half a
 	// prepared_for assertion cannot reach — an unprobed walk reports it under
@@ -335,6 +340,7 @@ func TestAMeetingNeverDisclosesTheRecordBehindALinkTheCallerCannotSee(t *testing
 // reclassifying them as "unresolved" would put their email in the answer as
 // free text, disclosing through a summary exactly what the row scope withheld.
 func TestAMeetingNeverDisclosesAnAttendeeTheCallerCannotSee(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	f := seedMeetingFixture(t, e)
 	// Contacts are readable by every seat, so the hidden attendee is a
@@ -358,6 +364,7 @@ func TestAMeetingNeverDisclosesAnAttendeeTheCallerCannotSee(t *testing.T) {
 // unmatched address either — reporting them would tell an agent to go resolve
 // someone who already works here.
 func TestAColleagueOnTheInvitationIsNotAnUnresolvedAttendee(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	f := seedMeetingFixture(t, e)
 	meeting := seedMeeting(t, e, "Internal prep")
@@ -378,6 +385,7 @@ func TestAColleagueOnTheInvitationIsNotAnUnresolvedAttendee(t *testing.T) {
 // precedence ever saw them, and the prep would be built around whichever
 // attendee happened to sort first.
 func TestTheOrganizerSurvivesAnOversizedInvitation(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	seedMeetingFixture(t, e)
 	meeting := seedMeeting(t, e, "All hands with the customer")
@@ -430,6 +438,7 @@ func (e *SearchEnv) readerOf(objects ...string) context.Context {
 // read events at all. A caller holding no activity grant is denied the type
 // rather than handed the ones their row scope would have admitted.
 func TestAnEventIsRefusedToACallerWithNoActivityGrant(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	f := seedMeetingFixture(t, e)
 	meeting := seedMeeting(t, e, "Renewal review")
@@ -446,6 +455,7 @@ func TestAnEventIsRefusedToACallerWithNoActivityGrant(t *testing.T) {
 // means the prep moves to the next tier it may read, not that it names the
 // deal anyway.
 func TestASubjectTypeTheCallerMayNotReadIsNeverNamed(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	f := seedMeetingFixture(t, e)
 	meeting := seedMeeting(t, e, "Renewal review")
@@ -475,6 +485,7 @@ func TestASubjectTypeTheCallerMayNotReadIsNeverNamed(t *testing.T) {
 // they are connected. Without this the employer hop would be a way to learn
 // every edge in the workspace by asking for a meeting prep.
 func TestAnEmployerIsNotNamedToACallerWithNoEdgeGrant(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	f := seedMeetingFixture(t, e)
 	meeting := seedMeeting(t, e, "Renewal review")
@@ -539,6 +550,7 @@ func assertNoTextAnywhere(t *testing.T, assembled retrieval.Context, forbidden .
 // An event reachable through no readable link is not found — the same answer
 // any other anchor gives, never a leak of who was in someone else's meeting.
 func TestAnEventOutsideTheCallersScopeIsNotFound(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	seedMeetingFixture(t, e)
 	meeting := seedMeeting(t, e, "Other team only")
@@ -576,6 +588,7 @@ func (e *SearchEnv) teamRepWhoReadsProjects(user, team ids.UUID) context.Context
 // An archived event answers the same not-found, so a prep never re-serves a
 // meeting every other read has stopped returning.
 func TestAnArchivedEventIsNotFound(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	seedMeetingFixture(t, e)
 	meeting := seedMeeting(t, e, "Cancelled review")
@@ -591,6 +604,7 @@ func TestAnArchivedEventIsNotFound(t *testing.T) {
 // An event id nobody wrote answers not-found rather than an empty picture that
 // reads as a meeting with nothing in it.
 func TestAnUnknownEventIsNotFound(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	if _, err := prepFor(e.Admin(), t, e, ids.NewV7()); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("preparing for an event that does not exist = %v, want not-found", err)
@@ -623,6 +637,7 @@ func sectionNames(assembled retrieval.Context) []string {
 // Asserting the SUMMARY rather than the section being present is deliberate: a
 // walk emitting an empty recent_touches would satisfy a check on the sections.
 func TestALeadAnchorWalksItsOwnTimeline(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	lead := e.SeedID(t, `INSERT INTO lead (id, owner_id, full_name, company_name, status, source, captured_by)
 		VALUES ($1, $2, 'Bruno Kellner', 'Kellner Anlagenbau', 'new', 'manual', 'human:x')`, e.Rep1)
@@ -659,6 +674,7 @@ func TestALeadAnchorWalksItsOwnTimeline(t *testing.T) {
 // why naming it is worth a section: the deal is what they came for, and the
 // lead is what else was on the call.
 func TestALeadSharingAnActivityWithTheAnchorIsReportedAsANeighbour(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	f := seedMeetingFixture(t, e)
 	lead := e.SeedID(t, `INSERT INTO lead (id, owner_id, full_name, company_name, status, source, captured_by)

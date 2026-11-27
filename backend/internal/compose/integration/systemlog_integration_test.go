@@ -37,6 +37,7 @@ func connectorCtx(e *Env, onBehalf ids.UUID) context.Context {
 }
 
 func TestLogSystem_writesConnectorRowWithDerivedActor(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := connectorCtx(e, e.Rep1)
 	detail := map[string]any{"reason": "personal_exclusion", "source_system": "gmail", "source_id": "msg-1"}
@@ -93,6 +94,7 @@ func TestLogSystem_writesConnectorRowWithDerivedActor(t *testing.T) {
 }
 
 func TestLogSystem_isAppendOnly(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
 

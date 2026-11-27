@@ -225,9 +225,11 @@ func joinNotes(notes ...string) string {
 }
 
 // dailyScale reads the corpus multiplier; 1 is the published mid-market tier.
-// A value that is not a positive number is an error, never a silent default.
-func dailyScale() (float64, error) {
-	raw := os.Getenv(dailyScaleEnv)
+func dailyScale() (float64, error) { return dailyScaleOf(os.Getenv(dailyScaleEnv)) }
+
+// dailyScaleOf is the multiplier raw names. A value that is not a positive
+// number is an error, never a silent default.
+func dailyScaleOf(raw string) (float64, error) {
 	if raw == "" {
 		return 1, nil
 	}
@@ -239,6 +241,7 @@ func dailyScale() (float64, error) {
 }
 
 func TestADailyFlowWithinItsBudgetPasses(t *testing.T) {
+	t.Parallel()
 	v, issue := JudgeDaily("lists", "lists_contacts", 90*time.Millisecond, Perf2Budget, 30)
 	if v != DailyWithin || issue != 0 {
 		t.Fatalf("got %q #%d, want within budget and no issue", v, issue)
@@ -246,6 +249,7 @@ func TestADailyFlowWithinItsBudgetPasses(t *testing.T) {
 }
 
 func TestAKnownSlowFlowIsRecordedAgainstItsIssueAndPasses(t *testing.T) {
+	t.Parallel()
 	v, issue := JudgeDaily("worklist", "worklist", 3*time.Second, Perf8Budget, 30)
 	if v != DailyOverKnown || issue != 10779 {
 		t.Fatalf("got %q #%d, want over budget against #10779", v, issue)
@@ -256,6 +260,7 @@ func TestAKnownSlowFlowIsRecordedAgainstItsIssueAndPasses(t *testing.T) {
 }
 
 func TestAnUnlistedSlowFlowFailsTheRunNamingTheFlow(t *testing.T) {
+	t.Parallel()
 	v, _ := JudgeDaily("record_open", "record_open_deal", 400*time.Millisecond, 100*time.Millisecond, 30)
 	err := DailyGate([]DailyResult{{Flow: "record_open", Seat: "manager", Verdict: v}}, 1)
 	if v != DailyOver || err == nil || !strings.Contains(err.Error(), "record_open") {
@@ -264,12 +269,14 @@ func TestAnUnlistedSlowFlowFailsTheRunNamingTheFlow(t *testing.T) {
 }
 
 func TestAFlowWithNoSamplesIsNoDataNotAPass(t *testing.T) {
+	t.Parallel()
 	if v, _ := JudgeDaily("home", "home_digest", 0, Perf8Budget, 0); v != DailyNoData {
 		t.Fatalf("got %q, want no data", v)
 	}
 }
 
 func TestAServerErrorFailsEvenWithinBudget(t *testing.T) {
+	t.Parallel()
 	err := DailyGate([]DailyResult{{Flow: "contact_360", Seat: "rep", Verdict: DailyWithin, Status5xx: 1}}, 1)
 	if err == nil || !strings.Contains(err.Error(), "contact_360") {
 		t.Fatalf("got %v; a 5xx must fail the run and name the flow", err)
@@ -277,6 +284,7 @@ func TestAServerErrorFailsEvenWithinBudget(t *testing.T) {
 }
 
 func TestA422IsAllowedOnlyWhereListed(t *testing.T) {
+	t.Parallel()
 	ok := DailyGate([]DailyResult{{Flow: "palette_search_prefix", Seat: "rep", Verdict: DailyOverKnown, Issue: 7037, Status422: 3, Allow422: true}}, 1)
 	bad := DailyGate([]DailyResult{{Flow: "results_search", Seat: "rep", Verdict: DailyWithin, Status422: 1}}, 1)
 	if ok != nil || bad == nil || !strings.Contains(bad.Error(), "results_search") {
@@ -285,6 +293,7 @@ func TestA422IsAllowedOnlyWhereListed(t *testing.T) {
 }
 
 func TestAListedFlowBackUnderBudgetForEverySeatAsksForItsRowToGo(t *testing.T) {
+	t.Parallel()
 	results := []DailyResult{
 		{Flow: "worklist", Seat: "rep", Verdict: DailyWithin},
 		{Flow: "worklist", Seat: "manager", Verdict: DailyWithin},
@@ -300,6 +309,7 @@ func TestAListedFlowBackUnderBudgetForEverySeatAsksForItsRowToGo(t *testing.T) {
 }
 
 func TestAListedFlowStillOverForOneSeatKeepsItsRow(t *testing.T) {
+	t.Parallel()
 	got := advisoryText([]DailyResult{
 		{Flow: "worklist", Seat: "rep", Verdict: DailyWithin},
 		{Flow: "worklist", Seat: "manager", Verdict: DailyOverKnown, Issue: 10779},
@@ -310,18 +320,21 @@ func TestAListedFlowStillOverForOneSeatKeepsItsRow(t *testing.T) {
 }
 
 func TestAListedFlowWithNoMeasuredSeatKeepsItsRow(t *testing.T) {
+	t.Parallel()
 	if got := advisoryText([]DailyResult{{Flow: "worklist", Seat: "rep", Verdict: DailyNoData}}, 1); got != "" {
 		t.Fatalf("a flow nobody measured says nothing about its issue: %q", got)
 	}
 }
 
 func TestADevelopmentScaleRunNeverAsksForARowToGo(t *testing.T) {
+	t.Parallel()
 	if got := advisoryText([]DailyResult{{Flow: "worklist", Seat: "rep", Verdict: DailyWithin}}, 0.05); got != "" {
 		t.Fatalf("a development-scale corpus cannot clear a known issue: %q", got)
 	}
 }
 
 func TestARowLevelEntryMarksOnlyItsRow(t *testing.T) {
+	t.Parallel()
 	listed, issue := JudgeDaily("home", "home_worklist", 3*time.Second, Perf8Budget, 30)
 	sibling, _ := JudgeDaily("home", "home_digest", 3*time.Second, Perf8Budget, 30)
 	if listed != DailyOverKnown || issue != 10779 || sibling != DailyOver {
@@ -337,6 +350,7 @@ func TestARowLevelEntryMarksOnlyItsRow(t *testing.T) {
 }
 
 func TestAFlowLevelEntryCoversEveryRowOfItsFlow(t *testing.T) {
+	t.Parallel()
 	for _, row := range []string{"worklist", "worklist_handled"} {
 		if v, issue := JudgeDaily("worklist", row, 3*time.Second, Perf8Budget, 30); v != DailyOverKnown || issue != 10779 {
 			t.Errorf("%s: got %q #%d, want over budget against #10779", row, v, issue)
@@ -345,6 +359,7 @@ func TestAFlowLevelEntryCoversEveryRowOfItsFlow(t *testing.T) {
 }
 
 func TestARowEntryBackUnderBudgetAsksForItsRowToGo(t *testing.T) {
+	t.Parallel()
 	got := advisoryText([]DailyResult{
 		{Flow: "home", Row: "home_worklist", Seat: "rep", Verdict: DailyWithin},
 		{Flow: "home", Row: "home_worklist", Seat: "manager", Verdict: DailyWithin},
@@ -358,26 +373,26 @@ func TestARowEntryBackUnderBudgetAsksForItsRowToGo(t *testing.T) {
 }
 
 func TestTheDailyScaleDefaultsToThePublishedTier(t *testing.T) {
-	t.Setenv(dailyScaleEnv, "")
-	if scale, err := dailyScale(); err != nil || scale != 1 {
+	t.Parallel()
+	if scale, err := dailyScaleOf(""); err != nil || scale != 1 {
 		t.Fatalf("got %v, %v; want 1 and no error", scale, err)
 	}
-	t.Setenv(dailyScaleEnv, "0.05")
-	if scale, err := dailyScale(); err != nil || scale != 0.05 {
+	if scale, err := dailyScaleOf("0.05"); err != nil || scale != 0.05 {
 		t.Fatalf("got %v, %v; want 0.05 and no error", scale, err)
 	}
 }
 
 func TestTheDailyScaleRefusesAValueThatSeedsNothing(t *testing.T) {
+	t.Parallel()
 	for _, raw := range []string{"0", "-1", "half"} {
-		t.Setenv(dailyScaleEnv, raw)
-		if _, err := dailyScale(); err == nil || !strings.Contains(err.Error(), dailyScaleEnv) {
+		if _, err := dailyScaleOf(raw); err == nil || !strings.Contains(err.Error(), dailyScaleEnv) {
 			t.Fatalf("%s=%q: got %v; want an error naming the variable", dailyScaleEnv, raw, err)
 		}
 	}
 }
 
 func TestTheMorningLoadIsGatedOnItsOwnBudget(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		elapsed time.Duration
 		verdict DailyVerdict
@@ -399,6 +414,7 @@ func TestTheMorningLoadIsGatedOnItsOwnBudget(t *testing.T) {
 }
 
 func TestARefusedRowNeverCountsAsBackUnderBudget(t *testing.T) {
+	t.Parallel()
 	got := advisoryText([]DailyResult{
 		{Flow: "palette_search_prefix", Seat: "rep", Verdict: DailyWithin, Status422: 4, Allow422: true},
 		{Flow: "palette_search_prefix", Seat: "manager", Verdict: DailyWithin},
@@ -409,6 +425,7 @@ func TestARefusedRowNeverCountsAsBackUnderBudget(t *testing.T) {
 }
 
 func TestARowUnderTheSampleFloorIsNoDataNeverAVerdict(t *testing.T) {
+	t.Parallel()
 	short := MeasurementFrom("LOAD-1", "morning_load_cheap_route", 0, 700*time.Millisecond, 0, Load1Budget, 14)
 	short.Verdict, short.KnownIssue = string(DailyOverKnown), 7068
 	rows := applySampleFloor([]dailyRow{
@@ -429,6 +446,7 @@ func TestARowUnderTheSampleFloorIsNoDataNeverAVerdict(t *testing.T) {
 }
 
 func TestACorpusWhoseMedianRepOwnsNoProjectIsRefused(t *testing.T) {
+	t.Parallel()
 	if missing := missingMedianKinds([]string{"deal", "company", "contact"}); !slices.Equal(missing, []string{"project"}) {
 		t.Fatalf("got %v; the flows open the median rep's own project, so a corpus without one must fail the pick", missing)
 	}
@@ -438,6 +456,7 @@ func TestACorpusWhoseMedianRepOwnsNoProjectIsRefused(t *testing.T) {
 }
 
 func TestOnlyAnOptionalCallsNotFoundIsNoData(t *testing.T) {
+	t.Parallel()
 	logo := dailyCall{Name: "logo", Path: "/v1/companies/1/logo", Optional: true}
 	if untimed, err := probeAbsent(logo, http.StatusNotFound, nil); !untimed || err != nil {
 		t.Fatalf("an optional 404 → untimed %v, err %v; want no data", untimed, err)
@@ -449,6 +468,7 @@ func TestOnlyAnOptionalCallsNotFoundIsNoData(t *testing.T) {
 }
 
 func TestOnlyAnAllowlistedRouteMayAnswerNotImplemented(t *testing.T) {
+	t.Parallel()
 	unwired := []byte(`{"code":"not_implemented","message":"not wired"}`)
 	for path, want := range map[string]bool{
 		"/v1/connectors":            true,
@@ -469,6 +489,7 @@ func TestOnlyAnAllowlistedRouteMayAnswerNotImplemented(t *testing.T) {
 }
 
 func TestOnlyTimedSamplesAreTallied(t *testing.T) {
+	t.Parallel()
 	failing := dailyFlow{Name: "contact_360"}
 	var tally dailyTally
 	_, err := dailySampling(1, func(counted bool) ([]time.Duration, error) {
@@ -481,6 +502,7 @@ func TestOnlyTimedSamplesAreTallied(t *testing.T) {
 }
 
 func TestTheProbeIsNeverTallied(t *testing.T) {
+	t.Parallel()
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 	}))
@@ -494,6 +516,7 @@ func TestTheProbeIsNeverTallied(t *testing.T) {
 }
 
 func TestAFirstLoadRefusalIsRecordedInItsNoteAndNeverFailsTheRun(t *testing.T) {
+	t.Parallel()
 	refused := firstTry{Status: 422, Body: []byte(`{"code":"query_too_broad","message":"too broad"}`), Elapsed: 5 * time.Second}
 	row := firstLoadRow(firstLoad{"PERF-10", "search_first_load", Perf10Budget, refused})
 	if row.Measurement.Note != "answered 422 query_too_broad after 5.0 s" || row.Measurement.P95Ms != 5000 {
@@ -508,6 +531,7 @@ func TestAFirstLoadRefusalIsRecordedInItsNoteAndNeverFailsTheRun(t *testing.T) {
 }
 
 func TestAFirstLoadServerErrorIsRecordedAndFailsTheRun(t *testing.T) {
+	t.Parallel()
 	broken := firstTry{Status: 503, Body: []byte(`upstream gone`), Elapsed: 1200 * time.Millisecond}
 	row := firstLoadRow(firstLoad{"PERF-8", "worklist_first_load", Perf8Budget, broken})
 	if row.Measurement.Note != "answered 503 after 1.2 s" || row.Measurement.Status5xx != 1 {
@@ -519,6 +543,7 @@ func TestAFirstLoadServerErrorIsRecordedAndFailsTheRun(t *testing.T) {
 }
 
 func TestAServedFirstLoadKeepsItsColdCacheNote(t *testing.T) {
+	t.Parallel()
 	row := firstLoadRow(firstLoad{"PERF-8", "worklist_first_load", Perf8Budget, firstTry{Status: 200, Elapsed: time.Second}})
 	if !strings.HasPrefix(row.Measurement.Note, "one connection dialled") || row.Result.Status5xx != 0 {
 		t.Fatalf("note %q status_5xx %d; want the cold-cache note and no error", row.Measurement.Note, row.Result.Status5xx)
@@ -526,6 +551,7 @@ func TestAServedFirstLoadKeepsItsColdCacheNote(t *testing.T) {
 }
 
 func TestEveryServerErrorFailsTheDailyGate(t *testing.T) {
+	t.Parallel()
 	for _, row := range []DailyResult{
 		{Flow: "morning_load", Row: "morning_load_cheap_route", Seat: "team", Verdict: DailyWithin, Status5xx: 1},
 		{Flow: "worklist", Row: "worklist", Seat: "rep", Verdict: DailyOverKnown, Issue: 10779, Status5xx: 1},
@@ -538,6 +564,7 @@ func TestEveryServerErrorFailsTheDailyGate(t *testing.T) {
 }
 
 func TestAListedRowJustUnderItsBudgetKeepsItsEntry(t *testing.T) {
+	t.Parallel()
 	got := advisoryText([]DailyResult{
 		{Flow: "worklist", Seat: "rep", Verdict: DailyWithin, P95: 500 * time.Millisecond, Budget: Perf8Budget},
 		{Flow: "worklist", Seat: "manager", Verdict: DailyWithin, P95: 820 * time.Millisecond, Budget: Perf8Budget},
@@ -548,6 +575,7 @@ func TestAListedRowJustUnderItsBudgetKeepsItsEntry(t *testing.T) {
 }
 
 func TestAListedRowWellUnderItsBudgetForEverySeatAsksForItsEntryToGo(t *testing.T) {
+	t.Parallel()
 	got := advisoryText([]DailyResult{
 		{Flow: "worklist", Seat: "rep", Verdict: DailyWithin, P95: 500 * time.Millisecond, Budget: Perf8Budget},
 		{Flow: "worklist", Seat: "manager", Verdict: DailyWithin, P95: 800 * time.Millisecond, Budget: Perf8Budget},
@@ -572,6 +600,7 @@ func steadyRound(perRow ...time.Duration) [][]time.Duration {
 }
 
 func TestAnUnlistedBreachIsJudgedOnASecondMeasurement(t *testing.T) {
+	t.Parallel()
 	for _, c := range []struct {
 		second time.Duration
 		note   string
@@ -598,6 +627,7 @@ func TestAnUnlistedBreachIsJudgedOnASecondMeasurement(t *testing.T) {
 }
 
 func TestOnlyAnUnlistedGatedBreachIsMeasuredAgain(t *testing.T) {
+	t.Parallel()
 	specs := []dailyRowSpec{
 		{flow: "lists", name: "lists_contacts", budget: Perf2Budget, gated: true},
 		{flow: "home", name: "home_worklist", budget: Perf8Budget, gated: true},
@@ -614,6 +644,7 @@ func TestOnlyAnUnlistedGatedBreachIsMeasuredAgain(t *testing.T) {
 }
 
 func TestOnlyTheBreachedRowOfARoundTakesTheSecondMeasurement(t *testing.T) {
+	t.Parallel()
 	specs := []dailyRowSpec{
 		{flow: "search_to_deal", name: "search_to_deal_search", budget: Perf10Budget, gated: true},
 		{flow: "search_to_deal", name: "search_to_deal_page", budget: perf1RecordOpenBudget, gated: true},

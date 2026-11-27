@@ -59,6 +59,7 @@ func redactFor(ctx context.Context, t *testing.T, tx pgx.Tx, subject ids.UUID) {
 }
 
 func TestRedactingAStakeholderKeepsTheRestOfTheLegalReviewText(t *testing.T) {
+	t.Parallel()
 	ctx := principal.SystemActing(context.Background(), "privacy_test")
 	tx := subjectColumnsTx(ctx, t)
 	subject, other := ids.NewV7(), ids.NewV7()
@@ -94,6 +95,7 @@ func TestRedactingAStakeholderKeepsTheRestOfTheLegalReviewText(t *testing.T) {
 }
 
 func TestRedactingAStakeholderReachesADealWhoseLinkWasArchived(t *testing.T) {
+	t.Parallel()
 	ctx := principal.SystemActing(context.Background(), "privacy_test")
 	tx := subjectColumnsTx(ctx, t)
 	subject := ids.NewV7()
@@ -110,6 +112,7 @@ func TestRedactingAStakeholderReachesADealWhoseLinkWasArchived(t *testing.T) {
 }
 
 func TestTheExportCarriesTheLegalReviewTextOfTheSubjectsDeals(t *testing.T) {
+	t.Parallel()
 	e := setupSARIdentifiers(t)
 	_, review := seedReviewedDeal(e.ctx, t, e.owner, e.contact.UUID)
 
@@ -128,6 +131,7 @@ func TestTheExportCarriesTheLegalReviewTextOfTheSubjectsDeals(t *testing.T) {
 }
 
 func TestTheExportLeavesOutTheLegalReviewOfADealWhoseStakeholderLinkWasArchived(t *testing.T) {
+	t.Parallel()
 	e := setupSARIdentifiers(t)
 	_, live := seedReviewedDeal(e.ctx, t, e.owner, e.contact.UUID)
 	retiredDeal, retired := seedReviewedDeal(e.ctx, t, e.owner, e.contact.UUID)
@@ -150,6 +154,7 @@ func TestTheExportLeavesOutTheLegalReviewOfADealWhoseStakeholderLinkWasArchived(
 }
 
 func TestASubjectWithNoUsablePatternHasTheLegalReviewTextCleared(t *testing.T) {
+	t.Parallel()
 	ctx := principal.SystemActing(context.Background(), "privacy_test")
 	tx := subjectColumnsTx(ctx, t)
 	subject := ids.NewV7()
@@ -173,6 +178,7 @@ func TestASubjectWithNoUsablePatternHasTheLegalReviewTextCleared(t *testing.T) {
 }
 
 func TestAnAddressInLegalReviewTextIsRedactedLikeAnUnlinkedNote(t *testing.T) {
+	t.Parallel()
 	ctx := principal.SystemActing(context.Background(), "privacy_test")
 	tx := subjectColumnsTx(ctx, t)
 	subject := ids.NewV7()

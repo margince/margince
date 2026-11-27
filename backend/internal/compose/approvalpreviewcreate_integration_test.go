@@ -22,6 +22,7 @@ import (
 )
 
 func TestLeadCreationApprovalShowsDefaultsBeforeTheRecordExists(t *testing.T) {
+	t.Parallel()
 	for _, rest := range []bool{false, true} {
 		t.Run(fmt.Sprintf("rest=%t", rest), func(t *testing.T) {
 			e := integration.Setup(t)
@@ -84,6 +85,7 @@ func TestLeadCreationApprovalShowsDefaultsBeforeTheRecordExists(t *testing.T) {
 }
 
 func TestCompanyCreationApprovalMatchesTheWriter(t *testing.T) {
+	t.Parallel()
 	for _, rest := range []bool{false, true} {
 		t.Run(fmt.Sprintf("rest=%t", rest), func(t *testing.T) {
 			e := integration.Setup(t)
@@ -149,6 +151,7 @@ func TestCompanyCreationApprovalMatchesTheWriter(t *testing.T) {
 }
 
 func TestContactCreationApprovalOverALiveLeadReportsTheRefusal(t *testing.T) {
+	t.Parallel()
 	for _, rest := range []bool{false, true} {
 		t.Run(fmt.Sprintf("rest=%t", rest), func(t *testing.T) {
 			e := integration.Setup(t)

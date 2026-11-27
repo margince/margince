@@ -185,6 +185,7 @@ func seedParkedSenders(t *testing.T, env captureEnv) {
 }
 
 func TestReopenParkedReopensOnlyWhatTheWindowParkedAndNobodyDecided(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	seedParkedSenders(t, env)
@@ -235,6 +236,7 @@ func TestReopenParkedReopensOnlyWhatTheWindowParkedAndNobodyDecided(t *testing.T
 // The offer-expiry sweep leaves the row unsure with a link to an offer nobody
 // can answer; that is no reason to leave the sender parked for good.
 func TestReopenParkedReopensASenderWhoseOfferExpired(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	seedParkedSenders(t, env)
@@ -276,6 +278,7 @@ func TestReopenParkedReopensASenderWhoseOfferExpired(t *testing.T) {
 }
 
 func TestReopenParkedDryRunCountsAndWritesNothing(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	seedParkedSenders(t, env)
@@ -296,6 +299,7 @@ func TestReopenParkedDryRunCountsAndWritesNothing(t *testing.T) {
 }
 
 func TestReopenParkedStopsAtTheBatch(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	seedParkedSenders(t, env)
 
@@ -317,6 +321,7 @@ func TestReopenParkedStopsAtTheBatch(t *testing.T) {
 }
 
 func TestReopenParkedRefusesAWindowThatEndsBeforeItStarts(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	now := time.Now()
 	_, err := compose.NewProviderRecovery(e.Pool).Reopen(context.Background(),
@@ -327,6 +332,7 @@ func TestReopenParkedRefusesAWindowThatEndsBeforeItStarts(t *testing.T) {
 }
 
 func TestReopenParkedReopensExhaustedEnrichmentInTheWindowOnly(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
 	store := capturemod.NewAutoEnrichStore(e.DB())

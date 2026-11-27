@@ -20,6 +20,7 @@ import (
 // rows named one. The merge and its preview refuse up front, with a message
 // that names no finance record, and nothing moves. Each table refuses alone.
 func TestAMergeRefusesToMoveLedgerRowsThatNameNoCustomerLink(t *testing.T) {
+	t.Parallel()
 	for name, unlinked := range map[string][]string{
 		"an invoice and a payment": {"finance_invoice", "finance_payment"},
 		"a payment alone":          {"finance_payment"},

@@ -30,6 +30,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
@@ -39,8 +40,8 @@ import (
 
 // dealVerdictRefs lets a lane script its reply by record id. The reply reaches
 // the pass in the refs the request showed each activity, stage and criterion by.
-func dealVerdictRefs(lane completer) completer {
-	return inRefs{inner: lane, shown: []shownBy{
+func dealVerdictRefs(t *testing.T, lane completer) completer {
+	return inRefs{inner: lane, ownerDSN: testdb.For(t).OwnerDSN, shown: []shownBy{
 		{key: "activity_id", query: `SELECT left(body, 40) FROM activity WHERE id = $1`},
 		{key: "stage_id", query: `SELECT 'Later stage: ' || name || ' (' FROM stage WHERE id = $1`},
 		{key: "criterion_id", query: `SELECT ': ' || label || ' (criterion_id' FROM stage_exit_criterion WHERE id = $1`},
@@ -116,7 +117,7 @@ func setupDealVerdict(t *testing.T) *dealVerdictEnv {
 		t.Fatal(err)
 	}
 	v.lane = &dealVerdictLane{cite: &v.note, date: signing, probability: stagePct - 10}
-	v.pass = newDealVerdictPass(e.Pool, dealVerdictRefs(v.lane), slog.New(slog.DiscardHandler))
+	v.pass = newDealVerdictPass(e.Pool, dealVerdictRefs(t, v.lane), slog.New(slog.DiscardHandler))
 	v.pass.now = func() time.Time { return v.now.Add(time.Minute) }
 	return v
 }
@@ -186,6 +187,7 @@ func (v *dealVerdictEnv) undo(t *testing.T, correction string) {
 }
 
 func TestMarginceSetsWhatTheCustomerSaidAndAnUndoHoldsItBack(t *testing.T) {
+	t.Parallel()
 	v := setupDealVerdict(t)
 	v.run(t)
 
@@ -242,6 +244,7 @@ func TestMarginceSetsWhatTheCustomerSaidAndAnUndoHoldsItBack(t *testing.T) {
 }
 
 func TestASwitchedOffKindIsLeftAlone(t *testing.T) {
+	t.Parallel()
 	v := setupDealVerdict(t)
 	integration.TurnKindOff(v.owner(t), t, approvals.NewService(InstallationDB(v.Pool)), deals.VerdictAmountCorrection)
 	v.run(t)
@@ -257,6 +260,7 @@ func TestASwitchedOffKindIsLeftAlone(t *testing.T) {
 }
 
 func TestAColleaguesEditAfterTheEvidenceWins(t *testing.T) {
+	t.Parallel()
 	v := setupDealVerdict(t)
 	amount := int64(3_000_000)
 	if _, err := v.Deals.UpdateDeal(v.Admin(), ids.From[ids.DealKind](v.deal), deals.UpdateDealInput{AmountMinor: &amount}); err != nil {
@@ -301,6 +305,7 @@ func (v *dealVerdictEnv) untouched(t *testing.T) {
 }
 
 func TestAnOfferAcceptedWhileTheModelReadsStopsTheWrite(t *testing.T) {
+	t.Parallel()
 	v := setupDealVerdict(t)
 	desk := v.As(v.Rep1, nil, principal.Permissions{
 		RoleKeys: []string{"deal_desk"},
@@ -332,6 +337,7 @@ func TestAnOfferAcceptedWhileTheModelReadsStopsTheWrite(t *testing.T) {
 }
 
 func TestACitedNoteMovedAwayWhileTheModelReadsStopsTheWrite(t *testing.T) {
+	t.Parallel()
 	v := setupDealVerdict(t)
 	owner := ids.From[ids.UserKind](v.Rep1)
 	other, err := v.Deals.CreateDeal(v.Admin(), deals.CreateDealInput{
@@ -354,6 +360,7 @@ func TestACitedNoteMovedAwayWhileTheModelReadsStopsTheWrite(t *testing.T) {
 // The owner leaves, or loses the deal grant, after Margince bound itself as
 // their agent. The write binds them again and refuses.
 func TestAnOwnerWhoLeavesBeforeTheWriteGetsNoChange(t *testing.T) {
+	t.Parallel()
 	for name, c := range map[string]struct{ revoke, outcome string }{
 		"deactivated":  {`UPDATE app_user SET status = 'deactivated' WHERE id = $1`, droppedNoOwner},
 		"role removed": {`DELETE FROM role_assignment WHERE user_id = $1`, deals.VerdictDroppedOwnerCannotEdit},
@@ -395,6 +402,7 @@ func verdictAfterTheOwnerLeft(t *testing.T, revoke, wantOutcome string) {
 // Home names an amount in the currency it was written in, even after the
 // deal's currency changed.
 func TestAReceiptKeepsTheCurrencyTheAmountWasSetIn(t *testing.T) {
+	t.Parallel()
 	v := setupDealVerdict(t)
 	v.run(t)
 	usd := "USD"
@@ -416,6 +424,7 @@ func TestAReceiptKeepsTheCurrencyTheAmountWasSetIn(t *testing.T) {
 
 // A price in a currency with no stored rate is read again once a rate is.
 func TestANewRateMakesANoRateDropDueAgain(t *testing.T) {
+	t.Parallel()
 	v := setupDealVerdict(t)
 	v.note = v.logBuyerMessage(t, "Our budget is 40,000 GBP a year.")
 	v.lane.quote = "40,000 GBP"
@@ -437,6 +446,7 @@ func TestANewRateMakesANoRateDropDueAgain(t *testing.T) {
 }
 
 func TestVerdictNotesTranslateTheInstructionsAndKeepTheirEvidence(t *testing.T) {
+	t.Parallel()
 	v := setupDealVerdict(t)
 	v.run(t)
 	textID := v.WsScalar(t, `SELECT a.id::text FROM activity a JOIN activity_link l ON l.activity_id=a.id WHERE l.deal_id=$1 AND a.subject='Margince updated this deal'`, v.deal)
@@ -465,6 +475,7 @@ func TestVerdictNotesTranslateTheInstructionsAndKeepTheirEvidence(t *testing.T) 
 }
 
 func TestAnAgentsNoteIsNotDealVerdictEvidence(t *testing.T) {
+	t.Parallel()
 	v := setupDealVerdict(t)
 	subject, body := "Agent assessment", "Budget is 1,000 EUR."
 	note, _, err := v.Activities.LogActivity(v.Admin(), activities.LogActivityInput{
@@ -491,6 +502,7 @@ func TestAnAgentsNoteIsNotDealVerdictEvidence(t *testing.T) {
 }
 
 func TestAnInboundCopyFromASeatIsMarkedAsOurWords(t *testing.T) {
+	t.Parallel()
 	v := setupDealVerdict(t)
 	direction, subject, body := "inbound", "Copy", "The budget is 1,000 EUR."
 	email := v.WsScalar(t, `SELECT email FROM app_user WHERE id=@user`, pgx.StrictNamedArgs{"user": v.Rep1})
@@ -517,6 +529,7 @@ func TestAnInboundCopyFromASeatIsMarkedAsOurWords(t *testing.T) {
 }
 
 func TestTheInstallationSwitchStopsTheVerdictWrites(t *testing.T) {
+	t.Parallel()
 	v := setupDealVerdict(t)
 	integration.SetAutoApplyEnabled(t, v.Env, false)
 	v.run(t)

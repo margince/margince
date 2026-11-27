@@ -68,7 +68,7 @@ func TestJobHealthRefusesAnUnauthenticatedCall(t *testing.T) {
 // request then panics on the first query. There is no nil-pool branch in
 // the handler on purpose; this is what stands in its place.
 func TestTheJobHealthHandlerIsConstructedWithAPoolNotJustEmbedded(t *testing.T) {
-	srv := newServer(nil, quietTestLogger(), authHandlers{}, dealsHandlers{})
+	srv := newServer(nil, quietTestLogger(), nil, authHandlers{}, dealsHandlers{})
 	if srv.jobHealthHandlers.pool != nil {
 		t.Fatal("the fixture passed a pool; this test can no longer tell construction from embedding")
 	}
@@ -76,7 +76,7 @@ func TestTheJobHealthHandlerIsConstructedWithAPoolNotJustEmbedded(t *testing.T) 
 	// The real assertion: the composed server threads ITS pool through, so
 	// a handler constructed from a live pool holds that same pool.
 	live := &pgxpool.Pool{}
-	withPool := newServer(live, quietTestLogger(), authHandlers{}, dealsHandlers{})
+	withPool := newServer(live, quietTestLogger(), nil, authHandlers{}, dealsHandlers{})
 	if withPool.jobHealthHandlers.pool != live {
 		t.Error("newServer embedded jobHealthHandlers without constructing it; every " +
 			"authenticated read would reach a nil pool")
@@ -89,7 +89,7 @@ func TestTheJobHealthHandlerIsConstructedWithAPoolNotJustEmbedded(t *testing.T) 
 // stops that text travelling.
 func TestOnlyAVettedSentenceReachesTheWire(t *testing.T) {
 	vetted := "the record this job names no longer exists"
-	if got := renderFailure(jobs.Failure{Kind: "any_kind", StoredReason: vetted}).Reason; got != vetted {
+	if got := renderFailure(jobs.Composed{}, jobs.Failure{Kind: "any_kind", StoredReason: vetted}).Reason; got != vetted {
 		t.Errorf("the vetted sentence rendered as %q, want it passed through", got)
 	}
 
@@ -101,7 +101,7 @@ func TestOnlyAVettedSentenceReachesTheWire(t *testing.T) {
 		// read a process log that died before writing one.
 		"Stuck job rescued by JobRescuer",
 	} {
-		rendered := renderFailure(jobs.Failure{Kind: "any_kind", StoredReason: raw})
+		rendered := renderFailure(jobs.Composed{}, jobs.Failure{Kind: "any_kind", StoredReason: raw})
 		got := rendered.Reason
 		if got == raw {
 			t.Errorf("a worker's raw cause reached the wire: %q", raw)
@@ -127,7 +127,7 @@ func TestOnlyAVettedSentenceReachesTheWire(t *testing.T) {
 // and points an operator at a log line nobody wrote. Nothing recorded and
 // something unreadable are different facts.
 func TestARowThatRecordedNoCauseDoesNotClaimItFailed(t *testing.T) {
-	rendered := renderFailure(jobs.Failure{Kind: "cancelled_pass"})
+	rendered := renderFailure(jobs.Composed{}, jobs.Failure{Kind: "cancelled_pass"})
 	got := rendered.Reason
 
 	if rendered.Class != nil || rendered.Remedy != nil {
@@ -155,7 +155,7 @@ func TestARowThatRecordedNoCauseDoesNotClaimItFailed(t *testing.T) {
 func TestBothTenantAndDispatcherFailuresReachTheResponse(t *testing.T) {
 	someoneElse := ids.NewV7().String()
 
-	got := jobHealthResponse(context.Background(), jobs.Health{Failures: []jobs.Failure{
+	got := jobHealthResponse(context.Background(), jobs.Composed{}, jobs.Health{Failures: []jobs.Failure{
 		{Kind: "tenant_pass", WorkspaceID: &someoneElse, State: "discarded"},
 		{Kind: "the_dispatcher", WorkspaceID: nil, State: "discarded"},
 	}}, 24*time.Hour)
@@ -175,7 +175,7 @@ func TestBothTenantAndDispatcherFailuresReachTheResponse(t *testing.T) {
 // a healthy-looking number.
 func TestAnAbsentOldestAgeStaysAbsent(t *testing.T) {
 	measured := 41.7
-	got := jobHealthResponse(context.Background(), jobs.Health{Kinds: []jobs.KindHealth{
+	got := jobHealthResponse(context.Background(), jobs.Composed{}, jobs.Health{Kinds: []jobs.KindHealth{
 		{Kind: "idle", OldestWaitingAgeSeconds: nil},
 		{Kind: "waiting", OldestWaitingAgeSeconds: &measured},
 	}}, 24*time.Hour)
@@ -195,7 +195,7 @@ func TestAnAbsentOldestAgeStaysAbsent(t *testing.T) {
 // arrays, and a JSON null where a list belongs breaks a client that
 // iterates it.
 func TestAnIdleFleetMapsToEmptyListsNotNulls(t *testing.T) {
-	got := jobHealthResponse(context.Background(), jobs.Health{}, 24*time.Hour)
+	got := jobHealthResponse(context.Background(), jobs.Composed{}, jobs.Health{}, 24*time.Hour)
 
 	if got.Kinds == nil {
 		t.Error("kinds serialized as null rather than []")

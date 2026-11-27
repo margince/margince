@@ -101,7 +101,7 @@ func TestNewServerAlwaysCarriesAMetricsStore(t *testing.T) {
 	t.Parallel()
 	// A nil pool is the shape the other route-level tests use: newServer wires
 	// handlers and reaches no database.
-	srv := newServer(nil, quietTestLogger(), authHandlers{}, dealsHandlers{})
+	srv := newServer(nil, quietTestLogger(), nil, authHandlers{}, dealsHandlers{})
 	if srv.httpMetrics == nil {
 		t.Fatal("newServer left httpMetrics nil; the api would serve /v1 and count nothing")
 	}

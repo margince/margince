@@ -58,6 +58,7 @@ func refusedLeadFilters(t *testing.T, e *apptest.AppEnv) []string {
 // A seat that may not read companies is refused every dial over them, and /me
 // names what the list refuses.
 func TestMeNamesTheCompanyDialsOfTheLeadListForASeatWithoutCompanyRead(t *testing.T) {
+	t.Parallel()
 	e := reachApp(t)
 	narrowSignedInRole(t, e, "lead_reach_no_company_read", `{"company": {"create": false, "read": false, "update": false, "delete": false}}`)
 
@@ -70,6 +71,7 @@ func TestMeNamesTheCompanyDialsOfTheLeadListForASeatWithoutCompanyRead(t *testin
 }
 
 func TestMeNamesTheListFilterOfTheLeadListForASeatWithoutListRead(t *testing.T) {
+	t.Parallel()
 	e := reachApp(t)
 	narrowSignedInRole(t, e, "lead_reach_no_list_read", `{"list": {"create": false, "read": false, "update": false, "delete": false}}`)
 
@@ -79,6 +81,7 @@ func TestMeNamesTheListFilterOfTheLeadListForASeatWithoutListRead(t *testing.T) 
 }
 
 func TestMeRefusesNoLeadFilterToTheAdmin(t *testing.T) {
+	t.Parallel()
 	e := reachApp(t)
 
 	refused := refusedLeadFilters(t, e)
@@ -91,6 +94,7 @@ func TestMeRefusesNoLeadFilterToTheAdmin(t *testing.T) {
 // A code no company could hold is refused by the field it names, never
 // answered with an empty page that reads as "no such leads".
 func TestTheLeadListRefusesACompanyFactNoCompanyHolds(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	for parameter, operand := range map[string]string{"country": "DEU", "industry": "logistics", "size_band": "2-9"} {

@@ -4,7 +4,10 @@ include ../scripts/composition-profile.mk
 
 GO        ?= go
 PG_PORT   ?= 15432
-REDIS_PORT?= 16379
+# The integration lanes' Postgres: postgres-test in docker-compose.dev.yml, in RAM.
+TEST_PG_PORT ?= 15433
+# The integration lanes' Redis: redis-test in docker-compose.dev.yml.
+TEST_REDIS_PORT ?= 16380
 DB_NAME   ?= margince
 
 # The database THIS worktree's stack runs against, resolved by the same code
@@ -49,29 +52,28 @@ APP_DSN   ?= postgres://margince_app:margince_app_dev@localhost:$(PG_PORT)/$(DB_
 # truncate the call.
 REDACTED_OWNER_DSN = $(shell printf '%s' '$(OWNER_DSN)' | sed -E 's|//[^@/]*@|//***@|')
 
-# The integration lane runs on its OWN `_test`-suffixed namespace on the shared
-# containers, so `make dev` (DB `margince`, Redis logical db 0) and
+# The integration lane runs on servers of its own, so `make dev` and
 # `make test-integration` never touch the same mutable state and can run
-# concurrently. Postgres: a separate `margince_test` database (the parallel lane
-# clones per-package throwaways from a template of the same name; the serial
-# escape hatch runs directly on it). Redis: db 0 is reserved for `make dev`, so
-# the test lanes default to db 15 and the parallel runner fans packages across
-# 1..15 (see scripts/test-integration-parallel.sh) — no stream collisions.
+# concurrently. Postgres: a `margince_test` template on postgres-test, which the
+# lanes clone per package. Redis: redis-test, where each test leases a logical
+# database of its own (testdb.RedisDB).
 TEST_DB_NAME ?= margince_test
-export MARGINCE_TEST_DSN     ?= postgres://margince_owner:dev@localhost:$(PG_PORT)/$(TEST_DB_NAME)
+export MARGINCE_TEST_DSN     ?= postgres://margince_owner:dev@localhost:$(TEST_PG_PORT)/$(TEST_DB_NAME)
 # The benchmark targets' own database. NOT the lane's template: the bench suite
 # drops the schema and seeds a quarter of a million rows, and every per-package
 # clone is copied from that template — see bench_db in scripts/lib-testdb.sh.
 BENCH_DB_NAME                ?= margince_bench
+# Benchmarks measure on the durable dev server, where their records were taken,
+# not on the in-RAM test server.
+BENCH_DSNS = MARGINCE_TEST_DSN=postgres://margince_owner:dev@localhost:$(PG_PORT)/$(TEST_DB_NAME) MARGINCE_TEST_APP_DSN=postgres://margince_app:margince_app_dev@localhost:$(PG_PORT)/$(TEST_DB_NAME)
 BENCH_DAILY_DB_NAME          ?= margince_bench_daily
 BENCH_DAILY_TEST             ?= TestDailyUseBudgets
 BENCH_BACKLOG_DB_NAME        ?= margince_bench_backlog
 BENCH_HOME_DB_NAME           ?= margince_bench_home
 BENCH_GROWTH_DB_NAME         ?= margince_bench_growth
 BENCH_GROWTH_TIMEOUT         ?= 60m
-export MARGINCE_TEST_APP_DSN ?= postgres://margince_app:margince_app_dev@localhost:$(PG_PORT)/$(TEST_DB_NAME)
-export MARGINCE_TEST_REDIS    ?= localhost:$(REDIS_PORT)
-export MARGINCE_TEST_REDIS_DB ?= 15
+export MARGINCE_TEST_APP_DSN ?= postgres://margince_app:margince_app_dev@localhost:$(TEST_PG_PORT)/$(TEST_DB_NAME)
+export MARGINCE_TEST_REDIS    ?= localhost:$(TEST_REDIS_PORT)
 # Blobstore (MinIO) — the integration lane fails loudly without it, never
 # skips, so the endpoint/creds/bucket are part of the compose + CI contract.
 # The bucket is created by the store at first connect.
@@ -620,14 +622,16 @@ ROLE_SWEEP_TIMEOUT ?= 2700s
 # does not pay for a shell. The harness asserts both rather than skipping: this
 # target fails on any SKIP, so a capacity check that quietly opted out would take
 # the whole lane red for a reason that has nothing to do with the tests.
-LANE_BUDGET_ENV = $(shell bash -c 'cd .. && source scripts/lib-testdb.sh && declare_lane_budget 1 && echo LANE_CONN_BUDGET=$$LANE_CONN_BUDGET MARGINCE_TEST_POOL_MAX_CONNS=$$MARGINCE_TEST_POOL_MAX_CONNS')
+LANE_BUDGET_ENV = $(shell bash -c 'cd .. && source scripts/lib-testdb.sh && declare_lane_budget 1 && echo LANE_CONN_BUDGET=$$LANE_CONN_BUDGET MARGINCE_TEST_POOL_MAX_CONNS=$$MARGINCE_TEST_POOL_MAX_CONNS MARGINCE_TEST_ADMIN_CONNS=$$MARGINCE_TEST_ADMIN_CONNS')
+LANE_TEST_PARALLEL = $(shell bash -c 'cd .. && source scripts/lib-testdb.sh && declare_lane_budget 1 && echo $$LANE_TEST_PARALLEL')
 
 test-integration-serial: composition ## Escape hatch: the old sequential lane, all packages on the shared margince_test DB (debugging a parallel-isolation issue).
 	@$(GOWORK_COMPOSED) bash -c 'cd .. && source scripts/lib-testdb.sh && parse_test_dsn && ensure_template'
 	@log=$$(mktemp); st=$$(mktemp); manifest=$$(mktemp); \
 	trap 'rm -f "$$manifest"' EXIT; \
+	template=$$(cd .. && bash -c 'source scripts/lib-testdb.sh && echo "$$TEMPLATE_NAME"') || exit $$?; \
 	$(GOWORK_COMPOSED) $(GO) run ./cmd/migrate extension-manifest >"$$manifest" || exit $$?; \
-	{ $(GOWORK_COMPOSED) env MARGINCE_TEST_EXTENSION_MANIFEST="$$manifest" $(LANE_BUDGET_ENV) $(GO) test -tags integration -p 1 -v ./... 2>&1; echo $$? >"$$st"; } | tee "$$log"; \
+	{ $(GOWORK_COMPOSED) env MARGINCE_TEST_EXTENSION_MANIFEST="$$manifest" MARGINCE_TEST_TEMPLATE="$$template" $(LANE_BUDGET_ENV) $(GO) test -tags integration -p 1 -parallel $(LANE_TEST_PARALLEL) -v ./... 2>&1; echo $$? >"$$st"; } | tee "$$log"; \
 	code=$$(cat "$$st"); rm -f "$$st"; \
 	if [ "$$code" -ne 0 ]; then rm -f "$$log"; exit "$$code"; fi; \
 	if grep -q -- '--- SKIP' "$$log"; then \
@@ -646,9 +650,9 @@ BENCH_PERF_TIMEOUT ?= 30m
 # records: a render failure must not read as the measurement failing.
 BENCH_RENDER       ?= 1
 bench-perf: composition ## PERF-3/PERF-7 benchmark harness, writing a record; mid-market unless BENCH_PERF_TIER=smb (needs db-up; seeds 250k contacts)
-	@$(GOWORK_COMPOSED) bash -c 'cd .. && source scripts/lib-testdb.sh && parse_test_dsn && bench_db $(BENCH_DB_NAME) \
+	@$(GOWORK_COMPOSED) bash -c 'cd .. && source scripts/lib-testdb.sh && $(BENCH_DSNS) parse_test_dsn && bench_db $(BENCH_DB_NAME) \
 	  && cd backend && MARGINCE_BENCH_TIER=$(BENCH_PERF_TIER) MARGINCE_BENCH_RECORD=1 \
-	     MARGINCE_TEST_DSN="$$BENCH_OWNER_DSN" MARGINCE_TEST_APP_DSN="$$BENCH_APP_DSN" \
+	     MARGINCE_TEST_IN_PLACE=1 MARGINCE_TEST_DSN="$$BENCH_OWNER_DSN" MARGINCE_TEST_APP_DSN="$$BENCH_APP_DSN" \
 	     $(GO) test -tags "integration bench" -run TestPerfBudgetsHoldOnSeededVolumeTier -count=1 -v -timeout $(BENCH_PERF_TIMEOUT) ./internal/compose/integration'
 	@if [ -n "$(BENCH_RENDER)" ]; then $(MAKE) --no-print-directory perfdoc; fi
 
@@ -669,10 +673,10 @@ BENCH_PERF_CHECK_TIER    ?= smb
 BENCH_PERF_GATE          ?= 1
 BENCH_PERF_CHECK_TIMEOUT ?= 20m
 bench-perf-check: composition ## PERF-3/PERF-7 on one tier (BENCH_PERF_CHECK_TIER, smb by default), no record written; BENCH_PERF_GATE=0 reports without failing (needs db-up)
-	@$(GOWORK_COMPOSED) bash -c 'cd .. && source scripts/lib-testdb.sh && parse_test_dsn && bench_db $(BENCH_DB_NAME) \
+	@$(GOWORK_COMPOSED) bash -c 'cd .. && source scripts/lib-testdb.sh && $(BENCH_DSNS) parse_test_dsn && bench_db $(BENCH_DB_NAME) \
 	  && cd backend && MARGINCE_BENCH_TIER=$(BENCH_PERF_CHECK_TIER) \
 	     MARGINCE_BENCH_GATE=$(BENCH_PERF_GATE) MARGINCE_BENCH_RECORD= \
-	     MARGINCE_TEST_DSN="$$BENCH_OWNER_DSN" MARGINCE_TEST_APP_DSN="$$BENCH_APP_DSN" \
+	     MARGINCE_TEST_IN_PLACE=1 MARGINCE_TEST_DSN="$$BENCH_OWNER_DSN" MARGINCE_TEST_APP_DSN="$$BENCH_APP_DSN" \
 	     $(GO) test -tags "integration bench" -run TestPerfBudgetsHoldOnSeededVolumeTier -count=1 -v -timeout $(BENCH_PERF_CHECK_TIMEOUT) ./internal/compose/integration'
 
 # The `bench` lane: measurements run BY HAND, never by a merge gate.
@@ -698,28 +702,30 @@ bench-perf-check: composition ## PERF-3/PERF-7 on one tier (BENCH_PERF_CHECK_TIE
 # A private database like bench-perf's: the harness resets whatever it is given,
 # and the default DSN is the template every integration clone is copied from.
 bench-record: composition ## PERF-1/PERF-4 record open + save budgets, measured over HTTP (needs db-up)
-	@$(GOWORK_COMPOSED) bash -c 'cd .. && source scripts/lib-testdb.sh && parse_test_dsn && bench_db $(BENCH_DB_NAME) \
-	  && cd backend && MARGINCE_TEST_DSN="$$BENCH_OWNER_DSN" MARGINCE_TEST_APP_DSN="$$BENCH_APP_DSN" \
+	@$(GOWORK_COMPOSED) bash -c 'cd .. && source scripts/lib-testdb.sh && $(BENCH_DSNS) parse_test_dsn && bench_db $(BENCH_DB_NAME) \
+	  && cd backend && MARGINCE_TEST_IN_PLACE=1 MARGINCE_TEST_DSN="$$BENCH_OWNER_DSN" MARGINCE_TEST_APP_DSN="$$BENCH_APP_DSN" \
 	     $(GO) test -tags "integration bench" -run TestRecordOpenAndSaveBudgets -count=1 -v -timeout 15m ./internal/compose/integration'
 	@$(MAKE) --no-print-directory perfdoc
 
 bench-ai: composition ## PERF-5 AI baseline action: a contact draft with an offline model, 1.5s p95 (needs db-up)
-	@$(GOWORK_COMPOSED) bash -c 'cd .. && source scripts/lib-testdb.sh && parse_test_dsn && bench_db $(BENCH_DB_NAME) \
-	  && cd backend && MARGINCE_TEST_DSN="$$BENCH_OWNER_DSN" MARGINCE_TEST_APP_DSN="$$BENCH_APP_DSN" \
+	@$(GOWORK_COMPOSED) bash -c 'cd .. && source scripts/lib-testdb.sh && $(BENCH_DSNS) parse_test_dsn && bench_db $(BENCH_DB_NAME) \
+	  && cd backend && MARGINCE_TEST_IN_PLACE=1 MARGINCE_TEST_DSN="$$BENCH_OWNER_DSN" MARGINCE_TEST_APP_DSN="$$BENCH_APP_DSN" \
 	     $(GO) test -tags "integration bench" -run "^TestAIDraftBudget$$" -count=1 -v -timeout 15m ./internal/compose/integration'
 	@$(MAKE) --no-print-directory perfdoc
 
 # The binary boots against a database it must find migrated, so the target
 # migrates the private database first; the harness builds cmd/api itself.
 bench-coldstart: composition ## PERF-6 cold start: the built API binary to /readyz 200, 2s p95 (needs db-up)
-	@$(GOWORK_COMPOSED) bash -c 'cd .. && source scripts/lib-testdb.sh && parse_test_dsn && resolve_test_redis && bench_db $(BENCH_DB_NAME) \
+	@$(GOWORK_COMPOSED) bash -c 'cd .. && source scripts/lib-testdb.sh && $(BENCH_DSNS) parse_test_dsn && resolve_test_redis && bench_db $(BENCH_DB_NAME) \
 	  && cd backend && MARGINCE_OWNER_DSN="$$BENCH_OWNER_DSN" $(GO) run ./cmd/migrate up >/dev/null \
-	  && MARGINCE_TEST_DSN="$$BENCH_OWNER_DSN" MARGINCE_TEST_APP_DSN="$$BENCH_APP_DSN" \
+	  && MARGINCE_TEST_IN_PLACE=1 MARGINCE_TEST_DSN="$$BENCH_OWNER_DSN" MARGINCE_TEST_APP_DSN="$$BENCH_APP_DSN" \
 	     $(GO) test -tags "integration bench" -run "^TestColdStartBudget$$" -count=1 -v -timeout 15m ./cmd/api'
 	@$(MAKE) --no-print-directory perfdoc
 
 bench-capture: composition ## CAP-PARAM-1 capture-to-timeline latency, 60s p95 (needs db-up)
-	$(GOWORK_COMPOSED) $(GO) test -tags 'integration bench' -run TestCaptureToTimelineLatencyBudget -count=1 -v -timeout 15m ./internal/compose/integration/capture
+	@$(GOWORK_COMPOSED) bash -c 'cd .. && source scripts/lib-testdb.sh && $(BENCH_DSNS) parse_test_dsn && bench_db $(BENCH_DB_NAME) \
+	  && cd backend && MARGINCE_TEST_IN_PLACE=1 MARGINCE_TEST_DSN="$$BENCH_OWNER_DSN" MARGINCE_TEST_APP_DSN="$$BENCH_APP_DSN" \
+	     $(GO) test -tags "integration bench" -run TestCaptureToTimelineLatencyBudget -count=1 -v -timeout 15m ./internal/compose/integration/capture'
 	@$(MAKE) --no-print-directory perfdoc
 
 # AC-W2, and the newest arrival in this lane. It gated the standing integration
@@ -733,20 +739,22 @@ bench-capture: composition ## CAP-PARAM-1 capture-to-timeline latency, 60s p95 (
 # published budget row, and a target that renders nothing new should not claim a
 # measurement the page never shows.
 bench-dispatch: composition ## AC-W2 workflow trigger->dispatch p95, 200ms over the seeded dataset (needs db-up)
-	$(GOWORK_COMPOSED) $(GO) test -tags 'integration bench' -run TestWorkflowTriggerToDispatchP95HoldsOnTheSeededDataset -count=1 -v -timeout 15m ./internal/compose/integration
+	@$(GOWORK_COMPOSED) bash -c 'cd .. && source scripts/lib-testdb.sh && $(BENCH_DSNS) parse_test_dsn && bench_db $(BENCH_DB_NAME) \
+	  && cd backend && MARGINCE_TEST_IN_PLACE=1 MARGINCE_TEST_DSN="$$BENCH_OWNER_DSN" MARGINCE_TEST_APP_DSN="$$BENCH_APP_DSN" \
+	     $(GO) test -tags "integration bench" -run TestWorkflowTriggerToDispatchP95HoldsOnTheSeededDataset -count=1 -v -timeout 15m ./internal/compose/integration'
 
 # The test DSNs for a database bench_db made, as variable assignments that go in
 # front of `go test`. cache_statement is pgx's default, which the API and test
 # pools both keep; named because without it no generic plan can appear.
 BENCH_DSN_ENV = sep="?"; case "$$BENCH_APP_DSN" in *\?*) sep="&";; esac; \
-  MARGINCE_TEST_DSN="$$BENCH_OWNER_DSN" MARGINCE_TEST_APP_DSN="$${BENCH_APP_DSN}$${sep}default_query_exec_mode=cache_statement"
+  MARGINCE_TEST_IN_PLACE=1 MARGINCE_TEST_DSN="$$BENCH_OWNER_DSN" MARGINCE_TEST_APP_DSN="$${BENCH_APP_DSN}$${sep}default_query_exec_mode=cache_statement"
 
 # Leaves its database behind: the corpus and its plans are what you debug a slow
 # row with, and bench-daily-clean is the only thing that drops it. A failed run
 # has still written its record but stops before perfdoc; `make perfdoc` renders it.
 # `|| exit` stops a failed bench_db.
 bench-daily: composition ## Daily-use screens for a rep and a manager over HTTP, mid-market tier; records and re-renders the budget pages (needs db-up; leaves margince_bench_daily, see bench-daily-clean; after a failed run, make perfdoc)
-	@$(GOWORK_COMPOSED) bash -c '$(GO) test -tags "integration bench" -list "^$(BENCH_DAILY_TEST)$$" ./internal/compose/integration | grep -Fx "$(BENCH_DAILY_TEST)" >/dev/null || { echo "Unknown benchmark test: $(BENCH_DAILY_TEST)" >&2; exit 1; }; cd .. && source scripts/lib-testdb.sh && parse_test_dsn && bench_db $(BENCH_DAILY_DB_NAME) && cd backend || exit; \
+	@$(GOWORK_COMPOSED) bash -c '$(GO) test -tags "integration bench" -list "^$(BENCH_DAILY_TEST)$$" ./internal/compose/integration | grep -Fx "$(BENCH_DAILY_TEST)" >/dev/null || { echo "Unknown benchmark test: $(BENCH_DAILY_TEST)" >&2; exit 1; }; cd .. && source scripts/lib-testdb.sh && $(BENCH_DSNS) parse_test_dsn && bench_db $(BENCH_DAILY_DB_NAME) && cd backend || exit; \
 	  $(BENCH_DSN_ENV) \
 	  $(GO) test -tags "integration bench" -run "^$(BENCH_DAILY_TEST)$$" -count=1 -v -timeout 120m ./internal/compose/integration'
 	@$(MAKE) --no-print-directory perfdoc
@@ -754,7 +762,7 @@ bench-daily: composition ## Daily-use screens for a rep and a manager over HTTP,
 # Home's API budget on its own small corpus. It records nothing and drops its
 # database at the end, so a run leaves no state behind.
 home-budget-api: composition ## Home's reads for the heaviest owner, cold and warm, against fixed p95 budgets (needs db-up; make home-budget runs it)
-	@$(GOWORK_COMPOSED) bash -c 'cd .. && source scripts/lib-testdb.sh && parse_test_dsn && bench_db $(BENCH_HOME_DB_NAME) && cd backend || exit; \
+	@$(GOWORK_COMPOSED) bash -c 'cd .. && source scripts/lib-testdb.sh && $(BENCH_DSNS) parse_test_dsn && bench_db $(BENCH_HOME_DB_NAME) && cd backend || exit; \
 	  $(BENCH_DSN_ENV) \
 	  $(GO) test -tags "integration bench" -run "^TestHomeBudget$$" -count=1 -v -timeout 20m ./internal/compose/integration; st=$$?; \
 	  cd .. && db_admin drop-db --name $(BENCH_HOME_DB_NAME) >/dev/null || st=1; exit $$st'
@@ -762,7 +770,7 @@ home-budget-api: composition ## Home's reads for the heaviest owner, cold and wa
 # Home's reads as the bench mail grows by a year per step, on its own database,
 # dropped at the end. The MARGINCE_BENCH_GROWTH_* settings size the run.
 bench-growth: composition ## Home's reads as the mail grows a year per step, with a delay per round trip; fails when a read is predicted to reach 10 s soon (needs db-up)
-	@$(GOWORK_COMPOSED) bash -c 'cd .. && source scripts/lib-testdb.sh && parse_test_dsn && bench_db $(BENCH_GROWTH_DB_NAME) && cd backend || exit; \
+	@$(GOWORK_COMPOSED) bash -c 'cd .. && source scripts/lib-testdb.sh && $(BENCH_DSNS) parse_test_dsn && bench_db $(BENCH_GROWTH_DB_NAME) && cd backend || exit; \
 	  $(BENCH_DSN_ENV) \
 	  $(GO) test -tags "integration bench" -run "^TestHomeGrowth$$" -count=1 -v -timeout $(BENCH_GROWTH_TIMEOUT) ./internal/compose/integration; st=$$?; \
 	  cd .. && db_admin drop-db --name $(BENCH_GROWTH_DB_NAME) >/dev/null || st=1; exit $$st'
@@ -771,13 +779,13 @@ bench-growth: composition ## Home's reads as the mail grows a year per step, wit
 # corpus: the stage 0 measurement of the Worklist redesign. It records nothing.
 # MARGINCE_BENCH_BACKLOG_SIZES picks the candidate counts (default 100,1000,10000).
 bench-worklist-backlog: composition ## Worklist first page, walk and whole-source enumeration over a growing synthetic backlog (needs db-up; leaves margince_bench_backlog)
-	@$(GOWORK_COMPOSED) bash -c 'cd .. && source scripts/lib-testdb.sh && parse_test_dsn && bench_db $(BENCH_BACKLOG_DB_NAME) && cd backend || exit; \
+	@$(GOWORK_COMPOSED) bash -c 'cd .. && source scripts/lib-testdb.sh && $(BENCH_DSNS) parse_test_dsn && bench_db $(BENCH_BACKLOG_DB_NAME) && cd backend || exit; \
 	  $(BENCH_DSN_ENV) \
 	  $(GO) test -tags "integration bench" -run "^TestDailyWorklistBacklog$$" -count=1 -v -timeout 180m ./internal/compose/integration'
 	@$(GO) test -run '^$$' -bench '^BenchmarkRankingAWholeBacklog$$' -benchmem ./internal/compose/attention
 
 bench-daily-clean: ## Drop margince_bench_daily, the database bench-daily leaves behind
-	@bash -c 'cd .. && source scripts/lib-testdb.sh && parse_test_dsn && db_admin drop-db --name $(BENCH_DAILY_DB_NAME)'
+	@bash -c 'cd .. && source scripts/lib-testdb.sh && $(BENCH_DSNS) parse_test_dsn && db_admin drop-db --name $(BENCH_DAILY_DB_NAME)'
 
 # The published page is re-rendered from EVERY record, not only the one the run
 # just wrote, so a partial run still produces a complete and current page: the
@@ -1116,11 +1124,12 @@ hooks: ## Install the repo pre-commit hook (gofmt + license-header gate)
 # is throwaway — migrate + seed-dev rebuild it).
 COMPOSE ?= docker compose -f ../docker-compose.dev.yml
 
-db-up: ## Start the dev stack (docker-compose.dev.yml) and create the app role
+db-up: ## Start the dev stack (docker-compose.dev.yml) and create the app role on both Postgres servers
 	@docker rm -f fable-pg16 fable-redis 2>/dev/null || true
 	@bash ../scripts/compose-recreate-guard.sh $(COMPOSE)
 	$(COMPOSE) up -d --wait
 	$(MAKE) db-init
+	$(MAKE) db-init PG_PORT=$(TEST_PG_PORT) PG_SERVICE=postgres-test
 # Every ad-hoc statement goes through PSQL, which resolves the container from
 # PG_PORT — the port the DSNs above name — rather than from the compose project.
 # docker-compose.dev.yml pins `name: margince`, so every checkout on this
@@ -1128,7 +1137,8 @@ db-up: ## Start the dev stack (docker-compose.dev.yml) and create the app role
 # one brought the stack up first, while the api and the migrator connect through
 # the port. Two ways to name one database: a seed run from a second checkout
 # went into the first checkout's postgres, and nothing said so.
-PSQL = bash ../scripts/dev-psql.sh $(PG_PORT)
+PG_SERVICE ?= postgres
+PSQL = PG_SERVICE=$(PG_SERVICE) bash ../scripts/dev-psql.sh $(PG_PORT)
 
 db-init: ## (Re)apply scripts/db-init.sql to the running Postgres
 	$(PSQL) postgres -v ON_ERROR_STOP=1 < ../scripts/db-init.sql

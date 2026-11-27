@@ -57,7 +57,7 @@ func (c *JobCensus) ArgsFields() ([]JobArgsField, error) {
 			refused = append(refused, reading.err)
 			continue
 		}
-		spec, declared := jobs.SpecFor(reading.kind)
+		spec, declared := c.table.SpecFor(reading.kind)
 		for _, name := range reading.fields {
 			field := JobArgsField{Kind: reading.kind, GoType: spec.GoType, Name: name}
 			if declared {
@@ -123,7 +123,7 @@ func (c *JobCensus) everyArgsFieldIsDeclaredAndBack() []string {
 			findings = append(findings, reading.err.Error())
 			continue
 		}
-		spec, declared := jobs.SpecFor(reading.kind)
+		spec, declared := c.table.SpecFor(reading.kind)
 		if !declared {
 			continue // already reported by the totality check.
 		}
@@ -163,7 +163,7 @@ func (c *JobCensus) everyArgsFieldIsDeclaredAndBack() []string {
 // invisible to those too.
 func (c *JobCensus) everyFanOutChildCarriesItsUnitKey() []string {
 	var findings []string
-	units := jobs.FanOutUnits()
+	units := c.table.FanOutUnits()
 	for _, kind := range slices.Sorted(maps.Keys(units)) {
 		wired, registered := c.wired[kind]
 		if !registered {

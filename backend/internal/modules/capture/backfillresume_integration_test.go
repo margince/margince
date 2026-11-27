@@ -86,6 +86,7 @@ func startFixtureBackfill(ctx context.Context, t *testing.T, reg *capture.Regist
 // live and keeps the cursor it stopped on. Re-enqueueing it is the reconcile
 // pass's job, which already puts a job behind every live run.
 func TestASuccessfulSyncRevivesATruncatedImport(t *testing.T) {
+	t.Parallel()
 	ctx, reg, _, _ := newCaptureRegistryFixture(t)
 	connectFixtureConnection(ctx, t, reg)
 	startFixtureBackfill(ctx, t, reg)
@@ -113,6 +114,7 @@ func TestASuccessfulSyncRevivesATruncatedImport(t *testing.T) {
 // from becoming a loop, and it is why the class is the predicate rather than a
 // counter: `internal` does not become true again because a mailbox synced.
 func TestAFaultTheCredentialDidNotCauseIsNotRevived(t *testing.T) {
+	t.Parallel()
 	ctx, reg, _, _ := newCaptureRegistryFixture(t)
 	connectFixtureConnection(ctx, t, reg)
 	startFixtureBackfill(ctx, t, reg)
@@ -132,6 +134,7 @@ func TestAFaultTheCredentialDidNotCauseIsNotRevived(t *testing.T) {
 // reason it states: the counters would count the same messages twice. Starting
 // that mailbox over is a decision with a cost, so it stays the operator's.
 func TestARunWithNoResumePointIsNotRevived(t *testing.T) {
+	t.Parallel()
 	ctx, reg, _, _ := newCaptureRegistryFixture(t)
 	connectFixtureConnection(ctx, t, reg)
 	startFixtureBackfill(ctx, t, reg)

@@ -19,6 +19,7 @@ import (
 // An agent's proposed contact on a sending system's address cannot be created.
 // The approver is told why before deciding, not shown a bare preview.
 func TestAContactCreationOnASendingSystemsAddressShowsABlockingConflict(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	e.GrantRole(t, e.AdminUser, "admin")
 	ctx := e.As(e.AdminUser, nil, integration.AdminPerms)
@@ -56,6 +57,7 @@ func TestAContactCreationOnASendingSystemsAddressShowsABlockingConflict(t *testi
 }
 
 func TestANameOnlyContactApprovalShowsTheChannelChoices(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	e.GrantRole(t, e.AdminUser, "admin")
 	ctx := e.As(e.AdminUser, nil, integration.AdminPerms)

@@ -52,6 +52,7 @@ func download(ctx context.Context, h Handlers, id ids.UUID) *httptest.ResponseRe
 }
 
 func TestAnInvoiceOpensAsTheSourcesOwnPDF(t *testing.T) {
+	t.Parallel()
 	a := setupSourceAdmin(t)
 	invoice := a.mirroredInvoice(t)
 
@@ -74,6 +75,7 @@ func TestAnInvoiceOpensAsTheSourcesOwnPDF(t *testing.T) {
 // A caller who cannot see the company learns nothing about its invoices, not
 // even that one exists.
 func TestAnInvoiceOfAHiddenCompanyAnswersAsIfItDidNotExist(t *testing.T) {
+	t.Parallel()
 	a := setupSourceAdmin(t)
 	invoice := a.mirroredInvoice(t)
 
@@ -94,6 +96,7 @@ func TestAnInvoiceOfAHiddenCompanyAnswersAsIfItDidNotExist(t *testing.T) {
 // fetches are counted. A miss is answered before the count, so probing ids
 // the reader cannot see spends nothing.
 func TestOneCallerFetchesAtMostTwentyDocumentsAMinute(t *testing.T) {
+	t.Parallel()
 	a := setupSourceAdmin(t)
 	invoice := a.mirroredInvoice(t)
 
@@ -114,6 +117,7 @@ func TestOneCallerFetchesAtMostTwentyDocumentsAMinute(t *testing.T) {
 // An archived company's card is not found, and neither are the documents it
 // listed, though archiving leaves its invoices in place.
 func TestAnInvoiceOfAnArchivedCompanyIsNotFound(t *testing.T) {
+	t.Parallel()
 	a := setupSourceAdmin(t)
 	invoice := a.mirroredInvoice(t)
 
@@ -125,6 +129,7 @@ func TestAnInvoiceOfAnArchivedCompanyIsNotFound(t *testing.T) {
 // Unlinking the customer takes its invoices off the company's card, and their
 // documents with them, though the mirror keeps the rows.
 func TestAnInvoiceOfAnUnlinkedCustomerIsNotFound(t *testing.T) {
+	t.Parallel()
 	a := setupSourceAdmin(t)
 	invoice := a.mirroredInvoice(t)
 
@@ -148,6 +153,7 @@ func (a *sourceAdmin) makeOwnerPrivate(t *testing.T) {
 // Once the installation reads a newer source, an invoice the earlier one issued
 // is no longer that source's to open.
 func TestAnInvoiceFromAReplacedConnectionIsNotFound(t *testing.T) {
+	t.Parallel()
 	a := setupSourceAdmin(t)
 	invoice := a.mirroredInvoice(t)
 	successor := ids.NewV7()
@@ -155,10 +161,6 @@ func TestAnInvoiceFromAReplacedConnectionIsNotFound(t *testing.T) {
 		INSERT INTO finance_connection (id, provider, status, captured_by, created_at)
 		VALUES ($1, $2, 'active', 'system:test', now() + interval '1 second')`,
 		successor, fixtureProviderName)
-	// The package shares one database, and every later test reads the newest connection.
-	t.Cleanup(func() {
-		a.ownerExec(t, `UPDATE finance_connection SET status = 'disconnected' WHERE id = $1`, successor)
-	})
 
 	expect(t, download(a.documentReader(principal.RowScopeAll), a.handlers, ids.UUID(invoice.Id)),
 		http.StatusNotFound, "not_found")
@@ -187,6 +189,7 @@ func (pageInsteadOfPDF) InvoiceDocument(context.Context, string) (SourceDocument
 }
 
 func TestASourceWithoutDocumentsIsNeitherOfferedNorOpened(t *testing.T) {
+	t.Parallel()
 	a := setupSourceAdmin(t)
 	invoice := a.mirroredInvoice(t)
 	a.store.WithSources(documentlessSources{document: withoutDocuments{}})
@@ -203,6 +206,7 @@ func TestASourceWithoutDocumentsIsNeitherOfferedNorOpened(t *testing.T) {
 // Only a PDF leaves the core. Anything else from a source could render as a
 // page of this origin.
 func TestADocumentThatIsNotAPDFIsRefused(t *testing.T) {
+	t.Parallel()
 	a := setupSourceAdmin(t)
 	invoice := a.mirroredInvoice(t)
 	a.store.WithSources(documentlessSources{document: pageInsteadOfPDF{}})

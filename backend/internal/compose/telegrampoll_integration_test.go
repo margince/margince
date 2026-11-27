@@ -48,6 +48,7 @@ import (
 // highest + 1) is what tells Telegram to forget the batch, so the number stored
 // here is the acknowledgement of everything below it.
 func TestAPollPersistsTheBatchAndAdvancesTheCursor(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	integration.ApplyRiverSchema(t)
 	vault := keyvault.NewMemory()
@@ -93,6 +94,7 @@ func TestAPollPersistsTheBatchAndAdvancesTheCursor(t *testing.T) {
 // opened — because that is the only way to prove the raw insert does not survive
 // the rollback. An error returned before the transaction would prove nothing.
 func TestTheCursorSurvivesACrashBeforeCommit(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	integration.ApplyRiverSchema(t)
 	vault := keyvault.NewMemory()
@@ -151,6 +153,7 @@ func TestTheCursorSurvivesACrashBeforeCommit(t *testing.T) {
 // an erased subject's messages would re-fetch them on every poll forever and block
 // every later customer's message behind them.
 func TestAPollPersistsNothingForAnErasedSubject(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	integration.ApplyRiverSchema(t)
 	vault := keyvault.NewMemory()
@@ -195,6 +198,7 @@ func TestAPollPersistsNothingForAnErasedSubject(t *testing.T) {
 // The cursor still advances past it, because the alternative is re-fetching an
 // update this connector will never store on every poll, forever.
 func TestAPollPersistsNothingForAGroupChat(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	integration.ApplyRiverSchema(t)
 	vault := keyvault.NewMemory()
@@ -227,6 +231,7 @@ func TestAPollPersistsNothingForAGroupChat(t *testing.T) {
 // blocked the cursor would silently stop all further ingress for that bot, which is
 // a far larger loss than the one update dropped here.
 func TestAPollDropsAPoisonUpdateAndAdvancesPastIt(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	integration.ApplyRiverSchema(t)
 	vault := keyvault.NewMemory()
@@ -271,6 +276,7 @@ func TestAPollDropsAPoisonUpdateAndAdvancesPastIt(t *testing.T) {
 // wrote are keyed on the bot that sent them and stay valid; only the cursor is
 // wrong, so only the cursor is refused.
 func TestAReplacementDuringAPollDoesNotInheritTheOutgoingBotsCursor(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	integration.ApplyRiverSchema(t)
 	vault := keyvault.NewMemory()
@@ -310,6 +316,7 @@ func TestAReplacementDuringAPollDoesNotInheritTheOutgoingBotsCursor(t *testing.T
 // to refuse a token whose bot was replaced under it — so a version bumped by every
 // inbound message would fire that fence on a healthy channel, over and over.
 func TestAdvancingTheCursorDoesNotLookLikeAReplacedBinding(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	integration.ApplyRiverSchema(t)
 	vault := keyvault.NewMemory()
@@ -347,6 +354,7 @@ func TestAdvancingTheCursorDoesNotLookLikeAReplacedBinding(t *testing.T) {
 // The cursor is therefore advanced FIRST here. Replacing a never-polled connection
 // would pass against the broken condition too.
 func TestAReplacementStillBumpsTheVersionOnAPolledConnection(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	integration.ApplyRiverSchema(t)
 	vault := keyvault.NewMemory()
@@ -386,7 +394,7 @@ func suppressChannelAccount(t *testing.T, e *integration.Env, account string) {
 		_, err := tx.Exec(ctx, `
 			INSERT INTO erasure_suppression (kind, value_hash)
 			VALUES ('channel_identity', $1)`,
-			storekit.ChannelIdentityHash(telegram.Provider, account))
+			storekit.ChannelIdentityHash(ctx, telegram.Provider, account))
 		return err
 	}); err != nil {
 		t.Fatalf("arming the erasure suppression for account %s: %v", account, err)

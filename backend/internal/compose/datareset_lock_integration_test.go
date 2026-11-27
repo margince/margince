@@ -29,6 +29,7 @@ import (
 // one — and it would arm the trap this closes, because that second reset would
 // then run its own deferred resume and lift the first one's pause mid-sweep.
 func TestASecondResetIsRefusedWithoutTouchingTheFleet(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 
@@ -74,6 +75,7 @@ func TestASecondResetIsRefusedWithoutTouchingTheFleet(t *testing.T) {
 // that leaked would turn one reset into an installation that can never be reset
 // again, which is a worse failure than the interleaving it prevents.
 func TestTheResetLockIsReleasedForTheNextReset(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	h := dataResetHandlers{
@@ -98,6 +100,7 @@ func TestTheResetLockIsReleasedForTheNextReset(t *testing.T) {
 // deliberately, since a pause nobody lifts wedges every queue — so without the
 // token a refused reset would run that defer too and lift a pause it never took.
 func TestARefusedResetDoesNotResumeTheFleet(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 
@@ -145,6 +148,7 @@ func TestARefusedResetDoesNotResumeTheFleet(t *testing.T) {
 // the post-commit INVARIANT — a vault_secret row no live handle names is
 // unreachable however it got there — rather than replaying a snapshot.
 func TestASealedRefTheSweepNeverSawIsStillPurged(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 

@@ -55,6 +55,7 @@ func asArchiver(e *dedupeEnv) context.Context {
 // restored would never be offered against its twin again. Archived is the same
 // answer a merge already gives a stale pair (retireStaleCandidates).
 func TestArchivingOneSideClosesTheDuplicateDecision(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := asArchiver(e)
 	first, _ := seedCompanyPair(ctx, t, e)
@@ -78,6 +79,7 @@ func TestArchivingOneSideClosesTheDuplicateDecision(t *testing.T) {
 // A count that outlived its rows would send a reader to a queue that has nothing
 // in it, which is the same defect wearing a number.
 func TestTheOpenCountDropsWhenASubjectIsArchived(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := asArchiver(e)
 	first, _ := seedCompanyPair(ctx, t, e)
@@ -101,6 +103,7 @@ func TestTheOpenCountDropsWhenASubjectIsArchived(t *testing.T) {
 // The control. A sweep that closed everything would pass the two above while
 // emptying the queue of exactly the work it exists to show.
 func TestAPairOfLiveCompaniesIsStillServed(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := asArchiver(e)
 	seedCompanyPair(ctx, t, e)
@@ -129,6 +132,7 @@ func TestAPairOfLiveCompaniesIsStillServed(t *testing.T) {
 // The same rule, on the other record type the queue serves. Companies are
 // where it was measured; nothing about the cause is specific to them.
 func TestArchivingAContactClosesTheirDuplicateDecision(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := asArchiver(e)
 	incumbent, _ := seedContactPair(ctx, t, e,
@@ -157,6 +161,7 @@ func TestArchivingAContactClosesTheirDuplicateDecision(t *testing.T) {
 // Disqualifying is the lead's own archive: it stamps archived_at, and it is what
 // a rep does to a lead that turned out to be nothing.
 func TestADisqualifiedLeadsDuplicateDecisionClosesWithIt(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := asArchiver(e)
 	first := e.createLead(ctx, t, "Jonas Petersen", "jonas@nordwind.test", "Nordwind Logistik")
@@ -183,6 +188,7 @@ func TestADisqualifiedLeadsDuplicateDecisionClosesWithIt(t *testing.T) {
 // against a contact the product had archived, or erased, which stamps the same
 // column and leaves the row.
 func TestTheSpendFenceClustersOnlyLiveTwins(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := asArchiver(e)
 	incumbent, twin := seedContactPair(ctx, t, e,
@@ -223,6 +229,7 @@ func TestTheSpendFenceClustersOnlyLiveTwins(t *testing.T) {
 // applying "both sides live" to the merged list would hide every row it exists
 // to show, and the contract advertises that filter.
 func TestAMergedPairIsStillListedAsMerged(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := asArchiver(e)
 	first, _ := seedCompanyPair(ctx, t, e)
@@ -258,6 +265,7 @@ func TestAMergedPairIsStillListedAsMerged(t *testing.T) {
 // what happens to a pair whose side is archived: merging answers AlreadyMerged,
 // which reopens it — "a pair no human can ever dispose of".
 func TestAnOpenPairNamingAnArchivedRecordIsNotReadableOrActionable(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := asArchiver(e)
 	first, _ := seedCompanyPair(ctx, t, e)

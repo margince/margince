@@ -15,7 +15,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -32,7 +31,7 @@ type schedulingCalendar struct {
 }
 
 func newSchedulingCalendar(pool *pgxpool.Pool, registry *capture.Registry) schedulingCalendar {
-	return schedulingCalendar{registry: registry, Seats: identity.NewService(pool), pool: pool}
+	return schedulingCalendar{registry: registry, Seats: IdentityService(pool), pool: pool}
 }
 
 func (c schedulingCalendar) Check(ctx context.Context, host ids.UserID, provider string) error {

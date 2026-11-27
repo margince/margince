@@ -24,6 +24,7 @@ import (
 )
 
 func TestACapturedMailLeavesTheHomeFenceWhereItWas(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	steps := []struct {
@@ -67,6 +68,7 @@ func TestACapturedMailLeavesTheHomeFenceWhereItWas(t *testing.T) {
 // nobody. Its project and deal links are then its first, and capture writes
 // them before it commits too.
 func TestAnUnfiledSendersMailNamingAProjectLeavesTheHomeFenceWhereItWas(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)

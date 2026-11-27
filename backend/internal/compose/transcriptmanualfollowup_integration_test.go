@@ -20,6 +20,7 @@ import (
 )
 
 func TestTranscriptKeepsAnAlreadyFiledMeetingNextStep(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name, subject string
 		paddedSummary bool
@@ -53,6 +54,7 @@ func TestTranscriptKeepsAnAlreadyFiledMeetingNextStep(t *testing.T) {
 }
 
 func TestTranscriptDoesNotMistakeAnotherColleaguesTaskForTheNextStep(t *testing.T) {
+	t.Parallel()
 	e := setupTranscript(t)
 	assignee := ids.From[ids.UserKind](e.Rep2)
 	_, _, err := e.Activities.LogActivity(e.ctx, activities.LogActivityInput{
@@ -69,6 +71,7 @@ func TestTranscriptDoesNotMistakeAnotherColleaguesTaskForTheNextStep(t *testing.
 }
 
 func TestTranscriptCanBeReadAfterItsMeetingWasArchived(t *testing.T) {
+	t.Parallel()
 	e := setupTranscript(t)
 	meeting, _, err := e.Activities.LogActivity(e.ctx, activities.LogActivityInput{
 		Kind: "meeting", Subject: new("Quarterly review"), Source: "manual",

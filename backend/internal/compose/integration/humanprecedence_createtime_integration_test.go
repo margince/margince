@@ -19,6 +19,7 @@ import (
 )
 
 func TestAutomaticWorkOverwritesCreateTimeHumanValuesAndNothingWaits(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -83,6 +84,7 @@ func TestAutomaticWorkOverwritesCreateTimeHumanValuesAndNothingWaits(t *testing.
 
 // An agent fills an empty field with no approval.
 func TestAgentFillsAnEmptyFieldWithoutApproval(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 

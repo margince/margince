@@ -16,6 +16,7 @@ import (
 )
 
 func TestReportingRejectsInvalidDefinitionsWithoutSavingPartialReports(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	cases := []struct {
 		name   string
@@ -66,6 +67,7 @@ func TestReportingRejectsInvalidDefinitionsWithoutSavingPartialReports(t *testin
 }
 
 func TestReportingHTTPReadGrantsAreRequiredForEverySavedResource(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	actor, ok := principal.Actor(f.human)
 	if !ok {
@@ -84,6 +86,7 @@ func TestReportingHTTPReadGrantsAreRequiredForEverySavedResource(t *testing.T) {
 }
 
 func TestReportingMCPReadsShareTheSavedReportAndRejectInvalidPaging(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	input := crmcontracts.ReportingReportInput{Name: "Team review", Audience: "team", AudienceTeamId: ptrUUID(f.env.Team1), Selection: f.selection()}
 	report, err := f.service.CreateReport(f.human, input)
@@ -115,6 +118,7 @@ func TestReportingMCPReadsShareTheSavedReportAndRejectInvalidPaging(t *testing.T
 }
 
 func TestReportingHTTPMissingResourcesNeverReturnSuccessfulEmptyRecords(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	handler := reportingHTTPRouter(f)
 	id := ids.NewV7().String()

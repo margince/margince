@@ -25,6 +25,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/jobs"
@@ -55,10 +56,14 @@ type AppEnv struct {
 	// placeholder, so a suite that needs the link the SUBJECT would receive
 	// reads the same bytes the dispatcher substitutes.
 	Vault keyvault.Vault
+	// Config is the configuration the app was composed over, nil for none.
+	Config *config.Config
 
 	// wiring is the suite's extra compose options, kept so Reboot recomposes
 	// the same application rather than the default one.
 	wiring func(origin string) []compose.Option
+	// extensions is the composition the server serves; nil composes no unit.
+	extensions *compose.Extensions
 	// ownPool is set on an env from Reboot, whose pool no other env shares.
 	ownPool bool
 	// importJobs are the import workers over this server's own object store.
@@ -92,24 +97,23 @@ func SetupAppWithOptions(t *testing.T, opts ...compose.Option) *AppEnv {
 // composed, so the origin is known without booting twice.
 func SetupAppWithOriginOptions(t *testing.T, opts func(origin string) []compose.Option) *AppEnv {
 	t.Helper()
-	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
-	appDSN := os.Getenv("MARGINCE_TEST_APP_DSN")
-	if ownerDSN == "" || appDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
+	return setupComposedApp(t, nil, opts)
+}
+
+// SetupAppComposing is SetupAppWithOptions serving a composition the suite
+// registered.
+func SetupAppComposing(t *testing.T, composed *compose.Extensions, opts ...compose.Option) *AppEnv {
+	t.Helper()
+	return setupComposedApp(t, composed, func(string) []compose.Option { return opts })
+}
+
+func setupComposedApp(t *testing.T, composed *compose.Extensions, opts func(origin string) []compose.Option) *AppEnv {
+	t.Helper()
+	db := testdb.New(t)
 	ctx := context.Background()
-	owner := connectOwner(t, ownerDSN)
+	owner := connectOwner(t, db.OwnerDSN)
 
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatalf("migrating schema: %v", err)
-	}
-	if err := testdb.Reset(ctx, owner); err != nil {
-		t.Fatalf("resetting database: %v", err)
-	}
-
-	// Shared across the package's tests, and deliberately not closed here — see
-	// testdb.Pool for why the connections, not the pool object, are the cost.
-	pool, err := testdb.Pool(ctx, appDSN)
+	pool, err := testdb.Pool(ctx, db.AppDSN)
 	if err != nil {
 		t.Fatalf("opening app pool: %v", err)
 	}
@@ -122,7 +126,7 @@ func SetupAppWithOriginOptions(t *testing.T, opts func(origin string) []compose.
 	if err != nil {
 		t.Fatalf("cookie jar: %v", err)
 	}
-	e := &AppEnv{Owner: owner, Pool: pool, Vault: keyvault.NewMemory(), wiring: opts}
+	e := &AppEnv{Owner: owner, Pool: pool, Vault: keyvault.NewMemory(), wiring: opts, extensions: composed}
 	return e.serve(t, jar)
 }
 
@@ -141,17 +145,17 @@ func (e *AppEnv) Reboot(t *testing.T) *AppEnv {
 // that meters the rebooted app's connections.
 func (e *AppEnv) RebootWith(t *testing.T, tune func(*pgxpool.Config)) *AppEnv {
 	t.Helper()
-	pool, err := testdb.OwnPoolWith(context.Background(), AppDSN(t), tune)
+	pool, err := testdb.OwnPoolWith(context.Background(), testdb.For(t).AppDSN, tune)
 	if err != nil {
 		t.Fatalf("opening the rebooted app pool: %v", err)
 	}
 	t.Cleanup(pool.Close)
-	next := &AppEnv{Owner: e.Owner, Pool: pool, Vault: e.Vault, wiring: e.wiring, ownPool: true}
+	next := &AppEnv{Owner: e.Owner, Pool: pool, Vault: e.Vault, Config: e.Config, wiring: e.wiring, extensions: e.extensions, ownPool: true}
 	return next.serve(t, e.Client.Jar)
 }
 
 // Close stops requests and drains their refreshes before releasing an owned pool.
-// SetupApp shares its pool across environments.
+// SetupApp shares its pool across the test's environments.
 func (e *AppEnv) Close() {
 	e.TS.Close()
 	e.settleHomeRefreshes()
@@ -215,7 +219,7 @@ func (e *AppEnv) serve(t *testing.T, jar http.CookieJar) *AppEnv {
 		compose.WithImportJobWorkersForTest(&e.importJobs, &importJobsErr),
 		compose.WithHomeRefreshSettlerForTest(&e.settleHomeRefreshes),
 	)
-	ts.Config.Handler = compose.New(e.Pool, slog.New(slog.NewTextHandler(os.Stderr, nil)), allOpts...)
+	ts.Config.Handler = compose.New(e.Pool, slog.New(slog.NewTextHandler(os.Stderr, nil)), e.extensions, allOpts...)
 	if importJobsErr != nil {
 		t.Fatalf("building the import workers: %v", importJobsErr)
 	}
@@ -366,7 +370,7 @@ func BootstrapWorkspaceSession(t *testing.T, e *AppEnv, workspaceName, adminEmai
 			Email: adminEmail, DisplayName: adminName, PasswordFile: pwFile,
 		},
 	}
-	if err := compose.EnsureInstallation(context.Background(), e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), cfg); err != nil {
+	if err := compose.EnsureInstallation(e.Ctx(context.Background()), e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), cfg); err != nil {
 		t.Fatalf("bootstrap: %v", err)
 	}
 	if status := e.signIn(t, adminEmail, operatorSupplied); status != http.StatusOK {
@@ -415,12 +419,8 @@ func CloseBody(t *testing.T, resp *http.Response) {
 // would then reach compose through it.
 func applyRiverSchema(t *testing.T) {
 	t.Helper()
-	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
-	if ownerDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
 	ctx := context.Background()
-	ownerPool, err := testdb.Pool(ctx, ownerDSN)
+	ownerPool, err := testdb.Pool(ctx, testdb.For(t).OwnerDSN)
 	if err != nil {
 		t.Fatalf("opening owner pool: %v", err)
 	}

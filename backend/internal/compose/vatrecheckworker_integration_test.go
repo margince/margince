@@ -121,6 +121,7 @@ func (v *vatRecheckEnv) work(t *testing.T, requested bool) {
 // one somebody gave or confirmed: a number the website reader proposed is not
 // this installation's legal identity until somebody says it is.
 func TestTheConsultationIsMadeUnderTheVatNumberAnAdminConfirmed(t *testing.T) {
+	t.Parallel()
 	v := setupVatRecheck(t)
 	const own = "DE999999999"
 	lastRequester := func() string { return v.register.requesters[len(v.register.requesters)-1] }
@@ -171,6 +172,7 @@ func TestTheConsultationIsMadeUnderTheVatNumberAnAdminConfirmed(t *testing.T) {
 // reader. Somebody looking at their own typo was told a public service had
 // failed them, and the thing they had to fix was on their own screen.
 func TestANumberThatIsNotAVatIdIsInvalid(t *testing.T) {
+	t.Parallel()
 	v := setupVatRecheck(t)
 	register := &refusingRegister{}
 	v.worker = newVatCheckWorker(v.Pool, register, func() time.Time {
@@ -203,6 +205,7 @@ func TestANumberThatIsNotAVatIdIsInvalid(t *testing.T) {
 // nobody asked. A write queues a consultation about a number already answered;
 // the worker leaves the register alone.
 func TestAnAutomaticConsultationDoesNotReAskAnAnsweredNumber(t *testing.T) {
+	t.Parallel()
 	v := setupVatRecheck(t)
 
 	v.work(t, false)
@@ -215,6 +218,7 @@ func TestAnAutomaticConsultationDoesNotReAskAnAnsweredNumber(t *testing.T) {
 // The exception, and the reason this change exists: a contact pressing the button
 // has said the stored answer is not good enough.
 func TestAContactsRequestReAsksAnAnsweredNumber(t *testing.T) {
+	t.Parallel()
 	v := setupVatRecheck(t)
 
 	v.work(t, true)
@@ -231,6 +235,7 @@ func TestAContactsRequestReAsksAnAnsweredNumber(t *testing.T) {
 // number has nothing to consult, however loudly it is asked about. Without this
 // the flag would send the register an empty string.
 func TestAContactsRequestStillAsksNothingWhenNoNumberIsStated(t *testing.T) {
+	t.Parallel()
 	v := setupVatRecheck(t)
 	ctx := v.Admin()
 	if _, err := v.Pool.Exec(ctx,
@@ -278,6 +283,7 @@ func (m *movingRegister) Check(_ context.Context, number, _ string) (vatcheck.Re
 // about a number the company no longer states, and the next consultation waits
 // on somebody editing the field again.
 func TestANumberCorrectedWhileTheJobHoldsItIsStillAnswered(t *testing.T) {
+	t.Parallel()
 	v := setupVatRecheck(t)
 	const corrected = "DE136695976"
 	register := &movingRegister{
@@ -321,6 +327,7 @@ func TestANumberCorrectedWhileTheJobHoldsItIsStillAnswered(t *testing.T) {
 // run of consultations; this is the other half — the common case must not pay
 // for the rare one, against a register running on goodwill.
 func TestAnUnchangedNumberIsConsultedOnce(t *testing.T) {
+	t.Parallel()
 	v := setupVatRecheck(t)
 
 	v.work(t, true)
@@ -349,6 +356,7 @@ func (r *throttledRegister) Check(_ context.Context, _, _ string) (vatcheck.Resu
 // is the case where even a second consultation is one too many, and coming back
 // sooner than told is how an installation gets blocked outright.
 func TestAThrottledRegisterReschedulesRatherThanAskingAgain(t *testing.T) {
+	t.Parallel()
 	v := setupVatRecheck(t)
 	register := &throttledRegister{after: 90 * time.Second}
 	v.worker = newVatCheckWorker(v.Pool, register, func() time.Time {
@@ -381,6 +389,7 @@ func (r *failingRegister) Check(_ context.Context, _, _ string) (vatcheck.Result
 // does not consume the second round either: River retries the job on its own
 // ledger, which is where a transport failure belongs.
 func TestAConsultationThatFailedRecordsNothingAndDoesNotRetryInLine(t *testing.T) {
+	t.Parallel()
 	v := setupVatRecheck(t)
 	register := &failingRegister{}
 	v.worker = newVatCheckWorker(v.Pool, register, func() time.Time {

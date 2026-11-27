@@ -361,6 +361,7 @@ func assertPublicBookingRecovery(t *testing.T, e *apptest.AppEnv, base string, m
 }
 
 func TestPublicBookingEndToEnd(t *testing.T) {
+	t.Parallel()
 	e := setupBookingApp(t)
 	e.BootstrapWorkspace(t)
 	apptest.EnableGoogleBookingPage(t, e)
@@ -393,6 +394,7 @@ func TestPublicBookingEndToEnd(t *testing.T) {
 // The anonymous surface is throttled per slug: a flood of booking posts
 // meets 429 long before it meets the calendar.
 func TestPublicBookingRateLimited(t *testing.T) {
+	t.Parallel()
 	e := setupBookingApp(t)
 	e.BootstrapWorkspace(t)
 	apptest.EnableGoogleBookingPage(t, e)
@@ -423,6 +425,7 @@ func TestPublicBookingRateLimited(t *testing.T) {
 // would answer 201 too, having written a stranger a grant under a marketing
 // lane they never saw.
 func TestAnAnonymousBookingNamesNoPurposeAndStillGrantsTheLane(t *testing.T) {
+	t.Parallel()
 	e := setupBookingApp(t)
 	e.BootstrapWorkspace(t)
 	apptest.EnableGoogleBookingPage(t, e)
@@ -457,6 +460,7 @@ func TestAnAnonymousBookingNamesNoPurposeAndStillGrantsTheLane(t *testing.T) {
 // the refusal on its own field, and nothing is written: no contact, no
 // meeting, no consent grant.
 func TestAPublicBookingFromASendingSystemsAddressIsRefusedOnTheBookerEmail(t *testing.T) {
+	t.Parallel()
 	e := setupBookingApp(t)
 	e.BootstrapWorkspace(t)
 	apptest.EnableGoogleBookingPage(t, e)

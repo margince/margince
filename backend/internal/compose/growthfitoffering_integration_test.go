@@ -149,6 +149,7 @@ func entityID(e crmcontracts.LegalEntity) ids.LegalEntityID {
 }
 
 func TestACompanyIsJudgedAgainstTheOfferingChosenForIt(t *testing.T) {
+	t.Parallel()
 	o := setupOffering(t)
 	wien := o.secondOffering(t, new("Car dealers with large lots"))
 	company, cited := o.customer(t, "Autohaus Berger")
@@ -181,6 +182,7 @@ func TestACompanyIsJudgedAgainstTheOfferingChosenForIt(t *testing.T) {
 }
 
 func TestChoosingTheDefaultEntityReturnsToTheMainOffering(t *testing.T) {
+	t.Parallel()
 	o := setupOffering(t)
 	wien := o.secondOffering(t, new("Car dealers with large lots"))
 	company, cited := o.customer(t, "Autohaus Berger")
@@ -207,6 +209,7 @@ func TestChoosingTheDefaultEntityReturnsToTheMainOffering(t *testing.T) {
 }
 
 func TestEditingAnOfferingReJudgesOnlyTheCompaniesChosenAgainstIt(t *testing.T) {
+	t.Parallel()
 	o := setupOffering(t)
 	wien := o.secondOffering(t, new("Car dealers with large lots"))
 	pointing, citedPointing := o.customer(t, "Autohaus Berger")
@@ -233,6 +236,7 @@ func TestEditingAnOfferingReJudgesOnlyTheCompaniesChosenAgainstIt(t *testing.T) 
 }
 
 func TestAnOfferingWithoutAnIdealCustomerCapsTheBand(t *testing.T) {
+	t.Parallel()
 	o := setupOffering(t)
 	wien := o.secondOffering(t, nil)
 	company, cited := o.customer(t, "Autohaus Berger")

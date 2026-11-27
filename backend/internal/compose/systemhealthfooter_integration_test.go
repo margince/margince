@@ -27,6 +27,7 @@ import (
 //
 // Mutation: return nil from RecordUnheldRefusalTx and this fails.
 func TestADroppedBackgroundSendCountsInTheFooterWarning(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	held := commsauthz.Decision{ReasonCode: commsauthz.ReasonFooterIncomplete}

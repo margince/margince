@@ -28,6 +28,7 @@ import (
 // The reminder the real writer files quotes the sender in its body and its
 // system text; erasing the mail's content takes the quote from both.
 func TestErasingAMailTakesItsQuoteFromTheFiledReminder(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	at := time.Date(2026, 10, 21, 8, 0, 0, 0, time.UTC)
 	var address string

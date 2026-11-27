@@ -70,6 +70,7 @@ func auditedRow(t *testing.T, e *extRuntimeEnv, entityID ids.UUID) (auditID ids.
 // table the core has never heard of. The unit describes its own change; the
 // core supplies the actor, the workspace, the attribution and the trace.
 func TestAUnitsOwnWriteLandsAsARowALedgerRowAndAnEvent(t *testing.T) {
+	t.Parallel()
 	e := setupExtRuntime(t)
 	unitsqltest.ScratchTable(t, probeTable)
 	rt, ctx := e.runtime("alpha")
@@ -200,6 +201,7 @@ func assertSameJSON(t *testing.T, what string, got json.RawMessage, want string)
 // leaves no history of a write that never happened. The rows are counted with
 // the transaction already rolled back, which is the state a later reader meets.
 func TestAFailedUnitWriteTakesItsLedgerRowAndItsEventWithIt(t *testing.T) {
+	t.Parallel()
 	e := setupExtRuntime(t)
 	rt, ctx := e.runtime("alpha")
 	rowID := ids.NewV7()
@@ -246,12 +248,13 @@ func TestAFailedUnitWriteTakesItsLedgerRowAndItsEventWithIt(t *testing.T) {
 // itself would be asserting its own arithmetic and would stay green through
 // exactly the regression that matters.
 func TestADeliveryThroughTheRealHandlerRecordsAndRefuses(t *testing.T) {
+	t.Parallel()
 	e := setupExtRuntime(t)
 	rowID, correlation, cause := ids.NewV7(), ids.NewV7(), ids.NewV7()
 
 	var coreErr error
 	sub := ComposedSubscription{
-		Unit: "alpha", Version: "1.0.0",
+		Unit: "alpha", Version: "1.0.0", composed: e.composed,
 		Sub: extension.Subscription{
 			Name: "probe", Events: []string{"activity.archived"},
 			Handle: func(ctx context.Context, rt extension.Runtime, d extension.Delivery) error {
@@ -333,10 +336,11 @@ func TestADeliveryThroughTheRealHandlerRecordsAndRefuses(t *testing.T) {
 // one would: inside a handler that the real Handler actually reached, past the
 // tenant read a fake pool cannot answer.
 func TestAPanickingHandlerFailsTheDeliveryRatherThanTheWorker(t *testing.T) {
+	t.Parallel()
 	e := setupExtRuntime(t)
 	var ran bool
 	sub := ComposedSubscription{
-		Unit: "alpha", Version: "1.0.0",
+		Unit: "alpha", Version: "1.0.0", composed: e.composed,
 		Sub: extension.Subscription{
 			Name: "probe", Events: []string{"activity.archived"},
 			Handle: func(context.Context, extension.Runtime, extension.Delivery) error {

@@ -153,6 +153,7 @@ func (v *viabilityEnv) receiptStale(t *testing.T, deal ids.UUID) bool {
 }
 
 func TestEvidenceThatMovedSinceTheCheckMakesTheReceiptStale(t *testing.T) {
+	t.Parallel()
 	v := setupViability(t)
 	v.check(t)
 	if v.receiptStale(t, v.supported) {
@@ -171,6 +172,7 @@ func hasReason(list, item string) bool {
 }
 
 func TestABrokenColleagueMailboxDoesNotBlindTheOwnersDeals(t *testing.T) {
+	t.Parallel()
 	v := setupViability(t)
 	// The fixture's pipeline and stage, read off a deal it already made.
 	var pipeline ids.PipelineID
@@ -211,6 +213,7 @@ func TestABrokenColleagueMailboxDoesNotBlindTheOwnersDeals(t *testing.T) {
 // Mutation: drop the capture_import users from dealMailCovered (judge the owner
 // alone) and the silent deal reads review_required.
 func TestADealWhoseMailReachedABrokenMailboxStaysUnknown(t *testing.T) {
+	t.Parallel()
 	v := setupViability(t)
 	owner := integration.OwnerConn(t)
 	ctx := context.Background()
@@ -275,6 +278,7 @@ func (v *viabilityEnv) ourMailOnDeal(t *testing.T, deal, importer ids.UUID, deli
 // Mutation: let a checked run grade cover every deal again in dealMailCovered
 // and the deal reads review_required.
 func TestAHealthyRunDoesNotCoverADealWhoseOwnerHasNoMailbox(t *testing.T) {
+	t.Parallel()
 	v := setupViability(t)
 	v.reassign(t, v.silent, v.Rep2)
 
@@ -292,6 +296,7 @@ func TestAHealthyRunDoesNotCoverADealWhoseOwnerHasNoMailbox(t *testing.T) {
 // Mutation: judge an import on its user's connections and ignore delivered_by,
 // and the deal reads review_required.
 func TestAGoneDeliveringConnectionIsNotCoveredByTheUsersNewOne(t *testing.T) {
+	t.Parallel()
 	v := setupViability(t)
 	owner := integration.OwnerConn(t)
 	graph := integration.SeedIDRow(t, owner, `
@@ -318,6 +323,7 @@ func TestAGoneDeliveringConnectionIsNotCoveredByTheUsersNewOne(t *testing.T) {
 // Mutation: drop the mailboxes from viabilityFingerprintSQL and the receipt
 // stays current.
 func TestANewDeliveringMailboxMakesTheReceiptStale(t *testing.T) {
+	t.Parallel()
 	v := setupViability(t)
 	v.ourMailOnDeal(t, v.supported, v.Rep1, "gmail:0")
 	v.check(t)
@@ -340,6 +346,7 @@ func TestANewDeliveringMailboxMakesTheReceiptStale(t *testing.T) {
 // A past meeting with the buyer moves the deal whether or not anyone reported
 // it held. A meeting still to come, a canceled one and a no-show do not.
 func TestAPastMeetingNobodyCalledOffIsCustomerProgress(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	pipeline, open, _ := integration.DealFixture(t, e)
 	buyer, now := e.SeedContact(t, "Buyer", nil), clocktest.Now(t)

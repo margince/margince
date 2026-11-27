@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/chatlinks"
 	"github.com/margince/margince/backend/internal/modules/chatlinks/dispact"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -36,6 +37,8 @@ type Filer struct {
 	// erased subject's message is not filed.
 	Contacts *contacts.Store
 	Lane     ai.Completer
+	// Rbac is the vocabulary a summary's readers are judged under.
+	Rbac identity.RbacObjects
 }
 
 // restricted answers which of the author addresses the summary must withhold.
@@ -70,7 +73,7 @@ func (f *Filer) FileMessage(ctx context.Context, kind string, id ids.UUID, ref s
 	if err != nil {
 		return crmcontracts.Activity{}, err
 	}
-	reply, err := summariser{lane: f.Lane, pool: f.Pool, restricted: f.restricted}.summarise(ctx, link, record, messages, true)
+	reply, err := summariser{lane: f.Lane, pool: f.Pool, rbac: f.Rbac, restricted: f.restricted}.summarise(ctx, link, record, messages, true)
 	// errUnmatchableAuthor is a restricted or unidentifiable author: like a
 	// missing model, it files nothing and answers that no summary is available.
 	if errors.Is(err, errNoModel) || errors.Is(err, errUnmatchableAuthor) {

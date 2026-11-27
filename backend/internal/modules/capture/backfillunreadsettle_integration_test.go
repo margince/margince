@@ -29,6 +29,7 @@ func (p *oneLastPage) BackfillPage(context.Context, connector.Auth, time.Time, s
 // was asked for is not one it covered. A run that failed a message did not read
 // its window.
 func TestAFinishedImportSettlesTheUnreadSpanItRead(t *testing.T) {
+	t.Parallel()
 	day := 24 * time.Hour
 	for _, c := range []struct {
 		name string

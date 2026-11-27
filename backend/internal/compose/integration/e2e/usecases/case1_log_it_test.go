@@ -154,6 +154,7 @@ const transcriptMarker = "transcript"
 //
 // Held by: this test's own employment-edge count, below.
 func TestCase1TheCompanyTheContactAndTheDealAllExistAfterwards(t *testing.T) {
+	t.Parallel()
 	s := boot(t, scopesReadWrite)
 	m := s.logTheMeeting(t)
 
@@ -202,6 +203,7 @@ func TestCase1TheCompanyTheContactAndTheDealAllExistAfterwards(t *testing.T) {
 // below reads it back off the account's own timeline, reached through the
 // employment edge this same act wrote.
 func TestCase1TheMeetingLandsOnEveryRecordInOneWrite(t *testing.T) {
+	t.Parallel()
 	s := boot(t, scopesReadWrite)
 	m := s.logTheMeeting(t)
 
@@ -265,6 +267,7 @@ func TestCase1TheMeetingLandsOnEveryRecordInOneWrite(t *testing.T) {
 // The account reaches the meeting through the contact who was in the room, and
 // the timeline an assistant actually reads is where that has to be true.
 func TestCase1TheAccountSeesTheMeetingThroughTheContactWhoWasInIt(t *testing.T) {
+	t.Parallel()
 	s := boot(t, scopesReadWrite)
 	m := s.logTheMeeting(t)
 
@@ -292,6 +295,7 @@ func TestCase1TheAccountSeesTheMeetingThroughTheContactWhoWasInIt(t *testing.T) 
 // a model retries the same call or gives up on the write. The tool answers with
 // the rule and the alternative in one sentence.
 func TestCase1FilingTheMeetingAgainstTheCompanyIsRefusedWithSomethingToDo(t *testing.T) {
+	t.Parallel()
 	s := boot(t, scopesReadWrite)
 	m := s.logTheMeeting(t)
 
@@ -322,6 +326,7 @@ func TestCase1FilingTheMeetingAgainstTheCompanyIsRefusedWithSomethingToDo(t *tes
 // requested by the HUMAN behind the passport, not by the agent. Proposals routed
 // to a software account reach nobody.
 func TestCase1TheTranscriptIsStoredAsATranscriptAndReadWithoutAsking(t *testing.T) {
+	t.Parallel()
 	s := bootWithTranscriptReading(t)
 	m := s.logTheMeeting(t)
 

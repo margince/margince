@@ -10,7 +10,6 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/webhooks"
 	"github.com/margince/margince/backend/internal/platform/database"
 	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
@@ -32,7 +31,7 @@ func newWebhookHandlers(pool *pgxpool.Pool, cipher *webhooks.Cipher, log *slog.L
 	// resolver. A nil one here would make every replay answer 200, write its
 	// audit row, and send nothing.
 	deliverer := webhooks.NewDeliverer(store, webhooks.NewGuardedClient(), nil,
-		identity.NewService(pool), log)
+		IdentityService(pool), log)
 	return webhooks.NewHandlers(store, deliverer)
 }
 
@@ -40,7 +39,7 @@ func newWebhookHandlers(pool *pgxpool.Pool, cipher *webhooks.Cipher, log *slog.L
 // webhook runs as is acting for that member, so it asks the handover's
 // member-administration check about the new owner.
 func webhookStoreOver(db *database.DB, cipher *webhooks.Cipher) *webhooks.Store {
-	return webhooks.NewStore(db, cipher).WithOwnerAdmission(identity.AdmitMemberHandover)
+	return webhooks.NewStore(db, cipher).WithOwnerAdmission(admitMemberHandover)
 }
 
 // NewWebhookDeliverer builds the bus-consumer / retry-sweep deliverer for
@@ -65,7 +64,7 @@ func NewWebhookDeliverer(pool *pgxpool.Pool, key, publicBaseURL string, log *slo
 	if err != nil {
 		return nil, fmt.Errorf("webhook cipher: %w", err)
 	}
-	resolver := identity.NewService(pool)
+	resolver := IdentityService(pool)
 	return func(db *database.DB) *webhooks.Deliverer {
 		return webhooks.NewDeliverer(webhooks.NewStore(db, cipher),
 			webhooks.NewGuardedClient(), nil, resolver, log).WithPublicBaseURL(publicBaseURL)

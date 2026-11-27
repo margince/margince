@@ -43,6 +43,7 @@ func countAudit(t *testing.T, e *integration.Env) int {
 }
 
 func TestTaskOverridesSaveUnderTheirOwnETagAndAuditTheWrite(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := overrideSeat(e)
 	h := taskOverrideHandlers(e)
@@ -71,6 +72,7 @@ func TestTaskOverridesSaveUnderTheirOwnETagAndAuditTheWrite(t *testing.T) {
 }
 
 func TestATaskOverrideOutOfBoundsIsRefusedByItsPath(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	put := putTaskOverrides(overrideSeat(e), taskOverrideHandlers(e), `{"capture_classify":{"decision_timeout_ms":15000,"attempt_timeout_ms":400000}}`, "")
 	if put.Code != http.StatusUnprocessableEntity ||
@@ -81,6 +83,7 @@ func TestATaskOverrideOutOfBoundsIsRefusedByItsPath(t *testing.T) {
 }
 
 func TestTheTaskOverridePreviewWritesNothingAndNamesStaleTasks(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := overrideSeat(e)
 	h := taskOverrideHandlers(e)
@@ -109,6 +112,7 @@ func TestTheTaskOverridePreviewWritesNothingAndNamesStaleTasks(t *testing.T) {
 }
 
 func TestTheStatusMarksATaskWithAnOverride(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := overrideSeat(e)
 	if rec := putTaskOverrides(ctx, taskOverrideHandlers(e), `{"cold_start":{"thinking":"high"}}`, ""); rec.Code != http.StatusOK {
@@ -135,6 +139,7 @@ func TestTheStatusMarksATaskWithAnOverride(t *testing.T) {
 // A save reaches a running Router on the watcher's next read, through the same
 // store the handler wrote with.
 func TestASavedTaskOverrideReachesARunningRouter(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := overrideSeat(e)
 	w, router := watcherServing(t, routingFixture(t, "serving"))

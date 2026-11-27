@@ -15,7 +15,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/gcal"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/platform/originalstore"
@@ -31,7 +30,7 @@ import (
 // whose calendar stamps the meeting. A stored answer only fills an empty one.
 func meetingGuestAnswersDataTask(pool *pgxpool.Pool) datatask.Task {
 	inWorkspace := installationContext(pool)
-	authority := identity.NewService(pool)
+	authority := IdentityService(pool)
 	return datatask.Task{
 		ID: "core/1793003497_meeting_guest_answers", Version: 2,
 		Title: systemtext.Literal("datatask.title.core.1793003497_meeting_guest_answers"), Requires: []string{"core/1793003496"},

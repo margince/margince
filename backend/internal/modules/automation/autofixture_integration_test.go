@@ -17,7 +17,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"testing"
 	"time"
 
@@ -41,13 +40,9 @@ type autoFixture struct {
 
 func setupAutomationDB(t *testing.T) *autoFixture {
 	t.Helper()
-	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
-	appDSN := os.Getenv("MARGINCE_TEST_APP_DSN")
-	if ownerDSN == "" || appDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
+	db := testdb.New(t)
 	ctx := context.Background()
-	owner, err := pgx.Connect(ctx, ownerDSN)
+	owner, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -56,19 +51,6 @@ func setupAutomationDB(t *testing.T) *autoFixture {
 			t.Errorf("closing owner connection: %v", err)
 		}
 	})
-	// To head before anything else touches this database: testdb.Pool refuses
-	// until EnsureSchema has run, and EnsureSchema still REBUILDS whenever it
-	// cannot prove the database is a fresh lane clone — so a seed written
-	// before it would be dropped rather than reset.
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
-	// Every test in this package seeds its own workspace into ONE database, so
-	// the separation between them has to be real: reset before seeding, as
-	// compose/integration's harness does.
-	if err := testdb.Reset(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
 
 	fx := &autoFixture{owner: owner, ws: ids.NewV7(), rep1: ids.NewV7(), rep2: ids.NewV7()}
 	// The database is already migrated (`make migrate`, the integration
@@ -79,14 +61,12 @@ func setupAutomationDB(t *testing.T) *autoFixture {
 	fx.exec(t, `INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Rep1')`, fx.rep1, "rep1-"+fx.rep1.String()+"@runs.test")
 	fx.exec(t, `INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Rep2')`, fx.rep2, "rep2-"+fx.rep2.String()+"@runs.test")
 
-	pool, err := testdb.Pool(ctx, appDSN)
+	pool, err := testdb.Pool(ctx, db.AppDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// Registered where the pool is handed out, before the test adds any cleanup
 	// of its own, so it runs last and sees a package that has genuinely stopped.
-	// The pool outlives the test now, so a goroutine still holding a connection
-	// would go on writing into the database the NEXT test just reset.
 	testdb.AssertPoolsQuiesced(t)
 	fx.pool = pool
 	return fx

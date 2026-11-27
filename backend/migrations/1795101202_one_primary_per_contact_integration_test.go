@@ -16,6 +16,7 @@ import (
 // A contact that held a primary address of each type keeps the one the app
 // already used. The per-contact index then refuses a second primary.
 func TestTheOnePrimaryMigrationKeepsTheAddressTheAppUsed(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	resetSchema(t, conn)

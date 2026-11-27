@@ -39,6 +39,7 @@ func signalOrigin(t *testing.T, e *integration.Env, id ids.UUID) [2]string {
 // A producer's name moves to source_system and the row lands on automation. A
 // client's free text names no producer, and lands on api with none.
 func TestTheTaskMovesAnOlderSignalsProducerIntoSourceSystem(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	want := map[ids.UUID][2]string{
@@ -89,6 +90,7 @@ func TestTheTaskMovesAnOlderSignalsProducerIntoSourceSystem(t *testing.T) {
 // The scan's readers select its rows by producer. A row the task has not
 // reached still names the scan in source, and a reader must find it there.
 func TestAScanReaderFindsAnOlderSignalBeforeTheTaskHasRun(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	scanned := olderSignal(t, owner, "ghosted_thread", "No reply for 15 days", "signal-scan")
@@ -124,6 +126,7 @@ func TestAScanReaderFindsAnOlderSignalBeforeTheTaskHasRun(t *testing.T) {
 // An unvalidated check still judges an older row when it is next written. A
 // triage before the task has run goes through, and moves the producer too.
 func TestATriageBeforeTheTaskMovesAnOlderSignalOntoItsChannel(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	unit := olderSignal(t, owner, "ext:billing:paid_late", "Paid late", "billing")
@@ -144,6 +147,7 @@ func TestATriageBeforeTheTaskMovesAnOlderSignalOntoItsChannel(t *testing.T) {
 
 // A new scan finding is written on its channel with its producer beside it.
 func TestANewScanFindingNamesItsChannelAndItsProducer(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := e.SeedCompany(t, "Quiet Co", nil)
 	ctx := systemCtx(e)

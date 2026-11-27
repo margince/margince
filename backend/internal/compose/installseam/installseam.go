@@ -16,11 +16,13 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"sync"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/briefmerge"
 	"github.com/margince/margince/backend/internal/compose/editaccess"
+	"github.com/margince/margince/backend/internal/compose/extensionprivacy"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
@@ -35,6 +37,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/sweepreach"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -64,6 +67,9 @@ func Deals() deals.Installation {
 			activities.MoveDealRefsTx, dealrooms.MoveDealRefsTx, chatlinks.MoveDealRefsTx,
 			commissions.MoveDealRefsTx, briefmerge.MoveDealRefsTx,
 		},
+		// The core modules' declared tables; the composition answers the
+		// installed extensions' too.
+		MergeReach: coreMergeReach,
 		// The Value sort reads both ungated: a seat that may read deals may
 		// order them, whatever its installation_settings grant.
 		BaseCurrencyApplied: identity.BaseCurrencyAppliedTx,
@@ -197,3 +203,13 @@ func followDealOwner(ctx context.Context, tx pgx.Tx, dealID ids.UUID, from, to *
 	}
 	return editaccess.FollowOwnerTx(ctx, tx, "deal", dealID, to)
 }
+
+// coreMergeReach is the reach the core modules declare, for a store built
+// outside the composition.
+var coreMergeReach = sync.OnceValues(func() (sweepreach.Set, error) {
+	registry, err := extensionprivacy.Registry(nil)
+	if err != nil {
+		return sweepreach.Set{}, err
+	}
+	return registry.Reach(), nil
+})

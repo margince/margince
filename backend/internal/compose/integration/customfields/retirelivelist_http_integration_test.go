@@ -38,6 +38,7 @@ type listWire struct {
 }
 
 func TestRetiringAFieldALiveListFiltersOnNamesTheListAndKeepsItEvaluating(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupAppWithOptions(t,
 		compose.WithSchemaPool(integration.SchemaPool(t)), compose.WithListsEnabled(true))
 	e.BootstrapWorkspace(t)

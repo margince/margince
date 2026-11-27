@@ -31,6 +31,7 @@ func (e *financeEnv) unlinkTheFixtureRows(tx pgx.Tx) error {
 // A new row, and a rewrite of an old row, must name a customer link. An old
 // row that names none stays as it is.
 func TestTheDatabaseRefusesANewOrRewrittenRowThatNamesNoCustomerLink(t *testing.T) {
+	t.Parallel()
 	e := setupFinance(t)
 	if _, err := e.store.SyncConnection(e.ctx, e.provider()); err != nil {
 		t.Fatal(err)

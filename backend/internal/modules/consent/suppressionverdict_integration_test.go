@@ -23,6 +23,7 @@ func (e *qualifyingEnv) suppress(t *testing.T, kind string) {
 }
 
 func TestASubjectRequestBlocksCorrespondenceTheGuardWouldOtherwiseAllow(t *testing.T) {
+	t.Parallel()
 	e := setupQualifying(t)
 	e.inbound(t, time.Now().Add(-24*time.Hour))
 
@@ -51,6 +52,7 @@ func TestASubjectRequestBlocksCorrespondenceTheGuardWouldOtherwiseAllow(t *testi
 // overwhelming majority of ordinary replies the moment anybody unsubscribed
 // from a newsletter.
 func TestAMarketingObjectionDoesNotBlockBusinessCorrespondence(t *testing.T) {
+	t.Parallel()
 	e := setupQualifying(t)
 	e.inbound(t, time.Now().Add(-24*time.Hour))
 	e.suppress(t, "marketing_objection")
@@ -64,6 +66,7 @@ func TestAMarketingObjectionDoesNotBlockBusinessCorrespondence(t *testing.T) {
 // A statutory restriction (Art. 18) binds business correspondence too — it is
 // not one of the three subject-serving categories Art. 18(2) exempts.
 func TestAProcessingRestrictionBlocksCorrespondence(t *testing.T) {
+	t.Parallel()
 	e := setupQualifying(t)
 	e.inbound(t, time.Now().Add(-24*time.Hour))
 	e.suppress(t, "processing_restriction")
@@ -83,6 +86,7 @@ func TestAProcessingRestrictionBlocksCorrespondence(t *testing.T) {
 // so a bounce on one of their addresses must not read as "this contact is
 // blocked" when another channel might still reach them.
 func TestAnAddressPinnedHardBounceDoesNotBlockTheContactLevelVerdict(t *testing.T) {
+	t.Parallel()
 	e := setupQualifying(t)
 	e.inbound(t, time.Now().Add(-24*time.Hour))
 	if _, err := e.owner.Exec(e.ctx, `
@@ -102,6 +106,7 @@ func TestAnAddressPinnedHardBounceDoesNotBlockTheContactLevelVerdict(t *testing.
 // excludes it. This pins that the verdict inherits that read rather than a
 // second, looser one.
 func TestARevokedSuppressionDoesNotBlock(t *testing.T) {
+	t.Parallel()
 	e := setupQualifying(t)
 	e.inbound(t, time.Now().Add(-24*time.Hour))
 	if _, err := e.owner.Exec(e.ctx, `

@@ -16,6 +16,7 @@ import (
 )
 
 func TestAFilterValueOutsideItsEnumIsRefusedOverHTTP(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -48,6 +49,7 @@ func TestAFilterValueOutsideItsEnumIsRefusedOverHTTP(t *testing.T) {
 }
 
 func TestHalfAnEntityPairOnTheTimelineIsRefusedOverHTTP(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 

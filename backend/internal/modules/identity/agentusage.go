@@ -86,7 +86,7 @@ func (s *Service) AgentUsageHolders(ctx context.Context, id Identity) ([]AgentUs
 		if err := rows.Err(); err != nil {
 			return err
 		}
-		return addHolderRolesTx(ctx, tx, out)
+		return addHolderRolesTx(ctx, tx, s.rbac, out)
 	})
 	if err != nil {
 		return nil, err
@@ -96,12 +96,12 @@ func (s *Service) AgentUsageHolders(ctx context.Context, id Identity) ([]AgentUs
 
 // addHolderRolesTx sets each holder's live roles, read the way authentication
 // reads them, so the allowance shown is the one their agents are held to.
-func addHolderRolesTx(ctx context.Context, tx pgx.Tx, holders []AgentUsageHolder) error {
+func addHolderRolesTx(ctx context.Context, tx pgx.Tx, rbac RbacObjects, holders []AgentUsageHolder) error {
 	users := make([]ids.UUID, len(holders))
 	for i, holder := range holders {
 		users[i] = holder.UserID
 	}
-	_, held, err := loadRoleDocuments(ctx, tx, users)
+	held, err := loadRoleDocuments(ctx, tx, rbac, users)
 	if err != nil {
 		return err
 	}

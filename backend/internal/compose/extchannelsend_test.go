@@ -23,15 +23,10 @@ import (
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
-// declaresTransport installs a composed set holding one unit that supplies one
-// channel, restoring whatever the process had when the test ends.
-//
-// It writes the REAL registry rather than a stub, because what is under test is
-// that the resolve reads the boot's own composed declarations: a fake set here
-// would prove it consults something, not that it consults that.
-func declaresTransport(t *testing.T, unit string, ch extension.Channel) {
-	t.Helper()
-	composeUnit(t, extension.Extension{
+// declaresTransport is a composition holding one unit that supplies one
+// channel. The resolver reads that composition's declarations.
+func declaresTransport(unit string, ch extension.Channel) *Extensions {
+	return composeUnit(extension.Extension{
 		Name: extension.Name(unit), Version: "1.0.0", Channels: []extension.Channel{ch},
 	})
 }
@@ -117,10 +112,10 @@ func TestThePreflightHoldsChannelDeclarationsToTheComposedSet(t *testing.T) {
 // a message the installation can perfectly well send.
 func TestResolveChannelPrefersTheUnitThatSuppliesTheTransport(t *testing.T) {
 	sender := &capturedSend{}
-	declaresTransport(t, "mine", extension.Channel{
+	composed := declaresTransport("mine", extension.Channel{
 		Provider: "mine_chat", CredentialModel: extension.CredentialPerMember, Send: sender.send, Live: answersLive(true, nil),
 	})
-	r := commsResolver{channels: stubChannelSenders{err: errors.New("the capture registry was asked and should not have been")}}
+	r := commsResolver{composed: composed, channels: stubChannelSenders{err: errors.New("the capture registry was asked and should not have been")}}
 
 	resolved, auth, err := r.ResolveChannel(context.Background(), ids.New[ids.UserKind](), "mine_chat")
 	if err != nil {
@@ -169,8 +164,8 @@ func TestResolveUnitChannelTranslatesOnlyTheDeploymentFacts(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			declaresTransport(t, "mine", tc.channel)
-			r := commsResolver{}
+			composed := declaresTransport("mine", tc.channel)
+			r := commsResolver{composed: composed}
 
 			_, _, err := r.ResolveChannel(context.Background(), ids.New[ids.UserKind](), "mine_chat")
 
@@ -190,10 +185,10 @@ func TestResolveUnitChannelTranslatesOnlyTheDeploymentFacts(t *testing.T) {
 func TestTheUnitSenderHandsOverTheDeliveryTheDispatcherBuilt(t *testing.T) {
 	sender := &capturedSend{receipt: extension.Receipt{ProviderMessageID: "provider-42"}}
 	member := ids.New[ids.UserKind]()
-	declaresTransport(t, "mine", extension.Channel{
+	composed := declaresTransport("mine", extension.Channel{
 		Provider: "mine_chat", CredentialModel: extension.CredentialPerMember, Send: sender.send, Live: answersLive(true, nil),
 	})
-	r := commsResolver{}
+	r := commsResolver{composed: composed}
 	resolved, _, err := r.ResolveChannel(context.Background(), member, "mine_chat")
 	if err != nil {
 		t.Fatalf("ResolveChannel: %v", err)
@@ -266,10 +261,10 @@ func TestOnlyAnUnknownOutcomeStopsTheDeliveryRatherThanRetryingIt(t *testing.T) 
 	} {
 		t.Run(name, func(t *testing.T) {
 			sender := &capturedSend{err: tc.from}
-			declaresTransport(t, "mine", extension.Channel{
+			composed := declaresTransport("mine", extension.Channel{
 				Provider: "mine_chat", CredentialModel: extension.CredentialPerMember, Send: sender.send, Live: answersLive(true, nil),
 			})
-			r := commsResolver{}
+			r := commsResolver{composed: composed}
 			resolved, _, err := r.ResolveChannel(context.Background(), ids.New[ids.UserKind](), "mine_chat")
 			if err != nil {
 				t.Fatalf("ResolveChannel: %v", err)
@@ -296,10 +291,10 @@ func TestOnlyAnUnknownOutcomeStopsTheDeliveryRatherThanRetryingIt(t *testing.T) 
 // a core connector's own transport would stop resolving the moment any unit
 // declared any channel.
 func TestResolveChannelStillReachesTheCoreRegistryForACoreTransport(t *testing.T) {
-	declaresTransport(t, "mine", extension.Channel{
+	composed := declaresTransport("mine", extension.Channel{
 		Provider: "mine_chat", CredentialModel: extension.CredentialPerMember, Send: (&capturedSend{}).send, Live: answersLive(true, nil),
 	})
-	r := commsResolver{channels: stubChannelSenders{sender: stubChannelSender{}}}
+	r := commsResolver{composed: composed, channels: stubChannelSenders{sender: stubChannelSender{}}}
 
 	sender, auth, err := r.ResolveChannel(context.Background(), ids.New[ids.UserKind](), "telegram")
 	if err != nil {
@@ -319,10 +314,10 @@ func TestResolveChannelStillReachesTheCoreRegistryForACoreTransport(t *testing.T
 // surface cannot yet express is exactly the mistake this catches.
 func TestAUnitIsRefusedAMessageCarryingFilesItCannotPutAnywhere(t *testing.T) {
 	sender := &capturedSend{receipt: extension.Receipt{ProviderMessageID: "provider-42"}}
-	declaresTransport(t, "mine", extension.Channel{
+	composed := declaresTransport("mine", extension.Channel{
 		Provider: "mine_chat", CredentialModel: extension.CredentialPerMember, Send: sender.send, Live: answersLive(true, nil),
 	})
-	resolved, _, err := commsResolver{}.ResolveChannel(context.Background(), ids.New[ids.UserKind](), "mine_chat")
+	resolved, _, err := commsResolver{composed: composed}.ResolveChannel(context.Background(), ids.New[ids.UserKind](), "mine_chat")
 	if err != nil {
 		t.Fatalf("ResolveChannel: %v", err)
 	}

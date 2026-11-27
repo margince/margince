@@ -205,7 +205,7 @@ func (e *voiceSendEnv) draftedSend(ref string) activities.SendEmailInput {
 // deployment gets rather than a store built by hand for the test.
 func composedSendServer(t *testing.T, e *voiceSendEnv, stager DeliveryMachinery) Server {
 	t.Helper()
-	srv := newServer(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)),
+	srv := newServer(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), nil,
 		identity.NewHandlers(identity.NewService(e.Pool)), deals.NewHandlers(e.DB(), DealsInstallation()))
 	for _, opt := range []Option{WithPublicBaseURL(voiceSendBaseURL), WithDelivery(stager)} {
 		opt(&srv, e.Pool)
@@ -215,6 +215,7 @@ func composedSendServer(t *testing.T, e *voiceSendEnv, stager DeliveryMachinery)
 }
 
 func TestBothSendTransportsCarryTheDraftOutcomeRecorder(t *testing.T) {
+	t.Parallel()
 	e := setupVoiceSend(t)
 
 	t.Run("the store the tool surface sends through", func(t *testing.T) {
@@ -315,6 +316,7 @@ func awaitLockHolder(t *testing.T, locked <-chan int32) int32 {
 }
 
 func TestConcurrentSendsSharingADraftReferenceLeaveOneOutcomeAndBothTransmit(t *testing.T) {
+	t.Parallel()
 	e := setupVoiceSend(t)
 	draft := e.openDraft(t)
 

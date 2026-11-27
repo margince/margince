@@ -6,6 +6,7 @@
 package apptest
 
 import (
+	"context"
 	"io/fs"
 	"testing"
 
@@ -15,26 +16,27 @@ import (
 
 // SetupAppWithEnv is SetupAppWithOptions for an app whose program read environ
 // at boot, so a suite sees what a setting set there locks. It loads the api's
-// configuration the way cmd/api does. Compose holds it from before the app is
-// composed until the test ends.
+// configuration the way cmd/api does and composes the app over it.
 func SetupAppWithEnv(t *testing.T, environ []string, opts ...compose.Option) *AppEnv {
 	t.Helper()
-	BindEnv(t, environ)
-	return SetupAppWithOptions(t, opts...)
+	cfg := LoadEnv(t, environ)
+	e := SetupAppWithOptions(t, append(opts, compose.WithConfig(cfg))...)
+	e.Config = cfg
+	return e
 }
 
-// BindEnv binds the api's configuration loaded from environ until the test
-// ends, for a suite that composes its stores itself. The binding is the
-// process's own, so a test that calls it must not run in parallel.
-func BindEnv(t *testing.T, environ []string) {
-	t.Helper()
-	compose.UseConfig(withEnv(t, environ))
-	t.Cleanup(func() { compose.UseConfig(nil) })
+// Ctx is ctx serving the program this app was composed for.
+func (e *AppEnv) Ctx(ctx context.Context) context.Context {
+	if e.Config == nil {
+		return ctx
+	}
+	return compose.ConfigContext(ctx, e.Config)
 }
 
-// withEnv loads the api's registry from environ alone: no flag, and no file,
-// so a margince.yaml beside the test cannot reach it.
-func withEnv(t *testing.T, environ []string) *config.Config {
+// LoadEnv loads the api's registry from environ alone: no flag, and no file,
+// so a margince.yaml beside the test cannot reach it. A suite that composes its
+// stores itself serves them through compose.ConfigContext.
+func LoadEnv(t *testing.T, environ []string) *config.Config {
 	t.Helper()
 	reg, err := compose.ProgramRegistry(config.RoleAPI)
 	if err != nil {

@@ -77,6 +77,8 @@ type mailboxAuthority struct {
 	// api-side gmail connector — and keying the refusal on the role's registry
 	// would refuse every Gmail send there.
 	mailAppConfigured func(ctx context.Context, provider string) (bool, error)
+	// composed is the composition whose units may supply a transport.
+	composed *Extensions
 }
 
 var _ activities.SendAuthority = mailboxAuthority{}
@@ -119,6 +121,7 @@ func installSendPreflight(s *Server, pool *pgxpool.Pool) {
 	WithSendAuthority(mailboxAuthority{
 		grants:            s.connectorHandlers.registry,
 		mailAppConfigured: s.mailAppConfigured,
+		composed:          s.extensions,
 	})(s, pool)
 }
 
@@ -132,7 +135,7 @@ func (m mailboxAuthority) SendableMailbox(ctx context.Context, from ids.UUID, an
 	}
 	chosen, err := m.grants.ChooseSendingMailbox(ctx, ids.From[ids.UserKind](actor.UserID), from, anchor, comms.MailSendProviders(),
 		func(mailbox capture.SendingMailbox) (bool, error) {
-			scope, _ := comms.SendScopeFor(mailbox.Provider)
+			scope, _ := comms.SendScopeFor(mailbox.Provider, m.composed.sendsOn)
 			configured, err := m.mailAppConfigured(ctx, mailbox.Provider)
 			return configured && slices.Contains(mailbox.ProviderScopes, scope), err
 		})
@@ -159,10 +162,10 @@ func (m mailboxAuthority) SendCapable(ctx context.Context, provider string) (boo
 	// unit never writes (DESIGN-SP5 §7). Left to fall through, every unit send
 	// would be refused here — before staging, with a message telling the rep to
 	// have an admin bind a bot that has nothing to do with this transport.
-	if transport, supplied := composedUnitTransport(provider); supplied {
-		return unitSendCapable(ctx, transport, ids.From[ids.UserKind](actor.UserID))
+	if transport, supplied := m.composed.unitTransport(provider); supplied {
+		return unitSendCapable(ctx, m.composed, transport, ids.From[ids.UserKind](actor.UserID))
 	}
-	scope, capability := comms.SendScopeFor(provider)
+	scope, capability := comms.SendScopeFor(provider, m.composed.sendsOn)
 	switch capability {
 	case comms.CannotSend:
 		return false, nil
@@ -198,8 +201,8 @@ func (m mailboxAuthority) SendCapable(ctx context.Context, provider string) (boo
 }
 
 // Worker roles register the transports they can actually transmit through.
-func workerMailAuthority(registry *capture.Registry) mailboxAuthority {
-	return mailboxAuthority{grants: registry, mailAppConfigured: func(_ context.Context, provider string) (bool, error) {
+func workerMailAuthority(registry *capture.Registry, composed *Extensions) mailboxAuthority {
+	return mailboxAuthority{grants: registry, composed: composed, mailAppConfigured: func(_ context.Context, provider string) (bool, error) {
 		if registry == nil {
 			return false, nil
 		}

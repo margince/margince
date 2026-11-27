@@ -57,6 +57,7 @@ type receiptResponse struct {
 // place that can be shown: the citation is minted by one endpoint and resolved
 // by another, and a unit test on either side supplies its own ids.
 func TestEverySentenceTheDossierWritesCanBeOpened(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	companyID := createBareCompany(t, e)
@@ -104,6 +105,7 @@ func TestEverySentenceTheDossierWritesCanBeOpened(t *testing.T) {
 // company or to nobody. Both answer 404: the existence of a record the reader
 // may not see is itself a disclosure.
 func TestAReceiptForARecordThisCompanyDoesNotHoldIsNotFound(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	companyID := createBareCompany(t, e)
@@ -139,6 +141,7 @@ func TestAReceiptForARecordThisCompanyDoesNotHoldIsNotFound(t *testing.T) {
 // A dossier assembled from sources read long ago still renders, and says so.
 // Hiding it would leave the reader with nothing rather than something dated.
 func TestADossierOverOldSourcesRendersAndSaysItIsStale(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	companyID := createBareCompany(t, e)
@@ -161,6 +164,7 @@ func TestADossierOverOldSourcesRendersAndSaysItIsStale(t *testing.T) {
 // A company nobody has described is not an error, and a refresh over it still
 // answers rather than failing.
 func TestARefreshOverACompanyWithNothingRecordedStillAnswers(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	companyID := createBareCompany(t, e)
@@ -195,6 +199,7 @@ func seedProfileFieldWrittenAt(
 // A client can tell the two speeds of this read apart. The first read writes
 // the dossier, the next serves it, and a refresh writes it again.
 func TestADossierSaysWhetherItWasWrittenOrServedFromTheCache(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	companyID := createBareCompany(t, e)

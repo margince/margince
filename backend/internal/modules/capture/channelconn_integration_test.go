@@ -41,6 +41,7 @@ const unknownToken = "8109999999:AAH-a-token-telegram-does-not-know"
 // Counting what was NOT written is what earns the tag: the assertion is a real
 // query returning zero, which no fake can be wrong about.
 func TestConnectValidatesTokenBeforePersistingAnything(t *testing.T) {
+	t.Parallel()
 	f := newChannelFixture(t, nil)
 
 	_, err := f.store.Connect(f.ctx, capture.ConnectRequest{
@@ -70,6 +71,7 @@ func TestConnectValidatesTokenBeforePersistingAnything(t *testing.T) {
 // would turn a future "it persisted something" regression into a panic instead
 // of a failure, which is the fixture lying rather than the test passing.
 func TestConnectRejectsAnInvalidTokenWith400(t *testing.T) {
+	t.Parallel()
 	f := newChannelFixture(t, nil)
 
 	rec, req := f.connectRequest(
@@ -104,6 +106,7 @@ func TestConnectRejectsAnInvalidTokenWith400(t *testing.T) {
 // write nothing rather than a row the poller could only ever fail on. The clear
 // happens BEFORE the seal, which is what keeps the vault clean too.
 func TestConnectWritesNothingWhenTheWebhookCannotBeCleared(t *testing.T) {
+	t.Parallel()
 	api := newFakeTelegram()
 	token, _ := api.withNewBot("unclearable_bot")
 	api.deleteWebhookErr = telegram.ErrUnreachable
@@ -128,6 +131,7 @@ func TestConnectWritesNothingWhenTheWebhookCannotBeCleared(t *testing.T) {
 // collected rather than skipped. There is no `pending` state to pass through,
 // because nothing follows the insert.
 func TestConnectIsLiveOnCommitWithAZeroCursor(t *testing.T) {
+	t.Parallel()
 	api := newFakeTelegram()
 	token, botID := api.withNewBot("live_bot")
 	f := newChannelFixture(t, api)
@@ -168,6 +172,7 @@ func TestConnectIsLiveOnCommitWithAZeroCursor(t *testing.T) {
 // reply on either. The refusal has to name the remedy: disconnect what is
 // already bound, rather than try another bot.
 func TestConnectRefusesASecondBot(t *testing.T) {
+	t.Parallel()
 	api := newFakeTelegram()
 	firstToken, _ := api.withNewBot("first_bot")
 	secondToken, _ := api.withNewBot("second_bot")
@@ -211,6 +216,7 @@ func TestConnectRefusesASecondBot(t *testing.T) {
 // incoming bot for updates numbered far beyond anything it has ever sent, and every
 // message it received would be skipped silently.
 func TestReplaceTokenClearsTheIncomingWebhookAndRestartsTheCursor(t *testing.T) {
+	t.Parallel()
 	api := newFakeTelegram()
 	firstToken, firstID := api.withNewBot("original_bot")
 	replacementToken, replacementID := api.withNewBot("replacement_bot")
@@ -272,6 +278,7 @@ func TestReplaceTokenClearsTheIncomingWebhookAndRestartsTheCursor(t *testing.T) 
 // the bump on the transition the predicate reads. The steady state is a bot that
 // HAS polled.
 func TestAStaleReplacementCannotOverwriteTheWinner(t *testing.T) {
+	t.Parallel()
 	api := newFakeTelegram()
 	originalToken, _ := api.withNewBot("original_bot")
 	tokenA, botAID := api.withNewBot("bot_a")
@@ -331,6 +338,7 @@ func TestAStaleReplacementCannotOverwriteTheWinner(t *testing.T) {
 // destroying it leaves a live bot credential in the vault forever, with nothing
 // left that could ever name it.
 func TestADisconnectInsideAReplacementsWindowLeavesNoOrphanedCredential(t *testing.T) {
+	t.Parallel()
 	api := newFakeTelegram()
 	originalToken, _ := api.withNewBot("outgoing_bot")
 	replacementToken, _ := api.withNewBot("late_bot")
@@ -381,6 +389,7 @@ func TestADisconnectInsideAReplacementsWindowLeavesNoOrphanedCredential(t *testi
 // because the poll dispatcher's due-scan selects only live connected rows — and
 // every activity already captured through the channel is still there.
 func TestDisconnectArchivesTheBindingAndKeepsActivities(t *testing.T) {
+	t.Parallel()
 	api := newFakeTelegram()
 	token, _ := api.withNewBot("disconnect_bot")
 	f := newChannelFixture(t, api)

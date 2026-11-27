@@ -20,6 +20,7 @@ import (
 )
 
 func TestAnalyticsStartupMatchesTheAuthorizedIndividualReads(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	var plain, prepared crmcontracts.MeResponse
@@ -71,6 +72,7 @@ func TestAnalyticsStartupMatchesTheAuthorizedIndividualReads(t *testing.T) {
 }
 
 func TestAnalyticsStartupUsesEachSeatsLiveReportGrants(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	e.DescribeCompany(t)
@@ -124,6 +126,7 @@ func TestAnalyticsStartupUsesEachSeatsLiveReportGrants(t *testing.T) {
 }
 
 func TestPreparedSessionNegotiatesCompressionWithoutLosingIdentityOrMetadata(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	var plain crmcontracts.MeResponse

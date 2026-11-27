@@ -89,6 +89,7 @@ func (c answeredCase) wantCost() int64 {
 }
 
 func TestTheCostReportPricesACallAtTheModelThatAnswered(t *testing.T) {
+	t.Parallel()
 	f := seedAnsweredCalls(t)
 	report, err := NewRateStore(f.db).CostReport(f.ctx, time.Now().Add(-time.Hour), time.Now().Add(time.Hour))
 	if err != nil {
@@ -106,6 +107,7 @@ func TestTheCostReportPricesACallAtTheModelThatAnswered(t *testing.T) {
 }
 
 func TestCallStatsPriceACallAtTheModelThatAnswered(t *testing.T) {
+	t.Parallel()
 	f := seedAnsweredCalls(t)
 	rows, err := NewCallReadStore(f.db).CallStats(diagnosticsReader(f.ws), CallStatsQuery{Window: 24 * time.Hour, GroupBy: GroupByTask})
 	if err != nil {
@@ -123,6 +125,7 @@ func TestCallStatsPriceACallAtTheModelThatAnswered(t *testing.T) {
 }
 
 func TestARunSummaryPricesACallAtTheModelThatAnswered(t *testing.T) {
+	t.Parallel()
 	f := seedAnsweredCalls(t)
 	reader := principal.WithActor(f.ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + ids.NewV7().String(), UserID: ids.NewV7(),
@@ -143,6 +146,7 @@ func TestARunSummaryPricesACallAtTheModelThatAnswered(t *testing.T) {
 }
 
 func TestCallStatsGroupByTheModelThatAnsweredAndCountTheSwitch(t *testing.T) {
+	t.Parallel()
 	f := seedAnsweredCalls(t)
 	reader := NewCallReadStore(f.db)
 	rows, err := reader.CallStats(diagnosticsReader(f.ws), CallStatsQuery{Window: 24 * time.Hour, GroupBy: GroupByServedModel, Filter: CallStatsFilter{Tier: string(TierPremium)}})
@@ -180,6 +184,7 @@ func TestCallStatsGroupByTheModelThatAnsweredAndCountTheSwitch(t *testing.T) {
 }
 
 func TestATaskStepNamesTheModelTheProviderSwitchedTo(t *testing.T) {
+	t.Parallel()
 	f := seedAnsweredCalls(t)
 	reader := NewCallReadStore(f.db)
 	for i, c := range answeredCases {
@@ -198,6 +203,7 @@ func TestATaskStepNamesTheModelTheProviderSwitchedTo(t *testing.T) {
 }
 
 func TestTheCallListNarrowsToTheModelThatAnswered(t *testing.T) {
+	t.Parallel()
 	f := seedAnsweredCalls(t)
 	page, err := NewCallReadStore(f.db).ListCalls(diagnosticsReader(f.ws), nil, nil, CallListFilter{ServedModel: answeredGemini})
 	if err != nil {
@@ -210,6 +216,7 @@ func TestTheCallListNarrowsToTheModelThatAnswered(t *testing.T) {
 }
 
 func TestAPriceSyncReadsOnlyTheModelsAProviderSwitchedTo(t *testing.T) {
+	t.Parallel()
 	f := seedAnsweredCalls(t)
 	got, err := NewRateStore(f.db).switchedServedModels(f.ctx, time.Now().Add(-time.Hour))
 	if err != nil {
@@ -222,6 +229,7 @@ func TestAPriceSyncReadsOnlyTheModelsAProviderSwitchedTo(t *testing.T) {
 }
 
 func TestAFailedAttemptIsNotCountedAsASwitch(t *testing.T) {
+	t.Parallel()
 	f := seedAnsweredCalls(t)
 	if err := NewCallMeter(f.db).Record(f.ctx, []Call{{
 		LogicalCallID: ids.NewV7(), Attempt: 1, IsTerminal: true, Kind: callKindCompletion, Task: f.tasks[0],
@@ -240,6 +248,7 @@ func TestAFailedAttemptIsNotCountedAsASwitch(t *testing.T) {
 }
 
 func TestServedTaskTotalsSplitASliceByTheModelThatAnswered(t *testing.T) {
+	t.Parallel()
 	f := seedAnsweredCalls(t)
 	totals, err := NewCallReadStore(f.db).ServedTaskTotals(f.ctx, f.tasks, time.Now().Add(-time.Hour))
 	if err != nil {

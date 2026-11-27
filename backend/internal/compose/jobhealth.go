@@ -93,14 +93,14 @@ type renderedFailure struct {
 // token — so the sentence alone is ambiguous and the kind is what disambiguates
 // it. Reading one kind's vocabulary for another's row would report a failure as
 // something it is not.
-func renderFailure(f jobs.Failure) renderedFailure {
+func renderFailure(table jobs.Composed, f jobs.Failure) renderedFailure {
 	// Nothing recorded is a different fact from something unreadable, and the
 	// two must not render alike — see jobs.NoRecordedCause. It is checked here
 	// rather than left to the vetting, which cannot tell them apart either.
 	if f.StoredReason == "" {
 		return renderedFailure{Reason: jobs.NoRecordedCause}
 	}
-	if detail, ok := jobs.VettedFailure(f.Kind, f.StoredReason); ok {
+	if detail, ok := table.VettedFailure(f.Kind, f.StoredReason); ok {
 		return renderedFailure{Reason: detail.Sentence, Class: &detail.Class, Remedy: &detail.Remedy}
 	}
 	// The fault seam's OWN unclassified sentence is vetted text that carries no
@@ -134,6 +134,8 @@ const jobHealthReadTimeout = 5 * time.Second
 // holds the wiring instead.
 type jobHealthHandlers struct {
 	pool *pgxpool.Pool
+	// jobTable reads a composed kind's cadence and failure vocabulary.
+	jobTable jobs.Composed
 }
 
 // GetJobHealth reports this workspace's background-job health.
@@ -183,7 +185,7 @@ func (h jobHealthHandlers) GetJobHealth(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	httperr.WriteJSON(w, http.StatusOK, jobHealthResponse(ctx, health, window))
+	httperr.WriteJSON(w, http.StatusOK, jobHealthResponse(ctx, h.jobTable, health, window))
 }
 
 // deadWorkBannerReadActor names the entry read this endpoint performs after it
@@ -216,10 +218,10 @@ func deadWorkWindow(ctx context.Context, pool *pgxpool.Pool) (time.Duration, err
 // rendering. A banner that names a number without naming its span asks a reader
 // to guess, and the guess a reader makes is "since forever" — which is the
 // reading this whole change exists to stop.
-func jobHealthResponse(ctx context.Context, health jobs.Health, window time.Duration) crmcontracts.JobHealth {
+func jobHealthResponse(ctx context.Context, table jobs.Composed, health jobs.Health, window time.Duration) crmcontracts.JobHealth {
 	kinds := make([]crmcontracts.JobKindHealth, 0, len(health.Kinds))
 	for _, k := range health.Kinds {
-		assessment := jobs.AssessHealth(k)
+		assessment := table.AssessHealth(k)
 		condition := crmcontracts.JobKindHealthCondition(assessment.Condition)
 		code := crmcontracts.JobKindHealthConditionCode(assessment.Code)
 		var expectation *int
@@ -242,7 +244,7 @@ func jobHealthResponse(ctx context.Context, health jobs.Health, window time.Dura
 		})
 	}
 
-	failures := jobFailuresResponse(ctx, health.Failures)
+	failures := jobFailuresResponse(ctx, table, health.Failures)
 
 	return crmcontracts.JobHealth{
 		GeneratedAt:     time.Now().UTC(),
@@ -252,13 +254,13 @@ func jobHealthResponse(ctx context.Context, health jobs.Health, window time.Dura
 	}
 }
 
-func jobFailuresResponse(ctx context.Context, rows []jobs.Failure) []crmcontracts.JobFailure {
+func jobFailuresResponse(ctx context.Context, table jobs.Composed, rows []jobs.Failure) []crmcontracts.JobFailure {
 	failures := make([]crmcontracts.JobFailure, 0, len(rows))
 	for _, f := range rows {
-		rendered := renderFailure(f)
+		rendered := renderFailure(table, f)
 		rendered.Reason = jobs.SubstituteInLanguage(rendered.Reason, systemtext.Locale(ctx))
 		if rendered.Class != nil {
-			detail, ok := jobs.VettedFailure(f.Kind, f.StoredReason)
+			detail, ok := table.VettedFailure(f.Kind, f.StoredReason)
 			if ok {
 				detail = detail.InLanguage(systemtext.Locale(ctx))
 				rendered.Reason = detail.Sentence

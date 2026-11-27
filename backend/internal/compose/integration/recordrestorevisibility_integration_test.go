@@ -24,6 +24,7 @@ type visibleContact struct {
 }
 
 func TestEndToEnd_makingAContactPrivateGoesBack(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	contact := createOwnedContact(t, e)
@@ -37,6 +38,7 @@ func TestEndToEnd_makingAContactPrivateGoesBack(t *testing.T) {
 }
 
 func TestEndToEnd_publishingAContactGoesBack(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	contact := createOwnedContact(t, e)

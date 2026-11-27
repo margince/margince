@@ -22,6 +22,7 @@ import (
 // written yet, is no work to decide. The count already leaves it out, so every
 // list of work must too.
 func TestAnExpiredButStoredPendingApprovalIsNoWorkOnAnySurface(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	pipeline, open, _ := integration.DealFixture(t, e)
 	svc := NewApprovalsService(e.DB())

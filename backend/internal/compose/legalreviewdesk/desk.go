@@ -46,7 +46,8 @@ var _ deals.LegalReviewDesk = Desk{}
 
 // Reviewers lists the live seats that may read and answer legal reviews.
 func (Desk) Reviewers(ctx context.Context, tx pgx.Tx) ([]ids.UUID, error) {
-	seats, err := identity.LiveSeatsAllowingTx(principal.SystemActing(ctx, actor), tx,
+	// The legal review object is a core one, so the core vocabulary decides.
+	seats, err := identity.LiveSeatsAllowingTx(principal.SystemActing(ctx, actor), tx, identity.RbacObjects{},
 		objectName, approvalsubject.LegalReviewDecisionActions()...)
 	if err != nil {
 		return nil, err

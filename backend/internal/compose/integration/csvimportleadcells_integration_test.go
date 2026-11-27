@@ -56,6 +56,7 @@ func leadReport(t *testing.T, e *apptest.AppEnv, runID string) importReportDTO {
 }
 
 func TestALeadFileNamesItsBadEmailAndPhoneInThePreviewAndCommitsTheRest(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	file := "Name,Email,Phone\n" +
 		"Ada Lovelace,ada@lovelace.example,+44 20 7946 0001\n" +
@@ -87,6 +88,7 @@ func TestALeadFileNamesItsBadEmailAndPhoneInThePreviewAndCommitsTheRest(t *testi
 }
 
 func TestReimportingASpacedLeadPhoneChangesNothing(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	file := "Name,Email,Phone\nAda Lovelace,ada@lovelace.example,+84 90 111 0002\n"
 	mapping := map[string]string{"Name": "full_name", "Email": "email", "Phone": "phone"}
@@ -113,6 +115,7 @@ func TestReimportingASpacedLeadPhoneChangesNothing(t *testing.T) {
 }
 
 func TestALeadFileNamingAnEmailAnotherLeadHoldsIsSkippedInThePreview(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	createdID(t, e, "/v1/leads", AnyMap{"full_name": "Made In App", "email": "taken@lead.example", "source": "manual"})
 	_, versionBefore := leadByEmail(t, e, "taken@lead.example")
@@ -139,6 +142,7 @@ func TestALeadFileNamingAnEmailAnotherLeadHoldsIsSkippedInThePreview(t *testing.
 }
 
 func TestACorrectedLeadFileMovingAnEmailOntoAnotherLeadSkipsTheRow(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	mapping := map[string]string{"Ref": "ref", "Name": "full_name", "Email": "email"}
 	runWith := func(file string) importjobtest.Run {

@@ -105,6 +105,7 @@ func sectionWire(got contextResponseWire, name string) []contextItemWire {
 }
 
 func TestGetRecordContextReturnsAnchorAndIsRowScoped(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	pid := seedContactWithActivity(t, e)

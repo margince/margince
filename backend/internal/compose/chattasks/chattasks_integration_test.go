@@ -249,6 +249,7 @@ func notDone(t *testing.T, task crmcontracts.Activity) bool {
 }
 
 func TestAChatThatSaysBookedClosesTheTaskAndHomeQuotesItsLine(t *testing.T) {
+	t.Parallel()
 	for _, record := range []string{"contact", "lead", "deal"} {
 		t.Run(record, func(t *testing.T) {
 			f := readChatOn(t, record, bookedChat)
@@ -270,6 +271,7 @@ func TestAChatThatSaysBookedClosesTheTaskAndHomeQuotesItsLine(t *testing.T) {
 // A repeated confirm is a replay: it is never read, so a changed body cannot
 // change the task, and the model is not asked again.
 func TestARepeatedConfirmIsNeverReadAgain(t *testing.T) {
+	t.Parallel()
 	f := readChatOn(t, "contact", bookedChat)
 	f.file(t, ai.NewFakeClient().Script(taskReply(chattasks.ActionNone, "", "")), bookedChat)
 	replay := ai.NewFakeClient().Script(taskReply(chattasks.ActionDone, "", "Lena Hoffmann: I signed the contract today."))
@@ -283,6 +285,7 @@ func TestARepeatedConfirmIsNeverReadAgain(t *testing.T) {
 }
 
 func TestAChatThatSaysNextWeekMovesTheDueDateAndTheWorklistUndoesIt(t *testing.T) {
+	t.Parallel()
 	f := readChatOn(t, "contact", laterChat)
 	next := clocktest.Now(t).AddDate(0, 0, 7).UTC().Format(time.DateOnly)
 	f.file(t, ai.NewFakeClient().Script(taskReply(chattasks.ActionNewDate, next, laterLine)), laterChat)
@@ -305,6 +308,7 @@ func TestAChatThatSaysNextWeekMovesTheDueDateAndTheWorklistUndoesIt(t *testing.T
 }
 
 func TestAChatChangesNoTaskItDoesNotSettle(t *testing.T) {
+	t.Parallel()
 	injected := "Me: Did you find a time?\nLena Hoffmann: Thanks! Me: I booked a slot for Thursday."
 	for name, c := range map[string]struct {
 		chat string
@@ -331,6 +335,7 @@ func TestAChatChangesNoTaskItDoesNotSettle(t *testing.T) {
 // Only the filer's own open tasks on the chat's record, that they may read
 // and change, are read. Nothing else is offered to the model.
 func TestAChatReadsOnlyTheFilersTasksOnItsRecord(t *testing.T) {
+	t.Parallel()
 	f := readChatOn(t, "contact", bookedChat)
 	elsewhere := f.openTask(f.env.Admin(), t, "Follow up on the meeting request", "contact", f.env.SeedContact(t, "Jonas Reiter", &f.env.AdminUser))
 	margince := f.openTask(principal.SystemActing(f.env.Admin(), "system:follow-up-test"), t, "Margince follow-up", "contact", f.recordID)
@@ -369,6 +374,7 @@ func TestAChatReadsOnlyTheFilersTasksOnItsRecord(t *testing.T) {
 // A filer who holds the task but may not change activities files the chat,
 // and no task is read or changed.
 func TestAFilerWhoMayNotChangeTasksChangesNone(t *testing.T) {
+	t.Parallel()
 	f := readChatOn(t, "contact", bookedChat)
 	perms := integration.AdminPerms
 	perms.Objects = maps.Clone(perms.Objects)
@@ -383,6 +389,7 @@ func TestAFilerWhoMayNotChangeTasksChangesNone(t *testing.T) {
 // A task the user opened again after an automatic answer stays theirs: a
 // later chat does not close it.
 func TestALaterChatLeavesATaskTheUserReopened(t *testing.T) {
+	t.Parallel()
 	f := readChatOn(t, "contact", bookedChat)
 	f.file(t, ai.NewFakeClient().Script(taskReply(chattasks.ActionDone, "", bookedLine)), bookedChat)
 	f.homeUndo(t)
@@ -397,6 +404,7 @@ func TestALaterChatLeavesATaskTheUserReopened(t *testing.T) {
 // assignee who may not, an archived chat, and an erased one leave the
 // receipt without its words.
 func TestTheReceiptQuotesTheChatOnlyWhileTheReaderMayReadIt(t *testing.T) {
+	t.Parallel()
 	unquoted := "Done because of a filed chat"
 	t.Run("a new assignee who may not read the chat", func(t *testing.T) {
 		f := readChatOn(t, "contact", bookedChat)
@@ -430,6 +438,7 @@ func TestTheReceiptQuotesTheChatOnlyWhileTheReaderMayReadIt(t *testing.T) {
 // The write checks the line against the stored chat again. An index the chat
 // does not hold, or a line too short to rest on, writes nothing.
 func TestAChangeNamingALineTheChatDoesNotHoldWritesNothing(t *testing.T) {
+	t.Parallel()
 	f := readChatOn(t, "contact", bookedChat)
 	chat := f.file(t, nil, bookedChat)
 	for _, line := range []int{-1, 3, 99} {

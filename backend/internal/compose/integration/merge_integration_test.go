@@ -28,6 +28,7 @@ import (
 )
 
 func TestMergeContact_relinkSurvivorshipAndReferentialIntegrity(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 
@@ -96,6 +97,7 @@ func TestMergeContact_relinkSurvivorshipAndReferentialIntegrity(t *testing.T) {
 // target's does not become a second primary. A target with none takes the
 // source's.
 func TestMergeContact_keepsOnePrimaryAcrossTypes(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 
@@ -136,6 +138,7 @@ func TestMergeContact_keepsOnePrimaryAcrossTypes(t *testing.T) {
 }
 
 func TestMergeContact_consentMergesRestrictively(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 
@@ -172,6 +175,7 @@ func TestMergeContact_consentMergesRestrictively(t *testing.T) {
 }
 
 func TestMergeCompany_hierarchyReparenting(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 
@@ -210,6 +214,7 @@ func TestMergeCompany_hierarchyReparenting(t *testing.T) {
 }
 
 func TestMergeCompany_partnerExtensionMovesIntoVacancy(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 
@@ -256,6 +261,7 @@ func TestMergeCompany_partnerExtensionMovesIntoVacancy(t *testing.T) {
 }
 
 func TestMerge_errorPaths(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 

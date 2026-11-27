@@ -14,6 +14,7 @@ import (
 )
 
 func TestTheRecheckClosesAPhoneCollisionAfterItsNumberIsRemoved(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	left := e.seedContact(ctx, t, "Ola Berg", []string{"ola@phone.example"}, []string{"+49305550101"})
@@ -48,6 +49,7 @@ func TestTheRecheckClosesAPhoneCollisionAfterItsNumberIsRemoved(t *testing.T) {
 }
 
 func TestAPhoneEditReopensAPairAConcurrentRecheckCloses(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.seedContact(ctx, t, "Ola Berg", []string{"ola@phone.example"}, []string{"+49305550101"})
@@ -92,6 +94,7 @@ func TestAPhoneEditReopensAPairAConcurrentRecheckCloses(t *testing.T) {
 }
 
 func TestTheRecheckPreservesUnfamiliarAndRoutingEvidence(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	for _, evidence := range []string{
@@ -115,6 +118,7 @@ func TestTheRecheckPreservesUnfamiliarAndRoutingEvidence(t *testing.T) {
 }
 
 func TestTheRecheckKeepsNameEvidenceAfterASharedPhoneIsRemoved(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	left := e.seedContact(ctx, t, "Mia Schulz", []string{"mia@one.example"}, []string{"+49305550101"})
@@ -139,6 +143,7 @@ func TestTheRecheckKeepsNameEvidenceAfterASharedPhoneIsRemoved(t *testing.T) {
 }
 
 func TestTheRecheckShowsTheAddressVariantAfterASharedPhoneIsRemoved(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	left := e.seedContact(ctx, t, "Mia Schulz", []string{"mia@one.example"}, []string{"+49305550101"})

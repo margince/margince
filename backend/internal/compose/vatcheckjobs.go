@@ -21,7 +21,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -323,45 +322,10 @@ func WithVatChecking(inserter *jobs.Runner) Option {
 		//nolint:staticcheck // QF1008: the embedded name is load-bearing — s.Handlers resolves to briefs.Handlers, a different embedded type
 		s.contactsHandlers = s.contactsHandlers.WithVatCheckEnqueue(enqueue)
 		s.authHandlers = s.WithVatRegisterAvailable(true)
-		// And every store compose builds from a pool — the approval effects,
-		// the capture sink, the verdict engine — which is where a site read's
-		// accepted VAT number actually lands.
-		BindVatChecking(enqueue)
+		// And every store this composition builds from a pool, such as the
+		// approval effects, where a site read's accepted VAT number lands.
+		s.queues.bindVatCheck(enqueue)
 	}
-}
-
-// vatCheckBinding is the enqueue every contacts.Store built inside compose picks
-// up, held at package scope for the reason WithVatChecking cannot cover.
-//
-// The Option wires the two stores the SERVER holds. The approval effects — the
-// path a site read's accepted fields actually take — build their own store from
-// a pool (newCounterpartyStore), as do the capture sink and the verdict engine,
-// and none of those can reach the job runner: they are constructed from a pool
-// alone, several layers below the composition that has one. Threading a runner
-// through all of them is a wider change than this lane, and leaving them unwired
-// meant the main path queued nothing at all.
-var vatCheckBinding struct {
-	mu      sync.RWMutex
-	enqueue contacts.VatCheckEnqueue
-}
-
-// BindVatChecking records the enqueue for every store compose builds from a
-// pool. Called once at boot by the role that queues, after the job runner
-// exists. A nil enqueue is a deployment that checks no VAT numbers, and every
-// such store then writes the number and queues nothing.
-func BindVatChecking(enqueue contacts.VatCheckEnqueue) {
-	vatCheckBinding.mu.Lock()
-	defer vatCheckBinding.mu.Unlock()
-	vatCheckBinding.enqueue = enqueue
-}
-
-// boundVatCheckEnqueue reads the binding. Read per STORE rather than captured
-// once, so the ordering between binding and building a store cannot matter —
-// only the ordering against the first write, which is after boot either way.
-func boundVatCheckEnqueue() contacts.VatCheckEnqueue {
-	vatCheckBinding.mu.RLock()
-	defer vatCheckBinding.mu.RUnlock()
-	return vatCheckBinding.enqueue
 }
 
 // vatCheckJobActor is the installation acting for itself: the consultation is

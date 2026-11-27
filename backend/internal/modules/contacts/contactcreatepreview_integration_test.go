@@ -24,6 +24,7 @@ import (
 )
 
 func TestContactCreationPreviewMatchesWriterAndAcquisition(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	actor, ok := principal.Actor(ctx)
@@ -67,6 +68,7 @@ func TestContactCreationPreviewMatchesWriterAndAcquisition(t *testing.T) {
 }
 
 func TestContactCreationPreviewNamesDuplicateReviewWithoutCreatingIt(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	actor, ok := principal.Actor(ctx)
@@ -122,6 +124,7 @@ func TestContactCreationPreviewNamesDuplicateReviewWithoutCreatingIt(t *testing.
 }
 
 func TestAContactCreateOverALiveLeadIsRefusedAndWritesNothing(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	actor, ok := principal.Actor(ctx)
@@ -149,6 +152,7 @@ func TestAContactCreateOverALiveLeadIsRefusedAndWritesNothing(t *testing.T) {
 }
 
 func TestAContactWriteNeverCombinesDistinctLeadHolders(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	in := CreateContactInput{FullName: "Shared Identity", Source: "manual"}
@@ -179,6 +183,7 @@ func TestAContactWriteNeverCombinesDistinctLeadHolders(t *testing.T) {
 }
 
 func TestAConvertThatNamesOtherLeadsThanTheHoldersIsAskedAgain(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	for _, email := range []string{"one@example.test", "two@example.test"} {
@@ -198,6 +203,7 @@ func TestAConvertThatNamesOtherLeadsThanTheHoldersIsAskedAgain(t *testing.T) {
 }
 
 func TestALeadHeldRefusalOffersNoConvertWithoutThePromotionGrants(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	lead, _, err := e.store.CreateLead(ctx, CreateLeadInput{FullName: new("Existing Buyer"), Email: new("no-promotion@example.test"), Source: "manual"})
@@ -226,6 +232,7 @@ func TestALeadHeldRefusalOffersNoConvertWithoutThePromotionGrants(t *testing.T) 
 }
 
 func TestALeadHeldRefusalNamesNoLeadTheCallerCannotRead(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	actor, ok := principal.Actor(ctx)
@@ -262,6 +269,7 @@ func TestALeadHeldRefusalNamesNoLeadTheCallerCannotRead(t *testing.T) {
 }
 
 func TestAnAgentCannotConvertALeadThroughAContactCreate(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	lead, _, err := e.store.CreateLead(ctx, CreateLeadInput{FullName: new("Existing Buyer"), Email: new("agent-held@example.test"), Source: "manual"})
@@ -288,6 +296,7 @@ func TestAnAgentCannotConvertALeadThroughAContactCreate(t *testing.T) {
 }
 
 func TestALinkedInProfileALeadHoldsIsIdentityInAnySpelling(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	lead, _, err := e.store.CreateLead(ctx, CreateLeadInput{FullName: new("Sam Profile"), LinkedInURL: new("https://www.linkedin.com/in/sam-profile"), Source: "manual"})

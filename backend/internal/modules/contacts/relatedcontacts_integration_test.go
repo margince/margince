@@ -98,6 +98,7 @@ func relatedNames(ctx context.Context, t *testing.T, e *privacyEnv, anchor ids.C
 }
 
 func TestRelatedToListsCurrentColleaguesAndDealPeers(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	g := e.seedRelatedGraph(t)
 	got := relatedNames(e.relatedReader(t, e.owner, readerGrants{edges: true, deals: true}), t, e, g.buyer)
@@ -107,6 +108,7 @@ func TestRelatedToListsCurrentColleaguesAndDealPeers(t *testing.T) {
 }
 
 func TestRelatedToLeavesDealPeersOutForAReaderWithoutDeals(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	g := e.seedRelatedGraph(t)
 	got := relatedNames(e.relatedReader(t, e.owner, readerGrants{edges: true}), t, e, g.buyer)
@@ -116,6 +118,7 @@ func TestRelatedToLeavesDealPeersOutForAReaderWithoutDeals(t *testing.T) {
 }
 
 func TestRelatedToAContactTheReaderCannotOpenIsEmpty(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	g := e.seedRelatedGraph(t)
 	hidden := e.captureContact(t, "owner")
@@ -138,6 +141,7 @@ func TestRelatedToAContactTheReaderCannotOpenIsEmpty(t *testing.T) {
 }
 
 func TestRelatedToIsEmptyForAReaderWithoutEdges(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	g := e.seedRelatedGraph(t)
 	if got := relatedNames(e.relatedReader(t, e.owner, readerGrants{deals: true}), t, e, g.buyer); len(got) != 0 {

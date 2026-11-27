@@ -29,6 +29,7 @@ import (
 // seat), not a hand-rolled full-user count, and the correction goes through ReplaceBudget
 // itself — the actor path an admin's fix actually takes.
 func TestAllowanceOverflowLockoutRecoversThroughReplaceBudget(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	store := ai.NewAdminStore(e.DB(), NewSettingsStore(e.Pool), StoredConfig(e.Pool), budgetFullUsers, aiDeferredWork(e.Pool))
@@ -139,6 +140,7 @@ func TestAllowanceOverflowLockoutRecoversThroughReplaceBudget(t *testing.T) {
 // rather than being swallowed — a genuine DB-side failure counting seats must
 // surface as a read error, not a silent zero that understates the workspace.
 func TestAllowanceReadFailsClosedWhenFullUserCountingErrors(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	errCounting := errors.New("full-user count unavailable")
 	failingUsers := func(context.Context, pgx.Tx) (int64, error) { return 0, errCounting }

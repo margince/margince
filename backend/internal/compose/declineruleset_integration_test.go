@@ -63,6 +63,7 @@ func declinedUnder(t *testing.T, e *integration.Env, id ids.UUID, column string)
 }
 
 func TestTheClassifyPassOffersAMessageDeclinedUnderAnotherPrompt(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	stale := seedUnlabeledEmail(t, e, "please send the offer")
 	// The control: declined under THIS prompt, and carrying the marker, so any
@@ -91,6 +92,7 @@ func TestTheClassifyPassOffersAMessageDeclinedUnderAnotherPrompt(t *testing.T) {
 // An unsure answer is final only for its prompt too: stamped under a retired
 // one, the message is asked again and labeled.
 func TestTheClassifyPassOffersAMessageFoundUnsureUnderAnotherPrompt(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	stale := seedUnlabeledEmail(t, e, "please send the offer")
 	classifier, ctx := classifyPassFor(e, &scriptedClassifyBrain{})
@@ -112,6 +114,7 @@ func TestTheClassifyPassOffersAMessageFoundUnsureUnderAnotherPrompt(t *testing.T
 // The stamp is about the text the model read: a row whose version moved during
 // the call is not stamped, and is asked again.
 func TestAnUnsureStampSkipsAMessageThatChangedSinceItWasRead(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	id := seedUnlabeledEmail(t, e, "please send the offer")
 	classifier, ctx := classifyPassFor(e, &scriptedClassifyBrain{})
@@ -130,6 +133,7 @@ func TestAnUnsureStampSkipsAMessageThatChangedSinceItWasRead(t *testing.T) {
 
 // The owed stamp is held to the version read as well.
 func TestAnOwedStampSkipsAMessageThatChangedSinceItWasRead(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	id := seedWaitingMail(t, e, "Monatsreporting Juli")
 	store := activities.NewStore(InstallationDB(e.Pool))
@@ -145,6 +149,7 @@ func TestAnOwedStampSkipsAMessageThatChangedSinceItWasRead(t *testing.T) {
 // Re-offering must not become the per-tick loop the stamp ended: a message the
 // current prompt declines too is asked once, re-stamped, and left alone.
 func TestTheClassifyPassRestampsAStaleDeclineOnce(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	hostile := seedUnlabeledEmail(t, e, "Invoice "+hostileMarker)
 	brain := &withholdingWhere{inner: &scriptedClassifyBrain{}}
@@ -167,6 +172,7 @@ func TestTheClassifyPassRestampsAStaleDeclineOnce(t *testing.T) {
 }
 
 func TestTheOwedPassOffersAMessageDeclinedUnderAnotherPrompt(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	stale := seedWaitingMail(t, e, "Dienstag 14 Uhr wuerde bei uns passen")
 	current := seedWaitingMail(t, e, "Invoice "+hostileMarker)
@@ -195,6 +201,7 @@ func TestTheOwedPassOffersAMessageDeclinedUnderAnotherPrompt(t *testing.T) {
 // retired prompt that the current prompt declines too is offered on the first
 // pass, re-stamped under the current prompt, and not offered on the second.
 func TestTheOwedPassRestampsAStaleDeclineOnce(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	hostile := seedWaitingMail(t, e, "Invoice "+hostileMarker)
 	store := activities.NewStore(InstallationDB(e.Pool))

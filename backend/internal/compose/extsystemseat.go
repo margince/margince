@@ -50,7 +50,7 @@ func (r *callRuntime) seatRead(ctx context.Context, read extension.SystemRead, a
 	var admitted bool
 	err = database.WithWorkspaceTx(sys, r.deps.pool, func(tx pgx.Tx) error {
 		var err error
-		admitted, err = serviceMemberConnectedTx(sys, tx, r.unit, member)
+		admitted, err = serviceMemberConnectedTx(sys, tx, r.deps.composed, r.unit, member)
 		return err
 	})
 	if err != nil {
@@ -76,14 +76,14 @@ var bindSeat = workerSeat
 
 // serviceMemberConnectedTx reports whether member is the live service member
 // declared for unit and holds one of the unit's secrets.
-func serviceMemberConnectedTx(ctx context.Context, tx pgx.Tx, unit string, member ids.UUID) (bool, error) {
+func serviceMemberConnectedTx(ctx context.Context, tx pgx.Tx, composed *Extensions, unit string, member ids.UUID) (bool, error) {
 	var service bool
 	err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM app_user u WHERE u.id = $1 AND u.service_extension = $2 AND `+
 		workforce.LiveMemberSQL("u")+`)`, member, unit).Scan(&service)
 	if err != nil || !service {
 		return false, err
 	}
-	return memberConnectedTx(ctx, tx, unit, member)
+	return memberConnectedTx(ctx, tx, composed, unit, member)
 }
 
 // trace writes the system_log row of the read: unit, read, record and the seat

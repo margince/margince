@@ -19,6 +19,7 @@ import (
 // A caller without the update grant moves no task and does not abort the
 // handover. A dead connection fails the move and the count.
 func TestHandingOverTasksNeedsTheUpdateGrantAndASoundConnection(t *testing.T) {
+	t.Parallel()
 	e := setupPromises(t)
 	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
 	from, to := ids.From[ids.UserKind](e.rep), ids.From[ids.UserKind](e.other)
@@ -69,6 +70,7 @@ func noUpdateGrant(e *promiseEnv) context.Context {
 
 // A caller with workspace-wide read counts every open task the member holds.
 func TestAWorkspaceWideReaderCountsAMembersOpenTasks(t *testing.T) {
+	t.Parallel()
 	e := setupPromises(t)
 	task := ids.NewV7()
 	e.exec(t, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by, assignee_id, is_done)

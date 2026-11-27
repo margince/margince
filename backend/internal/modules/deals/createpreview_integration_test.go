@@ -15,6 +15,7 @@ import (
 )
 
 func TestDealCreationPreviewMatchesWriterWithoutWriting(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	e.store.installation = eurInstallation()
 	stage := openStage(t, e, SemanticOpen)
@@ -54,6 +55,7 @@ func TestDealCreationPreviewMatchesWriterWithoutWriting(t *testing.T) {
 }
 
 func TestDealCreationPreviewDoesNotBorrowReviewerCreateGrant(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	creator, ok := principal.Actor(e.asDealless())
 	if !ok {

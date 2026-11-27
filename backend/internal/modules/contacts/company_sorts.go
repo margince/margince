@@ -58,7 +58,7 @@ func orderByContactCount(ctx context.Context, arg func(any) int) (string, error)
 //
 // Held by: TestEveryOpenDealCountComesFromTheRollup (backend/internal/modules/contacts/opendealcount_test.go)
 //
-// The as-of instant is rollupAsOf(), which the page's own count already uses:
+// The as-of instant is rollupAsOf(ctx), which the page's own count already uses:
 // the sort and the figure beside it cannot land on two different days.
 //
 // A role without computed_field:read is shown NO count (STATE-4) and orders by
@@ -72,7 +72,7 @@ func orderByOpenDealCount(ctx context.Context, arg func(any) int) (string, error
 		`coalesce((SELECT pipeline_sort.open_deal_count
 		    FROM company_open_pipeline_rollup(%s) pipeline_sort
 		   WHERE pipeline_sort.company_id = company.id), 0)`,
-		occurredday.TodaySQL(storekit.SQLf("$%d::timestamptz", arg(rollupAsOf())))), nil
+		occurredday.TodaySQL(storekit.SQLf("$%d::timestamptz", arg(rollupAsOf(ctx))))), nil
 }
 
 // withheldSortValue is what a column this caller may not see orders by: NULL,

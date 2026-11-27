@@ -88,6 +88,7 @@ func anAttendee(account, email, name string) extension.Participant {
 // record carried no participants field at all, so a captured group chat named
 // its sender and the member and nobody else in the room.
 func TestAUnitsGroupRosterLandsAsParticipants(t *testing.T) {
+	t.Parallel()
 	e := setupIngress(t)
 	registerProbeTransport(t, e)
 	rt := e.ingestingRuntime()
@@ -154,6 +155,7 @@ func TestAUnitsGroupRosterLandsAsParticipants(t *testing.T) {
 // the binding the installation already holds. This is what puts a group chat on
 // the right contact's timeline and into "who on our team knows this contact".
 func TestARosterAccountResolvesToTheContactItIsBoundTo(t *testing.T) {
+	t.Parallel()
 	e := setupIngress(t)
 	registerProbeTransport(t, e)
 	contact := seedContactBoundToAccount(t, e, "acct-77")
@@ -182,6 +184,7 @@ func TestARosterAccountResolvesToTheContactItIsBoundTo(t *testing.T) {
 // two-party message is the overwhelming majority of what a chat unit sends,
 // and it must not have gained an EXTRA row.
 func TestATwoPartyMessageStillNamesNoRoster(t *testing.T) {
+	t.Parallel()
 	e := setupIngress(t)
 	registerProbeTransport(t, e)
 	result, err := e.ingestingRuntime().Ingest(context.Background(), extension.UserID(e.member.String()),

@@ -18,6 +18,7 @@ import (
 )
 
 func TestLeadReferencesUseEmailWithoutChangingLegacyLabels(t *testing.T) {
+	t.Parallel()
 	for _, name := range []string{"", "   ", "Named Lead"} {
 		t.Run(name, func(t *testing.T) {
 			e := setupCapturePrivacy(t)
@@ -59,6 +60,7 @@ func TestLeadReferencesUseEmailWithoutChangingLegacyLabels(t *testing.T) {
 }
 
 func TestNamelessLeadReferenceRetainsItsIdentity(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	ctx := e.as(e.owner, principal.RowScopeAll)
 	row, created, err := e.store.CreateLead(ctx, CreateLeadInput{CompanyName: new("Unidentified enquiry"), Source: "manual"})
@@ -76,6 +78,7 @@ func TestNamelessLeadReferenceRetainsItsIdentity(t *testing.T) {
 }
 
 func TestCompanyReferencesPreserveAnchorAndLogoRevision(t *testing.T) {
+	t.Parallel()
 	e := newAnchorEnv(t)
 	actor, ok := principal.Actor(e.ctx)
 	if !ok {
@@ -111,6 +114,7 @@ func TestCompanyReferencesPreserveAnchorAndLogoRevision(t *testing.T) {
 }
 
 func TestCompanyReferencesRespectPrivateRowScope(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	owner := e.as(e.owner, principal.RowScopeAll)
 	company, err := e.store.CreateCompany(owner, CreateCompanyInput{DisplayName: "Private company", Source: "manual"})
@@ -143,6 +147,7 @@ func TestCompanyReferencesRespectPrivateRowScope(t *testing.T) {
 }
 
 func TestCompanyReferencesAvoidFullListAttachmentReads(t *testing.T) {
+	t.Parallel()
 	e := newAnchorEnv(t)
 	id := e.newCompany(t)
 	referenceCtx, referenceMeter := database.WithStatementMeter(e.ctx)

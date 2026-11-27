@@ -48,6 +48,7 @@ func asMember(e *sendEnv, member ids.UUID) context.Context {
 // A member signed in on two browsers sees a due reminder once. The first tab
 // to claim it shows it; a moved or handed-on reminder can be claimed again.
 func TestADueReminderIsClaimedOncePerMemberAndAgainOnceMoved(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	now := clocktest.Now(t)
 	store := pinStore(e).WithClock(func() time.Time { return now })
@@ -116,6 +117,7 @@ func TestADueReminderIsClaimedOncePerMemberAndAgainOnceMoved(t *testing.T) {
 // The write re-reads the task under a lock. A list read that a handover beat
 // to commit cannot turn into a claim for the member who no longer holds it.
 func TestAReminderClaimBehindAHandoverRecordsNothing(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	now := clocktest.Now(t)
 	store := pinStore(e).WithClock(func() time.Time { return now })

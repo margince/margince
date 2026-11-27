@@ -16,6 +16,7 @@ import (
 )
 
 func TestOnceDecisionActivityKeepsAudienceAndArchiveReads(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx, store := e.as(principal.RowScopeAll), e.store(nil)
 	written := loggedNote(ctx, t, e)
@@ -50,6 +51,7 @@ func TestOnceDecisionActivityKeepsAudienceAndArchiveReads(t *testing.T) {
 }
 
 func TestOnceDecisionEmailSummaryKeepsContentAdmission(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx, store := e.as(principal.RowScopeAll), e.store(nil)
 	written, _, err := store.LogActivity(ctx, LogActivityInput{
@@ -83,6 +85,7 @@ func TestOnceDecisionEmailSummaryKeepsContentAdmission(t *testing.T) {
 }
 
 func TestOnceDecisionActivityPagesKeepCursorAndCount(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx, store := e.as(principal.RowScopeAll), e.store(nil)
 	want := map[ids.UUID]string{}

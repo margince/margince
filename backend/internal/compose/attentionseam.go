@@ -38,7 +38,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -237,7 +236,7 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		attentionAIWork{store: aiactivity.NewStore(db)},
 		attentionBounces{store: comms.NewStore(db, time.Now, activities.NewStore(db))},
 		attentionAutomations{store: automation.NewAutomationStore(db)},
-		attentionNotices{store: notices.NewStore(db), users: identity.NewService(db.Pool())},
+		attentionNotices{store: notices.NewStore(db), users: IdentityService(db.Pool())},
 		newAttentionNames(db),
 		now,
 		attention.WithZones(attentionZone(pool), dayrule.ActingReaderZone(pool)),
@@ -280,7 +279,7 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		WithContactEmployers(newContactsStore(db)).
 		WithMeetingOrganizers(activities.NewStore(db)).WithMeetingRooms(activities.NewStore(db)).
 		// Cached cards keep queue reads from starting model work.
-		WithDealMoves(attentionDealMoves{cards: newDealStatusService(pool, now).WithManagerStandings(managermove.Standings(newForecastStore(db)))}).
+		WithDealMoves(attentionDealMoves{cards: newDealStatusService(pool, now).WithManagerStandings(managermove.Standings(newForecastStore(db), installedRbacObjects()))}).
 		WithDealStandings(attentionDealStandings{cards: cards}).
 		WithBaseMoney(AttentionBaseMoney{Pool: pool}).
 		WithWeeklyPlans(attentionWeeklyPlan{store: WeeklyPlanStore(pool), pool: pool}).WithNamedTeams(newTeammatesSeam(pool)).WithTeammates(newTeammatesSeam(pool)).WithFormerTeammates(newTeammatesSeam(pool)).

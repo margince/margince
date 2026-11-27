@@ -34,6 +34,7 @@ func plantStoredZone(t *testing.T, e *integration.Env, name string) {
 // The pass runs at 22:30 UTC, which is already the next day in the stored
 // zone. Its run is dated the UTC day, and the walk records the fault once.
 func TestASweepWhoseStoredZoneWillNotLoadRunsInUTCAndRecordsOneFault(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	plantStoredZone(t, e, zoneOnlyPostgresReads)
 	at := time.Date(2026, 3, 10, 22, 30, 0, 0, time.UTC)
@@ -61,6 +62,7 @@ func TestASweepWhoseStoredZoneWillNotLoadRunsInUTCAndRecordsOneFault(t *testing.
 }
 
 func TestAPassWhoseZoneLoadsRecordsNoFault(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	corrector := NewCloseDateCorrector(e.Pool, slog.New(slog.DiscardHandler))
 	err := runEach(context.Background(), e.Pool, []ids.UUID{e.WS}, func(ctx context.Context, ws ids.UUID) error {
@@ -77,6 +79,7 @@ func TestAPassWhoseZoneLoadsRecordsNoFault(t *testing.T) {
 // The admin's health page raises the finding while the stored zone will not
 // load, and drops it once an admin saves a loadable zone.
 func TestSystemHealthTellsTheAdminTheStoredZoneWillNotLoad(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	server := Server{jobHealthHandlers: jobHealthHandlers{pool: e.Pool}}
 	raised := func() bool {
@@ -111,6 +114,7 @@ func TestSystemHealthTellsTheAdminTheStoredZoneWillNotLoad(t *testing.T) {
 // Inside a watched pass the zone reader answers UTC for the unloadable name.
 // Outside one it answers the stored name, which an interactive read refuses.
 func TestAZoneReaderAnswersUTCOnlyInsideAWatchedPass(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	plantStoredZone(t, e, zoneOnlyPostgresReads)
 	watched, _ := storekit.WatchZones(e.Admin())

@@ -99,6 +99,7 @@ func embeddedCount(t *testing.T, e *Env, corpusID ids.UUID) int {
 
 // The first pass embeds every passage; the corpus's coverage then says so.
 func TestEmbeddingADocumentGivesEveryPassageAVector(t *testing.T) {
+	t.Parallel()
 	ee := newEmbedEnv(t)
 
 	n, err := ee.store.EmbedDocument(ee.ctx, ee.doc, ee.embedder)
@@ -124,6 +125,7 @@ func TestEmbeddingADocumentGivesEveryPassageAVector(t *testing.T) {
 // Re-embedding an unchanged document under an unchanged binding costs no model
 // calls. This is what makes the re-embed sweep resumable for free.
 func TestEmbeddingAnAlreadyCurrentDocumentCostsNoCalls(t *testing.T) {
+	t.Parallel()
 	ee := newEmbedEnv(t)
 	if _, err := ee.store.EmbedDocument(ee.ctx, ee.doc, ee.embedder); err != nil {
 		t.Fatalf("first embed: %v", err)
@@ -150,6 +152,7 @@ func TestEmbeddingAnAlreadyCurrentDocumentCostsNoCalls(t *testing.T) {
 // a model that no longer serves the workspace makes it indistinguishable from a
 // live row.
 func TestAChangedIdentityReEmbedsIdenticalText(t *testing.T) {
+	t.Parallel()
 	ee := newEmbedEnv(t)
 	if _, err := ee.store.EmbedDocument(ee.ctx, ee.doc, ee.embedder); err != nil {
 		t.Fatalf("first embed: %v", err)
@@ -177,6 +180,7 @@ func TestAChangedIdentityReEmbedsIdenticalText(t *testing.T) {
 // `ORDER BY sim DESC` sorts NaN first, so one stored zero silently outranks
 // every real passage in the corpus.
 func TestAZeroVectorIsRefusedAtWrite(t *testing.T) {
+	t.Parallel()
 	ee := newEmbedEnv(t)
 	ee.embedder.zero = true
 
@@ -193,6 +197,7 @@ func TestAZeroVectorIsRefusedAtWrite(t *testing.T) {
 // the wrong passage — a corpus that cites the wrong document rather than one
 // that fails.
 func TestAShortEmbedAnswerIsRefusedBeforeAnythingIsWritten(t *testing.T) {
+	t.Parallel()
 	ee := newEmbedEnv(t)
 	ee.embedder.short = true
 
@@ -208,6 +213,7 @@ func TestAShortEmbedAnswerIsRefusedBeforeAnythingIsWritten(t *testing.T) {
 // installation configured without one is a legitimate deployment shape, and the
 // ask reports retrieval_unavailable rather than treating it as a fault here.
 func TestAnUnboundEmbedLaneEmbedsNothingAndDoesNotFail(t *testing.T) {
+	t.Parallel()
 	ee := newEmbedEnv(t)
 	ee.embedder.identity = ""
 
@@ -230,6 +236,7 @@ func TestAnUnboundEmbedLaneEmbedsNothingAndDoesNotFail(t *testing.T) {
 // which is worse than an unembedded row — the schema refuses it, and this is
 // the test that would notice the write splitting in two.
 func TestNoPassageEverCarriesAnIdentityWithoutAVector(t *testing.T) {
+	t.Parallel()
 	ee := newEmbedEnv(t)
 	if _, err := ee.store.EmbedDocument(ee.ctx, ee.doc, ee.embedder); err != nil {
 		t.Fatalf("embed: %v", err)
@@ -251,6 +258,7 @@ func TestNoPassageEverCarriesAnIdentityWithoutAVector(t *testing.T) {
 // not storeVectors compared chunk_hash at all, and removing the guard left it
 // green. It was a test named for a CAS that never touched one.
 func TestAVectorIsNotStampedOntoAPassageThatChangedUnderIt(t *testing.T) {
+	t.Parallel()
 	ee := newEmbedEnv(t)
 	// The passages as they stand, and what they will be embedded against.
 	pending := ee.env.WsCount(t,

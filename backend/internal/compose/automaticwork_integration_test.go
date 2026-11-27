@@ -149,6 +149,7 @@ func tallyOf(t *testing.T, health crmcontracts.AutomaticWorkHealth, user ids.UUI
 }
 
 func TestAutomaticWorkCountsEachOutcomeOncePerColleagueAndKind(t *testing.T) {
+	t.Parallel()
 	f := newWorkFixture(t)
 	e := f.e
 	moveTo := func(user ids.UUID) activities.UpdateActivityInput {
@@ -253,6 +254,7 @@ func TestAutomaticWorkCountsEachOutcomeOncePerColleagueAndKind(t *testing.T) {
 // An outcome counts on its item's creation day, however late it is read. The
 // window drops the item once that day leaves it.
 func TestAutomaticWorkCountsALateOutcomeOnTheCreationDay(t *testing.T) {
+	t.Parallel()
 	f := newWorkFixture(t)
 	task := f.promiseTask(t, f.e.Rep1)
 	f.update(t, task, activities.UpdateActivityInput{IsDone: new(true)})
@@ -276,6 +278,7 @@ func TestAutomaticWorkCountsALateOutcomeOnTheCreationDay(t *testing.T) {
 // A seat that was handed work and has since been deactivated still shows,
 // under its own name and status.
 func TestAutomaticWorkKeepsADeactivatedColleaguesItems(t *testing.T) {
+	t.Parallel()
 	f := newWorkFixture(t)
 	f.promiseTask(t, f.e.Rep3)
 	if _, err := integration.OwnerConn(t).Exec(context.Background(),
@@ -289,6 +292,7 @@ func TestAutomaticWorkKeepsADeactivatedColleaguesItems(t *testing.T) {
 }
 
 func TestAutomaticWorkCountsAWaitingMessageMarkedNotMineOnce(t *testing.T) {
+	t.Parallel()
 	f := newWorkFixture(t)
 	direction := "inbound"
 	message, _, err := f.e.Activities.LogActivity(f.e.Admin(), activities.LogActivityInput{
@@ -313,6 +317,7 @@ func TestAutomaticWorkCountsAWaitingMessageMarkedNotMineOnce(t *testing.T) {
 }
 
 func TestAutomaticWorkHealthIsForAnAdminOnly(t *testing.T) {
+	t.Parallel()
 	f := newWorkFixture(t)
 	h := automaticWorkHandlers{pool: f.e.Pool, now: func() time.Time { return f.dbNow(t) }}
 	call := func(ctx context.Context, days *int) int {
@@ -342,6 +347,7 @@ func TestAutomaticWorkHealthIsForAnAdminOnly(t *testing.T) {
 // names. A later machine create row over a colleague's own task is a replay,
 // not automatic work.
 func TestAutomaticWorkLeavesOutATaskAColleagueCreatedFirst(t *testing.T) {
+	t.Parallel()
 	f := newWorkFixture(t)
 	task := f.promiseTask(t, f.e.Rep1)
 	created := f.dbNow(t)
@@ -362,6 +368,7 @@ func TestAutomaticWorkLeavesOutATaskAColleagueCreatedFirst(t *testing.T) {
 
 // A machine create replayed later is still one automatic item.
 func TestAutomaticWorkCountsAReplayedMachineCreateOnce(t *testing.T) {
+	t.Parallel()
 	f := newWorkFixture(t)
 	task := f.promiseTask(t, f.e.Rep1)
 	created := f.dbNow(t)
@@ -377,6 +384,7 @@ func TestAutomaticWorkCountsAReplayedMachineCreateOnce(t *testing.T) {
 }
 
 func TestAutomaticWorkWindowStartsOnTheRequestedDayAcrossAMidnightDSTChange(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	zone := "America/Santiago"

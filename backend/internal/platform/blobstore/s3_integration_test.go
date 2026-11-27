@@ -57,6 +57,7 @@ func newS3Store(t *testing.T) blobstore.Store {
 // lane is hermetic: no test there opens a real connection at all. A dial belongs
 // in the dialing lane whether or not anything answers.
 func TestNewFailsWhenStoreUnreachable(t *testing.T) {
+	t.Parallel()
 	// A store that never comes up must fail the boot, not hang: the connect
 	// retry is bounded by the context deadline.
 	ctx, cancel := context.WithTimeout(t.Context(), 300*time.Millisecond)
@@ -70,6 +71,7 @@ func TestNewFailsWhenStoreUnreachable(t *testing.T) {
 }
 
 func TestFromConfigConfiguredConnects(t *testing.T) {
+	t.Parallel()
 	endpoint := os.Getenv("MARGINCE_TEST_BLOBSTORE_ENDPOINT")
 	if endpoint == "" {
 		t.Fatal("MARGINCE_TEST_BLOBSTORE_ENDPOINT not set — run `make db-up` (integration tests fail loudly, they never skip)")
@@ -96,6 +98,7 @@ func TestFromConfigConfiguredConnects(t *testing.T) {
 }
 
 func TestS3StoreRoundTrip(t *testing.T) {
+	t.Parallel()
 	store := newS3Store(t)
 	ctx := t.Context()
 	// A fresh workspace id keeps this test's keys clear of every other
@@ -142,6 +145,7 @@ func TestS3StoreRoundTrip(t *testing.T) {
 }
 
 func TestS3StoreGetMissingReturnsNotFound(t *testing.T) {
+	t.Parallel()
 	store := newS3Store(t)
 	key := blobstore.WorkspaceKey(ids.New[ids.WorkspaceKind](), "attachment", "absent")
 
@@ -152,6 +156,7 @@ func TestS3StoreGetMissingReturnsNotFound(t *testing.T) {
 }
 
 func TestS3StoreDeleteIsIdempotent(t *testing.T) {
+	t.Parallel()
 	store := newS3Store(t)
 	key := blobstore.WorkspaceKey(ids.New[ids.WorkspaceKind](), "attachment", "never-written")
 
@@ -163,12 +168,14 @@ func TestS3StoreDeleteIsIdempotent(t *testing.T) {
 }
 
 func TestS3StoreHealthReadyAgainstLiveMinIO(t *testing.T) {
+	t.Parallel()
 	if err := newS3Store(t).Health(t.Context()); err != nil {
 		t.Fatalf("Health against live MinIO: %v", err)
 	}
 }
 
 func TestS3StoreDeletePrefixRemovesOnlyThatPrefix(t *testing.T) {
+	t.Parallel()
 	store := newS3Store(t)
 	ctx := t.Context()
 	// Two fresh workspace ids give two disjoint prefixes in the shared bucket,
@@ -210,6 +217,7 @@ func TestS3StoreDeletePrefixRemovesOnlyThatPrefix(t *testing.T) {
 // enabling versioning on the shared test bucket would change what every other
 // test in the lane leaves behind.
 func TestS3StoreDeletePrefixLeavesNoVersionOnAVersionedBucket(t *testing.T) {
+	t.Parallel()
 	ctx := t.Context()
 	endpoint := os.Getenv("MARGINCE_TEST_BLOBSTORE_ENDPOINT")
 	if endpoint == "" {
@@ -273,6 +281,7 @@ func TestS3StoreDeletePrefixLeavesNoVersionOnAVersionedBucket(t *testing.T) {
 }
 
 func TestS3StoreDeletePrefixOnAnEmptyPrefixReportsZero(t *testing.T) {
+	t.Parallel()
 	store := newS3Store(t)
 	// A workspace that never had a key written has an empty prefix — the
 	// sweep must report zero, not error, on a data reset that finds nothing
@@ -289,6 +298,7 @@ func TestS3StoreDeletePrefixOnAnEmptyPrefixReportsZero(t *testing.T) {
 }
 
 func TestS3StoreDeletePrefixRejectsEmptyPrefix(t *testing.T) {
+	t.Parallel()
 	store := newS3Store(t)
 	ctx := t.Context()
 	key := blobstore.WorkspaceKey(ids.New[ids.WorkspaceKind](), "attachment", "guarded")
@@ -315,6 +325,7 @@ func TestS3StoreDeletePrefixRejectsEmptyPrefix(t *testing.T) {
 }
 
 func TestS3StoreWorkspaceKeyIsolation(t *testing.T) {
+	t.Parallel()
 	store := newS3Store(t)
 	ctx := t.Context()
 	// The same logical entity id under two workspaces must not collide:

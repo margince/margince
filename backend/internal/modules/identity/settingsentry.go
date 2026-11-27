@@ -413,7 +413,7 @@ func ZoneAppliedTx(ctx context.Context, tx pgx.Tx) (*time.Location, error) {
 // installation-identity settings are seeded together at bootstrap, so a tree
 // where one is unset has the other two unset as well.
 func NameOf(ctx context.Context, tx pgx.Tx) (string, error) {
-	return config.StoredRequireTx(ctx, tx, config.Bound(), Name)
+	return config.StoredRequireTx(ctx, tx, config.Bound(ctx), Name)
 }
 
 // InstallationNameOf reads the installation's own display label inside a
@@ -431,7 +431,7 @@ func NameOf(ctx context.Context, tx pgx.Tx) (string, error) {
 // into a 500.
 func InstallationNameOf(ctx context.Context, tx pgx.Tx) (string, error) {
 	// A name a boot source sets answers without the row.
-	if name, ok := config.BootVal(config.Bound(), Name); ok {
+	if name, ok := config.BootVal(ctx, config.Bound(ctx), Name); ok {
 		return name, nil
 	}
 	var name string
@@ -467,7 +467,7 @@ func InstallationNameForPublicPage(ctx context.Context, pool *pgxpool.Pool) (str
 // string — which resolves to no jurisdiction and therefore adds no
 // jurisdiction-specific permission to anybody's mail.
 func CountryOf(ctx context.Context, tx pgx.Tx) (jurisdiction.Code, error) {
-	code, err := config.StoredApplyTx(ctx, tx, config.Bound(), Country)
+	code, err := config.StoredApplyTx(ctx, tx, config.Bound(ctx), Country)
 	if err != nil {
 		return "", err
 	}
@@ -494,5 +494,5 @@ func CountryOf(ctx context.Context, tx pgx.Tx) (jurisdiction.Code, error) {
 // answer mailcopy falls back to, so an installation that has never chosen gets
 // what it got before this existed.
 func LanguageOf(ctx context.Context, tx pgx.Tx) (string, error) {
-	return config.StoredApplyTx(ctx, tx, config.Bound(), BaseLanguage)
+	return config.StoredApplyTx(ctx, tx, config.Bound(ctx), BaseLanguage)
 }

@@ -21,6 +21,7 @@ import (
 )
 
 func TestReviewChoicesRemainFrozenAfterTemplateEdits(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	perms := AdminPerms
 	perms.Objects = maps.Clone(AdminPerms.Objects)

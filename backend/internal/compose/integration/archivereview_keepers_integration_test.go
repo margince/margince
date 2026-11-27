@@ -75,6 +75,7 @@ func keptReasons(out crmcontracts.ArchiveDeletionResult) map[ids.UUID]crmcontrac
 // a controller pinned to the floor. Only the third, which nothing keeps, is
 // erased.
 func TestTheArchiveDeletionKeepsWhatTheLawKeeps(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	yearAgo := clocktest.Now(t).AddDate(-1, 0, 0)
 	contact := e.SeedContact(t, "Floor Subject", nil)
@@ -111,6 +112,7 @@ func TestTheArchiveDeletionKeepsWhatTheLawKeeps(t *testing.T) {
 // produced and lets its floor run out. The receipt no longer keeps it, so
 // the controller's deletion erases it.
 func TestAnOptOutReceiptPastItsFloorIsDeleted(t *testing.T) {
+	t.Parallel()
 	l := setupReceiptLane(t)
 	refuser := l.refusingContact(t, "Lapsed Refusal")
 	var receipt ids.UUID
@@ -141,6 +143,7 @@ func TestAnOptOutReceiptPastItsFloorIsDeleted(t *testing.T) {
 // listed nor deleted, and reads as not found. The mail linked to a workspace
 // contact is listed and deleted.
 func TestTheArchiveReviewHidesMailOnlyItsCapturerMaySee(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	yearAgo := clocktest.Now(t).AddDate(-1, 0, 0)
 	inside := logArchivedMail(t, e, "Workspace customer", yearAgo, e.SeedContact(t, "Workspace Subject", &e.Rep1))

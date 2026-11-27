@@ -39,7 +39,7 @@ func pictureWire(t *testing.T, status int) (chainWire, chan offeredPicture, func
 	c.h.picture = newConnectPicture(identity.NewServiceFor(c.env.DB()), func(_ context.Context, user ids.UserID, pictureURL string) error {
 		offered <- offeredPicture{user, pictureURL}
 		return nil
-	})
+	}, nil)
 	c.h.picture.userinfo = googleconn.NewUserinfo(userinfo.Client(), userinfo.URL)
 	return c, offered, release
 }
@@ -47,6 +47,7 @@ func pictureWire(t *testing.T, status int) (chainWire, chan offeredPicture, func
 // The landing is written while userinfo still holds its answer: the picture rides
 // after the connect, never in front of it.
 func TestAPersonalGoogleConnectLandsAndThenOffersItsPicture(t *testing.T) {
+	t.Parallel()
 	c, offered, release := pictureWire(t, http.StatusOK)
 	jar := browserJar{}
 
@@ -61,6 +62,7 @@ func TestAPersonalGoogleConnectLandsAndThenOffersItsPicture(t *testing.T) {
 }
 
 func TestAFailingUserinfoStillLandsTheConnect(t *testing.T) {
+	t.Parallel()
 	c, _, release := pictureWire(t, http.StatusInternalServerError)
 	release()
 	jar := browserJar{}

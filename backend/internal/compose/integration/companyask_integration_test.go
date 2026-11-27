@@ -31,6 +31,7 @@ import (
 // path: one prepared question, one model call, the answer labelled with who
 // wrote it and echoing the question it answers.
 func TestCompanyAskAnswersFromTheModelAndReportsTheWriter(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, stage, _ := DealFixture(t, e)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme", &e.Rep1))
@@ -71,6 +72,7 @@ func TestCompanyAskAnswersFromTheModelAndReportsTheWriter(t *testing.T) {
 // between the reader and a sentence about a record they cannot open, so the
 // answer path must run it rather than trusting the reply.
 func TestCompanyAskFallsBackWhenTheReplyCitesNothingReal(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme", &e.Rep1))
 	// A well-formed reply citing a deal that is not this account's.
@@ -94,6 +96,7 @@ func TestCompanyAskFallsBackWhenTheReplyCitesNothingReal(t *testing.T) {
 // Without a model lane the questions still answer, from the same input. A
 // deployment that runs no model is a supported posture, not a broken one.
 func TestCompanyAskServesTheFloorWithoutALane(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme", &e.Rep1))
 	svc := briefService(e, nil, "")
@@ -118,6 +121,7 @@ func TestCompanyAskServesTheFloorWithoutALane(t *testing.T) {
 // A question about an account outside the caller's row scope is a read of that
 // account: it must answer 404, not 403, or the refusal confirms it exists.
 func TestCompanyAskHidesAnAccountOutOfRowScope(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	theirs := e.SeedCompany(t, "Theirs", &e.Rep3)
 	// An account is readable by every seat with the grant; capture privacy
@@ -141,6 +145,7 @@ func TestCompanyAskHidesAnAccountOutOfRowScope(t *testing.T) {
 // An agent asking about an account has the records themselves; letting it
 // spend the human's model budget on prose is not what a passport is for.
 func TestCompanyAskRefusesAnAgent(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme", &e.Rep1))
 	lane := &countingLane{reply: `{"sentences":[]}`}
@@ -159,6 +164,7 @@ func TestCompanyAskRefusesAnAgent(t *testing.T) {
 // answering a different question than the one asked is indistinguishable from
 // answering the one asked badly.
 func TestCompanyAskTransportRefusesAnUnpreparedQuestion(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme", &e.Rep1))
 	lane := &countingLane{reply: `{"sentences":[]}`}

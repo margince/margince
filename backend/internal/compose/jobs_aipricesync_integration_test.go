@@ -81,6 +81,7 @@ func lastRun(t *testing.T, e *integration.Env) *ai.LastPriceSync {
 }
 
 func TestTheDailySweepRepricesASeededPriceAndRecordsTheRun(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	keyGemini(t, e)
 	seedPrice(t, e, "1.5", ai.RateSourceSeed)
@@ -103,6 +104,7 @@ func TestTheDailySweepRepricesASeededPriceAndRecordsTheRun(t *testing.T) {
 }
 
 func TestTheDailySweepLeavesAnInstallationWithAutoSyncOffAlone(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	keyGemini(t, e)
 	seedPrice(t, e, "1.5", ai.RateSourceSeed)
@@ -123,6 +125,7 @@ func TestTheDailySweepLeavesAnInstallationWithAutoSyncOffAlone(t *testing.T) {
 }
 
 func TestAHandSetPriceSurvivesTheDailySweep(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	keyGemini(t, e)
 	seedPrice(t, e, "9.99", ai.RateSourceManual)

@@ -47,6 +47,7 @@ func (c deliveryConnector) Sync(ctx context.Context, _ connector.Auth, cursor co
 }
 
 func TestSuccessfulEmailDeliveryDatesSilenceAndDismissal(t *testing.T) {
+	t.Parallel()
 	ctx, _, vault, ws := newCaptureRegistryFixture(t)
 	owner, pool := setupCaptureDB(t)
 	db := database.BindTo(pool, ws)
@@ -132,6 +133,7 @@ func TestSuccessfulEmailDeliveryDatesSilenceAndDismissal(t *testing.T) {
 }
 
 func TestFailedPullDoesNotCommitDelivery(t *testing.T) {
+	t.Parallel()
 	ctx, _, vault, ws := newCaptureRegistryFixture(t)
 	_, pool := setupCaptureDB(t)
 	db := database.BindTo(pool, ws)
@@ -164,6 +166,7 @@ func (c deliveryConnector) AccountLabel(auth connector.Auth) (string, error) {
 }
 
 func TestReauthenticationKeepsSilenceDismissalAndAnotherAccountStartsClean(t *testing.T) {
+	t.Parallel()
 	ctx, _, vault, ws := newCaptureRegistryFixture(t)
 	owner, pool := setupCaptureDB(t)
 	db := database.BindTo(pool, ws)
@@ -226,6 +229,7 @@ func TestReauthenticationKeepsSilenceDismissalAndAnotherAccountStartsClean(t *te
 }
 
 func TestSupersededPullCannotPublishDelivery(t *testing.T) {
+	t.Parallel()
 	ctx, _, vault, ws := newCaptureRegistryFixture(t)
 	_, pool := setupCaptureDB(t)
 	db := database.BindTo(pool, ws)

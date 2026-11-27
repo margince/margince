@@ -11,6 +11,7 @@ package integration
 // audit row through storekit, then the sweep the worker runs.
 
 import (
+	"context"
 	"io"
 	"log/slog"
 	"testing"
@@ -24,6 +25,7 @@ import (
 )
 
 func TestARetentionEraseScrubsTheImagesOfARiskDay(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	day := ids.NewV7()
 	e.WsExec(t, `INSERT INTO retention_policy (object_type, category, retain_days, action)
@@ -39,6 +41,7 @@ func TestARetentionEraseScrubsTheImagesOfARiskDay(t *testing.T) {
 }
 
 func TestARetentionEraseScrubsTheImagesOfAStoredOriginal(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	activity := ids.NewV7()
 	e.WsExec(t, `INSERT INTO retention_policy (object_type, category, retain_days, action)
@@ -73,7 +76,7 @@ func auditWithImages(t *testing.T, e *Env, entityType string, id ids.UUID) {
 func runRetentionSweep(t *testing.T, e *Env) {
 	t.Helper()
 	svc := compose.NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
-	if err := svc.EvaluateInstallation(RetentionPassCtx(e.WS)); err != nil {
+	if err := svc.EvaluateInstallation(RetentionPassCtx(context.Background(), e.WS)); err != nil {
 		t.Fatalf("running the retention sweep: %v", err)
 	}
 }

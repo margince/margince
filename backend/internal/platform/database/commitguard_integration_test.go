@@ -9,7 +9,6 @@ import (
 	"context"
 	"errors"
 	"math/rand/v2"
-	"os"
 	"strconv"
 	"testing"
 	"time"
@@ -30,6 +29,7 @@ import (
 // The test ends the context once Postgres shows the COMMIT waiting, then lets
 // it go.
 func TestACommitThatHasStartedFinishesWhenItsContextEnds(t *testing.T) {
+	t.Parallel()
 	ctx, pool := laneEnv(t)
 	wait, stop := context.WithTimeout(context.Background(), 30*time.Second)
 	defer stop()
@@ -127,10 +127,8 @@ func awaitCommitWaitingOnLock(ctx context.Context, t *testing.T, pool *pgxpool.P
 // connection survives. Sent on the ended context it fails, and pgx closes the
 // connection.
 func TestARollbackOnAnEndedContextKeepsTheConnection(t *testing.T) {
-	dsn := os.Getenv("MARGINCE_TEST_DSN")
-	if dsn == "" {
-		t.Fatal("MARGINCE_TEST_DSN is not set — run `make db-up` and try again")
-	}
+	t.Parallel()
+	dsn := testdb.For(t).OwnerDSN
 	pool, err := testdb.OwnPoolWith(context.Background(), dsn, func(cfg *pgxpool.Config) {
 		cfg.MinConns, cfg.MaxConns = 0, 1
 	})
@@ -162,6 +160,7 @@ func TestARollbackOnAnEndedContextKeepsTheConnection(t *testing.T) {
 // A watched request learns that a write committed under it, and only a write:
 // a refusal after a read changed nothing and may run again.
 func TestAWatchedRequestLearnsOnlyOfCommittedWrites(t *testing.T) {
+	t.Parallel()
 	ctx, pool := laneEnv(t)
 	for name, statement := range map[string]string{
 		"a read":  `SELECT 1`,

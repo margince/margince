@@ -49,7 +49,7 @@ func faultRecord(ctx context.Context, t *testing.T, kind string, err error) map[
 	// The return is asserted rather than discarded: a seam that logged the cause
 	// and then answered nil would leave the tick reporting success, and the line
 	// these cases read would be describing a failure nothing failed over.
-	if stored := FaultForKind(ctx, kind, err); stored == nil {
+	if stored := FaultForKind(ctx, Composed{}, kind, err); stored == nil {
 		t.Fatal("a cause answered no fault at all")
 	}
 

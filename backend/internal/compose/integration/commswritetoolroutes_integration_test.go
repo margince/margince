@@ -27,6 +27,7 @@ type sharedDraft struct {
 // A reply drafted to one email is the same text on either door: the same
 // subject and the same body, greeting included.
 func TestDraftEmailAnswersAsItsRouteDoes(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "draft-write-doors", "read", "write", "draft")
 	contact := createdID(t, d.e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Pat Draft", "source": "manual"})
 	mail := createdID(t, d.e, "/v1/activities", AnyMap{
@@ -47,6 +48,7 @@ func TestDraftEmailAnswersAsItsRouteDoes(t *testing.T) {
 // Only the refusal is compared: a permitted email goes out through a connected
 // mailbox, and the harness has none to stand in for it.
 func TestSendsAreRefusedAlikeOnEitherDoor(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "send-write-doors", "read", "write", "send")
 	contact := createdID(t, d.e, "/v1/contacts", AnyMap{
 		"full_name": "Send Pat", "source": "manual",

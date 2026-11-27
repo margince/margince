@@ -171,6 +171,7 @@ func domainOfAddress(address string) string {
 // connected mailbox contributed. Each setting has a meeting that is captured
 // and one that is not.
 func TestTheOwnersDomainDropsAMeetingOnlyWhereTheWorkspaceCallsItInternal(t *testing.T) {
+	t.Parallel()
 	shipped := freemail.Domains()[0]
 	carvedOut := carvableConsumerDomain(t, shipped)
 	const added = "regional-provider.example"

@@ -55,6 +55,7 @@ func ownDomainAdmin(e *integration.Env) context.Context {
 }
 
 func TestOwnDomainHandlersRoundTripTheRegistry(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	h := ownDomainHandlers{store: capture.NewOwnDomainStore(e.DB())}
 
@@ -105,6 +106,7 @@ func TestOwnDomainHandlersRoundTripTheRegistry(t *testing.T) {
 
 // The refusals the TRANSPORT owns, each answered before the store is reached.
 func TestOwnDomainHandlersRefuseBadInputAndAgents(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	h := ownDomainHandlers{store: capture.NewOwnDomainStore(e.DB())}
 	admin := ownDomainAdmin(e)
@@ -144,6 +146,7 @@ func TestOwnDomainHandlersRefuseBadInputAndAgents(t *testing.T) {
 }
 
 func TestOwnDomainHandlersRefuseAConsumerMailDomainUnlessTheWorkspaceCarvedItOut(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	h := ownDomainHandlers{store: capture.NewOwnDomainStore(e.DB())}
 	admin := ownDomainAdmin(e)

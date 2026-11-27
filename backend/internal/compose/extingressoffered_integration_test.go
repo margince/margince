@@ -21,6 +21,7 @@ import (
 )
 
 func TestAFeedValueIsKeptBesideTheTypedOneAndReplacedByTheNextOffer(t *testing.T) {
+	t.Parallel()
 	e := setupCRMIngress(t)
 	first := e.companyEditedByAUser(t)
 	id := ids.From[ids.CompanyKind](ids.MustParse(first.Ref.ID))
@@ -41,6 +42,7 @@ func TestAFeedValueIsKeptBesideTheTypedOneAndReplacedByTheNextOffer(t *testing.T
 }
 
 func TestAnArchivedCompanyServesNoOfferedValues(t *testing.T) {
+	t.Parallel()
 	e := setupCRMIngress(t)
 	made := e.mustIngest(t, companyRecord("acct-1", extension.CompanyFields{DisplayName: "Acme", Industry: "education"}))
 	id := ids.From[ids.CompanyKind](ids.MustParse(made.Ref.ID))
@@ -53,6 +55,7 @@ func TestAnArchivedCompanyServesNoOfferedValues(t *testing.T) {
 }
 
 func TestErasingAnEmployeeDeletesTheOfferedValuesOfTheirCompany(t *testing.T) {
+	t.Parallel()
 	e := setupCRMIngress(t)
 	made := e.mustIngest(t, companyRecord("acct-1", extension.CompanyFields{DisplayName: "Acme", Description: "run by Erika"}))
 	other := e.mustIngest(t, companyRecord("acct-2", extension.CompanyFields{DisplayName: "Other", Description: "unrelated"}))
@@ -71,6 +74,7 @@ func TestErasingAnEmployeeDeletesTheOfferedValuesOfTheirCompany(t *testing.T) {
 }
 
 func TestOfferedValuesGoWithTheCompanyTheyDescribe(t *testing.T) {
+	t.Parallel()
 	e := setupCRMIngress(t)
 	made := e.mustIngest(t, companyRecord("acct-1", extension.CompanyFields{DisplayName: "Acme", Industry: "education"}))
 	count := `SELECT count(*) FROM company_offered_value`

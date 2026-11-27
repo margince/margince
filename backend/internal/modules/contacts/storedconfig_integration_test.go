@@ -13,6 +13,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/config/configtest"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -21,6 +22,7 @@ import (
 // A target the environment sets pairs with the switch an admin saved. The
 // settings surface reads it through the configuration its writes lock against.
 func TestABootSetTargetPairsWithTheSavedSwitch(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	pool := e.store.db.Pool()
 	on, saved := true, 30
@@ -42,6 +44,7 @@ func TestABootSetTargetPairsWithTheSavedSwitch(t *testing.T) {
 // A seat the environment sets is the one a breach escalates to. A change to
 // any other seat is refused as locked before that seat is judged.
 func TestABootSetEscalationSeatRefusesAnotherBeforeJudgingIt(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	locked := configtest.StoredOver(t, e.store.db.Pool(), ConfigSettings(), "MARGINCE_CONTACTS_UNASSIGNED_ESCALATION_USER_ID="+e.user.String())
 	store := e.store.WithSettings(locked)
@@ -66,15 +69,16 @@ func TestABootSetEscalationSeatRefusesAnotherBeforeJudgingIt(t *testing.T) {
 // A signature template the environment sets is the one a send signs with,
 // over the row an admin saved.
 func TestABootSetTemplateIsTheOneASendSignsWith(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	if _, err := e.owner.Exec(context.Background(), `
 		INSERT INTO setting (key, value, updated_at) VALUES ($1, '"<p>saved</p>"'::jsonb, now())`,
 		SignatureTemplate.Key()); err != nil {
 		t.Fatal(err)
 	}
-	configtest.Bind(t, configtest.StoredOver(t, e.store.db.Pool(), ConfigSettings(), "MARGINCE_CONTACTS_SIGNATURE_TEMPLATE=<p>{name}</p>"))
+	boot := config.WithBound(e.ctx, configtest.StoredOver(t, e.store.db.Pool(), ConfigSettings(), "MARGINCE_CONTACTS_SIGNATURE_TEMPLATE=<p>{name}</p>"))
 
-	signature, err := e.store.SignatureFor(e.ctx, e.user, ids.Nil)
+	signature, err := e.store.SignatureFor(boot, e.user, ids.Nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -84,18 +88,16 @@ func TestABootSetTemplateIsTheOneASendSignsWith(t *testing.T) {
 }
 
 // A boot-set seat no colleague holds escalates to nobody, and the log names
-// the setting and the variable that set it. Not parallel: the log and the
-// binding are the process's own.
+// the setting and the variable that set it.
 func TestABootSetSeatNoColleagueHoldsIsWarnedAbout(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	locked := configtest.StoredOver(t, e.store.db.Pool(), ConfigSettings(),
 		"MARGINCE_CONTACTS_UNASSIGNED_ESCALATION_USER_ID="+ids.NewV7().String())
 	var logged bytes.Buffer
-	restore := slog.Default()
-	slog.SetDefault(slog.New(slog.NewTextHandler(&logged, &slog.HandlerOptions{Level: slog.LevelWarn})))
-	t.Cleanup(func() { slog.SetDefault(restore) })
+	warnings := slog.New(slog.NewTextHandler(&logged, &slog.HandlerOptions{Level: slog.LevelWarn}))
 
-	got, err := e.store.WithSettings(locked).GetLeadSettings(e.ctx)
+	got, err := e.store.WithSettings(locked).WithWarnings(warnings).GetLeadSettings(e.ctx)
 	if err != nil {
 		t.Fatal(err)
 	}

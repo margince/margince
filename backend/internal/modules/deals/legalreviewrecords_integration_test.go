@@ -72,6 +72,7 @@ func (e *reviewEnv) OpenableActivity(_ context.Context, _ ids.UUID, activityIDs 
 }
 
 func TestThePackNamesTheDealsAgreementsTouchesAndTasks(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	dealID, _, _ := gatedDeal(t, e)
 	now := clocktest.Now(t).UTC()
@@ -127,6 +128,7 @@ func TestThePackNamesTheDealsAgreementsTouchesAndTasks(t *testing.T) {
 // A pack asked for before the sections existed has none of their keys. It
 // reads as a pack that predates them, never as one that found nothing.
 func TestAPackFromBeforeTheRecordSectionsLeavesThemAbsent(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	dealID, _, _ := gatedDeal(t, e)
 	id := e.request(t, dealID, nil)
@@ -152,6 +154,7 @@ func TestAPackFromBeforeTheRecordSectionsLeavesThemAbsent(t *testing.T) {
 // A frozen agreement stays in the pack when newer ones push it off the
 // deal's newest-first page, because the view reads it by id.
 func TestAFrozenAgreementOutlastsNewerOnesOnTheDeal(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	dealID, _, _ := gatedDeal(t, e)
 	frozen := ids.NewV7()

@@ -53,6 +53,7 @@ func seedRefusal(t *testing.T, e *apptest.AppEnv, unit, refusal string, daysAgo,
 }
 
 func TestExtensionIngestHealthFoldsPerUnitAndForgetsWhatIsOutsideTheWindow(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -100,6 +101,7 @@ func TestExtensionIngestHealthFoldsPerUnitAndForgetsWhatIsOutsideTheWindow(t *te
 }
 
 func TestAnInstallationWithNothingRefusedReportsNoUnitsRatherThanNoAnswer(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -114,6 +116,7 @@ func TestAnInstallationWithNothingRefusedReportsNoUnitsRatherThanNoAnswer(t *tes
 }
 
 func TestAnAdminsAgentReadsExtensionIngestHealth(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	seedRefusal(t, e, "openchannel", "key", 0, 1)

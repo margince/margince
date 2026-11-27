@@ -15,6 +15,7 @@ import (
 // A disqualified lead is an archived record, so it leaves its Shortlists as a
 // contact, company or deal does. The list records why each member went.
 func TestADisqualifiedLeadLeavesItsShortlists(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	lead := e.seedLeadCreatedAt(t, "shortlisted-lead@example.test", clocktest.Now(t).Add(-time.Hour))
 

@@ -88,6 +88,7 @@ func openTasks(t *testing.T, e *Env) int {
 }
 
 func TestAPromiseLeftOutOfTheFirstReadingIsReadOnItsOwn(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	conv := seedPromiseThread(t, e, company, "thread-promise")
@@ -120,6 +121,7 @@ func TestAPromiseLeftOutOfTheFirstReadingIsReadOnItsOwn(t *testing.T) {
 }
 
 func TestTwoSendsOfOnePromiseEachBecomeATask(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	short := seedPromiseThread(t, e, e.SeedCompany(t, "Acme", &e.Rep1), "thread-short")
 
@@ -165,6 +167,7 @@ func TestTwoSendsOfOnePromiseEachBecomeATask(t *testing.T) {
 }
 
 func TestAQuietReadingIsNotReadTwice(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	seedPromiseThread(t, e, e.SeedCompany(t, "Acme", &e.Rep1), "thread-quiet")
 	brain := &scriptedBrain{reply: `{"events": []}`}
@@ -177,6 +180,7 @@ func TestAQuietReadingIsNotReadTwice(t *testing.T) {
 }
 
 func TestAMessageAnEarlierPassJudgedIsNotReadAgain(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	conv := seedPromiseThread(t, e, company, "thread-grows")
@@ -204,6 +208,7 @@ func TestAMessageAnEarlierPassJudgedIsNotReadAgain(t *testing.T) {
 }
 
 func TestARefusedFocusedReadingKeepsTheThreadDue(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	conv := seedPromiseThread(t, e, e.SeedCompany(t, "Acme", &e.Rep1), "thread-refused")
 	brain := &scriptedBrain{replies: []string{eventsReply(t, needEvent(conv.need)), "not json"}}
@@ -226,6 +231,7 @@ func TestARefusedFocusedReadingKeepsTheThreadDue(t *testing.T) {
 }
 
 func TestTwoReadingsTogetherKeepTheEventCap(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	conv := seedPromiseThread(t, e, e.SeedCompany(t, "Acme", &e.Rep1), "thread-cap")
 	brain := &scriptedBrain{replies: []string{
@@ -244,6 +250,7 @@ func TestTwoReadingsTogetherKeepTheEventCap(t *testing.T) {
 }
 
 func TestAConversationMadePrivateDuringTheSecondReadingFilesNoSharedSignal(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	conv := seedPromiseThread(t, e, e.SeedCompany(t, "Acme", &e.Rep1), "thread-private")
 	brain := &scriptedBrain{replies: []string{

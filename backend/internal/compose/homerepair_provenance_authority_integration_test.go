@@ -29,6 +29,7 @@ import (
 )
 
 func TestReviewedLegacyActivationRequiresTheAuthorityItsActionUses(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name                 string
 		old, update, archive bool
@@ -113,6 +114,7 @@ func legacyRepairWire(operator context.Context, t *testing.T, handler dataTaskHa
 }
 
 func TestReviewedLegacyPreviewKeepsAChangedTaskForReview(t *testing.T) {
+	t.Parallel()
 	f := seedLegacyRepair(t, false)
 	var before activities.HomeRepairTask
 	if err := f.e.DB().Tx(f.e.Admin(), func(tx pgx.Tx) error {
@@ -137,6 +139,7 @@ func TestReviewedLegacyPreviewKeepsAChangedTaskForReview(t *testing.T) {
 }
 
 func TestReviewedLegacyRepairKeepsAnExplicitDateEqualToTheGeneratedDate(t *testing.T) {
+	t.Parallel()
 	f := seedLegacyRepair(t, false)
 	chosen := f.now.Add(time.Hour)
 	if _, err := f.e.Activities.UpdateActivity(f.e.Admin(), f.task, activities.UpdateActivityInput{DueAt: &chosen}); err != nil {
@@ -176,6 +179,7 @@ func TestReviewedLegacyRepairKeepsAnExplicitDateEqualToTheGeneratedDate(t *testi
 }
 
 func TestReviewedLegacyRepairRefusesAnEarlierRulesVersion(t *testing.T) {
+	t.Parallel()
 	f := seedLegacyRepair(t, false)
 	operator := repairOperator(t, f.e)
 	review, _ := f.preview(t)
@@ -189,6 +193,7 @@ func TestReviewedLegacyRepairRefusesAnEarlierRulesVersion(t *testing.T) {
 }
 
 func TestReviewedLegacyActivationRefusesActionsAnOlderClientDidNotAcknowledge(t *testing.T) {
+	t.Parallel()
 	for _, mode := range []string{"old client", "partial acknowledgement", "all displayed actions"} {
 		t.Run(mode, func(t *testing.T) {
 			f := seedLegacyRepair(t, false)

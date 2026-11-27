@@ -93,6 +93,6 @@ func letterheadNameTx(ctx context.Context, tx pgx.Tx) (string, string, error) {
 	if err != nil || name != "" {
 		return name, key, err
 	}
-	name, err = config.StoredApplyTx(ctx, tx, loadedConfig(), identity.Name)
+	name, err = config.StoredApplyTx(ctx, tx, loadedConfig(ctx), identity.Name)
 	return name, "", err
 }

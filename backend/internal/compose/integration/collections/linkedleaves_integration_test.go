@@ -43,6 +43,7 @@ func (f fixture) ownedCompany(t *testing.T, name string, owner ids.UUID) ids.UUI
 // through team_membership, so this is the whole membership edge under test and
 // not just a column comparison.
 func TestATeamFilterSelectsEveryMembersRecords(t *testing.T) {
+	t.Parallel()
 	f := setupFixture(t)
 	firstMember := f.ownedCompany(t, "Held by Rep1", f.e.Rep1)
 	secondMember := f.ownedCompany(t, "Held by Rep2", f.e.Rep2)
@@ -77,6 +78,7 @@ func TestATeamFilterSelectsEveryMembersRecords(t *testing.T) {
 // TestARecordWhoseOwnerIsInNoTeamIsCoveredByNoTeam rather than here, so that a
 // change breaking one of the two reasons a record is uncovered names which one.
 func TestAnUnownedRecordIsCoveredByNoTeam(t *testing.T) {
+	t.Parallel()
 	f := setupFixture(t)
 	inATeam := f.ownedCompany(t, "Held by Rep1", f.e.Rep1)
 	unowned, err := f.contacts.CreateCompany(f.ctx, contactsmod.CreateCompanyInput{
@@ -123,6 +125,7 @@ func TestAnUnownedRecordIsCoveredByNoTeam(t *testing.T) {
 // is asserted rather than assumed, so the day that seat joins a team this test
 // says so instead of failing as a filter bug.
 func TestARecordWhoseOwnerIsInNoTeamIsCoveredByNoTeam(t *testing.T) {
+	t.Parallel()
 	f := setupFixture(t)
 	if memberships := f.e.WsCount(t,
 		"SELECT count(*) FROM team_membership WHERE user_id = $1", f.e.AdminUser); memberships != 0 {
@@ -163,6 +166,7 @@ func TestARecordWhoseOwnerIsInNoTeamIsCoveredByNoTeam(t *testing.T) {
 // accounts that are AT LEAST the named type. A filter that meant "is only this"
 // would answer a different and much smaller question.
 func TestARelationshipFilterSelectsAccountsThatAreAtLeastThatType(t *testing.T) {
+	t.Parallel()
 	f := setupFixture(t)
 	both := f.customerAndSupplier(t, "Acme, both")
 	customerOnly := f.withRelationshipTypes(t, "Beta, customer only", []string{"customer"})
@@ -190,6 +194,7 @@ func TestARelationshipFilterSelectsAccountsThatAreAtLeastThatType(t *testing.T) 
 // archived_at guard inside the wrapper, a segment would keep selecting accounts
 // on a fact somebody deliberately took back.
 func TestAWithdrawnRelationshipStopsMatching(t *testing.T) {
+	t.Parallel()
 	f := setupFixture(t)
 	account := f.customerAndSupplier(t, "Acme, both")
 

@@ -20,6 +20,7 @@ import (
 // message does not hold, that the caller may not change, is left out, and the
 // task keeps the rest. Any other record the caller may not change refuses it.
 func TestATaskFromAMessageDropsOnlyAGuessedCompanyItMayNotChange(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	message := e.seedAnchor(t, "parent@buyer.test", "root@buyer.test")
 	carried := e.colleaguesCompany(t, message)

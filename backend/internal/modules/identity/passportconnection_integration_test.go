@@ -22,6 +22,7 @@ import (
 )
 
 func TestARotatedPassportAuthenticatesToTheSameConnection(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "passport-connection-rotation")
 	fixture := e.connectOAuthFor(t, e.member)
 
@@ -52,6 +53,7 @@ func TestARotatedPassportAuthenticatesToTheSameConnection(t *testing.T) {
 // indistinguishable from "connection not plumbed", so it is asserted rather
 // than assumed.
 func TestADirectlyMintedPassportCarriesNoConnection(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "passport-connection-direct")
 	issued, err := e.svc.IssuePassport(e.wsCtx(e.member), e.member, IssuePassportInput{Label: new(testPassportLabel), Scopes: []string{"read"}})
 	if err != nil {

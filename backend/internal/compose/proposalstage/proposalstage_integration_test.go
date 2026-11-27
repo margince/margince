@@ -184,6 +184,7 @@ func (p *proposalEnv) scalar(t *testing.T, query string, args ...any) string {
 }
 
 func TestASentOfferAsksToMoveTheDealAndAcceptingMovesIt(t *testing.T) {
+	t.Parallel()
 	p := newProposalEnv(t)
 	p.handle(t, p.sendOffer(t))
 
@@ -227,6 +228,7 @@ func TestASentOfferAsksToMoveTheDealAndAcceptingMovesIt(t *testing.T) {
 }
 
 func TestADeclinedQuestionIsNotAskedAgainForTheSameOfferButIsForANewOne(t *testing.T) {
+	t.Parallel()
 	p := newProposalEnv(t)
 	first := p.sendOffer(t)
 	p.handle(t, first)
@@ -245,6 +247,7 @@ func TestADeclinedQuestionIsNotAskedAgainForTheSameOfferButIsForANewOne(t *testi
 }
 
 func TestNoQuestionWhereThereIsNothingToMove(t *testing.T) {
+	t.Parallel()
 	cases := map[string]func(*testing.T, *proposalEnv){
 		"legal hold": func(t *testing.T, p *proposalEnv) {
 			p.WsExec(t, `UPDATE deal SET legal_hold = true WHERE id = $1`, p.deal)
@@ -276,6 +279,7 @@ func TestNoQuestionWhereThereIsNothingToMove(t *testing.T) {
 }
 
 func TestMovingTheDealPastTheStageWithdrawsTheQuestion(t *testing.T) {
+	t.Parallel()
 	p := newProposalEnv(t)
 	p.handle(t, p.sendOffer(t))
 	if _, err := p.Deals.AdvanceDeal(p.Admin(), p.deal, deals.AdvanceDealInput{ToStageID: p.stages[5]}); err != nil {
@@ -290,6 +294,7 @@ func TestMovingTheDealPastTheStageWithdrawsTheQuestion(t *testing.T) {
 }
 
 func TestAnUnansweredQuestionExpiresAfterFourteenDays(t *testing.T) {
+	t.Parallel()
 	p := newProposalEnv(t)
 	p.handle(t, p.sendOffer(t))
 	days := p.scalar(t, `SELECT round(extract(epoch FROM expires_at - created_at) / 86400)::text FROM approval WHERE kind = $1 AND target_entity_id = $2`,
@@ -345,6 +350,7 @@ func (p *proposalEnv) captured(t *testing.T, activity ids.UUID) kevents.Envelope
 }
 
 func TestOurMailWithAnAttachmentNamedLikeAProposalAsksWithoutAModel(t *testing.T) {
+	t.Parallel()
 	p := newProposalEnv(t)
 	p.handle(t, p.captured(t, p.outboundMail(t, "See attached.", "Angebot_Depot_2026.pdf")))
 	open := p.pending(t)
@@ -354,6 +360,7 @@ func TestOurMailWithAnAttachmentNamedLikeAProposalAsksWithoutAModel(t *testing.T
 }
 
 func TestAnAttachmentThatIsNotNamedLikeAProposalAsksNothing(t *testing.T) {
+	t.Parallel()
 	p := newProposalEnv(t)
 	p.handle(t, p.captured(t, p.outboundMail(t, "See attached.", "Rechnung_2026.pdf", "photo.png")))
 	if n := len(p.cards(t)); n != 0 {
@@ -362,6 +369,7 @@ func TestAnAttachmentThatIsNotNamedLikeAProposalAsksNothing(t *testing.T) {
 }
 
 func TestTheOfferAndTheMailCarryingItAskOnce(t *testing.T) {
+	t.Parallel()
 	p := newProposalEnv(t)
 	p.handle(t, p.sendOffer(t))
 	p.handle(t, p.captured(t, p.outboundMail(t, "Offer attached.", "Offer_Depot.pdf")))
@@ -404,6 +412,7 @@ func (p *proposalEnv) read(t *testing.T, brain interface {
 }
 
 func TestTheReadingRaisesTheQuestionOnlyForAConfidentYes(t *testing.T) {
+	t.Parallel()
 	const body = "Please find our quote attached."
 	cases := map[string]struct {
 		reply claimReply
@@ -428,6 +437,7 @@ func TestTheReadingRaisesTheQuestionOnlyForAConfidentYes(t *testing.T) {
 }
 
 func TestTheReadingDoesNotAskAboutAMailWithNoAttachment(t *testing.T) {
+	t.Parallel()
 	p := newProposalEnv(t)
 	p.read(t, claimReply{met: "true", quote: "Please find our quote attached.", confidence: 0.9}, p.outboundMail(t, "Please find our quote attached."))
 	if n := len(p.cards(t)); n != 0 {
@@ -436,6 +446,7 @@ func TestTheReadingDoesNotAskAboutAMailWithNoAttachment(t *testing.T) {
 }
 
 func TestAnAcceptAfterTheDealMovedOrWasHeldWritesNothing(t *testing.T) {
+	t.Parallel()
 	cases := map[string]func(*testing.T, *proposalEnv){
 		"the deal reached the stage by hand": func(t *testing.T, p *proposalEnv) {
 			p.WsExec(t, `UPDATE deal SET stage_id = $2 WHERE id = $1`, p.deal, p.stages[4])
@@ -466,6 +477,7 @@ func TestAnAcceptAfterTheDealMovedOrWasHeldWritesNothing(t *testing.T) {
 }
 
 func TestOnlyTheDealsOwnerSeesAndDecidesTheQuestionAndAReassignmentHandsItOn(t *testing.T) {
+	t.Parallel()
 	p := newProposalEnv(t)
 	p.WsExec(t, `UPDATE deal SET owner_id = $2 WHERE id = $1`, p.deal, p.Rep1)
 	p.handle(t, p.sendOffer(t))
@@ -494,6 +506,7 @@ func TestOnlyTheDealsOwnerSeesAndDecidesTheQuestionAndAReassignmentHandsItOn(t *
 }
 
 func TestAUserCriterionUnderTheProposalKeysOldSpellingIsNotTheProposalQuestion(t *testing.T) {
+	t.Parallel()
 	p := newProposalEnv(t)
 	if _, err := p.Deals.CreateStageExitCriterion(p.Admin(), deals.CreateCriterionInput{
 		StageID: p.stages[1], Key: "margince_proposal_sent", Label: "Quote out", Kind: string(deals.CriterionCustom),
@@ -508,6 +521,7 @@ func TestAUserCriterionUnderTheProposalKeysOldSpellingIsNotTheProposalQuestion(t
 }
 
 func TestAnAcceptWritesNothingWhenTheAnnouncingFileIsGone(t *testing.T) {
+	t.Parallel()
 	cases := map[string]string{
 		"the file was removed":           `UPDATE attachment SET archived_at = now() WHERE activity_id = $1`,
 		"the file's bytes were withheld": `UPDATE attachment SET bytes_withheld = true WHERE activity_id = $1`,
@@ -536,6 +550,7 @@ func TestAnAcceptWritesNothingWhenTheAnnouncingFileIsGone(t *testing.T) {
 }
 
 func TestSimultaneousSourcesRaiseOneQuestion(t *testing.T) {
+	t.Parallel()
 	p := newProposalEnv(t)
 	mail := p.outboundMail(t, "See attached.", "Angebot_Depot.pdf")
 	sources := []proposalstage.Source{
@@ -563,6 +578,7 @@ func TestSimultaneousSourcesRaiseOneQuestion(t *testing.T) {
 }
 
 func TestAStageMoveInFlightDecidesBeforeAQuestionIsRaised(t *testing.T) {
+	t.Parallel()
 	p := newProposalEnv(t)
 	moving := make(chan struct{})
 	release := make(chan struct{})
@@ -606,6 +622,7 @@ func (p *proposalEnv) waitForLock(t *testing.T, pattern string) {
 }
 
 func TestASuggestionWaitsForTheDealsLockBeforeScanningForOpenQuestions(t *testing.T) {
+	t.Parallel()
 	p := newProposalEnv(t)
 	holding := make(chan struct{})
 	release := make(chan struct{})
@@ -649,6 +666,7 @@ func (p *proposalEnv) summaryOfTheQuestion(t *testing.T) string {
 }
 
 func TestTheQuestionNamesTheStageInTheOwnersLanguage(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name         string
 		translations string

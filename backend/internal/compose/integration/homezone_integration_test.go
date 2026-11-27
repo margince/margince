@@ -64,6 +64,7 @@ func ownWorklist(t *testing.T, e *Env, user ids.UUID) map[string]struct {
 // A plan commitment dated the 16th is due today in Hanoi. In Berlin it is due
 // tomorrow. So it is on the Hanoi rep's own list and not on a Berlin rep's.
 func TestAPlanCommitmentDueTodayInHanoiShowsOnTheHanoiRepsOwnHome(t *testing.T) {
+	t.Parallel()
 	e := hanoiBerlinSetup(t)
 	store := compose.WeeklyPlanStore(e.Pool)
 	date := time.Date(2026, 6, 16, 0, 0, 0, 0, time.UTC)
@@ -88,6 +89,7 @@ func TestAPlanCommitmentDueTodayInHanoiShowsOnTheHanoiRepsOwnHome(t *testing.T) 
 // A deal closing on the 15th is overdue in Hanoi, so the Hanoi rep's at-risk
 // lane admits it. Its quiet days count on the same Hanoi day.
 func TestAnAtRiskDealsQuietDaysCountOnTheDayItWasAdmittedOn(t *testing.T) {
+	t.Parallel()
 	e := hanoiBerlinSetup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	closeOn := time.Date(2026, 6, 15, 0, 0, 0, 0, time.UTC)

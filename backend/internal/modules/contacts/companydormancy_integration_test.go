@@ -23,6 +23,7 @@ import (
 // both sides of every boundary day. The installation zone is Berlin, where half
 // past midnight is still the day before in UTC, so only the zone gets it right.
 func TestTheDormancyFilterAgreesWithTheLadderOnEveryBoundaryDay(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	owner := e.as()
 	berlin, err := time.LoadLocation("Europe/Berlin")

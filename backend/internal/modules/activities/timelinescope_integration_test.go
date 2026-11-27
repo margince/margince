@@ -33,6 +33,7 @@ import (
 // not-found, the same as an id that names nothing. Any other answer, including
 // an empty page, tells the caller the company is there.
 func TestNarrowingTheTimelineToAnUnreadableCompanyAnswersNotFound(t *testing.T) {
+	t.Parallel()
 	e := setupPromises(t)
 	hiddenCompanyID, visibleContactID, activityID := ids.NewV7(), ids.NewV7(), ids.NewV7()
 
@@ -68,6 +69,7 @@ func TestNarrowingTheTimelineToAnUnreadableCompanyAnswersNotFound(t *testing.T) 
 // may. Without this case the test above would pass against an implementation
 // that denied every narrowed timeline read.
 func TestNarrowingTheTimelineToAReadableLeadReturnsIt(t *testing.T) {
+	t.Parallel()
 	e := setupPromises(t)
 	ownLeadID, activityID := ids.NewV7(), ids.NewV7()
 
@@ -97,6 +99,7 @@ func TestNarrowingTheTimelineToAReadableLeadReturnsIt(t *testing.T) {
 // entity_type outside the link vocabulary is refused as a bad request rather
 // than becoming a column name.
 func TestNarrowingTheTimelineToAnUnknownEntityTypeIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupPromises(t)
 	someID := ids.NewV7()
 	bogus := "invoice"

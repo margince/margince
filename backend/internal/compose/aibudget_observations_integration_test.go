@@ -6,7 +6,6 @@
 package compose
 
 import (
-	"context"
 	"log/slog"
 	"testing"
 
@@ -18,6 +17,7 @@ import (
 )
 
 func TestAllowanceTriggerFiltersOtherEventsAndCoalescesPendingRecovery(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	runner, err := jobs.NewInserter(e.Pool, slog.New(slog.DiscardHandler))
 	if err != nil {
@@ -51,16 +51,12 @@ func TestAllowanceTriggerFiltersOtherEventsAndCoalescesPendingRecovery(t *testin
 }
 
 func TestUnavailableCarrierReadingDoesNotClaimZeroWaitingWork(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	if _, err := owner.Exec(t.Context(), `ALTER TABLE voice_build RENAME TO voice_build_unavailable_probe`); err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() {
-		if _, err := owner.Exec(context.Background(), `ALTER TABLE voice_build_unavailable_probe RENAME TO voice_build`); err != nil {
-			t.Errorf("restore carrier: %v", err)
-		}
-	})
 	readings, err := aiDeferredWork(e.Pool)(e.Admin())
 	if err != nil {
 		t.Fatal(err)

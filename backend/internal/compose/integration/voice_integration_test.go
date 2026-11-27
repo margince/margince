@@ -106,6 +106,7 @@ func createVoiceProfile(t *testing.T, e *apptest.AppEnv) voiceProfileWire {
 }
 
 func TestVoiceProfileLifecycle(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	created := createVoiceProfile(t, e)
@@ -163,6 +164,7 @@ func ingest(t *testing.T, e *apptest.AppEnv, base string, body AnyMap) voiceInge
 }
 
 func TestVoiceCorpusIngestAndMeter(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	created := createVoiceProfile(t, e)
@@ -242,6 +244,7 @@ func TestVoiceCorpusIngestAndMeter(t *testing.T) {
 }
 
 func TestVoiceBuildQueuesOnlyAtTheProvisionalThreshold(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	created := createVoiceProfile(t, e)
@@ -288,6 +291,7 @@ func TestVoiceBuildQueuesOnlyAtTheProvisionalThreshold(t *testing.T) {
 // formats — never a size-derived estimate. Real extraction is deferred
 // (B-E07.5c).
 func TestVoiceBinaryDocumentIngestIsRefusedWith422(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	created := createVoiceProfile(t, e)
@@ -324,6 +328,7 @@ func TestVoiceBinaryDocumentIngestIsRefusedWith422(t *testing.T) {
 // A labelled transcript without the owner's label is refused whole —
 // never half-ingested with the other side included (§B1.2).
 func TestVoiceTranscriptIngestRequiresTheOwnersSpeakerLabel(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	created := createVoiceProfile(t, e)
@@ -339,6 +344,7 @@ func TestVoiceTranscriptIngestRequiresTheOwnersSpeakerLabel(t *testing.T) {
 // A voice profile an agent creates is its user's one profile, so a second is a
 // conflict whichever door made the first.
 func TestAnAgentsVoiceProfileIsItsUsersOne(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -367,6 +373,7 @@ func TestAnAgentsVoiceProfileIsItsUsersOne(t *testing.T) {
 // the assertion runs through the store — the same RBAC + row-scope path
 // the HTTP surface drives.
 func TestVoiceProfileIsInvisibleAcrossTenants(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 

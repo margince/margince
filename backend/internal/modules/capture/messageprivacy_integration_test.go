@@ -21,6 +21,7 @@ import (
 // answer. Only a record under another key asks again, such as the seat-scoped
 // copy of a collided message.
 func TestAVerdictAfterThePrivacyDecisionLeavesEveryReaderOnTheFirstAnswer(t *testing.T) {
+	t.Parallel()
 	ctx, pool := meetingTenureEnv(t)
 	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
 		seat := ids.NewV7()

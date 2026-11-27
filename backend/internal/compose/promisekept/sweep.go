@@ -31,6 +31,8 @@ type Sweep struct {
 	// AskedOf names the one colleague a promise belongs to: the seat the claim
 	// names, else the owner of shared-mailbox mail. Zero means nobody.
 	AskedOf func(ctx context.Context, tx pgx.Tx, source ids.UUID, seat *ids.UUID) (ids.UUID, error)
+	// Rbac is the RBAC vocabulary an owner's grants resolve under.
+	Rbac identity.RbacObjects
 }
 
 // Workspace runs one workspace's pass. The writes are the system's. Each promise
@@ -70,7 +72,7 @@ func (s Sweep) Owner(ctx context.Context, tx pgx.Tx, source ids.UUID, named *ids
 // nothing it could read shows a promise kept.
 func (s Sweep) Reader(ctx context.Context, tx pgx.Tx, owner ids.UUID) (context.Context, error) {
 	reader := principal.Principal{Type: principal.PrincipalHuman, ID: principal.HumanIDPrefix + owner.String(), UserID: owner}
-	rbac, seat, err := identity.EffectiveAuthorityTx(ctx, tx, owner)
+	rbac, seat, err := identity.EffectiveAuthorityTx(ctx, tx, s.Rbac, owner)
 	switch {
 	case errors.Is(err, apperrors.ErrNotFound):
 	case err != nil:

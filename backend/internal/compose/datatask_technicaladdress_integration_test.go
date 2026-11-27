@@ -47,6 +47,7 @@ func mixedContact(t *testing.T, e *integration.Env, conn *pgx.Conn) ids.UUID {
 }
 
 func TestTheTechnicalAddressTaskArchivesRetiresAndTags(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	conn := integration.OwnerConn(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
@@ -120,6 +121,7 @@ func TestTheTechnicalAddressTaskArchivesRetiresAndTags(t *testing.T) {
 }
 
 func TestCaptureRefusesAnExistingTechnicalContact(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	conn := integration.OwnerConn(t)
 	technical := machineAddressContact(t, e, conn, "HubSpot Logger", hubspotBCC)

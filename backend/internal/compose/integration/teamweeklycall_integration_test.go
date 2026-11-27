@@ -101,6 +101,7 @@ func realForecastEngine(e *teamEnv) *weekly.Engine {
 // A call whose pipeline moved is frozen as needing review, and the summary and
 // the wire say so; a call that still matches is not.
 func TestTheTeamCoverageFreezesThatItsCallNeedsReview(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name       string
 		comparison string
@@ -137,6 +138,7 @@ func TestTheTeamCoverageFreezesThatItsCallNeedsReview(t *testing.T) {
 // The team's live exceptions hold the finding on the team's own call and not
 // the one on another team's.
 func TestTheTeamExceptionsHoldItsCallFindingAndNotAnotherTeams(t *testing.T) {
+	t.Parallel()
 	e := setupTeamWeekly(t)
 	writeRepWeek(t, e, e.Rep1)
 	engine := realForecastEngine(e)
@@ -172,6 +174,7 @@ func TestTheTeamExceptionsHoldItsCallFindingAndNotAnotherTeams(t *testing.T) {
 // A team whose frozen roster has all left still reads the findings on its call,
 // and no deal finding of anybody else's.
 func TestTheTeamExceptionsKeepItsCallWhenNoRosterMemberRemains(t *testing.T) {
+	t.Parallel()
 	e := setupTeamWeekly(t)
 	writeRepWeek(t, e, e.Rep1)
 	engine := realForecastEngine(e)

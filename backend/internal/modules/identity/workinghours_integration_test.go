@@ -22,6 +22,7 @@ import (
 )
 
 func TestAContactWhoHasChosenNothingIsBookableOnTheInstallationsClock(t *testing.T) {
+	t.Parallel()
 	svc, ctx, _ := seatChoosingALanguage(t)
 
 	hours, chosen, err := svc.MyWorkingHours(ctx)
@@ -44,6 +45,7 @@ func TestAContactWhoHasChosenNothingIsBookableOnTheInstallationsClock(t *testing
 }
 
 func TestChoosingWorkingHoursIsReadBackAsTheirOwn(t *testing.T) {
+	t.Parallel()
 	svc, ctx, userID := seatChoosingALanguage(t)
 
 	// The zone is the user's own time zone. An older client still sends it
@@ -99,6 +101,7 @@ func TestChoosingWorkingHoursIsReadBackAsTheirOwn(t *testing.T) {
 }
 
 func TestTheAuditRowCarriesBothWindows(t *testing.T) {
+	t.Parallel()
 	svc, ctx, userID := seatChoosingALanguage(t)
 	if _, err := svc.SaveMyWorkingHours(ctx, WorkingHours{
 		StartMinute: 8 * 60, EndMinute: 13 * 60, Days: []int{1, 2, 3, 4}, Timezone: "Europe/Berlin",
@@ -123,6 +126,7 @@ func TestTheAuditRowCarriesBothWindows(t *testing.T) {
 }
 
 func TestARefusalNamesTheControlTheReaderUsed(t *testing.T) {
+	t.Parallel()
 	svc, ctx, _ := seatChoosingALanguage(t)
 	for _, refused := range []struct {
 		name  string

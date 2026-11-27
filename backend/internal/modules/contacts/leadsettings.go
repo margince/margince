@@ -13,6 +13,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -113,6 +114,8 @@ func LeadSettingsSurface() []config.Any {
 type leadSLAPolicy struct {
 	enabled bool
 	target  time.Duration
+	// asOf is the instant a scanned row's SLA state is judged against.
+	asOf time.Time
 }
 
 // atRisk is the tail of the target inside which an unanswered lead reads as
@@ -127,9 +130,9 @@ func (p leadSLAPolicy) targetMinutes() int { return int(p.target / time.Minute) 
 func loadLeadSLAPolicy(ctx context.Context, tx pgx.Tx, cfg *config.Config) (leadSLAPolicy, error) {
 	enabled, minutes, err := config.StoredApplyPairTx(ctx, tx, cfg, FirstResponseEnabled, FirstResponseTargetMinutes)
 	if err != nil {
-		return leadSLAPolicy{target: DefaultFirstResponseTarget}, fmt.Errorf("load lead sla policy: %w", err)
+		return leadSLAPolicy{target: DefaultFirstResponseTarget, asOf: slaNow(ctx)}, fmt.Errorf("load lead sla policy: %w", err)
 	}
-	return leadSLAPolicy{enabled: enabled, target: time.Duration(minutes) * time.Minute}, nil
+	return leadSLAPolicy{enabled: enabled, target: time.Duration(minutes) * time.Minute, asOf: slaNow(ctx)}, nil
 }
 
 // slaPolicy resolves the policy for a store operation that has not opened
@@ -137,7 +140,7 @@ func loadLeadSLAPolicy(ctx context.Context, tx pgx.Tx, cfg *config.Config) (lead
 func (s *Store) slaPolicy(ctx context.Context) (leadSLAPolicy, error) {
 	var policy leadSLAPolicy
 	err := s.tx(ctx, func(tx pgx.Tx) (err error) {
-		policy, err = loadLeadSLAPolicy(ctx, tx, s.bootConfig())
+		policy, err = loadLeadSLAPolicy(ctx, tx, s.bootConfig(ctx))
 		return err
 	})
 	return policy, err
@@ -163,11 +166,11 @@ func (s *Store) FirstResponseTracked(ctx context.Context) (bool, error) {
 
 // bootConfig is the configuration this store reads boot values from: the
 // injected one, which the lead-settings writes lock against, else the program's.
-func (s *Store) bootConfig() *config.Config {
+func (s *Store) bootConfig(ctx context.Context) *config.Config {
 	if s.settings != nil {
 		return s.settings
 	}
-	return config.Bound()
+	return config.Bound(ctx)
 }
 
 // WithSettings wires the configuration the lead-settings endpoints read and
@@ -175,6 +178,19 @@ func (s *Store) bootConfig() *config.Config {
 func (s *Store) WithSettings(cfg *config.Config) *Store {
 	s.settings = cfg
 	return s
+}
+
+// WithWarnings sends the store's warnings about a setting to log.
+func (s *Store) WithWarnings(log *slog.Logger) *Store {
+	s.warnings = log
+	return s
+}
+
+func (s *Store) warningLog() *slog.Logger {
+	if s.warnings == nil {
+		return slog.Default()
+	}
+	return s.warnings
 }
 
 // GetLeadSettings answers the installation's lead handling.
@@ -194,7 +210,7 @@ func (s *Store) GetLeadSettings(ctx context.Context) (crmcontracts.LeadSettings,
 	// naming somebody who has since been suspended reads null here for the
 	// same reason it escalates to nobody there.
 	if err := s.tx(ctx, func(tx pgx.Tx) error {
-		target, configured, err := unassignedEscalationTarget(ctx, tx, s.bootConfig())
+		target, configured, err := unassignedEscalationTarget(ctx, tx, s.bootConfig(ctx), s.warningLog())
 		if err != nil {
 			return err
 		}
@@ -262,7 +278,7 @@ func (s *Store) UpdateLeadSettings(ctx context.Context, in UpdateLeadSettingsInp
 // Whether a field is locked does not depend on the value sent.
 func (s *Store) saveEscalationSeatTx(ctx context.Context, tx pgx.Tx, seat *ids.UserID) error {
 	named := seat.String()
-	locked, err := config.LockedChange(s.settings, UnassignedEscalationUserID, func(boot string) bool { return boot == named })
+	locked, err := config.LockedChange(ctx, s.settings, UnassignedEscalationUserID, func(boot string) bool { return boot == named })
 	if locked || err != nil {
 		return err
 	}

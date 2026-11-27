@@ -61,6 +61,7 @@ func assertBackWithTagAndList(t *testing.T, e *integration.Env, entityType strin
 }
 
 func TestUndoingABulkArchiveOfCompaniesBringsBackTheirDomainsTagsAndLists(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	engine := bulkEngineFor(e)
 	type seeded struct{ id, tag, list ids.UUID }
@@ -106,6 +107,7 @@ func TestUndoingABulkArchiveOfCompaniesBringsBackTheirDomainsTagsAndLists(t *tes
 }
 
 func TestAnUndoLeavesACompanyWhoseDomainAnotherCompanyHoldsNow(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	engine := bulkEngineFor(e)
 	domain := "taken-" + ids.NewV7().String()[:8] + ".test"
@@ -139,6 +141,7 @@ func TestAnUndoLeavesACompanyWhoseDomainAnotherCompanyHoldsNow(t *testing.T) {
 }
 
 func TestUndoingABulkArchiveOfDealsBringsBackTheirTagsListsAndStakeholders(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	engine := bulkEngineFor(e)
 	pipeline, open, _ := integration.DealFixture(t, e)
@@ -183,6 +186,7 @@ func TestUndoingABulkArchiveOfDealsBringsBackTheirTagsListsAndStakeholders(t *te
 }
 
 func TestAnUndoCannotHandBackARecordThatHadNoOwner(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	engine := bulkEngineFor(e)
 	items := seedBulkContacts(t, e, e.Rep1, 1)

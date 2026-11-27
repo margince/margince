@@ -16,6 +16,7 @@ import (
 // 1001 groups has the top of an answer, and total_rows is the only thing in
 // the envelope that can say so.
 func TestAReportAtItsRowLimitStillCountsEveryGroup(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	// One group per stage, one deal past the limit, so the cap cuts one group
 	// and an off-by-one in either direction shows up as 1000 or 1002.
@@ -38,6 +39,7 @@ func TestAReportAtItsRowLimitStillCountsEveryGroup(t *testing.T) {
 // A report inside its limit reports the groups it shows, and takes no second
 // query to say so.
 func TestAReportInsideItsLimitReportsWhatItShows(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	seedStagesWithADealEach(t, e, 3)
 
@@ -86,6 +88,7 @@ func seedStagesWithADealEach(t *testing.T, e *forecastEnv, n int) {
 // placeholders past the values that bind appended, so this case fails with a
 // parameter error where a report of plain columns passes.
 func TestAReportGroupedByATokenBearingDimensionCountsItsGroups(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	months := reportRowLimit + 1
 	seedClosedDealAMonthApart(t, e, months)

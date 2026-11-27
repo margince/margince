@@ -50,6 +50,7 @@ func openAttachment(t *testing.T, e *apptest.AppEnv, id, accept string) httpAnsw
 // A link to a missing attachment, opened in a tab, reads a sentence; the same
 // request from a client reads the problem.
 func TestAMissingAttachmentOpenedInATabReadsAPageAndAClientReadsTheProblem(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "File Page", "file-page@fable.test", "Admin")
 	missing := ids.NewV7().String()

@@ -15,7 +15,6 @@ package contacts
 import (
 	"context"
 	"errors"
-	"os"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -39,13 +38,9 @@ type linkedinEnv struct {
 
 func setupLeadLinkedIn(t *testing.T) *linkedinEnv {
 	t.Helper()
-	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
-	appDSN := os.Getenv("MARGINCE_TEST_APP_DSN")
-	if ownerDSN == "" || appDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
+	db := testdb.New(t)
 	ctx := context.Background()
-	owner, err := pgx.Connect(ctx, ownerDSN)
+	owner, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,19 +49,6 @@ func setupLeadLinkedIn(t *testing.T) *linkedinEnv {
 			t.Errorf("closing owner connection: %v", err)
 		}
 	})
-	// To head before anything else touches this database: testdb.Pool refuses
-	// until EnsureSchema has run, and EnsureSchema still REBUILDS whenever it
-	// cannot prove the database is a fresh lane clone — so a seed written
-	// before it would be dropped rather than reset.
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
-	// Every test in this package seeds its own workspace into ONE database, so
-	// the separation between them has to be real: reset before seeding, as
-	// compose/integration's harness does.
-	if err := testdb.Reset(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
 
 	e := &linkedinEnv{owner: owner, ws: ids.NewV7(), rep1: ids.NewV7(), rep2: ids.NewV7()}
 	if _, err := owner.Exec(ctx,
@@ -80,14 +62,12 @@ func setupLeadLinkedIn(t *testing.T) *linkedinEnv {
 		}
 	}
 
-	pool, err := testdb.Pool(ctx, appDSN)
+	pool, err := testdb.Pool(ctx, db.AppDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// Registered where the pool is handed out, before the test adds any cleanup
 	// of its own, so it runs last and sees a package that has genuinely stopped.
-	// The pool outlives the test now, so a goroutine still holding a connection
-	// would go on writing into the database the NEXT test just reset.
 	testdb.AssertPoolsQuiesced(t)
 	e.store = NewStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](e.ws))).WithSenderStamp(noSenderStamp)
 	return e
@@ -110,6 +90,7 @@ func (e *linkedinEnv) as(user ids.UUID, scope principal.RowScope) context.Contex
 }
 
 func TestCreateLeadNormalizesTheLinkedInKeyOnce(t *testing.T) {
+	t.Parallel()
 	e := setupLeadLinkedIn(t)
 	ctx := e.as(e.rep1, principal.RowScopeAll)
 
@@ -155,6 +136,7 @@ func TestCreateLeadNormalizesTheLinkedInKeyOnce(t *testing.T) {
 }
 
 func TestLeadLinkedInRefusesNonURLsAsTheCallersFault(t *testing.T) {
+	t.Parallel()
 	e := setupLeadLinkedIn(t)
 	ctx := e.as(e.rep1, principal.RowScopeAll)
 
@@ -173,6 +155,7 @@ func TestLeadLinkedInRefusesNonURLsAsTheCallersFault(t *testing.T) {
 }
 
 func TestLeadLinkedInRefusesACompanyPage(t *testing.T) {
+	t.Parallel()
 	e := setupLeadLinkedIn(t)
 	ctx := e.as(e.rep1, principal.RowScopeAll)
 

@@ -73,7 +73,7 @@ func (e *revocationEnv) resolve(t *testing.T, userID ids.UserID) Identity {
 	id := Identity{UserID: userID, WorkspaceID: e.admin.WorkspaceID, SeatType: string(principal.SeatFull)}
 	err := e.svc.db.Tx(e.wsCtx(e.admin), func(tx pgx.Tx) error {
 		var err error
-		id.Roles, id.Teams, id.Permissions, err = loadGrants(context.Background(), tx, userID)
+		id.Roles, id.Teams, id.Permissions, err = loadGrants(context.Background(), tx, RbacObjects{}, userID)
 		return err
 	})
 	if err != nil {
@@ -91,19 +91,6 @@ func (e *revocationEnv) maskRole(t *testing.T, key string) {
 		key); err != nil {
 		t.Fatalf("masking %s: %v", key, err)
 	}
-	e.dropMasksAfter(t, key)
-}
-
-// dropMasksAfter removes a role's masks when the test ends: field_mask has no
-// workspace column, so a mask left behind reaches the next test's role of the
-// same key, a copy's included.
-func (e *revocationEnv) dropMasksAfter(t *testing.T, key string) {
-	t.Helper()
-	t.Cleanup(func() {
-		if _, err := e.owner.Exec(context.Background(), `DELETE FROM field_mask WHERE role_key = $1`, key); err != nil {
-			t.Errorf("removing %s's masks: %v", key, err)
-		}
-	})
 }
 
 func (e *revocationEnv) auditActions(t *testing.T, entity ids.UUID) []string {
@@ -132,17 +119,17 @@ func (e *revocationEnv) roleID(t *testing.T, key string) ids.UUID {
 // A copy keeps what its source stores, including a grant on an extension this
 // installation no longer composes, and the source's field masks.
 func TestACopiedRoleKeepsItsSourcesGrantsAndMasks(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "role-copy")
-	registerExtObject(t)
+	e.registerExtObject(t)
 	source := e.customRole(t, "Field sales", "rep", map[string]storedGrant{extObject: {Read: true}})
 	e.maskRole(t, source)
-	ResetRbacObjectsForTest()
+	e.svc.WithRbacObjects(RbacObjects{})
 
 	copied, err := e.svc.CreateRole(e.wsCtx(e.admin), e.admin, source, "  Field sales DACH ")
 	if err != nil {
 		t.Fatalf("copying: %v", err)
 	}
-	e.dropMasksAfter(t, copied.Key)
 	if copied.Key != "custom_field_sales_dach" || copied.Name != "Field sales DACH" || copied.IsSystem {
 		t.Errorf("copy = key %q name %q system %v, want custom_field_sales_dach, the trimmed name, not system",
 			copied.Key, copied.Name, copied.IsSystem)
@@ -164,7 +151,6 @@ func TestACopiedRoleKeepsItsSourcesGrantsAndMasks(t *testing.T) {
 		t.Errorf("a second role with the same name, other case: %v, want errRoleNameTaken", err)
 	}
 	second, err := e.svc.CreateRole(e.wsCtx(e.admin), e.admin, source, "Field-Sales DACH!")
-	e.dropMasksAfter(t, second.Key)
 	if err != nil || second.Key != "custom_field_sales_dach_2" {
 		t.Errorf("a name slugging to a used key got %q (%v), want custom_field_sales_dach_2", second.Key, err)
 	}
@@ -175,6 +161,7 @@ func TestACopiedRoleKeepsItsSourcesGrantsAndMasks(t *testing.T) {
 
 // Rename and row scope go through If-Match, and each changed field is audited.
 func TestARoleIsRenamedAndRescopedUnderIfMatch(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "role-update")
 	ctx := e.wsCtx(e.admin)
 	key := e.customRole(t, "Inside sales", "rep", nil)
@@ -212,6 +199,7 @@ func TestARoleIsRenamedAndRescopedUnderIfMatch(t *testing.T) {
 // write that could widen what a role grants is the admin's, whatever the
 // editor holds themselves.
 func TestAnEditorWhoIsNotAnAdminOnlyNarrows(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "role-narrow")
 	editor := e.seat(t, "editor", e.customRole(t, "Role editor", "admin", map[string]storedGrant{objectUserAdmin: {}}))
 	other := e.customRole(t, "Viewer", "read_only", map[string]storedGrant{"deal": {Read: true, Update: true}})
@@ -258,6 +246,7 @@ func TestAnEditorWhoIsNotAnAdminOnlyNarrows(t *testing.T) {
 // The admin role cannot lose its administration grants; an admin copy is not
 // an admin to the last-admin guard.
 func TestTheAdminRoleKeepsItsFloorAndACopyIsNotAnAdmin(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "role-floor")
 	ctx := e.wsCtx(e.admin)
 	if _, err := e.svc.SetRoleObjectGrant(ctx, e.admin, roleAdmin, objectRoleAdmin, storedGrant{Read: true}, nil); !errors.Is(err, errAdminRoleFloor) {
@@ -279,6 +268,7 @@ func TestTheAdminRoleKeepsItsFloorAndACopyIsNotAnAdmin(t *testing.T) {
 // archived role grants nothing and cannot be assigned; restore brings it back
 // with its masks.
 func TestArchivingARoleTakesItOutOfUseAndRestoreBringsItBack(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "role-archive")
 	ctx := e.wsCtx(e.admin)
 	key := e.customRole(t, "Seasonal", "rep", nil)
@@ -350,6 +340,7 @@ func containsRoleKey(rows []roleRow, key string) bool {
 // the archive and then finds no live role. Without the lock it would read the
 // role as live and land a member on a role that grants nothing.
 func TestAnAssignmentRacingAnArchiveFindsNoRole(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "role-race")
 	ctx := e.wsCtx(e.admin)
 	key := e.customRole(t, "Temporary", "rep", nil)
@@ -404,6 +395,7 @@ func waitForALockWaiter(t *testing.T, e *revocationEnv) {
 
 // A member may not read the role directory, so /me names the roles they hold.
 func TestMeNamesACustomRoleItsHolderCannotLookUp(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "me-role-names")
 	key := e.customRole(t, "Sales assistant", "rep", nil)
 	member := e.seat(t, "assistant", key)

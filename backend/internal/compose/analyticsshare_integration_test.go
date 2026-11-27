@@ -211,6 +211,7 @@ func (e *forecastEnv) readShared(ctx context.Context, t *testing.T, id ids.UUID)
 }
 
 func TestASharedSnapshotRecomputesRatherThanServingTheStoredTotal(t *testing.T) {
+	t.Parallel()
 	const mine, theirs = 100_000, 250_000
 	e := setupForecast(t)
 	id := e.freezeTwoTeams(t, mine, theirs)
@@ -270,6 +271,7 @@ func TestASharedSnapshotRecomputesRatherThanServingTheStoredTotal(t *testing.T) 
 }
 
 func TestAMaskedRecipientReadsNoMoneyOutOfAFrozenSnapshot(t *testing.T) {
+	t.Parallel()
 	const mine, theirs = 100_000, 250_000
 	e := setupForecast(t)
 	id := e.freezeTwoTeams(t, mine, theirs)
@@ -293,6 +295,7 @@ func TestAMaskedRecipientReadsNoMoneyOutOfAFrozenSnapshot(t *testing.T) {
 }
 
 func TestASnapshotThatDoesNotExistIsNotAnEmptyQuarter(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	err := forecasting.NewStore(InstallationDB(e.Pool)).InTx(snapshotWriterCtx(e.WS),
 		func(ctx context.Context, tx pgx.Tx) error {
@@ -328,6 +331,7 @@ func (e *forecastEnv) issue(ctx context.Context, t *testing.T, in NewShare) (Sha
 }
 
 func TestASharesPlaintextTokenNeverReachesTheTable(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	ctx := e.writerCtx(t)
 	_, token := e.issue(ctx, t, NewShare{
@@ -363,6 +367,7 @@ func TestASharesPlaintextTokenNeverReachesTheTable(t *testing.T) {
 }
 
 func TestARevokedShareStopsServing(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	ctx := e.writerCtx(t)
 	share, token := e.issue(ctx, t, NewShare{
@@ -401,6 +406,7 @@ func TestARevokedShareStopsServing(t *testing.T) {
 }
 
 func TestAnExpiredShareStopsServing(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	ctx := e.writerCtx(t)
 	_, token := e.issue(ctx, t, NewShare{
@@ -424,6 +430,7 @@ func TestAnExpiredShareStopsServing(t *testing.T) {
 }
 
 func TestAnExpiryBeyondTheCeilingIsRefusedRatherThanShortened(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	err := forecasting.NewStore(InstallationDB(e.Pool)).InTx(snapshotWriterCtx(e.WS),
 		func(ctx context.Context, tx pgx.Tx) error {
@@ -451,6 +458,7 @@ func TestAnExpiryBeyondTheCeilingIsRefusedRatherThanShortened(t *testing.T) {
 }
 
 func TestAShareStopsServingWhenItsIssuerLoses(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	issuer, ctx := e.seededIssuer(t, "issuer@forecast.test")
 	_, token := e.issue(ctx, t, NewShare{
@@ -476,6 +484,7 @@ func TestAShareStopsServingWhenItsIssuerLoses(t *testing.T) {
 }
 
 func TestTheExportedRowsAreTheRowsTheHeadlineWasSummedFrom(t *testing.T) {
+	t.Parallel()
 	const mine, theirs = 100_000, 250_000
 	e := setupForecast(t)
 	id := e.freezeTwoTeams(t, mine, theirs)
@@ -518,6 +527,7 @@ func TestTheExportedRowsAreTheRowsTheHeadlineWasSummedFrom(t *testing.T) {
 }
 
 func TestAnExportedCellCannotCarryAFormulaIntoASpreadsheet(t *testing.T) {
+	t.Parallel()
 	rows := []SharedContribution{{DealName: "=cmd|' /c calc'!A1", Currency: "EUR"}}
 	body, err := shareRowsCSV(frozenForReader{Rows: rows}, nil, "")
 	if err != nil {
@@ -531,6 +541,7 @@ func TestAnExportedCellCannotCarryAFormulaIntoASpreadsheet(t *testing.T) {
 }
 
 func TestAShareExportSaysWhetherItsChancesCorrectedThemselves(t *testing.T) {
+	t.Parallel()
 	on := true
 	drawn := forecasting.Range{LowMinor: 1200, HighMinor: 3400, Runs: 8}
 	body, err := shareRowsCSV(frozenForReader{Rows: []SharedContribution{{DealName: "Frozen"}}, Range: &drawn}, &on, "USD")
@@ -547,6 +558,7 @@ func TestAShareExportSaysWhetherItsChancesCorrectedThemselves(t *testing.T) {
 // A file limited to the reader's own rows says why on every row. A reader who
 // owns none of its deals gets one summary row, which says it too.
 func TestAShareExportSaysWhyItsRowsAreTheReadersOwn(t *testing.T) {
+	t.Parallel()
 	reason := reportingCoverageWords.IndividualOff.En
 	for name, rows := range map[string][]SharedContribution{"own rows": {{DealName: "Mine"}}, "summary row": nil} {
 		body, err := shareRowsCSV(frozenForReader{Rows: rows, Limited: true, Reason: reason}, nil, "")
@@ -565,6 +577,7 @@ func TestAShareExportSaysWhyItsRowsAreTheReadersOwn(t *testing.T) {
 }
 
 func TestAnUnpricedDealExportsAnEmptyCellRatherThanAZero(t *testing.T) {
+	t.Parallel()
 	rows := []SharedContribution{{DealName: "Unpriced", ExclusionReason: "unpriced"}}
 	body, err := shareRowsCSV(frozenForReader{Rows: rows}, nil, "")
 	if err != nil {
@@ -578,6 +591,7 @@ func TestAnUnpricedDealExportsAnEmptyCellRatherThanAZero(t *testing.T) {
 }
 
 func TestASeatThatCanIssueAShareCanCloseIt(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	_, ctx := e.seededIssuer(t, "issuer-real@forecast.test")
 
@@ -643,6 +657,7 @@ func (e *forecastEnv) revoke(ctx context.Context, id ids.UUID) error {
 }
 
 func TestTheShareListIsTheCallersOwnOpenLinksNewestFirst(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	_, mine := e.seededIssuer(t, "lister@forecast.test")
 	_, theirs := e.seededIssuer(t, "colleague@forecast.test")
@@ -683,6 +698,7 @@ func shareIDs(shares []Share) []ids.UUID {
 }
 
 func TestOnlyTheSeatThatIssuedAShareCanCloseIt(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	_, issuer := e.seededIssuer(t, "owner@forecast.test")
 	_, colleague := e.seededIssuer(t, "colleague@forecast.test")
@@ -711,6 +727,7 @@ func TestOnlyTheSeatThatIssuedAShareCanCloseIt(t *testing.T) {
 }
 
 func TestASeatThatCannotIssueSharesCannotListThem(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	reader := e.forecastReader(e.dealReadCtx(e.Rep1, nil, principal.RowScopeAll))
 
@@ -728,6 +745,7 @@ func TestASeatThatCannotIssueSharesCannotListThem(t *testing.T) {
 // installation. So a team-lens manager could mint a link to the whole
 // forecast and hand it to anybody, which is authority granted by issuing.
 func TestATeamManagerCannotIssueAWorkspaceShare(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	id := e.freezeTwoTeams(t, 100_000, 250_000)
 
@@ -752,6 +770,7 @@ func TestATeamManagerCannotIssueAWorkspaceShare(t *testing.T) {
 // different one labels those numbers with a population nobody computed them
 // for, and the recipient has no way to tell.
 func TestASnapshotShareCannotClaimADifferentPopulation(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	id := e.freezeTwoTeams(t, 100_000, 250_000)
 
@@ -819,6 +838,7 @@ func (e *forecastEnv) issueShare(ctx context.Context, in NewShare) error {
 // asserted: `resolve` is a required argument to NewHandlers, so a forecast
 // surface built without one does not compile.
 func TestATeamManagerCannotAssertTheWorkspacesForecast(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	manager := e.dealReadCtx(e.Rep1, []ids.UUID{e.Team1}, principal.RowScopeTeam)
 
@@ -863,6 +883,7 @@ func (e *forecastEnv) writableScope(
 // are asserted EQUAL here, which fails whichever of them drifts, rather than
 // pinning constants that would stay green while they parted company.
 func TestASharedSnapshotSplitsByProbabilitySourceAndKeepsItsThreshold(t *testing.T) {
+	t.Parallel()
 	const priced = 100_000
 	e := setupForecast(t)
 	e.seedDealClosingWithin(t, "Follows its stage", &e.Rep1, priced)
@@ -900,6 +921,7 @@ func TestASharedSnapshotSplitsByProbabilitySourceAndKeepsItsThreshold(t *testing
 }
 
 func TestASharedSnapshotCountsPricingRatherThanConversion(t *testing.T) {
+	t.Parallel()
 	const priced = 100_000
 	e := setupForecast(t)
 	e.seedDealClosingWithin(t, "Convertible", &e.Rep1, priced)

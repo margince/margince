@@ -38,6 +38,7 @@ func (s *scriptedLine) Complete(_ context.Context, req model.Request) (model.Res
 // A mail on a contact writes the line the contact page shows. The same input
 // is not asked about twice, and a reader who may not open the mail gets none.
 func TestAMailOnAContactWritesTheLineItsPageShows(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const address = "anna@kunde.example"
 	contact := seedLinkedContact(t, e, address)

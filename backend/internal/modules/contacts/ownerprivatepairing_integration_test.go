@@ -46,6 +46,7 @@ func clearOwnerDirectly(t *testing.T, e *privacyEnv, id ids.ContactID) error {
 }
 
 func TestAnOwnerPrivateContactCannotLoseItsOwner(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	owned := e.captureContact(t, "owner")
 
@@ -78,6 +79,7 @@ func TestAnOwnerPrivateContactCannotLoseItsOwner(t *testing.T) {
 // And the pair is refused whichever way round it is written: narrowing a
 // contact that already has no owner is the other order of the same two steps.
 func TestAnOwnerlessContactCannotBecomeOwnerPrivate(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	shared := e.captureContact(t, "workspace")
 	ctx := e.as(e.owner, principal.RowScopeOwn)
@@ -100,6 +102,7 @@ func TestAnOwnerlessContactCannotBecomeOwnerPrivate(t *testing.T) {
 // The states either column reaches on its own are ordinary and stay ordinary.
 // A rule that refused them would make the column unusable rather than safe.
 func TestTheOrdinaryVisibilityStatesAreUntouched(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	ctx := context.Background()
 	_ = ctx

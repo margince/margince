@@ -61,6 +61,7 @@ func stillLive(t *testing.T, e *channelConsentEnv, id ids.UUID) bool {
 // Without it a rep's stop is permanent whatever the contract says, which makes
 // the level a claim rather than a rule.
 func TestAnAdminLiftsARepsStop(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	row := plantSuppression(t, e, e.contact, string(commsauthz.LevelUser))
 
@@ -81,6 +82,7 @@ func TestAnAdminLiftsARepsStop(t *testing.T) {
 // not that whoever acts second wins. Reversing a peer's judgement stays a
 // deliberate escalation rather than something a rep does by pressing a button.
 func TestARepDoesNotLiftAnotherRepsStop(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	own := ids.New[ids.ContactKind]()
 	if _, err := e.owner.Exec(context.Background(), `
@@ -109,6 +111,7 @@ func TestARepDoesNotLiftAnotherRepsStop(t *testing.T) {
 // be offering a control that cannot lawfully be used, and whoever pressed it
 // would believe the send was permitted.
 func TestNobodyLiftsTheSubjectsOwnAct(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	row := plantSuppression(t, e, e.contact, string(commsauthz.LevelSubject))
 
@@ -130,6 +133,7 @@ func TestNobodyLiftsTheSubjectsOwnAct(t *testing.T) {
 // never existed, so a caller learns nothing about rows they were not going to
 // be allowed to touch.
 func TestAnAlreadyLiftedStopAnswersNotFound(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	row := plantSuppression(t, e, e.contact, string(commsauthz.LevelUser))
 
@@ -159,6 +163,7 @@ func TestAnAlreadyLiftedStopAnswersNotFound(t *testing.T) {
 // that recorded its own audit entry and left the engine still refusing would
 // look like it worked and change nothing a rep can see.
 func TestALiftedStopStopsRefusingTheSend(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	row := plantSuppression(t, e, e.contact, string(commsauthz.LevelUser))
 
@@ -195,6 +200,7 @@ func TestALiftedStopStopsRefusingTheSend(t *testing.T) {
 // Taking back a stop is the change most worth being able to explain later: the
 // row said somebody asked us not to write, and this says who overruled that.
 func TestTheLiftCarriesItsAuditAndItsEvent(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	row := plantSuppression(t, e, e.contact, string(commsauthz.LevelUser))
 
@@ -244,6 +250,7 @@ func TestTheLiftCarriesItsAuditAndItsEvent(t *testing.T) {
 // EnsureVisible runs first, so this answers not-found: a caller learns nothing
 // about rows they were never going to reach.
 func TestALiftIsRefusedOnAContactOutsideTheCallersScope(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 
 	hidden := seedForeignContact(t, e, "owner")
@@ -270,6 +277,7 @@ func TestALiftIsRefusedOnAContactOutsideTheCallersScope(t *testing.T) {
 // adds over EnsureVisible, and without this arm swapping one for the other goes
 // unnoticed.
 func TestALiftIsRefusedOnAContactTheCallerMayOnlyRead(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 
 	theirs := seedForeignContact(t, e, "workspace")
@@ -313,6 +321,7 @@ func seedForeignContact(t *testing.T, e *channelConsentEnv, visibility string) i
 // written twice — here and in the contract's maxLength — and nothing generated
 // enforces the contract's copy.
 func TestALiftNeedsAReasonSomebodyCanReview(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	row := plantSuppression(t, e, e.contact, string(commsauthz.LevelUser))
 
@@ -378,6 +387,7 @@ func lastLiftPayload(t *testing.T, e *channelConsentEnv) crmcontracts.PublicEven
 // strongest live row inside the sending transaction; the consumers reading this
 // event are the ones that would resume mail to somebody who objected.
 func TestALiftSaysWhatStillStands(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 
 	// Two stops. The user-level one is liftable by an admin; the subject's own
@@ -414,6 +424,7 @@ func TestALiftSaysWhatStillStands(t *testing.T) {
 // TestALiftOfTheLastStopSaysSo is the other direction: when nothing remains,
 // the event must say so, or a consumer holding mail back forever is the bug.
 func TestALiftOfTheLastStopSaysSo(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	only := plantSuppression(t, e, e.contact, string(commsauthz.LevelUser))
 
@@ -442,6 +453,7 @@ func TestALiftOfTheLastStopSaysSo(t *testing.T) {
 // tell a consumer to resume mail the engine will not send. Under-reporting is
 // the one direction this field must never fail in.
 func TestALiftReportsAnAddressPinnedStopAsStanding(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 
 	address := "bounced-" + e.contact.String() + "@example.test"
@@ -510,6 +522,7 @@ func plantNarrowSuppression(
 // the id alone must be enough) or, the case that matters more, by touching
 // the wrong one.
 func TestALiftTargetsANarrowStopByIdRegardlessOfItsPurpose(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	second := ids.NewV7()
 	if _, err := e.owner.Exec(context.Background(), `
@@ -541,6 +554,7 @@ func TestALiftTargetsANarrowStopByIdRegardlessOfItsPurpose(t *testing.T) {
 // newsletter, and a consumer told otherwise would resume mail to somebody who
 // is still refused it.
 func TestALiftReportsARemainingNarrowStopAsStanding(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	second := ids.NewV7()
 	if _, err := e.owner.Exec(context.Background(), `

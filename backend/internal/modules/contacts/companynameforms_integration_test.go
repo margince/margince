@@ -16,6 +16,7 @@ import "testing"
 // that never comes back from the query scores nothing and reads exactly like a
 // name that scored badly.
 func TestVietnameseCompaniesResolveThroughTheLadder(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 

@@ -44,6 +44,7 @@ func (e *dedupeEnv) setLinkedIn(ctx context.Context, t *testing.T, id ids.Compan
 
 // A signal and a file about the retired company are about the survivor now.
 func TestMergingACompanyMovesTheRowsThatNameItByKindAndID(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := asAdmin(e)
 	source, survivor := e.companyPair(ctx, t)
@@ -69,6 +70,7 @@ func TestMergingACompanyMovesTheRowsThatNameItByKindAndID(t *testing.T) {
 
 // A signal about the retired contact is about the survivor now.
 func TestMergingAContactMovesTheSignalsNamingIt(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	survivor, err := e.store.EnsureCounterparty(ctx, e.ensureInput(ctx, t, "keeper@kindid.test", "Keeper", "kindid.test"))
@@ -93,6 +95,7 @@ func TestMergingAContactMovesTheSignalsNamingIt(t *testing.T) {
 
 // The address on the retired company moves when the survivor has none.
 func TestMergingACompanyCarriesItsLinkedInAddressWhenTheSurvivorHasNone(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := asAdmin(e)
 	source, survivor := e.companyPair(ctx, t)
@@ -112,6 +115,7 @@ func TestMergingACompanyCarriesItsLinkedInAddressWhenTheSurvivorHasNone(t *testi
 
 // A survivor that has its own address keeps it.
 func TestMergingACompanyKeepsTheSurvivorsOwnLinkedInAddress(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := asAdmin(e)
 	source, survivor := e.companyPair(ctx, t)
@@ -141,6 +145,7 @@ func TestMergingACompanyKeepsTheSurvivorsOwnLinkedInAddress(t *testing.T) {
 
 // An address another live company holds is a conflict, never a 500.
 func TestAnAddressAnotherCompanyHoldsIsRefusedAsAConflict(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := asAdmin(e)
 	a, b := e.companyPair(ctx, t)

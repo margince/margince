@@ -25,7 +25,7 @@ func TestTheSeatReadsNeedTheirDeclarationAnUnattendedCallAndAnActAs(t *testing.T
 	company := ids.NewV7().String()
 	seat := extension.UserID(ids.NewV7().String())
 
-	composeReader(t, extension.SystemReadDeals)
+	binding.composed = composeReader(extension.SystemReadDeals)
 	undeclared := deliveryRuntimeFor(ctx, "dealmirror", "1.0.0", "subscription/mirror", binding)
 	defer undeclared.release()
 	if _, err := undeclared.Companies().Get(ctx, seat, company); !errors.Is(err, extension.ErrUndeclaredRead) {
@@ -35,12 +35,12 @@ func TestTheSeatReadsNeedTheirDeclarationAnUnattendedCallAndAnActAs(t *testing.T
 		t.Errorf("an undeclared MailContent().Get: err = %v, want ErrUndeclaredRead", err)
 	}
 
-	composeReader(t, extension.SystemReadDeals)
+	binding.composed = composeReader(extension.SystemReadDeals)
 	if _, err := undeclared.Directory().ByRole(ctx, seat, []string{"reviewer"}); !errors.Is(err, extension.ErrUndeclaredRead) {
 		t.Errorf("an undeclared Directory().ByRole: err = %v, want ErrUndeclaredRead", err)
 	}
 
-	composeReader(t, extension.SystemReadCompanies, extension.SystemReadMailContent, extension.SystemReadDirectory)
+	binding.composed = composeReader(extension.SystemReadCompanies, extension.SystemReadMailContent, extension.SystemReadDirectory)
 	attended := runtimeFor(ctx, "dealmirror", "1.0.0", "tool/probe", binding)
 	defer attended.release()
 	if _, err := attended.Companies().List(ctx, seat, extension.CompanyPageQuery{}); !errors.Is(err, extension.ErrAttendedRead) {

@@ -20,6 +20,7 @@ import (
 )
 
 func TestWonDealKeepsOldSchedulingRequestUntilItsTaskIsCompleted(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	deal := apptest.ExerciseDealToWon(t, e, apptest.DiscoverSeededPipeline(t, e))

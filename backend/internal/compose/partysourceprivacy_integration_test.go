@@ -20,6 +20,7 @@ import (
 )
 
 func TestCapturedPartyEvidenceIsExportedAndErasedWithoutAProviderOriginal(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	alice, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{FullName: "Alice Buyer", Source: "manual", Emails: []contacts.ContactEmailInput{{Email: "alice@buyer.test", EmailType: "work", IsPrimary: true}}})
 	if err != nil {
@@ -86,6 +87,7 @@ func TestCapturedPartyEvidenceIsExportedAndErasedWithoutAProviderOriginal(t *tes
 }
 
 func TestPartySourceErasureFoldsSubjectAddressesWithoutErasingOtherParties(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ref := capturePartiesMailUsing(t, e, newCaptureSink(e.Pool, CaptureConfig{}).WithEnsurer(nil, nil), partyMailProof{outbound: true, sentByOwner: true}, "Bob Buyer <bob@buyer.test>", "", "Could we discuss the product requirements?")
 	if err := e.DB().Tx(e.Admin(), func(tx pgx.Tx) error {

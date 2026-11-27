@@ -64,6 +64,7 @@ func commentsOnTheThread(t *testing.T, e *apptest.AppEnv, threadID string) int {
 // A double-click, a mobile retry and a proxy replay are all one attempt arriving
 // twice, and the buyer is owed the thread the first delivery opened.
 func TestARepeatedThreadPostOpensOneThread(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	auth := buyerInARoom(t, e)
@@ -108,6 +109,7 @@ func TestARepeatedThreadPostOpensOneThread(t *testing.T) {
 }
 
 func TestARepeatedCommentPostAppendsOnce(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	auth := buyerInARoom(t, e)
@@ -138,6 +140,7 @@ func TestARepeatedCommentPostAppendsOnce(t *testing.T) {
 // say the same thing twice is entitled to, which is why this is not keyed on the
 // body. A content-derived key would make this case the bug.
 func TestTwoAttemptsWithTheSameWordsBothLand(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	auth := buyerInARoom(t, e)
@@ -167,6 +170,7 @@ func TestTwoAttemptsWithTheSameWordsBothLand(t *testing.T) {
 // column is nullable and its index partial precisely so this stays possible — and so
 // the rows that carry no key do not collide with each other on NULL.
 func TestWithoutAKeyNothingIsDeduplicated(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	auth := buyerInARoom(t, e)
@@ -246,6 +250,7 @@ func sideEffectsOf(t *testing.T, e *apptest.AppEnv, entityType, eventType string
 // The room comes from the same helper the HTTP tests use, so the rows these
 // statements land on are the ones the product makes.
 func TestTwoOverlappingDeliveriesLeaveOneThread(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	room := openRoomWithABuyer(t, e)
@@ -321,6 +326,7 @@ func TestTwoOverlappingDeliveriesLeaveOneThread(t *testing.T) {
 // second write without ON CONFLICT raises 23505 — so if this stops failing, the
 // index has gone and everything above protects nothing.
 func TestWithoutTheConflictClauseARepeatIsAnError(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	room := openRoomWithABuyer(t, e)
@@ -348,6 +354,7 @@ func TestWithoutTheConflictClauseARepeatIsAnError(t *testing.T) {
 // table already holds that attempt. The opening then has to answer something other
 // than a failure for a post that is perfectly legitimate.
 func TestAnAttemptIdUsedForBothAThreadAndACommentIsNotAFailure(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	auth := buyerInARoom(t, e)
@@ -383,6 +390,7 @@ func TestAnAttemptIdUsedForBothAThreadAndACommentIsNotAFailure(t *testing.T) {
 // retry tells them their message failed when it did not, and there is nothing they
 // can do about it: the thread they posted into is closed to them now.
 func TestARetryAfterTheThreadIsResolvedStillAnswersTheThread(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	room := openRoomWithABuyer(t, e)

@@ -19,6 +19,7 @@ import (
 )
 
 func TestSystemTaskDisplayFollowsTheReaderAndRealEditsRetireOnlyTheirComponent(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	store := e.store(nil)
@@ -61,6 +62,7 @@ func TestSystemTaskDisplayFollowsTheReaderAndRealEditsRetireOnlyTheirComponent(t
 }
 
 func TestSchedulingDefaultOriginSurvivesOtherEditsButNeverReclassifiesLegacyTitles(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	store := e.store(nil)
@@ -101,6 +103,7 @@ func TestSchedulingDefaultOriginSurvivesOtherEditsButNeverReclassifiesLegacyTitl
 }
 
 func TestAHumanNoteMatchingAnErasureCaptionRetainsItsOwnWords(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := systemtext.WithLocale(e.as(principal.RowScopeAll), textlang.German)
 	subject := "Erased"
@@ -114,6 +117,7 @@ func TestAHumanNoteMatchingAnErasureCaptionRetainsItsOwnWords(t *testing.T) {
 }
 
 func TestANewCustomTitleCannotBecomeDefaultByMatchingEnglish(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	store := e.store(nil)

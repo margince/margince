@@ -114,6 +114,7 @@ func atRiskByDeal(t *testing.T, e *integration.Env) map[ids.UUID]attention.Risky
 // nothing about its champion, and one with contacts recorded and none of them
 // champion still says nobody is carrying it.
 func TestChampionUnknownIsSaidOnlyOfAnImportedDeal(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	at := newChampionStage(t, e)
 	company := e.SeedCompany(t, "Turbinenbau", nil)

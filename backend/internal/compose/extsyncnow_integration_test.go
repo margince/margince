@@ -16,7 +16,6 @@ package compose
 
 import (
 	"context"
-	"os"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -34,12 +33,10 @@ import (
 const syncNowUnit, syncNowJob = "notes", "heartbeat"
 
 func TestSyncNowQueuesTheUnitsOwnTickForTheCallersWorkspace(t *testing.T) {
+	t.Parallel()
+	db := testdb.New(t)
 	ctx := context.Background()
-	ownerDSN, appDSN := os.Getenv("MARGINCE_TEST_DSN"), os.Getenv("MARGINCE_TEST_APP_DSN")
-	if ownerDSN == "" || appDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN not set — run `make db-up`")
-	}
-	owner, err := pgx.Connect(ctx, ownerDSN)
+	owner, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -48,13 +45,7 @@ func TestSyncNowQueuesTheUnitsOwnTickForTheCallersWorkspace(t *testing.T) {
 			t.Errorf("closing the owner connection: %v", err)
 		}
 	})
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
-	if err := testdb.Reset(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
-	pool, err := testdb.Pool(ctx, appDSN)
+	pool, err := testdb.Pool(ctx, db.AppDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,27 +56,18 @@ func TestSyncNowQueuesTheUnitsOwnTickForTheCallersWorkspace(t *testing.T) {
 	}
 	decl := extension.JobDeclaration{Unit: syncNowUnit, Job: syncNowJob}
 	set := []composedJob{{decl: decl}}
-	before := servedExtensionJobs()
-	setComposedJobs(set)
-	t.Cleanup(func() { setComposedJobs(before) })
-	// The DECLARATION table as well as the served set: attendedChildOpts reads
-	// the child kind's queue and attempt cap out of it, so a test that
-	// registered only the served half would be asking about a kind the job
-	// tier has never heard of.
-	if err := jobs.RegisterComposed(composedJobSpecs(set)); err != nil {
-		t.Fatalf("registering the composed job specs: %v", err)
+	// The declaration table as well as the served set: attendedChildOpts reads
+	// the child kind's queue and attempt cap from it.
+	table, err := jobs.NewComposed(composedJobSpecs(set), nil)
+	if err != nil {
+		t.Fatalf("declaring the composed job specs: %v", err)
 	}
-	t.Cleanup(func() {
-		if err := jobs.RegisterComposed(composedJobSpecs(before)); err != nil {
-			t.Errorf("restoring the composed job specs: %v", err)
-		}
-	})
 
 	rt := &callRuntime{
 		unit:    syncNowUnit,
 		live:    true,
 		callCtx: principal.WithWorkspaceID(ctx, ws),
-		deps:    extensionRuntimeBinding{pool: pool},
+		deps:    extensionRuntimeBinding{pool: pool, composed: &Extensions{jobs: set, jobTable: table}},
 	}
 
 	if err := rt.SyncNow(ctx, syncNowJob); err != nil {

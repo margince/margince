@@ -20,13 +20,15 @@ import (
 
 // composedFinanceSources implements finance.Sources over this boot's
 // composition. The boot has already refused a provider claimed twice.
-type composedFinanceSources struct{}
+type composedFinanceSources struct {
+	composed *Extensions
+}
 
 var _ finance.Sources = composedFinanceSources{}
 
-func (composedFinanceSources) Providers() []finance.SourceOption {
+func (s composedFinanceSources) Providers() []finance.SourceOption {
 	var out []finance.SourceOption
-	for _, ext := range ComposedExtensions() {
+	for _, ext := range s.composed.Units() {
 		for _, source := range ext.FinanceSources {
 			out = append(out, finance.SourceOption{
 				Provider: source.Provider, DisplayName: source.DisplayName, Description: string(ext.Description),
@@ -39,13 +41,13 @@ func (composedFinanceSources) Providers() []finance.SourceOption {
 }
 
 //nolint:ireturn // the seam IS an interface: this resolves WHICH unit reads the source
-func (composedFinanceSources) Open(provider string, conn accounting.Connection) (finance.Provider, bool) {
-	for _, ext := range ComposedExtensions() {
+func (s composedFinanceSources) Open(provider string, conn accounting.Connection) (finance.Provider, bool) {
+	for _, ext := range s.composed.Units() {
 		for _, source := range ext.FinanceSources {
 			if source.Provider == provider {
 				return unitFinanceProvider{
 					unit: string(ext.Name), version: string(ext.Version),
-					source: source, conn: conn, deps: boundExtensionRuntime(),
+					source: source, conn: conn, deps: s.composed.binding(),
 				}, true
 			}
 		}

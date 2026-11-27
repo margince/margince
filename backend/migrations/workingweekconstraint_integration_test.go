@@ -22,6 +22,7 @@ import (
 // census checks, in both directions: `{}` is refused, a real week and an
 // unset week are not.
 func TestAWorkingWeekHasADayInIt(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	headSchema(t, conn)

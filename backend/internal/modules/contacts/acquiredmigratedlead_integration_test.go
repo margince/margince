@@ -75,6 +75,7 @@ func (e *dedupeEnv) outboundOnly(ctx context.Context, t *testing.T, in EnsureCou
 }
 
 func TestAnAddressAMigratedLeadHoldsIsACRMMigration(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	lead := e.seedLead(ctx, t, "buyer@oldcrm.test", "buyer@oldcrm.test", "mirror:hubspot")
@@ -89,6 +90,7 @@ func TestAnAddressAMigratedLeadHoldsIsACRMMigration(t *testing.T) {
 // A lead somebody typed in here is not a migration, and says nothing about how
 // the address was obtained.
 func TestALeadEnteredHereIsNotAMigration(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	lead := e.seedLead(ctx, t, "walkin@fair.test", "walkin@fair.test", "web_form")
@@ -105,6 +107,7 @@ func TestALeadEnteredHereIsNotAMigration(t *testing.T) {
 // only an importer may write the mirror: prefix, and the two together must not
 // excuse a notice for somebody the old CRM never held.
 func TestAnImportedLeadRetargetedAtAnotherAddressIsNotAMigration(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	lead := e.seedLead(ctx, t, "stranger@elsewhere.test", "original@oldcrm.test", "mirror:hubspot")
@@ -119,6 +122,7 @@ func TestAnImportedLeadRetargetedAtAnotherAddressIsNotAMigration(t *testing.T) {
 // A lead who wrote to us converts into a contact who contacted us first. The
 // mail is the evidence a capture would have read.
 func TestALeadWhoWroteConvertsIntoAContactWhoWrote(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	lead := e.seedLead(ctx, t, "asked@fair.test", "asked@fair.test", "web_form")

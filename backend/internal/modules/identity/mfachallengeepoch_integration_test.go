@@ -41,6 +41,7 @@ func (e *revocationEnv) passwordChallengeWith(t *testing.T, password string) MFA
 }
 
 func TestAChallengeIsRefusedOnceTheCredentialsChange(t *testing.T) {
+	t.Parallel()
 	base := time.Unix(1_760_000_000, 0)
 	changes := map[string]func(e *revocationEnv, t *testing.T, secret *string){
 		"password changed": func(e *revocationEnv, t *testing.T, _ *string) {
@@ -101,6 +102,7 @@ func TestAChallengeIsRefusedOnceTheCredentialsChange(t *testing.T) {
 
 // The unchanged case, so the refusals above are about the change.
 func TestAChallengeStandsWhileTheCredentialsDoNot(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "mfa-epoch-kept")
 	e.withVault()
 	base := time.Unix(1_760_000_000, 0)
@@ -124,6 +126,7 @@ func TestAChallengeStandsWhileTheCredentialsDoNot(t *testing.T) {
 // A stale challenge is refused through the wrong-code path. It counts towards
 // the lockout and leaves the same evidence, so the two cannot be told apart.
 func TestAStaleChallengeCountsAsAWrongCode(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "mfa-epoch-counts")
 	e.withVault()
 	base := time.Unix(1_760_000_000, 0)
@@ -162,6 +165,7 @@ func TestAStaleChallengeCountsAsAWrongCode(t *testing.T) {
 // The epoch is read under the factor row lock that the code check also uses,
 // so a removal and re-enrolment cannot land between the two.
 func TestAChallengeHoldsTheFactorRowWhileItChecksTheEpoch(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "mfa-epoch-lock")
 	e.withVault()
 	base := time.Unix(1_760_000_000, 0)

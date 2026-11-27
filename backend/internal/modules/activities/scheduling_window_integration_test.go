@@ -23,6 +23,7 @@ import (
 )
 
 func TestReliableAvailabilityDistinguishesBusyWeeksFromBookingHorizon(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	now := time.Date(2026, 9, 27, 6, 0, 0, 0, time.UTC)
@@ -59,6 +60,7 @@ func TestReliableAvailabilityDistinguishesBusyWeeksFromBookingHorizon(t *testing
 }
 
 func TestRescheduleAvailabilityExplainsTheBookingHorizon(t *testing.T) {
+	t.Parallel()
 	f := newInvitationFixture(t)
 	meeting := f.book(t)
 	from := f.now.AddDate(0, 0, 35)
@@ -70,6 +72,7 @@ func TestRescheduleAvailabilityExplainsTheBookingHorizon(t *testing.T) {
 }
 
 func TestPublicAvailabilityReturnsAWindowErrorInsteadOfAnEmptyCalendar(t *testing.T) {
+	t.Parallel()
 	f := newInvitationFixture(t)
 	profile, err := f.store.SchedulingProfile(f.ctx)
 	if err != nil {
@@ -103,6 +106,7 @@ func TestPublicAvailabilityReturnsAWindowErrorInsteadOfAnEmptyCalendar(t *testin
 // which is the reading the field exists to prevent. `reliable=true` is the one
 // path that consults the calendar and the one that may say so.
 func TestTheWindowSaysWhatItWasReadFromRatherThanWhatTheHostHasConnected(t *testing.T) {
+	t.Parallel()
 	f := newInvitationFixture(t)
 	handlers := Handlers{store: f.store}.WithCalendarConnected(
 		func(context.Context, ids.UserID) (bool, error) { return true, nil },
@@ -146,6 +150,7 @@ func TestTheWindowSaysWhatItWasReadFromRatherThanWhatTheHostHasConnected(t *test
 // A host with no calendar connected is told to connect one, not refused as if
 // a grant were missing. The answer is what an assistant tells its user.
 func TestReliableAvailabilityWithNoCalendarAsksForOne(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	now := time.Date(2026, 9, 27, 6, 0, 0, 0, time.UTC)
@@ -160,6 +165,7 @@ func TestReliableAvailabilityWithNoCalendarAsksForOne(t *testing.T) {
 // A guest is never told to connect a calendar: the host's setup is not theirs
 // to learn. The proposal link answers as a paused page; the host is still asked.
 func TestAGuestIsNotToldTheHostHasNoCalendar(t *testing.T) {
+	t.Parallel()
 	f := newInvitationFixture(t)
 	link, err := f.store.CreateProposal(f.ctx, crmcontracts.MeetingProposalRequest{ContactId: f.request.ContactId, AttendeeEmail: f.request.AttendeeEmail, Subject: f.request.Subject, DurationMinutes: 30})
 	if err != nil {

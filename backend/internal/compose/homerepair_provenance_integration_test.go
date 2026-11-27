@@ -122,6 +122,7 @@ func (f legacyRepairFixture) applyReviewed(t *testing.T, review datatask.ReviewR
 }
 
 func TestReviewedLegacyCorrectionDoesNotAdoptWorkBeforeLaterRetirement(t *testing.T) {
+	t.Parallel()
 	f := seedLegacyRepair(t, false)
 	review, item := f.preview(t)
 	if !f.applyReviewed(t, review, item) {
@@ -147,6 +148,7 @@ func TestReviewedLegacyCorrectionDoesNotAdoptWorkBeforeLaterRetirement(t *testin
 }
 
 func TestReviewedLegacyRepairUsesCurrentSourceAdmission(t *testing.T) {
+	t.Parallel()
 	for _, old := range []bool{false, true} {
 		t.Run(map[bool]string{false: "current", true: "historic"}[old], func(t *testing.T) {
 			f := seedLegacyRepair(t, old)
@@ -186,6 +188,7 @@ func TestReviewedLegacyRepairUsesCurrentSourceAdmission(t *testing.T) {
 }
 
 func TestReviewedLegacyRepairPreservesHumanAdoptionAndRollsBack(t *testing.T) {
+	t.Parallel()
 	for _, change := range []string{"subject", "due", "pin", "reminder", "rollback"} {
 		t.Run(change, func(t *testing.T) {
 			f := seedLegacyRepair(t, false)
@@ -239,6 +242,7 @@ func TestReviewedLegacyRepairPreservesHumanAdoptionAndRollsBack(t *testing.T) {
 }
 
 func TestReviewedLegacyRepairCannotAdmitAnUnresolvableSource(t *testing.T) {
+	t.Parallel()
 	f := seedLegacyRepair(t, true, "unresolved-legacy-reference")
 	if err := f.e.DB().Tx(f.e.Admin(), func(tx pgx.Tx) error {
 		review, err := previewHomeRepairAfterTx(f.e.Admin(), tx, ids.Nil, 100, f.now)

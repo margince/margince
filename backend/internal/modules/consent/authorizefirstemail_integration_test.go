@@ -58,6 +58,7 @@ func (e *resolveEnv) capturedMail(t *testing.T, threadKey, subjectRole string, w
 }
 
 func TestAForgedThreadKeyWithNoMailFromOurSeatEarnsNoCopiedStanding(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	e.plantCopiedMail(t, copiedMail{
 		threadKey: "thread-forged", subjectRole: "cc", direction: "inbound",
@@ -84,6 +85,7 @@ func (e *resolveEnv) ourSentMail(t *testing.T, threadKey string) {
 // Our side counts only as the sender of an outbound mail. A seat in To of an
 // outbound mail did not send it, nor did a seat in From of an inbound one.
 func TestOurSeatCountsOnlyAsTheSenderOfAnOutboundMail(t *testing.T) {
+	t.Parallel()
 	cases := map[string]copiedMail{
 		"our seat only in To of an outbound mail": {direction: "outbound", ourRecipient: true},
 		"our seat in From of an inbound mail":     {direction: "inbound", ourAuthor: true},
@@ -142,6 +144,7 @@ func (e *resolveEnv) plantCopiedMail(t *testing.T, m copiedMail) ids.UUID {
 }
 
 func TestACcParticipantOfACapturedThreadMayBeWrittenToAboutThatThread(t *testing.T) {
+	t.Parallel()
 	for _, role := range []string{"to", "cc"} {
 		t.Run(role, func(t *testing.T) {
 			e := setupResolve(t)
@@ -160,6 +163,7 @@ func TestACcParticipantOfACapturedThreadMayBeWrittenToAboutThatThread(t *testing
 }
 
 func TestAnOutsiderForgingAThreadWeWroteOnToSomeoneElseEarnsNoStanding(t *testing.T) {
+	t.Parallel()
 	cases := map[string]struct{ inbound, ours copiedMail }{
 		"the outsider is not who we wrote to": {
 			inbound: copiedMail{counterparty: "outsider@evil.test"},
@@ -189,6 +193,7 @@ func TestAnOutsiderForgingAThreadWeWroteOnToSomeoneElseEarnsNoStanding(t *testin
 }
 
 func TestACcParticipantStillNeedsAnAnswerForAnUnrelatedTopic(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	e.capturedMail(t, "thread-matter", "cc", true)
 
@@ -201,6 +206,7 @@ func TestACcParticipantStillNeedsAnAnswerForAnUnrelatedTopic(t *testing.T) {
 
 // Our own side must never be able to make the evidence by copying the contact.
 func TestOurOwnMailCopyingTheContactIsNotEvidence(t *testing.T) {
+	t.Parallel()
 	cases := map[string]copiedMail{
 		"outbound mail we sent": {direction: "outbound", ourAuthor: true},
 		// Capture files a colleague's copy as outbound, with the colleague
@@ -225,6 +231,7 @@ func TestOurOwnMailCopyingTheContactIsNotEvidence(t *testing.T) {
 }
 
 func TestTheCcRuleNeedsOurSideOnTheThreadAndAConnectorCapture(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	e.capturedMail(t, "thread-no-us", "cc", false)
 	if got := e.resolve(t, commsauthz.Request{ThreadKey: "thread-no-us"}); got.Supported {
@@ -243,6 +250,7 @@ func TestTheCcRuleNeedsOurSideOnTheThreadAndAConnectorCapture(t *testing.T) {
 // A thread key is shared across media, so our side on a hand-typed activity or
 // on another medium with the same key does not count.
 func TestOurSideMustBeOnACapturedMailOfTheSameThread(t *testing.T) {
+	t.Parallel()
 	cases := map[string]string{
 		"hand-typed":    `INSERT INTO activity (id, kind, direction, thread_key, occurred_at, source, captured_by) VALUES ($1, 'email', 'outbound', 'thread-split', now(), 'gmail', 'human:x')`,
 		"another media": `INSERT INTO activity (id, kind, direction, thread_key, occurred_at, source, captured_by) VALUES ($1, 'call', 'outbound', 'thread-split', now(), 'gmail', 'connector:gmail')`,
@@ -270,6 +278,7 @@ func TestOurSideMustBeOnACapturedMailOfTheSameThread(t *testing.T) {
 }
 
 func TestAnArchivedCapturedMailSupportsNothing(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	id := e.capturedMail(t, "thread-gone", "cc", true)
 	if _, err := e.owner.Exec(context.Background(),
@@ -283,6 +292,7 @@ func TestAnArchivedCapturedMailSupportsNothing(t *testing.T) {
 }
 
 func TestTheCcRuleNeverSupportsAdvertising(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	e.capturedMail(t, "thread-matter", "cc", true)
 
@@ -294,6 +304,7 @@ func TestTheCcRuleNeverSupportsAdvertising(t *testing.T) {
 }
 
 func TestARecordedRequestSupportsAComposerFollowUp(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	claim := commsauthz.Request{Context: commsauthz.CategoryRequestedFollowup}
 	if got := e.resolve(t, claim); got.Supported {
@@ -312,6 +323,7 @@ func TestARecordedRequestSupportsAComposerFollowUp(t *testing.T) {
 }
 
 func TestAPickedOpenDealSupportsADealFollowUp(t *testing.T) {
+	t.Parallel()
 	cases := map[string]struct {
 		status      string
 		stakeholder bool
@@ -340,6 +352,7 @@ func TestAPickedOpenDealSupportsADealFollowUp(t *testing.T) {
 }
 
 func TestAClaimNamingNoDealIsNotSupportedAsADealFollowUp(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	if got := e.resolve(t, commsauthz.Request{Context: commsauthz.CategoryActiveDealFollowup}); got.Supported {
 		t.Fatal("a deal follow-up naming no deal was supported")
@@ -347,6 +360,7 @@ func TestAClaimNamingNoDealIsNotSupportedAsADealFollowUp(t *testing.T) {
 }
 
 func TestTheStrongerEvidenceWinsOverAMistakenClaim(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	deal := e.openDeal(t, "open", true)
 	e.enquiredAbout(t, deal)
@@ -362,6 +376,7 @@ func TestTheStrongerEvidenceWinsOverAMistakenClaim(t *testing.T) {
 }
 
 func TestAnUnsupportedClaimWithNoPurposeIsAQuestionNotAnUnknownPurpose(t *testing.T) {
+	t.Parallel()
 	for _, claim := range []commsauthz.Category{commsauthz.CategoryCustomerService, commsauthz.CategoryAccountNotice} {
 		t.Run(string(claim), func(t *testing.T) {
 			e := setupResolve(t)
@@ -376,6 +391,7 @@ func TestAnUnsupportedClaimWithNoPurposeIsAQuestionNotAnUnknownPurpose(t *testin
 }
 
 func TestAPurposeNothingDefinesIsStillUnknown(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 
 	d := e.decide(t, commsauthz.Request{Context: commsauthz.CategoryCustomerService, LegacyPurposeKey: "invented"})
@@ -389,6 +405,7 @@ func TestAPurposeNothingDefinesIsStillUnknown(t *testing.T) {
 // request carries no anchor and only the delivery's thread key. It goes while
 // the copying mail stands and is refused once that mail is gone.
 func TestASendTheCcRuleAllowedIsAskedAgainAtTransmit(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	copying := e.capturedMail(t, "thread-transmit", "cc", true)
 	delivery := e.plantDelivery(t)
@@ -438,6 +455,7 @@ func TestASendTheCcRuleAllowedIsAskedAgainAtTransmit(t *testing.T) {
 // captured address. The new contact earns no Cc standing, at staging or at
 // transmit.
 func TestARelinkedCopiedParticipantTransfersNoStanding(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	e.capturedMail(t, "thread-relink", "cc", true)
 	other := ids.New[ids.ContactKind]()

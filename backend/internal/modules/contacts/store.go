@@ -5,6 +5,7 @@ package contacts
 
 import (
 	"context"
+	"log/slog"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -17,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/extprivacy"
 	"github.com/margince/margince/backend/internal/platform/freemail"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/companytypes"
 )
 
 // ownerIDColumn is the owner reference column contact and company
@@ -41,6 +43,9 @@ type Store struct {
 	profileVerdictReader    ProfileVerdictReader
 	participantRosterReader ParticipantRosterReader
 	clock                   func() time.Time
+	// beforeTechnicalWrite runs between reading a contact and writing it. Tests
+	// set it to edit the contact in that window; production leaves it nil.
+	beforeTechnicalWrite func(ctx context.Context, id ids.ContactID)
 	// db binds the workspace this store runs for (ADR-0091 §9 step 3).
 	db *database.DB
 	// catalog is the fieldcatalog seam (custom-field columns); nil means
@@ -79,6 +84,8 @@ type Store struct {
 	// settings is the configuration the lead and signature-template settings
 	// are read and saved through; nil means they are read-only on this store.
 	settings *config.Config
+	// warnings is where a read reports a setting it cannot honour; nil is slog.Default().
+	warnings *slog.Logger
 	// dealOpener opens the deal a qualify call asks for, inside the promote
 	// transaction; compose binds the deals store. Nil refuses such calls.
 	dealOpener LeadDealOpener
@@ -111,6 +118,9 @@ type Store struct {
 	// renameInstallation keeps the installation's name on the anchor's display
 	// name (anchorname.go); nil refuses an anchor rename.
 	renameInstallation InstallationRenamer
+	// companyTypes is the extension company types the composition declares; the
+	// zero value declares none (company_relationship_types.go).
+	companyTypes companytypes.Registry
 	// employerChanges asks a contact's owner about a newer employer; nil asks nobody.
 	employerChanges EmployerChangeProposer
 }

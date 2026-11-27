@@ -9,6 +9,7 @@ package compose
 import (
 	"context"
 	"log/slog"
+	"net/http"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/modules/capture/googleconn"
@@ -27,13 +28,13 @@ type connectPicture struct {
 }
 
 // newConnectPicture binds the offer to the seat directory and the picture seam.
-func newConnectPicture(users *identity.Service, fill identity.ProviderPictureFill) connectPicture {
+func newConnectPicture(users *identity.Service, fill identity.ProviderPictureFill, google *http.Client) connectPicture {
 	return connectPicture{
 		seatEmail: func(ctx context.Context) (string, error) {
 			_, email, err := users.ActorIdentity(ctx)
 			return email, err
 		},
-		userinfo: googleconn.NewUserinfo(nil, ""),
+		userinfo: googleconn.NewUserinfo(google, ""),
 		fill:     fill,
 	}
 }

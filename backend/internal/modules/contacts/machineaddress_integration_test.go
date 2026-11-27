@@ -79,6 +79,7 @@ func legacyMachineContact(ctx context.Context, t *testing.T, e *dedupeEnv, addre
 }
 
 func TestACreateWithASendingSystemsAddressIsRefusedAndWritesNothing(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	before := writeShapeRows(ctx, t, e)
@@ -94,6 +95,7 @@ func TestACreateWithASendingSystemsAddressIsRefusedAndWritesNothing(t *testing.T
 }
 
 func TestAnUpdateCannotReplaceAnAddressWithASendingSystemsAddress(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	made, err := e.store.CreateContact(ctx, CreateContactInput{
@@ -116,6 +118,7 @@ func TestAnUpdateCannotReplaceAnAddressWithASendingSystemsAddress(t *testing.T) 
 // hands back a contact already holding the address. A contact stored before
 // the rule must not take the booking either.
 func TestEnsureContactByEmailRefusesASendingSystemsAddressEvenWhenAContactHoldsIt(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	legacyMachineContact(ctx, t, e, sendingSystemAddress)
@@ -130,6 +133,7 @@ func TestEnsureContactByEmailRefusesASendingSystemsAddressEvenWhenAContactHoldsI
 // Capture's counterparty path asks the rule before anything else. It answers
 // with the same skip capture already takes for an erased address.
 func TestTheCounterpartyPathRefusesASendingSystemsAddress(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	before := writeShapeRows(ctx, t, e)
@@ -144,6 +148,7 @@ func TestTheCounterpartyPathRefusesASendingSystemsAddress(t *testing.T) {
 }
 
 func TestAVCardWithASendingSystemsAddressIsSkippedAndTheRestOfTheFileLands(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -169,6 +174,7 @@ func TestAVCardWithASendingSystemsAddressIsSkippedAndTheRestOfTheFileLands(t *te
 // A card that matches an existing contact takes the update arm, which never
 // reaches the create's check.
 func TestAVCardMatchingAContactCannotCarryASendingSystemsAddressOntoIt(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	made, err := e.store.CreateContact(ctx, CreateContactInput{
@@ -189,6 +195,7 @@ func TestAVCardMatchingAContactCannotCarryASendingSystemsAddressOntoIt(t *testin
 }
 
 func TestABoughtSendingSystemsAddressFillsNothing(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	made, err := e.store.CreateContact(ctx, CreateContactInput{FullName: "No Address Yet", Source: "manual"})
@@ -212,6 +219,7 @@ func TestABoughtSendingSystemsAddressFillsNothing(t *testing.T) {
 
 // A display name the writer chose stays, even where it is not the name parts.
 func TestACreateAndAnUpdateKeepAChosenFullNameBesideItsParts(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	first, last := "Robert", "Fischer"
@@ -236,6 +244,7 @@ func TestACreateAndAnUpdateKeepAChosenFullNameBesideItsParts(t *testing.T) {
 }
 
 func TestMachineAddressContactsPagesEveryContactAndNamesTheMachineOnes(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	machine := legacyMachineContact(ctx, t, e, "receipts@page.test")
@@ -283,6 +292,7 @@ func TestMachineAddressContactsPagesEveryContactAndNamesTheMachineOnes(t *testin
 // A CRM's BCC logging address is a sending system too. A manual create with
 // it is refused. A human at the provider's own domain is created.
 func TestManualCreateRefusesHubSpotBCC(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	before := writeShapeRows(ctx, t, e)

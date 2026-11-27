@@ -54,6 +54,7 @@ func (e *pullEnv) linkStatus(t *testing.T) string {
 }
 
 func TestAChannelArchivedWithoutANoticePausesItsLinkOnThePull(t *testing.T) {
+	t.Parallel()
 	e := setupPull(t)
 	e.say("acme", 1, 60, "Acme wants 12% off")
 	e.history.Archive("acme")
@@ -72,6 +73,7 @@ func TestAChannelArchivedWithoutANoticePausesItsLinkOnThePull(t *testing.T) {
 }
 
 func TestADealThatTakesTheChannelOverFilesItsOwnNoteOfTheTalkSoFar(t *testing.T) {
+	t.Parallel()
 	e := setupPull(t)
 	threeDaysBefore := -3 * 24 * 60
 	e.say("acme", 1, threeDaysBefore, "Maya Brandt asked for 8 percent")
@@ -134,6 +136,7 @@ func (h hookedChat) History(ctx context.Context, slug string, after int64, limit
 }
 
 func TestALinkAskingForTheTalkSoFarDuringAPullRunsThePullOnceMore(t *testing.T) {
+	t.Parallel()
 	e := setupPull(t)
 	worker := &PullWorker[pullArgs]{Bind: bindAny, Puller: e.puller}
 	job := &river.Job[pullArgs]{Args: pullArgs{conn: e.conn}}
@@ -164,6 +167,7 @@ func TestALinkAskingForTheTalkSoFarDuringAPullRunsThePullOnceMore(t *testing.T) 
 }
 
 func TestABareStatusOrATimeoutLeavesTheLinkActive(t *testing.T) {
+	t.Parallel()
 	for name, front := range map[string]http.HandlerFunc{
 		"a bare 404": func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNotFound) },
 		"a bare 403": func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusForbidden) },
@@ -184,6 +188,7 @@ func TestABareStatusOrATimeoutLeavesTheLinkActive(t *testing.T) {
 }
 
 func TestANoteFiledUnderTheKeyWithoutARecordIsNotFiledAgain(t *testing.T) {
+	t.Parallel()
 	e := setupPull(t)
 	threeDaysBefore := -3 * 24 * 60
 	e.say("acme", 1, threeDaysBefore, "Maya Brandt asked for 8 percent")
@@ -198,6 +203,7 @@ func TestANoteFiledUnderTheKeyWithoutARecordIsNotFiledAgain(t *testing.T) {
 }
 
 func TestAProjectSharedByTwoDealsHoldsTheTalkSoFarOnce(t *testing.T) {
+	t.Parallel()
 	e := setupPull(t)
 	project := ids.NewV7()
 	e.exec(t, `INSERT INTO project (id, name, source, captured_by) VALUES ($1, 'Brandt rollout', 'manual', 'system')`, project)

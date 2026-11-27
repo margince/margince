@@ -110,7 +110,7 @@ func (s *RoutingStore) Replace(ctx context.Context, next RoutingConfig) (Routing
 // that keeps moving is refused as stale.
 func (s *RoutingStore) probedWrite(ctx context.Context, probe func(stored RoutingConfig) error, settle func(current RoutingConfig) (stored, served RoutingConfig, err error)) (RoutingConfig, error) {
 	// A boot-set binding is kept or refused as it stands; Google is not asked.
-	if _, locked := s.cfg.Locked(RoutingKey); locked {
+	if _, locked := s.cfg.Locked(ctx, RoutingKey); locked {
 		return s.write(ctx, settle)
 	}
 	for range probeAttempts {
@@ -186,13 +186,13 @@ func (s *RoutingStore) logger() *slog.Logger {
 // seen, with the lock when a boot source sets key. The update gate comes
 // first, as on a save, so a caller without it learns nothing of the lock.
 func (s *RoutingStore) LockFirst(ctx context.Context, key string, err error) error {
-	if _, locked := s.cfg.Locked(key); !locked || err == nil {
+	if _, locked := s.cfg.Locked(ctx, key); !locked || err == nil {
 		return err
 	}
 	if gate := auth.Require(ctx, routingSettingsObject, principal.ActionUpdate); gate != nil {
 		return gate
 	}
-	return s.cfg.LockFirst(key, err)
+	return s.cfg.LockFirst(ctx, key, err)
 }
 
 // Revision identifies the editable document independently of credentials. It
@@ -280,13 +280,13 @@ func (s *RoutingStore) write(ctx context.Context, settle func(current RoutingCon
 			return err
 		}
 		if err != nil {
-			return s.cfg.LockFirst(RoutingKey, err)
+			return s.cfg.LockFirst(ctx, RoutingKey, err)
 		}
 		written, served = stored, serving
 		// Compared by revision, as If-Match is: a resent boot binding settles to
 		// its canonical form, which need not be the decoded value field for field.
 		sameBinding := func(boot RoutingConfig) bool { return boot.Revision() == stored.Revision() }
-		if locked, err := config.LockedChange(s.cfg, Routing, sameBinding); locked || err != nil {
+		if locked, err := config.LockedChange(ctx, s.cfg, Routing, sameBinding); locked || err != nil {
 			return err
 		}
 		return config.SaveTx(ctx, s.cfg, tx, Routing, stored)

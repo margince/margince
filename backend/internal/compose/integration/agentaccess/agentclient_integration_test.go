@@ -88,6 +88,7 @@ func (o *oauthEnv) codeForm(code string) url.Values {
 }
 
 func TestAClientWithASecretConnectsAndRenewsOnlyWithIt(t *testing.T) {
+	t.Parallel()
 	o := setupOAuth(t)
 	client := o.registerAdminClient(t)
 	code := o.authorize(t, url.Values{"scope": {"read write offline_access"}})
@@ -142,6 +143,7 @@ func TestAClientWithASecretConnectsAndRenewsOnlyWithIt(t *testing.T) {
 // library that also sends a Basic header with an empty secret, or an empty
 // client_secret, must keep working.
 func TestASelfRegisteredClientStillConnectsWithNoSecret(t *testing.T) {
+	t.Parallel()
 	o := setupOAuth(t)
 	for name, headers := range map[string]map[string]string{
 		"form only":             nil,
@@ -167,6 +169,7 @@ func TestASelfRegisteredClientStillConnectsWithNoSecret(t *testing.T) {
 }
 
 func TestRotatingASecretCutsTheOldOneAndKeepsTheConnection(t *testing.T) {
+	t.Parallel()
 	o := setupOAuth(t)
 	selfRegistered := o.clientID
 	client := o.registerAdminClient(t)
@@ -202,6 +205,7 @@ func TestRotatingASecretCutsTheOldOneAndKeepsTheConnection(t *testing.T) {
 }
 
 func TestDisableBlocksLiveTokensAndEnableBringsThemBack(t *testing.T) {
+	t.Parallel()
 	o := setupOAuth(t)
 	client := o.registerAdminClient(t)
 	code := o.authorize(t, nil)
@@ -226,6 +230,7 @@ func TestDisableBlocksLiveTokensAndEnableBringsThemBack(t *testing.T) {
 }
 
 func TestDeletingAClientEndsEveryConnectionUnderIt(t *testing.T) {
+	t.Parallel()
 	o := setupOAuth(t)
 	client := o.registerAdminClient(t)
 	code := o.authorize(t, url.Values{"scope": {"read offline_access"}})
@@ -257,6 +262,7 @@ func TestDeletingAClientEndsEveryConnectionUnderIt(t *testing.T) {
 // A switch stops new sign-ins through its method, a returning human included,
 // and never a connection that is already renewing.
 func TestSwitchesStopNewSignInsAndNeverARenewal(t *testing.T) {
+	t.Parallel()
 	o := setupOAuth(t)
 	code := o.authorize(t, url.Values{"scope": {"read offline_access"}})
 	_, body, _ := o.postTokenWith(t, "/oauth/token", o.codeForm(code), nil)
@@ -308,6 +314,7 @@ func TestSwitchesStopNewSignInsAndNeverARenewal(t *testing.T) {
 }
 
 func TestTheSecretIsInNoAuditRowAndNoListResponse(t *testing.T) {
+	t.Parallel()
 	o := setupOAuth(t)
 	client := o.registerAdminClient(t)
 	var rotated struct {
@@ -332,6 +339,7 @@ func TestTheSecretIsInNoAuditRowAndNoListResponse(t *testing.T) {
 
 // RFC 7009: a confidential client's token is handed back only by that client.
 func TestOnlyTheConfidentialClientItselfRevokesItsToken(t *testing.T) {
+	t.Parallel()
 	o := setupOAuth(t)
 	client := o.registerAdminClient(t)
 	code := o.authorize(t, nil)
@@ -356,6 +364,7 @@ func TestOnlyTheConfidentialClientItselfRevokesItsToken(t *testing.T) {
 }
 
 func TestTheSignInReplyNamesTheIssuerDiscoveryAdvertises(t *testing.T) {
+	t.Parallel()
 	o := setupOAuth(t)
 	form := o.armConsent(t, nil)
 	form.Set("scopes", "read")
@@ -375,6 +384,7 @@ func TestTheSignInReplyNamesTheIssuerDiscoveryAdvertises(t *testing.T) {
 }
 
 func TestTheClientListRefusesRedirectsItCannotServe(t *testing.T) {
+	t.Parallel()
 	o := setupOAuth(t)
 	for name, uris := range map[string][]string{
 		"plain http":  {"http://evil.example/cb"},

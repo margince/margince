@@ -46,6 +46,7 @@ func (p *changedBeforeTheWrite) ActForOwner(owner ids.UUID) deals.OwnerAuthority
 }
 
 func TestAnOwnerWhoLeavesBeforeTheSweepWritesKeepsTheirDate(t *testing.T) {
+	t.Parallel()
 	for name, change := range ownerChanges {
 		t.Run(name, func(t *testing.T) {
 			e := setupCloseDate(t)
@@ -82,6 +83,7 @@ func TestAnOwnerWhoLeavesBeforeTheSweepWritesKeepsTheirDate(t *testing.T) {
 // A colleague who sets the close date after the sweep read the deal, and
 // before its write locks the row, keeps the date they set.
 func TestADateSetBeforeTheSweepWritesStands(t *testing.T) {
+	t.Parallel()
 	e := setupCloseDate(t)
 	id := e.seedSweepDeal(t, "Slipped but alive", e.early, nil, new(-12), 3)
 	human := today().AddDate(0, 0, 30)
@@ -143,6 +145,7 @@ func (p *bindsBeforeRecords) ActForOwner(owner ids.UUID) deals.OwnerAuthorityTx 
 // deals. The sweep binds the owner before it locks a deal, so the two cannot
 // wait on each other in a cycle.
 func TestTheSweepBindsTheOwnerBeforeItLocksADeal(t *testing.T) {
+	t.Parallel()
 	e := setupCloseDate(t)
 	owner := dealOwnerAuthority{db: e.DB(), users: identity.NewServiceFor(e.DB())}
 	policy := &bindsBeforeRecords{owner: owner}
@@ -186,6 +189,7 @@ func (p *switchedOffAfterTheWriteReads) CorrectsWithoutAsking(ctx context.Contex
 // A switch turned off after the sweep's write read the mode waits for that
 // write. It cannot commit under a write that already decided to run.
 func TestASwitchTurnedOffWaitsForTheSweepsWriteInFlight(t *testing.T) {
+	t.Parallel()
 	e := setupCloseDate(t)
 	if err := e.setSwitch(context.Background(), true); err != nil {
 		t.Fatal(err)

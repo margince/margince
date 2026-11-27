@@ -19,6 +19,7 @@ import (
 // These rows reproduce the old shape: an import lost its message identity,
 // and another arrival then stored the mailbox copy under its seat's key.
 func TestTheMailCopiesTaskKeepsFilesLinksReadStateAndHoldsOnce(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	kept, imported, scoped := ids.NewV7(), ids.NewV7(), ids.NewV7()
@@ -76,6 +77,7 @@ func TestTheMailCopiesTaskKeepsFilesLinksReadStateAndHoldsOnce(t *testing.T) {
 }
 
 func TestMailRepairPreservesCopiesReferencedByTasks(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	kept, duplicate, task := ids.NewV7(), ids.NewV7(), ids.NewV7()
 	const message = "referenced-copy@mail-task.test"

@@ -94,6 +94,7 @@ func badgeNeedsReply(t *testing.T, e *loadEnv, id ids.UUID) bool {
 }
 
 func TestADeclinedInvitationIsOwedNothingUnlessItAsks(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	if !owedNow(t, e, seedCalendarMail(t, e, "REPLY", OwedVerdictAsksUs)) {
 		t.Error("a calendar reply the classifier says asks us is not owed")
@@ -121,6 +122,7 @@ func TestADeclinedInvitationIsOwedNothingUnlessItAsks(t *testing.T) {
 // A rep took the mail on before its method was read back from the original.
 // The lane hands an accepted request to its reminder task, so the badge is read.
 func TestACalendarReplyARepTookOnStaysOwed(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	id := seedCalendarMail(t, e, "", "")
 	actor, ok := principal.Actor(e.as())
@@ -141,6 +143,7 @@ func TestACalendarReplyARepTookOnStaysOwed(t *testing.T) {
 // The record offers unjudged mail as a request to take on; a calendar copy is
 // not one.
 func TestTheRecordOffersNoUnjudgedCalendarReplyForReview(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	decline := seedCalendarMail(t, e, "REPLY", "")
 	invitation := seedCalendarMail(t, e, "REQUEST", "")
@@ -168,6 +171,7 @@ func TestTheRecordOffersNoUnjudgedCalendarReplyForReview(t *testing.T) {
 // A sender can mark any request REPLY. An unjudged calendar response stays off
 // the lane, but the classifier is still offered it, and its verdict decides.
 func TestAForgedCalendarReplyIsStillJudged(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	forged := seedCalendarMailSaying(t, e, "REPLY", "",
 		"Please send us a quote for 40 seats by Friday.")

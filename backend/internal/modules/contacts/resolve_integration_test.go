@@ -22,6 +22,7 @@ import (
 )
 
 func TestResolveFindsAContactByAClaimedAddress(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	contact, _ := e.seedEmployedContact(ctx, t, "Anna Weber", "anna@acme.example", "Acme GmbH", "acme.example")
@@ -52,6 +53,7 @@ func TestResolveFindsAContactByAClaimedAddress(t *testing.T) {
 // the tool above publishes that as "act on this", and the caller writes to
 // whichever of two contacts sorted first.
 func TestTwoAddressesNamingTwoContactsAreBothReported(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	anna, _ := e.seedEmployedContact(ctx, t, "Anna Weber", "anna@acme.example", "Acme GmbH", "acme.example")
@@ -78,6 +80,7 @@ func TestTwoAddressesNamingTwoContactsAreBothReported(t *testing.T) {
 // collision unless the lane was the phone one, because households, reception
 // desks and switchboards share numbers.
 func TestAPhoneHitIsReportedWithoutClaimingCertainty(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	created, err := e.store.CreateContact(ctx, CreateContactInput{
@@ -108,6 +111,7 @@ func TestAPhoneHitIsReportedWithoutClaimingCertainty(t *testing.T) {
 // the company tier is keyed on domain — so the derivation is what makes the
 // difference between an exact hit and a name guess.
 func TestResolveFindsACompanyByTheDomainInsideAnAddress(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	_, company := e.seedEmployedContact(ctx, t, "Anna Weber", "anna@acme.example", "Acme GmbH", "acme.example")
@@ -130,6 +134,7 @@ func TestResolveFindsACompanyByTheDomainInsideAnAddress(t *testing.T) {
 // A consumer-mail address contributes NO domain. Without this, every private
 // address would collide onto whichever company first claimed that provider.
 func TestResolveIgnoresAConsumerMailDomainOnACompany(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	_, holdings := e.seedEmployedContact(ctx, t, "Anna Weber", "anna@gmail.com", "Gmail Holdings", "gmail-holdings.test")
@@ -152,6 +157,7 @@ func TestResolveIgnoresAConsumerMailDomainOnACompany(t *testing.T) {
 // A mixed batch answers in order, one answer per candidate — the alignment every
 // caller depends on to know which answer belongs to which payload.
 func TestResolveAnswersAMixedBatchInOrder(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	contact, company := e.seedEmployedContact(ctx, t, "Anna Weber", "anna@acme.example", "Acme GmbH", "acme.example")
@@ -183,6 +189,7 @@ func TestResolveAnswersAMixedBatchInOrder(t *testing.T) {
 // runs — otherwise the refusal would arrive after the batch had already told
 // them which addresses exist.
 func TestResolveRefusesTheWholeBatchOnAMissingGrant(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.seedEmployedContact(ctx, t, "Anna Weber", "anna@acme.example", "Acme GmbH", "acme.example")

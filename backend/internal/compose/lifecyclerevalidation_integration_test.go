@@ -19,6 +19,7 @@ import (
 )
 
 func TestOneWorkstreamOrUnknownScopeDoesNotProposeEndingTheAccount(t *testing.T) {
+	t.Parallel()
 	for _, scope := range []string{"workstream", "unknown", ""} {
 		t.Run(scope, func(t *testing.T) {
 			e := integration.Setup(t)
@@ -35,6 +36,7 @@ func TestOneWorkstreamOrUnknownScopeDoesNotProposeEndingTheAccount(t *testing.T)
 }
 
 func TestChangedSourceCannotReleaseACompanyTermination(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := seedAccountAtStage(t, e, "customer")
 	signal := seedOpenContractEnded(t, e, company)
@@ -78,6 +80,7 @@ func TestChangedSourceCannotReleaseACompanyTermination(t *testing.T) {
 }
 
 func TestLifecycleUsesSourceOrderInsteadOfExtractionOrder(t *testing.T) {
+	t.Parallel()
 	for _, scope := range []string{"company", "workstream", "unknown"} {
 		t.Run(scope, func(t *testing.T) {
 			e := integration.Setup(t)
@@ -105,6 +108,7 @@ func TestLifecycleUsesSourceOrderInsteadOfExtractionOrder(t *testing.T) {
 }
 
 func TestSimultaneousConflictingScopesNeedReview(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := seedAccountAtStage(t, e, "customer")
 	at := time.Date(2026, 7, 1, 12, 0, 0, 0, time.UTC)
@@ -116,6 +120,7 @@ func TestSimultaneousConflictingScopesNeedReview(t *testing.T) {
 }
 
 func TestAnActiveAgreementPreventsEndingTheAccount(t *testing.T) {
+	t.Parallel()
 	for _, stagedFirst := range []bool{false, true} {
 		name := "existing agreement"
 		if stagedFirst {
@@ -169,6 +174,7 @@ func TestAnActiveAgreementPreventsEndingTheAccount(t *testing.T) {
 }
 
 func TestOnlyProjectDeliveryBlocksEndingTheAccount(t *testing.T) {
+	t.Parallel()
 	for _, phase := range []string{projects.PhaseInitiative, projects.PhasePursuing, projects.PhaseDelivering, projects.PhaseClosed} {
 		t.Run(phase, func(t *testing.T) {
 			e := integration.Setup(t)

@@ -21,6 +21,7 @@ import (
 )
 
 func TestRecordPreviewIncludesEmptyAndStructuredFields(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		entity, field, value, kind string
 		owner                      bool
@@ -80,6 +81,7 @@ func TestRecordPreviewIncludesEmptyAndStructuredFields(t *testing.T) {
 }
 
 func TestOwnerPreviewAllowsReplacingAnArchivedOwnerWithoutRevealingTheirName(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	seats := identity.NewServiceFor(e.DB())
@@ -127,6 +129,7 @@ func TestOwnerPreviewAllowsReplacingAnArchivedOwnerWithoutRevealingTheirName(t *
 }
 
 func TestReferencePreviewUsesCurrentAuthorizedCompanyNames(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	contact := e.SeedContact(t, "Dana", &e.AdminUser)

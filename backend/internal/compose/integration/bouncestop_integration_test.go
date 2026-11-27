@@ -158,6 +158,7 @@ func (b *bounceEnv) liveStops(t *testing.T) []string {
 // TestAHardBounceStopsTheAddress is the whole point. Before this the report
 // marked the row and the next message went out to the same dead mailbox.
 func TestAHardBounceStopsTheAddress(t *testing.T) {
+	t.Parallel()
 	b := setupBounce(t, "anna@dead.example")
 
 	if !b.report(t, connector.BounceHard) {
@@ -184,6 +185,7 @@ func TestAHardBounceStopsTheAddress(t *testing.T) {
 // address, the send was still refused with reason hard_bounce, because the
 // contact arm was matching and the address arm never had to.
 func TestTheStopNamesNoContact(t *testing.T) {
+	t.Parallel()
 	b := setupBounce(t, "anna@dead.example")
 	b.report(t, connector.BounceHard)
 
@@ -203,6 +205,7 @@ func TestTheStopNamesNoContact(t *testing.T) {
 // TestASoftBounceStopsNothing. A full mailbox or a greylisting server is not a
 // dead address, and stopping on one would silence somebody who went on holiday.
 func TestASoftBounceStopsNothing(t *testing.T) {
+	t.Parallel()
 	b := setupBounce(t, "anna@full.example")
 
 	if !b.report(t, connector.BounceSoft) {
@@ -219,6 +222,7 @@ func TestASoftBounceStopsNothing(t *testing.T) {
 // the same address. A row per report would fill the contact's history with
 // identical stops saying nothing the first one did not.
 func TestARedeliveredReportStopsTheAddressOnce(t *testing.T) {
+	t.Parallel()
 	b := setupBounce(t, "anna@dead.example")
 
 	b.report(t, connector.BounceHard)
@@ -245,6 +249,7 @@ func TestARedeliveredReportStopsTheAddressOnce(t *testing.T) {
 // record: a contact-scoped stop would silence every address that record has, so
 // correcting a typo in one would leave the others stopped.
 func TestABounceOnOneAddressStopsNobodyElse(t *testing.T) {
+	t.Parallel()
 	b := setupBounce(t, "anna@dead.example")
 	owner := OwnerConn(t)
 	if _, err := owner.Exec(context.Background(), `
@@ -272,6 +277,7 @@ func TestABounceOnOneAddressStopsNobodyElse(t *testing.T) {
 // must not rank with one — an address corrected by a rep has to clear, and a
 // subject-level stop would refuse every seat.
 func TestAnySeatLiftsABounceStop(t *testing.T) {
+	t.Parallel()
 	b := setupBounce(t, "anna@dead.example")
 	b.report(t, connector.BounceHard)
 
@@ -295,6 +301,7 @@ func TestAnySeatLiftsABounceStop(t *testing.T) {
 // as dead. Tying the stop to whether the ledger still had a mark to set left
 // the second dead mailbox live, with nothing anywhere saying so.
 func TestBothDeadRecipientsOfOneMessageAreStopped(t *testing.T) {
+	t.Parallel()
 	b := setupBounce(t, "anna@dead.example")
 	// A second dead recipient on the SAME message, staged the way the send path
 	// does. Both addresses are on the row, so both reports name a real send.
@@ -342,6 +349,7 @@ func TestBothDeadRecipientsOfOneMessageAreStopped(t *testing.T) {
 // matter. An unguarded fallback would have let anyone name any address and have
 // this installation stop writing to it.
 func TestAForgedReportStopsNothing(t *testing.T) {
+	t.Parallel()
 	b := setupBounce(t, "anna@dead.example")
 
 	// A real message id, a real reporting mailbox, and an address the message
@@ -371,6 +379,7 @@ func TestAForgedReportStopsNothing(t *testing.T) {
 // cannot reach these rows, because it reads by `id AND contact_id` and a bounce
 // stop deliberately names no contact.
 func TestACorrectedAddressIsWritableAgain(t *testing.T) {
+	t.Parallel()
 	b := setupBounce(t, "anna@dead.example")
 	b.report(t, connector.BounceHard)
 
@@ -388,6 +397,7 @@ func TestACorrectedAddressIsWritableAgain(t *testing.T) {
 // MACHINERY wrote about a mailbox, and must never reach one somebody made:
 // correcting an address does not undo somebody's objection.
 func TestLiftingAnAddressLeavesASubjectsOwnStopAlone(t *testing.T) {
+	t.Parallel()
 	b := setupBounce(t, "anna@dead.example")
 	b.report(t, connector.BounceHard)
 	// A subject-recorded stop on the same address, of the kind a rep writes
@@ -420,6 +430,7 @@ func TestLiftingAnAddressLeavesASubjectsOwnStopAlone(t *testing.T) {
 // about the subject and left their address standing in plaintext in a table
 // nothing would ever clean — the one outcome an erasure must not produce.
 func TestErasingTheSubjectDestroysTheirBounceStop(t *testing.T) {
+	t.Parallel()
 	b := setupBounce(t, "anna@dead.example")
 	b.report(t, connector.BounceHard)
 	if stops := b.liveStops(t); len(stops) != 1 {
@@ -450,6 +461,7 @@ func TestErasingTheSubjectDestroysTheirBounceStop(t *testing.T) {
 // walks past it — and the subject asking what is held about them would not be
 // told that this installation has stopped writing to an address of theirs.
 func TestTheExportTellsTheSubjectTheirAddressIsStopped(t *testing.T) {
+	t.Parallel()
 	b := setupBounce(t, "anna@dead.example")
 	b.report(t, connector.BounceHard)
 
@@ -478,6 +490,7 @@ func TestTheExportTellsTheSubjectTheirAddressIsStopped(t *testing.T) {
 // defect this closes is that nothing connected the two. A test reaching past
 // the seam would pass against a seam that was never wired.
 func TestABouncedNoticeReopensItsCase(t *testing.T) {
+	t.Parallel()
 	b := setupBounce(t, "anna@dead.example")
 	owner := OwnerConn(t)
 
@@ -531,6 +544,7 @@ func TestABouncedNoticeReopensItsCase(t *testing.T) {
 // the USER path, where user_id is set. A test that reaches the feature by a
 // route production does not use proves nothing about production.
 func TestAControllerMailBounceIsMatched(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	const address = "anna@dead.example"
@@ -599,6 +613,7 @@ func TestAControllerMailBounceIsMatched(t *testing.T) {
 // The stop describes an ADDRESS, so one row covers every message to it. A duty
 // describes a MESSAGE, and there is one per delivery.
 func TestASecondDeliveryToADeadAddressStillReopensItsDuty(t *testing.T) {
+	t.Parallel()
 	b := setupBounce(t, "anna@dead.example")
 	owner := OwnerConn(t)
 

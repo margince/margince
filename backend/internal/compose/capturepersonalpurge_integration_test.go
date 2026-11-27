@@ -30,6 +30,7 @@ import (
 )
 
 func TestPersonalMailIsDestroyedOnceItsWindowCloses(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	mail := seedPurgeableMail(t, e, "mama@familie.example", "Sonntag Essen?", e.Rep1)
 	resolvePersonal(t, e, "mama@familie.example", mail, e.Rep1, true)
@@ -47,6 +48,7 @@ func TestPersonalMailIsDestroyedOnceItsWindowCloses(t *testing.T) {
 // leaves the activity row standing. Without the guard, a destroyed message is
 // erased and audited again on every pass.
 func TestPersonalMailIsDestroyedOnlyOnce(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	mail := seedPurgeableMail(t, e, "mama@familie.example", "Sonntag Essen?", e.Rep1)
 	resolvePersonal(t, e, "mama@familie.example", mail, e.Rep1, true)
@@ -64,6 +66,7 @@ func TestPersonalMailIsDestroyedOnlyOnce(t *testing.T) {
 }
 
 func TestPersonalMailInsideItsWindowSurvives(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	mail := seedPurgeableMail(t, e, "mama@familie.example", "Sonntag Essen?", e.Rep1)
 	resolvePersonal(t, e, "mama@familie.example", mail, e.Rep1, true)
@@ -78,6 +81,7 @@ func TestPersonalMailInsideItsWindowSurvives(t *testing.T) {
 }
 
 func TestAMessageThatArrivedAfterTheVerdictGetsItsOwnWindow(t *testing.T) {
+	t.Parallel()
 	// The defect a verdict-keyed window ships: the sender keeps writing, and
 	// mail that arrived after the decision would be destroyed on arrival with no
 	// undo window at all — for exactly the messages a wrong verdict is most
@@ -101,6 +105,7 @@ func TestAMessageThatArrivedAfterTheVerdictGetsItsOwnWindow(t *testing.T) {
 }
 
 func TestAVerdictNobodyConfirmedWaitsLonger(t *testing.T) {
+	t.Parallel()
 	// Two authorities reach the same verdict and they are not worth the same. A
 	// contact said so on purpose; the classifier guessed and nobody has looked.
 	e := integration.Setup(t)
@@ -119,6 +124,7 @@ func TestAVerdictNobodyConfirmedWaitsLonger(t *testing.T) {
 }
 
 func TestOverrulingTheVerdictCancelsTheDestruction(t *testing.T) {
+	t.Parallel()
 	// The cancel that would silently not work: SenderOverrideStore.Set writes
 	// capture_sender_override and an audit row and never touches this ledger, so
 	// a selector that did not anti-join it would destroy the mail anyway while
@@ -138,6 +144,7 @@ func TestOverrulingTheVerdictCancelsTheDestruction(t *testing.T) {
 }
 
 func TestAnotherSeatsPersonalMailIsNotDestroyed(t *testing.T) {
+	t.Parallel()
 	// One rep's family member is another rep's customer. The verdict is per
 	// seat, and so is the destruction.
 	e := integration.Setup(t)
@@ -185,6 +192,7 @@ func archiveAuditRows(t *testing.T, e *integration.Env, activityID ids.UUID) int
 }
 
 func TestTheOwnersOwnRepliesSurviveAPersonalPurge(t *testing.T) {
+	t.Parallel()
 	// The seat's own sent mail is its own record, and a stranger's forged header
 	// must never reach it. capture_import rows are written whatever the
 	// direction, so a selector that does not say `inbound` destroys every reply
@@ -206,6 +214,7 @@ func TestTheOwnersOwnRepliesSurviveAPersonalPurge(t *testing.T) {
 }
 
 func TestAReplyDoesNotKeepPersonalMailButAContactLinkDoes(t *testing.T) {
+	t.Parallel()
 	// A reply carries no seat, so it stands for any colleague's; a contact link keeps mail.
 	e := integration.Setup(t)
 	replied := seedPurgeableMail(t, e, "doctor@praxis.example", "Krankmeldung", e.Rep1)
@@ -224,6 +233,7 @@ func TestAReplyDoesNotKeepPersonalMailButAContactLinkDoes(t *testing.T) {
 }
 
 func TestMailArrivingLongAfterTheVerdictIsNotDestroyedByIt(t *testing.T) {
+	t.Parallel()
 	// The forward bound. counterparty_email comes off an unauthenticated From
 	// header: forge one message, have it judged personal, and without this
 	// clause every later mail the REAL owner of that address sends is destroyed
@@ -385,6 +395,7 @@ func sweepPersonal(t *testing.T, e *integration.Env) int {
 // arm where the omission cost most: a pending access request loses the records
 // it was going to report, and the only trace is a count nobody reads as wrong.
 func TestPersonalMailAnOpenRequestIsAboutSurvivesItsWindow(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const address = "anwalt@kanzlei.example"
 	mail := seedPurgeableMail(t, e, address, "Mandat", e.Rep1)

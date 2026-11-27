@@ -34,8 +34,10 @@ type refusal struct {
 func dropNote(ns string) string { return scaffoldDown(ns) }
 
 func TestGateRefusesEveryShapeOutsideTheAllowlist(t *testing.T) {
+	t.Parallel()
 	for _, c := range refusalCases() {
 		t.Run(c.tag, func(t *testing.T) {
+			t.Parallel()
 			unit := unitName(t, c.tag)
 			ns := namespaceOf(t, unit)
 			err := runGate(t, unit, migrationDir(t, c.up(ns), c.down(ns)))
@@ -273,9 +275,10 @@ func relationRefusals() []refusal {
 // The gate is also a command, and a command's arguments are part of its
 // contract: a missing one must say which, not fail somewhere inside pgx.
 func TestGateRefusesIncompleteInvocations(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	dir := migrationDir(t, scaffoldUp("ext_x"), scaffoldDown("ext_x"))
-	dsn := ownerDSN(t)
+	dsn := gateDatabase(t)
 
 	for _, c := range []struct {
 		name           string
@@ -300,11 +303,12 @@ func TestGateRefusesIncompleteInvocations(t *testing.T) {
 // shipped nothing in it — which reads, everywhere else in the build, as a unit
 // with migrations.
 func TestGateRefusesAnEmptyMigrationsDirectory(t *testing.T) {
+	t.Parallel()
 	empty := filepath.Join(t.TempDir(), "migrations")
 	if err := os.Mkdir(empty, 0o750); err != nil {
 		t.Fatalf("creating the empty migrations directory: %v", err)
 	}
-	err := run(context.Background(), unitName(t, "empty"), empty, ownerDSN(t))
+	err := run(context.Background(), unitName(t, "empty"), empty, gateDatabase(t))
 	requireRefusal(t, err, "holds no NNNN_name.up.sql/.down.sql pair")
 }
 
@@ -312,9 +316,11 @@ func TestGateRefusesAnEmptyMigrationsDirectory(t *testing.T) {
 // adopting or dropping it: the role is cluster-scoped and named from the unit,
 // so dropping one in use would corrupt the OTHER run.
 func TestGateRefusesWhileAnotherRunHoldsTheRole(t *testing.T) {
+	t.Parallel()
 	unit := unitName(t, "busy")
 	ns := namespaceOf(t, unit)
-	owner := admin(t)
+	dsn := gateDatabase(t)
+	owner := admin(t, dsn)
 	ctx := context.Background()
 
 	password, err := randomPassword()
@@ -332,14 +338,14 @@ func TestGateRefusesWhileAnotherRunHoldsTheRole(t *testing.T) {
 		}
 	})
 
-	held := connectAs(t, ns, password)
+	held := connectAs(t, dsn, ns, password)
 	defer func() {
 		if err := held.Close(context.Background()); err != nil {
 			t.Errorf("closing the held session: %v", err)
 		}
 	}()
 
-	requireRefusal(t, run(ctx, unit, migrationDir(t, scaffoldUp(ns), scaffoldDown(ns)), ownerDSN(t)),
+	requireRefusal(t, run(ctx, unit, migrationDir(t, scaffoldUp(ns), scaffoldDown(ns)), dsn),
 		"live session", ns)
 }
 
@@ -349,22 +355,18 @@ func TestGateRefusesWhileAnotherRunHoldsTheRole(t *testing.T) {
 // what the cluster grants to PUBLIC underneath it — which is exactly how a
 // real cluster would drift into making this gate vacuous.
 func TestGateRefusesARoleTheClusterHasWidened(t *testing.T) {
-	owner := admin(t)
-	ctx := context.Background()
-
+	t.Parallel()
 	for _, c := range []struct {
-		tag, name, setup, restore, mustMention string
+		tag, name, setup, mustMention string
 	}{{
 		tag:         "widenc",
 		name:        "create on public",
 		setup:       `GRANT CREATE ON SCHEMA public TO PUBLIC`,
-		restore:     `REVOKE CREATE ON SCHEMA public FROM PUBLIC`,
 		mustMention: "holds CREATE on schema public",
 	}, {
 		tag:         "widenu",
 		name:        "no usage on public",
 		setup:       `REVOKE USAGE ON SCHEMA public FROM PUBLIC`,
-		restore:     `GRANT USAGE ON SCHEMA public TO PUBLIC`,
 		mustMention: "cannot USE schema public",
 	}, {
 		// The DML-on-core refusal is PostgreSQL denying the statement, and this
@@ -373,7 +375,6 @@ func TestGateRefusesARoleTheClusterHasWidened(t *testing.T) {
 		tag:         "widentbl",
 		name:        "insert on every core table",
 		setup:       `GRANT INSERT ON ALL TABLES IN SCHEMA public TO PUBLIC`,
-		restore:     `REVOKE INSERT ON ALL TABLES IN SCHEMA public FROM PUBLIC`,
 		mustMention: "can read, write or trigger on public.",
 	}, {
 		// TRIGGER is a write verb wearing another name: a role holding it can
@@ -382,7 +383,6 @@ func TestGateRefusesARoleTheClusterHasWidened(t *testing.T) {
 		tag:         "widentrg",
 		name:        "trigger on every core table",
 		setup:       `GRANT TRIGGER ON ALL TABLES IN SCHEMA public TO PUBLIC`,
-		restore:     `REVOKE TRIGGER ON ALL TABLES IN SCHEMA public FROM PUBLIC`,
 		mustMention: "can read, write or trigger on public.",
 	}, {
 		// The gate grants REFERENCES on public.workspace(id) itself, so the
@@ -393,24 +393,20 @@ func TestGateRefusesARoleTheClusterHasWidened(t *testing.T) {
 		tag:         "widenref",
 		name:        "references on every core table",
 		setup:       `GRANT REFERENCES ON ALL TABLES IN SCHEMA public TO PUBLIC`,
-		restore:     `REVOKE REFERENCES ON ALL TABLES IN SCHEMA public FROM PUBLIC`,
 		mustMention: "can declare a foreign key against public.",
 	}} {
 		t.Run(c.name, func(t *testing.T) {
-			if _, err := owner.Exec(ctx, c.setup); err != nil {
+			t.Parallel()
+			// The widening lands on a database of the subtest's own, so no
+			// other test ever runs on it and nothing needs restoring.
+			dsn := gateDatabase(t)
+			if _, err := admin(t, dsn).Exec(context.Background(), c.setup); err != nil {
 				t.Fatalf("%s: %v", c.setup, err)
 			}
-			// Restored before the assertion runs, so a failing assertion cannot
-			// leave the rest of the package running on a widened cluster.
-			defer func() {
-				if _, err := owner.Exec(context.Background(), c.restore); err != nil {
-					t.Fatalf("%s: %v", c.restore, err)
-				}
-			}()
 
 			unit := unitName(t, c.tag)
 			ns := namespaceOf(t, unit)
-			requireRefusal(t, runGate(t, unit, migrationDir(t, scaffoldUp(ns), scaffoldDown(ns))), c.mustMention)
+			requireRefusal(t, runGateOn(t, dsn, unit, migrationDir(t, scaffoldUp(ns), scaffoldDown(ns))), c.mustMention)
 		})
 	}
 }
@@ -433,6 +429,7 @@ func TestGateRefusesARoleTheClusterHasWidened(t *testing.T) {
 // legacy conversion refuses a table carrying indexes or constraints, and a
 // fixture that failed for THAT reason would prove nothing about _RETURN.
 func TestGateRefusesAManualReturnRule(t *testing.T) {
+	t.Parallel()
 	unit := unitName(t, "retrule")
 	ns := namespaceOf(t, unit)
 	up := scaffoldUp(ns) + fmt.Sprintf(`

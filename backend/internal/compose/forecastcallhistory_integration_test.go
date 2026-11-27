@@ -25,6 +25,7 @@ import (
 // seat reads the totals. The history answers only a seat that may assert about
 // the population, and refuses the rest as recording a call would.
 func TestTheCallHistoryAnswersOnlyASeatThatMayAssertAboutThePopulation(t *testing.T) {
+	t.Parallel()
 	q := seedTargetQuarter(t)
 	recordTeamCall(t, q, q.env.Team1, 30_000_000)
 	recordTeamCall(t, q, q.env.Team2, 20_000_000)

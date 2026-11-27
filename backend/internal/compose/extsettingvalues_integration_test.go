@@ -23,6 +23,7 @@ import (
 )
 
 func TestUnitSettingValuesAreAdminOnlyAuditedAndKeepEachUnitsOwn(t *testing.T) {
+	t.Parallel()
 	e := setupCRMIngress(t)
 	store := NewSettingsStore(e.Pool)
 
@@ -57,17 +58,17 @@ func TestUnitSettingValuesAreAdminOnlyAuditedAndKeepEachUnitsOwn(t *testing.T) {
 }
 
 func TestAUnitNeedsSetupUntilItsWorkspaceSecretIsStored(t *testing.T) {
+	t.Parallel()
 	e := setupExtRuntime(t)
 	const unit = "setup-probe"
-	t.Cleanup(func() { setComposedExtensions(nil) })
-	setComposedExtensions([]extension.Extension{{Name: unit, Version: "1.0.0", Secrets: []extension.SecretsRequest{
+	composed := &Extensions{units: []extension.Extension{{Name: unit, Version: "1.0.0", Secrets: []extension.SecretsRequest{
 		{Key: "api-key", Scope: extension.SecretScopeWorkspace},
 		{Key: "own-token", Scope: extension.SecretScopeUser},
-	}}})
+	}}}}
 	list := func(ctx context.Context) *[]crmcontracts.ComposedExtensionSetupItem {
 		t.Helper()
 		rec := httptest.NewRecorder()
-		extensionsHandlers{pool: e.Pool}.ListExtensions(rec, httptest.NewRequest(http.MethodGet, "/v1/extensions", nil).WithContext(ctx))
+		extensionsHandlers{extensions: composed, pool: e.Pool}.ListExtensions(rec, httptest.NewRequest(http.MethodGet, "/v1/extensions", nil).WithContext(ctx))
 		var got crmcontracts.ExtensionDirectory
 		if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil || rec.Code != http.StatusOK || len(got.Extensions) != 1 {
 			t.Fatalf("list → %d %s (decode err %v)", rec.Code, rec.Body.String(), err)

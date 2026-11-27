@@ -16,6 +16,7 @@ import (
 )
 
 func TestPublicBookingPendingCancellationAndPausedPage(t *testing.T) {
+	t.Parallel()
 	e := setupBookingApp(t)
 	e.BootstrapWorkspace(t)
 	apptest.EnableGoogleBookingPage(t, e)
@@ -80,6 +81,7 @@ func TestPublicBookingPendingCancellationAndPausedPage(t *testing.T) {
 }
 
 func TestProposalReplayRehydratesTheVaultWithoutStoringTheCapability(t *testing.T) {
+	t.Parallel()
 	e := setupBookingApp(t)
 	e.BootstrapWorkspace(t)
 	apptest.EnableGoogleBookingPage(t, e)

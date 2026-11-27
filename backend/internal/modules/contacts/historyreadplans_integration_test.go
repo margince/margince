@@ -64,6 +64,7 @@ func (n mailboxPlanNode) boundsHistoryRows(limit int) bool {
 // reader, because writing it costs far more than all the reads together. Each
 // reader's own records are added after the readers before it have run.
 func TestHistoryReadsSeekPastAnUnrelatedInstallation(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	connected := time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC)
 	e.seedHistoryReadBackground(e.as(), t, connected)
@@ -225,6 +226,11 @@ func (e *dedupeEnv) seedHistoryReadBackground(ctx context.Context, t *testing.T,
 			return err
 		}); err != nil {
 			t.Fatal(err)
+		}
+		// A fresh database has no statistics, and the insert triggers would plan
+		// every later batch for an empty activity table.
+		if after == 0 {
+			analyzeAsOwner(t, "activity", "activity_participant", "capture_import")
 		}
 	}
 	for after := 0; after < historyBackground; after += historyBatch {

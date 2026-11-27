@@ -90,6 +90,7 @@ func (f *fixture) readerEvidence(deal ids.DealID) (int, int) {
 }
 
 func TestALoneColleaguesStageOutcomesMoveNoReadersChanceWhileTheSwitchIsOff(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	f.wonFrom(20, f.env.Rep2)
 	today := clocktest.Now(t)
@@ -114,6 +115,7 @@ func TestALoneColleaguesStageOutcomesMoveNoReadersChanceWhileTheSwitchIsOff(t *t
 }
 
 func TestStageOutcomesOfEnoughColleaguesStillMoveTheChanceWhileTheSwitchIsOff(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	f.wonFrom(21, f.liveSeat("ana"), f.liveSeat("ben"), f.liveSeat("cleo"))
 	today := clocktest.Now(t)
@@ -132,6 +134,7 @@ func TestStageOutcomesOfEnoughColleaguesStillMoveTheChanceWhileTheSwitchIsOff(t 
 }
 
 func TestAQuietEffectLearnedFromALoneColleaguesDealsFallsBackWhileTheSwitchIsOff(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	// A year back, so no forecast of this quarter counts the settled deals.
 	f.at = clocktest.Now(t).AddDate(-1, 0, 0)
@@ -194,6 +197,7 @@ func (f *fixture) team(name string, members ...ids.UUID) {
 // member of two of the teams reads both as "My teams". That leaves the third
 // team's one colleague, so the outcomes count for no reader.
 func TestStageOutcomesOneMyTeamsTotalWouldLeaveToOneColleagueMoveNoChance(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	a1, a2, b1, b2, c, lead := f.liveSeat("a1"), f.liveSeat("a2"), f.liveSeat("b1"), f.liveSeat("b2"), f.liveSeat("c"), f.liveSeat("lead")
 	f.team("north", a1, a2, lead)

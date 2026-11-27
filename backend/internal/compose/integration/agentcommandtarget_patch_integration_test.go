@@ -18,6 +18,7 @@ import (
 // An agent on a colleague's passport overwrites a name a human typed at once,
 // as the colleague could in the app. It stages nothing for anyone to approve.
 func TestARestPatchOnAColleaguesPassportOverwritesAHumanWrittenNameAtOnce(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	contactID := createdID(t, e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Ines Human"})

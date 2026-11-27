@@ -36,6 +36,7 @@ func insertParticipantIdentity(conn *pgx.Conn, activity string, identity partici
 // The digest input joins four columns, so the cases are pairs a careless join folds into one.
 // They are a null beside an empty text, and a text holding the separator.
 func TestAParticipantKeyTellsEveryIdentityApart(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	headSchema(t, conn)

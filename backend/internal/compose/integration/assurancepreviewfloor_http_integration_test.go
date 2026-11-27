@@ -20,6 +20,7 @@ import (
 // With the reader and one colleague, each count less the reader's own is the
 // colleague's. While the switch is off the preview is refused.
 func TestIndividualPerformanceOffRefusesAPreviewOfOneColleaguesChecks(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupAppWithOptions(t, compose.WithAssuranceRun(nil))
 	me, colleague, _ := twoSellerTeam(t, e, "preview-floor")
 	stages := apptest.DiscoverSeededPipeline(t, e)

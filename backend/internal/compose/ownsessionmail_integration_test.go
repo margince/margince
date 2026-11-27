@@ -17,6 +17,7 @@ import (
 // them, as the conversation shows it. The digest still lists it. Handed to a
 // colleague since, it is emailed to them like any other.
 func TestAnApprovalStagedInTheDecidersOwnSessionIsNotEmailed(t *testing.T) {
+	t.Parallel()
 	a := newApprovalNotifyEnv(t)
 	a.grantRole(t, a.e.AdminUser)
 	a.grantRole(t, a.e.Rep1)

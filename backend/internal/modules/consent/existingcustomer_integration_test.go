@@ -143,6 +143,7 @@ func customerEnv(t *testing.T) (*resolveEnv, ids.UUID, time.Time) {
 var newsletterSend = commsauthz.Request{LegacyPurposeKey: "newsletter"}
 
 func TestADeclaredNoticeCarriesMarketingToAnExistingCustomer(t *testing.T) {
+	t.Parallel()
 	e, newsletter, _ := customerEnv(t)
 	if got := e.decide(t, newsletterSend); got.Verdict == commsauthz.VerdictAllow {
 		t.Fatalf("verdict = allow before any declaration: the fixture proves nothing")
@@ -161,6 +162,7 @@ func TestADeclaredNoticeCarriesMarketingToAnExistingCustomer(t *testing.T) {
 // The stakeholder role is free text, so a buyer stored in other case or with
 // outer whitespace is still the buyer of the sale.
 func TestABuyerRoleInOtherCaseStillMakesACustomer(t *testing.T) {
+	t.Parallel()
 	for _, typed := range []string{" Economic_Buyer ", "\tEconomic_Buyer\n", "\u00a0economic_buyer"} {
 		t.Run(typed, func(t *testing.T) {
 			e, newsletter, _ := customerEnv(t)
@@ -211,6 +213,7 @@ var customerConditions = []customerCase{
 }
 
 func TestEachExistingCustomerConditionIsNeeded(t *testing.T) {
+	t.Parallel()
 	for _, tc := range customerConditions {
 		t.Run(tc.name, func(t *testing.T) {
 			e, newsletter, soldAt := customerEnv(t)
@@ -226,6 +229,7 @@ func TestEachExistingCustomerConditionIsNeeded(t *testing.T) {
 // The sale is an accepted offer of the sending entity. No case below has one
 // that counts.
 func TestASaleIsAnAcceptedOfferOfTheSendingEntity(t *testing.T) {
+	t.Parallel()
 	for name, plant := range map[string]func(t *testing.T, e *resolveEnv, at time.Time){
 		"a won deal with no accepted offer": func(t *testing.T, e *resolveEnv, at time.Time) {
 			deal, offer := e.saleAt(t, e.defaultEntity(t), at)
@@ -278,6 +282,7 @@ func (e *resolveEnv) marketingVerdict(t *testing.T, marketing MarketingContext) 
 }
 
 func TestTheVerdictNamesTheSaleItAllowedOn(t *testing.T) {
+	t.Parallel()
 	e, newsletter, soldAt := customerEnv(t)
 	n := e.declare(t, e.defaultEntity(t), soldAt.Add(-year), nil, newsletter)
 	de := messaging.MarketingException{Kind: messaging.ExistingCustomer, RequiresSaleEvidence: true,
@@ -293,6 +298,7 @@ func TestTheVerdictNamesTheSaleItAllowedOn(t *testing.T) {
 }
 
 func TestOnlyASignedInConsentAdminDeclaresANotice(t *testing.T) {
+	t.Parallel()
 	e, newsletter, _ := customerEnv(t)
 	in := DeclareNoticeInput{
 		LegalEntityID: e.defaultEntity(t), CustomerGroup: "Buyers", CollectionChannel: "order form",
@@ -314,6 +320,7 @@ func TestOnlyASignedInConsentAdminDeclaresANotice(t *testing.T) {
 }
 
 func TestADeclarationStatesAPastPeriodAndMarketingPurposes(t *testing.T) {
+	t.Parallel()
 	e, newsletter, _ := customerEnv(t)
 	e.seedPurpose(t, "service", "transactional")
 	now := clocktest.Now(t)
@@ -353,6 +360,7 @@ func TestADeclarationStatesAPastPeriodAndMarketingPurposes(t *testing.T) {
 // The buyer of a sale counts and a colleague on the same deal who only
 // advised does not. A billing contact of the buyer company counts too.
 func TestOnlyTheBuyerOfASaleIsItsCustomer(t *testing.T) {
+	t.Parallel()
 	e, newsletter, soldAt := customerEnv(t)
 	e.declare(t, e.defaultEntity(t), soldAt.Add(-year), nil, newsletter)
 	if got := e.decide(t, newsletterSend); got.Verdict != commsauthz.VerdictAllow {
@@ -384,6 +392,7 @@ func TestOnlyTheBuyerOfASaleIsItsCustomer(t *testing.T) {
 // seat that had ended by then makes nobody a customer, and a seat that ended
 // later still does.
 func TestASeatThatEndedBeforeTheSaleMakesNoCustomer(t *testing.T) {
+	t.Parallel()
 	e, newsletter, soldAt := customerEnv(t)
 	e.declare(t, e.defaultEntity(t), soldAt.Add(-year), nil, newsletter)
 	endSeat := func(days int) {
@@ -403,6 +412,7 @@ func TestASeatThatEndedBeforeTheSaleMakesNoCustomer(t *testing.T) {
 // A declaration back-dated without proof covers no sale before the day it is
 // declared; the same declaration with dated proof covers it.
 func TestABackDatedDeclarationNeedsDatedProof(t *testing.T) {
+	t.Parallel()
 	e, newsletter, soldAt := customerEnv(t)
 	if _, err := e.store.DeclareCustomerNotice(e.consentAdminCtx(), DeclareNoticeInput{
 		LegalEntityID: e.defaultEntity(t), CustomerGroup: "Web shop buyers", CollectionChannel: "checkout",
@@ -428,6 +438,7 @@ func TestABackDatedDeclarationNeedsDatedProof(t *testing.T) {
 
 // A message naming two different purposes is refused, whichever it is judged by.
 func TestAMessageNamingTwoPurposesIsRefused(t *testing.T) {
+	t.Parallel()
 	e, newsletter, soldAt := customerEnv(t)
 	e.declare(t, e.defaultEntity(t), soldAt.Add(-year), nil, newsletter)
 	e.seedPurpose(t, "events", "marketing")
@@ -443,6 +454,7 @@ func TestAMessageNamingTwoPurposesIsRefused(t *testing.T) {
 // The staging row of a send on the route names the entity, the purpose, the
 // declaration and the sale it rested on.
 func TestTheDecisionRowNamesTheGroundItRestedOn(t *testing.T) {
+	t.Parallel()
 	e, newsletter, soldAt := customerEnv(t)
 	n := e.declare(t, e.defaultEntity(t), soldAt.Add(-year), nil, newsletter)
 	delivery := e.plantDelivery(t)
@@ -472,6 +484,7 @@ func TestTheDecisionRowNamesTheGroundItRestedOn(t *testing.T) {
 // records no address, so it is the buyer's address row held from before the
 // acceptance.
 func TestOnlyTheAddressThatCameWithTheSaleCarriesTheRoute(t *testing.T) {
+	t.Parallel()
 	e, newsletter, soldAt := customerEnv(t)
 	e.declare(t, e.defaultEntity(t), soldAt.Add(-year), nil, newsletter)
 	if got := e.decide(t, newsletterSend); got.Verdict != commsauthz.VerdictAllow {

@@ -7,7 +7,6 @@ package meetingbrief
 
 import (
 	"context"
-	"os"
 	"testing"
 	"time"
 
@@ -24,8 +23,9 @@ import (
 // millisecond. A bound of four rows reads part of both groups. The history must
 // then widen, or it names a copy that is not the shown one.
 func TestTheHistoryWidensWhenItsBoundCutsTheOldestSecond(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
-	owner, err := pgx.Connect(ctx, os.Getenv("MARGINCE_TEST_DSN"))
+	owner, err := pgx.Connect(ctx, testdb.For(t).OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}

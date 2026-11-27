@@ -96,6 +96,7 @@ func (e *cimdEnv) unusedSelfMade(t *testing.T) int {
 // A full cap makes room instead of refusing: someone filling it cannot shut a
 // real tool out, and the never-used clients stay at the cap.
 func TestAFullCapMakesRoomByRemovingTheOldestUnusedClient(t *testing.T) {
+	t.Parallel()
 	e := setupCIMD(t, "dcr-cap")
 	h := Handlers{svc: e.svc}.WithUnusedDynamicClientCap(2)
 	admin := e.actorWith(t, fullAgentClientGrant)
@@ -135,6 +136,7 @@ func TestAFullCapMakesRoomByRemovingTheOldestUnusedClient(t *testing.T) {
 // A metadata-document client is a self-made client too: its first resolution
 // is held to the cap a registration is.
 func TestADocumentClientMakesRoomUnderTheSameCap(t *testing.T) {
+	t.Parallel()
 	e := setupCIMD(t, "cimd-cap")
 	h := Handlers{svc: e.svc}.WithUnusedDynamicClientCap(1)
 	_, registered := e.selfRegister(t, h, "Tool")
@@ -159,6 +161,7 @@ func TestADocumentClientMakesRoomUnderTheSameCap(t *testing.T) {
 // appears only at the token exchange. A registration flood at the cap must not
 // evict it mid-consent, so the table goes over the cap instead.
 func TestAClientStillSigningInIsNotEvictedAtTheCap(t *testing.T) {
+	t.Parallel()
 	e := setupCIMD(t, "dcr-window")
 	h := Handlers{svc: e.svc}.WithUnusedDynamicClientCap(1)
 	_, signingIn := e.selfRegister(t, h, "Signing-in")
@@ -181,6 +184,7 @@ func TestAClientStillSigningInIsNotEvictedAtTheCap(t *testing.T) {
 // A disabled document client is the ban on its URL. Neither the cap nor the
 // sweep may delete it, or the next sign-in would fetch the document again.
 func TestADisabledDocumentClientSurvivesTheCapAndTheSweep(t *testing.T) {
+	t.Parallel()
 	e := setupCIMD(t, "cimd-disabled")
 	h := Handlers{svc: e.svc}.WithUnusedDynamicClientCap(1)
 	banned := e.docs.URL + "/client.json"
@@ -213,6 +217,7 @@ func TestADisabledDocumentClientSurvivesTheCapAndTheSweep(t *testing.T) {
 }
 
 func TestTheSweepDeletesOnlyOldSelfRegisteredClientsNoConsentUsed(t *testing.T) {
+	t.Parallel()
 	e := setupCIMD(t, "dcr-sweep")
 	h := Handlers{svc: e.svc}
 	clients := map[string]string{}
@@ -268,6 +273,7 @@ func TestTheSweepDeletesOnlyOldSelfRegisteredClientsNoConsentUsed(t *testing.T) 
 // that client and still deletes the rest of its batch, and the consent then
 // commits.
 func TestTheSweepLeavesAClientAConsentHoldsAndDeletesTheRest(t *testing.T) {
+	t.Parallel()
 	e := setupCIMD(t, "dcr-race")
 	h := Handlers{svc: e.svc}
 	_, held := e.selfRegister(t, h, "Held")

@@ -41,7 +41,11 @@ func (s *Store) relinkDealReferences(ctx context.Context, tx pgx.Tx, sourceID, t
 	if err := s.installation.CarryGrants(ctx, tx, dealTable, sourceID.UUID, targetID.UUID); err != nil {
 		return tally, fmt.Errorf("carry the merged-away deal's grants: %w", err)
 	}
-	if err := recordmerge.MoveKindIDRows(ctx, tx, dealTable, sourceID.UUID, targetID.UUID); err != nil {
+	reached, err := s.installation.MergeReach()
+	if err != nil {
+		return tally, err
+	}
+	if err := recordmerge.MoveKindIDRows(ctx, tx, reached, dealTable, sourceID.UUID, targetID.UUID); err != nil {
 		return tally, err
 	}
 	return tally, nil

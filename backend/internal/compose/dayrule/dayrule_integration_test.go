@@ -23,6 +23,7 @@ import (
 )
 
 func TestThePersonalSurfaceFollowsTheMemberAndTheCombinedOneTheInstallation(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	e.WsExec(t, `UPDATE setting SET value = '"Europe/Berlin"'::jsonb WHERE key = 'installation.timezone'`)
 	e.WsExec(t, `UPDATE app_user SET timezone = 'Asia/Ho_Chi_Minh' WHERE id = $1`, e.Rep1)
@@ -70,6 +71,7 @@ func TestThePersonalSurfaceFollowsTheMemberAndTheCombinedOneTheInstallation(t *t
 }
 
 func TestTheActingReadersZoneIsTheirOwnWithTheInstallationAsFallback(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	e.WsExec(t, `UPDATE setting SET value = '"Europe/Berlin"'::jsonb WHERE key = 'installation.timezone'`)
 	e.WsExec(t, `UPDATE app_user SET timezone = 'Asia/Ho_Chi_Minh' WHERE id = $1`, e.Rep1)
@@ -88,6 +90,7 @@ func TestTheActingReadersZoneIsTheirOwnWithTheInstallationAsFallback(t *testing.
 }
 
 func TestForAssigneeFollowsWhoseRecordsTheReadIsAbout(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	e.WsExec(t, `UPDATE setting SET value = '"Europe/Berlin"'::jsonb WHERE key = 'installation.timezone'`)
 	e.WsExec(t, `UPDATE app_user SET timezone = 'Asia/Ho_Chi_Minh' WHERE id = $1`, e.Rep1)
@@ -115,6 +118,7 @@ func TestForAssigneeFollowsWhoseRecordsTheReadIsAbout(t *testing.T) {
 // through the pool or inside the read's transaction. A read without the memo
 // asks every time.
 func TestOneReadResolvesEachZoneOnce(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	e.WsExec(t, `UPDATE app_user SET timezone = 'Asia/Ho_Chi_Minh' WHERE id = $1`, e.Rep1)
 	reader := e.As(e.Rep1, nil, integration.RepPerms)

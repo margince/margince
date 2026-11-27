@@ -158,6 +158,7 @@ func euros(cents map[string]int64) map[string]int64 {
 // groups add up to every won deal. Reclassifying one unassigned deal moves its
 // money to North and leaves the total where it was.
 func TestTheTerritoryExampleGroupsSalesWonAndReclassifies(t *testing.T) {
+	t.Parallel()
 	b := newTerritoryBook(t)
 	for range 5 {
 		b.deal(t, "North", 36_000, true)
@@ -194,6 +195,7 @@ func TestTheTerritoryExampleGroupsSalesWonAndReclassifies(t *testing.T) {
 // The forecast is a deal population too, so a Territory filter narrows it
 // rather than being ignored: North's forecast counts North's open deals.
 func TestTheForecastTakesTheTerritoryFilter(t *testing.T) {
+	t.Parallel()
 	b := newTerritoryBook(t)
 	for range 5 {
 		b.deal(t, "North", 10_000, false)

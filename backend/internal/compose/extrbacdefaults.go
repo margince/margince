@@ -54,32 +54,19 @@ func extensionRbacDefaults(verbs []extension.Verb) ([]identity.RbacDefault, erro
 	return out, nil
 }
 
-// registerRbacDefaults hands the declared defaults to identity, after the
-// objects they grant on are registered. Validate-then-apply like the objects: a
-// set refused in the validate phase never reaches here.
-func registerRbacDefaults(defaults []identity.RbacDefault) error {
-	if len(defaults) == 0 {
-		return nil
-	}
-	if err := identity.RegisterRbacDefaults(defaults...); err != nil {
-		return fmt.Errorf("compose: %w", err)
-	}
-	return nil
-}
-
-// FillExtensionRbacDefaults writes the registered default grants into the
+// FillExtensionRbacDefaults writes the composition's default grants into the
 // system roles that have no entry for the object. Every process role calls it
 // once the installation is bound. The fill is idempotent and serialized, so the
 // api and the worker booting together write each entry once.
 //
 // Before bootstrap there is no role set to fill. That is "not yet", not an
-// error, because the seed writes the registered defaults with the role set.
-func FillExtensionRbacDefaults(ctx context.Context, pool *pgxpool.Pool, log *slog.Logger) error {
+// error, because the seed writes the composition's defaults with the role set.
+func FillExtensionRbacDefaults(ctx context.Context, pool *pgxpool.Pool, log *slog.Logger, composed *Extensions) error {
 	ctx, bootstrapped, err := bootLedgerScope(ctx, pool, "system:rbac-defaults")
 	if err != nil || !bootstrapped {
 		return err
 	}
-	filled, err := identity.NewService(pool).FillRbacDefaults(ctx)
+	filled, err := identity.NewService(pool).WithRbacObjects(composed.RbacObjects()).FillRbacDefaults(ctx)
 	if err != nil {
 		return err
 	}

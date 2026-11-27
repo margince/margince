@@ -20,6 +20,7 @@ import (
 // The point of the widening: an installation can say it captures no
 // promotions, once, for everybody.
 func TestAProviderCategoryMayBindTheWholeInstallation(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	store := capture.NewExclusionStore(InstallationDB(e.Pool))
 
@@ -34,6 +35,7 @@ func TestAProviderCategoryMayBindTheWholeInstallation(t *testing.T) {
 // somebody made lives in one mailbox, so a workspace rule over it would bind
 // every colleague's connection to a place that does not exist there.
 func TestALabelSomebodyMadeStillCannotBindEverybody(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	store := capture.NewExclusionStore(InstallationDB(e.Pool))
 
@@ -47,6 +49,7 @@ func TestALabelSomebodyMadeStillCannotBindEverybody(t *testing.T) {
 // And the refusal is a stated one rather than a constraint violation reaching
 // a reader as a 500: the writer checks before the database does.
 func TestTheRefusalNamesTheScopeRatherThanFailingOnTheConstraint(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	store := capture.NewExclusionStore(InstallationDB(e.Pool))
 
@@ -64,6 +67,7 @@ func TestTheRefusalNamesTheScopeRatherThanFailingOnTheConstraint(t *testing.T) {
 // A provider category is still writable as somebody's own rule — widening the
 // scope it MAY take does not take away the one it had.
 func TestAProviderCategoryIsStillWritableAsAPersonalRule(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	store := capture.NewExclusionStore(InstallationDB(e.Pool))
 

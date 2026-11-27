@@ -52,6 +52,7 @@ func publishQuestions(t *testing.T, e *channelConsentEnv) {
 // news and the link pins no question. An answer to one is refused, and the
 // link stays unspent.
 func TestARecordCheckAsksNoNewsWhereTheRecipientsRulesBarIt(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	stager := &recordingStager{}
 	e.store = e.store.WithConfirmationLane(stager, &recordingVault{}, "https://crm.example.test")
@@ -89,6 +90,7 @@ func TestARecordCheckAsksNoNewsWhereTheRecipientsRulesBarIt(t *testing.T) {
 // TestARecordConfirmationStillAsksNewsElsewhere is the other side: a recipient
 // with no such rule gets the news question and the wording that names it.
 func TestARecordConfirmationStillAsksNewsElsewhere(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	stager := &recordingStager{}
 	e.store = e.store.WithConfirmationLane(stager, &recordingVault{}, "https://crm.example.test")
@@ -114,6 +116,7 @@ func TestARecordConfirmationStillAsksNewsElsewhere(t *testing.T) {
 // pack a consent-confirmation mail answers the subject's own request; staff
 // cannot send one to somebody who never asked.
 func TestAConsentMailWithoutTheSubjectsRequestIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedSubjectAddress(t, e)
 	placeUnderConfirmRules(t, e)
@@ -125,6 +128,7 @@ func TestAConsentMailWithoutTheSubjectsRequestIsRefused(t *testing.T) {
 // request for consent mail and names no purpose class asks it for all of
 // them, correspondence included.
 func TestAPackNamingNoClassNeedsTheRequestForEveryPurpose(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedDefaultCatalog(t, e.owner)
 	seedSubjectAddress(t, e)
@@ -162,6 +166,7 @@ func requireNoSubjectRequestRefusal(t *testing.T, e *channelConsentEnv) {
 // TestTheGrantKeepsTheRequestItAnswers. With the request on record the mail
 // goes, and the proof row of the grant names that request.
 func TestTheGrantKeepsTheRequestItAnswers(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedSubjectAddress(t, e)
 	placeUnderConfirmRules(t, e)
@@ -212,6 +217,7 @@ func TestTheGrantKeepsTheRequestItAnswers(t *testing.T) {
 // served question with the controller, the purpose, its frequency and the
 // privacy page in it, and no placeholder left.
 func TestTheStoredConsentTextIsTheFilledSentence(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedSubjectAddress(t, e)
 	stateParticulars(t, e, ControllerParticulars{
@@ -265,6 +271,7 @@ func TestTheStoredConsentTextIsTheFilledSentence(t *testing.T) {
 // TestAStoredMailStampDoesNotStandInForTheMail. A stamped inbound_message is
 // read again from the timeline, so a stamp whose mail is gone is no request.
 func TestAStoredMailStampDoesNotStandInForTheMail(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedSubjectAddress(t, e)
 	placeUnderConfirmRules(t, e)
@@ -288,6 +295,7 @@ func TestAStoredMailStampDoesNotStandInForTheMail(t *testing.T) {
 // installation's, sent for the default entity; a request recorded for a second
 // entity does not answer for it.
 func TestARequestRecordedForAnotherEntityIsNotThisMailsRequest(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedSubjectAddress(t, e)
 	placeUnderConfirmRules(t, e)
@@ -333,6 +341,7 @@ func plantActivity(t *testing.T, e *channelConsentEnv, direction string, contact
 // booking made, and the merge drops the source's duplicate copies. The copy a
 // grant answered stays, so the grant still names a request.
 func TestAMergeKeepsTheRequestAGrantAnswered(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedSubjectAddress(t, e)
 	survivor := ids.New[ids.ContactKind]()
@@ -389,6 +398,7 @@ func TestAMergeKeepsTheRequestAGrantAnswered(t *testing.T) {
 // zone reads the expiry in that zone, named. A contact whose country has
 // several reads it on the installation's clock, UTC here.
 func TestTheMailedExpiryIsOnTheRecipientsClock(t *testing.T) {
+	t.Parallel()
 	tokyo, err := time.LoadLocation("Asia/Tokyo")
 	if err != nil {
 		t.Fatal(err)
@@ -419,6 +429,7 @@ func TestTheMailedExpiryIsOnTheRecipientsClock(t *testing.T) {
 // TestAContactWhoCameInThroughAFormHasAsked. The acquisition a form wrote is
 // the contact's own request, read by the same owner as every other request.
 func TestAContactWhoCameInThroughAFormHasAsked(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedSubjectAddress(t, e)
 	placeUnderConfirmRules(t, e)

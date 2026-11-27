@@ -114,6 +114,7 @@ func runInitialsTask(t *testing.T, e *integration.Env) {
 }
 
 func TestTheInitialsTaskShowsTheLocalPartOfAnAddressTheHeaderDidNotName(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	id := legacyInitialsContact(t, e)
 
@@ -129,6 +130,7 @@ func TestTheInitialsTaskShowsTheLocalPartOfAnAddressTheHeaderDidNotName(t *testi
 }
 
 func TestANameLearnedAfterTheInitialsTaskStillReplacesItsRewrite(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	id := legacyInitialsContact(t, e)
 	runInitialsTask(t, e)
@@ -142,6 +144,7 @@ func TestANameLearnedAfterTheInitialsTaskStillReplacesItsRewrite(t *testing.T) {
 }
 
 func TestTheInitialsTaskKeepsANameTheHeaderSpelled(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	id := captureFromStoredMail(t, e, "DV <dv@initials.test>", "DV", "dv@initials.test")
 	if got := shownName(t, e, id); got != "Dv" {
@@ -156,6 +159,7 @@ func TestTheInitialsTaskKeepsANameTheHeaderSpelled(t *testing.T) {
 }
 
 func TestTheInitialsTaskKeepsANameWhoseOriginalIsGone(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	id := legacyInitialsContact(t, e)
 	owner := integration.OwnerConn(t)
@@ -173,6 +177,7 @@ func TestTheInitialsTaskKeepsANameWhoseOriginalIsGone(t *testing.T) {
 }
 
 func TestTheInitialsTaskRepairsAVerdictContactWhoseMailsAllNamedNobody(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	id := verdictCreatesFromStoredMails(t, e, "dv@initials.test", "dv@initials.test", "dv@initials.test")
 
@@ -184,6 +189,7 @@ func TestTheInitialsTaskRepairsAVerdictContactWhoseMailsAllNamedNobody(t *testin
 }
 
 func TestTheInitialsTaskKeepsAVerdictContactOneOfWhoseMailsNamedThem(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	id := verdictCreatesFromStoredMails(t, e, "dv@initials.test", "dv@initials.test", "DV <dv@initials.test>")
 
@@ -195,6 +201,7 @@ func TestTheInitialsTaskKeepsAVerdictContactOneOfWhoseMailsNamedThem(t *testing.
 }
 
 func TestTheInitialsTaskKeepsANameEveryHeaderSpellingGave(t *testing.T) {
+	t.Parallel()
 	for _, header := range []struct{ from, display string }{
 		{`"DV" <dv@initials.test>`, "DV"},
 		{"=?UTF-8?Q?DV?= <dv@initials.test>", "DV"},
@@ -215,6 +222,7 @@ func TestTheInitialsTaskKeepsANameEveryHeaderSpellingGave(t *testing.T) {
 }
 
 func TestTheInitialsTaskRollsItsRewriteBackWithItsProgress(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	id := legacyInitialsContact(t, e)
 	task := initialsNamesDataTask()
@@ -238,6 +246,7 @@ func TestTheInitialsTaskRollsItsRewriteBackWithItsProgress(t *testing.T) {
 }
 
 func TestTheInitialsTaskReplaysFromTheStartWithoutChangingAnything(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	id := legacyInitialsContact(t, e)
 	runInitialsTask(t, e)
@@ -269,6 +278,7 @@ func TestTheInitialsTaskReplaysFromTheStartWithoutChangingAnything(t *testing.T)
 }
 
 func TestTheInitialsTaskRefusesAMalformedCursor(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := datatask.Acting(e.Admin(), initialsNamesDataTask().ID)
 	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
@@ -281,6 +291,7 @@ func TestTheInitialsTaskRefusesAMalformedCursor(t *testing.T) {
 }
 
 func TestTheInitialsTaskKeepsAnInitialsNameAHumanRenamed(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	id := captureFromStoredMail(t, e, "dv@initials.test", "", "dv@initials.test")
 	typed := "Dvx"
@@ -297,6 +308,7 @@ func TestTheInitialsTaskKeepsAnInitialsNameAHumanRenamed(t *testing.T) {
 }
 
 func TestTheInitialsTaskKeepsAnImportedInitialsName(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	id := legacyInitialsContact(t, e)
 	e.WsExec(t, `UPDATE contact SET source_system = 'crm_import' WHERE id = $1`, id)
@@ -311,6 +323,7 @@ func TestTheInitialsTaskKeepsAnImportedInitialsName(t *testing.T) {
 // Five contacts are eligible and none needs a rewrite. Each batch inspects at
 // most its limit, and the next one starts after the last contact inspected.
 func TestTheInitialsTaskInspectsAtMostItsLimitAndResumesAfterIt(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	var eligible []ids.UUID
 	for n := range 5 {

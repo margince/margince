@@ -48,6 +48,7 @@ func (c *cacheClock) advance(d time.Duration) {
 // A pooled read is remembered for the cache lifetime and a write through the
 // store clears it at once.
 func TestAPooledSettingReadIsCachedAndItsWriterClearsIt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	clock := &cacheClock{now: time.Date(2026, 3, 4, 5, 6, 7, 0, time.UTC)}
 	settings.EnableCacheAt(e.Pool, settings.CacheLifetime, clock.Now)
@@ -93,6 +94,7 @@ func TestAPooledSettingReadIsCachedAndItsWriterClearsIt(t *testing.T) {
 }
 
 func TestASettingThatIsNotDeclaredCacheableIsAlwaysReadFromTheDatabase(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	clock := &cacheClock{now: time.Date(2026, 3, 4, 5, 6, 7, 0, time.UTC)}
 	settings.EnableCacheAt(e.Pool, settings.CacheLifetime, clock.Now)
@@ -120,6 +122,7 @@ func TestASettingThatIsNotDeclaredCacheableIsAlwaysReadFromTheDatabase(t *testin
 
 // A context with no workspace is refused whether the value is cached or not.
 func TestACachedSettingReadWithoutAWorkspaceIsRefusedLikeAMiss(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	clock := &cacheClock{now: time.Date(2026, 3, 4, 5, 6, 7, 0, time.UTC)}
 	settings.EnableCacheAt(e.Pool, settings.CacheLifetime, clock.Now)
@@ -151,6 +154,7 @@ func TestACachedSettingReadWithoutAWorkspaceIsRefusedLikeAMiss(t *testing.T) {
 // A write transaction open past the lifetime, with a reader in between, still
 // leaves the next read after the commit seeing the new value.
 func TestAReaderDuringALongWriteTransactionDoesNotKeepTheOldValue(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	clock := &cacheClock{now: time.Date(2026, 3, 4, 5, 6, 7, 0, time.UTC)}
 	settings.EnableCacheAt(e.Pool, settings.CacheLifetime, clock.Now)

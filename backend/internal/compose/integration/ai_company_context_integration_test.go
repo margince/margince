@@ -28,6 +28,7 @@ type companyContextTrace struct {
 }
 
 func TestCompanyContextBindsPromptCacheAndAICallTrace(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.Admin()
 	offer := "Industrial heat pumps"
@@ -124,6 +125,7 @@ func readCompanyContextTraces(ctx context.Context, t *testing.T, e *Env, task st
 }
 
 func TestPolicyNoneTraceCarriesEmptyCompanyContext(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	modelPath, err := compose.NewModelPath(context.Background(), ai.FakeRoutingConfig(), e.Pool, false, nil)
 	if err != nil {
@@ -152,6 +154,7 @@ func TestPolicyNoneTraceCarriesEmptyCompanyContext(t *testing.T) {
 }
 
 func TestDraftReplyCarriesItsBoundedCompanyContextPolicy(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	offer := "Industrial heat pumps"
 	if _, err := e.Contacts.SaveCompany(e.Admin(), contacts.SaveCompanyInput{

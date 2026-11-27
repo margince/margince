@@ -37,6 +37,7 @@ var (
 )
 
 func TestCompany360_ADealCarriesItsMostOverdueTaskAsTheReason(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	pipeline, stage, _ := integration.DealFixture(t, e)
 	companyID := e.SeedCompany(t, "Overdue Account", nil)
@@ -67,6 +68,7 @@ func TestCompany360_ADealCarriesItsMostOverdueTaskAsTheReason(t *testing.T) {
 }
 
 func TestCompany360_ADealCarriesNoReasonFromAnotherAccountsTask(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	pipeline, stage, _ := integration.DealFixture(t, e)
 	ours := e.SeedCompany(t, "Our Account", nil)
@@ -90,6 +92,7 @@ func TestCompany360_ADealCarriesNoReasonFromAnotherAccountsTask(t *testing.T) {
 }
 
 func TestCompany360_AProjectCarriesTheOpenCommitmentTheyMade(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	companyID := e.SeedCompany(t, "Committed Account", nil)
 	project, err := e.Projects.CreateProject(e.Admin(), projects.CreateProjectInput{
@@ -121,6 +124,7 @@ func TestCompany360_AProjectCarriesTheOpenCommitmentTheyMade(t *testing.T) {
 }
 
 func TestCompany360_ADisputedOrSettledCommitmentIsNotStatedAsFact(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	companyID := e.SeedCompany(t, "Disputed Account", nil)
 	project, err := e.Projects.CreateProject(e.Admin(), projects.CreateProjectInput{
@@ -145,6 +149,7 @@ func TestCompany360_ADisputedOrSettledCommitmentIsNotStatedAsFact(t *testing.T) 
 }
 
 func TestCompany360_AReaderWithoutTheActivityGrantGetsRowsAndIsToldTheReasonsAreMissing(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	pipeline, stage, _ := integration.DealFixture(t, e)
 	companyID := e.SeedCompany(t, "Blind Account", nil)
@@ -293,6 +298,7 @@ func projectAttention(t *testing.T, view crmcontracts.Company360, projectID ids.
 }
 
 func TestCompany360_ACommitmentNeedsTheContactGrantAndNotOnlyTheRowScope(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	companyID := e.SeedCompany(t, "Contact-blind Account", nil)
 	project, err := e.Projects.CreateProject(e.Admin(), projects.CreateProjectInput{
@@ -327,6 +333,7 @@ func TestCompany360_ACommitmentNeedsTheContactGrantAndNotOnlyTheRowScope(t *test
 }
 
 func TestCompany360_ACommitmentByAnInvisibleContactIsReportedRatherThanDropped(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	companyID := e.SeedCompany(t, "Scoped Account", nil)
 	project, err := e.Projects.CreateProject(e.Admin(), projects.CreateProjectInput{
@@ -395,6 +402,7 @@ var company360OwnScopePerms = principal.Permissions{
 }
 
 func TestCompany360_ClosedProjectsOverflowingTheCapDoNotClaimMoreWorkInFlight(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	companyID := e.SeedCompany(t, "Portfolio Account", nil)
 	// One project in flight and enough closed ones to overflow the cap. The

@@ -24,12 +24,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// bindForTest binds the api's configuration loaded from environ until the
-// test ends.
-func bindForTest(t *testing.T, environ ...string) {
+// apiBootCtx is ctx serving an api whose configuration was loaded from environ.
+func apiBootCtx(ctx context.Context, t *testing.T, environ ...string) context.Context {
 	t.Helper()
-	UseConfig(bootConfigForTest(t, config.RoleAPI, environ...))
-	t.Cleanup(func() { UseConfig(nil) })
+	return ConfigContext(ctx, bootConfigForTest(t, config.RoleAPI, environ...))
 }
 
 func routingRows(t *testing.T, e *integration.Env) int {
@@ -51,9 +49,9 @@ const bootBinding = `MARGINCE_AI_ROUTING_BINDING={"profile":"eu_hosted","tiers":
 // A binding the environment sets is in force. The declared seed writes no row
 // that would act only once the variable is gone, and reports nothing discarded.
 func TestABootSetBindingIsNeitherSeededNorReportedDiscarded(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
-	ctx := e.Admin()
-	bindForTest(t, bootBinding)
+	ctx := apiBootCtx(e.Admin(), t, bootBinding)
 
 	var discarded []string
 	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
@@ -64,7 +62,7 @@ func TestABootSetBindingIsNeitherSeededNorReportedDiscarded(t *testing.T) {
 	if len(discarded) != 0 {
 		t.Errorf("reported %v discarded; the boot-set binding is the one in force", discarded)
 	}
-	if err := SeedRoutingIfUnset(context.Background(), e.Pool, declaredFromFile(t), slog.New(slog.DiscardHandler)); err != nil {
+	if err := SeedRoutingIfUnset(apiBootCtx(context.Background(), t, bootBinding), e.Pool, declaredFromFile(t), slog.New(slog.DiscardHandler)); err != nil {
 		t.Fatalf("the boot-time seed under a boot-set binding: %v", err)
 	}
 	if rows := routingRows(t, e); rows != 0 {
@@ -75,15 +73,16 @@ func TestABootSetBindingIsNeitherSeededNorReportedDiscarded(t *testing.T) {
 // The watcher publishes the overrides the environment sets, over the ones an
 // admin saved before the operator set them.
 func TestABootSetTaskOverrideReachesARunningRouter(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	if rec := putTaskOverrides(overrideSeat(e), taskOverrideHandlers(e), `{"capture_classify":{"thinking":"low"}}`, ""); rec.Code != http.StatusOK {
 		t.Fatalf("saving the admin's override: %d %s", rec.Code, rec.Body)
 	}
-	bindForTest(t, `MARGINCE_AI_TASK_OVERRIDES={"capture_classify":{"thinking":"high"}}`)
+	boot := apiBootCtx(context.Background(), t, `MARGINCE_AI_TASK_OVERRIDES={"capture_classify":{"thinking":"high"}}`)
 	w, router := watcherServing(t, routingFixture(t, "serving"))
 	w.pool = e.Pool
 
-	w.refreshTaskOverrides(context.Background())
+	w.refreshTaskOverrides(boot)
 
 	want := ai.TaskOverrides{ai.TaskCaptureClassify: {Thinking: "high"}}.Revision()
 	if got := router.TaskOverridesRevision(); got != want {
@@ -94,15 +93,16 @@ func TestABootSetTaskOverrideReachesARunningRouter(t *testing.T) {
 // Spend is metered against the allowance the environment sets, over a saved
 // one: the meter reads it with no request behind it.
 func TestTheSpendMeterReadsABootSetAllowance(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	saved := int64(999)
 	if err := config.Save(e.Admin(), StoredConfig(e.Pool), ai.BudgetSettings,
 		ai.BudgetConfig{TokensPerFullUser: 9, CompanyMonthlyTokens: &saved}); err != nil {
 		t.Fatalf("saving the admin's allowance: %v", err)
 	}
-	bindForTest(t, `MARGINCE_AI_BUDGET={"tokens_per_full_user":5,"company_monthly_tokens":777}`)
+	boot := apiBootCtx(context.Background(), t, `MARGINCE_AI_BUDGET={"tokens_per_full_user":5,"company_monthly_tokens":777}`)
 
-	monthly, err := NewSeatBudget(e.Pool).MonthlyTokenBudget(context.Background(), ids.From[ids.WorkspaceKind](e.WS))
+	monthly, err := NewSeatBudget(e.Pool).MonthlyTokenBudget(boot, ids.From[ids.WorkspaceKind](e.WS))
 	if err != nil {
 		t.Fatal(err)
 	}

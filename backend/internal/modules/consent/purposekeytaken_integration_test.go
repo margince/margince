@@ -17,6 +17,7 @@ import (
 // An archived purpose keeps its key, and the refusal says so. The admin is told to
 // restore that purpose. A bare "already exists" would name a purpose the list does not show.
 func TestAnArchivedPurposeKeepsItsKeyAndTheRefusalSaysSo(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	configurer := principal.WithActor(e.ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.user.String(), UserID: e.user,

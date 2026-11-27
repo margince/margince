@@ -18,6 +18,7 @@ import (
 // a considered original. One the constraint allows and no path writes is a
 // reason nothing can produce.
 func TestTheOutcomeCheckAdmitsEveryOutcomeTheSweepWrites(t *testing.T) {
+	t.Parallel()
 	var def string
 	err := ownerConn(t).QueryRow(context.Background(), `
 		SELECT pg_get_constraintdef(oid) FROM pg_constraint

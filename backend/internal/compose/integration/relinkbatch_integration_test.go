@@ -73,6 +73,7 @@ func projectLinks(t *testing.T, e *Env, activity, project ids.UUID) int {
 // its own project_linked evidence. The member on another team's private
 // contact stays where it is, and the count says so.
 func TestRelinkingAThreadMovesEveryWritableMemberWithItsOwnWriteShape(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedThreadFixture(t, e, OwnerConn(t))
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
@@ -120,6 +121,7 @@ func TestRelinkingAThreadMovesEveryWritableMemberWithItsOwnWriteShape(t *testing
 // existence-hiding 404 the single relink answers, and the ids beside it —
 // already written inside the same transaction — are rolled back.
 func TestRelinkingANamedSetWithAnInvisibleIdMovesNothing(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedThreadFixture(t, e, OwnerConn(t))
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
@@ -154,6 +156,7 @@ func TestRelinkingANamedSetWithAnInvisibleIdMovesNothing(t *testing.T) {
 
 // A blank anchor and an oversized set are refused before any row is read.
 func TestBatchRelinkRefusesAnEmptySelection(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedThreadFixture(t, e, OwnerConn(t))
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)

@@ -56,6 +56,7 @@ func (e *dedupeEnv) ensureInput(ctx context.Context, t *testing.T, email, displa
 }
 
 func TestEnsureCounterpartyReusesTheExactIncumbent(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -99,6 +100,7 @@ func TestEnsureCounterpartyReusesTheExactIncumbent(t *testing.T) {
 }
 
 func TestEnsureCounterpartyAttachesToACompanyThatAlreadyExists(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -145,6 +147,7 @@ func TestEnsureCounterpartyAttachesToACompanyThatAlreadyExists(t *testing.T) {
 // every repeated capture of the same mail would mint history for a write that
 // did not happen, which is the failure ON CONFLICT DO NOTHING exists to avoid.
 func TestCapturedEmploymentCarriesTheWriteShapeAndANoOpCarriesNothing(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	if _, err := e.store.CreateCompany(ctx, CreateCompanyInput{
@@ -207,6 +210,7 @@ func ledgerRowsForRelationship(ctx context.Context, t *testing.T, e *dedupeEnv, 
 }
 
 func TestEnsureCounterpartyAsksNothingAboutConsumerMail(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -234,6 +238,7 @@ func TestEnsureCounterpartyAsksNothingAboutConsumerMail(t *testing.T) {
 }
 
 func TestEnsureCounterpartyWarnsOfASenderShowingASign(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -261,6 +266,7 @@ func TestEnsureCounterpartyWarnsOfASenderShowingASign(t *testing.T) {
 }
 
 func TestApplySignatureFieldsLetsTheNewerStatementWinAndKeepsWhatItReplaced(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	contact, err := e.store.CreateContact(ctx, CreateContactInput{
@@ -373,12 +379,13 @@ func TestApplySignatureFieldsLetsTheNewerStatementWinAndKeepsWhatItReplaced(t *t
 }
 
 func TestEnsureCounterpartySuppressedAddressStaysDead(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
 			INSERT INTO erasure_suppression (kind, value_hash)
-			VALUES ('email', $1)`, storekit.SuppressionHash("dead@ensure.test"))
+			VALUES ('email', $1)`, storekit.SuppressionHash(ctx, "dead@ensure.test"))
 		return err
 	}); err != nil {
 		t.Fatal(err)

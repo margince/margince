@@ -20,6 +20,7 @@ import (
 // The copies are written in one statement, under the key shape capture files a
 // seat's copy with. Two thousand rows through the sink would cost minutes.
 func TestMailboxCopiesDoNotCrowdADistinctMailOutOfTheRankSample(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	if _, err := e.Owner.Exec(context.Background(), `
 		INSERT INTO activity (id, kind, subject, body, direction, counterparty_email, occurred_at,

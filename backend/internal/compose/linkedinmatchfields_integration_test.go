@@ -225,6 +225,7 @@ func (c *linkedInFieldsCase) decidedEvent(t *testing.T) (title, employer bool) {
 }
 
 func TestUseAsTitleIsStagedTickedForAContactWithNoTitleAndWritesThePosition(t *testing.T) {
+	t.Parallel()
 	c := stageLinkedInFieldsCase(t, "", "")
 	staged := c.payload(t)
 	if staged["connection_position"] != "Head of Sales" || staged["use_as_title"] != true {
@@ -255,6 +256,7 @@ func TestUseAsTitleIsStagedTickedForAContactWithNoTitleAndWritesThePosition(t *t
 }
 
 func TestAContactWithATitleKeepsItUnlessTheBoxIsTicked(t *testing.T) {
+	t.Parallel()
 	c := stageLinkedInFieldsCase(t, "Founder", "")
 	if staged := c.payload(t); staged["use_as_title"] != false || staged["contact_title"] != "Founder" {
 		t.Fatalf("the card is staged as %v, want the contact's title beside an unticked box", staged)
@@ -271,6 +273,7 @@ func TestAContactWithATitleKeepsItUnlessTheBoxIsTicked(t *testing.T) {
 }
 
 func TestTickingUseAsTitleReplacesATitleAndKeepsTheOldOneInTheAudit(t *testing.T) {
+	t.Parallel()
 	c := stageLinkedInFieldsCase(t, "Founder", "")
 	if err := c.approveWith(c.ctx, t, map[string]any{"use_as_title": true}); err != nil {
 		t.Fatalf("approving with the box ticked: %v", err)
@@ -285,6 +288,7 @@ func TestTickingUseAsTitleReplacesATitleAndKeepsTheOldOneInTheAudit(t *testing.T
 }
 
 func TestUseAsEmployerMakesThePlacedCompanyTheCurrentPrimaryEmployer(t *testing.T) {
+	t.Parallel()
 	c := stageLinkedInFieldsCase(t, "", "")
 	staged := c.payload(t)
 	if staged["employer_company_id"] != c.acme.String() || staged["use_as_employer"] != true {
@@ -314,6 +318,7 @@ func TestUseAsEmployerMakesThePlacedCompanyTheCurrentPrimaryEmployer(t *testing.
 }
 
 func TestTickingUseAsEmployerReplacesTheCurrentPrimaryEmployer(t *testing.T) {
+	t.Parallel()
 	c := stageLinkedInFieldsCase(t, "", "Old Employer GmbH")
 	if staged := c.payload(t); staged["use_as_employer"] != false || staged["employer_relationship_id"] == nil {
 		t.Fatalf("the card is staged as %v, want the current employment named beside an unticked box", staged)
@@ -327,6 +332,7 @@ func TestTickingUseAsEmployerReplacesTheCurrentPrimaryEmployer(t *testing.T) {
 }
 
 func TestAConnectionPlacedAtNoCompanyOffersNoEmployer(t *testing.T) {
+	t.Parallel()
 	c := stageLinkedInEmailMatch(t, strings.Replace(linkedInEmailExport, "Acme GmbH", "Unknown Ltd", 1))
 	if staged := c.payload(t); staged["employer_company_id"] != nil || staged["use_as_employer"] != false {
 		t.Errorf("the card is staged as %v, want no employer offered", staged)
@@ -334,6 +340,7 @@ func TestAConnectionPlacedAtNoCompanyOffersNoEmployer(t *testing.T) {
 }
 
 func TestUseAsEmployerCreatesTheEmploymentWhenTheContactHasNoneThere(t *testing.T) {
+	t.Parallel()
 	c := stageLinkedInEmailMatch(t, linkedInEmailExport)
 	if staged := c.payload(t); staged["employer_company_id"] != c.acme.String() || staged["use_as_employer"] != true {
 		t.Fatalf("the card is staged as %v, want Acme offered with the employer box ticked", staged)
@@ -349,6 +356,7 @@ func TestUseAsEmployerCreatesTheEmploymentWhenTheContactHasNoneThere(t *testing.
 }
 
 func TestAnEditToAnythingButTheBoxesIsRefusedAndWritesNothing(t *testing.T) {
+	t.Parallel()
 	for _, edit := range []map[string]any{
 		{"connection_position": "Chief Executive"},
 		{"contact_title": "Founder"},
@@ -368,6 +376,7 @@ func TestAnEditToAnythingButTheBoxesIsRefusedAndWritesNothing(t *testing.T) {
 }
 
 func TestATitleSetWhileTheCardWaitedIsNeverReplaced(t *testing.T) {
+	t.Parallel()
 	c := stageLinkedInFieldsCase(t, "", "")
 	if _, err := c.e.Contacts.UpdateContact(c.ctx, ids.ContactID{UUID: c.contact},
 		contacts.UpdateContactInput{Title: new("VP Sales")}); err != nil {
@@ -385,6 +394,7 @@ func TestATitleSetWhileTheCardWaitedIsNeverReplaced(t *testing.T) {
 }
 
 func TestAnEmployerSetWhileTheCardWaitedIsNeverReplaced(t *testing.T) {
+	t.Parallel()
 	c := stageLinkedInFieldsCase(t, "", "")
 	newer := c.company(t, "Newer GmbH")
 	c.employ(t, newer, true)
@@ -409,6 +419,7 @@ func (c *linkedInFieldsCase) relationshipGrant(grant principal.ObjectGrant) cont
 }
 
 func TestADeciderWhoMayNotCreateTheEmploymentIsRefusedBeforeAnyWrite(t *testing.T) {
+	t.Parallel()
 	c := stageLinkedInEmailMatch(t, linkedInEmailExport)
 	decider := c.relationshipGrant(principal.ObjectGrant{Read: true, Update: true})
 	if _, err := c.svc.Decide(decider, c.approval, true, nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
@@ -427,6 +438,7 @@ func TestADeciderWhoMayNotCreateTheEmploymentIsRefusedBeforeAnyWrite(t *testing.
 }
 
 func TestADeciderWhoMayCreateButNotUpdateEmploymentsIsRefusedThePromote(t *testing.T) {
+	t.Parallel()
 	c := stageLinkedInFieldsCase(t, "", "")
 	decider := c.relationshipGrant(principal.ObjectGrant{Read: true, Create: true})
 	if _, err := c.svc.Decide(decider, c.approval, true, nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
@@ -442,6 +454,7 @@ func TestADeciderWhoMayCreateButNotUpdateEmploymentsIsRefusedThePromote(t *testi
 }
 
 func TestADeciderWhoMayUpdateButNotCreateEmploymentsPromotesOne(t *testing.T) {
+	t.Parallel()
 	c := stageLinkedInFieldsCase(t, "", "")
 	decider := c.relationshipGrant(principal.ObjectGrant{Read: true, Update: true})
 	if _, err := c.svc.Decide(decider, c.approval, true, nil); err != nil {
@@ -453,6 +466,7 @@ func TestADeciderWhoMayUpdateButNotCreateEmploymentsPromotesOne(t *testing.T) {
 }
 
 func TestADeciderWhoMayCreateButNotUpdateEmploymentsCreatesOne(t *testing.T) {
+	t.Parallel()
 	c := stageLinkedInEmailMatch(t, linkedInEmailExport)
 	decider := c.relationshipGrant(principal.ObjectGrant{Read: true, Create: true})
 	if _, err := c.svc.Decide(decider, c.approval, true, nil); err != nil {
@@ -464,6 +478,7 @@ func TestADeciderWhoMayCreateButNotUpdateEmploymentsCreatesOne(t *testing.T) {
 }
 
 func TestAPromotedEmploymentKeepsItsAuthor(t *testing.T) {
+	t.Parallel()
 	c := stageLinkedInFieldsCase(t, "", "")
 	colleague := c.e.As(c.e.AdminUser, nil, integration.AdminPerms)
 	if _, err := c.svc.Decide(colleague, c.approval, true, nil); err != nil {
@@ -478,6 +493,7 @@ func TestAPromotedEmploymentKeepsItsAuthor(t *testing.T) {
 }
 
 func TestADeciderWhoCannotSeeTheCompanyIsRefusedTheEmployer(t *testing.T) {
+	t.Parallel()
 	c := stageLinkedInFieldsCase(t, "", "")
 	if err := database.WithWorkspaceTx(c.e.Admin(), c.e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
@@ -500,17 +516,13 @@ func TestADeciderWhoCannotSeeTheCompanyIsRefusedTheEmployer(t *testing.T) {
 }
 
 func TestAFailedEmploymentTakesTheTitleWithIt(t *testing.T) {
+	t.Parallel()
 	c := stageLinkedInEmailMatch(t, linkedInEmailExport)
 	owner := integration.OwnerConn(t)
 	if _, err := owner.Exec(c.ctx, `ALTER TABLE relationship ADD CONSTRAINT refuse_export_employment_test
 		CHECK (source <> 'linkedin_export') NOT VALID`); err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() {
-		if _, err := owner.Exec(context.Background(), `ALTER TABLE relationship DROP CONSTRAINT refuse_export_employment_test`); err != nil {
-			t.Error(err)
-		}
-	})
 	if _, err := c.svc.Decide(c.ctx, c.approval, true, nil); err == nil {
 		t.Fatal("approving reported success while the employment could not be written")
 	}
@@ -524,6 +536,7 @@ func TestAFailedEmploymentTakesTheTitleWithIt(t *testing.T) {
 }
 
 func TestALaterExportNeverWritesTheContactAgain(t *testing.T) {
+	t.Parallel()
 	c := stageLinkedInFieldsCase(t, "", "")
 	if _, err := c.svc.Decide(c.ctx, c.approval, true, nil); err != nil {
 		t.Fatalf("approving: %v", err)
@@ -547,6 +560,7 @@ func TestALaterExportNeverWritesTheContactAgain(t *testing.T) {
 }
 
 func TestACardStagedBeforeTheBoxesAppliesOnlyTheLink(t *testing.T) {
+	t.Parallel()
 	c := stageLinkedInFieldsCase(t, "", "")
 	if err := database.WithWorkspaceTx(c.e.Admin(), c.e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `UPDATE approval SET proposed_change = proposed_change
@@ -569,6 +583,7 @@ func TestACardStagedBeforeTheBoxesAppliesOnlyTheLink(t *testing.T) {
 }
 
 func TestAPositionTheExportChangedSinceStagingIsNotWritten(t *testing.T) {
+	t.Parallel()
 	c := stageLinkedInFieldsCase(t, "", "")
 	later := strings.Replace(linkedInFieldsExport, "Head of Sales", "Chief Revenue Officer", 1)
 	if _, err := c.store.ImportLinkedInConnections(c.ctx, strings.NewReader(later)); err != nil {

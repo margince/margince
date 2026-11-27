@@ -37,7 +37,7 @@ import (
 
 // harnessList holds the harness's list. The product's list comes from
 // goPreservedTables, which the seed-reset parity reads it through too.
-const harnessList = "internal/platform/testdb/reset.go"
+const harnessList = "internal/platform/testdb/emptyschema.go"
 
 // harnessOnly names tables the TEST harness spares that the product sweep does
 // not, with the reason each is not a product concern. Every entry is a

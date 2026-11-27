@@ -14,7 +14,6 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/contacts"
-	"github.com/margince/margince/backend/internal/platform/extprivacy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/pkg/extension/jurisdiction"
 	"github.com/margince/margince/backend/pkg/extension/privacy"
@@ -33,10 +32,11 @@ var unitNotePrivacy = privacy.Table{
 }
 
 func TestEveryMergeMovesALinkTheUnitDeclaresForPrivacyAndReach(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 	withUnitNoteTable(t)
-	e.Contacts.WithExtensions(extprivacy.Declared([]privacy.Table{unitNotePrivacy}))
+	e.Contacts.WithExtensions(unitNoteData(t, unitNotePrivacy))
 	src, tgt := seedMergePair(t, e, "Both declared")
 	retired, survivor := e.SeedContact(t, "Ida Keller", nil), e.SeedContact(t, "Ida Kellar", nil)
 	loser, live := seedLead(t, e, "Ola Berg", "ola@berg.test", nil), seedLead(t, e, "Ola Bergh", "", nil)
@@ -71,14 +71,15 @@ func TestEveryMergeMovesALinkTheUnitDeclaresForPrivacyAndReach(t *testing.T) {
 // The refusal counts only the rows the merge would leave behind. The probe
 // note counts, because no reach declaration moves it. The unit note does not.
 func TestAMergeRefusalCountsOnlyTheRowsTheMergeWouldNotMove(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	withUnitNoteTable(t)
 	probeUnit(t, "1.0.0")
-	e.Contacts.WithExtensions(extprivacy.Declared([]privacy.Table{unitNotePrivacy, {
+	e.Contacts.WithExtensions(unitNoteData(t, unitNotePrivacy, privacy.Table{
 		Name:      "ext_probe_note",
 		Links:     []privacy.Link{{Column: "company_id", Record: privacy.Company}},
 		Retention: jurisdiction.CommercialCorrespondence,
-	}}))
+	}))
 	src, tgt := seedMergePair(t, e, "Half declared")
 	e.WsExec(t, `INSERT INTO ext.ext_reachtest_note (company_id, body) VALUES ($1, 'a')`, src)
 	e.WsExec(t, `INSERT INTO ext.ext_probe_note (company_id) VALUES ($1)`, src)
@@ -97,9 +98,10 @@ func TestAMergeRefusalCountsOnlyTheRowsTheMergeWouldNotMove(t *testing.T) {
 // row of another kind that privacy links to the lead stays behind. So it still
 // refuses the lead merge, and the lead-kind row does not.
 func TestAKindColumnRowTheMergeLeavesBehindStillRefusesIt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	withUnitNoteTable(t)
-	e.Contacts.WithExtensions(extprivacy.Declared([]privacy.Table{unitNotePrivacy}))
+	e.Contacts.WithExtensions(unitNoteData(t, unitNotePrivacy))
 	loser, live := seedLead(t, e, "Ola Berg", "ola@berg.test", nil), seedLead(t, e, "Ola Bergh", "", nil)
 	e.WsExec(t, `INSERT INTO ext.ext_reachtest_note (record_type, record_id, body) VALUES ('lead', $1, 'a'), ('company', $1, 'b')`, loser)
 

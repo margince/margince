@@ -52,6 +52,7 @@ var scopedEndpointTables = map[string]bool{
 const tenantColumn = "workspace_id"
 
 func TestEveryScopedEndpointColumnIsInTheVisibilityConjunction(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 
 	// Read the real foreign keys off the live schema. pg_constraint is the

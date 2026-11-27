@@ -18,6 +18,7 @@ import (
 // letters; every other type is found from the first letter. The messages carry
 // the short words whole, because a message matches the fragment as a whole word.
 func TestTypeaheadLeavesMessagesOutUntilTheLastWordHasFourLetters(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	e.SeedCompany(t, "Abc Corp", nil)
 	contact := e.SeedContact(t, "Kick Starter", nil)

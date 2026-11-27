@@ -26,6 +26,7 @@ import (
 
 // TestTheDirectoryReadsThroughTheSeam is the regression this file exists for.
 func TestTheDirectoryReadsThroughTheSeam(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	// The workspace must be BOUND, exactly as the capture job binds it before
 	// calling the connector. Without it the read is refused rather than empty:
@@ -66,6 +67,7 @@ func TestTheDirectoryReadsThroughTheSeam(t *testing.T) {
 // accounts that rep owns. Returning another seat's would put correspondence in
 // the wrong mailbox, and the sink would refuse the link anyway.
 func TestTheDirectoryOnlyReturnsThisSeatsAccounts(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 

@@ -16,6 +16,7 @@ import (
 )
 
 func TestRoutingAHandoffRefusesAnInactiveReceiverIncludingAnInheritedOne(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	former := ids.NewV7()
 	if _, err := e.owner.Exec(t.Context(), `INSERT INTO app_user(id,email,display_name) VALUES(@id,'former@example.test','Former colleague')`, pgx.StrictNamedArgs{"id": former}); err != nil {

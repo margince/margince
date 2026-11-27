@@ -56,5 +56,5 @@ func observeUntilAtHead(ctx context.Context, cfg workerConfig, pool *pgxpool.Poo
 	if err != nil {
 		return func() {}, false, err
 	}
-	return observe.Stop, awaitSchema(ctx, compose.SchemaAtHead(pool), schemaPoll, log), nil
+	return observe.Stop, awaitSchema(ctx, compose.SchemaAtHead(pool, cfg.extensions), schemaPoll, log), nil
 }

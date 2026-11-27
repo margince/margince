@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/companytypes"
 )
 
 // reassignAsRep1 hands the held contact to another seat through the update
@@ -33,7 +34,7 @@ func reassignAsRep1(t *testing.T, e *integration.Env, held ids.ContactID, to ids
 		WithContext(e.As(e.Rep1, []ids.UUID{e.Team1}, acrossTeams))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
-	newContactsHandlers(e.Pool).UpdateContact(rec, req, crmcontracts.Id(held.UUID), crmcontracts.UpdateContactParams{})
+	newContactsHandlers(e.Pool, companytypes.Registry{}).UpdateContact(rec, req, crmcontracts.Id(held.UUID), crmcontracts.UpdateContactParams{})
 	if rec.Code != http.StatusOK {
 		t.Fatalf("reassigning the contact answered %d: %s", rec.Code, rec.Body.String())
 	}
@@ -47,6 +48,7 @@ func pendingRequestsFor(t *testing.T, e *integration.Env, held ids.ContactID, ow
 }
 
 func TestARequestIsPutToTheOwnerTheContactHasWhenItIsFiled(t *testing.T) {
+	t.Parallel()
 	e, held := heldByRep1(t)
 	reassignAsRep1(t, e, held, e.Rep3)
 
@@ -62,6 +64,7 @@ func TestARequestIsPutToTheOwnerTheContactHasWhenItIsFiled(t *testing.T) {
 }
 
 func TestReassigningAContactWithdrawsTheRequestPutToItsPreviousOwner(t *testing.T) {
+	t.Parallel()
 	e, held := heldByRep1(t)
 	createAsRep2(t, e)
 
@@ -78,6 +81,7 @@ func TestReassigningAContactWithdrawsTheRequestPutToItsPreviousOwner(t *testing.
 }
 
 func TestAnOwnerWhoLeftIsNotAsked(t *testing.T) {
+	t.Parallel()
 	e, held := heldByRep1(t)
 	deactivate(t, e, e.Rep1)
 
@@ -90,6 +94,7 @@ func TestAnOwnerWhoLeftIsNotAsked(t *testing.T) {
 }
 
 func TestAHandoverWithdrawsTheRequestsPutToTheMemberWhoLeft(t *testing.T) {
+	t.Parallel()
 	e, held := heldByRep1(t)
 	createAsRep2(t, e)
 	deactivate(t, e, e.Rep1)
@@ -109,6 +114,7 @@ func TestAHandoverWithdrawsTheRequestsPutToTheMemberWhoLeft(t *testing.T) {
 // A contact nobody owns is the workspace's to read, so the address is a plain
 // duplicate the caller can open, and nobody is asked.
 func TestAContactNobodyOwnsAnswersAsAnOrdinaryDuplicate(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	if _, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{
 		FullName: "Unowned", Source: "manual",

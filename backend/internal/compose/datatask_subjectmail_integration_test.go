@@ -50,6 +50,7 @@ func seedDirectSenderDuty(t *testing.T, e *integration.Env, kind, state, actor s
 }
 
 func TestDirectSenderCorrectionPagesReplaysAndPreservesOtherSources(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	now := clocktest.Now(t)
@@ -129,6 +130,7 @@ func TestDirectSenderCorrectionPagesReplaysAndPreservesOtherSources(t *testing.T
 }
 
 func TestDirectSenderCorrectionRollsBackWithItsProgress(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	seedDirectSenderDuty(t, e, "unknown_legacy", "open", "connector:gmail")
@@ -160,6 +162,7 @@ func TestDirectSenderCorrectionRollsBackWithItsProgress(t *testing.T) {
 }
 
 func TestDirectSenderCorrectionKeepsAQueuedSiblingAndCountsChangedContacts(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	now := clocktest.Now(t)
@@ -184,6 +187,7 @@ func TestDirectSenderCorrectionKeepsAQueuedSiblingAndCountsChangedContacts(t *te
 }
 
 func TestDirectSenderCorrectionLeavesAMovedAddressWithItsFormerHolder(t *testing.T) {
+	t.Parallel()
 	for _, attributed := range []bool{true, false} {
 		directSenderAfterMovedMail(t, attributed)
 	}

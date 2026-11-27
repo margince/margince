@@ -163,6 +163,7 @@ func (fx introFixture) deliver(t *testing.T, env kevents.Envelope) {
 // The admit case. Without it every refusal below would pass against a consumer
 // that closed nothing at all.
 func TestAContactsAnswerClosesTheIntroduction(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	fx := seedIntroduced(t, e)
 
@@ -180,6 +181,7 @@ func TestAContactsAnswerClosesTheIntroduction(t *testing.T) {
 // mark every introduction answered within minutes of being made, by the rep
 // themselves.
 func TestTheRepsOwnFollowUpDoesNotCountAsAnAnswer(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	fx := seedIntroduced(t, e)
 
@@ -196,6 +198,7 @@ func TestTheRepsOwnFollowUpDoesNotCountAsAnAnswer(t *testing.T) {
 // without their having written a word. Only role `from` is the contact
 // speaking, and this is the clause that says so.
 func TestBeingCopiedOnAMessageIsNotAnAnswer(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	fx := seedIntroduced(t, e)
 
@@ -213,6 +216,7 @@ func TestBeingCopiedOnAMessageIsNotAnAnswer(t *testing.T) {
 // from the contact. Without the instant comparison, that single import would
 // mark every introduction ever recorded as answered.
 func TestMailFromBeforeTheHandshakeDoesNotCloseIt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	fx := seedIntroduced(t, e)
 
@@ -232,6 +236,7 @@ func TestMailFromBeforeTheHandshakeDoesNotCloseIt(t *testing.T) {
 
 // Somebody else's mail closes nobody's introduction.
 func TestAnotherContactsMailLeavesTheAskAlone(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	fx := seedIntroduced(t, e)
 	other := e.SeedContact(t, "Unrelated Contact", &e.Rep1)
@@ -247,6 +252,7 @@ func TestAnotherContactsMailLeavesTheAskAlone(t *testing.T) {
 // course. The second delivery must write nothing and error nothing — an error
 // would wedge the group on a message that will never stop being a duplicate.
 func TestARedeliveredMessageChangesNothing(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	fx := seedIntroduced(t, e)
 	env := fx.message(t, e, "inbound", "from", fx.contact, fx.handshake.Add(time.Hour))
@@ -279,6 +285,7 @@ func TestARedeliveredMessageChangesNothing(t *testing.T) {
 // `captured_by` comes from the authenticated principal and cannot be asserted
 // by a caller, which is what makes it the honest one.
 func TestAHandLoggedMessageCannotCloseAnIntroduction(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	fx := seedIntroduced(t, e)
 
@@ -313,6 +320,7 @@ func TestAHandLoggedMessageCannotCloseAnIntroduction(t *testing.T) {
 // happens — message first with no contact on it, promotion second — and requires
 // the ask to close.
 func TestAReplyCapturedBeforeItsSenderExistsIsStillFound(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	fx := seedIntroduced(t, e)
 	sentAt := fx.handshake.Add(time.Hour)
@@ -364,6 +372,7 @@ func TestAReplyCapturedBeforeItsSenderExistsIsStillFound(t *testing.T) {
 // clauses are checked here through the contact arm — a hand-logged message, an
 // outbound one, and one predating the handshake all leave the ask alone.
 func TestTheRepairArmRefusesWhatTheLiveArmRefuses(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	fx := seedIntroduced(t, e)
 
@@ -412,6 +421,7 @@ func TestTheRepairArmRefusesWhatTheLiveArmRefuses(t *testing.T) {
 // is keyed on the entity type rather than on contact.created/updated alone: it
 // is the same repair, reached by the event the handshake itself emits.
 func TestAReplyThatBeatsTheHandshakeIsStillFound(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
 	store := introductions.NewStore(e.DB(), time.Now)

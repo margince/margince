@@ -34,6 +34,7 @@ func (h *historyEnv) queueSignature(t *testing.T, contact ids.UUID) {
 }
 
 func TestPendingSignaturePassReadsOnlyItsRequestedContacts(t *testing.T) {
+	t.Parallel()
 	h := setupHistory(t)
 	mail := h.writes(t, 0, signed("Head of Procurement"))
 	h.brain.answers[mail] = statesTitle("Head of Procurement")
@@ -66,6 +67,7 @@ func TestPendingSignaturePassReadsOnlyItsRequestedContacts(t *testing.T) {
 }
 
 func TestPendingSignaturePassKeepsARequestArrivingDuringTheModelRead(t *testing.T) {
+	t.Parallel()
 	h := setupHistory(t)
 	first := h.writes(t, 0, signed("Head of Procurement"))
 	h.brain.answers[first] = statesTitle("Head of Procurement")
@@ -103,6 +105,7 @@ func TestPendingSignaturePassKeepsARequestArrivingDuringTheModelRead(t *testing.
 }
 
 func TestDeletingAnUnreadSignatureSourceKeepsTheContactPending(t *testing.T) {
+	t.Parallel()
 	h := setupHistory(t)
 	older := h.writes(t, 0, signed("Director"))
 	newest := h.writes(t, 1, signed("Head of Procurement"))
@@ -136,6 +139,7 @@ func TestDeletingAnUnreadSignatureSourceKeepsTheContactPending(t *testing.T) {
 }
 
 func TestSharedSignatureDeferralSnoozesTheWholePendingPass(t *testing.T) {
+	t.Parallel()
 	for _, delay := range []time.Duration{3 * time.Minute, 30 * 24 * time.Hour} {
 		t.Run(delay.String(), func(t *testing.T) {
 			h := setupHistory(t)

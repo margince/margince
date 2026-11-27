@@ -18,6 +18,7 @@ import (
 // A disconnect parks a queue and a held row joins it later. The host is told
 // once per episode, and a new episode tells them again.
 func TestAHostIsToldOncePerParkedEpisode(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	host := ids.From[ids.UserKind](e.Rep1)
 	attention := invitationAttention{pool: e.Pool}

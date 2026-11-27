@@ -56,6 +56,7 @@ func registerClientDirectly(t *testing.T, e *apptest.AppEnv, clientID string) {
 // fixture for the off case — which keeps client existence constant and
 // leaves the connector switch as the only variable between them.
 func TestConsentRequestFollowsTheConnectorSwitch(t *testing.T) {
+	t.Parallel()
 	const clientID = "directly-registered-client"
 	// A request the CONTRACT cannot bind is refused by the generated router
 	// before any middleware or handler runs, so the switch has no say in it.
@@ -138,6 +139,7 @@ func cookieValue(t *testing.T, setCookies []*http.Cookie, name string) string {
 // ride in the FRAGMENT, which is never sent to a server — so client_id, state
 // and the PKCE challenge stay out of api access logs.
 func TestAuthorizeRedirectsToTheSPAConsentScreen(t *testing.T) {
+	t.Parallel()
 	o := setupOAuth(t)
 
 	status, location, body, setCookies := o.authorizeNoFollow(t, url.Values{"scope": {"read write"}})
@@ -247,6 +249,7 @@ func toolRequiresScope(t *testing.T, tool map[string]any, scope string) bool {
 // passed: a human with zero passports still authorizes a client end to end,
 // on the scopes they tick, with nothing hand-minted first.
 func TestAHumanWithNoPassportCanConnectAClient(t *testing.T) {
+	t.Parallel()
 	o := setupOAuth(t)
 	assertOwnerCount(t, o, 0, `SELECT count(*) FROM passport`)
 
@@ -270,6 +273,7 @@ func TestAHumanWithNoPassportCanConnectAClient(t *testing.T) {
 // there is nothing to run out of: a second client ticks its own scopes and
 // connects on the same terms.
 func TestASecondClientNeedsNoHandMintedPassportEither(t *testing.T) {
+	t.Parallel()
 	o := setupOAuth(t)
 	code := o.authorize(t, url.Values{"scope": {"read"}})
 	if _, body := o.exchange(t, url.Values{"code": {code}}); body["access_token"] == nil || body["access_token"] == "" {
@@ -289,6 +293,7 @@ func TestASecondClientNeedsNoHandMintedPassportEither(t *testing.T) {
 // column instead would prove the row, not the surface a client actually
 // sees, and an empty list would pass every assertion below vacuously.
 func TestNarrowingOnTheScreenReachesTheToolSurface(t *testing.T) {
+	t.Parallel()
 	o := setupOAuth(t)
 	code := o.authorize(t, url.Values{"scope": {"read"}})
 	_, body := o.exchange(t, url.Values{"code": {code}})

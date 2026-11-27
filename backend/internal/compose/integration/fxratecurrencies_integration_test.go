@@ -38,6 +38,7 @@ func seedSheet(t *testing.T, e *Env) {
 }
 
 func TestARepReadsTheSheetCurrenciesButNotTheRates(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	seedSheet(t, e)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
@@ -59,6 +60,7 @@ func TestARepReadsTheSheetCurrenciesButNotTheRates(t *testing.T) {
 // picker still needs the base and the codes, so the base is read without that
 // gate.
 func TestDealReadAloneIsEnoughForTheSheetCurrencies(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	seedSheet(t, e)
 	dealReader := e.As(e.Rep1, nil, principal.Permissions{
@@ -89,6 +91,7 @@ func TestDealReadAloneIsEnoughForTheSheetCurrencies(t *testing.T) {
 }
 
 func TestAnEmptySheetAnswersAnEmptyList(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	_, codes, err := e.Deals.RateSheetCurrencies(e.Admin())
 	if err != nil {
@@ -104,6 +107,7 @@ func TestAnEmptySheetAnswersAnEmptyList(t *testing.T) {
 // base change while any rate is priced, so it cannot leave such a row. One
 // written straight in stands for a sheet older than that refusal.
 func TestARateInAnotherBaseIsNotOnTheSheet(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	seedSheet(t, e)
 	e.WsExec(t, `INSERT INTO fx_rate (from_currency, to_currency, rate, rate_date)

@@ -158,6 +158,7 @@ func (s *leaverScene) narrowAdmin(t *testing.T, path string, body anyMap) {
 
 // Every blocking room is named, with the deal page it opens on.
 func TestTheRetirementPreviewNamesTheRoomsThatBlockIt(t *testing.T) {
+	t.Parallel()
 	s := setupLeaver(t)
 	got := s.preview(t)
 	if !slices.Contains(got.Blockers, "deal_rooms") || !slices.Contains(got.Blockers, "reports") {
@@ -184,6 +185,7 @@ func TestTheRetirementPreviewNamesTheRoomsThatBlockIt(t *testing.T) {
 
 // A record the reader may not open counts in total and is never named.
 func TestTheRetirementPreviewNamesOnlyWhatTheReaderMayOpen(t *testing.T) {
+	t.Parallel()
 	s := setupLeaver(t)
 	s.narrowAdmin(t, "", anyMap{"row_scope": "own"})
 	got := s.preview(t)

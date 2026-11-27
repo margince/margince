@@ -169,7 +169,7 @@ func deleteConsentCapabilities(
 	// hash. The address arm matches it for a live address. keptHashes reaches
 	// the addresses an earlier anonymize removed.
 	// Merged-away records too, for the reason the override delete below gives.
-	lowered, hashes := storekit.StopAddressArgs(emails...)
+	lowered, hashes := storekit.StopAddressArgs(ctx, emails...)
 	if _, err := tx.Exec(ctx, `
 		DELETE FROM communication_suppression s
 		 WHERE s.contact_id = $1

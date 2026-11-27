@@ -215,6 +215,7 @@ func (re *runnerEnv) assertDayHeld(t *testing.T, sc agentloope2e.Scenario, world
 // A case that starts too close to midnight waits for the next day instead of
 // failing. One with the day ahead of it does not wait.
 func TestACaseNearMidnightWaitsForTheNextDay(t *testing.T) {
+	t.Parallel()
 	for name, tc := range map[string]struct {
 		now  time.Time
 		wait time.Duration

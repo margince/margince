@@ -134,6 +134,7 @@ func parityCases(t *testing.T, e *Env) []parityCase {
 // mirror image: admitted where the first pair is refused, refused where it is
 // admitted.
 func TestAnAgentWritesExactlyWhatItsHumanWrites(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	svc := identity.NewService(e.Pool)
 
@@ -205,6 +206,7 @@ func TestAnAgentWritesExactlyWhatItsHumanWrites(t *testing.T) {
 // unconditionally, every verdict above would become "admitted" on both sides
 // and the pair would still line up. This asserts the refusal itself.
 func TestAnAgentForAStrangerIsRefusedOnEveryRecordType(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	for _, tc := range parityCases(t, e) {
 		t.Run(tc.table, func(t *testing.T) {

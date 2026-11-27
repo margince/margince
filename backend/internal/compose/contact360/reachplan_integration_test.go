@@ -14,7 +14,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -60,12 +59,10 @@ func readsByPrimaryKey(n planNode) bool {
 }
 
 func TestAContactsReachIsReadFromItsOwnLinksAndParticipants(t *testing.T) {
-	dsn := os.Getenv("MARGINCE_TEST_DSN")
-	if dsn == "" {
-		t.Fatal("MARGINCE_TEST_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
+	t.Parallel()
+	db := testdb.New(t)
 	ctx := context.Background()
-	owner, err := pgx.Connect(ctx, dsn)
+	owner, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -74,9 +71,6 @@ func TestAContactsReachIsReadFromItsOwnLinksAndParticipants(t *testing.T) {
 			t.Errorf("closing the owner connection: %v", err)
 		}
 	})
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
 	tx, err := owner.Begin(ctx)
 	if err != nil {
 		t.Fatal(err)

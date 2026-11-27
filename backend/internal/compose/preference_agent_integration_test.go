@@ -29,6 +29,7 @@ import (
 )
 
 func TestPreferenceCenterOptOutBlocksAgentSend(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	consentStore := consent.NewStore(InstallationDB(e.Pool))
 	// Built through the composition root, not by hand: a marketing send is
@@ -40,7 +41,7 @@ func TestPreferenceCenterOptOutBlocksAgentSend(t *testing.T) {
 	// The REAL delivery machinery for the same reason, one layer down: this
 	// suite's whole claim is that an opt-out REFUSES the next send, and the
 	// engine refuses at staging — inside commsStager, which a double replaces.
-	adapter := newCommsAdapter(e.Pool, nil, SendPath{
+	adapter := newCommsAdapter(e.Pool, nil, nil, SendPath{
 		PublicBaseURL: "https://crm.margince.test",
 		Delivery:      realDeliveryStager(t, e),
 	})

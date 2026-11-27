@@ -57,6 +57,7 @@ func (e *dedupeEnv) countAs(ctx context.Context, t *testing.T, sql string, args 
 // reader's dismissal of the same claim, and the survivor's stands — it was made
 // with the record that remains in front of them.
 func TestAMergeCarriesTheDismissalsAReaderAlreadyGave(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	survivor, err := e.store.EnsureCounterparty(ctx, e.ensureInput(ctx, t, "keeper@dismiss.test", "Keeper", "dismiss.test"))
@@ -125,6 +126,7 @@ func TestAMergeCarriesTheDismissalsAReaderAlreadyGave(t *testing.T) {
 // it is a cached summary, and after a merge BOTH copies describe a record that
 // no longer exists in the shape they were written about.
 func TestAMergeCarriesOpenWorkAndDropsTheStaleBrief(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	survivor, err := e.store.EnsureCounterparty(ctx, e.ensureInput(ctx, t, "keeper@open.test", "Keeper", "open.test"))

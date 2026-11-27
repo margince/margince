@@ -146,6 +146,7 @@ func readCaptureCounts(t *testing.T, e *integration.SearchEnv) captureCounts {
 }
 
 func TestCaptureSyncIsIdempotentAndProvenanced(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	contactID := e.SeedID(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Inbox Sender', 'manual', 'human:x')`)
 
@@ -222,6 +223,7 @@ func TestCaptureSyncIsIdempotentAndProvenanced(t *testing.T) {
 }
 
 func TestCaptureScopeIntersectionRefusesOverScopedConnector(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	registry := newTestCaptureRegistry(e, newTestKeyvault(t, e))
 	registry.Register(&mailFake{scopes: []principal.Scope{principal.ScopeRead, principal.ScopeSend}})
@@ -241,6 +243,7 @@ func TestCaptureScopeIntersectionRefusesOverScopedConnector(t *testing.T) {
 }
 
 func TestReconnectUnarchivesTheConnection(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	registry := newTestCaptureRegistry(e, newTestKeyvault(t, e))
 	registry.Register(&mailFake{})
@@ -282,6 +285,7 @@ func TestReconnectUnarchivesTheConnection(t *testing.T) {
 }
 
 func TestCaptureLinkTargetOutsideScopeRefused(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	// A contact capture-private to team2's rep — the one state that hides a
 	// contact from the team1 granting human.

@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/dealrooms"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -65,7 +66,7 @@ func newManagerMoveFixture(t *testing.T) managerMoveFixture {
 	pipeline, stage, won := DealFixture(t, e)
 	now := clocktest.Now(t)
 	svc := dealstatus.NewService(e.Pool, e.Deals, e.Activities, dealrooms.NewStore(e.DB()), func() time.Time { return now }).
-		WithManagerStandings(managermove.Standings(compose.ForecastStoreForTest(e.Pool)))
+		WithManagerStandings(managermove.Standings(compose.ForecastStoreForTest(e.Pool), identity.RbacObjects{}))
 	return managerMoveFixture{
 		e: e, svc: svc, rep: e.As(e.Rep1, []ids.UUID{e.Team1}, repReadingForecast(true)), now: now, pipeline: pipeline, stage: stage, won: won,
 	}
@@ -130,6 +131,7 @@ func (f managerMoveFixture) move(ctx context.Context, t *testing.T, deal ids.UUI
 }
 
 func TestADealThatNeedsTheManagerOffersTheMoveWithEachReason(t *testing.T) {
+	t.Parallel()
 	f := newManagerMoveFixture(t)
 	f.e.GrantRole(t, f.e.Rep2, "manager")
 	owner := f.e.Rep1
@@ -168,6 +170,7 @@ func TestADealThatNeedsTheManagerOffersTheMoveWithEachReason(t *testing.T) {
 }
 
 func TestARepWithNoManagerIsNotOfferedTheMove(t *testing.T) {
+	t.Parallel()
 	f := newManagerMoveFixture(t)
 	owner := f.e.Rep3
 	deal := f.e.SeedDeal(t, "Alone on the team", f.pipeline, f.stage, &owner)
@@ -184,6 +187,7 @@ func TestARepWithNoManagerIsNotOfferedTheMove(t *testing.T) {
 }
 
 func TestSettingTheManagerMoveAsideHoldsUntilAFactChanges(t *testing.T) {
+	t.Parallel()
 	f := newManagerMoveFixture(t)
 	f.e.GrantRole(t, f.e.Rep2, "manager")
 	owner := f.e.Rep1
@@ -209,6 +213,7 @@ func TestSettingTheManagerMoveAsideHoldsUntilAFactChanges(t *testing.T) {
 }
 
 func TestForecastReasonsFollowTheReadersForecastAccess(t *testing.T) {
+	t.Parallel()
 	f := newManagerMoveFixture(t)
 	f.e.GrantRole(t, f.e.Rep2, "manager")
 	owner, other := f.e.Rep1, f.e.Rep3
@@ -249,6 +254,7 @@ func TestForecastReasonsFollowTheReadersForecastAccess(t *testing.T) {
 }
 
 func TestDealActionsBetweenNamesTasksDoneAndMeetingsHeldInsideTheWindow(t *testing.T) {
+	t.Parallel()
 	f := newManagerMoveFixture(t)
 	owner := f.e.Rep1
 	deal := f.e.SeedDeal(t, "Worked deal", f.pipeline, f.stage, &owner)
@@ -291,6 +297,7 @@ func TestDealActionsBetweenNamesTasksDoneAndMeetingsHeldInsideTheWindow(t *testi
 }
 
 func TestAcceptingTheMoveRequestsTheManagerThroughTheDealsOwnWrite(t *testing.T) {
+	t.Parallel()
 	f := newManagerMoveFixture(t)
 	f.e.GrantRole(t, f.e.Rep2, "manager")
 	f.e.WsExec(t, `INSERT INTO team_membership (team_id, user_id) VALUES ($1, $2)`, f.e.Team1, f.e.Rep3)
@@ -374,6 +381,7 @@ func TestAcceptingTheMoveRequestsTheManagerThroughTheDealsOwnWrite(t *testing.T)
 }
 
 func TestARequestLeavesTheListWhenTheDealLeavesTheOpenPipeline(t *testing.T) {
+	t.Parallel()
 	f := newManagerMoveFixture(t)
 	owner := f.e.Rep1
 	deal := f.e.SeedDeal(t, "Closing deal", f.pipeline, f.stage, &owner)
@@ -394,6 +402,7 @@ func TestARequestLeavesTheListWhenTheDealLeavesTheOpenPipeline(t *testing.T) {
 }
 
 func TestARecordGrantDoesNotMakeALeadTheManagerOfADeal(t *testing.T) {
+	t.Parallel()
 	f := newManagerMoveFixture(t)
 	owner := f.e.Rep1
 	deal := f.e.SeedDeal(t, "Shared deal", f.pipeline, f.stage, &owner)
@@ -422,6 +431,7 @@ func TestARecordGrantDoesNotMakeALeadTheManagerOfADeal(t *testing.T) {
 }
 
 func TestClosingAndReopeningADealLeavesNoStaleRequest(t *testing.T) {
+	t.Parallel()
 	f := newManagerMoveFixture(t)
 	f.e.GrantRole(t, f.e.Rep2, "manager")
 	owner := f.e.Rep1

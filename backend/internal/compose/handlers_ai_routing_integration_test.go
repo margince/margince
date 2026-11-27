@@ -67,6 +67,7 @@ func getThenPut(ctx context.Context, t *testing.T, h aiRoutingHandlers, edit fun
 // Judged bare, every lane of a pinned eu_hosted binding reads as a residency
 // breach and the binding can never be saved from the form.
 func TestAPinnedEUBindingPreviewsCleanAndSavesFromTheDocumentGETAnswered(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.As(e.AdminUser, nil, principal.Permissions{
 		Objects:  map[string]principal.ObjectGrant{"ai_routing": {Read: true, Update: true}, "ai_budget": {Read: true}},
@@ -97,6 +98,7 @@ func TestAPinnedEUBindingPreviewsCleanAndSavesFromTheDocumentGETAnswered(t *test
 }
 
 func TestReadingTheBindingAndWritingItBackKeepsEveryResidencyPin(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := routingAdmin(e)
 	store := ai.NewRoutingStore(NewSettingsStore(e.Pool), StoredConfig(e.Pool))
@@ -137,6 +139,7 @@ func TestReadingTheBindingAndWritingItBackKeepsEveryResidencyPin(t *testing.T) {
 // how it is served (here its `{}` opt-out of the product default) is not
 // carried to the new one.
 func TestRepointingALaneKeepsItsProvidersPinsButNotItsServingPreferences(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := routingAdmin(e)
 	store := ai.NewRoutingStore(NewSettingsStore(e.Pool), StoredConfig(e.Pool))
@@ -187,6 +190,7 @@ func TestRepointingALaneKeepsItsProvidersPinsButNotItsServingPreferences(t *test
 // A stored thinking level is cleared by writing `default`, which is not itself
 // stored; omitting the field would have kept it.
 func TestAStoredThinkingLevelIsClearedByWritingDefault(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := routingAdmin(e)
 	store := ai.NewRoutingStore(NewSettingsStore(e.Pool), StoredConfig(e.Pool))

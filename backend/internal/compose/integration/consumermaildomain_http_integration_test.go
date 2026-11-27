@@ -31,6 +31,7 @@ type consumerMailDomainListDTO struct {
 }
 
 func TestConsumerMailDomainsOverHTTP(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -100,6 +101,7 @@ func TestConsumerMailDomainsOverHTTP(t *testing.T) {
 }
 
 func TestConsumerMailDomainsRefusesWhatTheMatcherCouldNeverRead(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -133,6 +135,7 @@ type domainProblemDTO struct {
 // The shipped list already answers for its own domains, and a customer's
 // domain is stored only after the request says yes.
 func TestConsumerMailDomainsAnswerWhatIsAlreadyOnFile(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	const path = "/v1/capture/consumer-mail-domains"
@@ -173,6 +176,7 @@ func TestConsumerMailDomainsAnswerWhatIsAlreadyOnFile(t *testing.T) {
 // A company's domain list refuses consumer mail, and the other-address list
 // refuses it as a whole domain but asks about a customer's.
 func TestConsumerMailDomainIsRefusedWhereItNamesACompanyOrASeat(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -201,6 +205,7 @@ func TestConsumerMailDomainIsRefusedWhereItNamesACompanyOrASeat(t *testing.T) {
 // The agent door judges a company's domain by the same list the app does,
 // including a domain only this workspace added.
 func TestTheAgentDoorRefusesAWorkspaceAddedConsumerDomainOnACompany(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "agent-company-domain", "read", "write")
 	if status := d.e.Call(t, "POST", "/v1/capture/consumer-mail-domains", map[string]any{"domain": "overlay-mail.example", "kind": "extra"}, nil, nil); status != http.StatusCreated {
 		t.Fatalf("adding the overlay domain → %d, want 201", status)

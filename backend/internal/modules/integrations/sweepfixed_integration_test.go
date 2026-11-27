@@ -81,6 +81,7 @@ func (e *runsEnv) tickPicks(t *testing.T, budget int) []ids.ContactID {
 }
 
 func TestAFixedContactBehindAThousandOlderOnesIsPickedInTheNextTick(t *testing.T) {
+	t.Parallel()
 	e := setupRuns(t, runsConfig{})
 	e.plantOlderBacklog(t, 1000)
 
@@ -107,6 +108,7 @@ func TestAFixedContactBehindAThousandOlderOnesIsPickedInTheNextTick(t *testing.T
 }
 
 func TestAtMostFivePlacesGoToFixedContactsNewestChangeFirst(t *testing.T) {
+	t.Parallel()
 	e := setupRuns(t, runsConfig{})
 	e.plantOlderBacklog(t, 100)
 
@@ -139,6 +141,7 @@ func TestAtMostFivePlacesGoToFixedContactsNewestChangeFirst(t *testing.T) {
 }
 
 func TestUnusedReservedPlacesGoToTheBacklogInOldestFirstOrder(t *testing.T) {
+	t.Parallel()
 	e := setupRuns(t, runsConfig{})
 	e.plantOlderBacklog(t, 100)
 	fixed := e.plantFixed(t)
@@ -187,6 +190,7 @@ func (e *runsEnv) isFixed(t *testing.T, id ids.ContactID) bool {
 }
 
 func TestAContactThatIsNotFixedKeepsItsCooldown(t *testing.T) {
+	t.Parallel()
 	e := setupRuns(t, runsConfig{})
 	e.plantOlderBacklog(t, 100)
 	unfixed := e.plantSubjectSkippedFor(t, provider.SkipNoIdentifiers)
@@ -198,6 +202,7 @@ func TestAContactThatIsNotFixedKeepsItsCooldown(t *testing.T) {
 }
 
 func TestTheFixedShareScalesWithTheBudgetAndTheBacklogKeepsTheRest(t *testing.T) {
+	t.Parallel()
 	e := setupRuns(t, runsConfig{})
 	e.plantOlderBacklog(t, 30)
 	fixed := map[ids.ContactID]bool{}
@@ -226,6 +231,7 @@ func TestTheFixedShareScalesWithTheBudgetAndTheBacklogKeepsTheRest(t *testing.T)
 // fixes arrive every tick, and the backlog must still drain. A fixed contact
 // the run skipped again for lack of identifiers must not come back.
 func TestTheBacklogDrainsUnderADailyLimitWhileFixesKeepArriving(t *testing.T) {
+	t.Parallel()
 	e := setupRuns(t, runsConfig{})
 	const backlogSize = 30
 	e.plantOlderBacklog(t, backlogSize)
@@ -313,6 +319,7 @@ func (e *runsEnv) recordRun(t *testing.T, id ids.ContactID, state string) {
 }
 
 func TestTheSettingsCountLeavesOutARestrictedContact(t *testing.T) {
+	t.Parallel()
 	e := setupRuns(t, runsConfig{})
 	e.plantOlderBacklog(t, 3)
 	count := func() int {

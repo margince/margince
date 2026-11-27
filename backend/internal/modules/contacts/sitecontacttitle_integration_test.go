@@ -16,6 +16,7 @@ import (
 )
 
 func TestASiteRolePastTheTitleLimitFillsTheTitleCut(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	contactID, companyID := e.seedEmployedContact(ctx, t,

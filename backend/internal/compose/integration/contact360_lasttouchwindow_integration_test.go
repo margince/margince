@@ -15,6 +15,7 @@ import (
 // The reader who opens them all still gets the newest. The closed rows
 // outnumber any first window the read may use.
 func TestTheNewestReadableReplyIsFoundBehindManyTheReaderCannotOpen(t *testing.T) {
+	t.Parallel()
 	f := newCorrespondenceFixture(t)
 	older := f.logMail(t, "Re: the first proposal", "inbound", 20*24*time.Hour)
 	olderAt := roomAgo(20 * 24 * time.Hour)
@@ -47,6 +48,7 @@ func TestTheNewestReadableReplyIsFoundBehindManyTheReaderCannotOpen(t *testing.T
 // The outbound clock falls back the same way. Sends the reader cannot open,
 // newer than one they can, leave that one as their last send.
 func TestTheNewestReadableSendIsFoundBehindManyTheReaderCannotOpen(t *testing.T) {
+	t.Parallel()
 	f := newCorrespondenceFixture(t)
 	for hour := range 40 {
 		f.inward = f.logMail(t, "Following up", "outbound", time.Duration(40-hour)*time.Hour)
@@ -65,6 +67,7 @@ func TestTheNewestReadableSendIsFoundBehindManyTheReaderCannotOpen(t *testing.T)
 // The answer is the one the whole history picks, never whichever of the pair
 // a window happened to keep.
 func TestATieAtTheWindowsEdgeAnswersAsTheWholeHistory(t *testing.T) {
+	t.Parallel()
 	f := newCorrespondenceFixture(t)
 	f.logMail(t, "Re: first of two", "inbound", 3*24*time.Hour)
 	second := f.logMail(t, "Re: second of two", "inbound", 3*24*time.Hour)

@@ -16,6 +16,7 @@ import (
 )
 
 func TestOnlyAnIdenticalCompletedAbsoluteMoveReplacesItsOlderFailure(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name, kind, replacementHash, replacementBody string
 		completed, hidden, otherDecider              bool

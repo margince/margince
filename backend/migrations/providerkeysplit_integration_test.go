@@ -38,6 +38,7 @@ func providerKeyRows(ctx context.Context, t *testing.T, conn *pgx.Conn) map[stri
 // Each provider's ref moves to its own row unchanged, so every sealed blob is
 // still named. An empty ref names nothing and does not move.
 func TestEachProviderKeyRefMovesToItsOwnRow(t *testing.T) {
+	t.Parallel()
 	dsn, _ := dsns(t)
 	conn := connect(t, dsn)
 	headSchema(t, conn)
@@ -73,6 +74,7 @@ func TestEachProviderKeyRefMovesToItsOwnRow(t *testing.T) {
 // An installation that never stored a key has no map row, and the migration
 // touches nothing.
 func TestTheProviderKeySplitWithNoMapRowDoesNothing(t *testing.T) {
+	t.Parallel()
 	dsn, _ := dsns(t)
 	conn := connect(t, dsn)
 	headSchema(t, conn)
@@ -88,6 +90,7 @@ func TestTheProviderKeySplitWithNoMapRowDoesNothing(t *testing.T) {
 // The split applied twice, and a round trip down and up again, leave every
 // ref as it was.
 func TestTheProviderKeySplitIsRepeatableAndRoundTrips(t *testing.T) {
+	t.Parallel()
 	dsn, _ := dsns(t)
 	conn := connect(t, dsn)
 	headSchema(t, conn)

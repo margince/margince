@@ -7,7 +7,6 @@ package runner
 
 import (
 	"context"
-	"os"
 	"strings"
 	"testing"
 
@@ -20,10 +19,8 @@ import (
 // scheduler tick runs finds its rows through idx_agent_run_running, so it does
 // not read every finished run the table keeps.
 func TestTheStuckRunSweepReadsOnlyTheRunningRows(t *testing.T) {
-	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
-	if ownerDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
+	t.Parallel()
+	ownerDSN := testdb.For(t).OwnerDSN
 	ctx := context.Background()
 	owner, err := pgx.Connect(ctx, ownerDSN)
 	if err != nil {

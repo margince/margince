@@ -80,6 +80,7 @@ func remindedOn(t *testing.T, e *loadEnv, source ids.UUID, byHand bool) map[stri
 }
 
 func TestAReplyReminderSitsOnlyOnTheSendersPage(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	sender, from := e.mailContact(t, "sender", "workspace")
 	firstCc, firstCcAddress := e.mailContact(t, "first-cc", "workspace")
@@ -105,6 +106,7 @@ func TestAReplyReminderSitsOnlyOnTheSendersPage(t *testing.T) {
 }
 
 func TestAReplyReminderFromAnUnknownSenderSitsOnTheMailsRecords(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	copied, copiedAddress := e.mailContact(t, "copied", "workspace")
 	company := e.company(t)
@@ -122,6 +124,7 @@ func TestAReplyReminderFromAnUnknownSenderSitsOnTheMailsRecords(t *testing.T) {
 // A message whose sender was never recorded cannot tell the requester from the
 // contacts copied, so the reminder keeps every link the message has.
 func TestAReplyReminderOnAMailWithNoRecordedSenderKeepsEveryLink(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	first, firstAddress := e.mailContact(t, "first", "workspace")
 	second, secondAddress := e.mailContact(t, "second", "workspace")
@@ -146,6 +149,7 @@ func TestAReplyReminderOnAMailWithNoRecordedSenderKeepsEveryLink(t *testing.T) {
 // the reminder sits on the mail's other records instead — and the automatic
 // pass and a rep taking the request by hand agree on that.
 func TestBothDoorsFileAReminderFromAHiddenSenderOnTheSameRecords(t *testing.T) {
+	t.Parallel()
 	for _, byHand := range []bool{false, true} {
 		e := setupLoad(t)
 		hidden, from := e.mailContact(t, "hidden", "owner")
@@ -165,6 +169,7 @@ func TestBothDoorsFileAReminderFromAHiddenSenderOnTheSameRecords(t *testing.T) {
 // archived team keeps its membership rows, and the seat a reminder is filed for
 // is judged the way that seat itself is resolved.
 func TestAReminderReachesASenderSharedWithTheAssigneesLiveTeamOnly(t *testing.T) {
+	t.Parallel()
 	for _, archived := range []bool{false, true} {
 		e := setupLoad(t)
 		team := ids.NewV7()
@@ -190,6 +195,7 @@ func TestAReminderReachesASenderSharedWithTheAssigneesLiveTeamOnly(t *testing.T)
 // A sender row whose stored contact never held its address names the address's
 // holder. Both doors file the reminder on that contact, not on the stored one.
 func TestAReplyReminderFollowsTheSenderAddressOverAMismatchedStoredContact(t *testing.T) {
+	t.Parallel()
 	for _, byHand := range []bool{false, true} {
 		e := setupLoad(t)
 		guessed, _ := e.mailContact(t, "guessed", "workspace")
@@ -209,6 +215,7 @@ func TestAReplyReminderFollowsTheSenderAddressOverAMismatchedStoredContact(t *te
 // A sender row with only an address another contact once held proves nobody, so
 // the reminder sits on the mail's other records.
 func TestAReplyReminderFromABareMovedAddressSitsOnTheMailsRecords(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	holder, from := e.mailContact(t, "holder", "workspace")
 	former, _ := e.mailContact(t, "former", "workspace")

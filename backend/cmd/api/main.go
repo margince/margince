@@ -25,10 +25,10 @@ import (
 	// containers that ship no zoneinfo.
 	_ "time/tzdata"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	// The composed extension set (ADR-0120): the generated module under
 	// build/composition/ in a composed build, the committed vanilla stub
 	// in a bare one — same import path either way.
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/margince/margince/composition"
 
 	"github.com/margince/margince/backend/internal/compose"
@@ -72,25 +72,17 @@ func start(ctx context.Context, args []string, stdout io.Writer) error {
 // listener — and the order it reads in is the order the process depends on;
 // boot.go holds the phases.
 func run(ctx context.Context, args []string, stdout io.Writer) error {
-	cfg, loaded, err := loadAPIConfig(args, config.Environ())
+	cfg, loaded, err := bootAPIConfig(args, config.Environ())
 	if err != nil {
 		return err
 	}
 
-	// Register the composed extension set before anything serves; a
-	// failing registration aborts the boot (ADR-0120 EXT-P4). ONE
-	// snapshot serves registration and the boot inventory below, so both
-	// observe the same declarations.
-	extensions := composition.Extensions()
-	if err := registerExtensions(extensions); err != nil {
+	composed, err := registerAndInstrument(ctx, composition.Extensions(), cfg, stdout)
+	if err != nil {
 		return err
 	}
-
 	// The flush is deferred before the pool and the other closers, so it runs
 	// last. Events logged while shutting down still leave.
-	if err := startInstrumentation(ctx, cfg, stdout); err != nil {
-		return err
-	}
 	defer compose.FlushInstrumentation(ctx)
 
 	// INSTALLED as the process default, not merely built. Everything below is
@@ -104,7 +96,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	}
 	loaded.Report(logger)
 
-	pool, vault, err := openInstallation(ctx, cfg)
+	pool, vault, err := openBoundInstallation(ctx, cfg, composed)
 	if err != nil {
 		return err
 	}
@@ -119,7 +111,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	// no workspace to record against; BEFORE the server is assembled, which
 	// loads the transport directory from the rows this writes. boot.go holds the
 	// phase and the order inside it.
-	if err := recordBootFacts(ctx, pool, logger, extensions); err != nil {
+	if err := recordBootFacts(ctx, pool, logger, composed); err != nil {
 		return err
 	}
 
@@ -169,6 +161,9 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	if err != nil {
 		return err
 	}
+	if modelPath != nil {
+		composed.BindModels(modelPath.ExtensionTasks)
+	}
 	opts = append(opts, slices.Concat(modelOpts, settingOptions(cfg, logger))...)
 
 	doorOpts, stopDoorLanes, err := mcpDoorLanes(ctx, cfg, logger)
@@ -178,7 +173,8 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	defer stopDoorLanes()
 	opts = append(opts, doorOpts...)
 
-	apiHandler := compose.New(pool, logger, opts...)
+	//nolint:contextcheck // boot-time wiring: the handler and the directory it loads outlive any request context
+	apiHandler := compose.New(pool, logger, composed, opts...)
 	// Only now: the flush it listens with is captured while the options run.
 	resetLane.listen(ctx, modelPath)
 	// An admin re-points a lane through this role, but the WORKER is a separate
@@ -468,9 +464,10 @@ func schemaPoolOptions(ctx context.Context, schemaDSN string, stdout io.Writer) 
 // registerExtensions registers the units' verbs and jobs, then their AI tasks.
 // The tasks join the router's tables before the model path is resolved, so
 // Settings lists them and the budget counts them.
-func registerExtensions(extensions []extension.Extension) error {
-	if err := compose.RegisterExtensions(extensions, composition.Verbs(), composition.Jobs()); err != nil {
-		return err
+func registerExtensions(extensions []extension.Extension) (*compose.Extensions, error) {
+	composed, err := compose.RegisterExtensions(extensions, composition.Verbs(), composition.Jobs())
+	if err != nil {
+		return nil, err
 	}
-	return compose.RegisterExtensionAITasks(extensions, composition.AITasks())
+	return composed, compose.RegisterExtensionAITasks(extensions, composition.AITasks())
 }

@@ -54,6 +54,7 @@ func zeroNegativeTokens(t *testing.T, e *rateEnv, ws ids.UUID) int {
 }
 
 func TestANegativeTokenFigureIsRaisedToZeroAndTheRestStay(t *testing.T) {
+	t.Parallel()
 	e := setupRateStore(t)
 	ws, _ := e.seedWorkspace(context.Background(), t)
 	misreported, served := ids.NewV7(), ids.NewV7()

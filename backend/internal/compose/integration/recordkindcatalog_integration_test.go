@@ -47,6 +47,7 @@ func declaredKind(table string, key ...string) recordkinds.Declared {
 }
 
 func TestADeclaredKindMustHaveItsTableColumnsAndAUniqueNaturalKey(t *testing.T) {
+	t.Parallel()
 	env := Setup(t)
 	ctx := context.Background()
 	const good = `id uuid PRIMARY KEY, archived_at timestamptz, code text NOT NULL, site text, UNIQUE (code)`
@@ -107,6 +108,7 @@ func TestADeclaredKindMustHaveItsTableColumnsAndAUniqueNaturalKey(t *testing.T) 
 }
 
 func TestADeclaredKindTimelineColumnsMustExistWithTheRightTypes(t *testing.T) {
+	t.Parallel()
 	env := Setup(t)
 	ctx := context.Background()
 	const base = `id uuid PRIMARY KEY, archived_at timestamptz, code text NOT NULL UNIQUE, site text, `
@@ -143,6 +145,7 @@ func TestADeclaredKindTimelineColumnsMustExistWithTheRightTypes(t *testing.T) {
 }
 
 func TestADeclaredKindTitleColumnMustBeText(t *testing.T) {
+	t.Parallel()
 	env := Setup(t)
 	kindTable(t, "ext_kindcat_titleint", `id uuid PRIMARY KEY, archived_at timestamptz, code integer NOT NULL UNIQUE, site text`)
 	err := compose.VerifyRecordKinds(context.Background(), env.Pool, []recordkinds.Declared{declaredKind("ext_kindcat_titleint", "code")})
@@ -162,6 +165,7 @@ func titleIndex(t *testing.T, table string) {
 }
 
 func TestAKindWithAHistoryNeedsAnIndexPerSubject(t *testing.T) {
+	t.Parallel()
 	env := Setup(t)
 	ctx := context.Background()
 	const table = "ext_kindcat_timeline"

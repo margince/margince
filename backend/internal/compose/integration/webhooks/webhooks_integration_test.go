@@ -241,6 +241,7 @@ func (we *webhookEnv) createSubscription(t *testing.T, target string, eventTypes
 // builder both roles use: a valid key yields a deliverer; a non-base64 or
 // wrong-length key fails the boot loudly.
 func TestNewWebhookDelivererBuildsFromKey(t *testing.T) {
+	t.Parallel()
 	we := setupWebhooks(t)
 	log := slog.New(slog.NewTextHandler(os.Stderr, nil))
 
@@ -258,6 +259,7 @@ func TestNewWebhookDelivererBuildsFromKey(t *testing.T) {
 }
 
 func TestWebhookSubscriptionCRUDOverHTTP(t *testing.T) {
+	t.Parallel()
 	we := setupWebhooks(t)
 
 	// http:// is rejected at create.
@@ -340,6 +342,7 @@ func TestWebhookSubscriptionCRUDOverHTTP(t *testing.T) {
 }
 
 func TestWebhookDeliverySignedExactlyOnce(t *testing.T) {
+	t.Parallel()
 	we := setupWebhooks(t)
 	rcv := newReceiver(t, http.StatusOK)
 	now := time.Now().UTC()
@@ -416,6 +419,7 @@ func verifySWSignature(t *testing.T, secret, webhookID string, ts int64, body []
 // (BYO-EVT-4): once the subscription's owner is no longer a live user, the
 // fan-out delivers nothing — no privilege escalation survives a revocation.
 func TestWebhookFanOutStopsAtRevokedOwner(t *testing.T) {
+	t.Parallel()
 	we := setupWebhooks(t)
 	rcv := newReceiver(t, http.StatusOK)
 	now := time.Now().UTC()
@@ -452,6 +456,7 @@ func TestWebhookFanOutStopsAtRevokedOwner(t *testing.T) {
 // owner is re-evaluated once the failure clears (rather than the event being
 // lost for that subscription forever).
 func TestWebhookFanOutReturnsErrorOnTransientVisibilityFailure(t *testing.T) {
+	t.Parallel()
 	we := setupWebhooks(t)
 	rcv := newReceiver(t, http.StatusOK)
 	now := time.Now().UTC()
@@ -475,6 +480,7 @@ func TestWebhookFanOutReturnsErrorOnTransientVisibilityFailure(t *testing.T) {
 // delivered — even to a row_scope=all owner — while a genuinely
 // workspace-level subject (pipeline config) still is.
 func TestWebhookFanOutFailsClosedForUnclassifiedSubject(t *testing.T) {
+	t.Parallel()
 	we := setupWebhooks(t)
 	rcv := newReceiver(t, http.StatusOK)
 	now := time.Now().UTC()
@@ -522,6 +528,7 @@ func TestWebhookFanOutFailsClosedForUnclassifiedSubject(t *testing.T) {
 // edited_change, target ids) never reaches an owner who could not read the target
 // directly.
 func TestWebhookApprovalFanOutGatesOnTargetVisibility(t *testing.T) {
+	t.Parallel()
 	we := setupWebhooks(t)
 	rcv := newReceiver(t, http.StatusOK)
 	now := time.Now().UTC()
@@ -720,6 +727,7 @@ func (we *webhookEnv) inWorkspaceTx(t *testing.T, run func(pgx.Tx) error) {
 }
 
 func TestWebhookRetryThenDeadLetterThenReplay(t *testing.T) {
+	t.Parallel()
 	we := setupWebhooks(t)
 	rcv := newReceiver(t, http.StatusInternalServerError) // endpoint is down
 	now := time.Now().UTC()
@@ -884,6 +892,7 @@ func mustParseUUID(t *testing.T, s string) ids.UUID {
 // made. Driven through the real Deliverer and a real receiver, so what is
 // counted is POSTs rather than a probe's opinion.
 func TestWebhookAttachmentFanOutFollowsTheRecordItHangsOff(t *testing.T) {
+	t.Parallel()
 	we := setupWebhooks(t)
 	rcv := newReceiver(t, http.StatusOK)
 	now := time.Now().UTC()

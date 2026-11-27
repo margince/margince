@@ -67,6 +67,7 @@ func seedAiCallTrace(t *testing.T, e *apptest.AppEnv) seededAiCalls {
 }
 
 func TestAiCallsListPagesTerminalCallsNewestFirst(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupAppWithOptions(t, compose.WithAiPayloadCaptureFlag(true))
 	e.BootstrapWorkspace(t)
 	seeded := seedAiCallTrace(t, e)
@@ -113,6 +114,7 @@ func TestAiCallsListPagesTerminalCallsNewestFirst(t *testing.T) {
 }
 
 func TestAiCallDetailCarriesLadderAndPayload(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupAppWithOptions(t, compose.WithAiPayloadCaptureFlag(true))
 	e.BootstrapWorkspace(t)
 	seeded := seedAiCallTrace(t, e)
@@ -142,6 +144,7 @@ func TestAiCallDetailCarriesLadderAndPayload(t *testing.T) {
 }
 
 func TestAiCallsRefusedWithoutAutomationGrant(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	seeded := seedAiCallTrace(t, e)

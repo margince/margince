@@ -56,6 +56,7 @@ func entityMembers(t *testing.T, e *apptest.AppEnv, entityID string) []entityMem
 }
 
 func TestAnInviteNamingAnEntityPlacesTheMemberThere(t *testing.T) {
+	t.Parallel()
 	e, entity := inviteEnv(t)
 	var invited struct {
 		ID string `json:"id"`
@@ -89,6 +90,7 @@ func TestAnInviteNamingAnEntityPlacesTheMemberThere(t *testing.T) {
 }
 
 func TestAnInviteNamingNoEntityLeavesTheMemberWithTheDefault(t *testing.T) {
+	t.Parallel()
 	e, entity := inviteEnv(t)
 	if status := e.Call(t, http.MethodPost, "/v1/users", inviteInto("default@invite.test", ""), nil, nil); status != http.StatusCreated {
 		t.Fatalf("inviting with no entity -> %d, want 201", status)
@@ -99,6 +101,7 @@ func TestAnInviteNamingNoEntityLeavesTheMemberWithTheDefault(t *testing.T) {
 }
 
 func TestAnInviteNamingAnEntityThatCannotTakeMembersAddsNoSeat(t *testing.T) {
+	t.Parallel()
 	e, entity := inviteEnv(t)
 	var archived versionedWire
 	if status := e.Call(t, http.MethodPost, "/v1/legal-entities/"+entity.ID+"/archive", nil,
@@ -127,6 +130,7 @@ func TestAnInviteNamingAnEntityThatCannotTakeMembersAddsNoSeat(t *testing.T) {
 // Placing a member is assigning them, so an inviter who may add seats but
 // lacks either assignment grant is refused the whole invite.
 func TestAnInviteNamingAnEntityAsksBothAssignmentGrants(t *testing.T) {
+	t.Parallel()
 	for _, revoked := range []string{"legal_entity", "user_admin"} {
 		t.Run(revoked, func(t *testing.T) {
 			e, entity := inviteEnv(t)
@@ -149,6 +153,7 @@ func TestAnInviteNamingAnEntityAsksBothAssignmentGrants(t *testing.T) {
 // The member edit takes the entity too, so the edit dialog saves in one
 // request; an unknown entity refuses the whole edit.
 func TestAMemberEditMovesTheMemberToTheEntityNamed(t *testing.T) {
+	t.Parallel()
 	e, entity := inviteEnv(t)
 	var invited struct {
 		ID          string `json:"id"`

@@ -17,6 +17,7 @@ import (
 )
 
 func TestDocumentReadingStoresItsOriginalExplanationLanguage(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct{ language, text string }{{"en", "states none"}, {"de", "keines der Deal-Felder"}, {"vi", "không nêu rõ"}} {
 		t.Run(tc.language, func(t *testing.T) {
 			env := integration.Setup(t)

@@ -42,6 +42,7 @@ func seedAcquisition(t *testing.T, e *channelConsentEnv, kind string) ids.UUID {
 // duplicate accepted, one acquisition would owe two duties and discharging one
 // would leave the other standing forever on the queue.
 func TestADutyIsRecordedOncePerAcquisition(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	acq := seedAcquisition(t, e, "purchased_or_imported")
 	due := time.Now().Add(30 * 24 * time.Hour)
@@ -75,6 +76,7 @@ func TestADutyIsRecordedOncePerAcquisition(t *testing.T) {
 // on the contact, the second would collapse into the first and read as
 // discharged by it.
 func TestTwoAcquisitionsOweTwoDuties(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	first := seedAcquisition(t, e, "event_or_form")
 	second := seedAcquisition(t, e, "purchased_or_imported")
@@ -104,6 +106,7 @@ func TestTwoAcquisitionsOweTwoDuties(t *testing.T) {
 // TestTheQueueOrdersByTheClock — soonest deadline first, and a completed case
 // is off it entirely.
 func TestTheQueueOrdersByTheClock(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	now := time.Now()
 	late := seedAcquisition(t, e, "purchased_or_imported")
@@ -146,6 +149,7 @@ func TestTheQueueOrdersByTheClock(t *testing.T) {
 // TestATerminalCaseSaysWhenItBecameOne — a completed case carrying no timestamp
 // cannot be told from one somebody closed and forgot to date.
 func TestATerminalCaseSaysWhenItBecameOne(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	acq := seedAcquisition(t, e, "referral")
 

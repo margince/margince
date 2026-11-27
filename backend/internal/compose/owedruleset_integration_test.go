@@ -64,6 +64,7 @@ func stampVerdict(t *testing.T, e *integration.Env, id ids.UUID, verdict, rulese
 // a verdict nothing could revisit, so correcting the rules left every message
 // already judged under the old ones wrong for good.
 func TestAVerdictUnderAnOlderRulesetIsJudgedAgain(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	activity := seedWaitingMail(t, e, "Dienstag 14 Uhr wuerde bei uns passen")
 	stampVerdict(t, e, activity, activities.OwedVerdictInformsUs, "prompts-someoldbuild")
@@ -85,6 +86,7 @@ func TestAVerdictUnderAnOlderRulesetIsJudgedAgain(t *testing.T) {
 // Without this the sweep would re-judge the whole installation on every pass,
 // forever, at one model call per ten rows.
 func TestAVerdictUnderTheCurrentRulesetIsLeftAlone(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	activity := seedWaitingMail(t, e, "Already judged by this build")
 	stampVerdict(t, e, activity, activities.OwedVerdictInformsUs, owedverdict.Ruleset)
@@ -106,6 +108,7 @@ func TestAVerdictUnderTheCurrentRulesetIsLeftAlone(t *testing.T) {
 // never delay a customer who wrote this morning. On the deploy that moves the
 // prompt every judged row is stale at once, which is exactly when that matters.
 func TestNewMailIsJudgedBeforeTheSweep(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	fresh := seedWaitingMail(t, e, "A question nobody has judged")
 	stale := seedWaitingMail(t, e, "Judged under rules that have moved")

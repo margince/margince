@@ -26,6 +26,7 @@ import (
 // marketing mail without a List-Unsubscribe header is what gets a domain
 // filtered.
 func TestSendEmailDerivesUnsubscribeHeadersForAMarketingPurpose(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
 	stager := &recordingStager{}
@@ -72,6 +73,7 @@ func TestSendEmailDerivesUnsubscribeHeadersForAMarketingPurpose(t *testing.T) {
 // declines to mint a token for a locked purpose — so it carries no header and
 // its body is left exactly as the sender wrote it.
 func TestSendEmailDerivesNoUnsubscribeHeadersForATransactionalPurpose(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
 	stager := &recordingStager{}
@@ -93,6 +95,7 @@ func TestSendEmailDerivesNoUnsubscribeHeadersForATransactionalPurpose(t *testing
 }
 
 func TestMultiRecipientRenderingNeverSharesAnUnsubscribeCredential(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
 	stager := &recordingStager{}
@@ -108,6 +111,7 @@ func TestMultiRecipientRenderingNeverSharesAnUnsubscribeCredential(t *testing.T)
 }
 
 func TestMissingPublicURLTravelsAsAFooterFinding(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
 	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws))).WithUnsubscribe(stubUnsubscribeLinker{token: testUnsubscribeTok, ok: true})
@@ -130,6 +134,7 @@ func TestMissingPublicURLTravelsAsAFooterFinding(t *testing.T) {
 // means the answer is unknown — and sending bulk mail on an unknown answer is
 // the RFC 8058 violation the linker exists to prevent.
 func TestSendEmailRefusesWhenTheUnsubscribeLinkerFails(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
 	stager := &recordingStager{}
@@ -150,6 +155,7 @@ func TestSendEmailRefusesWhenTheUnsubscribeLinkerFails(t *testing.T) {
 // transactional send mints none, so it reaches as many addressees as the caller
 // listed. Refusing those too would break every ordinary reply-all.
 func TestSendEmailAcceptsAMultiAddresseeSendThatCarriesNoUnsubscribeToken(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
 	stager := &recordingStager{}
@@ -173,6 +179,7 @@ func TestSendEmailAcceptsAMultiAddresseeSendThatCarriesNoUnsubscribeToken(t *tes
 // left the activity behind would promise the user a send that was never
 // queued, on a timeline they have no way to correct.
 func TestSendEmailCommitsNoActivityWhenStagingFails(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
 	stager := &recordingStager{err: errors.New("delivery table unavailable")}
@@ -193,6 +200,7 @@ func TestSendEmailCommitsNoActivityWhenStagingFails(t *testing.T) {
 // the send grant existed holds read-only access, so the check must ask about
 // the GRANT — "is something connected?" would pass all of them.
 func TestSendEmailRefusesWhenTheMailboxHoldsNoSendGrant(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
 	stager := &recordingStager{}
@@ -215,6 +223,7 @@ func TestSendEmailRefusesWhenTheMailboxHoldsNoSendGrant(t *testing.T) {
 // anchor outside the caller's row scope refuses with the same answer a
 // missing one gives, before anything is staged.
 func TestSendEmailRefusesAnAnchorOutsideTheCallersRowScope(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
 	e.linkToContactOwnedBy(t, anchor, e.other)
@@ -238,6 +247,7 @@ func TestSendEmailRefusesAnAnchorOutsideTheCallersRowScope(t *testing.T) {
 // fact about the deployment they reached by pointing at a record they may not
 // read.
 func TestSendEmailAnswersAnUnauthorizedCallerBeforeTheWiringGuards(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
 	e.linkToContactOwnedBy(t, anchor, e.other)
@@ -258,6 +268,7 @@ func TestSendEmailAnswersAnUnauthorizedCallerBeforeTheWiringGuards(t *testing.T)
 // The same ordering for the OBJECT grant: a caller who may read the anchor but
 // not create an activity gets the denial, not the composition state.
 func TestSendEmailAnswersAMissingCreateGrantBeforeTheWiringGuards(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
 
@@ -276,6 +287,7 @@ func TestSendEmailAnswersAMissingCreateGrantBeforeTheWiringGuards(t *testing.T) 
 // nothing will ever transmit must not leave a timeline entry claiming a message
 // went out.
 func TestSendEmailRefusesAnAuthorizedSendWithNoDeliveryMachinery(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
 
@@ -296,6 +308,7 @@ func TestSendEmailRefusesAnAuthorizedSendWithNoDeliveryMachinery(t *testing.T) {
 // consented, which is a fact about those contacts they did not earn the right to
 // observe by attempting a send they cannot make.
 func TestSendEmailAnswersTheMailboxRefusalBeforeTheConsentGate(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
 	stager := &recordingStager{}
@@ -316,6 +329,7 @@ func TestSendEmailAnswersTheMailboxRefusalBeforeTheConsentGate(t *testing.T) {
 // resolve. Emitting a calendar system's opaque id as In-Reply-To breaks the
 // header for every recipient.
 func TestSendEmailThreadsOntoNothingWhenTheAnchorIsNotMail(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := e.seedNonMailAnchor(t, "evt-88231@google.com")
 	stager := &recordingStager{}
@@ -344,6 +358,7 @@ func TestSendEmailThreadsOntoNothingWhenTheAnchorIsNotMail(t *testing.T) {
 // upsert, which the log path answers by returning the existing row untouched
 // — so neither leg can overwrite the other's value.
 func TestReplayingASourceKeyLeavesTheStoredThreadKeyUntouched(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
@@ -384,6 +399,7 @@ func TestReplayingASourceKeyLeavesTheStoredThreadKeyUntouched(t *testing.T) {
 // is documentation on this surface rather than a validator, so the refusal has
 // to live where both transports pass through.
 func TestSendEmailRefusesAMessageWhoseAddresseeLineIsEmpty(t *testing.T) {
+	t.Parallel()
 	// One fixture for all three, which is what the cases actually share: what
 	// varies is the To/Cc pair, and the subject — the subtraction that empties
 	// the addressee line — reads none of the seeded state.
@@ -445,6 +461,7 @@ func TestSendEmailRefusesAMessageWhoseAddresseeLineIsEmpty(t *testing.T) {
 // composition defect meant for a miswired caller, which has no field fault and
 // answers 500.
 func TestSendEmailAnswersTheAllZeroAnchorAsAMissingRecord(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	stager := &recordingStager{}
 

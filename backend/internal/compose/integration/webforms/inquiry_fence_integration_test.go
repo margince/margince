@@ -28,6 +28,7 @@ import (
 )
 
 func TestAHandlingCutoverRefusesAnIntakeWithoutAcknowledgingOrLosingIt(t *testing.T) {
+	t.Parallel()
 	e := setupFormsApp(t)
 	form := createForm(t, e, integration.AnyMap{"name": "Inquiries", "sender": "browser", "allowed_origins": []string{siteOrigin}})
 	id, err := ids.Parse(form.ID)
@@ -71,6 +72,7 @@ func TestAHandlingCutoverRefusesAnIntakeWithoutAcknowledgingOrLosingIt(t *testin
 // Each intake holds the form's lease while it lands, so posts that meet it held
 // wait behind it instead of turning visitors away.
 func TestPostsSentTogetherAreAllAccepted(t *testing.T) {
+	t.Parallel()
 	e := setupFormsApp(t)
 	form := createForm(t, e, integration.AnyMap{"name": "Together", "sender": "browser", "allowed_origins": []string{siteOrigin}})
 	id, err := ids.Parse(form.ID)
@@ -170,6 +172,7 @@ func intakesInTheFenceWait() int {
 }
 
 func TestLegacyLeadHandlersWaitForTheAcceptedWebsiteNote(t *testing.T) {
+	t.Parallel()
 	e := setupFormsApp(t)
 	form := createForm(t, e, integration.AnyMap{"name": "Inquiries", "sender": "browser", "allowed_origins": []string{siteOrigin}})
 	for _, key := range []string{"route_lead", "assign_lead_owner"} {

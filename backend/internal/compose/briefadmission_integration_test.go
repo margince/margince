@@ -20,6 +20,7 @@ import (
 )
 
 func TestStoredBriefRankingNeedsCurrentInterventionBeforeWorklistAdmission(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	// Postgres keeps microseconds; a Linux clock reads nanoseconds, so the
 	// instant read back would never equal one with finer precision.
@@ -132,6 +133,7 @@ func TestStoredBriefRankingNeedsCurrentInterventionBeforeWorklistAdmission(t *te
 }
 
 func TestStoredBriefDoesNotReviveAClosedDeal(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := clocktest.Now(t)
 	clock := func() time.Time { return now }
@@ -164,6 +166,7 @@ func TestStoredBriefDoesNotReviveAClosedDeal(t *testing.T) {
 }
 
 func TestCurrentQuietDealObservationsExplainTheStoredSuggestion(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := clocktest.Now(t)
 	clock := func() time.Time { return now }

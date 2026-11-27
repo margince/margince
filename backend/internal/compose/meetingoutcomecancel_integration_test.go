@@ -31,6 +31,7 @@ import (
 // live invitation refuses it, as does one whose guest left a shared meeting by
 // erasure; a canceled one no longer holds the meeting.
 func TestAMeetingOutcomeRowOffersCancelOnlyWhereTheWriteIsAccepted(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := laneDay.Add(3 * time.Hour)
 	// A signed-in member holds a full seat, and only a full seat is offered a write.
@@ -124,6 +125,7 @@ func assertAHeldInvitedMeetingMovedAheadIsCalendarManaged(reader context.Context
 // A reader who may not change the meeting is offered no verb on its outcome
 // row, and the row says why.
 func TestAMeetingOutcomeRowForAReadSeatOffersNoVerb(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := laneDay.Add(3 * time.Hour)
 	guest, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{FullName: "Customer met"})
@@ -163,6 +165,7 @@ func TestAMeetingOutcomeRowForAReadSeatOffersNoVerb(t *testing.T) {
 // A live invitation holds its meeting, so undoing the meeting's create is
 // refused for it. A canceled one holds nothing.
 func TestOnlyALiveInvitationRefusesTheMeetingCreateUndo(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	start := time.Date(2026, time.March, 9, 10, 0, 0, 0, time.UTC)
 	inviting := newInvitingStore(memberSeat(e, e.Rep1, principal.SeatFull), t, e, start.AddDate(0, 0, -2))

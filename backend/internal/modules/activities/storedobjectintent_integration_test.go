@@ -43,6 +43,7 @@ func systemStore(e *sendEnv) (*Store, context.Context) {
 // erasure cannot reach, because it finds an attachment's bytes by reading
 // storage_key off the row.
 func TestAKeyWhoseRowNeverArrivedIsUnreferenced(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	store, ctx := systemStore(e)
 
@@ -62,6 +63,7 @@ func TestAKeyWhoseRowNeverArrivedIsUnreferenced(t *testing.T) {
 // provisional, and a reaper trusting the ledger alone would delete the bytes of a
 // document somebody can still open.
 func TestALiveAttachmentRowKeepsItsBytesOutOfTheReapersReach(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	const key = "ws/attachment/live"
 	seedAttachmentRow(t, e, key)
@@ -90,6 +92,7 @@ func TestALiveAttachmentRowKeepsItsBytesOutOfTheReapersReach(t *testing.T) {
 // The sweep groups provisional keys by kind, so a kind with none of its own reaches
 // this with an empty slice every pass.
 func TestNoKeysIsNoQuestion(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	store, ctx := systemStore(e)
 
@@ -133,6 +136,7 @@ func seedAttachmentRow(t *testing.T, e *sendEnv, key string) {
 // Pinned at the source, because the hazard is invisible from the sweep: a wrong
 // route produces a confident "nobody references this" rather than an error.
 func TestTheAttachmentCheckAnswersOnlyForAttachments(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	store, ctx := systemStore(e)
 

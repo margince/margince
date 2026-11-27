@@ -32,28 +32,24 @@ import (
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
-// withComposedVerbs installs a composed set for one test and removes it after,
-// so the process-global boot state one test needs is never another's.
+// withComposedVerbs is a composition declaring verbs and serving servedVerbs.
 // servedVerbs are the DECLARATIONS a unit shipped behavior for, not bare tool
 // names: the served set is keyed by (unit, tool), so a helper taking names
 // alone could not express which unit owns a handler — the very distinction the
 // route-ownership fix rests on.
-func withComposedVerbs(t *testing.T, verbs []extension.Verb, servedVerbs ...extension.Verb) {
-	t.Helper()
-	setComposedVerbs(verbs)
+func withComposedVerbs(verbs []extension.Verb, servedVerbs ...extension.Verb) *Extensions {
 	served := make([]mcp.Tool, 0, len(servedVerbs))
 	for _, v := range servedVerbs {
 		served = append(served, servedTool{unit: v.Unit, name: v.Tool})
 	}
-	setComposedTools(served)
-	t.Cleanup(func() { setComposedVerbs(nil); setComposedTools(nil) })
+	return &Extensions{verbs: verbs, tools: served}
 }
 
-// edgeServer is the smallest Server extensionEdge reads: a tool registry, which
-// is the only field it touches.
-func edgeServer(t *testing.T) Server {
+// edgeServer is the smallest Server extensionEdge reads: a tool registry and the
+// composition, which are the only fields it touches.
+func edgeServer(t *testing.T, composed *Extensions) Server {
 	t.Helper()
-	return Server{toolRegistry: agents.NewRegistry(nil, auth.NewGate(fullSeat{}))}
+	return Server{toolRegistry: agents.NewRegistry(nil, auth.NewGate(fullSeat{})), extensions: composed}
 }
 
 // coreRouter stands in for the generated /v1 surface, so a fall-through is
@@ -77,13 +73,13 @@ func coreRouter(hit *string) http.Handler { return coreRouterStub{hit: hit} }
 // relative to authH.Middleware.
 func TestExtensionRoutesAreBehindTheSessionMiddleware(t *testing.T) {
 	verbs := composedFixture()
-	withComposedVerbs(t, verbs, verbs...)
+	composed := withComposedVerbs(verbs, verbs...)
 
 	// A zero pool: nothing on the path this test takes dereferences it. The
 	// readiness and metrics closures capture it lazily and are never called, and
 	// mux.Handler RESOLVES without serving.
 	pool := &pgxpool.Pool{}
-	srv := newServer(pool, discardLog(), authHandlers{}, dealsHandlers{})
+	srv := newServer(pool, discardLog(), composed, authHandlers{}, dealsHandlers{})
 	srv.toolRegistry = agents.NewRegistry(nil, auth.NewGate(fullSeat{}))
 	var coreHit string
 	mux := operationalMux(srv, pool, discardLog(), nil, coreRouter(&coreHit))
@@ -124,10 +120,10 @@ func TestExtensionRoutesAreBehindTheSessionMiddleware(t *testing.T) {
 // it serves nothing of its own.
 func TestExtensionEdgeFallsThroughToTheCoreRouter(t *testing.T) {
 	verb := unitVerb("alpha", "alpha_sync", extension.TierAutoExecute, extension.ScopeRead)
-	withComposedVerbs(t, []extension.Verb{verb}, verb)
+	composed := withComposedVerbs([]extension.Verb{verb}, verb)
 
 	var coreHit string
-	edged := extensionEdge(edgeServer(t), discardLog())(coreRouter(&coreHit))
+	edged := extensionEdge(edgeServer(t, composed), discardLog())(coreRouter(&coreHit))
 
 	for _, path := range []string{"/v1/deals", "/v1/ext", "/v1/ext/alpha", "/v1/ext/alpha/other", "/healthz"} {
 		coreHit = ""
@@ -157,11 +153,11 @@ func TestExtensionEdgeFallsThroughToTheCoreRouter(t *testing.T) {
 // a core route.
 func TestExtensionEdgeMountsWhatComposedVerbsDeclares(t *testing.T) {
 	verbs := composedFixture()
-	withComposedVerbs(t, verbs, verbs...)
+	composed := withComposedVerbs(verbs, verbs...)
 
 	var coreHit string
 	core := coreRouter(&coreHit)
-	edged := extensionEdge(edgeServer(t), discardLog())(core)
+	edged := extensionEdge(edgeServer(t, composed), discardLog())(core)
 	for _, v := range verbs {
 		coreHit = ""
 		rec := httptest.NewRecorder()
@@ -172,22 +168,20 @@ func TestExtensionEdgeMountsWhatComposedVerbsDeclares(t *testing.T) {
 	}
 
 	t.Run("an empty composed set leaves the core router untouched", func(t *testing.T) {
-		setComposedVerbs(nil)
-		if got := extensionEdge(edgeServer(t), discardLog())(core); got != core {
+		if got := extensionEdge(edgeServer(t, nil), discardLog())(core); got != core {
 			t.Fatal("the edge wrapped the core router with nothing to mount")
 		}
 	})
 
 	t.Run("a role with no tool registry leaves the core router untouched", func(t *testing.T) {
-		setComposedVerbs(verbs)
-		if got := extensionEdge(Server{}, discardLog())(core); got != core {
+		if got := extensionEdge(Server{extensions: withComposedVerbs(verbs)}, discardLog())(core); got != core {
 			t.Fatal("the edge mounted routes with no registry to invoke through")
 		}
 	})
 }
 
-// servedTool is the smallest thing setComposedTools accepts: a unit and a
-// name, so composedServedVerbs reports the pair as served. Nothing here is
+// servedTool is the smallest served tool a composition holds: a unit and a
+// name, so servedVerbs reports the pair as served. Nothing here is
 // invoked — these tests are about routing, and invocation through the admission
 // gate is extensiontools_test.go's subject.
 type servedTool struct {

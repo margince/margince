@@ -32,6 +32,7 @@ import (
 // decision day a provisional close date, and the request the brief. Each is
 // marked as Margince's until a rep edits it. A need alone opens nothing.
 func TestAnExplicitRequestOpensADealPrefilledFromTheMail(t *testing.T) {
+	t.Parallel()
 	e := setupRequests(t)
 	acme := e.SeedCompany(t, "Acme GmbH", &e.AdminUser)
 	e.request(t, acme, dealscout.RequestKindExplicit, "our budget is 10,000 per year", sent)
@@ -78,6 +79,7 @@ func TestAnExplicitRequestOpensADealPrefilledFromTheMail(t *testing.T) {
 
 // A budget that names its currency is used as stated, and no guess is marked.
 func TestARequestBudgetInItsOwnCurrencyIsNotMarkedAsAGuess(t *testing.T) {
+	t.Parallel()
 	e := setupRequests(t)
 	acme := e.SeedCompany(t, "Acme GmbH", &e.AdminUser)
 	e.request(t, acme, dealscout.RequestKindExplicit, "USD 40,000", sent)
@@ -97,6 +99,7 @@ func TestARequestBudgetInItsOwnCurrencyIsNotMarkedAsAGuess(t *testing.T) {
 // A contact who was only copied, or a sender nobody authenticated, opens no
 // deal with one request. Anyone can put a buyer on Cc or forge a From.
 func TestACopiedOrUnauthenticatedBuyerOpensNoDealAlone(t *testing.T) {
+	t.Parallel()
 	for name, m := range map[string]mail{
 		"copied":          {role: "cc", authenticated: true},
 		"unauthenticated": {role: "from"},
@@ -119,6 +122,7 @@ func TestACopiedOrUnauthenticatedBuyerOpensNoDealAlone(t *testing.T) {
 // gets nothing of that mail: no brief, amount or close date. Its timeline note
 // names no content, and a colleague is not shown the suggestion.
 func TestAProtectedRequestOpensADealThatShowsNothingOfTheMail(t *testing.T) {
+	t.Parallel()
 	for _, protect := range []struct {
 		name   string
 		reason string
@@ -163,6 +167,7 @@ func TestAProtectedRequestOpensADealThatShowsNothingOfTheMail(t *testing.T) {
 // deal shows what the customer asked for. Switched off after the reading, the
 // deal opens and shows nothing of it.
 func TestARoutinePrivateRequestIsSharedOnlyWhileTheSwitchIsOn(t *testing.T) {
+	t.Parallel()
 	for _, on := range []bool{true, false} {
 		t.Run(strconv.FormatBool(on), func(t *testing.T) {
 			e := setupRequests(t)
@@ -187,6 +192,7 @@ func TestARoutinePrivateRequestIsSharedOnlyWhileTheSwitchIsOn(t *testing.T) {
 // One cited signal whose mail may not be shared withholds every title from
 // the deal's timeline, even when the newest request is shareable.
 func TestOneProtectedSignalWithholdsTheTimelineTitles(t *testing.T) {
+	t.Parallel()
 	e := setupRequests(t)
 	acme := e.SeedCompany(t, "Acme GmbH", &e.AdminUser)
 	older := e.request(t, acme, dealscout.RequestKindExplicit, "", sent)

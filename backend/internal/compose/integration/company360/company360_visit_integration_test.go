@@ -31,6 +31,7 @@ import (
 )
 
 func TestCompanyViewAckIsMonotonicAndPerUser(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := company360Service(e)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme", &e.Rep1))
@@ -76,6 +77,7 @@ func TestCompanyViewAckIsMonotonicAndPerUser(t *testing.T) {
 // The 360 is a read: it must never advance the mark it reports against,
 // or the "what changed" answer destroys itself on first sight.
 func TestCompany360DoesNotAdvanceTheVisitBaseline(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := company360Service(e)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme", &e.Rep1))
@@ -106,6 +108,7 @@ func TestCompany360DoesNotAdvanceTheVisitBaseline(t *testing.T) {
 // answer, and the section is present rather than omitted — which is the whole
 // point of a briefing that says what is waiting.
 func TestCompany360RefusesTheVisitBaselineToAnAgentAndStillShowsWhatIsWaiting(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := company360Service(e)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme", &e.Rep1))
@@ -130,6 +133,7 @@ func TestCompany360RefusesTheVisitBaselineToAnAgentAndStillShowsWhatIsWaiting(t 
 // most easily-wrong query in the read — it has to count moves without
 // counting the deal's creation — so it is seeded both ways.
 func TestCompany360CountsWhatChangedSinceTheAcknowledgedVisit(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	svc := company360Service(e)
@@ -195,6 +199,7 @@ func TestCompany360CountsWhatChangedSinceTheAcknowledgedVisit(t *testing.T) {
 // The first visit is not "nothing happened": a caller who has never opened
 // the account gets the whole history counted, against a null baseline.
 func TestCompany360CountsTheWholeHistoryOnAFirstVisit(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	svc := company360Service(e)

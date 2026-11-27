@@ -103,6 +103,7 @@ func authorOf(t *testing.T, e *integration.SearchEnv, activity ids.UUID) ids.UUI
 }
 
 func TestAForwardToSelfIsFiledUnderTheCustomerAsTheRepsOwnMail(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnvWithBlob(t, captureNow, blobstore.NewMemory())
 	e := env.e
 	original := customerOriginal(forwardedCustomer, "original-1@prospect.example")
@@ -150,6 +151,7 @@ func TestAForwardToSelfIsFiledUnderTheCustomerAsTheRepsOwnMail(t *testing.T) {
 }
 
 func TestForwardsFromTwoRepsFileUnderOneContact(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	colleague := secondSentMailbox(t, e, e.Rep3)
@@ -175,6 +177,7 @@ func TestForwardsFromTwoRepsFileUnderOneContact(t *testing.T) {
 // A forward sent from the rep's private alias to their connected mailbox is
 // filed. One sent to that alias is not: it is where private mail goes.
 func TestOnlyAForwardToTheConnectedMailboxIsFiled(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	declareIdentity(t, e, e.Rep1, capturemod.IdentityKindAddress, ownerAlias)
@@ -198,6 +201,7 @@ func TestOnlyAForwardToTheConnectedMailboxIsFiled(t *testing.T) {
 // A marked inline forward is filed too, and its body, the quoted original, is
 // marked as not the rep's own words.
 func TestAnInlineForwardIsFiledAsTheOriginalsText(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	env.syncSent(t, map[string]bool{"fwd-inline@myco.example": true}, []byte(strings.Join([]string{
@@ -217,6 +221,7 @@ func TestAnInlineForwardIsFiledAsTheOriginalsText(t *testing.T) {
 // The original's sender is refused when they are a colleague: a seat's login
 // outside our domains, or anybody on our domains.
 func TestAForwardOfAColleaguesMailIsNotFiled(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 
@@ -241,6 +246,7 @@ func TestAForwardOfAColleaguesMailIsNotFiled(t *testing.T) {
 // was judged the rep's private life, so the forward creates nobody and stays
 // held, though the mailbox shares its mail.
 func TestAForwardKeepsTheOriginalThreadsPrivateVerdict(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	shareMailbox(t, env)
@@ -306,6 +312,7 @@ func assertNoExchange(t *testing.T, e *integration.SearchEnv, forward ids.UUID) 
 // still skipped, and the trace says why. So is a forward the provider never
 // filed as sent: its From could be anybody's.
 func TestOwnMailWithNoCustomerForwardIsSkippedWithItsReason(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	declareIdentity(t, e, e.Rep1, capturemod.IdentityKindAddress, ownerAlias)
@@ -335,6 +342,7 @@ func TestOwnMailWithNoCustomerForwardIsSkippedWithItsReason(t *testing.T) {
 // two projects names neither. The forward is filed under no project and no
 // deal, and the rep who forwarded it is asked.
 func TestAForwardWhoseProjectIsAmbiguousAsksTheRep(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
@@ -361,6 +369,7 @@ func TestAForwardWhoseProjectIsAmbiguousAsksTheRep(t *testing.T) {
 // A file withheld because nobody here was addressed says so. It is not the
 // private-message reason, which a reader would take as a judgement on them.
 func TestAFileOfMailNobodyHereWasAddressedOnSaysWhy(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnvWithBlob(t, captureNow, blobstore.NewMemory())
 	e := env.e
 	env.sync(t, []byte(strings.Join([]string{
@@ -394,6 +403,7 @@ func TestAFileOfMailNobodyHereWasAddressedOnSaysWhy(t *testing.T) {
 // A seat with two mailboxes forwards from one to the other. Only the copy
 // the receiving mailbox captured was sent to the mailbox that captured it.
 func TestAForwardIsFiledOnlyByTheMailboxItWasSentTo(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	second := secondSentMailbox(t, e, e.Rep1)

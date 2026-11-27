@@ -58,6 +58,7 @@ func seedInitiativeDeals(t *testing.T, e *forecastEnv, start time.Time) (manufac
 // launch freezes those deals as the baseline, and a report narrowed to the
 // initiative reads them alone.
 func TestAnInitiativeIsDefinedByItsRulesPicksAndExclusions(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	start := clocktest.Now(t).UTC().Truncate(time.Second)
 	_, _, open := seedInitiativeDeals(t, e, start)
@@ -153,6 +154,7 @@ func TestAnInitiativeIsDefinedByItsRulesPicksAndExclusions(t *testing.T) {
 // An exclusion on a type the editor cannot read stays out of their reading as a
 // pick does. Their save lands, and it does not fail on the read it returns.
 func TestAnExclusionTheEditorCannotReadDoesNotFailTheirSave(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	start := clocktest.Now(t).UTC().Truncate(time.Second)
 	_, _, open := seedInitiativeDeals(t, e, start)
@@ -189,6 +191,7 @@ func TestAnExclusionTheEditorCannotReadDoesNotFailTheirSave(t *testing.T) {
 }
 
 func TestSavingMembersKeepsThePicksTheEditorCannotRead(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	start := clocktest.Now(t).UTC().Truncate(time.Second)
 	_, _, open := seedInitiativeDeals(t, e, start)

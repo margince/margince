@@ -62,6 +62,7 @@ func (e *dedupeEnv) holdDomainAdmissionLock(ctx context.Context, t *testing.T, d
 // one of those rows would be claiming there was nothing to replace when there
 // was.
 func TestASecondAdmissionDecisionWaitsOnTheDomainLock(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	const domain = "contended.example"
@@ -93,6 +94,7 @@ func TestASecondAdmissionDecisionWaitsOnTheDomainLock(t *testing.T) {
 // reason and nobody answerable for one, and says so by writing SQL NULL; the
 // second moved all three and names what they were.
 func TestALaterAdmissionDecisionRecordsTheOneItReplaced(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	const domain = "mckinsey.example"

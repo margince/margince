@@ -21,6 +21,7 @@ import (
 )
 
 func TestExistingInquiryReviewKeepsLegacyTasksAcrossTheirLifecycle(t *testing.T) {
+	t.Parallel()
 	for _, state := range []string{"open", "done", "promoted", "outbox purged"} {
 		t.Run(state, func(t *testing.T) {
 			e := setupFormsApp(t)
@@ -93,6 +94,7 @@ func TestExistingInquiryReviewKeepsLegacyTasksAcrossTheirLifecycle(t *testing.T)
 }
 
 func TestAcceptedInquirySurvivesAnEditOrPauseBeforeItsEventIsRead(t *testing.T) {
+	t.Parallel()
 	for _, change := range []string{"edit", "pause and resume"} {
 		t.Run(change, func(t *testing.T) {
 			e := setupFormsApp(t)

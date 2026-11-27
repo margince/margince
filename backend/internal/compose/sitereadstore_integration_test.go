@@ -41,6 +41,7 @@ func siteReadWorkerCtx(e *integration.Env) context.Context {
 }
 
 func TestSiteReadStartCreatesAQueuedDossierAndAReClickJoinsIt(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	store := contacts.NewStore(e.DB())
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
@@ -80,6 +81,7 @@ func TestSiteReadStartCreatesAQueuedDossierAndAReClickJoinsIt(t *testing.T) {
 }
 
 func TestSiteReadWorkerAdvancesTheDossierThroughGuardedTransitions(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	store := contacts.NewStore(e.DB())
 	human := e.As(e.Rep1, nil, integration.AdminPerms)
@@ -164,6 +166,7 @@ func TestSiteReadWorkerAdvancesTheDossierThroughGuardedTransitions(t *testing.T)
 }
 
 func TestSiteReadBudgetDeferralKeepsProgressAndJoinsUntilDue(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	store := contacts.NewStore(e.DB())
 	human := e.As(e.Rep1, nil, integration.AdminPerms)
@@ -226,6 +229,7 @@ func TestSiteReadBudgetDeferralKeepsProgressAndJoinsUntilDue(t *testing.T) {
 }
 
 func TestSiteReadWorkerReclaimsAStaleRunningDossier(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	store := contacts.NewStore(e.DB())
 	human := e.As(e.Rep1, nil, integration.AdminPerms)
@@ -265,6 +269,7 @@ func TestSiteReadWorkerReclaimsAStaleRunningDossier(t *testing.T) {
 }
 
 func TestSiteReadIsScopedToTheCompanyTheCallerCanSee(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	store := contacts.NewStore(e.DB())
 	admin := e.As(e.Rep1, nil, integration.AdminPerms)
@@ -304,6 +309,7 @@ func TestSiteReadIsScopedToTheCompanyTheCallerCanSee(t *testing.T) {
 }
 
 func TestATransientlyFailedReadIsClaimedAgainWhenItsRetryFallsDue(t *testing.T) {
+	t.Parallel()
 	// A 403 from an edge's bot protection is not the site's final answer, so the
 	// failure names a time to try again. Without the claim honoring it the retry
 	// time would be state nothing reads, and one bad minute would settle a live
@@ -365,6 +371,7 @@ func TestATransientlyFailedReadIsClaimedAgainWhenItsRetryFallsDue(t *testing.T) 
 }
 
 func TestAPermanentlyFailedReadIsNeverClaimedAgain(t *testing.T) {
+	t.Parallel()
 	// A domain that does not resolve will not resolve tomorrow either. It sets
 	// no retry time, and nothing may re-claim it — re-crawling those is the
 	// noise the retry arm must not create.
@@ -393,6 +400,7 @@ func TestAPermanentlyFailedReadIsNeverClaimedAgain(t *testing.T) {
 }
 
 func TestASucceededReadCarriesNoDiagnosis(t *testing.T) {
+	t.Parallel()
 	// The columns say what went wrong. A read that worked has nothing to say
 	// there, and the store refuses the contradiction rather than storing it.
 	e := integration.Setup(t)
@@ -426,6 +434,7 @@ func TestASucceededReadCarriesNoDiagnosis(t *testing.T) {
 // somebody else. Running alone never told the two apart, because a reclaim
 // puts a running row back into running.
 func TestAReclaimedReadRefusesTheAbandonedAttemptsTerminalWrite(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	store := contacts.NewStore(e.DB())
 	human := e.As(e.Rep1, nil, integration.AdminPerms)

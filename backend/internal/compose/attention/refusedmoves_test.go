@@ -57,7 +57,7 @@ func TestEveryListOnThePageBlocksTheMovesThisReaderMayNotTake(t *testing.T) {
 func TestEverySubjectTypeNamesAnObjectARoleCanGrant(t *testing.T) {
 	for _, subject := range contractEnum(t, "AttentionSubjectType") {
 		row := crmcontracts.WorklistItem{Subject: &crmcontracts.AttentionSubject{Type: crmcontracts.AttentionSubjectType(subject)}}
-		if object := moveRecord(row); !identity.RBACObjectGrantable(object) {
+		if object := moveRecord(row); !(identity.RbacObjects{}).Grantable(object) {
 			t.Errorf("subject type %q names %q, which no role can grant, so its moves are refused to everyone", subject, object)
 		}
 	}

@@ -18,6 +18,7 @@ import (
 // value below it instead of serving one row. Above the maximum the page is
 // served at the maximum, as the contract says.
 func TestAListPageSizeBelowOneIsRefusedThroughTheRouter(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 

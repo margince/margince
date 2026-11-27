@@ -16,6 +16,7 @@ import (
 // A record with nothing in it still answers the shapes the contract declares.
 // An array is declared where it is read, and it is never null.
 func TestAnEmptyRecordReadsAsDeclaredArraysNotNull(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Read Shapes", "admin@readshapes.test", "Admin")
 

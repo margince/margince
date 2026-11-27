@@ -15,8 +15,6 @@ package capture_test
 import (
 	"context"
 	"errors"
-	"os"
-	"sync"
 	"testing"
 	"time"
 
@@ -34,78 +32,31 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
-// captureDB connects once per test binary and brings the database to head
-// through testdb.EnsureSchema — the lane's one migrate-once mechanism, which on
-// a lane clone is a probe rather than a rebuild; every test then bootstraps its
-// own workspace, so the suites stay independent.
-//
-// The pool is testdb's process-shared one. What that buys is not the pool
-// object but the connections: the lane's per-pool ceiling reaches a suite only
-// through that constructor (scripts/lib-testdb.sh, #1744).
-var captureDB struct {
-	once  sync.Once
-	owner *pgx.Conn
-	pool  *pgxpool.Pool
-	err   error
-}
-
+// setupCaptureDB answers an owner connection and the shared pool on the
+// test's own database. Every call in one test reaches the same database, so a
+// test that seeds a second workspace keeps its first.
 func setupCaptureDB(t *testing.T) (*pgx.Conn, *pgxpool.Pool) {
 	t.Helper()
-	captureDB.once.Do(func() {
-		ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
-		appDSN := os.Getenv("MARGINCE_TEST_APP_DSN")
-		if ownerDSN == "" || appDSN == "" {
-			captureDB.err = errors.New("MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-			return
+	db := testdb.For(t)
+	ctx := context.Background()
+	owner, err := pgx.Connect(ctx, db.OwnerDSN)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := owner.Close(context.Background()); err != nil {
+			t.Errorf("closing owner connection: %v", err)
 		}
-		ctx := context.Background()
-		owner, err := pgx.Connect(ctx, ownerDSN)
-		if err != nil {
-			captureDB.err = err
-			return
-		}
-		captureDB.owner = owner
-		// To head before anything else touches this database: testdb.Pool
-		// refuses until EnsureSchema has run, and EnsureSchema still REBUILDS
-		// whenever it cannot prove the database is a fresh lane clone — so a
-		// seed written before it would be dropped rather than reset.
-		if captureDB.err = testdb.EnsureSchema(ctx, owner); captureDB.err != nil {
-			return
-		}
-		captureDB.pool, captureDB.err = testdb.Pool(ctx, appDSN)
 	})
-	if captureDB.err != nil {
-		t.Fatal(captureDB.err)
+	pool, err := testdb.Pool(ctx, db.AppDSN)
+	if err != nil {
+		t.Fatal(err)
 	}
 	// Registered where the pool is handed out, before the test adds any cleanup
 	// of its own, so it runs last and sees a package that has genuinely stopped.
-	// The pool outlives the test now, so a goroutine still holding a connection
-	// would go on writing into the database the NEXT test just reset.
 	testdb.AssertPoolsQuiesced(t)
-	// Every test in this package seeds its own workspace through ONE shared
-	// connection, so the separation between them has to be real: reset before
-	// seeding, as compose/integration's harness does. Once per TEST, not per call
-	// — a test that seeds a second workspace on purpose must not lose its first.
-	captureResetMu.Lock()
-	defer captureResetMu.Unlock()
-	if !captureResetFor[t.Name()] {
-		if err := testdb.Reset(context.Background(), captureDB.owner); err != nil {
-			t.Fatal(err)
-		}
-		captureResetFor[t.Name()] = true
-		t.Cleanup(func() {
-			captureResetMu.Lock()
-			defer captureResetMu.Unlock()
-			delete(captureResetFor, t.Name())
-		})
-	}
-	return captureDB.owner, captureDB.pool
+	return owner, pool
 }
-
-var (
-	captureResetMu  sync.Mutex
-	captureResetFor = map[string]bool{}
-)
 
 // fixtureOwnerEmail is the mailbox fixtureConnector reports through
 // AccountLabeler — a fixed value, since the fixture's opaque auth bytes
@@ -241,6 +192,7 @@ func queryConnectionRow(ctx context.Context, t *testing.T, status *string, crede
 // the column is stamped by every connect, so a connection's row always says
 // since when its mail has been flowing under that regime.
 func TestConnectStampsWhenTheSharingRegimeBoundTheGrant(t *testing.T) {
+	t.Parallel()
 	ctx, reg, _, _ := newCaptureRegistryFixture(t)
 	connectFixtureConnection(ctx, t, reg)
 	owner, _ := setupCaptureDB(t)
@@ -258,6 +210,7 @@ func TestConnectStampsWhenTheSharingRegimeBoundTheGrant(t *testing.T) {
 // selectable AND the sealed secret is destroyed. Until this held, a user who
 // disconnected kept a decryptable refresh token in the vault indefinitely.
 func TestDisconnectDeletesTheStoredCredential(t *testing.T) {
+	t.Parallel()
 	ctx, reg, vault, ws := newCaptureRegistryFixture(t)
 
 	ref := connectFixtureConnection(ctx, t, reg)
@@ -293,6 +246,7 @@ func TestDisconnectDeletesTheStoredCredential(t *testing.T) {
 // A second disconnect is a no-op, not an error: the operation is idempotent
 // and the secret is already gone.
 func TestDisconnectIsIdempotentAfterTheSecretIsGone(t *testing.T) {
+	t.Parallel()
 	ctx, reg, _, _ := newCaptureRegistryFixture(t)
 	connectFixtureConnection(ctx, t, reg)
 
@@ -308,6 +262,7 @@ func TestDisconnectIsIdempotentAfterTheSecretIsGone(t *testing.T) {
 // exactly when a user asks "did I authorize the right account?". Deriving it
 // from sync_cursor would leave it null until the first successful sync.
 func TestConnectRecordsTheAccountLabel(t *testing.T) {
+	t.Parallel()
 	ctx, reg, _, _ := newCaptureRegistryFixture(t)
 	connectFixtureConnection(ctx, t, reg)
 
@@ -348,6 +303,7 @@ func insertLegacyConnection(ctx context.Context, t *testing.T, userID ids.UserID
 // survive disconnect: a credential_ref-only predicate matches no such row,
 // leaving it connected with the secret still in auth column forever.
 func TestDisconnectErasesALegacyAuthOnlyRow(t *testing.T) {
+	t.Parallel()
 	ctx, reg, _, _ := newCaptureRegistryFixture(t)
 	actor, _ := principal.Actor(ctx)
 	insertLegacyConnection(ctx, t, ids.From[ids.UserKind](actor.UserID), "gmail", []byte("legacy-refresh-token"))
@@ -379,6 +335,7 @@ func TestDisconnectErasesALegacyAuthOnlyRow(t *testing.T) {
 // reconnect strands the previous refresh token in the vault, live and
 // decryptable, forever.
 func TestReconnectDeletesThePriorSecret(t *testing.T) {
+	t.Parallel()
 	ctx, reg, vault, ws := newCaptureRegistryFixture(t)
 
 	firstRef := connectFixtureConnection(ctx, t, reg)
@@ -419,6 +376,7 @@ func TestReconnectDeletesThePriorSecret(t *testing.T) {
 // an error here instead would tell a user their disconnect failed when it did
 // not, and invite a retry that finds nothing left to do.
 func TestDisconnectCompletesEvenWhenTheVaultDeleteFails(t *testing.T) {
+	t.Parallel()
 	ctx, reg, vault, ws := newCaptureRegistryFixture(t)
 	connectFixtureConnection(ctx, t, reg)
 
@@ -453,6 +411,7 @@ func TestDisconnectCompletesEvenWhenTheVaultDeleteFails(t *testing.T) {
 // "clear only the ref THIS call resolved" — without that guard the row would
 // end up 'connected' with no credential_ref, and the fresh secret orphaned.
 func TestDisconnectPhase3DoesNotClobberAConcurrentReconnect(t *testing.T) {
+	t.Parallel()
 	ctx, reg, vault, ws := newCaptureRegistryFixture(t)
 	firstRef := connectFixtureConnection(ctx, t, reg)
 

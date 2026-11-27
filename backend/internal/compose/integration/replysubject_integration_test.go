@@ -25,6 +25,7 @@ import (
 // same reply sent from the mailbox would. The wire, the stored row and the echo
 // agree on the key. The owner's hold on the old conversation covers the new one.
 func TestAReplySentOnANewTopicStartsItsOwnConversation(t *testing.T) {
+	t.Parallel()
 	p, anchor := heldConversation(t, clocktest.Now(t).Add(-time.Hour))
 	deliveryID, messageID := p.sendSplitReply(t, anchor, "transactional")
 	if got := p.threadKeyOfSourceID(t, messageID); got != messageID {
@@ -59,6 +60,7 @@ func TestAReplySentOnANewTopicStartsItsOwnConversation(t *testing.T) {
 // Gmail files the sent copy under an identity of its own, which renames the
 // reply's conversation. The owner's hold moves to the new name with it.
 func TestAHoldFollowsASplitReplyTheProviderRenames(t *testing.T) {
+	t.Parallel()
 	p, anchor := heldConversation(t, clocktest.Now(t).Add(-time.Hour))
 	deliveryID, _ := p.sendSplitReply(t, anchor, "transactional")
 	transmitted, _ := p.transmit(t, deliveryID, gmailStamped)
@@ -77,6 +79,7 @@ func TestAHoldFollowsASplitReplyTheProviderRenames(t *testing.T) {
 // The buyer wrote two years ago and the send names no purpose, so only the
 // thread arm admits the reply. Transmit asks the conversation it answers.
 func TestOnlyTheAnsweredThreadAdmitsAnOldSplitReply(t *testing.T) {
+	t.Parallel()
 	p, anchor := heldConversation(t, clocktest.Now(t).Add(-2*365*24*time.Hour))
 	deliveryID, _ := p.sendSplitReply(t, anchor, "")
 	p.transmit(t, deliveryID, "")

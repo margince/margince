@@ -29,6 +29,7 @@ import (
 )
 
 func TestAClaimIsRefusedAgainstARetiredContact(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.Admin()
 	owner := OwnerConn(t)

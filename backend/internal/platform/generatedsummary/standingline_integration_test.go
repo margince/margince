@@ -16,6 +16,7 @@ import (
 
 // A line is replaced in place, and touching it moves only its fingerprint.
 func TestAStatusLineIsReplacedAndTouchedInPlace(t *testing.T) {
+	t.Parallel()
 	e := setup(t)
 	record := generatedsummary.StandingRecord{EntityType: "contact", EntityID: e.contact(t).UUID}
 	note := e.note(t)
@@ -32,6 +33,7 @@ func TestAStatusLineIsReplacedAndTouchedInPlace(t *testing.T) {
 // Forgetting a contact deletes its own line and every line written from an
 // activity filed on it, and leaves a line about anybody else.
 func TestForgettingAContactDeletesTheLinesThatMayQuoteIt(t *testing.T) {
+	t.Parallel()
 	e := setup(t)
 	subject, bystander := e.contact(t), e.contact(t)
 	theirMail, otherMail := e.note(t), e.note(t)

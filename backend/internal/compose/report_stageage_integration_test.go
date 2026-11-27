@@ -17,6 +17,7 @@ import (
 )
 
 func TestStageAgeCountsEveryReadableDealForATeamManager(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	e.seedOpenDeal(t, "Unowned", 60, nil, new(int64(10000)))
 	e.seedOpenDeal(t, "Team2's", 60, &e.Rep3, new(int64(10000)))

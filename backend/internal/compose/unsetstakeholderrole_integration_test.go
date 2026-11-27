@@ -27,6 +27,7 @@ import (
 )
 
 func TestAStakeholderWithoutARoleStillRendersTheCommercialBand(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	pipeline, stage, _ := integration.DealFixture(t, e)
 	deal, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{

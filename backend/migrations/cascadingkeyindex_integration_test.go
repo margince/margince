@@ -29,6 +29,7 @@ import (
 )
 
 func TestEveryCascadingKeyCanFindItsChildren(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	headSchema(t, conn)
@@ -60,6 +61,7 @@ func TestEveryCascadingKeyCanFindItsChildren(t *testing.T) {
 // the gate above can fail short: a `covered` clause that matches everything
 // reads as a clean schema. This test proves the gate tells the two apart.
 func TestTheCascadeIndexQueryNoticesAWithdrawnIndex(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	headSchema(t, conn)
@@ -135,6 +137,7 @@ func described(keys []testdb.UncoveredKey) []string {
 // The measurement is of its parent in foreignKeyNoIndexNeeded, or of the key itself
 // in foreignKeyScanAccepted.
 func TestEveryOtherForeignKeyIsIndexedOrMeasured(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	headSchema(t, conn)

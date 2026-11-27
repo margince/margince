@@ -30,6 +30,7 @@ import (
 )
 
 func TestBothPagesRankTwoPromisesTheSameWay(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := seedLinkedContact(t, e, "beide@kunde.example")
 	company := seedEmployerOf(t, e, contact, "Kunde GmbH")

@@ -162,6 +162,7 @@ func (e *reviewEnv) answer(t *testing.T, id ids.UUID, outcome LegalReviewStatus)
 // The gate end to end. No review, a waiting one and one that asked for
 // changes each hold the deal at its stage. Only an approval lets it pass.
 func TestAStageThatNeedsLegalIsPassedOnlyAfterLegalApproves(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	dealID, _, toID := gatedDeal(t, e)
 
@@ -181,6 +182,7 @@ func TestAStageThatNeedsLegalIsPassedOnlyAfterLegalApproves(t *testing.T) {
 // Asking again sets the earlier approval aside: legal answers the new request
 // before the gated stage opens.
 func TestANewRequestSetsTheEarlierApprovalAside(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	dealID, _, toID := gatedDeal(t, e)
 	e.answer(t, e.request(t, dealID, nil), ReviewApproved)
@@ -190,6 +192,7 @@ func TestANewRequestSetsTheEarlierApprovalAside(t *testing.T) {
 
 // A move back and a move to a lost stage do not pass the stage legal guards.
 func TestALostDealLeavesAGatedStageWithoutLegal(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	dealID, fromID, _ := gatedDeal(t, e)
 	var pipelineID ids.PipelineID
@@ -207,6 +210,7 @@ func TestALostDealLeavesAGatedStageWithoutLegal(t *testing.T) {
 
 // Switched off, the gate stands aside and a request is refused as absent.
 func TestSwitchingLegalReviewOffReleasesTheGate(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	dealID, _, toID := gatedDeal(t, e)
 	switchLegalReview(t, e, false)
@@ -234,6 +238,7 @@ func switchLegalReview(t *testing.T, e *reviewEnv, on bool) {
 // A review is a second pair of eyes. The requester cannot answer their own.
 // A seat without the read grant cannot answer blind. A connector is no seat.
 func TestOnlyAnotherSeatHoldingTheReviewGrantAnswers(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	dealID, _, _ := gatedDeal(t, e)
 	id := e.request(t, dealID, nil)
@@ -263,6 +268,7 @@ func TestOnlyAnotherSeatHoldingTheReviewGrantAnswers(t *testing.T) {
 
 // One open request per deal, and a repeat links only a changes_needed review.
 func TestADealWaitsForOneAnswerAtATime(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	dealID, _, _ := gatedDeal(t, e)
 	first := e.request(t, dealID, nil)
@@ -283,6 +289,7 @@ func TestADealWaitsForOneAnswerAtATime(t *testing.T) {
 
 // Only legal's decision settles the kind: the ledger refuses a rep's evidence.
 func TestEvidenceCannotSettleALegalReviewCriterion(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	dealID, criterionID := evidenceFixture(t, e.configEnv, CriterionLegalReviewed)
 	_, err := e.store.RecordStageEvidence(e.asDealWriter(), claim(dealID, criterionID, AuthorBuyer))
@@ -295,6 +302,7 @@ func TestEvidenceCannotSettleALegalReviewCriterion(t *testing.T) {
 // The queue puts the largest value first, then the nearest close, and a
 // review with neither last; a page boundary neither repeats nor skips.
 func TestTheQueueSortsByValueThenCloseDate(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	_, stageID, _ := twoStagePipeline(t, e.configEnv)
 	soon, later := clocktest.Now(t).AddDate(0, 1, 0), clocktest.Now(t).AddDate(0, 3, 0)
@@ -368,6 +376,7 @@ func queueDeal(t *testing.T, e *reviewEnv, stageID ids.StageID, name string, amo
 // The pack is the deal as it stood, read with the reviewer's own grants. A
 // document the reviewer cannot open stays listed, unavailable and unnamed.
 func TestTheReviewerReadsThePackWithoutADealGrant(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	dealID, _, _ := gatedDeal(t, e)
 	openable, removed, mailed := ids.NewV7(), ids.NewV7(), ids.NewV7()
@@ -441,6 +450,7 @@ func threeStageDeal(t *testing.T, e *reviewEnv) (ids.DealID, ids.StageID) {
 
 // A jump over the gated stage passes it as surely as a step off it does.
 func TestAMoveCannotJumpOverAStageThatNeedsLegal(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	dealID, last := threeStageDeal(t, e)
 	refusedFor(t, e.advance(dealID, last), "")
@@ -449,6 +459,7 @@ func TestAMoveCannotJumpOverAStageThatNeedsLegal(t *testing.T) {
 // Legal approving the deal before it reaches the gated stage settles that
 // stage too: the approval is of the deal, not of one step.
 func TestAnEarlierApprovalOpensALaterGatedStage(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	dealID, last := threeStageDeal(t, e)
 	e.answer(t, e.request(t, dealID, nil), ReviewApproved)
@@ -459,6 +470,7 @@ func TestAnEarlierApprovalOpensALaterGatedStage(t *testing.T) {
 
 // A deal cannot be born in the future of a gated stage it never passed.
 func TestADealCannotBeCreatedPastAStageThatNeedsLegal(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	_, last := threeStageDeal(t, e)
 	var pipelineID ids.PipelineID
@@ -474,6 +486,7 @@ func TestADealCannotBeCreatedPastAStageThatNeedsLegal(t *testing.T) {
 // An approval holds for the terms legal read. Changing the amount afterwards
 // sends the deal back to legal.
 func TestAnApprovalLapsesWhenTheAmountChanges(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	dealID, _, toID := gatedDeal(t, e)
 	e.answer(t, e.request(t, dealID, nil), ReviewApproved)

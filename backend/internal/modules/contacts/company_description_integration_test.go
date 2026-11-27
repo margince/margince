@@ -23,6 +23,7 @@ import (
 )
 
 func TestCompanyDescriptionRoundTripsThroughCreateAndUpdate(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	written := "Supplies architectural glazing and modular walls to builders."
@@ -76,6 +77,7 @@ func TestCompanyDescriptionRoundTripsThroughCreateAndUpdate(t *testing.T) {
 // A nil Description leaves the column untouched, so an edit that only moves
 // the lifecycle cannot silently wipe the line someone wrote.
 func TestCompanyDescriptionSurvivesAnUnrelatedEdit(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	written := "Runs the regional glazing supply network."
@@ -100,6 +102,7 @@ func TestCompanyDescriptionSurvivesAnUnrelatedEdit(t *testing.T) {
 // The survivorship rule is fill-where-blank: a survivor with no description
 // inherits one, a survivor that already has one keeps its own.
 func TestCompanyDescriptionFillsOnlyABlankMergeSurvivor(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	retiredLine := "Fabricates aluminium window systems."
@@ -151,6 +154,7 @@ func TestCompanyDescriptionFillsOnlyABlankMergeSurvivor(t *testing.T) {
 }
 
 func TestASiteReadKeepsTheOfferSeparateFromTheDescription(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	fromTranscript := "Discovery call: they run two shops and plan to internationalise."
 	company, err := e.store.CreateCompany(e.asAgent(), CreateCompanyInput{
@@ -174,6 +178,7 @@ func TestASiteReadKeepsTheOfferSeparateFromTheDescription(t *testing.T) {
 }
 
 func TestASiteReadLeavesAHumansDescriptionAlone(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	company, err := e.store.CreateCompany(ctx, CreateCompanyInput{
@@ -207,6 +212,7 @@ func TestASiteReadLeavesAHumansDescriptionAlone(t *testing.T) {
 // nothing would leave the very first sentence somebody wrote unclaimed, and the
 // next crawl would take it.
 func TestASiteReadLeavesAHumansCreatedDescriptionAlone(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	typed := "What we tell contacts we do, written when the record was made."
@@ -234,6 +240,7 @@ func TestASiteReadLeavesAHumansCreatedDescriptionAlone(t *testing.T) {
 // and if the claim did not travel with it the next site read of the survivor
 // would replace words a contact wrote.
 func TestAMergedInDescriptionKeepsItsHumanAuthor(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	typed := "The sentence a contact wrote on the record that lost the merge."
@@ -268,6 +275,7 @@ func TestAMergedInDescriptionKeepsItsHumanAuthor(t *testing.T) {
 }
 
 func TestAutomaticWorksEditDoesNotClaimTheDescription(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	company, err := e.store.CreateCompany(e.as(), CreateCompanyInput{
 		DisplayName: "Agent Edited GmbH", Source: "manual",
@@ -301,6 +309,7 @@ func TestAutomaticWorksEditDoesNotClaimTheDescription(t *testing.T) {
 // the first would let any agent write that echoes a record back strip the
 // human's claim and hand the sentence to the next crawl.
 func TestAnAgentEchoingAHumansDescriptionDoesNotTakeIt(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	typed := "The sentence a contact wrote and an agent merely repeats."
@@ -340,6 +349,7 @@ func TestAnAgentEchoingAHumansDescriptionDoesNotTakeIt(t *testing.T) {
 // case. What is asserted is the backfill's premise: the row's captured_by is a
 // sound answer to who wrote the description when nothing else recorded it.
 func TestABackfilledLegacyDescriptionIsHeldByItsRowAuthor(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	typed := "Written long before anybody stamped a field."
@@ -422,6 +432,7 @@ func applySiteReadDescription(ctx context.Context, t *testing.T, e *dedupeEnv, c
 // The document bound is the database's, so it holds for every writer and
 // not only the ones that remember to check.
 func TestCompanyDescriptionRefusesTextPastTheDocumentLimit(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	tooLong := strings.Repeat("a", values.TextDocumentCharacters+1)

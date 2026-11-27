@@ -25,6 +25,7 @@ var footerExceptionCountry = sync.OnceValue(func() string {
 })
 
 func TestARepSendsWithMissingEvidenceAndFooterDetails(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	c := &consentEnv{AppEnv: p.AppEnv, contactID: p.contactID, activityID: p.activityID}
@@ -77,6 +78,7 @@ var footerOnlyCountry = sync.OnceValue(func() string {
 })
 
 func TestAFooterOnlyExceptionReachesTheProvider(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	p.stakeADeal(t)
@@ -121,6 +123,7 @@ var changingFooterCountry = sync.OnceValue(func() string {
 })
 
 func TestAChangedFooterRenewsTheReviewBeforeRecordingTheDecision(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	if _, err := c.Owner.Exec(t.Context(), `UPDATE contact SET address_country=@country WHERE id=@contact`, pgx.StrictNamedArgs{"contact": c.contactID, "country": changingFooterCountry()}); err != nil {
 		t.Fatal(err)
@@ -171,6 +174,7 @@ func TestAChangedFooterRenewsTheReviewBeforeRecordingTheDecision(t *testing.T) {
 }
 
 func TestARepConfirmsAMissingPublicLinkAndTheProviderReceivesTheEmail(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t, compose.WithPublicBaseURL(""))
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	demoteToRep(t, p.AppEnv)

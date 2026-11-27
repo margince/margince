@@ -20,6 +20,7 @@ import (
 )
 
 func TestWeeklyClosedMoneyAddsTheWinsThatConvertAndNamesTheOnesThatCannotBePriced(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	date := time.Date(2020, 1, 1, 12, 0, 0, 0, time.UTC)
@@ -83,6 +84,7 @@ func TestWeeklyClosedMoneyAddsTheWinsThatConvertAndNamesTheOnesThatCannotBePrice
 // A week is valued at its last day. A rate effective on the following Monday
 // is the day the exclusive window end names, and it does not price the week.
 func TestWeeklyMoneyIsValuedAtTheWeeksLastInstant(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	day := func(d int) time.Time { return time.Date(2026, 3, d, 0, 0, 0, 0, time.UTC) }
@@ -119,6 +121,7 @@ func TestWeeklyMoneyIsValuedAtTheWeeksLastInstant(t *testing.T) {
 }
 
 func TestAWeekIsValuedOneStepBeforeItsExclusiveEnd(t *testing.T) {
+	t.Parallel()
 	end := time.Date(2026, 3, 9, 0, 0, 0, 0, time.UTC)
 	if got := weekValuedAt(end); !got.Before(end) || end.Sub(got) > time.Millisecond {
 		t.Errorf("valued at %v, want the instant just inside %v", got, end)
@@ -129,6 +132,7 @@ func TestAWeekIsValuedOneStepBeforeItsExclusiveEnd(t *testing.T) {
 // for the week's opened pipeline. A masked row is never read, so it is never
 // named as one with no rate.
 func TestWeeklyOpenedPipelineNamesNoCurrencyOfAMaskedDeal(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	pipeline, open, _ := integration.DealFixture(t, e)
 	jpy := "JPY"

@@ -45,6 +45,7 @@ import (
 // connections card are both callers today; when this read was gated only by
 // its callers, reordering the graph's group list turned it into an ungated one.
 func TestRouteInEdgesRefusesWithoutTheContactGrant(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme", &e.Rep1))
 	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
@@ -87,6 +88,7 @@ func TestRouteInEdgesRefusesWithoutTheContactGrant(t *testing.T) {
 // whole card rests on: a company with contacts the caller cannot read must not
 // look like a company with no contacts.
 func TestCompanyGraphOmitsAGroupTheCallerMayNotRead(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := company360Service(e)
 	pipeline, stage, _ := integration.DealFixture(t, e)
@@ -163,6 +165,7 @@ func TestCompanyGraphOmitsAGroupTheCallerMayNotRead(t *testing.T) {
 // seat. Every node kind is checked, because one unscoped arm is a side channel
 // for the whole class.
 func TestCompanyGraphPrunesNodesToTheCallersReadScope(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := company360Service(e)
 	pipeline, stage, _ := integration.DealFixture(t, e)
@@ -234,6 +237,7 @@ func TestCompanyGraphPrunesNodesToTheCallersReadScope(t *testing.T) {
 // graph's gate, and a capture-private account must be indistinguishable from a
 // nonexistent one.
 func TestCompanyGraphHidesACapturePrivateAccount(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := company360Service(e)
 	theirsRaw := e.SeedCompany(t, "Other Rep's Private Account", &e.Rep3)
@@ -254,6 +258,7 @@ func TestCompanyGraphHidesACapturePrivateAccount(t *testing.T) {
 // claim, taken against real rows: the card marks the same contact
 // GET /signals/{id}/intro-path would route through, and cites the signal.
 func TestCompanyGraphSignalRouteNamesTheWarmRoomsContact(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	svc := company360Service(e)
@@ -328,6 +333,7 @@ func TestCompanyGraphSignalRouteNamesTheWarmRoomsContact(t *testing.T) {
 // is what keeps this card and GET /signals agreeing about what belongs to an
 // account.
 func TestCompanyGraphCitesACompanySubjectSignal(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	svc := company360Service(e)
@@ -358,6 +364,7 @@ func TestCompanyGraphCitesACompanySubjectSignal(t *testing.T) {
 // available whenever the account has contacts, so the absence has to come from
 // the signal, not from the contacts.
 func TestCompanyGraphReportsNoSignalRouteWithoutAnOpenSignal(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	svc := company360Service(e)

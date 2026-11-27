@@ -28,6 +28,7 @@ import (
 // forever. It also proves the spelling is normalized — the file says
 // "https://www.northwind.example/" and the store holds "northwind.example".
 func TestCSVImportLandsDomainsAndConverges(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 
 	const companies = "Company,Website\n" +
@@ -99,6 +100,7 @@ func TestCSVImportLandsDomainsAndConverges(t *testing.T) {
 // The company keeps its own name, and the report says so. No second company
 // is created.
 func TestCSVImportFilesARowOntoTheCompanyHoldingItsDomain(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	if status := e.Call(t, http.MethodPost, "/v1/companies",
 		map[string]any{"source": "manual", "display_name": "Northwind Traders", "domains": []map[string]any{
@@ -169,6 +171,7 @@ func TestCSVImportFilesARowOntoTheCompanyHoldingItsDomain(t *testing.T) {
 // same company creates a twin — which is the by-name matching this whole target
 // exists to replace.
 func TestCSVImportOfOneDomainKeepsTheCompanysOthers(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	mapping := map[string]string{"Company": "display_name", "Website": "domain"}
 

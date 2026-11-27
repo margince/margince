@@ -99,7 +99,7 @@ func newAccountScanWorker(pool *pgxpool.Pool, brain completer, routingVersion fu
 		NewApprovalsService(InstallationDB(pool)), time.Now)
 	return &accountScanWorker{
 		svc:   companyscan.NewService(pool, view, view, brain, nil, routingVersion, time.Now, log),
-		users: identity.NewService(pool),
+		users: IdentityService(pool),
 		log:   log,
 	}
 }

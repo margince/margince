@@ -29,6 +29,7 @@ import (
 )
 
 func TestASeatWhoseBacklogStoppedMovingIsFound(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	seedPendingSender(t, e, e.Rep1, "wartet@example.test", 1, 8*time.Hour)
 
@@ -40,6 +41,7 @@ func TestASeatWhoseBacklogStoppedMovingIsFound(t *testing.T) {
 }
 
 func TestAFreshlyArrivedRowIsNotStalled(t *testing.T) {
+	t.Parallel()
 	// New, not stuck. Mail that just landed is pending because nothing has
 	// reached it yet, and reporting that would tell every seat their backlog is
 	// broken every time a message arrives.
@@ -52,6 +54,7 @@ func TestAFreshlyArrivedRowIsNotStalled(t *testing.T) {
 }
 
 func TestARowTheRetryLoopKeepsTouchingIsStillStalled(t *testing.T) {
+	t.Parallel()
 	// The case the first version of this predicate could not see, and the reason
 	// it reads created_at. During an outage the pass re-claims and re-defers each
 	// row every cycle, so updated_at and next_attempt_at are always fresh — a
@@ -76,6 +79,7 @@ func TestARowTheRetryLoopKeepsTouchingIsStillStalled(t *testing.T) {
 }
 
 func TestAResolvedRowIsNotStalled(t *testing.T) {
+	t.Parallel()
 	// The question was answered. Only a row still waiting is waiting.
 	e := Setup(t)
 	seedPendingSender(t, e, e.Rep1, "beantwortet@example.test", 2, 8*time.Hour)
@@ -94,6 +98,7 @@ func TestAResolvedRowIsNotStalled(t *testing.T) {
 }
 
 func TestTheStallIsCountedPerSeat(t *testing.T) {
+	t.Parallel()
 	// Whose backlog stopped is the question the notice answers, so two seats
 	// waiting are two notices rather than one number nobody can act on.
 	e := Setup(t)

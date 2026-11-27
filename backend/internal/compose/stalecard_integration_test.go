@@ -22,6 +22,7 @@ import (
 // withdrawn with the reason when its owner approves it. No second next step is
 // written.
 func TestAFollowUpNoLongerNeededIsWithdrawnWithItsReason(t *testing.T) {
+	t.Parallel()
 	for name, meanwhile := range map[string]func(e *reconcileEnv, deal ids.UUID){
 		"a meeting was booked": func(e *reconcileEnv, deal ids.UUID) {
 			e.seedMeeting(t, deal, "Next Thursday", -72, 3600, "booked")
@@ -50,6 +51,7 @@ func TestAFollowUpNoLongerNeededIsWithdrawnWithItsReason(t *testing.T) {
 // still stops the follow-up. Here no precheck is wired, so only the effect can.
 // The card is spent with nothing written, and the decider is told why.
 func TestTheFollowUpEffectWritesNothingOnceTheDealHasANextStep(t *testing.T) {
+	t.Parallel()
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Booked meanwhile", e.pipeline, e.open, &e.Rep1)
 	call := e.seedInteraction(t, deal, "call", "Discovery", 1)
@@ -78,6 +80,7 @@ func TestTheFollowUpEffectWritesNothingOnceTheDealHasANextStep(t *testing.T) {
 // since. That holds for a card resting on a claim and for one resting on the
 // commitment decision.
 func TestAPromiseNoLongerOpenIsWithdrawnWithItsReason(t *testing.T) {
+	t.Parallel()
 	for name, close := range map[string]func(e *integration.Env, id ids.ApprovalID, change map[string]any){
 		"its claim was dismissed": func(e *integration.Env, _ ids.ApprovalID, _ map[string]any) {
 			e.WsExec(t, `UPDATE conversation_claim SET status = 'dismissed' WHERE kind = 'commitment_ours'`)

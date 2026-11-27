@@ -50,6 +50,7 @@ func seedOpenFXDeal(t *testing.T, e *Env, st openFXStages, company ids.UUID, amo
 }
 
 func TestAnOpenDealInAnotherCurrencyIsPricedAtTheLatestRate(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	st := seedOpenFXPipeline(t, e)
 	company := ids.NewV7()
@@ -95,6 +96,7 @@ func TestAnOpenDealInAnotherCurrencyIsPricedAtTheLatestRate(t *testing.T) {
 }
 
 func TestAnOpenDealInACurrencyWithNoRateStaysCountedAndUnpriced(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	st := seedOpenFXPipeline(t, e)
 	company := ids.NewV7()
@@ -128,6 +130,7 @@ func TestAnOpenDealInACurrencyWithNoRateStaysCountedAndUnpriced(t *testing.T) {
 }
 
 func TestTheLatestRateOnOrBeforeTheAsOfDayIsTheOneUsed(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	st := seedOpenFXPipeline(t, e)
 	company := ids.NewV7()
@@ -170,6 +173,7 @@ func TestTheLatestRateOnOrBeforeTheAsOfDayIsTheOneUsed(t *testing.T) {
 }
 
 func TestAStaleRateDateOnAnOpenDealDoesNotBecomeTheAsOf(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	st := seedOpenFXPipeline(t, e)
 	company := ids.NewV7()

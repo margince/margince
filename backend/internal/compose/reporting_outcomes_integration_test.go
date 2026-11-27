@@ -20,6 +20,7 @@ import (
 )
 
 func TestReportingQualifiedPipelineKeepsTheFirstEntryThroughRegression(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	at := time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC)
 	clock := func() time.Time { return at }
@@ -61,6 +62,7 @@ func TestReportingQualifiedPipelineKeepsTheFirstEntryThroughRegression(t *testin
 }
 
 func TestReportingAcceptedCreditSurvivesTransferAndDeduplicatesHandoffs(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	at := time.Date(2026, 9, 25, 12, 0, 0, 0, time.UTC)
 	clock := func() time.Time { return at }

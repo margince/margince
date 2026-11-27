@@ -24,6 +24,7 @@ import (
 )
 
 func TestCompanyArchivePreviewNamesItsRetiredScope(t *testing.T) {
+	t.Parallel()
 	for _, rest := range []bool{false, true} {
 		t.Run(fmt.Sprintf("rest=%t", rest), func(t *testing.T) {
 			e := integration.Setup(t)
@@ -124,6 +125,7 @@ func TestCompanyArchivePreviewNamesItsRetiredScope(t *testing.T) {
 }
 
 func TestCompanyArchivePreviewHonorsVersionAndProjectGuard(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	perms := integration.AdminPerms
 	perms.Objects = maps.Clone(perms.Objects)

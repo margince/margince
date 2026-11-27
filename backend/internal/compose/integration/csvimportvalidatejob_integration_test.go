@@ -71,6 +71,7 @@ func readTestRunState(t *testing.T, e *apptest.AppEnv, id string) testRunState {
 }
 
 func TestATestRunAnswersBeforeAnyRowIsRead(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	queued := queueLeadTest(t, e, prospectCSV)
 	if state := readTestRunState(t, e, queued.ID); state.phase != "" || len(state.progress.Objects) != 0 {
@@ -101,6 +102,7 @@ func TestATestRunAnswersBeforeAnyRowIsRead(t *testing.T) {
 // A second test of the version being tested answers from the run. The request
 // opens no file, so a double click costs no read of the object store.
 func TestASecondTestOfTheVersionBeingTestedReadsNoFile(t *testing.T) {
+	t.Parallel()
 	e, store := setupImportAppWithStore(t)
 	queued := queueLeadTest(t, e, prospectCSV)
 	var sourceRef string
@@ -127,6 +129,7 @@ func jobNames(t *testing.T, job *rivertype.JobRow, id string, attempt int) bool 
 }
 
 func TestAnOverBudgetTestRunReturnsToDraft(t *testing.T) {
+	t.Parallel()
 	e, store := setupImportAppWithStore(t)
 	queued := queueLeadTest(t, e, leadFile(12_000))
 
@@ -155,6 +158,7 @@ func TestAnOverBudgetTestRunReturnsToDraft(t *testing.T) {
 }
 
 func TestAWorkerWithNoObjectStoreFailsTheValidation(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	queued := queueLeadTest(t, e, prospectCSV)
 
@@ -212,6 +216,7 @@ func awaitMidPart(t *testing.T, e *apptest.AppEnv, id string) testRunState {
 }
 
 func TestTestRunProgressIsReadableWhileItRuns(t *testing.T) {
+	t.Parallel()
 	e, runner := testRunnerApp(t)
 	const rows = 12_000
 	queued := queueLeadTest(t, e, leadFile(rows))
@@ -231,6 +236,7 @@ func TestTestRunProgressIsReadableWhileItRuns(t *testing.T) {
 }
 
 func TestAStoppedTestRunRestartsFromZero(t *testing.T) {
+	t.Parallel()
 	e, runner := testRunnerApp(t)
 	const rows = 12_000
 	queued := queueLeadTest(t, e, leadFile(rows))

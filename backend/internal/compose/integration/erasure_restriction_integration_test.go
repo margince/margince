@@ -102,6 +102,7 @@ func seedRestrictionFixture(t *testing.T, e *Env) restrictionFixture {
 // identifiers gone, its deadline pinned, its evidence written — and both the
 // tombstone and the outbox event say so.
 func TestErasureRestrictsAHandelsbriefInsteadOfDestroyingIt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedRestrictionFixture(t, e)
 
@@ -263,6 +264,7 @@ func assertRestrictedListOverTheWire(t *testing.T, e *Env, f restrictionFixture)
 // around it on its own database to close the window; that is a clock shift,
 // not a second version of production.
 func TestExpiredRestrictionCompletesTheSuspendedErasureUnderRetainOnly(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedRestrictionFixture(t, e)
 	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(e.Admin(), f.contact, "test"); err != nil {
@@ -277,7 +279,7 @@ func TestExpiredRestrictionCompletesTheSuspendedErasureUnderRetainOnly(t *testin
 	svc := compose.NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
 
 	// A window still open is left exactly as it is by the pass.
-	if err := svc.EvaluateInstallation(RetentionPassCtx(e.WS)); err != nil {
+	if err := svc.EvaluateInstallation(RetentionPassCtx(context.Background(), e.WS)); err != nil {
 		t.Fatal(err)
 	}
 	if !restrictedRowHolds(t, e, f.email) {
@@ -295,7 +297,7 @@ func TestExpiredRestrictionCompletesTheSuspendedErasureUnderRetainOnly(t *testin
 			t.Fatalf("closing the window: %v", err)
 		}
 	}
-	if err := svc.EvaluateInstallation(RetentionPassCtx(e.WS)); err != nil {
+	if err := svc.EvaluateInstallation(RetentionPassCtx(context.Background(), e.WS)); err != nil {
 		t.Fatal(err)
 	}
 
@@ -357,6 +359,7 @@ func TestExpiredRestrictionCompletesTheSuspendedErasureUnderRetainOnly(t *testin
 // which the erasure engine never attempts (its selectors exclude restricted
 // rows) and which a caller must not retry.
 func TestARestrictedRowRefusesEveryOrdinaryWrite(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedRestrictionFixture(t, e)
 	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(e.Admin(), f.contact, "test"); err != nil {
@@ -390,6 +393,7 @@ func TestARestrictedRowRefusesEveryOrdinaryWrite(t *testing.T) {
 // did not exist; lockActivityForWrite now asks whether a row LiveOnly
 // cannot see is gone or held before answering either way.
 func TestARestrictedRowLeavesEveryOrdinaryReadPath(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedRestrictionFixture(t, e)
 	admin := e.Admin()
@@ -472,6 +476,7 @@ func controllerCtx(e *Env, grant principal.ObjectGrant) context.Context {
 // ERASING, because the Art. 17 request the hold suspended is still
 // outstanding. The reason is what makes it a decision rather than a toggle.
 func TestAControllerReleasesAHeldRecordByErasingIt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedRestrictionFixture(t, e)
 	eraser := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).WithRawCapturePurger(compose.RawCapturePurgerFor(e.DB()))
@@ -557,6 +562,7 @@ func TestAControllerReleasesAHeldRecordByErasingIt(t *testing.T) {
 // controller's decision — until it is lifted. Destroying held evidence is
 // spoliation, and it is the one thing neither path may do.
 func TestALegalHoldOutranksAControllerRelease(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedRestrictionFixture(t, e)
 	eraser := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).WithRawCapturePurger(compose.RawCapturePurgerFor(e.DB()))
@@ -609,6 +615,7 @@ func TestALegalHoldOutranksAControllerRelease(t *testing.T) {
 // rule here would find it. The controller says so, with a reason, and the
 // record is held on exactly the same terms as a derived one.
 func TestAControllerPinsCorrespondenceTheDerivationCannotSee(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	supplierMail := ids.NewV7()
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
@@ -761,6 +768,7 @@ func originalsBehind(t *testing.T, e *Env, sourceID string) int {
 // comment forbids: "a record must not be more thoroughly erased by the clock
 // than by a controller's decision".
 func TestAFloorExpiringDestroysTheProviderOriginalToo(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	activity, sourceID := pinnedMailWithAnOriginal(t, e)
 	if originalsBehind(t, e, sourceID) != 1 {
@@ -778,7 +786,7 @@ func TestAFloorExpiringDestroysTheProviderOriginalToo(t *testing.T) {
 		}
 	}
 	svc := compose.NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
-	if err := svc.EvaluateInstallation(RetentionPassCtx(e.WS)); err != nil {
+	if err := svc.EvaluateInstallation(RetentionPassCtx(context.Background(), e.WS)); err != nil {
 		t.Fatal(err)
 	}
 
@@ -806,6 +814,7 @@ func TestAFloorExpiringDestroysTheProviderOriginalToo(t *testing.T) {
 // the erasure the restriction suspended, so it must reach everything the sweep
 // reaches.
 func TestAControllerReleaseDestroysTheProviderOriginalToo(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	activity, sourceID := pinnedMailWithAnOriginal(t, e)
 
@@ -831,6 +840,7 @@ func TestAControllerReleaseDestroysTheProviderOriginalToo(t *testing.T) {
 // is an erasure that reports success over an intact original, which is the one
 // outcome worse than refusing.
 func TestAnEraserWithNoPurgerRefusesRatherThanErasingHalf(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	activity, sourceID := pinnedMailWithAnOriginal(t, e)
 
@@ -879,6 +889,7 @@ func TestAnEraserWithNoPurgerRefusesRatherThanErasingHalf(t *testing.T) {
 // the column, which was never in doubt; what is in doubt is whether the
 // database refuses a caller that does not.
 func TestARestrictionCannotBeLiftedWithTheBylineIntact(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedRestrictionFixture(t, e)
 	admin := e.Admin()

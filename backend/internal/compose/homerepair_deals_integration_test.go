@@ -18,6 +18,7 @@ import (
 )
 
 func TestReviewedSuggestionRepairPreservesCurrentEvidenceAndRetiresExpiredQualification(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	e.now = time.Date(2026, 10, 1, 12, 0, 0, 0, time.UTC)
 	company := e.SeedCompany(t, "Example buyer", nil)
@@ -65,6 +66,7 @@ func TestReviewedSuggestionRepairPreservesCurrentEvidenceAndRetiresExpiredQualif
 }
 
 func TestReviewedSuggestionRepairPreservesALaterHumanDismissal(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	e.now = time.Date(2026, 10, 1, 12, 0, 0, 0, time.UTC)
 	company := e.SeedCompany(t, "Example buyer", nil)

@@ -70,6 +70,7 @@ func (e *sendEnv) draftsOf(t *testing.T, author ids.UUID) int {
 }
 
 func TestAnAdminCannotReachSomebodyElsesDraft(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := replyAnchor(e.seedAnchor(t, "", ""))
 	mine := saveDraft(e.as(principal.RowScopeAll), t, e, anchor)
@@ -89,6 +90,7 @@ func TestAnAdminCannotReachSomebodyElsesDraft(t *testing.T) {
 // The moved draft is audited as an update naming its new author, and like
 // every draft audit row it carries no word the author wrote.
 func TestAHandedOverDraftBelongsToTheSuccessorAndIsAudited(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := replyAnchor(e.seedAnchor(t, "", ""))
 	mine := saveDraft(e.as(principal.RowScopeAll), t, e, anchor)
@@ -117,6 +119,7 @@ func TestAHandedOverDraftBelongsToTheSuccessorAndIsAudited(t *testing.T) {
 // A caller who may not change activities moves no draft, and the rest of the
 // handover still lands, as for open tasks.
 func TestAHandoverWithoutTheActivityUpdateGrantMovesNoDraft(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	mine := saveDraft(e.as(principal.RowScopeAll), t, e, replyAnchor(e.seedAnchor(t, "", "")))
 	e.repLeaves(t)
@@ -133,6 +136,7 @@ func TestAHandoverWithoutTheActivityUpdateGrantMovesNoDraft(t *testing.T) {
 // A member who has not left keeps every draft: an admin handing their work to
 // anyone, themselves included, cannot read what they have not sent.
 func TestAnActiveAuthorKeepsTheirDraftsThroughAHandover(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	mine := saveDraft(e.as(principal.RowScopeAll), t, e, replyAnchor(e.seedAnchor(t, "", "")))
 
@@ -149,6 +153,7 @@ func TestAnActiveAuthorKeepsTheirDraftsThroughAHandover(t *testing.T) {
 // author when it goes. The draft stays with that author through a handover, so
 // the resume takes it and no copy is left with the receiver.
 func TestAHeldMessagesDraftStaysForTheResumeToTake(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	store := e.store(stubUnsubscribeLinker{token: testUnsubscribeTok, ok: true}).WithClock(func() time.Time { return draftClock })
@@ -177,6 +182,7 @@ func TestAHeldMessagesDraftStaysForTheResumeToTake(t *testing.T) {
 // The removal preview asks this count, so a caller who could not move a draft
 // sees the blocker before the removal fails.
 func TestOnlyALeaversFreeDraftsAreTransferable(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	saveDraft(e.as(principal.RowScopeAll), t, e, replyAnchor(e.seedAnchor(t, "", "")))
 	count := func(ctx context.Context) int {
@@ -212,6 +218,7 @@ func TestOnlyALeaversFreeDraftsAreTransferable(t *testing.T) {
 // cannot see it and must wait on its key. The commit comes only once that very
 // backend waits on that very transaction.
 func TestAReceiversConcurrentSaveIsAConflict(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := replyAnchor(e.seedAnchor(t, "", ""))
 	saveDraft(e.as(principal.RowScopeAll), t, e, anchor)

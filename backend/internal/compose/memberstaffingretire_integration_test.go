@@ -17,6 +17,7 @@ import (
 )
 
 func TestRetirementEndsResponsibilitiesWhoseParentWasArchived(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	manager := memberManagerFor(t, e)
 	company := e.SeedCompany(t, "Closed account", &e.AdminUser)
@@ -59,6 +60,7 @@ func TestRetirementEndsResponsibilitiesWhoseParentWasArchived(t *testing.T) {
 }
 
 func TestRetirementRejectsAReceiverWhoCannotWorkTheHandoff(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	manager := memberManagerFor(t, e)
 	lead := ids.UUID(seedBulkLeads(t, e, e.AdminUser, 1)[0].Id)

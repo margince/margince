@@ -26,6 +26,7 @@ import (
 // there. It no longer does: a passport carries the granting human's seat and
 // row scope, and archiving a tag is ordinary work its holder does unaided.
 func TestARestArchiveOutsideTheToolSchemaPerformsOnTheAgentsPassport(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	bearer := agentBearer(t, e, "outside-the-tool-schema agent")

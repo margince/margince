@@ -73,6 +73,7 @@ func firstUseWrites(t *testing.T, f *invitationFixture) (audits, events int) {
 }
 
 func TestAPublicBookingMarksThePageUsedOnce(t *testing.T) {
+	t.Parallel()
 	f := newInvitationFixture(t)
 	f.book(t)
 	if used := pageFirstUsedAt(t, f); used != nil {
@@ -97,6 +98,7 @@ func TestAPublicBookingMarksThePageUsedOnce(t *testing.T) {
 // A booking that lands while the host replaces their link waits for the
 // replacement, then stamps the new live page.
 func TestABookingDuringALinkReplacementStampsTheNewPage(t *testing.T) {
+	t.Parallel()
 	f := newInvitationFixture(t)
 	host, err := schedulingHost(f.ctx)
 	if err != nil {
@@ -162,6 +164,7 @@ func waitForLockWaiters(t *testing.T, f *invitationFixture, want int, booked <-c
 }
 
 func TestCopyingTheLinkMarksThePageUsedAndAuditsOnce(t *testing.T) {
+	t.Parallel()
 	f := newInvitationFixture(t)
 	for range 2 {
 		if err := f.store.MarkBookingPageShared(f.ctx); err != nil {
@@ -180,6 +183,7 @@ func TestCopyingTheLinkMarksThePageUsedAndAuditsOnce(t *testing.T) {
 }
 
 func TestReplacingTheLinkKeepsItsFirstUse(t *testing.T) {
+	t.Parallel()
 	f := newInvitationFixture(t)
 	if err := f.store.MarkBookingPageShared(f.ctx); err != nil {
 		t.Fatal(err)
@@ -204,6 +208,7 @@ func TestReplacingTheLinkKeepsItsFirstUse(t *testing.T) {
 
 // A browser that sends no key still books through the public door.
 func TestAPublicBookingWithoutAKeyMarksThePageUsed(t *testing.T) {
+	t.Parallel()
 	f := newInvitationFixture(t)
 	bookPublicly(t, f, "", monday(10))
 	if used := pageFirstUsedAt(t, f); used == nil {
@@ -214,6 +219,7 @@ func TestAPublicBookingWithoutAKeyMarksThePageUsed(t *testing.T) {
 // Home names a booking page only when it is switched on, was used, and takes
 // no bookings. Each case breaks one of the three.
 func TestABookingPageConcernNeedsASwitchedOnUsedPausedPage(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		name                 string
 		enabled, used, block bool

@@ -30,10 +30,11 @@ type bookedInvitation struct {
 // it. The invitation the host's calendar sends never carries it, on creation or on
 // a reschedule: its recipient is only an address the booker typed.
 func TestABookersAgendaStaysOnTheRecordAndOffTheInvitation(t *testing.T) {
+	t.Parallel()
 	e, provider := setupBookingProvider(t)
 	e.BootstrapWorkspace(t)
 	apptest.EnableGoogleBookingPage(t, e)
-	deliver := startMeetingDelivery(t, e)
+	deliver := startMeetingDelivery(t, e, provider)
 	base := "/v1/public/booking/" + bookingSlug(t, e)
 	monday := nextMonday()
 	const agenda = "Bring the renewal figures"
@@ -92,10 +93,11 @@ func TestABookersAgendaStaysOnTheRecordAndOffTheInvitation(t *testing.T) {
 // The rule follows who wrote the words, not which door accepted the meeting. A
 // proposal's description is its host's, so accepting it anonymously still sends it.
 func TestAnAcceptedProposalStillSendsTheDescriptionItsHostWrote(t *testing.T) {
+	t.Parallel()
 	e, provider := setupBookingProvider(t)
 	e.BootstrapWorkspace(t)
 	apptest.EnableGoogleBookingPage(t, e)
-	deliver := startMeetingDelivery(t, e)
+	deliver := startMeetingDelivery(t, e, provider)
 	var contact struct {
 		ID string `json:"id"`
 	}
@@ -161,9 +163,9 @@ func deliveredDescription(t *testing.T, provider *apptest.BookingProvider, invit
 
 // startMeetingDelivery boots the booking worker and answers a function running one
 // calendar delivery pass to completion.
-func startMeetingDelivery(t *testing.T, e *apptest.AppEnv) func() {
+func startMeetingDelivery(t *testing.T, e *apptest.AppEnv, provider *apptest.BookingProvider) func() {
 	t.Helper()
-	runner, completed, failed := startBookingWorker(t, e)
+	runner, completed, failed := startBookingWorker(t, e, provider)
 	awaitPass := func() {
 		t.Helper()
 		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)

@@ -30,6 +30,7 @@ func latestOn(t *testing.T, e *loadEnv, store *Store, contact ids.UUID) []crmcon
 }
 
 func TestLatestInboundOffersAcceptingARequestUntilItsTaskStands(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := e.buyer(t)
 	links := []ActivityLinkInput{{EntityType: "contact", EntityID: contact}}
@@ -52,6 +53,7 @@ func TestLatestInboundOffersAcceptingARequestUntilItsTaskStands(t *testing.T) {
 }
 
 func TestLatestInboundShowsAWebsiteFormUntilACallAnswersIt(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := e.buyer(t)
 	links := []ActivityLinkInput{{EntityType: "contact", EntityID: contact}}
@@ -81,6 +83,7 @@ func TestLatestInboundShowsAWebsiteFormUntilACallAnswersIt(t *testing.T) {
 }
 
 func TestLatestInboundLeavesOutAFormATaskWasMadeFrom(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := e.buyer(t)
 	links := []ActivityLinkInput{{EntityType: "contact", EntityID: contact}}
@@ -103,6 +106,7 @@ func TestLatestInboundLeavesOutAFormATaskWasMadeFrom(t *testing.T) {
 }
 
 func TestLatestInboundLeavesOutWhatArrivedBeforeTheWindow(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := e.buyer(t)
 	links := []ActivityLinkInput{{EntityType: "contact", EntityID: contact}}
@@ -114,6 +118,7 @@ func TestLatestInboundLeavesOutWhatArrivedBeforeTheWindow(t *testing.T) {
 }
 
 func TestLatestInboundSaysWhoseMoveTheLastExchangeLeaves(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := e.buyer(t)
 	links := []ActivityLinkInput{{EntityType: "contact", EntityID: contact}}
@@ -144,6 +149,7 @@ func TestLatestInboundSaysWhoseMoveTheLastExchangeLeaves(t *testing.T) {
 }
 
 func TestLatestInboundKeepsAFormUntilARowThatAnswersIt(t *testing.T) {
+	t.Parallel()
 	out, in := string(crmcontracts.ActivityDirectionOutbound), string(crmcontracts.ActivityDirectionInbound)
 	status := func(s crmcontracts.ActivityMeetingStatus) *string { v := string(s); return &v }
 	cases := []struct {
@@ -200,6 +206,7 @@ func TestLatestInboundKeepsAFormUntilARowThatAnswersIt(t *testing.T) {
 // A form and our answer at one stored instant: a date on either side makes ours its answer. Between
 // two answers of ours at that instant, the day one answers whichever was logged last.
 func TestLatestInboundReadsAFormTieByTheAnswerRule(t *testing.T) {
+	t.Parallel()
 	out := string(crmcontracts.ActivityDirectionOutbound)
 	for _, c := range []struct {
 		name    string
@@ -244,6 +251,7 @@ func TestLatestInboundReadsAFormTieByTheAnswerRule(t *testing.T) {
 }
 
 func TestLatestInboundRefusesARecordNobodyHolds(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	_, err := storeKnowing(e).LatestInbound(e.asSeat(e.rep), "contact", ids.NewV7())
 	if !errors.Is(err, apperrors.ErrNotFound) {
@@ -286,6 +294,7 @@ func (e *recencyEnv) seedCallOrMeeting(t *testing.T, deal ids.UUID, kind, direct
 // They are a colleague's mail that arrives inbound, a withheld mail, automatic
 // mail, mail forwarded to oneself, a call and a meeting. Sixty notes follow them.
 func TestLatestInboundDatesTheLastMessagesOverEveryRowNotOnePage(t *testing.T) {
+	t.Parallel()
 	e := setupRecency(t)
 	deal := e.seedQuietDeal(t, pinnedQuiet)
 	inbound := e.seedMail(t, deal, "inbound", pinnedQuiet.AddDate(0, 0, 1), "")

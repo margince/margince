@@ -22,6 +22,7 @@ import (
 // after the request turns "your move" into "you replied"; their next message
 // turns it back. The request stays open the whole time.
 func TestTheDealCardSaysWeRepliedUntilTheBuyerWritesAgain(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	deal := apptest.CreateOpenDeal(t, e, apptest.DiscoverSeededPipeline(t, e))

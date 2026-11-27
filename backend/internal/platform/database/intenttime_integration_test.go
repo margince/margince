@@ -18,6 +18,7 @@ import (
 )
 
 func TestSQLAndTheValueObjectResolveTheSameLocalTime(t *testing.T) {
+	t.Parallel()
 	raw, err := os.ReadFile("../../shared/kernel/values/testdata/intenttime.json")
 	if err != nil {
 		t.Fatal(err)
@@ -60,6 +61,7 @@ func TestSQLAndTheValueObjectResolveTheSameLocalTime(t *testing.T) {
 }
 
 func TestTheIntentPairRefusesAMissingOrUnusableZone(t *testing.T) {
+	t.Parallel()
 	ctx, pool := laneEnv(t)
 	cases := []struct {
 		Wall, Zone *string
@@ -90,6 +92,7 @@ func TestTheIntentPairRefusesAMissingOrUnusableZone(t *testing.T) {
 }
 
 func TestANamedZoneIsExactlyOneTheZoneCatalogLists(t *testing.T) {
+	t.Parallel()
 	ctx, pool := laneEnv(t)
 	onSnapshot(ctx, t, pool, func(ctx context.Context, tx pgx.Tx) {
 		if _, err := tx.Exec(ctx, `SET LOCAL TimeZone = 'Asia/Tokyo'`); err != nil {
@@ -126,6 +129,7 @@ WHERE named IS DISTINCT FROM (name IN (SELECT name FROM listed))`)
 }
 
 func TestLegacyScheduleSavesKeepOnlyUnchangedLocalIntent(t *testing.T) {
+	t.Parallel()
 	ctx, pool := laneEnv(t)
 	cases := []struct{ NewWall, NewZone, NewInstant, Wall, Zone, Instant *string }{
 		{nil, new("Europe/Berlin"), new("2026-07-01T08:00:00Z"), new("2026-07-01T09:00:00"), new("Europe/Berlin"), new("2026-07-01T07:00:00Z")},

@@ -54,6 +54,7 @@ func boundedRepCtx(ws, user ids.UUID) context.Context {
 }
 
 func TestAnArchivedSubjectTakesAWithdrawalButNotAGrant(t *testing.T) {
+	t.Parallel()
 	// A withdrawal is admitted against an archived subject, NOT against one the
 	// caller cannot reach. The two are different questions and the permissive
 	// probe still answers the second: without this arm the withdrawal branch

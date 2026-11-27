@@ -29,6 +29,7 @@ func labelCurrent(ctx context.Context, store *Store, id ids.UUID, label string) 
 // A verdict is about the text the classifier read. When the body changes while
 // the model call runs, the verdict must not label the new text.
 func TestAVerdictAboutAnEarlierBodyDoesNotLabelTheRestoredOne(t *testing.T) {
+	t.Parallel()
 	e := setupFacts(t)
 	ctx := e.as()
 	id := e.seed(t, capturedRow{kind: "email"})

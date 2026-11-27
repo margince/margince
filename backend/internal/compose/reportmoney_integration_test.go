@@ -30,6 +30,7 @@ const openDealsBasePlan = `{"group_by":["owner_id"],"aggregates":[` +
 // The drill-through behind a converted total recomputes the same figure, and a
 // deal with no rate is counted without being priced.
 func TestTheConvertedTotalPerCompanyReconcilesWithItsEvidence(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	seedRate(t, e, "0.5", 1)
 	seedPricedDeal(t, e, "Home", 100_000, "EUR", "open")
@@ -60,6 +61,7 @@ func TestTheConvertedTotalPerCompanyReconcilesWithItsEvidence(t *testing.T) {
 // The converted measure reads the masked amount, so a mask on amount_minor
 // withholds it as it withholds the native sum.
 func TestAMaskOnTheAmountWithholdsTheConvertedTotal(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	own := int64(100_000)
 	e.seedOpenDeal(t, "Mine", 20, &e.Rep1, &own)
@@ -76,6 +78,7 @@ func TestAMaskOnTheAmountWithholdsTheConvertedTotal(t *testing.T) {
 // A question saved before the currency rule still lists, and opening it gives
 // the refusal with its repair rather than a figure in no currency.
 func TestASavedQuestionThatMixesCurrenciesIsListedAndRefusedWhenOpened(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	e.seedDealPricedIn(t, "Home", nil, 100_000, "EUR")
 	e.seedDealPricedIn(t, "Abroad", nil, 10_000, "USD")

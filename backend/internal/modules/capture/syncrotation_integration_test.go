@@ -40,6 +40,7 @@ func (c *rotatingFailurePull) Sync(ctx context.Context, _ connector.Auth, prior 
 }
 
 func TestAPullsOwnTokenRotationKeepsItsFailureAndBackoff(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name    string
 		failure error

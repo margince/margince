@@ -137,6 +137,7 @@ func (m mailbox) calendarChange(t *testing.T, message ids.UUID, reader ids.UUID)
 }
 
 func TestAMeetingUpdateSaysWhatChangedSinceTheInvitation(t *testing.T) {
+	t.Parallel()
 	o := setupMailbox(t)
 	now := clocktest.Now(t)
 	// Next year's December keeps the meeting ahead of today and inside Berlin's winter offset.

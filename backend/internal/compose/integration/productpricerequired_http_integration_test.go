@@ -16,6 +16,7 @@ import (
 // A product without a price would sell at 0 on every offer it joins. An
 // explicit 0 is a free item and stays valid.
 func TestAProductCreateWithoutAPriceIsRefusedOverHTTP(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	base := AnyMap{"name": "Seat", "currency": "EUR", "source": "manual"}

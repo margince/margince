@@ -83,6 +83,7 @@ func (f inquiryRecipientFixture) revoke(t *testing.T, object string) {
 }
 
 func TestInquiryRecipientAccessLossUsesCoordinatorWithoutAssigningLead(t *testing.T) {
+	t.Parallel()
 	for _, object := range []string{"lead", "activity"} {
 		t.Run(object, func(t *testing.T) {
 			f := setupInquiryRecipient(t)
@@ -119,6 +120,7 @@ func TestInquiryRecipientAccessLossUsesCoordinatorWithoutAssigningLead(t *testin
 }
 
 func TestCompletedInquiryRemainsHandledAfterItsRecipientLosesAccess(t *testing.T) {
+	t.Parallel()
 	for _, object := range []string{"lead", "activity"} {
 		t.Run(object, func(t *testing.T) {
 			f := setupInquiryRecipient(t)

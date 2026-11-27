@@ -23,6 +23,7 @@ import (
 // standing, and join nothing: the archived message replies into two live
 // conversations, and it must not bridge them.
 func TestRecapturingAnArchivedMessageSkipsTheThreadJoin(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := e.Rep1
 	addr := seatAddress(t, e, owner)

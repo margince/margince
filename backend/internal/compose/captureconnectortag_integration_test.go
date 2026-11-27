@@ -22,6 +22,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -138,6 +139,7 @@ func tagsOn(t *testing.T, e *integration.Env, email string) []string {
 // set rather than as containment: a filer that applied every word it could find
 // would satisfy "carries the Nord word" and be wrong about what a batch is.
 func TestTwoConnectorsFileUnderTheirOwnWord(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	nord := seedTag(t, e, "Nord inbox", false)
 	sued := seedTag(t, e, "Sued inbox", false)
@@ -149,7 +151,7 @@ func TestTwoConnectorsFileUnderTheirOwnWord(t *testing.T) {
 	nordID := seedOwnedDisposition(t, e, e.Rep1, "a@nord.example", "nord.example", fromNord)
 	suedID := seedOwnedDisposition(t, e, e.Rep2, "b@sued.example", "sued.example", fromSued)
 
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{
+	brain := &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN, verdicts: map[string]string{
 		nordID.String(): "contact", suedID.String(): "contact",
 	}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
@@ -168,6 +170,7 @@ func TestTwoConnectorsFileUnderTheirOwnWord(t *testing.T) {
 // A connector whose operator chose no word files none. The honest default: an
 // absent choice, not a guessed one.
 func TestAConnectorWithNoWordFilesNothing(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	// A live word exists in the vocabulary — so a filer that reached for "any
 	// tag" would have one to find, and this test would catch it.
@@ -177,7 +180,7 @@ func TestAConnectorWithNoWordFilesNothing(t *testing.T) {
 	activityID := seedMailFrom(t, e, "gmail", e.Rep1, "c@plain.example")
 	dispositionID := seedOwnedDisposition(t, e, e.Rep1, "c@plain.example", "plain.example", activityID)
 
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): "contact"}}
+	brain := &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN, verdicts: map[string]string{dispositionID.String(): "contact"}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
@@ -192,6 +195,7 @@ func TestAConnectorWithNoWordFilesNothing(t *testing.T) {
 // happens. The alternative — failing the capture — would trade a mailbox going
 // unread for a vocabulary edit, which is the worse of the two by a distance.
 func TestAnArchivedWordFilesNothingAndTheContactIsStillMade(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	retired := seedTag(t, e, "Retired inbox", true)
 	seedFilingConnection(t, e, e.Rep1, "gmail", &retired)
@@ -199,7 +203,7 @@ func TestAnArchivedWordFilesNothingAndTheContactIsStillMade(t *testing.T) {
 	activityID := seedMailFrom(t, e, "gmail", e.Rep1, "d@retired.example")
 	dispositionID := seedOwnedDisposition(t, e, e.Rep1, "d@retired.example", "retired.example", activityID)
 
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): "contact"}}
+	brain := &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN, verdicts: map[string]string{dispositionID.String(): "contact"}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
@@ -226,6 +230,7 @@ func TestAnArchivedWordFilesNothingAndTheContactIsStillMade(t *testing.T) {
 // already here, which is exactly the question "which records came in from this
 // source" is asked to answer.
 func TestAContactThatWasAlreadyHereIsNotFiledUnderTheConnectorsWord(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	nord := seedTag(t, e, "Nord inbox", false)
 	seedFilingConnection(t, e, e.Rep1, "gmail", &nord)
@@ -250,7 +255,7 @@ func TestAContactThatWasAlreadyHereIsNotFiledUnderTheConnectorsWord(t *testing.T
 	activityID := seedMailFrom(t, e, "gmail", e.Rep1, address)
 	dispositionID := seedOwnedDisposition(t, e, e.Rep1, address, "nord.example", activityID)
 
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): "contact"}}
+	brain := &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN, verdicts: map[string]string{dispositionID.String(): "contact"}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
@@ -264,6 +269,7 @@ func TestAContactThatWasAlreadyHereIsNotFiledUnderTheConnectorsWord(t *testing.T
 // A bare `connector:gmail` stamp names no mailbox, so even the only gmail
 // connection in the workspace does not claim the mail for its word.
 func TestABareConnectorStampFilesUnderNoWord(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	nord := seedTag(t, e, "Nord inbox", false)
 	seedFilingConnection(t, e, e.Rep1, "gmail", &nord)
@@ -271,7 +277,7 @@ func TestABareConnectorStampFilesUnderNoWord(t *testing.T) {
 	activityID := seedMailStamped(t, e, "gmail", "connector:gmail", "e@bare.example")
 	dispositionID := seedOwnedDisposition(t, e, e.Rep1, "e@bare.example", "bare.example", activityID)
 
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): "contact"}}
+	brain := &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN, verdicts: map[string]string{dispositionID.String(): "contact"}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)

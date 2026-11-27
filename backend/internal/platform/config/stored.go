@@ -50,6 +50,7 @@ func StoredVal[T any](ctx context.Context, c *Config, s *Setting[T]) (T, error) 
 // locked setting never depends on a row an operator cannot see or change. The
 // read gate comes first either way: whether a value is locked is no grant.
 func StoredValWithSource[T any](ctx context.Context, c *Config, s *Setting[T]) (T, Origin, error) {
+	c = c.serving(ctx)
 	var zero T
 	if err := requireStored(s); err != nil {
 		return zero, Origin{}, err
@@ -80,6 +81,7 @@ func StoredValWithSource[T any](ctx context.Context, c *Config, s *Setting[T]) (
 // StoredValTx is StoredVal inside the caller's transaction, so several reads
 // answer from one snapshot.
 func StoredValTx[T any](ctx context.Context, tx pgx.Tx, c *Config, s *Setting[T]) (T, error) {
+	c = c.serving(ctx)
 	var zero T
 	if err := requireStored(s); err != nil {
 		return zero, err
@@ -103,6 +105,7 @@ func StoredValTx[T any](ctx context.Context, tx pgx.Tx, c *Config, s *Setting[T]
 // StoredChosenTx is StoredValTx that also reports whether somebody chose the
 // value: a boot value or a stored row. False means the default answered.
 func StoredChosenTx[T any](ctx context.Context, tx pgx.Tx, c *Config, s *Setting[T]) (T, bool, error) {
+	c = c.serving(ctx)
 	var zero T
 	if err := requirePlain(s); err != nil {
 		return zero, false, err
@@ -119,6 +122,7 @@ func StoredChosenTx[T any](ctx context.Context, tx pgx.Tx, c *Config, s *Setting
 // StoredRequireTx is StoredValTx for a value the installation is measured in:
 // with no boot value, an absent row is an error rather than the default.
 func StoredRequireTx[T any](ctx context.Context, tx pgx.Tx, c *Config, s *Setting[T]) (T, error) {
+	c = c.serving(ctx)
 	var zero T
 	if err := requirePlain(s); err != nil {
 		return zero, err
@@ -135,15 +139,17 @@ func StoredRequireTx[T any](ctx context.Context, tx pgx.Tx, c *Config, s *Settin
 // SeedTx writes a bootstrap value once, unless a boot source sets the setting.
 // A row written then would take effect only once that source is removed.
 func SeedTx[T any](ctx context.Context, tx pgx.Tx, c *Config, s *Setting[T], v T) (stored bool, err error) {
+	c = c.serving(ctx)
 	if err := requirePlain(s); err != nil {
 		return false, err
 	}
-	return settings.SeedValue(ctx, tx, s.row, v, c.BootLocked())
+	return settings.SeedValue(ctx, tx, s.row, v, c.BootLocked(ctx))
 }
 
 // BootVal is the value a boot source sets, for a raw reader that runs before a
 // principal exists and so has no gate to take.
-func BootVal[T any](c *Config, s *Setting[T]) (T, bool) {
+func BootVal[T any](ctx context.Context, c *Config, s *Setting[T]) (T, bool) {
+	c = c.serving(ctx)
 	v, _, ok := bootValue(c, s)
 	return v, ok
 }
@@ -168,6 +174,7 @@ func storedOrigin(key string, stored bool) Origin {
 // settings.ApplyTx it takes no read gate, locked or not; the entry's
 // MachineryApplied declaration is its licence.
 func StoredApplyTx[T any](ctx context.Context, tx pgx.Tx, c *Config, s *Setting[T]) (T, error) {
+	c = c.serving(ctx)
 	var zero T
 	if err := requireMachinery(s); err != nil {
 		return zero, err
@@ -181,6 +188,7 @@ func StoredApplyTx[T any](ctx context.Context, tx pgx.Tx, c *Config, s *Setting[
 // StoredApplyChosenTx is StoredApplyTx that also reports whether somebody chose
 // the value: a boot source or a stored row, never the default.
 func StoredApplyChosenTx[T any](ctx context.Context, tx pgx.Tx, c *Config, s *Setting[T]) (T, bool, error) {
+	c = c.serving(ctx)
 	var zero T
 	if err := requireMachinery(s); err != nil {
 		return zero, false, err
@@ -195,6 +203,7 @@ func StoredApplyChosenTx[T any](ctx context.Context, tx pgx.Tx, c *Config, s *Se
 // statement reads the rows no boot source sets, so a write that changes both
 // cannot commit between two reads. With both boot-set it reads no row.
 func StoredApplyPairTx[A, B any](ctx context.Context, tx pgx.Tx, c *Config, a *Setting[A], b *Setting[B]) (A, B, error) {
+	c = c.serving(ctx)
 	var zeroA A
 	var zeroB B
 	if err := requireMachinery(a); err != nil {
@@ -204,10 +213,10 @@ func StoredApplyPairTx[A, B any](ctx context.Context, tx pgx.Tx, c *Config, a *S
 		return zeroA, zeroB, err
 	}
 	var unlocked []settings.Definition
-	if _, locked := c.Locked(a.Key()); !locked {
+	if _, locked := c.Locked(ctx, a.Key()); !locked {
 		unlocked = append(unlocked, a.row)
 	}
-	if _, locked := c.Locked(b.Key()); !locked {
+	if _, locked := c.Locked(ctx, b.Key()); !locked {
 		unlocked = append(unlocked, b.row)
 	}
 	rows := map[string]json.RawMessage{}
@@ -256,13 +265,14 @@ func requireMachinery[T any](s *Setting[T]) error {
 // gate comes before the lock, so a caller without the grant learns nothing
 // about where the value comes from.
 func Save[T any](ctx context.Context, c *Config, s *Setting[T], v T) error {
+	c = c.serving(ctx)
 	if err := requireStored(s); err != nil {
 		return err
 	}
 	if err := settings.RequireWrite(ctx, s.entry()); err != nil {
 		return err
 	}
-	if locked, err := lockedAgainst(c, s, v); locked || err != nil {
+	if locked, err := lockedAgainst(ctx, c, s, v); locked || err != nil {
 		return err
 	}
 	if s.sealed != nil {
@@ -277,13 +287,14 @@ func Save[T any](ctx context.Context, c *Config, s *Setting[T], v T) error {
 
 // SaveTx is Save inside the caller's transaction.
 func SaveTx[T any](ctx context.Context, c *Config, tx pgx.Tx, s *Setting[T], v T) error {
+	c = c.serving(ctx)
 	if err := requirePlain(s); err != nil {
 		return err
 	}
 	if err := settings.RequireWrite(ctx, s.row); err != nil {
 		return err
 	}
-	if locked, err := lockedAgainst(c, s, v); locked || err != nil {
+	if locked, err := lockedAgainst(ctx, c, s, v); locked || err != nil {
 		return err
 	}
 	db, err := c.database(s.Key())
@@ -296,15 +307,16 @@ func SaveTx[T any](ctx context.Context, c *Config, tx pgx.Tx, s *Setting[T], v T
 // lockedAgainst accepts the boot value itself as a no-op, so a form that sends
 // every field still saves the fields that are not locked. A secret is never
 // the same: a no-op answer would confirm a guess of the boot value.
-func lockedAgainst[T any](c *Config, s *Setting[T], v T) (bool, error) {
-	return LockedChange(c, s, func(boot T) bool { return !s.Secret() && reflect.DeepEqual(boot, v) })
+func lockedAgainst[T any](ctx context.Context, c *Config, s *Setting[T], v T) (bool, error) {
+	return LockedChange(ctx, c, s, func(boot T) bool { return !s.Secret() && reflect.DeepEqual(boot, v) })
 }
 
 // LockedChange is the lock a save takes, for a writer with its own statement
 // or its own rule of sameness. It takes no gate; the caller holds the update
 // gate. locked is whether a boot source sets s. err is a LockedError unless
 // same(boot) holds.
-func LockedChange[T any](c *Config, s *Setting[T], same func(boot T) bool) (locked bool, err error) {
+func LockedChange[T any](ctx context.Context, c *Config, s *Setting[T], same func(boot T) bool) (locked bool, err error) {
+	c = c.serving(ctx)
 	boot, origin, ok := bootValue(c, s)
 	if !ok {
 		return false, nil
@@ -318,11 +330,11 @@ func LockedChange[T any](c *Config, s *Setting[T], same func(boot T) bool) (lock
 // LockFirst answers the lock of a boot-set key in place of err, a refusal of
 // the value sent for it. A locked field then reads as locked whether or not
 // the value sent is valid.
-func (c *Config) LockFirst(key string, err error) error {
+func (c *Config) LockFirst(ctx context.Context, key string, err error) error {
 	if err == nil {
 		return nil
 	}
-	if origin, locked := c.Locked(key); locked {
+	if origin, locked := c.Locked(ctx, key); locked {
 		return LockedError{Key: key, Origin: origin}
 	}
 	return err
@@ -357,7 +369,8 @@ func (c *Config) database(key string) (*settings.Store, error) {
 }
 
 // Locked reports the boot source that sets key, when one does.
-func (c *Config) Locked(key string) (Origin, bool) {
+func (c *Config) Locked(ctx context.Context, key string) (Origin, bool) {
+	c = c.serving(ctx)
 	if c == nil {
 		return Origin{}, false
 	}
@@ -367,13 +380,14 @@ func (c *Config) Locked(key string) (Origin, bool) {
 
 // BootLocked are the stored keys a boot source decides: the skip set a seed
 // or a reset of the settings takes.
-func (c *Config) BootLocked() map[string]bool {
+func (c *Config) BootLocked(ctx context.Context) map[string]bool {
+	c = c.serving(ctx)
 	out := map[string]bool{}
 	if c == nil {
 		return out
 	}
 	for _, s := range c.reg.All() {
-		if _, locked := c.Locked(s.Key()); locked && s.Stored() {
+		if _, locked := c.Locked(ctx, s.Key()); locked && s.Stored() {
 			out[s.Key()] = true
 		}
 	}
@@ -402,6 +416,7 @@ func (c *Config) StoredDefinitions() []settings.Definition {
 // database. Every stored entry, locked or not, takes the caller's read gate. A
 // secret's value stays nil.
 func (c *Config) StoredEntries(ctx context.Context) ([]Entry, error) {
+	c = c.serving(ctx)
 	out := c.Entries()
 	for i, e := range out {
 		s, found := c.reg.Lookup(e.Key)

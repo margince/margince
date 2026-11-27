@@ -24,6 +24,7 @@ import (
 )
 
 func TestLaterPassCannotReplaceANewerRenewalWithOlderEvidence(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := time.Date(2026, 10, 18, 12, 0, 0, 0, time.UTC)
 	var messages []ids.UUID
@@ -99,6 +100,7 @@ func TestLaterPassCannotReplaceANewerRenewalWithOlderEvidence(t *testing.T) {
 }
 
 func TestConcurrentOlderRenewalCannotOverwriteCommittedNewerWork(t *testing.T) {
+	t.Parallel()
 	f := setupRenewalPrivacy(t, 0.95)
 	now := time.Date(2026, 10, 18, 12, 0, 0, 0, time.UTC)
 	latest, _, err := f.e.Activities.LogActivity(f.e.Admin(), activities.LogActivityInput{
@@ -187,6 +189,7 @@ func TestConcurrentOlderRenewalCannotOverwriteCommittedNewerWork(t *testing.T) {
 }
 
 func TestErasingOldRenewalWaitsForTheTaskAndRechecksItsEvidence(t *testing.T) {
+	t.Parallel()
 	f := setupRenewalPrivacy(t, 0.95)
 	subject := f.e.SeedContact(t, "Old renewal subject", &f.e.Rep1)
 	integration.LinkActivity(t, integration.OwnerConn(t), f.messages[1], "contact", subject)

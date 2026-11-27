@@ -17,6 +17,7 @@ import (
 )
 
 func TestEnrichmentApprovalShowsTheActualReadTarget(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct{ depth, operation, target string }{
 		{"page", "scrapeCompany", "https://example.org/team"},
 		{"site", "deepReadCompany", "https://example.org/team"},

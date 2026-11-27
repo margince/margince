@@ -48,6 +48,7 @@ func reminderFixture(t *testing.T) (*invitationFixture, crmcontracts.MeetingInvi
 }
 
 func TestMeetingReminderQueuesOnceThroughTheEmailWriter(t *testing.T) {
+	t.Parallel()
 	f, meeting, _ := reminderFixture(t)
 	stager := &recordingStager{}
 	for range 2 {
@@ -76,6 +77,7 @@ func TestMeetingReminderQueuesOnceThroughTheEmailWriter(t *testing.T) {
 }
 
 func TestMeetingReminderRefreshesProviderMovesAndCancellations(t *testing.T) {
+	t.Parallel()
 	for _, canceled := range []bool{false, true} {
 		t.Run(map[bool]string{false: "moved", true: "canceled"}[canceled], func(t *testing.T) {
 			f, meeting, calendar := reminderFixture(t)
@@ -99,6 +101,7 @@ func TestMeetingReminderRefreshesProviderMovesAndCancellations(t *testing.T) {
 }
 
 func TestMeetingReminderRecordsARefusalWithoutSending(t *testing.T) {
+	t.Parallel()
 	f, meeting, _ := reminderFixture(t)
 	stager := &recordingStager{err: apperrors.ErrPermissionDenied}
 	err := f.store.SendMeetingReminder(f.ctx, ids.UUID(meeting.Id), stubConsentGate{}, stager)
@@ -141,6 +144,7 @@ func (r *unheldRecordingStager) RecordUnheldRefusalTx(_ context.Context, _ pgx.T
 // Mutation: return the refusal from meetingReminderNotSent, or drop the
 // recordUnheldRefusalTx call, and this fails.
 func TestARefusedMeetingReminderTellsItsHost(t *testing.T) {
+	t.Parallel()
 	f, meeting, _ := reminderFixture(t)
 	told := &attentionRecorder{}
 	f.store = f.store.WithInvitationAttention(told)
@@ -169,6 +173,7 @@ func TestARefusedMeetingReminderTellsItsHost(t *testing.T) {
 }
 
 func TestMeetingReminderSkipsAMissedWindow(t *testing.T) {
+	t.Parallel()
 	f, meeting, _ := reminderFixture(t)
 	f.now = monday(12)
 	stager := &recordingStager{}

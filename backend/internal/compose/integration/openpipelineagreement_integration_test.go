@@ -33,6 +33,7 @@ import (
 // one invariant spelled on both sides of a wire is ONE item, and a gate that
 // fails in both directions is what keeps it that way.
 func TestBothOpenPipelineReadsAgreeOnAYenDeal(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open := pipelineFixtureFor(e.Admin(), t, e.Deals)
 	companyID := e.SeedCompany(t, "Yen Pipeline KK", nil)
@@ -98,6 +99,7 @@ func TestBothOpenPipelineReadsAgreeOnAYenDeal(t *testing.T) {
 // rate. The SQL function once ordered by date alone and could answer with
 // either version of the day.
 func TestBothOpenPipelineReadsAgreeAfterASameDayRateCorrection(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	e.Deals.SetClock(func() time.Time { return roomFixedNow })
 	pipeline, open := pipelineFixtureFor(e.Admin(), t, e.Deals)

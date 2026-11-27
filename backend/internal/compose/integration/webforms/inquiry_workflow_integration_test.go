@@ -68,6 +68,7 @@ func inquiryEvent(t *testing.T, e *apptest.AppEnv, email, kind string) kevents.E
 }
 
 func TestAnAcceptedInquiryRoutesAndCreatesOneTaskAcrossEventIDs(t *testing.T) {
+	t.Parallel()
 	e := setupFormsApp(t)
 	form := createForm(t, e, integration.AnyMap{"name": "Inquiries", "sender": "browser", "allowed_origins": []string{siteOrigin}})
 	policy := setupInquiryPolicy(t, e, form, "one_colleague")
@@ -108,6 +109,7 @@ func TestAnAcceptedInquiryRoutesAndCreatesOneTaskAcrossEventIDs(t *testing.T) {
 }
 
 func TestAPausedInquiryPolicyDoesNotReactivateLegacyLeadTasks(t *testing.T) {
+	t.Parallel()
 	e := setupFormsApp(t)
 	form := createForm(t, e, integration.AnyMap{"name": "Inquiries", "sender": "browser", "allowed_origins": []string{siteOrigin}})
 	policy := setupInquiryPolicy(t, e, form, "coordinator")

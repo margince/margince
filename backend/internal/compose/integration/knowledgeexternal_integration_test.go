@@ -30,6 +30,7 @@ func (ie *ingestEnv) file(t *testing.T, extID, body string, meta map[string]stri
 }
 
 func TestAnExternalDocumentIsReplacedBySourceIdAndSkippedWhenUnchanged(t *testing.T) {
+	t.Parallel()
 	ie := newIngestEnv(t)
 	meta := map[string]string{"owner": "Lan", "effective": "2026-01-01"}
 
@@ -73,6 +74,7 @@ func TestAnExternalDocumentIsReplacedBySourceIdAndSkippedWhenUnchanged(t *testin
 }
 
 func TestAnExternalDocumentBeingReadIsNotReplacedUnderTheReader(t *testing.T) {
+	t.Parallel()
 	ie := newIngestEnv(t)
 	id, _, err := ie.file(t, "drive-2", prose(2), nil)
 	if err != nil {
@@ -88,6 +90,7 @@ func TestAnExternalDocumentBeingReadIsNotReplacedUnderTheReader(t *testing.T) {
 }
 
 func TestAnExternalFilingIsHeldToTheUploadBounds(t *testing.T) {
+	t.Parallel()
 	ie := newIngestEnv(t)
 	_, _, err := ie.store.UpsertExternal(ie.ctx, gdocsCorpus, knowledge.ExternalDocument{
 		ExternalID: "x", Filename: "scan.pdf", ContentType: "application/pdf", Content: strings.NewReader("%PDF"),
@@ -108,6 +111,7 @@ func TestAnExternalFilingIsHeldToTheUploadBounds(t *testing.T) {
 }
 
 func TestDeletingAnExternalDocumentRemovesItAndIsRepeatable(t *testing.T) {
+	t.Parallel()
 	ie := newIngestEnv(t)
 	id, _, err := ie.file(t, "drive-3", prose(2), nil)
 	if err != nil {
@@ -126,6 +130,7 @@ func TestDeletingAnExternalDocumentRemovesItAndIsRepeatable(t *testing.T) {
 }
 
 func TestTheManagedSourceCheckAcceptsGdocsAndRefusesAnUnknownSource(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	e.WsExec(t, `INSERT INTO knowledge_corpus (name, topic_statement, managed_source, captured_by)
 	             VALUES ('g', 't', 'gdocs', 'test')`)
@@ -136,6 +141,7 @@ func TestTheManagedSourceCheckAcceptsGdocsAndRefusesAnUnknownSource(t *testing.T
 }
 
 func TestTheSourceIdsOfLiveExternalDocumentsAreListedAndShrinkOnDelete(t *testing.T) {
+	t.Parallel()
 	ie := newIngestEnv(t)
 	for _, id := range []string{"drive-b", "drive-a"} {
 		if _, _, err := ie.file(t, id, prose(1)+id, nil); err != nil {

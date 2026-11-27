@@ -37,6 +37,7 @@ func leavingRecords(left ...ids.UUID) func(context.Context, pgx.Tx, BatchIn) (Ba
 }
 
 func TestAStepThatLeavesRecordsFinishesWithActionNeededNotFailed(t *testing.T) {
+	t.Parallel()
 	ctx, pool, e, _ := executorFixture(t)
 	first, second := ids.NewV7(), ids.NewV7()
 	e.tasks[0].Steps[0].Batch = leavingRecords(first, second)
@@ -84,6 +85,7 @@ func TestAStepThatLeavesRecordsFinishesWithActionNeededNotFailed(t *testing.T) {
 }
 
 func TestASecondActionReasonFailsTheBatchAndKeepsTheFirst(t *testing.T) {
+	t.Parallel()
 	ctx, _, e, _ := executorFixture(t)
 	record := ids.NewV7()
 	e.tasks[0].Steps[0].Batch = func(_ context.Context, _ pgx.Tx, in BatchIn) (BatchOut, error) {
@@ -108,6 +110,7 @@ func TestASecondActionReasonFailsTheBatchAndKeepsTheFirst(t *testing.T) {
 }
 
 func TestANewTaskVersionStartsWithNoActionLeftOpen(t *testing.T) {
+	t.Parallel()
 	ctx, _, e, _ := executorFixture(t)
 	e.tasks[0].Steps[0].Batch = leavingRecords(ids.NewV7())
 	for range 2 {
@@ -148,6 +151,7 @@ func rerunAudit(ctx context.Context, t *testing.T, pool *pgxpool.Pool) string {
 }
 
 func TestAReviewedStepWithActionNeededIsNotRerunUnderItsOldReview(t *testing.T) {
+	t.Parallel()
 	ctx, pool, e, _ := executorFixture(t)
 	p := progressFor(ctx, t, e)
 	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {

@@ -45,6 +45,6 @@ func (q financeSyncQueue) QueueSync(ctx context.Context) error {
 // through. Without it those endpoints answer 501.
 func WithFinanceSources(inserter financeSyncEnqueuer) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
-		s.financeHandlers = newFinanceHandlers(pool).WithSources(composedFinanceSources{}, financeSyncQueue{enqueue: inserter})
+		s.financeHandlers = newFinanceHandlers(pool).WithSources(composedFinanceSources{composed: s.extensions}, financeSyncQueue{enqueue: inserter})
 	}
 }

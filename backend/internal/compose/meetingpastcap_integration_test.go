@@ -55,6 +55,7 @@ func boundOn(t *testing.T, e *integration.Env, id ids.UUID) (seats []string, str
 // The same crowded invitation, once captured live and once repaired from its
 // stored original, binds the same seat and no stranger either way.
 func TestACrowdedMeetingBindsItsSeatsAndNoStrangerOnEitherPath(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedCalendarConnection(t, e)
 	seatEmail := e.WsScalar(t, `SELECT email FROM app_user WHERE id = $1`, e.Rep1)
@@ -123,6 +124,7 @@ func TestACrowdedMeetingBindsItsSeatsAndNoStrangerOnEitherPath(t *testing.T) {
 // An unattested list is a sender's text, so past the cap it binds nobody — the
 // same refusal the ordinary stamp makes for a Cc line.
 func TestAnUnattestedCrowdBindsNoSeat(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seatEmail := e.WsScalar(t, `SELECT email FROM app_user WHERE id = $1`, e.Rep1)
 	parties := []connector.MessageParticipant{{Email: seatEmail, Role: connector.ParticipantRoleAttendee}}
@@ -153,6 +155,7 @@ func TestAnUnattestedCrowdBindsNoSeat(t *testing.T) {
 // A meeting an earlier pass settled as `capped` bound nobody, so the repair
 // offers it again and settles it under the current rule.
 func TestAMeetingStoredAsCappedIsRepairedAgain(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedCalendarConnection(t, e)
 	seatEmail := e.WsScalar(t, `SELECT email FROM app_user WHERE id = $1`, e.Rep1)

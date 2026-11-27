@@ -49,6 +49,7 @@ func plantControllerPayload(t *testing.T, e *storeEnv, ref string, expires *time
 // looking — the happy paths retired theirs already. Over-reading costs a
 // destroyed link the send path would have destroyed anyway.
 func TestTheSweepFindsOnlyMaterialPastItsExpiry(t *testing.T) {
+	t.Parallel()
 	e := setupStore(t)
 	now := e.clockValue
 
@@ -73,6 +74,7 @@ func TestTheSweepFindsOnlyMaterialPastItsExpiry(t *testing.T) {
 // on: the vault entry is destroyed BEFORE the column naming it is cleared, so
 // the reference has to be readable first.
 func TestTheSweepReadsTheReferenceItMustDestroy(t *testing.T) {
+	t.Parallel()
 	e := setupStore(t)
 	past := e.clockValue.Add(-time.Hour)
 	id := plantControllerPayload(t, e, "vault-ref-readable", &past)
@@ -105,6 +107,7 @@ func TestTheSweepReadsTheReferenceItMustDestroy(t *testing.T) {
 // A bounded pass that cannot drain its backlog should shorten the LONGEST
 // exposure, not an arbitrary one.
 func TestTheSweepTakesTheOldestMaterialFirst(t *testing.T) {
+	t.Parallel()
 	e := setupStore(t)
 	now := e.clockValue
 	oldest := now.Add(-72 * time.Hour)

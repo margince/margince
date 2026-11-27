@@ -32,6 +32,7 @@ func (e *closeDateEnv) seedObservedPace(t *testing.T) {
 }
 
 func TestThinHistoryLeavesDatesAndCorrectionLedgerUntouched(t *testing.T) {
+	t.Parallel()
 	for _, remaining := range []int{0, deals.CloseDateMinHistory - 1} {
 		t.Run(strconv.Itoa(remaining), func(t *testing.T) {
 			e := setupCloseDate(t)
@@ -61,6 +62,7 @@ func TestThinHistoryLeavesDatesAndCorrectionLedgerUntouched(t *testing.T) {
 }
 
 func TestObservedCloseDateCarriesItsActualSampleAndPace(t *testing.T) {
+	t.Parallel()
 	e := setupCloseDate(t)
 	id := e.seedSweepDeal(t, "Observed estimate", e.early, nil, new(-12), 3)
 	if err := e.sweep(); err != nil {
@@ -84,6 +86,7 @@ func TestObservedCloseDateCarriesItsActualSampleAndPace(t *testing.T) {
 // another CRM's pace. Their stints would pull the median to nothing, so the
 // pace and its sample leave them out.
 func TestImportedOrSyncedWinsDoNotSetTheSweepPace(t *testing.T) {
+	t.Parallel()
 	e := setupCloseDate(t)
 	run := integration.SeedIDRow(t, e.owner, importRunSeedSQL)
 	for _, origin := range []struct {
@@ -116,6 +119,7 @@ func TestImportedOrSyncedWinsDoNotSetTheSweepPace(t *testing.T) {
 }
 
 func TestEstimateReceiptUsesOnlyRecordedAuthorizedObservations(t *testing.T) {
+	t.Parallel()
 	e := setupCloseDate(t)
 	id := e.seedSweepDeal(t, "Observed receipt", e.early, nil, new(-12), 3)
 	if err := e.sweep(); err != nil {

@@ -94,6 +94,12 @@ func WithRunnerDisabledCoreFeatures(disabled []string) RunnerOption {
 	return func(s *RunnerService) { s.features.coreFeatures = availability }
 }
 
+// WithRunnerExtensions serves the composition's unit tools to the runner, as
+// the API serves them.
+func WithRunnerExtensions(exts *Extensions) RunnerOption {
+	return func(s *RunnerService) { s.features.extensions = exts }
+}
+
 // WithRunnerLists turns on list_id narrowing in the runner's tools.
 func WithRunnerLists(on bool) RunnerOption {
 	return func(s *RunnerService) { s.features.lists = on }
@@ -117,7 +123,7 @@ func NewRunnerService(pool *pgxpool.Pool, brain runner.Brain, draftBrain complet
 	svc := &RunnerService{
 		pool:       pool,
 		store:      runner.NewStore(InstallationDB(pool)),
-		identity:   identity.NewService(pool),
+		identity:   IdentityService(pool),
 		specByName: ScheduledAgentSpecByName,
 		retriever:  retriever,
 		log:        log,

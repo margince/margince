@@ -67,6 +67,7 @@ func draftIntro(as context.Context, t *testing.T, e *integration.Env, company, c
 // A colleague's unpromoted captured contact is not one this caller may be told
 // about, even naming them by id.
 func TestAnIntroDraftWillNotNameAColleaguesUnpromotedContact(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company, contact := seedIntroducibleContact(t, e, "Ute Sommer")
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, company360NoDealPerms)
@@ -96,6 +97,7 @@ func TestAnIntroDraftWillNotNameAColleaguesUnpromotedContact(t *testing.T) {
 // entirely: a clause that were merely an owner check would be absent here, and
 // the test above would still pass.
 func TestNotEvenAnAdminDraftsAboutAColleaguesUnpromotedContact(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company, contact := seedIntroducibleContact(t, e, "Ute Sommer")
 
@@ -118,6 +120,7 @@ func TestNotEvenAnAdminDraftsAboutAColleaguesUnpromotedContact(t *testing.T) {
 // gain one without the other: the roster reads never pass an archived id, so
 // nothing else on this path would notice.
 func TestAnIntroDraftWillNotNameAnArchivedContact(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company, contact := seedIntroducibleContact(t, e, "Ute Sommer")
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, company360NoDealPerms)

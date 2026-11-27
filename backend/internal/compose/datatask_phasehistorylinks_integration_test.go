@@ -47,6 +47,7 @@ func phaseRowsOf(t *testing.T, e *integration.Env, project ids.ProjectID, column
 const phaseWriterColumns = `concat_ws(',', COALESCE(reason, '-'), occurred_at::text)`
 
 func TestThePhaseHistoryLinkTaskLinksOnlyWhatOneAuditRowProves(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	linked := phaseLinkProject(t, e, "Linked")
@@ -103,6 +104,7 @@ func TestThePhaseHistoryLinkTaskLinksOnlyWhatOneAuditRowProves(t *testing.T) {
 }
 
 func TestThePhaseHistoryLinkTaskEstimateIsBoundedAndPagesPastUnmatchedRows(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	for _, name := range []string{"One", "Two", "Three"} {

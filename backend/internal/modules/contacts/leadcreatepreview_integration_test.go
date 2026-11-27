@@ -17,6 +17,7 @@ import (
 )
 
 func TestLeadCreationPreviewMatchesActorDefaultsAndNormalization(t *testing.T) {
+	t.Parallel()
 	for _, agent := range []bool{false, true} {
 		name := "human"
 		if agent {
@@ -67,6 +68,7 @@ func TestLeadCreationPreviewMatchesActorDefaultsAndNormalization(t *testing.T) {
 }
 
 func TestLeadCreationPreviewRefusesTheDeprecatedContactID(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	contact, err := e.store.CreateContact(e.ctx, CreateContactInput{FullName: "Known Buyer", Source: "manual"})
 	if err != nil {
@@ -85,6 +87,7 @@ func TestLeadCreationPreviewRefusesTheDeprecatedContactID(t *testing.T) {
 }
 
 func TestLeadCreationPreviewNamesTheDuplicateReviewEffect(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	existing, _, err := e.store.CreateLead(e.ctx, CreateLeadInput{FullName: new("Dana Buyer"), CompanyName: new("Example buyer"), Email: new("first@example.test"), Source: "manual"})
 	if err != nil {
@@ -115,6 +118,7 @@ func TestLeadCreationPreviewNamesTheDuplicateReviewEffect(t *testing.T) {
 }
 
 func TestLeadCreationPreviewUsesCreatorDefaultsWithoutBorrowingPermissions(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	actor, ok := principal.Actor(e.ctx)
 	if !ok {

@@ -20,6 +20,7 @@ import (
 )
 
 func TestWorkLeaseProofNamesOnlyItsLiveOwner(t *testing.T) {
+	t.Parallel()
 	ctx, pool := laneEnv(t)
 	ws, ok := principal.WorkspaceID(ctx)
 	if !ok {
@@ -77,6 +78,7 @@ func TestWorkLeaseProofNamesOnlyItsLiveOwner(t *testing.T) {
 }
 
 func TestWorkLeaseLossCannotOvertakeAClaimOrItsAdmittedWrite(t *testing.T) {
+	t.Parallel()
 	ctx, pool := laneEnv(t)
 	ws, ok := principal.WorkspaceID(ctx)
 	if !ok {

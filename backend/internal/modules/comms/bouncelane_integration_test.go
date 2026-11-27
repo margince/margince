@@ -23,6 +23,7 @@ import (
 )
 
 func TestHardBouncesForCarriesTheCallersHardBouncesOnly(t *testing.T) {
+	t.Parallel()
 	e := setupStore(t)
 
 	// The send that hard-bounced, filed under a contact.
@@ -140,6 +141,7 @@ func readerCtx(ws ids.UUID, user ids.UserID) context.Context {
 // A caller whose role lacks the activity read grant is refused like any other
 // timeline read: the subject lines of their sends are activity content.
 func TestHardBouncesForRefusesAReaderWithoutTheActivityGrant(t *testing.T) {
+	t.Parallel()
 	e := setupStore(t)
 	if _, err := e.store.HardBouncesFor(e.ctx, e.clockValue.Add(-time.Hour), 8); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("HardBouncesFor without the activity grant = %v, want the permission sentinel", err)
@@ -158,6 +160,7 @@ func TestHardBouncesForRefusesAReaderWithoutTheActivityGrant(t *testing.T) {
 // recipients column holds what a real send puts there rather than what this
 // test thinks it should.
 func TestHardBouncesForNamesTheAddressThatRefused(t *testing.T) {
+	t.Parallel()
 	e := setupStore(t)
 	contact := ids.NewV7()
 	if _, err := e.owner.Exec(context.Background(),

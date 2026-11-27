@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -51,6 +52,7 @@ func (l *leadMailEnv) moveAddress(t *testing.T, from, to string) (ids.LeadID, ti
 }
 
 func TestAnAddressALeadTookLaterFilesNoEarlierMail(t *testing.T) {
+	t.Parallel()
 	l := setupLeadMail(t)
 	earlier := l.at.AddDate(0, 0, -10)
 
@@ -91,6 +93,7 @@ func (l *leadMailEnv) createdAt(t *testing.T, lead ids.LeadID) time.Time {
 // An address a retired lead still holds was that lead's. A new lead taking it
 // gets the mail sent since it was created, and none from before.
 func TestAnAddressARetiredLeadHeldFilesOnlyMailSinceTheNewLead(t *testing.T) {
+	t.Parallel()
 	l := setupLeadMail(t)
 	earlier := l.at.AddDate(0, 0, -10)
 
@@ -150,6 +153,7 @@ func (l *leadMailEnv) importedLead(t *testing.T, address string) ids.LeadID {
 // A lead created by hand, by capture or by the API gets no mail from before it
 // existed. History from before a lead is filed only for one an import created.
 func TestOnlyAnImportedLeadGetsMailFromBeforeIt(t *testing.T) {
+	t.Parallel()
 	l := setupLeadMail(t)
 	byHand := l.lead(t, "hand@prospect.example")
 	old := l.mail(t, owedMail{from: "hand@prospect.example", to: l.seat, subject: "Prices?", at: l.at.AddDate(0, 0, -30)}, true)
@@ -164,6 +168,7 @@ func TestOnlyAnImportedLeadGetsMailFromBeforeIt(t *testing.T) {
 // An imported lead keeps its history, and the history does not move its reply
 // clock before the lead existed.
 func TestALeadsEarlierHistoryIsFiledAndItsClockStartsAtCreation(t *testing.T) {
+	t.Parallel()
 	l := setupLeadMail(t)
 	lead := l.importedLead(t, "lena@prospect.example")
 	asked := l.mail(t, owedMail{from: "lena@prospect.example", to: l.seat, subject: "Prices?", at: l.at.AddDate(0, 0, -30)}, true)
@@ -211,6 +216,7 @@ func runLeadFirstResponse(t *testing.T, l *leadMailEnv, activity ids.UUID) {
 }
 
 func TestMailPrivateToTheSeatGoesOnNoLead(t *testing.T) {
+	t.Parallel()
 	l := setupLeadMail(t)
 	ctx := principal.SystemActing(l.e.Admin(), "system:datatask-test")
 	lead := l.lead(t, "lena@family.example")
@@ -243,6 +249,7 @@ func TestMailPrivateToTheSeatGoesOnNoLead(t *testing.T) {
 }
 
 func TestAMeetingKeepsASeatForItsProject(t *testing.T) {
+	t.Parallel()
 	l := setupLeadMail(t)
 	company := l.e.SeedCompany(t, "Acme Projects", nil)
 	project, err := l.e.Projects.CreateProject(l.e.Admin(), projects.CreateProjectInput{
@@ -275,6 +282,7 @@ func TestAMeetingKeepsASeatForItsProject(t *testing.T) {
 // sender's mail to the seat, each with its audit row. A link a colleague filed
 // by hand stays.
 func TestAPersonalSenderVerdictTakesTheSendersMailOffItsLead(t *testing.T) {
+	t.Parallel()
 	l := setupLeadMail(t)
 	const sister = "sister@family.example"
 	lead := l.lead(t, sister)
@@ -317,7 +325,7 @@ func (l *leadMailEnv) settleSenderVerdict(t *testing.T, address string, mail ids
 		t.Fatalf("reading the open sender question: %v", err)
 	}
 	l.e.WsExec(t, `UPDATE capture_pending_counterparty SET status = 'pending', next_attempt_at = now() WHERE id = $1`, question)
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{question.String(): kind}}
+	brain := &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN, verdicts: map[string]string{question.String(): kind}}
 	engine := NewCounterpartyVerdictEngine(l.e.Pool, brain, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), l.e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)

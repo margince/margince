@@ -46,6 +46,7 @@ func expectLockedWrites(t *testing.T, e *apptest.AppEnv, writes []lockedWrite) {
 // refuses a change; resending it is accepted. A window outside the contract's
 // bounds is refused at decode, before any lock is read.
 func TestFollowUpWindowSetByEnvIsLockedAgainstAChange(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupAppWithEnv(t, []string{"MARGINCE_ACTIVITIES_FOLLOW_UP_AFTER_DAYS=6"})
 	e.BootstrapWorkspace(t)
 
@@ -69,6 +70,7 @@ func TestFollowUpWindowSetByEnvIsLockedAgainstAChange(t *testing.T) {
 // The particulars the api's environment sets read as that value and refuse a
 // change, even an invalid one; resending them is accepted.
 func TestControllerParticularsSetByEnvAreLockedAgainstAChange(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupAppWithEnv(t, []string{
 		`MARGINCE_CONSENT_CONTROLLER_PARTICULARS={"LegalName":"Env GmbH","PostalAddress":"Envweg 1"}`,
 	})
@@ -97,6 +99,7 @@ func TestControllerParticularsSetByEnvAreLockedAgainstAChange(t *testing.T) {
 // a change, even an invalid one; resending them is accepted. A target outside
 // the contract's bounds is refused at decode, before any lock is read.
 func TestLeadSettingsSetByEnvAreLockedAgainstAChange(t *testing.T) {
+	t.Parallel()
 	seat := ids.NewV7().String()
 	e := apptest.SetupAppWithEnv(t, []string{
 		"MARGINCE_CONTACTS_FIRST_RESPONSE_TARGET_MINUTES=60",
@@ -134,6 +137,7 @@ func TestLeadSettingsSetByEnvAreLockedAgainstAChange(t *testing.T) {
 // The signature template the api's environment sets reads as that value and
 // refuses a change, even an invalid one; resending it is accepted.
 func TestSignatureTemplateSetByEnvIsLockedAgainstAChange(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupAppWithEnv(t, []string{"MARGINCE_CONTACTS_SIGNATURE_TEMPLATE=<p>{name}</p>"})
 	e.BootstrapWorkspace(t)
 
@@ -158,6 +162,7 @@ func TestSignatureTemplateSetByEnvIsLockedAgainstAChange(t *testing.T) {
 // refuses a change; resending it is accepted. A bool has no invalid value, and
 // a body that is no bool is refused for its shape before the lock is asked.
 func TestLegalReviewSetByEnvIsLockedAgainstAChange(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupAppWithEnv(t, []string{"MARGINCE_DEALS_LEGAL_REVIEW_ENABLED=false"})
 	e.BootstrapWorkspace(t)
 
@@ -180,6 +185,7 @@ func TestLegalReviewSetByEnvIsLockedAgainstAChange(t *testing.T) {
 // The retain-only posture the api's environment sets reads as that value and
 // refuses a change; resending it is accepted. A bool has no invalid value.
 func TestRetainOnlySetByEnvIsLockedAgainstAChange(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupAppWithEnv(t, []string{"MARGINCE_PRIVACY_RETAIN_ONLY=true"})
 	e.BootstrapWorkspace(t)
 

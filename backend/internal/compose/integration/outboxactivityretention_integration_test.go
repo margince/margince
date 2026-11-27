@@ -6,6 +6,7 @@
 package integration
 
 import (
+	"context"
 	"log/slog"
 	"testing"
 
@@ -36,6 +37,7 @@ func callWithAgedEvent(t *testing.T, e *Env, subject string, contact ids.UUID) (
 // The statutory floor protects the activity row. A delivered event about it
 // is no copy of its content, so it leaves after its window like any other.
 func TestAnActivitysEventLeavesAfterItsWindowWhileTheFloorKeepsTheActivity(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	brief, briefEvent := callWithAgedEvent(t, e, "Order confirmed", e.SeedContact(t, "Floor Party", nil))
 	heldContact := e.SeedContact(t, "Held Caller", nil)
@@ -47,7 +49,7 @@ func TestAnActivitysEventLeavesAfterItsWindowWhileTheFloorKeepsTheActivity(t *te
 		archived_at = now(), restricted_at = now(), restricted_reason = 'statutory retention',
 		restricted_until = now() + interval '1 year' WHERE id = $1`, brief)
 
-	if err := compose.NewRetentionServiceFor(e.DB(), nil, slog.Default()).EvaluateInstallation(RetentionPassCtx(e.WS)); err != nil {
+	if err := compose.NewRetentionServiceFor(e.DB(), nil, slog.Default()).EvaluateInstallation(RetentionPassCtx(context.Background(), e.WS)); err != nil {
 		t.Fatal(err)
 	}
 	kept := func(event ids.UUID) bool {

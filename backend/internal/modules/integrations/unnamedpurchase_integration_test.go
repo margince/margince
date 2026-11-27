@@ -17,6 +17,7 @@ import (
 )
 
 func TestAManualRunThatLeavesOutWhatItBuysIsRefusedBeforeTheMoney(t *testing.T) {
+	t.Parallel()
 	e := setupRuns(t, runsConfig{})
 	var before int
 	if err := e.owner.QueryRow(e.ctx, `SELECT count(*) FROM provider_run`).Scan(&before); err != nil {
@@ -48,6 +49,7 @@ func TestAManualRunThatLeavesOutWhatItBuysIsRefusedBeforeTheMoney(t *testing.T) 
 }
 
 func TestAManualRunStillQueuesWhenItOmitsItsCategoriesOrPadsItsProvider(t *testing.T) {
+	t.Parallel()
 	e := setupRuns(t, runsConfig{})
 	run, err := e.store.QueueRun(e.ctx, provider.QueueInput{
 		ContactID: e.mine.String(), Provider: " surfe ", Trigger: provider.TriggerManual,
@@ -58,6 +60,7 @@ func TestAManualRunStillQueuesWhenItOmitsItsCategoriesOrPadsItsProvider(t *testi
 }
 
 func TestAConfigurationPatchThatNamesNoSettingIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupRuns(t, runsConfig{})
 	actor, ok := principal.Actor(e.ctx)
 	if !ok {

@@ -19,6 +19,7 @@ import (
 )
 
 func TestInternalMeetingOutcomeEligibilityAgreesOnListsAndDetails(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	trustOwnDomain(t, e)
 	anchor, err := e.Contacts.SaveCompany(e.Admin(), contacts.SaveCompanyInput{DisplayName: "Our company"})

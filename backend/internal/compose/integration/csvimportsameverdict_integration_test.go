@@ -28,6 +28,7 @@ func verdicts(report importReportDTO) []string {
 }
 
 func TestTheTestRunReachesTheImportsVerdictOnEveryRow(t *testing.T) {
+	t.Parallel()
 	contactMap := AnyMap{"ref": "ref", "full_name": "full_name", "email": "email", "phone": "phone"}
 	leadMap := AnyMap{"ref": "ref", "full_name": "full_name", "email": "email", "linkedin": "linkedin_url"}
 	for _, tc := range []struct {

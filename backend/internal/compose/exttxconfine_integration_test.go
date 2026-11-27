@@ -17,6 +17,7 @@ import (
 // Runtime.Tx hands a unit the confined verbs, and the core door keeps the
 // application role between them. The cases of the confinement are in unitsql.
 func TestRuntimeTxRefusesACoreTableAndKeepsTheCoreDoor(t *testing.T) {
+	t.Parallel()
 	e := setupCore(t)
 	rt, ctx, cancel := e.runtime(t)
 	defer cancel()

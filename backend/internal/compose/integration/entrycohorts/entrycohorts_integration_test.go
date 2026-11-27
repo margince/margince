@@ -143,6 +143,7 @@ func (d dealsOf) win(deal ids.DealID) {
 // Every way a deal can leave and re-enter a loss is counted once per loss, under
 // its own reason. A loss that was explicitly reversed is no loss at all.
 func TestEveryLossIsOneEventWhateverHappenedToTheDealAfterwards(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	d := newDeals(t, e)
 	rep := readerOf(e)
@@ -207,6 +208,7 @@ func TestEveryLossIsOneEventWhateverHappenedToTheDealAfterwards(t *testing.T) {
 // Each loss falls in the period it happened in, not the period of the deal's
 // final close.
 func TestLossesFallInTheirOwnPeriodsNotTheFinalCloses(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	d := newDeals(t, e)
 	deal := d.create(e.Rep1)
@@ -332,6 +334,7 @@ func countsOf(point crmcontracts.ReportingPoint) map[string]int64 {
 // the leads linked to a deal. Evidence opens the members a count names, and an
 // origin whose key extends another's is a source of its own.
 func TestTheEntryCohortReadsAsCompaniesAndAsSources(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	w := seedCohort(t, e)
 	reader := readerOf(e)
@@ -385,6 +388,7 @@ func TestTheEntryCohortReadsAsCompaniesAndAsSources(t *testing.T) {
 // A scheduled edition freezes both new cards. An admin reads them back whole.
 // A rep without company read gets the edition with the company card withheld.
 func TestAnEditionWithTheEntryCohortCardsReadsBack(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	w := seedCohort(t, e)
 	admin := readerOf(e)
@@ -461,6 +465,7 @@ func (w cohortWorld) publish(admin context.Context, t *testing.T) ids.UUID {
 // The company card is derived from leads. A reader who may read companies but
 // not leads gets it withheld, on a frozen edition and on a live evaluation.
 func TestTheCompanyCardIsWithheldFromAReaderWhoMayNotReadItsLeads(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	w := seedCohort(t, e)
 	admin := readerOf(e)

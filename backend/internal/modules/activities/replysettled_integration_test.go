@@ -87,6 +87,7 @@ func (e *loadEnv) stampOf(t *testing.T, message ids.UUID) (stamp *time.Time, ver
 // The stamp only lets the owed check stop early. At every instant, a message is
 // owed when and only when it was before the stamp existed.
 func TestTheSettledStampNeverChangesWhatIsOwed(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	buyer := "buyer-" + ids.NewV7().String() + "@customer.test"
 	now := clocktest.Now(t)
@@ -145,6 +146,7 @@ func TestTheSettledStampNeverChangesWhatIsOwed(t *testing.T) {
 // earliest message written on it, and a thread whose messages all came later
 // keeps its stamp.
 func TestOneStatementClearsEachThreadFromItsOwnEarliestMessage(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	buyer := "buyer-" + ids.NewV7().String() + "@customer.test"
 	now := clocktest.Now(t)
@@ -217,6 +219,7 @@ func (e *loadEnv) stamped(t *testing.T, message ids.UUID) bool {
 // reply's recipients keep the older settled stamp; a recipient added to the old
 // ask itself clears it.
 func TestAParticipantClearsOnlyTheStampsFromItsOwnMessageOn(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	s := e.settledThread(t)
 
@@ -245,6 +248,7 @@ func TestAParticipantClearsOnlyTheStampsFromItsOwnMessageOn(t *testing.T) {
 
 // Columns the owed check never reads move no stamp; each column it reads does.
 func TestOnlyAColumnTheOwedCheckReadsClearsTheStamp(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	s := e.settledThread(t)
 	other := ids.NewV7()
@@ -292,6 +296,7 @@ func TestOnlyAColumnTheOwedCheckReadsClearsTheStamp(t *testing.T) {
 // One statement that writes rows on two threads clears each thread from its
 // own earliest message, never from the earliest across the statement.
 func TestOneParticipantStatementClearsEachThreadFromItsOwnEarliestMessage(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	early, late := e.settledThread(t), e.settledThread(t)
 	e.exec(t, `UPDATE activity_participant SET activity_id = $2 WHERE activity_id = $1 AND role = 'from'`, late.answered, late.later)

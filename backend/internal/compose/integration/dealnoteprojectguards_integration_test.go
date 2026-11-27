@@ -31,6 +31,7 @@ import (
 // Declining the deal takes the project it brought along, and keeps a project
 // the member named themselves.
 func TestDecliningTheDealTakesOnlyTheProjectItBrought(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedDealNoteFixture(t, e)
 	inherited := logDealNote(e.Admin(), t, e, onDeal(f.erpDeal))
@@ -51,6 +52,7 @@ func TestDecliningTheDealTakesOnlyTheProjectItBrought(t *testing.T) {
 
 // Moving a note from one deal to another moves the project it inherited.
 func TestReplacingTheDealMovesTheInheritedProject(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedDealNoteFixture(t, e)
 	note := logDealNote(e.Admin(), t, e, onDeal(f.erpDeal))
@@ -69,6 +71,7 @@ func TestReplacingTheDealMovesTheInheritedProject(t *testing.T) {
 // The owner of a project a note inherited cannot change a note another rep
 // wrote on their own deal.
 func TestAnInheritedProjectGivesItsOwnerNoSayOverTheNote(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Acme", nil)
 	project, err := e.Projects.CreateProject(e.Admin(), projects.CreateProjectInput{
@@ -111,6 +114,7 @@ func TestAnInheritedProjectGivesItsOwnerNoSayOverTheNote(t *testing.T) {
 
 // DealsProject names no project to a role without project read.
 func TestTheDealsProjectNeedsProjectRead(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedDealNoteFixture(t, e)
 	resolve := func(perms principal.Permissions) ids.UUID {
@@ -138,6 +142,7 @@ func TestTheDealsProjectNeedsProjectRead(t *testing.T) {
 // A member's note on the deal counts as the project's filed work and moves
 // its clock.
 func TestAMembersDealNoteCountsForTheProject(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedDealNoteFixture(t, e)
 	when := time.Date(2026, 8, 11, 9, 0, 0, 0, time.UTC)

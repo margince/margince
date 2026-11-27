@@ -54,6 +54,7 @@ func historyGraphEvents(t *testing.T, b *backfillWireEnv, run ids.UUID) []events
 }
 
 func TestHistoricalGraphArrivalsCoalesceUntilTheImportEnds(t *testing.T) {
+	t.Parallel()
 	b := setupBackfillWire(t)
 	run := strandedBackfill(t, b)
 	ctx := storekit.WithBatch(b.env.Admin(), run)

@@ -75,6 +75,7 @@ func (o older) source(table string, id ids.UUID) string {
 // Each shape a writer stored before the list lands on its channel, and the
 // audit row keeps the value it replaced.
 func TestTheTaskMovesEveryOlderSourceOntoItsChannel(t *testing.T) {
+	t.Parallel()
 	o := seedOlder(t)
 	channels := map[string]string{
 		"mirror:csv:deal:42": "import", "ext:finance:erp": "import", "agent:dealscout": "automation",
@@ -136,6 +137,7 @@ func TestTheTaskMovesEveryOlderSourceOntoItsChannel(t *testing.T) {
 // Batches of two walk the table in key order until every older deal is moved,
 // and a replay changes nothing.
 func TestBatchesOfTwoReachEveryOlderDealAndAReplayChangesNothing(t *testing.T) {
+	t.Parallel()
 	o := seedOlder(t)
 	for range 5 {
 		o.deal("seed")
@@ -179,6 +181,7 @@ func TestBatchesOfTwoReachEveryOlderDealAndAReplayChangesNothing(t *testing.T) {
 // A batch that fails after its move leaves the deal and the audit log as they
 // were. A cursor that is no key is refused, and so is a caller that is no system.
 func TestTheTaskRollsBackWithItsBatchAndRefusesAMalformedCursor(t *testing.T) {
+	t.Parallel()
 	o := seedOlder(t)
 	deal := o.deal("seed")
 	ctx := systemCtx(o.e)
@@ -221,6 +224,7 @@ func TestTheTaskRollsBackWithItsBatchAndRefusesAMalformedCursor(t *testing.T) {
 // An unvalidated check still judges an older row when it is next written. An
 // edit before the task has run goes through, and leaves the row on its channel.
 func TestAnEditBeforeTheTaskMovesAnOlderRowOntoItsChannel(t *testing.T) {
+	t.Parallel()
 	o := seedOlder(t)
 	deal := o.deal("mirror:csv:deal:7")
 	for table, id := range map[string]ids.UUID{
@@ -247,6 +251,7 @@ func TestAnEditBeforeTheTaskMovesAnOlderRowOntoItsChannel(t *testing.T) {
 // A new revision copies the offer it revises. An older offer's revision takes
 // the channel, so revising it does not wait for the task.
 func TestARevisionOfAnOlderOfferTakesItsChannel(t *testing.T) {
+	t.Parallel()
 	o := seedOlder(t)
 	deal := o.e.SeedDeal(t, "Quoted deal", o.pipeline, o.stage, nil)
 	sent := integration.SeedBeforeSourceCheck(t, o.owner, "offer",

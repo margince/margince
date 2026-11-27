@@ -61,6 +61,7 @@ func linkedInMatchFixture(ctx context.Context, t *testing.T, e *integration.Env)
 }
 
 func TestApprovingAStagedLinkedInMatchLinksTheConnectionAndWritesTheURL(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	contact := linkedInMatchFixture(ctx, t, e)
@@ -109,6 +110,7 @@ func TestApprovingAStagedLinkedInMatchLinksTheConnectionAndWritesTheURL(t *testi
 }
 
 func TestARefusedLinkedInMatchIsNeverProposedAgain(t *testing.T) {
+	t.Parallel()
 	// The branch's headline claim. Without it a member re-decides the same
 	// wrong guess after every export refresh, which is the fastest way to
 	// teach somebody to approve without reading.
@@ -147,6 +149,7 @@ func TestARefusedLinkedInMatchIsNeverProposedAgain(t *testing.T) {
 // that repairs the event path is a feature that works an hour late, and only
 // for the owners that enumeration happens to reach.
 func TestAContactEventStagesTheLinkedInSuggestionItProduced(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	contact := linkedInMatchFixture(ctx, t, e)
@@ -173,6 +176,7 @@ func TestAContactEventStagesTheLinkedInSuggestionItProduced(t *testing.T) {
 // nothing else dropped out of the sweep's enumeration entirely and no later
 // pass could reach them.
 func TestTheSweepStagesALinkedInSuggestionNobodyWasEverAskedAbout(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	linkedInMatchFixture(ctx, t, e)
@@ -207,6 +211,7 @@ func TestTheSweepStagesALinkedInSuggestionNobodyWasEverAskedAbout(t *testing.T) 
 // on the connection the first time a pass observes it, so the widened
 // enumeration stops reaching a row whose answer can only ever be empty.
 func TestTheSweepNeverReasksALinkedInMatchThatWasRefused(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	linkedInMatchFixture(ctx, t, e)
@@ -274,6 +279,7 @@ func linkedInMatchStatus(t *testing.T, e *integration.Env) string {
 // decision — a title correction, an owner change, a second match applying —
 // failed the redemption's re-check and the member's yes did nothing.
 func TestAContactEditDoesNotCancelAWaitingLinkedInMatch(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	contact := linkedInMatchFixture(ctx, t, e)
@@ -368,6 +374,7 @@ func onlyPendingLinkedInMatch(t *testing.T, e *integration.Env) ids.ApprovalID {
 // it answered, so a stale observation must not overwrite a link somebody now
 // has — which a predicate of "anything that is not already rejected" would.
 func TestARefusalDoesNotOverwriteAMatchConfirmedSince(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	linkedInMatchFixture(ctx, t, e)
@@ -422,6 +429,7 @@ func onlyLinkedInConnection(t *testing.T, e *integration.Env) ids.UUID {
 // the approval is left UNCONSUMED — so a consumed approval implies the write
 // landed, which is the property the two transactions did not have.
 func TestAFailedLinkedInApplyLeavesTheApprovalUnconsumed(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	linkedInMatchFixture(ctx, t, e)
@@ -488,6 +496,7 @@ func linkedInMatchPair(t *testing.T, e *integration.Env) (string, *ids.UUID) {
 // re-propose. Asserted WITHOUT running a sweep afterwards, which is the whole
 // point: the state has to be right the moment the member answers.
 func TestRejectingALinkedInMatchMarksTheGhostRowAtTheMomentItIsRejected(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	linkedInMatchFixture(ctx, t, e)
@@ -526,6 +535,7 @@ func TestRejectingALinkedInMatchMarksTheGhostRowAtTheMomentItIsRejected(t *testi
 // would pass for the wrong reason: a read returning nothing because the table
 // is empty looks identical to one excluding a rejection.
 func TestThePendingReadExcludesARefusedConnectionThatIsStillThere(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	linkedInMatchFixture(ctx, t, e)
@@ -581,6 +591,7 @@ func TestThePendingReadExcludesARefusedConnectionThatIsStillThere(t *testing.T) 
 // card the member is looking at names the OLD one. Refusing whoever the row
 // points at now would discard a suggestion that was never offered.
 func TestARefusalDoesNotDiscardASuggestionStagedForSomebodyElse(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	linkedInMatchFixture(ctx, t, e)
@@ -633,6 +644,7 @@ func TestARefusalDoesNotDiscardASuggestionStagedForSomebodyElse(t *testing.T) {
 // that fails: Rep2 approving Rep1's proposal would look for a connection Rep2
 // does not have, and either write nothing or write against their own.
 func TestAColleagueDecidingAMatchAppliesItToTheStagersConnection(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	stager := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	contact := linkedInMatchFixture(stager, t, e)

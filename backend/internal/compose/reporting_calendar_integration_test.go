@@ -21,6 +21,7 @@ import (
 )
 
 func TestReportingQuarterRolloverKeepsPriorWinsInCustomRanges(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	selection := f.selection()
 	selection.Period = "this_quarter"
@@ -60,6 +61,7 @@ func TestReportingQuarterRolloverKeepsPriorWinsInCustomRanges(t *testing.T) {
 }
 
 func TestReportingFutureRangeSavesAndFreezesOnlyMeasuredSales(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	at := f.at
 	won := f.env.seedID(t, `INSERT INTO stage(id,pipeline_id,name,position,semantic,win_probability) VALUES($1,$2,'Future won',90,'won',100)`, f.env.pipeline)
@@ -121,6 +123,7 @@ func TestReportingFutureRangeSavesAndFreezesOnlyMeasuredSales(t *testing.T) {
 }
 
 func TestReportingCustomRangeCSVAndDateErrorUseTheHTTPContract(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	handler := reportingHTTPRouter(f)
 	query := url.Values{"scope_kind": {"workspace"}, "period": {"custom"}, "start_at": {"2026-01-01T00:00:00Z"}, "end_at": {"2026-11-01T00:00:00Z"}}
@@ -140,6 +143,7 @@ func TestReportingCustomRangeCSVAndDateErrorUseTheHTTPContract(t *testing.T) {
 }
 
 func TestReportingPublicationCannotShortenACapturedInterval(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	report, err := f.service.CreateReport(f.human, crmcontracts.ReportingReportInput{Name: "Fixed cutoff", Audience: "private", Selection: f.selection()})
 	if err != nil {

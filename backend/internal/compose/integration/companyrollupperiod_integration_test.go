@@ -26,6 +26,7 @@ import (
 // The won deals are seeded with SQL. The close path stamps closed_at with the
 // database clock, and a past period needs a deal won in it.
 func TestTheRollupSumsTheNamedPeriodOverTheReadableTree(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	st := seedRollupStages(t, e)
 	now := clocktest.Now(t)
@@ -79,6 +80,7 @@ func TestTheRollupSumsTheNamedPeriodOverTheReadableTree(t *testing.T) {
 // null rather than the priced part. A win dated after the read is not yet a
 // win of the period under way.
 func TestTheRollupsWonTotalIsWholeAndStopsAtTheRead(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	st := seedRollupStages(t, e)
 	now := clocktest.Now(t)
@@ -135,6 +137,7 @@ type periodRollupWire struct {
 // The rollup route, read_view and the win-loss report give one quarter's won
 // sales the same total, and refuse a malformed period alike.
 func TestARollupPeriodAnswersAlikeOnTheRouteTheToolAndTheReport(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "rollup-period-doors", "read")
 	stages := apptest.DiscoverSeededPipeline(t, d.e)
 	root := createCompanyRollupCompany(t, d.e, "Period Doors Root", "")

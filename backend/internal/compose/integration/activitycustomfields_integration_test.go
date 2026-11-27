@@ -66,6 +66,7 @@ func (d *twoDoors) activityIDsWhere(t *testing.T, query string) map[string]bool 
 }
 
 func TestAnActivityCustomFieldIsWrittenReadAndFilteredOverBothDoors(t *testing.T) {
+	t.Parallel()
 	d, column := activityFieldDoors(t)
 
 	logged := decodeActivity(t, d.restStatus(t, "POST", "/v1/activities", AnyMap{
@@ -110,6 +111,7 @@ func TestAnActivityCustomFieldIsWrittenReadAndFilteredOverBothDoors(t *testing.T
 }
 
 func TestAnActivityCreateRefusesWhatItCannotStore(t *testing.T) {
+	t.Parallel()
 	d, column := activityFieldDoors(t)
 	for name, body := range map[string]AnyMap{
 		"a key that is not a custom field": {"subjcet": "typo"},
@@ -129,6 +131,7 @@ func TestAnActivityCreateRefusesWhatItCannotStore(t *testing.T) {
 // refusals are a closed body's: the key by name, and the path as sent.
 // The tool door refuses a guessed link key before it runs, naming the item key.
 func TestAnActivityCreateStillNamesAMisspeltField(t *testing.T) {
+	t.Parallel()
 	d, column := activityFieldDoors(t)
 	for name, tc := range map[string]struct {
 		body AnyMap

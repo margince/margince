@@ -19,11 +19,13 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestTheMachineNeverOverwritesAContactsDecision(t *testing.T) {
+	t.Parallel()
 	// The whole reason the page is worth a click. A correction the next message
 	// undoes is a suggestion: the owner would find the same sender wrong again
 	// next week with no way to tell a fresh mistake from one they already
@@ -37,7 +39,7 @@ func TestTheMachineNeverOverwritesAContactsDecision(t *testing.T) {
 	setDecision(t, e, e.Rep1, sender, capture.OverrideBusiness)
 
 	// A brain that would answer `spam` — and must never be asked.
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindSpam}}
+	brain := &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN, verdicts: map[string]string{dispositionID.String(): capture.KindSpam}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
@@ -53,6 +55,7 @@ func TestTheMachineNeverOverwritesAContactsDecision(t *testing.T) {
 }
 
 func TestKeepingASenderOutSurvivesTheClassifier(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const sender = "angebote@spam.example"
 	activityID := seedCapturedMail(t, e, sender, "Angebot")
@@ -61,7 +64,7 @@ func TestKeepingASenderOutSurvivesTheClassifier(t *testing.T) {
 	setDecision(t, e, e.Rep1, sender, capture.OverrideKeepOut)
 
 	// A brain that would call them a contact. The owner disagrees.
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindContact}}
+	brain := &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN, verdicts: map[string]string{dispositionID.String(): capture.KindContact}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
@@ -78,6 +81,7 @@ func TestKeepingASenderOutSurvivesTheClassifier(t *testing.T) {
 }
 
 func TestTheSendersPageShowsWhatWasDecidedAndByWhom(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const judged = "kunde@example.test"
 	const corrected = "freund@webmail.example"
@@ -102,6 +106,7 @@ func TestTheSendersPageShowsWhatWasDecidedAndByWhom(t *testing.T) {
 }
 
 func TestASeatSeesOnlyTheirOwnSenders(t *testing.T) {
+	t.Parallel()
 	// Whose mail a colleague keeps out is itself private: a colleague's list is
 	// not a thing this product will show, to anyone.
 	e := integration.Setup(t)
@@ -141,6 +146,7 @@ func dispositionKind(t *testing.T, e *integration.Env, id ids.UUID) string {
 }
 
 func TestAnOverrideDoesNotRevealAColleaguesVerdict(t *testing.T) {
+	t.Parallel()
 	// The leak the earlier isolation test could not see, because it gave the
 	// colleague no override row — which is the only precondition.
 	//
@@ -193,6 +199,7 @@ func setDispositionOutcome(t *testing.T, e *integration.Env, id ids.UUID, kind, 
 }
 
 func TestSenderSearchPagesTheOwnersDecisionsAndFiltersOverrides(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	for _, address := range []string{"ada@paging.example", "bea@paging.example", "cam@paging.example"} {
 		seedPendingDisposition(t, e, address, "paging.example", seedCapturedMail(t, e, address, "Hello"))

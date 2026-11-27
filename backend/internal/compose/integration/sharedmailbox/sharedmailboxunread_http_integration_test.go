@@ -24,6 +24,7 @@ import (
 // the mailbox itself, beside the history import that recovers it. The health
 // count names it too.
 func TestASharedMailboxShowsItsUnreadSpanToItsAdmins(t *testing.T) {
+	t.Parallel()
 	s := newSharedMailboxSuite(t)
 	e := s.e
 	box := s.connect(t, e.Team1)

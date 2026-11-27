@@ -27,6 +27,7 @@ import (
 )
 
 func TestAProbedLinkTargetMakesTheArchiveWait(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	contactID, _ := e.seedEmployedContact(ctx, t,
@@ -85,6 +86,7 @@ func TestAProbedLinkTargetMakesTheArchiveWait(t *testing.T) {
 // lock here would be correct and would serialize the whole of capture behind
 // one contact.
 func TestTwoReferencesOntoOneRecordDoNotWaitForEachOther(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	contactID, _ := e.seedEmployedContact(ctx, t,

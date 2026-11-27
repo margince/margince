@@ -9,7 +9,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"strconv"
 	"testing"
 
@@ -112,11 +111,12 @@ func jitCompiled(t *testing.T, raw []byte) bool {
 // the mail is filed under. The plan reads mail through the text index, and the
 // connection does not compile it with JIT.
 func TestOneWordMailSearchStaysInsideTheBudgetOnACommonWord(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	// A connection built from the pool configuration production uses, asked
 	// for jit=on by its DSN. The seeded mail stays inside one transaction,
 	// which a separate pool could not read.
-	poolConfig, err := database.PoolConfig(database.WithDSNParam(os.Getenv("MARGINCE_TEST_DSN"), "jit", "on"))
+	poolConfig, err := database.PoolConfig(database.WithDSNParam(testdb.For(t).OwnerDSN, "jit", "on"))
 	if err != nil {
 		t.Fatal(err)
 	}

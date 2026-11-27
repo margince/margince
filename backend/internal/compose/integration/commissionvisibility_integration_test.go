@@ -34,6 +34,7 @@ var commissionRepPerms = principal.Permissions{
 }
 
 func TestARepSeesWhatTheirOwnDealEarnedAndNotTheLedger(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	fx := seedAccrualFixture(t, e, "tier2_20") // the deal is Rep1's
 	winAndDeliver(t, e, fx)
@@ -72,6 +73,7 @@ func TestARepSeesWhatTheirOwnDealEarnedAndNotTheLedger(t *testing.T) {
 // deal ownerless (the foreign key sets it NULL), and reading "unowned" as
 // "everyone's" would hand that deal's commissions to every rep.
 func TestTheCommissionOfAnOwnerlessDealIsNotEveryRepsToRead(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	fx := seedAccrualFixture(t, e, "tier2_20")
 	winAndDeliver(t, e, fx)

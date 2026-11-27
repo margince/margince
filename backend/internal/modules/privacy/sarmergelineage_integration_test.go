@@ -47,6 +47,7 @@ func seedMergedPredecessor(ctx context.Context, t *testing.T, e *sarIdentifierEn
 // TestTheExportFollowsAPredecessorIdentity is the whole slice: a subject whose
 // duplicate was merged into them must be shown what is held under BOTH ids.
 func TestTheExportFollowsAPredecessorIdentity(t *testing.T) {
+	t.Parallel()
 	e := setupSARIdentifiers(t)
 	predecessor := seedMergedPredecessor(e.ctx, t, e, e.contact)
 
@@ -102,6 +103,7 @@ func TestTheExportFollowsAPredecessorIdentity(t *testing.T) {
 // reaches them through the lead twin. That twin points at the PREDECESSOR, so
 // following only the survivor's promotions loses it.
 func TestTheExportReachesALeadPromotedIntoAMergedAwayRecord(t *testing.T) {
+	t.Parallel()
 	e := setupSARIdentifiers(t)
 	predecessor := seedMergedPredecessor(e.ctx, t, e, e.contact)
 
@@ -135,6 +137,7 @@ func TestTheExportReachesALeadPromotedIntoAMergedAwayRecord(t *testing.T) {
 // one direction only: records merged INTO this subject are theirs, and the
 // record this subject was merged into belongs to somebody else.
 func TestTheExportDoesNotReachTheRecordThisSubjectWasMergedInto(t *testing.T) {
+	t.Parallel()
 	e := setupSARIdentifiers(t)
 
 	var survivor ids.UUID

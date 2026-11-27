@@ -107,6 +107,7 @@ func inWorkspaceTx(t *testing.T, e *integration.Env, read func(tx pgx.Tx) error)
 }
 
 func TestACanceledMeetingIsNoGraphEdgesLastInteraction(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := time.Now().UTC().Truncate(time.Second)
 	dana := contactWithEmail(t, e, "Dana Fold", "dana@fold.example")
@@ -141,6 +142,7 @@ func TestACanceledMeetingIsNoGraphEdgesLastInteraction(t *testing.T) {
 }
 
 func TestACanceledMeetingIsNoDealEngagement(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := time.Now().UTC()
 	pipeline, open, _ := integration.DealFixture(t, e)
@@ -174,6 +176,7 @@ func TestACanceledMeetingIsNoDealEngagement(t *testing.T) {
 }
 
 func TestACanceledMeetingIsNotTheGhostedScansNewestInteraction(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := time.Now().UTC()
 	company := e.SeedCompany(t, "Fold Ghost Co", nil)
@@ -201,6 +204,7 @@ func TestACanceledMeetingIsNotTheGhostedScansNewestInteraction(t *testing.T) {
 }
 
 func TestACanceledMeetingIsNotTheAccountsNewestMessage(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := e.SeedCompany(t, "Fold Reply Co", nil)
 	acct := quietAccount{company: ids.From[ids.CompanyKind](company), now: time.Now().UTC()}
@@ -228,6 +232,7 @@ func TestACanceledMeetingIsNotTheAccountsNewestMessage(t *testing.T) {
 }
 
 func TestACanceledMeetingIsNoFollowUpEvidence(t *testing.T) {
+	t.Parallel()
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Fold follow-up", e.pipeline, e.open, &e.Rep1)
 	e.seedInteraction(t, deal, "call", "Discovery call", 5)
@@ -260,6 +265,7 @@ func TestACanceledMeetingIsNoFollowUpEvidence(t *testing.T) {
 }
 
 func TestACanceledMeetingIsNotADealSidesLastWord(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	pipeline, open, _ := integration.DealFixture(t, e)
 	dealUUID := e.SeedDeal(t, "Fold quiet deal", pipeline, open, nil)

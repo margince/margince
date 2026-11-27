@@ -41,6 +41,7 @@ func edgeLive(t *testing.T, e *integration.Env, edge ids.UUID) bool {
 }
 
 func TestTheSeatEmploymentTaskRetiresOnlyMachineInferredEdgesOfSeatLoginsAndReplaysSafely(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	if _, err := e.Contacts.CreateCompany(e.Admin(), contacts.CreateCompanyInput{
@@ -184,6 +185,7 @@ func replayChangesNothing(ctx context.Context, t *testing.T, e *integration.Env,
 // note a colleague wrote about it, a lead made from it, or an agent's tag. The
 // plain seat contact beside them is archived, so the step ran.
 func TestTheSeatContactStepKeepsAContactSomebodyWorkedOn(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	if _, err := e.Contacts.CreateCompany(e.Admin(), contacts.CreateCompanyInput{

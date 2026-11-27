@@ -61,6 +61,7 @@ func (f *invitationFixture) actingAs(user ids.UUID) context.Context {
 }
 
 func TestTheProposalListShowsOnlyTheHostsLinksAGuestCanStillUse(t *testing.T) {
+	t.Parallel()
 	f := newInvitationFixture(t)
 	host := f.actingAs(f.env.rep)
 	contact := f.request.ContactId
@@ -101,6 +102,7 @@ func TestTheProposalListShowsOnlyTheHostsLinksAGuestCanStillUse(t *testing.T) {
 }
 
 func TestTheProposalListHidesAContactTheReaderCannotSee(t *testing.T) {
+	t.Parallel()
 	f := newInvitationFixture(t)
 	host := f.actingAs(f.env.rep)
 	contact := f.seedContact(t, f.env.other)
@@ -117,6 +119,7 @@ func TestTheProposalListHidesAContactTheReaderCannotSee(t *testing.T) {
 }
 
 func TestTheProposalListNeedsTheContactGrant(t *testing.T) {
+	t.Parallel()
 	f := newInvitationFixture(t)
 	f.propose(f.actingAs(f.env.rep), t, f.request.ContactId, "Before the grant was lost")
 	withoutContacts := principal.WithActor(f.ctx, principal.Principal{

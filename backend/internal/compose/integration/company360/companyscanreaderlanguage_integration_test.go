@@ -22,6 +22,7 @@ import (
 // language. The read is current, because a task Margince wrote is named in the
 // scan's language on both sides.
 func TestAScanOpenedInGermanAndReadByTheWorkerIsCurrent(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Nordlicht", &e.Rep1))
 	message := seedInboundAsk(t, e, company.UUID, "workspace", databaseNow(t, e))

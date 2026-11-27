@@ -137,6 +137,7 @@ func bothDoors() []retire {
 // product says it rather than leaving a contact plainly employed with no
 // employer on their page.
 func TestRetiringThePrimaryEmploymentPromotesTheOneThatRemains(t *testing.T) {
+	t.Parallel()
 	for _, door := range bothDoors() {
 		t.Run(door.door, func(t *testing.T) {
 			e := setupDedupe(t)
@@ -161,6 +162,7 @@ func TestRetiringThePrimaryEmploymentPromotesTheOneThatRemains(t *testing.T) {
 // Two remaining IS a choice, and it is not the product's to make: picking
 // between two employers on somebody's behalf writes a fact nobody asserted.
 func TestRetiringThePrimaryEmploymentLeavesTwoSurvivorsUnchosen(t *testing.T) {
+	t.Parallel()
 	for _, door := range bothDoors() {
 		t.Run(door.door, func(t *testing.T) {
 			e := setupDedupe(t)
@@ -182,6 +184,7 @@ func TestRetiringThePrimaryEmploymentLeavesTwoSurvivorsUnchosen(t *testing.T) {
 // None remaining invents nothing: a contact who has left their only job has no
 // current employer, and the empty slot is the honest answer.
 func TestRetiringTheOnlyEmploymentLeavesNoEmployer(t *testing.T) {
+	t.Parallel()
 	for _, door := range bothDoors() {
 		t.Run(door.door, func(t *testing.T) {
 			e := setupDedupe(t)
@@ -203,6 +206,7 @@ func TestRetiringTheOnlyEmploymentLeavesNoEmployer(t *testing.T) {
 // case where the empty slot is an instruction rather than a gap — and the case
 // that separates "an employment was retired" from "any employment changed".
 func TestClearingTheFlagOnTheOnlyEmploymentIsNotOverruled(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	contact, company := e.seedEmployedContact(ctx, t,

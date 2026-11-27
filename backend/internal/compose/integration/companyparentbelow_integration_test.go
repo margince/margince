@@ -15,6 +15,7 @@ import (
 // A parent that already sits below the company is refused on the parent field,
 // naming that company, before the database's cycle trigger can answer.
 func TestAParentBelowTheCompanyIsRefusedByName(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	top := createCompanyRollupCompany(t, e, "Group Holding", "")

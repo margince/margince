@@ -16,6 +16,7 @@ import (
 )
 
 func TestDataSubjectRequestLifecycle(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 
 	due := time.Now().AddDate(0, 0, 7).UTC().Format(time.RFC3339)

@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -130,6 +131,7 @@ func senderOf(t *testing.T, e *integration.Env, alice ids.ContactID) ids.UUID {
 }
 
 func TestMailFromAnEmaillessContactIsQueuedAgainstThemOnceTheSenderIsJudged(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	alice := seedEmaillessAlice(t, e)
 	colleague := e.As(e.Rep2, nil, colleaguePerms)
@@ -140,7 +142,7 @@ func TestMailFromAnEmaillessContactIsQueuedAgainstThemOnceTheSenderIsJudged(t *t
 		t.Fatalf("a colleague is shown %d pairs while the sender awaits its verdict, want none", len(pairs))
 	}
 
-	runVerdict(t, e, &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindContact}})
+	runVerdict(t, e, &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN, verdicts: map[string]string{dispositionID.String(): capture.KindContact}})
 	pairs := pairsJoining(colleague, t, e, alice.UUID, sender)
 	if len(pairs) != 1 {
 		t.Fatalf("a colleague is shown %d open pairs for Alice and the sender, want exactly 1", len(pairs))
@@ -158,12 +160,13 @@ func TestMailFromAnEmaillessContactIsQueuedAgainstThemOnceTheSenderIsJudged(t *t
 // A sender the verdict keeps the owner's, here an advisor, is never offered to
 // colleagues as somebody's duplicate.
 func TestASenderKeptTheOwnersIsNotQueuedForColleagues(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	alice := seedEmaillessAlice(t, e)
 
 	dispositionID := captureFromAlice(t, e)
 	sender := senderOf(t, e, alice)
-	runVerdict(t, e, &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindAdvisor}})
+	runVerdict(t, e, &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN, verdicts: map[string]string{dispositionID.String(): capture.KindAdvisor}})
 	if pairs := pairsJoining(e.As(e.Rep2, nil, colleaguePerms), t, e, alice.UUID, sender); len(pairs) != 0 {
 		t.Fatalf("a colleague is shown %d pairs for a sender kept the owner's, want none", len(pairs))
 	}
@@ -173,12 +176,13 @@ func TestASenderKeptTheOwnersIsNotQueuedForColleagues(t *testing.T) {
 // each of them. Each pair is a question for a human: nothing merges, and the
 // sender stays its own contact holding its own address.
 func TestAnEmaillessNameMatchingTwoNamesakesQueuesAPairWithEach(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	alices := seedEmaillessAlices(t, e, 2)
 
 	dispositionID := captureFromAlice(t, e)
 	sender := senderOf(t, e, alices[0])
-	runVerdict(t, e, &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindContact}})
+	runVerdict(t, e, &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN, verdicts: map[string]string{dispositionID.String(): capture.KindContact}})
 	colleague := e.As(e.Rep2, nil, colleaguePerms)
 	for _, alice := range alices {
 		if got := len(pairsJoining(colleague, t, e, alice.UUID, sender)); got != 1 {

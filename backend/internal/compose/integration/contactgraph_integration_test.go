@@ -113,6 +113,7 @@ func seedExchange(t *testing.T, e *Env, colleague, contact ids.UUID, subject str
 // A contact outside the caller's row scope must 404. An empty graph would
 // confirm the record exists and only its edges are withheld.
 func TestContactGraphRefusesAContactOutsideRowScope(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	theirs := e.SeedContact(t, "Their Contact", &e.Rep3)
 	e.MakeCapturePrivate(t, "contact", theirs, e.Rep3)
@@ -127,6 +128,7 @@ func TestContactGraphRefusesAContactOutsideRowScope(t *testing.T) {
 // messages behind each edge — pooled counts alone would ask the reader to
 // trust a number.
 func TestContactGraphAttachesTheMessagesBehindADirectEdge(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	mine := e.SeedContact(t, "Anna Weber", &e.Rep1)
 	seedExchange(t, e, e.Rep1, mine, "Q3 pricing")
@@ -168,6 +170,7 @@ func TestContactGraphAttachesTheMessagesBehindADirectEdge(t *testing.T) {
 // correspondence and are not. A caller with no activity grant keeps the edge
 // and loses the receipts.
 func TestContactGraphWithholdsReceiptsFromACallerWithNoActivityGrant(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	mine := e.SeedContact(t, "Anna Weber", &e.Rep1)
 	seedExchange(t, e, e.Rep1, mine, "Q3 pricing")
@@ -204,6 +207,7 @@ func TestContactGraphWithholdsReceiptsFromACallerWithNoActivityGrant(t *testing.
 // The sender count reaches the graph edge and the route evidence for a caller
 // who may read activity, so a route names who actually wrote.
 func TestContactGraphStatesWhatTheColleagueSent(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	mine := e.SeedContact(t, "Anna Weber", &e.Rep1)
 	seedExchange(t, e, e.Rep1, mine, "Q3 pricing")
@@ -235,6 +239,7 @@ func routesOf(t *testing.T, graph crmcontracts.ContactGraph) []crmcontracts.Cont
 // scope — a colleague's capture-private contact — is absent, and the graph
 // must not disclose them by adjacency.
 func TestContactGraphHidesCoworkersOutsideRowScope(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	company := e.SeedCompany(t, "ScaleCommerce", &e.Rep1)
@@ -279,6 +284,7 @@ func TestContactGraphHidesCoworkersOutsideRowScope(t *testing.T) {
 // A contact nobody has corresponded with recommends nothing. Inventing a route
 // from an empty picture is the failure the evidence posture exists to avoid.
 func TestContactGraphRecommendsNothingWithoutAnEdge(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	mine := e.SeedContact(t, "Anna Weber", &e.Rep1)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, graphPerms)
@@ -300,6 +306,7 @@ func TestContactGraphRecommendsNothingWithoutAnEdge(t *testing.T) {
 // probe, which is what keeps it from serving who corresponded with a subject
 // the controller certified erased.
 func TestContactGraphRefusesAnArchivedContact(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	mine := e.SeedContact(t, "Anna Weber", &e.Rep1)
@@ -318,6 +325,7 @@ func TestContactGraphRefusesAnArchivedContact(t *testing.T) {
 // The service-level refusal, so the sentinel is asserted rather than inferred
 // from a status code the handler chose.
 func TestContactGraphServiceReturnsNotFoundForAForeignContact(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	theirs := e.SeedContact(t, "Their Contact", &e.Rep3)
 	e.MakeCapturePrivate(t, "contact", theirs, e.Rep3)
@@ -336,6 +344,7 @@ func TestContactGraphServiceReturnsNotFoundForAForeignContact(t *testing.T) {
 // same company. They are one contact and get one node; the two edges hang off
 // it, or the diagram draws the same human twice.
 func TestContactGraphGivesAColleagueOneNodeAcrossBothArms(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	company := e.SeedCompany(t, "ScaleCommerce", &e.Rep1)
@@ -392,6 +401,7 @@ func TestContactGraphGivesAColleagueOneNodeAcrossBothArms(t *testing.T) {
 // interaction metadata is disclosable where the correspondence behind it is
 // not, so the absence of receipts here is the rule working, not missing data.
 func TestContactGraphAccountEdgesCarryCountsAndNoMessages(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	company := e.SeedCompany(t, "ScaleCommerce", &e.Rep1)
@@ -441,6 +451,7 @@ func TestContactGraphAccountEdgesCarryCountsAndNoMessages(t *testing.T) {
 // The ask is created through the introductions store — the real writer — so
 // what the graph reads is a row the product actually produces.
 func TestContactGraphMarksARouteThatAlreadyHasAnOpenAsk(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	mine := e.SeedContact(t, "Anna Weber", &e.Rep1)
 	seedExchange(t, e, e.Rep2, mine, "Q3 pricing")

@@ -48,6 +48,7 @@ func anchorAuditEvidence(ctx context.Context, t *testing.T, s *Store, companyID 
 // `source` are not fields of a company, and field history would project them
 // as though they were.
 func TestACompanySaveRecordsWhatTheFormReplaced(t *testing.T) {
+	t.Parallel()
 	env := newAnchorEnv(t)
 	automotive := "Automotive"
 	if _, err := env.store.SaveCompany(env.ctx, SaveCompanyInput{
@@ -92,6 +93,7 @@ func TestACompanySaveRecordsWhatTheFormReplaced(t *testing.T) {
 // must not present the rest as edits: an image narrowed to what moved is the
 // difference between a history a human can read and one page of noise per save.
 func TestACompanySaveRecordsOnlyTheFieldsThatMoved(t *testing.T) {
+	t.Parallel()
 	env := newAnchorEnv(t)
 	automotive := "Automotive"
 	summary := "We keep fleets on the road."

@@ -67,6 +67,7 @@ func (e *dedupeEnv) openQuestionDomains(ctx context.Context, t *testing.T) []str
 // the rep the mail was addressed to is asked. Without this read an open
 // question sits on an admin screen addressed to nobody.
 func TestAnOpenQuestionReachesItsDirectRecipient(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.openTriageFirst(ctx, t, "anna@unjudged.test", "Anna Example", "unjudged.test")
@@ -91,6 +92,7 @@ func TestAnOpenQuestionReachesItsDirectRecipient(t *testing.T) {
 // the sender match. The read finds a sender's mail by its reversed host in an
 // index range. A host one label deeper than the domain falls in that range.
 func TestASubdomainSenderAsksTheQuestionOfItsDomain(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.openTriageFirst(ctx, t, "carla@mail.deeper.test", "Carla Example", "deeper.test")
@@ -127,6 +129,7 @@ func (e *dedupeEnv) reasonFor(ctx context.Context, t *testing.T, domain string) 
 // read keyed only on `pending_reason` therefore serves the same question back on
 // the next refresh, and the verb looks like a button that does nothing.
 func TestDiscardingADomainTakesItsQuestionOffTheQueue(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.openTriageFirst(ctx, t, "bob@noise.test", "Bob Example", "noise.test")
@@ -158,6 +161,7 @@ func TestDiscardingADomainTakesItsQuestionOffTheQueue(t *testing.T) {
 // forgot `user_id` would let one colleague silently answer for everybody, which
 // is the shared pile this feature exists to replace.
 func TestAColleaguesDiscardLeavesYourOwnQuestionStanding(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.openTriageFirst(ctx, t, "dana@shared.test", "Dana Example", "shared.test")
@@ -183,6 +187,7 @@ func TestAColleaguesDiscardLeavesYourOwnQuestionStanding(t *testing.T) {
 // question about a domain the workspace refuses is not one any colleague still
 // owes an answer to.
 func TestAWorkspaceExclusionAnswersItForEveryone(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.openTriageFirst(ctx, t, "erin@policy.test", "Erin Example", "policy.test")
@@ -206,6 +211,7 @@ func TestAWorkspaceExclusionAnswersItForEveryone(t *testing.T) {
 // through the lane, a reader — that the backlog is clear, which is a different
 // and false statement.
 func TestACallerWithNoHumanBehindItIsRefusedRatherThanServedNothing(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
@@ -224,6 +230,7 @@ func TestACallerWithNoHumanBehindItIsRefusedRatherThanServedNothing(t *testing.T
 }
 
 func TestDomainQuestionsContinueBeyondTheAttentionWindow(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	for i := range 3 {
@@ -265,6 +272,7 @@ func TestDomainQuestionsContinueBeyondTheAttentionWindow(t *testing.T) {
 // to the rep. The second sat in the other rep's mailbox, which earns that seat
 // no question.
 func TestADomainQuestionIsAskedOfItsRecipientNotOfEveryMailboxThatHeldIt(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	first, second := e.as(), e.asOther()
 	e.openTriageFirst(first, t, "first@shared-question.test", "First Sender", "shared-question.test")
@@ -289,6 +297,7 @@ func TestADomainQuestionIsAskedOfItsRecipientNotOfEveryMailboxThatHeldIt(t *test
 }
 
 func TestRepeatedUnreadableEvidenceKeepsTheQuestionStable(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.openTriageFirst(ctx, t, "hello@uncertain.test", "Sender", "uncertain.test")

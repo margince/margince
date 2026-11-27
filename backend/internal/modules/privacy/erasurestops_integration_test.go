@@ -7,7 +7,6 @@ package privacy
 
 import (
 	"context"
-	"os"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -20,9 +19,10 @@ import (
 // contact. The stop writer holds the subject's stop lock, the erasure queues
 // behind it, and the refusal it then sees is inside its floor.
 func TestARefusalRecordedDuringRetentionErasureKeepsTheContact(t *testing.T) {
+	t.Parallel()
 	env := setupSARIdentifiers(t)
 	ctx := context.Background()
-	holder, err := pgx.Connect(ctx, os.Getenv("MARGINCE_TEST_DSN"))
+	holder, err := pgx.Connect(ctx, testdb.For(t).OwnerDSN)
 	if err != nil {
 		t.Fatalf("opening the stop writer's connection: %v", err)
 	}
@@ -73,6 +73,7 @@ func TestARefusalRecordedDuringRetentionErasureKeepsTheContact(t *testing.T) {
 // The refusal floor holds retention only. An Art. 17 request erases the same
 // contact, because its cascade puts the addresses on the erasure list.
 func TestARequestErasesAContactWhoseRefusalIsInsideItsFloor(t *testing.T) {
+	t.Parallel()
 	env := setupSARIdentifiers(t)
 	ctx := context.Background()
 	recordKeptRefusal(ctx, t, env.owner, env.contact)
@@ -103,6 +104,7 @@ func contactName(ctx context.Context, t *testing.T, env *sarIdentifierEnv) strin
 
 // An erasure clears the register a rep chose for a named contact.
 func TestErasingAContactClearsItsGreetingRegister(t *testing.T) {
+	t.Parallel()
 	env := setupSARIdentifiers(t)
 	ctx := context.Background()
 	mustExec(ctx, t, env.owner, `UPDATE contact SET greeting_register = 'formal' WHERE id = $1`, env.contact)

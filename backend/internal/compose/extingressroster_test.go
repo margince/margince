@@ -28,7 +28,7 @@ func TestTheRosterCrossesWholeAndInOrder(t *testing.T) {
 		extension.Participant{Account: "acct-51", Name: "Sam Okonkwo", Role: extension.ParticipantRoleAttendee},
 		extension.Participant{Account: "acct-77", Email: "legal@example.net", Name: "Priya Raman", Role: extension.ParticipantRoleCC},
 	)
-	got := ingestingRuntime(t).normalized(rec, extension.IngressSource{}).Participants
+	got := ingestingRuntime(nil).normalized(rec, extension.IngressSource{}).Participants
 
 	want := []connector.MessageParticipant{
 		{ChannelUserID: "acct-51", DisplayName: "Sam Okonkwo", Role: connector.ParticipantRoleAttendee},
@@ -59,7 +59,7 @@ func TestAUnitsRosterIsNeverProviderAttested(t *testing.T) {
 		Name:  "The Chief Executive",
 		Role:  extension.ParticipantRoleAttendee,
 	})
-	if ingestingRuntime(t).normalized(rec, extension.IngressSource{}).ParticipantsAreProviderAttested() {
+	if ingestingRuntime(nil).normalized(rec, extension.IngressSource{}).ParticipantsAreProviderAttested() {
 		t.Fatal("a unit's roster arrived attested — capture binds a colleague's user_id from an attested list, so a sender naming one would forge an interaction edge")
 	}
 }
@@ -67,7 +67,7 @@ func TestAUnitsRosterIsNeverProviderAttested(t *testing.T) {
 // A record naming nobody carries nothing, rather than an empty slice that reads
 // as "the unit enumerated the parties and there were none".
 func TestARecordWithNoRosterCarriesNoParticipants(t *testing.T) {
-	if got := ingestingRuntime(t).normalized(aRecord(), extension.IngressSource{}).Participants; got != nil {
+	if got := ingestingRuntime(nil).normalized(aRecord(), extension.IngressSource{}).Participants; got != nil {
 		t.Fatalf("a record naming nobody carried %d participants", len(got))
 	}
 }
@@ -83,7 +83,7 @@ func TestARosterPastTheCoresCapIsDroppedWhole(t *testing.T) {
 			Role:    extension.ParticipantRoleAttendee,
 		})
 	}
-	got := ingestingRuntime(t).normalized(aRecordWithRoster(parties...), extension.IngressSource{}).Participants
+	got := ingestingRuntime(nil).normalized(aRecordWithRoster(parties...), extension.IngressSource{}).Participants
 	if got != nil {
 		t.Fatalf("a roster of %d parties carried %d through the cap of %d — half a broadcast list reads exactly like a small group",
 			len(parties), len(got), connector.MaxParticipants)

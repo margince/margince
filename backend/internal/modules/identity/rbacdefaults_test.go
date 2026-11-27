@@ -31,15 +31,12 @@ func TestADefaultTheFillCouldNotApplyIsRefusedBeforeAnythingIsRegistered(t *test
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			t.Cleanup(ResetRbacObjectsForTest)
-			if err := RegisterRbacObjects(object); err != nil {
-				t.Fatal(err)
-			}
-			err := RegisterRbacDefaults(tc.defaults...)
+			t.Parallel()
+			rbac, err := NewRbacObjects([]RbacObject{object}, tc.defaults)
 			if err == nil || !strings.Contains(err.Error(), tc.contains) {
-				t.Fatalf("RegisterRbacDefaults = %v, want a refusal naming %q", err, tc.contains)
+				t.Fatalf("NewRbacObjects = %v, want a refusal naming %q", err, tc.contains)
 			}
-			if got := registeredRbacDefaults(); len(got) != 0 {
+			if got := rbac.defaults; len(got) != 0 {
 				t.Errorf("a refused set left %d defaults registered; the boot must not half-apply", len(got))
 			}
 		})
@@ -47,10 +44,10 @@ func TestADefaultTheFillCouldNotApplyIsRefusedBeforeAnythingIsRegistered(t *test
 }
 
 func TestADefaultOnAnObjectNoUnitRegisteredIsRefused(t *testing.T) {
-	t.Cleanup(ResetRbacObjectsForTest)
-	err := RegisterRbacDefaults(RbacDefault{Object: "ext_rbacdef_unregistered", Role: "rep", Actions: []string{"read"}})
+	t.Parallel()
+	_, err := NewRbacObjects(nil, []RbacDefault{{Object: "ext_rbacdef_unregistered", Role: "rep", Actions: []string{"read"}}})
 	if err == nil || !strings.Contains(err.Error(), "no unit registered") {
-		t.Fatalf("RegisterRbacDefaults = %v, want a refusal for an unregistered object", err)
+		t.Fatalf("NewRbacObjects = %v, want a refusal for an unregistered object", err)
 	}
 }
 

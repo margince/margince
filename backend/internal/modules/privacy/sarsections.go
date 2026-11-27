@@ -37,7 +37,7 @@ func sarSections(ctx context.Context, pkg *SARPackage, contactID ids.ContactID, 
 	sections = append(sections, sarConsentSections(pkg, contactID, emails, leads)...)
 	sections = append(sections, sarRequestSections(pkg, contactID)...)
 	sections = append(sections, sarConsentLinkSections(pkg)...)
-	sections = append(sections, sarCommunicationSections(pkg, emails, leads, identities)...)
+	sections = append(sections, sarCommunicationSections(ctx, pkg, emails, leads, identities)...)
 	sections = append(append(sections, sarJudgementSections(pkg, contactID, authored)...), sarEvidenceSections(pkg, leads)...)
 	return append(sections, sarProvenanceSections(pkg, contactID, external)...), nil
 }

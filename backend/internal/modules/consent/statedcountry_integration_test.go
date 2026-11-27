@@ -72,6 +72,7 @@ func (e *resolveEnv) recordedCountry(t *testing.T, delivery ids.UUID, phase stri
 // A stated or cleared country decides staging and transmit, and both rows say
 // it came from the sender.
 func TestAStatedCountryDecidesStagingAndTransmit(t *testing.T) {
+	t.Parallel()
 	for name, c := range map[string]struct {
 		stated func(packPair) string
 		source string
@@ -130,6 +131,7 @@ func equalCodes(a, b []string) bool {
 // An agent may not move a recipient's jurisdiction: the preview and staging
 // refuse, and nothing is staged.
 func TestAnAgentMayNotStateARecipientsCountry(t *testing.T) {
+	t.Parallel()
 	e, p := statedEnv(t)
 	agent := principal.WithActor(e.ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:x", OnBehalfOf: e.user,
@@ -160,6 +162,7 @@ func TestAnAgentMayNotStateARecipientsCountry(t *testing.T) {
 // Clearing a country moves no objection. A recipient who asked us to stop is
 // refused alike with the country stated, cleared or left to the record.
 func TestAClearedCountryKeepsALiveObjection(t *testing.T) {
+	t.Parallel()
 	e, p := statedEnv(t)
 	e.suppress(t, "subject_request")
 	for name, stated := range map[string][]commsauthz.CountryOverride{
@@ -177,6 +180,7 @@ func TestAClearedCountryKeepsALiveObjection(t *testing.T) {
 // Clearing a recipient's country removes the duties their country owes and
 // keeps the ones the sender's own country owes.
 func TestAClearedCountryKeepsTheSendersDuties(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	code := testMessagingRules(t, messagingrules.Rules{
 		Version: 1,

@@ -143,6 +143,7 @@ func reconnect(t *testing.T, c companyEnv) {
 }
 
 func TestMailFromAMailboxConnectedBeforeTheScopeCountsForItsOwnersCompany(t *testing.T) {
+	t.Parallel()
 	c := twoCompanies(t)
 	e := c.e
 	old, fresh := partnerContact(t, e, oldMailAuthor), partnerContact(t, e, newMailAuthor)
@@ -181,6 +182,7 @@ func TestMailFromAMailboxConnectedBeforeTheScopeCountsForItsOwnersCompany(t *tes
 }
 
 func TestAnImportWhoseMailboxHasNoOwnerStaysUnscoped(t *testing.T) {
+	t.Parallel()
 	c := twoCompanies(t)
 	e := c.e
 	old := partnerContact(t, e, oldMailAuthor)
@@ -196,6 +198,7 @@ func TestAnImportWhoseMailboxHasNoOwnerStaysUnscoped(t *testing.T) {
 }
 
 func TestMeetingsFromACalendarConnectedBeforeTheScopeCountForItsOwnersCompany(t *testing.T) {
+	t.Parallel()
 	c := twoCompanies(t)
 	e := c.e
 	guest := partnerContact(t, e, meetingGuest)
@@ -217,6 +220,7 @@ func TestMeetingsFromACalendarConnectedBeforeTheScopeCountForItsOwnersCompany(t 
 // A seat with mailboxes in two companies is scoped by the one named in delivered_by.
 // It stays unscoped when both delivered it or the mailbox has no company.
 func TestTheImportScopeTaskFollowsTheDeliveringMailboxAndGuessesNone(t *testing.T) {
+	t.Parallel()
 	c := twoCompanies(t)
 	e := c.e
 	for label, entity := range map[string]ids.UUID{"first@scope.test": c.branch, "second@scope.test": c.defaultEntity} {

@@ -28,6 +28,7 @@ import (
 // paused then, and a paused page answers as an unknown slug. A calendar the
 // provider could not report is named as the problem. Neither is a bare 500.
 func TestAvailabilityWithoutAUsableCalendarIsRefusedAtEveryDoor(t *testing.T) {
+	t.Parallel()
 	for name, tc := range map[string]struct {
 		fail func(*invitationCalendar)
 		want int
@@ -101,6 +102,7 @@ func TestAvailabilityWithoutAUsableCalendarIsRefusedAtEveryDoor(t *testing.T) {
 // could not be read. A public door, a colleague, an agent acting for the host
 // and a system job never see it.
 func TestOnlyTheHostIsToldWhichCalendarCouldNotBeRead(t *testing.T) {
+	t.Parallel()
 	const unreadable = "team-holidays@group.calendar.test"
 	f := newInvitationFixture(t)
 	hostName := "Test Host"
@@ -176,6 +178,7 @@ func TestOnlyTheHostIsToldWhichCalendarCouldNotBeRead(t *testing.T) {
 // the saved notice, which is the request it sends. Under the default two
 // hours' notice that window still reaches the calendars, so they are named.
 func TestTheSettingsCheckNamesTheUnreadableCalendarUnderTheDefaultNotice(t *testing.T) {
+	t.Parallel()
 	const unreadable = "team-holidays@group.calendar.test"
 	f := newInvitationFixture(t)
 	profile := defaultSchedulingProfile()

@@ -37,6 +37,7 @@ func installedIn(e *resolveEnv, code *jurisdiction.Code) {
 // Mutation: read applicableRules(subject.Country.Code) in settlePackBasisTx and
 // the second and third checks fail.
 func TestTheSendersPackWithoutLegitimateInterestsBindsEveryRecipient(t *testing.T) {
+	t.Parallel()
 	p := registerPackPair(t)
 	e := setupResolve(t)
 	sender := p.installation
@@ -67,6 +68,7 @@ func TestTheSendersPackWithoutLegitimateInterestsBindsEveryRecipient(t *testing.
 // Mutation: judge the confirmation under the default entity alone and the
 // second confirmation is dropped.
 func TestTheWarningCanBeConfirmedForAStricterEntityThanTheDefault(t *testing.T) {
+	t.Parallel()
 	p := registerPackPair(t)
 	e := setupResolve(t)
 	home := p.installation
@@ -101,6 +103,7 @@ func TestTheWarningCanBeConfirmedForAStricterEntityThanTheDefault(t *testing.T) 
 //
 // Mutation: drop the staged sender in transmitCountries and this fails.
 func TestTransmitJudgesUnderTheSenderCountryStagingRecorded(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	installation := jurisdiction.Code("de")
 	installedIn(e, &installation)
@@ -133,6 +136,7 @@ func TestTransmitJudgesUnderTheSenderCountryStagingRecorded(t *testing.T) {
 // entity registered at an address no pack covers still puts its jurisdiction's
 // pack in force for the particulars.
 func TestTheLawsInForceAreTheEntitiesJurisdictionsNotTheirAddresses(t *testing.T) {
+	t.Parallel()
 	p := registerPackPair(t)
 	e := setupResolve(t)
 	if _, err := e.owner.Exec(context.Background(), `

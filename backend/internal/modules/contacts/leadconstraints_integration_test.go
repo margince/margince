@@ -43,6 +43,7 @@ func constraintOf(err error) string {
 }
 
 func TestTheLeadTableRefusesWhatItsWriterNeverWrites(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	created := time.Now().UTC().Add(-2 * time.Hour)
 
@@ -121,6 +122,7 @@ func TestTheLeadTableRefusesWhatItsWriterNeverWrites(t *testing.T) {
 // The admitted shapes, so what the constraints refuse is the violation rather
 // than the column. A gate that refuses everything reads as green here too.
 func TestTheLeadTableStillAdmitsWhatItsWriterWrites(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	created := time.Now().UTC().Add(-2 * time.Hour)
 	lead := e.seedLeadCreatedAt(t, "admitted@example.test", created)

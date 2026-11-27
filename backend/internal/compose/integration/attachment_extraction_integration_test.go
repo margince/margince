@@ -35,6 +35,7 @@ import (
 // document nothing has read has no reading to report, which is a 404 rather
 // than an empty body a client would render as "read it, found none".
 func TestGetAttachmentExtractionOfAnUnreadDocumentIs404(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	h := activities.NewHandlers(e.DB()).WithUploadLimit(uploadCeiling).WithBlobstore(blobstore.NewMemory())
 	ctx := e.Admin()
@@ -54,6 +55,7 @@ func TestGetAttachmentExtractionOfAnUnreadDocumentIs404(t *testing.T) {
 // fields with their evidence, one honestly omitted, and the reading's own
 // status alongside them.
 func TestGetAttachmentExtractionPartitionsAStoredReading(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	base := activities.NewHandlers(e.DB()).WithUploadLimit(uploadCeiling).WithBlobstore(blobstore.NewMemory())
 	ctx := e.Admin()
@@ -96,6 +98,7 @@ func TestGetAttachmentExtractionPartitionsAStoredReading(t *testing.T) {
 // a non-deal attachment: accepting fields onto a deal is what's deal-only,
 // not reading the staged extraction.
 func TestGetAttachmentExtractionReadsAnyEntityType(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	h := activities.NewHandlers(e.DB()).WithUploadLimit(uploadCeiling).WithBlobstore(blobstore.NewMemory())
 	ctx := e.Admin()
@@ -115,6 +118,7 @@ func TestGetAttachmentExtractionReadsAnyEntityType(t *testing.T) {
 // in-flight index buys (RD-AC-N-6): pressing the button twice attaches to the
 // reading already running rather than paying for the same document twice.
 func TestStartExtractionReadTwiceJoinsTheOneInFlight(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	h := activities.NewHandlers(e.DB()).WithUploadLimit(uploadCeiling).WithBlobstore(blobstore.NewMemory())
 	ctx := e.Admin()
@@ -143,6 +147,7 @@ func TestStartExtractionReadTwiceJoinsTheOneInFlight(t *testing.T) {
 // read carries the same existence-hiding row-scope gate as every other
 // attachment op.
 func TestGetAttachmentExtractionHidesAnInvisibleParent(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	h := activities.NewHandlers(e.DB()).WithUploadLimit(uploadCeiling).WithBlobstore(blobstore.NewMemory())
 	adminCtx := e.Admin()
@@ -170,6 +175,7 @@ func TestGetAttachmentExtractionHidesAnInvisibleParent(t *testing.T) {
 // courtesy op writes one activity note carrying the requesting principal,
 // linked back to the parent deal, and answers {requested:true}.
 func TestRequestAttachmentAccessAuditsANoteAndReturnsRequested(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	h := activities.NewHandlers(e.DB()).WithUploadLimit(uploadCeiling).WithBlobstore(blobstore.NewMemory())
 	ctx := e.Admin()
@@ -209,6 +215,7 @@ func TestRequestAttachmentAccessAuditsANoteAndReturnsRequested(t *testing.T) {
 // locked-row placeholder. The parent is a capture-private contact — the one
 // state that hides a contact from another seat.
 func TestRequestAttachmentAccessHidesAnInvisibleParent(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	h := activities.NewHandlers(e.DB()).WithUploadLimit(uploadCeiling).WithBlobstore(blobstore.NewMemory())
 	adminCtx := e.Admin()

@@ -37,6 +37,7 @@ func listedBaseline(ctx context.Context, t *testing.T, registry *capturemod.Regi
 }
 
 func TestAMailboxStartsWithoutAHistoryBaseline(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	registry, owner := connectedMailbox(t, e)
 	if got := listedBaseline(owner, t, registry); got != nil {
@@ -45,6 +46,7 @@ func TestAMailboxStartsWithoutAHistoryBaseline(t *testing.T) {
 }
 
 func TestAMailboxOwnerSetsReadsAndClearsTheHistoryBaseline(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	registry, owner := connectedMailbox(t, e)
 	date := time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)
@@ -70,6 +72,7 @@ func TestAMailboxOwnerSetsReadsAndClearsTheHistoryBaseline(t *testing.T) {
 }
 
 func TestSettingTheHistoryBaselineAuditsBothSides(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	registry, owner := connectedMailbox(t, e)
 	date := time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)
@@ -96,6 +99,7 @@ func TestSettingTheHistoryBaselineAuditsBothSides(t *testing.T) {
 }
 
 func TestOnlyAHumanSetsAHistoryBaseline(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	registry, _ := connectedMailbox(t, e)
 	date := time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)
@@ -110,6 +114,7 @@ func TestOnlyAHumanSetsAHistoryBaseline(t *testing.T) {
 }
 
 func TestAHistoryBaselineNeedsAZoneTheProductKnows(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	registry, owner := connectedMailbox(t, e)
 	date := time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)
@@ -125,6 +130,7 @@ func TestAHistoryBaselineNeedsAZoneTheProductKnows(t *testing.T) {
 }
 
 func TestAColleagueCannotReachAnotherSeatsHistoryBaseline(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	registry, owner := connectedMailbox(t, e)
 	colleague := humanWithScopes(e, e.Rep3, []principal.Scope{principal.ScopeRead})

@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -48,13 +47,9 @@ type forecastEnv struct {
 
 func setupForecast(t *testing.T) *forecastEnv {
 	t.Helper()
-	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
-	appDSN := os.Getenv("MARGINCE_TEST_APP_DSN")
-	if ownerDSN == "" || appDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
+	db := testdb.New(t)
 	ctx := context.Background()
-	owner, err := pgx.Connect(ctx, ownerDSN)
+	owner, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -63,15 +58,6 @@ func setupForecast(t *testing.T) *forecastEnv {
 			t.Errorf("closing owner connection: %v", err)
 		}
 	})
-	// Migrated once per test process; every later test resets the data only, as
-	// the rest of this package's suites do through integration.Setup — the
-	// discipline backend/gates/integrationmigrateonce_test.go enforces module-wide.
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
-	if err := testdb.Reset(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
 
 	e := &forecastEnv{
 		owner: owner, WS: ids.NewV7(),
@@ -118,7 +104,7 @@ func setupForecast(t *testing.T) *forecastEnv {
 			e.pipeline, fmt.Sprintf("Stage %d", position), position, probability)
 	}
 
-	pool, err := testdb.OwnPool(ctx, appDSN)
+	pool, err := testdb.OwnPool(ctx, db.AppDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -273,6 +259,7 @@ func weightedMinor(amountMinor, probability int64) int64 {
 }
 
 func TestForecastRollupReconcilesToConstituentDeals(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 
 	// The constituent open deals — amounts chosen so per-deal rounding
@@ -366,6 +353,7 @@ func TestForecastRollupReconcilesToConstituentDeals(t *testing.T) {
 // AC-F2: the roll-up aggregates deals, never deal×stakeholder join rows —
 // a deal with two stakeholders counts once in the per-owner grouping.
 func TestForecastByOwnerCountsAMultiStakeholderDealOnce(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	dealID := e.seedOpenDeal(t, "Two champions", 60, &e.Rep1, new(int64(50000)))
 	for _, role := range []string{"champion", "economic_buyer"} {
@@ -398,6 +386,7 @@ func TestForecastByOwnerCountsAMultiStakeholderDealOnce(t *testing.T) {
 // displayed aggregate; each source row carries the weighted value next
 // to its base inputs, so the lineage bottoms out with no opaque step.
 func TestForecastDerivationDrillThroughReconcilesExactly(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	e.seedOpenDeal(t, "Alpha", 20, &e.Rep1, new(int64(100000)))
 	e.seedOpenDeal(t, "Beta", 60, &e.Rep1, new(int64(12341)))
@@ -493,6 +482,7 @@ func TestForecastDerivationDrillThroughReconcilesExactly(t *testing.T) {
 // handle changes which cell is explained and never which population it may be
 // explained from.
 func TestForecastDerivationRidesThePopulationOfTheReportItExplains(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	e.seedOpenDeal(t, "Mine A", 20, &e.Rep1, new(int64(10000)))
 	e.seedOpenDeal(t, "Mine B", 60, &e.Rep1, new(int64(20000)))
@@ -540,6 +530,7 @@ func TestForecastDerivationRidesThePopulationOfTheReportItExplains(t *testing.T)
 // It was on one of the two deal reports and not the other, so "revenue by
 // partner" could be read backwards and never forwards.
 func TestForecastGroupsThePipelineByPartner(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	northgate := e.seedID(t, `INSERT INTO company (id, display_name, source, captured_by) VALUES ($1, 'Northgate', 'manual', 'human:x')`)
 	kestrel := e.seedID(t, `INSERT INTO company (id, display_name, source, captured_by) VALUES ($1, 'Kestrel', 'manual', 'human:x')`)
@@ -572,6 +563,7 @@ func TestForecastGroupsThePipelineByPartner(t *testing.T) {
 
 // Narrowing the forecast to ONE partner, the dial the deals screen offers.
 func TestForecastNarrowsToOnePartner(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	wanted := e.seedID(t, `INSERT INTO company (id, display_name, source, captured_by) VALUES ($1, 'Wanted', 'manual', 'human:x')`)
 	other := e.seedID(t, `INSERT INTO company (id, display_name, source, captured_by) VALUES ($1, 'Other', 'manual', 'human:x')`)
@@ -600,6 +592,7 @@ func TestForecastNarrowsToOnePartner(t *testing.T) {
 // not name a partner the caller's own deal read would mask, and an aggregate
 // has no per-row place to write "withheld".
 func TestForecastByPartnerDoesNotNameAPartnerTheCallerCannotOpen(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	hidden := e.seedID(t, `INSERT INTO company (id, owner_id, display_name, visibility, source, captured_by)
 		VALUES ($1, $2, 'Hidden Partners', 'owner', 'manual', 'human:x')`, e.Rep3)
@@ -643,6 +636,7 @@ func TestForecastByPartnerDoesNotNameAPartnerTheCallerCannotOpen(t *testing.T) {
 // every seat, so the scope clause renders TRUE and the population is the only
 // thing narrowing anything.
 func TestAReportAndItsDrillThroughCoverTheAskersOwnPopulation(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	mine := int64(100_000)
 	theirs := int64(250_000)
@@ -693,6 +687,7 @@ func TestAReportAndItsDrillThroughCoverTheAskersOwnPopulation(t *testing.T) {
 // a rule, and a caller naming its own group_by walked straight past it — which
 // the MCP schema resource invites by listing group_by as a free choice.
 func TestAReportRefusesNativeMoneySummedAcrossCurrencies(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	eur := int64(2_500_000)
 	usd := int64(1_000_000)

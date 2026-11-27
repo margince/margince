@@ -125,6 +125,7 @@ func (d deskEnv) count(t *testing.T, sql string) int {
 }
 
 func TestEveryReviewerGetsOneEntryAndOneNoticeAndSettlingClearsBoth(t *testing.T) {
+	t.Parallel()
 	d := newDeskEnv(t)
 	d.grant(t, d.e.AdminUser, legalReviewerGrants)
 	d.grant(t, d.e.Rep3, legalReviewerGrants)
@@ -171,6 +172,7 @@ func TestEveryReviewerGetsOneEntryAndOneNoticeAndSettlingClearsBoth(t *testing.T
 }
 
 func TestAReviewerWhoLosesTheGrantsIsNoLongerAskedAboutTheReview(t *testing.T) {
+	t.Parallel()
 	d := newDeskEnv(t)
 	d.grant(t, d.e.AdminUser, legalReviewerGrants)
 	request := deals.ReviewRequest{ReviewID: ids.NewV7(), DealID: ids.NewV7(), DealName: "Fleet renewal", Seats: []ids.UUID{d.e.AdminUser}}

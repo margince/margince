@@ -21,6 +21,7 @@ import (
 )
 
 func TestADeclineUnderAnotherPromptIsOfferedToThisOne(t *testing.T) {
+	t.Parallel()
 	e := setupFacts(t)
 	ctx := e.as()
 	declined := e.seed(t, capturedRow{kind: "email"})
@@ -56,6 +57,7 @@ func TestADeclineUnderAnotherPromptIsOfferedToThisOne(t *testing.T) {
 }
 
 func TestADeclineIsRestampedOncePerPrompt(t *testing.T) {
+	t.Parallel()
 	e := setupFacts(t)
 	ctx := e.as()
 	id := e.seed(t, capturedRow{kind: "email"})
@@ -91,6 +93,7 @@ func TestADeclineIsRestampedOncePerPrompt(t *testing.T) {
 // and the write that records a second refusal re-stamps it. No writer produces
 // that row any more, so the seed writes the stamp the old writer left.
 func TestALegacyDeclineIsOfferedOnceAndRestamped(t *testing.T) {
+	t.Parallel()
 	e := setupFacts(t)
 	ctx := e.as()
 	id := e.seed(t, capturedRow{kind: "email"})
@@ -114,6 +117,7 @@ func TestALegacyDeclineIsOfferedOnceAndRestamped(t *testing.T) {
 // tick of its own and not again within it, and the moment one prompt is left
 // the row settles, stamped under it and offered to nobody.
 func TestTwoPromptsServedSideBySideOfferADeclinedRowOncePerTickEach(t *testing.T) {
+	t.Parallel()
 	e := setupFacts(t)
 	ctx := e.as()
 	id := e.seed(t, capturedRow{kind: "email"})

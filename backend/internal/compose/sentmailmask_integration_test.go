@@ -31,6 +31,7 @@ import (
 // The sent row and the sender's synced copy of one mail must read alike.
 // Otherwise the echo that joins the row would have to rewrite it.
 func TestASentMailKeepsOneMaskedRowThroughItsEcho(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	address := seatAddress(t, e, e.Rep1)
 	root := "masked-opening@counterparty.test"
@@ -43,7 +44,7 @@ func TestASentMailKeepsOneMaskedRowThroughItsEcho(t *testing.T) {
 	}
 	const secret = "Hunter2-Example!"
 	stager := &recordingStager{}
-	adapter := newCommsAdapter(e.Pool, nil, SendPath{PublicBaseURL: toolSurfaceBaseURL, Delivery: stager})
+	adapter := newCommsAdapter(e.Pool, nil, nil, SendPath{PublicBaseURL: toolSurfaceBaseURL, Delivery: stager})
 	sent, err := adapter.SendEmail(e.As(e.Rep1, []ids.UUID{e.Team1}, integration.SchedulerPerms), anchor, agents.SendEmailArgs{
 		To: []string{"pat@counterparty.example"}, Subject: "Zugang Passwort: " + secret,
 		Body: "Hallo Pat,\nPasswort: " + secret + "\nBis bald", ConsentPurpose: "transactional",
@@ -118,6 +119,7 @@ func assertCaptureMasksAsTheSendDid(t *testing.T, raw []byte, mailbox, subject, 
 // The installation's own mail is a sent row too, so its timeline copy is masked
 // while the delivery keeps the words it sends.
 func TestControllerMailStoresItsTimelineRowMasked(t *testing.T) {
+	t.Parallel()
 	l := setupConfirmLane(t)
 	inserter, err := jobs.NewInserter(l.e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	if err != nil {

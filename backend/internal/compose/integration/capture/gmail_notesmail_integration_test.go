@@ -101,6 +101,7 @@ func contactLinks(t *testing.T, e *integration.SearchEnv, system, sourceID strin
 // contacts, with one reading queued. The mail is filed under nobody, so the
 // receiver's own contact gathers no notes, and only its participants read it.
 func TestAGeminiNotesMailLandsAsTheTranscriptOfItsMeeting(t *testing.T) {
+	t.Parallel()
 	start := captureNow.Add(-4 * time.Hour)
 	w := syncedMeetings(t, map[string]time.Time{"review": start}, meetingTitle)
 	e := w.env.e
@@ -160,6 +161,7 @@ func TestAGeminiNotesMailLandsAsTheTranscriptOfItsMeeting(t *testing.T) {
 // Two meetings match the subject, so the mail cannot say which it is about. It
 // lands as mail held to its participants and no transcript is written.
 func TestANotesMailNamingTwoMeetingsLandsNoTranscript(t *testing.T) {
+	t.Parallel()
 	start := captureNow.Add(-5 * time.Hour)
 	w := syncedMeetings(t, map[string]time.Time{"review": start, "review2": start.Add(time.Hour)}, meetingTitle)
 
@@ -179,6 +181,7 @@ func TestANotesMailNamingTwoMeetingsLandsNoTranscript(t *testing.T) {
 // The same From without Gmail's authentication is a sender's own text, so it is
 // ordinary mail and reaches no meeting.
 func TestAnUnauthenticatedNotesMailLandsNoTranscript(t *testing.T) {
+	t.Parallel()
 	start := captureNow.Add(-4 * time.Hour)
 	w := syncedMeetings(t, map[string]time.Time{"review": start}, meetingTitle)
 
@@ -192,6 +195,7 @@ func TestAnUnauthenticatedNotesMailLandsNoTranscript(t *testing.T) {
 // A colleague's copy of the same notes names the same meeting. One transcript
 // reads a meeting, so the second copy proposes nothing twice.
 func TestASecondNotesMailForTheSameMeetingLandsNoSecondTranscript(t *testing.T) {
+	t.Parallel()
 	start := captureNow.Add(-4 * time.Hour)
 	w := syncedMeetings(t, map[string]time.Time{"review": start}, meetingTitle)
 
@@ -209,6 +213,7 @@ func TestASecondNotesMailForTheSameMeetingLandsNoSecondTranscript(t *testing.T) 
 // Notes already landed from the mail are the meeting's transcript. The same
 // notes in a Doc are not read again, or every next step is proposed twice.
 func TestADocNotesReadingFollowsNoNotesMail(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	meetingWithNotes(t, env)
 	start := env.now.AddDate(0, 0, -3)
@@ -232,6 +237,7 @@ func TestADocNotesReadingFollowsNoNotesMail(t *testing.T) {
 // The subject names "Quarterly Review", and the meeting is called "Review". A
 // title is matched whole, so the notes of one meeting never land on another.
 func TestANotesMailLandsOnlyOnAMeetingWithTheWholeTitle(t *testing.T) {
+	t.Parallel()
 	start := captureNow.Add(-4 * time.Hour)
 	w := syncedMeetings(t, map[string]time.Time{"review": start}, "Review")
 
@@ -249,6 +255,7 @@ func TestANotesMailLandsOnlyOnAMeetingWithTheWholeTitle(t *testing.T) {
 // A copy somebody forwarded, or one the owner only received as a Cc, is not
 // Google's mail to the owner about the owner's own meeting.
 func TestAForwardedNotesMailLandsNoTranscript(t *testing.T) {
+	t.Parallel()
 	start := captureNow.Add(-4 * time.Hour)
 	w := syncedMeetings(t, map[string]time.Time{"review": start}, meetingTitle)
 
@@ -264,6 +271,7 @@ func TestAForwardedNotesMailLandsNoTranscript(t *testing.T) {
 // Gemini sends the notes on the day of the call. A meeting with the same title
 // that started days before the mail is another meeting, so nothing lands.
 func TestANotesMailLandsNoTranscriptOnAMeetingOutsideTheDay(t *testing.T) {
+	t.Parallel()
 	start := captureNow.Add(-60 * time.Hour)
 	w := syncedMeetings(t, map[string]time.Time{"review": start}, meetingTitle)
 

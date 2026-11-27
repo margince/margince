@@ -71,6 +71,7 @@ func liveSeatCtx(t *testing.T, e *integration.Env, seat ids.UUID) context.Contex
 // second, the hold refuses the versions it was read at. The other decision is
 // sent once.
 func TestAnApprovalMailChangedWhileItIsReadSendsOnlyTheNewWords(t *testing.T) {
+	t.Parallel()
 	for name, after := range map[string]int{"after the first rendering": 1, "just before the reservation": 2} {
 		t.Run(name, func(t *testing.T) {
 			a, _, worker := newDecisionMailEnv(t)
@@ -238,6 +239,7 @@ func withdraw(t *testing.T, a approvalNotifyEnv, id ids.ApprovalID) {
 // reservation refuses the basis and the digest is read again; the other
 // decision is still quoted once.
 func TestADigestDecisionChangedBeforeItsReservationIsLeftOut(t *testing.T) {
+	t.Parallel()
 	changes := map[string]func(t *testing.T, a approvalNotifyEnv, id ids.ApprovalID, deal ids.UUID){
 		"it was withdrawn": func(t *testing.T, a approvalNotifyEnv, id ids.ApprovalID, _ ids.UUID) { withdraw(t, a, id) },
 		"its deal was archived": func(t *testing.T, a approvalNotifyEnv, _ ids.ApprovalID, deal ids.UUID) {
@@ -277,6 +279,7 @@ func TestADigestDecisionChangedBeforeItsReservationIsLeftOut(t *testing.T) {
 // message. A decision withdrawn before the send is left out of it, and the
 // one still waiting is quoted once.
 func TestADigestWithAValidDecisionIsSentOnceAloneAndCombined(t *testing.T) {
+	t.Parallel()
 	for _, combined := range []bool{false, true} {
 		t.Run(map[bool]string{false: "alone", true: "combined"}[combined], func(t *testing.T) {
 			d, a := setupDecisionDigest(t)
@@ -310,6 +313,7 @@ func TestADigestWithAValidDecisionIsSentOnceAloneAndCombined(t *testing.T) {
 // that admission records the promise as kept, the basis no longer carries the
 // decision and a reservation over the old basis is refused.
 func TestAClaimlessDecisionWhoseAdmissionChangedIsNotReserved(t *testing.T) {
+	t.Parallel()
 	a, _, _ := newDecisionMailEnv(t)
 	note, _, err := a.e.Activities.LogActivity(a.e.Admin(), activities.LogActivityInput{Kind: "note", Body: new("We will send the pricing."), Source: "manual"})
 	if err != nil {
@@ -349,6 +353,7 @@ func TestAClaimlessDecisionWhoseAdmissionChangedIsNotReserved(t *testing.T) {
 // A decision that expired while the send waited is refused; at a time before
 // its expiry the same basis holds.
 func TestADecisionThatExpiredWhileTheSendWaitedIsRefused(t *testing.T) {
+	t.Parallel()
 	a, _, _ := newDecisionMailEnv(t)
 	decision := stagePromisedDecision(t, a, a.e.Rep1, "Send the pricing")
 	var expires time.Time
@@ -368,6 +373,7 @@ func TestADecisionThatExpiredWhileTheSendWaitedIsRefused(t *testing.T) {
 // A reservation holds the recipient's team memberships, so taking the
 // recipient off a team waits for the reservation to commit.
 func TestTakingTheRecipientOffATeamWaitsForTheReservation(t *testing.T) {
+	t.Parallel()
 	a, _, _ := newDecisionMailEnv(t)
 	decision := stagePromisedDecision(t, a, a.e.Rep1, "Send the pricing")
 	reader := a.e.As(a.e.Rep1, []ids.UUID{a.e.Team1}, integration.AdminPerms)
@@ -422,6 +428,7 @@ func TestTakingTheRecipientOffATeamWaitsForTheReservation(t *testing.T) {
 // authority again, so that decision's words are withheld and the decision the
 // recipient reads directly is sent once.
 func TestARecipientTakenOffTheSourcesTeamBeforeTheReservationGetsOnlyTheDirectDecision(t *testing.T) {
+	t.Parallel()
 	a, _, worker := newDecisionMailEnv(t)
 	teamOnly := stagePromisedDecision(t, a, a.e.Rep1, "Send the pricing")
 	direct := stagePromisedDecision(t, a, a.e.Rep1, "Send the contract")
@@ -472,6 +479,7 @@ func claimedItems(t *testing.T, worker *notificationMailWorker, a approvalNotify
 // the second rendering, the line is left out at the reservation. A readable
 // line beside it is still quoted once.
 func TestAHistoricDigestLineWhoseContactWasHandedOnIsLeftOut(t *testing.T) {
+	t.Parallel()
 	d := setupDigest(t)
 	handed, kept := d.capturedContact(t, "Pricing contact", d.Rep1), d.capturedContact(t, "Contract contact", d.Rep1)
 	d.raise(t, "Pricing contact replied", contactRef(handed))
@@ -500,6 +508,7 @@ func TestAHistoricDigestLineWhoseContactWasHandedOnIsLeftOut(t *testing.T) {
 // A historic line whose contact is handed to a colleague before the hold is
 // refused there. With the contact unchanged, the same basis holds.
 func TestACombinedMorningHoldsItsHistoricDigestLines(t *testing.T) {
+	t.Parallel()
 	d := setupDigest(t)
 	handed := d.capturedContact(t, "Pricing contact", d.Rep1)
 	d.raise(t, "Pricing contact replied", contactRef(handed))
@@ -526,6 +535,7 @@ func TestACombinedMorningHoldsItsHistoricDigestLines(t *testing.T) {
 // Narrowed to someone else before the hold, it refuses the reservation; left
 // readable, the same basis holds.
 func TestAReportedActivityNarrowedBeforeTheHoldIsRefused(t *testing.T) {
+	t.Parallel()
 	a, _, _ := newDecisionMailEnv(t)
 	body := "Notes from the pricing call."
 	note, _, err := a.e.Activities.LogActivity(a.e.Admin(), activities.LogActivityInput{Kind: "note", Body: &body, Source: "manual"})
@@ -558,6 +568,7 @@ func TestAReportedActivityNarrowedBeforeTheHoldIsRefused(t *testing.T) {
 // reported activity are left out. The deal decision is still sent once. With
 // the role restored before the reservation, both decisions are sent.
 func TestARecipientWhoLostActivityReadGetsOnlyTheDealDecision(t *testing.T) {
+	t.Parallel()
 	for name, after := range map[string]int{"after the first rendering": 1, "after the second rendering": 2, "restored after the first rendering": 0} {
 		t.Run(name, func(t *testing.T) {
 			a, _, worker := newDecisionMailEnv(t)
@@ -608,6 +619,7 @@ func TestARecipientWhoLostActivityReadGetsOnlyTheDealDecision(t *testing.T) {
 // A decision quoting a mail rests on that mail being read in full. A mail found
 // read only in part refuses the reservation even where its version matches.
 func TestADecisionWhoseMailIsNoLongerReadInFullIsNotReserved(t *testing.T) {
+	t.Parallel()
 	a, _, _ := newDecisionMailEnv(t)
 	decision := stagePromisedDecision(t, a, a.e.Rep1, "Send the pricing")
 	a.e.WsExec(t, `UPDATE activity SET kind = 'email', direction = 'inbound', subject = 'Pricing' WHERE id = $1`, decision.source)

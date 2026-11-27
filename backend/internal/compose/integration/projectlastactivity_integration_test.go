@@ -50,6 +50,7 @@ func projectClock(ctx context.Context, t *testing.T, e *Env, id ids.ProjectID) *
 }
 
 func TestProjectLastActivity_MovesOnEveryWriteThatChangesTheTimeline(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Clocked Client", nil)
 	erp := seedProject(e.Admin(), t, e, "ERP replacement", company, nil)
@@ -135,6 +136,7 @@ func TestProjectLastActivity_MovesOnEveryWriteThatChangesTheTimeline(t *testing.
 // The clock counts activities filed against the PROJECT, not activities that
 // reach it only through one of its deals.
 func TestProjectLastActivity_CountsOnlyDirectlyLinkedActivities(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Deal-Reached Client", nil)
 	project := seedProject(e.Admin(), t, e, "Programme", company, nil)

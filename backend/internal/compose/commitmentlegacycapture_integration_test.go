@@ -21,6 +21,7 @@ import (
 )
 
 func TestLegacyCapturedMailUsesItsOriginalDateInsteadOfArrival(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	captureThreadMail(t, e, e.Rep1, threadMail(seatAddress(t, e, e.Rep1), "legacy-date@buyer.test", "Fri, 18 Oct 2024 10:00:00 +0000", ""))
 	source := ids.MustParse(e.WsScalar(t, `SELECT activity_id::text FROM activity_identity WHERE identity_kind='mail' AND identity_key=$1`, "legacy-date@buyer.test"))

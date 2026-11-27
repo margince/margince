@@ -41,6 +41,7 @@ func signedInBuyer(t *testing.T, e *Env, buyer buyerSeat) dealrooms.Session {
 // A buyer write past its session read when the erasure commits writes nothing.
 // It finds the seat revoked once it may lock it.
 func TestABuyerThreadOpenedAcrossAnErasureIsRefused(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	buyer := seedBuyerInARoom(t, e, "opening.race@acme.test")
 	sess := signedInBuyer(t, e, buyer)
@@ -80,6 +81,7 @@ func TestABuyerThreadOpenedAcrossAnErasureIsRefused(t *testing.T) {
 // A buyer reply already holding the seat is waited for, and the erasure then
 // deletes it with the rest of what the seat wrote.
 func TestAnErasureWaitsForABuyerReplyAndTakesItWithTheRest(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	buyer := seedBuyerInARoom(t, e, "reply.race@acme.test")
 	sess := signedInBuyer(t, e, buyer)
@@ -131,6 +133,7 @@ func TestAnErasureWaitsForABuyerReplyAndTakesItWithTheRest(t *testing.T) {
 
 // A download recorded with a session from before the erasure records nothing.
 func TestADownloadRecordedAfterAnErasureIsRefused(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	buyer := seedBuyerInARoom(t, e, "download.race@acme.test")
 	doc := roomDocument(t, e, buyer)

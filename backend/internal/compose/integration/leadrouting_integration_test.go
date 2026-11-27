@@ -77,6 +77,7 @@ func (e *routingEnv) leadOwner(t *testing.T, leadID ids.UUID) *ids.UUID {
 }
 
 func TestLeadRoutingRoundRobinIsFairAndCapsAreNeverExceeded(t *testing.T) {
+	t.Parallel()
 	e := setupRouting(t)
 	pool := []ids.UUID{e.Rep1, e.Rep2, e.Rep3}
 	enableLeadRouting(t, e.SearchEnv, map[string]any{
@@ -141,6 +142,7 @@ func TestLeadRoutingRoundRobinIsFairAndCapsAreNeverExceeded(t *testing.T) {
 }
 
 func TestLeadRoutingRuleOutranksRotationButNeverTheCap(t *testing.T) {
+	t.Parallel()
 	e := setupRouting(t)
 	enableLeadRouting(t, e.SearchEnv, map[string]any{
 		"owners":        []string{e.Rep1.String(), e.Rep2.String()},
@@ -168,6 +170,7 @@ func TestLeadRoutingRuleOutranksRotationButNeverTheCap(t *testing.T) {
 }
 
 func TestLeadRoutingLeavesHumanAssignmentsAlone(t *testing.T) {
+	t.Parallel()
 	e := setupRouting(t)
 	enableLeadRouting(t, e.SearchEnv, map[string]any{
 		"owners": []string{e.Rep1.String()},
@@ -205,6 +208,7 @@ func TestLeadRoutingLeavesHumanAssignmentsAlone(t *testing.T) {
 // in the unassigned queue had the audit trail and nothing else to read. The
 // run row now carries the sentence.
 func TestAnUnroutableLeadRecordsWhyOnItsRun(t *testing.T) {
+	t.Parallel()
 	e := setupRouting(t)
 	enableLeadRouting(t, e.SearchEnv, map[string]any{
 		"owners":        []string{e.Rep1.String()},
@@ -240,6 +244,7 @@ func TestAnUnroutableLeadRecordsWhyOnItsRun(t *testing.T) {
 }
 
 func TestAStoredSourceRoutingRuleStopsWithAnActionableRun(t *testing.T) {
+	t.Parallel()
 	e := setupRouting(t)
 	enableLeadRouting(t, e.SearchEnv, map[string]any{
 		"owners": []string{e.Rep1.String()},

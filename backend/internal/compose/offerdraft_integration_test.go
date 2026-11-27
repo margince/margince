@@ -101,6 +101,7 @@ func offerDrafterOn(t *testing.T, e *integration.Env, brain *ai.FakeClient) offe
 // extended by whoever adds the next field, who is by definition the author
 // who does not know this fixture exists.
 func TestTheOfferDraftFixtureLeavesNoFieldZero(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	drafter := newOfferDrafterFixture(t, e, ai.NewFakeClient())
 
@@ -194,6 +195,7 @@ func offerTotals(t *testing.T, o crmcontracts.Offer) (net, tax, gross int64) {
 }
 
 func TestDraftOfferLinesStagesGroundedLinesAndDiscloses(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDraftPerms)
 	offerID, workshopSource := seedDraftOfferWithDealActivity(ctx, t, e, "Grounded-draft deal",
@@ -274,6 +276,7 @@ func TestDraftOfferLinesStagesGroundedLinesAndDiscloses(t *testing.T) {
 }
 
 func TestDraftOfferLinesDropsUngroundedCandidateAsHonestEmpty(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDraftPerms)
 	offerID, source := seedDraftOfferWithDealActivity(ctx, t, e, "Ungrounded-draft deal",
@@ -306,6 +309,7 @@ func TestDraftOfferLinesDropsUngroundedCandidateAsHonestEmpty(t *testing.T) {
 }
 
 func TestDraftOfferLinesGroundsPriceOnTheRateCardWhenNoConversationPrice(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDraftPerms)
 	offerID, source := seedDraftOfferWithDealActivity(ctx, t, e, "Rate-card-draft deal",
@@ -348,6 +352,7 @@ func TestDraftOfferLinesGroundsPriceOnTheRateCardWhenNoConversationPrice(t *test
 // grounds (that gate is currency-blind by design), only the price falls
 // through to the honest zero sentinel.
 func TestDraftOfferLinesNeverGroundsARateCardPriceInAMismatchedCurrency(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDraftPerms)
 	offerID, source := seedDraftOfferWithDealActivity(ctx, t, e, "Currency-mismatch-draft deal",
@@ -401,6 +406,7 @@ func TestDraftOfferLinesNeverGroundsARateCardPriceInAMismatchedCurrency(t *testi
 // context (unaffected by cancellation), so the failure surfaces from the
 // transaction itself, not from apperrors.ErrNotFound.
 func TestGroundOfferLinesPropagatesANonNotFoundProductLookupError(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDraftPerms)
 
@@ -429,6 +435,7 @@ func TestGroundOfferLinesPropagatesANonNotFoundProductLookupError(t *testing.T) 
 }
 
 func TestDraftOfferLinesNeverGuessesAnUngroundedPrice(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDraftPerms)
 	offerID, source := seedDraftOfferWithDealActivity(ctx, t, e, "No-price-draft deal",
@@ -458,6 +465,7 @@ func TestDraftOfferLinesNeverGuessesAnUngroundedPrice(t *testing.T) {
 }
 
 func TestDraftOfferLinesDropsStoreInvalidQuantityWithoutErroringTheBatch(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDraftPerms)
 	offerID, source := seedDraftOfferWithDealActivity(ctx, t, e, "Bad-decimal-draft deal",
@@ -494,6 +502,7 @@ func TestDraftOfferLinesDropsStoreInvalidQuantityWithoutErroringTheBatch(t *test
 }
 
 func TestDraftOfferLinesStripsSecretsBeforeTheModelCall(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDraftPerms)
 	secret := "sk-ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -523,6 +532,7 @@ func TestDraftOfferLinesStripsSecretsBeforeTheModelCall(t *testing.T) {
 // A line the drafter grounds on a product carries the product's name in the
 // offer's language, as a line added by hand does.
 func TestADraftedProductLineTakesTheProductsNameInTheOffersLanguage(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDraftPerms)
 	offerID, source := seedDraftOfferWithDealActivity(ctx, t, e, "German draft deal",
@@ -568,6 +578,7 @@ func TestADraftedProductLineTakesTheProductsNameInTheOffersLanguage(t *testing.T
 // The model is not asked for a tax rate. A drafted line carries the sheet's
 // standard rate for the installation's country.
 func TestADraftedLineOnNoProductIsTaxedFromTheSheetsStandardRate(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDraftPerms)
 	offerID, source := seedDraftOfferWithDealActivity(ctx, t, e, "Sheet-taxed deal",
@@ -593,6 +604,7 @@ func TestADraftedLineOnNoProductIsTaxedFromTheSheetsStandardRate(t *testing.T) {
 
 // With no standard rate on the sheet, the draft is refused and stages nothing.
 func TestADraftWithNoStandardRateOnTheSheetIsRefusedAndStagesNothing(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDraftPerms)
 	offerID, source := seedDraftOfferWithDealActivity(ctx, t, e, "Unrated deal",

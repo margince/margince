@@ -65,6 +65,7 @@ func (b *lockWatchingBlob) Delete(ctx context.Context, key string) error {
 }
 
 func TestAMessagesFilesAreStoredBeforeItsTransactionTakesTheAuthorizationLock(t *testing.T) {
+	t.Parallel()
 	blob := &lockWatchingBlob{Store: blobstore.NewMemory()}
 	env := newCaptureEnvWithBlob(t, captureNow, blob)
 	blob.e = env.e
@@ -85,6 +86,7 @@ func TestAMessagesFilesAreStoredBeforeItsTransactionTakesTheAuthorizationLock(t 
 }
 
 func TestFilesStoredForAMessageTheCaptureDropsAreDeleted(t *testing.T) {
+	t.Parallel()
 	blob := &lockWatchingBlob{Store: blobstore.NewMemory()}
 	env := newCaptureEnvWithBlob(t, captureNow, blob)
 	blob.e = env.e
@@ -108,6 +110,7 @@ func TestFilesStoredForAMessageTheCaptureDropsAreDeleted(t *testing.T) {
 }
 
 func TestFilesStoredForACaptureItsAuthorityRefusesAreDeleted(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	seedShippedRoles(t, e)
 	holdOnlyRole(t, e, e.Rep1, "rep")

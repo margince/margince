@@ -96,6 +96,7 @@ func wantSeat(t *testing.T, what string, got *ids.UUID, want *ids.UUID) {
 // The card moves with the deal: the new owner sees and decides it, the old one
 // no longer can, and the audit trail says the seat moved and who moved it.
 func TestAFollowUpFollowsTheDealToItsNewOwner(t *testing.T) {
+	t.Parallel()
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Handed over", e.pipeline, e.open, &e.Rep1)
 	call := e.seedInteraction(t, deal, "call", "Discovery call", 3)
@@ -135,6 +136,7 @@ func TestAFollowUpFollowsTheDealToItsNewOwner(t *testing.T) {
 // The move is part of the owner change: a reassignment that fails after the
 // move takes the move back with it.
 func TestAReassignmentThatFailsLeavesTheCardWithThePreviousOwner(t *testing.T) {
+	t.Parallel()
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Reassignment rolled back", e.pipeline, e.open, &e.Rep1)
 	call := e.seedInteraction(t, deal, "call", "Discovery call", 3)
@@ -180,6 +182,7 @@ func TestAReassignmentThatFailsLeavesTheCardWithThePreviousOwner(t *testing.T) {
 // What a human answered, and what the window closed on, belong to the seat they
 // were asked of. Only a PENDING card follows the deal.
 func TestADecidedOrExpiredCardStaysWithTheSeatItWasAskedOf(t *testing.T) {
+	t.Parallel()
 	e := setupReconcile(t)
 	rejected := e.SeedDeal(t, "Declined before the handover", e.pipeline, e.open, &e.Rep1)
 	rejectedID, _ := e.stageLegacyFollowUp(t, rejected, e.seedInteraction(t, rejected, "call", "Discovery call", 3))
@@ -214,6 +217,7 @@ func TestADecidedOrExpiredCardStaysWithTheSeatItWasAskedOf(t *testing.T) {
 // out from their mailbox. It is withdrawn rather than handed on, and the next
 // sweep drafts one for the new owner.
 func TestADraftForThePreviousOwnerIsWithdrawnAndRedraftedForTheNewOne(t *testing.T) {
+	t.Parallel()
 	e := setupReconcile(t)
 	e.grantOwner(t, e.Rep2, reconcileOwnerPolicy)
 	deal := e.SeedDeal(t, "Drafted, then handed over", e.pipeline, e.open, &e.Rep1)
@@ -303,6 +307,7 @@ func (e *reconcileEnv) logTranscript(t *testing.T, subject string, dealIDs ...id
 // asked for the reading, not to the deal's owner, and it stays with them when
 // the deal changes hands.
 func TestAPromiseCardStaysWithItsPromiserWhenTheDealChangesHands(t *testing.T) {
+	t.Parallel()
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Meeting on this deal", e.pipeline, e.open, &e.Rep1)
 	brain := cannedBrain{reply: groundedReply(t, 3, 0.95, e.Rep2)}
@@ -318,6 +323,7 @@ func TestAPromiseCardStaysWithItsPromiserWhenTheDealChangesHands(t *testing.T) {
 // A promise nobody can be named for asks nobody: not the colleague who asked
 // for the reading, and not the deal's owner.
 func TestAPromiseNobodyCanBeNamedForStagesNoCard(t *testing.T) {
+	t.Parallel()
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Meeting on this deal", e.pipeline, e.open, &e.Rep1)
 	meeting := e.logTranscript(t, "Rollout call", deal)
@@ -346,6 +352,7 @@ func TestAPromiseNobodyCanBeNamedForStagesNoCard(t *testing.T) {
 // path and the claim. The update path is reached by the HTTP handler, the agent
 // tools, automation through the provider, and the extraction accept.
 func TestEveryDealOwnerWriterHandsOnThePendingProposals(t *testing.T) {
+	t.Parallel()
 	e := setupReconcile(t)
 	provider := deals.NewProvider(e.DB(), installseam.Deals())
 	writers := []struct {
@@ -405,6 +412,7 @@ func TestEveryDealOwnerWriterHandsOnThePendingProposals(t *testing.T) {
 // The task then names the new owner. A sweep that read the owner in its own
 // transaction would not block, and would file the task for the leaving seat.
 func TestTheSweepWaitsForAReassignmentInFlightAndFilesForTheNewOwner(t *testing.T) {
+	t.Parallel()
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Reassigned mid-sweep", e.pipeline, e.open, &e.Rep1)
 	e.seedInteraction(t, deal, "call", "Discovery call", 3)
@@ -460,6 +468,7 @@ func TestTheSweepWaitsForAReassignmentInFlightAndFilesForTheNewOwner(t *testing.
 // hand-over moves cards from and what its audit row says the deal was taken
 // from — not the one both of them saw before either committed.
 func TestConcurrentReassignmentsHandTheCardOnFromTheOwnerEachFinds(t *testing.T) {
+	t.Parallel()
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Reassigned twice at once", e.pipeline, e.open, &e.Rep1)
 	call := e.seedInteraction(t, deal, "call", "Discovery call", 3)
@@ -551,6 +560,7 @@ func (d reassigningDrafter) DraftEmail(ctx context.Context, anchor ids.UUID, int
 // takes its place. A task filed instead would be an open next step. It would
 // keep the next sweep from drafting for the new owner.
 func TestADraftComposedForAnOwnerWhoLeftIsDroppedAndRedraftedNextSweep(t *testing.T) {
+	t.Parallel()
 	e := setupReconcile(t)
 	e.grantOwner(t, e.Rep2, reconcileOwnerPolicy)
 	deal := e.SeedDeal(t, "Handed over mid-draft", e.pipeline, e.open, &e.Rep1)
@@ -559,7 +569,7 @@ func TestADraftComposedForAnOwnerWhoLeftIsDroppedAndRedraftedNextSweep(t *testin
 		svc:   e.svc,
 		tasks: e.Activities,
 		draft: reassigningDrafter{
-			followUpReplySeam: newCommsAdapter(e.Pool, nil, SendPath{}),
+			followUpReplySeam: newCommsAdapter(e.Pool, nil, nil, SendPath{}),
 			during:            func() { e.reassign(t, deal, e.Rep2) },
 		},
 		owner: dealOwnerAuthority{db: e.DB(), users: identity.NewServiceFor(e.DB())},
@@ -609,6 +619,7 @@ func (e *reconcileEnv) dealOwner(t *testing.T, deal ids.UUID) ids.UUID {
 // both writers. Re-sending the owner the deal already has moves nothing, so it
 // needs no hand-over and goes through.
 func TestAStoreWithoutTheHandOverRefusesToMoveTheOwner(t *testing.T) {
+	t.Parallel()
 	e := setupReconcile(t)
 	deal, id := e.stagedFollowUp(t, "No hand-over wired")
 	unwired := deals.NewStore(e.DB(), deals.Installation{})
@@ -638,6 +649,7 @@ func TestAStoreWithoutTheHandOverRefusesToMoveTheOwner(t *testing.T) {
 // An archived deal is frozen: reassigning it is refused as absent, and its
 // waiting card stays where it was.
 func TestAnArchivedDealIsNotHandedOver(t *testing.T) {
+	t.Parallel()
 	e := setupReconcile(t)
 	deal, id := e.stagedFollowUp(t, "Archived with a card waiting")
 	if _, err := e.Deals.ArchiveDeal(e.Admin(), ids.From[ids.DealKind](deal), nil); err != nil {
@@ -655,6 +667,7 @@ func TestAnArchivedDealIsNotHandedOver(t *testing.T) {
 // did it. A hand-over run with nobody to name is refused for both — the card
 // neither moves nor is withdrawn.
 func TestAHandOverNobodyCanBeNamedForIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupReconcile(t)
 	e.grantOwner(t, e.Rep2, reconcileOwnerPolicy)
 	taskDeal, task := e.stagedFollowUp(t, "Task card, nobody named")
@@ -692,13 +705,14 @@ func (failingDrafter) DraftEmail(context.Context, ids.UUID, string) (string, str
 // A drafting failure fails the pass for that deal. A task in its place would hide
 // the fault. As an open next step, it would also keep the reply from being drafted.
 func TestADraftingFailureStagesNothingInsteadOfATask(t *testing.T) {
+	t.Parallel()
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Drafter down", e.pipeline, e.open, &e.Rep1)
 	e.seedAnswerableThread(t, deal, "Kickoff")
 	stager := followUpStager{
 		svc:   e.svc,
 		tasks: e.Activities,
-		draft: failingDrafter{followUpReplySeam: newCommsAdapter(e.Pool, nil, SendPath{})},
+		draft: failingDrafter{followUpReplySeam: newCommsAdapter(e.Pool, nil, nil, SendPath{})},
 		owner: dealOwnerAuthority{db: e.DB(), users: identity.NewServiceFor(e.DB())},
 		pool:  e.Pool,
 	}

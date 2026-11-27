@@ -39,6 +39,7 @@ func captureSettingsHumanCtx(e *integration.Env, grant principal.ObjectGrant) co
 }
 
 func TestCaptureSettingsHandlers(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	h := captureSettingsHandlers{store: capture.NewSettings(NewSettingsStore(e.Pool), StoredConfig(e.Pool))}
 
@@ -77,6 +78,7 @@ func TestCaptureSettingsHandlers(t *testing.T) {
 }
 
 func TestInternalMailSourceControlsRequireAdminEvenWithCaptureSettingsWrite(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	h := captureSettingsHandlers{store: capture.NewSettings(NewSettingsStore(e.Pool), StoredConfig(e.Pool))}
 	granted := captureSettingsHumanCtx(e, principal.ObjectGrant{Read: true, Update: true})

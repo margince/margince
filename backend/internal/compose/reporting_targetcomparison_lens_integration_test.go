@@ -32,6 +32,7 @@ func (q targetQuarter) teamSelection() crmcontracts.ReportingSelection {
 }
 
 func TestARepOnTheirOwnRowsComparesTheirOwnQuarter(t *testing.T) {
+	t.Parallel()
 	q := seedTargetQuarter(t)
 	q.openDeal(t, q.env.Rep3, "A colleague's deal", 5_000_000)
 	q.quarterTarget(t, crmcontracts.ReportingScope{Kind: "owner", Id: ptrUUID(q.env.Rep1)}, 80_000_000)
@@ -52,6 +53,7 @@ func (q targetQuarter) maskedLead() context.Context {
 }
 
 func TestAReaderWhoCannotSeeADealsAmountGetsNoComparisonOfItsScope(t *testing.T) {
+	t.Parallel()
 	q := seedTargetQuarter(t)
 	q.openDeal(t, q.env.Rep3, "Another team's deal", 5_000_000)
 	q.quarterTarget(t, crmcontracts.ReportingScope{Kind: "owner", Id: ptrUUID(q.env.Rep1)}, 80_000_000)
@@ -65,6 +67,7 @@ func TestAReaderWhoCannotSeeADealsAmountGetsNoComparisonOfItsScope(t *testing.T)
 }
 
 func TestACallBelowWhatIsWonGivesNeitherReachedNorShort(t *testing.T) {
+	t.Parallel()
 	q := seedTargetQuarter(t)
 	calls := forecasting.NewStore(InstallationDB(q.env.Pool))
 	if err := calls.InTx(q.human, func(ctx context.Context, tx pgx.Tx) error {
@@ -84,6 +87,7 @@ func TestACallBelowWhatIsWonGivesNeitherReachedNorShort(t *testing.T) {
 }
 
 func TestWithIndividualPerformanceOffAComparisonNeverShowsOneColleague(t *testing.T) {
+	t.Parallel()
 	q := seedTargetQuarter(t)
 	q.quarterTarget(t, crmcontracts.ReportingScope{Kind: "owner", Id: ptrUUID(q.env.Rep1)}, 80_000_000)
 	q.quarterTarget(t, crmcontracts.ReportingScope{Kind: "team", Id: ptrUUID(q.env.Team1)}, 90_000_000)
@@ -107,6 +111,7 @@ func TestWithIndividualPerformanceOffAComparisonNeverShowsOneColleague(t *testin
 // Three colleagues are behind the quarter, and one of them behind its open
 // pipeline. The open total minus the reader's own is that colleague's pipeline.
 func TestWithIndividualPerformanceOffOneColleaguesOpenPipelineIsWithheld(t *testing.T) {
+	t.Parallel()
 	q := seedTargetQuarter(t)
 	q.quarterTarget(t, crmcontracts.ReportingScope{Kind: "team", Id: ptrUUID(q.env.Team1)}, 90_000_000)
 	colleagues := q.env.addMembers(t, q.env.Team1, "colleague1@forecast.test", "colleague2@forecast.test", "colleague3@forecast.test")

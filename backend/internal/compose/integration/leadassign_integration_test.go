@@ -73,6 +73,7 @@ func assignLead(actor context.Context, e *Env, id ids.LeadID, dest ids.UUID) err
 // may update leads hands an ownerless lead, or one it may change, to any active
 // colleague. A lead the caller may not change stays with its owner.
 func TestALeadTheCallerMayChangeIsAssignableToAnyColleague(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, leadRepPerms())
 	manager := e.As(e.Rep2, []ids.UUID{e.Team1}, leadManagerPerms())
@@ -135,6 +136,7 @@ func mustBeOwnedBy(reader context.Context, t *testing.T, e *Env, id ids.LeadID, 
 // archived one and an agent are all present in the table and none of them can
 // do lead work, so handing them a lead files it where nobody will answer it.
 func TestALeadIsNeverAssignedToASeatThatCannotWorkIt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 
@@ -180,6 +182,7 @@ func TestALeadIsNeverAssignedToASeatThatCannotWorkIt(t *testing.T) {
 // that may not touch the lead could ride a score or a status change in beside
 // the owner and rewrite a record it has no authority over.
 func TestTheOwnerlessDoorCarriesOwnershipAndNoOtherField(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	manager := e.As(e.Rep2, []ids.UUID{e.Team1}, leadManagerPerms())
 	id := seedOwnerlessLead(t, e, "Mixed Patch")
@@ -203,6 +206,7 @@ func TestTheOwnerlessDoorCarriesOwnershipAndNoOtherField(t *testing.T) {
 // door for a record nobody owns, and this is the assertion that it widened
 // nothing else: a stranger's lead answers the same refusal it always did.
 func TestAnotherSeatsLeadIsStillNotAssignableByAStranger(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	stranger := e.As(e.Rep3, []ids.UUID{e.Team2}, leadRepPerms())
 
@@ -232,6 +236,7 @@ func TestAnotherSeatsLeadIsStillNotAssignableByAStranger(t *testing.T) {
 // a plan that only guarded the update would have missed. CSV and mirror
 // imports reach the same body through CreateLeadTx.
 func TestACreatedLeadCannotNameAnIneligibleOwner(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	e.WsExec(t, `UPDATE app_user SET status = 'suspended' WHERE id = $1`, e.Rep3)
 	defer e.WsExec(t, `UPDATE app_user SET status = 'active' WHERE id = $1`, e.Rep3)
@@ -254,6 +259,7 @@ func TestACreatedLeadCannotNameAnIneligibleOwner(t *testing.T) {
 // have not signed in yet. Handing an EXISTING lead to them is routing, which
 // still asks for an active seat.
 func TestACreatedLeadMayNameAnInvitedColleague(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	e.WsExec(t, `UPDATE app_user SET status = 'invited' WHERE id = $1`, e.Rep3)
 	defer e.WsExec(t, `UPDATE app_user SET status = 'active' WHERE id = $1`, e.Rep3)
@@ -291,6 +297,7 @@ func mustStayUnowned(t *testing.T, e *Env, id ids.LeadID) {
 // pass, and the second write lands on a lead the first had just taken — a
 // record the loser could not otherwise have touched at all.
 func TestTwoSeatsRacingForOneOwnerlessLeadDoNotBothWin(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	id := seedOwnerlessLead(t, e, "Contested")
 	first := e.As(e.Rep1, []ids.UUID{e.Team1}, leadRepPerms())
@@ -337,6 +344,7 @@ func TestTwoSeatsRacingForOneOwnerlessLeadDoNotBothWin(t *testing.T) {
 // conversation. relinkActivities refuses everything when one row refuses,
 // because its rows belong together; these do not.
 func TestBulkAssignAnswersForEachLeadSeparately(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	manager := e.As(e.Rep2, []ids.UUID{e.Team1}, leadManagerPerms())
 
@@ -400,6 +408,7 @@ func TestBulkAssignAnswersForEachLeadSeparately(t *testing.T) {
 // An ineligible destination stops the run before it starts. Discovering it on
 // row thirty would leave the reader twenty-nine writes to undo by hand.
 func TestBulkAssignRefusesAnIneligibleOwnerBeforeWritingAnything(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	first := seedOwnerlessLead(t, e, "Bulk Untouched One")
 	second := seedOwnerlessLead(t, e, "Bulk Untouched Two")
@@ -422,6 +431,7 @@ func TestBulkAssignRefusesAnIneligibleOwnerBeforeWritingAnything(t *testing.T) {
 // colleague's lead. Bulk answers as one at a time does, because the same
 // writer runs.
 func TestBulkAssignHoldsTheSameRuleAsTheSingleWrite(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, leadRepPerms())
 	ownerless := seedOwnerlessLead(t, e, "Bulk Rep Hands On")
@@ -455,6 +465,7 @@ func TestBulkAssignHoldsTheSameRuleAsTheSingleWrite(t *testing.T) {
 // that: this installation runs no request-validator middleware, so a cap
 // declared in the schema alone is a cap on nothing.
 func TestBulkAssignEnforcesItsOwnSizeCap(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := ids.From[ids.UserKind](e.Rep1)
 
@@ -476,6 +487,7 @@ func TestBulkAssignEnforcesItsOwnSizeCap(t *testing.T) {
 }
 
 func TestAssigningALeadToItsCurrentOwnerWritesNothing(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 	id := seedOwnerlessLead(t, e, "Already Theirs")

@@ -75,6 +75,7 @@ func companyStatingVat(
 // changed. The automatic lanes decline exactly this, which is why the request
 // carries a flag rather than relying on the number looking new.
 func TestAContactCanAskTheRegisterAgainAboutAnUnchangedNumber(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	var recorder vatCheckRecorder
@@ -117,6 +118,7 @@ func TestAContactCanAskTheRegisterAgainAboutAnUnchangedNumber(t *testing.T) {
 // nothing, "a contact spent a consultation on this company" is answerable from
 // nothing at all.
 func TestARequestRecordsWhoAskedForIt(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	var recorder vatCheckRecorder
@@ -151,6 +153,7 @@ func TestARequestRecordsWhoAskedForIt(t *testing.T) {
 // and a button with nothing under it is how an installation gets blocked for
 // everybody.
 func TestAskingAgainWithinTheCooldownIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	var recorder vatCheckRecorder
@@ -187,6 +190,7 @@ func TestAskingAgainWithinTheCooldownIsRefused(t *testing.T) {
 // the day — on a column that exists to say what the register attested to, not
 // when we last asked.
 func TestTheFloorHoldsWhenTheRegisterDatedTheReceiptMidnight(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	var recorder vatCheckRecorder
@@ -221,6 +225,7 @@ func TestTheFloorHoldsWhenTheRegisterDatedTheReceiptMidnight(t *testing.T) {
 // a different fact from asking too often: one needs a number typed, the other
 // needs a wait. Told apart, or the reader is sent to do the wrong thing.
 func TestAskingAboutACompanyWithNoNumberIsNotFound(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	var recorder vatCheckRecorder
@@ -246,6 +251,7 @@ func TestAskingAboutACompanyWithNoNumberIsNotFound(t *testing.T) {
 // queued job on a lane nothing reads answers the reader with a promise the
 // installation cannot keep, and the button would appear to work forever.
 func TestAskingOnADeploymentThatConsultsNoRegisterIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	var recorder vatCheckRecorder
@@ -264,6 +270,7 @@ func TestAskingOnADeploymentThatConsultsNoRegisterIsRefused(t *testing.T) {
 // takes the authority to CHANGE the record rather than merely read it. A seat
 // that may read the company and not write it is refused.
 func TestAskingTakesTheAuthorityToChangeTheRecord(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	var recorder vatCheckRecorder
 	e.store.WithVatCheckEnqueue(recorder.enqueue())
@@ -296,6 +303,7 @@ func (e *dedupeEnv) asCompanyReader() context.Context {
 // 202 because the register can be slow or decline, and neither should hold the
 // request open — the verdict is read back from the GET.
 func TestRequestCompanyVatCheckHandler(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	var recorder vatCheckRecorder

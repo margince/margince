@@ -48,6 +48,7 @@ func asClassifier(e *loadEnv) context.Context {
 // reply, none of which an index can encode. A backlog built that way spends
 // model calls on messages nobody will ever see.
 func TestTheBacklogIsTheWaitingQueueAndNotEveryUnjudgedMail(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := e.buyer(t)
 	waiting := e.waitingFrom(t, "Can you confirm the price?", "buyer@customer.test", contact)
@@ -83,6 +84,7 @@ func TestTheBacklogIsTheWaitingQueueAndNotEveryUnjudgedMail(t *testing.T) {
 // It is the same defect waitingsql.go warns about for its own rules, one level
 // up: a filter after LIMIT lets rows nobody wants fill the scan.
 func TestAnOlderUnjudgedMessageSurvivesNewerJudgedOnes(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := e.buyer(t)
 	old := e.waitingAgedFrom(t, "The oldest question", "buyer@customer.test", contact, 28)
@@ -110,6 +112,7 @@ func TestAnOlderUnjudgedMessageSurvivesNewerJudgedOnes(t *testing.T) {
 // direct question. Two of the three messages that opened this work differ from
 // real work mostly in who was on the envelope.
 func TestTheCandidateCarriesWhoTheMessageWasAddressedTo(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := e.buyer(t)
 	activity := e.waitingFrom(t, "Monthly reporting", "paul@customer.test", contact)
@@ -131,6 +134,7 @@ func TestTheCandidateCarriesWhoTheMessageWasAddressedTo(t *testing.T) {
 // A message judged to ask nothing leaves the backlog and the queue, and the
 // hidden reading lists it under informs_us with its verdict.
 func TestAJudgedMessageLeavesTheBacklogAndKeepsItsVerdict(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := e.buyer(t)
 	activity := e.waitingFrom(t, "Monthly reporting", "paul@customer.test", contact)
@@ -167,6 +171,7 @@ func TestAJudgedMessageLeavesTheBacklogAndKeepsItsVerdict(t *testing.T) {
 // The first verdict stands. Two model calls on one message are two opinions,
 // and there is no rule here for preferring the later one.
 func TestASecondVerdictDoesNotOverwriteTheFirst(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := e.buyer(t)
 	activity := e.waitingFromToRep(t, "Can you confirm?", "buyer@customer.test", contact)
@@ -199,6 +204,7 @@ func TestASecondVerdictDoesNotOverwriteTheFirst(t *testing.T) {
 // a thread narrowed to its participants would otherwise have its subject and
 // body handed to a cloud tier.
 func TestAMessageNarrowedDuringTheModelCallIsNotJudged(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := e.buyer(t)
 	activity := e.waitingFrom(t, "Private matter", "buyer@customer.test", contact)
@@ -220,6 +226,7 @@ func TestAMessageNarrowedDuringTheModelCallIsNotJudged(t *testing.T) {
 // message away while the model was reading it, and coming back with an opinion
 // about it writes a verdict and an audit row for a message nobody will see.
 func TestAMessageArchivedDuringTheModelCallIsNotJudged(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := e.buyer(t)
 	activity := e.waitingFrom(t, "Filed away", "buyer@customer.test", contact)
@@ -241,6 +248,7 @@ func TestAMessageArchivedDuringTheModelCallIsNotJudged(t *testing.T) {
 // This one is a model-derived claim, and "which records did the classifier
 // touch" has to stay answerable from audit_log.
 func TestJudgingAMessageWritesAnAuditRow(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := e.buyer(t)
 	activity := e.waitingFrom(t, "Monthly reporting", "paul@customer.test", contact)
@@ -272,6 +280,7 @@ func TestJudgingAMessageWritesAnAuditRow(t *testing.T) {
 
 // A verdict this column does not define is refused before it reaches SQL.
 func TestAnUnknownVerdictIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := e.buyer(t)
 	activity := e.waitingFrom(t, "Anything", "buyer@customer.test", contact)

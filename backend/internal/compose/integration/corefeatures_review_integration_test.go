@@ -23,6 +23,7 @@ import (
 )
 
 func TestHiddenContactsStillReceiveTheirAccessAndErasureRights(t *testing.T) {
+	t.Parallel()
 	var disabled []string
 	e := apptest.SetupAppWithOriginOptions(t, func(string) []compose.Option { return []compose.Option{compose.WithDisabledCoreFeatures(disabled)} })
 	e.BootstrapWorkspace(t)
@@ -49,6 +50,7 @@ func TestHiddenContactsStillReceiveTheirAccessAndErasureRights(t *testing.T) {
 }
 
 func TestPublicCardsHideDisabledRecordsAndDependentCompanyNames(t *testing.T) {
+	t.Parallel()
 	var disabled []string
 	e := apptest.SetupAppWithOriginOptions(t, func(string) []compose.Option { return []compose.Option{compose.WithDisabledCoreFeatures(disabled)} })
 	e.BootstrapWorkspace(t)
@@ -74,6 +76,7 @@ func TestPublicCardsHideDisabledRecordsAndDependentCompanyNames(t *testing.T) {
 }
 
 func TestAQueuedMessageRechecksFeatureAvailabilityWhenItFires(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	company := p.seedCompany(t, "Queued company")

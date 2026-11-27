@@ -76,10 +76,8 @@ func (r *callRuntime) needed(ctx context.Context, capability extension.Capabilit
 	if err != nil {
 		return nil, err
 	}
-	for _, ext := range ComposedExtensions() {
-		if string(ext.Name) == r.unit && ext.Declares(capability) {
-			return ctx, nil
-		}
+	if ext := r.deps.composed.unit(r.unit); ext.Name != "" && ext.Declares(capability) {
+		return ctx, nil
 	}
 	return nil, fmt.Errorf("%w: add extension.Need %q to it", extension.ErrNotDeclared, capability)
 }

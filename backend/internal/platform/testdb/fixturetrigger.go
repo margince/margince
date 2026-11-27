@@ -7,7 +7,6 @@ package testdb
 
 import (
 	"errors"
-	"os"
 	"strings"
 	"testing"
 
@@ -36,7 +35,7 @@ func WithFixtureTriggerDisabled(t *testing.T, table, trigger string, mutate func
 func withFixtureOwnerTx(t *testing.T, mutate func(pgx.Tx) error) {
 	t.Helper()
 	ctx := t.Context()
-	cfg, err := pgx.ParseConfig(os.Getenv("MARGINCE_TEST_DSN"))
+	cfg, err := pgx.ParseConfig(For(t).OwnerDSN)
 	if err != nil {
 		t.Fatal("parsing fixture owner configuration")
 	}

@@ -19,6 +19,7 @@ import (
 // names the request it answers. The request reads as answered, is offered for
 // settlement, and a settled verdict closes its reminder.
 func TestASplitReplySettlesTheRequestItAnswers(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	store := storeKnowing(e)
 	request := seedEmailRequest(t, e, "Answered ask", "commitment", OwedVerdictAsksUs)

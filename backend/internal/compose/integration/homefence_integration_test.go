@@ -93,6 +93,7 @@ type fenceStatement struct {
 }
 
 func TestEveryNarrowingWriteAdvancesTheHomeFenceOncePerTransaction(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	cases := map[string]func(f fenceFixture) []fenceStatement{
 		"a contact changes owner": func(f fenceFixture) []fenceStatement {
@@ -173,6 +174,7 @@ func TestEveryNarrowingWriteAdvancesTheHomeFenceOncePerTransaction(t *testing.T)
 }
 
 func TestAWriteThatOnlyWidensReachLeavesTheHomeFence(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	cases := map[string]func(f fenceFixture) []fenceStatement{
 		"a message's subject is edited": func(f fenceFixture) []fenceStatement {

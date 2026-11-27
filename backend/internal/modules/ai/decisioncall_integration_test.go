@@ -56,6 +56,7 @@ func recordDecisionThenLadder(ctx context.Context, t *testing.T, meter *CallMete
 }
 
 func TestADecisionCallRoundTripsTheTrace(t *testing.T) {
+	t.Parallel()
 	env := setupRateStore(t)
 	ws, ctx := env.seedWorkspace(context.Background(), t)
 	recordDecisionThenLadder(ctx, t, NewCallMeter(env.dbFor(ws)))
@@ -89,6 +90,7 @@ func TestADecisionCallRoundTripsTheTrace(t *testing.T) {
 // The totals price what the task's LLM ladder would cost to re-run, so a
 // decision row in them would bill Jev's tokens at a chat model's rate.
 func TestServedTaskTotalsLeavesDecisionCallsOut(t *testing.T) {
+	t.Parallel()
 	env := setupRateStore(t)
 	ws, ctx := env.seedWorkspace(context.Background(), t)
 	recordDecisionThenLadder(ctx, t, NewCallMeter(env.dbFor(ws)))
@@ -103,6 +105,7 @@ func TestServedTaskTotalsLeavesDecisionCallsOut(t *testing.T) {
 }
 
 func TestTheRateLaneAcceptsDecisions(t *testing.T) {
+	t.Parallel()
 	env := setupRateStore(t)
 	ws, _ := env.seedWorkspace(context.Background(), t)
 	ctx := laneWriterCtx(ws)
@@ -123,6 +126,7 @@ func TestTheRateLaneAcceptsDecisions(t *testing.T) {
 // The list row is all a reader sees before opening a call, so a fallback whose
 // terminal attempt is a completion must still say a decision model was asked.
 func TestTheTraceListSaysWhichCallsAskedADecisionModel(t *testing.T) {
+	t.Parallel()
 	env := setupRateStore(t)
 	ws, ctx := env.seedWorkspace(context.Background(), t)
 	meter := NewCallMeter(env.dbFor(ws))
@@ -194,6 +198,7 @@ func assertAnswers(t *testing.T, attempts []CallAttempt, want ...*DecisionAnswer
 // The answer a floor is tuned from is the one that did not stand, and it is
 // kept on the decision row although that row is not the terminal one.
 func TestAFallenBackDecisionKeepsItsAnswer(t *testing.T) {
+	t.Parallel()
 	detail := decidedDetail(t, TaskSiteTriage, answered("company", 0.62))
 
 	assertAnswers(t, detail.Attempts, &DecisionAnswer{Choice: "company", Confidence: 0.62}, nil)
@@ -207,6 +212,7 @@ func TestAFallenBackDecisionKeepsItsAnswer(t *testing.T) {
 }
 
 func TestAnAcceptedDecisionKeepsItsAnswer(t *testing.T) {
+	t.Parallel()
 	detail := decidedDetail(t, TaskSiteTriage, answered("parked", 0.95))
 
 	assertAnswers(t, detail.Attempts, &DecisionAnswer{Choice: "parked", Confidence: 0.95})
@@ -217,6 +223,7 @@ func TestAnAcceptedDecisionKeepsItsAnswer(t *testing.T) {
 
 // A failed call answered nothing, and a zero confidence would claim it had.
 func TestAnErroredDecisionRecordsNoAnswer(t *testing.T) {
+	t.Parallel()
 	detail := decidedDetail(t, TaskSiteTriage, decisionReply{err: errors.New("down")})
 
 	assertAnswers(t, detail.Attempts, nil, nil)
@@ -228,6 +235,7 @@ func TestAnErroredDecisionRecordsNoAnswer(t *testing.T) {
 // The answer is a label and a number, never the prompt, so a task that may
 // keep no payload keeps it as well.
 func TestANoPayloadTaskStillKeepsTheDecisionAnswer(t *testing.T) {
+	t.Parallel()
 	if !NoPayload(TaskAccountScan) {
 		t.Fatalf("%s is no longer no_payload; pick a task that is", TaskAccountScan)
 	}

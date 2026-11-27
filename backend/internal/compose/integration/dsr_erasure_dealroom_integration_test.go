@@ -140,6 +140,7 @@ func readSeat(t *testing.T, e *Env, seat ids.DealRoomParticipantID) (name, email
 }
 
 func TestErasingASubjectWipesTheDealRoomSeatCarryingTheirAddress(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	seeded := seedBuyerInARoom(t, e, "rita.erasure@acme.test")
 
@@ -166,6 +167,7 @@ func TestErasingASubjectWipesTheDealRoomSeatCarryingTheirAddress(t *testing.T) {
 }
 
 func TestErasingASubjectLeavesNoRoomActivityTrailBehind(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	seeded := seedBuyerInARoom(t, e, "trail.erasure@acme.test")
 
@@ -205,6 +207,7 @@ func TestErasingASubjectLeavesNoRoomActivityTrailBehind(t *testing.T) {
 // the seat, the audit log hands the "erased" address straight back — an
 // erasure the record itself contradicts.
 func TestErasingASubjectTombstonesTheSeatSoTheAuditLogStopsAtIt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	seeded := seedBuyerInARoom(t, e, "audit.erasure@acme.test")
 
@@ -236,6 +239,7 @@ func TestErasingASubjectTombstonesTheSeatSoTheAuditLogStopsAtIt(t *testing.T) {
 // came off the seat while what the contact actually wrote stayed, readable by every
 // colleague with access to the room.
 func TestErasingASubjectTakesTheCommentsTheyWroteWithThem(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	buyer := seedBuyerInARoom(t, e, "rita@reviewer.example")
 	said := "We cannot accept clause 4 as drafted — Rita"
@@ -300,6 +304,7 @@ func commentsBy(t *testing.T, e *Env, seat ids.DealRoomParticipantID) int {
 // for rows written before that, which TestEraseDealRoomSeatsRefusesTheTombstoneAddress
 // in the privacy package covers directly.
 func TestTheTombstoneAddressCannotBeStoredOnAContact(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.As(e.AdminUser, nil, roomErasureAdmin)
 

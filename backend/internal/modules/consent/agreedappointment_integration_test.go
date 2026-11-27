@@ -48,6 +48,7 @@ func (e *resolveEnv) plantAppointment(t *testing.T, a appointment) ids.UUID {
 // A message about moving an appointment the contact agreed to continues it:
 // the requested follow-up is supported by the calendar meeting still to come.
 func TestMovingAnAgreedAppointmentIsARequestedFollowup(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	meeting := e.plantAppointment(t, accepted)
 
@@ -64,6 +65,7 @@ func TestMovingAnAgreedAppointmentIsARequestedFollowup(t *testing.T) {
 
 // An appointment is evidence only when it is real, still on, and the one named.
 func TestOnlyAnAgreedAppointmentStillToComeSupportsTheFollowup(t *testing.T) {
+	t.Parallel()
 	with := func(change func(*appointment)) appointment {
 		a := accepted
 		change(&a)
@@ -100,6 +102,7 @@ func TestOnlyAnAgreedAppointmentStillToComeSupportsTheFollowup(t *testing.T) {
 // A meeting proves the appointment, never the sender's purpose. Marketing about
 // it stays marketing, and a message that names no reason is not given one.
 func TestAnAppointmentLendsNoReasonToAMessageThatClaimsAnother(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	e.plantAppointment(t, accepted)
 

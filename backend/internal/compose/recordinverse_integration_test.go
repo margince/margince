@@ -79,6 +79,7 @@ func isArchived(t *testing.T, e *integration.Env, entityType string, id ids.UUID
 // the entry it reverses, so the create then reads as already undone. The
 // archive is itself an entry, and undoing it brings the contact back.
 func TestUndoingAMachineCreateArchivesTheRecordAndCanBeRedone(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	created, err := e.Contacts.CreateContact(machineCtx(e), contacts.CreateContactInput{FullName: "Imported Ida", Source: "import"})
 	if err != nil {
@@ -115,6 +116,7 @@ func TestUndoingAMachineCreateArchivesTheRecordAndCanBeRedone(t *testing.T) {
 // A colleague's work on the record wins: archiving it would take their edit out
 // of view along with the machine's create.
 func TestACreateAColleagueHasWorkedOnIsNotUndone(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	created, err := e.Contacts.CreateContact(machineCtx(e), contacts.CreateContactInput{FullName: "Imported Ida", Source: "import"})
 	if err != nil {
@@ -138,6 +140,7 @@ func TestACreateAColleagueHasWorkedOnIsNotUndone(t *testing.T) {
 // The mail reader archived a company; undoing that archive brings it back
 // through the contacts module's own un-archive.
 func TestUndoingAMachineArchiveBringsTheRecordBack(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := e.SeedCompany(t, "Noise GmbH", nil)
 	if _, err := NewProvider(e.Pool).Archive(machineCtx(e), datasource.EntityRef{Type: "company", ID: company}); err != nil {
@@ -174,6 +177,7 @@ func TestUndoingAMachineArchiveBringsTheRecordBack(t *testing.T) {
 // An archive already undone stays undone when the record is archived again:
 // an un-archive now would reverse the LATER archive, not the one on screen.
 func TestAnArchiveAlreadyUndoneStaysUndoneAfterALaterArchive(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := e.SeedCompany(t, "Twice Archived AG", nil)
 	provider := NewProvider(e.Pool)
@@ -195,6 +199,7 @@ func TestAnArchiveAlreadyUndoneStaysUndoneAfterALaterArchive(t *testing.T) {
 // A lead the router promoted is undone by demoting it: the lead is live again
 // and the contact the promotion created is archived with it.
 func TestUndoingAMachinePromotionDemotesTheLead(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct{ language, reason string }{
 		{"en", "Undone from the record's history."},
 		{"de", "Über den Verlauf des Datensatzes rückgängig gemacht."},
@@ -249,6 +254,7 @@ func TestUndoingAMachinePromotionDemotesTheLead(t *testing.T) {
 // A colleague who tagged or shortlisted an imported contact did their work on
 // the tag and the list, not the contact; archiving it would drop both.
 func TestACreateAColleagueTaggedIsNotUndone(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	created, err := e.Contacts.CreateContact(machineCtx(e), contacts.CreateContactInput{FullName: "Imported Ida", Source: "import"})
 	if err != nil {
@@ -270,6 +276,7 @@ func TestACreateAColleagueTaggedIsNotUndone(t *testing.T) {
 // imported one the survivor of their merge; archiving it would take the merged
 // contact's data with it.
 func TestACreateAColleagueMergedIntoIsNotUndone(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	created, err := e.Contacts.CreateContact(machineCtx(e), contacts.CreateContactInput{FullName: "Imported Ida", Source: "import"})
 	if err != nil {
@@ -291,6 +298,7 @@ func TestACreateAColleagueMergedIntoIsNotUndone(t *testing.T) {
 // that work in the correction ledger, not on the contact; archiving the contact
 // would take it out of view.
 func TestACreateAColleagueCorrectedIsNotUndone(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	created, err := e.Contacts.CreateContact(machineCtx(e), contacts.CreateContactInput{FullName: "Imported Ida", Source: "import"})
 	if err != nil {
@@ -314,6 +322,7 @@ func TestACreateAColleagueCorrectedIsNotUndone(t *testing.T) {
 // A deal a machine made is undone through the deals module's own archive, and
 // its archive is undone through the deals module's own un-archive.
 func TestUndoingAMachineDealCreateAndItsArchive(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	pipeline, open, _ := integration.DealFixture(t, e)
 	created, err := e.Deals.CreateDeal(machineCtx(e), deals.CreateDealInput{Source: "manual", Name: "Imported Fleet", PipelineID: pipeline, StageID: open})
@@ -337,6 +346,7 @@ func TestUndoingAMachineDealCreateAndItsArchive(t *testing.T) {
 
 // A note a machine logged is undone through the activities module's archive.
 func TestUndoingAMachineActivityCreateArchivesIt(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Noted Nora", nil)
 	subject := "captured"
@@ -360,6 +370,7 @@ func TestUndoingAMachineActivityCreateArchivesIt(t *testing.T) {
 // A teammate who may edit the contact, but neither owns it nor holds delete,
 // is told so up front.
 func TestACreateUndoIsRefusedToASeatThatMayNotArchive(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := ids.From[ids.UserKind](e.Rep2)
 	created, err := e.Contacts.CreateContact(machineCtx(e), contacts.CreateContactInput{FullName: "Imported Ida", Source: "import", OwnerID: &owner})
@@ -377,6 +388,7 @@ func TestACreateUndoIsRefusedToASeatThatMayNotArchive(t *testing.T) {
 // A demotion writes the contact as well as the lead, so a seat that may change
 // leads and not contacts is told so up front.
 func TestAPromotionUndoIsRefusedToASeatThatMayNotChangeTheContact(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	name, email := "Lena Lead", "lena@prospect.test"
 	lead, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{Source: "import", FullName: &name, Email: &email})

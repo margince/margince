@@ -84,6 +84,7 @@ func sendSeries(t *testing.T, c *consentEnv, series string) int {
 // anyway on that review sends the message once, and the send families count
 // one first Send and one confirmation.
 func TestARefusedSendResolvesOnceThroughItsReview(t *testing.T) {
+	t.Parallel()
 	c := setupScrapedConsent(t)
 	c.useReviewableMarketingProfile(t)
 

@@ -48,6 +48,7 @@ func seedAddresses(t *testing.T, e *Env, name string, in []contacts.ContactEmail
 }
 
 func TestTheServedAddressIsTheOneTheSharedRulePicks(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, AccountRepPerms)
 
@@ -145,6 +146,7 @@ func servedContact(ctx context.Context, t *testing.T, e *Env, id ids.UUID) crmco
 // happens to sit first, which is what a sort over `contact_email` without the
 // choosing rule would give.
 func TestTheContactsListSortsByTheAddressItPrints(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, AccountRepPerms)
 

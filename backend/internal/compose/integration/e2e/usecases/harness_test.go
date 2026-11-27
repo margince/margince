@@ -17,7 +17,6 @@ import (
 	"encoding/json"
 	"io"
 	"log/slog"
-	"os"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -108,13 +107,9 @@ func finishBoot(t *testing.T, e *apptest.AppEnv, scopes []string) *scenario {
 // is the weekly lane's question.
 func bootWithTranscriptReading(t *testing.T) *scenario {
 	t.Helper()
-	appDSN := os.Getenv("MARGINCE_TEST_APP_DSN")
-	if appDSN == "" {
-		t.Fatal("MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
 	// A separate pool from the one the harness opens: the inserter needs SOME
 	// pool reaching the same Postgres, not the same object.
-	wirePool, err := testdb.OwnPool(context.Background(), appDSN)
+	wirePool, err := testdb.OwnPool(context.Background(), testdb.For(t).AppDSN)
 	if err != nil {
 		t.Fatalf("opening the insert-only wiring pool: %v", err)
 	}

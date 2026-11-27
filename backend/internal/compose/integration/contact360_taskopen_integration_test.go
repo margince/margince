@@ -27,6 +27,7 @@ import (
 // past the cap is still owed, so its claim says the task is open. A claim
 // whose task is done or archived says it is not, and the page leaves it out.
 func TestALinkedTaskPastTheCapLeavesItsPromiseOwed(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	p := e.SeedPromiseThread(t)
 	pastCap := e.SeedPromiseTask(t, p)
@@ -86,6 +87,7 @@ func TestALinkedTaskPastTheCapLeavesItsPromiseOwed(t *testing.T) {
 // rep on another team. Their page still shows the promise, and says its task is
 // not open to them, so the promise is not counted as owed.
 func TestATaskTheReaderCannotSeeLeavesNoPromiseOwed(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	colleague := e.As(e.Rep3, []ids.UUID{e.Team2}, activityLifecyclePerms)
 	contact := ids.From[ids.ContactKind](e.SeedContact(t, "Lena Kunde", &e.Rep3))

@@ -19,6 +19,7 @@ import (
 )
 
 func TestAWorkedTaskAndAMachineRecordReadTheActorThroughThePassport(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	passport := ids.NewV7()
 	for _, tc := range []struct {

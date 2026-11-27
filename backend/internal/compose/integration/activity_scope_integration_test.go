@@ -39,6 +39,7 @@ var activityLifecyclePerms = principal.Permissions{
 }
 
 func TestActivityLifecycleMutatorsHonorRowScope(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 
@@ -92,6 +93,7 @@ func TestActivityLifecycleMutatorsHonorRowScope(t *testing.T) {
 // assignee or the host. Refusal is 403, because the row is visibly readable
 // and a 404 would have nothing left to hide.
 func TestAReadableActivityOfAnotherTeamIsNotEditable(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 
@@ -145,6 +147,7 @@ func TestAReadableActivityOfAnotherTeamIsNotEditable(t *testing.T) {
 // this conversation" and the conversation being silently repointed to
 // someone else before the approval is redeemed.
 func TestRelinkActivityBumpsVersion(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
 	first := e.SeedContact(t, "First Contact", &e.Rep1)

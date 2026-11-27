@@ -21,6 +21,7 @@ import (
 )
 
 func TestHistoricalTaskSurvivesMissingParticipantsAndReassignment(t *testing.T) {
+	t.Parallel()
 	e := setupTranscript(t)
 	meeting, _, err := e.Activities.LogActivity(e.ctx, activities.LogActivityInput{
 		Kind: "meeting", Source: "manual", SourceSystem: new("transcript"), Body: new(transcriptBody),
@@ -56,6 +57,7 @@ func TestHistoricalTaskSurvivesMissingParticipantsAndReassignment(t *testing.T) 
 }
 
 func TestCustomerPromiseDoesNotBecomeOurTaskWhenAttributionIsLost(t *testing.T) {
+	t.Parallel()
 	for _, state := range []string{"open", "dismissed", "archived contact"} {
 		t.Run(state, func(t *testing.T) {
 			e := setupTranscript(t)
@@ -93,6 +95,7 @@ func TestCustomerPromiseDoesNotBecomeOurTaskWhenAttributionIsLost(t *testing.T) 
 // An unattributed promise asks nobody, and once it is found to be the
 // customer's it is filed on them as theirs.
 func TestAnUnattributedPromiseLaterFoundToBeTheCustomersIsFiledOnThem(t *testing.T) {
+	t.Parallel()
 	e := setupTranscript(t)
 	first := e.read(t, cannedBrain{reply: ownedReply(t, "Priya Raman", 0.95)})
 	if len(first.ProposalIDs) != 0 || e.taskCount(t) != 0 {
@@ -115,6 +118,7 @@ func TestAnUnattributedPromiseLaterFoundToBeTheCustomersIsFiledOnThem(t *testing
 // Accepting a commitment reads its source mail as it stands now. Mail that is
 // gone refuses the task, and so does private mail the holder may not open.
 func TestACommitmentFromMailThatIsGoneOrNotTheHoldersIsRefused(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	source, owner := ids.NewV7(), ids.NewV7()
 	e.WsExec(t, `INSERT INTO activity (id, kind, subject, direction, occurred_at, source, captured_by)

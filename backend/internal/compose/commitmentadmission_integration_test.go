@@ -26,6 +26,7 @@ import (
 )
 
 func TestCommitmentAdmissionUsesCurrentEvidenceBeforeWriting(t *testing.T) {
+	t.Parallel()
 	asOf := time.Date(2026, 10, 18, 12, 0, 0, 0, time.UTC)
 	cases := []struct {
 		name   string
@@ -141,6 +142,7 @@ func TestCommitmentAdmissionUsesCurrentEvidenceBeforeWriting(t *testing.T) {
 }
 
 func TestCapturedMailWithoutASentDateDoesNotCreateFreshWork(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	address := seatAddress(t, e, e.Rep1)
 	raw := threadMail(address, "undated@counterparty.test", "Sun, 18 Oct 2026 10:00:00 +0000", "")
@@ -170,6 +172,7 @@ func TestCapturedMailWithoutASentDateDoesNotCreateFreshWork(t *testing.T) {
 }
 
 func TestHistoricalPromiseRemainsSearchableWithoutBecomingCurrentWork(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{FullName: "Pat Buyer"})
 	if err != nil {
@@ -221,6 +224,7 @@ func TestHistoricalPromiseRemainsSearchableWithoutBecomingCurrentWork(t *testing
 }
 
 func TestProviderArrivalContradictionRemainsReviewable(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	address := seatAddress(t, e, e.Rep1)
 	raw := threadMail(address, "conflicting-date@counterparty.test", "Fri, 18 Oct 2024 10:00:00 +0000", "")
@@ -267,6 +271,7 @@ func TestProviderArrivalContradictionRemainsReviewable(t *testing.T) {
 }
 
 func TestAdmissionDoesNotDemoteWatchedOrProposedCommitments(t *testing.T) {
+	t.Parallel()
 	for _, scenario := range []struct {
 		name           string
 		theirs, legacy bool
@@ -346,6 +351,7 @@ func TestAdmissionDoesNotDemoteWatchedOrProposedCommitments(t *testing.T) {
 }
 
 func TestCapturedSourceDateSurvivesOriginalRetention(t *testing.T) {
+	t.Parallel()
 	for _, dated := range []bool{true, false} {
 		t.Run(map[bool]string{true: "dated", false: "undated"}[dated], func(t *testing.T) {
 			e := integration.Setup(t)

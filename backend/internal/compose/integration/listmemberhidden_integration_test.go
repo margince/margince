@@ -22,6 +22,7 @@ import (
 // A caller may change a Shortlist and not read its record type. They are told
 // the record is not there, and the gate notes that it hid the record.
 func TestAShortlistMemberOfAnUnreadableTypeIsAHiddenRow(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	perms := integration.AdminPerms
 	perms.Objects = maps.Clone(perms.Objects)

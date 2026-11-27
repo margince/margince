@@ -60,6 +60,7 @@ func lineTexts(offer crmcontracts.Offer) []string {
 }
 
 func TestAnOfferTakesItsEntitysLanguageAndProductTextInIt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	vienna := seedVienna(t, e)
 	if _, err := e.Contacts.UpdateLegalEntity(e.Admin(), vienna.ID, contacts.LegalEntityInput{DefaultLanguage: new("de")}, nil); err != nil {
@@ -93,6 +94,7 @@ func TestAnOfferTakesItsEntitysLanguageAndProductTextInIt(t *testing.T) {
 }
 
 func TestALanguageWithoutATranslationTakesTheProductsName(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	product := seedRetainer(t, e)
 	pipeline, open, _ := DealFixture(t, e)
@@ -113,6 +115,7 @@ func TestALanguageWithoutATranslationTakesTheProductsName(t *testing.T) {
 // With no language on the entity, the offer takes its template's; with no
 // template, the default template locale's.
 func TestAnOfferWithoutAnEntityLanguageTakesItsTemplates(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	dealID := e.SeedDeal(t, "Template language deal", pipeline, open, &e.Rep1)
@@ -133,6 +136,7 @@ func TestAnOfferWithoutAnEntityLanguageTakesItsTemplates(t *testing.T) {
 }
 
 func TestADraftChangesItsLanguageAndASentOfferDoesNot(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	dealID := e.SeedDeal(t, "Language change deal", pipeline, open, &e.Rep1)
@@ -155,6 +159,7 @@ func TestADraftChangesItsLanguageAndASentOfferDoesNot(t *testing.T) {
 // A product's translations are read with product:read, changed with
 // product:update, and every change leaves an audit row on the product.
 func TestProductTranslationsFollowTheProductGrant(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	product := seedRetainer(t, e)
 	reader := e.As(e.Rep1, []ids.UUID{e.Team1}, offerRenderDeskPerms)
@@ -178,6 +183,7 @@ func TestProductTranslationsFollowTheProductGrant(t *testing.T) {
 // Changing a draft's language leaves the lines it already has, and the lines
 // added after take product text in the new language.
 func TestAChangedLanguageReachesOnlyTheLinesAddedAfterIt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	product := seedRetainer(t, e)
 	pipeline, open, _ := DealFixture(t, e)
@@ -200,6 +206,7 @@ func TestAChangedLanguageReachesOnlyTheLinesAddedAfterIt(t *testing.T) {
 // A template locale written with `_`, or one with no ISO 639-1 language,
 // still gives the offer a valid language rather than a refused row.
 func TestATemplateLocaleOfAnyShapeGivesAValidLanguage(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	dealID := e.SeedDeal(t, "Locale shape deal", pipeline, open, &e.Rep1)
@@ -221,6 +228,7 @@ func TestATemplateLocaleOfAnyShapeGivesAValidLanguage(t *testing.T) {
 // Two writes to one product's translation run one after the other, so each
 // audit row's before-image is the text the write replaced.
 func TestConcurrentTranslationWritesAuditTheTextTheyReplaced(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	product := seedRetainer(t, e)
 	desk := e.As(e.AdminUser, nil, offerLanguagePerms)

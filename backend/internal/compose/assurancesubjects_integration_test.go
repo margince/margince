@@ -141,6 +141,7 @@ func subjectsFor(t *testing.T, e *integration.Env) []assurance.Subject {
 }
 
 func TestEveryRuleInputHasAnAssembledSource(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	deal := dressedDeal(t, e)
 
@@ -184,6 +185,7 @@ func TestEveryRuleInputHasAnAssembledSource(t *testing.T) {
 // on a healthy connector is checked, and no connector at all is not_connected
 // rather than a repair that nobody can perform.
 func TestMailCoverageGradesTheConnectorNotTheTraffic(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	ctx := context.Background()
@@ -271,6 +273,7 @@ func TestMailCoverageGradesTheConnectorNotTheTraffic(t *testing.T) {
 // An empty native offers table is checked-and-found-nothing, not a broken
 // source: it lives in the same database as the run itself.
 func TestAnEmptyOfferTableIsCheckedNotUnavailable(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		for _, c := range AssuranceCoverage(context.Background(), tx, time.Now().UTC()) {

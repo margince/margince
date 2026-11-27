@@ -27,6 +27,7 @@ func removedLinksNamed(t *testing.T, e *Env, activity ids.UUID, entityType strin
 // A replacing relink names the links it removed in the audit row's before.
 // The single door and the named-set door both do it.
 func TestReplacingRelinkNamesTheRemovedLinksInTheAuditBefore(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.As(e.Rep1, nil, AdminPerms)
 	a, b, c := e.SeedContact(t, "Ingrid Sattler", nil), e.SeedContact(t, "Tomas Berg", nil), e.SeedContact(t, "Petra Lang", nil)
@@ -63,6 +64,7 @@ func TestReplacingRelinkNamesTheRemovedLinksInTheAuditBefore(t *testing.T) {
 
 // The project link is the second kind a replace removes.
 func TestReplacingAProjectLinkNamesTheOldProjectInTheAuditBefore(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.As(e.Rep1, nil, AdminPerms)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
@@ -84,6 +86,7 @@ func TestReplacingAProjectLinkNamesTheOldProjectInTheAuditBefore(t *testing.T) {
 // Company, deal and lead are the other link kinds a replace removes, each
 // through its own column.
 func TestReplacingACompanyDealOrLeadLinkNamesTheOldRecordInTheAuditBefore(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.As(e.Rep1, nil, AdminPerms)
 	pipeline, open, _ := DealFixture(t, e)
@@ -117,6 +120,7 @@ func TestReplacingACompanyDealOrLeadLinkNamesTheOldRecordInTheAuditBefore(t *tes
 
 // The thread door replaces each member's links and audits each one.
 func TestReplacingAThreadsLinksNamesTheRemovedLinksOnEveryMember(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.As(e.Rep1, nil, AdminPerms)
 	from, to := e.SeedContact(t, "Ingrid Sattler", nil), e.SeedContact(t, "Petra Lang", nil)

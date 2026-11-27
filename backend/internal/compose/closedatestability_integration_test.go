@@ -11,6 +11,7 @@ import (
 )
 
 func TestCloseDateNearFutureCommitmentDoesNotSlideOnConsecutiveNights(t *testing.T) {
+	t.Parallel()
 	e := setupCloseDate(t)
 	id := e.seedSweepDeal(t, "Stable estimate", e.early, nil, new(5), 3)
 	if err := e.sweep(); err != nil {

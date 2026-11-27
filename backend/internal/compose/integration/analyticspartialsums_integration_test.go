@@ -39,6 +39,7 @@ func askBaseSum(ctx context.Context, t *testing.T, e *Env) compose.AnalyticsAnsw
 }
 
 func TestAReaderMaskedFromTheAmountOrCurrencyGetsNoSumCountsOrCurrencies(t *testing.T) {
+	t.Parallel()
 	for _, field := range []string{"", "amount_minor", "currency"} {
 		t.Run("mask on "+field, func(t *testing.T) {
 			e := Setup(t)

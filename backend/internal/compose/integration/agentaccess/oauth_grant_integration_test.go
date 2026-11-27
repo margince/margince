@@ -28,6 +28,7 @@ import (
 // authority over a record, so it must not survive into the array every
 // RBAC bind reads.
 func TestCodeExchangeIssuesAGrantAndItsFirstRefreshToken(t *testing.T) {
+	t.Parallel()
 	o := setupOAuth(t)
 
 	code := o.authorize(t, url.Values{"scope": {"read write offline_access"}})
@@ -117,6 +118,7 @@ func TestCodeExchangeIssuesAGrantAndItsFirstRefreshToken(t *testing.T) {
 // and NO grant row is written — and the refusal is the same sentence a spent
 // code gets, because an unauthenticated caller may not probe account state.
 func TestCodeExchangeAfterTheHumanIsDeactivatedIssuesNoGrant(t *testing.T) {
+	t.Parallel()
 	o := setupOAuth(t)
 	ctx := context.Background()
 
@@ -158,6 +160,7 @@ func TestCodeExchangeAfterTheHumanIsDeactivatedIssuesNoGrant(t *testing.T) {
 // item in it, where a human reads it as a permission over records rather than
 // over the connection's lifetime — is asserted by the screen's own test.)
 func TestAuthorizeCarriesTheRenewalRequestToTheConsentScreen(t *testing.T) {
+	t.Parallel()
 	o := setupOAuth(t)
 
 	status, location, body, _ := o.authorizeNoFollow(t, url.Values{"scope": {"read offline_access"}})
@@ -181,6 +184,7 @@ func TestAuthorizeCarriesTheRenewalRequestToTheConsentScreen(t *testing.T) {
 // Without offline_access there is no refresh credential to hand back: a
 // client must not be given a long-lived token it never asked to store.
 func TestCodeExchangeWithoutOfflineAccessReturnsNoRefreshToken(t *testing.T) {
+	t.Parallel()
 	o := setupOAuth(t)
 
 	code := o.authorize(t, nil)

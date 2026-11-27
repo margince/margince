@@ -164,7 +164,7 @@ func (s *Service) seatInvitedTx(
 	if err := s.recordInvite(ctx, tx, seat.user, actor.UserID, in); err != nil {
 		return userRow{}, err
 	}
-	return readMemberTx(ctx, tx, actor, seat.user)
+	return readMemberTx(ctx, tx, s.rbac, actor, seat.user)
 }
 
 // refuseInviteTx takes the invite's locks and answers every refusal that
@@ -228,7 +228,7 @@ func emitInvited(
 
 // readMemberTx is GetUser's read inside a transaction the caller holds, so a
 // write can answer the member it committed without a second read after commit.
-func readMemberTx(ctx context.Context, tx pgx.Tx, actor Identity, userID ids.UserID) (userRow, error) {
+func readMemberTx(ctx context.Context, tx pgx.Tx, rbac RbacObjects, actor Identity, userID ids.UserID) (userRow, error) {
 	row, err := scanUser(tx.QueryRow(ctx, getUserQuery, true, userID))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return userRow{}, apperrors.ErrNotFound
@@ -237,7 +237,7 @@ func readMemberTx(ctx context.Context, tx pgx.Tx, actor Identity, userID ids.Use
 		return userRow{}, err
 	}
 	rows := []userRow{row}
-	grants, err := loadGrantsFor(ctx, tx, rowIDs(rows))
+	grants, err := loadGrantsFor(ctx, tx, rbac, rowIDs(rows))
 	if err != nil {
 		return userRow{}, err
 	}

@@ -82,6 +82,7 @@ func stopFailing(t *testing.T, e *channelConsentEnv, alarm MissedReceipts) {
 }
 
 func TestAnAlarmThatCannotBeRaisedKeepsTheReceiptOwed(t *testing.T) {
+	t.Parallel()
 	for name, alarm := range map[string]failingAlarm{
 		"nobody to tell":   {},
 		"a database error": {sql: `SELECT 1/0`},
@@ -108,6 +109,7 @@ func TestAnAlarmThatCannotBeRaisedKeepsTheReceiptOwed(t *testing.T) {
 // A raised alarm keeps nothing owed, and a notice under the receipt's key
 // settles a kept one.
 func TestOnlyAnUnraisedReceiptStaysOwed(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	stopFailing(t, e, raisedAlarm{})
 	if owed := owedReceipts(t, e); len(owed) != 0 {
@@ -132,6 +134,7 @@ func TestOnlyAnUnraisedReceiptStaysOwed(t *testing.T) {
 
 // A press is kept owed under its own message id, which nothing else records.
 func TestAPressWhoseAlarmFailsKeepsItsOwnReceiptOwed(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedMarketingPurpose(t, e)
 	owingAcknowledgement(t, e, true)
@@ -152,6 +155,7 @@ func TestAPressWhoseAlarmFailsKeepsItsOwnReceiptOwed(t *testing.T) {
 
 // A marker the database refuses is logged, and the stop still stands.
 func TestAMarkerThatCannotBeWrittenLeavesTheStopStanding(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	ctx := context.Background()
 	if _, err := e.owner.Exec(ctx, `
@@ -161,11 +165,6 @@ func TestAMarkerThatCannotBeWrittenLeavesTheStopStanding(t *testing.T) {
 		WHEN (NEW.action = 'optout_receipt_alarm_owed') EXECUTE FUNCTION refuse_owed_marker();`); err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() {
-		if _, err := e.owner.Exec(ctx, `DROP TRIGGER refuse_owed_marker ON system_log; DROP FUNCTION refuse_owed_marker()`); err != nil {
-			t.Errorf("removing the test trigger: %v", err)
-		}
-	})
 	stopFailing(t, e, failingAlarm{})
 	if owed := owedReceipts(t, e); len(owed) != 0 {
 		t.Fatalf("owed %+v, want the refused marker to leave none", owed)

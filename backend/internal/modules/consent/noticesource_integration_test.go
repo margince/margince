@@ -17,6 +17,7 @@ import (
 )
 
 func TestAssessedSourceControlsTheDisclosureAndSurvivesAutomaticCorrections(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	ctx := officerCtx(e)
 	now := time.Date(2026, 6, 1, 12, 0, 0, 0, time.UTC)
@@ -74,6 +75,7 @@ func TestAssessedSourceControlsTheDisclosureAndSurvivesAutomaticCorrections(t *t
 }
 
 func TestUndatedSourceReviewsPageWithoutAStatutoryDeadline(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	ctx := officerCtx(e)
 	for range 2 {
@@ -98,6 +100,7 @@ func TestUndatedSourceReviewsPageWithoutAStatutoryDeadline(t *testing.T) {
 }
 
 func TestUnverifiedLegacyDeadlinesStayOffTheAgendaBeforeCorrection(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	ctx := officerCtx(e)
 	due := time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
@@ -125,6 +128,7 @@ func TestUnverifiedLegacyDeadlinesStayOffTheAgendaBeforeCorrection(t *testing.T)
 }
 
 func TestUnverifiedLegacyCasesUseTheReviewSurfaceBeforeCorrection(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	ctx := officerCtx(e)
 	acquisition := seedAcquisition(t, e, "unknown_legacy")
@@ -172,6 +176,7 @@ func TestUnverifiedLegacyCasesUseTheReviewSurfaceBeforeCorrection(t *testing.T) 
 }
 
 func TestSourceReviewCannotBeExcusedWithoutAnAssessment(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	ctx := officerCtx(e)
 	acquisition := seedAcquisition(t, e, "unknown_legacy")
@@ -190,6 +195,7 @@ func TestSourceReviewCannotBeExcusedWithoutAnAssessment(t *testing.T) {
 }
 
 func TestUndatedIndirectAcquisitionSurvivesAutomaticCorrections(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	ctx := officerCtx(e)
 	acquisition := seedAcquisition(t, e, "purchased_or_imported")
@@ -232,6 +238,7 @@ func TestUndatedIndirectAcquisitionSurvivesAutomaticCorrections(t *testing.T) {
 }
 
 func TestUnknownSourceBounceReturnsToReviewAndClearsARetiredOwner(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	ctx := officerCtx(e)
 	id := seedNoticeCase(t, e, "unknown_legacy", []string{noticeRouteRecordConfirmation})
@@ -265,6 +272,7 @@ func TestUnknownSourceBounceReturnsToReviewAndClearsARetiredOwner(t *testing.T) 
 }
 
 func TestMixedQueuePaginationKeepsItsPositionAcrossSourceCorrection(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	ctx := officerCtx(e)
 	legalDue := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)

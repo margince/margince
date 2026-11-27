@@ -45,6 +45,7 @@ func stageMailedRequest(t *testing.T) (*integration.Env, crmcontracts.Approval) 
 // The email names the company, the source mail, the promiser, the promise and
 // why the reader is asked, in the card's own words.
 func TestACommitmentEmailNamesWhatTheCardShowsItsPromiser(t *testing.T) {
+	t.Parallel()
 	e, wire := stageMailedRequest(t)
 	words := mailcopy.For("en")
 	reader := e.As(e.Rep2, []ids.UUID{e.Team1}, integration.AdminPerms)
@@ -72,6 +73,7 @@ func TestACommitmentEmailNamesWhatTheCardShowsItsPromiser(t *testing.T) {
 // A seat who may not read the private source gets no line about it and no
 // quote. One who may not see the company gets no heading.
 func TestACommitmentEmailLeavesOutWhatTheReaderMayNotSee(t *testing.T) {
+	t.Parallel()
 	e, wire := stageMailedRequest(t)
 	e.WsExec(t, `UPDATE contact SET visibility = 'owner', owner_id = $1
 		 WHERE id IN (SELECT contact_id FROM activity_link WHERE entity_type = 'contact' AND contact_id IS NOT NULL)`, e.Rep2)
@@ -101,6 +103,7 @@ func TestACommitmentEmailLeavesOutWhatTheReaderMayNotSee(t *testing.T) {
 // Only the single email reads a commitment's facts. The digest line reads
 // none, so no failed read of them can cost the seat the whole digest.
 func TestADigestLineReadsNoCommitmentFacts(t *testing.T) {
+	t.Parallel()
 	e, wire := stageMailedRequest(t)
 	id := ids.From[ids.ApprovalKind](ids.UUID(wire.Id))
 	attempt := notices.EmailAttempt{

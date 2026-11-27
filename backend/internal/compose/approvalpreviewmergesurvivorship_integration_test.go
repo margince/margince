@@ -22,6 +22,7 @@ import (
 )
 
 func TestContactMergePreviewMatchesTheSurvivorFields(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.As(e.AdminUser, nil, integration.AdminPerms)
 	source, err := e.Contacts.CreateContact(ctx, contacts.CreateContactInput{FullName: "Source Contact", Title: new("Director"), Address: &crmcontracts.Address{City: new("Berlin")}, Source: "manual"})
@@ -53,6 +54,7 @@ func TestContactMergePreviewMatchesTheSurvivorFields(t *testing.T) {
 }
 
 func TestCompanyMergePreviewKeepsExistingFieldsAndWholeAddresses(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.As(e.AdminUser, nil, integration.AdminPerms)
 	source, err := e.Contacts.CreateCompany(ctx, contacts.CreateCompanyInput{DisplayName: "Source account", LegalName: new("Source legal name"), Description: new("Discard this description"), Industry: new("manufacturing"), Address: &crmcontracts.Address{City: new("Berlin"), PostalCode: new("10115")}, Source: "manual"})
@@ -138,6 +140,7 @@ func checkMergeAuditFields(ctx context.Context, t *testing.T, e *integration.Env
 }
 
 func TestMergeSurvivorshipRequiresAuthorityOverBothRecords(t *testing.T) {
+	t.Parallel()
 	for _, kind := range []string{"contact", "company"} {
 		t.Run(kind, func(t *testing.T) {
 			e := integration.Setup(t)

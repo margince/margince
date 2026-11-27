@@ -14,6 +14,7 @@ import (
 )
 
 func TestTheNightlyScanReopensAPhonePairAfterANumberIsRevived(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.seedContact(ctx, t, "Ola Berg", []string{"ola@phone.example"}, []string{"+49305550101"})

@@ -31,6 +31,7 @@ func boughtFieldOf(t *testing.T, e *Env, store *contacts.Store, subject ids.UUID
 }
 
 func TestAProviderValueIsPaidOnlyWhenASeatsRunSpentCredits(t *testing.T) {
+	t.Parallel()
 	cases := map[string]struct {
 		trigger     string
 		credits     int

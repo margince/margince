@@ -75,6 +75,7 @@ func walkRestoreAuthority(t *testing.T, e *dedupeEnv, record restoreRecord) {
 }
 
 func TestAContactRestoreAsksTheArchivesOwnAuthority(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	created, err := e.store.CreateContact(e.as(), CreateContactInput{FullName: "Owned Olga", Source: "test"})
 	if err != nil {
@@ -94,6 +95,7 @@ func TestAContactRestoreAsksTheArchivesOwnAuthority(t *testing.T) {
 }
 
 func TestACompanyRestoreAsksTheArchivesOwnAuthority(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	created, err := e.store.CreateCompany(e.as(), CreateCompanyInput{DisplayName: "Owned Works", Source: "test"})
 	if err != nil {
@@ -116,6 +118,7 @@ func TestACompanyRestoreAsksTheArchivesOwnAuthority(t *testing.T) {
 // commits while the restore waits on the lock moves the contact to another
 // owner, and the former owner's restore is refused.
 func TestAContactRestoreRacingAReassignmentIsRefusedForTheFormerOwner(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	created, err := e.store.CreateContact(ctx, CreateContactInput{FullName: "Handed Hanna", Source: "test"})

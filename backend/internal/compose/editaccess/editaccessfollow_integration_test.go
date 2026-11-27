@@ -51,6 +51,7 @@ func noticesTo(t *testing.T, e *integration.Env, member ids.UUID, kind string) i
 // A deal moved through its writer closes the request put to its former owner,
 // and the colleague who asked is told.
 func TestADealThatChangedHandsClosesItsEditAccessRequest(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	grantEditorRole(t, e, e.Rep1, e.Rep2, e.Rep3)
 	deal := seedRecord(t, e, "deal", e.Rep1)
@@ -71,6 +72,7 @@ func TestADealThatChangedHandsClosesItsEditAccessRequest(t *testing.T) {
 // A lead tells nobody when it moves. So the next ask closes the request put to
 // its former owner, and puts a new one to its owner now.
 func TestAskingAboutALeadThatChangedHandsAsksItsNewOwner(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	grantEditorRole(t, e, e.Rep1, e.Rep2, e.Rep3)
 	lead := seedRecord(t, e, "lead", e.Rep1)
@@ -92,6 +94,7 @@ func TestAskingAboutALeadThatChangedHandsAsksItsNewOwner(t *testing.T) {
 // Only the owner the request is put to gives the access. An administrator who
 // may change the lead does not.
 func TestOnlyTheOwnerGivesEditAccess(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	grantEditorRole(t, e, e.Rep1, e.Rep3)
 	lead := seedRecord(t, e, "lead", e.Rep1)
@@ -107,6 +110,7 @@ func TestOnlyTheOwnerGivesEditAccess(t *testing.T) {
 
 // A request nobody answered within its window tells the colleague who asked.
 func TestAnExpiredEditAccessRequestTellsTheColleagueWhoAsked(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	grantEditorRole(t, e, e.Rep1, e.Rep3)
 	project := seedRecord(t, e, "project", e.Rep1)
@@ -125,6 +129,7 @@ func TestAnExpiredEditAccessRequestTellsTheColleagueWhoAsked(t *testing.T) {
 // A record the asker lost sight of answers as if it did not exist. That holds
 // for a new ask, and for the request made while they could still see it.
 func TestARecordOutsideTheAskersSightAnswersNotFound(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	grantEditorRole(t, e, e.Rep1, e.Rep3)
 	contact := e.SeedContact(t, "Ines Brandt", &e.Rep1)
@@ -152,6 +157,7 @@ func hide(t *testing.T, e *integration.Env, contact ids.UUID) {
 // The line telling the colleague how their request ended names the record only
 // while they may still see it.
 func TestTheOutcomeLineNamesOnlyARecordTheColleagueStillSees(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	grantEditorRole(t, e, e.Rep1, e.Rep3)
 	contact := e.SeedContact(t, "Ines Brandt", &e.Rep1)
@@ -168,6 +174,7 @@ func TestTheOutcomeLineNamesOnlyARecordTheColleagueStillSees(t *testing.T) {
 // Erasing a website lead nobody could tell closes the requests on it, and nobody
 // is sent a line about a lead that no longer exists.
 func TestErasingAnUntoldLeadClosesItsEditAccessRequest(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	grantEditorRole(t, e, e.Rep1, e.Rep3)
 	lead := seedRecord(t, e, "lead", e.Rep1)

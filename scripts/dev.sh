@@ -574,12 +574,9 @@ stack_server_pids() { # dsn [redis_addr]
   done
 }
 
-# The Redis instance serves 81 logical databases in three blocks that must not
-# overlap (docker-compose.dev.yml says the same): 0 is the primary
-# worktree's stack, 1..64 belong to the parallel integration lane one per
-# package, and 65..80 are these per-worktree stacks. A stack landing in the test
-# range would have its streams FLUSHDB'd mid-run by a suite that believes it
-# owns the database.
+# The dev Redis serves 81 logical databases (docker-compose.dev.yml): 0 is the
+# primary worktree's stack and 65..80 are these per-worktree stacks. The
+# integration lane leases its databases on its own server, redis-test.
 DEV_REDIS_DB_MIN=65
 DEV_REDIS_DB_MAX=80
 
@@ -600,9 +597,8 @@ read_registry() { # slug
     # shellcheck disable=SC1090
     . "$state_file"
     if [[ "$other" == "$want" ]]; then
-      # A database recorded before the block moved is not ours to reclaim. It
-      # may now belong to the integration lane, whose fixtures flush the
-      # database they are given between tests.
+      # A database recorded outside the block is not ours to reclaim: a stack
+      # takes its database from the block and from nowhere else.
       if [[ -n "$REDIS_DB" ]] \
         && (( REDIS_DB >= DEV_REDIS_DB_MIN && REDIS_DB <= DEV_REDIS_DB_MAX )); then
         MINE_DB="$REDIS_DB"
@@ -695,11 +691,10 @@ claim_stack() { # slug → "<redis_db> <fe_port>"
   if grep -q '^BACKEND_PID=[0-9]' "${root}/${want}/env" 2>/dev/null; then
     # A started stack whose database left the block cannot be handed a new one
     # here: this path returns without writing, so the number would be recorded
-    # nowhere and the next overlapping start would pick it again. The running
-    # stack is also on a database the lane now owns, which flushes it.
+    # nowhere and the next overlapping start would pick it again.
     if [[ -z "$MINE_DB" ]]; then
       echo "FAIL: this worktree's stack is on a Redis database outside ${DEV_REDIS_DB_MIN}..${DEV_REDIS_DB_MAX}," >&2
-      echo "  which the integration lane now owns and flushes between tests." >&2
+      echo "  the block dev stacks take their databases from." >&2
       echo "  Stop it and start it again: make dev-stop && make dev" >&2
       return 1
     fi

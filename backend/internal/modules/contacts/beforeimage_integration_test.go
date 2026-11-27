@@ -91,6 +91,7 @@ func wantImage(t *testing.T, image map[string]any, label, key string, want any) 
 // what each column held: nothing for the split pair, and for full_name the one
 // short spelling the parser had refused to split.
 func TestACompletedNameRecordsWhatEachColumnHeld(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -124,6 +125,7 @@ func TestACompletedNameRecordsWhatEachColumnHeld(t *testing.T) {
 // columns never reach an audit image at all — so the human stays their latest
 // writer and an agent's patch of them still stages for approval.
 func TestACompletedNameNeverRecordsAColumnAHumanTyped(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -156,6 +158,7 @@ func TestACompletedNameNeverRecordsAColumnAHumanTyped(t *testing.T) {
 // The site-read fill records what the page filled and what each field held —
 // nothing — and keeps the page that said so out of the images.
 func TestASiteContactFillRecordsTheEmptyFields(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	contactID, companyID := e.seedEmployedContact(ctx, t,
@@ -188,6 +191,7 @@ func TestASiteContactFillRecordsTheEmptyFields(t *testing.T) {
 // says what that column held. The mail it read is context about the write and
 // stays out of the images.
 func TestASignatureFillRecordsTheEmptyColumn(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	contactID, _ := e.seedEmployedContact(ctx, t,
@@ -221,6 +225,7 @@ func TestASignatureFillRecordsTheEmptyColumn(t *testing.T) {
 // That writer records the field it filled, so the field's history is asserted by
 // WHOSE row stands rather than by there being none: one row, and the signature's.
 func TestASiteContactFillNeverRecordsAFieldAlreadyAnswered(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	contactID, companyID := e.seedEmployedContact(ctx, t,
@@ -253,6 +258,7 @@ func TestASiteContactFillNeverRecordsAFieldAlreadyAnswered(t *testing.T) {
 // it missed is context about the breach and rides evidence, because a lead has
 // no `deadline` field for field history to project one onto.
 func TestASLABreachSeparatesTheColumnFromTheDeadline(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	e.enableFirstResponseSLA(t)
 	now := time.Now().UTC()
@@ -301,6 +307,7 @@ func TestASLABreachSeparatesTheColumnFromTheDeadline(t *testing.T) {
 // field with two histories — a change from one writer and a blank row from
 // another — is what a reader of the field's history cannot reconcile.
 func TestASignatureFillRecordsTheEmptySidecarFields(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	contactID, _ := e.seedEmployedContact(ctx, t,

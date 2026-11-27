@@ -51,6 +51,34 @@ func TestTheReportKindsAreTheContractsKinds(t *testing.T) {
 	}
 }
 
+// The composition serves the reports of the units it registered, each over the
+// unit's own kind, and a core population over no kind.
+func TestACompositionServesItsUnitsReports(t *testing.T) {
+	composed, err := RegisterExtensions(composableAll([]extension.Extension{{
+		Name: "reports-demo", RecordKinds: []extension.RecordKindDeclaration{visitKind("ext_reports_demo")},
+		ReportCounts: []extension.ReportCount{{Name: "visits", Label: "Visits", Population: "visit"}},
+		ReportBreakdowns: []extension.ReportBreakdown{
+			{Name: "by_region", Label: "By region", Population: "pipeline-current", By: "cf_regions"},
+		},
+	}}), nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := composed.reports()
+	if len(got) != 2 || got[0].name != "ext:reports-demo:by_region" || got[1].name != "ext:reports-demo:visits" {
+		t.Fatalf("reports = %+v, want by_region and visits in name order", got)
+	}
+	if got[0].overKind != nil {
+		t.Errorf("the core population resolved to kind %s", got[0].overKind.Name)
+	}
+	if kind := got[1].overKind; kind == nil || kind.Table != "ext_reports_demo_visit" {
+		t.Errorf("the count's kind = %+v, want the unit's visit kind", kind)
+	}
+	if (*Extensions)(nil).reports() != nil {
+		t.Error("a composition with no units served reports")
+	}
+}
+
 func TestAFailingReportIsListedUnavailableAndTheReportsAfterItStillAnswer(t *testing.T) {
 	broken := registeredReport{name: "ext:demo:broken", label: "Broken", kind: extReportBreakdown, unit: "demo", population: "ext:demo:gone", by: "site"}
 	healthy := registeredReport{name: "ext:demo:visits", label: "Visits", kind: extReportCount, unit: "demo", population: "ext:demo:visit"}

@@ -35,6 +35,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
@@ -46,6 +47,7 @@ import (
 // confidence below the floor stays below it on the re-ask too, which is how
 // the terminal-unsure path is reached.
 type scriptedVerdictBrain struct {
+	ownerDSN   string
 	verdicts   map[string]string  // by disposition id; default the contact kind
 	confidence map[string]float64 // by disposition id; default 0.95
 	calls      int
@@ -60,7 +62,7 @@ func (s *scriptedVerdictBrain) Complete(ctx context.Context, req model.Request) 
 	if len(askedFor) == 0 {
 		return model.Response{}, fmt.Errorf("verdict prompt declared no data boundary, or fenced no sender: %q", req.System)
 	}
-	scripted, err := recordsByRef(ctx, req, dispositionShown,
+	scripted, err := recordsByRef(ctx, s.ownerDSN, req, dispositionShown,
 		append(slices.Collect(maps.Keys(s.verdicts)), slices.Collect(maps.Keys(s.confidence))...))
 	if err != nil {
 		return model.Response{}, err
@@ -88,11 +90,12 @@ func (s *scriptedVerdictBrain) Complete(ctx context.Context, req model.Request) 
 // A `real` verdict creates the records capture withheld, and does so on the
 // transaction that resolved the ledger row.
 func TestVerdictRealCreatesTheCounterpartyCaptureWithheld(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	activityID := seedCapturedMail(t, e, "ada@realco.example", "quote request")
 	dispositionID := seedPendingDisposition(t, e, "ada@realco.example", "realco.example", activityID)
 
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindContact}}
+	brain := &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN, verdicts: map[string]string{dispositionID.String(): capture.KindContact}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
@@ -126,13 +129,14 @@ func TestVerdictRealCreatesTheCounterpartyCaptureWithheld(t *testing.T) {
 // A `noise` verdict hides the message at once and redacts it only after the
 // undo window — the two stages that make an automatic hide safe.
 func TestVerdictNoiseHidesNowAndRedactsOnlyAfterTheUndoWindow(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	// Bulk-attested: this message carried List-Unsubscribe, so it is the kind a
 	// noise verdict may eventually destroy rather than only hide.
 	activityID := seedBulkCapturedMail(t, e, "blast@bulk.example", "🚀 growth hacks")
 	dispositionID := seedPendingDisposition(t, e, "blast@bulk.example", "bulk.example", activityID)
 
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindSpam}}
+	brain := &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN, verdicts: map[string]string{dispositionID.String(): capture.KindSpam}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
@@ -189,12 +193,14 @@ func TestVerdictNoiseHidesNowAndRedactsOnlyAfterTheUndoWindow(t *testing.T) {
 // Below the floor twice is terminally `unsure`: nothing is created, nothing is
 // hidden, and a human is offered the decision instead.
 func TestVerdictBelowTheFloorAbstainsAndAsksAHuman(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	activityID := seedCapturedMail(t, e, "maybe@ambiguous.example", "hello")
 	dispositionID := seedPendingDisposition(t, e, "maybe@ambiguous.example", "ambiguous.example", activityID)
 
 	// The model says "noise" — but never confidently enough to act on it.
 	brain := &scriptedVerdictBrain{
+		ownerDSN:   testdb.For(t).OwnerDSN,
 		verdicts:   map[string]string{dispositionID.String(): capture.KindSpam},
 		confidence: map[string]float64{dispositionID.String(): 0.4},
 	}
@@ -340,6 +346,7 @@ func countIn(t *testing.T, e *integration.Env, query string, args ...any) int {
 // sender per call makes that unrepresentable, so this asserts the property
 // directly rather than testing a defence against a shape that no longer exists.
 func TestEachSendersPromptContainsOnlyThatSendersText(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	victimActivity := seedCapturedMail(t, e, "victim@realprospect.example", "quote please")
 	seedPendingDisposition(t, e, "victim@realprospect.example", "realprospect.example", victimActivity)
@@ -435,6 +442,7 @@ func (b *promptRecordingBrain) Complete(_ context.Context, req model.Request) (m
 // by TestEachSendersPromptContainsOnlyThatSendersText; this is the other half —
 // that one sender's verdict does not spill onto its neighbour's records.
 func TestEachSenderIsJudgedOnItsOwnMessage(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	victimActivity := seedCapturedMail(t, e, "victim@realprospect.example", "quote please")
 	victim := seedPendingDisposition(t, e, "victim@realprospect.example", "realprospect.example", victimActivity)
@@ -442,6 +450,7 @@ func TestEachSenderIsJudgedOnItsOwnMessage(t *testing.T) {
 	attacker := seedPendingDisposition(t, e, "attacker@evil.example", "evil.example", attackerActivity)
 
 	brain := &scriptedVerdictBrain{
+		ownerDSN: testdb.For(t).OwnerDSN,
 		verdicts: map[string]string{
 			victim.String():   capture.KindContact,
 			attacker.String(): capture.KindSpam,
@@ -502,12 +511,13 @@ func backdateArchive(t *testing.T, e *integration.Env, id ids.UUID) {
 // written by the time it is needed — the claim is spent, so a second resolve
 // would match nothing and report success.
 func TestAnAddressErasedBeforeTheVerdictRecordsSuppressedNotReal(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	activityID := seedCapturedMail(t, e, "gone@erased.example", "hello")
 	dispositionID := seedPendingDisposition(t, e, "gone@erased.example", "erased.example", activityID)
 	suppressAddress(t, e, "gone@erased.example")
 
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindContact}}
+	brain := &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN, verdicts: map[string]string{dispositionID.String(): capture.KindContact}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
@@ -530,7 +540,7 @@ func suppressAddress(t *testing.T, e *integration.Env, email string) {
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO erasure_suppression (kind, value_hash)
-			VALUES ('email', $1)`, storekit.SuppressionHash(email))
+			VALUES ('email', $1)`, storekit.SuppressionHash(t.Context(), email))
 		return err
 	})
 	if err != nil {
@@ -544,6 +554,7 @@ func suppressAddress(t *testing.T, e *integration.Env, email string) {
 // contact named after the company — a real import produced contacts called
 // "Docsign" (on a vendor's support address), "VINASA" and "Expensify".
 func TestOnlyTheContactKindCreatesAContact(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	cases := []struct {
 		kind         string
@@ -569,7 +580,7 @@ func TestOnlyTheContactKindCreatesAContact(t *testing.T) {
 		t.Run(tc.kind, func(t *testing.T) {
 			activity := seedCapturedMail(t, e, tc.email, "hello")
 			id := seedPendingDisposition(t, e, tc.email, "example", activity)
-			brain := &scriptedVerdictBrain{verdicts: map[string]string{id.String(): tc.kind}}
+			brain := &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN, verdicts: map[string]string{id.String(): tc.kind}}
 			engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 			if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 				t.Fatalf("verdict pass: %v", err)
@@ -617,6 +628,7 @@ func TestOnlyTheContactKindCreatesAContact(t *testing.T) {
 // create the contact and fail this — the assertion is not merely that the brain
 // went unused.
 func TestARoleMailboxIsSettledWithoutAskingTheModel(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	for _, address := range []string{
 		"support+idy4dl62-9rnjp@getmyinvoices.zendesk.com",
@@ -626,7 +638,7 @@ func TestARoleMailboxIsSettledWithoutAskingTheModel(t *testing.T) {
 		t.Run(address, func(t *testing.T) {
 			activity := seedCapturedMail(t, e, address, "hello")
 			id := seedPendingDisposition(t, e, address, "example", activity)
-			brain := &scriptedVerdictBrain{}
+			brain := &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN}
 			engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 			if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 				t.Fatalf("verdict pass: %v", err)
@@ -667,6 +679,7 @@ func TestARoleMailboxIsSettledWithoutAskingTheModel(t *testing.T) {
 // address and the ledger alone still land — a role mailbox is one of them — and
 // every row that genuinely needs a model reaches a human instead of nobody.
 func TestAnInstallationWithNoModelStillAnswersItsSenders(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	// No brain at all: this is an installation that never configured AI.
 	engine := NewCounterpartyVerdictEngine(e.Pool, nil, CaptureConfig{}, slog.Default())
@@ -698,10 +711,12 @@ func TestAnInstallationWithNoModelStillAnswersItsSenders(t *testing.T) {
 // The ledger records how sure the answer was, so a 0.86 answer and a 0.99 one
 // stay apart after the floor judged them.
 func TestTheLedgerRecordsHowSureTheVerdictWas(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	activityID := seedCapturedMail(t, e, "ada@realco.example", "quote request")
 	dispositionID := seedPendingDisposition(t, e, "ada@realco.example", "realco.example", activityID)
 	brain := &scriptedVerdictBrain{
+		ownerDSN:   testdb.For(t).OwnerDSN,
 		verdicts:   map[string]string{dispositionID.String(): capture.KindContact},
 		confidence: map[string]float64{dispositionID.String(): 0.91},
 	}
@@ -722,11 +737,12 @@ func TestTheLedgerRecordsHowSureTheVerdictWas(t *testing.T) {
 // 1.0 as one that was certain — both are claims about a measurement that was
 // never taken. NULL is the honest record.
 func TestADeterministicAnswerRecordsNoConfidence(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	// A role mailbox: settled from the address, with no model call at all.
 	activityID := seedCapturedMail(t, e, "billing@realco.example", "your invoice")
 	dispositionID := seedPendingDisposition(t, e, "billing@realco.example", "realco.example", activityID)
-	brain := &scriptedVerdictBrain{}
+	brain := &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
@@ -747,6 +763,7 @@ func TestADeterministicAnswerRecordsNoConfidence(t *testing.T) {
 // record in a shared CRM. Between the two floors the sender becomes a question
 // for a contact rather than a contact — escalated, not dismissed.
 func TestAWeakContactAnswerAsksAHumanWhileAWeakNoiseAnswerStands(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	t.Run("a contact answer below the create floor escalates", func(t *testing.T) {
 		activityID := seedCapturedMail(t, e, "maybe@realco.example", "hello")
@@ -754,6 +771,7 @@ func TestAWeakContactAnswerAsksAHumanWhileAWeakNoiseAnswerStands(t *testing.T) {
 		// Above the ordinary floor, below the create floor — and the same on the
 		// re-ask, so the lane runs out of confidence rather than of attempts.
 		brain := &scriptedVerdictBrain{
+			ownerDSN:   testdb.For(t).OwnerDSN,
 			verdicts:   map[string]string{dispositionID.String(): capture.KindContact},
 			confidence: map[string]float64{dispositionID.String(): 0.75},
 		}
@@ -776,6 +794,7 @@ func TestAWeakContactAnswerAsksAHumanWhileAWeakNoiseAnswerStands(t *testing.T) {
 		activityID := seedCapturedMail(t, e, "blast@spam.example", "offer")
 		dispositionID := seedPendingDisposition(t, e, "blast@spam.example", "spam.example", activityID)
 		brain := &scriptedVerdictBrain{
+			ownerDSN:   testdb.For(t).OwnerDSN,
 			verdicts:   map[string]string{dispositionID.String(): capture.KindSpam},
 			confidence: map[string]float64{dispositionID.String(): 0.75},
 		}

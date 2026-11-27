@@ -81,6 +81,7 @@ func liftRestrictionDirectly(t *testing.T, e *integration.Env, contact ids.UUID)
 }
 
 func TestTheClassifierSkipsMailOfARestrictedContactUntilTheLift(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	anna := restrictContact(t, e)
 	restricted := mailFromAddress(t, e, "about my disputed address", "anna.weber@restricted.example")
@@ -109,6 +110,7 @@ func TestTheClassifierSkipsMailOfARestrictedContactUntilTheLift(t *testing.T) {
 }
 
 func TestTheRouterCheckFindsARestrictedContactByIdAddressAndMail(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	anna := restrictContact(t, e)
 	restricted := mailFromAddress(t, e, "about my disputed address", restrictedAddress)
@@ -146,6 +148,7 @@ func TestTheRouterCheckFindsARestrictedContactByIdAddressAndMail(t *testing.T) {
 // A revoked buyer is no longer in the room brief's buyer list. What they wrote
 // while they had a seat can still be in it, so the room names them.
 func TestTheRouterCheckReachesARestrictedContactThroughTheirCompanyDealAndRoom(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	anna := restrictContact(t, e)
 	company := e.SeedCompany(t, "Brandt Automotive", nil)
@@ -185,6 +188,7 @@ func TestTheRouterCheckReachesARestrictedContactThroughTheirCompanyDealAndRoom(t
 // An agent's tools read activity content through the one content gate, so an
 // agent reads no mail a restricted contact sent or received.
 func TestAnAgentReadsNoMailOfARestrictedContact(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	restrictContact(t, e)
 	restricted := mailFromAddress(t, e, "about my disputed address", restrictedAddress)
@@ -221,6 +225,7 @@ func TestAnAgentReadsNoMailOfARestrictedContact(t *testing.T) {
 // mail is filed on a company the agent may read, so it stays discoverable. Only
 // the restriction keeps its subject out of the answer.
 func TestAnAgentToolCallReturnsNoRestrictedContactOrTheirMail(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	anna := restrictContact(t, e)
 	restricted := mailFromAddress(t, e, "about my disputed address", restrictedAddress)

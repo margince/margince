@@ -33,6 +33,7 @@ import (
 )
 
 func TestTheWorklistPricesAmountsThroughTheStoredRates(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.Admin()
 	e.WsExec(t, `INSERT INTO fx_rate (from_currency, to_currency, rate, rate_date)
@@ -68,6 +69,7 @@ func TestTheWorklistPricesAmountsThroughTheStoredRates(t *testing.T) {
 // The re-base holds the row as a settings write does. A read that took it FOR
 // SHARE would park behind it until the bound below gives up.
 func TestTheWorklistPricingNeitherWaitsForAReBaseNorNeedsTheSettingsGrant(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	// The admin holds the settings grant, so its case reaches the row and
 	// proves the lock half; the rep proves the grant half.

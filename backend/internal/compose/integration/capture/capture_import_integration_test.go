@@ -204,6 +204,7 @@ func customerMailToBoth(msgID string) []byte {
 }
 
 func TestASecondImportingMailboxIsRecordedOnAMessageStoredOnce(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	syncSecond := secondMailbox(t, e, e.Rep3)
@@ -240,6 +241,7 @@ func TestASecondImportingMailboxIsRecordedOnAMessageStoredOnce(t *testing.T) {
 }
 
 func TestTheStrictestImportingMailboxDecidesTheAudience(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	syncSecond := secondMailbox(t, e, e.Rep3)
@@ -280,6 +282,7 @@ func TestTheStrictestImportingMailboxDecidesTheAudience(t *testing.T) {
 }
 
 func TestTheAudienceIsTheSameWhicheverMailboxSyncsFirst(t *testing.T) {
+	t.Parallel()
 	// The ordering claim, proven by running both orders and comparing. A test
 	// that ran one order would pass against a sink that simply let the last
 	// sync win.
@@ -317,6 +320,7 @@ func TestTheAudienceIsTheSameWhicheverMailboxSyncsFirst(t *testing.T) {
 }
 
 func TestARecomputeThatChangesNothingWritesNoAuditRowAndEmitsNoEvent(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	sync(t, customerMail("quiet-1@acme.example"))
@@ -344,6 +348,7 @@ func TestARecomputeThatChangesNothingWritesNoAuditRowAndEmitsNoEvent(t *testing.
 }
 
 func TestAHumanSelectedAudienceIsNotMovedByADerivation(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	sync(t, customerMail("selected-1@acme.example"))
@@ -410,6 +415,7 @@ func auditAndOutboxCounts(t *testing.T, e *integration.SearchEnv, activityID ids
 }
 
 func TestTheLinkLessHoldSurvivesARecompute(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 
@@ -443,6 +449,7 @@ func TestTheLinkLessHoldSurvivesARecompute(t *testing.T) {
 //
 // Asserted against the literal so the test fails from EITHER side.
 func TestTheTwoModulesSpellTheRowCarriedReasonsTheSameWay(t *testing.T) {
+	t.Parallel()
 	// capture's constants are unexported, so its side is read through what the
 	// sink WRITES. Comparing that against the activities constant is the whole
 	// check: either side moving alone fails it, which is the drift that matters.
@@ -496,6 +503,7 @@ func TestTheTwoModulesSpellTheRowCarriedReasonsTheSameWay(t *testing.T) {
 }
 
 func TestAForgedMessageIDBuysNoAccessToAColleaguesHeldMail(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	syncOther := secondMailbox(t, e, e.Rep3)
@@ -577,6 +585,7 @@ func TestAForgedMessageIDBuysNoAccessToAColleaguesHeldMail(t *testing.T) {
 }
 
 func TestTheWorkspaceMailSharingFloorSurvivesTheDerivation(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 
@@ -635,6 +644,7 @@ func setMailSharing(t *testing.T, e *integration.SearchEnv, on bool) {
 // and this is the other one — SetAudience itself cannot build it any more, so
 // the row is shaped by hand the same way that test's backfillReasons does.
 func TestACapturedRowRefusesTheDirectWriteAndAManualWideningDoesNotStand(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	setMailSharing(t, e, false)
@@ -680,6 +690,7 @@ func TestACapturedRowRefusesTheDirectWriteAndAManualWideningDoesNotStand(t *test
 }
 
 func TestAMessageWithNoRecoverableImporterIsLeftAsItIs(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	sync(t, customerMail("orphan-1@acme.example"))
@@ -714,6 +725,7 @@ func TestAMessageWithNoRecoverableImporterIsLeftAsItIs(t *testing.T) {
 }
 
 func TestARowCarriedHoldOutlivesAMailboxPostureOnTheSameMessage(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 
@@ -741,6 +753,7 @@ func TestARowCarriedHoldOutlivesAMailboxPostureOnTheSameMessage(t *testing.T) {
 }
 
 func TestARowNarrowedBeforeThisFeatureIsNotPublishedByTheFirstRecompute(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	sync(t, customerMail("legacy-1@acme.example"))

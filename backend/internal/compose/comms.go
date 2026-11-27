@@ -37,9 +37,12 @@ const sendAccepted = "accepted"
 const sendScheduled = "scheduled"
 
 type commsAdapter struct {
-	store *activities.Store
-	gate  activities.ConsentGate
-	draft activities.EmailDrafter
+	// composed is the composition whose registered transports a reply may
+	// leave on.
+	composed *Extensions
+	store    *activities.Store
+	gate     activities.ConsentGate
+	draft    activities.EmailDrafter
 	// stager records an accepted send for transmission. It is the same seam
 	// the HTTP transport passes, so the tool surface cannot accept a message
 	// nothing will carry.
@@ -239,10 +242,10 @@ func sendContextOf(in agents.SendContextArgs) activities.SendContextInput {
 // eventual refusal can never drift onto two different answers for the same kind.
 func (c commsAdapter) IsChannelKind(kind string) bool { return activities.IsChannelKind(kind) }
 
-// CanSendOnProvider delegates to activities.CanSendOnProvider for the same
-// reason: the pre-staging refusal and the store's own must answer alike.
+// CanSendOnProvider answers from the composition's registered transports, the
+// set the send path's own gate reads.
 func (c commsAdapter) CanSendOnProvider(provider string) bool {
-	return activities.CanSendOnProvider(provider)
+	return c.composed.sendsOn(provider)
 }
 
 // channelKinds is that same question WITHOUT the send machinery around it, for
@@ -254,12 +257,12 @@ func (c commsAdapter) CanSendOnProvider(provider string) bool {
 // It reaches activities.IsChannelKind exactly as the adapter above does, so the
 // two are one answer arrived at from two places rather than two answers — there
 // is no state here for a second opinion to accumulate in.
-type channelKinds struct{}
+type channelKinds struct{ composed *Extensions }
 
 func (channelKinds) IsChannelKind(kind string) bool { return activities.IsChannelKind(kind) }
 
-func (channelKinds) CanSendOnProvider(provider string) bool {
-	return activities.CanSendOnProvider(provider)
+func (k channelKinds) CanSendOnProvider(provider string) bool {
+	return k.composed.sendsOn(provider)
 }
 
 var _ agents.ChannelKinds = channelKinds{}

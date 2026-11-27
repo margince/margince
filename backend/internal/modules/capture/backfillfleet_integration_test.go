@@ -16,6 +16,7 @@ import (
 // tally, the same sum its own status read reports; a finished run counts
 // toward its status and not toward progress.
 func TestTheFleetReadCountsRunsByStatusAndSumsTheLiveOnes(t *testing.T) {
+	t.Parallel()
 	ctx, reg, _, ws := newCaptureRegistryFixture(t)
 	connectFixtureConnection(ctx, t, reg)
 	startFixtureBackfill(ctx, t, reg)

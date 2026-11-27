@@ -32,6 +32,7 @@ import (
 // its stored logo as an inline image, else its name. The read runs with no
 // signed-in member, as a password reset does.
 func TestTheSystemMailLetterheadIsTheInstallationsOwnCompany(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	blob := blobstore.NewMemory()
 	logoKey := "logos/" + ids.NewV7().String() + ".png"
@@ -95,6 +96,7 @@ func (failingBlob) Get(context.Context, string) (io.ReadCloser, blobstore.Object
 // the reset handler makes (identity/reset.go): the account message through
 // mailer.SendProduct, with no signed-in member.
 func TestAResetMailGoesOutWhenTheLogoStoreFails(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	logoKey := "logos/" + ids.NewV7().String() + ".png"
 	e.WsExec(t, `INSERT INTO company (id, display_name, is_anchor, logo_object_key, logo_source, source, captured_by)
@@ -121,6 +123,7 @@ func TestAResetMailGoesOutWhenTheLogoStoreFails(t *testing.T) {
 // An installation that works under two companies heads its mail with its own
 // company's logo, never another's.
 func TestOnlyTheAnchorCompanysLogoHeadsTheMail(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	blob := blobstore.NewMemory()
 	anchorKey, otherKey := "logos/anchor.png", "logos/other.png"
@@ -143,6 +146,7 @@ func TestOnlyTheAnchorCompanysLogoHeadsTheMail(t *testing.T) {
 // installation's own company, even where the installation-name setting still
 // holds an older name.
 func TestPrivacyNoticesAndProductMailNameTheSameCompany(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	e.WsExec(t, `INSERT INTO company (id, display_name, is_anchor, source, captured_by)
 		VALUES ($1, 'Northstar GmbH', true, 'manual', 'human:x')`, ids.NewV7())
@@ -180,6 +184,7 @@ func putWidePNG(t *testing.T, blob blobstore.Store, key string) {
 // and the controller particulars are two settings. Where they name different
 // companies, the legal name heads the mail, without the other company's logo.
 func TestAControllerMailIsHeadedByTheControllerItNames(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	blob := blobstore.NewMemory()
 	logoKey := "logos/" + ids.NewV7().String() + ".png"

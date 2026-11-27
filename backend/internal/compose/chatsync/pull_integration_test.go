@@ -140,6 +140,7 @@ func (e *pullEnv) notes(t *testing.T) []filedNote {
 }
 
 func TestAPullFilesOneNoteForAClosedEpisodeAndAReplayFilesNone(t *testing.T) {
+	t.Parallel()
 	e := setupPull(t)
 	e.say("acme", 1, 60, "Acme wants 12% off the secret-plan-zebra renewal")
 	e.say("acme", 2, 70, "OK, we can give 12% if they sign this week")
@@ -170,6 +171,7 @@ func TestAPullFilesOneNoteForAClosedEpisodeAndAReplayFilesNone(t *testing.T) {
 }
 
 func TestAnIrrelevantEpisodeFilesNothingAndMovesTheCursor(t *testing.T) {
+	t.Parallel()
 	e := setupPull(t)
 	e.say("acme", 1, 60, "lunch at noon?")
 	e.say("acme", 2, 61, "sure")
@@ -184,6 +186,7 @@ func TestAnIrrelevantEpisodeFilesNothingAndMovesTheCursor(t *testing.T) {
 }
 
 func TestWithNoModelAnEpisodeIsPassedOverUnfiled(t *testing.T) {
+	t.Parallel()
 	e := setupPull(t)
 	e.puller.Lane = nil
 	e.say("acme", 1, 60, "Acme wants 12% off")
@@ -198,6 +201,7 @@ func TestWithNoModelAnEpisodeIsPassedOverUnfiled(t *testing.T) {
 }
 
 func TestAnEpisodeWhoseAuthorRestrictedProcessingIsPassedOverUnfiled(t *testing.T) {
+	t.Parallel()
 	e := setupPull(t)
 	contact := ids.NewV7()
 	e.exec(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Clara Contact', 'manual', 'system')`, contact)
@@ -216,6 +220,7 @@ func TestAnEpisodeWhoseAuthorRestrictedProcessingIsPassedOverUnfiled(t *testing.
 }
 
 func TestTalkFromBeforeTheLinkIsJudgedOnlyWhenAskedAndAtMostFiveTimes(t *testing.T) {
+	t.Parallel()
 	e := setupPull(t)
 	for i := range 7 {
 		e.say("acme", int64(i+1), -60*(7-i)-30, "price talk "+strconv.Itoa(i))
@@ -243,6 +248,7 @@ func TestTalkFromBeforeTheLinkIsJudgedOnlyWhenAskedAndAtMostFiveTimes(t *testing
 }
 
 func TestEachLinkReadsAndFilesOnlyItsOwnChannel(t *testing.T) {
+	t.Parallel()
 	e := setupPull(t)
 	project := ids.NewV7()
 	e.exec(t, `INSERT INTO project (id, name, source, captured_by) VALUES ($1, 'Other rollout', 'manual', 'system')`, project)
@@ -269,6 +275,7 @@ func TestEachLinkReadsAndFilesOnlyItsOwnChannel(t *testing.T) {
 }
 
 func TestAChosenMessageIsFiledOnceAsASummary(t *testing.T) {
+	t.Parallel()
 	e := setupPull(t)
 	e.say("acme", 1, 60, "The 12% is fine with me")
 	note, err := e.filer.FileMessage(e.memberCtx(), chatlinks.RecordDeal, e.deal, "<m:#acme:1|this message>", false)
@@ -288,6 +295,7 @@ func TestAChosenMessageIsFiledOnceAsASummary(t *testing.T) {
 }
 
 func TestAChosenMessageFromBeforeTheLinkAnswersAsMissing(t *testing.T) {
+	t.Parallel()
 	e := setupPull(t)
 	e.say("acme", 1, -30, "Before the link: Acme may walk")
 	e.say("acme", 2, 60, "After the link: the 12% is fine")
@@ -302,6 +310,7 @@ func TestAChosenMessageFromBeforeTheLinkAnswersAsMissing(t *testing.T) {
 }
 
 func TestAChosenThreadLeavesOutAReplyStampedBeforeTheLink(t *testing.T) {
+	t.Parallel()
 	e := setupPull(t)
 	e.sayIn("acme", dispacttest.Message{Seq: 1, Text: "Can we do 12%?", ReplyCount: 2}, 60)
 	e.sayIn("acme", dispacttest.Message{Seq: 2, Text: "Stamped before the link", ThreadSeq: 1}, -30)
@@ -363,6 +372,7 @@ func (u *unlinkingSummary) Complete(ctx context.Context, req model.Request) (mod
 }
 
 func TestAnUnlinkWhileTheModelReadsFilesNothing(t *testing.T) {
+	t.Parallel()
 	e := setupPull(t)
 	e.puller.Lane = &unlinkingSummary{unlink: func() {
 		e.exec(t, `UPDATE chat_link SET archived_at = now() WHERE id = $1`, e.link)
@@ -376,6 +386,7 @@ func TestAnUnlinkWhileTheModelReadsFilesNothing(t *testing.T) {
 }
 
 func TestAnEpisodeCutByThePageCapIsFiledOnceWhole(t *testing.T) {
+	t.Parallel()
 	e := setupPull(t)
 	e.now = linkedAt.Add(12 * time.Hour)
 	for seq := int64(1); seq <= 10; seq++ {
@@ -397,6 +408,7 @@ func TestAnEpisodeCutByThePageCapIsFiledOnceWhole(t *testing.T) {
 }
 
 func TestAnEpisodeThatFillsTheWholeReadIsFiledSoTheLinkMovesOn(t *testing.T) {
+	t.Parallel()
 	e := setupPull(t)
 	e.now = linkedAt.Add(15 * time.Hour)
 	for seq := int64(1); seq <= 600; seq++ {
@@ -414,6 +426,7 @@ func TestAnEpisodeThatFillsTheWholeReadIsFiledSoTheLinkMovesOn(t *testing.T) {
 }
 
 func TestAThreadLongerThanOneReadIsNotFiledInPart(t *testing.T) {
+	t.Parallel()
 	e := setupPull(t)
 	e.sayIn("acme", dispacttest.Message{Seq: 1, Text: "Thread talk", ReplyCount: 599}, 60)
 	for seq := int64(2); seq <= 600; seq++ {
@@ -428,6 +441,7 @@ func TestAThreadLongerThanOneReadIsNotFiledInPart(t *testing.T) {
 }
 
 func TestANoteUnderAMessageKeyThatTheChatDidNotWriteIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupPull(t)
 	e.say("acme", 1, 60, "The 12% is fine with me")
 	planted := ids.NewV7()
@@ -527,6 +541,7 @@ func requireNotIn(t *testing.T, prompt string, banned ...string) {
 }
 
 func TestALaterEpisodeIsSentTheEarlierNoteAndOnlyWhatEveryReaderMayRead(t *testing.T) {
+	t.Parallel()
 	e := setupParties(t)
 	second := e.secondRequest(t)
 	requireIn(t, second, "Which discount for two years?", "Acme GmbH", "Clara Buyer", "Owen Owner", "agreed: option B")
@@ -534,6 +549,7 @@ func TestALaterEpisodeIsSentTheEarlierNoteAndOnlyWhatEveryReaderMayRead(t *testi
 }
 
 func TestAReaderWithoutTheCompanyOrContactOrEdgeReadLeavesThatNameOut(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name, object      string
 		present, withheld string
@@ -569,6 +585,7 @@ func (e *partyEnv) denyRead(t *testing.T, role, object string) {
 }
 
 func TestAMemberWhoCannotReadTheDealDoesNotBoundTheNames(t *testing.T) {
+	t.Parallel()
 	e := setupParties(t)
 	e.outsider(t)
 	e.denyRead(t, "rep", "contact")
@@ -577,6 +594,7 @@ func TestAMemberWhoCannotReadTheDealDoesNotBoundTheNames(t *testing.T) {
 }
 
 func TestAMemberWhoCanReadTheDealBoundsTheNames(t *testing.T) {
+	t.Parallel()
 	e := setupParties(t)
 	e.exec(t, `DELETE FROM role_assignment WHERE user_id = $1`, e.owner)
 	e.exec(t, `INSERT INTO role_assignment (role_id, user_id) SELECT id, $1 FROM role WHERE key = 'rep' AND is_system`, e.owner)
@@ -591,7 +609,7 @@ func (e *partyEnv) chatNotesAs(t *testing.T, user ids.UUID, query *string) int {
 	var found int
 	ws := principal.WithWorkspaceID(context.Background(), e.ws)
 	err := database.WithWorkspaceTx(ws, e.pool, func(tx pgx.Tx) error {
-		members, err := identity.MemberPrincipalsTx(ws, tx, []ids.UUID{user})
+		members, err := identity.MemberPrincipalsTx(ws, tx, identity.RbacObjects{}, []ids.UUID{user})
 		if err != nil {
 			return err
 		}
@@ -613,6 +631,7 @@ func (e *partyEnv) chatNotesAs(t *testing.T, user ids.UUID, query *string) int {
 }
 
 func TestTheFiledNoteIsReadByDealReadersOnlyInTheListAndInSearch(t *testing.T) {
+	t.Parallel()
 	e := setupParties(t)
 	outsider := e.outsider(t)
 	e.secondRequest(t)
@@ -628,6 +647,7 @@ func TestTheFiledNoteIsReadByDealReadersOnlyInTheListAndInSearch(t *testing.T) {
 }
 
 func TestADepartedOwnerIsNotNamed(t *testing.T) {
+	t.Parallel()
 	e := setupParties(t)
 	e.exec(t, `UPDATE app_user SET status = 'deactivated' WHERE id = $1`, e.owner)
 	second := e.secondRequest(t)
@@ -636,6 +656,7 @@ func TestADepartedOwnerIsNotNamed(t *testing.T) {
 }
 
 func TestANoteLimitedToItsParticipantsIsNotSent(t *testing.T) {
+	t.Parallel()
 	e := setupParties(t)
 	e.secondRequest(t)
 	e.exec(t, `UPDATE activity SET audience = 'participants' WHERE source_system = 'dispact'`)
@@ -672,6 +693,7 @@ func (e *pullEnv) previous(t *testing.T, before time.Time) string {
 }
 
 func TestThePreviousNoteIsChosenByWhenItsTalkEndedThenByChannelSequence(t *testing.T) {
+	t.Parallel()
 	e := setupPull(t)
 	at := func(minutes int) time.Time { return linkedAt.Add(time.Duration(minutes) * time.Minute) }
 	// A thread chosen later, rooted before the episode, whose replies run past it.

@@ -51,6 +51,7 @@ func upsertAsBackfill(ctx context.Context, sink *capture.Sink, sourceID, counter
 // the trace's decision becomes the message's outcome: an all-internal message
 // is counted internal, not as a generic skip.
 func TestABackfilledMessageIsTimedBySinkStageAndCountedByItsTracedDecision(t *testing.T) {
+	t.Parallel()
 	ctx, db := bootstrapInternalMailWorkspace(t, "acme.com")
 	sink := capture.NewSink(db)
 	series := []string{

@@ -12,7 +12,6 @@ import (
 	"strings"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -23,7 +22,7 @@ func (r approvalPreviewReader) importRows(ctx context.Context, run migration.Run
 	if run.Actor == nil || run.Actor.ID != plan.ActorID {
 		return nil, apperrors.ErrVersionSkew
 	}
-	creator, err := (storedActor{authority: identity.NewService(r.db.Pool())}).rebuild(ctx, *run.Actor, principal.ScopeWrite)
+	creator, err := (storedActor{authority: IdentityService(r.db.Pool())}).rebuild(ctx, *run.Actor, principal.ScopeWrite)
 	if err != nil {
 		return nil, err
 	}

@@ -17,6 +17,7 @@ import (
 // A pending card of a retired kind is refused on approval, because nothing
 // would carry out the yes. Declining it still closes it.
 func TestAPendingRetiredCardIsRefusedOnApprovalAndMayBeDeclined(t *testing.T) {
+	t.Parallel()
 	for _, kind := range []string{kindTranscriptProposal, kindCommunicationReview, retiredStageCardKind} {
 		t.Run(kind, func(t *testing.T) {
 			e := setupStaging(t)

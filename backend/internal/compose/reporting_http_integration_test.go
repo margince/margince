@@ -27,7 +27,7 @@ import (
 
 func reportingHTTPRouter(f *reportingBusinessFixture) http.Handler {
 	authHandlers := identity.NewHandlers(identity.NewService(f.env.Pool))
-	server := newServer(f.env.Pool, slog.New(slog.DiscardHandler), authHandlers, deals.NewHandlers(InstallationDB(f.env.Pool), DealsInstallation()))
+	server := newServer(f.env.Pool, slog.New(slog.DiscardHandler), nil, authHandlers, deals.NewHandlers(InstallationDB(f.env.Pool), DealsInstallation()))
 	server.reportingHandlers = reporting.NewHandlers(f.service, openingSelection())
 	server.reportingExportHandlers = reportingExportHandlers{service: f.service}
 	return crmcontracts.HandlerFromMuxWithBaseURL(server, chi.NewRouter(), "/v1")
@@ -68,6 +68,7 @@ func reportingResponse[T any](t *testing.T, response *httptest.ResponseRecorder)
 }
 
 func TestReportingHTTPRevisionsSchedulesAndFrozenHistory(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	handler := reportingHTTPRouter(f)
 	input := crmcontracts.ReportingReportInput{Name: "Operating review", Audience: "workspace", Selection: f.selection()}
@@ -153,6 +154,7 @@ func reportingAssertLibrary(t *testing.T, f *reportingBusinessFixture, handler h
 }
 
 func TestReportingHTTPFrameworkAndTargetVersions(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	handler := reportingHTTPRouter(f)
 	framework := reportingResponse[crmcontracts.ReportingFramework](t, reportingRequest(f.human, t, handler, http.MethodGet, "framework", nil, -1, http.StatusOK))

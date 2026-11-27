@@ -96,6 +96,7 @@ func walkDecisions(
 // next_cursor until every approval its reader may decide has been served once.
 // The stated total is the number walked, and nobody else's approval is served.
 func TestTheDecisionsViewPagesThroughEveryApprovalPastTheCensus(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := NewApprovalsService(e.DB())
 	pipeline, open, _ := integration.DealFixture(t, e)

@@ -102,6 +102,7 @@ func grantedAdvisoryLocks(ctx context.Context, t *testing.T, tx pgx.Tx, pid int)
 // VALUE apart from one that reads the FIELD — and that is the distinction the
 // ordering rests on.
 func TestAnEvidenceApplyClearingANameWaitsOnTheNameLock(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	legal := "Kranz Logistik GmbH"
@@ -166,6 +167,7 @@ func TestAnEvidenceApplyClearingANameWaitsOnTheNameLock(t *testing.T) {
 // serialize behind every company write in the installation. Enrichment and
 // deep-read arrive in batches of exactly this shape.
 func TestAnEvidenceApplyWithoutANameDoesNotWaitOnTheNameLock(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	company, err := e.store.CreateCompany(ctx, CreateCompanyInput{

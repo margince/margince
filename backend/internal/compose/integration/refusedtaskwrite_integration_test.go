@@ -16,6 +16,7 @@ import (
 // add_task refused to these seats. The write behind both, POST /tasks, refuses
 // them on its own, so the shown refusal is never the only one.
 func TestTheTaskWriteRefusesEverySeatTheVerbIsShownRefused(t *testing.T) {
+	t.Parallel()
 	const email = "refused-task@fable.test"
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Refused Task", email, "Admin")

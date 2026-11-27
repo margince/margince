@@ -64,6 +64,7 @@ var (
 // The CHECK constraints forbid a NULL detail on a deferred row today, so the
 // only way to prove NotClause keeps one is to evaluate it against a NULL.
 func TestNotClauseKeepsARowWhoseDetailIsNull(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	var kept, matched int
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
@@ -86,6 +87,7 @@ func TestNotClauseKeepsARowWhoseDetailIsNull(t *testing.T) {
 // so a budget raise neither counts nor wakes it; one deferred for the budget
 // is the opposite. Both are written by the real worker.
 func TestWebsiteReadsSplitTheBudgetWaitFromTheProviderWait(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	grantBudgetRequester(t, e, e.Rep1)
 	inserter, err := jobs.NewInserter(e.Pool, slog.New(slog.DiscardHandler))
@@ -133,6 +135,7 @@ func TestWebsiteReadsSplitTheBudgetWaitFromTheProviderWait(t *testing.T) {
 }
 
 func TestVoiceBuildsSplitTheBudgetWaitFromTheProviderWait(t *testing.T) {
+	t.Parallel()
 	cases := map[string]struct {
 		cause           error
 		budget, waiting int64

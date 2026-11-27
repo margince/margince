@@ -28,21 +28,21 @@ check() { # want got description
 }
 
 # What the script route resolves, from a shell carrying neither variable.
-resolved() { # [REDIS_PORT]
-    env -u MARGINCE_TEST_REDIS -u MARGINCE_TEST_REDIS_DB ${1:+REDIS_PORT="$1"} \
+resolved() { # [TEST_REDIS_PORT]
+    env -u MARGINCE_TEST_REDIS ${1:+TEST_REDIS_PORT="$1"} \
         bash -c "source '$root/scripts/lib-testdb.sh'; resolve_test_redis; echo \"\$MARGINCE_TEST_REDIS\""
 }
 
 # What the make route resolves, asked of make itself rather than parsed out of
 # the Makefile: a regex over the assignment would agree with a line that no
 # longer takes effect.
-from_make() { # [REDIS_PORT]
+from_make() { # [TEST_REDIS_PORT]
     # Asked as a make VARIABLE EXPANSION, through a throwaway target appended
     # with a second -f. `make -p` reports the assignment unexpanded — the answer
-    # would be the literal `localhost:$(REDIS_PORT)`, which agrees with nothing
+    # would be the literal `localhost:$(TEST_REDIS_PORT)`, which agrees with nothing
     # and proves nothing.
     ( cd "$root/backend" \
-        && make -s --no-print-directory ${1:+REDIS_PORT="$1"} \
+        && make -s --no-print-directory ${1:+TEST_REDIS_PORT="$1"} \
              -f Makefile -f <(printf 'margince-test-redis-addr:;@echo $(MARGINCE_TEST_REDIS)\n') \
              margince-test-redis-addr )
 }
@@ -57,10 +57,18 @@ make_default="$(from_make)"
 check "$make_default" "$script_default" \
     "the script route resolves the same default the make route does ($make_default)"
 
+# The default must be the port compose publishes redis-test on, or both routes
+# agree on a server nothing starts.
+compose_port="$(awk '/^  redis-test:/ { inside = 1; next } inside && /^  [a-z]/ { exit }
+    inside && /- "[0-9]+:6379"/ { gsub(/[^0-9:]/, ""); split($0, port, ":"); print port[1]; exit }' \
+    "$root/docker-compose.dev.yml")"
+check "localhost:${compose_port}" "$make_default" \
+    "the default names the port compose publishes redis-test on"
+
 # AND AN OVERRIDE REACHES BOTH. A default that agreed while an override reached
 # only one is the same defect one turn of the knob later.
 check "$(from_make 26379)" "$(resolved 26379)" \
-    "REDIS_PORT reaches both routes"
+    "TEST_REDIS_PORT reaches both routes"
 
 # The address is never empty, which is the specific shape the failure took: the
 # variable was ABSENT rather than wrong, and the fixtures reported that as a
@@ -77,17 +85,11 @@ run_one() {
     printf '%s|%s\n' "$PPID" "$1" > "$3/$2"
 }
 export -f run_one
-run_integration_packages "$batch_fixture/work" 2 2 "$batch_fixture"
-check "$(cut -d'|' -f1 "$batch_fixture/1")" "$(cut -d'|' -f1 "$batch_fixture/2")" \
-    "the first two packages share a bounded batch"
-check "$(cut -d'|' -f1 "$batch_fixture/3")" "$(cut -d'|' -f1 "$batch_fixture/4")" \
-    "the next two packages share a bounded batch"
-parents="$(cat "$batch_fixture/"{1,3,5} | cut -d'|' -f1 | sort -u | wc -l | tr -d ' ')"
-check 3 "$parents" "each Redis reuse starts in a separate waited batch"
+run_integration_packages "$batch_fixture/work" 2 "$batch_fixture"
 subjects="$(cat "$batch_fixture/"{1,2,3,4,5} | cut -d'|' -f2 | paste -sd, -)"
-check one,two,three,four,five "$subjects" "all packages retain global indices beyond capacity"
-if run_integration_packages "$batch_fixture/work" 2 0 "$batch_fixture" 2>/dev/null; then
-    check rejected accepted "zero capacity is rejected"
+check one,two,three,four,five "$subjects" "every package runs once, under its own line number"
+if run_integration_packages "$batch_fixture/work" 0 "$batch_fixture" 2>/dev/null; then
+    check rejected accepted "zero jobs is rejected"
 fi
 
 if [[ "$failures" -ne 0 ]]; then

@@ -74,6 +74,7 @@ func gmailStub(t *testing.T, owner string) *httptest.Server {
 }
 
 func TestGmailConnectorSyncsAnActivity(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	const owner = "rep@ws.example"
 	stub := gmailStub(t, owner)

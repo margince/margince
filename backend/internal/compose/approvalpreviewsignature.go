@@ -40,7 +40,7 @@ func (r approvalPreviewReader) appendMailSignature(ctx context.Context, approval
 		return err
 	}
 	store := r.activities.WithSignature(signatureReader{store: contacts.NewStore(r.db)}).
-		WithSenderName(identity.NewServiceFor(r.db)).
+		WithSenderName(identityServiceFor(r.db)).
 		WithBaseLanguage(activities.BaseLanguageFunc(func(context.Context) string { return language }))
 	sign, err := store.PreviewMailSignOff(ctx, in.Body, in.Subject, in.SendingEntity)
 	if err != nil {

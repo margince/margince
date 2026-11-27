@@ -49,6 +49,7 @@ func (e *cimdEnv) actorWith(t *testing.T, grant principal.ObjectGrant) Identity 
 var fullAgentClientGrant = principal.ObjectGrant{Create: true, Read: true, Update: true, Delete: true}
 
 func TestEveryAgentClientOperationRefusesWhoeverLacksItsVerb(t *testing.T) {
+	t.Parallel()
 	e := setupCIMD(t, "agent-client-rbac")
 	admin := e.actorWith(t, fullAgentClientGrant)
 	registered, _, err := e.svc.RegisterAgentClient(e.ctx, admin, RegisterAgentClientInput{
@@ -90,6 +91,7 @@ func TestEveryAgentClientOperationRefusesWhoeverLacksItsVerb(t *testing.T) {
 // A tool that cannot send a secret connects through DCR or CIMD. So every
 // client an admin registers has one, kept only as its digest.
 func TestAnAdminRegisteredClientAlwaysGetsASecretStoredAsItsDigest(t *testing.T) {
+	t.Parallel()
 	e := setupCIMD(t, "agent-client-secret")
 	admin := e.actorWith(t, fullAgentClientGrant)
 	client, secret, err := e.svc.RegisterAgentClient(e.ctx, admin, RegisterAgentClientInput{
@@ -116,6 +118,7 @@ func TestAnAdminRegisteredClientAlwaysGetsASecretStoredAsItsDigest(t *testing.T)
 // Delete ends connections; it does not ban the vendor's URL. Disable does, and
 // a disabled document is never fetched again.
 func TestADeletedMetadataDocumentClientComesBackAndADisabledOneDoesNot(t *testing.T) {
+	t.Parallel()
 	e := setupCIMD(t, "agent-client-cimd")
 	var fetches atomic.Int32
 	plain := e.body
@@ -170,6 +173,7 @@ func (e *cimdEnv) agentClientRow(t *testing.T, actor Identity, clientID string) 
 // Self-registered clients pile up, so the list pages, and the clients an admin
 // registered come before them on every page boundary.
 func TestTheClientListPagesWithAdminClientsFirst(t *testing.T) {
+	t.Parallel()
 	e := setupCIMD(t, "agent-client-page")
 	admin := e.actorWith(t, fullAgentClientGrant)
 	err := database.WithWorkspaceTx(e.ctx, e.svc.db.Pool(), func(tx pgx.Tx) error {

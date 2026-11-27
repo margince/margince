@@ -33,6 +33,7 @@ import (
 const extProbeTable = "ext_probe_staged_row"
 
 func TestTheExistenceProbeReadsARegisteredUnitTable(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	ctx := context.Background()
 	if _, err := e.owner.Exec(ctx,
@@ -48,11 +49,6 @@ func TestTheExistenceProbeReadsARegisteredUnitTable(t *testing.T) {
 		`GRANT SELECT ON ext.`+extProbeTable+` TO margince_app`); err != nil {
 		t.Fatalf("granting the application role the read a unit migration grants: %v", err)
 	}
-	t.Cleanup(func() {
-		if _, err := e.owner.Exec(context.Background(), `DROP TABLE IF EXISTS ext.`+extProbeTable); err != nil {
-			t.Errorf("dropping the probe table: %v", err)
-		}
-	})
 	present := ids.NewV7()
 	if _, err := e.owner.Exec(ctx,
 		`INSERT INTO ext.`+extProbeTable+` (id) VALUES ($1)`, present); err != nil {

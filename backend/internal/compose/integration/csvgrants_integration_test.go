@@ -41,6 +41,7 @@ const (
 )
 
 func TestATagTheRoleCannotCreateIsAProblemAndTheCompaniesLandWithoutIt(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	actWithGrant(t, e, "tag", readOnlyGrant)
 	tagsBefore := tagCount(t, e)
@@ -67,6 +68,7 @@ func TestATagTheRoleCannotCreateIsAProblemAndTheCompaniesLandWithoutIt(t *testin
 }
 
 func TestARoleWithoutTagReadStagesAndIsToldTheTagsAreNotImported(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	actWithGrant(t, e, "tag", noGrant)
 	profile, _ := importjobtest.UploadCSV(t, e, "company", "Name,Tags\nUntagged GmbH,Partner\n")
@@ -85,6 +87,7 @@ func TestARoleWithoutTagReadStagesAndIsToldTheTagsAreNotImported(t *testing.T) {
 }
 
 func TestARoleThatCannotCreateLeadsHasEveryLeadRowSkipped(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	actWithGrant(t, e, "lead", readOnlyGrant)
 	profile, _ := importjobtest.UploadCSV(t, e, "lead", prospectCSV)
@@ -106,6 +109,7 @@ func TestARoleThatCannotCreateLeadsHasEveryLeadRowSkipped(t *testing.T) {
 }
 
 func TestAnOwnerTheImporterCannotNameIsAProblemAndTheImporterOwnsTheRow(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	const runner = "runner@seat.test"
 	if _, err := e.Owner.Exec(t.Context(), `

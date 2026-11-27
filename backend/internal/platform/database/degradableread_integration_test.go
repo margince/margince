@@ -12,7 +12,6 @@ package database_test
 import (
 	"context"
 	"errors"
-	"os"
 	"strconv"
 	"testing"
 	"time"
@@ -27,15 +26,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-const queryCanceled = "57014"
-
 func laneEnv(t *testing.T) (context.Context, *pgxpool.Pool) {
 	t.Helper()
-	dsn := os.Getenv("MARGINCE_TEST_DSN")
-	if dsn == "" {
-		t.Fatal("MARGINCE_TEST_DSN is not set — run `make db-up` and try again (integration tests fail loudly, they never skip)")
-	}
-	pool, err := testdb.OwnPool(context.Background(), dsn)
+	pool, err := testdb.OwnPool(context.Background(), testdb.For(t).OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -75,6 +68,7 @@ func timeoutMilliseconds(ctx context.Context, t *testing.T, tx pgx.Tx) int64 {
 // from the same snapshot: the property a page needs to name the lane as
 // unavailable instead of failing with it.
 func TestALaneThatOutrunsItsBudgetLeavesTheSnapshotUsable(t *testing.T) {
+	t.Parallel()
 	ctx, pool := laneEnv(t)
 	onSnapshot(ctx, t, pool, func(ctx context.Context, tx pgx.Tx) {
 		var before int64
@@ -104,6 +98,7 @@ func TestALaneThatOutrunsItsBudgetLeavesTheSnapshotUsable(t *testing.T) {
 // The lane's budget is the lane's alone: the page's own ceiling is what the
 // next read runs under, whether the lane finished or failed.
 func TestALanesBudgetDoesNotOutliveTheLane(t *testing.T) {
+	t.Parallel()
 	ctx, pool := laneEnv(t)
 	onSnapshot(ctx, t, pool, func(ctx context.Context, tx pgx.Tx) {
 		page := timeoutMilliseconds(ctx, t, tx)
@@ -127,6 +122,7 @@ func TestALanesBudgetDoesNotOutliveTheLane(t *testing.T) {
 // With no snapshot every reader owns its transaction already, so the lane just
 // runs and its error is its own.
 func TestALaneWithoutASnapshotJustRuns(t *testing.T) {
+	t.Parallel()
 	ran := false
 	sentinel := errors.New("the lane failed")
 	err := database.WithDegradableRead(context.Background(), time.Second, func(context.Context) error {
@@ -139,6 +135,7 @@ func TestALaneWithoutASnapshotJustRuns(t *testing.T) {
 }
 
 func TestALaneNeedsAPositiveBudget(t *testing.T) {
+	t.Parallel()
 	ctx, pool := laneEnv(t)
 	onSnapshot(ctx, t, pool, func(ctx context.Context, tx pgx.Tx) {
 		if err := database.WithDegradableRead(ctx, 0, func(context.Context) error { return nil }); err == nil {
@@ -155,6 +152,7 @@ func TestALaneNeedsAPositiveBudget(t *testing.T) {
 // the transaction aborted; the lane is still undone rather than returned as
 // healthy, and the snapshot keeps working for the lanes after it.
 func TestALaneThatSwallowsItsFailureIsStillUndone(t *testing.T) {
+	t.Parallel()
 	ctx, pool := laneEnv(t)
 	onSnapshot(ctx, t, pool, func(ctx context.Context, tx pgx.Tx) {
 		err := database.WithDegradableRead(ctx, time.Second, func(ctx context.Context) error {
@@ -174,6 +172,7 @@ func TestALaneThatSwallowsItsFailureIsStillUndone(t *testing.T) {
 // A lane opened on a transaction that is already aborted cannot start, and says
 // so instead of running its reads against a dead snapshot.
 func TestALaneCannotStartOnAnAbortedSnapshot(t *testing.T) {
+	t.Parallel()
 	ctx, pool := laneEnv(t)
 	var laneErr error
 	ran := false

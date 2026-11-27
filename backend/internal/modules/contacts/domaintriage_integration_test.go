@@ -22,9 +22,6 @@ import (
 
 // openTriage puts a domain in the state the ensure ladder leaves it: the contact
 // exists, the company question is open, and no company row was invented.
-//
-// Only the FIRST sender on a domain reports TriagePending — the question is
-// opened once and one crawl answers it, however many colleagues write in.
 func (e *dedupeEnv) openTriage(ctx context.Context, t *testing.T, email, display, domain string) EnsureCounterpartyResult {
 	t.Helper()
 	res, err := e.store.EnsureCounterparty(ctx, e.ensureInput(ctx, t, email, display, domain))
@@ -71,6 +68,7 @@ func (e *dedupeEnv) startTriageRead(ctx context.Context, t *testing.T, domain st
 }
 
 func TestCompanyVerdictCreatesTheCompanyAndWiresEveryoneWaitingOnIt(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -152,6 +150,7 @@ func TestCompanyVerdictCreatesTheCompanyAndWiresEveryoneWaitingOnIt(t *testing.T
 }
 
 func TestPersonalVerdictRefusesTheCompanyForGood(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -206,6 +205,7 @@ func TestPersonalVerdictRefusesTheCompanyForGood(t *testing.T) {
 }
 
 func TestCompanyVerdictAdoptsACompanyAHumanCreatedMidTriage(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -247,6 +247,7 @@ func TestCompanyVerdictAdoptsACompanyAHumanCreatedMidTriage(t *testing.T) {
 }
 
 func TestResolvingADomainNobodyAskedAboutIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -262,6 +263,7 @@ func TestResolvingADomainNobodyAskedAboutIsRefused(t *testing.T) {
 }
 
 func TestListDueDomainsOffersOnlyTheQuestionsWorthAsking(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -304,6 +306,7 @@ func TestListDueDomainsOffersOnlyTheQuestionsWorthAsking(t *testing.T) {
 }
 
 func TestMarkTriageQueuedSpendsAnAttemptAndBacksOff(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.openTriageFirst(ctx, t, "a@backoff.test", "A Contact", "backoff.test")
@@ -363,6 +366,7 @@ func (e *dedupeEnv) dispositionRow(ctx context.Context, t *testing.T, domain str
 // produced 40 of 108 companies in a real import — "Pwc", "Mckinsey",
 // "Ausgezeichnet" — each named after its domain label with every field empty.
 func TestAnUnreadableSiteWithholdsTheCompanyInsteadOfInventingIt(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.openTriage(ctx, t, "hello@pwc.example", "", "pwc.example")
@@ -392,6 +396,7 @@ func TestAnUnreadableSiteWithholdsTheCompanyInsteadOfInventingIt(t *testing.T) {
 // The sender's own name still settles the domain as theirs. Withholding is for
 // the case where nothing explains the domain, not a refusal to answer at all.
 func TestAnUnreadableSiteThatIsSomebodysNameIsStillTheirs(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.openTriage(ctx, t, "v@lentin.example", "Valentin Lentin", "lentin.example")
@@ -414,6 +419,7 @@ func TestAnUnreadableSiteThatIsSomebodysNameIsStillTheirs(t *testing.T) {
 // writes. This is the vendor rule: Expensify has a genuine corporate website,
 // so every evidence test says yes and only a standing refusal says no.
 func TestASuppressedDomainNeverBecomesACompany(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	if _, err := e.store.SetDomainAdmission(ctx, "expensify.example", DomainSuppressed,
@@ -471,6 +477,7 @@ func TestASuppressedDomainNeverBecomesACompany(t *testing.T) {
 // The sticky rule, and the McKinsey case: once an admin admits a domain, no
 // later machine verdict may take it back.
 func TestAHumanAdmissionOutranksEveryLaterMachineRefusal(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	if _, err := e.store.SetDomainAdmission(ctx, "mckinsey.example", DomainAdmitted,
@@ -506,6 +513,7 @@ func TestAHumanAdmissionOutranksEveryLaterMachineRefusal(t *testing.T) {
 // Without this the row is stranded: both sweeps require a cursor, and the
 // review surface it was waiting for does not exist yet.
 func TestNewMailReopensAWithheldDomain(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.openTriage(ctx, t, "hello@downsite.example", "", "downsite.example")
@@ -538,6 +546,7 @@ func TestNewMailReopensAWithheldDomain(t *testing.T) {
 // has said something stronger than any verdict, so the refusal lifts — and
 // lifts as a HUMAN admission, so no later newsletter puts it back.
 func TestClaimingASuppressedDomainForACompanyLiftsTheRefusal(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	if _, err := e.store.SetDomainAdmission(ctx, "mckinsey.example", DomainSuppressed,
@@ -586,6 +595,7 @@ func (e *dedupeEnv) dueContains(ctx context.Context, t *testing.T, domain string
 // would ever ask again on its own, and an admin who unblocked McKinsey because
 // they became a client would watch nothing happen.
 func TestUnblockingADomainReopensTheCompanyQuestion(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -632,6 +642,7 @@ func TestUnblockingADomainReopensTheCompanyQuestion(t *testing.T) {
 // An operator who cannot find out that a domain was refused has no way to tell
 // the refusal from an empty CRM.
 func TestTheBlockedDomainListShowsWhatDecidedEachRefusal(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	if _, err := e.store.SetDomainAdmission(ctx, "expensify.example", DomainSuppressed,
@@ -663,12 +674,10 @@ func TestTheBlockedDomainListShowsWhatDecidedEachRefusal(t *testing.T) {
 	}
 }
 
-// Re-opening a domain stamps the human who is ANSWERABLE for it, and stamps
-// nobody when there is nobody. owner_id has a foreign key to app_user, so a
-// forged zero would fail the constraint rather than record "unknown" — and a
-// domain with no owner is one triage may not mint rows for, which is the state
-// a machine suppression leaves behind.
+// Re-opening a domain stamps the human answerable for it, and nobody when there
+// is nobody. owner_id has a foreign key to app_user, so a forged zero would fail.
 func TestUnblockingStampsTheHumanAnswerableForTheDomain(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
@@ -713,6 +722,7 @@ func (e *dedupeEnv) dispositionOwner(ctx context.Context, t *testing.T, domain s
 // returning its id here would leak what the record's own endpoint correctly
 // 404s, to every colleague with company:read.
 func TestTheBlockedDomainListWithholdsAnInvisibleCompany(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	owner := e.as()
 
@@ -771,6 +781,7 @@ func TestTheBlockedDomainListWithholdsAnInvisibleCompany(t *testing.T) {
 // cursor because re-crawling could not help; somebody may know otherwise, and
 // this is the verb that says so.
 func TestReopeningAnUndecidedDomainPutsItBackInTheSweep(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.openTriage(ctx, t, "hello@pwc.example", "", "pwc.example")
@@ -806,6 +817,7 @@ func TestReopeningAnUndecidedDomainPutsItBackInTheSweep(t *testing.T) {
 // answer, and re-opening it silently would undo somebody's call without
 // recording that anything happened.
 func TestReopeningRefusesADomainThatAlreadyHasAnAnswer(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	if _, err := e.store.SetDomainAdmission(ctx, "expensify.example", DomainSuppressed,
@@ -829,6 +841,7 @@ func TestReopeningRefusesADomainThatAlreadyHasAnAnswer(t *testing.T) {
 // admission either — so a standing built from "whatever is left" answers with a
 // source the published enum does not contain, on every successful re-ask.
 func TestReopeningAnswersWithAStandingTheContractPublishes(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.openTriage(ctx, t, "hello@pwc.example", "", "pwc.example")
@@ -860,12 +873,10 @@ func TestReopeningAnswersWithAStandingTheContractPublishes(t *testing.T) {
 	}
 }
 
-// A SETTLED domain is not an open question, however little it says about its
-// admission. settleDisposition never writes that column, so a domain answered
-// personal, provider or no_site carries NULL there exactly as an unjudged one
-// does — and re-asking about it would spend an attempt on a question that has
-// an answer, while the underlying guard silently matched no row at all.
+// A settled domain is not an open question, though settleDisposition leaves its
+// admission NULL. Re-asking would spend an attempt on a question with an answer.
 func TestReopeningRefusesADomainAlreadySettled(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.openTriage(ctx, t, "anna@weber.example", "Anna Weber", "weber.example")
@@ -891,6 +902,7 @@ func TestReopeningRefusesADomainAlreadySettled(t *testing.T) {
 
 // A domain nothing ever asked about has no question to re-open.
 func TestReopeningADomainNobodyAskedAboutIsNotFound(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	_, err := e.store.ReopenWithheldDomain(ctx, "stranger.example")
@@ -903,6 +915,7 @@ func TestReopeningADomainNobodyAskedAboutIsNotFound(t *testing.T) {
 // records for a domain nobody is accountable for, so a row re-opened under
 // nobody's name would come straight back having spent an attempt for nothing.
 func TestReopeningStampsTheHumanAnswerableForTheDomain(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	// A machine suppression records no owner, then a human lifts it — which
@@ -938,10 +951,8 @@ func TestReopeningStampsTheHumanAnswerableForTheDomain(t *testing.T) {
 
 // A dossier already bound to another company refuses a second bind, rather
 // than leaving the caller holding a read that describes somebody else.
-//
-// The bind guards on `company_id IS NULL`, and the decline was silent: the
-// caller was told it owned a dossier that names a different company.
 func TestADossierBoundElsewhereRefusesASecondBind(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.openTriageFirst(ctx, t, "anna@twobind.test", "Anna Behr", "twobind.test")

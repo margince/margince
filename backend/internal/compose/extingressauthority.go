@@ -17,7 +17,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -26,37 +25,27 @@ import (
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
-// composedIngressFor returns the ingress sources the named unit declared in
-// THIS boot's composition.
+// ingressFor returns the ingress sources the named unit declared in this
+// composition.
 //
 // It reads the composed declarations rather than a second registry, for the
-// reason ComposedExtensions exists: the set the boot reconciliation actually
-// validated is the only honest answer to "what may this unit do", and a
-// parallel copy could describe a unit that is not serving.
-func composedIngressFor(unit string) []extension.IngressSource {
-	for _, ext := range ComposedExtensions() {
-		if string(ext.Name) == unit {
-			return ext.Ingress
-		}
-	}
-	return nil
-}
-
-// composedChannelsFor returns the transports the named unit declared in THIS
-// boot's composition, and it is composedIngressFor's twin for the same reason:
-// what a unit may name at a write door is what the boot reconciliation
-// validated, never a second registry that could describe a unit that is not
+// reason Extensions exists. The set the boot reconciliation validated answers
+// "what may this unit do". A parallel copy could describe a unit that is not
 // serving.
-func composedChannelsFor(unit string) []extension.Channel {
-	for _, ext := range ComposedExtensions() {
-		if string(ext.Name) == unit {
-			return ext.Channels
-		}
-	}
-	return nil
+func (x *Extensions) ingressFor(unit string) []extension.IngressSource {
+	declared := x.unit(unit)
+	return declared.Ingress
 }
 
-// declaredUserSecretKeys are the user-scoped secret keys the named unit
+// channelsFor returns the transports the named unit declared in this
+// composition. It is ingressFor's twin for the same reason: what a unit may name
+// at a write door is what the boot reconciliation validated.
+func (x *Extensions) channelsFor(unit string) []extension.Channel {
+	declared := x.unit(unit)
+	return declared.Channels
+}
+
+// userSecretKeys are the user-scoped secret keys the named unit
 // declares in THIS boot's composition.
 //
 // The consent check reads them rather than accepting any row in the unit's
@@ -65,16 +54,12 @@ func composedChannelsFor(unit string) []extension.Channel {
 // a credential a member gave an earlier version of a unit would go on
 // authorizing a capability the current manifest does not describe. What an
 // operator can read has to be what the core acts on.
-func declaredUserSecretKeys(unit string) []string {
+func (x *Extensions) userSecretKeys(unit string) []string {
+	declared := x.unit(unit)
 	var keys []string
-	for _, ext := range ComposedExtensions() {
-		if string(ext.Name) != unit {
-			continue
-		}
-		for _, request := range ext.Secrets {
-			if request.Scope == extension.SecretScopeUser {
-				keys = append(keys, request.Key)
-			}
+	for _, request := range declared.Secrets {
+		if request.Scope == extension.SecretScopeUser {
+			keys = append(keys, request.Key)
 		}
 	}
 	return keys
@@ -102,17 +87,18 @@ func declaredUserSecretKeys(unit string) []string {
 // The read is the installation's: ADR-0091 §8 phase D took the tenant column
 // off extension_secret and then off app_user, and one installation serves one
 // company (ADR-0061), so the deposit either exists or it does not.
-func extensionMemberConsented(ctx context.Context, pool *pgxpool.Pool, unit string, member ids.UUID) (bool, error) {
+func extensionMemberConsented(ctx context.Context, deps extensionRuntimeBinding, unit string, member ids.UUID) (bool, error) {
+	pool := deps.pool
 	if pool == nil {
 		return false, errExtensionRuntimeUnwired
 	}
-	if len(declaredUserSecretKeys(unit)) == 0 {
+	if len(deps.composed.userSecretKeys(unit)) == 0 {
 		return false, nil
 	}
 	var consented bool
 	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
 		var err error
-		consented, err = memberConsentedTx(ctx, tx, unit, member)
+		consented, err = memberConsentedTx(ctx, tx, deps.composed, unit, member)
 		return err
 	})
 	if err != nil {
@@ -126,8 +112,8 @@ func extensionMemberConsented(ctx context.Context, pool *pgxpool.Pool, unit stri
 // for the unit it was declared for and no other. Without the join, a unit could
 // name another unit's service member and borrow the authority the operator gave
 // that feed.
-func memberConsentedTx(ctx context.Context, tx pgx.Tx, unit string, member ids.UUID) (bool, error) {
-	declared := declaredUserSecretKeys(unit)
+func memberConsentedTx(ctx context.Context, tx pgx.Tx, composed *Extensions, unit string, member ids.UUID) (bool, error) {
+	declared := composed.userSecretKeys(unit)
 	if len(declared) == 0 {
 		// Such a unit gives a member no way to consent. Nobody is left to act for.
 		return false, nil
@@ -148,12 +134,12 @@ func memberConsentedTx(ctx context.Context, tx pgx.Tx, unit string, member ids.U
 // memberConnectedTx reports whether the member is active now and holds one of
 // the unit's user-scoped secrets. A member who has left keeps the credential
 // they deposited. A door that acts for a named member asks this, not the deposit.
-func memberConnectedTx(ctx context.Context, tx pgx.Tx, unit string, member ids.UUID) (bool, error) {
+func memberConnectedTx(ctx context.Context, tx pgx.Tx, composed *Extensions, unit string, member ids.UUID) (bool, error) {
 	var live bool
 	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM app_user u WHERE u.id = $1 AND `+workforce.LiveMemberSQL("u")+`)`, member).Scan(&live); err != nil || !live {
 		return false, err
 	}
-	return memberConsentedTx(ctx, tx, unit, member)
+	return memberConsentedTx(ctx, tx, composed, unit, member)
 }
 
 // liveMemberPrincipal resolves what the member may do now, per call, so a
@@ -164,5 +150,5 @@ func liveMemberPrincipal(ctx context.Context, pool *pgxpool.Pool, workspace, mem
 	if pool == nil {
 		return principal.Principal{}, errExtensionRuntimeUnwired
 	}
-	return authz.MemberPrincipal(ctx, identity.NewService(pool), workspace, member)
+	return authz.MemberPrincipal(ctx, IdentityService(pool), workspace, member)
 }

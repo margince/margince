@@ -16,6 +16,7 @@ import (
 // seat's to admit. So admission after the commit must follow what the
 // transaction stored, not the record the connector handed over.
 func TestAdmissionRunsForMailTheSeatSentFromAnAlias(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	declareIdentity(t, e, e.Rep1, capturemod.IdentityKindAddress, ownerAlias)
@@ -35,6 +36,7 @@ func TestAdmissionRunsForMailTheSeatSentFromAnAlias(t *testing.T) {
 // Mail the seat only received names no one its proof can admit, so capture
 // leaves nothing pending and runs no admission after the commit.
 func TestReceivedMailLeavesNoAdmissionPending(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 

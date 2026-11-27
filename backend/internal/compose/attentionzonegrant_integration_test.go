@@ -21,6 +21,7 @@ import (
 // A member without installation_settings.read still gets the installation's
 // day on the Worklist: which day it is needs no settings grant.
 func TestTheWorklistDayBoundaryNeedsNoSettingsGrant(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	zoneName := "Pacific/Auckland"
 	zone, err := time.LoadLocation(zoneName)

@@ -55,6 +55,7 @@ func (p *skippingPage) BackfillPage(ctx context.Context, _ connector.Auth, _ tim
 }
 
 func TestAnOwnDomainRemovedMidRunNoLongerDropsTheNextMessage(t *testing.T) {
+	t.Parallel()
 	const ours = "partner-fact.example"
 	e := integration.SetupSearch(t)
 	seedCaptureRole(t, e)

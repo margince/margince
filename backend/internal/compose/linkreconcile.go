@@ -34,7 +34,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/platform/jobs"
@@ -191,7 +190,7 @@ func (w *linkReconcileWorker) reconcileLinksForWorkspace(ctx context.Context, wo
 func (w *linkReconcileWorker) repairLeadFilings(ctx context.Context) (int, error) {
 	tasks := newLeadWorkTasks(InstallationDB(w.pool), w.log)
 	repair := capture.LeadFilingRepair{
-		Authority: identity.NewService(w.pool),
+		Authority: IdentityService(w.pool),
 		Filer:     ActivityLeadFiler{Tasks: &tasks},
 	}
 	var out datatask.BatchOut

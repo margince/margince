@@ -14,7 +14,6 @@ package consent
 import (
 	"context"
 	"errors"
-	"os"
 	"strings"
 	"testing"
 
@@ -45,13 +44,9 @@ type channelConsentEnv struct {
 
 func setupChannelConsent(t *testing.T) *channelConsentEnv {
 	t.Helper()
-	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
-	appDSN := os.Getenv("MARGINCE_TEST_APP_DSN")
-	if ownerDSN == "" || appDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
+	db := testdb.New(t)
 	ctx := context.Background()
-	owner, err := pgx.Connect(ctx, ownerDSN)
+	owner, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -60,19 +55,6 @@ func setupChannelConsent(t *testing.T) *channelConsentEnv {
 			t.Errorf("closing owner connection: %v", err)
 		}
 	})
-	// To head before anything else touches this database: testdb.Pool refuses
-	// until EnsureSchema has run, and EnsureSchema still REBUILDS whenever it
-	// cannot prove the database is a fresh lane clone — so a seed written
-	// before it would be dropped rather than reset.
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
-	// Every test in this package seeds its own workspace into ONE database, so
-	// the separation between them has to be real: reset before seeding, as
-	// compose/integration's harness does.
-	if err := testdb.Reset(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
 
 	e := &channelConsentEnv{
 		owner: owner,
@@ -112,14 +94,12 @@ func setupChannelConsent(t *testing.T) *channelConsentEnv {
 		t.Fatal(err)
 	}
 
-	pool, err := testdb.Pool(ctx, appDSN)
+	pool, err := testdb.Pool(ctx, db.AppDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// Registered where the pool is handed out, before the test adds any cleanup
 	// of its own, so it runs last and sees a package that has genuinely stopped.
-	// The pool outlives the test now, so a goroutine still holding a connection
-	// would go on writing into the database the NEXT test just reset.
 	testdb.AssertPoolsQuiesced(t)
 	// With a lane, because the mint refuses without one. An installation that
 	// issues these links can mail them, and a case about what a link does once
@@ -153,6 +133,7 @@ func (e *channelConsentEnv) recipient() connector.Recipient {
 }
 
 func TestConsentGateRefusesAChannelRecipientWithoutAGrant(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	gate := NewGate(e.store)
 	rs := []connector.Recipient{e.recipient()}
@@ -193,6 +174,7 @@ func TestConsentGateRefusesAChannelRecipientWithoutAGrant(t *testing.T) {
 // suppression mechanism, and it is asked after the subject could have changed
 // their mind.
 func TestConsentGateRefusesAChannelRecipientAfterWithdrawal(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	gate := NewGate(e.store)
 	rs := []connector.Recipient{e.recipient()}
@@ -226,6 +208,7 @@ func TestConsentGateRefusesAChannelRecipientAfterWithdrawal(t *testing.T) {
 // claim is that the gate propagates such a fault unchanged instead of folding it
 // into a suppression answer, so one malformed recipient carries the claim.
 func TestConsentGateRefusesAMalformedRecipientAsAFault(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	gate := NewGate(e.store)
 
@@ -242,6 +225,7 @@ func TestConsentGateRefusesAMalformedRecipientAsAFault(t *testing.T) {
 // The address-shaped entry point must stay a THIN WRAPPER: mail's own gate is
 // unchanged by the generalization, and the one rule now serves both.
 func TestRequireGrantedForEmailsStillAnswersThroughTheSharedRule(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	gate := NewGate(e.store)
 	address := "tilda-" + e.contact.String() + "@example.test"
@@ -274,6 +258,7 @@ func TestRequireGrantedForEmailsStillAnswersThroughTheSharedRule(t *testing.T) {
 // a caller cannot name one — so a refusal that quoted it back would mint that
 // identifier into an error string for anyone who can provoke a refusal.
 func TestConsentGateRefusalNeverCarriesTheChannelAccountID(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	gate := NewGate(e.store)
 
@@ -301,6 +286,7 @@ func TestConsentGateRefusalNeverCarriesTheChannelAccountID(t *testing.T) {
 // only thing that makes a multi-recipient refusal actionable, since the rep has to
 // know WHICH address stopped the send.
 func TestConsentGateRefusalStillNamesTheRefusedMailAddress(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	gate := NewGate(e.store)
 	const address = "no-grant@cc.test"

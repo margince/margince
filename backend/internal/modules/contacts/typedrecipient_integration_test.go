@@ -69,6 +69,7 @@ func (e *privacyEnv) ownersHolding(t *testing.T, address string) []ids.UUID {
 //
 // Mutation: return early from FileTypedRecipientsTx and nothing is filed.
 func TestANewTypedAddressIsFiledAsTheCallersContact(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	ctx := e.as(e.admin, principal.RowScopeAll)
 
@@ -94,6 +95,7 @@ func TestANewTypedAddressIsFiledAsTheCallersContact(t *testing.T) {
 // Mutation: drop the holder check from typedRecipientFileable and the create
 // refuses the held address, which fails the send.
 func TestATypedAddressOnAHiddenContactIsNotFiledAgain(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	hidden := e.captureContact(t, "owner")
 	e.seedAddress(t, hidden, "private@typed.test")
@@ -116,6 +118,7 @@ func TestATypedAddressOnAHiddenContactIsNotFiledAgain(t *testing.T) {
 // Mutation: drop visibleLeadAddresses from VisibleAddresses and the lead's
 // address is not visible.
 func TestALeadsAddressIsNotFiledAndMayBeWrittenTo(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	ctx := e.as(e.admin, principal.RowScopeAll)
 	name, email := "Prospect Lead", "lead@typed.test"

@@ -83,6 +83,7 @@ func seedHealthyDeal(t *testing.T, e *Env, owner *pgx.Conn) (deal ids.UUID, enga
 }
 
 func TestDealHealthReproducesTheWorkedExampleOverSeededRows(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	deal, engaged, freshest := seedHealthyDeal(t, e, owner)
@@ -141,6 +142,7 @@ func TestDealHealthReproducesTheWorkedExampleOverSeededRows(t *testing.T) {
 // deal row (stage, status, version, every column) is byte-identical
 // after the computation.
 func TestDealHealthComputationNeverMutatesTheDeal(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	deal, _, _ := seedHealthyDeal(t, e, owner)
@@ -167,6 +169,7 @@ func TestDealHealthComputationNeverMutatesTheDeal(t *testing.T) {
 // idle time, commitments zeroed by the stalled flag even though the
 // overdue task still shows in the evidence.
 func TestStalledDealReadsAtRisk(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	pipeline, open, _ := DealFixture(t, e)
@@ -225,6 +228,7 @@ func TestStalledDealReadsAtRisk(t *testing.T) {
 // factor compares against. Ten wins saved before provenance was kept, four days
 // in the stage, set it to four, however many imported wins sit beside them.
 func TestImportedWinsDoNotSetTheStagePace(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	pipeline, open, won := DealFixture(t, e)
@@ -254,6 +258,7 @@ func TestImportedWinsDoNotSetTheStagePace(t *testing.T) {
 // them, whatever their ids say. Here that is an imported move. So each one-day
 // stint ending in such a pair is left out, and the four-day pace holds.
 func TestAStintEndsAtTheMoveWrittenFirstInItsInstant(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	ctx := context.Background()

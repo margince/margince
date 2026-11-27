@@ -17,6 +17,7 @@ import (
 // A host left with two live pages keeps the one in use. That is the one their
 // alias names, else the one that was used, else the newest.
 func TestOnePersonalPageKeepsThePageInUse(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	resetSchema(t, conn)

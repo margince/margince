@@ -154,6 +154,7 @@ func seedTwoDealRoom(t *testing.T, e *Env) twoDealRoom {
 }
 
 func TestAMeetingOnAnOpenAndAClosedDealBriefsOnTheOpenOne(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	room := seedTwoDealRoom(t, e)
 	lane := &planPromptLane{}
@@ -179,6 +180,7 @@ func TestAMeetingOnAnOpenAndAClosedDealBriefsOnTheOpenOne(t *testing.T) {
 }
 
 func TestHistoryNamesAnotherDealOnlyWhenTheReaderMaySeeIt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	room := seedTwoDealRoom(t, e)
 	noDeals := roomPerms
@@ -205,6 +207,7 @@ func TestHistoryNamesAnotherDealOnlyWhenTheReaderMaySeeIt(t *testing.T) {
 // A meeting filed under no deal is briefed on its contact's leading open deal.
 // Mail on that deal is on this meeting's deal, and names no other.
 func TestMailOnTheContactsLeadingDealIsOnAnUnlinkedMeetingsDeal(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	attendee := e.SeedContact(t, "Ana Roth", &e.Rep1)

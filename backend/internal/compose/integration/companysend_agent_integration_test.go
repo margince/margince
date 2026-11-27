@@ -142,6 +142,7 @@ func (a *accountSendEnv) linkedActivities(t *testing.T) int {
 }
 
 func TestAHumansAccountStartedSendLeavesWithoutAnApproval(t *testing.T) {
+	t.Parallel()
 	a := setupAccountSend(t)
 
 	var sent struct {
@@ -193,6 +194,7 @@ func (a *accountSendEnv) pendingApprovals(t *testing.T) int {
 // JSON-RPC framing is proven elsewhere, and Invoke is the one call every
 // transport dispatches through.
 func TestTheMCPDoorStagesTheSameShapeAsTheRESTDoor(t *testing.T) {
+	t.Parallel()
 	a := setupAccountSend(t)
 	token := a.mintAccountSendPassport(t)
 
@@ -226,6 +228,7 @@ func TestTheMCPDoorStagesTheSameShapeAsTheRESTDoor(t *testing.T) {
 // Automatic work with no passport may not stage, so under the floor its account
 // send is refused and nothing leaves.
 func TestAFlooredAccountSendFromAutomaticWorkIsRefusedAndNothingLeaves(t *testing.T) {
+	t.Parallel()
 	a := setupAccountSend(t)
 	args, err := json.Marshal(map[string]any{
 		"to": []string{"buyer@preflight.test"}, "subject": "Hello from an agent",
@@ -250,6 +253,7 @@ func TestAFlooredAccountSendFromAutomaticWorkIsRefusedAndNothingLeaves(t *testin
 // An agent on a colleague's passport sends at once under the same floor, as the
 // colleague could from the app. One message leaves and nothing is staged.
 func TestAFlooredAccountSendOnAColleaguesPassportLeavesAtOnce(t *testing.T) {
+	t.Parallel()
 	a := setupAccountSend(t)
 	args, err := json.Marshal(map[string]any{
 		"to": []string{"buyer@preflight.test"}, "subject": "Hello from an agent",
@@ -372,6 +376,7 @@ func (a *accountSendEnv) mintAccountSendPassport(t *testing.T) string {
 // project the probe cannot reach answers not-found on both doors, so the
 // refusal never says that a record the agent cannot reach exists.
 func TestAnAgentsPreviewAndSendAgreeOnAProjectLink(t *testing.T) {
+	t.Parallel()
 	a := accountSendOn(t, setupPreflightServingMCP(t))
 	live := createdRecord(t, a.AppEnv, "/v1/projects", AnyMap{"name": "Rollout", "company_id": a.company, "source": "manual"})
 	archived := createdRecord(t, a.AppEnv, "/v1/projects", AnyMap{"name": "Retired", "company_id": a.company, "source": "manual"})

@@ -31,6 +31,7 @@ var companyDomainParts = []AnyMap{{"file": "companies.csv", "object": "company",
 }}}
 
 func TestADomainRepeatedPastACommitSliceIsRefusedAsTheTestRunSaid(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	var file strings.Builder
 	file.WriteString("ref,name,domain\nk0,Twin Holder,twin-boundary.test\n")
@@ -86,6 +87,7 @@ func failAfterTheFirstCreate(t *testing.T, e *apptest.AppEnv, runID, sourceName,
 }
 
 func TestAResumedCommitRefusesADomainAnEarlierAttemptLanded(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	files := map[string]string{"companies.csv": "ref,name,domain\nk1,Resume One,resume.test\nk2,Resume Two,resume.test\n"}
 	run := stageBundle(t, e, uploadZip(t, e, "resume.zip", zipBytes(t, files)).SourceRef, "resume", companyDomainParts)
@@ -106,6 +108,7 @@ func TestAResumedCommitRefusesADomainAnEarlierAttemptLanded(t *testing.T) {
 // A lead's or contact's LinkedIn URL keeps the case of its path in the store,
 // so the test run must not fold it before asking.
 func TestALeadRowMeetsAMixedCaseLinkedInURLAsTheStoreDoes(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	createdID(t, e, "/v1/leads", AnyMap{
 		"source": "manual", "full_name": "Stored Lee", "email": "stored-lee@case.test",

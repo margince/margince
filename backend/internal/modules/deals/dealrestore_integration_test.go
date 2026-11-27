@@ -42,6 +42,7 @@ func (e *configEnv) restoreAs(ctx context.Context, deal ids.DealID) error {
 // delete holder restores it. An editor of every deal who owns none restores
 // no archive.
 func TestADealRestoreAsksTheArchivesOwnAuthority(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	deal, _, _ := seedOwnedDeal(t, e)
 	owner := e.asEditor(e.admin, principal.RowScopeOwn)

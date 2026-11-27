@@ -8,7 +8,6 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/platform/database/dbsettings"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
@@ -30,9 +29,6 @@ func openInstallation(ctx context.Context, cfg apiConfig) (*pgxpool.Pool, keyvau
 	vault, err := keyvault.ForRole(ctx, "api", pool, cfg.settings)
 	if err == nil {
 		err = storekit.RefuseForeignSuppressionKey(ctx, pool)
-	}
-	if err == nil {
-		err = compose.BindExtensionObjectsFromConfig(ctx, cfg.settings)
 	}
 	if err != nil {
 		pool.Close()

@@ -17,7 +17,7 @@ package migrations_test
 import (
 	"context"
 	"errors"
-	"os"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -25,18 +25,16 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/margince/margince/backend/internal/platform/dbmigrate"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/migrations"
 )
 
-// ownerDSN administers the throwaway test database; appDSNFmt is the
-// non-owner runtime role RLS must bind.
-func dsns(t *testing.T) (owner string, appFmt string) {
+// dsns answers the test's own database as its owner, who rewinds and
+// replays migrations on it, and as the non-owner runtime role.
+func dsns(t *testing.T) (owner string, app string) {
 	t.Helper()
-	owner = os.Getenv("MARGINCE_TEST_DSN")
-	if owner == "" {
-		t.Fatal("MARGINCE_TEST_DSN is not set — run `make db-up` and try again (integration tests fail loudly, they never skip)")
-	}
-	return owner, os.Getenv("MARGINCE_TEST_APP_DSN")
+	db := testdb.For(t)
+	return db.OwnerDSN, db.AppDSN
 }
 
 func connect(t *testing.T, dsn string) *pgx.Conn {
@@ -55,17 +53,24 @@ func connect(t *testing.T, dsn string) *pgx.Conn {
 
 func migrateAll(t *testing.T, conn *pgx.Conn) {
 	t.Helper()
+	if err := migrateUp(context.Background(), conn); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func migrateUp(ctx context.Context, conn *pgx.Conn) error {
 	core, err := migrations.Core()
 	if err != nil {
-		t.Fatalf("loading core migrations: %v", err)
+		return fmt.Errorf("loading core migrations: %w", err)
 	}
 	custom, err := migrations.Custom()
 	if err != nil {
-		t.Fatalf("loading custom migrations: %v", err)
+		return fmt.Errorf("loading custom migrations: %w", err)
 	}
-	if _, err := dbmigrate.Up(context.Background(), conn, core, custom); err != nil {
-		t.Fatalf("migrate up: %v", err)
+	if _, err := dbmigrate.Up(ctx, conn, core, custom); err != nil {
+		return fmt.Errorf("migrate up: %w", err)
 	}
+	return nil
 }
 
 // resetSchema drops everything so each test run starts clean.
@@ -83,19 +88,26 @@ func migrateAll(t *testing.T, conn *pgx.Conn) {
 // in 0213_ext_schema.down.sql, where the data is real.
 func resetSchema(t *testing.T, conn *pgx.Conn) {
 	t.Helper()
-	ctx := context.Background()
-	if _, err := conn.Exec(ctx, `DROP SCHEMA IF EXISTS ext CASCADE`); err != nil {
-		t.Fatalf("resetting the ext schema: %v", err)
-	}
-	if _, err := conn.Exec(ctx, `DROP SCHEMA public CASCADE; CREATE SCHEMA public;`); err != nil {
-		t.Fatalf("resetting schema: %v", err)
-	}
-	if _, err := conn.Exec(ctx, `GRANT USAGE ON SCHEMA public TO margince_app`); err != nil {
-		t.Fatalf("re-granting schema usage: %v", err)
+	if err := clearSchemas(context.Background(), conn); err != nil {
+		t.Fatal(err)
 	}
 }
 
+func clearSchemas(ctx context.Context, conn *pgx.Conn) error {
+	if _, err := conn.Exec(ctx, `DROP SCHEMA IF EXISTS ext CASCADE`); err != nil {
+		return fmt.Errorf("resetting the ext schema: %w", err)
+	}
+	if _, err := conn.Exec(ctx, `DROP SCHEMA public CASCADE; CREATE SCHEMA public;`); err != nil {
+		return fmt.Errorf("resetting schema: %w", err)
+	}
+	if _, err := conn.Exec(ctx, `GRANT USAGE ON SCHEMA public TO margince_app`); err != nil {
+		return fmt.Errorf("re-granting schema usage: %w", err)
+	}
+	return nil
+}
+
 func TestMigrations_applyReverseReapply(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	resetSchema(t, conn)
@@ -182,6 +194,7 @@ func inTx(t *testing.T, conn *pgx.Conn, fn func(pgx.Tx) error) error {
 }
 
 func TestVersionBumpAndSkewSemantics(t *testing.T) {
+	t.Parallel()
 	ownerDSN, appDSN := dsns(t)
 	owner := connect(t, ownerDSN)
 	headSchema(t, owner)
@@ -234,6 +247,7 @@ func TestVersionBumpAndSkewSemantics(t *testing.T) {
 }
 
 func TestAuditLogIsAppendOnly(t *testing.T) {
+	t.Parallel()
 	ownerDSN, appDSN := dsns(t)
 	owner := connect(t, ownerDSN)
 	headSchema(t, owner)
@@ -307,6 +321,7 @@ func seedLedgerRowsForReversal(t *testing.T, conn *pgx.Conn) {
 // what the source names rather than what the database has, then deletes the row
 // that was the only record of what it did apply.
 func TestMigrations_downRefusesAnEditedMigration(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	resetSchema(t, conn)
@@ -364,6 +379,7 @@ func TestMigrations_downRefusesAnEditedMigration(t *testing.T) {
 // predicate was already right and unread: what this pins is that the production
 // migrate path consults it.
 func TestMigrations_upRefusesAnEditedMigrationBeforeApplyingAny(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	resetSchema(t, conn)

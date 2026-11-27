@@ -32,6 +32,7 @@ import (
 // the write leaves them both live — which uq_contact_email_primary refuses.
 // Archiving before inserting is what makes that window not exist.
 func TestReplacingTheWorkEmailCorrectsIt(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -61,6 +62,7 @@ func TestReplacingTheWorkEmailCorrectsIt(t *testing.T) {
 // address the file never mentioned survives. The file's address takes the
 // contact's one primary, so the retained personal address arrives demoted.
 func TestReplacingOneAddressMovesTheContactsOnePrimary(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -98,6 +100,7 @@ func TestReplacingOneAddressMovesTheContactsOnePrimary(t *testing.T) {
 // Primary is one choice across types: ticking it on an address of another type
 // moves it, and the address the app writes to follows.
 func TestPrimaryMovesAcrossTypesAndTheAppFollows(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -137,6 +140,7 @@ func TestPrimaryMovesAcrossTypesAndTheAppFollows(t *testing.T) {
 // A new contact's only address is primary whether or not the writer said so.
 // With several addresses and none marked, the first by position is.
 func TestANewContactsFirstAddressIsPrimary(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -182,6 +186,7 @@ func primaryEmails(rows []crmcontracts.ContactEmail) []string {
 // An address another contact holds is refused, and the target contact's own rows
 // are left exactly as they were: the transaction rolls back whole.
 func TestReplacingWithAnAddressAnotherContactHoldsIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -223,6 +228,7 @@ func TestReplacingWithAnAddressAnotherContactHoldsIsRefused(t *testing.T) {
 // own row — the claim check excludes them, which is why the self-excluding
 // variant exists at all.
 func TestReStatingAHeldAddressIsNotAConflict(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -246,6 +252,7 @@ func TestReStatingAHeldAddressIsNotAConflict(t *testing.T) {
 // makes an address name one contact, and the evidence a merge dispute is settled
 // by is that the contact once held it.
 func TestAReplacedAddressIsArchivedNotDeleted(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -282,6 +289,7 @@ func TestAReplacedAddressIsArchivedNotDeleted(t *testing.T) {
 // for the length of a statement — which uq_contact_email_primary refuses.
 // Demoting before promoting is what keeps that window from existing.
 func TestSwappingWhichWorkAddressIsPrimary(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -326,6 +334,7 @@ func TestSwappingWhichWorkAddressIsPrimary(t *testing.T) {
 // contradiction the caller can fix. It is refused before any write with a typed
 // error, not the bare conflict uq_contact_email_primary would answer with.
 func TestTwoPrimaryAddressesAreRefusedWhateverTheirTypes(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -375,6 +384,7 @@ func liveEmailRows(p crmcontracts.Contact) []crmcontracts.ContactEmail {
 // may be primary. The retained row arrives demoted, and the write must land the
 // new primary without ever having two live primaries of one type.
 func TestANewPrimaryLandsBesideARetainedWorkAddress(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -429,6 +439,7 @@ func TestANewPrimaryLandsBesideARetainedWorkAddress(t *testing.T) {
 // implementation that treated empty as "nothing to do" would look identical
 // from the call site and quietly leave the dead address in place.
 func TestAnEmptyAddressSetRemovesEveryAddress(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -462,6 +473,7 @@ func TestAnEmptyAddressSetRemovesEveryAddress(t *testing.T) {
 // And an absent set leaves them alone, without which the case above could be a
 // mapping that sends an empty slice for everything.
 func TestAnAbsentAddressSetLeavesThemAlone(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 

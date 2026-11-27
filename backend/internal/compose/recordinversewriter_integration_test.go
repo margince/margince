@@ -40,6 +40,7 @@ func auditRowOf(t *testing.T, e *integration.Env, auditID ids.UUID) AuditRow {
 // The archive an undo writes asks about a colleague's work again, in its own
 // transaction, and refuses without archiving.
 func TestTheArchiveAnUndoWritesRefusesAColleaguesWorkByItself(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	created, err := e.Contacts.CreateContact(machineCtx(e), contacts.CreateContactInput{FullName: "Imported Ida", Source: "import"})
 	if err != nil {
@@ -61,6 +62,7 @@ func TestTheArchiveAnUndoWritesRefusesAColleaguesWorkByItself(t *testing.T) {
 // An archive's own cascade names the tags and list memberships it removed, so
 // what a colleague gave the record is visible after the archive deleted it.
 func TestAnArchivesCascadeNamesTheColleagueWorkItDropped(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	tagged := e.SeedContact(t, "Tagged Tom", nil)
 	taggedAndListed(t, e, "contact", tagged)
@@ -92,6 +94,7 @@ func TestAnArchivesCascadeNamesTheColleagueWorkItDropped(t *testing.T) {
 // A demotion asked to spare a colleague's work refuses when the contact the
 // promotion created carries a tag a colleague gave it.
 func TestADemotionRefusesWhenAColleagueWorkedOnTheCreatedContact(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	name, email := "Lena Lead", "lena@prospect.test"
 	lead, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{Source: "import", FullName: &name, Email: &email})

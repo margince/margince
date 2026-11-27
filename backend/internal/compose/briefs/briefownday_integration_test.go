@@ -17,6 +17,7 @@ import (
 )
 
 func TestABriefIsFiledUnderTheMembersOwnDay(t *testing.T) {
+	t.Parallel()
 	b := setupBrief(t)
 	b.WsExec(t, `UPDATE setting SET value = '"Europe/Berlin"'::jsonb WHERE key = 'installation.timezone'`)
 	b.WsExec(t, `UPDATE app_user SET timezone = 'Asia/Ho_Chi_Minh' WHERE id = $1`, b.Rep1)
@@ -54,6 +55,7 @@ func (b *briefEnv) runsFiled(t *testing.T) int {
 // would file tomorrow's run early, east to west a second run for today. Either
 // way one edition covers the real day, and a later day still gets its own.
 func TestAZoneChangeFilesOneBriefPerRealDayInBothDirections(t *testing.T) {
+	t.Parallel()
 	for name, c := range map[string]struct{ from, to string }{
 		"moving east": {"America/Los_Angeles", "Asia/Ho_Chi_Minh"},
 		"moving west": {"Asia/Ho_Chi_Minh", "America/Los_Angeles"},

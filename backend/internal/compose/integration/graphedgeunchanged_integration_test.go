@@ -137,6 +137,7 @@ func (v graphSkipEnv) handle(t *testing.T, env kevents.Envelope) {
 }
 
 func TestAnUpdateTheFoldCannotSeeLeavesTheEdgeAlone(t *testing.T) {
+	t.Parallel()
 	v := graphSkipEnv{Setup(t)}
 	contact := v.contact(t, "Classified Contact")
 	activity := v.interaction(t, v.e.Rep1, contact, clocktest.Now(t).AddDate(0, 0, -2), "inbound")
@@ -167,6 +168,7 @@ func TestAnUpdateTheFoldCannotSeeLeavesTheEdgeAlone(t *testing.T) {
 }
 
 func TestARefoldThatFindsTheSameFactsWritesNothing(t *testing.T) {
+	t.Parallel()
 	v := graphSkipEnv{Setup(t)}
 	contact := v.contact(t, "Steady Contact")
 	activity := v.interaction(t, v.e.Rep1, contact, clocktest.Now(t).AddDate(0, 0, -2), "inbound")
@@ -193,6 +195,7 @@ func TestARefoldThatFindsTheSameFactsWritesNothing(t *testing.T) {
 }
 
 func TestARealChangeStillUpdatesTheEdgeAndTheRebuildAgrees(t *testing.T) {
+	t.Parallel()
 	v := graphSkipEnv{Setup(t)}
 	now := clocktest.Now(t)
 	contact := v.contact(t, "Moving Contact")
@@ -249,6 +252,7 @@ func TestARealChangeStillUpdatesTheEdgeAndTheRebuildAgrees(t *testing.T) {
 }
 
 func TestAChangeThatOnlyMovesTheSentCountRewritesTheEdge(t *testing.T) {
+	t.Parallel()
 	v := graphSkipEnv{Setup(t)}
 	contact := v.contact(t, "Sent Count Contact")
 	activity := v.interaction(t, v.e.Rep1, contact, clocktest.Now(t).AddDate(0, 0, -2), "outbound")

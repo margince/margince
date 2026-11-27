@@ -14,6 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/recordmerge"
+	"github.com/margince/margince/backend/internal/platform/sweepreach"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
@@ -161,7 +162,13 @@ type Installation struct {
 	// merge survivor: contacts, contracts, assignments, activities, dealrooms,
 	// chatlinks, commissions and the briefs.
 	MoveDealRefs []MoveDealRefs
+	// MergeReach answers the tables the core modules and the installed
+	// extensions declare as naming a deal, which a merge moves to the survivor.
+	MergeReach MergeReach
 }
+
+// MergeReach answers the declared tables a deal merge relinks.
+type MergeReach func() (sweepreach.Set, error)
 
 // EnsurePartner answers whether a company may be named as a deal's
 // partner, inside the caller's own transaction so the answer cannot go stale
@@ -208,6 +215,12 @@ func (i Installation) orRefusing() Installation {
 	}
 	if i.StartDeliveryForWonDeal == nil {
 		i.StartDeliveryForWonDeal = refusingStartDelivery()
+	}
+	if i.MergeReach == nil {
+		i.MergeReach = func() (sweepreach.Set, error) {
+			return sweepreach.Set{}, errors.New("deals: the installation MergeReach seam was not injected; " +
+				"construct this store with installseam.Deals(), which binds the declared tables a merge moves")
+		}
 	}
 	if i.EnsurePartner == nil {
 		i.EnsurePartner = refusingEnsurePartner()

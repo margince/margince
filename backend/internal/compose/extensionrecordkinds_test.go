@@ -7,7 +7,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/ports/extregistrytest"
 	"github.com/margince/margince/backend/internal/shared/ports/recordkinds"
 	"github.com/margince/margince/backend/pkg/extension"
@@ -23,8 +22,7 @@ func visitKind(unitNS string) extension.RecordKindDeclaration {
 
 func TestRegisterExtensionsRegistersDeclaredRecordKinds(t *testing.T) {
 	extregistrytest.Reset(t)
-	t.Cleanup(identity.ResetRbacObjectsForTest)
-	if err := RegisterExtensions(composableAll([]extension.Extension{{
+	if _, err := RegisterExtensions(composableAll([]extension.Extension{{
 		Name: "kinds-ok", Version: "0.0.1",
 		RecordKinds: []extension.RecordKindDeclaration{visitKind("ext_kinds_ok")},
 	}}), nil, nil); err != nil {
@@ -50,7 +48,7 @@ func TestABadRecordKindDeclarationAbortsTheBoot(t *testing.T) {
 		{"table of another unit", []extension.RecordKindDeclaration{visitKind("ext_elsewhere")}, "namespace"},
 	} {
 		recordkinds.Reset()
-		err := RegisterExtensions(composableAll([]extension.Extension{{
+		_, err := RegisterExtensions(composableAll([]extension.Extension{{
 			Name: "kinds-bad", Version: "0.0.1", RecordKinds: c.kinds,
 		}}), nil, nil)
 		if err == nil || !strings.Contains(err.Error(), c.want) {

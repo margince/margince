@@ -27,13 +27,11 @@ const (
 	// maxReviewedLossMappings is the most decisions one apply names: the
 	// contract's page of them.
 	maxReviewedLossMappings = 200
+	// maxReviewedLossDeals is the most deals one run changes, as the engine
+	// bounds a reviewed run at 1000 records. Applied deals drop out of the
+	// pending set, so the next apply of the same decisions takes the rest.
+	maxReviewedLossDeals = 1000
 )
-
-// maxReviewedLossDeals is the most deals one run changes, as the engine bounds
-// a reviewed run at 1000 records. Applied deals drop out of the pending set, so
-// the next apply of the same decisions takes the rest. A var so a test can make
-// the page small enough to need two.
-var maxReviewedLossDeals = 1000
 
 // lossMappingScope is the reviewed plan: each decided mapping at the version
 // the administrator applied.
@@ -111,7 +109,7 @@ type lossMappingPlan struct {
 // lossMappingReview seals the decisions the operator reviewed and no others,
 // each at the version they saw. A decision that moved or went since is refused, so a
 // run never applies one nobody looked at.
-func lossMappingReview(ctx context.Context, tx pgx.Tx, seen []deals.ReviewedLossMapping, asOf time.Time) (lossMappingPlan, error) {
+func lossMappingReview(ctx context.Context, tx pgx.Tx, seen []deals.ReviewedLossMapping, asOf time.Time, maxDeals int) (lossMappingPlan, error) {
 	if len(seen) == 0 || len(seen) > maxReviewedLossMappings {
 		return lossMappingPlan{}, apperrors.ErrInvalidArgument
 	}
@@ -122,11 +120,11 @@ func lossMappingReview(ctx context.Context, tx pgx.Tx, seen []deals.ReviewedLoss
 	for _, mapping := range seen {
 		reviewed = append(reviewed, mapping.ID)
 	}
-	pending, err := deals.CountLossMappingCandidates(ctx, tx, int64(maxReviewedLossDeals), reviewed)
+	pending, err := deals.CountLossMappingCandidates(ctx, tx, int64(maxDeals), reviewed)
 	if err != nil {
 		return lossMappingPlan{}, err
 	}
-	plan := lossMappingPlan{mappings: len(seen), deals: int(min(pending, int64(maxReviewedLossDeals)))}
+	plan := lossMappingPlan{mappings: len(seen), deals: int(min(pending, int64(maxDeals)))}
 	encoded, err := json.Marshal(lossMappingScope{Mappings: seen})
 	if err != nil {
 		return lossMappingPlan{}, err

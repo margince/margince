@@ -18,6 +18,7 @@ import (
 // A host with no calendar provider asks for reliable availability and is told
 // to connect a calendar, on the route and in the tool alike.
 func TestReliableAvailabilityWithoutACalendarAsksForOneAtBothDoors(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoorsWith(t, "availability-no-calendar", []compose.Option{(&apptest.BookingCalendar{}).Option()}, "read")
 	day := apptest.NextBookableMorning(t).Truncate(24 * time.Hour)
 	from, to := day.Add(8*time.Hour).Format(time.RFC3339), day.Add(18*time.Hour).Format(time.RFC3339)

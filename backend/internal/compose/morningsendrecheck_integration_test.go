@@ -26,6 +26,7 @@ import (
 // between is not mailed to its former holder; work still theirs is mailed
 // once.
 func TestAMorningMailRereadsTheWorkAfterItsSendIsReserved(t *testing.T) {
+	t.Parallel()
 	relay := &countingMailer{}
 	b := setupBriefJob(t).withMailer(relay)
 	morning := time.Date(2026, 6, 4, 9, 0, 0, 0, time.UTC)
@@ -65,6 +66,7 @@ func TestAMorningMailRereadsTheWorkAfterItsSendIsReserved(t *testing.T) {
 // A change committed while the reservation waits on its row is seen by the
 // reservation. It then reads the work again instead of mailing the old body.
 func TestAMorningReservationWaitsForAConcurrentChangeToItsWork(t *testing.T) {
+	t.Parallel()
 	relay := &countingMailer{}
 	b := setupBriefJob(t).withMailer(relay)
 	morning := time.Date(2026, 6, 4, 9, 0, 0, 0, time.UTC)
@@ -128,6 +130,7 @@ func TestAMorningReservationWaitsForAConcurrentChangeToItsWork(t *testing.T) {
 // Once the reservation commits, the message goes to the relay. A change made
 // during the relay call cannot unsend it, and no second message follows.
 func TestAChangeDuringTheRelayCallDoesNotSendTwice(t *testing.T) {
+	t.Parallel()
 	relay := &countingMailer{}
 	b := setupBriefJob(t).withMailer(relay)
 	morning := time.Date(2026, 6, 4, 9, 0, 0, 0, time.UTC)

@@ -114,6 +114,8 @@ type lossTaskRunner struct {
 	engine *datatask.Engine
 	system context.Context
 	now    func() time.Time
+	// dealPage, when set, is the most deals one run changes.
+	dealPage int
 }
 
 func newLossTaskRunner(t *testing.T, e *integration.Env) lossTaskRunner {
@@ -144,7 +146,7 @@ func (r lossTaskRunner) apply(ctx context.Context, t *testing.T, shown ...crmcon
 		t.Fatal(err)
 	}
 	rec := httptest.NewRecorder()
-	(dataTaskHandlers{pool: r.e.Pool, clock: r.now}).ApplyLegacyLossReasons(rec,
+	(dataTaskHandlers{pool: r.e.Pool, clock: r.now, lossDealPage: r.dealPage}).ApplyLegacyLossReasons(rec,
 		httptest.NewRequest(http.MethodPost, "/v1/loss-reasons/legacy/apply", bytes.NewReader(raw)).WithContext(ctx))
 	if rec.Code != http.StatusAccepted {
 		return rec.Code, 0
@@ -191,6 +193,7 @@ func askWinLoss(t *testing.T, e *integration.Env, groupBy ...string) map[string]
 // counts, money included. A note nobody mapped stays its own bucket rather
 // than vanishing or borrowing a code.
 func TestWinLossCountsLossesByHowTheirReasonIsKnown(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	operator := lossAdmin(t, e)
 	seedLosses(operator, t, e)
@@ -214,13 +217,12 @@ func TestWinLossCountsLossesByHowTheirReasonIsKnown(t *testing.T) {
 // One run changes at most a page of deals. The deals it changed leave the
 // pending set, so applying the same decision again takes the rest.
 func TestAnApplyLargerThanOneRunFinishesOnTheNext(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	operator := lossAdmin(t, e)
 	seedLosses(operator, t, e)
-	page := maxReviewedLossDeals
-	maxReviewedLossDeals = 1
-	t.Cleanup(func() { maxReviewedLossDeals = page })
 	runner := newLossTaskRunner(t, e)
+	runner.dealPage = 1
 	decided := decideShared(operator, t, e)
 	for run, want := range []int{1, 1} {
 		if status, deals := runner.apply(operator, t, decided); status != http.StatusAccepted || deals != want {
@@ -238,6 +240,7 @@ func TestAnApplyLargerThanOneRunFinishesOnTheNext(t *testing.T) {
 // An apply carries the decisions the administrator saw, at the versions they
 // saw. One that moved since is refused, and one nobody named is not applied.
 func TestAnApplyCarriesOnlyTheDecisionsItWasShown(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	operator := lossAdmin(t, e)
 	seedLosses(operator, t, e)
@@ -275,6 +278,7 @@ func TestAnApplyCarriesOnlyTheDecisionsItWasShown(t *testing.T) {
 // loss's reason, which is what the report's notes state. The first loss keeps
 // its own code on its stage history row.
 func TestAReloseCountsOnceUnderItsLastLoss(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := lossAdmin(t, e)
 	pipeline, open, _ := integration.DealFixture(t, e)
@@ -315,6 +319,7 @@ func TestAReloseCountsOnceUnderItsLastLoss(t *testing.T) {
 // An apply an agent starts runs as that agent, on a worker with no one signed in,
 // so each deal's audit row names the agent.
 func TestAnApplyByAnAgentNamesTheAgentOnEachDeal(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	operator := lossAdmin(t, e)
 	seedLosses(operator, t, e)
@@ -343,6 +348,7 @@ func TestAnApplyByAnAgentNamesTheAgentOnEachDeal(t *testing.T) {
 
 // A passport that no longer lends write ends the run its agent started.
 func TestAnActivationOnAReadOnlyPassportDoesNotRun(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	operator := lossAdmin(t, e)
 	human, _ := principal.Actor(operator)

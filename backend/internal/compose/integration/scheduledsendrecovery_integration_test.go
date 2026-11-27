@@ -68,6 +68,7 @@ func (p *preflightEnv) overdueMessage(t *testing.T) ids.UUID {
 // Nothing works the alarms here, so every alarm the first pass queues stays
 // live. The second pass must reach the messages that did not fit in the first.
 func TestARecoveryPassReachesMessagesBehindABatchWhoseAlarmsAreLive(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	source := p.overdueMessage(t)
@@ -97,6 +98,7 @@ func TestARecoveryPassReachesMessagesBehindABatchWhoseAlarmsAreLive(t *testing.T
 // The stamp is cleared between the passes, so only the alarm's uniqueness can
 // stop the second pass from queueing a second alarm.
 func TestARecoveryPassAddsNoAlarmBesideALiveOne(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	id := p.overdueMessage(t)
@@ -119,6 +121,7 @@ func TestARecoveryPassAddsNoAlarmBesideALiveOne(t *testing.T) {
 // An alarm still waits for the later moment, so a key on the message alone
 // would swallow the alarm for the earlier one.
 func TestAMessageMovedEarlierGetsAnAlarmForItsNewMoment(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	now := time.Now()

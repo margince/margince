@@ -18,6 +18,7 @@ import (
 // promise at send time. Once the promise is settled, the proposal is stale and
 // nothing is mailed; while it is open, the notice goes out.
 func TestAQueuedCommitmentNoticeIsNotMailedOnceThePromiseIsSettled(t *testing.T) {
+	t.Parallel()
 	e, wire := stageMailedRequest(t)
 	claim, err := ids.Parse(e.WsScalar(t, `SELECT coalesce(proposed_change->>'claim_id', proposed_change->'claim_ids'->>0) FROM approval WHERE id = $1`, ids.UUID(wire.Id)))
 	if err != nil {

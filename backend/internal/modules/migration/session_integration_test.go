@@ -91,6 +91,7 @@ func auditCount(ctx context.Context, t *testing.T, db *database.DB, id RunID) in
 }
 
 func TestEveryTransitionMovesOnlyFromItsDeclaredStates(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	for name, move := range sessionMoves {
@@ -115,6 +116,7 @@ func TestEveryTransitionMovesOnlyFromItsDeclaredStates(t *testing.T) {
 }
 
 func TestARepeatedApproveSaysTheRunIsAlreadyRunning(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	id := seedRunIn(ctx, t, db, StatusRunning)
 	err := db.Tx(ctx, func(tx pgx.Tx) error { return stageTransition(ctx, tx, id, moveApprove, runChange{}) })
@@ -127,6 +129,7 @@ func TestARepeatedApproveSaysTheRunIsAlreadyRunning(t *testing.T) {
 }
 
 func TestAPatchOfAChoiceReturnsAReportToDraft(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	run := toReport(ctx, t, s, newDraft(ctx, t, s, ""))
@@ -147,6 +150,7 @@ func TestAPatchOfAChoiceReturnsAReportToDraft(t *testing.T) {
 }
 
 func TestAPatchOfNothingWritesNothing(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	run := newDraft(ctx, t, s, "Fair 2026")
@@ -166,6 +170,7 @@ func TestAPatchOfNothingWritesNothing(t *testing.T) {
 }
 
 func TestAStepAloneSpendsNoVersion(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	run := newDraft(ctx, t, s, "")
@@ -181,6 +186,7 @@ func TestAStepAloneSpendsNoVersion(t *testing.T) {
 }
 
 func TestVersionMismatchIsAConflict(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	run := newDraft(ctx, t, s, "")
@@ -202,6 +208,7 @@ func TestVersionMismatchIsAConflict(t *testing.T) {
 }
 
 func TestValidatingANameSupersedesItsUnwrittenRuns(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	older := toReport(ctx, t, s, newDraft(ctx, t, s, "Fair 2026"))
@@ -226,6 +233,7 @@ func TestValidatingANameSupersedesItsUnwrittenRuns(t *testing.T) {
 }
 
 func TestATestFillsTheDraftsDefaultsWithoutSpendingAVersion(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	draft, err := s.CreateDraftRun(ctx, CreateDraftRunInput{
@@ -257,6 +265,7 @@ func TestATestFillsTheDraftsDefaultsWithoutSpendingAVersion(t *testing.T) {
 }
 
 func TestASecondTestRunOfOneVersionSaysItDidNotMove(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	run := newDraft(ctx, t, s, "Fair 2026")
@@ -283,6 +292,7 @@ func TestASecondTestRunOfOneVersionSaysItDidNotMove(t *testing.T) {
 }
 
 func TestTestRunsOfOneNameAtOnceEachSupersedeTheLast(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	const crowd = 8
@@ -324,6 +334,7 @@ func TestTestRunsOfOneNameAtOnceEachSupersedeTheLast(t *testing.T) {
 }
 
 func TestAWritingRunOfTheSameNameIsAConflictNamingIt(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	writing := toReport(ctx, t, s, newDraft(ctx, t, s, "Fair 2026"))
@@ -343,6 +354,7 @@ func TestAWritingRunOfTheSameNameIsAConflictNamingIt(t *testing.T) {
 }
 
 func TestResumeRefusesARunThatWasNeverApproved(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	// Only code before saved sessions failed a test run; such a run was never approved.
@@ -372,6 +384,7 @@ func TestResumeRefusesARunThatWasNeverApproved(t *testing.T) {
 }
 
 func TestAMoveWhoseJobCannotBeQueuedStaysWhereItWas(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	report := toReport(ctx, t, s, newDraft(ctx, t, s, ""))
@@ -411,6 +424,7 @@ func intentKinds(ctx context.Context, t *testing.T, db *database.DB, key string)
 }
 
 func TestReleasingASourceRecordsItForTheReaper(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	key := "ws/import/" + ids.NewV7().String()
@@ -440,6 +454,7 @@ func TestReleasingASourceRecordsItForTheReaper(t *testing.T) {
 }
 
 func TestUnreferencedImportKeysAnswersAReleasedKey(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	draft := newDraft(ctx, t, s, "")
@@ -459,6 +474,7 @@ func TestUnreferencedImportKeysAnswersAReleasedKey(t *testing.T) {
 }
 
 func TestAListedDraftCarriesTheRowsItsUploadCounted(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	counted, err := s.CreateDraftRun(ctx, CreateDraftRunInput{

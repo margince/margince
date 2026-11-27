@@ -43,6 +43,7 @@ func (e *loadEnv) seedCopiedMail(t *testing.T, contact ids.UUID) {
 }
 
 func TestABoundedFoldPagesAContactLikeTheUnboundedFold(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := e.buyer(t)
 	e.seedCopiedMail(t, contact)
@@ -84,6 +85,7 @@ func TestABoundedFoldPagesAContactLikeTheUnboundedFold(t *testing.T) {
 }
 
 func TestABoundedFoldWidensWhenCopiesFillItsCandidates(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := e.buyer(t)
 	e.seedCopiedMail(t, contact)
@@ -109,6 +111,7 @@ func TestABoundedFoldWidensWhenCopiesFillItsCandidates(t *testing.T) {
 }
 
 func TestACollapsedPageFoldsOnlyTheCandidatesNearItsRows(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := e.buyer(t)
 	e.seedCopiedMail(t, contact)
@@ -161,6 +164,7 @@ func (e *loadEnv) seedInterleavedCopies(t *testing.T, contact ids.UUID) {
 }
 
 func TestABoundedFoldNeverShowsAPartialGroupOfTheOldestSecond(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := e.buyer(t)
 	e.seedInterleavedCopies(t, contact)

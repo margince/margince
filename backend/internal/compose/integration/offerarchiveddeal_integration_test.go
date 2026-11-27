@@ -18,6 +18,7 @@ import (
 // Listing them is a read: only an id no deal holds answers not found. A deal
 // carries no row-scope restriction of its own, so that is the one miss to try.
 func TestAnArchivedDealStillListsItsOffers(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	deal := ids.From[ids.DealKind](e.SeedDeal(t, "Northgate rollout", pipeline, open, &e.Rep1))

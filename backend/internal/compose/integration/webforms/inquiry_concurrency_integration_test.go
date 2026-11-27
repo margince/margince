@@ -23,6 +23,7 @@ import (
 )
 
 func TestConcurrentInquiryAssignmentsRetryStaleRoutingCounts(t *testing.T) {
+	t.Parallel()
 	e := setupFormsApp(t)
 	var colleague ids.UUID
 	if err := e.Owner.QueryRow(t.Context(), `SELECT id FROM app_user WHERE email='ada@example.com'`).Scan(&colleague); err != nil {

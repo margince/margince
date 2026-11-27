@@ -46,6 +46,7 @@ func totalOver(t *testing.T, e *integration.Env, group, expression string) strin
 }
 
 func TestASumSaysWhatItCouldPriceAndAStrictTotalSaysNothing(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	unpriced := deals.UnpricedValueCountSQL("v.base", "v.native", "TRUE")
 
@@ -71,6 +72,7 @@ func TestASumSaysWhatItCouldPriceAndAStrictTotalSaysNothing(t *testing.T) {
 }
 
 func TestAFullyPricedGroupStillAnswers(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	strict := moneytotal.StrictBaseTotalSQL("avg(v.base)", deals.UnpricedValueCountSQL("v.base", "v.native", "TRUE"))
 	if got := totalOver(t, e, fullyPriced, strict); got != "200.0000000000000000" {

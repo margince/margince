@@ -128,7 +128,7 @@ func setupRunnerOn(t *testing.T, modelPath *compose.ModelPath) *runnerEnv {
 		t.Fatal(err)
 	}
 
-	pool, err := testdb.OwnPool(context.Background(), os.Getenv("MARGINCE_TEST_APP_DSN"))
+	pool, err := testdb.OwnPool(context.Background(), testdb.For(t).AppDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -257,6 +257,7 @@ func (re *runnerEnv) seedSlippingDeal(t *testing.T) {
 // A sweep whose member owns nothing slipping is closed before its first model
 // call: the run completes, and the model is never asked.
 func TestASweepWithNothingSlippingMakesNoModelCall(t *testing.T) {
+	t.Parallel()
 	re := setupRunner(t)
 	trigger := "overnight_at_risk_sweep:e2e-nothing-slips"
 	re.brain.Script(`{"final":{"summary":"the model was asked"}}`)
@@ -274,6 +275,7 @@ func TestASweepWithNothingSlippingMakesNoModelCall(t *testing.T) {
 }
 
 func TestRunnerFullLoopWritesAsGovernedAgent(t *testing.T) {
+	t.Parallel()
 	re := setupRunner(t)
 	re.seedSlippingDeal(t)
 	trigger := "overnight_at_risk_sweep:e2e-full"
@@ -335,6 +337,7 @@ func TestRunnerFullLoopWritesAsGovernedAgent(t *testing.T) {
 }
 
 func TestRunnerConfirmationRequiredSuspendApproveResume(t *testing.T) {
+	t.Parallel()
 	re := setupRunner(t)
 
 	var contact struct {
@@ -393,6 +396,7 @@ func TestRunnerConfirmationRequiredSuspendApproveResume(t *testing.T) {
 }
 
 func TestRunnerConfirmationRequiredRejectionReplansWithoutEffect(t *testing.T) {
+	t.Parallel()
 	re := setupRunner(t)
 
 	var contact struct {
@@ -434,6 +438,7 @@ func TestRunnerConfirmationRequiredRejectionReplansWithoutEffect(t *testing.T) {
 }
 
 func TestRunnerJobWithoutPassportFailsLoudly(t *testing.T) {
+	t.Parallel()
 	re := setupRunner(t)
 	trigger := "morning_brief:e2e-no-passport"
 	re.enqueue(t, "morning_brief", trigger, nil)
@@ -482,6 +487,7 @@ func decidedEnvelope(wsID ids.UUID, approvalID, verdict string) kevents.Envelope
 // delivery must find nothing: the run is claimed as it is read, and the
 // first loop's outcome and trace stand untouched.
 func TestRunnerResumeIsClaimedSoARedeliveryIsANoOp(t *testing.T) {
+	t.Parallel()
 	re := setupRunner(t)
 
 	var contact struct {
@@ -557,6 +563,7 @@ func TestRunnerResumeIsClaimedSoARedeliveryIsANoOp(t *testing.T) {
 // the governed surface rather than the prompt: the run completes without
 // parking, no approval is staged, and the target is untouched.
 func TestTheSweepMayNotArchiveEvenWithAModelThatTriesTo(t *testing.T) {
+	t.Parallel()
 	re := setupRunner(t)
 	re.seedSlippingDeal(t)
 
@@ -614,6 +621,7 @@ func TestTheSweepMayNotArchiveEvenWithAModelThatTriesTo(t *testing.T) {
 // there undoes MarkFailed while the claim stays taken — a redelivery then finds
 // nothing to resume and the run is stuck in a state nothing can close.
 func TestASuspendedRunWhoseAuthorityDiesIsClosedRatherThanParkedForever(t *testing.T) {
+	t.Parallel()
 	re := setupRunner(t)
 	var contact struct {
 		ID string `json:"id"`
@@ -676,6 +684,7 @@ func TestASuspendedRunWhoseAuthorityDiesIsClosedRatherThanParkedForever(t *testi
 // this distinguishes — `awaiting_approval` and `running` — are one word apart in
 // the row and half an hour apart for the contact waiting.
 func TestATerminalWriteThatFailsLeavesTheRunResumable(t *testing.T) {
+	t.Parallel()
 	re := setupRunner(t)
 	var company struct {
 		ID string `json:"id"`

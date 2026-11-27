@@ -18,6 +18,7 @@ import (
 // status while it still describes the address, and turns stale once the
 // address moved on. It never replaces an answer the worker already gave.
 func TestTheCopyTaskMovesEachPointBesideItsCompany(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	// The columns the company row held its point in, written as rows from

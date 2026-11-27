@@ -115,6 +115,7 @@ func storedInvitations(t *testing.T, e *integration.Env, owner ids.UUID, uid str
 }
 
 func TestEveryGuestsCopyOfOneInvitationIsOneActivity(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seat := guestCopyMailbox(t, e, e.Rep1)
 
@@ -142,6 +143,7 @@ func TestEveryGuestsCopyOfOneInvitationIsOneActivity(t *testing.T) {
 // Two seats' copies of one send never share a row, because a seat's mail joins
 // only that seat's own rows. Each seat's own copies still fold.
 func TestAnotherSeatsCopiesStayTheirOwn(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	e.GrantRole(t, e.Rep2, "rep")
 	one, two := guestCopyMailbox(t, e, e.Rep1), guestCopyMailbox(t, e, e.Rep2)

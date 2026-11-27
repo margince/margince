@@ -17,6 +17,7 @@ import (
 )
 
 func TestAnSVGTheRendererCannotDrawIsRefusedAndTheCurrentMarkStays(t *testing.T) {
+	t.Parallel()
 	const open = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 50">`
 	refusals := []struct{ name, doc, code string }{
 		{"live text", open + `<circle cx="25" cy="25" r="20"/><text x="50" y="30">Acme</text></svg>`, "svg_text_not_outlined"},

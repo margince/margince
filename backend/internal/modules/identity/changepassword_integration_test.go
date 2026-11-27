@@ -56,6 +56,7 @@ func loginCtx(t *testing.T, e *revocationEnv, email, pw string) context.Context 
 }
 
 func TestChangePasswordRotatesTheCredential(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "changepw-ok")
 	ctx := memberCtx(t, e)
 
@@ -73,6 +74,7 @@ func TestChangePasswordRotatesTheCredential(t *testing.T) {
 }
 
 func TestChangePasswordNeedsTheCurrentPasswordNotJustASession(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "changepw-wrong")
 	ctx := memberCtx(t, e)
 
@@ -88,6 +90,7 @@ func TestChangePasswordNeedsTheCurrentPasswordNotJustASession(t *testing.T) {
 }
 
 func TestChangePasswordRefusesTheSamePassword(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "changepw-same")
 	ctx := memberCtx(t, e)
 
@@ -97,6 +100,7 @@ func TestChangePasswordRefusesTheSamePassword(t *testing.T) {
 }
 
 func TestChangePasswordHoldsTheLengthFloor(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "changepw-short")
 	ctx := memberCtx(t, e)
 
@@ -113,6 +117,7 @@ func TestChangePasswordHoldsTheLengthFloor(t *testing.T) {
 }
 
 func TestChangePasswordRefusesBlankRepeatedAndEmailPasswords(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "changepw-weak")
 	ctx := memberCtx(t, e)
 
@@ -133,6 +138,7 @@ func TestChangePasswordRefusesBlankRepeatedAndEmailPasswords(t *testing.T) {
 }
 
 func TestChangePasswordEndsEveryPriorSessionAndIssuesAFreshOne(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "changepw-revoke")
 	wsCtx := e.wsOnlyCtx()
 
@@ -178,6 +184,7 @@ func TestChangePasswordEndsEveryPriorSessionAndIssuesAFreshOne(t *testing.T) {
 }
 
 func TestChangePasswordIsAudited(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "changepw-audit")
 	ctx := memberCtx(t, e)
 
@@ -199,6 +206,7 @@ func TestChangePasswordIsAudited(t *testing.T) {
 }
 
 func TestChangePasswordRefusesACallerWithNoUserBehindIt(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "changepw-noidentity")
 	// A workspace-bound context with no authenticated identity: an agent seat
 	// or a system principal has no own password to change.
@@ -213,6 +221,7 @@ func TestChangePasswordRefusesACallerWithNoUserBehindIt(t *testing.T) {
 // uncounted, and leaving nothing in the trail.
 
 func TestAWrongCurrentPasswordCountsTowardTheLockout(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "changepw-lockout")
 	ctx := memberCtx(t, e)
 
@@ -229,6 +238,7 @@ func TestAWrongCurrentPasswordCountsTowardTheLockout(t *testing.T) {
 }
 
 func TestAFailedChangeLeavesEvidence(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "changepw-evidence")
 	ctx := memberCtx(t, e)
 
@@ -250,6 +260,7 @@ func TestAFailedChangeLeavesEvidence(t *testing.T) {
 }
 
 func TestChangePasswordRetiresAnOutstandingResetToken(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "changepw-token")
 	ctx := memberCtx(t, e)
 
@@ -294,6 +305,7 @@ func changeOverHTTP(ctx context.Context, t *testing.T, e *revocationEnv, body st
 }
 
 func TestChangePasswordOverHTTPHandsBackTheFreshSession(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "changepw-http-ok")
 	ctx := memberCtx(t, e)
 
@@ -327,6 +339,7 @@ func TestChangePasswordOverHTTPHandsBackTheFreshSession(t *testing.T) {
 }
 
 func TestChangePasswordOverHTTPSeparatesItsRefusals(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "changepw-http-codes")
 	ctx := memberCtx(t, e)
 
@@ -350,6 +363,7 @@ func TestChangePasswordOverHTTPSeparatesItsRefusals(t *testing.T) {
 }
 
 func TestChangePasswordOverHTTPReportsALockedAccount(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "changepw-http-locked")
 	ctx := memberCtx(t, e)
 
@@ -389,6 +403,7 @@ func mustChangeFor(t *testing.T, svc *Service, userID ids.UserID) bool {
 }
 
 func TestAConfiguredBootstrapForcesTheAdminToChoosePassword(t *testing.T) {
+	t.Parallel()
 	svc := newSetupService(t)
 	ctx := context.Background()
 	_, created, _, err := svc.BootstrapInstallation(ctx, func() (InstallationBootstrap, error) {
@@ -410,6 +425,7 @@ func TestAConfiguredBootstrapForcesTheAdminToChoosePassword(t *testing.T) {
 }
 
 func TestAClaimDoesNotForceTheAdminToChooseAgain(t *testing.T) {
+	t.Parallel()
 	svc := newSetupService(t)
 	ctx := context.Background()
 	// The claim path has the human choose their own credential during the
@@ -436,6 +452,7 @@ func TestAClaimDoesNotForceTheAdminToChooseAgain(t *testing.T) {
 }
 
 func TestChangingThePasswordClearsTheForcedFlag(t *testing.T) {
+	t.Parallel()
 	// Driven from the admin, who is flagged because setupRevocationEnv boots a
 	// CONFIGURED installation — the state production actually reaches. A member
 	// hand-flagged by the test would prove the UPDATE clears a column, not that
@@ -455,6 +472,7 @@ func TestChangingThePasswordClearsTheForcedFlag(t *testing.T) {
 }
 
 func TestAForcedAccountReachesNothingButTheChangeRoute(t *testing.T) {
+	t.Parallel()
 	// The admin of a CONFIGURED installation is flagged by the real writer, so
 	// this drives the shipped combination end to end: bootstrap, sign in, and
 	// find every door shut but one.
@@ -530,6 +548,7 @@ func TestAForcedAccountReachesNothingButTheChangeRoute(t *testing.T) {
 // authority of an account that owes a rotation.
 
 func TestAnOperatorResetForcesTheSubjectToChooseTheirOwn(t *testing.T) {
+	t.Parallel()
 	// §9.1's CLI recovery is the second place an operator picks a password for
 	// somebody else's account — the exact condition the flag exists to end.
 	e := setupRevocationEnv(t, "operator-reset-forces")
@@ -543,6 +562,7 @@ func TestAnOperatorResetForcesTheSubjectToChooseTheirOwn(t *testing.T) {
 }
 
 func TestAnOperatorResetHoldsTheSameLengthFloorAsEveryOtherRoute(t *testing.T) {
+	t.Parallel()
 	// Eleven emoji is eleven characters and forty-four bytes: it clears a
 	// byte-counted floor of twelve and fails a character-counted one. The CLI
 	// path spelled its own rule and counted bytes while saying "characters",
@@ -562,6 +582,7 @@ func TestAnOperatorResetHoldsTheSameLengthFloorAsEveryOtherRoute(t *testing.T) {
 }
 
 func TestAnOperatorResetRefusesBlankAndEmailPasswords(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "operator-reset-weak")
 	for code, weak := range map[string]string{"blank": strings.Repeat(" ", 12), "email": e.member.Email} {
 		err := withOperatorTx(t, e, func(tx pgx.Tx) error {
@@ -583,6 +604,7 @@ func TestAnOperatorResetRefusesBlankAndEmailPasswords(t *testing.T) {
 }
 
 func TestAnOperatorResetRefusesAnAgentIdentity(t *testing.T) {
+	t.Parallel()
 	// An agent identity carries an address, so it is reachable by the email
 	// lookup, but it holds no password. Refused by name — letting the write
 	// reach the database would answer a reasonable question with a constraint
@@ -605,6 +627,7 @@ func TestAnOperatorResetRefusesAnAgentIdentity(t *testing.T) {
 }
 
 func TestRedeemingAResetLinkSettlesTheForcedRotation(t *testing.T) {
+	t.Parallel()
 	// The subject chose this password themselves through their own mailbox, so
 	// the question the flag asks is answered. Left raised, it would refuse
 	// every route to someone holding a credential only they have ever known —
@@ -629,6 +652,7 @@ func TestRedeemingAResetLinkSettlesTheForcedRotation(t *testing.T) {
 }
 
 func TestAPassportStopsWorkingWhileItsHumanOwesARotation(t *testing.T) {
+	t.Parallel()
 	// "Agent ≤ human" is a runtime property, so a human held to nothing over
 	// REST keeps nothing through the agents they granted either.
 	//

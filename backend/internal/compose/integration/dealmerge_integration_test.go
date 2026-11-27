@@ -85,6 +85,7 @@ func addStakeholder(t *testing.T, e *Env, deal ids.DealID, contact ids.UUID) {
 }
 
 func TestDealMergeMovesTheFactsAndLeavesThePathOnTheLoser(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := mergeAdmin(e)
 	_, source, target := twoDealsOnOneCompany(t, e)
@@ -130,6 +131,7 @@ func TestDealMergeMovesTheFactsAndLeavesThePathOnTheLoser(t *testing.T) {
 }
 
 func TestDealMergeRefusesWhatCannotJoin(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := mergeAdmin(e)
 	_, source, target := twoDealsOnOneCompany(t, e)
@@ -167,6 +169,7 @@ func TestDealMergeRefusesWhatCannotJoin(t *testing.T) {
 }
 
 func TestDealMergeMovesTheLosersPinnedOffer(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	_, source, target := twoDealsOnOneCompany(t, e)
 	offer, err := e.Deals.CreateOffer(mergeAdmin(e), source, deals.CreateOfferInput{Currency: "EUR", Source: "manual"})
@@ -184,6 +187,7 @@ func TestDealMergeMovesTheLosersPinnedOffer(t *testing.T) {
 }
 
 func TestAMergedAwayDealCannotBeRestored(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	_, source, target := twoDealsOnOneCompany(t, e)
 	if _, err := e.Deals.MergeDeal(mergeAdmin(e), source, target, nil); err != nil {
@@ -206,6 +210,7 @@ func TestAMergedAwayDealCannotBeRestored(t *testing.T) {
 // Two merges of one pair in opposite directions share one pair lock. One wins
 // and the other finds its source or target gone.
 func TestTwoOppositeDealMergesLeaveOneWinner(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	_, a, b := twoDealsOnOneCompany(t, e)
 	var wg sync.WaitGroup
@@ -233,6 +238,7 @@ func TestTwoOppositeDealMergesLeaveOneWinner(t *testing.T) {
 // An accepted offer that moved with the merge prices the deal that carries on,
 // and never the merged-away one it came from.
 func TestAnOfferMovedByTheMergeRepricesTheSurvivorOnly(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := mergeAdmin(e)
 	_, source, target := twoDealsOnOneCompany(t, e)
@@ -265,6 +271,7 @@ func TestAnOfferMovedByTheMergeRepricesTheSurvivorOnly(t *testing.T) {
 // The weekly funnel and the stage cohort read stage entries through one query.
 // A merged-away duplicate's entry would count one opportunity twice.
 func TestAMergedAwayDealLeavesTheStageEntriesTheReportsCount(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	_, source, target := twoDealsOnOneCompany(t, e)
 	entries := func(deal ids.DealID) int {
@@ -288,6 +295,7 @@ func TestAMergedAwayDealLeavesTheStageEntriesTheReportsCount(t *testing.T) {
 // merge cannot be used to ask which ids exist. Every seat reads every deal, so a
 // colleague's deal is read-only to the rep and the refusal says so.
 func TestAMergeIntoAMissingTargetAnswersLikeOneUnseen(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	_, source, target := twoDealsOnOneCompany(t, e)
 	e.WsExec(t, `UPDATE deal SET owner_id = $2 WHERE id = $1`, source, e.Rep1)
@@ -318,6 +326,7 @@ func TestAMergeIntoAMissingTargetAnswersLikeOneUnseen(t *testing.T) {
 // case seeds a row on the duplicate and merges. It then asserts that nothing
 // names the duplicate, the survivor holds the row and the owner audited it.
 func TestEachOwnersSeamMovesItsRowsAndAuditsThem(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company, source, target := twoDealsOnOneCompany(t, e)
 	project, err := e.Projects.CreateProject(mergeAdmin(e), projects.CreateProjectInput{

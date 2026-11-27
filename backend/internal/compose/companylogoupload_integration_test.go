@@ -98,6 +98,7 @@ func decodeCompany(t *testing.T, recorder *httptest.ResponseRecorder) crmcontrac
 }
 
 func TestAnUploadedMarkIsStoredAsThisServersOwnPNG(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	blob := blobstore.NewMemory()
 	handlers := companyHandlers{store: e.Contacts, blob: blob}
@@ -180,6 +181,7 @@ func storedBounds(t *testing.T, blob blobstore.Store, key string) image.Rectangl
 }
 
 func TestAnUploadedMarkIsStoredWithoutItsTransparentCanvas(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	blob := blobstore.NewMemory()
 	handlers := companyHandlers{store: e.Contacts, blob: blob}
@@ -197,6 +199,7 @@ func TestAnUploadedMarkIsStoredWithoutItsTransparentCanvas(t *testing.T) {
 }
 
 func TestAContactsMarkOutranksWhatAWebsiteReadResolves(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	blob := blobstore.NewMemory()
 	handlers := companyHandlers{store: e.Contacts, blob: blob}
@@ -233,6 +236,7 @@ func TestAContactsMarkOutranksWhatAWebsiteReadResolves(t *testing.T) {
 }
 
 func TestRemovingAMarkGivesTheFieldBackToTheNextRead(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	blob := blobstore.NewMemory()
 	handlers := companyHandlers{store: e.Contacts, blob: blob}
@@ -277,6 +281,7 @@ func TestRemovingAMarkGivesTheFieldBackToTheNextRead(t *testing.T) {
 // pick up what its website says now. A re-read whose whole point is a fresher
 // logo has to be allowed to land one.
 func TestReReadingTheCompanysSiteReplacesTheMarkAnEarlierReadLanded(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	human := e.As(e.Rep1, nil, integration.AdminPerms)
 	blob := newRecordingBlobstore()
@@ -333,6 +338,7 @@ func TestReReadingTheCompanysSiteReplacesTheMarkAnEarlierReadLanded(t *testing.T
 // The key a replaced or removed mark drops is provisional in the ledger. A
 // delete the object store refuses leaves bytes the sweep still collects.
 func TestADroppedCompanyMarkIsLeftForTheSweepWhenItsDeleteFails(t *testing.T) {
+	t.Parallel()
 	for name, drop := range map[string]func(*testing.T, *integration.Env, companyHandlers){
 		"replaced": func(t *testing.T, e *integration.Env, handlers companyHandlers) {
 			uploadMark(t, e, handlers, logoFixture(t, 300, 300), "acme-new.png")

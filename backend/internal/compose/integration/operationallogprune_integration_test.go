@@ -6,6 +6,7 @@
 package integration
 
 import (
+	"context"
 	"log/slog"
 	"testing"
 
@@ -27,6 +28,7 @@ func logEntry(t *testing.T, e *Env, action, detail string, days int) ids.UUID {
 // The nightly pass removes a listed entry past its window. It keeps a young
 // one, an action with no window, and a sign-in row that still waits for its key.
 func TestTheNightlyPassRemovesOldLogEntriesOfTheListedKinds(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	const keyed = `{"outcome":"failed","email_hash":"aa","email_key_id":"bb"}`
 	gone := map[string]ids.UUID{
@@ -43,7 +45,7 @@ func TestTheNightlyPassRemovesOldLogEntriesOfTheListedKinds(t *testing.T) {
 		"an old factor enrolment":        logEntry(t, e, "mfa_enrolled", `{}`, 900),
 	}
 
-	if err := compose.NewRetentionServiceFor(e.DB(), nil, slog.Default()).EvaluateInstallation(RetentionPassCtx(e.WS)); err != nil {
+	if err := compose.NewRetentionServiceFor(e.DB(), nil, slog.Default()).EvaluateInstallation(RetentionPassCtx(context.Background(), e.WS)); err != nil {
 		t.Fatal(err)
 	}
 
@@ -66,6 +68,7 @@ func TestTheNightlyPassRemovesOldLogEntriesOfTheListedKinds(t *testing.T) {
 // The database admits a delete for the actions the prune lists and no other,
 // and only past their window. The two lists then cannot part.
 func TestTheSystemLogAdmitsADeleteOnlyForAListedActionPastItsWindow(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	remove := func(id ids.UUID) error {
 		return e.WsExecErr(t, `DELETE FROM system_log WHERE id = $1`, id)
@@ -93,6 +96,7 @@ func TestTheSystemLogAdmitsADeleteOnlyForAListedActionPastItsWindow(t *testing.T
 // The nightly pass removes a completion or decision trace past 400 days.
 // It keeps a younger one, and one whose stored content has its own rule.
 func TestTheNightlyPassRemovesAnswerTracesPastTheirYear(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	trace := func(kind string, days int) ids.UUID {
 		id := ids.NewV7()
@@ -106,7 +110,7 @@ func TestTheNightlyPassRemovesAnswerTracesPastTheirYear(t *testing.T) {
 		VALUES ($1, '{}'::jsonb, '{}'::jsonb, now() - make_interval(days => 401))`, withContent)
 	kept := []ids.UUID{trace("completion", 399), trace("decision", 100), withContent}
 
-	if err := compose.NewRetentionServiceFor(e.DB(), nil, slog.Default()).EvaluateInstallation(RetentionPassCtx(e.WS)); err != nil {
+	if err := compose.NewRetentionServiceFor(e.DB(), nil, slog.Default()).EvaluateInstallation(RetentionPassCtx(context.Background(), e.WS)); err != nil {
 		t.Fatal(err)
 	}
 

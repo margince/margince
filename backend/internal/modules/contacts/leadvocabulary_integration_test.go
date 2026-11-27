@@ -9,7 +9,6 @@ package contacts
 // agrees with the scorer's fixture, and a lead's source and reason round-trip.
 
 import (
-	"context"
 	"errors"
 	"net/http"
 	"slices"
@@ -31,6 +30,7 @@ import (
 // here. Otherwise a fresh installation would score differently than the unit
 // tests say.
 func TestLeadOriginSeedMatchesTheScorerFixture(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	var seeded OriginIntents
 	if err := e.store.tx(e.ctx, func(tx pgx.Tx) (err error) {
@@ -59,6 +59,7 @@ func TestLeadOriginSeedMatchesTheScorerFixture(t *testing.T) {
 // A lead's source is one of the channels. An internal writer that still hands
 // an older word lands on its channel, and the list filters by the channel.
 func TestALeadSourceLandsOnItsChannel(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	siteread := "siteread"
 	cases := []struct {
@@ -102,6 +103,7 @@ func TestALeadSourceLandsOnItsChannel(t *testing.T) {
 // Disqualifying records the reason and note on the lead, refuses a reason
 // that is not active, and the reason's lead_count and RESTRICT delete follow.
 func TestDisqualifyRecordsAnActiveReason(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	reasons, err := e.store.ListLeadDisqualifyReasons(e.ctx)
 	if err != nil {
@@ -143,6 +145,7 @@ func TestDisqualifyRecordsAnActiveReason(t *testing.T) {
 // It asserts the label on the wire and not just a row count. After `deleted`
 // the row is gone, so the event is the only thing naming what to drop.
 func TestEveryLeadVocabularyMutationPublishesItsChange(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 
 	published := func(eventType string) []string {
@@ -200,6 +203,7 @@ func TestEveryLeadVocabularyMutationPublishesItsChange(t *testing.T) {
 // the approval was consumed, not when the disqualify lands. A lead edited in
 // that window must lose to the compare rather than to timing.
 func TestDisqualifyRefusesAVersionThePinNoLongerNames(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	lead := e.seedLead(t, "pinned@example.test")
 
@@ -231,6 +235,7 @@ func TestDisqualifyRefusesAVersionThePinNoLongerNames(t *testing.T) {
 // does not spell the call the same way — which is what lets the unapproved
 // static-tier path keep working unchanged.
 func TestDisqualifyWithNoPinIsUnconditioned(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	lead := e.seedLead(t, "unpinned@example.test")
 
@@ -246,6 +251,7 @@ func TestDisqualifyWithNoPinIsUnconditioned(t *testing.T) {
 // A label names one reason, compared trimmed and case-folded: two spellings of
 // one reason would split a report on why leads were dropped.
 func TestADisqualifyReasonLabelIsHeldOnce(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	_, err := e.store.CreateLeadDisqualifyReason(e.ctx, CreateLeadDisqualifyReasonInput{Label: " no budget "})
 	if !errors.Is(err, apperrors.ErrConflict) {
@@ -259,12 +265,6 @@ func TestADisqualifyReasonLabelIsHeldOnce(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create reason: %v", err)
 	}
-	// Reset keeps the reason table, so the row would outlive this test.
-	t.Cleanup(func() {
-		if err := e.store.DeleteLeadDisqualifyReason(e.ctx, ids.UUID(custom.Id)); err != nil {
-			t.Errorf("removing the custom reason: %v", err)
-		}
-	})
 	if _, err := e.store.CreateLeadDisqualifyReason(e.ctx, CreateLeadDisqualifyReasonInput{Label: " procurement FREEZE "}); !errors.Is(err, apperrors.ErrConflict) {
 		t.Fatalf("a second spelling of a custom reason answered %v, want a conflict", err)
 	}
@@ -381,9 +381,8 @@ func requireTooLong(t *testing.T, err error, field string) {
 }
 
 func TestALeadListHoldsEachLabelOnce(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
-	keepOriginCatalogAsSeeded(t, e)
-	keepDisqualifyReasonsAsSeeded(t, e)
 	for _, list := range leadVocabularyLists(e) {
 		t.Run(list.name, func(t *testing.T) {
 			requireLabelHeldOnce(t, list)
@@ -392,25 +391,10 @@ func TestALeadListHoldsEachLabelOnce(t *testing.T) {
 	}
 }
 
-// keepDisqualifyReasonsAsSeeded removes the reasons a test added and wakes the
-// built-ins it retired. A reset keeps the list, so they would outlive the test.
-func keepDisqualifyReasonsAsSeeded(t *testing.T, e *promoteConsentEnv) {
-	t.Helper()
-	t.Cleanup(func() {
-		for _, statement := range []string{
-			`DELETE FROM lead_disqualify_reason WHERE NOT system`,
-			`UPDATE lead_disqualify_reason SET active = true`,
-		} {
-			if _, err := e.owner.Exec(context.Background(), statement); err != nil {
-				t.Errorf("restoring the disqualification reasons: %v", err)
-			}
-		}
-	})
-}
-
 // A lead's name holds at most a label's characters, typed or changed, and the
 // refusal names full_name before anything is written.
 func TestALeadNamePastTheLimitIsRefusedBeforeTheWrite(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	long := strings.Repeat("n", values.TextLabelCharacters+1)
 	_, _, err := e.store.CreateLead(e.ctx, CreateLeadInput{Source: "manual", FullName: &long})

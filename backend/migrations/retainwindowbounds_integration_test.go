@@ -21,6 +21,7 @@ import (
 // days makes the nightly pass answer "timestamp out of range" instead of
 // acting.
 func TestARetentionWindowOutsideItsBoundsIsRefusedByTheDatabase(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	headSchema(t, conn)

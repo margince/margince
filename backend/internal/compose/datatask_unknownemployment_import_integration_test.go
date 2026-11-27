@@ -58,6 +58,7 @@ func importedUnknownEmployment(t *testing.T, e *integration.Env, resolve bool) i
 }
 
 func TestUnknownEmploymentRepairPreservesImportsAfterHumanEditsAndResolution(t *testing.T) {
+	t.Parallel()
 	for _, resolve := range []bool{false, true} {
 		t.Run(map[bool]string{false: "edited_import", true: "resolved_import"}[resolve], func(t *testing.T) {
 			e := integration.Setup(t)
@@ -85,6 +86,7 @@ func TestUnknownEmploymentRepairPreservesImportsAfterHumanEditsAndResolution(t *
 }
 
 func TestUnknownEmploymentRepairPreservesResolvedImportsAfterClaimsAreDeleted(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	id := importedUnknownEmployment(t, e, true)
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {

@@ -30,7 +30,7 @@ func seededIdentity(t *testing.T, roles ...string) Identity {
 	t.Helper()
 	byRole := make(map[string]policy.Document, len(roles))
 	for _, key := range roles {
-		doc, err := policy.Parse(policy.MustDefaultJSON(key))
+		doc, err := policy.Parse(policy.MustDefaultJSON(key), policy.Vocabulary{})
 		if err != nil {
 			t.Fatalf("the seeded document for %q does not parse: %v", key, err)
 		}
@@ -40,6 +40,6 @@ func seededIdentity(t *testing.T, roles ...string) Identity {
 		UserID:      ids.UserID{UUID: ids.NewV7()},
 		Roles:       roles,
 		SeatType:    string(principal.SeatFull),
-		Permissions: policy.Merge(byRole),
+		Permissions: policy.Merge(byRole, policy.Vocabulary{}),
 	}
 }

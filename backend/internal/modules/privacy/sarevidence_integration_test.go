@@ -15,6 +15,7 @@ import (
 // writer lives in the consent module, which this package cannot import, so the
 // row is seeded the way the notice lane writes it.
 func TestTheAccessExportCarriesTheNoticeALeadTwinWasSent(t *testing.T) {
+	t.Parallel()
 	e := setupSARIdentifiers(t)
 	lead := ids.NewV7()
 	if _, err := e.owner.Exec(e.ctx,

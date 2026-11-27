@@ -74,6 +74,7 @@ func (c *carryEnv) askStatus(t *testing.T, id ids.UUID) (status string, contact 
 // Both arms follow: an ask ABOUT the retired contact and an ask routed THROUGH
 // them now name the survivor, and the survivor's page lists the first.
 func TestAMergeCarriesAsksAboutAndThroughTheRetiredContact(t *testing.T) {
+	t.Parallel()
 	c := setupCarry(t)
 	retired := c.contactAt(t, "Intro Retired", "intro@carry.test")
 	survivor := c.contactAt(t, "Intro Survivor", "intro-survivor@carry.test")
@@ -104,6 +105,7 @@ func TestAMergeCarriesAsksAboutAndThroughTheRetiredContact(t *testing.T) {
 // merge. The survivor's stands; the retired contact's closes as cancelled and
 // says so in intro_request.closed.
 func TestAnAskTheSurvivorAlreadyHasOpenIsClosed(t *testing.T) {
+	t.Parallel()
 	c := setupCarry(t)
 	retired := c.contactAt(t, "Dup Retired", "dup@carry.test")
 	survivor := c.contactAt(t, "Dup Survivor", "dup-survivor@carry.test")
@@ -134,6 +136,7 @@ func TestAnAskTheSurvivorAlreadyHasOpenIsClosed(t *testing.T) {
 // way round, becomes an ask about the survivor routed through the survivor. That
 // is no way in, so it closes the way a requester closes one.
 func TestAnAskTheMergeRoutesThroughItsOwnContactIsClosed(t *testing.T) {
+	t.Parallel()
 	c := setupCarry(t)
 	retired := c.contactAt(t, "Self Retired", "self@carry.test")
 	survivor := c.contactAt(t, "Self Survivor", "self-survivor@carry.test")
@@ -159,6 +162,7 @@ func TestAnAskTheMergeRoutesThroughItsOwnContactIsClosed(t *testing.T) {
 // after the merge. The retired half's closes, and its event names the contact
 // the ask is ABOUT, not the survivor it was routed through.
 func TestAThroughOnlyCollisionClosesAboutTheContactTheAskIsAbout(t *testing.T) {
+	t.Parallel()
 	c := setupCarry(t)
 	retired := c.contactAt(t, "Via Retired", "via@carry.test")
 	survivor := c.contactAt(t, "Via Survivor", "via-survivor@carry.test")
@@ -194,6 +198,7 @@ func (c *carryEnv) closedEventsAbout(t *testing.T, ask, about ids.UUID) int {
 }
 
 func TestAnUnwiredMergeRefusesWhenAnAskWouldBeStranded(t *testing.T) {
+	t.Parallel()
 	c := setupCarry(t)
 	unwired := contacts.NewStore(c.e.DB()).WithStopCarrier(c.consent).WithSatelliteCarriers(c.consent, nil)
 	retired := c.contactAt(t, "Unwired Ask", "unwired-ask@carry.test")
@@ -263,6 +268,7 @@ func (c *carryEnv) assertIntroPreview(t *testing.T, preview []introduction.Carri
 }
 
 func TestMergePreviewDoesNotDisclosePrivateIntroductionDependencies(t *testing.T) {
+	t.Parallel()
 	for _, privateWitness := range []bool{false, true} {
 		t.Run(map[bool]string{false: "source ask", true: "collision witness"}[privateWitness], func(t *testing.T) {
 			c := setupCarry(t)
@@ -289,6 +295,7 @@ func TestMergePreviewDoesNotDisclosePrivateIntroductionDependencies(t *testing.T
 }
 
 func TestMergePreviewCarriesAClosedIntroductionWithoutCancellingItAgain(t *testing.T) {
+	t.Parallel()
 	c := setupCarry(t)
 	source := c.contactAt(t, "Closed source", "closed-source@carry.test")
 	target := c.contactAt(t, "Closed target", "closed-target@carry.test")
@@ -321,6 +328,7 @@ func withoutIntroductions(e *integration.Env) context.Context {
 }
 
 func TestIntroductionPreviewChecksReadPermissionBeforeLookingForRequests(t *testing.T) {
+	t.Parallel()
 	c := setupCarry(t)
 	source := c.contactAt(t, "Read source", "read-source@carry.test")
 	target := c.contactAt(t, "Read target", "read-target@carry.test")
@@ -336,6 +344,7 @@ func TestIntroductionPreviewChecksReadPermissionBeforeLookingForRequests(t *test
 }
 
 func TestMergePreviewRefusesAnArchivedIntroductionItWouldCarry(t *testing.T) {
+	t.Parallel()
 	c := setupCarry(t)
 	source := c.contactAt(t, "Archived source", "archived-source@carry.test")
 	target := c.contactAt(t, "Archived target", "archived-target@carry.test")
@@ -356,6 +365,7 @@ func TestMergePreviewRefusesAnArchivedIntroductionItWouldCarry(t *testing.T) {
 }
 
 func TestMergeIntroductionPreviewRefusesToTruncateItsScope(t *testing.T) {
+	t.Parallel()
 	c := setupCarry(t)
 	source := c.contactAt(t, "Bounded source", "bounded-source@carry.test")
 	target := c.contactAt(t, "Bounded target", "bounded-target@carry.test")
@@ -408,6 +418,7 @@ func (c *carryEnv) archivedAt(t *testing.T, id ids.UUID) *time.Time {
 // stands on the survivor and the newer is archived, in the preview and in the
 // merge alike. A recorded introduction of another pair is carried untouched.
 func TestAMergeKeepsTheOlderRecordedIntroductionOfAPair(t *testing.T) {
+	t.Parallel()
 	c := setupCarry(t)
 	retired := c.contactAt(t, "Rec Retired", "rec@carry.test")
 	survivor := c.contactAt(t, "Rec Survivor", "rec-survivor@carry.test")

@@ -199,6 +199,7 @@ func parkedMark(t *testing.T, e *integration.Env, readID ids.UUID, slot contacts
 }
 
 func TestOnboardingReadResolvesTheLogoTheConfirmedAnchorWears(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	site := &assetSite{assets: map[string][]byte{touchIconURL: logoFixture(t, 512, 512)}}
 	blob := blobstore.NewMemory()
@@ -289,6 +290,7 @@ func TestOnboardingReadResolvesTheLogoTheConfirmedAnchorWears(t *testing.T) {
 }
 
 func TestAMarkAWebsiteReadResolvesIsStoredWithoutItsTransparentCanvas(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	site := &assetSite{assets: map[string][]byte{touchIconURL: letterboxedFixture(t, 256)}}
 	blob := blobstore.NewMemory()
@@ -304,6 +306,7 @@ func TestAMarkAWebsiteReadResolvesIsStoredWithoutItsTransparentCanvas(t *testing
 }
 
 func TestAdoptingTheParkedMarkLeavesTheCompanyItsOnlyReference(t *testing.T) {
+	t.Parallel()
 	// The confirmation HANDS the object over; it does not share it. Two rows
 	// naming one key would let the next resolve of this company supersede
 	// that key and collect the bytes, while the confirmed dossier still pointed
@@ -376,6 +379,7 @@ func publishedSeq(t *testing.T, e *integration.Env, companyID ids.CompanyID) (cr
 }
 
 func TestConfirmingAnOnboardingReadPublishesTheAnchorBeforeItsMark(t *testing.T) {
+	t.Parallel()
 	// One confirmation publishes two events about one company: the
 	// creation that mints the anchor, and the update the adopted logo writes.
 	// The relay ships an entity's rows in insert order, so the creation has to
@@ -394,6 +398,7 @@ func TestConfirmingAnOnboardingReadPublishesTheAnchorBeforeItsMark(t *testing.T)
 }
 
 func TestConfirmingAnOnboardingReadSurvivesALogoThatNeverResolved(t *testing.T) {
+	t.Parallel()
 	// An air-gapped install, a site that declares nothing, an asset that will
 	// not answer: the company still has to come into being. A logo is polish on
 	// a read whose product is the company itself.
@@ -427,6 +432,7 @@ func TestConfirmingAnOnboardingReadSurvivesALogoThatNeverResolved(t *testing.T) 
 }
 
 func TestAReadThatFailsGivesBackTheLogoItParked(t *testing.T) {
+	t.Parallel()
 	// The mark is stored while the page is in hand, before anything the model
 	// lanes produced is judged — so a read that dies afterwards has already paid
 	// for bytes no confirmation will ever adopt: only a done or partial read
@@ -456,6 +462,7 @@ func TestAReadThatFailsGivesBackTheLogoItParked(t *testing.T) {
 }
 
 func TestAFailedReadKeepsTheBytesACompanyIsAlreadyWearing(t *testing.T) {
+	t.Parallel()
 	// Deleting bytes is irreversible, and an adoption leaves the record and the
 	// dossier naming ONE object: whatever else the read's collection may take, a
 	// key a company wears is not it. Here the read fails after that adoption —
@@ -590,6 +597,7 @@ func endedOnboardingRead(t *testing.T, e *integration.Env, status string) (SiteD
 }
 
 func TestADossierThatEndedRefusesALateParkedMark(t *testing.T) {
+	t.Parallel()
 	// Whatever the read ended as, its mark is settled. A read that ended without
 	// a company already had its parked object collected on the way to terminal,
 	// and nothing runs that collection twice; a read that ended with a report is
@@ -620,6 +628,7 @@ func TestADossierThatEndedRefusesALateParkedMark(t *testing.T) {
 }
 
 func TestAResolveThatLandsAfterTheReadEndedCollectsItsOwnBytes(t *testing.T) {
+	t.Parallel()
 	// Bytes first, row second — so a refused park leaves an object no row names,
 	// and a per-attempt key nobody else was ever told. The attempt that stored it
 	// is the last thing that can still find it, which is why the collection
@@ -661,6 +670,7 @@ func reclaimTheRead(t *testing.T, e *integration.Env, args SiteDeepReadArgs) con
 }
 
 func TestOnlyTheAttemptHoldingTheReadParksItsMark(t *testing.T) {
+	t.Parallel()
 	// A reclaim puts a running read back into running under a NEW attempt, so
 	// the status alone cannot tell the two apart. The stalled attempt resuming
 	// afterwards must be refused: parking would replace the mark the holder just
@@ -701,6 +711,7 @@ func TestOnlyTheAttemptHoldingTheReadParksItsMark(t *testing.T) {
 }
 
 func TestAResolveThatLandsAfterAnotherAttemptTookTheReadKeepsThatAttemptsBytes(t *testing.T) {
+	t.Parallel()
 	// The whole lane over the same hand-off: the refused attempt collects the
 	// bytes IT stored, and leaves standing the object the holder's mark names.
 	// Collecting that one would leave the dossier — and the company its
@@ -785,6 +796,7 @@ func readTheAnchorsSiteFor(t *testing.T, e *integration.Env, blob blobstore.Stor
 }
 
 func TestConfirmingAnOnboardingReadKeepsTheLogoAContactGaveTheAnchor(t *testing.T) {
+	t.Parallel()
 	// A contact's own mark holds the field, so the read's mark is adopted by
 	// nobody — and the confirmed dossier would be the last thing naming it,
 	// forever. The confirmation reports that key instead and the transport
@@ -822,6 +834,7 @@ func TestConfirmingAnOnboardingReadKeepsTheLogoAContactGaveTheAnchor(t *testing.
 }
 
 func TestConfirmingAnOnboardingReadCollectsNothingWhenTheAnchorAdoptsTheMark(t *testing.T) {
+	t.Parallel()
 	// The ordinary path: the anchor is created with no logo, so it takes the
 	// one its own read resolved. Nothing is unadopted, and a collection here
 	// would delete the face the company is now wearing.
@@ -847,6 +860,7 @@ func TestConfirmingAnOnboardingReadCollectsNothingWhenTheAnchorAdoptsTheMark(t *
 }
 
 func TestAConfirmationSurvivesAnObjectStoreThatWillNotCollect(t *testing.T) {
+	t.Parallel()
 	// The collection runs after the commit, so it can only ever cost storage:
 	// the company exists, its face is decided, and onboarding is not failed a
 	// second time over bytes nobody can see.
@@ -879,6 +893,7 @@ func TestAConfirmationSurvivesAnObjectStoreThatWillNotCollect(t *testing.T) {
 }
 
 func TestAConfirmationWithNoObjectStoreKeepsTheUnadoptedReference(t *testing.T) {
+	t.Parallel()
 	// The parked key embeds a per-attempt uuid nothing else recorded, so it is
 	// the object's last handle. A caller that owns no object store cannot
 	// delete those bytes, and dropping the reference for it would turn a

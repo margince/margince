@@ -38,6 +38,7 @@ import (
 // their own. The correct write is the narrow one, and this asserts both
 // halves: the narrow row lands, and no broad row does.
 func TestANamedPurposeLeadLinkDoesNotStopAllMarketing(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedMarketingPurpose(t, e)
 	purpose := marketingPurposeID(t, e)
@@ -119,6 +120,7 @@ func TestANamedPurposeLeadLinkDoesNotStopAllMarketing(t *testing.T) {
 // about whether the real writer actually calls it that way — which is
 // exactly the gap the prior "declines" behaviour hid behind.
 func TestANarrowPressBindsOnlyItsOwnPurpose(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	ctx := context.Background()
 
@@ -277,6 +279,7 @@ func TestANarrowPressBindsOnlyItsOwnPurpose(t *testing.T) {
 // own the one opt-out that does not work, and answering 200 while writing
 // nothing would tell them it had.
 func TestANamedPurposeLinkNamingOnlyAnAddressStopsThatOneList(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedMarketingPurpose(t, e)
 	purpose := marketingPurposeID(t, e)
@@ -341,6 +344,7 @@ func TestANamedPurposeLinkNamingOnlyAnAddressStopsThatOneList(t *testing.T) {
 // mint doors while the constraint binds the table. So the mint is asked to do
 // the impossible thing here rather than the rule being restated beside it.
 func TestANamedPurposeLinkMustNameItsPurpose(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 
 	err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
@@ -378,6 +382,7 @@ func TestANamedPurposeLinkMustNameItsPurpose(t *testing.T) {
 // All four pairings, because the two halves fail in opposite directions and a
 // dedup that only ever widens or only ever absorbs passes half of them.
 func TestABroadStopAbsorbsANarrowPressButNotTheOtherWayAround(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedMarketingPurpose(t, e)
 	purpose := marketingPurposeID(t, e)

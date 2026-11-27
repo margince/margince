@@ -18,6 +18,7 @@ import (
 )
 
 func TestQualifyingATypedEmployerCreatesOrReusesTheCompany(t *testing.T) {
+	t.Parallel()
 	for _, existing := range []bool{false, true} {
 		t.Run(fmt.Sprint(existing), func(t *testing.T) {
 			e := setupDedupe(t)
@@ -48,6 +49,7 @@ func TestQualifyingATypedEmployerCreatesOrReusesTheCompany(t *testing.T) {
 }
 
 func TestManualWorkAddressResolvesWithoutAnotherMessage(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	id := e.contactWithEmail(ctx, t, "Dana Buyer", "dana@northwind-research.test")
@@ -65,6 +67,7 @@ func TestManualWorkAddressResolvesWithoutAnotherMessage(t *testing.T) {
 }
 
 func TestConcurrentContactsReuseOneNamedEmployerAndReplayEmployment(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	var wg sync.WaitGroup
@@ -103,6 +106,7 @@ func TestConcurrentContactsReuseOneNamedEmployerAndReplayEmployment(t *testing.T
 }
 
 func TestConflictingEmployerNameAndDomainRollBackContact(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.createNamedCompany(ctx, t, "Named Employer")
@@ -117,6 +121,7 @@ func TestConflictingEmployerNameAndDomainRollBackContact(t *testing.T) {
 }
 
 func TestManualWorkAddressRecordsDomainSplitReviewOnce(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.seedCompanyOnDomain(ctx, t, "Parent Works", "parent-works.test")
@@ -131,6 +136,7 @@ func TestManualWorkAddressRecordsDomainSplitReviewOnce(t *testing.T) {
 }
 
 func TestOwnerlessWorkAddressIsDueAndLinksAfterTriage(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := principal.WithActor(e.as(), principal.Principal{Type: principal.PrincipalSystem, ID: "system:employer-test"})
 	id := e.contactWithEmail(ctx, t, "Ownerless Buyer", "buyer@ownerless-work.test")
@@ -149,6 +155,7 @@ func TestOwnerlessWorkAddressIsDueAndLinksAfterTriage(t *testing.T) {
 }
 
 func TestStoredWorkAddressDoesNotRestoreAnArchivedEmployment(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	company := e.createNamedCompany(ctx, t, "Past Works", "past-work.test")
@@ -185,6 +192,7 @@ func TestStoredWorkAddressDoesNotRestoreAnArchivedEmployment(t *testing.T) {
 }
 
 func TestNamedEmployerStoresTheRegistrableAndMailDomains(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	result, err := e.store.CreateContact(ctx, CreateContactInput{FullName: "Domain Buyer", Source: "manual", Employer: EmployerChoice{CompanyName: new("Domain Works")}, Emails: []ContactEmailInput{{Email: "buyer@mail.domain-work.test", EmailType: "work", IsPrimary: true}}})
@@ -216,6 +224,7 @@ func TestNamedEmployerStoresTheRegistrableAndMailDomains(t *testing.T) {
 }
 
 func TestMissingCompanyGrantRollsBackWorkContact(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	actor, ok := principal.Actor(ctx)
@@ -238,6 +247,7 @@ func TestMissingCompanyGrantRollsBackWorkContact(t *testing.T) {
 // A primary employment whose end date has passed names no employer. A deal
 // opened at promotion is then not filed under the company the contact left.
 func TestALapsedPrimaryEmploymentIsNoCurrentEmployer(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.editorCtx()
 	fx := e.seedFlipFixture(ctx, t, "Jon Rask", "Rask Former", "Rask Unused")

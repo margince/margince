@@ -21,6 +21,7 @@ import (
 )
 
 func TestAFirstNameAndTheEmployersNameFindTheContact(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	demo := seedSearchCompany(t, e, "Demo GmbH")
 	alice := seedSearchContact(t, e, "Alice Müller")
@@ -56,6 +57,7 @@ func TestAFirstNameAndTheEmployersNameFindTheContact(t *testing.T) {
 }
 
 func TestAWordNeitherSideCarriesFindsNoOne(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	demo := seedSearchCompany(t, e, "Demo GmbH")
 	alice := seedSearchContact(t, e, "Alice Müller")
@@ -72,6 +74,7 @@ func TestAWordNeitherSideCarriesFindsNoOne(t *testing.T) {
 // More companies carry the first name than the seed cap admits, and each ranks
 // above the employer; the employer's own word still seeds it.
 func TestCompaniesCarryingTheFirstNameDoNotCrowdOutTheEmployer(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	demo := seedSearchCompany(t, e, "Demo GmbH")
 	alice := seedSearchContact(t, e, "Alice Müller")
@@ -89,6 +92,7 @@ func TestCompaniesCarryingTheFirstNameDoNotCrowdOutTheEmployer(t *testing.T) {
 }
 
 func TestAnEndedEmploymentLendsNoName(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	demo := seedSearchCompany(t, e, "Demo GmbH")
 	now := seedSearchCompany(t, e, "Neuwerk AG")
@@ -105,6 +109,7 @@ func TestAnEndedEmploymentLendsNoName(t *testing.T) {
 }
 
 func TestTheWordWiseMatchKeepsBothRowScopes(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	public := seedSearchCompany(t, e, "Demo GmbH")
 	private := e.SeedID(t, `INSERT INTO company (id, display_name, owner_id, visibility, source, captured_by)
@@ -132,6 +137,7 @@ func TestTheWordWiseMatchKeepsBothRowScopes(t *testing.T) {
 // A contact whose own text carries every word is the contact branch's hit,
 // and the employer arm does not add it a second time.
 func TestAContactMatchingEveryWordItselfAppearsOnce(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	demo := seedSearchCompany(t, e, "Demo GmbH")
 	own := seedSearchContact(t, e, "Alice Demo")
@@ -146,6 +152,7 @@ func TestAContactMatchingEveryWordItselfAppearsOnce(t *testing.T) {
 // The same question end to end. The company, its staff and their employment
 // are made through the app's API; the query is a first name and part of the company.
 func TestAFirstNameAndPartOfTheCompanyFindAContactMadeThroughTheApp(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	var company struct {

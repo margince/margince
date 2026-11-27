@@ -66,6 +66,7 @@ func textOf(name *string) string {
 }
 
 func TestAMemberSetsAndClearsTheNameTheyAreGreetedBy(t *testing.T) {
+	t.Parallel()
 	svc, ctx, userID := seatChoosingALanguage(t)
 
 	typed := "  Sofia  "
@@ -110,6 +111,7 @@ func TestAMemberSetsAndClearsTheNameTheyAreGreetedBy(t *testing.T) {
 }
 
 func TestAnOverlongGreetingNameIsRefusedOnItsField(t *testing.T) {
+	t.Parallel()
 	svc, ctx, userID := seatChoosingALanguage(t)
 
 	// Counted in runes: 101 two-byte characters is past the bound, 100 is not.
@@ -132,6 +134,7 @@ func TestAnOverlongGreetingNameIsRefusedOnItsField(t *testing.T) {
 }
 
 func TestTheFirstFederatedSignInFillsAnEmptyGreetingName(t *testing.T) {
+	t.Parallel()
 	svc, _, userID, email := seedSSOEnv(t, "sso-greeting-fill")
 
 	if _, err := svc.LoginViaFederatedIdentity(groupSyncCtx(), "google",
@@ -147,6 +150,7 @@ func TestTheFirstFederatedSignInFillsAnEmptyGreetingName(t *testing.T) {
 }
 
 func TestASignInNeverReplacesAGreetingNameAlreadySet(t *testing.T) {
+	t.Parallel()
 	svc, conn, userID, email := seedSSOEnv(t, "sso-greeting-kept")
 	if _, err := conn.Exec(context.Background(),
 		`UPDATE app_user SET greeting_name = 'Caz' WHERE id = $1`, userID); err != nil {
@@ -168,6 +172,7 @@ func TestASignInNeverReplacesAGreetingNameAlreadySet(t *testing.T) {
 // A second provider linked later is not a first sign-in: a name the member
 // cleared after the first one stays cleared.
 func TestASecondProviderDoesNotRefillAClearedGreetingName(t *testing.T) {
+	t.Parallel()
 	svc, conn, userID, email := seedSSOEnv(t, "sso-greeting-second")
 	if _, err := svc.LoginViaFederatedIdentity(groupSyncCtx(), "google",
 		OIDCClaims{Subject: "sub-greeting-google", Email: email, GivenName: "Carol"}); err != nil {
@@ -190,6 +195,7 @@ func TestASecondProviderDoesNotRefillAClearedGreetingName(t *testing.T) {
 // An invite that names a greeting name stores it and announces it, so a
 // subscriber following greeting names hears the invited one too.
 func TestAnInvitedGreetingNameIsStoredAndAnnounced(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "invite-greeting")
 	greeting := "Lan"
 	userID, _, err := e.svc.InviteUser(e.wsCtx(e.admin), e.admin, InviteUserInput{
@@ -221,6 +227,7 @@ func TestAnInvitedGreetingNameIsStoredAndAnnounced(t *testing.T) {
 // A member who cleared their greeting name before ever signing in through a
 // provider made a choice; the provider's first sign-in does not undo it.
 func TestAClearBeforeTheFirstFederatedSignInIsKept(t *testing.T) {
+	t.Parallel()
 	svc, _, userID, email := seedSSOEnv(t, "sso-greeting-cleared")
 	ctx := selfActorCtx(groupSyncCtx(), userID)
 	typed, blank := "Caz", ""

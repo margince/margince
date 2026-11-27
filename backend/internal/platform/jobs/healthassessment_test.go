@@ -21,7 +21,7 @@ func TestHealthAssessmentDoesNotTreatHistoryAsRecovery(t *testing.T) {
 		{"future scheduled", KindHealth{Waiting: 1}, "processing"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			if got := AssessHealth(tc.row); got.Condition != tc.condition {
+			if got := (Composed{}).AssessHealth(tc.row); got.Condition != tc.condition {
 				t.Fatalf("got %s, want %s", got.Condition, tc.condition)
 			}
 		})
@@ -30,7 +30,7 @@ func TestHealthAssessmentDoesNotTreatHistoryAsRecovery(t *testing.T) {
 
 func TestAQueueWithoutAnExpectationCannotBeCalledOnTime(t *testing.T) {
 	age := 600.0
-	got := AssessHealth(KindHealth{Kind: "unknown", Waiting: 1, OldestWaitingAgeSeconds: &age})
+	got := (Composed{}).AssessHealth(KindHealth{Kind: "unknown", Waiting: 1, OldestWaitingAgeSeconds: &age})
 	if got.Condition != "unknown" || got.Expectation != 0 {
 		t.Fatalf("unexpected assessment: %+v", got)
 	}
@@ -46,11 +46,11 @@ func TestRunnableWaitIsOverdueOnlyPastItsDeclaredTick(t *testing.T) {
 		t.Run(kind, func(t *testing.T) {
 			age := spec.Cadence.Fixed.Seconds()
 			row := KindHealth{Kind: kind, Waiting: 1, OldestWaitingAgeSeconds: &age}
-			if AssessHealth(row).Code == "queue_overdue" {
+			if (Composed{}).AssessHealth(row).Code == "queue_overdue" {
 				t.Fatal("boundary is not overdue")
 			}
 			age++
-			if AssessHealth(row).Code != "queue_overdue" {
+			if (Composed{}).AssessHealth(row).Code != "queue_overdue" {
 				t.Fatal("missed tick must be overdue")
 			}
 		})
@@ -62,22 +62,19 @@ func TestRunnableWaitIsOverdueOnlyPastItsDeclaredTick(t *testing.T) {
 }
 
 func TestAClockTimePassIsOverdueOnlyPastItsLongestGap(t *testing.T) {
+	t.Parallel()
 	const kind = "ext_health_clock_report"
-	t.Cleanup(func() {
-		if err := RegisterComposed(nil); err != nil {
-			t.Error(err)
-		}
-	})
-	if err := RegisterComposed([]Spec{{Kind: kind, Role: Dispatcher, Cadence: Cadence{ClockGap: 72 * time.Hour}}}); err != nil {
+	table, err := NewComposed([]Spec{{Kind: kind, Role: Dispatcher, Cadence: Cadence{ClockGap: 72 * time.Hour}}}, nil)
+	if err != nil {
 		t.Fatal(err)
 	}
 	age := (72 * time.Hour).Seconds()
 	row := KindHealth{Kind: kind, Waiting: 1, OldestWaitingAgeSeconds: &age}
-	if got := AssessHealth(row); got.Code == "queue_overdue" || got.Expectation != 72*time.Hour {
+	if got := table.AssessHealth(row); got.Code == "queue_overdue" || got.Expectation != 72*time.Hour {
 		t.Fatalf("at the gap: %+v, want on time against a 72h expectation", got)
 	}
 	age++
-	if AssessHealth(row).Code != "queue_overdue" {
+	if table.AssessHealth(row).Code != "queue_overdue" {
 		t.Fatal("a wait past the longest gap must be overdue")
 	}
 }

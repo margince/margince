@@ -93,6 +93,7 @@ func exportRow(key, title string) deals.KeyNamedDeal {
 }
 
 func TestADryRunReportsTheRenameAndWritesNothing(t *testing.T) {
+	t.Parallel()
 	f := newKeyNamedFixture(t)
 	id := f.importDeal(t, "acme-q3", f.company(t, "Acme"))
 
@@ -113,6 +114,7 @@ func TestADryRunReportsTheRenameAndWritesNothing(t *testing.T) {
 }
 
 func TestApplyingRenamesToTheSourceTitleWithItsOwnAuditAndEvent(t *testing.T) {
+	t.Parallel()
 	f := newKeyNamedFixture(t)
 	id := f.importDeal(t, "acme-q3", f.company(t, "Acme"))
 
@@ -136,6 +138,7 @@ func TestApplyingRenamesToTheSourceTitleWithItsOwnAuditAndEvent(t *testing.T) {
 }
 
 func TestWithoutATitleTheDealIsNamedForItsCompanyAndStage(t *testing.T) {
+	t.Parallel()
 	f := newKeyNamedFixture(t)
 	id := f.importDeal(t, "acme-q3", f.company(t, "Acme"))
 	stage := f.e.WsScalar(t, `SELECT name FROM stage WHERE id = $1`, f.open)
@@ -149,6 +152,7 @@ func TestWithoutATitleTheDealIsNamedForItsCompanyAndStage(t *testing.T) {
 }
 
 func TestANameSomeoneChangedIsLeftAlone(t *testing.T) {
+	t.Parallel()
 	f := newKeyNamedFixture(t)
 	id := f.importDeal(t, "acme-q3", f.company(t, "Acme"))
 	edited := "Acme expansion"
@@ -167,6 +171,7 @@ func TestANameSomeoneChangedIsLeftAlone(t *testing.T) {
 }
 
 func TestADealWithNoTitleAndNoCompanyIsSkipped(t *testing.T) {
+	t.Parallel()
 	f := newKeyNamedFixture(t)
 	id := f.importDeal(t, "acme-q3", nil)
 
@@ -181,6 +186,7 @@ func TestADealWithNoTitleAndNoCompanyIsSkipped(t *testing.T) {
 }
 
 func TestAKeyTwoDealsShareIsSkippedAsAmbiguous(t *testing.T) {
+	t.Parallel()
 	f := newKeyNamedFixture(t)
 	first := f.importDeal(t, "acme-q3", f.company(t, "Acme"))
 	second := f.importDeal(t, "acme-q3", f.company(t, "Acme Holdings"))
@@ -199,6 +205,7 @@ func TestAKeyTwoDealsShareIsSkippedAsAmbiguous(t *testing.T) {
 }
 
 func TestAnArchivedDealIsNotRenamed(t *testing.T) {
+	t.Parallel()
 	f := newKeyNamedFixture(t)
 	id := f.importDeal(t, "acme-q3", f.company(t, "Acme"))
 	if _, err := f.e.Deals.ArchiveDeal(f.e.Admin(), id, nil); err != nil {
@@ -216,6 +223,7 @@ func TestAnArchivedDealIsNotRenamed(t *testing.T) {
 }
 
 func TestASeatCannotRunTheRepair(t *testing.T) {
+	t.Parallel()
 	f := newKeyNamedFixture(t)
 	f.importDeal(t, "acme-q3", f.company(t, "Acme"))
 
@@ -227,6 +235,7 @@ func TestASeatCannotRunTheRepair(t *testing.T) {
 }
 
 func TestARerunAfterApplyFindsNothingLeft(t *testing.T) {
+	t.Parallel()
 	f := newKeyNamedFixture(t)
 	id := f.importDeal(t, "acme-q3", f.company(t, "Acme"))
 	other := f.importDeal(t, "globex-q4", f.company(t, "Globex"))

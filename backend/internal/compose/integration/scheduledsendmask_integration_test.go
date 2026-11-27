@@ -22,6 +22,7 @@ import (
 // A scheduled message waits as its sender typed it, because that text is what
 // goes out when it fires. Only the timeline row it then writes is masked.
 func TestAScheduledSendDeliversWhatWasTypedAndStoresItMasked(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	p.stakeADeal(t)

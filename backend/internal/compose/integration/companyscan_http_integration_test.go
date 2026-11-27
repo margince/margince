@@ -27,6 +27,7 @@ type scanResponse struct {
 }
 
 func TestAccountScanHTTPSurface(t *testing.T) {
+	t.Parallel()
 	// Wired the way the api role wires it, with no job runner and no lane:
 	// the option must still stand the surface up, on the rules' floor.
 	e := apptest.SetupAppWithOptions(t, compose.WithAccountScan(nil, nil, nil))
@@ -78,6 +79,7 @@ func TestAccountScanHTTPSurface(t *testing.T) {
 // HTTP, so a forward that was dropped or crossed fails here rather than in
 // a rep's morning.
 func TestAttentionSurfacesAnswerOverHTTP(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	for _, path := range []string{

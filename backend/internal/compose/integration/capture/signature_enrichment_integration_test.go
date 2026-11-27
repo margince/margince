@@ -59,6 +59,7 @@ func listedAnswer(ctx context.Context, t *testing.T, registry *capturemod.Regist
 }
 
 func TestAMailboxStartsWithNoAnswerOfItsOwn(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	registry, owner := connectedMailbox(t, e)
 
@@ -71,6 +72,7 @@ func TestAMailboxStartsWithNoAnswerOfItsOwn(t *testing.T) {
 }
 
 func TestAMailboxKeepsItsOwnSignatureAnswer(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	registry, owner := connectedMailbox(t, e)
 
@@ -92,6 +94,7 @@ func TestAMailboxKeepsItsOwnSignatureAnswer(t *testing.T) {
 }
 
 func TestAMailboxCanHandTheQuestionBackToTheTenantDefault(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	registry, owner := connectedMailbox(t, e)
 
@@ -108,6 +111,7 @@ func TestAMailboxCanHandTheQuestionBackToTheTenantDefault(t *testing.T) {
 }
 
 func TestSettingSignatureEnrichmentAuditsTheChange(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	registry, owner := connectedMailbox(t, e)
 
@@ -139,6 +143,7 @@ func TestSettingSignatureEnrichmentAuditsTheChange(t *testing.T) {
 }
 
 func TestSettingSignatureEnrichmentRefusesAMailboxTheCallerHasNot(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	registry := capturemod.NewRegistry(e.DB(), capturemod.NewSink(e.DB()), fakeAuthority{}, newTestKeyvault(t, e))
 	registry.Register(&grantingFake{granted: []string{"Mail.Read"}})

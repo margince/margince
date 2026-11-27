@@ -17,6 +17,7 @@ import (
 )
 
 func TestTheCompanyListNarrowsToTheIDsNamedAndHidesWhatTheCallerCannotSee(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	owner := e.as()
 	named := seedLogoCompany(owner, t, e, "Voltaq Systems GmbH", "voltaq.test")
@@ -40,6 +41,7 @@ func TestTheCompanyListNarrowsToTheIDsNamedAndHidesWhatTheCallerCannotSee(t *tes
 }
 
 func TestTheCompanyListRefusesMoreIDsThanOneBoardNames(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	tooMany := make([]ids.UUID, maxCompanyIDFilter+1)
 	for i := range tooMany {

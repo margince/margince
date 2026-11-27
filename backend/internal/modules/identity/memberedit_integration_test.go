@@ -14,6 +14,7 @@ import (
 )
 
 func TestAnImportedMemberCanBeEditedAndPlacedOnATeamBeforeFirstSignIn(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "imported-member-edit")
 	ctx := e.wsCtx(e.admin)
 	member, err := e.svc.CreateFormerMember(ctx, e.admin, FormerMemberInput{Email: "imported@example.test", DisplayName: "Imported Name", Role: "rep"})
@@ -54,6 +55,7 @@ func TestAnImportedMemberCanBeEditedAndPlacedOnATeamBeforeFirstSignIn(t *testing
 }
 
 func TestARejectedMemberTeamEditRollsBackTheProfile(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "atomic-member-edit")
 	ctx := e.wsCtx(e.admin)
 	row, err := e.svc.GetUser(ctx, e.admin, e.member.UserID)
@@ -80,6 +82,7 @@ func TestARejectedMemberTeamEditRollsBackTheProfile(t *testing.T) {
 }
 
 func TestAMemberEmailEditCannotTakeAnotherAccount(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "member-email-conflict")
 	ctx := e.wsCtx(e.admin)
 	row, err := e.svc.GetUser(ctx, e.admin, e.member.UserID)
@@ -101,6 +104,7 @@ func TestAMemberEmailEditCannotTakeAnotherAccount(t *testing.T) {
 
 // An invited member's address may still change, and not to one another seat holds.
 func TestAnInvitedMembersEmailEditCannotTakeAnotherAccount(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "invited-email-conflict")
 	ctx := e.wsCtx(e.admin)
 	invited, _, err := e.svc.InviteUser(ctx, e.admin, InviteUserInput{Email: "new@" + e.slug + ".test", DisplayName: "New", Role: "rep"})
@@ -118,6 +122,7 @@ func TestAnInvitedMembersEmailEditCannotTakeAnotherAccount(t *testing.T) {
 }
 
 func TestAUsedSignInAddressCannotBeChangedByTheMemberEditor(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "protected-member-email")
 	ctx := e.wsCtx(e.admin)
 	row, err := e.svc.GetUser(ctx, e.admin, e.member.UserID)
@@ -138,6 +143,7 @@ func TestAUsedSignInAddressCannotBeChangedByTheMemberEditor(t *testing.T) {
 }
 
 func TestAnUnusedImportedSignInAddressCanBeCorrected(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "unused-member-email")
 	ctx := e.wsCtx(e.admin)
 	member, err := e.svc.CreateFormerMember(ctx, e.admin, FormerMemberInput{Email: "mistyped@example.test", DisplayName: "Imported colleague"})

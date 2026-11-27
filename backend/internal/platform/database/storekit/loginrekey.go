@@ -25,7 +25,7 @@ func RekeyLoginAttemptsPageTx(ctx context.Context, tx pgx.Tx, after ids.UUID, li
 	if err := auth.RequireSystem(ctx); err != nil {
 		return nil, err
 	}
-	keyID := SuppressionKeyID()
+	keyID := SuppressionKeyID(ctx)
 	if keyID == nil {
 		return nil, nil
 	}
@@ -45,7 +45,7 @@ func RekeyLoginAttemptsPageTx(ctx context.Context, tx pgx.Tx, after ids.UUID, li
 			rows.Close()
 			return nil, err
 		}
-		hash, _ := RekeySuppressionHash(digest)
+		hash, _ := RekeySuppressionHash(ctx, digest)
 		scanned, hashes = append(scanned, id), append(hashes, hash)
 	}
 	rows.Close()

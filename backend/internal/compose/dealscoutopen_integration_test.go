@@ -59,6 +59,7 @@ func (e *scoutEnv) openedCorrection(t *testing.T, company ids.UUID) (deals.DealC
 // archives it and dismisses the suggestion. The same evidence then opens
 // nothing, and newer evidence opens it again.
 func TestMarginceOpensADealForTheCompanyOwnerAndUndoArchivesIt(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	e.GrantRole(t, e.AdminUser, "admin")
 	acme := e.SeedCompany(t, "Acme GmbH", &e.AdminUser)
@@ -117,6 +118,7 @@ func TestMarginceOpensADealForTheCompanyOwnerAndUndoArchivesIt(t *testing.T) {
 // A company with no owner, or an owner who switched deal_open off, keeps the
 // suggestion for a human.
 func TestNoOwnerOrASwitchOffKeepsTheSuggestion(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	unowned := e.SeedCompany(t, "Initech", nil)
 	e.WsExec(t, `UPDATE company SET owner_id = NULL WHERE id = $1`, unowned)
@@ -139,6 +141,7 @@ func TestNoOwnerOrASwitchOffKeepsTheSuggestion(t *testing.T) {
 // Undo of an opened deal the team has worked on since asks first, and the
 // confirmed Undo archives it.
 func TestUndoOfAnOpenedDealTheTeamWorkedOnNeedsConfirming(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	e.GrantRole(t, e.AdminUser, "admin")
 	acme := e.SeedCompany(t, "Acme GmbH", &e.AdminUser)
@@ -185,6 +188,7 @@ func TestUndoOfAnOpenedDealTheTeamWorkedOnNeedsConfirming(t *testing.T) {
 // A note written before Margince opened the deal but filed on it afterwards
 // is the team's work too.
 func TestAnOlderNoteFiledOnTheOpenedDealNeedsConfirming(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	e.GrantRole(t, e.AdminUser, "admin")
 	acme := e.SeedCompany(t, "Acme GmbH", &e.AdminUser)
@@ -209,6 +213,7 @@ func TestAnOlderNoteFiledOnTheOpenedDealNeedsConfirming(t *testing.T) {
 // Evidence the workspace can no longer read by the time the deal would open
 // opens no deal.
 func TestEvidenceNoLongerWorkspaceReadableOpensNoDeal(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	e.GrantRole(t, e.AdminUser, "admin")
 	acme := e.SeedCompany(t, "Acme GmbH", &e.AdminUser)
@@ -251,6 +256,7 @@ func TestEvidenceNoLongerWorkspaceReadableOpensNoDeal(t *testing.T) {
 // An amount reaches the opened deal only when the document's own words state
 // it; a reading with no quote opens the deal with no amount.
 func TestAnAmountNeedsTheDocumentsOwnWords(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	e.GrantRole(t, e.AdminUser, "admin")
 	for _, c := range []struct {
@@ -292,6 +298,7 @@ func (e *scoutEnv) archive(ctx context.Context, t *testing.T, deal ids.DealID, a
 // Archiving a deal by hand works like Undo: evidence from before the archive
 // opens nothing, and newer evidence opens a deal again.
 func TestArchivingADealKeepsItsOlderEvidenceFromOpeningAnother(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	e.GrantRole(t, e.AdminUser, "admin")
 	acme := e.SeedCompany(t, "Acme GmbH", &e.AdminUser)
@@ -321,6 +328,7 @@ func TestArchivingADealKeepsItsOlderEvidenceFromOpeningAnother(t *testing.T) {
 // A lost deal archived since is not reopened: evidence from before the archive
 // opens nothing, and newer evidence opens a new deal beside it.
 func TestALostDealArchivedSinceSetsTheFloorAndStaysArchived(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	e.GrantRole(t, e.AdminUser, "admin")
 	acme := e.SeedCompany(t, "Acme GmbH", &e.AdminUser)
@@ -347,6 +355,7 @@ func TestALostDealArchivedSinceSetsTheFloorAndStaysArchived(t *testing.T) {
 // A system archive, as retention and an import undo make, judges nothing:
 // evidence from before it still opens a deal.
 func TestASystemArchiveSetsNoFloor(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	e.GrantRole(t, e.AdminUser, "admin")
 	acme := e.SeedCompany(t, "Acme GmbH", &e.AdminUser)
@@ -362,6 +371,7 @@ func TestASystemArchiveSetsNoFloor(t *testing.T) {
 // A suggestion raised before a user archives a deal no longer stands: the
 // opener supersedes it and opens nothing.
 func TestASuggestionRaisedBeforeAnArchiveOpensNothing(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	e.GrantRole(t, e.AdminUser, "admin")
 	acme := e.SeedCompany(t, "Acme GmbH", &e.AdminUser)

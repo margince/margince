@@ -16,6 +16,7 @@ import (
 )
 
 func TestExactListTotalUsesExhaustedFirstPage(t *testing.T) {
+	t.Parallel()
 	for _, kind := range []string{"contact", "company", "lead_sorted", "lead_queue"} {
 		for _, count := range []int{0, 1, 2, 3} {
 			t.Run(fmt.Sprintf("%s/%d", kind, count), func(t *testing.T) {

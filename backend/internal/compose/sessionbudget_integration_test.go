@@ -10,7 +10,6 @@ import (
 	"errors"
 	"io"
 	"log/slog"
-	"os"
 	"testing"
 	"time"
 
@@ -24,8 +23,9 @@ import (
 )
 
 func TestPinnedLocksLeaveConnectionsForProtectedWork(t *testing.T) {
+	t.Parallel()
 	integration.Setup(t)
-	cfg, err := database.WorkerPoolConfig(os.Getenv("MARGINCE_TEST_APP_DSN"), WorkerQueueConcurrency(), 5, 64)
+	cfg, err := database.WorkerPoolConfig(testdb.For(t).AppDSN, WorkerQueueConcurrency(), 5, 64)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -64,6 +64,7 @@ func TestPinnedLocksLeaveConnectionsForProtectedWork(t *testing.T) {
 }
 
 func TestRefusedSessionLocksReturnTheirBudget(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := context.WithValue(t.Context(), sessionBudgetKey{}, make(chan struct{}, 2))
 	release, held, err := holdSessionLock(ctx, e.Pool, "test:refused-slot", slog.Default())
@@ -92,6 +93,7 @@ func TestRefusedSessionLocksReturnTheirBudget(t *testing.T) {
 }
 
 func TestRunnerBindsTheSessionBudgetAndResumesWaitingWork(t *testing.T) {
+	t.Parallel()
 	embedder := &gatedEmbedder{entered: make(chan struct{}), release: make(chan struct{})}
 	o := newOrphanIngest(t, embedder)
 	poolCfg := o.e.Pool.Config()
@@ -174,6 +176,7 @@ func TestRunnerBindsTheSessionBudgetAndResumesWaitingWork(t *testing.T) {
 }
 
 func TestRunnerRefusesAZeroSessionBudget(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	cfg := e.Pool.Config()
 	cfg.MaxConns = 3
@@ -188,8 +191,9 @@ func TestRunnerRefusesAZeroSessionBudget(t *testing.T) {
 }
 
 func TestWorkerConnectionBudgetIncludesTheRiverListener(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
-	cfg, err := database.WorkerPoolConfig(os.Getenv("MARGINCE_TEST_APP_DSN"), WorkerQueueConcurrency(), 5, 256)
+	cfg, err := database.WorkerPoolConfig(testdb.For(t).AppDSN, WorkerQueueConcurrency(), 5, 256)
 	if err != nil {
 		t.Fatal(err)
 	}

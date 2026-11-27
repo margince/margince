@@ -38,6 +38,7 @@ func documentsByFilename(t *testing.T, ie *ingestEnv, store *knowledge.Store, co
 }
 
 func TestOnlyAShippedPageIsNamedByItsHeading(t *testing.T) {
+	t.Parallel()
 	ie := newIngestEnv(t)
 	uploaded := ie.upload(t, "README.md", "text/markdown", prose(1))
 	mine := documentsByFilename(t, ie, ie.store, ie.corpus)["README.md"]
@@ -103,6 +104,7 @@ func assertDocumentsSumToTheirCorpus(t *testing.T, ee *embedEnv, store *knowledg
 }
 
 func TestADocumentsSearchableCountAgreesWithItsCorpus(t *testing.T) {
+	t.Parallel()
 	ee := newEmbedEnv(t)
 	second := ee.upload(t, "second.md", "text/markdown", prose(1))
 	ee.ingest(t, second)
@@ -141,6 +143,7 @@ func TestADocumentsSearchableCountAgreesWithItsCorpus(t *testing.T) {
 }
 
 func TestAShippedPageCannotBeDeleted(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	bootCtx := handbookBootCtx(e.WS)
 	var q recordingQueue

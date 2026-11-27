@@ -21,6 +21,7 @@ import (
 // to asking them. Read off real columns, because the type is the column's and
 // not the rendered expression's.
 func TestOnlyATextOrEnumDefaultIsNobodysEdit(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := context.Background()
 	tx, err := e.Pool.Begin(ctx)

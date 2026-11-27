@@ -34,6 +34,7 @@ var registerRequestReceiptCountry sync.Once
 // request receipt goes out on the real lane, and the engine allows it on the
 // standing restriction it answers.
 func TestARestrictionUnderARecipientBoundPackIsReceiptedThroughTheEngine(t *testing.T) {
+	t.Parallel()
 	registerRequestReceiptCountry.Do(func() {
 		messagingrules.Register(messagingrules.Rules{
 			Jurisdiction: requestReceiptCountry, Version: 1, DataProtectionFollowsRecipient: true,

@@ -17,6 +17,7 @@ import (
 )
 
 func TestBuyerReattributionDoesNotDuplicateTheSourceFinding(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	partner := e.SeedCompany(t, "Cedar Partner", nil)
 	buyerCompany := e.SeedCompany(t, "Maple Studio", nil)
@@ -56,6 +57,7 @@ func TestBuyerReattributionDoesNotDuplicateTheSourceFinding(t *testing.T) {
 }
 
 func TestCommercialIntermediariesDoNotCreateBuyingReviewMatters(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	for _, role := range []string{commercialRoleSupplier, commercialRolePartner, commercialRoleProvider} {
 		t.Run(role, func(t *testing.T) {

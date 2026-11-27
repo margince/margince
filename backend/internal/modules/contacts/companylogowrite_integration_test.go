@@ -26,6 +26,7 @@ import (
 )
 
 func TestTheCompanyMarkIsSetAndTakenOffThroughOneStatement(t *testing.T) {
+	t.Parallel()
 	e := newAnchorEnv(t)
 
 	superseded, err := e.store.SetAnchorCompanyLogo(e.ctx, LogoWide, "logos/first.png", "first.png")
@@ -71,6 +72,7 @@ func TestTheCompanyMarkIsSetAndTakenOffThroughOneStatement(t *testing.T) {
 // took its wordmark away would be a mark a contact did not ask to lose, and no
 // test of one slot alone can see it.
 func TestTheTwoCompanyMarksAreWrittenAndClearedIndependently(t *testing.T) {
+	t.Parallel()
 	e := newAnchorEnv(t)
 
 	if _, err := e.store.SetAnchorCompanyLogo(e.ctx, LogoWide, "logos/wide.png", "wide.png"); err != nil {

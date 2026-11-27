@@ -27,6 +27,7 @@ import (
 )
 
 func TestOnlyADeadCredentialIsReaped(t *testing.T) {
+	t.Parallel()
 	_, pool := setupIdentityDB(t)
 	ctx := context.Background()
 
@@ -113,6 +114,7 @@ func TestOnlyADeadCredentialIsReaped(t *testing.T) {
 // Reaping a member's dead sessions keeps the latest request they made on their
 // seat, so the last activity survives with no session row left.
 func TestTheReapKeepsAMembersLastActivity(t *testing.T) {
+	t.Parallel()
 	_, pool := setupIdentityDB(t)
 	ctx := context.Background()
 	tx, err := pool.Begin(ctx)
@@ -159,6 +161,7 @@ func TestTheReapKeepsAMembersLastActivity(t *testing.T) {
 // A reap meeting a member another write holds passes them by instead of waiting.
 // Locking their sessions first and app_user second deadlocked against every member write.
 func TestTheSessionReapPassesAMemberAnotherWriteHolds(t *testing.T) {
+	t.Parallel()
 	_, pool := setupIdentityDB(t)
 	ctx := context.Background()
 	seed := beginReapTx(ctx, t, pool)
@@ -243,6 +246,7 @@ func seatLastActive(ctx context.Context, t *testing.T, tx pgx.Tx, user string) *
 // A table nobody wrote a rule for fails rather than sweeping nothing: a reaper
 // that skips without saying so reads the same as one that found nothing.
 func TestAnUnknownCredentialTableIsRefused(t *testing.T) {
+	t.Parallel()
 	_, pool := setupIdentityDB(t)
 	ctx := context.Background()
 	tx, err := pool.Begin(ctx)
@@ -296,6 +300,7 @@ func rollback(t *testing.T, tx pgx.Tx) {
 // database has already abandoned, and that belongs in the writer's own reading
 // rather than in a claim this test cannot hold.
 func TestAFailedReapRefusesTheCredential(t *testing.T) {
+	t.Parallel()
 	owner, pool := setupIdentityDB(t)
 	ctx := context.Background()
 	// The owner connection, because creating a trigger needs rights the app
@@ -343,16 +348,6 @@ func refuseSessionDeletes(ctx context.Context, t *testing.T, pool interface {
 			t.Fatalf("installing the refusing trigger: %v", err)
 		}
 	}
-	t.Cleanup(func() {
-		for _, stmt := range []string{
-			`DROP TRIGGER IF EXISTS trg_refuse_session_deletes ON session`,
-			`DROP FUNCTION IF EXISTS refuse_session_deletes()`,
-		} {
-			if _, err := pool.Exec(context.Background(), stmt); err != nil {
-				t.Errorf("dropping the refusing trigger: %v", err)
-			}
-		}
-	})
 }
 
 func mustParseUUID(t *testing.T, raw string) ids.UUID {
@@ -368,6 +363,7 @@ func mustParseUUID(t *testing.T, raw string) ids.UUID {
 // rather than a bare writer: a second call site, and the one credential here
 // that belongs to the installation rather than to a member.
 func TestAFailedSetupTokenReapRefusesTheToken(t *testing.T) {
+	t.Parallel()
 	owner, pool := setupIdentityDB(t)
 	ctx := context.Background()
 	svc := NewService(pool)
@@ -402,14 +398,4 @@ func refuseSetupTokenDeletes(ctx context.Context, t *testing.T, owner interface 
 			t.Fatalf("installing the refusing trigger: %v", err)
 		}
 	}
-	t.Cleanup(func() {
-		for _, stmt := range []string{
-			`DROP TRIGGER IF EXISTS trg_refuse_setup_token_deletes ON setup_token`,
-			`DROP FUNCTION IF EXISTS refuse_setup_token_deletes()`,
-		} {
-			if _, err := owner.Exec(context.Background(), stmt); err != nil {
-				t.Errorf("dropping the refusing trigger: %v", err)
-			}
-		}
-	})
 }

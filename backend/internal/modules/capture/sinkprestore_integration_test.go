@@ -23,6 +23,7 @@ import (
 )
 
 func TestDropBeforeStoreAgreesWithUpsert(t *testing.T) {
+	t.Parallel()
 	ctx, db := bootstrapInternalMailWorkspace(t, "acme.com")
 	sink := capture.NewSink(db)
 
@@ -54,6 +55,7 @@ func TestDropBeforeStoreAgreesWithUpsert(t *testing.T) {
 // which only its body shows. Its headers alone never drop current mail; the
 // full download decides. Unsent mail, and history, are dropped as before.
 func TestDropBeforeStoreLeavesTheSeatsOwnSentMailToItsBody(t *testing.T) {
+	t.Parallel()
 	ctx, db := bootstrapInternalMailWorkspace(t, "acme.com")
 	ws, _ := principal.WorkspaceID(ctx)
 	seat := seedSeat(ctx, t, db, "rep@acme.com", "active")

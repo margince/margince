@@ -40,6 +40,7 @@ func heldMeetingWeekCount(t *testing.T, e *weekEnv, start time.Time) (int, int) 
 }
 
 func TestAMeetingRedatedAfterItWasHeldStaysInItsHeldWeek(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 	heldWeek := time.Date(2026, 9, 14, 0, 0, 0, 0, time.UTC)
 	laterWeek := heldWeek.AddDate(0, 0, 7)
@@ -112,6 +113,7 @@ func TestAMeetingRedatedAfterItWasHeldStaysInItsHeldWeek(t *testing.T) {
 // Read over a row shaped as the old history left it. The CHECK on precision is
 // `NOT VALID`, so no writer can make such a row now, and old ones remain.
 func TestAFollowUpTheMorningOfAnUndatedDayMeetingCounts(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 	anchor := time.Date(2026, 9, 16, 12, 0, 0, 0, time.UTC)
 	morning := anchor.Add(-4 * time.Hour)

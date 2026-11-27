@@ -82,6 +82,7 @@ func revenueOf(t *testing.T, ranking BriefRanking, deal ids.UUID) float64 {
 
 // THE defect: a deal the reader may not price, scored on its price.
 func TestAMaskedDealsAmountDoesNotScoreTheBrief(t *testing.T) {
+	t.Parallel()
 	b := setupBrief(t)
 	theirs := b.seedColleagueDealWithMyTask(t)
 
@@ -115,6 +116,7 @@ func TestAMaskedDealsAmountDoesNotScoreTheBrief(t *testing.T) {
 // the fallback asserts nothing. Twelve puts a real percentile on the unmasked
 // side, which is what makes the masked side's fallback an answer.
 func TestTheRevenueNormIsTakenOverAmountsTheReaderMayRead(t *testing.T) {
+	t.Parallel()
 	b := setupBrief(t)
 	owner := integration.OwnerConn(t)
 	for i := range 12 {
@@ -149,6 +151,7 @@ func TestTheRevenueNormIsTakenOverAmountsTheReaderMayRead(t *testing.T) {
 // The always-masked seat scores nothing on revenue: not one card, however the
 // norm came out.
 func TestAnAlwaysMaskedSeatScoresNoRevenueAtAll(t *testing.T) {
+	t.Parallel()
 	b := setupBrief(t)
 	b.seedColleagueDealWithMyTask(t)
 
@@ -172,6 +175,7 @@ func TestAnAlwaysMaskedSeatScoresNoRevenueAtAll(t *testing.T) {
 // clock, and the figure still reads. Without it a mask that broke the statement
 // outright would pass every assertion above.
 func TestAnUnmaskedSeatStillScoresTheSameDeal(t *testing.T) {
+	t.Parallel()
 	b := setupBrief(t)
 	theirs := b.seedColleagueDealWithMyTask(t)
 

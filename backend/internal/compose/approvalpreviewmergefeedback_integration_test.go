@@ -20,6 +20,7 @@ import (
 )
 
 func TestMergePreviewMatchesHumanDecisionSurvivorship(t *testing.T) {
+	t.Parallel()
 	for _, kind := range []string{"contact", "company"} {
 		t.Run(kind, func(t *testing.T) {
 			e := integration.Setup(t)

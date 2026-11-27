@@ -70,6 +70,7 @@ func rosterRow(t *testing.T, activity ids.ActivityID, account string) (userID, c
 // they were dropped outright, so a four-contact conversation was recorded as a
 // two-contact one.
 func TestAPartyNamedOnlyByAccountIsRecorded(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	activity := seedChatMessage(t)
 
@@ -92,6 +93,7 @@ func TestAPartyNamedOnlyByAccountIsRecorded(t *testing.T) {
 // the account to the outside human, and that binding is what the interaction
 // graph joins on.
 func TestAnAccountResolvesToTheContactItIsBoundTo(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	activity := seedChatMessage(t)
@@ -115,6 +117,7 @@ func TestAnAccountResolvesToTheContactItIsBoundTo(t *testing.T) {
 // meaningful against the provider that issued it, and two providers reusing a
 // short numeric id is the ordinary case rather than the exotic one.
 func TestAnAccountDoesNotResolveAcrossTransports(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	activity := seedChatMessage(t)
@@ -140,6 +143,7 @@ func TestAnAccountDoesNotResolveAcrossTransports(t *testing.T) {
 // member. A roster that could would let whoever writes it name a colleague and
 // hand them a read of the conversation.
 func TestAnAccountNeverBindsASeatEvenWhenAttested(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	activity := seedChatMessage(t)
@@ -170,6 +174,7 @@ func TestAnAccountNeverBindsASeatEvenWhenAttested(t *testing.T) {
 // that arm asked directly of the rows the stamp writes: nothing it produced can
 // make an unrelated seat discover the conversation.
 func TestARosterRowIsNotDiscoveryEvidence(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	activity := seedChatMessage(t)
 
@@ -200,6 +205,7 @@ func TestARosterRowIsNotDiscoveryEvidence(t *testing.T) {
 // NOTHING keeps whichever arrived first — a silent loss with no error anywhere,
 // which is the failure this assertion exists to catch.
 func TestTwoPartiesDifferingOnlyByAccountAreTwoRows(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	activity := seedChatMessage(t)
 
@@ -221,6 +227,7 @@ func TestTwoPartiesDifferingOnlyByAccountAreTwoRows(t *testing.T) {
 // Capture's sync loop is at-least-once, so a redelivered group message must add
 // nothing — the same obligation the address rows are already under.
 func TestStampingTheSameRosterTwiceAddsNothing(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	activity := seedChatMessage(t)
 	parties := []connector.MessageParticipant{
@@ -244,6 +251,7 @@ func TestStampingTheSameRosterTwiceAddsNothing(t *testing.T) {
 // seen. The address is what contact_email and the graph read; the account is what
 // a reply routes on.
 func TestAPartyWithBothKeepsBoth(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	activity := seedChatMessage(t)
 
@@ -268,6 +276,7 @@ func TestAPartyWithBothKeepsBoth(t *testing.T) {
 // corroborates. Reversed, one row would name two contacts, and an erasure keyed
 // on either would reach a record about the other.
 func TestAnAccountOutranksAnAddressWhenBothNameSomebody(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	activity := seedChatMessage(t)
@@ -297,6 +306,7 @@ func TestAnAccountOutranksAnAddressWhenBothNameSomebody(t *testing.T) {
 // for mail and wrong for a roster. Left to the index the graph counts two
 // contacts in a two-contact room.
 func TestARosterNamingOneAccountTwiceLeavesOneRow(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	activity := seedChatMessage(t)
 
@@ -337,6 +347,7 @@ func TestARosterNamingOneAccountTwiceLeavesOneRow(t *testing.T) {
 // address-only roster keeps exactly the behaviour the uniqueness index has
 // always given the mail path.
 func TestTheAccountDedupeDoesNotReachAnAddressOnlyParty(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	activity := seedChatMessage(t)
 
@@ -365,6 +376,7 @@ func TestTheAccountDedupeDoesNotReachAnAddressOnlyParty(t *testing.T) {
 // does; two entries carrying DIFFERENT accounts never fold, whatever address
 // they share.
 func TestAPartyDescribedWithAndWithoutTheirAccountIsOneRow(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	activity := seedChatMessage(t)
 
@@ -402,6 +414,7 @@ func TestAPartyDescribedWithAndWithoutTheirAccountIsOneRow(t *testing.T) {
 // that reaches the fill through the account and the address index through
 // nothing at all.
 func TestAnAddressFilledInLaterStillNamesTheSameRow(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	activity := seedChatMessage(t)
 
@@ -445,6 +458,7 @@ func TestAnAddressFilledInLaterStillNamesTheSameRow(t *testing.T) {
 // id attributable to nobody, which is the state the identity CHECK exists to
 // keep out.
 func TestAWhitespaceAccountIsStoredAsNoAccount(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	activity := seedChatMessage(t)
 

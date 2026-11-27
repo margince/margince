@@ -30,6 +30,7 @@ func requestsInOneConversation(t *testing.T, e *loadEnv) []ids.UUID {
 // Setting the card aside sets the conversation's earlier requests aside with
 // it, and undoing it brings back exactly those.
 func TestSettingACardAsideReachesItsEarlierRequests(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	asks := requestsInOneConversation(t, e)
 	alone := seedEmailRequest(t, e, "Unrelated question", "commitment", OwedVerdictAsksUs)
@@ -63,6 +64,7 @@ func TestSettingACardAsideReachesItsEarlierRequests(t *testing.T) {
 // A judgement the reader already made on an earlier request survives setting
 // the card aside and undoing it: the card only fills in where there was none.
 func TestACardNeverOverwritesAnEarlierJudgement(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	asks := requestsInOneConversation(t, e)
 	rep, store := e.asSeat(e.rep), storeKnowing(e)
@@ -88,6 +90,7 @@ func TestACardNeverOverwritesAnEarlierJudgement(t *testing.T) {
 // A time snooze that has already lapsed hides nothing, so the card's
 // set-aside reaches that request as if it had no state.
 func TestACardReachesARequestWhoseSnoozeHasLapsed(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	asks := requestsInOneConversation(t, e)
 	rep, store := e.asSeat(e.rep), storeKnowing(e)

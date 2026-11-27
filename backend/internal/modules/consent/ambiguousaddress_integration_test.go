@@ -55,6 +55,7 @@ func (e *resolveEnv) withAddressOnTwoContacts(t *testing.T, check func(tx pgx.Tx
 }
 
 func TestTheSendGateRefusesAnAddressLiveOnTwoContacts(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	e.withAddressOnTwoContacts(t, func(tx pgx.Tx) {
 		_, found, err := resolveContact(e.ctx, tx, connector.Recipient{Email: e.address})
@@ -65,6 +66,7 @@ func TestTheSendGateRefusesAnAddressLiveOnTwoContacts(t *testing.T) {
 }
 
 func TestAnUnsubscribeLinkIsNotMintedForAnAddressLiveOnTwoContacts(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	e.withAddressOnTwoContacts(t, func(tx pgx.Tx) {
 		_, found, err := liveAddressHolderTx(e.ctx, tx, e.address)
@@ -77,6 +79,7 @@ func TestAnUnsubscribeLinkIsNotMintedForAnAddressLiveOnTwoContacts(t *testing.T)
 // A decision that is no longer directed cannot be spent, so the message it
 // was about is not staged under it.
 func TestADecisionNoLongerLiveIsNotSpent(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	ctx := context.Background()
 	tx, err := e.owner.Begin(ctx)

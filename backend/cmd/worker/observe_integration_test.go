@@ -55,6 +55,7 @@ func bootedGate() *bootGate {
 // wired into one surface and not the other would mean the two disagree about
 // the same process.
 func TestTheWorkerReadinessProbeAnswersFromItsRealDependencies(t *testing.T) {
+	t.Parallel()
 	base := startProbeListener(t, workerTestPool(t), redistest.Client(t), bootedGate())
 
 	status, body := get(t, base+"/readyz")
@@ -85,6 +86,7 @@ func TestTheWorkerReadinessProbeAnswersFromItsRealDependencies(t *testing.T) {
 // one: an arm that passed because a different check failed would prove nothing
 // about the check it is named for.
 func TestEachDeclaredReadinessCheckCanActuallyFail(t *testing.T) {
+	t.Parallel()
 	t.Run("boot", func(t *testing.T) {
 		// A gate never marked complete is the state during boot. The listener
 		// comes up before the lanes and the runner on purpose, so this is the

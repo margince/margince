@@ -29,21 +29,18 @@ import (
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
-// bindRuntimeForTest binds the process-wide runtime dependencies and restores
-// whatever was bound before, rather than clearing to nil: a test that clears
-// leaves the next one unwired if the two ever run concurrently, and the
-// refusal it would then meet names a deployment fault that is not there.
-func bindRuntimeForTest(t *testing.T, pool *pgxpool.Pool, vault keyvault.Vault) {
-	t.Helper()
-	previous := boundExtensionRuntime()
-	BindExtensionRuntime(pool, vault)
-	t.Cleanup(func() { BindExtensionRuntime(previous.pool, previous.vault) })
+// boundForTest is a composition with no units whose runtime is bound to pool and
+// vault, as a role binds its own at boot.
+func boundForTest(pool *pgxpool.Pool, vault keyvault.Vault) *Extensions {
+	composed := &Extensions{}
+	composed.BindRuntime(pool, vault)
+	return composed
 }
 
 // invokeTool adapts ONE handler-bearing declaration exactly as the boot does
 // and calls it once. It is the only route to a Runtime in this package's
 // tests, deliberately: an extension never constructs one either.
-func invokeTool(t *testing.T, unit string, h extension.ToolHandler) {
+func invokeTool(t *testing.T, composed *Extensions, unit string, h extension.ToolHandler) {
 	t.Helper()
 	adapted, err := adaptExtensionTool(extension.Name(unit),
 		extension.Tool{Name: "probe", Handle: h},
@@ -51,6 +48,7 @@ func invokeTool(t *testing.T, unit string, h extension.ToolHandler) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	adapted.composed = composed
 	if _, err := adapted.Handle(context.Background(), nil); err != nil {
 		t.Fatal(err)
 	}
@@ -65,10 +63,10 @@ func TestRuntimeFailsClosedAfterHandlerReturns(t *testing.T) {
 	// against an unwired role every call below refuses anyway, and the test
 	// would pass without a lifetime at all. Nothing here reaches the pool —
 	// both refusals are decided before a connection is taken.
-	bindRuntimeForTest(t, &pgxpool.Pool{}, nil)
+	composed := boundForTest(&pgxpool.Pool{}, nil)
 
 	var escaped extension.Runtime
-	invokeTool(t, "demo", func(_ context.Context, rt extension.Runtime, _ json.RawMessage) (json.RawMessage, error) {
+	invokeTool(t, composed, "demo", func(_ context.Context, rt extension.Runtime, _ json.RawMessage) (json.RawMessage, error) {
 		escaped = rt
 		return json.RawMessage(`{}`), nil
 	})
@@ -129,7 +127,7 @@ func TestRuntimeFailsClosedAfterHandlerReturns(t *testing.T) {
 // TestRuntimeSecretsCannotReachAnotherUnitsNamespace, over real RLS.
 func TestRuntimeIsScopedToTheInvokingUnit(t *testing.T) {
 	var got extension.Runtime
-	invokeTool(t, "alpha", func(_ context.Context, rt extension.Runtime, _ json.RawMessage) (json.RawMessage, error) {
+	invokeTool(t, nil, "alpha", func(_ context.Context, rt extension.Runtime, _ json.RawMessage) (json.RawMessage, error) {
 		got = rt
 		return json.RawMessage(`{}`), nil
 	})
@@ -348,10 +346,10 @@ func TestBoundExtensionRuntimeDepsReachTheHandler(t *testing.T) {
 	// property under test is that the binding is what the adapter reads.
 	pool := &pgxpool.Pool{}
 	vault := keyvault.NewMemory()
-	bindRuntimeForTest(t, pool, vault)
+	composed := boundForTest(pool, vault)
 
 	var got *callRuntime
-	invokeTool(t, "alpha", func(_ context.Context, rt extension.Runtime, _ json.RawMessage) (json.RawMessage, error) {
+	invokeTool(t, composed, "alpha", func(_ context.Context, rt extension.Runtime, _ json.RawMessage) (json.RawMessage, error) {
 		got, _ = rt.(*callRuntime)
 		return json.RawMessage(`{}`), nil
 	})
@@ -399,8 +397,7 @@ var oneMessage = extension.CompleteRequest{Messages: []extension.Message{{Role: 
 // Runtime for it in a fresh workspace.
 func composeNeeds(t *testing.T, deps extensionRuntimeBinding, needs ...extension.Need) (*callRuntime, context.Context) {
 	t.Helper()
-	setComposedExtensions([]extension.Extension{{Name: "summaries", Version: "1.0.0", Needs: needs}})
-	t.Cleanup(func() { setComposedExtensions(nil) })
+	deps.composed = composeUnit(extension.Extension{Name: "summaries", Version: "1.0.0", Needs: needs})
 	registerSummariesTasks(t)
 	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
 	deps.pool = &pgxpool.Pool{}
@@ -429,8 +426,8 @@ func TestAnUndeclaredCapabilityIsRefusedAndNeverReached(t *testing.T) {
 
 func TestAnUnattendedRuntimeRefusesInteractiveAndUndeclaredTasks(t *testing.T) {
 	lane := &countingLane{}
-	_, ctx := composeNeeds(t, extensionRuntimeBinding{}, extension.Need{Capability: extension.CapabilityModels, Reason: "Summarises a thread."})
-	deps := extensionRuntimeBinding{pool: &pgxpool.Pool{}, models: laneOf(lane)}
+	declared, ctx := composeNeeds(t, extensionRuntimeBinding{}, extension.Need{Capability: extension.CapabilityModels, Reason: "Summarises a thread."})
+	deps := extensionRuntimeBinding{pool: &pgxpool.Pool{}, models: laneOf(lane), composed: declared.deps.composed}
 	for name, mint := range map[string]func(context.Context, string, string, string, extensionRuntimeBinding) *callRuntime{
 		"job tick": jobRuntimeFor, "bus delivery": deliveryRuntimeFor,
 	} {
@@ -459,7 +456,7 @@ func TestADeclaredCapabilityGrantsOnlyItselfAndRemovingItCutsAccess(t *testing.T
 	if err := rt.Objects().Put(ctx, "a", []byte("x")); err != nil {
 		t.Fatalf("Put while declared: %v", err)
 	}
-	setComposedExtensions([]extension.Extension{{Name: "summaries", Version: "1.0.0"}})
+	rt.deps.composed = composeUnit(extension.Extension{Name: "summaries", Version: "1.0.0"})
 	if err := rt.Objects().Put(ctx, "a", []byte("x")); !errors.Is(err, extension.ErrNotDeclared) {
 		t.Errorf("Put after the declaration was removed: err = %v, want ErrNotDeclared", err)
 	}

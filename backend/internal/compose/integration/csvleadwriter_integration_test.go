@@ -13,6 +13,7 @@ import (
 )
 
 func TestALeadWhoseLinkedInURLIsHeldIsSkippedInThePreviewAndTheCommit(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	var held struct {
 		ID string `json:"id"`

@@ -43,6 +43,7 @@ func seedAgentSeat(t *testing.T) ids.UserID {
 }
 
 func TestATaskCannotBeCreatedOnAnAgentSeat(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	seat := seedAgentSeat(t)
 	subject := "Chase the renewal"
@@ -55,6 +56,7 @@ func TestATaskCannotBeCreatedOnAnAgentSeat(t *testing.T) {
 }
 
 func TestATaskCannotBeReassignedToAnAgentSeat(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	seat := seedAgentSeat(t)
 	subject := "Send the summary"
@@ -76,6 +78,7 @@ func TestATaskCannotBeReassignedToAnAgentSeat(t *testing.T) {
 // The admission case, over the same fixture: a CONTACT still takes the work.
 // Without it every assertion above would pass on a door that refused everyone.
 func TestATaskStillReachesAContact(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	subject := "Book the call"
 	due := time.Now().Add(24 * time.Hour)
@@ -96,6 +99,7 @@ func TestATaskStillReachesAContact(t *testing.T) {
 // the caller sent. An unknown id, a retired colleague and an agent read alike,
 // so the answer discloses nothing about the seat.
 func TestARefusedSeatGetsOneAnswerOnEveryDoor(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	retired := ids.NewV7()
 	if _, err := OwnerConn(t).Exec(t.Context(), `

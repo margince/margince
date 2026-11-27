@@ -90,6 +90,7 @@ SELECT tbl || '.' || col
  ORDER BY 1`
 
 func TestAColumnNamingATableReferencesItOrSaysWhyNot(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	headSchema(t, conn)

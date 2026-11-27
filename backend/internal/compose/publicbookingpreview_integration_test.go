@@ -48,6 +48,7 @@ func fetchBookingPreview(t *testing.T, server http.Handler, method, slug string)
 }
 
 func TestALengthLinkPreviewNamesItsLengthThroughTheRealRoute(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	slug := hostWithBookingPage(t, e, true)
 	store := e.Activities.WithPublicBaseURL(previewOrigin).WithSchedulingCalendar(privateCalendar{}).WithSchedulingBrand(e.Contacts)
@@ -59,7 +60,7 @@ func TestALengthLinkPreviewNamesItsLengthThroughTheRealRoute(t *testing.T) {
 	if _, err := store.SaveSchedulingProfile(e.Admin(), profile); err != nil {
 		t.Fatal(err)
 	}
-	server := New(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), withConnectedCalendar(), WithPublicBaseURL(previewOrigin))
+	server := New(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), nil, withConnectedCalendar(), WithPublicBaseURL(previewOrigin))
 	page := previewOrigin + "/book/" + slug
 	for query, want := range map[string][]string{
 		"?l=15": {"a 15-minute meeting", `href="/#/book/` + slug + `?l=15"`, `<link rel="canonical" href="` + page + `?l=15">`, `<meta property="og:url" content="` + page + `?l=15">`},
@@ -89,12 +90,13 @@ func expectNoMarginceOrHost(t *testing.T, body string) {
 }
 
 func TestBookingPreviewNamesTheHostAndCompanyWithTheirLogoAndNoMargince(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	blob := blobstore.NewMemory()
 	theCompanyExists(t, e)
 	uploadMark(t, e, companyHandlers{store: e.Contacts, blob: blob}, logoFixture(t, 400, 100), "logo.png")
 	slug := hostWithBookingPage(t, e, true)
-	server := New(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), withConnectedCalendar(), WithBlobstore(blob), WithPublicBaseURL(previewOrigin))
+	server := New(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), nil, withConnectedCalendar(), WithBlobstore(blob), WithPublicBaseURL(previewOrigin))
 
 	response := fetchBookingPreview(t, server, http.MethodGet, slug)
 	body := response.Body.String()
@@ -159,11 +161,12 @@ func TestBookingPreviewNamesTheHostAndCompanyWithTheirLogoAndNoMargince(t *testi
 }
 
 func TestBookingPreviewWithoutALogoOrAnOriginIsATextCardWithNoURLs(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	theCompanyExists(t, e)
 	slug := hostWithBookingPage(t, e, true)
 	// The page was published on an origin; this server has none configured.
-	server := New(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), withConnectedCalendar())
+	server := New(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), nil, withConnectedCalendar())
 	response := fetchBookingPreview(t, server, http.MethodGet, slug)
 	body := response.Body.String()
 	if response.Code != http.StatusOK || !strings.Contains(body, "of Acme GmbH.") || !strings.Contains(body, `<meta name="twitter:card" content="summary">`) {
@@ -177,10 +180,11 @@ func TestBookingPreviewWithoutALogoOrAnOriginIsATextCardWithNoURLs(t *testing.T)
 }
 
 func TestPausedBookingPreviewNamesNobody(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	theCompanyExists(t, e)
 	slug := hostWithBookingPage(t, e, false)
-	server := New(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), withConnectedCalendar(), WithPublicBaseURL(previewOrigin))
+	server := New(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), nil, withConnectedCalendar(), WithPublicBaseURL(previewOrigin))
 	response := fetchBookingPreview(t, server, http.MethodGet, slug)
 	body := response.Body.String()
 	if response.Code != http.StatusOK || !strings.Contains(body, "<title>Booking unavailable</title>") {
@@ -198,6 +202,7 @@ func TestPausedBookingPreviewNamesNobody(t *testing.T) {
 }
 
 func TestRevokedAndMissingBookingPreviewsAre404WithNoHost(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	theCompanyExists(t, e)
 	old := hostWithBookingPage(t, e, true)
@@ -215,7 +220,7 @@ func TestRevokedAndMissingBookingPreviewsAre404WithNoHost(t *testing.T) {
 	if replaced.Slug == nil || *replaced.Slug == old {
 		t.Fatalf("Replace address kept the slug: %+v", replaced.Slug)
 	}
-	server := New(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), withConnectedCalendar(), WithPublicBaseURL(previewOrigin))
+	server := New(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), nil, withConnectedCalendar(), WithPublicBaseURL(previewOrigin))
 	for _, slug := range []string{old, "no-such-page"} {
 		for _, method := range []string{http.MethodGet, http.MethodHead} {
 			response := fetchBookingPreview(t, server, method, slug)
@@ -234,10 +239,11 @@ func TestRevokedAndMissingBookingPreviewsAre404WithNoHost(t *testing.T) {
 }
 
 func TestAGuestTokenRouteHasNoPreviewCard(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	theCompanyExists(t, e)
 	hostWithBookingPage(t, e, true)
-	server := New(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), withConnectedCalendar(), WithPublicBaseURL(previewOrigin))
+	server := New(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), nil, withConnectedCalendar(), WithPublicBaseURL(previewOrigin))
 	for _, path := range []string{"/v1/public/meeting/private-token/preview", "/v1/public/proposal/private-token/preview"} {
 		response := httptest.NewRecorder()
 		server.ServeHTTP(response, httptest.NewRequest(http.MethodGet, path, nil))
@@ -249,6 +255,7 @@ func TestAGuestTokenRouteHasNoPreviewCard(t *testing.T) {
 }
 
 func TestABookingPageOfAHostWhoseAccountIsNotLiveIsGoneEverywhere(t *testing.T) {
+	t.Parallel()
 	for name, retire := range map[string]string{
 		"suspended":   `UPDATE app_user SET status = 'suspended' WHERE id = $1`,
 		"deactivated": `UPDATE app_user SET status = 'deactivated' WHERE id = $1`,
@@ -258,7 +265,7 @@ func TestABookingPageOfAHostWhoseAccountIsNotLiveIsGoneEverywhere(t *testing.T) 
 			e := integration.Setup(t)
 			theCompanyExists(t, e)
 			slug := hostWithBookingPage(t, e, true)
-			server := New(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), withConnectedCalendar(), WithPublicBaseURL(previewOrigin))
+			server := New(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), nil, withConnectedCalendar(), WithPublicBaseURL(previewOrigin))
 			if live := fetchBookingPreview(t, server, http.MethodGet, slug); live.Code != http.StatusOK {
 				t.Fatalf("live host: %d", live.Code)
 			}

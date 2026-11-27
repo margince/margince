@@ -27,20 +27,20 @@ func StopOnAddressesSQL(alias, lowered, hashes string) string {
 // StopAddressArgs answers the parameters of StopOnAddressesSQL. They are each
 // address lowercased, and every SuppressionForms of each spelling EmailLookups
 // knows, the hash an anonymize writes. An empty address matches nothing.
-func StopAddressArgs(addresses ...string) (lowered, hashes []string) {
+func StopAddressArgs(ctx context.Context, addresses ...string) (lowered, hashes []string) {
 	lowered = make([]string, 0, len(addresses))
 	for _, address := range addresses {
 		if trimmed := strings.ToLower(strings.TrimSpace(address)); trimmed != "" {
 			lowered = append(lowered, trimmed)
 		}
 	}
-	return lowered, SuppressionForms(EmailLookups(addresses...)...)
+	return lowered, SuppressionForms(ctx, EmailLookups(addresses...)...)
 }
 
 // StopAddressLockKeys follows the address/hash matches in StopOnAddressesSQL.
 // Stored hashes also participate when the subject's plain addresses are gone.
-func StopAddressLockKeys(addresses, storedHashes []string) []string {
-	lowered, hashes := StopAddressArgs(addresses...)
+func StopAddressLockKeys(ctx context.Context, addresses, storedHashes []string) []string {
+	lowered, hashes := StopAddressArgs(ctx, addresses...)
 	keys := make([]string, 0, len(lowered)+len(hashes)+len(storedHashes))
 	for _, address := range lowered {
 		keys = append(keys, "communication-stop:address:"+address)
@@ -56,7 +56,7 @@ func StopAddressLockKeys(addresses, storedHashes []string) []string {
 
 // LockStopAddresses orders address-bound stops against the final send check.
 func LockStopAddresses(ctx context.Context, tx pgx.Tx, addresses, hashes []string) error {
-	for _, key := range StopAddressLockKeys(addresses, hashes) {
+	for _, key := range StopAddressLockKeys(ctx, addresses, hashes) {
 		if err := LockStopKey(ctx, tx, key); err != nil {
 			return err
 		}

@@ -17,6 +17,7 @@ import (
 )
 
 func TestNotificationReplayKeepsTheOriginalActorAndOccurrence(t *testing.T) {
+	t.Parallel()
 	e := setupNotices(t)
 	origin := &crmcontracts.NoticeOrigin{EventId: openapi_types.UUID(ids.NewV7()), ActorType: "human", ActorId: "human:" + e.other.String(), OccurredAt: time.Date(2026, 8, 3, 10, 0, 0, 0, time.UTC)}
 	in := NewNotice{Recipient: e.recipient, Kind: "automation", Subject: "Stage changed", Origin: origin, DedupeKey: origin.EventId.String()}

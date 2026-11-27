@@ -68,6 +68,7 @@ func assertOneTransactionWithOneCatalogStatement(t *testing.T, call string, with
 }
 
 func TestAStoreReadsTheCatalogOnItsOwnTransaction(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	catalog := catalogWithFields(t, e, "deal", "contact")
 	pipeline, open, _ := DealFixture(t, e)
@@ -102,6 +103,7 @@ func TestAStoreReadsTheCatalogOnItsOwnTransaction(t *testing.T) {
 }
 
 func TestTenWritesInOneTransactionReadTheCatalogOnce(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	catalog := catalogWithFields(t, e, "contact")
 	contactIDs := make([]ids.UUID, 10)
@@ -150,6 +152,7 @@ func TestTenWritesInOneTransactionReadTheCatalogOnce(t *testing.T) {
 var errRollBack = errors.New("roll the test transaction back")
 
 func TestAFieldRetiredInTheTransactionRefusesAWriteAfterAReadThere(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.As(e.Rep1, nil, CustomFieldAdminPerms)
 	catalog := customfields.NewService(e.Pool, SchemaPool(t))

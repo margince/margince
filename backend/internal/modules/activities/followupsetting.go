@@ -80,7 +80,7 @@ func ConfigSettings() []config.Any {
 // transaction.
 func sharePrivateQuoteRequests(ctx context.Context, tx pgx.Tx) (bool, error) {
 	on, err := database.Remember(tx, settings.ValueMemoKey(SharePrivateQuoteRequests.Key()), func() (bool, error) {
-		return config.StoredApplyTx(ctx, tx, config.Bound(), SharePrivateQuoteRequests)
+		return config.StoredApplyTx(ctx, tx, config.Bound(ctx), SharePrivateQuoteRequests)
 	})
 	if err != nil {
 		return false, fmt.Errorf("read %s: %w", SharePrivateQuoteRequests.Key(), err)
@@ -92,7 +92,7 @@ func sharePrivateQuoteRequests(ctx context.Context, tx pgx.Tx) (bool, error) {
 // the boot value the program bound.
 func followUpAfterDays(ctx context.Context, tx pgx.Tx) (int, error) {
 	days, err := database.Remember(tx, settings.ValueMemoKey(FollowUpAfterDays.Key()), func() (int, error) {
-		return config.StoredApplyTx(ctx, tx, config.Bound(), FollowUpAfterDays)
+		return config.StoredApplyTx(ctx, tx, config.Bound(ctx), FollowUpAfterDays)
 	})
 	if err != nil {
 		return 0, fmt.Errorf("read %s: %w", FollowUpAfterDays.Key(), err)
@@ -104,7 +104,7 @@ func followUpAfterDays(ctx context.Context, tx pgx.Tx) (int, error) {
 // transaction, so one pass judges every row by one answer.
 func privateMailRequests(ctx context.Context, tx pgx.Tx) (bool, error) {
 	on, err := database.Remember(tx, settings.ValueMemoKey(PrivateMailRequests.Key()), func() (bool, error) {
-		return config.StoredApplyTx(ctx, tx, config.Bound(), PrivateMailRequests)
+		return config.StoredApplyTx(ctx, tx, config.Bound(ctx), PrivateMailRequests)
 	})
 	if err != nil {
 		return false, fmt.Errorf("read %s: %w", PrivateMailRequests.Key(), err)

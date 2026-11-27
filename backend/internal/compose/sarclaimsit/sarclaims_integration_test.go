@@ -57,6 +57,7 @@ func claimOnOwnMessage(t *testing.T, e *integration.Env, contact ids.UUID, quote
 }
 
 func TestTheAccessExportReturnsAClaimsReadingBesideTheWordsAndNotItsAuthor(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := seedContact(t, e)
 	const quote = "I will send the signed order by Friday."
@@ -78,6 +79,7 @@ func TestTheAccessExportReturnsAClaimsReadingBesideTheWordsAndNotItsAuthor(t *te
 }
 
 func TestTheAccessExportWithholdsAClaimsReadingOfALimitedMessage(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := seedContact(t, e)
 	message := claimOnOwnMessage(t, e, contact, "I will send the signed order by Friday.")

@@ -69,6 +69,7 @@ func (e *dedupeEnv) participantContactsOn(ctx context.Context, t *testing.T, act
 // The ordinary case, plus the collision: the two halves sat on the same
 // activity, so after the merge that activity names ONE contact once.
 func TestAMergeMovesTheParticipantRowsOntoTheSurvivor(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -108,6 +109,7 @@ func TestAMergeMovesTheParticipantRowsOntoTheSurvivor(t *testing.T) {
 // A row stored before addresses were held lowercase moves with its lowercase
 // twin. The two spellings become one row on the survivor, and the merge succeeds.
 func TestAMergeFoldsTwoSpellingsOfTheSourcesAddress(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	survivor, err := e.store.EnsureCounterparty(ctx, e.ensureInput(ctx, t, "keeper@fold.test", "Keeper", "fold.test"))
@@ -148,6 +150,7 @@ func TestAMergeFoldsTwoSpellingsOfTheSourcesAddress(t *testing.T) {
 // A merge whose context ended stops at the fold and reports it, before any
 // participant row moves.
 func TestAMergeReportsAFoldItCouldNotRun(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	stopped, stop := context.WithCancel(ctx)

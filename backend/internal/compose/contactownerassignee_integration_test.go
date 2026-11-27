@@ -20,6 +20,7 @@ import (
 )
 
 func TestHandingOneContactOrCompanyOnRefusesAColleagueWhoMayNotOwnRecords(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	rep1 := ids.From[ids.UserKind](e.Rep1)
 	rep3 := ids.From[ids.UserKind](e.Rep3)

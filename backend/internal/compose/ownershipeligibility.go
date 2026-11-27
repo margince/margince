@@ -51,7 +51,7 @@ func handOverRecipientsTx(ctx context.Context, tx pgx.Tx, recordType string, can
 			asked = append(asked, candidate)
 		}
 	}
-	members, err := identity.MemberPrincipalsTx(ctx, tx, asked)
+	members, err := identity.MemberPrincipalsTx(ctx, tx, installedRbacObjects(), asked)
 	if err != nil {
 		return nil, err
 	}
@@ -102,7 +102,7 @@ func transferPartiesTx(ctx context.Context, tx pgx.Tx, transfer approvalsubject.
 // offeredGiverTx binds the giver of an offer from their stored seat and
 // grants, and refuses unless they may still change the record.
 func offeredGiverTx(ctx context.Context, tx pgx.Tx, transfer approvalsubject.OwnershipTransfer) (context.Context, error) {
-	givers, err := identity.MemberPrincipalsTx(ctx, tx, []ids.UUID{transfer.FromID})
+	givers, err := identity.MemberPrincipalsTx(ctx, tx, installedRbacObjects(), []ids.UUID{transfer.FromID})
 	if err != nil {
 		return nil, err
 	}

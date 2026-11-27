@@ -28,6 +28,7 @@ import (
 // database's. A deal at the threshold is not quiet, and one that crosses it
 // after that instant is not quiet yet, in both.
 func TestTheSweepAndTheTailJudgeQuietAtOneInstant(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	pipeline, stage, _ := integration.DealFixture(t, e)
 	// In UTC, so the days back are whole days on a machine whose zone
@@ -78,6 +79,7 @@ func dealIDsOf(candidates []agents.SlippingDeal) []ids.UUID {
 // row. The tail never serves it as at risk. Done on it as an at-risk row
 // answers not found.
 func TestDoneRefusesADealTheBriefRowReportsAbove(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	pipeline, stage, _ := integration.DealFixture(t, e)
 	at := clocktest.Now(t).Truncate(time.Microsecond)

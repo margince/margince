@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/automation"
+	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -90,7 +91,7 @@ func (stubComms) SendMessage(context.Context, ids.UUID, agents.SendMessageArgs) 
 
 func (stubComms) IsChannelKind(kind string) bool { return activities.IsChannelKind(kind) }
 
-func (stubComms) CanSendOnProvider(p string) bool { return activities.CanSendOnProvider(p) }
+func (stubComms) CanSendOnProvider(p string) bool { return comms.PreRegistryChannelSending(p) }
 
 func (stubComms) Availability(context.Context, *ids.UUID, time.Time, time.Time, int) (agents.AvailabilityResult, error) {
 	return agents.AvailabilityResult{}, nil

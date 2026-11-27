@@ -77,6 +77,7 @@ func asInt(t *testing.T, v any) int64 {
 // inside one. The mask is still proved on the always-condition below, which
 // does not depend on authority over the row.
 func TestADealOutsideThePopulationIsNotAPermissionExclusion(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	own := int64(100_000)
 	other := int64(250_000)
@@ -129,6 +130,7 @@ func TestADealOutsideThePopulationIsNotAPermissionExclusion(t *testing.T) {
 }
 
 func TestAnAlwaysMaskEmptiesTheAggregateAndSaysSo(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	own := int64(100_000)
 	other := int64(250_000)
@@ -149,6 +151,7 @@ func TestAnAlwaysMaskEmptiesTheAggregateAndSaysSo(t *testing.T) {
 // role lost deal.update still OWNS rows; the mask must not lift on them —
 // otherwise revoking the verb would WIDEN what the rep reads out of a sum.
 func TestARevokedUpdateVerbKeepsTheMaskOnTheRepsOwnRows(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	own := int64(100_000)
 	e.seedOpenDeal(t, "Mine", 20, &e.Rep1, &own)

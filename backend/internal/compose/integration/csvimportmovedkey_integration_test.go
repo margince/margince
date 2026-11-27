@@ -33,16 +33,20 @@ var (
 	}}}
 )
 
+// movedKeyCase is one import that moves a key onto a record another holds.
+type movedKeyCase struct {
+	name  string
+	file  func(first, second string) string
+	prior map[string]string
+	// link runs after the prior import, for a state no import writes.
+	link  func(t *testing.T, e *apptest.AppEnv)
+	parts []AnyMap
+	want  []string
+}
+
 func TestTheTestRunRefusesAMovedKeyTheImportRefuses(t *testing.T) {
-	for _, tc := range []struct {
-		name  string
-		file  func(first, second string) string
-		prior map[string]string
-		// link runs after the prior import, for a state no import writes.
-		link  func(t *testing.T, e *apptest.AppEnv)
-		parts []AnyMap
-		want  []string
-	}{{
+	t.Parallel()
+	for _, tc := range []movedKeyCase{{
 		name: "an earlier row creates the company that holds the domain",
 		file: func(first, _ string) string {
 			return "ref,id,name,domain\nk1,,New Holder,moved.test\nk2," + first + ",Stored One,moved.test\n"
@@ -199,6 +203,7 @@ func TestTheTestRunRefusesAMovedKeyTheImportRefuses(t *testing.T) {
 }
 
 func TestAResumedCommitClaimsNothingForARefusedMovedKeyRow(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	domains := []AnyMap{{"domain": "one.stored.test", "is_primary": true}}
 	stored := createdID(t, e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Stored One", "domains": domains})
@@ -247,6 +252,7 @@ func importedReport(t *testing.T, e *apptest.AppEnv, object, csv string, mapping
 // A row that moves its key onto a free value previews as the update the
 // commit makes. The preview leaves the stored key where it was.
 func TestCSVImportPreviewsAnUpdateForARowThatMovesAFreeKey(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	mapping := map[string]string{"Ref": "ref", "Email": "email", "Full Name": "full_name"}
 	importedReport(t, e, "lead", "Ref,Email,Full Name\nR-1,first@moved.example,First\n", mapping, true)

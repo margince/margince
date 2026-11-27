@@ -74,11 +74,13 @@ func (f privateLeadMerge) mergeAndCheck(t *testing.T, carried bool) {
 }
 
 func TestLeadMergeCarriesAHiddenSourceCompanyLink(t *testing.T) {
+	t.Parallel()
 	f := newPrivateLeadMerge(t)
 	f.mergeAndCheck(t, true)
 }
 
 func TestLeadMergeKeepsAHiddenTargetCompanyLink(t *testing.T) {
+	t.Parallel()
 	f := newPrivateLeadMerge(t)
 	e, owner := f.env, f.owner
 	if _, err := e.store.LinkLeadCompany(owner, f.target, f.company); err != nil {

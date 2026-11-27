@@ -55,6 +55,7 @@ func (e *dedupeEnv) employerOf(ctx context.Context, t *testing.T, contact ids.Co
 }
 
 func TestTheSweepAttachesACompanysContactsThatNoWriteReaches(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -137,6 +138,7 @@ func TestTheSweepAttachesACompanysContactsThatNoWriteReaches(t *testing.T) {
 // current-primary slot — which is what the selector asks about — and is still a
 // row the insert silently drops.
 func TestTheSweepSkipsADomainWhoseContactsThePlantWillRefuse(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -183,6 +185,7 @@ func TestTheSweepSkipsADomainWhoseContactsThePlantWillRefuse(t *testing.T) {
 // It must not offer a domain that only ends in the same letters. The plant
 // refuses that address, so the domain would come back on every tick.
 func TestTheSweepOffersASubdomainAndNotALookalike(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 

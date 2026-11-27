@@ -41,6 +41,7 @@ func (e *dedupeEnv) countContactsWithEmail(ctx context.Context, t *testing.T, ad
 }
 
 func TestEnsureCounterpartyRefusesAProvenSeatAddressFromEveryMailbox(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.declareSeatAddress(ctx, t, e.otherRep, "colleague.attested@gmail.test", "provider")
@@ -62,6 +63,7 @@ func TestEnsureCounterpartyRefusesAProvenSeatAddressFromEveryMailbox(t *testing.
 // Any seat can type any address as its own, a client's included. The typed
 // alias stops capture from that seat's mailbox and from no one else's.
 func TestATypedAliasStopsOnlyItsOwnSeatsCapture(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.declareSeatAddress(ctx, t, e.otherRep, "client@bigcustomer.test", "user")
@@ -79,6 +81,7 @@ func TestATypedAliasStopsOnlyItsOwnSeatsCapture(t *testing.T) {
 }
 
 func TestDomainTriageDoesNotEmploySeatContacts(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	for _, address := range []string{"hans@seatdom.test", "colleague.private@seatdom.test", "typed@seatdom.test"} {

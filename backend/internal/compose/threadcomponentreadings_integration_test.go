@@ -20,6 +20,7 @@ import (
 )
 
 func TestAPaidReadingWaitsForItsComponentWithoutRepeatingTheModel(t *testing.T) {
+	t.Parallel()
 	o := signalEnv(t)
 	const key, words = "busy-reading@customer.example", "We are pleased with our agreement."
 	o.customerSays(t, key, "", words, "", o.now.Add(-48*time.Hour))
@@ -53,6 +54,7 @@ func TestAPaidReadingWaitsForItsComponentWithoutRepeatingTheModel(t *testing.T) 
 }
 
 func TestAReadingWhoseThreadMergedAwayIsDeclinedWithoutAFailedJob(t *testing.T) {
+	t.Parallel()
 	o := signalEnv(t)
 	const oldKey, newKey = "reading-old@customer.example", "reading-new@customer.example"
 	o.customerSays(t, oldKey, "", "The old conversation.", "", o.now.Add(-48*time.Hour))

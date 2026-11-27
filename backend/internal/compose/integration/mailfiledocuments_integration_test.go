@@ -124,6 +124,7 @@ func documentIDs(ctx context.Context, t *testing.T, e *Env, deal, contact, compa
 }
 
 func TestAMailFileReachesEveryRecordTheMailIsLinkedTo(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, stage, _ := DealFixture(t, e)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
@@ -167,6 +168,7 @@ func TestAMailFileReachesEveryRecordTheMailIsLinkedTo(t *testing.T) {
 }
 
 func TestAMailFileLeavesEveryListWhenItIsNotLive(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, stage, _ := DealFixture(t, e)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
@@ -203,6 +205,7 @@ func TestAMailFileLeavesEveryListWhenItIsNotLive(t *testing.T) {
 }
 
 func TestALimitedAudienceMailFileStaysWithItsAudience(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, stage, _ := DealFixture(t, e)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
@@ -229,6 +232,7 @@ func TestALimitedAudienceMailFileStaysWithItsAudience(t *testing.T) {
 }
 
 func TestACcdEmployeesEmployerDoesNotListTheMailFile(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, stage, _ := DealFixture(t, e)
 	subject := e.SeedCompany(t, "Subject", &e.Rep1)
@@ -253,6 +257,7 @@ func TestACcdEmployeesEmployerDoesNotListTheMailFile(t *testing.T) {
 }
 
 func TestAMailFileWithoutAContentTypeStaysOnTheDealList(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, stage, _ := DealFixture(t, e)
 	deal := e.SeedDeal(t, "D", pipeline, stage, &e.Rep1)

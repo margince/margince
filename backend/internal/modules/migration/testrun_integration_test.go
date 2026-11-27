@@ -47,6 +47,7 @@ func claimedTest(ctx context.Context, t *testing.T, s *RunStore) Lease {
 }
 
 func TestASecondValidateNeverStrandsTheRun(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	draft := newDraft(ctx, t, s, "")
@@ -74,6 +75,7 @@ func TestASecondValidateNeverStrandsTheRun(t *testing.T) {
 }
 
 func TestCancelDuringATestRunFencesItsResult(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	l := claimedTest(ctx, t, s)
@@ -107,6 +109,7 @@ func TestCancelDuringATestRunFencesItsResult(t *testing.T) {
 }
 
 func TestRevalidateAfterCancelInsertsANewJob(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	draft := newDraft(ctx, t, s, "")
@@ -132,6 +135,7 @@ func TestRevalidateAfterCancelInsertsANewJob(t *testing.T) {
 }
 
 func TestARefusedTestRunReturnsToDraftOnlyFromItsOwnAttempt(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	l := claimedTest(ctx, t, s)
@@ -153,6 +157,7 @@ func TestARefusedTestRunReturnsToDraftOnlyFromItsOwnAttempt(t *testing.T) {
 }
 
 func TestARefusedTestRunKeepsItsRefusalUntilTheNextTest(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	l := claimedTest(ctx, t, s)
@@ -174,6 +179,7 @@ func TestARefusedTestRunKeepsItsRefusalUntilTheNextTest(t *testing.T) {
 }
 
 func TestTestRunProgressIsWrittenBesideItsSnapshot(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	l := claimedTest(ctx, t, s)
@@ -206,6 +212,7 @@ func agentCtx(ctx context.Context, id string) context.Context {
 }
 
 func TestAnAgentsSecondTestRunNamesItsFirst(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	agent := agentCtx(ctx, "agent:"+ids.NewV7().String())

@@ -75,7 +75,7 @@ func (s *Service) UpdateMember(ctx context.Context, actor Identity, member ids.U
 		if err := lockMemberAddressClaims(ctx, tx, member, in.Email); err != nil {
 			return err
 		}
-		if err := refuseUnlessCallerOutranksTarget(ctx, tx, actor, member, reachTakeover); err != nil {
+		if err := refuseUnlessCallerOutranksTarget(ctx, tx, s.rbac, actor, member, reachTakeover); err != nil {
 			return err
 		}
 		if err := refuseAgentEmailChange(ctx, tx, member, in.Email); err != nil {

@@ -48,6 +48,7 @@ func (silentMailer) Send(ctx context.Context, _, _, _ string) error {
 // A relay that does not answer holds the invite for the wait and no longer.
 // The invite then reads as not emailed, and the roster as failed.
 func TestAnInviteStopsWaitingForASilentRelay(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupAppWithOptions(t,
 		compose.WithDealRoomInviteMail(silentMailer{}),
 		compose.WithPublicBaseURL("https://rooms.example.test"))
@@ -63,6 +64,7 @@ func TestAnInviteStopsWaitingForASilentRelay(t *testing.T) {
 
 // A relay that accepts the message reads as queued, and the roster as sent.
 func TestAnAcceptedInvitationReadsAsQueued(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupAppWithOptions(t,
 		compose.WithDealRoomInviteMail(apptest.DiscardingMailer{}),
 		compose.WithPublicBaseURL("https://rooms.example.test"))
@@ -79,6 +81,7 @@ func TestAnAcceptedInvitationReadsAsQueued(t *testing.T) {
 // An installation with no relay reads as not queued, and the credential is
 // still issued, so the seller passes it on themselves.
 func TestAnInvitationWithNoRelayReadsAsNotQueued(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupAppWithOptions(t, compose.WithPublicBaseURL("https://rooms.example.test"))
 	e.BootstrapWorkspace(t)
 
@@ -99,6 +102,7 @@ func TestAnInvitationWithNoRelayReadsAsNotQueued(t *testing.T) {
 // render through issuedBody today; this asks resend directly, so a resend that
 // grew its own body fails here.
 func TestAResentInvitationReportsQueuedTheSameWay(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupAppWithOptions(t,
 		compose.WithDealRoomInviteMail(refusingMailer{}),
 		compose.WithPublicBaseURL("https://rooms.example.test"))
@@ -178,6 +182,7 @@ func waitForDeliveryState(t *testing.T, e *apptest.AppEnv, room buyerRoom, want 
 // A relay that REFUSES the message reads as not emailed, so the seller copies
 // the link, and the refusal lands on the roster as failed.
 func TestARefusedInvitationShowsAsFailedOnTheRoster(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupAppWithOptions(t,
 		compose.WithDealRoomInviteMail(refusingMailer{}),
 		compose.WithPublicBaseURL("https://rooms.example.test"))
@@ -208,6 +213,7 @@ func roomSenderContext(t *testing.T, e *apptest.AppEnv) context.Context {
 // The invitation send mails a link only while it still admits its bearer and
 // the participant still has the address it was issued to.
 func TestAnInvitationIsMailableOnlyWhileItStandsAtItsAddress(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupAppWithOptions(t, compose.WithPublicBaseURL("https://rooms.example.test"))
 	e.BootstrapWorkspace(t)
 	store := dealrooms.NewStore(e.DB())

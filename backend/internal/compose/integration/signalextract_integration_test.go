@@ -167,6 +167,7 @@ func reply(t *testing.T, kind string, message ids.UUID, summary string, confiden
 // The whole point of the site, end to end: a conversation says the contract is
 // over, and the account gains a signal that cites the message it came from.
 func TestAThreadThatEndsAContractRaisesASignalCitingIt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	notice := seedThread(t, e, company, "thread-renewal", "Renewal for 2027",
@@ -208,6 +209,7 @@ func TestAThreadThatEndsAContractRaisesASignalCitingIt(t *testing.T) {
 // A producer that runs hourly must raise nothing new on a conversation nobody
 // has written on, and must not pay a model to find that out twice.
 func TestASettledThreadIsReadOnceUntilSomethingArrives(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	notice := seedThread(t, e, company, "thread-renewal", "Renewal for 2027",
@@ -242,6 +244,7 @@ func TestASettledThreadIsReadOnceUntilSomethingArrives(t *testing.T) {
 // not written at low confidence: an unsure event is not an event, and the
 // thread is still watermarked so nothing loops on it.
 func TestAnUnsureReadingIsDroppedRatherThanFiled(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	vague := seedThread(t, e, company, "thread-maybe", "Thoughts",
@@ -266,6 +269,7 @@ func TestAnUnsureReadingIsDroppedRatherThanFiled(t *testing.T) {
 // produces events the next message contradicts, and a signal written from a
 // sentence that was still being negotiated is one nobody can trust.
 func TestAThreadStillInFlightIsNotRead(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	seedThread(t, e, company, "thread-live", "Pricing", "Sending numbers shortly.",
@@ -284,6 +288,7 @@ func TestAThreadStillInFlightIsNotRead(t *testing.T) {
 // whichever one the join picked. A signal on the wrong account is worse than
 // no signal: it is a claim the reader cannot trace back.
 func TestAThreadSpanningTwoAccountsIsNotFiledAgainstEither(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	acme := e.SeedCompany(t, "Acme", &e.Rep1)
 	contoso := e.SeedCompany(t, "Contoso", &e.Rep1)
@@ -307,6 +312,7 @@ func TestAThreadSpanningTwoAccountsIsNotFiledAgainstEither(t *testing.T) {
 // account either, and picking the alphabetically-first company id would be
 // a guess wearing a query's clothing.
 func TestAThreadWithATwoEmployerContactIsNotFiledAgainstEither(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	acme := e.SeedCompany(t, "Acme", &e.Rep1)
 	contoso := e.SeedCompany(t, "Contoso", &e.Rep1)
@@ -331,6 +337,7 @@ func TestAThreadWithATwoEmployerContactIsNotFiledAgainstEither(t *testing.T) {
 // — and the walk must reach it, because this is the shape a rep produces by
 // dragging a thread onto a deal rather than onto a company.
 func TestAThreadReachesTheAccountThroughItsDealAlone(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	pipeline, stage, _ := DealFixture(t, e)
@@ -359,6 +366,7 @@ func TestAThreadReachesTheAccountThroughItsDealAlone(t *testing.T) {
 // be handed a negotiation mid-sentence — which is the whole reason the settle
 // window exists.
 func TestAnUnplaceableMessageStillHoldsTheConversationOpen(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	contact := employeeOf(t, e, company, "Ada at Acme")
@@ -392,6 +400,7 @@ func TestAnUnplaceableMessageStillHoldsTheConversationOpen(t *testing.T) {
 // question, and a sharper one than this walk currently answers — see the note
 // on CompanyReachSet about employment carrying no start date.
 func TestAConversationIsOwedAFreshReadingWhenItsAccountChanges(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	acme := e.SeedCompany(t, "Acme", &e.Rep1)
 	contoso := e.SeedCompany(t, "Contoso", &e.Rep1)
@@ -439,6 +448,7 @@ func TestAConversationIsOwedAFreshReadingWhenItsAccountChanges(t *testing.T) {
 // of noise describing nothing wrong. What was read stays read either way,
 // because each conversation commits its signals and its watermark together.
 func TestAPassThatRunsOutOfTimeStopsAndLeavesTheRestDue(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	at := extractClock.Add(-48 * time.Hour)
@@ -480,6 +490,7 @@ func TestAPassThatRunsOutOfTimeStopsAndLeavesTheRestDue(t *testing.T) {
 // human filing a call against a company writes exactly that row. The walk's
 // first arm is not dead code, and this is the case that keeps it honest.
 func TestAThreadLinkedStraightToTheAccountIsStillRead(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	notice := seedUnlinkedMessage(t, e, "thread-direct", "Renewal for 2027",
@@ -501,6 +512,7 @@ func TestAThreadLinkedStraightToTheAccountIsStillRead(t *testing.T) {
 // producers writing the same table. Neither may silence the other, and a
 // reader must see both.
 func TestTheTwoProducersBothReachTheSameAccount(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	// An outbound tail nobody answered, old enough for the deterministic rule.
@@ -527,6 +539,7 @@ func TestTheTwoProducersBothReachTheSameAccount(t *testing.T) {
 // tie-breaker the conversation is never read again — and the event in the
 // message nobody looked at is lost for good.
 func TestAThreadIsReReadWhenAMessageArrivesWithoutMovingTheClock(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	newest := extractClock.Add(-48 * time.Hour)
@@ -641,6 +654,7 @@ func (b *validatingBrain) CompleteValidated(
 // whatever the messages already sitting there say is never raised by anything.
 // The pass carries on, and the thread stays due.
 func TestAThreadTheModelCannotReadStarvesNoOneAndIsNotGivenUpOn(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	newest := extractClock.Add(-24 * time.Hour)
@@ -693,6 +707,7 @@ func TestAThreadTheModelCannotReadStarvesNoOneAndIsNotGivenUpOn(t *testing.T) {
 // abandoning the threads behind it, because dueThreads puts the newest first
 // and a busy broken thread would then be the only one ever attempted.
 func TestAProviderFailureOnOneThreadStillLetsThePassReadTheRest(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	newest := extractClock.Add(-24 * time.Hour)
@@ -730,6 +745,7 @@ func TestAProviderFailureOnOneThreadStillLetsThePassReadTheRest(t *testing.T) {
 // read nothing but themselves while the backlog behind them is never reached —
 // and each costs its model calls every hour, for good.
 func TestARepeatedlyRefusedThreadIsParkedAndUnparkedByNewMail(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	newest := extractClock.Add(-24 * time.Hour)
@@ -794,6 +810,7 @@ func TestARepeatedlyRefusedThreadIsParkedAndUnparkedByNewMail(t *testing.T) {
 // until new mail arrives, those events would be dropped permanently and
 // without a word.
 func TestAParkedThreadIsOfferedAgainOnceTheParkExpires(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	newest := extractClock.Add(-24 * time.Hour)
@@ -858,6 +875,7 @@ func TestAParkedThreadIsOfferedAgainOnceTheParkExpires(t *testing.T) {
 // half was never read, and "walks back a window per pass" was a description
 // rather than a behaviour.
 func TestALongThreadIsWalkedToItsStartOnePassAtATime(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
 
@@ -924,6 +942,7 @@ func seedProjectFor(t *testing.T, owner *pgx.Conn, company ids.UUID, name, key s
 // so a finding drawn from the migration half would be filed against the rollout
 // half half the time (#2287).
 func TestAThreadSpanningTwoProjectsIsNotRead(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	acme := e.SeedCompany(t, "Acme", &e.Rep1)
 	owner := OwnerConn(t)
@@ -952,6 +971,7 @@ func TestAThreadSpanningTwoProjectsIsNotRead(t *testing.T) {
 // most mail out of the pass — the great majority carries no project link at all
 // — so this is the arm that keeps the rule a refusal rather than a filter.
 func TestAThreadOnOneProjectOrNoneIsStillRead(t *testing.T) {
+	t.Parallel()
 	for name, linked := range map[string]bool{"one project": true, "no project": false} {
 		t.Run(name, func(t *testing.T) {
 			e := Setup(t)

@@ -130,6 +130,7 @@ func (w *contentGateWeek) linkDeal(t *testing.T, activity, deal ids.UUID) {
 // activity the rep may read. Each of them reads several sets of activity under
 // one content gate, and each set holds one row limited to a colleague.
 func TestTheWeekCountsOnlyActivityTheRepMayRead(t *testing.T) {
+	t.Parallel()
 	w := seedContentGateWeek(t)
 	e := w.e
 	err := e.DB().Tx(e.repCtx, func(tx pgx.Tx) error {
@@ -168,6 +169,7 @@ func TestTheWeekCountsOnlyActivityTheRepMayRead(t *testing.T) {
 // The multi-threaded count follows the published threshold: two contacts are
 // several at the default of one and too few at a threshold of two.
 func TestTheWeekCountsMultiThreadedDealsAtThePublishedThreshold(t *testing.T) {
+	t.Parallel()
 	w := seedContentGateWeek(t)
 	e := w.e
 	multi := func() int {

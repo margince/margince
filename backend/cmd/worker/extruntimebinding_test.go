@@ -16,11 +16,11 @@ package main
 // Nothing failed loudly: every capability answers errExtensionRuntimeUnwired, a
 // clean refusal, so the symptom is a scheduled job that refuses forever.
 //
-// A behavioural test cannot see this. compose exposes BindExtensionRuntime and
-// no reader, so a booted worker cannot be asked what it bound, and the guard
-// that broke it is a plain early return that any future refactor could
-// reintroduce. What the boot CAN be asked is whether the call is on the job
-// lane's path at all, unconditionally — which is the property.
+// A behavioural test cannot see this. compose.Extensions exposes BindRuntime and
+// no reader, so a booted worker cannot be asked what it bound. The guard that
+// broke it is a plain early return that any future refactor could reintroduce.
+// What the boot can be asked is whether the call is on the job lane's path at
+// all, unconditionally. That is the property.
 
 import (
 	"go/ast"
@@ -36,14 +36,13 @@ import (
 // about this role's boot with the same failure mode — a capability that refuses
 // forever while nothing looks broken.
 const (
-	bindPkg      = "compose"
-	bindFn       = "BindExtensionRuntime"
-	bindCaptureF = "BindExtensionCapture"
+	bindField    = "extensions"
+	bindFn       = "BindRuntime"
+	bindCaptureF = "BindCapture"
 )
 
-// bindingSites reports, per enclosing function in this package, how many calls
-// to compose.<fn> it makes and how many of those sit inside a conditional or a
-// loop body.
+// bindingSites reports how many calls to <x>.extensions.<fn> each function in
+// this package makes. It also counts those inside a conditional or a loop body.
 func bindingSites(t *testing.T, bindName string) (calls map[string]int, guarded map[string]int) {
 	t.Helper()
 	fset := token.NewFileSet()
@@ -127,8 +126,8 @@ func isBindCall(call *ast.CallExpr, bindName string) bool {
 	if !ok || sel.Sel.Name != bindName {
 		return false
 	}
-	pkg, ok := sel.X.(*ast.Ident)
-	return ok && pkg.Name == bindPkg
+	field, ok := sel.X.(*ast.SelectorExpr)
+	return ok && field.Sel.Name == bindField
 }
 
 // TestTheJobLaneBindsTheExtensionRuntimeUnconditionally is the regression.
@@ -159,10 +158,9 @@ func TestTheRunnerLaneStillBindsToo(t *testing.T) {
 }
 
 // TestTheRoleBindsFromExactlyTheTwoKnownSites: a third site would be a third
-// opinion about the pool and the custodian, and BindExtensionRuntime only warns
-// on a rebind to a different POOL — a site passing a different vault would
-// change what every extension secret read resolves against, silently, depending
-// on which lane bound last.
+// opinion about the pool and the custodian. BindRuntime warns only on a rebind
+// to a different pool. A site passing a different vault would silently change
+// what every extension secret read resolves against, by which lane bound last.
 func TestTheRoleBindsFromExactlyTheTwoKnownSites(t *testing.T) {
 	calls, _ := bindingSites(t, bindFn)
 	known := map[string]bool{"startJobRunner": true, "startRunnerLane": true}

@@ -42,6 +42,7 @@ func retireContact(t *testing.T, e *channelConsentEnv, retired, survivor ids.Con
 }
 
 func TestABasisIsRefusedForASubjectAMergeRetired(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	survivor := seedContactWithEmail(t, e, "survivor@example.test", false)
 	ctx := principal.WithActor(e.ctx, principal.Principal{
@@ -77,6 +78,7 @@ func TestABasisIsRefusedForASubjectAMergeRetired(t *testing.T) {
 // The live subject still records, so the lock refuses the retired case rather
 // than the write itself.
 func TestABasisStillRecordsForALiveSubject(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	ctx := principal.WithActor(e.ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.user.String(), UserID: e.user,

@@ -40,6 +40,7 @@ func originOf(t *testing.T, conn *pgx.Conn, externalID string) string {
 }
 
 func TestAnOldShapeIdentityRowIsACreation(t *testing.T) {
+	t.Parallel()
 	conn := connect(t, ownerDSNOf(t))
 	headSchema(t, conn)
 	run := seedLegacyRun(t, conn, legacyRun{status: "complete", sourceRef: "ws/import/origin-old"})
@@ -52,6 +53,7 @@ func TestAnOldShapeIdentityRowIsACreation(t *testing.T) {
 }
 
 func TestTheOriginCheckRefusesAnUnknownOrigin(t *testing.T) {
+	t.Parallel()
 	conn := connect(t, ownerDSNOf(t))
 	headSchema(t, conn)
 	run := seedLegacyRun(t, conn, legacyRun{status: "complete", sourceRef: "ws/import/origin-check"})
@@ -76,6 +78,7 @@ func TestTheOriginCheckRefusesAnUnknownOrigin(t *testing.T) {
 }
 
 func TestTheOriginDownMigrationDropsBoundRowsAndKeepsCreatedOnes(t *testing.T) {
+	t.Parallel()
 	conn := connect(t, ownerDSNOf(t))
 	headSchema(t, conn)
 	run := seedLegacyRun(t, conn, legacyRun{status: "complete", sourceRef: "ws/import/origin-down"})

@@ -25,6 +25,7 @@ import (
 )
 
 func TestParticipantEvidenceCorrectionRollsBackReplaysAndRepairsLegacyGaps(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	subject := "Stored domain evidence"
 	if _, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{

@@ -130,6 +130,7 @@ func (e *callEnv) check(t *testing.T) {
 // nothing, and nor do two days. A real change raises one finding naming the
 // deal, however often it is seen. A new call clears it.
 func TestAMaterialChangeSinceACallRaisesOneFinding(t *testing.T) {
+	t.Parallel()
 	e := setupCall(t)
 	call := e.recordCall(t, 5_000_000)
 	if call.Baseline == nil || *call.Baseline != crmcontracts.ForecastCallBaselineCaptured {
@@ -176,6 +177,7 @@ func TestAMaterialChangeSinceACallRaisesOneFinding(t *testing.T) {
 // A call recorded before calls kept a baseline says its history is
 // unavailable and raises nothing.
 func TestACallWithNoBaselineHasUnavailableHistory(t *testing.T) {
+	t.Parallel()
 	e := setupCall(t)
 	legacy := forecasting.NewHandlers(newForecastStoreFor(e.Pool), ForecastAssemble, ForecastPeriodAt,
 		ForecastWritableScope, ForecastConversionHistory, ForecastForwardMeasure, ForecastScopeHoldsDeals,
@@ -194,6 +196,7 @@ func TestACallWithNoBaselineHasUnavailableHistory(t *testing.T) {
 
 // A call whose window the calendar no longer has is a limitation, not a delta.
 func TestACallWhoseQuarterMovedIsALimitation(t *testing.T) {
+	t.Parallel()
 	e := setupCall(t)
 	call := e.recordCall(t, 5_000_000)
 	if _, err := integration.OwnerConn(t).Exec(context.Background(), `
@@ -218,6 +221,7 @@ func TestACallWhoseQuarterMovedIsALimitation(t *testing.T) {
 // A call replaced while the pass reads the calls closes its finding. The pass
 // raised that finding from a read taken before the new call landed.
 func TestACallSupersededDuringThePassLeavesNoOpenFinding(t *testing.T) {
+	t.Parallel()
 	e := setupCall(t)
 	first := e.recordCall(t, 5_000_000)
 	e.updateDeal(t, deals.UpdateDealInput{AmountMinor: new(int64(9_900_000)), Currency: new("EUR")})
@@ -241,6 +245,7 @@ func TestACallSupersededDuringThePassLeavesNoOpenFinding(t *testing.T) {
 // stamped at the server's clock. It is never listed as a capture a movement
 // could start from.
 func TestACallForAnotherDayKeepsItsWindowAndTheServersClock(t *testing.T) {
+	t.Parallel()
 	e := setupCall(t)
 	var next, last forecasting.Period
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
@@ -307,6 +312,7 @@ func (e *callEnv) recordCallFor(t *testing.T, amount int64, day time.Time) crmco
 // shown every amount. The masked manager sees the deal and no money; a seat
 // that may not read deals sees only the comparison.
 func TestACallFindingIsReadThroughTheReadersScopeAndMask(t *testing.T) {
+	t.Parallel()
 	e := setupCall(t)
 	team := crmcontracts.NewForecastCallScopeKindTeam
 	body, err := json.Marshal(crmcontracts.NewForecastCall{
@@ -369,6 +375,7 @@ func (e *callEnv) observedAs(reader context.Context, t *testing.T) map[string]an
 // The forecast tool tells a model what the review panel tells a manager: the
 // call kept its baseline, and the pipeline moved away from it.
 func TestTheForecastToolCarriesTheCallsReview(t *testing.T) {
+	t.Parallel()
 	e := setupCall(t)
 	e.recordCall(t, 5_000_000)
 	e.updateDeal(t, deals.UpdateDealInput{AmountMinor: new(int64(9_900_000)), Currency: new("EUR")})

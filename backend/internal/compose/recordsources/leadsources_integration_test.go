@@ -26,6 +26,7 @@ func olderLead(t *testing.T, owner *pgx.Conn, source string, system *string) ids
 // Each older lead word lands on the channel a contact's would. The lead's
 // source_system is its replay key, so the task neither fills nor replaces it.
 func TestTheTaskMovesOlderLeadsOntoAChannel(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	csv, form, site := "mirror:csv:bundle", "web_form", "siteread"
@@ -74,6 +75,7 @@ func TestTheTaskMovesOlderLeadsOntoAChannel(t *testing.T) {
 // An older lead is judged by the unvalidated check on its next write. An edit
 // before the task goes through and moves the lead onto its channel.
 func TestAnEditBeforeTheTaskMovesAnOlderLeadOntoItsChannel(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	form := "web_form"
 	older := olderLead(t, integration.OwnerConn(t), "web_form", &form)

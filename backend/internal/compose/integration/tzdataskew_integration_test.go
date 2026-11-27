@@ -41,6 +41,7 @@ const offsetsRead = 424 * 24 * 4
 // Where one copy moved a transition and the other did not, one instant falls
 // on two days, and neither reader reports a fault.
 func TestGoAndPostgresBucketAnInstantAlike(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	from := clocktest.Now(t).UTC().Truncate(15 * time.Minute)
 	transitioned := 0

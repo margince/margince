@@ -46,6 +46,7 @@ func seedCustomer(t *testing.T, e *sendEnv) ids.UUID {
 // The read's stamp answers the outcome lane's rule without its look-back window.
 // A booked meeting a month old still asks, which the lane alone never shows.
 func TestTheActivityReadStampsWhichMeetingsAwaitAnOutcome(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	customer := seedCustomer(t, e)
 	booked, held := "booked", "held"
@@ -85,6 +86,7 @@ func TestTheActivityReadStampsWhichMeetingsAwaitAnOutcome(t *testing.T) {
 // The lane's filter and the read's stamp are one rule: the filter keeps the
 // meetings the stamp marks, and no others.
 func TestTheOutcomeFilterKeepsWhatTheStampMarks(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	customer := seedCustomer(t, e)
 	booked, canceled := "booked", "canceled"
@@ -125,6 +127,7 @@ func TestTheOutcomeFilterKeepsWhatTheStampMarks(t *testing.T) {
 // Held and no-show describe a meeting that took place, so the patch refuses
 // them ahead of the start. Canceling a future meeting stays allowed.
 func TestAnOutcomeWaitsForTheMeetingToStart(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	customer := seedCustomer(t, e)
 	booked := "booked"
@@ -153,6 +156,7 @@ func TestAnOutcomeWaitsForTheMeetingToStart(t *testing.T) {
 // The start the patch leaves the meeting with is the one judged. Moving a
 // meeting into the past and saying it was held is one patch.
 func TestAMeetingMovedIntoThePastCanBeHeldInOnePatch(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	customer := seedCustomer(t, e)
 	booked := "booked"
@@ -173,6 +177,7 @@ func TestAMeetingMovedIntoThePastCanBeHeldInOnePatch(t *testing.T) {
 // A patch that moves a held meeting to a start still ahead is refused. It sends
 // no status, and the status it leaves is the one judged.
 func TestMovingAHeldMeetingAheadIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	customer := seedCustomer(t, e)
 	noon := clocktest.Now(t).UTC().Truncate(24 * time.Hour).Add(12 * time.Hour)
@@ -200,6 +205,7 @@ func TestMovingAHeldMeetingAheadIsRefused(t *testing.T) {
 // A form resending the start a held meeting already has moves nothing. So a
 // row stored held ahead of its start still takes an edit to its subject.
 func TestResendingAHeldMeetingsStartIsNoMove(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	customer := seedCustomer(t, e)
 	booked := "booked"
@@ -218,6 +224,7 @@ func TestResendingAHeldMeetingsStartIsNoMove(t *testing.T) {
 // A date-only meeting takes place once its date is over in the installation's
 // timezone. Dated today there, it is not owed yet and cannot be held.
 func TestADateOnlyMeetingIsOwedOnceItsLocalDateIsOver(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	setInstallationZone(t, e, "Pacific/Auckland")
 	zone, err := time.LoadLocation("Pacific/Auckland")
@@ -277,6 +284,7 @@ func TestADateOnlyMeetingIsOwedOnceItsLocalDateIsOver(t *testing.T) {
 // Logging a meeting is held to the same rule as a patch. So is a second log
 // under the same source key that moves the status of the row it holds.
 func TestLoggingAnOutcomeWaitsForTheMeetingToStart(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	customer := seedCustomer(t, e)
 	tomorrow := clocktest.Now(t).AddDate(0, 0, 1)

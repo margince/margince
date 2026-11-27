@@ -67,6 +67,7 @@ type growthRead struct {
 // Every round trip waits a fixed delay. It fits T ≈ k·W + r·R + A per read, and
 // fails when a read is predicted to reach 10 s within the horizon.
 func TestHomeGrowth(t *testing.T) {
+	t.Parallel()
 	if os.Getenv(database.SQLCensusDirEnv) != "" {
 		t.Fatal("SQL file capture changes latency; unset " + database.SQLCensusDirEnv + " for this bench")
 	}

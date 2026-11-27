@@ -43,6 +43,7 @@ func valueSortRates() map[string]string {
 }
 
 func TestSortingDealsByValueComparesThemInTheBaseCurrency(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	e.Deals.SetClock(func() time.Time { return fxTestNow })
 	pipeline := seedValueSortDeals(t, e, fxTestNow.Truncate(24*time.Hour), valueSortRates(), valueSortDeals)
@@ -63,6 +64,7 @@ func TestSortingDealsByValueComparesThemInTheBaseCurrency(t *testing.T) {
 // The sort reads the base currency and the zone without the
 // installation_settings gate, so a seat holding only deal.read can use it.
 func TestASeatWithoutInstallationSettingsCanSortDealsByValue(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	e.Deals.SetClock(func() time.Time { return fxTestNow })
 	pipeline := seedValueSortDeals(t, e, fxTestNow.Truncate(24*time.Hour), valueSortRates(), valueSortDeals)
@@ -81,6 +83,7 @@ func TestASeatWithoutInstallationSettingsCanSortDealsByValue(t *testing.T) {
 // masks only the currency is refused the Value sort too. Ordered beside the
 // visible amounts, the base values would give the masked currency away.
 func TestACurrencyMaskRefusesTheValueSort(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	e.Deals.SetClock(func() time.Time { return fxTestNow })
 	pipeline := seedValueSortDeals(t, e, fxTestNow.Truncate(24*time.Hour), valueSortRates(), valueSortDeals)
@@ -105,6 +108,7 @@ func TestACurrencyMaskRefusesTheValueSort(t *testing.T) {
 // already the next day on Kiritimati (UTC+14), so the rate dated that day
 // applies. A UTC "today" finds no rate and puts the yen deal last.
 func TestTheValueSortConvertsAtTodaysRateInTheInstallationZone(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	e.WsExec(t, `UPDATE setting SET value = '"Pacific/Kiritimati"'::jsonb WHERE key = 'installation.timezone'`)
 	e.Deals.SetClock(func() time.Time { return fxTestNow })
@@ -124,6 +128,7 @@ func TestTheValueSortConvertsAtTodaysRateInTheInstallationZone(t *testing.T) {
 // rates may differ, so the old cursor is refused instead of skipping or
 // repeating deals.
 func TestAValueSortCursorFromAnotherDayIsRefused(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	e.Deals.SetClock(func() time.Time { return fxTestNow })
 	pipeline := seedValueSortDeals(t, e, fxTestNow.Truncate(24*time.Hour), valueSortRates(), valueSortDeals)
@@ -145,6 +150,7 @@ func TestAValueSortCursorFromAnotherDayIsRefused(t *testing.T) {
 // A correction to a rate the page was converted with changes the order.
 // A cursor minted before it is refused, so no deal is skipped or repeated.
 func TestAValueSortCursorFromBeforeARateCorrectionIsRefused(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	e.Deals.SetClock(func() time.Time { return fxTestNow })
 	day := fxTestNow.Truncate(24 * time.Hour)
@@ -168,6 +174,7 @@ func TestAValueSortCursorFromBeforeARateCorrectionIsRefused(t *testing.T) {
 
 // Removing a currency a page was converted with changes the order too.
 func TestAValueSortCursorFromBeforeARateRemovalIsRefused(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	e.Deals.SetClock(func() time.Time { return fxTestNow })
 	day := fxTestNow.Truncate(24 * time.Hour)
@@ -192,6 +199,7 @@ func TestAValueSortCursorFromBeforeARateRemovalIsRefused(t *testing.T) {
 // A correction to a currency no open deal is held in changes no order, so a
 // cursor minted before it still continues the page.
 func TestAValueSortCursorSurvivesACorrectionToAnUnusedCurrency(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	e.Deals.SetClock(func() time.Time { return fxTestNow })
 	day := fxTestNow.Truncate(24 * time.Hour)

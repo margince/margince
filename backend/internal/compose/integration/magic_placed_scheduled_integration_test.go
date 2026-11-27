@@ -78,6 +78,7 @@ func (p *preflightEnv) authorsTeam(t *testing.T) ids.UUID {
 }
 
 func TestDoneForYouShowsAScheduledSendOnlyToItsAuthor(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	p.scheduleForTheUser(t)
 	deal := uuidOf(t, p.dealID)

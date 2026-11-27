@@ -30,6 +30,7 @@ import (
 // The offline fake publishes a list, so the whole path — grant, profile,
 // binding, adapter, decode — is exercisable with no vendor and no network.
 func TestAvailableModelsAsksTheBoundAdapter(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	store := ai.NewRoutingStore(compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
 	if _, err := store.Replace(e.adminRoutingCtx(), parsedRouting(t, "fake-stored")); err != nil {
@@ -52,6 +53,7 @@ func TestAvailableModelsAsksTheBoundAdapter(t *testing.T) {
 // egress like any other. Refused BEFORE the adapter is built, so a sovereign
 // installation never opens a connection to a cloud vendor to find out.
 func TestSovereignRefusesToAskACloudVendor(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	store := ai.NewRoutingStore(compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
 	if _, err := store.Replace(e.adminRoutingCtx(), sovereignRouting(t)); err != nil {
@@ -88,6 +90,7 @@ func TestSovereignRefusesToAskACloudVendor(t *testing.T) {
 // unbound vendor exactly as it refuses a bound one, and this proves it does
 // so BEFORE any network call, the same way the bound case above does.
 func TestSovereignRefusesOpenRouterToo(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	store := ai.NewRoutingStore(compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
 	if _, err := store.Replace(e.adminRoutingCtx(), sovereignRouting(t)); err != nil {
@@ -110,6 +113,7 @@ func TestSovereignRefusesOpenRouterToo(t *testing.T) {
 // key — rather than a failure, and it is reported without ever reaching the
 // network.
 func TestACloudVendorWithNoKeyReportsItRatherThanFailing(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	store := ai.NewRoutingStore(compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
 	if _, err := store.Replace(e.adminRoutingCtx(), parsedRouting(t, "fake-stored")); err != nil {
@@ -129,6 +133,7 @@ func TestACloudVendorWithNoKeyReportsItRatherThanFailing(t *testing.T) {
 // than about the vendor, and a seat without it must not learn which vendors this
 // installation can reach.
 func TestAvailableModelsNeedsTheRoutingReadGrant(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	store := ai.NewRoutingStore(compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
 
@@ -153,6 +158,7 @@ func TestAvailableModelsNeedsTheRoutingReadGrant(t *testing.T) {
 // the save is refused naming the lane rather than storing a binding nobody
 // checked.
 func TestSavingAVertexBindingIsRefusedWhenItsModelCannotBeChecked(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	store := ai.NewRoutingStore(compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
 	cfg, err := ai.ParseRouting([]byte(`profile: eu_hosted
@@ -195,6 +201,7 @@ embeddings: {provider: fake, model: fake-embed, dimensions: 8}
 // A key test reads the stored document to find the host and the profile, and
 // the offline fake answers it with no vendor and no network.
 func TestAKeyTestAsksTheStoredBinding(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	store := ai.NewRoutingStore(compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
 	if _, err := store.Replace(e.adminRoutingCtx(), sovereignRouting(t)); err != nil {

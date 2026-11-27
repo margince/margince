@@ -23,6 +23,7 @@ import (
 // The findings for one population are the ones on that population's deals,
 // narrowed by the rule the forecast and reports use for it.
 func TestFindingsFollowTheRequestedPopulation(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	team1Deal := e.seedOpenDeal(t, "North deal", 20, &e.Rep1, nil)
 	team2Deal := e.seedOpenDeal(t, "South deal", 20, &e.Rep3, nil)

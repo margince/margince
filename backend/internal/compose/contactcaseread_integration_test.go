@@ -21,6 +21,7 @@ import (
 )
 
 func TestAResolvedCaseNamesNoSurvivorItsReaderCannotSee(t *testing.T) {
+	t.Parallel()
 	c := setupCases(t)
 	members := c.seedCase(t, c.e.Rep1, c.e.Rep2)
 	source, survivor := members[0], members[1]
@@ -41,6 +42,7 @@ func TestAResolvedCaseNamesNoSurvivorItsReaderCannotSee(t *testing.T) {
 }
 
 func TestAPairIsMergeableByTheOwnerOfEitherEnd(t *testing.T) {
+	t.Parallel()
 	c := setupCases(t)
 	shared := c.seedCase(t, c.e.Rep1, c.e.Rep2)
 	own := c.seedCase(t, c.e.Rep1, c.e.Rep1)
@@ -68,6 +70,7 @@ func TestAPairIsMergeableByTheOwnerOfEitherEnd(t *testing.T) {
 }
 
 func TestTheOwnerOfOneMemberOfALargerCaseIsOfferedOnlyTheirPairs(t *testing.T) {
+	t.Parallel()
 	c := setupCases(t)
 	members := c.seedCase(t, c.e.Rep1, c.e.Rep2, c.e.Rep2)
 	rep := c.rep(c.e.Rep1)
@@ -112,6 +115,7 @@ func TestTheOwnerOfOneMemberOfALargerCaseIsOfferedOnlyTheirPairs(t *testing.T) {
 }
 
 func TestACasePairWhoseSurvivorHasNoLiveOwnerOffersNoCaseMerge(t *testing.T) {
+	t.Parallel()
 	c := setupCases(t)
 	agent := ids.NewV7()
 	if _, err := integration.OwnerConn(t).Exec(context.Background(),
@@ -131,6 +135,7 @@ func TestACasePairWhoseSurvivorHasNoLiveOwnerOffersNoCaseMerge(t *testing.T) {
 }
 
 func TestAnAgentSeatOwnsNoShareOfACase(t *testing.T) {
+	t.Parallel()
 	c := setupCases(t)
 	agent := ids.NewV7()
 	if _, err := integration.OwnerConn(t).Exec(context.Background(),
@@ -157,6 +162,7 @@ func TestAnAgentSeatOwnsNoShareOfACase(t *testing.T) {
 }
 
 func TestALargeCaseReadsAlikeFromEveryMember(t *testing.T) {
+	t.Parallel()
 	c := setupCases(t)
 	owners := make([]ids.UUID, 27)
 	for i := range owners {

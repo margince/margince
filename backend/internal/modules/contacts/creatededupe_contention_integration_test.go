@@ -104,6 +104,7 @@ func (e *dedupeEnv) createInBackground(ctx context.Context, in CreateContactInpu
 // lane, both fall to no-match, and the pair reaches nobody — no queue row, and
 // no later sweep that would find it.
 func TestASecondCreateSharingAPhoneStillRecordsTheReviewPair(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	const switchboard = "+4930900000501"
@@ -208,6 +209,7 @@ func (e *dedupeEnv) beginHeldNameCreate(ctx context.Context, t *testing.T, name 
 // name, so a lock taken on the raw string would let these two race each other —
 // and "Lucy Vo" against "LUCY VO" is the pair most likely to be entered twice.
 func TestASecondCreateSharingANameStillRecordsTheReviewPair(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 

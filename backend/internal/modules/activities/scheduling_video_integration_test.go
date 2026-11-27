@@ -39,6 +39,7 @@ func (f *invitationFixture) bookAt(t *testing.T, hour int, video *bool) crmcontr
 }
 
 func TestANewMeetingGetsAVideoCallUnlessTheHostOrTheMeetingSaysNo(t *testing.T) {
+	t.Parallel()
 	f := newInvitationFixture(t)
 	on, off := true, false
 	for _, tc := range []struct {
@@ -69,6 +70,7 @@ func TestANewMeetingGetsAVideoCallUnlessTheHostOrTheMeetingSaysNo(t *testing.T) 
 }
 
 func TestTheGuestSeesTheVideoLinkButNotTheHostsCalendar(t *testing.T) {
+	t.Parallel()
 	f := newInvitationFixture(t)
 	created, err := f.store.CreateInvitation(f.ctx, f.request)
 	if err != nil {
@@ -96,6 +98,7 @@ func TestTheGuestSeesTheVideoLinkButNotTheHostsCalendar(t *testing.T) {
 }
 
 func TestAProposalsVideoChoiceSurvivesTheGuestsAcceptance(t *testing.T) {
+	t.Parallel()
 	f := newInvitationFixture(t)
 	off := false
 	link, err := f.store.CreateProposal(f.ctx, crmcontracts.MeetingProposalRequest{ContactId: f.request.ContactId, AttendeeEmail: f.request.AttendeeEmail, Subject: "Walkthrough", DurationMinutes: 60, VideoCall: &off})
@@ -135,6 +138,7 @@ func TestAProposalsVideoChoiceSurvivesTheGuestsAcceptance(t *testing.T) {
 }
 
 func TestThePublicPageNamesTheVideoAppOnlyWhenMeetingsGetOne(t *testing.T) {
+	t.Parallel()
 	f := newInvitationFixture(t)
 	handlers := Handlers{store: f.store}
 	// A paused page names nothing, so the page the guest reads is switched on.
@@ -204,6 +208,7 @@ func (acceptingConsent) CaptureLeadBookingConsent(context.Context, ids.LeadID, B
 func (acceptingConsent) RecordBookingInquiry(context.Context, ids.UUID, ids.UUID) error { return nil }
 
 func TestTheGuestLengthDoesNotChangeTheHostsSavedDefault(t *testing.T) {
+	t.Parallel()
 	f := newInvitationFixture(t)
 	profile := savePage(t, f, true)
 	profile.OfferedLengths = new([]int{45, 60})

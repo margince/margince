@@ -170,6 +170,7 @@ func (e *freshnessEnv) generation(t *testing.T, deal ids.UUID) int64 {
 }
 
 func TestEditingADealMarksItsFindingsOutOfDateUntilTheNextPass(t *testing.T) {
+	t.Parallel()
 	e := setupFreshness(t)
 	if f := e.freshness(t); f.OutOfDate() {
 		t.Fatalf("a pass that just ran reads out of date: %+v", f)
@@ -198,6 +199,7 @@ func TestEditingADealMarksItsFindingsOutOfDateUntilTheNextPass(t *testing.T) {
 
 // A stage every deal is judged against reaches every finding, not one deal's.
 func TestEditingAStageMarksEveryFindingOutOfDate(t *testing.T) {
+	t.Parallel()
 	e := setupFreshness(t)
 	var stage ids.UUID
 	if err := e.Pool.QueryRow(e.Admin(), `SELECT stage_id FROM deal WHERE id = $1`, e.faulted).Scan(&stage); err != nil {
@@ -223,6 +225,7 @@ func TestEditingAStageMarksEveryFindingOutOfDate(t *testing.T) {
 // An event delivered twice, or after a later one, only moves the generation
 // up: the reading can become out of date, never current.
 func TestADuplicateOrLateDeliveryNeverMakesAReadingCurrent(t *testing.T) {
+	t.Parallel()
 	e := setupFreshness(t)
 	first := e.editDeal(t, e.faulted, 3300000)
 	second := e.editDeal(t, e.faulted, 3400000)
@@ -245,6 +248,7 @@ func TestADuplicateOrLateDeliveryNeverMakesAReadingCurrent(t *testing.T) {
 
 // A burst of edits to one deal, read as one batch, is one row and one step.
 func TestABurstOfEditsIsOneMarkerWrite(t *testing.T) {
+	t.Parallel()
 	e := setupFreshness(t)
 	burst := make([]kevents.Envelope, 0, 20)
 	for i := range 20 {
@@ -265,6 +269,7 @@ func TestABurstOfEditsIsOneMarkerWrite(t *testing.T) {
 
 // A change committed while a pass is reading is not the pass's to clear.
 func TestAChangeDuringAPassKeepsItsResultOutOfDate(t *testing.T) {
+	t.Parallel()
 	e := setupFreshness(t)
 	duringRead := func(ctx context.Context, tx pgx.Tx, asOf time.Time, coverage []assurance.SourceCoverage) ([]assurance.Subject, error) {
 		subjects, err := AssuranceSubjects(ctx, tx, asOf, coverage)
@@ -282,6 +287,7 @@ func TestAChangeDuringAPassKeepsItsResultOutOfDate(t *testing.T) {
 // A pass that read the deals but not the mailbox did not read every input,
 // so it clears nothing either.
 func TestAPassThatMissedASourceKeepsTheReadingOutOfDate(t *testing.T) {
+	t.Parallel()
 	e := setupFreshness(t)
 	e.deliver(t, e.editDeal(t, e.faulted, 3650000))
 	mailUnread := func(context.Context, pgx.Tx, time.Time) []assurance.SourceCoverage {
@@ -302,6 +308,7 @@ func TestAPassThatMissedASourceKeepsTheReadingOutOfDate(t *testing.T) {
 
 // A pass that could not read the deals clears nothing.
 func TestAFailedPassKeepsTheReadingOutOfDate(t *testing.T) {
+	t.Parallel()
 	e := setupFreshness(t)
 	e.deliver(t, e.editDeal(t, e.faulted, 3700000))
 	unreadable := func(context.Context, pgx.Tx, time.Time, []assurance.SourceCoverage) ([]assurance.Subject, error) {
@@ -318,6 +325,7 @@ func TestAFailedPassKeepsTheReadingOutOfDate(t *testing.T) {
 
 // Reading the panel never runs a pass.
 func TestReadingFreshnessRunsNoPass(t *testing.T) {
+	t.Parallel()
 	e := setupFreshness(t)
 	runs := e.WsCount(t, `SELECT count(*) FROM assurance_run`)
 	e.deliver(t, e.editDeal(t, e.faulted, 3800000))
@@ -345,6 +353,7 @@ func (e *freshnessEnv) passCtx() context.Context {
 // An installation upgraded from before the tracking has runs that recorded
 // nothing. Until a pass records what it read, nothing is claimed either way.
 func TestAReadingFromBeforeTheTrackingIsUnknownUntilTheNextPass(t *testing.T) {
+	t.Parallel()
 	e := setupFreshness(t)
 	owner := integration.OwnerConn(t)
 	if _, err := owner.Exec(context.Background(), `UPDATE assurance_run SET read_through_generation = NULL`); err != nil {
@@ -372,6 +381,7 @@ func TestAReadingFromBeforeTheTrackingIsUnknownUntilTheNextPass(t *testing.T) {
 // list_input_checks reads through the same function as the endpoint, so a
 // model is told a finding is out of date when a screen is.
 func TestTheToolMarksAnEditedDealsFindingsOutOfDate(t *testing.T) {
+	t.Parallel()
 	e := setupFreshness(t)
 	e.deliver(t, e.editDeal(t, e.faulted, 3900000))
 
@@ -398,6 +408,7 @@ func TestTheToolMarksAnEditedDealsFindingsOutOfDate(t *testing.T) {
 // A note on the deal moves what its viability read, so the deal is marked.
 // The same activity seen again after a pass read it marks nothing.
 func TestAnActivityOnADealMarksItWhenTheCheckReadsIt(t *testing.T) {
+	t.Parallel()
 	e := setupFreshness(t)
 	logged, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
 		Kind: "note", Subject: new("Customer asked for the revised quote"), Source: "manual",

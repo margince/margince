@@ -31,6 +31,7 @@ func leadMetAt(t *testing.T, e *integration.Env, email string, meeting ids.UUID)
 // a booked lead meeting held and asks the lead's owner to qualify the lead.
 // Notes on a meeting already canceled keep that outcome and ask nobody.
 func TestTheNotesRepairMarkingALeadMeetingHeldAsksTheOwnerToQualify(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	booked, _ := storedAutomaticNotes(t, e, "booked")
 	canceled, _ := storedAutomaticNotes(t, e, "canceled")

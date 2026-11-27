@@ -19,6 +19,7 @@ import (
 // the caller's row scope stays hidden, which
 // TestDedupeQueueHidesPairsOutsideTheCallersRowScope holds for every pair.
 func TestACompanyNamedAgainWithItsLegalFormIsSuggestedForReview(t *testing.T) {
+	t.Parallel()
 	for i, form := range []string{
 		"Inc", "OHG", "KGaA", "e.V.", "UG (haftungsbeschränkt)", "GmbH & Co. KGaA",
 		"S.p.A.", "SARL", "S.L.", "AB", "A/S", "Pte. Ltd.", "Sdn Bhd",
@@ -46,6 +47,7 @@ func TestACompanyNamedAgainWithItsLegalFormIsSuggestedForReview(t *testing.T) {
 // An everyday last word is not a legal form. A different brand under the same
 // legal form is a different company. Neither files a pair on its name alone.
 func TestASimilarNameWithoutTheSameBrandIsNotSuggested(t *testing.T) {
+	t.Parallel()
 	for i, pair := range [][2]string{
 		{"Example Day", "Example Day Spa"},
 		{"Example Telecom", "Example Media OHG"},

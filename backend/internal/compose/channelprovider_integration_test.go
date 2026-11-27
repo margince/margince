@@ -13,7 +13,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
-	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/pkg/extension"
@@ -21,29 +20,16 @@ import (
 
 // A core connector not already seeded is inserted, with transport='core'.
 func TestReconcileChannelProvidersInsertsAnUnseenProvider(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := context.Background()
 	owner := integration.OwnerConn(t)
-	// Restore the pre-registry default in BOTH packages' in-memory snapshots:
-	// reconcileChannelProviders below sets them to this test's own composed
-	// set, and a later test in this process must not see it.
-	defer activities.SetChannelProviders([]string{capture.ProviderTelegram})
-	defer comms.SetChannelProviders([]string{capture.ProviderTelegram})
-	// Deleting the channel_provider row keeps the shared test database tidy for
-	// the tests that follow. The activity_kind row is deliberately NOT cleaned
-	// up: nothing should have written one, and the assertion below is what says
-	// so — a defensive delete here would tidy away the evidence of a regression.
-	t.Cleanup(func() {
-		if _, err := owner.Exec(context.Background(), `DELETE FROM channel_provider WHERE provider = 'fake_core_channel'`); err != nil {
-			t.Errorf("cleaning up channel_provider: %v", err)
-		}
-	})
-
 	// telegram is already seeded by the core migration; assert the reconcile is
 	// a no-op for it and inserts a genuinely new one — standing in for "core
 	// ships a second channel connector" without adding one.
-	if err := reconcileChannelProviders(ctx, e.Pool, []string{"telegram", "fake_core_channel"}); err != nil {
-		t.Fatalf("reconcileChannelProviders: %v", err)
+	composed := &Extensions{}
+	if err := reconcileComposedProviders(ctx, e.Pool, []string{"telegram", "fake_core_channel"}, composed); err != nil {
+		t.Fatalf("reconcileComposedProviders: %v", err)
 	}
 
 	var transport string
@@ -69,15 +55,15 @@ func TestReconcileChannelProvidersInsertsAnUnseenProvider(t *testing.T) {
 		t.Fatalf("querying activity_kind: %v", err)
 	}
 	if kindExists {
-		t.Fatal("reconcileChannelProviders minted an activity_kind row for a provider — a transport is not an interaction kind, " +
+		t.Fatal("reconcileComposedProviders minted an activity_kind row for a provider — a transport is not an interaction kind, " +
 			"and a boot that keeps inserting these will silently restore whatever the kind-narrowing migration removes")
 	}
 
 	// Idempotent: calling it again with the SAME set changes nothing and
 	// errors on nothing — a role that constructs the registry twice (the
 	// worker's one-shot backfill helper does) must not fail its second call.
-	if err := reconcileChannelProviders(ctx, e.Pool, []string{"telegram", "fake_core_channel"}); err != nil {
-		t.Fatalf("reconcileChannelProviders, second call: %v", err)
+	if err := reconcileComposedProviders(ctx, e.Pool, []string{"telegram", "fake_core_channel"}, composed); err != nil {
+		t.Fatalf("reconcileComposedProviders, second call: %v", err)
 	}
 }
 
@@ -87,18 +73,18 @@ func TestReconcileChannelProvidersInsertsAnUnseenProvider(t *testing.T) {
 // constraint — so this is also the proof that boot keeps no second, disagreeing
 // spelling of the rule.
 func TestReconcileChannelProvidersRefusesAProviderNameTheGrammarRejects(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := context.Background()
-	defer activities.SetChannelProviders([]string{capture.ProviderTelegram})
-	defer comms.SetChannelProviders([]string{capture.ProviderTelegram})
 
 	// Hyphens and capitals are both outside ^[a-z][a-z0-9_]*$ — and this exact
 	// spelling was a test fixture in this file before the grammar existed, which
 	// is how a name no installation could ever register got used as the stand-in
 	// for one that could.
-	err := reconcileChannelProviders(ctx, e.Pool, []string{"fake-core-channel"})
+	composed := &Extensions{}
+	err := reconcileComposedProviders(ctx, e.Pool, []string{"fake-core-channel"}, composed)
 	if err == nil {
-		t.Fatal("reconcileChannelProviders accepted a provider name the channel_provider grammar refuses; " +
+		t.Fatal("reconcileComposedProviders accepted a provider name the channel_provider grammar refuses; " +
 			"a name that cannot be stored must fail at boot, not become a provider the registry silently lacks")
 	}
 
@@ -115,16 +101,12 @@ func TestReconcileChannelProvidersRefusesAProviderNameTheGrammarRejects(t *testi
 // A provider whose supplier is gone on a LATER boot is kept, never deleted —
 // activity and contact_channel_identity rows may still reference it.
 func TestReconcileChannelProvidersNeverDeletesARetiredRow(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := context.Background()
-	// reconcileChannelProviders below sets BOTH packages' in-memory snapshots
-	// to the empty set this test passes it; restore the pre-registry default
-	// so a later test in this process does not see telegram deregistered.
-	defer activities.SetChannelProviders([]string{capture.ProviderTelegram})
-	defer comms.SetChannelProviders([]string{capture.ProviderTelegram})
-
-	if err := reconcileChannelProviders(ctx, e.Pool, []string{}); err != nil {
-		t.Fatalf("reconcileChannelProviders with an empty composed set: %v", err)
+	composed := &Extensions{}
+	if err := reconcileComposedProviders(ctx, e.Pool, []string{}, composed); err != nil {
+		t.Fatalf("reconcileComposedProviders with an empty composed set: %v", err)
 	}
 
 	var count int
@@ -147,22 +129,16 @@ func TestReconcileChannelProvidersNeverDeletesARetiredRow(t *testing.T) {
 // and credential_model='per_member' is what an operator reads to know that
 // connecting is each member's own act rather than an admin's one-time binding.
 func TestReconcileChannelProvidersRegistersAUnitsDeclaredTransport(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := context.Background()
 	owner := integration.OwnerConn(t)
-	defer activities.SetChannelProviders([]string{capture.ProviderTelegram})
-	defer comms.SetChannelProviders([]string{capture.ProviderTelegram})
-	declaresTransport(t, "mine", extension.Channel{
+	composed := declaresTransport("mine", extension.Channel{
 		Provider: "mine_chat", CredentialModel: extension.CredentialPerMember, Send: (&capturedSend{}).send, Live: answersLive(true, nil),
 	})
-	t.Cleanup(func() {
-		if _, err := owner.Exec(context.Background(), `DELETE FROM channel_provider WHERE provider = 'mine_chat'`); err != nil {
-			t.Errorf("cleaning up channel_provider: %v", err)
-		}
-	})
 
-	if err := reconcileChannelProviders(ctx, e.Pool, []string{capture.ProviderTelegram}); err != nil {
-		t.Fatalf("reconcileChannelProviders: %v", err)
+	if err := reconcileComposedProviders(ctx, e.Pool, []string{capture.ProviderTelegram}, composed); err != nil {
+		t.Fatalf("reconcileComposedProviders: %v", err)
 	}
 
 	var transport, credentialModel, label string
@@ -189,12 +165,12 @@ func TestReconcileChannelProvidersRegistersAUnitsDeclaredTransport(t *testing.T)
 	// would register, publish, capture — and park every reply a rep wrote under
 	// "this installation cannot send on that", which is the one failure a rep
 	// cannot tell from a broken provider.
-	if !activities.CanSendOnProvider("mine_chat") {
+	if !composed.sendsOn("mine_chat") {
 		t.Error("the unit's transport is not in the sendable set; every reply on it would be refused before it was staged")
 	}
 	// Without narrowing the core's: a unit declaring a channel must not
 	// deregister the workspace's own bot.
-	if !activities.CanSendOnProvider(capture.ProviderTelegram) {
+	if !composed.sendsOn(capture.ProviderTelegram) {
 		t.Error("registering a unit transport dropped the core connector out of the sendable set")
 	}
 }
@@ -210,23 +186,17 @@ func TestReconcileChannelProvidersRegistersAUnitsDeclaredTransport(t *testing.T)
 // one reader, so every audience invariant reads green while the whole company
 // has lost its own inbox.
 func TestReconcileChannelProvidersHonoursAUnitsDeclaredWorkspaceBotCredential(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := context.Background()
 	owner := integration.OwnerConn(t)
-	defer activities.SetChannelProviders([]string{capture.ProviderTelegram})
-	defer comms.SetChannelProviders([]string{capture.ProviderTelegram})
-	declaresTransport(t, "official", extension.Channel{
+	composed := declaresTransport("official", extension.Channel{
 		Provider: "official_account", CredentialModel: extension.CredentialWorkspaceBot,
 		Send: (&capturedSend{}).send, Live: answersLive(true, nil),
 	})
-	t.Cleanup(func() {
-		if _, err := owner.Exec(context.Background(), `DELETE FROM channel_provider WHERE provider = 'official_account'`); err != nil {
-			t.Errorf("cleaning up channel_provider: %v", err)
-		}
-	})
 
-	if err := reconcileChannelProviders(ctx, e.Pool, []string{capture.ProviderTelegram}); err != nil {
-		t.Fatalf("reconcileChannelProviders: %v", err)
+	if err := reconcileComposedProviders(ctx, e.Pool, []string{capture.ProviderTelegram}, composed); err != nil {
+		t.Fatalf("reconcileComposedProviders: %v", err)
 	}
 
 	var transport, credentialModel string
@@ -248,20 +218,14 @@ func TestReconcileChannelProvidersHonoursAUnitsDeclaredWorkspaceBotCredential(t 
 // separate columns because the difference is real and a rep sees it: the
 // timeline can name what carried a message on a transport nothing can answer on.
 func TestReconcileChannelProvidersRegistersACaptureOnlyUnitTransportAsUnsendable(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := context.Background()
 	owner := integration.OwnerConn(t)
-	defer activities.SetChannelProviders([]string{capture.ProviderTelegram})
-	defer comms.SetChannelProviders([]string{capture.ProviderTelegram})
-	declaresTransport(t, "mine", extension.Channel{Provider: "mine_chat", CredentialModel: extension.CredentialPerMember})
-	t.Cleanup(func() {
-		if _, err := owner.Exec(context.Background(), `DELETE FROM channel_provider WHERE provider = 'mine_chat'`); err != nil {
-			t.Errorf("cleaning up channel_provider: %v", err)
-		}
-	})
+	composed := declaresTransport("mine", extension.Channel{Provider: "mine_chat", CredentialModel: extension.CredentialPerMember})
 
-	if err := reconcileChannelProviders(ctx, e.Pool, []string{capture.ProviderTelegram}); err != nil {
-		t.Fatalf("reconcileChannelProviders: %v", err)
+	if err := reconcileComposedProviders(ctx, e.Pool, []string{capture.ProviderTelegram}, composed); err != nil {
+		t.Fatalf("reconcileComposedProviders: %v", err)
 	}
 
 	var supplies bool
@@ -272,7 +236,7 @@ func TestReconcileChannelProvidersRegistersACaptureOnlyUnitTransportAsUnsendable
 	if supplies {
 		t.Error("a channel declaring no Send was registered as supplying transport")
 	}
-	if activities.CanSendOnProvider("mine_chat") {
+	if composed.sendsOn("mine_chat") {
 		t.Error("a capture-only transport is in the sendable set; a reply would be staged against a unit that cannot transmit")
 	}
 }
@@ -288,15 +252,14 @@ func TestReconcileChannelProvidersRegistersACaptureOnlyUnitTransportAsUnsendable
 // so the preflight would answer from an empty set and pass the collision it
 // exists to catch.
 func TestReconcileChannelProvidersRefusesAUnitThatShadowsACoreConnector(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := context.Background()
-	defer activities.SetChannelProviders([]string{capture.ProviderTelegram})
-	defer comms.SetChannelProviders([]string{capture.ProviderTelegram})
-	declaresTransport(t, "impostor", extension.Channel{
+	composed := declaresTransport("impostor", extension.Channel{
 		Provider: capture.ProviderTelegram, CredentialModel: extension.CredentialPerMember, Send: (&capturedSend{}).send, Live: answersLive(true, nil),
 	})
 
-	err := reconcileChannelProviders(ctx, e.Pool, []string{capture.ProviderTelegram})
+	err := reconcileComposedProviders(ctx, e.Pool, []string{capture.ProviderTelegram}, composed)
 
 	if err == nil {
 		t.Fatal("a unit declaring the core's own transport was accepted; every reply on it would leave under the unit's credential")
@@ -328,17 +291,16 @@ func TestReconcileChannelProvidersRefusesAUnitThatShadowsACoreConnector(t *testi
 // WhatsApp conversation in the installation became one the unit transmits — on
 // its own credential, with nothing on any screen different.
 func TestReconcileChannelProvidersRefusesAUnitThatSeizesARegisteredCoreTransport(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := context.Background()
-	defer activities.SetChannelProviders([]string{capture.ProviderTelegram})
-	defer comms.SetChannelProviders([]string{capture.ProviderTelegram})
 	// whatsapp is deliberately NOT in the composed set below, which is the
 	// truth about this binary: nothing composes a WhatsApp connector.
-	declaresTransport(t, "impostor", extension.Channel{
+	composed := declaresTransport("impostor", extension.Channel{
 		Provider: "whatsapp", CredentialModel: extension.CredentialPerMember, Send: (&capturedSend{}).send, Live: answersLive(true, nil),
 	})
 
-	err := reconcileChannelProviders(ctx, e.Pool, []string{capture.ProviderTelegram})
+	err := reconcileComposedProviders(ctx, e.Pool, []string{capture.ProviderTelegram}, composed)
 
 	if err == nil {
 		t.Fatal("a unit seized a registered core transport it composed no connector for; every hand-logged conversation on it became repliable by the unit")
@@ -356,7 +318,7 @@ func TestReconcileChannelProvidersRefusesAUnitThatSeizesARegisteredCoreTransport
 	if supplies {
 		t.Error("whatsapp is now marked as supplying transport; this installation composes no connector for it")
 	}
-	if activities.CanSendOnProvider("whatsapp") {
+	if composed.sendsOn("whatsapp") {
 		t.Error("whatsapp entered the sendable set, so every hand-logged WhatsApp conversation would now accept a reply")
 	}
 }
@@ -376,26 +338,19 @@ func TestReconcileChannelProvidersRefusesAUnitThatSeizesARegisteredCoreTransport
 // before the act, and would pass against a boot step that did nothing at all.
 // A unit's row can only have been written by this call.
 func TestTheBootStepRegistersAComposedUnitTransportWithNoCaptureRegistry(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := context.Background()
 	owner := integration.OwnerConn(t)
-	defer activities.SetChannelProviders([]string{capture.ProviderTelegram})
-	defer comms.SetChannelProviders([]string{capture.ProviderTelegram})
-	declaresTransport(t, "boot", extension.Channel{
+	composed := declaresTransport("boot", extension.Channel{
 		Provider: "boot_chat", CredentialModel: extension.CredentialPerMember, Send: (&capturedSend{}).send, Live: answersLive(true, nil),
 	})
-	t.Cleanup(func() {
-		if _, err := owner.Exec(context.Background(),
-			`DELETE FROM channel_provider WHERE provider = 'boot_chat'`); err != nil {
-			t.Errorf("cleaning up channel_provider: %v", err)
-		}
-	})
-	emptyTheSendableSets(t)
+	emptyTheSendableSets(t, composed)
 
 	// Through RecordComposition, which is what a process role actually calls —
 	// reaching past it to the reconcile alone would leave the step every role
 	// wires untested, and the ordering it owns unproven.
-	if err := RecordComposition(ctx, e.Pool, discardLog(), ComposedExtensions()); err != nil {
+	if err := RecordComposition(ctx, e.Pool, discardLog(), composed); err != nil {
 		t.Fatalf("the boot step on a role that composes no capture registry: %v", err)
 	}
 	// The inventory half landed too: both facts follow from the same composed
@@ -415,13 +370,13 @@ func TestTheBootStepRegistersAComposedUnitTransportWithNoCaptureRegistry(t *test
 	}
 	// Both in-memory halves, refilled from empty: the send pre-flight reads
 	// them, so a transport missing here is one every reply is refused on.
-	if !activities.CanSendOnProvider("boot_chat") {
+	if !composed.sendsOn("boot_chat") {
 		t.Error("the unit's transport is not in activities' sendable set")
 	}
-	if _, capability := comms.SendScopeFor("boot_chat"); capability == comms.CannotSend {
+	if _, capability := comms.SendScopeFor("boot_chat", composed.sendsOn); capability == comms.CannotSend {
 		t.Error("the unit's transport is not in comms' sendable set")
 	}
-	if !activities.CanSendOnProvider(capture.ProviderTelegram) {
+	if !composed.sendsOn(capture.ProviderTelegram) {
 		t.Error("the core connector did not come back into the sendable set")
 	}
 }
@@ -431,21 +386,14 @@ func TestTheBootStepRegistersAComposedUnitTransportWithNoCaptureRegistry(t *test
 // exists. A workspace-bound transaction cannot resolve which workspace to bind,
 // which halts every fresh install rather than some corner of one.
 func TestTheBootStepReconcilesBeforeTheInstallationIsBootstrapped(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := context.Background()
 	owner := integration.OwnerConn(t)
-	defer activities.SetChannelProviders([]string{capture.ProviderTelegram})
-	defer comms.SetChannelProviders([]string{capture.ProviderTelegram})
-	declaresTransport(t, "prebootstrap", extension.Channel{
+	composed := declaresTransport("prebootstrap", extension.Channel{
 		Provider: "prebootstrap_chat", CredentialModel: extension.CredentialPerMember, Send: (&capturedSend{}).send, Live: answersLive(true, nil),
 	})
-	t.Cleanup(func() {
-		if _, err := owner.Exec(context.Background(),
-			`DELETE FROM channel_provider WHERE provider = 'prebootstrap_chat'`); err != nil {
-			t.Errorf("cleaning up channel_provider: %v", err)
-		}
-	})
-	emptyTheSendableSets(t)
+	emptyTheSendableSets(t, composed)
 
 	// Archived, not deleted: identity.Service.InstallationWorkspace counts
 	// un-archived workspaces, and integration.Setup's own fixture rows
@@ -456,10 +404,10 @@ func TestTheBootStepReconcilesBeforeTheInstallationIsBootstrapped(t *testing.T) 
 		t.Fatalf("archiving every workspace to simulate a pre-bootstrap install: %v", err)
 	}
 
-	if err := ReconcileChannelProviders(ctx, e.Pool); err != nil {
+	if err := ReconcileChannelProviders(ctx, e.Pool, composed); err != nil {
 		t.Fatalf("the boot step with no company bootstrapped yet: %v", err)
 	}
-	if !activities.CanSendOnProvider("prebootstrap_chat") {
+	if !composed.sendsOn("prebootstrap_chat") {
 		t.Error("the boot step did not reconcile with no company bootstrapped yet")
 	}
 }
@@ -470,15 +418,14 @@ func TestTheBootStepReconcilesBeforeTheInstallationIsBootstrapped(t *testing.T) 
 // than swallowing it, and that an operator reading one line knows whether the
 // inventory or the transports were what went wrong.
 func TestRecordingTheCompositionFailsTheBootWhenAUnitShadowsACoreTransport(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := context.Background()
-	defer activities.SetChannelProviders([]string{capture.ProviderTelegram})
-	defer comms.SetChannelProviders([]string{capture.ProviderTelegram})
-	declaresTransport(t, "impostor", extension.Channel{
+	composed := declaresTransport("impostor", extension.Channel{
 		Provider: capture.ProviderTelegram, CredentialModel: extension.CredentialPerMember, Send: (&capturedSend{}).send, Live: answersLive(true, nil),
 	})
 
-	err := RecordComposition(ctx, e.Pool, discardLog(), ComposedExtensions())
+	err := RecordComposition(ctx, e.Pool, discardLog(), composed)
 
 	if err == nil {
 		t.Fatal("a boot whose unit declares the core's own transport was allowed to continue; " +
@@ -508,15 +455,13 @@ func observedExtensionCount(t *testing.T, owner *pgx.Conn) int {
 }
 
 // emptyTheSendableSets clears what the assertions are about to look at, and
-// fails if the clearing did not take. Both packages carry telegram as a
-// compile-time default and testdb does not reset channel_provider, so a test
-// that does not start from empty cannot tell a boot step that ran from one that
-// did nothing.
-func emptyTheSendableSets(t *testing.T) {
+// fails if the clearing did not take. A composition answers telegram before its
+// boot registered anything. A test that does not start from empty cannot tell a
+// boot step that ran from one that did nothing.
+func emptyTheSendableSets(t *testing.T, composed *Extensions) {
 	t.Helper()
-	activities.SetChannelProviders(nil)
-	comms.SetChannelProviders(nil)
-	if activities.CanSendOnProvider(capture.ProviderTelegram) {
+	composed.setSendable(nil)
+	if composed.sendsOn(capture.ProviderTelegram) {
 		t.Fatal("the sendable set survived being emptied — this run could not tell a reconcile from a no-op")
 	}
 }

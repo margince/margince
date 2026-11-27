@@ -47,7 +47,7 @@ func (r *callRuntime) SyncNow(ctx context.Context, job extension.JobName) error 
 	if err != nil {
 		return err
 	}
-	decl, found := declaredJobFor(r.unit, string(job))
+	decl, found := r.deps.composed.declaredJob(r.unit, string(job))
 	if !found {
 		// The unit's OWN set, so a name that belongs to another unit reads the
 		// same as one that belongs to nobody: this unit declares no such job.
@@ -68,21 +68,21 @@ func (r *callRuntime) SyncNow(ctx context.Context, job extension.JobName) error 
 		return fmt.Errorf("compose: opening the queue to ask for %s: %w", job, err)
 	}
 	child := decl.ChildKind()
-	opts, err := attendedChildOpts(child)
+	opts, err := attendedChildOpts(r.deps.composed.declaredJobs(), child)
 	if err != nil {
 		return err
 	}
 	return inserter.Enqueue(ctx, extJobWorkspaceArgs{JobKind: child, Workspace: ws}, opts)
 }
 
-// declaredJobFor answers the declaration of one unit's job, and whether the
+// declaredJob answers the declaration of one unit's job, and whether the
 // unit declares it at all.
 //
 // Read from the composed set rather than from anything the caller supplies,
 // which is what makes "its own job" a property of construction: the set is what
 // this boot registered, and the unit is the one the Runtime was minted for.
-func declaredJobFor(unit, job string) (extension.JobDeclaration, bool) {
-	for _, served := range servedExtensionJobs() {
+func (x *Extensions) declaredJob(unit, job string) (extension.JobDeclaration, bool) {
+	for _, served := range x.servedJobs() {
 		if string(served.decl.Unit) == unit && served.decl.Job == job {
 			return served.decl, true
 		}
@@ -113,14 +113,14 @@ func declaredJobFor(unit, job string) (extension.JobDeclaration, bool) {
 // This one is reached from a unit's handler, inside a member's request: the
 // same fault there would take down the call, or the worker, for a mistake in a
 // declaration nobody in that request can fix.
-func attendedChildOpts(childKind string) (*river.InsertOpts, error) {
-	spec := fanOutChildSpec(childKind)
+func attendedChildOpts(table jobs.Composed, childKind string) (*river.InsertOpts, error) {
+	spec := fanOutChildSpec(table, childKind)
 	if spec.OptsOwner != jobs.OptsFanOut {
 		return nil, fmt.Errorf(
 			"compose: %s declares an opts_owner other than fan_out, so its queue and attempt cap are not "+
 				"this helper's to set", childKind)
 	}
-	return jobs.QueuedAsKind(childKind, &river.InsertOpts{
+	return table.QueuedAsKind(childKind, &river.InsertOpts{
 		MaxAttempts: spec.MaxAttempts,
 		UniqueOpts:  river.UniqueOpts{ByArgs: true, ByState: activeSweepStates},
 	}), nil

@@ -47,7 +47,7 @@ func RekeyKeptStopsPageTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit 
 	if err := auth.RequireSystem(ctx); err != nil {
 		return nil, err
 	}
-	keyID := storekit.SuppressionKeyID()
+	keyID := storekit.SuppressionKeyID(ctx)
 	if keyID == nil {
 		return nil, nil
 	}
@@ -61,7 +61,7 @@ func RekeyKeptStopsPageTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit 
 	oldHashes := make([]string, len(page))
 	for i, stop := range page {
 		oldHashes[i] = stop.value
-		rekeyed[i], _ = storekit.RekeySuppressionHash(stop.value)
+		rekeyed[i], _ = storekit.RekeySuppressionHash(ctx, stop.value)
 	}
 	if err := storekit.LockStopAddresses(ctx, tx, nil, append(oldHashes, rekeyed...)); err != nil {
 		return nil, err
@@ -90,7 +90,7 @@ func HashPreferenceLinksPageTx(ctx context.Context, tx pgx.Tx, after ids.UUID, l
 	if err := auth.RequireSystem(ctx); err != nil {
 		return nil, err
 	}
-	if preferenceLinkKey() == nil {
+	if preferenceLinkKey(ctx) == nil {
 		return nil, nil
 	}
 	page, err := readStoredValues(ctx, tx, `SELECT id, token FROM preference_token
@@ -113,7 +113,7 @@ func HashPreferenceLinksPageTx(ctx context.Context, tx pgx.Tx, after ids.UUID, l
 // CountStoredPreferenceLinks bounds the hashing's estimate at one row past
 // maximum. It answers zero without a root key, as the hashing inspects nothing.
 func CountStoredPreferenceLinks(ctx context.Context, q storekit.RowQuerier, maximum int64) (int64, error) {
-	if preferenceLinkKey() == nil {
+	if preferenceLinkKey(ctx) == nil {
 		return 0, nil
 	}
 	var count int64

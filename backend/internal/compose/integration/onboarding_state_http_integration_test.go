@@ -41,6 +41,7 @@ func onboardingHeaders(key string) map[string]string {
 }
 
 func TestOnboardingStateResumesAndRejectsStaleTabs(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -110,6 +111,7 @@ func TestOnboardingStateResumesAndRejectsStaleTabs(t *testing.T) {
 // dropped from the contract fails here, and a step added to the contract is
 // added to this walk when it is added to the flow.
 func TestOnboardingStateAcceptsEveryStepTheContractNames(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -156,6 +158,7 @@ func TestOnboardingStateAcceptsEveryStepTheContractNames(t *testing.T) {
 // The state is replaced whole, so source_mode is always sent: null before a
 // choice is made, and never left out, which would read the same.
 func TestOnboardingStateRefusesABodyWithoutASourceMode(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 

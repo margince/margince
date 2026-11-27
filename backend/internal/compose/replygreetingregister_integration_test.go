@@ -32,6 +32,7 @@ func (o *owedEnv) contactWith(t *testing.T, first, address, register string) {
 }
 
 func TestTheStoredRegisterOfTheDeliveredContactDecidesTheReplyGreeting(t *testing.T) {
+	t.Parallel()
 	const buyer = "buyer@alpha.test"
 	cc := func(from string) owedMail {
 		return owedMail{from: from, cc: buyer, subject: "Pricing", messageID: pricingRoot, body: alphaAsks, at: pricingStart, authenticated: true}

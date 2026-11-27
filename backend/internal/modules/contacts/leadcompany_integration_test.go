@@ -152,6 +152,7 @@ func (e *privacyEnv) eventTypesOf(ctx context.Context, t *testing.T, correlation
 }
 
 func TestLinkingALeadWritesOnlyTheCompany(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	ctx := e.linker(e.owner, principal.RowScopeOwn)
 	company := e.linkCompany(ctx, t, "Acme Rocket GmbH")
@@ -201,6 +202,7 @@ func TestLinkingALeadWritesOnlyTheCompany(t *testing.T) {
 }
 
 func TestLinkingALeadLeavesTheContactItsEmailNamesAlone(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	ctx := e.linker(e.owner, principal.RowScopeOwn)
 	company := e.linkCompany(ctx, t, "Boreal Freight")
@@ -239,6 +241,7 @@ func TestLinkingALeadLeavesTheContactItsEmailNamesAlone(t *testing.T) {
 }
 
 func TestALinkNeedsOnlyLeadUpdateAndCompanyRead(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	company := e.linkCompany(e.linker(e.owner, principal.RowScopeOwn), t, "Echo Freight")
 	ctx := e.linkerWith(e.owner, principal.RowScopeOwn, map[string]principal.ObjectGrant{
@@ -257,6 +260,7 @@ func TestALinkNeedsOnlyLeadUpdateAndCompanyRead(t *testing.T) {
 }
 
 func TestACompanyOutsideTheReadersScopeIsNeitherOfferedNorLinked(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	ownerCtx := e.linker(e.owner, principal.RowScopeOwn)
 	hidden := e.linkCompany(ownerCtx, t, "Private Holdings")
@@ -282,6 +286,7 @@ func TestACompanyOutsideTheReadersScopeIsNeitherOfferedNorLinked(t *testing.T) {
 }
 
 func TestChangingTheCompanyNameUnlinksTheLead(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	ctx := e.linker(e.owner, principal.RowScopeOwn)
 	company := e.linkCompany(ctx, t, "Cobalt Labs")
@@ -307,6 +312,7 @@ func TestChangingTheCompanyNameUnlinksTheLead(t *testing.T) {
 }
 
 func TestPromotingALinkedLeadCarriesTheEmployment(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	ctx := e.linker(e.owner, principal.RowScopeOwn)
 	company := e.linkCompany(ctx, t, "Delta Mills")
@@ -337,6 +343,7 @@ func refusedAsNotTheMatch(err error) bool {
 }
 
 func TestALinkRefusesACompanyThatIsNotTheLeadsCurrentMatch(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	ctx := e.linker(e.owner, principal.RowScopeOwn)
 
@@ -383,6 +390,7 @@ func (e *privacyEnv) leadTrail(ctx context.Context, t *testing.T, lead ids.LeadI
 }
 
 func TestRepeatingALinkWritesNothing(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	ctx := e.linker(e.owner, principal.RowScopeOwn)
 	company := e.linkCompany(ctx, t, "Kilo Systems")
@@ -403,6 +411,7 @@ func TestRepeatingALinkWritesNothing(t *testing.T) {
 }
 
 func TestMergingTheLinkedCompanyAwayMovesTheLead(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	ctx := e.linker(e.owner, principal.RowScopeAll)
 	retired := e.linkCompany(ctx, t, "Lima Foods")
@@ -433,6 +442,7 @@ func TestMergingTheLinkedCompanyAwayMovesTheLead(t *testing.T) {
 }
 
 func TestTheLeadListWithholdsALinkedCompanyTheReaderCannotOpen(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	ownerCtx := e.linker(e.owner, principal.RowScopeOwn)
 	company := e.linkCompany(ownerCtx, t, "Quiet Holdings")
@@ -476,6 +486,7 @@ func listedCompanyID(ctx context.Context, t *testing.T, store *Store, lead ids.L
 }
 
 func TestPromotingALeadWhoseCompanyMergedAwayEmploysAtTheSurvivor(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	ctx := e.linker(e.owner, principal.RowScopeAll)
 	retired := e.linkCompany(ctx, t, "Mike Metals")
@@ -516,6 +527,7 @@ func (e *privacyEnv) mergeAudit(ctx context.Context, t *testing.T, survivor ids.
 }
 
 func TestALeadMergeCarriesTheLosersCompanyLinkFillOnly(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	ctx := e.linker(e.owner, principal.RowScopeOwn)
 	november := e.linkCompany(ctx, t, "November Tools")

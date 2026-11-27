@@ -84,6 +84,7 @@ func snippetCleared(t *testing.T, e *integration.Env, evidence ids.UUID) bool {
 }
 
 func TestErasureClearsTheStageEvidenceQuotingAnErasedMessage(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Mara Kessler", nil)
 	erased := seedTranscript(t, e, "1: Tom: Where are we on terms?\n2: "+quotedAcceptance)
@@ -114,6 +115,7 @@ func TestErasureClearsTheStageEvidenceQuotingAnErasedMessage(t *testing.T) {
 }
 
 func TestAnOwnerPurgeClearsTheStageEvidenceQuotingThePurgedMessage(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	purged := seedTranscript(t, e, "1: Tom: Where are we on terms?\n2: "+quotedAcceptance)
 	evidence := evidenceQuoting(t, e, purged, quotedAcceptance)
@@ -131,6 +133,7 @@ func TestAnOwnerPurgeClearsTheStageEvidenceQuotingThePurgedMessage(t *testing.T)
 // A model reading runs outside any transaction, so an erasure can commit while
 // the call is out. The claim written after it must not bring the words back.
 func TestAQuotationWrittenAfterTheErasureIsNotStored(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Mara Kessler", nil)
 	erased := seedTranscript(t, e, "1: Tom: Where are we on terms?\n2: "+quotedAcceptance)
@@ -150,6 +153,7 @@ func TestAQuotationWrittenAfterTheErasureIsNotStored(t *testing.T) {
 // What the ledger read out of the subject's messages is a conclusion about
 // their words, and the access export hands it back.
 func TestTheAccessExportCarriesTheStageEvidenceReadFromTheSubjectsMessages(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Mara Kessler", nil)
 	activity := seedTranscript(t, e, "1: Tom: Where are we on terms?\n2: "+quotedAcceptance)

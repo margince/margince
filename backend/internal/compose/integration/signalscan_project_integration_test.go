@@ -65,6 +65,7 @@ func projectSignals(t *testing.T, e *Env, company ids.UUID, project ids.ProjectI
 }
 
 func TestAQuietProjectIsRaisedOncePerQuietEpisode(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 	now := time.Now().UTC()
@@ -111,6 +112,7 @@ func TestAQuietProjectIsRaisedOncePerQuietEpisode(t *testing.T) {
 // signal.read without project.read is not served it — the subject arm takes
 // the object grant, not only the row predicate a project admits every seat to.
 func TestAProjectSignalIsWithheldFromASeatWithoutTheProjectGrant(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 	now := time.Now().UTC()

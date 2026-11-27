@@ -69,7 +69,7 @@ func mountProbe(t *testing.T, p *inboundProbe) (*http.ServeMux, []InboundRoute) 
 	ws := ids.From[ids.WorkspaceKind](ids.MustParse("00000000-0000-0000-0000-0000000000a1"))
 	routes := MountInboundEndpoints(mux, []extension.Extension{p.unit()},
 		func(context.Context) (ids.WorkspaceID, error) { return ws, nil },
-		extensionRuntimeBinding{}, quietLog())
+		extensionRuntimeBinding{composed: composeUnit(p.unit())}, quietLog())
 	return mux, routes
 }
 
@@ -367,14 +367,9 @@ func TestInboundCallerIsABareConnector(t *testing.T) {
 // one would be landed on nobody's behalf.
 func TestInboundCannotIngest(t *testing.T) {
 	p := &inboundProbe{outcome: extension.InboundAccepted, tryIngest: true}
-	unit := p.unit()
-	// Ingest resolves the caller's declared sources from the composed set, so
-	// the unit has to BE composed or the call stops at the source check and the
-	// test would pass on a refusal that says nothing about the edge's authority.
-	previous := ComposedExtensions()
-	setComposedExtensions([]extension.Extension{unit})
-	t.Cleanup(func() { setComposedExtensions(previous) })
-
+	// Ingest resolves the caller's declared sources from the composition, and
+	// mountProbe composes the unit. So the call gets past the source check, and
+	// the refusal is about the edge's authority.
 	mux, _ := mountProbe(t, p)
 	serve(mux, signedRequest("/webhooks/ext/u/capture", time.Now(), "{}"))
 	if !errors.Is(p.ingestErr, extension.ErrAttendedIngest) {

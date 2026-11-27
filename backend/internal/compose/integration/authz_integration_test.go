@@ -24,6 +24,7 @@ import (
 )
 
 func TestObjectLevelRBACDeniesUngrantedActions(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	target := e.SeedContact(t, "Target", &e.Rep1)
 
@@ -57,6 +58,7 @@ func TestObjectLevelRBACDeniesUngrantedActions(t *testing.T) {
 // belonging to somebody else — and that one answers 404, never a 403 that
 // would disclose its existence.
 func TestRowScopeTeamReadsEveryContactButWritesOnlyItsOwnTeams(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	mine := e.SeedContact(t, "Mine", &e.Rep1)
 	teammates := e.SeedContact(t, "Teammates", &e.Rep2)
@@ -120,6 +122,7 @@ func TestRowScopeTeamReadsEveryContactButWritesOnlyItsOwnTeams(t *testing.T) {
 }
 
 func TestMutationRecordsTheGoverningRuleInAuditLog(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
 	p, err := e.Contacts.CreateContact(rep, contacts.CreateContactInput{FullName: "Audited", Source: "manual"})
@@ -142,6 +145,7 @@ func TestMutationRecordsTheGoverningRuleInAuditLog(t *testing.T) {
 }
 
 func TestZeroPermissionsFailClosed(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	nobody := e.As(ids.NewV7(), nil, principal.Permissions{})
 	if _, _, err := e.Contacts.ListContacts(nobody, contacts.ListContactsInput{}); !errors.Is(err, apperrors.ErrPermissionDenied) {

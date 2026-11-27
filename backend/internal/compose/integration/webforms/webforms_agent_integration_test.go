@@ -20,6 +20,7 @@ import (
 // on either door. The secret and the form's websites stay its user's to set.
 // The user then mints a secret in the app and the website signs with it.
 func TestAnAgentMakesAServerFormWithoutEverSeeingItsSecret(t *testing.T) {
+	t.Parallel()
 	d := apptest.SetupTwoDoors(t, "agent-web-form", []compose.Option{compose.WithKeyvault(keyvault.NewMemory())}, "read", "write")
 	raw := d.MCP.CallOK(t, "change_settings", map[string]any{
 		"action":       "create_web_form",

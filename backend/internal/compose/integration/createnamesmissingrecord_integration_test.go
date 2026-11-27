@@ -37,6 +37,7 @@ func namesFieldWithCode(problem problemBody, field, code string) bool {
 }
 
 func TestAWriteNamingAMissingRecordIsA422NamingTheField(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Missing Refs", "admin@missingrefs.test", "Admin")
 
@@ -163,6 +164,7 @@ func TestAWriteNamingAMissingRecordIsA422NamingTheField(t *testing.T) {
 // A record that does not exist and one the caller may not read answer alike.
 // Otherwise the status would enumerate rows.
 func TestAMissingRecordAndAHiddenOneAnswerAlike(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	hidden := e.SeedCompany(t, "Their Company", &e.Rep3)
@@ -207,6 +209,7 @@ func TestAMissingRecordAndAHiddenOneAnswerAlike(t *testing.T) {
 // A deal whose ids a system derived (a stored suggestion, a lead) must not be
 // refused naming a field the caller never sent.
 func TestADerivedIDThatIsGoneIsNotNamedAsTheCallersField(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	gone := ids.From[ids.CompanyKind](ids.NewV7())

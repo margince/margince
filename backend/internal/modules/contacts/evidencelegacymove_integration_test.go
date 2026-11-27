@@ -91,6 +91,7 @@ func seedEvidenceSubjects(ctx context.Context, t *testing.T, e *dedupeEnv) (ids.
 }
 
 func TestACorrectionMovesTheCompanysLegacyEvidenceFirst(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	company, contact := seedEvidenceSubjects(ctx, t, e)
@@ -128,6 +129,7 @@ func TestACorrectionMovesTheCompanysLegacyEvidenceFirst(t *testing.T) {
 }
 
 func TestTheDataTaskMovesEveryLegacyRowAndAReplayFindsNone(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	company, contact := seedEvidenceSubjects(ctx, t, e)
@@ -184,6 +186,7 @@ func TestTheDataTaskMovesEveryLegacyRowAndAReplayFindsNone(t *testing.T) {
 }
 
 func TestADeletedCompanyTakesItsEvidence(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	company, _ := seedEvidenceSubjects(ctx, t, e)

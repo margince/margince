@@ -58,6 +58,7 @@ var everyClassCountry struct {
 // Where the contact's rules refuse a consent mail they did not ask for, the
 // preview offers no consent request, because the mint would refuse it.
 func TestNoConsentRequestIsOfferedThatTheMintWouldRefuse(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	everyClassCountry.once.Do(func() {
 		everyClassCountry.code = testMessagingRules(t, messagingrules.Rules{
@@ -100,6 +101,7 @@ func seedDoubleOptInPurpose(t *testing.T, e *resolveEnv, key, class string) ids.
 // refused. It is never the warning a sender may confirm, and a confirmation
 // does not let it through.
 func TestAdvertisingWithoutConsentUnderThePackIsRefusedNotWarned(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	placeUnderConsentOnly(t, e)
 	e.ctx = withActivityCreate(e.ctx)
@@ -149,6 +151,7 @@ func TestAdvertisingWithoutConsentUnderThePackIsRefusedNotWarned(t *testing.T) {
 // names no request, and its audit row names the user who asked. A request for
 // the newsletter or for sales calls is still refused.
 func TestANoBasisRecipientCanBeAskedForConsentToCorrespondence(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	placeUnderConsentOnly(t, e)
 	e.capturedMail(t, "thread-matter", "cc", true)
@@ -207,6 +210,7 @@ func TestANoBasisRecipientCanBeAskedForConsentToCorrespondence(t *testing.T) {
 // With no purpose covering correspondence, the preview names no purpose and
 // the composer offers no request. A newsletter does not stand in for one.
 func TestNoConsentPurposeIsNamedWhenNoneCoversTheUse(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	placeUnderConsentOnly(t, e)
 	e.capturedMail(t, "thread-matter", "cc", true)
@@ -230,6 +234,7 @@ func TestNoConsentPurposeIsNamedWhenNoneCoversTheUse(t *testing.T) {
 // consent request for the built-in correspondence purpose. Confirming it
 // grants that purpose, and the next preview no longer warns.
 func TestTheSeededCatalogLetsANoBasisContactBeAskedForConsent(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	placeUnderConsentOnly(t, e)
 	e.capturedMail(t, "thread-matter", "cc", true)
@@ -275,6 +280,7 @@ func TestTheSeededCatalogLetsANoBasisContactBeAskedForConsent(t *testing.T) {
 // A marketing purpose not confirmed by double opt-in is still never asked
 // about by mail.
 func TestAMarketingPurposeWithoutDoubleOptInIsNotAskedByMail(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	e.seedPurpose(t, "rp_plain_news", "marketing")
 	var news ids.PurposeID

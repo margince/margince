@@ -36,6 +36,7 @@ import (
 // back as RECORDS, with the fields a caller can act on, and the hop that
 // admitted each one is still attached to it.
 func TestQueryWorkspaceAnswersTheStuttgartQuestionAsRecords(t *testing.T) {
+	t.Parallel()
 	q := setupQuery(t)
 	f := q.seedFixture(t)
 	registry := compose.NewRegistry(q.Pool, compose.SendPath{})
@@ -94,6 +95,7 @@ func sealedNames(sealed sealedResult, id ids.UUID) bool {
 // the seam would answer with an envelope naming no evidence and claiming no
 // freshness, which is exactly what this catches.
 func TestQueryWorkspaceSourcesEveryRowItAnswersWith(t *testing.T) {
+	t.Parallel()
 	q := setupQuery(t)
 	q.seedFixture(t)
 	registry := compose.NewRegistry(q.Pool, compose.SendPath{})
@@ -139,6 +141,7 @@ func TestQueryWorkspaceSourcesEveryRowItAnswersWith(t *testing.T) {
 // (platform/auth tableclass.go), so capture privacy is the one narrowing left
 // and two principals asking about anything else get the same answer by design.
 func TestQueryWorkspaceAnswersTwoPrincipalsFromOneCorpusWithoutLeaking(t *testing.T) {
+	t.Parallel()
 	q := setupQuery(t)
 	// Rep1's unpromoted capture: theirs alone until a human promotes it, and
 	// capture privacy does not yield to row_scope=all — so the two principals
@@ -199,6 +202,7 @@ func TestQueryWorkspaceAnswersTwoPrincipalsFromOneCorpusWithoutLeaking(t *testin
 // company cannot use it to select deals either — otherwise the hop becomes
 // a side channel that answers questions about records the caller was denied.
 func TestAHopThroughARecordTheCallerCannotSeeAdmitsNothing(t *testing.T) {
+	t.Parallel()
 	q := setupQuery(t)
 	f := q.seedFixture(t)
 	registry := compose.NewRegistry(q.Pool, compose.SendPath{})
@@ -230,6 +234,7 @@ func TestAHopThroughARecordTheCallerCannotSeeAdmitsNothing(t *testing.T) {
 // a refinement that quietly drops evidence leaves the caller holding rows they
 // can no longer check.
 func TestARefinedQueryPreservesTheProvenanceOfEveryRowItKeeps(t *testing.T) {
+	t.Parallel()
 	q := setupQuery(t)
 	q.seedFixture(t)
 	registry := compose.NewRegistry(q.Pool, compose.SendPath{})
@@ -289,6 +294,7 @@ func TestARefinedQueryPreservesTheProvenanceOfEveryRowItKeeps(t *testing.T) {
 // The vocabulary that decides two of these three is derived from the live
 // catalog, so only a real schema produces the real refusal.
 func TestARefusedPlanIsRefusedThroughTheToolAndStillSaysWhereAndWhy(t *testing.T) {
+	t.Parallel()
 	q := setupQuery(t)
 	q.seedFixture(t)
 	registry := compose.NewRegistry(q.Pool, compose.SendPath{})
@@ -393,6 +399,7 @@ func evidenceByRow(answer agents.QueryWorkspaceResult) map[ids.UUID][]agents.Que
 // quieter, not different, because the ROW is the disclosure and the rep chose
 // the predicate that selected it.
 func TestAPredicateNamingARecordTheCallerCannotSeeAdmitsNothing(t *testing.T) {
+	t.Parallel()
 	q := setupQuery(t)
 	f := q.seedFixture(t)
 	registry := compose.NewRegistry(q.Pool, compose.SendPath{})
@@ -421,6 +428,7 @@ func TestAPredicateNamingARecordTheCallerCannotSeeAdmitsNothing(t *testing.T) {
 // that refused both would pass the case above perfectly while making the field
 // useless, which is the availability regression a security fix smuggles in.
 func TestAPredicateNamingARecordTheCallerCanSeeStillAnswers(t *testing.T) {
+	t.Parallel()
 	q := setupQuery(t)
 	f := q.seedFixture(t)
 	registry := compose.NewRegistry(q.Pool, compose.SendPath{})

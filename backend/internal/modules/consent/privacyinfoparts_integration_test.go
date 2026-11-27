@@ -35,6 +35,7 @@ func noticeFor(t *testing.T, e *channelConsentEnv, ref ConfirmRef) PrivacyInform
 }
 
 func TestThePrivacyPageNamesTheControllerTheInstallationStated(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	stated := ControllerParticulars{
 		LegalName: "Beispiel GmbH", PostalAddress: "Hauptstr. 1\n10115 Berlin",
@@ -49,6 +50,7 @@ func TestThePrivacyPageNamesTheControllerTheInstallationStated(t *testing.T) {
 }
 
 func TestThePageNamesOnlyTheUsesOnRecordWithTheirRecordedBasis(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	reader := &fixedHeld{held: NoticeHeld{
 		Categories: []string{"name", "postal_address"},
@@ -78,6 +80,7 @@ func TestThePageNamesOnlyTheUsesOnRecordWithTheirRecordedBasis(t *testing.T) {
 // An unwired reader names no categories and no retention, and still names
 // the business correspondence purpose every page owes.
 func TestAnUnwiredReaderDisclosesNothingItCannotBack(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 
 	info := noticeFor(t, e, ConfirmRef{ContactID: e.contact})
@@ -94,6 +97,7 @@ func TestAnUnwiredReaderDisclosesNothingItCannotBack(t *testing.T) {
 // A stored row that still holds the retired agreement is shown as the consent
 // it records. The page and the API output both show it, never "no basis".
 func TestAStoredRetiredAgreementIsShownAsConsent(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	e.store = e.store.WithNoticeHeldReader(&fixedHeld{held: NoticeHeld{
 		Uses: []NoticeUse{{PurposeKey: "business_correspondence", Basis: "vn_subject_agreement"}},

@@ -6,6 +6,7 @@
 package integration
 
 import (
+	"context"
 	"log/slog"
 	"testing"
 
@@ -17,6 +18,7 @@ import (
 // something still reads: one with an effect, a failed one, a parked one, a
 // young one and a lead rule's.
 func TestTheNightlyPassRemovesOldRunsThatChangedNothing(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	run := func(handler, status, applied string, days int) ids.UUID {
 		id := ids.NewV7()
@@ -39,7 +41,7 @@ func TestTheNightlyPassRemovesOldRunsThatChangedNothing(t *testing.T) {
 		"a lead rule's blocked run":       run("route_lead", "blocked", "null", 31),
 	}
 
-	if err := compose.NewRetentionServiceFor(e.DB(), nil, slog.Default()).EvaluateInstallation(RetentionPassCtx(e.WS)); err != nil {
+	if err := compose.NewRetentionServiceFor(e.DB(), nil, slog.Default()).EvaluateInstallation(RetentionPassCtx(context.Background(), e.WS)); err != nil {
 		t.Fatal(err)
 	}
 	stored := func(id ids.UUID) bool {

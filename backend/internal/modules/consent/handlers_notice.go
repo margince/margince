@@ -11,6 +11,7 @@ package consent
 // anything. These three routes are that middle.
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"time"
@@ -187,7 +188,7 @@ func (h Handlers) writeParticulars(w http.ResponseWriter, r *http.Request, p Con
 		languages = []string{}
 	}
 	out := wireParticulars(p)
-	out.Locks = h.settingLocks(ControllerIdentity)
+	out.Locks = h.settingLocks(r.Context(), ControllerIdentity)
 	wireMeans := make([]crmcontracts.ContactMeans, 0, len(means))
 	for _, m := range means {
 		wireMeans = append(wireMeans, crmcontracts.ContactMeans(m))
@@ -317,17 +318,17 @@ func wireTranslations(translations []ParticularsTranslation) *[]crmcontracts.Con
 }
 
 // WithLocks binds what reports the settings a boot source sets.
-func (h Handlers) WithLocks(locks func(surface []config.Any) *[]crmcontracts.SettingLock) Handlers {
+func (h Handlers) WithLocks(locks func(ctx context.Context, surface []config.Any) *[]crmcontracts.SettingLock) Handlers {
 	h.locks = locks
 	return h
 }
 
 // settingLocks are the locks among surface, the settings one response carries.
-func (h Handlers) settingLocks(surface ...config.Any) *[]crmcontracts.SettingLock {
+func (h Handlers) settingLocks(ctx context.Context, surface ...config.Any) *[]crmcontracts.SettingLock {
 	if h.locks == nil {
 		return nil
 	}
-	return h.locks(surface)
+	return h.locks(ctx, surface)
 }
 
 func (h Handlers) writeNoticeCasePage(w http.ResponseWriter, r *http.Request, cases []NoticeCase, page storekit.Page) {

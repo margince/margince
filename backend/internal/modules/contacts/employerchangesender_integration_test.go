@@ -46,6 +46,7 @@ func (e *dedupeEnv) sentMail(t *testing.T, m movedContact, direction string, ver
 }
 
 func TestOnlyTheContactsOwnVouchedForMailAsks(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		name      string
 		direction string
@@ -104,6 +105,7 @@ func (e *dedupeEnv) seedBob(t *testing.T) {
 // A signature from a personal address its domain did not vouch for is
 // somebody writing in her name.
 func TestAForgedSignatureAsksNobody(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	asked := e.askingStore()
 	ctx := e.as()
@@ -118,6 +120,7 @@ func TestAForgedSignatureAsksNobody(t *testing.T) {
 // A company only another rep may open is never named to Ann's owner. The
 // capture runs as the system, which sees it, so only the owner's sight stops it.
 func TestACompanyTheOwnerCannotOpenAsksNothing(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	asked := e.askingStore()
 	m := e.seedMovedContact(e.as(), t)
@@ -129,6 +132,7 @@ func TestACompanyTheOwnerCannotOpenAsksNothing(t *testing.T) {
 // Mail only its participants may read, and the owner is not one, is not the
 // owner's to be shown.
 func TestMailTheOwnerMayNotReadAsksNothing(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	asked := e.askingStore()
 	ctx := e.as()
@@ -144,6 +148,7 @@ func TestMailTheOwnerMayNotReadAsksNothing(t *testing.T) {
 // One settled domain raises at most domainEmployerChangeCap questions, in one
 // call to the inbox. The rest are asked when they next write.
 func TestASettledDomainAsksABoundedNumberAtOnce(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	asked := e.askingStore()
 	ctx := e.as()

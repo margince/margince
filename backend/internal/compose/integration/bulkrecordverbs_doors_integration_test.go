@@ -45,6 +45,7 @@ func taskContacts(items []bulkItemDTO) AnyMap {
 }
 
 func TestBothDoorsTagASelectionAndTheUndoTakesOffOnlyWhatTheyAdded(t *testing.T) {
+	t.Parallel()
 	e, doors := bulkUndoApp(t, "bulk-tag")
 	tag := seedDoorTag(t, e)
 	for _, door := range doors {
@@ -73,6 +74,7 @@ func TestBothDoorsTagASelectionAndTheUndoTakesOffOnlyWhatTheyAdded(t *testing.T)
 }
 
 func TestBothDoorsNeedATokenToTagOrFileTasksUnderMoreThanTen(t *testing.T) {
+	t.Parallel()
 	e, _, doors := bulkDoorsApp(t, "bulk-tag-token", agentvolume.Limits{})
 	tag := seedDoorTag(t, e)
 	for _, door := range doors {
@@ -97,6 +99,7 @@ func TestBothDoorsNeedATokenToTagOrFileTasksUnderMoreThanTen(t *testing.T) {
 }
 
 func TestBothDoorsFileATaskUnderEachRecordAndTheUndoArchivesThem(t *testing.T) {
+	t.Parallel()
 	e, doors := bulkUndoApp(t, "bulk-task")
 	for _, door := range doors {
 		items := seedBulkContacts(t, e, 3)
@@ -123,6 +126,7 @@ func TestBothDoorsFileATaskUnderEachRecordAndTheUndoArchivesThem(t *testing.T) {
 }
 
 func TestBothDoorsReassignLeadsAndRefuseToArchiveThem(t *testing.T) {
+	t.Parallel()
 	e, _, doors := bulkDoorsApp(t, "bulk-leads", agentvolume.Limits{})
 	colleague := seedColleague(t, e)
 	for _, door := range doors {
@@ -147,6 +151,7 @@ func TestBothDoorsReassignLeadsAndRefuseToArchiveThem(t *testing.T) {
 }
 
 func TestAShortlistExportsItsMembersAndNothingElse(t *testing.T) {
+	t.Parallel()
 	e, _ := listsApp(t, true)
 	var list listDTO
 	if status := e.Call(t, "POST", "/v1/lists", AnyMap{

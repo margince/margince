@@ -70,6 +70,7 @@ func saveAnchor(t *testing.T, e *apptest.AppEnv, name string) string {
 }
 
 func TestSavingTheCompanyProfileRenamesTheInstallation(t *testing.T) {
+	t.Parallel()
 	e := oneNameApp(t)
 	if got := meWorkspaceName(t, e); got != configuredName {
 		t.Fatalf("before onboarding /me workspace_name = %q, want the configured %q", got, configuredName)
@@ -113,6 +114,7 @@ func TestSavingTheCompanyProfileRenamesTheInstallation(t *testing.T) {
 }
 
 func TestAHumanRenamingTheAnchorRecordRenamesTheInstallation(t *testing.T) {
+	t.Parallel()
 	e := oneNameApp(t)
 	anchor := saveAnchor(t, e, "Profile Name AG")
 
@@ -174,6 +176,7 @@ func anchorRenameDoors(d *twoDoors, anchor string) map[string]renameDoor {
 // No agent rename of the anchor reaches an approval, on any door that carries
 // one; resending its current name is no rename.
 func TestAnAgentRenamingTheAnchorIsRefusedBeforeAnyoneIsAsked(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "anchor-renamer", "read", "write")
 	anchor := saveAnchor(t, d.e, "Onboarded Name AG")
 	// A name a human last wrote is what an agent's rename stages over.
@@ -217,6 +220,7 @@ func TestAnAgentRenamingTheAnchorIsRefusedBeforeAnyoneIsAsked(t *testing.T) {
 // a refusal moves neither the anchor nor the installation. A customer company's
 // typed name carries the same label bound.
 func TestAnAnchorNameTheInstallationCannotCarryIsRefused(t *testing.T) {
+	t.Parallel()
 	e := oneNameApp(t)
 	anchor := saveAnchor(t, e, "Profile Name AG")
 	tooLong := strings.Repeat("a", values.TextLabelCharacters+1)
@@ -263,6 +267,7 @@ func TestAnAnchorNameTheInstallationCannotCarryIsRefused(t *testing.T) {
 // so its company can still edit the rest of the profile. Only a hand-written
 // row can hold one now, because every writer refuses a new one.
 func TestAnExistingLongAnchorNameSavesUnchanged(t *testing.T) {
+	t.Parallel()
 	e := oneNameApp(t)
 	anchor := saveAnchor(t, e, "Profile Name AG")
 	stored := strings.Repeat("a", values.TextLabelCharacters+30)
@@ -285,6 +290,7 @@ func TestAnExistingLongAnchorNameSavesUnchanged(t *testing.T) {
 // Renaming the anchor renames the installation. So a seat that may edit the
 // record but not the installation is refused, and resending the name is no rename.
 func TestOnlyAnAdministratorRenamesTheAnchor(t *testing.T) {
+	t.Parallel()
 	e := oneNameApp(t)
 	anchor := saveAnchor(t, e, "Profile Name AG")
 	if status := e.Call(t, http.MethodPatch, "/v1/companies/"+anchor,
@@ -339,6 +345,7 @@ func wantNameFault(t *testing.T, problem companyProblem, code string) {
 }
 
 func TestTheDeprecatedSettingsNameCannotDriftFromTheProfile(t *testing.T) {
+	t.Parallel()
 	e := oneNameApp(t)
 	saveAnchor(t, e, "Profile Name AG")
 

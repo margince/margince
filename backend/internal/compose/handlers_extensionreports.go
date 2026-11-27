@@ -22,7 +22,7 @@ import (
 // their group floor.
 func (h analyticsQueryHandlers) ListExtensionReports(w http.ResponseWriter, r *http.Request) {
 	engine := newReportEngine(h.db.Pool())
-	data := extensionReportDirectory(r.Context(), registeredReports(),
+	data := extensionReportDirectory(r.Context(), h.extensions.reports(),
 		func(ctx context.Context, report registeredReport) (extensionReportAnswer, bool, error) {
 			return engine.runRegistered(ctx, report, h.floor)
 		})

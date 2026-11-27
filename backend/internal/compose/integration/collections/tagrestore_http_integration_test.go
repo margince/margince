@@ -13,6 +13,7 @@ import (
 )
 
 func TestATagRemovalAnswersTheHandleThatPutsItBack(t *testing.T) {
+	t.Parallel()
 	e := tagEnv(t)
 	tag := createTag(t, e, "Undo Over The Wire")
 	contact := createContactWithTag(t, e, "Tagged Then Not", tag)

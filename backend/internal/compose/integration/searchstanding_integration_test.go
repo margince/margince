@@ -60,6 +60,7 @@ func standingsByID(ctx context.Context, t *testing.T, e *SearchEnv) map[ids.UUID
 }
 
 func TestARecordHitSaysWhereItStands(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	r := seedKielRecords(t, e)
 	hits := standingsByID(searchSeat(e, nil, principal.RowScopeAll, standingGrants()), t, e)
@@ -96,6 +97,7 @@ func TestARecordHitSaysWhereItStands(t *testing.T) {
 // A masked amount is withheld and named, so the palette never draws a priced
 // deal as unpriced.
 func TestADealStandingHonoursTheAmountMask(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	r := seedKielRecords(t, e)
 	seat := searchSeat(e, []ids.UUID{e.Team1}, principal.RowScopeTeam, searchReadGrants())

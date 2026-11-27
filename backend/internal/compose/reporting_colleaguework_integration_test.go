@@ -43,6 +43,7 @@ func (m meetingWeeks) bookFor(rep context.Context, t *testing.T, host ids.UUID, 
 }
 
 func TestColleagueWorkReadsAgainstItsTargetInMyOutcomes(t *testing.T) {
+	t.Parallel()
 	m := setupMeetingWeeks(t)
 	actor, _ := principal.Actor(m.human)
 	actor.Permissions.Objects = maps.Clone(actor.Permissions.Objects)

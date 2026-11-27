@@ -85,6 +85,7 @@ func startImportReconnectingMidPage(t *testing.T, e *integration.SearchEnv, acco
 // to the same account and the same import it always did — fencing it off would
 // report the import the human was told to repair as "cancelled".
 func TestAReauthOfTheSameAccountLetsAnInFlightPageCommit(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	status, scanned, cursor := startImportReconnectingMidPage(t, e, "same@example.com", "same@example.com")
 	if status != "running" {
@@ -129,6 +130,7 @@ func connectAndSync(t *testing.T, registry *capturemod.Registry, e *integration.
 }
 
 func TestReconnectingTheSameAccountKeepsItsWatermark(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	seedCaptureRole(t, e)
 	registry := newTestCaptureRegistry(e, newTestKeyvault(t, e))
@@ -147,6 +149,7 @@ func TestReconnectingTheSameAccountKeepsItsWatermark(t *testing.T) {
 }
 
 func TestReconnectingTheSameAccountKeepsItsSignatureAnswer(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	seedCaptureRole(t, e)
 	registry := newTestCaptureRegistry(e, newTestKeyvault(t, e))

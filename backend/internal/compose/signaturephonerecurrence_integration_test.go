@@ -51,6 +51,7 @@ func restorePhoneContact(t *testing.T, e *integration.Env, contact ids.UUID) {
 }
 
 func TestANarrowingDoesNotReviveAnUnsupportedSignaturePredecessor(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact, mail := replacedSignaturePhone(t, e)
 	narrowSignatureMail(t, e, mail)
@@ -60,6 +61,7 @@ func TestANarrowingDoesNotReviveAnUnsupportedSignaturePredecessor(t *testing.T) 
 }
 
 func TestAnUndoAfterThePredecessorWasReaddedKeepsTheReplacementEvidence(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact, _ := replacedSignaturePhone(t, e)
 	id := ids.From[ids.ContactKind](contact)
@@ -83,6 +85,7 @@ func TestAnUndoAfterThePredecessorWasReaddedKeepsTheReplacementEvidence(t *testi
 }
 
 func TestRestoringAContactDoesNotReviveUnsupportedSignatureNumbers(t *testing.T) {
+	t.Parallel()
 	for _, evidenceRemoved := range []string{"before_archive", "while_archived"} {
 		t.Run(evidenceRemoved, func(t *testing.T) {
 			e := integration.Setup(t)
@@ -109,6 +112,7 @@ func TestRestoringAContactDoesNotReviveUnsupportedSignatureNumbers(t *testing.T)
 }
 
 func TestTheNightlyPassRepairsEvidenceLostAfterTheDataTaskCompleted(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	runMachineAddressTask(ctx, t, e, signaturePhonesDataTask())
@@ -126,6 +130,7 @@ func TestTheNightlyPassRepairsEvidenceLostAfterTheDataTaskCompleted(t *testing.T
 }
 
 func TestABoldOutlookQuoteAddsNoNumberWithoutAMemberSignature(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := seedEnrichContact(t, e, "bold@recurrence.example", "Works.\n\nBob Contact\n"+bobOwnNumber+"\n\n"+
 		"*From:* Sam Seller <sam@seller.example>\n*Sent:* Monday\n\nSam Seller\n"+memberNumber)
@@ -136,6 +141,7 @@ func TestABoldOutlookQuoteAddsNoNumberWithoutAMemberSignature(t *testing.T) {
 }
 
 func TestRestoringAContactKeepsASupportedSignatureNumber(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := seedEnrichContact(t, e, "supported@recurrence.example", "Bob Contact\n"+germany)
 	applySignature(t, e, contact, onlyMailOf(t, e, contact), phoneField(germany))
@@ -149,6 +155,7 @@ func TestRestoringAContactKeepsASupportedSignatureNumber(t *testing.T) {
 }
 
 func TestSignaturePhoneSupportUsesTheCanonicalEvidenceKey(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := seedEnrichContact(t, e, "spelling@recurrence.example", "Bob Contact\n"+germany)
 	applySignature(t, e, contact, onlyMailOf(t, e, contact), phoneField(germany))
@@ -165,6 +172,7 @@ func TestSignaturePhoneSupportUsesTheCanonicalEvidenceKey(t *testing.T) {
 }
 
 func TestRepairClosesUnsupportedPhonePairsWithoutRefilingThem(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	var subjects []ids.UUID
@@ -201,6 +209,7 @@ func TestRepairClosesUnsupportedPhonePairsWithoutRefilingThem(t *testing.T) {
 }
 
 func TestTheUpdatedSignatureWindowTaskRepairsPreviouslyStoredBoldQuotes(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	previous := signatureWindowDataTask()

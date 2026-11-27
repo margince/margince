@@ -54,6 +54,7 @@ func readHorizon(ctx context.Context, t *testing.T, tx pgx.Tx, store *Store) int
 }
 
 func TestAReadWithNothingStoredAnswersTheCompiledHorizonWithoutMeasuring(t *testing.T) {
+	t.Parallel()
 	ctx, tx, store := storedHorizonTx(t)
 
 	if got := readHorizon(ctx, t, tx, store); got != waitingHorizonDays {
@@ -63,6 +64,7 @@ func TestAReadWithNothingStoredAnswersTheCompiledHorizonWithoutMeasuring(t *test
 }
 
 func TestThePassStoresTheMeasuredHorizonAndReadsAnswerIt(t *testing.T) {
+	t.Parallel()
 	ctx, tx, store := storedHorizonTx(t)
 	asOf := time.Now()
 
@@ -77,6 +79,7 @@ func TestThePassStoresTheMeasuredHorizonAndReadsAnswerIt(t *testing.T) {
 }
 
 func TestAStoredHorizonOlderThanADayAnswersTheCompiledHorizon(t *testing.T) {
+	t.Parallel()
 	ctx, tx, store := storedHorizonTx(t)
 	now := time.Now()
 	store = store.WithClock(func() time.Time { return now })
@@ -96,6 +99,7 @@ func TestAStoredHorizonOlderThanADayAnswersTheCompiledHorizon(t *testing.T) {
 }
 
 func TestAFailedMeasurementKeepsThePreviousStoredHorizon(t *testing.T) {
+	t.Parallel()
 	ctx, tx, store := storedHorizonTx(t)
 	now := time.Now()
 	store = store.WithClock(func() time.Time { return now })
@@ -127,6 +131,7 @@ func TestAFailedMeasurementKeepsThePreviousStoredHorizon(t *testing.T) {
 // pass. Under the generic plan a worker reuses, the answer read runs for the
 // sampled messages only.
 func TestTheHorizonMeasurementJudgesABoundedRepeatableSample(t *testing.T) {
+	t.Parallel()
 	ctx, tx, store := storedHorizonTx(t)
 	asOf := store.now()
 	whole, err := store.waitingHorizonSpreadTx(ctx, tx, asOf, waitingHorizonSample)
@@ -194,6 +199,7 @@ func answerReadLoops(ctx context.Context, t *testing.T, tx pgx.Tx, store *Store,
 // A sample with too few answers to speak is measured again over the whole
 // window, so a mailbox that answers rarely keeps its learned horizon.
 func TestASparseHorizonSampleIsMeasuredOverTheWholeWindow(t *testing.T) {
+	t.Parallel()
 	ctx, tx, store := storedHorizonTx(t)
 	asOf := store.now()
 	whole, err := store.waitingHorizonSpreadTx(ctx, tx, asOf, wholeWindow)

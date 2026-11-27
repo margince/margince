@@ -48,6 +48,7 @@ func seededMarketingPurposeID(t *testing.T, e *apptest.AppEnv) string {
 }
 
 func TestAPublicBookingMarketingTickMailsALinkAndGrantsNothing(t *testing.T) {
+	t.Parallel()
 	e := setupBookingApp(t)
 	e.BootstrapWorkspace(t)
 	apptest.EnableGoogleBookingPage(t, e)
@@ -100,6 +101,7 @@ func TestAPublicBookingMarketingTickMailsALinkAndGrantsNothing(t *testing.T) {
 // follows, and for the same reason: this door is anonymous, so a refusal after
 // the ensure would grow the contact table one rejected request at a time.
 func TestAPublicBookingRefusesAnInadmissibleMarketingTickBeforeAnyWrite(t *testing.T) {
+	t.Parallel()
 	e := setupBookingApp(t)
 	e.BootstrapWorkspace(t)
 	apptest.EnableGoogleBookingPage(t, e)
@@ -227,6 +229,7 @@ func bookingCounts(t *testing.T, e *apptest.AppEnv) counts {
 // operational grant lands and nothing else moves. Without this the suite could
 // not tell "the tick works" from "every booking now mails a link".
 func TestAPublicBookingWithoutAMarketingTickMailsNothing(t *testing.T) {
+	t.Parallel()
 	e := setupBookingApp(t)
 	e.BootstrapWorkspace(t)
 	apptest.EnableGoogleBookingPage(t, e)
@@ -324,6 +327,7 @@ func assertNoMarketingGrant(t *testing.T, e *apptest.AppEnv, contactID, purposeI
 // exist. The response is the neutral `pending_confirmation`, the same answer
 // every address gets.
 func TestAMarketingTickFromANonPrimaryAddressIsNotAsked(t *testing.T) {
+	t.Parallel()
 	e := setupBookingApp(t)
 	e.BootstrapWorkspace(t)
 	apptest.EnableGoogleBookingPage(t, e)
@@ -425,6 +429,7 @@ func TestAMarketingTickFromANonPrimaryAddressIsNotAsked(t *testing.T) {
 // granted, which is all the guard protects. A visitor who came to book a slot
 // does not pay for it. The response stays neutral, and the withdrawal stands.
 func TestAMarketingTickDoesNotReSolicitAWithdrawnSubject(t *testing.T) {
+	t.Parallel()
 	e := setupBookingApp(t)
 	e.BootstrapWorkspace(t)
 	apptest.EnableGoogleBookingPage(t, e)

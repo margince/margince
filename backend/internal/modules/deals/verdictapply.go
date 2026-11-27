@@ -272,7 +272,7 @@ func lockVerdictDeal(ctx context.Context, tx pgx.Tx, in VerdictInput) (storekit.
 	if DealStatus(status) != DealOpen || legalHold || owner == nil || *owner != in.Owner {
 		return lock, current, false, nil
 	}
-	on, err := config.StoredApplyTx(ctx, tx, config.Bound(), MaintenanceWritesEnabled)
+	on, err := config.StoredApplyTx(ctx, tx, config.Bound(ctx), MaintenanceWritesEnabled)
 	if err != nil || !on {
 		return lock, current, false, err
 	}

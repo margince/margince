@@ -22,6 +22,7 @@ import (
 // The guard re-reads the member and the credential inside the capture
 // transaction. A removed credential, or a member who is not there, refuses.
 func TestTheMemberGuardRefusesAWithdrawnCredentialAndAMissingMember(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	answer := func(consented bool, member ids.UUID) error {
 		guard := extingress.MemberGuard("unit", func(context.Context, pgx.Tx, string, ids.UUID) (bool, error) { return consented, nil })

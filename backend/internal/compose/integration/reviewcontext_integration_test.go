@@ -88,6 +88,7 @@ func liveReviewFor(t *testing.T, c *consentEnv) string {
 // the endpoint returned 200; it retries the send that was refused and requires
 // it to go.
 func TestAFirsthandStatementLetsTheRefusedMessageGo(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	who := aColdContact(t, c, "rang.up@cold.test")
 
@@ -123,6 +124,7 @@ func TestAFirsthandStatementLetsTheRefusedMessageGo(t *testing.T) {
 // others who had nothing to do with it. The subject is named in the body, and
 // a subject this review was not refused for is not found.
 func TestAStatementAboutSomebodyElseIsNotFound(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	who := aColdContact(t, c, "named@cold.test")
 	stranger := aColdContact(t, c, "stranger@cold.test")
@@ -164,6 +166,7 @@ func TestAStatementAboutSomebodyElseIsNotFound(t *testing.T) {
 // The refusal names what is really in the way, because the rep is about to go
 // looking for the next move.
 func TestAStatementCannotAnswerAStopTheSubjectRecorded(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	who := aColdContact(t, c, "asked.us.to.stop@cold.test")
 
@@ -221,6 +224,7 @@ func TestAStatementCannotAnswerAStopTheSubjectRecorded(t *testing.T) {
 // identically. That is this slice's own failure mode, arriving on the date axis
 // instead of the table axis, and it is what Codex found on the second round.
 func TestAnExchangeTooOldToCountIsRefusedNotAccepted(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	who := aColdContact(t, c, "long.ago@cold.test")
 
@@ -279,6 +283,7 @@ func sendColdAs(t *testing.T, c *consentEnv, who coldContact, claim string) (int
 // Mutation: drop the requestAnswersClaim guard in RecordContext and the form
 // refuses the old request with 422.
 func TestAnOldRequestEnteredThroughTheReviewFormAuthorizesItsFollowUp(t *testing.T) {
+	t.Parallel()
 	for _, claim := range []string{"requested_followup", "precontract_quote"} {
 		t.Run(claim, func(t *testing.T) {
 			c := setupConsent(t)
@@ -312,6 +317,7 @@ func TestAnOldRequestEnteredThroughTheReviewFormAuthorizesItsFollowUp(t *testing
 // and accepting a statement there reports success about a message that will be
 // refused anyway.
 func TestAStopRecordedAfterTheReviewOpenedIsStillSeen(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	who := aColdContact(t, c, "changed.their.mind@cold.test")
 
@@ -347,6 +353,7 @@ func TestAStopRecordedAfterTheReviewOpenedIsStillSeen(t *testing.T) {
 // review whose message was cancelled weeks ago and write evidence that then
 // authorizes some unrelated future send.
 func TestAReviewThatIsOverTakesNoStatement(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	who := aColdContact(t, c, "cancelled@cold.test")
 
@@ -397,6 +404,7 @@ func TestAReviewThatIsOverTakesNoStatement(t *testing.T) {
 // The check now asks whether a stop binds THIS message's category, through the
 // engine's own rule rather than a second copy of it.
 func TestAMarketingObjectionDoesNotBlockEvidenceForAnOrdinaryLetter(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	who := aColdContact(t, c, "no.newsletter@cold.test")
 

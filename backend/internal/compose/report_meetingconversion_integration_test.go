@@ -23,6 +23,7 @@ import (
 // A HELD meeting whose prospect was handed on and accepted converts. One that
 // was merely booked, or no-showed, is not in the report at all.
 func TestOnlyHeldMeetingsCountTowardTheConversion(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	lead := e.seedHandoffLead(t, "converted@customer.test")
 
@@ -55,6 +56,7 @@ func TestOnlyHeldMeetingsCountTowardTheConversion(t *testing.T) {
 // coincidental matches. A report that got this wrong would still produce a
 // number, and the number would look better than the truth.
 func TestACoincidentalDealAtTheSameCompanyConvertsNothing(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	company := e.seedHandoffCompany(t)
 	metNobodyHandedOn := e.seedHandoffLead(t, "met-only@customer.test")
@@ -86,6 +88,7 @@ func TestACoincidentalDealAtTheSameCompanyConvertsNothing(t *testing.T) {
 // meeting — the opportunity already existed when it happened. Without the
 // ordering the report would credit the meeting for it.
 func TestAnEarlierAcceptanceDoesNotConvertALaterMeeting(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	lead := e.seedHandoffLead(t, "accepted-first@customer.test")
 	e.acceptHandoff(t, lead, "2026-03-01T10:00:00Z")
@@ -103,6 +106,7 @@ func TestAnEarlierAcceptanceDoesNotConvertALaterMeeting(t *testing.T) {
 // A day meeting began with its date, so an acceptance that morning came after
 // it, though the meeting is stored at that date's noon.
 func TestAnAcceptanceOnADayMeetingsMorningConvertsIt(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	lead := e.seedHandoffLead(t, "same-day@customer.test")
 	met := e.seedID(t, `INSERT INTO activity (id, kind, direction, meeting_status, subject, occurred_at, occurred_precision, thread_key, source, captured_by)
@@ -124,6 +128,7 @@ func TestAnAcceptanceOnADayMeetingsMorningConvertsIt(t *testing.T) {
 // the meeting by its handoffs — and a rate whose numerator can exceed its
 // denominator is not a rate.
 func TestAProspectHandedOnTwiceCountsItsMeetingOnce(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	lead := e.seedHandoffLead(t, "twice@customer.test")
 	e.seedMeeting(t, "held", lead, "2026-05-01T10:00:00Z")
@@ -152,6 +157,7 @@ func TestAProspectHandedOnTwiceCountsItsMeetingOnce(t *testing.T) {
 // against a report refusing everybody, which would be a different bug wearing
 // this test as cover.
 func TestTheConversionTakesTheHandoffGrant(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	lead := e.seedHandoffLead(t, "gated@customer.test")
 	e.seedMeeting(t, "held", lead, "2026-06-01T10:00:00Z")

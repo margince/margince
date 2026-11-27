@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/corereach"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/extprivacy"
@@ -24,13 +25,18 @@ import (
 // declaration against its version.
 const declaredAction = "extension.privacy_declared"
 
-// Registry is the declared tables of the given units.
-func Registry(exts []extension.Extension) extprivacy.Registry {
+// Registry is the declared tables of the given units, and the tables their
+// merge and erasure reach beside the core modules' own (corereach).
+func Registry(exts []extension.Extension) (extprivacy.Registry, error) {
+	reached, err := corereach.Set(exts)
+	if err != nil {
+		return extprivacy.Registry{}, err
+	}
 	var tables []privacy.Table
 	for _, e := range exts {
 		tables = append(tables, e.Privacy...)
 	}
-	return extprivacy.Declared(tables)
+	return extprivacy.Declared(tables).WithReach(reached), nil
 }
 
 // Preflight checks one unit's declaration against its own namespace. Whether it

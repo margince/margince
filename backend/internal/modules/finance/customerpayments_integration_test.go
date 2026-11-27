@@ -49,6 +49,7 @@ func syncPayments(t *testing.T, a *sourceAdmin) {
 }
 
 func TestCustomerPaymentsNeverCountsAnUnsharedAccountAndRechecksEveryPage(t *testing.T) {
+	t.Parallel()
 	a := setupSourceAdmin(t)
 	reader, other := a.seedUser(t), a.seedUser(t)
 	paymentExec(t, a, "UPDATE company SET owner_id = $%d WHERE id = $%d", reader, a.company)
@@ -101,6 +102,7 @@ func TestCustomerPaymentsNeverCountsAnUnsharedAccountAndRechecksEveryPage(t *tes
 }
 
 func TestCustomerPaymentsKeepsCapturePrivateAccountsOutOfAllScope(t *testing.T) {
+	t.Parallel()
 	a := setupSourceAdmin(t)
 	a.makeOwnerPrivate(t)
 	syncPayments(t, a)
@@ -111,6 +113,7 @@ func TestCustomerPaymentsKeepsCapturePrivateAccountsOutOfAllScope(t *testing.T) 
 }
 
 func TestCustomerPaymentsRequiresBothReadGrants(t *testing.T) {
+	t.Parallel()
 	a := setupSourceAdmin(t)
 	for _, missing := range []string{"finance", "company"} {
 		grants := map[string]principal.ObjectGrant{"finance": {Read: true}, "company": {Read: true}}
@@ -123,6 +126,7 @@ func TestCustomerPaymentsRequiresBothReadGrants(t *testing.T) {
 }
 
 func TestCustomerPaymentsDoesNotCallAnIncompleteFirstSyncAZeroBalance(t *testing.T) {
+	t.Parallel()
 	a := setupSourceAdmin(t)
 	syncPayments(t, a)
 	paymentExec(t, a, `UPDATE finance_connection SET status = 'error', last_success_at = NULL WHERE id = $%d`, a.connection)
@@ -134,6 +138,7 @@ func TestCustomerPaymentsDoesNotCallAnIncompleteFirstSyncAZeroBalance(t *testing
 }
 
 func TestCustomerPaymentsLeavesArchivedAndUnlinkedAndFormerCustomersOut(t *testing.T) {
+	t.Parallel()
 	for _, state := range []string{"archived", "unlinked", "former"} {
 		t.Run(state, func(t *testing.T) {
 			a := setupSourceAdmin(t)
@@ -159,6 +164,7 @@ func TestCustomerPaymentsLeavesArchivedAndUnlinkedAndFormerCustomersOut(t *testi
 }
 
 func TestCustomerPaymentsKeepsCompleteTotalsAcrossEveryInvoicePage(t *testing.T) {
+	t.Parallel()
 	a := setupSourceAdmin(t)
 	a.store.SetClock(func() time.Time { return ledgerEpoch.AddDate(0, 0, 60) })
 	if _, err := a.store.SyncConnection(a.ctx, a.provider()); err != nil {
@@ -193,15 +199,12 @@ func TestCustomerPaymentsKeepsCompleteTotalsAcrossEveryInvoicePage(t *testing.T)
 }
 
 func TestCustomerPaymentsDoesNotIncludeTheReplacedConnectionsInvoices(t *testing.T) {
+	t.Parallel()
 	a := setupSourceAdmin(t)
 	syncPayments(t, a)
 	replacement := ids.NewV7()
 	paymentExec(t, a, `INSERT INTO finance_connection (id,provider,status,captured_by,created_at)
   VALUES ($%d,$%d,'active','human:test',now()+interval '1 second')`, replacement, fixtureProviderName)
-	// The package shares one database, and every later test reads the newest connection.
-	t.Cleanup(func() {
-		a.ownerExec(t, `UPDATE finance_connection SET status = 'disconnected' WHERE id = $1`, replacement)
-	})
 	got := paymentResponse(a.documentReader(principal.RowScopeAll), t, a, nil, 50)
 	if got.State != crmcontracts.FinanceSummaryStateSyncing || got.LinkedCompanies != 0 || got.InvoiceCount != 0 || len(got.Data) != 0 {
 		t.Fatalf("old source figures appeared: %+v", got)
@@ -209,6 +212,7 @@ func TestCustomerPaymentsDoesNotIncludeTheReplacedConnectionsInvoices(t *testing
 }
 
 func TestCustomerPaymentsRejectsMalformedAndWrongSourceCursors(t *testing.T) {
+	t.Parallel()
 	a := setupSourceAdmin(t)
 	syncPayments(t, a)
 	wrong, err := storekit.EncodeOpaque(paymentPosition{ids.NewV7(), ledgerEpoch, ids.NewV7()})
@@ -224,6 +228,7 @@ func TestCustomerPaymentsRejectsMalformedAndWrongSourceCursors(t *testing.T) {
 }
 
 func TestCustomerPaymentsWaitsForANewCustomerLinksFirstImport(t *testing.T) {
+	t.Parallel()
 	a := setupSourceAdmin(t)
 	a.syncDirectory(t)
 	another := a.seedCompany(t, "Newly linked account", nil)
@@ -242,6 +247,7 @@ func TestCustomerPaymentsWaitsForANewCustomerLinksFirstImport(t *testing.T) {
 }
 
 func TestCustomerPaymentsKeepsLastGoodFiguresWhenANewLinkFollowsAFailedSync(t *testing.T) {
+	t.Parallel()
 	a := setupSourceAdmin(t)
 	a.syncDirectory(t)
 	ctx := a.documentReader(principal.RowScopeAll)

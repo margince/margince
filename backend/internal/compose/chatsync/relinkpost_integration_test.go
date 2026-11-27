@@ -67,6 +67,7 @@ func seedLateNote(t *testing.T, e *flushEnv) ids.UUID {
 }
 
 func TestAnActivityFiledAfterItsCaptureReachesTheChannelOnce(t *testing.T) {
+	t.Parallel()
 	e := setupFlush(t)
 	late := seedLateNote(t, e)
 	e.handle(t, "activity.captured", "activity", late, `{"kind":"note"}`)
@@ -82,6 +83,7 @@ func TestAnActivityFiledAfterItsCaptureReachesTheChannelOnce(t *testing.T) {
 }
 
 func TestAnActivityCapturedAfterItsFilingIsNotPostedTwice(t *testing.T) {
+	t.Parallel()
 	e := setupFlush(t)
 	late := seedLateNote(t, e)
 	relink := e.fileOnDeal(t, late)

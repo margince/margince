@@ -40,6 +40,7 @@ func claimOf(identity string) search.ReembedClaim {
 // would hand back a marker the NEXT run is holding. That is the corpus
 // reporting itself re-embedded while a live pass is still writing it.
 func TestAStragglerOfAFinishedRunCannotActOnTheRunThatReplacedIt(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	ctx := context.Background()
 	const identity = "fake/same-identity@1024"
@@ -146,6 +147,7 @@ func ageMarkerPastTheStealWindow(t *testing.T, e *SearchEnv) {
 // two children re-embedding the same corpus at once, doubling model spend on the
 // largest tenant in the fleet.
 func TestAHealthyRunIsNotStealableHoweverLongItTakes(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	ctx := context.Background()
 	fake := ai.NewFakeClient()
@@ -221,6 +223,7 @@ func (p *probingEmbedder) Embed(ctx context.Context, req model.EmbedRequest) (mo
 // does to it. By the time the pass reaches its first embed, a forced confirm
 // must find a marker fresh enough to refuse.
 func TestReembedReportsProgressBeforeItsScanAndItsFirstEmbed(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	ctx := context.Background()
 	fake := ai.NewFakeClient()
@@ -290,6 +293,7 @@ func TestReembedReportsProgressBeforeItsScanAndItsFirstEmbed(t *testing.T) {
 // explain why. An ordinary confirm must still be refused, so the escape hatch
 // cannot be mistaken for the normal path.
 func TestAForcedClaimTakesTheMarkerOffARunThatStoppedMoving(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	ctx := context.Background()
 	const identity = "fake/stuck@1024"

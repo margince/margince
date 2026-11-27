@@ -20,6 +20,7 @@ import (
 // A held group reads nothing, so an entry published while it is held waits in
 // the stream and is delivered once the hold lifts.
 func TestAPausedSubscriberDeliversNothingUntilItResumes(t *testing.T) {
+	t.Parallel()
 	ctx, rdb := purgeTestRedis(t)
 	group := probeGroup(t)
 

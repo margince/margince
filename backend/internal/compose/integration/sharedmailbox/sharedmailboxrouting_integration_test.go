@@ -31,6 +31,7 @@ func (s *sharedMailboxSuite) liveReminders(t *testing.T, mail ids.UUID) int {
 }
 
 func TestAReplyTaskMovesWhenTheContactChangesOwner(t *testing.T) {
+	t.Parallel()
 	s := newSharedMailboxSuite(t)
 	box := s.connectOpen(t)
 	s.ownAnna(t, &s.e.Rep1)
@@ -54,6 +55,7 @@ func TestAReplyTaskMovesWhenTheContactChangesOwner(t *testing.T) {
 }
 
 func TestAReplyTaskIsRetiredWhenASeatsOwnMailboxLaterCapturesTheMail(t *testing.T) {
+	t.Parallel()
 	s := newSharedMailboxSuite(t)
 	box := s.connectOpen(t)
 	s.ownAnna(t, &s.e.Rep1)
@@ -94,6 +96,7 @@ func (s *sharedMailboxSuite) contactOwnedBy(t *testing.T, name, address string, 
 }
 
 func TestOutboundMailToTwoOwnersFallsToTheBackupOwner(t *testing.T) {
+	t.Parallel()
 	for name, tc := range map[string]struct {
 		bobOwner func(e *integration.Env) ids.UUID
 		want     func(e *integration.Env) ids.UUID
@@ -122,6 +125,7 @@ func TestOutboundMailToTwoOwnersFallsToTheBackupOwner(t *testing.T) {
 }
 
 func TestTheMailboxsOwnAddressIsNeverTheOtherParty(t *testing.T) {
+	t.Parallel()
 	s := newSharedMailboxSuite(t)
 	box := ids.UUID(s.connect(t, s.e.Team1).Id)
 	s.ownAnna(t, &s.e.Rep1)
@@ -133,6 +137,7 @@ func TestTheMailboxsOwnAddressIsNeverTheOtherParty(t *testing.T) {
 }
 
 func TestTwoSharedMailboxesWithDifferentBackupOwnersNameNobody(t *testing.T) {
+	t.Parallel()
 	for name, tc := range map[string]struct {
 		second func(e *integration.Env) ids.UUID
 		want   func(e *integration.Env) ids.UUID
@@ -170,6 +175,7 @@ func TestTwoSharedMailboxesWithDifferentBackupOwnersNameNobody(t *testing.T) {
 }
 
 func TestAVendorQuestionIsNeverAskedOfASharedMailboxsWorkOwner(t *testing.T) {
+	t.Parallel()
 	s := newSharedMailboxSuite(t)
 	box := ids.UUID(s.connect(t, s.e.Team1).Id)
 	s.ownAnna(t, &s.e.Rep1)
@@ -192,6 +198,7 @@ func TestAVendorQuestionIsNeverAskedOfASharedMailboxsWorkOwner(t *testing.T) {
 }
 
 func TestATeamChangeClearsABackupOwnerTheNewTeamDoesNotHold(t *testing.T) {
+	t.Parallel()
 	s := newSharedMailboxSuite(t)
 	box := ids.UUID(s.connect(t, s.e.Team1).Id)
 	if code := s.setBackup(t, box, &s.e.Rep1); code != http.StatusOK {
@@ -215,6 +222,7 @@ func TestATeamChangeClearsABackupOwnerTheNewTeamDoesNotHold(t *testing.T) {
 }
 
 func TestResendingABackupOwnerWhoLeftTheTeamIsRefused(t *testing.T) {
+	t.Parallel()
 	s := newSharedMailboxSuite(t)
 	box := ids.UUID(s.connect(t, s.e.Team1).Id)
 	if code := s.setBackup(t, box, &s.e.Rep1); code != http.StatusOK {

@@ -14,6 +14,7 @@ import (
 // A null in an update_record patch clears the field, as it does over REST.
 // A field the record cannot clear is refused by name, never left as it was.
 func TestUpdateRecordToolClearsOnANullAndRefusesWhatItCannotClear(t *testing.T) {
+	t.Parallel()
 	e := setupRelationships(t)
 	agentToken := mintAgentToken(t, e)
 	invoke := mcpAgentInvoker(t, agentToken)

@@ -59,6 +59,7 @@ func contextIDs(t *testing.T, data json.RawMessage) map[string]bool {
 }
 
 func TestCatchMeUpOnScopedToAProjectDropsTheOtherEngagement(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedTwoEngagementAccount(t, e)
 	registry := compose.NewRegistry(e.Pool, compose.SendPath{})
@@ -90,6 +91,7 @@ func TestCatchMeUpOnScopedToAProjectDropsTheOtherEngagement(t *testing.T) {
 // the meeting is outside of: the scoped walk in front of the brief answers
 // not-found, existence-hiding, and the brief is never read.
 func TestPrepForMeetingUnderTheMeetingsOwnProjectNamesItAndUnderAnotherIsNotFound(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedTwoEngagementAccount(t, e)
 	registry := compose.NewRegistry(e.Pool, compose.SendPath{})
@@ -117,6 +119,7 @@ func TestPrepForMeetingUnderTheMeetingsOwnProjectNamesItAndUnderAnotherIsNotFoun
 }
 
 func TestReviewCommitmentsScopedToAProjectDropsTheOtherEngagementsPromise(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedTwoEngagementAccount(t, e)
 	registry := compose.NewRegistry(e.Pool, compose.SendPath{})
@@ -153,6 +156,7 @@ func TestReviewCommitmentsScopedToAProjectDropsTheOtherEngagementsPromise(t *tes
 // see — here, one that does not exist — answers as not found rather than as a
 // full, unscoped picture that looks as though the filter matched.
 func TestAProjectScopeTheCallerCannotSeeIsRefusedThroughTheToolSurface(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedTwoEngagementAccount(t, e)
 	registry := compose.NewRegistry(e.Pool, compose.SendPath{})
@@ -185,6 +189,7 @@ func TestAProjectScopeTheCallerCannotSeeIsRefusedThroughTheToolSurface(t *testin
 // brief for a meeting, and the assembled-picture fallback for any other
 // activity — because the fallback is the same scoped walk.
 func TestAnActivityAnchorFiledUnderAnotherProjectIsNotFoundUnderTheScope(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedTwoEngagementAccount(t, e)
 	registry := compose.NewRegistry(e.Pool, compose.SendPath{})

@@ -16,6 +16,7 @@ import (
 )
 
 func TestBookingPageUsesTheCurrentAccountName(t *testing.T) {
+	t.Parallel()
 	e := setupBookingApp(t)
 	e.BootstrapWorkspace(t)
 	if status := e.Call(t, "PUT", "/v1/me/display-name", AnyMap{"display_name": "Account name"}, nil, nil); status != http.StatusOK {

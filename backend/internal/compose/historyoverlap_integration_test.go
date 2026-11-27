@@ -24,6 +24,7 @@ import (
 )
 
 func TestOverlappingHistoryImportsKeepSharedWorkDeferredAndLiveWorkPrompt(t *testing.T) {
+	t.Parallel()
 	b := setupBackfillWire(t)
 	b.registry.WithBackfillAdmission(2, false)
 	first := strandedBackfill(t, b)

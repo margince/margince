@@ -30,6 +30,7 @@ type sharedBulk struct {
 // door. The count is the same, nothing is skipped, and the tag's audit rows
 // name the agent. Each door has its own tag, because the rows sit on the tag.
 func TestBulkUpdateRecordsLeavesTheSameOnEitherDoor(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "bulk-write-doors", "read", "write")
 	tagREST := createdID(t, d.e, "/v1/tags", AnyMap{"name": "Spring rest", "color": "lime"})
 	tagTool := createdID(t, d.e, "/v1/tags", AnyMap{"name": "Spring tool", "color": "lime"})
@@ -68,6 +69,7 @@ func TestBulkUpdateRecordsLeavesTheSameOnEitherDoor(t *testing.T) {
 // A Shortlist made, renamed and given a member over either door is the same
 // list with the same rows behind it.
 func TestChangeListsLeavesTheSameOnEitherDoor(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoorsWith(t, "list-write-doors", []compose.Option{compose.WithListsEnabled(true)}, "read", "write")
 	member := createdID(t, d.e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Listed Lena", "source": "manual"})
 
@@ -100,6 +102,7 @@ func TestChangeListsLeavesTheSameOnEitherDoor(t *testing.T) {
 // Folding one contact into another runs on either door: the source is archived
 // and redirected to the survivor, and the rows left behind read alike.
 func TestMergeRecordsLeavesTheSameOnEitherDoor(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "merge-write-doors", "read", "write")
 	pair := func(source, survivor string) (string, string) {
 		return createdID(t, d.e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": source, "source": "manual"}),

@@ -43,6 +43,7 @@ type dedupeListDTO struct {
 }
 
 func TestDedupeQueueOverHTTP(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	incumbentID := apptest.SeedCompanyPair(t, e, "Umbrella Holdings", "umbrella.example", "umbrella-us.example")
@@ -118,6 +119,7 @@ func TestDedupeQueueOverHTTP(t *testing.T) {
 }
 
 func TestDedupeQueuePagesOverHTTP(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	apptest.SeedCompanyPair(t, e, "Vandelay Industries", "vandelay.example", "vandelay-us.example")

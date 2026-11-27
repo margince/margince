@@ -41,6 +41,7 @@ func (e *channelConsentEnv) countryOf(t *testing.T, who ruleSubject) RecipientCo
 // TestARecipientsCountryComesFromTheirRecord walks the sources in order, and
 // the lead takes the same route through the record it has.
 func TestARecipientsCountryComesFromTheirRecord(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	contact := ruleSubject{Kind: entityContact, ID: e.contact.String()}
 
@@ -74,6 +75,7 @@ func TestARecipientsCountryComesFromTheirRecord(t *testing.T) {
 // Mutation: map the domain's last label to a code in recipientCountryOf and this
 // fails.
 func TestAnAddressSuffixIsNeverACountry(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	var got RecipientCountry
 	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
@@ -92,6 +94,7 @@ func TestAnAddressSuffixIsNeverACountry(t *testing.T) {
 // entity goes out under that entity's country. The default entity and no
 // entity at all take the installation's.
 func TestTheSendingEntityPicksTheDataProtectionCountry(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	store := e.store.WithInstallationCountry(
 		InstallationCountryFunc(func(context.Context, pgx.Tx) (jurisdiction.Code, error) { return "de", nil }))
@@ -130,6 +133,7 @@ func TestTheSendingEntityPicksTheDataProtectionCountry(t *testing.T) {
 // DisclosuresFor. The pack owes a controller identity (data protection) and an
 // objection route on advertising (marketing).
 func TestDisclosuresFollowTheirOwnSelectors(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	testMessagingRules(t, messagingrules.Rules{
 		Jurisdiction: "zj", Version: 1,

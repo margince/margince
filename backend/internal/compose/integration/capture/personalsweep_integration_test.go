@@ -149,6 +149,7 @@ func assertReceipt(t *testing.T, e *integration.Env, kind string, kept int) {
 }
 
 func TestEligibleMailBehindAFullBatchOfMailAnOpenRequestKeepsIsDestroyedInOnePass(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const held = "anwalt@kanzlei.example"
 	heldCount := sweepBatch + 1
@@ -180,6 +181,7 @@ func TestEligibleMailBehindAFullBatchOfMailAnOpenRequestKeepsIsDestroyedInOnePas
 }
 
 func TestEligibleMailBehindAFullBatchUnderTheStatutoryFloorIsDestroyedInOnePass(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const held = "einkauf@kunde.example"
 	heldCount := sweepBatch + 1
@@ -221,6 +223,7 @@ func TestEligibleMailBehindAFullBatchUnderTheStatutoryFloorIsDestroyedInOnePass(
 }
 
 func TestAHeldMessageIsKeptWhileTheMailBehindItIsDestroyed(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const held = "gegner@kanzlei.example"
 	heldMail := seedDueMail(t, e, held, 1)

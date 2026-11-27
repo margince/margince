@@ -131,6 +131,7 @@ func identityPart(file, object, header string) AnyMap {
 }
 
 func TestAnExportedCompanyFileUploadsAsSame(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	header := "ref,display_name,legal_name,industry,size_band,description,domain,linkedin_url,phone,email,owner_email,tags,address.line1,address.city,address.postal_code,address.country"
 	seedBundle(t, e, map[string]string{"companies.csv": header + "\n" +
@@ -150,6 +151,7 @@ func TestAnExportedCompanyFileUploadsAsSame(t *testing.T) {
 }
 
 func TestAnExportedContactFileUploadsAsSame(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	header := "ref,full_name,first_name,last_name,email,phone,linkedin_url,title,owner_email,tags,address.line1,address.city,address.postal_code,address.country,company_name"
 	seedBundle(t, e, map[string]string{"contacts.csv": header + "\n" +
@@ -167,6 +169,7 @@ func TestAnExportedContactFileUploadsAsSame(t *testing.T) {
 }
 
 func TestAnExportedLeadFileUploadsAsSame(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	header := "ref,full_name,email,phone,title,company_name,linkedin_url,status,origin,origin_detail,owner_email,tags"
 	seedBundle(t, e, map[string]string{"leads.csv": header + "\n" +
@@ -180,6 +183,7 @@ func TestAnExportedLeadFileUploadsAsSame(t *testing.T) {
 }
 
 func TestAnExportedDealFileUploadsAsSame(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	pipeline, open, won := seededStageNames(t, e)
 	companies := "ref,display_name"
@@ -208,6 +212,7 @@ func TestAnExportedDealFileUploadsAsSame(t *testing.T) {
 
 // The file is named after the view it exports and the day, not after the table.
 func TestAnExportOfASavedViewIsNamedAfterTheViewAndTheDay(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	var view struct {
 		ID string `json:"id"`
@@ -245,6 +250,7 @@ func TestAnExportOfASavedViewIsNamedAfterTheViewAndTheDay(t *testing.T) {
 // A row that names a contact, lead or deal by the id the export wrote updates
 // that record. An id nobody can see is refused, not created.
 func TestARowNamingAnIDUpdatesThatContactLeadOrDeal(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	pipeline, open, _ := seededStageNames(t, e)
 	seedBundle(t, e, map[string]string{
@@ -297,6 +303,7 @@ func TestARowNamingAnIDUpdatesThatContactLeadOrDeal(t *testing.T) {
 
 // The rows follow the sort the view stores, as the list screen does, not the id order.
 func TestAnExportOfASortedViewFollowsTheViewsSort(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	seedBundle(t, e, map[string]string{"contacts.csv": "ref,full_name,email\nC1,Charlie Zed,c@x.example\nC2,Alice Able,a@x.example\nC3,Bob Baker,b@x.example\n"},
 		[]AnyMap{identityPart("contacts.csv", "contact", "ref,full_name,email")})

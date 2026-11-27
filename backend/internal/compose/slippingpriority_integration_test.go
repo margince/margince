@@ -16,6 +16,7 @@ import (
 )
 
 func TestOverdueDealIsFoundBehindMoreThanOnePageOfCurrentDeals(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	pipeline, stage, _ := integration.DealFixture(t, e)
 	now := time.Date(2090, 1, 15, 12, 0, 0, 0, time.UTC)

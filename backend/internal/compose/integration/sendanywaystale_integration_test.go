@@ -36,6 +36,7 @@ func confirmationOf(r servedReview) AnyMap {
 // they were about to take. The held message keeps its words. The press gets a
 // fresh review naming the objection, and the sender decides again.
 func TestAnObjectionAfterTheReviewAsksTheSenderToDecideAgain(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	c.useReviewableMarketingProfile(t)
 	if status, _ := c.send(t, "marketing_email"); status != http.StatusConflict {

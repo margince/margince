@@ -43,6 +43,7 @@ func boundedTagAuthor() principal.Permissions {
 }
 
 func TestABoundedSeatCannotAuthorTheVocabulary(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := collections.NewStore(e.DB())
 
@@ -87,6 +88,7 @@ func TestABoundedSeatCannotAuthorTheVocabulary(t *testing.T) {
 // it: every case above and below holds the SCOPE, so a gate that dropped the
 // object check would have passed all of them.
 func TestASeatWithoutTheGrantCannotAuthorTheVocabulary(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := collections.NewStore(e.DB())
 
@@ -115,6 +117,7 @@ func TestASeatWithoutTheGrantCannotAuthorTheVocabulary(t *testing.T) {
 // holding it authors as it always did — without this, a check that refused
 // everybody would pass the case above perfectly.
 func TestAnUnboundedSeatStillAuthorsTheVocabulary(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := collections.NewStore(e.DB())
 
@@ -136,6 +139,7 @@ func TestAnUnboundedSeatStillAuthorsTheVocabulary(t *testing.T) {
 // question with its own answer — write authority over the record being tagged
 // (#3755) — and a bounded seat's own records are within their honest reach.
 func TestABoundedSeatStillTagsItsOwnRecords(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := collections.NewStore(e.DB())
 

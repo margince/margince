@@ -119,6 +119,7 @@ func read(s *string) string {
 // Two spellings of one address on one meeting and role become one row. It keeps
 // the given answer, the name and the seats of both calendars.
 func TestTwoSpellingsOfOneGuestFoldIntoOneRowThatKeepsWhatBothKnew(t *testing.T) {
+	t.Parallel()
 	o := seedOlder(t)
 	meeting := o.meeting()
 	o.asTyped(meeting, guest{address: " Lena@Prospect.test", name: new("Lena Prospect"), seat: &o.e.Rep1})
@@ -171,6 +172,7 @@ func sortedSeats(a, b ids.UUID) []ids.UUID {
 // Between two given answers the later written row wins and brings its name. An
 // answer beats an invitation not answered yet, whichever row is later.
 func TestTheLaterGivenAnswerWinsAndBringsItsName(t *testing.T) {
+	t.Parallel()
 	o := seedOlder(t)
 	early, late := time.Date(2026, 3, 1, 9, 0, 0, 0, time.UTC), time.Date(2026, 3, 2, 9, 0, 0, 0, time.UTC)
 	cases := map[string]struct {
@@ -217,6 +219,7 @@ func TestTheLaterGivenAnswerWinsAndBringsItsName(t *testing.T) {
 // Batches of two walk the rows in key order until each address is lowercase.
 // Three spellings of one guest end as one row, and a replay changes nothing.
 func TestBatchesOfTwoReachEveryAddressAndAReplayChangesNothing(t *testing.T) {
+	t.Parallel()
 	o := seedOlder(t)
 	crowded := o.meeting()
 	for _, address := range []string{"Eve@Buyer.test", "eve@BUYER.test", "EVE@buyer.test"} {
@@ -267,6 +270,7 @@ func TestBatchesOfTwoReachEveryAddressAndAReplayChangesNothing(t *testing.T) {
 // A batch that fails after its fold leaves the rows and the audit log as they
 // were. A cursor that is no key is refused, and so is a caller that is no system.
 func TestTheTaskRollsBackWithItsBatchAndRefusesAMalformedCursor(t *testing.T) {
+	t.Parallel()
 	o := seedOlder(t)
 	meeting := o.meeting()
 	o.asTyped(meeting, guest{address: "Hal@Buyer.test"})
@@ -323,6 +327,7 @@ func TestTheTaskRollsBackWithItsBatchAndRefusesAMalformedCursor(t *testing.T) {
 // An unvalidated check still judges an older row when it is next written. An
 // edit before the task has run goes through, and leaves the address lowercase.
 func TestAnEditBeforeTheTaskLowercasesAnOlderRow(t *testing.T) {
+	t.Parallel()
 	o := seedOlder(t)
 	alone, twinned := o.meeting(), o.meeting()
 	single := o.asTyped(alone, guest{address: "Ivy@Buyer.test"})

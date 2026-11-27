@@ -25,6 +25,7 @@ import (
 )
 
 func TestDownloadingAFailedDocumentIsNotAServerFault(t *testing.T) {
+	t.Parallel()
 	ie := newIngestEnv(t)
 	docID := ie.upload(t, "unreadable.txt", "text/plain", prose(2))
 	if err := ie.store.FailIngest(ie.ctx, docID, "the stored file could not be read"); err != nil {
@@ -47,6 +48,7 @@ func TestDownloadingAFailedDocumentIsNotAServerFault(t *testing.T) {
 // The advice on a failed document is to upload the file again, so the same
 // bytes are accepted and the row is re-used.
 func TestReuploadingAFailedDocumentsBytesIsAccepted(t *testing.T) {
+	t.Parallel()
 	ie := newIngestEnv(t)
 	body := prose(2)
 	docID := ie.upload(t, "operating.md", "text/markdown", body)
@@ -96,6 +98,7 @@ func TestReuploadingAFailedDocumentsBytesIsAccepted(t *testing.T) {
 // A live document still refuses the same bytes: the relaxation is for a row
 // that holds none, not for duplicates.
 func TestAnIngestedDocumentStillRefusesTheSameBytes(t *testing.T) {
+	t.Parallel()
 	ie := newIngestEnv(t)
 	body := prose(2)
 	ie.upload(t, "operating.md", "text/markdown", body)

@@ -56,6 +56,7 @@ func concurrentIndexNamespace(t *testing.T, name string, ask bool) dbmigrate.Nam
 // Wrapped, Postgres refuses it — which is the reason this mode exists, stated by the
 // server rather than by a comment.
 func TestAWrappedConcurrentIndexBuildIsRefusedByPostgres(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	resetSchema(t, conn)
@@ -74,6 +75,7 @@ func TestAWrappedConcurrentIndexBuildIsRefusedByPostgres(t *testing.T) {
 
 // Unwrapped, it lands — and the ledger records it.
 func TestAnUnwrappedConcurrentIndexBuildLandsAndIsRecorded(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	resetSchema(t, conn)
@@ -138,6 +140,7 @@ func TestAnUnwrappedConcurrentIndexBuildLandsAndIsRecorded(t *testing.T) {
 // An unwrapped file bounds the lock wait for the whole session. A failure stops it
 // before its RESET, and the runner's later work on this connection must not inherit it.
 func TestAFailedUnwrappedMigrationLeavesTheSessionLockWaitAsItFoundIt(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	resetSchema(t, conn)

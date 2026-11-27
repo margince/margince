@@ -14,6 +14,7 @@ import (
 )
 
 func TestTheLatestMarkIsWhatLastAnswers(t *testing.T) {
+	t.Parallel()
 	store := New(redistest.Client(t))
 	ctx := t.Context()
 	if got, err := store.Last(ctx, "conn"); err != nil || !got.IsZero() {
@@ -31,6 +32,7 @@ func TestTheLatestMarkIsWhatLastAnswers(t *testing.T) {
 }
 
 func TestAMarkEndsWithItsTimeToLive(t *testing.T) {
+	t.Parallel()
 	store := New(redistest.Client(t))
 	ctx := t.Context()
 	if err := store.Mark(ctx, "conn", clocktest.Now(t), time.Second); err != nil {

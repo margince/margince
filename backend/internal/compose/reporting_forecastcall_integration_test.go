@@ -22,6 +22,7 @@ import (
 // GET /forecast gives it: the records' projection with the call_withheld caveat.
 // Neither the metric nor its CSV holds the call.
 func TestAReaderWhoMayNotSeeTheCallGetsTheLandingWithoutIt(t *testing.T) {
+	t.Parallel()
 	q := seedTargetQuarter(t)
 	reader := reportingTieredReader(q.human, principal.RowScopeTeam)
 

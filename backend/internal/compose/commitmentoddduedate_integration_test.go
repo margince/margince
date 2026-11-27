@@ -29,6 +29,7 @@ func unownedPromiseOnDay(t *testing.T, day string) string {
 }
 
 func TestADayInsideTheWindowIsStoredOnTheTask(t *testing.T) {
+	t.Parallel()
 	e := setupTranscript(t)
 	e.WsExec(t, `UPDATE app_user SET display_name = 'Priya Raman' WHERE id = $1`, e.Rep2)
 	day := clocktest.Now(t).AddDate(0, 0, 7).Format(time.DateOnly)
@@ -43,6 +44,7 @@ func TestADayInsideTheWindowIsStoredOnTheTask(t *testing.T) {
 }
 
 func TestAFarOffDayIsPutToThePromiserOnceAndNotStored(t *testing.T) {
+	t.Parallel()
 	e := setupTranscript(t)
 	e.WsExec(t, `UPDATE app_user SET display_name = 'Priya Raman' WHERE id = $1`, e.Rep2)
 	day := clocktest.Now(t).AddDate(15, 0, 0).Format(time.DateOnly)
@@ -63,6 +65,7 @@ func TestAFarOffDayIsPutToThePromiserOnceAndNotStored(t *testing.T) {
 }
 
 func TestKeepingTheFarOffDayWritesItAsTheColleague(t *testing.T) {
+	t.Parallel()
 	e := setupTranscript(t)
 	e.WsExec(t, `UPDATE app_user SET display_name = 'Priya Raman' WHERE id = $1`, e.Rep2)
 	day := clocktest.Now(t).AddDate(15, 0, 0).Format(time.DateOnly)
@@ -80,6 +83,7 @@ func TestKeepingTheFarOffDayWritesItAsTheColleague(t *testing.T) {
 }
 
 func TestAFarOffDayWithNoNamedOwnerAsksNobody(t *testing.T) {
+	t.Parallel()
 	e := setupTranscript(t)
 	day := clocktest.Now(t).AddDate(15, 0, 0).Format(time.DateOnly)
 

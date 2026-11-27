@@ -38,6 +38,7 @@ func (f fieldRefusal) names(field string) bool {
 // refuses it at the door, and the last instant inside the bound still lists.
 // A task's due_at has the tighter due window (values.DueInWindow) instead.
 func TestADateTimeNoZoneCanRenderIsRefusedAndTheListsStayReadable(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Far Dates", "admin@fardates.test", "Admin")
 

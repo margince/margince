@@ -38,6 +38,7 @@ import (
 )
 
 func TestLastActivityAudience_NarrowingTheNewestMessageMovesEveryClockButTheDeals(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Held Clock Company", nil)
 	contact := e.SeedContact(t, "Held Clock Contact", nil)
@@ -98,6 +99,7 @@ func TestLastActivityAudience_NarrowingTheNewestMessageMovesEveryClockButTheDeal
 }
 
 func TestLastActivityAudience_WideningTheMessageMovesTheClockForward(t *testing.T) {
+	t.Parallel()
 	// The admit case, and the round trip. Without it a helper that counted
 	// nothing at all would pass the test above.
 	e := Setup(t)
@@ -137,6 +139,7 @@ func TestLastActivityAudience_WideningTheMessageMovesTheClockForward(t *testing.
 }
 
 func TestLastActivityAudience_AMessageBornHeldNeverMovesTheClock(t *testing.T) {
+	t.Parallel()
 	// The LINK trigger's arm, which the narrow-then-check case cannot reach.
 	// Captured mail is born with its audience already decided
 	// (capture/birthdecision.go), so nothing ever UPDATEs the audience column
@@ -177,6 +180,7 @@ func TestLastActivityAudience_AMessageBornHeldNeverMovesTheClock(t *testing.T) {
 }
 
 func TestLastActivityAudience_AClockMoveIsNotAnEdit(t *testing.T) {
+	t.Parallel()
 	// A narrowing moves four stored dates, and moving one must not look like
 	// somebody edited the record. set_updated_at_bump_version() fires on all
 	// four tables and suppresses itself only inside a clock move's own guard

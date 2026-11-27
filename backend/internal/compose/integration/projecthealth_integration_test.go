@@ -84,6 +84,7 @@ func healthNotices(t *testing.T, e *Env, project ids.ProjectID) int {
 }
 
 func TestTheHealthJobMarksAQuietProjectAtRiskAndTellsTheOwner(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	now := wallNow()
 	erp := quietDeliveringProject(t, e, "ERP replacement", &e.Rep1, now)
@@ -123,6 +124,7 @@ func TestTheHealthJobMarksAQuietProjectAtRiskAndTellsTheOwner(t *testing.T) {
 }
 
 func TestAProjectWithNoOwnerGetsTheReadingAndNoNotice(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	now := wallNow()
 	erp := quietDeliveringProject(t, e, "ERP replacement", nil, now)
@@ -139,6 +141,7 @@ func TestAProjectWithNoOwnerGetsTheReadingAndNoNotice(t *testing.T) {
 }
 
 func TestAUsersReadingNewerThanTheLastActivityIsKept(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	now := wallNow()
 	erp := quietDeliveringProject(t, e, "ERP replacement", &e.Rep1, now)
@@ -171,6 +174,7 @@ func TestAUsersReadingNewerThanTheLastActivityIsKept(t *testing.T) {
 }
 
 func TestUndoingTheAIsReadingRestoresTheOneBeforeIt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	now := wallNow()
 	erp := quietDeliveringProject(t, e, "ERP replacement", &e.Rep1, now)
@@ -215,6 +219,7 @@ func TestUndoingTheAIsReadingRestoresTheOneBeforeIt(t *testing.T) {
 // Undoing the AI's first-ever reading leaves the project not judged. It does
 // not read on track.
 func TestUndoingTheOnlyReadingLeavesTheProjectNotJudged(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	now := wallNow()
 	erp := quietDeliveringProject(t, e, "ERP replacement", &e.Rep1, now)
@@ -231,6 +236,7 @@ func TestUndoingTheOnlyReadingLeavesTheProjectNotJudged(t *testing.T) {
 }
 
 func TestUndoRefusesWhatIsNotAStandingAIReading(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	now := wallNow()
 	erp := quietDeliveringProject(t, e, "ERP replacement", &e.Rep1, now)
@@ -272,6 +278,7 @@ func TestUndoRefusesWhatIsNotAStandingAIReading(t *testing.T) {
 // A user's reading that commits while the job waits on the project lock is
 // seen by the job, which then keeps it.
 func TestAUsersReadingRacingTheJobIsKept(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	now := wallNow()
 	erp := quietDeliveringProject(t, e, "ERP replacement", &e.Rep1, now)
@@ -333,6 +340,7 @@ func TestAUsersReadingRacingTheJobIsKept(t *testing.T) {
 
 // A user's reading and a correction leave through the outbox like the AI's.
 func TestAUsersReadingAndCorrectionEmitTheirEvent(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	now := wallNow()
 	erp := quietDeliveringProject(t, e, "ERP replacement", &e.Rep1, now)

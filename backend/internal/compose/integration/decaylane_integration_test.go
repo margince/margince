@@ -103,6 +103,7 @@ func seedLapsedPairAt(t *testing.T, e *Env, colleague, contact ids.UUID, subject
 // for everyone would pass it — so the same call must admit the caller's own
 // lapsed contact.
 func TestQuietCandidatesCarryOnlyContactsInsideRowScope(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	mine := e.SeedContact(t, "Anna Weber", &e.Rep1)
 	theirs := e.SeedContact(t, "Their Contact", &e.Rep3)
@@ -169,6 +170,7 @@ func seedColleagueMessage(t *testing.T, e *Env, colleague, sender, copied ids.UU
 // from. That holds when the same colleague holds the contact's older exchange.
 // The contact who wrote that mail has been heard from, so the read drops them.
 func TestQuietCandidatesIgnoreAColleaguesMailTheContactOnlyReceived(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	copied := e.SeedContact(t, "Copied Only", &e.Rep1)
 	writer := e.SeedContact(t, "Wrote Recently", &e.Rep1)
@@ -205,6 +207,7 @@ func TestQuietCandidatesIgnoreAColleaguesMailTheContactOnlyReceived(t *testing.T
 // row scope in one pass: an unreadable contact is absent from the answer, and
 // the readable one arrives derived and named.
 func TestBatchedChangesAdmitOnlyReadableContacts(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	mine := e.SeedContact(t, "Anna Weber", &e.Rep1)
 	theirs := e.SeedContact(t, "Their Contact", &e.Rep3)
@@ -261,6 +264,7 @@ func TestBatchedChangesAdmitOnlyReadableContacts(t *testing.T) {
 // the exclusion before the cut the reader gets their live lapse, and with it
 // after they get an empty lane.
 func TestADismissedContactDoesNotSpendACandidateSlot(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	setAside := e.SeedContact(t, "Dana Weiss", &e.Rep1)
 	standing := e.SeedContact(t, "Ines Sommer", &e.Rep1)
@@ -348,6 +352,7 @@ func seedConnectorMailFrom(t *testing.T, e *Env, contact, colleague ids.UUID, ma
 // mailbox nobody can name, so no live colleague has heard from them, and the
 // relationship stays quiet. The same mail captured for the colleague ends it.
 func TestAGuessedSeatRowDoesNotResetTheQuietClock(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	guessed := e.SeedContact(t, "Wrote To A Guessed Seat", &e.Rep1)
 	captured := e.SeedContact(t, "Wrote To Rep One", &e.Rep1)

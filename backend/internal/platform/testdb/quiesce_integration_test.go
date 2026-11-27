@@ -34,6 +34,7 @@ const quiesceTestGrace = 300 * time.Millisecond
 // TestQuiescedPoolReportsQuiet is the negative control: without it, a gate that
 // never reports quiet would look just as green as one that works.
 func TestQuiescedPoolReportsQuiet(t *testing.T) {
+	t.Parallel()
 	pool := quiesceProbePool(t)
 	// Use it first, so the pool has an idle connection and a non-zero acquire
 	// count. Observing a pool that has never been touched would prove nothing
@@ -49,6 +50,7 @@ func TestQuiescedPoolReportsQuiet(t *testing.T) {
 // TestAHeldConnectionIsNotQuiet is the arm the acquire-based version could not
 // pass: ONE connection checked out, fifteen slots free.
 func TestAHeldConnectionIsNotQuiet(t *testing.T) {
+	t.Parallel()
 	pool := quiesceProbePool(t)
 	held, err := pool.Acquire(context.Background())
 	if err != nil {

@@ -23,6 +23,7 @@ import (
 // A host whose calendar stopped answering after the profile was saved is asked
 // to reconnect, from the invite button and from the calendar picker alike.
 func TestInvitingWithoutAUsableCalendarIsRefusedNamingTheProvider(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	clock := time.Date(2026, 10, 5, 6, 0, 0, 0, time.UTC)

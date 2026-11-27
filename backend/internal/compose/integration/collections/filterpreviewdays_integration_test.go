@@ -20,6 +20,7 @@ import (
 // On the wire a date column is its calendar day and a timestamp an instant.
 // So the client formats each without guessing which one it holds.
 func TestAFilterPreviewSendsADateAsItsDayAndATimestampAsAnInstant(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupAppWithOptions(t, compose.WithSchemaPool(integration.SchemaPool(t)))
 	e.BootstrapWorkspace(t)
 	var field integration.AnyMap

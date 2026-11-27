@@ -16,7 +16,6 @@ package activities
 
 import (
 	"context"
-	"os"
 	"testing"
 	"time"
 
@@ -41,7 +40,7 @@ type loadEnv struct {
 
 func setupLoad(t *testing.T) *loadEnv {
 	t.Helper()
-	emptyDatabase(t)
+	testdb.New(t)
 	return joinLoad(t)
 }
 
@@ -49,14 +48,9 @@ func setupLoad(t *testing.T) *loadEnv {
 // whose rows stay in place.
 func joinLoad(t *testing.T) *loadEnv {
 	t.Helper()
-	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
-	appDSN := os.Getenv("MARGINCE_TEST_APP_DSN")
-	if ownerDSN == "" || appDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN not set — run `make db-up` " +
-			"(integration tests fail loudly, they never skip)")
-	}
+	db := testdb.For(t)
 	ctx := context.Background()
-	owner, err := pgx.Connect(ctx, ownerDSN)
+	owner, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,9 +59,6 @@ func joinLoad(t *testing.T) *loadEnv {
 			t.Errorf("closing owner connection: %v", err)
 		}
 	})
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
 	e := &loadEnv{owner: owner, ws: ids.NewV7(), rep: ids.NewV7(), other: ids.NewV7()}
 	if _, err := owner.Exec(ctx, `INSERT INTO workspace (id) VALUES ($1)`, e.ws); err != nil {
 		t.Fatal(err)
@@ -79,7 +70,7 @@ func joinLoad(t *testing.T) *loadEnv {
 			t.Fatal(err)
 		}
 	}
-	pool, err := testdb.Pool(ctx, appDSN)
+	pool, err := testdb.Pool(ctx, db.AppDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -118,9 +109,8 @@ func (e *loadEnv) exec(t *testing.T, sql string, args ...any) {
 
 // waitFor reads who is waiting and returns the ONE row for the given message.
 //
-// By id rather than by taking the only row: the lane template is shared across
-// this package's tests, so a message another test seeded is present too. An
-// assertion over the whole answer would pass or fail on which tests ran.
+// By id rather than by taking the only row, because a test may seed more than
+// the one message it asks about.
 func (e *loadEnv) waitFor(t *testing.T, activity ids.UUID) WaitingReply {
 	t.Helper()
 	rows, err := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws))).
@@ -174,6 +164,7 @@ func (e *loadEnv) seedWait(t *testing.T, subject string, link string, target ids
 }
 
 func TestAWaitWithoutARecipientDoesNotInheritItsRecordOwner(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := ids.NewV7()
 	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
@@ -186,6 +177,7 @@ func TestAWaitWithoutARecipientDoesNotInheritItsRecordOwner(t *testing.T) {
 }
 
 func TestADealOnTheThreadDoesNotOverrideTheMailRecipient(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact, deal, company := ids.NewV7(), ids.NewV7(), ids.NewV7()
 	e.exec(t, `INSERT INTO company (id, display_name, owner_id, source, captured_by)
@@ -193,9 +185,6 @@ func TestADealOnTheThreadDoesNotOverrideTheMailRecipient(t *testing.T) {
 	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
 		VALUES ($1, 'Buyer Contact', $2, 'seed', 'system')`, contact, e.rep)
 	pipeline, stage := ids.NewV7(), ids.NewV7()
-	// Named for its own id: pipeline_name_unique is installation-wide and the
-	// lane template is shared across this package, so a fixed name collides with
-	// whatever another test in this file seeded first.
 	e.exec(t, `INSERT INTO pipeline (id, name) VALUES ($1, $2)`, pipeline, "Pipeline "+pipeline.String())
 	e.exec(t, `INSERT INTO stage (id, pipeline_id, name, "position") VALUES ($1, $2, 'Qualified', 1)`,
 		stage, pipeline)
@@ -215,6 +204,7 @@ func TestADealOnTheThreadDoesNotOverrideTheMailRecipient(t *testing.T) {
 
 // A wait on a record nobody owns names nobody, rather than picking somebody.
 func TestAWaitOnAnUnownedRecordNamesNobody(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := ids.NewV7()
 	e.exec(t, `INSERT INTO contact (id, full_name, source, captured_by)
@@ -227,6 +217,7 @@ func TestAWaitOnAnUnownedRecordNamesNobody(t *testing.T) {
 // The overdue count is per assignee, counts only what is actually late, and
 // reports the unassigned pile under the zero id.
 func TestOverdueTasksAreCountedPerAssignee(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	seed := func(assignee *ids.UUID, due string, done bool) {
 		// done_at travels with is_done: the activity_done_at CHECK refuses a
@@ -273,11 +264,9 @@ func TestOverdueTasksAreCountedPerAssignee(t *testing.T) {
 
 // Linked deal selection stays stable without turning either record owner into a recipient.
 func TestAWaitNamesItsRecordWithoutBorrowingEitherOwner(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	pipeline, stage := ids.NewV7(), ids.NewV7()
-	// Named for its own id: pipeline_name_unique is installation-wide and the
-	// lane template is shared across this package, so a fixed name collides with
-	// whatever another test in this file seeded first.
 	e.exec(t, `INSERT INTO pipeline (id, name) VALUES ($1, $2)`, pipeline, "Pipeline "+pipeline.String())
 	e.exec(t, `INSERT INTO stage (id, pipeline_id, name, "position") VALUES ($1, $2, 'Qualified', 1)`,
 		stage, pipeline)
@@ -320,6 +309,7 @@ func TestAWaitNamesItsRecordWithoutBorrowingEitherOwner(t *testing.T) {
 }
 
 func TestAWaitOnAReadableUnownedRecordWithNoRecipientIsNobodys(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := ids.NewV7()
 	e.exec(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Unassigned buyer', 'seed', 'system')`, contact)
@@ -328,6 +318,7 @@ func TestAWaitOnAReadableUnownedRecordWithNoRecipientIsNobodys(t *testing.T) {
 }
 
 func TestAWaitingRecipientDoesNotRevealAnUnreadableRecordOwner(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := ids.NewV7()
 	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by) VALUES ($1, 'Private buyer', $2, 'seed', 'system')`, contact, e.other)
@@ -363,6 +354,7 @@ func TestAWaitingRecipientDoesNotRevealAnUnreadableRecordOwner(t *testing.T) {
 }
 
 func TestAChatWaitDoesNotBorrowTheLinkedContactOwner(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := ids.NewV7()
 	e.exec(t, `INSERT INTO contact (id,full_name,owner_id,source,captured_by) VALUES ($1,'Chat buyer',$2,'seed','system')`, contact, e.rep)

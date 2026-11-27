@@ -48,6 +48,7 @@ func importCards(ctx context.Context, t *testing.T, e *dedupeEnv, file string) [
 }
 
 func TestImportingAnUnknownCardCreatesTheContactAndTheirEmployer(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -67,6 +68,7 @@ func TestImportingAnUnknownCardCreatesTheContactAndTheirEmployer(t *testing.T) {
 }
 
 func TestACardWithAnUnstorableValueIsReportedAndTheRestOfTheFileImports(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -136,6 +138,7 @@ func rowsNamed(t *testing.T, e *dedupeEnv, name string) (contacts, audits, event
 }
 
 func TestImportingACardForAKnownAddressAppliesWhatTheCardStates(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -204,6 +207,7 @@ func supersededFieldValue(ctx context.Context, t *testing.T, e *dedupeEnv, conta
 }
 
 func TestImportingACardThatMerelyResemblesSomebodyIsLeftForAHuman(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -230,6 +234,7 @@ func TestImportingACardThatMerelyResemblesSomebodyIsLeftForAHuman(t *testing.T) 
 }
 
 func TestImportingAFileReportsEveryCardInOrder(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -270,6 +275,7 @@ func TestImportingAFileReportsEveryCardInOrder(t *testing.T) {
 // malformation has always done. Nothing is written, not even the card that was
 // fine, and the reader is told rather than reassured.
 func TestAFileWhoseMiddleCardNeverEndsIsRefusedRatherThanShortened(t *testing.T) {
+	t.Parallel()
 	setupDedupe(t)
 
 	file := "BEGIN:VCARD\nFN:QC Probe Alpha\nEMAIL:alpha@probe.test\nEND:VCARD\n" +
@@ -290,6 +296,7 @@ func TestAFileWhoseMiddleCardNeverEndsIsRefusedRatherThanShortened(t *testing.T)
 // the lookup, a ten-card export from Acme creates ten Acmes for a human to
 // merge afterwards.
 func TestImportingTwoCardsFromOneCompanyCreatesOneCompany(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -314,6 +321,7 @@ func TestImportingTwoCardsFromOneCompanyCreatesOneCompany(t *testing.T) {
 // that let somebody start an import says nothing about changing a record that
 // already exists.
 func TestImportingRefusesACallerWhoMayNotUpdateContacts(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
@@ -380,6 +388,7 @@ func profileFieldValue(ctx context.Context, t *testing.T, e *dedupeEnv, contactI
 // would undo THEIR answer in order to undo the machine's, which is the one
 // thing an undo must never do — so the refusal is the half worth planting.
 func TestRestoringAFieldPutsBackWhatWasReplacedAndRefusesWhenTheRecordMovedOn(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -447,6 +456,7 @@ func TestRestoringAFieldPutsBackWhatWasReplacedAndRefusesWhenTheRecordMovedOn(t 
 // So the SQL hash is checked against a key built the way the ledger builds
 // one. Change either side alone and this fails.
 func TestTheRestoreMatchesTheLedgersOwnClaimKey(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	for _, field := range []string{fieldTitle, fieldRole, fieldWebsite} {
@@ -474,6 +484,7 @@ func TestTheRestoreMatchesTheLedgersOwnClaimKey(t *testing.T) {
 // signature had already corrected. That is the whole defect; the second import
 // asserting nothing new is the fix.
 func TestReimportingACardDoesNotOutrankWhatCameAfterIt(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -514,6 +525,7 @@ func TestReimportingACardDoesNotOutrankWhatCameAfterIt(t *testing.T) {
 // was back while the record still held the replacement — and they would find
 // out by dialling it.
 func TestUndoingAReplacedNumberBringsBackTheRowAReaderDials(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	contactID, _ := e.seedEmployedContact(ctx, t,
@@ -617,6 +629,7 @@ func livePhones(ctx context.Context, t *testing.T, e *dedupeEnv, contactID ids.C
 // OUTRANKS. A card claiming 2099 would beat every statement the contact makes
 // afterwards, permanently, from one file somebody mailed in.
 func TestACardCannotDateItselfIntoTheFuture(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -670,6 +683,7 @@ func TestACardCannotDateItselfIntoTheFuture(t *testing.T) {
 // A reader clicking Undo on the home number would otherwise revive a work
 // number they were not looking at.
 func TestACardWithSeveralNumbersPointsTheUndoAtTheReplacement(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	contactID, _ := e.seedEmployedContact(ctx, t,
@@ -723,6 +737,7 @@ func TestACardWithSeveralNumbersPointsTheUndoAtTheReplacement(t *testing.T) {
 // by the provider resolver. A card that spelt the profile with http, a trailing
 // slash or a tracking query used to file the same contact under a second one.
 func TestACardsLinkedInProfileIsStoredNormalized(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -741,6 +756,7 @@ func TestACardsLinkedInProfileIsStoredNormalized(t *testing.T) {
 }
 
 func TestANameOnlyCardIsImportedWithAChannelWarning(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	results := importCards(e.as(), t, e, "BEGIN:VCARD\nFN:Name Only\nEND:VCARD\n")
 	if len(results) != 1 || results[0].Outcome != VCardCreated || results[0].ContactID == nil {

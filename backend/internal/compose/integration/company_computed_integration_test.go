@@ -169,6 +169,7 @@ var computedFieldNoGrantPerms = principal.Permissions{
 // read directly AND the assembled open_pipeline row, and the four floor
 // rows must carry their exact honest reasons.
 func TestCompanyComputed_GatedVisible_RealValueMatchesDirectViewRead(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open := pipelineFixtureFor(e.Admin(), t, e.Deals)
 	companyID := e.SeedCompany(t, "Acme Corp", nil)
@@ -224,6 +225,7 @@ func TestCompanyComputed_GatedVisible_RealValueMatchesDirectViewRead(t *testing.
 // view row at all, and the assembler floors that to a real 0 — the
 // poc-1-tested behaviour, since a tile has no way to render "unknown".
 func TestCompanyComputed_NoOpenDeals_FloorsToZero(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	companyID := e.SeedCompany(t, "No Deals Inc", nil)
 
@@ -254,6 +256,7 @@ func TestCompanyComputed_NoOpenDeals_FloorsToZero(t *testing.T) {
 // pipeline. Shown as a total it is worse than the "not computable" it replaced
 // — the reader cannot see what is missing from it.
 func TestCompanyComputed_SomeDealsUnpriceable_RefusesTheShortTotal(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open := pipelineFixtureFor(e.Admin(), t, e.Deals)
 	companyID := e.SeedCompany(t, "Half Priced GmbH", nil)
@@ -295,6 +298,7 @@ func TestCompanyComputed_SomeDealsUnpriceable_RefusesTheShortTotal(t *testing.T)
 // reported "awaiting FX" — for deals that needed no FX — and the field was
 // effectively dead on every account that had not closed and reopened a deal.
 func TestCompanyComputed_OpenDealsInTheBaseCurrency_ReportTheirTotal(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open := pipelineFixtureFor(e.Admin(), t, e.Deals)
 	companyID := e.SeedCompany(t, "Ordinary Pipeline GmbH", nil)
@@ -339,6 +343,7 @@ func TestCompanyComputed_OpenDealsInTheBaseCurrency_ReportTheirTotal(t *testing.
 // view converts now, so reaching this state takes a currency the rate sheet
 // genuinely cannot price.
 func TestCompanyComputed_OpenDealsWithNoUsableRate_AwaitingFX(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open := pipelineFixtureFor(e.Admin(), t, e.Deals)
 	companyID := e.SeedCompany(t, "Unpriced Pipeline LLC", nil)
@@ -413,6 +418,7 @@ func TestCompanyComputed_OpenDealsWithNoUsableRate_AwaitingFX(t *testing.T) {
 // would have had. The raw-map decode (not a struct field check) proves
 // the key is absent from the wire entirely, not merely nil in Go.
 func TestCompanyComputed_UngatedPrincipal_ComputedFieldsKeyAbsentFromWire(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	companyID := e.SeedCompany(t, "Gated Company", nil)
 	ctx := e.As(e.Rep1, nil, computedFieldNoGrantPerms)
@@ -453,6 +459,7 @@ func TestCompanyComputed_UngatedPrincipal_ComputedFieldsKeyAbsentFromWire(t *tes
 // The deal now contributes nothing and stays counted, exactly as a deal with no
 // usable rate does, and the record opens.
 func TestCompanyComputed_AnUnrepresentableDeal_RefusesOneFigureNotTheRecord(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open := pipelineFixtureFor(e.Admin(), t, e.Deals)
 	companyID := e.SeedCompany(t, "Overflow Logistics", nil)
@@ -543,6 +550,7 @@ func TestCompanyComputed_AnUnrepresentableDeal_RefusesOneFigureNotTheRecord(t *t
 // bound, so reaching past bigint takes a thousand deals instead of two — the
 // bound removed the pair, not the class.
 func TestCompanyComputed_ATotalThatCannotBeRepresented_RefusesTheFigure(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open := pipelineFixtureFor(e.Admin(), t, e.Deals)
 	companyID := e.SeedCompany(t, "Big Numbers GmbH", nil)

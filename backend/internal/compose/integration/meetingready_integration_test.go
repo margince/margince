@@ -48,6 +48,7 @@ func decodePreparation(t *testing.T, raw json.RawMessage) preparationWire {
 }
 
 func TestAnAgentConfirmsReadinessAtTheRevisionItReadOnEitherDoor(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "ready-doors", "read", "write")
 	start := clocktest.Now(t).UTC().Add(2 * time.Hour).Truncate(time.Minute)
 	meeting := createdID(t, d.e, "/v1/activities", AnyMap{

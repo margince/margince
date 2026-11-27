@@ -80,6 +80,7 @@ func sortedIDs(in ...ids.UUID) []ids.UUID {
 }
 
 func TestAMeetingFiledOnlyOnADealGoesToItsAttendees(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	s := storeAddressing(e, readerAddress)
 	deal := e.openDeal(t)
@@ -103,6 +104,7 @@ func TestAMeetingFiledOnlyOnADealGoesToItsAttendees(t *testing.T) {
 }
 
 func TestTheLinkedContactsComeBeforeTheAttendeeList(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	s := storeAddressing(e, readerAddress)
 	meeting := e.metOnDeal(t, e.openDeal(t))
@@ -119,6 +121,7 @@ func TestTheLinkedContactsComeBeforeTheAttendeeList(t *testing.T) {
 }
 
 func TestAMailToAnyAttendeeSettlesTheMeeting(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	s := storeAddressing(e, readerAddress)
 	meeting := e.metOnDeal(t, e.openDeal(t))
@@ -136,6 +139,7 @@ func TestAMailToAnyAttendeeSettlesTheMeeting(t *testing.T) {
 }
 
 func TestAnAttendeeTheReaderCannotSeeIsNotARecipient(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	s := storeAddressing(e, readerAddress)
 	meeting := e.metOnDeal(t, e.openDeal(t))
@@ -155,6 +159,7 @@ func TestAnAttendeeTheReaderCannotSeeIsNotARecipient(t *testing.T) {
 // A mail to an attendee the reader may not see must not settle the row: a row
 // vanishing would tell them that contact exists.
 func TestAMailToAnAttendeeTheReaderCannotSeeDoesNotSettleIt(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	s := storeAddressing(e, readerAddress)
 	meeting := e.metOnDeal(t, e.openDeal(t))
@@ -174,6 +179,7 @@ func TestAMailToAnAttendeeTheReaderCannotSeeDoesNotSettleIt(t *testing.T) {
 // A contact shared with the reader read-only cannot take a filed send, so it
 // is not offered as a recipient.
 func TestAReadOnlySharedAttendeeIsNotARecipient(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	s := storeAddressing(e, readerAddress)
 	meeting := e.metOnDeal(t, e.openDeal(t))
@@ -192,6 +198,7 @@ func TestAReadOnlySharedAttendeeIsNotARecipient(t *testing.T) {
 }
 
 func TestAMeetingWithNoAttendeeOnFileStillNamesItsDeal(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	s := storeAddressing(e, readerAddress)
 	deal := e.openDeal(t)
@@ -210,6 +217,7 @@ func TestAMeetingWithNoAttendeeOnFileStillNamesItsDeal(t *testing.T) {
 }
 
 func TestAMergedAttendeeIsListedAsTheSurvivor(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	s := storeAddressing(e, readerAddress)
 	meeting := e.metOnDeal(t, e.openDeal(t))
@@ -224,6 +232,7 @@ func TestAMergedAttendeeIsListedAsTheSurvivor(t *testing.T) {
 }
 
 func TestTheDealReadNamesOnlyThatDealsMeetings(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	s := storeAddressing(e, readerAddress)
 	deal := e.openDeal(t)

@@ -23,6 +23,7 @@ import (
 // shares a word with travel still owes one. The outcome filter, the list stamp
 // and the single read give the same answer for every subject.
 func TestATravelSubjectOwesNoOutcomeUnlessItLinksADealLeadOrProject(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	helper := seedCustomer(t, e)
 	pipeline, stage, deal, lead, company, project := ids.NewV7(), ids.NewV7(), ids.NewV7(), ids.NewV7(), ids.NewV7(), ids.NewV7()
@@ -169,6 +170,7 @@ func assertOwedAsRead(ctx context.Context, t *testing.T, e *sendEnv, want map[id
 
 // A meeting with no subject is not travel, so it still owes an outcome.
 func TestAMeetingWithNoSubjectStillOwesAnOutcome(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	helper := seedCustomer(t, e)
 	yesterday := clocktest.Now(t).Add(-24 * time.Hour)

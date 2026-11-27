@@ -74,6 +74,7 @@ func dealUpdated(deal ids.UUID) kevents.Envelope {
 // deactivated, or replaced, after the fan-out authorized them gets nothing
 // sent under their name; with nothing in between, the event goes out.
 func TestAFirstWebhookAttemptIsCheckedAgainBeforeItsPost(t *testing.T) {
+	t.Parallel()
 	for name, tc := range map[string]struct {
 		between func(e *integration.Env)
 		posts   int
@@ -108,6 +109,7 @@ func TestAFirstWebhookAttemptIsCheckedAgainBeforeItsPost(t *testing.T) {
 // Two handovers of one member to different colleagues race. The one that
 // commits first keeps the webhook; the other finds it moved and leaves it.
 func TestTwoRacingHandoversLeaveAWebhookWithTheFirstSuccessor(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	hook := seedWebhook(t, e, e.Rep1, false)
 	admin := adminWithWebhooks(e)
@@ -117,7 +119,7 @@ func TestTwoRacingHandoversLeaveAWebhookWithTheFirstSuccessor(t *testing.T) {
 	firstDone := make(chan error, 1)
 	go func() {
 		firstDone <- e.DB().Tx(admin, func(tx pgx.Tx) error {
-			if _, err := webhooks.TransferSubscriptionOwnershipTx(admin, tx, from, ids.From[ids.UserKind](e.Rep2), identity.AdmitMemberHandover); err != nil {
+			if _, err := webhooks.TransferSubscriptionOwnershipTx(admin, tx, from, ids.From[ids.UserKind](e.Rep2), admitMemberHandover); err != nil {
 				return err
 			}
 			close(firstMoved)
@@ -131,7 +133,7 @@ func TestTwoRacingHandoversLeaveAWebhookWithTheFirstSuccessor(t *testing.T) {
 	go func() {
 		secondDone <- e.DB().Tx(admin, func(tx pgx.Tx) error {
 			var err error
-			secondMoved, err = webhooks.TransferSubscriptionOwnershipTx(admin, tx, from, ids.From[ids.UserKind](e.Rep3), identity.AdmitMemberHandover)
+			secondMoved, err = webhooks.TransferSubscriptionOwnershipTx(admin, tx, from, ids.From[ids.UserKind](e.Rep3), admitMemberHandover)
 			return err
 		})
 	}()

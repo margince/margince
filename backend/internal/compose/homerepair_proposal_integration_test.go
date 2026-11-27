@@ -22,6 +22,7 @@ import (
 )
 
 func TestReviewedHistoricalProposalWithdrawsWithoutRecreatingWork(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := time.Date(2026, 4, 1, 12, 0, 0, 0, time.UTC)
 	old := now.AddDate(0, 0, -90)
@@ -104,6 +105,7 @@ func stageRepairProposalFrom(t *testing.T, e *integration.Env, at time.Time, log
 }
 
 func TestReviewedDuplicateProposalKeepsTheOriginalAndDoesNotRestage(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	at := time.Date(2026, 4, 1, 12, 0, 0, 0, time.UTC)
 	commitment, originalID := stageRepairProposal(t, e, at)
@@ -172,6 +174,7 @@ func TestReviewedDuplicateProposalKeepsTheOriginalAndDoesNotRestage(t *testing.T
 }
 
 func TestReviewedProposalRepairPreservesLaterHumanDecisionsAndSourcePrivacy(t *testing.T) {
+	t.Parallel()
 	for _, change := range []string{"decided", "source_hidden"} {
 		t.Run(change, func(t *testing.T) {
 			e := integration.Setup(t)
@@ -219,6 +222,7 @@ func TestReviewedProposalRepairPreservesLaterHumanDecisionsAndSourcePrivacy(t *t
 }
 
 func TestReviewedRepairLeavesAHandLoggedProposalPastTheHorizon(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := time.Date(2026, 4, 1, 12, 0, 0, 0, time.UTC)
 	stageRepairProposalFrom(t, e, now.AddDate(0, 0, -90), "manual")

@@ -107,6 +107,7 @@ func netValueNotices(t *testing.T, e *integration.Env, deal ids.UUID) int {
 }
 
 func TestTheOfferNetTaskCorrectsAGrossPricedDealAndTellsItsOwnerOnce(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	pipeline, open, won := integration.DealFixture(t, e)
@@ -137,6 +138,7 @@ func TestTheOfferNetTaskCorrectsAGrossPricedDealAndTellsItsOwnerOnce(t *testing.
 }
 
 func TestTheOfferNetTaskLeavesAloneWhatIsNotAGrossFromAnAccept(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 
@@ -170,6 +172,7 @@ func TestTheOfferNetTaskLeavesAloneWhatIsNotAGrossFromAnAccept(t *testing.T) {
 }
 
 func TestTheOfferNetTaskRollsBackItsNoticeWithItsDomainWrite(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	pipeline, open, won := integration.DealFixture(t, e)
@@ -194,6 +197,7 @@ func TestTheOfferNetTaskRollsBackItsNoticeWithItsDomainWrite(t *testing.T) {
 }
 
 func TestTheOfferNetTaskLeavesADealAloneThatSomeoneRetypedAwayAndBackToTheGross(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	pipeline, open, won := integration.DealFixture(t, e)
@@ -215,6 +219,7 @@ func TestTheOfferNetTaskLeavesADealAloneThatSomeoneRetypedAwayAndBackToTheGross(
 }
 
 func TestTheOfferNetTaskTellsTheOwnerTheDealHasWhenItIsCorrected(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	pipeline, open, won := integration.DealFixture(t, e)
@@ -235,6 +240,7 @@ func TestTheOfferNetTaskTellsTheOwnerTheDealHasWhenItIsCorrected(t *testing.T) {
 }
 
 func TestTheOfferNetTaskLeavesADealAloneWhoseCurrencyWasRestated(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	pipeline, open, won := integration.DealFixture(t, e)
@@ -249,6 +255,7 @@ func TestTheOfferNetTaskLeavesADealAloneWhoseCurrencyWasRestated(t *testing.T) {
 }
 
 func TestTheOfferNetTaskReFreezesAClosedDealOnTheNetAndLeavesItsCommissionAlone(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	pipeline, open, won := integration.DealFixture(t, e)

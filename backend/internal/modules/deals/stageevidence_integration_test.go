@@ -72,6 +72,7 @@ func claim(dealID ids.DealID, criterionID ids.ExitCriterionID, side AuthorSide) 
 // The rule the ledger exists for, held at the WRITE. A rep's own message
 // saying the buyer confirmed something is our claim about them, not theirs.
 func TestSellerAuthoredEvidenceCannotSettleABuyerMilestone(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	dealID, criterionID := evidenceFixture(t, e, CriterionBuyerConfirmed)
 
@@ -94,6 +95,7 @@ func TestSellerAuthoredEvidenceCannotSettleABuyerMilestone(t *testing.T) {
 // Observing that a criterion is NOT met is something anybody may report.
 // Refusing it would leave the ledger able to record only good news.
 func TestOurOwnSideMayRecordThatACriterionIsUnmet(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	dealID, criterionID := evidenceFixture(t, e, CriterionBuyerConfirmed)
 
@@ -107,6 +109,7 @@ func TestOurOwnSideMayRecordThatACriterionIsUnmet(t *testing.T) {
 // A criterion NOT naming something the buyer did takes either side's word: we
 // learn who the economic buyer is from our own notes as readily as from theirs.
 func TestANonBuyerMilestoneTakesOurOwnObservation(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	dealID, criterionID := evidenceFixture(t, e, CriterionRoleIdentified)
 
@@ -119,6 +122,7 @@ func TestANonBuyerMilestoneTakesOurOwnObservation(t *testing.T) {
 // contract turning active arrives more than once. A second row would
 // double-count one fact for every reader that counts met criteria.
 func TestTheSameSourceIsRecordedOnce(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	dealID, criterionID := evidenceFixture(t, e, CriterionRoleIdentified)
 
@@ -161,6 +165,7 @@ func TestTheSameSourceIsRecordedOnce(t *testing.T) {
 // A refuted claim STAYS. Why a stage move was reversed is a question asked
 // later, and a deleted row answers it with silence.
 func TestRefutingAClaimKeepsItAndMarksIt(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	ctx := e.asDealWriter()
 	dealID, criterionID := evidenceFixture(t, e, CriterionRoleIdentified)
@@ -191,6 +196,7 @@ func TestRefutingAClaimKeepsItAndMarksIt(t *testing.T) {
 // The first word on a refutation is the one worth keeping: re-refuting would
 // overwrite who first said the claim was wrong.
 func TestASecondRefutationLeavesTheFirstStanding(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	ctx := e.asDealWriter()
 	dealID, criterionID := evidenceFixture(t, e, CriterionRoleIdentified)
@@ -215,6 +221,7 @@ func TestASecondRefutationLeavesTheFirstStanding(t *testing.T) {
 // it is theatre. The column refuses the pairing; this answers in the caller's
 // own vocabulary rather than surfacing a constraint violation.
 func TestADeterministicClaimCarriesNoConfidence(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	dealID, criterionID := evidenceFixture(t, e, CriterionRoleIdentified)
 
@@ -231,6 +238,7 @@ func TestADeterministicClaimCarriesNoConfidence(t *testing.T) {
 // The deterministic writer resolves the criteria itself, so a deal whose stage
 // asks for nothing of the kind gets no row — the common case, not an error.
 func TestADealWhoseStageAsksForNothingOfTheKindGetsNoEvidence(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	dealID, _ := evidenceFixture(t, e, CriterionRoleIdentified)
 
@@ -250,6 +258,7 @@ func TestADealWhoseStageAsksForNothingOfTheKindGetsNoEvidence(t *testing.T) {
 // And when the stage DOES ask for it, the writer finds the criterion without
 // the caller naming it.
 func TestTheDeterministicWriterFindsTheCriterionByKind(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	dealID, criterionID := evidenceFixture(t, e, CriterionDocumentSigned)
 
@@ -285,6 +294,7 @@ func TestTheDeterministicWriterFindsTheCriterionByKind(t *testing.T) {
 // a row-scope boundary instead would encode a rule the product does not have
 // and would fail the day somebody reads tableclass.go and believes the test.
 func TestEvidenceCarriesTheDealsOwnReadRule(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	dealID, criterionID := evidenceFixture(t, e, CriterionRoleIdentified)
 	if _, err := e.store.RecordStageEvidence(e.asDealWriter(), claim(dealID, criterionID, AuthorSeller)); err != nil {
@@ -309,6 +319,7 @@ func TestEvidenceCarriesTheDealsOwnReadRule(t *testing.T) {
 // A deal nobody may see at all still answers 404 rather than an empty list:
 // an unknown id and a hidden one are the same answer, by design.
 func TestEvidenceForAnUnknownDealIsNotFound(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	_, err := e.store.ListStageEvidence(e.asDealWriter(), ids.From[ids.DealKind](ids.NewV7()))
 	if !errors.Is(err, apperrors.ErrNotFound) {
@@ -377,6 +388,7 @@ func (e *configEnv) asDealless() context.Context {
 // ErrNotFound rather than a field fault: naming the mismatch would confirm
 // that the other stage's criterion exists.
 func TestEvidenceCannotNameACriterionFromAnotherDealsStage(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	dealID, _ := evidenceFixture(t, e, CriterionEventHeld)
 	_, otherCriterion := evidenceFixture(t, e, CriterionEventHeld)
@@ -392,6 +404,7 @@ func TestEvidenceCannotNameACriterionFromAnotherDealsStage(t *testing.T) {
 // those — "the buyer has not confirmed" is an observation anybody may make —
 // but a misfiled row is misfiled whichever way it reads.
 func TestAnUnmetClaimIsAlsoBoundToItsDealsStage(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	dealID, _ := evidenceFixture(t, e, CriterionEventHeld)
 	_, otherCriterion := evidenceFixture(t, e, CriterionEventHeld)
@@ -411,6 +424,7 @@ func TestAnUnmetClaimIsAlsoBoundToItsDealsStage(t *testing.T) {
 // latency: the same meeting settled a different criterion on a replay, and a
 // criterion on a stage the deal had already left could never be settled at all.
 func TestEvidenceLandsOnTheStageTheDealWasOnWhenItHappened(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	dealID, criterionID := evidenceFixture(t, e, CriterionDocumentSigned)
 	// The signature was observed an HOUR before the stage moved, which is the
@@ -500,6 +514,7 @@ func laterStageAsking(
 // creates the deal because of it. Refusing evidence that predates the record
 // would throw away exactly the evidence that motivated creating it.
 func TestEvidenceOlderThanTheDealLandsOnTheStageItWasCreatedOn(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	dealID, criterionID := evidenceFixture(t, e, CriterionDocumentSigned)
 
@@ -540,6 +555,7 @@ func TestEvidenceOlderThanTheDealLandsOnTheStageItWasCreatedOn(t *testing.T) {
 // nothing about production — the version of this test that did exactly that is
 // what Codex caught.
 func TestTheTranscriptLineCountAgreesBetweenSQLAndGo(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	dealID, _ := evidenceFixture(t, e, CriterionEventHeld)
 
@@ -574,6 +590,7 @@ func TestTheTranscriptLineCountAgreesBetweenSQLAndGo(t *testing.T) {
 // An activity with no transcript reports none, so HasTranscript is a real
 // answer rather than a column that is always true.
 func TestAnActivityWithNoTranscriptReportsNone(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	dealID, _ := evidenceFixture(t, e, CriterionEventHeld)
 	activityID := seedTranscribedMeeting(t, e, dealID, "")
@@ -639,6 +656,7 @@ func (noDomains) MeetingParties(context.Context, pgx.Tx) (owndomain.Parties, err
 // record said the meeting happened; the ledger said it did not, and nothing
 // failed. Both rows stand now, and a reader can see they disagree.
 func TestAModelReadingDoesNotSilenceTheRecordsOwnClaim(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	dealID, criterionID := evidenceFixture(t, e, CriterionEventHeld)
 	sourceID := ids.NewV7()
@@ -680,6 +698,7 @@ func TestAModelReadingDoesNotSilenceTheRecordsOwnClaim(t *testing.T) {
 // same source twice still collapses, because the bus is at-least-once and a
 // second row would double-count one fact.
 func TestOneWriterRecordingTwiceStillCollapses(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	dealID, criterionID := evidenceFixture(t, e, CriterionEventHeld)
 	twice := claim(dealID, criterionID, AuthorBuyer)

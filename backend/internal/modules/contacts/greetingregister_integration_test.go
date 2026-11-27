@@ -32,6 +32,7 @@ func (e *dedupeEnv) greetingAudit(ctx context.Context, t *testing.T, id ids.Cont
 }
 
 func TestARepSetsAndClearsTheGreetingRegisterAndEachEditIsAudited(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	created, err := e.store.CreateContact(ctx, CreateContactInput{FullName: "Dietmar Rietsch", Source: "manual"})
@@ -75,6 +76,7 @@ func TestARepSetsAndClearsTheGreetingRegisterAndEachEditIsAudited(t *testing.T) 
 }
 
 func TestAnUnknownGreetingRegisterIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	created, err := e.store.CreateContact(ctx, CreateContactInput{FullName: "Pat Doe", Source: "manual"})

@@ -338,13 +338,12 @@ type Server struct {
 	confirmRunner   *jobs.Runner
 	siteLeadNotices *siteLeadNoticeLane
 
-	// captureConfig is the deployment's capture suppression-list config
-	// (CAP-PARAM-5/6, ADR-0072), injected by WithCaptureConfig. The options
-	// that rebuild the capture registry (WithKeyvault, WithGraphCapture) read
-	// it so the transactional/free-mail additions apply on EVERY registry, not
-	// only the Gmail one WithGmailCapture threads it into. Zero value = the
-	// pinned baselines.
+	// captureConfig is the deployment's capture config, from WithCaptureConfig.
+	// Every option that rebuilds the capture registry reads it, so its
+	// additions apply on every registry. The zero value is the pinned baselines.
 	captureConfig CaptureConfig
+	// queues is what this composition's contacts stores queue after a write.
+	queues *storeQueues
 
 	// gmailAppConfigured records whether the ENVIRONMENT carries a Google app.
 	// The send pre-flight asks googleAppResolver too, so false still finds an
@@ -378,8 +377,8 @@ type Server struct {
 
 	// log is the process logger, shared with the optional engines an
 	// option wires (e.g. the brief L2 ranker's degradation warnings).
-	log *slog.Logger
-
+	log        *slog.Logger
+	extensions *Extensions // the composition's units; bindExtensions hands it on
 	// offerDrafter is the AI-drafted offer regeneration orchestrator (arc
 	// 4b), injected by WithOfferDraft. Without it, offerregenerate.go's
 	// RegenerateOffer shadow stays mechanical-only — the same "declared
@@ -493,7 +492,7 @@ type Server struct {
 	// views is the router read_view runs through, shared by every Server copy.
 	views *viewDoor
 	coreFeatureSettings
-
+	composedConfig
 	// securityTxt is the rendered web.security_txt (WithSecurityTxt); empty
 	// leaves /.well-known/security.txt unmounted.
 	securityTxt string

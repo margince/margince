@@ -8,14 +8,13 @@ package integration
 import (
 	"context"
 	"maps"
-	"os"
 	"testing"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/margince/margince/backend/internal/compose/corereach"
+	"github.com/margince/margince/backend/internal/compose/extensionprivacy"
 	"github.com/margince/margince/backend/internal/compose/installseam"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -71,22 +70,14 @@ type Env struct {
 	AgentPassport ids.UUID
 }
 
-// Setup gives each test a clean, migrated database and seeds the
-// workspace/user/team fixture, returning the ready Env. The schema is migrated
-// once per test process (testdb.EnsureSchema); every later test resets the data
-// only (testdb.Reset) — nothing here remigrates, and nothing truncates the whole
-// schema; see package testdb for what each of those costs.
-// Integration tests fail loudly without a database — they never skip.
+// Setup gives the test a migrated database of its own (testdb.New) and seeds
+// the workspace/user/team fixture, returning the ready Env.
 func Setup(t *testing.T) *Env {
 	t.Helper()
-	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
-	appDSN := os.Getenv("MARGINCE_TEST_APP_DSN")
-	if ownerDSN == "" || appDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
+	db := testdb.New(t)
 	ctx := context.Background()
 
-	owner, err := pgx.Connect(ctx, ownerDSN)
+	owner, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -95,18 +86,6 @@ func Setup(t *testing.T) *Env {
 			t.Errorf("closing owner connection: %v", err)
 		}
 	})
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
-	// Refused rather than reported, because the reset is what makes a leak
-	// invisible: it truncates the rows the leaked workers are still reading.
-	if leaked := leakedRunners(); leaked != "" {
-		t.Fatalf("a job runner outlived the test that started it, so this reset would "+
-			"pull the database out from under its workers:%s", leaked)
-	}
-	if err := testdb.Reset(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
 
 	e := &Env{
 		WS: ids.NewV7(), Rep1: ids.NewV7(), Rep2: ids.NewV7(), Rep3: ids.NewV7(),
@@ -118,10 +97,6 @@ func Setup(t *testing.T) *Env {
 		t.Fatal(err)
 	}
 	seedInstallationIdentity(ctx, t, owner)
-	// The boot seals these in RegisterExtensions, which no test here runs.
-	if err := corereach.Install(nil); err != nil {
-		t.Fatal(err)
-	}
 	for i, user := range []ids.UUID{e.Rep1, e.Rep2, e.Rep3, e.AdminUser} {
 		address := string(rune('a'+i)) + "@authz.test"
 		if _, err := owner.Exec(ctx,
@@ -153,9 +128,7 @@ func Setup(t *testing.T) *Env {
 
 	seedSystemRoleRows(ctx, t, owner)
 
-	// Shared across the package's tests, and deliberately not closed here — see
-	// testdb.Pool for why the connections, not the pool object, are the cost.
-	pool, err := testdb.Pool(ctx, appDSN)
+	pool, err := testdb.Pool(ctx, db.AppDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -163,7 +136,13 @@ func Setup(t *testing.T) *Env {
 	// last and sees a package that has genuinely stopped.
 	testdb.AssertPoolsQuiesced(t)
 	e.Pool = pool
-	e.bindStores(t, harnessDB(pool, e.WS))
+	// The registry a composition of no units hands its merge doors: the core
+	// modules' declared tables.
+	core, err := extensionprivacy.Registry(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	e.bindStores(t, harnessDB(pool, e.WS), core)
 	return e
 }
 
@@ -208,14 +187,7 @@ func ContractsStore(db *database.DB, dealStore *deals.Store) *contracts.Store {
 // same owner DSN the migration step uses.
 func SchemaPool(t *testing.T) *pgxpool.Pool {
 	t.Helper()
-	if err := testdb.EnsureSchema(context.Background(), OwnerConn(t)); err != nil {
-		t.Fatal(err)
-	}
-	dsn := os.Getenv("MARGINCE_TEST_DSN")
-	if dsn == "" {
-		t.Fatal("MARGINCE_TEST_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
-	pool, err := database.NewPool(context.Background(), dsn)
+	pool, err := database.NewPool(context.Background(), testdb.For(t).OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -402,17 +374,8 @@ var SchedulerPerms = principal.Permissions{
 // and why the guard probes the table rather than a flag.
 func ApplyRiverSchema(t *testing.T) {
 	t.Helper()
-	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
-	if ownerDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
 	ctx := context.Background()
-	// The shared owner pool, not a fresh one: every suite that needs a real
-	// worker calls this, and each call is one existence probe. testdb.Pool
-	// refuses to open before EnsureSchema has run, so a caller that reached
-	// here without a harness Setup is told so rather than served a connection
-	// older than the schema.
-	ownerPool, err := testdb.Pool(ctx, ownerDSN)
+	ownerPool, err := testdb.Pool(ctx, testdb.For(t).OwnerDSN)
 	if err != nil {
 		t.Fatalf("opening owner pool: %v", err)
 	}

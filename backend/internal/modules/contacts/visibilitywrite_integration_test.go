@@ -60,6 +60,7 @@ func (e *privacyEnv) ownerOf(t *testing.T, id ids.ContactID) *ids.UUID {
 // TestAWorkspaceContactCanBeMadePrivateAgain is the direction that did not
 // exist, and the whole reason for the change.
 func TestAWorkspaceContactCanBeMadePrivateAgain(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	published := e.captureContact(t, "workspace")
 	teammate := e.as(e.teammate, principal.RowScopeTeam)
@@ -86,6 +87,7 @@ func TestAWorkspaceContactCanBeMadePrivateAgain(t *testing.T) {
 // TestAPrivateContactCanBePublishedThroughThePatch is the other direction
 // through the ordinary field, rather than through the owner's own verb.
 func TestAPrivateContactCanBePublishedThroughThePatch(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	captured := e.captureContact(t, "owner")
 	teammate := e.as(e.teammate, principal.RowScopeTeam)
@@ -119,6 +121,7 @@ func TestAPrivateContactCanBePublishedThroughThePatch(t *testing.T) {
 // colleague who may write it, keeps its own owner rather than being handed to
 // the caller.
 func TestNarrowingAContactNamesAnOwnerForIt(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	published := e.captureContact(t, "workspace")
 
@@ -149,6 +152,7 @@ func TestNarrowingAContactNamesAnOwnerForIt(t *testing.T) {
 // ownership. The owner's own verb (POST /contacts/{id}/publish) keeps its
 // stricter ownership test, because it also publishes the correspondence.
 func TestAWriteGrantHolderMovesVisibility(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	published := e.captureContact(t, "workspace")
 
@@ -178,6 +182,7 @@ func TestAWriteGrantHolderMovesVisibility(t *testing.T) {
 // same existence-hiding answer the owner's verb gives. Neither a teammate nor
 // an admin can publish somebody else's private contact through this field.
 func TestCapturePrivacyStillHidesAContactFromTheNewDoor(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	captured := e.captureContact(t, "owner")
 
@@ -210,6 +215,7 @@ func TestCapturePrivacyStillHidesAContactFromTheNewDoor(t *testing.T) {
 // that says 'owner' and names nobody is invisible to every seat — including
 // whoever just wrote it, and including the admin who would have to repair it.
 func TestNarrowingRefusesToMakeARecordNobodyCanRead(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 
 	t.Run("a row that already has no owner", func(t *testing.T) {
@@ -255,6 +261,7 @@ func TestNarrowingRefusesToMakeARecordNobodyCanRead(t *testing.T) {
 // caller would have carried — the row as it looked while still public — and
 // must refuse it now that the stored row says otherwise.
 func TestAStaleVisibilityWriteIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	published := e.captureContact(t, "workspace")
 	ctx := e.as(e.owner, principal.RowScopeOwn)
@@ -304,6 +311,7 @@ func TestAStaleVisibilityWriteIsRefused(t *testing.T) {
 // Driven as the real interleaving: authorize while the contact is public, let
 // the owner privatize and COMMIT, then carry on as the update path does.
 func TestContactAuthorizationIsRecheckedUnderTheRowLock(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	published := e.captureContact(t, "workspace")
 	colleague := e.as(e.teammate, principal.RowScopeTeam)

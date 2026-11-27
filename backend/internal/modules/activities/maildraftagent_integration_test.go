@@ -42,6 +42,7 @@ func agentDraft(body string) MailDraftContent {
 }
 
 func TestAnAgentsDraftWaitsForItsHumanMarkedAsAnAgents(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := MailDraftAnchor{Type: crmcontracts.MailDraftAnchorTypeContact, ID: e.seedContact(t, "Buyer")}
 	store := draftStore(e)
@@ -72,6 +73,7 @@ func TestAnAgentsDraftWaitsForItsHumanMarkedAsAnAgents(t *testing.T) {
 }
 
 func TestTheHumansSaveClearsTheMarkAndAnAgentCannotWriteOverIt(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := MailDraftAnchor{Type: crmcontracts.MailDraftAnchorTypeContact, ID: e.seedContact(t, "Buyer")}
 	store := draftStore(e)
@@ -98,6 +100,7 @@ func TestTheHumansSaveClearsTheMarkAndAnAgentCannotWriteOverIt(t *testing.T) {
 // The route's save and discard hold an agent to the line its own draft verb holds.
 // It replaces and removes its own draft, and never one the human saved.
 func TestAnAgentReachesOnlyItsOwnDraftThroughTheRouteWrites(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := MailDraftAnchor{Type: crmcontracts.MailDraftAnchorTypeContact, ID: e.seedContact(t, "Buyer")}
 	store := draftStore(e)
@@ -132,6 +135,7 @@ func TestAnAgentReachesOnlyItsOwnDraftThroughTheRouteWrites(t *testing.T) {
 }
 
 func TestAnAgentsDraftAnswersToItsHumansRowScopeAndOnlyAnAgentMarksOne(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	hidden := replyAnchor(e.seedAnchor(t, "", ""))
 	e.linkToContactOwnedBy(t, ids.From[ids.ActivityKind](hidden.ID), e.other)

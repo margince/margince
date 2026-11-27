@@ -16,6 +16,7 @@ import (
 // An agent whose colleague has been deactivated lends nobody's authority, even
 // while it still holds the passport the colleague issued.
 func TestAnAgentOfADeactivatedMemberActsForNobody(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "agent-actor-departed")
 	// The suite's database holds one workspace per env, so the singleton read
 	// would find several; this env's own workspace is the installation here.

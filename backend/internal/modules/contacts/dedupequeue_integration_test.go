@@ -51,6 +51,7 @@ func openCandidates(ctx context.Context, t *testing.T, e *dedupeEnv, entityType 
 }
 
 func TestManualFuzzyCreateLeavesAnOpenDedupeCandidate(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	incumbent, created := seedContactPair(ctx, t, e, "John Doe", "john@queue.test", "Jon Doe", "jon@queue.test", "queue.test")
@@ -91,6 +92,7 @@ func TestManualFuzzyCreateLeavesAnOpenDedupeCandidate(t *testing.T) {
 }
 
 func TestDedupeQueueRefusesBadInput(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	_, _ = seedContactPair(ctx, t, e, "Erin Example", "erin@badinput.test", "Eryn Example", "eryn@badinput.test", "badinput.test")
@@ -128,6 +130,7 @@ func TestDedupeQueueRefusesBadInput(t *testing.T) {
 }
 
 func TestDedupeDismissSuppressesAndUndoReopens(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	_, _ = seedContactPair(ctx, t, e, "Max Muster", "max@dismiss.test", "Marx Muster", "marx@dismiss.test", "dismiss.test")
@@ -168,6 +171,7 @@ func TestDedupeDismissSuppressesAndUndoReopens(t *testing.T) {
 }
 
 func TestDedupeMergeRunsTheOneMergeVerbAndStandsForever(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	incumbent, created := seedContactPair(ctx, t, e, "Ada Lovelace", "ada@merge.test", "Ada Lovelance", "adal@merge.test", "merge.test")
@@ -199,6 +203,7 @@ func TestDedupeMergeRunsTheOneMergeVerbAndStandsForever(t *testing.T) {
 }
 
 func TestDedupeCompanyMergeArm(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	incumbent, err := e.store.CreateCompany(ctx, CreateCompanyInput{
@@ -230,6 +235,7 @@ func TestDedupeCompanyMergeArm(t *testing.T) {
 }
 
 func TestDedupeQueuePagesByConfidence(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	_, _ = seedContactPair(ctx, t, e, "Kim Page", "kim@page.test", "Kym Page", "kym@page.test", "page.test")
@@ -261,6 +267,7 @@ func TestDedupeQueuePagesByConfidence(t *testing.T) {
 // Each employer is named after its surname alone. Employers that share a
 // leading name score as each other's duplicates, which would move the count.
 func TestAnOverCapPageAskIsClampedRatherThanResetToTheDefault(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	for _, name := range surnamesPastOnePage {
@@ -325,6 +332,7 @@ func (e *dedupeEnv) asAgentFor(onBehalfOf ids.UUID) context.Context {
 }
 
 func TestDedupeDispositionRefusesACallWithNoHumanBehindIt(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	_, _ = seedContactPair(ctx, t, e, "Pat Human", "pat@human.test", "Patt Human", "patt@human.test", "human.test")
@@ -339,6 +347,7 @@ func TestDedupeDispositionRefusesACallWithNoHumanBehindIt(t *testing.T) {
 }
 
 func TestAnAgentActingForAHumanDismissesAndReopensAPair(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	_, _ = seedContactPair(ctx, t, e, "Ann Agent", "ann@agent.test", "Anne Agent", "anne@agent.test", "agent.test")
@@ -391,6 +400,7 @@ func (e *dedupeEnv) asOwnScoped(other ids.UUID) context.Context {
 }
 
 func TestDedupeQueueHidesPairsOutsideTheCallersRowScope(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	_, _ = seedContactPair(ctx, t, e, "Vis Owner", "vis@scope.test", "Viz Owner", "viz@scope.test", "scope.test")
@@ -444,6 +454,7 @@ func seedCompanyPair(ctx context.Context, t *testing.T, e *dedupeEnv) (ids.UUID,
 // canonically with the lower id left and ids are time-ordered, so handing over
 // the record created first always probes the left slot and never the right.
 func TestDedupeDispositionRefusesAHalfWritablePair(t *testing.T) {
+	t.Parallel()
 	// Both verbs, because they are separate probes on separate paths: an undo
 	// that checked only one endpoint would pass the neither-writable test and
 	// the both-writable test alike. Both entity types that can reach this
@@ -529,6 +540,7 @@ func halfWritablePairIsRefused(t *testing.T, entityType, reown string,
 // So this seat is bounded — own-only scope, no grant — and owns both records
 // because the manual create path stamped it. It must be admitted.
 func TestDedupeDispositionAdmitsABoundedOwnerOfBothRecords(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	_, _ = seedContactPair(ctx, t, e, "Rey Owner", "rey@admit.test", "Reye Owner", "reye@admit.test", "admit.test")
@@ -572,6 +584,7 @@ func TestDedupeDispositionAdmitsABoundedOwnerOfBothRecords(t *testing.T) {
 // audit ledger carries no merge for it, which the old shape wrote and then
 // could not unwrite.
 func TestARefusedMergeLeavesNoMarkAndNoAuditOfOne(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	first, second := seedContactPair(ctx, t, e, "Nora Atomic", "nora@atomic.test", "Norah Atomic", "norah@atomic.test", "atomic.test")
@@ -637,6 +650,7 @@ func TestARefusedMergeLeavesNoMarkAndNoAuditOfOne(t *testing.T) {
 // buttons — they rendered unconditionally and the refusal arrived after the
 // POST.
 func TestTheQueueSaysWhichPairsThisCallerCouldDecide(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	_, second := seedContactPair(ctx, t, e, "Otto Split", "otto@split.test", "Ottoo Split", "ottoo@split.test", "split.test")
@@ -693,6 +707,7 @@ func TestTheQueueSaysWhichPairsThisCallerCouldDecide(t *testing.T) {
 // neither end hears the merge's refusal of the source. A winner outside the
 // pair is the caller's mistake, and they hear about it first.
 func TestDedupeMergeArmKeepsItsOwnRefusal(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	first, second := seedContactPair(ctx, t, e, "Ivy Merge", "ivy@mergearm.test", "Ivee Merge", "ivee@mergearm.test", "mergearm.test")
@@ -733,6 +748,7 @@ func TestDedupeMergeArmKeepsItsOwnRefusal(t *testing.T) {
 // there binds the wrong value rather than failing, and the symptom is exactly
 // the disclosure above.
 func TestOpenCandidatesNamingHidesAPairOutsideTheCallersRowScope(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	_, right := seedContactPair(ctx, t, e, "Nam Owner", "nam@scope.test", "Namm Owner", "namm@scope.test", "scope.test")
@@ -773,6 +789,7 @@ func TestOpenCandidatesNamingHidesAPairOutsideTheCallersRowScope(t *testing.T) {
 // have a queue at all, so a refusal here would turn every deal create into an
 // error.
 func TestOpenCandidatesNamingIsSilentForARecordTypeWithNoQueue(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	rows, err := e.store.OpenCandidatesNaming(ctx, "deal", ids.NewV7(), nil)
@@ -795,6 +812,7 @@ func TestOpenCandidatesNamingIsSilentForARecordTypeWithNoQueue(t *testing.T) {
 // A unit test cannot hold this. Both answers come out of SQL predicates over
 // owner_id and record_grant, which is exactly what a stub replaces.
 func TestTheMergeCardAgreesWithTheDispositionEndpoint(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	left, right := seedCompanyPair(ctx, t, e)
@@ -836,6 +854,7 @@ func TestTheMergeCardAgreesWithTheDispositionEndpoint(t *testing.T) {
 // Lifting a disposition reads the row it lifts. A candidate no longer there is
 // not-found, so a rolled-back merge never audits a reversal of nothing.
 func TestReopeningADedupeCandidateThatIsGoneIsNotFound(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	err := e.store.tx(ctx, func(tx pgx.Tx) error { return reopenDedupeCandidateTx(ctx, tx, ids.NewV7()) })

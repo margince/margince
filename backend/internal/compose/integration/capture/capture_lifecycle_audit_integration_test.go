@@ -60,6 +60,7 @@ func connectionCredentialRef(t *testing.T, e *integration.SearchEnv, connID ids.
 }
 
 func TestReconnectDeletesSupersededCredentialWhenTheCallerHangsUp(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	vault := newTestKeyvault(t, e)
 	hangUp := &hangUpVault{Vault: vault}
@@ -87,6 +88,7 @@ func TestReconnectDeletesSupersededCredentialWhenTheCallerHangsUp(t *testing.T) 
 }
 
 func TestDisconnectDeletesTheCredentialWhenTheCallerHangsUp(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	vault := newTestKeyvault(t, e)
 	hangUp := &hangUpVault{Vault: vault}
@@ -159,6 +161,7 @@ func connectionAudits(t *testing.T, e *integration.SearchEnv) []lifecycleAudit {
 }
 
 func TestConnectAndDisconnectLeaveAnAttributableAuditRow(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	registry := newTestCaptureRegistry(e, newTestKeyvault(t, e))
 	registry.Register(&authAssertingFake{})
@@ -233,6 +236,7 @@ func connectionGeneration(t *testing.T, e *integration.SearchEnv, connID ids.UUI
 // not a second withdrawal: the human withdrew once, so the trail must say so
 // once, and there is no new cycle out at the provider left to fence.
 func TestARetriedDisconnectDoesNotReAuditTheWithdrawal(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	registry := newTestCaptureRegistry(e, newTestKeyvault(t, e))
 	registry.Register(&authAssertingFake{})
@@ -282,19 +286,13 @@ func refuseSyncStateUpdates(t *testing.T, e *integration.SearchEnv) {
 			FOR EACH STATEMENT EXECUTE FUNCTION refuse_sync_state_update();`); err != nil {
 		t.Fatalf("installing the sync-state failure trigger: %v", err)
 	}
-	t.Cleanup(func() {
-		if _, err := e.Owner.Exec(context.Background(), `
-			DROP TRIGGER refuse_sync_state ON capture_sync_state;
-			DROP FUNCTION refuse_sync_state_update();`); err != nil {
-			t.Errorf("removing the sync-state failure trigger: %v", err)
-		}
-	})
 }
 
 // The audit row must be part of the connect, not a second write that happens
 // to follow it: a connect that fails anywhere in its transaction must leave no
 // trace of a connection that never existed.
 func TestAConnectThatFailsLeavesNoAuditRow(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	registry := newTestCaptureRegistry(e, newTestKeyvault(t, e))
 	registry.Register(&authAssertingFake{})

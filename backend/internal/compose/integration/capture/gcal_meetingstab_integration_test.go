@@ -142,6 +142,7 @@ func guestMeetings(t *testing.T, owner, colleague, guest string) []map[string]an
 }
 
 func TestAColleaguesMeetingWithAContactIsOnTheirMeetingsTab(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	buyer, err := contacts.NewStore(e.DB()).WithSenderStamp(activities.StampProvenSendersTx).EnsureContactByEmail(contactCreator(e), "Anna Buyer", "anna@acme.com", "manual", storekit.RefuseErased)
 	if err != nil {
@@ -157,6 +158,7 @@ func TestAColleaguesMeetingWithAContactIsOnTheirMeetingsTab(t *testing.T) {
 // The contact can arrive after the calendar sync, from the invitation mail or
 // by hand. The cohort promotion every contact event runs files the meeting then.
 func TestAMeetingSyncedBeforeItsGuestBecameAContactReachesTheirMeetingsTab(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	syncGcalEvents(t, e, "rep@ws.example", guestMeetings(t, "rep@ws.example", "lead@ws.example", "anna@acme.com"))
 	store := contacts.NewStore(e.DB()).WithSenderStamp(activities.StampProvenSendersTx)

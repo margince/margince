@@ -47,9 +47,9 @@ var sendingMailProviders = []struct {
 func TestTheSendScopeCommsDemandsIsTheOneTheConnectorRechecks(t *testing.T) {
 	for _, p := range sendingMailProviders {
 		t.Run(p.provider, func(t *testing.T) {
-			scope, capability := comms.SendScopeFor(p.provider)
+			scope, capability := comms.SendScopeFor(p.provider, comms.PreRegistryChannelSending)
 			if capability != comms.SendsWithScope {
-				t.Fatalf("comms.SendScopeFor(%q) = %v, want SendsWithScope; a grant that is never scope-checked, or a delivery that always parks", p.provider, capability)
+				t.Fatalf("comms.SendScopeFor(%q, comms.PreRegistryChannelSending) = %v, want SendsWithScope; a grant that is never scope-checked, or a delivery that always parks", p.provider, capability)
 			}
 			if scope != p.recheck {
 				t.Errorf("comms demands %q, the %s connector re-checks %q — every send would park as ungranted", scope, p.provider, p.recheck)
@@ -63,7 +63,7 @@ func TestTheSendScopeCommsDemandsIsTheOneTheConnectorRechecks(t *testing.T) {
 func TestEveryMailConsentRequestsTheScopeTheSendPathDemands(t *testing.T) {
 	for _, p := range sendingMailProviders {
 		t.Run(p.provider, func(t *testing.T) {
-			scope, _ := comms.SendScopeFor(p.provider)
+			scope, _ := comms.SendScopeFor(p.provider, comms.PreRegistryChannelSending)
 			if !slices.Contains(p.requested, scope) {
 				t.Errorf("the %s consent requests %v, which does not include the send scope %q the dispatcher demands", p.provider, p.requested, scope)
 			}
@@ -104,9 +104,9 @@ func TestTheSendScopeTableCoversExactlyWhatCommsHandsAScopeTo(t *testing.T) {
 // "provider cannot send messages", which is a connector limitation that does not
 // exist.
 func TestTheChannelProviderCommsCanSendForIsTheOneCaptureConnects(t *testing.T) {
-	scope, capability := comms.SendScopeFor(capture.ProviderTelegram)
+	scope, capability := comms.SendScopeFor(capture.ProviderTelegram, comms.PreRegistryChannelSending)
 	if capability != comms.SendsWithoutScope {
-		t.Fatalf("comms.SendScopeFor(%q) = %v, want SendsWithoutScope", capture.ProviderTelegram, capability)
+		t.Fatalf("comms.SendScopeFor(%q, comms.PreRegistryChannelSending) = %v, want SendsWithoutScope", capture.ProviderTelegram, capability)
 	}
 	if scope != "" {
 		t.Errorf("a bot token has no OAuth grant to intersect, yet comms demands scope %q of it", scope)
@@ -127,8 +127,8 @@ func TestTheChannelKindTheReplyPathAnswersIsTheOneCaptureFilesUnder(t *testing.T
 	}
 	// The transport half: capture's provider name has to be one the send path
 	// will act on, which is the drift this test has always been about.
-	if !activities.CanSendOnProvider(capture.ProviderTelegram) {
-		t.Errorf("activities cannot send on %q, the provider capture files Telegram messages under; every Telegram reply would be refused as uncarriable",
+	if !comms.PreRegistryChannelSending(capture.ProviderTelegram) {
+		t.Errorf("a composition before its boot cannot send on %q, the provider capture files Telegram messages under; every Telegram reply would be refused as uncarriable",
 			capture.ProviderTelegram)
 	}
 	// The fourth spelling: capture restates the message kind rather than

@@ -97,6 +97,7 @@ func (l *confirmLaneEnv) leadReceiptDue(t *testing.T, lead ids.UUID) time.Time {
 }
 
 func TestALeadsPressGetsTheReceiptItsRulesOwe(t *testing.T) {
+	t.Parallel()
 	l := receiptLane(t, receiptOwed)
 	lead := l.refusingLead(t, new(leadReceiptAddress))
 	l.pressLeadLink(t, lead, leadReceiptAddress)
@@ -108,6 +109,7 @@ func TestALeadsPressGetsTheReceiptItsRulesOwe(t *testing.T) {
 }
 
 func TestALeadWithNoAddressRaisesTheNoAddressNotice(t *testing.T) {
+	t.Parallel()
 	l := receiptLane(t, receiptOwed)
 	lead := l.refusingLead(t, nil)
 	l.pressLeadLink(t, lead, "")
@@ -122,6 +124,7 @@ func TestALeadWithNoAddressRaisesTheNoAddressNotice(t *testing.T) {
 }
 
 func TestAnOverdueLeadReceiptIsRaisedOnTheLeadAndSettledWhenSent(t *testing.T) {
+	t.Parallel()
 	l := receiptLane(t, receiptOwed)
 	lead := l.refusingLead(t, new(leadReceiptAddress))
 	l.pressLeadLink(t, lead, leadReceiptAddress)
@@ -147,6 +150,7 @@ func TestAnOverdueLeadReceiptIsRaisedOnTheLeadAndSettledWhenSent(t *testing.T) {
 // A lead erased with its contact before the deadline keeps no receipt to send
 // and raises no notice.
 func TestALeadErasedBeforeItsReceiptIsSentGetsNeitherReceiptNorNotice(t *testing.T) {
+	t.Parallel()
 	l := receiptLane(t, receiptOwed)
 	lead := l.refusingLead(t, new(leadReceiptAddress))
 	l.e.WsExec(t, `UPDATE lead SET from_contact_id = $2 WHERE id = $1`, lead, l.contact)
@@ -172,6 +176,7 @@ func TestALeadErasedBeforeItsReceiptIsSentGetsNeitherReceiptNorNotice(t *testing
 // A link refusal is answered at the address it was made from. The lead may
 // have changed its address since the link was minted.
 func TestALinkRefusalIsAnsweredAtTheAddressItWasMadeFrom(t *testing.T) {
+	t.Parallel()
 	l := receiptLane(t, receiptOwed)
 	lead := l.refusingLead(t, new(leadReceiptAddress))
 	l.e.WsExec(t, `UPDATE lead SET email = 'lead-moved@example.test' WHERE id = $1`, lead)
@@ -231,6 +236,7 @@ func (l *confirmLaneEnv) transmitLeadReceipt(t *testing.T) commsauthz.TransmitTi
 // A lead's receipt to an address a contact also holds is decided on the lead.
 // That holds at staging and at transmit, whatever the contact's record says.
 func TestALeadReceiptToASharedAddressIsDecidedOnTheLead(t *testing.T) {
+	t.Parallel()
 	for name, contactObjected := range map[string]bool{
 		"the contact never objected": false,
 		"the contact objected too":   true,
@@ -264,6 +270,7 @@ func TestALeadReceiptToASharedAddressIsDecidedOnTheLead(t *testing.T) {
 // Retention anonymizing a lead parks its waiting receipt and takes back the
 // notice that the receipt is overdue.
 func TestRetentionAnonymizingALeadParksItsReceiptAndRetractsItsNotice(t *testing.T) {
+	t.Parallel()
 	l := receiptLane(t, receiptOwed)
 	lead := l.refusingLead(t, new(leadReceiptAddress))
 	l.pressLeadLink(t, lead, leadReceiptAddress)
@@ -281,7 +288,7 @@ func TestRetentionAnonymizingALeadParksItsReceiptAndRetractsItsNotice(t *testing
 
 	svc := NewRetentionServiceFor(l.e.DB(), nil, slog.Default())
 	integration.SettleIntoInstall(t, l.e)
-	if err := svc.EvaluateInstallation(integration.RetentionPassCtx(l.e.WS)); err != nil {
+	if err := svc.EvaluateInstallation(integration.RetentionPassCtx(context.Background(), l.e.WS)); err != nil {
 		t.Fatalf("EvaluateInstallation: %v", err)
 	}
 	if n := l.e.WsCount(t, `SELECT count(*) FROM lead WHERE id = $1 AND full_name = 'Anonymized Lead'`, lead); n != 1 {
@@ -299,6 +306,7 @@ func TestRetentionAnonymizingALeadParksItsReceiptAndRetractsItsNotice(t *testing
 // A mail filed under a lead may only go to an address the lead holds. The pin
 // narrows who a message is about and never reaches somebody new.
 func TestAMailFiledUnderALeadIsRefusedToAnAddressTheLeadDoesNotHold(t *testing.T) {
+	t.Parallel()
 	l := receiptLane(t, receiptOwed)
 	lead := l.refusingLead(t, new(leadReceiptAddress))
 	l.pressLeadLink(t, lead, leadReceiptAddress)
@@ -328,6 +336,7 @@ func TestAMailFiledUnderALeadIsRefusedToAnAddressTheLeadDoesNotHold(t *testing.T
 }
 
 func TestAQueuedLeadReceiptFollowsItsPromotedSubject(t *testing.T) {
+	t.Parallel()
 	l := receiptLane(t, receiptOwed)
 	lead := l.refusingLead(t, new(leadReceiptAddress))
 	l.pressLeadLink(t, lead, leadReceiptAddress)
@@ -351,6 +360,7 @@ func TestAQueuedLeadReceiptFollowsItsPromotedSubject(t *testing.T) {
 }
 
 func TestAQueuedLeadReceiptFollowsItsMergedSubject(t *testing.T) {
+	t.Parallel()
 	l := receiptLane(t, receiptOwed)
 	lead := l.refusingLead(t, new(leadReceiptAddress))
 	survivor := l.refusingLead(t, new("surviving-lead@example.test"))
@@ -369,6 +379,7 @@ func TestAQueuedLeadReceiptFollowsItsMergedSubject(t *testing.T) {
 }
 
 func TestLeadAnonymizationPreservesTheAlreadySentCorrespondence(t *testing.T) {
+	t.Parallel()
 	l := receiptLane(t, receiptOwed)
 	lead := l.refusingLead(t, new(leadReceiptAddress))
 	l.pressLeadLink(t, lead, leadReceiptAddress)
@@ -383,7 +394,7 @@ func TestLeadAnonymizationPreservesTheAlreadySentCorrespondence(t *testing.T) {
 	l.e.WsExec(t, `UPDATE lead SET created_at=now()-interval '400 days',entered_at=now()-interval '400 days' WHERE id=@lead`, pgx.StrictNamedArgs{"lead": lead})
 	svc := NewRetentionServiceFor(l.e.DB(), nil, slog.Default())
 	integration.SettleIntoInstall(t, l.e)
-	if err := svc.EvaluateInstallation(integration.RetentionPassCtx(l.e.WS)); err != nil {
+	if err := svc.EvaluateInstallation(integration.RetentionPassCtx(context.Background(), l.e.WS)); err != nil {
 		t.Fatal(err)
 	}
 	if n := l.e.WsCount(t, `SELECT count(*) FROM lead WHERE id=@lead AND full_name='Anonymized Lead' AND email IS NULL`, pgx.StrictNamedArgs{"lead": lead}); n != 1 {
@@ -395,6 +406,7 @@ func TestLeadAnonymizationPreservesTheAlreadySentCorrespondence(t *testing.T) {
 }
 
 func TestALegacySharedMailboxKeepsThePinnedLeadsCountry(t *testing.T) {
+	t.Parallel()
 	l := receiptLane(t, receiptOwed)
 	lead := l.refusingLead(t, new(leadReceiptAddress))
 	contact, err := l.e.Contacts.CreateContact(l.e.Admin(), contacts.CreateContactInput{
@@ -415,6 +427,7 @@ func TestALegacySharedMailboxKeepsThePinnedLeadsCountry(t *testing.T) {
 }
 
 func TestAReceiptStagedAfterPromotionKeepsItsLeadPin(t *testing.T) {
+	t.Parallel()
 	l := receiptLane(t, receiptOwed)
 	lead := l.refusingLead(t, new(leadReceiptAddress))
 	l.pressLeadLink(t, lead, leadReceiptAddress)

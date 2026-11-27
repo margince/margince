@@ -25,6 +25,7 @@ import (
 )
 
 func TestErasureRefoldsARelinkedActivityBeforeItsEventIsDelivered(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	oldContact := e.SeedContact(t, "Earlier contact", nil)

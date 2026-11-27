@@ -37,6 +37,7 @@ func (f chatFixture) fileConfirmed(t *testing.T, confirm bool) (ids.UUID, error)
 }
 
 func TestAChatShowingSomeoneElseFilesOnlyOnceConfirmed(t *testing.T) {
+	t.Parallel()
 	f := readChatScreenshot(t, strangerChatReply())
 	read, err := f.store.GetExtractionRead(f.env.Admin(), f.attachment, f.reading)
 	if err != nil {
@@ -57,6 +58,7 @@ func TestAChatShowingSomeoneElseFilesOnlyOnceConfirmed(t *testing.T) {
 }
 
 func TestAChatShowingTheContactNeedsNoConfirm(t *testing.T) {
+	t.Parallel()
 	f := readChatScreenshot(t, chatReply())
 	read, err := f.store.GetExtractionRead(f.env.Admin(), f.attachment, f.reading)
 	if err != nil {
@@ -71,6 +73,7 @@ func TestAChatShowingTheContactNeedsNoConfirm(t *testing.T) {
 }
 
 func TestAChatBodyIsHeldToItsLimitInCharacters(t *testing.T) {
+	t.Parallel()
 	f := readChatScreenshot(t, chatReply())
 	over := strings.Repeat("ü", activities.MaxChatText+1)
 	_, err := f.file(t, &over)
@@ -87,6 +90,7 @@ func TestAChatBodyIsHeldToItsLimitInCharacters(t *testing.T) {
 // Two confirms of one reading race. The attachment lock makes the second wait
 // and then answer the first one's activity.
 func TestTwoConcurrentConfirmsFileOneActivity(t *testing.T) {
+	t.Parallel()
 	f := readChatScreenshot(t, chatReply())
 	var wg sync.WaitGroup
 	results := make([]ids.UUID, 2)

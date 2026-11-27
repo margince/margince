@@ -30,6 +30,7 @@ func wantConsumerDomainRefusal(t *testing.T, err error) {
 }
 
 func TestCompanyDomainRefusesConsumerMail(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -63,6 +64,7 @@ func TestCompanyDomainRefusesConsumerMail(t *testing.T) {
 // Onboarding and the site-read confirmation save the company's website through
 // setCompanyDomain, so a consumer-mail website is refused there too.
 func TestSavingACompanyWebsiteOnConsumerMailIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	website := "https://www.gmail.com"
 	_, err := e.store.SaveCompany(e.asAdmin(), SaveCompanyInput{DisplayName: "Our House GmbH", Website: &website})
@@ -77,6 +79,7 @@ func TestSavingACompanyWebsiteOnConsumerMailIsRefused(t *testing.T) {
 // A company-domain write queues behind a consumer-list write holding the same
 // domain, so one of them sees the other's row.
 func TestACompanyDomainWriteWaitsForTheConsumerListWriter(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	company := e.createNamedCompany(ctx, t, "Raceco", "raceco.test")

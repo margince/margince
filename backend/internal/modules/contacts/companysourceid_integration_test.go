@@ -26,6 +26,7 @@ func createSourcedCompany(ctx context.Context, e *dedupeEnv, name, domain, syste
 }
 
 func TestACompanyIsFoundByItsIDInTheOutsideSystem(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	if err := createSourcedCompany(ctx, e, "Voltaq Systems GmbH", "voltaq.test", "lookup-erp", "C-1"); err != nil {
@@ -53,6 +54,7 @@ func TestACompanyIsFoundByItsIDInTheOutsideSystem(t *testing.T) {
 }
 
 func TestTheSameOutsideIDCannotNameTwoCompaniesButTwoSystemsMayShareOne(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	if err := createSourcedCompany(ctx, e, "Voltaq Systems GmbH", "voltaq.test", "acme-erp", "C-1"); err != nil {
@@ -68,6 +70,7 @@ func TestTheSameOutsideIDCannotNameTwoCompaniesButTwoSystemsMayShareOne(t *testi
 }
 
 func TestACompanyTheCallerCannotSeeIsNotFoundByItsOutsideID(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	owner := e.as()
 	if err := createSourcedCompany(owner, e, "Fremdfirma GmbH", "fremd.test", "acme-erp", "C-7"); err != nil {
@@ -91,6 +94,7 @@ func TestACompanyTheCallerCannotSeeIsNotFoundByItsOutsideID(t *testing.T) {
 // The clash answer must not depend on whether the caller may read the holder,
 // and the refused create must leave nothing behind.
 func TestACreateOverAHiddenHoldersOutsideIDAnswersTheSameConflict(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	owner := e.as()
 	if err := createSourcedCompany(owner, e, "Fremdfirma GmbH", "fremd2.test", "hidden-erp", "C-1"); err != nil {

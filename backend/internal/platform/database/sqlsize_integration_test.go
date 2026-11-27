@@ -13,6 +13,7 @@ import (
 )
 
 func TestTheSizeCounterObservesTheStatementThePoolSends(t *testing.T) {
+	t.Parallel()
 	ctx, pool := laneEnv(t)
 	database.ResetLargestSQLStatementBytes()
 	if got := database.LargestSQLStatementBytes(); got != 0 {

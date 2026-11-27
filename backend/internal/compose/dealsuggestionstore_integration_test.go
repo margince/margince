@@ -42,6 +42,7 @@ func (e *scoutEnv) record(ctx context.Context, t *testing.T, draft deals.Suggest
 }
 
 func TestOnlyTheSystemRecordsAWellFormedSuggestion(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	acme := e.SeedCompany(t, "Acme GmbH", nil)
 	dana := e.employee(t, "Dana Buyer", acme)
@@ -81,6 +82,7 @@ func TestOnlyTheSystemRecordsAWellFormedSuggestion(t *testing.T) {
 }
 
 func TestEvidenceOlderThanADismissalIsRefusedByTheWriter(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	acme := e.SeedCompany(t, "Acme GmbH", nil)
 	dana := e.employee(t, "Dana Buyer", acme)
@@ -104,6 +106,7 @@ func TestEvidenceOlderThanADismissalIsRefusedByTheWriter(t *testing.T) {
 }
 
 func TestAReaderWithoutTheGrantsReadsNoSuggestion(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	acme := e.SeedCompany(t, "Acme GmbH", nil)
 	dana := e.employee(t, "Dana Buyer", acme)
@@ -138,6 +141,7 @@ func TestAReaderWithoutTheGrantsReadsNoSuggestion(t *testing.T) {
 }
 
 func TestAnAcceptanceSettlesOnlyTheSignalsItsReaderCouldSettle(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	acme := e.SeedCompany(t, "Acme GmbH", nil)
 	mail, buyer := e.buyingEmail(t, acme, e.daysAgo(6))
@@ -209,6 +213,7 @@ func (e *scoutEnv) meetingDraft(t *testing.T, company, meeting ids.UUID) deals.S
 // One meeting is evidence for one opportunity. A business filed twice and
 // paired as a possible duplicate gets one suggestion from it, not two.
 func TestOneMeetingRaisesOneSuggestionAcrossDuplicateCompanies(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	named := e.SeedCompany(t, "Northwind Traders", nil)
 	twin := e.SeedCompany(t, "NORTHWIND TRADERS", nil)
@@ -229,6 +234,7 @@ func TestOneMeetingRaisesOneSuggestionAcrossDuplicateCompanies(t *testing.T) {
 // Two businesses at one meeting are two opportunities. Shared evidence alone
 // does not make them one company.
 func TestOneMeetingWithTwoDistinctCompaniesRaisesASuggestionForEach(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	buyer := e.SeedCompany(t, "Northwind Traders", nil)
 	partner := e.SeedCompany(t, "Contoso Logistics", nil)
@@ -275,6 +281,7 @@ func (e *scoutEnv) recordUnpaired(t *testing.T, company, meeting ids.UUID) ids.U
 // A business filed twice and offered one meeting twice, before the pair was
 // known, is left with the first suggestion after one scout pass.
 func TestAScoutPassWithdrawsTheNewerSuggestionRaisedTwiceForOneBusiness(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	named := e.SeedCompany(t, "Northwind Traders", nil)
 	twin := e.SeedCompany(t, "NORTHWIND TRADERS", nil)
@@ -300,6 +307,7 @@ func TestAScoutPassWithdrawsTheNewerSuggestionRaisedTwiceForOneBusiness(t *testi
 // Two meetings are two pieces of evidence: a duplicate pair offered one each
 // keeps both until a human merges the records.
 func TestDuplicateCompaniesCitingDifferentMeetingsKeepBothSuggestions(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	named := e.SeedCompany(t, "Northwind Traders", nil)
 	twin := e.SeedCompany(t, "NORTHWIND TRADERS", nil)
@@ -319,6 +327,7 @@ func TestDuplicateCompaniesCitingDifferentMeetingsKeepBothSuggestions(t *testing
 // A user who dismissed the suggestion on one record dismissed the business:
 // its duplicate is not offered the same meeting again.
 func TestADismissedSuggestionIsNotReofferedOnTheDuplicateCompany(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	named := e.SeedCompany(t, "Northwind Traders", nil)
 	twin := e.SeedCompany(t, "NORTHWIND TRADERS", nil)
@@ -339,6 +348,7 @@ func TestADismissedSuggestionIsNotReofferedOnTheDuplicateCompany(t *testing.T) {
 // A user who turned the meeting into a deal on one record has the opportunity:
 // its duplicate is not offered the same meeting as a second one.
 func TestAnAcceptedSuggestionIsNotReofferedOnTheDuplicateCompany(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	named := e.SeedCompany(t, "Northwind Traders", nil)
 	twin := e.SeedCompany(t, "NORTHWIND TRADERS", nil)
@@ -366,6 +376,7 @@ func TestAnAcceptedSuggestionIsNotReofferedOnTheDuplicateCompany(t *testing.T) {
 // Archiving one end closes a duplicate pair, as the dedupe queue reads it, so
 // the live company is no longer read as anybody's duplicate.
 func TestAnArchivedTwinNoLongerPairsTheLiveCompany(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	named := e.SeedCompany(t, "Northwind Traders", nil)
 	twin := e.SeedCompany(t, "NORTHWIND TRADERS", nil)
@@ -381,6 +392,7 @@ func TestAnArchivedTwinNoLongerPairsTheLiveCompany(t *testing.T) {
 // Two passes recording a duplicate pair at once: the second waits on the
 // first's evidence lock, then finds its suggestion and writes nothing.
 func TestTwinsRecordedAtOnceRaiseOneSuggestion(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	e.now = e.now.Truncate(time.Second).Add(123456789 * time.Nanosecond)
 	named := e.SeedCompany(t, "Northwind Traders", nil)
@@ -446,6 +458,7 @@ func TestTwinsRecordedAtOnceRaiseOneSuggestion(t *testing.T) {
 // reviewer answering "not a duplicate" meanwhile waits for it, so no suggestion
 // is withdrawn on a pair a human has just said is two businesses.
 func TestAReviewerAnsweringAPairWaitsForTheScoutActingOnIt(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	named := e.SeedCompany(t, "Northwind Traders", nil)
 	e.SeedCompany(t, "NORTHWIND TRADERS", nil)
@@ -510,6 +523,7 @@ func TestAReviewerAnsweringAPairWaitsForTheScoutActingOnIt(t *testing.T) {
 // business: the twin raised before the pair was known is withdrawn on the next
 // pass, though no older open suggestion claims it.
 func TestAScoutPassWithdrawsATwinOfADismissedSuggestion(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	e.now = e.now.Truncate(time.Second).Add(123456789 * time.Nanosecond)
 	named := e.SeedCompany(t, "Northwind Traders", nil)
@@ -532,6 +546,7 @@ func TestAScoutPassWithdrawsATwinOfADismissedSuggestion(t *testing.T) {
 // The withdrawal trusts its claimants until it commits: a user dismissing the
 // claimant meanwhile waits for it rather than changing the claim under it.
 func TestAClaimantWaitsForTheWithdrawalThatTrustsIt(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	named := e.SeedCompany(t, "Northwind Traders", nil)
 	twin := e.SeedCompany(t, "NORTHWIND TRADERS", nil)

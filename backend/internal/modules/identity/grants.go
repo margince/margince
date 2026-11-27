@@ -142,7 +142,7 @@ func (s *Service) CreateRecordGrant(ctx context.Context, in CreateGrantInput) (g
 	var out grantRow
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		out, err = createRecordGrantInTx(ctx, tx, in)
+		out, err = createRecordGrantInTx(ctx, tx, s.rbac, in)
 		return err
 	})
 	return out, err
@@ -155,7 +155,7 @@ func (s *Service) CreateRecordGrantTx(ctx context.Context, tx pgx.Tx, in CreateG
 	if err := s.refuseMalformedGrant(ctx, in); err != nil {
 		return grantRow{}, err
 	}
-	return createRecordGrantInTx(ctx, tx, in)
+	return createRecordGrantInTx(ctx, tx, s.rbac, in)
 }
 
 // refuseMalformedGrant is what a share settles before any transaction opens.
@@ -191,7 +191,7 @@ func (s *Service) ValidateRecordGrantFields(ctx context.Context, in CreateGrantI
 
 // createRecordGrantInTx is the share itself: who may grant it, who may hold
 // it, and the audited upsert.
-func createRecordGrantInTx(ctx context.Context, tx pgx.Tx, in CreateGrantInput) (grantRow, error) {
+func createRecordGrantInTx(ctx context.Context, tx pgx.Tx, rbac RbacObjects, in CreateGrantInput) (grantRow, error) {
 	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return grantRow{}, err
 	}
@@ -217,7 +217,7 @@ func createRecordGrantInTx(ctx context.Context, tx pgx.Tx, in CreateGrantInput) 
 		return grantRow{}, err
 	}
 	requested := in.Access
-	access, cut, err := grantAccessFor(ctx, tx, in)
+	access, cut, err := grantAccessFor(ctx, tx, rbac, in)
 	if err != nil {
 		return grantRow{}, err
 	}

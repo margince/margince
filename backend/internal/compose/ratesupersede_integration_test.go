@@ -45,6 +45,7 @@ func stageFxIdentity(ctx context.Context, t *testing.T, svc *approvals.Service, 
 }
 
 func TestIdentityStagingSupersedesStalePending(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	svc := rateSvc(e)

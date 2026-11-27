@@ -84,6 +84,7 @@ func inheritedMarks(t *testing.T, e *Env, activity, project ids.UUID) int {
 // project's own timeline lists it. The link stamps no retention: while the
 // deal is unqualified the note stays erasable.
 func TestANoteLoggedOnADealIsFiledUnderTheDealsProject(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedDealNoteFixture(t, e)
 
@@ -110,6 +111,7 @@ func TestANoteLoggedOnADealIsFiledUnderTheDealsProject(t *testing.T) {
 // A project the caller named wins over the deal's, and a deal with no project
 // or two deals on two projects add none.
 func TestADealsProjectIsInheritedOnlyWhenItIsTheOneAnswer(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedDealNoteFixture(t, e)
 
@@ -129,6 +131,7 @@ func TestADealsProjectIsInheritedOnlyWhenItIsTheOneAnswer(t *testing.T) {
 // Only a member's own write inherits. An agent's note and a system note land
 // on the deal alone rather than being refused.
 func TestOnlyAMembersNoteOnADealTakesTheProject(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedDealNoteFixture(t, e)
 
@@ -145,6 +148,7 @@ func TestOnlyAMembersNoteOnADealTakesTheProject(t *testing.T) {
 // A member who may create notes but not change them files the deal alone:
 // the refused project link does not refuse the note.
 func TestAMemberWithoutUpdateFilesTheDealAlone(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedDealNoteFixture(t, e)
 	perms := dealNotePerms(principal.ObjectGrant{Create: true, Read: true})
@@ -173,6 +177,7 @@ func dealNotePerms(activity principal.ObjectGrant) principal.Permissions {
 // with its own audit row naming the deal it came from. A later change of the
 // deal's project moves nothing already filed.
 func TestRelinkingOntoADealFilesTheDealsProjectAndKeepsIt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedDealNoteFixture(t, e)
 	note := logDealNote(e.Admin(), t, e, activities.ActivityLinkInput{EntityType: "company", EntityID: f.company})
@@ -204,6 +209,7 @@ func TestRelinkingOntoADealFilesTheDealsProjectAndKeepsIt(t *testing.T) {
 // The bulk and thread relink doors file each row they move onto the deal's
 // project too.
 func TestBatchRelinkingOntoADealFilesTheDealsProject(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedDealNoteFixture(t, e)
 	onCompany := activities.ActivityLinkInput{EntityType: "company", EntityID: f.company}

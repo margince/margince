@@ -17,6 +17,7 @@ import (
 // messages on one thread is not. Mail that does not count as ours, or that the
 // external evidence rule hides, never makes the second thread.
 func TestWritingOnTwoThreadsIsCountedByThreadNotByMessage(t *testing.T) {
+	t.Parallel()
 	ctx, pool := meetingTenureEnv(t)
 	type mail struct {
 		thread     string

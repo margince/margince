@@ -166,6 +166,7 @@ func (e *tagScoutEnv) mustSuggest(t *testing.T, brain completer) scoutTally {
 }
 
 func TestTheModelRaisesASuggestionThePhraseMatchMisses(t *testing.T) {
+	t.Parallel()
 	e := setupTagScout(t)
 	migration := e.tag(t, "Ledger migration", "move bookkeeping off spreadsheets", true)
 	dana := e.SeedContact(t, "Dana Buyer", &e.Rep1)
@@ -189,6 +190,7 @@ func TestTheModelRaisesASuggestionThePhraseMatchMisses(t *testing.T) {
 }
 
 func TestASecondPassDoesNotAskAboutAnItemAlreadyRead(t *testing.T) {
+	t.Parallel()
 	e := setupTagScout(t)
 	migration := e.tag(t, "Ledger migration", "move bookkeeping off spreadsheets", true)
 	dana := e.SeedContact(t, "Dana Buyer", &e.Rep1)
@@ -206,6 +208,7 @@ func TestASecondPassDoesNotAskAboutAnItemAlreadyRead(t *testing.T) {
 }
 
 func TestEditingASuggestibleTagReadsTheWindowAgain(t *testing.T) {
+	t.Parallel()
 	e := setupTagScout(t)
 	migration := e.tag(t, "Ledger migration", "move bookkeeping off spreadsheets", true)
 	dana := e.SeedContact(t, "Dana Buyer", &e.Rep1)
@@ -230,6 +233,7 @@ func TestEditingASuggestibleTagReadsTheWindowAgain(t *testing.T) {
 }
 
 func TestAReplyNamingAnUnsentItemOrAnUnlistedTagIsStoredTagless(t *testing.T) {
+	t.Parallel()
 	for name, reply := range map[string]func(items []string) string{
 		"an unlisted tag": func(items []string) string {
 			return `{"items":[{"id":"` + items[0] + `","tags":["` + ids.NewV7().String() + `"]}]}`
@@ -259,6 +263,7 @@ func TestAReplyNamingAnUnsentItemOrAnUnlistedTagIsStoredTagless(t *testing.T) {
 }
 
 func TestRestrictedArchivedAndNoiseItemsAreNeverSent(t *testing.T) {
+	t.Parallel()
 	e := setupTagScout(t)
 	migration := e.tag(t, "Ledger migration", "move bookkeeping off spreadsheets", true)
 	dana := e.SeedContact(t, "Dana Buyer", &e.Rep1)
@@ -286,6 +291,7 @@ func TestRestrictedArchivedAndNoiseItemsAreNeverSent(t *testing.T) {
 }
 
 func TestAnItemUnlinkedWhileTheModelReadsItIsNotCited(t *testing.T) {
+	t.Parallel()
 	e := setupTagScout(t)
 	migration := e.tag(t, "Ledger migration", "move bookkeeping off spreadsheets", true)
 	dana := e.SeedContact(t, "Dana Buyer", &e.Rep1)
@@ -304,6 +310,7 @@ func TestAnItemUnlinkedWhileTheModelReadsItIsNotCited(t *testing.T) {
 }
 
 func TestAnOutageEndsThePassCleanlyAndStampsNothing(t *testing.T) {
+	t.Parallel()
 	e := setupTagScout(t)
 	migration := e.tag(t, "Ledger migration", "move bookkeeping off spreadsheets", true)
 	dana := e.SeedContact(t, "Dana Buyer", &e.Rep1)
@@ -323,6 +330,7 @@ func TestAnOutageEndsThePassCleanlyAndStampsNothing(t *testing.T) {
 }
 
 func TestOnlyTheOfflineStandInFallsBackToPhrases(t *testing.T) {
+	t.Parallel()
 	e := setupTagScout(t)
 	e.tag(t, "Product X", "product x pricing", true)
 	dana := e.SeedContact(t, "Dana Buyer", &e.Rep1)
@@ -340,6 +348,7 @@ func TestOnlyTheOfflineStandInFallsBackToPhrases(t *testing.T) {
 }
 
 func TestAnItemEditedAfterItWasReadIsReadAgain(t *testing.T) {
+	t.Parallel()
 	e := setupTagScout(t)
 	migration := e.tag(t, "Ledger migration", "move bookkeeping off spreadsheets", true)
 	dana := e.SeedContact(t, "Dana Buyer", &e.Rep1)
@@ -359,6 +368,7 @@ func TestAnItemEditedAfterItWasReadIsReadAgain(t *testing.T) {
 }
 
 func TestAnAnswerRefusedByAnOpenSuggestionIsRaisedOnceThatOneIsGone(t *testing.T) {
+	t.Parallel()
 	e := setupTagScout(t)
 	migration := e.tag(t, "Ledger migration", "move bookkeeping off spreadsheets", true)
 	dana := e.SeedContact(t, "Dana Buyer", &e.Rep1)
@@ -395,6 +405,7 @@ func TestAnAnswerRefusedByAnOpenSuggestionIsRaisedOnceThatOneIsGone(t *testing.T
 }
 
 func TestARefiledItemIsSuggestedOnItsNewRecordWithoutAskingAgain(t *testing.T) {
+	t.Parallel()
 	e := setupTagScout(t)
 	migration := e.tag(t, "Ledger migration", "move bookkeeping off spreadsheets", true)
 	dana := e.SeedContact(t, "Dana Buyer", &e.Rep1)
@@ -413,6 +424,7 @@ func TestARefiledItemIsSuggestedOnItsNewRecordWithoutAskingAgain(t *testing.T) {
 }
 
 func TestAnswersPastThePassBudgetAreRaisedOnLaterPasses(t *testing.T) {
+	t.Parallel()
 	e := setupTagScout(t)
 	// Each item sits on its own record, so it is asked alone and answers for
 	// every tag: one pair per tag an item.
@@ -441,6 +453,7 @@ func TestAnswersPastThePassBudgetAreRaisedOnLaterPasses(t *testing.T) {
 }
 
 func TestAnItemNotEveryReaderMayReadIsNeverAskedBesideAnother(t *testing.T) {
+	t.Parallel()
 	e := setupTagScout(t)
 	migration := e.tag(t, "Ledger migration", "move bookkeeping off spreadsheets", true)
 	dana := e.SeedContact(t, "Dana Buyer", &e.Rep1)
@@ -470,6 +483,7 @@ func TestAnItemNotEveryReaderMayReadIsNeverAskedBesideAnother(t *testing.T) {
 }
 
 func TestADeclinedItemIsStoredWithNoTagAndItsSiblingRaises(t *testing.T) {
+	t.Parallel()
 	e := setupTagScout(t)
 	migration := e.tag(t, "Ledger migration", "move bookkeeping off spreadsheets", true)
 	dana := e.SeedContact(t, "Dana Buyer", &e.Rep1)
@@ -507,6 +521,7 @@ func batchedWith(brain *tagBrainStub) map[string]map[string]bool {
 }
 
 func TestItemsShareACallWhenTheyShareTheirReaders(t *testing.T) {
+	t.Parallel()
 	e := setupTagScout(t)
 	migration := e.tag(t, "Ledger migration", "move bookkeeping off spreadsheets", true)
 	dana := e.SeedContact(t, "Dana Buyer", &e.Rep1)
@@ -528,6 +543,7 @@ func TestItemsShareACallWhenTheyShareTheirReaders(t *testing.T) {
 }
 
 func TestErasingAnItemDropsWhatTheModelReadOfIt(t *testing.T) {
+	t.Parallel()
 	e := setupTagScout(t)
 	migration := e.tag(t, "Ledger migration", "move bookkeeping off spreadsheets", true)
 	dana := e.SeedContact(t, "Dana Buyer", &e.Rep1)
@@ -552,6 +568,7 @@ func TestErasingAnItemDropsWhatTheModelReadOfIt(t *testing.T) {
 }
 
 func TestAnItemErasedOrEditedWhileTheModelReadsItStoresNothing(t *testing.T) {
+	t.Parallel()
 	for name, change := range map[string]func(e *tagScoutEnv, t *testing.T, note, contact ids.UUID){
 		"erased": func(e *tagScoutEnv, t *testing.T, note, _ ids.UUID) {
 			retention := NewRetentionServiceFor(InstallationDB(e.Pool), nil, slog.Default())

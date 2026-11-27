@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -42,7 +43,7 @@ func (o *owedEnv) judgeAs(t *testing.T, kind string) *scriptedVerdictBrain {
 	pending := o.e.WsScalar(t, `
 		SELECT coalesce(max(id::text), '') FROM capture_pending_counterparty
 		 WHERE email = $1 AND status = 'pending'`, geminiNotes)
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{pending: kind}}
+	brain := &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN, verdicts: map[string]string{pending: kind}}
 	engine := NewCounterpartyVerdictEngine(o.e.Pool, brain, CaptureConfig{}, slog.Default())
 	ctx := principal.WithWorkspaceID(context.Background(), o.e.WS)
 	if err := engine.RunWorkspace(ctx, 0); err != nil {
@@ -60,6 +61,7 @@ func (o *owedEnv) visible(t *testing.T, id ids.UUID) bool {
 }
 
 func TestAuthenticatedGoogleNotesMailIsNeverJudgedNoise(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	notes := o.notesMail(t, true)
 
@@ -87,6 +89,7 @@ func (o *owedEnv) settledAsRoleMailbox(t *testing.T) {
 // it. A forged notes mail is judged like any other, and a noise answer it
 // earns does not reach the authenticated notes that follow.
 func TestAForgedNotesMailIsJudgedAndItsNoiseSparesAuthenticatedNotes(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	forged := o.notesMail(t, false)
 
@@ -118,6 +121,7 @@ func TestAForgedNotesMailIsJudgedAndItsNoiseSparesAuthenticatedNotes(t *testing.
 // A personal verdict destroys mail once its window closes, so a forged notes
 // mail judged personal must not take the authenticated notes with it.
 func TestAForgedPersonalVerdictDestroysNoAuthenticatedNotes(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	forged := o.notesMail(t, false)
 	o.judgeAs(t, capture.KindPersonal)

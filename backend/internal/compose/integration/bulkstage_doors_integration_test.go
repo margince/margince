@@ -89,6 +89,7 @@ func stageChangedEvents(t *testing.T, e *apptest.AppEnv, deal string) int {
 }
 
 func TestBothDoorsMoveDealsToAStageAndTheUndoMovesThemBackBesideTheFirstMove(t *testing.T) {
+	t.Parallel()
 	e, doors := bulkUndoApp(t, "bulk-stage")
 	pipeline, from, to := openStagePair(t, e)
 	for _, door := range doors {
@@ -138,6 +139,7 @@ func TestBothDoorsMoveDealsToAStageAndTheUndoMovesThemBackBesideTheFirstMove(t *
 }
 
 func TestBothDoorsLeaveAlonePerDealWhatTheAdvanceRefusesAndSayWhy(t *testing.T) {
+	t.Parallel()
 	e, doors := bulkUndoApp(t, "bulk-stage-skips")
 	pipeline, from, to := openStagePair(t, e)
 	lostStage := apptest.DiscoverSeededPipeline(t, e).Lost
@@ -181,6 +183,7 @@ func TestBothDoorsLeaveAlonePerDealWhatTheAdvanceRefusesAndSayWhy(t *testing.T) 
 }
 
 func TestBothDoorsRefuseAClosingStageAndAnythingButADeal(t *testing.T) {
+	t.Parallel()
 	e, doors := bulkUndoApp(t, "bulk-stage-refusals")
 	pipeline, from, _ := openStagePair(t, e)
 	stages := apptest.DiscoverSeededPipeline(t, e)
@@ -205,6 +208,7 @@ func TestBothDoorsRefuseAClosingStageAndAnythingButADeal(t *testing.T) {
 }
 
 func TestBothDoorsSkipADealThatMovedAgainOnUndo(t *testing.T) {
+	t.Parallel()
 	e, doors := bulkUndoApp(t, "bulk-stage-undo-moved")
 	pipeline, from, to := openStagePair(t, e)
 	for _, door := range doors {
@@ -238,6 +242,7 @@ func TestBothDoorsSkipADealThatMovedAgainOnUndo(t *testing.T) {
 }
 
 func TestBothDoorsRefuseAStageMoveWhoseTokenWasIssuedForAnotherStage(t *testing.T) {
+	t.Parallel()
 	e, doors := bulkUndoApp(t, "bulk-stage-token")
 	pipeline, from, to := openStagePair(t, e)
 	for _, door := range doors {
@@ -260,6 +265,7 @@ func TestBothDoorsRefuseAStageMoveWhoseTokenWasIssuedForAnotherStage(t *testing.
 }
 
 func TestBothDoorsCloseNothingOnUndoWhenTheUndoTargetWasRetypedAsWon(t *testing.T) {
+	t.Parallel()
 	e, doors := bulkUndoApp(t, "bulk-stage-undo-retyped")
 	pipeline, from, to := openStagePair(t, e)
 	for _, door := range doors {
@@ -293,6 +299,7 @@ func TestBothDoorsCloseNothingOnUndoWhenTheUndoTargetWasRetypedAsWon(t *testing.
 }
 
 func TestBothDoorsSkipAsChangedSinceBatchADealAHumanMovedBackToTheUndoTarget(t *testing.T) {
+	t.Parallel()
 	e, doors := bulkUndoApp(t, "bulk-stage-undo-movedback")
 	pipeline, from, to := openStagePair(t, e)
 	for _, door := range doors {

@@ -19,6 +19,7 @@ import (
 )
 
 func TestLeadMeetingsKeepTheirCustomerLanesWithoutAContactRoster(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	lead, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{FullName: new("Buyer lead"), Email: new("buyer@lead.example"), Source: "manual"})
 	if err != nil {

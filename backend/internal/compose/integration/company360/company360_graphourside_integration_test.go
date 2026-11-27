@@ -144,6 +144,7 @@ func graphEdgeTargets(graph crmcontracts.CompanyGraph, kind crmcontracts.Company
 // The two connections, against real rows: the account's owner, and the
 // colleague who emailed one of its contacts.
 func TestCompanyGraphDrawsTheOwnerAndWhoHasBeenInContact(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	svc := company360Service(e)
@@ -196,6 +197,7 @@ func TestCompanyGraphDrawsTheOwnerAndWhoHasBeenInContact(t *testing.T) {
 // the first place — assigning work is intent, and writing something down is
 // not reaching out.
 func TestCompanyGraphDrawsNoContactEdgeForANonInteraction(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	svc := company360Service(e)
@@ -243,6 +245,7 @@ func TestCompanyGraphDrawsNoContactEdgeForANonInteraction(t *testing.T) {
 // grant gets the group named as withheld rather than an account that looks like
 // nobody here has ever spoken to it.
 func TestCompanyGraphOmitsOurSideWithoutTheContactOrActivityGrant(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	svc := company360Service(e)
@@ -308,6 +311,7 @@ func TestCompanyGraphOmitsOurSideWithoutTheContactOrActivityGrant(t *testing.T) 
 // wrote to them has nothing to point at. Anything else would leak the fact of
 // contact with a record whose existence the card is hiding.
 func TestCompanyGraphDrawsNoContactEdgeForACapturePrivateContact(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	svc := company360Service(e)
@@ -360,6 +364,7 @@ func setMemberStatus(t *testing.T, owner *pgx.Conn, user ids.UUID, status string
 // The account is simply left unowned. Nothing else about the group changes — a
 // live teammate's contact edge is still drawn.
 func TestCompanyGraphDrawsNoColleagueWhoNoLongerWorksHere(t *testing.T) {
+	t.Parallel()
 	for _, status := range []string{"deactivated", "suspended"} {
 		t.Run(status, func(t *testing.T) {
 			e := integration.Setup(t)
@@ -427,6 +432,7 @@ const graphContactCapSeed = 15
 // showing nobody on our side — while `our_side` and its dropped_count described
 // contacts the graph does not contain.
 func TestCompanyGraphCapsColleaguesAgainstTheContactsItDraws(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	svc := company360Service(e)
@@ -524,6 +530,7 @@ func TestCompanyGraphCapsColleaguesAgainstTheContactsItDraws(t *testing.T) {
 // the rows — a second count could see a newer snapshot and drive it NEGATIVE,
 // which the contract's own `minimum: 0` forbids.
 func TestCompanyGraphUserCapCountsUsersAndReportsTheRemainder(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	svc := company360Service(e)

@@ -28,14 +28,27 @@ import (
 // Schema is where every extension table lives.
 const Schema = "ext"
 
-// Registry is the composed set of declared tables.
-type Registry struct{ tables []privacy.Table }
+// Registry is the composed set of declared tables: the units' privacy
+// declarations and the tables a merge or erasure reaches (sweepreach).
+type Registry struct {
+	tables []privacy.Table
+	reach  sweepreach.Set
+}
 
 // Declared builds a registry from the declarations of the composed units.
 func Declared(tables []privacy.Table) Registry { return Registry{tables: tables} }
 
+// WithReach is the registry with the composition's reached tables.
+func (r Registry) WithReach(set sweepreach.Set) Registry {
+	r.reach = set
+	return r
+}
+
 // Tables returns the declared tables.
 func (r Registry) Tables() []privacy.Table { return r.tables }
+
+// Reach returns the tables the composition's merge and erasure reach.
+func (r Registry) Reach() sweepreach.Set { return r.reach }
 
 // Cleared is one row whose personal columns were cleared.
 type Cleared struct {
@@ -70,7 +83,7 @@ type linkedColumn struct {
 // refuse the merge. For a kind-column link, the rows of another kind still count.
 func (r Registry) CountDependents(ctx context.Context, tx pgx.Tx, kind privacy.RecordKind, id ids.UUID) (int64, error) {
 	merged := reach.Record(kind)
-	moved, err := sweepreach.MovedColumns(merged)
+	moved, err := r.reach.MovedColumns(merged)
 	if err != nil {
 		return 0, fmt.Errorf("extprivacy: reading which columns the merge moves: %w", err)
 	}

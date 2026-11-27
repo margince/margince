@@ -16,7 +16,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/customfields"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -38,7 +37,7 @@ func NewWorkflowEngineWithReplyDraft(db *database.DB, brain completer) *automati
 }
 
 func workflowEngineWithDrafter(db *database.DB, drafter activities.EmailDrafter) *automation.WorkflowEngine {
-	engine := automation.NewWorkflowEngine(db, identity.NewService(db.Pool()))
+	engine := automation.NewWorkflowEngine(db, IdentityService(db.Pool()))
 	contactsStore := contacts.NewStore(db)
 	claims := automation.NewEffectClaims(db)
 	ex := automation.Executors{
@@ -48,12 +47,12 @@ func workflowEngineWithDrafter(db *database.DB, drafter activities.EmailDrafter)
 		Provider:         NewProvider(db.Pool()),
 		Approvals:        automationApprovalsAdapter{svc: NewApprovalsService(db)},
 		// Drafts remain held until the approval send path checks delivery.
-		Comms:     newCommsAdapter(db.Pool(), drafter, SendPath{}),
+		Comms:     newCommsAdapter(db.Pool(), nil, drafter, SendPath{}),
 		Notifier:  noticesNotifier{store: notices.NewStore(db)},
 		Claims:    claims,
 		Language:  installationLanguage(db.Pool()),
 		Lists:     NewListRules(db.Pool()),
-		Authority: identity.NewService(db.Pool()),
+		Authority: IdentityService(db.Pool()),
 	}
 	engine.WithFiringFence(newInquiryFiringFence(db))
 	engine.WithRulePauses(noticesNotifier{store: notices.NewStore(db)}, ex.Lists)

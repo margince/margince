@@ -19,6 +19,7 @@ import (
 // forecast, so sorting by close_day orders by what the column shows. The days
 // are cut in the installation zone, and a deal with nothing to show sits last.
 func TestTheDealsListSortsByTheCloseDayItDraws(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	e.WsExec(t, `UPDATE setting SET value = '"Asia/Ho_Chi_Minh"'::jsonb WHERE key = 'installation.timezone'`)
 	zone, err := time.LoadLocation("Asia/Ho_Chi_Minh")

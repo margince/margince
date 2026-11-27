@@ -95,6 +95,7 @@ func newMirrorEnv(t *testing.T) *mirrorEnv {
 // the floor, so a ranker that filtered first and took eight afterwards agrees
 // with production at floor 0 and disagrees the moment a floor bites.
 func TestTheInMemoryRankerSelectsExactlyWhatTheSQLDoes(t *testing.T) {
+	t.Parallel()
 	me := newMirrorEnv(t)
 	question := []float32{1, 0, 0, 0}
 

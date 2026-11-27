@@ -24,6 +24,7 @@ import (
 // still waits, one staged with no passport, and one a scheduled run is paused on
 // all stay.
 func TestAPendingAgentCallThatNoLongerWaitsIsWithdrawn(t *testing.T) {
+	t.Parallel()
 	a := newApprovalNotifyEnv(t)
 	passport := a.e.SeedPassport(t, integration.OwnerConn(t), "lifted call probe")
 	stage := func(kind string, onPassport bool) ids.ApprovalID {

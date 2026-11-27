@@ -70,6 +70,7 @@ func companyByName(t *testing.T, e *apptest.AppEnv, want string) (string, string
 }
 
 func TestCSVImportByIDUpdatesTheNamedCompany(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	id := createCompanyReturningID(t, e, map[string]any{"display_name": "Kestrel Data"})
 
@@ -104,6 +105,7 @@ func TestCSVImportByIDUpdatesTheNamedCompany(t *testing.T) {
 
 // The three cases that destroyed data under name matching, each harmless here.
 func TestCSVImportByIDIsImmuneToEveryAmbiguityThatBrokeNameMatching(t *testing.T) {
+	t.Parallel()
 	// Each case seeds a DIFFERENT ambiguity into the same table, and the
 	// subject is which record an id resolves to among them. A shared fixture
 	// would leave the first case's two Kestrel Data rows in place while the
@@ -201,6 +203,7 @@ func cityOf(t *testing.T, e *apptest.AppEnv, id string) string {
 // company, the file had a typo or a stale export, and they get a new record
 // instead — reported as a create they would have to read carefully to notice.
 func TestCSVImportByIDRefusesAnIDNothingAnswersTo(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name, id, wants string
 	}{
@@ -254,6 +257,7 @@ func TestCSVImportByIDRefusesAnIDNothingAnswersTo(t *testing.T) {
 // needs — for re-import and for undo — comes from the file's own key column, so
 // a row with no id is simply a row naming no record: an ordinary create.
 func TestCSVImportByIDTreatsAnEmptyIDAsANewCompany(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	existing := createCompanyReturningID(t, e, map[string]any{"display_name": "Kestrel Data"})
 
@@ -285,6 +289,7 @@ func TestCSVImportByIDTreatsAnEmptyIDAsANewCompany(t *testing.T) {
 
 // Re-importing an unchanged file changes nothing and says so.
 func TestCSVImportByIDOfIdenticalValuesIsUnchanged(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	id := createCompanyReturningID(t, e, map[string]any{
 		"display_name": "Kestrel Data", "address": map[string]any{"city": "Bremen"},
@@ -306,6 +311,7 @@ func TestCSVImportByIDOfIdenticalValuesIsUnchanged(t *testing.T) {
 }
 
 func TestCSVImportOfAnUneditedExportIsUnchanged(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	createCompanyReturningID(t, e, map[string]any{"display_name": "=Name", "description": "- first point"})
 
@@ -340,6 +346,7 @@ func TestCSVImportOfAnUneditedExportIsUnchanged(t *testing.T) {
 
 // One address column named alongside an id leaves the rest of the address alone.
 func TestCSVImportByIDOfOneAddressColumnKeepsTheRest(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	id := createCompanyReturningID(t, e, map[string]any{
 		"display_name": "Kestrel Data",
@@ -405,6 +412,7 @@ func createRunWithSourceKey(t *testing.T, e *apptest.AppEnv, object, sourceRef s
 // refusals at once, and an export edited against the wrong workspace produces
 // exactly that.
 func TestCSVImportSkippedRowsAreCountedIndividually(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 
 	const file = "Company,Id,City\n" +
@@ -449,6 +457,7 @@ func TestCSVImportSkippedRowsAreCountedIndividually(t *testing.T) {
 // Both duplicate policies, because they disagree differently: `create` lands a
 // second record and discloses it, `skip` leaves the incumbent alone.
 func TestThePreviewPromisesWhatTheCommitPerformsForACollision(t *testing.T) {
+	t.Parallel()
 	for _, policy := range []string{"create", "skip"} {
 		t.Run(policy, func(t *testing.T) {
 			e := setupImportApp(t)

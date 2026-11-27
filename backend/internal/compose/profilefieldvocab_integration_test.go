@@ -24,6 +24,7 @@ import (
 )
 
 func TestEveryExtractionFieldIsAccepted_ByTheLiveCheckConstraint(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 

@@ -28,6 +28,7 @@ import (
 )
 
 func TestACapturedMessageRecordsTheLanguageItIsWrittenIn(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 
@@ -94,6 +95,7 @@ func TestACapturedMessageRecordsTheLanguageItIsWrittenIn(t *testing.T) {
 // A replay must not rewrite what the first capture recorded: the row is stored
 // once on its natural key, and the second sync writes nothing at all.
 func TestAReplayDoesNotRewriteTheRecordedLanguage(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	raw := emailWith("lang-replay@acme.example", "Outstanding invoice",
@@ -133,6 +135,7 @@ func emailWith(msgID, subject, body string) []byte {
 
 // An edit replaces the original language label with that of the current text.
 func TestEditingAMessageRetiresItsRecordedLanguage(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	sync(t, emailWith("lang-edit@acme.example", "Outstanding invoice",

@@ -29,6 +29,7 @@ import (
 )
 
 func TestAnAgentCannotReopenAClosedDealWithoutAHuman(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, won := DealFixture(t, e)
 	registry := compose.NewRegistry(e.Pool, compose.SendPath{})

@@ -15,6 +15,7 @@ import (
 // The contact 360 timeline and the single read are two readers of one fact,
 // so they must give the same writable for the same activity.
 func TestTheContact360TimelineSaysTheSameWritableAsTheSingleRead(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 

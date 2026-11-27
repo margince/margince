@@ -44,6 +44,7 @@ func seedDomainEvidence(ctx context.Context, tx pgx.Tx, f domainEvidenceFixture)
 }
 
 func TestDomainEvidenceProjectionMatchesTheExactReaderAcrossDateAndPrivacyBoundaries(t *testing.T) {
+	t.Parallel()
 	for _, zone := range []string{"Pacific/Kiritimati", "Pacific/Pago_Pago"} {
 		t.Run(zone, func(t *testing.T) {
 			e := setupDedupe(t)

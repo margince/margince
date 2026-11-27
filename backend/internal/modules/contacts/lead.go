@@ -377,7 +377,7 @@ func (s *Store) FindLeadByLinkedInURL(ctx context.Context, rawURL string) (*crmc
 		}
 		// A dedupe probe for the capture path — its result is not rendered
 		// with custom fields, so no catalog columns are carried (nil active).
-		policy, err := loadLeadSLAPolicy(ctx, tx, s.bootConfig())
+		policy, err := loadLeadSLAPolicy(ctx, tx, s.bootConfig(ctx))
 		if err != nil {
 			return err
 		}

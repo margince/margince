@@ -79,6 +79,7 @@ func insertCompany(t *testing.T, e *integration.Env, owner ids.UUID, domain, ind
 }
 
 func TestScrapeStagesEnrichmentBoundToCompany(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	companyID := insertCompany(t, e, e.Rep1, "acme.example", "")
 	fake := ai.NewFakeClient().Script(acmeExtraction)
@@ -126,6 +127,7 @@ func TestScrapeStagesEnrichmentBoundToCompany(t *testing.T) {
 }
 
 func TestScrapeHidesAnInvisibleCompany(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	// Capture-private to rep3 (team2): a company is otherwise readable by
 	// every seat, so visibility='owner' is what makes it invisible to rep1.
@@ -149,6 +151,7 @@ func TestScrapeHidesAnInvisibleCompany(t *testing.T) {
 }
 
 func TestScrapeDegradesHonestly(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	// (a) A visible company with a domain but nothing survives the gate → unreadable.
 	companyID := insertCompany(t, e, e.Rep1, "acme.example", "")
@@ -168,6 +171,7 @@ func TestScrapeDegradesHonestly(t *testing.T) {
 }
 
 func TestScrapeAcceptFillsOnlyEmptyFields(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	// Human already set the industry; legal_name is empty.
 	companyID := insertCompany(t, e, e.Rep1, "acme.example", "Handcrafted Industry")
@@ -244,6 +248,7 @@ func TestScrapeAcceptFillsOnlyEmptyFields(t *testing.T) {
 // An enrichment whose model lane ended without an answer is the assistant being
 // unavailable, not a server fault: the 503 the client has copy for.
 func TestAnEnrichmentTheModelWithheldIsTheAssistantBeingUnavailable(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	companyID := insertCompany(t, e, e.Rep1, "acme.example", "")
 	brain := &replyBrainStub{err: fmt.Errorf("ai: provider: %w", model.ErrOutputWithheld)}

@@ -26,6 +26,7 @@ import (
 // today. Its promise is put to the promiser and, once accepted, stays on the
 // Worklist past the horizon.
 func TestALateLoggedMeetingPromiseIsProposedAndAcceptedWorkStaysOnTheWorklist(t *testing.T) {
+	t.Parallel()
 	e := setupTranscript(t)
 	e.WsExec(t, `UPDATE activity SET occurred_at = now() - interval '35 days' WHERE id = $1`, e.activity)
 
@@ -77,6 +78,7 @@ func TestALateLoggedMeetingPromiseIsProposedAndAcceptedWorkStaysOnTheWorklist(t 
 // Captured sources, private mail and promises of the customer keep the
 // horizon's old outcome.
 func TestOnlyHandLoggedEvidenceIsProposedPastTheHorizon(t *testing.T) {
+	t.Parallel()
 	asOf := time.Date(2026, 10, 18, 12, 0, 0, 0, time.UTC)
 	old := asOf.AddDate(0, 0, -35)
 	cases := []struct {

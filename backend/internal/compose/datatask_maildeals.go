@@ -12,7 +12,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/mailhooks"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -53,8 +52,8 @@ func mailDealsDataTask(pool *pgxpool.Pool) datatask.Task {
 func mailDealRepair(pool *pgxpool.Pool) capture.DealRepair {
 	store := deals.NewStore(InstallationDB(pool), DealsInstallation())
 	return capture.DealRepair{
-		Candidates: store, Authority: identity.NewService(pool), Filer: ActivityDealFiler{},
+		Candidates: store, Authority: IdentityService(pool), Filer: ActivityDealFiler{},
 		AdmitClosed: func(deal ids.UUID) capture.DealCandidates { return store.CandidatesOnly(deal) },
-		Hooks:       mailhooks.New(ComposedExtensions, pool),
+		Hooks:       mailhooks.New(installedUnits, pool),
 	}
 }

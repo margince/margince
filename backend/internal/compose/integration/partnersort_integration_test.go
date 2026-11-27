@@ -61,6 +61,7 @@ func partnerTiers(ctx context.Context, t *testing.T, store *contacts.Store, in c
 }
 
 func TestThePartnerListIsOrderedByTheSortItIsAsked(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	seedPartnersWithTiers(t, e)
 	store := contacts.NewStore(e.DB())
@@ -84,6 +85,7 @@ func TestThePartnerListIsOrderedByTheSortItIsAsked(t *testing.T) {
 }
 
 func TestASortedPartnerPageContinuesInItsOwnOrder(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	seedPartnersWithTiers(t, e)
 	store := contacts.NewStore(e.DB())
@@ -115,6 +117,7 @@ func TestASortedPartnerPageContinuesInItsOwnOrder(t *testing.T) {
 // cannot order by, because the key would be a joined value the cursor has no
 // column for. Refusing it is what keeps the dial honest.
 func TestAPartnerSortOnAJoinedValueIsRefused(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := contacts.NewStore(e.DB())
 	ctx := e.As(e.AdminUser, nil, partnerSortReader())

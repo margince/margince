@@ -27,6 +27,7 @@ import (
 )
 
 func TestTakingBackASnoozeReturnsTheItemToTheQueue(t *testing.T) {
+	t.Parallel()
 	b := setupBrief(t)
 	owner := integration.OwnerConn(t)
 
@@ -99,6 +100,7 @@ func TestTakingBackASnoozeReturnsTheItemToTheQueue(t *testing.T) {
 // three states are tried separately because they reach the guard by different
 // routes: `new` never was snoozed, and acted/dismissed left the snooze behind.
 func TestTakingBackASnoozeThatIsNotThereIsRefused(t *testing.T) {
+	t.Parallel()
 	b := setupBrief(t)
 	run, err := b.engine.SnapshotRun(b.repCtx, briefClock)
 	if err != nil {
@@ -129,6 +131,7 @@ func TestTakingBackASnoozeThatIsNotThereIsRefused(t *testing.T) {
 // aside and says so, rather than stamping a fresh state_at over a row a rep has
 // since been working from.
 func TestTakingBackASnoozeTwiceRefusesTheSecond(t *testing.T) {
+	t.Parallel()
 	b := setupBrief(t)
 	run, err := b.engine.SnapshotRun(b.repCtx, briefClock)
 	if err != nil {
@@ -155,6 +158,7 @@ func TestTakingBackASnoozeTwiceRefusesTheSecond(t *testing.T) {
 // pressing undo on a visible toast must not get a conflict for a reason
 // nothing on their screen shows.
 func TestTakingBackAnExpiredSnoozeStillReturnsTheItem(t *testing.T) {
+	t.Parallel()
 	b := setupBrief(t)
 	run, err := b.engine.SnapshotRun(b.repCtx, briefClock)
 	if err != nil {

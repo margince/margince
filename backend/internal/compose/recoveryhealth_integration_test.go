@@ -40,6 +40,7 @@ func readRecoveryHealth(ctx context.Context, t *testing.T, e *integration.Env) (
 // An installation that never rehearsed says so with a null drill, beside the
 // targets it has not yet been measured against.
 func TestRecoveryHealthReportsNoDrillAsNull(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	code, report := readRecoveryHealth(e.Admin(), t, e)
 	if code != http.StatusOK {
@@ -57,6 +58,7 @@ func TestRecoveryHealthReportsNoDrillAsNull(t *testing.T) {
 // The page shows what the ledger measured: both windows come from the drill's
 // own timestamps.
 func TestRecoveryHealthReportsTheLatestDrillsMeasuredWindows(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ledger := continuity.NewStore(InstallationDB(e.Pool))
 	id, err := ledger.Begin(e.Admin(), time.Now().Add(-40*time.Minute), "Dana Ops", "")
@@ -95,6 +97,7 @@ func TestRecoveryHealthReportsTheLatestDrillsMeasuredWindows(t *testing.T) {
 // A seat without the operational grant is refused, as on every System health
 // card, though every role may read installation settings.
 func TestRecoveryHealthRefusesASeatWithoutTheOperationalGrant(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	code, _ := readRecoveryHealth(e.As(e.Rep1, nil, integration.RepPerms), t, e)
 	if code != http.StatusForbidden {
@@ -105,6 +108,7 @@ func TestRecoveryHealthRefusesASeatWithoutTheOperationalGrant(t *testing.T) {
 // The endpoint asks `job_health:read` and nothing else: an ops seat holding
 // that grant without installation settings reads the report.
 func TestRecoveryHealthAnswersASeatHoldingOnlyTheOperationalGrant(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ops := e.As(e.Rep1, nil, principal.Permissions{
 		RoleKeys: []string{"ops"},

@@ -28,6 +28,7 @@ type leadWire struct {
 }
 
 func TestReopeningADisqualifiedLeadOverHTTP(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 

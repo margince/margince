@@ -39,6 +39,7 @@ func atFullPrecision(t *testing.T, e *integration.Env) int {
 // The task moves every stored vector to half precision and keeps its value.
 // A second pass finds nothing to move.
 func TestTheTaskMovesEveryVectorToHalfPrecisionAndReplaysAsANoOp(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	for _, entityType := range []string{"contact", "company", "deal", "company", "lead"} {
 		storedAtFullPrecision(t, e, entityType)
@@ -71,6 +72,7 @@ func TestTheTaskMovesEveryVectorToHalfPrecisionAndReplaysAsANoOp(t *testing.T) {
 // Batches of two walk the table in key order, across record types, until
 // every vector is moved.
 func TestBatchesOfTwoReachEveryVector(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	for _, entityType := range []string{"lead", "contact", "company", "deal", "contact"} {
 		storedAtFullPrecision(t, e, entityType)
@@ -104,6 +106,7 @@ func TestBatchesOfTwoReachEveryVector(t *testing.T) {
 // A batch that fails after its move leaves every vector where it was, and a
 // cursor that is no key is refused.
 func TestTheTaskRollsBackWithItsBatchAndRefusesAMalformedCursor(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	storedAtFullPrecision(t, e, "contact")
 	ctx := systemCtx(e)

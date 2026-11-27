@@ -150,6 +150,7 @@ func olderInvitations(t *testing.T, env captureEnv) {
 // An invitation stored before capture named its sender gets the colleague back
 // from its stored original, by capture's own rule. A second pass changes nothing.
 func TestAnOlderInvitationNamesItsColleagueFromItsOriginal(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	claimOwnDomain(t, e, "search.test")
@@ -207,6 +208,7 @@ func TestAnOlderInvitationNamesItsColleagueFromItsOriginal(t *testing.T) {
 // A mailing group's own pass is not proof for the sender it names. Capture
 // credits no colleague with an invitation a group relayed.
 func TestAGroupRelayedInvitationNamesNoColleague(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	claimOwnDomain(t, e, "search.test")
@@ -249,6 +251,7 @@ func projectRows(reader context.Context, t *testing.T, e *integration.SearchEnv,
 // invitation arrived inbound, and the agent reads it as our side's. A reader
 // who may not open the row gets its stored direction, since the voice is withheld.
 func TestTheProjectToolNamesTheSideThatWroteARow(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	claimOwnDomain(t, e, "search.test")

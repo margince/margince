@@ -17,6 +17,7 @@ import (
 
 // A body sent as null empties the notes: the row reads back with no body at all.
 func TestABodyClearedWithNullEmptiesTheNotes(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	id := bookMeeting(t, e, "Harbor review", clocktest.Now(t).Add(-48*time.Hour))
 	moveTo(t, e, id, crmcontracts.ActivityMeetingStatusHeld)
@@ -36,6 +37,7 @@ func TestABodyClearedWithNullEmptiesTheNotes(t *testing.T) {
 // A note says something or it is not stored. Clearing the body of a note with
 // no subject would leave an empty entry, so the store refuses it.
 func TestClearingTheOnlyTextOfANoteIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	note, _, err := meetingStore(e).LogActivity(meetingCtx(e), LogActivityInput{
 		Kind:   string(crmcontracts.ActivityKindNote),

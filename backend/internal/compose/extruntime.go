@@ -16,7 +16,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"sync"
 	"time"
 
@@ -43,15 +42,6 @@ import (
 // cost them the afternoon.
 var errExtensionRuntimeUnwired = errors.New("compose: this role bound no pool for the extension runtime, so no extension capability can be served")
 
-// extensionRuntimeDeps is the boot's binding of what every per-call Runtime is
-// built over. It is process-wide because the tool adapter that needs it is
-// reached through a registry that carries only a context and raw JSON. The mutex
-// orders the write at boot before the reads that serve; a role binds once.
-var extensionRuntimeDeps struct {
-	mu sync.RWMutex
-	extensionRuntimeBinding
-}
-
 // extensionRuntimeBinding is what one role bound for every per-call Runtime:
 // the pool a unit's own SQL and the governed core port both run on, and the
 // custodian its secrets need.
@@ -62,7 +52,7 @@ type extensionRuntimeBinding struct {
 	pool  *pgxpool.Pool
 	vault keyvault.Vault
 	// captureSink is the ONE fully-guarded capture pipeline a unit's ingress
-	// lands through, bound separately by BindExtensionCapture.
+	// lands through, bound separately by BindCapture.
 	//
 	// It IS a binding, unlike the core port above, and the difference is that
 	// this dependency is not derivable from the pool: newCaptureSink attaches
@@ -73,61 +63,15 @@ type extensionRuntimeBinding struct {
 	// impossible. Nil on a role that composed no capture, and the port then
 	// refuses by name rather than half-working.
 	captureSink *capture.Sink
+	// composed is the composition the invoked unit was declared in. Every
+	// check of what the unit declared reads it.
+	composed *Extensions
 	// models and blob are what a unit's Models and Objects reach, bound by
-	// BindExtensionModels and BindExtensionObjects; nil, the capability refuses by name.
+	// BindModels and BindObjects; nil, the capability refuses by name.
 	models func(ai.Task) completer
 	blob   blobstore.Store
 	// now is the clock a time-bound read asks; nil means the wall clock.
 	now func() time.Time
-}
-
-// BindExtensionCapture records the capture pipeline a unit's ingress lands
-// through. A role that runs unattended extension work — a job tick, a
-// subscription delivery — calls it once at boot with the same deployment
-// capture config its own connectors run on.
-//
-// It takes the CONFIG and assembles the sink here rather than accepting one,
-// which is the whole point of the signature: newCaptureSink is the one spelling
-// that attaches the file keeper, the merge stager and the counterparty ensurer,
-// and a parameter of type *capture.Sink would let a caller hand over a
-// hand-assembled pipeline that lands activities and silently creates no contacts.
-//
-// Separate from BindExtensionRuntime rather than a third parameter on it,
-// because the two answer different questions: every role has a pool and a
-// custodian, and only some run work that can ingest. A role that never calls
-// this leaves ingress refusing with errIngressUnwired, which is the honest
-// answer for a process that has nowhere to put a captured record.
-func BindExtensionCapture(pool *pgxpool.Pool, cfg CaptureConfig) {
-	extensionRuntimeDeps.mu.Lock()
-	defer extensionRuntimeDeps.mu.Unlock()
-	extensionRuntimeDeps.captureSink = newCaptureSink(pool, cfg)
-}
-
-// BindExtensionRuntime records what a governed extension tool's per-call
-// Runtime reaches the installation through. Every role that serves or runs
-// agent tools calls it once at boot, after the pool and the custodian exist.
-// A nil vault makes the secret namespace refuse by name (extsecrets.ErrNoCustodian),
-// and a nil pool makes every capability refuse with errExtensionRuntimeUnwired.
-// A second bind to a different non-nil pool is a wiring fault, logged and not refused.
-func BindExtensionRuntime(pool *pgxpool.Pool, vault keyvault.Vault) {
-	extensionRuntimeDeps.mu.Lock()
-	defer extensionRuntimeDeps.mu.Unlock()
-	if prev := extensionRuntimeDeps.pool; prev != nil && pool != nil && prev != pool {
-		slog.Default().Warn("compose: the extension runtime was rebound to a different pool; " +
-			"every extension capability from now on runs against the new one")
-	}
-	// Only its own two fields: the other dependencies are bound by their own calls.
-	extensionRuntimeDeps.pool, extensionRuntimeDeps.vault = pool, vault
-}
-
-// boundExtensionRuntime reads the binding. Read per CALL rather than
-// captured at registry construction, so the ordering between binding and
-// building a registry cannot matter — only the ordering against the first
-// tool call, which is after the boot either way.
-func boundExtensionRuntime() extensionRuntimeBinding {
-	extensionRuntimeDeps.mu.RLock()
-	defer extensionRuntimeDeps.mu.RUnlock()
-	return extensionRuntimeDeps.extensionRuntimeBinding
 }
 
 // callRuntime is ONE invocation's extension.Runtime.
@@ -441,28 +385,28 @@ func (s callSecrets) DeleteUser(ctx context.Context, userID extension.UserID, ke
 	return s.inner.DeleteUser(ctx, userID, key)
 }
 
-// BindExtensionModels records how a unit's Models reach the lane of a declared
-// task; nil leaves it refusing.
-func BindExtensionModels(lane func(ai.Task) completer) {
-	extensionRuntimeDeps.mu.Lock()
-	defer extensionRuntimeDeps.mu.Unlock()
-	extensionRuntimeDeps.models = lane
+// BindModels records how a unit's Models reach the lane of a declared task;
+// nil leaves it refusing.
+func (x *Extensions) BindModels(lane func(ai.Task) completer) {
+	x.mu.Lock()
+	defer x.mu.Unlock()
+	x.runtime.models = lane
 }
 
-// BindExtensionObjects records the store a unit's Objects reaches.
-func BindExtensionObjects(store blobstore.Store) {
-	extensionRuntimeDeps.mu.Lock()
-	defer extensionRuntimeDeps.mu.Unlock()
-	extensionRuntimeDeps.blob = store
+// BindObjects records the store a unit's Objects reaches.
+func (x *Extensions) BindObjects(store blobstore.Store) {
+	x.mu.Lock()
+	defer x.mu.Unlock()
+	x.runtime.blob = store
 }
 
-// BindExtensionObjectsFromConfig opens the configured object store and binds it,
+// BindObjectsFromConfig opens the configured object store and binds it,
 // before RecordComposition sweeps the objects of a unit no longer composed.
-func BindExtensionObjectsFromConfig(ctx context.Context, settings *config.Config) error {
+func (x *Extensions) BindObjectsFromConfig(ctx context.Context, settings *config.Config) error {
 	store, err := extcapability.OpenStore(ctx, settings)
 	if err != nil {
 		return fmt.Errorf("compose: opening the object store for extensions: %w", err)
 	}
-	BindExtensionObjects(store)
+	x.BindObjects(store)
 	return nil
 }

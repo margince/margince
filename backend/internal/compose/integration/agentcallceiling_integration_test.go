@@ -65,6 +65,7 @@ func callsCharged(t *testing.T, e *apptest.AppEnv, meter *agentvolume.Meter, pas
 // this, /v1 sat outside the control entirely: a credential that spent its calls
 // through MCP could keep reading the same records over REST.
 func TestASpentWindowRefusesTheSamePassportOnTheRestDoor(t *testing.T) {
+	t.Parallel()
 	e, meter := boundedApp(t, "call-ceiling-rest", 100)
 	bearer, passport := apptest.PassportWithID(t, e, "reading agent", "read")
 	seedContacts(t, e, 2)
@@ -96,6 +97,7 @@ func TestASpentWindowRefusesTheSamePassportOnTheRestDoor(t *testing.T) {
 // busy agent must not be able to lock its own operator out of the product it is
 // acting inside.
 func TestAHumanSessionIsUnaffectedByASpentAgentWindow(t *testing.T) {
+	t.Parallel()
 	e, meter := boundedApp(t, "call-ceiling-human", 100)
 	_, passport := apptest.PassportWithID(t, e, "reading agent", "read")
 	seedContacts(t, e, 2)
@@ -111,6 +113,7 @@ func TestAHumanSessionIsUnaffectedByASpentAgentWindow(t *testing.T) {
 // however many records it returns. A page of four and a single record cost the
 // same, which is what a reader of the usage meter expects.
 func TestARestReadSpendsOneCallWhateverItReturns(t *testing.T) {
+	t.Parallel()
 	e, meter := boundedApp(t, "call-ceiling-charge", 100)
 	bearer, passport := apptest.PassportWithID(t, e, "reading agent", "read")
 	seedContacts(t, e, 3)
@@ -154,6 +157,7 @@ func TestARestReadSpendsOneCallWhateverItReturns(t *testing.T) {
 // total taken at the end cannot say which door paid. A read must move Calls by
 // one, so a second charge on a read-only route is caught.
 func TestEveryCounterTheRestDoorRefusesOnIsChargedOnIt(t *testing.T) {
+	t.Parallel()
 	e, meter := boundedApp(t, "call-ceiling-census", 1000)
 	bearer, passport := apptest.PassportWithID(t, e, "counting agent", "read", "write")
 	seedContacts(t, e, 2)
@@ -217,6 +221,7 @@ func TestEveryCounterTheRestDoorRefusesOnIsChargedOnIt(t *testing.T) {
 // the same passport's writes are refused too. A passport that only reads over
 // /v1 must approach the same ceiling as one calling over /mcp.
 func TestRestCallsAloneCanSpendTheWindow(t *testing.T) {
+	t.Parallel()
 	e, _ := boundedApp(t, "call-ceiling-selfspend", 4)
 	bearer, _ := apptest.PassportWithID(t, e, "reading agent", "read", "write")
 	seedContacts(t, e, 3)

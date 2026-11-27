@@ -100,6 +100,7 @@ func budgetSpent(t *testing.T, e *integration.Env) int {
 }
 
 func TestTriageOnCaptureRespectsTheSettingBeforeSpendingAnything(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	setAutoEnrich(t, e, false)
 	openQuestion(t, e, "switched-off.example")
@@ -116,6 +117,7 @@ func TestTriageOnCaptureRespectsTheSettingBeforeSpendingAnything(t *testing.T) {
 }
 
 func TestTriageOnCaptureLeavesTheCompanyToTheSweepAtTheDailyCap(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	setAutoEnrich(t, e, true)
 	openQuestion(t, e, "capped.example")
@@ -161,6 +163,7 @@ func TestTriageOnCaptureLeavesTheCompanyToTheSweepAtTheDailyCap(t *testing.T) {
 // itself failing to start — by running with no ambient River client, which is
 // exactly what a missing queue looks like from here.
 func TestTriageOnCaptureLeavesTheCompanyToTheSweepWhenTheReadCannotStart(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	setAutoEnrich(t, e, true)
 	openQuestion(t, e, "no-queue.example")
@@ -183,6 +186,7 @@ func TestTriageOnCaptureLeavesTheCompanyToTheSweepWhenTheReadCannotStart(t *test
 // first because it is the only one that needs no query; this asserts the spend,
 // which is the part that matters, not the query count.
 func TestTriageOnCaptureIgnoresAnEmptyDomain(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	setAutoEnrich(t, e, true)
 
@@ -200,6 +204,7 @@ func TestTriageOnCaptureIgnoresAnEmptyDomain(t *testing.T) {
 // the day's allowance eroding a slot at a time, with the shortfall growing with
 // exactly the concurrency the cap is meant to be indifferent to.
 func TestAutoEnrichBudgetSlotIsReturnedWhenItBoughtNothing(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	store := capture.NewAutoEnrichStore(e.DB())
 
@@ -238,6 +243,7 @@ func TestAutoEnrichBudgetSlotIsReturnedWhenItBoughtNothing(t *testing.T) {
 // below zero would hand out free reads on the next reservation, which is the
 // failure the cap exists to prevent.
 func TestAutoEnrichBudgetReleaseNeverGoesBelowZero(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	store := capture.NewAutoEnrichStore(e.DB())
 
@@ -277,6 +283,7 @@ func TestAutoEnrichBudgetReleaseNeverGoesBelowZero(t *testing.T) {
 // row — freeing a slot nobody took, and letting that day start one read past its
 // cap.
 func TestAutoEnrichBudgetRefundNamesTheDayItWasReservedOn(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	store := capture.NewAutoEnrichStore(e.DB())
 
@@ -317,6 +324,7 @@ func TestAutoEnrichBudgetRefundNamesTheDayItWasReservedOn(t *testing.T) {
 // the detach, would try to return it on a context that is already dead —
 // leaking the slot in precisely the case it was written to handle.
 func TestAutoEnrichRefundSurvivesACancelledCaptureContext(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	store := capture.NewAutoEnrichStore(e.DB())
 	slot, err := store.ReserveBudget(e.Admin(), 3)
@@ -380,6 +388,7 @@ func spendTriageAttempts(t *testing.T, e *integration.Env, domain string) {
 // its contacts without a company and with nothing on the row to say why — the
 // contact is created either way, and only the company waits on this.
 func TestTriageSweepSettlesADomainThatRanOutOfAttempts(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	setAutoEnrich(t, e, true)
 	openQuestion(t, e, "unreachable.example")
@@ -411,6 +420,7 @@ func TestTriageSweepSettlesADomainThatRanOutOfAttempts(t *testing.T) {
 // A domain with attempts left is left alone by the settle pass — settling it
 // early would answer from no evidence a crawl could still have gathered.
 func TestTriageSweepLeavesADomainThatStillHasAttempts(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	setAutoEnrich(t, e, true)
 	openQuestion(t, e, "waiting.example")
@@ -446,6 +456,7 @@ func pendingReasonOf(t *testing.T, e *integration.Env, domain string) string {
 }
 
 func TestReservedDomainTriageIsRecoverableMaintenance(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
 	domain := "reserved-company.test"

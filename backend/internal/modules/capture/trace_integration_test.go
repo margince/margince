@@ -89,6 +89,7 @@ func stageForOutcome(outcome capture.TraceOutcome) pipelinetrace.Stage {
 // not polls — which is what the expression index buys, and which only holds if
 // the ON CONFLICT target spells that same expression.
 func TestAReplayedDecisionRecordsOneRow(t *testing.T) {
+	t.Parallel()
 	ctx, db := traceWorkspace(t)
 	entry := mailTrace("m-replay", capture.TraceInternal)
 	entry.Reason = "internal_only"
@@ -106,6 +107,7 @@ func TestAReplayedDecisionRecordsOneRow(t *testing.T) {
 // first row swallow the second, and the second member's own view then omits
 // their own message — the single promise this table makes.
 func TestTwoMembersEachKeepTheirOwnRowForOneMessage(t *testing.T) {
+	t.Parallel()
 	ctx, db := traceWorkspace(t)
 	first, second := mailTrace("m-shared", capture.TraceCaptured), mailTrace("m-shared", capture.TraceCaptured)
 
@@ -121,6 +123,7 @@ func TestTwoMembersEachKeepTheirOwnRowForOneMessage(t *testing.T) {
 // read selects on. Two of them must still dedupe, which a bare unique index
 // over a nullable column would not do.
 func TestWorkspaceOwnedRowsCarryNoMemberAndStillDedupe(t *testing.T) {
+	t.Parallel()
 	ctx, db := traceWorkspace(t)
 	entry := capture.TraceEntry{
 		Stage:     pipelinetrace.StageTierLadder,
@@ -154,6 +157,7 @@ func TestWorkspaceOwnedRowsCarryNoMemberAndStillDedupe(t *testing.T) {
 // A channel record's source id is the customer's account id. It must not be
 // stored, and dedupe must still work without it.
 func TestAChannelAccountIdIsHashedNeverStored(t *testing.T) {
+	t.Parallel()
 	ctx, db := traceWorkspace(t)
 	const accountID = "chat-77:9001"
 	writeTrace(ctx, t, db, capture.TraceEntry{
@@ -180,6 +184,7 @@ func TestAChannelAccountIdIsHashedNeverStored(t *testing.T) {
 // Mail keeps its message id: ADR-0082 permits it, and it is what makes a
 // support question answerable.
 func TestAMailMessageIdIsKept(t *testing.T) {
+	t.Parallel()
 	ctx, db := traceWorkspace(t)
 	writeTrace(ctx, t, db, mailTrace("<abc@mail.example>", capture.TraceCaptured), false)
 
@@ -198,6 +203,7 @@ func TestAMailMessageIdIsKept(t *testing.T) {
 // The default posture stores no content at all. Not masked, not redacted —
 // never written, because a column that is never populated cannot leak.
 func TestWithPayloadsOffNoContentIsStored(t *testing.T) {
+	t.Parallel()
 	ctx, db := traceWorkspace(t)
 	entry := mailTrace("m-nocontent", capture.TraceInternal)
 	entry.Counterparty, entry.Subject = "colleague@acme.com", "Meeting recap"
@@ -219,6 +225,7 @@ func TestWithPayloadsOffNoContentIsStored(t *testing.T) {
 // With the operator's posture on, content is stored — bounded, and normalized
 // so the erasure predicate is index-backed equality rather than a scan.
 func TestWithPayloadsOnContentIsBoundedAndNormalized(t *testing.T) {
+	t.Parallel()
 	ctx, db := traceWorkspace(t)
 	entry := mailTrace("m-content", capture.TraceInternal)
 	entry.Counterparty = "  Colleague@ACME.com  "
@@ -246,6 +253,7 @@ func TestWithPayloadsOnContentIsBoundedAndNormalized(t *testing.T) {
 // programming error at a call site, and it fails loudly rather than writing a
 // row nothing can find.
 func TestATraceWithoutANaturalKeyIsRefused(t *testing.T) {
+	t.Parallel()
 	ctx, db := traceWorkspace(t)
 	err := db.Tx(ctx, func(tx pgx.Tx) error {
 		return capture.Trace(ctx, tx, capture.TraceEntry{
@@ -266,6 +274,7 @@ func TestATraceWithoutANaturalKeyIsRefused(t *testing.T) {
 // diagnostic table in payload mode is exactly where it would otherwise come
 // back, so the trace asks the same list.
 func TestAnErasedAddressIsNeverWrittenEvenWithPayloadsOn(t *testing.T) {
+	t.Parallel()
 	ctx, db := traceWorkspace(t)
 	const erased = "gone@client.io"
 	if err := db.Tx(ctx, func(tx pgx.Tx) error {
@@ -274,7 +283,7 @@ func TestAnErasedAddressIsNeverWrittenEvenWithPayloadsOn(t *testing.T) {
 		// a stray space resurrects an erased subject.
 		_, err := tx.Exec(ctx, `
 			INSERT INTO erasure_suppression (kind, value_hash)
-			VALUES ('email', $1)`, storekit.SuppressionHash(erased))
+			VALUES ('email', $1)`, storekit.SuppressionHash(ctx, erased))
 		return err
 	}); err != nil {
 		t.Fatalf("seeding the suppression list: %v", err)
@@ -311,6 +320,7 @@ func TestAnErasedAddressIsNeverWrittenEvenWithPayloadsOn(t *testing.T) {
 // contact the pipeline had just resolved and created a contact for. The reader was
 // told the pipeline knew less than it did.
 func TestTraceNamesACounterpartyThatHasNoAddress(t *testing.T) {
+	t.Parallel()
 	ctx, db := traceWorkspace(t)
 
 	entry := mailTrace("chan-named", capture.TraceCaptured)
@@ -350,6 +360,7 @@ func TestTraceNamesACounterpartyThatHasNoAddress(t *testing.T) {
 // "not suppressed" for every erased contact and write the very name the erasure
 // existed to remove.
 func TestTraceWithholdsTheNameOfAnErasedChannelIdentity(t *testing.T) {
+	t.Parallel()
 	ctx, db := traceWorkspace(t)
 
 	const provider, account = "zalo_oa", "4033837145949898046:6020261223181465911"
@@ -363,7 +374,7 @@ func TestTraceWithholdsTheNameOfAnErasedChannelIdentity(t *testing.T) {
 			// The derivation the reader uses, not a hand-rolled equivalent: a test
 			// that seeded its own spelling would pass while production looked
 			// somewhere else.
-			storekit.ChannelIdentityHash(provider, account))
+			storekit.ChannelIdentityHash(ctx, provider, account))
 		return err
 	}); err != nil {
 		t.Fatalf("seeding the suppression list: %v", err)
@@ -400,6 +411,7 @@ func TestTraceWithholdsTheNameOfAnErasedChannelIdentity(t *testing.T) {
 // A record naming its human NEITHER way keeps the honest NULL this column was
 // always for: the trace says nothing about a sender it never had.
 func TestTraceRecordsNoCounterpartyWhenTheRecordNamesNobody(t *testing.T) {
+	t.Parallel()
 	ctx, db := traceWorkspace(t)
 
 	entry := mailTrace("chan-anon", capture.TraceCaptured)

@@ -21,7 +21,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -35,30 +34,26 @@ import (
 // Every route into EnsureCounterpartyTx uses this: the capture sink, the
 // verdict engine, and the review-queue accept. A plain contacts.NewStore on any
 // of them would silently fall back to the shipped baseline and ignore the
-// workspace's own corrections.
+// workspace's own corrections. This one queues no follow-up work.
 func newCounterpartyStore(pool *pgxpool.Pool) *contacts.Store {
-	return newCounterpartyStoreAt(pool, time.Now)
+	return newCounterpartyStoreAt(pool, time.Now, nil)
 }
 
-func newCounterpartyStoreAt(pool *pgxpool.Pool, now func() time.Time) *contacts.Store {
+// newCounterpartyStoreAt queues through queues, the composition's binding. A
+// site read's accepted fields land through the approval effect's store, so
+// without it the address and VAT lanes' main trigger would queue nothing.
+func newCounterpartyStoreAt(pool *pgxpool.Pool, now func() time.Time, queues *storeQueues) *contacts.Store {
 	tasks := newLeadWorkTasks(InstallationDB(pool), slog.Default())
 	tasks.now = now
-	// The VAT-check enqueue rides here rather than being passed in, because
-	// every caller of this constructor is several layers below the composition
-	// that holds a job runner. A site read's accepted fields land through the
-	// approval effect's store, so without it the lane's main trigger queued
-	// nothing — see BindVatChecking.
-	// The audience derivation rides here for a reason of the same shape: the
-	// cohort repair FILES a captured meeting under the contact it has just
-	// resolved, and a meeting the capture limiter held for having no record is
-	// no longer that record-less thing once it does. activities owns the
-	// derivation, contacts may not import it, so compose hands it over.
+	// The cohort repair files a captured meeting under the contact it has just
+	// resolved, so a meeting held for having no record has one now. activities
+	// owns the audience derivation and contacts may not import it.
 	return withContactMergeCarriers(InstallationDB(pool), newContactsStore(InstallationDB(pool))).
 		WithLeadQualifyTasks(tasks).
 		WithConsumerMail(capture.MatcherTx).
 		WithAudienceRecompute(activities.RecomputeAudienceTx).
-		WithVatCheckEnqueue(boundVatCheckEnqueue()).
-		WithGeocodeEnqueue(boundGeocodeEnqueue)
+		WithVatCheckEnqueue(queues.vatCheckEnqueue()).
+		WithGeocodeEnqueue(queues.geocodeEnqueue)
 }
 
 // contactsEnsurer adapts the contacts module's auto-create engine onto
@@ -101,7 +96,7 @@ func (p contactsEnsurer) EnsureCounterpartyTx(ctx context.Context, tx pgx.Tx, in
 		Replied:         in.Replied,
 		LinkOnly:        in.LinkOnly,
 		ReaderTeam:      in.ReaderTeam,
-		ReaderAuthority: identity.ReadAuthorityTx,
+		ReaderAuthority: readAuthorityTx,
 		// The SINK's ensure, which runs while the sender is still unjudged.
 		// Owner-scoped until something says otherwise; the verdict path is the
 		// only caller that asks for the workspace.

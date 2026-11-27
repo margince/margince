@@ -20,6 +20,7 @@ import (
 // A lead's next task says whether its due is a date with no time, and the date
 // and zone it was chosen in. A reader in any zone then prints the picked day.
 func TestALeadsNextTaskCarriesItsPickedDate(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	assignee := ids.From[ids.UserKind](e.AdminUser)
 	lead, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{

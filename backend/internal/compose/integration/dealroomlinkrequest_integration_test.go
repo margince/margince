@@ -17,6 +17,7 @@ import (
 )
 
 func TestASellersNewLinkAnswersTheBuyersRequest(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	room := openRoomWithABuyer(t, e)
@@ -43,6 +44,7 @@ func TestASellersNewLinkAnswersTheBuyersRequest(t *testing.T) {
 // With no ask on the row, a resend has nothing to answer and leaves the row's
 // version as it was.
 func TestAResendWithNoAskLeavesTheBuyersRowUnwritten(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	room := openRoomWithABuyer(t, e)

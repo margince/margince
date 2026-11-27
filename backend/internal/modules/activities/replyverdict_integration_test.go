@@ -29,6 +29,7 @@ import (
 // reads positive. The constraint is in the database rather than in the writer's
 // memory, so this asserts the refusal rather than the writer's good intentions.
 func TestAnOutboundMessageCannotCarryAReplyVerdict(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	outbound := ids.NewV7()
 	e.exec(t, `INSERT INTO activity (id, kind, direction, subject, occurred_at, thread_key, source, captured_by)
@@ -56,6 +57,7 @@ func TestAnOutboundMessageCannotCarryAReplyVerdict(t *testing.T) {
 // customers changed their minds are different facts, and without this column
 // nobody can tell them apart afterwards.
 func TestAnInboundReplyTakesAVerdictAndNamesItsJudge(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := e.buyer(t)
 	reply := e.waitingFrom(t, "Yes, let us talk next week", "buyer@customer.test", contact)
@@ -94,6 +96,7 @@ func TestAnInboundReplyTakesAVerdictAndNamesItsJudge(t *testing.T) {
 // silently re-judged its own history would move without anybody changing
 // anything.
 func TestASecondReplyVerdictDoesNotOverwriteTheFirst(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := e.buyer(t)
 	reply := e.waitingFrom(t, "Not for us, thanks", "buyer@customer.test", contact)
@@ -122,6 +125,7 @@ func TestASecondReplyVerdictDoesNotOverwriteTheFirst(t *testing.T) {
 // because a rep re-judged twenty replies is a different fact from one that moved
 // because customers did, and an overwriting column cannot tell them apart.
 func TestAHumanCorrectionAppendsRatherThanReplaces(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := e.buyer(t)
 	reply := e.waitingFrom(t, "Interesting, but not now", "buyer@customer.test", contact)
@@ -159,6 +163,7 @@ func TestAHumanCorrectionAppendsRatherThanReplaces(t *testing.T) {
 // message" is an answer, and it returns the row to counting in neither half of
 // the rate rather than leaving a guess standing.
 func TestAHumanMayCorrectAVerdictBackToUnjudged(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := e.buyer(t)
 	reply := e.waitingFrom(t, "?", "buyer@customer.test", contact)

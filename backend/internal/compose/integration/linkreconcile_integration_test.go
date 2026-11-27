@@ -37,6 +37,7 @@ var sweepContactPerms = principal.Permissions{
 }
 
 func TestTheRepairSweepActuallyRepairsWhenDrivenAsTheJob(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := contacts.NewStore(e.DB())
 

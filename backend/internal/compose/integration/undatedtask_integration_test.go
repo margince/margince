@@ -60,6 +60,7 @@ func worklistAt(t *testing.T, e *Env, asOf time.Time, scope, filter string) crmc
 }
 
 func TestAnUndatedTaskWaitsUnderUpcomingAndNeverOnToday(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	asOf := clocktest.Now(t)
 	contact := e.SeedContact(t, "Renewal Contact", &e.AdminUser)
@@ -110,6 +111,7 @@ func TestAnUndatedTaskWaitsUnderUpcomingAndNeverOnToday(t *testing.T) {
 // A reminder the reader asked for makes an undated task today's work: it is on
 // Today once, and the upcoming total leaves it out.
 func TestAnUndatedTaskWithADueReminderIsTodaysWorkOnce(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	asOf := clocktest.Now(t).Add(2 * time.Hour)
 	contact := e.SeedContact(t, "Renewal Contact", &e.AdminUser)

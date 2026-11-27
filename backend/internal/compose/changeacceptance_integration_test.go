@@ -17,6 +17,7 @@ import (
 )
 
 func TestAcceptanceRecordsOneDecisionForTheDisplayedCorrection(t *testing.T) {
+	t.Parallel()
 	e := setupCloseDate(t)
 	deal := e.seedSweepDeal(t, "Review this correction", e.early, nil, new(-12), 3)
 	if err := e.sweep(); err != nil {
@@ -82,6 +83,7 @@ func TestAcceptanceRecordsOneDecisionForTheDisplayedCorrection(t *testing.T) {
 }
 
 func TestAnEditedCorrectionCannotBeAcceptedAsTheCurrentChange(t *testing.T) {
+	t.Parallel()
 	e := setupCloseDate(t)
 	deal := e.seedSweepDeal(t, "Edit after correction", e.early, nil, new(-12), 3)
 	if err := e.sweep(); err != nil {
@@ -106,6 +108,7 @@ func TestAnEditedCorrectionCannotBeAcceptedAsTheCurrentChange(t *testing.T) {
 }
 
 func TestAcceptanceChecksWriteAuthorityBeforeReturningAConflict(t *testing.T) {
+	t.Parallel()
 	e := setupCloseDate(t)
 	deal := e.seedSweepDeal(t, "Another owner's correction", e.early, nil, new(-12), 3)
 	if err := e.sweep(); err != nil {

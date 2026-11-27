@@ -93,6 +93,7 @@ func cardFields(email string) map[string]any {
 // Criterion 2 is the half that makes the refusal usable: "already exists" is
 // not enough, it has to say WHO, so the user can go and look.
 func TestCase2TheSameContactIsNotCreatedTwice(t *testing.T) {
+	t.Parallel()
 	s := boot(t, scopesReadWrite)
 
 	first := s.createFromCard(t, cardFields(cardEmail))
@@ -128,6 +129,7 @@ func TestCase2TheSameContactIsNotCreatedTwice(t *testing.T) {
 // would lose a real second contact at a company whose number everyone shares.
 // It lands, and a possible duplicate is filed rather than lost.
 func TestCase2ASharedPhoneLandsAndIsFiledForReview(t *testing.T) {
+	t.Parallel()
 	s := boot(t, scopesReadWrite)
 
 	first := s.createFromCard(t, cardFields(cardEmail))
@@ -197,6 +199,7 @@ func TestCase2ASharedPhoneLandsAndIsFiledForReview(t *testing.T) {
 // name is a reference to a word somebody already chose — this test creates it
 // as an admin first, which is the same order a real workspace works in.
 func TestCase2ATagIsAppliedByNameInOneStep(t *testing.T) {
+	t.Parallel()
 	s := boot(t, scopesReadWrite)
 	contact := s.createFromCard(t, cardFields(cardEmail))
 
@@ -231,6 +234,7 @@ func TestCase2ATagIsAppliedByNameInOneStep(t *testing.T) {
 // shared vocabulary permanently, which is the drift a shared vocabulary is for
 // preventing.
 func TestCase2AnUnknownTagNameIsRefusedRatherThanCoined(t *testing.T) {
+	t.Parallel()
 	s := boot(t, scopesReadWrite)
 	contact := s.createFromCard(t, cardFields(cardEmail))
 

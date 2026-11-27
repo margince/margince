@@ -29,6 +29,7 @@ import (
 )
 
 func TestTheHeldThreadsListIsOneSeatsOwn(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedVerdict(t, e, e.Rep1, "thread-mine", "held", "legal", 1)
 	seedVerdict(t, e, e.Rep2, "thread-theirs", "held", "personnel", 1)
@@ -53,6 +54,7 @@ func TestTheHeldThreadsListIsOneSeatsOwn(t *testing.T) {
 // A thread the classifier opened is not held, so it is not on a page that
 // answers "what is not visible to my colleagues".
 func TestAClearedThreadIsNotHeld(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedVerdict(t, e, e.Rep1, "thread-open", "cleared", "ordinary", 1)
 	seedVerdict(t, e, e.Rep1, "thread-shared", "shared_by_owner", "", 1)
@@ -74,6 +76,7 @@ func TestAClearedThreadIsNotHeld(t *testing.T) {
 // decided — burying them under decided ones is what makes an owner scroll to
 // find the work.
 func TestPendingThreadsComeFirst(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedVerdict(t, e, e.Rep1, "thread-decided", "held", "legal", 1)
 	seedVerdict(t, e, e.Rep1, "thread-waiting", "pending", "", 3)
@@ -99,6 +102,7 @@ func TestPendingThreadsComeFirst(t *testing.T) {
 }
 
 func TestAThreadWithoutAnyReadableMessageIsAbsent(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedVerdictOrphan(t, e, e.Rep1, "thread-orphan", "held", "personal", 1)
 	if got := heldThreads(t, e, e.Rep1); len(got) != 0 {
@@ -114,6 +118,7 @@ func TestAThreadWithoutAnyReadableMessageIsAbsent(t *testing.T) {
 // on the happy path notices. What it buys is the row the clause refuses: a
 // verdict whose activity the caller may not read is omitted.
 func TestAHeldThreadCarriesItsSubjectOnlyWhenTheReaderMayReadIt(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedVerdict(t, e, e.Rep1, "thread-mine", "held", "legal", 1)
 
@@ -134,6 +139,7 @@ func TestAHeldThreadCarriesItsSubjectOnlyWhenTheReaderMayReadIt(t *testing.T) {
 // The ledger row is theirs to see and release; the message's content is not
 // theirs to read, and the two answers are separate.
 func TestAHeldThreadWithholdsAMessageTheReaderIsNotOn(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	var activityID ids.UUID
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
@@ -166,6 +172,7 @@ func TestAHeldThreadWithholdsAMessageTheReaderIsNotOn(t *testing.T) {
 // admission case is asserted as hard as the refusal: a list that handed out no
 // id at all would pass every refusal above while opening nothing.
 func TestAHeldThreadCarriesTheMessageItsReaderMayOpen(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	activityID := ids.NewV7()
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
@@ -268,6 +275,7 @@ func seedVerdictWithActivity(t *testing.T, e *integration.Env, user ids.UUID,
 // forever, which on the screen is indistinguishable from a deployment that
 // composed no queue at all.
 func TestTheHeldThreadsPageCarriesTheThreadVerdictClock(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedVerdict(t, e, e.Rep1, "thread-waiting", "pending", "", 0)
 
@@ -287,6 +295,7 @@ func TestTheHeldThreadsPageCarriesTheThreadVerdictClock(t *testing.T) {
 // would take the list away over a field nobody asked for, on precisely the
 // deployment where the queue is what is broken.
 func TestAScheduleReadThatFailsStillListsTheHeldThreads(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedVerdict(t, e, e.Rep1, "thread-listed", "held", "legal", 1)
 

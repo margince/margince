@@ -41,6 +41,7 @@ func (e *dedupeEnv) seedTwoOwnersOfOneCard(ctx context.Context, t *testing.T) (l
 // message somewhere, and it has to be the same somewhere it landed before. The
 // lowest id wins, which is what the `ORDER BY … LIMIT 1` this replaced returned.
 func TestACardNamingTwoContactsRoutesToTheSameOneItAlwaysDid(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	lower, _ := e.seedTwoOwnersOfOneCard(ctx, t)
@@ -63,6 +64,7 @@ func TestACardNamingTwoContactsRoutesToTheSameOneItAlwaysDid(t *testing.T) {
 
 // And the fact that used to be discarded: the OTHER contact the card named.
 func TestACardNamingTwoContactsReportsTheOneItDidNotRouteTo(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	lower, higher := e.seedTwoOwnersOfOneCard(ctx, t)
@@ -89,6 +91,7 @@ func TestACardNamingTwoContactsReportsTheOneItDidNotRouteTo(t *testing.T) {
 // report ever fires on the ordinary case — a warning on every answer says as
 // little as one on none.
 func TestACardNamingOneContactReportsNoSplit(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	only := e.seedContact(ctx, t, "Clara Vogt", []string{"clara@lanesplit-c.test", "c.vogt@lanesplit-c.test"}, nil)
@@ -109,6 +112,7 @@ func TestACardNamingOneContactReportsNoSplit(t *testing.T) {
 // The review row, with the evidence that tells a reader which of the two
 // questions this is: the payload disagreed with itself, not our bindings.
 func TestALaneSplitEnqueuesOneReviewNamingBothContacts(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	lower, higher := e.seedTwoOwnersOfOneCard(ctx, t)
@@ -161,6 +165,7 @@ func TestALaneSplitEnqueuesOneReviewNamingBothContacts(t *testing.T) {
 // attached to whichever company had the lower id, with nothing saying a second
 // one answered to the same sender.
 func TestDomainsNamingTwoCompaniesRouteToTheSameOneAndReportTheOther(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	first := e.seedCompanyOnDomain(ctx, t, "Kellner Anlagenbau", "kellner-split.test")
@@ -216,6 +221,7 @@ func TestDomainsNamingTwoCompaniesRouteToTheSameOneAndReportTheOther(t *testing.
 // sender's own domain and its base usually belong to the same account, and a
 // report that fired there would be a report on every message.
 func TestTwoDomainsOnOneCompanyReportNoSplit(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	only := e.seedCompanyOnDomain(ctx, t, "Turbinenbau AG", "turbinenbau-split.test")

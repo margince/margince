@@ -25,6 +25,7 @@ import (
 )
 
 func TestAuditAttributionsMatchTheRecordHistoryForEveryActorShape(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contact := e.SeedContact(t, "History Subject", nil)
 	human := seedWorkspaceUser(t, e, "Ada Authority")

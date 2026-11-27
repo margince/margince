@@ -25,11 +25,12 @@ import (
 )
 
 func TestTheSendCheckMatchesAStopKeptAsTheHashOfTheAddress(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	if _, err := e.owner.Exec(context.Background(), `
 		INSERT INTO communication_suppression (address_hash, kind, source, captured_by, decided_by_level)
 		VALUES ($1, 'subject_request', 'kept', 'system', 'user')`,
-		storekit.SuppressionHash("kept@returning.test")); err != nil {
+		storekit.SuppressionHash(t.Context(), "kept@returning.test")); err != nil {
 		t.Fatalf("planting the kept stop: %v", err)
 	}
 	for _, c := range []struct {
@@ -59,11 +60,12 @@ func TestTheSendCheckMatchesAStopKeptAsTheHashOfTheAddress(t *testing.T) {
 // Mutation: put back the plain-address arm alone in aStopThatBindsTheMessage
 // and this fails.
 func TestAReviewSeesAStopKeptAsTheHashOfTheAddress(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	if _, err := e.owner.Exec(context.Background(), `
 		INSERT INTO communication_suppression (address_hash, kind, source, captured_by, decided_by_level)
 		VALUES ($1, 'subject_request', 'kept', 'system', 'user')`,
-		storekit.SuppressionHash("kept@returning.test")); err != nil {
+		storekit.SuppressionHash(t.Context(), "kept@returning.test")); err != nil {
 		t.Fatalf("planting the kept stop: %v", err)
 	}
 	binding, err := aStopThatBindsTheMessage(e.ctx, e.store.db, ids.New[ids.ContactKind](), RefusedRecipient{
@@ -94,6 +96,7 @@ func leadAdminCtx(e *channelConsentEnv) context.Context {
 }
 
 func TestALeadsStopIsListedAndLiftedThroughTheLead(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	ctx := leadAdminCtx(e)
 	lead := ids.New[ids.LeadKind]()
@@ -158,6 +161,7 @@ func carryAndDropOriginal(t *testing.T, e *channelConsentEnv) ids.ContactID {
 //
 // Mutation: drop recorded_through from the carry's INSERT and both fail.
 func TestACopyKeepsHowItsStopWasRecordedAfterTheOriginalIsGone(t *testing.T) {
+	t.Parallel()
 	t.Run("the contact's press", func(t *testing.T) {
 		e := setupChannelConsent(t)
 		if _, err := e.store.PublicStop(systemCtx(e.ws), e.contact, StopAllMarketing, "No more ads."); err != nil {
@@ -192,6 +196,7 @@ func TestACopyKeepsHowItsStopWasRecordedAfterTheOriginalIsGone(t *testing.T) {
 // Mutation: drop the stop statement from BindRequestsToAddressesTx and the
 // first case fails; drop the trigger and the second fails.
 func TestAMergeBindsASubjectWideStopToItsOwnRecordsAddresses(t *testing.T) {
+	t.Parallel()
 	for _, viaTrigger := range []bool{false, true} {
 		t.Run(map[bool]string{false: "the merge code", true: "the trigger"}[viaTrigger], func(t *testing.T) {
 			e := setupChannelConsent(t)
@@ -240,12 +245,13 @@ func TestAMergeBindsASubjectWideStopToItsOwnRecordsAddresses(t *testing.T) {
 // Mutation: put back the plain-address arm alone in StopForCredentialTx's
 // dedup and the replay writes a second, plaintext stop.
 func TestAReplayedPressFindsTheStopKeptAsAHash(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	const address = "pressed@bare.test"
 	if _, err := e.owner.Exec(context.Background(), `
 		INSERT INTO communication_suppression (address_hash, kind, source, captured_by, decided_by_level)
 		VALUES ($1, $2, 'public_link', 'system', 'machine')`,
-		storekit.SuppressionHash(address), commsauthz.ReasonObjection); err != nil {
+		storekit.SuppressionHash(t.Context(), address), commsauthz.ReasonObjection); err != nil {
 		t.Fatalf("planting the kept stop: %v", err)
 	}
 	var stopped bool

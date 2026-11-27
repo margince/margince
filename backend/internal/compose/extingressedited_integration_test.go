@@ -41,6 +41,7 @@ func (e *crmEnv) companyEditedByAUser(t *testing.T) extension.Result {
 }
 
 func TestAFeedWithholdsAFieldAUserEditedAndSaysSo(t *testing.T) {
+	t.Parallel()
 	e := setupCRMIngress(t)
 	first := e.companyEditedByAUser(t)
 
@@ -60,6 +61,7 @@ func TestAFeedWithholdsAFieldAUserEditedAndSaysSo(t *testing.T) {
 }
 
 func TestAFeedAllowedToOverwriteReplacesAFieldAUserEdited(t *testing.T) {
+	t.Parallel()
 	e := setupCRMIngress(t)
 	first := e.companyEditedByAUser(t)
 	e.allowOverwrite(t, true)
@@ -84,6 +86,7 @@ func TestAFeedAllowedToOverwriteReplacesAFieldAUserEdited(t *testing.T) {
 }
 
 func TestAFeedWithholdsADealAmountAndItsCurrencyTogether(t *testing.T) {
+	t.Parallel()
 	e := setupCRMIngress(t)
 	made := e.mustIngest(t, e.dealRecord("opp-1", nil))
 	if _, err := e.Deals.UpdateDeal(e.Admin(), ids.From[ids.DealKind](ids.MustParse(made.Ref.ID)),
@@ -111,6 +114,7 @@ func TestAFeedWithholdsADealAmountAndItsCurrencyTogether(t *testing.T) {
 // The feed overwrote the amount after a user set the figure. The amount's
 // last writer is the feed, and the currency's is still the user.
 func TestAFeedWithholdsTheAmountWhenTheUserLastWroteOnlyTheCurrency(t *testing.T) {
+	t.Parallel()
 	e := setupCRMIngress(t)
 	made := e.mustIngest(t, e.dealRecord("opp-1", nil))
 	if _, err := e.Deals.UpdateDeal(e.Admin(), ids.From[ids.DealKind](ids.MustParse(made.Ref.ID)),
@@ -135,6 +139,7 @@ func TestAFeedWithholdsTheAmountWhenTheUserLastWroteOnlyTheCurrency(t *testing.T
 }
 
 func TestChangingTheOverwriteSettingIsAudited(t *testing.T) {
+	t.Parallel()
 	e := setupCRMIngress(t)
 	e.allowOverwrite(t, true)
 	got := e.countAsWorkspace(t,

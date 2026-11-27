@@ -9,7 +9,6 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"strings"
 	"testing"
 
@@ -26,11 +25,9 @@ import (
 // nothing else: every figure it asserts on is a zero or a count the pool keeps
 // for itself, and no statement is issued.
 func TestEveryDeclaredPoolSeriesReachesTheScrape(t *testing.T) {
-	dsn := os.Getenv("MARGINCE_TEST_DSN")
-	if dsn == "" {
-		t.Fatal("MARGINCE_TEST_DSN is not set — run `make db-up` and try again (integration tests fail loudly, they never skip)")
-	}
-	pool, err := testdb.OwnPool(context.Background(), dsn)
+	t.Parallel()
+	db := testdb.New(t)
+	pool, err := testdb.OwnPool(context.Background(), db.OwnerDSN)
 	if err != nil {
 		t.Fatalf("opening a pool to read the exposition off: %v", err)
 	}

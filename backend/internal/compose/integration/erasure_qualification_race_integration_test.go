@@ -42,6 +42,7 @@ import (
 )
 
 func TestAQualificationInFlightHoldsItsCorrespondence(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedRestrictionFixture(t, e)
 	// A deal the correspondence hangs off, so the stamp below is the one the

@@ -51,6 +51,7 @@ func (e *revocationEnv) verifyMemberMFA(t *testing.T, code string) bool {
 }
 
 func TestTOTPEnrolmentConfirmVerifyAndRecovery(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "mfa-enrol")
 	e.withVault()
 	base := time.Unix(1_760_000_000, 0)
@@ -127,6 +128,7 @@ func TestTOTPEnrolmentConfirmVerifyAndRecovery(t *testing.T) {
 }
 
 func TestMFACannotBeReEnrolledWhileConfirmedAndDisableDemandsTheFactor(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "mfa-reenrol")
 	e.withVault()
 	base := time.Unix(1_760_000_000, 0)
@@ -198,6 +200,7 @@ func TestMFACannotBeReEnrolledWhileConfirmedAndDisableDemandsTheFactor(t *testin
 }
 
 func TestConfirmTOTPRefusesAWrongCode(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "mfa-wrongcode")
 	e.withVault()
 	ctx := e.asMember()
@@ -215,6 +218,7 @@ func TestConfirmTOTPRefusesAWrongCode(t *testing.T) {
 }
 
 func TestConfirmTOTPEndsEveryOtherSessionOfTheMember(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "mfa-cutover")
 	e.withVault()
 

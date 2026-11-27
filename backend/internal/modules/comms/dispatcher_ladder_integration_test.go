@@ -61,6 +61,7 @@ func (e *storeEnv) deliveryRow(t *testing.T, id ids.UUID) (status string, attemp
 }
 
 func TestPacingADeliveryPastTheLadderNeverSpendsATransmitAttempt(t *testing.T) {
+	t.Parallel()
 	e := setupStore(t)
 	id := e.stage(t, e.baseInput(e.activity, "msg-paced@example.com"))
 
@@ -134,6 +135,7 @@ func TestPacingADeliveryPastTheLadderNeverSpendsATransmitAttempt(t *testing.T) {
 // provider keeps its rung, so the exhaustion guard still parks a delivery
 // whose transmissions are genuinely spent.
 func TestATransmittingAttemptStillSpendsARung(t *testing.T) {
+	t.Parallel()
 	e := setupStore(t)
 	id := e.stage(t, e.baseInput(e.activity, "msg-transmits@example.com"))
 
@@ -160,6 +162,7 @@ func TestATransmittingAttemptStillSpendsARung(t *testing.T) {
 // the snooze restores the caller's own attempt. The row would look live
 // indefinitely — the exact state the exhaustion bound exists to prevent.
 func TestProviderThrottlingPastTheLadderParksNamingTheThrottle(t *testing.T) {
+	t.Parallel()
 	e := setupStore(t)
 	id := e.stage(t, e.baseInput(e.activity, "msg-throttled@example.com"))
 

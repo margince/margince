@@ -145,6 +145,7 @@ func seatImportCount(t *testing.T, e *integration.Env, activity, seat ids.UUID) 
 }
 
 func TestTheMailboxOwnerSeesTheirMailPerAddressAndNobodyElseDoes(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	unroutedMailbox(t, e, e.Rep1, "own1@authz.test")
 	unroutedMailbox(t, e, e.Rep2, "own2@authz.test")
@@ -171,6 +172,7 @@ func TestTheMailboxOwnerSeesTheirMailPerAddressAndNobodyElseDoes(t *testing.T) {
 }
 
 func TestMailAddressedToTheSeatItselfIsNotCounted(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	unroutedMailbox(t, e, e.Rep1, "own1@authz.test")
 	captureUnrouted(t, e, e.Rep1, "u-own", "own1@authz.test", unroutedInfo)
@@ -181,6 +183,7 @@ func TestMailAddressedToTheSeatItselfIsNotCounted(t *testing.T) {
 }
 
 func TestReceivingAnAddressLetsTheNextSweepJudgeItsMail(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	unroutedMailbox(t, e, e.Rep1, "own1@authz.test")
 	unroutedMailbox(t, e, e.Rep2, "own2@authz.test")
@@ -219,6 +222,7 @@ func TestReceivingAnAddressLetsTheNextSweepJudgeItsMail(t *testing.T) {
 }
 
 func TestWithdrawingTheClaimListsTheUnjudgedMailAgain(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	unroutedMailbox(t, e, e.Rep1, "own1@authz.test")
 	captureUnrouted(t, e, e.Rep1, "u-undo", unroutedInfo)
@@ -235,6 +239,7 @@ func TestWithdrawingTheClaimListsTheUnjudgedMailAgain(t *testing.T) {
 }
 
 func TestNotMineHidesTheAddressAndKeepsItsMailUnjudged(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	unroutedMailbox(t, e, e.Rep1, "own1@authz.test")
 	unroutedMailbox(t, e, e.Rep2, "own2@authz.test")
@@ -287,6 +292,7 @@ func importedAtHeldAddress(t *testing.T, e *integration.Env, address string) boo
 }
 
 func TestAnAddressAnotherMemberClaimsIsNeverAdopted(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	unroutedMailbox(t, e, e.Rep1, "own1@authz.test")
 	unroutedMailbox(t, e, e.Rep2, "own2@authz.test")
@@ -299,6 +305,7 @@ func TestAnAddressAnotherMemberClaimsIsNeverAdopted(t *testing.T) {
 }
 
 func TestAColleaguesLoginIsNeverAdopted(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	unroutedMailbox(t, e, e.Rep1, "own1@authz.test")
 	login := e.WsScalar(t, `SELECT lower(email) FROM app_user WHERE id = $1`, e.Rep2)
@@ -308,6 +315,7 @@ func TestAColleaguesLoginIsNeverAdopted(t *testing.T) {
 }
 
 func TestAColleaguesMailboxAddressIsNeverAdopted(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	unroutedMailbox(t, e, e.Rep1, "own1@authz.test")
 	unroutedMailbox(t, e, e.Rep2, "own2@authz.test")
@@ -317,6 +325,7 @@ func TestAColleaguesMailboxAddressIsNeverAdopted(t *testing.T) {
 }
 
 func TestAnAddressOnAContactAsksBeforeItIsClaimed(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	unroutedMailbox(t, e, e.Rep1, "own1@authz.test")
 	const customer = "kunde@customer.example"
@@ -344,6 +353,7 @@ func TestAnAddressOnAContactAsksBeforeItIsClaimed(t *testing.T) {
 }
 
 func TestTheListIsCutAtTheAddressCapAndSaysSo(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	unroutedMailbox(t, e, e.Rep1, "own1@authz.test")
 	message := ids.NewV7()
@@ -370,6 +380,7 @@ func refusalTrail(t *testing.T, e *integration.Env) (events, audits int) {
 }
 
 func TestARefusalWritesItsAuditRowAndEventOnlyWhenItChangesSomething(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	store := unroutedStore(e)
 	ctx := seatCtx(e, e.Rep1)

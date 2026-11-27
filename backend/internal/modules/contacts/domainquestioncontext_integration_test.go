@@ -65,6 +65,7 @@ func (e *dedupeEnv) employCurrently(ctx context.Context, t *testing.T, contact i
 }
 
 func TestAQuestionNamesItsSenderAndSaysWhetherTheSiteWasRead(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	anna := e.openTriageFirst(ctx, t, "anna@unread.test", "Anna Example", "unread.test")
@@ -90,6 +91,7 @@ func TestAQuestionNamesItsSenderAndSaysWhetherTheSiteWasRead(t *testing.T) {
 }
 
 func TestASenderTheReaderMayNotSeeIsCountedButNotNamed(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	hidden := e.openTriageFirst(ctx, t, "hidden@private.test", "Hidden Sender", "private.test")
@@ -110,6 +112,7 @@ func TestASenderTheReaderMayNotSeeIsCountedButNotNamed(t *testing.T) {
 }
 
 func TestASuggestionNeedsExactlyOneVisibleCompany(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	first := e.openTriageFirst(ctx, t, "first@employed.test", "First Sender", "employed.test")
@@ -140,6 +143,7 @@ func TestASuggestionNeedsExactlyOneVisibleCompany(t *testing.T) {
 }
 
 func TestARedirectTargetSuggestsItsOwnerButDoesNotDecide(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.openTriageFirst(ctx, t, "alex@alias.test", "Alex Example", "alias.test")
@@ -161,6 +165,7 @@ func TestARedirectTargetSuggestsItsOwnerButDoesNotDecide(t *testing.T) {
 }
 
 func TestANameTwinIsStoredButTwoTwinsSuggestNothing(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	twin := e.createNamedCompany(ctx, t, "Twin GmbH", "twin-one.test")
@@ -200,6 +205,7 @@ func (e *dedupeEnv) candidateOf(ctx context.Context, t *testing.T, domain string
 }
 
 func TestTheFocusedReadAnswersOnlyTheNamedQuestion(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	for _, domain := range []string{"focus-one.test", "focus-two.test"} {
@@ -229,6 +235,7 @@ func (e *dedupeEnv) withheldAgain(ctx context.Context, t *testing.T, domain stri
 }
 
 func TestOneTwinSuggestsItself(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	twin := e.createNamedCompany(ctx, t, "Solo GmbH", "solo-one.test")
@@ -244,6 +251,7 @@ func TestOneTwinSuggestsItself(t *testing.T) {
 }
 
 func TestEverySenderCountsTowardsTheSuggestionNotOnlyTheNamedThree(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	one, other := e.createNamedCompany(ctx, t, "Employer A"), e.createNamedCompany(ctx, t, "Employer B")
@@ -265,6 +273,7 @@ func TestEverySenderCountsTowardsTheSuggestionNotOnlyTheNamedThree(t *testing.T)
 }
 
 func TestAnEmploymentThatEndedYesterdaySuggestsNothing(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	former := e.openTriageFirst(ctx, t, "former@ended.test", "Former Employee", "ended.test")
@@ -281,6 +290,7 @@ func TestAnEmploymentThatEndedYesterdaySuggestsNothing(t *testing.T) {
 }
 
 func TestTheLinkedCountIsWhatAConfirmEmploys(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.openTriageFirst(ctx, t, "free@linked.test", "Free Sender", "linked.test")
@@ -304,6 +314,7 @@ func TestTheLinkedCountIsWhatAConfirmEmploys(t *testing.T) {
 }
 
 func TestASuppressionClearsTheQuestionsContext(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	twin := e.createNamedCompany(ctx, t, "Refused GmbH")
@@ -338,6 +349,7 @@ func TestASuppressionClearsTheQuestionsContext(t *testing.T) {
 // moves on, a row naming the former holder keeps naming them, and a bare row
 // names nobody.
 func TestAQuestionNamesTheSenderOfAMovedAddressByTheSenderRule(t *testing.T) {
+	t.Parallel()
 	for _, attributed := range []bool{true, false} {
 		e := setupDedupe(t)
 		ctx := e.as()

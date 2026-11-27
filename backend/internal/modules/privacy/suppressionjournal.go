@@ -126,10 +126,10 @@ func (e *Eraser) ExportSuppressions(ctx context.Context) (int, error) {
 	}); err != nil {
 		return 0, fmt.Errorf("privacy: reading the suppression list to export it: %w", err)
 	}
-	keyed := storekit.SuppressionKeyID() != nil
+	keyed := storekit.SuppressionKeyID(ctx) != nil
 	for _, row := range entries {
 		body := journalEntryBody(row.kind, row.state)
-		if err := e.journalStore().Put(ctx, journalEntryKey(row.kind, row.hash, row.keyID != nil),
+		if err := e.journalStore().Put(ctx, journalEntryKey(ctx, row.kind, row.hash, row.keyID != nil),
 			bytes.NewReader(body), int64(len(body)), "text/plain"); err != nil {
 			return 0, fmt.Errorf("privacy: exporting suppression %s: %w", row.hash, err)
 		}
@@ -156,11 +156,11 @@ func (e *Eraser) ExportSuppressions(ctx context.Context) (int, error) {
 
 // journalEntryKey names one row's entry by its keyed hash, when the row holds
 // one or a bound key can make one. Otherwise it uses the unkeyed hash.
-func journalEntryKey(kind, hash string, rowKeyed bool) string {
+func journalEntryKey(ctx context.Context, kind, hash string, rowKeyed bool) string {
 	if rowKeyed {
 		return keyedJournalKey(kind, hash)
 	}
-	if rekeyed, ok := storekit.RekeySuppressionHash(hash); ok {
+	if rekeyed, ok := storekit.RekeySuppressionHash(ctx, hash); ok {
 		return keyedJournalKey(kind, rekeyed)
 	}
 	return suppressionJournalKey(kind, hash)

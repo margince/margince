@@ -17,6 +17,7 @@ import (
 )
 
 func TestAFormerDealLabelIsNotARecordedRequest(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	when := clocktest.Now(t).Add(-time.Hour)
 	deal := e.openDeal(t, "open", true)
@@ -41,6 +42,7 @@ func TestAFormerDealLabelIsNotARecordedRequest(t *testing.T) {
 }
 
 func TestARecordedSourceCannotAuthorizeAfterItIsRestricted(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	when := clocktest.Now(t).Add(-time.Hour)
 	source := e.inboundFrom(t, "recorded-source", e.address, when)
@@ -86,6 +88,7 @@ func TestARecordedSourceCannotAuthorizeAfterItIsRestricted(t *testing.T) {
 }
 
 func TestAnUnscopedInquiryIsRecordedWithoutGrantingPermission(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	e.secondEntity(t)
 	when := clocktest.Now(t).Add(-time.Hour)

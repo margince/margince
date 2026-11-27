@@ -98,6 +98,7 @@ func readHeldState(t *testing.T, e *Env, activity ids.UUID) heldState {
 // A project-linked email is a Handelsbrief. Erasing its subject holds it —
 // substance intact, restriction pinned — rather than scrubbing it.
 func TestErasureHoldsCorrespondenceHeldOnlyByAProject(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedProjectErasureFixture(t, e)
 
@@ -125,6 +126,7 @@ func TestErasureHoldsCorrespondenceHeldOnlyByAProject(t *testing.T) {
 // selects a row the activity_restriction_needs_evidence trigger then refuses,
 // and the whole erasure fails rather than under-shielding one record.
 func TestErasureStampsAPreStampProjectLinkAndHoldsIt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedProjectErasureFixture(t, e)
 
@@ -158,6 +160,7 @@ func TestErasureStampsAPreStampProjectLinkAndHoldsIt(t *testing.T) {
 // The controller's list names the project holding the record. A shielded
 // record whose reason resolves to nothing is evidence of nothing.
 func TestTheRestrictedListNamesTheHoldingProject(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedProjectErasureFixture(t, e)
 
@@ -207,6 +210,7 @@ func TestTheRestrictedListNamesTheHoldingProject(t *testing.T) {
 // two-year engagement is most of them. That failure has no error and nothing
 // to notice: the note simply stops being erasable.
 func TestANoteFiledUnderAProjectIsStampedAndStillErased(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedProjectErasureFixture(t, e)
 	note := ids.NewV7()
@@ -256,6 +260,7 @@ func TestANoteFiledUnderAProjectIsStampedAndStillErased(t *testing.T) {
 // activity_restriction_needs_evidence trigger would refuse — failing the whole
 // erasure for that subject, not just under-shielding one record.
 func TestDeletingAProjectTakesItsActivityLinksWithIt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedProjectErasureFixture(t, e)
 

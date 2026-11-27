@@ -71,6 +71,7 @@ func (a approvalNotifyEnv) stageCommitmentFor(t *testing.T, seat, source ids.UUI
 }
 
 func TestARequestSentToTheWrongColleagueIsTakenBack(t *testing.T) {
+	t.Parallel()
 	a := newApprovalNotifyEnv(t)
 	a.grantCommitmentRole(t, a.e.Rep1)
 	a.grantCommitmentRole(t, a.e.Rep2)
@@ -161,6 +162,7 @@ func withdrawUnaskedCommitments(t *testing.T, e *integration.Env) int {
 // The staging engine refuses a commitment that is not for the colleague who
 // made it, before it can join, supersede or remember another member's row.
 func TestACommitmentIsStagedOnlyForItsPromiser(t *testing.T) {
+	t.Parallel()
 	a := newApprovalNotifyEnv(t)
 	source := ids.NewV7()
 	for name, staged := range map[string]struct {
@@ -196,6 +198,7 @@ func TestACommitmentIsStagedOnlyForItsPromiser(t *testing.T) {
 // A request staged while its promiser had no seat yet is the same member's
 // request as one naming their seat. Restaging the promise replaces it.
 func TestARequestWithoutASeatIsReplacedByTheSamePromisersNext(t *testing.T) {
+	t.Parallel()
 	a := newApprovalNotifyEnv(t)
 	source := ids.NewV7()
 	identity := json.RawMessage(`{"locator":"same-promise"}`)

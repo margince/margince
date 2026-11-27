@@ -49,6 +49,7 @@ func previewArgs(name string) map[string]any {
 }
 
 func TestPreviewWaitsThenAnswersTheReport(t *testing.T) {
+	t.Parallel()
 	clock := steppedClock{asked: make(chan chan time.Time)}
 	d := newTwoDoorsWith(t, "preview-waits",
 		[]compose.Option{compose.WithImportPreviewWaitForTest(clock, 20*time.Second)}, "read", "write")
@@ -87,6 +88,7 @@ func TestPreviewWaitsThenAnswersTheReport(t *testing.T) {
 }
 
 func TestPreviewAnswersValidatingPastTheWait(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "preview-past-wait", "read", "write")
 	var preview waitedPreview
 	decode(t, d.tool(t, "preview_import", previewArgs("Unwaited GmbH")), &preview)
@@ -108,6 +110,7 @@ func TestPreviewAnswersValidatingPastTheWait(t *testing.T) {
 }
 
 func TestASecondPreviewByOneAgentAnswersItsRun(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "preview-agent-busy", "read", "write")
 	var first waitedPreview
 	decode(t, d.tool(t, "preview_import", previewArgs("First GmbH")), &first)
@@ -130,6 +133,7 @@ func TestASecondPreviewByOneAgentAnswersItsRun(t *testing.T) {
 }
 
 func TestCommitImportResumesAFailedCommit(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "commit-resumes", "read", "write")
 	run := previewCompanies(t, d, "").Run.RunID
 	d.tool(t, "commit_import", map[string]any{"run_id": run})

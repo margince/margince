@@ -86,6 +86,7 @@ func spendFor(t *testing.T, e *runsEnv, month, pool string) MonthlySpend {
 
 // The card's number and the ceiling's number come from one definition.
 func TestSpendReportsPerMonthAndAgreesWithTheCeiling(t *testing.T) {
+	t.Parallel()
 	e := setupRuns(t, runsConfig{})
 	if _, err := e.owner.Exec(context.Background(), `DELETE FROM provider_run`); err != nil {
 		t.Fatal(err)
@@ -138,6 +139,7 @@ func TestSpendReportsPerMonthAndAgreesWithTheCeiling(t *testing.T) {
 
 // A run whose outcome was never learned is reported as held, separately.
 func TestAnUnknownOutcomeIsHeldRatherThanFoldedIntoTheCharge(t *testing.T) {
+	t.Parallel()
 	e := setupRuns(t, runsConfig{})
 	if _, err := e.owner.Exec(context.Background(), `DELETE FROM provider_run`); err != nil {
 		t.Fatal(err)
@@ -163,6 +165,7 @@ func TestAnUnknownOutcomeIsHeldRatherThanFoldedIntoTheCharge(t *testing.T) {
 // it. A run in that gap counted toward one number and not the other, which is
 // the precise failure the shared expression exists to rule out.
 func TestTheMonthBoundaryIsUTCWhateverTheSessionZone(t *testing.T) {
+	t.Parallel()
 	e := setupRuns(t, runsConfig{})
 	if _, err := e.owner.Exec(context.Background(), `DELETE FROM provider_run`); err != nil {
 		t.Fatal(err)
@@ -217,6 +220,7 @@ func TestTheMonthBoundaryIsUTCWhateverTheSessionZone(t *testing.T) {
 
 // Erasing a subject removes the subject, not the accounting.
 func TestTheSpendHistorySurvivesAnErasure(t *testing.T) {
+	t.Parallel()
 	e := setupRuns(t, runsConfig{})
 	if _, err := e.owner.Exec(context.Background(), `DELETE FROM provider_run`); err != nil {
 		t.Fatal(err)

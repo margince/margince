@@ -62,6 +62,7 @@ func declareServiceMemberFor(t *testing.T, unit string) ids.UUID {
 }
 
 func TestAFeedRunsAsItsServiceMemberAndOffboardingAColleagueDoesNotStopIt(t *testing.T) {
+	t.Parallel()
 	e := setupIngress(t)
 	member := declareServiceMemberFor(t, ingressUnit)
 	depositCredential(t, e.extRuntimeEnv, member)
@@ -95,6 +96,7 @@ func TestAFeedRunsAsItsServiceMemberAndOffboardingAColleagueDoesNotStopIt(t *tes
 }
 
 func TestAServiceMemberDeclaredForAnotherUnitCannotBeActedFor(t *testing.T) {
+	t.Parallel()
 	e := setupIngress(t)
 	member := declareServiceMemberFor(t, "some-other-unit")
 	// The credential is on deposit under this unit, so only the declaration
@@ -109,6 +111,7 @@ func TestAServiceMemberDeclaredForAnotherUnitCannotBeActedFor(t *testing.T) {
 }
 
 func TestAServiceMemberWithNoSecretOnDepositCannotBeActedFor(t *testing.T) {
+	t.Parallel()
 	e := setupIngress(t)
 	member := declareServiceMemberFor(t, ingressUnit)
 
@@ -120,6 +123,7 @@ func TestAServiceMemberWithNoSecretOnDepositCannotBeActedFor(t *testing.T) {
 }
 
 func TestAnArchivedServiceMemberLandsNothing(t *testing.T) {
+	t.Parallel()
 	e := setupIngress(t)
 	member := declareServiceMemberFor(t, ingressUnit)
 	depositCredential(t, e.extRuntimeEnv, member)
@@ -141,6 +145,7 @@ func TestAnArchivedServiceMemberLandsNothing(t *testing.T) {
 // The secret is filed through the unit's own port, so the service member holds
 // it as a colleague would.
 func TestTheFeedsSecretIsReadBackFromTheServiceMember(t *testing.T) {
+	t.Parallel()
 	e := setupIngress(t)
 	member := declareServiceMemberFor(t, ingressUnit)
 	depositCredential(t, e.extRuntimeEnv, member)

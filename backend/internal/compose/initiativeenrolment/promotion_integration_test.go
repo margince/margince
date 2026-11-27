@@ -57,6 +57,7 @@ func (w manufacturingDeals) promote(t *testing.T, lead ids.UUID, amount int64) i
 // promoted before any sweep saw it. A lead taken out before its promotion
 // sourced nothing, even with its deal picked later.
 func TestALeadEnrolledAtItsPromotionSourcedItsDeal(t *testing.T) {
+	t.Parallel()
 	w := seedManufacturingDeals(t)
 	ctx := w.manager()
 	early := w.manufacturingLead(t, "early@linden.test")

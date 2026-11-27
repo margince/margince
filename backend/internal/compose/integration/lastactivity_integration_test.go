@@ -29,6 +29,7 @@ import (
 )
 
 func TestLastActivity_MovesTheContactAndEveryAccountItReaches(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	// Seeded FIRST: on the default recency tie-break quiet would sort ahead of
 	// the others, so its place at the end below can only be NULLS LAST.
@@ -177,6 +178,7 @@ func TestLastActivity_MovesTheContactAndEveryAccountItReaches(t *testing.T) {
 // the race is between transactions, and the real writer commits each of its
 // own before returning.
 func TestLastActivity_ConcurrentWritersConvergeOnTheNewest(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	staff := e.SeedContact(t, "Raced Contact", nil)
 	a := FreshOwnerConn(t)
@@ -262,6 +264,7 @@ func TestLastActivity_ConcurrentWritersConvergeOnTheNewest(t *testing.T) {
 // seeks happened, on any machine and under any load. A backend reports its
 // statistics in batches, hence the explicit flush.
 func TestLastActivity_TheAccountClockSeeksInsteadOfScanningTheTimeline(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	ctx := context.Background()

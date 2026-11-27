@@ -24,6 +24,7 @@ import (
 //
 // Mutation: drop the EntityName rule from GapsTx and this fails.
 func TestAnUnnamedDefaultEntityWarnsUntilTheCompanyIsNamed(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	store := consent.NewStore(compose.InstallationDB(e.Pool))

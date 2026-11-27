@@ -47,6 +47,7 @@ var attachDirectionPerms = principal.Permissions{
 }
 
 func TestAReadShareNamesTheCompanyAndCannotFileOntoIt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	// Capture-private, which is what makes the share rep1's ONLY path to the
 	// row: a plain company is readable by every seat, and then every outcome
@@ -167,6 +168,7 @@ func attachPaths(t *testing.T, e *Env, company ids.UUID) map[string]func(ctx con
 // 403 until the caller holds write authority, as owner or through a write
 // share. An agent acting for the reader is refused like the reader.
 func TestAttachingToAReadableRecordNeedsWriteAuthority(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Brenner Logistik", &e.Rep3)
 	companyID := ids.From[ids.CompanyKind](company)
@@ -214,6 +216,7 @@ func TestAttachingToAReadableRecordNeedsWriteAuthority(t *testing.T) {
 // An all-scope seat holds write authority over every row. A capture-private
 // company it sees only through a read share still takes nothing from it.
 func TestAnAllScopeReaderCannotFileThroughAReadShare(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Halden Werke", &e.Rep3)
 	e.MakeCapturePrivate(t, "company", company, e.Rep3)

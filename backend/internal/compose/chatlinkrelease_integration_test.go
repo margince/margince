@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/chatlinks"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -54,7 +55,7 @@ func setupChatRelease(t *testing.T) *chatReleaseEnv {
 		VALUES ($1, 'dispact', 'team', 'Margince', 'https://chat.test', 'ref', 'connected', $2)`, connection, e.Rep1)
 	f.exec(t, `INSERT INTO chat_link (id, connection_id, provider, channel_slug, channel_name, deal_id, linked_by)
 		VALUES ($1, $2, 'dispact', 'acme', 'Acme', $3, $4)`, f.link, connection, f.deal, e.Rep1)
-	f.sync = chatsync.New(e.Pool, e.DB(), chatlinks.NewStore(e.DB(), nil, unqueuedChatJobs{}, chatsync.Viewers))
+	f.sync = chatsync.New(e.Pool, e.DB(), chatlinks.NewStore(e.DB(), nil, unqueuedChatJobs{}, chatsync.Viewers(identity.RbacObjects{})))
 	return f
 }
 
@@ -124,6 +125,7 @@ func (f *chatReleaseEnv) linkRetired(t *testing.T) bool {
 }
 
 func TestARestoredDealLeavesItsFreedChannelFree(t *testing.T) {
+	t.Parallel()
 	f := setupChatRelease(t)
 	f.archive(t)
 	f.handle(t, f.outboxed(t, "deal.archived"))
@@ -136,6 +138,7 @@ func TestARestoredDealLeavesItsFreedChannelFree(t *testing.T) {
 }
 
 func TestAnArchiveHandledAfterTheRestoreLeavesTheDealItsChannel(t *testing.T) {
+	t.Parallel()
 	f := setupChatRelease(t)
 	f.archive(t)
 	archived := f.outboxed(t, "deal.archived")
@@ -148,6 +151,7 @@ func TestAnArchiveHandledAfterTheRestoreLeavesTheDealItsChannel(t *testing.T) {
 }
 
 func TestADealARetentionPolicyArchivesFreesItsChannel(t *testing.T) {
+	t.Parallel()
 	f := setupChatRelease(t)
 	f.exec(t, `UPDATE deal SET status = 'lost', lost_reason = 'price',
 		closed_at = now() - interval '30 days', created_at = now() - interval '30 days' WHERE id = $1`, f.deal)

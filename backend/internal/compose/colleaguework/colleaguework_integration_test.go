@@ -143,6 +143,7 @@ func (w workEnv) introduce(t *testing.T, asker, introducer, contact ids.UUID) {
 // An ask counts when it was completed, and a recorded introduction when it
 // was recorded. The date a recording names cannot fill a past month.
 func TestAnIntroductionCountsWhenItWasMadeOrRecorded(t *testing.T) {
+	t.Parallel()
 	w := setupWork(t)
 	rep1 := w.seat(w.e.Rep1)
 	w.introduce(t, w.e.Rep2, w.e.Rep1, w.e.SeedContact(t, "Asked Buyer", &w.e.Rep1))
@@ -162,6 +163,7 @@ func TestAnIntroductionCountsWhenItWasMadeOrRecorded(t *testing.T) {
 // An ask is its two colleagues' alone. A recorded introduction is anyone's who
 // may open its contact.
 func TestAnIntroductionCountsOnlyForAReaderWhoMayReadIt(t *testing.T) {
+	t.Parallel()
 	w := setupWork(t)
 	w.introduce(t, w.e.Rep2, w.e.Rep3, w.e.SeedContact(t, "Asked Buyer", &w.e.Rep2))
 	w.record(w.seat(w.e.Rep3), t, w.e.Rep3, w.e.Rep2, ninth, ninth)
@@ -211,6 +213,7 @@ func sourced(system string) func(*activities.LogActivityInput) {
 // neither is logging it once it happened. Imports, transcripts, calendar
 // syncs, system work and an agent acting for nobody book nothing.
 func TestAMeetingCountsForTheSeatThatBookedItForAColleague(t *testing.T) {
+	t.Parallel()
 	w := setupWork(t)
 	rep1, rep2 := w.seat(w.e.Rep1), w.e.Rep2
 	agent := w.e.AgentOnPassport(t, w.e.Rep1, []ids.UUID{w.e.Team1}, workPerms, ids.From[ids.PassportKind](w.e.AgentPassport))
@@ -244,6 +247,7 @@ func TestAMeetingCountsForTheSeatThatBookedItForAColleague(t *testing.T) {
 // The host is the one the booking named. A later host repair or handover
 // moves no credit, for or against the booker.
 func TestAHostChangeAfterBookingMovesNoCredit(t *testing.T) {
+	t.Parallel()
 	w := setupWork(t)
 	rep1 := w.seat(w.e.Rep1)
 	repaired := w.meeting(rep1, t, w.e.Rep2, ninth, nil)
@@ -259,6 +263,7 @@ func TestAHostChangeAfterBookingMovesNoCredit(t *testing.T) {
 // A meeting the reader may not open counts nowhere for them: one limited to
 // its participants, and one about a contact private to another colleague.
 func TestABookingTheReaderMayNotOpenIsNotCounted(t *testing.T) {
+	t.Parallel()
 	w := setupWork(t)
 	rep2 := w.seat(w.e.Rep2)
 	limited := w.meeting(rep2, t, w.e.Rep3, ninth, nil)
@@ -283,6 +288,7 @@ func TestABookingTheReaderMayNotOpenIsNotCounted(t *testing.T) {
 // no booking, and moving a booking into the past unmakes none. A date is
 // ahead until it is over.
 func TestARescheduleNeitherMakesNorUnmakesABooking(t *testing.T) {
+	t.Parallel()
 	w := setupWork(t)
 	rep1 := w.seat(w.e.Rep1)
 	reschedule := func(id ids.UUID, start time.Time) {

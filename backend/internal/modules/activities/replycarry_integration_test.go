@@ -45,6 +45,7 @@ func (e *sendEnv) replyTo(anchor ids.ActivityID, subject string) error {
 }
 
 func TestAReplyThreadedOntoAMailCarriesItsLinks(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "parent@buyer.test", "root@buyer.test")
 	company := e.colleaguesCompany(t, anchor)
@@ -63,6 +64,7 @@ func TestAReplyThreadedOntoAMailCarriesItsLinks(t *testing.T) {
 }
 
 func TestAReplyThatStartsAConversationAddsToTheRecordAnew(t *testing.T) {
+	t.Parallel()
 	for name, c := range map[string]struct {
 		anchor  func(e *sendEnv, t *testing.T) ids.ActivityID
 		subject string

@@ -21,6 +21,7 @@ import (
 )
 
 func TestReportingFrameworkRejectsAmbiguousQualificationAndCaptureScopes(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	framework, err := f.service.GetFramework(f.human)
 	if err != nil {
@@ -74,6 +75,7 @@ func TestReportingFrameworkRejectsAmbiguousQualificationAndCaptureScopes(t *test
 }
 
 func TestReportingSharedManagersCanReviseOnlyVisibleReports(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	actor, ok := principal.Actor(f.human)
 	if !ok {
@@ -135,6 +137,7 @@ func TestReportingSharedManagersCanReviseOnlyVisibleReports(t *testing.T) {
 }
 
 func TestReportingWritesNameTheirNestedScope(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	for _, scope := range []crmcontracts.ReportingScope{
 		{Kind: "owner"}, {Kind: "team"}, {Kind: "unknown"}, {Kind: "workspace", Id: ptrUUID(f.env.Rep1)},
@@ -155,6 +158,7 @@ func TestReportingWritesNameTheirNestedScope(t *testing.T) {
 }
 
 func TestReportingTargetsRejectAmbiguousPeriodsAndIdentityChanges(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	cases := []struct {
 		name   string
@@ -192,6 +196,7 @@ func TestReportingTargetsRejectAmbiguousPeriodsAndIdentityChanges(t *testing.T) 
 }
 
 func TestReportingTargetsTakeAPipelineOnlyWhereTheFigureFiltersByOne(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	for _, metric := range []crmcontracts.ReportingMetricID{"leads_promoted", "meetings_held", "accepted_opportunities"} {
 		input := f.target.Definition
@@ -215,6 +220,7 @@ func TestReportingTargetsTakeAPipelineOnlyWhereTheFigureFiltersByOne(t *testing.
 }
 
 func TestReportingStoredTargetOnAnUnfilteredPipelineStaysRevisableAndRetirable(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	input := f.target.Definition
 	input.Metric, input.PipelineId = "meetings_held", nil
@@ -249,8 +255,7 @@ func TestReportingStoredTargetOnAnUnfilteredPipelineStaysRevisableAndRetirable(t
 	requireRefusedField(t, err, "pipeline_id")
 }
 
-// requireRefusedField holds the 422 shape the contract lists: a refusal that
-// names the field to fix, not a bare invalid argument.
+// A 422 must name the input the caller can fix.
 func requireRefusedField(t *testing.T, err error, field string) {
 	t.Helper()
 	fault, ok := httperr.Classify(err)

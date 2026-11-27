@@ -8,7 +8,6 @@ package integration
 import (
 	"context"
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -43,19 +42,13 @@ type SearchEnv struct {
 	Team2 ids.UUID
 }
 
-// SetupSearch gives each test a clean, migrated database seeded with the
-// SearchEnv fixture. Like Setup it fails loudly without a database rather than
-// skipping, and it migrates once per process — see package testdb for what the
-// schema and data resets each cost.
+// SetupSearch gives the test a migrated database of its own (testdb.New)
+// seeded with the SearchEnv fixture.
 func SetupSearch(t *testing.T) *SearchEnv {
 	t.Helper()
-	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
-	appDSN := os.Getenv("MARGINCE_TEST_APP_DSN")
-	if ownerDSN == "" || appDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
+	db := testdb.New(t)
 	ctx := context.Background()
-	owner, err := pgx.Connect(ctx, ownerDSN)
+	owner, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -64,12 +57,6 @@ func SetupSearch(t *testing.T) *SearchEnv {
 			t.Errorf("closing owner connection: %v", err)
 		}
 	})
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
-	if err := testdb.Reset(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
 
 	e := &SearchEnv{
 		Owner: owner, WS: ids.NewV7(),
@@ -101,9 +88,7 @@ func SetupSearch(t *testing.T) *SearchEnv {
 		}
 	}
 
-	// Shared across the package's tests, and deliberately not closed here — see
-	// testdb.Pool for why the connections, not the pool object, are the cost.
-	pool, err := testdb.Pool(ctx, appDSN)
+	pool, err := testdb.Pool(ctx, db.AppDSN)
 	if err != nil {
 		t.Fatal(err)
 	}

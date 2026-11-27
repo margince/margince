@@ -143,6 +143,7 @@ func traceIDFor(t *testing.T, e *Env, sourceID string) ids.UUID {
 }
 
 func TestTheLadderAnswersFromBothDoorsForTheSameMessage(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, AdminPerms)
 	msg := seedTracedMessage(t, e, e.Rep1, capturedMail("both-doors"))
@@ -200,6 +201,7 @@ func TestTheLadderAnswersFromBothDoorsForTheSameMessage(t *testing.T) {
 }
 
 func TestAChatIsLabelledButNotReadForMaterialEvents(t *testing.T) {
+	t.Parallel()
 	// The composed wiring carries both answers end to end. The chat carries a
 	// thread key, as a channel unit writes one. So the material rung cannot
 	// fall back on "no thread" and must say the transport is not read.
@@ -225,6 +227,7 @@ func TestAChatIsLabelledButNotReadForMaterialEvents(t *testing.T) {
 }
 
 func TestTheTraceDoorWithholdsAnActivityOutsideTheReadersRowScope(t *testing.T) {
+	t.Parallel()
 	// The regression this surface shipped once: the window read strips the link
 	// for an activity the caller cannot reach, and the drawer opened from that
 	// same row must strip it too.
@@ -269,6 +272,7 @@ func TestTheTraceDoorWithholdsAnActivityOutsideTheReadersRowScope(t *testing.T) 
 }
 
 func TestTheActivityDoorRefusesAMessageOutsideTheReadersRowScope(t *testing.T) {
+	t.Parallel()
 	// The gate is taken FIRST, so a caller who may not open the message never
 	// reaches the trace store at all.
 	//
@@ -301,6 +305,7 @@ func TestTheActivityDoorRefusesAMessageOutsideTheReadersRowScope(t *testing.T) {
 }
 
 func TestThePostureFlagTravelsButDoesNotGateTheRung(t *testing.T) {
+	t.Parallel()
 	// The posture reaches the assembled ladder, and enforcement is NOT here:
 	// wireRung applies it at the wire (see pipelinetrace/handlers_test.go). The
 	// off-arm below is what keeps this test honest — without it the counterparty
@@ -335,6 +340,7 @@ func TestThePostureFlagTravelsButDoesNotGateTheRung(t *testing.T) {
 }
 
 func TestAColleagueReadingASharedRecordGetsNoneOfTheOwnersMailboxRungs(t *testing.T) {
+	t.Parallel()
 	// The boundary 0258 makes categorical: a capture_trace row is the member's
 	// alone and NO grant widens it. A colleague may read what the pipeline did
 	// to the RECORD; what one member's connection recorded about their own

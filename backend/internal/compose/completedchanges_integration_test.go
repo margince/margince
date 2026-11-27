@@ -18,6 +18,7 @@ import (
 )
 
 func TestHomeCompletedChangesRemainDiscoverableAcrossHistoryPages(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := clocktest.Now(t)
 	for i := range 63 {

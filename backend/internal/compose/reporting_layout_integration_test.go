@@ -16,6 +16,7 @@ import (
 // A saved layout keeps its sections and widths, decides the report's blocks
 // whatever the client sent, and reaches the reader through the evaluation.
 func TestASavedReportKeepsItsLayout(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	title := "Pipeline"
 	layout := []crmcontracts.ReportingSection{
@@ -60,6 +61,7 @@ func TestASavedReportKeepsItsLayout(t *testing.T) {
 // evaluation. It reaches the reader in the evaluation's layout, for the page
 // to ask.
 func TestASavedReportKeepsItsQuestionCard(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	question := crmcontracts.ReportingCardQuestion{
 		Entity:   "deals-by-stage",

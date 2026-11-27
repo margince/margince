@@ -19,6 +19,7 @@ import (
 )
 
 func TestCachedDealCardRefreshesTheRequestEvaluationWithoutRebuildingItsWords(t *testing.T) {
+	t.Parallel()
 	e := setupVerdicts(t)
 	reader := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	at := time.Date(2026, 8, 24, 12, 0, 0, 0, time.UTC)

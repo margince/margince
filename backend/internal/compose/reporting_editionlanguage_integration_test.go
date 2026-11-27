@@ -15,6 +15,7 @@ import (
 // An edition is stored for every reader, so its captions take the installation's
 // language. The owner's own live read takes the owner's language.
 func TestAnEditionIsWrittenInTheBaseLanguageWhileTheOwnersLiveReadIsInTheirs(t *testing.T) {
+	t.Parallel()
 	q := newQuestionEditions(t)
 	owner, _ := principal.Actor(q.human)
 	owner.Locale = "de"
@@ -37,6 +38,7 @@ func TestAnEditionIsWrittenInTheBaseLanguageWhileTheOwnersLiveReadIsInTheirs(t *
 // An edition captured in the base language is downloaded by a German reader.
 // The file names each metric as the catalog on that reader's screen does.
 func TestAnEditionExportNamesItsMetricsAsTheReadersScreenDoes(t *testing.T) {
+	t.Parallel()
 	q := newQuestionEditions(t)
 	edition := q.send(t)
 	reader, _ := principal.Actor(q.human)

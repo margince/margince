@@ -21,6 +21,7 @@ import (
 // A company pair belongs to the owners of either end, and is ownerless only
 // when neither end has an owner.
 func TestACompanyPairBelongsToTheOwnersOfEitherEnd(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	first, err := e.store.CreateCompany(ctx, CreateCompanyInput{DisplayName: "Alpha Trading GmbH", Source: "manual", OwnerID: new(ids.From[ids.UserKind](e.rep))})
@@ -74,6 +75,7 @@ func TestACompanyPairBelongsToTheOwnersOfEitherEnd(t *testing.T) {
 // The record filter answers the pairs that name one company, and refuses to
 // guess the record's type.
 func TestThePairsNamingOneCompanyAreFiltered(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	first, err := e.store.CreateCompany(ctx, CreateCompanyInput{DisplayName: "Beta Freight GmbH", Source: "manual"})
@@ -106,6 +108,7 @@ func TestThePairsNamingOneCompanyAreFiltered(t *testing.T) {
 // The owner and record filters keep the both-sides rule. A pair reaches nobody's
 // Mine page or company page unless that reader can open both records.
 func TestTheOwnerAndRecordFiltersKeepTheBothSidesRule(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	first, second := seedCompanyPair(ctx, t, e)
@@ -148,6 +151,7 @@ func TestTheOwnerAndRecordFiltersKeepTheBothSidesRule(t *testing.T) {
 // A pair is unassigned unless one of its records has a live owner, and a pair
 // names only live owners as its deciders. A member who has left owns nothing.
 func TestAFormerMembersCompaniesLeaveTheirPairUnassigned(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	for range 2 {
@@ -194,6 +198,7 @@ func openTotal(ctx context.Context, t *testing.T, store *Store, owners *storekit
 // reader may see, even when the page holds fewer. The expectation is built from
 // the seeded records and their owners, not from another read of the queue.
 func TestTheCountedFirstPageHoldsExactlyTheSeededPairsOfItsFilter(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyOf := func(owner ids.UUID, name string) [2]ids.UUID {

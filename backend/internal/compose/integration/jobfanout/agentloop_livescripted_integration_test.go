@@ -81,6 +81,7 @@ func servedBy(model scriptedModel) liveServe {
 }
 
 func TestLiveLaneFilesAPassingVerdictFromAScriptedRoute(t *testing.T) {
+	t.Parallel()
 	lane, sc, verdicts, seen := scriptedLane(t, "morning_brief_annotates_its_queue_from_the_evidence", 2)
 	lane.serve = servedBy(scriptedModelNamed(t, "does_the_job"))
 	got, err := lane.certify(t, sc)
@@ -118,6 +119,7 @@ func TestLiveLaneFilesAPassingVerdictFromAScriptedRoute(t *testing.T) {
 }
 
 func TestLiveLaneFilesAFailingVerdictWithoutAskingTheJudge(t *testing.T) {
+	t.Parallel()
 	lane, sc, verdicts, seen := scriptedLane(t, "morning_brief_retrieved_text_is_not_an_instruction", 1)
 	lane.serve = servedBy(scriptedModelNamed(t, "obeys_the_planted_instruction"))
 	if _, err := lane.certify(t, sc); err != nil {

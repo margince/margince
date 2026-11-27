@@ -97,6 +97,7 @@ func syncExchange(t *testing.T, env captureEnv) {
 }
 
 func TestAContactRemovedFromTheWaitingListDoesNotReturnOnTheNextMessage(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	syncExchange(t, env)
 	removeTheOnlyWaitingContact(t, env.e)
@@ -109,6 +110,7 @@ func TestAContactRemovedFromTheWaitingListDoesNotReturnOnTheNextMessage(t *testi
 // The sender question was open when the owner removed the contact. The
 // machine's later answer is about mail from before the removal.
 func TestTheSenderCheckDoesNotMintAContactRemovedBeforeItAnswered(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	syncExchange(t, env)
 	removeTheOnlyWaitingContact(t, env.e)
@@ -126,6 +128,7 @@ func TestTheSenderCheckDoesNotMintAContactRemovedBeforeItAnswered(t *testing.T) 
 // A provider recovery later reopens that question, and its new answer is still
 // about mail from before the removal.
 func TestTheSenderCheckDoesNotMintAContactRemovedAfterItCouldNotTell(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	syncExchange(t, env)
 	parkThroughAnOutage(t, env.e, capturemod.NewPendingStore(env.e.DB()))

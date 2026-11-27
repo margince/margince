@@ -17,6 +17,7 @@ import (
 // topic word with it starts its own conversation, as capture splits mailbox
 // copies. A shared word, or no topic at all, keeps the reply in it.
 func TestAReplyOnANewTopicStartsItsOwnConversation(t *testing.T) {
+	t.Parallel()
 	for name, c := range map[string]struct {
 		subject string
 		splits  bool
@@ -68,6 +69,7 @@ func TestAReplyOnANewTopicStartsItsOwnConversation(t *testing.T) {
 // A reply to a calendar entry answers no mail, so it starts a conversation
 // rather than splitting one, whatever the subject: nothing is carried over.
 func TestAReplyToANonMailAnchorSplitsNothing(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := e.seedNonMailAnchor(t, "event-17@calendar.test")
 	if _, err := e.owner.Exec(context.Background(),
@@ -94,6 +96,7 @@ func TestAReplyToANonMailAnchorSplitsNothing(t *testing.T) {
 // A conversation a seat has not judged yet keeps a reply on a new topic. The
 // pending question names the old message, so the reply waits with it.
 func TestAReplyStaysInAConversationStillAwaitingItsVerdict(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "parent@buyer.test", "root@buyer.test")
 	if _, err := e.owner.Exec(context.Background(),

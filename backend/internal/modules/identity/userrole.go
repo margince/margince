@@ -43,7 +43,7 @@ func (s *Service) changeUserRoleTx(ctx context.Context, tx pgx.Tx, actor Identit
 	if err := refuseOwnRoleChange(actor, userID); err != nil {
 		return err
 	}
-	roleID, err := memberRoleTarget(ctx, tx, actor, userID, toRole)
+	roleID, err := memberRoleTarget(ctx, tx, s.rbac, actor, userID, toRole)
 	if err != nil {
 		return err
 	}
@@ -102,9 +102,9 @@ func roleChangedPayload(userID ids.UserID, toRole string, by ids.UserID, fromRol
 	}
 }
 
-func memberRoleTarget(ctx context.Context, tx pgx.Tx, actor Identity, userID ids.UserID, toRole string) (ids.UUID, error) {
+func memberRoleTarget(ctx context.Context, tx pgx.Tx, rbac RbacObjects, actor Identity, userID ids.UserID, toRole string) (ids.UUID, error) {
 	// Containment applies to both the existing member and the replacement role.
-	if err := refuseUnlessCallerOutranksTarget(ctx, tx, actor, userID, reachTakeover); err != nil {
+	if err := refuseUnlessCallerOutranksTarget(ctx, tx, rbac, actor, userID, reachTakeover); err != nil {
 		return ids.UUID{}, err
 	}
 	teams, err := loadLiveTeams(ctx, tx, []ids.UUID{userID.UUID})

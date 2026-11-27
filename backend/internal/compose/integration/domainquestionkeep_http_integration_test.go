@@ -18,6 +18,7 @@ import (
 )
 
 func TestKeepingADomainNobodyAskedAboutIsNotFound(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -28,6 +29,7 @@ func TestKeepingADomainNobodyAskedAboutIsNotFound(t *testing.T) {
 }
 
 func TestKeepingIsRefusedToASeatWithoutTheCompanyGrantWhetherOrNotTheDomainIsOpen(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	if _, err := e.Owner.Exec(context.Background(),
@@ -49,6 +51,7 @@ func TestKeepingIsRefusedToASeatWithoutTheCompanyGrantWhetherOrNotTheDomainIsOpe
 // The keep-vendor route is wired to its handler. A domain nobody asked about is
 // not found. A seat without the company grant is refused before any row is read.
 func TestKeepingAVendorVerdictOverTheWireAnswersOnlyAnAskedSeat(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	if status := e.Call(t, "POST", "/v1/capture/domain-questions/never-seen.example/keep-vendor",

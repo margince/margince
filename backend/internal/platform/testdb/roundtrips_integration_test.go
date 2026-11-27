@@ -56,6 +56,7 @@ func encode(t *testing.T, messages ...pgproto3.Message) []byte {
 }
 
 func TestRoundTripFramingSurvivesEveryWriteBoundary(t *testing.T) {
+	t.Parallel()
 	wire := encode(t,
 		&pgproto3.StartupMessage{ProtocolVersion: pgproto3.ProtocolVersionNumber},
 		&pgproto3.Parse{Query: "SELECT 'S Q'"},
@@ -89,6 +90,7 @@ func TestRoundTripFramingSurvivesEveryWriteBoundary(t *testing.T) {
 }
 
 func TestUnsupportedProtocolAndBadFramingCannotPassTheCounter(t *testing.T) {
+	t.Parallel()
 	for name, wire := range map[string][]byte{
 		"flush-and-wait": {'H', 0, 0, 0, 4},
 		"bad length":     {'S', 0, 0, 0, 3},
@@ -104,6 +106,7 @@ func TestUnsupportedProtocolAndBadFramingCannotPassTheCounter(t *testing.T) {
 }
 
 func TestFramingFailureKeepsTheTransportError(t *testing.T) {
+	t.Parallel()
 	failure := errors.New("connection failed")
 	conn, server, _, _ := meteredWire(0)
 	server.failure = failure
@@ -114,6 +117,7 @@ func TestFramingFailureKeepsTheTransportError(t *testing.T) {
 }
 
 func TestEachRoundTripIsHeldForTheDelayWithEverythingSentBeforeIt(t *testing.T) {
+	t.Parallel()
 	conn, server, _, slept := meteredWire(3 * time.Millisecond)
 	conn.sent.startup = false
 	batch := encode(t, &pgproto3.Parse{}, &pgproto3.Bind{}, &pgproto3.Execute{}, &pgproto3.Sync{}, &pgproto3.Query{String: "SELECT 1"})
@@ -132,6 +136,7 @@ func TestEachRoundTripIsHeldForTheDelayWithEverythingSentBeforeIt(t *testing.T) 
 }
 
 func TestServerTimeRunsFromSendingToReadyForQueryAndCountsAnOverlapOnce(t *testing.T) {
+	t.Parallel()
 	conn, server, clock, _ := meteredWire(0)
 	conn.sent.startup = false
 	ready := encode(t, &pgproto3.ReadyForQuery{TxStatus: 'I'})

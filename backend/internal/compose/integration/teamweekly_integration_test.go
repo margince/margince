@@ -71,6 +71,7 @@ func members(e *teamEnv) []weekly.TeamMember {
 // A team snapshot is a team question. An own-scoped seat asking for one would
 // get a page about contacts whose rows they cannot read.
 func TestAnOwnScopedSeatIsRefusedTheTeamWeek(t *testing.T) {
+	t.Parallel()
 	e := setupTeamWeekly(t)
 
 	_, err := e.engine.LatestTeamReview(e.repCtx, e.Team1, nil)
@@ -126,6 +127,7 @@ func writeTeamTwosWeek(t *testing.T, e *teamEnv) weekly.TeamReview {
 // member week assembled, then the team week summed. A hand-inserted count would
 // prove the column round-trips and nothing about whether anything fills it.
 func TestTheTeamWeekCountsWhatAdvanced(t *testing.T) {
+	t.Parallel()
 	e := setupTeamWeekly(t)
 
 	// Two reps, one advancing deal each, so the team figure is a SUM rather
@@ -164,6 +166,7 @@ func TestTheTeamWeekCountsWhatAdvanced(t *testing.T) {
 // team: their name, their won deals, their breached leads, and the one thing
 // their own lead was told to raise with them.
 func TestALeadOfOneTeamCannotOpenAnothersWeek(t *testing.T) {
+	t.Parallel()
 	e := setupTeamWeekly(t)
 
 	// Team2 is Rep3's in the harness; Rep1 and Rep2 share Team1.
@@ -186,6 +189,7 @@ func TestALeadOfOneTeamCannotOpenAnothersWeek(t *testing.T) {
 // over an engine that refuses everyone, which is how a refusal test proves
 // nothing at all.
 func TestATeamScopedLeadReadsTheirOwnTeamsWeek(t *testing.T) {
+	t.Parallel()
 	e := setupTeamWeekly(t)
 
 	writeRepWeek(t, e, e.Rep1)
@@ -210,6 +214,7 @@ func TestATeamScopedLeadReadsTheirOwnTeamsWeek(t *testing.T) {
 // about, so only a reader who deliberately is not can tell the grant apart
 // from the membership arm.
 func TestAManagementSeatOpensATeamItIsNotOn(t *testing.T) {
+	t.Parallel()
 	e := setupTeamWeekly(t)
 	writeTeamTwosWeek(t, e)
 
@@ -234,6 +239,7 @@ func TestAManagementSeatOpensATeamItIsNotOn(t *testing.T) {
 // Both teams: the one it is not on, and the one it is. Being on a team does not
 // make a seat its lead.
 func TestAReadOnlySeatIsRefusedTheTeamWeek(t *testing.T) {
+	t.Parallel()
 	e := setupTeamWeekly(t)
 	writeTeamTwosWeek(t, e)
 	auditor := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.ReadOnlyPerms)
@@ -251,6 +257,7 @@ func TestAReadOnlySeatIsRefusedTheTeamWeek(t *testing.T) {
 // on. Without this case the refusal above would pass over a gate that refuses
 // every workspace-wide seat, management included.
 func TestTheOversightGrantAdmitsAWorkspaceWideSeat(t *testing.T) {
+	t.Parallel()
 	e := setupTeamWeekly(t)
 	writeTeamTwosWeek(t, e)
 	overseer := e.As(e.Rep1, []ids.UUID{e.Team1}, withOversight(integration.ReadOnlyPerms))
@@ -267,6 +274,7 @@ func TestTheOversightGrantAdmitsAWorkspaceWideSeat(t *testing.T) {
 // A rep on the team is refused its week. The harness rep reaches its team's
 // rows, so this is the coaching question refusing, not the row scope.
 func TestARepIsRefusedTheirOwnTeamsWeek(t *testing.T) {
+	t.Parallel()
 	e := setupTeamWeekly(t)
 	rep := e.As(e.Rep2, []ids.UUID{e.Team1}, integration.RepPerms)
 
@@ -281,6 +289,7 @@ func TestARepIsRefusedTheirOwnTeamsWeek(t *testing.T) {
 // each member's won deals and pipeline totals, so the grant that hides deals
 // hides them here too — refused, not "no week has closed".
 func TestALeadWithoutDealReadIsRefusedTheirTeamsWeek(t *testing.T) {
+	t.Parallel()
 	e := setupTeamWeekly(t)
 	perms := withoutOversight(integration.AdminPerms)
 	perms.RoleKeys = []string{"manager"}
@@ -298,6 +307,7 @@ func TestALeadWithoutDealReadIsRefusedTheirTeamsWeek(t *testing.T) {
 // The NAMED week takes the same gate as the newest one. They are separate entry
 // points, and a gate written into one alone leaves "?week=2026-06-01" open.
 func TestNamingTheWeekDoesNotBypassTheTeamGate(t *testing.T) {
+	t.Parallel()
 	e := setupTeamWeekly(t)
 
 	written := writeTeamTwosWeek(t, e)
@@ -317,6 +327,7 @@ func TestNamingTheWeekDoesNotBypassTheTeamGate(t *testing.T) {
 // unchecked. An unbound seam is a wiring mistake, and the failure mode of
 // serving anyway is handing every lead every team's week.
 func TestAnUnboundMembershipSeamRefusesTheTeamWeek(t *testing.T) {
+	t.Parallel()
 	e := setupTeamWeekly(t)
 
 	writeRepWeek(t, e, e.Rep1)
@@ -339,6 +350,7 @@ func TestAnUnboundMembershipSeamRefusesTheTeamWeek(t *testing.T) {
 // A rep who leaves the team afterwards stays in the week they were part of, and
 // a rep who joins later does not appear in it.
 func TestTheMembershipIsFrozenIntoTheWeek(t *testing.T) {
+	t.Parallel()
 	e := setupTeamWeekly(t)
 	owner := integration.OwnerConn(t)
 	ctx := context.Background()
@@ -398,6 +410,7 @@ func TestTheMembershipIsFrozenIntoTheWeek(t *testing.T) {
 // that was down still backfills — which means this path runs repeatedly over
 // the same team week by design, not by accident.
 func TestASecondAssemblyReadsTheFirst(t *testing.T) {
+	t.Parallel()
 	e := setupTeamWeekly(t)
 
 	writeRepWeek(t, e, e.Rep1)
@@ -429,6 +442,7 @@ func TestASecondAssemblyReadsTheFirst(t *testing.T) {
 // A rep on leave and a rep whose measurement failed look identical as zeros,
 // and only one of those is a fact about their week.
 func TestAMemberWithNoWeekIsCountedAsUnread(t *testing.T) {
+	t.Parallel()
 	e := setupTeamWeekly(t)
 
 	// Only Rep1 has a week.

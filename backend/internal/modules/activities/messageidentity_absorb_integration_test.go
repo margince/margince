@@ -237,6 +237,7 @@ func (e *sendEnv) linkedTargets(t *testing.T, activityID ids.ActivityID, entityT
 // on the counterparty's record comes with it — dropping that would take the
 // sent mail off the record it was sent about.
 func TestReconcileAbsorbsAnEchoThatAlreadyHoldsTheStampedIdentity(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	survivor := e.seedSentEmail(t, mintedIdentity)
 	echo := e.seedCapturedEcho(t)
@@ -313,6 +314,7 @@ func TestReconcileAbsorbsAnEchoThatAlreadyHoldsTheStampedIdentity(t *testing.T) 
 // archived row shows on no timeline, so keeping the link cannot show the
 // message twice.
 func TestAbsorbLeavesTheEchoTheLinksErasureReachesItBy(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	survivor := e.seedSentEmail(t, mintedIdentity)
 	echo := e.seedCapturedEcho(t)
@@ -335,6 +337,7 @@ func TestAbsorbLeavesTheEchoTheLinksErasureReachesItBy(t *testing.T) {
 // would raise the uniqueness violation the absorb exists to answer, so the
 // survivor keeps the one it has and the echo keeps its own.
 func TestAbsorbDoesNotDuplicateALinkTheSurvivorAlreadyHolds(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	survivor := e.seedSentEmail(t, mintedIdentity)
 	echo := e.seedCapturedEcho(t)
@@ -355,6 +358,7 @@ func TestAbsorbDoesNotDuplicateALinkTheSurvivorAlreadyHolds(t *testing.T) {
 // copying it could not even be written, and taking it would be the overwrite
 // the ladder refuses.
 func TestAbsorbLeavesTheEchosProjectLinkBehindWhenTheSurvivorHasOne(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	survivor := e.seedSentEmail(t, mintedIdentity)
 	echo := e.seedCapturedEcho(t)
@@ -380,6 +384,7 @@ func TestAbsorbLeavesTheEchosProjectLinkBehindWhenTheSurvivorHasOne(t *testing.T
 // A human's send already on a deal keeps it. The deal the deal rule chose for
 // the echo stays on the echo and is not added beside the human's choice.
 func TestAbsorbLeavesTheEchosDealLinkBehindWhenTheSurvivorHasOne(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	survivor := e.seedSentEmail(t, mintedIdentity)
 	echo := e.seedCapturedEcho(t)
@@ -398,6 +403,7 @@ func TestAbsorbLeavesTheEchosDealLinkBehindWhenTheSurvivorHasOne(t *testing.T) {
 // The echo's deal link comes over with its mark, so a colleague's "not about
 // this deal" on the echo still holds on the survivor.
 func TestAbsorbCarriesTheMarkOnTheEchosDealLink(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	survivor := e.seedSentEmail(t, mintedIdentity)
 	echo := e.seedCapturedEcho(t)
@@ -424,6 +430,7 @@ func TestAbsorbCarriesTheMarkOnTheEchosDealLink(t *testing.T) {
 // overwritten, and skipping it would lose a placement the ladder had already
 // decided on evidence the survivor never saw.
 func TestAbsorbGivesTheSurvivorTheEchosProjectLinkWhenItHasNone(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	survivor := e.seedSentEmail(t, mintedIdentity)
 	echo := e.seedCapturedEcho(t)
@@ -451,6 +458,7 @@ func TestAbsorbGivesTheSurvivorTheEchosProjectLinkWhenItHasNone(t *testing.T) {
 // statement Postgres refuses, and why the assertion is on the CLASS rather than
 // on the absence of an error.
 func TestAbsorbStampsTheProjectLinkItCopies(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	survivor := e.seedSentEmail(t, mintedIdentity)
 	echo := e.seedCapturedEcho(t)
@@ -491,6 +499,7 @@ func TestAbsorbStampsTheProjectLinkItCopies(t *testing.T) {
 // own echo is a fault: the reconcile reports it, the caller rolls its
 // best-effort transaction back to one duplicate row, and NOTHING is touched.
 func TestAbsorbRefusesARowThatIsNotThisMessagesEcho(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name string
 		seed echoSeed
@@ -543,6 +552,7 @@ func TestAbsorbRefusesARowThatIsNotThisMessagesEcho(t *testing.T) {
 // does not re-queue. It must move with the absorb, or the question about who
 // this stranger is stays attached to a message the workspace can no longer see.
 func TestAbsorbRePointsAQueuedCounterpartyReview(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	survivor := e.seedSentEmail(t, mintedIdentity)
 	echo := e.seedCapturedEcho(t)
@@ -572,6 +582,7 @@ func TestAbsorbRePointsAQueuedCounterpartyReview(t *testing.T) {
 // A contact link in the same body still lands on the create grant alone: the
 // rule is about what a PROJECT link means, not about links in general.
 func TestFilingUnderAProjectNeedsTheUpdateGrantNotJustCreate(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	project := e.seedProject(t, "Migration")
 	contact := e.seedContact(t, "Dieter")
@@ -634,6 +645,7 @@ func (e *sendEnv) asAgent(scope principal.RowScope) context.Context {
 // The refusal is at the write rather than in the five tools, so this asks the
 // store — which is where a sixth tool would arrive.
 func TestAnAgentCannotFileANewActivityUnderAProject(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	project := e.seedProject(t, "Migration")
 
@@ -672,6 +684,7 @@ func TestAnAgentCannotFileANewActivityUnderAProject(t *testing.T) {
 // And the human path is untouched, which is the whole distinction: a contact at
 // a form has already decided, and the mark is theirs to write.
 func TestAHumanStillFilesANewActivityUnderAProject(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	project := e.seedProject(t, "Migration")
 

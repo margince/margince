@@ -43,6 +43,7 @@ func seedAccountClaim(t *testing.T, e *integration.Env, contact ids.UUID, kind, 
 }
 
 func TestTheCompanyPageListsBothSidesOfTheOpenCommitmentsAndTheCardReadsTheSameRow(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := company360Service(e)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
@@ -78,6 +79,7 @@ func TestTheCompanyPageListsBothSidesOfTheOpenCommitmentsAndTheCardReadsTheSameR
 }
 
 func TestACallerWithoutTheActivityGrantIsToldCommitmentsAreWithheld(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := company360Service(e)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
@@ -97,6 +99,7 @@ func TestACallerWithoutTheActivityGrantIsToldCommitmentsAreWithheld(t *testing.T
 }
 
 func TestATaskNamesItsLiveAssigneeInTheNextSteps(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := company360Service(e)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)

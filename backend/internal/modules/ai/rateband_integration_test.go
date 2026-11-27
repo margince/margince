@@ -13,6 +13,7 @@ import (
 // A base-price edit keeps the band the model carries, and the sheet head shows
 // it. Only a write that says so drops it.
 func TestABasePriceEditKeepsTheBandUnlessItIsCleared(t *testing.T) {
+	t.Parallel()
 	e := setupRateStore(t)
 	ws, _ := e.seedWorkspace(context.Background(), t)
 	ctx := laneWriterCtx(ws)

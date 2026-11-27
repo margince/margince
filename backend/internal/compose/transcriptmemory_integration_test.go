@@ -66,6 +66,7 @@ func (e *transcriptEnv) rejectFirst(t *testing.T, proposalIDs []ids.UUID) {
 
 // A refused proposal does not come back when the transcript is read again.
 func TestARejectedTranscriptProposalIsNotStagedAgainOnASecondReading(t *testing.T) {
+	t.Parallel()
 	e := setupTranscript(t)
 	first := e.read(t, cannedBrain{reply: groundedReply(t, 3, 0.9, e.Rep1)})
 	e.rejectFirst(t, first.ProposalIDs)
@@ -86,6 +87,7 @@ func TestARejectedTranscriptProposalIsNotStagedAgainOnASecondReading(t *testing.
 // second reading of one transcript paraphrases: the payload differs, and a
 // memory keyed on the payload's diff hash forgets the refusal immediately.
 func TestARejectedTranscriptProposalStaysRefusedWhenTheModelRewordsIt(t *testing.T) {
+	t.Parallel()
 	e := setupTranscript(t)
 	first := e.read(t, cannedBrain{reply: groundedReply(t, 3, 0.9, e.Rep1)})
 	e.rejectFirst(t, first.ProposalIDs)
@@ -105,6 +107,7 @@ func TestARejectedTranscriptProposalStaysRefusedWhenTheModelRewordsIt(t *testing
 // for good — every later commitment silently suppressed, with nothing to point
 // at.
 func TestADifferentLineIsStillProposedAfterARefusal(t *testing.T) {
+	t.Parallel()
 	e := setupTranscript(t)
 	first := e.read(t, cannedBrain{reply: groundedReply(t, 3, 0.9, e.Rep1)})
 	e.rejectFirst(t, first.ProposalIDs)
@@ -122,6 +125,7 @@ func TestADifferentLineIsStillProposedAfterARefusal(t *testing.T) {
 // The pending half, which the producer had no guard for at all: before this,
 // reading twice put two identical cards in front of the rep.
 func TestASecondReadingDoesNotDuplicateAProposalStillWaiting(t *testing.T) {
+	t.Parallel()
 	e := setupTranscript(t)
 	e.read(t, cannedBrain{reply: groundedReply(t, 3, 0.9, e.Rep1)})
 	e.read(t, cannedBrain{reply: groundedReply(t, 3, 0.9, e.Rep1)})
@@ -139,6 +143,7 @@ func TestASecondReadingDoesNotDuplicateAProposalStillWaiting(t *testing.T) {
 // this. Whom it was put to depends on who reads: the colleague who made the
 // promise and decided it is told "you", anyone else is told their name.
 func TestAReadingWhoseStepsWereAllAnsweredSaysSo(t *testing.T) {
+	t.Parallel()
 	e := setupTranscript(t)
 	e.WsExec(t, `UPDATE app_user SET display_name = 'Priya Raman' WHERE id = $1`, e.Rep2)
 	reply := attributedReply(t, "Priya Raman", "seat:"+e.Rep2.String(), 0.75)
@@ -181,6 +186,7 @@ func TestAReadingWhoseStepsWereAllAnsweredSaysSo(t *testing.T) {
 // reading can produce that, one commitment silently replaces the other and the
 // rep never sees it.
 func TestTwoCommitmentsOnOneLineBothReachTheQueue(t *testing.T) {
+	t.Parallel()
 	e := setupTranscript(t)
 	both, err := json.Marshal(map[string]any{"proposals": []map[string]any{
 		{

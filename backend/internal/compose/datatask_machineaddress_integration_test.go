@@ -69,6 +69,7 @@ func runMachineAddressTask(ctx context.Context, t *testing.T, e *integration.Env
 }
 
 func TestTheMachineAddressTaskTagsOnlyMachineContactsAndReplaysSafely(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	conn := integration.OwnerConn(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
@@ -124,6 +125,7 @@ func TestTheMachineAddressTaskTagsOnlyMachineContactsAndReplaysSafely(t *testing
 // A user who archived the word keeps it retired. The task neither restores it
 // nor coins a second tag of the same name.
 func TestTheMachineAddressTaskLeavesAnArchivedTagOfItsNameRetired(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	conn := integration.OwnerConn(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
@@ -147,6 +149,7 @@ func TestTheMachineAddressTaskLeavesAnArchivedTagOfItsNameRetired(t *testing.T) 
 }
 
 func TestTheMachineAddressTaskRollsItsTagsBackWithItsProgress(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	conn := integration.OwnerConn(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
@@ -180,6 +183,7 @@ func TestTheMachineAddressTaskRollsItsTagsBackWithItsProgress(t *testing.T) {
 // An installation that finished version 1 keeps its ledger row. Only a higher
 // version restarts the cursor, so the contacts the first run missed get tagged.
 func TestTheMachineAddressTaskRunsAgainOverAFinishedFirstVersion(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	conn := integration.OwnerConn(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")

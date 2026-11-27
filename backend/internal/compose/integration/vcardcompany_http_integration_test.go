@@ -55,6 +55,7 @@ func importCardsOver(t *testing.T, e *apptest.AppEnv, path, vcf string) (int, st
 }
 
 func TestTheVCardImportFilesCreatedContactsUnderTheCompanyNamedInTheQuery(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "VCard Company", "vcard-company-a@fable.test", "Admin")
 	company := createdID(t, e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Atrium Home GmbH"})
@@ -75,6 +76,7 @@ func TestTheVCardImportFilesCreatedContactsUnderTheCompanyNamedInTheQuery(t *tes
 }
 
 func TestTheVCardImportRefusesACompanyNobodyHasAndWritesNothing(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "VCard Company", "vcard-company-b@fable.test", "Admin")
 	card := "BEGIN:VCARD\r\nVERSION:3.0\r\nFN:Dina Dangling\r\nEMAIL;TYPE=work:dina@dangling.example\r\nEND:VCARD\r\n"

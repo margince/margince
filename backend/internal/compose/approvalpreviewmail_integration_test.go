@@ -20,6 +20,7 @@ import (
 )
 
 func TestMailApprovalPreservesCompleteMessageAndFilingContext(t *testing.T) {
+	t.Parallel()
 	for _, rest := range []bool{false, true} {
 		name := "tool"
 		if rest {
@@ -104,6 +105,7 @@ func TestMailApprovalPreservesCompleteMessageAndFilingContext(t *testing.T) {
 }
 
 func TestReplyApprovalInheritsTheOriginalConversationFiling(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := e.SeedCompany(t, "Harbor account", &e.AdminUser)
 	contact := e.SeedContact(t, "Dana Buyer", &e.AdminUser)

@@ -22,6 +22,7 @@ import (
 // message it answers. The contact wrote only into that message's conversation,
 // too long ago for any arm but the thread arm. Transmit asks it, as staging did.
 func TestTransmitAsksTheConversationAReplyOnANewTopicAnswers(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	anchor := e.inboundFrom(t, "their-question", e.address, longAgo(t))
 	delivery := e.splitReplyDelivery(t, anchor)
@@ -34,6 +35,7 @@ func TestTransmitAsksTheConversationAReplyOnANewTopicAnswers(t *testing.T) {
 // A merge that renames the answered conversation before transmit does not strand
 // the reply: transmit reads the answered message's current key.
 func TestASplitReplyFollowsAMergeOfTheConversationItAnswers(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	anchor := e.inboundFrom(t, "their-question", e.address, longAgo(t))
 	delivery := e.splitReplyDelivery(t, anchor)
@@ -46,6 +48,7 @@ func TestASplitReplyFollowsAMergeOfTheConversationItAnswers(t *testing.T) {
 
 // A reply that stays in its conversation follows a merge to transmit too.
 func TestAReplyInItsOwnConversationFollowsAMergeToTransmit(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	anchor := e.inboundFrom(t, "their-question", e.address, longAgo(t))
 	delivery := e.deliveryOnThread(t, "their-question")

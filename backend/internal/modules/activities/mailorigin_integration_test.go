@@ -20,6 +20,7 @@ import (
 // The origin reader asks the content gate itself, so it names no mail the
 // caller may not read even when a list hands it one.
 func TestAMailOriginNamesOnlyAMailTheCallerMayRead(t *testing.T) {
+	t.Parallel()
 	e := setupPromises(t)
 	open, held, meeting := ids.NewV7(), ids.NewV7(), ids.NewV7()
 	e.exec(t, `INSERT INTO activity (id, kind, direction, subject, occurred_at, source, captured_by)
@@ -50,6 +51,7 @@ func TestAMailOriginNamesOnlyAMailTheCallerMayRead(t *testing.T) {
 // A mail logged by its day hands its precision on. Its file is then dated by
 // that day, not by the stored noon read on a clock.
 func TestAMailOriginCarriesTheMailsPrecision(t *testing.T) {
+	t.Parallel()
 	e := setupPromises(t)
 	day, moment := ids.NewV7(), ids.NewV7()
 	e.exec(t, `INSERT INTO activity (id, kind, direction, subject, occurred_at, occurred_precision, source, captured_by)
@@ -70,6 +72,7 @@ func TestAMailOriginCarriesTheMailsPrecision(t *testing.T) {
 // A reader without contact read sees the sender the header states, and no
 // contact behind it. A file's origin and the email viewer agree.
 func TestASenderNamesNoContactToAReaderWithoutContactRead(t *testing.T) {
+	t.Parallel()
 	e := setupPromises(t)
 	mail, contact := ids.NewV7(), ids.NewV7()
 	e.exec(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Record Name', 'seed', 'system')`, contact)

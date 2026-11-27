@@ -29,6 +29,7 @@ import (
 )
 
 func TestUpdateDealRejectsAStrandedAmount(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	admin := e.Admin()
@@ -54,6 +55,7 @@ func TestUpdateDealRejectsAStrandedAmount(t *testing.T) {
 }
 
 func TestReopeningAWonDealClearsTerminalFields(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, won := DealFixture(t, e)
 	admin := e.Admin()
@@ -93,6 +95,7 @@ func TestReopeningAWonDealClearsTerminalFields(t *testing.T) {
 }
 
 func TestOwnerReassignmentEmitsOwnerChanged(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	admin := e.Admin()
@@ -162,6 +165,7 @@ func TestOwnerReassignmentEmitsOwnerChanged(t *testing.T) {
 // unless its capture is private, so the activity Rep1 must not reach is one
 // linked only to a capture-private contact of Rep3's.
 func TestActivityReadsAreScopedThroughLinks(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	foreignContact := e.SeedContact(t, "Foreign owner", &e.Rep3)
 	e.MakeCapturePrivate(t, "contact", foreignContact, e.Rep3)
@@ -232,6 +236,7 @@ func TestActivityReadsAreScopedThroughLinks(t *testing.T) {
 // the record. A caller who may not read it gets the held refusal instead. The
 // contact they may not read is a capture-private one of another rep's.
 func TestDuplicate409DoesNotDiscloseOutOfScopeIDs(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 	hidden, err := e.Contacts.CreateContact(admin, contacts.CreateContactInput{
@@ -297,6 +302,7 @@ var domainCreateRepPerms = principal.Permissions{
 // company, editing its domains, and saving its profile website all reach the
 // same probe, so the rule is held in one place for all of them.
 func TestDuplicateDomain409DoesNotDiscloseACompanyOutOfScope(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 
@@ -376,6 +382,7 @@ func lostStage(t *testing.T, e *Env) ids.StageID {
 // re-freeze as of the CLOSE date (not leave the old currency's rate
 // silently corrupting base-currency roll-ups).
 func TestRepricingAClosedDealRefreezesFx(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, won := DealFixture(t, e)
 	admin := e.Admin()
@@ -436,6 +443,7 @@ func TestRepricingAClosedDealRefreezesFx(t *testing.T) {
 // an "open" deal on a terminal column with no closed_at/FX — the
 // invariant AdvanceDeal exists to maintain, bypassed at birth.
 func TestCreateDealRejectsATerminalStage(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, _, won := DealFixture(t, e)
 
@@ -451,6 +459,7 @@ func TestCreateDealRejectsATerminalStage(t *testing.T) {
 // lost_reason must not produce a duplicate SET clause — the reopen wins
 // and clears the field.
 func TestReopeningWithARedundantLostReasonStillCleans(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	lost := lostStage(t, e)
@@ -481,6 +490,7 @@ func TestReopeningWithARedundantLostReasonStillCleans(t *testing.T) {
 // readable by every seat, so a lead replay hands the existing lead back —
 // the same answer the caller's own replay would get.
 func TestIdempotentReplayDoesNotDiscloseOutOfScopeRecords(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	foreignContact := e.SeedContact(t, "Foreign", &e.Rep3)
 	e.MakeCapturePrivate(t, "contact", foreignContact, e.Rep3)
@@ -526,6 +536,7 @@ func TestIdempotentReplayDoesNotDiscloseOutOfScopeRecords(t *testing.T) {
 // the caller's to change, so filing onto it answers 403. Their capture-private
 // contact is not even readable, so it answers 404.
 func TestActivityLinkTargetsMustBeVisible(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ownContact := e.SeedContact(t, "Own contact", &e.Rep1)
 	theirContact := e.SeedContact(t, "Their contact", &e.Rep3)
@@ -576,6 +587,7 @@ func repPermsWithCapture() principal.Permissions {
 // tells the reader this workspace has no customers when the question was never
 // one the contract accepts.
 func TestUnknownAccountFilterValuesAreRefusedRatherThanAnsweredEmpty(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 

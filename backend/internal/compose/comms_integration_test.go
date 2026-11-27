@@ -111,11 +111,12 @@ func realDeliveryStager(t *testing.T, e *integration.Env) DeliveryMachinery {
 const pricingReplySubject = "Re: Pricing question"
 
 func TestCommsAdapterSharesTheGovernedPaths(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	// The REAL delivery machinery, because this suite asserts that an
 	// unconsented send is refused and the engine refuses at staging — inside
 	// commsStager, which a double replaces.
-	adapter := newCommsAdapter(e.Pool, nil, SendPath{Delivery: realDeliveryStager(t, e)})
+	adapter := newCommsAdapter(e.Pool, nil, nil, SendPath{Delivery: realDeliveryStager(t, e)})
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.SchedulerPerms)
 
 	anchorID := ids.NewV7()
@@ -196,6 +197,7 @@ func assertModelAndFallbackDrafts(ctx context.Context, t *testing.T, adapter com
 }
 
 func TestIntentToolsReturnTheAssembledPicture(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	target := e.SeedContact(t, "Briefing Target", &e.Rep1)
 	retriever := search.NewRetriever(search.NewStore(e.DB()), nil)

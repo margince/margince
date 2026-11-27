@@ -75,6 +75,7 @@ func (e *dedupeEnv) filedPairField(ctx context.Context, t *testing.T, a, b ids.C
 }
 
 func TestACompanyNamedAfterAClaimedDomainIsFiledForReview(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	claimant := e.createNamedCompany(ctx, t, "Litware Inc", "proseware.example")
@@ -87,6 +88,7 @@ func TestACompanyNamedAfterAClaimedDomainIsFiledForReview(t *testing.T) {
 }
 
 func TestClaimingTheDomainACompanyIsNamedAfterFilesThePair(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -110,6 +112,7 @@ func TestClaimingTheDomainACompanyIsNamedAfterFilesThePair(t *testing.T) {
 
 // A name that merely contains the domain spells another host.
 func TestASubdomainNameIsNotATwinOfItsParentDomain(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	shop := e.createNamedCompany(ctx, t, "shop.tailspin.example")
@@ -124,6 +127,7 @@ func TestASubdomainNameIsNotATwinOfItsParentDomain(t *testing.T) {
 // The own company refuses every merge, so a pair naming it could only sit on
 // the queue unanswerable — from either direction.
 func TestTheOwnCompanyIsNeverPairedOnANameDomain(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	website := "https://ourhouse.example"
@@ -146,6 +150,7 @@ func TestTheOwnCompanyIsNeverPairedOnANameDomain(t *testing.T) {
 // A domain edit reads names for twins, so it takes the name lock before the
 // company row, as a rename does.
 func TestADomainEditWaitsOnTheNameLockBeforeTheCompanyRow(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	company := e.createNamedCompany(ctx, t, "Lamna Healthcare")
@@ -181,6 +186,7 @@ func TestADomainEditWaitsOnTheNameLockBeforeTheCompanyRow(t *testing.T) {
 // merge held the pair row while it waited on the name lock, and the claim held
 // the name lock while it waited on the row.
 func TestACompanyMergeWaitsOnTheNameLockBeforeThePairRow(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := asArchiver(e)
 	first, _ := seedCompanyPair(ctx, t, e)

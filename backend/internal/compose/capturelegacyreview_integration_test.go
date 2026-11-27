@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/approvalsubject"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -86,11 +87,12 @@ func seedLegacySenderReviews(t *testing.T, e *integration.Env, engine *Counterpa
 }
 
 func TestTheSweepRetiresLegacyUncertaintyOffersWithoutRestaging(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	activity := seedCapturedMail(t, e, "old@uncertain.test", "Hello")
 	disposition := seedPendingDisposition(t, e, "old@uncertain.test", "uncertain.test", activity)
 	retireToUnsure(t, e, disposition)
-	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{}, CaptureConfig{}, nil)
+	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN}, CaptureConfig{}, nil)
 	if err := seedLegacySenderReviews(t, e, engine); err != nil {
 		t.Fatal(err)
 	}

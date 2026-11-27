@@ -14,6 +14,7 @@ import (
 
 // A company not stored yet is compared on what its create or lookup carries.
 func TestACreateAtTheSameStreetAddressFilesAtCreateTime(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	brand := e.companyAt(ctx, t, brandName, "Marienplatz 8", "")
@@ -24,6 +25,7 @@ func TestACreateAtTheSameStreetAddressFilesAtCreateTime(t *testing.T) {
 }
 
 func TestALookupCarryingTheSameNumberMeetsTheSimilarName(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	brand := e.createNamedCompany(ctx, t, brandName)
@@ -46,6 +48,7 @@ func TestALookupCarryingTheSameNumberMeetsTheSimilarName(t *testing.T) {
 // A contact kept private by its owner is not evidence: a reader who sees both
 // companies would otherwise learn of an employment they cannot see.
 func TestOnlyAContactEverySeatSeesLinksTwoSimilarCompanies(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	brand := e.createNamedCompany(ctx, t, brandName)
@@ -69,6 +72,7 @@ func TestOnlyAContactEverySeatSeesLinksTwoSimilarCompanies(t *testing.T) {
 }
 
 func TestAJobThatHasNotStartedLinksNothing(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	brand := e.createNamedCompany(ctx, t, brandName)
@@ -89,6 +93,7 @@ func TestAJobThatHasNotStartedLinksNothing(t *testing.T) {
 
 // A number three companies state is a switchboard and links none of them.
 func TestASwitchboardNumberLinksNothing(t *testing.T) {
+	t.Parallel()
 	for holders, filed := range map[int]bool{2: true, 3: false} {
 		e := setupDedupe(t)
 		ctx := e.as()
@@ -108,6 +113,7 @@ func TestASwitchboardNumberLinksNothing(t *testing.T) {
 // An archived company is no duplicate to review, whichever side it is on and
 // whatever lane filed the pair.
 func TestTheRecheckClosesACompanyPairWithAnArchivedEnd(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := asArchiver(e)
 	var pairs []ids.UUID

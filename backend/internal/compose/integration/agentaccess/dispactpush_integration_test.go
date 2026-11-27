@@ -123,6 +123,7 @@ func messageNotice(team string) string {
 }
 
 func TestTenNoticesQueueOnePullWithNoSession(t *testing.T) {
+	t.Parallel()
 	e := setupDispactPush(t)
 	for i := range 10 {
 		got := postNotice(t, e, fmt.Sprintf("msg_%d", i), pushSecret, messageNotice(dispactTeam))
@@ -136,6 +137,7 @@ func TestTenNoticesQueueOnePullWithNoSession(t *testing.T) {
 }
 
 func TestTheURLCheckIsAnsweredOverTheRoute(t *testing.T) {
+	t.Parallel()
 	e := setupDispactPush(t)
 	got := postNotice(t, e, "msg_check", pushSecret, `{"type":"url_verification","challenge":"c-77"}`)
 	if got.StatusCode != http.StatusOK || strings.TrimSpace(got.Body) != `{"challenge":"c-77"}` {
@@ -144,6 +146,7 @@ func TestTheURLCheckIsAnsweredOverTheRoute(t *testing.T) {
 }
 
 func TestAnotherTeamsNoticeNeverPullsThisInstallationsLink(t *testing.T) {
+	t.Parallel()
 	e := setupDispactPush(t)
 	got := postNotice(t, e, "msg_other", pushSecret, messageNotice("team-someone-else"))
 	if got.StatusCode != http.StatusUnauthorized {

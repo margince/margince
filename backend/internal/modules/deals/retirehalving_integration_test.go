@@ -57,6 +57,7 @@ func (e *configEnv) retireHalved(t *testing.T) int {
 // that write left. A probability a colleague set afterwards, and one a
 // verdict set afterwards, are other writes and stay.
 func TestTheRetiredHalvingIsClearedOnlyWhereItStillStands(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	halved, from, _ := seedOwnedDeal(t, e)
 	var pipeline ids.PipelineID

@@ -55,6 +55,8 @@ const codeUnauthorized = "unauthorized"
 
 type connectorHandlers struct {
 	registry *capture.Registry
+	// extensions is the composition whose units may declare an OAuth app.
+	extensions *Extensions
 	// publicOrigin reports the address this installation puts in outgoing
 	// links. Nil when none is configured, and then the field is absent
 	// rather than reported as broken.
@@ -74,11 +76,14 @@ type connectorHandlers struct {
 	gcalAPI          gcal.API
 	gdocsOAuth       gdocs.OAuth
 	gdocsOwner       gdocs.Owner
-	graphOAuth       graph.OAuth
-	graphAPI         graph.API
-	graphCalOAuth    graphcal.OAuth
-	graphCalAPI      graphcal.API
-	signer           stateSigner
+	// googleHTTP carries the Google calls of a client built per request; nil is
+	// each client's bounded default.
+	googleHTTP    *http.Client
+	graphOAuth    graph.OAuth
+	graphAPI      graph.API
+	graphCalOAuth graphcal.OAuth
+	graphCalAPI   graphcal.API
+	signer        stateSigner
 	// publicBaseURL is the canonical public/front origin (the SPA): where the
 	// browser lands after consent, and — for a same-origin deployment — the
 	// default base for the callback redirect_uri too.

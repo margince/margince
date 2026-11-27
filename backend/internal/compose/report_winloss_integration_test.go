@@ -154,6 +154,7 @@ func bucketRow(t *testing.T, result reportResultWire, keys map[string]string) ma
 }
 
 func TestWinLossGroupsClosedDealsByYearAndExcludesOpenOnes(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	e.seedClosedDeal(t, "Won early", "won", "2025-03-04T10:00:00Z", 10000)
 	e.seedClosedDeal(t, "Won late", "won", "2025-11-30T10:00:00Z", 25000)
@@ -186,6 +187,7 @@ func TestWinLossGroupsClosedDealsByYearAndExcludesOpenOnes(t *testing.T) {
 // every period report's "Explain This Number" fail at exactly the moment a
 // reader stops trusting the figure and asks what is behind it.
 func TestWinLossPeriodDerivationReconcilesExactly(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	e.seedClosedDeal(t, "A", "won", "2025-03-04T10:00:00Z", 10000)
 	e.seedClosedDeal(t, "B", "won", "2025-11-30T10:00:00Z", 25000)
@@ -225,6 +227,7 @@ func TestWinLossPeriodDerivationReconcilesExactly(t *testing.T) {
 // report that ignored the zone would put it in the wrong year, and on a UTC
 // installation nothing would ever notice.
 func TestWinLossPeriodBucketsFollowTheInstallationZone(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	e.seedClosedDeal(t, "New year's eve in New York", "won", "2026-01-01T00:30:00Z", 10000)
 
@@ -265,6 +268,7 @@ func TestWinLossPeriodBucketsFollowTheInstallationZone(t *testing.T) {
 // quarter and the case passes. The sibling unit test's first four cases were
 // written that way and all four passed with the fiscal arithmetic deleted.
 func TestWinLossPeriodBucketsFollowTheInstallationFiscalYear(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	e.seedClosedDeal(t, "Mid-March", "won", "2026-03-15T12:00:00Z", 10000)
 
@@ -331,6 +335,7 @@ func TestWinLossPeriodBucketsFollowTheInstallationFiscalYear(t *testing.T) {
 // gives FY2026/27-Q1; a shift of `months => 4` rather than `4 - 1` gives
 // FY2025/26-Q4. Nothing else in the tree distinguishes those.
 func TestTheFiscalMonthShiftIsExactAtTheYearsFirstDay(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	e.seedClosedDeal(t, "First day of the fiscal year", "won", "2026-04-01T12:00:00Z", 10000)
 	e.setFiscalYearStart(t, 4)
@@ -350,6 +355,7 @@ func TestTheFiscalMonthShiftIsExactAtTheYearsFirstDay(t *testing.T) {
 // is load-bearing twice over: it is what a reader sees, and text in these
 // formats sorts chronologically, so the report needs no separate sort key.
 func TestWinLossPeriodGrainsUseTheirCanonicalSpelling(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	e.seedClosedDeal(t, "Q1", "won", "2026-02-11T10:00:00Z", 10000)
 	e.seedClosedDeal(t, "Q4", "won", "2025-10-02T10:00:00Z", 10000)
@@ -384,6 +390,7 @@ func TestWinLossPeriodGrainsUseTheirCanonicalSpelling(t *testing.T) {
 //
 // Held by: TestAnUnsetFilterMeansTheSameThingOnBothDoors (backend/internal/compose/report_winloss_integration_test.go) — this test.
 func TestAnUnsetFilterMeansTheSameThingOnBothDoors(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	e.seedClosedDeal(t, "Unowned A", "won", "2025-03-04T10:00:00Z", 10000)
 	e.seedClosedDeal(t, "Unowned B", "won", "2025-11-30T10:00:00Z", 25000)
@@ -481,6 +488,7 @@ func jsonLiteral(t *testing.T, value any) string {
 // back as the caller's own mistake with the fix in it, never as an opaque 500
 // that sends an agent retrying something that cannot succeed.
 func TestANumericPeriodFilterIsRefusedAsTheCallersMistake(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	e.seedClosedDeal(t, "A", "won", "2026-03-04T10:00:00Z", 10000)
 
@@ -550,6 +558,7 @@ func (e *forecastEnv) analyticsStatus(ctx context.Context, q analyticsquery.Quer
 // here. When they did, a bucket reported one deal and the handle it minted in
 // the same response resolved to none.
 func TestAnEmptyTextGroupKeyIsNotTheSameAsAnAbsentOne(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	e.seedOlderDealWithoutSource(t, "No source recorded", "2025-03-04T10:00:00Z", 10000)
 	e.seedClosedDealFromSource(t, "Sourced", "manual", "2025-04-04T10:00:00Z", 20000)
@@ -575,6 +584,7 @@ func TestAnEmptyTextGroupKeyIsNotTheSameAsAnAbsentOne(t *testing.T) {
 // that spans currencies is a number with no unit. The default plan is the one
 // an agent calls first and a screen renders unattended, so it has to split.
 func TestTheWinLossDefaultNeverSumsAcrossCurrencies(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	e.seedClosedDeal(t, "In euros", "won", "2025-03-04T10:00:00Z", 10000)
 	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, amount_minor, currency, status, closed_at, fx_rate_to_base, source, captured_by)
@@ -618,6 +628,7 @@ func (e *forecastEnv) seedDealTaking(t *testing.T, name string, days int, closed
 // 12 days. percentile_cont interpolates, so the median of six values is the
 // midpoint of the third and fourth — 7 — rather than either of them.
 func TestWinLossReportsHowLongDealsTookToClose(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	for i, days := range []int{2, 4, 6, 8, 10, 12} {
 		e.seedDealTaking(t, "Took "+string(rune('A'+i)), days, "2025-06-15T10:00:00Z", 10000)
@@ -648,6 +659,7 @@ func TestWinLossReportsHowLongDealsTookToClose(t *testing.T) {
 // A deal created and closed on the same day took zero days, which is a fact
 // about the sale rather than a missing figure.
 func TestASameDayCloseTakesZeroDaysRatherThanNothing(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	// Five so the group clears the sample floor and the percentile is a
 	// number rather than the NULL that would hide a wrong zero.
@@ -676,6 +688,7 @@ func TestASameDayCloseTakesZeroDaysRatherThanNothing(t *testing.T) {
 // Six deals with the same span, so the group clears the sample floor and the
 // median is that span rather than a NULL that would agree with either answer.
 func TestADealIsAgedInCalendarDaysNotElapsedHours(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	for i := range 6 {
 		e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, amount_minor, currency,
@@ -710,6 +723,7 @@ func TestADealIsAgedInCalendarDaysNotElapsedHours(t *testing.T) {
 // session's zone, the duration would move with the deployment region while the
 // bucket on the very same row did not, and a row would disagree with itself.
 func TestDaysToCloseFollowsTheInstallationZone(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	// Six identical deals, so the group clears the sample floor and the median
 	// is the span itself rather than a NULL that would agree with any answer.
@@ -746,6 +760,7 @@ func TestDaysToCloseFollowsTheInstallationZone(t *testing.T) {
 // in, one backdated row drags a median toward a span nobody experienced, and
 // a reader has no way to see it happen.
 func TestABackdatedCloseHasNoDurationRatherThanANegativeOne(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	// Five honest deals of 10 days each, so the median is unambiguous, plus
 	// one inverted row that must not move it.
@@ -791,6 +806,7 @@ func TestABackdatedCloseHasNoDurationRatherThanANegativeOne(t *testing.T) {
 // and asserting it here is what stops a later "tidy up the NULLs" change from
 // quietly dropping wins out of the report.
 func TestWinLossGroupsLossesByTheirReason(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	e.seedLostDealWithReason(t, "Beaten on price", "competitive_loss", "2025-04-01T10:00:00Z", 50000)
 	e.seedLostDealWithReason(t, "Beaten on features", "competitive_loss", "2025-05-01T10:00:00Z", 30000)
@@ -852,6 +868,7 @@ func TestWinLossGroupsLossesByTheirReason(t *testing.T) {
 // filters), so "show me the deals we lost to a competitor" is one call rather
 // than a group-by the caller then has to sift.
 func TestWinLossFiltersToOneLostReason(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	e.seedLostDealWithReason(t, "Beaten on price", "competitive_loss", "2025-04-01T10:00:00Z", 50000)
 	e.seedLostDealWithReason(t, "Budget froze", "no_decision", "2025-06-01T10:00:00Z", 90000)
@@ -879,6 +896,7 @@ func TestWinLossFiltersToOneLostReason(t *testing.T) {
 // not how the asker does. An unowned win counts for a team manager like any
 // other, and so does a win by a seat outside their teams.
 func TestWinLossCountsEveryReadableWonDealForATeamManager(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, amount_minor, currency, status, closed_at, lost_reason, fx_rate_to_base, source, captured_by)
 		VALUES ($1, 'Unowned win', $2, $3, 50000, 'EUR', 'won', '2026-01-15T10:00:00Z'::timestamptz, NULL, 1.0, 'manual', 'human:x')`,
@@ -902,6 +920,7 @@ func TestWinLossCountsEveryReadableWonDealForATeamManager(t *testing.T) {
 // that colleague's exact closed revenue, and an empty answer would read as
 // "they sold nothing".
 func TestWinLossFilteredToAColleaguesOwnerIDIsRefusedForARep(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	seedClosedWin(t, e, "Colleague win", e.Rep3, 90000)
 
@@ -920,6 +939,7 @@ func TestWinLossFilteredToAColleaguesOwnerIDIsRefusedForARep(t *testing.T) {
 // A team manager may measure their teammates, the same answer an explicit
 // owner scope naming one gives.
 func TestWinLossFilteredToATeammateAnswersForTheirManager(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	seedClosedWin(t, e, "Teammate win", e.Rep1, 70000)
 	seedClosedWin(t, e, "Other team win", e.Rep3, 90000)
@@ -941,6 +961,7 @@ func TestWinLossFilteredToATeammateAnswersForTheirManager(t *testing.T) {
 
 // An all-scope seat may measure anyone.
 func TestWinLossFilteredToAnyOwnerAnswersForAnAllScopeSeat(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	seedClosedWin(t, e, "Rep3 win", e.Rep3, 90000)
 

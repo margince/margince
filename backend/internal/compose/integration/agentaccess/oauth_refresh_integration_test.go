@@ -198,6 +198,7 @@ func (o *oauthEnv) accessTokenWorks(t *testing.T, accessToken string) bool {
 // one live passport: the predecessor dies with the token that minted it, so a
 // leaked older access token cannot outlive the renewal that replaced it.
 func TestRefreshRotatesAndRevokesThePredecessorPassport(t *testing.T) {
+	t.Parallel()
 	o := setupOAuth(t)
 	firstAccess, firstRefresh := o.connect(t)
 	if !o.accessTokenWorks(t, firstAccess) {
@@ -254,6 +255,7 @@ func TestRefreshRotatesAndRevokesThePredecessorPassport(t *testing.T) {
 // ends up holding two divergent chains and the loser's token silently
 // resurrects a connection the human cannot see.
 func TestConcurrentRefreshesMintExactlyOneSuccessor(t *testing.T) {
+	t.Parallel()
 	o := setupOAuth(t)
 	_, refresh := o.connect(t)
 
@@ -309,6 +311,7 @@ func TestConcurrentRefreshesMintExactlyOneSuccessor(t *testing.T) {
 // retry as theft would destroy a working connection on the commonest benign
 // failure there is.
 func TestReplayedRefreshInsideTheGraceWindowDoesNotRevokeTheChain(t *testing.T) {
+	t.Parallel()
 	o := setupOAuth(t)
 	_, firstRefresh := o.connect(t)
 
@@ -344,6 +347,7 @@ func TestReplayedRefreshInsideTheGraceWindowDoesNotRevokeTheChain(t *testing.T) 
 // is theft, not a retry: RFC 9700 says the whole chain dies, and it must
 // actually die — grant, every refresh row, every passport under it.
 func TestReplayedRefreshOutsideTheWindowRevokesEverything(t *testing.T) {
+	t.Parallel()
 	o := setupOAuth(t)
 	_, firstRefresh := o.connect(t)
 
@@ -391,6 +395,7 @@ func TestReplayedRefreshOutsideTheWindowRevokesEverything(t *testing.T) {
 // grant already carries — refusing it would kill a working connection a month
 // after anyone was watching. A resource that IS named is still checked.
 func TestRefreshOfAnAudienceBoundGrantAcceptsAnAbsentResource(t *testing.T) {
+	t.Parallel()
 	o := setupOAuth(t)
 	resource := o.origin + "/mcp"
 	code := o.authorize(t, url.Values{"scope": {"read write offline_access"}, "resource": {resource}})
@@ -421,6 +426,7 @@ func TestRefreshOfAnAudienceBoundGrantAcceptsAnAbsentResource(t *testing.T) {
 // grant is the ceiling, and a request past it is refused without spending the
 // token — a client that asks wrongly must not be locked out by its own bug.
 func TestRefreshNarrowsScopesButNeverWidensThem(t *testing.T) {
+	t.Parallel()
 	o := setupOAuth(t)
 	_, refresh := o.connect(t)
 

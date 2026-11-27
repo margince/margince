@@ -36,6 +36,7 @@ func outageFor() *ai.ProviderDownError {
 }
 
 func TestAProviderOutageRefundsTheSendersAndSchedulesAtTheProbe(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const senders = 4
 	down := outageFor()
@@ -63,6 +64,7 @@ func TestAProviderOutageRefundsTheSendersAndSchedulesAtTheProbe(t *testing.T) {
 }
 
 func TestAPlainProviderErrorStillChargesTheSender(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	address := "plain-" + ids.NewV7().String() + "@outage.example"
 	activityID := seedCapturedMail(t, e, address, "hello")
@@ -79,6 +81,7 @@ func TestAPlainProviderErrorStillChargesTheSender(t *testing.T) {
 }
 
 func TestAProviderOutageRefundsTheThreadsAndSchedulesAtTheProbe(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	down := outageFor()
 	questions := make([]ids.UUID, 0, confidentialityClaimSize)
@@ -105,6 +108,7 @@ func TestAProviderOutageRefundsTheThreadsAndSchedulesAtTheProbe(t *testing.T) {
 }
 
 func TestAPlainProviderErrorStillChargesTheThread(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	key := "thread-plain-" + ids.NewV7().String()
 	activityID := seedHeldThreadMail(t, e, key, "einkauf@kunde.example", "Anfrage")

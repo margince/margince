@@ -43,6 +43,7 @@ const baseCurrencyKey = "installation.base_currency"
 // control below then shows the same statement succeeding once the reader is
 // done, so the timeout is not simply a slow database.
 func TestAWriteOfTheBaseWaitsForACallerDecidingAgainstIt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx, admin := context.Background(), e.Admin()
 	reader, writer := FreshOwnerConn(t), OwnerConn(t)
@@ -111,6 +112,7 @@ func TestAWriteOfTheBaseWaitsForACallerDecidingAgainstIt(t *testing.T) {
 // wide a reach — one that would make every settings write wait on every read of
 // any of them.
 func TestDecidingAgainstTheBaseDoesNotBlockAnotherSetting(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx, admin := context.Background(), e.Admin()
 	reader, writer := FreshOwnerConn(t), OwnerConn(t)

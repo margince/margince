@@ -16,6 +16,7 @@ import (
 // A note carries no disposition: it has no direction and no conversation, so
 // setting or clearing one is refused as not_a_message.
 func TestMarkingANoteAsNotSalesIsRefusedAsNotAMessage(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	store := storeKnowing(e)
 	body := "Called the buyer back"

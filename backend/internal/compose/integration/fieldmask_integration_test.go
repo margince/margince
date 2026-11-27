@@ -57,6 +57,7 @@ func assertMoneyWithheld(t *testing.T, d crmcontracts.Deal) {
 // refused — ordering by a value is reading it. The mask is a row property the
 // admin does not carry.
 func TestARepReadsEveryDealButNotAnotherTeamsMoney(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	mine := e.SeedDeal(t, "Mine", pipeline, open, &e.Rep1)
@@ -125,6 +126,7 @@ func TestARepReadsEveryDealButNotAnotherTeamsMoney(t *testing.T) {
 // deal.update owns write authority over NO row, so the mask holds on their
 // own deal too — revoking a verb must never widen what a role reads.
 func TestARevokedUpdateVerbMasksTheRepsOwnMoney(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	mine := e.SeedDeal(t, "Mine", pipeline, open, &e.Rep1)
@@ -172,6 +174,7 @@ func seedPartneredDeal(t *testing.T, e *Env) (ids.DealID, ids.CompanyID) {
 // it: "sourced" beside a null partner tells the reader that some partner
 // brought the deal, which is the fact the mask was set to withhold.
 func TestAMaskedPartnerTakesTheAttributionWithIt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	deal, _ := seedPartneredDeal(t, e)
 	rep := maskedDealSeat(t, e, "partner_company_id")
@@ -200,6 +203,7 @@ func TestAMaskedPartnerTakesTheAttributionWithIt(t *testing.T) {
 // binding the projection just declined to name — so the list refuses instead.
 // An empty page would be just as safe and would teach the caller the value.
 func TestTheDealListRefusesAFilterOverAColumnTheRoleWithholds(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	deal, partner := seedPartneredDeal(t, e)
 	rep := maskedDealSeat(t, e, "partner_company_id")

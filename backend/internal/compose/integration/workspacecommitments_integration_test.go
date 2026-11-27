@@ -49,6 +49,7 @@ func workspacePromises(t *testing.T, e *integration.Env, limit int) ([]contacts.
 // still worth rescuing — and the tool reports the least recoverable promise on
 // the record as the thing to do.
 func TestABoundedSweepKeepsThePromiseThatSlippedLast(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Carol Wagner", nil)
 
@@ -77,6 +78,7 @@ func TestABoundedSweepKeepsThePromiseThatSlippedLast(t *testing.T) {
 // A promise somebody settled is done with, and one the extractor flagged as
 // contested would state as true the very thing it doubted.
 func TestASettledPromiseLeavesTheSweep(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Carol Wagner", nil)
 	due := sweepClock.AddDate(0, 0, -2)
@@ -103,6 +105,7 @@ func TestASettledPromiseLeavesTheSweep(t *testing.T) {
 // drops the one that slipped yesterday. The tool then names the least
 // recoverable promise on the record and the read looks like it worked.
 func TestABoundedTaskSweepKeepsTheTaskThatSlippedLast(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Carol Wagner", nil)
 	seedTask := func(subject string, dueDaysAgo int) {
@@ -141,6 +144,7 @@ func TestABoundedTaskSweepKeepsTheTaskThatSlippedLast(t *testing.T) {
 // want the earliest deadline at the top, and the flag is what separates the
 // two questions rather than one order being made to serve both.
 func TestTheDisplayQueueStillLeadsWithTheEarliestDeadline(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Carol Wagner", nil)
 	for _, row := range []struct {

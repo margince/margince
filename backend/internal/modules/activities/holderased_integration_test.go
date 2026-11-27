@@ -30,6 +30,7 @@ func (r *reviewRecordingStager) RecordPendingReview(_ context.Context, err error
 // An erasure that won the race leaves nothing to hold and nothing to review: a
 // review would store the erased address again. The sender still gets the refusal.
 func TestARefusalForAnErasedRecipientOpensNoReview(t *testing.T) {
+	t.Parallel()
 	for _, erased := range []bool{false, true} {
 		e := setupSend(t)
 		ctx := e.as(principal.RowScopeAll)

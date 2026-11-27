@@ -100,7 +100,7 @@ func (f floorFixture) retentionPass(t *testing.T) {
 	t.Helper()
 	SettleIntoInstall(t, f.e)
 	svc := compose.NewRetentionServiceFor(f.e.DB(), nil, slog.New(slog.NewTextHandler(os.Stderr, nil)))
-	if err := svc.EvaluateInstallation(RetentionPassCtx(f.e.WS)); err != nil {
+	if err := svc.EvaluateInstallation(RetentionPassCtx(context.Background(), f.e.WS)); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -132,6 +132,7 @@ func (f floorFixture) policy(t *testing.T) privacy.FloorPolicy {
 // No jurisdiction selected: the strictest compiled-in floor holds, so a pack
 // declaring none does not unshield mail the other pack protects.
 func TestAnUnsetJurisdictionKeepsTheStrictestCompiledInFloor(t *testing.T) {
+	t.Parallel()
 	f := newFloorFixture(t)
 	old := f.mail(t, 400)
 	f.retentionPass(t)
@@ -142,6 +143,7 @@ func TestAnUnsetJurisdictionKeepsTheStrictestCompiledInFloor(t *testing.T) {
 
 // A jurisdiction selected at setup whose pack declares no floor applies none.
 func TestASelectedPackWithNoFloorAppliesNone(t *testing.T) {
+	t.Parallel()
 	f := newFloorFixture(t)
 	f.exec(t, `INSERT INTO setting (key, value) VALUES ('installation.country', '"zk"')`)
 	old := f.mail(t, 400)
@@ -158,6 +160,7 @@ func TestASelectedPackWithNoFloorAppliesNone(t *testing.T) {
 // Changing an existing installation from unset to zk weakens the floor. Mail
 // that occurred before the change keeps the zq floor; mail after it has none.
 func TestAWeakeningChangeCarriesTheOldFloorForOlderMail(t *testing.T) {
+	t.Parallel()
 	f := newFloorFixture(t)
 	f.setCountry(t, "zk")
 	carried := f.policy(t).Carried
@@ -181,6 +184,7 @@ func TestAWeakeningChangeCarriesTheOldFloorForOlderMail(t *testing.T) {
 // A controller's pin on old mail pins to the carried floor, never to the
 // current one that has already let it go.
 func TestAPinOnOldMailPinsToTheCarriedFloor(t *testing.T) {
+	t.Parallel()
 	f := newFloorFixture(t)
 	f.setCountry(t, "zk")
 	old := f.mail(t, 400)
@@ -206,6 +210,7 @@ func TestAPinOnOldMailPinsToTheCarriedFloor(t *testing.T) {
 // A purge selected while nothing protected the mail and executed after a
 // change to a jurisdiction that does must not destroy it.
 func TestAPurgeExecutedAfterAStricterChangeKeepsTheMail(t *testing.T) {
+	t.Parallel()
 	f := newFloorFixture(t)
 	f.setCountry(t, "zk")
 	f.exec(t, `UPDATE setting SET value = jsonb_set(value, '{before}', to_jsonb(now() - interval '1000 days'))
@@ -225,6 +230,7 @@ func TestAPurgeExecutedAfterAStricterChangeKeepsTheMail(t *testing.T) {
 // Boot refuses a stored jurisdiction this build carries no pack for, rather
 // than run selecting a law that applies nothing.
 func TestBootRefusesAStoredJurisdictionWithNoPack(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	if err := compose.RequireCompiledInCountry(context.Background(), e.Pool); err != nil {
 		t.Fatalf("unset jurisdiction refused: %v", err)
@@ -245,6 +251,7 @@ func TestBootRefusesAStoredJurisdictionWithNoPack(t *testing.T) {
 // destroy under it. The change cannot commit between that transaction's read
 // and its write; once it ends, the change lands and the next read sees it.
 func TestAJurisdictionChangeWaitsForADestroyInFlight(t *testing.T) {
+	t.Parallel()
 	f := newFloorFixture(t)
 	ctx := context.Background()
 	destroying, err := f.e.Pool.Begin(ctx)
@@ -277,6 +284,7 @@ func TestAJurisdictionChangeWaitsForADestroyInFlight(t *testing.T) {
 // The carry binds mail captured before the change even when its own date is
 // later, as a provider's date header can be.
 func TestTheCarryBindsMailCapturedBeforeTheChange(t *testing.T) {
+	t.Parallel()
 	f := newFloorFixture(t)
 	f.setCountry(t, "zk")
 	f.exec(t, `UPDATE setting SET value = jsonb_set(value, '{before}', to_jsonb(now() - interval '200 days'))
@@ -292,6 +300,7 @@ func TestTheCarryBindsMailCapturedBeforeTheChange(t *testing.T) {
 // Every jurisdiction change asks the retention grant, even one that weakens
 // nothing: the change decides what may be destroyed.
 func TestAJurisdictionChangeNeedsTheRetentionGrant(t *testing.T) {
+	t.Parallel()
 	f := newFloorFixture(t)
 	settingsOnly := f.e.As(f.e.AdminUser, nil, principal.Permissions{
 		RowScope: principal.RowScopeAll,

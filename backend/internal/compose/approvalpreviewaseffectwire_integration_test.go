@@ -43,6 +43,7 @@ func (s *promotionSight) requireWireWithholdsPlan(id ids.ApprovalID, secrets ...
 
 // A contract the mail cites is evidence its approver opens like any record.
 func TestAnAgentsMailCitingAContractIsReadyForAnApproverWhoCanOpenIt(t *testing.T) {
+	t.Parallel()
 	s := newMailSight(t)
 	company := s.company("Contract Account", s.e.Rep1, "")
 	agreement, err := s.e.Contracts.CreateContract(s.e.Admin(), contracts.CreateContractInput{
@@ -62,6 +63,7 @@ func TestAnAgentsMailCitingAContractIsReadyForAnApproverWhoCanOpenIt(t *testing.
 // The approver's role masks contact email, so the addresses a mail goes to
 // show as unavailable while the rest of the plan stays readable.
 func TestAnAgentsMailKeepsTheAddressesTheApproversRoleMasks(t *testing.T) {
+	t.Parallel()
 	s := newMailSight(t)
 	s.approver = storedMemberSeat(t, s.e, s.e.Rep2)
 	viewer, _ := principal.Actor(s.approver)
@@ -84,6 +86,7 @@ func TestAnAgentsMailKeepsTheAddressesTheApproversRoleMasks(t *testing.T) {
 // Whatever the agent's build reads through the reader's names and records
 // counts as touched, so a record named nowhere in the plan is still checked.
 func TestAnAgentsBuildCountsEveryRecordItReads(t *testing.T) {
+	t.Parallel()
 	s := newKindSight(t)
 	hidden := s.privateCompany("Unnamed Holdings", s.e.Rep1)
 	touched := &previewTouched{}

@@ -17,6 +17,7 @@ import (
 )
 
 func TestBookingProfileReadsAccountNameBeforeItsLinkExists(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	store := e.store(nil).WithPublicBaseURL("https://crm.example.test")
@@ -67,6 +68,7 @@ func TestBookingProfileReadsAccountNameBeforeItsLinkExists(t *testing.T) {
 }
 
 func TestBookingProfileIgnoresALegacyStoredName(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	store := e.store(nil).WithPublicBaseURL("https://crm.example.test")
@@ -126,6 +128,7 @@ func liveBookingPage(t *testing.T, e *sendEnv, calendar *authorityCalendar) crmc
 // never sees. Nothing is asked of the provider, so a store with no calendar
 // bound at all saves it too.
 func TestALiveBookingPageSavesItsLimitsWithoutAskingTheCalendar(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	calendar := &authorityCalendar{}
@@ -153,6 +156,7 @@ func TestALiveBookingPageSavesItsLimitsWithoutAskingTheCalendar(t *testing.T) {
 // Pointing a live page at another calendar, or at new blocking calendars, is
 // what the check vouches for. So it runs again and its refusal stands.
 func TestALiveBookingPageChecksTheCalendarItIsPointedAt(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	calendar := &authorityCalendar{}
@@ -180,6 +184,7 @@ func TestALiveBookingPageChecksTheCalendarItIsPointedAt(t *testing.T) {
 // Switching a page off asks nothing; switching it back on is a fresh
 // publication and checks the calendar again.
 func TestSwitchingABookingPageBackOnChecksTheCalendarAgain(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	calendar := &authorityCalendar{}
@@ -204,6 +209,7 @@ func TestSwitchingABookingPageBackOnChecksTheCalendarAgain(t *testing.T) {
 // A host who picks a provider before connecting it gets the sentence the
 // no-provider case already gives, naming the provider field, not a server error.
 func TestEnablingBookingsWithoutAUsableCalendarNamesTheProvider(t *testing.T) {
+	t.Parallel()
 	for name, calendar := range map[string]*invitationCalendar{
 		"no connection":              {checkErr: connector.ErrAuthRejected},
 		"a connection since revoked": {listErr: connector.ErrAuthRejected},
@@ -226,6 +232,7 @@ func TestEnablingBookingsWithoutAUsableCalendarNamesTheProvider(t *testing.T) {
 // The contract lists the providers a profile may name; a disabled profile is
 // held to it too, so an unknown value is never stored.
 func TestSavingAProfileRefusesAProviderOutsideTheContract(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	store := e.store(nil).WithPublicBaseURL("https://crm.example.test")
 	profile := defaultSchedulingProfile()

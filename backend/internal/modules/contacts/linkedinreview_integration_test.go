@@ -90,6 +90,7 @@ func (e *dedupeEnv) importAndMatch(t *testing.T) {
 }
 
 func TestApplyingAnApprovedMatchPutsTheLinkedInURLOnTheContact(t *testing.T) {
+	t.Parallel()
 	// The write an approved proposal releases. It is the same write the
 	// automatic exact-name path performs — the difference is only who released
 	// it, a string comparison there and a contact here.
@@ -115,6 +116,7 @@ func TestApplyingAnApprovedMatchPutsTheLinkedInURLOnTheContact(t *testing.T) {
 }
 
 func TestApplyingAMatchNeverOverwritesAHandleTheContactAlreadyHad(t *testing.T) {
+	t.Parallel()
 	// A value already on a record is somebody's statement, and approving a
 	// match is not grounds to replace it.
 	e := setupDedupe(t)
@@ -147,6 +149,7 @@ func TestApplyingAMatchNeverOverwritesAHandleTheContactAlreadyHad(t *testing.T) 
 }
 
 func TestTheMatchesAwaitingADecisionAreTheCallersOwnAndCarryTheExportsSpelling(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	company := e.seedAcmeCompany(t)
 	andreas := e.seedVisibleContact(t, "Andreas Muller")
@@ -172,6 +175,7 @@ func TestTheMatchesAwaitingADecisionAreTheCallersOwnAndCarryTheExportsSpelling(t
 }
 
 func TestReachCountsConnectionsPerAccountAndSaysWhatItCannotShow(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	company := e.seedAcmeCompany(t)
 	dana := e.seedVisibleContact(t, "Dana Buyer")
@@ -215,6 +219,7 @@ func TestReachCountsConnectionsPerAccountAndSaysWhatItCannotShow(t *testing.T) {
 }
 
 func TestCollapseNeverLetsAMachineGuessOverrideAHumanConfirmation(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	company := e.seedAcmeCompany(t)
 	guessed := e.seedVisibleContact(t, "Guessed Contact")
@@ -272,6 +277,7 @@ func TestCollapseNeverLetsAMachineGuessOverrideAHumanConfirmation(t *testing.T) 
 }
 
 func TestAConnectionNeverMatchesAContactItsOwnerMayNotSee(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	company := e.seedAcmeCompany(t)
 	// A contact somebody ELSE captured privately. Capture privacy makes it
@@ -312,6 +318,7 @@ func TestAConnectionNeverMatchesAContactItsOwnerMayNotSee(t *testing.T) {
 // three predicates, and each must change zero rows and answer not-found rather
 // than reporting a link it did not make.
 func TestApplyingAMatchRefusesAConnectionTheProposalDoesNotDescribe(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	company := e.seedAcmeCompany(t)
 	andreas := e.seedVisibleContact(t, "Andreas Muller")
@@ -383,6 +390,7 @@ func TestApplyingAMatchRefusesAConnectionTheProposalDoesNotDescribe(t *testing.T
 // building a legacy approval row to carry one there would be asserting against
 // a fixture of the old format rather than against the behaviour.
 func TestAProposalWithNoOwnerStillAppliesAgainstItsConnection(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	company := e.seedAcmeCompany(t)
 	andreas := e.seedVisibleContact(t, "Andreas Muller")
@@ -412,6 +420,7 @@ func TestAProposalWithNoOwnerStillAppliesAgainstItsConnection(t *testing.T) {
 // transaction. Whether the visibility rule then admits the right subscriber is
 // the webhooks suite's own subject, and it covers all three self-only events.
 func TestTheDecidedEventCarriesTheMembersOwnID(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	company := e.seedAcmeCompany(t)
 	andreas := e.seedVisibleContact(t, "Andreas Muller")

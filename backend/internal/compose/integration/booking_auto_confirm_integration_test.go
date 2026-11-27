@@ -107,6 +107,7 @@ func (x *tickEnv) consentState(t *testing.T, email string) string {
 }
 
 func TestAMarketingTickMailsOneConfirmationAndARepeatDoesNotMailAgain(t *testing.T) {
+	t.Parallel()
 	x := newTickEnv(t)
 	email := "mia@visitor.example"
 	x.wantQuiet(t, email, x.book(t, email), 1, 1)
@@ -132,6 +133,7 @@ func TestAMarketingTickMailsOneConfirmationAndARepeatDoesNotMailAgain(t *testing
 }
 
 func TestTheConfirmationBudgetPerAddressIsOnePerWeekAndThreePerQuarter(t *testing.T) {
+	t.Parallel()
 	x := newTickEnv(t)
 	email := "budget@visitor.example"
 	x.wantQuiet(t, email, x.book(t, email), 1, 1)
@@ -149,11 +151,12 @@ func TestTheConfirmationBudgetPerAddressIsOnePerWeekAndThreePerQuarter(t *testin
 }
 
 func TestAnErasedAddressIsNotMailedAConfirmation(t *testing.T) {
+	t.Parallel()
 	x := newTickEnv(t)
 	email := "erased@visitor.example"
 	if _, err := x.e.Owner.Exec(context.Background(),
 		`INSERT INTO erasure_suppression (kind, value_hash) VALUES ('email', $1) ON CONFLICT DO NOTHING`,
-		storekit.SuppressionHash(email)); err != nil {
+		storekit.SuppressionHash(t.Context(), email)); err != nil {
 		t.Fatal(err)
 	}
 	x.wantQuiet(t, email, x.book(t, email), 0, 0)
@@ -163,6 +166,7 @@ func TestAnErasedAddressIsNotMailedAConfirmation(t *testing.T) {
 }
 
 func TestAContactWhoAlreadySubscribedIsNotMailedAgain(t *testing.T) {
+	t.Parallel()
 	x := newTickEnv(t)
 	email := "subscribed@visitor.example"
 	x.wantQuiet(t, email, x.book(t, email), 1, 1)
@@ -178,6 +182,7 @@ func TestAContactWhoAlreadySubscribedIsNotMailedAgain(t *testing.T) {
 }
 
 func TestAStoppedContactIsNotMailedAConfirmation(t *testing.T) {
+	t.Parallel()
 	for _, kind := range []string{"marketing_objection", "processing_restriction", "subject_request"} {
 		t.Run(kind, func(t *testing.T) {
 			x := newTickEnv(t)
@@ -226,6 +231,7 @@ func (x *tickEnv) leadConsentState(t *testing.T, leadID string) string {
 }
 
 func TestATickOnABookingMatchedToALeadMailsOneConfirmationToItsAddress(t *testing.T) {
+	t.Parallel()
 	x := newTickEnv(t)
 	email := "lead@visitor.example"
 	leadID := x.leadTick(t, email)
@@ -259,6 +265,7 @@ func (x *tickEnv) leadWrites(t *testing.T, leadID string) (audits, events int) {
 }
 
 func TestOpeningALeadsConfirmationGrantsItsMarketingConsentWithTheWriteShape(t *testing.T) {
+	t.Parallel()
 	x := newTickEnv(t)
 	email := "lead.opens@visitor.example"
 	leadID := x.leadTick(t, email)
@@ -285,6 +292,7 @@ func TestOpeningALeadsConfirmationGrantsItsMarketingConsentWithTheWriteShape(t *
 }
 
 func TestAPromotedLeadKeepsTheMarketingGrantItsLinkEarned(t *testing.T) {
+	t.Parallel()
 	x := newTickEnv(t)
 	email := "lead.promoted@visitor.example"
 	leadID := x.leadTick(t, email)
@@ -324,12 +332,13 @@ func TestAPromotedLeadKeepsTheMarketingGrantItsLinkEarned(t *testing.T) {
 }
 
 func TestAnErasedLeadAddressIsNotMailedAConfirmation(t *testing.T) {
+	t.Parallel()
 	x := newTickEnv(t)
 	email := "erased.lead@visitor.example"
 	leadID := x.leadTick(t, email)
 	if _, err := x.e.Owner.Exec(context.Background(),
 		`INSERT INTO erasure_suppression (kind, value_hash) VALUES ('email', $1) ON CONFLICT DO NOTHING`,
-		storekit.SuppressionHash(email)); err != nil {
+		storekit.SuppressionHash(t.Context(), email)); err != nil {
 		t.Fatal(err)
 	}
 	x.wantQuiet(t, email, x.book(t, email), 0, 0)
@@ -339,6 +348,7 @@ func TestAnErasedLeadAddressIsNotMailedAConfirmation(t *testing.T) {
 }
 
 func TestAStoppedLeadIsNotMailedAConfirmation(t *testing.T) {
+	t.Parallel()
 	for _, kind := range []string{"marketing_objection", "processing_restriction", "subject_request"} {
 		t.Run(kind, func(t *testing.T) {
 			x := newTickEnv(t)
@@ -355,6 +365,7 @@ func TestAStoppedLeadIsNotMailedAConfirmation(t *testing.T) {
 }
 
 func TestALeadWhoAlreadySubscribedIsNotMailedAgain(t *testing.T) {
+	t.Parallel()
 	x := newTickEnv(t)
 	email := "lead.subscribed@visitor.example"
 	leadID := x.leadTick(t, email)
@@ -368,6 +379,7 @@ func TestALeadWhoAlreadySubscribedIsNotMailedAgain(t *testing.T) {
 }
 
 func TestALeadWhoWithdrewIsNotAskedAgainByABooking(t *testing.T) {
+	t.Parallel()
 	x := newTickEnv(t)
 	email := "lead.withdrew@visitor.example"
 	leadID := x.leadTick(t, email)
@@ -380,6 +392,7 @@ func TestALeadWhoWithdrewIsNotAskedAgainByABooking(t *testing.T) {
 }
 
 func TestTheConfirmationBudgetPerAddressHoldsForALead(t *testing.T) {
+	t.Parallel()
 	x := newTickEnv(t)
 	email := "lead.budget@visitor.example"
 	x.leadTick(t, email)
@@ -395,6 +408,7 @@ func TestTheConfirmationBudgetPerAddressHoldsForALead(t *testing.T) {
 }
 
 func TestAHardBouncedAddressIsNotMailedAConfirmationToALead(t *testing.T) {
+	t.Parallel()
 	x := newTickEnv(t)
 	email := "bounced.lead@visitor.example"
 	leadID := x.leadTick(t, email)
@@ -410,6 +424,7 @@ func TestAHardBouncedAddressIsNotMailedAConfirmationToALead(t *testing.T) {
 }
 
 func TestAContactAndALeadOnOneAddressShareTheConfirmationBudget(t *testing.T) {
+	t.Parallel()
 	x := newTickEnv(t)
 	email := "shared@visitor.example"
 	x.leadTick(t, email)
@@ -447,6 +462,7 @@ func TestAContactAndALeadOnOneAddressShareTheConfirmationBudget(t *testing.T) {
 }
 
 func TestALeadsLinkIsDeadOnceTheLeadIsPromoted(t *testing.T) {
+	t.Parallel()
 	x := newTickEnv(t)
 	email := "lead.dead.link@visitor.example"
 	leadID := x.leadTick(t, email)

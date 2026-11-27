@@ -382,7 +382,7 @@ var crossStoreWrites = gatekit.Waive(map[string]string{
 	// principal for storekit.LogSystem to stamp — bootstrap and failed
 	// logins have no session yet — so identity appends the append-only rows
 	// directly.
-	"internal/modules/identity:system_log:installation.go:createInstallation:INSERT INTO system_log (actor_type, actor_id, action, detail) …":   "the installation bootstrap writes its own ledger row: it runs before any principal exists, so storekit.LogSystem has nobody to stamp as captured_by",
+	"internal/modules/identity:system_log:installation.go:logBootstrap:INSERT INTO system_log (actor_type, actor_id, action, detail) …":         "the installation bootstrap writes its own ledger row: it runs before any principal exists, so storekit.LogSystem has nobody to stamp as captured_by",
 	"internal/modules/identity:system_log:lockout.go:Service.recordFailedLogin:INSERT INTO system_log (actor_type, actor_id, action, detail) …": "login and failed-login land in system_log but fire before/without an authenticated principal for storekit.LogSystem to stamp; identity appends the append-only rows itself",
 	"internal/modules/identity:system_log:reset.go:OperatorResetPassword:INSERT INTO system_log (actor_type, actor_id, action, detail) …":       "an operator reset writes its own ledger row: the operator acts out of band and is not an authenticated principal of this workspace, so storekit.LogSystem has nobody to stamp",
 	"internal/modules/identity:system_log:service.go:logAuthEvent:INSERT INTO system_log (actor_type, actor_id, action, detail) …":              "login and failed-login land in system_log but fire before/without an authenticated principal for storekit.LogSystem to stamp; identity appends the append-only rows itself",

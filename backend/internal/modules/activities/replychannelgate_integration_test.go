@@ -32,6 +32,7 @@ const (
 // discover-gated one keeps it. Either way the list holds the rows its gate
 // admits, and each names the channel the source audience arm names.
 func TestAListNamesTheReplyChannelTheSourceArmAdmits(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	private := e.privateContactOf(t, e.other)
 	restricted := e.buyer(t)

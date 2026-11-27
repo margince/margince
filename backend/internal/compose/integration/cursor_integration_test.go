@@ -34,6 +34,7 @@ import (
 )
 
 func TestMalformedCursorAnswersMalformedCursorEverywhere(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 
 	apptest.BootstrapWorkspaceSession(t, e, "Cursor Probe", "admin@cursor.test", "Admin")

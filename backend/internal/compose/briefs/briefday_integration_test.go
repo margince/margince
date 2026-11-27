@@ -29,6 +29,7 @@ import (
 )
 
 func TestBriefReadServesTodaysRunAndNotAnOlderOne(t *testing.T) {
+	t.Parallel()
 	b := setupBrief(t)
 
 	yesterday, err := b.engine.SnapshotRun(b.repCtx, briefClock)
@@ -61,6 +62,7 @@ func TestBriefReadServesTodaysRunAndNotAnOlderOne(t *testing.T) {
 }
 
 func TestTwoBriefAssembliesOnOneMorningProduceOneRun(t *testing.T) {
+	t.Parallel()
 	b := setupBrief(t)
 
 	// The boot pass and the hourly pass, reaching the same rep at the same
@@ -104,6 +106,7 @@ func TestTwoBriefAssembliesOnOneMorningProduceOneRun(t *testing.T) {
 }
 
 func TestAnotherRepsRunIsNeverServedAsMine(t *testing.T) {
+	t.Parallel()
 	b := setupBrief(t)
 
 	// Rep1's morning exists; Rep2's does not. Rep2 shares Rep1's team, so
@@ -136,6 +139,7 @@ func (b countingBrain) Complete(_ context.Context, _ model.Request) (model.Respo
 }
 
 func TestAskingForTodaysBriefAgainReadsItRatherThanReRanking(t *testing.T) {
+	t.Parallel()
 	b := setupBrief(t)
 
 	// The night assembled the morning deterministically, as the worker role does.

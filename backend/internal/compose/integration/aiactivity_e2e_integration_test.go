@@ -193,6 +193,7 @@ func (f *readingFixture) projection(t *testing.T) projectedOccurrence {
 // A reading a human asked for is that human's, and it is theirs from the
 // moment it is queued — not from the moment a worker picks it up.
 func TestAQueuedReadingIsProjectedAsTheContactsOwnLiveWork(t *testing.T) {
+	t.Parallel()
 	f := newReadingFixture(t)
 	f.drain(t)
 
@@ -218,6 +219,7 @@ func TestAQueuedReadingIsProjectedAsTheContactsOwnLiveWork(t *testing.T) {
 // is running. This is the whole reason the guard orders by attempt: the release
 // moves the row BACKWARDS, and it has to be believed.
 func TestAReleasedReadingIsProjectedBackToQueuedAtTheNextAttempt(t *testing.T) {
+	t.Parallel()
 	f := newReadingFixture(t)
 	claim, err := f.store.BeginExtractionRead(f.ctx, f.readID, activities.ExtractionReadLease)
 	if err != nil {
@@ -245,6 +247,7 @@ func TestAReleasedReadingIsProjectedBackToQueuedAtTheNextAttempt(t *testing.T) {
 // A finished reading settles, and it stops carrying a lease: nothing about a
 // closed occurrence can go stale.
 func TestAFinishedReadingSettlesInTheProjection(t *testing.T) {
+	t.Parallel()
 	f := newReadingFixture(t)
 	claim, err := f.store.BeginExtractionRead(f.ctx, f.readID, activities.ExtractionReadLease)
 	if err != nil {

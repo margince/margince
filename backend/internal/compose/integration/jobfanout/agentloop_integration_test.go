@@ -23,6 +23,7 @@ import (
 )
 
 func TestAgentLoopScenariosJudgeTheEndStateOfAScriptedModel(t *testing.T) {
+	t.Parallel()
 	if os.Getenv(clockskew.EnvVar) != "" {
 		t.Skip("the lane reads day-level facts off the real clock, which the drift lane moves")
 	}
@@ -43,6 +44,7 @@ func TestAgentLoopScenariosJudgeTheEndStateOfAScriptedModel(t *testing.T) {
 // TestTheScriptedModelsReachEveryCheck is the census of the lane: a check no
 // scripted model fails is a check nothing proves can fire on a real run.
 func TestTheScriptedModelsReachEveryCheck(t *testing.T) {
+	t.Parallel()
 	var reached []string
 	for _, model := range loopModels {
 		reached = append(reached, model.want.wantFailed...)

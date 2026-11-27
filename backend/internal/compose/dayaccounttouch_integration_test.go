@@ -38,6 +38,7 @@ func isDay(precision *crmcontracts.OccurredPrecision) bool {
 }
 
 func TestAnAccountsDirectionClocksCarryTheirPrecision(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	acct := employedAccount(t, e, "Dated Calls GmbH")
 	inbound := occurredday.AnchorIn(acct.now.AddDate(0, 0, -3), time.UTC)

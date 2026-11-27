@@ -133,6 +133,7 @@ func assertShareCall(t *testing.T, who string, readings crmcontracts.ForecastRea
 }
 
 func TestALiveShareStatesTheCallAndLandingTheForecastStatesForItsReader(t *testing.T) {
+	t.Parallel()
 	e := calledQuarter(t, true)
 	company, teamLens := e.shareReaders()
 	token := e.issueWorkspaceShare(t, shareKindLive, nil)
@@ -158,6 +159,7 @@ func TestALiveShareStatesTheCallAndLandingTheForecastStatesForItsReader(t *testi
 
 // A snapshot keeps the call's amount, not its record: it lands on the call and withholds the record.
 func TestASnapshotShareStatesTheLandingItFroze(t *testing.T) {
+	t.Parallel()
 	e := calledQuarter(t, true)
 	company, teamLens := e.shareReaders()
 	token := e.issueWorkspaceShare(t, shareKindSnapshot, new(e.freezeMeasured(t)))
@@ -170,6 +172,7 @@ func TestASnapshotShareStatesTheLandingItFroze(t *testing.T) {
 
 // A snapshot that froze no call says so only to a reader who may see calls.
 func TestASnapshotWithNoCallSaysSoOnlyToAReaderWhoMaySeeCalls(t *testing.T) {
+	t.Parallel()
 	e := calledQuarter(t, false)
 	company, teamLens := e.shareReaders()
 	token := e.issueWorkspaceShare(t, shareKindSnapshot, new(e.freezeMeasured(t)))
@@ -180,6 +183,7 @@ func TestASnapshotWithNoCallSaysSoOnlyToAReaderWhoMaySeeCalls(t *testing.T) {
 }
 
 func TestASnapshotFrozenBeforeTheLandingWasKeptHasNone(t *testing.T) {
+	t.Parallel()
 	e := calledQuarter(t, true)
 	company, _ := e.shareReaders()
 	token := e.issueWorkspaceShare(t, shareKindSnapshot, new(e.freezeWorkspace(t)))

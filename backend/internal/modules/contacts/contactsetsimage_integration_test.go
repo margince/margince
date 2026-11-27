@@ -16,6 +16,7 @@ import (
 )
 
 func TestAReplacedSetRecordsItsRowsInTheShapeOfTheBeforeImage(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 

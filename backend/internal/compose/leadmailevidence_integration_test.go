@@ -17,6 +17,7 @@ import (
 // Capture files a reply under every lead whose address is on it. Only the lead
 // who sent it has replied, so only that lead may be promoted on it.
 func TestOnlyTheSenderOfACapturedReplyIsPromotedOnIt(t *testing.T) {
+	t.Parallel()
 	l := setupLeadMail(t)
 	sender := l.lead(t, "ana@prospect.example")
 	copied := l.lead(t, "ben@prospect.example")
@@ -44,6 +45,7 @@ func TestOnlyTheSenderOfACapturedReplyIsPromotedOnIt(t *testing.T) {
 
 // A captured meeting names its attendees, and an attendee lead took part.
 func TestACapturedMeetingsAttendeeLeadIsPromotedOnIt(t *testing.T) {
+	t.Parallel()
 	l := setupLeadMail(t)
 	attendee := l.lead(t, "cara@prospect.example")
 	meeting := ids.From[ids.ActivityKind](l.meeting(t, "cara@prospect.example"))

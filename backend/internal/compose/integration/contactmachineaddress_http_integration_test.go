@@ -31,6 +31,7 @@ func (f fieldFaults) only() (string, string) {
 // Each door names the refusal on its own field. The typed create uses emails,
 // and quick capture uses email.
 func TestEachContactDoorRefusesASendingSystemsAddressOnItsOwnField(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	for _, c := range []struct {

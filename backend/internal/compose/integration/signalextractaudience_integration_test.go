@@ -34,6 +34,7 @@ import (
 // durable, searchable restatement of that content which outlives the message's
 // own limit. There is no owner for whom extracting it is free.
 func TestAThreadWithALimitedMessageIsNotOfferedToTheModel(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	at := extractClock.Add(-48 * time.Hour)
@@ -79,6 +80,7 @@ func TestAThreadWithALimitedMessageIsNotOfferedToTheModel(t *testing.T) {
 // reached from here and is asserted directly, against the statement, in
 // compose/signalextractwindow_integration_test.go.
 func TestAConversationIsNotReReadAfterOneOfItsMessagesIsLimited(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	at := extractClock.Add(-48 * time.Hour)
@@ -143,6 +145,7 @@ type recordingBrain struct {
 // conversation, presented to readers from whom one of its messages is withheld,
 // with nothing on the summary to say a part is missing.
 func TestAHandLoggedLimitedMessageTakesItsThreadOutOfThePass(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	at := extractClock.Add(-48 * time.Hour)

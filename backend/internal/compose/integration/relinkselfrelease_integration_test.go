@@ -54,6 +54,7 @@ func companyLinks(t *testing.T, e *Env, activity, company ids.UUID) int {
 }
 
 func TestACredentialRelinksExactlyTheNamedActivitiesToACompanyAtOnce(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	f := seedThreadFixture(t, e, owner)
@@ -106,6 +107,7 @@ func TestACredentialRelinksExactlyTheNamedActivitiesToACompanyAtOnce(t *testing.
 // stamps the activity. The undo is a named member's decision the credential
 // cannot make.
 func TestACredentialFilesUnderAProjectOnceApprovedAndOnlyAMemberUndoesTheFiling(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	f := seedThreadFixture(t, e, owner)
@@ -153,6 +155,7 @@ func TestACredentialFilesUnderAProjectOnceApprovedAndOnlyAMemberUndoesTheFiling(
 // A set that names an activity outside the lender's scope is refused as a
 // whole, so none of it moves.
 func TestARelinkReachingOutsideTheLendersScopeMovesNothing(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	f := seedThreadFixture(t, e, owner)
@@ -177,6 +180,7 @@ func TestARelinkReachingOutsideTheLendersScopeMovesNothing(t *testing.T) {
 // conversation has since outgrown. The credential cannot release it, and even a
 // contact's release cannot make the retry run.
 func TestAThreadApprovalStagedBeforeThreadMovesStoppedStagingNeverRuns(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	f := seedThreadFixture(t, e, owner)

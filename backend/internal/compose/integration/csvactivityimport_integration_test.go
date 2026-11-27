@@ -84,6 +84,7 @@ func importActivities(t *testing.T, e *apptest.AppEnv, files map[string]string, 
 const activityHeader = "ref,type,subject,body,occurred_at,links,duration_minutes,meeting_status,direction"
 
 func TestAnActivitiesFileLandsAtItsPastDatesUnderItsLinks(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	_, report := importActivities(t, e, map[string]string{
 		"contacts.csv": "ref,email,name\nP-1,jo@act-land.example,Jo Tran\n",
@@ -112,6 +113,7 @@ func TestAnActivitiesFileLandsAtItsPastDatesUnderItsLinks(t *testing.T) {
 }
 
 func TestAnImportedActivityStillCountsAsEngagement(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	contactID := createdID(t, e, "/v1/contacts", AnyMap{
 		"source": "manual", "full_name": "Engaged Eli",
@@ -142,6 +144,7 @@ func TestAnImportedActivityStillCountsAsEngagement(t *testing.T) {
 }
 
 func TestAReUploadedActivityIsNotDuplicated(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	files := func(subject string) map[string]string {
 		return map[string]string{
@@ -165,6 +168,7 @@ func TestAReUploadedActivityIsNotDuplicated(t *testing.T) {
 }
 
 func TestAnActivityReImportedAfterUndoLandsAsANewRow(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	files := map[string]string{
 		"contacts.csv":   "ref,email,name\nP-1,jo@act-undo.example,Jo\n",
@@ -185,6 +189,7 @@ func TestAnActivityReImportedAfterUndoLandsAsANewRow(t *testing.T) {
 }
 
 func TestAnInvisibleLinkTargetSkipsTheRowNotTheRun(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	e.DescribeCompany(t)
 	colleague := createdID(t, e, "/v1/users", AnyMap{"email": "colleague@act-hidden.test", "display_name": "Colleague", "role": "rep"})
@@ -212,6 +217,7 @@ func TestAnInvisibleLinkTargetSkipsTheRowNotTheRun(t *testing.T) {
 }
 
 func TestTheDryRunGivesTheReasonTheCommitGivesForEachRefusedActivityRow(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	files := map[string]string{
 		"contacts.csv": "ref,email,name\nP-1,jo@act-refused.example,Jo\n",
@@ -251,6 +257,7 @@ func TestTheDryRunGivesTheReasonTheCommitGivesForEachRefusedActivityRow(t *testi
 }
 
 func TestAnActivityLinksToADealAndAContactInTheSameZip(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	pipeline, open, _, _ := seededStages(t, e)
 	_, report := importActivities(t, e, map[string]string{
@@ -288,6 +295,7 @@ func TestAnActivityLinksToADealAndAContactInTheSameZip(t *testing.T) {
 }
 
 func TestACorrectedFileWithNoTypeColumnHoldsADurationToTheStoredKind(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	contacts := "ref,email,name\nP-1,jo@act-fix.example,Jo\n"
 	parts := contactAndActivityParts()
@@ -318,6 +326,7 @@ func TestACorrectedFileWithNoTypeColumnHoldsADurationToTheStoredKind(t *testing.
 }
 
 func TestATestRunResolvesAnActivityLinkByTheNaturalKeyOfARowInTheSameUpload(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	parts := append([]AnyMap{
 		{"file": "companies.csv", "object": "company", "mapping": AnyMap{"ref": "ref", "name": "display_name", "domain": "domain"}},
@@ -355,6 +364,7 @@ func issuesWith(r importReportDTO, code string) int {
 }
 
 func TestOneImportFilesOneCopyOfANoteItsExportRepeats(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	var rows strings.Builder
 	for i := 1; i <= 4; i++ {
@@ -389,6 +399,7 @@ func TestOneImportFilesOneCopyOfANoteItsExportRepeats(t *testing.T) {
 }
 
 func TestARepeatedTextStaysApartAtAnotherTimeOnAnotherRecordOrOfAnotherKind(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	_, report := importActivities(t, e, map[string]string{
 		"contacts.csv": "ref,email,name\nP-1,jo@act-apart.example,Jo\nP-2,li@act-apart.example,Li\n",
@@ -405,6 +416,7 @@ func TestARepeatedTextStaysApartAtAnotherTimeOnAnotherRecordOrOfAnotherKind(t *t
 }
 
 func TestARepeatedNoteStaysApartUnderAnotherAuthorOrOwner(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	e.DescribeCompany(t)
 	createdID(t, e, "/v1/users", AnyMap{"email": "owner@act-attrib.test", "display_name": "Owner", "role": "rep"})
@@ -427,6 +439,7 @@ func TestARepeatedNoteStaysApartUnderAnotherAuthorOrOwner(t *testing.T) {
 }
 
 func TestARowIdShapedLikeANoteKeyIsAnOrdinaryRow(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	keyShaped := "activity_note_twin:" + strings.Repeat("0", 64)
 	_, report := importActivities(t, e, map[string]string{
@@ -452,6 +465,7 @@ func TestARowIdShapedLikeANoteKeyIsAnOrdinaryRow(t *testing.T) {
 // holds for a row that files the meeting and for one that corrects it. It holds
 // for a row that moves a held meeting to today without changing its status too.
 func TestAFileCannotHoldAMeetingDatedToday(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	now := clocktest.Now(t)
 	offset := 12 - now.UTC().Hour()

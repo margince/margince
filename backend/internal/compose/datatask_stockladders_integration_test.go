@@ -55,6 +55,7 @@ func routingAuditsByTheTask(t *testing.T, e *integration.Env) int {
 // A stock Gemini install takes the order its preset now declares, audited as a
 // settings change; running the task again changes nothing.
 func TestTheStockLaddersTaskGivesAStockInstallItsPresetsOrder(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	routing := ai.NewRoutingStore(NewSettingsStore(e.Pool), StoredConfig(e.Pool))
 	storeGeminiRouting(t, e, routing, false)
@@ -79,6 +80,7 @@ func TestTheStockLaddersTaskGivesAStockInstallItsPresetsOrder(t *testing.T) {
 // An install whose admin chose their own binding keeps the contract order and
 // is not written to.
 func TestTheStockLaddersTaskLeavesACustomisedInstallAlone(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	routing := ai.NewRoutingStore(NewSettingsStore(e.Pool), StoredConfig(e.Pool))
 	storeGeminiRouting(t, e, routing, true)
@@ -101,6 +103,7 @@ func TestTheStockLaddersTaskLeavesACustomisedInstallAlone(t *testing.T) {
 // An install bound to a preset that orders no task is not written to: no save,
 // no audit row.
 func TestTheStockLaddersTaskWritesNothingForAPresetThatOrdersNoTask(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	routing := ai.NewRoutingStore(NewSettingsStore(e.Pool), StoredConfig(e.Pool))
 	storePresetRouting(t, e, routing, "openrouter_cloud.yaml", false)

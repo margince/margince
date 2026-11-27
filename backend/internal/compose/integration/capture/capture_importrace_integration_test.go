@@ -25,6 +25,7 @@ import (
 )
 
 func TestTwoSeatsFirstImportsRecomputeOneMessageAndTheStricterSeatWins(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	env.sync(t, customerMail("import-race@acme.example"))
@@ -152,6 +153,7 @@ func awaitRecomputeDoneOrQueued(t *testing.T, e *integration.SearchEnv, seat *ra
 // lock before its own import row. So it waits for the colleague, and the
 // recompute never waits on it.
 func TestAMeetingReplayWaitsForAColleaguesImportBeforeItSharesTheRow(t *testing.T) {
+	t.Parallel()
 	p := newPairEnv(t)
 	start := captureNow.AddDate(0, 0, -3).Truncate(time.Hour)
 	p.book(start)

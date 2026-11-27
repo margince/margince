@@ -60,6 +60,7 @@ func (e *auditBoundaryEnv) withDealRead(read bool) context.Context {
 }
 
 func TestAChatSummaryAuditImageNeedsReadOnTheDeal(t *testing.T) {
+	t.Parallel()
 	e := setupAuditBoundary(t)
 	note := e.seedChatSummaryAudit(t)
 	entityType, limit := "activity", 50

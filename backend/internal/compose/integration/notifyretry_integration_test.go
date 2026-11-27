@@ -136,6 +136,7 @@ func notifyRunAndNoticeCount(t *testing.T, e *Env, recipient ids.UUID) (status s
 }
 
 func TestATransientNoticeFailureIsRetriedOnRedeliveryAndTheNoticeLandsOnce(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	notifier := &flakyNotifier{store: notices.NewStore(e.DB()), failures: 1}
 	if err := runNotifyProbe(t, e, notifier, e.Rep1, 3); err == nil {
@@ -155,6 +156,7 @@ func TestATransientNoticeFailureIsRetriedOnRedeliveryAndTheNoticeLandsOnce(t *te
 }
 
 func TestANoticeForAnInactiveRecipientIsRecorded(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	if _, err := OwnerConn(t).Exec(context.Background(), `UPDATE app_user SET status = 'deactivated' WHERE id = $1`, e.Rep2); err != nil {
 		t.Fatalf("deactivating the recipient: %v", err)
@@ -171,6 +173,7 @@ func TestANoticeForAnInactiveRecipientIsRecorded(t *testing.T) {
 }
 
 func TestARefusedNoticeStaysFailedAndIsNotRetriedByRedelivery(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	notifier := &flakyNotifier{store: notices.NewStore(e.DB()), refusal: apperrors.ErrNotFound}
 	if err := runNotifyProbe(t, e, notifier, e.Rep1, 3); err == nil {

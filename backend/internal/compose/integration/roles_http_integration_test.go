@@ -47,6 +47,7 @@ func dropFieldSalesMasksAfter(t *testing.T) {
 }
 
 func TestTheRoleLifecycleOverHTTP(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	e.DescribeCompany(t)
@@ -132,6 +133,7 @@ func hasRole(directory roleDirectoryWire, key string) bool {
 // handlers: a body it cannot read, an If-Match it cannot parse, and the codes
 // the service's refusals map onto.
 func TestTheRoleEditorsRefusalsOverHTTP(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	e.DescribeCompany(t)
@@ -189,6 +191,7 @@ func TestTheRoleEditorsRefusalsOverHTTP(t *testing.T) {
 // A refusal for a field the body left out names that field. The client then
 // knows which part of its request to fix, not which role is missing.
 func TestTheRoleEditorsMissingFieldRefusalsNameTheField(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	e.DescribeCompany(t)
@@ -222,6 +225,7 @@ func TestTheRoleEditorsMissingFieldRefusalsNameTheField(t *testing.T) {
 // The pickers' read over HTTP: the admin is offered every live role, and the
 // answer is never cached by a shared proxy.
 func TestTheAssignableRolesOverHTTP(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	e.DescribeCompany(t)

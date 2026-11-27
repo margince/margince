@@ -28,6 +28,7 @@ func (e *contractVisEnv) seedReview(t *testing.T) ids.UUID {
 }
 
 func TestAReviewSubjectNeedsNoGrantOnItsDeal(t *testing.T) {
+	t.Parallel()
 	e := setupContractVis(t)
 	review := e.seedReview(t)
 	visible, err := e.store.legalReviewVisibleTo(
@@ -38,6 +39,7 @@ func TestAReviewSubjectNeedsNoGrantOnItsDeal(t *testing.T) {
 }
 
 func TestAReviewSubjectStillNeedsLegalReviewRead(t *testing.T) {
+	t.Parallel()
 	e := setupContractVis(t)
 	review := e.seedReview(t)
 	visible, err := e.store.legalReviewVisibleTo(
@@ -48,6 +50,7 @@ func TestAReviewSubjectStillNeedsLegalReviewRead(t *testing.T) {
 }
 
 func TestAMissingReviewIsWithheld(t *testing.T) {
+	t.Parallel()
 	e := setupContractVis(t)
 	visible, err := e.store.legalReviewVisibleTo(
 		e.asHolding(map[string]principal.ObjectGrant{"legal_review": {Read: true}}), ids.NewV7())

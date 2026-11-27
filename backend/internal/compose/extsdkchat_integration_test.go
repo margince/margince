@@ -19,7 +19,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/unitsql/unitsqltest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/extsecrets"
-	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/pkg/extension"
 )
@@ -141,7 +140,7 @@ func setupMemberChat(t *testing.T, posture extension.Posture) *chatEnv {
 		DispatcherTimeout: 30 * time.Second, Timeout: 30 * time.Second, MaxAttempts: 2,
 		Tier: extension.TierAutoExecute, RequestedScope: extension.ScopeRead,
 	}
-	if err := RegisterExtensions([]extension.Extension{{
+	composed, err := RegisterExtensions([]extension.Extension{{
 		Name: chatUnit, Version: "1.0.0", Description: "A neutral member-owned chat unit for tests.",
 		Ingress: []extension.IngressSource{{
 			System: chatSystem, Lands: []extension.RecordKind{extension.KindActivity}, PinnedPosture: posture,
@@ -152,16 +151,12 @@ func setupMemberChat(t *testing.T, posture extension.Posture) *chatEnv {
 			_, err := ingestFiled(ctx, rt)
 			return err
 		}}},
-	}}, nil, []extension.JobDeclaration{decl}); err != nil {
+	}}, nil, []extension.JobDeclaration{decl})
+	if err != nil {
 		t.Fatalf("registering the unit: %v", err)
 	}
-	t.Cleanup(func() {
-		setComposedJobs(nil)
-		if err := jobs.RegisterComposed(nil); err != nil {
-			t.Errorf("restoring the composed job table: %v", err)
-		}
-	})
-	bindCaptureForTest(t, e)
+	e.compose(composed)
+	e.composed.BindCapture(e.Pool, CaptureConfig{})
 	env := &chatEnv{ingressEnv: &ingressEnv{extRuntimeEnv: e, member: e.Rep1}, second: e.Rep2}
 	registerProbeTransport(t, env.ingressEnv)
 	for _, member := range []ids.UUID{e.Rep1, e.Rep2} {
@@ -175,7 +170,7 @@ func setupMemberChat(t *testing.T, posture extension.Posture) *chatEnv {
 }
 
 func (e *chatEnv) job() *callRuntime {
-	return jobRuntimeFor(e.callCtx(e.WS), chatUnit, "1.0.0", "job/ingest", boundExtensionRuntime())
+	return jobRuntimeFor(e.callCtx(e.WS), chatUnit, "1.0.0", "job/ingest", e.composed.binding())
 }
 
 func (e *chatEnv) runJob(t *testing.T) map[string][]extension.Result {
@@ -234,6 +229,7 @@ func (e *chatEnv) links(t *testing.T, activity ids.UUID, column string) int {
 
 // A message filed on a visible contact is linked to it, held, and binds no identity.
 func TestAHandFiledMessageIsFiledOnTheChosenContactAndBornHeldUnderTheSourcesPosture(t *testing.T) {
+	t.Parallel()
 	e := setupMemberChat(t, extension.PostureClassified)
 	contact := e.SeedContact(t, "Chosen Contact", &e.member)
 	msg := e.message("m-1")
@@ -261,6 +257,7 @@ func TestAHandFiledMessageIsFiledOnTheChosenContactAndBornHeldUnderTheSourcesPos
 
 // A subject the member cannot see answers as one that is not there. It stores
 func TestAChosenSubjectTheMemberCannotSeeIsRefusedAsNotFound(t *testing.T) {
+	t.Parallel()
 	e := setupMemberChat(t, extension.PostureClassified)
 	revokeRoles(t, e.extRuntimeEnv, e.member)
 	grantPolicy(t, e.member, "ingress-own", `{"objects":{"activity":{"read":true,"create":true,"update":true},
@@ -304,6 +301,7 @@ func TestAChosenSubjectTheMemberCannotSeeIsRefusedAsNotFound(t *testing.T) {
 }
 
 func TestAChosenLeadReceivesTheMessage(t *testing.T) {
+	t.Parallel()
 	e := setupMemberChat(t, extension.PostureHeld)
 	grantPolicy(t, e.member, "ingress-lead", `{"objects":{"activity":{"read":true,"create":true,"update":true},
 		"contact":{"read":true,"create":true,"update":true},"company":{"read":true,"create":true,"update":true},
@@ -326,6 +324,7 @@ func TestAChosenLeadReceivesTheMessage(t *testing.T) {
 
 // A day-only time keeps its precision, and an unknown one is dated on the day
 func TestAMessageKeepsHowPreciselItsTimeIsKnown(t *testing.T) {
+	t.Parallel()
 	e := setupMemberChat(t, extension.PostureClassified)
 	day := e.message("day")
 	day.Precision = extension.PrecisionDay
@@ -361,6 +360,7 @@ func TestAMessageKeepsHowPreciselItsTimeIsKnown(t *testing.T) {
 
 // Two members of one source keep their own positions. A stale writer is
 func TestEachMemberOfASourceKeepsTheirOwnPositionAndAStaleWriterIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupMemberChat(t, extension.PostureClassified)
 	one, two := extension.UserID(e.member.String()), extension.UserID(e.second.String())
 	rt := e.job()
@@ -426,6 +426,7 @@ func TestEachMemberOfASourceKeepsTheirOwnPositionAndAStaleWriterIsRefused(t *tes
 
 // A request that carries a caller never ingests, and a unit with no pin lands
 func TestAMemberOwnedSourceStillRefusesAnAttendedIngest(t *testing.T) {
+	t.Parallel()
 	e := setupMemberChat(t, extension.PostureClassified)
 	rt, ctx := e.runtime(chatUnit)
 
@@ -444,6 +445,7 @@ func TestAMemberOwnedSourceStillRefusesAnAttendedIngest(t *testing.T) {
 
 // A replay files the stored message on the subject it names, once.
 func TestAReplayNamingAnotherSubjectIsFiledOnItToo(t *testing.T) {
+	t.Parallel()
 	e := setupMemberChat(t, extension.PostureClassified)
 	first, second := e.SeedContact(t, "First", &e.member), e.SeedContact(t, "Second", &e.member)
 	msg := e.message("replay")

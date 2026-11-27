@@ -18,6 +18,7 @@ import (
 )
 
 func TestARecordCreateWithoutASourceIsRefusedOverHTTP(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	contact := createdID(t, e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Origin Contact", "source": "manual"})
@@ -91,6 +92,7 @@ func TestARecordCreateWithoutASourceIsRefusedOverHTTP(t *testing.T) {
 // The lead list filters by one of the channels. A word off the list is 422 on
 // `source`, not an empty page that reads as "no such leads".
 func TestTheLeadListRefusesASourceOffTheChannelList(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	if status := e.Call(t, "GET", "/v1/leads?source=webinar", nil, nil, nil); status != http.StatusUnprocessableEntity {

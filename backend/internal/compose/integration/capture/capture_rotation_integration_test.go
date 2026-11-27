@@ -110,6 +110,7 @@ func readCredentialRef(t *testing.T, e *integration.SearchEnv, connID ids.UUID) 
 }
 
 func TestARotatedCredentialIsSealedAndTheOldOneRetired(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	seedCaptureRole(t, e)
 	vault := newTestKeyvault(t, e)
@@ -155,6 +156,7 @@ func TestARotatedCredentialIsSealedAndTheOldOneRetired(t *testing.T) {
 // human's disconnect destroyed the credential; re-pointing the row at a fresh
 // blob would resurrect a grant they withdrew.
 func TestARotationThatLosesToADisconnectLandsNowhere(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	seedCaptureRole(t, e)
 	vault := newTestKeyvault(t, e)
@@ -198,6 +200,7 @@ func TestARotationThatLosesToADisconnectLandsNowhere(t *testing.T) {
 // read is still the credential on the row" tells a rotation of the live grant
 // apart from one derived out of a grant that has since been replaced.
 func TestARotationThatLosesToAReconnectLandsNowhere(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	seedCaptureRole(t, e)
 	vault := newTestKeyvault(t, e)

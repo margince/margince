@@ -64,16 +64,21 @@ func Register(unit extension.Name, kinds []extension.RecordKindDeclaration) {
 	mu.Lock()
 	defer mu.Unlock()
 	for _, k := range kinds {
-		name := extension.RecordKindName(unit, k.Kind)
-		policy := k.DeletePolicy
-		if policy == "" {
-			policy = extension.DeleteArchiveOnly
-		}
-		byName[name] = Declared{
-			Name: name, Unit: unit, Kind: k.Kind, DisplayName: k.DisplayName, Table: k.Table,
-			Object: extension.RecordKindObject(unit, k.Kind), Fields: k.Fields,
-			NaturalKey: k.NaturalKey, DeletePolicy: policy, Timeline: k.Timeline, View: k.View,
-		}
+		d := Declare(unit, k)
+		byName[d.Name] = d
+	}
+}
+
+// Declare is what the registry records for one of a unit's kinds.
+func Declare(unit extension.Name, k extension.RecordKindDeclaration) Declared {
+	policy := k.DeletePolicy
+	if policy == "" {
+		policy = extension.DeleteArchiveOnly
+	}
+	return Declared{
+		Name: extension.RecordKindName(unit, k.Kind), Unit: unit, Kind: k.Kind, DisplayName: k.DisplayName, Table: k.Table,
+		Object: extension.RecordKindObject(unit, k.Kind), Fields: k.Fields,
+		NaturalKey: k.NaturalKey, DeletePolicy: policy, Timeline: k.Timeline, View: k.View,
 	}
 }
 

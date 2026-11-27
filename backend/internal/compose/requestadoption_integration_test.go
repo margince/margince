@@ -18,6 +18,7 @@ import (
 )
 
 func TestAcceptedRequestKeepsOneHumanOwnerWhenMailboxIdentityChanges(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	at := time.Date(2026, 10, 21, 8, 0, 0, 0, time.UTC)
 	first := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
@@ -70,6 +71,7 @@ func TestAcceptedRequestKeepsOneHumanOwnerWhenMailboxIdentityChanges(t *testing.
 }
 
 func TestAcceptingAnOldOwnRequestRestoresPersonalAndContactWork(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	at := time.Date(2026, 10, 21, 8, 0, 0, 0, time.UTC)
 	old := at.AddDate(-2, 0, 0)

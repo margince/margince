@@ -25,6 +25,7 @@ import (
 // caller was told WHICH member was wrong and never what to put in it, so the
 // only way forward was to guess or to give up.
 func TestARefusedPlanTellsTheAgentWhatToPutInTheMemberItRefused(t *testing.T) {
+	t.Parallel()
 	env := setupConnector(t)
 	bearer := readPassport(t, env.AppEnv, "query plan caller")
 
@@ -52,6 +53,7 @@ func TestARefusedPlanTellsTheAgentWhatToPutInTheMemberItRefused(t *testing.T) {
 // plural: a plan wrong in two predicates comes back with a remedy for each,
 // which is what makes one round trip enough to fix it.
 func TestARefusedPlanCarriesARemedyForEveryBadPredicate(t *testing.T) {
+	t.Parallel()
 	env := setupConnector(t)
 	bearer := readPassport(t, env.AppEnv, "multi-fault query caller")
 
