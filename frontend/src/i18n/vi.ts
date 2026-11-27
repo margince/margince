@@ -18729,6 +18729,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "webForms.field.senderSecretHint":
     "Khóa ký API Webflow trả về một lần khi tạo webhook. Webhook do một ứng dụng OAuth tạo thì được ký bằng client secret của ứng dụng đó. Để trống cho đến khi có: trước đó biểu mẫu không nhận bài gửi nào.",
   "webForms.field.senderSecretKeep": "Để trống để giữ khóa đã lưu.",
+  "webForms.field.notifyOwnerHint": "Thông báo khi nhận biểu mẫu hoặc khi kế hoạch xử lý giao người phụ trách. Phân công sau đó trong không gian làm việc không gửi thông báo bổ sung.",
+  "webForms.field.notifyOwner": "Thông báo cho người phụ trách mỗi lượt gửi mới",
+  "notifications.class.website_lead.label": "Khách hàng mới từ website",
+  "notifications.class.website_lead.help": "Biểu mẫu website được gửi cho khách hàng tiềm năng hoặc người liên hệ do bạn phụ trách.",
   "webForms.field.consentRequired": "Yêu cầu đồng ý trước khi nhận bài gửi",
   "webForms.field.consentWording": "Nội dung đồng ý",
   "webForms.field.consentWordingHint":

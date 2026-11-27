@@ -431,6 +431,7 @@ type Copy struct {
 	NotificationSubject string
 	NotificationIntro   string
 	NotificationOpen    string
+	WebsiteLeadOpen     string
 
 	// The morning notification digest: the same queue as the line above, for a
 	// colleague who asked to hear about a class once a day rather than each time

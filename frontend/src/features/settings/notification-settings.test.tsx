@@ -36,6 +36,7 @@ function jsonResponse(body: unknown, status = 200) {
 function everyClass(): Preference[] {
   return [
     { class: "approval_pending", delivery: "email", chosen: false },
+    { class: "website_lead", delivery: "in_app", chosen: false },
     { class: "automation", delivery: "in_app", chosen: false },
     { class: "lead_sla", delivery: "in_app", chosen: false },
     { class: "project_health", delivery: "in_app", chosen: false },
@@ -106,7 +107,7 @@ describe("NotificationSettingsCard", () => {
     vi.stubGlobal("fetch", backendFor(everyClass()).fetchMock);
     render(<NotificationSettingsCard />);
 
-    expect(await screen.findAllByRole("combobox")).toHaveLength(7);
+    expect(await screen.findAllByRole("combobox")).toHaveLength(8);
   });
 
   // The server's order is its own; the reader meets what waits on them first.
@@ -120,6 +121,7 @@ describe("NotificationSettingsCard", () => {
     );
     expect(rows).toEqual([
       "notification-delivery-approval_pending",
+      "notification-delivery-website_lead",
       "notification-delivery-project_health",
       "notification-delivery-coach",
       "notification-delivery-lead_sla",
@@ -177,7 +179,7 @@ describe("NotificationSettingsCard", () => {
   //
   // `Daily digest` is still offered, which is the half that keeps this a
   // statement about the ROUTE: every class can still reach a mailbox.
-  it("offers immediate email on approvals alone, and the batch everywhere", async () => {
+  it("offers immediate email on approvals and website leads, and the batch everywhere", async () => {
     vi.stubGlobal("fetch", backendFor(everyClass()).fetchMock);
     const user = userEvent.setup();
     render(<NotificationSettingsCard />);
@@ -202,6 +204,25 @@ describe("NotificationSettingsCard", () => {
         name: "Email",
       }),
     ).not.toBeNull();
+  });
+
+  it("lets a website lead owner choose immediate email", async () => {
+    const backend = backendFor(everyClass());
+    vi.stubGlobal("fetch", backend.fetchMock);
+    const user = userEvent.setup();
+    render(<NotificationSettingsCard />);
+    await pickOption(
+      user,
+      await screen.findByRole("combobox", { name: /New website leads/i }),
+      "Email",
+    );
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() =>
+      expect(backend.puts()).toContainEqual({
+        class: "website_lead",
+        delivery: "email",
+      }),
+    );
   });
 
   // Every other class MAY be switched off, so the coach rule above is a

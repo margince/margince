@@ -19372,6 +19372,7 @@ const (
 	NotificationClassLeadSla         NotificationClass = "lead_sla"
 	NotificationClassProjectHealth   NotificationClass = "project_health"
 	NotificationClassSystem          NotificationClass = "system"
+	NotificationClassWebsiteLead     NotificationClass = "website_lead"
 )
 
 // Valid indicates whether the value is a known member of the NotificationClass enum.
@@ -19390,6 +19391,8 @@ func (e NotificationClass) Valid() bool {
 	case NotificationClassProjectHealth:
 		return true
 	case NotificationClassSystem:
+		return true
+	case NotificationClassWebsiteLead:
 		return true
 	default:
 		return false
@@ -49297,16 +49300,19 @@ type CreateVoiceProfileRequest struct {
 // CreateWebFormRequest defines model for CreateWebFormRequest.
 type CreateWebFormRequest struct {
 	// AllowedOrigins Required, and only allowed, for a `browser` form.
-	AllowedOrigins       *[]string           `json:"allowed_origins,omitempty"`
-	ConsentPolicyVersion *string             `json:"consent_policy_version,omitempty"`
-	ConsentRequired      *bool               `json:"consent_required,omitempty"`
-	ConsentWording       *string             `json:"consent_wording,omitempty"`
-	FieldMap             *map[string]string  `json:"field_map,omitempty"`
-	LeadOrigin           *string             `json:"lead_origin,omitempty"`
-	Name                 string              `json:"name"`
-	OwnerId              *openapi_types.UUID `json:"owner_id,omitempty"`
-	PrivacyNotice        *string             `json:"privacy_notice,omitempty"`
-	PrivacyNoticeUrl     *string             `json:"privacy_notice_url,omitempty"`
+	AllowedOrigins       *[]string          `json:"allowed_origins,omitempty"`
+	ConsentPolicyVersion *string            `json:"consent_policy_version,omitempty"`
+	ConsentRequired      *bool              `json:"consent_required,omitempty"`
+	ConsentWording       *string            `json:"consent_wording,omitempty"`
+	FieldMap             *map[string]string `json:"field_map,omitempty"`
+	LeadOrigin           *string            `json:"lead_origin,omitempty"`
+	Name                 string             `json:"name"`
+
+	// NotifyOwner Tell the final active owner about accepted posts through their notification preference. Defaults to false.
+	NotifyOwner      *bool               `json:"notify_owner,omitempty"`
+	OwnerId          *openapi_types.UUID `json:"owner_id,omitempty"`
+	PrivacyNotice    *string             `json:"privacy_notice,omitempty"`
+	PrivacyNoticeUrl *string             `json:"privacy_notice_url,omitempty"`
 
 	// ProductId The product every lead this form creates is interested in. Omit it or send null to capture leads with no product.
 	ProductId   *openapi_types.UUID `json:"product_id,omitempty"`
@@ -61244,10 +61250,8 @@ type NotificationClass string
 // NotificationDelivery Where a class of notification reaches its reader.
 //
 // `in_app` is the notification centre, the Worklist's lane and the unread badge. `email`
-// sends a message as each one lands, and is accepted for `approval_pending` ALONE — it is
-// the only class with a sending leg, and taking the word for any other would record a
-// choice the product does not keep; the others answer `422 value_not_allowed` and reach a
-// mailbox through `digest` instead. `digest` holds a class for one rolled-up send the
+// sends a message as each one lands for `approval_pending` and `website_lead`.
+// Other classes answer `422 value_not_allowed` and reach a mailbox through `digest` instead. `digest` holds a class for one rolled-up send the
 // following morning, and is accepted for every class.
 //
 // `off` records the notice and stops there: no lane, no badge, no message. It does NOT
@@ -61353,10 +61357,8 @@ type NotificationPreference struct {
 	// Delivery Where a class of notification reaches its reader.
 	//
 	// `in_app` is the notification centre, the Worklist's lane and the unread badge. `email`
-	// sends a message as each one lands, and is accepted for `approval_pending` ALONE — it is
-	// the only class with a sending leg, and taking the word for any other would record a
-	// choice the product does not keep; the others answer `422 value_not_allowed` and reach a
-	// mailbox through `digest` instead. `digest` holds a class for one rolled-up send the
+	// sends a message as each one lands for `approval_pending` and `website_lead`.
+	// Other classes answer `422 value_not_allowed` and reach a mailbox through `digest` instead. `digest` holds a class for one rolled-up send the
 	// following morning, and is accepted for every class.
 	//
 	// `off` records the notice and stops there: no lane, no badge, no message. It does NOT
@@ -73575,9 +73577,12 @@ type UpdateWebFormRequest struct {
 	HandlingAutomationId *openapi_types.UUID `json:"handling_automation_id,omitempty"`
 	LeadOrigin           *string             `json:"lead_origin,omitempty"`
 	Name                 *string             `json:"name,omitempty"`
-	OwnerId              *openapi_types.UUID `json:"owner_id,omitempty"`
-	PrivacyNotice        *string             `json:"privacy_notice,omitempty"`
-	PrivacyNoticeUrl     *string             `json:"privacy_notice_url,omitempty"`
+
+	// NotifyOwner Tell the final active owner about accepted posts through their notification preference. Defaults to false.
+	NotifyOwner      *bool               `json:"notify_owner,omitempty"`
+	OwnerId          *openapi_types.UUID `json:"owner_id,omitempty"`
+	PrivacyNotice    *string             `json:"privacy_notice,omitempty"`
+	PrivacyNoticeUrl *string             `json:"privacy_notice_url,omitempty"`
 
 	// ProductId The product every lead this form creates is interested in. Send null to stop naming one.
 	ProductId      *openapi_types.UUID        `json:"product_id,omitempty"`
@@ -74260,6 +74265,9 @@ type WebForm struct {
 	LeadOrigin *string `json:"lead_origin,omitempty"`
 	Name       string  `json:"name"`
 
+	// NotifyOwner Tell the final active owner about accepted posts through their notification preference. Defaults to false.
+	NotifyOwner *bool `json:"notify_owner,omitempty"`
+
 	// OwnerId Who owns the leads this form creates; null leaves them in the unassigned queue.
 	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
 
@@ -74355,6 +74363,9 @@ type WebFormCreated struct {
 	// LeadOrigin The `/lead-origins` key every lead from this form carries.
 	LeadOrigin *string `json:"lead_origin,omitempty"`
 	Name       string  `json:"name"`
+
+	// NotifyOwner Tell the final active owner about accepted posts through their notification preference. Defaults to false.
+	NotifyOwner *bool `json:"notify_owner,omitempty"`
 
 	// OwnerId Who owns the leads this form creates; null leaves them in the unassigned queue.
 	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
@@ -83869,10 +83880,8 @@ type SaveNotificationPreferenceJSONBody struct {
 	// Delivery Where a class of notification reaches its reader.
 	//
 	// `in_app` is the notification centre, the Worklist's lane and the unread badge. `email`
-	// sends a message as each one lands, and is accepted for `approval_pending` ALONE — it is
-	// the only class with a sending leg, and taking the word for any other would record a
-	// choice the product does not keep; the others answer `422 value_not_allowed` and reach a
-	// mailbox through `digest` instead. `digest` holds a class for one rolled-up send the
+	// sends a message as each one lands for `approval_pending` and `website_lead`.
+	// Other classes answer `422 value_not_allowed` and reach a mailbox through `digest` instead. `digest` holds a class for one rolled-up send the
 	// following morning, and is accepted for every class.
 	//
 	// `off` records the notice and stops there: no lane, no badge, no message. It does NOT

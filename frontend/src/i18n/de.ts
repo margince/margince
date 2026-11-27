@@ -19254,6 +19254,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Der Signaturschlüssel, den die Webflow-API einmal zurückgibt, wenn sie den Webhook anlegt. Einen Webhook, den eine OAuth-App anlegt, signiert stattdessen das Client Secret dieser App. Lass das Feld leer, bis du ihn hast: Bis dahin nimmt das Formular nichts an.",
   "webForms.field.senderSecretKeep":
     "Leer lassen, um den gespeicherten Signaturschlüssel zu behalten.",
+  "webForms.field.notifyOwnerHint": "Informiert den Verantwortlichen beim Eingang oder nach der Zuweisung durch den Bearbeitungsplan. Eine spätere Verteilung im Workspace löst keine nachträgliche Nachricht aus.",
+  "webForms.field.notifyOwner": "Den Verantwortlichen über jede neue Anfrage informieren",
+  "notifications.class.website_lead.label": "Neue Website-Anfragen",
+  "notifications.class.website_lead.help": "Eine neue Formularanfrage zu einem Lead oder Kontakt in deiner Verantwortung.",
   "webForms.field.consentRequired":
     "Einwilligung verlangen, bevor eine Sendung angenommen wird",
   "webForms.field.consentWording": "Einwilligungstext",
