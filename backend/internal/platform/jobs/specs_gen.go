@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "4a9336dc7431ca4c053c2089e3570d37980f3967d45a1ad9ee20d0fbc042b360"
+const JobContractHash = "07e742550f2bbb45e9626507ef27737c1f3dbf60d0ff130dbe5a2e8c8d62fbd6"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -997,6 +997,16 @@ var specs = map[string]Spec{
 		OptsOwner:    OptsCaller,
 		Registration: Registration{When: []string{"StageEvidenceBrain"}, AbsentRegistersAnyway: true},
 		Args:         []ArgField{{Name: "After"}, {Name: "Domain", Scalar: true, Reason: "The removed own domain is an installation setting the admin list already showed; it names no contact and carries no mail content."}, {Name: "Removal"}, {Name: "Workspace"}},
+	},
+	"standing_line_check": {
+		Kind:         "standing_line_check",
+		GoType:       "StandingLineCheckArgs",
+		Role:         Worker,
+		Queue:        "ai_capture",
+		Timeout:      TimeoutPolicy{Fixed: 4 * time.Minute},
+		OptsOwner:    OptsCaller,
+		Registration: Registration{When: []string{"StandingLineBrain"}},
+		Args:         []ArgField{{Name: "ActivityID"}, {Name: "Workspace"}},
 	},
 	"stored_object_reap": {
 		Kind:         "stored_object_reap",

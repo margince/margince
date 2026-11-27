@@ -146,7 +146,7 @@ func TestEveryHumanOnlyOperationNarrowsItsTransport(t *testing.T) {
 	t.Parallel()
 	defer humanOnlyWithoutASession.AssertAllMatched(t)
 
-	doc := loadContract(t)
+	doc := loadContractDocument(t)
 	paths, ok := doc["paths"].(map[string]any)
 	if !ok {
 		t.Fatal("api/crm.yaml carries no paths, so this census would clear every operation by reading none")

@@ -47,7 +47,7 @@ func TestNoOperationJoinsThePendingHumanOnlyBacklog(t *testing.T) {
 // contractOperations reads the operation objects of api/crm.yaml.
 func contractOperations(t *testing.T) []map[string]any {
 	t.Helper()
-	paths, ok := loadContract(t)["paths"].(map[string]any)
+	paths, ok := loadContractDocument(t)["paths"].(map[string]any)
 	if !ok {
 		t.Fatal("api/crm.yaml carries no paths")
 	}

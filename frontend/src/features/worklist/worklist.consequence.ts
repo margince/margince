@@ -32,10 +32,8 @@ const CONSEQUENCE: Readonly<
     bare: "worklist.consequence.deal_slips_past_close",
   },
   meeting_unprepared: { bare: "worklist.consequence.meeting_unprepared" },
-  task_slips: {
-    named: "worklist.consequence.task_slips.named",
-    bare: "worklist.consequence.task_slips",
-  },
+  // Only the task's own explanation can say what an open task costs.
+  task_slips: null,
   work_blocked: { bare: "worklist.consequence.work_blocked" },
   customer_never_received: {
     named: "worklist.consequence.customer_never_received.named",

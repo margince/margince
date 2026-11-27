@@ -52,14 +52,10 @@ type uniqueIndex struct {
 // means a new partial index enrols its writers without this file changing.
 func uniqueIndexesByTable(t *testing.T) map[string][]uniqueIndex {
 	t.Helper()
-	catalog := filepath.Join(gatekit.ModuleRoot(t), "migrations", "testdata", "head_catalog.txt")
-	body, err := gatekit.ReadFile(catalog)
-	if err != nil {
-		t.Fatalf("reading the head catalog: %v", err)
-	}
+	body := headCatalog(t)
 	byTable := map[string][]uniqueIndex{}
 	var declared, read int
-	for line := range strings.SplitSeq(string(body), "\n") {
+	for line := range strings.SplitSeq(body, "\n") {
 		line = strings.TrimSpace(line)
 		if !strings.Contains(strings.ToUpper(line), "CREATE UNIQUE INDEX") {
 			continue

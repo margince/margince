@@ -4,9 +4,13 @@
 package httperr_test
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"mime/multipart"
 	"net/http"
+	"net/http/httptest"
+	"net/textproto"
 	"strings"
 	"testing"
 
@@ -106,5 +110,39 @@ func TestAMalformedBodyIsRefusedByItsFraming(t *testing.T) {
 	// sends the reader off to shrink a file that was never too big.
 	if strings.Contains(refusal.Detail, "MB") {
 		t.Errorf("detail %q blames a size limit for a framing failure", refusal.Detail)
+	}
+	if want := "The request must be sent as multipart/form-data."; refusal.Detail != want {
+		t.Errorf("detail %q, want the sentence %q", refusal.Detail, want)
+	}
+}
+
+// A browser sends a quote in a file name as %22, and the name is stored as the
+// sender typed it.
+func TestAnUploadedFileKeepsTheNameItsSenderTyped(t *testing.T) {
+	var body bytes.Buffer
+	form := multipart.NewWriter(&body)
+	part, err := form.CreatePart(textproto.MIMEHeader{
+		"Content-Disposition": {`form-data; name="file"; filename="Offer <b> & %22x%22.pdf"`},
+	})
+	if err != nil {
+		t.Fatalf("writing the file part: %v", err)
+	}
+	if _, err := part.Write([]byte("%PDF-1.4")); err != nil {
+		t.Fatalf("writing the file bytes: %v", err)
+	}
+	if err := form.Close(); err != nil {
+		t.Fatalf("closing the form: %v", err)
+	}
+	req := httptest.NewRequest(http.MethodPost, "/v1/attachments", &body)
+	req.Header.Set("Content-Type", form.FormDataContentType())
+	if err := req.ParseMultipartForm(1 << 20); err != nil {
+		t.Fatalf("parsing the form: %v", err)
+	}
+	_, header, err := req.FormFile("file")
+	if err != nil {
+		t.Fatalf("reading the file part: %v", err)
+	}
+	if got, want := httperr.MultipartFilename(header), `Offer <b> & "x".pdf`; got != want {
+		t.Errorf("file name %q, want %q", got, want)
 	}
 }

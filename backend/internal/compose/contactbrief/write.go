@@ -307,3 +307,9 @@ func contactThemselves(in Input) string {
 	in.Recent, in.Claims, in.Moment, in.OpenDeal = nil, nil, nil, nil
 	return claims.Source(in)
 }
+
+// CitableRecords is what a brief written from in may cite. The task explanation
+// cites through it, so the two ground one relationship by one rule.
+func CitableRecords(in Input) map[Evidence]string {
+	return knownRecords(in.ID, in)
+}
