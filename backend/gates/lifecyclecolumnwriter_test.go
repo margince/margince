@@ -38,19 +38,19 @@ var lifecycleColumn = regexp.MustCompile(`^public\.(\w+)\.(version (?:bigint|int
 const lifecycleTableFloor = 100
 
 // rowWritingCalls are the storekit entry points whose table argument names a
-// row they update or lock for an update, with that argument's position. None of
-// them assigns version: the table's trigger does.
+// row they update, with that argument's position. LockRow and LockPair stand in
+// for ApplyLocked, which takes only the lock. None of them assigns version.
 var rowWritingCalls = map[string]int{
 	"ApplyWithVersion": 2, "ApplyGuarded": 2, "ApplyGuardedIn": 2, "LockRow": 2, "LockPair": 2,
-	"ClaimOwnership": 2, "EnsureIfMatch": 2, "EnsureReleasedVersion": 2,
+	"ClaimOwnership": 2,
 }
 
 var (
-	updateTarget = regexp.MustCompile(`(?is)\bUPDATE\s+(?:ONLY\s+)?(?:public\.)?(\w+)`)
-	upsertTarget = regexp.MustCompile(`(?is)\bINSERT\s+INTO\s+(?:public\.)?(\w+)\b.*?\bON\s+CONFLICT\b.*?\bDO\s+UPDATE\b`)
 	// sqlFunction is one function a migration installs, with its body.
 	sqlFunction = regexp.MustCompile(`(?is)\bCREATE\s+(?:OR\s+REPLACE\s+)?FUNCTION\b.*?\bAS\s+(\$\w*\$)(.*?)\$\w*\$`)
-	versionBump = regexp.MustCompile(`(?i)\bNEW\.version\s*:?=`)
+	// updateTrigger is a row trigger that runs before an update, with or without
+	// a `WHEN` clause.
+	updateTrigger = regexp.MustCompile(`^public\.(\w+)\.\w+ CREATE TRIGGER \w+ BEFORE UPDATE ON public\.\w+ FOR EACH ROW (?:WHEN \(.*\) )?EXECUTE FUNCTION (\w+)\(\)$`)
 	// versionIncrement is a SET item a writer keeps apart and joins into its
 	// statement at run time, so no whole statement holds it.
 	versionIncrement = regexp.MustCompile(`(?i)^\s*version\s*=\s*version\s*\+\s*1\s*$`)
@@ -86,47 +86,29 @@ func readLifecycleCatalog(t *testing.T) lifecycleCatalog {
 		t.Fatalf("reading the head catalog: %v", err)
 	}
 	catalog := lifecycleCatalog{columns: map[string][]string{}, versionBumped: map[string]bool{}}
-	bumpingFunctions := map[string]bool{}
-	triggers := map[string][]string{}
-	inFunction := ""
 	for line := range strings.SplitSeq(string(raw), "\n") {
-		line = strings.TrimSpace(line)
-		switch {
-		case catalogFunction.MatchString(line):
-			inFunction, _, _ = strings.Cut(line[strings.Index(line, ".")+1:], "(")
-			continue
-		case line == "":
-			inFunction = ""
-		case inFunction != "" && versionBump.MatchString(line):
-			bumpingFunctions[inFunction] = true
-		}
-		if m := lifecycleColumn.FindStringSubmatch(line); m != nil {
+		if m := lifecycleColumn.FindStringSubmatch(strings.TrimSpace(line)); m != nil {
 			column, _, _ := strings.Cut(m[2], " ")
 			catalog.columns[m[1]] = append(catalog.columns[m[1]], column)
 		}
-		if m := catalogTrigger.FindStringSubmatch(line); m != nil {
-			if fn := triggerFunction.FindStringSubmatch(m[3]); fn != nil {
-				triggers[fn[1]] = append(triggers[fn[1]], m[1])
-			}
-		}
-	}
-	for function := range bumpingFunctions {
-		for _, table := range triggers[function] {
-			catalog.versionBumped[table] = true
+		if m := updateTrigger.FindStringSubmatch(strings.TrimSpace(line)); m != nil {
+			catalog.versionBumped[m[1]] = catalog.versionBumped[m[1]] || slices.Contains(triggerWrites[m[2]], "version")
 		}
 	}
 	return catalog
 }
 
-// lifecycleEvidence is what production statements do to each table: whether
-// any updates its rows, and which columns they assign.
+// lifecycleEvidence is what production statements do to each table. It records
+// whether any updates its rows and which columns they assign. It also records
+// whether one assembles its SET list at run time.
 type lifecycleEvidence struct {
-	updated  map[string]bool
-	assigned map[string]map[string]bool
+	updated   map[string]bool
+	assigned  map[string]map[string]bool
+	assembled map[string]bool
 }
 
 func newLifecycleEvidence() lifecycleEvidence {
-	return lifecycleEvidence{updated: map[string]bool{}, assigned: map[string]map[string]bool{}}
+	return lifecycleEvidence{updated: map[string]bool{}, assigned: map[string]map[string]bool{}, assembled: map[string]bool{}}
 }
 
 func (e lifecycleEvidence) assign(table, column string) {
@@ -138,12 +120,11 @@ func (e lifecycleEvidence) assign(table, column string) {
 
 // note reads one statement or function body.
 func (e lifecycleEvidence) note(sql string) {
-	for _, target := range []*regexp.Regexp{updateTarget, upsertTarget} {
-		for _, m := range target.FindAllStringSubmatch(sql, -1) {
-			e.updated[strings.ToLower(m[1])] = true
-		}
-	}
 	for _, segment := range writeSegments(sql) {
+		e.updated[segment.table] = true
+		if segment.unreadable || segment.assignments == "" {
+			e.assembled[segment.table] = true
+		}
 		for _, column := range assignedColumns(segment.assignments) {
 			e.assign(segment.table, column)
 		}
@@ -177,7 +158,7 @@ func readLifecycleEvidence(t *testing.T) lifecycleEvidence {
 				return nil
 			case strings.HasSuffix(path, ".sql") && !strings.HasSuffix(path, ".down.sql"):
 				return noteFunctionBodies(path, evidence.note)
-			case !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go"):
+			case !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") || isIntegrationTagged(path):
 				return nil
 			}
 			src, err := gatekit.ReadFile(path)
@@ -230,11 +211,11 @@ func (e lifecycleEvidence) noteGoFile(t *testing.T, path, src string, packageCon
 }
 
 // merge adds a package's evidence. A version increment kept apart from its
-// statement counts on each table the package updates.
+// statement counts only on a table whose SET list the package assembles.
 func (e lifecycleEvidence) merge(pkg lifecycleEvidence, increments bool) {
 	for table := range pkg.updated {
 		e.updated[table] = true
-		if increments {
+		if increments && pkg.assembled[table] {
 			e.assign(table, "version")
 		}
 	}
@@ -354,5 +335,49 @@ func TestALifecycleColumnSitsOnARowThatIsUpdated(t *testing.T) {
 			t.Errorf("%s.%s has no production statement that keeps it. Drop the column in a migration, "+
 				"or waive it in appendOnlyLifecycle with why it stays.", table, column)
 		}
+	}
+}
+
+func TestTheLifecycleEvidenceRuleFiresOnPlantedStatements(t *testing.T) {
+	t.Parallel()
+	catalog := lifecycleCatalog{versionBumped: map[string]bool{"bumped": true}}
+	cases := []struct {
+		name, sql, table, column string
+		kept                     bool
+	}{
+		{"an insert alone keeps nothing", `INSERT INTO ledger (id) VALUES ($1)`, "ledger", "updated_at", false},
+		{"an update keeps updated_at", `UPDATE ledger SET note = $2 WHERE id = $1`, "ledger", "updated_at", true},
+		{"an update without a bump trigger keeps no version", `UPDATE ledger SET note = $2 WHERE id = $1`, "ledger", "version", false},
+		{"an update the trigger answers keeps version", `UPDATE bumped SET note = $2 WHERE id = $1`, "bumped", "version", true},
+		{"an assigned increment keeps version", `UPDATE ledger SET version = version + 1 WHERE id = $1`, "ledger", "version", true},
+		{"a version named in WHERE is no assignment", `UPDATE ledger SET note = $2 WHERE version = $1`, "ledger", "version", false},
+		{"an upsert after an insert keeps only its own table",
+			`INSERT INTO ledger (id) VALUES ($1); INSERT INTO other (id) VALUES ($1) ON CONFLICT (id) DO UPDATE SET note = $2`,
+			"ledger", "updated_at", false},
+		{"an upsert keeps its table", `INSERT INTO other (id) VALUES ($1) ON CONFLICT (id) DO UPDATE SET note = $2`,
+			"other", "updated_at", true},
+	}
+	for _, c := range cases {
+		evidence := newLifecycleEvidence()
+		evidence.note(c.sql)
+		if got := evidence.kept(catalog, c.table, c.column); got != c.kept {
+			t.Errorf("%s: kept(%s.%s) = %v, want %v", c.name, c.table, c.column, got, c.kept)
+		}
+	}
+}
+
+func TestALoneIncrementCountsOnlyOnAnAssembledUpdate(t *testing.T) {
+	t.Parallel()
+	pkg := newLifecycleEvidence()
+	pkg.note(`UPDATE assembled SET `)
+	pkg.note(`UPDATE written SET note = $2 WHERE id = $1`)
+	merged := newLifecycleEvidence()
+	merged.merge(pkg, true)
+	catalog := lifecycleCatalog{versionBumped: map[string]bool{}}
+	if !merged.kept(catalog, "assembled", "version") {
+		t.Error("an increment joined into an assembled SET list does not keep version")
+	}
+	if merged.kept(catalog, "written", "version") {
+		t.Error("an increment in the package keeps version on a table whose statement never names it")
 	}
 }
