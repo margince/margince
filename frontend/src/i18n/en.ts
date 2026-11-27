@@ -9604,6 +9604,8 @@ export const en = {
     "Figures as they stood when the snapshot was taken. They do not change, and the link names the time it was taken.",
   "analytics.share.snapshotUnavailable":
     "No snapshot exists for this period yet.",
+  "analytics.share.quarterOnly":
+    "Sharing covers the quarter. Choose Quarter to share this view.",
   "analytics.share.expiryNote": "The link stops working after 30 days.",
   "analytics.share.create": "Create link",
   "analytics.share.linkTitle": "Your link",
@@ -9803,6 +9805,7 @@ export const en = {
   "forecast.period.quarter": "Quarter",
   "forecast.period.month": "Month",
   "forecast.period.week": "Week",
+  "forecast.quarterCards": "The two pipeline cards below cover the quarter.",
   "forecast.receipt": "Data and evidence checked",
   "forecast.eligible": "Eligible deals",
   "forecast.priced": "Priced",

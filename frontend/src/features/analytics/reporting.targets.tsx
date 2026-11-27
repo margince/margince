@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { AppLink } from "../../design-system/applink";
 import {
   Button,
   EmptyState,
@@ -19,7 +20,8 @@ import { useCanWrite } from "../../lib/capability";
 import { useCompanyZone } from "../../lib/companyzone";
 import { usePipelines } from "../../lib/pipelines.queries";
 import { unwrap } from "../../lib/problem";
-import { navigate } from "../../lib/router";
+import { routeHash } from "../../lib/router";
+import { hashWithParams } from "../../lib/urlstate";
 import {
   scopeName,
   useAnalyticsContext,
@@ -222,14 +224,12 @@ export function ReportingTargets() {
                       render: (row) => {
                         if (row.kind === "goals")
                           return (
-                            <Button
-                              variant="link"
-                              onClick={() =>
-                                navigate({ screen: "goals" }, goalsDials(row))
-                              }
+                            <AppLink
+                              className="btn btn-link"
+                              href={goalsHref(row)}
                             >
                               {t("reporting.openGoals")}
-                            </Button>
+                            </AppLink>
                           );
                         return canUpdate ? (
                           <Button
@@ -286,11 +286,14 @@ export function ReportingTargets() {
 }
 
 // Sales goals on the year the row is about, with that team member's plan open.
-function goalsDials(row: Extract<Row, { kind: "goals" }>) {
-  return new Map([
-    ["year", identifierNumber(row.roster.year)],
-    ["seller", row.seller.owner_id],
-  ]);
+function goalsHref(row: Extract<Row, { kind: "goals" }>): string {
+  return hashWithParams(
+    routeHash({ screen: "goals" }),
+    new Map([
+      ["year", identifierNumber(row.roster.year)],
+      ["seller", row.seller.owner_id],
+    ]),
+  );
 }
 
 function TargetSubject({

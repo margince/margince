@@ -156,7 +156,9 @@ const (
 	// owner's connection row, mapped and checked in the unexported connection wire.
 	// Raised by 44 test lines for the contact page reads the plan reuse census
 	// drives through its unexported statement recorder and partial index check.
-	composeRootProductionLines = 232_131
+	// Raised by 1 production line when main's forecast scope label met develop
+	// in the sync.
+	composeRootProductionLines = 232_132
 	// Raised by 18 test lines for the link suggestion tool cases.
 	// Raised by 2 test lines for the actor census waivers of the two jobs that
 	// bind their colleague inside a method.
@@ -164,7 +166,9 @@ const (
 	// from naming a tool it is not offered.
 	// Raised by 37 test lines for main's unread mail period and contact page
 	// census cases, met with develop's in the sync.
-	composeRootTestLines = 363_829
+	// Raised by 1 test line when main's forecast scope label case met develop
+	// in the sync.
+	composeRootTestLines = 363_830
 )
 
 // A read under these floors stopped early or read the wrong place, and would

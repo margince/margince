@@ -9392,6 +9392,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.share.snapshotHelp":
     "Số liệu tại thời điểm chụp. Số liệu không thay đổi, và liên kết ghi rõ thời điểm chụp.",
   "analytics.share.snapshotUnavailable": "Chưa có ảnh chụp nào cho kỳ này.",
+  "analytics.share.quarterOnly":
+    "Chia sẻ luôn tính theo quý. Hãy chọn Quý để chia sẻ chế độ xem này.",
   "analytics.share.expiryNote": "Liên kết ngừng hoạt động sau 30 ngày.",
   "analytics.share.create": "Tạo liên kết",
   "analytics.share.linkTitle": "Liên kết đã tạo",
@@ -9593,6 +9595,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "forecast.period.quarter": "Quý",
   "forecast.period.month": "Tháng",
   "forecast.period.week": "Tuần",
+  "forecast.quarterCards": "Hai thẻ pipeline bên dưới tính cho cả quý.",
   "forecast.receipt": "Đã kiểm tra dữ liệu và bằng chứng",
   "forecast.eligible": "Deal được tính",
   "forecast.priced": "Có giá",

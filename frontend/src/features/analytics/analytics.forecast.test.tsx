@@ -672,16 +672,22 @@ describe("SharedForecastView", () => {
     range_low_minor: 90_000,
     range_high_minor: 210_000,
   };
-  function share(kind: "live" | "snapshot", over: Record<string, unknown>) {
+  // A live share carries no `as_of` of its own; its readings say when.
+  function share(
+    kind: "live" | "snapshot",
+    over: Record<string, unknown>,
+    view: Record<string, unknown> = {},
+  ) {
     vi.stubGlobal(
       "fetch",
       vi.fn(async () =>
         jsonResponse({
           kind,
           target: "forecast",
-          as_of: "2026-05-14T09:00:00Z",
+          ...(kind === "snapshot" ? { as_of: "2026-05-14T09:00:00Z" } : {}),
           withheld: false,
           readings: readings({ ...ranged, ...over }),
+          ...view,
         }),
       ),
     );
@@ -699,11 +705,33 @@ describe("SharedForecastView", () => {
     });
     expect(await screen.findByText("Won + Likely deals")).toBeTruthy();
     expect(screen.getByText("Modelled quarter finish")).toBeTruthy();
+    expect(screen.getByText("Live report · Whole company")).toBeTruthy();
     expect(
       screen.getByText(
-        /^Live report · .+ · Central European Summer Time · UTC\+2$/,
+        /^Actuals through .+ · Central European Summer Time · UTC\+2$/,
       ),
     ).toBeTruthy();
+  });
+
+  it("names the team a share covers, with its period, when the reader may name it", async () => {
+    share(
+      "snapshot",
+      { scope_kind: "team", scope_id: "t1" },
+      { scope_label: "Sales DACH" },
+    );
+    expect(await screen.findByText("Saved snapshot · Sales DACH")).toBeTruthy();
+    const period = screen.getByText("1 April – 30 June");
+    const through = screen.getByText(
+      "Actuals through 14/05/2026, 11:00 · Central European Summer Time · UTC+2",
+    );
+    expect(period.parentElement).toBe(through.parentElement);
+  });
+
+  // The server leaves out a name the reader's own access does not reach, so
+  // the page says only whose kind of records they are.
+  it("calls a colleague the reader may not name by the kind alone", async () => {
+    share("live", { scope_kind: "owner", scope_id: "u9" });
+    expect(await screen.findByText("Live report · Colleague")).toBeTruthy();
   });
 
   it("says a snapshot from before the landing was kept has no recorded basis", async () => {

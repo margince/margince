@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { AppLink } from "../../design-system/applink";
 import { Button, StatCard } from "../../design-system/atoms";
 import {
   SegmentBar,
@@ -128,11 +129,11 @@ function goalLine(
 export function ProgressResult({
   progress,
   onEvidence,
-  onGoals,
+  goalsHref,
 }: Readonly<{
   progress: SalesProgress;
   onEvidence: OpenEvidence;
-  onGoals: () => void;
+  goalsHref: string;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -148,7 +149,7 @@ export function ProgressResult({
           {amountText(closed, currency, locale, t)}
         </p>
         {goal.status === "missing" ? (
-          <NoGoal progress={progress} onGoals={onGoals} />
+          <NoGoal progress={progress} goalsHref={goalsHref} />
         ) : (
           <p className="progress-result-goal">
             {goalLine(progress, locale, t)}
@@ -198,8 +199,8 @@ export function ProgressResult({
 // the way to; any other reader is told who sets it.
 function NoGoal({
   progress,
-  onGoals,
-}: Readonly<{ progress: SalesProgress; onGoals: () => void }>) {
+  goalsHref,
+}: Readonly<{ progress: SalesProgress; goalsHref: string }>) {
   const t = useT();
   const { locale } = useLocale();
   const own = progress.scope.kind === "owner";
@@ -213,9 +214,9 @@ function NoGoal({
         {!sets && t("progress.whoSetsGoals")}
       </p>
       {sets && (
-        <Button variant="ghost" onClick={onGoals}>
+        <AppLink className="btn btn-ghost" href={goalsHref}>
           {t(own ? "progress.setGoals" : "progress.viewGoals")}
-        </Button>
+        </AppLink>
       )}
     </div>
   );
