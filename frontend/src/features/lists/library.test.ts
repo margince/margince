@@ -2,8 +2,20 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { describe, expect, it } from "vitest";
+import { listOpening } from "../../components/listquery.options";
+import { listQueryFromParams } from "../../components/listqueryparams";
+import { matchesView } from "../../components/listqueryviews";
+import { leadsOpeningFilters } from "../../lib/leads.address";
+import {
+  COMPANIES_INITIAL_SORT,
+  CONTACTS_INITIAL_SORT,
+  LEADS_INITIAL_SORT,
+  PROJECTS_INITIAL_SORT,
+} from "../../lib/listopenings";
 import type { List } from "../../lib/lists.queries";
+import type { SavedView } from "../../lib/savedviews.queries";
 import { isGroup } from "../../lib/segmentpredicate";
+import { parseParams } from "../../lib/urlstate";
 import {
   liveList,
   OTHER_OWNER_ID,
@@ -14,15 +26,18 @@ import { filterView } from "./filters.testkit";
 import {
   cutLibrary,
   groupOf,
+  hrefOf,
   isFirstRun,
   type LibraryCut,
   type LibraryItem,
   libraryItems,
   listsLanding,
+  listViewHref,
   nameOf,
   ownedByReader,
   pillCounts,
   sortForReader,
+  typeOf,
   visibleGroups,
   withFound,
 } from "./library";
@@ -56,25 +71,63 @@ const ALL: LibraryCut = { q: "", type: "all", archived: false };
 const captionOf = (item: LibraryItem) =>
   item.kind === "list" ? (item.list.purpose ?? "") : "City is Berlin";
 
+/** A view saved on a list screen: its dials, and no filter tree. */
+function listView(
+  id: string,
+  name: string,
+  resource: string,
+  list: unknown,
+): SavedView {
+  return { ...filterView(id, name, resource, null), query: { list } };
+}
+
+const byName = listView("v-name", "By name", "contacts", {
+  q: "",
+  sort: "name",
+  includeArchived: false,
+  filters: {},
+});
+
 describe("the merged library", () => {
-  it("keeps only views whose filter this build can open", () => {
+  it("keeps the views whose filter or list state this build can open", () => {
     const items = libraryItems(
       [
         view,
         filterView("v-old", "Stale", "contacts", {
           and: [{ field: "c", op: "like", value: "x" }],
         }),
-        {
-          ...filterView("v-list", "List state", "contacts", null),
-          query: { list: {} },
-        },
+        listView("v-list", "List state", "contacts", {}),
+        listView("v-junk", "Junk", "contacts", "sort=name"),
         filterView("v-act", "Calls", "activities", { and: [BERLIN] }),
+        listView("v-act-list", "Call list", "activities", {}),
         filterView("v-par", "Resellers", "partners", { and: [BERLIN] }),
+        listView("v-par-list", "Reseller list", "partners", {}),
         filterView("v-pro", "Builds", "projects", { and: [BERLIN] }),
       ],
       [],
     );
-    expect(items.map(nameOf)).toEqual(["Berlin contacts"]);
+    expect(items.map(nameOf)).toEqual(["Berlin contacts", "List state"]);
+    expect(items.map((item) => item.kind)).toEqual(["view", "listView"]);
+  });
+
+  it("files a view saved on the Projects list under the projects pill", () => {
+    const items = libraryItems(
+      [listView("v-pro-list", "Stalled builds", "projects", { sort: "name" })],
+      [],
+    );
+    expect(items.map(typeOf)).toEqual(["projects"]);
+    expect(pillCounts(items, false, false)?.projects).toBe(1);
+    expect(groupOf(items[0], READER_ID)).toBe("mine");
+  });
+
+  it("opens a view holding both a filter and list state wherever it is pressed: in the builder", () => {
+    const both: SavedView = {
+      ...view,
+      query: { ...view.query, list: { sort: "name" } },
+    };
+    const items = libraryItems([both], []);
+    expect(items).toHaveLength(1);
+    expect(items[0]?.kind).toBe("view");
   });
 
   it("wraps a stored single clause in a group, the shape every editor expects", () => {
@@ -236,6 +289,94 @@ describe("the groups drawn", () => {
       visibleGroups(both, [], READER_ID, true, (group) => group === "shared"),
     ).toEqual(["shared"]);
   });
+});
+
+describe("where a view saved on a list opens", () => {
+  const [item] = libraryItems([byName], []);
+  const href = (openingFilters: Readonly<Record<string, string>>) =>
+    item?.kind === "listView" ? listViewHref(item, openingFilters) : "";
+
+  it("is that list, with the view's dials as the list writes them", () => {
+    expect(href({})).toBe("#/contacts?per=25&sort=name");
+  });
+
+  it("spells out a filter the list opens on and the view leaves off", () => {
+    const [allLeads] = libraryItems(
+      [listView("v-all", "All leads", "leads", { sort: "", filters: {} })],
+      [],
+    );
+    expect(
+      allLeads?.kind === "listView" &&
+        listViewHref(allLeads, { owner_id: READER_ID }),
+    ).toBe("#/leads?owner_id=all&per=25");
+  });
+
+  it("waits for the reader before a view saved on the leads queue opens", () => {
+    const [leads] = libraryItems(
+      [listView("v-hot", "Hot", "leads", { sort: "-score" })],
+      [],
+    );
+    if (leads === undefined) {
+      throw new Error("no row for the leads view");
+    }
+    expect(hrefOf(leads, undefined)).toBeUndefined();
+    expect(hrefOf(leads, { owner_id: READER_ID })).toBe(
+      "#/leads?owner_id=all&per=25&sort=-score",
+    );
+  });
+
+  it("opens a deals view on the table it was saved from", () => {
+    const [deals] = libraryItems(
+      [
+        listView("v-deal", "Stalled", "deals", {
+          filters: { stalled: "true", pipeline_id: "pl" },
+        }),
+      ],
+      [],
+    );
+    expect(deals?.kind === "listView" && listViewHref(deals, {})).toBe(
+      "#/deals?per=25&pipeline_id=pl&stalled=true&view=table",
+    );
+  });
+});
+
+describe("a view saved on a list, arriving at that list", () => {
+  const openings = [
+    { resource: "contacts", sort: CONTACTS_INITIAL_SORT, filters: {} },
+    { resource: "companies", sort: COMPANIES_INITIAL_SORT, filters: {} },
+    { resource: "projects", sort: PROJECTS_INITIAL_SORT, filters: {} },
+    {
+      resource: "leads",
+      sort: LEADS_INITIAL_SORT,
+      filters: leadsOpeningFilters({ user: { id: READER_ID } }),
+    },
+  ];
+  const stored = [
+    {},
+    { sort: "" },
+    { sort: "name" },
+    { q: "acme", includeArchived: true, perPage: 100 },
+    { filters: { owner_id: READER_ID } },
+  ];
+
+  it.each(openings)(
+    "is read by $resource as the list the view describes, its default order included",
+    ({ resource, sort, filters }) => {
+      for (const list of stored) {
+        const [item] = libraryItems([listView("v", "V", resource, list)], []);
+        if (item?.kind !== "listView") {
+          throw new Error(`no list row for ${resource}`);
+        }
+        const query = listQueryFromParams(
+          parseParams(listViewHref(item, filters)),
+          listOpening(sort, filters),
+          false,
+        );
+        expect(matchesView(item.state, query)).toBe(true);
+        expect(query.perPage).toBe(item.state.perPage ?? 25);
+      }
+    },
+  );
 });
 
 describe("a list address", () => {

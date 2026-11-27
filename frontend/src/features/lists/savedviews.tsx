@@ -18,7 +18,7 @@ import { ErrorLine } from "../../design-system/errorline";
 import { NamePrompt } from "../../design-system/nameprompt";
 import { useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
-import type { ViewResource } from "../../lib/filtersaddress";
+import { type ViewResource, viewPageHref } from "../../lib/filtersaddress";
 import { problemMessageOf } from "../../lib/problem";
 import {
   type SavedView,
@@ -27,6 +27,7 @@ import {
   viewNameTaken,
 } from "../../lib/savedviews.queries";
 import { ManageViewsButton } from "./savedviews.manage";
+import { listStateFrom, viewOpening } from "./savedviews.state";
 
 // A saved view is the reader's own list state, by name: the search, the sort,
 // the filters, the archived toggle and the page size they were looking at.
@@ -42,88 +43,12 @@ import { ManageViewsButton } from "./savedviews.manage";
 // promising a sharing model V1 does not have.
 
 /**
- * The list state a view restores.
- *
- * Deliberately NOT written under the `query.filter` key: the server validates
- * that one as a segment filter TREE (field/op/value, compiled against the
- * resource's engine), and a list's filters are flat `param=value` pairs the
- * list endpoints take directly. Storing them there would be refused as "not a
- * valid filter tree" — and storing a tree here would be a second filter dialect
- * the lists cannot read. So list state lives under its own key and the tree key
- * stays free for the segment builder that owns it.
- */
-const LIST_STATE_KEY = "list";
-
-type SavedListState = Pick<
-  ListQuery,
-  "q" | "sort" | "includeArchived" | "filters"
-> & {
-  /**
-   * The page size the view claims, or absent when the stored blob makes no
-   * claim about one.
-   *
-   * Optional rather than defaulted, because those are different facts and the
-   * rail acts on the difference: a view that stored 25 asks for 25, and a view
-   * that stored nothing leaves the reader on whatever they had. Substituting a
-   * number here made the two indistinguishable, and a view written through
-   * `POST /views` with a `list` blob carrying no page size then dropped a
-   * reader from 100 rows to the default with no dial moving.
-   */
-  perPage?: number;
-};
-
-/** The saved state of one view, or null when the row predates this shape. */
-export function listStateOf(view: SavedView): SavedListState | null {
-  // `query` is required by the contract, but a stub, a hand-written row, or a
-  // future shape can still hand this an object without it — and a list screen
-  // that throws while reading its own tab rail takes the whole screen with it.
-  const stored = view.query as Record<string, unknown> | undefined;
-  const raw = stored?.[LIST_STATE_KEY];
-  if (!raw || typeof raw !== "object") {
-    return null;
-  }
-  const state = raw as Partial<SavedListState>;
-  // Every field is checked rather than trusted: a view is stored as an open
-  // JSON object, so a row written by an older build (or by hand) can carry any
-  // shape at all. The four dials that describe WHICH rows the list holds take a
-  // neutral value when the blob omits them, because the list has to send the
-  // server something; the page size does not, and stays absent so the rail can
-  // tell "asked for the default" from "asked for nothing".
-  return {
-    q: typeof state.q === "string" ? state.q : "",
-    sort: typeof state.sort === "string" ? state.sort : "",
-    includeArchived: state.includeArchived === true,
-    filters:
-      state.filters && typeof state.filters === "object"
-        ? Object.fromEntries(
-            Object.entries(state.filters).filter(
-              ([, value]) => typeof value === "string",
-            ),
-          )
-        : {},
-    perPage: typeof state.perPage === "number" ? state.perPage : undefined,
-  };
-}
-
-/** What a view saves, given the list the reader is looking at now. */
-function listStateFrom(query: ListQuery): Record<string, unknown> {
-  return {
-    [LIST_STATE_KEY]: {
-      q: query.q,
-      sort: query.sort,
-      includeArchived: query.includeArchived,
-      filters: query.filters,
-      perPage: query.perPage,
-    },
-  };
-}
-
-/**
  * The saved views of one resource, as view tabs the list can render beside its
  * built-in presets.
  *
- * A view whose stored state cannot be read is dropped rather than shown: a tab
- * that lights up and restores nothing is worse than a tab that is not there.
+ * A view that opens in the builder (`viewOpening`) cannot be applied here, so
+ * its tab links to its page in Filters and views. Any other unreadable view is
+ * dropped: a tab that restores nothing is worse than none.
  *
  * Everything the view claims travels with the tab, not just the sort and the
  * filters: the search, the archived toggle and the page size were saved too, and
@@ -136,20 +61,39 @@ function listStateFrom(query: ListQuery): Record<string, unknown> {
  * only answer with tabs.
  */
 export function useSavedViewTabs(resource: ViewResource): SavedViewTab[] {
+  const t = useT();
   const views = useSavedViews(resource);
-  return (views.data ?? []).flatMap((view) => {
-    const state = listStateOf(view);
-    return state
+  return (views.data ?? []).flatMap((view): SavedViewTab[] => {
+    const opens = viewOpening(view);
+    if (opens?.kind === "list") {
+      const { state } = opens;
+      return [
+        {
+          id: view.id,
+          label: view.name,
+          q: state.q,
+          sort: state.sort,
+          filters: state.filters,
+          includeArchived: state.includeArchived,
+          perPage: state.perPage,
+          version: view.version,
+        },
+      ];
+    }
+    return opens?.kind === "builder"
       ? [
           {
             id: view.id,
             label: view.name,
-            q: state.q,
-            sort: state.sort,
-            filters: state.filters,
-            includeArchived: state.includeArchived,
-            perPage: state.perPage,
+            q: "",
+            sort: "",
+            filters: {},
+            includeArchived: false,
             version: view.version,
+            link: {
+              href: viewPageHref(opens.tab, view.id),
+              name: t("views.opensInFilters", { name: view.name }),
+            },
           },
         ]
       : [];
@@ -307,12 +251,12 @@ export function SaveViewAction({
   }
   const saved = views.data;
   const holdsThisList = (view: SavedView) => {
-    const stored = listStateOf(view);
-    return stored !== null && matchesView(stored, state.query);
+    const opens = viewOpening(view);
+    return opens?.kind === "list" && matchesView(opens.state, state.query);
   };
   const unsaved = isNarrowed(state.query, state) && !saved.some(holdsThisList);
   const opened = saved.find(
-    (view) => view.id === openedView?.id && listStateOf(view) !== null,
+    (view) => view.id === openedView?.id && viewOpening(view)?.kind === "list",
   );
   // Only the version the reader opened may guard the write, never the cache's.
   const openedVersion = openedView?.version;
