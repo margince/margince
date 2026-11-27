@@ -350,7 +350,7 @@ func (s *Store) LatestExtractionRead(ctx context.Context, attachmentID ids.UUID,
 			 ORDER BY created_at DESC
 			 LIMIT 1`, attachmentID, question))
 		if errors.Is(err, pgx.ErrNoRows) {
-			return fmt.Errorf("%w: no %s reading for attachment %s", apperrors.ErrNotFound, question, attachmentID)
+			return fmt.Errorf("%w: no %s reading for attachment %s", apperrors.ErrNothingYet, question, attachmentID)
 		}
 		if err != nil {
 			return fmt.Errorf("read latest extraction reading: %w", err)

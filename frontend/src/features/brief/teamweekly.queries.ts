@@ -42,7 +42,7 @@ export function useTeamWeeklyReview(
         params: { query: { team: teamId ?? "", ...(week ? { week } : {}) } },
       });
       if (response.status === 403) return { kind: "absent", why: "forbidden" };
-      if (response.status === 404)
+      if (response.status === 204)
         return { kind: "absent", why: "no_snapshot" };
       if (error) throwProblem(error);
       if (!data) return { kind: "absent", why: "no_snapshot" };

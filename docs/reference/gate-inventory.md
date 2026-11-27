@@ -58,6 +58,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `consumergrouptypes_test.go` | H3 | The subscriber acks every event type a consumer group does not declare before the group's handler runs. |
 | `consumergroupwiring_test.go` | H3 | Every lane the worker starts is a group the catalog declares. |
 | `contextanchorenum_test.go` | H3 | GET /records/{entity\_type}/{id}/context accepts the record types the search module can anchor a context read on (every searchable type but the text-only ones), and the contract has to say the same set. |
+| `contractabsentpreference_test.go` | H3 | An operation that takes `Prefer` (PreferAbsent) may answer the 204 NothingYet response, and only such an operation does. |
 | `contractadmission_test.go` | H3 | A route the contract declares `security: []` is reachable without a session. |
 | `contractdaycaps_test.go` | H3 | A day-count bound published in the contract and enforced in Go is one rule with two spellings, so it is held here. |
 | `contractfrontendlane_test.go` | H3 | A contract change owes three regenerations, and the one that strands the frontend types is enforced in two different places for two different readers. |
@@ -365,6 +366,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `extinboundnonce_test.go` | H1 | A unit that takes an anonymous inbound webhook refuses a replay of one. |
 | `fiscalperiodsingle_test.go` | H2 | Which fiscal period holds a day is computed in one place. |
 | `forecastscopeauthority_test.go` | H2 | Every forecasting store entry point that records against a scope asks whether its caller answers for that scope. |
+| `frontendabsent404_test.go` | H3 | A screen that reads a 404 as "nothing here yet" fills the browser console with failed requests on ordinary pages, and JavaScript cannot silence them. |
 | `frontendsendpermission_test.go` | H2 | Every surface that posts to a send door asks the engine first, through the one component that says what it answered. |
 | `gatecensus_test.go` | H2 | The census over this repo's own gate machinery: a gate's exceptions are held to the standard the gate holds its subjects to. |
 | `gateinventory_test.go` | H3 | The gate inventory: every gate in this package declares its own shape, and the reference page listing them is rendered from those declarations. |

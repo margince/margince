@@ -4,7 +4,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import {
   boundedLeads,
-  NOT_FOUND,
   pipelineRows,
   readingsDay,
   report,
@@ -381,7 +380,7 @@ export const Plan: Story = {
 export const PlanNone: Story = {
   render: part(<PlanSection />, {
     ...PLAN_ROUTES,
-    "GET /weekly-plans/current": () => jsonResponse(NOT_FOUND, 404),
+    "GET /weekly-plans/current": () => new Response(null, { status: 204 }),
   }),
 };
 

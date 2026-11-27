@@ -119,13 +119,12 @@ export const ClosedWeek: Story = {
   play: openThePlan,
 };
 
-// This teammate has not opened a week. A 404 is that absence and not a
+// This teammate has not opened a week. A 204 is that absence and not a
 // failure, so the dialog says so in their name rather than drawing a refusal.
 export const NoPlanThisWeek: Story = {
   render: review(
     {
-      [PLAN_ROUTE]: () =>
-        jsonResponse({ title: "Not found", status: 404 }, 404),
+      [PLAN_ROUTE]: () => new Response(null, { status: 204 }),
     },
     { weekly_plan: ["read", "update"] },
   ),

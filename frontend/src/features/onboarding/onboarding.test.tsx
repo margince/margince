@@ -228,7 +228,7 @@ function stubApi(options: StubOptions = {}) {
         });
       }
       if (path.endsWith("/onboarding/state") && request.method === "GET") {
-        return jsonResponse({ detail: "not started" }, 404);
+        return new Response(null, { status: 204 });
       }
       if (path.endsWith("/onboarding/state") && request.method === "PUT") {
         const body = (await request.clone().json()) as Record<string, unknown>;
@@ -282,7 +282,7 @@ function stubApi(options: StubOptions = {}) {
         return jsonResponse(meFixture({ allow: options.allow }));
       }
       if (path.endsWith("/company") && request.method === "GET") {
-        return jsonResponse({ detail: "no company yet" }, 404);
+        return new Response(null, { status: 204 });
       }
       if (path.endsWith("/company") && request.method === "PUT") {
         if (options.saveError) {

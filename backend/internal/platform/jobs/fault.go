@@ -432,6 +432,7 @@ type sentinelFault struct {
 // gate rather than silently reporting as unclassifiable the first time a job
 // returns it.
 var vocabulary = []sentinelFault{
+	{apperrors.ErrNothingYet, "nothing_yet", systemtext.Literal("jobs.nothing_yet.sentence"), systemtext.Literal("jobs.nothing_yet.remedy")},
 	{apperrors.ErrNotFound, "record_gone", systemtext.Literal("jobs.record_gone.sentence"), systemtext.Literal("jobs.record_gone.remedy")},
 	{apperrors.ErrConflict, "write_conflict", systemtext.Literal("jobs.write_conflict.sentence"), systemtext.Literal("jobs.write_conflict.remedy")},
 	{apperrors.ErrVersionSkew, "version_skew", systemtext.Literal("jobs.version_skew.sentence"), systemtext.Literal("jobs.version_skew.remedy")},

@@ -641,3 +641,27 @@ var deprecationTable = map[string]map[string]string{
 	"PUT /v1/scheduling/team-requests/{host_user_id}":            {"Link": "</v1/openapi.json>; rel=\"deprecation\"; type=\"application/json\", <https://github.com/margince/margince/blob/develop/docs/reference/api-compatibility.md>; rel=\"deprecation\"; type=\"text/markdown\""},
 	"PUT /v1/stage-automation/policies/{id}":                     {"Link": "</v1/openapi.json>; rel=\"deprecation\"; type=\"application/json\", <https://github.com/margince/margince/blob/develop/docs/reference/api-compatibility.md>; rel=\"deprecation\"; type=\"text/markdown\""},
 }
+
+var absentPreferenceRoutes = map[string]bool{
+	"GET /v1/activities/{id}/transcript-proposals/latest":    true,
+	"GET /v1/analytics/coverage":                             true,
+	"GET /v1/attachments/{id}/extraction":                    true,
+	"GET /v1/brief":                                          true,
+	"GET /v1/companies/{id}/partner":                         true,
+	"GET /v1/companies/{id}/site-reads/latest":               true,
+	"GET /v1/companies/{id}/technical-enrich/latest":         true,
+	"GET /v1/companies/{id}/vat-check":                       true,
+	"GET /v1/company":                                        true,
+	"GET /v1/dedupe/contact-cases/{contact_id}":              true,
+	"GET /v1/forecast/assurance":                             true,
+	"GET /v1/mail-drafts":                                    true,
+	"GET /v1/onboarding/company/proposal":                    true,
+	"GET /v1/onboarding/state":                               true,
+	"GET /v1/records/{record_type}/{id}/edit-access-request": true,
+	"GET /v1/records/{record_type}/{id}/ownership-offer":     true,
+	"GET /v1/records/{record_type}/{id}/ownership-request":   true,
+	"GET /v1/weekly-plans/current":                           true,
+	"GET /v1/weekly-plans/{owner_id}/current":                true,
+	"GET /v1/weekly-reviews/latest":                          true,
+	"GET /v1/weekly-reviews/team":                            true,
+}
