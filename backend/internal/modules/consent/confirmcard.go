@@ -138,7 +138,7 @@ func fieldOriginsFor(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) ([
 	rows, err := tx.Query(ctx, `
 		SELECT field_name, source, to_char(captured_at, 'YYYY-MM-DD')
 		  FROM field_provenance
-		 WHERE object_type = 'contact' AND object_id = $1
+		 WHERE object_type = 'contact' AND object_id = $1 AND value IS NULL
 		 ORDER BY field_name`, contactID)
 	if err != nil {
 		return nil, err

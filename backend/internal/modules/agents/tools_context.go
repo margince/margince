@@ -234,8 +234,8 @@ func (t searchContext) hydrate(ctx context.Context, found retrieval.Result) (Sea
 		result.Coverage = CoveragePartialDegraded
 		result.Notes = append(result.Notes, QueryNote{
 			Code: CodeSemanticRankingDegraded,
-			Detail: "the meaning lane contributed nothing to this ranking — it is not configured, it " +
-				"could not be reached, or nothing is indexed under the current model — so these " +
+			Detail: "the meaning lane contributed nothing to this ranking (it is not configured, it " +
+				"could not be reached, or nothing is indexed under the current model), so these " +
 				"results are ranked by word overlap alone, and a phrase sharing no words with a " +
 				"record cannot rank it",
 		})

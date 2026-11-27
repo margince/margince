@@ -76,7 +76,7 @@ func ReviewTemplateFor(ctx context.Context, tx pgx.Tx, outcome string) (ReviewTe
 	err := tx.QueryRow(ctx,
 		`SELECT id, key, label, outcome, questions, version, active, system
 		   FROM activity_review_template
-		  WHERE outcome = $1 AND active AND archived_at IS NULL
+		  WHERE outcome = $1 AND active
 		  ORDER BY created_at
 		  LIMIT 1`, outcome).
 		Scan(&t.ID, &t.Key, &t.Label, &t.Outcome, &questions, &t.Version, &t.Active, &t.System)
@@ -104,7 +104,6 @@ func (s *Store) ListReviewTemplates(ctx context.Context) ([]crmcontracts.Activit
 		rows, err := tx.Query(ctx,
 			`SELECT `+reviewTemplateColumns+`
 			   FROM activity_review_template
-			  WHERE archived_at IS NULL
 			  ORDER BY outcome, created_at`)
 		if err != nil {
 			return fmt.Errorf("list review templates: %w", err)

@@ -219,11 +219,22 @@ export const EveryDealPricedPhone: Story = {
 
 // A share states its landing and modelled finish. A snapshot frozen before
 // the landing was kept says its basis is not recorded and keeps its range.
-function recipient(kind: "live" | "snapshot", landingKept = true) {
+// A team share names its team; one whose name is withheld says "Team".
+function recipient(
+  kind: "live" | "snapshot",
+  landingKept = true,
+  team?: { label?: string },
+) {
   return () => {
     const shared = readings({
       range_low_minor: 200_000_00,
       range_high_minor: 360_000_00,
+      ...(team
+        ? {
+            scope_kind: "team" as const,
+            scope_id: "0194f8a0-0000-7000-8000-0000000000a1",
+          }
+        : {}),
     });
     const view = {
       kind,
@@ -241,6 +252,7 @@ function recipient(kind: "live" | "snapshot", landingKept = true) {
           }
         : shared,
       withheld: false,
+      scope_label: team?.label,
     } satisfies components["schemas"]["SharedForecastView"];
     installFetchStub({
       "GET /forecast/shared/fixture": () => jsonResponse(view),
@@ -256,4 +268,10 @@ export const LiveRecipient: Story = { render: recipient("live") };
 export const SnapshotRecipient: Story = { render: recipient("snapshot") };
 export const SnapshotRecipientBeforeTheLandingWasKept: Story = {
   render: recipient("snapshot", false),
+};
+export const TeamRecipient: Story = {
+  render: recipient("live", true, { label: "Sales DACH" }),
+};
+export const TeamRecipientUnnamed: Story = {
+  render: recipient("live", true, {}),
 };

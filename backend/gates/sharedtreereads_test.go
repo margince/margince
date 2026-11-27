@@ -11,11 +11,14 @@ package gates
 // A gate that reads the disk itself still passes. The cost shows only as a
 // slower CI job, since every gate rereads the same files.
 //
-// It sees the four calls below under any import name. It cannot see a read
-// through another package, by a child process, or through os.Open.
+// It sees the calls below under any import name, and a parser.ParseFile that
+// reads its own file. It cannot see a read through another package or by a
+// child process.
 
 import (
 	"go/ast"
+	"go/parser"
+	"go/token"
 	"path/filepath"
 	"slices"
 	"strconv"
@@ -27,12 +30,13 @@ import (
 
 // diskReads are the calls the shared view stands in for, by import path.
 var diskReads = map[string][]string{
-	"os":            {"ReadFile", "ReadDir"},
-	"path/filepath": {"WalkDir", "Walk"},
+	"os":            {"ReadFile", "ReadDir", "Open"},
+	"path/filepath": {"WalkDir", "Walk", "Glob"},
+	"go/parser":     {"ParseDir"},
 }
 
 // sharedTreeReaders are the gatekit calls a gate reads the tree through.
-var sharedTreeReaders = []string{"ReadFile", "ReadDir", "WalkDir"}
+var sharedTreeReaders = []string{"ReadFile", "ReadDir", "WalkDir", "Glob", "ParseFile"}
 
 // directDiskReads are the functions that must reach the disk themselves,
 // keyed "path:function".
@@ -43,6 +47,8 @@ var directDiskReads = gatekit.Waive(map[string]string{
 		"records only what the test process opens",
 	"internal/shared/gatekit/cacheinputs.go:DeclareListings": "must open the directory itself, since Go's test cache " +
 		"records only what the test process opens",
+	"gates/typedmodule_test.go:newModuleUniverse": "opens the compiled export data the go command left in the build " +
+		"cache, which is outside the tree",
 })
 
 // Below the real counts: about 700 files and 750 shared reads.
@@ -133,6 +139,10 @@ func treeReadsIn(file *ast.File) treeReads {
 	for _, decl := range file.Decls {
 		function := declName(decl)
 		ast.Inspect(decl, func(n ast.Node) bool {
+			if call, ok := n.(*ast.CallExpr); ok && parsesItsOwnFile(call, imported) {
+				reads.direct = append(reads.direct, directRead{function: function, call: "parser.ParseFile", at: call})
+				return true
+			}
 			sel, ok := n.(*ast.SelectorExpr)
 			if !ok {
 				return true
@@ -157,6 +167,21 @@ func treeReadsIn(file *ast.File) treeReads {
 	return reads
 }
 
+// parsesItsOwnFile reports a parser.ParseFile given no source, which reads
+// the file from the disk and parses a private copy beside the shared tree.
+func parsesItsOwnFile(call *ast.CallExpr, imported map[string]string) bool {
+	sel, ok := call.Fun.(*ast.SelectorExpr)
+	if !ok || sel.Sel.Name != "ParseFile" || len(call.Args) < 3 {
+		return false
+	}
+	pkg, ok := sel.X.(*ast.Ident)
+	if !ok || pkg.Obj != nil || imported[pkg.Name] != "go/parser" {
+		return false
+	}
+	source, ok := call.Args[2].(*ast.Ident)
+	return ok && source.Name == "nil"
+}
+
 // unqualifiedSharedCalls counts gatekit's own calls of its shared view, which
 // it spells without a package name.
 func unqualifiedSharedCalls(decl ast.Decl) int {
@@ -174,12 +199,67 @@ func unqualifiedSharedCalls(decl ast.Decl) int {
 	return found
 }
 
-// sharedName is the gatekit call that stands in for a disk read; filepath.Walk
+// sharedName is the gatekit call that stands in for a disk read. filepath.Walk
 // becomes WalkDir, whose callback takes a DirEntry.
 func sharedName(call string) string {
-	name := call[strings.LastIndex(call, ".")+1:]
-	if name == "Walk" {
+	switch name := call[strings.LastIndex(call, ".")+1:]; name {
+	case "Walk":
 		return "WalkDir"
+	case "Open":
+		return "ReadFile"
+	case "ParseDir":
+		return "ParseFile"
+	default:
+		return name
 	}
-	return name
+}
+
+func TestTheTreeReadCensusSeesEveryWayToReadTheDisk(t *testing.T) {
+	t.Parallel()
+	const planted = `package planted
+
+import (
+	"go/parser"
+	"go/token"
+	opsys "os"
+	"path/filepath"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
+)
+
+func reads(fset *token.FileSet, src []byte) {
+	opsys.ReadFile("a")
+	opsys.ReadDir("a")
+	opsys.Open("a")
+	filepath.WalkDir("a", nil)
+	filepath.Walk("a", nil)
+	filepath.Glob("a/*")
+	parser.ParseDir(fset, "a", nil, 0)
+	parser.ParseFile(fset, "a.go", nil, 0)
+	parser.ParseFile(fset, "a.go", src, 0)
+	gatekit.ReadFile("a")
+	gatekit.Glob("a/*")
+	gatekit.ParseFile("a.go", 0)
+}
+`
+	file, err := parser.ParseFile(token.NewFileSet(), "planted.go", planted, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reads := treeReadsIn(file)
+	var direct []string
+	for _, read := range reads.direct {
+		direct = append(direct, read.call)
+	}
+	slices.Sort(direct)
+	want := []string{
+		"filepath.Glob", "filepath.Walk", "filepath.WalkDir", "os.Open", "os.ReadDir", "os.ReadFile",
+		"parser.ParseDir", "parser.ParseFile",
+	}
+	if !slices.Equal(direct, want) {
+		t.Errorf("the census saw the disk reads %v, want %v: a parse of source the gate already holds is no read", direct, want)
+	}
+	if reads.shared != 3 {
+		t.Errorf("the census saw %d shared reads, want 3", reads.shared)
+	}
 }

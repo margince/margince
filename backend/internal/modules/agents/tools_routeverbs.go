@@ -80,34 +80,6 @@ const (
 	routeFileType   = "content_type"
 )
 
-// RouteAnswerTruncated is the member a write's answer carries when its body was
-// too long to return. The write has committed, so the caller must not retry.
-const RouteAnswerTruncated = "truncated"
-
-// writeAnswerSchema admits the two members of a write's cut answer beside the
-// route's own, and so can require none of the route's.
-func writeAnswerSchema(answer json.RawMessage) json.RawMessage {
-	var shape map[string]json.RawMessage
-	if err := json.Unmarshal(answer, &shape); err != nil {
-		return answer
-	}
-	var properties map[string]json.RawMessage
-	if err := json.Unmarshal(shape["properties"], &properties); err != nil || properties == nil {
-		properties = map[string]json.RawMessage{}
-	}
-	// A route's own status may be a word, and a cut answer's is the HTTP code. This
-	// surface refuses anyOf, so a status that may be either stays untyped.
-	if _, declared := properties["status"]; declared {
-		properties["status"] = json.RawMessage(`{}`)
-	} else {
-		properties["status"] = json.RawMessage(`{"type":"integer"}`)
-	}
-	properties[RouteAnswerTruncated] = json.RawMessage(`{"type":"boolean"}`)
-	shape["properties"] = mustMarshal(properties)
-	delete(shape, "required")
-	return mustMarshal(shape)
-}
-
 // RegisterRouteVerbs registers every route-backed verb, unlisted, and records
 // which router fronts each. It runs before the routers register.
 func RegisterRouteVerbs(r *Registry, verbs []RouteVerb, run RouteRunner) {
@@ -163,7 +135,7 @@ func (t routeVerbTool) Spec() mcp.ToolSpec {
 	var maxArgs int64
 	if v.UploadField != "" {
 		properties[routeFileName] = `{"type":"string","description":"The file's name, with its extension"}`
-		properties[routeFileType] = `{"type":"string","description":"The file's media type, e.g. image/png"}`
+		properties[routeFileType] = `{"type":"string","description":"The file's media type, for example image/png"}`
 		properties[argContentBase64] = contentBase64Schema
 		properties[argContentText] = contentTextSchema
 		required = append(required, routeFileName, routeFileType)
@@ -173,9 +145,9 @@ func (t routeVerbTool) Spec() mcp.ToolSpec {
 	for _, name := range slices.Sorted(maps.Keys(properties)) {
 		members = append(members, strconv.Quote(name)+":"+properties[name])
 	}
-	answer := v.AnswerSchema
+	facts, answer := routeAnswerOf(v.AnswerSchema), v.AnswerSchema
 	if v.Method != http.MethodGet {
-		answer = writeAnswerSchema(answer)
+		answer = json.RawMessage(facts.write)
 	}
 	return mcp.ToolSpec{
 		Name: v.Verb, Title: v.Summary, Version: toolVersionV1,
@@ -184,7 +156,7 @@ func (t routeVerbTool) Spec() mcp.ToolSpec {
 		Unlisted: true,
 		// The route's own answer schema decides: one that names only ids, numbers,
 		// dates and closed sets of words holds nothing someone wrote.
-		ProductMadeAnswer: !CarriesFreeText(v.AnswerSchema),
+		ProductMadeAnswer: !facts.freeText,
 		OpenAPIOp:         v.Op,
 		UnkeyedArguments:  unkeyed,
 		MaxArgsBytes:      maxArgs,

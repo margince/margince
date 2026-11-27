@@ -16,8 +16,8 @@ import (
 
 // Mark is a value of contact.relationship_mark.
 //
-// Held by: TestTheRelationshipMarkVocabularyIsTheCatalogsCheck
-// (backend/gates/relationshipmarkvocabulary_test.go), which fails when this set
+// Held by: TestEveryListedVocabularyIsItsColumnsCheck
+// (backend/gates/enumsync_test.go), which fails when this set
 // and the column's CHECK stop naming the same values.
 type Mark string
 

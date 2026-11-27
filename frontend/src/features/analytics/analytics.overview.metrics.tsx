@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type { ReactNode } from "react";
-import { StatCard } from "../../design-system/atoms";
+import { type ReactNode, useId } from "react";
+import { AppLink } from "../../design-system/applink";
+import { Button, StatCard } from "../../design-system/atoms";
+import { Heading } from "../../design-system/heading";
 import { Panel } from "../../design-system/panel";
 import { StatStrip } from "../../design-system/statstrip";
 import {
@@ -11,6 +13,7 @@ import {
   formatMoneyCompact,
 } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
+import { replaceDial, useUrlParams } from "../../lib/urlstate";
 import { landingBasisLines } from "./analytics.forecast.landing";
 import { formatMoneyCompactRange } from "./analytics.moneyrange";
 import {
@@ -18,6 +21,7 @@ import {
   useForecastCoverage,
 } from "./analytics.overview.decision";
 import {
+  type ChartTab,
   MetricReading,
   metricOf,
   readingValue,
@@ -28,30 +32,114 @@ import {
   reportingCompactAmount,
 } from "./reporting.model";
 
+/** Which reading the quarter's chart shows. */
+export type HeroChart = "won" | "forecast" | "range";
+
+const HERO_CHARTS: readonly HeroChart[] = ["won", "forecast", "range"];
+// The shown tab is in the address. Back from a door at the chart's foot then
+// returns to the same tab, where that door takes focus again.
+const CHART_DIAL = "chart";
+
+type QuarterProps = Parameters<typeof QuarterOverviewMetrics>[0];
+
 /**
- * The review's head: its figures as one plate, the first one leading, and on
- * a quarter the trajectory to where it can finish.
+ * The review's head: its figures as one plate over the chart. On a quarter the
+ * figures are the chart's tabs, each drawing its own reading of the period.
  */
-export function SalesOverviewMetrics(
-  props: Parameters<typeof QuarterOverviewMetrics>[0] &
-    Readonly<{ trajectory?: ReactNode }>,
-) {
-  const { trajectory, ...quarter } = props;
-  return (
-    <Panel className="analytics-sales-hero">
-      {props.evaluation.selection.period === "this_quarter" ? (
-        <QuarterOverviewMetrics {...quarter} />
-      ) : (
+export function SalesOverviewMetrics({
+  trajectory,
+  ...quarter
+}: Omit<QuarterProps, "tabs"> &
+  Readonly<{ trajectory?: (shown: HeroChart) => ReactNode }>) {
+  const [params] = useUrlParams();
+  const shown =
+    HERO_CHARTS.find((chart) => chart === params.get(CHART_DIAL)) ?? "won";
+  if (quarter.evaluation.selection.period !== "this_quarter")
+    return (
+      <Panel className="analytics-sales-hero">
         <PeriodOverviewMetrics {...quarter} />
-      )}
-      {trajectory}
+        {trajectory?.("won")}
+      </Panel>
+    );
+  // With no chart to switch, each figure keeps its own door.
+  if (!trajectory)
+    return (
+      <Panel className="analytics-sales-hero">
+        <QuarterOverviewMetrics {...quarter} />
+      </Panel>
+    );
+  const tab = (chart: HeroChart): ChartTab => ({
+    pressed: shown === chart,
+    onShow: () => replaceDial(CHART_DIAL, chart === "won" ? undefined : chart),
+  });
+  return (
+    <Panel className="analytics-sales-hero analytics-sales-tabs">
+      <QuarterOverviewMetrics {...quarter} tabs={tab} />
+      <HeroPlot shown={shown} {...quarter}>
+        {trajectory?.(shown)}
+      </HeroPlot>
     </Panel>
   );
 }
 
-function PeriodOverviewMetrics(
-  props: Parameters<typeof QuarterOverviewMetrics>[0],
-) {
+// The chart under the tabs: what it shows, the chart, and its key. The key
+// leads to the records or the page the reading came from.
+function HeroPlot({
+  shown,
+  evaluation,
+  forecastHref,
+  onEvidence,
+  children,
+}: Readonly<{
+  shown: HeroChart;
+  evaluation: ReportingEvaluation;
+  forecastHref: string;
+  onEvidence: (reference: ReportingEvidenceRef) => void;
+  children: ReactNode;
+}>) {
+  const t = useT();
+  const title = useId();
+  const won = metricOf(evaluation, "bookings_won");
+  const forecast = metricOf(evaluation, "forecast_landing");
+  const goal =
+    !forecast?.coverage.withheld && forecast?.target_comparison?.target != null;
+  if (!children) return null;
+  return (
+    <section className="analytics-hero-plot" aria-labelledby={title}>
+      <Heading id={title} size="small" className="analytics-hero-plot-title">
+        {t(`analytics.hero.chart.${shown}`)}
+      </Heading>
+      {children}
+      <footer className="analytics-hero-plot-foot">
+        <ul className="analytics-hero-key">
+          <li data-mark="line">{t("analytics.hero.key.won")}</li>
+          {goal && (
+            <>
+              <li data-mark="pace">{t("analytics.trajectory.pace")}</li>
+              <li data-mark="target">{t("analytics.hero.key.goal")}</li>
+            </>
+          )}
+          {shown !== "won" && (
+            <li data-mark="range">{t("analytics.trajectory.range")}</li>
+          )}
+        </ul>
+        {shown === "won" ? (
+          won && (
+            <Button variant="link" onClick={() => onEvidence(won.evidence)}>
+              {t("reporting.viewRecords")}
+            </Button>
+          )
+        ) : (
+          <AppLink href={forecastHref}>
+            {t("analytics.hero.openForecast")}
+          </AppLink>
+        )}
+      </footer>
+    </section>
+  );
+}
+
+function PeriodOverviewMetrics(props: Omit<QuarterProps, "tabs">) {
   const t = useT();
   return (
     <StatStrip label={t("analytics.overview.readings")} density="plate" lead>
@@ -83,6 +171,7 @@ function QuarterOverviewMetrics({
   receipt,
   forecastHref,
   onEvidence,
+  tabs,
 }: Readonly<{
   evaluation: ReportingEvaluation;
   // The one line under Sales won, and what it rests on behind its receipt.
@@ -90,6 +179,8 @@ function QuarterOverviewMetrics({
   receipt?: ReactNode;
   forecastHref: string;
   onEvidence: (reference: ReportingEvidenceRef) => void;
+  // Each figure as a tab of the chart under the row, when one is drawn.
+  tabs?: (chart: HeroChart) => ChartTab;
 }>) {
   const t = useT();
   const plural = usePlural();
@@ -112,18 +203,24 @@ function QuarterOverviewMetrics({
     visibleForecast?.range_low_minor != null &&
     visibleForecast.range_high_minor != null;
   return (
-    <StatStrip label={t("analytics.overview.readings")} density="plate" lead>
+    <StatStrip
+      label={t("analytics.overview.readings")}
+      density="plate"
+      lead={!tabs}
+    >
       <MetricReading
         narrow="stack"
         evaluation={evaluation}
         id="bookings_won"
         detail={aside}
         basis={receipt}
+        chart={tabs?.("won")}
         onEvidence={onEvidence}
       />
       <ForecastOverviewReading
         forecast={forecast}
         evaluation={evaluation}
+        chart={tabs?.("forecast")}
         href={forecastHref}
         money={money}
       />
@@ -145,8 +242,7 @@ function QuarterOverviewMetrics({
           hasRange ? t("forecast.model.short") : forecast?.coverage.reason
         }
         basis={hasRange ? t("forecast.model.detail") : undefined}
-        href={hasRange ? forecastHref : undefined}
-        opens="forecast"
+        {...(hasRange ? chartDoor(tabs?.("range"), forecastHref) : {})}
       />
       <StatCard
         narrow="stack"
@@ -178,14 +274,30 @@ function QuarterOverviewMetrics({
   );
 }
 
+// A figure on a drawn chart shows itself there; with no chart it keeps its
+// door to the forecast.
+function chartDoor(
+  chart: ChartTab | undefined,
+  href: string,
+): Pick<
+  Parameters<typeof StatCard>[0],
+  "onOpen" | "href" | "opens" | "pressed"
+> {
+  if (chart)
+    return { onOpen: chart.onShow, pressed: chart.pressed, opens: "chart" };
+  return { href, opens: "forecast" };
+}
+
 function ForecastOverviewReading({
   forecast,
   evaluation,
+  chart,
   href,
   money,
 }: Readonly<{
   forecast: ReportingEvaluation["metrics"][number] | undefined;
   evaluation: ReportingEvaluation;
+  chart: ChartTab | undefined;
   href: string;
   money: (value: number | undefined) => string;
 }>) {
@@ -230,8 +342,7 @@ function ForecastOverviewReading({
           : undefined
       }
       value={readingValue(forecast, evaluation, t, locale)}
-      href={forecast?.value != null ? href : undefined}
-      opens="forecast"
+      {...(forecast?.value != null ? chartDoor(chart, href) : {})}
       detail={
         shownGap == null ? (
           shown

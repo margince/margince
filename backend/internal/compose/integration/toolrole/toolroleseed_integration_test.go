@@ -173,7 +173,6 @@ func configSeeders(post func(string, integration.AnyMap) string, unique func(str
 	return map[string]func() string{
 		"team":                   func() string { return post("/v1/teams", integration.AnyMap{"name": unique("Role Sweep")}) },
 		"tag":                    func() string { return post("/v1/tags", integration.AnyMap{"name": unique("Sweep")}) },
-		"lead_source":            label("/v1/lead-sources"),
 		"lead_origin":            label("/v1/lead-origins"),
 		"lead_disqualify_reason": label("/v1/lead-disqualify-reasons"),
 		"acquisition_source":     label("/v1/acquisition-sources"),

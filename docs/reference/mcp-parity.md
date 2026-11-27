@@ -9,11 +9,11 @@ Counting what another tool covers, it is 83.3%. Once every pending operation ope
 
 | Counted over | Operations | Open to an agent | Parity |
 |---|---:|---:|---:|
-| Every operation in the contract | 1146 | 882 | 76.9% |
-| Operations a signed-in user reaches | 1101 | 882 | 80.1% |
+| Every operation in the contract | 1142 | 878 | 76.8% |
+| Operations a signed-in user reaches | 1097 | 878 | 80.0% |
 | Operations the web app calls for a signed-in user | 967 | 779 | 80.5% |
 
-The last count answers the question of parity with the web app, so it leads this page. The first adds pages for visitors with no account, where no agent acts because no signed-in user does. The second adds routes where the scan found no web app call: 103 of those are open, so an agent can do them.
+The last count answers the question of parity with the web app, so it leads this page. The first adds pages for visitors with no account, where no agent acts because no signed-in user does. The second adds routes where the scan found no web app call: 99 of those are open, so an agent can do them.
 
 | Of the operations the web app calls | Count |
 |---|---:|
@@ -49,8 +49,8 @@ Each operation is in one group. Ask first is a part of Open, so leave it out of 
 | [Business operations](#business-operations) | Sales work | 620 | 554 | 43 | 0 | 38 | 28 | 529 | 89.9% | 89.3% |
 | [Compliance and privacy](#compliance-and-privacy) | Compliance and privacy | 73 | 49 | 20 | 0 | 24 | 0 | 63 | 65.0% | 67.1% |
 | [Capture and connectors](#capture-and-connectors) | Email and calendar capture | 70 | 47 | 12 | 0 | 22 | 1 | 66 | 68.1% | 67.1% |
-| [Workspace settings a non-admin can reach](#workspace-settings-a-non-admin-can-reach) | Company settings | 89 | 69 | 5 | 0 | 12 | 8 | 75 | 82.6% | 77.5% |
-| [Admin settings](#admin-settings) | Admin settings | 163 | 120 | 33 | 0 | 42 | 1 | 152 | 75.6% | 73.6% |
+| [Workspace settings a non-admin can reach](#workspace-settings-a-non-admin-can-reach) | Company settings | 88 | 68 | 5 | 0 | 12 | 8 | 75 | 82.6% | 77.2% |
+| [Admin settings](#admin-settings) | Admin settings | 160 | 117 | 33 | 0 | 42 | 1 | 152 | 75.6% | 73.1% |
 | [The user's own account and security](#the-users-own-account-and-security) | My account | 32 | 18 | 5 | 0 | 11 | 2 | 31 | 54.8% | 56.2% |
 | [Agent governance](#agent-governance) | every passport, in no area | 29 | 8 | 0 | 0 | 20 | 1 | 29 | 27.5% | 27.5% |
 | [Operator and system](#operator-and-system) | Admin settings, held as that area | 25 | 17 | 3 | 0 | 8 | 0 | 22 | 68.1% | 68.0% |
@@ -129,7 +129,7 @@ Passport area: Company settings.
 | Area | Operations | Open | Ask first | Pending | Security | Covered | Web app calls | Parity (web app) | Parity (signed-in) |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | Pipelines and stages | 10 | 6 | 0 | 0 | 0 | 4 | 5 | 100.0% | 60.0% |
-| Sales lists and reasons | 6 | 6 | 0 | 0 | 0 | 0 | 5 | 100.0% | 100.0% |
+| Sales lists and reasons | 5 | 5 | 0 | 0 | 0 | 0 | 5 | 100.0% | 100.0% |
 | Sales rules and templates | 6 | 6 | 0 | 0 | 0 | 0 | 6 | 100.0% | 100.0% |
 | Your company and legal entities | 12 | 10 | 0 | 0 | 2 | 0 | 7 | 71.4% | 83.3% |
 | Custom fields | 2 | 2 | 0 | 0 | 0 | 0 | 2 | 100.0% | 100.0% |
@@ -152,7 +152,7 @@ Passport area: Admin settings.
 | Area | Operations | Open | Ask first | Pending | Security | Covered | Web app calls | Parity (web app) | Parity (signed-in) |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | Pipelines and stages | 15 | 14 | 5 | 0 | 1 | 0 | 15 | 93.3% | 93.3% |
-| Sales lists and reasons | 16 | 16 | 1 | 0 | 0 | 0 | 13 | 100.0% | 100.0% |
+| Sales lists and reasons | 13 | 13 | 1 | 0 | 0 | 0 | 13 | 100.0% | 100.0% |
 | Sales rules and templates | 7 | 7 | 1 | 0 | 0 | 0 | 7 | 100.0% | 100.0% |
 | Your company and legal entities | 13 | 13 | 1 | 0 | 0 | 0 | 13 | 100.0% | 100.0% |
 | Custom fields | 5 | 5 | 3 | 0 | 0 | 0 | 5 | 100.0% | 100.0% |
@@ -959,7 +959,6 @@ An operation an agent can call, by the passport area that admits it. A passport 
 | `listLeadDisqualifyReasons` | `GET /lead-disqualify-reasons` | `read_view` |
 | `listLeadOrigins` | `GET /lead-origins` | `read_view` |
 | `getLeadSignalCatalog` | `GET /lead-signal-catalog` | `get_lead_signal_catalog` |
-| `listLeadSources` | `GET /lead-sources` | `read_view` |
 | `getLeadSettings` | `GET /leads/settings` | `read_view` |
 | `listLegalEntities` | `GET /legal-entities` | `list_legal_entities` |
 | `getLegalEntity` | `GET /legal-entities/{id}` | `get_legal_entity` |
@@ -1057,9 +1056,6 @@ An operation an agent can call, by the passport area that admits it. A passport 
 | `createLeadOrigin` | `POST /lead-origins` | `create_lead_origin` |
 | `deleteLeadOrigin` | `DELETE /lead-origins/{id}` | `delete_lead_origin` |
 | `updateLeadOrigin` | `PATCH /lead-origins/{id}` | `update_lead_origin` |
-| `createLeadSource` | `POST /lead-sources` | `create_lead_source` |
-| `deleteLeadSource` | `DELETE /lead-sources/{id}` | `delete_lead_source` |
-| `updateLeadSource` | `PATCH /lead-sources/{id}` | `update_lead_source` |
 | `updateLeadSettings` | `PATCH /leads/settings` | `update_lead_settings` |
 | `createLegalEntity` | `POST /legal-entities` | `create_legal_entity` |
 | `updateLegalEntity` | `PATCH /legal-entities/{id}` | `update_legal_entity` |

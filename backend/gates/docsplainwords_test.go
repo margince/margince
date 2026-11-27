@@ -14,8 +14,8 @@ package gates
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
-	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -55,17 +55,12 @@ var (
 
 func readWordList(t *testing.T, rel string) []string {
 	t.Helper()
-	f, err := os.Open(filepath.Join(docsTreeRoot, rel))
+	body, err := gatekit.ReadFile(filepath.Join(docsTreeRoot, rel))
 	if err != nil {
-		t.Fatalf("open %s: %v", rel, err)
+		t.Fatalf("read %s: %v", rel, err)
 	}
-	defer func() {
-		if cerr := f.Close(); cerr != nil {
-			t.Errorf("close %s: %v", rel, cerr)
-		}
-	}()
 	var words []string
-	sc := bufio.NewScanner(f)
+	sc := bufio.NewScanner(bytes.NewReader(body))
 	for sc.Scan() {
 		if w := strings.TrimSpace(sc.Text()); w != "" && !strings.HasPrefix(w, "#") {
 			words = append(words, w)

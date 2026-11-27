@@ -253,10 +253,10 @@ func applySelectedSiteReadFacts(
 		if !overwriteKeys[SiteReadFactKey(fact)] {
 			continue
 		}
-		if _, err := tx.Exec(ctx, `DELETE FROM company_fact
-			WHERE company_id = $1 AND category = $2
-			  AND field = $3 AND value_key = $4 AND source = ANY($5)`,
-			companyID, fact.Category, fact.Field, fact.ValueKey, []string{CompanySourceHuman, CompanySourceAgent}); err != nil {
+		if _, err := tx.Exec(ctx, `DELETE FROM field_provenance
+			WHERE object_type = 'company' AND object_id = $1 AND value IS NOT NULL
+			  AND field_name = $2 AND value_key = $3 AND source = ANY($4)`,
+			companyID, fact.Field, fact.ValueKey, []string{CompanySourceHuman, CompanySourceAgent}); err != nil {
 			return nil, fmt.Errorf("replace accepted human company fact %s.%s: %w",
 				fact.Category, fact.Field, err)
 		}

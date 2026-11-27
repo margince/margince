@@ -250,8 +250,15 @@ const answerWalkOwnerFile = "internal/platform/database/storekit/answered.go"
 // reading it costs a waiver line, where missing one costs the census.
 func walksForOutbound(sql string) bool {
 	folded := foldSpace.ReplaceAllString(strings.ToLower(sql), " ")
+	if threadMatchWords != nil && !mayHoldFolded(folded, threadMatchWords...) {
+		return false
+	}
 	return threadMatch.MatchString(folded) && ourOutbound.MatchString(folded)
 }
+
+// threadMatchWords are the words every threadMatch match holds, derived from
+// the pattern. A statement holding none of them is never asked the regex.
+var threadMatchWords = requiredWords(threadMatch)
 
 func TestOnlyTheAnswerPredicateWalksAThreadForOurReply(t *testing.T) {
 	t.Parallel()

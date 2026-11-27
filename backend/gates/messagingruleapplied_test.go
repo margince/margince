@@ -558,7 +558,7 @@ func TestEveryCitationExplainsACodeTheEngineEmits(t *testing.T) {
 // are Go literals like a hand-written pack's.
 func compiledRulesFiles(t *testing.T) []string {
 	t.Helper()
-	folders, err := filepath.Glob("../extensions/*/policy")
+	folders, err := gatekit.Glob("../extensions/*/policy")
 	if err != nil {
 		t.Fatal(err)
 	}

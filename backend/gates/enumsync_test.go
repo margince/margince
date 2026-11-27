@@ -17,14 +17,22 @@ import (
 	"go/ast"
 	"go/token"
 	"io/fs"
+	"maps"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/greetingregister"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
+	"github.com/margince/margince/backend/internal/shared/kernel/relationshipmark"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
 // enumBindings maps "table.column" to the Go type that mirrors it.
@@ -148,7 +156,6 @@ var enumBindings = map[string]struct{ pkgDir, typeName string }{
 	"intro_request.route_type":                {"internal/contracts", "ContactGraphRouteType"},
 	"intro_request.status":                    {"internal/contracts", "IntroRequestStatus"},
 	"lead_manual_signal.signal_kind":          {"internal/contracts", "LeadManualSignalKind"},
-	"lead_source.intent":                      {"internal/contracts", "LeadSourceIntent"},
 	"project_health_assessment.state":         {"internal/contracts", "ProjectHealthState"},
 	"provider_connection.mode":                {"internal/contracts", "ProviderConnectionMode"},
 	"provider_connection.status":              {"internal/contracts", "ProviderConnectionStatus"},
@@ -237,8 +244,8 @@ var enumBindings = map[string]struct{ pkgDir, typeName string }{
 	"company.source":                               {"internal/shared/kernel/provenance", "RecordSource"},
 	"contact.source":                               {"internal/shared/kernel/provenance", "RecordSource"},
 	"deal.source":                                  {"internal/shared/kernel/provenance", "RecordSource"},
+	"lead.source":                                  {"internal/shared/kernel/provenance", "RecordSource"},
 	"offer.source":                                 {"internal/shared/kernel/provenance", "RecordSource"},
-	"partner.source":                               {"internal/shared/kernel/provenance", "RecordSource"},
 	"project.source":                               {"internal/shared/kernel/provenance", "RecordSource"},
 	"signal.source":                                {"internal/shared/kernel/provenance", "RecordSource"},
 	"contact.quarantine_reason":                    {"internal/contracts", "ContactImpersonationWarningReason"},
@@ -416,6 +423,13 @@ func tableCheckSets(t *testing.T) map[string][]string {
 			t.Fatal(err)
 		}
 	}
+	// The evidence views store nothing, so their vocabularies are the lists on
+	// field_provenance, read from the catalog the migrations build.
+	evidence, err := readEvidenceVocabularies()
+	if err != nil {
+		t.Fatal(err)
+	}
+	maps.Copy(sets, evidence)
 	return sets
 }
 
@@ -520,6 +534,69 @@ func TestEveryDomainEnumMatchesItsSchemaCheck(t *testing.T) {
 		}
 		if got = asSet(got); setKey(got) != setKey(want) {
 			t.Errorf("%s: Go %s set %v != schema CHECK set %v — change both together", col, binding.typeName, got, want)
+		}
+	}
+}
+
+// listedVocabulary binds a column to the Go function its writers and readers
+// take the values from. A function can leave out a constant its type declares,
+// so the list itself is held to the CHECK, beside the constants above.
+type listedVocabulary struct {
+	col, lister string
+	values      func() []string
+}
+
+// listedStrings adapts a lister of a string-kinded type to the row's signature.
+func listedStrings[T ~string](list func() []T) func() []string {
+	return func() []string {
+		var out []string
+		for _, value := range list() {
+			out = append(out, string(value))
+		}
+		return out
+	}
+}
+
+// listedVocabularies returns the table's rows. The record tables come from
+// recordsourcevocabulary_test.go, so a table held there is compared here.
+func listedVocabularies() []listedVocabulary {
+	rows := []listedVocabulary{
+		{"communication_decision.resolved_category", "commsauthz.Categories", listedStrings(commsauthz.Categories)},
+		{"brief_item.reopen_on", "values.ReopenConditions", listedStrings(values.ReopenConditions)},
+		{"activity_reader_state.reopen_on", "values.ReopenConditions", listedStrings(values.ReopenConditions)},
+		{"contact.greeting_register", "greetingregister.Values", listedStrings(greetingregister.Values)},
+		{"contact.relationship_mark", "relationshipmark.Values", listedStrings(relationshipmark.Values)},
+		{"contact.narrowing_reason", "contacts.NarrowingReasons", listedStrings(contacts.NarrowingReasons)},
+		{"company_geocode_state.status", "contacts.GeocodeStatuses", contacts.GeocodeStatuses},
+	}
+	for _, table := range slices.Sorted(maps.Keys(recordSourceHeld)) {
+		rows = append(rows, listedVocabulary{table + ".source", "provenance.RecordSources", provenance.RecordSources})
+	}
+	return rows
+}
+
+func TestEveryListedVocabularyIsItsColumnsCheck(t *testing.T) {
+	t.Parallel()
+	checks, err := catalogVocabularies()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, row := range listedVocabularies() {
+		listed := row.values()
+		got := asSet(listed)
+		want, ok := checks[row.col]
+		switch {
+		case !ok:
+			t.Errorf("%s: no CHECK vocabulary found in %s, so %s is held to nothing; "+
+				"restore the constraint or repoint the row", row.col, vocabularyCatalog, row.lister)
+		case len(got) == 0:
+			t.Errorf("%s: %s lists no value", row.col, row.lister)
+		case len(got) != len(listed):
+			t.Errorf("%s: %s lists a value twice in %v", row.col, row.lister, listed)
+		case setKey(got) != setKey(want):
+			t.Errorf("%s: %s lists %v and the CHECK admits %v. A value Go writes and the CHECK refuses "+
+				"fails at insert; one the CHECK admits and Go never lists has no reader. Change both together",
+				row.col, row.lister, got, want)
 		}
 	}
 }

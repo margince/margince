@@ -19,8 +19,6 @@ import (
 	"strings"
 	"testing"
 
-	"gopkg.in/yaml.v3"
-
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
@@ -40,7 +38,7 @@ func TestTheEgressPageMatchesTheTaskContract(t *testing.T) {
 			NoPayload bool `yaml:"no_payload"`
 		} `yaml:"embed"`
 	}
-	if err := yaml.Unmarshal(raw, &contract); err != nil {
+	if err := unmarshalYAML(raw, &contract); err != nil {
 		t.Fatalf("parsing the task contract: %v", err)
 	}
 	if len(contract.Tasks) == 0 {

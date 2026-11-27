@@ -32,8 +32,6 @@ import (
 	"strings"
 	"testing"
 
-	"gopkg.in/yaml.v3"
-
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
@@ -108,7 +106,7 @@ func crmFieldEnums(t *testing.T) map[string][]string {
 			} `yaml:"parameters"`
 		} `yaml:"components"`
 	}
-	if err := yaml.Unmarshal(src, &doc); err != nil {
+	if err := unmarshalYAML(src, &doc); err != nil {
 		t.Fatalf("parsing api/crm.yaml: %v", err)
 	}
 	enums := map[string][]string{}

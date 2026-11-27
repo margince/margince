@@ -91,7 +91,7 @@ func (t readProject360) Handle(ctx context.Context, in json.RawMessage) (json.Ra
 // states: a section cut at its cap is a page of the collection, not the
 // collection, and the owning list verb has the rest.
 const project360TruncatedMessage = "At least one section of this page was cut at 25 rows. Treat it as a " +
-	"page, not the whole collection — list_records and search_records page the rest."
+	"page, not the whole collection; list_records and search_records page the rest."
 
 // chargeProject360 charges every record the page names: the project, the
 // company, each deal, each seated contact, each open task and each timeline

@@ -27,6 +27,7 @@ package gates
 // pairs out of the catalog this gate reads.
 
 import (
+	"bytes"
 	"fmt"
 	"io/fs"
 	"os"
@@ -156,6 +157,10 @@ func maskedFieldsDrawnUnder(root string) (map[string][]maskDrawing, error) {
 		source, readErr := gatekit.ReadFile(filepath.Join(root, path)) // #nosec G304 -- a path from walking the source tree
 		if readErr != nil {
 			return readErr
+		}
+		// Every test is found from a maskedAnchor match, which spells this word.
+		if !bytes.Contains(source, []byte("masked")) {
+			return nil
 		}
 		for _, declaration := range declarationsIn(string(source)) {
 			for _, test := range maskedFieldTests(declaration) {

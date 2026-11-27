@@ -6,6 +6,7 @@ import { Badge, Button } from "./atoms";
 import { ReadingTable } from "./report-charts";
 import { type ChartReading, niceTop } from "./report-charts.model";
 import "./trajectorychart.css";
+import { Hair, nearest, Readout, ValueGrid } from "./trajectorychart.marks";
 
 /** A running total read through one moment of the period, `at` from 0 to 1. */
 export type TrajectoryPoint = ChartReading &
@@ -30,12 +31,19 @@ export type TrajectoryChartProps = Readonly<{
   range?: Readonly<{ low: number; high: number; label: string }>;
   // What the projection leaves short of the target, as words under it.
   shortfall?: string;
+  // The straight line from nothing to the target over the period: where the
+  // total would stand on an even pace. Drawn only with a target.
+  pace?: string;
+  // Which reading of the period the chart answers. `actual` shows only what
+  // was read; `projection` adds the committed finish; `range` leads with the
+  // modelled band. Absent, every mark the props carry is drawn.
+  emphasis?: "actual" | "projection" | "range";
   onSelect?: (key: string) => void;
 }>;
 
-const HEIGHT = 190;
-const LEFT = 44;
-const RIGHT = 12;
+const HEIGHT = 260;
+const LEFT = 4;
+const RIGHT = 56;
 const TOP = 14;
 const BOTTOM = 26;
 
@@ -57,6 +65,8 @@ export function TrajectoryChart({
   projection,
   range,
   shortfall,
+  pace,
+  emphasis,
   onSelect,
 }: TrajectoryChartProps) {
   const title = useId();
@@ -65,6 +75,9 @@ export function TrajectoryChart({
   const [plot, setPlot] = useState<HTMLDivElement | null>(null);
   const [width, setWidth] = useState(720);
   const [active, setActive] = useState<string | null>(null);
+  // Once drawn the line drops its dash: a dash sized to the first width
+  // would cut the line short when the plot is measured again.
+  const [drawn, setDrawn] = useState(false);
   useEffect(() => {
     if (!plot || typeof ResizeObserver === "undefined") return;
     // The plot's own width, unclamped. The marks sit in pixels over the
@@ -100,12 +113,38 @@ export function TrajectoryChart({
   // Near the period's end the label reads leftwards, inside the plot.
   const late = now.at > 0.75;
   const selected = points.find((point) => point.key === active);
+  // An even pace stands at the goal's share of the period: half way at half.
+  const paced =
+    target && pace ? { label: pace, goal: target.value } : undefined;
+  // The pointer reads the nearest week anywhere over the plot, not only on
+  // its dot, so the line can be scanned like a ruler.
+  const follow = (clientX: number, box: DOMRect) => {
+    const at = (clientX - box.left - LEFT) / (right - LEFT);
+    setActive(nearest(points, at).key);
+  };
   return (
-    <figure className="report-chart trajectory-chart" aria-labelledby={title}>
+    <figure
+      className="report-chart trajectory-chart"
+      aria-labelledby={title}
+      data-emphasis={emphasis}
+    >
       <figcaption id={title} className="sr-only">
         {label}
       </figcaption>
-      <div className="trajectory-chart-plot" ref={setPlot}>
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: a pointer ruler over the plot; each week's button is the keyboard's way in */}
+      {/* biome-ignore lint/a11y/useKeyWithClickEvents: the same press as the focused week's button, which keys reach */}
+      <div
+        className="trajectory-chart-plot"
+        ref={setPlot}
+        onPointerMove={(event) =>
+          follow(event.clientX, event.currentTarget.getBoundingClientRect())
+        }
+        onPointerLeave={() => setActive(null)}
+        onClick={(event) => {
+          if (active && event.target === event.currentTarget)
+            onSelect?.(active);
+        }}
+      >
         <svg viewBox={`0 0 ${width} ${HEIGHT}`} aria-hidden="true">
           <defs>
             <linearGradient id={`${title}-area`} x1="0" x2="0" y1="0" y2="1">
@@ -113,26 +152,13 @@ export function TrajectoryChart({
               <stop offset="1" className="trajectory-chart-area-foot" />
             </linearGradient>
           </defs>
-          {[0, top / 2, top].map((tick) => (
-            <g key={tick}>
-              <line
-                className="trajectory-chart-grid"
-                data-base={tick === 0 || undefined}
-                x1={LEFT}
-                x2={right}
-                y1={y(tick)}
-                y2={y(tick)}
-              />
-              <text
-                className="trajectory-chart-axis"
-                x={LEFT - 8}
-                y={y(tick) + 4}
-                textAnchor="end"
-              >
-                {tick === 0 ? "0" : axisLabel(tick)}
-              </text>
-            </g>
-          ))}
+          <ValueGrid
+            top={top}
+            left={LEFT}
+            right={right}
+            y={y}
+            axisLabel={axisLabel}
+          />
           {ticks.map((tick) => (
             <g key={tick.at}>
               <line
@@ -164,6 +190,15 @@ export function TrajectoryChart({
             range={range}
             projection={projection}
           />
+          {paced && (
+            <line
+              className="trajectory-chart-pace"
+              x1={x(0)}
+              y1={y(0)}
+              x2={x(1)}
+              y2={y(paced.goal)}
+            />
+          )}
           {target && (
             <line
               className="trajectory-chart-target"
@@ -178,7 +213,13 @@ export function TrajectoryChart({
             d={`${line} L${nowX},${y(0)} L${x(0)},${y(0)} Z`}
             fill={`url(#${CSS.escape(`${title}-area`)})`}
           />
-          <path className="trajectory-chart-line" d={line} pathLength={1} />
+          <path
+            className="trajectory-chart-line"
+            d={line}
+            pathLength={1}
+            data-drawn={drawn}
+            onAnimationEnd={() => setDrawn(true)}
+          />
           <line
             className="trajectory-chart-now"
             x1={nowX}
@@ -209,7 +250,25 @@ export function TrajectoryChart({
             cy={nowY}
             r="6"
           />
+          {selected && (
+            <Hair
+              x={x(selected.at)}
+              y={y(selected.value)}
+              span={[TOP - 6, HEIGHT - BOTTOM]}
+            />
+          )}
         </svg>
+        {selected && (
+          <Readout
+            label={selected.label}
+            amount={selected.amount}
+            at={selected.at}
+            left={Math.min(Math.max(x(selected.at), 80), width - 80)}
+            top={y(selected.value)}
+            pace={paced}
+            axisLabel={axisLabel}
+          />
+        )}
         {target && (
           <span
             className="trajectory-chart-target-name"
@@ -237,7 +296,7 @@ export function TrajectoryChart({
           </Button>
         ))}
       </div>
-      <div className="report-chart-focus" aria-live="polite">
+      <div className="report-chart-focus sr-only" aria-live="polite">
         {selected ? `${selected.label} · ${selected.amount}` : ""}
       </div>
       <ReadingTable

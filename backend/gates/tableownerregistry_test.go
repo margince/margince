@@ -88,7 +88,6 @@ var tableOwners = map[string]string{
 	"lead":                    "internal/modules/contacts",
 	"lead_score_history":      "internal/modules/contacts",
 	"lead_manual_signal":      "internal/modules/contacts",
-	"lead_source":             "internal/modules/contacts",
 	"lead_origin":             "internal/modules/contacts",
 	"lead_disqualify_reason":  "internal/modules/contacts",
 	"partner_stage":           "internal/modules/contacts",
@@ -97,19 +96,23 @@ var tableOwners = map[string]string{
 	// administered reason a refusal names. contacts owns them because the SUBJECT
 	// is a lead or a contact; the deal an acceptance produces is an outcome, and
 	// compose wires the caller that does both.
-	"sdr_handoff":           "internal/modules/contacts",
-	"sdr_handoff_event":     "internal/modules/contacts",
-	"sdr_handoff_reason":    "internal/modules/contacts",
-	"legal_entity":          "internal/modules/contacts",
-	"legal_entity_member":   "internal/modules/contacts",
-	"company_profile_field": "internal/modules/contacts",
-	"company_vat_check":     "internal/modules/contacts",
-	"contact_profile_field": "internal/modules/contacts",
+	"sdr_handoff":         "internal/modules/contacts",
+	"sdr_handoff_event":   "internal/modules/contacts",
+	"sdr_handoff_reason":  "internal/modules/contacts",
+	"legal_entity":        "internal/modules/contacts",
+	"legal_entity_member": "internal/modules/contacts",
+	"company_vat_check":   "internal/modules/contacts",
+	// The evidence of a company or contact: field_provenance rows with a value,
+	// and the older rows that wait in the legacy tables to move. storekit writes
+	// the stamps, the rows without a value, and this gate does not walk it.
+	"field_provenance":             "internal/modules/contacts",
+	"company_fact_legacy":          "internal/modules/contacts",
+	"company_profile_field_legacy": "internal/modules/contacts",
+	"contact_profile_field_legacy": "internal/modules/contacts",
 	// The signature pass's per-contact read cursor (PO-F-2a): which mail was
 	// already shown to the model, so the same empty signature is not re-read
 	// every night.
 	"contact_signature_enrich_state": "internal/modules/contacts",
-	"company_fact":                   "internal/modules/contacts",
 	"company_fact_revision":          "internal/modules/contacts",
 	"company_geocode_state":          "internal/modules/contacts",
 	"geocode_cache":                  "internal/modules/contacts",
@@ -596,14 +599,12 @@ var tableOwners = map[string]string{
 	// rest, and a purge is the one statement this tree issues against it.
 	"river_job": jobsStoreDir,
 
-	// platform, storekit: the audit+outbox pair has ONE sanctioned writer, and
-	// the shared field-provenance layer (B-E02.12) is spelled once next to it.
+	// platform, storekit: the audit+outbox pair has one sanctioned writer.
 	// system_log is the non-entity operational ledger written through
 	// storekit.LogSystem, the same storekit-owned posture as audit_log.
-	"audit_log":        storekitOwned,
-	"event_outbox":     storekitOwned,
-	"field_provenance": storekitOwned,
-	"system_log":       storekitOwned,
+	"audit_log":    storekitOwned,
+	"event_outbox": storekitOwned,
+	"system_log":   storekitOwned,
 	// The bookkeeping rows of the background passes. A module reaches its row
 	// through the storekit readers and writers, with a shape of its own.
 	"installation_state": storekitOwned,

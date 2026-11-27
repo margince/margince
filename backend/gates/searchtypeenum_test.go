@@ -19,8 +19,6 @@ import (
 	"slices"
 	"testing"
 
-	"gopkg.in/yaml.v3"
-
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
@@ -141,7 +139,7 @@ func searchTypesParameterEnum(t *testing.T) typeSpelling {
 			} `yaml:"get"`
 		} `yaml:"paths"`
 	}
-	if err := yaml.Unmarshal(raw, &doc); err != nil {
+	if err := unmarshalYAML(raw, &doc); err != nil {
 		t.Fatalf("parsing %s: %v", contractFile, err)
 	}
 	for _, param := range doc.Paths["/search"].Get.Parameters {

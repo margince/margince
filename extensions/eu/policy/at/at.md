@@ -2,10 +2,14 @@
 jurisdiction: at
 version: 1
 created: 2026-11-19
+source-checked: 2026-11-25
 instruments:
   - name: "Telekommunikationsgesetz 2021 (TKG 2021)"
     provision: "§ 174"
     source-url: https://www.ris.bka.gv.at/eli/bgbl/i/2021/190/P174/NOR40238632
+    text-url: https://ogd.ris.bka.gv.at/Dokumente/Bundesnormen/NOR40238632/NOR40238632.html
+    text-digest: 19775970f88ca39960418366ec329f3fec7f0099168b96d721182e5c79ba7dd9
+    text-fetched: 2026-11-25
   - name: "E-Commerce-Gesetz (ECG)"
     provision: "§ 7"
 marketing-exceptions: []

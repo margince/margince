@@ -7,12 +7,12 @@
 
 package gates
 
-// Each text cap a module applies is a hand-typed mirror of a number
+// Each text cap the server applies is a hand-typed mirror of a number
 // `api/crm.yaml` publishes, because the generated server enforces no string
 // length. This gate fails the day one of them drifts. Raise the contract alone
 // and the server refuses what the schema calls valid. Raise the constant alone
 // and a client truncates to a bound nobody applies. A cap joins the list when a
-// module copies the number instead of reading it.
+// package copies the number instead of reading it.
 
 import (
 	"go/ast"
@@ -20,8 +20,6 @@ import (
 	"go/types"
 	"strconv"
 	"testing"
-
-	"gopkg.in/yaml.v3"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
@@ -83,6 +81,18 @@ var textLimits = []textLimit{
 	{"internal/modules/knowledge/corpustext.go", "maxCorpusName", corpusBody("patch", "/knowledge/corpora/{id}", "name")},
 	{"internal/modules/knowledge/corpustext.go", "maxCorpusTopic", corpusBody("patch", "/knowledge/corpora/{id}", "topic_statement")},
 	{"internal/modules/knowledge/corpustext.go", "maxCorpusDescription", corpusBody("patch", "/knowledge/corpora/{id}", "description")},
+	{
+		"internal/modules/deals/win_evidence.go", "maxWonReasonDetail",
+		schemaPath("components", "schemas", "AdvanceDealRequest", "properties", "won_without_contract_detail"),
+	},
+	{
+		"internal/shared/kernel/statedreason/statedreason.go", "Max",
+		schemaPath("components", "schemas", "RetentionOverrideRequest", "properties", "reason"),
+	},
+	{sharedTextLimits, "TextDocumentCharacters", schemaPath("components", "schemas", "CreateCompanyRequest", "properties", "description")},
+	{sharedTextLimits, "TextDocumentCharacters", schemaPath("components", "schemas", "UpdateCompanyRequest", "properties", "description")},
+	{sharedTextLimits, "TextDocumentCharacters", schemaPath("components", "schemas", "CreateDealRequest", "properties", "description")},
+	{sharedTextLimits, "TextDocumentCharacters", schemaPath("components", "schemas", "UpdateDealRequest", "properties", "description")},
 }
 
 func corpusBody(method, route, property string) []string {
@@ -97,14 +107,14 @@ func TestEachMirroredTextCapIsTheContractsMaxLength(t *testing.T) {
 		t.Fatalf("reading the contract: %v", err)
 	}
 	var doc map[string]any
-	if err := yaml.Unmarshal(raw, &doc); err != nil {
+	if err := unmarshalYAML(raw, &doc); err != nil {
 		t.Fatalf("parsing the contract: %v", err)
 	}
 	for _, limit := range textLimits {
 		published := publishedMaxLength(t, doc, limit.path)
 		if applied := appliedIntConst(t, limit.file, limit.constant); applied != published {
-			t.Errorf("%s applies %d and api/crm.yaml publishes maxLength %d at %v — one refuses what the other calls valid",
-				limit.constant, applied, published, limit.path)
+			t.Errorf("%s in %s applies %d and api/crm.yaml publishes maxLength %d at %v — one refuses what the other calls valid",
+				limit.constant, limit.file, applied, published, limit.path)
 		}
 	}
 }
@@ -135,7 +145,7 @@ func publishedMaxLength(t *testing.T, doc map[string]any, path []string) int {
 	return length
 }
 
-// appliedIntConst reads a module's integer constant from source. The constants
+// appliedIntConst reads a package's integer constant from source. The constants
 // stay unexported: exporting one to suit a gate would widen the surface to make
 // the check convenient.
 // sharedTextLimits declares the four shared limits a cap may name instead of a literal.

@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { Handshake, MessageSquare } from "lucide-react";
 import { expect, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
 import { WriteToProvider } from "../lib/writeto";
@@ -93,6 +94,44 @@ export const NameOnly: Story = {
       href="#/contacts/p-2"
     />
   ),
+};
+
+/** A deal has no face, so it wears its kind's icon where a contact's avatar goes. */
+export const Deal: Story = {
+  render: () => (
+    <RecordCard
+      kind="deal"
+      icon={Handshake}
+      name="Fleet retrofit"
+      identity="d-1"
+      href="#/deals/d-1"
+      position={
+        <>
+          <Badge>Proposal</Badge> €12,000 · closes 3 Dec
+        </>
+      }
+    />
+  ),
+};
+
+/** An activity has no page: its name opens the panel the list keeps beside it. */
+export const ActivityOpensAPanel: Story = {
+  render: () => (
+    <RecordCard
+      kind="activity"
+      icon={MessageSquare}
+      name="Follow up with the new lead"
+      identity="a-1"
+      onOpen={() => {}}
+      position="“Ask about the second site”"
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const open = within(canvasElement).getByRole("button", {
+      name: /Follow up with the new lead/,
+    });
+    await expect(open.getAttribute("aria-haspopup")).toBe("dialog");
+  },
 };
 
 /**

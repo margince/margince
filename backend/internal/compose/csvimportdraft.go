@@ -234,6 +234,7 @@ func applySession(out *crmcontracts.ImportRun, run migration.Run) {
 	out.Version = run.Version
 	out.SourceReleased = run.SourceReleased
 	out.ApprovedAt = run.ApprovedAt
+	out.RowCount = run.UploadRows
 	if run.DraftStep != "" {
 		out.DraftStep = new(crmcontracts.ImportDraftStep(run.DraftStep))
 	}

@@ -40,6 +40,9 @@ var argBuildsGitRepo = regexp.MustCompile(`["'` + "`" + `](-c\s+\S+\s+)*(init|co
 // never does is not building a repository, whatever its strings say.
 var spawnsGit = regexp.MustCompile(`\b(Command|CommandContext|execFileSync|execFile|spawnSync|spawn|execSync|execa)\(\s*(\w+,\s*)?["'` + "`" + `]git\b`)
 
+// spawnsGitWords holds a word of every spawnsGit match, so a file without one is not scanned.
+var spawnsGitWords = requiredWords(spawnsGit)
+
 // shellCallsGit matches git started as a shell command, not the word in prose.
 var shellCallsGit = regexp.MustCompile(`(^|[;&|(` + "`" + `!{]|\b(if|then|else|elif|do|while|until)\s)\s*git\s`)
 
@@ -79,7 +82,7 @@ func TestEveryTestThatBuildsAGitRepoIgnoresTheCallersGitConfig(t *testing.T) {
 			t.Fatalf("reading %s: %v", file.path, err)
 		}
 		shell := isShellTest(base)
-		if !shell && !spawnsGit.Match(raw) {
+		if !shell && (!mayHoldFolded(string(raw), spawnsGitWords...) || !spawnsGit.Match(raw)) {
 			continue
 		}
 		buildsGitRepo := argBuildsGitRepo

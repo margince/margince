@@ -249,7 +249,6 @@ public.audit_log.actor_id exempt system-written rows on the write path of every 
 public.audit_log.actor_type exempt system-written rows on the write path of every change or capture; a guard would serialize each whole row
 public.audit_log.authorization_rule exempt system-written rows on the write path of every change or capture; a guard would serialize each whole row
 public.audit_log.entity_type exempt system-written rows on the write path of every change or capture; a guard would serialize each whole row
-public.auth_token.purpose document
 public.auth_token.token_hash document
 public.automation.key document
 public.automation.name label
@@ -489,26 +488,26 @@ public.company_domain_disposition.evidence exempt carries model reasons and craw
 public.company_domain_disposition.pending_reason note
 public.company_domain_disposition.source document
 public.company_domain_disposition.status document
-public.company_fact.captured_by document
-public.company_fact.category document
-public.company_fact.evidence_snippet document checked: a site passage of about 600 runes or a fixed marker
-public.company_fact.field document
-public.company_fact.source document
-public.company_fact.source_url document checked: a crawled page URL
-public.company_fact.value document checked: must match the cited passage or the page excerpt of 18000 runes
-public.company_fact.value_key document
+public.company_fact_legacy.captured_by document
+public.company_fact_legacy.category document
+public.company_fact_legacy.evidence_snippet document checked: a site passage of about 600 runes or a fixed marker
+public.company_fact_legacy.field document
+public.company_fact_legacy.source document
+public.company_fact_legacy.source_url document checked: a crawled page URL
+public.company_fact_legacy.value document checked: must match the cited passage or the page excerpt of 18000 runes
+public.company_fact_legacy.value_key document
 public.company_geocode_state.input_hash document
 public.company_geocode_state.provider document
 public.company_geocode_state.status document
 public.company_offered_value.field_key document
 public.company_offered_value.offered_value document checked: the extension surface refuses past 500
 public.company_offered_value.source_system document
-public.company_profile_field.captured_by document
-public.company_profile_field.evidence_snippet document checked: site reads and enrichment are cut to it (coldstartprofile.go)
-public.company_profile_field.field document
-public.company_profile_field.source document
-public.company_profile_field.source_url document checked: a crawled page or seed URL
-public.company_profile_field.value document checked: site reads and enrichment are cut to it (coldstartprofile.go); a typed correction is refused past it
+public.company_profile_field_legacy.captured_by document
+public.company_profile_field_legacy.evidence_snippet document checked: site reads and enrichment are cut to it (coldstartprofile.go)
+public.company_profile_field_legacy.field document
+public.company_profile_field_legacy.source document
+public.company_profile_field_legacy.source_url document checked: a crawled page or seed URL
+public.company_profile_field_legacy.value document checked: site reads and enrichment are cut to it (coldstartprofile.go); a typed correction is refused past it
 public.company_relationship_type.captured_by document
 public.company_relationship_type.relationship_type document
 public.company_relationship_type.source document
@@ -622,15 +621,15 @@ public.contact_phone.captured_by document
 public.contact_phone.phone document
 public.contact_phone.phone_type document
 public.contact_phone.source document
-public.contact_profile_field.captured_by document
-public.contact_profile_field.evidence_snippet document checked: cards, signatures and pages are cut to it (machineProfileField); a research quote is refused past it
-public.contact_profile_field.field document
-public.contact_profile_field.source document
-public.contact_profile_field.source_ref document checked: a record reference or a crawled page URL
-public.contact_profile_field.superseded_captured_by document
-public.contact_profile_field.superseded_value document checked: a copy of an earlier contact_profile_field.value or a contact column
-public.contact_profile_field.value document checked: cards, signatures and pages are cut to it (machineProfileField); a research claim is refused past it
-public.contact_profile_field.value_key document
+public.contact_profile_field_legacy.captured_by document
+public.contact_profile_field_legacy.evidence_snippet document checked: cards, signatures and pages are cut to it (machineProfileField); a research quote is refused past it
+public.contact_profile_field_legacy.field document
+public.contact_profile_field_legacy.source document
+public.contact_profile_field_legacy.source_ref document checked: a record reference or a crawled page URL
+public.contact_profile_field_legacy.superseded_captured_by document
+public.contact_profile_field_legacy.superseded_value document checked: a copy of an earlier contact_profile_field.value or a contact column
+public.contact_profile_field_legacy.value document checked: cards, signatures and pages are cut to it (machineProfileField); a research claim is refused past it
+public.contact_profile_field_legacy.value_key document
 public.contact_provider_claim.captured_by document
 public.contact_provider_claim.claim_key document
 public.contact_provider_claim.employment_processing_error document checked: one fixed sentence
@@ -798,7 +797,6 @@ public.extension_ingest_refusal.unit document
 public.extension_secret.extension_name label
 public.extension_secret.key document
 public.extension_secret.vault_ref document
-public.federated_identity.email_at_link document
 public.federated_identity.provider document
 public.federated_identity.subject exempt opaque provider subject keys retain the complete external identity
 public.field_mask.condition document
@@ -807,9 +805,14 @@ public.field_mask.object document
 public.field_mask.role_key document
 public.field_provenance.captured_by document
 public.field_provenance.evidence_ref document
+public.field_provenance.evidence_snippet document checked: each writer cuts or refuses its quote (machineProfileField, coldstartprofile.go, the site passage of about 600 runes)
 public.field_provenance.field_name label
 public.field_provenance.object_type document
 public.field_provenance.source document
+public.field_provenance.superseded_captured_by document
+public.field_provenance.superseded_value document checked: a copy of an earlier field_provenance.value or a contact column
+public.field_provenance.value document checked: each writer cuts or refuses its value (machineProfileField, coldstartprofile.go, the cited site passage)
+public.field_provenance.value_key document
 public.finance_connection.captured_by document
 public.finance_connection.last_error_code document
 public.finance_connection.provider document
@@ -958,9 +961,6 @@ public.lead_privacy_notice.locale document
 public.lead_privacy_notice.state document
 public.lead_privacy_notice.template_key document
 public.lead_score_history.override_reason note
-public.lead_source.intent document
-public.lead_source.key document
-public.lead_source.label label
 public.legal_entity.address_city document
 public.legal_entity.address_line1 line
 public.legal_entity.address_line2 line
@@ -999,7 +999,6 @@ public.linkedin_connection.normalized_company document
 public.linkedin_connection.normalized_name label
 public.linkedin_connection.position document
 public.linkedin_connection.profile_url document checked: a cell of an uploaded export; the upload is refused past it
-public.linkedin_connection.provider_member_ref document
 public.linkedin_connection.source document
 public.list.entity_type document
 public.list.list_type document
@@ -1105,7 +1104,6 @@ public.partner.next_step document
 public.partner.partner_kinds document
 public.partner.relationship_stage document
 public.partner.served_segments document
-public.partner.source document
 public.partner_stage.key document
 public.partner_stage.label label
 public.partner_stage.label_key exempt generated from independently checked source columns
@@ -1167,7 +1165,6 @@ public.project_health_assessment.source document
 public.project_health_assessment.source_author document
 public.project_health_assessment.state document
 public.project_phase_history.cause_kind label
-public.project_phase_history.changed_by document
 public.project_phase_history.from_phase document
 public.project_phase_history.reason note
 public.project_phase_history.to_phase document
@@ -1403,7 +1400,6 @@ public.voice_corpus_source.source_label line
 public.voice_corpus_source.source_ref document
 public.voice_learning_signal.captured_by document
 public.voice_learning_signal.final_captured_by document
-public.voice_learning_signal.final_text exempt a copy of the sent mail body, which has no length bound
 public.voice_learning_signal.generated_original exempt a copy of the model-drafted mail body, which mail_draft.body keeps whole
 public.voice_learning_signal.outcome document
 public.voice_profile.active_source_hash document

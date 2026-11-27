@@ -23,9 +23,6 @@ info:
     name: Gradion
     email: lars@gradion.com
   x-api-deprecation-notices:
-    DELETE /v1/lead-sources/{id}:
-      release: ""
-      announced_at: ""
     GET /v1/companies/{id}/brief:
       release: ""
       announced_at: ""
@@ -38,16 +35,10 @@ info:
     GET /v1/forecast/assurance/enforcement:
       release: ""
       announced_at: ""
-    GET /v1/lead-sources:
-      release: ""
-      announced_at: ""
     GET /v1/stage-automation/policies/{id}:
       release: ""
       announced_at: ""
     GET /v1/stage-automation/report:
-      release: ""
-      announced_at: ""
-    PATCH /v1/lead-sources/{id}:
       release: ""
       announced_at: ""
     POST /v1/ai-model-rates/propose-refresh:
@@ -66,9 +57,6 @@ info:
       release: ""
       announced_at: ""
     POST /v1/forecast/assurance/exceptions/{id}/wait:
-      release: ""
-      announced_at: ""
-    POST /v1/lead-sources:
       release: ""
       announced_at: ""
     POST /v1/stage-automation/policies/{id}/resume:
@@ -8815,8 +8803,8 @@ paths:
             Mutually exclusive with `owner_id` and `owner_team_id`; combining them is `422`.
         - name: source
           in: query
-          schema: {type: string}
-          description: Filter by how the row was written (import, crawl, manual, `connector:<name>`, ...). Not the origin; use `origin` to filter by where the lead came from.
+          schema: {type: string, enum: [api, automation, capture, import, manual, webform]}
+          description: Filter by the channel the lead arrived by. Not the origin; use `origin` to filter by where the lead came from.
         - name: origin
           in: query
           schema: {type: string}
@@ -9589,104 +9577,6 @@ paths:
               schema: {$ref: '#/components/schemas/Problem'}
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
-  /lead-sources:
-    get:
-      tags: [Leads]
-      operationId: listLeadSources
-      deprecated: true
-      summary: List lead sources, active and inactive, in display order.
-      description: |-
-        Deprecated: the list says how a row reached Margince, which nothing scores any more.
-        Use `/lead-origins` for where a lead came from.
-      responses:
-        '200':
-          description: The lead source list.
-          content:
-            application/json:
-              schema: {$ref: '#/components/schemas/LeadSourceListResponse'}
-        '401': {$ref: '#/components/responses/Unauthorized'}
-    post:
-      tags: [Leads]
-      operationId: createLeadSource
-      deprecated: true
-      security: [{bearerAuth: []}]
-      summary: Add a lead source.
-      parameters:
-        - $ref: '#/components/parameters/IdempotencyKey'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: {$ref: '#/components/schemas/CreateLeadSourceRequest'}
-      responses:
-        '201':
-          description: Created lead source.
-          content:
-            application/json:
-              schema: {$ref: '#/components/schemas/LeadSource'}
-        '403': {$ref: '#/components/responses/Forbidden'}
-        '409': {$ref: '#/components/responses/Conflict'}
-        '422': {$ref: '#/components/responses/ValidationError'}
-      description: |-
-        Add a lead source.
-
-        Needs the passport permission Change records.
-
-        Runs at once.
-  /lead-sources/{id}:
-    parameters:
-      - $ref: '#/components/parameters/Id'
-    patch:
-      tags: [Leads]
-      operationId: updateLeadSource
-      deprecated: true
-      security: [{bearerAuth: []}]
-      summary: Rename, reorder, re-weight or (de)activate a lead source.
-      description: |-
-        Changing `intent` does not rescore existing leads; each lead picks the
-        new weight up on its next recompute. A built-in (`system`) source
-        accepts every field here — it only refuses deletion.
-
-        Needs the passport permission Change records.
-
-        Runs at once.
-      parameters:
-        - $ref: '#/components/parameters/IdempotencyKey'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: {$ref: '#/components/schemas/UpdateLeadSourceRequest'}
-      responses:
-        '200':
-          description: Updated lead source.
-          content:
-            application/json:
-              schema: {$ref: '#/components/schemas/LeadSource'}
-        '403': {$ref: '#/components/responses/Forbidden'}
-        '404': {$ref: '#/components/responses/NotFound'}
-        '409': {$ref: '#/components/responses/Conflict'}
-        '422': {$ref: '#/components/responses/ValidationError'}
-    delete:
-      tags: [Leads]
-      operationId: deleteLeadSource
-      deprecated: true
-      security: [{bearerAuth: []}]
-      summary: Remove a lead source nothing uses.
-      description: |-
-        409 when the source is built-in or any live lead still carries it —
-        deactivate it instead, which hides it from the create form and the
-        filter while every existing lead keeps its value.
-
-        Needs the passport permission Change records.
-
-        Runs at once.
-      responses:
-        '204': {description: Removed.}
-        '403': {$ref: '#/components/responses/Forbidden'}
-        '404': {$ref: '#/components/responses/NotFound'}
-        '409': {$ref: '#/components/responses/Conflict'}
-        '422': {$ref: '#/components/responses/ValidationError'}
   /lead-origins:
     get:
       tags: [Leads]
@@ -9788,9 +9678,8 @@ paths:
       summary: List deal acquisition sources, active and retired, in display order.
       description: |-
         The administered business channels a deal can be attributed to. This list is
-        deliberately separate from `/lead-sources`: that one also models how a RECORD
-        reached Margince (connector, import, crawl) and scores lead intent, while this
-        one only names how an OPPORTUNITY reached the business. Retired entries are
+        deliberately separate from `/lead-origins`, which names where a LEAD came from;
+        this one only names how an OPPORTUNITY reached the business. Retired entries are
         returned so a deal still carrying one renders its label and a filter can still
         find it; they cannot be newly assigned.
       responses:
@@ -28925,6 +28814,10 @@ components:
         sync_failing_since: {type: [string, 'null'], format: date-time, description: 'When the CURRENT failure streak began, null while healthy. Set on the first failure after a success and left alone until one clears it, so the duration read off it is the outage''s — last_synced_at moves on every postponed tick and dates the newest attempt instead.'}
         next_sync_due_at: {type: [string, 'null'], format: date-time, description: 'When the sweep will next pick this connection up (backoff-aware).'}
         backfill: {allOf: [{$ref: '#/components/schemas/BackfillStatus'}], description: 'Summary of the connection''s backfill run; state `none` when never run.'}
+        unread_period:
+          allOf: [{$ref: '#/components/schemas/CaptureUnreadPeriod'}]
+          description: >-
+            A period no sync of this mailbox read: a sync found its provider cursor gone and listed only the newest mail, or a first sync could not reach back to where it was to start. A successful sync since, and a finished import, do not clear it. Only an import whose window reaches back over it, and that failed no message, does. Absent when there is none.
         signature_enrich_enabled:
           type: [boolean, 'null']
           description: |-
@@ -31605,7 +31498,7 @@ components:
       description: 'What kind of problem a report issue names, so a screen can group them. One closed list, the same one the server reports from.'
     ImportReasonCode:
       type: string
-      enum: [activity_empty, activity_held, address_erased, address_not_split, activity_link_ambiguous, activity_link_ambiguous_dropped, activity_type_unknown, activity_type_unnamed, activity_unlinked, amount_negative, author_too_long, cannot_create, cannot_create_tags, cannot_edit, cannot_edit_and_tag, cannot_link_stakeholders, cannot_read_pipelines, cannot_read_tags, cannot_write_type, close_date_future, close_date_past, company_domain_matched, company_duplicate_found, company_duplicate_skipped, company_link_on_meeting, company_name_empty, contact_duplicate_found, contact_duplicate_skipped, contact_email_held, contact_holds_lead, contact_not_found, contact_not_found_dropped, contact_channel_missing, contact_unnamed, currency_not_a_code, currency_unset, deal_already_closed, deal_company_has_contracts, deal_legal_gate, deal_not_found, deal_not_found_dropped, deal_pipeline_fixed, description_too_long, direction_unknown, domain_held, duplicate_email, duration_not_valid_for_kind, email_names_no_contact, duration_out_of_range, employer_column_empty, employer_column_empty_dropped, employer_not_found, employer_not_found_dropped, employer_refused, employer_will_create, empty_payload, field_inactive, fx_rate_missing, id_not_a_company_id, id_not_a_record_id, id_not_visible, id_record_not_visible, id_on_non_company, lead_not_found, lead_not_found_dropped, lead_status_not_importable, lead_status_unknown, link_ambiguous, link_ambiguous_dropped, link_contact_not_imported, link_edge_unsupported, link_malformed, link_not_attachable, link_not_found, link_not_found_dropped, link_row_not_imported, link_row_skipped, link_row_skipped_dropped, link_type_unknown, linkedin_held, lost_reason_missing, meeting_not_taken_place, meeting_status_not_valid_for_kind, meeting_status_unknown, message_not_importable, natural_key_taken, not_a_date, note_repeated, not_a_domain, not_a_number, not_an_amount, not_an_email, not_yes_no, occurred_at_future, occurred_at_unnamed, option_not_allowed, option_not_in_list, options_need_semicolons, owner_refused, owner_unknown, phone_needs_country, pipeline_no_open_stage, pipeline_unknown, pipeline_unnamed, record_archived, ref_taken_by_another_company, ref_taken_by_another_record, row_key_empty, row_key_repeated, run_in_flight, size_band_invalid, stage_unknown, stage_unnamed, stored_values_kept, tag_created, tag_name_invalid, tag_new, task_not_importable, timestamp_needs_zone, too_many_links, undo_edited, undo_failed, undo_grant_lost, undo_not_visible, undo_rule_protects, undo_still_referenced, value_refused, value_too_long, value_unreadable]
+      enum: [activity_empty, activity_held, address_erased, address_not_split, activity_link_ambiguous, activity_link_ambiguous_dropped, activity_link_ambiguous_will_drop, activity_type_unknown, activity_type_unnamed, activity_unlinked, amount_negative, amount_needs_currency, amount_too_many_decimals, author_too_long, cannot_create, cannot_create_tags, cannot_edit, cannot_edit_and_tag, cannot_link_stakeholders, cannot_read_pipelines, cannot_read_tags, cannot_write_type, close_date_far, close_date_future, close_date_past, company_domain_matched, company_duplicate_found, company_duplicate_skipped, company_link_on_meeting, company_name_empty, contact_duplicate_found, contact_duplicate_skipped, contact_email_held, contact_holds_lead, contact_not_found, contact_not_found_dropped, contact_not_found_will_drop, contact_channel_missing, contact_unnamed, currency_not_a_code, currency_not_money, currency_unset, deal_already_closed, deal_company_has_contracts, deal_legal_gate, deal_not_found, deal_not_found_dropped, deal_not_found_will_drop, deal_pipeline_fixed, description_too_long, direction_unknown, domain_held, duplicate_email, duration_not_valid_for_kind, email_names_no_contact, duration_out_of_range, employer_column_empty, employer_column_empty_dropped, employer_column_empty_will_drop, employer_not_found, employer_not_found_dropped, employer_not_found_will_drop, employer_refused, employer_will_create, empty_payload, field_inactive, fx_rate_missing, id_not_a_company_id, id_not_a_record_id, id_not_visible, id_record_not_visible, id_on_non_company, lead_not_found, lead_not_found_dropped, lead_not_found_will_drop, lead_status_not_importable, lead_status_unknown, link_ambiguous, link_ambiguous_dropped, link_ambiguous_will_drop, link_contact_not_imported, link_edge_unsupported, link_malformed, link_not_attachable, link_not_found, link_not_found_dropped, link_not_found_will_drop, link_row_not_imported, link_row_skipped, link_row_skipped_dropped, link_row_skipped_will_drop, link_type_unknown, linkedin_held, lost_reason_missing, meeting_not_taken_place, meeting_status_not_valid_for_kind, meeting_status_unknown, message_not_importable, natural_key_taken, not_a_date, note_repeated, not_a_domain, not_a_number, not_a_phone, not_an_amount, not_an_email, not_yes_no, occurred_at_future, occurred_at_unnamed, option_not_allowed, option_not_in_list, options_need_semicolons, owner_refused, owner_unknown, phone_needs_country, pipeline_no_open_stage, pipeline_unknown, pipeline_unnamed, record_archived, ref_taken_by_another_company, ref_taken_by_another_record, row_key_empty, row_key_repeated, run_in_flight, size_band_invalid, stage_unknown, stage_unnamed, stored_values_kept, tag_created, tag_name_invalid, tag_new, task_not_importable, timestamp_needs_zone, too_many_links, undo_edited, undo_failed, undo_grant_lost, undo_not_visible, undo_rule_protects, undo_still_referenced, value_refused, value_too_long, value_unreadable]
       description: 'Why a row was skipped or warned about, so a screen can say it in the reader''s language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code. `run_in_flight` is the one refusal code: it answers a commit or undo on a run another attempt holds, and no row carries it.'
     CreateImportRunRequest:
       type: object
@@ -31802,7 +31695,7 @@ components:
           description: 'A picklist or multiselect field''s allowed values, for a caller who may read custom fields. Absent otherwise.'
     ImportRowIssue:
       type: object
-      description: One row the import could not take, named by its line so a human can go fix it. A problem of a whole file, such as a tag the file names that does not exist yet, has no line.
+      description: One problem of a row, named by its line so a human can go fix it. A row with several cells at fault has one issue for each, and counts once in `skipped`. A problem of a whole file, such as a tag the file names that does not exist yet, has no line.
       required: [reason]
       properties:
         line: {type: integer, minimum: 1, description: 'The line in the uploaded file, counting the header as line 1. Absent when the problem belongs to the whole file.'}
@@ -31991,6 +31884,7 @@ components:
         object: {$ref: '#/components/schemas/ImportObject'}
         file_name: {type: string, description: 'The uploaded file''s name, as the run was created with it. Display only.'}
         source_name: {type: string, description: 'The name the run''s source is filed under.'}
+        row_count: {type: integer, minimum: 0, readOnly: true, description: 'Rows the upload counted in the file, a ZIP''s files added together. Present while the run keeps what the upload read of the file, in a list too, so a draft no test has read still says how many rows it holds.'}
         parts:
           type: array
           items: {$ref: '#/components/schemas/ImportRunPart'}
@@ -32069,6 +31963,7 @@ components:
         file: {type: string, description: 'The ZIP entry, or the uploaded file''s name for a single CSV. Empty for a single CSV created without `file_name`.'}
         object: {$ref: '#/components/schemas/ImportObject'}
         row_count: {type: integer, minimum: 0, description: 'Rows the file holds, once a dry run has read it; 0 before.'}
+        rows_written: {type: integer, minimum: 0, readOnly: true, description: 'Rows of the file the run created or updated. Present once the run has written: `complete`, `failed`, `undoing` or `undone`.'}
         mapping:
           type: object
           additionalProperties: {type: string}
@@ -41562,7 +41457,7 @@ components:
         assignee_id: {type: [string, 'null'], format: uuid, description: Task only.}
         is_done: {type: boolean, default: false, description: Task only.}
         done_at: {type: [string, 'null'], format: date-time}
-        duration_seconds: {type: [integer, 'null'], description: Meeting/call only.}
+        duration_seconds: {type: [integer, 'null'], minimum: 0, description: Meeting/call only.}
         host_user_id:
           type: [string, 'null']
           format: uuid
@@ -42032,7 +41927,7 @@ components:
           format: uuid
           description: >-
             Inbound message, call, meeting or email only: the linked contact who wrote or said it. Set it whenever one contact sent the message, for example the one member of a group chat who asked for a follow-up. Only that contact counts as its author, so only they asked to hear from us. Without it, an inbound activity linked to one contact names that contact as the sender. One linked to two or more contacts names no sender, and each contact is kept as copied. The stated `participants` of an email win over this field. A contact that is not in `links` returns `422 code: sender_not_linked`. Any other kind, or a direction other than `inbound`, returns `422 code: field_not_valid_for_kind`.
-        duration_seconds: {type: [integer, 'null']}
+        duration_seconds: {type: [integer, 'null'], minimum: 0}
         direction: {type: [string, 'null'], enum: [null, inbound, outbound]}
         call_outcome:
           type: [string, 'null']
@@ -43928,8 +43823,7 @@ components:
         next_task_due_has_time: {type: boolean, readOnly: true, description: 'True when next_task_due_at names a time of day; false when the next task is due on a date with no time.'}
         next_task_due_intent: {allOf: [{$ref: '#/components/schemas/IntentTime'}], readOnly: true, description: 'The date and clock the next task was set for, in the zone it was chosen in. A task with only a date is due on this date for every reader.'}
         score_reason: {type: [string, 'null'], readOnly: true, description: 'The highest-impact factor in the retained current score explanation, for a compact queue reason.'}
-        source: {type: string, description: 'How the row reached Margince: `manual` for a typed lead, or the value an import, connector or capture wrote (`connector:<name>:<id>`). It never scores and never feeds the origin filter or report; use `origin` for where the lead came from.'}
-        source_label: {type: [string, 'null'], readOnly: true}
+        source: {type: string, description: 'The channel this lead arrived by: `api`, `automation`, `capture`, `import`, `manual` or `webform`. An older lead can show another value until the background correction reaches it. It never scores; use `origin` for where the lead came from.'}
         web_form_name: {type: [string, 'null'], readOnly: true, description: 'The current name of the website form this lead came through; null for every other lead, and for one whose form was deleted.'}
         origin: {type: [string, 'null'], description: 'Where the lead came from, a key from `/lead-origins`. Null when nobody has classified the lead; such a lead scores neutral. Set by a human, an importer or capture, and the only lead fact the score and the origin filter read.'}
         origin_label: {type: [string, 'null'], readOnly: true, description: 'The label `/lead-origins` gives `origin`; null when `origin` is null.'}
@@ -43996,7 +43890,7 @@ components:
         source_author_id: {type: [string, 'null'], format: uuid, description: 'Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer, only beside a source_system; either author field or both may be sent, and the seat''s current name wins on read. captured_by still names the caller.'}
         source_author_name: {type: [string, 'null'], maxLength: 200, description: 'The source system''s own spelling of who wrote this record. Same door as source_author_id: a declared importer only, beside a source_system. Kept when a seat is also named, so the name survives the seat.'}
         source_id: {type: [string, 'null']}
-        source: {type: string, description: 'How the row was written. Optional: the server writes `manual` when none is sent. Never scored; send `origin` for where the lead came from.'}
+        source: {type: string, enum: [api, automation, capture, import, manual, webform], description: 'The channel this lead arrived by. Optional: the server writes `manual` when none is sent, and an integration sends `api`. The other system and the lead''s id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`. Never scored; send `origin` for where the lead came from.'}
         origin: {type: [string, 'null'], description: 'Where the lead came from: an ACTIVE key from `/lead-origins` (422 `unknown_lead_origin` or `inactive_lead_origin` otherwise). Omit for an unclassified lead, which scores neutral.'}
         origin_detail: {type: [string, 'null'], maxLength: 500, description: 'A short note beside `origin`.'}
       additionalProperties: true
@@ -44216,7 +44110,7 @@ components:
     LeadSourceIntent:
       type: string
       enum: [high, neutral, low]
-      description: 'What the scorer makes of a lead from this origin (the deprecated lead source list carries the same field, which nothing reads): high adds the high-intent points, low subtracts the low-intent penalty, neutral does neither.'
+      description: 'What the scorer makes of a lead from this origin (lead origins carry it): high adds the high-intent points, low subtracts the low-intent penalty, neutral does neither.'
     ReviewQuestion:
       type: object
       required: [key, label, type, required]
@@ -44647,51 +44541,6 @@ components:
       type: object
       properties:
         label: {type: string, minLength: 1, maxLength: 120}
-        intent: {$ref: '#/components/schemas/LeadSourceIntent'}
-        sort_order: {type: integer}
-        active: {type: boolean}
-    LeadSource:
-      type: object
-      deprecated: true
-      description: 'Deprecated: how a row reached Margince is no longer scored. One administered lead source. `key` is the value stored on `lead.source`; `label` is what a user sees.'
-      required: [id, key, label, intent, sort_order, active, system, lead_count, version, created_at, updated_at]
-      properties:
-        id: {type: string, format: uuid}
-        key: {type: string, description: 'Lowercase stable key, the stored value. Never changes after creation.'}
-        label: {type: string}
-        intent: {$ref: '#/components/schemas/LeadSourceIntent'}
-        sort_order: {type: integer}
-        active: {type: boolean, description: 'Inactive sources leave the create form and the filter; leads carrying them keep the value.'}
-        system: {type: boolean, readOnly: true, description: 'Built-in. Can be renamed, re-weighted and deactivated, never deleted.'}
-        lead_count: {type: integer, readOnly: true, description: 'Live leads carrying this key.'}
-        version: {$ref: '#/components/schemas/RowVersion'}
-        created_at: {type: string, format: date-time}
-        updated_at: {type: string, format: date-time}
-    DiscoveredLeadSource:
-      type: object
-      description: A source value present on leads but absent from the administered list — a connector family, a seed, an import.
-      required: [key, lead_count]
-      properties:
-        key: {type: string, description: 'The stored value, or for `connector:<name>:<id>` values the `connector:<name>` family.'}
-        lead_count: {type: integer}
-    LeadSourceListResponse:
-      type: object
-      required: [data, discovered]
-      properties:
-        data: {type: array, items: {$ref: '#/components/schemas/LeadSource'}}
-        discovered: {type: array, items: {$ref: '#/components/schemas/DiscoveredLeadSource'}}
-    CreateLeadSourceRequest:
-      type: object
-      required: [label]
-      properties:
-        label: {type: string, minLength: 1}
-        key: {type: string, description: 'Optional; derived from the label (lowercased, non-alphanumerics collapsed to `_`) when absent. Must be unique.'}
-        intent: {$ref: '#/components/schemas/LeadSourceIntent'}
-        sort_order: {type: integer}
-    UpdateLeadSourceRequest:
-      type: object
-      properties:
-        label: {type: string, minLength: 1}
         intent: {$ref: '#/components/schemas/LeadSourceIntent'}
         sort_order: {type: integer}
         active: {type: boolean}
@@ -49459,6 +49308,10 @@ components:
           type: string
           format: date-time
           description: The instant a snapshot share's state describes. Absent on a live share.
+        scope_label:
+          type: string
+          description: >-
+            The name of the population the readings cover, as this reader's own lens names it: the team, the team member, or the whole company. Absent when that lens does not reach the team member or team, so a link never names a subject its reader could not choose; `readings.scope_kind` still says which kind it is.
         readings: {$ref: '#/components/schemas/ForecastReadings'}
         withheld:
           type: boolean

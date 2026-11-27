@@ -34,6 +34,7 @@ import {
   stopIsConfigured,
 } from "../../lib/sitereadkind";
 import { useViewerZone } from "../../lib/viewerzone";
+import { SiteReadFailure } from "./companydeepread.failure";
 
 type SiteReadReport = components["schemas"]["SiteReadReport"];
 
@@ -290,6 +291,7 @@ function SiteReadPanel({
         )}
       </p>
       <ScanSteps report={report} />
+      <SiteReadFailure report={report} />
       <SiteReadDeferral report={report} />
       {/* Only the stops a reader can do something about are drawn as a
           warning. A page or byte cap is already stated by the status beside

@@ -2,10 +2,13 @@
 jurisdiction: es
 version: 1
 created: 2026-11-19
+source-checked: 2026-11-25
 instruments:
   - name: "Ley 34/2002, de 11 de julio, de servicios de la sociedad de la información y de comercio electrónico (LSSI)"
     provision: "arts. 20 y 21"
     source-url: https://www.boe.es/buscar/act.php?id=BOE-A-2002-13758
+    text-digest: dd21da362b3ef4679a3712a0f8cc46f8c5c15047782a661e94d2304ba9c0aca5
+    text-fetched: 2026-11-25
 subject-prefix: "Publicidad"
 fixtures:
   - finding: objection_route

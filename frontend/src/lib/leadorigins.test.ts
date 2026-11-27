@@ -99,6 +99,9 @@ describe("the added-via reader", () => {
     expect(addedViaFor({ source: "manual", imported_from: null }, t)).toBe(
       "lead.source.manual",
     );
+    expect(addedViaFor({ source: "capture", imported_from: null }, t)).toBe(
+      "lead.source.capture",
+    );
     expect(addedViaFor({ source: "siteread", imported_from: null }, t)).toBe(
       "lead.source.siteread",
     );

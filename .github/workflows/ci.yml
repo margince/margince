@@ -99,6 +99,8 @@ jobs:
       # requires, and without it the classifier fails closed — which on a pull
       # request skips every gated job and still renders a green `ci`.
       pull-requests: read
+      # The merge-queue step below reads earlier runs, their jobs and artifacts.
+      actions: read
     outputs:
       # Diff-scoping is honest for author feedback and dishonest as a merge
       # verdict: on a push, a commit matching no scope skipped every gate and
@@ -130,10 +132,15 @@ jobs:
       # docs/explanation/ci-pipeline.md rather than left to be inferred from
       # this filter.
       images: ${{ steps.filter.outputs.images == 'true' || github.event_name == 'merge_group' }}
+      # The release scripts and the workflows that call them. See the filter below.
+      release: ${{ steps.filter.outputs.release == 'true' || github.event_name == 'merge_group' }}
       # A pull request into `develop` takes the fast lanes only. The slow ones run
       # each night on develop's tip, before develop is merged into main: see
       # docs/how-to/land-through-develop.md.
       full_lane: ${{ github.event_name != 'pull_request' || github.base_ref != 'develop' }}
+      # On the merge queue: a run of the entry's pull request already passed the
+      # integration lane on this exact tree, so the lane is skipped.
+      integration_proven: ${{ steps.proven.outputs.proven == 'true' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -345,6 +352,18 @@ jobs:
               - 'Dockerfile'
               - '.dockerignore'
               - 'docker-bake.hcl'
+            # What `make check-release` tests, and the workflows that call it.
+            # Only the release workflows run these scripts, so `make check`
+            # leaves their tests out and this scope runs them instead.
+            # backend/gates/releaselane_test.go derives what this scope must
+            # hold from the tree.
+            release:
+              - 'Makefile'
+              - 'scripts/release*'
+              - 'scripts/lib-git-fixture.sh'
+              - '.github/workflows/release.yml'
+              - '.github/workflows/release-tag.yml'
+              - '.github/workflows/_release-*.yml'
             # Everything that can change WHICH packages are in the tree, and
             # therefore which licenses the gate below judges. `**/pnpm-lock.yaml`
             # is globbed on purpose: a Renovate lockfile-only PR is precisely
@@ -405,6 +424,18 @@ jobs:
               # dependency PR.
               - '.github/workflows/**'
               - '.github/actions/**'
+      # Reads the API only. Each queue group starts a full lane, and a dozen
+      # integration runners per group is what kept the `ci` verdict waiting.
+      - name: An earlier run passed integration on this tree
+        id: proven
+        if: github.event_name == 'merge_group'
+        working-directory: .
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          MERGE_GROUP_SHA: ${{ github.event.merge_group.head_sha }}
+          MERGE_GROUP_REF: ${{ github.event.merge_group.head_ref }}
+        run: ./scripts/ci-integration-proven.sh >> "$GITHUB_OUTPUT"
 
   # The image the toolchain jobs run in, named by digest. Beside `changes`, not
   # behind it: when the image exists this is a lookup that ends first.
@@ -596,7 +627,7 @@ jobs:
           name: go-coverage-extensions
           path: backend/coverage-extensions.out
           if-no-files-found: error
-      # Judged in test-budget over both legs' logs: a waiver for a package
+      # Judged in the `ci` job over every leg's log: a waiver for a package
       # this leg never ran is stale only if the other leg never ran it either.
       - name: Upload the test log for the budget
         if: ${{ !cancelled() }}
@@ -605,31 +636,6 @@ jobs:
           name: check-backend-log-${{ matrix.part }}
           path: ${{ runner.temp }}/check-backend.log
           if-no-files-found: error
-
-  # Here and not in check-backend: only a CI runner's timings are steady enough
-  # to hold a package to a budget.
-  test-budget:
-    name: test-budget
-    timeout-minutes: 10
-    needs: [deterministic-gates]
-    if: ${{ !cancelled() && needs.deterministic-gates.result != 'skipped' }}
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    defaults:
-      run:
-        working-directory: .
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: Download every leg's test log
-        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          pattern: check-backend-log-*
-          path: ${{ runner.temp }}/logs
-      - name: Unit-test time budget per package
-        run: make test-budget LOG="$RUNNER_TEMP/logs/*/check-backend.log"
 
   # The static half of the backend gate (`make check-static`: lint, vet,
   # arch-lint), beside deterministic-gates rather than inside it. On one runner
@@ -866,7 +872,11 @@ jobs:
   # the build gate serialized the two slowest jobs and dominated PR wall-clock.
   integration:
     needs: [changes]
-    if: needs.changes.outputs.backend_db == 'true' && needs.changes.outputs.full_lane == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
+    if: >-
+      needs.changes.outputs.backend_db == 'true'
+      && needs.changes.outputs.full_lane == 'true'
+      && needs.changes.outputs.integration_proven != 'true'
+      && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     # The most a job of the lane may ask for: the shards read the run's jobs to
     # learn whether a re-run builds the binaries again.
     permissions:
@@ -1517,6 +1527,7 @@ jobs:
       contents: read
     defaults:
       run:
+        shell: bash
         working-directory: .
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -1566,8 +1577,14 @@ jobs:
   # scripts/ci-verdict.sh is where "a skip is not a pass on the merge queue" is
   # written down and unit-tested (make test-ci-verdict).
   #
+  # `changes` is listed for its `integration_proven` output only: the
+  # classifier produces no verdict.
+  #
+  # The test budget is judged here rather than in a job of its own. Under a full
+  # runner queue each job in the chain waits for a runner, and that job was the
+  # last link before this one.
+  #
   # WHAT THE needs: LIST DELIBERATELY OMITS:
-  #   changes                    — the classifier produces no verdict.
   #   fe-quality/-unit/-bundle   — absorbed by the `frontend` fan-in.
   #   integration-shards,
   #   integration-unit-coverage  — absorbed by the `integration` fan-in, which
@@ -1655,6 +1672,27 @@ jobs:
       - name: Build the role images
         run: docker buildx bake -f docker-bake.hcl default
 
+  # The release scripts' own tests. They left `make check` because only the
+  # release workflows run the scripts; those workflows run this lane before
+  # they build, and this job runs it on a pull request that changes it.
+  release-scripts:
+    name: release-scripts
+    timeout-minutes: 10
+    needs: [changes]
+    if: needs.changes.outputs.release == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: The release scripts pass their own tests
+        run: make check-release
+
   ci:
     name: ci
     timeout-minutes: 10
@@ -1663,11 +1701,11 @@ jobs:
     # which is the whole failure mode this job exists to end.
     if: always()
     needs:
+      - changes
       # A failed image build skips every job that needs it, and a skip passes
       # on a pull request; this entry is what turns that failure red.
       - ci-image
       - deterministic-gates
-      - test-budget
       - backend-lint
       - craftsmanship
       - craft-residue
@@ -1684,6 +1722,7 @@ jobs:
       - uat
       - license-gate
       - images
+      - release-scripts
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -1691,16 +1730,31 @@ jobs:
       run:
         working-directory: .
     steps:
-      # The verdict reads one script. The whole tree took 12 of this job's 16 s,
+      # The verdict reads three files. The whole tree took 12 of this job's 16 s,
       # and this job is the last step to every pull request's result.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           filter: blob:none
-          sparse-checkout: scripts/ci-verdict.sh
+          sparse-checkout: |
+            scripts/ci-verdict.sh
+            scripts/check-test-budget.sh
+            scripts/test-budget-waivers.txt
           sparse-checkout-cone-mode: false
       - name: Verdict
         env:
           CI_VERDICT_NEEDS: ${{ toJSON(needs) }}
           CI_VERDICT_EVENT: ${{ github.event_name }}
+          CI_VERDICT_PROVEN: ${{ needs.changes.outputs.integration_proven == 'true' && 'integration' || '' }}
         run: ./scripts/ci-verdict.sh
+      # Only a CI runner's timings are steady enough to hold a package to a
+      # budget, so `make check` leaves this out. A failed leg still left a log.
+      - name: Download every leg's test log
+        if: ${{ !cancelled() && needs.deterministic-gates.result != 'skipped' }}
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: check-backend-log-*
+          path: ${{ runner.temp }}/logs
+      - name: Unit-test time budget per package
+        if: ${{ !cancelled() && needs.deterministic-gates.result != 'skipped' }}
+        run: ./scripts/check-test-budget.sh "$RUNNER_TEMP"/logs/*/check-backend.log

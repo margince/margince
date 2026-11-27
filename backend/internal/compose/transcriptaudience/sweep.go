@@ -6,6 +6,7 @@
 package transcriptaudience
 
 import (
+	"cmp"
 	"context"
 
 	"github.com/jackc/pgx/v5"
@@ -24,6 +25,8 @@ const sweepBatch = 200
 // added to or taken off the meeting, by any writer, reaches the transcript here.
 type Sweep struct {
 	Pool *pgxpool.Pool
+	// Batch is the rows one transaction takes. Zero is sweepBatch.
+	Batch int
 }
 
 // Workspace runs one workspace's pass, as the system. It pages through every
@@ -36,7 +39,7 @@ func (s Sweep) Workspace(ctx context.Context, workspace ids.UUID) error {
 		var page activities.DriftedPage
 		if err := database.WithWorkspaceTx(ctx, s.Pool, func(tx pgx.Tx) error {
 			var err error
-			page, err = activities.FollowDriftedTranscriptsTx(ctx, tx, after, sweepBatch)
+			page, err = activities.FollowDriftedTranscriptsTx(ctx, tx, after, s.batch())
 			return err
 		}); err != nil {
 			return err
@@ -47,3 +50,5 @@ func (s Sweep) Workspace(ctx context.Context, workspace ids.UUID) error {
 		after = page.Next
 	}
 }
+
+func (s Sweep) batch() int { return cmp.Or(s.Batch, sweepBatch) }

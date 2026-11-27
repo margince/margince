@@ -3,7 +3,12 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, expect, it, vi } from "vitest";
-import { installFetchStub, StoryProviders } from "../../testing/story-utils";
+import {
+  installFetchStub,
+  jsonResponse,
+  meRoute,
+  StoryProviders,
+} from "../../testing/story-utils";
 import { ReportingEvidenceDrawer } from "./analytics.drawers";
 import { ReportingCharts, wideCharts } from "./reporting.charts";
 import { ReportingForecastGraphs } from "./reporting.forecast";
@@ -122,6 +127,42 @@ it("labels snapshot selection as sharing and keeps the forecast at one quarterly
         input instanceof Request && input.url.includes("period=this_quarter"),
     ),
   ).toBe(true);
+});
+
+it("keeps the quarter's cards and Shared links on a week, and says why Share view waits for the quarter", async () => {
+  installFetchStub({
+    ...reportingStoryRoutes(forecastEvaluation),
+    "GET /me": meRoute({
+      report_definition: ["read"],
+      forecast: ["read", "create"],
+    }),
+    "GET /forecast/shares": () => jsonResponse({ data: [] }),
+  });
+  render(
+    <StoryProviders client={reportingCatalogClient()}>
+      <ReportingForecastGraphs scope={reportingStoryScope} period="week" />
+    </StoryProviders>,
+  );
+  expect(
+    await screen.findByRole("button", { name: "Shared links" }),
+  ).toBeVisible();
+  expect(screen.getByRole("button", { name: "Share view" })).toHaveAttribute(
+    "disabled",
+  );
+  expect(
+    screen.getAllByText(
+      "Sharing covers the quarter. Choose Quarter to share this view.",
+    ).length,
+  ).toBeGreaterThan(0);
+  expect(
+    screen.getByText("The two pipeline cards below cover the quarter."),
+  ).toBeVisible();
+  expect(
+    await screen.findByRole("button", { name: /Opening.*760/ }),
+  ).toBeVisible();
+  expect(
+    screen.queryByRole("combobox", { name: "Snapshot to share" }),
+  ).not.toBeInTheDocument();
 });
 
 it("shows missing capture history as unavailable instead of drawing a fabricated bridge", () => {

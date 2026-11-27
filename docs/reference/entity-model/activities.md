@@ -6,7 +6,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## activity
 
-91 columns · primary key `(id)` · referenced by 49 foreign keys
+91 columns · primary key `(id)` · referenced by 50 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -132,6 +132,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 - `activity_direction_check`: `CHECK (((direction IS NULL) OR (direction = ANY (ARRAY['inbound', 'outbound']))))`
 - `activity_done_at`: `CHECK (((is_done = false) OR (done_at IS NOT NULL)))`
 - `activity_due_intent_pair`: `CHECK (valid_intent_time(due_wall, due_zone))`
+- `activity_duration_not_negative`: `CHECK (((duration_seconds IS NULL) OR (duration_seconds >= 0))) NOT VALID`
 - `activity_exact_booking_duration`: `CHECK (((NOT booking_interval_exact) OR ((duration_seconds IS NOT NULL) AND (duration_seconds > 0))))`
 - `activity_guests_left_out_check`: `CHECK ((guests_left_out >= 0))`
 - `activity_internal_mail_remains_restricted`: `CHECK (((internal_mail_authorization IS NULL) OR ((kind = 'email') AND (audience = ANY (ARRAY['participants', 'selected'])) AND (jsonb_typeof(internal_mail_authorization) = 'object') AND (internal_mail_authorization ?& ARRAY['connection_id', 'owner_user_id', 'provider', 'generation', 'enrolled_at', 'enrolled_by', 'policy_since']))))`
@@ -179,6 +180,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 - `idx_activity_kind`: `btree (kind, occurred_at DESC) WHERE (archived_at IS NULL)`
 - `idx_activity_labeled`: `btree (capture_labeled_at) WHERE (capture_labeled_at IS NOT NULL)`
 - `idx_activity_meeting_host`: `btree (host_user_id, occurred_at) WHERE ((kind = 'meeting') AND (archived_at IS NULL))`
+- `idx_activity_negative_duration`: `btree (id) WHERE ((duration_seconds < 0) AND (restricted_at IS NULL))`
 - `idx_activity_occurred_live`: `btree (occurred_at DESC) WHERE (archived_at IS NULL)`
 - `idx_activity_owed_ruleset`: `btree (owed_verdict_ruleset, occurred_at) WHERE ((owed_verdict IS NOT NULL) AND (direction = 'inbound') AND (kind = ANY (ARRAY['email', 'message'])) AND (archived_at IS NULL) AND (audience = 'workspace') AND (restricted_at IS NULL))`
 - `idx_activity_participants_by_reason`: `btree (audience_reason, occurred_at DESC, id) WHERE ((audience = 'participants') AND (restricted_at IS NULL) AND (archived_at IS NULL))`
@@ -201,6 +203,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 **Triggers**
 
 - `activity_assignee_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.assignee_id IS NOT NULL) AND ((new.archived_at IS NULL) AND (new.kind = 'task') AND (NOT new.is_done)))) EXECUTE FUNCTION refuse_retired_member_work('assignee_id')`
+- `activity_clears_negative_duration`: `BEFORE UPDATE FOR EACH ROW WHEN (((old.duration_seconds < 0) AND (NOT (new.duration_seconds IS DISTINCT FROM old.duration_seconds)))) EXECUTE FUNCTION activity_clears_negative_duration()`
 - `activity_clears_reply_settled`: `AFTER UPDATE OF thread_key, kind, channel_provider, direction, archived_at, occurred_at, occurred_precision, counterparty_email FOR EACH ROW EXECUTE FUNCTION activity_clears_reply_settled()`
 - `activity_due_time_follows_due_at`: `BEFORE INSERT OR UPDATE OF due_at, due_has_time FOR EACH ROW EXECUTE FUNCTION activity_due_time_follows_due_at()`
 - `activity_intent_insert`: `BEFORE INSERT FOR EACH ROW WHEN (((new.due_wall IS NOT NULL) OR (new.remind_wall IS NOT NULL))) EXECUTE FUNCTION maintain_intent_times('due_wall', 'due_zone', 'due_at', 'remind_wall', 'remind_zone', 'remind_at')`
@@ -871,7 +874,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## activity_review_template
 
-16 columns · primary key `(id)` · referenced by 0 foreign keys
+15 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -885,7 +888,6 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 | `shipped_label` | `text` |  |  |
 | `shipped_label_key` | `text` |  |  |
 | `system` | `boolean`, default `false` | yes | Shipped with the product. |
-| `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `source` | `text` | yes | Which internal channel the record arrived by. |
@@ -901,8 +903,8 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 
 **Indexes**
 
-- `activity_review_template_live_key`: `unique, btree (key) WHERE (archived_at IS NULL)`
-- `activity_review_template_one_active_per_outcome`: `unique, btree (outcome) WHERE (active AND (archived_at IS NULL))`
+- `activity_review_template_one_asked_per_outcome`: `unique, btree (outcome) WHERE active`
+- `activity_review_template_one_per_key`: `unique, btree (key)`
 - `activity_review_template_pkey`: `unique, btree (id)`
 
 **Triggers**

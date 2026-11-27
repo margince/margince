@@ -27,8 +27,6 @@ package gates
 import (
 	"testing"
 
-	"gopkg.in/yaml.v3"
-
 	"github.com/margince/margince/backend/internal/compose/attention"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
@@ -98,7 +96,7 @@ func worklistCategories(t *testing.T) []string {
 	if err != nil {
 		t.Fatalf("reading the contract: %v", err)
 	}
-	if err := yaml.Unmarshal(raw, &doc); err != nil {
+	if err := unmarshalYAML(raw, &doc); err != nil {
 		t.Fatalf("parsing the contract: %v", err)
 	}
 	return doc.Components.Schemas["WorklistItem"].Properties["category"].Enum

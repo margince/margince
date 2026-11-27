@@ -68,10 +68,23 @@ var permanentlyUnvalidated = gatekit.Waive(map[unvalidatedSubject]string{
 	"company.company_source_check":                            unlistedRecordSource,
 	"contact.contact_source_check":                            unlistedRecordSource,
 	"deal.deal_source_check":                                  unlistedRecordSource,
+	"lead.lead_source_check":                                  unlistedRecordSource,
 	"offer.offer_source_check":                                unlistedRecordSource,
 	"project.project_source_check":                            unlistedRecordSource,
 	"signal.signal_source_check":                              unlistedRecordSource,
 	"finance_payment.finance_payment_names_its_customer_link": unnamedCustomerLink,
+	"activity.activity_duration_not_negative": "" +
+		"rows written before the API refused a negative duration may hold one, and the negative counts " +
+		"data task clears them after the migrations ran. A VALIDATE would fail the upgrade of an " +
+		"installation whose task has not finished. A restricted row is immutable, so the task leaves " +
+		"it, and the update that lifts its restriction clears the duration. Until then an update that " +
+		"carries an old negative duration clears it, so the row stays editable; validating needs a " +
+		"minimum upgrade-from release, and no restricted row left holding a negative duration",
+	"ai_call.ai_call_tokens_in_not_negative":          negativeHistory,
+	"ai_call.ai_call_tokens_out_not_negative":         negativeHistory,
+	"ai_call.ai_call_reasoning_tokens_not_negative":   negativeHistory,
+	"ai_call.ai_call_cached_tokens_not_negative":      negativeHistory,
+	"ai_call.ai_call_cache_write_tokens_not_negative": negativeHistory,
 	"activity_participant.activity_participant_address_is_canonical": "" +
 		"rows written before the check hold the address as typed, and the participant address data " +
 		"task lowercases them after the migrations ran. A VALIDATE would fail the upgrade of an " +
@@ -87,6 +100,13 @@ const unlistedRecordSource = "" +
 	"migrations ran. A VALIDATE would fail the upgrade of an installation whose task has not finished, " +
 	"and no migration may wait for a data task. The check binds every row written since; validating " +
 	"it needs a minimum upgrade-from release that guarantees the task ran"
+
+// negativeHistory is why a floor on a table with unbounded history stays `NOT VALID`.
+const negativeHistory = "" +
+	"rows written before the floor may hold a provider's misreported negative token count. The " +
+	"table's history is unbounded, so correcting it is a data task, and a VALIDATE before that task " +
+	"ran would fail the upgrade of such an installation. No writer updates an ai_call row, so an old " +
+	"row refuses nothing, and the floor binds every row written since"
 
 // unnamedCustomerLink is the cost shared by the two mirrored tables' link checks.
 const unnamedCustomerLink = "" +
@@ -105,7 +125,8 @@ const polymorphicBranchKey = "" +
 // suffix is what the dump prints for `convalidated = false`, on a CHECK and a
 // FOREIGN KEY alike.
 var unvalidatedConstraint = regexp.MustCompile(
-	`^(?:public|ext)\.([a-z0-9_]+)\.([a-zA-Z0-9_]+) (?:CHECK|FOREIGN KEY) .*NOT VALID$`)
+	`^(?:public|ext)\.([a-z0-9_]+)\.([a-zA-Z0-9_]+) (?:CHECK|FOREIGN KEY) .*NOT VALID$`,
+)
 
 func TestEveryUnvalidatedConstraintSaysWhyItStaysThatWay(t *testing.T) {
 	t.Parallel()

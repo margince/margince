@@ -98,7 +98,7 @@ func TestEveryConditionCaptureRaisesTheReceiptCanDraw(t *testing.T) {
 // captureConcernKinds reads the vocabulary out of the package that owns it.
 func captureConcernKinds(t *testing.T) map[string]bool {
 	t.Helper()
-	sources, err := filepath.Glob(filepath.Join(captureConcernPkg, "*.go"))
+	sources, err := gatekit.Glob(filepath.Join(captureConcernPkg, "*.go"))
 	if err != nil {
 		t.Fatalf("listing %s for its concern vocabulary: %v", captureConcernPkg, err)
 	}
