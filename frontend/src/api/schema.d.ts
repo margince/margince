@@ -2919,7 +2919,9 @@ export interface paths {
          *     the company carries it. `linkCompanyContacts` accepts exactly these contacts.
          *
          *     A candidate with no current employer is also attached by the daily link reconcile,
-         *     so the list's lasting use is contacts who work elsewhere today.
+         *     so the list's lasting use is contacts who work elsewhere today. The reconcile does not
+         *     re-make a link somebody removed: a contact whose job at this company was ended or
+         *     archived stays unlinked until a user links them again.
          *
          *     Ordered by name, then id. At most 50 candidates; `truncated` is true when more exist.
          *     Needs read on companies, contacts and relationships. A caller without
