@@ -429,6 +429,27 @@ describe("ContractStatusModal", () => {
 
     expect(posted).toBe(false);
   });
+
+  it("warns that a status no change can leave is final once it is picked", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response("not found", { status: 404 })),
+    );
+    const user = userEvent.setup();
+    show(
+      <ContractStatusModal contract={PREDECESSOR} open onClose={() => {}} />,
+    );
+    const final = "Once saved, the status cannot be changed again.";
+
+    await user.click(await screen.findByRole("combobox"));
+    await user.click(screen.getByRole("option", { name: "Draft" }));
+    expect(screen.queryByText(new RegExp(final))).toBeNull();
+
+    await user.click(screen.getByRole("combobox"));
+    await user.click(screen.getByRole("option", { name: "Canceled" }));
+    expect(screen.getByText("Canceled is final")).toBeTruthy();
+    expect(screen.getByText(new RegExp(final))).toBeTruthy();
+  });
 });
 
 describe("ContractCancelModal", () => {

@@ -265,11 +265,8 @@ func TestTheWholeRowProbeStillSeesAWholeRow(t *testing.T) {
 // nothing, which is the shape of a pass.
 func TestEveryRuntimeDDLObjectIsATableInTheSchema(t *testing.T) {
 	t.Parallel()
-	catalog, err := gatekit.ReadFile("migrations/testdata/head_catalog.txt")
-	if err != nil {
-		t.Fatalf("reading the head catalog: %v", err)
-	}
-	text := string(catalog)
+	catalog := headCatalog(t)
+	text := catalog
 	for _, object := range runtimeDDLTables() {
 		if !strings.Contains(text, "\npublic."+object+".") {
 			t.Errorf("customfields declares %q a field object, so BuildDDL emits `ALTER TABLE %q`, "+

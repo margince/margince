@@ -74,6 +74,29 @@ export const AutomaticReminderFromRow: Story = {
             { entity_type: "deal", entity_id: "deal-1" },
           ],
         }),
+      "GET /activities/reminder-1/task-explanation": () =>
+        jsonResponse({
+          task_id: "reminder-1",
+          generated_at: "2026-09-06T13:42:00Z",
+          generated_by: "model",
+          sentences: [
+            {
+              text: "Nothing has moved on the Brandt renewal since Alice Brandt asked for the revised price list on 30 June.",
+              nature: "fact",
+              evidence: [{ entity_type: "deal", entity_id: "deal-1" }],
+            },
+            {
+              text: "The renewal is due in October, and without the price list Alice cannot take it to her board.",
+              nature: "assessment",
+              evidence: [{ entity_type: "deal", entity_id: "deal-1" }],
+            },
+            {
+              text: "Send Alice the revised price list and ask when her board meets.",
+              nature: "recommendation",
+              evidence: [{ entity_type: "contact", entity_id: "c-1" }],
+            },
+          ],
+        }),
       // The records it is filed under, named so their chips can be read.
       "GET /companies": () =>
         jsonResponse({
