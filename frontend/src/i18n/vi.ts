@@ -5775,7 +5775,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "tagResult.retiredNothing":
     "Không có hồ sơ nào gắn thẻ này. Thẻ đã ngừng dùng nên không thể gắn vào hồ sơ.",
   "tagResult.mergedBody":
-    "Thẻ này đã được gộp vào {name}. Các hồ sơ từng có thẻ này giờ mang thẻ {name}.",
+    "Thẻ này đã được gộp vào {name}. Các hồ sơ từng có thẻ này đã nhận thẻ {name} khi gộp.",
   "tagResult.openKept": "Mở {name}",
   "tagResult.loadingRows": "Đang tải {kind}…",
   "tagResult.noneLeft": "Không còn hồ sơ nào gắn thẻ này",
@@ -11788,7 +11788,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "notifications.delivery.digest": "Bản tổng hợp hằng ngày",
   "notifications.noMailTitle": "Chưa thiết lập email",
   "notifications.noMail":
-    "Bản cài đặt này không gửi email, nên Qua email, Bản tổng hợp hằng ngày và các bản tóm tắt qua email không đến hộp thư nào. Mọi thông báo vẫn hiện trong ứng dụng.",
+    "Bản cài đặt này không gửi email thông báo, nên Qua email, Bản tổng hợp hằng ngày và các bản tóm tắt qua email không đến hộp thư nào. Mọi thông báo vẫn hiện trong ứng dụng.",
   "notifications.noMailGuide": "Cách thiết lập email",
   "privacynotice.title": "Thông tin đang lưu về quý khách",
   "privacynotice.intro":

@@ -5935,7 +5935,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "tagResult.retiredNothing":
     "Keine Datensätze haben dieses Tag. Es ist stillgelegt und kann keinem Datensatz mehr hinzugefügt werden.",
   "tagResult.mergedBody":
-    "Dieses Tag wurde in {name} zusammengeführt. Die Datensätze mit diesem Tag haben jetzt {name}.",
+    "Dieses Tag wurde in {name} zusammengeführt. Die Datensätze mit diesem Tag haben bei der Zusammenführung {name} erhalten.",
   "tagResult.openKept": "{name} öffnen",
   "tagResult.loadingRows": "{kind} werden geladen…",
   "tagResult.noneLeft": "Keine Datensätze mehr mit diesem Tag",
@@ -12124,7 +12124,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "notifications.delivery.digest": "Tägliche Zusammenfassung",
   "notifications.noMailTitle": "E-Mail ist nicht eingerichtet",
   "notifications.noMail":
-    "Diese Installation versendet keine E-Mails, daher erreichen E-Mail, tägliche Zusammenfassung und Zusammenfassungen per E-Mail kein Postfach. Jede Benachrichtigung erscheint weiter in der App.",
+    "Diese Installation versendet keine Benachrichtigungen per E-Mail, daher erreichen E-Mail, tägliche Zusammenfassung und Zusammenfassungen per E-Mail kein Postfach. Jede Benachrichtigung erscheint weiter in der App.",
   "notifications.noMailGuide": "E-Mail einrichten",
   "privacynotice.title": "Was wir über Sie gespeichert haben",
   "privacynotice.intro":

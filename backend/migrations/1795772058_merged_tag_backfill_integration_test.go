@@ -41,7 +41,7 @@ func seedTagAudit(t *testing.T, conn *pgx.Conn, tag, after string, at time.Time)
 }
 
 // A tag merged before the column existed takes its survivor from the merge's
-// audit row, and only while that row is its last word.
+// audit row, while no later row restored or retired it; a rename is not one.
 func TestTheMergedTagBackfillNamesOnlyTagsStillMerged(t *testing.T) {
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
@@ -65,6 +65,7 @@ func TestTheMergedTagBackfillNamesOnlyTagsStillMerged(t *testing.T) {
 	retired := seedTag(t, conn, "Trade Fair", true)
 	mergedThenRetired := seedTag(t, conn, "Old Merge", true)
 	mergedThenRestored := seedTag(t, conn, "Back Again", false)
+	mergedThenRenamed := seedTag(t, conn, "New Name", true)
 	mergeAfter := `{"merged_into":"` + kept + `","moved":1,"collapsed":0}`
 	at := time.Date(2026, 9, 1, 9, 0, 0, 0, time.UTC)
 	seedTagAudit(t, conn, merged, mergeAfter, at)
@@ -74,12 +75,15 @@ func TestTheMergedTagBackfillNamesOnlyTagsStillMerged(t *testing.T) {
 	seedTagAudit(t, conn, mergedThenRetired, "", at.Add(2*time.Hour))
 	seedTagAudit(t, conn, mergedThenRestored, mergeAfter, at)
 	seedTagAudit(t, conn, mergedThenRestored, `{"archived_at":null,"name":"Back Again"}`, at.Add(time.Hour))
+	seedTagAudit(t, conn, mergedThenRenamed, mergeAfter, at)
+	seedTagAudit(t, conn, mergedThenRenamed, `{"name":"New Name","suggestible":false}`, at.Add(time.Hour))
 
 	if _, err := dbmigrate.Up(ctx, conn, core); err != nil {
 		t.Fatalf("migrating back up: %v", err)
 	}
 	for tag, want := range map[string]*string{
-		merged: &kept, retired: nil, mergedThenRetired: nil, mergedThenRestored: nil, kept: nil,
+		merged: &kept, mergedThenRenamed: &kept, retired: nil, mergedThenRetired: nil,
+		mergedThenRestored: nil, kept: nil,
 	} {
 		var into *string
 		if err := conn.QueryRow(ctx, `SELECT merged_into_id::text FROM tag WHERE id = $1`, tag).Scan(&into); err != nil {

@@ -34,7 +34,7 @@ Not every row offers every choice. Margince leaves out a choice it cannot keep:
 - **Daily digest** is on the menu for every kind.
 - **Nudges from colleagues** has no **Off**. A colleague's words always reach you.
 
-### What if this installation sends no email?
+### What if this installation sends no notification email?
 Then the page says "Email is not set up" above the rows. **Email**, **Daily digest** and the **Email summaries** reach no mailbox, and every notice still shows in the app. A row offers neither **Email** nor **Daily digest**, unless it already holds one. An admin also gets **How to set up email**.
 
 ### How do I save a change?

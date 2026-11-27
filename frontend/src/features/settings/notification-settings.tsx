@@ -60,18 +60,19 @@ const MAIL_GUIDE =
  * mail is still on the table for every class.
  *
  * With no mail on this installation, neither mailed choice is offered. The
- * stored one stays listed, so the control still shows what the row holds.
+ * stored and the drafted one stay listed, so the control still shows what the
+ * row holds and what Save would write, even when mail goes away mid-draft.
  */
 function choicesFor(
   notificationClass: NotificationClass,
   mailSends: boolean,
-  stored: NotificationDelivery,
+  kept: readonly NotificationDelivery[],
 ): readonly NotificationDelivery[] {
   return CHOICES.filter(
     (choice) =>
       !(choice === "off" && notificationClass === "coach") &&
       !(choice === "email" && notificationClass !== "approval_pending") &&
-      (mailSends || !MAILED.includes(choice) || choice === stored),
+      (mailSends || !MAILED.includes(choice) || kept.includes(choice)),
   );
 }
 
@@ -320,7 +321,7 @@ function DeliveryRow({
   refusedBy?: string;
 }>) {
   const t = useT();
-  const offered = choicesFor(row.class, mailSends, row.delivery);
+  const offered = choicesFor(row.class, mailSends, [row.delivery, delivery]);
   return (
     <SettingRow
       label={t(CLASS_COPY[row.class].label)}

@@ -5863,7 +5863,7 @@ export const en = {
   "tagResult.retiredNothing":
     "No records have this tag. It is retired, so it cannot be added to a record.",
   "tagResult.mergedBody":
-    "This tag was merged into {name}. The records that had it now have {name}.",
+    "This tag was merged into {name}. The records that had it received {name} in the merge.",
   "tagResult.openKept": "Open {name}",
   "tagResult.loadingRows": "Loading {kind}…",
   "tagResult.noneLeft": "No records have this tag anymore",
@@ -12068,7 +12068,7 @@ export const en = {
   "notifications.delivery.digest": "Daily digest",
   "notifications.noMailTitle": "Email is not set up",
   "notifications.noMail":
-    "This installation sends no email, so Email, Daily digest and the email summaries reach no mailbox. Every notice still shows in the app.",
+    "This installation sends no notification email, so Email, Daily digest and the email summaries reach no mailbox. Every notice still shows in the app.",
   "notifications.noMailGuide": "How to set up email",
   "privacynotice.title": "What we hold about you",
   "privacynotice.intro":

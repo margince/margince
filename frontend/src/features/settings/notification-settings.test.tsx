@@ -54,6 +54,7 @@ function backendFor(
   { mailSends = true, roles = ["admin"] } = {},
 ) {
   let state = rows;
+  let mailing = mailSends;
   const puts: unknown[] = [];
   const fetchMock = vi.fn(
     async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -77,20 +78,26 @@ function backendFor(
         }
         return jsonResponse({
           items: state,
-          email_delivery_available: mailSends,
+          email_delivery_available: mailing,
         });
       }
       throw new Error(`unexpected request: ${req.method} ${req.url}`);
     },
   );
-  return { fetchMock, puts: () => puts };
+  return {
+    fetchMock,
+    puts: () => puts,
+    withdrawMail: () => {
+      mailing = false;
+    },
+  };
 }
 
 const render = (ui: ReactNode, locale: Locale = "en") => {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  return rtlRender(
+  const view = rtlRender(
     <QueryClientProvider client={client}>
       <LocaleProvider initial={locale}>
         <SavePageProvider>
@@ -100,6 +107,7 @@ const render = (ui: ReactNode, locale: Locale = "en") => {
       </LocaleProvider>
     </QueryClientProvider>,
   );
+  return { ...view, client };
 };
 
 afterEach(() => {
@@ -212,7 +220,7 @@ describe("NotificationSettingsCard", () => {
 
   // With no relay, a mailed choice reaches no mailbox. The page says so once
   // and stops offering both, while a row already on one still shows it.
-  it("says the installation sends no email, and offers no mailed choice", async () => {
+  it("says the installation sends no notification email, and offers no mailed choice", async () => {
     vi.stubGlobal(
       "fetch",
       backendFor(everyClass(), { mailSends: false }).fetchMock,
@@ -245,6 +253,31 @@ describe("NotificationSettingsCard", () => {
         name: "Daily digest",
       }),
     ).toBeNull();
+  });
+
+  // Mail can go away while a pick is drafted. The control keeps showing the pick
+  // that Save would write, rather than a blank face over a hidden value.
+  it("keeps a drafted digest showing when the server withdraws mail", async () => {
+    const backend = backendFor(everyClass());
+    vi.stubGlobal("fetch", backend.fetchMock);
+    const user = userEvent.setup();
+    const { client } = render(<NotificationSettingsCard />);
+
+    await pickOption(
+      user,
+      await screen.findByRole("combobox", { name: /Automations that ran/i }),
+      "Daily digest",
+    );
+    backend.withdrawMail();
+    await client.invalidateQueries();
+
+    expect(
+      await screen.findByText(en["notifications.noMailTitle"]),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("combobox", { name: /Automations that ran/i })
+        .textContent,
+    ).toContain("Daily digest");
   });
 
   it("points an administrator at the mail setup, and a rep at nothing", async () => {

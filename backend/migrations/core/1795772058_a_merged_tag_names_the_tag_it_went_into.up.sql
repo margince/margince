@@ -7,12 +7,14 @@ ALTER TABLE tag ADD COLUMN IF NOT EXISTS merged_into_id uuid
     REFERENCES tag(id) ON DELETE SET NULL (merged_into_id);
 
 -- A tag merged before the column existed names its survivor only in the
--- merge's audit row. It takes it when that row is still its last word: a
--- restore or a second retirement after the merge would be later.
+-- merge's audit row. It takes it when that row is still the last change to its
+-- archive state: a merge, a restore (archived_at) or a retirement (no after
+-- image). A later rename or link row leaves the tag merged, so it does not count.
 UPDATE tag SET merged_into_id = (last_word.after ->> 'merged_into')::uuid
   FROM (SELECT archived.id,
                (SELECT a.after FROM audit_log a
                  WHERE a.entity_type = 'tag' AND a.entity_id = archived.id
+                   AND (a.after IS NULL OR a.after ? 'merged_into' OR a.after ? 'archived_at')
                  ORDER BY a.occurred_at DESC, a.id DESC LIMIT 1) AS after
           FROM tag archived
          WHERE archived.archived_at IS NOT NULL) last_word

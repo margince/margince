@@ -70285,7 +70285,8 @@ type Tag struct {
 	Id          openapi_types.UUID `json:"id"`
 
 	// MergedInto The tag a merge folded this one into, named as it reads now. Present only on a tag
-	// archived by a merge: such a tag cannot be restored, and its records carry this one.
+	// archived by a merge, and such a tag cannot be restored. The named tag took its records
+	// and may since have been merged on itself; its own `merged_into` then names where they are.
 	MergedInto *RowTag `json:"merged_into,omitempty"`
 	Name       string  `json:"name"`
 
@@ -70309,7 +70310,8 @@ type TagDetail struct {
 	Id          openapi_types.UUID `json:"id"`
 
 	// MergedInto The tag a merge folded this one into, named as it reads now. Present only on a tag
-	// archived by a merge: such a tag cannot be restored, and its records carry this one.
+	// archived by a merge, and such a tag cannot be restored. The named tag took its records
+	// and may since have been merged on itself; its own `merged_into` then names where they are.
 	MergedInto *RowTag `json:"merged_into,omitempty"`
 	Name       string  `json:"name"`
 
