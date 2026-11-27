@@ -86,7 +86,7 @@ func readViews(policies map[string]agentPolicy) []agents.ReadView {
 }
 
 // viewName spells an operation as a caller asks for it: getCompany360 is
-// company_360 and listLeadSources is lead_sources.
+// company_360 and listLeadOrigins is lead_origins.
 func viewName(op string) string {
 	for _, prefix := range []string{"get", "list"} { //nolint:goconst // an operationId's verb prefixes, not record types
 		if rest, ok := strings.CutPrefix(op, prefix); ok && rest != "" && unicode.IsUpper(rune(rest[0])) {

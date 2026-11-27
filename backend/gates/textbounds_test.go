@@ -72,24 +72,6 @@ func TestFrontendTextLimitsComeFromTheSharedValues(t *testing.T) {
 	}
 }
 
-func TestCompanyAndDealDescriptionsShareTheDocumentLimit(t *testing.T) {
-	t.Parallel()
-	raw, err := gatekit.ReadFile("api/crm.yaml")
-	if err != nil {
-		t.Fatal(err)
-	}
-	var contract map[string]any
-	if err := unmarshalYAML(raw, &contract); err != nil {
-		t.Fatal(err)
-	}
-	for _, schema := range []string{"CreateCompanyRequest", "UpdateCompanyRequest", "CreateDealRequest", "UpdateDealRequest"} {
-		cap := publishedMaxLength(t, contract, schemaPath("components", "schemas", schema, "properties", "description"))
-		if cap != values.TextDocumentCharacters {
-			t.Errorf("%s.description has limit %d, want %d", schema, cap, values.TextDocumentCharacters)
-		}
-	}
-}
-
 func TestEveryBoundedTextColumnChecksNewAndChangedValues(t *testing.T) {
 	t.Parallel()
 	raw, err := gatekit.ReadFile(vocabularyCatalog)

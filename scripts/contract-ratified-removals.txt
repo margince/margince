@@ -1,3 +1,7 @@
 # METHOD /v1/path reason: operations a maintainer ratified removing without a
 # published deprecation notice. Every other removal still needs one.
 POST /v1/contacts/{id}/consent/allow ratified-2026-11-11-no-stable-release-ever-served-the-standing-override
+GET /v1/lead-sources ratified-2026-11-23-the-lead-source-list-is-retired-with-the-fixed-lead-source-channels
+POST /v1/lead-sources ratified-2026-11-23-the-lead-source-list-is-retired-with-the-fixed-lead-source-channels
+PATCH /v1/lead-sources/{id} ratified-2026-11-23-the-lead-source-list-is-retired-with-the-fixed-lead-source-channels
+DELETE /v1/lead-sources/{id} ratified-2026-11-23-the-lead-source-list-is-retired-with-the-fixed-lead-source-channels

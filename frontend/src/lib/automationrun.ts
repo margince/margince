@@ -21,7 +21,7 @@ export const RUN_OUTCOME_WORD: Readonly<Record<Outcome, MessageKey>> = {
 };
 
 // The server's run reason codes (automation.RunReasonCodes), held to them by
-// backend/gates/frontendrunreasons_test.go.
+// backend/gates/frontendvocabularymirrors_test.go.
 export const RUN_REASON_WORDS: Readonly<Record<string, MessageKey>> = {
   target_missing: "auto.runs.reasonCode.target_missing",
   not_permitted: "auto.runs.reasonCode.not_permitted",

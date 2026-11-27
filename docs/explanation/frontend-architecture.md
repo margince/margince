@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/App.tsx frontend/src/bootstrap.ts frontend/src/main.tsx frontend/index.html frontend/src/app/startup-session.ts frontend/src/app/navigation-prefetch.ts frontend/src/app/nav.ts frontend/src/app/shell.tsx frontend/src/app/pagemeta.ts frontend/src/lib/router.tsx frontend/src/lib/screenaddress.ts frontend/src/lib/navigatefrom.ts frontend/src/lib/historydepth.ts frontend/src/lib/urlstate.ts frontend/src/App.views.tsx frontend/src/App.screens.tsx frontend/src/App.screencode.ts frontend/src/app/startup-reads.ts frontend/src/app/reservedpages.ts frontend/src/lib/essentialscreens.ts frontend/src/lib/session.ts frontend/src/design-system/tokens.css frontend/src/i18n frontend/scripts/feature-boundaries.ts -->
+<!-- describes: frontend/src/App.tsx frontend/src/bootstrap.ts frontend/src/main.tsx frontend/index.html frontend/src/app/startup-session.ts frontend/src/app/navigation-prefetch.ts frontend/src/app/recordprefetch.ts frontend/src/app/nav.ts frontend/src/app/shell.tsx frontend/src/app/pagemeta.ts frontend/src/lib/router.tsx frontend/src/lib/screenaddress.ts frontend/src/lib/navigatefrom.ts frontend/src/lib/historydepth.ts frontend/src/lib/urlstate.ts frontend/src/App.views.tsx frontend/src/App.screens.tsx frontend/src/App.screencode.ts frontend/src/app/startup-reads.ts frontend/src/app/reservedpages.ts frontend/src/lib/essentialscreens.ts frontend/src/lib/session.ts frontend/src/design-system/tokens.css frontend/src/i18n frontend/scripts/feature-boundaries.ts -->
 # The frontend: how the web app is put together
 
 Read this before you change anything under `frontend/`. Most of the rules of
@@ -208,6 +208,10 @@ refuses a second one while the first is in flight.
   that grants the object, and only into an empty cache entry. It cancels the
   read when the pointer or focus leaves the link before a click. When the
   signed-in user or their grants change, it drops the entries it filled.
+
+  `frontend/src/app/recordprefetch.ts` hands it every link to a contact's
+  page, on any screen. A resting pointer, a press or focus on the link starts
+  the reads that page waits on: the contact row, its 360 and latest-inbound.
 
   The order of choice is: the user's own choice, then the languages the browser
   asks for, then the default. English with no setting is `en-GB`, never
