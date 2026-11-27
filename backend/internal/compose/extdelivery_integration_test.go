@@ -34,6 +34,7 @@ func (e *crmEnv) deliverCompanyCreated(t *testing.T, event ids.UUID, company str
 	return sub.Handler(e.Pool, quietTestLogger())(context.Background(), kevents.Envelope{
 		EventID: event, Type: "company.created",
 		Entity: kevents.EntityRef{Type: "company", ID: ids.MustParse(company)},
+		Trace:  kevents.Trace{CorrelationID: ids.NewV7()},
 	})
 }
 
