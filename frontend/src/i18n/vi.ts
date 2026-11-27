@@ -10966,7 +10966,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "import.reason.id_not_a_record_id":
     "“{value}” không phải mã bản ghi. Hãy xuất danh sách để lấy mã, hoặc để trống cột để nhập hàng này làm bản ghi mới.",
   "import.reason.id_record_not_visible":
-    "Không có bản ghi nào bạn nhìn thấy có mã “{value}”. Có thể nó đã được lưu trữ hoặc gộp, hoặc đến từ một hệ thống khác.",
+    "Không có bản ghi nào bạn nhìn thấy có mã “{value}”. Có thể nó đã được đưa vào kho lưu trữ hoặc gộp, hoặc đến từ một hệ thống khác.",
   "import.reason.not_your_record":
     "Hàng này khớp với một bản ghi do thành viên khác phụ trách. Lần nhập của bạn chỉ thay đổi bản ghi bạn phụ trách nên hàng này không được áp dụng.",
   "import.reason.ref_taken_by_another_record":
