@@ -188,8 +188,12 @@ const (
 	// Raised by 197 test lines for the re-ingest vector reuse cases, which drive
 	// the unexported knowledge ingest worker and its embedder fixture.
 	// Raised by 3 test lines for the generated Prefer parameter the unwired
-	// transcript read now takes.
-	composeRootTestLines = 364_314
+	// transcript read now takes. Raised by 1 test line for the second staged
+	// approval in the site-read finish case, which checks a repeated id keeps
+	// its first place.
+	// Raised by 21 test lines for the case that reads a timeline entry's request
+	// state into the deal status input, which is unexported.
+	composeRootTestLines = 364_339
 )
 
 // A read under these floors stopped early or read the wrong place, and would

@@ -402,9 +402,11 @@ deps:
     # holds them to the browser's words, the same way as for approvals.
     # consumergrouptypes_test.go feeds search.EmbedGen every event type its
     # group leaves out, as it does for the compose handlers.
+    # xtext: stringliteralnfc_test.go holds every shipped literal to NFC; the
+    # shared copy packages stay stdlib-only, so the norm check lives here.
     # gates carries test files only, so this grants no production edge.
     mayDependOn: [contracts, compose, ai, collections, webforms, platform, activities, aiactivity, agents, approvals, contacts, customfields, deals, forecasting, comms, identity, introductions, privacy, assurance, automation, search]
-    canUse: [yaml, jsonschema]
+    canUse: [yaml, jsonschema, xtext]
   cmd:
     mayDependOn: [compose, identity, contacts, privacy, continuity, deals, activities, aiactivity, approvals, agents, automation, ai, search, capture, consent, collections, recordlinks, initiatives, signals, customfields, migration, webhooks, webforms, comms, notices, introductions, weeklyplan, forecasting, reporting, assurance, finance, integrations, agreements, commissions, contracts, dealrooms, chatlinks, assignments, platform, migrations, projects]
     canUse: [pgx, redis, xterm, composition]

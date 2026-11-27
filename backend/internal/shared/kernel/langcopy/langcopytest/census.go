@@ -66,12 +66,20 @@ type reporter interface {
 // written as a map keyed by language rather than a struct of phrases keeps its
 // own walk until it is migrated onto Phrase.
 //
+// It also holds every phrase to the English and Vietnamese style pages, in
+// member copy unless the caller names another Register and why.
+//
 // Held by: TestOneCensusReadsEveryPhraseTable (backend/gates/langcopyonecensus_test.go)
 //
 //craft:ignore naked-any every caller passes its own copy table's struct or map type
-func Census(t reporter, table any) {
+func Census(t reporter, table any, register ...Register) {
 	t.Helper()
-	walk(t, table, censusEntry)
+	style := styleEntry(named(t, register))
+	walk(t, table, func(t reporter, name string, p langcopy.Phrase) {
+		t.Helper()
+		censusEntry(t, name, p)
+		style(t, name, p)
+	})
 }
 
 // walk hands every phrase a table holds to entry, so each check over a table

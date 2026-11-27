@@ -24,13 +24,13 @@ func workPresentationLines(line writeLine) {
 		"Some team information is missing. Check the team view for details.",
 		"Ein Teil der Teaminformationen fehlt. Prüfe die Details in der Teamübersicht.",
 		"Thiếu một phần thông tin nhóm. Kiểm tra trong tổng quan nhóm.")
-	line(func(c *Copy) *string { return &c.PoweredBy }, "Powered by Margince", "Bereitgestellt von Margince", "Được cung cấp bởi Margince")
+	line(func(c *Copy) *string { return &c.PoweredBy }, "Powered by Margince", "Bereitgestellt von Margince", "Chạy trên Margince")
 	line(func(c *Copy) *string { return &c.InviteBy }, "%s invited you to join %s.", "%s hat dich zu %s eingeladen.", "%s đã mời bạn tham gia %s.")
 	line(func(c *Copy) *string { return &c.MailWhy }, "You receive this because email delivery is enabled in your notification settings.", "Du erhältst diese E-Mail, weil der E-Mail-Versand in deinen Benachrichtigungseinstellungen aktiviert ist.", "Bạn nhận được thư này vì đã bật gửi email trong cài đặt thông báo.")
 	line(func(c *Copy) *string { return &c.MailCoverage },
 		"This overview is incomplete. Some tasks or meetings may be missing. Check the current details in Margince.",
 		"Diese Übersicht ist unvollständig. Aufgaben oder Termine können fehlen. Prüfe den aktuellen Stand in Margince.",
-		"Bản tổng quan chưa đầy đủ. Một số công việc hoặc cuộc họp có thể còn thiếu. Kiểm tra thông tin hiện tại trong Margince.")
+		"Bản tổng quan chưa đầy đủ. Một số việc cần làm hoặc cuộc họp có thể còn thiếu. Kiểm tra thông tin hiện tại trong Margince.")
 	line(func(c *Copy) *string { return &c.MailReview }, "Review", "Prüfen", "Xem xét")
 	line(func(c *Copy) *string { return &c.MailReply }, "Reply", "Antworten", "Trả lời")
 	line(func(c *Copy) *string { return &c.MailPrepare }, "Prepare for the meeting", "Gespräch vorbereiten", "Chuẩn bị cuộc họp")
@@ -43,13 +43,13 @@ func workPresentationLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.MailBurstCount }, "%d requests", "%d Anfragen", "%d yêu cầu")
 	line(func(c *Copy) *string { return &c.MailSetOnApproval }, "set when approved", "wird bei Freigabe gesetzt", "được đặt khi phê duyệt")
 	line(func(c *Copy) *string { return &c.MailReadFrom }, "Read from", "Gelesen aus", "Đọc từ")
-	line(func(c *Copy) *string { return &c.MailPromisedBy }, "Promised by", "Zugesagt von", "Người hứa")
+	line(func(c *Copy) *string { return &c.MailPromisedBy }, "Promised by", "Zugesagt von", "Người cam kết")
 	line(func(c *Copy) *string { return &c.MailInTheirWords }, "In their words", "Im Wortlaut", "Nguyên văn")
 	line(func(c *Copy) *string { return &c.MailWhyYou }, "Why you", "Warum du", "Vì sao là bạn")
 	line(func(c *Copy) *string { return &c.MailAlsoChanges }, "Also changes", "Weitere Änderungen", "Thay đổi kèm theo")
 	line(func(c *Copy) *string { return &c.MailPreviewStatus }, "Approval context", "Freigabekontext", "Ngữ cảnh phê duyệt")
 	line(func(c *Copy) *string { return &c.MailTranscriptOf },
-		"a meeting transcript of", "ein Gesprächsprotokoll vom", "biên bản cuộc họp ngày")
+		"a meeting transcript of", "ein Gesprächsprotokoll vom", "bản chép lời cuộc họp ngày")
 	line(func(c *Copy) *string { return &c.MailReasonRequested },
 		"You were asked to review this proposal.",
 		"Du wurdest gebeten, diesen Vorschlag zu prüfen.",
@@ -102,7 +102,7 @@ func previewLines(line writeLine) {
 		"Das steht heute für dich an.",
 		"Đây là những việc cần tập trung hôm nay.")
 	line(func(c *Copy) *string { return &c.WeeklyPreview }, "Review your recorded results and choose your next priorities.", "Sieh dir deine erfassten Ergebnisse an und setze die nächsten Prioritäten.", "Xem lại kết quả đã ghi nhận và chọn ưu tiên tiếp theo.")
-	line(func(c *Copy) *string { return &c.DigestPreview }, "Catch up on the updates you asked to receive together.", "Hier sind die Neuigkeiten, die du gesammelt erhalten möchtest.", "Xem các cập nhật bạn đã chọn nhận cùng nhau.")
+	line(func(c *Copy) *string { return &c.DigestPreview }, "Catch up on the updates you asked to receive together.", "Hier sind die Neuigkeiten, die du gesammelt erhalten möchtest.", "Xem các cập nhật bạn đã chọn nhận gộp một lần.")
 	line(func(c *Copy) *string { return &c.NotificationPreview }, "Review the current request and decide the next step.", "Prüfe die aktuelle Anfrage und entscheide über den nächsten Schritt.", "Xem yêu cầu hiện tại và quyết định bước tiếp theo.")
 	line(func(c *Copy) *string { return &c.ResetPreview }, "Use this personal link to choose a new password.", "Wähle über diesen persönlichen Link ein neues Passwort.", "Dùng liên kết cá nhân này để chọn mật khẩu mới.")
 	line(func(c *Copy) *string { return &c.InvitePreview }, "See who invited you and choose whether to accept.", "Sieh nach, wer dich eingeladen hat, und entscheide, ob du annimmst.", "Xem ai đã mời bạn và quyết định có chấp nhận hay không.")
@@ -154,8 +154,8 @@ func weeklyPresentationLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.WeeklyOverview }, "Here are your recorded results for this week.", "Hier findest du deine erfassten Ergebnisse dieser Woche.", "Đây là kết quả đã ghi nhận của bạn trong tuần.")
 	line(func(c *Copy) *string { return &c.WeeklyWonOne }, "You won one deal.", "Du hast einen Deal gewonnen.", "Bạn đã chốt một deal.")
 	line(func(c *Copy) *string { return &c.WeeklyWonMany }, "You won %d deals.", "Du hast %d Deals gewonnen.", "Bạn đã chốt %d deal.")
-	line(func(c *Copy) *string { return &c.WeeklyDoneOne }, "You completed one task.", "Du hast eine Aufgabe erledigt.", "Bạn đã hoàn thành một công việc.")
-	line(func(c *Copy) *string { return &c.WeeklyDoneMany }, "You completed %d tasks.", "Du hast %d Aufgaben erledigt.", "Bạn đã hoàn thành %d công việc.")
+	line(func(c *Copy) *string { return &c.WeeklyDoneOne }, "You completed one task.", "Du hast eine Aufgabe erledigt.", "Bạn đã hoàn thành một việc cần làm.")
+	line(func(c *Copy) *string { return &c.WeeklyDoneMany }, "You completed %d tasks.", "Du hast %d Aufgaben erledigt.", "Bạn đã hoàn thành %d việc cần làm.")
 }
 
 func controllerPresentationLines(line writeLine) {
