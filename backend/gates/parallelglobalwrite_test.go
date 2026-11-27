@@ -107,6 +107,13 @@ func TestShadowsTheName(t *testing.T) {
 	_ = clock
 }
 
+func TestShadowsWithVar(t *testing.T) {
+	t.Parallel()
+	var clock int
+	clock = 2
+	_ = clock
+}
+
 func TestFillsAOnce(t *testing.T) {
 	t.Parallel()
 	once.Do(func() { cached = 1 })
@@ -134,8 +141,8 @@ func TestRunsAlone(t *testing.T) {
 	}
 	slices.Sort(got)
 	want := []string{"fixture_test.go#TestSwapsAnImportedVariable http.DefaultTransport", "fixture_test.go#TestSwapsThroughAHelper clock"}
-	if scanned != 5 || !slices.Equal(got, want) {
-		t.Errorf("scanned %d parallel tests and found %v, want 5 and %v", scanned, got, want)
+	if scanned != 6 || !slices.Equal(got, want) {
+		t.Errorf("scanned %d parallel tests and found %v, want 6 and %v", scanned, got, want)
 	}
 }
 
@@ -232,6 +239,10 @@ func (w writeScan) writes(fn *ast.FuncDecl) string {
 		switch node := n.(type) {
 		case *ast.AssignStmt:
 			hit = w.assigned(node, locals)
+		case *ast.ValueSpec:
+			for _, name := range node.Names {
+				locals[name.Name] = true
+			}
 		case *ast.CallExpr:
 			if id, ok := node.Fun.(*ast.Ident); ok && w.funcs[id.Name] != nil {
 				hit = w.writes(w.funcs[id.Name])
