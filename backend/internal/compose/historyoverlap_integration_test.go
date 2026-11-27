@@ -29,7 +29,7 @@ func TestOverlappingHistoryImportsKeepSharedWorkDeferredAndLiveWorkPrompt(t *tes
 	first := strandedBackfill(t, b)
 	other, second := startSecondHistory(t, b)
 	dispatch := backfillWorkContext(principal.WithWorkspaceID(context.Background(), b.env.WS), t, b)
-	if err := b.registry.DispatchBackfills(dispatch, backfillScheduler(b.env.WS), false); err != nil {
+	if err := b.registry.DispatchBackfills(dispatch, backfillScheduler(), false); err != nil {
 		t.Fatal(err)
 	}
 	if got := b.env.WsCount(t, `SELECT count(*) FROM capture_backfill WHERE status='running'`); got != 2 {

@@ -60,7 +60,7 @@ type captureTraceSweepWorker struct {
 //
 // One worker where there were two (ADR-0103).
 func (w *captureTraceSweepWorker) Work(ctx context.Context, _ *river.Job[CaptureTraceSweepArgs]) error {
-	return jobs.FaultContext(ctx, runPerEveryWorkspace(ctx, w.pool, w.sweepWorkspace))
+	return jobs.FaultContext(ctx, runInstallationPass(ctx, w.pool, w.sweepWorkspace))
 }
 
 func (w *captureTraceSweepWorker) sweepWorkspace(ctx context.Context, workspace ids.UUID) error {
@@ -84,5 +84,5 @@ type chatClarificationSweepWorker struct{ sweep chatclarify.Sweep }
 
 // Work asks the colleagues of every workspace who wrote what they forwarded.
 func (w *chatClarificationSweepWorker) Work(ctx context.Context, _ *river.Job[ChatClarificationSweepArgs]) error {
-	return jobs.FaultContext(ctx, runPerEveryWorkspace(ctx, w.sweep.Pool, w.sweep.Workspace))
+	return jobs.FaultContext(ctx, runInstallationPass(ctx, w.sweep.Pool, w.sweep.Workspace))
 }

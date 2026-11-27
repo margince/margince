@@ -33,7 +33,7 @@ func (e *transcriptEnv) tryTranscript(t *testing.T, first int, brains ...complet
 	quiet, now := slog.New(slog.DiscardHandler), func() time.Time { return clocktest.Now(t) }
 	// The reading works as Rep1's agent, under Rep1's live grants.
 	e.GrantRole(t, e.Rep1, "admin")
-	args := TranscriptProposeArgs{Workspace: e.WS, ActivityID: e.activity.UUID, TranscriptReadID: started.ID, RequestedBy: "human:" + e.Rep1.String()}
+	args := TranscriptProposeArgs{ActivityID: e.activity.UUID, TranscriptReadID: started.ID, RequestedBy: "human:" + e.Rep1.String()}
 	var errs []error
 	for i, brain := range brains {
 		worker := &transcriptProposeWorker{

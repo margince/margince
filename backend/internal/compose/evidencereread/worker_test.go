@@ -11,23 +11,21 @@ import (
 
 	"github.com/riverqueue/river"
 
-	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-type pageJob struct{ workspace ids.UUID }
+type pageJob struct{}
 
-func (pageJob) Kind() string            { return "stage_evidence_reread" }
-func (j pageJob) WorkspaceID() ids.UUID { return j.workspace }
-func (pageJob) SentFrom() string        { return "buyer-corp.test" }
-func (pageJob) PageAfter() ids.UUID     { return ids.UUID{} }
-func bound(ctx context.Context, _ jobs.WorkspaceScoped) (context.Context, error) {
+func (pageJob) Kind() string        { return "stage_evidence_reread" }
+func (pageJob) SentFrom() string    { return "buyer-corp.test" }
+func (pageJob) PageAfter() ids.UUID { return ids.UUID{} }
+func bound(ctx context.Context) (context.Context, error) {
 	return ctx, nil
 }
 
 func work(w *Worker[pageJob]) error {
 	w.Log = slog.New(slog.DiscardHandler)
-	return w.Work(context.Background(), &river.Job[pageJob]{Args: pageJob{workspace: ids.NewV7()}})
+	return w.Work(context.Background(), &river.Job[pageJob]{Args: pageJob{}})
 }
 
 func TestARoleWithNoModelLaneCompletesWithoutAnInserter(t *testing.T) {
@@ -49,11 +47,11 @@ func TestAPageWhoseInserterCannotBeBuiltFails(t *testing.T) {
 	}
 }
 
-func TestArgsThatBindNoWorkspaceAreRefusedBeforeAnythingIsRead(t *testing.T) {
+func TestAFailedBindingIsRefusedBeforeAnythingIsRead(t *testing.T) {
 	refused := errors.New("no workspace")
 	err := work(&Worker[pageJob]{
 		Reads: true,
-		Bind:  func(context.Context, jobs.WorkspaceScoped) (context.Context, error) { return nil, refused },
+		Bind:  func(context.Context) (context.Context, error) { return nil, refused },
 	})
 	if !errors.Is(err, refused) {
 		t.Errorf("the page answered %v, want the binding's refusal", err)

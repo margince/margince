@@ -27,15 +27,11 @@ import (
 // AssuranceDealRescanArgs is the input check over one changed deal. Unique on
 // both fields, so a burst of edits to one deal is one job.
 type AssuranceDealRescanArgs struct {
-	Workspace ids.UUID `json:"workspace_id" river:"unique"`
-	Deal      ids.UUID `json:"deal_id" river:"unique"`
+	Deal ids.UUID `json:"deal_id" river:"unique"`
 }
 
 // Kind is the stable job identifier River persists in river_job.
 func (AssuranceDealRescanArgs) Kind() string { return "assurance_deal_rescan" }
-
-// WorkspaceID binds this pass to its tenant (jobs.WorkspaceScoped).
-func (a AssuranceDealRescanArgs) WorkspaceID() ids.UUID { return a.Workspace }
 
 const (
 	// assuranceRescanQueue mirrors api/jobs.yaml, at one worker. The insert
@@ -94,7 +90,7 @@ type assuranceDealRescanWorker struct {
 type dealScan func(ctx context.Context, store *assurance.Store, now time.Time, deal ids.UUID) (assurance.Result, error)
 
 func (w *assuranceDealRescanWorker) Work(ctx context.Context, job *river.Job[AssuranceDealRescanArgs]) error {
-	wsCtx, err := workspaceJobCtx(ctx, job.Args)
+	wsCtx, err := bindInstallation(ctx, w.sweep.pool)
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
@@ -126,10 +122,10 @@ func (w *assuranceSweepWorker) rescanDeal(ctx context.Context, args AssuranceDea
 	}, result.RunID)
 	if bundleErr != nil {
 		w.log.ErrorContext(ctx, "the deal's findings were recorded but not bundled into tasks",
-			"workspace_id", args.Workspace, "run_id", result.RunID, "error", bundleErr)
+			"run_id", result.RunID, "error", bundleErr)
 	}
 	w.log.InfoContext(ctx, "one changed deal's inputs were checked",
-		"workspace_id", args.Workspace, "deal_id", args.Deal, "run_id", result.RunID,
+		"deal_id", args.Deal, "run_id", result.RunID,
 		"findings", result.Findings, "cleared", result.Cleared, "status", result.Status, "tasks_minted", minted)
 	if result.Status != assurance.StatusComplete {
 		return nil

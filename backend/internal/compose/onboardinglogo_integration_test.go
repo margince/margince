@@ -96,7 +96,7 @@ func readTheOnboardingSiteDeclaring(t *testing.T, e *integration.Env, w *siteDee
 	if joined {
 		t.Fatal("a fresh onboarding read joined an existing dossier")
 	}
-	args := SiteDeepReadArgs{Workspace: e.WS, SiteReadID: read.ID, RequestedBy: read.RequestedBy}
+	args := SiteDeepReadArgs{SiteReadID: read.ID, RequestedBy: read.RequestedBy}
 	workerCtx := deepReadWorkerCtx(context.Background(), args)
 	claim, err := e.Contacts.BeginSiteRead(workerCtx, read.ID, 10*time.Minute)
 	if err != nil {
@@ -561,7 +561,7 @@ func claimedOnboardingRead(t *testing.T, e *integration.Env) (SiteDeepReadArgs, 
 	if err != nil {
 		t.Fatalf("start the onboarding read: %v", err)
 	}
-	args := SiteDeepReadArgs{Workspace: e.WS, SiteReadID: read.ID, RequestedBy: read.RequestedBy}
+	args := SiteDeepReadArgs{SiteReadID: read.ID, RequestedBy: read.RequestedBy}
 	claim, err := e.Contacts.BeginSiteRead(deepReadWorkerCtx(context.Background(), args), read.ID, 10*time.Minute)
 	if err != nil {
 		t.Fatalf("claim the onboarding read: %v", err)

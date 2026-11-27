@@ -58,8 +58,8 @@ func (w *gmailWatchWorker) Work(ctx context.Context, _ *river.Job[GmailWatchArgs
 		return jobs.FaultContext(ctx, err)
 	}
 	return jobs.FaultContext(ctx, dispatchDueWatches(ctx, w.registry, providerGmail, renewWithin,
-		func(ws ids.UUID, connID string) error {
-			return dispatchOne(ctx, w.pool, GmailWatchRenewArgs{Workspace: ws, ConnectionID: connID}, nil)
+		func(connID string) error {
+			return dispatchOne(ctx, w.pool, GmailWatchRenewArgs{ConnectionID: connID}, nil)
 		}))
 }
 
@@ -70,14 +70,14 @@ func (w *gmailWatchWorker) Work(ctx context.Context, _ *river.Job[GmailWatchArgs
 // error.
 func dispatchDueWatches(
 	ctx context.Context, reg *capture.Registry, provider string,
-	renewWithin time.Duration, enqueue func(ids.UUID, string) error,
+	renewWithin time.Duration, enqueue func(string) error,
 ) error {
 	// Returns the bare cause: each caller is a River Work method, and the gate
 	// that keeps a raw cause out of river_job.errors reads the return AT that
 	// method — so the wrap belongs there, where a reader of the worker sees it.
 	due, enumErr := reg.DueWatches(ctx, provider, renewWithin)
 	for _, d := range due {
-		if err := enqueue(d.Workspace.UUID, d.ID.String()); err != nil {
+		if err := enqueue(d.ID.String()); err != nil {
 			// A refused enqueue means this connection's watch is never renewed,
 			// so it fails the DISPATCHER rather than being logged past.
 			enumErr = errors.Join(enumErr, fmt.Errorf("enqueueing the watch renewal for connection %s: %w", d.ID, err))
@@ -90,30 +90,27 @@ func dispatchDueWatches(
 // with it because capture_connection reads are workspace-predicated and a job
 // carries no session.
 type GmailWatchRenewArgs struct {
-	Workspace    ids.UUID `json:"workspace_id"`
-	ConnectionID string   `json:"connection_id"`
+	ConnectionID string `json:"connection_id"`
 }
 
 // Kind is the stable job identifier River persists in river_job.
 func (GmailWatchRenewArgs) Kind() string { return "gmail_watch_renew_connection" }
 
-// WorkspaceID binds this renewal to its tenant (jobs.WorkspaceScoped).
-func (a GmailWatchRenewArgs) WorkspaceID() ids.UUID { return a.Workspace }
-
 // gmailWatchRenewWorker renews one connection's watch and advances
 // watch_expires_at. A revoked mailbox fails its OWN row now, where before it
 // was logged and skipped inside a pass River recorded as completed.
 type gmailWatchRenewWorker struct {
+	pool     *pgxpool.Pool
 	registry *capture.Registry
 	topic    string
 }
 
 func (w *gmailWatchRenewWorker) Work(ctx context.Context, job *river.Job[GmailWatchRenewArgs]) error {
-	return jobs.FaultContext(ctx, renewOneWatch(ctx, w.registry, job.Args, job.Args.ConnectionID, w.topic))
+	return jobs.FaultContext(ctx, renewOneWatch(ctx, w.pool, w.registry, job.Args, job.Args.ConnectionID, w.topic))
 }
 
 // renewOneWatch is the body both providers' renewal workers run: bind the
-// tenant the job carries, read the connection id it names, and let the registry
+// installation, read the connection id it names, and let the registry
 // perform the provider call and advance watch_expires_at.
 //
 // The topic is whatever that provider's Watch takes — a Pub/Sub topic for
@@ -121,9 +118,9 @@ func (w *gmailWatchRenewWorker) Work(ctx context.Context, job *river.Job[GmailWa
 //
 // Returns the bare cause, for the reason dispatchDueWatches does.
 func renewOneWatch(
-	ctx context.Context, reg *capture.Registry, args jobs.WorkspaceScoped, connectionID, topic string,
+	ctx context.Context, pool *pgxpool.Pool, reg *capture.Registry, args river.JobArgs, connectionID, topic string,
 ) error {
-	wsCtx, err := workspaceJobCtx(ctx, args)
+	wsCtx, err := bindInstallation(ctx, pool)
 	if err != nil {
 		return err
 	}
@@ -167,8 +164,8 @@ func (w *graphWatchWorker) Work(ctx context.Context, _ *river.Job[GraphWatchArgs
 		return jobs.FaultContext(ctx, err)
 	}
 	return jobs.FaultContext(ctx, dispatchDueWatches(ctx, w.registry, providerGraph, renewWithin,
-		func(ws ids.UUID, connID string) error {
-			return dispatchOne(ctx, w.pool, GraphWatchRenewArgs{Workspace: ws, ConnectionID: connID}, nil)
+		func(connID string) error {
+			return dispatchOne(ctx, w.pool, GraphWatchRenewArgs{ConnectionID: connID}, nil)
 		}))
 }
 
@@ -176,26 +173,23 @@ func (w *graphWatchWorker) Work(ctx context.Context, _ *river.Job[GraphWatchArgs
 // travels with it because capture_connection reads are workspace-predicated and
 // a job carries no session.
 type GraphWatchRenewArgs struct {
-	Workspace    ids.UUID `json:"workspace_id"`
-	ConnectionID string   `json:"connection_id"`
+	ConnectionID string `json:"connection_id"`
 }
 
 // Kind is the stable job identifier River persists in river_job.
 func (GraphWatchRenewArgs) Kind() string { return "graph_watch_renew_connection" }
 
-// WorkspaceID binds this renewal to its tenant (jobs.WorkspaceScoped).
-func (a GraphWatchRenewArgs) WorkspaceID() ids.UUID { return a.Workspace }
-
 // graphWatchRenewWorker renews one connection's subscription and advances
 // watch_expires_at. A revoked mailbox fails its OWN row, where a pass that
 // logged and skipped would be recorded as completed.
 type graphWatchRenewWorker struct {
+	pool            *pgxpool.Pool
 	registry        *capture.Registry
 	notificationURL string
 }
 
 func (w *graphWatchRenewWorker) Work(ctx context.Context, job *river.Job[GraphWatchRenewArgs]) error {
-	return jobs.FaultContext(ctx, renewOneWatch(ctx, w.registry, job.Args, job.Args.ConnectionID, w.notificationURL))
+	return jobs.FaultContext(ctx, renewOneWatch(ctx, w.pool, w.registry, job.Args, job.Args.ConnectionID, w.notificationURL))
 }
 
 // renewWithinOf reads how far ahead of expiry a watch scan renews, at the

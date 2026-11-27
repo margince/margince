@@ -34,7 +34,7 @@ func addGraphWatchJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig
 		registry: cfg.GmailRegistry, pool: pool, log: log,
 	})
 	addDeclaredWorker[GraphWatchRenewArgs](reg, &graphWatchRenewWorker{
-		registry: cfg.GmailRegistry, notificationURL: cfg.GraphWatch.NotificationURL,
+		pool: pool, registry: cfg.GmailRegistry, notificationURL: cfg.GraphWatch.NotificationURL,
 	})
 }
 

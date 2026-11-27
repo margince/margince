@@ -15,7 +15,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/chatedge"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/whatsapp"
-	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -44,7 +43,7 @@ func NewMedia(client *whatsapp.Client, pool *pgxpool.Pool, vault keyvault.Vault)
 // NewWorker is the shared chat worker for this network's ingest job. It files
 // through the live connection as the connector principal actor, and decodes a
 // stored item with media.decode.
-func NewWorker[T IngestJob](bind func(context.Context, jobs.WorkspaceScoped) (context.Context, error),
+func NewWorker[T IngestJob](bind func(context.Context) (context.Context, error),
 	pool *pgxpool.Pool, sink connector.Sink, actor principal.Principal, log *slog.Logger, media Media,
 ) *chatedge.Worker[T] {
 	return &chatedge.Worker[T]{Name: "whatsapp_ingest", Bind: bind, Pool: pool, Sink: sink, Actor: actor, Log: log, Decode: media.decode}

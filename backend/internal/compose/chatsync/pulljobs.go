@@ -22,7 +22,7 @@ import (
 
 // PullJob is the args of the chat_pull job, which compose declares.
 type PullJob interface {
-	jobs.WorkspaceScoped
+	river.JobArgs
 	Connection() ids.UUID
 }
 
@@ -33,7 +33,7 @@ const noticeRerun = 5 * time.Second
 // notices. A notice's own enqueue adds nothing while this pull runs. So a
 // notice that arrived during the run makes the pull run once more.
 type PullWorker[T PullJob] struct {
-	Bind   func(context.Context, jobs.WorkspaceScoped) (context.Context, error)
+	Bind   func(context.Context) (context.Context, error)
 	Puller *Puller
 	Marks  Marks
 }
@@ -41,7 +41,7 @@ type PullWorker[T PullJob] struct {
 // Work implements River's worker for the pull.
 func (w *PullWorker[T]) Work(ctx context.Context, job *river.Job[T]) error {
 	// Bind answers no context when it refuses, so the fault rides the job's own.
-	bound, err := w.Bind(ctx, job.Args)
+	bound, err := w.Bind(ctx)
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}

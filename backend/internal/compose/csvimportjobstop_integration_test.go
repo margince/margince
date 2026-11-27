@@ -35,7 +35,7 @@ func committedUndo(t *testing.T, e *integration.Env) (importHandlers, ImportUndo
 	if err != nil {
 		t.Fatalf("starting the undo: %v", err)
 	}
-	return h, ImportUndoArgs{Workspace: e.WS, RunID: args.RunID, Attempt: undoing.JobAttempt}
+	return h, ImportUndoArgs{RunID: args.RunID, Attempt: undoing.JobAttempt}
 }
 
 func runOf(t *testing.T, e *integration.Env, id migration.RunID) migration.Run {

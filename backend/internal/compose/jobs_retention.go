@@ -39,7 +39,7 @@ type idempotencyRetentionWorker struct {
 }
 
 func (w *idempotencyRetentionWorker) Work(ctx context.Context, _ *river.Job[IdempotencyRetentionArgs]) error {
-	return jobs.FaultContext(ctx, runPerEveryWorkspace(ctx, w.pool, w.retainWorkspace))
+	return jobs.FaultContext(ctx, runInstallationPass(ctx, w.pool, w.retainWorkspace))
 }
 
 func (w *idempotencyRetentionWorker) retainWorkspace(ctx context.Context, workspace ids.UUID) error {

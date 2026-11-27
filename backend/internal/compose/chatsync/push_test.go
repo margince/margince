@@ -18,7 +18,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/chatlinks"
 	"github.com/margince/margince/backend/internal/modules/webhooks"
-	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -334,11 +333,9 @@ type pullArgs struct{ conn ids.UUID }
 
 func (pullArgs) Kind() string { return "chat_pull" }
 
-func (pullArgs) WorkspaceID() ids.UUID { return ids.Nil }
-
 func (a pullArgs) Connection() ids.UUID { return a.conn }
 
-func bindAny(ctx context.Context, _ jobs.WorkspaceScoped) (context.Context, error) { return ctx, nil }
+func bindAny(ctx context.Context) (context.Context, error) { return ctx, nil }
 
 func TestANoticeDuringAPullRunsItOnceMore(t *testing.T) {
 	conn := ids.NewV7()

@@ -34,7 +34,6 @@ const documentExtractActor = "agent:document-extractor"
 
 // DocumentExtractArgs is one queued reading.
 type DocumentExtractArgs struct {
-	Workspace        ids.UUID `json:"workspace_id"`
 	AttachmentID     ids.UUID `json:"attachment_id"`
 	ExtractionReadID ids.UUID `json:"attachment_extraction_id"`
 	// RequestedBy is the human who asked, so what the reading records carries
@@ -47,11 +46,6 @@ func (DocumentExtractArgs) Kind() string { return "document_extract" }
 
 // SessionLocked says the worker holds a session lease on the work for the run.
 func (DocumentExtractArgs) SessionLocked() {}
-
-// WorkspaceID declares the one tenant this job's work belongs to, and is what
-// binds the worker's context — a worker that picked its own could claim one
-// workspace and work in another.
-func (a DocumentExtractArgs) WorkspaceID() ids.UUID { return a.Workspace }
 
 // The reading lease owns execution; a dead River row must not suppress a new request.
 func documentExtractInsertOpts() *river.InsertOpts {
@@ -95,7 +89,7 @@ type documentExtractWorker struct {
 
 func (w *documentExtractWorker) Work(ctx context.Context, job *river.Job[DocumentExtractArgs]) error {
 	args := job.Args
-	wsCtx, err := workspaceJobCtx(ctx, args)
+	wsCtx, err := bindInstallation(ctx, w.pool)
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}

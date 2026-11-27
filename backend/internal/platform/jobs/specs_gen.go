@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "3168e4b5bdbcb7eadf1c09904bdcbc779157b6fa9e8302852b4ef4bd308740c1"
+const JobContractHash = "6ed1fb88ab20ddba1f37a2c440d2cb7a70792599d558df99fe551230e8b763af"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -26,7 +26,7 @@ var specs = map[string]Spec{
 		Timeout:      TimeoutPolicy{Fixed: 4 * time.Minute},
 		OptsOwner:    OptsCaller,
 		Registration: Registration{When: []string{"AccountScanBrain"}, AbsentRegistersAnyway: true},
-		Args:         []ArgField{{Name: "CompanyID"}, {Name: "ScanID"}, {Name: "ViewerID"}, {Name: "Workspace"}},
+		Args:         []ArgField{{Name: "CompanyID"}, {Name: "ScanID"}, {Name: "ViewerID"}},
 	},
 	"address_country_check": {
 		Kind:         "address_country_check",
@@ -138,7 +138,7 @@ var specs = map[string]Spec{
 		Queue:     "default",
 		Timeout:   TimeoutPolicy{Fixed: 1 * time.Minute},
 		OptsOwner: OptsArgs,
-		Args:      []ArgField{{Name: "ApprovalID"}, {Name: "DeciderID"}, {Name: "Workspace"}},
+		Args:      []ArgField{{Name: "ApprovalID"}, {Name: "DeciderID"}},
 	},
 	"assurance_deal_rescan": {
 		Kind:      "assurance_deal_rescan",
@@ -147,7 +147,7 @@ var specs = map[string]Spec{
 		Queue:     "assurance_rescan",
 		Timeout:   TimeoutPolicy{Fixed: 2 * time.Minute},
 		OptsOwner: OptsCaller,
-		Args:      []ArgField{{Name: "Deal"}, {Name: "Workspace"}},
+		Args:      []ArgField{{Name: "Deal"}},
 	},
 	"assurance_run": {
 		Kind:      "assurance_run",
@@ -156,7 +156,7 @@ var specs = map[string]Spec{
 		Queue:     "default",
 		Timeout:   TimeoutPolicy{Fixed: 5 * time.Minute},
 		OptsOwner: OptsCaller,
-		Args:      []ArgField{{Name: "RequestedBy"}, {Name: "Workspace"}},
+		Args:      []ArgField{{Name: "RequestedBy"}},
 	},
 	"assurance_sweep": {
 		Kind:      "assurance_sweep",
@@ -197,7 +197,7 @@ var specs = map[string]Spec{
 		OptsOwner:    OptsCaller,
 		Registration: Registration{When: []string{"GmailRegistry"}},
 		Fault:        FaultPolicy{NilAfterLogging: "the backfill ROW owns the outcome: RunBackfillExecution ends the run and records the fault class on the row against its own give-up cap, on a context detached from the job because the job context dying mid-page is the commonest fault. A River retry would re-page a run the engine already ended."},
-		Args:         []ArgField{{Name: "BackfillID"}, {Name: "ExecutionGeneration", Scalar: true, Reason: "A monotonic execution number fences replaced paging jobs and carries no mail content."}, {Name: "Workspace"}},
+		Args:         []ArgField{{Name: "BackfillID"}, {Name: "ExecutionGeneration", Scalar: true, Reason: "A monotonic execution number fences replaced paging jobs and carries no mail content."}},
 	},
 	"capture_backfill_reconcile": {
 		Kind:      "capture_backfill_reconcile",
@@ -282,7 +282,7 @@ var specs = map[string]Spec{
 		OptsOwner:    OptsFanOut,
 		Registration: Registration{When: []string{"GmailRegistry"}},
 		Fault:        FaultPolicy{NilAfterLogging: "the connector sidecar owns the retry: a failed sync leaves next_sync_at unadvanced, so the dispatcher re-enqueues it on the next scan — the job row's success means 'this attempt is concluded', not 'the sync succeeded'."},
-		Args:         []ArgField{{Name: "ConnectionID"}, {Name: "Provider", Scalar: true, Reason: "the connector family the connection belongs to (gmail, gcal). It selects the sync path before any row is read, so the job cannot resolve it from the connection it names without first knowing which connector owns that row. A member of a fixed set this build compiles, and a fact about a code path rather than about anyone."}, {Name: "Workspace"}},
+		Args:         []ArgField{{Name: "ConnectionID"}, {Name: "Provider", Scalar: true, Reason: "the connector family the connection belongs to (gmail, gcal). It selects the sync path before any row is read, so the job cannot resolve it from the connection it names without first knowing which connector owns that row. A member of a fixed set this build compiles, and a fact about a code path rather than about anyone."}},
 	},
 	"capture_trace_sweep": {
 		Kind:      "capture_trace_sweep",
@@ -302,7 +302,7 @@ var specs = map[string]Spec{
 		Timeout:     TimeoutPolicy{Fixed: 2 * time.Minute},
 		MaxAttempts: 3,
 		OptsOwner:   OptsFanOut,
-		Args:        []ArgField{{Name: "AsOf", Scalar: true, Reason: "Fixed horizon instant for a resumable pass, never a message timestamp supplied by a sender."}, {Name: "Ceiling"}, {Name: "Correlation"}, {Name: "Event"}, {Name: "Scope", Scalar: true, Reason: "Record identities and a boolean selecting the recovery census; no correspondence travels in the job."}, {Name: "Workspace"}},
+		Args:        []ArgField{{Name: "AsOf", Scalar: true, Reason: "Fixed horizon instant for a resumable pass, never a message timestamp supplied by a sender."}, {Name: "Ceiling"}, {Name: "Correlation"}, {Name: "Event"}, {Name: "Scope", Scalar: true, Reason: "Record identities and a boolean selecting the recovery census; no correspondence travels in the job."}},
 	},
 	"captured_deal_refile_sweep": {
 		Kind:       "captured_deal_refile_sweep",
@@ -334,7 +334,7 @@ var specs = map[string]Spec{
 		Timeout:      TimeoutPolicy{Fixed: 2 * time.Minute},
 		OptsOwner:    OptsCaller,
 		Registration: Registration{When: []string{"ChannelVault"}},
-		Args:         []ArgField{{Name: "LinkID"}, {Name: "Workspace"}},
+		Args:         []ArgField{{Name: "LinkID"}},
 	},
 	"chat_pull": {
 		Kind:         "chat_pull",
@@ -345,7 +345,7 @@ var specs = map[string]Spec{
 		MaxAttempts:  3,
 		OptsOwner:    OptsArgs,
 		Registration: Registration{When: []string{"ChannelVault"}},
-		Args:         []ArgField{{Name: "ConnectionID"}, {Name: "Workspace"}},
+		Args:         []ArgField{{Name: "ConnectionID"}},
 	},
 	"chat_pull_sweep": {
 		Kind:         "chat_pull_sweep",
@@ -368,7 +368,7 @@ var specs = map[string]Spec{
 		Timeout:      TimeoutPolicy{Fixed: 2 * time.Minute},
 		OptsOwner:    OptsCaller,
 		Registration: Registration{When: []string{"VatChecker"}, AbsentRegistersAnyway: true},
-		Args:         []ArgField{{Name: "CompanyID"}, {Name: "Requested", Scalar: true, Reason: "whether a contact asked for this consultation, rather than a write having earned it. It decides whether the worker asks about a number the register has already answered, so it cannot be resolved from the company the job names — the row says what the number is, never who wanted it re-checked. A bare true/false carrying no subject data: it names no contact, and erasing the contact who pressed the button leaves nothing here to erase."}, {Name: "Workspace"}},
+		Args:         []ArgField{{Name: "CompanyID"}, {Name: "Requested", Scalar: true, Reason: "whether a contact asked for this consultation, rather than a write having earned it. It decides whether the worker asks about a number the register has already answered, so it cannot be resolved from the company the job names — the row says what the number is, never who wanted it re-checked. A bare true/false carrying no subject data: it names no contact, and erasing the contact who pressed the button leaves nothing here to erase."}},
 	},
 	"close_date_sweep": {
 		Kind:      "close_date_sweep",
@@ -408,7 +408,7 @@ var specs = map[string]Spec{
 		Timeout:      TimeoutPolicy{Fixed: 5 * time.Minute},
 		OptsOwner:    OptsCaller,
 		Registration: Registration{When: []string{"SendRegistry", "SendDelivery"}},
-		Args:         []ArgField{{Name: "DueAt", Scalar: true, Reason: "The moment the alarm was set for. It keys the job's uniqueness and the worker never reads it."}, {Name: "ScheduledSendID"}, {Name: "Workspace"}},
+		Args:         []ArgField{{Name: "DueAt", Scalar: true, Reason: "The moment the alarm was set for. It keys the job's uniqueness and the worker never reads it."}, {Name: "ScheduledSendID"}},
 	},
 	"comms_scheduled_send_recovery": {
 		Kind:         "comms_scheduled_send_recovery",
@@ -429,7 +429,7 @@ var specs = map[string]Spec{
 		Timeout:      TimeoutPolicy{Fixed: 5 * time.Minute},
 		OptsOwner:    OptsCaller,
 		Registration: Registration{When: []string{"SendRegistry"}},
-		Args:         []ArgField{{Name: "DeliveryID"}, {Name: "Workspace"}},
+		Args:         []ArgField{{Name: "DeliveryID"}},
 	},
 	"company_name_promotion": {
 		Kind:      "company_name_promotion",
@@ -488,7 +488,7 @@ var specs = map[string]Spec{
 		Timeout:      TimeoutPolicy{Fixed: 4 * time.Minute},
 		OptsOwner:    OptsCaller,
 		Registration: Registration{When: []string{"DocumentExtractBrain"}, AbsentRegistersAnyway: true},
-		Args:         []ArgField{{Name: "AttachmentID"}, {Name: "ExtractionReadID"}, {Name: "RequestedBy"}, {Name: "Workspace"}},
+		Args:         []ArgField{{Name: "AttachmentID"}, {Name: "ExtractionReadID"}, {Name: "RequestedBy"}},
 	},
 	"embed_drift_sweep": {
 		Kind:         "embed_drift_sweep",
@@ -540,7 +540,6 @@ var specs = map[string]Spec{
 		Queue:     "accounting_read",
 		Timeout:   TimeoutPolicy{Fixed: 5 * time.Minute},
 		OptsOwner: OptsCaller,
-		Args:      []ArgField{{Name: "Workspace"}},
 	},
 	"finance_sync_sweep": {
 		Kind:      "finance_sync_sweep",
@@ -579,7 +578,7 @@ var specs = map[string]Spec{
 		Queue:     "rate_refresh",
 		Timeout:   TimeoutPolicy{Fixed: 10 * time.Minute},
 		OptsOwner: OptsCaller,
-		Args:      []ArgField{{Name: "RequestedBy"}, {Name: "Workspace"}},
+		Args:      []ArgField{{Name: "RequestedBy"}},
 	},
 	"geocode_backfill": {
 		Kind:         "geocode_backfill",
@@ -600,7 +599,7 @@ var specs = map[string]Spec{
 		Timeout:      TimeoutPolicy{Fixed: 3 * time.Minute},
 		OptsOwner:    OptsCaller,
 		Registration: Registration{When: []string{"Geocoder"}, AbsentRegistersAnyway: true},
-		Args:         []ArgField{{Name: "CompanyID"}, {Name: "Workspace"}},
+		Args:         []ArgField{{Name: "CompanyID"}},
 	},
 	"gmail_sync": {
 		Kind:         "gmail_sync",
@@ -637,7 +636,7 @@ var specs = map[string]Spec{
 		MaxAttempts:  3,
 		OptsOwner:    OptsFanOut,
 		Registration: Registration{When: []string{"GmailRegistry", "GmailWatch.Topic"}},
-		Args:         []ArgField{{Name: "ConnectionID"}, {Name: "Workspace"}},
+		Args:         []ArgField{{Name: "ConnectionID"}},
 	},
 	"graph_edge_reconcile": {
 		Kind:      "graph_edge_reconcile",
@@ -672,7 +671,7 @@ var specs = map[string]Spec{
 		MaxAttempts:  3,
 		OptsOwner:    OptsFanOut,
 		Registration: Registration{When: []string{"GmailRegistry.OffersGraph", "GraphWatch.NotificationURL"}},
-		Args:         []ArgField{{Name: "ConnectionID"}, {Name: "Workspace"}},
+		Args:         []ArgField{{Name: "ConnectionID"}},
 	},
 	"idempotency_retention": {
 		Kind:      "idempotency_retention",
@@ -692,7 +691,7 @@ var specs = map[string]Spec{
 		Timeout:   TimeoutPolicy{Fixed: 1 * time.Minute, DerivedFrom: "importSliceTimeout"},
 		OptsOwner: OptsCaller,
 		Fault:     FaultPolicy{NilAfterLogging: "the import_run row owns the outcome: a failed row, an over-budget slice and a lost fence are written to the run, or are a superseded attempt's quiet exit; a River retry would rerun a slice whose run already says what happened."},
-		Args:      []ArgField{{Name: "Attempt", Scalar: true, Reason: "the fence the run row holds; a new attempt is a new job"}, {Name: "RunID"}, {Name: "Workspace"}},
+		Args:      []ArgField{{Name: "Attempt", Scalar: true, Reason: "the fence the run row holds; a new attempt is a new job"}, {Name: "RunID"}},
 	},
 	"import_run_sweep": {
 		Kind:      "import_run_sweep",
@@ -711,7 +710,7 @@ var specs = map[string]Spec{
 		Timeout:   TimeoutPolicy{Fixed: 1 * time.Minute, DerivedFrom: "importSliceTimeout"},
 		OptsOwner: OptsCaller,
 		Fault:     FaultPolicy{NilAfterLogging: "the import_run row owns the outcome: an undo that stops stays undoing with its cause and its cursor, and a lost fence is a superseded attempt's quiet exit; a River retry would rerun a slice whose run already says what happened."},
-		Args:      []ArgField{{Name: "Attempt", Scalar: true, Reason: "the fence the run row holds; a new attempt is a new job"}, {Name: "RunID"}, {Name: "Workspace"}},
+		Args:      []ArgField{{Name: "Attempt", Scalar: true, Reason: "the fence the run row holds; a new attempt is a new job"}, {Name: "RunID"}},
 	},
 	"import_validate": {
 		Kind:      "import_validate",
@@ -721,7 +720,7 @@ var specs = map[string]Spec{
 		Timeout:   TimeoutPolicy{Fixed: 10 * time.Minute},
 		OptsOwner: OptsCaller,
 		Fault:     FaultPolicy{NilAfterLogging: "the import_run row owns the outcome: a refusal, an over-budget stop and a lost fence are written to the run, or are a superseded attempt's quiet exit; a River retry would test again a run whose state already says what happened."},
-		Args:      []ArgField{{Name: "Attempt", Scalar: true, Reason: "the fence the run row holds; a new attempt is a new job"}, {Name: "RunID"}, {Name: "Workspace"}},
+		Args:      []ArgField{{Name: "Attempt", Scalar: true, Reason: "the fence the run row holds; a new attempt is a new job"}, {Name: "RunID"}},
 	},
 	"initiative_enrolment_sweep": {
 		Kind:      "initiative_enrolment_sweep",
@@ -751,7 +750,7 @@ var specs = map[string]Spec{
 		Timeout:   TimeoutPolicy{Fixed: 15 * time.Minute},
 		OptsOwner: OptsCaller,
 		Cadence:   Cadence{OnDemand: true},
-		Args:      []ArgField{{Name: "DocumentID"}, {Name: "Workspace"}},
+		Args:      []ArgField{{Name: "DocumentID"}},
 	},
 	"link_reconcile": {
 		Kind:      "link_reconcile",
@@ -832,7 +831,7 @@ var specs = map[string]Spec{
 		Timeout:   TimeoutPolicy{Fixed: 2 * time.Minute},
 		OptsOwner: OptsCaller,
 		Fault:     FaultPolicy{NilAfterLogging: "ONE branch, and it is a mis-wired ROLE rather than a failed send: a worker composed with no operator relay says so at Warn, claims nothing, and returns nil. No durable retry stands behind that, and none is wanted — each role reads its own config, so returning a failure would have an installation that deliberately runs no operator mail discard a row per decision, and would leave a relay-less replica bouncing rows rather than sending them. What makes the green row honest is that the thing the product promises still happened: the notice is on the recipient's Worklist, which is where every notice is, and this message is only a nudge toward it. The log is how an operator tells one unconfigured worker from a quiet week.\nIt waives THAT branch and no other. The failures above the claim are returned and River retries them. A relay that never took the message (mailer.NotTaken) releases the claims and is returned too, so the next rung sends it; no relay holds a copy, so the retry cannot send a second one. Any other relay failure, and the last rung, writes its cause into notice.email_error beside a claim that is never released, and cancels the job so job health counts it as dead. SMTP returns no receipt, so a message the relay may have taken is never sent again."},
-		Args:      []ArgField{{Name: "NoticeID"}, {Name: "Workspace"}},
+		Args:      []ArgField{{Name: "NoticeID"}},
 	},
 	"oauth_client_unused_sweep": {
 		Kind:        "oauth_client_unused_sweep",
@@ -946,7 +945,7 @@ var specs = map[string]Spec{
 		MaxAttempts:  3,
 		OptsOwner:    OptsArgs,
 		Registration: Registration{When: []string{"ProviderRuns.Registry", "ProviderRuns.Vault"}},
-		Args:         []ArgField{{Name: "RunID"}, {Name: "Workspace"}},
+		Args:         []ArgField{{Name: "RunID"}},
 	},
 	"reply_settled_stamp": {
 		Kind:      "reply_settled_stamp",
@@ -996,7 +995,7 @@ var specs = map[string]Spec{
 		Timeout:      TimeoutPolicy{Fixed: 830 * time.Second, DerivedFrom: "deepReadTimeout"},
 		OptsOwner:    OptsCaller,
 		Registration: Registration{When: []string{"DeepReadBrain"}, AbsentRegistersAnyway: true},
-		Args:         []ArgField{{Name: "CompanyID"}, {Name: "MaxPages", Scalar: true, Reason: "this run's page ceiling, or zero for the installation's own. The worker clamps it against the page limit an admin set, so it can only ever narrow it, and a crawl budget states nothing about a subject."}, {Name: "RequestedBy"}, {Name: "SiteReadID"}, {Name: "Workspace"}},
+		Args:         []ArgField{{Name: "CompanyID"}, {Name: "MaxPages", Scalar: true, Reason: "this run's page ceiling, or zero for the installation's own. The worker clamps it against the page limit an admin set, so it can only ever narrow it, and a crawl budget states nothing about a subject."}, {Name: "RequestedBy"}, {Name: "SiteReadID"}},
 	},
 	"stage_evidence_read": {
 		Kind:         "stage_evidence_read",
@@ -1006,7 +1005,7 @@ var specs = map[string]Spec{
 		Timeout:      TimeoutPolicy{Fixed: 4 * time.Minute},
 		OptsOwner:    OptsCaller,
 		Registration: Registration{When: []string{"StageEvidenceBrain"}},
-		Args:         []ArgField{{Name: "ActivityID"}, {Name: "DealID"}, {Name: "RereadFor"}, {Name: "Workspace"}},
+		Args:         []ArgField{{Name: "ActivityID"}, {Name: "DealID"}, {Name: "RereadFor"}},
 	},
 	"stage_evidence_reread": {
 		Kind:         "stage_evidence_reread",
@@ -1016,7 +1015,7 @@ var specs = map[string]Spec{
 		Timeout:      TimeoutPolicy{Fixed: 2 * time.Minute},
 		OptsOwner:    OptsCaller,
 		Registration: Registration{When: []string{"StageEvidenceBrain"}, AbsentRegistersAnyway: true},
-		Args:         []ArgField{{Name: "After"}, {Name: "Domain", Scalar: true, Reason: "The removed own domain is an installation setting the admin list already showed; it names no contact and carries no mail content."}, {Name: "Removal"}, {Name: "Workspace"}},
+		Args:         []ArgField{{Name: "After"}, {Name: "Domain", Scalar: true, Reason: "The removed own domain is an installation setting the admin list already showed; it names no contact and carries no mail content."}, {Name: "Removal"}},
 	},
 	"standing_line_check": {
 		Kind:         "standing_line_check",
@@ -1026,7 +1025,7 @@ var specs = map[string]Spec{
 		Timeout:      TimeoutPolicy{Fixed: 4 * time.Minute},
 		OptsOwner:    OptsCaller,
 		Registration: Registration{When: []string{"StandingLineBrain"}},
-		Args:         []ArgField{{Name: "ActivityID"}, {Name: "Workspace"}},
+		Args:         []ArgField{{Name: "ActivityID"}},
 	},
 	"stored_object_reap": {
 		Kind:         "stored_object_reap",
@@ -1080,7 +1079,7 @@ var specs = map[string]Spec{
 		Timeout:      TimeoutPolicy{Fixed: 4 * time.Minute},
 		OptsOwner:    OptsCaller,
 		Registration: Registration{When: []string{"TechnicalEnricher"}, AbsentRegistersAnyway: true},
-		Args:         []ArgField{{Name: "CompanyID"}, {Name: "Workspace"}},
+		Args:         []ArgField{{Name: "CompanyID"}},
 	},
 	"telegram_ingest": {
 		Kind:      "telegram_ingest",
@@ -1089,7 +1088,7 @@ var specs = map[string]Spec{
 		Queue:     "default",
 		Timeout:   TimeoutPolicy{Fixed: 2 * time.Minute},
 		OptsOwner: OptsCaller,
-		Args:      []ArgField{{Name: "BotID"}, {Name: "BusinessLinkID", Scalar: true, Reason: "The approved business link row id the poll admitted the update through; empty for a message sent to the bot itself. It names no contact and carries no message content."}, {Name: "ConnectionID"}, {Name: "RawCaptureID"}, {Name: "Workspace"}},
+		Args:      []ArgField{{Name: "BotID"}, {Name: "BusinessLinkID", Scalar: true, Reason: "The approved business link row id the poll admitted the update through; empty for a message sent to the bot itself. It names no contact and carries no message content."}, {Name: "ConnectionID"}, {Name: "RawCaptureID"}},
 	},
 	"telegram_poll": {
 		Kind:         "telegram_poll",
@@ -1100,7 +1099,7 @@ var specs = map[string]Spec{
 		MaxAttempts:  3,
 		OptsOwner:    OptsArgs,
 		Registration: Registration{When: []string{"ChannelVault"}},
-		Args:         []ArgField{{Name: "ConnectionID"}, {Name: "Workspace"}},
+		Args:         []ArgField{{Name: "ConnectionID"}},
 	},
 	"telegram_poll_sweep": {
 		Kind:         "telegram_poll_sweep",
@@ -1143,7 +1142,7 @@ var specs = map[string]Spec{
 		Timeout:      TimeoutPolicy{Fixed: 4 * time.Minute},
 		OptsOwner:    OptsCaller,
 		Registration: Registration{When: []string{"TranscriptProposeBrain"}, AbsentRegistersAnyway: true},
-		Args:         []ArgField{{Name: "ActivityID"}, {Name: "RequestedBy"}, {Name: "TranscriptReadID"}, {Name: "Workspace"}},
+		Args:         []ArgField{{Name: "ActivityID"}, {Name: "RequestedBy"}, {Name: "TranscriptReadID"}},
 	},
 	"vcard_ingest": {
 		Kind:      "vcard_ingest",
@@ -1153,7 +1152,7 @@ var specs = map[string]Spec{
 		Timeout:   TimeoutPolicy{Fixed: 5 * time.Minute},
 		OptsOwner: OptsCaller,
 		Cadence:   Cadence{OnDemand: true},
-		Args:      []ArgField{{Name: "Activity"}, {Name: "Workspace"}},
+		Args:      []ArgField{{Name: "Activity"}},
 	},
 	"voice_build": {
 		Kind:         "voice_build",
@@ -1163,7 +1162,7 @@ var specs = map[string]Spec{
 		Timeout:      TimeoutPolicy{Fixed: 10 * time.Minute, DerivedFrom: "voiceBuildTimeout"},
 		OptsOwner:    OptsCaller,
 		Registration: Registration{When: []string{"VoiceBrain"}, AbsentRegistersAnyway: true},
-		Args:         []ArgField{{Name: "BuildID"}, {Name: "ProfileID"}, {Name: "RequestedBy"}, {Name: "Workspace"}},
+		Args:         []ArgField{{Name: "BuildID"}, {Name: "ProfileID"}, {Name: "RequestedBy"}},
 	},
 	"voice_build_retry": {
 		Kind:       "voice_build_retry",
@@ -1215,7 +1214,7 @@ var specs = map[string]Spec{
 		Queue:     "default",
 		Timeout:   TimeoutPolicy{Fixed: 2 * time.Minute},
 		OptsOwner: OptsCaller,
-		Args:      []ArgField{{Name: "ConnectionID"}, {Name: "RawCaptureID"}, {Name: "Workspace"}},
+		Args:      []ArgField{{Name: "ConnectionID"}, {Name: "RawCaptureID"}},
 	},
 	"zalo_oa_ingest": {
 		Kind:      "zalo_oa_ingest",
@@ -1224,7 +1223,7 @@ var specs = map[string]Spec{
 		Queue:     "default",
 		Timeout:   TimeoutPolicy{Fixed: 2 * time.Minute},
 		OptsOwner: OptsCaller,
-		Args:      []ArgField{{Name: "ConnectionID"}, {Name: "RawCaptureID"}, {Name: "Workspace"}},
+		Args:      []ArgField{{Name: "ConnectionID"}, {Name: "RawCaptureID"}},
 	},
 	"zalo_token_renew": {
 		Kind:         "zalo_token_renew",

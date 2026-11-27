@@ -138,7 +138,7 @@ func (v *viabilityEnv) check(t *testing.T) {
 	t.Helper()
 	worker := &assuranceRunWorker{sweep: v.worker}
 	if err := worker.Work(context.Background(), &river.Job[AssuranceRunArgs]{
-		Args: AssuranceRunArgs{Workspace: v.WS, RequestedBy: v.Rep1.String()},
+		Args: AssuranceRunArgs{RequestedBy: v.Rep1.String()},
 	}); err != nil {
 		t.Fatalf("the input check: %v", err)
 	}

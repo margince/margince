@@ -25,7 +25,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/knowledge"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/vectorkit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -74,17 +73,11 @@ func ingestSnooze(err error, enqueuedAt, now time.Time) (time.Duration, bool) {
 
 // KnowledgeIngestArgs is one queued ingest.
 type KnowledgeIngestArgs struct {
-	Workspace  ids.UUID `json:"workspace_id"`
 	DocumentID ids.UUID `json:"document_id"`
 }
 
 // Kind is the string River persists for this job.
 func (KnowledgeIngestArgs) Kind() string { return "knowledge_ingest" }
-
-// WorkspaceID declares the one tenant this job's work belongs to, and is what
-// binds the worker's context — a worker that picked its own could claim one
-// workspace and work in another.
-func (a KnowledgeIngestArgs) WorkspaceID() ids.UUID { return a.Workspace }
 
 // knowledgeIngestInsertOpts names no uniqueness. River requires a unique job to
 // count `running`, and a killed worker leaves that row behind. A new ingest
@@ -131,7 +124,7 @@ func newKnowledgeIngestWorker(pool *pgxpool.Pool, blob blobstore.Store, embedder
 }
 
 func (w *knowledgeIngestWorker) Work(ctx context.Context, job *river.Job[KnowledgeIngestArgs]) error {
-	wsCtx, err := workspaceJobCtx(ctx, job.Args)
+	wsCtx, err := bindInstallation(ctx, w.pool)
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
@@ -283,7 +276,6 @@ func WithKnowledgeIngest(inserter *jobs.Runner) Option {
 func knowledgeIngestEnqueue(inserter *jobs.Runner) knowledge.QueueIngest {
 	return func(ctx context.Context, tx pgx.Tx, documentID ids.UUID) error {
 		return inserter.EnqueueTx(ctx, tx, KnowledgeIngestArgs{
-			Workspace:  storekit.MustWorkspace(ctx),
 			DocumentID: documentID,
 		}, knowledgeIngestInsertOpts())
 	}

@@ -23,7 +23,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -34,10 +33,9 @@ import (
 
 // VoiceBuildArgs names one build whose executor owns a session lease.
 type VoiceBuildArgs struct {
-	Workspace   ids.UUID `json:"workspace_id"`
-	ProfileID   string   `json:"profile_id"`
-	BuildID     string   `json:"build_id"`
-	RequestedBy string   `json:"requested_by"`
+	ProfileID   string `json:"profile_id"`
+	BuildID     string `json:"build_id"`
+	RequestedBy string `json:"requested_by"`
 }
 
 // Kind is the stable job identifier River persists in river_job.
@@ -45,9 +43,6 @@ func (VoiceBuildArgs) Kind() string { return "voice_build" }
 
 // SessionLocked says the worker holds a session lease on the work for the run.
 func (VoiceBuildArgs) SessionLocked() {}
-
-// WorkspaceID binds this build to its tenant (jobs.WorkspaceScoped).
-func (a VoiceBuildArgs) WorkspaceID() ids.UUID { return a.Workspace }
 
 // VoiceBuildRetryArgs schedules one deferred-build sweep: re-enqueue every
 // budget-deferred build whose next attempt is due.
@@ -107,7 +102,6 @@ func WithVoiceBuildEnqueue(inserter *jobs.Runner) Option {
 				return errors.New("compose: voice build enqueue without an acting principal")
 			}
 			return inserter.EnqueueTx(ctx, tx, VoiceBuildArgs{
-				Workspace:   storekit.MustWorkspace(ctx),
 				ProfileID:   build.ProfileID.String(),
 				BuildID:     build.ID.String(),
 				RequestedBy: actor.UserID.String(),
@@ -150,7 +144,7 @@ func voiceBuildWorkerCtx(ctx context.Context, users *identity.Service, args Voic
 	if err != nil {
 		return nil, nil, fmt.Errorf("voice_build: requester id: %w", err)
 	}
-	ctx, err = workspaceJobCtx(ctx, args)
+	ctx, err = installationJobCtx(ctx, users)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -453,7 +447,6 @@ func (w *voiceBuildRetryWorker) Work(ctx context.Context, _ *river.Job[VoiceBuil
 			continue
 		}
 		if err := dispatchOne(ctx, w.pool, VoiceBuildArgs{
-			Workspace:   ref.Workspace,
 			ProfileID:   ref.ProfileID.String(),
 			BuildID:     ref.BuildID.String(),
 			RequestedBy: ref.RequestedBy.String(),

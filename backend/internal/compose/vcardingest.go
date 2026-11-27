@@ -91,15 +91,11 @@ func vcardIngestInsertOpts() *river.InsertOpts {
 
 // VCardIngestArgs is one captured message's cards.
 type VCardIngestArgs struct {
-	Workspace ids.UUID `json:"workspace_id"`
-	Activity  ids.UUID `json:"activity_id"`
+	Activity ids.UUID `json:"activity_id"`
 }
 
 // Kind is the stable job identifier River persists in river_job.
 func (VCardIngestArgs) Kind() string { return "vcard_ingest" }
-
-// WorkspaceID binds this import to its tenant (jobs.WorkspaceScoped).
-func (a VCardIngestArgs) WorkspaceID() ids.UUID { return a.Workspace }
 
 // vcardIngestWorker imports the cards attached to one captured message.
 type vcardIngestWorker struct {
@@ -116,7 +112,7 @@ func newVCardIngestWorker(pool *pgxpool.Pool, blob blobstore.Store, log *slog.Lo
 
 // Work imports one message's cards.
 func (w *vcardIngestWorker) Work(ctx context.Context, job *river.Job[VCardIngestArgs]) error {
-	wsCtx, err := workspaceJobCtx(ctx, job.Args)
+	wsCtx, err := bindInstallation(ctx, w.pool)
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
@@ -129,7 +125,7 @@ func (w *vcardIngestWorker) Work(ctx context.Context, job *river.Job[VCardIngest
 		// or the message is gone — both are answers, and retrying either would
 		// have the job beat against the same refusal until it exhausts.
 		w.log.InfoContext(ctx, "a mailed card was not imported: the mailbox's grant no longer writes",
-			"activity", job.Args.Activity, "workspace", job.Args.Workspace)
+			"activity", job.Args.Activity)
 		return nil
 	default:
 		// River retries this against vcardIngestMaxAttempts, declared beside
@@ -252,7 +248,11 @@ func (w *vcardIngestWorker) asMailboxGrantor(ctx context.Context, args VCardInge
 		}
 		return nil, fmt.Errorf("compose: resolving the mailbox behind a captured card: %w", err)
 	}
-	actor, err := authz.MemberPrincipal(ctx, w.users, args.Workspace, grantedBy)
+	ws, err := boundWorkspace(ctx)
+	if err != nil {
+		return nil, err
+	}
+	actor, err := authz.MemberPrincipal(ctx, w.users, ws, grantedBy)
 	if err != nil {
 		return nil, fmt.Errorf("compose: the mailbox's granting human no longer resolves: %w", err)
 	}

@@ -27,7 +27,6 @@ import (
 
 // CapturedDealRefileArgs freezes the pass's scope and horizon without correspondence.
 type CapturedDealRefileArgs struct {
-	Workspace   ids.UUID                `json:"workspace_id" river:"unique"`
 	Event       ids.UUID                `json:"event_id" river:"unique"`
 	Correlation ids.UUID                `json:"correlation_id"`
 	Scope       capture.DealRefileScope `json:"scope"`
@@ -37,9 +36,6 @@ type CapturedDealRefileArgs struct {
 
 // Kind selects the declared continuation queue.
 func (CapturedDealRefileArgs) Kind() string { return "captured_deal_refile" }
-
-// WorkspaceID binds the continuation to its installation.
-func (a CapturedDealRefileArgs) WorkspaceID() ids.UUID { return a.Workspace }
 
 // CapturedDealRefileSweepArgs recovers work whose original trigger did not finish.
 type CapturedDealRefileSweepArgs struct{}
@@ -93,7 +89,7 @@ type dealRefileCursor struct {
 }
 
 func (w *capturedDealRefileWorker) Work(ctx context.Context, job *river.Job[CapturedDealRefileArgs]) error {
-	passCtx, err := workspaceJobCtx(ctx, job.Args)
+	passCtx, err := bindInstallation(ctx, w.pool)
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
@@ -267,7 +263,7 @@ type capturedDealRefileSweepWorker struct {
 }
 
 func (w *capturedDealRefileSweepWorker) Work(ctx context.Context, _ *river.Job[CapturedDealRefileSweepArgs]) error {
-	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.scheduleWorkspace))
+	return jobs.FaultContext(ctx, runInstallationPass(ctx, w.pool, w.scheduleWorkspace))
 }
 
 func (w *capturedDealRefileSweepWorker) scheduleWorkspace(ctx context.Context, workspace ids.UUID) error {

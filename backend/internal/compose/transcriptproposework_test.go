@@ -80,7 +80,7 @@ func TestAWorkerWithNoModelLaneFailsTheReadingInsteadOfLeavingItQueued(t *testin
 	worker := &transcriptProposeWorker{activities: store, log: slog.New(slog.DiscardHandler)}
 
 	err := worker.Work(context.Background(), transcriptJob(TranscriptProposeArgs{
-		Workspace: ids.NewV7(), ActivityID: ids.NewV7(), TranscriptReadID: ids.NewV7(),
+		ActivityID: ids.NewV7(), TranscriptReadID: ids.NewV7(),
 	}))
 	if err != nil {
 		t.Fatalf("declining a reading is an outcome, not a job fault: %v", err)
@@ -102,7 +102,7 @@ func TestAWorkerClaimsWithTheLeaseTheDoorReArmsWith(t *testing.T) {
 	worker := &transcriptProposeWorker{activities: store, log: slog.New(slog.DiscardHandler)}
 
 	if err := worker.Work(context.Background(), transcriptJob(TranscriptProposeArgs{
-		Workspace: ids.NewV7(), TranscriptReadID: ids.NewV7(),
+		TranscriptReadID: ids.NewV7(),
 	})); err != nil {
 		t.Fatalf("working the job: %v", err)
 	}
@@ -117,7 +117,7 @@ func TestAReadingAnotherWorkerHoldsIsLeftAlone(t *testing.T) {
 	worker := &transcriptProposeWorker{activities: store, log: slog.New(slog.DiscardHandler)}
 
 	err := worker.Work(context.Background(), transcriptJob(TranscriptProposeArgs{
-		Workspace: ids.NewV7(), TranscriptReadID: ids.NewV7(),
+		TranscriptReadID: ids.NewV7(),
 	}))
 	if err != nil {
 		t.Fatalf("losing the claim is not a fault — the holder is working it: %v", err)

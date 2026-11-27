@@ -59,15 +59,11 @@ const (
 // session: the worker binds this workspace before the dispatcher reads
 // anything.
 type SendEmailArgs struct {
-	Workspace  ids.UUID `json:"workspace_id"`
-	DeliveryID string   `json:"delivery_id"`
+	DeliveryID string `json:"delivery_id"`
 }
 
 // Kind is the stable job identifier River persists in river_job.
 func (SendEmailArgs) Kind() string { return "comms_send_email" }
-
-// WorkspaceID binds this delivery to its tenant (jobs.WorkspaceScoped).
-func (a SendEmailArgs) WorkspaceID() ids.UUID { return a.Workspace }
 
 // sendMaxAttempts is the retry ladder for one delivery, and it is ONE number
 // on purpose: it is both the MaxAttempts River enqueues the job with and the
@@ -121,6 +117,7 @@ var _ deliveryDispatcher = (*comms.Dispatcher)(nil)
 // the row's state, and this is the adapter that keeps River out of comms.
 type commsSendWorker struct {
 	dispatcher deliveryDispatcher
+	bind       func(context.Context) (context.Context, error)
 }
 
 // SendWorkerContext is the scope one dispatch attempt runs under. RecordSent's
@@ -158,7 +155,7 @@ func (w *commsSendWorker) Work(ctx context.Context, job *river.Job[SendEmailArgs
 		return jobs.FaultContext(ctx, fmt.Errorf("comms_send_email: delivery id: %w", err))
 	}
 
-	wsCtx, err := workspaceJobCtx(ctx, job.Args)
+	wsCtx, err := w.bind(ctx)
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
@@ -343,7 +340,7 @@ func (s commsSeats) ActiveSeat(ctx context.Context, userID ids.UserID) (bool, st
 // the policy chain. Every one of those edges crosses a module boundary, which
 // is why the assembly lives here and not in comms.
 func newSendWorker(pool *pgxpool.Pool, registry *capture.Registry, blob blobstore.Store, relay comms.ControllerRelay, vault keyvault.Vault) *commsSendWorker {
-	return &commsSendWorker{dispatcher: newPacedDispatcher(pool, func(pace sendPace) deliveryDispatcher {
+	return &commsSendWorker{bind: installationBinder(pool), dispatcher: newPacedDispatcher(pool, func(pace sendPace) deliveryDispatcher {
 		return newSendDispatcher(pool, registry, pace, blob, relay, vault)
 	})}
 }

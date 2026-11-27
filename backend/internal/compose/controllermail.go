@@ -36,7 +36,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -82,10 +81,6 @@ func NewControllerMailQueue(pool *pgxpool.Pool, runner *jobs.Runner, from string
 // delivery staged before its activity would be invisible to both for as long as
 // the transaction ran — and permanently, if the activity write then failed.
 func (q controllerMailQueue) QueueConfirmationTx(ctx context.Context, tx pgx.Tx, in consent.ConfirmationSend) (ids.UUID, error) {
-	ws, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return ids.UUID{}, errors.New("compose: staging a controller delivery outside workspace context")
-	}
 	mail, err := presentControllerMailTx(ctx, tx, in.Rendered, in.Entity)
 	if err != nil {
 		return ids.UUID{}, err
@@ -149,7 +144,7 @@ func (q controllerMailQueue) QueueConfirmationTx(ctx context.Context, tx pgx.Tx,
 		return ids.UUID{}, err
 	}
 	if err := q.runner.EnqueueTx(ctx, tx, SendEmailArgs{
-		Workspace: ws, DeliveryID: deliveryID.String(),
+		DeliveryID: deliveryID.String(),
 	}, sendInsertOpts()); err != nil {
 		return ids.UUID{}, err
 	}

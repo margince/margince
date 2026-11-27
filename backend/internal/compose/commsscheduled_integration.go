@@ -59,7 +59,7 @@ func driveScheduledSendAttempt(ctx context.Context, pool *pgxpool.Pool, workspac
 	worker := newScheduledSendWorker(pool, NewDeliveryStager(pool, inserter), nil, origin, disabled...)
 	err = worker.Work(ctx, &river.Job[ScheduledSendArgs]{
 		JobRow: &rivertype.JobRow{Attempt: attempt, MaxAttempts: scheduledSendMaxAttempts},
-		Args:   ScheduledSendArgs{Workspace: workspace, ScheduledSendID: id.String()},
+		Args:   ScheduledSendArgs{ScheduledSendID: id.String()},
 	})
 	if _, ok := errors.AsType[*river.JobSnoozeError](err); ok {
 		// Its moment moved: the alarm asked to come back later, which is an

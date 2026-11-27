@@ -44,7 +44,7 @@ func TestAReviewedLeadRowNamingAHeldEmailIsSkippedAndTheNextRowLands(t *testing.
 		if err != nil {
 			t.Fatal(err)
 		}
-		args := ImportValidateArgs{Workspace: e.WS, RunID: run.ID, Attempt: run.JobAttempt}
+		args := ImportValidateArgs{RunID: run.ID, Attempt: run.JobAttempt}
 		if err := validateWorkerFor(e, h).Work(context.Background(), &river.Job[ImportValidateArgs]{Args: args}); err != nil {
 			t.Fatal(err)
 		}
@@ -60,7 +60,7 @@ func TestAReviewedLeadRowNamingAHeldEmailIsSkippedAndTheNextRowLands(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
-	args := ImportCommitArgs{Workspace: e.WS, RunID: approved.ID, Attempt: approved.JobAttempt}
+	args := ImportCommitArgs{RunID: approved.ID, Attempt: approved.JobAttempt}
 	if err := commitWorkerFor(e, h).Work(context.Background(), &river.Job[ImportCommitArgs]{Args: args}); err != nil {
 		t.Fatal(err)
 	}

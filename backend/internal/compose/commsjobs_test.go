@@ -58,7 +58,7 @@ func (s *stubDispatcher) DispatchWithWait(ctx context.Context, id ids.UUID) (com
 // sendJob builds one job for the worker with a fresh workspace/delivery pair.
 func sendJob(ws, delivery ids.UUID) *river.Job[SendEmailArgs] {
 	return &river.Job[SendEmailArgs]{
-		Args: SendEmailArgs{Workspace: ws, DeliveryID: delivery.String()},
+		Args: SendEmailArgs{DeliveryID: delivery.String()},
 	}
 }
 
@@ -211,7 +211,7 @@ func TestSendEmailWorkerDispatchesUnderASystemActorAndACorrelationID(t *testing.
 func TestSendEmailWorkerRefusesAJobArgumentThatNamesNothing(t *testing.T) {
 	cases := map[string]SendEmailArgs{
 		"workspace": {DeliveryID: ids.NewV7().String()},
-		"delivery":  {Workspace: ids.NewV7(), DeliveryID: "not-a-uuid"},
+		"delivery":  {DeliveryID: "not-a-uuid"},
 	}
 	for name, args := range cases {
 		t.Run(name, func(t *testing.T) {

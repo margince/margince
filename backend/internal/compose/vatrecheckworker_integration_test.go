@@ -107,7 +107,6 @@ func (v *vatRecheckEnv) work(t *testing.T, requested bool) {
 	t.Helper()
 	err := v.worker.Work(context.Background(), &river.Job[CheckCompanyVatArgs]{
 		Args: CheckCompanyVatArgs{
-			Workspace: v.WS,
 			CompanyID: v.companyID.UUID,
 			Requested: requested,
 		},
@@ -356,7 +355,7 @@ func TestAThrottledRegisterReschedulesRatherThanAskingAgain(t *testing.T) {
 	})
 
 	err := v.worker.Work(context.Background(), &river.Job[CheckCompanyVatArgs]{
-		Args: CheckCompanyVatArgs{Workspace: v.WS, CompanyID: v.companyID.UUID, Requested: true},
+		Args: CheckCompanyVatArgs{CompanyID: v.companyID.UUID, Requested: true},
 	})
 
 	if _, ok := errors.AsType[*river.JobSnoozeError](err); !ok {
@@ -388,7 +387,7 @@ func TestAConsultationThatFailedRecordsNothingAndDoesNotRetryInLine(t *testing.T
 	})
 
 	err := v.worker.Work(context.Background(), &river.Job[CheckCompanyVatArgs]{
-		Args: CheckCompanyVatArgs{Workspace: v.WS, CompanyID: v.companyID.UUID, Requested: true},
+		Args: CheckCompanyVatArgs{CompanyID: v.companyID.UUID, Requested: true},
 	})
 	if err == nil {
 		t.Fatal("a register that could not be reached reported success, so River records the job " +

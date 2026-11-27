@@ -34,23 +34,17 @@ import (
 // (river:"unique") so two admins refreshing the same workspace collapse to one
 // crawl; RequestedBy is provenance-only, outside the uniqueness hash.
 type FxRateRefreshArgs struct {
-	Workspace   ids.UUID `json:"workspace_id" river:"unique"`
-	RequestedBy string   `json:"requested_by"`
+	RequestedBy string `json:"requested_by"`
 }
 
 // Kind is the stable River job identifier.
 func (FxRateRefreshArgs) Kind() string { return "fx_rate_refresh" }
 
-// WorkspaceID binds this refresh to its tenant (jobs.WorkspaceScoped).
-// The field is Workspace because Go forbids a field and a method of the
-// same name; the wire key stays workspace_id.
-func (a FxRateRefreshArgs) WorkspaceID() ids.UUID { return a.Workspace }
-
 // rateRefreshWorkerCtx binds the agent a refresh runs as, acting for the admin
 // who asked under that admin's live grants. The refresh keeps no run row. An
 // admin who left or lost the rate sheet fails the job itself.
-func rateRefreshWorkerCtx(ctx context.Context, users *identity.Service, ws ids.UUID, requestedBy string) (context.Context, error) {
-	ctx = principal.WithCorrelationID(principal.WithWorkspaceID(ctx, ws), ids.NewV7())
+func rateRefreshWorkerCtx(ctx context.Context, users *identity.Service, requestedBy string) (context.Context, error) {
+	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return agentFor(ctx, users, requestedByUserID(requestedBy), rateRefreshAgentID)
 }
 
@@ -301,10 +295,11 @@ type fxRefreshWorker struct {
 }
 
 func (w *fxRefreshWorker) Work(ctx context.Context, job *river.Job[FxRateRefreshArgs]) error {
-	if _, err := workspaceJobCtx(ctx, job.Args); err != nil {
+	bound, err := installationJobCtx(ctx, w.users)
+	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
-	asAdmin, err := rateRefreshWorkerCtx(ctx, w.users, job.Args.Workspace, job.Args.RequestedBy)
+	asAdmin, err := rateRefreshWorkerCtx(bound, w.users, job.Args.RequestedBy)
 	if err != nil {
 		return jobs.FaultContext(ctx, fmt.Errorf("fx refresh: the admin who asked cannot act: %w", err))
 	}

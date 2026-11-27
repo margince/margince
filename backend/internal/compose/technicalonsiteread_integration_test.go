@@ -64,9 +64,9 @@ func TestASiteReadAsksWhatTheCompanyPubliclyRuns(t *testing.T) {
 	// wrong account while looking exactly like this one.
 	job := rivertest.RequireInserted(ctx, t, riverpgxv5.New(e.Pool),
 		TechnicalEnrichCompanyArgs{}, nil)
-	if job.Args.CompanyID != company || job.Args.Workspace != e.WS {
-		t.Fatalf("queued lookup = %+v, want the company this read was about (%s in %s)",
-			job.Args, company, e.WS)
+	if job.Args.CompanyID != company {
+		t.Fatalf("queued lookup = %+v, want the company this read was about (%s)",
+			job.Args, company)
 	}
 	if job.Queue != technicalLookupQueue {
 		t.Fatalf("queued on %q, want %q — the lookup's pacing is the queue's, not the crawl's",
@@ -109,7 +109,7 @@ func TestALookupWithNoEnricherConfiguredRecordsWhatItCouldNotRead(t *testing.T) 
 
 	err := worker.Work(context.Background(), &river.Job[TechnicalEnrichCompanyArgs]{
 		JobRow: &rivertype.JobRow{},
-		Args:   TechnicalEnrichCompanyArgs{Workspace: e.WS, CompanyID: company},
+		Args:   TechnicalEnrichCompanyArgs{CompanyID: company},
 	})
 	if err != nil {
 		t.Fatalf("a lookup this deployment cannot perform failed the job: %v", err)

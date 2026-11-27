@@ -142,7 +142,7 @@ func TestDocumentRetryUsesSessionDeathInsteadOfTheOldTimer(t *testing.T) {
 		t.Fatalf("replacement offers=%d", enqueued)
 	}
 	worker := newDocumentExtractWorker(env.Pool, nil, blob, discardLogger())
-	if err := worker.Work(context.Background(), &river.Job[DocumentExtractArgs]{Args: DocumentExtractArgs{Workspace: env.WS, AttachmentID: attachmentID, ExtractionReadID: reading.ID, RequestedBy: "human:" + env.AdminUser.String()}}); err != nil {
+	if err := worker.Work(context.Background(), &river.Job[DocumentExtractArgs]{Args: DocumentExtractArgs{AttachmentID: attachmentID, ExtractionReadID: reading.ID, RequestedBy: "human:" + env.AdminUser.String()}}); err != nil {
 		t.Fatal(err)
 	}
 	finished, err := store.GetExtractionRead(ctx, attachmentID, reading.ID)
@@ -163,9 +163,9 @@ func TestSessionLockedJobsInsertPastAbandonedRiverRows(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, args := range []river.JobArgs{
-		CaptureSyncArgs{Workspace: env.WS, ConnectionID: ids.NewV7().String(), Provider: "gmail"},
-		DocumentExtractArgs{Workspace: env.WS, AttachmentID: ids.NewV7(), ExtractionReadID: ids.NewV7(), RequestedBy: env.AdminUser.String()},
-		VoiceBuildArgs{Workspace: env.WS, ProfileID: ids.NewV7().String(), BuildID: ids.NewV7().String(), RequestedBy: env.AdminUser.String()},
+		CaptureSyncArgs{ConnectionID: ids.NewV7().String(), Provider: "gmail"},
+		DocumentExtractArgs{AttachmentID: ids.NewV7(), ExtractionReadID: ids.NewV7(), RequestedBy: env.AdminUser.String()},
+		VoiceBuildArgs{ProfileID: ids.NewV7().String(), BuildID: ids.NewV7().String(), RequestedBy: env.AdminUser.String()},
 	} {
 		t.Run(args.Kind(), func(t *testing.T) {
 			opts := &river.InsertOpts{UniqueOpts: river.UniqueOpts{ByArgs: true, ByState: activeSweepStates}}
@@ -209,7 +209,7 @@ func TestConcurrentSessionJobOffersCoalesceWhileWaiting(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	args := CaptureSyncArgs{Workspace: env.WS, ConnectionID: ids.NewV7().String(), Provider: "gmail"}
+	args := CaptureSyncArgs{ConnectionID: ids.NewV7().String(), Provider: "gmail"}
 	start := make(chan struct{})
 	finished := make(chan error, 8)
 	for range cap(finished) {
@@ -282,7 +282,7 @@ func TestADocumentReadingIsHandedBackAndClosedOnItsLastTry(t *testing.T) {
 			brain.cancel = cancel
 		}
 		worker := newDocumentExtractWorker(env.Pool, brain, blob, discardLogger())
-		args := DocumentExtractArgs{Workspace: env.WS, AttachmentID: ids.UUID(attachment.Id), ExtractionReadID: reading.ID, RequestedBy: "human:" + env.AdminUser.String()}
+		args := DocumentExtractArgs{AttachmentID: ids.UUID(attachment.Id), ExtractionReadID: reading.ID, RequestedBy: "human:" + env.AdminUser.String()}
 		row := &rivertype.JobRow{Attempt: tc.attempt, MaxAttempts: oneOffJobMaxAttempts}
 		workErr := worker.Work(ctx, &river.Job[DocumentExtractArgs]{JobRow: row, Args: args})
 		cancel()

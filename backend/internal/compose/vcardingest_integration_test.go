@@ -159,7 +159,7 @@ func TestOnlyWorkspaceReadableMailLendsItsCard(t *testing.T) {
 
 	// The refusal is not a fault: a narrowed source is an ANSWER, and returning
 	// an error would have River retry into the same refusal until it exhausts.
-	if err := worker.importCards(ctx, VCardIngestArgs{Workspace: e.WS, Activity: narrowed}); err != nil {
+	if err := worker.importCards(ctx, VCardIngestArgs{Activity: narrowed}); err != nil {
 		t.Fatalf("importing from a narrowed message: %v", err)
 	}
 	if keys := cardKeysOf(ctx, t, worker, narrowed); len(keys) != 0 {
@@ -265,7 +265,7 @@ func setMailboxSwitch(ctx context.Context, t *testing.T, e *integration.Env, on 
 // grantorOf answers the human the import would run as, or the refusal.
 func grantorOf(ctx context.Context, e *integration.Env, activity ids.UUID) (ids.UUID, error) {
 	worker := newVCardIngestWorker(e.Pool, blobstore.NewMemory(), quietIngestLog())
-	actorCtx, err := worker.asMailboxGrantor(ctx, VCardIngestArgs{Workspace: e.WS, Activity: activity})
+	actorCtx, err := worker.asMailboxGrantor(ctx, VCardIngestArgs{Activity: activity})
 	if err != nil {
 		return ids.Nil, err
 	}

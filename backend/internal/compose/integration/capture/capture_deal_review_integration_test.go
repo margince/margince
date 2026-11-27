@@ -458,7 +458,7 @@ func TestTheRepairsLinkIsReadByTheStageEvidenceTrigger(t *testing.T) {
 			t.Fatalf("delivering the relink event: %v", err)
 		}
 	}
-	want := compose.StageEvidenceReadArgs{Workspace: queue.first(t).Workspace, DealID: deal, ActivityID: mail}
+	want := compose.StageEvidenceReadArgs{DealID: deal, ActivityID: mail}
 	if len(queue.asked) != 2 || queue.asked[0] != want || queue.asked[1] != want {
 		t.Fatalf("the trigger asked for %+v, want the same reading of the mail against its deal twice", queue.asked)
 	}

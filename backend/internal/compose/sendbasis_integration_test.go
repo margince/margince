@@ -88,7 +88,7 @@ func mailNotice(t *testing.T, a approvalNotifyEnv, worker *notificationMailWorke
 	t.Helper()
 	if err := worker.Work(context.Background(), &river.Job[SendNotificationEmailArgs]{
 		JobRow: &rivertype.JobRow{Attempt: 1, MaxAttempts: notificationMailJobAttempts},
-		Args:   SendNotificationEmailArgs{Workspace: a.e.WS, NoticeID: notice.String()},
+		Args:   SendNotificationEmailArgs{NoticeID: notice.String()},
 	}); err != nil {
 		t.Fatalf("the notification mail worker refused the job: %v", err)
 	}

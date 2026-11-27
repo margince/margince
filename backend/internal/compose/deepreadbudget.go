@@ -24,10 +24,11 @@ func (w *siteDeepReadWorker) Work(ctx context.Context, job *river.Job[SiteDeepRe
 	// claimed dossier. Recover at the ownership boundary so an unexpected
 	// provider/parser panic becomes a terminal failed read instead of a row
 	// that tells the browser "reading" forever.
-	if _, err := workspaceJobCtx(ctx, job.Args); err != nil {
+	bound, err := bindInstallation(ctx, w.pool)
+	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
-	workCtx := deepReadWorkerCtx(ctx, job.Args)
+	workCtx := deepReadWorkerCtx(bound, job.Args)
 	defer func() {
 		if recovered := recover(); recovered != nil {
 			cause := fmt.Errorf("site deep read panic: %v", recovered)
@@ -38,7 +39,7 @@ func (w *siteDeepReadWorker) Work(ctx context.Context, job *river.Job[SiteDeepRe
 			workErr = jobs.FaultContext(ctx, w.fail(workCtx, job.Args.SiteReadID, cause))
 		}
 	}()
-	err := w.run(workCtx, job.Args)
+	err = w.run(workCtx, job.Args)
 	until, deferred := ai.DeferredUntil(err)
 	if !deferred {
 		return jobs.FaultContext(ctx, err)

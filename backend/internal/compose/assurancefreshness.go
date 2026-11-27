@@ -132,7 +132,7 @@ func (f *AssuranceFreshness) queueRescans(
 	}
 	slices.SortFunc(changed, func(a, b ids.UUID) int { return strings.Compare(a.String(), b.String()) })
 	for _, deal := range changed[:min(len(changed), room)] {
-		args := AssuranceDealRescanArgs{Workspace: workspace, Deal: deal}
+		args := AssuranceDealRescanArgs{Deal: deal}
 		if err := f.rescans.EnqueueTx(ctx, tx, args, assuranceRescanInsertOpts()); err != nil {
 			return err
 		}

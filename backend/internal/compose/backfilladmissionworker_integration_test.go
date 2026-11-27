@@ -25,7 +25,7 @@ func TestAnAdmissionWorkerPreservesTheSharedSessionBudgetSnooze(t *testing.T) {
 	b := setupBackfillWire(t)
 	runID := strandedBackfill(t, b)
 	ctx := backfillWorkContext(principal.WithWorkspaceID(context.Background(), b.env.WS), t, b)
-	if err := b.registry.DispatchBackfills(ctx, backfillScheduler(b.env.WS), false); err != nil {
+	if err := b.registry.DispatchBackfills(ctx, backfillScheduler(), false); err != nil {
 		t.Fatal(err)
 	}
 	var generation int64
@@ -35,7 +35,7 @@ func TestAnAdmissionWorkerPreservesTheSharedSessionBudgetSnooze(t *testing.T) {
 	}
 	ctx = database.WithSessionBudget(ctx, func(context.Context) (func(), error) { return nil, river.JobSnooze(5 * time.Second) })
 	worker := &captureBackfillWorker{registry: b.registry, log: b.handlers.log}
-	err := worker.Work(ctx, &river.Job[CaptureBackfillArgs]{JobRow: &rivertype.JobRow{}, Args: CaptureBackfillArgs{Workspace: b.env.WS, BackfillID: runID.String(), ExecutionGeneration: generation}})
+	err := worker.Work(ctx, &river.Job[CaptureBackfillArgs]{JobRow: &rivertype.JobRow{}, Args: CaptureBackfillArgs{BackfillID: runID.String(), ExecutionGeneration: generation}})
 	if _, snoozed := errors.AsType[*river.JobSnoozeError](err); !snoozed {
 		t.Fatalf("resource deferral swallowed: %v", err)
 	}
@@ -54,7 +54,7 @@ func TestARecoveredRunningJobGetsANewExecutionWithoutDuplicatingTheSuccessor(t *
 	b := setupBackfillWire(t)
 	runID := strandedBackfill(t, b)
 	ctx := backfillWorkContext(principal.WithWorkspaceID(context.Background(), b.env.WS), t, b)
-	if err := b.registry.DispatchBackfills(ctx, backfillScheduler(b.env.WS), false); err != nil {
+	if err := b.registry.DispatchBackfills(ctx, backfillScheduler(), false); err != nil {
 		t.Fatal(err)
 	}
 	var previous int64
@@ -66,7 +66,7 @@ func TestARecoveredRunningJobGetsANewExecutionWithoutDuplicatingTheSuccessor(t *
 	if _, err := b.env.Pool.Exec(ctx, fmt.Sprintf(`UPDATE river_job SET state='running',attempted_at=now() WHERE kind='capture_backfill' AND args->>'backfill_id'=$%d`, len(args)), args...); err != nil {
 		t.Fatal(err)
 	}
-	if err := b.registry.DispatchBackfills(ctx, backfillScheduler(b.env.WS), true); err != nil {
+	if err := b.registry.DispatchBackfills(ctx, backfillScheduler(), true); err != nil {
 		t.Fatal(err)
 	}
 	var generation int64
@@ -77,7 +77,7 @@ func TestARecoveredRunningJobGetsANewExecutionWithoutDuplicatingTheSuccessor(t *
 	if generation <= previous {
 		t.Fatalf("lost running job reused generation %d", generation)
 	}
-	if err := b.registry.DispatchBackfills(ctx, backfillScheduler(b.env.WS), true); err != nil {
+	if err := b.registry.DispatchBackfills(ctx, backfillScheduler(), true); err != nil {
 		t.Fatal(err)
 	}
 	var current, jobs int
@@ -103,7 +103,7 @@ func TestALegacyRunningImportEntersTheAdmissionBudget(t *testing.T) {
 		t.Fatal(err)
 	}
 	worker := &captureBackfillWorker{registry: b.registry, log: b.handlers.log}
-	jobArgs := CaptureBackfillArgs{Workspace: b.env.WS, BackfillID: runID.String()}
+	jobArgs := CaptureBackfillArgs{BackfillID: runID.String()}
 	if err := worker.Work(ctx, &river.Job[CaptureBackfillArgs]{JobRow: &rivertype.JobRow{}, Args: jobArgs}); err != nil {
 		t.Fatal(err)
 	}

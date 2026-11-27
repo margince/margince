@@ -234,7 +234,7 @@ func runOnePoll(t *testing.T, worker *telegramPollWorker, ws ids.UUID, conn capt
 	t.Helper()
 	return worker.Work(context.Background(), &river.Job[TelegramPollArgs]{
 		JobRow: &rivertype.JobRow{Kind: TelegramPollArgs{}.Kind(), Attempt: 1},
-		Args:   TelegramPollArgs{Workspace: ws, ConnectionID: conn.ID.String()},
+		Args:   TelegramPollArgs{ConnectionID: conn.ID.String()},
 	})
 }
 

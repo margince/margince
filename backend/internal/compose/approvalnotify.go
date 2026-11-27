@@ -277,7 +277,7 @@ func stageNoticeMail(
 		return nil
 	}
 	return mail.EnqueueTx(ctx, tx, SendNotificationEmailArgs{
-		Workspace: wsID, NoticeID: noticeID.String(),
+		NoticeID: noticeID.String(),
 	}, notificationMailOpts())
 }
 

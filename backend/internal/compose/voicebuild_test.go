@@ -102,7 +102,7 @@ func TestVoiceBuildWorkerCtxRefusesArgsItCannotBind(t *testing.T) {
 		t.Fatal("args carrying no workspace must be an explicit error — binding a zero id would fail at the first tenant query instead")
 	}
 	if _, _, err := voiceBuildWorkerCtx(context.Background(), worker.users, VoiceBuildArgs{
-		Workspace: ids.NewV7(), RequestedBy: "",
+		RequestedBy: "",
 	}); err == nil {
 		t.Fatal("a missing requester must be an explicit error — the runner acts for the owner")
 	}

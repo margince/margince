@@ -21,7 +21,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -31,7 +30,6 @@ import (
 // The row is the authority on all four; the args are what lets the worker
 // find it.
 type AccountScanArgs struct {
-	Workspace ids.UUID `json:"workspace_id"`
 	CompanyID ids.UUID `json:"company_id"`
 	ScanID    ids.UUID `json:"scan_id"`
 	ViewerID  ids.UUID `json:"viewer_id"`
@@ -39,9 +37,6 @@ type AccountScanArgs struct {
 
 // Kind is the stable job identifier River persists in river_job.
 func (AccountScanArgs) Kind() string { return "account_scan" }
-
-// WorkspaceID binds this scan to its tenant (jobs.WorkspaceScoped).
-func (a AccountScanArgs) WorkspaceID() ids.UUID { return a.Workspace }
 
 // accountScanInsertOpts deduplicates the job by args, only
 // while a job is still active — for the reason documentExtractInsertOpts
@@ -67,8 +62,8 @@ func WithAccountScan(inserter *jobs.Runner, brain completer, routingVersion func
 		if inserter != nil {
 			enqueue = func(ctx context.Context, tx pgx.Tx, scan companyscan.Queued) error {
 				return inserter.EnqueueTx(ctx, tx, AccountScanArgs{
-					Workspace: storekit.MustWorkspace(ctx), CompanyID: scan.CompanyID.UUID,
-					ScanID: scan.ScanID, ViewerID: scan.ViewerID.UUID,
+					CompanyID: scan.CompanyID.UUID,
+					ScanID:    scan.ScanID, ViewerID: scan.ViewerID.UUID,
 				}, accountScanInsertOpts())
 			}
 		}
@@ -108,7 +103,7 @@ func newAccountScanWorker(pool *pgxpool.Pool, brain completer, routingVersion fu
 // snoozes the job until the moment the router named; any other outcome is
 // on the row, which the page and the rail read.
 func (w *accountScanWorker) Work(ctx context.Context, job *river.Job[AccountScanArgs]) error {
-	wsCtx, err := workspaceJobCtx(ctx, job.Args)
+	wsCtx, err := installationJobCtx(ctx, w.users)
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}

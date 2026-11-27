@@ -48,75 +48,49 @@ func (a extJobDispatcherArgs) Kind() string { return a.JobKind }
 // no tenant data (jobs.FleetWide).
 func (extJobDispatcherArgs) FleetWide() {}
 
-// extJobWorkspaceArgs is one workspace's tick of one composed job.
+// extJobWorkspaceArgs is the tick of one composed job.
 //
 // The row carries NO principal. What acts is the job, not a contact: the tick's
 // authority is a pure function of the declaration (extensionJobPrincipal), so
 // there is nothing about it a queued row could carry stale.
 //
-// The `river:"unique"` tag on Workspace changes NOTHING today, and is kept
-// deliberately. ByArgs hashes the whole encoded args unless a field is tagged,
-// and River adds the kind to that hash itself — so with these two fields the
-// tagged and untagged keys partition identically, because JobKind is constant
-// for a given kind. It stays because it DECLARES which field is the unit of
-// work: the day a second varying field lands here, an untagged hash would
-// silently widen the key and hand one workspace a second concurrent child while
-// its first was still in flight. That is what the tag prevents, and it prevents
-// it by being here before the field arrives rather than after.
+// The args are the kind alone, so ByArgs uniqueness holds at most one live tick
+// of a job: a second varying field would have to be tagged `river:"unique"`
+// here, or an untagged hash would widen the key and let a second concurrent
+// tick start while the first was in flight.
 type extJobWorkspaceArgs struct {
 	JobKind string `json:"job_kind"`
-	// Workspace is the tenant this tick is for, and the ONLY thing the
-	// uniqueness hash reads out of these args. The runner binds it before the
-	// handler is entered, so a unit's tick can never see a global scope.
-	Workspace ids.UUID `json:"workspace_id" river:"unique"`
 }
 
 // Kind is the composed child kind, ext_<unit>_<job>_ws.
 func (a extJobWorkspaceArgs) Kind() string { return a.JobKind }
 
-// WorkspaceID binds this tick to its tenant (jobs.WorkspaceScoped).
-func (a extJobWorkspaceArgs) WorkspaceID() ids.UUID { return a.Workspace }
-
-// extJobDispatcherWorker fans one composed job out over the fleet.
+// extJobDispatcherWorker enqueues the tick of one composed job.
 type extJobDispatcherWorker struct {
 	pool *pgxpool.Pool
 	decl extension.JobDeclaration
 }
 
-// Work enqueues one child per live workspace, as ONE atomic insert.
+// Work enqueues the job's tick as ONE insert, once the installation has a
+// company.
 //
-// The fan-out is over ALL live workspaces because enablement is DIRECTORY
-// PRESENCE: an installation that composed a unit composed it for the whole
-// installation, and there is no per-tenant switch for the tick to consult. When
-// one lands, it belongs in the enumeration below and nowhere else.
+// Enablement is DIRECTORY PRESENCE: an installation that composed a unit
+// composed it for the whole installation, and there is no per-tenant switch for
+// the tick to consult.
 func (w *extJobDispatcherWorker) Work(ctx context.Context, _ *river.Job[extJobDispatcherArgs]) error {
-	workspaces, err := database.LiveWorkspaces(ctx, w.pool)
-	if err != nil {
+	_, ok, err := database.LiveWorkspace(ctx, w.pool)
+	if err != nil || !ok {
 		return jobs.FaultContext(ctx, err)
 	}
-	// Every live workspace is enqueued, unconditionally. The dispatcher reads
-	// no identity at all: what a tick acts as is decided from the declaration
-	// at execution, so there is no per-workspace precondition left for this
-	// loop to consult and no tenant it can be right to skip.
-	//
-	// The enumeration is therefore the dispatcher's ONLY read, which is what
-	// keeps its declared wall clock independent of fleet size. It used to
-	// resolve one agent seat per workspace here, serially, and that round trip
-	// per tenant is what came out.
 	child := w.decl.ChildKind()
-	// workspaceSweepOpts and not sweepInsertOpts. The difference is the whole
-	// fan-out: sweepInsertOpts' uniqueness window is ByState ONLY, so N children
-	// of one kind collapse to a single row and every workspace but one is
-	// silently dropped. workspaceSweepOpts adds ByArgs, which makes the
-	// workspace part of the unique key.
+	// workspaceSweepOpts and not sweepInsertOpts: it adds ByArgs, which keeps a
+	// slow tick from being started a second time while it is still running.
 	// FaultContext, not FaultForKind, because a dispatcher runs NO unit code: it
 	// holds a pool and a declaration and never the unit's handler, so every error
 	// below is compose's own and no declared failure class can reach here. Asking
 	// for kind-verification would be asking about a value that cannot arrive.
-	return jobs.FaultContext(ctx, dispatchWith(ctx, workspaces, clientInsertMany(ctx), workspaceSweepOpts(child),
-		func(ws ids.UUID) river.JobArgs {
-			return extJobWorkspaceArgs{JobKind: child, Workspace: ws}
-		}))
+	return jobs.FaultContext(ctx, dispatchOnce(ctx, clientInsertMany(ctx), workspaceSweepOpts(child),
+		extJobWorkspaceArgs{JobKind: child}))
 }
 
 // extensionJobPrincipal is the authority a scheduled tick answers as: the JOB,
@@ -169,7 +143,7 @@ func (w *extJobWorkspaceWorker) Work(ctx context.Context, job *river.Job[extJobW
 	// from the context it is invoked on, so an unpinned invocation would not
 	// leak — it would refuse — but it would refuse at the unit's first query,
 	// which names the wrong fault.
-	wsCtx, err := workspaceJobCtx(ctx, job.Args)
+	wsCtx, err := bindInstallation(ctx, w.pool)
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}

@@ -124,7 +124,6 @@ func startDeepRead(t *testing.T, e *integration.Env, company ids.UUID) (contacts
 		t.Fatal("the first start joined — the fixture is not clean")
 	}
 	return read, SiteDeepReadArgs{
-		Workspace:   e.WS,
 		CompanyID:   company,
 		SiteReadID:  read.ID,
 		RequestedBy: read.RequestedBy,
@@ -463,7 +462,7 @@ func TestDeepReadStartQueuesOnceAndAReClickJoinsWithoutASecondInsert(t *testing.
 	if !ok {
 		t.Fatalf("enqueued %T, want SiteDeepReadArgs", inserter.inserts[0])
 	}
-	if args.Workspace != e.WS || args.CompanyID != company ||
+	if args.CompanyID != company ||
 		args.SiteReadID != ids.UUID(first.ReadId) || args.RequestedBy != "human:"+e.Rep1.String() {
 		t.Fatalf("job args = %+v, want the dossier's own identity and the human who asked", args)
 	}
@@ -505,7 +504,7 @@ func seedHousekeepingSiteDeepRead(t *testing.T, e *integration.Env, company ids.
 			readID, company, contacts.TargetKindCompany, seedURL, "system:capture_auto_enrich"); err != nil {
 			return err
 		}
-		args, err := json.Marshal(SiteDeepReadArgs{Workspace: e.WS, CompanyID: company, SiteReadID: readID, RequestedBy: "system:capture_auto_enrich"})
+		args, err := json.Marshal(SiteDeepReadArgs{CompanyID: company, SiteReadID: readID, RequestedBy: "system:capture_auto_enrich"})
 		if err != nil {
 			return err
 		}

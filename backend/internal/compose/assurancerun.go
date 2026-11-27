@@ -35,7 +35,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -87,7 +86,6 @@ func (h assuranceRunHandlers) StartForecastAssuranceRun(w http.ResponseWriter, r
 		return
 	}
 	args := AssuranceRunArgs{
-		Workspace:   storekit.MustWorkspace(ctx),
 		RequestedBy: requestedBy(ctx),
 	}
 	var started bool

@@ -245,7 +245,6 @@ kinds:
     opts_owner: caller
     registration: {when: [AccountScanBrain], absent: registers_anyway}
     args:
-      Workspace: id
       CompanyID: id
       ScanID: id
       ViewerID: id
@@ -341,8 +340,6 @@ kinds:
     queue: accounting_read
     timeout: 5m
     opts_owner: caller
-    args:
-      Workspace: id
     reason: >-
       One workspace's pass, queued when an administrator connects a source or
       presses Sync now, so the customer directory arrives without waiting for
@@ -397,7 +394,6 @@ kinds:
         is the commonest fault. A River retry would re-page a run the engine
         already ended.
     args:
-      Workspace: id
       BackfillID: id
       ExecutionGeneration: {scalar: true, reason: "A monotonic execution number fences replaced paging jobs and carries no mail content."}
     reason: >-
@@ -528,7 +524,6 @@ kinds:
     max_attempts: 3
     opts_owner: fan_out
     args:
-      Workspace: id
       Event: id
       Correlation: id
       Ceiling: id
@@ -619,7 +614,6 @@ kinds:
         next scan — the job row's success means 'this attempt is
         concluded', not 'the sync succeeded'.
     args:
-      Workspace: id
       ConnectionID: id
       Provider:
         scalar: true
@@ -663,7 +657,6 @@ kinds:
     timeout: 5m
     opts_owner: caller
     args:
-      Workspace: id
       RequestedBy: id
     reason: >-
       The same pass assurance_sweep runs, on one workspace, because a human
@@ -680,7 +673,6 @@ kinds:
     timeout: 2m
     opts_owner: caller
     args:
-      Workspace: id
       Deal: id
     reason: >-
       The input check over one deal, queued when a change marked that deal's
@@ -707,7 +699,6 @@ kinds:
     opts_owner: caller
     registration: {when: [SendRegistry], absent: registers_nothing}
     args:
-      Workspace: id
       DeliveryID: id
     reason: >-
       One attempt unseals a credential from the vault, refreshes an OAuth token,
@@ -814,7 +805,6 @@ kinds:
     opts_owner: caller
     registration: {when: [SendRegistry, SendDelivery], absent: registers_nothing}
     args:
-      Workspace: id
       ScheduledSendID: id
       DueAt: {scalar: true, reason: "The moment the alarm was set for. It keys the job's uniqueness and the worker never reads it."}
     reason: >-
@@ -876,7 +866,6 @@ kinds:
     opts_owner: caller
     cadence: on_demand
     args:
-      Workspace: id
       DocumentID: id
 
   vcard_ingest:
@@ -894,7 +883,6 @@ kinds:
     opts_owner: caller
     cadence: on_demand
     args:
-      Workspace: id
       Activity: id
 
   embed_reindex:
@@ -1064,7 +1052,6 @@ kinds:
     timeout: 10m
     opts_owner: caller
     args:
-      Workspace: id
       RequestedBy: id
     reason: >-
       One page fetch and ONE reasoning-ladder model call, then a staged proposal
@@ -1106,7 +1093,6 @@ kinds:
     opts_owner: fan_out
     registration: {when: [GmailRegistry, GmailWatch.Topic], absent: registers_nothing}
     args:
-      Workspace: id
       ConnectionID: id
     reason: >-
       One users.watch call against Gmail for one connection, and the write that
@@ -1138,7 +1124,6 @@ kinds:
     opts_owner: fan_out
     registration: {when: [GmailRegistry.OffersGraph, GraphWatch.NotificationURL], absent: registers_nothing}
     args:
-      Workspace: id
       ConnectionID: id
     reason: >-
       One subscription create-or-renew against Microsoft Graph for one
@@ -1168,7 +1153,6 @@ kinds:
     timeout: 1m
     opts_owner: args
     args:
-      Workspace: id
       ApprovalID: id
       DeciderID: id
     reason: >-
@@ -1320,7 +1304,6 @@ kinds:
         the job so job health counts it as dead. SMTP returns no receipt, so a
         message the relay may have taken is never sent again.
     args:
-      Workspace: id
       NoticeID: id
     reason: >-
       One SMTP exchange for one colleague, bounded at forty-five seconds by the
@@ -1666,7 +1649,6 @@ kinds:
     opts_owner: args
     registration: {when: [ProviderRuns.Registry, ProviderRuns.Vault], absent: registers_nothing}
     args:
-      Workspace: id
       RunID: id
     reason: >-
       One submission is one bounded HTTP call to the provider plus three short
@@ -1694,7 +1676,6 @@ kinds:
         quiet exit; a River retry would test again a run whose state already
         says what happened.
     args:
-      Workspace: id
       RunID: id
       Attempt:
         scalar: true
@@ -1720,7 +1701,6 @@ kinds:
         quiet exit; a River retry would rerun a slice whose run already says
         what happened.
     args:
-      Workspace: id
       RunID: id
       Attempt:
         scalar: true
@@ -1746,7 +1726,6 @@ kinds:
         attempt's quiet exit; a River retry would rerun a slice whose run
         already says what happened.
     args:
-      Workspace: id
       RunID: id
       Attempt:
         scalar: true
@@ -1925,7 +1904,6 @@ kinds:
     opts_owner: caller
     registration: {when: [DeepReadBrain], absent: registers_anyway}
     args:
-      Workspace: id
       CompanyID: id
       SiteReadID: id
       RequestedBy: id
@@ -1950,7 +1928,6 @@ kinds:
     opts_owner: caller
     registration: {when: [VatChecker], absent: registers_anyway}
     args:
-      Workspace: id
       CompanyID: id
       Requested:
         scalar: true
@@ -1975,7 +1952,6 @@ kinds:
     opts_owner: caller
     registration: {when: [Geocoder], absent: registers_anyway}
     args:
-      Workspace: id
       CompanyID: id
     reason: >-
       One address, one lookup, plus the write — but the ceiling is set by what
@@ -2053,7 +2029,6 @@ kinds:
     opts_owner: caller
     registration: {when: [TechnicalEnricher], absent: registers_anyway}
     args:
-      Workspace: id
       CompanyID: id
     reason: >-
       Three lanes for one company, and the ceiling is set by what the job can
@@ -2104,7 +2079,6 @@ kinds:
     opts_owner: caller
     registration: {when: [TranscriptProposeBrain], absent: registers_anyway}
     args:
-      Workspace: id
       ActivityID: id
       TranscriptReadID: id
       RequestedBy: id
@@ -2127,7 +2101,6 @@ kinds:
     opts_owner: caller
     registration: {when: [StandingLineBrain], absent: registers_nothing}
     args:
-      Workspace: id
       ActivityID: id
     reason: >-
       One model call per record the activity is filed on, at most three, each
@@ -2144,7 +2117,6 @@ kinds:
     opts_owner: caller
     registration: {when: [StageEvidenceBrain], absent: registers_nothing}
     args:
-      Workspace: id
       DealID: id
       ActivityID: id
       RereadFor: id
@@ -2167,7 +2139,6 @@ kinds:
     opts_owner: caller
     registration: {when: [StageEvidenceBrain], absent: registers_anyway}
     args:
-      Workspace: id
       Domain: {scalar: true, reason: "The removed own domain is an installation setting the admin list already showed; it names no contact and carries no mail content."}
       Removal: id
       After: id
@@ -2190,7 +2161,6 @@ kinds:
     opts_owner: caller
     registration: {when: [DocumentExtractBrain], absent: registers_anyway}
     args:
-      Workspace: id
       AttachmentID: id
       ExtractionReadID: id
       RequestedBy: id
@@ -2221,7 +2191,6 @@ kinds:
     opts_owner: caller
     registration: {when: [ChannelVault], absent: registers_nothing}
     args:
-      Workspace: id
       LinkID: id
     reason: >-
       One linked channel's pending events become one post, and its card is kept
@@ -2237,7 +2206,6 @@ kinds:
     opts_owner: args
     registration: {when: [ChannelVault], absent: registers_nothing}
     args:
-      Workspace: id
       ConnectionID: id
     reason: >-
       One bot's linked channels each read at most five history pages, and each
@@ -2269,7 +2237,6 @@ kinds:
     timeout: 2m
     opts_owner: caller
     args:
-      Workspace: id
       ConnectionID: id
       BotID: id
       RawCaptureID: id
@@ -2285,7 +2252,6 @@ kinds:
     timeout: 2m
     opts_owner: caller
     args:
-      Workspace: id
       ConnectionID: id
       RawCaptureID: id
     reason: >-
@@ -2317,7 +2283,6 @@ kinds:
     timeout: 2m
     opts_owner: caller
     args:
-      Workspace: id
       ConnectionID: id
       RawCaptureID: id
     reason: >-
@@ -2334,7 +2299,6 @@ kinds:
     opts_owner: args
     registration: {when: [ChannelVault], absent: registers_nothing}
     args:
-      Workspace: id
       ConnectionID: id
     reason: >-
       It must EXCEED the 25-second long poll plus the headroom the client adds
@@ -2380,7 +2344,6 @@ kinds:
     opts_owner: caller
     registration: {when: [VoiceBrain], absent: registers_anyway}
     args:
-      Workspace: id
       ProfileID: id
       BuildID: id
       RequestedBy: id

@@ -38,7 +38,7 @@ type tagScoutWorker struct {
 }
 
 func (w *tagScoutWorker) Work(ctx context.Context, _ *river.Job[TagScoutArgs]) error {
-	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, func(ctx context.Context, workspace ids.UUID) error {
+	return jobs.FaultContext(ctx, runInstallationPass(ctx, w.pool, func(ctx context.Context, workspace ids.UUID) error {
 		if w.suggester == nil {
 			return scoutWorkspace(ctx, &w.scoutWorker, tagScoutActor, workspace)
 		}

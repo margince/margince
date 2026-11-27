@@ -93,7 +93,7 @@ func TestAReadingForARequesterWhoMayNoLongerReadTheMeetingFailsWithAReason(t *te
 		users: identity.NewService(e.Pool), log: slog.New(slog.DiscardHandler),
 	}
 	job := &river.Job[TranscriptProposeArgs]{JobRow: &rivertype.JobRow{}, Args: TranscriptProposeArgs{
-		Workspace: e.WS, ActivityID: e.activity.UUID, TranscriptReadID: started.ID, RequestedBy: "human:" + e.Rep1.String(),
+		ActivityID: e.activity.UUID, TranscriptReadID: started.ID, RequestedBy: "human:" + e.Rep1.String(),
 	}}
 	if err := worker.Work(context.Background(), job); err != nil {
 		t.Fatalf("working the reading: %v", err)

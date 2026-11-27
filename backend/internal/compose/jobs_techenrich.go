@@ -49,15 +49,11 @@ const (
 // domain the company actually has — and, because the args cannot carry one,
 // there is no way to point this lane at a domain the record never held.
 type TechnicalEnrichCompanyArgs struct {
-	Workspace ids.UUID `json:"workspace_id"`
 	CompanyID ids.UUID `json:"company_id"`
 }
 
 // Kind is the stable job identifier River persists in river_job.
 func (TechnicalEnrichCompanyArgs) Kind() string { return "technical_enrich_company" }
-
-// WorkspaceID binds this lookup to its tenant (jobs.WorkspaceScoped).
-func (a TechnicalEnrichCompanyArgs) WorkspaceID() ids.UUID { return a.Workspace }
 
 // TechnicalEnrichBackfillArgs is one pass over the companies due a lookup.
 //
@@ -145,7 +141,7 @@ func (w *technicalEnrichWorker) Work(ctx context.Context, job *river.Job[Technic
 	// read whatever the connection happened to carry. Under a NEW name rather
 	// than reassigning ctx, because workspaceJobCtx returns a nil context
 	// alongside its error and the refusal has to report through one that exists.
-	wsCtx, err := workspaceJobCtx(ctx, args)
+	wsCtx, err := bindInstallation(ctx, w.pool)
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
@@ -154,9 +150,7 @@ func (w *technicalEnrichWorker) Work(ctx context.Context, job *river.Job[Technic
 	// which refuse a context with no principal.
 	wsCtx = technicalActor(wsCtx)
 	companyID := ids.From[ids.CompanyKind](args.CompanyID)
-	store := contacts.NewStore(database.Bind(w.pool, func(context.Context) (ids.WorkspaceID, error) {
-		return ids.From[ids.WorkspaceKind](args.Workspace), nil
-	}))
+	store := contacts.NewStore(InstallationDB(w.pool))
 
 	domain, ok, err := store.TechnicalDomain(wsCtx, companyID)
 	if err != nil {
@@ -251,19 +245,15 @@ func technicalVerdict(outcome laneOutcome, read contacts.TechnicalEnrichment) st
 // technicalBackfillWorker nominates the companies due a lookup.
 type technicalBackfillWorker struct{ pool *pgxpool.Pool }
 
-// Work nominates up to TechnicalBackfillBatch companies per workspace.
+// Work nominates up to TechnicalBackfillBatch companies.
 func (w *technicalBackfillWorker) Work(ctx context.Context, _ *river.Job[TechnicalEnrichBackfillArgs]) error {
-	workspaces, err := database.LiveWorkspaces(ctx, w.pool)
-	if err != nil {
+	ws, ok, err := database.LiveWorkspace(ctx, w.pool)
+	if err != nil || !ok {
 		return jobs.FaultContext(ctx, err)
 	}
-	queued := 0
-	for _, ws := range workspaces {
-		n, err := w.sweepOneWorkspace(ctx, ws)
-		if err != nil {
-			return jobs.FaultContext(ctx, err)
-		}
-		queued += n
+	queued, err := w.sweepOneWorkspace(ctx, ws)
+	if err != nil {
+		return jobs.FaultContext(ctx, err)
 	}
 	if queued == 0 {
 		return nil
@@ -276,7 +266,7 @@ func (w *technicalBackfillWorker) Work(ctx context.Context, _ *river.Job[Technic
 	return nil
 }
 
-// sweepOneWorkspace nominates one tenant's due companies.
+// sweepOneWorkspace nominates the installation's due companies.
 func (w *technicalBackfillWorker) sweepOneWorkspace(ctx context.Context, ws ids.UUID) (int, error) {
 	// Reads under an actor of its own: nothing queued this on a contact's
 	// behalf — the installation is asking which of its own companies it has
@@ -299,7 +289,6 @@ func (w *technicalBackfillWorker) sweepOneWorkspace(ctx context.Context, ws ids.
 	}
 	for _, companyID := range due {
 		if _, err := client.Insert(wsCtx, TechnicalEnrichCompanyArgs{
-			Workspace: ws,
 			CompanyID: companyID.UUID,
 		}, technicalBackfillOpts()); err != nil {
 			return 0, err

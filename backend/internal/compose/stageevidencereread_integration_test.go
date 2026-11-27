@@ -78,7 +78,7 @@ func (f *rereadFixture) read(args StageEvidenceReadArgs) {
 // and runs it. Its row stays in River's table, as a finished job's does.
 func (f *rereadFixture) firstReading(mail ids.UUID) {
 	f.t.Helper()
-	args := StageEvidenceReadArgs{Workspace: f.WS, DealID: f.dealID.UUID, ActivityID: mail}
+	args := StageEvidenceReadArgs{DealID: f.dealID.UUID, ActivityID: mail}
 	queue, err := callerTxJobs()
 	if err != nil {
 		f.t.Fatal(err)
@@ -262,7 +262,7 @@ func TestWithNoModelLaneTheSweepQueuesNothing(t *testing.T) {
 	f := newRereadFixture(t)
 	f.mail("cfo@buyer-corp.test")
 	worker := newStageEvidenceRereadWorker(f.Pool, false, slog.New(slog.DiscardHandler))
-	args := StageEvidenceRereadArgs{Workspace: f.WS, Domain: "buyer-corp.test", Removal: ids.NewV7()}
+	args := StageEvidenceRereadArgs{Domain: "buyer-corp.test", Removal: ids.NewV7()}
 	if err := worker.Work(context.Background(), &river.Job[StageEvidenceRereadArgs]{Args: args}); err != nil {
 		t.Fatal(err)
 	}

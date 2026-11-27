@@ -33,7 +33,7 @@ func approvedLeadRun(t *testing.T, e *integration.Env) (importHandlers, ImportCo
 	if err != nil {
 		t.Fatalf("approving the run: %v", err)
 	}
-	return h, ImportCommitArgs{Workspace: e.WS, RunID: approved.ID, Attempt: approved.JobAttempt}
+	return h, ImportCommitArgs{RunID: approved.ID, Attempt: approved.JobAttempt}
 }
 
 // workedByHand queues nothing: these tests call Work with the attempt's args.
@@ -108,7 +108,7 @@ func TestAnUndoSliceReversesTheCommittedRun(t *testing.T) {
 	}
 
 	worker := &importUndoWorker{slicer: commitWorkerFor(e, h).slicer}
-	undo := ImportUndoArgs{Workspace: e.WS, RunID: args.RunID, Attempt: undoing.JobAttempt}
+	undo := ImportUndoArgs{RunID: args.RunID, Attempt: undoing.JobAttempt}
 	if err := worker.Work(context.Background(), &river.Job[ImportUndoArgs]{Args: undo}); err != nil {
 		t.Fatalf("the undo slice answered %v, want nil for a run it finished", err)
 	}

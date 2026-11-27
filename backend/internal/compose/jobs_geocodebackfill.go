@@ -78,17 +78,13 @@ type geocodeBackfillWorker struct{ pool *pgxpool.Pool }
 // nomination harmless — but a half-committed pass that logged success would
 // misreport what it did.
 func (w *geocodeBackfillWorker) Work(ctx context.Context, _ *river.Job[GeocodeBackfillArgs]) error {
-	workspaces, err := database.LiveWorkspaces(ctx, w.pool)
-	if err != nil {
+	ws, ok, err := database.LiveWorkspace(ctx, w.pool)
+	if err != nil || !ok {
 		return jobs.FaultContext(ctx, err)
 	}
-	queued := 0
-	for _, ws := range workspaces {
-		n, err := w.sweepOneWorkspace(ctx, ws)
-		if err != nil {
-			return jobs.FaultContext(ctx, err)
-		}
-		queued += n
+	queued, err := w.sweepOneWorkspace(ctx, ws)
+	if err != nil {
+		return jobs.FaultContext(ctx, err)
 	}
 	if queued == 0 {
 		return nil
@@ -151,7 +147,6 @@ func (w *geocodeBackfillWorker) sweepOneWorkspace(ctx context.Context, ws ids.UU
 	}
 	for _, companyID := range due {
 		if _, err := client.Insert(wsCtx, GeocodeCompanyArgs{
-			Workspace: ws,
 			CompanyID: companyID.UUID,
 		}, geocodeBackfillOpts()); err != nil {
 			return 0, err

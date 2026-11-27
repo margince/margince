@@ -530,7 +530,7 @@ func TestOverlappingTicksAreBounded(t *testing.T) {
 
 	// And a second CHILD for one workspace while its pass is in flight, which
 	// is the same window plus ByArgs.
-	child := extJobWorkspaceArgs{JobKind: decl.ChildKind(), Workspace: e.WS}
+	child := extJobWorkspaceArgs{JobKind: decl.ChildKind()}
 	for range 2 {
 		if err := inserter.Enqueue(ctx, child, workspaceSweepOpts(decl.ChildKind())); err != nil {
 			t.Fatalf("enqueueing the child: %v", err)
@@ -541,7 +541,7 @@ func TestOverlappingTicksAreBounded(t *testing.T) {
 	}
 	// A DIFFERENT workspace is not suppressed — the window bounds overlap, it
 	// does not bound the fan-out.
-	other := extJobWorkspaceArgs{JobKind: decl.ChildKind(), Workspace: ids.NewV7()}
+	other := extJobWorkspaceArgs{JobKind: decl.ChildKind()}
 	if err := inserter.Enqueue(ctx, other, workspaceSweepOpts(decl.ChildKind())); err != nil {
 		t.Fatalf("enqueueing a second workspace's child: %v", err)
 	}

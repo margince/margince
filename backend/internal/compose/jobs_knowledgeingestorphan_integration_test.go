@@ -109,7 +109,7 @@ func (o *orphanIngest) work(t *testing.T) error {
 	t.Helper()
 	return o.worker.Work(context.Background(), &river.Job[KnowledgeIngestArgs]{
 		JobRow: &rivertype.JobRow{CreatedAt: clocktest.Now(t), Attempt: max(o.attempt, 1)},
-		Args:   KnowledgeIngestArgs{Workspace: o.e.WS, DocumentID: o.doc},
+		Args:   KnowledgeIngestArgs{DocumentID: o.doc},
 	})
 }
 
@@ -170,7 +170,7 @@ func TestAHandbookPageLeftRunningByAKilledWorkerIsReadAgainAtTheNextBoot(t *test
 	if err != nil {
 		t.Fatalf("NewInserter: %v", err)
 	}
-	args := KnowledgeIngestArgs{Workspace: o.e.WS, DocumentID: o.doc}
+	args := KnowledgeIngestArgs{DocumentID: o.doc}
 	if err := inserter.Enqueue(ctx, args, knowledgeIngestInsertOpts()); err != nil {
 		t.Fatalf("the killed worker's job: %v", err)
 	}
@@ -316,7 +316,7 @@ func TestAnIngestThatCannotTakeItsLockFailsAndLeavesTheDocument(t *testing.T) {
 		t.Fatalf("holdIngest on a cancelled context = held %v, err %v; want a refusal", held, err)
 	}
 	row := &rivertype.JobRow{CreatedAt: clocktest.Now(t), Attempt: 1}
-	job := &river.Job[KnowledgeIngestArgs]{JobRow: row, Args: KnowledgeIngestArgs{Workspace: o.e.WS, DocumentID: o.doc}}
+	job := &river.Job[KnowledgeIngestArgs]{JobRow: row, Args: KnowledgeIngestArgs{DocumentID: o.doc}}
 	if err := o.worker.Work(cancelled, job); err == nil {
 		t.Fatal("a run that could not take its lock reported success")
 	}

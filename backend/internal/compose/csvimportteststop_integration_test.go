@@ -78,7 +78,7 @@ func queuedLeadTest(t *testing.T, e *integration.Env, h importHandlers, profile 
 	if err != nil {
 		t.Fatalf("reading the queued run: %v", err)
 	}
-	return ImportValidateArgs{Workspace: e.WS, RunID: run.ID, Attempt: run.JobAttempt}
+	return ImportValidateArgs{RunID: run.ID, Attempt: run.JobAttempt}
 }
 
 func validateWorkerFor(e *integration.Env, h importHandlers) *importValidateWorker {

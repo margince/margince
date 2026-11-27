@@ -41,14 +41,14 @@ func (fanOutProbeArgs) Kind() string { return "fan_out_probe" }
 type fanOutProbeWorker struct {
 	pool *pgxpool.Pool
 	river.WorkerDefaults[fanOutProbeArgs]
-	fleet []ids.UUID
+	fleet string
 	child CaptureSyncArgs
 	done  chan error
 }
 
 func (w *fanOutProbeWorker) Work(ctx context.Context, _ *river.Job[fanOutProbeArgs]) error {
-	err := dispatchWith(ctx, w.fleet, clientInsertMany(ctx),
-		workspaceSweepOpts(GmailWatchRenewArgs{}.Kind()), gmailWatchRenewArgsFor)
+	err := dispatchOnce(ctx, clientInsertMany(ctx),
+		workspaceSweepOpts(GmailWatchRenewArgs{}.Kind()), GmailWatchRenewArgs{ConnectionID: w.fleet})
 	if err == nil {
 		err = dispatchOne(ctx, w.pool, w.child, nil)
 	}
@@ -69,15 +69,14 @@ func TestARealFanOutInsertCarriesTheSweepTagIntoRiversTagsColumn(t *testing.T) {
 	e := integration.Setup(t)
 	integration.ApplyRiverSchema(t)
 
-	fleetChild := ids.NewV7()
+	fleetChild := ids.NewV7().String()
 	loopChild := CaptureSyncArgs{
-		Workspace:    ids.NewV7(),
 		ConnectionID: ids.NewV7().String(),
 		Provider:     "gmail",
 	}
 	probe := &fanOutProbeWorker{
 		pool:  e.Pool,
-		fleet: []ids.UUID{fleetChild},
+		fleet: fleetChild,
 		child: loopChild,
 		done:  make(chan error, 1),
 	}
@@ -114,21 +113,21 @@ func TestARealFanOutInsertCarriesTheSweepTagIntoRiversTagsColumn(t *testing.T) {
 	}
 
 	assertRowIsTagged(ctx, t, e.Pool, GmailWatchRenewArgs{}.Kind(), fleetChild,
-		"dispatchWith's fleet insert")
-	assertRowIsTagged(ctx, t, e.Pool, loopChild.Kind(), loopChild.Workspace,
+		"dispatchOnce's insert")
+	assertRowIsTagged(ctx, t, e.Pool, loopChild.Kind(), loopChild.ConnectionID,
 		"dispatchOne's single insert")
 }
 
 // assertRowIsTagged reads the tags River actually stored for one child. It
-// matches on the workspace inside args so the row is the one this test
+// matches on the connection inside args so the row is the one this test
 // enqueued, not a leftover of the same kind.
-func assertRowIsTagged(ctx context.Context, t *testing.T, pool *pgxpool.Pool, kind string, workspace ids.UUID, via string) {
+func assertRowIsTagged(ctx context.Context, t *testing.T, pool *pgxpool.Pool, kind, connection, via string) {
 	t.Helper()
 
 	var tags []string
 	if err := pool.QueryRow(ctx,
-		`SELECT tags FROM river_job WHERE kind = $1 AND args->>'workspace_id' = $2`,
-		kind, workspace.String()).Scan(&tags); err != nil {
+		`SELECT tags FROM river_job WHERE kind = $1 AND args->>'connection_id' = $2`,
+		kind, connection).Scan(&tags); err != nil {
 		t.Fatalf("reading back the %s child enqueued through %s: %v", kind, via, err)
 	}
 	if !slices.Contains(tags, jobs.SweepTag) {

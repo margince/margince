@@ -47,10 +47,10 @@ func TestASliceBudgetEndsBySlicedRowsOrTime(t *testing.T) {
 
 func TestEachImportAttemptIsItsOwnJob(t *testing.T) {
 	t.Parallel()
-	ws, run := ids.NewV7(), ids.NewV7()
+	run := ids.NewV7()
 	for _, args := range []importJobArgs{
-		ImportCommitArgs{Workspace: ws, RunID: run, Attempt: 3},
-		ImportUndoArgs{Workspace: ws, RunID: run, Attempt: 3},
+		ImportCommitArgs{RunID: run, Attempt: 3},
+		ImportUndoArgs{RunID: run, Attempt: 3},
 	} {
 		encoded, err := json.Marshal(args)
 		if err != nil {

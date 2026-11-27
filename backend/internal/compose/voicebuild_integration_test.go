@@ -210,8 +210,8 @@ func (v *voiceBuildEnv) principals(t *testing.T) (books, work context.Context) {
 	t.Helper()
 	worker := newVoiceBuildWorker(v.e.Pool, nil, slog.New(slog.DiscardHandler))
 	books, work, err := voiceBuildWorkerCtx(context.Background(), worker.users, VoiceBuildArgs{
-		Workspace: v.e.WS, ProfileID: v.profile.ID.String(),
-		BuildID: ids.NewV7().String(), RequestedBy: v.e.Rep1.String(),
+		ProfileID: v.profile.ID.String(),
+		BuildID:   ids.NewV7().String(), RequestedBy: v.e.Rep1.String(),
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -452,8 +452,8 @@ func voiceBuildJob(env *voiceBuildEnv, build ai.VoiceBuild) *river.Job[VoiceBuil
 	return &river.Job[VoiceBuildArgs]{
 		JobRow: &rivertype.JobRow{},
 		Args: VoiceBuildArgs{
-			Workspace: env.e.WS, ProfileID: env.profile.ID.String(),
-			BuildID: build.ID.String(), RequestedBy: env.e.Rep1.String(),
+			ProfileID: env.profile.ID.String(),
+			BuildID:   build.ID.String(), RequestedBy: env.e.Rep1.String(),
 		},
 	}
 }

@@ -69,15 +69,11 @@ func providerRunStore(pool *pgxpool.Pool, cfg ProviderRunsConfig, workspace ids.
 // ProviderRunSubmitArgs submits ONE queued run. The workspace travels in the
 // args because a job queue is not a request and carries no tenant to inherit.
 type ProviderRunSubmitArgs struct {
-	Workspace ids.UUID `json:"workspace_id"`
-	RunID     string   `json:"run_id"`
+	RunID string `json:"run_id"`
 }
 
 // Kind is the stable job identifier River persists in river_job.
 func (ProviderRunSubmitArgs) Kind() string { return "provider_run_submit" }
-
-// WorkspaceID binds this submission to its tenant (jobs.WorkspaceScoped).
-func (a ProviderRunSubmitArgs) WorkspaceID() ids.UUID { return a.Workspace }
 
 // InsertOpts binds the uniqueness to the ARGS TYPE rather than to the one
 // call site that enqueues today, because it is a spend guard: two live submit
@@ -101,12 +97,16 @@ type providerRunSubmitWorker struct {
 }
 
 func (w *providerRunSubmitWorker) Work(ctx context.Context, job *river.Job[ProviderRunSubmitArgs]) error {
-	wsCtx, err := workspaceJobCtx(ctx, job.Args)
+	wsCtx, err := bindInstallation(ctx, w.pool)
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
 	wsCtx = providerJobActor(wsCtx)
-	store, err := providerRunStore(w.pool, w.cfg, job.Args.WorkspaceID())
+	ws, err := boundWorkspace(wsCtx)
+	if err != nil {
+		return jobs.FaultContext(ctx, err)
+	}
+	store, err := providerRunStore(w.pool, w.cfg, ws)
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
@@ -152,7 +152,7 @@ type providerRunPollSweepWorker struct {
 // The tick is the real cadence: a workspace that failed is picked up by the
 // next pass, so nothing here needs a ladder of its own.
 func (w *providerRunPollSweepWorker) Work(ctx context.Context, _ *river.Job[ProviderRunPollSweepArgs]) error {
-	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.pollWorkspace))
+	return jobs.FaultContext(ctx, runInstallationPass(ctx, w.pool, w.pollWorkspace))
 }
 
 func (w *providerRunPollSweepWorker) pollWorkspace(ctx context.Context, workspace ids.UUID) error {

@@ -27,7 +27,6 @@ package capture
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
@@ -61,44 +60,31 @@ const actionCredentialRelocated = "capture_credential_relocated"
 // credential still lives in the auth bytea column onto the vault: it seals the
 // bytes, records the credential_ref, and clears auth. It is idempotent — a row
 // that already carries a ref is skipped — so a re-run or a crash-retry is
-// safe, which is what lets it run on every boot. It walks every live workspace
-// under that workspace's own GUC, which is what capture_connection's own
-// workspace predicates read.
-// One workspace's failure must not starve the rest of the fleet (the same
-// invariant retention and the close-date sweep hold): the walk continues past
-// a failing workspace and returns the count migrated plus the joined errors.
+// safe, which is what lets it run on every boot. It runs under the installation
+// workspace's own GUC, which is what capture_connection's own workspace
+// predicates read.
 func (r *Registry) BackfillCredentials(ctx context.Context) (int, error) {
 	if r.vault == nil {
 		return 0, errors.New("capture: cannot backfill connector credentials without a keyvault")
 	}
-	workspaces, err := database.LiveWorkspaces(ctx, r.db.Pool())
-	if err != nil {
+	wsID, ok, err := database.LiveWorkspace(ctx, r.db.Pool())
+	if err != nil || !ok {
 		return 0, err
 	}
-	total := 0
-	var errs error
-	for _, wsID := range workspaces {
-		// The pass names ITSELF as the actor. Nobody asked for this — it is
-		// the boot noticing a legacy row — so binding a human would put
-		// somebody's name on a move they did not make, and the ledger's whole
-		// value is telling a relocation apart from a connect.
-		//
-		// A bound actor is also storekit.LogSystem's precondition: it refuses
-		// rather than guessing, which is what made this the one credential_ref
-		// writer with no ledger row until the actor arrived with it.
-		//
-		// The correlation id groups one boot's relocations as the single pass
-		// they are, exactly as the expiry sweep's does for one tick.
-		wsCtx := principal.WithWorkspaceID(ctx, wsID)
-		wsCtx = principal.SystemActing(wsCtx, CredentialBackfillActor)
-		migrated, err := r.backfillWorkspace(wsCtx, ids.From[ids.WorkspaceKind](wsID))
-		if err != nil {
-			errs = errors.Join(errs, fmt.Errorf("capture: backfilling workspace %s: %w", wsID, err))
-			continue
-		}
-		total += migrated
-	}
-	return total, errs
+	// The pass names ITSELF as the actor. Nobody asked for this — it is
+	// the boot noticing a legacy row — so binding a human would put
+	// somebody's name on a move they did not make, and the ledger's whole
+	// value is telling a relocation apart from a connect.
+	//
+	// A bound actor is also storekit.LogSystem's precondition: it refuses
+	// rather than guessing, which is what made this the one credential_ref
+	// writer with no ledger row until the actor arrived with it.
+	//
+	// The correlation id groups one boot's relocations as the single pass
+	// they are, exactly as the expiry sweep's does for one tick.
+	wsCtx := principal.WithWorkspaceID(ctx, wsID)
+	wsCtx = principal.SystemActing(wsCtx, CredentialBackfillActor)
+	return r.backfillWorkspace(wsCtx, ids.From[ids.WorkspaceKind](wsID))
 }
 
 // backfillWorkspace migrates one workspace's legacy rows. Each secret is

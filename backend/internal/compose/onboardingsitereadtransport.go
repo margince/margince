@@ -16,7 +16,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/contacts"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -48,7 +47,7 @@ func (e *deepReadEngine) startCompanySiteRead(w http.ResponseWriter, r *http.Req
 	read, joined, err := e.contacts.StartOnboardingSiteRead(r.Context(), seedURL, requestedBy(r.Context()),
 		func(ctx context.Context, tx pgx.Tx, read contacts.SiteRead) error {
 			return e.enqueue.EnqueueTx(ctx, tx, SiteDeepReadArgs{
-				Workspace: storekit.MustWorkspace(ctx), SiteReadID: read.ID,
+				SiteReadID:  read.ID,
 				RequestedBy: read.RequestedBy,
 			}, siteDeepReadInsertOpts(DeepReadPriorityLive))
 		})

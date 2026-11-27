@@ -123,7 +123,7 @@ func TestATeamRequestMailNamesTheLinkAsItStandsWhenItLeaves(t *testing.T) {
 	env.saveLink(t, "Renewal call", env.e.Rep2)
 	job := &river.Job[SendNotificationEmailArgs]{
 		JobRow: &rivertype.JobRow{Attempt: 1, MaxAttempts: notificationMailJobAttempts},
-		Args:   SendNotificationEmailArgs{Workspace: env.e.WS, NoticeID: env.requestNotice(t).String()},
+		Args:   SendNotificationEmailArgs{NoticeID: env.requestNotice(t).String()},
 	}
 	if err := env.worker.Work(context.Background(), job); err != nil {
 		t.Fatalf("the notification mail worker refused the job: %v", err)

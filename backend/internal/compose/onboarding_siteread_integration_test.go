@@ -52,7 +52,7 @@ func onboardingDraft(t *testing.T, e *integration.Env) contacts.SiteRead {
 func finishOnboardingDraft(t *testing.T, e *integration.Env, read contacts.SiteRead) contacts.SiteRead {
 	t.Helper()
 	if _, err := e.Contacts.BeginSiteRead(deepReadWorkerCtx(context.Background(), SiteDeepReadArgs{
-		Workspace: e.WS, SiteReadID: read.ID, RequestedBy: read.RequestedBy,
+		SiteReadID: read.ID, RequestedBy: read.RequestedBy,
 	}), read.ID, 10*time.Minute); err != nil {
 		t.Fatalf("begin onboarding read: %v", err)
 	}
@@ -75,7 +75,7 @@ func finishOnboardingDraft(t *testing.T, e *integration.Env, read contacts.SiteR
 	if err != nil {
 		t.Fatal(err)
 	}
-	workerCtx := deepReadWorkerCtx(context.Background(), SiteDeepReadArgs{Workspace: e.WS, SiteReadID: read.ID})
+	workerCtx := deepReadWorkerCtx(context.Background(), SiteDeepReadArgs{SiteReadID: read.ID})
 	stopped := "page_cap"
 	if err := e.Contacts.FinishSiteRead(workerCtx, read.ID, contacts.FinishSiteReadInput{
 		Status: "partial", FactCount: len(fields) + len(facts), ProfileFields: fields,
@@ -658,7 +658,7 @@ func TestConfirmingAReadThatNamedNobodySucceeds(t *testing.T) {
 		t.Fatalf("start onboarding read: %v", err)
 	}
 	if _, err := e.Contacts.BeginSiteRead(deepReadWorkerCtx(context.Background(), SiteDeepReadArgs{
-		Workspace: e.WS, SiteReadID: read.ID, RequestedBy: read.RequestedBy,
+		SiteReadID: read.ID, RequestedBy: read.RequestedBy,
 	}), read.ID, 10*time.Minute); err != nil {
 		t.Fatalf("begin onboarding read: %v", err)
 	}
@@ -674,7 +674,7 @@ func TestConfirmingAReadThatNamedNobodySucceeds(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := e.Contacts.FinishSiteRead(deepReadWorkerCtx(context.Background(), SiteDeepReadArgs{
-		Workspace: e.WS, SiteReadID: read.ID,
+		SiteReadID: read.ID,
 	}), read.ID, contacts.FinishSiteReadInput{
 		Status: "done", FactCount: len(fields), ProfileFields: fields,
 		Pages:        []contacts.SiteReadPage{{URL: seedURL, Kind: "home"}},

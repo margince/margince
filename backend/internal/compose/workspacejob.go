@@ -3,47 +3,16 @@
 
 package compose
 
-// The scope a workspace-scoped job runs under. River's WorkerMiddleware sees
-// a rivertype.JobRow — raw JSON, never the typed args — so a middleware could
-// only bind by re-reading the wire key, which would leave the role declaration
-// a label beside the binding rather than the thing that governs it. Binding
-// from the args' own WorkspaceID() instead keeps the declaration load-bearing:
-// a worker cannot claim one workspace and work in another.
-
 import (
 	"context"
-	"fmt"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
-
-// workspaceJobCtx binds the workspace the args themselves declare, and only
-// that. Provenance stays where it already is — each pass names its own actor
-// and mints its own correlation id, and moving that here would change what the
-// audit rows say about work whose behaviour is meant to be untouched.
-//
-// A zero id is REFUSED rather than bound. Nothing downstream narrows a query
-// by workspace — no table carries the column and no policy reads one
-// (ADR-0061/ADR-0091 §5) — so an unrefused zero would not fail here or at any
-// later statement; it would simply be the value an audit entity id, a blob key
-// or an advisory-lock name carries instead of the real one, discovered only
-// much later and far from the job that produced it. It is also what an args
-// type decodes to when a queued job predates a change to its wire key, so the
-// refusal is the difference between a loud failure and a pass that quietly
-// touches nothing.
-func workspaceJobCtx(ctx context.Context, args jobs.WorkspaceScoped) (context.Context, error) {
-	ws := args.WorkspaceID()
-	if ws == (ids.UUID{}) {
-		return nil, fmt.Errorf("%s: declares WorkspaceScoped but carries no workspace", args.Kind())
-	}
-	return principal.WithWorkspaceID(ctx, ws), nil
-}
 
 // installationJobCtx binds the installation's workspace for a collapsed pass —
 // one that carries no workspace of its own (ADR-0103 §1).
@@ -64,18 +33,25 @@ func installationJobCtx(ctx context.Context, svc *identity.Service) (context.Con
 	return principal.WithWorkspaceID(ctx, ws.UUID), nil
 }
 
-// workspaceJobDB binds a handle to the workspace a per-workspace job NAMES.
-//
-// A fleet pass runs one job per workspace, so the installation resolver is the
-// wrong answer here twice over: it refuses outright while more than one
-// workspace exists (ADR-0061 §3), and even with one it would be answering a
-// question the job has already answered in its args. The workspace comes from
-// the args exactly as it did when the binding rode the context — this is the
-// same fact, moved to where the transaction now reads it (ADR-0091 §9 step 3).
-func workspaceJobDB(pool *pgxpool.Pool, args jobs.WorkspaceScoped) (*database.DB, error) {
-	ws := args.WorkspaceID()
-	if ws == (ids.UUID{}) {
-		return nil, fmt.Errorf("%s: declares WorkspaceScoped but carries no workspace", args.Kind())
+// bindInstallation is installationJobCtx for a worker that holds a pool and no
+// identity service. It resolves the installation's workspace per job, so a job
+// queued before the first company existed fails until one does.
+func bindInstallation(ctx context.Context, pool *pgxpool.Pool) (context.Context, error) {
+	return installationJobCtx(ctx, identity.NewService(pool))
+}
+
+// installationBinder is bindInstallation as the Bind hook the capture and chat
+// workers of the edge packages take.
+func installationBinder(pool *pgxpool.Pool) func(context.Context) (context.Context, error) {
+	return func(ctx context.Context) (context.Context, error) { return bindInstallation(ctx, pool) }
+}
+
+// boundWorkspace reads the workspace installationJobCtx bound, for a worker
+// that hands it to a store which still takes one.
+func boundWorkspace(ctx context.Context) (ids.UUID, error) {
+	ws, ok := principal.WorkspaceID(ctx)
+	if !ok {
+		return ids.UUID{}, database.ErrNoWorkspace
 	}
-	return database.BindTo(pool, ids.From[ids.WorkspaceKind](ws)), nil
+	return ws, nil
 }

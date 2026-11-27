@@ -242,21 +242,21 @@ func (w *Flusher) answerFailure(ctx context.Context, pending chatlinks.Pending, 
 
 // FlushJob is the args of the flush job, which compose declares.
 type FlushJob interface {
-	jobs.WorkspaceScoped
+	river.JobArgs
 	Link() ids.UUID
 }
 
 // Worker runs the flush job. Bind is compose's one workspace binder, so the
 // args' own WorkspaceID is the binding.
 type Worker[T FlushJob] struct {
-	Bind    func(context.Context, jobs.WorkspaceScoped) (context.Context, error)
+	Bind    func(context.Context) (context.Context, error)
 	Flusher *Flusher
 }
 
 // Work implements River's worker for the flush.
 func (w *Worker[T]) Work(ctx context.Context, job *river.Job[T]) error {
 	// Bind answers no context when it refuses, so the fault rides the job's own.
-	bound, err := w.Bind(ctx, job.Args)
+	bound, err := w.Bind(ctx)
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}

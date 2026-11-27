@@ -18,7 +18,6 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -63,7 +62,7 @@ func (h rateRefreshHandlers) ProposeFxRateRefresh(w http.ResponseWriter, r *http
 		httperr.Write(w, r, err)
 		return
 	}
-	args := FxRateRefreshArgs{Workspace: storekit.MustWorkspace(ctx), RequestedBy: requestedBy(ctx)}
+	args := FxRateRefreshArgs{RequestedBy: requestedBy(ctx)}
 	// ByArgs uniqueness now hashes only the river:"unique"-tagged WorkspaceID
 	// (RequestedBy is provenance, untagged), so two admins refreshing the same
 	// workspace collapse to one in-flight refresh rather than racing two.

@@ -27,7 +27,7 @@ import (
 func fxRefreshJobFor(e *integration.Env, requester ids.UUID) *river.Job[FxRateRefreshArgs] {
 	return &river.Job[FxRateRefreshArgs]{
 		JobRow: &rivertype.JobRow{},
-		Args:   FxRateRefreshArgs{Workspace: e.WS, RequestedBy: principal.HumanIDPrefix + requester.String()},
+		Args:   FxRateRefreshArgs{RequestedBy: principal.HumanIDPrefix + requester.String()},
 	}
 }
 
