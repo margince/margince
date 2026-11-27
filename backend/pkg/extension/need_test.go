@@ -18,6 +18,7 @@ func TestNeedValidate(t *testing.T) {
 	}{
 		"models with a reason":  {need: extension.Need{Capability: extension.CapabilityModels, Reason: "Summarises a thread."}},
 		"objects with a reason": {need: extension.Need{Capability: extension.CapabilityObjects, Reason: "Keeps generated PDFs."}},
+		"members with a reason": {need: extension.Need{Capability: extension.CapabilityMembers, Reason: "Finds an administrator to hand a task to."}},
 		"unknown capability":    {need: extension.Need{Capability: "vault", Reason: "Reads tokens."}, wantErr: "not a capability"},
 		"empty reason":          {need: extension.Need{Capability: extension.CapabilityModels}, wantErr: "reason"},
 		"multi-line reason":     {need: extension.Need{Capability: extension.CapabilityModels, Reason: "one\ntwo"}, wantErr: "reason"},
