@@ -908,3 +908,32 @@
 .brief-payments-total {
   font: var(--fontHeadingSmall);
 }
+
+/* ── A decision waiting, as a Home task card ──────────────────────────────
+ * The task card's columns plus one for Decide. The staged ring stands where a
+ * task has its tick, at the tick's size, so every title starts on one x. */
+.brief-task.magic-approval {
+  grid-template-columns: var(--space-8) minmax(0, 1fr) auto;
+}
+.magic-approval .brief-task-tick > .magic-mark {
+  inline-size: var(--controlIcon);
+  block-size: var(--controlIcon);
+}
+.magic-approval-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+  padding-block-start: var(--space-1);
+}
+.magic-approval-body > .brief-task-title {
+  margin: 0;
+}
+.magic-approval-body > .task-meta {
+  margin-block-start: 0;
+}
+.magic-approval-decide {
+  display: grid;
+  min-block-size: var(--space-8);
+  align-items: center;
+}
