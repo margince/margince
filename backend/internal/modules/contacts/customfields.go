@@ -13,10 +13,12 @@ package contacts
 import (
 	"context"
 	"errors"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
@@ -54,6 +56,17 @@ func (s *Store) activeColumnsIn(ctx context.Context, tx pgx.Tx, object string) (
 // The zero value is the honest empty answer: core columns only.
 type CustomColumns struct {
 	cols []fieldcatalog.Column
+}
+
+// Has reports whether name is an active custom column.
+func (c CustomColumns) Has(name string) bool {
+	return slices.ContainsFunc(c.cols, func(col fieldcatalog.Column) bool { return col.Name == name })
+}
+
+// Check refuses a value the active columns cannot hold, a picklist choice among
+// them. It is the verdict the write itself would reach, taken without writing.
+func (c CustomColumns) Check(values map[string]any) error {
+	return storekit.CheckCustomValues(c.cols, values)
 }
 
 // ActiveContactColumns is the caller-side half of GetContactTx. A caller that

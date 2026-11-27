@@ -60,6 +60,9 @@ type CompanyFields struct {
 	// onto this company. A key that matches nothing the member may see is
 	// skipped without a word, so the list cannot be used to probe for records.
 	RelinkActivities []string
+	// CustomFields are the values of the installation's custom company fields
+	// the unit offers, under the rules DealFields.CustomFields states.
+	CustomFields map[string]any
 }
 
 // DealFields is a deal on its way into the CRM.
@@ -144,6 +147,9 @@ func (c CompanyFields) validate() error {
 	case c.AdoptOn != "" && strings.TrimSpace(c.Domain) == "":
 		return errors.New("extension: the company asks to be adopted by its domain and names none")
 	}
+	if err := validateCustomFieldKeys(c.CustomFields); err != nil {
+		return err
+	}
 	return validateRelinkKeys(c.RelinkActivities)
 }
 
@@ -169,6 +175,10 @@ func (d DealFields) validate() error {
 const MaxLandedCustomFields = 50
 
 var customFieldKey = regexp.MustCompile(`^cf_[a-z0-9_]{1,60}$`)
+
+// ValidateCustomFieldKeys is the check a landed record's custom values pass,
+// for a door that writes them without landing a record.
+func ValidateCustomFieldKeys(values map[string]any) error { return validateCustomFieldKeys(values) }
 
 func validateCustomFieldKeys(values map[string]any) error {
 	if len(values) > MaxLandedCustomFields {

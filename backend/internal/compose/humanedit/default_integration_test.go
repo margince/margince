@@ -3,7 +3,7 @@
 
 //go:build integration
 
-package compose
+package humanedit
 
 import (
 	"context"
@@ -15,11 +15,11 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 )
 
-// Only a quoted literal on a text or enum column is a default nobody chose. A
-// number, boolean, date, uuid or jsonb default is read as a value a human may
-// have meant — product.active = true is a decision to sell it — so the tie goes
-// to asking them. Read off real columns, because the type is the column's and
-// not the rendered expression's.
+// Only a quoted literal on a text or enum column is a default nobody chose.
+// A number, boolean, date, uuid or jsonb default may be a human's decision.
+// For example, product.active = true is a decision to sell it.
+// So the tie goes to asking them. Read off real columns: the type is the
+// column's, not the rendered expression's.
 func TestOnlyATextOrEnumDefaultIsNobodysEdit(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := context.Background()
@@ -57,7 +57,7 @@ func TestOnlyATextOrEnumDefaultIsNobodysEdit(t *testing.T) {
 		"a_numeric": nil, "a_quoted_bigint": nil, "a_stamp": nil, "an_array": nil,
 	} {
 		var got *string
-		if err := tx.QueryRow(ctx, `SELECT (`+constantColumnDefault+`)
+		if err := tx.QueryRow(ctx, `SELECT (`+ConstantColumnDefault+`)
 			FROM default_probe t CROSS JOIN (SELECT $1::text AS key) p`, column).Scan(&got); err != nil {
 			t.Fatalf("%s: %v", column, err)
 		}
@@ -66,4 +66,11 @@ func TestOnlyATextOrEnumDefaultIsNobodysEdit(t *testing.T) {
 				column, deref(got), got == nil, deref(want), want == nil)
 		}
 	}
+}
+
+func deref(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
 }

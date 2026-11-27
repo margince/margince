@@ -36,9 +36,9 @@ var taskGrades = map[CertKey]CertGrade{
 	// records/account_scan/openai_compatible_qwen_qwen3.8-27b_cloud_frontier.json
 	{Task: "account_scan", Provider: "openai_compatible", Model: "qwen/qwen3.8-27b", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: "{\"only\":[\"deepinfra\"],\"ignore\":null,\"quantizations\":[\"bf16\"],\"sort\":\"\",\"require_parameters\":null,\"allow_fallbacks\":null,\"preferred_max_latency_p90\":0,\"reasoning_effort\":\"\"}"}: {Verdict: "certified", State: "stale"},
 	// records/agent_loop/anthropic_claude-haiku-5-5_cloud_frontier.json
-	{Task: "agent_loop", Provider: "anthropic", Model: "claude-haiku-5-5", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "not_supported", State: "stale"},
+	{Task: "agent_loop", Provider: "anthropic", Model: "claude-haiku-5-5", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "not_supported", State: "current"},
 	// records/agent_loop/anthropic_claude-sonnet-5-5_cloud_frontier.json
-	{Task: "agent_loop", Provider: "anthropic", Model: "claude-sonnet-5-5", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "stale"},
+	{Task: "agent_loop", Provider: "anthropic", Model: "claude-sonnet-5-5", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "current"},
 	// records/agent_loop/gemini_gemini-3.1-flash-lite_cloud_frontier.json
 	{Task: "agent_loop", Provider: "gemini", Model: "gemini-3.1-flash-lite", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "not_supported", State: "current"},
 	// records/agent_loop/gemini_gemini-3.5-flash_cloud_frontier.json
