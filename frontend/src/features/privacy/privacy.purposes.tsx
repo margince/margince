@@ -102,6 +102,11 @@ function keyFromLabel(label: string): string {
     .replace(/^_|_$/g, "");
 }
 
+// The characters the server's strings.Fields splits a label on (Go's
+// unicode.IsSpace). JavaScript's \s would add U+FEFF and leave out U+0085.
+const LABEL_SPACES =
+  /[\t\n\v\f\r \u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]+/;
+
 // A label or key as a reader tells it apart: case, spacing, underscores and the
 // encoding of its accents aside. Case maps up, then down with ß as ss, which
 // reads as the server's purposeReading does: STRAẞE and STRASSE read as Straße.
@@ -112,8 +117,8 @@ function purposeReading(text: string): string {
     .toLowerCase()
     .replaceAll("ß", "ss")
     .replaceAll("_", " ")
-    .trim()
-    .split(/\s+/)
+    .split(LABEL_SPACES)
+    .filter((word) => word !== "")
     .join(" ");
 }
 

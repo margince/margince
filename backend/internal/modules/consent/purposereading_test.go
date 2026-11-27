@@ -29,3 +29,16 @@ func TestALabelReadsTheSameInCapitals(t *testing.T) {
 		}
 	}
 }
+
+// Spacing splits on unicode.IsSpace, the set privacy.purposes.tsx mirrors: a
+// next-line character is a space, a zero-width no-break space is not.
+func TestALabelSplitsOnTheSpacesTheFormSplitsOn(t *testing.T) {
+	t.Parallel()
+	listed := purposeReading("Mail digest")
+	if got := purposeReading("Mail\u0085digest"); got != listed {
+		t.Errorf("a label split by U+0085 reads %q, want %q", got, listed)
+	}
+	if got := purposeReading("Mail\ufeffdigest"); got == listed {
+		t.Errorf("a label joined by U+FEFF reads %q, want a reading of its own", got)
+	}
+}

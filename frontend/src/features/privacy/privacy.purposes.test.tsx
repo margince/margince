@@ -266,6 +266,45 @@ describe("Add purpose", () => {
     },
   );
 
+  // Spacing splits on the server's set: U+0085 is a space, U+FEFF is not.
+  // Mutation: split on \s and the first label is sent, the second refused.
+  it("reads a next-line character as a space, like the server", async () => {
+    const listed = {
+      ...NEWSLETTER,
+      id: "p5",
+      key: "digest",
+      label: "Mail digest",
+    };
+    const posted = stub(refused({}, 500), [TRANSACTIONAL, listed]);
+    await addPurpose("weekly", "Mail\u0085digest");
+
+    expect(
+      await screen.findByText(
+        "This label reads like Mail digest. Choose another label to tell the two purposes apart.",
+      ),
+    ).toBeVisible();
+    expect(posted).toHaveLength(0);
+  });
+
+  it("sends a label joined by a zero-width no-break space, as the server accepts it", async () => {
+    const listed = {
+      ...NEWSLETTER,
+      id: "p5",
+      key: "digest",
+      label: "Mail digest",
+    };
+    const created = {
+      ...listed,
+      id: "p6",
+      key: "weekly",
+      label: "Mail\ufeffdigest",
+    };
+    const posted = stub(() => json(created, 201), [TRANSACTIONAL, listed]);
+    await addPurpose(created.key, created.label);
+
+    await waitFor(() => expect(posted).toHaveLength(1));
+  });
+
   it("sends a label whose accent is another one", async () => {
     const created = {
       ...NEWSLETTER,
