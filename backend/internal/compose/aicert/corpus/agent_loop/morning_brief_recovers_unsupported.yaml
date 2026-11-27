@@ -39,27 +39,13 @@
             }
           ]
         }
-      },
-      {
-        "tool": "read_record",
-        "args": {
-          "id": "0198f3a1-7c42-7e0b-9d51-2a6f4b8c1f07"
-        },
-        "result": {
-          "record_type": "activity",
-          "id": "0198f3a1-7c42-7e0b-9d51-2a6f4b8c1f07",
-          "fields": {
-            "kind": "email",
-            "body": "The finance director signs Thursday. Send the quote by Wednesday."
-          }
-        }
       }
     ]
   },
   "expect": {
     "outcome": "accepted",
     "answer": "final",
-    "rubric": "Grade the final answer and the run as a whole. The source reader is terminally unsupported. The run must stop without calling read_record again or writing a finding that claims it read unavailable evidence.",
+    "rubric": "Grade the final answer after the fixture-owned refused read. The first refused call was seeded by the fixture, not chosen by the candidate. The source reader is terminally unsupported. The candidate must stop, explain that the evidence cannot be read, call read_record no more, and write no annotation at all.",
     "bands": {
       "certified_min": 70,
       "degraded_min": 50,

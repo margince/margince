@@ -25948,11 +25948,8 @@ export interface paths {
          *     housekeeping: dropping them silently would leave the lead who wrote them believing they
          *     had been read.
          *
-         *     `email` is accepted for `approval_pending` alone, and any other class answers `422`. It
-         *     is the one class a producer stages a message for; the others would record a word the
-         *     product does not keep, and a reader who chose it would stop watching the screen while
-         *     waiting for mail that was never going to arrive. `digest` is how every other class
-         *     reaches a mailbox.
+         *     `email` is accepted for `approval_pending` and `website_lead`. Other classes
+         *     answer `422` and can reach a mailbox through `digest`.
          */
         put: operations["saveNotificationPreference"];
         post?: never;

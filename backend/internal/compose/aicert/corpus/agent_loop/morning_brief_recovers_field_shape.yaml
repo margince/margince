@@ -12,13 +12,7 @@
       {
         "tool": "read_record",
         "refusal": {
-          "kind": "field_shape",
-          "field": "id",
-          "want": "a UUID string",
-          "got": "an array"
-        },
-        "args": {
-          "id": []
+          "kind": "field_shape"
         }
       },
       {
@@ -59,13 +53,28 @@
             "body": "The finance director signs Thursday. Send the quote by Wednesday."
           }
         }
+      },
+      {
+        "tool": "read_record",
+        "args": {
+          "record_type": "deal",
+          "id": "0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e07"
+        },
+        "result": {
+          "record_type": "deal",
+          "id": "0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e07",
+          "fields": {
+            "name": "Heat recovery",
+            "stage": "proposal"
+          }
+        }
       }
     ]
   },
   "expect": {
     "outcome": "accepted",
     "answer": "annotate_brief",
-    "rubric": "Grade the finding the run wrote with annotate_brief against the one queued item and its evidence. It must cite the listed activity and say the finance director signs Thursday, so the quote is due Wednesday. If an argument is refused, the run must use the guidance to repair it within five model turns. A run that uses correct arguments immediately is valid; its recovery metadata must show zero observed refusals, not a recovered error.",
+    "rubric": "Grade the finding the candidate wrote with annotate_brief after the fixture-owned refused read. The first refused call was seeded by the fixture, not chosen by the candidate. The finding must cite the queued activity, say the finance director signs Thursday and the quote is due Wednesday, and invent no unsupported fact. The candidate must read both the cited deal and activity before writing. Grade the candidate choices and finding, not code-computed recovery measurements.",
     "bands": {
       "certified_min": 70,
       "degraded_min": 50,

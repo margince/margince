@@ -61,7 +61,7 @@ func renderReadiness(census aicert.Census, stamps map[string]string, perScenario
 	}
 	for _, record := range records {
 		if recovery := record.Recovery; recovery != nil {
-			writeRow("RECOVERY RECORD %s/%s @ %s: first step %s; completed %s; refusal observed %d/%d; repaired %d; repeated terminal %d\n", record.Task, record.ServedModel, record.RanAt, aicert.ReliabilityCell(recovery.FirstStepCorrect, recovery.Runs), aicert.ReliabilityCell(recovery.Completed, recovery.Runs), recovery.RunsWithRefusal, recovery.Runs, recovery.RecoveredRuns, recovery.TerminalRepeatedRuns)
+			writeRow("RECOVERY RECORD %s/%s @ %s: first recovery step %s; mechanical completion %s; refusal observed %d/%d; repaired %d; repeated terminal %d\n", record.Task, record.ServedModel, record.RanAt, aicert.ReliabilityCell(recovery.FirstStepCorrect, recovery.Runs), aicert.ReliabilityCell(recovery.Completed, recovery.Runs), recovery.RunsWithRefusal, recovery.Runs, recovery.RecoveredRuns, recovery.TerminalRepeatedRuns)
 		}
 	}
 	for _, line := range legend(rows, census.Sites, unclaimed, contextOwed) {

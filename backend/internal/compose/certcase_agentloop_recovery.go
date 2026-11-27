@@ -7,29 +7,23 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"slices"
-	"strings"
 
 	"github.com/margince/margince/backend/internal/compose/aitasks"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/agents/runner"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 const (
 	agentLoopRecoveryBand  = "refusal_recovery"
-	agentLoopRecoverySteps = 5
+	agentLoopRecoverySteps = 6
 )
 
-// agentLoopToolRefusal is one real refusal type a fixture's backend returns.
-// Args on the answer select the refused call; a repaired call reaches its
-// ordinary answer. No counter or mutable sequence changes between replays.
+// agentLoopToolRefusal selects a seeded real refusal before the first candidate
+// turn. Argument refusals come from the production decoder; unsupported is a
+// declared backend capability gap. Replays execute the same seeded read.
 type agentLoopToolRefusal struct {
-	Kind  string `json:"kind"`
-	Field string `json:"field,omitempty"`
-	Want  string `json:"want,omitempty"`
-	Got   string `json:"got,omitempty"`
+	Kind string `json:"kind"`
 }
 
 func (s agentLoopToolSurface) refusalFor(tool string, args json.RawMessage) *agentLoopToolRefusal {
@@ -41,29 +35,32 @@ func (s agentLoopToolSurface) refusalFor(tool string, args json.RawMessage) *age
 	return nil
 }
 
-func (s agentLoopToolSurface) refusalError(tool string, refusal agentLoopToolRefusal) error {
-	var fields []string
-	for _, spec := range agentLoopRegistry() {
-		if spec.Name == tool {
-			for key := range agentLoopSchemaProperties(spec.InputSchema) {
-				fields = append(fields, key)
-			}
+// recoveryRefusalKind classifies the real decoder's refusal, not a guessed
+// fixture sentence. A successful or missing-record read is no argument refusal.
+func (s agentLoopToolSurface) recoveryRefusalKind(tool string, args json.RawMessage) string {
+	if tool != "read_record" {
+		return ""
+	}
+	_, err := agents.DecodeReadRecordArguments(args)
+	if err != nil {
+		var unknown *datasource.UnknownFieldError
+		if errors.As(err, &unknown) {
+			return "unknown_field"
 		}
+		var wrongType *json.UnmarshalTypeError
+		if errors.As(err, &wrongType) {
+			return "field_shape"
+		}
+		var shape *datasource.FieldShapeError
+		if errors.As(err, &shape) && shape.Got != "" {
+			return "field_shape"
+		}
+		return "bad_arguments"
 	}
-	slices.Sort(fields)
-	guidance := "use the declared arguments: " + strings.Join(fields, ", ")
-	switch refusal.Kind {
-	case "bad_arguments":
-		return &agents.BadArgsError{Cause: errors.New("the argument value was not accepted"), Field: refusal.Field, Code: "invalid", Guidance: guidance}
-	case "unknown_field":
-		return &agents.BadArgsError{Cause: &datasource.UnknownFieldError{Fields: []string{refusal.Field}, Hint: guidance}}
-	case "field_shape":
-		return &agents.BadArgsError{Cause: &datasource.FieldShapeError{Field: refusal.Field, Want: refusal.Want, Got: refusal.Got}, Field: refusal.Field, Code: "invalid"}
-	case "unsupported":
-		return fmt.Errorf("record reader: %w", apperrors.ErrUnsupportedBySoR)
-	default:
-		return fmt.Errorf("unknown recovery refusal %q", refusal.Kind)
+	if refusal := s.refusalFor(tool, args); refusal != nil && refusal.Kind == "unsupported" {
+		return "unsupported"
 	}
+	return ""
 }
 
 func prepareAgentLoopRecovery(f agentLoopFixture, job *runner.Job) error {
@@ -76,21 +73,15 @@ func prepareAgentLoopRecovery(f agentLoopFixture, job *runner.Job) error {
 		if len(answer.Result) > 0 {
 			return errors.New("agent_loop: a tool answer cannot be both a result and a refusal")
 		}
+		if answer.Tool != "read_record" || len(answer.Args) != 0 {
+			return errors.New("agent_loop: recovery names read_record's refusal class, not a pinned fake response")
+		}
 		switch answer.Refusal.Kind {
-		case "bad_arguments", "unknown_field", "field_shape":
-			if _, pinned := answer.Args[answer.Refusal.Field]; !pinned {
-				return errors.New("agent_loop: a repairable refusal must pin its named field")
-			}
-			if answer.Refusal.Kind == "field_shape" && (answer.Refusal.Want == "" || answer.Refusal.Got == "") {
-				return errors.New("agent_loop: a field-shape refusal needs the expected and received shapes")
-			}
-			if strings.TrimSpace(answer.Refusal.Field) == "" || len(answer.Args) == 0 {
-				return errors.New("agent_loop: a repairable refusal must pin the refused argument and name its field")
-			}
-		case "unsupported":
+		case "bad_arguments", "unknown_field", "field_shape", "unsupported":
 		default:
 			return fmt.Errorf("agent_loop: unknown refusal kind %q", answer.Refusal.Kind)
 		}
+
 	}
 	if f.Band == "" && refusals == 0 {
 		return nil
@@ -109,9 +100,41 @@ func prepareAgentLoopRecovery(f agentLoopFixture, job *runner.Job) error {
 	return nil
 }
 
-// agentLoopRecoveryMeasure keeps first-step accuracy apart from the final
-// outcome. A run that avoided the bad call reports zero observed refusals;
-// it is a completion measurement, not evidence that a refusal was recovered.
+// recoverySeed runs one fixture-owned failed read through the real decoder.
+// It is not a candidate model turn; the candidate is measured on what it does next.
+func (s agentLoopToolSurface) recoverySeed() (string, error) {
+	if s.recoveryKind == "" {
+		return "", nil
+	}
+	var brief agents.ReadBriefResult
+	if err := json.Unmarshal(s.list.normalized, &brief); err != nil || len(brief.Items) == 0 || len(brief.Items[0].EvidenceIDs) == 0 {
+		return "", errors.New("agent_loop: a recovery scenario needs a brief with cited evidence")
+	}
+	args := map[string]any{"record_type": "deal", "id": brief.Items[0].EvidenceIDs[0].String()}
+	switch s.recoveryKind {
+	case "bad_arguments":
+		args["id"] = "not-a-record-id"
+	case "unknown_field":
+		args["obsolete_field"] = true
+	case "field_shape":
+		args["id"] = []string{}
+	}
+	raw, err := json.Marshal(args)
+	if err != nil {
+		return "", err
+	}
+	if kind := s.recoveryRefusalKind("read_record", raw); kind != s.recoveryKind {
+		return "", fmt.Errorf("agent_loop: the real decoder returned %q, not the seeded %q refusal", kind, s.recoveryKind)
+	}
+	step, err := json.Marshal(struct {
+		Tool string          `json:"tool"`
+		Args json.RawMessage `json:"args"`
+	}{Tool: "read_record", Args: raw})
+	return string(step), err
+}
+
+// agentLoopRecoveryMeasure keeps the first candidate turn after the seeded
+// refusal apart from mechanical completion of the whole goal.
 type agentLoopRecoveryMeasure = aitasks.LoopRecoveryMeasure
 
 func (c *agentLoopCase) recoveryMeasure(res runner.Result, replies []string) *agentLoopRecoveryMeasure {
@@ -120,29 +143,36 @@ func (c *agentLoopCase) recoveryMeasure(res runner.Result, replies []string) *ag
 	}
 	out := &agentLoopRecoveryMeasure{}
 	firstTool, validFirst := "", false
-	if len(replies) > 0 {
-		firstTool, validFirst = runner.ToolStepName(replies[0])
+	if len(replies) > 1 {
+		firstTool, validFirst = runner.ToolStepName(replies[1])
 	}
 	terminal := map[string]bool{}
 	repairable := map[string]bool{}
 	for i, step := range res.Steps {
-		if i == 0 {
+		if i == 1 {
 			out.FirstStepCorrect = validFirst && firstTool == c.tools.work.list && step.Tool == firstTool && step.Admission == agentLoopExecuted
 		}
 		if terminal[step.Tool] {
 			out.TerminalRepeated = true
 		}
+		if step.TerminalRefusal {
+			terminal[step.Tool] = true
+		}
 		if step.Admission == runner.AdmissionRefused {
-			out.Refusals++
-			refusal := c.tools.refusalFor(step.Tool, step.Args)
-			if refusal != nil && refusal.Kind == "unsupported" {
-				terminal[step.Tool] = true
-			} else {
-				repairable[step.Tool] = true
+			kind := c.tools.recoveryRefusalKind(step.Tool, step.Args)
+			if kind == c.tools.recoveryKind {
+				out.Refusals++
+				if !step.TerminalRefusal {
+					repairable[step.Tool] = true
+				}
 			}
+
 		} else if step.Admission == agentLoopExecuted && repairable[step.Tool] {
 			out.Recovered = true
 		}
+	}
+	if len(replies) > 1 && c.expected == agentLoopFinalStep && runner.IsFinalStep(replies[1]) {
+		out.FirstStepCorrect = true
 	}
 	out.Completed = res.Outcome == runner.OutcomeCompleted && c.gradeRun(res).Result == aitasks.OutcomeAccepted && !out.TerminalRepeated
 	out.Recovered = out.Recovered && out.Completed
@@ -155,7 +185,7 @@ func (c *agentLoopCase) withRecoveryMeasure(outcome aitasks.Outcome, res runner.
 		return outcome
 	}
 	outcome.Recovery = measure
-	if measure.TerminalRepeated {
+	if measure.TerminalRepeated && outcome.Result == aitasks.OutcomeAccepted {
 		outcome.Result = aitasks.OutcomeWrongAnswer
 		outcome.Detail = "a terminally unsupported tool was called again"
 	}

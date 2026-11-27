@@ -115,3 +115,9 @@ func ToolStepName(text string) (string, bool) {
 	step, err := parseStep(text)
 	return step.Tool, err == nil && step.Final == nil && step.Tool != ""
 }
+
+// IsFinalStep recognizes a final answer through the runner's own strict parser.
+func IsFinalStep(text string) bool {
+	step, err := parseStep(text)
+	return err == nil && step.Final != nil
+}

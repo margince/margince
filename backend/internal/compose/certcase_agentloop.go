@@ -127,6 +127,9 @@ func (c agentLoopCases) Prepare(fixture, expected json.RawMessage) (aitasks.Prep
 		return nil, fmt.Errorf("%s/%s: the scenario expects %q, and a run of this agent ends either by writing with %s or as %q",
 			agentLoopSite, c.agent, want, surface.work.write, agentLoopFinalStep)
 	}
+	if _, err := surface.recoverySeed(); err != nil {
+		return nil, err
+	}
 	return &agentLoopCase{job: job, tools: surface, expected: want, band: f.Band}, nil
 }
 
@@ -157,7 +160,15 @@ func (c agentLoopCases) toolSurface(f agentLoopFixture, specs []mcp.ToolSpec) (a
 	if err != nil {
 		return agentLoopToolSurface{}, fmt.Errorf("%s/%s: %w", agentLoopSite, c.agent, err)
 	}
-	return agentLoopToolSurface{work: work, list: list, answers: f.Tools}, nil
+	surface := agentLoopToolSurface{work: work, list: list, answers: f.Tools}
+	if f.Band == agentLoopRecoveryBand {
+		for _, answer := range f.Tools {
+			if answer.Refusal != nil {
+				surface.recoveryKind = answer.Refusal.Kind
+			}
+		}
+	}
+	return surface, nil
 }
 
 // refuseUnrunnableAgentJob names a job the scheduler could never have handed the
@@ -204,10 +215,10 @@ type agentLoopCase struct {
 // agentLoopRun is a run as Output carries it: what the judge grades, and the
 // replies Evaluate replays to grade it again.
 type agentLoopRun struct {
-	Recovery *agentLoopRecoveryMeasure `json:"recovery,omitempty"`
-	Steps    []agentLoopRunStep        `json:"steps"`
-	Final    json.RawMessage           `json:"final,omitempty"`
-	Replies  []string                  `json:"replies"`
+	SeededRefusal bool               `json:"seeded_refusal,omitempty"`
+	Steps         []agentLoopRunStep `json:"steps"`
+	Final         json.RawMessage    `json:"final,omitempty"`
+	Replies       []string           `json:"replies"`
 }
 
 // agentLoopRunStep is one call the run made and what it was told.
@@ -226,16 +237,14 @@ type agentLoopRunStep struct {
 // So a run needs no database: the brain forwards to the completer, and the tool
 // surface answers from the fixture.
 func (c *agentLoopCase) Run(ctx context.Context, completer aitasks.Completer) (aitasks.Trace, error) {
-	recorder := &agentLoopRecorder{completer: completer}
-	res, err := runner.New(c.tools, recorder).Run(ctx, c.job)
+	seed, seedErr := c.tools.recoverySeed()
+	if seedErr != nil {
+		return aitasks.Trace{}, seedErr
+	}
+	recorder := &agentLoopRecorder{completer: completer, seed: seed}
+	res, runErr := runner.New(c.tools, recorder).Run(ctx, c.job)
 	trace := aitasks.Trace{Requests: recorder.requests}
-	if recorder.failed != nil {
-		return trace, fmt.Errorf("%s: the model call did not complete: %w", agentLoopSite, recorder.failed)
-	}
-	if err != nil {
-		return trace, fmt.Errorf("%s: the run never reached a reply to measure: %w", agentLoopSite, err)
-	}
-	run := agentLoopRun{Final: res.Final, Replies: recorder.replies, Recovery: c.recoveryMeasure(res, recorder.replies)}
+	run := agentLoopRun{Final: res.Final, Replies: recorder.replies, SeededRefusal: seed != ""}
 	for _, step := range res.Steps {
 		run.Steps = append(run.Steps, agentLoopRunStep{
 			Tool: step.Tool, Args: step.Args, Admission: step.Admission, Observation: step.Observation,
@@ -246,6 +255,12 @@ func (c *agentLoopCase) Run(ctx context.Context, completer aitasks.Completer) (a
 		return trace, fmt.Errorf("%s: recording the run: %w", agentLoopSite, err)
 	}
 	trace.Output = string(output)
+	if recorder.failed != nil {
+		return trace, fmt.Errorf("%s: the model call did not complete: %w", agentLoopSite, recorder.failed)
+	}
+	if runErr != nil {
+		return trace, fmt.Errorf("%s: the run never reached a reply to measure: %w", agentLoopSite, runErr)
+	}
 	return trace, nil
 }
 
@@ -259,6 +274,8 @@ func (c *agentLoopCase) Run(ctx context.Context, completer aitasks.Completer) (a
 // step claiming an identity this seam never resolved would be the one part of the
 // trace that was invented.
 type agentLoopRecorder struct {
+	seed      string
+	seeded    bool
 	completer aitasks.Completer
 	requests  []model.Request
 	replies   []string
@@ -269,6 +286,12 @@ type agentLoopRecorder struct {
 }
 
 func (r *agentLoopRecorder) Complete(ctx context.Context, req model.Request) (model.Response, runner.Meta, error) {
+	if r.seed != "" && !r.seeded {
+		r.seeded = true
+		r.replies = append(r.replies, r.seed)
+		return model.Response{Text: r.seed}, runner.Meta{}, nil
+	}
+
 	req, err := withCertCompanyContext(ctx, ai.TaskAgentLoop, req)
 	if err != nil {
 		r.failed = err

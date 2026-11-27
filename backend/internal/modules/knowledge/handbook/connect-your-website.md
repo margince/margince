@@ -176,3 +176,5 @@ Also called: turn off form, disable form, delete form.
 ### Can the owner hear about each post?
 
 Turn on **Tell the owner about each new post** beside **Owner of new leads**. This starts off. The owner chooses email, in-app notices, the daily digest or off under **New website leads** in their notification settings. A handling plan tells the owner it assigns. An existing lead or contact keeps its own owner. Unassigned records and inactive owners raise no notice.
+
+An existing contact still gets its usual inquiry task. This switch adds a notice; it creates no second task. Without a handling plan, the notice goes to the owner the record has when the post lands. A workspace routing rule that assigns an unassigned lead later raises no delayed notice. Use a handling plan when the notice should follow that assignment.

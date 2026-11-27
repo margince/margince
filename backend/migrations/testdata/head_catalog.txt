@@ -1456,6 +1456,7 @@ public.approval.bundle_id uuid gen=- def=-
 public.approval.co_target_entity_id uuid gen=- def=-
 public.approval.co_target_entity_type text gen=- def=-
 public.approval.co_target_version bigint gen=- def=-
+public.approval.consent_purpose_keys CREATE TRIGGER consent_purpose_keys BEFORE INSERT OR UPDATE OF proposed_change ON public.approval FOR EACH ROW EXECUTE FUNCTION lock_consent_purpose_keys('json', 'live', 'proposed_change')
 public.approval.consumed_at timestamp with time zone gen=- def=-
 public.approval.context_digest text gen=- def=-
 public.approval.created_at timestamp with time zone NOT NULL gen=- def=now()
@@ -2074,6 +2075,7 @@ public.automation.automation_pkey PRIMARY KEY (id)
 public.automation.automation_setter_passport_id_fkey FOREIGN KEY (setter_passport_id) REFERENCES passport(id) ON DELETE SET NULL
 public.automation.automation_tier_check CHECK ((tier = ANY (ARRAY['auto_execute'::text, 'confirmation_required'::text])))
 public.automation.automation_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+public.automation.consent_purpose_keys CREATE TRIGGER consent_purpose_keys BEFORE INSERT OR UPDATE OF action, params ON public.automation FOR EACH ROW EXECUTE FUNCTION lock_consent_purpose_keys('json', 'live', 'action,params')
 public.automation.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.automation.enabled boolean NOT NULL gen=- def=false
 public.automation.enabled_from timestamp with time zone gen=- def=-
@@ -2993,7 +2995,7 @@ public.comms_outbound.comms_outbound_template_is_controllers CHECK (((sender_kin
 public.comms_outbound.comms_outbound_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE RESTRICT
 public.comms_outbound.connection_id uuid gen=- def=-
 public.comms_outbound.consent_purpose text gen=- def=-
-public.comms_outbound.consent_purpose_keys CREATE TRIGGER consent_purpose_keys BEFORE INSERT ON public.comms_outbound FOR EACH ROW EXECUTE FUNCTION lock_consent_purpose_keys('consent_purpose', 'record')
+public.comms_outbound.consent_purpose_keys CREATE TRIGGER consent_purpose_keys BEFORE INSERT ON public.comms_outbound FOR EACH ROW EXECUTE FUNCTION lock_consent_purpose_keys('consent_purpose', 'live')
 public.comms_outbound.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.comms_outbound.delivery_due_at timestamp with time zone gen=- def=-
 public.comms_outbound.execution_authority text NOT NULL gen=- def='supported'::text
@@ -3101,7 +3103,7 @@ public.communication_decision.communication_decision_ruleset_shape CHECK ((((rul
 public.communication_decision.communication_decision_subject_kind CHECK (((subject_kind IS NULL) OR (subject_kind = ANY (ARRAY['contact'::text, 'lead'::text]))))
 public.communication_decision.communication_decision_subject_shape CHECK (((subject_kind IS NULL) = (subject_id IS NULL)))
 public.communication_decision.communication_decision_verdict CHECK ((verdict = ANY (ARRAY['allow'::text, 'deny'::text, 'review'::text])))
-public.communication_decision.consent_purpose_keys CREATE TRIGGER consent_purpose_keys BEFORE INSERT ON public.communication_decision FOR EACH ROW EXECUTE FUNCTION lock_consent_purpose_keys('purpose_key', 'record')
+public.communication_decision.consent_purpose_keys CREATE TRIGGER consent_purpose_keys BEFORE INSERT ON public.communication_decision FOR EACH ROW EXECUTE FUNCTION lock_consent_purpose_keys('purpose_key', 'decision')
 public.communication_decision.content_fingerprint bytea gen=- def=-
 public.communication_decision.country_source text gen=- def=-
 public.communication_decision.data_protection_country text gen=- def=-
@@ -4077,14 +4079,27 @@ BEGIN
             INTO used USING target;
         IF used THEN RETURN true; END IF;
     END LOOP;
-    RETURN EXISTS (SELECT 1 FROM public.consent_text_version WHERE key = purpose_key)
-        OR EXISTS (SELECT 1 FROM public.communication_decision WHERE communication_decision.purpose_key = $2)
-        OR EXISTS (SELECT 1 FROM public.comms_outbound WHERE consent_purpose = purpose_key)
+    RETURN EXISTS (SELECT 1 FROM public.consent_text_version WHERE public.normalized_consent_purpose_key(key) = public.normalized_consent_purpose_key($2))
+        OR EXISTS (SELECT 1 FROM public.communication_decision WHERE public.normalized_consent_purpose_key(communication_decision.purpose_key) = public.normalized_consent_purpose_key($2))
+        OR EXISTS (SELECT 1 FROM public.comms_outbound WHERE public.normalized_consent_purpose_key(consent_purpose) = public.normalized_consent_purpose_key($2))
         OR EXISTS (SELECT 1 FROM public.scheduled_send
-                   WHERE payload->>'consent_purpose' = purpose_key OR payload->>'marketing_purpose' = purpose_key);
+                   WHERE public.normalized_consent_purpose_key($2) = ANY(public.consent_purpose_keys_in(payload)))
+        OR EXISTS (SELECT 1 FROM public.automation
+                   WHERE public.normalized_consent_purpose_key($2) = ANY(public.consent_purpose_keys_in(jsonb_build_array(action, params))))
+        OR EXISTS (SELECT 1 FROM public.approval
+                   WHERE public.normalized_consent_purpose_key($2) = ANY(public.consent_purpose_keys_in(proposed_change)));
 END;
 
 public.consent_purpose_key_unique CREATE UNIQUE INDEX consent_purpose_key_unique ON public.consent_purpose USING btree (key)
+public.consent_purpose_keys_in(document jsonb) secdef=false cfg=search_path=pg_catalog, public acl=- 
+    SELECT coalesce(array_agg(DISTINCT public.normalized_consent_purpose_key(value #>> '{}'))
+                    FILTER (WHERE jsonb_typeof(value) = 'string'), ARRAY[]::text[])
+    FROM (
+        SELECT jsonb_path_query(document, '$.**.consent_purpose') AS value
+        UNION ALL
+        SELECT jsonb_path_query(document, '$.**.marketing_purpose') AS value
+    ) keys;
+
 public.consent_purpose_pkey CREATE UNIQUE INDEX consent_purpose_pkey ON public.consent_purpose USING btree (id)
 public.consent_qualifying_event acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.consent_qualifying_event.about_deal_id uuid gen=- def=-
@@ -4201,6 +4216,7 @@ public.contact.contact_quarantine_reason_check CHECK ((quarantine_reason = ANY (
 public.contact.contact_quarantine_reason_needs_a_verdict CHECK (((quarantine_reason IS NULL) OR (quarantined_at IS NOT NULL)))
 public.contact.contact_relationship_mark_check CHECK ((relationship_mark = ANY (ARRAY['vendor_marketing'::text])))
 public.contact.contact_relationship_mark_set_by_pairs CHECK (((relationship_mark IS NULL) = (relationship_mark_set_by IS NULL)))
+public.contact.contact_salutation_check CHECK ((salutation = ANY (ARRAY['mr'::text, 'ms'::text, 'none'::text])))
 public.contact.contact_source_author_id_fkey FOREIGN KEY (source_author_id) REFERENCES app_user(id) ON DELETE SET NULL
 public.contact.contact_source_author_needs_a_source CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL)))
 public.contact.contact_source_channel CREATE TRIGGER contact_source_channel BEFORE INSERT OR UPDATE ON public.contact FOR EACH ROW WHEN ((new.source <> ALL (ARRAY['api'::text, 'automation'::text, 'capture'::text, 'import'::text, 'manual'::text, 'webform'::text]))) EXECUTE FUNCTION move_party_source_onto_its_channel()
@@ -4234,6 +4250,7 @@ public.contact.quarantine_reason text gen=- def=-
 public.contact.quarantined_at timestamp with time zone gen=- def=-
 public.contact.relationship_mark text gen=- def=-
 public.contact.relationship_mark_set_by text gen=- def=-
+public.contact.salutation text gen=- def=-
 public.contact.search_tsv tsvector gen=s def=(((setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(full_name, ''::text))), 'A'::"char") || setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(full_name, ''::text))), 'A'::"char")) || setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(title, ''::text))), 'B'::"char")) || setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(title, ''::text))), 'B'::"char"))
 public.contact.source text NOT NULL gen=- def=-
 public.contact.source_author_id uuid gen=- def=-
@@ -7711,6 +7728,7 @@ public.lead.lead_project_id_fkey FOREIGN KEY (project_id) REFERENCES project(id)
 public.lead.lead_promoted_contact_id_fkey FOREIGN KEY (promoted_contact_id) REFERENCES contact(id) ON DELETE SET NULL (promoted_contact_id)
 public.lead.lead_promoted_names_its_contact CHECK (((status <> 'promoted'::text) OR ((promoted_contact_id IS NOT NULL) AND (archived_at IS NOT NULL))))
 public.lead.lead_qualified_deal_id_fkey FOREIGN KEY (qualified_deal_id) REFERENCES deal(id) ON DELETE SET NULL
+public.lead.lead_salutation_check CHECK ((salutation = ANY (ARRAY['mr'::text, 'ms'::text, 'none'::text])))
 public.lead.lead_score_computed_range CHECK (((score_computed IS NULL) OR ((score_computed >= 0) AND (score_computed <= 100))))
 public.lead.lead_score_override_reason_check CHECK (((score_override_reason IS NULL) OR (length(btrim(score_override_reason)) > 0)))
 public.lead.lead_score_range CHECK (((score >= 0) AND (score <= 100)))
@@ -7736,6 +7754,7 @@ public.lead.promoted_at timestamp with time zone gen=- def=-
 public.lead.promoted_contact_id uuid gen=- def=-
 public.lead.qualified_deal_id uuid gen=- def=-
 public.lead.routed_at timestamp with time zone gen=- def=-
+public.lead.salutation text gen=- def=-
 public.lead.score smallint NOT NULL gen=- def=0
 public.lead.score_computed smallint gen=- def=-
 public.lead.score_override_reason text gen=- def=-
@@ -8166,15 +8185,22 @@ public.list_visit.user_id uuid NOT NULL gen=- def=-
 public.list_visit.visited_at timestamp with time zone NOT NULL gen=- def=-
 public.list_visit_pkey CREATE UNIQUE INDEX list_visit_pkey ON public.list_visit USING btree (user_id, list_id)
 public.lock_consent_purpose_keys() secdef=false cfg=search_path=pg_catalog, public acl=- 
-DECLARE keys text[]; item record;
+DECLARE keys text[]; item record; document jsonb; column_name text; refusal boolean := false;
 BEGIN
-    IF TG_ARGV[0] = 'payload' THEN
-        keys := ARRAY[NEW.payload->>'consent_purpose', NEW.payload->>'marketing_purpose'];
+    IF TG_ARGV[0] = 'json' THEN
+        document := '[]'::jsonb;
+        FOREACH column_name IN ARRAY string_to_array(TG_ARGV[2], ',') LOOP
+            document := document || jsonb_build_array(to_jsonb(NEW)->column_name);
+        END LOOP;
+        keys := public.consent_purpose_keys_in(document);
     ELSE
-        keys := ARRAY[to_jsonb(NEW)->>TG_ARGV[0]];
+        keys := ARRAY[public.normalized_consent_purpose_key(to_jsonb(NEW)->>TG_ARGV[0])];
     END IF;
-    FOR item IN SELECT id, archived_at FROM public.consent_purpose WHERE key = ANY(keys) ORDER BY key FOR KEY SHARE LOOP
-        IF TG_ARGV[1] = 'live' AND item.archived_at IS NOT NULL THEN
+    IF TG_ARGV[1] = 'decision' THEN
+        refusal := NEW.verdict IN ('deny', 'review');
+    END IF;
+    FOR item IN SELECT id, archived_at FROM public.consent_purpose WHERE public.normalized_consent_purpose_key(key) = ANY(keys) ORDER BY key FOR KEY SHARE LOOP
+        IF item.archived_at IS NOT NULL AND NOT refusal THEN
             RAISE EXCEPTION 'consent purpose is archived'
                 USING ERRCODE = '23514', CONSTRAINT = 'consent_purpose_in_use';
         END IF;
@@ -8509,6 +8535,9 @@ BEGIN
  END IF;
  RETURN true;
 END
+
+public.normalized_consent_purpose_key(input text) secdef=false cfg=search_path=pg_catalog, public acl=- 
+    SELECT lower(btrim(input, U&'\0009\000A\000B\000C\000D\0020\0085\00A0\1680\2000\2001\2002\2003\2004\2005\2006\2007\2008\2009\200A\2028\2029\202F\205F\3000'));
 
 public.notice acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.notice.body text NOT NULL gen=- def=''::text
@@ -10428,7 +10457,7 @@ public.scheduled_send.agent_on_behalf_of uuid gen=- def=-
 public.scheduled_send.agent_passport_id uuid gen=- def=-
 public.scheduled_send.also_links jsonb gen=- def=-
 public.scheduled_send.anchor_activity_id uuid gen=- def=-
-public.scheduled_send.consent_purpose_keys CREATE TRIGGER consent_purpose_keys BEFORE INSERT OR UPDATE OF payload ON public.scheduled_send FOR EACH ROW EXECUTE FUNCTION lock_consent_purpose_keys('payload', 'live')
+public.scheduled_send.consent_purpose_keys CREATE TRIGGER consent_purpose_keys BEFORE INSERT OR UPDATE OF payload ON public.scheduled_send FOR EACH ROW EXECUTE FUNCTION lock_consent_purpose_keys('json', 'live', 'payload')
 public.scheduled_send.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.scheduled_send.delivery_id uuid gen=- def=-
 public.scheduled_send.held_reason text gen=- def=-
@@ -12355,6 +12384,7 @@ public.web_form.handling_cutover_at timestamp with time zone gen=- def=-
 public.web_form.id uuid NOT NULL gen=- def=uuidv7()
 public.web_form.lead_origin text gen=- def=-
 public.web_form.name text NOT NULL gen=- def=-
+public.web_form.notify_owner boolean NOT NULL gen=- def=false
 public.web_form.owner_id uuid gen=- def=-
 public.web_form.privacy_notice text gen=- def=-
 public.web_form.privacy_notice_url text gen=- def=-

@@ -2560,7 +2560,7 @@ type PublicEventOfferSuperseded struct {
 	ToRevision int `json:"to_revision"`
 }
 
-// PublicEventOfferUpdated Payload for offer.updated: a draft offer was edited, its header or its line items. Names what changed and carries no values, so a subscriber reads the offer for them.
+// PublicEventOfferUpdated Payload for offer.updated: an offer was edited or its stored source was normalized. Names the changed fields. Source normalization also carries the stored source and may occur after the offer left draft status.
 type PublicEventOfferUpdated struct {
 	// ChangedFields The offer fields the edit moved, by their column names. A line edit names line_items, beside any total it moved.
 	ChangedFields []string `json:"changed_fields"`
@@ -2568,7 +2568,7 @@ type PublicEventOfferUpdated struct {
 	// DealId The deal this offer belongs to.
 	DealId openapi_types.UUID `json:"deal_id"`
 
-	// OfferId The edited draft offer.
+	// OfferId The edited offer.
 	OfferId openapi_types.UUID `json:"offer_id"`
 
 	// Source The stored source channel when this edit changed it, including a trigger's normalization.

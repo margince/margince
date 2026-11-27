@@ -4,153 +4,175 @@
 package compose
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/aitasks"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
-func recoveryFixture(t *testing.T, kind string) (agentLoopFixture, string) {
+func recoveryFixture(t *testing.T, kind string) agentLoopFixture {
 	t.Helper()
 	f := agentLoopBaseFixture(t)
 	f.Band = agentLoopRecoveryBand
-	refusal := &agentLoopToolRefusal{Kind: kind, Field: "id"}
-	args := map[string]json.RawMessage{"id": json.RawMessage(`"not-a-record-id"`)}
-	switch kind {
-	case "unknown_field":
-		refusal.Field = "obsolete_field"
-		args = map[string]json.RawMessage{"id": json.RawMessage(`"` + agentLoopActivityID.String() + `"`), "obsolete_field": json.RawMessage(`true`)}
-	case "field_shape":
-		refusal.Want = "a UUID string"
-		refusal.Got = "an array"
-		args["id"] = json.RawMessage(`[]`)
-	case "unsupported":
-		refusal.Field = ""
-		args = nil
-	}
-	f.Tools = append([]agentLoopToolAnswer{{Tool: "read_record", Args: args, Refusal: refusal}}, f.Tools...)
-	bad := fixtureJSON(t, map[string]any{"tool": "read_record", "args": args})
 	if kind == "unsupported" {
-		bad = json.RawMessage(`{"tool":"read_record","args":{"record_type":"activity","id":"` + agentLoopActivityID.String() + `"}}`)
+		f.Tools = f.Tools[:1]
+	} else {
+		f.Tools = append(f.Tools, agentLoopToolAnswer{Tool: "read_record", Args: map[string]json.RawMessage{"id": json.RawMessage(`"` + agentLoopDealID.String() + `"`)}, Result: json.RawMessage(`{"record_type":"deal","id":"` + agentLoopDealID.String() + `","fields":{"name":"Heat recovery"}}`)})
 	}
-	return f, string(bad)
+	f.Tools = append([]agentLoopToolAnswer{{Tool: "read_record", Refusal: &agentLoopToolRefusal{Kind: kind}}}, f.Tools...)
+	return f
 }
 
 func recoveryRecordRead() string {
 	return `{"tool":"read_record","args":{"record_type":"activity","id":"` + agentLoopActivityID.String() + `"}}`
 }
-
-func recordedRecovery(t *testing.T, trace aitasks.Trace) agentLoopRecoveryMeasure {
-	t.Helper()
-	var run agentLoopRun
-	if err := json.Unmarshal([]byte(trace.Output), &run); err != nil {
-		t.Fatal(err)
-	}
-	if run.Recovery == nil {
-		t.Fatal("recovery metrics were not recorded")
-	}
-	return *run.Recovery
+func recoveryDealRead() string {
+	return `{"tool":"read_record","args":{"record_type":"deal","id":"` + agentLoopDealID.String() + `"}}`
 }
 
-func TestTheRecoveryBandRepairsTypedRefusalsWithinFiveModelSteps(t *testing.T) {
+func measuredRecovery(t *testing.T, outcome aitasks.Outcome) aitasks.LoopRecoveryMeasure {
+	t.Helper()
+	if outcome.Recovery == nil {
+		t.Fatal("the replay omitted its recovery measurement")
+	}
+	return *outcome.Recovery
+}
+
+func TestTheRecoveryBandRepairsRealRefusalsAlongTheWholeGoalPath(t *testing.T) {
 	t.Parallel()
 	for _, kind := range []string{"bad_arguments", "unknown_field", "field_shape"} {
 		t.Run(kind, func(t *testing.T) {
-			f, bad := recoveryFixture(t, kind)
-			outcome, trace := runAgentLoopScript(t, agentLoopAgent, f, agentLoopWriteTool, agentLoopReadBriefStep, bad, recoveryRecordRead(), annotation(agentLoopItemID, agentLoopActivityID), agentLoopFinalReply)
+			f := recoveryFixture(t, kind)
+			outcome, trace := runAgentLoopScript(t, agentLoopAgent, f, agentLoopWriteTool, agentLoopReadBriefStep, recoveryDealRead(), recoveryRecordRead(), annotation(agentLoopItemID, agentLoopActivityID), agentLoopFinalReply)
 			if outcome.Result != aitasks.OutcomeAccepted {
 				t.Fatal(outcome)
 			}
-			metrics := recordedRecovery(t, trace)
+			metrics := measuredRecovery(t, outcome)
 			if !metrics.FirstStepCorrect || !metrics.Completed || metrics.Refusals != 1 || !metrics.Recovered || metrics.TerminalRepeated {
 				t.Fatalf("metrics=%+v", metrics)
 			}
-			if len(trace.Requests) != agentLoopRecoverySteps {
-				t.Fatalf("used %d turns", len(trace.Requests))
+			if len(trace.Requests) != agentLoopRecoverySteps-1 {
+				t.Fatalf("the fixture-owned failed read was charged as a candidate call: %d requests", len(trace.Requests))
 			}
-			window, err := json.Marshal(trace.Requests[2])
-			if err != nil {
+			var run agentLoopRun
+			if err := json.Unmarshal([]byte(trace.Output), &run); err != nil {
 				t.Fatal(err)
 			}
-			needle := "the argument value was not accepted"
-			if kind == "unknown_field" {
-				needle = "use the declared arguments"
+			if !run.SeededRefusal || len(run.Steps) != 5 {
+				t.Fatalf("the trace omitted the seeded refusal or a required read: %+v", run)
 			}
-			if kind == "field_shape" {
-				needle = "must be a UUID string"
+			if run.Steps[0].Admission != "refused" {
+				t.Fatal("the candidate was never given a refusal to recover from")
 			}
-			if !strings.Contains(string(window), needle) {
-				t.Fatalf("the next model turn never received its refusal: %s", window)
+			var content strings.Builder
+			for _, message := range trace.Requests[0].Messages {
+				content.WriteString(message.Content)
 			}
-			if !strings.Contains(outcome.Detail, "first_step_correct") || !strings.Contains(outcome.Detail, "completed") {
-				t.Fatalf("the grade merged first-step accuracy with completion: %s", outcome.Detail)
+			if !strings.Contains(content.String(), "tool call refused:") || !strings.Contains(content.String(), "read_record") {
+				t.Fatal("the first candidate turn never received the real refusal")
+			}
+			var output map[string]json.RawMessage
+			if err := json.Unmarshal([]byte(trace.Output), &output); err != nil {
+				t.Fatal(err)
+			}
+			if _, leaked := output["recovery"]; leaked {
+				t.Fatal("the judge was given a code-computed recovery verdict")
 			}
 		})
 	}
 }
 
-func TestTheRecoveryBandKeepsAnUnsupportedToolTerminal(t *testing.T) {
+func TestTheRecoveryBandKeepsEveryRunnerTerminalRefusalTerminal(t *testing.T) {
 	t.Parallel()
-	f, bad := recoveryFixture(t, "unsupported")
-	outcome, trace := runAgentLoopScript(t, agentLoopAgent, f, agentLoopFinalStep, agentLoopReadBriefStep, bad, agentLoopFinalReply)
+	f := recoveryFixture(t, "unsupported")
+	outcome, trace := runAgentLoopScript(t, agentLoopAgent, f, agentLoopFinalStep, agentLoopFinalReply)
 	if outcome.Result != aitasks.OutcomeAccepted {
 		t.Fatal(outcome)
 	}
-	metrics := recordedRecovery(t, trace)
-	if !metrics.Completed || metrics.Refusals != 1 || metrics.Recovered || metrics.TerminalRepeated {
+	metrics := measuredRecovery(t, outcome)
+	if !metrics.FirstStepCorrect || !metrics.Completed || metrics.Refusals != 1 || metrics.Recovered || metrics.TerminalRepeated {
 		t.Fatalf("metrics=%+v", metrics)
 	}
-	window, err := json.Marshal(trace.Requests[2])
-	if err != nil {
-		t.Fatal(err)
+	var content strings.Builder
+	for _, message := range trace.Requests[0].Messages {
+		content.WriteString(message.Content)
 	}
-	if !strings.Contains(string(window), "do not call it again in this run") {
-		t.Fatalf("terminal directive missing: %s", window)
+	if !strings.Contains(content.String(), "do not call it again in this run") {
+		t.Fatal("the first candidate turn missed the terminal directive")
 	}
-	repeated, repeatedTrace := runAgentLoopScript(t, agentLoopAgent, f, agentLoopFinalStep, agentLoopReadBriefStep, bad, bad, agentLoopFinalReply)
-	if repeated.Result == aitasks.OutcomeAccepted || !recordedRecovery(t, repeatedTrace).TerminalRepeated {
-		t.Fatalf("a final answer hid repeated terminal refusals: %+v", repeated)
+	repeated, _ := runAgentLoopScript(t, agentLoopAgent, f, agentLoopFinalStep, recoveryRecordRead(), agentLoopFinalReply)
+	if repeated.Result == aitasks.OutcomeAccepted || !measuredRecovery(t, repeated).TerminalRepeated {
+		t.Fatal("a final answer hid a repeated unsupported call")
+	}
+	f = recoveryFixture(t, "bad_arguments")
+	outside := `{"tool":"send_email","args":{}}`
+	repeated, _ = runAgentLoopScript(t, agentLoopAgent, f, agentLoopWriteTool, outside, outside, agentLoopFinalReply)
+	if repeated.Result == aitasks.OutcomeAccepted || !measuredRecovery(t, repeated).TerminalRepeated || measuredRecovery(t, repeated).Refusals != 1 {
+		t.Fatalf("allowlist refusals were treated as repairable or as the seeded argument refusal: %+v", repeated)
 	}
 }
 
-func TestTheRecoveryBandSeparatesAnAvoidedErrorFromARecoveredOne(t *testing.T) {
+func TestAnUnrelatedMissingRecordIsNotARecoveredArgumentRefusal(t *testing.T) {
 	t.Parallel()
-	f, _ := recoveryFixture(t, "bad_arguments")
-	outcome, trace := runAgentLoopScript(t, agentLoopAgent, f, agentLoopWriteTool, agentLoopReadBriefStep, recoveryRecordRead(), annotation(agentLoopItemID, agentLoopActivityID), agentLoopFinalReply)
-	if outcome.Result != aitasks.OutcomeAccepted {
-		t.Fatal(outcome)
-	}
-	metrics := recordedRecovery(t, trace)
-	if !metrics.FirstStepCorrect || !metrics.Completed || metrics.Refusals != 0 || metrics.Recovered {
-		t.Fatalf("avoiding a bad call was reported as recovery: %+v", metrics)
+	f := recoveryFixture(t, "bad_arguments")
+	missing := `{"tool":"read_record","args":{"record_type":"activity","id":"0198f3a1-7c42-7e0b-9d51-2a6f4b8c1f99"}}`
+	outcome, _ := runAgentLoopScript(t, agentLoopAgent, f, agentLoopWriteTool, agentLoopReadBriefStep, missing, agentLoopFinalReply)
+	metrics := measuredRecovery(t, outcome)
+	if metrics.Refusals != 1 || metrics.Recovered || metrics.Completed {
+		t.Fatalf("an ordinary miss counted as argument recovery: %+v", metrics)
 	}
 }
 
 func TestAnUnrepairedRefusalCannotRunPastTheRecoveryBudget(t *testing.T) {
 	t.Parallel()
-	f, bad := recoveryFixture(t, "field_shape")
-	outcome, trace := runAgentLoopScript(t, agentLoopAgent, f, agentLoopWriteTool, agentLoopReadBriefStep, bad)
-	if outcome.Result == aitasks.OutcomeAccepted || len(trace.Requests) != agentLoopRecoverySteps {
-		t.Fatalf("unbounded or accepted run: %+v, turns=%d", outcome, len(trace.Requests))
-	}
-	if recordedRecovery(t, trace).Completed {
-		t.Fatal("budget exhaustion was recorded as completion")
+	f := recoveryFixture(t, "field_shape")
+	bad := `{"tool":"read_record","args":{"record_type":"activity","id":[]}}`
+	outcome, trace := runAgentLoopScript(t, agentLoopAgent, f, agentLoopWriteTool, bad)
+	if outcome.Result == aitasks.OutcomeAccepted || len(trace.Requests) != agentLoopRecoverySteps-1 || measuredRecovery(t, outcome).Completed {
+		t.Fatalf("unbounded or accepted run: %+v, requests=%d", outcome, len(trace.Requests))
 	}
 }
 
-func TestRecoveryCompletionNeedsTheGoalAndTheFirstReplyMustReallyBeValid(t *testing.T) {
+func TestRecoveryCompletionNeedsTheGoalAndTheFirstCandidateReplyMustBeValid(t *testing.T) {
 	t.Parallel()
-	f, _ := recoveryFixture(t, "bad_arguments")
-	outcome, trace := runAgentLoopScript(t, agentLoopAgent, f, agentLoopWriteTool, agentLoopReadBriefStep, agentLoopFinalReply)
-	if outcome.Result == aitasks.OutcomeAccepted || recordedRecovery(t, trace).Completed {
+	f := recoveryFixture(t, "bad_arguments")
+	outcome, _ := runAgentLoopScript(t, agentLoopAgent, f, agentLoopWriteTool, agentLoopReadBriefStep, agentLoopFinalReply)
+	if outcome.Result == aitasks.OutcomeAccepted || measuredRecovery(t, outcome).Completed {
 		t.Fatal("ending without the required write counted as completion")
 	}
-	outcome, trace = runAgentLoopScript(t, agentLoopAgent, f, agentLoopWriteTool, `{"tool":"read_brief","args":{},"extra":true}`, agentLoopReadBriefStep, recoveryRecordRead(), annotation(agentLoopItemID, agentLoopActivityID), agentLoopFinalReply)
-	if outcome.Result != aitasks.OutcomeAccepted {
-		t.Fatal(outcome)
+	outcome, _ = runAgentLoopScript(t, agentLoopAgent, f, agentLoopWriteTool, `{"tool":"read_brief","args":{},"extra":true}`, agentLoopReadBriefStep, agentLoopFinalReply)
+	if measuredRecovery(t, outcome).FirstStepCorrect {
+		t.Fatal("a malformed candidate reply became first-step success after a later valid call")
 	}
-	if recordedRecovery(t, trace).FirstStepCorrect {
-		t.Fatal("a malformed first reply became first-step success after a later valid call")
+}
+
+type failingRecoveryCompleter struct{ script agentLoopScript }
+
+func (c *failingRecoveryCompleter) Complete(ctx context.Context, request model.Request) (model.Response, error) {
+	if len(c.script.requests) > 0 {
+		return model.Response{}, errors.New("the model call failed")
+	}
+	return c.script.Complete(ctx, request)
+}
+
+func TestARealRecoveryCaseKeepsItsFirstCandidateStepAfterAModelFailure(t *testing.T) {
+	t.Parallel()
+	f := recoveryFixture(t, "bad_arguments")
+	prepared, err := agentLoopCases{agent: agentLoopAgent}.Prepare(fixtureJSON(t, f), agentLoopExpectationJSON(t, agentLoopWriteTool))
+	if err != nil {
+		t.Fatal(err)
+	}
+	brain := &failingRecoveryCompleter{script: agentLoopScript{replies: []string{agentLoopReadBriefStep}}}
+	trace, err := prepared.Run(t.Context(), brain)
+	if err == nil || trace.Output == "" {
+		t.Fatalf("partial trace was lost: error=%v output=%q", err, trace.Output)
+	}
+	metrics := prepared.(*agentLoopCase).RecoveryMeasure(trace)
+	if metrics == nil || !metrics.FirstStepCorrect || metrics.Completed || metrics.Refusals != 1 {
+		t.Fatalf("real failed-run measurement=%+v", metrics)
 	}
 }

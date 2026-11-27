@@ -535,7 +535,7 @@ func TestTheReportKeepsRecoveryFirstStepAndCompletionRatesSeparate(t *testing.T)
 	t.Parallel()
 	records := []aicert.Record{{Task: "agent_loop", ServedModel: "model", RanAt: "2026-09-24T04:00:00Z", Recovery: &aicert.RecoveryTally{Runs: 3, FirstStepCorrect: 1, Completed: 2, RunsWithRefusal: 2, RecoveredRuns: 1, TerminalRepeatedRuns: 1}}}
 	report := renderReadiness(aicert.Census{}, nil, nil, records, nil)
-	for _, want := range []string{"RECOVERY RECORD agent_loop/model", "first step " + aicert.ReliabilityCell(1, 3), "completed " + aicert.ReliabilityCell(2, 3), "refusal observed 2/3; repaired 1; repeated terminal 1"} {
+	for _, want := range []string{"RECOVERY RECORD agent_loop/model", "first recovery step " + aicert.ReliabilityCell(1, 3), "mechanical completion " + aicert.ReliabilityCell(2, 3), "refusal observed 2/3; repaired 1; repeated terminal 1"} {
 		if !strings.Contains(report, want) {
 			t.Fatalf("missing %q in report: %s", want, report)
 		}
