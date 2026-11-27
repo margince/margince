@@ -1602,7 +1602,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.basis.implementation": "Chỉ triển khai",
   "reporting.productReports": "Doanh số sản phẩm",
   "reporting.productReportsPurpose":
-    "Mở Đánh giá doanh số cho một sản phẩm. Không cần thiết lập và không ghi gì cả.",
+    "Mở Tổng kết bán hàng cho một sản phẩm. Không cần thiết lập và không ghi gì cả.",
   "reporting.noProducts":
     "Chưa có sản phẩm đang hoạt động. Thêm sản phẩm trong Cài đặt để báo cáo về chúng.",
   "reporting.actualsThrough": "Số liệu thực tế đến {at} · {zone}",
@@ -5074,7 +5074,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.commitment.unnamedColleague": "Tên đồng nghiệp không khả dụng",
   "approval.commitment.unverifiedNamed": "Chưa xác minh: {name}",
   "approval.commitment.unresolved": "Chưa xác định người cam kết",
-  "approval.commitment.assignNamed": "Tạo công việc giao cho {name}.",
+  "approval.commitment.assignNamed": "Tạo việc giao cho {name}.",
   "approval.field.owner": "Người chịu trách nhiệm",
   "approval.field.sourceText": "Văn bản gốc",
   "approval.field.to": "Đến",
@@ -8999,7 +8999,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "tasks.origin.privacy_request":
     "Được tạo khi liên hệ yêu cầu chỉnh sửa, xóa hoặc ngừng sử dụng dữ liệu của họ. Pháp luật nước họ quy định thời hạn của việc này.",
   "tasks.origin.analytics_decision":
-    "Ghi từ một lần xem xét bán hàng: một quyết định có thành viên chịu trách nhiệm và ngày xem lại. Ghi kết quả trong Quyết định từ lần xem xét trước.",
+    "Ghi từ Tổng kết bán hàng: một quyết định có thành viên chịu trách nhiệm và ngày xem lại. Ghi kết quả trong Quyết định từ lần xem xét trước.",
   "tasks.origin.overnight_reconcile":
     "Việc này được tạo từ một bước tiếp theo do lượt rà soát ban đêm đề xuất.",
   "tasks.origin.commitment":
@@ -9026,7 +9026,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.sectionPipeline": "Pipeline",
   "analytics.sectionOverview": "Tổng quan",
   "analytics.overview.views": "Chế độ xem tổng quan",
-  "analytics.overview.sales": "Báo cáo bán hàng",
+  "analytics.overview.sales": "Tổng kết bán hàng",
   "analytics.overview.prospecting": "Tìm khách của tôi",
   "analytics.overview.readings": "Chỉ số chính",
   "analytics.overview.charts": "Biểu đồ",
@@ -23276,11 +23276,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.commitment.tentative": "Chưa chắc chắn: họ nói sẽ cố gắng",
   "approval.commitment.promiseStatus": "Trạng thái cam kết",
   "approval.commitment.notFulfilled":
-    "Tạo công việc không có nghĩa là cam kết đã được thực hiện.",
+    "Tạo việc không có nghĩa là cam kết đã được thực hiện.",
   "approval.commitment.inactiveAssignment":
-    "Không thể tạo công việc cho {name}: tài khoản này không thể nhận công việc. Bỏ đề xuất này và tạo công việc cho một đồng nghiệp đang hoạt động.",
-  "approval.commitment.createTask_other": "Tạo {count} công việc",
-  "approval.commitment.createTask_one": "Tạo công việc",
+    "Không thể tạo việc cho {name}: tài khoản này không thể nhận việc. Bỏ đề xuất này và tạo việc cho một đồng nghiệp đang hoạt động.",
+  "approval.commitment.createTask_other": "Tạo {count} việc",
+  "approval.commitment.createTask_one": "Tạo việc",
   "magic.action.approval_commitment_task_named": "{party}: {summary}",
   "magic.action.approval_commitment_task_summary": "{summary}",
   "magic.action.approval_commitment_task_unverified":

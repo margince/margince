@@ -48,6 +48,9 @@ func replaceContactEmails(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, 
 	if err != nil {
 		return err
 	}
+	if err := refuseLongerList(contactEmailsField, "addresses", maxContactEmails, len(emails), len(held)); err != nil {
+		return err
+	}
 	if err := parseContactHandles(emails, nil, held); err != nil {
 		return err
 	}
@@ -201,11 +204,15 @@ func refuseRepeatedAddress(emails []ContactEmailInput) error {
 
 //nolint:unparam // the same shape as its siblings; see writeContactSocial.
 func insertContactEmails(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, contactID ids.ContactID, source, by string, emails []ContactEmailInput, erasure storekit.ErasureAdmission, converting []ids.LeadID) error {
-	// Every address a contact gains is written here, so every create and
-	// update door meets the erasure list without asking for it.
+	// Identity locks and refusal probes must use the normalized spelling written below.
 	addresses := make([]string, 0, len(emails))
-	for _, e := range emails {
-		addresses = append(addresses, e.Email)
+	for i, e := range emails {
+		parsed, err := values.ParseEmail(e.Email)
+		if err != nil {
+			return err
+		}
+		emails[i].Email = parsed.String()
+		addresses = append(addresses, parsed.String())
 	}
 	// The public booking page's admission skips the refusal; storekit's
 	// AdmitSelfBooking says why. It still takes the lock an erasure orders by.

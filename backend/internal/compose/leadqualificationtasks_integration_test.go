@@ -176,7 +176,7 @@ func TestLegacyQualificationTextDistinguishesAnUnnamedLeadFromAName(t *testing.T
 			writer := newLeadWorkTasks(l.e.DB(), slog.Default())
 			named := name == "named"
 			input := contacts.CreateLeadInput{Source: "manual", LinkedInURL: new("https://www.linkedin.com/in/unnamed-lead")}
-			expected := "Xem xét điều kiện của Một khách hàng tiềm năng"
+			expected := "Xem xét điều kiện của Một lead"
 			if named {
 				input.LinkedInURL = nil
 				input.FullName = new("A lead")

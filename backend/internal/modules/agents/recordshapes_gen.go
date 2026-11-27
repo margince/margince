@@ -466,6 +466,7 @@ var contractFieldEnums = map[string]contractFieldEnum{
 	"ContactConsentState.state":                                         {Values: []string{"unknown", "granted", "withdrawn"}, ResponseOnly: []string{}, Description: ""},
 	"ContactEmail.email_type":                                           {Values: []string{"work", "personal", "other"}, ResponseOnly: []string{}, Description: ""},
 	"ContactEmailInput.email_type":                                      {Values: []string{"work", "personal", "other"}, ResponseOnly: []string{}, Description: ""},
+	"ContactEmailReplacementInput.email_type":                           {Values: []string{"work", "personal", "other"}, ResponseOnly: []string{}, Description: ""},
 	"ContactGraph.groups_omitted":                                       {Values: []string{"direct", "account"}, ResponseOnly: []string{}, Description: "Groups withheld for lack of a grant — so a client can say \"you can't see this\" instead of \"there is none\"."},
 	"ContactGraphEdge.last_precision":                                   {Values: []string{"instant", "day"}, ResponseOnly: []string{}, Description: "How to read `last_at`, from the activity it names. Absent when that is null."},
 	"ContactGraphEdge.strength_bucket":                                  {Values: []string{"none", "weak", "moderate", "strong"}, ResponseOnly: []string{}, Description: ""},

@@ -163,6 +163,12 @@ func (s *Store) readyContactCreate(ctx context.Context, in *CreateContactInput) 
 			return "", err
 		}
 	}
+	if err := refuseLongerList(contactEmailsField, "addresses", maxContactEmails, len(in.Emails), 0); err != nil {
+		return "", err
+	}
+	if err := refuseLongerList(contactPhonesField, "numbers", maxContactPhones, len(in.Phones), 0); err != nil {
+		return "", err
+	}
 	if err := parseContactContacts(in.Emails, in.Phones); err != nil {
 		return "", err
 	}

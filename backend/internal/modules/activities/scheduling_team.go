@@ -269,7 +269,7 @@ func (s *Store) tellTeamChanges(ctx context.Context, tx pgx.Tx, host ids.UserID,
 			}
 		}
 	}
-	retitled := before != nil && before.Title != after.Title
+	retitled := before != nil && before.shownTitle() != after.Title
 	hostName := ""
 	for _, m := range named {
 		kept := slices.ContainsFunc(was, sameMember(m))

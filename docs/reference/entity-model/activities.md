@@ -880,7 +880,7 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## activity_review_template
 
-15 columns · primary key `(id)` · referenced by 0 foreign keys
+13 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -894,9 +894,7 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 | `shipped_label` | `text` |  |  |
 | `shipped_label_key` | `text` |  |  |
 | `system` | `boolean`, default `false` | yes | Shipped with the product. |
-| `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
-| `source` | `text` | yes | Which internal channel the record arrived by. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 | `version` | `integer`, default `1` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
 
@@ -915,8 +913,8 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 
 **Triggers**
 
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"key": 20000, "label": 120, "source": 20000, "outcome": 20000, "captured_by": 20000, "shipped_label": 120, "shipped_label_key": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"key":20000,"label":120,"outcome":20000,"shipped_label":120,"shipped_label_key":20000,"source":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"key": 20000, "label": 120, "source": 20000, "outcome": 20000, "captured_by": 20000, "shipped_label": 120, "shipped_label_key": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"key":20000,"label":120,"outcome":20000,"shipped_label":120,"shipped_label_key":20000,"source":20000}')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"key": 20000, "label": 120, "outcome": 20000, "shipped_label": 120, "shipped_label_key": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"key":20000,"label":120,"outcome":20000,"shipped_label":120,"shipped_label_key":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"key": 20000, "label": 120, "outcome": 20000, "shipped_label": 120, "shipped_label_key": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"key":20000,"label":120,"outcome":20000,"shipped_label":120,"shipped_label_key":20000}')`
 - `trg_activity_review_template_question_keys`: `BEFORE INSERT OR UPDATE OF questions FOR EACH ROW EXECUTE FUNCTION key_shipped_review_questions()`
 - `trg_activity_review_template_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 

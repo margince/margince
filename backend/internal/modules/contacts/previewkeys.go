@@ -6,12 +6,13 @@ package contacts
 import "github.com/margince/margince/backend/internal/platform/recordmerge"
 
 const (
-	columnContactID    = "contact_id"
-	columnCompanyID    = "company_id"
-	contactEmailsField = "emails"
-	contactPhonesField = "phones"
-	fieldSource        = "source"
-	addressKindDomain  = "domain"
+	columnContactID     = "contact_id"
+	columnCompanyID     = "company_id"
+	contactEmailsField  = "emails"
+	contactPhonesField  = "phones"
+	companyDomainsField = "domains"
+	fieldSource         = "source"
+	addressKindDomain   = "domain"
 )
 
 const (

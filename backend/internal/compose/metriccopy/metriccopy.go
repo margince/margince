@@ -60,7 +60,7 @@ var Definitions = map[crmcontracts.ReportingMetricID]langcopy.Phrase{
 	"closed_win_rate": {
 		En: "Of the deals won or lost with a close date in the period you picked, the share that was won, credited to the deal's current owner. Example: 6 deals won and 4 lost in March give a win rate of 60%.",
 		De: "Von allen Deals, die im gewählten Zeitraum gewonnen oder verloren wurden, der Anteil der gewonnenen, gutgeschrieben der Person, die den Deal jetzt verantwortet. Beispiel: 6 gewonnene und 4 verlorene Deals im März ergeben eine Gewinnquote von 60 %.",
-		Vi: "Trong các deal đã thắng hoặc thất bại có ngày đóng trong khoảng thời gian bạn chọn, phần deal đã thắng, tính cho người đang phụ trách deal. Ví dụ: tháng 3 có 6 deal thắng và 4 deal thất bại thì tỷ lệ thắng là 60%.",
+		Vi: "Trong các deal đã chốt hoặc thất bại có ngày chốt trong khoảng thời gian bạn chọn, phần deal đã chốt, tính cho người đang phụ trách deal. Ví dụ: tháng 3 có 6 deal đã chốt và 4 deal thất bại thì tỷ lệ thắng là 60%.",
 	},
 	"open_pipeline": {
 		En: "The total value of all deals open right now, credited to the deal's current owner; the period you pick does not change it, only the expected close filter does. Example: three open deals of €5,000 each give €15,000, whichever period is chosen.",

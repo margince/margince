@@ -253,7 +253,7 @@ func TestAMutedClassIsListedInTheCentreAndReachesNoLane(t *testing.T) {
 	}
 	// A class the seat did NOT switch off, so every difference below is the
 	// preference and not the lane failing to carry anything at all.
-	heard := e.seedNotice(t, e.recipient, "A lead's first response is overdue")
+	heard := e.seedNotice(t, e.recipient, "A lead’s first response is overdue")
 
 	// The row, its ledger entry and its announcement all stand: a muted notice
 	// is an ordinary write, and anything less would leave the centre showing a
@@ -319,7 +319,7 @@ func TestSettlingTheCentreClearsMutedLinesAndCountsOnlyTheBadge(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("raising the muted notice: %v", err)
 	}
-	e.seedNotice(t, e.recipient, "A lead's first response is overdue")
+	e.seedNotice(t, e.recipient, "A lead’s first response is overdue")
 
 	shown, err := e.store.MarkAllRead(e.asUser(e.recipient))
 	if err != nil {
