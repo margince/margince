@@ -275,7 +275,7 @@ func (e *Env) projectClock(t *testing.T, id ids.UUID) *time.Time {
 	t.Helper()
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 	var at *time.Time
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `SELECT last_activity_at FROM project WHERE id = $1`, id).Scan(&at)
 	}); err != nil {
 		t.Fatalf("reading the project clock: %v", err)

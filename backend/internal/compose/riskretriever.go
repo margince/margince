@@ -94,7 +94,7 @@ func (r riskAwareRetriever) AssembleContext(ctx context.Context, anchor datasour
 
 func (r riskAwareRetriever) riskSection(ctx context.Context, dealID ids.UUID) (retrieval.Section, error) {
 	section := retrieval.Section{Name: "network_risks"}
-	err := database.WithWorkspaceTx(ctx, r.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, r.pool, func(tx pgx.Tx) error {
 		// The same deal gate the coverage endpoint and the coverage tool take.
 		// The inner walk already proved the caller can read this deal, but the
 		// gate is re-taken rather than assumed: a context assembly that trusted

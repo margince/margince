@@ -40,7 +40,7 @@ func purgeFloorTx(ctx context.Context, tx pgx.Tx) (capture.StatutoryFloor, priva
 // selects pages across several. Each destroying transaction re-resolves it.
 func purgeFloor(ctx context.Context, pool *pgxpool.Pool) (capture.StatutoryFloor, error) {
 	var floor capture.StatutoryFloor
-	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		var err error
 		floor, _, err = purgeFloorTx(ctx, tx)
 		return err

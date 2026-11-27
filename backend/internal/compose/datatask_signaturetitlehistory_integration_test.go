@@ -35,7 +35,7 @@ func (h *historyEnv) hasWatermark(t *testing.T, contact ids.UUID) bool {
 
 func runSignatureHistoryBatch(ctx context.Context, h *historyEnv, in datatask.BatchIn) (datatask.BatchOut, error) {
 	var out datatask.BatchOut
-	err := database.WithWorkspaceTx(ctx, h.e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, h.e.Pool, func(tx pgx.Tx) error {
 		var err error
 		out, err = signatureTitleHistoryDataTask(h.e.Pool).Steps[0].Batch(ctx, tx, in)
 		return err
@@ -65,7 +65,7 @@ func inspectedByTheRepair(ctx context.Context, t *testing.T, h *historyEnv) (ins
 	t.Helper()
 	rollback := errors.New("rolled back")
 	step := signatureTitleHistoryDataTask(h.e.Pool).Steps[0]
-	err := database.WithWorkspaceTx(ctx, h.e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, h.e.Pool, func(tx pgx.Tx) error {
 		var err error
 		if estimated, _, err = step.Estimate(ctx, tx, 1000); err != nil {
 			return err

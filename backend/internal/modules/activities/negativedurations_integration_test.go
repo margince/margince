@@ -58,7 +58,7 @@ func clearDurations(t *testing.T, e *sendEnv) int {
 	in, changed := datatask.BatchIn{Limit: 1}, 0
 	for {
 		var out datatask.BatchOut
-		if err := database.WithWorkspaceTx(system, e.pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(system, e.pool, func(tx pgx.Tx) error {
 			var err error
 			out, err = ClearNegativeDurationsTx(system, tx, in)
 			return err

@@ -231,7 +231,7 @@ func lookupRestricted(ctx context.Context, pool *pgxpool.Pool, store *contacts.S
 	// the pull and the file-message path, and discloses nothing.
 	ctx = principal.WithActor(ctx, chatLinksPrincipal)
 	var blocked map[string]bool
-	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		var err error
 		blocked, err = store.RestrictedEmailsTx(ctx, tx, emails)
 		return err
@@ -317,7 +317,7 @@ func fileNote(ctx context.Context, f filing, said talk, reply chatsummary.Reply)
 		Origin:       activities.OriginAgent,
 	}
 	var note crmcontracts.Activity
-	err := database.WithWorkspaceTx(ctx, f.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, f.pool, func(tx pgx.Tx) error {
 		if err := f.store.HoldLiveLinkTx(ctx, tx, link); err != nil {
 			return err
 		}

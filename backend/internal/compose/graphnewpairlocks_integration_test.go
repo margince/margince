@@ -49,7 +49,7 @@ func TestASecondGraphFoldNeverClaimsAnUnwrittenPair(t *testing.T) {
 			var namedMissing atomic.Bool
 			go func() {
 				defer close(done)
-				result <- database.WithWorkspaceTx(ctx, b.env.Pool, func(tx pgx.Tx) error {
+				result <- database.WithTx(ctx, b.env.Pool, func(tx pgx.Tx) error {
 					boundary := &graphFoldBarrierTx{Tx: tx, entered: entered, release: release, fold: "INSERT INTO " + test.table + " AS e"}
 					boundary.observe = func(args []any) {
 						index := 0
@@ -100,7 +100,7 @@ func TestASecondGraphFoldNeverClaimsAnUnwrittenPair(t *testing.T) {
 				t.Fatal(err)
 			}
 			folded := graphProjectionSnapshot(system, t, b.env.Pool)
-			if err := database.WithWorkspaceTx(system, b.env.Pool, func(tx pgx.Tx) error { return search.RebuildEdges(system, tx) }); err != nil {
+			if err := database.WithTx(system, b.env.Pool, func(tx pgx.Tx) error { return search.RebuildEdges(system, tx) }); err != nil {
 				t.Fatal(err)
 			}
 			if rebuilt := graphProjectionSnapshot(system, t, b.env.Pool); !maps.Equal(folded, rebuilt) {

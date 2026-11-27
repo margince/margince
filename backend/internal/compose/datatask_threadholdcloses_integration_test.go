@@ -25,7 +25,7 @@ import (
 func seedOpenedUnderVerdict(t *testing.T, e *integration.Env, threadKey, ledgerStatus, rowStatus string, n int) []ids.UUID {
 	t.Helper()
 	var messages []ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(context.Background(), `
 			WITH made AS (
 			  INSERT INTO activity (id, kind, subject, body, direction, source_system, source_id,
@@ -48,7 +48,7 @@ func seedOpenedUnderVerdict(t *testing.T, e *integration.Env, threadKey, ledgerS
 		t.Fatalf("seeding opened messages: %v", err)
 	}
 	question := seedThreadQuestion(t, e, threadKey, messages[0])
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(), `
 			UPDATE capture_thread_verdict
 			   SET status = $2, resolved_at = now(), next_attempt_at = NULL
@@ -67,7 +67,7 @@ func seedOpenedUnderVerdict(t *testing.T, e *integration.Env, threadKey, ledgerS
 func estimateThreadHolds(ctx context.Context, t *testing.T, e *integration.Env, task datatask.Task) int64 {
 	t.Helper()
 	var estimated int64
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		estimated, _, err = task.Steps[0].Estimate(ctx, tx, 10_000)
 		return err
@@ -86,7 +86,7 @@ func TestTheThreadHoldTaskClosesOpenedMessagesOnceAndOnlyUnderAClosingVerdict(t 
 	stillOpen := seedOpenedUnderVerdict(t, e, "task-cleared", capture.VerdictCleared, capture.VerdictCleared, 1)
 	// A colleague's own clearance of a held thread's message is theirs.
 	addImportRowFor(t, e, held[0], e.Rep2)
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			UPDATE capture_import SET verdict_status = 'cleared' WHERE activity_id = $1 AND user_id = $2`,
 			held[0], e.Rep2)

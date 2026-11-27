@@ -261,7 +261,7 @@ func emailAbout(msgID, refs, subject string) []byte {
 func countRows(t *testing.T, e *integration.SearchEnv, query string) int {
 	t.Helper()
 	var n int
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), query).Scan(&n)
 	})
 	if err != nil {
@@ -281,7 +281,7 @@ func countRows(t *testing.T, e *integration.SearchEnv, query string) int {
 // grant rather than riding the create the capture already made.
 func seedCaptureRole(t *testing.T, e *integration.SearchEnv) {
 	t.Helper()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var roleID string
 		if err := tx.QueryRow(context.Background(), `
 			INSERT INTO role (key, name, permissions)
@@ -428,7 +428,7 @@ func newCaptureEnvConfigured(t *testing.T, now time.Time, cfg compose.CaptureCon
 	// this domain is ours. It is what lets the mailbox seed below count as
 	// verified — a connected mailbox alone proves whose mailbox it is, never
 	// whose domain it is (ADR-0082/A127 §2).
-	if err := database.WithWorkspaceTx(wsCtx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(wsCtx, e.Pool, func(tx pgx.Tx) error {
 		companyID := ids.NewV7()
 		if _, err := tx.Exec(wsCtx, `
 			INSERT INTO company (id, display_name, is_anchor, source, captured_by)
@@ -449,7 +449,7 @@ func newCaptureEnvConfigured(t *testing.T, now time.Time, cfg compose.CaptureCon
 	// later be wrong.
 	sync(t)
 	var seeded, verified bool
-	if err := database.WithWorkspaceTx(wsCtx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(wsCtx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(wsCtx, `
 			SELECT true, verified FROM workspace_email_domain WHERE domain = 'myco.example'`).
 			Scan(&seeded, &verified)

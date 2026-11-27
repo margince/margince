@@ -142,7 +142,7 @@ func TestStoredWorkSeesARevocationAfterTheSnapshotBegan(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = database.WithWorkspaceSnapshot(ctx, e.svc.db.Pool(), func(ctx context.Context) error {
+	err = database.WithSnapshot(ctx, e.svc.db.Pool(), func(ctx context.Context) error {
 		if _, err := e.svc.AgentForStoredWork(ctx, e.member.UserID.UUID, issued.ID, ids.UUID{}); err != nil {
 			return fmt.Errorf("the live passport before the revocation: %w", err)
 		}

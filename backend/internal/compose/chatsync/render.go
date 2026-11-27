@@ -71,7 +71,7 @@ func readRecord(ctx context.Context, pool *pgxpool.Pool, link chatlinks.Link) (c
 			FROM deal d LEFT JOIN stage s ON s.id = d.stage_id LEFT JOIN app_user u ON u.id = d.owner_id
 			WHERE d.id = $1`
 	}
-	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, query, args...).Scan(&record.name, &record.stage, &record.status, &record.due,
 			&record.ownerName, &record.ownerEmail)
 	})

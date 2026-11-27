@@ -56,7 +56,7 @@ func newWebFormLander(db *database.DB, pool *pgxpool.Pool, log *slog.Logger) web
 	catalog := customfields.NewService(pool, nil)
 	leads := newContactsStore(db).WithFieldCatalog(catalog).WithLeadArrivals(newLeadWorkTasks(db, log))
 	return webformlead.New(leads, activities.NewStore(db), catalog, automation.NewAutomationStore(db), webFormFieldValue).WithTransaction(func(ctx context.Context, run func(context.Context) error) error {
-		return database.WithWorkspaceWriteTx(ctx, db.Pool(), run)
+		return database.WithWriteTx(ctx, db.Pool(), run)
 	}).WithArrival(func(ctx context.Context, form, source ids.UUID, target activities.ActivityLinkInput) error {
 		return tellWebsiteLeadOwner(ctx, db, form, source, notices.Target{Type: target.EntityType, ID: target.EntityID})
 	})

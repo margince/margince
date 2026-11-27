@@ -143,7 +143,7 @@ func (r *StageEvidenceReader) gather(
 ) (stageEvidenceReadFacts, []stageEvidenceCriterion, error) {
 	var facts stageEvidenceReadFacts
 	var criteria []stageEvidenceCriterion
-	err := database.WithWorkspaceTx(ctx, r.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, r.pool, func(tx pgx.Tx) error {
 		authorship, err := deals.ReadActivityAuthorship(ctx, tx, activityID, r.own)
 		if err != nil {
 			return err

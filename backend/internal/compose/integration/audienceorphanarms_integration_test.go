@@ -82,7 +82,7 @@ func TestAnAudienceLimitedToOneOwnerExcludesEveryOtherReader(t *testing.T) {
 	id := ids.UUID(row.Id)
 	check := func(want bool) {
 		t.Helper()
-		if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			limited, err := auth.ActivityAudienceLimitedToTx(e.Admin(), tx, id, e.Rep1)
 			if err == nil && limited != want {
 				t.Errorf("limited to owner = %v, want %v", limited, want)
@@ -295,7 +295,7 @@ func TestTheOrphanRefusalAgreesWithTheAudienceGateArmForArm(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			var admits ids.UUID
 			var id ids.UUID
-			if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+			if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 				id = seedBareActivity(t, tx, tc.audience)
 				admits = tc.arrange(t, e, tx, id)
 				return nil
@@ -305,7 +305,7 @@ func TestTheOrphanRefusalAgreesWithTheAudienceGateArmForArm(t *testing.T) {
 
 			// What the REFUSAL believes.
 			var hasReader bool
-			if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+			if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 				var err error
 				hasReader, err = auth.ActivityHasAReaderTx(context.Background(), tx, id)
 				return err

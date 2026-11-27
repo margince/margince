@@ -455,7 +455,7 @@ func TestThePreflightRecordsNothing(t *testing.T) {
 	f := seedHeldDraft(t, e, svc)
 
 	var staged json.RawMessage
-	if err := database.WithWorkspaceTx(decider(e), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(decider(e), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(decider(e),
 			`SELECT proposed_change FROM approval WHERE id = $1`, f.approval).Scan(&staged)
 	}); err != nil {

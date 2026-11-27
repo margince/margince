@@ -104,7 +104,7 @@ func extensionMemberConsented(ctx context.Context, pool *pgxpool.Pool, unit stri
 		return false, nil
 	}
 	var consented bool
-	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		var err error
 		consented, err = memberConsentedTx(ctx, tx, unit, member)
 		return err

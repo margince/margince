@@ -60,7 +60,7 @@ func TestEveryScopedEndpointColumnIsInTheVisibilityConjunction(t *testing.T) {
 	type fk struct{ column, target string }
 	var keys []fk
 	ctx := e.Admin()
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
 			SELECT att.attname, cl.relname
 			  FROM pg_constraint con

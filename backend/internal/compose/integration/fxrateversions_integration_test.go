@@ -64,8 +64,8 @@ func TestASnapshotPinsTheRateRevisionItSawAcrossACommittedCorrection(t *testing.
 	set("0.0060")
 
 	var pinned time.Time
-	err := database.WithWorkspaceSnapshot(ctx, e.Pool, func(inner context.Context) error {
-		return database.WithWorkspaceTx(inner, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithSnapshot(ctx, e.Pool, func(inner context.Context) error {
+		return database.WithTx(inner, e.Pool, func(tx pgx.Tx) error {
 			var err error
 			if pinned, err = deals.RateSheetRevision(inner, tx); err != nil {
 				return err
@@ -80,7 +80,7 @@ func TestASnapshotPinsTheRateRevisionItSawAcrossACommittedCorrection(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		if got := rateAt(tx, pinned); got != "0.0060000000" {
 			t.Errorf("a later detail at the pinned revision read %s, want 0.0060000000", got)
 		}
@@ -107,7 +107,7 @@ func TestARemovedCurrencyKeepsTheRateAPinnedFigureUsed(t *testing.T) {
 		t.Fatal(err)
 	}
 	var pinned time.Time
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) (err error) {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) (err error) {
 		pinned, err = deals.RateSheetRevision(ctx, tx)
 		return err
 	}); err != nil {
@@ -118,7 +118,7 @@ func TestARemovedCurrencyKeepsTheRateAPinnedFigureUsed(t *testing.T) {
 	}
 	var atPinned string
 	var live int
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(ctx, `SELECT count(*) FROM fx_rate WHERE from_currency = 'JPY' AND `+
 			deals.RateVersionSQL("", "")).Scan(&live); err != nil {
 			return err
@@ -146,7 +146,7 @@ func TestARemovalMovesTheSheetRevisionPastTheRemovedRate(t *testing.T) {
 	}
 	revision := func() time.Time {
 		var at time.Time
-		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) (err error) {
+		if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) (err error) {
 			at, err = deals.RateSheetRevision(ctx, tx)
 			return err
 		}); err != nil {
@@ -164,7 +164,7 @@ func TestARemovalMovesTheSheetRevisionPastTheRemovedRate(t *testing.T) {
 	}
 	seen := func(at time.Time) int {
 		var n int
-		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			return tx.QueryRow(ctx, `SELECT count(*) FROM fx_rate WHERE from_currency = 'JPY' AND `+
 				deals.RateVersionSQL("", "$1"), at).Scan(&n)
 		}); err != nil {

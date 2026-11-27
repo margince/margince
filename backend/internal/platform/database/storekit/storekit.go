@@ -374,9 +374,8 @@ func UUIDOrNil(id ids.UUID) *ids.UUID {
 // workspace, not for a tenant column: ADR-0091 §8 phase D has taken the last of
 // those off the schema, the ledgers included.
 //
-// It survives that phase rather than following it, because what its callers
-// need is an identifier for the installation, which the collapse of
-// WithWorkspaceTx into a plain Tx (§5) is what actually retires.
+// It survives that phase, because what its callers need is an identifier for the
+// installation.
 func MustWorkspace(ctx context.Context) ids.UUID {
 	wsID, _ := principal.WorkspaceID(ctx)
 	return wsID

@@ -25,7 +25,7 @@ func quietCandidates(t *testing.T, e *integration.Env, read search.QuietRead) []
 	t.Helper()
 	reader := e.As(e.Rep1, nil, integration.AdminPerms)
 	var got []ids.UUID
-	if err := database.WithWorkspaceTx(reader, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(reader, e.Pool, func(tx pgx.Tx) error {
 		quiet, err := search.QuietContacts(reader, tx, read)
 		for _, c := range quiet {
 			got = append(got, c.Edge.ContactID)

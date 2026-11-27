@@ -47,7 +47,7 @@ type restrictionFixture struct {
 func seedRestrictionFixture(t *testing.T, e *Env) restrictionFixture {
 	t.Helper()
 	f := restrictionFixture{contact: ids.NewV7(), email: ids.NewV7(), note: ids.NewV7(), delivery: ids.NewV7()}
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if _, err := tx.Exec(ctx,
 			`INSERT INTO contact (id, full_name, first_name, source, captured_by)
@@ -109,7 +109,7 @@ func TestErasureRestrictsAHandelsbriefInsteadOfDestroyingIt(t *testing.T) {
 		t.Fatalf("erasing the subject → %v", err)
 	}
 
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		var subject, class, reason string
 		var body, counterparty *string
@@ -268,7 +268,7 @@ func TestExpiredRestrictionCompletesTheSuspendedErasureUnderRetainOnly(t *testin
 	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(e.Admin(), f.contact, "test"); err != nil {
 		t.Fatalf("erasing the subject → %v", err)
 	}
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := config.SeedTx(context.Background(), tx, nil, privacy.RetainOnly, true)
 		return err
 	}); err != nil {
@@ -299,7 +299,7 @@ func TestExpiredRestrictionCompletesTheSuspendedErasureUnderRetainOnly(t *testin
 		t.Fatal(err)
 	}
 
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var subject, body *string
 		var stillRestricted bool
 		var redacted []string
@@ -362,7 +362,7 @@ func TestARestrictedRowRefusesEveryOrdinaryWrite(t *testing.T) {
 	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(e.Admin(), f.contact, "test"); err != nil {
 		t.Fatalf("erasing the subject → %v", err)
 	}
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `UPDATE activity SET body = 'rewritten' WHERE id = $1`, f.email)
 		return err
 	})
@@ -425,7 +425,7 @@ func TestARestrictedRowLeavesEveryOrdinaryReadPath(t *testing.T) {
 	if updateFault, ok := httperr.Classify(updateErr); !ok || updateFault.Status != http.StatusLocked || updateFault.Code != "locked" {
 		t.Errorf("the store's write path answered %v (fault %+v), want 423 locked", updateErr, updateFault)
 	}
-	err = database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(admin, e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `UPDATE activity SET subject = 'rewritten' WHERE id = $1`, f.email)
 		return err
 	})
@@ -441,7 +441,7 @@ func TestARestrictedRowLeavesEveryOrdinaryReadPath(t *testing.T) {
 func restrictedRowHolds(t *testing.T, e *Env, id ids.UUID) bool {
 	t.Helper()
 	var held bool
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT restricted_at IS NOT NULL AND body IS NOT NULL FROM activity WHERE id = $1`, id).Scan(&held)
 	}); err != nil {
@@ -498,7 +498,7 @@ func TestAControllerReleasesAHeldRecordByErasingIt(t *testing.T) {
 		t.Fatalf("releasing → %v", err)
 	}
 
-	err = database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		var subject, body *string
 		var stillHeld bool
@@ -565,7 +565,7 @@ func TestALegalHoldOutranksAControllerRelease(t *testing.T) {
 	}
 	// Counsel places the hold on the deal the correspondence hangs off, after
 	// the record is already held under the statutory floor.
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `UPDATE deal SET legal_hold = true WHERE id = $1`, f.deal)
 		return err
 	}); err != nil {
@@ -582,7 +582,7 @@ func TestALegalHoldOutranksAControllerRelease(t *testing.T) {
 	// Refused means the record is untouched, not half-erased.
 	var body *string
 	var stillHeld bool
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT body, restricted_at IS NOT NULL FROM activity WHERE id = $1`, f.email).Scan(&body, &stillHeld)
 	}); err != nil {
@@ -592,7 +592,7 @@ func TestALegalHoldOutranksAControllerRelease(t *testing.T) {
 		t.Fatalf("the refused release destroyed evidence anyway: body=%v held=%v", body, stillHeld)
 	}
 	// Lifting the hold returns the decision to the controller.
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `UPDATE deal SET legal_hold = false WHERE id = $1`, f.deal)
 		return err
 	}); err != nil {
@@ -611,7 +611,7 @@ func TestALegalHoldOutranksAControllerRelease(t *testing.T) {
 func TestAControllerPinsCorrespondenceTheDerivationCannotSee(t *testing.T) {
 	e := Setup(t)
 	supplierMail := ids.NewV7()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`INSERT INTO activity (id, kind, subject, body, counterparty_email, occurred_at, source, captured_by)
 			 VALUES ($1, 'email', 'Lieferschein 88-2026', 'Delivery note attached.', 'supplier@parts.test',
@@ -630,7 +630,7 @@ func TestAControllerPinsCorrespondenceTheDerivationCannotSee(t *testing.T) {
 		t.Fatalf("pinning → %v", err)
 	}
 
-	err = database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		var body *string
 		var counterparty *string
@@ -703,7 +703,7 @@ func TestAControllerPinsCorrespondenceTheDerivationCannotSee(t *testing.T) {
 func pinnedMailWithAnOriginal(t *testing.T, e *Env) (activity ids.UUID, sourceID string) {
 	t.Helper()
 	activity, sourceID = ids.NewV7(), "supplier-"+ids.NewV7().String()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO activity (id, kind, subject, body, counterparty_email, occurred_at,
@@ -737,7 +737,7 @@ func pinnedMailWithAnOriginal(t *testing.T, e *Env) (activity ids.UUID, sourceID
 func originalsBehind(t *testing.T, e *Env, sourceID string) int {
 	t.Helper()
 	var n int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM raw_capture WHERE source_system = 'email' AND source_id = $1`,
 			sourceID).Scan(&n)
@@ -782,7 +782,7 @@ func TestAFloorExpiringDestroysTheProviderOriginalToo(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var body *string
 		if err := tx.QueryRow(ctx, `SELECT body FROM activity WHERE id = $1`, activity).Scan(&body); err != nil {
 			return err
@@ -848,7 +848,7 @@ func TestAnEraserWithNoPurgerRefusesRatherThanErasingHalf(t *testing.T) {
 	if got := originalsBehind(t, e, sourceID); got != 1 {
 		t.Errorf("%d provider original(s) after a refused release, want the record untouched", got)
 	}
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var held bool
 		if err := tx.QueryRow(context.Background(),
 			`SELECT restricted_at IS NOT NULL FROM activity WHERE id = $1`, activity).Scan(&held); err != nil {
@@ -889,7 +889,7 @@ func TestARestrictionCannotBeLiftedWithTheBylineIntact(t *testing.T) {
 	// With a source_system, because activity_source_author_needs_a_source
 	// refuses a byline on a row that names no system it came from: a byline is
 	// what the OTHER system said, and a row with no other system has none.
-	if err := database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(admin, e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE activity SET source_system = 'import:legacy', source_id = 'legacy-42',
 			        source_author_name = 'Held Subject'
@@ -904,7 +904,7 @@ func TestARestrictionCannotBeLiftedWithTheBylineIntact(t *testing.T) {
 	// The floor holds the row back rather than redacting it, so the byline is
 	// still there — which is what makes the release below the case this guards.
 	var byline *string
-	if err := database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(admin, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT source_author_name FROM activity WHERE id = $1`, f.email).Scan(&byline)
 	}); err != nil {
@@ -921,7 +921,7 @@ func TestARestrictionCannotBeLiftedWithTheBylineIntact(t *testing.T) {
 	            SET restricted_at = NULL, restricted_until = NULL, restricted_reason = NULL,
 	                body = NULL, raw = NULL, counterparty_email = NULL, subject = 'Erased'
 	          WHERE id = $1`
-	err := database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(admin, e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), lift, f.email)
 		return err
 	})
@@ -932,7 +932,7 @@ func TestARestrictionCannotBeLiftedWithTheBylineIntact(t *testing.T) {
 
 	// And the same statement WITH the byline cleared is admitted, so what the
 	// guard refuses is the omission rather than the release.
-	if err := database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(admin, e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE activity
 			    SET restricted_at = NULL, restricted_until = NULL, restricted_reason = NULL,

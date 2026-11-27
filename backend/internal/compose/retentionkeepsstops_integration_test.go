@@ -117,7 +117,7 @@ func withdrawMarketing(t *testing.T, e *integration.Env, store *consent.Store, c
 func seedLeadWithPinnedStop(t *testing.T, e *integration.Env, address string) ids.UUID {
 	t.Helper()
 	var lead ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO lead (full_name, status, source, captured_by, created_at)
@@ -143,7 +143,7 @@ func setEveryScopeToItsMostDestructiveAction(t *testing.T, e *integration.Env) {
 	if len(scopes) < 8 {
 		t.Fatalf("read %d retention scopes, want every selector the engine has", len(scopes))
 	}
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		for _, wire := range scopes {
 			scope, err := privacy.ParseRetentionScope(wire)
 			if err != nil {
@@ -167,7 +167,7 @@ func setEveryScopeToItsMostDestructiveAction(t *testing.T, e *integration.Env) {
 
 func ageRow(t *testing.T, e *integration.Env, statement string, id ids.UUID) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), statement, id)
 		return err
 	}); err != nil {
@@ -180,7 +180,7 @@ func ageRow(t *testing.T, e *integration.Env, statement string, id ids.UUID) {
 func assertAnonymized(t *testing.T, e *integration.Env, contact ids.UUID) {
 	t.Helper()
 	var addresses int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM contact_email WHERE contact_id = $1`, contact).Scan(&addresses)
 	}); err != nil {
@@ -194,7 +194,7 @@ func assertAnonymized(t *testing.T, e *integration.Env, contact ids.UUID) {
 func assertLeadAnonymized(t *testing.T, e *integration.Env, lead ids.UUID) {
 	t.Helper()
 	var name string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT full_name FROM lead WHERE id = $1`, lead).Scan(&name)
 	}); err != nil {
 		t.Fatalf("reading the anonymized lead: %v", err)

@@ -43,7 +43,7 @@ func prepareRoutineDigest(ctx context.Context, pool *pgxpool.Pool, user ids.UUID
 	if err != nil || !allowed {
 		return part, err
 	}
-	err = database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		var err error
 		part.window, err = notificationWindow(ctx, tx, occurredday.Personal, user, window.Open)
 		return err

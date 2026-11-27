@@ -254,7 +254,7 @@ func sweepWith(e *integration.SearchEnv, vault keyvault.Vault, now func() time.T
 func insertConnection(t *testing.T, e *integration.SearchEnv, provider, channel, account, credential string, parent *ids.UUID) ids.UUID {
 	t.Helper()
 	var id ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			INSERT INTO channel_connection (provider, channel_id, channel_label, credential_ref, events_credential_ref, status,
 			                                connected_by, account_id, parent_connection_id, approved_at)
@@ -287,7 +287,7 @@ func verifyColleague(t *testing.T, e *integration.SearchEnv, n clarifyNetwork) {
 func storeOriginal(t *testing.T, e *integration.SearchEnv, source string) ids.UUID {
 	t.Helper()
 	var id ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var err error
 		id, err = capturemod.InsertRawCaptureTx(context.Background(), tx, capturemod.RawRecord{
 			SourceSystem: "test", SourceID: source, Payload: []byte(`{"n":"` + source + `"}`),

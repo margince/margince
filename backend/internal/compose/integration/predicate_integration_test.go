@@ -45,7 +45,7 @@ func TestPredicateEngineFiltersRealRowsWithinRowScope(t *testing.T) {
 	selectIDs := func(ctx context.Context, p storekit.Predicate) map[ids.UUID]bool {
 		t.Helper()
 		got := map[ids.UUID]bool{}
-		err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			matched, err := engine.SelectIDs(ctx, tx, p, 100)
 			for _, id := range matched {
 				got[id] = true
@@ -120,7 +120,7 @@ func TestPredicateEngineFiltersRealRowsWithinRowScope(t *testing.T) {
 	countMatching := func(ctx context.Context, p storekit.Predicate) int {
 		t.Helper()
 		var n int
-		err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			var err error
 			n, err = engine.CountMatching(ctx, tx, p)
 			return err
@@ -167,7 +167,7 @@ func TestNeqReturnsTheRowsWhoseColumnWasNeverSet(t *testing.T) {
 		BaseWhere: "t.archived_at IS NULL",
 	}
 	admin := e.As(e.Rep3, []ids.UUID{e.Team1, e.Team2}, AdminPerms)
-	if err := database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(admin, e.Pool, func(tx pgx.Tx) error {
 		_, execErr := tx.Exec(admin, `UPDATE contact SET owner_id = NULL WHERE id = $1`, unowned)
 		return execErr
 	}); err != nil {
@@ -176,7 +176,7 @@ func TestNeqReturnsTheRowsWhoseColumnWasNeverSet(t *testing.T) {
 	// The column really is unset. Without this the test would go on passing if
 	// the writer ever started filling it again, and would be asserting nothing.
 	var stillSet bool
-	if err := database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(admin, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(admin, `SELECT owner_id IS NOT NULL FROM contact WHERE id = $1`, unowned).Scan(&stillSet)
 	}); err != nil {
 		t.Fatalf("reading back the owner: %v", err)
@@ -187,7 +187,7 @@ func TestNeqReturnsTheRowsWhoseColumnWasNeverSet(t *testing.T) {
 	selectIDs := func(p storekit.Predicate) map[ids.UUID]bool {
 		t.Helper()
 		got := map[ids.UUID]bool{}
-		err := database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
+		err := database.WithTx(admin, e.Pool, func(tx pgx.Tx) error {
 			matched, err := engine.SelectIDs(admin, tx, p, 100)
 			for _, id := range matched {
 				got[id] = true

@@ -46,7 +46,7 @@ func markedWeeklyCopies(t *testing.T, e *Env) ids.UUID {
 	plan, commitment := ids.NewV7(), ids.NewV7()
 	e.WsExec(t, `INSERT INTO weekly_plan(id,owner_id,local_week_start,captured_by) VALUES(@id,@owner,date '2026-11-02','system:legacy') ON CONFLICT(owner_id,local_week_start) DO NOTHING`, pgx.StrictNamedArgs{"id": plan, "owner": e.AdminUser})
 	e.WsExec(t, `INSERT INTO weekly_plan_commitment(id,plan_id,label,help_requested,due_on,position,captured_by) SELECT @id,p.id,'(erased: the contact this named exercised erasure)','',date '2026-11-06',0,'system:legacy' FROM weekly_plan p WHERE p.owner_id=@owner AND p.local_week_start=date '2026-11-02'`, pgx.StrictNamedArgs{"id": commitment, "owner": e.AdminUser})
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := storekit.AuditWithEvidence(e.Admin(), tx, "create", "weekly_plan_commitment", commitment, nil, map[string]any{"label": "Private Contact"}, nil)
 		return err
 	}); err != nil {
@@ -66,7 +66,7 @@ func markedRequestCopies(t *testing.T, e *Env) ids.UUID {
  VALUES(@id,'access','erased+'||@id::uuid::text,'fulfilled','erased',@received,@due,'phone',@receipt)`, pgx.StrictNamedArgs{
 		"id": request, "receipt": "RCPT-" + request.String(), "received": received, "due": received.AddDate(0, 0, 30),
 	})
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		image := map[string]any{"subject_ref": subject.Id.String(), "email": "private@example.test", "status": "fulfilled"}
 		_, err := storekit.AuditWithEvidence(e.Admin(), tx, "create", "data_subject_request", request, nil, image, nil)
 		return err

@@ -76,7 +76,7 @@ func TestAWaitingMailedCommitmentIsCountedOnItsAccount(t *testing.T) {
 	}
 	var open int
 	var complete bool
-	if err := database.WithWorkspaceTx(pass, m.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(pass, m.Pool, func(tx pgx.Tx) error {
 		var err error
 		open, complete, err = m.Contacts.CountAccountCommitments(pass, tx, company)
 		return err

@@ -55,7 +55,7 @@ func (s *Store) CloseWeek(ctx context.Context, now time.Time) (Outcome, error) {
 		return Outcome{}, err
 	}
 	var out Outcome
-	err = database.WithWorkspaceTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
 		week, err := s.weekStart(ctx, tx, now)
 		if err != nil {
 			return err

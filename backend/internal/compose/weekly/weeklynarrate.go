@@ -54,7 +54,7 @@ func (e *Engine) writeNarration(ctx context.Context, reviewID ids.UUID, sentence
 	if err := httperr.RequireWithin("narrative", sentence, narrative.MaxNarrativeRunes); err != nil {
 		return err
 	}
-	return database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+	return database.WithTx(ctx, e.pool, func(tx pgx.Tx) error {
 		var before *string
 		var beforeStamp *time.Time
 		// The owner check is the row scope: a review belongs to the rep whose

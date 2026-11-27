@@ -128,7 +128,7 @@ func assertHistorySurvivesFirstGraphFold(t *testing.T, table string, parties int
 	if _, err := releaseTerminalImportWork(system, b.env.Pool); err != nil {
 		t.Fatal(err)
 	}
-	if err := database.WithWorkspaceTx(system, b.env.Pool, func(tx pgx.Tx) error { _, err := search.DrainPendingGraphTx(system, tx, 100); return err }); err != nil {
+	if err := database.WithTx(system, b.env.Pool, func(tx pgx.Tx) error { _, err := search.DrainPendingGraphTx(system, tx, 100); return err }); err != nil {
 		t.Fatal(err)
 	}
 	if got := b.env.WsCount(t, `SELECT count(*) FROM graph_interaction_edge WHERE count_total=2 AND requested_generation=processed_generation`); got != parties {
@@ -138,7 +138,7 @@ func assertHistorySurvivesFirstGraphFold(t *testing.T, table string, parties int
 		t.Fatalf("first fold lost contact arrivals: %d", got)
 	}
 	drained := graphProjectionSnapshot(system, t, b.env.Pool)
-	if err := database.WithWorkspaceTx(system, b.env.Pool, func(tx pgx.Tx) error { return search.RebuildEdges(system, tx) }); err != nil {
+	if err := database.WithTx(system, b.env.Pool, func(tx pgx.Tx) error { return search.RebuildEdges(system, tx) }); err != nil {
 		t.Fatal(err)
 	}
 	if rebuilt := graphProjectionSnapshot(system, t, b.env.Pool); !maps.Equal(drained, rebuilt) {

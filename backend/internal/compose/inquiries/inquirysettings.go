@@ -45,7 +45,7 @@ func (s Settings) Save(ctx context.Context, id ids.UUID, version int64, in crmco
 	var out crmcontracts.WebsiteInquiryHandling
 	err := s.fence.Within(ctx, id, func(leased context.Context) error {
 		run := func() error {
-			return database.WithWorkspaceSnapshot(leased, s.db.Pool(), func(bound context.Context) error {
+			return database.WithSnapshot(leased, s.db.Pool(), func(bound context.Context) error {
 				var err error
 				out, err = s.saveHandling(bound, id, version, in)
 				return err

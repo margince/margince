@@ -150,7 +150,7 @@ func SaveTx(ctx context.Context, tx pgx.Tx, reader ids.UserID, subject Subject, 
 // Read is the reader's one summary of the subject, in its own transaction.
 func Read(ctx context.Context, pool *pgxpool.Pool, reader ids.UserID, subject Subject) (Entry, bool, error) {
 	var found map[ids.UUID]Entry
-	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		var err error
 		found, err = ReadEachTx(ctx, tx, reader, subject.kind, []ids.UUID{subject.record})
 		return err
@@ -161,7 +161,7 @@ func Read(ctx context.Context, pool *pgxpool.Pool, reader ids.UserID, subject Su
 
 // Save is SaveTx in a transaction of its own.
 func Save(ctx context.Context, pool *pgxpool.Pool, reader ids.UserID, subject Subject, written Entry) error {
-	return database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	return database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		return SaveTx(ctx, tx, reader, subject, written)
 	})
 }

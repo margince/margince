@@ -73,7 +73,7 @@ func TestASendingSystemMessageDoesNotPullAThreadOntoItsCompany(t *testing.T) {
 
 	as := e.Admin()
 	var due []settledThread
-	if err := database.WithWorkspaceTx(as, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(as, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		due, err = dueThreads(as, tx, traceReadClock, 100)
 		return err

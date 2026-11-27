@@ -136,7 +136,7 @@ func TestRecordAffordancesReadArchiveStateAfterProjection(t *testing.T) {
 	if stale.ArchivedAt != nil {
 		t.Fatal("fixture already archived")
 	}
-	err = database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var one int
 		if err := tx.QueryRow(ctx, "SELECT 1").Scan(&one); err != nil {
 			return err

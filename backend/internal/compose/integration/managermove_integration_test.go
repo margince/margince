@@ -222,7 +222,7 @@ func TestForecastReasonsFollowTheReadersForecastAccess(t *testing.T) {
 	standings := func(ctx context.Context) map[ids.UUID]forecasting.DealStanding {
 		t.Helper()
 		var got map[ids.UUID]forecasting.DealStanding
-		err := database.WithWorkspaceTx(ctx, f.e.Pool, func(tx pgx.Tx) error {
+		err := database.WithTx(ctx, f.e.Pool, func(tx pgx.Tx) error {
 			var err error
 			got, err = store.DealStandings(ctx, tx, []ids.UUID{stuck, foreign})
 			return err
@@ -270,7 +270,7 @@ func TestDealActionsBetweenNamesTasksDoneAndMeetingsHeldInsideTheWindow(t *testi
 	read := func(after, until time.Time) []activities.DealAction {
 		t.Helper()
 		var got []activities.DealAction
-		err := database.WithWorkspaceTx(f.e.Admin(), f.e.Pool, func(tx pgx.Tx) error {
+		err := database.WithTx(f.e.Admin(), f.e.Pool, func(tx pgx.Tx) error {
 			var err error
 			got, err = activities.DealActionsBetweenTx(f.e.Admin(), tx, []ids.UUID{deal}, after, until)
 			return err
@@ -331,7 +331,7 @@ func TestAcceptingTheMoveRequestsTheManagerThroughTheDealsOwnWrite(t *testing.T)
 	requested := func(ctx context.Context) []deals.ManagerRequest {
 		t.Helper()
 		var got []deals.ManagerRequest
-		err := database.WithWorkspaceTx(ctx, f.e.Pool, func(tx pgx.Tx) error {
+		err := database.WithTx(ctx, f.e.Pool, func(tx pgx.Tx) error {
 			var err error
 			got, err = f.e.Deals.ManagerRequests(ctx, tx, nil)
 			return err
@@ -354,7 +354,7 @@ func TestAcceptingTheMoveRequestsTheManagerThroughTheDealsOwnWrite(t *testing.T)
 	otherTeam := f.e.Team2
 	var narrowed []deals.ManagerRequest
 	lead := f.e.As(f.e.Rep2, []ids.UUID{f.e.Team1}, leadReadingForecast())
-	if err := database.WithWorkspaceTx(lead, f.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(lead, f.e.Pool, func(tx pgx.Tx) error {
 		var err error
 		narrowed, err = f.e.Deals.ManagerRequests(lead, tx, &otherTeam)
 		return err
@@ -383,7 +383,7 @@ func TestARequestLeavesTheListWhenTheDealLeavesTheOpenPipeline(t *testing.T) {
 	f.e.WsExec(t, `UPDATE deal SET status = 'won', closed_at = now() WHERE id = $1`, deal)
 	lead := f.e.As(f.e.Rep2, []ids.UUID{f.e.Team1}, leadReadingForecast())
 	var got []deals.ManagerRequest
-	err := database.WithWorkspaceTx(lead, f.e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(lead, f.e.Pool, func(tx pgx.Tx) error {
 		var err error
 		got, err = f.e.Deals.ManagerRequests(lead, tx, nil)
 		return err
@@ -405,7 +405,7 @@ func TestARecordGrantDoesNotMakeALeadTheManagerOfADeal(t *testing.T) {
 	unrelated := f.e.As(f.e.Rep3, []ids.UUID{f.e.Team2}, leadReadingForecast())
 
 	var got []deals.ManagerRequest
-	err := database.WithWorkspaceTx(unrelated, f.e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(unrelated, f.e.Pool, func(tx pgx.Tx) error {
 		var err error
 		got, err = f.e.Deals.ManagerRequests(unrelated, tx, nil)
 		return err

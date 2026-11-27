@@ -73,7 +73,7 @@ func PoolLedger(pool *pgxpool.Pool) Ledger {
 	return func(ctx context.Context, unit string, plan func(Usage) (ObjectChange, error), write func() error) error {
 		var refused error
 		wrote := false
-		err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+		err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 			held, err := lockUsage(ctx, tx, unit)
 			if err != nil {
 				return err
@@ -153,7 +153,7 @@ func ForgetUnits(ctx context.Context, pool *pgxpool.Pool, units []string) error 
 	if len(units) == 0 {
 		return nil
 	}
-	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `DELETE FROM extension_object_usage WHERE unit = ANY($1)`, units)
 		return err
 	})

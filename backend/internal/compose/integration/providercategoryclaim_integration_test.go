@@ -28,7 +28,7 @@ import (
 // it exists, not about how QueueRun admits it.
 func seedCategoryClaims(t *testing.T, e *Env, runID string, contactID ids.UUID, categories ...string) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO provider_run_category (run_id, contact_id, provider, category)
 			SELECT $1, $2, 'surfe', unnest($3::text[])`, runID, contactID, categories)
@@ -42,7 +42,7 @@ func seedCategoryClaims(t *testing.T, e *Env, runID string, contactID ids.UUID, 
 func claimedBy(t *testing.T, e *Env, contactID ids.UUID) map[string]string {
 	t.Helper()
 	held := map[string]string{}
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(context.Background(),
 			`SELECT category, run_id::text FROM provider_run_category WHERE contact_id = $1`, contactID)
 		if err != nil {
@@ -120,7 +120,7 @@ func TestMergeSkipsAQueuedRunBuyingWhatTheOtherSideIsBuying(t *testing.T) {
 
 	var state, reason string
 	var audited int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(context.Background(),
 			`SELECT state, coalesce(skip_reason, '') FROM provider_run WHERE id = $1`,
 			queuedRun).Scan(&state, &reason); err != nil {
@@ -161,7 +161,7 @@ func TestErasureReleasesALiveRunsCategoryClaims(t *testing.T) {
 	}
 
 	var left int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM provider_run_category WHERE run_id = $1`, runID).Scan(&left)
 	}); err != nil {

@@ -32,7 +32,7 @@ func TestTheInputCheckReadsAnEconomicBuyerInAnyCase(t *testing.T) {
 
 	now := clocktest.Now(t)
 	var subjects []assurance.Subject
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var err error
 		subjects, err = compose.AssuranceSubjects(e.Admin(), tx, now, compose.AssuranceCoverage(e.Admin(), tx, now))
 		return err

@@ -136,7 +136,7 @@ func (t *Trial) start(ctx context.Context) (time.Time, bool, error) {
 		return *cached, true, nil
 	}
 	var first *time.Time
-	// rls-exempt: the workspace table is not workspace-scoped; the trial belongs to the installation, before any tenant transaction.
+	// pool-exempt: the workspace table is not workspace-scoped; the trial belongs to the installation, before any tenant transaction.
 	if err := t.pool.QueryRow(ctx, `SELECT min(created_at) FROM workspace`).Scan(&first); err != nil {
 		return time.Time{}, false, fmt.Errorf("installtrial: reading when the trial started: %w", err)
 	}

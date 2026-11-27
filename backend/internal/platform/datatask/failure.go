@@ -42,7 +42,7 @@ func (e *Engine) recordFailure(ctx context.Context, picked selection, cause erro
 	if p.Status != Failed {
 		p.NextAttemptAt = &next
 	}
-	return database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+	return database.WithTx(ctx, e.pool, func(tx pgx.Tx) error {
 		tag, err := tx.Exec(ctx, `UPDATE data_task_run SET status = @status, batch_limit = @limit,
  consecutive_failures = @failures, last_error_class = @class, next_attempt_at = @next,
  updated_at = @now, version = version + 1 WHERE task_id = @task AND step = @step AND version = @version`,

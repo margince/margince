@@ -167,7 +167,7 @@ func TestTheRekeyKeepsALift(t *testing.T) {
 
 	apptest.BindEnv(t, []string{"MARGINCE_KEYVAULT_ROOT_KEY=" + returnRootKey})
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := privacy.RekeySuppressionListPageTx(ctx, tx, privacy.SuppressionCursor{}, 100)
 		return err
 	}); err != nil {
@@ -235,7 +235,7 @@ func assertReplayKeeps(t *testing.T, e *Env, eraser *privacy.Eraser, contact ids
 
 func addressRefused(t *testing.T, e *Env) bool {
 	t.Helper()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return storekit.RefuseErasedEmail(e.Admin(), tx, "email", liftedAddress)
 	})
 	if _, isErased := errors.AsType[*storekit.ErasedIdentifierError](err); err != nil && !isErased {
@@ -248,7 +248,7 @@ func erasedAtOf(t *testing.T, e *Env, email string) time.Time {
 	t.Helper()
 	var erasedAt time.Time
 	var erased bool
-	if err := database.WithWorkspaceTx(liftContext(e), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(liftContext(e), e.Pool, func(tx pgx.Tx) error {
 		var err error
 		erasedAt, erased, err = privacy.EmailErasedAt(liftContext(e), tx, email)
 		return err
@@ -266,7 +266,7 @@ func liftAddress(t *testing.T, e *Env) {
 }
 
 func tryLift(e *Env, erasedAt time.Time) error {
-	return database.WithWorkspaceTx(liftContext(e), e.Pool, func(tx pgx.Tx) error {
+	return database.WithTx(liftContext(e), e.Pool, func(tx pgx.Tx) error {
 		return privacy.LiftEmailSuppressionTx(liftContext(e), tx, liftedAddress, erasedAt, ids.NewV7(), ids.NewV7())
 	})
 }

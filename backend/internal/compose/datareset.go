@@ -104,7 +104,7 @@ func (h dataResetHandlers) run(ctx context.Context, confirmation string) (resetC
 	// installation nothing, and quiescing the job fleet is not nothing. The
 	// sweep re-checks inside its own transaction — one row read that closes
 	// the window where the company is renamed in between.
-	if err := database.WithWorkspaceTx(ctx, h.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, h.pool, func(tx pgx.Tx) error {
 		return confirmResetCompanyName(ctx, tx, confirmation)
 	}); err != nil {
 		return resetCounts{}, err
@@ -227,7 +227,7 @@ func confirmResetCompanyName(ctx context.Context, tx pgx.Tx, confirmation string
 // is the runtime phase's first act, ahead of the stream purge, so the relay has
 // nothing staged to ship into streams that were just emptied (clearOutbox).
 func (h dataResetHandlers) sweepAndReseed(ctx context.Context, wsID ids.UUID, confirmation string, counts *resetCounts) error {
-	return database.WithWorkspaceTx(ctx, h.pool, func(tx pgx.Tx) error {
+	return database.WithTx(ctx, h.pool, func(tx pgx.Tx) error {
 		if err := confirmResetCompanyName(ctx, tx, confirmation); err != nil {
 			return err
 		}

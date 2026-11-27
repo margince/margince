@@ -36,7 +36,7 @@ func TestExtractedLifecycleSignalStoresSourceProofWithoutCopyingTheQuote(t *test
 		Summary: "Maple ended its account relationship.", Quote: body, LifecycleScope: lifecycleScopeCompany,
 	}
 	extractor := &SignalExtractor{}
-	if err := database.WithWorkspaceTx(e.system(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.system(), e.Pool, func(tx pgx.Tx) error {
 		raised, err := extractor.recordExtractedEvent(e.system(), tx, thread, event, e.now)
 		if err == nil && !raised {
 			t.Fatal("the extracted event raised no signal")

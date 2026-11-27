@@ -234,7 +234,7 @@ func (w *scheduledSendWorker) scheduler(ctx context.Context, id ids.UUID) (sched
 		passport *ids.UUID
 		behalf   *ids.UUID
 	)
-	err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, w.pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
 			SELECT scheduled_by, principal_kind,
 			       agent_actor_id, agent_passport_id, agent_on_behalf_of

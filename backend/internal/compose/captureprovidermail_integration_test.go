@@ -157,7 +157,7 @@ func TestMailboxPurgeRechecksAColleagueClaimInsideTheEraseTransaction(t *testing
 		t.Fatal(err)
 	}
 	var selected capture.PurgeSubject
-	err = database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		floor, _, err := purgeFloorTx(e.Admin(), tx)
 		if err != nil {
 			return err

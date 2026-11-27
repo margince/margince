@@ -207,7 +207,7 @@ func (x *SignalExtractor) queue(ctx context.Context, now time.Time) (due []settl
 		}
 		return nil, ExtractPass{OutOfTime: true}, true, nil
 	}
-	if err := database.WithWorkspaceTx(ctx, x.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, x.pool, func(tx pgx.Tx) error {
 		found, err := dueThreads(ctx, tx, now, extractThreadCap)
 		due = found
 		return err

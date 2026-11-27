@@ -106,7 +106,7 @@ func TestSharedMailIdentityMustResolveBeforeItAssignsPersonalWork(t *testing.T) 
 	// Two seats in the To line make no automatic duty for either, and no
 	// shared one. The mail stays on its record until somebody adopts it.
 	var secondAddress string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), "SELECT email FROM app_user WHERE id=$1", e.Rep2).Scan(&secondAddress)
 	}); err != nil {
 		t.Fatal(err)
@@ -158,7 +158,7 @@ func TestVerifiedMailIdentityOutranksClaimsAndDeliveryDoesNotProveDuty(t *testin
 			first := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 			second := e.As(e.Rep2, []ids.UUID{e.Team1}, integration.AdminPerms)
 			identities := capture.NewOwnerIdentityStore(e.DB())
-			if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+			if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 				switch tc.name {
 				case "login":
 					return tx.QueryRow(context.Background(), `SELECT email FROM app_user WHERE id=$1`, e.Rep1).Scan(&target)
@@ -180,7 +180,7 @@ func TestVerifiedMailIdentityOutranksClaimsAndDeliveryDoesNotProveDuty(t *testin
 					t.Fatal(err)
 				}
 				if tc.name == "delivered" || tc.name == "delivered_then_declared" {
-					if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+					if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 						_, err := tx.Exec(context.Background(), `UPDATE capture_owner_identity SET source='delivered_to' WHERE id=$1`, claim.ID)
 						return err
 					}); err != nil {

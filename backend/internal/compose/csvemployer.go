@@ -125,7 +125,7 @@ func (r *linkResolver) estateEmployer(ctx context.Context, key string) (employer
 		return hit, nil
 	}
 	var found employerCandidate
-	if err := database.WithWorkspaceTx(ctx, r.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, r.pool, func(tx pgx.Tx) error {
 		matches, err := contacts.EmployerNameMatchesTx(ctx, tx, key)
 		if err != nil {
 			return err

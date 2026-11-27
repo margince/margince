@@ -5,7 +5,7 @@ package customfields
 
 // Update and Retire are the two catalog-only lifecycle mutations. Neither
 // runs DDL, so both stay on the workspace-bound app pool inside
-// database.WithWorkspaceTx. Only Create and SetOptions need the schema
+// database.WithTx. Only Create and SetOptions need the schema
 // pool's one-transaction owner-ALTER shape (create.go, options.go).
 
 import (
@@ -139,7 +139,7 @@ func (s *Service) Update(ctx context.Context, id ids.UUID, patch FieldPatch, ifV
 	}
 
 	var out crmcontracts.CustomField
-	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		f, err := lockField(ctx, tx, id)
 		if err != nil {
 			return err
@@ -297,7 +297,7 @@ func (s *Service) Retire(ctx context.Context, id ids.UUID) (crmcontracts.CustomF
 	}
 
 	var out crmcontracts.CustomField
-	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		f, err := lockField(ctx, tx, id)
 		if err != nil {
 			return err

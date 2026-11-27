@@ -35,7 +35,7 @@ func domainSeat(ctx context.Context, t *testing.T, db *database.DB) context.Cont
 func domainSeatWith(ctx context.Context, t *testing.T, db *database.DB, scope principal.RowScope, readsCompanies bool) context.Context {
 	t.Helper()
 	seat := ids.NewV7()
-	if err := database.WithWorkspaceTx(ctx, db.Pool(), func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, db.Pool(), func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
 			INSERT INTO app_user (id, email, display_name, status)
 			VALUES ($1, $2, 'Domain Admin', 'active')`, seat, "domains-"+seat.String()+"@example.test")
@@ -62,7 +62,7 @@ func domainSeatWith(ctx context.Context, t *testing.T, db *database.DB, scope pr
 // the contact alice@demo.test.
 func seedDemoCustomer(ctx context.Context, t *testing.T, db *database.DB) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(ctx, db.Pool(), func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, db.Pool(), func(tx pgx.Tx) error {
 		var company, contact ids.UUID
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO company (display_name, source, captured_by)
@@ -211,7 +211,7 @@ func TestAnUnreadableCompanyIsNeitherNamedNorAskedAbout(t *testing.T) {
 
 func TestACompanyOutsideTheSeatsRowScopeIsNeitherNamedNorAskedAbout(t *testing.T) {
 	base, db := bootstrapInternalMailWorkspace(t, "ours.test")
-	if err := database.WithWorkspaceTx(base, db.Pool(), func(tx pgx.Tx) error {
+	if err := database.WithTx(base, db.Pool(), func(tx pgx.Tx) error {
 		var owner, company ids.UUID
 		if err := tx.QueryRow(base, `
 			INSERT INTO app_user (email, display_name, status)
@@ -243,7 +243,7 @@ func TestACompanyOnAParentOrChildDomainIsAskedAbout(t *testing.T) {
 	_, err := store.Add(ctx, capture.IdentityKindDomain, "shop.demo.test")
 	wantRefusal(t, err, http.StatusConflict, capture.CodeNeedsConfirmation)
 
-	if err := database.WithWorkspaceTx(ctx, db.Pool(), func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, db.Pool(), func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
 			INSERT INTO company_domain (company_id, domain, is_primary, source, captured_by)
 			SELECT id, 'eu.regional.test', false, 'manual', 'human:test'
@@ -261,7 +261,7 @@ func TestACompanyOnAParentOrChildDomainIsAskedAbout(t *testing.T) {
 
 func TestAContactAddressIsFoundInEitherSpellingOfItsDomain(t *testing.T) {
 	ctx, db := domainFixture(t)
-	if err := database.WithWorkspaceTx(ctx, db.Pool(), func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, db.Pool(), func(tx pgx.Tx) error {
 		var contact ids.UUID
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO contact (full_name, visibility, source, captured_by)
@@ -284,7 +284,7 @@ func TestAContactAddressIsFoundInEitherSpellingOfItsDomain(t *testing.T) {
 
 func TestAPunycodeContactAddressIsFoundByItsUnicodeSpelling(t *testing.T) {
 	ctx, db := domainFixture(t)
-	if err := database.WithWorkspaceTx(ctx, db.Pool(), func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, db.Pool(), func(tx pgx.Tx) error {
 		var contact ids.UUID
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO contact (full_name, visibility, source, captured_by)
@@ -325,7 +325,7 @@ func TestARestoredIdentityIsJudgedAgain(t *testing.T) {
 	if err := store.Remove(ctx, asked.ID); err != nil {
 		t.Fatal(err)
 	}
-	if err := database.WithWorkspaceTx(ctx, db.Pool(), func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, db.Pool(), func(tx pgx.Tx) error {
 		var contact ids.UUID
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO contact (full_name, visibility, source, captured_by)
@@ -372,7 +372,7 @@ func TestTheConsumerListWaitsForTheCompanyDomainWriter(t *testing.T) {
 	finished := make(chan struct{})
 	var addErr error
 	waited := false
-	err := database.WithWorkspaceTx(ctx, db.Pool(), func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, db.Pool(), func(tx pgx.Tx) error {
 		if err := storekit.LockConsumerDomain(ctx, tx, "mail.race-provider.example"); err != nil {
 			return err
 		}

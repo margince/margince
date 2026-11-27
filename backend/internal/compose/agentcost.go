@@ -155,7 +155,7 @@ func (c *passportShareCeiling) livePassports(ctx context.Context) int {
 		// not be the thing that panics a model call.
 		return live
 	}
-	err := database.WithWorkspaceTx(ctx, c.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, c.pool, func(tx pgx.Tx) error {
 		var n int
 		if err := tx.QueryRow(ctx,
 			`SELECT count(*) FROM passport WHERE revoked_at IS NULL AND expires_at > now()`).Scan(&n); err != nil {

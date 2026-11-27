@@ -32,7 +32,7 @@ import (
 // probe runs one read in its own workspace transaction and names what it
 // asked about when it fails.
 func probe(ctx context.Context, pool *pgxpool.Pool, about string, read func(pgx.Tx) error) error {
-	if err := database.WithWorkspaceTx(ctx, pool, read); err != nil {
+	if err := database.WithTx(ctx, pool, read); err != nil {
 		return fmt.Errorf("import: checking whether %s is already held: %w", about, err)
 	}
 	return nil
@@ -126,7 +126,7 @@ func VisibleDomainHolder(ctx context.Context, pool *pgxpool.Pool, domain string)
 	}
 	var holder ids.UUID
 	found := false
-	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		var args []any
 		arg := func(v any) int { args = append(args, v); return len(args) }
 		domainPos := arg(owndomain.Spellings(domain))
@@ -165,7 +165,7 @@ func WritableDomainHolder(ctx context.Context, pool *pgxpool.Pool, domain string
 	if err != nil || !found {
 		return ids.UUID{}, false, err
 	}
-	err = database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		return auth.EnsureWritableLive(ctx, tx, migration.ObjectCompany, holder)
 	})
 	if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) {

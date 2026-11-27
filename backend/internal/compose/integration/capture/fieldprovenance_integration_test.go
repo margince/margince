@@ -48,7 +48,7 @@ func TestFieldProvenanceCoversCaptureAcrossObjectTypes(t *testing.T) {
 	// Captured vs human-entered fields are independently queryable: the
 	// captured set is non-empty, and none of it claims a human author.
 	var humanStamped int
-	err = database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM field_provenance WHERE captured_by LIKE 'human:%'`).Scan(&humanStamped)
 	})
@@ -62,7 +62,7 @@ func TestFieldProvenanceCoversCaptureAcrossObjectTypes(t *testing.T) {
 	// Mixed-origin display read: the contact was human-created and has no
 	// field rows — every requested field falls back to the row-level
 	// provenance (gate Q3 coexistence).
-	err = database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		origins, err := storekit.FieldOrigins(context.Background(), tx, "contact", contactID,
 			[]string{"full_name", "title"}, "manual", "human:x", time.Now().UTC())
 		if err != nil {
@@ -89,7 +89,7 @@ func assertCaptureStampedBothObjectTypes(t *testing.T, e *integration.SearchEnv)
 		objectType, field, source, capturedBy string
 	}
 	var stamps []stampRow
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(context.Background(),
 			`SELECT object_type, field_name, source, captured_by FROM field_provenance ORDER BY object_type, field_name`)
 		if err != nil {

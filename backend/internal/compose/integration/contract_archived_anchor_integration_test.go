@@ -36,7 +36,7 @@ import (
 // company-less.
 func anchorOnCompany(t *testing.T, e *Env, deal, company ids.UUID) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE deal SET company_id = $1 WHERE id = $2`, company, deal)
 		return err
@@ -65,7 +65,7 @@ func contractOnArchivedDeal(t *testing.T, e *Env) ids.ContractID {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE deal SET archived_at = now() WHERE id = $1`, dealUUID)
 		return err

@@ -39,7 +39,7 @@ func TestFindingsRankByTheirAmountInTheBaseCurrency(t *testing.T) {
 
 	admin := e.Admin()
 	var got []ids.UUID
-	if err := database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(admin, e.Pool, func(tx pgx.Tx) error {
 		found, err := AssuranceExceptions(admin, tx)
 		for _, f := range found {
 			got = append(got, f.SubjectID)

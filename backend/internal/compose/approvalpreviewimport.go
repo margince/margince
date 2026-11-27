@@ -40,7 +40,7 @@ func (r approvalPreviewReader) importPreview(ctx context.Context, approval crmco
 		}
 		return out, nil
 	}
-	err = database.WithWorkspaceSnapshot(ctx, r.db.Pool(), func(ctx context.Context) error {
+	err = database.WithSnapshot(ctx, r.db.Pool(), func(ctx context.Context) error {
 		rows, err := r.importRows(ctx, run, out)
 		if err != nil {
 			return err

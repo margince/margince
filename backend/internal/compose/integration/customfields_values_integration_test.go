@@ -408,7 +408,7 @@ func TestCustomFieldValues_RetiredFieldHiddenButPreserved(t *testing.T) {
 
 	// The stored value is untouched underneath.
 	var stored *string
-	err = database.WithWorkspaceTx(f.ctx, f.e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(f.ctx, f.e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(f.ctx,
 			`SELECT `+col+` FROM contact WHERE id = $1`, ids.UUID(created.Id)).Scan(&stored)
 	})
@@ -441,7 +441,7 @@ func TestCustomFieldValues_UpdateAuditCarriesDiff(t *testing.T) {
 	}
 
 	var before, after map[string]any
-	err = database.WithWorkspaceTx(f.ctx, f.e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(f.ctx, f.e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(f.ctx,
 			`SELECT before, after FROM audit_log
 			 WHERE entity_type = 'contact' AND entity_id = $1 AND action = 'update'

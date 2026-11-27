@@ -46,7 +46,7 @@ func TestFindingsFollowTheRequestedPopulation(t *testing.T) {
 	admin := sectionsReader(e, ids.NewV7(), nil, principal.RowScopeAll)
 	read := func(population assurance.Population) ([]ids.UUID, error) {
 		var subjects []ids.UUID
-		err := database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
+		err := database.WithTx(admin, e.Pool, func(tx pgx.Tx) error {
 			found, err := AssuranceExceptionsIn(admin, tx, population)
 			for _, finding := range found {
 				subjects = append(subjects, finding.SubjectID)

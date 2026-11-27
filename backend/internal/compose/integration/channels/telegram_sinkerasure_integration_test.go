@@ -150,7 +150,7 @@ func TestTheSinkWaitsForAnErasureHoldingTheRecordsAccount(t *testing.T) {
 	ctx := sinkConnectorCtx(e)
 
 	var upsertErr error
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		if err := storekit.LockChannelIdentities(ctx, tx, []storekit.ChannelIdentityKey{
 			{Provider: telegramProvider, ChannelUserID: "20302"},
 		}); err != nil {
@@ -184,7 +184,7 @@ func TestTheSinkIsUnaffectedByALockOnAnotherAccount(t *testing.T) {
 
 	const body = "an unrelated account's message"
 	var upsertErr error
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		if err := storekit.LockChannelIdentities(ctx, tx, []storekit.ChannelIdentityKey{
 			{Provider: telegramProvider, ChannelUserID: "20999"},
 		}); err != nil {

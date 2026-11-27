@@ -69,7 +69,7 @@ func readSyncState(t *testing.T, e *integration.SearchEnv, connID ids.UUID) (str
 	t.Helper()
 	var status string
 	var row syncStateRow
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(context.Background(),
 			`SELECT status FROM capture_connection WHERE id = $1`, connID).Scan(&status); err != nil {
 			return err
@@ -141,7 +141,7 @@ func TestSyncFailureNeverKillsAConnection(t *testing.T) {
 
 	t.Run("persistent failure degrades to a daily probe that heals", func(t *testing.T) {
 		// Fast-forward the ladder to the brink instead of failing 20 times.
-		err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			_, err := tx.Exec(context.Background(),
 				`UPDATE capture_sync_state SET consecutive_failures = 19 WHERE connection_id = $1`, connID)
 			return err
@@ -210,7 +210,7 @@ func TestSyncFailureNeverKillsAConnection(t *testing.T) {
 
 	// The detail landed in the ledger; the row never carries it.
 	var ledger int
-	err = database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM system_log WHERE action = 'capture_sync_error'`).Scan(&ledger)
 	})
@@ -225,7 +225,7 @@ func TestSyncFailureNeverKillsAConnection(t *testing.T) {
 // forceDue moves the connection's pacing clock into the past.
 func forceDue(t *testing.T, e *integration.SearchEnv, connID ids.UUID) {
 	t.Helper()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE capture_sync_state SET next_sync_at = now() - interval '1 second' WHERE connection_id = $1`, connID)
 		return err

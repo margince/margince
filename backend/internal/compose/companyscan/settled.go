@@ -58,7 +58,7 @@ func (s *Service) dropSettled(
 		return findings, nil
 	}
 	var settled map[ids.UUID]bool
-	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		var readErr error
 		settled, readErr = settledFor(ctx, tx, companyID, cited, s.now().UTC())
 		return readErr

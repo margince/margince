@@ -88,7 +88,7 @@ func TestApprovingAStagedLinkedInMatchLinksTheConnectionAndWritesTheURL(t *testi
 	var status string
 	var matched *ids.UUID
 	var handle *string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(context.Background(), `
 			SELECT match_status, matched_contact_id FROM linkedin_connection
 			 WHERE normalized_name = 'andreas muller'`).Scan(&status, &matched); err != nil {
@@ -257,7 +257,7 @@ func TestTheSweepNeverReasksALinkedInMatchThatWasRefused(t *testing.T) {
 func linkedInMatchStatus(t *testing.T, e *integration.Env) string {
 	t.Helper()
 	var status string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT match_status FROM linkedin_connection`).Scan(&status)
 	}); err != nil {
@@ -303,7 +303,7 @@ func TestAContactEditDoesNotCancelAWaitingLinkedInMatch(t *testing.T) {
 
 	var status string
 	var matched *ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT match_status, matched_contact_id FROM linkedin_connection
 			 WHERE normalized_name = 'andreas muller'`).Scan(&status, &matched)
@@ -321,7 +321,7 @@ func TestAContactEditDoesNotCancelAWaitingLinkedInMatch(t *testing.T) {
 func pendingLinkedInMatchCount(t *testing.T, e *integration.Env) int {
 	t.Helper()
 	var n int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM approval WHERE kind = 'linkedin_match' AND status = 'pending'`).Scan(&n)
 	}); err != nil {
@@ -336,7 +336,7 @@ func pendingLinkedInMatchCount(t *testing.T, e *integration.Env) int {
 func onlyPendingLinkedInMatch(t *testing.T, e *integration.Env) ids.ApprovalID {
 	t.Helper()
 	var ids_ []ids.ApprovalID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(context.Background(), `
 			SELECT id FROM approval WHERE kind = 'linkedin_match' AND status = 'pending'`)
 		if err != nil {
@@ -379,7 +379,7 @@ func TestARefusalDoesNotOverwriteAMatchConfirmedSince(t *testing.T) {
 	}
 
 	// The row moves on under the observation: confirmed by the other path.
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE linkedin_connection SET match_status = 'confirmed'`)
 		return err
@@ -400,7 +400,7 @@ func TestARefusalDoesNotOverwriteAMatchConfirmedSince(t *testing.T) {
 func onlyLinkedInConnection(t *testing.T, e *integration.Env) ids.UUID {
 	t.Helper()
 	var id ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT id FROM linkedin_connection`).Scan(&id)
 	}); err != nil {
 		t.Fatalf("reading the connection id: %v", err)
@@ -439,7 +439,7 @@ func TestAFailedLinkedInApplyLeavesTheApprovalUnconsumed(t *testing.T) {
 
 	// The row the proposal is about goes away, exactly as a re-import would
 	// take it away.
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE linkedin_connection SET tombstoned_at = now()`)
 		return err
@@ -452,7 +452,7 @@ func TestAFailedLinkedInApplyLeavesTheApprovalUnconsumed(t *testing.T) {
 	}
 
 	var consumed *string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT consumed_at::text FROM approval WHERE id = $1`, approval).Scan(&consumed)
 	}); err != nil {
@@ -471,7 +471,7 @@ func linkedInMatchPair(t *testing.T, e *integration.Env) (string, *ids.UUID) {
 	t.Helper()
 	var status string
 	var contact *ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT match_status, matched_contact_id FROM linkedin_connection`).Scan(&status, &contact)
 	}); err != nil {
@@ -656,7 +656,7 @@ func TestAColleagueDecidingAMatchAppliesItToTheStagersConnection(t *testing.T) {
 
 	var owner, matched *ids.UUID
 	var status string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT owner_user_id, matched_contact_id, match_status FROM linkedin_connection
 			 WHERE normalized_name = 'andreas muller'`).Scan(&owner, &matched, &status)

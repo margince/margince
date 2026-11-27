@@ -19,7 +19,7 @@ func validateParts(
 	ctx context.Context, db *database.DB, id migration.RunID, source migration.Source,
 	skipped func(object string) []migration.SkippedLine, mapping *migration.RunMapping, progress *testRunProgress,
 ) (report migration.Report, err error) {
-	err = database.WithWorkspaceSnapshot(ctx, db.Pool(), func(ctx context.Context) error {
+	err = database.WithSnapshot(ctx, db.Pool(), func(ctx context.Context) error {
 		writers, err := newBundleWriters(ctx, db, id, mapping, source)
 		if err != nil {
 			return err

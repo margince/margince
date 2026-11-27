@@ -142,7 +142,7 @@ func TallyTx(ctx context.Context, tx pgx.Tx, run ids.UUID) (Tally, error) {
 // the count the receipt states.
 func WriteReceipt(ctx context.Context, pool *pgxpool.Pool, subject Subject, run ids.UUID, build func(Tally) map[string]any) (Tally, error) {
 	var tally Tally
-	err := database.WithWorkspaceTx(storekit.WithBatch(ctx, run), pool, func(tx pgx.Tx) error {
+	err := database.WithTx(storekit.WithBatch(ctx, run), pool, func(tx pgx.Tx) error {
 		var err error
 		if tally, err = TallyTx(ctx, tx, run); err != nil {
 			return err
@@ -223,7 +223,7 @@ type SweepResult struct {
 func Sweep(ctx context.Context, pool *pgxpool.Pool) (SweepResult, error) {
 	var orphans []ids.UUID
 	var subjects []Subject
-	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) (err error) {
+	if err := database.WithTx(ctx, pool, func(tx pgx.Tx) (err error) {
 		if orphans, err = orphanRunsTx(ctx, tx); err != nil || len(orphans) == 0 {
 			return err
 		}
@@ -286,7 +286,7 @@ func repairIfIdle(ctx context.Context, pool *pgxpool.Pool, s Subject) (int, erro
 	}
 	defer closeLease(ctx, lease)
 	written := 0
-	err = database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) (err error) {
+	err = database.WithTx(ctx, pool, func(tx pgx.Tx) (err error) {
 		written, err = RepairTx(ctx, tx, s)
 		return err
 	})

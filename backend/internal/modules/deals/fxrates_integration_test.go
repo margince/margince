@@ -50,7 +50,7 @@ func TestTheEngineReadsTheNewestRateOnOrBeforeTheAsOfDay(t *testing.T) {
 
 	var got FXRate
 	var found bool
-	if err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.pool, func(tx pgx.Tx) error {
 		var err error
 		got, found, err = NewFXRates("EUR", asOf).For(ctx, tx, "JPY")
 		return err
@@ -88,7 +88,7 @@ func TestTheEngineAnswersNotFoundForAnUnpricedCurrency(t *testing.T) {
 	ctx := e.as()
 
 	var found bool
-	if err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.pool, func(tx pgx.Tx) error {
 		var err error
 		_, found, err = NewFXRates("EUR", time.Now().UTC()).For(ctx, tx, "XPF")
 		return err
@@ -109,7 +109,7 @@ func TestTheBaseCurrencyNeedsNoStoredRate(t *testing.T) {
 
 	var got FXRate
 	var found bool
-	if err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.pool, func(tx pgx.Tx) error {
 		var err error
 		got, found, err = NewFXRates("EUR", time.Now().UTC()).For(ctx, tx, "EUR")
 		return err

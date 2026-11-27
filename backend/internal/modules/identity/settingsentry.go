@@ -446,7 +446,7 @@ func InstallationNameOf(ctx context.Context, tx pgx.Tx) (string, error) {
 // surface holding only a pool — the public preference centre's seam.
 func InstallationNameForPublicPage(ctx context.Context, pool *pgxpool.Pool) (string, error) {
 	var name string
-	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		var err error
 		name, err = InstallationNameOf(ctx, tx)
 		return err

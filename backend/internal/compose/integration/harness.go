@@ -452,7 +452,7 @@ func withFullSignalGrant(base principal.Permissions) principal.Permissions {
 func (e *Env) SeedWonDealLinkedTo(t *testing.T, activities ...ids.UUID) ids.UUID {
 	t.Helper()
 	pipeline, stage, deal := ids.NewV7(), ids.NewV7(), ids.NewV7()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if _, err := tx.Exec(ctx, `INSERT INTO pipeline (id, name, is_default, position)
 			VALUES ($1, 'Floor fixture', false, 90)`, pipeline); err != nil {

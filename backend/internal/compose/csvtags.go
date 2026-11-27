@@ -144,7 +144,7 @@ func (w *csvWriters) tagExisting(ctx context.Context, id ids.UUID, row migration
 	if len(splitTags(cell)) == 0 {
 		return nil
 	}
-	return database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
+	return database.WithTx(ctx, w.pool, func(tx pgx.Tx) error {
 		return w.tagNames.applyAll(ctx, tx, w.object, id, cell)
 	})
 }

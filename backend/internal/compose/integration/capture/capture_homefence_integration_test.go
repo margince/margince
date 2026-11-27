@@ -132,7 +132,7 @@ func archiveNewestMail(t *testing.T, e *integration.SearchEnv) {
 		},
 	})
 	var id ids.UUID
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `SELECT id FROM activity WHERE kind = 'email' AND archived_at IS NULL
 			ORDER BY created_at DESC, id DESC LIMIT 1`).Scan(&id)
 	}); err != nil {

@@ -395,7 +395,7 @@ func (h marginceChangeHandlers) bundleCorrections(
 	var found []deals.DealCorrection
 	for _, auditID := range auditIDs {
 		var correction deals.DealCorrection
-		err := database.WithWorkspaceTx(ctx, h.pool, func(tx pgx.Tx) error {
+		err := database.WithTx(ctx, h.pool, func(tx pgx.Tx) error {
 			var err error
 			correction, err = h.deals.CorrectionForAudit(ctx, tx, ids.UUID(auditID))
 			return err

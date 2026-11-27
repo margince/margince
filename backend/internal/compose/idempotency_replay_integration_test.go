@@ -111,7 +111,7 @@ func TestARefusalAfterACommittedWriteIsNotRunAgain(t *testing.T) {
 	calls := 0
 	r := keyedTemplateRouter(e, func(w http.ResponseWriter, req *http.Request) {
 		calls++
-		if err := database.WithWorkspaceTx(req.Context(), e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(req.Context(), e.Pool, func(tx pgx.Tx) error {
 			_, err := tx.Exec(req.Context(), `SELECT txid_current()`)
 			return err
 		}); err != nil {

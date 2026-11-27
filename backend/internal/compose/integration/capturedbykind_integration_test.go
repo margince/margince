@@ -30,7 +30,7 @@ import (
 // only thing this filter reads.
 func seatContactCapturedBy(t *testing.T, e *integration.Env, fullName, capturedBy string) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO contact (id, owner_id, full_name, source, captured_by)
 			VALUES ($1, $2, $3, 'test', $4)`, ids.NewV7(), e.Rep1, fullName, capturedBy)
@@ -125,7 +125,7 @@ func TestCapturedByKindNarrowsRowScopeAndNeverWidensIt(t *testing.T) {
 	// An AI-created contact capture-private to Rep3, who sits in the other team.
 	// Ownership alone hides no contact from another seat; visibility='owner' is
 	// the state that still keeps the row out of Rep1's read scope.
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO contact (id, owner_id, full_name, source, captured_by, visibility)
 			VALUES ($1, $2, 'Other Team AI Record', 'test', 'agent:capture_counterparty_verdict', 'owner')`, ids.NewV7(), e.Rep3)
@@ -155,7 +155,7 @@ func TestCapturedByKindNarrowsRowScopeAndNeverWidensIt(t *testing.T) {
 func seatConnectorCompany(t *testing.T, e *integration.Env, name, nameSource string) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO company (id, owner_id, display_name, name_source, source, captured_by)
 			VALUES ($1, $2, $3, $4, 'test', 'connector:gmail')`, id, e.Rep1, name, nameSource)

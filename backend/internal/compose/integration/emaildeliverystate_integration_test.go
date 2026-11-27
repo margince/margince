@@ -71,7 +71,7 @@ func (d *deliveryEnv) sent(t *testing.T, subject string) ids.UUID {
 func (d *deliveryEnv) stage(t *testing.T, activity ids.UUID, messageID string, files []comms.OutboundFile) ids.UUID {
 	t.Helper()
 	var delivery ids.UUID
-	if err := database.WithWorkspaceTx(d.author, d.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(d.author, d.Pool, func(tx pgx.Tx) error {
 		var txErr error
 		delivery, txErr = d.comms.StageTx(d.author, tx, comms.StageInput{
 			ActivityID: ids.From[ids.ActivityKind](activity), Provider: "gmail",

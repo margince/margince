@@ -33,7 +33,7 @@ const latestInboundLimit = 10
 // messages come from the waiting_reply read, so this never judges a thread on its own.
 func (s *Store) LatestInbound(ctx context.Context, entityType string, entityID ids.UUID) (crmcontracts.LatestInboundList, error) {
 	var out crmcontracts.LatestInboundList
-	err := database.WithWorkspaceSnapshot(ctx, s.db.Pool(), func(ctx context.Context) error {
+	err := database.WithSnapshot(ctx, s.db.Pool(), func(ctx context.Context) error {
 		// Each read carries the row scope and plans far longer than it runs.
 		return database.ReuseGenericPlans(ctx, func(ctx context.Context) (err error) {
 			out, err = s.readLatestInbound(ctx, entityType, entityID)

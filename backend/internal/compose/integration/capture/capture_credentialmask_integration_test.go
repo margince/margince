@@ -53,7 +53,7 @@ func TestACapturedMailStoresItsCredentialsMasked(t *testing.T) {
 
 	var subject, body string
 	var raw []byte
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(context.Background(),
 			`SELECT subject, body FROM activity WHERE id = $1`, activityID).Scan(&subject, &body); err != nil {
 			return err
@@ -170,7 +170,7 @@ func TestMaskedTextIsNoProofThatTwoMailboxesHoldOneMessage(t *testing.T) {
 
 	sync(t, passwordMail("pw-older@acme.example", secondSeatAddress, "AlphaSecret"))
 	older := activityIDOf(t, e, "pw-older@acme.example")
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE activity SET body = replace(body, '[masked]', 'AlphaSecret') WHERE id = $1`, older)
 		return err

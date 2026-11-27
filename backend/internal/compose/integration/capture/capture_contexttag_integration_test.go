@@ -29,7 +29,7 @@ import (
 func putWord(t *testing.T, env captureEnv, name string, archived bool) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
-	err := database.WithWorkspaceTx(env.e.Admin(), env.e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(env.e.Admin(), env.e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO tag (id, name, archived_at)
 			VALUES ($1, $2, CASE WHEN $3 THEN now() ELSE NULL END)`, id, name, archived)
@@ -109,7 +109,7 @@ func TestAWordArchivedAfterwardsIsReportedOnTheConnection(t *testing.T) {
 		t.Fatalf("filing the mailbox under a word: %v", err)
 	}
 
-	err := database.WithWorkspaceTx(env.e.Admin(), env.e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(env.e.Admin(), env.e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `UPDATE tag SET archived_at = now() WHERE id = $1`, word)
 		return err
 	})

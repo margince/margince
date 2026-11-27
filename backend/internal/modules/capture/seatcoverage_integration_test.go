@@ -175,7 +175,7 @@ func TestSeatCoverage(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx, pool := meetingTenureEnv(t)
-			if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+			if err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 				seat, email := seedSeat(ctx, t, tx, tc.status)
 				if tc.connect != "" {
 					connectSeat(ctx, t, tx, seat, tc.connect)
@@ -221,7 +221,7 @@ func TestSeatCoverage(t *testing.T) {
 // bound to a user_id and never becomes an interaction edge.
 func TestSeatCoverageDoesNotBindAnUnattestedAddress(t *testing.T) {
 	ctx, pool := meetingTenureEnv(t)
-	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		seat, email := seedSeat(ctx, t, tx, "invited")
 		contactID := seedThread(ctx, t, tx, seatThread{kind: "email", audience: "workspace", seatEmail: email})
 		if len(seatGaps(ctx, t, tx, contactID).Seats) != 1 {
@@ -247,7 +247,7 @@ func TestSeatCoverageDoesNotBindAnUnattestedAddress(t *testing.T) {
 // counts it once, the way the list names it once.
 func TestSeatCoverageCountsASeatOnSeveralThreadsOnce(t *testing.T) {
 	ctx, pool := meetingTenureEnv(t)
-	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		seat, email := seedSeat(ctx, t, tx, "active")
 		thread := seatThread{kind: "email", audience: "workspace", seatEmail: email}
 		thread.contactID = seedThread(ctx, t, tx, thread)

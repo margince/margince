@@ -125,7 +125,7 @@ func TestTheClockRepairReadsBoundedPagesToAWrongRecordFarBehind(t *testing.T) {
 
 	wsCtx := principal.WithWorkspaceID(context.Background(), f.e.WS)
 	var count int64
-	if err := database.WithWorkspaceTx(wsCtx, f.e.Pool, func(tx pgx.Tx) (err error) {
+	if err := database.WithTx(wsCtx, f.e.Pool, func(tx pgx.Tx) (err error) {
 		count, err = storekit.CountClockRecords(wsCtx, tx, storekit.ClockContacts, 3)
 		return err
 	}); err != nil || count != 4 {

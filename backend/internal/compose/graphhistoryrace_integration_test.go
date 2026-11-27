@@ -119,7 +119,7 @@ func assertLateHistorySurvivesDrain(t *testing.T, fold string, parties int) {
 	drained, drainDone := make(chan error, 1), make(chan struct{})
 	go func() {
 		defer close(drainDone)
-		drained <- database.WithWorkspaceTx(ctx, b.env.Pool, func(tx pgx.Tx) error {
+		drained <- database.WithTx(ctx, b.env.Pool, func(tx pgx.Tx) error {
 			_, err := search.DrainPendingGraphTx(ctx, &graphFoldBarrierTx{Tx: tx, entered: entered, release: release, fold: fold}, 100)
 			return err
 		})
@@ -165,7 +165,7 @@ func assertLateHistorySurvivesDrain(t *testing.T, fold string, parties int) {
 	if got := b.env.WsCount(t, `SELECT count(*) FROM graph_contact_edge WHERE requested_generation>processed_generation AND deferred_run_id IS NULL`); got != parties*(parties-1)/2 {
 		t.Fatalf("contact successors=%d", got)
 	}
-	if err := database.WithWorkspaceTx(system, b.env.Pool, func(tx pgx.Tx) error { _, err := search.DrainPendingGraphTx(system, tx, 100); return err }); err != nil {
+	if err := database.WithTx(system, b.env.Pool, func(tx pgx.Tx) error { _, err := search.DrainPendingGraphTx(system, tx, 100); return err }); err != nil {
 		t.Fatal(err)
 	}
 	if got := b.env.WsCount(t, `SELECT count(*) FROM graph_interaction_edge WHERE requested_generation>processed_generation`); got != 0 {

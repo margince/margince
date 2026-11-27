@@ -74,7 +74,7 @@ func verdictCreatesFromStoredMails(t *testing.T, e *integration.Env, email strin
 		}
 	}
 	verdictCtx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), verdictActor)
-	if err := database.WithWorkspaceTx(verdictCtx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(verdictCtx, e.Pool, func(tx pgx.Tx) error {
 		_, err := createCounterpartyRecords(verdictCtx, tx, e.Contacts, nil, counterpartyCreation{
 			Email: email, Domain: email[strings.IndexByte(email, '@')+1:],
 			OwnerID: e.AdminUser, ActivityID: first, Source: verdictReason, CapturedBy: verdictActor,
@@ -249,7 +249,7 @@ func TestTheInitialsTaskReplaysFromTheStartWithoutChangingAnything(t *testing.T)
 	in := datatask.BatchIn{Limit: 1, RunID: ids.NewV7()}
 	for range 200 {
 		var out datatask.BatchOut
-		err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			var err error
 			out, err = step.Batch(ctx, tx, in)
 			return err
@@ -271,7 +271,7 @@ func TestTheInitialsTaskReplaysFromTheStartWithoutChangingAnything(t *testing.T)
 func TestTheInitialsTaskRefusesAMalformedCursor(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := datatask.Acting(e.Admin(), initialsNamesDataTask().ID)
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := initialsNamesDataTask().Steps[0].Batch(ctx, tx, datatask.BatchIn{Cursor: []byte(`"not an id"`), Limit: 10})
 		return err
 	})
@@ -325,7 +325,7 @@ func TestTheInitialsTaskInspectsAtMostItsLimitAndResumesAfterIt(t *testing.T) {
 	for range 50 {
 		var page contacts.InitialsNamePage
 		var out datatask.BatchOut
-		err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			after, err := datatask.UUIDCursor(in.Cursor)
 			if err != nil {
 				return err

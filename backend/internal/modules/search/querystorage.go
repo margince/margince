@@ -74,7 +74,7 @@ func NewColumnCatalog(db *database.DB) *ColumnCatalog { return &ColumnCatalog{db
 // engine) would then leave a workspace's own new column unaskable until the
 // process restarted, for a saving of one indexed catalog read per plan.
 func (c *ColumnCatalog) Columns(ctx context.Context, table string) ([]StoredColumn, error) {
-	// rls-exempt: information_schema is the database's own schema catalog; it holds no tenant rows, so there is no workspace to bind
+	// pool-exempt: information_schema is the database's own schema catalog; it holds no domain rows, so no audit or outbox row belongs with this read
 	rows, err := c.db.Pool().Query(ctx,
 		`SELECT column_name, CASE WHEN data_type = 'ARRAY' AND udt_name = '_text' THEN 'text[]' ELSE data_type END FROM information_schema.columns
 		  WHERE table_schema = current_schema() AND table_name = $1`, table)

@@ -42,7 +42,7 @@ func TestLogSystem_writesConnectorRowWithDerivedActor(t *testing.T) {
 	detail := map[string]any{"reason": "personal_exclusion", "source_system": "gmail", "source_id": "msg-1"}
 
 	var id ids.UUID
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		id, err = storekit.LogSystem(ctx, tx, "capture_skip", detail)
 		return err
@@ -60,7 +60,7 @@ func TestLogSystem_writesConnectorRowWithDerivedActor(t *testing.T) {
 		detailJSON                 []byte
 	)
 	rowCtx := principal.WithWorkspaceID(context.Background(), e.WS)
-	if err := database.WithWorkspaceTx(rowCtx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(rowCtx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
 			`SELECT actor_type, actor_id, on_behalf_of, action, detail,
 			        NOT EXISTS (SELECT 1 FROM information_schema.columns
@@ -97,7 +97,7 @@ func TestLogSystem_isAppendOnly(t *testing.T) {
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
 
 	var id ids.UUID
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		id, err = storekit.LogSystem(ctx, tx, "export", map[string]any{"kind": "filtered"})
 		return err
@@ -110,7 +110,7 @@ func TestLogSystem_isAppendOnly(t *testing.T) {
 		`UPDATE system_log SET action = 'tampered' WHERE id = $1`,
 		`DELETE FROM system_log WHERE id = $1`,
 	} {
-		err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			_, err := tx.Exec(ctx, stmt, id)
 			return err
 		})

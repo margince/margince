@@ -179,7 +179,7 @@ func TestTestRunProgressIsWrittenBesideItsSnapshot(t *testing.T) {
 	l := claimedTest(ctx, t, s)
 	progress := Progress{Objects: []ObjectProgress{{Object: ObjectLead, RowsDone: 2, RowsTotal: 3}}}
 
-	err := database.WithWorkspaceSnapshot(ctx, db.Pool(), func(snapshot context.Context) error {
+	err := database.WithSnapshot(ctx, db.Pool(), func(snapshot context.Context) error {
 		if err := s.FlushTestProgress(snapshot, l, progress, PhaseChecking, ObjectLead); err != nil {
 			return err
 		}

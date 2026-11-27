@@ -177,7 +177,7 @@ func indexAfter(s, sub string) int {
 func seedUnlabeledEmail(t *testing.T, e *integration.Env, subject string) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO activity (id, kind, subject, body, source_system, source_id, source, captured_by)
 			VALUES ($1, 'email', $2, 'body text', 'gmail', $3, 'gmail:'||$3, 'connector:gmail')`,
@@ -193,7 +193,7 @@ func seedUnlabeledEmail(t *testing.T, e *integration.Env, subject string) ids.UU
 func labelOf(t *testing.T, e *integration.Env, id ids.UUID) *string {
 	t.Helper()
 	var label *string
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT capture_label FROM activity WHERE id = $1`, id).Scan(&label)
 	})
@@ -550,7 +550,7 @@ func seedOutboundEmail(t *testing.T, e *integration.Env, subject string) ids.UUI
 func seedDirectedEmail(t *testing.T, e *integration.Env, subject, direction string) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO activity (id, kind, direction, subject, body, source_system, source_id, source, captured_by)
 			VALUES ($1, 'email', $2, $3, 'body text', 'gmail', $4, 'gmail:'||$4, 'connector:gmail')`,
@@ -566,7 +566,7 @@ func seedDirectedEmail(t *testing.T, e *integration.Env, subject, direction stri
 func seedInboundEmailWithBody(t *testing.T, e *integration.Env, subject, body string) ids.UUID {
 	t.Helper()
 	id := seedInboundEmail(t, e, subject)
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `UPDATE activity SET body = $2 WHERE id = $1`, id, body)
 		return err
 	})
@@ -579,7 +579,7 @@ func seedInboundEmailWithBody(t *testing.T, e *integration.Env, subject, body st
 func replyVerdictOf(t *testing.T, e *integration.Env, id ids.UUID) *string {
 	t.Helper()
 	var out *string
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT reply_verdict FROM activity WHERE id = $1`, id).Scan(&out)
 	})
@@ -592,7 +592,7 @@ func replyVerdictOf(t *testing.T, e *integration.Env, id ids.UUID) *string {
 func replyHistoryCount(t *testing.T, e *integration.Env, id ids.UUID) int {
 	t.Helper()
 	var n int
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM activity_reply_verdict_history WHERE activity_id = $1`, id).Scan(&n)
 	})
@@ -613,7 +613,7 @@ func replyHistoryCount(t *testing.T, e *integration.Env, id ids.UUID) int {
 func TestAMessageWithNoDirectionStillGetsLabelled(t *testing.T) {
 	e := integration.Setup(t)
 	id := ids.NewV7()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO activity (id, kind, subject, body, source_system, source_id, source, captured_by)
 			VALUES ($1, 'email', 'no direction on this one', 'body text', 'gmail', $2, 'gmail:'||$2, 'connector:gmail')`,

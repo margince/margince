@@ -131,7 +131,7 @@ func setDecision(t *testing.T, e *integration.Env, user ids.UUID, address, decis
 func dispositionKind(t *testing.T, e *integration.Env, id ids.UUID) string {
 	t.Helper()
 	var kind string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT coalesce(kind, '') FROM capture_pending_counterparty WHERE id = $1`, id).Scan(&kind)
 	}); err != nil {
@@ -182,7 +182,7 @@ func TestAnOverrideDoesNotRevealAColleaguesVerdict(t *testing.T) {
 // setDispositionOutcome writes what the classifier concluded about a sender.
 func setDispositionOutcome(t *testing.T, e *integration.Env, id ids.UUID, kind, status string) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			UPDATE capture_pending_counterparty SET kind = $2, status = $3 WHERE id = $1`,
 			id, kind, status)

@@ -37,7 +37,7 @@ func olderCorrespondenceThread(t *testing.T, o *owedEnv) (string, ids.UUID) {
 func threadEnds(t *testing.T, o *owedEnv, key string) (oldest time.Time, oldestID ids.UUID, newest time.Time) {
 	t.Helper()
 	as := o.e.Admin()
-	if err := database.WithWorkspaceTx(as, o.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(as, o.e.Pool, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(as, `
 			SELECT occurred_at, id FROM activity
 			 WHERE thread_key = $1 AND kind = 'email' AND archived_at IS NULL
@@ -57,7 +57,7 @@ func readWindow(t *testing.T, o *owedEnv, thread *settledThread) []threadMessage
 	t.Helper()
 	var window []threadMessage
 	as := o.e.Admin()
-	if err := database.WithWorkspaceTx(as, o.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(as, o.e.Pool, func(tx pgx.Tx) error {
 		var err error
 		window, err = threadMessages(as, tx, thread)
 		return err
@@ -107,7 +107,7 @@ func TestAReadWithNothingOlderLeftToReadStopsWalkingBack(t *testing.T) {
 	var alphaFrom time.Time
 	var alphaFromID ids.UUID
 	as := o.e.Admin()
-	if err := database.WithWorkspaceTx(as, o.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(as, o.e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(as, `
 			SELECT occurred_at, id FROM activity
 			 WHERE thread_key = $1 AND kind = 'email' AND id <> $2

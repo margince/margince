@@ -58,7 +58,7 @@ func (o *owedEnv) requestTasks(t *testing.T, message ids.UUID) int {
 
 func (o *owedEnv) unlinkOriginal(t *testing.T, message ids.UUID) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `UPDATE activity SET raw_capture_id = NULL WHERE id = $1`, message)
 		return err
 	}); err != nil {
@@ -167,7 +167,7 @@ func TestCurrentWorkFromAMailNotReadInFullIsWithheld(t *testing.T) {
 	taskFor := func(sourceSystem string, message ids.UUID) ids.UUID {
 		t.Helper()
 		var id ids.UUID
-		if err := database.WithWorkspaceTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
 			return tx.QueryRow(context.Background(), `SELECT id FROM activity WHERE source_system = $1 AND source_activity_id = $2`,
 				sourceSystem, message).Scan(&id)
 		}); err != nil {

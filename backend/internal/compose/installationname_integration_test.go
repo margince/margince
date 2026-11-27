@@ -37,7 +37,7 @@ func TestConfirmingTheOnboardingReadRenamesTheInstallation(t *testing.T) {
 	}
 
 	var name string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var err error
 		name, err = identity.InstallationNameOf(e.Admin(), tx)
 		return err

@@ -87,7 +87,7 @@ func captureCopy(t *testing.T, e *integration.Env, owner ids.UUID, seat, provide
 func guestCopyMailbox(t *testing.T, e *integration.Env, seat ids.UUID) string {
 	t.Helper()
 	address := "organizer-" + seat.String() + "@ws.example"
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO capture_connection (user_id, provider, status, credential_ref, account_label)
 			VALUES ($1, 'gmail', 'connected', 'vault:test', $2)`, seat, address)
@@ -102,7 +102,7 @@ func guestCopyMailbox(t *testing.T, e *integration.Env, seat ids.UUID) string {
 // the mailbox ids its import rows hold.
 func storedInvitations(t *testing.T, e *integration.Env, owner ids.UUID, uid string) (rows, mailboxIDs int) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT count(DISTINCT a.id), coalesce(sum(cardinality(ci.provider_message_ids)), 0)
 			  FROM activity a JOIN capture_import ci ON ci.activity_id = a.id AND ci.user_id = $1

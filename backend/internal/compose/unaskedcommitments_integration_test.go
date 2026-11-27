@@ -141,7 +141,7 @@ func withdrawUnaskedCommitments(t *testing.T, e *integration.Env) int {
 	changed := 0
 	for range 100 {
 		var out datatask.BatchOut
-		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			var err error
 			out, err = approvals.WithdrawUnaskedCommitmentsTx(ctx, tx, in)
 			return err

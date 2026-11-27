@@ -48,7 +48,7 @@ func TestCommitmentReadsMatchTheTaskWritersAssigneeRule(t *testing.T) {
 				t.Fatal("missing source target")
 			}
 			var targeted []crmcontracts.Approval
-			if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+			if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 				pending, err := e.svc.PendingForTarget(ctx, tx, *got.TargetEntityType, ids.UUID(*got.TargetEntityId))
 				targeted = pending.Approvals
 				return err

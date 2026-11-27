@@ -121,7 +121,7 @@ func (s *Service) Freeze(
 	}
 	now := s.now()
 	var id ids.UUID
-	err = database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		// The reader's old walks go first, in the same transaction: a sweep that
 		// ran separately could leave a reader at their bound if it failed, and
 		// nothing else deletes these rows.
@@ -160,7 +160,7 @@ func (s *Service) Resume(ctx context.Context, id ids.UUID, fingerprint string) (
 		encodedBuckets []byte
 		storedPrint    string
 	)
-	err = database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
 			SELECT id, as_of, expires_at, params_fingerprint, buckets, rows
 			  FROM worklist_snapshot

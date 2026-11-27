@@ -143,7 +143,7 @@ func TestOneDecisionInTheBodyAndTheDigestIsOneBasisRow(t *testing.T) {
 	digest := digestLines{total: 1, quotable: []digestItem{{decision: true, target: notices.Target{Type: notices.TargetApproval, ID: decision.approval}}}}
 	reader := a.e.As(a.e.AdminUser, nil, integration.AdminPerms)
 	var basis sendBasis
-	if err := database.WithWorkspaceTx(reader, a.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(reader, a.e.Pool, func(tx pgx.Tx) error {
 		var err error
 		if basis, err = readSendBasis(reader, tx, a.e.AdminUser, nil, morningRefs(items, digest), clocktest.Now(t)); err != nil {
 			return err

@@ -254,7 +254,7 @@ func writeReturnLinkSpent(w http.ResponseWriter, r *http.Request) {
 // list, under the booking page's admission. The lift comes last and checks that
 // the link still names the current erasure. Its refusal rolls all of it back.
 func (h Handlers) storeReturned(ctx context.Context, request returnlink.Request) error {
-	return database.WithWorkspaceWriteTx(ctx, h.pool, func(ctx context.Context) error {
+	return database.WithWriteTx(ctx, h.pool, func(ctx context.Context) error {
 		contactID, err := h.contacts.EnsureContactByEmail(ctx, request.Name, request.Email, returnSource, storekit.AdmitSelfBooking)
 		if err != nil {
 			return err

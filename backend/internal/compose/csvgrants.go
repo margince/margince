@@ -145,7 +145,7 @@ func checkGrants(
 func refusedOwners(ctx context.Context, pool *pgxpool.Pool, owners *ownerResolver) ([]string, error) {
 	var refused []string
 	self := migration.OwnSeat(ctx)
-	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		for _, email := range slices.Sorted(maps.Keys(owners.seats)) {
 			err := auth.EnsureNewRecordOwner(ctx, tx, owners.seats[email])
 			notSelf := self != nil && self.UUID != owners.seats[email]

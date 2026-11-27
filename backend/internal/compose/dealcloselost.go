@@ -78,7 +78,7 @@ type closeDecision struct {
 func (c silentDealCloser) CloseWorkspace(ctx context.Context) (int, error) {
 	now := c.now()
 	var due []closeDecision
-	err := database.WithWorkspaceTx(ctx, c.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, c.pool, func(tx pgx.Tx) error {
 		var err error
 		due, err = closeDecisions(ctx, tx, now, nil)
 		return err

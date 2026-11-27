@@ -184,7 +184,7 @@ func TestASentMessageIsAddressedOnlyToTheContactsItsHeadersName(t *testing.T) {
 
 	var parties MessageParties
 	ctx := e.as()
-	if err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.pool, func(tx pgx.Tx) error {
 		parties, err = storeKnowing(e).PartiesOf(ctx, tx, ids.UUID(logged.Id))
 		return err
 	}); err != nil {
@@ -220,7 +220,7 @@ func TestAnArchivedAddressStillNamesItsContactOnTheHeader(t *testing.T) {
 	}
 	var parties MessageParties
 	ctx := e.as()
-	if err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.pool, func(tx pgx.Tx) error {
 		parties, err = storeKnowing(e).PartiesOf(ctx, tx, ids.UUID(logged.Id))
 		return err
 	}); err != nil {

@@ -116,7 +116,7 @@ func TestOnlyHandLoggedEvidenceIsProposedPastTheHorizon(t *testing.T) {
 			}
 			ctx := withTranscriptReader(principal.WithWorkspaceID(context.Background(), e.WS), "human:"+e.Rep1.String(), ids.NewV7())
 			dispatcher := NewCommitmentDispatcher(e.Pool, approvals.NewService(e.DB()))
-			if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+			if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 				outcome, _, err := dispatcher.DispatchTx(ctx, tx, c, ids.NewV7())
 				if err == nil && outcome != test.want {
 					t.Errorf("outcome = %q, want %q", outcome, test.want)

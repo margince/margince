@@ -181,7 +181,7 @@ func claimKey(ctx context.Context, pool *pgxpool.Pool, principalID, key, endpoin
 	outcome := claimFresh
 	var hold claimHold
 	var stored storedResponse
-	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		attempt, claimed, err := insertClaim(ctx, tx, principalID, key, endpoint, digest)
 		if err != nil {
 			return err
@@ -399,7 +399,7 @@ func claimIsReleased(status int, committed bool) bool {
 func recordClaimOutcome(ctx context.Context, pool *pgxpool.Pool, hold claimHold,
 	status int, body, contentType string, records int,
 ) error {
-	return database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	return database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		// attempt_id, so a settlement lands only on the attempt that made it.
 		// Without it a holder whose claim expired mid-flight would overwrite
 		// the REPLACEMENT's recorded result, and a later replay would serve the
@@ -418,7 +418,7 @@ func recordClaimOutcome(ctx context.Context, pool *pgxpool.Pool, hold claimHold,
 // somebody may still replay, and deleting it here would turn a completed call
 // into one that executes a second time.
 func releaseClaim(ctx context.Context, pool *pgxpool.Pool, hold claimHold) error {
-	return database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	return database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		// attempt_id here for the harder half of the same reason: a stale
 		// release DELETES a live claim, and the key is then free while the
 		// attempt holding it is still running — so a third attempt executes

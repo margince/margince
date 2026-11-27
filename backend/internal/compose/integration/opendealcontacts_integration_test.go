@@ -69,7 +69,7 @@ func openDealContacts(
 	t.Helper()
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, perms)
 	var out map[ids.UUID]bool
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		funded, readErr := deals.OpenDealContacts(ctx, tx, candidates)
 		out = funded
 		return readErr

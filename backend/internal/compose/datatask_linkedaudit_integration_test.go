@@ -27,7 +27,7 @@ func legacyRequestAuditCopies(t *testing.T, e *integration.Env) ids.UUID {
 	request := ids.NewV7()
 	e.WsExec(t, `INSERT INTO data_subject_request(id,kind,subject_ref,status,resolution,received_at,due_at,channel,receipt_reference)
  VALUES(@id,'access','erased+'||@id::uuid::text,'fulfilled','erased',now(),now()+interval '30 days','phone',@receipt)`, pgx.StrictNamedArgs{"id": request, "receipt": "RCPT-" + request.String()})
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		// These images predate the older eraser's domain-only case retirement.
 		image := map[string]any{"subject_ref": contact.String(), "email": "private@example.test", "status": "fulfilled"}
 		if _, err := storekit.AuditWithEvidence(e.Admin(), tx, "create", "data_subject_request", request, nil, image, nil); err != nil {
@@ -60,7 +60,7 @@ func TestLinkedAuditTaskCorrectsBothPhasesAndReplaysSafely(t *testing.T) {
 		t.Fatalf("added %d domain erasure boundaries", n)
 	}
 	for _, step := range task.Steps {
-		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			out, err := step.Batch(ctx, tx, datatask.BatchIn{Limit: 1000, RunID: ids.NewV7()})
 			if err == nil && out.Changed != 0 {
 				t.Errorf("replay changed %d entries", out.Changed)
@@ -95,7 +95,7 @@ func TestLinkedAuditTaskRollsBackPayloadsAndStopsBeforeIdentityRemoval(t *testin
 	if n := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type='audit_log' AND evidence->>'legacy_erased_record'='true'`); n != 0 {
 		t.Fatalf("rollback left %d correction proofs", n)
 	}
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := batch(ctx, tx, datatask.BatchIn{Cursor: []byte(`"bad cursor"`), Limit: 1})
 		return err
 	}); err == nil {
@@ -108,7 +108,7 @@ func legacyWeeklyCopies(t *testing.T, e *integration.Env, workingText string) id
 	plan, commitment := ids.NewV7(), ids.NewV7()
 	e.WsExec(t, `INSERT INTO weekly_plan(id,owner_id,local_week_start,captured_by) VALUES(@id,@owner,date '2026-11-02','system:legacy') ON CONFLICT(owner_id,local_week_start) DO NOTHING`, pgx.StrictNamedArgs{"id": plan, "owner": e.AdminUser})
 	e.WsExec(t, `INSERT INTO weekly_plan_commitment(id,plan_id,label,help_requested,due_on,position,captured_by) SELECT @id,p.id,'(erased: the contact this named exercised erasure)',@working,date '2026-11-06',(SELECT count(*) FROM weekly_plan_commitment c WHERE c.plan_id=p.id),'system:legacy' FROM weekly_plan p WHERE p.owner_id=@owner AND p.local_week_start=date '2026-11-02'`, pgx.StrictNamedArgs{"id": commitment, "owner": e.AdminUser, "working": workingText})
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		audit, err := storekit.AuditWithEvidence(e.Admin(), tx, "create", "weekly_plan_commitment", commitment, nil, map[string]any{"label": "Private Contact", "help_requested": "private@example.test"}, nil)
 		if err != nil {
 			return err
@@ -141,7 +141,7 @@ func TestMarkedWeeklyTaskClearsOldCopiesKeepsLaterWorkAndReplays(t *testing.T) {
 		t.Fatalf("later working text lost its history: %d", n)
 	}
 	for _, step := range task.Steps {
-		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			out, err := step.Batch(ctx, tx, datatask.BatchIn{Limit: 1000, RunID: ids.NewV7()})
 			if err == nil && out.Changed != 0 {
 				t.Fatalf("replay changed %d rows", out.Changed)

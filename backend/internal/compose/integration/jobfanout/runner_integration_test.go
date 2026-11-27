@@ -209,7 +209,7 @@ func (re *runnerEnv) enqueue(t *testing.T, spec, trigger string, passport *ids.P
 func (re *runnerEnv) runRow(t *testing.T, trigger string) (status string, trace []runner.Step, approvalID *string) {
 	t.Helper()
 	var traceJSON []byte
-	err := database.WithWorkspaceTx(re.wsCtx, re.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(re.wsCtx, re.pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT status, trace, approval_id::text FROM agent_run WHERE trigger_ref = $1`, trigger).
 			Scan(&status, &traceJSON, &approvalID)
@@ -228,7 +228,7 @@ func (re *runnerEnv) runRow(t *testing.T, trigger string) (status string, trace 
 func (re *runnerEnv) runRowWithReason(t *testing.T, trigger string) (status, reason string, approvalID *string) {
 	t.Helper()
 	var stored *string
-	err := database.WithWorkspaceTx(re.wsCtx, re.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(re.wsCtx, re.pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT status, degrade_reason, approval_id::text FROM agent_run WHERE trigger_ref = $1`, trigger).
 			Scan(&status, &stored, &approvalID)
@@ -300,7 +300,7 @@ func TestRunnerFullLoopWritesAsGovernedAgent(t *testing.T) {
 	// The write carries the AGENT's provenance in the same audit stream
 	// as every other surface — no runner back door.
 	var actorType, actorID, capturedBy string
-	err := database.WithWorkspaceTx(re.wsCtx, re.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(re.wsCtx, re.pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT al.actor_type, al.actor_id, a.captured_by
 			FROM audit_log al JOIN activity a ON a.id = al.entity_id
@@ -322,7 +322,7 @@ func TestRunnerFullLoopWritesAsGovernedAgent(t *testing.T) {
 	re.enqueue(t, "overnight_at_risk_sweep", trigger, &re.passportID)
 	re.tick(t)
 	var runs int
-	err = database.WithWorkspaceTx(re.wsCtx, re.pool, func(tx pgx.Tx) error {
+	err = database.WithTx(re.wsCtx, re.pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM agent_run WHERE trigger_ref = $1`, trigger).Scan(&runs)
 	})
@@ -439,7 +439,7 @@ func TestRunnerJobWithoutPassportFailsLoudly(t *testing.T) {
 	re.enqueue(t, "morning_brief", trigger, nil)
 	re.tick(t)
 	var status string
-	err := database.WithWorkspaceTx(re.wsCtx, re.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(re.wsCtx, re.pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT status FROM runner_job WHERE trigger_ref = $1`, trigger).Scan(&status)
 	})
@@ -451,7 +451,7 @@ func TestRunnerJobWithoutPassportFailsLoudly(t *testing.T) {
 	}
 	// And no run started with ambient authority.
 	var runs int
-	err = database.WithWorkspaceTx(re.wsCtx, re.pool, func(tx pgx.Tx) error {
+	err = database.WithTx(re.wsCtx, re.pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM agent_run WHERE trigger_ref = $1`, trigger).Scan(&runs)
 	})

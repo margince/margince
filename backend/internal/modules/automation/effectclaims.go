@@ -135,7 +135,7 @@ func (s *EffectClaimStore) StageOnce(ctx context.Context, handler, occurrence, f
 	}
 	var id ids.ApprovalID
 	err := storekit.RetryLockCycles(ctx, func() error {
-		return database.WithWorkspaceSnapshot(ctx, s.db.Pool(), func(bound context.Context) error {
+		return database.WithSnapshot(ctx, s.db.Pool(), func(bound context.Context) error {
 			claimed, err := s.Claim(bound, handler, occurrence, fingerprint)
 			if err != nil {
 				return err

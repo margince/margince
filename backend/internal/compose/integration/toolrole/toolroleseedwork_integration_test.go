@@ -328,7 +328,7 @@ func linkSuggestion(s sweepSeed) string {
 	})
 	deal := s.create["deal"]()
 	ctx := s.systemContext("system:role-sweep")
-	if err := database.WithWorkspaceTx(ctx, s.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, s.e.Pool, func(tx pgx.Tx) error {
 		_, err := activities.ProposeLinkSuggestionTx(ctx, tx, activities.LinkSuggestionInput{
 			ActivityID: ids.From[ids.ActivityKind](ids.MustParse(email)), EntityType: "deal", EntityID: ids.MustParse(deal),
 			Unit: "role-sweep", Reason: "Role sweep", Score: 0.5,
@@ -353,7 +353,7 @@ func tagSuggestion(s sweepSeed) string {
 		"links":       []integration.AnyMap{{"entity_type": "contact", "entity_id": contact}},
 	})
 	ctx := s.systemContext("system:tag-scout")
-	if err := database.WithWorkspaceTx(ctx, s.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, s.e.Pool, func(tx pgx.Tx) error {
 		_, err := compose.RunTagScout(ctx, tx, clocktest.Now(s.t))
 		return err
 	}); err != nil {

@@ -51,7 +51,7 @@ func stampedCopy(t *testing.T, e *integration.Env, sender ids.UUID) ids.UUID {
 func senderMayHold(t *testing.T, e *integration.Env, source, seat ids.UUID) bool {
 	t.Helper()
 	var may bool
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var err error
 		may, err = auth.SeatMayHoldPrivateWorkTx(e.Admin(), tx, source, &e.Rep1, seat)
 		return err

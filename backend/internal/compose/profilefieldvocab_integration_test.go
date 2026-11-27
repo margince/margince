@@ -27,7 +27,7 @@ func TestEveryExtractionFieldIsAccepted_ByTheLiveCheckConstraint(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.Admin()
 
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		companyID := ids.New[ids.CompanyKind]()
 		if _, err := tx.Exec(context.Background(),
 			`INSERT INTO company (id, display_name, source, captured_by)

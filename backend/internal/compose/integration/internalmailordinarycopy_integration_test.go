@@ -63,7 +63,7 @@ func TestInternalMailboxCopyDoesNotReclassifyCustomerMail(t *testing.T) {
 	if len(captured) != 1 {
 		t.Fatalf("initial capture=%v", captured)
 	}
-	if err := database.WithWorkspaceTx(admin, pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(admin, pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(admin, `UPDATE activity SET audience='selected',audience_reason='manual' WHERE id=$1`, captured[0])
 		if err != nil {
 			return err
@@ -81,7 +81,7 @@ func TestInternalMailboxCopyDoesNotReclassifyCustomerMail(t *testing.T) {
 	if len(captured) != 2 || captured[0] != captured[1] {
 		t.Fatalf("copy changed identity=%v", captured)
 	}
-	if err := database.WithWorkspaceTx(admin, pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(admin, pool, func(tx pgx.Tx) error {
 		var unchanged bool
 		err := tx.QueryRow(admin, `SELECT internal_mail_authorization IS NULL AND audience='selected' AND audience_reason='manual'
    AND EXISTS (SELECT 1 FROM activity_audience_member WHERE activity_id=activity.id AND subject_id=$2)

@@ -87,7 +87,7 @@ func TestLegacySystemTaskTextRepairIsBoundedAtomicAndPreservesUserWording(t *tes
 				if e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type='activity'`) != before || e.WsCount(t, `SELECT count(*) FROM event_outbox`) != events {
 					t.Fatal("repair audit or event escaped executor rollback")
 				}
-				if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+				if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 					_, err := original(ctx, tx, datatask.BatchIn{Limit: 1, Cursor: []byte(`"invalid"`)})
 					return err
 				}); err == nil {

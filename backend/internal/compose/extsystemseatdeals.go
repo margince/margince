@@ -45,7 +45,7 @@ func (d systemDeals) GetAs(ctx context.Context, actAs extension.UserID, dealID s
 		got   crmcontracts.Deal
 		stage string
 	)
-	err = database.WithWorkspaceTx(seatCtx, d.rt.deps.pool, func(tx pgx.Tx) error {
+	err = database.WithTx(seatCtx, d.rt.deps.pool, func(tx pgx.Tx) error {
 		var err error
 		// The deals store is the app's own read, so its object grant, row scope
 		// and field mask decide what the seat is given.
@@ -105,7 +105,7 @@ func (d systemDeals) ResponsibleAs(ctx context.Context, actAs extension.UserID, 
 	// The answer is about the deal a merge carried on in, so the seat must open
 	// that deal and not only the one it named.
 	var survivor ids.UUID
-	err = database.WithWorkspaceTx(seatCtx, d.rt.deps.pool, func(tx pgx.Tx) error {
+	err = database.WithTx(seatCtx, d.rt.deps.pool, func(tx pgx.Tx) error {
 		var err error
 		survivor, err = deals.FollowMergeTx(seatCtx, tx, id)
 		return err
@@ -134,7 +134,7 @@ func (s systemSeat) opensDeal(seatCtx context.Context, deal ids.UUID) error {
 		return fmt.Errorf("%w: the seat may not read deals", extension.ErrForbidden)
 	}
 	var visible bool
-	err := database.WithWorkspaceTx(seatCtx, s.rt.deps.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(seatCtx, s.rt.deps.pool, func(tx pgx.Tx) error {
 		var err error
 		visible, err = auth.VisibleToExisting(seatCtx, tx, fieldmask.Deal, deal)
 		return err

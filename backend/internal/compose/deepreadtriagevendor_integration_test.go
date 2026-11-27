@@ -125,7 +125,7 @@ type vendorRow struct {
 func vendorRowOf(t *testing.T, e *integration.Env, domain string) vendorRow {
 	t.Helper()
 	var row vendorRow
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT status, COALESCE(source, ''), COALESCE(pending_reason, ''), next_attempt_at IS NULL
 			FROM company_domain_disposition WHERE domain = $1`, domain).Scan(&row.status, &row.source, &row.reason, &row.cursorCleared)
 	}); err != nil {
@@ -508,7 +508,7 @@ func TestAMailTheDeciderMayNotOpenMakesNoQuestion(t *testing.T) {
 		t.Fatal("the sole direct recipient at own row scope was not asked about mail addressed to them")
 	}
 	var mail ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT id FROM activity WHERE source_id = 'withheld'`).Scan(&mail)
 	}); err != nil {
 		t.Fatal(err)
@@ -551,7 +551,7 @@ func TestASeatWithoutActivityReadGetsNoVendorQuestion(t *testing.T) {
 	}
 	noActivity := e.As(e.Rep1, nil, principal.Permissions{Objects: grants, RowScope: principal.RowScopeAll})
 	var mail ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT id FROM activity WHERE source_id = 'no-activity-read'`).Scan(&mail)
 	}); err != nil {
 		t.Fatal(err)
@@ -602,7 +602,7 @@ func TestANewerUnclearMailIsNotOverruledByAnOlderOne(t *testing.T) {
 			captureStaffMail(t, e, staffMail{sourceID: tc.domain + "-new", from: "new@" + tc.domain, mailbox: e.Rep1, to: tc.to, occurred: now.Add(-time.Hour)})
 			if tc.hold {
 				var mail ids.UUID
-				if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+				if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 					return tx.QueryRow(context.Background(), `SELECT id FROM activity WHERE source_id = $1`, tc.domain+"-new").Scan(&mail)
 				}); err != nil {
 					t.Fatal(err)

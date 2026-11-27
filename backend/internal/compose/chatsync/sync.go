@@ -112,7 +112,7 @@ func (s *Sync) activityPosts(ctx context.Context, id ids.UUID) (bool, error) {
 // sharedActivityText reads the activity as a channel may show it.
 func (s *Sync) sharedActivityText(ctx context.Context, id ids.UUID) (sharedText, error) {
 	var shared sharedText
-	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		var err error
 		shared, err = sharedActivity(ctx, tx, id)
 		return err
@@ -178,7 +178,7 @@ func (s *Sync) recordsOf(ctx context.Context, entity string, id ids.UUID) ([]ids
 		return nil, nil, nil
 	}
 	var deals, projects []ids.UUID
-	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, query, id)
 		if err != nil {
 			return err

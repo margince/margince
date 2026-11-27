@@ -28,7 +28,7 @@ type Destroyer interface {
 // executor, which is what every selected purge goes through.
 func ExpireForwards(ctx context.Context, pool *pgxpool.Pool, purge Destroyer) error {
 	var subject capture.PurgeSubject
-	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) (err error) {
+	if err := database.WithTx(ctx, pool, func(tx pgx.Tx) (err error) {
 		subject, err = capture.SelectExpiredForwardsTx(ctx, tx)
 		return err
 	}); err != nil {

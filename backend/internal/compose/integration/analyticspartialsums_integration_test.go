@@ -24,7 +24,7 @@ import (
 func askBaseSum(ctx context.Context, t *testing.T, e *Env) compose.AnalyticsAnswer {
 	t.Helper()
 	var answer compose.AnalyticsAnswer
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		answer, err = compose.RunAnalyticsQuery(ctx, tx, analyticsquery.Query{
 			Entity:   "deals-by-stage",

@@ -78,7 +78,7 @@ func logNote(t *testing.T, e *Env, subject string, occurredAt time.Time, links .
 func activityBodyKept(t *testing.T, e *Env, id ids.UUID) bool {
 	t.Helper()
 	var kept bool
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT body = 'what was said' AND archived_at IS NULL FROM activity WHERE id = $1`, id).Scan(&kept)
 	}); err != nil {
@@ -102,7 +102,7 @@ func seedDerivedRows(t *testing.T, e *Env, activity, subject ids.UUID) {
 
 func derivedRows(t *testing.T, e *Env, activity ids.UUID) (embeddings, participants int) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT (SELECT count(*) FROM embedding WHERE entity_type = 'activity' AND entity_id = $1),
 			       (SELECT count(*) FROM activity_participant WHERE activity_id = $1 AND contact_id IS NOT NULL)`,

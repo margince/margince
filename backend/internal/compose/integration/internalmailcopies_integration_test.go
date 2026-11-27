@@ -54,7 +54,7 @@ func TestAnInternalCopyInASharedMailboxRetainsItsRestrictionAndAdmitsOnlyAnActua
 	admin := principal.WithActor(ctx, actor)
 	seedInternalMailAnchor(admin, t, pool, actor.UserID)
 	secondUser := ids.NewV7()
-	if err := database.WithWorkspaceTx(admin, pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(admin, pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(admin, `INSERT INTO app_user (id, email, display_name, status) VALUES ($1, 'teammate@example.test', 'Teammate', 'active')`, secondUser)
 		return err
 	}); err != nil {
@@ -87,7 +87,7 @@ func TestAnInternalCopyInASharedMailboxRetainsItsRestrictionAndAdmitsOnlyAnActua
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := database.WithWorkspaceTx(admin, pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(admin, pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(admin, `UPDATE capture_connection SET mail_posture = 'shared' WHERE id = $1`, second)
 		return err
 	}); err != nil {
@@ -114,7 +114,7 @@ func TestAnInternalCopyInASharedMailboxRetainsItsRestrictionAndAdmitsOnlyAnActua
 	if len(captured) != 2 || captured[0].ID != captured[1].ID {
 		t.Fatalf("copies did not resolve to the same restricted message: %+v", captured)
 	}
-	if err := database.WithWorkspaceTx(admin, pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(admin, pool, func(tx pgx.Tx) error {
 		var audience, reason string
 		var imports int
 		if err := tx.QueryRow(admin, `SELECT audience, audience_reason FROM activity WHERE id = $1`, captured[0].ID).Scan(&audience, &reason); err != nil {
@@ -131,7 +131,7 @@ func TestAnInternalCopyInASharedMailboxRetainsItsRestrictionAndAdmitsOnlyAnActua
 		t.Fatal(err)
 	}
 	forger := ids.NewV7()
-	if err := database.WithWorkspaceTx(admin, pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(admin, pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(admin, `INSERT INTO app_user (id, email, display_name, status) VALUES ($1, 'other@example.test', 'Other', 'active')`, forger)
 		return err
 	}); err != nil {

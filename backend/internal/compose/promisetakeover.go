@@ -73,7 +73,7 @@ func (h promiseTakeOverHandlers) TakeOver(ctx context.Context, claimID ids.UUID)
 		return crmcontracts.PromiseTakeOver{}, err
 	}
 	var out crmcontracts.PromiseTakeOver
-	err = database.WithWorkspaceTx(ctx, h.pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, h.pool, func(tx pgx.Tx) error {
 		// The source lock comes before any row lock, the order a reading of
 		// the message takes them in (lockPromiseSources).
 		var source ids.UUID

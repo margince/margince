@@ -111,7 +111,7 @@ func (w *csvWriters) preloadBindings(ctx context.Context) error {
 // binds even when the update is then refused. The row still names a live
 // company the caller can see, which the dry run counted as linkable.
 func (w *csvWriters) bind(ctx context.Context, row migration.Row, id ids.UUID) error {
-	if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, w.pool, func(tx pgx.Tx) error {
 		return w.identities.RecordIdentityTx(ctx, tx, w.runID, w.sourceSystem, w.object, row.ExternalID, id, migration.OriginBound)
 	}); err != nil {
 		return err

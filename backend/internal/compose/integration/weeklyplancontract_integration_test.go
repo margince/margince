@@ -46,7 +46,7 @@ func TestRisksAndCapacityNoteAreAuditedAndEmitted(t *testing.T) {
 	}
 
 	var audits, events int
-	if err := database.WithWorkspaceTx(e.rep1Ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.rep1Ctx, e.Pool, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(e.rep1Ctx, `
 			SELECT count(*) FROM audit_log
 			 WHERE entity_type = 'weekly_plan' AND entity_id = $1

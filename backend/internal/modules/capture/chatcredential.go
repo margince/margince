@@ -32,7 +32,7 @@ func (r ChatCredentials) WhatsAppAccessToken(ctx context.Context, connection ids
 		return "", ErrChannelWiringIncomplete
 	}
 	var token string
-	err := database.WithWorkspaceTx(ctx, r.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, r.Pool, func(tx pgx.Tx) error {
 		var ref string
 		if err := tx.QueryRow(ctx, `SELECT credential_ref FROM channel_connection
 			 WHERE id = $1 AND archived_at IS NULL AND `+whatsappRow, connection).Scan(&ref); err != nil {

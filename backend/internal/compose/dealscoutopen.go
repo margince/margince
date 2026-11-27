@@ -73,7 +73,7 @@ type openableSuggestion struct {
 // that cannot act does not stop the others.
 func (o scoutDealOpener) OpenWorkspace(ctx context.Context) (int, error) {
 	var due []openableSuggestion
-	err := database.WithWorkspaceTx(ctx, o.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, o.pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
 			SELECT s.id, c.owner_id, latest.id, latest.owner_id
 			  FROM deal_suggestion s JOIN company c ON c.id = s.company_id

@@ -128,7 +128,7 @@ func (r *ProviderRecovery) reopenCounterparties(ctx context.Context, w capture.R
 // first leaves the offer no longer pending and this backs out unchanged.
 func (r *ProviderRecovery) reopenOneCounterparty(ctx context.Context, w capture.ReopenWindow, id ids.UUID) (bool, error) {
 	reopened := false
-	err := database.WithWorkspaceTx(ctx, r.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, r.pool, func(tx pgx.Tx) error {
 		proposalID, ok, err := r.pending.ClaimParkedForReopen(ctx, tx, w, id)
 		if err != nil || !ok {
 			return err

@@ -89,7 +89,7 @@ func internalMailSettings(t *testing.T, e *integration.SearchEnv) *capturemod.Se
 func storedAuthorization(t *testing.T, e *integration.SearchEnv, id ids.UUID) json.RawMessage {
 	t.Helper()
 	var raw json.RawMessage
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT internal_mail_authorization FROM activity WHERE id = $1`, id).Scan(&raw)
 	}); err != nil {
 		t.Fatalf("reading the internal-mail authorization: %v", err)

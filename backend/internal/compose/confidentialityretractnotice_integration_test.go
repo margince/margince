@@ -21,7 +21,7 @@ import (
 func owedNoticeCase(t *testing.T, e *integration.Env, contactID ids.ContactID) ids.UUID {
 	t.Helper()
 	var caseID ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			WITH ev AS (
 			  INSERT INTO contact_acquisition_evidence (contact_id, kind, occurred_at, captured_by)
@@ -38,7 +38,7 @@ func owedNoticeCase(t *testing.T, e *integration.Env, contactID ids.ContactID) i
 func noticeCaseState(t *testing.T, e *integration.Env, caseID ids.UUID) string {
 	t.Helper()
 	var state string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT state FROM privacy_notice_case WHERE id = $1`, caseID).Scan(&state)
 	}); err != nil {

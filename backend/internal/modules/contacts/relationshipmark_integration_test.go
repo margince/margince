@@ -19,7 +19,7 @@ import (
 
 func (e *dedupeEnv) markColumns(ctx context.Context, t *testing.T, id ids.ContactID) (mark, setBy *string) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(ctx, e.store.db.Pool(), func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.store.db.Pool(), func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `SELECT relationship_mark, relationship_mark_set_by FROM contact WHERE id = $1`, id).Scan(&mark, &setBy)
 	}); err != nil {
 		t.Fatalf("reading the mark columns: %v", err)

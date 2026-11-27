@@ -324,7 +324,7 @@ func bookedMeetingAt(t *testing.T, e *integration.Env, subject string, start tim
 	t.Helper()
 	seat, seatAddress := e.Rep1, "a@"+colleagueTestDomain
 	var id ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if err := tx.QueryRow(ctx, `INSERT INTO activity (kind, subject, meeting_status, occurred_at, source, captured_by)
 			VALUES ('meeting', $1, 'booked', $2, 'gcal:seed', $3) RETURNING id`,

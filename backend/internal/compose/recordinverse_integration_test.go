@@ -62,7 +62,7 @@ func isArchived(t *testing.T, e *integration.Env, entityType string, id ids.UUID
 	t.Helper()
 	archived, err := func() (bool, error) {
 		var out bool
-		err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			var err error
 			out, err = recordIsArchived(context.Background(), tx, entityType, id)
 			return err

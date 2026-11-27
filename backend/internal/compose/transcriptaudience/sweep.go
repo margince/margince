@@ -37,7 +37,7 @@ func (s Sweep) Workspace(ctx context.Context, workspace ids.UUID) error {
 	var after ids.ActivityID
 	for {
 		var page activities.DriftedPage
-		if err := database.WithWorkspaceTx(ctx, s.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, s.Pool, func(tx pgx.Tx) error {
 			var err error
 			page, err = activities.FollowDriftedTranscriptsTx(ctx, tx, after, s.batch())
 			return err

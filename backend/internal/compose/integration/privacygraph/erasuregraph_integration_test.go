@@ -48,7 +48,7 @@ func TestErasureRefoldsARelinkedActivityBeforeItsEventIsDelivered(t *testing.T) 
 		activities.RelinkActivityInput{EntityType: "contact", EntityID: subject, ReplaceExistingOfType: true}); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("rep relinked an activity outside their team: %v", err)
 	}
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return search.RecomputeEdgesForActivities(ctx, tx, []ids.UUID{activityID})
 	}); err != nil {
 		t.Fatal(err)

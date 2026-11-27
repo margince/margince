@@ -97,7 +97,7 @@ func (c *rotatingConnector) Sync(ctx context.Context, _ connector.Auth, _ connec
 func readCredentialRef(t *testing.T, e *integration.SearchEnv, connID ids.UUID) string {
 	t.Helper()
 	var ref *string
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(e.Admin(), `SELECT credential_ref FROM capture_connection WHERE id = $1`, connID).Scan(&ref)
 	})
 	if err != nil {

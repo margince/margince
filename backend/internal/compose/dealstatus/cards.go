@@ -60,7 +60,7 @@ func (s *Service) CachedCards(
 	if err != nil {
 		return nil, err
 	}
-	err = database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		found, err := readCachedCards(ctx, tx, userID, dealIDs)
 		if err != nil {
 			return err
