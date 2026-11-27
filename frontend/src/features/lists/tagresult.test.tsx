@@ -8,6 +8,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { translate } from "../../i18n";
 import { en } from "../../i18n/en";
 import {
   installFetchStub,
@@ -373,6 +374,66 @@ describe("the tag page names what carries the word", () => {
     expect(
       await screen.findByText(en["tagResult.nothingCarries"]),
     ).toBeInTheDocument();
+  });
+
+  // A retired word cannot be applied, so the page does not invite the reader to.
+  it("calls a retired word retired, and does not offer to apply it", async () => {
+    installFetchStub({
+      "GET /me": meRoute({ contact: ["read"] }),
+      [`GET /tags/${TAG}`]: () =>
+        jsonResponse({
+          id: TAG,
+          name: "Automation World 2026",
+          version: 2,
+          archived_at: "2026-09-01T00:00:00Z",
+          usage: { contacts: 0, companies: 0, deals: 0, leads: 0 },
+        }),
+    });
+    render(
+      <StoryProviders>
+        <TagResultScreen tagID={TAG} />
+      </StoryProviders>,
+    );
+
+    expect(
+      await screen.findByText(en["tagResult.retiredNothing"]),
+    ).toBeInTheDocument();
+    expect(screen.getByText(en["tagAdmin.retired"])).toBeInTheDocument();
+    expect(screen.queryByText(en["tagResult.nothingCarries"])).toBeNull();
+  });
+
+  // A merge moved every record onto the kept word, so the page sends the reader there.
+  it("names the tag a merged word went into and links to it", async () => {
+    const kept = "01a0641b-db0c-7b92-8564-6c843bf58df4";
+    installFetchStub({
+      "GET /me": meRoute({ contact: ["read"] }),
+      [`GET /tags/${TAG}`]: () =>
+        jsonResponse({
+          id: TAG,
+          name: "Colored",
+          version: 2,
+          archived_at: "2026-09-01T00:00:00Z",
+          merged_into: { tag_id: kept, name: "Renamed" },
+          usage: { contacts: 0, companies: 0, deals: 0, leads: 0 },
+        }),
+    });
+    render(
+      <StoryProviders>
+        <TagResultScreen tagID={TAG} />
+      </StoryProviders>,
+    );
+
+    const open = await screen.findByRole("link", {
+      name: translate("en", "tagResult.openKept", { name: "Renamed" }),
+    });
+    expect(open).toHaveAttribute("href", `/#/tags/${kept}`);
+    expect(
+      screen.getByText(
+        translate("en", "tagAdmin.mergedInto", { name: "Renamed" }),
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(en["tagResult.nothingCarries"])).toBeNull();
+    expect(screen.queryByText(en["tagAdmin.retired"])).toBeNull();
   });
 
   // `#/tags` names no tag, and the page that lists them lives in Settings. The
