@@ -180,10 +180,12 @@
   .analytics-body .stat-strip[data-density="plate"] > .stat-card > * {
     grid-area: auto;
   }
-  .analytics-body .stat-strip[data-density="plate"] .stat-card-label,
+  /* Every name starts on the row's top line, so a name that wraps runs down,
+     not up, and the figures under the names stay level. */
   .analytics-body .stat-strip[data-density="plate"] .stat-card-value {
     align-self: end;
   }
+  .analytics-body .stat-strip[data-density="plate"] .stat-card-label,
   .analytics-body .stat-strip[data-density="plate"] .stat-card-detail,
   .analytics-body .stat-strip[data-density="plate"] .stat-card-meter {
     align-self: start;
