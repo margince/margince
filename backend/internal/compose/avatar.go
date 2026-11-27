@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/imagenorm"
 	"github.com/margince/margince/backend/internal/platform/storedobjects"
@@ -127,8 +128,12 @@ func centreSquare(img image.Image) image.Image {
 
 // avatarKey mints where one seat's picture lives. attempt keeps two writers of
 // one seat's picture apart.
-func avatarKey(ws ids.WorkspaceID, user ids.UserID, attempt string) string {
-	return blobstore.WorkspaceKey(ws, avatarKind, user.String()+"/"+attempt+".png")
+func (p *avatarPictures) avatarKey(ctx context.Context, user ids.UserID, attempt string) (string, error) {
+	ws, err := storekit.StoredKeyWorkspaceOn(ctx, p.db)
+	if err != nil {
+		return "", err
+	}
+	return blobstore.WorkspaceKey(ids.From[ids.WorkspaceKind](ws), avatarKind, user.String()+"/"+attempt+".png"), nil
 }
 
 // putPicture declares the key provisional, then puts the bytes. A failed put leaves
@@ -158,8 +163,7 @@ func (h avatarHandlers) UploadMyAvatar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	actor, isActor := principal.Actor(r.Context())
-	workspace, inWorkspace := principal.WorkspaceID(r.Context())
-	if !isActor || actor.Type != principal.PrincipalHuman || !inWorkspace {
+	if !isActor || actor.Type != principal.PrincipalHuman {
 		httperr.Write(w, r, apperrors.ErrPermissionDenied)
 		return
 	}
@@ -173,7 +177,11 @@ func (h avatarHandlers) UploadMyAvatar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	user := ids.From[ids.UserKind](actor.UserID)
-	key := avatarKey(ids.From[ids.WorkspaceKind](workspace), user, ids.NewV7().String())
+	key, err := p.avatarKey(r.Context(), user, ids.NewV7().String())
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
 	if err := p.putPicture(r.Context(), key, png); err != nil {
 		httperr.Write(w, r, err)
 		return

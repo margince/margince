@@ -15,7 +15,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/platform/jobs"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -153,11 +152,9 @@ func TestARowThatRecordedNoCauseDoesNotClaimItFailed(t *testing.T) {
 // no tenant now (ADR-0091 §6), so what is left to hold is that neither kind of
 // row is dropped on the way out.
 func TestBothTenantAndDispatcherFailuresReachTheResponse(t *testing.T) {
-	someoneElse := ids.NewV7().String()
-
 	got := jobHealthResponse(context.Background(), jobs.Health{Failures: []jobs.Failure{
-		{Kind: "tenant_pass", WorkspaceID: &someoneElse, State: "discarded"},
-		{Kind: "the_dispatcher", WorkspaceID: nil, State: "discarded"},
+		{Kind: "tenant_pass", State: "discarded"},
+		{Kind: "the_dispatcher", State: "discarded"},
 	}}, 24*time.Hour)
 
 	if len(got.RecentFailures) != 2 {

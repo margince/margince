@@ -148,16 +148,19 @@ func RecordInstallationTx(ctx context.Context, tx Execer, company ids.UUID, crea
 // is stored under a workspace id.
 var ErrNoStoredKeyWorkspace = errors.New("storekit: the installation has no stored-key workspace yet")
 
-// StoredKeyWorkspaceTx reads the id stored keys are scoped by.
+// StoredKeyWorkspaceTx reads the id stored keys are scoped by. The id never
+// moves once set, so a transaction that asks twice reads the row once.
 func StoredKeyWorkspaceTx(ctx context.Context, tx pgx.Tx) (ids.UUID, error) {
-	state, found, err := InstallationStateTx[StoredKeyWorkspace](ctx, tx, StateStoredKeyWorkspace)
-	if err != nil {
-		return ids.UUID{}, err
-	}
-	if !found {
-		return ids.UUID{}, ErrNoStoredKeyWorkspace
-	}
-	return state.ID, nil
+	return database.Remember(tx, "storekit:stored-key-workspace", func() (ids.UUID, error) {
+		state, found, err := InstallationStateTx[StoredKeyWorkspace](ctx, tx, StateStoredKeyWorkspace)
+		if err != nil {
+			return ids.UUID{}, err
+		}
+		if !found {
+			return ids.UUID{}, ErrNoStoredKeyWorkspace
+		}
+		return state.ID, nil
+	})
 }
 
 // KeptInstallationFacts is the part of installation_state a reset must not
@@ -220,4 +223,14 @@ func ReadStoredKeyWorkspace(ctx context.Context, pool *pgxpool.Pool) (ids.UUID, 
 		return err
 	})
 	return company, err
+}
+
+// StoredKeyWorkspaceOn reads the id stored keys are scoped by through a store's
+// pool. It joins the caller's open snapshot. It asks no handle to resolve a
+// workspace first, because the row it reads is what names the company.
+func StoredKeyWorkspaceOn(ctx context.Context, db *database.DB) (ids.UUID, error) {
+	if db.Pool() == nil {
+		return ids.UUID{}, database.ErrNoWorkspace
+	}
+	return ReadStoredKeyWorkspace(ctx, db.Pool())
 }

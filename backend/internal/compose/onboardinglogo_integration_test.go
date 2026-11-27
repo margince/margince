@@ -601,7 +601,7 @@ func TestADossierThatEndedRefusesALateParkedMark(t *testing.T) {
 			e := integration.Setup(t)
 			args, claim := endedOnboardingRead(t, e, status)
 			workerCtx := deepReadWorkerCtx(context.Background(), args)
-			late := siteReadLogoKey(ids.From[ids.WorkspaceKind](e.WS), args.SiteReadID)
+			late := blobstore.WorkspaceKey(ids.From[ids.WorkspaceKind](e.WS), contacts.LogoKeyKind, "site-read/"+args.SiteReadID.String()+"/"+ids.NewV7().String())
 			recorded, superseded, err := e.Contacts.RecordSiteReadLogo(workerCtx, args.SiteReadID, claim.ClaimedAt, contacts.LogoWide, late, touchIconURL)
 			if err != nil {
 				t.Fatalf("parking a mark on a %s read: %v", status, err)
@@ -671,7 +671,7 @@ func TestOnlyTheAttemptHoldingTheReadParksItsMark(t *testing.T) {
 	workerCtx := deepReadWorkerCtx(context.Background(), args)
 	current := reclaimTheRead(t, e, args)
 
-	held := siteReadLogoKey(ids.From[ids.WorkspaceKind](e.WS), args.SiteReadID)
+	held := blobstore.WorkspaceKey(ids.From[ids.WorkspaceKind](e.WS), contacts.LogoKeyKind, "site-read/"+args.SiteReadID.String()+"/"+ids.NewV7().String())
 	recorded, superseded, err := e.Contacts.RecordSiteReadLogo(workerCtx, args.SiteReadID, current.ClaimedAt, contacts.LogoWide, held, touchIconURL)
 	if err != nil {
 		t.Fatalf("the holding attempt parking its mark: %v", err)
@@ -680,7 +680,7 @@ func TestOnlyTheAttemptHoldingTheReadParksItsMark(t *testing.T) {
 		t.Fatalf("the holding attempt's park recorded %v superseding %v, want it taken and superseding nothing", recorded, superseded)
 	}
 
-	late := siteReadLogoKey(ids.From[ids.WorkspaceKind](e.WS), args.SiteReadID)
+	late := blobstore.WorkspaceKey(ids.From[ids.WorkspaceKind](e.WS), contacts.LogoKeyKind, "site-read/"+args.SiteReadID.String()+"/"+ids.NewV7().String())
 	recorded, superseded, err = e.Contacts.RecordSiteReadLogo(workerCtx, args.SiteReadID, stalled.ClaimedAt, contacts.LogoWide, late, seedURL+"/stale.png")
 	if err != nil {
 		t.Fatalf("the stalled attempt parking its mark: %v", err)
@@ -746,7 +746,7 @@ func anchorWearingAContactsMark(t *testing.T, e *integration.Env, blob blobstore
 	if err != nil {
 		t.Fatalf("describe the company by hand: %v", err)
 	}
-	uploaded := blobstore.WorkspaceKey(ids.From[ids.WorkspaceKind](e.WS), companyLogoKind,
+	uploaded := blobstore.WorkspaceKey(ids.From[ids.WorkspaceKind](e.WS), contacts.LogoKeyKind,
 		saved.CompanyID.String()+"/uploaded")
 	chosen := logoFixture(t, 64, 64)
 	if err := blob.Put(context.Background(), uploaded, bytes.NewReader(chosen),

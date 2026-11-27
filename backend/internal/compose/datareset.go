@@ -77,6 +77,9 @@ type dataResetHandlers struct {
 	runtime *ResetRuntime
 	// blob is the object store holding the bytes the swept rows referenced.
 	blob blobstore.Store
+	// objectsKey answers the id the object keys are stored under. Nil reads it
+	// from the installation through pool.
+	objectsKey func(context.Context) (ids.UUID, error)
 	// vault holds the sealed credentials the swept connection rows referenced.
 	// Its storage carries no workspace_id, so the sweep cannot reach it and the
 	// ciphertext would otherwise outlive the installation it belonged to.
@@ -364,9 +367,17 @@ func (h dataResetHandlers) purgeUnjoinableSurfaces(ctx context.Context, logger *
 		}
 	}
 	if h.blob != nil {
-		// The prefix must end at the key separator or the store refuses it:
-		// "<ws>" alone would reach into a sibling tenant whose id extends it.
-		n, err := h.blob.DeletePrefix(ctx, wsID.String()+"/")
+		// Under the stored-key id, the one every writer names. The prefix must
+		// end at the key separator or the store refuses it.
+		read := h.objectsKey
+		if read == nil {
+			read = func(ctx context.Context) (ids.UUID, error) { return storekit.ReadStoredKeyWorkspace(ctx, h.pool) }
+		}
+		keyed, err := read(ctx)
+		if err != nil {
+			return err
+		}
+		n, err := h.blob.DeletePrefix(ctx, keyed.String()+"/")
 		if err != nil {
 			return err
 		}

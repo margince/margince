@@ -18,8 +18,8 @@ import (
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -39,14 +39,25 @@ func Prefix(ws ids.WorkspaceID, unit string) string {
 	return blobstore.WorkspaceKey(ws, kind+unit, "")
 }
 
+// StoredWorkspace answers, for Objects.Workspace, the id the installation's
+// objects were stored under, read from the installation itself.
+func StoredWorkspace(pool *pgxpool.Pool) func(context.Context) (ids.WorkspaceID, error) {
+	return func(ctx context.Context) (ids.WorkspaceID, error) {
+		ws, err := storekit.ReadStoredKeyWorkspace(ctx, pool)
+		return ids.From[ids.WorkspaceKind](ws), err
+	}
+}
+
 // Objects is extension.Objects over a store. Gate checks the unit's declaration
-// and returns the invocation's context, which carries its workspace. Ledger
-// counts and logs each Put and Delete.
+// and returns the invocation's context. Ledger counts and logs each Put and
+// Delete. Workspace answers the id every object of the installation is stored
+// under.
 type Objects struct {
-	Store  blobstore.Store
-	Ledger Ledger
-	Unit   string
-	Gate   func(context.Context) (context.Context, error)
+	Store     blobstore.Store
+	Ledger    Ledger
+	Unit      string
+	Gate      func(context.Context) (context.Context, error)
+	Workspace func(context.Context) (ids.WorkspaceID, error)
 }
 
 // key is where the named object lives for this invocation's workspace.
@@ -61,11 +72,11 @@ func (o Objects) key(ctx context.Context, name string) (context.Context, string,
 	if o.Store == nil || o.Ledger == nil {
 		return nil, "", ErrObjectsUnwired
 	}
-	raw, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return nil, "", ErrObjectsFailed
+	ws, err := o.Workspace(ctx)
+	if err != nil {
+		return nil, "", fmt.Errorf("%w: %w", ErrObjectsFailed, err)
 	}
-	return ctx, Prefix(ids.From[ids.WorkspaceKind](raw), o.Unit) + name, nil
+	return ctx, Prefix(ws, o.Unit) + name, nil
 }
 
 // OpenStore opens the configured object store, or answers nil when the
@@ -222,21 +233,29 @@ func SweepGone(ctx context.Context, pool *pgxpool.Pool, store blobstore.Store, o
 		return fmt.Errorf("extcapability: reading the units this installation has composed: %w", err)
 	}
 	gone := Gone(ever, composed)
-	if err := Sweep(ctx, store, gone); err != nil || store == nil {
-		return err
+	if store == nil {
+		return nil
+	}
+	ws, err := storekit.ReadStoredKeyWorkspace(ctx, pool)
+	if err != nil && !errors.Is(err, storekit.ErrNoStoredKeyWorkspace) {
+		return fmt.Errorf("extcapability: reading the installation's storage id: %w", err)
+	}
+	if err == nil {
+		if err := Sweep(ctx, store, ids.From[ids.WorkspaceKind](ws), gone); err != nil {
+			return err
+		}
 	}
 	return ForgetUnits(ctx, pool, gone)
 }
 
-// Sweep deletes every object of each named unit in the context's workspace. It
-// is idempotent, and a failure is returned so the caller can try again.
-func Sweep(ctx context.Context, store blobstore.Store, removed []string) error {
-	raw, ok := principal.WorkspaceID(ctx)
-	if store == nil || !ok {
+// Sweep deletes every object of each named unit under ws. It is idempotent,
+// and a failure is returned so the caller can try again.
+func Sweep(ctx context.Context, store blobstore.Store, ws ids.WorkspaceID, removed []string) error {
+	if store == nil {
 		return nil
 	}
 	for _, unit := range removed {
-		if _, err := store.DeletePrefix(ctx, Prefix(ids.From[ids.WorkspaceKind](raw), unit)); err != nil {
+		if _, err := store.DeletePrefix(ctx, Prefix(ws, unit)); err != nil {
 			return fmt.Errorf("extcapability: deleting the objects of removed extension %q: %w", unit, err)
 		}
 	}

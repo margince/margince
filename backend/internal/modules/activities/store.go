@@ -244,10 +244,12 @@ func uuidPtr(id *ids.UUID) *openapi_types.UUID {
 	return &converted
 }
 
-// workspaceID types the tx-bound workspace GUC (storekit hands it out
-// untyped) for the helpers that carry it as an entity parameter.
-func workspaceID(ctx context.Context) ids.WorkspaceID {
-	return ids.From[ids.WorkspaceKind](storekit.MustWorkspace(ctx))
+// storedKeyWorkspace is the id every object key of this installation is
+// scoped by. It is read from the installation, never from the caller, so a key
+// minted now matches the objects already stored.
+func (s *Store) storedKeyWorkspace(ctx context.Context) (ids.WorkspaceID, error) {
+	id, err := storekit.StoredKeyWorkspaceOn(ctx, s.db)
+	return ids.From[ids.WorkspaceKind](id), err
 }
 
 // WithTranscriptEnqueue wires the reading a landed transcript starts.
