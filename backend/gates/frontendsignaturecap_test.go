@@ -55,7 +55,7 @@ func TestTheSignatureHTMLCapAgreesInGoTheContractAndTheDialog(t *testing.T) {
 	if uses := strings.Count(rest, "SIGNATURE_HTML_MAX_CHARS"); uses < 2 {
 		t.Errorf("the counter reads SIGNATURE_HTML_MAX_CHARS %d times, want its threshold and its danger tone", uses)
 	}
-	for _, literal := range tsSignatureNumber.FindAllString(tsComment.ReplaceAllString(rest, " "), -1) {
+	for _, literal := range tsSignatureNumber.FindAllString(gatekit.TSWithoutComments(rest), -1) {
 		if n, err := strconv.Atoi(strings.ReplaceAll(literal, "_", "")); err == nil && n >= 1000 {
 			t.Errorf("%s types %s, a cap that does not read SIGNATURE_HTML_MAX_CHARS", frontendSignatureEditor, literal)
 		}

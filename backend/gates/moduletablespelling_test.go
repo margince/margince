@@ -161,10 +161,11 @@ func TestAModuleThatNamedItsTableUsesThatName(t *testing.T) {
 		// judgement: a table argument written as an identifier is resolved
 		// against the constants of the very files being judged.
 		files := packageFiles(t, fset, dir)
-		consts := map[string]string{}
+		sources := make([]*ast.File, 0, len(files))
 		for _, parsed := range files {
-			collectStringConstants(parsed.File, consts)
+			sources = append(sources, parsed.File)
 		}
+		consts := gatekit.StringConstantsOf(t, sources)
 		for _, parsed := range files {
 			judged += judgeTableArgs(t, fset, parsed, declared[dir], consts, tableArgs)
 			gated += judgeObjectArgs(t, fset, parsed, objectArgs)

@@ -7,12 +7,14 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
-	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // The gate in backend/gates holds DedupeEvidenceFields against the contract.
@@ -21,7 +23,7 @@ import (
 func TestEveryWrittenEvidenceFieldIsListed(t *testing.T) {
 	t.Parallel()
 	files := packageSources(t)
-	consts := stringConsts(files)
+	consts := gatekit.StringConstantsOf(t, slices.Collect(maps.Values(files)))
 	listed := DedupeEvidenceFields()
 
 	// Field expressions that are not constants, each with the place where the
@@ -65,7 +67,7 @@ func TestEveryWrittenEvidenceFieldIsListed(t *testing.T) {
 func TestEveryWrittenEvidenceSignalIsListed(t *testing.T) {
 	t.Parallel()
 	files := packageSources(t)
-	consts := stringConsts(files)
+	consts := gatekit.StringConstantsOf(t, slices.Collect(maps.Values(files)))
 	listed := DedupeEvidenceSignals()
 	signals := evidenceSignalExprs(files)
 	if len(signals) == 0 {
@@ -200,35 +202,6 @@ func packageSources(t *testing.T) map[string]*ast.File {
 		t.Fatal("no package sources read; this test is checking nothing")
 	}
 	return files
-}
-
-func stringConsts(files map[string]*ast.File) map[string]string {
-	consts := map[string]string{}
-	for _, file := range files {
-		for _, decl := range file.Decls {
-			gen, ok := decl.(*ast.GenDecl)
-			if !ok || gen.Tok != token.CONST {
-				continue
-			}
-			for _, spec := range gen.Specs {
-				value, ok := spec.(*ast.ValueSpec)
-				if !ok {
-					continue
-				}
-				for i, ident := range value.Names {
-					if i >= len(value.Values) {
-						continue
-					}
-					if lit, ok := value.Values[i].(*ast.BasicLit); ok && lit.Kind == token.STRING {
-						if text, err := strconv.Unquote(lit.Value); err == nil {
-							consts[ident.Name] = text
-						}
-					}
-				}
-			}
-		}
-	}
-	return consts
 }
 
 // spelled spells an identifier or selector the way the source does.

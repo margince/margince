@@ -24,8 +24,11 @@ may_call:
 must_mention:
   - "Mai"
 
-must_end_with:
-  - contact "Mai Nguyen" stop=subject_request
+# suppress_contact says to ask the user first, and the user named the outcome:
+# recording the stop, or naming it and asking for the yes, both fulfil it. The
+# end state cannot say "either", so the judge reads which one the answer reports.
+judge:
+  - "Criterion 1. The answer either reports a stop recorded on Mai Nguyen because she asked us to stop writing, or proposes recording that stop and asks the user's yes first. Answer no if it offers a tag, a note, a marketing opt-out alone or a field change instead, or says it cannot stop mail to her."
 
 runs: 3
 pass_at: 2

@@ -10,7 +10,12 @@ package gatekit_test
 // failing.
 
 import (
+	"fmt"
+	"go/ast"
 	"go/parser"
+	"go/token"
+	"runtime"
+	"slices"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
@@ -124,4 +129,99 @@ func TestTheStringReaderAnswersBothQuestionsItIsAsked(t *testing.T) {
 			}
 		})
 	}
+}
+
+// Each row is an input on which one of the package-constant readers this one
+// replaced read less than it does.
+func TestThePackageConstantReaderReadsEveryShapeGoDeclaresAStringIn(t *testing.T) {
+	t.Parallel()
+	got := gatekit.StringConstantValues(t, parsedSources(t,
+		`package p
+const forward = later
+const joined = "a" + "b"
+const converted = string("c")
+const wrapped = ("d")
+const first, second = "e", "f"
+const (
+	kept = "g"
+	repeated
+)
+const dup = "h"
+const fromDup = dup
+const notString = 4
+`,
+		`package p
+const later = "i"
+const dup = "j"
+`))
+	want := map[string][]string{
+		"forward": {"i"}, "later": {"i"}, "joined": {"ab"}, "converted": {"c"}, "wrapped": {"d"},
+		"first": {"e"}, "second": {"f"}, "kept": {"g"}, "repeated": {"g"}, "dup": {"h", "j"},
+	}
+	for name, values := range want {
+		if !slices.Equal(got[name], values) {
+			t.Errorf("const %s read as %q, want %q", name, got[name], values)
+		}
+	}
+	// A name that holds two values resolves nothing that names it.
+	for _, name := range []string{"fromDup", "notString"} {
+		if values, read := got[name]; read {
+			t.Errorf("const %s read as %q, want it unread", name, values)
+		}
+	}
+}
+
+func TestTheConstantReaderFailsOnAConstantItCannotTellTheValueOf(t *testing.T) {
+	t.Parallel()
+	// The parser refuses a literal that does not unquote, so that row is built by hand.
+	undecodable := &ast.File{Decls: []ast.Decl{&ast.GenDecl{Tok: token.CONST, Specs: []ast.Spec{&ast.ValueSpec{
+		Names:  []*ast.Ident{ast.NewIdent("bad")},
+		Values: []ast.Expr{&ast.BasicLit{Kind: token.STRING, Value: `"\q"`}},
+	}}}}}
+	for name, files := range map[string][]*ast.File{
+		"two builds declare it apart":  parsedSources(t, "package p\nconst dsn = \"a\"\n", "package p\nconst dsn = \"b\"\n"),
+		"its literal does not unquote": {undecodable},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			rec := &fatalRecorder{TB: t}
+			finished := make(chan struct{})
+			go func() {
+				defer close(finished)
+				gatekit.StringConstantsOf(rec, files)
+			}()
+			<-finished
+			if rec.fatal == "" {
+				t.Error("the reader answered instead of failing")
+			}
+		})
+	}
+}
+
+func parsedSources(t *testing.T, sources ...string) []*ast.File {
+	t.Helper()
+	fset := token.NewFileSet()
+	var files []*ast.File
+	for i, source := range sources {
+		file, err := parser.ParseFile(fset, fmt.Sprintf("f%d.go", i), source, 0)
+		if err != nil {
+			t.Fatalf("parsing source %d: %v", i, err)
+		}
+		files = append(files, file)
+	}
+	return files
+}
+
+// fatalRecorder keeps the message of a Fatalf and ends the goroutine, as the
+// real Fatalf does.
+type fatalRecorder struct {
+	testing.TB
+	fatal string
+}
+
+func (r *fatalRecorder) Helper() {}
+
+func (r *fatalRecorder) Fatalf(format string, args ...any) {
+	r.fatal = fmt.Sprintf(format, args...)
+	runtime.Goexit()
 }

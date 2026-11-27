@@ -37,11 +37,9 @@ prompt: |
 
   Where does each one stand?
 
-must_call:
-  - invite_meeting
-# The lane's stack has no calendar connected, so the invitation is refused after
-# the call and before anyone is told. The refused call is the outcome criterion 2
-# grades, and no record shows it.
+# The lane's stack has no calendar connected, so an invitation is refused after
+# the call and before anyone is told. A model may learn that from the refusal or
+# from check_availability first; criterion 2 grades what the answer then says.
 counts_when_refused:
   - invite_meeting
 
@@ -55,11 +53,10 @@ may_call:
   - query_workspace
   - log_activity
 
-# Omar is the one invited and Greta the one recorded. Pinning the invitation's
-# address makes "invited Greta" a structural failure instead of something the
-# judge has to catch in prose.
-must_call_with:
-  - invite_meeting.attendee_email=omar.haddad@lindqvist-anlagen.test
+# Omar is the one invited and Greta the one recorded, so an invitation to Greta
+# is a structural failure instead of something the judge has to catch in prose.
+must_not_call_with:
+  - invite_meeting~greta\.lindqvist@lindqvist-anlagen\.test
 
 must_mention:
   - "Greta"

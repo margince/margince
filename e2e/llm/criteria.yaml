@@ -31,10 +31,11 @@ cases:
         committed to.
   case3_spreadsheet:
     1:
-      name: The numbers are shown before anything is committed
+      name: Where the import stands is said truthfully
       statement: >-
-        What the import will do is reported before it is done: how many rows
-        will land, said out loud rather than discovered after the write.
+        The list goes in and the answer names what was created, or the answer
+        shows what the import would do and waits for the yes. A claim of rows
+        written that the server never wrote gets neither job done.
     6:
       name: The row that could not be used is reported
       statement: >-

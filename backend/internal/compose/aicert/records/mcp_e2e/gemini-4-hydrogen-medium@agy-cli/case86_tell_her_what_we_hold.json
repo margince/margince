@@ -12,25 +12,25 @@
   "search": "semantic",
   "self_judged": false,
   "stamp": {
-    "scenario": "92d778d1da3a10e0",
-    "tools": "096dd9c5377757f7",
-    "instructions": "4eab26d5fff0793f",
-    "judge": "",
-    "harness": "ae24b6799c8461d2",
+    "scenario": "531b67260afdcc49",
+    "tools": "edabe5931f160adb",
+    "instructions": "d707a123fe53827f",
+    "judge": "claude-haiku-5-5",
+    "harness": "0fe690d35efcc703",
     "parsers": {
       "gemini:cli": "fa1db64bc14e971b",
       "gpt:cli": "d48ca27c983f8b3f"
     },
-    "commit": "5dfb7ceebe8ce1b1607ab3992fb9d36b3ac8208f",
-    "ran_at": "2026-11-25T07:03:30Z",
-    "graded_commit": "8d1a2e3f3d0e19ca67b1a23f47f3c2d8686628c3",
-    "graded_at": "2026-11-25T10:49:09Z"
+    "commit": "eac0feebb30d682b24479b1c6eb86fdf37eecbf4",
+    "ran_at": "2026-11-26T13:01:58Z",
+    "graded_commit": "eac0feebb30d682b24479b1c6eb86fdf37eecbf4",
+    "graded_at": "2026-11-26T13:01:58Z"
   },
   "usage": {
-    "input_tokens": 115971,
-    "output_tokens": 22728,
+    "input_tokens": 102616,
+    "output_tokens": 21868,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 549345,
+    "cache_read_input_tokens": 496313,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
@@ -42,14 +42,11 @@
         "catch_me_up_on",
         "describe_router_actions",
         "find_records",
-        "get_contact_case_settings",
         "get_contact_consent",
         "get_contact_consent_guard",
         "get_controller_particulars",
-        "get_legal_review_settings",
         "get_notice_case_review",
         "get_notice_source_evidence",
-        "list_import_runs",
         "list_notice_case_reviews",
         "list_notice_cases",
         "preview_notice_source",
@@ -60,6 +57,9 @@
         "read_workspace",
         "search_records",
         "whoami"
+      ],
+      "refused": [
+        "read_details"
       ]
     },
     {
@@ -68,17 +68,19 @@
         "catch_me_up_on",
         "describe_router_actions",
         "find_records",
+        "get_anchor_company",
         "get_contact_case_settings",
-        "get_contact_consent",
         "get_contact_consent_guard",
         "get_controller_particulars",
+        "get_legal_review_settings",
         "get_notice_case_review",
         "get_notice_source_evidence",
-        "list_contact_stops",
-        "list_data_subject_requests",
+        "get_record_history",
+        "list_corpora",
+        "list_corpus_documents",
+        "list_documents",
         "list_import_runs",
         "list_legal_entities",
-        "list_legal_holds",
         "list_notice_case_reviews",
         "list_notice_cases",
         "preview_notice_source",
@@ -90,35 +92,49 @@
         "read_workspace",
         "search_records",
         "whoami"
+      ],
+      "refused": [
+        "read_details",
+        "read_workspace"
       ]
     }
   ],
   "efficiency": {
     "runs": 2,
     "calls": {
-      "median": 28.5,
-      "min": 27,
-      "max": 30
+      "median": 26,
+      "min": 20,
+      "max": 32
     },
     "turns": {
       "median": 10,
-      "min": 9,
-      "max": 11
+      "min": 8,
+      "max": 12
     },
     "refused": {
-      "median": 3.5,
+      "median": 3,
       "min": 3,
-      "max": 4
+      "max": 3
+    },
+    "retries": {
+      "median": 2,
+      "min": 2,
+      "max": 2
+    },
+    "client_refused": {
+      "median": 0,
+      "min": 0,
+      "max": 0
     },
     "prompt_tokens": {
-      "median": 332658,
-      "min": 290570,
-      "max": 374746
+      "median": 299464.5,
+      "min": 178355,
+      "max": 420574
     },
     "output_tokens": {
-      "median": 11364,
-      "min": 11349,
-      "max": 11379
+      "median": 10934,
+      "min": 9416,
+      "max": 12452
     }
   }
 }

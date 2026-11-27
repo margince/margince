@@ -13,24 +13,24 @@
   "self_judged": false,
   "stamp": {
     "scenario": "e0b734a703b7f819",
-    "tools": "33041d7ae339da31",
-    "instructions": "4eab26d5fff0793f",
+    "tools": "cdd517e102d3ab09",
+    "instructions": "d707a123fe53827f",
     "judge": "claude-haiku-5-5",
-    "harness": "ae24b6799c8461d2",
+    "harness": "0fe690d35efcc703",
     "parsers": {
       "gemini:cli": "fa1db64bc14e971b",
       "gpt:cli": "d48ca27c983f8b3f"
     },
-    "commit": "6d3a5be8c69b862c6c7db3c3534ac5fd705dd41e",
-    "ran_at": "2026-11-25T10:32:30Z",
-    "graded_commit": "6d3a5be8c69b862c6c7db3c3534ac5fd705dd41e",
-    "graded_at": "2026-11-25T10:32:30Z"
+    "commit": "ad96834804cdd040c8f582fe5c8d31b0fa53f1ab",
+    "ran_at": "2026-11-26T08:17:23Z",
+    "graded_commit": "ad96834804cdd040c8f582fe5c8d31b0fa53f1ab",
+    "graded_at": "2026-11-26T08:17:23Z"
   },
   "usage": {
-    "input_tokens": 75239,
-    "output_tokens": 18545,
+    "input_tokens": 85127,
+    "output_tokens": 16304,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 265063,
+    "cache_read_input_tokens": 286808,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
@@ -48,34 +48,6 @@
         "list_contact_overrides",
         "list_contact_stops",
         "list_held_threads",
-        "list_records",
-        "list_scheduled_sends",
-        "read_context",
-        "read_details",
-        "read_record",
-        "read_workspace",
-        "search_records",
-        "whoami"
-      ]
-    },
-    {
-      "passed": true,
-      "tools": [
-        "catch_me_up_on",
-        "describe_router_actions",
-        "export_contact_optout_records",
-        "find_records",
-        "get_contact_consent",
-        "get_contact_consent_guard",
-        "get_record_history",
-        "list_blocked_domains",
-        "list_capture_counterparty_holds",
-        "list_contact_overrides",
-        "list_contact_stops",
-        "list_data_subject_requests",
-        "list_held_threads",
-        "list_notice_cases",
-        "list_notices",
         "list_scheduled_sends",
         "read_context",
         "read_details",
@@ -84,35 +56,76 @@
         "read_workspace",
         "search_records",
         "whoami"
+      ],
+      "refused": [
+        "read_details",
+        "read_workspace"
       ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "catch_me_up_on",
+        "describe_router_actions",
+        "find_records",
+        "get_contact_brief",
+        "get_contact_consent",
+        "get_contact_consent_guard",
+        "get_record_history",
+        "list_confirm_submissions",
+        "list_contact_overrides",
+        "list_contact_stops",
+        "list_notice_case_reviews",
+        "list_notice_cases",
+        "list_notices",
+        "list_records",
+        "list_scheduled_sends",
+        "read_context",
+        "read_details",
+        "read_record",
+        "read_workspace",
+        "search_records",
+        "whoami"
+      ],
+      "refused": []
     }
   ],
   "efficiency": {
     "runs": 2,
     "calls": {
-      "median": 24,
+      "median": 20.5,
       "min": 19,
-      "max": 29
+      "max": 22
     },
     "turns": {
-      "median": 7.5,
+      "median": 8,
       "min": 7,
-      "max": 8
+      "max": 9
     },
     "refused": {
-      "median": 3,
-      "min": 3,
-      "max": 3
+      "median": 1,
+      "min": 0,
+      "max": 2
+    },
+    "retries": {
+      "median": 0.5,
+      "min": 0,
+      "max": 1
+    },
+    "client_refused": {
+      "median": 0,
+      "min": 0,
+      "max": 0
     },
     "prompt_tokens": {
-      "median": 170151,
-      "min": 145396,
-      "max": 194906
+      "median": 185967.5,
+      "min": 170651,
+      "max": 201284
     },
     "output_tokens": {
-      "median": 9272.5,
-      "min": 8670,
-      "max": 9875
+      "median": 8152,
+      "min": 7481,
+      "max": 8823
     }
   }
 }

@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer proposes recording a stop on Mai Nguyen's contact because she asked to stop being written to, and asks the user for confirmation before doing so, which matches the criterion.",
+  "model": "claude-haiku-5-5",
+  "criterion": "Criterion 1. The answer either reports a stop recorded on Mai Nguyen because she asked us to stop writing, or proposes recording that stop and asks the user's yes first. Answer no if it offers a tag, a note, a marketing opt-out alone or a field change instead, or says it cannot stop mail to her.",
+  "answer": "I found Mai Nguyen at Vietnam Partner JSC. No stop is on her record yet.\n\nBefore I record it, please confirm: I would add a stop on her contact because she asked us to stop writing, which blocks all mail to her except what the law or a contract requires. Shall I go ahead?"
+}
