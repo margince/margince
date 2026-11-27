@@ -76,7 +76,8 @@ func TestImportRowsAreWrittenOnlyByTheImportJobs(t *testing.T) {
 	for _, finding := range findings {
 		t.Error(finding)
 	}
-	// A slice with no caller here means the walk stopped resolving calls.
+	// Every other import stands in empty, and what that leaves unresolved is
+	// dropped. A slice with no caller here means the check resolved nothing.
 	for _, entry := range []string{"RunSlice", "UndoSlice", "DryRun"} {
 		for fn, obj := range g.owner {
 			if g.pkgOf[fn] == "migration" && fn.Name.Name == entry && len(g.sites[obj]) == 0 {
@@ -156,48 +157,48 @@ type callSite struct {
 	pos token.Pos
 }
 
-// loadImportCallGraph reads the packages of the typed tree under dirs. The
-// arch gates keep every importer of migration in compose or cmd.
+// loadImportCallGraph type-checks the packages under dirs, the first dir's
+// package before the rest, so a call into migration resolves to its body.
+// The arch gates keep every importer of migration in compose or cmd.
 func loadImportCallGraph(t *testing.T, dirs ...string) *importCallGraph {
 	t.Helper()
-	var pkgs []typedPackage
+	var groups [][]*ast.File
+	fset := gatekit.SourceFileSet()
 	for _, dir := range dirs {
-		pkgs = append(pkgs, typedCallGraphUnder(t, dir)...)
+		_, files := parseGoFilesUnder(t, dir)
+		byPackage := map[string][]*ast.File{}
+		for _, file := range files {
+			key := filepath.Dir(fset.Position(file.Pos()).Filename) + "\x00" + file.Name.Name
+			byPackage[key] = append(byPackage[key], file)
+		}
+		for _, key := range slices.Sorted(maps.Keys(byPackage)) {
+			groups = append(groups, byPackage[key])
+		}
 	}
-	return importCallGraphOf(gatekit.SourceFileSet(), pkgs)
+	return newImportCallGraph(fset, groups)
 }
 
-// newImportCallGraph checks each planted group in order. A later group
-// importing an earlier one sees its real types; every other import stands in
-// empty.
+// newImportCallGraph checks each group in order. A later group importing an
+// earlier one sees its real types; every other import stands in empty.
 func newImportCallGraph(fset *token.FileSet, groups [][]*ast.File) *importCallGraph {
-	checked := sharedImports{}
-	pkgs := make([]typedPackage, len(groups))
-	for i, files := range groups {
-		dir := filepath.ToSlash(filepath.Dir(fset.Position(files[0].Pos()).Filename))
-		info := &types.Info{Defs: map[*ast.Ident]types.Object{}, Uses: map[*ast.Ident]types.Object{}}
-		conf := types.Config{Importer: checked, Error: func(error) {}}
-		pkg, _ := conf.Check(modulePath+"/"+dir, fset, files, info)
-		checked[pkg.Path()] = pkg
-		pkgs[i] = typedPackage{path: pkg.Path(), dir: dir, files: files, info: info, types: pkg}
-	}
-	return importCallGraphOf(fset, pkgs)
-}
-
-// importCallGraphOf indexes every declaration of pkgs before it reads a site,
-// so a site names its callee whichever package declares it.
-func importCallGraphOf(fset *token.FileSet, pkgs []typedPackage) *importCallGraph {
 	g := &importCallGraph{
 		fset: fset, decls: map[*types.Func]*ast.FuncDecl{}, owner: map[*ast.FuncDecl]*types.Func{},
 		pkgOf: map[*ast.FuncDecl]string{}, sites: map[*types.Func][]callSite{}, methods: map[string][]*types.Func{},
 		infos: map[*ast.FuncDecl]*types.Info{}, fileInfos: map[*ast.File]*types.Info{},
 	}
-	for _, pkg := range pkgs {
-		g.packages = append(g.packages, pkg.types)
-		g.index(pkg.files, pkg.info)
+	checked := sharedImports{}
+	infos := make([]*types.Info, len(groups))
+	for i, files := range groups {
+		dir := filepath.ToSlash(filepath.Dir(fset.Position(files[0].Pos()).Filename))
+		infos[i] = &types.Info{Defs: map[*ast.Ident]types.Object{}, Uses: map[*ast.Ident]types.Object{}}
+		conf := types.Config{Importer: checked, Error: func(error) {}}
+		pkg, _ := conf.Check(modulePath+"/"+dir, fset, files, infos[i])
+		checked[pkg.Path()] = pkg
+		g.packages = append(g.packages, pkg)
+		g.index(files, infos[i])
 	}
-	for _, pkg := range pkgs {
-		g.collectSites(pkg.files, pkg.info)
+	for i, files := range groups {
+		g.collectSites(files, infos[i])
 	}
 	return g
 }
@@ -256,8 +257,8 @@ func (g *importCallGraph) collectSites(files []*ast.File, info *types.Info) {
 }
 
 // methodKey names a method by its name and its parameter and result types,
-// never their names. Two planted packages read apart print a stand-in type
-// alike, so the text is compared.
+// never their names. Two packages read apart print a stand-in type alike, so
+// the text is compared.
 func methodKey(fn *types.Func) string {
 	var key strings.Builder
 	key.WriteString(fn.Name())

@@ -15,7 +15,6 @@ import (
 	"errors"
 	"fmt"
 	"go/ast"
-	"go/build/constraint"
 	"go/importer"
 	"go/parser"
 	"go/token"
@@ -24,7 +23,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"sync"
 	"testing"
 
@@ -33,9 +31,7 @@ import (
 
 // typedPackage is one package of this module, checked.
 type typedPackage struct {
-	path string
-	// dir is the package's directory, spelled from the module root.
-	dir   string
+	path  string
 	files []*ast.File
 	info  *types.Info
 	types *types.Package
@@ -54,15 +50,7 @@ type listedPackage struct {
 // the memory the parsed and checked module holds in flight.
 const typeCheckWorkers = 4
 
-var typedModuleOnce = sync.OnceValues(func() ([]typedPackage, error) { return loadTypedModule("", "./...") })
-
-// typedTreeTags are the build tags the tree's hand-written files use.
-// typedTreeUnder fails a file that no build with these tags reads.
-const typedTreeTags = "integration,loadrig"
-
-var typedTreeOnce = sync.OnceValues(func() ([]typedPackage, error) {
-	return loadTypedModule(typedTreeTags, "./...", "./tools/...")
-})
+var typedModuleOnce = sync.OnceValues(loadTypedModule)
 
 // gatekitWorkingDir is the module root TestMain moved to.
 var gatekitWorkingDir = sync.OnceValue(func() string {
@@ -77,124 +65,18 @@ var gatekitWorkingDir = sync.OnceValue(func() string {
 // test binary.
 func typedModule(t *testing.T) []typedPackage {
 	t.Helper()
-	return typedOrFatal(t, "the module", typedModuleOnce)
-}
-
-// typedTree is typedModule built with typedTreeTags, the tools module
-// included, once per test binary. A caller must not write into what it holds.
-func typedTree(t *testing.T) []typedPackage {
-	t.Helper()
-	return typedOrFatal(t, "the tree with tags "+typedTreeTags, typedTreeOnce)
-}
-
-func typedOrFatal(t *testing.T, what string, load func() ([]typedPackage, error)) []typedPackage {
-	t.Helper()
-	pkgs, err := load()
+	pkgs, err := typedModuleOnce()
 	if err != nil {
-		t.Fatalf("type-checking %s: %v", what, err)
+		t.Fatalf("type-checking the module: %v", err)
 	}
 	if len(pkgs) == 0 {
-		t.Fatalf("type-checked no package of %s, and an empty module agrees with every census", what)
+		t.Fatal("type-checked no package of the module, and an empty module agrees with every census")
 	}
 	return pkgs
 }
 
-// typedTreeUnder is the packages of tree under dir. It fails on a hand-written
-// file there that tree does not hold, unless only a build without
-// typedTreeTags reads it. That file comes back in shippedOnly.
-func typedTreeUnder(t *testing.T, tree []typedPackage, dir string) (pkgs []typedPackage, shippedOnly []string) {
-	t.Helper()
-	held := map[string]bool{}
-	for _, pkg := range tree {
-		if dir == "." || pkg.dir == dir || strings.HasPrefix(pkg.dir, dir+"/") {
-			pkgs = append(pkgs, pkg)
-		}
-		for _, file := range pkg.files {
-			held[gatekit.SourceFileSet().Position(file.Pos()).Filename] = true
-		}
-	}
-	paths, err := goFilesUnder(dir)
-	if err != nil {
-		t.Fatalf("walking %s: %v", dir, err)
-	}
-	for _, path := range paths {
-		if held[path] {
-			continue
-		}
-		file, err := gatekit.ParseFile(path, parser.ParseComments)
-		if err != nil {
-			t.Errorf("parsing %s: %v", path, err)
-			continue
-		}
-		switch shipped, err := onlyShippedBuildReads(file); {
-		case err != nil:
-			t.Errorf("reading the build constraint of %s: %v", path, err)
-		case shipped:
-			shippedOnly = append(shippedOnly, path)
-		default:
-			t.Errorf("%s is in no package the typed tree built with tags %s, so no gate reading that tree judges it. "+
-				"Add its build tag to typedTreeTags, or make go list see its package.", path, typedTreeTags)
-		}
-	}
-	return pkgs, shippedOnly
-}
-
-// typedCallGraphUnder is typedTreeUnder for a call graph, which holds one
-// declaration per name. It reads the tagged twin of a shipped-only file, so it
-// fails on a shipped-only file that runs code the twin may not.
-func typedCallGraphUnder(t *testing.T, dir string) []typedPackage {
-	t.Helper()
-	pkgs, shippedOnly := typedTreeUnder(t, typedTree(t), dir)
-	for _, path := range shippedOnly {
-		file, err := gatekit.ParseFile(path, parser.ParseComments)
-		if err != nil {
-			t.Errorf("parsing %s: %v", path, err)
-			continue
-		}
-		ast.Inspect(file, func(n ast.Node) bool {
-			_, isCall := n.(*ast.CallExpr)
-			body, isBody := n.(*ast.BlockStmt)
-			if isCall || (isBody && len(body.List) > 0) {
-				t.Errorf("%s: only the shipped build reads this file, and it runs code. A call graph over the typed tree "+
-					"reads its tagged twin in its place, so judge typedModule as well.", gatekit.SourceFileSet().Position(n.Pos()))
-				return false
-			}
-			return true
-		})
-	}
-	return pkgs
-}
-
-// onlyShippedBuildReads reports whether file's build constraint holds with no
-// tag set and fails with typedTreeTags. Such a file is in the shipped build,
-// and the typed tree reads its tagged twin instead.
-func onlyShippedBuildReads(file *ast.File) (bool, error) {
-	tagged := map[string]bool{}
-	for tag := range strings.SplitSeq(typedTreeTags, ",") {
-		tagged[tag] = true
-	}
-	for _, group := range file.Comments {
-		if group.Pos() > file.Package {
-			break
-		}
-		for _, line := range group.List {
-			if !constraint.IsGoBuild(line.Text) {
-				continue
-			}
-			expr, err := constraint.Parse(line.Text)
-			if err != nil {
-				return false, err
-			}
-			return expr.Eval(func(string) bool { return false }) && !expr.Eval(func(tag string) bool { return tagged[tag] }), nil
-		}
-	}
-	return false, nil
-}
-
-// loadTypedModule checks the packages patterns name under tags, a comma list
-// that may be empty.
-func loadTypedModule(tags string, patterns ...string) ([]typedPackage, error) {
-	listed, err := listModule(tags, patterns)
+func loadTypedModule() ([]typedPackage, error) {
+	listed, err := listModule()
 	if err != nil {
 		return nil, err
 	}
@@ -225,7 +107,7 @@ func loadTypedModule(tags string, patterns ...string) ([]typedPackage, error) {
 	wg.Wait()
 	var module []typedPackage
 	for i, pkg := range roots {
-		if inBackendTree(pkg) {
+		if inBackendModule(pkg) {
 			module = append(module, out[i])
 		}
 	}
@@ -250,7 +132,7 @@ func newModuleUniverse(listed []listedPackage) *moduleUniverse {
 	u := &moduleUniverse{done: map[string]chan struct{}{}}
 	for _, pkg := range listed {
 		exports[pkg.ImportPath] = pkg.Export
-		reaches := inBackendTree(pkg)
+		reaches := inBackendModule(pkg)
 		for _, dep := range pkg.Imports {
 			reaches = reaches || u.fromSource(dep)
 		}
@@ -273,9 +155,8 @@ func (u *moduleUniverse) fromSource(path string) bool {
 	return ok
 }
 
-// inBackendTree holds for a package of this module or of its tools module.
-func inBackendTree(pkg listedPackage) bool {
-	return pkg.Module != nil && (pkg.Module.Path == modulePath || pkg.Module.Path == modulePath+"/tools") && len(pkg.GoFiles) > 0
+func inBackendModule(pkg listedPackage) bool {
+	return pkg.Module != nil && pkg.Module.Path == modulePath && len(pkg.GoFiles) > 0
 }
 
 func (u *moduleUniverse) wait(path string) {
@@ -310,14 +191,10 @@ func (u *moduleUniverse) Import(path string) (*types.Package, error) {
 	return u.outside.Import(path)
 }
 
-// listModule asks the go command for every package patterns name and their
+// listModule asks the go command for every package of the module and its
 // dependencies, with the export data a build left for each.
-func listModule(tags string, patterns []string) ([]listedPackage, error) {
-	args := []string{"list", "-export", "-deps", "-json=ImportPath,Dir,GoFiles,Imports,Export,Module"}
-	if tags != "" {
-		args = append(args, "-tags", tags)
-	}
-	cmd := exec.Command("go", append(args, patterns...)...)
+func listModule() ([]listedPackage, error) {
+	cmd := exec.Command("go", "list", "-export", "-deps", "-json=ImportPath,Dir,GoFiles,Imports,Export,Module", "./...")
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	stdout, err := cmd.StdoutPipe()
@@ -364,7 +241,7 @@ func checkListedPackage(pkg listedPackage, imports types.Importer) (typedPackage
 	if err != nil {
 		return typedPackage{}, fmt.Errorf("type-checking %s: %w", pkg.ImportPath, err)
 	}
-	return typedPackage{path: pkg.ImportPath, dir: filepath.ToSlash(dir), files: files, info: info, types: checked}, nil
+	return typedPackage{path: pkg.ImportPath, files: files, info: info, types: checked}, nil
 }
 
 // newTypedInfo asks the checker for everything a census reads.

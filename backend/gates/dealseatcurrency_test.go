@@ -14,19 +14,17 @@ package gates
 // ask whether any edge row exists at all. Those are ratified below, each with
 // its reason.
 //
-// The kind is read as a SQL literal, through any Go string constant, or as a
-// `$N` parameter bound to one. A constant can differ between the shipped build
-// and the tagged one, so the census judges both.
+// The kind is read as a SQL literal, through a Go string constant of the
+// module, or as a `$N` parameter bound to one. A constant of the generated
+// contract is not read, because type-checking it costs most of the walk.
 
 import (
 	"go/ast"
 	"go/parser"
 	"go/token"
 	"go/types"
-	"maps"
 	"path/filepath"
 	"regexp"
-	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -77,56 +75,62 @@ var dealSeatDateBlind = gatekit.Waive(map[string]string{
 func TestEveryDealSeatCurrencyTestUsesTheOneDefinition(t *testing.T) {
 	t.Parallel()
 	defer dealSeatDateBlind.AssertAllMatched(t)
-	tree, shipped := typedTree(t), typedModule(t)
-	assertShippedOnlyFilesAreRead(t, tree, shipped)
-	findings := map[string]bool{}
-	judged := map[string]bool{}
-	for _, pkg := range slices.Concat(tree, shipped) {
-		for _, file := range pkg.files {
-			path := filepath.ToSlash(gatekit.SourceFileSet().Position(file.Pos()).Filename)
-			if path == dealSeatOwner || strings.HasSuffix(path, "_gen.go") {
-				continue
-			}
-			scope := dealSeatScope(file, pkg.info)
-			for _, decl := range file.Decls {
-				statements := dealSeatStatements(decl, scope)
-				for _, sql := range statements {
-					subject := path + ":" + declName(decl) + "#" + strconv.Itoa(len(statements))
-					judged[subject] = true
-					if !dealSeatDateBlind.Waived(t, subject) {
-						findings[subject+": "+firstDealSeatLine(sql)] = true
-					}
+	fset, files := parseGoFilesUnder(t, ".")
+	infos := typeCheckModule(fset, files)
+	var findings []string
+	judged := 0
+	for _, file := range files {
+		path := filepath.ToSlash(fset.Position(file.Pos()).Filename)
+		if path == dealSeatOwner || strings.HasSuffix(path, "_gen.go") {
+			continue
+		}
+		scope := dealSeatScope(file, infos[file])
+		for _, decl := range file.Decls {
+			statements := dealSeatStatements(decl, scope)
+			for _, sql := range statements {
+				judged++
+				subject := path + ":" + declName(decl) + "#" + strconv.Itoa(len(statements))
+				if dealSeatDateBlind.Waived(t, subject) {
+					continue
 				}
+				findings = append(findings, subject+": "+firstDealSeatLine(sql))
 			}
 		}
 	}
-	if len(judged) < 10 {
-		t.Fatalf("only %d deal_stakeholder statement(s) were judged, so this census covered almost nothing", len(judged))
+	if judged < 10 {
+		t.Fatalf("only %d deal_stakeholder statement(s) were judged, so this census covered almost nothing", judged)
 	}
 	if len(findings) > 0 {
 		t.Errorf("these statements decide by hand whether a contact sits on a deal:\n  %s\n\n"+
 			"Call dealseat.CurrentSQL, which keeps a future End date current until that day and takes "+
 			"an ended seat off the committee. If the statement asks whether any edge row exists, "+
-			"ratify it in dealSeatDateBlind with the reason.", strings.Join(slices.Sorted(maps.Keys(findings)), "\n  "))
+			"ratify it in dealSeatDateBlind with the reason.", strings.Join(findings, "\n  "))
 	}
 }
 
-// assertShippedOnlyFilesAreRead fails a file under the module root that
-// neither the tagged tree nor the shipped build holds.
-func assertShippedOnlyFilesAreRead(t *testing.T, tree, shipped []typedPackage) {
-	t.Helper()
-	held := map[string]bool{}
-	for _, pkg := range shipped {
-		for _, file := range pkg.files {
-			held[gatekit.SourceFileSet().Position(file.Pos()).Filename] = true
+// typeCheckModule checks every package in import order, so a constant is read
+// with its value wherever it is declared in the module.
+func typeCheckModule(fset *token.FileSet, files []*ast.File) map[*ast.File]*types.Info {
+	byDir := map[string][]*ast.File{}
+	for _, file := range files {
+		name := filepath.ToSlash(fset.Position(file.Pos()).Filename)
+		if !strings.HasSuffix(name, "_gen.go") {
+			byDir[filepath.Dir(name)] = append(byDir[filepath.Dir(name)], file)
 		}
 	}
-	_, shippedOnly := typedTreeUnder(t, tree, ".")
-	for _, path := range shippedOnly {
-		if !held[path] {
-			t.Errorf("%s is in neither the tagged tree nor the shipped build, so the census does not read it", path)
+	out := map[*ast.File]*types.Info{}
+	checked := sharedImports{}
+	for _, group := range packagesInImportOrder(byDir) {
+		dir := filepath.ToSlash(filepath.Dir(fset.Position(group[0].Pos()).Filename))
+		info := &types.Info{Uses: map[*ast.Ident]types.Object{}}
+		conf := types.Config{Importer: checked, Error: func(error) {}}
+		pkg, _ := conf.Check(modulePath+"/"+dir, fset, group, info)
+		checked[pkg.Path()] = pkg
+		for _, file := range group {
+			out[file] = info
 		}
 	}
+	return out
 }
 
 // dealSeatScope is the walk's view of one file: where the helper is, and the
@@ -237,7 +241,8 @@ func TestTheDealSeatDetectorSeesWhatItClaimsTo(t *testing.T) {
 			if err != nil {
 				t.Fatalf("the probe does not parse, so it proves nothing: %v", err)
 			}
-			scope := dealSeatScope(file, typeCheckLoosely(fset, "probe", []*ast.File{file}))
+			info, _ := typeCheckLoosely(fset, "probe", []*ast.File{file})
+			scope := dealSeatScope(file, info)
 			hit := false
 			for _, decl := range file.Decls {
 				hit = hit || len(dealSeatStatements(decl, scope)) > 0
@@ -246,27 +251,5 @@ func TestTheDealSeatDetectorSeesWhatItClaimsTo(t *testing.T) {
 				t.Errorf("detector answered %v, want %v, over:\n%s", hit, probe.fires, probe.src)
 			}
 		})
-	}
-}
-
-// A file the tagged tree lacks is the shipped twin of a tagged file only when
-// its constraint holds untagged and fails tagged. Any other is a file unread.
-func TestTheTypedTreeTellsAShippedTwinFromAnUnreadFile(t *testing.T) {
-	t.Parallel()
-	for line, shippedOnly := range map[string]bool{
-		"":                                    false,
-		"//go:build !integration":             true,
-		"//go:build !integration && !loadrig": true,
-		"//go:build integration":              false,
-		"//go:build e2e":                      false,
-		"//go:build !e2e":                     false,
-	} {
-		file, err := parser.ParseFile(token.NewFileSet(), "twin.go", line+"\n\npackage twin\n", parser.ParseComments)
-		if err != nil {
-			t.Fatalf("the planted file does not parse: %v", err)
-		}
-		if got, err := onlyShippedBuildReads(file); err != nil || got != shippedOnly {
-			t.Errorf("%q reads as shipped-only %v (%v), want %v", line, got, err, shippedOnly)
-		}
 	}
 }
