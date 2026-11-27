@@ -59,6 +59,7 @@ import { DealCreateAction, useCreateRefusal } from "./deals.createaction";
 import {
   dealRowSelection,
   dealViewDials,
+  railDealView,
   savableDealQuery,
   useDealChips,
   useDealScreenDials,
@@ -312,7 +313,7 @@ export function DealsScreen({
         // what puts the reader back on page 1.
         scopeKey={effectivePipeline?.id ?? ""}
         dataChips={[...ownerChips, ...dealChips, ...tagChips, ...rangeChips]}
-        dataViews={savedViews}
+        dataViews={savedViews.map((view) => railDealView(view, pipelineId))}
         selection={rowSelection}
         chips={surfaceChips}
         views={[...standardViews(viewerId, { sort: "" })]}
