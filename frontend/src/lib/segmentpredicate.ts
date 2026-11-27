@@ -88,7 +88,7 @@ export function isRadiusOperand(value: unknown): value is RadiusOperand {
   );
 }
 
-/** storekit's `MaxRelativeDays`, held equal by gates/frontendrelativedays_test.go. */
+/** storekit's `MaxRelativeDays`, held equal by gates/frontendlimits_test.go. */
 export const MAX_DAYS_AGO = 36600;
 
 export function isRelativeDate(value: unknown): value is RelativeDate {

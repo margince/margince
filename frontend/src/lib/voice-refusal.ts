@@ -13,7 +13,7 @@ export type RefusalReason =
   | "tooLarge";
 
 /** The server's largest JSON request body, voice source text included, as a
- *  mirror of httperr.MaxBodyBytes that frontendvoicesourcecap_test holds. */
+ *  mirror of httperr.MaxBodyBytes that frontendlimits_test.go holds. */
 export const VOICE_SOURCE_MAX_BYTES = 1_048_576;
 
 const refusalReasons: Record<string, RefusalReason> = {
