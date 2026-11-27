@@ -140,8 +140,8 @@ jobs:
   # runner budget.
   #
   # The suite is every file fe-unit collects, on the worker count vitest picks
-  # from the runner's cores; the timings below were measured and go stale as it
-  # grows, so re-measure before moving the knee. The fixed cost of a leg —
+  # from the runner's cores. Only the 1- and 4-shard timings below were measured,
+  # the rest are estimates, and all go stale as the suite grows. The fixed cost of a leg —
   # checkout, pnpm install, the node setup — is around 65s. The slices are cut
   # by each file's expected cost (frontend/scripts/vitest-shards.ts), because
   # vitest's own split by a hash of the path evens out the file count and leaves
