@@ -7,11 +7,7 @@
 // reader meets one wording for one filter wherever it appears.
 // census/rules/filtersentence.census.ts fails any other module spelling an operator.
 
-import {
-  formatDateAbbrev,
-  formatMoney,
-  formatNumber,
-} from "../../format/format";
+import { formatDateAbbrev, formatNumber } from "../../format/format";
 import { INDUSTRY_FIELD, industryWords } from "../../format/industry";
 import {
   type Locale,
@@ -24,7 +20,11 @@ import {
 } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCan } from "../../lib/capability";
-import { fieldLabel, type VocabularyField } from "../../lib/filterdata";
+import {
+  fieldLabel,
+  optionWords,
+  type VocabularyField,
+} from "../../lib/filterdata";
 import { valueFor } from "../../lib/labelfor";
 import {
   type FilterOp,
@@ -33,7 +33,6 @@ import {
   isRelativeDate,
   type Leaf,
   type Node,
-  type RadiusOperand,
 } from "../../lib/segmentpredicate";
 import { useViewerZone } from "../../lib/viewerzone";
 import {
@@ -43,6 +42,7 @@ import {
   tagNamesText,
   useRecordNames,
 } from "./filtersentence.names";
+import { moneyText, radiusText } from "./filtersentence.values";
 import { useTagCatalog } from "./tagadmin.queries";
 
 /**
@@ -73,11 +73,38 @@ const NUMERIC_OPERATOR_KEY: Partial<Record<FilterOp, MessageKey>> = {
   lte: "filters.op.atMost",
 };
 
+/**
+ * A tag field holds a set, so it reads as what the set includes. "Tags is
+ * Wanted" says the record has one tag when it may have five.
+ */
+const SET_OPERATOR_KEY: Partial<Record<FilterOp, MessageKey>> = {
+  eq: "filters.op.include",
+  neq: "filters.op.notInclude",
+  in: "filters.op.includeAny",
+  // Not includeSome: beside "include any of" the picker would offer two near twins.
+  exists: "filters.op.includeSomeOrNone",
+};
+
+/** The two readings of `exists`, said of a set where the field holds one. */
+export function existsKeys(
+  field: Pick<VocabularyField, "references"> | undefined,
+): Readonly<Record<"true" | "false", MessageKey>> {
+  return field?.references === "tag"
+    ? { true: "filters.op.includeSome", false: "filters.op.includeNone" }
+    : { true: "filters.hasValue", false: "filters.isEmpty" };
+}
+
+/** What of a field decides how its operators read. */
+export type OperatorReading = Pick<VocabularyField, "type" | "references">;
+
 export function operatorKey(
   op: FilterOp,
-  type: VocabularyField["type"],
+  field: OperatorReading | undefined,
 ): MessageKey {
-  if (type === "number" || type === "currency") {
+  if (field?.references === "tag") {
+    return SET_OPERATOR_KEY[op] ?? OPERATOR_KEY[op];
+  }
+  if (field?.type === "number" || field?.type === "currency") {
     return NUMERIC_OPERATOR_KEY[op] ?? OPERATOR_KEY[op];
   }
   return OPERATOR_KEY[op];
@@ -185,10 +212,8 @@ export function clauseWords(
   const field = known ? fieldLabel(known, t) : clause.field;
   const { op, operand } = clause;
   if (op === "exists") {
-    return {
-      field,
-      op: t(operand === false ? "filters.isEmpty" : "filters.hasValue"),
-    };
+    const readings = existsKeys(known);
+    return { field, op: t(operand === false ? readings.false : readings.true) };
   }
   const relative = relativeDateWords(op, operand, words);
   if (relative) {
@@ -226,7 +251,8 @@ function retiredTagCount(
  * The operator as this clause says it. One value of `in` reads "is", except
  * where ids are counted: "Stage is 1 stage" says the count is the stage. A
  * counted `in` has words of its own, since German „eines von“ would have to
- * agree with a noun only the count names.
+ * agree with a noun only the count names. Tags keep their set words: the
+ * field already names the noun.
  */
 function clauseOperatorKey(
   { op, operand }: Clause,
@@ -235,14 +261,23 @@ function clauseOperatorKey(
 ): MessageKey {
   const named =
     field !== undefined &&
-    recordNamesText(operand, field, words.recordNames) !== undefined;
-  if (op === "in" && field?.references && !named) {
-    return "filters.sentence.inCounted";
+    (recordNamesText(operand, field, words.recordNames) ??
+      tagNamesText(
+        operand,
+        field,
+        words.tagNames,
+        retiredTagCount(operand, field, words) > 0,
+      )) !== undefined;
+  const counted = op === "in" && field?.references !== undefined && !named;
+  if (counted) {
+    return field?.references === "tag"
+      ? operatorKey(op, field)
+      : "filters.sentence.inCounted";
   }
   if (op === "in" && Array.isArray(operand) && operand.length === 1) {
-    return "filters.op.eq";
+    return operatorKey("eq", field);
   }
-  return operatorKey(op, field?.type ?? "text");
+  return operatorKey(op, field);
 }
 
 /**
@@ -276,20 +311,6 @@ function relativeDateWords(
     return { op: plural("filters.sentence.withinLast", days, count) };
   }
   return undefined;
-}
-
-/** A radius as "50 km of Stuttgart", or of its coordinates when no place was named. */
-export function radiusText(
-  operand: RadiusOperand,
-  t: Translator,
-  locale: Locale,
-): string {
-  return t("filters.sentence.radiusOf", {
-    km: formatNumber(operand.radius_km, locale),
-    place:
-      operand.label ??
-      `${formatNumber(operand.lat, locale)}, ${formatNumber(operand.lon, locale)}`,
-  });
 }
 
 /** A clause's operand as the filter states it, or "" where it states none yet. */
@@ -343,7 +364,10 @@ function scalarText(
   if (day) {
     return formatDateAbbrev(operand, locale, zone);
   }
-  return field?.name === INDUSTRY_FIELD ? industryWords(t, operand) : operand;
+  if (field?.name === INDUSTRY_FIELD) return industryWords(t, operand);
+  return field?.options?.includes(operand)
+    ? optionWords(field.name, operand, t)
+    : operand;
 }
 
 /**
@@ -392,26 +416,6 @@ function typedOperandText(
         tags: counted,
         retired: formatNumber(retired, locale),
       });
-}
-
-/**
- * A money operand or value — minor units of the field's currency — as the
- * reader reads money, or undefined for anything that is not an amount.
- */
-export function moneyText(
-  raw: unknown,
-  currency: string,
-  locale: Locale,
-): string | undefined {
-  const one = (v: unknown) =>
-    typeof v === "number" || (typeof v === "string" && /^-?\d+$/.test(v))
-      ? formatMoney(Number(v), currency, locale)
-      : undefined;
-  if (Array.isArray(raw)) {
-    const each = raw.map(one);
-    return each.every((v) => v !== undefined) ? each.join(", ") : undefined;
-  }
-  return one(raw);
 }
 
 /**

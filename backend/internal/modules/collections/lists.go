@@ -346,9 +346,9 @@ func (s *Store) CreateList(ctx context.Context, in CreateListInput) (listRow, er
 // sharing setting.
 func (s *Store) checkNewList(ctx context.Context, in *CreateListInput) error {
 	if !values.HasVisibleText(in.Name) {
-		return &BadInputError{Field: nameField, Reason: "a list needs a name"}
+		return &BadInputError{Field: nameField, Code: codeRequired, Reason: "a list needs a name"}
 	}
-	if !acceptsEntityType(in.EntityType) {
+	if !acceptsEntityType(in.EntityType) || kindUnavailable(ctx, in.EntityType) {
 		return &BadInputError{Field: entityTypeField, Reason: "must be " + memberEntityVocabulary}
 	}
 	if in.ListType == "" {

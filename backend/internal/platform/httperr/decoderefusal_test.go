@@ -128,10 +128,10 @@ var decodeRefusalCases = []decodeRefusalCase{
 		wantDetail: `"tomorrow" is not a date in YYYY-MM-DD form`,
 	},
 	{
-		name:       "a nested path is quoted as the caller spelled it",
+		name:       "a key inside an array item is named with the item's index",
 		body:       `{"links":[{"entity_id":5,"entity_type":"deal"}]}`,
 		decode:     intoCreateActivity,
-		wantDetail: "`links.0.entity_id` must be a UUID string, not a number",
+		wantDetail: "`links[0].entity_id` must be a UUID string, not a number",
 	},
 	{
 		name:       "a value whose own unmarshaller ran is still traced back to its field",

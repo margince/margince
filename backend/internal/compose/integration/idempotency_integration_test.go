@@ -34,7 +34,7 @@ func TestIdempotencyKeyReplay(t *testing.T) {
 		"full_name":    "Retry Prospect",
 		"email":        "retry@example.org",
 		"company_name": "Retry AG",
-		"source":       "import:idem",
+		"source":       "import",
 	}
 
 	var first AnyMap
@@ -68,7 +68,7 @@ func TestIdempotencyKeyReplay(t *testing.T) {
 	status := e.Call(t, "POST", "/v1/leads", AnyMap{
 		"full_name": "Different Intent",
 		"email":     "other@example.org",
-		"source":    "import:idem",
+		"source":    "import",
 	}, keyed, &problem)
 	if status != http.StatusConflict || problem["code"] != "idempotency_key_conflict" {
 		t.Fatalf("mismatched body under a reused key = %d %v, want 409 idempotency_key_conflict", status, problem)
@@ -91,7 +91,7 @@ func TestIdempotencyReplayRefusesAnArchivedRecord(t *testing.T) {
 		"full_name":    "Erasable Prospect",
 		"email":        "erasable@example.org",
 		"company_name": "Erasable AG",
-		"source":       "import:idem",
+		"source":       "import",
 	}
 
 	var first AnyMap
@@ -142,7 +142,7 @@ func TestAPromoteReplayStillWorksThoughItArchivedItsOwnLead(t *testing.T) {
 		"full_name":    "Promotable Prospect",
 		"email":        "promotable@example.org",
 		"company_name": "Promotable AG",
-		"source":       "import:idem",
+		"source":       "import",
 	}, nil, &lead); status != http.StatusCreated {
 		t.Fatalf("create lead = %d %v", status, lead)
 	}

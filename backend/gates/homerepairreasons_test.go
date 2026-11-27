@@ -70,7 +70,7 @@ func TestHomeRepairExplainsEveryOwnerReason(t *testing.T) {
 		t.Fatal("repair label map is incomplete")
 	}
 	labels := map[string]bool{}
-	for _, match := range tsReasonEntry.FindAllStringSubmatch(tsReasonComment.ReplaceAllString(body, ""), -1) {
+	for _, match := range tsReasonEntry.FindAllStringSubmatch(gatekit.TSWithoutComments(body), -1) {
 		labels[match[1]] = true
 	}
 	for label := range labels {

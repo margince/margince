@@ -31,7 +31,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"reflect"
 	"slices"
@@ -42,12 +41,10 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/margince/margince/backend/internal/platform/unitset"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
-
-// extensionsDir is the unit tier, relative to this package.
-const extensionsDir = "../../../extensions"
 
 // toolIDPrefix is how a manifest entry names an agent tool: the `id` is
 // `tool/<name>` where a job's is `job/<name>`. The KIND is what decides an
@@ -55,7 +52,6 @@ const extensionsDir = "../../../extensions"
 const (
 	toolIDPrefix  = "tool/"
 	agentToolKind = "agent_tool"
-	manifestName  = "manifest.generated.json"
 )
 
 // unitTool is one extension tool as its unit published it.
@@ -76,98 +72,49 @@ type unitManifest struct {
 	} `json:"risk_tiers"`
 }
 
-// extensionTools reads every shipped unit's manifest and returns the agent
-// tools the tier contributes to the registry, sorted.
-//
-// instance/go.mod requires the units under extensions/ and no others (a gate holds
-// the two equal), so the directory listing is the shipped set. A tree with no
-// units returns nothing, which is the honest answer for a core-only build and
-// not a scan that failed.
-// shippedUnits is the set of unit directories git TRACKS under the extension
-// tier. Tracked is what "shipped" means here: a unit a lane copied in for its
-// own purposes is real to that lane and is not part of the product this page
-// describes.
-//
-// It fails rather than returning an empty set when git cannot answer. An empty
-// set would silently drop every unit and publish "the shipped units add 0
-// tools", which is the under-reporting direction this page must not fail in.
-func shippedUnits(dir string) (map[string]bool, error) {
-	if err := gatekit.DeclareInputs(os.Getenv, dir); err != nil {
+// extensionTools reads the manifest of every unit a production build of the
+// tree at root composes, and returns the agent tools they add, sorted. The set
+// is unitset's, the composer's own selection, so a development-only example is
+// not counted and a fetched unit is. A selected unit with no manifest fails
+// the read rather than shrinking the census.
+func extensionTools(root string) ([]unitTool, error) {
+	goMod := filepath.Join(root, "instance", "go.mod")
+	if err := gatekit.DeclareInputs(os.Getenv, goMod); err != nil {
 		return nil, err
 	}
-	out, err := exec.Command("git", "ls-files", "-z", "--", dir).Output()
+	units, err := unitset.Selected(root, false)
 	if err != nil {
-		return nil, fmt.Errorf("asking git which units are shipped under %s: %w", dir, err)
-	}
-	units := map[string]bool{}
-	for path := range strings.SplitSeq(strings.TrimRight(string(out), "\x00"), "\x00") {
-		if path == "" {
-			continue
-		}
-		rest, ok := strings.CutPrefix(filepath.ToSlash(path), filepath.ToSlash(dir)+"/")
-		if !ok {
-			continue
-		}
-		if name, _, found := strings.Cut(rest, "/"); found {
-			units[name] = true
-		}
-	}
-	if len(units) == 0 {
-		return nil, fmt.Errorf("git tracks no unit under %s — a page generated from an empty "+
-			"extension tier would report the shipped units as adding nothing", dir)
-	}
-	return units, nil
-}
-
-func extensionTools(dir string) ([]unitTool, error) {
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return nil, fmt.Errorf("reading the extension tier at %s: %w", dir, err)
-	}
-	shipped, err := shippedUnits(dir)
-	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("reading the composed units from %s: %w", goMod, err)
 	}
 	var tools []unitTool
-	for _, entry := range entries {
-		if !entry.IsDir() {
-			continue
+	for _, unit := range units {
+		if err := gatekit.DeclareInputs(os.Getenv, unit.ManifestPath()); err != nil {
+			return nil, err
 		}
-		// SHIPPED units only, which is what this page is about. A unit that is
-		// merely present is not necessarily one the product ships. Counted, a
-		// fixture copied into extensions/ would change the published page.
-		// The drift gate would then fail on the tree that did not generate it.
-		if !shipped[entry.Name()] {
-			continue
-		}
-		path := filepath.Join(dir, entry.Name(), manifestName)
-		body, readErr := os.ReadFile(path)
-		if os.IsNotExist(readErr) {
-			continue
-		}
-		if readErr != nil {
-			return nil, readErr
+		body, err := os.ReadFile(unit.ManifestPath())
+		if err != nil {
+			return nil, fmt.Errorf("the composed unit %s has no readable manifest (run make composition): %w", unit.Name, err)
 		}
 		var manifest unitManifest
-		if unmarshalErr := json.Unmarshal(body, &manifest); unmarshalErr != nil {
-			return nil, unmarshalErr
+		if err := json.Unmarshal(body, &manifest); err != nil {
+			return nil, fmt.Errorf("decoding %s: %w", unit.ManifestPath(), err)
 		}
 		for _, entry := range manifest.RiskTiers {
 			if entry.Kind != agentToolKind {
 				continue
 			}
-			unit := entry.Unit
-			if unit == "" {
-				unit = manifest.Name
+			owner := entry.Unit
+			if owner == "" {
+				owner = manifest.Name
 			}
-			tools = append(tools, unitTool{Name: strings.TrimPrefix(entry.ID, toolIDPrefix), Unit: unit})
+			tools = append(tools, unitTool{Name: strings.TrimPrefix(entry.ID, toolIDPrefix), Unit: owner})
 		}
 	}
 	sort.Slice(tools, func(i, j int) bool { return tools[i].Name < tools[j].Name })
 	return tools, nil
 }
 
-// lanePassportScopes are the scopes scripts/e2e-llm.sh mints its passports with.
+// lanePassportScopes are the scopes scripts/e2e-llm.sh connects its passports with.
 // The key is a scenario's `passport:` line: absent, "wide", "research", "rep" or "readonly".
 //
 // It is the LANE'S OWN CHOICE, restated here because the page's central claim is
@@ -324,16 +271,16 @@ func readPublishedCoverage(t *testing.T) mcpToolCoverage {
 // while a reader that found no manifest at all has failed short and would report
 // that same emptiness.
 func TestTheUnitToolCensusReadsTheWholeTier(t *testing.T) {
-	manifests, err := unitManifestCount(extensionsDir)
+	selected, err := unitset.Selected(repoRoot, false)
 	if err != nil {
-		t.Fatalf("reading the unit manifests under %s: %v", extensionsDir, err)
+		t.Fatalf("reading the composed units: %v", err)
 	}
-	if manifests == 0 {
-		t.Fatalf("read no unit manifest under %s — the tier ships units, so a census finding no "+
-			"manifest has failed short rather than measured a core-only build", extensionsDir)
+	if len(selected) == 0 {
+		t.Fatal("instance/go.mod selects no unit for a production build — the tree ships units, so a census " +
+			"finding none has failed short rather than measured a core-only build")
 	}
 
-	units, err := extensionTools(extensionsDir)
+	units, err := extensionTools(repoRoot)
 	if err != nil {
 		t.Fatalf("reading the unit tools: %v", err)
 	}
@@ -348,24 +295,6 @@ func TestTheUnitToolCensusReadsTheWholeTier(t *testing.T) {
 				"two governed capabilities as one", tool.Unit, tool.Name)
 		}
 	}
-}
-
-// unitManifestCount is how many units published a manifest at all.
-func unitManifestCount(dir string) (int, error) {
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return 0, fmt.Errorf("reading the extension tier at %s: %w", dir, err)
-	}
-	count := 0
-	for _, entry := range entries {
-		if !entry.IsDir() {
-			continue
-		}
-		if _, statErr := os.Stat(filepath.Join(dir, entry.Name(), manifestName)); statErr == nil {
-			count++
-		}
-	}
-	return count, nil
 }
 
 // corpusDir is the certification lane's scenario corpus, relative to this
@@ -433,26 +362,17 @@ func corpusGradedTools(dir string, names []string, routes map[string]string) (co
 	return grades, nil
 }
 
-// writeCoverageSurfaces is the section this page did not have, and the reason
-// its headline number was unreadable.
-//
-// There are TWO menus and they are not comparable. Your AI assistant is
-// offered the whole MCP catalog, because a user is there to correct a wrong
-// reach. A night helper gets its declared allowlist of five to seven tools.
-// Its run is unattended, and every listed tool is paid for on every step.
-// One coverage number over both reports a menu nobody is served.
-//
-// It also states what this page CANNOT see, rather than leaving the reader to
-// infer that silence means zero: the units' tools, and the scope filter.
+// MCP clients use their user's full tool catalog. Scheduled helpers have a
+// smaller declared menu. Separate counts keep the coverage report useful.
 func writeCoverageSurfaces(p *strings.Builder, r mcpToolCoverage) {
 	p.WriteString("## Your AI assistant and the night helpers\n\n")
 	p.WriteString("A tool being \"untried\" means something different for each, so the numbers above " +
 		"are your AI assistant's.\n\n")
 	p.WriteString("| | Your AI assistant, over MCP | The night helpers: scheduled agents of Margince AI |\n|---|---|---|\n")
-	p.WriteString("| Who drives it | a user, watching | a job on a timer, unattended |\n")
+	p.WriteString("| Who drives it | a client acting for its user, chatting or automatic | a job on a timer, unattended |\n")
 	fmt.Fprintf(p, "| Menu | %d tools, the whole catalog | %s tools, declared per agent |\n",
 		r.Totals.Tools, agentMenuRange(r.Agents))
-	p.WriteString("| A wrong reach | the user corrects it | nobody is there |\n")
+	p.WriteString("| A wrong reach | the same user grants and credential scopes apply | nobody is there |\n")
 	p.WriteString("| Graded by | the use-case lane on this page | " +
 		"[ai-certification.md](ai-certification.md) |\n\n")
 

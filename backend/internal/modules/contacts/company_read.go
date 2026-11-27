@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
@@ -135,6 +136,13 @@ func readCompanyRow(ctx context.Context, tx pgx.Tx, id ids.CompanyID, archived s
 	return companies[0], nil
 }
 
+// LastActivityDaySQL says the activity a company's stored clock names is a day
+// entry, so days since it count from its own date. company is the table or its
+// alias, SQL the caller renders.
+func LastActivityDaySQL(company string) string {
+	return occurredday.ClockIsDaySQL(storekit.CompanyClockRowsSQL(company), company+".last_activity_at")
+}
+
 // scanCompany scans core + active custom columns; extra receives
 // any trailing expressions the caller's SELECT appended (the sorted
 // list's cursor key).
@@ -150,17 +158,18 @@ func scanCompany(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 	var version int64
 	var visibility string
 	var assessAgainst *ids.UUID
-	var sourceSystem, authorName, authorSeatName *string
+	var authorName, authorSeatName *string
 	var authorID *ids.UUID
+	var lastActivityDay bool
 
 	dests := []any{
 		&id, &o.DisplayName, &o.LegalName, &o.Description, &o.Industry, &o.SizeBand, &ownerID, &visibility,
 		&addr.Line1, &addr.Line2, &addr.City, &addr.Region, &addr.PostalCode, &addr.Country,
 		&resolvedCountries,
 		&lifecycle, &parentID, &mergedInto, &logoObjectKey, &linkedinURL, &o.Phone, &email, &o.Source, &o.CapturedBy,
-		&sourceSystem, &authorID, &authorName, &authorSeatName,
+		&o.SourceSystem, &authorID, &authorName, &authorSeatName,
 		&version, &o.CreatedAt, &o.UpdatedAt, &o.ArchivedAt, &o.IsAnchor,
-		&o.LastActivityAt, &o.LegalHold, &assessAgainst,
+		&o.LastActivityAt, &o.LegalHold, &assessAgainst, &lastActivityDay,
 	}
 	cf := storekit.ScanDests(active)
 	if err := row.Scan(append(append(dests, cf...), extra...)...); err != nil {
@@ -177,8 +186,8 @@ func scanCompany(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 	}
 	o.ParentCompanyId = uuidPtr(parentID)
 	o.MergedIntoId = uuidPtr(mergedInto)
-	lc := crmcontracts.CompanyLifecycle(lifecycle)
-	o.Lifecycle = &lc
+	lc := crmcontracts.CompanyStatus(lifecycle)
+	o.Status = &lc
 	o.LogoUrl = LogoURL(id, logoObjectKey, LogoWide)
 	o.LinkedinUrl = linkedinURL
 	if email != nil {
@@ -190,7 +199,8 @@ func scanCompany(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 	}
 	o.AddressCountryMismatch = addressCountryMismatch(addr.Country, resolvedCountries)
 	o.Version = &version
-	o.Author = sourceAuthorOf(authorID, authorSeatName, authorName, sourceSystem)
-	o.ImportedFrom = provenance.ImportedFrom(sourceSystem)
+	o.LastActivityPrecision = occurredday.ClockPrecision[crmcontracts.OccurredPrecision](o.LastActivityAt, lastActivityDay)
+	o.Author = sourceAuthorOf(authorID, authorSeatName, authorName, o.SourceSystem)
+	o.ImportedFrom = provenance.ImportedFrom(o.SourceSystem)
 	return o, nil
 }

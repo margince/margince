@@ -70,7 +70,28 @@ describe("a reader the server does not let archive this contact", () => {
     expect(
       document.getElementById(verb.getAttribute("aria-describedby") ?? "")
         ?.textContent,
-    ).toBe(en["contact.archiveRefused"]);
+    ).toBe(en["record.archiveRefused"]);
+  });
+});
+
+describe("a reader whose role only reads", () => {
+  it("names the role, not the owner, on the page and on archive", async () => {
+    const readOnly: Contact360 = {
+      ...view,
+      contact: { ...view.contact, archivable: false, writable: false },
+    };
+    mount("overview", readOnly, [], {}, { contact: ["read"] });
+
+    await screen.findAllByText(en["record.roleReadsOnly"]);
+    expect(screen.queryByText(en["contact.notYoursToChange"])).toBeNull();
+    await openRecordMenu();
+    const verb = await screen.findByTestId("archive-record");
+    await waitFor(() =>
+      expect(
+        document.getElementById(verb.getAttribute("aria-describedby") ?? "")
+          ?.textContent,
+      ).toBe(en["record.roleReadsOnly"]),
+    );
   });
 });
 
@@ -110,9 +131,9 @@ describe("the header's core record verbs — edit, merge, archive", () => {
       document.querySelector(".record-split-lines")?.textContent ?? "";
     await waitFor(() => expect(subtitle()).toContain("Old title"));
     await userEvent.click(
-      await screen.findByRole("button", { name: /^Change Title/ }),
+      await screen.findByRole("button", { name: /^Change Job title/ }),
     );
-    const title = await screen.findByRole("textbox", { name: "Title" });
+    const title = await screen.findByRole("textbox", { name: "Job title" });
     await userEvent.clear(title);
     await userEvent.type(title, "New title{Enter}");
 
@@ -141,6 +162,48 @@ describe("the header's core record verbs — edit, merge, archive", () => {
     );
 
     await waitFor(() => expect(archived).toBe(true));
+  });
+
+  // The server refuses both reads for an archived row, and the page still
+  // holds the live row in the beat after the archive answers.
+  it("asks for no 360 or lists of the contact it just archived", async () => {
+    let archived = false;
+    let rowReadsAfter = 0;
+    const refusedReads: string[] = [];
+    const archivedRow = {
+      ...view.contact,
+      archived_at: "2026-08-14T00:00:00Z",
+    };
+    mount("overview", view, [], {
+      "GET /contacts/p-1": () => {
+        if (!archived) return jsonResponse(view.contact);
+        rowReadsAfter += 1;
+        return jsonResponse(archivedRow);
+      },
+      "GET /contacts/p-1/360": () => {
+        if (archived) refusedReads.push("360");
+        return jsonResponse(view);
+      },
+      "GET /records/contact/p-1/lists": () => {
+        if (archived) refusedReads.push("lists");
+        return jsonResponse({ data: [], page: { has_more: false } });
+      },
+      "DELETE /contacts/p-1": () => {
+        archived = true;
+        return jsonResponse(archivedRow);
+      },
+    });
+
+    await pressRecordVerb("archive-record");
+    await userEvent.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: /^Archive/,
+      }),
+    );
+
+    await waitFor(() => expect(rowReadsAfter).toBeGreaterThan(0));
+    expect(await screen.findByText(en["record.archived"])).toBeTruthy();
+    expect(refusedReads).toEqual([]);
   });
 
   it("says so when the Undo of an archive finds no archive to put back", async () => {
@@ -292,7 +355,7 @@ describe("the left column edits a contact's fields", () => {
       await left.findByRole("button", { name: "Edit About" }),
     );
     const about = within(await screen.findByRole("dialog", { name: "About" }));
-    const title = about.getByRole("textbox", { name: "Title" });
+    const title = about.getByRole("textbox", { name: "Job title" });
     await userEvent.clear(title);
     await userEvent.type(title, "New title");
     await userEvent.click(about.getByRole("button", { name: "Save" }));

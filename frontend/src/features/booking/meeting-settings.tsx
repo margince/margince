@@ -15,12 +15,13 @@ import { useRoute } from "../../lib/router";
 import { useSchedulingProfile } from "../../lib/scheduling-profile-query";
 import { useMe } from "../../lib/session";
 import { needsAttention, useCalendarStanding } from "./booking-calendar-state";
+import { BookingPrivacyWarning } from "./booking-privacy";
 import { AvailabilityCard } from "./meeting-availability";
 import { MeetingCalendarCard } from "./meeting-calendar";
 import { GuestViewCard } from "./meeting-guest-view";
 import { BookingLinksCard } from "./meeting-links";
 import { MeetingSetupCard } from "./meeting-setup";
-import { TeamMembersCard, TeamRequestsCard } from "./meeting-team";
+import { TeamLinksCard, TeamRequestsCard } from "./meeting-team";
 import { useWorkingHours } from "./working-hours";
 
 type Profile = components["schemas"]["SchedulingProfile"];
@@ -109,8 +110,9 @@ function MeetingCards({
           hasLink={!!profile.slug}
         />
       )}
+      <BookingPrivacyWarning address={profile.privacy_information} />
       <BookingLinksCard profile={profile} />
-      {profile.slug && <TeamMembersCard profile={profile} />}
+      {profile.slug && <TeamLinksCard hostName={profile.host_name ?? ""} />}
       <TeamRequestsCard />
       <MeetingCalendarCard profile={profile} />
     </>

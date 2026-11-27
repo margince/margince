@@ -14,7 +14,25 @@ package connector
 // Username is display only. A Telegram handle can be released and re-claimed
 // by a different human, so nothing may route, authorize or deduplicate on it.
 type ChannelIdentity struct {
-	Provider      string
+	Provider string
+	// AccountScope names the connected account the identity was seen through.
+	// It is empty for everything the workspace's own bot receives.
+	AccountScope  string
 	ChannelUserID string
 	Username      string
+	// Alias is a second identity the same record names for the same human, such
+	// as a WhatsApp customer's business-scoped user id beside their phone. It is
+	// bound to the contact the main identity resolves to, so an erasure of the
+	// contact suppresses both. It is a pointer so the identity stays comparable.
+	Alias *ChannelIdentity
+}
+
+// All lists the identity and its alias, the identity first.
+func (ci ChannelIdentity) All() []ChannelIdentity {
+	own := ci
+	own.Alias = nil
+	if ci.Alias == nil {
+		return []ChannelIdentity{own}
+	}
+	return []ChannelIdentity{own, *ci.Alias}
 }

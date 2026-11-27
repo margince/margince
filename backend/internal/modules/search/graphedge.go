@@ -43,9 +43,11 @@ type InteractionEdge struct {
 	UserID    ids.UUID
 	ContactID ids.UUID
 
-	LastAt        time.Time
-	LastInboundAt *time.Time
-	LastOutbound  *time.Time
+	LastAt time.Time
+	// LastAtDateOnly says the activity behind LastAt names only a date.
+	LastAtDateOnly bool
+	LastInboundAt  *time.Time
+	LastOutbound   *time.Time
 	// LastMetAt is the newest meeting or call of the pair neither declined.
 	// Nil when they never met.
 	LastMetAt *time.Time
@@ -232,7 +234,8 @@ func EdgesForContact(ctx context.Context, tx pgx.Tx, contactID ids.UUID, limit i
 	}
 	rows, err := tx.Query(ctx, `
 		SELECT e.user_id, e.contact_id, e.last_at, e.last_inbound_at, e.last_outbound_at, e.last_met_at,
-		       e.late_count_90d, e.late_out_count_90d, e.count_90d, e.in_count_90d, e.out_count_90d, e.sent_count_90d, e.count_total
+		       e.late_count_90d, e.late_out_count_90d, e.count_90d, e.in_count_90d, e.out_count_90d, e.sent_count_90d, e.count_total,
+		       e.last_precision IS NOT DISTINCT FROM 'day'
 		  FROM graph_interaction_edge e
 		  `+liveMemberJoin+`
 		 WHERE e.contact_id = $1
@@ -283,7 +286,8 @@ func EdgesForContacts(ctx context.Context, tx pgx.Tx, contacts []ids.UUID) ([]In
 	}
 	rows, err := tx.Query(ctx, `
 		SELECT e.user_id, e.contact_id, e.last_at, e.last_inbound_at, e.last_outbound_at, e.last_met_at,
-		       e.late_count_90d, e.late_out_count_90d, e.count_90d, e.in_count_90d, e.out_count_90d, e.sent_count_90d, e.count_total
+		       e.late_count_90d, e.late_out_count_90d, e.count_90d, e.in_count_90d, e.out_count_90d, e.sent_count_90d, e.count_total,
+		       e.last_precision IS NOT DISTINCT FROM 'day'
 		  FROM graph_interaction_edge e
 		  `+liveMemberJoin+`
 		 WHERE e.contact_id = ANY($1)
@@ -350,7 +354,7 @@ var graphEngagedRows = `SELECT c.*, max(c.occurred_at) FILTER (WHERE ` + relstre
 func graphFoldColumns(window string) string {
 	late := ` AND ` + relstrength.AfterEngagedSQL("a", "engaged_at")
 	inWindow := occurredday.FromSQL("a", window)
-	return `max(a.occurred_at) AS last_at,
+	return `max(a.occurred_at) AS last_at, ` + occurredday.LatestPrecisionSQL("a", "") + ` AS last_precision,
 		       max(a.occurred_at) FILTER (WHERE ` + relstrength.TheyWroteSQL("a.edge_contact", "a") + `) AS last_inbound_at,
 		       max(a.occurred_at) FILTER (WHERE ` + graphWeWrote + `) AS last_outbound_at,
 		       max(a.occurred_at) FILTER (WHERE a.met) AS last_met_at,
@@ -390,10 +394,10 @@ func RebuildEdges(ctx context.Context, tx pgx.Tx) error {
 		       AND `+liveContactSQL("pp.contact_id")+`
 		)
 		INSERT INTO graph_interaction_edge
-		    (user_id, contact_id, last_at, last_inbound_at, last_outbound_at, last_met_at,
-		     count_90d, in_count_90d, out_count_90d, sent_count_90d, late_count_90d, late_out_count_90d, count_total, computed_at, read_snapshot)
-		SELECT f.user_id, f.contact_id, f.last_at, f.last_inbound_at, f.last_outbound_at, f.last_met_at,
-		       f.count_90d, f.in_90d, f.out_90d, f.sent_90d, f.late_90d, f.late_out_90d, f.count_total, now(), pg_current_snapshot()
+		    (user_id, contact_id, last_at, last_precision, last_inbound_at, last_outbound_at, last_met_at,
+		     count_90d, in_count_90d, out_count_90d, sent_count_90d, late_count_90d, late_out_count_90d, count_total, read_snapshot)
+		SELECT f.user_id, f.contact_id, f.last_at, f.last_precision, f.last_inbound_at, f.last_outbound_at, f.last_met_at,
+		       f.count_90d, f.in_90d, f.out_90d, f.sent_90d, f.late_90d, f.late_out_90d, f.count_total, pg_current_snapshot()
 		  FROM (SELECT a.edge_user AS user_id, a.edge_contact AS contact_id, `+graphFoldColumns(window)+`
 		          FROM (`+graphEngagedRows+`) a
 		         GROUP BY a.edge_user, a.edge_contact) f`); err != nil {
@@ -412,12 +416,12 @@ func rebuildContactEdges(ctx context.Context, tx pgx.Tx, window string) error {
 	}
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO graph_contact_edge
-		    (contact_a, contact_b, last_at, count_90d, count_total, computed_at, read_snapshot)
+		    (contact_a, contact_b, last_at, last_precision, count_90d, count_total, read_snapshot)
 		SELECT pa.contact_id, pb.contact_id,
-		       max(a.occurred_at),
+		       max(a.occurred_at), `+occurredday.LatestPrecisionSQL("a", "")+`,
 		       count(DISTINCT `+graphInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", window)+`),
 		       count(DISTINCT `+graphInteractionUnit+`),
-		       now(), pg_current_snapshot()
+		       pg_current_snapshot()
 		  FROM activity_participant pa
 		  JOIN activity_participant pb
 		    ON pb.activity_id = pa.activity_id AND pb.contact_id > pa.contact_id

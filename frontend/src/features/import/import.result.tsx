@@ -18,13 +18,14 @@ import {
   UndoRecordName,
   useRunStopSentence,
 } from "./import.notices";
+import { ProblemsDownload } from "./import.problems";
 import {
   hasProgress,
   ImportProgressPanel,
   panelStalled,
   workerSilent,
 } from "./import.progress";
-import { PartCounts, ProblemsDownload, partsOf } from "./import.testrun";
+import { PartCounts, partsOf } from "./import.testrun";
 import { reasonText } from "./importreason";
 import type {
   ImportFormat,

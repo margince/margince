@@ -67,8 +67,13 @@ func bookingItem(concern BookingConcern) crmcontracts.AttentionItem {
 		Kind:    &kind,
 		Actions: []crmcontracts.AttentionItemActions{},
 	}
-	cause := "booking_health:" + kind
+	// Each page is its own incident, so two paused team links never fold into
+	// one card. A team link is named by its title.
+	cause := "booking_health:" + kind + ":" + concern.PageID.String()
 	item.CauseRef = &cause
+	if concern.Title != "" {
+		item.CauseLabel = &concern.Title
+	}
 	return item
 }
 
@@ -135,7 +140,9 @@ func aiWorkItem(run TroubledRun) crmcontracts.AttentionItem {
 // bounceItem draws one hard-bounced send. The subject line is the headline —
 // the name the reader knows the send by — and the receiving side's own reason
 // the supporting line. `open` is offered exactly when the send is filed under
-// a contact, because that page is where fixing the address and resending live.
+// a contact, because that page is where fixing the address by hand lives.
+// `send_again` is offered when the store says this bounce may be sent
+// again, so a bounce that was already repeated keeps `open` alone.
 func bounceItem(send BouncedSend) crmcontracts.AttentionItem {
 	kind := "hard"
 	occurred := send.BouncedAt
@@ -156,6 +163,9 @@ func bounceItem(send BouncedSend) crmcontracts.AttentionItem {
 	if !send.ContactID.IsZero() {
 		item.Subject = subjectOf("contact", send.ContactID)
 		item.Actions = append(item.Actions, actionOpen)
+		if send.CanSendAgain {
+			item.Actions = append(item.Actions, actionSendAgain)
+		}
 	}
 	return item
 }

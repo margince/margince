@@ -365,6 +365,10 @@ func (s *Store) createDealInTx(ctx context.Context, tx pgx.Tx, in CreateDealInpu
 		return crmcontracts.Deal{}, err
 	}
 
+	if err := checkPipelineScope(in.PipelineID, active, in.CustomFields); err != nil {
+		return crmcontracts.Deal{}, err
+	}
+
 	id := ids.New[ids.DealKind]()
 	provenanceCols, provenanceHolders, base := storekit.ProvenanceInsertFragments(in.SourceID, in.Author, []any{
 		id, in.Name, in.AmountMinor, in.Currency, in.PipelineID, in.StageID,
@@ -373,7 +377,7 @@ func (s *Store) createDealInTx(ctx context.Context, tx pgx.Tx, in CreateDealInpu
 		in.Description, in.CommercialMotion, in.Priority, in.AcquisitionSource,
 		in.ExpectedArrMinor, in.SourceSystem, in.CloseDateProvisional,
 	})
-	cfCols, cfHolders, args, err := storekit.InsertFragments(active, in.CustomFields, base)
+	cfCols, cfHolders, args, err := storekit.InsertFragmentsIn(ctx, tx, active, in.CustomFields, base)
 	if err != nil {
 		return crmcontracts.Deal{}, err
 	}

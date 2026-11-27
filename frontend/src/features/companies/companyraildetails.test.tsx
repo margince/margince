@@ -38,7 +38,7 @@ const COMPANY: Company = {
   // edit affordances these tests are about.
   writable: true,
   display_name: "Brandt Automotive GmbH",
-  lifecycle: "customer",
+  status: "customer",
   owner_id: "u-1",
   industry: "automotive",
   captured_by: "human:u-author",
@@ -109,13 +109,7 @@ function stub(
       // it a list shape would render no mark and a test asserting its absence
       // would pass for the wrong reason.
       if (pathname.endsWith("/vat-check")) {
-        return (
-          answers.vatCheck?.() ??
-          new Response(JSON.stringify({ title: "not found" }), {
-            status: 404,
-            headers: { "content-type": "application/json" },
-          })
-        );
+        return answers.vatCheck?.() ?? new Response(null, { status: 204 });
       }
       if (request.method === "PATCH") {
         return answers.patch?.() ?? json({});
@@ -295,7 +289,7 @@ describe("the legal identity a contact can state", () => {
           return json(meFixture({ allow: { company: ["read", "update"] } }));
         }
         if (url.pathname.endsWith("/vat-check")) {
-          return new Response(null, { status: 404 });
+          return new Response(null, { status: 204 });
         }
         return json({});
       }),
@@ -510,7 +504,7 @@ describe("the grouped postal address", () => {
 describe("a choice that may be cleared", () => {
   it.each([
     ["Industry", "industry"],
-    ["Employees", "size_band"],
+    ["Company size", "size_band"],
   ])("clears %s to null", async (label, key) => {
     const user = userEvent.setup();
     const calls = await renderSettledGrid({ ...COMPANY, size_band: "11-50" });

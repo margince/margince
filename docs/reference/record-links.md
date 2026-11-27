@@ -41,18 +41,18 @@ The boot refuses a bad name, a missing label, an end that is not one of the thre
 |---|---|
 | Make a link | The `update` right on the type of the *from* record and write authority over that record. The right to attach to the *to* record, and the right to read its type. |
 | Remove a link | The same on the *from* record, and the *to* record must be readable. |
-| Read the links of a record | The `read` right and a record the caller may open. A link is left out when the caller may not read the other end, or the other end is archived. |
+| Read the links of a record | The `read` right and a record the caller may open. A link is left out when the caller may not read the other end, or the other end is archived. Each link carries `removable`, the answer of the remove check above for this caller; a read-only seat gets `false`. |
 
 A record the caller cannot open answers not found, so the id is not disclosed. Both ends are locked while the link is
 written, so an erasure of a contact waits for it.
 
 ## Routes
 
-All routes are human only. No agent tool exists for links.
+Every route but the list of types is human only. No agent tool reads or makes a link.
 
 | Route | What it does |
 |---|---|
-| `GET /v1/link-types` | Every type, with the ends each allows. |
+| `GET /v1/link-types` | Every type, with the ends each allows. An agent reads the same list with the `read_workspace` action `link_types`, and passes a type to `list_records` on deals as `link_type`. |
 | `GET /v1/record-links` | The links of one record, from `record_type` and `record_id`, newest first, at most 200. |
 | `POST /v1/record-links` | Makes a link. |
 | `DELETE /v1/record-links/{id}` | Removes a link. |

@@ -18,7 +18,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
@@ -73,18 +72,10 @@ func stageRateProposal(ctx context.Context, svc *approvals.Service, kind, target
 	}
 	digest := sha256.Sum256(raw)
 	hash := hex.EncodeToString(digest[:])
-	// StageUnlessDeclined rather than Stage, and the difference is a rejection
-	// rather than a duplicate. JoinPending collapses a proposal that is still
-	// waiting; the moment a human turns one down there is no pending row left to
-	// join, so a plain Stage puts the refused figure straight back. And it comes
-	// back on every refresh after that: the diff is computed against the RATE
-	// SHEET, which a rejection does not change, so the same click re-derives the
-	// same proposal from the same source indefinitely.
-	//
-	// The identity was already declared for the join, and it is what makes the
-	// memory precise: a refused $5 stays refused while a genuine move to $6 is
-	// still offered.
+	// A refused figure stays refused: every refresh re-derives it from the rate
+	// sheet, and the identity still offers a move to a new figure.
 	_, _, err = svc.StageUnlessDeclined(ctx, approvals.StageInput{
+		Why:  approvals.HeadlineSaysWhy,
 		Kind: kind, ProposedChange: raw, DiffHash: hash,
 		TargetType: targetType, TargetID: ws, Summary: summary, SystemText: metadata,
 		JoinPending: true, Identity: identity,
@@ -95,18 +86,9 @@ func stageRateProposal(ctx context.Context, svc *approvals.Service, kind, target
 	return err
 }
 
-// rateRefreshActor binds the system principal a rate-refresh effect applies
-// under (bypasses auth.Require), on behalf of the deciding admin.
-func rateRefreshActor(ctx context.Context) (context.Context, error) {
-	decider, ok := principal.Actor(ctx)
-	if !ok {
-		return nil, errors.New("compose: rate refresh effect without a deciding principal")
-	}
-	return principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalSystem, ID: "agent:rate-refresh",
-		UserID: decider.UserID, OnBehalfOf: decider.UserID,
-	}), nil
-}
+// rateRefreshAgentID is the agent that reads rates and writes an approved one,
+// each time for one named admin.
+const rateRefreshAgentID = "agent:rate-refresh"
 
 func fxRateAcceptEffect(svc *approvals.Service, store *deals.Store) approvals.ApprovedEffect {
 	return func(ctx context.Context, approvalID ids.ApprovalID, proposedChange json.RawMessage, diffHash string) error {
@@ -114,17 +96,13 @@ func fxRateAcceptEffect(svc *approvals.Service, store *deals.Store) approvals.Ap
 		if err := json.Unmarshal(proposedChange, &p); err != nil {
 			return fmt.Errorf("compose: fx rate proposal payload: %w", err)
 		}
-		execCtx, err := rateRefreshActor(ctx)
-		if err != nil {
-			return err
-		}
 		// Redeem the authority object and apply the sheet write in ONE
 		// transaction: a failed write leaves the approval unconsumed and the
 		// job retryable, never permanently consumed with the sheet unchanged.
 		// The precondition read returns the day it sampled and the write is
 		// pinned to that SAME day, so a cross-midnight apply fails the
 		// past-date guard rather than overwriting the new day's scheduled row.
-		return svc.RedeemAndApply(ctx, approvalID, fxRateProposalKind, diffHash, func(tx pgx.Tx) error {
+		return redeemForApprover(ctx, svc, approvalID, fxRateProposalKind, diffHash, rateRefreshAgentID, func(execCtx context.Context, tx pgx.Tx) error {
 			// The diff was computed against the rate then in force; if the sheet
 			// moved since (manual write, competing approval), applying would
 			// silently restore a stale value — refuse and roll back instead. The

@@ -14,7 +14,10 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
+
+	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -40,6 +43,18 @@ func registerHistoryVisits(t *testing.T) {
 			t.Fatalf("preparing the visit table (%s): %v", stmt, err)
 		}
 	}
+	registerHistoryVisitKind()
+	t.Cleanup(func() {
+		recordkinds.Reset()
+		if _, err := owner.Exec(context.Background(), `DROP TABLE IF EXISTS ext.`+historyDemoTable); err != nil {
+			t.Errorf("dropping the visit table: %v", err)
+		}
+	})
+}
+
+// registerHistoryVisitKind declares the visit kind over a table that already
+// exists, as composing its unit again would.
+func registerHistoryVisitKind() {
 	recordkinds.Register("historydemo", []extension.RecordKindDeclaration{{
 		Kind: "visit", DisplayName: "Visit", Table: historyDemoTable,
 		Fields:     []extension.RecordKindField{{Name: "code", Label: "Code"}, {Name: "site", Label: "Site"}},
@@ -49,12 +64,6 @@ func registerHistoryVisits(t *testing.T) {
 			Subjects: []extension.TimelineSubject{{Entity: "contact", Column: "contact_id"}},
 		},
 	}})
-	t.Cleanup(func() {
-		recordkinds.Reset()
-		if _, err := owner.Exec(context.Background(), `DROP TABLE IF EXISTS ext.`+historyDemoTable); err != nil {
-			t.Errorf("dropping the visit table: %v", err)
-		}
-	})
 }
 
 func readExtensionHistory(ctx context.Context, t *testing.T, e *integration.Env, contact ids.UUID) (int, []crmcontracts.ExtensionHistoryEntry) {
@@ -96,8 +105,8 @@ func TestAContactsHistoryCarriesExtensionRowsAndSignalsNewestFirst(t *testing.T)
 			VALUES ($1, $2, $3::timestamptz, $4, CASE WHEN $5 THEN now() END)`, row.code, row.site, row.at, who, row.archived)
 	}
 	e.WsExec(t, `INSERT INTO signal (kind, entity_type, entity_id, summary, detected_at, source, captured_by)
-		VALUES ('ext:historydemo:late', 'contact', $1, 'Paid late', '2026-04-15T10:00:00Z', 'test', 'human:seed'),
-		       ('risk', 'contact', $1, 'A core signal', '2026-04-16T10:00:00Z', 'test', 'human:seed')`, contact)
+		VALUES ('ext:historydemo:late', 'contact', $1, 'Paid late', '2026-04-15T10:00:00Z', 'automation', 'human:seed'),
+		       ('risk', 'contact', $1, 'A core signal', '2026-04-16T10:00:00Z', 'manual', 'human:seed')`, contact)
 
 	reader := e.As(e.Rep1, nil, principal.Permissions{
 		RowScope: principal.RowScopeAll,
@@ -142,5 +151,67 @@ func TestAContactsHistoryCarriesExtensionRowsAndSignalsNewestFirst(t *testing.T)
 	}
 	if code, _ := readExtensionHistory(reader, t, e, ids.NewV7()); code != http.StatusNotFound {
 		t.Errorf("a contact nobody holds = %d, want 404", code)
+	}
+}
+
+func TestTheExtensionHistoryReadUsesTheSubjectIndex(t *testing.T) {
+	integration.Setup(t)
+	registerHistoryVisits(t)
+	owner := integration.OwnerConn(t)
+	ctx := context.Background()
+	if _, err := owner.Exec(ctx, `CREATE INDEX ext_historydemo_visit_contact ON ext.`+historyDemoTable+` (contact_id, visited_at)`); err != nil {
+		t.Fatal(err)
+	}
+	kind, ok := recordkinds.Lookup("ext:historydemo:visit")
+	if !ok {
+		t.Fatal("the visit kind did not register")
+	}
+	query, ok := extensionHistoryQuery(kind, "contact", "")
+	if !ok {
+		t.Fatal("the visit kind has no contact History")
+	}
+	tx, err := owner.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := tx.Rollback(context.Background()); err != nil {
+			t.Errorf("rolling back the plan transaction: %v", err)
+		}
+	})
+	if _, err := tx.Exec(ctx, `SET LOCAL enable_seqscan = off`); err != nil {
+		t.Fatal(err)
+	}
+	rows, err := tx.Query(ctx, "EXPLAIN "+query, ids.NewV7())
+	if err != nil {
+		t.Fatal(err)
+	}
+	plan, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if text := strings.Join(plan, "\n"); !strings.Contains(text, "ext_historydemo_visit_contact") {
+		t.Fatalf("the History read does not use the subject index:\n%s", text)
+	}
+}
+
+// The handler has no database here, so a type that got past the check would
+// panic on the row probe instead of answering.
+func TestExtensionHistoryRefusesATypeOutsideTheContract(t *testing.T) {
+	for _, entity := range []string{"bogus", "ext:finance:ledger_account", ""} {
+		t.Run(entity, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			r := httptest.NewRequest(http.MethodGet, "/v1/extension-history", nil)
+			analyticsQueryHandlers{}.ListExtensionHistory(w, r, crmcontracts.ListExtensionHistoryParams{
+				EntityType: crmcontracts.ListExtensionHistoryParamsEntityType(entity),
+				EntityId:   crmcontracts.Id(ids.NewV7()),
+			})
+			if w.Code != http.StatusUnprocessableEntity {
+				t.Fatalf("status = %d, want 422", w.Code)
+			}
+			if !strings.Contains(w.Body.String(), `"entity_type"`) {
+				t.Fatalf("the answer does not name entity_type: %s", w.Body.String())
+			}
+		})
 	}
 }

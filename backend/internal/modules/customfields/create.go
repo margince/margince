@@ -16,9 +16,11 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // pgDuplicateColumn is SQLSTATE 42701: the ALTER TABLE's ADD COLUMN hit
@@ -51,6 +53,9 @@ func (s *Service) Create(ctx context.Context, spec FieldSpec) (crmcontracts.Cust
 	}
 	if errs := Validate(spec); len(errs) > 0 {
 		return crmcontracts.CustomField{}, &ValidationError{Errors: errs}
+	}
+	if err := requireLabelWithin(spec.Label); err != nil {
+		return crmcontracts.CustomField{}, err
 	}
 	if IsStructural(spec.Label) {
 		return crmcontracts.CustomField{}, ErrStructural
@@ -90,6 +95,10 @@ func (s *Service) Create(ctx context.Context, spec FieldSpec) (crmcontracts.Cust
 // createInTx is Create's transaction body: add the column, then write the
 // catalog row and audit entry, all as the schema pool's owner role.
 func (s *Service) createInTx(ctx context.Context, tx pgx.Tx, spec FieldSpec, creator ids.UUID, slug string) (crmcontracts.CustomField, error) {
+	spec.PipelineIDs = storedPipelines(spec.PipelineIDs)
+	if err := livePipelines(ctx, tx, spec.PipelineIDs); err != nil {
+		return crmcontracts.CustomField{}, err
+	}
 	column, err := addColumn(ctx, tx, spec, slug)
 	if err != nil {
 		return crmcontracts.CustomField{}, err
@@ -112,6 +121,7 @@ func (s *Service) createInTx(ctx context.Context, tx pgx.Tx, spec FieldSpec, cre
 		{fieldOptions, optionsArg},
 		{fieldShow, spec.ShowInCreate == nil || *spec.ShowInCreate},
 		{fieldKinds, storedKinds(spec.ActivityKinds)},
+		{fieldPipelines, spec.PipelineIDs},
 		{"created_by", creator},
 	})
 	if storekit.IsUniqueViolation(err) {
@@ -146,6 +156,9 @@ func auditCreate(ctx context.Context, tx pgx.Tx, out crmcontracts.CustomField, c
 	}
 	if out.ActivityKinds != nil {
 		after[fieldKinds] = *out.ActivityKinds
+	}
+	if out.PipelineIds != nil {
+		after[fieldPipelines] = *out.PipelineIds
 	}
 	// Audit-only by ratification: the closed event catalog (events.md §5)
 	// defines no custom_field.* type — the spec's custom-fields.md §Events
@@ -319,6 +332,12 @@ func allocateColumn(ctx context.Context, tx pgx.Tx, object, slug string) (string
 	}
 	return "", &LabelTakenError{message: fmt.Sprintf(
 		"too many custom fields on %s were named %q; choose a different label", object, slug)}
+}
+
+// requireLabelWithin refuses a label past the label limit, measured as it is
+// stored: the label keeps the spaces it was sent with.
+func requireLabelWithin(label string) error {
+	return httperr.RequireWithin(fieldLabel, label, values.TextLabelCharacters)
 }
 
 // foldedLabel is a stored label as the collision test reads it: trimmed of any

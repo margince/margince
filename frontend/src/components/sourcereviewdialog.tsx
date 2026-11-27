@@ -285,7 +285,8 @@ function canPreviewSource(
     settled &&
     request !== null &&
     (!request.met_in_person || Boolean(request.obtained_at)) &&
-    (request.note.trim() !== "" || request.selected_evidence !== undefined)
+    ((request.note ?? "").trim() !== "" ||
+      request.selected_evidence !== undefined)
   );
 }
 
@@ -319,16 +320,18 @@ function SourcePreviewResult({
 }: Readonly<{ preview: components["schemas"]["NoticeSourcePreview"] }>) {
   const t = useT();
   const { locale } = useLocale();
-  const sentence = !preview.notice_required
-    ? t("notice.source.previewNone")
-    : preview.due_at
-      ? t(
-          preview.deadline_is_upper_bound
-            ? "notice.source.previewLatest"
-            : "notice.source.previewOwed",
-          { date: formatDate(preview.due_at, locale, preview.timezone) },
-        )
-      : t("notice.source.noDeadline");
+  const sentence = preview.subject_reached_out
+    ? t("notice.source.previewReachedOut")
+    : !preview.notice_required
+      ? t("notice.source.previewNone")
+      : preview.due_at
+        ? t(
+            preview.deadline_is_upper_bound
+              ? "notice.source.previewLatest"
+              : "notice.source.previewOwed",
+            { date: formatDate(preview.due_at, locale, preview.timezone) },
+          )
+        : t("notice.source.noDeadline");
   return <FieldRow label={t("notice.source.preview")}>{sentence}</FieldRow>;
 }
 

@@ -5,18 +5,17 @@
 
 package gates
 
-// The work-area table the server reads matches the parity catalog's placement and the contract's WorkArea enum.
+// The work-area table offers the contract's WorkArea enum, and a limited passport reaches every verb.
 //
-// The test that writes docs/reference/mcp-parity.md writes the table too, so a
-// passport limited to some areas is held to the groups that page shows.
+// The test that writes docs/reference/mcp-parity.md writes the table too, and
+// compares it byte for byte. That holds every placement in it to the groups
+// the page shows.
 
 import (
 	"encoding/json"
 	"maps"
 	"slices"
 	"testing"
-
-	"gopkg.in/yaml.v3"
 
 	"github.com/margince/margince/backend/internal/platform/workarea"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
@@ -145,61 +144,21 @@ func TestTheContractOffersTheChoosableWorkAreas(t *testing.T) {
 			} `yaml:"schemas"`
 		} `yaml:"components"`
 	}
-	if err := yaml.Unmarshal(raw, &doc); err != nil {
+	if err := unmarshalYAML(raw, &doc); err != nil {
 		t.Fatalf("parsing %s: %v", contractDocument, err)
 	}
-	var choosable []string
-	for _, info := range parityGroupInfos {
-		if info.Passport != "" {
-			choosable = append(choosable, info.Passport)
-		}
-	}
-	if len(choosable) < 2 {
-		t.Fatalf("the parity groups name %d passport areas; a choice needs at least two", len(choosable))
-	}
+	// The embedded table is the parity groups' placement, byte for byte:
+	// TestTheMCPParityCatalogIsPublished regenerates it and compares.
 	var keys []string
 	for _, area := range workarea.Choosable() {
 		keys = append(keys, area.Key)
 	}
+	if len(keys) < 2 {
+		t.Fatalf("the embedded table offers %d passport areas; a choice needs at least two", len(keys))
+	}
 	if got := doc.Components.Schemas["WorkArea"].Enum; !slices.Equal(got, keys) {
 		t.Errorf("WorkArea in %s is %v; the embedded work-area table offers %v. Regenerate with %s, then make the "+
 			"enum match.", contractDocument, got, keys, mcpParityCommand)
-	}
-	if len(keys) != len(choosable) {
-		t.Errorf("the embedded table offers %d areas and the parity groups name %d. Regenerate with %s.",
-			len(keys), len(choosable), mcpParityCommand)
-	}
-}
-
-// The table places the operations the contract lets an agent call and no
-// others, each in a group it declares.
-func TestTheWorkAreaTablePlacesEveryAgentOperation(t *testing.T) {
-	t.Parallel()
-	file := workarea.Embedded()
-	declared := map[string]bool{}
-	for _, area := range file.Areas {
-		declared[area.Key] = true
-	}
-	agentOps := map[string]bool{}
-	for _, methods := range readParityContract(t).routes {
-		for _, op := range methods {
-			if op.MCPTool != nil {
-				agentOps[op.OperationID] = true
-			}
-		}
-	}
-	if len(agentOps) == 0 {
-		t.Fatal("the contract names no agent operation; the walk lost them")
-	}
-	for op := range agentOps {
-		if area, placed := file.Operations[op]; !placed || !declared[area] {
-			t.Errorf("%s carries x-mcp-tool and is placed in %q. Regenerate with %s.", op, area, mcpParityCommand)
-		}
-	}
-	for op := range file.Operations {
-		if !agentOps[op] {
-			t.Errorf("the table places %s, which carries no x-mcp-tool. Regenerate with %s.", op, mcpParityCommand)
-		}
 	}
 }
 
@@ -221,24 +180,5 @@ func TestEveryAgentVerbIsReachableByALimitedPassport(t *testing.T) {
 			t.Errorf("%s sits only in %v, which no limited passport reaches. Mark its group Free or HeldAs a "+
 				"choosable group in gates/mcpparityplaces_test.go.", verb, file.Verbs[verb])
 		}
-	}
-}
-
-func TestEveryHTTPOperationHasItsCurrentFeaturePlacement(t *testing.T) {
-	t.Parallel()
-	file := workarea.Embedded()
-	contract := readParityContract(t)
-	count := 0
-	for path, methods := range contract.routes {
-		for _, operation := range methods {
-			count++
-			want := parityAreaOf(path, operation.Tags)
-			if got, placed := file.Placements[operation.OperationID]; !placed || got != want {
-				t.Errorf("%s placement=%q (%v), want %q; regenerate with %s", operation.OperationID, got, placed, want, mcpParityCommand)
-			}
-		}
-	}
-	if count == 0 || len(file.Placements) != count {
-		t.Fatalf("feature placement census has %d entries for %d operations", len(file.Placements), count)
 	}
 }

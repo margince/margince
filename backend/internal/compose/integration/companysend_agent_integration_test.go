@@ -31,7 +31,9 @@ import (
 	"encoding/json"
 	"io"
 	"log/slog"
+	"maps"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -77,7 +79,12 @@ type accountSendEnv struct {
 
 func setupAccountSend(t *testing.T) *accountSendEnv {
 	t.Helper()
-	p := setupPreflight(t)
+	return accountSendOn(t, setupPreflight(t))
+}
+
+// accountSendOn lays the account-send records down on a booted pre-flight.
+func accountSendOn(t *testing.T, p *preflightEnv) *accountSendEnv {
+	t.Helper()
 	// Without the send grant every send below refuses at the pre-flight, and
 	// this suite would pass while proving nothing about authority.
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
@@ -216,9 +223,9 @@ func TestTheMCPDoorStagesTheSameShapeAsTheRESTDoor(t *testing.T) {
 	}
 }
 
-// Automatic work with no passport may not stage, so under the floor its account
-// send is refused and nothing leaves.
-func TestAFlooredAccountSendFromAutomaticWorkIsRefusedAndNothingLeaves(t *testing.T) {
+// Under the floor, automatic work with no passport stages its account send for
+// the colleague it acts for, and nothing leaves until that colleague answers.
+func TestAFlooredAccountSendFromAutomaticWorkWaitsForTheColleague(t *testing.T) {
 	a := setupAccountSend(t)
 	args, err := json.Marshal(map[string]any{
 		"to": []string{"buyer@preflight.test"}, "subject": "Hello from an agent",
@@ -232,11 +239,10 @@ func TestAFlooredAccountSendFromAutomaticWorkIsRefusedAndNothingLeaves(t *testin
 		t.Fatal(err)
 	}
 	invoke := a.flooredAccountSendInvoker(t, a.mintAccountSendPassport(t), true)
-	if _, err := invoke(string(args)); !isPassportlessStagingRefusal(err) {
-		t.Fatalf("a floored account send from automatic work answered %v, want the refusal that it cannot stage", err)
-	}
+	_, err = invoke(string(args))
+	stagedForTheColleague(t, a.Owner, err)
 	if n := a.deliveryCount(t); n != 0 {
-		t.Fatalf("%d deliveries after a refused send, want 0", n)
+		t.Fatalf("%d deliveries before the colleague answered the staged send, want 0", n)
 	}
 }
 
@@ -358,4 +364,51 @@ func (a *accountSendEnv) mintAccountSendPassport(t *testing.T) string {
 		t.Fatalf("issue passport → %d", status)
 	}
 	return minted.Token
+}
+
+// An agent's preview of a first message answers what its send would. The send
+// refuses a project link, so the preview refuses it with the same code. A
+// project the probe cannot reach answers not-found on both doors, so the
+// refusal never says that a record the agent cannot reach exists.
+func TestAnAgentsPreviewAndSendAgreeOnAProjectLink(t *testing.T) {
+	a := accountSendOn(t, setupPreflightServingMCP(t))
+	live := createdRecord(t, a.AppEnv, "/v1/projects", AnyMap{"name": "Rollout", "company_id": a.company, "source": "manual"})
+	archived := createdRecord(t, a.AppEnv, "/v1/projects", AnyMap{"name": "Retired", "company_id": a.company, "source": "manual"})
+	if status := a.Call(t, "DELETE", "/v1/projects/"+archived, nil, nil, nil); status != http.StatusNoContent {
+		t.Fatalf("archive the project → %d", status)
+	}
+	agent := apptest.NewMCPClient(a.AppEnv, apptest.MCPBearerToken(t, a.AppEnv, "outreach agent", "read", "write", "send"))
+	notFound := func(text string) bool {
+		return strings.Contains(text, "reference_not_found") || strings.Contains(text, "No such record")
+	}
+	for _, tc := range []struct {
+		name, project string
+		want          func(string) bool
+	}{
+		{"a live project", live, func(text string) bool { return strings.Contains(text, projectFilingCode) }},
+		{"an archived project", archived, notFound},
+		{"no such project", absentRecordID, notFound},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			body := accountSendBody(a.company, a.deal, "Hello from an agent")
+			body["links"] = []AnyMap{{"entity_type": "company", "entity_id": a.company}, {"entity_type": "project", "entity_id": tc.project}}
+			send := map[string]any{"as": "email_new"}
+			maps.Copy(send, body)
+			answers := map[string]apptest.MCPResult{
+				"preview": agent.Call(t, "change_activities", map[string]any{"action": "check_new_send", "request_body": body}),
+				"send":    agent.Call(t, "send_outbound", send),
+			}
+			for door, got := range answers {
+				if !got.IsError || !tc.want(got.Text) {
+					t.Errorf("the %s answered %s", door, got.Text)
+				}
+				if tc.project != live && strings.Contains(got.Text, projectFilingCode) {
+					t.Errorf("the %s judged a project the agent cannot reach: %s", door, got.Text)
+				}
+			}
+		})
+	}
+	if n := a.deliveryCount(t); n != 0 {
+		t.Errorf("%d deliveries after refused sends, want 0", n)
+	}
 }

@@ -373,7 +373,7 @@ func anonymizeSubjectRows(
 	if _, err := tx.Exec(ctx, `DELETE FROM privacy_notice_case WHERE contact_id = $1`, contactID); err != nil {
 		return nil, fmt.Errorf("privacy: destroying the subject's notice cases: %w", err)
 	}
-	wiped, err := anonymizeLeadTwins(ctx, tx, contactID, emails)
+	wiped, err := wipeTwinsAndOriginals(ctx, tx, contactID, emails)
 	if err != nil {
 		return nil, err
 	}
@@ -410,16 +410,16 @@ func purgeContactDerivedRows(ctx context.Context, tx pgx.Tx, contactID ids.Conta
 		`DELETE FROM embedding WHERE entity_type = 'contact' AND entity_id = $1`, contactID); err != nil {
 		return err
 	}
+	// The stamps and the enrichment evidence. Anonymize-in-place leaves the
+	// contact row standing, so nothing cascades here. A value and its quote of
+	// the page or signature naming the subject survive unless these remove them.
+	// The second takes the rows still waiting in the legacy table.
 	if _, err := tx.Exec(ctx,
 		`DELETE FROM field_provenance WHERE object_type = 'contact' AND object_id = $1`, contactID); err != nil {
 		return err
 	}
-	// The enrichment sidecar. anonymize-in-place leaves the contact row
-	// standing, so nothing cascades here: the value AND its evidence snippet
-	// — which quotes the page or signature naming the subject — survive an
-	// erasure verbatim unless this statement removes them.
 	if _, err := tx.Exec(ctx,
-		`DELETE FROM contact_profile_field WHERE contact_id = $1`, contactID); err != nil {
+		`DELETE FROM contact_profile_field_legacy WHERE contact_id = $1`, contactID); err != nil {
 		return err
 	}
 	if _, err := tx.Exec(ctx,
@@ -437,6 +437,10 @@ func purgeContactDerivedRows(ctx context.Context, tx pgx.Tx, contactID ids.Conta
 // the ghost sweep identifies rows by them, and contact_social no longer holds
 // them once this returns.
 func deleteSubjectIdentifierRows(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, emails []string) ([]string, error) {
+	// Matched on the subject's addresses and numbers, so before they go.
+	if err := purgeSubjectCompanyEvidence(ctx, tx, contactID.UUID); err != nil {
+		return nil, err
+	}
 	// Read BEFORE the delete: the LinkedIn ghost sweep identifies rows by this
 	// address, and contact_social is about to stop holding it.
 	linkedInHandles, err := collectStrings(ctx, tx,

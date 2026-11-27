@@ -41,7 +41,7 @@ func CopyCompanyPointsTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit i
 	rows, err := tx.Query(ctx, `
 		SELECT o.id, o.address_line1, o.address_line2, o.address_city, o.address_region,
 		       o.address_postal_code, o.address_country, o.geocode_lat, o.geocode_lon,
-		       o.geocode_status, o.geocode_provider, o.geocode_input_hash, o.geocoded_at
+		       o.geocode_status, o.geocode_source, o.geocode_input_hash, o.geocoded_at
 		  `+uncopiedCompanyPoints+` AND o.id > $1
 		 ORDER BY o.id LIMIT $2 FOR UPDATE OF o`, after, limit)
 	if err != nil {
@@ -62,7 +62,7 @@ func CopyCompanyPointsTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit i
 	}
 	tag, err := tx.Exec(ctx, `
 		INSERT INTO company_geocode_state (company_id, lat, lon, status, provider, input_hash, geocoded_at)
-		SELECT o.id, o.geocode_lat, o.geocode_lon, copied.status, o.geocode_provider, o.geocode_input_hash, o.geocoded_at
+		SELECT o.id, o.geocode_lat, o.geocode_lon, copied.status, o.geocode_source, o.geocode_input_hash, o.geocoded_at
 		  FROM unnest($1::uuid[], $2::text[]) AS copied(id, status)
 		  JOIN company o ON o.id = copied.id
 		ON CONFLICT (company_id) DO UPDATE

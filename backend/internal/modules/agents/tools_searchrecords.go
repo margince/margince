@@ -144,7 +144,7 @@ const (
 var recordSearchTypes = []string{
 	string(datasource.EntityContact), string(datasource.EntityCompany), string(datasource.EntityDeal),
 	string(datasource.EntityLead), string(datasource.EntityProject), string(datasource.EntityProduct),
-	string(datasource.EntityOfferTemplate), string(datasource.EntityActivity),
+	string(datasource.EntityOfferTemplate), string(datasource.EntityDealRoom), string(datasource.EntityActivity),
 }
 
 // recordSearchDefaultTypes are searched when the caller names none. The
@@ -278,6 +278,12 @@ func (a searchRecordsArgs) query(ctx context.Context) (RecordSearchQuery, error)
 		if err := auth.Require(ctx, recordType, principal.ActionRead); err != nil {
 			return RecordSearchQuery{}, err
 		}
+		// A room is found through its deal, so the deal grant is asked as well.
+		if recordType == string(datasource.EntityDealRoom) {
+			if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
+				return RecordSearchQuery{}, err
+			}
+		}
 	}
 	if len(named) == 0 {
 		named = recordSearchDefaultTypes()
@@ -392,7 +398,7 @@ func (t searchRecords) addNearMatches(ctx context.Context, result *SearchRecords
 	if len(result.NearMatches) > 0 {
 		result.Notes = append(result.Notes, QueryNote{
 			Code: CodeNearMatchesOnly,
-			Detail: "no record matches these words; near_matches lists records whose names are spelt " +
+			Detail: "no record matches these words; near_matches lists records whose names are spelled " +
 				"close to them, and they are not matches",
 		})
 	}

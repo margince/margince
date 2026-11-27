@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/standingline"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
@@ -23,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
@@ -155,9 +157,12 @@ func (s *Service) AssembleScoped(ctx context.Context, companyID ids.CompanyID, o
 			}
 			// Each section's statement is tens of kilobytes of row scope, planned
 			// longer than it runs, so the sections keep their generic plans.
-			return database.ReuseGenericPlansTx(prepared, tx, func() error {
+			if err := database.ReuseGenericPlansTx(prepared, tx, func() error {
 				return s.sections(prepared, tx, companyID, now, opts, activityColumns, &out)
-			})
+			}); err != nil {
+				return err
+			}
+			return standingline.AttachTx(prepared, tx, standingline.KindCompany, companyID.UUID, &out.StandingLine)
 		})
 	})
 	if err != nil {
@@ -312,6 +317,12 @@ func (a *assembly) readContacts() error {
 		Data []crmcontracts.Company360Contact `json:"data"`
 		Page crmcontracts.PageInfo            `json:"page"`
 	}{Data: data, Page: page}
+	withheld, err := contacts.HiddenCompanyContactsTx(a.ctx, a.tx, a.companyID)
+	if err != nil {
+		return err
+	}
+	hidden := withheld.Wire()
+	a.out.ContactsHidden = &hidden
 	return nil
 }
 
@@ -363,11 +374,14 @@ func (a *assembly) suggestionInputsOnce() (suggestionInputs, error) {
 		if a.adviceErr == nil {
 			// The stage and the name come off the company row this
 			// assembly already read, so the page adds no query for either.
-			heading := companyHeading{name: a.out.Company.DisplayName, lastActivity: a.out.Company.LastActivityAt}
+			heading := companyHeading{
+				name: a.out.Company.DisplayName, lastActivity: a.out.Company.LastActivityAt,
+				lastActivityDateOnly: occurredday.IsStatedDay(a.out.Company.LastActivityPrecision),
+			}
 			if owner := a.out.Company.OwnerId; owner != nil {
 				heading.owner = new(ids.UUID(*owner))
 			}
-			if lc := a.out.Company.Lifecycle; lc != nil {
+			if lc := a.out.Company.Status; lc != nil {
 				heading.lifecycle = string(*lc)
 			}
 			var base string

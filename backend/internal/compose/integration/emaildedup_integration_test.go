@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -169,9 +170,8 @@ func TestOneMessageIsOneActivityWhicheverConnectorReadsItFirst(t *testing.T) {
 				t.Errorf("captured_by = %q, want the first reader %q — a replay rewrote provenance", got, first)
 			}
 			if got := scalar[string](t, e,
-				`SELECT source FROM activity WHERE id = $1`, firstID); got != first+":"+messageID {
-				t.Errorf("source = %q, want %q — the transport belongs on source even though the identity is shared",
-					got, first+":"+messageID)
+				`SELECT source FROM activity WHERE id = $1`, firstID); got != "capture" {
+				t.Errorf("source = %q, want capture: the channel, while captured_by names the transport", got)
 			}
 			// The identity itself is transport-independent.
 			if got := scalar[string](t, e,
@@ -320,5 +320,43 @@ func TestTheOfflineDemoLandsBothItsKindsThroughTheSameDoor(t *testing.T) {
 				t.Fatalf("the demo's %s was refused: %v", tc.kind, err)
 			}
 		})
+	}
+}
+
+// A colleague writes to a contact private to the seat and copies the seat. The
+// colleague's mailbox captures the message first and cannot see the contact, so
+// it files the message nowhere. The seat's mailbox joins the same row and files
+// it under the seat's contact, once however often the seat syncs.
+func TestAColleaguesMailCopyingTheSeatIsFiledUnderTheSeatsPrivateContact(t *testing.T) {
+	e := integration.Setup(t)
+	const seatAddr, colleagueAddr, customer = "rep1@ws.example", "rep2@ws.example", "ada@private-customer.example"
+	claimOwnAddress(t, e, e.Rep1, seatAddr)
+	claimOwnAddress(t, e, e.Rep2, colleagueAddr)
+	created, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{
+		FullName: "Ada Private", Source: "manual",
+		Emails: []contacts.ContactEmailInput{{Email: customer, EmailType: "work", IsPrimary: true}},
+	})
+	if err != nil {
+		t.Fatalf("creating the seat's contact: %v", err)
+	}
+	e.WsExec(t, `UPDATE contact SET owner_id = $2, visibility = 'owner' WHERE id = $1`, created.Id, e.Rep1)
+	raw := []byte(strings.Join([]string{
+		"From: " + colleagueAddr, "To: " + customer, "Cc: " + seatAddr, "Subject: Rollout",
+		"Date: Wed, 04 Jun 2026 08:00:00 +0000", "Message-ID: <colleague-copy@ws.example>",
+		"Content-Type: text/plain; charset=utf-8", "", "Could you send the dates?", "",
+	}, "\r\n"))
+	linked := `SELECT count(*) FROM activity_link WHERE activity_id = $1 AND contact_id = $2`
+
+	sent := captureThrough(t, e, "gmail", e.Rep2, colleagueAddr, raw)
+	if got := scalar[int](t, e, linked, sent, created.Id); got != 0 {
+		t.Fatalf("the colleague's mailbox filed the message under a contact it cannot see (%d links)", got)
+	}
+	for range 2 {
+		if joined := captureThrough(t, e, "gmail", e.Rep1, seatAddr, raw); joined != sent {
+			t.Fatalf("one message through two mailboxes is two activities: %s and %s", sent, joined)
+		}
+	}
+	if got := scalar[int](t, e, linked, sent, created.Id); got != 1 {
+		t.Errorf("the message is filed %d times under the seat's private contact, want once", got)
 	}
 }

@@ -45,7 +45,9 @@ func (s *Store) SummaryFor(
 		CompanyId: openapi_types.UUID(companyID.UUID),
 		State:     crmcontracts.FinanceSummaryStateNoConnection,
 	}
-	err := s.tx(ctx, func(tx pgx.Tx) error {
+	// One snapshot for the whole card: the billing list and its hidden count
+	// are two statements, and must describe one moment.
+	err := s.db.TxIsolated(ctx, pgx.RepeatableRead, func(tx pgx.Tx) error {
 		// A finance grant is not a licence to learn that a company exists, nor
 		// to read a ledger the caller does not own. Either answers 404 before
 		// any figure is read, as a made-up id does.
@@ -126,7 +128,7 @@ func readConnection(ctx context.Context, tx pgx.Tx) (conn connection, found bool
 	err = tx.QueryRow(ctx, `
 		SELECT id, provider, status, created_at, last_success_at
 		  FROM finance_connection
-		 WHERE archived_at IS NULL AND status <> 'disconnected'
+		 WHERE status <> 'disconnected'
 		 ORDER BY created_at DESC
 		 LIMIT 1`).Scan(&conn.id, &conn.provider, &conn.status, &conn.createdAt, &conn.lastSuccessAt)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -182,7 +184,7 @@ func collectsFrom(lifecycle string) bool {
 func companyLifecycle(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) (string, error) {
 	var lifecycle string
 	err := tx.QueryRow(ctx, `
-		SELECT lifecycle FROM company WHERE id = $1 AND archived_at IS NULL`,
+		SELECT status FROM company WHERE id = $1 AND archived_at IS NULL`,
 		companyID).Scan(&lifecycle)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return "", apperrors.ErrNotFound

@@ -61,17 +61,14 @@ const dateColumnFloor = 8
 // table the undo path compares images for.
 func undoReadableDateColumns(t *testing.T) map[string][]string {
 	t.Helper()
-	raw, err := gatekit.ReadFile("migrations/testdata/head_catalog.txt")
-	if err != nil {
-		t.Fatalf("reading the head catalog: %v", err)
-	}
+	raw := headCatalog(t)
 	reads := map[string]bool{}
 	for _, table := range tablesUndoReads {
 		reads[table] = true
 	}
 	columns := map[string][]string{}
 	total := 0
-	for line := range strings.SplitSeq(string(raw), "\n") {
+	for line := range strings.SplitSeq(raw, "\n") {
 		m := dateColumnLine.FindStringSubmatch(strings.TrimSpace(line))
 		if m == nil || !reads[m[1]] {
 			continue

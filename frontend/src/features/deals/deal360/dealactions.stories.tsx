@@ -120,7 +120,7 @@ export const LoggingRefused: Story = {
     });
     await waitFor(() =>
       expect(email).toHaveAccessibleDescription(
-        "You do not have permission to log activities on this record.",
+        "Your role can only read. Ask an administrator for another role.",
       ),
     );
     await expect(email).toBeDisabled();
@@ -131,7 +131,7 @@ export const LoggingRefused: Story = {
     }
     await waitFor(() =>
       expect(screen.getByRole("tooltip")).toHaveTextContent(
-        "Email. You do not have permission to log activities on this record.",
+        "Email. Your role can only read. Ask an administrator for another role.",
       ),
     );
   },
@@ -171,6 +171,24 @@ export const ReadOnlyDeal: Story = {
         screen.queryByRole("button", { name }),
       ).not.toBeInTheDocument();
     }
+  },
+};
+
+/** A deal this reader may change but not archive: Archive names who can. */
+export const ArchiveRefusedNotYours: Story = {
+  render: () => actions({ archivable: false }),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", {
+        name: "More actions",
+      }),
+    );
+    const archive = await screen.findByTestId("archive-record");
+    await waitFor(() =>
+      expect(archive).toHaveAccessibleDescription(
+        "Only its owner or a manager can archive this.",
+      ),
+    );
   },
 };
 

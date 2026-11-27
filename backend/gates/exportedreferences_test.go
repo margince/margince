@@ -27,7 +27,6 @@ package gates
 import (
 	"go/ast"
 	"go/token"
-	"path/filepath"
 	"regexp"
 	"slices"
 	"sort"
@@ -52,11 +51,8 @@ func TestEveryExportedReferenceToARowScopedTableIsWithheld(t *testing.T) {
 	}
 
 	want := map[string][]string{}
-	catalog, err := gatekit.ReadFile("migrations/testdata/head_catalog.txt")
-	if err != nil {
-		t.Fatalf("reading the head catalog: %v", err)
-	}
-	for _, line := range strings.Split(string(catalog), "\n") {
+	catalog := headCatalog(t)
+	for _, line := range strings.Split(catalog, "\n") {
 		m := foreignKeyToRowScoped.FindStringSubmatch(line)
 		if m == nil {
 			continue
@@ -167,7 +163,7 @@ func valueSpecsNamed(file *ast.File, name string) []*ast.ValueSpec {
 // the files that own each vocabulary — so this reads the package, not one file.
 func composeStringConstants(t *testing.T) map[string]string {
 	t.Helper()
-	sources, err := filepath.Glob("internal/compose/*.go")
+	sources, err := gatekit.Glob("internal/compose/*.go")
 	if err != nil {
 		t.Fatalf("listing compose sources: %v", err)
 	}

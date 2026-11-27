@@ -104,8 +104,8 @@ func (s *Store) Create(ctx context.Context, in Definition) (crmcontracts.SalesIn
 				return err
 			}
 		}
-		if _, err := tx.Exec(ctx, `INSERT INTO sales_initiative (id, name, description, owner_id, objective_metric, target_value, deadline, lead_rule, deal_rule, include_future, source, captured_by)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'manual', $11)`,
+		if _, err := tx.Exec(ctx, `INSERT INTO sales_initiative (id, name, description, owner_id, objective_metric, target_value, deadline, lead_rule, deal_rule, include_future, captured_by)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
 			id, in.Name, in.Description, owner, in.Objective, in.Target, in.Deadline, leadRule, dealRule, include, by); err != nil {
 			return fmt.Errorf("insert initiative: %w", err)
 		}
@@ -159,6 +159,13 @@ func (s *Store) Update(ctx context.Context, id ids.UUID, in Definition, ifVersio
 			if err := auth.EnsureAssignee(ctx, tx, owner); err != nil {
 				return err
 			}
+		}
+		// The same column list as the UPDATE, so a resend writes no revision nobody made.
+		var unchanged bool
+		if err := tx.QueryRow(ctx, `SELECT (name, description, owner_id, objective_metric, target_value, deadline, lead_rule, deal_rule, include_future) IS NOT DISTINCT FROM ($2::text, $3::text, $4::uuid, $5::text, $6::bigint, $7::date, $8::jsonb, $9::jsonb, $10::boolean) FROM sales_initiative WHERE id = $1`,
+			id, in.Name, in.Description, owner, in.Objective, in.Target, in.Deadline, leadRule, dealRule, include).Scan(&unchanged); err != nil || unchanged {
+			out = before
+			return err
 		}
 		tag, err := tx.Exec(ctx, `UPDATE sales_initiative SET name = $2, description = $3, owner_id = $4, objective_metric = $5, target_value = $6, deadline = $7, lead_rule = $8, deal_rule = $9, include_future = $10, version = version + 1, updated_at = now() WHERE id = $1 AND archived_at IS NULL AND version = $11`,
 			id, in.Name, in.Description, owner, in.Objective, in.Target, in.Deadline, leadRule, dealRule, include, versionOf(before))
@@ -217,9 +224,9 @@ func (s *Store) Launch(ctx context.Context, id ids.UUID, ifVersion *int64) (crmc
 			return httperr.Validation("members", "too_many", "narrow the rules: a launch freezes at most "+strconv.Itoa(ruleReadLimit)+" records of each kind")
 		}
 		now := s.now().UTC()
-		if _, err := tx.Exec(ctx, `INSERT INTO sales_initiative_baseline (initiative_id, deal_id, amount_minor_base, status, stage_id, captured_at)
-			SELECT $1, d.id, d.amount_minor_base, d.status, d.stage_id, $3 FROM deal d WHERE d.id = ANY($2)`,
-			id, members.Deals, now); err != nil {
+		if _, err := tx.Exec(ctx, `INSERT INTO sales_initiative_baseline (initiative_id, deal_id)
+			SELECT $1, d.id FROM deal d WHERE d.id = ANY($2)`,
+			id, members.Deals); err != nil {
 			return fmt.Errorf("freeze the baseline: %w", err)
 		}
 		tag, err := tx.Exec(ctx, `UPDATE sales_initiative SET status = 'live', launch_at = $2, version = version + 1, updated_at = now() WHERE id = $1 AND archived_at IS NULL AND version = $3`, id, now, versionOf(before))

@@ -114,7 +114,9 @@ function kindWord(kind: string, t: ReturnType<typeof useT> | undefined) {
 // A written body is markdown, so its title is the text it renders, not its
 // syntax.
 function titleText(activity: Activity, raw: string): string {
-  if (activity.kind === "email") return emailSummaryText(raw);
+  if (activity.kind === "email") {
+    return emailSummaryText(raw, activity.subject ?? "");
+  }
   const written = writtenAsMarkdown({
     kind: timelineKind(activity.kind),
     transcript: isTranscriptActivity(activity),
@@ -161,6 +163,9 @@ export function activityTimeline(
     nameOf?: NameOf;
     t: ReturnType<typeof useT>;
     locale: Locale;
+    // What the installation calls a channel or capture source, from its
+    // channel directory (useProviderLabel). Absent leaves every row unnamed.
+    channelName?: (key: string) => string;
   }>,
 ): TimelineEntry[] {
   return (activities ?? []).map((activity) => {
@@ -207,6 +212,9 @@ export function activityTimeline(
       audience: activity.audience,
       withheld: activity.content_state === "withheld",
       threadKey: activity.thread_key,
+      channel: who?.channelName
+        ? channelOf(activity, who.channelName, who.t)
+        : undefined,
       bulkAttested: activity.bulk_mail_attested,
       copies: activity.copies,
       automaticKind: activity.automatic_kind,
@@ -251,6 +259,27 @@ function transcriptSlots(
     detail: <TranscriptReadCard activityId={activity.id} />,
     lead: <TranscriptSummary activityId={activity.id} />,
   };
+}
+
+// The channel a message came by. A unit's message is named by the unit's
+// capture source, which carries the unit's own name. Its channel id is only
+// an internal key. Core's own channels are named by their provider. A mail is
+// a mail whichever mailbox it came through.
+function channelOf(
+  activity: Activity,
+  channelName: (key: string) => string,
+  t: ReturnType<typeof useT>,
+): string | undefined {
+  if (activity.kind === "email") {
+    return t("compose.transportEmail");
+  }
+  if (activity.kind !== "message") {
+    return undefined;
+  }
+  const key = activity.source?.startsWith("ext:")
+    ? activity.source
+    : activity.channel_provider;
+  return key ? channelName(key) : undefined;
 }
 
 function commitmentReviewCount(activity: Activity): number {

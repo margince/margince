@@ -50,8 +50,8 @@ type Approvals interface {
 	// method passing empty halves that have no meaning for it.
 	StageVolumeRelease(ctx context.Context, in VolumeReleaseRequest) (id ids.ApprovalID, staged bool, err error)
 	// ReleasableByCaller says whether the calling credential could approve the
-	// call it is staging — an undoable change on an attended session — so the
-	// answer it is handed offers the relay only when that move works.
+	// call it is staging. The change must be undoable and outside a built-in
+	// scheduled run. Its answer offers approval only when that move works.
 	ReleasableByCaller(ctx context.Context, in StageRequest) bool
 	// Redeem answers the version the approval was pinned to, so a transport
 	// that forwards the authorized call can bind its own write to it. pinned
@@ -78,6 +78,8 @@ type StageRequest struct {
 	Summary      string
 	// SummaryParts is Summary taken apart, nil when Summary is a sentence alone.
 	SummaryParts *crmcontracts.ApprovalSummaryParts
+	// Why is the reason the call gave for itself, in the agent's words.
+	Why string
 }
 
 // StageInfo is what a 🟡-capable tool contributes to its own staging: the
@@ -329,7 +331,7 @@ func refuseArchiveHere(ctx context.Context, p datasource.SystemOfRecordProvider,
 	if !ok {
 		return fmt.Errorf(
 			"this workspace's system of record cannot archive a %s at a named version, and an approved "+
-				"archive names one — so no approval of this could be carried out as approved: %w",
+				"archive names one, so no approval of this could be carried out as approved: %w",
 			ref.Type, apperrors.ErrUnsupportedBySoR)
 	}
 	return archiver.RefuseArchive(ctx, ref)

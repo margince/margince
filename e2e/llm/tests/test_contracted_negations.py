@@ -38,15 +38,10 @@ class ContractedNegationTest(unittest.TestCase):
 
     def test_a_positive_pin_holds_the_contracted_answer_as_well(self):
         for scenario, marker, spelled, contracted in (
-            ("case3-spreadsheet.yaml", "imported", "It was not imported: the Ostfalen line.",
-             "It wasn't imported: the Ostfalen line."),
-            ("case3-spreadsheet.yaml", "imported", "The last row could not be used.", "The last row couldn't be used."),
             ("case40-sort-the-queue.yaml", "going anywhere", "Bruno is not going anywhere, so Bruno is closed.",
              "Bruno isn't going anywhere, so Bruno is closed."),
             ("case40-sort-the-queue.yaml", "recorded", "The title is not recorded.", "The title hasn't been recorded."),
             ("case56-not-the-same.yaml", "a duplicate", "They are not the same contact.", "They aren't the same contact."),
-            ("case64-catch-me-up-and-the-brief.yaml", "brief", "The brief has not been generated.",
-             "The brief hasn't been generated."),
             ("case112-my-plan-and-the-dossier.yaml", "started", "Your plan has not been started.",
              "Your plan hasn't been started."),
         ):

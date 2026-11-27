@@ -13,7 +13,7 @@ import { Panel, PanelBody } from "../../design-system/panel";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { isTagTone } from "../../design-system/tagpill";
 import { formatNumber } from "../../format/format";
-import { useLocale, useT } from "../../i18n";
+import { useLocale, usePlural, useT } from "../../i18n";
 import { useHealthScope } from "../../lib/healthscope";
 import { unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
@@ -38,6 +38,7 @@ const PREVIEW_ROWS = 5;
 
 export function TagResultScreen({ tagID }: Readonly<{ tagID?: string }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const { navigateReplacing } = useAddressWriters();
   const tag = useQuery({
@@ -101,7 +102,7 @@ export function TagResultScreen({ tagID }: Readonly<{ tagID?: string }>) {
             still promising rows the groups below it correctly do not show. */}
         {!tag.data.archived_at && (
           <span className="t-caption">
-            {t("tagResult.totalVisible", {
+            {plural("tagResult.tagged", total, {
               count: formatNumber(total, locale),
             })}
           </span>

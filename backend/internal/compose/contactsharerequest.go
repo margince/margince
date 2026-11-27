@@ -33,9 +33,9 @@ import (
 const (
 	contactShareKind = approvalsubject.KindContactShare
 	// contactShareActor stages the request, which the server files for the
-	// requester. Staged under an agent working for the requester, a proposal
-	// for a different member is refused (payloadNamesItsOwner).
-	contactShareActor = "agent:" + contactShareKind
+	// requester. It acts for no one: staged for the requester, a proposal for a
+	// different member is refused (payloadNamesItsOwner).
+	contactShareActor = "system:" + contactShareKind
 )
 
 // contactShareRequests is the approvals queue behind contacts' share
@@ -102,6 +102,7 @@ func (q contactShareQueue) FileTx(ctx context.Context, tx pgx.Tx, req contacts.S
 	}
 	digest := sha256.Sum256(body)
 	_, open, err := svc.StageUnlessDeclinedTx(principal.SystemActing(ctx, contactShareActor), tx, approvals.StageInput{
+		Why:            approvals.HeadlineSaysWhy,
 		Kind:           contactShareKind,
 		ProposedChange: body,
 		DiffHash:       hex.EncodeToString(digest[:]),

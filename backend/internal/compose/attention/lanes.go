@@ -205,6 +205,8 @@ type Task struct {
 	// DueHasTime is true when DueAt names an agreed time of day.
 	DueHasTime bool
 	DueIntent  *crmcontracts.IntentTime
+	// TaskType is the kind of work the task asks for, as the task reads it.
+	TaskType *crmcontracts.TaskType
 	// The record this task was raised for, when it names one. A follow-up task
 	// says "Follow up with the new lead" and nothing else, so without the link
 	// the row is a sentence the reader cannot act on: the lane knows which lead
@@ -229,6 +231,9 @@ type Task struct {
 	// ReadOnly says the reader may see the task but not change it, so the row
 	// offers no verb that writes to it.
 	ReadOnly bool
+	// Takeable says the reader may press "Take it": an open task nobody holds
+	// that no writer routes, on a seat that may take tasks.
+	Takeable bool
 	// ReminderDue says the reader is the assignee and the reminder came due.
 	ReminderDue bool
 	// later says the later window read this task. Undated there, it is agreed

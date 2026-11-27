@@ -29,8 +29,8 @@ import (
 	"github.com/margince/margince/backend/internal/compose/claims"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/generatedsummary"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
@@ -196,7 +196,7 @@ func (s *GrowthFitService) Get(ctx context.Context, companyID ids.CompanyID, for
 	if err != nil {
 		return zero, err
 	}
-	lang := identity.BaseLanguageForPrompt(ctx, s.pool)
+	lang := readerLanguage(ctx, s.pool)
 	fingerprint, err := growthFitFingerprint(in, s.routingVersion(), offering, lang)
 	if err != nil {
 		return zero, err
@@ -353,7 +353,7 @@ func (g storedGrowthFit) wire(companyID ids.CompanyID, from crmcontracts.Assembl
 }
 
 func (s *GrowthFitService) cached(ctx context.Context, userID ids.UserID, companyID ids.CompanyID) (storedGrowthFit, bool, error) {
-	row, found, err := growthFitCache.load(ctx, s.pool, userID, companyID)
+	row, found, err := generatedsummary.Read(ctx, s.pool, userID, generatedsummary.CompanyGrowthFit(companyID))
 	if err != nil || !found {
 		return storedGrowthFit{}, false, err
 	}
@@ -373,10 +373,11 @@ func (s *GrowthFitService) save(ctx context.Context, userID ids.UserID, companyI
 	if err != nil {
 		return fmt.Errorf("encode the growth-fit payload: %w", err)
 	}
-	return growthFitCache.save(ctx, s.pool, userID, companyID, entry{
-		Fingerprint: fit.Fingerprint,
-		GeneratedAt: fit.GeneratedAt,
-		GeneratedBy: fit.GeneratedBy,
-		Payload:     payload,
-	})
+	return generatedsummary.Save(ctx, s.pool, userID, generatedsummary.CompanyGrowthFit(companyID),
+		generatedsummary.Entry{
+			Fingerprint: fit.Fingerprint,
+			GeneratedAt: fit.GeneratedAt,
+			GeneratedBy: fit.GeneratedBy,
+			Payload:     payload,
+		})
 }

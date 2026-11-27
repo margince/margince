@@ -116,7 +116,7 @@ func validateModernHeaders(header http.Header, req rpcRequest, fr framing) *rpcE
 			return &rpcError{
 				Code: codeHeaderMismatch,
 				Message: "header mismatch: " + mirrored + " was sent more than once, so this server " +
-					"and an intermediary between us could read different values from it",
+					"and an intermediary between client and server could read different values from it",
 			}
 		}
 	}

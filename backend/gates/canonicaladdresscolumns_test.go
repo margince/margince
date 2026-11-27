@@ -40,7 +40,6 @@ var (
 // notAnAddress records each such column that needs no canonical-form CHECK,
 // with why. An unlisted column must carry the CHECK.
 var notAnAddress = gatekit.Waive(map[string]string{
-	"activity_participant.address":             "the party as its writer named it. Capture folds it and the table holds no writer to that, so readers compare lower(address), which idx_aparticipant_address serves. The key keeps one row per stored identity and no reader takes it for one row per mailbox",
 	"communication_decision.recipient_address": "a recipient key of two shapes: a folded address, or a channel id whose case its provider may tell apart. decisionRecipientKey folds the address shape at the write",
 })
 
@@ -74,14 +73,11 @@ func holdsOneSpelling(def, column string) bool {
 // whether CHECKs hold both its canonical form and its one spelling.
 func addressColumnsInUniqueIndexes(t *testing.T) map[string]bool {
 	t.Helper()
-	raw, err := gatekit.ReadFile("migrations/testdata/head_catalog.txt")
-	if err != nil {
-		t.Fatalf("reading the head catalog: %v", err)
-	}
+	raw := headCatalog(t)
 	columns := map[string][]string{}
 	checks := map[string][]string{}
 	var indexes [][2]string
-	for line := range strings.SplitSeq(string(raw), "\n") {
+	for line := range strings.SplitSeq(raw, "\n") {
 		line = strings.TrimSpace(line)
 		if m := textColumnLine.FindStringSubmatch(line); m != nil {
 			columns[m[1]] = append(columns[m[1]], m[2])

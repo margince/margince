@@ -9,7 +9,7 @@ To open Settings in Margince, open the account menu at the top right of the scre
 Settings opens on **Overview**, which lists every page you can open. The page list down the side is in groups: **You**, **Company**, **People**, **Sales**, **Data**, **AI**, **Compliance** and **System**.
 
 A long page splits into tabs at its top, such as **Booking links**, **Availability** and **Guest page** on **Meetings**. Each tab has its own address, so a link can open one tab.
-To go right to one page, press ⌘K (Ctrl+K) and type its name, or the name of a setting on it. Or type into **Search settings** at the top of the settings list. When the page was found by one of its settings, **Search settings** shows that setting under the page name.
+To go right to one page, press ⌘K (Ctrl+K) and type its name, or the name of a setting on it. Or type into **Search settings** at the top of the settings list. When the page was found by one of its settings, **Search settings** shows that setting under the page name. When it finds one page, Enter opens that page.
 
 ### What settings pages are there?
 Margince Settings puts its pages in these groups:
@@ -128,14 +128,14 @@ The **Show individual performance** switch, on the **Forecast** tab of **Deals**
 
 **Currency rates** are the exchange rates that turn money in another currency into the base currency. A new rate usually starts today or later. A past date works in two cases: the currency has no rate yet, or the date is before its first rate. A rate dated today can be corrected the same day. An older rate never changes, so a new rate never changes a figure that a past month already had.
 
-Seeing the rates needs the permission to read exchange rates. The Admin and Ops roles hold it by default, and a custom role can get it too.
+Seeing the rates needs the permission to read exchange rates. The Admin and Ops roles hold it by default, and a custom role can get it too. Choose **Remove** on a currency's row to take it off the sheet. Deals in that currency then show no base value until you set a rate again, and figures already calculated keep their rate. The base currency changes only once every currency is removed, and never after a closed deal or sent offer has frozen a rate.
 
 **Company context** is what Margince knows about your own company, where it read it, and a place to tell it facts yourself. Only an Admin sees this card and edits it; Ops finds the page without it.
 
 ### How do I add a second company we work under?
 <!-- opens: settings/company -->
 
-**Legal entities** lists the companies you work under, each with its **Country** and **Jurisdiction**. Every installation starts with one, marked **Default**. It takes its name, address, VAT ID and logo from the company above, so you change those on the company form. A colleague nobody has assigned works for the default. A colleague's booking page shows the company they work for.
+**Legal entities** lists the companies you work under, each with its **Country** and **Jurisdiction**. Every installation starts with one, marked **Default**. It takes its name, address, VAT ID and logo from the company profile, so you change those on the company form. A colleague nobody has assigned works for the default. A colleague's booking page shows the company they work for. Where the default has no legal name or **Country** of its own, its row says **From the company profile**.
 
 An Admin adds another with **New legal entity**: its name, legal name, **Country** (where its address is) and **Jurisdiction** (the law it follows). Of the roles Margince ships, only Admin may change them, and a custom role can be given that permission too. Every other role sees the list and cannot change it. The ones you add can also say what they sell and to whom. On a company you can then choose which of them its fit rating is measured against. A new offer is issued by the company its writer works for; see [Offers and the rate card](offers-and-products.md).
 
@@ -170,7 +170,7 @@ The Members, Teams, Roles and permissions, and Seats and license pages sit in th
 
 **Members** lists everyone with a seat, and what each one can open. Here you ask colleagues in, change a role, turn a user off and turn them on again. Only a role allowed to see users sees this page: Admin by default, or a custom role given that permission. Every seat can still look a colleague up in the lists for sharing and for picking an owner on a record. An Admin also picks a member's teams here, and a team name nobody has yet creates that team.
 
-**Teams** holds who is in each team, which decides who can open records shared with a team. Create one, archive or restore it, and open a team to add or remove its members. Being in a team gives no access on its own, with one exception. A **Team lead** reads and works their team's records, so for them a team is what "their team" means. For every other built-in role, a team counts when a record is shared with it. See [Seats, roles and who can see what](seats-roles-and-access.md#row-scope-which-records-not-which-kinds).
+**Teams** holds who is in each team, which decides who can open records shared with a team. Every member can open it and read how many are in each team, but only a role that may see users reads the names. Create one, archive or restore it, and open a team to add or remove its members. Being in a team gives no access on its own, with one exception. A **Team lead** reads and works their team's records, so for them a team is what "their team" means. For every other built-in role, a team counts when a record is shared with it (see [Seats, roles and who can see what](seats-roles-and-access.md#row-scope-which-records-not-which-kinds)).
 
 **Seats and license** shows how many seats the installation may use against how many are in use. See [the licence](seats-roles-and-access.md#the-licence).
 
@@ -184,9 +184,9 @@ The Integrations page in Settings (group **Data**) shows what the installation i
 
 ## Extensions
 
-The Extensions page in Settings (group **System**) lists the add-ons your installation was built with, and what each may reach. You cannot add one from inside the app. Each add-on names what it is for, its release, and the kinds of record it adds.
+The Extensions page in Settings (group **System**) lists the add-ons your installation was built with, and what each may reach. You cannot add one from inside the app. Each add-on names what it is for, its release, and the kinds of record it adds. It also says **Ready** or **Needs setup**. Admin and Ops both reach the page.
 
-If an add-on's screen shows nothing, give a role access to it here with its switches. The built-in roles start with no access to an add-on's records. An add-on that adds no records, such as a set of rules for one place, is listed with nothing to give. Admin and Ops both reach the page.
+Needs setup names what is missing: a company key under **Integrations**, or the add-on's sign-in app under **Sign-in and security**. A key each person connects for their own account does not count. Removing an add-on does not delete its keys. If an add-on's screen shows nothing, give a role access to it here with its switches. The built-in roles start with no access to an add-on's records. An add-on that adds no records, such as a set of rules for one place, is listed with nothing to give.
 
 ## Mail capture
 
@@ -228,7 +228,7 @@ Every seat can read all of them. All but one are for Admin and Ops to change, so
 
 ## AI usage, AI models and AI call log
 
-The AI group in Settings has the pages **AI models**, **AI tool access**, **AI usage** and **AI call log**. **AI models** has the tabs **Providers**, **Model tiers**, **AI tasks** and **Prices**. **AI usage** has **Allowance**, **Agent limits** and **Spend**.
+The AI group in Settings has the pages **AI models**, **AI tool access**, **AI usage** and **AI call log**. **AI models** has the tabs **Providers**, **Model tiers**, **AI tasks**, **Prices** and **Rules**. **AI usage** has **Allowance**, **Agent limits** and **Spend**.
 
 **Model routing**, on **AI models**, shows which model does each kind of work, listed by activity. What you see is the current setting; **AI call log** shows what ran. Settings that several kinds of work share sit under **Advanced**, and changing one can move several kinds of work at once. Prices show the cost of the text sent in and the text that comes back, per million tokens. To know where data goes and what it costs, check the model and provider shown on each row, not the tier name.
 
@@ -385,7 +385,7 @@ A **read-only seat** keeps every page it could read, and loses every control tha
 
 | You are | You can change | You can also look up |
 |---|---|---|
-| A sales seat | Your own pages, Products and offers, Mail capture (adding only) | The rest of the Sales group, and Knowledge |
+| A sales seat | Your own pages, Products and offers, Mail capture (adding only) | The rest of the Sales group, Knowledge and Teams |
 | A team lead | The same | The same |
 | Management | The same | The above, and also AI usage, model calls, seat counts and the sign-in status, all read-only |
 | Ops | Most pages that run the business, the model rates too | The rest, the list of add-ons too, whose access switches Ops cannot change |

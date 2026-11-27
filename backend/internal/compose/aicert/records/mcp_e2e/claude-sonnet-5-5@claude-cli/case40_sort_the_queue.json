@@ -6,32 +6,37 @@
     3
   ],
   "passed": 2,
-  "runs": 2,
+  "runs": 3,
   "pass_at": 2,
   "driver": "claude:cli",
   "effort": "thinking off",
   "system_prompt": "cli-default",
   "search": "semantic",
+  "door": "mcp",
   "self_judged": true,
   "stamp": {
-    "scenario": "09f25ba8c52e21ce",
-    "tools": "42f7f135ac62768d",
-    "instructions": "c5c644eee9719be0",
-    "judge": "",
-    "harness": "024566e70b0c3db3",
-    "commit": "1d06e4e790e4733576f87296a1fcadc09dafe0ae",
-    "ran_at": "2026-11-22T04:57:24Z",
-    "graded_commit": "24405859b1f4fe6f5c16d1e06e82b54398a7f1fa",
-    "graded_at": "2026-11-22T16:00:18Z"
+    "scenario": "0b9d21083a4b8c99",
+    "tools": "1482b058451c254f",
+    "instructions": "d707a123fe53827f",
+    "judge": "claude-haiku-5-5",
+    "harness": "0fe690d35efcc703",
+    "parsers": {
+      "gemini:cli": "fa1db64bc14e971b",
+      "gpt:cli": "d48ca27c983f8b3f"
+    },
+    "commit": "63922f0d5214101ce8fd648757b5dce3558da74d",
+    "ran_at": "2026-11-26T03:13:15Z",
+    "graded_commit": "aa66c929ba42ef19f95fafeacc2474255696c429",
+    "graded_at": "2026-11-26T03:58:57Z"
   },
   "usage": {
-    "input_tokens": 26,
-    "output_tokens": 4945,
-    "cache_creation_input_tokens": 27012,
-    "cache_read_input_tokens": 1050845,
-    "runs_measured": 2,
-    "runs_costed": 2,
-    "cost_usd": 0.2626
+    "input_tokens": 40,
+    "output_tokens": 6770,
+    "cache_creation_input_tokens": 30174,
+    "cache_read_input_tokens": 1525957,
+    "runs_measured": 3,
+    "runs_costed": 3,
+    "cost_usd": 0.3411
   },
   "tools_by_run": [
     {
@@ -39,7 +44,24 @@
       "tools": [
         "catch_me_up_on",
         "change_state",
-        "disqualify_lead",
+        "find_records",
+        "list_records",
+        "promote_lead",
+        "qualify_lead",
+        "read_context",
+        "whoami"
+      ],
+      "refused": [
+        "change_state",
+        "find_records",
+        "whoami"
+      ]
+    },
+    {
+      "passed": false,
+      "tools": [
+        "catch_me_up_on",
+        "change_state",
         "find_records",
         "list_records",
         "preview_lead_promotion",
@@ -47,7 +69,11 @@
         "qualify_lead",
         "read_context",
         "read_details",
-        "read_record",
+        "whoami"
+      ],
+      "refused": [
+        "change_state",
+        "find_records",
         "whoami"
       ]
     },
@@ -59,48 +85,54 @@
         "disqualify_lead",
         "find_records",
         "list_records",
-        "preview_lead_promotion",
         "promote_lead",
         "qualify_lead",
         "read_context",
-        "read_details",
-        "read_record",
-        "read_view",
+        "whoami"
+      ],
+      "refused": [
+        "change_state",
+        "find_records",
         "whoami"
       ]
     }
   ],
   "efficiency": {
-    "runs": 2,
+    "runs": 3,
     "calls": {
-      "median": 14,
-      "min": 13,
-      "max": 15
+      "median": 11,
+      "min": 11,
+      "max": 12
     },
     "turns": {
-      "median": 15,
-      "min": 14,
-      "max": 16
+      "median": 12,
+      "min": 12,
+      "max": 13
     },
     "refused": {
-      "median": 2.5,
-      "min": 2,
-      "max": 3
+      "median": 4,
+      "min": 3,
+      "max": 4
+    },
+    "retries": {
+      "median": 4,
+      "min": 3,
+      "max": 4
     },
     "prompt_tokens": {
-      "median": 538941.5,
-      "min": 492337,
-      "max": 585546
+      "median": 544974,
+      "min": 463429,
+      "max": 547768
     },
     "output_tokens": {
-      "median": 2472.5,
-      "min": 2267,
-      "max": 2678
+      "median": 2250,
+      "min": 2203,
+      "max": 2317
     },
     "duration_ms": {
-      "median": 19662,
-      "min": 18168,
-      "max": 21156
+      "median": 21505,
+      "min": 20934,
+      "max": 21532
     }
   }
 }

@@ -21,12 +21,9 @@ type ChannelConnection = components["schemas"]["ChannelConnection"];
 
 // The mail providers (CaptureConnection) and the messaging-channel bot
 // (ChannelConnection) publish two different wire enums, but they share one
-// status vocabulary from here on. `pending` survives in the channel enum for a
-// generator reason the contract states, not a product one — no server produces it,
-// because a bot binding is polled and a connect either commits live or writes
-// nothing. It keeps its arms below because the switches are exhaustive over the
-// published type, and it is rendered as "needs a look" rather than as healthy in
-// case an older or foreign server ever sends one.
+// status vocabulary from here on. `pending_approval` is a Telegram Business link
+// waiting for an admin. A bot binding never has it, but the channel enum does.
+// The switches below show it as "needs a look", never as healthy.
 export type ConnectorStatus =
   | CaptureConnection["status"]
   | ChannelConnection["status"];
@@ -96,7 +93,7 @@ export function holdsSendGrant(
 /** Each contract status gets its own Badge tone. Collapsing reauth_required
  *  and error into the same tone is what made a dead mailbox and a merely-
  *  stale one indistinguishable at a glance. `disconnected` gets no tone (the
- *  shipped card's neutral, undecorated row). `pending` reads as `warning`, the
+ *  shipped card's neutral, undecorated row). `pending_approval` reads as `warning`, the
  *  same "needs a look" tone as reauth_required — never `success`: a row this
  *  installation cannot produce must not be rendered as a healthy channel if an
  *  older or foreign server ever sends one. */
@@ -106,7 +103,7 @@ export function statusTone(
   switch (status) {
     case "connected":
       return "success";
-    case "pending":
+    case "pending_approval":
     case "reauth_required":
       return "warning";
     case "error":
@@ -123,7 +120,7 @@ export function statusLabel(status: ConnectorStatus): MessageKey {
   switch (status) {
     case "connected":
       return "connectors.statusConnected";
-    case "pending":
+    case "pending_approval":
       return "connectors.statusPending";
     case "reauth_required":
       return "connectors.statusReauth";

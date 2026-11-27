@@ -44,7 +44,7 @@ func tsObjectEntries(t *testing.T, path, marker string) map[string]string {
 // declaration after marker, or why it cannot. A type annotation, which may hold
 // braces of its own, is skipped.
 func tsDeclaredObject(source, marker string) (body, problem string) {
-	text := tsWithoutComments(source)
+	text := gatekit.TSWithoutComments(source)
 	at := indexAfter(text, marker)
 	if at < 0 {
 		return "", fmt.Sprintf("no longer declares %q, the map this gate reads", marker)
@@ -94,43 +94,6 @@ func tsInitializer(text string) int {
 		}
 	}
 	return -1
-}
-
-// tsWithoutComments blanks each comment outside a string, so a `//` inside a
-// value stays part of the value.
-func tsWithoutComments(text string) string {
-	out := []byte(text)
-	var quote byte
-	for i := 0; i < len(out); i++ {
-		c := out[i]
-		switch {
-		case quote != 0:
-			switch c {
-			case '\\':
-				i++
-			case quote:
-				quote = 0
-			}
-		case c == '"' || c == '\'' || c == '`':
-			quote = c
-		case c == '/' && i+1 < len(out) && out[i+1] == '/':
-			for ; i < len(out) && out[i] != '\n'; i++ {
-				out[i] = ' '
-			}
-		case c == '/' && i+1 < len(out) && out[i+1] == '*':
-			end := strings.Index(string(out[i+2:]), "*/")
-			if end < 0 {
-				end = len(out) - i - 4
-			}
-			for j := i; j < i+end+4; j++ {
-				if out[j] != '\n' {
-					out[j] = ' '
-				}
-			}
-			i += end + 3
-		}
-	}
-	return string(out)
 }
 
 // tsBalanced answers the text between an opening brace and its match.

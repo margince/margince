@@ -59,15 +59,7 @@ func setupClosedDealEnv(t *testing.T) closeDayEnv {
 	}); err != nil {
 		t.Fatalf("reading the pipeline: %v", err)
 	}
-	hundred := 100
-	wonStage, err := e.store.CreateStage(e.as(), CreateStageInput{
-		PipelineID: pipelineID, Name: "Won", Position: 1,
-		Semantic: string(SemanticWon), WinProbability: &hundred,
-	})
-	if err != nil {
-		t.Fatalf("seeding the won stage: %v", err)
-	}
-	won := ids.From[ids.StageKind](ids.UUID(wonStage.Id))
+	won, _ := closingStageIDs(t, e, pipelineID)
 	owner := ids.From[ids.UserKind](e.admin)
 	amount, currency := int64(10000), "JPY"
 	deal, err := e.store.CreateDeal(e.asDealWriter(), CreateDealInput{

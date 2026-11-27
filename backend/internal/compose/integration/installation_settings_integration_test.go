@@ -24,9 +24,11 @@ package integration
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"maps"
+	"net/http"
 	"reflect"
 	"strings"
 	"testing"
@@ -35,8 +37,10 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/currencylock"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -420,6 +424,18 @@ func TestBaseCurrencyFreezesOnceADealHasConvertedAgainstIt(t *testing.T) {
 	if field != "installation.base_currency" || code != "setting_frozen" {
 		t.Errorf("refusal = %s/%s, want installation.base_currency/setting_frozen", field, code)
 	}
+	wantFacts := map[string]string{"reason": "rates_frozen", "count": "1"}
+	wantFrozenFacts(t, "the write", err, wantFacts, got.BaseCurrencyLock)
+
+	settingsStore := compose.NewSettingsStore(e.Pool)
+	err = database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
+		_, err := settingsStore.DeleteRawTx(admin, tx, identity.BaseCurrency.Key())
+		return err
+	})
+	if err == nil {
+		t.Fatal("the base currency was reset to its default after deals had converted against it")
+	}
+	wantFrozenFacts(t, "the removal", err, wantFacts, got.BaseCurrencyLock)
 
 	// Everything else on the surface still changes — the freeze is scoped to
 	// the one value whose history is at stake.
@@ -512,9 +528,10 @@ func TestBaseCurrencyWillNotMoveOutFromUnderAPricedRateSheet(t *testing.T) {
 	}
 	// Repairable, so the reason names the repair. A message that only said "no"
 	// would leave an operator with a currency they cannot correct and no idea why.
-	if !strings.Contains(message, "clear the rate sheet") {
+	if !strings.Contains(message, "remove every currency from the rate sheet") {
 		t.Errorf("reason = %q, want it to name the repair", message)
 	}
+	refusal := err
 
 	read, err := store.GetInstallation(admin)
 	if err != nil {
@@ -523,11 +540,116 @@ func TestBaseCurrencyWillNotMoveOutFromUnderAPricedRateSheet(t *testing.T) {
 	if want := (currencylock.Lock{Reason: currencylock.RateSheet, Count: 1, BaseCurrency: base.BaseCurrency}); !reflect.DeepEqual(withoutBreakdown(read.BaseCurrencyLock), want) {
 		t.Errorf("lock = %+v, want %+v", read.BaseCurrencyLock, want)
 	}
+	wantFrozenFacts(t, "the write", refusal,
+		map[string]string{"reason": "rate_sheet", "count": "1", "base_currency": base.BaseCurrency}, read.BaseCurrencyLock)
 
 	// Re-asserting the base already in force is not a change, so a priced sheet
 	// does not break an idempotent patch.
 	if _, err := store.UpdateInstallation(admin, identity.InstallationPatch{BaseCurrency: &base.BaseCurrency}); err != nil {
 		t.Fatalf("re-setting the base already in force: %v", err)
+	}
+}
+
+// The refusal's params and the read's base_currency_lock spell one lock, so
+// they carry the same keys and values for every reason.
+func TestARefusedBaseCurrencyCarriesTheFactsTheReadShows(t *testing.T) {
+	for name, tc := range map[string]struct {
+		lock    func(*testing.T, *apptest.AppEnv, string)
+		reason  string
+		named   bool
+		message string
+	}{
+		"a converted deal": {convertADeal, "rates_frozen", false, "1 record(s) (closed deals: 1) have already frozen"},
+		"a priced sheet":   {priceTheSheet, "rate_sheet", true, "remove every currency from the rate sheet"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			e := apptest.SetupApp(t)
+			e.BootstrapWorkspace(t)
+			base, to := baseCurrency(t, e), "CHF"
+			if base == to {
+				to = "JPY"
+			}
+			tc.lock(t, e, base)
+
+			lock := wireBaseCurrencyLock(t, e)
+			want := map[string]string{"reason": tc.reason, "count": "1"}
+			if tc.named {
+				want["base_currency"] = base
+			}
+			if !maps.Equal(lock, want) {
+				t.Fatalf("base_currency_lock = %v, want %v", lock, want)
+			}
+
+			var refused struct {
+				Details struct {
+					Errors []httperr.FieldError `json:"errors"`
+				} `json:"details"`
+			}
+			if status := e.Call(t, http.MethodPatch, "/v1/installation/settings",
+				map[string]any{"base_currency": to}, nil, &refused); status != http.StatusUnprocessableEntity {
+				t.Fatalf("PATCH base_currency under a lock → %d, want 422", status)
+			}
+			faults := refused.Details.Errors
+			if len(faults) != 1 || faults[0].Field != "installation.base_currency" || faults[0].Code != "setting_frozen" {
+				t.Fatalf("field errors = %+v, want one setting_frozen on installation.base_currency", faults)
+			}
+			if !strings.Contains(faults[0].Message, tc.message) {
+				t.Errorf("message = %q, want the English reason %q kept beside the facts", faults[0].Message, tc.message)
+			}
+			if !maps.Equal(faults[0].Params, lock) {
+				t.Errorf("params = %v, want the read's base_currency_lock %v", faults[0].Params, lock)
+			}
+		})
+	}
+}
+
+// wireBaseCurrencyLock is the GET's base_currency_lock with every value as the
+// text a refusal's params would carry.
+func wireBaseCurrencyLock(t *testing.T, e *apptest.AppEnv) map[string]string {
+	t.Helper()
+	var read struct {
+		Lock map[string]json.RawMessage `json:"base_currency_lock"`
+	}
+	if status := e.Call(t, http.MethodGet, "/v1/installation/settings", nil, nil, &read); status != http.StatusOK {
+		t.Fatalf("GET /installation/settings → %d, want 200", status)
+	}
+	lock := make(map[string]string, len(read.Lock))
+	for key, raw := range read.Lock {
+		var text string
+		if err := json.Unmarshal(raw, &text); err != nil {
+			text = string(raw)
+		}
+		lock[key] = text
+	}
+	return lock
+}
+
+func priceTheSheet(t *testing.T, e *apptest.AppEnv, base string) {
+	t.Helper()
+	from := "USD"
+	if base == from {
+		from = "GBP"
+	}
+	if status := e.Call(t, http.MethodPost, "/v1/fx-rates",
+		map[string]any{"from_currency": from, "rate": "0.92"}, nil, nil); status != http.StatusCreated {
+		t.Fatalf("POST /fx-rates → %d, want 201", status)
+	}
+}
+
+func convertADeal(t *testing.T, e *apptest.AppEnv, _ string) {
+	t.Helper()
+	tag, err := e.Owner.Exec(context.Background(), `
+		WITH pipeline AS (
+		    INSERT INTO pipeline (id, name, is_default) VALUES ($1, 'Freeze fixture', false) RETURNING id
+		), stage AS (
+		    INSERT INTO stage (id, pipeline_id, name, position, semantic, win_probability)
+		    SELECT $2, id, 'Won', 1, 'won', 100 FROM pipeline RETURNING id, pipeline_id
+		)
+		INSERT INTO deal (id, name, pipeline_id, stage_id, source, captured_by, amount_minor, currency, fx_rate_to_base, status, closed_at)
+		SELECT $3, 'Converted deal', pipeline_id, id, 'manual', 'system:test', 100000, 'EUR', 1.0850000000, 'won', now()
+		FROM stage`, ids.NewV7(), ids.NewV7(), ids.NewV7())
+	if err != nil || tag.RowsAffected() != 1 {
+		t.Fatalf("seeding a converted deal: %d rows, %v", tag.RowsAffected(), err)
 	}
 }
 
@@ -554,15 +676,15 @@ func TestTheFrozenRateCountSumsEveryKindOfRecord(t *testing.T) {
 		INSERT INTO contract (id, company_id, title, value_minor, currency, status, fx_rate_to_base, fx_rate_date, source, captured_by)
 		VALUES ($1, $2, 'MSA', 4100000, 'EUR', 'active', 1.0850000000, current_date, 'seed', 'system:test')`, company)
 	connection := e.SeedID(t, `
-		INSERT INTO finance_connection (id, provider, credential_ref, source, captured_by)
-		VALUES ($1, 'lexoffice', 'ref', 'seed', 'system:test')`)
+		INSERT INTO finance_connection (id, provider, captured_by)
+		VALUES ($1, 'lexoffice', 'system:test')`)
 	e.SeedID(t, `
 		WITH directory AS (
 		    INSERT INTO finance_external_customer (connection_id, external_customer_id, display_name, sync_hash, source, captured_by)
 		    VALUES ($2::uuid, 'cust-census', 'Census GmbH', '', 'seed', 'system:test') RETURNING external_customer_id
 		), link AS (
-		    INSERT INTO finance_customer_link (connection_id, company_id, external_customer_id, sync_hash, source, captured_by)
-		    SELECT $2::uuid, $3::uuid, external_customer_id, '', 'seed', 'system:test' FROM directory RETURNING id
+		    INSERT INTO finance_customer_link (connection_id, company_id, external_customer_id, captured_by)
+		    SELECT $2::uuid, $3::uuid, external_customer_id, 'system:test' FROM directory RETURNING id
 		)
 		INSERT INTO finance_invoice (id, connection_id, company_id, customer_link_id, external_id, issued_at, status, currency,
 		                             net_minor, gross_minor, fx_rate_to_base, fx_rate_date, sync_hash, source, captured_by)
@@ -584,6 +706,19 @@ func TestTheFrozenRateCountSumsEveryKindOfRecord(t *testing.T) {
 		if !strings.Contains(got.BaseCurrencyLock.Prose(), kind) {
 			t.Errorf("lock reason = %q, want it to name %q", got.BaseCurrencyLock.Prose(), kind)
 		}
+	}
+}
+
+// wantFrozenFacts holds a setting_frozen refusal to the facts it should name,
+// and to the facts the read's lock reports.
+func wantFrozenFacts(t *testing.T, path string, err error, want map[string]string, read currencylock.Lock) {
+	t.Helper()
+	var named interface{ FieldParams() map[string]string }
+	if !errors.As(err, &named) {
+		t.Fatalf("%s's refusal names no facts: %v", path, err)
+	}
+	if got := named.FieldParams(); !maps.Equal(got, want) || !maps.Equal(got, read.Params()) {
+		t.Errorf("%s's refusal params = %v, want %v, the facts of the read's lock %+v", path, got, want, read)
 	}
 }
 

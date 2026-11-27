@@ -27,7 +27,8 @@ Also called: partner permissions, who can add a partner, margin tier rights.
 ### Can an AI assistant set up a partner?
 Yes, in Margince an AI assistant can ask to make a company a partner, with its **Partner kinds**, a **Relationship stage** and a **Next step**. The request waits in the approvals inbox, and the program starts once someone who may change the company approves it.
 The assistant cannot choose the **Margin tier**, because it decides commission on every later deal. It stays **Not set** until someone sets it on the company's **Partner** tab.
-A partner program ends only when the company is archived, so an assistant cannot set one up on a company that already is a partner.
+
+Choose **End partner program** on the company’s **Partner** tab to end the program while keeping the company, deals and commission history. The tab stays available for that history. An assistant can use `end_partner_program`. A live program must end before another can be set up.
 Also called: let the assistant add a partner, AI partner onboarding.
 
 ### How do I change a partner's terms?
@@ -117,6 +118,7 @@ A partner's own **Partner** tab lists **Partner deals**: the deals of other comp
 ## Commission
 
 Commission in Margince is added on its own when a deal that a partner **sourced** is won; nobody creates it by hand. A deal the partner only influenced earns nothing.
+The win still earns it if the deal or the partner company is archived soon after. Commission on an archived deal shows again once the deal is restored.
 
 The partner's margin tier is fixed on the commission when it is added. So changing a partner's tier later does not change what they have already earned. A partner with no tier earns nothing, and no commission line shows at all. A zero would say "we owe them nothing"; no line says "we owe them nothing yet".
 

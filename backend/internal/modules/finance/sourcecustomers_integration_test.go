@@ -40,7 +40,7 @@ func (a *sourceAdmin) syncDirectory(t *testing.T) {
 func (a *sourceAdmin) seedCompany(t *testing.T, name string, owner *ids.UUID) ids.CompanyID {
 	t.Helper()
 	id := ids.New[ids.CompanyKind]()
-	a.ownerExec(t, `INSERT INTO company (id, display_name, lifecycle, source, captured_by, owner_id)
+	a.ownerExec(t, `INSERT INTO company (id, display_name, status, source, captured_by, owner_id)
 		VALUES ($1, $2, 'customer', 'manual', 'human:test', $3)`, id, name, owner)
 	return id
 }
@@ -163,6 +163,24 @@ func TestLinkingMovesACustomerAndUnlinkingTakesItOff(t *testing.T) {
 	expect(t, a.unlink(ctx, "BETA-02"), http.StatusNoContent, "")
 	if got := linkAudits(); got != 4 {
 		t.Errorf("%d link audit rows, want create, archive and create for the move, and archive", got)
+	}
+}
+
+// A company reads as syncing until a pass mirrors its new link, so the link
+// queues one; a refused link queues nothing.
+func TestALinkQueuesThePassThatMirrorsIt(t *testing.T) {
+	a := setupSourceAdmin(t)
+	a.syncDirectory(t)
+	ctx := a.admin()
+	beta := a.seedCompany(t, "Beta GmbH", nil)
+
+	expect(t, a.link(ctx, "NOPE-99", beta), http.StatusNotFound, "")
+	if a.queue.queued != 0 {
+		t.Fatalf("%d syncs queued for a refused link, want none", a.queue.queued)
+	}
+	expect(t, a.link(ctx, "BETA-02", beta), http.StatusOK, "")
+	if a.queue.queued != 1 {
+		t.Errorf("%d syncs queued after the link, want 1", a.queue.queued)
 	}
 }
 

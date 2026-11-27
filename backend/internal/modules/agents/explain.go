@@ -44,8 +44,6 @@ func (s *Dispatcher) explain(tool string, err error) string {
 	var (
 		badArgs        *BadArgsError
 		unknownTool    *UnknownToolError
-		steppedUp      *StepUpStagedError
-		overQuota      *auth.VolumeExceededError
 		staged         *workflow.StagedApprovalError
 		confirmAsk     *ConfirmInConversationError
 		skew           *apperrors.VersionSkewError
@@ -53,51 +51,15 @@ func (s *Dispatcher) explain(tool string, err error) string {
 		archiveRefusal *auth.ArchiveAuthorityError
 	)
 	switch {
-	case errors.As(err, &steppedUp):
-		// A step-up that reached a human. It is its own branch rather than a
-		// wording variant of the one below because the INSTRUCTION differs: wait
-		// for the contact who connected this agent, then repeat the call
-		// unchanged — and specifically do not present an approval_id, which is
-		// the 🟡 loop's move and cannot work for a kind no tool redeems.
-		// The approval id is deliberately NOT quoted. It is the one identifier a
-		// caller told "do not send an approval_id" would reach for, and it opens
-		// nothing here: a step-up is released by the human, not redeemed by the
-		// agent. The human finds it in their own inbox.
-		return "This agent has reached its " + string(steppedUp.Counter) + " limit for this window, and the contact " +
-			"who connected it has been asked whether it may continue. Do not send an approval_id: once they approve, " +
-			"repeat this call unchanged."
-	case errors.As(err, &overQuota) && overQuota.Releasable():
-		// A releasable counter with NO question open: the human already declined
-		// one, or this surface has no inbox to ask through. The branch above
-		// would have matched if one were open, so reaching here means asking is
-		// not the next move — and saying "no approval lifts it" would contradict
-		// the refusal quoted beside it, which correctly says a release WOULD end
-		// this. What is true of both is that nothing is pending.
-		return "This agent has reached a volume limit for this window, and no request to continue is open: " +
-			"the contact who connected it has already declined one, or cannot be asked from here. Stop calling this " +
-			"tool and tell the user what is blocking it; the same call can succeed after the window rolls. (" +
-			overQuota.Error() + ")"
-	case errors.As(err, &overQuota):
-		// A hard stop. Naming the window as the only thing that ends it is the
-		// whole value of this branch: an agent told to "ask a human" about a
-		// send ceiling waits for an approval nobody can grant.
-		return "This agent has reached a volume limit for this window that no approval lifts. Stop calling this tool " +
-			"and tell the user what is blocking it; the same call can succeed after the window rolls. (" +
-			overQuota.Error() + ")"
+	case isVolumeRefusal(err):
+		return volumeExplanation(err)
 	case errors.As(err, &confirmAsk):
 		return confirmInConversationExplanation(confirmAsk)
 	case errors.As(err, &staged):
-		// A 🟡 call that reached the inbox, and the branch that says WHAT is
-		// waiting there. The contact answers it — in the CRM, or through this
-		// credential when the change can be undone and the call is attended
-		// (stagedReleasePath) — so the caller's job is to relay, and it can only
-		// relay a description it was given: an agent sent
-		// to read_approval for the sentence tells the user a change is pending
-		// and cannot say which.
-		//
-		// Composed here rather than through refusalDetail. The summary carries a
-		// caller-chosen field name and a workspace-authored record label, so it is
-		// escaped and bounded at workflow.MaxStagedSummary on the way out.
+		// The caller needs the staged change's description to relay it to the user.
+		// A separate read_approval would leave the first answer without that detail.
+		// The summary includes caller-chosen fields and workspace record labels.
+		// stagedExplanation escapes and bounds it at workflow.MaxStagedSummary.
 		return stagedExplanation(staged)
 	case errors.Is(err, errDeclinedInChat):
 		return "The user said no in the chat, so nothing was changed. Do not repeat the call unless they ask again."
@@ -113,7 +75,7 @@ func (s *Dispatcher) explain(tool string, err error) string {
 		// with no inbox, or a tool that cannot describe its own staging target.
 		// There is no proposal to point at, so the answer says what it can.
 		return "This is a confirm-first (🟡) action: a contact answers it before it runs, and not the " +
-			"credential that proposed it. Nothing was changed. Tell the user it is waiting — list_approvals " +
+			"credential that proposed it. Nothing was changed. Tell the user it is waiting: list_approvals " +
 			"with targets naming this record shows it, and they release it in the CRM. (" + refusalDetail(err) + ")"
 	case errors.As(err, &areaOff):
 		// Its words name the area and where the user turns it on, for the agent to
@@ -127,14 +89,14 @@ func (s *Dispatcher) explain(tool string, err error) string {
 	case errors.Is(err, apperrors.ErrPermissionDenied):
 		return AuthorityRefusal(err)
 	case errors.Is(err, apperrors.ErrNotFound):
-		return "No such record in this workspace (or it is outside the acting user's row scope). (" + refusalDetail(err) + ")"
+		return notFoundExplanation(err)
 	case errors.As(err, &skew):
 		// Its words name the remedy, a re-stage or a reload, which the generic retry below contradicts.
 		return echoSafe(skew.Message, MaxFaultDetail)
 	case errors.Is(err, apperrors.ErrVersionSkew):
 		return "The record changed since it was read; re-read it and retry with the new version. (" + refusalDetail(err) + ")"
 	case errors.Is(err, apperrors.ErrApprovalTokenInvalid):
-		return "The approval token was not accepted — it may be consumed, expired, or for a different call. " +
+		return "The approval token was not accepted: it may be consumed, expired, or for a different call. " +
 			"Ask for a fresh approval and retry. (" + refusalDetail(err) + ")"
 	case errors.Is(err, apperrors.ErrUnsupportedBySoR):
 		// A DECLARED capability gap (AC-OV-2), not a fault: this workspace's
@@ -174,7 +136,7 @@ func (s *Dispatcher) explain(tool string, err error) string {
 		// and must therefore never carry caller-influenced text; it exists for
 		// the fixed vocabularies reflected off the contract.
 		return "The arguments were rejected before the tool ran; nothing was changed. (" + badArgs.Error() + ") " +
-			"Correct them against the tool's inputSchema and call again — re-sending the same arguments will be rejected again."
+			"Correct them against the tool's inputSchema and call again. Re-sending the same arguments will be rejected again."
 	default:
 		return s.explainClassified(tool, err)
 	}
@@ -256,11 +218,11 @@ func (s *Dispatcher) explainClassified(tool string, err error) string {
 			"change that. (" + explained + ") Do not retry; tell the user to connect an AI model under Settings, AI."
 	}
 	if fault.Transient() {
-		return "This tool is temporarily unavailable — nothing was changed. (" + explained + ") " +
+		return "This tool is temporarily unavailable; nothing was changed. (" + explained + ") " +
 			"The same call can succeed later; wait before retrying, and tell the user if they are waiting on it."
 	}
 	return "This call was refused as issued and nothing was changed; repeating it unchanged will be refused the same way. (" +
-		explained + ") Correct the arguments and call again — or, if this is a governed refusal " +
+		explained + ") Correct the arguments and call again, or, if this is a governed refusal " +
 		"rather than a mistake, do not retry: tell the user what is blocking it."
 }
 
@@ -429,7 +391,7 @@ func stagedExplanation(staged *workflow.StagedApprovalError) string {
 		stagedReleasePath(staged) +
 		" Once released, this exact call repeats with \"approval_id\": \"" +
 		staged.ApprovalID.String() + "\". " +
-		"Blocks THIS call only — do the rest of what you were asked that does not depend on it, " +
+		"Blocks THIS call only. Do the rest of what you were asked that does not depend on it, " +
 		"and report what you DID alongside what is waiting."
 }
 

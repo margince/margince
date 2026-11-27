@@ -129,7 +129,6 @@ Every delivery with the standard body is this envelope, with the event's own fie
 | [`lead.sla_breached`](#leadsla_breached) | lead | 1 |
 | [`lead.updated`](#leadupdated) | lead | 1 |
 | [`lead_disqualify_reason.changed`](#lead_disqualify_reasonchanged) | lead_disqualify_reason | 1 |
-| [`lead_source.changed`](#lead_sourcechanged) | lead_source | 1 |
 | [`legal_review.decided`](#legal_reviewdecided) | legal_review | 1 |
 | [`legal_review.requested`](#legal_reviewrequested) | legal_review | 1 |
 | [`legal_review.withdrawn`](#legal_reviewwithdrawn) | legal_review | 1 |
@@ -540,7 +539,7 @@ Payload for company.updated, an open envelope. Eight emit sites carry different 
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
-| `data.changed_fields` | object | yes | What this update touched, incl. runtime cf_* custom fields. The value shape depends on the emit site: a column patch carries a flat field → new-value entry, while the recompute/routing/relationship sites carry a `{delta: {...}}` sub-object (occasionally with a sibling `source`). Read a key's value as either form. |
+| `data.changed_fields` | object | yes | What this update touched, incl. runtime cf_* custom fields. The value shape depends on the emit site. A column patch carries a flat field → new-value entry. The recompute/routing/relationship sites carry a `{delta: {...}}` sub-object, sometimes with a sibling `source`. Read a key's value as either form. A change to the company's `status` also carries the value under `lifecycle`, the key this version first gave it. `lifecycle` is deprecated; read `status`. |
 
 ### `consent.changed`
 
@@ -1026,14 +1025,14 @@ Payload for forecast.created, somebody accountable for a number said what they b
 
 Record: `user` · version 1
 
-Payload for forecast.exception_resolved. Somebody answered a finding from the nightly input check. The entity is the author, because an answer is attributable to whoever gave it. The `outcome` field says what kind of answer it was, and consumers must not treat the seven alike. The `value_correct` and `not_relevant` outcomes hide the finding from the screens a revenue commitment is made from. So a surface counting open findings has to drop them. The `remind_later` outcome leaves the finding open, and it comes back. The reason does not ride along. It is prose one user wrote for another, and a subscriber acting on it acts on text the author may edit.
+Payload for forecast.exception_resolved. Somebody answered a finding from the nightly input check. The entity is the author, because an answer is attributable to whoever gave it. The `outcome` field says what kind of answer it was, and consumers must not treat the eight alike. The `value_correct` and `not_relevant` outcomes hide the finding from the screens a revenue commitment is made from. So a surface counting open findings has to drop them. The `remind_later` outcome leaves the finding open, and it comes back. The reason does not ride along. It is prose one user wrote for another, and a subscriber acting on it acts on text the author may edit.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
 | `data.actor_user_id` | string (uuid) | yes |  |
 | `data.exception_id` | string (uuid) | yes |  |
 | `data.expires_at` | string (date-time) | no | When a suppressing answer stops holding. Present only for the two outcomes that hide a finding, a consumer that re-surfaces findings needs the date. |
-| `data.outcome` | string: `fixed_record`, `added_evidence`, `value_correct`, `not_relevant`, `remind_later`, `reassign`, `condition_cleared` | yes |  |
+| `data.outcome` | string: `fixed_record`, `added_evidence`, `value_correct`, `not_relevant`, `remind_later`, `reassign`, `condition_cleared`, `separate` | yes |  |
 
 ### `forecast.share_issued`
 
@@ -1229,25 +1228,13 @@ Payload for lead.updated, an open envelope. Its emit sites carry different shape
 
 Record: `lead_disqualify_reason` · version 1
 
-Payload for lead_disqualify_reason.changed. A disqualification reason was added, edited or removed (contacts/leaddisqualifyreason.go). It rides the lead stream for the same reason lead_source.changed does. A subscriber reporting on why leads were disqualified re-reads the catalog on this event. It carries `label` where the source event carries `key`, because a reason has no key. The label is its identity, and after `deleted` it is the only thing naming what went away.
+Payload for lead_disqualify_reason.changed. A disqualification reason was added, edited or removed (contacts/leaddisqualifyreason.go). It rides the lead stream because every disqualified lead names its reason. A subscriber reporting on why leads were disqualified re-reads the catalog on this event. It carries `label` because a reason has no key. The label is its identity, and after `deleted` it is the only thing naming what went away.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
 | `data.change` | string: `created`, `updated`, `deleted` | yes |  |
 | `data.label` | string | yes | The reason's label, which is its only identifier. |
 | `data.reason_id` | string (uuid) | yes |  |
-
-### `lead_source.changed`
-
-Record: `lead_source` · version 1
-
-Deprecated: the lead source list no longer feeds the score, and a separate breaking change retires it. Payload for lead_source.changed. A lead source was added, edited or removed (contacts/leadsource.go). It rides the lead stream because every lead carries a source value. A subscriber that renders or groups by source re-reads the catalog on this event. The payload carries `key` and not `label`. The key is what leads carry and what a subscriber keys its own cache by. It is also the only thing left to identify the entry once `deleted` has removed it. The label is mutable and still readable while the entry exists. Publishing it here would invite a subscriber to trust a copy that can go stale.
-
-| Field | Type | Always present | What it is |
-|---|---|---|---|
-| `data.change` | string: `created`, `updated`, `deleted` | yes |  |
-| `data.key` | string | yes | The stable key leads carry, which never changes for a given source. |
-| `data.source_id` | string (uuid) | yes |  |
 
 ### `legal_review.decided`
 
@@ -1425,7 +1412,7 @@ Payload for notification.preference_changed, one seat decided how a class of not
 
 Record: `offer` · version 1
 
-Payload for offer.accepted, a sent offer was accepted. The deal's headline amount is synced from this offer's gross in the same transaction (see deal.updated on the paired deal entity).
+Payload for offer.accepted: a sent offer was accepted. The deal's headline amount is synced from this offer's net, the figure without tax, in the same transaction. The paired deal.updated carries that net. This payload still states the offer's own gross.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -1887,11 +1874,11 @@ Payload for user_display_name.changed, a member changed the name their colleague
 
 Record: `user` · version 1
 
-Payload for user_greeting_name.changed, the name a member's colleagues greet them by changed (identity/greetingname.go). The member saved it themselves, or their first sign-in through a login provider filled an empty one from the provider's given name. A subscriber that drafts a greeting to this member reads it, because the first word of the display name is not always the name somebody is greeted by.
+Payload for user_greeting_name.changed. The name a member's colleagues greet them by changed (identity/greetingname.go). The member saved it themselves, or their first sign-in through a login provider filled an empty one from the provider's given name. A subscriber that drafts a greeting to this member reads it, because the display name does not always say the name somebody is greeted by.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
-| `data.greeting_name` | string | yes | The greeting name now in force, trimmed. Null when it was cleared, and greetings fall back to the first word of the display name. |
+| `data.greeting_name` | string | yes | The greeting name now in force, trimmed. Null when it was cleared, and greetings fall back to the given name of the display name. |
 
 ### `user_locale.changed`
 

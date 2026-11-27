@@ -32,9 +32,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
-// BookingPage is the slug's resolution: which workspace, whose calendar.
+// BookingPage is the slug's resolution: whose calendar, and which of the
+// host's pages, their personal page or one of their team links.
 type BookingPage struct {
 	HostUserID ids.UserID
+	ID         ids.UUID
+	TeamLink   bool
 }
 
 // ResolveBookingPage answers the slug→host lookup the public middleware runs
@@ -49,11 +52,11 @@ func (s *Store) ResolveBookingPage(ctx context.Context, slug string) (BookingPag
 	var page BookingPage
 	err := database.WithInfraTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
 		err := tx.QueryRow(ctx,
-			`SELECT p.host_user_id FROM booking_page p JOIN app_user u ON u.id = p.host_user_id
+			`SELECT p.host_user_id, p.id, p.team_link FROM booking_page p JOIN app_user u ON u.id = p.host_user_id
    WHERE p.revoked_at IS NULL AND `+workforce.LiveMemberSQL("u")+`
    AND (p.slug = $1 OR p.id = (SELECT a.booking_page_id FROM booking_alias a
      WHERE a.alias = lower($1) AND a.retired_at IS NULL AND a.host_user_id = p.host_user_id))`,
-			slug).Scan(&page.HostUserID)
+			slug).Scan(&page.HostUserID, &page.ID, &page.TeamLink)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
 		}
@@ -166,6 +169,7 @@ func requestedPurpose(c crmcontracts.CaptureConsent) *ids.UUID {
 // operational purpose, and the marketing question admits only a purpose that
 // requires double opt-in. Folding them would give one call site two meanings.
 type ConsentCapturer interface {
+	BookingPrivacyInformation(ctx context.Context) (string, error)
 	ScopedPurpose(ctx context.Context, requested *ids.UUID) (ids.UUID, error)
 	ValidateMarketingPurpose(ctx context.Context, purposeID ids.UUID) error
 	// CaptureBookingConsent records the operational grant and, when the form

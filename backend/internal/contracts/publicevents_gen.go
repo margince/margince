@@ -356,6 +356,7 @@ const (
 	ResolvedNotRelevant      PublicEventForecastExceptionResolvedOutcome = "not_relevant"
 	ResolvedReassign         PublicEventForecastExceptionResolvedOutcome = "reassign"
 	ResolvedRemindLater      PublicEventForecastExceptionResolvedOutcome = "remind_later"
+	ResolvedSeparate         PublicEventForecastExceptionResolvedOutcome = "separate"
 	ResolvedValueCorrect     PublicEventForecastExceptionResolvedOutcome = "value_correct"
 )
 
@@ -373,6 +374,8 @@ func (e PublicEventForecastExceptionResolvedOutcome) Valid() bool {
 	case ResolvedReassign:
 		return true
 	case ResolvedRemindLater:
+		return true
+	case ResolvedSeparate:
 		return true
 	case ResolvedValueCorrect:
 		return true
@@ -498,27 +501,6 @@ func (e PublicEventLeadDisqualifyReasonChangedChange) Valid() bool {
 	case PublicEventLeadDisqualifyReasonChangedChangeDeleted:
 		return true
 	case PublicEventLeadDisqualifyReasonChangedChangeUpdated:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for PublicEventLeadSourceChangedChange.
-const (
-	PublicEventLeadSourceChangedChangeCreated PublicEventLeadSourceChangedChange = "created"
-	PublicEventLeadSourceChangedChangeDeleted PublicEventLeadSourceChangedChange = "deleted"
-	PublicEventLeadSourceChangedChangeUpdated PublicEventLeadSourceChangedChange = "updated"
-)
-
-// Valid indicates whether the value is a known member of the PublicEventLeadSourceChangedChange enum.
-func (e PublicEventLeadSourceChangedChange) Valid() bool {
-	switch e {
-	case PublicEventLeadSourceChangedChangeCreated:
-		return true
-	case PublicEventLeadSourceChangedChangeDeleted:
-		return true
-	case PublicEventLeadSourceChangedChangeUpdated:
 		return true
 	default:
 		return false
@@ -724,7 +706,6 @@ const (
 	LeadMerged                            SubscribableEventType = "lead.merged"
 	LeadPromoted                          SubscribableEventType = "lead.promoted"
 	LeadSlaBreached                       SubscribableEventType = "lead.sla_breached"
-	LeadSourceChanged                     SubscribableEventType = "lead_source.changed"
 	LeadUpdated                           SubscribableEventType = "lead.updated"
 	LegalReviewDecided                    SubscribableEventType = "legal_review.decided"
 	LegalReviewRequested                  SubscribableEventType = "legal_review.requested"
@@ -968,8 +949,6 @@ func (e SubscribableEventType) Valid() bool {
 	case LeadPromoted:
 		return true
 	case LeadSlaBreached:
-		return true
-	case LeadSourceChanged:
 		return true
 	case LeadUpdated:
 		return true
@@ -1611,7 +1590,7 @@ type PublicEventCompanyRestored struct{}
 
 // PublicEventCompanyUpdated Payload for company.updated, an open envelope. Eight emit sites carry different shapes. They include a flat column patch, the anchor company save's field delta and the partner extension's nested delta. Others are enrichment and deep-read applies, and a relationship delta. So the payload is a change-set map rather than a fixed field list.
 type PublicEventCompanyUpdated struct {
-	// ChangedFields What this update touched, incl. runtime cf_* custom fields. The value shape depends on the emit site: a column patch carries a flat field → new-value entry, while the recompute/routing/relationship sites carry a `{delta: {...}}` sub-object (occasionally with a sibling `source`). Read a key's value as either form.
+	// ChangedFields What this update touched, incl. runtime cf_* custom fields. The value shape depends on the emit site. A column patch carries a flat field → new-value entry. The recompute/routing/relationship sites carry a `{delta: {...}}` sub-object, sometimes with a sibling `source`. Read a key's value as either form. A change to the company's `status` also carries the value under `lifecycle`, the key this version first gave it. `lifecycle` is deprecated; read `status`.
 	ChangedFields map[string]interface{} `json:"changed_fields"`
 }
 
@@ -2143,7 +2122,7 @@ type PublicEventForecastCreated struct {
 	SupersedesId *openapi_types.UUID `json:"supersedes_id,omitempty"`
 }
 
-// PublicEventForecastExceptionResolved Payload for forecast.exception_resolved. Somebody answered a finding from the nightly input check. The entity is the author, because an answer is attributable to whoever gave it. The `outcome` field says what kind of answer it was, and consumers must not treat the seven alike. The `value_correct` and `not_relevant` outcomes hide the finding from the screens a revenue commitment is made from. So a surface counting open findings has to drop them. The `remind_later` outcome leaves the finding open, and it comes back. The reason does not ride along. It is prose one user wrote for another, and a subscriber acting on it acts on text the author may edit.
+// PublicEventForecastExceptionResolved Payload for forecast.exception_resolved. Somebody answered a finding from the nightly input check. The entity is the author, because an answer is attributable to whoever gave it. The `outcome` field says what kind of answer it was, and consumers must not treat the eight alike. The `value_correct` and `not_relevant` outcomes hide the finding from the screens a revenue commitment is made from. So a surface counting open findings has to drop them. The `remind_later` outcome leaves the finding open, and it comes back. The reason does not ride along. It is prose one user wrote for another, and a subscriber acting on it acts on text the author may edit.
 type PublicEventForecastExceptionResolved struct {
 	ActorUserId openapi_types.UUID `json:"actor_user_id"`
 	ExceptionId openapi_types.UUID `json:"exception_id"`
@@ -2264,7 +2243,7 @@ type PublicEventLeadDemoted struct {
 // PublicEventLeadDisqualified Payload for lead.disqualified — a lead was disqualified. Carries no data.
 type PublicEventLeadDisqualified struct{}
 
-// PublicEventLeadDisqualifyReasonChanged Payload for lead_disqualify_reason.changed. A disqualification reason was added, edited or removed (contacts/leaddisqualifyreason.go). It rides the lead stream for the same reason lead_source.changed does. A subscriber reporting on why leads were disqualified re-reads the catalog on this event. It carries `label` where the source event carries `key`, because a reason has no key. The label is its identity, and after `deleted` it is the only thing naming what went away.
+// PublicEventLeadDisqualifyReasonChanged Payload for lead_disqualify_reason.changed. A disqualification reason was added, edited or removed (contacts/leaddisqualifyreason.go). It rides the lead stream because every disqualified lead names its reason. A subscriber reporting on why leads were disqualified re-reads the catalog on this event. It carries `label` because a reason has no key. The label is its identity, and after `deleted` it is the only thing naming what went away.
 type PublicEventLeadDisqualifyReasonChanged struct {
 	Change PublicEventLeadDisqualifyReasonChangedChange `json:"change"`
 
@@ -2317,18 +2296,6 @@ type PublicEventLeadSlaBreached struct {
 	// OwnerId The lead's owner at breach time (absent when unrouted).
 	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
 }
-
-// PublicEventLeadSourceChanged Deprecated: the lead source list no longer feeds the score, and a separate breaking change retires it. Payload for lead_source.changed. A lead source was added, edited or removed (contacts/leadsource.go). It rides the lead stream because every lead carries a source value. A subscriber that renders or groups by source re-reads the catalog on this event. The payload carries `key` and not `label`. The key is what leads carry and what a subscriber keys its own cache by. It is also the only thing left to identify the entry once `deleted` has removed it. The label is mutable and still readable while the entry exists. Publishing it here would invite a subscriber to trust a copy that can go stale.
-type PublicEventLeadSourceChanged struct {
-	Change PublicEventLeadSourceChangedChange `json:"change"`
-
-	// Key The stable key leads carry, which never changes for a given source.
-	Key      string             `json:"key"`
-	SourceId openapi_types.UUID `json:"source_id"`
-}
-
-// PublicEventLeadSourceChangedChange defines model for PublicEventLeadSourceChanged.Change.
-type PublicEventLeadSourceChangedChange string
 
 // PublicEventLeadUpdated Payload for lead.updated, an open envelope. Its emit sites carry different shapes. One is a flat column patch that includes runtime cf_* custom-field columns; others are behavioral-recompute and routing deltas. So the payload is a change-set map rather than a fixed field list.
 type PublicEventLeadUpdated struct {
@@ -2464,7 +2431,7 @@ type PublicEventNotificationPreferenceChanged struct {
 	Class string `json:"class"`
 }
 
-// PublicEventOfferAccepted Payload for offer.accepted — a sent offer was accepted. The deal's headline amount is synced from this offer's gross in the same transaction (see deal.updated on the paired deal entity).
+// PublicEventOfferAccepted Payload for offer.accepted: a sent offer was accepted. The deal's headline amount is synced from this offer's net, the figure without tax, in the same transaction. The paired deal.updated carries that net. This payload still states the offer's own gross.
 type PublicEventOfferAccepted struct {
 	// Currency The currency of gross_minor (ISO 4217), so the amount can be printed.
 	Currency *string `json:"currency,omitempty"`
@@ -2907,9 +2874,9 @@ type PublicEventUserDisplayNameChanged struct {
 	DisplayName string `json:"display_name"`
 }
 
-// PublicEventUserGreetingNameChanged Payload for user_greeting_name.changed — the name a member's colleagues greet them by changed (identity/greetingname.go). The member saved it themselves, or their first sign-in through a login provider filled an empty one from the provider's given name. A subscriber that drafts a greeting to this member reads it, because the first word of the display name is not always the name somebody is greeted by.
+// PublicEventUserGreetingNameChanged Payload for user_greeting_name.changed. The name a member's colleagues greet them by changed (identity/greetingname.go). The member saved it themselves, or their first sign-in through a login provider filled an empty one from the provider's given name. A subscriber that drafts a greeting to this member reads it, because the display name does not always say the name somebody is greeted by.
 type PublicEventUserGreetingNameChanged struct {
-	// GreetingName The greeting name now in force, trimmed. Null when it was cleared, and greetings fall back to the first word of the display name.
+	// GreetingName The greeting name now in force, trimmed. Null when it was cleared, and greetings fall back to the given name of the display name.
 	GreetingName *string `json:"greeting_name"`
 }
 
@@ -3512,10 +3479,6 @@ func (PublicEventLeadSlaBreached) EventType() string { return "lead.sla_breached
 
 func (PublicEventLeadSlaBreached) EntityType() string { return "lead" }
 
-func (PublicEventLeadSourceChanged) EventType() string { return "lead_source.changed" }
-
-func (PublicEventLeadSourceChanged) EntityType() string { return "lead_source" }
-
 func (PublicEventLeadUpdated) EventType() string { return "lead.updated" }
 
 func (PublicEventLeadUpdated) EntityType() string { return "lead" }
@@ -3879,7 +3842,6 @@ var PublicEventVersions = map[string]int{
 	"lead.sla_breached":                         1,
 	"lead.updated":                              1,
 	"lead_disqualify_reason.changed":            1,
-	"lead_source.changed":                       1,
 	"legal_review.decided":                      1,
 	"legal_review.requested":                    1,
 	"legal_review.withdrawn":                    1,
@@ -4038,7 +4000,6 @@ var PublicEventSamples = map[string]string{
 	"lead.sla_breached":                         "{\"deadline\":\"2026-10-14T09:12:00Z\",\"escalation_target\":\"0190a7f2-0000-7000-8000-000000000010\",\"lead_name\":\"Sample lead name\",\"owner_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"lead.updated":                              "{\"changed_fields\":{}}",
 	"lead_disqualify_reason.changed":            "{\"change\":\"created\",\"label\":\"Sample label\",\"reason_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
-	"lead_source.changed":                       "{\"change\":\"created\",\"key\":\"Sample key\",\"source_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"legal_review.decided":                      "{\"deal_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"outcome\":\"Sample outcome\",\"review_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"legal_review.requested":                    "{\"deal_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"review_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"legal_review.withdrawn":                    "{\"deal_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"review_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",

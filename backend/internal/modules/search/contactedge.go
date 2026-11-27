@@ -22,11 +22,13 @@ import (
 // on the same captured activities. Canonically ordered (A < B) because
 // co-participation has no direction — neither wrote "to" the other through us.
 type ContactEdge struct {
-	ContactA   ids.UUID
-	ContactB   ids.UUID
-	LastAt     time.Time
-	Count90d   int
-	CountTotal int
+	ContactA ids.UUID
+	ContactB ids.UUID
+	LastAt   time.Time
+	// LastAtDateOnly says the activity behind LastAt names only a date.
+	LastAtDateOnly bool
+	Count90d       int
+	CountTotal     int
 }
 
 // StrengthOf scores the pair at an instant through the same §4 kernel every
@@ -93,7 +95,7 @@ func scanContactPairs(rows pgx.Rows) ([]contactPair, error) {
 }
 
 // contactEdgeFacts are the folded columns of graph_contact_edge.
-var contactEdgeFacts = []string{"last_at", "count_90d", "count_total"}
+var contactEdgeFacts = []string{"last_at", "last_precision", "count_90d", "count_total"}
 
 // foldContactPairsSQL is the upsert that refolds named contact pairs.
 func foldContactPairsSQL(advanceSnapshot bool) string {
@@ -104,7 +106,7 @@ func foldContactPairsSQL(advanceSnapshot bool) string {
 		),
 		folded AS (
 		    SELECT t.contact_a, t.contact_b,
-		           max(a.occurred_at) AS last_at,
+		           max(a.occurred_at) AS last_at, ` + occurredday.LatestPrecisionSQL("a", "") + ` AS last_precision,
 		           count(DISTINCT ` + graphInteractionUnit + `) FILTER (WHERE ` + occurredday.FromSQL("a", window) + `) AS count_90d,
 		           count(DISTINCT ` + graphInteractionUnit + `) AS count_total
 		      FROM target t
@@ -120,8 +122,8 @@ func foldContactPairsSQL(advanceSnapshot bool) string {
 		     GROUP BY t.contact_a, t.contact_b
 		)
 		INSERT INTO graph_contact_edge AS e
-		    (contact_a, contact_b, last_at, count_90d, count_total, computed_at, read_snapshot)
-		SELECT f.contact_a, f.contact_b, f.last_at, f.count_90d, f.count_total, now(), pg_current_snapshot()
+		    (contact_a, contact_b, last_at, last_precision, count_90d, count_total, read_snapshot)
+		SELECT f.contact_a, f.contact_b, f.last_at, f.last_precision, f.count_90d, f.count_total, pg_current_snapshot()
 		  FROM folded f
 		 ORDER BY f.contact_a, f.contact_b
 		ON CONFLICT (contact_a, contact_b) DO UPDATE SET
@@ -231,7 +233,7 @@ func ContactEdgesForContact(ctx context.Context, tx pgx.Tx, contactID ids.UUID, 
 	}
 	limitPos := arg(limit)
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT e.contact_a, e.contact_b, e.last_at, e.count_90d, e.count_total, p.id, p.full_name
+		SELECT e.contact_a, e.contact_b, e.last_at, e.last_precision IS NOT DISTINCT FROM 'day', e.count_90d, e.count_total, p.id, p.full_name
 		  FROM graph_contact_edge e
 		  JOIN contact p
 		    ON p.id = CASE WHEN e.contact_a = $%d THEN e.contact_b ELSE e.contact_a END
@@ -246,7 +248,7 @@ func ContactEdgesForContact(ctx context.Context, tx pgx.Tx, contactID ids.UUID, 
 	var out []PeerEdge
 	for rows.Next() {
 		var pe PeerEdge
-		if err := rows.Scan(&pe.Edge.ContactA, &pe.Edge.ContactB, &pe.Edge.LastAt,
+		if err := rows.Scan(&pe.Edge.ContactA, &pe.Edge.ContactB, &pe.Edge.LastAt, &pe.Edge.LastAtDateOnly,
 			&pe.Edge.Count90d, &pe.Edge.CountTotal, &pe.Peer, &pe.FullName); err != nil {
 			return nil, err
 		}
@@ -270,7 +272,7 @@ func ContactEdgesAmong(ctx context.Context, tx pgx.Tx, contacts []ids.UUID) ([]C
 		return nil, nil
 	}
 	rows, err := tx.Query(ctx, `
-		SELECT e.contact_a, e.contact_b, e.last_at, e.count_90d, e.count_total
+		SELECT e.contact_a, e.contact_b, e.last_at, e.last_precision IS NOT DISTINCT FROM 'day', e.count_90d, e.count_total
 		  FROM graph_contact_edge e
 		 WHERE e.contact_a = ANY($1) AND e.contact_b = ANY($1)
 		 ORDER BY e.last_at DESC, e.contact_a, e.contact_b`, contacts)
@@ -285,7 +287,7 @@ func scanContactEdges(rows pgx.Rows) ([]ContactEdge, error) {
 	var out []ContactEdge
 	for rows.Next() {
 		var e ContactEdge
-		if err := rows.Scan(&e.ContactA, &e.ContactB, &e.LastAt, &e.Count90d, &e.CountTotal); err != nil {
+		if err := rows.Scan(&e.ContactA, &e.ContactB, &e.LastAt, &e.LastAtDateOnly, &e.Count90d, &e.CountTotal); err != nil {
 			return nil, err
 		}
 		out = append(out, e)

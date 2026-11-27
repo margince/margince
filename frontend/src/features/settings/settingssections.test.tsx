@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { composeStories } from "@storybook/react-vite";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { stable } from "../../format/collate";
@@ -16,13 +16,15 @@ import {
   type SettingsPageId,
   visibleSettingsTabs,
 } from "../../lib/settingscatalog";
+import { catalogContext } from "../../lib/settingsreach";
 import { settingsHref } from "../../lib/settingsrouting";
 import { meFixture } from "../../testing/mefixture";
 import * as stories from "./settings.stories";
-import { catalogContext } from "./settingsnav";
 import { COMPANY_CONTEXT_OFF, EVERY_GRANT } from "./settingspages.fixtures";
 import {
   COMPANY_CONTEXT_SECTIONS,
+  SETTINGS_COLUMNS,
+  SUBPAGE_SECTIONS,
   settingsSectionKeys,
 } from "./settingssections";
 import { settingsTabLabel } from "./settingstabs";
@@ -67,12 +69,27 @@ const DRAWN_NOT_OFFERED: Readonly<Record<string, readonly NotOffered[]>> = {
   ],
 };
 
+// The story that draws each tab's settings table with rows in it.
+const COLUMN_STORIES = [
+  {
+    page: "deals",
+    tab: "pipelines",
+    Story: composeStories(stories).PipelinesAdmin,
+  },
+] as const;
+
 const pageStories = Object.values(composeStories(stories)).filter(
   (story) => story.parameters.settingsPage !== undefined,
 );
 
-// Not a table header: it heads a column of records.
+const tabStories = Object.values(composeStories(stories)).filter(
+  (story) => story.parameters.settingsTab !== undefined,
+);
+
+// Not a table header: it heads a column of records. A section header names
+// the panels under it, so search offers it as a page's section too.
 const NAMING = [
+  ".section-header > .section-header-title",
   ".settingrow-naming > .t-name",
   ".field > label:not(.sr-only)",
   ".field-label-row > label:not(.sr-only)",
@@ -153,27 +170,43 @@ function tabsOf(page: SettingsPageId): readonly (string | undefined)[] {
 }
 
 // The names search offers for one tab, less the tab's own name: the strip
-// draws that, not a panel.
+// draws that, not a panel. Less its column settings too: a page story answers
+// every list empty, so the table that heads them is not drawn there.
 function drawnSections(page: SettingsPageId, tab: string | undefined) {
   const keys = settingsSectionKeys(
     page,
     (each) => tab === undefined || each === tab,
   );
+  const columns = SETTINGS_COLUMNS[page]?.[tab ?? ""] ?? [];
   return [
-    ...keys.filter((key) => !TAB_NAMES.has(key)),
+    ...keys.filter((key) => !TAB_NAMES.has(key) && !columns.includes(key)),
     ...(page === "company" && (tab === undefined || tab === "profile")
       ? COMPANY_CONTEXT_SECTIONS
       : []),
   ].map(t);
 }
 
-const TAB_NAMES = new Set<string>(
-  SETTINGS_PAGES.flatMap((page) =>
+// A sub-address leads with its own name too, drawn by the switch that opens it.
+const TAB_NAMES = new Set<string>([
+  ...SETTINGS_PAGES.flatMap((page) =>
     "tabs" in page
       ? page.tabs.flatMap((tab) => settingsTabLabel(page.id, tab.id) ?? [])
       : [],
   ),
-);
+  ...Object.values(SUBPAGE_SECTIONS).flatMap((parts) =>
+    Object.values(parts ?? {}).flatMap((keys) => keys[0] ?? []),
+  ),
+]);
+
+function tabStory(page: SettingsPageId, tab: string | undefined) {
+  const Story = tabStories.find(
+    (story) => story.parameters.settingsTab === `${page}/${tab}`,
+  );
+  if (Story === undefined) {
+    throw new Error(`no story in settings.stories.tsx renders ${page}/${tab}`);
+  }
+  return Story;
+}
 
 async function expectTabDraws(
   Story: (typeof pageStories)[number],
@@ -185,7 +218,7 @@ async function expectTabDraws(
     ...(DRAWN_NOT_OFFERED[page] ?? []),
     ...(tab === undefined ? [] : (DRAWN_NOT_OFFERED[address] ?? [])),
   ];
-  const view = render(<Story route={settingsHref(page, tab)} />);
+  const view = render(<Story />);
   await waitFor(() => {
     // A tab that drew no panel at all crashed or never loaded.
     expect(view.container.querySelector(".panel"), address).not.toBeNull();
@@ -219,6 +252,17 @@ describe("each settings page's sections are the names it draws", () => {
     );
   });
 
+  it("has one tab story for every tab past a page's first", () => {
+    const covered = tabStories.map((story) => story.parameters.settingsTab);
+    expect(covered.sort(stable)).toEqual(
+      SETTINGS_PAGES.flatMap((page) =>
+        tabsOf(page.id)
+          .slice(1)
+          .map((tab) => `${page.id}/${tab}`),
+      ).sort(stable),
+    );
+  });
+
   it.each(SETTINGS_PAGES.map((page) => page.id))(
     "%s lists every panel and setting it draws, and nothing else",
     async (page) => {
@@ -234,11 +278,35 @@ describe("each settings page's sections are the names it draws", () => {
         );
         return;
       }
-      for (const tab of tabsOf(page)) {
-        await expectTabDraws(Story, page, tab);
+      for (const [index, tab] of tabsOf(page).entries()) {
+        await expectTabDraws(
+          index === 0 ? Story : tabStory(page, tab),
+          page,
+          tab,
+        );
       }
     },
   );
+
+  it("draws every column setting search offers as a column head", async () => {
+    const offered = Object.entries(SETTINGS_COLUMNS).flatMap(([page, tabs]) =>
+      Object.keys(tabs).map((tab) => `${page}/${tab}`),
+    );
+    expect(COLUMN_STORIES.map(({ page, tab }) => `${page}/${tab}`)).toEqual(
+      offered,
+    );
+    for (const { page, tab, Story } of COLUMN_STORIES) {
+      const view = render(<Story />);
+      for (const key of SETTINGS_COLUMNS[page]?.[tab] ?? []) {
+        expect(
+          await within(view.container).findByRole("columnheader", {
+            name: t(key),
+          }),
+        ).toBeTruthy();
+      }
+      view.unmount();
+    }
+  });
 
   it("opens Company profile on its next tab while the rollout hides the card", async () => {
     const seesCompanyContext = companyContextShown(true, COMPANY_CONTEXT_OFF);

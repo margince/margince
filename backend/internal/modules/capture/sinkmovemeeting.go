@@ -22,6 +22,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -114,22 +115,37 @@ func (s *Sink) MoveMeeting(ctx context.Context, key connector.NaturalKey, slot c
 		if err != nil {
 			return err
 		}
-		var id ids.ActivityID
-		err = tx.QueryRow(ctx, `
-			SELECT id FROM activity
-			 WHERE source_system = $1 AND source_id = $2
-			   AND kind = 'meeting' AND restricted_at IS NULL AND archived_at IS NULL`,
-			key.SourceSystem, key.SourceID).Scan(&id)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil
-		}
-		if err != nil {
-			return fmt.Errorf("capture: finding the meeting to move: %w", err)
+		id, found, err := s.meetingToMove(ctx, tx, key)
+		if err != nil || !found {
+			return err
 		}
 		slot.Duration = StorableDuration(slot.Duration)
 		_, err = s.moveMeeting(ctx, tx, id, slot)
 		return err
 	})
+}
+
+// meetingToMove is the live meeting stored under the key. Failing that, it is
+// the row this seat's calendar matched the event onto, if calendarMayMove allows.
+func (s *Sink) meetingToMove(ctx context.Context, tx pgx.Tx, key connector.NaturalKey) (ids.ActivityID, bool, error) {
+	var id ids.ActivityID
+	err := tx.QueryRow(ctx, `
+		SELECT id FROM activity
+		 WHERE source_system = $1 AND source_id = $2
+		   AND kind = 'meeting' AND restricted_at IS NULL AND archived_at IS NULL`,
+		key.SourceSystem, key.SourceID).Scan(&id)
+	if err == nil {
+		return id, true, nil
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return ids.ActivityID{}, false, fmt.Errorf("capture: finding the meeting to move: %w", err)
+	}
+	delivered, held, err := s.meetingOfOwnDelivery(ctx, tx, key)
+	if err != nil || !held {
+		return ids.ActivityID{}, false, err
+	}
+	movable, err := s.calendarMayMove(ctx, tx, delivered, key)
+	return delivered, movable, err
 }
 
 // moveOnReplay moves a meeting a calendar delivered again under its own key
@@ -149,10 +165,8 @@ func (s *Sink) moveOnReplay(
 		return nil
 	}
 	if viaIdentity {
-		// An occurrence of a series keeps its identity when moved, so this
-		// calendar's own row is reached through it too, and moves.
-		own, found, err := ownLiveMeetingTx(ctx, tx, rec.NaturalKey, actorUserID(ctx))
-		if err != nil || !found || own != id {
+		movable, err := s.calendarMayMove(ctx, tx, id, rec.NaturalKey)
+		if err != nil || !movable {
 			return err
 		}
 	}
@@ -165,15 +179,12 @@ func (s *Sink) moveOnReplay(
 
 // replayIncumbent is assertedIncumbent for the row a capture replays onto. A
 // meeting's replay settles its guests and start under the row lock, so it takes
-// that lock first. Taken after its own import row shares the row, the lock would
-// wait on a colleague's import of the meeting. That import's recompute waits here.
-// A restricted meeting takes none of those writes, so it is not locked.
+// the attendee lock and that row lock first. Taken after its own import row, the
+// lock would wait on a colleague's import, whose recompute waits here. A relist
+// waits here too, and then sees this import. A restricted row is not locked.
 func replayIncumbent(ctx context.Context, tx pgx.Tx, id ids.ActivityID, fields ActivityFields) (string, bool, error) {
 	if fields.Kind == meetingKind {
-		var locked ids.ActivityID
-		err := tx.QueryRow(ctx,
-			`SELECT id FROM activity WHERE id = $1 AND restricted_at IS NULL FOR UPDATE`, id).Scan(&locked)
-		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		if err := storekit.LockMeetingAttendeePage(ctx, tx, []ids.UUID{id.UUID}); err != nil {
 			return "", false, fmt.Errorf("capture: locking the meeting a replay settles: %w", err)
 		}
 	}
@@ -181,10 +192,9 @@ func replayIncumbent(ctx context.Context, tx pgx.Tx, id ids.ActivityID, fields A
 }
 
 // settleMeetingReplay is what a proven replay of a meeting still owes the row.
-// That is its identity, guests, documents, current start and host. Only this
-// calendar's own row moves. Another door's row reached through the cross-door
-// identity stays, or a second calendar on the old time would move it back.
-// Either replay may hand the host to the organizer.
+// That is its identity, guests, documents, current start and host. The start
+// moves only where calendarMayMove allows it. Either replay may hand the host
+// to the organizer.
 func (s *Sink) settleMeetingReplay(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID, rec connector.NormalizedRecord, viaIdentity bool,
 ) error {
@@ -235,6 +245,59 @@ func (s *Sink) foldOwnDuplicate(
 		return known, nil
 	}
 	return own, s.moveOnReplay(ctx, tx, own, rec, false)
+}
+
+// calendarMayMove says whether this calendar may move a meeting it reached past
+// its own key. Its own row moves: an occurrence of a series keeps its identity
+// when moved, so the row is reached through it too. A row it matched onto moves
+// as matchedRowMayMove says. Any other row stays, or a second calendar on the
+// old time would move it back.
+func (s *Sink) calendarMayMove(ctx context.Context, tx pgx.Tx, id ids.ActivityID, key connector.NaturalKey) (bool, error) {
+	own, found, err := ownLiveMeetingTx(ctx, tx, key, actorUserID(ctx))
+	if err != nil || found {
+		return found && own == id, err
+	}
+	delivered, held, err := s.meetingOfOwnDelivery(ctx, tx, key)
+	if err != nil || !held || delivered != id {
+		return false, err
+	}
+	return matchedRowMayMove(ctx, tx, id)
+}
+
+// matchedRowMayMove says whether this seat's calendar may retime a row another
+// door filed and it matched onto. A colleague's live calendar moves its own row.
+// Once it is not live, any calendar holding the row moves it. An import moves
+// only for its importer, its author or the organizer; a guest's time may be stale.
+// The importer comes from the create audit: a matching calendar took captured_by over.
+func matchedRowMayMove(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (bool, error) {
+	seat := actorUserID(ctx)
+	filer := auth.ConnectorSeatSQL("a")
+	var calendar, filed, filerLive, imported bool
+	err := tx.QueryRow(ctx, `
+		SELECT coalesce(a.source_system = ANY(@`+calendarProvidersArg+`), false),
+		       a.captured_by LIKE @stamp,
+		       coalesce(`+filer+` <> @`+rosterSeatArg+`::text AND `+calendarLiveSQL("("+filer+")::uuid", "@"+calendarProvidersArg)+`, false),
+		       a.source_author_id IS NOT DISTINCT FROM @`+rosterSeatArg+`::uuid OR EXISTS (
+		         SELECT 1 FROM `+storekit.TableAudit+` created
+		          WHERE created.entity_type = 'activity' AND created.entity_id = a.id
+		            AND created.action = 'create' AND created.actor_id = @importer)
+		  FROM activity a WHERE a.id = @`+capturedActivityObject+` AND a.restricted_at IS NULL`, pgx.StrictNamedArgs{
+		capturedActivityObject: id, rosterSeatArg: seat, calendarProvidersArg: calendarProviderNames(),
+		"stamp": "%:" + seat.String(), "importer": "human:" + seat.String(),
+	}).Scan(&calendar, &filed, &filerLive, &imported)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("capture: reading which door filed a meeting: %w", err)
+	}
+	if calendar {
+		return filed || !filerLive, nil
+	}
+	if imported {
+		return true, nil
+	}
+	return SeatOrganizesMeetingTx(ctx, tx, id, seat)
 }
 
 // ownLiveMeetingTx is the live meeting this seat's calendar stored under the

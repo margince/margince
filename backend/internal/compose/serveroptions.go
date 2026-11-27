@@ -61,7 +61,10 @@ func WithOperatorMail(m mailer.Mailer) Option {
 // The configured public origin keeps personal links independent of request headers.
 func WithDealRoomInviteMail(m mailer.Mailer) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
-		s.dealroomsHandlers = s.WithInviteMailer(m).WithMailLanguage(func(ctx context.Context) string { return string(identity.BaseLanguageForPrompt(ctx, pool)) }).WithInviteContext(func(ctx context.Context) (string, string, error) { return roomInviteIdentity(ctx, pool) })
+		s.dealroomsHandlers = s.WithInviteMailer(m).WithMailLanguage(func(ctx context.Context) string { return string(identity.BaseLanguageForPrompt(ctx, pool)) }).WithInviteContext(func(ctx context.Context) (string, error) {
+			name, _, err := identity.NewService(pool).ActorIdentity(ctx)
+			return name, err
+		})
 	}
 }
 
@@ -85,21 +88,27 @@ func WithMCPResource(resource string) Option {
 // WithMCPInputStateKey lets a tool ask the user in the chat, signing each
 // question with the deployment's HMAC key. Without one no tool asks.
 func WithMCPInputStateKey(key string) Option {
-	return func(s *Server, _ *pgxpool.Pool) { s.mcpChat.inputStateKey = key }
+	return func(s *Server, _ *pgxpool.Pool) { s.mcpDoor.inputStateKey = key }
 }
 
-// mcpChatSettings signs the questions a tool asks in the chat and spends the
-// codes of calls confirmed there.
-type mcpChatSettings struct {
+// mcpDoorSettings sign the questions a tool asks in the chat and spend each
+// answer and confirm code once. callLog records each call when it is set.
+type mcpDoorSettings struct {
 	inputStateKey string
-	confirmGuard  agents.ConfirmGuard
+	replayGuard   agents.ReplayGuard
+	callLog       agents.CallLog
 }
 
-// WithMCPConfirmGuard lets a call that waits for its own user be confirmed in
-// the MCP conversation, each code spent once through guard. Without it such
-// calls stage into the approval inbox.
-func WithMCPConfirmGuard(guard agents.ConfirmGuard) Option {
-	return func(s *Server, _ *pgxpool.Pool) { s.mcpChat.confirmGuard = guard }
+// WithMCPCallLog records every /mcp exchange in log.
+func WithMCPCallLog(log agents.CallLog) Option {
+	return func(s *Server, _ *pgxpool.Pool) { s.mcpDoor.callLog = log }
+}
+
+// WithMCPReplayGuard spends each confirm code and each answered chat question
+// once. Without it no tool asks in the chat, and a call that waits for its own
+// user stages into the approval inbox.
+func WithMCPReplayGuard(guard agents.ReplayGuard) Option {
+	return func(s *Server, _ *pgxpool.Pool) { s.mcpDoor.replayGuard = guard }
 }
 
 // WithMCPConnector turns the remote MCP connector on: the /mcp transport,
@@ -222,12 +231,12 @@ func WithKeyvault(vault keyvault.Vault) Option {
 		s.webFormsHandlers = s.WithFormSecrets(vault)
 		// The confirm link is sealed in the same vault (controllermailwiring.go).
 		s.rewireConfirmationLane(pool)
-		// The BYOK credential surface exists only where there is somewhere to
-		// seal a key. Wired here rather than in the AI block so a role that
-		// composes no vault serves 501 on those routes instead of recording a
-		// reference to a blob nothing wrote.
+		// The BYOK credential surface exists only where a key can be sealed.
+		// A role with no vault serves 501 on those routes instead of recording
+		// a reference to a blob nothing wrote.
 		sealed := WithVault(StoredConfig(pool), vault, s.log)
 		keys := ai.NewProviderKeyStore(sealed)
+		s.authHandlers = s.WithGoogleDirectory(sealed)
 		s.voiceHandlers = s.WithProviderKeys(keys)
 		// The routing store gets the same vault, for the ONE read that calls a
 		// vendor rather than describing it: asking a vendor what it serves needs
@@ -262,6 +271,7 @@ func WithKeyvault(vault keyvault.Vault) Option {
 		// the option orders where keyvault happens to run last, which nothing
 		// holds.
 		s.connectorAppHandlers.store = connectorApps.WithUnitApps(composedUnitApp)
+		s.apps = s.connectorAppHandlers.store
 		// And the connect transport resolves the STORED app per request, so an
 		// app set through Settings works without restarting the api. The worker
 		// resolves it the same way for the sync poll's token refresh, which is
@@ -328,20 +338,12 @@ func WithAgentVolume(meter *agentvolume.Meter) Option {
 // hybrid retrieval can use its vector half for a caller and not only for a
 // background job.
 //
-// It rebuilds the tool registry, because the registry is where the lane is
-// consumed: the intent retriever, search_context and the query executor are all
-// constructed inside it. An option that set the field without rebuilding would
-// leave a Server whose embedder is bound and whose tools still rank lexically —
-// a divergence nothing would report, because a lexically ranked page looks
-// exactly like a semantic one that found little.
-//
 // Without this option the lane stays unbound, which is a real deployment (a role
 // with no model path, or a routing config that binds no embeddings model) rather
 // than a broken one: every ranked answer says which lane ranked it.
 func WithRetrievalEmbedder(embedder search.Embedder) Option {
-	return func(s *Server, pool *pgxpool.Pool) {
+	return func(s *Server, _ *pgxpool.Pool) {
 		s.retrievalEmbedder = embedder
-		s.rebuildToolRegistry(pool)
 	}
 }
 
@@ -412,7 +414,6 @@ func WithPublicBaseURL(base string) Option {
 		// would deadlock a rollout on its own ingress.
 		s.originProbe = newPublicOriginProbe(base, newOriginProbeClient(), time.Now)
 		s.publicOrigin = s.originStatus
-		s.rebuildToolRegistry(pool)
 	}
 }
 
@@ -433,9 +434,8 @@ func WithAPIBaseURL(base string) Option {
 // that wired one without the other would serve a surface accepting messages
 // nothing will carry.
 func WithDelivery(stager DeliveryMachinery) Option {
-	return func(s *Server, pool *pgxpool.Pool) {
+	return func(s *Server, _ *pgxpool.Pool) {
 		s.send.Delivery = stager
-		s.rebuildToolRegistry(pool)
 	}
 }
 
@@ -444,9 +444,8 @@ func WithDelivery(stager DeliveryMachinery) Option {
 // what to do about it instead of being handed a 202 for a message that can only
 // park.
 func WithSendAuthority(authority activities.SendAuthority) Option {
-	return func(s *Server, pool *pgxpool.Pool) {
+	return func(s *Server, _ *pgxpool.Pool) {
 		s.send.SendAuthority = authority
-		s.rebuildToolRegistry(pool)
 	}
 }
 

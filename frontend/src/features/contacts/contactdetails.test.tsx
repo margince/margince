@@ -43,10 +43,13 @@ it("saves only the corrected scalar", async () => {
     return jsonResponse({ ...contact, version: 4 });
   });
   await user.click(
-    await screen.findByRole("button", { name: /^Change Title/ }),
+    await screen.findByRole("button", { name: /^Change Job title/ }),
   );
-  await user.clear(screen.getByRole("textbox", { name: "Title" }));
-  await user.type(screen.getByRole("textbox", { name: "Title" }), "CEO{Enter}");
+  await user.clear(screen.getByRole("textbox", { name: "Job title" }));
+  await user.type(
+    screen.getByRole("textbox", { name: "Job title" }),
+    "CEO{Enter}",
+  );
   await waitFor(() => expect(sent).toEqual([{ title: "CEO" }]));
 });
 it("renames with the full name alone, leaving the server to drop the old parts", async () => {
@@ -171,9 +174,9 @@ it("shows friendly conflict copy and retains the draft", async () => {
     ),
   );
   await user.click(
-    await screen.findByRole("button", { name: /^Change Title/ }),
+    await screen.findByRole("button", { name: /^Change Job title/ }),
   );
-  const input = screen.getByRole("textbox", { name: "Title" });
+  const input = screen.getByRole("textbox", { name: "Job title" });
   await user.clear(input);
   await user.type(input, "CEO{Enter}");
   expect((await screen.findByRole("alert")).textContent).toContain(
@@ -451,7 +454,7 @@ describe("the left column's sections", () => {
     expect(
       dialog.getByRole("button", { name: "Change Employer" }),
     ).toBeTruthy();
-    const title = dialog.getByRole("textbox", { name: "Title" });
+    const title = dialog.getByRole("textbox", { name: "Job title" });
     await user.clear(title);
     await user.type(title, "CEO");
     await user.click(dialog.getByRole("button", { name: "Save" }));
@@ -471,7 +474,7 @@ describe("the left column's sections", () => {
     const dialog = within(
       await screen.findByRole("dialog", { name: "Address" }),
     );
-    expect(dialog.queryByRole("textbox", { name: "Title" })).toBeNull();
+    expect(dialog.queryByRole("textbox", { name: "Job title" })).toBeNull();
     const city = dialog.getByRole("textbox", { name: "City" });
     await user.clear(city);
     await user.type(city, "Hamburg");

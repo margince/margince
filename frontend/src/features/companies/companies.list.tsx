@@ -14,6 +14,7 @@ import {
   RELATIONSHIP_TYPE_LABELS,
   SIZE_BAND_OPTIONS,
 } from "../../components/companylookups";
+import { hiddenHoldersNotice } from "../../components/contactemployersummary";
 import { CreateAction } from "../../components/create";
 import { useObjectCustomFields } from "../../components/customfields.form";
 import {
@@ -40,6 +41,7 @@ import { useToast } from "../../design-system/toast";
 import { useLocale, useT } from "../../i18n";
 import { useCan } from "../../lib/capability";
 import { labelFor } from "../../lib/labelfor";
+import { COMPANIES_INITIAL_SORT } from "../../lib/listopenings";
 import {
   KIND_LABELS,
   MEANING_LABELS,
@@ -111,7 +113,7 @@ export function CompaniesScreen({
   const cf = useObjectCustomFields("company", "create");
   const state = useListQuery<Company>({
     key: "companies",
-    initialSort: "-created_at",
+    initialSort: COMPANIES_INITIAL_SORT,
     fetchPage: fetchCompaniesPage,
   });
   const selection = useBulkSelection({
@@ -286,7 +288,20 @@ export function CompaniesScreen({
             header: t("company.contactCount"),
             initiallyHidden: true,
             numeric: true,
-            cell: (company: Company) => company.contact_count ?? "",
+            cell: (company: Company) => {
+              const notice = hiddenHoldersNotice(
+                company.hidden_contact_holders,
+                locale,
+              );
+              return notice ? (
+                <>
+                  {company.contact_count ?? ""}
+                  <span className="t-sub"> {notice}</span>
+                </>
+              ) : (
+                (company.contact_count ?? "")
+              );
+            },
             // A reader shown no count is ordered by none: such rows go last.
             sort: "contact_count",
           },
@@ -303,15 +318,13 @@ export function CompaniesScreen({
           {
             key: "class",
             header: t("company.lifecycle"),
-            sort: "lifecycle",
+            sort: "status",
             phone: "end",
-            // Reads lifecycle, because nothing writes classification. A column
+            // Reads status, because nothing writes classification. A column
             // on classification would show stale values forever.
             cell: (company: Company) =>
-              company.lifecycle && company.lifecycle !== "unknown" ? (
-                <Badge>
-                  {t(labelFor(LIFECYCLE_LABELS, company.lifecycle))}
-                </Badge>
+              company.status && company.status !== "unknown" ? (
+                <Badge>{t(labelFor(LIFECYCLE_LABELS, company.status))}</Badge>
               ) : null,
           },
           {
@@ -355,7 +368,7 @@ export function CompaniesScreen({
         dataChips={[...ownerChips, ...sizeChip, ...partnerChips, ...tagChips]}
         chips={[
           {
-            key: "lifecycle",
+            key: "status",
             label: "company.lifecycle",
             allLabel: "company.filterLifecycleAll",
             options: LIFECYCLE_OPTIONS.filter(
@@ -401,12 +414,12 @@ export function CompaniesScreen({
           {
             label: "list.viewCustomers",
             sort: "display_name",
-            filters: { lifecycle: "customer" },
+            filters: { status: "customer" },
           },
           {
             label: "list.viewProspects",
             sort: "display_name",
-            filters: { lifecycle: "prospect" },
+            filters: { status: "prospect" },
           },
         ]}
       />

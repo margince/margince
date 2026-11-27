@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-//go:build !integration
-
 package gates
 
 // The committed schema, read as a model rather than as text.
@@ -17,12 +15,18 @@ package gates
 // the walk fails, because the failure with no symptom is a line class the
 // parser quietly stopped understanding: the pages would render short and read
 // complete, which is the under-recognition AGENTS.md rule 8 is about.
+//
+// No build constraint: gates in both lanes read the catalog through this file,
+// and `make lint` compiles with the integration tag.
 
 import (
+	"fmt"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
@@ -87,7 +91,7 @@ var (
 	catalogIndex    = regexp.MustCompile(`^(?:public|ext)\.([a-z0-9_]+) (CREATE (?:UNIQUE )?INDEX .*)$`)
 	catalogFunction = regexp.MustCompile(`^(?:public|ext)\.[a-z0-9_]+\([^)]*\) secdef=`)
 	catalogRelation = regexp.MustCompile(`^(?:public|ext)\.([a-z0-9_]+) acl=\S* rls=\S+ force=\S+$`)
-	catalogView     = regexp.MustCompile(`^(?:public|ext)\.[a-z0-9_]+ opts=`)
+	catalogView     = regexp.MustCompile(`^(?:public|ext)\.([a-z0-9_]+) opts=`)
 	// catalogStorage is a table's storage options, which no page renders.
 	catalogStorage    = regexp.MustCompile(`^(?:public|ext)\.[a-z0-9_]+ storage=\S+ toast=\S+$`)
 	catalogTrigger    = regexp.MustCompile(`^(?:public|ext)\.([a-z0-9_]+)\.([a-zA-Z0-9_]+) (CREATE (?:CONSTRAINT )?TRIGGER .*)$`)
@@ -101,15 +105,35 @@ var (
 	catalogForeignKey = regexp.MustCompile(`^FOREIGN KEY \(([^)]*)\) REFERENCES ([a-z0-9_]+)\(([^)]*)\)(.*)$`)
 )
 
-// catalogRecords joins the file's lines back into one record each.
-func catalogRecords(t *testing.T) []string {
-	t.Helper()
+// headCatalogPath is the catalog, from the repository root. Every gate that
+// reads the committed schema reads this file through headCatalogText.
+const headCatalogPath = "backend/migrations/testdata/head_catalog.txt"
+
+// headCatalogText is the catalog as one string, read once per test binary. A
+// gate that scans it line by line and one that reads the model judge one copy.
+var headCatalogText = sync.OnceValues(func() (string, error) {
 	raw, err := gatekit.ReadFile(filepath.Join(repoRoot, headCatalogPath))
+	return string(raw), err
+})
+
+// headCatalog is headCatalogText for a test, which a missing catalog fails.
+func headCatalog(t *testing.T) string {
+	t.Helper()
+	text, err := headCatalogText()
 	if err != nil {
 		t.Fatalf("reading %s: %v", headCatalogPath, err)
 	}
+	return text
+}
+
+// headCatalogRecords joins the file's lines back into one record each.
+var headCatalogRecords = sync.OnceValues(func() ([]string, error) {
+	text, err := headCatalogText()
+	if err != nil {
+		return nil, err
+	}
 	var records []string
-	for _, line := range strings.Split(string(raw), "\n") {
+	for line := range strings.SplitSeq(text, "\n") {
 		if line == "" {
 			continue
 		}
@@ -119,20 +143,69 @@ func catalogRecords(t *testing.T) []string {
 		}
 		records[len(records)-1] += " " + line
 	}
-	return records
+	return records, nil
+})
+
+// catalogRecords is one copy of the catalog's records per caller. A caller that
+// rewrites its slice cannot change what the next one reads.
+func catalogRecords(t *testing.T) []string {
+	t.Helper()
+	records, err := headCatalogRecords()
+	if err != nil {
+		t.Fatalf("reading %s: %v", headCatalogPath, err)
+	}
+	return slices.Clone(records)
 }
 
-// parseHeadCatalog builds the schema model, failing on any record it cannot place.
+// catalogModel is the parse of the catalog and what the parse found wrong with
+// it. Each problem fails every test that reads the model, as a fresh parse would.
+type catalogModel struct {
+	schema   *emSchema
+	problems []string
+	// short, when set, says the model is too small to be this schema.
+	short string
+}
+
+// headCatalogModel is the one parse of the catalog. Its schema is shared by
+// every caller and read-only: no caller writes a table, a column or a key.
+var headCatalogModel = sync.OnceValues(func() (catalogModel, error) {
+	records, err := headCatalogRecords()
+	if err != nil {
+		return catalogModel{}, err
+	}
+	return buildCatalogModel(records), nil
+})
+
+// parseHeadCatalog returns the schema model, failing on any record it cannot place.
 func parseHeadCatalog(t *testing.T) *emSchema {
 	t.Helper()
+	model, err := headCatalogModel()
+	if err != nil {
+		t.Fatalf("reading %s: %v", headCatalogPath, err)
+	}
+	for _, problem := range model.problems {
+		t.Error(problem)
+	}
+	if model.short != "" {
+		t.Fatal(model.short)
+	}
+	return model.schema
+}
+
+// buildCatalogModel builds the schema model and names every record it cannot place.
+func buildCatalogModel(records []string) catalogModel {
 	schema := &emSchema{tables: map[string]*emTable{}, inbound: map[string]int{}}
 	var indexes []emConstraint
-	var unrecognised []string
+	var problems []string
 	relations := map[string]bool{}
-	for _, record := range catalogRecords(t) {
+	// A view is granted on like a table, and stores no column of its own.
+	views := map[string]bool{}
+	for _, record := range records {
 		switch {
-		case catalogIgnored.MatchString(record), catalogView.MatchString(record),
+		case catalogIgnored.MatchString(record),
 			catalogStorage.MatchString(record), catalogFunction.MatchString(record):
+		case catalogView.MatchString(record):
+			views[catalogView.FindStringSubmatch(record)[1]] = true
 		case catalogRelation.MatchString(record):
 			relations[catalogRelation.FindStringSubmatch(record)[1]] = true
 		case catalogIndex.MatchString(record):
@@ -149,18 +222,17 @@ func parseHeadCatalog(t *testing.T) *emSchema {
 			m := catalogColumn.FindStringSubmatch(record)
 			schema.addColumn(m[1], m[2], m[3], m[4], m[5])
 		default:
-			unrecognised = append(unrecognised, record)
+			problems = append(problems, fmt.Sprintf("%s holds a record this parser does not recognise, so the entity model would "+
+				"render without it and read complete:\n\t%s", headCatalogPath, truncate(record, 200)))
 		}
 	}
-	for _, unknown := range unrecognised {
-		t.Errorf("%s holds a record this parser does not recognise, so the entity model would "+
-			"render without it and read complete:\n\t%s", headCatalogPath, truncate(unknown, 200))
+	for view := range views {
+		delete(relations, view)
 	}
 	schema.attachIndexes(indexes)
 	schema.resolveForeignKeys()
-	schema.assertEveryRelationHasColumns(t, relations)
-	schema.assertNotShort(t)
-	return schema
+	problems = append(problems, schema.relationsWithoutColumns(relations)...)
+	return catalogModel{schema: schema, problems: problems, short: schema.shortfall()}
 }
 
 // table returns the named table, creating it on first sight. The catalog is
@@ -238,7 +310,7 @@ func (s *emSchema) resolveForeignKeys() {
 	}
 }
 
-// assertEveryRelationHasColumns is the cross-check under the parse.
+// relationsWithoutColumns is the cross-check under the parse.
 //
 // The catalog states each relation twice — once as a grant line, once as its
 // columns — and the two arms are independent, so they disagree exactly when a
@@ -249,38 +321,39 @@ func (s *emSchema) resolveForeignKeys() {
 //
 // Sequences are the one relation with a grant and no columns, so they are the
 // difference this allows.
-func (s *emSchema) assertEveryRelationHasColumns(t *testing.T, relations map[string]bool) {
-	t.Helper()
+func (s *emSchema) relationsWithoutColumns(relations map[string]bool) []string {
+	var problems []string
 	for name := range relations {
 		if strings.HasSuffix(name, "_seq") {
 			continue
 		}
 		if table, ok := s.tables[name]; !ok || len(table.columns) == 0 {
-			t.Errorf("%s grants on %q and states no column for it — a record was lost joining "+
+			problems = append(problems, fmt.Sprintf("%s grants on %q and states no column for it — a record was lost joining "+
 				"the file's lines back together, and the model is missing a table it cannot report",
-				headCatalogPath, name)
+				headCatalogPath, name))
 		}
 	}
 	for _, name := range s.tableNames() {
 		if !relations[name] {
-			t.Errorf("%s states columns for %q and grants on no such relation — the same loss, "+
-				"read from the other arm", headCatalogPath, name)
+			problems = append(problems, fmt.Sprintf("%s states columns for %q and grants on no such relation — the same loss, "+
+				"read from the other arm", headCatalogPath, name))
 		}
 	}
+	return problems
 }
 
-// assertNotShort refuses a model too small to be this schema.
-func (s *emSchema) assertNotShort(t *testing.T) {
-	t.Helper()
+// shortfall refuses a model too small to be this schema.
+func (s *emSchema) shortfall() string {
 	columns := 0
 	for _, tbl := range s.tables {
 		columns += len(tbl.columns)
 	}
 	if len(s.tables) < catalogTableFloor || columns < catalogColumnFloor {
-		t.Fatalf("parsed %d table(s) and %d column(s) from %s, below the floor of %d and %d — "+
+		return fmt.Sprintf("parsed %d table(s) and %d column(s) from %s, below the floor of %d and %d — "+
 			"the walk has stopped reading the file rather than the schema having shrunk this far",
 			len(s.tables), columns, headCatalogPath, catalogTableFloor, catalogColumnFloor)
 	}
+	return ""
 }
 
 // tableNames returns the table names in sorted order, so callers iterate the
@@ -292,6 +365,27 @@ func (s *emSchema) tableNames() []string {
 	}
 	sort.Strings(names)
 	return names
+}
+
+// tablesWithColumn names the tables carrying the column, of a type that opens
+// with typePrefix, so "numeric" matches numeric(20,10) and "" matches any type.
+func (s *emSchema) tablesWithColumn(column, typePrefix string) map[string]bool {
+	tables := map[string]bool{}
+	for name, table := range s.tables {
+		if found, ok := columnNamed(table, column); ok && strings.HasPrefix(found.dataType, typePrefix) {
+			tables[name] = true
+		}
+	}
+	return tables
+}
+
+func columnNamed(table *emTable, name string) (emColumn, bool) {
+	for _, column := range table.columns {
+		if column.name == name {
+			return column, true
+		}
+	}
+	return emColumn{}, false
 }
 
 func onDeleteOf(rest string) string {

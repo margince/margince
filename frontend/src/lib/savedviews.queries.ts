@@ -9,6 +9,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch } from "../api/version";
+import { foldForMatch } from "../format/collate";
 import { tabOfViewResource, type ViewResource } from "./filtersaddress";
 import { unwrap } from "./problem";
 import { decode, encode, type Node } from "./segmentpredicate";
@@ -46,10 +47,7 @@ export function useSavedViews(resource: ViewResource, fresh = false) {
   });
 }
 
-/**
- * One of the reader's saved views, read by id. Default freshness, so the
- * top-bar trail and the page it names share one request.
- */
+/** One of the reader's saved views, read by id. */
 export function useSavedView(id: string, enabled = true) {
   return useQuery({
     queryKey: [SAVED_VIEWS_KEY, "one", id],
@@ -101,7 +99,7 @@ export function filterTreeOf(view: SavedView): Node | null {
 /**
  * The tree a view opens on, or null when no page can open it: archived, over a
  * record type no builder reads, or holding no filter this editor reads. The
- * opened view and the top-bar trail both ask, so they agree on a gone view.
+ * opened view and a list's tab to it both ask, so no tab leads to a gone view.
  */
 export function openableTree(view: SavedView): Node | null {
   if (view.archived_at || tabOfViewResource(view.resource) === undefined) {
@@ -120,6 +118,21 @@ export function filterStateFrom(
   kept: Readonly<Record<string, unknown>> = {},
 ): Record<string, unknown> {
   return { ...kept, [FILTER_KEY]: encode(tree) };
+}
+
+/**
+ * Whether one of `views` other than `exceptId` already carries `name`. Letter
+ * case and outer spaces do not tell two names apart on a tab.
+ */
+export function viewNameTaken(
+  views: readonly SavedView[],
+  name: string,
+  exceptId?: string,
+): boolean {
+  const wanted = foldForMatch(name.trim());
+  return views.some(
+    (view) => view.id !== exceptId && foldForMatch(view.name.trim()) === wanted,
+  );
 }
 
 /**

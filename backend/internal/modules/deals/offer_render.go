@@ -76,19 +76,6 @@ func (s *Store) PrepareRender(ctx context.Context, id ids.OfferID) (RenderIngred
 		if err != nil {
 			return err
 		}
-		// The document says no more about the buyer than this caller's own
-		// read of the offer does. An offer is anchored on its DEAL, which
-		// every seat reads; the company it names is not, and the block
-		// below carries the buyer's display name and legal name — strictly
-		// more than the id the API withholds.
-		//
-		// Applied to the OFFER rather than probed inside the block, so the
-		// two spellings of the same withholding cannot diverge: with the
-		// reference gone, the live read has nothing to look up and the frozen
-		// snapshot has nothing to return.
-		if err := withholdUnreadableBuyerOn(ctx, tx, &offer); err != nil {
-			return err
-		}
 		lines, err := readOfferLines(ctx, tx, id)
 		if err != nil {
 			return err
@@ -114,40 +101,21 @@ func (s *Store) PrepareRender(ctx context.Context, id ids.OfferID) (RenderIngred
 	return out, err
 }
 
-// resolveRenderBuyerBlock answers the buyer legal block the renderer
-// shows: the frozen buyer_snapshot once sent (SendOffer already froze it
-// as the legal record), the LIVE company read fresh while still
-// draft (so an offer edited but never sent never shows a stale block), or
-// nil when the offer carries no buyer company at all. This is deliberately a
-// fresh, independent query rather than a refactor of offer_lifecycle.go's
-// sendSnapshots — the plan's boundary keeps Send/Accept/Reject/Regenerate
-// and their snapshot logic untouched.
-func resolveRenderBuyerBlock(ctx context.Context, tx pgx.Tx, offer crmcontracts.Offer) (block map[string]any, err error) {
+// resolveRenderBuyerBlock answers the buyer legal block the renderer shows.
+// Once sent it is the frozen buyer_snapshot. While draft it is the live
+// company, read fresh. It is nil when the offer names no buyer company.
+//
+// A caller who may not read the company is refused, frozen snapshot included.
+// The alternative is a document that names nobody.
+func resolveRenderBuyerBlock(ctx context.Context, tx pgx.Tx, offer crmcontracts.Offer) (map[string]any, error) {
+	live, err := readReadableBuyer(ctx, tx, offer)
+	if err != nil {
+		return nil, err
+	}
 	if offer.BuyerSnapshot != nil {
 		return *offer.BuyerSnapshot, nil
 	}
-	if offer.BuyerCompanyId == nil {
-		return block, err
-	}
-	var displayName string
-	var legalName *string
-	scanErr := tx.QueryRow(ctx,
-		`SELECT display_name, legal_name FROM company WHERE id = $1`,
-		ids.UUID(*offer.BuyerCompanyId)).Scan(&displayName, &legalName)
-	if errors.Is(scanErr, pgx.ErrNoRows) {
-		return block, err
-	}
-	if scanErr != nil {
-		return nil, fmt.Errorf("render: read buyer company: %w", scanErr)
-	}
-	block = map[string]any{
-		filterCompanyID: offer.BuyerCompanyId.String(),
-		"display_name":  displayName,
-	}
-	if legalName != nil {
-		block["legal_name"] = *legalName
-	}
-	return block, nil
+	return live, nil
 }
 
 // issuerName is who this installation issues a document AS, and it is the one

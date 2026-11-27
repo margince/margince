@@ -26,6 +26,7 @@ const (
 	sharedChangeReaders       = "readers_changed"
 	sharedChangeVisibility    = "visibility_changed"
 	sharedChangeBackupOwner   = "backup_owner_changed"
+	sharedChangeReply         = "reply_changed"
 	sharedChangeDisconnected  = "disconnected"
 	sharedChangeHistoryImport = "history_import_started"
 )
@@ -35,6 +36,10 @@ const fieldReaderTeam = "reader_team_id"
 
 // fieldBackupOwner names the backup owner on the wire and on the audit trail.
 const fieldBackupOwner = "backup_owner_id"
+
+// fieldReplyEnabled names the reader team's right to reply as the mailbox on the
+// wire and on the audit trail.
+const fieldReplyEnabled = "reply_enabled"
 
 // The audit verbs a shared mailbox's changes take.
 const (
@@ -78,9 +83,12 @@ func RequireSharedMailboxAdmin(ctx context.Context) (principal.Principal, error)
 
 // ReaderTeamError refuses a reader team that cannot read: unknown, archived,
 // or with no live member.
-type ReaderTeamError struct{ empty bool }
+type ReaderTeamError struct{ empty, missing bool }
 
 func (e *ReaderTeamError) Error() string {
+	if e.missing {
+		return "name the team that reads this account's messages"
+	}
 	if e.empty {
 		return "the reader team has no active member, so nobody could read this mailbox"
 	}
@@ -89,6 +97,9 @@ func (e *ReaderTeamError) Error() string {
 
 // FieldFault answers the refusal on the field that named the team.
 func (e *ReaderTeamError) FieldFault() (field, code, message string) {
+	if e.missing {
+		return fieldReaderTeam, "reader_team_required", e.Error()
+	}
 	if e.empty {
 		return fieldReaderTeam, "reader_team_has_no_member", e.Error()
 	}

@@ -34,10 +34,10 @@ var listedActions = map[string][]string{
 	},
 	"change_tags": {"apply", "merge", "remove", "update"},
 	"read_details": {
-		"company_brief", "company_contracts", "company_linkedin_reach", "company_logo", "contact_brief",
+		"company_brief", "company_contracts", "company_linkedin_reach", "contact_brief",
 		"contact_consent", "contact_consent_guard", "contact_optout_records", "contact_overrides", "contact_stops",
-		"deal_lines", "deal_margince_changes", "dossier", "field_history", "intro_requests", "job_health_history",
-		"lead_promotion_preview", "magic", "mail_draft", "notice_case_review", "notice_source_evidence",
+		"deal_lines", "dossier", "field_history", "job_health_history",
+		"lead_promotion_preview", "mail_draft", "meeting_proposals", "notice_case_review", "notice_source_evidence",
 		"notice_source_preview", "notices", "scheduled_sends",
 	},
 	"run_research": {"draft_intro_request"},

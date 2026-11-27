@@ -20,6 +20,7 @@ import (
 	"go/ast"
 	"go/token"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -142,22 +143,16 @@ func concatString(expr *ast.BinaryExpr, consts map[string]string, fold StringFol
 // PackageStringConstants reads every string constant one package declares, as
 // the table StringExpr folds identifiers against.
 //
-// It lives here rather than in a gate because two censuses in different BUILDS
-// need it: the list-sort parity gate is `//go:build !integration` and the
-// object-half censuses are not, so a copy in either is a copy the other cannot
-// reach. A second reading of "what does this package call that string" is also
-// exactly the drift StringExpr exists to prevent one level down.
-//
-// Non-test sources only, and single-name single-value specs only: a grouped
-// `const ( a, b = …)` or an iota block is not a string table, and guessing at
-// one would fold a name onto a value the package never gave it.
+// Its callers sit in two builds of the gates and in module tests, so it lives
+// where all of them can reach it. Non-test sources only: a test's constant is
+// not a value the package ships.
 func PackageStringConstants(t testing.TB, dir string) map[string]string {
 	t.Helper()
-	sources, err := filepath.Glob(filepath.Join(dir, "*.go"))
+	sources, err := Glob(filepath.Join(dir, "*.go"))
 	if err != nil {
 		t.Fatalf("listing %s for its string constants: %v", dir, err)
 	}
-	out := map[string]string{}
+	var files []*ast.File
 	for _, source := range sources {
 		if strings.HasSuffix(source, "_test.go") {
 			continue
@@ -166,32 +161,128 @@ func PackageStringConstants(t testing.TB, dir string) map[string]string {
 		if err != nil {
 			t.Fatalf("parsing %s for its string constants: %v", source, err)
 		}
-		collectFileStringConstants(t, source, file, out)
+		files = append(files, file)
+	}
+	return StringConstantsOf(t, files)
+}
+
+// StringConstantsOf reads the package-level string constants of one package's
+// files, one value per name. A name declared with two values, as a build-tag
+// pair can, fails: one value per name cannot say which build the caller means.
+func StringConstantsOf(t testing.TB, files []*ast.File) map[string]string {
+	t.Helper()
+	out := map[string]string{}
+	for name, values := range StringConstantValues(t, files) {
+		if len(values) > 1 {
+			t.Fatalf("const %s is declared with %d values %q, and this reader keeps one per name; "+
+				"read it with gatekit.StringConstantValues", name, len(values), values)
+		}
+		out[name] = values[0]
 	}
 	return out
 }
 
-func collectFileStringConstants(t testing.TB, source string, file *ast.File, into map[string]string) {
+// constSpec is one name of a const declaration and the expression it takes.
+type constSpec struct {
+	name  string
+	value ast.Expr
+}
+
+// StringConstantValues reads the package-level string constants of one
+// package's files, with every distinct value each name is declared with.
+//
+// A value is whatever StringExpr reads strictly, so `"a" + "b"`, `string("a")`
+// and `("a")` count. A value naming another constant resolves in any
+// declaration order, once every declaration of that name agrees on one value.
+// `const a, b = "x", "y"` and a grouped spec that repeats the one above it read
+// as the compiler reads them.
+func StringConstantValues(t testing.TB, files []*ast.File) map[string][]string {
 	t.Helper()
-	for _, decl := range file.Decls {
-		general, isGeneral := decl.(*ast.GenDecl)
-		if !isGeneral || general.Tok != token.CONST {
-			continue
+	pending := constSpecsOf(t, files)
+	declared := map[string]int{}
+	for _, spec := range pending {
+		declared[spec.name]++
+	}
+	values := map[string][]string{}
+	resolved := map[string]int{}
+	for progress := true; progress; {
+		progress = false
+		known := settledConstants(values, resolved, declared)
+		var unread []constSpec
+		for _, spec := range pending {
+			text, isString := StringExpr(spec.value, known, FoldStrict)
+			if !isString {
+				unread = append(unread, spec)
+				continue
+			}
+			if !slices.Contains(values[spec.name], text) {
+				values[spec.name] = append(values[spec.name], text)
+			}
+			resolved[spec.name]++
+			progress = true
 		}
-		for _, spec := range general.Specs {
-			value, isValue := spec.(*ast.ValueSpec)
-			if !isValue || len(value.Names) != 1 || len(value.Values) != 1 {
-				continue
-			}
-			lit, isLit := value.Values[0].(*ast.BasicLit)
-			if !isLit || lit.Kind != token.STRING {
-				continue
-			}
-			unquoted, err := strconv.Unquote(lit.Value)
-			if err != nil {
-				t.Fatalf("unquoting %s in %s: %v", lit.Value, source, err)
-			}
-			into[value.Names[0].Name] = unquoted
+		pending = unread
+	}
+	return values
+}
+
+// settledConstants is the table identifiers resolve against: the names whose
+// every declaration has resolved, to one value.
+func settledConstants(values map[string][]string, resolved, declared map[string]int) map[string]string {
+	known := map[string]string{}
+	for name, texts := range values {
+		if len(texts) == 1 && resolved[name] == declared[name] {
+			known[name] = texts[0]
 		}
 	}
+	return known
+}
+
+// constSpecsOf lists every named const of files with its expression. A grouped
+// spec with no values repeats the expressions of the one above it, as Go does.
+func constSpecsOf(t testing.TB, files []*ast.File) []constSpec {
+	t.Helper()
+	var specs []constSpec
+	for _, file := range files {
+		for _, decl := range file.Decls {
+			general, isGeneral := decl.(*ast.GenDecl)
+			if !isGeneral || general.Tok != token.CONST {
+				continue
+			}
+			var previous []ast.Expr
+			for _, spec := range general.Specs {
+				value, isValue := spec.(*ast.ValueSpec)
+				if !isValue {
+					continue
+				}
+				if len(value.Values) > 0 {
+					previous = value.Values
+				}
+				for i, name := range value.Names {
+					if name.Name == "_" || i >= len(previous) {
+						continue
+					}
+					refuseUndecodable(t, name.Name, previous[i])
+					specs = append(specs, constSpec{name.Name, previous[i]})
+				}
+			}
+		}
+	}
+	return specs
+}
+
+// refuseUndecodable fails on a string literal strconv cannot decode, rather
+// than let its constant drop out of the table without a word.
+func refuseUndecodable(t testing.TB, name string, value ast.Expr) {
+	t.Helper()
+	ast.Inspect(value, func(node ast.Node) bool {
+		lit, isLit := node.(*ast.BasicLit)
+		if !isLit || lit.Kind != token.STRING {
+			return true
+		}
+		if _, err := strconv.Unquote(lit.Value); err != nil {
+			t.Fatalf("const %s holds the string literal %s, which does not unquote: %v", name, lit.Value, err)
+		}
+		return false
+	})
 }

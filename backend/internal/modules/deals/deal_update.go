@@ -210,7 +210,10 @@ func (s *Store) writeDealInTx(ctx context.Context, tx pgx.Tx,
 	if err := storekit.EnsureVersionMatches(current.Version, in.IfVersion); err != nil {
 		return dealUpdated{}, err
 	}
-	if err := storekit.SetCustomFieldPatch(p, active, in.CustomFields, current.AdditionalProperties); err != nil {
+	if err := checkStoredDealPipelineScope(current, active, in.CustomFields); err != nil {
+		return dealUpdated{}, err
+	}
+	if err := storekit.SetCustomFieldPatchIn(ctx, tx, p, active, in.CustomFields, current.AdditionalProperties); err != nil {
 		return dealUpdated{}, err
 	}
 	if p.Empty() {

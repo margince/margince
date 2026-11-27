@@ -20,6 +20,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/database/textbounds"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -47,6 +48,7 @@ func (s *Sink) captureLead(ctx context.Context, tx pgx.Tx, rec connector.Normali
 	// carrying the raw spelling would read them as two questions and forget a
 	// refusal the first time a provider changed its capitalisation.
 	fields.Email = strings.ToLower(strings.TrimSpace(fields.Email))
+	fields = fittedLeadFields(fields)
 	// The A13 resurrection guard: an erased subject's address
 	// refuses re-capture — deletion sticks. The natural key, not
 	// the address, names the skip (the log must not re-store PII).
@@ -109,6 +111,15 @@ func (s *Sink) captureLead(ctx context.Context, tx pgx.Tx, rec connector.Normali
 	return ref, nil, nil, nil
 }
 
+// fittedLeadFields cuts the captured name, company and title to their columns'
+// limits: a provider's text nobody can shorten must not fail the capture.
+func fittedLeadFields(fields LeadFields) LeadFields {
+	fields.FullName = textbounds.Fit("public.lead.full_name", fields.FullName)
+	fields.CompanyName = textbounds.Fit("public.lead.company_name", fields.CompanyName)
+	fields.Title = textbounds.Fit("public.lead.title", fields.Title)
+	return fields
+}
+
 // leadCreatedCapturePayload builds the lead.created event for the
 // capture auto-create path — the one emit site (of the event's two)
 // that names an originating source system; the direct-create path
@@ -140,13 +151,15 @@ func (s *Sink) upsertLead(ctx context.Context, tx pgx.Tx, rec connector.Normaliz
 			return ids.LeadID{}, false, fmt.Errorf("capture: score new lead: %w", err)
 		}
 	}
-	// arrival_owner_id repeats owner_id: a captured lead arrives at created_at,
-	// and the owner it arrived with stays its attribution after a reassignment.
+	// arrival_owner_id and arrival_origin repeat owner_id and origin, because a
+	// captured lead arrives at created_at. They keep its attribution after a
+	// reassignment or an edit. An empty arrival_origin says it arrived with none.
 	err := tx.QueryRow(ctx, `
 		INSERT INTO lead (full_name, email, company_name, title, source_system, source_id, source, captured_by, owner_id,
-		                  origin, origin_detail, score, email_domain_folded, arrival_owner_id)
+		                  origin, origin_detail, score, email_domain_folded, arrival_owner_id, arrival_origin)
 		VALUES (NULLIF($1, ''), NULLIF(lower($2), ''), NULLIF($3, ''), NULLIF($4, ''), $5, $6, $7, $8, $9,
-		        (SELECT key FROM lead_origin WHERE key = $10 AND active), NULLIF($11, ''), $12, $13, $9)
+		        (SELECT key FROM lead_origin WHERE key = $10 AND active), NULLIF($11, ''), $12, $13, $9,
+		        COALESCE((SELECT key FROM lead_origin WHERE key = $10 AND active), ''))
 		ON CONFLICT (source_system, source_id) WHERE source_system IS NOT NULL AND source_id IS NOT NULL
 		DO NOTHING
 		RETURNING id`,

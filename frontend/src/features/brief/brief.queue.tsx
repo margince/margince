@@ -22,11 +22,10 @@ import { readStored, STORAGE_KEYS, writeStored } from "../../lib/storage";
 import {
   currentParams,
   NO_URL_PARAMS,
-  type UrlParams,
   useAddressWriters,
   useUrlParams,
 } from "../../lib/urlstate";
-import { WORKLIST_VIEW_PARAM } from "../../lib/worklistrouting";
+import { drawerOpen, WORKLIST_VIEW_PARAM } from "../../lib/worklistrouting";
 import { drawerScope } from "../worklist/worklist.address";
 import { worklistFilterFrom } from "../worklist/worklist.header";
 import { WorklistReturnScope } from "../worklist/worklist.return";
@@ -55,10 +54,6 @@ const DRAWER_DIALS = [
   "owner",
   "selected",
 ];
-
-/** Whether these dials open Home's queue drawer. */
-export const drawerOpen = (params: UrlParams): boolean =>
-  params.get("queue") === "1";
 
 /** Close the drawer onto Home as it stood under it. */
 export function closeQueue(): void {

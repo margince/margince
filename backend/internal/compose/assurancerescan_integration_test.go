@@ -167,7 +167,7 @@ func TestAChangeDuringAOneDealPassIsReadByTheRetry(t *testing.T) {
 		e.deliver(t, e.editDeal(t, e.faulted, 4100000))
 		return subjects, err
 	}
-	scanner := assuranceScanner(e.Pool, e.store).WithDealSubjects(duringRead)
+	scanner := AssuranceScanner(e.Pool, e.store).WithDealSubjects(duringRead)
 	if _, err := scanner.ScanDeal(e.passCtx(), e.at, e.faulted); !errors.Is(err, assurance.ErrInputsMovedDuringPass) {
 		t.Fatalf("a pass whose deal changed under it answered %v, want ErrInputsMovedDuringPass", err)
 	}

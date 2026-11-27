@@ -25,6 +25,7 @@ import { useFeatureLanding } from "./app/featurelanding";
 import { useHomePrefetch } from "./app/homeprefetch";
 import { ONBOARDING_ENTRY, passesOnboardingGate } from "./app/onboarding-gate";
 import { useCommandPalette } from "./app/palettehotkey";
+import { useRecordPrefetch } from "./app/recordprefetch";
 import { Shell, useRoute } from "./app/shell";
 import { SourceHost } from "./app/sourcehost";
 import { UnavailableOrClaimable } from "./app/unavailableorclaimable";
@@ -74,6 +75,7 @@ const CommandPalette = lazy(async () => ({
 const PUBLIC_SCREENS: ReadonlySet<Screen> = new Set([
   "book",
   "confirm",
+  "confirm-merge",
   "preferences",
   "unsubscribe",
   "room",
@@ -448,6 +450,7 @@ function AuthedShell({
   onOpenSearch: () => void;
 }>) {
   useWarmRouteChunks();
+  useRecordPrefetch();
   useWarmProgressName(!hold.held);
   // The gate is replacing this address, and its shell would only start the
   // full app's reads.

@@ -217,11 +217,10 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	"lead.company_id":                     "gated: auth.EnsureLinkTarget in LinkLeadCompany, the one writer that names a company; UpdateLead only clears it",
 	"lead.partner_company_id":             "gated: auth.EnsureReferenceTarget in setLeadPartner, the one writer that names a partner; a company merge repoints it to the survivor",
 	"suggestion_dismissal.company_id":     "gated: auth.EnsureVisible in company360.Service.DismissSuggestion, inside the same transaction as the insert — dismissing advice about an account the caller cannot read would confirm it exists",
-	"company_dossier.company_id":          "gated: the dossier is assembled only after companydossier.Service.Get runs the caller's OWN sidecar reads, and contacts.ListCompanyProfileFields opens with auth.Require + ensureCompanyReadable — a company the caller cannot read has no dossier written for it, and the row is keyed on that same caller",
-	"company_growth_fit.company_id":       "gated: same path as company_dossier — the assessment is written only after the caller's own gated sidecar reads succeed, and the row is keyed on that caller",
-	"company_brief.company_id":            "gated: the brief is written only after companybrief.Service.Get runs the caller's own company360 Assemble, whose GetCompanyTx does auth.Require + auth.EnsureVisible — an account the caller cannot read has no brief written for it, and the row is keyed on that same caller",
-	"deal_status_card.deal_id":            "gated: the deal-side twin of company_brief and contact_brief — the card is written only after dealstatus.Service.gather calls deals.Store.GetDeal, whose auth.Require + auth.EnsureVisible refuse a deal the caller cannot read, and that gather runs BEFORE the cache is consulted so the served-from-cache path carries the same gate. The row is keyed on that same caller",
-	"contact_brief.contact_id":            "gated: the contact-side twin of company_brief — the brief is written only after contactbrief.Service.Get runs the caller's own contact360 Assemble, whose GetContactTx does auth.Require + auth.EnsureVisible, and the row is keyed on that same caller",
+	"generated_summary.company_id":        "gated: a company summary is written only after its service ran the caller's OWN gated read of the company. companybrief.Service.Get runs company360 Assemble, whose GetCompanyTx does auth.Require + auth.EnsureVisible; companydossier's two services run the caller's sidecar reads, and contacts.ListCompanyProfileFields opens with auth.Require + ensureCompanyReadable. The row is keyed on that same caller",
+	"task_explanation.activity_id":        "gated: taskexplain.Service.Get reads the task through activities.Store.GetActivity, whose auth gates refuse a task the caller cannot read, before it consults or writes the cache. The row is keyed on that same caller",
+	"generated_summary.deal_id":           "gated: the card is written only after dealstatus.Service.gather calls deals.Store.GetDeal, whose auth.Require + auth.EnsureVisible refuse a deal the caller cannot read, and that gather runs BEFORE the cache is consulted so the served-from-cache path carries the same gate. The row is keyed on that same caller",
+	"generated_summary.contact_id":        "gated: the brief is written only after contactbrief.Service.Get runs the caller's own contact360 Assemble, whose GetContactTx does auth.Require + auth.EnsureVisible, and the row is keyed on that same caller",
 	"deal_move_dismissal.deal_id":         "gated: auth.RequireHuman + auth.Require + auth.EnsureVisible in dealstatus.Service.setAside, inside the same transaction as the write — setting aside a move on a deal the caller cannot read would confirm it exists",
 	"contact_moment_dismissal.contact_id": "gated: auth.RequireHuman + auth.Require + auth.EnsureVisibleLive in contact360.Service.DismissMoment, inside the same transaction as the insert — dismissing a card about a contact the caller cannot read would confirm they exist",
 	"consent_qualifying_event.lead_id":    "gated: recordQualifyingSubjectTx holds auth.HoldWritableLive on the lead, and retraction holds the same gate before changing its child row. ON DELETE CASCADE",
@@ -361,11 +360,13 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	"contact.merged_into_id":   "server-derived: stamped by MergeContact",
 	"company.merged_into_id":   "server-derived: stamped by MergeCompany",
 	// The same shape as its two siblings above, through the same writer
-	// (archiveMergedAway) and the same admission (mergePair): the survivor id
-	// arrives from the caller, and is stamped only after auth.EnsureWritable
-	// has admitted the loser and auth.WritableBy the survivor. A lead either
-	// end of the pair cannot be written to answers before the pointer is set.
-	"lead.merged_into_id":               "gated then stamped: MergeLead puts BOTH leads through mergePair's row-scope writability probes before archiveMergedAway writes the pointer",
+	// (recordmerge.ArchiveMergedAway) and the same admission (recordmerge.Pair).
+	// The survivor id arrives from the caller. It is stamped only after
+	// auth.EnsureWritable admits the loser and auth.WritableBy the survivor.
+	// A record at either end that the caller cannot write answers before the
+	// pointer is set.
+	"lead.merged_into_id":               "gated then stamped: MergeLead puts BOTH leads through recordmerge.Pair's row-scope writability probes before ArchiveMergedAway writes the pointer",
+	"deal.merged_into_id":               "gated then stamped: MergeDeal puts BOTH deals through recordmerge.Pair's row-scope writability probes before ArchiveMergedAway writes the pointer",
 	"contact.converted_from_lead_id":    "server-derived: stamped by PromoteLead",
 	"deal_stage_history.deal_id":        "server-derived: appended by CreateDeal/AdvanceDeal",
 	"project_phase_history.project_id":  "server-derived: appended by CreateProject/AdvanceProjectPhase from the project row they just wrote or advanced, never from a request body",
@@ -381,24 +382,24 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	// under the caller's project grant and row scope (readableProjectScope +
 	// the finder's ScopeClauseFor), never a request body.
 	// Client-supplied edge endpoints — every one probed at the store:
-	"relationship.contact_id":              "gated: auth.EnsureLinkTarget in CreateRelationship (H1)",
-	"relationship.counterparty_contact_id": "gated: auth.EnsureLinkTarget in CreateRelationship (H1) — the far end of the one contact↔contact kind (worksWithKind), the same probe every other client-supplied endpoint on this row takes",
-	"relationship.counterparty_company_id": "gated: auth.EnsureLinkTarget in CreateRelationship (H1)",
-	"relationship.company_id":              "gated: auth.EnsureLinkTarget in CreateRelationship (H1)",
-	"relationship.deal_id":                 "gated: auth.EnsureLinkTarget in CreateRelationship (H1)",
-	"relationship.project_id":              "gated: auth.EnsureLinkTarget on the project anchor in CreateRelationship (H1)",
-	"partner.company_id":                   "gated: auth.EnsureLinkTarget in UpsertPartner (H1)",
-	"company_profile_field.company_id":     "server-derived: the coldstart accept executor resolves the company from the staged source URL, never from a request body",
-	"company_fact.company_id":              "child rows written only through the deepread accept effect, whose approval was staged from a visibility-checked read",
-	"company_fact_revision.company_id":     "internal counter, never named by a caller: written by the company_fact trigger for the company whose fact row changed and by the company merge for its survivor (contacts/mergerelink_company.go settleFactRevisions), and read only by the technical lookup and its Undo (contacts/technicalrestore.go), after the company's own write or visibility gate. No read returns it to a client",
-	"offer.deal_id":                        "gated: auth.EnsureLinkTarget in CreateOffer; every later offer read/write re-probes the deal (H1)",
-	"deal_line_item.deal_id":               "gated: every line write takes the deal from the path, locks it and asks auth.EnsureWritable in deals.openDealLines before the insert; the body never names a deal",
-	"deal_product.deal_id":                 "gated: auth.EnsureWritableLive on the deal in deals.Store.ReplaceDealProducts, the one caller-supplied door; syncDealProductsFromOffer runs inside the offer accept, whose deal the accept already probed",
-	"offer.buyer_company_id":               "gated: auth.EnsureLinkTarget in CreateOffer/UpdateOffer (H1)",
-	"signal.resolved_company_id":           "gated: the resolver attributes only to a caller-visible company (visibleCandidates → auth.EnsureLinkTarget)",
-	"signal.resolved_contact_id":           "gated: consentedContact links only a caller-visible contact (auth.EnsureLinkTarget); else company-level",
-	"signal_resolution.matched_company_id": "child row: written only through Resolve's gated attribution — the company already passed auth.EnsureLinkTarget",
-	"contact_social.contact_id":            "child row: written only through the contact store — CreateContact mints the parent row itself, UpdateContact passes auth.EnsureVisible first",
+	"relationship.contact_id":                 "gated: auth.EnsureLinkTarget in CreateRelationship (H1)",
+	"relationship.counterparty_contact_id":    "gated: auth.EnsureLinkTarget in CreateRelationship (H1) — the far end of the one contact↔contact kind (worksWithKind), the same probe every other client-supplied endpoint on this row takes",
+	"relationship.counterparty_company_id":    "gated: auth.EnsureLinkTarget in CreateRelationship (H1)",
+	"relationship.company_id":                 "gated: auth.EnsureLinkTarget in CreateRelationship (H1)",
+	"relationship.deal_id":                    "gated: auth.EnsureLinkTarget in CreateRelationship (H1)",
+	"relationship.project_id":                 "gated: auth.EnsureLinkTarget on the project anchor in CreateRelationship (H1)",
+	"partner.company_id":                      "gated: auth.EnsureLinkTarget in UpsertPartner (H1)",
+	"company_profile_field_legacy.company_id": "server-derived: the coldstart accept executor resolves the company from the staged source URL, never from a request body",
+	"company_fact_legacy.company_id":          "child rows written only through the deepread accept effect, whose approval was staged from a visibility-checked read",
+	"company_fact_revision.company_id":        "internal counter, never named by a caller: written by the company_fact trigger for the company whose fact row changed and by the company merge for its survivor (contacts/mergerelink_company.go settleFactRevisions), and read only by the technical lookup and its Undo (contacts/technicalrestore.go), after the company's own write or visibility gate. No read returns it to a client",
+	"offer.deal_id":                           "gated: auth.EnsureLinkTarget in CreateOffer; every later offer read/write re-probes the deal (H1)",
+	"deal_line_item.deal_id":                  "gated: every line write takes the deal from the path, locks it and asks auth.EnsureWritable in deals.openDealLines before the insert; the body never names a deal",
+	"deal_product.deal_id":                    "gated: auth.EnsureWritableLive on the deal in deals.Store.ReplaceDealProducts, the one caller-supplied door; syncDealProductsFromOffer runs inside the offer accept, whose deal the accept already probed",
+	"offer.buyer_company_id":                  "gated: auth.EnsureLinkTarget in CreateOffer/UpdateOffer (H1)",
+	"signal.resolved_company_id":              "gated: the resolver attributes only to a caller-visible company (visibleCandidates → auth.EnsureLinkTarget)",
+	"signal.resolved_contact_id":              "gated: consentedContact links only a caller-visible contact (auth.EnsureLinkTarget); else company-level",
+	"signal_resolution.matched_company_id":    "child row: written only through Resolve's gated attribution — the company already passed auth.EnsureLinkTarget",
+	"contact_social.contact_id":               "child row: written only through the contact store — CreateContact mints the parent row itself, UpdateContact passes auth.EnsureVisible first",
 	// The dedupe review queue (DH-DDL-1): pair ids are server-derived —
 	// recordDedupeCandidate is their only writer, and both ids come from the writing
 	// path's own match query, never from a request body. Which query varies more than
@@ -431,8 +432,8 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	// one. This census is keyed by COLUMN, so it cannot notice a second writer
 	// of an already-waived column — the text is the only control, and a waiver
 	// naming one writer would read as covering both.
-	"contact_profile_field.contact_id":     "server-derived for the enrich pass — it resolves the contact from its own connector-activity query (PO-DDL-12) as the system principal, so what holds it is the absence of a caller; gated for SaveResearchClaims, whose contact id IS the request path's — auth.EnsureWritableLive inside the write's own transaction",
-	"capture_auto_enrich_state.company_id": "server-derived: the auto-enrich sweep keys the cursor on a company id its own ListDueCompanies read produced (CAP-PARAM-7), never from a request body — a background pass with no caller to scope against",
+	"contact_profile_field_legacy.contact_id": "server-derived for the enrich pass — it resolves the contact from its own connector-activity query (PO-DDL-12) as the system principal, so what holds it is the absence of a caller; gated for SaveResearchClaims, whose contact id IS the request path's — auth.EnsureWritableLive inside the write's own transaction",
+	"capture_auto_enrich_state.company_id":    "server-derived: the auto-enrich sweep keys the cursor on a company id its own ListDueCompanies read produced (CAP-PARAM-7), never from a request body — a background pass with no caller to scope against",
 	// The signature pass's read cursor (PO-F-2a): both ids come from the
 	// pass's own SignatureCandidates query — the contact it just read for and
 	// the activity whose body it just read — never from a request body.
@@ -578,7 +579,8 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	"capture_party_source.activity_id":                       "server-derived child: capture records the activity its sink just wrote or resolved; historical restoration requires the system principal and checks that activity's connector provider and owner stamp. Readers use the source only with that same activity's availability and live owner authority; subject exports require activity visibility. ON DELETE CASCADE",
 	"capture_party_source_replay.activity_id":                "server-derived maintenance ledger: the sink marks the activity it just processed, or the system-only historical repair marks an activity selected from stored originals. No client supplies this reference and no reader serves ledger rows; ON DELETE CASCADE",
 	"activity.source_activity_id":                            "server-derived: the transcript accept path names the meeting whose reading produced the proposal, off the staged payload's own ActivityID rather than off a request body — the rep decides an approval, they do not supply an id. Reading it is a separate act under the caller's own scope: the task carries the reference, and opening the meeting goes through the ordinary activity read, which answers 404 to a reader who may not see it. ON DELETE SET NULL, so erasing the meeting leaves the work standing",
-	"company_profile_field.source_activity_id":               "server-derived: the transcript reading names the transcript it is already reading, never a request body. The read returns the id only to a reader who passes auth.ActivityContentClause on that transcript, and ON DELETE CASCADE takes the field with its transcript",
+	"company_profile_field_legacy.source_activity_id":        "server-derived: the transcript reading names the transcript it is already reading, never a request body. The read returns the id only to a reader who passes auth.ActivityContentClause on that transcript, and ON DELETE CASCADE takes the field with its transcript",
+	"field_provenance.source_activity_id":                    "server-derived: the transcript reading names the transcript it is already reading, never a request body. The read returns the id only to a reader who passes auth.ActivityContentClause on that transcript, and ON DELETE CASCADE takes the field with its transcript",
 	"intro_request.source_activity_id":                       "server-derived: the reply consumer names the activity it is already processing, and a human marking the handshake names one from the timeline they are already reading. ON DELETE SET NULL, so the ask still answers after the message is gone",
 	"deal_correction.deal_id":                                "server-derived: the row names the deal the sweep is correcting inside that correction's own transaction, off the candidate it is already holding — no id reaches it from a request body, and the nightly pass runs under the workspace's system principal with no caller scope for a target probe to test. The one path where a HUMAN names one is the Undo, and it does not name a deal at all: RevertCorrection takes a correction id, reads the deal out of that row, and then takes auth.EnsureWritable on it before touching anything — a stronger question than visibility, because taking a machine's change back is changing the record. ON DELETE CASCADE, so erasing a deal takes its correction history with it",
 	"deal_correction.note_activity_id":                       "server-derived: deals.linkCorrectionNote stamps the History note that reports a Margince change, in the transaction that wrote both, so no id reaches it from a request body. The one reader that takes a note id is DealChanges, which asks deal read and auth.EnsureVisible on the deal before it narrows that deal's own corrections by the id. ON DELETE SET NULL, so an erased note leaves the change and its header Undo standing",
@@ -644,37 +646,21 @@ func TestFK_rowScopedTargetsHaveVisibilityDecision(t *testing.T) {
 	}
 }
 
-// Every language the product ships is a language a captured message may
-// record.
-//
-// Derived from textlang.Shipped rather than listed, because the failure this
-// prevents is silent in the direction that matters: the CHECK admitted de and
-// en for as long as the product shipped Vietnamese too, so a detected
-// Vietnamese message could not be stored at all — and nothing said so, because
-// nothing wrote the column. A fourth language added to the Go list fails here
-// until the constraint admits it.
-func TestSchema_theLanguageCheckAdmitsEveryShippedLanguage(t *testing.T) {
+// Every shipped language is a row of the language table, so a captured message
+// may record it. A fourth language added to textlang.Shipped fails here until the
+// table is seeded with it.
+func TestSchema_theLanguageTableHoldsEveryShippedLanguage(t *testing.T) {
 	owner, _ := dsns(t)
 	conn := connect(t, owner)
 	resetSchema(t, conn)
 	migrateAll(t, conn)
 
-	var definition string
-	if err := conn.QueryRow(context.Background(), `
-		SELECT pg_get_constraintdef(oid)
-		  FROM pg_constraint
-		 WHERE conname = 'activity_language_check'`).Scan(&definition); err != nil {
-		t.Fatalf("reading the language constraint: %v", err)
-	}
 	for _, lang := range textlang.Shipped {
-		if !strings.Contains(definition, "'"+string(lang)+"'") {
-			t.Errorf("the product ships %q but activity_language_check does not admit it, so a message in "+
-				"that language cannot record what it is written in: %s", lang, definition)
+		var source string
+		if err := conn.QueryRow(context.Background(),
+			`SELECT source FROM language WHERE code = $1`, string(lang)).Scan(&source); err != nil || source != "core" {
+			t.Errorf("the product ships %q and the language table holds it as %q (%v): a message in that "+
+				"language cannot record what it is written in", lang, source, err)
 		}
-	}
-	// NULL stays admitted: it is what every row captured before this carried,
-	// and what a message too short to tell still carries.
-	if !strings.Contains(definition, "IS NULL") {
-		t.Errorf("activity_language_check no longer admits NULL, which is what an unknown language records: %s", definition)
 	}
 }

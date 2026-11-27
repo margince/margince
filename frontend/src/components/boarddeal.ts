@@ -85,6 +85,9 @@ export function toBoardDeal(
     probabilityPct:
       deal.status === "open" ? (deal.win_probability ?? null) : null,
     idleSince: since,
+    idleSincePrecision: deal.last_activity_at
+      ? deal.last_activity_precision
+      : undefined,
     measuredAt,
     stalled: deal.stalled ?? false,
     archived: deal.archived_at != null,

@@ -32,7 +32,7 @@ var toolRoleFixtures = map[string]func(p *recordPool) map[string]any{
 		return map[string]any{"fields": map[string]any{"display_name": "Role Sweep", "source": "manual"}}
 	},
 	"update_record": func(*recordPool) map[string]any {
-		return map[string]any{"fields": map[string]any{"display_name": "Role Sweep Renamed"}}
+		return map[string]any{"fields": map[string]any{"display_name": "Role Sweep Renamed"}, "why": "A test asks for this change."}
 	},
 	"bulk_update_records": func(p *recordPool) map[string]any {
 		return map[string]any{"record_type": "company", "verb": "archive", "items": []any{map[string]any{"id": p.take("company"), "version": 1}}}
@@ -191,6 +191,8 @@ var routeVerbFixtures = map[string]func(p *recordPool) map[string]any{
 	"dismiss_deal_suggestion": byID("deal_suggestion"),
 	"get_deal_suggestion":     byID("deal_suggestion"),
 	"accept_tag_suggestion":   byID("tag_suggestion"),
+	"accept_link_suggestion":  byID("link_suggestion"),
+	"reject_link_suggestion":  byID("link_suggestion"),
 	"dismiss_tag_suggestion":  byID("tag_suggestion"),
 	"get_tag_suggestion":      byID("tag_suggestion"),
 	"acknowledge_approval_failure": func(p *recordPool) map[string]any {

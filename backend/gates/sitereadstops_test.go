@@ -34,11 +34,6 @@ const frontendSiteReadStops = "../frontend/src/lib/sitereadkind.ts"
 // tsStopReason reads one quoted entry out of the TypeScript array.
 var tsStopReason = regexp.MustCompile(`["']([a-z_]+)["']`)
 
-// tsStopComment strips comments from the literal's own text first. Without it a
-// line inside the array MENTIONING a reason keeps this gate green after the
-// real entry is deleted — the failure direction a census must not have.
-var tsStopComment = regexp.MustCompile(`(?s)//[^\n]*|/\*.*?\*/`)
-
 func TestTheFrontendCeilingStopsMatchTheGoOnes(t *testing.T) {
 	t.Parallel()
 	source, err := gatekit.ReadFile(frontendSiteReadStops)
@@ -55,7 +50,9 @@ func TestTheFrontendCeilingStopsMatchTheGoOnes(t *testing.T) {
 		t.Fatalf("%s's %s literal is unterminated", frontendSiteReadStops, marker)
 	}
 
-	literal := tsStopComment.ReplaceAllString(string(source)[start:start+end], " ")
+	// Stripped first: a comment inside the array MENTIONING a reason would keep
+	// this gate green after the real entry is deleted.
+	literal := gatekit.TSWithoutComments(string(source)[start : start+end])
 	inTS := []string{}
 	for _, m := range tsStopReason.FindAllStringSubmatch(literal, -1) {
 		inTS = append(inTS, m[1])

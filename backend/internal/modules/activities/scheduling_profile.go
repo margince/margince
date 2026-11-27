@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
 	"slices"
 	"strings"
 	"time"
@@ -100,7 +101,6 @@ func (s *Store) hostSchedulingProfile(ctx context.Context, host ids.UserID) (crm
 	defaultTitle := true
 	var name string
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		args := []any{host}
 		var err error
 		name, err = schedulingAccountName(ctx, tx, host)
 		if err != nil {
@@ -108,8 +108,8 @@ func (s *Store) hostSchedulingProfile(ctx context.Context, host ids.UserID) (crm
 		}
 		var stored *storedSchedulingProfile
 		var slug string
-		err = tx.QueryRow(ctx, fmt.Sprintf(`SELECT slug, scheduling_policy FROM booking_page
-   WHERE host_user_id = $%d AND revoked_at IS NULL ORDER BY created_at DESC LIMIT 1`, len(args)), args...).Scan(&slug, &stored)
+		args := schedulingArgs{}
+		err = tx.QueryRow(ctx, `SELECT slug, scheduling_policy FROM booking_page WHERE `+livePageSQL(&args, host, ids.Nil), args...).Scan(&slug, &stored)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil
 		}
@@ -146,7 +146,7 @@ func (s *Store) hostSchedulingProfile(ctx context.Context, host ids.UserID) (crm
 	return profile, err
 }
 
-// SchedulingProfile returns the acting host’s reusable booking settings.
+// SchedulingProfile returns the acting host’s personal booking settings, with no team.
 func (s *Store) SchedulingProfile(ctx context.Context) (crmcontracts.SchedulingProfile, error) {
 	host, err := schedulingHost(ctx)
 	if err != nil {
@@ -161,9 +161,7 @@ func (s *Store) SchedulingProfile(ctx context.Context) (crmcontracts.SchedulingP
 	if err != nil {
 		return profile, err
 	}
-	if err := s.describeTeam(ctx, &profile); err != nil {
-		return profile, err
-	}
+	profile.TeamMembers = nil
 	return s.brandSchedulingProfile(ctx, host, profile), nil
 }
 
@@ -277,8 +275,8 @@ func (s *Store) SaveSchedulingProfile(ctx context.Context, profile crmcontracts.
 	if err := validateSchedulingProfile(profile); err != nil {
 		return profile, err
 	}
-	if err := s.admitTeam(ctx, host, stored, profile); err != nil {
-		return profile, err
+	if len(teamMembers(profile)) > 0 {
+		return profile, &SchedulingArgumentError{Field: fieldTeamMembers, Code: faultInvalid, Message: "Name colleagues on a team link; your personal link offers only your own free time"}
 	}
 	if profile.Enabled {
 		if err := s.publicOriginUsable(); err != nil {
@@ -309,20 +307,6 @@ func (s *Store) checkBookingCalendar(ctx context.Context, host ids.UserID, store
 		return err
 	}
 	return s.validateBookingCalendars(ctx, host, profile)
-}
-
-// bookingCalendarChanged compares what the provider check vouches for. An
-// absent blocking list and an empty one block the same nothing.
-func bookingCalendarChanged(stored, next crmcontracts.SchedulingProfile) bool {
-	return stored.Provider != next.Provider || stored.CalendarId != next.CalendarId ||
-		!slices.Equal(blockingCalendars(stored), blockingCalendars(next))
-}
-
-func blockingCalendars(p crmcontracts.SchedulingProfile) []string {
-	if p.BlockingCalendars == nil {
-		return nil
-	}
-	return *p.BlockingCalendars
 }
 
 func (s *Store) validateBookingCalendars(ctx context.Context, host ids.UserID, profile *crmcontracts.SchedulingProfile) error {
@@ -390,14 +374,8 @@ func validateSchedulingLimits(p crmcontracts.SchedulingProfile) error {
 			}
 		}
 	}
-	if !values.HasVisibleText(p.Title) {
-		return &SchedulingArgumentError{Field: fieldTitle, Code: "required", Message: "Give the meeting a title guests can read"}
-	}
-	if utf8.RuneCountInString(p.Title) > maxSchedulingTitle {
-		return &SchedulingArgumentError{
-			Field: fieldTitle, Code: codeTooLong, Max: maxSchedulingTitle,
-			Message: fmt.Sprintf("The title may be at most %d characters", maxSchedulingTitle),
-		}
+	if err := validateSchedulingTitle(p.Title); err != nil {
+		return err
 	}
 	if utf8.RuneCountInString(p.Location) > maxSchedulingLocation {
 		return &SchedulingArgumentError{
@@ -412,6 +390,21 @@ func validateSchedulingLimits(p crmcontracts.SchedulingProfile) error {
 		return &SchedulingArgumentError{
 			Field: "calendar_id", Code: codeTooLong, Max: maxSchedulingCalendar,
 			Message: fmt.Sprintf("The calendar id may be at most %d characters", maxSchedulingCalendar),
+		}
+	}
+	return nil
+}
+
+// validateSchedulingTitle refuses a meeting title guests cannot read, on a
+// personal page and a team link alike.
+func validateSchedulingTitle(title string) error {
+	if !values.HasVisibleText(title) {
+		return &SchedulingArgumentError{Field: fieldTitle, Code: "required", Message: "Give the meeting a title guests can read"}
+	}
+	if utf8.RuneCountInString(title) > maxSchedulingTitle {
+		return &SchedulingArgumentError{
+			Field: fieldTitle, Code: codeTooLong, Max: maxSchedulingTitle,
+			Message: fmt.Sprintf("The title may be at most %d characters", maxSchedulingTitle),
 		}
 	}
 	return nil
@@ -436,12 +429,13 @@ func (s *Store) persistSchedulingProfile(ctx context.Context, host ids.UserID, p
 		}
 		var before *storedSchedulingProfile
 		var id ids.UUID
-		args := []any{host}
-		err := tx.QueryRow(ctx, fmt.Sprintf(`SELECT id, scheduling_policy FROM booking_page WHERE host_user_id=$%d AND revoked_at IS NULL ORDER BY created_at DESC LIMIT 1 FOR UPDATE`, len(args)), args...).Scan(&id, &before)
+		pageArgs := schedulingArgs{}
+		err := tx.QueryRow(ctx, `SELECT id, scheduling_policy FROM booking_page WHERE `+livePageSQL(&pageArgs, host, ids.Nil)+` FOR UPDATE`, pageArgs...).Scan(&id, &before)
 		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 			return err
 		}
-		if errors.Is(err, pgx.ErrNoRows) || (profile.ReplaceLink != nil && *profile.ReplaceLink) {
+		replaced := errors.Is(err, pgx.ErrNoRows) || (profile.ReplaceLink != nil && *profile.ReplaceLink)
+		if replaced {
 			id, err = s.replaceBookingPage(ctx, tx, host, profile.Enabled)
 			if err != nil {
 				return err
@@ -451,11 +445,15 @@ func (s *Store) persistSchedulingProfile(ctx context.Context, host ids.UserID, p
 		profile.HostName, profile.Blocker = nil, nil
 		profile.TeamMembers = mergeTeam(before, profile.TeamMembers)
 		stored := schedulingProfileToStore(ctx, profile, before, canonicalDefault)
-		args = []any{stored, id}
+		// The page saved as it stands moves nothing and tells nobody.
+		if !replaced && before != nil && reflect.DeepEqual(*before, stored) {
+			return nil
+		}
+		args := []any{stored, id}
 		if _, err := tx.Exec(ctx, fmt.Sprintf(`UPDATE booking_page SET scheduling_policy=$%d WHERE id=$%d`, len(args)-1, len(args)), args...); err != nil {
 			return err
 		}
-		if err := s.tellTeamChanges(ctx, tx, host, before, profile); err != nil {
+		if err := s.tellTeamChanges(ctx, tx, host, id, before, profile); err != nil {
 			return err
 		}
 		var audit ids.UUID
@@ -473,11 +471,11 @@ func (s *Store) persistSchedulingProfile(ctx context.Context, host ids.UserID, p
 
 func (s *Store) replaceBookingPage(ctx context.Context, tx pgx.Tx, host ids.UserID, enabled bool) (ids.UUID, error) {
 	args := schedulingArgs{}
-	if _, err := tx.Exec(ctx, `UPDATE booking_page SET revoked_at=now() WHERE host_user_id=`+args.add(host)+` AND revoked_at IS NULL`, args...); err != nil {
+	if _, err := tx.Exec(ctx, `UPDATE booking_page SET revoked_at=now() WHERE `+livePageSQL(&args, host, ids.Nil), args...); err != nil {
 		return ids.Nil, err
 	}
-	// Replace address stops every public address of the old page, the alias
-	// included. The alias is retired, so its cooldown starts now.
+	// Replace address stops every public address of the old personal page, the
+	// alias included; team links keep theirs. The alias cooldown starts now.
 	if err := s.retireBookingAliasTx(ctx, tx, host); err != nil {
 		return ids.Nil, err
 	}

@@ -25,11 +25,11 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
-	"go/token"
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // gatekit:fixture the seam-to-constructor pairing this gate asserts, not a
@@ -58,8 +58,8 @@ func TestComposeWiresNoUnguardedCalendarVerb(t *testing.T) {
 		if strings.HasSuffix(path, "_test.go") {
 			continue
 		}
-		fset := token.NewFileSet()
-		file, err := parser.ParseFile(fset, path, nil, 0)
+		fset := gatekit.SourceFileSet()
+		file, err := gatekit.ParseFile(path, 0)
 		if err != nil {
 			t.Fatalf("parsing %s: %v", path, err)
 		}
@@ -123,12 +123,11 @@ func recvTypeName(recv *ast.FieldList) string {
 
 func TestEveryCaptureMeetingSeamIsInTheGuardMap(t *testing.T) {
 	t.Parallel()
-	fset := token.NewFileSet()
 	for _, path := range goSourceFiles(t, "internal/modules/capture") {
 		if strings.HasSuffix(path, "_test.go") {
 			continue
 		}
-		file, err := parser.ParseFile(fset, path, nil, 0)
+		file, err := gatekit.ParseFile(path, 0)
 		if err != nil {
 			t.Fatalf("parsing %s: %v", path, err)
 		}

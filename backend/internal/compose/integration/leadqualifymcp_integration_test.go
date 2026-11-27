@@ -38,8 +38,8 @@ func TestAnAgentMarkingALeadMeetingHeldOverMCPAsksTheOwnerToQualify(t *testing.T
 	ownLeadByItsCreator(t, e, missed)
 	held, canceled := meetingWithLead(t, e, met, "booked"), meetingWithLead(t, e, missed, "booked")
 
-	d.tool(t, "update_record", map[string]any{"record_type": "activity", "id": held, "fields": map[string]any{"meeting_status": "held"}})
-	d.tool(t, "update_record", map[string]any{"record_type": "activity", "id": canceled, "fields": map[string]any{"meeting_status": "canceled"}})
+	d.tool(t, "update_record", map[string]any{"why": "A test asks for this change.", "record_type": "activity", "id": held, "fields": map[string]any{"meeting_status": "held"}})
+	d.tool(t, "update_record", map[string]any{"why": "A test asks for this change.", "record_type": "activity", "id": canceled, "fields": map[string]any{"meeting_status": "canceled"}})
 
 	owner := sessionSeat(t, e)
 	qualifytest.AssertOwnerAsked(owner, t, e.DB(), ids.MustParse(met), ids.MustParse(held))

@@ -15,7 +15,7 @@ import { ENTITY } from "../lib/entity";
 import { valueFor } from "../lib/labelfor";
 import { type Route, routeHash } from "../lib/router";
 import { useTaskContact } from "../lib/taskcontact";
-import { taskTypeOf } from "../lib/tasktype";
+import { type TaskType, taskTypeOf } from "../lib/tasktype";
 import { useWriteTo } from "../lib/writeto";
 import { mostSpecificFirst } from "./recordlinks";
 import "./tasknextsteps.css";
@@ -25,7 +25,6 @@ import {
   RecordDraftStep,
   refusalOf,
 } from "./tasknextsteps.verbs";
-import { asksWhichDeal, WhichDealChoice } from "./whichdealchoice";
 
 // The one step a task's type asks for. Nothing here writes the task, so a
 // done or read-only task still offers it.
@@ -33,8 +32,8 @@ import { asksWhichDeal, WhichDealChoice } from "./whichdealchoice";
 type Activity = components["schemas"]["Activity"];
 type Contact = components["schemas"]["Contact"];
 
-/** The room the next steps take while the reads behind them are out, so the
- *  verbs arrive without pushing the row they sit in. One Email verb wide. */
+/** The room a verb takes while the reads behind it are out, so it arrives
+ *  without pushing the row it sits in. One Email verb wide. */
 export function TaskNextStepsPending() {
   return (
     <div className="task-next-pending">
@@ -77,28 +76,41 @@ export function TaskNextSteps({
 }
 
 /** The type's step, and whether it is a filled button, so Done can step back
- *  and the card keeps one filled verb. */
+ *  and the card keeps one filled verb. While `pending`, that is not known yet.
+ *  `folded` keeps the type's one way in view and hands every other way, and
+ *  Open contact, to `others` as menu lines. */
 export function useTaskNextSteps(
   task: Activity | undefined,
   offerOpen: boolean,
+  folded = false,
 ): Steps {
   const { contact, pending } = useTaskContact(task);
   const writeTo = useWriteTo();
   if (!task) return NO_STEP;
-  const ways = taskWays(task, contact, pending, offerOpen, writeTo !== null);
+  const ways = taskWays(task, {
+    contact,
+    pending,
+    offerOpen,
+    folded,
+    composes: writeTo !== null,
+  });
   const shown = shownWays(ways);
   const target = task.email_target;
   const mail = !shown.includes("mail") && Boolean(target && !target.refusal);
   const call = !shown.includes("call") && ways.phone !== undefined;
+  const open = folded ? contact : undefined;
   return {
     ...typedSteps(ways),
+    pending: pending && CONTACT_STEPS.has(taskTypeOf(task)),
     others:
-      mail || call ? (
+      mail || call || open ? (
         <OtherWays
           task={task}
           contact={ways.reachable}
           phone={call ? ways.phone : undefined}
           mail={mail}
+          menu={folded}
+          open={open}
         />
       ) : null,
   };
@@ -106,16 +118,26 @@ export function useTaskNextSteps(
 
 function taskWays(
   task: Activity,
-  contact: Contact | undefined,
-  pending: boolean,
-  offerOpen: boolean,
-  composes: boolean,
+  {
+    contact,
+    pending,
+    offerOpen,
+    folded,
+    composes,
+  }: Readonly<{
+    contact: Contact | undefined;
+    pending: boolean;
+    offerOpen: boolean;
+    folded: boolean;
+    composes: boolean;
+  }>,
 ): Ways {
   const reachable = contact && !contact.archived_at ? contact : undefined;
   const target = task.email_target;
   return {
     task,
     offerOpen,
+    folded,
     pending,
     reachable,
     mailFills: Boolean(target && (composes || target.refusal)),
@@ -128,8 +150,17 @@ type Way = "mail" | "call";
 
 const BOTH_WAYS: readonly Way[] = ["mail", "call"];
 
-/** The ways a task's own step offers, which its menu leaves out. */
+/** The ways a task's own step offers, which its menu leaves out. Folded, one
+ *  way stays in view: a draft that works, else the call. A refused draft stays
+ *  beside the call, since its reason is news. */
 function shownWays(ways: Ways): readonly Way[] {
+  const shown = typeWays(ways);
+  if (!ways.folded || shown.length < 2) return shown;
+  if (ways.mailWorks) return ["mail"];
+  return ways.phone && !ways.mailFills ? ["call"] : shown;
+}
+
+function typeWays(ways: Ways): readonly Way[] {
   const { task } = ways;
   switch (taskTypeOf(task)) {
     case "reply":
@@ -155,7 +186,7 @@ function reachOutWays(ways: Ways): readonly Way[] {
   return BOTH_WAYS;
 }
 
-function typedSteps(ways: Ways): Omit<Steps, "others"> {
+function typedSteps(ways: Ways): TypedStep {
   const { task, reachable } = ways;
   switch (taskTypeOf(task)) {
     case "reply":
@@ -171,29 +202,35 @@ function typedSteps(ways: Ways): Omit<Steps, "others"> {
         ? { steps: <ReviewStep record={record} />, fills: true }
         : NO_STEP;
     }
-    case "decide":
-      return {
-        steps: <WhichDealChoice task={task} />,
-        fills: asksWhichDeal(task),
-      };
     default:
       return NO_STEP;
   }
 }
 
+// The types whose step reads the task's contact, so whether it fills waits on it.
+const CONTACT_STEPS: ReadonlySet<TaskType> = new Set([
+  "reply",
+  "reach_out",
+  "meet",
+]);
+
 type Steps = Readonly<{
   steps: ReactNode;
   fills: boolean;
+  /** A read that decides `fills` is still out, so Done holds its place. */
+  pending: boolean;
   /** The other ways to reach the contact, for the task's menu: always open,
    *  whatever way the type picked. */
   others?: ReactNode;
 }>;
-const NO_STEP: Steps = { steps: null, fills: false };
+const NO_STEP: Steps = { steps: null, fills: false, pending: false };
+type TypedStep = Pick<Steps, "steps" | "fills">;
 
 /** What reaching the task's contact can use: a mail target, a number. */
 type Ways = Readonly<{
   task: Activity;
   offerOpen: boolean;
+  folded: boolean;
   pending: boolean;
   reachable: Contact | undefined;
   mailFills: boolean;
@@ -204,7 +241,7 @@ type Ways = Readonly<{
 
 /** A reply or a reach out goes back the way its conversation went. A message
  *  Margince cannot answer in kind, or none, offers both ways. */
-function conversationSteps(ways: Ways): Omit<Steps, "others"> {
+function conversationSteps(ways: Ways): TypedStep {
   const { task, offerOpen, pending, mailFills, phone } = ways;
   const shown = shownWays(ways);
   if (shown.length > 1) return bothWaysSteps(ways);
@@ -221,7 +258,7 @@ function conversationSteps(ways: Ways): Omit<Steps, "others"> {
 }
 
 /** Email first, filled when it can be drafted; else Call is the filled one. */
-function bothWaysSteps(ways: Ways): Omit<Steps, "others"> {
+function bothWaysSteps(ways: Ways): TypedStep {
   const { task, offerOpen, mailFills, mailWorks, phone } = ways;
   return {
     steps: (
@@ -236,18 +273,23 @@ function bothWaysSteps(ways: Ways): Omit<Steps, "others"> {
 }
 
 /** The ways the type's step leaves out, as menu lines: a mail to draft when
- *  one can be, and the call. */
+ *  one can be, the call, and in a `menu` the contact to open. */
 function OtherWays({
   task,
   contact,
   phone,
   mail,
+  menu,
+  open,
 }: Readonly<{
   task: Activity;
   // The contact that can still be reached: an archived one offers no mail.
   contact: Contact | undefined;
   phone: Contact | undefined;
   mail: boolean;
+  menu: boolean;
+  // In a menu, the contact to open: archived or not, it can still be read.
+  open: Contact | undefined;
 }>) {
   const t = useT();
   const target = task.email_target;
@@ -259,7 +301,12 @@ function OtherWays({
         target &&
         (target.entity_type === "contact" ? (
           contact && (
-            <EmailVerb contact={contact} intent={intent} reasonId={undefined} />
+            <EmailVerb
+              contact={contact}
+              intent={intent}
+              reasonId={undefined}
+              bare={menu}
+            />
           )
         ) : (
           <RecordDraftStep target={target} intent={intent} />
@@ -267,11 +314,18 @@ function OtherWays({
       {phone && number && (
         <CallAction
           appearance="button"
+          bare={menu}
           label={t("record.verb.call")}
           number={number}
           record={{ entityType: "contact", entityId: phone.id }}
         />
       )}
+      {open &&
+        linkVerb(
+          routeHash(ENTITY.contact.route(open.id)),
+          null,
+          t("task.next.openContact"),
+        )}
     </>
   );
 }

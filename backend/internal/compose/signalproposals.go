@@ -42,7 +42,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
@@ -168,11 +167,11 @@ func readContradictions(ctx context.Context, tx pgx.Tx, now time.Time) ([]contra
 	// to be first standing and the rest never asked about at all.
 	args := []any{values.EngagedLifecycles()}
 	rows, err := tx.Query(ctx, storekit.SQLf(`
-		SELECT DISTINCT ON (o.id) o.id, o.lifecycle, s.id, s.summary
+		SELECT DISTINCT ON (o.id) o.id, o.status, s.id, s.summary
 		  FROM signal s
 		  JOIN company o ON o.id = s.resolved_company_id AND o.archived_at IS NULL
 		 WHERE s.kind = '`+signalKindContractEnded+`' AND s.status = 'open'
-		   AND s.archived_at IS NULL AND o.lifecycle = ANY($%d)
+		   AND s.archived_at IS NULL AND o.status = ANY($%d)
 		 ORDER BY o.id, s.detected_at DESC, s.id DESC`, len(args)), args...)
 	if err != nil {
 		return nil, err
@@ -274,20 +273,9 @@ func lifecycleAcceptEffect(svc *approvals.Service, store *contacts.Store, now fu
 		if err := json.Unmarshal(proposedChange, &proposal); err != nil {
 			return fmt.Errorf("compose: decoding the lifecycle proposal: %w", err)
 		}
-		decider, ok := principal.Actor(ctx)
-		if !ok {
-			return errors.New("compose: lifecycle accept without a deciding principal")
-		}
-		// The write carries the machine provenance — the stage came from the
-		// account's correspondence, not from someone typing it — while the
-		// human's approval is on the decision's own audit row.
-		execCtx := principal.WithActor(ctx, principal.Principal{
-			Type:       principal.PrincipalSystem,
-			ID:         lifecycleProposalActor,
-			UserID:     decider.UserID,
-			OnBehalfOf: decider.UserID,
-		})
-		return svc.RedeemAndApply(ctx, approvalID, lifecycleProposalKind, diffHash, func(tx pgx.Tx) error {
+		// The write carries the machine provenance, since the stage came from
+		// the account's correspondence, and runs under the decider's grants.
+		return redeemForApprover(ctx, svc, approvalID, lifecycleProposalKind, diffHash, lifecycleProposalActor, func(execCtx context.Context, tx pgx.Tx) error {
 			if err := lifecyclereview.Revalidate(ctx, tx, proposal.CompanyID, proposal.SignalID, proposal.Evidence, now()); err != nil {
 				return err
 			}
@@ -299,7 +287,7 @@ func lifecycleAcceptEffect(svc *approvals.Service, store *contacts.Store, now fu
 			if err != nil || !moved {
 				return err
 			}
-			_, err = signals.AcknowledgeCoveredForCompanyTx(execCtx, ctx, tx,
+			_, err = signals.AcknowledgeCoveredForCompanyTx(execCtx, execCtx, tx,
 				proposal.CompanyID.UUID, signalKindContractEnded, []ids.UUID{proposal.SignalID})
 			return err
 		})

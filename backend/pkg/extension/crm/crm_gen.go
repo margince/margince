@@ -654,45 +654,6 @@ func (e CompanyIndustry) Valid() bool {
 	}
 }
 
-// Defines values for CompanyLifecycle.
-const (
-	CompanyLifecycleCustomer       CompanyLifecycle = "customer"
-	CompanyLifecycleDisqualified   CompanyLifecycle = "disqualified"
-	CompanyLifecycleFormerCustomer CompanyLifecycle = "former_customer"
-	CompanyLifecycleLive           CompanyLifecycle = "live"
-	CompanyLifecycleOnboarding     CompanyLifecycle = "onboarding"
-	CompanyLifecycleOpportunity    CompanyLifecycle = "opportunity"
-	CompanyLifecycleProspect       CompanyLifecycle = "prospect"
-	CompanyLifecycleTarget         CompanyLifecycle = "target"
-	CompanyLifecycleUnknown        CompanyLifecycle = "unknown"
-)
-
-// Valid indicates whether the value is a known member of the CompanyLifecycle enum.
-func (e CompanyLifecycle) Valid() bool {
-	switch e {
-	case CompanyLifecycleCustomer:
-		return true
-	case CompanyLifecycleDisqualified:
-		return true
-	case CompanyLifecycleFormerCustomer:
-		return true
-	case CompanyLifecycleLive:
-		return true
-	case CompanyLifecycleOnboarding:
-		return true
-	case CompanyLifecycleOpportunity:
-		return true
-	case CompanyLifecycleProspect:
-		return true
-	case CompanyLifecycleTarget:
-		return true
-	case CompanyLifecycleUnknown:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for CompanyRelationshipTypes.
 const (
 	CompanyRelationshipTypesCompetitor       CompanyRelationshipTypes = "competitor"
@@ -753,6 +714,45 @@ func (e CompanySizeBand) Valid() bool {
 	case N5011000:
 		return true
 	case N51200:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CompanyStatus.
+const (
+	CompanyStatusCustomer       CompanyStatus = "customer"
+	CompanyStatusDisqualified   CompanyStatus = "disqualified"
+	CompanyStatusFormerCustomer CompanyStatus = "former_customer"
+	CompanyStatusLive           CompanyStatus = "live"
+	CompanyStatusOnboarding     CompanyStatus = "onboarding"
+	CompanyStatusOpportunity    CompanyStatus = "opportunity"
+	CompanyStatusProspect       CompanyStatus = "prospect"
+	CompanyStatusTarget         CompanyStatus = "target"
+	CompanyStatusUnknown        CompanyStatus = "unknown"
+)
+
+// Valid indicates whether the value is a known member of the CompanyStatus enum.
+func (e CompanyStatus) Valid() bool {
+	switch e {
+	case CompanyStatusCustomer:
+		return true
+	case CompanyStatusDisqualified:
+		return true
+	case CompanyStatusFormerCustomer:
+		return true
+	case CompanyStatusLive:
+		return true
+	case CompanyStatusOnboarding:
+		return true
+	case CompanyStatusOpportunity:
+		return true
+	case CompanyStatusProspect:
+		return true
+	case CompanyStatusTarget:
+		return true
+	case CompanyStatusUnknown:
 		return true
 	default:
 		return false
@@ -1299,6 +1299,24 @@ func (e EmailSummaryMove) Valid() bool {
 	case EmailSummaryMoveNone:
 		return true
 	case EmailSummaryMoveWaitingForThem:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for LinkFilerHook.
+const (
+	LinkFilerHookDeal    LinkFilerHook = "deal"
+	LinkFilerHookParties LinkFilerHook = "parties"
+)
+
+// Valid indicates whether the value is a known member of the LinkFilerHook enum.
+func (e LinkFilerHook) Valid() bool {
+	switch e {
+	case LinkFilerHookDeal:
+		return true
+	case LinkFilerHookParties:
 		return true
 	default:
 		return false
@@ -1971,7 +1989,7 @@ type Activity struct {
 	DueIntent *IntentTime `json:"due_intent,omitempty"`
 
 	// DurationSeconds Meeting/call only.
-	DurationSeconds *int `json:"duration_seconds,omitempty"`
+	DurationSeconds *int `json:"duration_seconds,omitempty" minimum:"0"`
 
 	// EmailSummary Present exactly when `kind=email`. What the canonical email row renders, so a list does not have to fetch a message per visible line to draw one. Every other kind carries none, and a reader branches on its presence rather than on the kind word.
 	EmailSummary *EmailSummary `json:"email_summary,omitempty"`
@@ -2010,6 +2028,9 @@ type Activity struct {
 	// Links Every record this activity is filed under that the caller may read; a link to a record they cannot read is left out. One activity may link to several, a contact and a deal say. Every read that returns an activity answers the same links: the list, one activity, and a contact's 360.
 	Links *[]ActivityLink `json:"links,omitempty"`
 
+	// MailboxImported Whether an import brought this in; the per-message audience write refuses it.
+	MailboxImported *bool `json:"mailbox_imported,omitempty"`
+
 	// MeetingIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
 	MeetingIntent *IntentTime `json:"meeting_intent,omitempty"`
 
@@ -2046,7 +2067,7 @@ type Activity struct {
 	// ReplyChannel Task only. For a `reply` or `reach_out` task, the kind of the activity it follows (`source_activity_id`), so the answer goes back the way the conversation went: a promise made in a mail is kept by mail. Null for every other type, and for a task with no source of one of these kinds.
 	ReplyChannel *ActivityReplyChannel `json:"reply_channel,omitempty"`
 
-	// Source Where the row came from. `manual` is anything typed, by a member or by an assistant working for one, so it never says who typed it: `captured_by` and `recorded_by_agent` do.
+	// Source The channel the row arrived by: `api`, `automation`, `capture`, `import`, `manual` or `webform`. `manual` is anything typed, by a member or by an assistant working for one, so it never says who typed it: `captured_by` and `recorded_by_agent` do. `source_system` names the connector or the product's own writer when there is one. An older row can show another value until the background correction reaches it.
 	Source string `json:"source"`
 
 	// SourceActivityId The conversation or note this task follows from, whether added by a human or read from a conversation. Opening the source requires current source access. A task cannot grant access to its source or disclose content from a withheld source. On a transcript created with `records_meeting_id`, the meeting it records.
@@ -2062,6 +2083,9 @@ type Activity struct {
 
 	// TaskType Task only, absent on every other kind. The type a human, an agent or the AI gave the task when it was made. A task made before types existed, or by a product rule that sets none, reads the type of its rule: an answer owed to a request is `reply`, a lead to qualify is `review`, a mail to file is `decide`. A task with neither reads `reach_out` when a human or an agent made it, else `do`. `offers_email` is false for every type but `reply` and `reach_out`.
 	TaskType *TaskType `json:"task_type,omitempty"`
+
+	// ThreadAudienceYours Whether the thread audience write acts on this row for the caller.
+	ThreadAudienceYours *bool `json:"thread_audience_yours,omitempty"`
 
 	// ThreadKey The provider's own conversation id (Gmail threadId, Graph conversationId, the RFC822 References root), stamped by capture. It is what makes a thread a thread: grouping by subject would merge two unrelated "Re: Update" exchanges and split one that was renamed mid-conversation. Null on anything capture did not thread — a note, a task, a message whose provider offered none.
 	ThreadKey *string   `json:"thread_key,omitempty"`
@@ -2197,7 +2221,10 @@ type ActivityLink struct {
 	DealRelevance *ActivityLinkDealRelevance `json:"deal_relevance,omitempty"`
 	EntityId      string                     `json:"entity_id"`
 	EntityType    ActivityLinkEntityType     `json:"entity_type"`
-	Id            *string                    `json:"id,omitempty"`
+
+	// FiledBy On a deal link only, and only when no human or agent chose it: who filed the activity on the deal, read from the latest filing of it there. The actor is `core` for the installation's own rule, or the name of the extension whose hook filed it. Marking the link `unrelated` takes the filing back, and no automatic pass files the activity there again.
+	FiledBy *LinkFiler `json:"filed_by,omitempty"`
+	Id      *string    `json:"id,omitempty"`
 
 	// RelevanceSource Who set `deal_relevance`. The classifier never changes a mark a human set.
 	RelevanceSource *ActivityLinkRelevanceSource `json:"relevance_source,omitempty"`
@@ -2377,6 +2404,7 @@ type Company struct {
 	ComputedFields *[]ComputedField `json:"computed_fields,omitempty"`
 
 	// ContactCount How many distinct live contacts THE CALLER MAY SEE hold a current job at this account (PO-EXT-10; AC-companies-2/3's Contacts column). Counted under the caller's contact row scope, exactly as the contact list is: a count is a read, and a number that moved when a colleague captured a private contact would disclose that contact. Present, zero included, on `listCompanies` and `getCompany` — the reads that render the column, and ABSENT entirely for a role without `contact:read` OR without `relationship:read` (the object grants come first, as on the contact list) — the number is a fact about the employment PAIRS, so the edge grant governs it exactly as it governs the employment list; write responses (create, update, archive, merge) omit it. Never client-supplied.
+	// A count of 0 means "no contacts YOU can see", never "no contacts": read it with `hidden_contact_holders`. Say "no contacts you can see" and name those colleagues when the list is not empty.
 	ContactCount *int      `json:"contact_count,omitempty" minimum:"0"`
 	CreatedAt    time.Time `json:"created_at"`
 
@@ -2398,7 +2426,10 @@ type Company struct {
 
 	// ExtensionRelationshipTypes The types an installed extension adds, as `ext:<unit>:<type>`. Kept apart from `relationship_types`, whose list stays the closed set above. Each value is declared by the extension it names; a value no extension declares is refused (422, `invalid_enum`).
 	ExtensionRelationshipTypes *[]string `json:"extension_relationship_types,omitempty"`
-	Id                         string    `json:"id"`
+
+	// HiddenContactHolders The live colleagues who own at least one current contact at this account that the caller may not see, each once, so the reader knows whom to ask for an introduction ("Dana and Minh have contacts here you can't see"). It names who to ask and nothing else: no contact's name, role or id, and no count per colleague or in total. Empty when nothing is hidden, and a colleague who left or an agent seat is never listed. It reads the same employment set as `contact_count` with the contact scope turned around, so the two never describe different populations. Present exactly when `contact_count` is, and absent entirely on a write response. Never client-supplied.
+	HiddenContactHolders *[]HiddenRecordHolder `json:"hidden_contact_holders,omitempty"`
+	Id                   string                `json:"id"`
 
 	// ImportedFrom Which import wrote this record, so a screen can say "Imported from <name>" instead of "Typed by you". Null when no import wrote it. The name is the source the import was run for (`bundle`); an empty string is an import that was given none. Derived from `source_system`, whose reserved `mirror:` prefix is never shown.
 	ImportedFrom *string `json:"imported_from,omitempty"`
@@ -2416,17 +2447,17 @@ type Company struct {
 	// A message limited to its participants does NOT move this date, even for a reader who may read that message. The value is one number every reader sees, so it can only count what every reader may see.
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
 
+	// LastActivityPrecision How to read `last_activity_at`, from the activity it names. A day entry counts its days from its own date. Absent when that is null.
+	LastActivityPrecision *OccurredPrecision `json:"last_activity_precision,omitempty"`
+
 	// LegalHold True while a litigation or investigation hold is preserving this record. A held record is never acted on by a retention sweep and an Art. 17 erasure against it is refused, so a screen that offers either action has to know. Placed and lifted through /retention/legal-holds, never by an ordinary edit.
 	LegalHold *bool   `json:"legal_hold,omitempty"`
 	LegalName *string `json:"legal_name,omitempty"`
 
-	// Lifecycle Where the account stands with us. Single-valued: an account is at one point in a sales motion at a time. `unknown` is the default and means it — the retired `classification` defaulted to `prospect` and, having no writer, rendered that default on every unassessed account as though someone had judged it. `onboarding` means the contract is signed and set-up runs. `live` means the agreed first scope is in use, and only a signed-in user may set it: an agent, automation, approval or import gets 422 `lifecycle_live_needs_a_human`.
-	Lifecycle *CompanyLifecycle `json:"lifecycle,omitempty"`
-
 	// LinkedinUrl Canonical LinkedIn company URL. A validated column rather than a governed custom field, because it bears identity semantics — matching, dedupe, enrichment — a custom field cannot express. Unique among live rows.
 	LinkedinUrl *string `json:"linkedin_url,omitempty"`
 
-	// LogoUrl Where to fetch the company's logo image (A55) — the `getCompanyLogo`
+	// LogoUrl Where to fetch the company's logo image — the `getCompanyLogo`
 	// path for this record, cookie-authenticated and same-origin. A revision query changes
 	// with the stored image so a replacement cannot remain hidden behind an older cached
 	// response. The key is ABSENT entirely (not null) when no logo is stored, which is the
@@ -2452,6 +2483,9 @@ type Company struct {
 	// forward-compatible.
 	Partner *Partner `json:"partner,omitempty"`
 
+	// PartnerProgramEnded An ended partner program has commission and deal history. Omitted without partner read permission.
+	PartnerProgramEnded *bool `json:"partner_program_ended,omitempty"`
+
 	// Phone The company's main number, in E.164 form (for example +49301234567). It is never a contact's own number.
 	Phone *string                 `json:"phone,omitempty"`
 	Raw   *map[string]interface{} `json:"raw,omitempty"`
@@ -2459,7 +2493,15 @@ type Company struct {
 	// RelationshipTypes WHAT THE COMPANY IS to us (PO-DDL-4b, ADR-0079). Multi-valued, because a company is legitimately several things at once — the partner program is built on companies that are simultaneously partners and customers. A company IS a partner iff it carries `partner` here AND has a `partner` row; removing the type while that row lives is refused (422).
 	RelationshipTypes *[]CompanyRelationshipTypes `json:"relationship_types,omitempty"`
 	SizeBand          *CompanySizeBand            `json:"size_band,omitempty"`
-	Source            string                      `json:"source"`
+
+	// Source The channel this company arrived by: `api`, `automation`, `capture`, `import`, `manual` or `webform`. An older company can show another value until the background correction reaches it.
+	Source string `json:"source"`
+
+	// SourceSystem The system or connector the company came from, such as `gmail` for one read out of a mailbox. Empty when a member or an API client wrote it and named none.
+	SourceSystem *string `json:"source_system,omitempty"`
+
+	// Status Where the account stands with us. Single-valued: an account is at one point in a sales motion at a time. `unknown` is the default and means it — the retired `classification` defaulted to `prospect` and, having no writer, rendered that default on every unassessed account as though someone had judged it. `onboarding` means the contract is signed and set-up runs. `live` means the agreed first scope is in use, and only a signed-in user may set it: an agent, automation, approval or import gets 422 `lifecycle_live_needs_a_human`.
+	Status *CompanyStatus `json:"status,omitempty"`
 
 	// Strength Deterministic company-level relationship-strength roll-up (features/07 §4). Read-only derived view; NULL until capture has interactions.
 	Strength  *RelationshipStrength `json:"strength,omitempty"`
@@ -2486,14 +2528,14 @@ type Company struct {
 // CompanyIndustry One of the fixed industry codes, or null. The server maps imported, read and typed text onto a code; text that names no code stores none.
 type CompanyIndustry string
 
-// CompanyLifecycle Where the account stands with us. Single-valued: an account is at one point in a sales motion at a time. `unknown` is the default and means it — the retired `classification` defaulted to `prospect` and, having no writer, rendered that default on every unassessed account as though someone had judged it. `onboarding` means the contract is signed and set-up runs. `live` means the agreed first scope is in use, and only a signed-in user may set it: an agent, automation, approval or import gets 422 `lifecycle_live_needs_a_human`.
-type CompanyLifecycle string
-
 // CompanyRelationshipTypes defines model for Company.RelationshipTypes.
 type CompanyRelationshipTypes string
 
 // CompanySizeBand defines model for Company.SizeBand.
 type CompanySizeBand string
+
+// CompanyStatus Where the account stands with us. Single-valued: an account is at one point in a sales motion at a time. `unknown` is the default and means it — the retired `classification` defaulted to `prospect` and, having no writer, rendered that default on every unassessed account as though someone had judged it. `onboarding` means the contract is signed and set-up runs. `live` means the agreed first scope is in use, and only a signed-in user may set it: an agent, automation, approval or import gets 422 `lifecycle_live_needs_a_human`.
+type CompanyStatus string
 
 // CompanyVisibility Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the workspace through a sender verdict, or through `visibility` on `PATCH /companies/{id}`, which moves it BOTH ways for anybody the write gate admits. Read-only HERE, on the read schema, the same as the contact column beside it: the update request carries the writable copy.
 type CompanyVisibility string
@@ -2582,7 +2624,7 @@ type CreateActivityRequest struct {
 
 	// DueIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
 	DueIntent       *IntentTime           `json:"due_intent,omitempty"`
-	DurationSeconds *int                  `json:"duration_seconds,omitempty"`
+	DurationSeconds *int                  `json:"duration_seconds,omitempty" minimum:"0"`
 	FollowUpTask    *ActivityFollowUpTask `json:"follow_up_task,omitempty"`
 
 	// HostUserId Meeting only: the member of this company who HELD it, which is not the same question as who typed it up. Omit it for a meeting you held yourself and the server fills in the caller; name a colleague when you are minuting theirs, so it counts into their week rather than yours. A label and never an authority — what a caller may read is decided before this field is filled in.
@@ -2643,7 +2685,9 @@ type CreateActivityRequest struct {
 
 	// SenderContactId Inbound message, call, meeting or email only: the linked contact who wrote or said it. Set it whenever one contact sent the message, for example the one member of a group chat who asked for a follow-up. Only that contact counts as its author, so only they asked to hear from us. Without it, an inbound activity linked to one contact names that contact as the sender. One linked to two or more contacts names no sender, and each contact is kept as copied. The stated `participants` of an email win over this field. A contact that is not in `links` returns `422 code: sender_not_linked`. Any other kind, or a direction other than `inbound`, returns `422 code: field_not_valid_for_kind`.
 	SenderContactId *string `json:"sender_contact_id,omitempty"`
-	Source          string  `json:"source"`
+
+	// Source The channel this activity arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. The other system and the activity's id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`.
+	Source string `json:"source"`
 
 	// SourceActivityId For a task, the conversation or note it follows from. The caller and assignee need access to that source. The task preserves its audience and inherits its visible links when no links are supplied. For a logged note, call or meeting, the task whose outcome is being recorded; a meeting transcript naming one needs `meeting_status`. This reference alone does not complete that task or accept a request.
 	SourceActivityId *string `json:"source_activity_id,omitempty"`
@@ -2746,6 +2790,9 @@ type Deal struct {
 	// LastActivityAt The newest `occurred_at` at or before now of an activity filed under the deal, so a booked meeting counts once it starts. A task never counts, whoever filed it, and neither does a canceled or no-show meeting. Drives the deterministic stalled flag. A message limited to its participants counts by its date alone, so a deal worked through private mail does not read as stalled. The deal timeline already lists such a message to every reader of the deal with its time, so its date reveals nothing new; its text and sender stay with its audience, a message limited to a chosen audience does not count, and no contact or company date moves for it.
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
 
+	// LastActivityPrecision How to read `last_activity_at`, from the activity it names. A day entry counts its quiet days from its own date. Absent when that is null.
+	LastActivityPrecision *OccurredPrecision `json:"last_activity_precision,omitempty"`
+
 	// LastEmail The newest email on this deal that the whole workspace may see — what a board card states as "last mail, N days ago" beside the deal, so a rep reads the silence without opening every card. Null on a deal nobody has mailed about. Counts what `last_activity_at` counts, narrowed to mail: workspace-audience rows only, and never the product's own system writing — a message limited to its participants must not move a date every colleague reads, and a mail the installation sent itself is not the buyer engaging. The rows a reader may discover through `GET /activities` can therefore be newer than this instant.
 	LastEmail *DealLastEmail `json:"last_email,omitempty"`
 
@@ -2763,8 +2810,11 @@ type Deal struct {
 
 	// MaskedFields The fields of THIS row withheld from the caller (a field mask — e.g. `amount_minor` for a rep on a deal they may read but not change), or pointing at a record they may not open. A named field is null because it is withheld, not because it is empty; absent or empty means nothing is withheld. Every withheld field is named, including one withheld only because another was: masking either money figure withholds both and the currency with them, and a withheld partner takes its attribution along. Sorting or filtering the list by any of them is refused (422).
 	MaskedFields *[]string `json:"masked_fields,omitempty"`
-	Name         string    `json:"name"`
-	OwnerId      *string   `json:"owner_id,omitempty"`
+
+	// MergedIntoId Set when this deal was merged away into another, and null otherwise. It separates a merged-away deal from one that was only archived: both are hidden from lists, but a merged one cannot be restored, and its id names the surviving deal to read instead. `contact`, `company` and `lead` carry the same field for the same reason.
+	MergedIntoId *string `json:"merged_into_id,omitempty"`
+	Name         string  `json:"name"`
+	OwnerId      *string `json:"owner_id,omitempty"`
 
 	// PartnerAttribution What the partner named by `partner_company_id` did: `sourced` (brought the deal) or `influenced` (helped one we had). Travels with the partner — naming a partner defaults it to `sourced`. Commission accrues on `sourced` only.
 	PartnerAttribution *DealPartnerAttribution `json:"partner_attribution,omitempty"`
@@ -3010,6 +3060,11 @@ type EmailCalendarInvitationResponse string
 // the bot, or because the credential was rejected rendered exactly like one the provider
 // confirmed. The rep was told their message went.
 type EmailDelivery struct {
+	// CanSendAgain True when the reader may send this bounced message again to a corrected address,
+	// by the same rule as the Worklist bounce row's `send_again`. Only the sender's own
+	// message that bounced hard qualifies, once, and not one an agent wrote.
+	CanSendAgain *bool `json:"can_send_again,omitempty"`
+
 	// DeliveredAt When the provider accepted it. Null unless the state is `sent`.
 	DeliveredAt *time.Time `json:"delivered_at,omitempty"`
 
@@ -3167,6 +3222,12 @@ type EmailSummaryDirection string
 // The message stays on the timeline; `none` does not mean it was answered.
 type EmailSummaryMove string
 
+// HiddenRecordHolder defines model for HiddenRecordHolder.
+type HiddenRecordHolder struct {
+	DisplayName string `json:"display_name"`
+	UserId      string `json:"user_id"`
+}
+
 // IntentTime A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
 type IntentTime struct {
 	// Timezone IANA zone name.
@@ -3175,6 +3236,20 @@ type IntentTime struct {
 	// WallClock Local date and time, no offset.
 	WallClock string `json:"wall_clock"`
 }
+
+// LinkFiler On a deal link only, and only when no human or agent chose it: who filed the activity on the deal, read from the latest filing of it there. The actor is `core` for the installation's own rule, or the name of the extension whose hook filed it. Marking the link `unrelated` takes the filing back, and no automatic pass files the activity there again.
+type LinkFiler struct {
+	Actor string `json:"actor"`
+
+	// Hook Which hook point filed it, for an extension actor. Absent for `core`.
+	Hook *LinkFilerHook `json:"hook,omitempty"`
+
+	// Reason For an extension, a key the extension declared for its hook. Read it together with the actor: the label comes from that extension's own translations. Absent for `core`.
+	Reason *string `json:"reason,omitempty"`
+}
+
+// LinkFilerHook Which hook point filed it, for an extension actor. Absent for `core`.
+type LinkFilerHook string
 
 // MeetingAttendeeResponse The answer one colleague or linked contact on a meeting gave its invitation. Exactly one of `user_id` and `contact_id` is set.
 type MeetingAttendeeResponse struct {
@@ -3267,15 +3342,6 @@ type Partner struct {
 	// NextStepDueAt Deprecated as stored text: the day the next step's task is due. Sent without `next_step` it is refused.
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	NextStepDueAt *string `json:"next_step_due_at,omitempty"`
-
-	// PartnerFitOverrideReason Non-null ⇒ partner_fit_score is a human Commercial Judgement override and recompute is suppressed until cleared.
-	PartnerFitOverrideReason *string `json:"partner_fit_override_reason,omitempty"`
-
-	// PartnerFitScore Current partner-fit score; if partner_fit_override_reason is non-null this is the Commercial Judgement value.
-	PartnerFitScore *int `json:"partner_fit_score,omitempty" maximum:"100" minimum:"0"`
-
-	// PartnerFitScoreComputed Retained machine-computed partner-fit value while a Commercial Judgement override is in force.
-	PartnerFitScoreComputed *int `json:"partner_fit_score_computed,omitempty" maximum:"100" minimum:"0"`
 
 	// PartnerKinds What the partner does with us, one or more kinds, sorted and without repeats. Empty only on a partner recorded before kinds existed with no role.
 	PartnerKinds *[]PartnerKind `json:"partner_kinds,omitempty"`
@@ -3554,11 +3620,16 @@ type Signal struct {
 	// ResolvedContactId Optional contact resolution, set only under a recorded consent grant and never inferred.
 	ResolvedContactId *string        `json:"resolved_contact_id,omitempty"`
 	Severity          SignalSeverity `json:"severity"`
-	Source            string         `json:"source"`
+
+	// Source The channel this signal arrived by: `api`, `automation`, `capture`, `import`, `manual` or `webform`. An older signal can show another value until the background correction reaches it.
+	Source string `json:"source"`
 
 	// SourceChannel Where the raw signal came from.
 	SourceChannel SignalSourceChannel `json:"source_channel"`
-	Status        SignalStatus        `json:"status"`
+
+	// SourceSystem The producer that wrote the signal, such as `signal-scan` or the name of an extension. Empty when a member or an API client filed it.
+	SourceSystem *string      `json:"source_system,omitempty"`
+	Status       SignalStatus `json:"status"`
 
 	// Summary The signal's one sentence. A sentence the server words itself (`technical_change`,
 	// `ghosted_thread`, `project_gone_quiet`) is in the reader's chosen display language, else
@@ -4171,6 +4242,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "links")
 	}
 
+	if raw, found := object["mailbox_imported"]; found {
+		err = json.Unmarshal(raw, &a.MailboxImported)
+		if err != nil {
+			return fmt.Errorf("error reading 'mailbox_imported': %w", err)
+		}
+		delete(object, "mailbox_imported")
+	}
+
 	if raw, found := object["meeting_intent"]; found {
 		err = json.Unmarshal(raw, &a.MeetingIntent)
 		if err != nil {
@@ -4321,6 +4400,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'task_type': %w", err)
 		}
 		delete(object, "task_type")
+	}
+
+	if raw, found := object["thread_audience_yours"]; found {
+		err = json.Unmarshal(raw, &a.ThreadAudienceYours)
+		if err != nil {
+			return fmt.Errorf("error reading 'thread_audience_yours': %w", err)
+		}
+		delete(object, "thread_audience_yours")
 	}
 
 	if raw, found := object["thread_key"]; found {
@@ -4711,6 +4798,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.MailboxImported != nil {
+		object["mailbox_imported"], err = json.Marshal(a.MailboxImported)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'mailbox_imported': %w", err)
+		}
+	}
+
 	if a.MeetingIntent != nil {
 		object["meeting_intent"], err = json.Marshal(a.MeetingIntent)
 		if err != nil {
@@ -4833,6 +4927,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["task_type"], err = json.Marshal(a.TaskType)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'task_type': %w", err)
+		}
+	}
+
+	if a.ThreadAudienceYours != nil {
+		object["thread_audience_yours"], err = json.Marshal(a.ThreadAudienceYours)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'thread_audience_yours': %w", err)
 		}
 	}
 
@@ -5181,6 +5282,14 @@ func (a *Company) UnmarshalJSON(b []byte) error {
 		delete(object, "extension_relationship_types")
 	}
 
+	if raw, found := object["hidden_contact_holders"]; found {
+		err = json.Unmarshal(raw, &a.HiddenContactHolders)
+		if err != nil {
+			return fmt.Errorf("error reading 'hidden_contact_holders': %w", err)
+		}
+		delete(object, "hidden_contact_holders")
+	}
+
 	if raw, found := object["id"]; found {
 		err = json.Unmarshal(raw, &a.Id)
 		if err != nil {
@@ -5221,6 +5330,14 @@ func (a *Company) UnmarshalJSON(b []byte) error {
 		delete(object, "last_activity_at")
 	}
 
+	if raw, found := object["last_activity_precision"]; found {
+		err = json.Unmarshal(raw, &a.LastActivityPrecision)
+		if err != nil {
+			return fmt.Errorf("error reading 'last_activity_precision': %w", err)
+		}
+		delete(object, "last_activity_precision")
+	}
+
 	if raw, found := object["legal_hold"]; found {
 		err = json.Unmarshal(raw, &a.LegalHold)
 		if err != nil {
@@ -5235,14 +5352,6 @@ func (a *Company) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'legal_name': %w", err)
 		}
 		delete(object, "legal_name")
-	}
-
-	if raw, found := object["lifecycle"]; found {
-		err = json.Unmarshal(raw, &a.Lifecycle)
-		if err != nil {
-			return fmt.Errorf("error reading 'lifecycle': %w", err)
-		}
-		delete(object, "lifecycle")
 	}
 
 	if raw, found := object["linkedin_url"]; found {
@@ -5301,6 +5410,14 @@ func (a *Company) UnmarshalJSON(b []byte) error {
 		delete(object, "partner")
 	}
 
+	if raw, found := object["partner_program_ended"]; found {
+		err = json.Unmarshal(raw, &a.PartnerProgramEnded)
+		if err != nil {
+			return fmt.Errorf("error reading 'partner_program_ended': %w", err)
+		}
+		delete(object, "partner_program_ended")
+	}
+
 	if raw, found := object["phone"]; found {
 		err = json.Unmarshal(raw, &a.Phone)
 		if err != nil {
@@ -5339,6 +5456,22 @@ func (a *Company) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'source': %w", err)
 		}
 		delete(object, "source")
+	}
+
+	if raw, found := object["source_system"]; found {
+		err = json.Unmarshal(raw, &a.SourceSystem)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_system': %w", err)
+		}
+		delete(object, "source_system")
+	}
+
+	if raw, found := object["status"]; found {
+		err = json.Unmarshal(raw, &a.Status)
+		if err != nil {
+			return fmt.Errorf("error reading 'status': %w", err)
+		}
+		delete(object, "status")
 	}
 
 	if raw, found := object["strength"]; found {
@@ -5522,6 +5655,13 @@ func (a Company) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.HiddenContactHolders != nil {
+		object["hidden_contact_holders"], err = json.Marshal(a.HiddenContactHolders)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'hidden_contact_holders': %w", err)
+		}
+	}
+
 	object["id"], err = json.Marshal(a.Id)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'id': %w", err)
@@ -5555,6 +5695,13 @@ func (a Company) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.LastActivityPrecision != nil {
+		object["last_activity_precision"], err = json.Marshal(a.LastActivityPrecision)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'last_activity_precision': %w", err)
+		}
+	}
+
 	if a.LegalHold != nil {
 		object["legal_hold"], err = json.Marshal(a.LegalHold)
 		if err != nil {
@@ -5566,13 +5713,6 @@ func (a Company) MarshalJSON() ([]byte, error) {
 		object["legal_name"], err = json.Marshal(a.LegalName)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'legal_name': %w", err)
-		}
-	}
-
-	if a.Lifecycle != nil {
-		object["lifecycle"], err = json.Marshal(a.Lifecycle)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling 'lifecycle': %w", err)
 		}
 	}
 
@@ -5625,6 +5765,13 @@ func (a Company) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.PartnerProgramEnded != nil {
+		object["partner_program_ended"], err = json.Marshal(a.PartnerProgramEnded)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'partner_program_ended': %w", err)
+		}
+	}
+
 	if a.Phone != nil {
 		object["phone"], err = json.Marshal(a.Phone)
 		if err != nil {
@@ -5656,6 +5803,20 @@ func (a Company) MarshalJSON() ([]byte, error) {
 	object["source"], err = json.Marshal(a.Source)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'source': %w", err)
+	}
+
+	if a.SourceSystem != nil {
+		object["source_system"], err = json.Marshal(a.SourceSystem)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_system': %w", err)
+		}
+	}
+
+	if a.Status != nil {
+		object["status"], err = json.Marshal(a.Status)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'status': %w", err)
+		}
 	}
 
 	if a.Strength != nil {
@@ -6610,6 +6771,14 @@ func (a *Deal) UnmarshalJSON(b []byte) error {
 		delete(object, "last_activity_at")
 	}
 
+	if raw, found := object["last_activity_precision"]; found {
+		err = json.Unmarshal(raw, &a.LastActivityPrecision)
+		if err != nil {
+			return fmt.Errorf("error reading 'last_activity_precision': %w", err)
+		}
+		delete(object, "last_activity_precision")
+	}
+
 	if raw, found := object["last_email"]; found {
 		err = json.Unmarshal(raw, &a.LastEmail)
 		if err != nil {
@@ -6656,6 +6825,14 @@ func (a *Deal) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'masked_fields': %w", err)
 		}
 		delete(object, "masked_fields")
+	}
+
+	if raw, found := object["merged_into_id"]; found {
+		err = json.Unmarshal(raw, &a.MergedIntoId)
+		if err != nil {
+			return fmt.Errorf("error reading 'merged_into_id': %w", err)
+		}
+		delete(object, "merged_into_id")
 	}
 
 	if raw, found := object["name"]; found {
@@ -7047,6 +7224,13 @@ func (a Deal) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.LastActivityPrecision != nil {
+		object["last_activity_precision"], err = json.Marshal(a.LastActivityPrecision)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'last_activity_precision': %w", err)
+		}
+	}
+
 	if a.LastEmail != nil {
 		object["last_email"], err = json.Marshal(a.LastEmail)
 		if err != nil {
@@ -7086,6 +7270,13 @@ func (a Deal) MarshalJSON() ([]byte, error) {
 		object["masked_fields"], err = json.Marshal(a.MaskedFields)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'masked_fields': %w", err)
+		}
+	}
+
+	if a.MergedIntoId != nil {
+		object["merged_into_id"], err = json.Marshal(a.MergedIntoId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'merged_into_id': %w", err)
 		}
 	}
 

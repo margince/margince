@@ -52,6 +52,9 @@ export const MAGIC_SENTENCE_KEYS = [
   "magic.action.mail_filed",
   "magic.action.company_profile_read",
   "magic.action.fields_changed",
+  "magic.action.guests_synced_from_calendar",
+  "magic.action.task_done",
+  "magic.action.task_reopened",
   "magic.action.retention_lead_anonymize",
   "magic.action.retention_lead_archive",
   "magic.action.retention_contact_anonymize",
@@ -128,6 +131,7 @@ export const MAGIC_WHY_KEYS = [
   "magic.why.site_read_unnamed",
   "magic.why.site_read_each",
   "magic.why.signature",
+  "magic.why.stated",
   "magic.why.retention",
 ] as const satisfies readonly MessageKey[];
 

@@ -6,17 +6,10 @@ package activities
 // The activity projection: which columns are selected, and where each one is
 // scanned, stated ONCE.
 //
-// They used to be two lists in two functions that had to track each other by
-// eye. Most neighbours differ enough in type that a transposition fails loudly
-// on scan — but five in a row here are string-ish and nullable
-// (meeting_status, source_system, source_id, source, captured_by), and
-// swapping any two of those scans cleanly and puts the wrong value on the
-// wire. No error, no failing test, a record that says its source is a meeting
-// status.
-//
-// The order is a single slice now. A column added in the middle of the SELECT
-// arrives with its own destination attached, so there is no second list to
-// forget.
+// Five neighbours (meeting_status, source_system, source_id, source,
+// captured_by) are string-ish and nullable. Two swapped in a second list would
+// scan cleanly and put the wrong value on the wire. One slice keeps each
+// column's destination next to it.
 
 import (
 	"context"
@@ -96,11 +89,12 @@ type activityScan struct {
 	writerSeat                      *ids.UUID
 	writerSeatName, writerSeatEmail *string
 	// Who sent the row, as relstrength.Evidence reads it into automatic_kind.
-	origin          string
-	calendarMethod  *string
-	senderIsMachine bool
-	version         int64
-	audience        string
+	origin                               string
+	calendarMethod                       *string
+	senderIsMachine                      bool
+	version                              int64
+	audience                             string
+	mailboxImported, threadAudienceYours bool
 	// contentAvailable is the caller's audience test, evaluated per row: it
 	// decides whether the content columns above reach the caller at all.
 	contentAvailable bool
@@ -175,6 +169,8 @@ var activityProjection = []activityColumn{
 	{"a.audience", func(s *activityScan) any { return &s.audience }},
 	{"a.audience_reason", func(s *activityScan) any { return &s.audienceReason }},
 	{"a.raw", func(s *activityScan) any { return &s.raw }},
+	{mailboxImportedColumn, func(s *activityScan) any { return &s.mailboxImported }},
+	{threadAudienceYoursColumn, func(s *activityScan) any { return &s.threadAudienceYours }},
 	{"", func(s *activityScan) any { return &s.a.CanShareInternal }},
 	{"", func(s *activityScan) any { return &s.contentAvailable }},
 }
@@ -255,9 +251,12 @@ func activityColumns(ctx context.Context, contentArm string, arg func(any) int) 
 	if err != nil {
 		return "", err
 	}
+	importFacts := importFactColumns(ctx, "a", arg)
 	out := make([]string, len(activityProjection))
 	for i, c := range activityProjection {
 		switch c.sql {
+		case mailboxImportedColumn, threadAudienceYoursColumn:
+			out[i] = importFacts[c.sql]
 		case replyChannel:
 			out[i] = storekit.ReplyChannelSQL("a", sourceAudience)
 		case "a.body":
@@ -335,6 +334,7 @@ func (s *activityScan) record(ctx context.Context) crmcontracts.Activity {
 		a.ImportedFrom = provenance.ImportedFrom(s.a.SourceSystem)
 		a.Author = SourceAuthorOf(s.sourceAuthorID, s.sourceAuthorSeatName, s.sourceAuthorName, s.a.SourceSystem)
 		a.Voice = writerSeatVoice(s.writerSeat, s.writerSeatName, s.writerSeatEmail)
+		a.MailboxImported, a.ThreadAudienceYours = &s.mailboxImported, &s.threadAudienceYours
 	}
 	// Said of a mail's body, so it goes where the body goes. A withheld reader
 	// does not get it, nor does a row whose body an erasure removed, nor any
@@ -470,7 +470,7 @@ func RowEmailSummary(a crmcontracts.Activity) *crmcontracts.EmailSummary {
 	}
 	summary.Subject = a.Subject
 	if a.Body != nil {
-		if preview := EmailSummaryText(*a.Body); preview != "" {
+		if preview := EmailSummaryText(*a.Body, deref(a.Subject)); preview != "" {
 			summary.Preview = &preview
 		}
 	}

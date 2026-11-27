@@ -116,7 +116,7 @@ var emailRenderers = map[string]bool{
 // These are the ones that never mount anything: builders, mappers and the
 // surfaces whose only act is to suppress their own title in favour of the row.
 var emailPassthroughs = gatekit.Waive(map[string]string{
-	"components/dealstakeholderoffer.tsx":          "reads the parties' contact and seat ids to offer the mail's contacts as deal stakeholders; it draws no part of the message",
+	"features/mail/dealstakeholderoffer.tsx":       "reads the parties' contact and seat ids to offer the mail's contacts as deal stakeholders; it draws no part of the message",
 	"features/booking/booking-context.ts":          "reads the inbound counterparty id to choose a booking email reason; it renders no message content",
 	"lib/worklistemailrow.ts":                      "asks whether a worklist row carries an email summary, to decide whether the message names the row; it draws no part of the message",
 	"design-system/activitytimeline.tsx":           "maps an Activity onto a TimelineEntry, email_summary included, for timeline.tsx to draw; it builds the entry and renders nothing",
@@ -132,8 +132,9 @@ var emailPassthroughs = gatekit.Waive(map[string]string{
 	"features/worklist/worklist.pane.tsx":          "reads the message's activity id to choose which thread the details read; worklist.pane.conversation.tsx draws that thread through ThreadState",
 	"features/contacts/contactmemory.rows.ts":      "maps a memory row onto the card's row model, the email summary included, for contactmemory.tsx to draw through EmailEntry; its subject and preview fill only the filter text and the fallback row",
 	"features/brief/brief.focus.tsx":               "draws no part of the message beyond its audience status, one more fact about whose row it is, the same access reading emailaccesseditor.tsx takes. The card's heading is brief.taskcard.tsx's name for the row, and the message itself is handed to WorklistRow, which draws it through EmailEntry",
-	"features/brief/brief.taskcard.tsx":            "names a Home card after the message it answers: the sender and the subject as one line, \"Reply to Anna: Pricing\". It reads the move and the band for the kind and state chips. No preview, body or attachment: the open card hands the message to WorklistRow, which draws it through EmailEntry",
+	"features/brief/brief.taskcard.tsx":            "names a Home card after the message it answers: the sender and the subject as one line, \"Reply to Anna: Pricing\". No preview, body or attachment: the open card hands the message to WorklistRow, which draws it through EmailEntry",
 	"testing/brief.fixtures.ts":                    "builds the rows a story and a test hand to the Brief; it constructs an EmailSummary and renders nothing",
+	"components/taskmeta.tsx":                      "the chip line under a Home card or a Worklist row: it reads the move and the band for the kind and state chips, and a calendar change for its badge. No preview, body or attachment: the message itself is drawn through EmailEntry",
 	"components/latestinbound.tsx":                 "the Just in row atop a record's Overview: the newest unanswered message as one line of headline, who sent it and one clamped line of its preview. A withheld message shows only its kind. Its verbs are the timeline row's own, and the full message is EmailDetail behind the timeline's row",
 	"components/latestinbound.words.tsx":           "the Just in row's words: the headline and one line of preview read from the message summary, and none for a withheld message. latestinbound.tsx draws them as that row",
 	"features/companies/companyoverviewlatest.tsx": "one row of the company overview's Latest card: the headline as the link that opens the drawer, who it was with and the day, and the needs-reply badge. No preview, body, attachment or access mark: the row is a line in a list in time order, and the drawer it opens is EmailDetail",

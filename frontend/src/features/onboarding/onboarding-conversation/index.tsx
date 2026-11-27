@@ -253,8 +253,8 @@ function useRestore(
         { params: { path: { readId: persistedReadId ?? "" } } },
       );
       if (error) {
-        // A read the server no longer serves is not a restore failure; the
-        // company act simply reopens fresh.
+        // absent-404: a read the server no longer serves is not a restore
+        // failure; the company act simply reopens fresh.
         if (response.status === 404) {
           return null;
         }

@@ -40,6 +40,19 @@ type Declared struct {
 	// View is the path segment under the unit's screen that shows one record,
 	// or empty for the screen itself.
 	View string
+	// OwnerColumn holds the member who owns a row, or is empty for a kind whose
+	// read right shows every row.
+	OwnerColumn string
+}
+
+// TitleColumn is the field a record of the kind is titled and searched by. It
+// is the History label field, else the first field of the natural key. Search
+// matches on it, and the readiness check asks for the index that match needs.
+func (d Declared) TitleColumn() string {
+	if d.Timeline != nil {
+		return d.Timeline.LabelField
+	}
+	return d.NaturalKey[0]
 }
 
 var (
@@ -63,6 +76,7 @@ func Register(unit extension.Name, kinds []extension.RecordKindDeclaration) {
 			Name: name, Unit: unit, Kind: k.Kind, DisplayName: k.DisplayName, Table: k.Table,
 			Object: extension.RecordKindObject(unit, k.Kind), Fields: k.Fields,
 			NaturalKey: k.NaturalKey, DeletePolicy: policy, Timeline: k.Timeline, View: k.View,
+			OwnerColumn: k.OwnerColumn,
 		}
 	}
 }
@@ -79,6 +93,19 @@ func Lookup(name string) (Declared, bool) {
 	defer mu.RUnlock()
 	d, ok := byName[name]
 	return d, ok
+}
+
+// LookupTable answers the kind whose rows a unit table holds, and false for a
+// table no unit declared a kind over.
+func LookupTable(table string) (Declared, bool) {
+	mu.RLock()
+	defer mu.RUnlock()
+	for _, d := range byName {
+		if d.Table == table {
+			return d, true
+		}
+	}
+	return Declared{}, false
 }
 
 // DeclaredBy reports whether the unit declared the kind. A kind another unit

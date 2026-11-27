@@ -157,7 +157,7 @@ type RowTag struct {
 // Exported because the browser has to know it too: a strip that counted the
 // rest off this capped array would tell a record with forty tags that it has
 // five. `frontend/src/design-system/rowtags.tsx` mirrors the number, and
-// `backend/gates/frontendrowtagcap_test.go` fails in both directions if the
+// `backend/gates/frontendlimits_test.go` fails in both directions if the
 // two ever disagree.
 const RowTagCap = 5
 

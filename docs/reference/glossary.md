@@ -18,6 +18,7 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | backend | The Go server code under `backend/`. |
 | Beschäftigteninformation | The German notice each employee gets before their mailbox is read (Art. 13 GDPR). |
 | breakdown | A count of one population split by one field, which an extension can add. |
+| burst | The chat messages of one thread that follow one another with short gaps, judged together. |
 | BUSL | The Business Source License 1.1, the license Margince uses. |
 | capability | A core feature an extension can ask to use, such as its AI models or file store. |
 | challenge | A check a WAF puts to the browser in the app's place, which only a page load can pass. |
@@ -78,6 +79,7 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | LICENSE | The file at the repository root that holds the license text. |
 | LinkedIn | The professional network whose contact export Margince can import. |
 | locale | The date or time format of the reader's language, as a setting value. |
+| Lumo | Proton's AI assistant, which connects to Margince through its desktop app. |
 | macOS | Apple's desktop operating system. |
 | Margince | The CRM this repository builds. |
 | mask | A field permission that hides one field of a record from a role. |

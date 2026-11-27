@@ -208,6 +208,57 @@ func TestASuggestionForARecordTheReaderCannotSeeCannotBeDecided(t *testing.T) {
 	}
 }
 
+func TestTheQueueShowsOnlySuggestionsTheReaderMayDecide(t *testing.T) {
+	f := newSuggestionFixture(t)
+	f.propose(t, "deal", f.deal)
+	if queue, err := f.queue(); err != nil || len(queue) != 1 {
+		t.Fatalf("the proposer's queue = %+v, %v; want the suggestion", queue, err)
+	}
+
+	f.ctx = readOnlySeat(f.e, f.e.rep)
+	queue, err := f.queue()
+	if err != nil || len(queue) != 0 {
+		t.Errorf("a seat that may read but not update messages sees %+v, %v; want an empty queue", queue, err)
+	}
+	if _, err := f.store.RejectLinkSuggestion(f.ctx, f.pendingID(t)); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("the same seat deciding it gave %v, want permission denied", err)
+	}
+}
+
+func TestUndecidableSuggestionsDoNotHideALaterOneTheReaderMayDecide(t *testing.T) {
+	f := newSuggestionFixture(t)
+	pipeline, stage := ids.NewV7(), ids.NewV7()
+	f.e.exec(t, `INSERT INTO pipeline (id, name) VALUES ($1, $2)`, pipeline, "Gone "+pipeline.String())
+	f.e.exec(t, `INSERT INTO stage (id, pipeline_id, name, "position") VALUES ($1, $2, 'Qualified', 1)`, stage, pipeline)
+	gone := make([]ids.UUID, suggestionQueueScan+1)
+	for i := range gone {
+		gone[i] = ids.NewV7()
+		f.e.exec(t, `INSERT INTO deal (id, name, status, owner_id, pipeline_id, stage_id, source, captured_by)
+			VALUES ($1, 'Gone', 'open', $2, $3, $4, 'manual', 'system')`, gone[i], f.e.rep, pipeline, stage)
+		f.propose(t, "deal", gone[i])
+	}
+	// An archived target is one no reader may decide; its rows stay pending.
+	f.e.exec(t, `UPDATE deal SET archived_at = now() WHERE id = ANY($1)`, gone)
+	f.propose(t, "deal", f.deal)
+
+	queue, err := f.queue()
+	if err != nil || len(queue) != 1 || ids.UUID(queue[0].EntityId) != f.deal {
+		t.Fatalf("queue behind %d undecidable suggestions = %+v, %v; want only the live deal", len(gone), queue, err)
+	}
+}
+
+// pendingID reads the message's one pending suggestion past the store, for a
+// caller whose queue does not show it.
+func (f suggestionFixture) pendingID(t *testing.T) ids.UUID {
+	t.Helper()
+	var id ids.UUID
+	if err := f.e.owner.QueryRow(context.Background(), `SELECT id FROM activity_link_suggestion
+		WHERE activity_id = $1 AND status = 'pending'`, f.message).Scan(&id); err != nil {
+		t.Fatalf("reading the pending suggestion: %v", err)
+	}
+	return id
+}
+
 func TestRejectingAttachesNothing(t *testing.T) {
 	f := newSuggestionFixture(t)
 	f.propose(t, "deal", f.deal)
@@ -252,5 +303,47 @@ func TestAProposalIsRefusedForABadShape(t *testing.T) {
 		if err == nil {
 			t.Errorf("%s was accepted", name)
 		}
+	}
+}
+
+// Margince's own deal question waits only in the queue of the colleague it
+// asks, and carries no unit. Another colleague who may change the message
+// neither sees nor decides it, and asking again in the conversation adds
+// nothing.
+func TestACoreDealQuestionIsForTheColleagueItAsks(t *testing.T) {
+	f := newSuggestionFixture(t)
+	ask := func() {
+		t.Helper()
+		err := f.store.tx(f.ctx, func(tx pgx.Tx) error {
+			return AskWhichDealTx(f.ctx, tx, WhichDealQuestion{
+				Mail: ids.From[ids.ActivityKind](f.message), Seat: f.e.rep,
+				Deals: []ids.UUID{f.deal}, Reason: "Which deal is this about?",
+			})
+		})
+		if err != nil {
+			t.Fatalf("asking the deal question: %v", err)
+		}
+	}
+	ask()
+	ask()
+
+	queue, err := f.queue()
+	if err != nil {
+		t.Fatalf("reading the asked colleague's queue: %v", err)
+	}
+	if len(queue) != 1 || queue[0].Unit != nil {
+		t.Fatalf("queue = %+v, want one question with no unit", queue)
+	}
+	other := f
+	other.ctx = f.e.asSeat(f.e.other)
+	theirs, err := other.queue()
+	if err != nil {
+		t.Fatalf("reading another colleague's queue: %v", err)
+	}
+	if len(theirs) != 0 {
+		t.Fatalf("a colleague who was not asked sees %+v", theirs)
+	}
+	if _, err := f.store.RejectLinkSuggestion(other.ctx, ids.UUID(queue[0].Id)); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("a colleague who was not asked rejected the question: %v, want not found", err)
 	}
 }

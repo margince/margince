@@ -40,6 +40,7 @@ export function BriefFeed({
   onRetry,
   onContext,
   queueToggle,
+  waiting,
 }: Readonly<{
   day: Worklist | undefined;
   state: SectionState;
@@ -49,6 +50,8 @@ export function BriefFeed({
   onContext?: (item: WorklistItem) => void;
   /** The way into the whole queue, under the day's order. */
   queueToggle?: ReactNode;
+  /** The decisions waiting on the reader, as cards after the day's own. */
+  waiting?: ReactNode;
 }>) {
   const readerZone = useViewerZone();
   const t = useT();
@@ -70,7 +73,11 @@ export function BriefFeed({
       scopeWasCut(day),
   );
   const shown =
-    state !== "ready" ? state : rows.length > 0 || partial ? "ready" : "empty";
+    state !== "ready"
+      ? state
+      : rows.length > 0 || partial || waiting
+        ? "ready"
+        : "empty";
   return (
     <section
       id="brief-today"
@@ -92,11 +99,8 @@ export function BriefFeed({
           </AppLink>
         )}
         <SystemBadge day={day} />
-        {rows.length > 0 && (
-          <span className="t-caption t-num brief-first-count">
-            {formatNumber(rows.length, locale)}
-          </span>
-        )}
+        <ShownOf shown={rows.length} total={day?.focus?.total} />
+
         {queueToggle && <div className="brief-first-queue">{queueToggle}</div>}
       </div>
       {refreshFailed && (
@@ -138,6 +142,7 @@ export function BriefFeed({
           )}
         </SurfaceState>
       )}
+      {state !== "loading" && waiting}
       <OpenEmailDrawer
         activityId={openEmail}
         zone={readerZone}
@@ -147,6 +152,27 @@ export function BriefFeed({
         }
       />
     </section>
+  );
+}
+
+/**
+ * How many of the day's cards are drawn, said only when the day holds more.
+ * The Worklist switch carries the whole count.
+ */
+function ShownOf({
+  shown,
+  total,
+}: Readonly<{ shown: number; total: number | undefined }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  if (shown === 0 || total === undefined || total <= shown) return null;
+  return (
+    <span className="t-caption t-num brief-first-count">
+      {t("brief.first.shownOf", {
+        shown: formatNumber(shown, locale),
+        total: formatNumber(total, locale),
+      })}
+    </span>
   );
 }
 

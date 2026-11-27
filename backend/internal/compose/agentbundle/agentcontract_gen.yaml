@@ -23,9 +23,6 @@ info:
     name: Gradion
     email: lars@gradion.com
   x-api-deprecation-notices:
-    DELETE /v1/lead-sources/{id}:
-      release: ""
-      announced_at: ""
     GET /v1/companies/{id}/brief:
       release: ""
       announced_at: ""
@@ -38,16 +35,10 @@ info:
     GET /v1/forecast/assurance/enforcement:
       release: ""
       announced_at: ""
-    GET /v1/lead-sources:
-      release: ""
-      announced_at: ""
     GET /v1/stage-automation/policies/{id}:
       release: ""
       announced_at: ""
     GET /v1/stage-automation/report:
-      release: ""
-      announced_at: ""
-    PATCH /v1/lead-sources/{id}:
       release: ""
       announced_at: ""
     POST /v1/ai-model-rates/propose-refresh:
@@ -68,13 +59,13 @@ info:
     POST /v1/forecast/assurance/exceptions/{id}/wait:
       release: ""
       announced_at: ""
-    POST /v1/lead-sources:
-      release: ""
-      announced_at: ""
     POST /v1/stage-automation/policies/{id}/resume:
       release: ""
       announced_at: ""
     PUT /v1/forecast/assurance/enforcement:
+      release: ""
+      announced_at: ""
+    PUT /v1/scheduling/team-requests/{host_user_id}:
       release: ""
       announced_at: ""
     PUT /v1/stage-automation/policies/{id}:
@@ -1919,7 +1910,7 @@ paths:
           in: query
           schema: {type: string}
           description: Lookup by normalized domain (the employer-inference index).
-        - name: lifecycle
+        - name: status
           in: query
           schema: {type: string, enum: [unknown, target, prospect, opportunity, onboarding, live, customer, former_customer, disqualified]}
           description: Where the account stands with us.
@@ -1934,7 +1925,7 @@ paths:
             type: string
             pattern: '^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z0-9]+(_[a-z0-9]+)*$'
           description: >-
-            Accounts carrying this extension type (`ext:<unit>:<type>`, from `extension_relationship_types`). It is a separate parameter so the closed `relationship_type` list stays as it is. A value no installed extension declares answers 422. Both parameters together select accounts that carry both.
+            Accounts carrying this extension type (`ext:<unit>:<type>`, from `extension_relationship_types`). It is a separate parameter so the closed `relationship_type` list stays as it is. A value no installed extension declares answers 422. Both parameters together select accounts that carry both. `listCompanyTypes` lists the values, and an agent reads them with the `read_workspace` action `company_types`.
         - name: owner_team_id
           in: query
           schema: {type: string, format: uuid}
@@ -2301,7 +2292,7 @@ paths:
       security: [{bearerAuth: []}]
       summary: Stream a company's logo image.
       description: |-
-        The bytes behind `Company.logo_url` (A55): the company logo resolved from its
+        The bytes behind `Company.logo_url`: the company logo resolved from its
         own website during enrichment or uploaded by a contact, normalized once at store time
         to PNG. Resolved site marks are square; uploaded wordmarks keep their aspect ratio.
         The response is always `image/png` — whatever the source format was, what is served
@@ -3058,15 +3049,37 @@ paths:
       tags: [Companies, Partners]
       operationId: getPartner
       summary: Read the partner extension on a company (404 if the company is not a partner).
+      parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
       responses:
         '200':
           description: The partner record.
           content:
             application/json:
               schema: {$ref: '#/components/schemas/Partner'}
+        '204': {$ref: '#/components/responses/NothingYet'}
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
       description: Read the partner extension on a company (404 if the company is not a partner).
+    delete:
+      tags: [Companies, Partners]
+      operationId: endPartnerProgram
+      security: [{bearerAuth: []}]
+      summary: End the partner program while keeping the company and commission history.
+      description: |-
+        Retires the partner extension. Company update authority is required. Existing terms and commission entries stay on record. The partner relationship type is removed in the same transaction; other relationship types stay.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+      responses:
+        '204': {description: Partner program ended.}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /companies/{id}/partner/setup:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -3163,7 +3176,7 @@ paths:
       operationId: deepReadCompany
       summary: Read the company's WHOLE site in the background — a crawl that ends in staged proposals.
       description: |-
-        The deep read (founder ratification R2, the A102 crawl seam): discovers up to 12 pages of the
+        The deep read: discovers up to 12 pages of the
         company's own site — well-known paths, sitemap, same-registrable-domain nav links, every
         one robots-checked and SSRF-guarded, discovery is deterministic code and NEVER model-chosen —
         extracts each page through the shared evidence gate, and stages the merged findings as
@@ -3253,12 +3266,15 @@ paths:
         single verdict would hide which of them is stale: an account can hold a mail provider
         read this morning beside services last read a week ago because the certificate log has
         been down since.
+      parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
       responses:
         '200':
           description: What each source last did for this account.
           content:
             application/json:
               schema: {$ref: '#/components/schemas/TechnicalEnrichStatus'}
+        '204': {$ref: '#/components/responses/NothingYet'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
@@ -3276,12 +3292,15 @@ paths:
         the register issues — the receipt, tied to the number consulted and the day it was
         asked. A `valid` flag with no receipt proves nothing, which is why the receipt and the
         date the register itself reported both travel here.
+      parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
       responses:
         '200':
           description: The current standing, and the proof it was checked.
           content:
             application/json:
               schema: {$ref: '#/components/schemas/CompanyVatCheck'}
+        '204': {$ref: '#/components/responses/NothingYet'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
@@ -3325,12 +3344,15 @@ paths:
         industry, no description, no facts — and a draft written from it had nothing to
         stand on. 404 when the account has never been read, which is the honest
         difference between "never tried" and "tried and got nothing".
+      parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
       responses:
         '200':
           description: The newest read's report.
           content:
             application/json:
               schema: {$ref: '#/components/schemas/SiteReadReport'}
+        '204': {$ref: '#/components/responses/NothingYet'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
@@ -3769,7 +3791,7 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/PartnerStage'}
         '403': {$ref: '#/components/responses/Forbidden'}
-        '409': {$ref: '#/components/responses/Conflict'}
+        '409': {$ref: '#/components/responses/NameTakenConflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
       description: |-
         Add a partner stage.
@@ -3808,7 +3830,7 @@ paths:
               schema: {$ref: '#/components/schemas/PartnerStage'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
-        '409': {$ref: '#/components/responses/Conflict'}
+        '409': {$ref: '#/components/responses/NameTakenConflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
   /commissions:
     get:
@@ -4359,7 +4381,7 @@ paths:
         - name: link_type
           in: query
           description: >-
-            A link type, core's or an extension's `ext:<unit>:<type>`. Keeps the deals that hold at least one link of that type to another live deal, from either end. Links to a company or a contact are not read by this filter.
+            A link type, core's or an extension's `ext:<unit>:<type>`. Keeps the deals that hold at least one link of that type to another live deal, from either end. Links to a company or a contact are not read by this filter. `listLinkTypes` lists the values, and an agent reads them with the `read_workspace` action `link_types`.
           schema: {type: string, maxLength: 68}
         - name: tag_id
           in: query
@@ -5449,7 +5471,7 @@ paths:
         `PUT /projects/{id}/companies`; this one is required because a project starts with a client.
         `key` is optional. Without it the server mints one from the name: the initials alone
         (`ERA`) when no live project uses those letters, else the letters plus the lowest free
-        number from 2 (`ERA-2`). `getProjectKeyPreview` answers the key a create would mint.
+        number from 2. `getProjectKeyPreview` answers the key a create would mint.
         A sent key is stored in upper case and is refused with 422 naming `key` when it does not
         fit the key shape (`invalid_key`), is a word often bracketed in subject lines
         (`key_is_common_word`), is a word of a colleague's name (`key_is_colleague_name`), or is
@@ -6649,6 +6671,41 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/ChannelProviderDirectory'}
         '401': {$ref: '#/components/responses/Unauthorized'}
+  /company-types:
+    get:
+      tags: [Companies]
+      operationId: listCompanyTypes
+      security: [{bearerAuth: []}]
+      summary: Which company types installed extensions add beside core's own.
+      description: |-
+        The values a company can carry in `extension_relationship_types`, and the label a
+        screen shows for each. Which extensions are installed is a fact of the binary, so the
+        contract cannot list the values; this operation does.
+      responses:
+        '200':
+          description: Every declared type, ordered by value.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CompanyTypeDirectory'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+  /record-kinds:
+    get:
+      tags: [Extensions]
+      operationId: listRecordKinds
+      security: [{bearerAuth: []}]
+      summary: Which kinds of record installed extensions add beside core's own.
+      description: |-
+        The record kinds this caller may read, each named `ext:<unit>:<kind>`, with the label a
+        screen shows, its fields, its natural key, its delete policy and the actions this caller
+        holds on it. Which extensions are installed is a fact of the binary, so the contract
+        cannot list the kinds; this operation does.
+      responses:
+        '200':
+          description: Every readable kind, ordered by name.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/RecordKindDirectory'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
   /tasks:
     post:
       tags: [Activities]
@@ -7278,6 +7335,99 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '409': {$ref: '#/components/responses/VersionConflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
+  /link-types:
+    get:
+      tags: [Links]
+      operationId: listLinkTypes
+      security: [{bearerAuth: []}]
+      summary: The types a link between two records may have.
+      description: |-
+        Core's types, then each extension's, with the records each may start and end on. An
+        extension's type is named `ext:<unit>:<type>`.
+      responses:
+        '200':
+          description: Every link type.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/LinkTypeList'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+  /link-suggestions:
+    get:
+      tags: [Activities]
+      operationId: listLinkSuggestions
+      security: [{bearerAuth: []}]
+      summary: The link suggestions waiting for the caller to decide.
+      description: |-
+        An extension may suggest which deal, company, contact or project a message belongs to. A
+        suggestion attaches nothing. It waits here until a reader accepts or rejects it. Margince
+        itself asks one question here: when several open deals fit a captured mail, it suggests each
+        of them to the one colleague the mailbox confirms is responsible. Such a suggestion has no
+        `unit`, and only that colleague sees and decides it. An agent acting for a colleague sees
+        and decides what that colleague would, and never another colleague's question.
+      responses:
+        '200':
+          description: The pending suggestions the caller may see.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/LinkSuggestionList'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+  /link-suggestions/{id}/accept:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Activities]
+      operationId: acceptLinkSuggestion
+      security: [{bearerAuth: []}]
+      summary: Accept a suggestion, filing the message under its record.
+      description: |-
+        Files the message under the suggested record through the same relink as any other filing,
+        and closes the suggestion in the same transaction. The caller needs the right to update the
+        message and to attach to the target. Accepting a suggestion that is already accepted is the
+        same success. A rejected one answers `409`.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
+      responses:
+        '200':
+          description: The suggestion, now accepted.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/LinkSuggestion'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/VersionConflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /link-suggestions/{id}/reject:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Activities]
+      operationId: rejectLinkSuggestion
+      security: [{bearerAuth: []}]
+      summary: Reject a suggestion. The message stays where it is, and the suggestion is not offered again.
+      description: |-
+        Closes the suggestion and attaches nothing. The same target is not proposed for the same
+        message a second time. Rejecting a suggestion that is already rejected is the same success.
+        An accepted one answers `409`.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
+      responses:
+        '200':
+          description: The suggestion, now rejected.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/LinkSuggestion'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/VersionConflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /activities/{id}/deal-decline:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -7494,12 +7644,15 @@ paths:
         after the rep left the page could not be found again — and a transcript nobody had read looked
         exactly like one whose reading had failed. 404 when this transcript has never been read, which
         is the honest difference between "never tried" and "tried and got nothing".
+      parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
       responses:
         '200':
           description: The newest reading's report.
           content:
             application/json:
               schema: {$ref: '#/components/schemas/TranscriptReadReport'}
+        '204': {$ref: '#/components/responses/NothingYet'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
@@ -7729,7 +7882,10 @@ paths:
                   description: |-
                     The records the message would be filed under. They are read through the caller's
                     own row scope before the engine sees them, so naming a record the caller cannot
-                    open is refused here rather than answered about.
+                    open is refused here rather than answered about. A project is REFUSED here
+                    (project_filing_needs_approval), because filing there marks commercial
+                    correspondence: add it afterwards with relink, which stages an approval that waits
+                    for the user's yes before it takes effect.
                   items:
                     $ref: '#/components/schemas/ActivityLinkInput'
                   maxItems: 25
@@ -8011,6 +8167,7 @@ paths:
         left, a handover of their work (`handOverUserWork`) moves their drafts to the colleague
         who takes over, who from then on is the only one who reads them.
       parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
         - name: anchor_type
           in: query
           required: true
@@ -8025,6 +8182,7 @@ paths:
           content:
             application/json:
               schema: {$ref: '#/components/schemas/MailDraft'}
+        '204': {$ref: '#/components/responses/NothingYet'}
         '404':
           description: |-
             No draft of the caller's for this anchor, or an anchor the caller can no longer
@@ -8383,6 +8541,27 @@ paths:
               schema:
                 type: array
                 items: {$ref: '#/components/schemas/SchedulingTeamCandidate'}
+  /scheduling/team-links:
+    get:
+      tags: [Activities]
+      operationId: listSchedulingTeamLinks
+      summary: List the caller's team booking links.
+      description: |-
+        Each live team link the caller owns, oldest first. A team link sits beside the caller's
+        personal booking page, which always offers the caller's own free time alone.
+      responses:
+        default:
+          description: The operation could not be completed.
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+        '200':
+          description: The caller's team links.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: '#/components/schemas/SchedulingTeamLink'}
   /scheduling/team-requests:
     get:
       tags: [Activities]
@@ -8788,8 +8967,8 @@ paths:
             Mutually exclusive with `owner_id` and `owner_team_id`; combining them is `422`.
         - name: source
           in: query
-          schema: {type: string}
-          description: Filter by how the row was written (import, crawl, manual, `connector:<name>`, ...). Not the origin; use `origin` to filter by where the lead came from.
+          schema: {type: string, enum: [api, automation, capture, import, manual, webform]}
+          description: Filter by the channel the lead arrived by. Not the origin; use `origin` to filter by where the lead came from.
         - name: origin
           in: query
           schema: {type: string}
@@ -9562,104 +9741,6 @@ paths:
               schema: {$ref: '#/components/schemas/Problem'}
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
-  /lead-sources:
-    get:
-      tags: [Leads]
-      operationId: listLeadSources
-      deprecated: true
-      summary: List lead sources, active and inactive, in display order.
-      description: |-
-        Deprecated: the list says how a row reached Margince, which nothing scores any more.
-        Use `/lead-origins` for where a lead came from.
-      responses:
-        '200':
-          description: The lead source list.
-          content:
-            application/json:
-              schema: {$ref: '#/components/schemas/LeadSourceListResponse'}
-        '401': {$ref: '#/components/responses/Unauthorized'}
-    post:
-      tags: [Leads]
-      operationId: createLeadSource
-      deprecated: true
-      security: [{bearerAuth: []}]
-      summary: Add a lead source.
-      parameters:
-        - $ref: '#/components/parameters/IdempotencyKey'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: {$ref: '#/components/schemas/CreateLeadSourceRequest'}
-      responses:
-        '201':
-          description: Created lead source.
-          content:
-            application/json:
-              schema: {$ref: '#/components/schemas/LeadSource'}
-        '403': {$ref: '#/components/responses/Forbidden'}
-        '409': {$ref: '#/components/responses/Conflict'}
-        '422': {$ref: '#/components/responses/ValidationError'}
-      description: |-
-        Add a lead source.
-
-        Needs the passport permission Change records.
-
-        Runs at once.
-  /lead-sources/{id}:
-    parameters:
-      - $ref: '#/components/parameters/Id'
-    patch:
-      tags: [Leads]
-      operationId: updateLeadSource
-      deprecated: true
-      security: [{bearerAuth: []}]
-      summary: Rename, reorder, re-weight or (de)activate a lead source.
-      description: |-
-        Changing `intent` does not rescore existing leads; each lead picks the
-        new weight up on its next recompute. A built-in (`system`) source
-        accepts every field here — it only refuses deletion.
-
-        Needs the passport permission Change records.
-
-        Runs at once.
-      parameters:
-        - $ref: '#/components/parameters/IdempotencyKey'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: {$ref: '#/components/schemas/UpdateLeadSourceRequest'}
-      responses:
-        '200':
-          description: Updated lead source.
-          content:
-            application/json:
-              schema: {$ref: '#/components/schemas/LeadSource'}
-        '403': {$ref: '#/components/responses/Forbidden'}
-        '404': {$ref: '#/components/responses/NotFound'}
-        '409': {$ref: '#/components/responses/Conflict'}
-        '422': {$ref: '#/components/responses/ValidationError'}
-    delete:
-      tags: [Leads]
-      operationId: deleteLeadSource
-      deprecated: true
-      security: [{bearerAuth: []}]
-      summary: Remove a lead source nothing uses.
-      description: |-
-        409 when the source is built-in or any live lead still carries it —
-        deactivate it instead, which hides it from the create form and the
-        filter while every existing lead keeps its value.
-
-        Needs the passport permission Change records.
-
-        Runs at once.
-      responses:
-        '204': {description: Removed.}
-        '403': {$ref: '#/components/responses/Forbidden'}
-        '404': {$ref: '#/components/responses/NotFound'}
-        '409': {$ref: '#/components/responses/Conflict'}
-        '422': {$ref: '#/components/responses/ValidationError'}
   /lead-origins:
     get:
       tags: [Leads]
@@ -9694,7 +9775,7 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/LeadOrigin'}
         '403': {$ref: '#/components/responses/Forbidden'}
-        '409': {$ref: '#/components/responses/Conflict'}
+        '409': {$ref: '#/components/responses/NameTakenConflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
       description: |-
         Add a lead origin.
@@ -9733,7 +9814,7 @@ paths:
               schema: {$ref: '#/components/schemas/LeadOrigin'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
-        '409': {$ref: '#/components/responses/Conflict'}
+        '409': {$ref: '#/components/responses/NameTakenConflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
     delete:
       tags: [Leads]
@@ -9761,9 +9842,8 @@ paths:
       summary: List deal acquisition sources, active and retired, in display order.
       description: |-
         The administered business channels a deal can be attributed to. This list is
-        deliberately separate from `/lead-sources`: that one also models how a RECORD
-        reached Margince (connector, import, crawl) and scores lead intent, while this
-        one only names how an OPPORTUNITY reached the business. Retired entries are
+        deliberately separate from `/lead-origins`, which names where a LEAD came from;
+        this one only names how an OPPORTUNITY reached the business. Retired entries are
         returned so a deal still carrying one renders its label and a filter can still
         find it; they cannot be newly assigned.
       responses:
@@ -9792,7 +9872,7 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/AcquisitionSource'}
         '403': {$ref: '#/components/responses/Forbidden'}
-        '409': {$ref: '#/components/responses/Conflict'}
+        '409': {$ref: '#/components/responses/NameTakenConflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
       description: |-
         Add an acquisition source.
@@ -9833,7 +9913,7 @@ paths:
               schema: {$ref: '#/components/schemas/AcquisitionSource'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
-        '409': {$ref: '#/components/responses/Conflict'}
+        '409': {$ref: '#/components/responses/NameTakenConflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
   /loss-reasons:
     get:
@@ -9870,7 +9950,7 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/LossReason'}
         '403': {$ref: '#/components/responses/Forbidden'}
-        '409': {$ref: '#/components/responses/Conflict'}
+        '409': {$ref: '#/components/responses/NameTakenConflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
       description: |-
         Add a loss reason.
@@ -9910,7 +9990,7 @@ paths:
               schema: {$ref: '#/components/schemas/LossReason'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
-        '409': {$ref: '#/components/responses/Conflict'}
+        '409': {$ref: '#/components/responses/NameTakenConflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
   /loss-reasons/legacy:
     get:
@@ -10040,7 +10120,7 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/RecordRole'}
         '403': {$ref: '#/components/responses/Forbidden'}
-        '409': {$ref: '#/components/responses/Conflict'}
+        '409': {$ref: '#/components/responses/NameTakenConflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
       description: |-
         Add a responsibility role.
@@ -10080,7 +10160,7 @@ paths:
               schema: {$ref: '#/components/schemas/RecordRole'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
-        '409': {$ref: '#/components/responses/Conflict'}
+        '409': {$ref: '#/components/responses/NameTakenConflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
   /records/{record_type}/{record_id}/assignments:
     parameters:
@@ -10221,11 +10301,7 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/LeadDisqualifyReason'}
         '403': {$ref: '#/components/responses/Forbidden'}
-        '409':
-          description: Another reason already holds this label, compared trimmed and ignoring case.
-          content:
-            application/problem+json:
-              schema: {$ref: '#/components/schemas/Problem'}
+        '409': {$ref: '#/components/responses/NameTakenConflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
       description: |-
         Add a disqualification reason.
@@ -10256,11 +10332,7 @@ paths:
               schema: {$ref: '#/components/schemas/LeadDisqualifyReason'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
-        '409':
-          description: Another reason already holds this label, compared trimmed and ignoring case.
-          content:
-            application/problem+json:
-              schema: {$ref: '#/components/schemas/Problem'}
+        '409': {$ref: '#/components/responses/NameTakenConflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
       description: |-
         Rename, reorder or (de)activate a disqualification reason.
@@ -10797,7 +10869,8 @@ paths:
         - name: resource
           in: query
           required: true
-          description: The record type whose vocabulary to read, or `ext:<unit>:<kind>` for a kind an extension declared.
+          description: >-
+            The record type whose vocabulary to read, or `ext:<unit>:<kind>` for a kind an extension declared. `listRecordKinds` lists the kinds the caller may read, and an agent reads them with the `read_workspace` action `record_kinds`.
           schema: {$ref: '#/components/schemas/FilterResource'}
       responses:
         '200':
@@ -11018,7 +11091,7 @@ paths:
             type: array
             items:
               $ref: '#/components/schemas/ReportingMetricID'
-            maxItems: 8
+            maxItems: 12
         - name: blocks
           in: query
           required: false
@@ -11197,7 +11270,7 @@ paths:
             type: array
             items:
               $ref: '#/components/schemas/ReportingMetricID'
-            maxItems: 8
+            maxItems: 12
         - name: blocks
           in: query
           required: false
@@ -11358,7 +11431,7 @@ paths:
             type: array
             items:
               $ref: '#/components/schemas/ReportingMetricID'
-            maxItems: 8
+            maxItems: 12
         - name: blocks
           in: query
           required: false
@@ -12642,6 +12715,11 @@ paths:
           content:
             application/json:
               schema: {$ref: '#/components/schemas/SavedView'}
+        '409':
+          description: '`view_name_taken` — another live view of this resource owned by the caller has this name.'
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
         '422': {$ref: '#/components/responses/ValidationError'}
       description: |-
         Save a per-user view (columns, sort, filter state) for a resource.
@@ -12685,7 +12763,11 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/SavedView'}
         '404': {$ref: '#/components/responses/NotFound'}
-        '409': {$ref: '#/components/responses/Conflict'}
+        '409':
+          description: '`version_skew` — the view changed since it was read; or `view_name_taken` — another live view of this resource owned by the caller has this name.'
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
         '422': {$ref: '#/components/responses/ValidationError'}
       description: |-
         Update a saved view's name or query state.
@@ -13501,7 +13583,7 @@ paths:
     post:
       tags: [Reports]
       operationId: runReport
-      summary: Run a report (the `run_report` MCP verb) and return aggregate rows.
+      summary: Run a report (the `run_report` MCP verb) and return aggregate rows. It keeps nothing; to keep figures others can reopen, ask runAnalyticsQuery with `save`.
       description: |-
         Executes a validated, typed query plan (NOT free-form SQL). Every aggregate cell is
         reconcilable via the `derivation` for "Explain This Number".
@@ -13913,7 +13995,7 @@ paths:
           in: query
           schema:
             type: array
-            items: {type: string, pattern: '^(contact|company|deal|activity|lead|project|product|offer_template|tag)$|^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$'}
+            items: {type: string, pattern: '^(contact|company|deal|activity|lead|project|product|offer_template|deal_room|tag)$|^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$'}
           style: form
           explode: false
           description: >-
@@ -14085,12 +14167,15 @@ paths:
         voice artifacts, and connector grants remain in their owning resources. A user with no
         persisted state receives 404; the client starts from the server-derived creator/member path.
       security: [{bearerAuth: []}]
+      parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
       responses:
         '200':
           description: The acting user's current onboarding state.
           content:
             application/json:
               schema: {$ref: '#/components/schemas/OnboardingState'}
+        '204': {$ref: '#/components/responses/NothingYet'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '404': {$ref: '#/components/responses/NotFound'}
     put:
@@ -14138,6 +14223,7 @@ paths:
         read is still queued, deferred, or running.
       security: [{bearerAuth: []}]
       parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
         - name: locale
           in: query
           required: false
@@ -14152,6 +14238,7 @@ paths:
           content:
             application/json:
               schema: {$ref: '#/components/schemas/OnboardingCompanyProposal'}
+        '204': {$ref: '#/components/responses/NothingYet'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404':
@@ -14172,12 +14259,15 @@ paths:
         saves the company form: that 404 IS the "this installation has not described itself yet" signal,
         and it is what onboarding gates on. Distinct from GET /companies/{id}, which reads the
         customer records.
+      parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
       responses:
         '200':
           description: The anchor company's profile.
           content:
             application/json:
               schema: {$ref: '#/components/schemas/CompanyProfile'}
+        '204': {$ref: '#/components/responses/NothingYet'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404':
@@ -14879,7 +14969,7 @@ paths:
       operationId: listConnectors
       summary: List the calling user's capture connections + sync state.
       description: |-
-        The per-user mail/calendar connections this user has established (RC-8), each with its
+        The per-user mail/calendar connections this user has established, each with its
         status and sync watermark. Never returns the credential — it lives encrypted in the vault
         (`credential_ref`); this row carries only status + cursor.
       security: [{bearerAuth: []}]
@@ -15453,7 +15543,7 @@ paths:
       summary: Disconnect the calling user's mail/calendar capture.
       description: |-
         Disconnects the caller's connection: capture stops immediately (the connection flips to
-        `disconnected`, RC-8) and the poller no longer selects it. No upstream token revocation is
+        `disconnected`) and the poller no longer selects it. No upstream token revocation is
         performed — the user removes the grant at the provider themselves. The stored credential
         IS deleted from the vault as part of this call, not merely retired for a later sweep.
         Idempotent. Already-captured activities are retained — they are real history; capture
@@ -17198,7 +17288,7 @@ paths:
         `merge` requires `winner_id` (one of the pair) and executes `mergeContact`/
         `mergeCompany` server-side — one merge in the system, no second verb.
         `not_a_duplicate` flips the row and suppresses the pair from every future
-        sweep (AC-dedupe-7). `409 already_disposed`; `422` when `winner_id` is not
+        sweep. `409 already_disposed`; `422` when `winner_id` is not
         one of the pair. Deciding a pair CHANGES both records, so the caller needs
         write authority over each of them and not merely the object grant — a seat
         that can read the pair but change neither gets `403`.
@@ -17285,12 +17375,15 @@ paths:
         `404` when the contact is in no open case and was not merged away. A contact that was merged
         away answers `status: resolved` with the contact it went into, so a reviewer holding an old
         tab sees who settled it.
+      parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
       responses:
         '200':
           description: The case.
           content:
             application/json:
               schema: {$ref: '#/components/schemas/ContactCase'}
+        '204': {$ref: '#/components/responses/NothingYet'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
@@ -17802,7 +17895,7 @@ paths:
       tags: [Compliance]
       operationId: getNoticeCase
       security: [{bearerAuth: []}]
-      summary: One privacy notice owed, where the source is confirmed. The case id comes from notice_cases, not the contact's id.
+      summary: One privacy notice owed, where the source is confirmed. The case id comes from notice_cases (GET /privacy/notice-cases), not the contact's id.
       description: |-
         The same case the queue lists, read on its own, for a surface that opens one duty rather
         than working a page of them.
@@ -17823,7 +17916,7 @@ paths:
       tags: [Compliance]
       operationId: assignNoticeCase
       security: [{bearerAuth: []}]
-      summary: Give a privacy notice already owed (from notice_cases) an owner.
+      summary: Give a privacy notice already owed (from notice_cases, GET /privacy/notice-cases) an owner.
       description: |-
         Records who is working this duty, so the queue shows a claimed case rather than a pile
         nobody has taken.
@@ -17893,7 +17986,7 @@ paths:
       tags: [Compliance]
       operationId: getNoticeCaseReview
       security: [{bearerAuth: []}]
-      summary: One contact's privacy-notice case — its source, whether a notice is owed, and by when. The id comes from notice_case_reviews or the contact's contact_360 view, not the contact's id.
+      summary: One contact's privacy-notice case — its source, whether a notice is owed, and by when. The id comes from notice_case_reviews (GET /privacy/notice-case-reviews) or the contact's contact_360 view (GET /contacts/{id}/360), not the contact's id.
       description: |-
         The administrative record for a source review or notice duty. Human privacy-request read
         authority covers the record; contact names remain limited by ordinary contact visibility.
@@ -17914,7 +18007,7 @@ paths:
       tags: [Compliance]
       operationId: assignNoticeCaseReview
       security: [{bearerAuth: []}]
-      summary: Give a contact's privacy-notice case (from notice_case_reviews) an owner.
+      summary: Give a contact's privacy-notice case (from notice_case_reviews, GET /privacy/notice-case-reviews) an owner.
       description: |-
         Records who is working this duty, so the queue shows a claimed case rather than a pile
         nobody has taken.
@@ -17962,7 +18055,7 @@ paths:
       tags: [Compliance]
       operationId: assessNoticeSource
       security: [{bearerAuth: []}]
-      summary: Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first (POST /privacy/notice-case-reviews/{id}/source/preview). Only a contact with no recorded source is up for review; when its evidence does not name where the data first came from, ask the user rather than guessing a kind.
+      summary: Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first (POST /privacy/notice-case-reviews/{id}/source/preview). Only a contact with no recorded source is up for review; when its evidence does not name where the data first came from (an import alone does not), ask the user rather than guessing a kind.
       requestBody:
         required: true
         content:
@@ -17979,7 +18072,7 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
       description: |-
-        Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first (POST /privacy/notice-case-reviews/{id}/source/preview). Only a contact with no recorded source is up for review; when its evidence does not name where the data first came from, ask the user rather than guessing a kind.
+        Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first (POST /privacy/notice-case-reviews/{id}/source/preview). Only a contact with no recorded source is up for review; when its evidence does not name where the data first came from (an import alone does not), ask the user rather than guessing a kind.
 
         Needs the passport permission Change records.
 
@@ -18179,7 +18272,7 @@ paths:
       summary: Read the human+agent-attributable audit log (Settings governance view).
       description: |-
         Powers
-        AC-settings-16 — the live-filterable audit view. Every entry attributes the actor
+        The live-filterable audit view. Every entry attributes the actor
         (`human:*` / `agent:*` + `passport_id`), the action, and the target. Admin/compliance scope;
         read-only.
       parameters:
@@ -18476,7 +18569,7 @@ paths:
       summary: Rename a custom field or change whether create dialogs offer it (not a schema change).
       description: |-
         Audited catalog update of `label`, `show_in_create`, `reportable`
-        or `activity_kinds`;
+        `activity_kinds` or `pipeline_ids`;
         `column_name` never moves — the physical column identity is stable across rename.
         Merge-PATCH: `column_name`, `object`, and `type` are absent from the request schema
         entirely, and a body with neither setting is refused with a 422. A retired field
@@ -19698,12 +19791,15 @@ paths:
       operationId: getOwnershipRequest
       security: [{bearerAuth: []}]
       summary: The caller's open request to be handed this record.
+      parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
       responses:
         '200':
           description: The caller's open request.
           content:
             application/json:
               schema: {$ref: '#/components/schemas/OwnershipRequest'}
+        '204': {$ref: '#/components/responses/NothingYet'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
@@ -19776,12 +19872,15 @@ paths:
       operationId: getEditAccessRequest
       security: [{bearerAuth: []}]
       summary: The caller's open request for edit access to this record.
+      parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
       responses:
         '200':
           description: The caller's open request.
           content:
             application/json:
               schema: {$ref: '#/components/schemas/EditAccessRequest'}
+        '204': {$ref: '#/components/responses/NothingYet'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
@@ -19861,12 +19960,15 @@ paths:
       operationId: getOwnershipOffer
       security: [{bearerAuth: []}]
       summary: The caller's open offer of this record.
+      parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
       responses:
         '200':
           description: The caller's open offer.
           content:
             application/json:
               schema: {$ref: '#/components/schemas/OwnershipOffer'}
+        '204': {$ref: '#/components/responses/NothingYet'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
@@ -20147,7 +20249,7 @@ paths:
       operationId: mergeMembers
       summary: Merge a duplicate into the selected surviving member.
       description: |-
-        The source must be an unused imported or invited identity. The acting administrator cannot be the survivor.
+        An unused source merges at once. A used source merges only after the holder of each side that is not deactivated has confirmed through `requestMemberMerge`; a deactivated side needs no confirmation, so two deactivated accounts merge on an administrator's say alone. The acting administrator can be neither side.
 
         Needs the passport permission Change records.
 
@@ -20679,7 +20781,7 @@ paths:
               schema: {$ref: '#/components/schemas/Team'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
-        '409': {$ref: '#/components/responses/Conflict'}
+        '409': {$ref: '#/components/responses/NameTakenConflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
   /teams/{id}:
     parameters:
@@ -20713,7 +20815,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
-        '409': {$ref: '#/components/responses/Conflict'}
+        '409': {$ref: '#/components/responses/NameTakenConflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
   /teams/{id}/members/{userId}:
     parameters:
@@ -22597,10 +22699,11 @@ paths:
     post:
       tags: [Offers]
       operationId: acceptOffer
-      summary: Record the buyer's acceptance — syncs the deal's amount from the offer's gross.
+      summary: Record the buyer's acceptance — syncs the deal's amount from the offer's net.
       description: |-
         sent → accepted; sets `accepted_at`, syncs `deal.amount_minor`/`currency` from the
-        accepted offer's `gross_minor` (the offer becomes the deal's value source) and emits
+        accepted offer's `net_minor`, the figure without tax, because a deal's value never
+        carries tax (the offer becomes the deal's value source), and emits
         `offer.accepted`. An offer whose `valid_until` day has passed is refused
         422 `offer_lapsed`, since accepting it would re-price the deal from a lapsed quote.
 
@@ -23022,13 +23125,16 @@ paths:
     get:
       tags: [Brief]
       operationId: getMorningBrief
-      summary: The acting rep's latest Morning-Brief run (the on-open read-model re-read; never re-ranks).
+      summary: Your morning brief for today, its ranked items. 404 means none has been made yet; generateMorningBrief makes one.
+      parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
       responses:
         '200':
           description: The latest brief run with its ranked queue.
           content:
             application/json:
               schema: {$ref: '#/components/schemas/MorningBrief'}
+        '204': {$ref: '#/components/responses/NothingYet'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404':
@@ -23036,7 +23142,7 @@ paths:
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
-      description: The acting rep's latest Morning-Brief run (the on-open read-model re-read; never re-ranks).
+      description: Your morning brief for today, its ranked items. 404 means none has been made yet; generateMorningBrief makes one.
     post:
       tags: [Brief]
       operationId: generateMorningBrief
@@ -23091,6 +23197,7 @@ paths:
       summary: A team's week, frozen — what each member's week came to, and the one thing to raise.
       description: Home, Weekly reads it when a lead or an overseer picks a team.
       parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
         - name: team
           in: query
           required: true
@@ -23108,6 +23215,7 @@ paths:
           content:
             application/json:
               schema: {$ref: '#/components/schemas/TeamWeeklyReview'}
+        '204': {$ref: '#/components/responses/NothingYet'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
@@ -23124,6 +23232,7 @@ paths:
         the deal you closed on Friday reclassified in March because somebody edited its stage —
         and a record of a past week that does that is not a record.
       parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
         - name: week
           in: query
           required: false
@@ -23135,6 +23244,7 @@ paths:
           content:
             application/json:
               schema: {$ref: '#/components/schemas/WeeklyReview'}
+        '204': {$ref: '#/components/responses/NothingYet'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404':
@@ -23277,12 +23387,15 @@ paths:
         date that went by, an amount that disagrees with the offer that was sent, a deal
         nobody has heard from in ninety days. None is a bug in the arithmetic; every one
         makes the total wrong.
+      parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
       responses:
         '200':
           description: The most recent completed run.
           content:
             application/json:
               schema: {$ref: '#/components/schemas/ForecastAssurance'}
+        '204': {$ref: '#/components/responses/NothingYet'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404':
@@ -23342,12 +23455,15 @@ paths:
       description: |-
         Source health: which connectors the nightly check could read, how far back each
         reaches, and what it could not open.
+      parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
       responses:
         '200':
           description: The most recent run's source health.
           content:
             application/json:
               schema: {$ref: '#/components/schemas/DataCoverage'}
+        '204': {$ref: '#/components/responses/NothingYet'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404':
@@ -23418,8 +23534,10 @@ paths:
       security: [{bearerAuth: []}]
       summary: Answer a finding from the nightly input check.
       description: |-
-        Six answers, and they are not interchangeable. `fixed_record` and `added_evidence`
-        say the record moved. `reassign` says it is somebody else's. `remind_later` says
+        Seven answers, and they are not interchangeable. `fixed_record` and `added_evidence`
+        say the record moved. `reassign` says it is somebody else's. `separate` answers only
+        a `duplicate_motion` finding: its two deals are not one buying motion, and the pair
+        is not flagged again. `remind_later` says
         not now — and it leaves the finding OPEN, because "not now" is an answer about
         when rather than about whether, and a deferred finding that read as resolved would
         never come back.
@@ -23915,7 +24033,7 @@ paths:
     post:
       tags: [Reports]
       operationId: runAnalyticsQuery
-      summary: Answer a question nobody wrote a report for.
+      summary: Answer a question nobody wrote a report for. With `save` the answer is kept as a saved question, which `GET /analytics/runs` lists and others reopen by its `run_id`.
       description: |-
         A typed query over the vocabulary `/analytics/schema` returns. The caller names a
         population, what to group by, what to measure and how to narrow — never SQL, and
@@ -24206,12 +24324,15 @@ paths:
       description: |-
         The forward half of the Brief's weekly. `/weekly-reviews/latest` is the week that
         closed, frozen and edited by nobody; this is the week running, authored by the rep.
+      parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
       responses:
         '200':
           description: The week as planned.
           content:
             application/json:
               schema: {$ref: '#/components/schemas/WeeklyPlan'}
+        '204': {$ref: '#/components/responses/NothingYet'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
@@ -24246,6 +24367,7 @@ paths:
         shared-live-team question that decides whether a lead may open a rep's queue or put
         a notice in it — one seam, never a fourth spelling of "is this my colleague".
       parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
         - name: owner_id
           in: path
           required: true
@@ -24257,6 +24379,7 @@ paths:
           content:
             application/json:
               schema: {$ref: '#/components/schemas/WeeklyPlan'}
+        '204': {$ref: '#/components/responses/NothingYet'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
@@ -24464,7 +24587,7 @@ paths:
       tags: [Notices]
       operationId: listNotices
       security: [{bearerAuth: []}]
-      summary: The acting user's own in-app notifications, newest first. Not a privacy notice owed to a contact; those are notice_case_reviews.
+      summary: The acting user's own in-app notifications, newest first. Not a privacy notice owed to a contact; those are notice_case_reviews (GET /privacy/notice-case-reviews).
       description: |-
         The acting human's own notifications, newest first, read and unread; another seat's are
         not an error, they are absent.
@@ -24519,12 +24642,14 @@ paths:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
         '404':
-          description: No such live contact to address (a departed or unknown recipient reads the same).
+          description: >-
+            No such live contact to address (a departed or unknown recipient reads the same), or no deal of that id the caller can read.
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
         '422':
-          description: An unknown kind, or a note past its ceiling.
+          description: >-
+            An unknown kind, a note past its ceiling, a next-step notice without its deal, a deal on any other kind, or a deal that is closed or owned by someone else.
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
@@ -24617,7 +24742,7 @@ paths:
       tags: [Brief]
       operationId: snoozeBriefItem
       security: [{bearerAuth: []}]
-      summary: Snooze a brief item (A77/AC-home-6) — hidden until `snoozed_until` passes, then it re-surfaces as actionable.
+      summary: Snooze a brief item — hidden until `snoozed_until` passes, then it re-surfaces as actionable.
       description: |-
         Sets the item to `state=snoozed` with the given `snoozed_until`. While the instant has not
         passed, the item is hidden from the home read AND the deal is suppressed from freshly
@@ -24750,7 +24875,17 @@ paths:
                 entity_type: {type: string, enum: [contact, company, deal, activity, lead, project]}
                 entity_id: {type: string, format: uuid}
                 file: {type: string, format: binary}
+                reuse_identical:
+                  type: boolean
+                  description: 'When true, a live file with the same bytes already filed on this record, against the same agreement, is answered with 200 instead of storing a copy.'
       responses:
+        '200':
+          description: The identical file the record already held, answered for `reuse_identical`. Nothing was stored.
+          headers:
+            Location: {schema: {type: string}}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Attachment'}
         '201':
           description: The stored attachment metadata.
           headers:
@@ -25594,7 +25729,7 @@ paths:
       tags: [Contracts]
       operationId: getContract
       security: [{bearerAuth: []}]
-      summary: One contract.
+      summary: One agreement with a company, with its terms, value, dates and status.
       parameters:
         - $ref: '#/components/parameters/Id'
       responses:
@@ -25606,7 +25741,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
-      description: One contract.
+      description: One agreement with a company, with its terms, value, dates and status.
     patch:
       tags: [Contracts]
       operationId: updateContract
@@ -25884,6 +26019,7 @@ paths:
         or is listed in `omitted` with reason "not_stated_in_file" — never a guessed value. Valid for any entity_type; the same parent-visibility gate as
         `downloadAttachment`/`listAttachments` applies.
       parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
         - name: question
           in: query
           required: false
@@ -25894,6 +26030,7 @@ paths:
           content:
             application/json:
               schema: {$ref: '#/components/schemas/AttachmentExtraction'}
+        '204': {$ref: '#/components/responses/NothingYet'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
@@ -26830,6 +26967,8 @@ paths:
       operationId: listCorpora
       security: [{bearerAuth: []}]
       summary: The document corpora this workspace has defined.
+      parameters:
+        - $ref: '#/components/parameters/IncludeArchived'
       responses:
         '200':
           description: The corpora.
@@ -26838,6 +26977,7 @@ paths:
               schema: {$ref: '#/components/schemas/KnowledgeCorpusList'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/PermissionDenied'}
+        '422': {$ref: '#/components/responses/ValidationError'}
       description: The document corpora this workspace has defined.
     post:
       tags: [Knowledge]
@@ -26865,6 +27005,7 @@ paths:
               schema: {$ref: '#/components/schemas/KnowledgeCorpus'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/PermissionDenied'}
+        '409': {$ref: '#/components/responses/NameTakenConflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
       description: |-
         Define a document corpus.
@@ -26917,6 +27058,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/PermissionDenied'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/NameTakenConflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
       description: |-
         Edit a corpus — its words, its floor, or which one the palette asks.
@@ -26946,6 +27088,31 @@ paths:
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /knowledge/corpora/{id}/restore:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Knowledge]
+      operationId: restoreCorpus
+      security: [{bearerAuth: []}]
+      summary: Bring an archived corpus back with everything filed in it.
+      description: |-
+        The undo half of `archiveCorpus`. The set, its documents and their passages return in one transaction, and the ask finds the passages again.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
+      responses:
+        '200':
+          description: The restored corpus.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/KnowledgeCorpus'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/PermissionDenied'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/NameTakenConflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
   /knowledge/corpora/{id}/documents:
     parameters:
@@ -27050,6 +27217,15 @@ paths:
               required: [question]
               properties:
                 question: {type: string, minLength: 1, maxLength: 1000}
+                audiences:
+                  type: array
+                  maxItems: 20
+                  items: {type: string, minLength: 1, maxLength: 200}
+                  description: |-
+                    Optional. When present and not empty, only documents whose `meta.audience` is one
+                    of these values are searched and cited. Values compare with no case, no accents and
+                    `đ` as `d`. A document with no audience is left out. When no document matches, the
+                    outcome is `not_covered`. Absent or empty, every document is searched.
       responses:
         '200':
           description: The answer, or the refusal — `outcome` says which.
@@ -27149,7 +27325,7 @@ components:
       required: true
       schema: {type: string, enum: [gmail, gcal, gdocs, graph, graphcal, imap, test_mailbox]}
       description: |-
-        The mail/calendar provider (A51 email+calendar parity). Every provider connects through
+        The mail/calendar provider. Every provider connects through
         the same operation; gmail/gcal/gdocs/graph/graphcal authorize by OAuth redirect, imap by
         credential submission, and test_mailbox connects immediately with neither (a QC-only
         connector, reachable only when the deployment armed operations.allow_test_mailbox — a
@@ -27303,7 +27479,27 @@ components:
         rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
         re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
         Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+    PreferAbsent:
+      name: Prefer
+      in: header
+      schema: {type: string, maxLength: 1024}
+      description: |-
+        An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+        read finds nothing yet. The token is matched without case, and every other preference is
+        ignored. A row the caller may not see still answers `404`. Every answer of an operation
+        that takes this header carries `Vary: Prefer`.
   responses:
+    NothingYet:
+      description: |-
+        Nothing exists yet. Only when the request carries `Prefer: absent=204`; without it the same
+        case answers `404`.
+      headers:
+        Preference-Applied:
+          description: '`absent=204`, the preference this answer honours.'
+          schema: {type: string}
+        Vary:
+          description: '`Prefer`: the answer depends on that request header.'
+          schema: {type: string}
     Unauthorized:
       description: No valid credential — a missing/invalid/expired `crm_session` cookie (human path) or a missing/invalid/expired bearer token (agent path).
       content:
@@ -27403,6 +27599,12 @@ components:
           examples:
             held:
               value: {type: 'https://errors.gradion.com/locked', title: Locked, status: 423, code: locked, detail: The record is held under a statutory retention obligation.}
+    NameTakenConflict:
+      description: >-
+        `name_taken`: another entry of this list already holds the name, compared trimmed and ignoring case; the detail names it. Any other state conflict answers its own code.
+      content:
+        application/problem+json:
+          schema: {$ref: '#/components/schemas/Problem'}
     Conflict:
       description: State conflict (duplicate key, concurrent edit, already-decided, default-pipeline collision).
       content:
@@ -28856,7 +29058,7 @@ components:
       required: [id, provider, status, scopes, can_backfill]
       properties:
         id: {type: string, format: uuid}
-        provider: {type: string, enum: [gmail, gcal, gdocs, graph, graphcal, imap, test_mailbox], description: The mail/calendar/meeting-notes provider (A51 email+calendar parity).}
+        provider: {type: string, enum: [gmail, gcal, gdocs, graph, graphcal, imap, test_mailbox], description: The mail/calendar/meeting-notes provider.}
         can_backfill:
           type: boolean
           description: |-
@@ -28884,6 +29086,10 @@ components:
         sync_failing_since: {type: [string, 'null'], format: date-time, description: 'When the CURRENT failure streak began, null while healthy. Set on the first failure after a success and left alone until one clears it, so the duration read off it is the outage''s — last_synced_at moves on every postponed tick and dates the newest attempt instead.'}
         next_sync_due_at: {type: [string, 'null'], format: date-time, description: 'When the sweep will next pick this connection up (backoff-aware).'}
         backfill: {allOf: [{$ref: '#/components/schemas/BackfillStatus'}], description: 'Summary of the connection''s backfill run; state `none` when never run.'}
+        unread_period:
+          allOf: [{$ref: '#/components/schemas/CaptureUnreadPeriod'}]
+          description: >-
+            A period no sync of this mailbox read: a sync found its provider cursor gone and listed only the newest mail, or a first sync could not reach back to where it was to start. A successful sync since, and a finished import, do not clear it. Only an import whose window reaches back over it, and that failed no message, does. Absent when there is none.
         signature_enrich_enabled:
           type: [boolean, 'null']
           description: |-
@@ -28900,6 +29106,7 @@ components:
             readable by colleagues the moment it lands. `classified` — held to its participants
             until a classifier judges the thread ordinary. `held` — held whatever any classifier
             concludes.
+        history_narrowing: {$ref: '#/components/schemas/MailHistoryNarrowing'}
         context_tag: {$ref: '#/components/schemas/ConnectorContextTag'}
         history_baseline: {$ref: '#/components/schemas/MailHistoryBaseline'}
         created_at: {type: string, format: date-time, readOnly: true}
@@ -29002,7 +29209,20 @@ components:
             Also narrow the mail this mailbox ALREADY brought in, to match the new posture. Only
             narrows: a move towards `shared` leaves history where it is, because opening what was
             captured under a stricter answer is a separate decision from what to do next. Rows a
-            human set to `selected` are never touched.
+            human set to `selected` are never touched. A background job does the narrowing after
+            the answer; a narrowing to `held` still pending is never loosened to `classified`.
+    MailHistoryNarrowing:
+      type: object
+      additionalProperties: false
+      readOnly: true
+      required: [posture, remaining]
+      description: |-
+        Earlier mail of this mailbox that a background job is still narrowing, after a change
+        asked for `apply_to_history`. Absent when nothing is pending. Mail the job has not reached
+        yet keeps the audience it had.
+      properties:
+        posture: {type: string, enum: [classified, held], description: What the earlier mail is narrowed to.}
+        remaining: {type: integer, minimum: 0, description: Messages still to narrow.}
     WorkspaceEmailDomain:
       type: object
       required: [domain, source, verified]
@@ -29201,8 +29421,10 @@ components:
           description: The ledger's own lifecycle for this sender.
         decision:
           type: string
-          enum: [business, keep_out]
-          description: What YOU decided instead, absent when you have not.
+          enum: [business, keep_out, personal]
+          description: |-
+            What YOU decided instead, absent when you have not. `personal` is the standing decision a
+            private verdict leaves; only the classifier writes it, and withdrawing it lifts it.
         overruled_kind:
           type: string
           description: |-
@@ -29572,6 +29794,12 @@ components:
           type: [string, 'null']
           format: date-time
           description: When the provider accepted it. Null unless the state is `sent`.
+        can_send_again:
+          type: boolean
+          description: |-
+            True when the reader may send this bounced message again to a corrected address,
+            by the same rule as the Worklist bounce row's `send_again`. Only the sender's own
+            message that bounced hard qualifies, once, and not one an agent wrote.
         files:
           type: array
           items: {$ref: '#/components/schemas/EmailDeliveryFile'}
@@ -31028,7 +31256,8 @@ components:
         p50_ms: {type: integer, format: int64}
         gave_up: {type: object, additionalProperties: {type: integer, format: int64}, description: 'Why the walk moved past this step, by sentinel (timeout, provider_error) or the next attempt''s reason (decision_below_floor, …).'}
         switched: {type: integer, format: int64, description: 'Calls this step answered with another model than the one bound, by the provider''s own report; out of `answered`.'}
-        switched_to: {type: string, description: 'The model the provider named most often on those calls; absent when switched is 0.'}
+        switched_to: {type: string, description: 'The model the provider named most often on those calls; absent when switched is 0. `switched_to_certification` grades it for this task with the step''s own binding settings, and is absent on a decision step, when no record measured it, and for a reader without `ai_routing` read.'}
+        switched_to_certification: {$ref: '#/components/schemas/AiRouteCertification'}
     AiDeferredWork:
       type: object
       required: [carrier, unit, available]
@@ -31306,7 +31535,7 @@ components:
       required: [id, provider, channelId, channelLabel, status, version]
       properties:
         id: {type: string, format: uuid}
-        provider: {type: string, enum: [telegram, dispact]}
+        provider: {type: string, enum: [telegram, telegram_business, dispact, whatsapp, zalo_oa]}
         channelId:
           type: string
           description: The provider's own id for the bot — the key the binding is unique on. For Dispact it is the chat's team id.
@@ -31318,9 +31547,9 @@ components:
           description: The web address of a self-hosted provider's install (Dispact). Absent for Telegram.
         status:
           type: string
-          enum: [pending, connected, disconnected, error, reauth_required]
+          enum: [pending_approval, connected, disconnected, error, reauth_required]
           description: >-
-            Only `connected` is live, and it is the only state a connect can produce: a pull ingress makes no provider call after the write, so there is no half-connected state. `error` and `reauth_required` are where ingress parks a binding it can no longer poll (another consumer holds the bot's updates; the token was refused), and neither is polled again until an operator acts. `pending` is a value NO server produces: it is retained because the code generator disambiguates enum member names across the whole document, so dropping it renames unrelated generated constants in other schemas.
+            Only `connected` is live, and it is the only state a connect can produce: a pull ingress makes no provider call after the write, so there is no half-connected state. `error` and `reauth_required` are where ingress parks a binding it can no longer poll (another consumer holds the bot's updates; the token was refused), and neither is polled again until an operator acts. `pending_approval` is the state of a Telegram Business link nobody has approved. It is served by the telegram-business operations and never appears on a bot connection.
         eventsSecretSet:
           type: boolean
           readOnly: true
@@ -31564,7 +31793,7 @@ components:
       description: 'What kind of problem a report issue names, so a screen can group them. One closed list, the same one the server reports from.'
     ImportReasonCode:
       type: string
-      enum: [activity_empty, activity_held, address_erased, address_not_split, activity_link_ambiguous, activity_link_ambiguous_dropped, activity_type_unknown, activity_type_unnamed, activity_unlinked, amount_negative, author_too_long, cannot_create, cannot_create_tags, cannot_edit, cannot_edit_and_tag, cannot_link_stakeholders, cannot_read_pipelines, cannot_read_tags, cannot_write_type, close_date_future, close_date_past, company_domain_matched, company_duplicate_found, company_duplicate_skipped, company_link_on_meeting, company_name_empty, contact_duplicate_found, contact_duplicate_skipped, contact_email_held, contact_holds_lead, contact_not_found, contact_not_found_dropped, contact_channel_missing, contact_unnamed, currency_not_a_code, currency_unset, deal_already_closed, deal_company_has_contracts, deal_legal_gate, deal_not_found, deal_not_found_dropped, deal_pipeline_fixed, description_too_long, direction_unknown, domain_held, duplicate_email, duration_not_valid_for_kind, email_names_no_contact, duration_out_of_range, employer_column_empty, employer_column_empty_dropped, employer_not_found, employer_not_found_dropped, employer_refused, employer_will_create, empty_payload, field_inactive, fx_rate_missing, id_not_a_company_id, id_not_a_record_id, id_not_visible, id_record_not_visible, id_on_non_company, lead_not_found, lead_not_found_dropped, lead_status_not_importable, lead_status_unknown, link_ambiguous, link_ambiguous_dropped, link_contact_not_imported, link_edge_unsupported, link_malformed, link_not_attachable, link_not_found, link_not_found_dropped, link_row_not_imported, link_row_skipped, link_row_skipped_dropped, link_type_unknown, linkedin_held, lost_reason_missing, meeting_not_taken_place, meeting_status_not_valid_for_kind, meeting_status_unknown, message_not_importable, natural_key_taken, not_a_date, note_repeated, not_a_domain, not_a_number, not_an_amount, not_an_email, not_yes_no, occurred_at_future, occurred_at_unnamed, option_not_allowed, option_not_in_list, options_need_semicolons, owner_refused, owner_unknown, phone_needs_country, pipeline_no_open_stage, pipeline_unknown, pipeline_unnamed, record_archived, ref_taken_by_another_company, ref_taken_by_another_record, row_key_empty, row_key_repeated, run_in_flight, size_band_invalid, stage_unknown, stage_unnamed, stored_values_kept, tag_created, tag_name_invalid, tag_new, task_not_importable, timestamp_needs_zone, too_many_links, undo_edited, undo_failed, undo_grant_lost, undo_not_visible, undo_rule_protects, undo_still_referenced, value_refused, value_too_long, value_unreadable]
+      enum: [activity_empty, activity_held, address_erased, address_not_split, activity_link_ambiguous, activity_link_ambiguous_dropped, activity_link_ambiguous_will_drop, activity_type_unknown, activity_type_unnamed, activity_unlinked, amount_negative, amount_needs_currency, amount_too_many_decimals, author_too_long, cannot_create, cannot_create_tags, cannot_edit, cannot_edit_and_tag, cannot_link_stakeholders, cannot_read_pipelines, cannot_read_tags, cannot_write_type, close_date_far, close_date_future, close_date_past, company_domain_matched, company_duplicate_found, company_duplicate_skipped, company_link_on_meeting, company_name_empty, contact_duplicate_found, contact_duplicate_skipped, contact_email_held, contact_holds_lead, contact_not_found, contact_not_found_dropped, contact_not_found_will_drop, contact_channel_missing, contact_unnamed, currency_not_a_code, currency_not_money, currency_unset, deal_already_closed, deal_company_has_contracts, deal_field_not_for_pipeline, deal_legal_gate, deal_not_found, deal_not_found_dropped, deal_not_found_will_drop, deal_pipeline_fixed, description_too_long, direction_unknown, domain_held, duplicate_email, duration_not_valid_for_kind, email_names_no_contact, duration_out_of_range, employer_column_empty, employer_column_empty_dropped, employer_column_empty_will_drop, employer_not_found, employer_not_found_dropped, employer_not_found_will_drop, employer_refused, employer_will_create, empty_payload, field_inactive, fx_rate_missing, id_not_a_company_id, id_not_a_record_id, id_not_visible, id_record_not_visible, id_on_non_company, lead_not_found, lead_not_found_dropped, lead_not_found_will_drop, lead_status_not_importable, lead_status_unknown, link_ambiguous, link_ambiguous_dropped, link_ambiguous_will_drop, link_contact_not_imported, link_edge_unsupported, link_malformed, link_not_attachable, link_not_found, link_not_found_dropped, link_not_found_will_drop, link_row_not_imported, link_row_skipped, link_row_skipped_dropped, link_row_skipped_will_drop, link_type_unknown, linkedin_held, lost_reason_missing, meeting_not_taken_place, meeting_status_not_valid_for_kind, meeting_status_unknown, message_not_importable, natural_key_taken, not_a_date, note_repeated, not_a_domain, not_a_number, not_a_phone, not_an_amount, not_an_email, not_yes_no, occurred_at_future, occurred_at_unnamed, option_not_allowed, option_not_in_list, options_need_semicolons, owner_refused, owner_unknown, phone_needs_country, pipeline_no_open_stage, pipeline_unknown, pipeline_unnamed, record_archived, ref_taken_by_another_company, ref_taken_by_another_record, row_key_empty, row_key_repeated, run_in_flight, size_band_invalid, stage_unknown, stage_unnamed, stored_values_kept, tag_created, tag_name_invalid, tag_new, task_not_importable, timestamp_needs_zone, too_many_links, undo_edited, undo_failed, undo_grant_lost, undo_not_visible, undo_rule_protects, undo_still_referenced, value_refused, value_too_long, value_unreadable]
       description: 'Why a row was skipped or warned about, so a screen can say it in the reader''s language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code. `run_in_flight` is the one refusal code: it answers a commit or undo on a run another attempt holds, and no row carries it.'
     CreateImportRunRequest:
       type: object
@@ -31761,7 +31990,7 @@ components:
           description: 'A picklist or multiselect field''s allowed values, for a caller who may read custom fields. Absent otherwise.'
     ImportRowIssue:
       type: object
-      description: One row the import could not take, named by its line so a human can go fix it. A problem of a whole file, such as a tag the file names that does not exist yet, has no line.
+      description: One problem of a row, named by its line so a human can go fix it. A row with several cells at fault has one issue for each, and counts once in `skipped`. A problem of a whole file, such as a tag the file names that does not exist yet, has no line.
       required: [reason]
       properties:
         line: {type: integer, minimum: 1, description: 'The line in the uploaded file, counting the header as line 1. Absent when the problem belongs to the whole file.'}
@@ -31901,7 +32130,7 @@ components:
             Rows this run corrected rather than created, which undo leaves corrected. A row count, from the run's own report: two rows naming one record count twice. Absent or zero means the run corrected nothing, and what it did reverse is `reversed_count`, `kept` and `errored`.
         kept:
           type: array
-          description: 'Import-created rows left in place: a human edited them since import (A93), or a live record still names the company.'
+          description: 'Import-created rows left in place: a human edited them since import, or a live record still names the company.'
           items:
             type: object
             required: [object, id]
@@ -31950,6 +32179,7 @@ components:
         object: {$ref: '#/components/schemas/ImportObject'}
         file_name: {type: string, description: 'The uploaded file''s name, as the run was created with it. Display only.'}
         source_name: {type: string, description: 'The name the run''s source is filed under.'}
+        row_count: {type: integer, minimum: 0, readOnly: true, description: 'Rows the upload counted in the file, a ZIP''s files added together. Present while the run keeps what the upload read of the file, in a list too, so a draft no test has read still says how many rows it holds.'}
         parts:
           type: array
           items: {$ref: '#/components/schemas/ImportRunPart'}
@@ -32028,6 +32258,7 @@ components:
         file: {type: string, description: 'The ZIP entry, or the uploaded file''s name for a single CSV. Empty for a single CSV created without `file_name`.'}
         object: {$ref: '#/components/schemas/ImportObject'}
         row_count: {type: integer, minimum: 0, description: 'Rows the file holds, once a dry run has read it; 0 before.'}
+        rows_written: {type: integer, minimum: 0, readOnly: true, description: 'Rows of the file the run created or updated. Present once the run has written: `complete`, `failed`, `undoing` or `undone`.'}
         mapping:
           type: object
           additionalProperties: {type: string}
@@ -32070,6 +32301,15 @@ components:
           description: |-
             The coach's own words, shown beneath the kind's headline. Optional: without one the
             notice still says what it is about, which is why the kind is closed and this is not.
+        deal_id:
+          type: string
+          format: uuid
+          description: |-
+            The deal the notice is about. Required for `coach_deal_needs_next_step`, and refused on
+            every other kind. The deal must be open, owned by the recipient, and one the caller
+            can read. The headline then names the deal and what Margince sees on it: whether a
+            next step is planned, and the day of its last activity. The recipient's row links to
+            the deal.
     Notice:
       type: object
       description: One durable line addressed to one contact, as the raising call returns it.
@@ -32223,6 +32463,27 @@ components:
             code names other values carries them in `params`, an object of text values by
             name, so a screen can word the code in the reader's language; `message` stays
             the English sentence.
+    HiddenRecords:
+      type: object
+      description: >-
+        What the caller's row scope withheld from one list on a record page, so a short list never reads as the whole one. It states how many entries were withheld and which live colleagues own them, so the reader knows whom to ask. A withheld record's name, value and every other field stay withheld. Count 0 with no holders when nothing was withheld.
+      required: [count, holders]
+      properties:
+        count:
+          type: integer
+          minimum: 0
+          description: >-
+            How many entries the list would have shown under an unbounded scope and did not. It includes entries owned by a colleague who has left, who is not in `holders`.
+        holders:
+          type: array
+          description: The live colleagues who own at least one withheld entry, each once, by name.
+          items: {$ref: '#/components/schemas/HiddenRecordHolder'}
+    HiddenRecordHolder:
+      type: object
+      required: [user_id, display_name]
+      properties:
+        user_id: {type: string, format: uuid}
+        display_name: {type: string}
     PageInfo:
       type: object
       required: [has_more]
@@ -32240,12 +32501,12 @@ components:
       type: [object, 'null']
       description: Structured postal address.
       properties:
-        line1: {type: [string, 'null']}
-        line2: {type: [string, 'null']}
-        city: {type: [string, 'null']}
-        region: {type: [string, 'null']}
-        postal_code: {type: [string, 'null']}
-        country: {type: [string, 'null'], description: 'ISO-3166 alpha-2. A contact or company write (and a CSV import cell) that changes the country to a name, an alpha-3 code or an unassigned pair answers 422 `invalid_country_code` on `address.country`; a code is stored upper-case. A country stored before this rule is kept as it is when a save carries it back unchanged.'}
+        line1: {type: [string, 'null'], maxLength: 500}
+        line2: {type: [string, 'null'], maxLength: 500}
+        city: {type: [string, 'null'], maxLength: 20000}
+        region: {type: [string, 'null'], maxLength: 20000}
+        postal_code: {type: [string, 'null'], maxLength: 20000}
+        country: {type: [string, 'null'], maxLength: 20000, description: 'ISO-3166 alpha-2. A contact or company write (and a CSV import cell) that changes the country to a name, an alpha-3 code or an unassigned pair answers 422 `invalid_country_code` on `address.country`; a code is stored upper-case. A country stored before this rule is kept as it is when a save carries it back unchanged.'}
       additionalProperties: true
     AddressCountryMismatch:
       type: object
@@ -32887,7 +33148,8 @@ components:
         merged_into_id: {type: [string, 'null'], format: uuid, description: Set when this row was merged away.}
         converted_from_lead_id: {type: [string, 'null'], format: uuid, description: Canonical origin pointer if promoted from a lead.}
         strength: {allOf: [{$ref: '#/components/schemas/RelationshipStrength'}], readOnly: true, description: 'Deterministic relationship-strength. Read-only derived view; NULL until capture has interactions. No mystery number — the factors + contributing activities are the explanation.'}
-        source: {type: string}
+        source: {type: string, description: 'The channel this contact arrived by: `api`, `automation`, `capture`, `import`, `manual` or `webform`. An older contact can show another value until the background correction reaches it.'}
+        source_system: {type: [string, 'null'], readOnly: true, description: 'The system or connector the contact came from, such as `gmail` for one read out of a mailbox. Empty when a member or an API client wrote it and named none.'}
         captured_by: {type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.'}
         created_by:
           allOf: [{$ref: '#/components/schemas/PrincipalAttribution'}]
@@ -32984,7 +33246,7 @@ components:
         phones:
           type: array
           items: {$ref: '#/components/schemas/ContactPhoneInput'}
-        source: {type: string}
+        source: {type: string, enum: [api, automation, capture, import, manual, webform], description: 'The channel this contact arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. The other system and the contact''s id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`.'}
         source_id: {type: [string, 'null'], maxLength: 128, description: 'The id this contact has in source_system. Needs source_system, and the pair is unique: a second contact with the same pair is 409.'}
         source_system: {type: [string, 'null'], maxLength: 128, description: 'Which external system this record came from, when a caller imported it.'}
         source_author_id: {type: [string, 'null'], format: uuid, description: 'Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer, only beside a source_system; either author field or both may be sent, and the seat''s current name wins on read. captured_by still names the caller.'}
@@ -33071,12 +33333,19 @@ components:
           items: {$ref: '#/components/schemas/Relationship'}
     VCardImportReport:
       type: object
-      required: [results]
+      required: [results, staged_for_review]
       description: One entry per card in the file, in the order the file listed them.
       properties:
         results:
           type: array
           items: {$ref: '#/components/schemas/VCardImportResult'}
+        staged_for_review:
+          type: integer
+          minimum: 0
+          description: |-
+            How many cards were staged as a review in the approvals inbox, so
+            the reader knows how many answers are waiting. An undecided one
+            expires after 30 days, and the expiry deletes the card's data.
     VCardImportResult:
       type: object
       required: [index, full_name, outcome]
@@ -33090,7 +33359,8 @@ components:
             `created` — nobody matched, so the card became a contact, their company and the edge
             between them. `updated` — an exact match: what the card states replaces an older value, which
             stays in `superseded_value`, and a field a human corrected stands.
-            `needs_review` — a resemblance, written nowhere; open the candidate and decide.
+            `needs_review` — a resemblance, so nothing was written; the card waits in the approvals
+            inbox, where whoever uploaded it merges it into the candidate or keeps it separate.
             `proposed` — a card read from a photo that nobody matched, waiting on an approval.
             `skipped` — the card states no name or one over 120 characters, carries a sending
             system's address, holds a value that is not readable text or cannot be stored, or
@@ -33368,7 +33638,7 @@ components:
         domains:
           type: array
           items: {$ref: '#/components/schemas/CompanyDomain'}
-        lifecycle:
+        status:
           type: string
           enum: [unknown, target, prospect, opportunity, onboarding, live, customer, former_customer, disqualified]
           description: >-
@@ -33387,7 +33657,7 @@ components:
           type: [string, 'null']
           readOnly: true
           description: |-
-            Where to fetch the company's logo image (A55) — the `getCompanyLogo`
+            Where to fetch the company's logo image — the `getCompanyLogo`
             path for this record, cookie-authenticated and same-origin. A revision query changes
             with the stored image so a replacement cannot remain hidden behind an older cached
             response. The key is ABSENT entirely (not null) when no logo is stored, which is the
@@ -33402,13 +33672,20 @@ components:
           minimum: 0
           description: >-
             How many distinct live contacts THE CALLER MAY SEE hold a current job at this account. Counted under the caller's contact row scope, exactly as the contact list is: a count is a read, and a number that moved when a colleague captured a private contact would disclose that contact. Present, zero included, on `listCompanies` and `getCompany` — the reads that render the column, and ABSENT entirely for a role without `contact:read` OR without `relationship:read` (the object grants come first, as on the contact list) — the number is a fact about the employment PAIRS, so the edge grant governs it exactly as it governs the employment list; write responses (create, update, archive, merge) omit it. Never client-supplied.
+        hidden_contact_holders:
+          type: array
+          readOnly: true
+          description: >-
+            The live colleagues who own at least one current contact at this account that the caller may not see, each once, so the reader knows whom to ask for an introduction ("Dana and Minh have contacts here you can't see"). It names who to ask and nothing else: no contact's name, role or id, and no count per colleague or in total. Empty when nothing is hidden, and a colleague who left or an agent seat is never listed. It reads the same employment set as `contact_count` with the contact scope turned around, so the two never describe different populations. Present exactly when `contact_count` is, and absent entirely on a write response. Never client-supplied.
+          items: {$ref: '#/components/schemas/HiddenRecordHolder'}
         open_deal_count:
           type: integer
           readOnly: true
           minimum: 0
           description: >-
             How many open, live deals belong to this account, counted across the WHOLE workspace — the same population the account's `computed_fields` open-pipeline row sums. The key is ABSENT entirely, not 0, for a role without `deal:read` or without `computed_field:read`. Present on `listCompanies` and `getCompany`; write responses omit it.
-        source: {type: string}
+        source: {type: string, description: 'The channel this company arrived by: `api`, `automation`, `capture`, `import`, `manual` or `webform`. An older company can show another value until the background correction reaches it.'}
+        source_system: {type: [string, 'null'], readOnly: true, description: 'The system or connector the company came from, such as `gmail` for one read out of a mailbox. Empty when a member or an API client wrote it and named none.'}
         captured_by: {type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.'}
         created_by:
           allOf: [{$ref: '#/components/schemas/PrincipalAttribution'}]
@@ -33433,6 +33710,10 @@ components:
             Who created this company in the system it came FROM, present only on a record imported from another system whose importer named the author. Null on everything else, which is most rows: a company somebody entered here has no author but the one `captured_by` already names.
         raw: {type: [object, 'null'], additionalProperties: true}
         partner: {$ref: '#/components/schemas/Partner'}
+        partner_program_ended:
+          type: boolean
+          readOnly: true
+          description: An ended partner program has commission and deal history. Omitted without partner read permission.
         version: {$ref: '#/components/schemas/RowVersion'}
         last_activity_at:
           type: [string, 'null']
@@ -33440,6 +33721,10 @@ components:
           readOnly: true
           description: >-
             When something last happened with this account: the newest `occurred_at` at or before now of a workspace-audience activity linked to it, so a booked meeting counts once it starts. A task never counts, whoever filed it, and neither does a canceled or no-show meeting. It is maintained on the activity write as `deal.last_activity_at` is (a read accelerator that a rebuild must reproduce). NULL until the first such activity. Sortable.
+        last_activity_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          readOnly: true
+          description: How to read `last_activity_at`, from the activity it names. A day entry counts its days from its own date. Absent when that is null.
         created_at: {type: string, format: date-time}
         updated_at: {type: string, format: date-time}
         archived_at: {type: [string, 'null'], format: date-time}
@@ -33460,10 +33745,11 @@ components:
         linkedin_url:
           type: [string, 'null']
           description: Canonical LinkedIn company URL, held to the rule the update holds it to. website_url is derived and refused here.
+          maxLength: 20000
           pattern: '^https://([a-z]{2,3}\.)?linkedin\.com/company/[^/?#]+/?$'
         legal_name: {type: [string, 'null'], maxLength: 500}
-        phone: {type: [string, 'null'], description: "The company's main number. A formatted number is accepted and stored in E.164 form (for example +49301234567). It is never a contact's own number."}
-        email: {type: [string, 'null'], format: email, description: "The company's general address, for example info@example.com. It never creates or matches a contact."}
+        phone: {type: [string, 'null'], maxLength: 20000, description: "The company's main number. A formatted number is accepted and stored in E.164 form (for example +49301234567). It is never a contact's own number."}
+        email: {type: [string, 'null'], format: email, maxLength: 20000, description: "The company's general address, for example info@example.com. It never creates or matches a contact."}
         description: {type: [string, 'null'], maxLength: 20000, description: A description of what the company does.}
         industry: {type: [string, 'null'], maxLength: 2000, description: 'An industry code, or text the server can map to one. Text that names no code stores no code and is kept in the description.'}
         size_band: {type: [string, 'null'], enum: [null, '1-10', '11-50', '51-200', '201-500', '501-1000', '1001-5000', '5000+']}
@@ -33473,7 +33759,7 @@ components:
         domains:
           type: array
           items: {$ref: '#/components/schemas/CompanyDomainInput'}
-        source: {type: string}
+        source: {type: string, enum: [api, automation, capture, import, manual, webform], description: 'The channel this company arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. The other system and the company''s id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`.'}
         source_system: {type: [string, 'null'], maxLength: 128, description: 'Which external system this record came from, when a caller imported it.'}
         source_id: {type: [string, 'null'], maxLength: 128, description: 'The id this company has in source_system. Needs source_system, and the pair is unique: a second company with the same pair is 409. Look a company up by it with the `source_system` and `source_id` filters on `listCompanies`.'}
         source_author_id: {type: [string, 'null'], format: uuid, description: 'Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer, only beside a source_system; either author field or both may be sent, and the seat''s current name wins on read. captured_by still names the caller.'}
@@ -33485,11 +33771,12 @@ components:
         linkedin_url:
           type: [string, 'null']
           description: Canonical LinkedIn company URL. Null clears it. website_url is derived and refused here.
+          maxLength: 20000
           pattern: '^https://([a-z]{2,3}\.)?linkedin\.com/company/[^/?#]+/?$'
         display_name: {type: string, maxLength: 120}
         legal_name: {type: [string, 'null'], maxLength: 500}
-        phone: {type: [string, 'null'], description: "The company's main number. A formatted number is accepted and stored in E.164 form (for example +49301234567). It is never a contact's own number."}
-        email: {type: [string, 'null'], format: email, description: "The company's general address, for example info@example.com. It never creates or matches a contact."}
+        phone: {type: [string, 'null'], maxLength: 20000, description: "The company's main number. A formatted number is accepted and stored in E.164 form (for example +49301234567). It is never a contact's own number."}
+        email: {type: [string, 'null'], format: email, maxLength: 20000, description: "The company's general address, for example info@example.com. It never creates or matches a contact."}
         description: {type: [string, 'null'], maxLength: 20000, description: 'A description of what the company does. Absent leaves it untouched; an empty string clears it, the same spelling every other nullable text field on this record uses.'}
         industry: {type: [string, 'null'], maxLength: 2000, description: 'An industry code, or text the server can map to one. Text that names no code stores no code and is kept in the description.'}
         size_band: {type: [string, 'null'], enum: [null, '1-10', '11-50', '51-200', '201-500', '501-1000', '1001-5000', '5000+']}
@@ -33513,7 +33800,7 @@ components:
           description: |-
             Who may see this company: `workspace` for everyone holding the read grant, `owner` for
             the seat named by `owner_id` alone. Absent = untouched.
-        lifecycle:
+        status:
           type: string
           enum: [unknown, target, prospect, opportunity, onboarding, live, customer, former_customer, disqualified]
           description: >-
@@ -34260,6 +34547,10 @@ components:
           description: >-
             Who to send this customer's invoices to, beside the figures — the one question a reader of this card asks that the accounting mirror cannot answer. Read from the installation's own relationships, NOT from the accounting source: it states who we record as handling the invoices, which the connector neither supplies nor is told.
           items: {$ref: '#/components/schemas/BillingContact'}
+        billing_contacts_hidden:
+          allOf: [{$ref: '#/components/schemas/HiddenRecords'}]
+          description: >-
+            The billing entries the caller's contact row scope withheld from `billing_contacts`, the same answer the company page gives. Absent exactly when `billing_contacts` is.
         provider:
           type: [string, 'null']
           description: >-
@@ -34415,7 +34706,7 @@ components:
     Company360Health:
       type: object
       description: |-
-        How the relationship stands, in the parts a reader can act on (AC-company-3).
+        How the relationship stands, in the parts a reader can act on.
       properties:
         relationship:
           allOf: [{$ref: '#/components/schemas/HealthDimension'}]
@@ -34473,6 +34764,10 @@ components:
           type: [string, 'null']
           format: date-time
           description: The account's stored last activity the rung is counted from. Null when it has none.
+        last_activity_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          readOnly: true
+          description: How to read `last_activity_at`, from the activity it names. A day entry counts its days from its own date. Absent when that is null.
         silent_days:
           type: integer
           minimum: 0
@@ -34497,9 +34792,9 @@ components:
       properties:
         account:
           type: object
-          required: [lifecycle, relationship_types]
+          required: [status, relationship_types]
           properties:
-            lifecycle:
+            status:
               type: string
               enum: [unknown, target, prospect, opportunity, onboarding, live, customer, former_customer, disqualified]
             relationship_types:
@@ -34682,6 +34977,10 @@ components:
         last_interaction_at:
           type: [string, 'null']
           format: date-time
+        last_interaction_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          readOnly: true
+          description: How to read `last_interaction_at`, from the activity it names. Absent when that is null.
     Company360DealRole:
       type: object
       description: One contact's stakeholder role on one of the account's deals.
@@ -34758,6 +35057,10 @@ components:
         key: {type: [string, 'null'], description: 'The subject-line handle, when the project has one.'}
         phase: {$ref: '#/components/schemas/Company360ProjectPhase'}
         last_activity_at: {type: [string, 'null'], format: date-time}
+        last_activity_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          readOnly: true
+          description: How to read `last_activity_at`, from the activity it names. A day entry counts its days from its own date. Absent when that is null.
         target_end_date: {type: [string, 'null'], format: date}
         owner_id: {type: [string, 'null'], format: uuid}
         owner_name:
@@ -34928,7 +35231,7 @@ components:
           type: [object, 'null']
           description: |-
             What performing this advice means, named by the server rather than inferred by the
-            client from the evidence order (AC-company-14). A rule that cannot name an action
+            client from the evidence order. A rule that cannot name an action
             carries null and the card advises without offering a button, which is honest — a
             control that does nothing teaches the reader to stop pressing them.
           required: [kind]
@@ -35028,6 +35331,9 @@ components:
           format: date-time
           description: The instant the assembling transaction read. Sections are consistent to this moment under Read Committed.
         company: {$ref: '#/components/schemas/Company'}
+        standing_line:
+          $ref: '#/components/schemas/StandingLine'
+          description: Absent until an activity was read, or when this reader may not open one it was written from.
         moment:
           description: >-
             The ONE thing this account needs today, selected server-side by the same rule the contact page uses. Today it fires on what we OWE the account's contacts — a promise past its date, or the next one coming due — read from both places a promise is recorded: a task somebody filed, and a commitment an extractor read out of a conversation. Absent when the caller lacks a grant the rule needs, named in `sections_omitted` as `moments`; the quiet success state is a moment of kind `nothing_needed`, not an absence.
@@ -35077,11 +35383,19 @@ components:
           properties:
             data: {type: array, items: {$ref: '#/components/schemas/Company360Contact'}}
             page: {$ref: '#/components/schemas/PageInfo'}
+        contacts_hidden:
+          allOf: [{$ref: '#/components/schemas/HiddenRecords'}]
+          description: >-
+            The account's current employees the caller may not see, by the contact row scope or by the employment tie's own read scope. Absent exactly when `contacts` is.
         billing_contacts:
           type: array
           description: >-
-            Who handles this account's invoices, ordered by capacity: addressed, approved, paid. Each entry is one edge, so the panel can change or archive a single role without touching the others. Empty means nobody is named — which for a paying customer is a gap worth showing, not a blank. Absent when the caller lacks the contact or relationship grant, named in `sections_omitted` as `billing_contacts`; a contact outside the caller's row scope is simply not listed, and no count states how many were withheld.
+            Who handles this account's invoices, ordered by capacity: addressed, approved, paid. Each entry is one edge, so the panel can change or archive a single role without touching the others. Empty means nobody is named — which for a paying customer is a gap worth showing, not a blank. Absent when the caller lacks the contact or relationship grant, named in `sections_omitted` as `billing_contacts`. A contact outside the caller's row scope is not listed; `billing_contacts_hidden` says how many entries were withheld and who owns them.
           items: {$ref: '#/components/schemas/BillingContact'}
+        billing_contacts_hidden:
+          allOf: [{$ref: '#/components/schemas/HiddenRecords'}]
+          description: >-
+            The billing entries the caller's contact row scope withheld from `billing_contacts`. Absent exactly when `billing_contacts` is.
         deals: {$ref: '#/components/schemas/Company360Deals'}
         projects:
           type: array
@@ -35200,7 +35514,7 @@ components:
         logo_url:
           type: [string, 'null']
           description: |-
-            The company node's resolved logo (A55), same value `Company.logo_url` carries.
+            The company node's resolved logo, same value `Company.logo_url` carries.
             Absent on a company with no resolved logo and on every contact or deal node —
             a client draws the node's monogram or its token-coloured circle instead.
     ContactProfileField:
@@ -35391,6 +35705,9 @@ components:
           format: date-time
           description: The assembly clock. Mail coverage carries its own evaluation time; Read Committed does not promise one snapshot across sections.
         contact: {$ref: '#/components/schemas/Contact'}
+        standing_line:
+          $ref: '#/components/schemas/StandingLine'
+          description: Absent until an activity was read, or when this reader may not open one it was written from.
         created_by:
           allOf: [{$ref: '#/components/schemas/PrincipalAttribution'}]
           description: |-
@@ -36183,6 +36500,22 @@ components:
           description: >-
             Two to five sentences: who this contact is in the current commercial context, what they have explicitly cared about, what recently changed, and the unresolved decision or risk. A sentence whose citations cannot be resolved is dropped whole rather than shown uncited.
           items: {$ref: '#/components/schemas/CompanyBriefSentence'}
+    StandingLine:
+      type: object
+      description: |-
+        Where a record stands after its latest activity, in one sentence the model wrote in
+        the background when that activity landed. Shared by the record's readers, and served
+        only to a reader who may open every activity it cites.
+      required: [text, activity_ids, written_at]
+      properties:
+        text: {type: string}
+        activity_ids:
+          type: array
+          description: |-
+            The activities the sentence rests on, as the model cited them. The page opens
+            each one, so a reader can check the line against what was said.
+          items: {type: string, format: uuid}
+        written_at: {type: string, format: date-time}
     ContactConsentGuard:
       type: object
       description: |-
@@ -36356,6 +36689,10 @@ components:
         outbound_90d: {type: integer}
         sent_90d: {type: integer, minimum: 0, description: "Messages in the last 90 days the colleague sent to the contact as the sender (participant role `from`). Being copied does not count. Absent for a reader without activity read, and on an edge folded before the count existed. The two-way reading then falls back to `outbound_90d`, which also counts mail the colleague was copied on."}
         last_at: {type: [string, 'null'], format: date-time, description: 'The newest `occurred_at` among the activities the edge counts. A client orders edges by it.'}
+        last_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          readOnly: true
+          description: How to read `last_at`, from the activity it names. Absent when that is null.
         receipts:
           type: array
           maxItems: 3
@@ -36457,6 +36794,10 @@ components:
           type: boolean
           description: Correspondence has gone both ways in the window — the claim that separates a relationship from a mailing list.
         last_at: {type: [string, 'null'], format: date-time}
+        last_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          readOnly: true
+          description: How to read `last_at`, from the activity it names. Absent when that is null.
         days_since_last:
           type: [integer, 'null']
           description: Whole days from the last interaction to now, so a client renders "2 days ago" without re-deriving today from a timestamp.
@@ -36902,6 +37243,10 @@ components:
         interactions_90d: {type: integer, minimum: 0}
         two_way: {type: boolean, description: "Whether both sides have written within the relationship window, decided by the shared direction rule."}
         last_at: {type: [string, 'null'], format: date-time}
+        last_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          readOnly: true
+          description: How to read `last_at`, from the activity it names. Absent when that is null.
         inbound_90d: {type: integer, minimum: 0, description: Interactions in the last 90 days where they wrote to this colleague.}
         outbound_90d: {type: integer, minimum: 0, description: "Outbound interactions in the last 90 days this colleague was on, as sender or copied. sent_90d counts only what they sent."}
         sent_90d: {type: integer, minimum: 0, description: "Messages in the last 90 days this colleague sent to the contact as the sender (participant role `from`). Being copied on a colleague's mail does not count, so it can be lower than outbound_90d."}
@@ -38493,7 +38838,7 @@ components:
             `deal_stakeholder` — the contact holds a stakeholder seat on the deal.
             `parent_of` — `from` is the parent company of `to` (the account's parent
             points at it; the account points at each child).
-            `partner_of` / `referred_by` / `co_sell_with` — the A41 partner edges, from
+            `partner_of` / `referred_by` / `co_sell_with` — the partner edges, from
             the company that records the edge to its counterparty.
             `owns` — `from` is the workspace member who owns the account.
             `in_contact_with` — `from` is the workspace member who has been IN recorded
@@ -39226,7 +39571,7 @@ components:
       properties:
         deal_id: {type: string, format: uuid}
         mode: {type: string, enum: [estimate, lines, legacy], description: '`estimate` is a value a human typed, `lines` the sum of the lines, `legacy` a deal from before deals had lines.'}
-        amount_basis: {type: [string, 'null'], enum: [lines_net_committed, offer_gross, estimate, unknown, null], description: 'What the deal''s amount means. Null while the deal has no amount.'}
+        amount_basis: {type: [string, 'null'], enum: [lines_net_committed, offer_net, offer_gross, estimate, unknown, null], description: 'What the deal''s amount means. `offer_net` is an accepted offer''s figure without tax. `offer_gross` is an older amount that took an accepted offer''s gross with tax. Null while the deal has no amount.'}
         commercial_revision: {type: integer, format: int64, description: Counts the accepted changes to the lines. Send it back as `expected_revision`.}
         currency: {type: [string, 'null'], pattern: '^[A-Z]{3}$'}
         lines: {type: array, items: {$ref: '#/components/schemas/DealLine'}}
@@ -39413,6 +39758,12 @@ components:
         amount_minor: {type: [integer, 'null'], format: int64}
         currency: {type: [string, 'null'], pattern: '^[A-Z]{3}$'}
         expected_arr_minor: {type: [integer, 'null'], format: int64, description: 'Expected annual recurring revenue in minor units of `currency`. Null means the deal carries no recurring component, which is not the same as zero. `currency` is present exactly when `amount_minor` or `expected_arr_minor` is.'}
+        merged_into_id:
+          type: [string, 'null']
+          format: uuid
+          readOnly: true
+          description: >-
+            Set when this deal was merged away into another, and null otherwise. It separates a merged-away deal from one that was only archived: both are hidden from lists, but a merged one cannot be restored, and its id names the surviving deal to read instead. `contact`, `company` and `lead` carry the same field for the same reason.
         arr_source_offer_id: {type: [string, 'null'], format: uuid, readOnly: true, description: 'The accepted offer `expected_arr_minor` came from, or null where a human set the figure. While it is set the recurring figure is the offer''s to state: an ordinary edit that would change or clear it is refused, and accepting another offer replaces both together.'}
         closing_occurrence_id: {type: [string, 'null'], format: uuid, readOnly: true, description: 'Which CLOSING this deal is currently on, as the id of the stage-history row that made it. Null while the deal is open, and null on a closed deal whose history does not record the move that closed it — an imported row, typically, where manufacturing an occurrence would invite a review of a closing nobody can point at. Reopening and re-closing yields a new one: the old closing stays in history and stays readable, it simply stops being the one this deal is on.'}
         masked_fields:
@@ -39532,6 +39883,10 @@ components:
         wait_ends_at: {type: [string, 'null'], format: date-time, readOnly: true, description: "The instant the pause ends: the start of the `wait_until` day in the deal owner's own time zone, the installation's when the owner has none. Clients judge a pause against this, never against the date."}
         closed_at: {type: [string, 'null'], format: date-time}
         last_activity_at: {type: [string, 'null'], format: date-time, description: 'The newest `occurred_at` at or before now of an activity filed under the deal, so a booked meeting counts once it starts. A task never counts, whoever filed it, and neither does a canceled or no-show meeting. Drives the deterministic stalled flag. A message limited to its participants counts by its date alone, so a deal worked through private mail does not read as stalled. The deal timeline already lists such a message to every reader of the deal with its time, so its date reveals nothing new; its text and sender stay with its audience, a message limited to a chosen audience does not count, and no contact or company date moves for it.'}
+        last_activity_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          readOnly: true
+          description: How to read `last_activity_at`, from the activity it names. A day entry counts its quiet days from its own date. Absent when that is null.
         stalled: {type: boolean, readOnly: true, description: 'Derived — no activity past the threshold (absolute duration). A booked workspace-audience meeting ahead keeps the deal off stalled until it starts or is called off.'}
         last_email:
           allOf: [{$ref: '#/components/schemas/DealLastEmail'}]
@@ -39884,7 +40239,7 @@ components:
         signed_on:
           type: [string, 'null']
           format: date
-          description: 'When a human asserts it was signed. Never derived from a deal close time, and never a signing ceremony — in-product e-signature stays removed (A94).'
+          description: 'When a human asserts it was signed. Never derived from a deal close time, and never a signing ceremony — in-product e-signature stays removed.'
         cancellation_notice_on: {type: [string, 'null'], format: date}
         cancellation_effective_on:
           type: [string, 'null']
@@ -40067,6 +40422,10 @@ components:
           format: date-time
           readOnly: true
           description: 'The newest workspace-audience activity filed under the project, maintained from the timeline on link write. A task never counts, whoever filed it. It is a read accelerator that a rebuild must reproduce. A message limited to its participants does not move it, even for a reader who may read that message: one number every reader sees can only count what every reader may see.'
+        last_activity_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          readOnly: true
+          description: How to read `last_activity_at`, from the activity it names. A day entry counts its quiet days from its own date. Absent when that is null.
         source: {type: string, description: 'The channel this record arrived by, one of the values `CreateProjectRequest.source` lists. A record written before the list was fixed may still carry an older value until the background correction reaches it.'}
         captured_by: {type: string, readOnly: true, description: 'Server-stamped from the authenticated principal; never client-supplied.'}
         author:
@@ -40094,6 +40453,9 @@ components:
           format: date-time
           description: The instant the assembling transaction read. Sections are consistent to this moment under Read Committed.
         project: {$ref: '#/components/schemas/Project'}
+        standing_line:
+          $ref: '#/components/schemas/StandingLine'
+          description: Absent until an activity was read, or when this reader may not open one it was written from.
         sections_omitted:
           type: array
           description: The sections withheld for lack of a grant — so a client can say "you can't see this" instead of "there is none".
@@ -40287,7 +40649,12 @@ components:
         id: {type: string, format: uuid}
         from_phase: {type: [string, 'null'], description: Null on the birth row.}
         to_phase: {type: string}
-        reason: {type: [string, 'null']}
+        reason: {type: [string, 'null'], description: The reason typed with the move.}
+        cause:
+          allOf: [{$ref: '#/components/schemas/Project360PhaseCause'}]
+          description: |-
+            What caused a move no one chose by hand. Absent on a move made by hand, and on
+            every move recorded before causes were stored. A client words the cause itself.
         changed_at: {type: string, format: date-time}
         changed_by:
           allOf: [{$ref: '#/components/schemas/PrincipalAttribution'}]
@@ -40297,6 +40664,25 @@ components:
             and not matched to one audit row, or an audit row that no longer exists.
             A reader says "unknown" for an absent value and never "System"; the
             system principal is `actor_type: system`.
+    Project360PhaseCause:
+      type: object
+      description: |-
+        Why the project moved, as a code and the record behind it. `deal_won`: winning the
+        deal moved the project into delivering.
+      required: [kind, deal_id, deal_name]
+      properties:
+        kind: {type: string, enum: [deal_won]}
+        deal_id:
+          type: [string, 'null']
+          format: uuid
+          description: |-
+            The deal whose win moved the project. Null when the caller may not see that deal,
+            or it no longer exists.
+        deal_name:
+          type: [string, 'null']
+          description: |-
+            The deal's name now, read under the caller's deal grant and row scope, archived
+            deals included. Null exactly when `deal_id` is.
     Project360PhaseDuration:
       type: object
       required: [phase, seconds, current]
@@ -40368,6 +40754,10 @@ components:
           type: [string, 'null']
           format: date-time
           description: 'The newest WORKSPACE-AUDIENCE activity filed under the project, a task never counting; null when nothing is filed yet. A message limited to its participants does not move it, even for a reader who may read that message.'
+        last_activity_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          readOnly: true
+          description: How to read `last_activity_at`, from the activity it names. A day entry counts its quiet days from its own date. Absent when that is null.
         activity_count: {type: integer, minimum: 0, description: Every live activity filed under the project.}
     CreateProjectRequest:
       type: object
@@ -40735,7 +41125,7 @@ components:
       required: [pipeline_id, name, position]
       properties:
         pipeline_id: {type: string, format: uuid}
-        name: {type: string}
+        name: {type: string, maxLength: 120}
         position: {type: integer}
         semantic: {type: string, enum: [open, won, lost], default: open}
         win_probability: {type: integer, minimum: 0, maximum: 100, default: 0}
@@ -40743,7 +41133,7 @@ components:
     UpdateStageRequest:
       type: object
       properties:
-        name: {type: string}
+        name: {type: string, maxLength: 120}
         position: {type: integer}
         semantic: {type: string, enum: [open, won, lost]}
         win_probability: {type: integer, minimum: 0, maximum: 100}
@@ -40954,7 +41344,7 @@ components:
       type: object
       required: [name]
       properties:
-        name: {type: string}
+        name: {type: string, maxLength: 120}
         is_default: {type: boolean, default: false}
         position: {type: integer, default: 0}
         stages:
@@ -40976,7 +41366,7 @@ components:
           description: |-
             Accepted and ignored. The stage joins the pipeline this request creates; the field
             stays so a client written when nested stages reused `CreateStageRequest` is not refused.
-        name: {type: string}
+        name: {type: string, maxLength: 120}
         position:
           type: integer
           description: Omitted or 0, the stage takes its place in the list (1-based).
@@ -40985,7 +41375,7 @@ components:
     UpdatePipelineRequest:
       type: object
       properties:
-        name: {type: string}
+        name: {type: string, maxLength: 120}
         is_default: {type: boolean}
         position: {type: integer}
     PipelineOrderRequest:
@@ -41045,6 +41435,23 @@ components:
           type: string
           enum: [human, classifier]
           description: Who set `deal_relevance`. The classifier never changes a mark a human set.
+        filed_by: {$ref: '#/components/schemas/LinkFiler'}
+    LinkFiler:
+      type: object
+      readOnly: true
+      description: >-
+        On a deal link only, and only when no human or agent chose it: who filed the activity on the deal, read from the latest filing of it there. The actor is `core` for the installation's own rule, or the name of the extension whose hook filed it. Marking the link `unrelated` takes the filing back, and no automatic pass files the activity there again.
+      required: [actor]
+      properties:
+        actor: {type: string}
+        hook:
+          type: string
+          enum: [parties, deal]
+          description: 'Which hook point filed it, for an extension actor. Absent for `core`.'
+        reason:
+          type: string
+          description: >-
+            For an extension, a key the extension declared for its hook. Read it together with the actor: the label comes from that extension's own translations. Absent for `core`.
     RelinkThreadRequest:
       type: object
       description: |-
@@ -41105,6 +41512,10 @@ components:
       type: object
       required: [enabled, provider, calendar_id, duration_minutes, notice_minutes, horizon_days, buffer_minutes, title, location]
       properties:
+        privacy_information:
+          type: string
+          readOnly: true
+          description: The installation's privacy page, falling back to its privacy contact. Absent when neither is stated.
         enabled: {type: boolean}
         provider: {type: string, enum: ['', gcal, graphcal]}
         calendar_id: {type: string, maxLength: 512}
@@ -41140,18 +41551,18 @@ components:
             the page names no calendar (a page saved before the profile existed reads this way).
             `calendar_read_only`: the connection lacks the calendar write grant. `calendar_unavailable`:
             the connection is gone or refused. `team_not_ready`: a team member has not confirmed, has
-            left, or has no calendar Margince can read; `team_members` says which. Answered on the
-            host's own profile read only.
+            left, or has no calendar Margince can read; the team link's `team_members` says which.
+            Answered on the host's own reads only.
         team_members:
           type: array
           maxItems: 5
+          deprecated: true
           items: {$ref: '#/components/schemas/SchedulingTeamMember'}
           description: |-
-            Colleagues who must attend every meeting booked through this page. Guests see only the
-            times when the host and every member are free, inside each one's own working hours, and
-            each booking invites every member. A member named here starts as `pending` and the page
-            takes no bookings until every member has confirmed. Only `user_id` is read from a
-            request; a colleague not offered by `GET /scheduling/team-candidates` is refused.
+            The personal page names no colleagues: it offers the host's own free time alone. A
+            request naming a member answers 422 on `team_members`; an empty list is accepted. A
+            response does not carry the field. Colleagues are named on a team link
+            (`POST /scheduling/team-links`).
     SchedulingTeamMember:
       type: object
       required: [user_id]
@@ -41174,12 +41585,33 @@ components:
         name: {type: string}
     SchedulingTeamRequest:
       type: object
-      required: [host_user_id, host_name, title, state]
+      required: [page_id, host_user_id, host_name, title, state]
       properties:
+        page_id: {type: string, format: uuid, description: 'The team link that names the caller; answer it with `PUT /scheduling/team-links/{page_id}/answer`.'}
         host_user_id: {type: string, format: uuid}
         host_name: {type: string}
-        title: {type: string, description: The meeting title the link offers.}
+        title: {type: string, description: "The team link's name, which is the meeting title it offers."}
         state: {type: string, enum: [pending, confirmed]}
+    SchedulingTeamLink:
+      type: object
+      required: [id, title, enabled, team_members, slug, blocker]
+      description: |-
+        A booking link that names colleagues who attend every meeting booked through it. It uses
+        the calendar and booking settings of its owner's personal page, and has its own address.
+      properties:
+        id: {type: string, format: uuid}
+        title: {type: string, maxLength: 200, description: "The link's name, which is also the meeting title guests see."}
+        enabled: {type: boolean, description: Whether the owner switched the link on.}
+        team_members:
+          type: array
+          maxItems: 5
+          items: {$ref: '#/components/schemas/SchedulingTeamMember'}
+        slug: {type: string}
+        public_url: {type: string, description: 'The address to share, `/book/{slug}` on the configured public origin. Absent when no usable public origin is configured.'}
+        blocker:
+          type: string
+          enum: [none, no_calendar, calendar_read_only, calendar_unavailable, team_not_ready]
+          description: Why the link takes no bookings now, with the meanings `SchedulingProfile.blocker` gives them.
     SchedulingAliasRequest:
       type: object
       required: [alias]
@@ -41401,6 +41833,14 @@ components:
           type: boolean
           readOnly: true
           description: Whether this caller may replace selected individual readers of this internal operational message. Absent for ordinary or withheld activities.
+        mailbox_imported:
+          type: boolean
+          readOnly: true
+          description: Whether an import brought this in; the per-message audience write refuses it.
+        thread_audience_yours:
+          type: boolean
+          readOnly: true
+          description: Whether the thread audience write acts on this row for the caller.
         writable:
           type: boolean
           readOnly: true
@@ -41457,7 +41897,7 @@ components:
         assignee_id: {type: [string, 'null'], format: uuid, description: Task only.}
         is_done: {type: boolean, default: false, description: Task only.}
         done_at: {type: [string, 'null'], format: date-time}
-        duration_seconds: {type: [integer, 'null'], description: Meeting/call only.}
+        duration_seconds: {type: [integer, 'null'], minimum: 0, description: Meeting/call only.}
         host_user_id:
           type: [string, 'null']
           format: uuid
@@ -41625,7 +42065,7 @@ components:
         source:
           type: string
           description: >-
-            Where the row came from. `manual` is anything typed, by a member or by an assistant working for one, so it never says who typed it: `captured_by` and `recorded_by_agent` do.
+            The channel the row arrived by: `api`, `automation`, `capture`, `import`, `manual` or `webform`. `manual` is anything typed, by a member or by an assistant working for one, so it never says who typed it: `captured_by` and `recorded_by_agent` do. `source_system` names the connector or the product's own writer when there is one. An older row can show another value until the background correction reaches it.
         captured_by: {type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.'}
         recorded_by_agent:
           type: boolean
@@ -41680,6 +42120,81 @@ components:
         any extension unit present under `extensions/` — so an enum here would assert that
         the legal set is identical in every installation, which is false. The contract
         states the invariant; `GET /v1/channel-providers` resolves the live set.
+    CompanyTypeDirectory:
+      type: object
+      description: The company types installed extensions add, ordered by value.
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: {$ref: '#/components/schemas/CompanyTypeOption'}
+    CompanyTypeOption:
+      type: object
+      required: [value, label, unit]
+      properties:
+        value:
+          type: string
+          description: The value a company carries, `ext:<unit>:<type>`.
+        label:
+          type: string
+          description: What a screen shows, in English, as the extension declared it.
+        unit:
+          type: string
+          description: The extension that declared the type.
+    RecordKindDirectory:
+      type: object
+      description: The record kinds installed extensions add that this caller may read, ordered by name.
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: {$ref: '#/components/schemas/RecordKindOption'}
+    RecordKindOption:
+      type: object
+      required: [name, unit, kind, display_name, fields, natural_key, view, delete_policy, actions]
+      properties:
+        name:
+          type: string
+          description: |-
+            The kind as every table that names a kind stores it, `ext:<unit>:<kind>`. The unit is a
+            unit name and the kind is a lower-case letter followed by up to 31 lower-case letters,
+            digits or underscores.
+        unit:
+          type: string
+          description: The extension that declared the kind.
+        kind:
+          type: string
+          description: The short name inside the unit.
+        display_name:
+          type: string
+          description: What a screen calls one record of the kind, in English.
+        fields:
+          type: array
+          items: {$ref: '#/components/schemas/RecordKindField'}
+        natural_key:
+          type: array
+          description: The fields that together identify one record. The unit's table holds them unique.
+          items: {type: string}
+        view:
+          type: string
+          description: |-
+            The path segment under the unit's screen that shows one record of the kind, as the unit
+            declared it. Absent when the unit's screen itself shows it. A link to a record opens
+            `#/ext/<unit>/<view>` with `record_type` and `record_id` in the query.
+        delete_policy:
+          type: string
+          enum: [archive_only, erasable]
+          description: What removing a record of the kind means. `archive_only` keeps the row.
+        actions:
+          type: array
+          description: The actions this caller holds on the kind. Every other action is denied.
+          items: {type: string, enum: [create, read, update, delete]}
+    RecordKindField:
+      type: object
+      required: [name, label]
+      properties:
+        name: {type: string, description: "The column the unit's table keeps the value in."}
+        label: {type: string, description: "What a screen shows, in English."}
     ChannelProviderDirectory:
       type: object
       description: Every messaging transport this installation has registered.
@@ -41815,7 +42330,7 @@ components:
             properties:
               entity_type: {type: string, enum: [contact, company, deal, lead, project]}
               entity_id: {type: string, format: uuid}
-        source: {type: string}
+        source: {type: string, enum: [api, automation, capture, import, manual, webform], description: 'The channel this task arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. Any other value is 422 `invalid_source`.'}
       additionalProperties: false
     ActivityDealFilingRecordType:
       type: string
@@ -41927,7 +42442,7 @@ components:
           format: uuid
           description: >-
             Inbound message, call, meeting or email only: the linked contact who wrote or said it. Set it whenever one contact sent the message, for example the one member of a group chat who asked for a follow-up. Only that contact counts as its author, so only they asked to hear from us. Without it, an inbound activity linked to one contact names that contact as the sender. One linked to two or more contacts names no sender, and each contact is kept as copied. The stated `participants` of an email win over this field. A contact that is not in `links` returns `422 code: sender_not_linked`. Any other kind, or a direction other than `inbound`, returns `422 code: field_not_valid_for_kind`.
-        duration_seconds: {type: [integer, 'null']}
+        duration_seconds: {type: [integer, 'null'], minimum: 0}
         direction: {type: [string, 'null'], enum: [null, inbound, outbound]}
         call_outcome:
           type: [string, 'null']
@@ -41950,7 +42465,7 @@ components:
             properties:
               entity_type: {type: string, enum: [contact, company, deal, lead, project]}
               entity_id: {type: string, format: uuid}
-        source: {type: string}
+        source: {type: string, enum: [api, automation, capture, import, manual, webform], description: 'The channel this activity arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. The other system and the activity''s id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`.'}
         raw:
           type: [object, 'null']
           additionalProperties: true
@@ -42129,6 +42644,74 @@ components:
             Stop following this contact for good, for this reader only. It has no end
             date; the reader resumes it with the DELETE verb. A colleague, or a later
             owner, keeps their own choice.
+    LinkedRecordType:
+      type: string
+      enum: [deal, company, contact]
+    LinkType:
+      type: object
+      additionalProperties: false
+      required: [name, label, from, to]
+      properties:
+        name: {type: string, description: 'A core word, or `ext:<unit>:<type>` for an extension''s.'}
+        label: {type: string}
+        unit:
+          type: [string, 'null']
+          description: The extension that declared it. Absent for core's own.
+        from: {type: array, items: {$ref: '#/components/schemas/LinkedRecordType'}}
+        to: {type: array, items: {$ref: '#/components/schemas/LinkedRecordType'}}
+    LinkTypeList:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: {$ref: '#/components/schemas/LinkType'}
+    LinkSuggestion:
+      type: object
+      additionalProperties: false
+      required: [id, activity_id, entity_type, entity_id, unit, reason, score, status, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        activity_id: {type: string, format: uuid}
+        activity_subject:
+          type: [string, 'null']
+          description: The subject of the message. Empty when the message has none.
+        entity_type: {type: string, enum: [contact, company, deal, project]}
+        entity_id: {type: string, format: uuid}
+        entity_name:
+          type: [string, 'null']
+          description: The name of the suggested record, for the screen. Absent on a decision's answer.
+        deal_amount_minor:
+          type: [integer, 'null']
+          format: int64
+          description: For a suggested deal, its value in minor units of `deal_currency`, to help pick. Null when the deal has none or the caller's role withholds it. Absent on a decision's answer.
+        deal_currency:
+          type: [string, 'null']
+          pattern: '^[A-Z]{3}$'
+          description: The currency of `deal_amount_minor`, withheld with it.
+        deal_expected_close_date:
+          type: [string, 'null']
+          format: date
+          description: For a suggested deal, when it is expected to close. Absent on a decision's answer.
+        unit:
+          type: [string, 'null']
+          description: The extension that proposed it. Null when Margince itself asks which deal a mail is about.
+        reason:
+          type: string
+          maxLength: 200
+          description: One short sentence from the extension on why, or Margince's own question.
+        score: {type: number, minimum: 0, maximum: 1}
+        status: {type: string, enum: [pending, accepted, rejected]}
+        created_at: {type: string, format: date-time}
+    LinkSuggestionList:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: {$ref: '#/components/schemas/LinkSuggestion'}
     DeclineActivityDealRequest:
       type: object
       additionalProperties: false
@@ -42199,7 +42782,7 @@ components:
         questions_closed:
           type: integer
           minimum: 0
-          description: The open deal questions of the conversation this call marked done.
+          description: The messages of the conversation whose open deal question this call closed.
     SetActivityDispositionRequest:
       type: object
       additionalProperties: false
@@ -42413,13 +42996,13 @@ components:
           format: uuid
           readOnly: true
           description: >-
-            The account an upload is filed under: the company it was uploaded on, or the account of the deal it was uploaded on at that time. A file that came with a captured mail carries none; the account's Documents list reaches it through the mail's links as they are now. A read path rather than a second parent: visibility stays the primary parent's, and a company merge moves it.
+            The account a file is filed under, worked out when it is read: the company it is filed on, or the company of the deal it is filed on now. A file on any other record names none; the account's Documents list reaches a mail's file through the mail's links as they are now. A read path rather than a second parent: visibility stays the primary parent's.
         contract_id:
           type: [string, 'null']
           format: uuid
           readOnly: true
           description: >-
-            The agreement this file belongs to: the same kind of roll-up as company_id above, and likewise not a second parent. Set at upload by the contact filing the paper; never inferred from a filename or a date, which is the guess the document state exists to refuse.
+            The agreement this file is about. A read path rather than a second parent: visibility stays the primary parent's. Set at upload by the member filing the paper; never inferred from a filename or a date, which is the guess the document state exists to refuse.
         bytes_withheld:
           type: boolean
           readOnly: true
@@ -42611,7 +43194,8 @@ components:
             `AttachmentExtraction` the human was actually shown. Required, and not
             inferable: resolving "the newest reading" instead would let a reading started
             by someone else between the display and the click decide what gets written,
-            which is precisely the divergence storing the fields exists to prevent. A reading belonging to another attachment, or one that never
+            which is precisely the divergence storing the fields exists to prevent.
+            A reading belonging to another attachment, or one that never
             existed, is a 404. A reading not read for deal facts is a 422 `not_deal_facts`.
         field_keys:
           type: array
@@ -42816,7 +43400,7 @@ components:
           type: string
           enum: [intent, recipient, relationship, deal, commitment, conversation, dossier]
           description: |-
-            Which grounding input this came from, in A132's order.
+            Which grounding input this came from, in the grounding order.
         label:
           type: string
           description: The reason in the reader's words, short enough to render as a chip.
@@ -42900,7 +43484,8 @@ components:
             `CaptureConnection`s that can send. Omitted, a reply goes out from the mailbox the
             conversation arrived in, and a new message from the sender's default mailbox. A mailbox
             that is not the sender's, or cannot send, is refused with 422
-            `mailbox_not_send_capable`.
+            `mailbox_not_send_capable`. A shared mailbox with `reply_enabled` can be named here by
+            its id, and only by a member of its reader team.
         subject: {type: string, description: The subject line. Blank or only white space is refused with 422 `required`.}
         body: {type: string, description: The (possibly edited) final body that is sent. Blank or only white space is refused with 422 `required`.}
         html_body:
@@ -43822,8 +44407,7 @@ components:
         next_task_due_has_time: {type: boolean, readOnly: true, description: 'True when next_task_due_at names a time of day; false when the next task is due on a date with no time.'}
         next_task_due_intent: {allOf: [{$ref: '#/components/schemas/IntentTime'}], readOnly: true, description: 'The date and clock the next task was set for, in the zone it was chosen in. A task with only a date is due on this date for every reader.'}
         score_reason: {type: [string, 'null'], readOnly: true, description: 'The highest-impact factor in the retained current score explanation, for a compact queue reason.'}
-        source: {type: string, description: 'How the row reached Margince: `manual` for a typed lead, or the value an import, connector or capture wrote (`connector:<name>:<id>`). It never scores and never feeds the origin filter or report; use `origin` for where the lead came from.'}
-        source_label: {type: [string, 'null'], readOnly: true}
+        source: {type: string, description: 'The channel this lead arrived by: `api`, `automation`, `capture`, `import`, `manual` or `webform`. An older lead can show another value until the background correction reaches it. It never scores; use `origin` for where the lead came from.'}
         web_form_name: {type: [string, 'null'], readOnly: true, description: 'The current name of the website form this lead came through; null for every other lead, and for one whose form was deleted.'}
         origin: {type: [string, 'null'], description: 'Where the lead came from, a key from `/lead-origins`. Null when nobody has classified the lead; such a lead scores neutral. Set by a human, an importer or capture, and the only lead fact the score and the origin filter read.'}
         origin_label: {type: [string, 'null'], readOnly: true, description: 'The label `/lead-origins` gives `origin`; null when `origin` is null.'}
@@ -43860,7 +44444,7 @@ components:
     CreateLeadRequest:
       type: object
       properties:
-        full_name: {type: [string, 'null']}
+        full_name: {type: [string, 'null'], maxLength: 120}
         email: {type: [string, 'null'], format: email}
         phone: {type: [string, 'null'], description: "E.164, as a contact's number is. One number: a lead is one enquiry until it is promoted, and the number carries to the contact it becomes."}
         linkedin_url: {type: [string, 'null']}
@@ -43890,7 +44474,7 @@ components:
         source_author_id: {type: [string, 'null'], format: uuid, description: 'Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer, only beside a source_system; either author field or both may be sent, and the seat''s current name wins on read. captured_by still names the caller.'}
         source_author_name: {type: [string, 'null'], maxLength: 200, description: 'The source system''s own spelling of who wrote this record. Same door as source_author_id: a declared importer only, beside a source_system. Kept when a seat is also named, so the name survives the seat.'}
         source_id: {type: [string, 'null']}
-        source: {type: string, description: 'How the row was written. Optional: the server writes `manual` when none is sent. Never scored; send `origin` for where the lead came from.'}
+        source: {type: string, enum: [api, automation, capture, import, manual, webform], description: 'The channel this lead arrived by. Optional: the server writes `manual` when none is sent, and an integration sends `api`. The other system and the lead''s id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`. Never scored; send `origin` for where the lead came from.'}
         origin: {type: [string, 'null'], description: 'Where the lead came from: an ACTIVE key from `/lead-origins` (422 `unknown_lead_origin` or `inactive_lead_origin` otherwise). Omit for an unclassified lead, which scores neutral.'}
         origin_detail: {type: [string, 'null'], maxLength: 500, description: 'A short note beside `origin`.'}
       additionalProperties: true
@@ -43902,7 +44486,7 @@ components:
         "disqualified ⇒ archived" is enforced on that one path); `promoted` is reachable only via
         POST /leads/{id}/promote. Both terminal states are therefore excluded from this enum.
       properties:
-        full_name: {type: [string, 'null']}
+        full_name: {type: [string, 'null'], maxLength: 120}
         email: {type: [string, 'null'], format: email}
         phone: {type: [string, 'null'], description: "E.164, as a contact's number is. One number: a lead is one enquiry until it is promoted, and the number carries to the contact it becomes."}
         title: {type: [string, 'null']}
@@ -44110,7 +44694,7 @@ components:
     LeadSourceIntent:
       type: string
       enum: [high, neutral, low]
-      description: 'What the scorer makes of a lead from this origin (the deprecated lead source list carries the same field, which nothing reads): high adds the high-intent points, low subtracts the low-intent penalty, neutral does neither.'
+      description: 'What the scorer makes of a lead from this origin (lead origins carry it): high adds the high-intent points, low subtracts the low-intent penalty, neutral does neither.'
     ReviewQuestion:
       type: object
       required: [key, label, type, required]
@@ -44179,7 +44763,7 @@ components:
         answers: {type: object, additionalProperties: {type: string}, description: 'Keyed by question key. Every key here has a question in `questions`.'}
         revision: {type: integer}
         created_at: {type: string, format: date-time}
-        updated_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time, description: 'Always equal to `created_at`: a review is not edited after it is submitted.'}
     OutcomeReviewListResponse:
       type: object
       required: [data]
@@ -44533,59 +45117,14 @@ components:
       type: object
       required: [label]
       properties:
-        label: {type: string, minLength: 1}
+        label: {type: string, minLength: 1, maxLength: 120}
         key: {type: string, description: 'Optional; derived from the label (lowercased, non-alphanumerics collapsed to `_`) when absent. Must be unique.'}
         intent: {$ref: '#/components/schemas/LeadSourceIntent'}
         sort_order: {type: integer}
     UpdateLeadOriginRequest:
       type: object
       properties:
-        label: {type: string, minLength: 1}
-        intent: {$ref: '#/components/schemas/LeadSourceIntent'}
-        sort_order: {type: integer}
-        active: {type: boolean}
-    LeadSource:
-      type: object
-      deprecated: true
-      description: 'Deprecated: how a row reached Margince is no longer scored. One administered lead source. `key` is the value stored on `lead.source`; `label` is what a user sees.'
-      required: [id, key, label, intent, sort_order, active, system, lead_count, version, created_at, updated_at]
-      properties:
-        id: {type: string, format: uuid}
-        key: {type: string, description: 'Lowercase stable key, the stored value. Never changes after creation.'}
-        label: {type: string}
-        intent: {$ref: '#/components/schemas/LeadSourceIntent'}
-        sort_order: {type: integer}
-        active: {type: boolean, description: 'Inactive sources leave the create form and the filter; leads carrying them keep the value.'}
-        system: {type: boolean, readOnly: true, description: 'Built-in. Can be renamed, re-weighted and deactivated, never deleted.'}
-        lead_count: {type: integer, readOnly: true, description: 'Live leads carrying this key.'}
-        version: {$ref: '#/components/schemas/RowVersion'}
-        created_at: {type: string, format: date-time}
-        updated_at: {type: string, format: date-time}
-    DiscoveredLeadSource:
-      type: object
-      description: A source value present on leads but absent from the administered list — a connector family, a seed, an import.
-      required: [key, lead_count]
-      properties:
-        key: {type: string, description: 'The stored value, or for `connector:<name>:<id>` values the `connector:<name>` family.'}
-        lead_count: {type: integer}
-    LeadSourceListResponse:
-      type: object
-      required: [data, discovered]
-      properties:
-        data: {type: array, items: {$ref: '#/components/schemas/LeadSource'}}
-        discovered: {type: array, items: {$ref: '#/components/schemas/DiscoveredLeadSource'}}
-    CreateLeadSourceRequest:
-      type: object
-      required: [label]
-      properties:
-        label: {type: string, minLength: 1}
-        key: {type: string, description: 'Optional; derived from the label (lowercased, non-alphanumerics collapsed to `_`) when absent. Must be unique.'}
-        intent: {$ref: '#/components/schemas/LeadSourceIntent'}
-        sort_order: {type: integer}
-    UpdateLeadSourceRequest:
-      type: object
-      properties:
-        label: {type: string, minLength: 1}
+        label: {type: string, minLength: 1, maxLength: 120}
         intent: {$ref: '#/components/schemas/LeadSourceIntent'}
         sort_order: {type: integer}
         active: {type: boolean}
@@ -44612,12 +45151,12 @@ components:
       type: object
       required: [label]
       properties:
-        label: {type: string, minLength: 1}
+        label: {type: string, minLength: 1, maxLength: 120}
         sort_order: {type: integer}
     UpdateLeadDisqualifyReasonRequest:
       type: object
       properties:
-        label: {type: string, minLength: 1}
+        label: {type: string, minLength: 1, maxLength: 120}
         sort_order: {type: integer}
         active: {type: boolean}
     FollowUpSettings:
@@ -44867,7 +45406,8 @@ components:
           description: Per-claim evidence; a claim without evidence is omitted.
         status: {type: string, enum: [open, acknowledged, resolved, dismissed], default: open}
         detected_at: {type: string, format: date-time}
-        source: {type: string}
+        source: {type: string, description: 'The channel this signal arrived by: `api`, `automation`, `capture`, `import`, `manual` or `webform`. An older signal can show another value until the background correction reaches it.'}
+        source_system: {type: [string, 'null'], readOnly: true, description: 'The producer that wrote the signal, such as `signal-scan` or the name of an extension. Empty when a member or an API client filed it.'}
         captured_by: {type: string, readOnly: true, description: 'Server-stamped from the authenticated principal; never client-supplied.'}
         version: {$ref: '#/components/schemas/RowVersion'}
         created_at: {type: string, format: date-time}
@@ -45040,7 +45580,7 @@ components:
           type: array
           items: {$ref: '#/components/schemas/SignalEvidence'}
         detected_at: {type: [string, 'null'], format: date-time, description: When the underlying observation happened (defaults to now).}
-        source: {type: string}
+        source: {type: string, enum: [api, automation, capture, import, manual, webform], description: 'The channel this signal arrived by. A client that files it for a member sends `manual`; an integration sends `api`. Any other value is 422 `invalid_source`.'}
     SignalListResponse:
       type: object
       required: [data, page]
@@ -45135,12 +45675,12 @@ components:
         visible_count:
           type: [integer, 'null']
           description: >-
-            How many members this caller may see. Null when the list's filter can no longer be evaluated (health `invalid`). Never the list's whole size.
+            How many members this caller may see. Null when the list's filter can no longer be evaluated (health `invalid`) or its records are unavailable (health `unavailable`). Never the list's whole size.
         health:
           type: string
-          enum: [ok, ownerless, invalid, retired_field, retired_tag]
+          enum: [ok, ownerless, invalid, retired_field, retired_tag, unavailable]
           description: >-
-            `ownerless` when nobody looks after the list — no steward, or one who can no longer sign in — so somebody should take it over. `invalid` when a Live List's filter no longer compiles. `retired_field` when a Live List's filter names a custom field that has been retired: the list still evaluates on the kept values, and its steward should replace the clause. `retired_tag` when a Live List's filter names a tag that has been archived or merged away: that tag no longer matches any record, so a clause on it selects nothing, and its steward should name the tag that took its place. `invalid` outranks `ownerless`, which outranks `retired_field`, which outranks `retired_tag`.
+            `unavailable` when no installed extension declares the list's record kind any more. Such a list has no count, no members, no filter definition and no export, and comes back when the extension is installed again; it outranks every other value. A list over a declared kind the caller may not read is left out of the library instead. `ownerless` when nobody looks after the list — no steward, or one who can no longer sign in — so somebody should take it over. `invalid` when a Live List's filter no longer compiles. `retired_field` when a Live List's filter names a custom field that has been retired: the list still evaluates on the kept values, and its steward should replace the clause. `retired_tag` when a Live List's filter names a tag that has been archived or merged away: that tag no longer matches any record, so a clause on it selects nothing, and its steward should name the tag that took its place. `invalid` outranks `ownerless`, which outranks `retired_field`, which outranks `retired_tag`.
         retired_tags:
           type: array
           items: {type: string, format: uuid}
@@ -46299,7 +46839,7 @@ components:
           items:
             $ref: '#/components/schemas/ReportingMetricID'
           minItems: 1
-          maxItems: 8
+          maxItems: 12
         blocks:
           type: array
           items:
@@ -47974,12 +48514,25 @@ components:
           description: >-
             Moves the member to this legal entity, from `listLegalEntities`, in the same transaction as the rest of the edit. Omit to keep their entity. An unknown or archived entity is refused as 422 `unknown_legal_entity`.
         expected_updated_at: {type: string, format: date-time}
+    MemberUnavailableAction:
+      type: object
+      required: [action, reason]
+      description: One member verb the caller holds the grant for and this member refuses, with why.
+      properties:
+        action:
+          type: string
+          enum: [merge]
+        reason:
+          type: string
+          enum: [sole_admin, self, agent_seat]
+          description: >-
+            Why the verb is refused. `sole_admin` is the last active administrator, `self` is the caller's own account and `agent_seat` is an agent. A used account is not refused: see `merge_needs_confirmation`.
     MemberRetirementBlocker:
       type: string
-      enum: [approval_decisions, automations, booking_pages, data_requests, deal_rooms, introductions, lists, stewarded_lists, mail_drafts, meeting_invitations, meeting_proposals, privacy_notices, record_responsibilities, reports, report_schedules, saved_views, scheduled_mail, handoffs, voice_profiles, web_forms, webhooks, weekly_plans, analytics_shares, source_used, self_survivor, deactivate_first, choose_survivor, choose_receiver, private_tasks, work_not_transferable, state_changed]
+      enum: [approval_decisions, automations, booking_pages, data_requests, deal_rooms, introductions, lists, stewarded_lists, mail_drafts, meeting_invitations, meeting_proposals, privacy_notices, record_responsibilities, reports, report_schedules, saved_views, scheduled_mail, handoffs, voice_profiles, web_forms, webhooks, weekly_plans, analytics_shares, confirmation_missing, suspended_side, self_survivor, deactivate_first, choose_survivor, choose_receiver, private_tasks, work_not_transferable, state_changed]
     MemberRetirementConsequence:
       type: string
-      enum: [source_signed_out, connectors_reconnect, survivor_access, original_attribution, private_alerts_archived, crm_private_records_move, private_audiences_retained, email_reserved, survivor_inactive]
+      enum: [source_signed_out, connectors_reconnect, survivor_access, original_attribution, private_alerts_archived, crm_private_records_move, private_audiences_retained, email_reserved, survivor_inactive, sign_in_dropped]
     MemberRetirementPreview:
       type: object
       required: [owned, signal_count, blockers, token, source_name, source_email, consequences]
@@ -47989,6 +48542,12 @@ components:
         blockers:
           type: array
           items: {$ref: '#/components/schemas/MemberRetirementBlocker'}
+        blocking_records:
+          type: array
+          description: |-
+            The records behind each blocker that is about records, such as `deal_rooms` or
+            `webhooks`. A blocker that is a state, such as `deactivate_first`, has no entry.
+          items: {$ref: '#/components/schemas/MemberRetirementBlockingRecords'}
         consequences:
           type: array
           items: {$ref: '#/components/schemas/MemberRetirementConsequence'}
@@ -47997,6 +48556,47 @@ components:
         source_email: {type: string, format: email}
         survivor_name: {type: string}
         survivor_email: {type: string, format: email}
+        confirmations:
+          type: array
+          items: {$ref: '#/components/schemas/MemberMergeConfirmation'}
+          description: >-
+            Present for a merge whose source account has been used: one entry per side, saying whether that side's holder has confirmed. `confirmation_missing` is in `blockers` while any side is `requested` or `not_requested`.
+    MemberMergeConfirmation:
+      type: object
+      required: [user_id, side, display_name, state]
+      properties:
+        user_id: {type: string, format: uuid}
+        side: {type: string, enum: [source, survivor]}
+        display_name: {type: string}
+        state:
+          type: string
+          enum: [confirmed, requested, not_requested, not_needed]
+          description: >-
+            `confirmed` once the holder used the mailed link; `requested` while a link is out; `not_requested` when none was sent yet; `not_needed` for a deactivated account, whose holder cannot confirm, and for a merge whose source was never used.
+    MemberRetirementBlockingRecords:
+      type: object
+      description: |-
+        The records that hold one blocker. `total` counts every one of them. `records` lists the
+        ones you may open, up to 25, and `visible` says how many those are in all. A record kept
+        to its owner, or one with no screen you may open, counts in `total` only.
+      required: [blocker, total, visible, records]
+      properties:
+        blocker: {$ref: '#/components/schemas/MemberRetirementBlocker'}
+        total: {type: integer, minimum: 0}
+        visible: {type: integer, minimum: 0}
+        records:
+          type: array
+          maxItems: 25
+          items: {$ref: '#/components/schemas/MemberRetirementBlockingRecord'}
+    MemberRetirementBlockingRecord:
+      type: object
+      required: [id, name]
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string}
+        web_url:
+          type: string
+          description: Where the record opens in the app, such as the deal a Deal Room belongs to. Absent when it has no page of its own.
     MergeMembersRequest:
       type: object
       additionalProperties: false
@@ -48047,7 +48647,7 @@ components:
           type: [string, 'null']
           maxLength: 120
           description: >-
-            The name a colleague's greeting uses ("Hi Sofia,"), absent or null when nobody has said. Read through one rule on both sides: this when set, else the first word of `display_name`. Present on the caller's own seat; absent on the roster.
+            The name a colleague's greeting uses ("Hi Sofia,"), absent or null when nobody has said. Read through one rule on both sides: this when set, else the given name of `display_name` (the last word after a Vietnamese family name, else the first). Present on the caller's own seat; absent on the roster.
         timezone:
           type: string
           description: >-
@@ -48120,6 +48720,15 @@ components:
             enum: [change_role, issue_password_link, resend_invite, remove_mfa, deactivate, reactivate, hand_over, edit, merge, remove]
           description: >-
             The member verbs the CALLER would be admitted to on this user right now, computed by the same checks those endpoints run: the `user_admin` verb each takes, a seat that may write, the ceiling over the target (a non-admin never acts on an admin, and otherwise holds everything the verb reaches), the member's status and kind, the last-admin guard, an archived role still held, the licensed seat ceiling on reactivation, whether this installation can build a set-password link, and whether the member has a confirmed second factor to remove. `hand_over` is `handOverUserWork` on this member. `resend_invite` is `resendUserInvite`, offered for an invited human member when this installation can send mail. Present on `listUsers`'s management view for a human caller only; absent means not computed, and a client offers nothing then. It is an offer, not a promise: every write re-checks under its lock, and `change_role` says a role change is possible at all — which roles, is `listAssignableRoles`'s answer.
+        merge_needs_confirmation:
+          type: boolean
+          description: >-
+            True when `merge` is in `allowed_actions` and this account has been used (a password, a sign-in or a linked provider), so merging it waits for the holder of each side that can still sign in to confirm. Absent otherwise, and on the same views as `allowed_actions`.
+        unavailable_actions:
+          type: array
+          items: {$ref: '#/components/schemas/MemberUnavailableAction'}
+          description: >-
+            The member verbs the caller holds the `user_admin` grant for and this member refuses, each with the reason, so a client explains the missing button instead of hiding it. An action never appears here and in `allowed_actions`. Present wherever `allowed_actions` is; empty when nothing is refused.
         last_active_at:
           type: [string, 'null']
           format: date-time
@@ -48201,7 +48810,7 @@ components:
           type: [string, 'null']
           maxLength: 120
           description: >-
-            The name the member's greetings use, when the first word of `display_name` is not it. Optional; absent, empty or null leaves it unset.
+            The name the member's greetings use, when the given name read off `display_name` is not it. Optional; absent, empty or null leaves it unset.
         role:
           type: string
           maxLength: 64
@@ -48932,9 +49541,9 @@ components:
           description: For fixed_record on an unlinked signal, file its source evidence on this deal at the same company and settle the signal in the same transaction.
         outcome:
           type: string
-          enum: [fixed_record, added_evidence, value_correct, not_relevant, remind_later, reassign]
+          enum: [fixed_record, added_evidence, value_correct, not_relevant, remind_later, reassign, separate]
           description: >-
-            What kind of answer this is. `condition_cleared` is absent on purpose: it is the check's own, and a contact naming it would be saying the condition stopped being true without anything having looked.
+            What kind of answer this is. `condition_cleared` is absent on purpose: it is the check's own, and a contact naming it would be saying the condition stopped being true without anything having looked. `separate` answers only a `duplicate_motion` finding, says its two deals are not one buying motion, and has no expiry: the pair is not flagged again.
         reason:
           type: string
           maxLength: 2000
@@ -49322,6 +49931,10 @@ components:
           type: string
           format: date-time
           description: The instant a snapshot share's state describes. Absent on a live share.
+        scope_label:
+          type: string
+          description: >-
+            The name of the population the readings cover, as this reader's own lens names it: the team, the team member, or the whole company. Absent when that lens does not reach the team member or team, so a link never names a subject its reader could not choose; `readings.scope_kind` still says which kind it is.
         readings: {$ref: '#/components/schemas/ForecastReadings'}
         withheld:
           type: boolean
@@ -50154,6 +50767,51 @@ components:
           description: >-
             The core capabilities the unit declares it uses, each with the reason its author gave. The core grants exactly these and refuses the rest, so this list is the whole of what the unit can borrow from the core (its AI models, its object store). Sorted by capability; absent for a unit that declares none.
           items: {$ref: '#/components/schemas/ComposedExtensionNeed'}
+        setup_missing:
+          type: array
+          description: >-
+            What an admin still has to set before the unit can work: each workspace secret the unit declares that holds no value, then each OAuth app it declares with no stored client. Empty means the unit is ready. Worked out on each read from the declaration and the stored values; nothing about it is stored. Each part needs the caller's right to read that setting: admin for a workspace secret, capture_settings.read for an OAuth app. A part the caller may not read is left out. The field is absent when that hides a part and nothing visible is missing, and from an older server.
+          items: {$ref: '#/components/schemas/ComposedExtensionSetupItem'}
+        mail_hooks:
+          $ref: '#/components/schemas/ComposedExtensionMailHooks'
+    ComposedExtensionSetupItem:
+      type: object
+      additionalProperties: false
+      required: [kind, name]
+      description: One piece of setup a composed unit still needs.
+      properties:
+        kind:
+          type: string
+          enum: [workspace_secret, oauth_app]
+          description: >-
+            `workspace_secret` is a key the installation shares, set on Settings → Integrations. `oauth_app` is a vendor app whose client an admin stores on Settings → Sign-in and security.
+        name:
+          type: string
+          description: The secret's key as the unit declares it, or the OAuth app's title.
+    ComposedExtensionMailHooks:
+      type: object
+      additionalProperties: false
+      required: [parties, deal, reads, body_characters, reasons]
+      description: >-
+        The unit's mail-capture hooks and what of each captured mail they read. Absent for a unit with no hook. A unit may send what a hook read to its own provider.
+      properties:
+        parties:
+          type: boolean
+          description: True when the unit may change the contacts and companies core found for a mail.
+        deal:
+          type: boolean
+          description: True when the unit may change the deal core files a mail on.
+        reads:
+          type: array
+          description: The parts of every captured mail the hooks read.
+          items: {type: string, enum: [subject, addresses, body]}
+        body_characters:
+          type: integer
+          description: How many characters of the mail's text a hook reads.
+        reasons:
+          type: array
+          description: The reason keys the unit's answers may give, sorted.
+          items: {type: string}
     ComposedExtensionNeed:
       type: object
       additionalProperties: false
@@ -51153,6 +51811,11 @@ components:
           items: {type: string, enum: [call, email, meeting, message, note, task]}
           description: >-
             The activity kinds an activity field applies to; null means every kind, and every other object's field is null. A logged or edited activity of another kind refuses a value for the field with `422 field_not_valid_for_kind`. A value stored before the field was narrowed stays readable, and sending null clears it.
+        pipeline_ids:
+          type: [array, 'null']
+          items: {type: string, format: uuid}
+          description: >-
+            The pipelines a deal field applies to; null means every pipeline, and every other object's field is null. A created or edited deal of another pipeline refuses a value for the field with `422 field_not_valid_for_pipeline`. A pipeline that is archived matches nothing. A value stored before the field was narrowed, or on a deal that moved pipeline, stays stored and readable, and sending null clears it.
         created_by: {type: string, format: uuid}
         created_at: {type: string, format: date-time}
         updated_at: {type: string, format: date-time}
@@ -51220,7 +51883,7 @@ components:
         object:
           type: string
           enum: [contact, company, deal, lead, project, contract, activity]
-        label: {type: string}
+        label: {type: string, maxLength: 120}
         type:
           type: string
           enum: [text, number, date, currency, picklist, multiselect, boolean, record, url]
@@ -51237,12 +51900,17 @@ components:
           items: {type: string, enum: [call, email, meeting, message, note, task]}
           description: >-
             The activity kinds the field applies to. Only an activity field may name any; omitted or empty means every kind. An unknown kind, or kinds on another object's field, is refused with a 422.
+        pipeline_ids:
+          type: array
+          items: {type: string, format: uuid}
+          description: >-
+            The pipelines the field applies to. Only a deal field may name any; omitted or empty means every pipeline. An id that is not a live pipeline, or ids on another object's field, is refused with a 422.
     RenameCustomFieldRequest:
       type: object
       description: >-
-        Merge-PATCH of the settings a live field may change: `label`, `label_translations`, `option_translations`, `show_in_create`, `reportable` and `activity_kinds`. At least one is required. `column_name`, `object`, and `type` are absent from this request schema entirely (immutable, not just ignored if sent). `reportable` true on a field that is not a picklist or boolean is refused. `activity_kinds` replaces the kinds an activity field applies to, and an empty array means every kind again; it is refused on another object's field.
+        Merge-PATCH of the settings a live field may change: `label`, `label_translations`, `option_translations`, `show_in_create`, `reportable`, `activity_kinds` and `pipeline_ids`. At least one is required. `column_name`, `object`, and `type` are absent from this request schema entirely (immutable, not just ignored if sent). `reportable` true on a field that is not a picklist or boolean is refused. `activity_kinds` replaces the kinds an activity field applies to, and an empty array means every kind again; it is refused on another object's field. `pipeline_ids` does the same for the pipelines a deal field applies to.
       properties:
-        label: {type: string}
+        label: {type: string, maxLength: 120}
         label_translations: {$ref: '#/components/schemas/LabelTranslations'}
         option_translations: {$ref: '#/components/schemas/OptionTranslations'}
         show_in_create: {type: boolean}
@@ -51250,6 +51918,9 @@ components:
         activity_kinds:
           type: array
           items: {type: string, enum: [call, email, meeting, message, note, task]}
+        pipeline_ids:
+          type: array
+          items: {type: string, format: uuid}
     UpdateCustomFieldOptionsRequest:
       type: object
       description: >-
@@ -51304,6 +51975,10 @@ components:
         before: {type: [object, 'null'], additionalProperties: true}
         after: {type: [object, 'null'], additionalProperties: true}
         summary: {type: string}
+        reason:
+          type: [string, 'null']
+          description: >-
+            Why a project's phase was moved, in the words given with the move, so a walk through the history says why each move was made. Null on every other row, on a move made without a reason, and for a reader whose role does not read the phase.
         undid_audit_log_id:
           type: [string, 'null']
           format: uuid
@@ -51459,7 +52134,7 @@ components:
           type: array
           items: {type: object, additionalProperties: true}
           description: >-
-            Aggregate rows; each carries its own `derivation_url` handle for the exact cell (group keys bound to the row's values). A row holding a sum that adds only the deals that convert also carries `coverage` (ReportRowCoverage), for every plan that asks such a sum.
+            Aggregate rows; each carries its own `derivation_url` handle for the exact cell (group keys bound to the row's values). A row holding a sum that adds only the deals that convert also carries `coverage` (ReportRowCoverage), for every plan that asks such a sum. A total past ±(2^53−1) is null, and the row's `_out_of_range` lists the columns it was withheld from: a JSON reader parses every number as a float64, which would turn that total into another number. The rest of the report is answered.
         total_rows:
           type: integer
           description: >-
@@ -51519,7 +52194,7 @@ components:
         aggregates:
           type: object
           additionalProperties: true
-          description: The requested aggregates recomputed over exactly these source rows — equals the explained cell.
+          description: The requested aggregates recomputed over exactly these source rows — equals the explained cell. A total past ±(2^53−1) is null and named in `_out_of_range`, as on the report row.
         total_rows: {type: integer, description: Source rows matched (rows is capped at the report row limit).}
         excluded_by_permission: {type: [integer, 'null'], description: 'Visible rows a field mask withheld — the same exclusion the explained report applied, so the drill-through reconciles exactly.'}
         population_narrowed: {$ref: '#/components/schemas/PopulationNarrowed'}
@@ -51538,7 +52213,7 @@ components:
       type: object
       required: [type, id]
       properties:
-        type: {type: string, pattern: '^(contact|company|deal|activity|lead|project|product|offer_template|tag)$|^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$'}
+        type: {type: string, pattern: '^(contact|company|deal|activity|lead|project|product|offer_template|deal_room|tag)$|^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$'}
         id: {type: string, format: uuid}
         title: {type: [string, 'null'], description: 'Display label (name/subject). An activity Margince wrote is titled in the reader''s language, as its History row names it.'}
         snippet: {type: [string, 'null']}
@@ -51559,6 +52234,12 @@ components:
           nullable: true
           description: >-
             On a `contact` hit found through `with_employees`: the company it currently works at that the query matched, which is why the hit is here — the contact's own text did not match. When the contact works at several matching companies, the best-matching one. Null on every other hit, a contact the query matched by its own text included.
+        deal_id:
+          type: [string, 'null']
+          format: uuid
+          readOnly: true
+          description: >-
+            Absent on every other hit type.
         logo_url:
           type: [string, 'null']
           readOnly: true
@@ -51616,6 +52297,10 @@ components:
           format: date-time
           description: >-
             When the record was last in touch: its newest logged call, mail, meeting or note. Set on a contact, a company and a deal.
+        last_activity_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          readOnly: true
+          description: How to read `last_activity_at`, from the activity it names. Absent when that is null.
         masked_fields:
           type: array
           items: {type: string}
@@ -51636,12 +52321,12 @@ components:
         page: {$ref: '#/components/schemas/PageInfo'}
         types_with_more:
           type: array
-          items: {type: string, pattern: '^(contact|company|deal|activity|lead|project|product|offer_template|tag)$|^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$'}
+          items: {type: string, pattern: '^(contact|company|deal|activity|lead|project|product|offer_template|deal_room|tag)$|^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$'}
           description: >-
             On a `per_type` answer only: the types that matched more hits than the page carries for them. Absent on a ranked answer, whose `page.has_more` says the same thing for the list as a whole.
         types_timed_out:
           type: array
-          items: {type: string, pattern: '^(contact|company|deal|activity|lead|project|product|offer_template|tag)$|^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$'}
+          items: {type: string, pattern: '^(contact|company|deal|activity|lead|project|product|offer_template|deal_room|tag)$|^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$'}
           description: >-
             On a `per_type` answer only: the types whose search did not finish within the time budget. `data` holds no hits of these types, and none of them is in `types_with_more`. Empty when every type answered. Absent on a ranked answer, which answers 422 `query_too_broad` instead.
         near_matches:
@@ -51871,7 +52556,7 @@ components:
                     format: {type: string}
               if_version: {type: boolean, description: 'Whether it takes if_version: the version you last read.'}
               ask_user_first: {type: boolean, description: Whether the app asks its user to confirm it first.}
-              uploads_a_file: {type: boolean, description: 'Whether it takes filename, content_type and content_base64.'}
+              uploads_a_file: {type: boolean, description: 'Whether it takes filename, content_type and content_base64 or content_text.'}
               body: {type: object, additionalProperties: true, description: The JSON schema of its body argument.}
     ColdStartField:
       type: object
@@ -53213,6 +53898,11 @@ components:
           allOf: [{$ref: '#/components/schemas/ApprovalSummaryParts'}]
           description: >-
             The summary's sentence and the field values it lists, apart, so a client can show the values as a list instead of the joined key=value text. Absent on a proposal whose summary is a sentence alone, and on one staged before the parts were kept. Withheld with the summary.
+        why:
+          allOf: [{$ref: '#/components/schemas/WorkGrounds'}]
+          readOnly: true
+          description: >-
+            Why this proposal exists, as whoever staged it said it: the record and the fact that prompted it. A card leads with it. Absent when its maker gave none, never filled with a stock sentence, and withheld with the summary.
         proposed_change:
           type: object
           additionalProperties: true
@@ -53382,9 +54072,6 @@ components:
         activated_by: {type: [string, 'null'], readOnly: true, description: 'Who accepted the lead or recorded the win that activated the partner.'}
         activation_lead_id: {type: [string, 'null'], format: uuid, readOnly: true, description: 'The accepted lead that activated the partner.'}
         activation_deal_id: {type: [string, 'null'], format: uuid, readOnly: true, description: 'The won deal that activated the partner.'}
-        partner_fit_score: {type: [integer, 'null'], minimum: 0, maximum: 100, description: 'Current partner-fit score; if partner_fit_override_reason is non-null this is the Commercial Judgement value.'}
-        partner_fit_score_computed: {type: [integer, 'null'], minimum: 0, maximum: 100, readOnly: true, description: 'Retained machine-computed partner-fit value while a Commercial Judgement override is in force.'}
-        partner_fit_override_reason: {type: [string, 'null'], readOnly: true, description: 'Non-null ⇒ partner_fit_score is a human Commercial Judgement override and recompute is suppressed until cleared.'}
         relationship_health: {type: [string, 'null'], deprecated: true, description: 'Never set; always null. Kept so existing clients keep compiling.'}
         last_contact_at: {type: [string, 'null'], format: date-time, deprecated: true, description: 'Never set; always null. Kept so existing clients keep compiling.'}
         next_step: {type: [string, 'null'], deprecated: true, description: 'Deprecated as stored text: a value sent here is written as a task on the partner''s company, held by the caller (or the human an agent acts for), and is not stored on the partner. Text stored before stays readable.'}
@@ -53474,14 +54161,14 @@ components:
       type: object
       required: [label, meaning]
       properties:
-        label: {type: string, minLength: 1}
+        label: {type: string, minLength: 1, maxLength: 120}
         key: {type: string, description: 'Optional; derived from the label when absent. Lowercase letters, digits and underscores, starting with a letter. Must be unique.'}
         meaning: {$ref: '#/components/schemas/PartnerStageMeaning'}
         sort_order: {type: integer}
     UpdatePartnerStageRequest:
       type: object
       properties:
-        label: {type: string, minLength: 1}
+        label: {type: string, minLength: 1, maxLength: 120}
         meaning: {$ref: '#/components/schemas/PartnerStageMeaning'}
         sort_order: {type: integer}
         active: {type: boolean}
@@ -54355,7 +55042,7 @@ components:
           description: 'The display name of a human `captured_by`. Null for a machine principal and for a member whose user row no longer resolves.'
     AssessNoticeSource:
       type: object
-      required: [kind, note]
+      required: [kind]
       properties:
         kind:
           type: string
@@ -54407,6 +55094,10 @@ components:
       type: object
       required: [preview_token, rule, notice_required, timezone, deadline_is_upper_bound]
       properties:
+        subject_reached_out:
+          type: boolean
+          readOnly: true
+          description: The contact's own mail or meeting removes the duty, regardless of the source selected. Does not disclose unreadable activity identifiers.
         preview_token: {type: string}
         rule: {type: string, enum: [none, art13, art14]}
         notice_required: {type: boolean}
@@ -55618,10 +56309,11 @@ components:
         One thread of the room's conversation, with its comments. Served to both
         sides in the same shape: the buyer and the seller read the same
         conversation, and neither side's ids beyond the thread's own are in it.
-      required: [id, room_id, required_change, state, author, created_at, comments]
+      required: [id, room_id, required_change, state, author, created_at, comments, visible_to_buyer]
       properties:
         id: {type: string, format: uuid}
         room_id: {type: string, format: uuid}
+        visible_to_buyer: {type: boolean}
         document_id: {type: [string, 'null'], format: uuid, description: Null for a room-level thread.}
         required_change: {type: boolean}
         state: {type: string, description: '`open` or `resolved`. A plain string, not an inline enum, for the reason `DealRoomParticipantCapability` gives.'}
@@ -55850,7 +56542,7 @@ components:
       type: object
       description: Any subset; omit a field to leave it unchanged. Totals are derived and not settable (422).
       properties:
-        position: {type: integer, minimum: 1}
+        position: {type: integer, minimum: 1, description: 'Moves the line to this place in the offer. The lines between shift to make room, and the offer''s lines are numbered from 1 again. A place past the last line puts it last.'}
         description: {type: string}
         unit: {type: string}
         quantity: {type: number, format: double}
@@ -55929,7 +56621,7 @@ components:
     ContactImpersonationWarning:
       type: object
       description: >-
-        The sign of impersonation the sender check saw when capture made this contact from a mail.
+        The sign of impersonation the sender check saw on a captured mail from this contact.
       required: [detected_at]
       properties:
         reason:
@@ -58404,6 +59096,9 @@ components:
         due_at: {type: string, format: date-time, description: 'When this is due, or when the meeting starts.'}
         due_has_time: {type: boolean, description: 'On a task row: true when `due_at` names an agreed time of day, false when the task is due by that day. Absent on other rows.'}
         due_intent: {$ref: '#/components/schemas/IntentTime'}
+        task_type:
+          allOf: [{$ref: '#/components/schemas/TaskType'}]
+          description: 'On a task row: the kind of work it asks for, so a card names it without reading the task. Absent on other rows.'
         overdue: {type: boolean, description: 'Past due at the read instant, resolved server-side so every surface agrees.'}
         due_group:
           type: string
@@ -58428,7 +59123,7 @@ components:
             The way back from work that was APPLIED rather than approved.
         actions:
           type: array
-          items: {type: string, enum: [decide, merge, complete, snooze, open, act, dismiss, set_aside, acknowledge, retry, reply, undo, keep, keep_as_vendor, discard, reopen, take, cancel]}
+          items: {type: string, enum: [decide, merge, complete, snooze, open, act, dismiss, set_aside, acknowledge, retry, reply, undo, keep, keep_as_vendor, discard, reopen, take, cancel, send_again]}
           description: 'What this item offers, routed to the endpoint that owns the verb.'
         band:
           type: string
@@ -59282,6 +59977,10 @@ components:
           description: A re-embed is in flight; every ask answers not_ready until it finishes.
         coverage: {$ref: '#/components/schemas/KnowledgeCoverage'}
         created_at: {type: string, format: date-time}
+        archived_at:
+          type: [string, 'null']
+          format: date-time
+          description: When the set was archived; absent or null while it is live.
     KnowledgeCorpusList:
       type: object
       description: >-
@@ -59344,6 +60043,15 @@ components:
             This document's passages that carry a vector, counted as the corpus coverage counts them, so a corpus's documents sum to its own figure.
         embed_state: {$ref: '#/components/schemas/KnowledgeEmbedState'}
         created_at: {type: string, format: date-time}
+        external_id:
+          type: [string, 'null']
+          description: >-
+            The id the document's source gave it (a Google Drive file id), set only on a document an extension keeps in step with that source. Null for an upload.
+        meta:
+          type: object
+          additionalProperties: {type: string}
+          description: >-
+            What the source said about the document (owner, department, country, type, effective and review dates, audience), as the extension read it. A field the source did not state is absent, never guessed. Absent for an upload.
     KnowledgeAnswerCorpus:
       type: object
       required: [id, name, topic_statement, shipped]
@@ -59392,6 +60100,11 @@ components:
           type: string
           description: >-
             A verbatim span from the retrieved passages, whitespace-collapsed and matched before this claim was allowed to exist.
+        meta:
+          type: object
+          additionalProperties: {type: string}
+          description: >-
+            What the cited document's source said about it (owner, effective date and so on), so a reader sees which version and date the quote comes from. Absent for an uploaded document.
         section:
           $ref: '#/components/schemas/KnowledgeClaimSection'
         opens:

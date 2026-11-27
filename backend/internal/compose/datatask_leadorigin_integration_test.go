@@ -93,6 +93,9 @@ func TestTheOriginTaskRescoresAndFillsOriginsAndReplaysSafely(t *testing.T) {
 			t.Errorf("%s ends with origin %q, want %q", name, got, want)
 		}
 	}
+	if got := e.WsScalar(t, `SELECT coalesce(arrival_origin, '') FROM lead WHERE full_name = 'D resolves'`); got != "referral" {
+		t.Errorf("a lead given its first origin by the repair arrived with %q, want referral", got)
+	}
 	if got := e.WsCount(t, `SELECT score FROM lead WHERE full_name = 'D resolves'`); got != highScore {
 		t.Errorf("a lead given a referral origin scores %d, want %d: the rescore step runs after the fill", got, highScore)
 	}
@@ -115,4 +118,43 @@ func TestTheOriginTaskRescoresAndFillsOriginsAndReplaysSafely(t *testing.T) {
 // originScoreOf is the formula's own number for a lead with no signals.
 func originScoreOf(intent contacts.SourceIntent) int {
 	return contacts.ScoreLeadDetail("", intent, nil, time.Time{}).Score
+}
+
+// Leads stored before the arrival origin was kept get the origin their first
+// audited origin change replaced, or the one they have now. A lead that arrived
+// with no origin is recorded as such, so a later origin is never credited.
+func TestTheArrivalOriginTaskReadsTheOriginALeadArrivedWith(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
+	referral, event := "referral", "event"
+	edited := originLead(t, e, "A edited", contacts.CreateLeadInput{Origin: &referral})
+	if _, err := e.Contacts.UpdateLead(e.Admin(), ids.From[ids.LeadKind](edited), contacts.UpdateLeadInput{Origin: &event}); err != nil {
+		t.Fatal(err)
+	}
+	originLead(t, e, "B kept", contacts.CreateLeadInput{Origin: &event})
+	given := originLead(t, e, "C given later", contacts.CreateLeadInput{})
+	if _, err := e.Contacts.UpdateLead(e.Admin(), ids.From[ids.LeadKind](given), contacts.UpdateLeadInput{Origin: &referral}); err != nil {
+		t.Fatal(err)
+	}
+	originLead(t, e, "D none", contacts.CreateLeadInput{})
+	e.WsExec(t, `UPDATE lead SET arrival_origin = NULL`)
+
+	task := leadArrivalOriginDataTask()
+	for i := range task.Steps {
+		task.Steps[i].Limit, task.Steps[i].MinLimit = 2, 1
+	}
+	arrivals := func() string {
+		return e.WsScalar(t, `SELECT string_agg(full_name || ':' || coalesce(arrival_origin, '-') || ':' || version, ',' ORDER BY full_name) FROM lead`)
+	}
+	runMachineAddressTask(ctx, t, e, task)
+	settled := arrivals()
+	for name, want := range map[string]string{"A edited": "referral", "B kept": "event", "C given later": "", "D none": ""} {
+		if got := e.WsScalar(t, `SELECT coalesce(arrival_origin, 'not recorded') FROM lead WHERE full_name = $1`, name); got != want {
+			t.Errorf("%s arrived with %q, want %q", name, got, want)
+		}
+	}
+	runMachineAddressTask(ctx, t, e, task)
+	if again := arrivals(); again != settled {
+		t.Errorf("a second run changed the leads:\n%s\nbecame\n%s", settled, again)
+	}
 }

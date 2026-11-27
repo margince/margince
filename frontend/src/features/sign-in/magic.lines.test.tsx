@@ -81,7 +81,11 @@ describe("a receipt line is one row", () => {
     expect(screen.queryByText(/12\.555555555/)).toBeNull();
   });
 
-  it.each([
+  it.each<{
+    key: string;
+    values: Readonly<Record<string, string>> | undefined;
+    text: string;
+  }>([
     {
       key: "magic.why.forecast_date_basis",
       values: {
@@ -96,7 +100,12 @@ describe("a receipt line is one row", () => {
       values: undefined,
       text: "Unconfirmed estimate; no usable recorded basis to show.",
     },
-  ])("shows an honest forecast basis: $key", async ({ key, values, text }) => {
+    {
+      key: "magic.why.stated",
+      values: { why: "Her signature on 14 Nov names her CTO." },
+      text: "Reason given: Her signature on 14 Nov names her CTO.",
+    },
+  ])("shows the reason a line gives: $key", async ({ key, values, text }) => {
     stub(receipt({ done: [line({ entity: fleet, reason: { key, values } })] }));
     renderMagic();
     expect(rowOf(await onlyLine("Done for you")).detail).toContain(text);
@@ -358,10 +367,11 @@ describe("a line names its record once", () => {
     renderMagic();
     const item = await onlyLine("Waiting on you");
     expect(occurrences(item.textContent ?? "", "Ines Kraft")).toBe(1);
-    expect(rowOf(item).sentence).toBe(
+    // A decision is a task card: its sentence is the title, its record a chip.
+    expect(item.querySelector(".brief-task-title")?.textContent).toBe(
       "Someone new wrote to you. Keep as a contact?",
     );
-    expect(item.querySelector(".magic-line-sep")).not.toBeNull();
+    expect(within(item).getByText("Ines Kraft")).toBeTruthy();
   });
 });
 

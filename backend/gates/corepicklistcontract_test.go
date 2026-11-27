@@ -34,10 +34,10 @@ package gates
 
 import (
 	"context"
+	"fmt"
 	"strings"
+	"sync"
 	"testing"
-
-	"gopkg.in/yaml.v3"
 
 	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -58,7 +58,8 @@ const contractDocument = "api/crm.yaml"
 // picklist added tomorrow is covered the day it lands — by forcing whoever adds
 // it to say where the contract admits its values.
 var picklistInContract = map[string]struct{ schema, property string }{
-	"company.lifecycle":         {"Company", "lifecycle"},
+	"company.status":            {"Company", "status"},
+	"company.lifecycle":         {"Company", "status"},
 	"company.industry":          {"Company", "industry"},
 	"company.size_band":         {"Company", "size_band"},
 	"company.relationship_type": {"Company", "relationship_types"},
@@ -69,7 +70,8 @@ var picklistInContract = map[string]struct{ schema, property string }{
 	// sets above appear a second time under the deal engine. Both entries name the
 	// Company property they reach, which is the point: a link leaf offering a
 	// different set from the field it reads is exactly the drift this catches.
-	"deal.company_lifecycle": {"Company", "lifecycle"},
+	"deal.company_status":    {"Company", "status"},
+	"deal.company_lifecycle": {"Company", "status"},
 	"deal.company_size_band": {"Company", "size_band"},
 	"deal.company_industry":  {"Company", "industry"},
 	"lead.company_industry":  {"Company", "industry"},
@@ -235,9 +237,55 @@ func descendContract(t testing.TB, doc map[string]any, path ...string) map[strin
 	return node
 }
 
+// loadContractDocument answers the caller's own copy of the contract, decoded
+// once per test binary: a reader may change the tree it walks.
 func loadContractDocument(t *testing.T) map[string]any {
 	t.Helper()
-	return loadOpenAPIDocument(t, contractDocument)
+	decodedContract.Lock()
+	defer decodedContract.Unlock()
+	if decodedContract.doc == nil {
+		decodedContract.doc = loadOpenAPIDocument(t, contractDocument)
+	}
+	return copyYAMLMapping(decodedContract.doc)
+}
+
+// decodedContract stays empty when a decode fails, so the next caller fails
+// the same way.
+var decodedContract struct {
+	sync.Mutex
+	doc map[string]any
+}
+
+// copyYAMLMapping copies every mapping and sequence of a decoded YAML mapping.
+// The scalars it holds cannot change.
+func copyYAMLMapping(mapping map[string]any) map[string]any {
+	out := make(map[string]any, len(mapping))
+	for key, item := range mapping {
+		out[key] = copyYAMLValue(item)
+	}
+	return out
+}
+
+//craft:ignore naked-any a decoded YAML value is any by the decoder's own contract
+func copyYAMLValue(value any) any {
+	switch typed := value.(type) {
+	case map[string]any:
+		return copyYAMLMapping(typed)
+	case map[any]any:
+		out := make(map[any]any, len(typed))
+		for key, item := range typed {
+			out[key] = copyYAMLValue(item)
+		}
+		return out
+	case []any:
+		out := make([]any, len(typed))
+		for i, item := range typed {
+			out[i] = copyYAMLValue(item)
+		}
+		return out
+	default:
+		return value
+	}
 }
 
 // loadOpenAPIDocument reads one OpenAPI document as untyped nodes, for the
@@ -251,8 +299,27 @@ func loadOpenAPIDocument(t *testing.T, path string) map[string]any {
 		t.Fatalf("reading %s: %v", path, err)
 	}
 	var doc map[string]any
-	if err := yaml.Unmarshal(raw, &doc); err != nil {
+	if err := unmarshalYAML(raw, &doc); err != nil {
 		t.Fatalf("parsing %s: %v", path, err)
 	}
 	return doc
+}
+
+// A caller's change to its contract document leaves the next caller's as it was.
+func TestACallersChangeToTheContractDocumentStaysItsOwn(t *testing.T) {
+	t.Parallel()
+	required := func(doc map[string]any) []any {
+		list, ok := descendContract(t, doc, "components", "schemas", "RbacObjectGrant")["required"].([]any)
+		if !ok || len(list) == 0 {
+			t.Fatalf("%s's RbacObjectGrant has no required list to change", contractDocument)
+		}
+		return list
+	}
+	first := loadContractDocument(t)
+	want := fmt.Sprint(required(first))
+	required(first)[0] = "changed"
+	delete(descendContract(t, first, "components"), "schemas")
+	if got := fmt.Sprint(required(loadContractDocument(t))); got != want {
+		t.Errorf("a caller's change reached the next caller: required %s, want %s", got, want)
+	}
 }

@@ -46,6 +46,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
@@ -204,7 +205,7 @@ func applyCreate(ctx context.Context, ex Executors, eff workflow.Effect, action 
 	created, createErr := ex.Provider.Create(systemtext.WithMessage(ctx, action.SystemText), datasource.CreateInput{
 		EntityType: entity,
 		Fields:     action.Args,
-		Source:     systemSource,
+		Source:     provenance.RecordSourceAutomation,
 	})
 	if createErr == nil && created.ID != ids.Nil {
 		action.Created = &created

@@ -74,8 +74,11 @@ menu. A caller sees a prompt only when it is offered every tool the prompt names
 `-32602`. In the modern framing `prompts/get` needs `Mcp-Name`, like `tools/call`.
 
 **What the server says about itself.** `serverInfo` carries a `title` and a `description`. When the public origin is
-set, it also carries `websiteUrl` and `icons`, both on that origin. The server instructions open with what Margince is
-and the tools to start with, before the rules.
+set, it also carries `websiteUrl` and `icons`, both on that origin. The server instructions open with what Margince is.
+
+**How the server names a tool.** Every text of the server names a tool bare, because it cannot know the prefix a
+client adds to the name. So the instructions say, before they name the tools to start with, that a client may list
+each tool under a prefix of its own. The rules come after.
 
 **Links and money in a result.** Each `evidence` entry for a deal, contact, company, lead or project carries a
 `web_url`. It opens the record in the app, on the public origin. Every `<name>_minor` beside a `currency`, or beside
@@ -89,9 +92,10 @@ signed with the deployment's `connector_state_key`. Two questions go this way. O
 more than one.
 
 The client then sends the same call again, with `inputResponses` and the same `requestState`. A state for some other
-caller, tool or set of arguments, or one older than ten minutes, gets the question again. The answer comes back
-through the client, so it only decides what the client could decide by itself. A change a human must approve still
-goes to the approval inbox. A client with no form support, or a server with no key, gets the answer it had before.
+caller, tool, set of arguments or question, or one older than ten minutes, gets the question again. So does a state
+sent a second time: Redis spends each one once, so one yes covers one retry. The answer comes back through the
+client, so it only decides what the client could decide by itself. A change a human must approve still goes to the
+approval inbox. A client with no form support, or a server with no key or Redis, gets the answer it had before.
 
 **Confirming in the conversation.** A tool marked `WaitsEvenForItsUser` waits for a human even when the agent acts
 as its user. Over MCP, when that user is in the conversation, the call does not stage. Its first answer is a refusal

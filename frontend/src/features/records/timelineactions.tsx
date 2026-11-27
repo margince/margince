@@ -49,9 +49,13 @@ import {
   type RelinkKind,
   RelinkModal,
 } from "../mail/compose";
-import { ActivityFilesAction } from "./activityfiles";
+import { ActivityFilesAction, ThreadAudienceAction } from "./activityfiles";
 import { audienceWords } from "./audiencewords";
-import { DealRelevanceAction, DealRelevanceBadge } from "./dealdecline";
+import {
+  DealFiledBy,
+  DealRelevanceAction,
+  DealRelevanceBadge,
+} from "./dealdecline";
 import { MoveButton } from "./movebutton";
 import { ProjectFilingAction } from "./projectfiling";
 
@@ -138,7 +142,10 @@ export function TimelineActions(props: RowVerbProps) {
     <>
       <RowAnswerActions {...props} />
       {entityType === "deal" && (
-        <DealRelevanceBadge activity={activity} dealId={entityId} />
+        <>
+          <DealRelevanceBadge activity={activity} dealId={entityId} />
+          <DealFiledBy activity={activity} dealId={entityId} />
+        </>
       )}
       {entityType === "contact" && (
         <HeldMailLink activity={activity} contactId={entityId} />
@@ -183,6 +190,12 @@ export function TimelineActions(props: RowVerbProps) {
             activity={activity}
             entityType={entityType}
             entityId={entityId}
+          />
+        )}
+        {activity.kind !== "email" && (
+          <ThreadAudienceAction
+            activity={activity}
+            invalidate={entityTimelineKeys(entityType, entityId)}
           />
         )}
         {/* Last, farthest from the press that opened the menu. */}
@@ -344,27 +357,9 @@ export function AudienceAction({
   if (audienceIsDerived(activity) && !internal) {
     return null;
   }
-  // A row a mailbox or connector imported refuses this write EVEN WHEN
-  // `audience_reason` is empty: a successfully-linked message is born
-  // `workspace` with no reason stamped at all (decideBirthTx only stamps one
-  // for a hold, and limitLinkLessAudience only for a link-less row), yet the
-  // server's own `activityWasImported` test — the one SetAudience runs —
-  // answers yes for it regardless. Offering the button anyway opened this
-  // exact dialog on a captured conversation and had the write refused with no
-  // control on the page able to do what it asked (margince#4152).
-  //
-  // `captured_by`'s own prefix — `connector:<name>:<uuid>`, never
-  // `human:<uuid>` or `agent:<id>` — is a PROXY for "an import row exists",
-  // not the same fact: an importing seat that later deleted their connection
-  // leaves the prefix with no import row behind it, and a sync that declined
-  // to record itself as the importer (mailboxWasARecipientTx false) can leave
-  // a `connector:`-stamped row with none at all. Both hide a control that
-  // would in fact succeed — the safe direction, and cheaper than the
-  // authoritative per-row check (`change_mode`, deliberately not carried on
-  // the list summary — see #4023's own comment) — but it is a known gap, not
-  // an exact mirror. Reading the prefix here is not the guess #4023 removed:
-  // that guess picked between two WRITE ENDPOINTS; this only hides a button.
-  if (activity.captured_by.startsWith("connector:") && !internal) {
+  // An imported row refuses this write even with no `audience_reason`; the
+  // server says so per row, and the thread control below is where it is changed.
+  if (activity.mailbox_imported === true && !internal) {
     return null;
   }
   const words = audienceWords(activity.kind);

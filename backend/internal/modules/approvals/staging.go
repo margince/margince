@@ -297,6 +297,9 @@ func (s *Service) supersedePendingInTx(ctx context.Context, tx pgx.Tx, in StageI
 		superseded); err != nil {
 		return fmt.Errorf("supersede pending approvals: %w", err)
 	}
+	if err := clearExpiredCards(ctx, tx, superseded); err != nil {
+		return err
+	}
 	for _, old := range superseded {
 		if _, err := storekit.AuditWithEvidence(ctx, tx, "update", entityApproval, old,
 			map[string]any{approvalKeyStatus: StatusPending},
@@ -379,7 +382,7 @@ func (s *Service) insertProposalInTx(ctx context.Context, tx pgx.Tx, in StageInp
 		return ids.ApprovalID{}, err
 	}
 
-	summaryParts, err := marshalSystemSummary(ctx, in.Summary, in.SummaryParts, in.SystemText, in.EffectSystemText)
+	summaryParts, err := marshalSystemSummary(ctx, in)
 	if err != nil {
 		return ids.ApprovalID{}, err
 	}
@@ -432,13 +435,13 @@ func (s *Service) insertProposalInTx(ctx context.Context, tx pgx.Tx, in StageInp
 	auditID, err := storekit.AuditWithEvidence(ctx, tx, "create", entityApproval, id.UUID,
 		nil,
 		map[string]any{approvalKeyStatus: StatusPending},
-		map[string]any{approvalKeyKind: in.Kind, "summary": in.Summary, "diff_hash": in.DiffHash})
+		createdEvidence(in))
 	if err != nil {
 		return ids.ApprovalID{}, err
 	}
 	requested := crmcontracts.PublicEventApprovalRequested{
 		Kind:             in.Kind,
-		Summary:          in.Summary,
+		Summary:          requestedSummary(in),
 		TargetEntityType: in.TargetType,
 		TargetEntityId:   optionalTargetID(in.TargetID),
 		ExpiresAt:        expiresAt,

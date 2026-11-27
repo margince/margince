@@ -83,11 +83,11 @@ func TestEveryProvenanceWireRefusesTheImporterNamespace(t *testing.T) {
 		t.Errorf("refusal names field %q, want source", refused.Field)
 	}
 
-	// An ordinary provenance string stays writable — the guard is a
-	// prefix rule, not a ban on the field.
+	// A channel on the list stays writable: the guard is a prefix rule, not a
+	// ban on the field.
 	if _, err := ContactCreationInput(crmcontracts.CreateContactRequest{
 		LinkedinUrl: new("https://www.linkedin.com/in/fixture-contact"),
-		FullName:    "Real", Source: "legacy_crm:contact:p-1",
+		FullName:    "Real", Source: "api",
 	}); err != nil {
 		t.Errorf("an ordinary source must stay writable: %v", err)
 	}
@@ -126,7 +126,7 @@ func TestTheRecordWiresRefuseTheImporterNamespaceOnSourceSystem(t *testing.T) {
 	ordinary := "legacy_crm"
 	contactIn, err := ContactCreationInput(crmcontracts.CreateContactRequest{
 		LinkedinUrl: new("https://www.linkedin.com/in/fixture-contact"),
-		FullName:    "Real", Source: "legacy_crm", SourceSystem: &ordinary,
+		FullName:    "Real", Source: "api", SourceSystem: &ordinary,
 	})
 	if err != nil {
 		t.Fatalf("contact: an ordinary source system must stay writable: %v", err)
@@ -135,7 +135,7 @@ func TestTheRecordWiresRefuseTheImporterNamespaceOnSourceSystem(t *testing.T) {
 		t.Errorf("contact: SourceSystem = %v, want it carried to the store", contactIn.SourceSystem)
 	}
 	companyIn, err := CompanyCreationInput(crmcontracts.CreateCompanyRequest{
-		DisplayName: "Real", Source: "legacy_crm", SourceSystem: &ordinary,
+		DisplayName: "Real", Source: "api", SourceSystem: &ordinary,
 	})
 	if err != nil {
 		t.Fatalf("company: an ordinary source system must stay writable: %v", err)
@@ -242,5 +242,30 @@ func TestALeadFromAContactReachesTheStoreRefusal(t *testing.T) {
 	}
 	if in.RequestedContactID == nil || in.RequestedContactID.UUID != ids.UUID(contact) {
 		t.Fatal("the deprecated contact id did not reach the store refusal")
+	}
+}
+
+// A contact, company or lead arrives by one of the fixed channels. A mailbox stamp
+// on the wire is 422 invalid_source, naming the field the caller must change.
+func TestThePartyWiresHoldSourceToTheChannels(t *testing.T) {
+	var refused *provenance.RecordSourceError
+	if _, err := ContactCreationInput(crmcontracts.CreateContactRequest{
+		LinkedinUrl: new("https://www.linkedin.com/in/fixture-contact"),
+		FullName:    "Stamped", Source: "gmail:msg-1",
+	}); !errors.As(err, &refused) {
+		t.Errorf("contact: err = %v, want the source refused", err)
+	}
+	if _, err := CompanyCreationInput(crmcontracts.CreateCompanyRequest{
+		DisplayName: "Stamped", Source: "gmail:msg-1",
+	}); !errors.As(err, &refused) {
+		t.Errorf("company: err = %v, want the source refused", err)
+	}
+	if _, err := LeadCreationInput(crmcontracts.CreateLeadRequest{
+		FullName: new("Stamped"), Source: new("crawl"),
+	}); !errors.As(err, &refused) {
+		t.Errorf("lead: err = %v, want the source refused", err)
+	}
+	if _, code, _ := refused.FieldFault(); code != "invalid_source" {
+		t.Errorf("the refusal answers %q, want invalid_source", code)
 	}
 }

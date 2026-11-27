@@ -60,7 +60,7 @@ describe("company view — where the account stands, and what it is to us", () =
     // reads of one row never disagree, so the fixture must not either.
     const withLifecycle: Company = {
       ...company,
-      lifecycle: "former_customer",
+      status: "former_customer",
       relationship_types: ["customer", "supplier"],
     };
     stub(view({ company: withLifecycle }), 200, withLifecycle);
@@ -83,7 +83,7 @@ describe("company view — where the account stands, and what it is to us", () =
   it("reads an account nobody has assessed yet as Unknown, in the details only", async () => {
     stub(view(), 200, {
       ...company,
-      lifecycle: "unknown",
+      status: "unknown",
       relationship_types: [],
     });
     renderCompany();
@@ -100,7 +100,7 @@ describe("company view — where the account stands, and what it is to us", () =
     // What "one write path, two mount points" promises: a save through either
     // control reaches the server once. The other control shows the new value
     // once the record refetches, with no second write and no stale value left.
-    let currentCompany: Company = { ...company, lifecycle: "unknown" };
+    let currentCompany: Company = { ...company, status: "unknown" };
     let patchCount = 0;
     let lastIfMatch: string | null = null;
     vi.stubGlobal(
@@ -127,7 +127,7 @@ describe("company view — where the account stands, and what it is to us", () =
             if (sent === null || typeof sent !== "object") {
               throw new Error(`the PATCH body is not an object: ${sent}`);
             }
-            const body: { lifecycle?: Company["lifecycle"] } = sent;
+            const body: { status?: Company["status"] } = sent;
             if (currentCompany.version === undefined) {
               // What this case asserts is the If-Match the second write sends,
               // so a fixture with no version to increment would be measuring
@@ -136,7 +136,7 @@ describe("company view — where the account stands, and what it is to us", () =
             }
             currentCompany = {
               ...currentCompany,
-              lifecycle: body.lifecycle ?? currentCompany.lifecycle,
+              status: body.status ?? currentCompany.status,
               version: currentCompany.version + 1,
             };
           }
@@ -176,7 +176,7 @@ describe("company view — the KPI row never invents a figure", () => {
   const commercial = (
     over: Partial<NonNullable<StateStrip360["commercial"]>>,
   ): StateStrip360 => ({
-    account: { lifecycle: "prospect", relationship_types: [] },
+    account: { status: "prospect", relationship_types: [] },
     commercial: {
       open_count: 2,
       stalled_count: 0,
@@ -310,7 +310,7 @@ describe("company view — the KPI row never invents a figure", () => {
     stub(
       view({
         state_strip: {
-          account: { lifecycle: "prospect", relationship_types: [] },
+          account: { status: "prospect", relationship_types: [] },
           commercial: {
             open_count: 1,
             stalled_count: 0,
@@ -339,7 +339,7 @@ describe("company view — the KPI row never invents a figure", () => {
       view({
         health: { days_since_last_inbound: 90 },
         state_strip: {
-          account: { lifecycle: "customer", relationship_types: [] },
+          account: { status: "customer", relationship_types: [] },
           commercial: {
             open_count: 1,
             stalled_count: 0,
@@ -371,7 +371,7 @@ describe("company view — the state strip", () => {
       view({
         state_strip: {
           account: {
-            lifecycle: "former_customer",
+            status: "former_customer",
             relationship_types: ["partner"],
           },
           engagement: {
@@ -406,7 +406,7 @@ describe("company view — the state strip", () => {
     stub(
       view({
         state_strip: {
-          account: { lifecycle: "prospect", relationship_types: [] },
+          account: { status: "prospect", relationship_types: [] },
           engagement: null,
           commercial: null,
           signal: {
@@ -514,7 +514,7 @@ describe("company view — advice you can act on", () => {
 // rather than a second copy of that card.
 describe("a customer's KPI row reports what the account is worth", () => {
   const customer = {
-    account: { lifecycle: "customer" as const, relationship_types: [] },
+    account: { status: "customer" as const, relationship_types: [] },
   };
   const connected = (extra: Record<string, unknown>) => ({
     company_id: "o-1",
@@ -586,7 +586,7 @@ describe("a customer's KPI row reports what the account is worth", () => {
 // already connected sends them to a settings page to change nothing.
 describe("the money slot says WHY it has no figure", () => {
   const customer = {
-    account: { lifecycle: "customer" as const, relationship_types: [] },
+    account: { status: "customer" as const, relationship_types: [] },
   };
   const strip = async () =>
     await screen.findByRole("region", { name: "Company status" });
@@ -618,7 +618,7 @@ describe("the money slot says WHY it has no figure", () => {
     expect(region.textContent).not.toMatch(/Accounting not connected/);
   });
 
-  it("says a first sync is running rather than that nothing is connected", async () => {
+  it("says a first sync is pending rather than that nothing is connected", async () => {
     stub(view({ state_strip: customer }), 200, company, {
       company_id: "o-1",
       state: "syncing",
@@ -626,7 +626,9 @@ describe("the money slot says WHY it has no figure", () => {
     });
     renderCompany();
     const region = await strip();
-    expect((await screen.findAllByText("Syncing")).length).toBeGreaterThan(0);
+    expect(
+      (await screen.findAllByText("First sync pending")).length,
+    ).toBeGreaterThan(0);
     expect(region.textContent).not.toMatch(/Accounting not connected/);
   });
 
@@ -749,7 +751,7 @@ describe("the money slot says WHY it has no figure", () => {
 // does.
 describe("the money slot says its reason once and borrows no figure", () => {
   const customer = {
-    account: { lifecycle: "customer" as const, relationship_types: [] },
+    account: { status: "customer" as const, relationship_types: [] },
   };
   const strip = async () =>
     await screen.findByRole("region", { name: "Company status" });
@@ -801,7 +803,7 @@ describe("the money slot says its reason once and borrows no figure", () => {
   const withStanding = () =>
     view({
       state_strip: {
-        account: { lifecycle: "customer" as const, relationship_types: [] },
+        account: { status: "customer" as const, relationship_types: [] },
         commercial: {
           open_count: 2,
           open_pipeline_minor_base: 500000,

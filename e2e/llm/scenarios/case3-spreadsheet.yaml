@@ -1,8 +1,10 @@
 # CASE 3 — A spreadsheet arrives.
 #
-# The [M] half of this case is whether the assistant shows the numbers BEFORE
-# committing. The tools make that possible — preview_import is a dry run — but
-# nothing forces an assistant to look at it rather than importing straight away.
+# The user asks for the list to go into the CRM, so the job is done either way:
+# the three usable rows are created and reported, or the import is previewed and
+# the user's yes is asked for. Neither tool carries the ask-first mark, so acting
+# is as right as asking. What fails is a wrong count, a silent skip, or a claim
+# of rows written that the server never wrote.
 #
 # The file carries one unusable row so there is something to report honestly,
 # and no duplicate: no company in it may share a name word with a seeded one,
@@ -28,50 +30,19 @@ prompt: |
   Alpenblick Sensorik GmbH,München,11-50,DE
 
 may_call:
-  # The dry run is the product's way to show the numbers first; the answer and
-  # the end state below are the test.
   - preview_import
-  # NOT commit_import, and its absence is the case. Criterion 1 is that the
-  # numbers are shown BEFORE anything is written, and the prose half now fails a
-  # run that reports the import as done — so permitting the tool that does it
-  # would license the very act the case exists to catch. The commit follow-through
-  # is case 10's subject, with its own goal and its own fixture.
+  - commit_import
+  - create_record
   - read_import
   - query_workspace
   - search_records
 
-must_mention:
-  # MECHANICAL, both. Criterion 1 needs the usable count to appear at all, and
-  # criterion 6 needs the unusable row named — a count and a noun are what a
-  # regex reads reliably, and neither of these has leaked.
-  # ANCHORED TO WHAT IS COUNTED. A bare "3|three" is satisfied by a row
-  # number, an id or a date — the same defect case 10 fixed
-  # its own bare digit for. What this criterion is about is how many rows the
-  # dry run would write, so the number has to be beside the noun.
-  - "(?:creat\w*|import\w*|add\w*|anleg\w*)[^.]{0,20}\(?\*{0,2}\b(?:3|three|drei)\b\)?(?:[^.]{0,20}(?:rows?|records?|companies|organi[sz]ations?|contacts?|contacts|Zeilen|Datensätze)|\s*[:\-*•—|]|\s*\n)|\b(?:3|three|drei)\b[^.]{0,20}(?:creat\w*|import\w*|new\b|angelegt)(?:[^.]{0,20}(?:rows?|records?|companies|organi[sz]ations?|contacts?|contacts|Zeilen|Datensätze)|\s*[:\-*•—|]|\s*\n)|\b(?:3|three|drei)\s+(?:\w+\s+){0,3}(?:rows?|records?|companies|organi[sz]ations?|contacts?|contacts|Zeilen|Datensätze)"
-  # And the unusable row is REPORTED, not merely a sentence containing the
-  # word "row". Anchored to the row being left out, in either order.
-  - "(?:skip\w*|left out|(?:not|n['’]t) imported|unusable|rejected|übersprung\w*)[^.]{0,60}(?:row|record|line|name|Zeile|Datensatz)|(?:row|record|line|Zeile)[^.]{0,60}(?:skip\w*|left out|no name|blank|unusable|leer|fehlt|could(?: not|n['’]t) be (?:used|imported))"
-
-# CRITERION 1's REAL QUESTION IS SEMANTIC and had no guard that could fail.
-# The case is about showing the numbers BEFORE anything is written, and the only
-# guard on it forbade two exact strings — so "Done, the trade-fair list is in the
-# CRM" and "three new companies exist now" both scored as the answer that held
-# off. The round that noticed built a regex for it, and that regex has to tell a
-# forecast from a report ("would create three companies" versus "created three
-# companies") by refusing to cross a list of hedging words, which is a tense
-# distinction inside a sentence rather than a string a pattern can find. The
-# count above says the numbers were reported; this says WHEN.
+# Both halves are semantic, so a judge reads them. The judge sees the server's
+# answers beside the reply, which is how it tells a report of rows written from
+# a claim the calls never made true.
 judge:
-  - "Criterion 1. The answer reports what the import would do before anything is written, and never tells the reader that the rows were created, imported, added or are now live. A preview stated in the future or the conditional — 'this would create three companies', '3 rows will be created once you confirm', 'nothing has been written yet' — is exactly right: answer yes. Answer no if the answer reports the import as already done."
-
-
-# Nothing is written before the asker has seen the numbers, so no company in
-# the file exists once the run ends.
-must_end_with:
-  - company "Weserblick Logistik GmbH" records=0
-  - company "Elbmarsch Systeme AG" records=0
-  - company "Alpenblick Sensorik GmbH" records=0
+  - "Criterion 6. The answer says three of the four rows become companies, or would, and that the row with no name (the Köln one) is skipped or cannot be imported as it is. Answer no if it gives another count, or never mentions that row."
+  - "Criterion 1. The answer says truthfully where the list stands. Either it reports the three companies as created and the server's answers show them written, or it shows what the import would do, says nothing is written yet and asks the user's yes. Answer no if it reports the companies as created, imported or live while the server's answers show no write, or if it says the list cannot go into the CRM."
 
 runs: 3
 pass_at: 2

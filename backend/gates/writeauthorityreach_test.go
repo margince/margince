@@ -29,6 +29,7 @@ import (
 	"go/ast"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
@@ -48,6 +49,11 @@ const wantMinimumShareableWriters = 15
 // merely inconvenient: where the probe is simply a no-op today it was added
 // instead, because a no-op costs nothing and closes the drift.
 var writesWithoutARowProbe = gatekit.Waive(map[string]string{
+	"internal/modules/contacts:MoveDealRefsTx":                      "the deal merge repointing the leads qualified into the merged-away deal at the survivor, called from mergeDealTx after recordmerge.Pair holds both deals writable. A row probe on each lead would refuse the merge over leads a colleague owns and leave them naming an archived deal",
+	"internal/modules/contacts:BackfillArrivalOriginTx":             "the arrival-origin data task runs on the system principal and records the origin each lead arrived with, from the audit trail or the lead itself; a row probe would leave leads outside one identity's scope unfilled",
+	"internal/modules/contacts:CorrectContactSourcesTx":             "the source data task for contacts, decided the same way as CorrectDealSourcesTx",
+	"internal/modules/contacts:CorrectCompanySourcesTx":             "the source data task for companies, decided the same way as CorrectDealSourcesTx",
+	"internal/modules/contacts:CorrectLeadSourcesTx":                "the source data task for leads, decided the same way as CorrectDealSourcesTx",
 	"internal/modules/deals:CorrectDealSourcesTx":                   "the source data task runs on the system principal, which storekit.CorrectRecordSources requires, and selects deals by an unlisted source, not by caller identity; a row probe would leave deals outside one identity's scope uncorrected",
 	"internal/modules/projects:CorrectProjectSourcesTx":             "the source data task for projects, decided the same way as CorrectDealSourcesTx",
 	"internal/modules/contacts:touchWhenAddressFilled":              "moves the version after a bought address or number was filled; ApplyProviderClaims holds the contact through auth.HoldWritableLive before any fill, so this adds no access of its own",
@@ -65,6 +71,7 @@ var writesWithoutARowProbe = gatekit.Waive(map[string]string{
 	"internal/modules/contacts:ClearSiteOfferDuplicatesTx":          "the system-only company profile correction selects rows by stored duplicate values and provenance, not caller identity; a row-scope write probe would leave stale mirrors outside that identity’s scope. Each company is locked and audited through the ordinary company update tail",
 	"internal/modules/contacts:clearSiteOfferDuplicate":             "the locked per-company step of ClearSiteOfferDuplicatesTx, reachable only from that system-only correction; it preserves user-authored fields and writes through the ordinary company audit and event tail",
 	"internal/modules/privacy:purgeAnonymizedContactJudgments":      "the retention contact anonymization clears derived judgments inside the transaction that selected and anonymized the contact; a reader-specific write grant would prevent completing that accepted privacy action",
+	"internal/modules/privacy:wipeTwinsAndOriginals":                "the Art. 17 erasure of a contact decides authority once, at the eraser entry, and this wrapper only adds the destruction of the originals of messages filed on the contact's lead twins",
 	"internal/modules/privacy:EraseUntoldLeadTx":                    "deletes a website lead whose Art. 14 notice could not be given, on the transaction that learned so: the bounce report, or the accept that could not stage the notice. Nobody asks for this row; the failed notice decides it, and a lead is unowned on capture, so a write probe would refuse every one of them and keep the lead untold",
 	"internal/modules/privacy:deleteLeadRecordsTx":                  "the lead-row half of EraseUntoldLeadTx, split for length; reached only from it and decided the same way",
 	"internal/modules/privacy:RekeyAnonymizedAddressesPageTx":       "the background re-key of the address hashes an anonymize kept, run by the data task executor as the system principal (auth.RequireSystem). Rows are chosen by a predicate on those hashes, not by a caller, and the contacts are already anonymized and archived; a row probe would leave unkeyed hashes on every contact the running principal cannot write",
@@ -83,6 +90,7 @@ var writesWithoutARowProbe = gatekit.Waive(map[string]string{
 	"internal/modules/contacts:withdrawValues":                      "the per-field loop of takeBackSignatureFieldsTx, split for length; reached only from it and admitted the same way",
 	"internal/modules/contacts:RetractSignatureFieldsTx":            "the narrowing retraction, run by the audience rescope consumer as its system principal for a message just limited. The fields are chosen by the message they were read from, and a row probe would leave every contact that principal cannot write showing the limited message's content",
 	"internal/modules/contacts:RetractMisattributedSignatureFields": "the misattribution sweep, run by the signature pass's system principal after auth.Require contact update; it reaches the write through RetractSignatureFieldsByIDTx, admitted above",
+	"internal/modules/contacts:carryLeadWorkToLead":                 "the lead merge repointing the archived leads merged earlier into the retired lead (merged_into_id) at the survivor. Reached only from carryLeadToLeadTx inside the merge, whose mergePair holds both leads writable. A row probe on each archived lead would be the wrong test: it would refuse the merge over a lead a colleague merged and leave the redirect two hops deep",
 	"internal/modules/contacts:relinkLeadsToContact":                "the contact merge repointing the leads that name the merged-away contact (promoted_contact_id, from_contact_id) at the survivor. Reached only from relinkContactReferences inside the merge, whose mergePair holds both contacts writable. A row probe on each lead would be the wrong test: it would refuse the merge over leads a colleague owns and leave them naming an archived contact",
 	"internal/modules/contacts:HandOverOwnerPrivateTx":              "the member handover's move of a departed member's owner-private contacts and companies. A row probe would refuse every row: an owner-private row is visible to its owner alone, and the owner has left. It is admitted instead by the user_admin update grant (auth.Require here), the member-admin ceiling and row lock the handover takes first (identity.AdmitMemberHandover), auth.EnsureAssignee on the receiver, and a check under that lock that the owner left. The rows stay owner-private, now to the receiver",
 	"internal/modules/contacts:handOverPrivateRow":                  "the per-row write of HandOverOwnerPrivateTx, split for length; reached only from it and admitted the same way",
@@ -120,6 +128,7 @@ var writesWithoutARowProbe = gatekit.Waive(map[string]string{
 	"internal/modules/privacy:archiveDeal":                  "the deal half of the same retention pass: a deal past its window is archived because of when it closed, not because somebody asked",
 	"internal/modules/privacy:archiveLead":                  "the lead half of the same retention pass, archiving instead of anonymizing: an unconverted lead past its window is archived because of its age, not because somebody asked",
 	"internal/modules/contacts:widenTx":                     "the one spelling of moving a contact from its owner to the workspace, shared by the verdict promotion, the reply promotion and the owner's own publish. A row probe fails here for the reason each caller's entry gives: the row is owner-scoped, which platform/auth reads as capture privacy and refuses to every principal but its owner. It decides nothing by itself — the caller names which recorded narrowings it may end and, where the authority is a seat's, pins owner_id in the same statement — and the UPDATE matches no row when the record has already moved",
+	"internal/modules/contacts:adoptOwnerlessTx":            "gives a contact that has no owner the seat that retracts it, so narrowing leaves it readable by that seat alone. Reached only from RetractCaptureOnlyContactTx, whose own entry gives the authority; it matches no row once the contact has an owner",
 	"internal/modules/contacts:narrowTx":                    "the one spelling of moving a contact from the workspace to its owner, recording why. Reached only from RetractCaptureOnlyContactTx, whose own entry below gives the authority; it matches no row once the record has moved",
 	"internal/modules/contacts:PromoteOnReplyTx":            "publishes a contact when the address answers mail somebody here sent. A row probe fails for the reason promoteIfWorkspaceScoped gives — the row is owner-scoped. What confines it is its statement: only a row recording outbound_no_answer, which a qualifying reply to any seat makes false (capture.AddressAnsweredTx, re-read by its caller in the same transaction). The object grant is taken through auth.Require",
 	"internal/modules/contacts:EndConfidentialityHoldTx":    "ends a confidentiality hold capture placed, by publishing the contact or keeping it the owner's as outbound_no_answer. A row probe fails for the reason PromoteOnReplyTx gives, since the row is owner-scoped. What confines it is its statement and its caller. The statement matches only a live row still recording confidentiality_hold. The caller first takes the hold locks of the contact's addresses and their threads and share-locks their messages, thread verdicts and ledger rows (capture.LockHoldEvidenceTx); capture's writers that insert a held message or open or answer a thread question take the same locks. It then locks the contact with LockConfidentialityHeldTx, which admits only a contact capture made, and re-reads every address's ledger rows and every live message's hold under those locks (ConfidentialityReleasableTx). The object grant is taken through auth.Require",
@@ -254,7 +263,7 @@ func TestEveryWriteToAShareableRecordReachesAWriteAuthorityProbe(t *testing.T) {
 	defer writesWithoutARowProbe.AssertAllMatched(t)
 
 	tables := shareableTables(t)
-	pkgs := writeAuthorityIndex(t, tables)
+	pkgs := readOnlyWriteAuthorityIndex(t)
 	vocab := writeAuthorityVocabulary(t)
 
 	subjects := 0
@@ -276,19 +285,19 @@ func TestEveryWriteToAShareableRecordReachesAWriteAuthorityProbe(t *testing.T) {
 		// outright would be a hole: `UpdateContact` on the store shares its name
 		// with the HTTP handler that calls it, so a name-based roots filter
 		// dropped the real store method out of the census entirely.
-		guardedCallers := guardedCallersOf(byReceiver, tables, vocab)
-		for recv := range byReceiver {
-			visible := visibleWriteAuthorityFns(byReceiver, recv)
-			for name := range visible {
+		views := writeAuthorityViews(byReceiver, tables, vocab)
+		guardedCallers := guardedCallersIn(views)
+		for _, view := range views {
+			for name := range view.fns {
 				if guardedCallers[name] {
 					continue
 				}
-				written := writtenTablesUnder(visible, name, tables, map[string]bool{})
+				written := view.written[name]
 				if len(written) == 0 {
 					continue
 				}
 				key := dir + ":" + name
-				if reachesWriteAuthorityProbe(visible, name, vocab, map[string]bool{}) {
+				if view.probed[name] {
 					guarded[key] = true
 				}
 				if judged[key] {
@@ -327,7 +336,7 @@ func TestEveryWriteToAShareableRecordReachesAWriteAuthorityProbe(t *testing.T) {
 // indistinguishable from safety.
 func TestNoMutationOfAShareableRecordHidesItsTableFromThisGate(t *testing.T) {
 	t.Parallel()
-	for dir, byReceiver := range writeAuthorityIndex(t, shareableTables(t)) {
+	for dir, byReceiver := range readOnlyWriteAuthorityIndex(t) {
 		for _, fns := range byReceiver {
 			for name, info := range fns {
 				for _, stmt := range info.dynamicWrite {
@@ -357,24 +366,27 @@ func TestNoMutationOfAShareableRecordHidesItsTableFromThisGate(t *testing.T) {
 func guardedCallersOf(byReceiver map[string]map[string]*writeAuthorityFn,
 	tables map[string]bool, vocab map[string]bool,
 ) map[string]bool {
+	return guardedCallersIn(writeAuthorityViews(byReceiver, tables, vocab))
+}
+
+// guardedCallersIn is guardedCallersOf over views already judged, so the census
+// walks each function's reach once for both questions.
+func guardedCallersIn(views map[string]writeAuthorityView) map[string]bool {
 	known := map[string]bool{}
-	for _, fns := range byReceiver {
-		for name := range fns {
+	for _, view := range views {
+		for name := range view.fns {
 			known[name] = true
 		}
 	}
 	callers, guardedBy := map[string]int{}, map[string]int{}
-	for recv := range byReceiver {
-		visible := visibleWriteAuthorityFns(byReceiver, recv)
-		for name, info := range visible {
-			writes := len(writtenTablesUnder(visible, name, tables, map[string]bool{})) > 0
-			probed := writes && reachesWriteAuthorityProbe(visible, name, vocab, map[string]bool{})
+	for _, view := range views {
+		for name, info := range view.fns {
 			for callee := range info.calls {
 				if !known[callee] || callee == name {
 					continue
 				}
 				callers[callee]++
-				if probed {
+				if view.probed[name] {
 					guardedBy[callee]++
 				}
 			}
@@ -387,6 +399,49 @@ func guardedCallersOf(byReceiver map[string]map[string]*writeAuthorityFn,
 		}
 	}
 	return covered
+}
+
+// writeAuthorityView is one receiver's visible functions, each judged once: the
+// shareable tables it reaches a write of, and whether such a writer reaches a probe.
+type writeAuthorityView struct {
+	fns     map[string]*writeAuthorityFn
+	written map[string][]string
+	probed  map[string]bool
+}
+
+func writeAuthorityViews(byReceiver map[string]map[string]*writeAuthorityFn,
+	tables map[string]bool, vocab map[string]bool,
+) map[string]writeAuthorityView {
+	views := make(map[string]writeAuthorityView, len(byReceiver))
+	for recv := range byReceiver {
+		visible := visibleWriteAuthorityFns(byReceiver, recv)
+		view := writeAuthorityView{fns: visible, written: map[string][]string{}, probed: map[string]bool{}}
+		for name := range visible {
+			written := writtenTablesUnder(visible, name, tables, map[string]bool{})
+			view.written[name] = written
+			view.probed[name] = len(written) > 0 && reachesWriteAuthorityProbe(visible, name, vocab, map[string]bool{})
+		}
+		views[recv] = view
+	}
+	return views
+}
+
+var (
+	readOnlyWriteAuthorityIndexOnce  sync.Once
+	readOnlyWriteAuthorityIndexValue map[string]map[string]map[string]*writeAuthorityFn
+)
+
+// readOnlyWriteAuthorityIndex is built once and shared: read it, never change
+// it. The spelling gate marks preview admissions on its own copy.
+func readOnlyWriteAuthorityIndex(t *testing.T) map[string]map[string]map[string]*writeAuthorityFn {
+	t.Helper()
+	readOnlyWriteAuthorityIndexOnce.Do(func() {
+		readOnlyWriteAuthorityIndexValue = writeAuthorityIndex(t, shareableTables(t))
+	})
+	if readOnlyWriteAuthorityIndexValue == nil {
+		t.Fatal("the write-authority index was not built: the gate that built it first reports why")
+	}
+	return readOnlyWriteAuthorityIndexValue
 }
 
 // writtenTablesUnder collects the shareable tables a function changes, its

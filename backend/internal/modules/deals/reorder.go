@@ -18,6 +18,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -142,6 +143,12 @@ func placements(order []ranked) []placement {
 	return out
 }
 
+// sameOrder reports that order names the ladder's stages in the order they are
+// stored, which readLadder reads by position under the ladder's lock.
+func sameOrder(ladder, order []ranked) bool {
+	return slices.EqualFunc(ladder, order, func(a, b ranked) bool { return a.id == b.id })
+}
+
 // positionImages are the audit before- and after-images of a reorder, and the
 // after-image is also the event's delta, so the trail and the wire body name the
 // same moves.
@@ -201,19 +208,29 @@ func placeStages(ctx context.Context, tx pgx.Tx, ladder []ranked, moves []placem
 			Message: "a stage sits too low to reorder around; give it a small position first",
 		}
 	}
-	movers := make([]ids.UUID, len(moves))
 	parks := make([]int, len(moves))
-	ranks := make([]int, len(moves))
-	for i, m := range moves {
-		movers[i], parks[i], ranks[i] = m.id, floor-1-i, m.to
+	for i := range moves {
+		parks[i] = floor - 1 - i
 	}
 	const place = `UPDATE stage SET position = v.position
 		FROM unnest($1::uuid[], $2::int[]) AS v(id, position) WHERE stage.id = v.id`
+	return parkThenPlace(ctx, tx, place, moves, parks, "stages")
+}
+
+// parkThenPlace runs `place` (ids $1, positions $2) twice: first to the parks,
+// which no row holds, then to each mover's rank. A unique position index is
+// checked row by row, so one statement straight to the ranks can collide.
+func parkThenPlace(ctx context.Context, tx pgx.Tx, place string, moves []placement, parks []int, noun string) error {
+	movers := make([]ids.UUID, len(moves))
+	ranks := make([]int, len(moves))
+	for i, m := range moves {
+		movers[i], ranks[i] = m.id, m.to
+	}
 	if _, err := tx.Exec(ctx, place, movers, parks); err != nil {
-		return fmt.Errorf("park the moving stages: %w", err)
+		return fmt.Errorf("park the moving %s: %w", noun, err)
 	}
 	if _, err := tx.Exec(ctx, place, movers, ranks); err != nil {
-		return fmt.Errorf("place the moving stages: %w", err)
+		return fmt.Errorf("place the moving %s: %w", noun, err)
 	}
 	return nil
 }
@@ -269,7 +286,9 @@ func (s *Store) ReorderStages(ctx context.Context, pipelineID ids.PipelineID, st
 		if err := refuseClosingBeforeOpen(order, "stage_ids"); err != nil {
 			return err
 		}
-		if moves := placements(order); len(moves) > 0 {
+		// The ladder's order sent back as it stands is no move, even when its
+		// stored positions have gaps the renumbering would close.
+		if moves := placements(order); len(moves) > 0 && !sameOrder(ladder, order) {
 			if err := refuseMovingAGatedLadder(ctx, tx, pipelineID); err != nil {
 				return err
 			}

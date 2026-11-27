@@ -15,18 +15,27 @@
 # so the gate only warns about it; remove it with the next edit here.
 # Package removals are never allowlistable (deprecate-then-major cycle,
 # ADR-0120 §3).
-github.com/margince/margince/backend/pkg/extension: AI: removed # Runtime.AI was never in a release tag and no unit calls it; Runtime.Models is the one AI port, ratified in #13234
-github.com/margince/margince/backend/pkg/extension: AIDocument: removed # Runtime.AI was never in a release tag and no unit calls it; Runtime.Models is the one AI port, ratified in #13234
-github.com/margince/margince/backend/pkg/extension: AIInput: removed # Runtime.AI was never in a release tag and no unit calls it; Runtime.Models is the one AI port, ratified in #13234
-github.com/margince/margince/backend/pkg/extension: AIResult: removed # Runtime.AI was never in a release tag and no unit calls it; Runtime.Models is the one AI port, ratified in #13234
-github.com/margince/margince/backend/pkg/extension: AITask: removed # Runtime.AI was never in a release tag and no unit calls it; Runtime.Models is the one AI port, ratified in #13234
-github.com/margince/margince/backend/pkg/extension: AITaskName: removed # Runtime.AI was never in a release tag and no unit calls it; Runtime.Models is the one AI port, ratified in #13234
-github.com/margince/margince/backend/pkg/extension: ErrAIDocumentType: removed # Runtime.AI was never in a release tag and no unit calls it; Runtime.Models is the one AI port, ratified in #13234
-github.com/margince/margince/backend/pkg/extension: ErrAIScannedDocument: removed # Runtime.AI was never in a release tag and no unit calls it; Runtime.Models is the one AI port, ratified in #13234
-github.com/margince/margince/backend/pkg/extension: ErrAITaskUndeclared: removed # Runtime.AI was never in a release tag and no unit calls it; Runtime.Models is the one AI port, ratified in #13234
-github.com/margince/margince/backend/pkg/extension: ErrAIUnavailable: removed # Runtime.AI was never in a release tag and no unit calls it; Runtime.Models is the one AI port, ratified in #13234
-github.com/margince/margince/backend/pkg/extension: Extension.AITasks: removed # Runtime.AI was never in a release tag and no unit calls it; Runtime.Models is the one AI port, ratified in #13234
-github.com/margince/margince/backend/pkg/extension: MaxAIPromptBytes: removed # Runtime.AI was never in a release tag and no unit calls it; Runtime.Models is the one AI port, ratified in #13234
-github.com/margince/margince/backend/pkg/extension: Runtime.AI: removed # Runtime.AI was never in a release tag and no unit calls it; Runtime.Models is the one AI port, ratified in #13234
-github.com/margince/margince/backend/pkg/extension: Activities.Attachments: added # a background job lists the files of one mail; only the core implements Activities, so no outside code breaks (#8294)
-github.com/margince/margince/backend/pkg/extension: Activities.OpenAttachment: added # a background job reads one mail file's bytes; only the core implements Activities, so no outside code breaks (#8294)
+github.com/margince/margince/backend/pkg/extension: Runtime.IngestMemberBatch: added # a member-owned chat source saves its batch on one member's place; only the core implements Runtime, so no outside code breaks, ratified in #13478
+github.com/margince/margince/backend/pkg/extension: Runtime.MemberIngestPosition: added # a member-owned chat source reads one member's saved position; only the core implements Runtime, so no outside code breaks, ratified in #13478
+github.com/margince/margince/backend/pkg/extension: Runtime.Knowledge: added # a unit files documents into its own corpus; only the core implements Runtime, so no outside code breaks, owner ratification pending in #13509
+github.com/margince/margince/backend/pkg/extension: CompanyQuery.Lifecycle: removed # a company's funnel position is named status on the wire and in Go; no unit in the tree reads the old name, ratified in #13294
+github.com/margince/margince/backend/pkg/extension: CompanySummary.Lifecycle: removed # a company's funnel position is named status on the wire and in Go; no unit in the tree reads the old name, ratified in #13294
+github.com/margince/margince/backend/pkg/extension/crm: Company.Lifecycle: removed # a company's funnel position is named status on the wire and in Go; no unit in the tree reads the old name, ratified in #13294
+github.com/margince/margince/backend/pkg/extension/crm: CompanyLifecycle: removed # a company's funnel position is named status on the wire and in Go; no unit in the tree reads the old name, ratified in #13294
+github.com/margince/margince/backend/pkg/extension/crm: CompanyLifecycleCustomer: removed # a company's funnel position is named status on the wire and in Go; no unit in the tree reads the old name, ratified in #13294
+github.com/margince/margince/backend/pkg/extension/crm: CompanyLifecycleDisqualified: removed # a company's funnel position is named status on the wire and in Go; no unit in the tree reads the old name, ratified in #13294
+github.com/margince/margince/backend/pkg/extension/crm: CompanyLifecycleFormerCustomer: removed # a company's funnel position is named status on the wire and in Go; no unit in the tree reads the old name, ratified in #13294
+github.com/margince/margince/backend/pkg/extension/crm: CompanyLifecycleLive: removed # a company's funnel position is named status on the wire and in Go; no unit in the tree reads the old name, ratified in #13294
+github.com/margince/margince/backend/pkg/extension/crm: CompanyLifecycleOnboarding: removed # a company's funnel position is named status on the wire and in Go; no unit in the tree reads the old name, ratified in #13294
+github.com/margince/margince/backend/pkg/extension/crm: CompanyLifecycleOpportunity: removed # a company's funnel position is named status on the wire and in Go; no unit in the tree reads the old name, ratified in #13294
+github.com/margince/margince/backend/pkg/extension/crm: CompanyLifecycleProspect: removed # a company's funnel position is named status on the wire and in Go; no unit in the tree reads the old name, ratified in #13294
+github.com/margince/margince/backend/pkg/extension/crm: CompanyLifecycleTarget: removed # a company's funnel position is named status on the wire and in Go; no unit in the tree reads the old name, ratified in #13294
+github.com/margince/margince/backend/pkg/extension/crm: CompanyLifecycleUnknown: removed # a company's funnel position is named status on the wire and in Go; no unit in the tree reads the old name, ratified in #13294
+github.com/margince/margince/backend/pkg/extension/crm: Partner.PartnerFitOverrideReason: removed # a partner fit score no engine produced and no request could set leaves the extension surface; no unit in the tree reads it, ratified in #5837
+github.com/margince/margince/backend/pkg/extension/crm: Partner.PartnerFitScore: removed # a partner fit score no engine produced and no request could set leaves the extension surface; no unit in the tree reads it, ratified in #5837
+github.com/margince/margince/backend/pkg/extension/crm: Partner.PartnerFitScoreComputed: removed # a partner fit score no engine produced and no request could set leaves the extension surface; no unit in the tree reads it, ratified in #5837
+github.com/margince/margince/backend/pkg/extension: Deals.GetAs: added # the read runs as the unit's service member under its own grants; only the core implements this interface, so no outside code breaks (#13347)
+github.com/margince/margince/backend/pkg/extension: Deals.ResponsibleAs: added # the read runs as the unit's service member under its own grants; only the core implements this interface, so no outside code breaks (#13347)
+github.com/margince/margince/backend/pkg/extension: Authority.CanReadAs: added # the read runs as the unit's service member under its own grants; only the core implements this interface, so no outside code breaks (#13347)
+github.com/margince/margince/backend/pkg/extension: Authority.CanWriteAs: added # the read runs as the unit's service member under its own grants; only the core implements this interface, so no outside code breaks (#13347)
+github.com/margince/margince/backend/pkg/extension: Directory.EmailsAs: added # the read runs as the unit's service member under its own grants; only the core implements this interface, so no outside code breaks (#13347)

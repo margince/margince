@@ -79,6 +79,8 @@ describe("what the rail carries and what it leaves behind", () => {
   it("leaves the pages a rep can only read out of the rail, not out of reach", () => {
     const reach = settingsReach(seededRep);
     expect(reach.looksUp.map((page) => page.id)).toEqual([
+      // Every member reads the teams; only a team verb changes one.
+      "teams",
       // Pipelines and the deal vocabularies: a rep reads the stages, picks a
       // source or a loss reason and answers the review, and changes none.
       "deals",

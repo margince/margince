@@ -3,19 +3,30 @@
 
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ListQuery } from "../../components/listquery";
 import { LocaleProvider } from "../../i18n";
+import {
+  emptyPage,
+  ListTableHarness,
+  render as renderList,
+} from "../../testing/listquery.testkit";
 import { meFixture } from "../../testing/mefixture";
 import {
-  listStateOf,
   SavedViewsFailure,
   SaveViewAction,
   useSavedViewTabs,
 } from "./savedviews";
+import { listStateOf } from "./savedviews.state";
 
 afterEach(cleanup);
 
@@ -34,7 +45,7 @@ const narrowed: ListQuery = {
   q: "",
   sort: "display_name",
   includeArchived: false,
-  filters: { lifecycle: "customer" },
+  filters: { status: "customer" },
   perPage: 25,
 };
 
@@ -107,7 +118,7 @@ describe("saved views", () => {
                   q: "",
                   sort: "display_name",
                   includeArchived: false,
-                  filters: { lifecycle: "customer" },
+                  filters: { status: "customer" },
                   perPage: 25,
                 },
               },
@@ -121,7 +132,7 @@ describe("saved views", () => {
     await waitFor(() =>
       expect(
         screen.getByText(
-          'German customers||display_name|{"lifecycle":"customer"}|false|25',
+          'German customers||display_name|{"status":"customer"}|false|25',
         ),
       ).toBeTruthy(),
     );
@@ -242,7 +253,7 @@ describe("saved views", () => {
     );
     wrap(<SaveViewAction resource="companies" state={{ query: narrowed }} />);
 
-    await user.click(screen.getByRole("button", { name: "Save view" }));
+    await user.click(await screen.findByRole("button", { name: "Save view" }));
     await user.type(screen.getByRole("textbox", { name: "Name" }), "Customers");
     await user.click(screen.getByRole("button", { name: "Save" }));
 
@@ -251,7 +262,7 @@ describe("saved views", () => {
       resource: "companies",
       name: "Customers",
       query: {
-        list: { sort: "display_name", filters: { lifecycle: "customer" } },
+        list: { sort: "display_name", filters: { status: "customer" } },
       },
     });
   });
@@ -367,7 +378,7 @@ describe("saved views", () => {
     expect(screen.queryByRole("button", { name: "Save view" })).toBeNull();
   });
 
-  it("does not offer to save the order and filters the list opened with", () => {
+  it("does not offer to save the order and filters the list opened with", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => jsonResponse({ data: [] })),
@@ -376,21 +387,94 @@ describe("saved views", () => {
       initialSort: narrowed.sort,
       initialFilters: narrowed.filters,
     };
-    const opened = wrap(
-      <SaveViewAction
-        resource="companies"
-        state={{ ...opening, query: narrowed }}
-      />,
-    );
-    expect(screen.queryByRole("button", { name: "Save view" })).toBeNull();
-
-    opened.unmount();
+    // Side by side, so the changed list's Save says the views have been read.
     wrap(
-      <SaveViewAction
-        resource="companies"
-        state={{ ...opening, query: { ...narrowed, sort: "-created_at" } }}
-      />,
+      <>
+        <section aria-label="as opened">
+          <SaveViewAction
+            resource="companies"
+            state={{ ...opening, query: narrowed }}
+          />
+        </section>
+        <section aria-label="changed">
+          <SaveViewAction
+            resource="companies"
+            state={{ ...opening, query: { ...narrowed, sort: "-created_at" } }}
+          />
+        </section>
+      </>,
     );
-    expect(screen.getByRole("button", { name: "Save view" })).toBeTruthy();
+    const changed = screen.getByRole("region", { name: "changed" });
+    expect(
+      await within(changed).findByRole("button", { name: "Save view" }),
+    ).toBeTruthy();
+    expect(
+      within(screen.getByRole("region", { name: "as opened" })).queryByRole(
+        "button",
+        { name: "Save view" },
+      ),
+    ).toBeNull();
+  });
+});
+
+/** The contacts rail as a list screen draws it, from the reader's views. */
+function ContactsRail() {
+  const tabs = useSavedViewTabs("contacts");
+  return (
+    <ListTableHarness
+      fetchPage={async () => emptyPage()}
+      views={[{ label: "list.viewAll" }]}
+      dataViews={tabs}
+    />
+  );
+}
+
+describe("a view built in Filters and views, on its list's rail", () => {
+  const berlin = { and: [{ field: "city", op: "eq", value: "Berlin" }] };
+  const views = [
+    {
+      id: "v-both",
+      owner_id: "u-1",
+      resource: "contacts",
+      name: "Both",
+      version: 1,
+      query: { filter: berlin, list: { sort: "full_name" } },
+    },
+    {
+      id: "v-vip",
+      owner_id: "u-1",
+      resource: "contacts",
+      name: "VIP in Berlin",
+      version: 2,
+      query: { filter: berlin },
+    },
+  ];
+
+  it("is a tab that opens the view there, and a view holding list state too opens wherever it is pressed: in the builder", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          data: views,
+          page: { next_cursor: null, has_more: false },
+        }),
+      ),
+    );
+    renderList(<ContactsRail />);
+
+    const link = await screen.findByRole("link", {
+      name: "VIP in Berlin, opens in Filters and views",
+    });
+    expect(
+      link.getAttribute("href")?.endsWith("#/filters/contacts/v-vip"),
+    ).toBe(true);
+    expect(link.hasAttribute("aria-pressed")).toBe(false);
+    const both = screen.getByRole("link", {
+      name: "Both, opens in Filters and views",
+    });
+    expect(
+      both.getAttribute("href")?.endsWith("#/filters/contacts/v-both"),
+    ).toBe(true);
+    expect(screen.queryByRole("button", { name: "Both" })).toBeNull();
   });
 });

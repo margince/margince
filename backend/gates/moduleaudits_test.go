@@ -44,7 +44,9 @@ import (
 // module's writes are not recorded at all", so the rationale has to explain
 // where the history actually lives.
 var modulesThatWriteNoHistory = gatekit.Waive(map[string]string{
-	"internal/platform/datatask": "release task progress is operational state; each domain writer records its own audit in the batch transaction. Operator controls and failures write system_log in that same transaction; cursor advancement is not a separate record fact.",
+	"internal/compose/languages":  "the language table is a vocabulary. Core seeds three rows in its migration, and the boot upserts the languages the composed units declare, so the declarations in the units' source are the history. The boot is not a user's act, and a replay of it is a no-op",
+	"internal/compose/extingress": "a unit's saved place in one source is a cursor with no domain meaning. Each record the unit lands carries its own audit row and event in the capture transaction, and a replay of the batch is a no-op by natural key",
+	"internal/platform/datatask":  "release task progress is operational state; each domain writer records its own audit in the batch transaction. Operator controls and failures write system_log in that same transaction; cursor advancement is not a separate record fact.",
 	// The intent ledger holds no history because it holds no state worth one. A row
 	// says "bytes may exist at this key and no row names them yet". On the ordinary
 	// path it lives for the milliseconds between a put and the transaction that
@@ -53,7 +55,8 @@ var modulesThatWriteNoHistory = gatekit.Waive(map[string]string{
 	// state change worth an audit row: what happened to the OBJECT is audited where
 	// it matters, by the module that writes the owning row, and the reaper's delete
 	// is the sweep's own act under the system principal.
-	"internal/platform/storedobjects": "a row records that a put is in flight; it is retired by the transaction that adopts the bytes, or adjudicated by the sweep when none ever does. The owning row's write is audited by the module that makes it, and the reaper's delete by the sweep",
+	"internal/platform/generatedsummary": "generated_summary is an assembly generated for one reader and never served to another: a brief, a dossier, a growth reading or a status card, rebuilt from the record at any time",
+	"internal/platform/storedobjects":    "a row records that a put is in flight; it is retired by the transaction that adopts the bytes, or adjudicated by the sweep when none ever does. The owning row's write is audited by the module that makes it, and the reaper's delete by the sweep",
 
 	// The audit writer itself. It owns audit_log, event_outbox, system_log and
 	// field_provenance, and auditing its own writes is circular — the audit row
@@ -80,21 +83,17 @@ var modulesThatWriteNoHistory = gatekit.Waive(map[string]string{
 	// different rows legitimately, and an audit trail over that would record
 	// reading rather than changing. Verified against the DDL, not the package
 	// name: user_record_view, suggestion_dismissal, contact_moment_dismissal,
-	// company_brief, contact_brief, deal_status_card, company_dossier and company_growth_fit all
-	// key on user_id.
+	// and generated_summary all key on user_id.
 	// company360 is deliberately absent from this list. Its per-reader tables
 	// (user_record_view, suggestion_dismissal) still need no history for the
 	// reason above, but the package now writes a real audit row — the evidence
 	// each agent-read buying role rests on — so it satisfies the gate outright
 	// and a waiver here would be a claim about it that is no longer true.
-	"internal/compose/contact360":     "contact_moment_dismissal, the same per-reader shape",
-	"internal/compose/companybrief":   "company_brief is an assembly generated for one reader and never served to another",
-	"internal/compose/companyscan":    "company_scan, the same per-reader shape — the model's reading of one account for one reader, regenerable from the records at any time and never served to another; the read's own history is the AI activity rail, which every transition announces",
-	"internal/compose/contactbrief":   "contact_brief, the same",
-	"internal/compose/dealstatus":     "deal_status_card, the same per-reader shape — a card written from the facts one contact may see, never served to another — and deal_move_dismissal, one reader's set-aside of that card's move",
-	"internal/compose/worklistsnap":   "worklist_snapshot, the same per-reader shape — one contact's position in one walk, keyed on reader_id, holding identity and order and no record content at all",
-	"internal/compose/homecache":      "home_read_cache, the same per-reader shape — one reader's last answer to a Home read, never served to another — with the invalidation state that ends it: home_read_fence, one global generation, home_read_fence_pending, the transactions that will advance it, and home_read_forgotten, each reader's last write",
-	"internal/compose/companydossier": "company_dossier and company_growth_fit, the same — the DDL says outright that an assembly generated for one reader is never served to another, and growth fit folds seat-dependent context on top",
+	"internal/compose/contact360":   "contact_moment_dismissal, the same per-reader shape",
+	"internal/compose/companyscan":  "company_scan, the same per-reader shape — the model's reading of one account for one reader, regenerable from the records at any time and never served to another; the read's own history is the AI activity rail, which every transition announces",
+	"internal/compose/dealstatus":   "deal_move_dismissal, the same per-reader shape: one reader's set-aside of the move their status card proposed",
+	"internal/compose/worklistsnap": "worklist_snapshot, the same per-reader shape — one contact's position in one walk, keyed on reader_id, holding identity and order and no record content at all",
+	"internal/compose/homecache":    "home_read_cache, the same per-reader shape — one reader's last answer to a Home read, never served to another — with the invalidation state that ends it: home_read_fence, one global generation, home_read_fence_pending, the transactions that will advance it, and home_read_forgotten, each reader's last write",
 
 	// The installation's ciphertext store. vault_secret is a ref -> ciphertext
 	// row carrying NO workspace_id — it is installation configuration, not a

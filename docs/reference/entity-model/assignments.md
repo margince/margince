@@ -96,6 +96,7 @@ The 2 tables owned by `assignments`, as the migrations build them. [Back to the 
 **Indexes**
 
 - `record_role_key_key`: `unique, btree (key)`
+- `record_role_label_once`: `unique, btree (lower(btrim(label)))`
 - `record_role_pkey`: `unique, btree (id)`
 
 **Triggers**

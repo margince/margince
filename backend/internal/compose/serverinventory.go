@@ -103,6 +103,7 @@ type Server struct {
 	backfillHandlers
 	aiRoutingHandlers
 	aiAdminHandlers
+	teamRulesHandlers
 	captureSettingsHandlers
 	integrationsSettingsHandlers
 	ownDomainHandlers
@@ -129,6 +130,7 @@ type Server struct {
 	channelHandlers
 	chatLinkHandlers
 	chatEventHandlers
+	whatsAppEventHandlers
 	traceHandlers
 	pipelineTraceHandlers
 	filteredExportHandlers
@@ -157,7 +159,7 @@ type Server struct {
 	recoveryHealthHandlers
 	vacuumhealth.Endpoint
 	automaticWorkHandlers
-	// Extension inventory, settings, transports: stateless, embedded as the zero value.
+	// Extension inventory, settings, transports.
 	extensionsHandlers
 	extensionSettingsHandlers
 	channelProvidersHandlers
@@ -165,6 +167,7 @@ type Server struct {
 	contact360Handlers
 	project360Handlers
 	contactBriefHandlers
+	taskExplainHandlers
 	meetingBriefHandlers
 	dealStatusHandlers
 	roomBriefHandlers
@@ -215,8 +218,7 @@ type Server struct {
 	// itself. In compose because a pass is assembled from the deals and
 	// coverage seams, which assurance owns nothing of.
 	assuranceRunHandlers
-	// Introductions: one rep asks a colleague to open a door, and what came of it.
-	introductionHandlers
+	introductionHandlers // one rep asks a colleague to open a door, and what came of it
 	initiativeHandlers
 
 	// signInProviders accumulates the federated sign-in providers this
@@ -249,13 +251,12 @@ type Server struct {
 	// challenge points at. WithMCPResource sets both from --public-base-url,
 	// never from a request header a caller controls.
 	mcpResource, mcpAllowedOrigin string
-	// mcpChat lets a tool ask in the chat, and a waiting call be confirmed there.
-	mcpChat mcpChatSettings
+	// mcpDoor is what the /mcp door carries beside the registry.
+	mcpDoor mcpDoorSettings
 	// dispactCalls checks the Dispact app's call tokens on /mcp; nil serves none.
 	dispactCalls *dispactapp.Edge
 	// chatPulls queues a chat_pull for a Dispact notice; WithChatLinks sets it.
 	chatPulls *jobs.Runner
-
 	// metricsToken gates /metrics, from --metrics-token. Empty refuses every
 	// scrape unless metricsOpen is set, because the exposition names routes and
 	// per-workspace job telemetry. It is checked over plain HTTP, so it holds
@@ -265,7 +266,6 @@ type Server struct {
 	// believes, from WithTrustedProxies. The zero value trusts nobody.
 	trustedProxies httpserver.TrustedProxies
 	apiBaseURL     string // --api-base-url, from WithAPIBaseURL; empty where the public origin serves the API
-
 	// metricsOpen serves /metrics to any caller, set by WithOpenMetrics from an
 	// explicit --metrics-access=open for a deployment whose network boundary
 	// already contains the port.

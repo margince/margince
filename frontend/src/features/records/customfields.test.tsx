@@ -91,6 +91,7 @@ describe("FieldTable", () => {
         onArchive={() => {}}
         onSetting={() => {}}
         onKinds={() => {}}
+        onPipelines={() => {}}
       />,
     );
     expect(screen.getByText("Renewal date")).toBeInTheDocument();
@@ -116,6 +117,7 @@ describe("FieldTable", () => {
         onRename={() => {}}
         onArchive={() => {}}
         onKinds={() => {}}
+        onPipelines={() => {}}
         onSetting={() => {}}
       />,
     );
@@ -134,6 +136,7 @@ describe("FieldTable", () => {
         onArchive={() => {}}
         onSetting={() => {}}
         onKinds={() => {}}
+        onPipelines={() => {}}
       />,
     );
     const menu = await openFieldMenu("Renewal date");
@@ -156,6 +159,7 @@ describe("FieldTable", () => {
         onArchive={() => {}}
         onSetting={() => {}}
         onKinds={() => {}}
+        onPipelines={() => {}}
       />,
     );
     expect(
@@ -175,6 +179,7 @@ describe("FieldTable", () => {
         onArchive={() => {}}
         onSetting={() => {}}
         onKinds={() => {}}
+        onPipelines={() => {}}
       />,
     );
     expect(screen.getByText(en["cf.retired"])).toBeInTheDocument();
@@ -666,6 +671,49 @@ describe("CustomFieldsAdmin", () => {
     expect(patch?.url).toContain("/custom-fields/d1");
     expect(patch?.body).toMatchObject({ label: "Contract end date" });
   });
+
+  it("says a label the server finds too long on the rename field", async () => {
+    const served = customFieldsBackend(
+      [field({ id: "d1", label: "Renewal date" })],
+      [],
+      [],
+    );
+    vi.stubGlobal("fetch", async (input: RequestInfo | URL) =>
+      input instanceof Request && input.method === "PATCH"
+        ? jsonResponse(
+            {
+              status: 422,
+              code: "validation_error",
+              detail: "the request failed validation",
+              details: {
+                errors: [
+                  {
+                    field: "label",
+                    code: "too_long",
+                    message: "at most 120 characters",
+                    max: 120,
+                  },
+                ],
+              },
+            },
+            422,
+          )
+        : served(input),
+    );
+    const user = userEvent.setup();
+    renderAdmin();
+    const menu = await openFieldMenu("Renewal date");
+    await user.click(menu.getByRole("button", { name: en["cf.edit"] }));
+    const input = screen.getByLabelText(/New label/i);
+    expect(input).toHaveAttribute("data-character-limit", "120");
+    await user.type(input, " for renewals");
+    await user.click(screen.getByRole("button", { name: /Save/i }));
+    await waitFor(() =>
+      expect(input).toHaveAccessibleDescription(
+        "New label: at most 120 characters.",
+      ),
+    );
+  });
 });
 
 describe("the create-form setting on the field table", () => {
@@ -749,6 +797,7 @@ describe("the create-form setting on the field table", () => {
         onArchive={() => {}}
         onSetting={() => {}}
         onKinds={() => {}}
+        onPipelines={() => {}}
       />,
     );
     expect(screen.queryByRole("switch")).toBeNull();
@@ -835,6 +884,7 @@ describe("the reporting setting on the field table", () => {
         onArchive={() => {}}
         onSetting={() => {}}
         onKinds={() => {}}
+        onPipelines={() => {}}
       />,
     );
     expect(
@@ -853,6 +903,7 @@ describe("the reporting setting on the field table", () => {
         onArchive={() => {}}
         onSetting={() => {}}
         onKinds={() => {}}
+        onPipelines={() => {}}
       />,
     );
     expect(screen.queryByText(en["cf.col.inReports"])).toBeNull();
@@ -869,6 +920,7 @@ describe("the reporting setting on the field table", () => {
         onArchive={() => {}}
         onSetting={() => {}}
         onKinds={() => {}}
+        onPipelines={() => {}}
       />,
     );
     expect(

@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent, within } from "storybook/test";
 
 import type { components } from "../../api/schema";
+import { en } from "../../i18n/en";
 import {
   installFetchStub,
   meRoute,
@@ -129,7 +130,38 @@ export const AudienceOpen: Story = {
     await userEvent.click(
       await screen.findByRole("button", { name: "Change visibility" }),
     );
-    await screen.findByRole("dialog", { name: "Who may read this message?" });
+    await screen.findByRole("dialog", {
+      name: en["activity.audience.callTitle"],
+    });
+  },
+};
+
+/** A captured chat message: the thread dialog, saying it changes the whole conversation. */
+export const ChatThreadAudienceOpen: Story = {
+  args: {
+    activity: {
+      ...BASE,
+      kind: "message",
+      channel_provider: "whatsapp",
+      captured_by: "connector:whatsapp:u1",
+      thread_key: "chat:abc",
+      mailbox_imported: true,
+      thread_audience_yours: true,
+    },
+  },
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", {
+        name: "More actions for Angebot Q4 — Rückfragen",
+      }),
+    );
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Visibility" }),
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: "Who may read this conversation?",
+    });
+    await within(dialog).findByText(/whole conversation, not one message/);
   },
 };
 

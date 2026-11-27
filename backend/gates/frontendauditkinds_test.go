@@ -49,7 +49,7 @@ var runtimeTypedAuditWriters = map[string]func(t *testing.T) []string{
 	"backend/internal/contracts/api_gen.go:ClaimRecord": recordTypeNames,
 	// A confirmation is about the contact or lead a send is addressed to.
 	"backend/internal/modules/consent/lawfulbasiswarning.go:confirmOneTx":       confirmedSubjectKinds,
-	"backend/internal/modules/contacts/mergekindid.go:auditDeclaredMoves":       declaredRelinkedEntities,
+	"backend/internal/platform/recordmerge/kindid.go:auditDeclaredMoves":        declaredRelinkedEntities,
 	"backend/internal/modules/privacy/erasure_declared.go:redactDeclaredTables": declaredErasedEntities,
 	"backend/internal/modules/privacy/retentionactions.go:apply":                retentionDispatchObjects,
 	// A stored setting's change is audited under the object that gates it.
@@ -292,7 +292,7 @@ func auditKindLabels(t *testing.T, page, kinds, search string) (worded, owned ma
 	if err != nil {
 		t.Fatalf("reading %s: %v", page, err)
 	}
-	text := tsWithoutComments(string(source))
+	text := gatekit.TSWithoutComments(string(source))
 	at := indexAfter(text, "const KIND_LABELS")
 	open := -1
 	if at >= 0 {

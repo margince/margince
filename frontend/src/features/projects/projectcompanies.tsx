@@ -17,12 +17,13 @@ import {
   useEmployerSummary,
 } from "../../components/contactemployersummary";
 import { AppLink } from "../../design-system/applink";
-import { Badge, Button, OverflowMenu } from "../../design-system/atoms";
+import { Badge } from "../../design-system/atoms";
 import { CompanyCard } from "../../design-system/companycard";
 import {
   type LinkedProject,
   ProjectLinks,
   type ProjectLinksAdapter,
+  RemoveLinkMenu,
 } from "../../design-system/projectlinks";
 import type { RecordPickerCandidate } from "../../design-system/recordpicker";
 import { useLocale, useT } from "../../i18n";
@@ -165,19 +166,7 @@ function ProjectCompanyCard({
           : null
       }
       actions={
-        onDetach && (
-          <OverflowMenu label={t("record.moreActions")}>
-            <Button
-              variant="danger"
-              onClick={onDetach}
-              // Five identical "Detach" items cannot say which company each
-              // one takes off.
-              aria-label={t("projectLinks.detachNamed", { name: company.name })}
-            >
-              {t("projectLinks.detach")}
-            </Button>
-          </OverflowMenu>
-        )
+        onDetach && <RemoveLinkMenu name={company.name} onRemove={onDetach} />
       }
     />
   );

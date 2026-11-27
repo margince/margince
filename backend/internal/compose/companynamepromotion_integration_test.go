@@ -59,8 +59,8 @@ func seedSigningEmployee(t *testing.T, e *integration.Env, company ids.UUID, ful
 			return err
 		}
 		_, err := tx.Exec(ctx, `
-			INSERT INTO contact_profile_field (contact_id, field, value, evidence_snippet, source_ref, confidence, source, captured_by)
-			VALUES ($1, 'company_name', $2, $2, 'activity:seed', 0.9, 'capture_enrich', 'agent:enrich')`, contact, signedName)
+			INSERT INTO field_provenance (object_type, object_id, field_name, value, evidence_snippet, evidence_ref, confidence, source, captured_by)
+			VALUES ('contact', $1, 'company_name', $2, $2, 'activity:seed', 0.9, 'capture_enrich', 'agent:enrich')`, contact, signedName)
 		return err
 	})
 	if err != nil {
@@ -75,8 +75,8 @@ func seedSigningEmployee(t *testing.T, e *integration.Env, company ids.UUID, ful
 func seedDossierName(t *testing.T, e *integration.Env, company ids.UUID, legalName string) {
 	t.Helper()
 	e.WsExec(t, `
-		INSERT INTO company_profile_field (company_id, field, value, evidence_snippet, source_url, confidence, source, captured_by)
-		VALUES ($1, 'legal_name', $2, $2, 'https://gitex.example', 0.9, 'site_read', 'connector:siteread')`,
+		INSERT INTO field_provenance (object_type, object_id, field_name, value, evidence_snippet, evidence_ref, confidence, source, captured_by)
+		VALUES ('company', $1, 'legal_name', $2, $2, 'https://gitex.example', 0.9, 'site_read', 'connector:siteread')`,
 		company, legalName)
 }
 
@@ -274,6 +274,37 @@ func TestCompanyNamePromotionDoesNotReofferADeclinedRename(t *testing.T) {
 	}
 	if name, source := companyNameAndSource(t, e, company); name != "Gitex" || source != "domain" {
 		t.Fatalf("company = %q/%q — a declined rename must change nothing", name, source)
+	}
+}
+
+// An approved rename is written by the promotion agent acting for the decider,
+// under the decider's grants.
+func TestAnApprovedCompanyRenameIsWrittenByTheAgentForTheDecider(t *testing.T) {
+	e := integration.Setup(t)
+	// The effect writes under the approver's live grants, and the harness
+	// seeds seats with no role.
+	e.GrantRole(t, e.Rep1, "admin")
+	company := seedProvisionalCompany(t, e, "Gitex", "domain")
+	seedSigningEmployee(t, e, company, "Alice Signer", "Gitex Global")
+	promoter := NewCompanyNamePromoter(e.Pool, slog.New(slog.DiscardHandler))
+	if err := promoter.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), e.WS); err != nil {
+		t.Fatalf("RunWorkspace: %v", err)
+	}
+	approvalID := e.WsScalar(t, `SELECT id::text FROM approval WHERE kind = 'company_name_promotion' AND target_entity_id = $1`, company)
+	id, err := ids.Parse(approvalID)
+	if err != nil {
+		t.Fatalf("reading the staged offer: %v", err)
+	}
+	if _, err := NewApprovalsServiceWithEffects(e.Pool).Decide(e.As(e.Rep1, nil, integration.AdminPerms),
+		ids.From[ids.ApprovalKind](id), true, nil); err != nil {
+		t.Fatalf("approving the rename: %v", err)
+	}
+	if name, _ := companyNameAndSource(t, e, company); name != "Gitex Global" {
+		t.Fatalf("company is named %q after the approval, want Gitex Global", name)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'company' AND entity_id = $1
+		AND actor_type = 'agent' AND actor_id = $2 AND on_behalf_of = $3`, company, companyNamePromotionActor, e.Rep1); n != 1 {
+		t.Errorf("%d renames by %s for the decider, want 1", n, companyNamePromotionActor)
 	}
 }
 

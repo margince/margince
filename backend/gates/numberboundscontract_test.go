@@ -8,7 +8,6 @@ package gates
 import (
 	"go/ast"
 	"go/parser"
-	"go/token"
 	"reflect"
 	"slices"
 	"strconv"
@@ -63,7 +62,7 @@ func TestEveryNumberBoundIsTaggedForTheDecoders(t *testing.T) {
 		t.Fatal(err)
 	}
 	var doc yaml.Node
-	if err := yaml.Unmarshal(raw, &doc); err != nil {
+	if err := unmarshalYAML(raw, &doc); err != nil {
 		t.Fatal(err)
 	}
 	census := newBoundCensus(t, doc.Content[0])
@@ -305,7 +304,7 @@ func mappingChild(node *yaml.Node, key string) *yaml.Node {
 // Type.json[.json…] through inline structs and lists of them, to "min,max".
 func boundTaggedFields(t *testing.T, path string) map[string]string {
 	t.Helper()
-	file, err := parser.ParseFile(token.NewFileSet(), path, nil, parser.SkipObjectResolution)
+	file, err := gatekit.ParseFile(path, parser.SkipObjectResolution)
 	if err != nil {
 		t.Fatal(err)
 	}

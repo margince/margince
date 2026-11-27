@@ -153,7 +153,7 @@ BEGIN
   -- statement that repeats its WHERE.
   INSERT INTO team (name)
   VALUES ('DACH Sales')
-  ON CONFLICT (name) WHERE archived_at IS NULL DO NOTHING;
+  ON CONFLICT (lower(btrim(name))) WHERE archived_at IS NULL DO NOTHING;
 
   -- Live only, for the same reason the upsert above says archived_at IS NULL: the
   -- name is unique among live rows now, so a name alone can match an archived team
@@ -247,6 +247,10 @@ END $$;
 -- what makes this a demonstration of the real path rather than a table of
 -- rows nobody produced — and it is the only way the hash discipline, the
 -- credit-note placement and the derived statuses are exercised at all.
+--
+-- The connection starts as a connected one does, `connecting` until its first
+-- pass. `make seed-dev` queues that pass through the API once this file has
+-- run, because the pass mirrors only the links made below.
 DO $$
 DECLARE
   ws   uuid;
@@ -259,13 +263,16 @@ BEGIN
   END IF;
   SELECT id INTO conn
     FROM finance_connection
-   WHERE provider = 'offline_demo' AND archived_at IS NULL;
+   WHERE provider = 'offline_demo';
 
   IF conn IS NULL THEN
     INSERT INTO finance_connection
-           (provider, status, credential_ref, source, captured_by)
-    VALUES ('offline_demo', 'active', 'extension:offline_demo', 'system', 'system:seed')
+           (provider, status, captured_by)
+    VALUES ('offline_demo', 'connecting', 'system:seed')
     RETURNING id INTO conn;
+    INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id, after)
+    VALUES ('system', 'system:seed', 'create', 'finance_connection', conn,
+            jsonb_build_object('status', 'connecting', 'last_error_code', ''));
   END IF;
 
   -- The directory the links name, as the finance-demo unit lists it and with
@@ -295,12 +302,11 @@ BEGIN
   -- unit's directory (DEMO-0001 to DEMO-0050), so a re-run links only what is
   -- new and never reuses an id another company holds.
   INSERT INTO finance_customer_link
-         (connection_id, company_id, external_customer_id,
-          sync_hash, source, captured_by)
-  SELECT conn, unlinked.id, free.external_id, 'seed', 'system', 'system:seed'
+         (connection_id, company_id, external_customer_id, captured_by)
+  SELECT conn, unlinked.id, free.external_id, 'system:seed'
     FROM (SELECT c.id, row_number() OVER (ORDER BY c.created_at, c.id) AS n
             FROM company c
-           WHERE c.archived_at IS NULL AND c.lifecycle = 'customer'
+           WHERE c.archived_at IS NULL AND c.status = 'customer'
              AND NOT EXISTS (SELECT 1 FROM finance_customer_link l
                               WHERE l.connection_id = conn AND l.company_id = c.id
                                 AND l.archived_at IS NULL)) unlinked
@@ -314,7 +320,7 @@ BEGIN
 
   SELECT count(*) INTO unmatched
     FROM company c
-   WHERE c.archived_at IS NULL AND c.lifecycle = 'customer'
+   WHERE c.archived_at IS NULL AND c.status = 'customer'
      AND NOT EXISTS (SELECT 1 FROM finance_customer_link l
                       WHERE l.connection_id = conn AND l.company_id = c.id
                         AND l.archived_at IS NULL);

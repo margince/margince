@@ -146,7 +146,7 @@ func (s *Dispatcher) answerTaskMethod(ctx context.Context, resp rpcResponse, met
 // context it never authenticated, which is this server's defect rather than the
 // caller's — reported as one, with the cause kept server-side.
 func (s *Dispatcher) bindTaskCall(ctx context.Context, method string) (context.Context, *rpcError) {
-	bound, err := s.bind(withRecordLinks(ctx, s.publicOrigin))
+	bound, err := s.bind(WithRecordLinks(ctx, s.publicOrigin))
 	if err != nil {
 		s.log.Error("mcp: task method reached dispatch on an unauthenticated context",
 			"method", method, "err", err)
@@ -227,11 +227,11 @@ func (s *Dispatcher) cancelTask(ctx context.Context, task Task) (map[string]any,
 		// client its cancellation succeeded while the proposal stayed live in a
 		// contact's inbox — and the client would stop polling the very task that
 		// could still act.
-		s.log.Error("mcp: withdrawing a cancelled task's approval failed",
+		s.log.Error("mcp: withdrawing a canceled task's approval failed",
 			"task", task.ID, "approval", task.ApprovalID, "err", err)
 		return nil, &rpcError{
 			Code: codeInternalError,
-			Message: "the approval behind this task could not be withdrawn, so it was not cancelled: " +
+			Message: "the approval behind this task could not be withdrawn, so it was not canceled: " +
 				"try again, or ask the user to decide it in Margince",
 		}
 	}
@@ -246,11 +246,11 @@ func (s *Dispatcher) cancelTask(ctx context.Context, task Task) (map[string]any,
 		// that believes that stops polling — leaving a task nothing will ever
 		// settle. Losing the RACE to an executor is different and returns nil:
 		// there the task does reach a terminal state, just not this one.
-		s.log.Error("mcp: recording a cancelled task failed", "task", task.ID, "err", err)
+		s.log.Error("mcp: recording a canceled task failed", "task", task.ID, "err", err)
 		return nil, &rpcError{
 			Code: codeInternalError,
-			Message: "the cancellation could not be recorded, so this task was not cancelled: " +
-				"poll it again, or try cancelling once more",
+			Message: "the cancellation could not be recorded, so this task was not canceled: " +
+				"poll it again, or try canceling once more",
 		}
 	}
 	if !cancelled {
@@ -258,7 +258,7 @@ func (s *Dispatcher) cancelTask(ctx context.Context, task Task) (map[string]any,
 		// has already settled. The ack stays empty and claims nothing — the
 		// client learns the real terminal state by polling, which is what the
 		// specification means by cooperative.
-		s.log.Info("mcp: a cancelled task was already executing or settled",
+		s.log.Info("mcp: a canceled task was already executing or settled",
 			"task", task.ID, "status", task.Status)
 	}
 	return map[string]any{}, nil

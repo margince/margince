@@ -9,7 +9,7 @@ package integration
 // partial update carrying every accepted field, then one audit activity
 // note per field (subject "Extraction accepted: <field>", body = the
 // grounding source quote, linked to the deal). Unedited fields carry the
-// machine stamp (captured_by agent:attachment-extractor); an edited field
+// machine stamp (captured_by system:extraction_accept); an edited field
 // is the human's own write (captured_by human:<uid>, provenance human).
 // Every refusal — non-deal parent, ungrounded key, missing grant,
 // invisible parent — is whole-request with ZERO writes.
@@ -101,7 +101,7 @@ func seededReadingDetail(fields []extraction.ExtractedField) string {
 			return ""
 		}
 	}
-	return "this document states none of the deal fields clearly enough to offer one"
+	return "This document states none of the deal fields clearly enough to offer one."
 }
 
 // acceptEnv is one deal-scoped attachment with the fixture extractor wired
@@ -154,7 +154,7 @@ func (a acceptEnv) acceptNoteCount(t *testing.T, field, body, capturedBy string)
 	return a.WsCount(t, `
 		SELECT count(*) FROM activity a
 		JOIN activity_link al ON al.activity_id = a.id
-		WHERE a.kind = 'note' AND a.source = 'attachment_extraction_accept'
+		WHERE a.kind = 'note' AND a.source_system = 'attachment_extraction_accept'
 		  AND a.subject = $1 AND a.body = $2 AND a.captured_by = $3
 		  AND al.entity_type = 'deal' AND al.deal_id = $4`,
 		"Extraction accepted: "+field, body, capturedBy, a.deal)
@@ -164,7 +164,7 @@ func (a acceptEnv) acceptNoteCount(t *testing.T, field, body, capturedBy string)
 // assertions pin on it.
 func (a acceptEnv) totalAcceptNotes(t *testing.T) int {
 	t.Helper()
-	return a.WsCount(t, `SELECT count(*) FROM activity WHERE source = 'attachment_extraction_accept'`)
+	return a.WsCount(t, `SELECT count(*) FROM activity WHERE source_system = 'attachment_extraction_accept'`)
 }
 
 // requireUntouchedDeal asserts the refusal left the seeded deal exactly as
@@ -224,12 +224,16 @@ func TestAcceptAttachmentExtractionPersistsFieldsAndAuditNotes(t *testing.T) {
 		"currency":            "all amounts in EUR",
 		"expected_close_date": "offer valid until " + a.closeDate,
 	} {
-		if n := a.acceptNoteCount(t, field, quote, "agent:attachment-extractor"); n != 1 {
+		if n := a.acceptNoteCount(t, field, quote, "system:extraction_accept"); n != 1 {
 			t.Errorf("audit notes for %s = %d, want exactly 1 (subject/body/captured_by/deal link all pinned)", field, n)
 		}
 	}
 	if total := a.totalAcceptNotes(t); total != 4 {
 		t.Errorf("total accept notes = %d, want 4", total)
+	}
+	if n := a.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'activity' AND action = 'create'
+		AND actor_type = 'system' AND actor_id = 'system:extraction_accept' AND on_behalf_of IS NOT NULL`); n != 4 {
+		t.Errorf("%d notes written by system:extraction_accept for the accepter, want 4", n)
 	}
 }
 
@@ -267,7 +271,7 @@ func TestAcceptAttachmentExtractionEditFlipsProvenanceAndCapturedBy(t *testing.T
 	if n := a.acceptNoteCount(t, "amount_minor", "Total: EUR 1,500.00", "human:"+a.Rep1.String()); n != 1 {
 		t.Errorf("edited-field notes with the human stamp = %d, want 1", n)
 	}
-	if n := a.acceptNoteCount(t, "currency", "all amounts in EUR", "agent:attachment-extractor"); n != 1 {
+	if n := a.acceptNoteCount(t, "currency", "all amounts in EUR", "system:extraction_accept"); n != 1 {
 		t.Errorf("unedited-field notes with the machine stamp = %d, want 1", n)
 	}
 }
@@ -286,7 +290,7 @@ func TestAcceptAttachmentExtractionRefusesNonDealAttachment(t *testing.T) {
 	if _, ok := errors.AsType[*compose.UnsupportedEntityTypeError](err); !ok {
 		t.Fatalf("err = %v, want UnsupportedEntityTypeError (only a deal-scoped attachment has a deal to write)", err)
 	}
-	if n := e.WsCount(t, `SELECT count(*) FROM activity WHERE source = 'attachment_extraction_accept'`); n != 0 {
+	if n := e.WsCount(t, `SELECT count(*) FROM activity WHERE source_system = 'attachment_extraction_accept'`); n != 0 {
 		t.Errorf("the refused non-deal accept still wrote %d note(s), want 0", n)
 	}
 }
@@ -393,7 +397,7 @@ func TestAcceptAttachmentExtractionEditedAcceptRequiresActivityGrant(t *testing.
 	}); err != nil {
 		t.Fatalf("unedited accept under the same rep grant: %v", err)
 	}
-	if n := a.acceptNoteCount(t, "amount_minor", "Total: EUR 1,500.00", "agent:attachment-extractor"); n != 1 {
+	if n := a.acceptNoteCount(t, "amount_minor", "Total: EUR 1,500.00", "system:extraction_accept"); n != 1 {
 		t.Errorf("machine-stamped notes after the unedited accept = %d, want 1", n)
 	}
 }
@@ -471,7 +475,7 @@ func TestExtractionAcceptDealUpdateAndNotesShareOneTransaction(t *testing.T) {
 			Kind:   string(crmcontracts.ActivityKindNote),
 			Body:   new("should never persist past the rollback"),
 			Links:  []activities.ActivityLinkInput{{EntityType: acceptDealEntityForTest, EntityID: a.deal}},
-			Source: "atomic_tx_probe",
+			Source: "manual",
 		}); err != nil {
 			return err
 		}
@@ -484,7 +488,7 @@ func TestExtractionAcceptDealUpdateAndNotesShareOneTransaction(t *testing.T) {
 	if n := a.WsCount(t, `SELECT count(*) FROM deal WHERE id = $1 AND name = 'Rolled Back Name'`, a.deal); n != 0 {
 		t.Error("the deal update persisted despite the shared transaction rolling back — UpdateDealTx is not honoring the caller's transaction")
 	}
-	if n := a.WsCount(t, `SELECT count(*) FROM activity WHERE source = 'atomic_tx_probe'`); n != 0 {
+	if n := a.WsCount(t, `SELECT count(*) FROM activity WHERE body = 'should never persist past the rollback'`); n != 0 {
 		t.Error("the note persisted despite the shared transaction rolling back — LogActivityTx is not honoring the caller's transaction")
 	}
 }
@@ -551,7 +555,7 @@ func TestAcceptAttachmentExtractionWritesTheReadingItWasShownNotTheNewest(t *tes
 	}
 	// The evidence has to match the value: a note quoting the newer reading
 	// beside the older reading's number is the same defect, half-landed.
-	if n := a.acceptNoteCount(t, "amount_minor", "Total: EUR 1,500.00", "agent:attachment-extractor"); n != 1 {
+	if n := a.acceptNoteCount(t, "amount_minor", "Total: EUR 1,500.00", "system:extraction_accept"); n != 1 {
 		t.Errorf("audit notes quoting the SHOWN reading's evidence = %d, want 1", n)
 	}
 }

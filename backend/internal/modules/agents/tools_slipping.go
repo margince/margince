@@ -52,10 +52,13 @@ type SlippingDeal struct {
 	// ABSENCE: what the deal list carries is what a deal has, so this is
 	// answered by its own read (compose.dealsWithNoOpenNextStep, which states
 	// what counts).
-	NoOpenNextStep    bool
-	LastActivityAt    *time.Time
-	CreatedAt         time.Time
-	ExpectedCloseDate *time.Time
+	NoOpenNextStep bool
+	LastActivityAt *time.Time
+	// LastActivityDateOnly says the activity behind LastActivityAt names only
+	// a date, so days since it count from that date.
+	LastActivityDateOnly bool
+	CreatedAt            time.Time
+	ExpectedCloseDate    *time.Time
 }
 
 // SlippingLister serves the row-scoped candidate set: open deals idle longer
@@ -113,7 +116,7 @@ type whatsSlippingThisWeek struct {
 
 func (t whatsSlippingThisWeek) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
-		Name: "whats_slipping_this_week", Title: "What's slipping this week", Version: toolVersionV1,
+		Name: "whats_slipping_this_week", Title: "What is slipping this week", Version: toolVersionV1,
 		ProductMadeAnswer: true,
 		Description:       whatsSlippingCopy.render(),
 		Instead:           whatsSlippingCopy.Instead,

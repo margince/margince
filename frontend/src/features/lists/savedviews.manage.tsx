@@ -9,7 +9,12 @@ import { useSinglePress } from "../../design-system/presslatch";
 import { useFieldFaults } from "../../design-system/savepage";
 import { useLocale, useT } from "../../i18n";
 import { blankRequired, problemMessageOf } from "../../lib/problem";
-import { type SavedView, useSaveView } from "../../lib/savedviews.queries";
+import {
+  type SavedView,
+  useSaveView,
+  viewNameTaken,
+} from "../../lib/savedviews.queries";
+import { viewNameRefusal } from "./viewnamerefusal";
 import "./savedviews.css";
 
 // Renaming and deleting the reader's own saved views. One dialog listing every
@@ -77,7 +82,10 @@ function ManageViewsList({ views }: Readonly<{ views: readonly SavedView[] }>) {
   if (views.length === 0) {
     return <p className="surfacestate-empty">{t("views.none")}</p>;
   }
-  const problem = rename.error ?? remove.error;
+  const renameRefused = viewNameRefusal(rename.error, t);
+  const problem = renameRefused.nameProblem
+    ? remove.error
+    : (rename.error ?? remove.error);
   return (
     <ul className="savedviews-manage">
       {views.map((view) => (
@@ -90,15 +98,23 @@ function ManageViewsList({ views }: Readonly<{ views: readonly SavedView[] }>) {
               onSubmit={singlePress((event) => {
                 event.preventDefault();
                 const name = mode.name.trim();
-                const blank = blankRequired(locale, {
-                  name: [nameLabel, mode.name],
-                });
-                if (faults.show(blank)) {
+                // Another view's name is refused here, as Save view refuses it.
+                const refused = viewNameTaken(views, name, view.id)
+                  ? new Map([["name", t("views.nameTaken")]])
+                  : blankRequired(locale, { name: [nameLabel, mode.name] });
+                if (faults.show(refused)) {
                   return;
                 }
                 rename.mutate(
                   { id: view.id, name, version: mode.version },
-                  { onSuccess: () => setMode(null) },
+                  {
+                    onSuccess: () => setMode(null),
+                    onError: (error) => {
+                      const refused = viewNameRefusal(error, t);
+                      if (refused.nameProblem)
+                        faults.show(new Map([["name", refused.nameProblem]]));
+                    },
+                  },
                 );
               })}
             >

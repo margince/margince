@@ -38,7 +38,8 @@ import { listFormat } from "../../format/formatters";
 import { type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { labelFor } from "../../lib/labelfor";
-import { blankRequired, problemMessageOf } from "../../lib/problem";
+import { blankRequired } from "../../lib/problem";
+import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 import { useVocabGrants, vocabMenuColumn } from "../leads/leadvocab.rows";
 
 const RECORD_KINDS: Record<AssignmentRecordType, MessageKey> = {
@@ -190,13 +191,16 @@ function AddRoleDialog({
     [],
   );
   const name = label.trim();
-  const refused = nameRefusal(create.error, t, "recordRoles.duplicate");
+  const nameLabel = t("recordRoles.addLabel");
+  const refused = nameRefusal(create.error, t, {
+    label: nameLabel,
+    duplicate: "recordRoles.duplicate",
+  });
   const { refusedName: nameProblem, markSent } = useRefusedName(
     name,
     refused.nameProblem,
   );
   const singlePress = useSinglePress(create.isPending);
-  const nameLabel = t("recordRoles.addLabel");
   // The two choice groups word their sentence bare: their legends read as
   // phrases, not names.
   const save = () => {
@@ -248,6 +252,7 @@ function AddRoleDialog({
             <TextInput
               {...control}
               value={label}
+              maxLength={TEXT_LIMITS.label}
               onChange={(e) => {
                 setLabel(e.target.value);
                 faults.edited("label");
@@ -308,6 +313,10 @@ export function RecordRolesCard() {
   const [renaming, setRenaming] = useState<RecordRole | null>(null);
   const [renamingOpen, setRenamingOpen] = useState(false);
   const roles = rowsOf(query.data);
+  const renameRefused = nameRefusal(rename.error, t, {
+    label: t("recordRoles.addLabel"),
+    duplicate: "recordRoles.duplicate",
+  });
   const columns = roleColumns({
     t,
     canEdit,
@@ -375,7 +384,6 @@ export function RecordRolesCard() {
           }}
         />
       )}
-      {/* A rename cannot collide: only the key is unique, and it never changes. */}
       <NameDialog
         open={renamingOpen}
         onClose={() => setRenamingOpen(false)}
@@ -384,7 +392,9 @@ export function RecordRolesCard() {
         initial={renaming?.label ?? ""}
         confirmLabel={t("leadSources.renameSave")}
         pending={rename.isPending}
-        problem={rename.isError ? problemMessageOf(rename.error, t) : null}
+        problem={renameRefused.problem}
+        nameProblem={renameRefused.nameProblem}
+        maxLength={TEXT_LIMITS.label}
         onSave={(label) => {
           if (renaming) {
             rename.mutate(

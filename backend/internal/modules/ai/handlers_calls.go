@@ -4,12 +4,14 @@
 package ai
 
 import (
+	"context"
 	"net/http"
 	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -251,15 +253,40 @@ func (h Handlers) GetAiTaskFlow(w http.ResponseWriter, r *http.Request, params c
 		httperr.Write(w, r, err)
 		return
 	}
+	routing, err := h.storedRouting(r.Context())
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
 	out := crmcontracts.AiTaskFlow{Task: params.Task, Window: window, Total: flow.Total, Unanswered: flow.Unanswered, Steps: make([]crmcontracts.AiFlowStep, 0, len(flow.Steps))}
 	for _, step := range flow.Steps {
-		out.Steps = append(out.Steps, crmcontracts.AiFlowStep{
+		wire := crmcontracts.AiFlowStep{
 			Decision: step.Decision, Tier: string(step.Tier), Provider: step.Provider, Model: step.Model,
 			Attempts: step.Attempts, Answered: step.Answered, P50Ms: step.P50Ms, GaveUp: step.GaveUp,
 			Switched: step.Switched, SwitchedTo: optionalText(step.SwitchedTo),
-		})
+		}
+		// A decision lane needs no certification record, so its switch is not graded.
+		if step.Switched > 0 && step.SwitchedTo != "" && !step.Decision && routing != nil {
+			wire.SwitchedToCertification = switchedCertification(*routing, Task(params.Task), step.Tier, step.SwitchedTo)
+		}
+		out.Steps = append(out.Steps, wire)
 	}
 	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+// storedRouting is the routing settings a switched model is graded against.
+// It is nil on a role that composed none, and for a reader without the routing
+// grant. A grade shows which settings a tier is bound with, and the flow's own
+// grant does not admit that.
+func (h Handlers) storedRouting(ctx context.Context) (*RoutingConfig, error) {
+	if h.routing == nil || !auth.Allows(ctx, routingSettingsObject, principal.ActionRead) {
+		return nil, nil //nolint:nilnil // nil says no step is graded for this reader
+	}
+	stored, err := h.routing(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &stored, nil
 }
 
 // statsWindow is the named window and its length, refusing a name the

@@ -48,10 +48,10 @@ func TestMergingACompanyMovesTheRowsThatNameItByKindAndID(t *testing.T) {
 	ctx := asAdmin(e)
 	source, survivor := e.companyPair(ctx, t)
 	e.execAs(ctx, t, `INSERT INTO signal (id, kind, source, source_channel, entity_type, entity_id, summary, severity, captured_by)
-		VALUES ($1, 'risk', 'qc', 'inbound', 'company', $2, 'flagged', 'warn', 'human:x')`, ids.NewV7(), source)
+		VALUES ($1, 'risk', 'manual', 'inbound', 'company', $2, 'flagged', 'warn', 'human:x')`, ids.NewV7(), source)
 
-	e.execAs(ctx, t, `INSERT INTO attachment (id, entity_type, entity_id, company_id, filename, storage_key, source, captured_by)
-		VALUES ($1, 'company', $2, $2, 'msa.pdf', 'k/msa', 'upload', 'human:x')`, ids.NewV7(), source)
+	e.execAs(ctx, t, `INSERT INTO attachment (id, entity_type, entity_id, filename, storage_key, source, captured_by)
+		VALUES ($1, 'company', $2, 'msa.pdf', 'k/msa', 'upload', 'human:x')`, ids.NewV7(), source)
 
 	if _, err := e.store.MergeCompany(ctx, source, survivor, nil); err != nil {
 		t.Fatalf("merge: %v", err)
@@ -80,7 +80,7 @@ func TestMergingAContactMovesTheSignalsNamingIt(t *testing.T) {
 		t.Fatal(err)
 	}
 	e.execAs(ctx, t, `INSERT INTO signal (id, kind, source, source_channel, entity_type, entity_id, summary, severity, captured_by)
-		VALUES ($1, 'risk', 'qc', 'inbound', 'contact', $2, 'flagged', 'warn', 'human:x')`, ids.NewV7(), retired.ContactID)
+		VALUES ($1, 'risk', 'manual', 'inbound', 'contact', $2, 'flagged', 'warn', 'human:x')`, ids.NewV7(), retired.ContactID)
 
 	if _, err := e.store.MergeContact(ctx, retired.ContactID, survivor.ContactID, nil); err != nil {
 		t.Fatalf("merge: %v", err)

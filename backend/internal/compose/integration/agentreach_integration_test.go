@@ -118,7 +118,7 @@ func TestAColleaguesAgentReachesNoneOfAnotherUsersItems(t *testing.T) {
 		"launching a user's initiative":        {"change_reports", map[string]any{"action": "launch_initiative", "id": initiative, "if_version": 1}},
 	} {
 		got := colleague.mcp.Call(t, call.tool, call.args)
-		refused := strings.Contains(got.Text, "No such record") || strings.Contains(got.Text, "permission denied")
+		refused := strings.Contains(got.Text, "No such record") || strings.Contains(got.Text, "permission_denied")
 		if !got.IsError || !refused {
 			t.Errorf("%s answered a colleague's agent %+v, want a refusal", name, got)
 		}

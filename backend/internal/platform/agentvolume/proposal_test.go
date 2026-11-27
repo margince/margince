@@ -136,29 +136,42 @@ func TestOneCrossedWindowIsOneQuestionWhateverToolHitIt(t *testing.T) {
 // The identity has to be CONTAINED in the payload — the approvals engine
 // matches them by jsonb containment, so a member spelled differently on either
 // side silently stops deduplicating and the inbox fills up again.
+//
+// A passport minted under a connection is counted by the connection, the
+// shape every OAuth-connected agent has, so both shapes are checked.
 func TestTheIdentityIsContainedInTheStoredPayload(t *testing.T) {
-	p := NewReleaseProposal(Reading{Counter: Writes, Observed: 1, Limit: 2, Bucket: 7}, proposalPassport, ids.UUID{}, "search_records")
-	identity, err := p.Identity()
-	if err != nil {
-		t.Fatal(err)
-	}
-	raw, err := json.Marshal(p)
-	if err != nil {
-		t.Fatal(err)
-	}
+	for name, connection := range map[string]ids.UUID{"bare passport": {}, "passport under a connection": ids.NewV7()} {
+		t.Run(name, func(t *testing.T) {
+			p := NewReleaseProposal(Reading{Counter: Writes, Observed: 1, Limit: 2, Bucket: 7}, proposalPassport, connection, "search_records")
+			identity, err := p.Identity()
+			if err != nil {
+				t.Fatal(err)
+			}
+			raw, err := json.Marshal(p)
+			if err != nil {
+				t.Fatal(err)
+			}
 
-	var stored, want map[string]any
-	if err := json.Unmarshal(raw, &stored); err != nil {
-		t.Fatal(err)
+			var stored, want map[string]any
+			if err := json.Unmarshal(raw, &stored); err != nil {
+				t.Fatal(err)
+			}
+			if err := json.Unmarshal(identity, &want); err != nil {
+				t.Fatal(err)
+			}
+			for key, value := range want {
+				if stored[key] != value {
+					t.Errorf("identity member %q is %#v in the identity and %#v in the payload; containment will not match",
+						key, value, stored[key])
+				}
+			}
+		})
 	}
-	if err := json.Unmarshal(identity, &want); err != nil {
-		t.Fatal(err)
-	}
-	for key, value := range want {
-		if stored[key] != value {
-			t.Errorf("identity member %q is %#v in the identity and %#v in the payload; containment will not match",
-				key, value, stored[key])
-		}
+}
+
+func TestAProposalWithNoSubjectHasNoIdentity(t *testing.T) {
+	if _, err := (ReleaseProposal{Counter: Writes, Bucket: "7", Passport: proposalPassport.String()}).Identity(); err == nil {
+		t.Error("a proposal naming no subject produced an identity the stored payload cannot contain")
 	}
 }
 

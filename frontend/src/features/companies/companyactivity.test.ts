@@ -42,7 +42,7 @@ type Reading = NonNullable<NonNullable<Company360["state_strip"]>["dormancy"]>;
 function reading(over: Partial<Reading>): Company360 {
   return view({
     state_strip: {
-      account: { lifecycle: "customer", relationship_types: [] },
+      account: { status: "customer", relationship_types: [] },
       dormancy: {
         rung: "active",
         silent_days: 0,
@@ -66,6 +66,22 @@ describe("an unrated account's verdict", () => {
       sentence: t("co.verdict.lastExchange", { date: "20 Oct" }),
       tone: "success",
     });
+  });
+
+  it("dates a date-only last activity by its own date far east of UTC", () => {
+    const east = { ...words, zone: "Pacific/Kiritimati" } as const;
+    const at = "2026-10-20T12:00:00Z";
+    const sentence = (precision: "day" | "instant") =>
+      companyActivityVerdict(
+        reading({ last_activity_at: at, last_activity_precision: precision }),
+        east,
+      )?.sentence;
+    expect(sentence("day")).toBe(
+      t("co.verdict.lastExchange", { date: "20 Oct" }),
+    );
+    expect(sentence("instant")).toBe(
+      t("co.verdict.lastExchange", { date: "21 Oct" }),
+    );
   });
 
   it("names each colder rung with the silent days and the ladder behind it", () => {

@@ -94,7 +94,7 @@ describe("CompaniesScreen — what an account is to us", () => {
         data: [
           {
             ...company,
-            lifecycle: "prospect",
+            status: "prospect",
             relationship_types: ["partner", "supplier"],
           },
         ],
@@ -250,6 +250,26 @@ describe("CompaniesScreen — how many work here, how many deals are open", () =
     expect(within(quiet).getAllByText("0").length).toBe(2);
   });
 
+  it("says who holds the contacts a reader cannot see beside a count of 0", async () => {
+    stubFetch(async () =>
+      jsonResponse({
+        data: [
+          {
+            ...company,
+            contact_count: 0,
+            hidden_contact_holders: [{ user_id: "u-1", display_name: "Dana" }],
+          },
+        ],
+        page: { next_cursor: null, has_more: false },
+      }),
+    );
+    render(<CompaniesScreen />);
+    await showContacts();
+    await screen.findByText(
+      "Dana has contacts here you cannot see. Ask for an introduction.",
+    );
+  });
+
   it("leaves the deal count blank when the server withheld it", async () => {
     // A role without computed_field:read gets no key at all (STATE-4), and
     // the column must not turn that absence into a confident 0.
@@ -360,7 +380,7 @@ describe("CompaniesScreen — list dials reach the server (P-14)", () => {
     await user.click(screen.getByRole("button", { name: "Customers" }));
 
     await waitFor(() =>
-      expect(urls.some((url) => url.includes("lifecycle=customer"))).toBe(true),
+      expect(urls.some((url) => url.includes("status=customer"))).toBe(true),
     );
   });
 
@@ -370,7 +390,7 @@ describe("CompaniesScreen — list dials reach the server (P-14)", () => {
     render(<CompaniesScreen />);
     await waitFor(() => expect(urls.length).toBeGreaterThan(0));
 
-    const values = await openFilterValues(user, "Employees");
+    const values = await openFilterValues(user, "Company size");
     await user.click(
       within(values).getByRole("radio", { name: "51–200 employees" }),
     );
@@ -449,7 +469,7 @@ describe("CompaniesScreen — rich create (P-15)", () => {
     );
     await pickOption(
       user,
-      screen.getByLabelText("Employees"),
+      screen.getByLabelText("Company size"),
       "11–50 employees",
     );
     await user.click(screen.getByText("Add domain"));
@@ -531,7 +551,7 @@ describe("CompaniesScreen — a row on a phone", () => {
     listCompanies([
       {
         ...company,
-        lifecycle: "customer",
+        status: "customer",
         website_url: "https://www.brandt.example/de",
         description: "Fleet retrofits",
       },
@@ -547,7 +567,7 @@ describe("CompaniesScreen — a row on a phone", () => {
 
   it("leaves out a lifecycle nobody set and a website nobody recorded", async () => {
     stubWindowWidth(390);
-    listCompanies([{ ...company, lifecycle: "unknown", website_url: null }]);
+    listCompanies([{ ...company, status: "unknown", website_url: null }]);
     const row = await phoneRowOf("Brandt Automotive GmbH");
     expect(row.end).toEqual([]);
     expect(row.caption).toEqual([]);

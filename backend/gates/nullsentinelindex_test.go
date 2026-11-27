@@ -282,6 +282,10 @@ func TestAPredicatesCoalesceIsNotAKeysCoalesce(t *testing.T) {
 // follows in DO UPDATE is assignment, not inference.
 var onConflictClause = regexp.MustCompile(`(?is)ON CONFLICT\s*\(`)
 
+// onConflictWords are what every match of onConflictClause holds, or nil when
+// it promises none.
+var onConflictWords = requiredWords(onConflictClause)
+
 // goSourceFloor is what the tree held when this gate was written, for the reason
 // uniqueIndexFloor exists.
 const goSourceFloor = 2000
@@ -294,47 +298,65 @@ const goSourceFloor = 2000
 // writer of two tables.
 //
 // An index coalescing only real columns is untouched by that, here as above: its
-// clause carries no literal, so it does not match. A clause built from a
-// constant is invisible to this, which is the one shape it cannot see.
+// clause carries no literal, so it does not match. It reads the statements
+// TestAnUpsertOntoAPartialIndexRepeatsItsPredicate reads. A clause held in a
+// variable is invisible to both, which is the one shape they cannot see.
 func TestNoUpsertInfersASentinelIndex(t *testing.T) {
 	t.Parallel()
-
-	read := 0
-	for _, path := range goSourceFiles(t, "..") {
-		body, err := gatekit.ReadFile(path)
-		if err != nil {
-			t.Fatalf("reading %s: %v", path, err)
-		}
-		read++
-		// The string literals, not the file: a census over raw bytes reads prose
-		// about an inference as an inference, and go/parser is already the tool
-		// this package uses to see only real SQL.
-		//
-		// Joined, because a statement is often built from several — consentproof
-		// splices a column name mid-clause, so the parenthesis that opens an
-		// inference list and the one that closes it sit in different literals. The
-		// spliced expression itself is this census's blind spot: an identifier
-		// cannot hide a sentinel, but a COALESCE held in a variable could.
-		statements := strings.Join(sqlStringsIn(t, path, body), "\n")
-		{
-			for _, at := range onConflictClause.FindAllStringIndex(statements, -1) {
-				inference, _, ok := parenGroup(statements[at[1]-1:])
-				if !ok {
-					t.Errorf("%s: cannot read the inference list of an ON CONFLICT in %q — "+
-						"an unreadable clause is not a passing one", path, statements[at[0]:at[1]])
-					continue
-				}
-				if found := sentinelCoalesce(inference); found != "" {
-					t.Errorf("%s infers its index with %s — an index on that column is "+
-						"NULLS NOT DISTINCT, so the clause matches nothing and the upsert "+
-						"fails at runtime with 42P10", path, found)
-				}
-			}
+	statements, read := everyUpsertInTheTree(t)
+	for _, statement := range statements {
+		for _, finding := range sentinelInferences(statement) {
+			t.Error(finding)
 		}
 	}
 
 	if read < goSourceFloor {
 		t.Fatalf("read %d Go files, fewer than the %d this gate was written against — "+
 			"the census is reading less than the tree", read, goSourceFloor)
+	}
+}
+
+// sentinelInferences reports each ON CONFLICT in one statement that infers its
+// index through a sentinel, or whose inference list cannot be read.
+func sentinelInferences(statement upsertStatement) []string {
+	if !mayHoldWordsOf(statement.sql, onConflictWords) {
+		return nil
+	}
+	var findings []string
+	for _, at := range onConflictClause.FindAllStringIndex(statement.sql, -1) {
+		inference, _, ok := parenGroup(statement.sql[at[1]-1:])
+		switch found := sentinelCoalesce(inference); {
+		case !ok:
+			findings = append(findings, fmt.Sprintf("%s: cannot read the inference list of an ON CONFLICT in %q — "+
+				"an unreadable clause is not a passing one", statement.where, statement.sql[at[0]:at[1]]))
+		case found != "":
+			findings = append(findings, fmt.Sprintf("%s infers its index with %s — an index on that column is "+
+				"NULLS NOT DISTINCT, so the clause matches nothing and the upsert fails at runtime with 42P10",
+				statement.where, found))
+		}
+	}
+	return findings
+}
+
+// TestTheUpsertCensusSeesASentinelSplitAcrossAChain plants two shapes the
+// shared reader adds. One is an inference list split across a `+` chain; the
+// other is a .sql script, which the Go-only reader never read.
+func TestTheUpsertCensusSeesASentinelSplitAcrossAChain(t *testing.T) {
+	t.Parallel()
+	// The clause keyword is formatted in, so this file holds no upsert the
+	// census itself would read.
+	const clause = "ON CONFLICT"
+	fixture := parseGateFixture(t, fmt.Sprintf("package p\nconst q = \"INSERT INTO t (a) VALUES ($1) %s (a, \" +\n"+
+		"\t\"COALESCE(b, '00000000-0000-0000-0000-000000000000')) DO NOTHING\"\n", clause))
+	var planted []upsertStatement
+	for _, sql := range statementsIn(fixture) {
+		planted = append(planted, upsertStatement{where: "planted.go", sql: sql})
+	}
+	planted = append(planted, upsertStatement{where: "seed.sql",
+		sql: fmt.Sprintf("INSERT INTO t (a) VALUES (1) %s (a, COALESCE(b, '')) DO NOTHING;", clause)})
+	for _, statement := range planted {
+		if len(sentinelInferences(statement)) != 1 {
+			t.Errorf("the census does not see the sentinel in %s: %q", statement.where, statement.sql)
+		}
 	}
 }

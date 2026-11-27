@@ -6,6 +6,7 @@ import { RecordListsActions } from "../../components/addtoshortlist";
 import { useEmployerSummary } from "../../components/contactemployersummary";
 import {
   customFieldHref,
+  dealNarrowing,
   useCustomFieldDisplay,
   useObjectCustomFields,
 } from "../../components/customfields.form";
@@ -44,10 +45,11 @@ import {
   PRIORITY_OPTIONS,
 } from "./deal360/dealcommercialfields";
 import { useDealEdit } from "./dealedit";
-import { DealPartner } from "./dealpartner";
+import { DealOwnerLeft, DealPartner } from "./dealpartner";
 import { ProbabilityHint } from "./dealprobabilityhint";
 import type { Deal, Stage } from "./deals";
 import "./deal360/deal360.css";
+import { useViewOnlyAccess } from "../../components/viewonly";
 
 type AsideProps = Readonly<{
   deal: Deal;
@@ -96,7 +98,8 @@ function DealAsideBody({
   const tagRows = useTagsRow("deal", deal);
   const change = useSectionEdits(deal, edit, locale, tagRows.length > 0);
   const owner = useMemberName(deal.owner_id).data;
-  const cf = useObjectCustomFields("deal");
+  const access = useViewOnlyAccess("deal", deal);
+  const cf = useObjectCustomFields("deal", "record", dealNarrowing(deal));
   const display = useCustomFieldDisplay();
   const reads = {
     viewerId,
@@ -157,9 +160,14 @@ function DealAsideBody({
   ];
   return (
     <>
+      <DealOwnerLeft
+        ownerId={deal.archived_at ? null : deal.owner_id}
+        onChoose={change.ownership?.onEdit}
+      />
       <RecordDetails
         sections={sections}
         footnote={t("deal.details.closingFootnote")}
+        access={access}
       />
       {change.element}
     </>
@@ -466,8 +474,8 @@ function DealAccount({ companyId }: Readonly<{ companyId: string }>) {
   const company = useEmployerSummary(companyId).data;
   const name = company?.display_name;
   const stage =
-    company?.lifecycle && company.lifecycle !== "unknown"
-      ? t(labelFor(LIFECYCLE_LABELS, company.lifecycle))
+    company?.status && company.status !== "unknown"
+      ? t(labelFor(LIFECYCLE_LABELS, company.status))
       : undefined;
   const facts = [
     stage,

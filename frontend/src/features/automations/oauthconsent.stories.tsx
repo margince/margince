@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { en } from "../../i18n/en";
 import {
   installFetchStub,
@@ -125,7 +125,10 @@ export const NothingPicked: Story = {
     for (const box of canvas.getAllByRole("checkbox")) {
       await userEvent.click(box);
     }
-    await expect(canvas.getByText(en["consent.pickOne"])).toBeVisible();
+    const why = canvas.getByText(en["consent.pickOne"]);
+    // The task column rises in from opacity 0, and a loaded runner can still
+    // be mid-rise here.
+    await waitFor(() => expect(why).toBeVisible());
     await expect(
       canvas.getByRole("button", { name: en["consent.approve"] }),
     ).toBeDisabled();

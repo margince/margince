@@ -405,7 +405,7 @@ lead() {
   id="$(jq -r --arg e "$email" '.data[] | select(.email == $e) | .id' "$workdir/body" | sed -n 1p)"
   if [[ -z "$id" ]]; then
     expect "201 200" "POST /leads ($2)" "$(api POST /leads "$(jq -n --arg n "$2" --arg e "$email" --arg c "$3" \
-      --arg k "$KEY" --arg r "lead-$1" --arg o "$SDR_ID" '{full_name:$n, email:$e, company_name:$c, source:"seed",
+      --arg k "$KEY" --arg r "lead-$1" --arg o "$SDR_ID" '{full_name:$n, email:$e, company_name:$c, source:"api",
         source_system:$k, source_id:$r, owner_id:$o}')")"
     id="$(jq -r '.id' "$workdir/body")"
   fi

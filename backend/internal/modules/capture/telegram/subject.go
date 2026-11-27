@@ -21,23 +21,40 @@ import (
 	"fmt"
 )
 
-// AllowedUpdates narrows what the poller asks Telegram for: the messages a
-// contact writes, and the membership changes that tell us a contact blocked or
-// unblocked the bot. Anything else (polls, inline queries, edited channel
-// posts) is bandwidth this system has no reader for, and asking for it would
-// mean fetching updates nobody consumes.
+// AllowedUpdates narrows what the poller asks Telegram for. It asks for seven kinds.
+//   - message: what a contact writes.
+//   - business_message: a message in a chat of a linked Telegram Business account,
+//     written by the customer or by the owner from their own app.
+//   - edited_message and edited_business_message: new text for one of those.
+//   - deleted_business_messages: messages of a business chat that were deleted.
+//   - my_chat_member: a contact blocked or unblocked the bot.
+//   - business_connection: a business account owner linked or unlinked the bot.
 //
-// It lives beside subjectEnvelope because the two must name the SAME set. A
-// kind subscribed here with no arm below falls to InScopeSubjects' `default:
-// return nil, nil` and is dropped silently at ingress — which reads exactly
-// like a bot nobody is messaging.
-func AllowedUpdates() []string { return []string{"message", "my_chat_member"} }
+// Any other kind has no reader here, so asking for it only costs bandwidth.
+//
+// It lives beside subjectEnvelope because both must name the same set. A kind
+// subscribed here with no arm in InScopeSubjects is dropped silently at ingress,
+// which reads like a bot nobody is messaging. A business_connection has an arm
+// that names no subject, because it carries no customer.
+func AllowedUpdates() []string {
+	return []string{
+		"message", "business_message", "edited_message", "edited_business_message", "deleted_business_messages",
+		"my_chat_member", "business_connection",
+	}
+}
 
 // subjectEnvelope decodes only the update kinds this connector subscribes to
 // (AllowedUpdates), each narrowed to the object the account id is read from.
 type subjectEnvelope struct {
-	Message      *telegramMessage   `json:"message"`
-	MyChatMember *chatMemberUpdated `json:"my_chat_member"`
+	Message               *telegramMessage         `json:"message"`
+	BusinessMessage       *telegramMessage         `json:"business_message"`
+	EditedMessage         *telegramMessage         `json:"edited_message"`
+	EditedBusinessMessage *telegramMessage         `json:"edited_business_message"`
+	DeletedBusiness       *deletedBusinessMessages `json:"deleted_business_messages"`
+	MyChatMember          *chatMemberUpdated       `json:"my_chat_member"`
+	// BusinessConnection is decoded so every subscribed kind has an arm. It
+	// names no customer, so that arm answers no subject.
+	BusinessConnection *businessConnectionPayload `json:"business_connection"`
 }
 
 // InScopeSubjects returns the channel_user_id of every account one verbatim
@@ -64,8 +81,8 @@ type subjectEnvelope struct {
 //     under sender_chat, leaving `from` absent and the id 0, which is not an
 //     account any human owns, and neither is a negative id, which is how
 //     Telegram numbers chats rather than users;
-//   - an update kind outside the two this connector subscribes to, or one
-//     carrying both of them, which is not a shape the Bot API posts.
+//   - an update kind outside the subscription, or one carrying two kinds, which
+//     is not a shape the Bot API posts.
 //
 // The two reads are deliberately the ones the domain already makes, not a
 // widened sweep of every user object the payload happens to contain: a
@@ -78,16 +95,54 @@ func InScopeSubjects(update []byte) ([]string, error) {
 	if err := json.Unmarshal(update, &env); err != nil {
 		return nil, fmt.Errorf("telegram: decoding the update to read its subject account: %w", err)
 	}
+	if env.BusinessConnection != nil || env.kindCount() != 1 {
+		return nil, nil
+	}
 	switch {
-	case env.Message != nil && env.MyChatMember == nil:
-		return subjectOf(env.Message.Chat, env.Message.From.ID), nil
-	case env.MyChatMember != nil && env.Message == nil:
+	case env.BusinessMessage != nil || env.EditedBusinessMessage != nil:
+		// The customer is the chat, whoever typed: the owner's own replies have
+		// the owner as sender, and the owner is not the contact kept.
+		// A message with no addressable sender is refused as the bot's are, so
+		// it is never stored without a subject to reach it by.
+		msg := env.BusinessMessage
+		if msg == nil {
+			msg = env.EditedBusinessMessage
+		}
+		if msg.From.ID <= 0 {
+			return nil, nil
+		}
+		return subjectOf(msg.Chat, msg.Chat.ID), nil
+	case env.DeletedBusiness != nil:
+		// A deletion names the chat and no sender. The chat is the customer.
+		return subjectOf(env.DeletedBusiness.Chat, env.DeletedBusiness.Chat.ID), nil
+	case env.Message != nil || env.EditedMessage != nil:
+		msg := env.Message
+		if msg == nil {
+			msg = env.EditedMessage
+		}
+		return subjectOf(msg.Chat, msg.From.ID), nil
+	case env.MyChatMember != nil:
 		// The chat IS the subject of a membership report, so its id is read
 		// twice here: once as the scope gate, once as the account.
 		return subjectOf(env.MyChatMember.Chat, env.MyChatMember.Chat.ID), nil
 	default:
 		return nil, nil
 	}
+}
+
+// kindCount is how many update kinds the envelope carries. The Bot API posts
+// one, so any other count is no shape this connector captures.
+func (e subjectEnvelope) kindCount() int {
+	count := 0
+	for _, present := range []bool{
+		e.Message != nil, e.BusinessMessage != nil, e.EditedMessage != nil, e.EditedBusinessMessage != nil,
+		e.DeletedBusiness != nil, e.MyChatMember != nil,
+	} {
+		if present {
+			count++
+		}
+	}
+	return count
 }
 
 // subjectOf answers for one update kind: the account, when the chat is one this

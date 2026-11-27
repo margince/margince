@@ -28,10 +28,8 @@ package gates
 // were.
 
 import (
-	"go/ast"
 	"maps"
 	"os"
-	"path"
 	"path/filepath"
 	"testing"
 
@@ -85,7 +83,7 @@ var predicateContactReads = gatekit.Waive(map[string]string{
 	"internal/modules/capture/privatesenderclause.go:PrivateSenderClause":               "the reconnect lane's exclusion: `contact` appears only inside NOT EXISTS, to ask whether the row carries a relationship mark. Nothing is selected, and removing the condition could only show more rows in a lane the caller is already gated on",
 	"internal/shared/kernel/relationshipmark/relationshipmark.go:ContactNotMarkedSQL":   "whether the contact an id names carries a relationship mark: the contact appears only inside EXISTS. Nothing is selected, and removing the condition could only show more rows to a reader already gated on the surface it filters",
 	"internal/modules/capture/strangermail.go:senderWasStrangerTx":                      "whether a mail's sender was already a live contact when it arrived, asked by the connector sink to stamp one boolean on the activity. The contact appears only inside EXISTS; nothing about the contact is selected, and the boolean only lowers the mail's rank",
-	"internal/modules/activities/meetingfollowup.go:meetingNeedSQL":                     "the set of activities the meeting follow-up read gates once: the contact is joined only to name a merged contact's survivor, as the statement's own recipients do. It yields activity ids that pass the content gate before anything reads them; no contact column leaves it",
+	"internal/modules/activities/meetingfollowup.go:contactSurvivorSQL":                 "the id of the contact a merge kept for a contact id the statement already holds, read by key. Only that id leaves it, and every caller uses it as a key: the attendee set admits the survivor only through the reader's addressable-contact clause, and the need set turns it into activity ids the content gate checks. No contact column leaves it",
 	"internal/modules/activities/messageidentity.go:copyEchoLinks":                      "holds the contacts an absorbed echo is filed under FOR SHARE and skips an archived one; it selects a constant and returns no contact column, and removing the condition could only copy more links",
 	"internal/modules/collections/tagsuggestion.go:tagSuggestionStandsClause":           "whether a tag suggestion still stands: the contact appears only inside EXISTS, to ask that it is live and not yet tagged. Nothing is selected; composed into the system-only superseding pass and into the gated visible-suggestions read, where removing it could only show more suggestions",
 	"internal/modules/collections/taginterest.go:TagInterestContactsLiveClause":         "whether any contact a captured item is filed under is archived, so the tag pass neither reads nor stores an answer about an anonymized subject. The contact appears only inside NOT EXISTS; nothing is selected, and removing the condition could only store more answers",
@@ -94,7 +92,7 @@ var predicateContactReads = gatekit.Waive(map[string]string{
 	"internal/modules/contacts/providerboughtfields.go":                                 "which of a contact's values a purchase still owns. `contact` appears only inside an EXISTS comparing the title with the ledger's copy, and the statement selects ledger columns (table, field, row id, provider, time). Reached only from readContact, whose callers ask the contact object gate",
 	"internal/modules/activities/quietmailbox.go:quietRecordOwner":                      "the owner arm of the cold-queue selector: the contact's owner_id — a USER id, not contact content — decides whether that seat's mailbox is visible enough to call the contact quiet. Nothing of the contact is selected; its only effect is to WITHHOLD a queue entry, never to surface one",
 	"internal/compose/capturehealth/capturehealth.go:MailboxHealth":                     "the capture health strip: how many contacts are waiting on a mailbox that has stopped delivering. Counts over the caller's own connector, never a contact column",
-	"internal/compose/contactbrief/service.go:save":                                     "the liveness check the cache write is made through: `SELECT id` for the contact the caller already named, to take its row and refuse the write when an erasure has archived it. The id is the argument, so nothing of the contact is disclosed; the read's only effect is to WITHHOLD a cache row, never to surface one. The reader's own grant was asked by the assembly that produced the brief",
+	"internal/compose/contactbrief/service.go:SaveForLiveContact":                       "the liveness check the cache write is made through: `SELECT id` for the contact the caller already named, to take its row and refuse the write when an erasure has archived it. The id is the argument, so nothing of the contact is disclosed; the read's only effect is to WITHHOLD a cache row, never to surface one. The reader's own grant was asked by the assembly that produced the brief",
 	"internal/compose/network/companycoverage.go:countCompanyStakeholders":              "a count of distinct stakeholders at an account, under the edge admission CompanyCoverageFor takes. A number, and deliberately reported as a BOOLEAN incompleteness flag rather than an exact one — the type's own comment says why an exact count would be an oracle",
 	"internal/compose/network/companycoverage.go:visibleAccountStakeholders":            "the stakeholder ids and roles behind that same coverage, under auth.EdgeReadScope and the contact ROW scope. Reading an edge discloses its endpoints AS A PAIR, which is what relationship.read governs; no contact column beyond the id the edge already carries is selected",
 	"internal/compose/signalextractrule.go":                                             "the visibility roll-up inside the conversation fold the thread extraction reads: a contact's visibility and owner_id decide whether a thread counts as shared or as one owner's. No contact column is selected and the statement produces a thread key",
@@ -183,6 +181,7 @@ var lifecycleContactReads = gatekit.Waive(map[string]string{
 	"internal/modules/contacts/captureorigin.go:CaptureMintedForSeatTx":             "`SELECT p.id` — which of the candidates a seat's own mailbox purge already found are contacts capture made for that seat and nobody worked on since. It runs inside that purge, after its own permission check, and its only effect is to REMOVE contacts from what the purge anonymises. Ids only, never a column of the contact",
 	"internal/modules/capture/priordisposition.go:priorDispositionExpression":       "the capture lane's own pass. It runs under the capture worker's principal — or, for the surfaces a member reaches, under auth.RequireHuman bound to that member's OWN mailbox — and what it answers is work to do rather than a contact anyone was shown",
 	"internal/modules/capture/participantfiling.go":                                 "the capture lane's own pass. It runs under the capture worker's principal — or, for the surfaces a member reaches, under auth.RequireHuman bound to that member's OWN mailbox — and what it answers is work to do rather than a contact anyone was shown",
+	"internal/modules/capture/chatprivacy.go:contactsOrphanedByBurstTx":             "the chat arm of ContactsOrphanedByPrivacyTx, reached only from it: work to do for the capture pass rather than a contact anyone was shown",
 	"internal/modules/capture/sinkpersonal.go:ContactsOrphanedByPrivacyTx":          "the capture lane's own pass. It runs under the capture worker's principal — or, for the surfaces a member reaches, under auth.RequireHuman bound to that member's OWN mailbox — and what it answers is work to do rather than a contact anyone was shown",
 	"internal/modules/capture/sinkreply.go:channelReplyContact":                     "the capture lane's own pass. It runs under the capture worker's principal — or, for the surfaces a member reaches, under auth.RequireHuman bound to that member's OWN mailbox — and what it answers is work to do rather than a contact anyone was shown",
 	"internal/modules/capture/sinkreply.go:mailReplyContact":                        "the capture lane's own pass. It runs under the capture worker's principal — or, for the surfaces a member reaches, under auth.RequireHuman bound to that member's OWN mailbox — and what it answers is work to do rather than a contact anyone was shown",
@@ -280,18 +279,17 @@ var calleeGatedContactReads = gatekit.Waive(map[string]string{
 
 // ruledContactReads: a DISCLOSING read the product has ruled needs no contact grant.
 var ruledContactReads = gatekit.Waive(map[string]string{
-	"internal/platform/database/storekit/leadidentity.go:identityHoldersSQL": "the identity check behind LockIdentityHolders and IdentityHoldersOf: which live contacts hold an address or a normalised LinkedIn profile, asked before a write that would give a live lead's keys to a contact or a contact's keys to a lead. The statement is a fixed literal and the keys are bind parameters. It must see every holder, because the rule holds whoever can read the holder. What leaves is ids and a per-key boolean; the CSV import's test run turns it into a skipped row, and a caller that names a contact asks for its visibility first, as claimedEmailRefusal does",
-	"internal/modules/activities/projectfiling.go":                           "the undo of a project filing locks the linked record FOR SHARE so a legal hold placed on it cannot land between the undo reading the holds and clearing the class. It takes a shared row lock (shareLockQualifyingRecords) on the records the activity is linked to, so the undo of a project filing serializes with a hold or a stamp being written; it selects only a row count, no field, and returns nothing to the caller.",
-	"internal/modules/privacy/legalholdlist.go":                              "the litigation-hold census: one UNION over the five holdable tables, selecting an id and a display name for rows where legal_hold is set. Gated on the retention-policy authority and refused to a non-human principal at its own entry, which is the posture the sibling restricted-records list already takes — a controller asked what a hold is preserving has to be told which records those are, and the grant that governs the retention ladder is the one that governs seeing what overrides it. No field of the record is read beyond its name",
+	"internal/modules/contacts/recordsourcecorrect.go:contactSourceSQL":            "the id and source of contacts whose source is off the fixed list, read under the row lock by the source data task. storekit.CorrectRecordSources asks auth.RequireSystem before the statement runs, and only ids leave it",
+	"internal/modules/contacts/recordsourcecorrect.go:CountUnlistedContactSources": "how many contacts still hold a source off the fixed list, for the source data task's estimate. Its one caller asks auth.Require for data_task read, and only a capped count leaves",
+	"internal/platform/database/storekit/leadidentity.go:identityHoldersSQL":       "the identity check behind LockIdentityHolders and IdentityHoldersOf: which live contacts hold an address or a normalised LinkedIn profile, asked before a write that would give a live lead's keys to a contact or a contact's keys to a lead. The statement is a fixed literal and the keys are bind parameters. It must see every holder, because the rule holds whoever can read the holder. What leaves is ids and a per-key boolean; the CSV import's test run turns it into a skipped row, and a caller that names a contact asks for its visibility first, as claimedEmailRefusal does",
+	"internal/modules/activities/projectfiling.go":                                 "the undo of a project filing locks the linked record FOR SHARE so a legal hold placed on it cannot land between the undo reading the holds and clearing the class. It takes a shared row lock (shareLockQualifyingRecords) on the records the activity is linked to, so the undo of a project filing serializes with a hold or a stamp being written; it selects only a row count, no field, and returns nothing to the caller.",
+	"internal/modules/privacy/legalholdlist.go":                                    "the litigation-hold census: one UNION over the five holdable tables, selecting an id and a display name for rows where legal_hold is set. Gated on the retention-policy authority and refused to a non-human principal at its own entry, which is the posture the sibling restricted-records list already takes — a controller asked what a hold is preserving has to be told which records those are, and the grant that governs the retention ladder is the one that governs seeing what overrides it. No field of the record is read beyond its name",
 })
 
 // deferredContactReads: a DISCLOSING read that is still ungated, each naming
 // the issue that will close it.
 var deferredContactReads = gatekit.Waive(map[string]string{})
 
-// notTheContactTable: the read pattern matched something that is not the table.
-// Empty for : unlike , the word is not a SQL keyword, and the
-// pattern's delimiter set already keeps contact_room and contact_stage_history out.
 // notTheContactTable: the read pattern matched something that is not this table.
 //
 // Empty for `contact`, and the emptiness is a finding rather than an omission:
@@ -309,65 +307,10 @@ var contactVerdicts = []namedVerdict{
 	{"deferred", deferredContactReads},
 }
 
-// wantMinimumGatedContactSites is the floor below the count of sites that
-// satisfy the gate today. It exists for the reason every floor in this
-// directory does: an extractor that stops recognising SQL finds no sites and
-// reports nothing, which is indistinguishable from a clean tree.
-const wantMinimumGatedContactSites = 22
-
-var contactReaderScope = gatekit.Scope{
-	Roots:   []string{"internal"},
-	Subject: readsContactTable,
-	Exempt:  gatekit.Waive(map[string]string{}),
-}
-
-func readsContactTable(filePath string, file *ast.File) bool {
-	return gatekit.FileReadsTable(filePath, file, contactGate.literal)
-}
-
-func TestEveryReaderOfTheContactTableCarriesTheObjectGateOrAVerdict(t *testing.T) {
-	t.Parallel()
-	files := contactReaderScope.Files(t)
-	walk := contactGate.walkPackages(t, files)
-	consts := constantTable{}
-
-	var satisfied int
-	for _, parsed := range files {
-		pkg := path.Dir(parsed.Path)
-		for _, site := range contactGate.readSites(parsed, consts.of(t, pkg)) {
-			subject := site.subject(parsed.Path)
-			carriesGate := walk.carries(t, contactGate, parsed, site, consts.of(t, pkg))
-			verdict := verdictIn(t, subject, contactVerdicts)
-
-			switch {
-			case carriesGate && verdict != "":
-				t.Errorf("%s carries the contact object gate AND a %s verdict — remove the verdict, it "+
-					"now describes code that is gated", subject, verdict)
-			case carriesGate:
-				satisfied++
-			case verdict == "":
-				t.Errorf("%s reads the contact table without the object gate and without a verdict.\n"+
-					"  Reading a contact discloses a named human being — their name, title, "+
-					"address and employer — which is what the contact grant governs.\n"+
-					"  Either ask auth.Require(ctx, \"contact\", …) — or auth.ReadGranted where the "+
-					"read must degrade rather than refuse — or declare it in "+
-					"predicateContactReads / lifecycleContactReads / calleeGatedContactReads / "+
-					"ruledContactReads with the reason it needs no gate.\n"+
-					"  Left alone it is indistinguishable from a read nobody considered.\n"+
-					"  The read: %s", subject, site.sql)
-			}
-		}
-	}
-
-	if satisfied < wantMinimumGatedContactSites {
-		t.Errorf("only %d contact reads satisfy the object gate, want at least %d — a literal extractor "+
-			"that stopped recognising this tree's SQL would report exactly this, and it reads the "+
-			"same as a clean tree", satisfied, wantMinimumGatedContactSites)
-	}
-	t.Logf("contact reads: %d gated, %d predicate, %d lifecycle, %d callee-gated, %d ruled, %d DEFERRED (still disclosing)",
-		satisfied, len(predicateContactReads.Subjects()), len(lifecycleContactReads.Subjects()),
-		len(calleeGatedContactReads.Subjects()), len(ruledContactReads.Subjects()), len(deferredContactReads.Subjects()))
-
+// sweepContactVerdicts fails a verdict no read matched any more. The
+// gate census asks for each sweep by name, so the list is written out.
+func sweepContactVerdicts(t *testing.T) {
+	t.Helper()
 	predicateContactReads.AssertAllMatched(t)
 	lifecycleContactReads.AssertAllMatched(t)
 	calleeGatedContactReads.AssertAllMatched(t)
@@ -375,6 +318,11 @@ func TestEveryReaderOfTheContactTableCarriesTheObjectGateOrAVerdict(t *testing.T
 	ruledContactReads.AssertAllMatched(t)
 	deferredContactReads.AssertAllMatched(t)
 }
+
+// wantMinimumGatedContactSites is the floor below the count of sites that
+// satisfy the gate today. An extractor that stops recognising SQL finds no sites
+// and reports nothing, which reads the same as a clean tree.
+const wantMinimumGatedContactSites = 22
 
 // spentGateFixture holds readers that gate only themselves: a contact read
 // whose call chain reaches one, and a read handed a statement the walk cannot see.

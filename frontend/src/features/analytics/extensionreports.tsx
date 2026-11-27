@@ -53,7 +53,11 @@ export function ExtensionReports({
     <>
       {(query.data?.data ?? []).map((report) => (
         <Panel key={report.name} title={report.label}>
-          <Figures report={report} />
+          {report.status === "unavailable" ? (
+            <PanelBody>{t("extensionReports.unavailable")}</PanelBody>
+          ) : (
+            <Figures report={report} />
+          )}
           {report.excluded_by_permission != null &&
             report.excluded_by_permission > 0 && (
               <PanelBody>

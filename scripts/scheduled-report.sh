@@ -422,9 +422,11 @@ if [[ "${BACKEND_CLOCK_RESULT:-}" = "failure" ]] && [[ "${BACKEND_CLOCK_OUTCOME:
 verdict about the tree: $RUN_URL
 
 No backend test is known to depend on the calendar, and none is known not to. The
-job annotations and the end of the step log say why the lane stopped: the runner
-lost its connection while its clock was moved, the 45-minute budget ran out, or
-\`scripts/clock-drift-host.sh\` found the shift no longer in force.
+\`backend clock drift (main, +200 days)\` job names each slice that gave no verdict.
+That slice's own job says why it stopped: its annotations show a runner that lost
+its connection while its clock was moved, and the end of its step log shows a slice
+over its 30-minute budget or \`scripts/clock-drift-host.sh\` finding the shift no
+longer in force.
 
 Reproduce the suites locally with \`BACKEND_CLOCK_SKEW=database:200 make backend-clock-drift\`."\
     || unreported=1
@@ -529,6 +531,26 @@ Reproduce locally with \`make fe-uat ARGS=--all-stories\`."\
     || unreported=1
 elif [[ "${STORIES_RESULT:-}" = "success" ]]; then
   resolve "a story does not render clean on main"
+fi
+
+if [[ "${SECONDARY_RESULT:-}" = "failure" ]]; then
+  report "a smoke flow fails in WebKit or Firefox on main" "priority: normal,area: ci-tests,bug" \
+"\`make e2e-secondary\` failed on the scheduled run of \`main\`: $RUN_URL
+
+Pull requests run the end-to-end lane in Chromium only, so a flow that breaks in
+WebKit or Firefox shows up here the day after the merge. The run's
+\`secondary-browsers-failures\` artifact holds the screenshot of each failing
+test. The failing test's name says which flow broke, and the project in front of
+it (\`webkit\` or \`firefox\`) says which engine.
+
+No artifact means the lane failed before a test ran: the install of the browsers
+or their system libraries, or the app build. The step log names which.
+
+Reproduce locally with \`cd frontend && pnpm exec playwright install webkit firefox\`,
+then \`make e2e-secondary\`."\
+    || unreported=1
+elif [[ "${SECONDARY_RESULT:-}" = "success" ]]; then
+  resolve "a smoke flow fails in WebKit or Firefox on main"
 fi
 
 if [[ "${TREND_RESULT:-}" = "failure" ]]; then

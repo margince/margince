@@ -168,7 +168,7 @@ func (s *Store) restoreCorrectedFields(
 	if err != nil {
 		return err
 	}
-	stamped, err := markReversed(ctx, tx, correction.ID, auditID, by)
+	stamped, err := markReversed(ctx, tx, correction.ID, by)
 	if err != nil {
 		return err
 	}
@@ -390,7 +390,7 @@ func markReversedOrConflict(ctx context.Context, tx pgx.Tx, c DealCorrection) er
 	if err != nil {
 		return err
 	}
-	stamped, err := markReversed(ctx, tx, c.ID, c.AuditLogID, by)
+	stamped, err := markReversed(ctx, tx, c.ID, by)
 	if err != nil {
 		return err
 	}

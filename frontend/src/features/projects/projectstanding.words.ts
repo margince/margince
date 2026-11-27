@@ -4,7 +4,8 @@ import type {
   TimelineEvent,
   TimelineGap,
 } from "../../design-system/standingtimeline";
-import { formatMoney } from "../../format/format";
+import { activityDay } from "../../format/activitywhen";
+import { formatMoneyWhole } from "../../format/format";
 import { formatDayMonthNearYear } from "../../format/format.dates";
 import type { Translator, Words } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
@@ -297,7 +298,7 @@ function momentTitle(moment: ProjectMoment, ctx: Ctx): string {
     case "update":
       return moment.subject ?? ctx.t("project.standing.lastUpdate");
     default:
-      return ctx.t("project.standing.event.end");
+      return ctx.t("project.targetEnd");
   }
 }
 
@@ -314,10 +315,19 @@ function momentSub(moment: ProjectMoment, view: Project360, ctx: Ctx): string {
     case "signed":
       return `${date} · ${moment.title}`;
     case "update":
-      return ctx.t("project.standing.event.lastUpdate", { date });
+      return ctx.t("project.standing.event.lastUpdate", {
+        date: activityDay(
+          moment.occurredAt,
+          moment.precision,
+          ctx.locale,
+          ctx.zone,
+          (at, locale, zone) =>
+            formatDayMonthNearYear(at, locale, zone, new Date(view.as_of)),
+        ),
+      });
     case "won":
       return moment.amountMinor != null && moment.currency
-        ? `${date} · ${formatMoney(moment.amountMinor, moment.currency, ctx.locale)}`
+        ? `${date} · ${formatMoneyWhole(moment.amountMinor, moment.currency, ctx.locale)}`
         : date;
     case "due":
       return moment.kind === "late"
@@ -340,7 +350,7 @@ export function projectEvents(view: Project360, ctx: Ctx): TimelineEvent[] {
     activityIds:
       moment.what === "update"
         ? (view.activities?.data ?? [])
-            .filter((row) => row.occurred_at === moment.at)
+            .filter((row) => row.occurred_at === moment.occurredAt)
             .map((row) => row.id)
         : undefined,
   }));
@@ -351,7 +361,7 @@ export function projectGap(
   view: Project360,
   ctx: Ctx,
 ): TimelineGap | undefined {
-  const quiet = quietStretch(view);
+  const quiet = quietStretch(view, ctx.zone);
   if (!quiet) {
     return undefined;
   }

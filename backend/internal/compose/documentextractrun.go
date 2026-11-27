@@ -125,21 +125,19 @@ type documentReadStore interface {
 	OpenAttachment(ctx context.Context, id ids.UUID) (crmcontracts.Attachment, io.ReadCloser, error)
 }
 
-// Read performs one reading: claim the run, put the document to the model on
-// whichever lane its type and the binding allow, and close the run with what
-// happened.
+// Read performs one reading. ctx claims and closes the run row; work opens the
+// document and asks the model, under the grants of the human who asked.
 //
-// It returns an error only for a fault the JOB should retry — the model lane
-// being down, the database being unreachable. A reading that legitimately could
-// not be used closes the run and returns nil, because retrying would ask the
-// same question of the same document and get the same answer.
-func (d *DocumentExtractor) Read(ctx context.Context, store documentReadStore, readID, attachmentID ids.UUID) error {
+// It returns an error only for a fault the job should retry. A reading that
+// could not be used closes the run and returns nil, as a retry would get the
+// same answer.
+func (d *DocumentExtractor) Read(ctx, work context.Context, store documentReadStore, readID, attachmentID ids.UUID) error {
 	reader := *d
 	reader.said = documentCopyFor(identity.BaseLanguageForPrompt(ctx, d.pool))
-	return reader.readAttachment(ctx, store, readID, attachmentID)
+	return reader.readAttachment(ctx, work, store, readID, attachmentID)
 }
 
-func (d *DocumentExtractor) readAttachment(ctx context.Context, store documentReadStore, readID, attachmentID ids.UUID) error {
+func (d *DocumentExtractor) readAttachment(ctx, work context.Context, store documentReadStore, readID, attachmentID ids.UUID) error {
 	claim, err := store.BeginExtractionRead(ctx, readID, activities.ExtractionReadLease)
 	if err != nil {
 		return err
@@ -154,7 +152,7 @@ func (d *DocumentExtractor) readAttachment(ctx context.Context, store documentRe
 		return d.retryable(ctx, store, readID, claimedAt, err)
 	}
 
-	src, detail, err := d.sourceFor(ctx, store, attachmentID, question)
+	src, detail, err := d.sourceFor(work, store, attachmentID, question)
 	if err != nil {
 		if terminal, msg := d.unreadableDocument(err); terminal {
 			return d.fail(ctx, store, readID, claimedAt, msg)
@@ -173,12 +171,12 @@ func (d *DocumentExtractor) readAttachment(ctx context.Context, store documentRe
 		// affordance only `failed` offers. No model call was made either way.
 		return d.fail(ctx, store, readID, claimedAt, detail)
 	}
-	fields, err := d.ask(ctx, question, src)
+	fields, err := d.ask(work, question, src)
 	if err != nil {
 		if errors.Is(err, errRefusedDocument) {
 			d.log.WarnContext(ctx, "document reading refused",
 				"attachment_extraction_id", readID, "attachment_id", attachmentID, "reason", err)
-			return d.fail(ctx, store, readID, claimedAt, d.refusedReadingDetail(err))
+			return d.fail(ctx, store, readID, claimedAt, d.refusedReadingDetail(question, err))
 		}
 		return d.retryable(ctx, store, readID, claimedAt, err)
 	}
@@ -421,20 +419,21 @@ func attachmentParent(meta crmcontracts.Attachment) ids.Ref {
 	return ids.From[ids.ActivityKind](id).Ref()
 }
 
-// refusedReadingDetail is what the panel says about a refused reading, and there
-// are two answers because one of them would otherwise be false.
+// refusedReadingDetail is what the panel says about a refused reading.
 //
-// The general refusal is honest about a reply the model produced and this
-// product would not act on: nothing about the document changed, so reading it
-// again is a reasonable thing to offer. A document whose BYTES are not the type
-// it was stored as is the opposite — every model reads them the same way, so
-// "can be read again" invites a rep to spend the same call twice and reach the
-// same place. The file has to change.
-func (d *DocumentExtractor) refusedReadingDetail(err error) string {
-	if errors.Is(err, model.ErrAttachmentMislabelled) {
+// The general refusal is the question's own: nothing about the file changed,
+// so the panel says what it offers next. Two causes would make that false.
+// Bytes that are not the type they were stored as read the same way on every
+// model, so the file has to change. A reply from the offline stand-in model
+// means no AI provider is set up, so an admin has to add one.
+func (d *DocumentExtractor) refusedReadingDetail(q documentQuestion, err error) string {
+	switch {
+	case errors.Is(err, model.ErrAttachmentMislabelled):
 		return documentWords.Mislabelled.In(d.said.Lang())
+	case errors.Is(err, ai.ErrUnconfiguredModel):
+		return documentWords.NoModel.In(d.said.Lang())
 	}
-	return documentWords.Refused.In(d.said.Lang())
+	return q.refused.In(d.said.Lang())
 }
 
 // ask puts one document to the model and returns what it may act on.
@@ -480,6 +479,9 @@ func (d *DocumentExtractor) ask(
 func (d *DocumentExtractor) unreadableDocument(err error) (terminal bool, detail string) {
 	if errors.Is(err, apperrors.ErrNotFound) {
 		return true, documentWords.Missing.In(d.said.Lang())
+	}
+	if errors.Is(err, apperrors.ErrPermissionDenied) {
+		return true, documentWords.Denied.In(d.said.Lang())
 	}
 	if errors.Is(err, activities.ErrBlobstoreUnconfigured) {
 		return true, documentWords.NoStorage.In(d.said.Lang())

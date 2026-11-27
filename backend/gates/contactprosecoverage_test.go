@@ -53,9 +53,8 @@ var contactProseWithoutSubjectData = gatekit.Waive(map[string]string{
 	"relationship_nudge_dismissal":   "the same shape for a relationship nudge; set_by names the colleague who dismissed it, not the subject",
 	"provider_employment_resolution": "the provider resolver's own bookkeeping: episode_key is a derived key and state its machine's position",
 	"signal":                         "the warm-room signal substrate. Its evidence carries SNIPPETS of activity bodies, which is subject prose — and it is retained for the reason the timeline's own bodies are: what was said is the seller's record of a conversation, erased only where the body it was copied from is. A snippet outliving its source would be the defect; the timeline redaction is what must reach it, so this is a declaration about WHERE the obligation sits, not that none exists",
-	"contact_signature_enrich_state": "the signature pass's read watermark: last_outcome and last_skip_reason are enums under a CHECK, and the rest are ids, counts and moments. It holds no text about the subject, and ON DELETE CASCADE from contact takes it with an erased contact",
 	"user_record_view":               "a reader's last-seen mark on a record: entity_type is the discriminator naming a table, and the rest are ids and a moment. It holds no text about the subject, and the contact key cascades, so a deleted contact takes the mark with it",
-	"contact_brief":                  "erased already: purgeSubjectBriefCache deletes every reader's cached brief on both acts (erasurebriefcache.go). Unregistered because whether a regenerable cache belongs in an Art. 15 package is a product question, and the cache is destroyed either way",
+	"generated_summary":              "erased already: purgeSubjectBriefCache deletes every reader's cached brief of the contact on both acts, with the summaries of each company and deal they spoke on (erasurebriefcache.go), through the store that owns the table. Unregistered because whether a regenerable cache belongs in an Art. 15 package is a product question, and the cache is destroyed either way",
 })
 
 var (
@@ -69,12 +68,9 @@ var (
 // key AND carry a column prose can be stored in.
 func contactProseTables(t *testing.T) []string {
 	t.Helper()
-	raw, err := gatekit.ReadFile("migrations/testdata/head_catalog.txt")
-	if err != nil {
-		t.Fatalf("reading the head catalog: %v", err)
-	}
+	raw := headCatalog(t)
 	namesContact, hasProse := map[string]bool{}, map[string]bool{}
-	for line := range strings.SplitSeq(string(raw), "\n") {
+	for line := range strings.SplitSeq(raw, "\n") {
 		line = strings.TrimSpace(line)
 		if m := contactForeignKeyLine.FindStringSubmatch(line); m != nil {
 			namesContact[m[1]] = true

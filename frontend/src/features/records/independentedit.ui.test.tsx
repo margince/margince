@@ -115,6 +115,7 @@ it("saves Customer tier when a background logo update changed the company versio
   stubFetch(async (url, method, request) => {
     if (url.includes("/custom-fields"))
       return jsonResponse({
+        page: { has_more: false },
         data: [
           {
             id: "tier",
@@ -187,13 +188,15 @@ it("saves a contact's title across an unrelated update without resending their e
         meFixture({ allow: { contact: ["read", "update"] } }),
       );
     if (url.includes("/custom-fields") || url.includes("/activities"))
-      return jsonResponse({ data: [] });
+      return jsonResponse({ page: { has_more: false }, data: [] });
     return jsonResponse(current);
   });
   render(<ContactDetails contact={anna} />);
-  fireEvent.click(await screen.findByRole("button", { name: /^Change Title/ }));
-  const dialog = await screen.findByRole("dialog", { name: "Title" });
-  fireEvent.change(within(dialog).getByLabelText("Title"), {
+  fireEvent.click(
+    await screen.findByRole("button", { name: /^Change Job title/ }),
+  );
+  const dialog = await screen.findByRole("dialog", { name: "Job title" });
+  fireEvent.change(within(dialog).getByLabelText("Job title"), {
     target: { value: "New title" },
   });
   current = { ...anna, version: 2, full_name: "Updated name" };

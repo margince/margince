@@ -6,11 +6,13 @@ package activities
 import (
 	"context"
 	"errors"
+	"fmt"
 	"slices"
 
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -55,7 +57,7 @@ func boundToKnownMessage(ctx context.Context, tx pgx.Tx, in LogActivityInput) (c
 	}
 	stated := append([]string{in.EmailFrom}, in.EmailTo...)
 	stated = append(stated, in.EmailCc...)
-	incumbent, found, err := bindableIdentityUnder(ctx, tx, kind, key, in.identityProver, stated)
+	incumbent, found, err := bindableIdentityUnder(ctx, tx, kind, key, in.identityProver, stated, in.Author.AuthorID)
 	if err != nil || !found {
 		return crmcontracts.Activity{}, false, err
 	}
@@ -207,4 +209,40 @@ func importNamesIncumbentSeat(ctx context.Context, tx pgx.Tx, incumbent ids.Acti
 		}
 	}
 	return false, nil
+}
+
+// importAuthorHoldsMeeting answers whether the incumbent meeting came from the
+// calendar or the hand of the seat a declared importer names as the author.
+// Only a declared importer may state an author (provenance.AdmitSourceAuthor),
+// and the importer must already be able to change the meeting. So the bind,
+// which may move its status and file it under more records, grants nothing new.
+func importAuthorHoldsMeeting(ctx context.Context, tx pgx.Tx, incumbent ids.ActivityID, author ids.UUID) (bool, error) {
+	var stamp string
+	args := schedulingArgs{}
+	err := tx.QueryRow(ctx, `SELECT captured_by FROM activity WHERE archived_at IS NULL AND restricted_at IS NULL AND id=`+args.add(incumbent), args...).Scan(&stamp)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("activities: reading who holds a meeting: %w", err)
+	}
+	if actingHumanOf(stamp) != author.String() {
+		return false, nil
+	}
+	return importerMayChangeMeeting(ctx, tx, incumbent)
+}
+
+// importerMayChangeMeeting is the one check an import passes before it lands on
+// a meeting it did not file. The importer acting in ctx must be able to change
+// it: a seat that writes, a role that updates activities, and the row in scope.
+// The live bind and the imported-copies task both ask it.
+func importerMayChangeMeeting(ctx context.Context, tx pgx.Tx, meeting ids.ActivityID) (bool, error) {
+	if !auth.AllowsWrite(ctx, "activity", principal.ActionUpdate) {
+		return false, nil
+	}
+	err := auth.EnsureActivityWritableIn(ctx, tx, meeting.UUID, true)
+	if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) {
+		return false, nil
+	}
+	return err == nil, err
 }

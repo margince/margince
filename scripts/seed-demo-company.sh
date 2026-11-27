@@ -66,7 +66,7 @@ SESSION="$(sed -n 's/^[Ss]et-[Cc]ookie: crm_session=\([^;]*\).*/\1/p' "$workdir/
 echo "  OK: logged in as $ADMIN_EMAIL"
 
 # ---- the company -----------------------------------------------------------
-# A CUSTOMER, because that is the lifecycle the money readings are for: the
+# A CUSTOMER, because that is the status the money readings are for: the
 # finance section is absent by contract on a target or a prospect (FIN-AC-3),
 # so a demo account that is not one cannot show the cards this exists to show.
 echo "== the company =="
@@ -74,7 +74,7 @@ company_id="$(psql_one "SELECT id FROM company WHERE display_name = '$COMPANY' A
 if [[ -z "$company_id" ]]; then
   status="$(api POST /companies "$(jq -n --arg n "$COMPANY" '{
     display_name: $n,
-    lifecycle: "customer",
+    status: "customer",
     website: "https://glazedfrog.example",
     description: "Supplies architectural glazing, aluminium systems and modular walls to builders, architects and developers.",
     employee_band: "51_200",
@@ -208,7 +208,7 @@ ensure_activity demo-gf-task "$(jq -n --arg o "$company_id" '{
 # does not hold. What it connects is the finance-demo unit, so the INVOICES are
 # not written here — the real sync produces them, at the real write shape.
 echo "== the accounting source =="
-live="$(psql_one "SELECT id || ' ' || provider FROM finance_connection WHERE archived_at IS NULL AND status <> 'disconnected' LIMIT 1")"
+live="$(psql_one "SELECT id || ' ' || provider FROM finance_connection WHERE status <> 'disconnected' LIMIT 1")"
 conn_id="${live%% *}"
 # The demo links name finance-demo's customers, which no other source holds.
 if [[ -n "$live" && "${live#* }" != "offline_demo" ]]; then
@@ -217,8 +217,8 @@ if [[ -n "$live" && "${live#* }" != "offline_demo" ]]; then
 fi
 if [[ -z "$conn_id" ]]; then
   conn_id="$(psql_one "INSERT INTO finance_connection
-      (provider, status, credential_ref, source, captured_by)
-    VALUES ('offline_demo', 'active', 'extension:offline_demo', 'system', 'system:seed')
+      (provider, status, captured_by)
+    VALUES ('offline_demo', 'active', 'system:seed')
     RETURNING id")"
   echo "  OK: connected the finance-demo source"
 else
@@ -250,8 +250,8 @@ if [[ -z "$(psql_one "SELECT 1 FROM finance_customer_link WHERE company_id = '$c
            jsonb_build_object('display_name', display_name, 'sync_hash', sync_hash)
       FROM entry" >/dev/null
   psql_one "INSERT INTO finance_customer_link
-      (connection_id, company_id, external_customer_id, sync_hash, source, captured_by)
-    VALUES ('$conn_id', '$company_id', '$linked', 'seed', 'system', 'system:seed')" >/dev/null
+      (connection_id, company_id, external_customer_id, captured_by)
+    VALUES ('$conn_id', '$company_id', '$linked', 'system:seed')" >/dev/null
   echo "  OK: matched $COMPANY to customer $linked in the source"
 else
   echo "  OK: $COMPANY is already matched"

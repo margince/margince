@@ -22,7 +22,7 @@ var voiceReasonBranch = regexp.MustCompile(`(?:case\s+["']([a-z_]+)["']\s*:|code
 
 func TestEveryVoiceReviewCodeHasAClientExplanation(t *testing.T) {
 	t.Parallel()
-	file, err := parser.ParseFile(token.NewFileSet(), "internal/modules/ai/voice_review_codes.go", nil, 0)
+	file, err := gatekit.ParseFile("internal/modules/ai/voice_review_codes.go", 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -56,7 +56,7 @@ func TestEveryVoiceReviewCodeHasAClientExplanation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	text := tsReasonComment.ReplaceAllString(string(source), " ")
+	text := gatekit.TSWithoutComments(string(source))
 	start := strings.Index(text, "function plainVoiceReason(")
 	end := strings.Index(text, "function legacyReviewReason(")
 	if start < 0 || end <= start {
@@ -71,7 +71,7 @@ func TestEveryVoiceReviewCodeHasAClientExplanation(t *testing.T) {
 
 func voiceReasonBranches(source string) []string {
 	var codes []string
-	for _, match := range voiceReasonBranch.FindAllStringSubmatch(tsReasonComment.ReplaceAllString(source, " "), -1) {
+	for _, match := range voiceReasonBranch.FindAllStringSubmatch(gatekit.TSWithoutComments(source), -1) {
 		codes = append(codes, match[1]+match[2])
 	}
 	slices.Sort(codes)

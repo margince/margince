@@ -29,28 +29,28 @@ type Contract = components["schemas"]["Contract"];
 
 const page = { has_more: false, next_cursor: null };
 
-const contracts: Contract[] = [
-  {
-    id: "c-1",
-    title: "Pallet pooling framework",
-    contract_number: "SM-2026-014",
-    status: "active",
-    value_basis: "annualized_12m",
-    under_contract: true,
-    term_state: "in_force",
-    auto_renew: false,
-    source: "manual",
-    captured_by: "human:u1",
-    version: 1,
-    created_at: "2026-10-20T00:00:00Z",
-    updated_at: "2026-10-20T00:00:00Z",
-    value_minor: 14850000,
-    currency: "EUR",
-    starts_on: "2026-11-01",
-    ends_on: "2027-10-31",
-    signed_on: "2026-10-20",
-  },
-];
+const framework: Contract = {
+  id: "c-1",
+  title: "Pallet pooling framework",
+  contract_number: "SM-2026-014",
+  status: "active",
+  value_basis: "annualized_12m",
+  under_contract: true,
+  term_state: "in_force",
+  auto_renew: false,
+  source: "manual",
+  captured_by: "human:u1",
+  version: 1,
+  created_at: "2026-10-20T00:00:00Z",
+  updated_at: "2026-10-20T00:00:00Z",
+  value_minor: 14850000,
+  currency: "EUR",
+  starts_on: "2026-11-01",
+  ends_on: "2027-10-31",
+  signed_on: "2026-10-20",
+};
+
+const contracts: Contract[] = [framework];
 
 const FULL_GRANTS = {
   // All four: Add needs `create`, Edit needs `update`, Archive needs `delete`,
@@ -124,6 +124,40 @@ export const PaperBeyondOnePage: Story = {
             });
       },
     });
+    return (
+      <StoryProviders>
+        <div style={{ maxWidth: 720 }}>
+          <CompanyContractsCard companyId="o-1" />
+        </div>
+      </StoryProviders>
+    );
+  },
+};
+
+/** A renewal beside the agreement it replaced, and a cancellation recorded
+ * before its term began: neither row says it renews. */
+export const CancelledAndReplaced: Story = {
+  render: () => {
+    routes([
+      {
+        ...framework,
+        id: "c-2",
+        contract_number: "SM-2027-002",
+        starts_on: "2027-11-01",
+        ends_on: "2028-10-31",
+        under_contract: false,
+        term_state: "not_started",
+        renewal_on: "2028-11-01",
+        cancellation_notice_on: "2027-06-01",
+        cancellation_effective_on: "2028-10-31",
+      },
+      {
+        ...framework,
+        status: "superseded",
+        renewal_on: "2027-11-01",
+        superseded_by_id: "c-2",
+      },
+    ]);
     return (
       <StoryProviders>
         <div style={{ maxWidth: 720 }}>

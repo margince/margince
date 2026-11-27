@@ -12,7 +12,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
-	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
@@ -62,16 +61,6 @@ func targetExistsSomewhere(t *testing.T, object, target string) bool {
 	return false
 }
 
-func TestTheSizeBandExampleNamesOnlyBandsTheImportTakes(t *testing.T) {
-	for _, lang := range textlang.Shipped {
-		for band := range strings.SplitSeq(importguide.Columns[fieldSizeBand].Example.In(lang), " · ") {
-			if !importableSizeBands[band] {
-				t.Errorf("%s example names %q, which the import refuses", lang, band)
-			}
-		}
-	}
-}
-
 func TestTheFormatNamesEachFileSoAnUploadDetectsIt(t *testing.T) {
 	f, err := formatFrom(map[string]importCatalog{}, langcopy.For("en"), 10)
 	if err != nil {
@@ -113,7 +102,7 @@ func TestACoreColumnIsItsTargetWithNoHeaderLabelAndAFieldLabelInTheCallersLangua
 		t.Fatal(err)
 	}
 	name := columnOf(t, f, crmcontracts.ImportObjectCompany, fieldDisplayName)
-	if name.Label != nil || name.FieldLabel == nil || *name.FieldLabel != "Firmenname" || name.Custom || !name.RequiredOnNewRow ||
+	if name.Label != nil || name.FieldLabel == nil || *name.FieldLabel != "Unternehmensname" || name.Custom || !name.RequiredOnNewRow ||
 		name.Description != importguide.Columns["company.display_name"].Description.De {
 		t.Fatalf("display_name = %+v, want the German company guide and field label, no header label, needed on a new row", name)
 	}

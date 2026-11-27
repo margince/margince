@@ -254,7 +254,7 @@ describe("what each page lets a reader change", () => {
 
     // The provider sheets price models on the same page as the bindings.
     models:
-      "all(full-seat, any(any(ai_routing:update), any(ai_model_rate:update, ai_model_rate:create)))",
+      "all(full-seat, any(any(ai_routing:update), any(ai_model_rate:update, ai_model_rate:create), any(ai_team_rules:update)))",
     automations:
       "all(full-seat, any(any(automation:update, automation:create), automation:delete))",
     usage: "all(full-seat, any(any(ai_budget:update)))",
@@ -373,16 +373,16 @@ describe("who may open what", () => {
   const writes = (object: RbacObject) =>
     grantOf(object, ["read", "create", "update"]);
 
-  it("shows the personal pages to everyone, including before /me resolves", () => {
-    // These carry no grant because they are about the reader themselves. They
-    // must survive the loading window too, or the rail flashes empty on every
-    // first paint.
+  it("shows the pages that need no grant to everyone, including before /me resolves", () => {
+    // The personal pages, Teams and About. They must survive the loading
+    // window too, or the rail flashes empty on every first paint.
     expect(visibleIds(nobody)).toEqual([
       "account",
       "notifications",
       "voice",
       "agents",
       "connections",
+      "teams",
       "about",
     ]);
   });
@@ -394,10 +394,9 @@ describe("who may open what", () => {
     expect(visibleIds(grantOf("activity", ["create"]))).toContain("meetings");
   });
 
-  // Members and Teams used to be on that list. `GET /users` still answers any
-  // authenticated caller and must — the share and assignee pickers read it —
-  // but a directory is not an administration page, and a reader who may not
-  // invite, change a role or switch a seat off has nothing to do on either.
+  // `GET /users` answers any caller, because the share and assignee pickers
+  // read it. A reader who may not invite, change a role or switch a seat off
+  // has nothing to do on Members.
   it("withholds members from a reader holding no user_admin", () => {
     expect(visibleIds(readsOnly("contact"))).not.toContain("members");
     // Any authority over the roster opens it, and the READ is one of them —
@@ -405,21 +404,16 @@ describe("who may open what", () => {
     expect(visibleIds(readsOnly("user_admin"))).toContain("members");
   });
 
-  it("withholds teams from a reader holding neither team verb nor the roster read", () => {
-    expect(visibleIds(readsOnly("contact"))).not.toContain("teams");
-    // The team object's READ is not one of its arms: teams.go takes create and
-    // update, and nothing on the page answers to a `team_admin:read`.
-    expect(visibleIds(readsOnly("team_admin"))).not.toContain("teams");
-    expect(visibleIds(writes("team_admin"))).toContain("teams");
-  });
-
-  // The roster's privileged projection is what Teams RENDERS: `team_ids` rides
-  // `user_admin:read` (handlers_roster.go), not the team object. So a reader
-  // holding that read alone still opens Teams — they see who is in which team
-  // and may change none of it — and the checkboxes are disabled rather than
-  // absent, because the list IS the answer they came for.
-  it("opens teams to the roster read that carries membership", () => {
+  // `GET /teams` answers every member with names and counts, so the page asks
+  // nothing to open. The team verbs decide what it lets a reader change.
+  it("opens teams to every reader and makes it theirs only with a team verb", () => {
+    expect(visibleIds(readsOnly("contact"))).toContain("teams");
     expect(visibleIds(readsOnly("user_admin"))).toContain("teams");
+    const acting = (snapshot: Parameters<typeof settingsReach>[0]) =>
+      settingsReach(snapshot).acts.map((page) => page.id);
+    expect(acting(readsOnly("contact"))).not.toContain("teams");
+    expect(acting(readsOnly("user_admin"))).not.toContain("teams");
+    expect(acting(writes("team_admin"))).toContain("teams");
   });
 
   // The seat switch WITHOUT the read does not open it, and that is the fix

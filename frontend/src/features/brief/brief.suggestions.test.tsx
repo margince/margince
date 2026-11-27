@@ -73,7 +73,8 @@ it.each([null, { ...ranked, items: [] }])(
   "draws nothing for an absent or empty run",
   async (run) => {
     stubApi({
-      "GET /brief": () => (run ? jsonResponse(run) : jsonResponse({}, 404)),
+      "GET /brief": () =>
+        run ? jsonResponse(run) : new Response(null, { status: 204 }),
     });
     const { container, client } = render(<BriefSuggestions />);
     // The read has settled as a success before the absence means anything.

@@ -38,8 +38,6 @@ gates/aitaskrailcensus_test.go#func everyRoutableTask
 gates/aitaskrailcensus_test.go#var carrierSources
 gates/consumermailonelist_test.go#var baselineDomains
 gates/edgereaders_test.go#const edgeTable
-gates/edgereaders_test.go#var edgeReaderScope
-gates/enumsync_test.go#func recordChecks
 gates/envcontract_test.go#func liveEnvVars
 gates/extensioncapabilitycensus_test.go#var surfaceConstants
 gates/fieldnames_test.go#const internalTree
@@ -125,7 +123,6 @@ internal/compose/deploymentsecretseal.go#method vaultBinding.open
 internal/compose/dispatch.go#func fanOutChildren
 internal/compose/documentextract.go#func documentFieldOrder
 internal/compose/documentextract.go#func toModelField
-internal/compose/export.go#func exportableColumns
 internal/compose/extensionpolicy.go#func preflightRetentionClasses
 internal/compose/extensions.go#var composedExtensions
 internal/compose/extensions.go#var composedSubscriptions
@@ -171,7 +168,6 @@ internal/compose/jobargsjsonfields.go#func jsonCandidateFields
 internal/compose/jobcensus.go#method JobCensus.NilAfterLoggingWaivers
 internal/compose/jobs_documentextract.go#const documentExtractActor
 internal/compose/jobs_integration_test.go#const awaitBudget
-internal/compose/jobs_transcript.go#func withTranscriptReader
 internal/compose/jobs_transcript.go#type TranscriptProposeArgs.RequestedBy
 internal/compose/license.go#func correctTheToken
 internal/compose/linkedinrematch.go#method linkedInRematchWorker.systemContext
@@ -212,7 +208,6 @@ internal/compose/sitetriage.go#const block at const triageFieldKind
 internal/compose/tagseam.go#method tagAdapter.TaggableTypes
 internal/compose/telegrampollfixture_integration_test.go#type telegramPollFakeAPI.held
 internal/compose/telegrampollscope.go#func polledBatchAccounts
-internal/compose/telegrampollscope.go#func telegramRawSourceID
 internal/compose/transcriptproposetransport.go#func TranscriptReadOnLanding
 internal/modules/activities/activity.go#const block at const fieldKind
 internal/modules/activities/activitylinks.go#func insertActivityLinks
@@ -297,7 +292,6 @@ internal/modules/approvals/stageagentcall.go#method Service.StageAgentCall
 internal/modules/approvals/staging.go#func withCanonicalIdentity
 internal/modules/automation/automations_catalog_renewal.go#func RenewalReminderObjects
 internal/modules/automation/automations_preview.go#const previewBaseWhereNotArchived
-internal/modules/automation/engine.go#const systemSource
 internal/modules/automation/handlers_clock.go#func renewalAnchor
 internal/modules/automation/handlers_clock.go#func touchAnchor
 internal/modules/automation/handlers_event.go#const block at const dealStageStatusField
@@ -496,7 +490,6 @@ internal/platform/httperr/decoderefusal.go#func fieldDecodeRefusal
 internal/platform/httperr/decoderefusal_test.go#var block at var intoAdvanceDeal
 internal/platform/httperr/decoderefusal_test.go#var decodeRefusalCases
 internal/platform/httperr/faulttest/faulttest.go#package faulttest
-internal/platform/httperr/httperr.go#func Classify
 internal/platform/httperr/httperr.go#type DetailedError.Fields
 internal/platform/httperr/wire.go#const codeBodyTooLarge
 internal/platform/jobs/composed.go#var composed
@@ -513,7 +506,6 @@ internal/platform/settings/entry.go#const CodeInvalidValue
 internal/platform/settings/store.go#type Store
 internal/platform/testdb/dropschema.go#const unreferencedTables
 internal/platform/testdb/redis.go#func RedisDB
-internal/platform/testdb/reset.go#const resetTables
 internal/platform/testdb/river.go#func EnsureRiverSchema
 internal/shared/buildinfo/buildinfo.go#var ReleaseVersion
 internal/shared/gatekit/scope.go#method Scope.normalizedRoots

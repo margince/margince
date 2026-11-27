@@ -75,6 +75,7 @@ package gates
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"go/ast"
 	"go/parser"
@@ -150,17 +151,12 @@ const registerPath = "uniquenessclaims.txt"
 // lines and the header.
 func readRegister(t *testing.T) []string {
 	t.Helper()
-	file, err := os.Open(registerPath)
+	body, err := gatekit.ReadFile(registerPath)
 	if err != nil {
-		t.Fatalf("opening %s: %v", registerPath, err)
+		t.Fatalf("reading %s: %v", registerPath, err)
 	}
-	defer func() {
-		if closeErr := file.Close(); closeErr != nil {
-			t.Errorf("closing %s: %v", registerPath, closeErr)
-		}
-	}()
 	var keys []string
-	scanner := bufio.NewScanner(file)
+	scanner := bufio.NewScanner(bytes.NewReader(body))
 	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
@@ -200,8 +196,15 @@ func testFunctions(t *testing.T) map[string][]string {
 			if readErr != nil {
 				return readErr
 			}
-			for _, match := range goTestFunc.FindAllStringSubmatch(string(source), -1) {
-				found[match[1]] = append(found[match[1]], filepath.ToSlash(path))
+			// goTestFunc never spans a newline and opens at a line start, so
+			// asking it line by line finds the same matches in the same order.
+			for line := range strings.Lines(string(source)) {
+				if goTestFuncWords != nil && !mayHoldFolded(line, goTestFuncWords...) {
+					continue
+				}
+				if match := goTestFunc.FindStringSubmatch(line); match != nil {
+					found[match[1]] = append(found[match[1]], filepath.ToSlash(path))
+				}
 			}
 			return nil
 		})
@@ -211,6 +214,10 @@ func testFunctions(t *testing.T) map[string][]string {
 	}
 	return found
 }
+
+// goTestFuncWords are the words every goTestFunc match holds, derived so an
+// edit to the pattern cannot leave the line filter stale.
+var goTestFuncWords = requiredWords(goTestFunc)
 
 func TestEveryUniquenessClaimNamesItsGateOrIsRegisteredDebt(t *testing.T) {
 	t.Parallel()
@@ -472,10 +479,10 @@ func TestTheRegisterHoldsNoEntryThatIsNoLongerAClaim(t *testing.T) {
 // a row falling, so the two kinds of progress are told apart by which number
 // moved and whether the tree moved with it.
 var shapeCensus = map[string]int{
-	"cannot-drift":   143,
-	"once":           151,
-	"one-of-a-kind":  138,
-	"is-every-named": 81,
+	"cannot-drift":   141,
+	"once":           150,
+	"one-of-a-kind":  134,
+	"is-every-named": 80,
 	"only-noun":      9,
 	"no-second":      10,
 	"never-twice":    7,

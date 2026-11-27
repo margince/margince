@@ -16,6 +16,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -54,12 +55,15 @@ type BookingHealth interface {
 	BookingConcerns(ctx context.Context) ([]BookingConcern, error)
 }
 
-// BookingConcern is the reader's paused booking page and why it is paused.
+// BookingConcern is one of the reader's paused booking pages, their personal
+// page or a team link, and why it is paused.
 type BookingConcern struct {
 	PageID ids.UUID
 	// Blocker is the profile's own reason: no_calendar, calendar_read_only,
 	// calendar_unavailable or team_not_ready.
 	Blocker string
+	// Title names a team link, and is empty for the reader's personal page.
+	Title string
 }
 
 // AIWork is the reader's own AI runs that went wrong — failed inside the
@@ -122,29 +126,11 @@ type ParkedSend struct {
 // Per-user like the health lanes beside it: the read refuses a principal with
 // no human behind it, and the lane renders that refusal as withheld.
 type Bounces interface {
-	HardBounces(ctx context.Context, since time.Time, limit int) ([]BouncedSend, error)
+	HardBouncesFor(ctx context.Context, since time.Time, limit int) ([]BouncedSend, error)
 }
 
-// BouncedSend is one send that did not arrive.
-type BouncedSend struct {
-	ID ids.UUID
-	// Subject is the send's own subject line — the name the reader knows it by.
-	Subject string
-	// Reason is the receiving side's own words for the refusal.
-	Reason    string
-	BouncedAt time.Time
-	// ContactID is the contact the send's activity is filed under, zero when it
-	// is filed under none — the card then offers no open.
-	ContactID ids.UUID
-	// Recipient is the address that refused the send.
-	//
-	// Without it the card names a contact and a subject, and a rep opening a
-	// contact who carries three addresses cannot tell which one is dead — the
-	// row reports a failure and leaves the reader to guess at the fix. Empty
-	// when the send carries none, and the card then says nothing about where it
-	// was aimed rather than guessing.
-	Recipient string
-}
+// BouncedSend is one send that did not arrive, as the comms store reads it.
+type BouncedSend = comms.HardBounce
 
 // AutomationHealth is the automations whose recent firings failed or were
 // blocked — a rule its owner believes is running and is not. One entry per

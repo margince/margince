@@ -1,0 +1,1 @@
+{"app_id":"1111222233334444","user_id_by_app":"7777888899990000","event_name":"user_send_image","timestamp":"1764070001000","sender":{"id":"5550001"},"recipient":{"id":"9990001"},"message":{"msg_id":"msg-in-2","text":"ảnh","attachments":[{"type":"image","payload":{"thumbnail":"https://example.test/t.jpg","url":"https://example.test/i.jpg"}}]}}

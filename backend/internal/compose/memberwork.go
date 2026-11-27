@@ -86,7 +86,7 @@ func (s memberWork) Inspect(ctx context.Context, tx pgx.Tx, source ids.UUID, tar
 	}
 	report.VisibleOwned = visible
 	blockers, err := memberRetirementBlockers(ctx, tx, source)
-	report.Blockers = blockers
+	report.Blockers, report.BlockingRecords = blockers.Blockers, blockers.Records
 	slices.Sort(stamp)
 	report.Stamp = strings.Join(stamp, ";")
 	return report, err
@@ -115,12 +115,7 @@ func memberWorkReceiverTx(ctx context.Context, tx pgx.Tx, target *ids.UUID) (pri
 	if target == nil {
 		return principal.Principal{}, false, nil
 	}
-	members, err := identity.MemberPrincipalsTx(ctx, tx, []ids.UUID{*target})
-	if err != nil {
-		return principal.Principal{}, false, err
-	}
-	receiver, exists := members[*target]
-	return receiver, exists, nil
+	return identity.MemberPrincipalTx(ctx, tx, *target)
 }
 
 func inspectMemberStaffingTx(ctx context.Context, tx pgx.Tx, table string, source ids.UUID, receiver *principal.Principal) (workforce.MemberWorkSnapshot, error) {

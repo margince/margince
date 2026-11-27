@@ -193,7 +193,27 @@ describe("typedMinorUnits", () => {
     ["en", "abc", "EUR", "amount.refused.notNumber", { example: "1234.56" }],
     ["de", "12,345", "EUR", "record.amountTooPrecise", { currency: "EUR" }],
     ["de", "1,5", "JPY", "record.amountTooPrecise", { currency: "JPY" }],
-    ["en", "99999999999999999", "EUR", "amount.refused.tooLarge", {}],
+    [
+      "en",
+      "99999999999999999",
+      "EUR",
+      "amount.refused.tooLarge",
+      { max: "90071992547409.91" },
+    ],
+    [
+      "de",
+      "99999999999999999",
+      "XXQ",
+      "amount.refused.tooLarge",
+      { max: "90071992547409,91" },
+    ],
+    [
+      "en",
+      "99999999999999999",
+      "JPY",
+      "amount.refused.tooLarge",
+      { max: "9007199254740991" },
+    ],
   ] as const)(
     "%s refuses %s %s with %s",
     (locale, typed, currency, key, params) => {

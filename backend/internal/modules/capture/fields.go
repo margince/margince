@@ -102,6 +102,19 @@ type ActivityFields struct {
 	// recorded document missing from it was taken off the meeting.
 	MeetingDocumentsListed bool
 
+	// memberOwned says the connection that carried this chat message is one
+	// member's own account. Unexported so only FileChatMessage derives it, from
+	// the authenticated binding.
+	memberOwned bool
+	// pinnedPosture is the posture the member-owned source declared. Unexported
+	// for the reason memberOwned is.
+	pinnedPosture string
+	// sourceRevision is the provider's edit time when the message is filed
+	// already edited. Zero for an original. It is unexported for the reason
+	// memberOwned is: only the chat filing function states it.
+	sourceRevision    time.Time
+	sourceRevisionSeq int64
+
 	// judged is what the sink concluded from Envelope. Unexported so no
 	// connector can state the conclusion for it.
 	judged envelopeFacts

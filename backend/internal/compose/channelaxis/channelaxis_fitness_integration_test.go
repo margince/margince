@@ -26,6 +26,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 func contractPath(t *testing.T, name string) string {
@@ -107,17 +108,19 @@ func TestNoContractEnumSpellsARegisteredTransport(t *testing.T) {
 
 	allowed := botBindingProviderSets(ctx, t, owner)
 
+	defer memberChatNetworkEnums.AssertAllMatched(t)
 	for _, item := range contractEnums(t, raw) {
 		members := item.Members
 		trimmed := make(map[string]bool, len(members))
 		for _, m := range members {
 			trimmed[strings.Trim(strings.TrimSpace(m), `'"`)] = true
 		}
-		if allowed[enumKey(trimmed)] {
+		if allowed[enumKey(trimmed)] || connectsABotTheSchemaAdmits(item.Path, trimmed, allowed) {
 			continue
 		}
 		for _, provider := range providers {
-			if trimmed[provider] && !independentLinkedInMeaning(item.Path, provider) {
+			if trimmed[provider] && !independentLinkedInMeaning(item.Path, provider) &&
+				!memberChatNetworkEnums.Waived(t, item.Path) {
 				t.Errorf("contract enum %s %v spells the registered transport %q; a provider vocabulary is a deployment fact and cannot live in an installation-independent enum — use ProviderRef",
 					item.Path, members, provider)
 			}
@@ -190,4 +193,39 @@ func TestActivityKindTableMatchesTheContractKindEnum(t *testing.T) {
 			t.Errorf("the contract admits kind %q and activity_kind does not carry it: a contract-valid request would fail a foreign key the caller cannot see", k)
 		}
 	}
+}
+
+// memberChatNetworkEnums name the chat network a member's own account is on, as
+// the member links it. They are networks, not this deployment's transports.
+var memberChatNetworkEnums = gatekit.Waive(map[string]string{
+	"components/schemas/ChatNetwork":                          "the network of a member's own chat account, as the member links it; a network offers or lacks a personal account link whatever this deployment registers",
+	"paths//me/chat-identities/{network}/parameters/0/schema": "the same network, named in the route a member links or unlinks their own account on",
+})
+
+// connectRequestProviderPath is the enum of the bot connectors ConnectChannel
+// takes a token for. An account connection rides on one of them and is never
+// connected this way, so the enum is narrower than the connection table's check.
+const connectRequestProviderPath = "components/schemas/ConnectChannelRequest/properties/provider"
+
+// connectsABotTheSchemaAdmits exempts that one enum while every member is one a
+// bot-binding table's provider check admits, so a provider the schema refuses
+// still fails here.
+func connectsABotTheSchemaAdmits(path string, members map[string]bool, allowed map[string]bool) bool {
+	if path != connectRequestProviderPath {
+		return false
+	}
+	for set := range allowed {
+		admits := map[string]bool{}
+		for provider := range strings.SplitSeq(set, ",") {
+			admits[provider] = true
+		}
+		within := true
+		for member := range members {
+			within = within && admits[member]
+		}
+		if within {
+			return true
+		}
+	}
+	return false
 }

@@ -50,7 +50,7 @@ Each type maps to one column type:
 The type names are written in three places: `ports/fieldcatalog`, the catalog's `CHECK` constraint (in
 `migrations/core/`), and `CF_TYPES` in `frontend/src/lib/customfields.logic.ts`. The engine's constants
 are the port's. `TestFieldTypes_IsTheCatalogCheckSet` holds the port against the `CHECK` in the head
-schema, and `backend/gates/frontendcustomfieldtypes_test.go` holds `CF_TYPES` against the port. Both fail
+schema, and `backend/gates/frontendvocabularymirrors_test.go` holds `CF_TYPES` against the port. Both fail
 in either direction.
 
 The admin never names the column. `label` is the only text a caller supplies. The engine derives the
@@ -241,6 +241,19 @@ The code is `field_not_valid_for_kind`, on a create and on a patch, where it rea
 A `null` always passes, so a value stored before the field was narrowed can still be cleared. The
 check is `checkCustomValues` in `internal/modules/activities/customfields.go`, and the REST routes
 and the agent tools all reach it.
+
+A deal field may apply to some pipelines only (`custom_field.pipeline_ids`, null for every pipeline).
+The deal store refuses a value for a field that does not apply to the deal's pipeline. This holds on a
+create, a patch and an import row. The code is `field_not_valid_for_pipeline`, and a `null` always passes.
+
+A patch never moves the deal, so it reads the stored pipeline. A deal that moves keeps its values.
+An array column cannot carry a reference constraint, so the engine checks each id against the live
+pipelines when it writes the list. A pipeline archived later matches nothing, and its id may stay on the list while only new ids must be live. The check is
+`checkPipelineScope` in `backend/internal/modules/deals/pipelinefields.go`.
+
+The forms show a field
+only when it applies to the deal's pipeline or the deal holds a value for it. That rule is
+`appliesToPipeline` in `frontend/src/components/customfields.form.ts`.
 
 ## No `cf_*` column is indexed
 

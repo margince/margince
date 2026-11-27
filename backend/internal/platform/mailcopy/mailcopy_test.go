@@ -13,6 +13,8 @@ package mailcopy
 import (
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/langcopy/langcopytest"
 )
 
 func TestALanguageThisBuildCarriesIsWrittenInIt(t *testing.T) {
@@ -70,6 +72,8 @@ func TestEveryEntryIsFilledIn(t *testing.T) {
 				"ResetAction": words.ResetAction, "ResetIgnore": words.ResetIgnore,
 				"InviteSubject": words.InviteSubject, "InviteIntro": words.InviteIntro,
 				"InviteAction": words.InviteAction, "InviteIgnore": words.InviteIgnore,
+				"MergeSubject": words.MergeSubject, "MergeIntro": words.MergeIntro,
+				"MergeAction": words.MergeAction, "MergeIgnore": words.MergeIgnore,
 				"WeeklySubject": words.WeeklySubject, "WeeklyHeading": words.WeeklyHeading,
 				"WeeklyOfDue": words.WeeklyOfDue, "WeeklyAndMore": words.WeeklyAndMore,
 			} {
@@ -115,5 +119,13 @@ func TestThePoweredByLineSpeaksEveryLanguage(t *testing.T) {
 		if language != Fallback && words == english {
 			t.Errorf("%s carries the English attribution line", language)
 		}
+	}
+}
+
+// A mail to a contact is in Sie and one to a member in du. The tests of each
+// audience hold the register, so this one holds only the punctuation.
+func TestTheGermanMailCopyFollowsTheGermanStylePage(t *testing.T) {
+	for name, text := range langcopytest.Sentences(t, catalog[German], "Language") {
+		langcopytest.GermanPunctuation(t, name, text)
 	}
 }

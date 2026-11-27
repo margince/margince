@@ -237,10 +237,10 @@ func mirrorCustomer(
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO finance_external_customer
 		       (id, connection_id, external_customer_id, display_name,
-		        source_updated_at, sync_hash, source, captured_by)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+		        sync_hash, source, captured_by)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)`,
 		id, connectionID, customer.ExternalID, customer.DisplayName,
-		customer.UpdatedAt, hash, source, by); err != nil {
+		hash, source, by); err != nil {
 		return fmt.Errorf("mirror the source's customer: %w", err)
 	}
 	if _, err := storekit.Audit(ctx, tx, "create", entityExternalCustomer, id, nil, after); err != nil {
@@ -263,9 +263,9 @@ func updateExternalCustomer(
 	}
 	if _, err := tx.Exec(ctx, `
 		UPDATE finance_external_customer
-		   SET display_name = $2, source_updated_at = $3, sync_hash = $4
+		   SET display_name = $2, sync_hash = $3
 		 WHERE id = $1`,
-		id, customer.DisplayName, customer.UpdatedAt, hash); err != nil {
+		id, customer.DisplayName, hash); err != nil {
 		return fmt.Errorf("update the mirrored customer: %w", err)
 	}
 	if _, err := storekit.Audit(ctx, tx, "update", entityExternalCustomer, id, before, after); err != nil {
@@ -304,7 +304,7 @@ func markSynced(ctx context.Context, tx pgx.Tx, connectionID ids.UUID) error {
 	// The connection row is held for the same reason the invoice rows are: two
 	// sweeps finishing at once must not interleave their status writes and
 	// leave the row saying `error` after the later one succeeded.
-	if _, err := storekit.LockRow(ctx, tx, entityConnection, connectionID, storekit.LiveOnly); err != nil {
+	if _, err := storekit.LockRow(ctx, tx, entityConnection, connectionID, storekit.NoArchiveColumn); err != nil {
 		return err
 	}
 	before, err := readConnectionState(ctx, tx, connectionID)
@@ -431,7 +431,7 @@ const failureRecordTimeout = 15 * time.Second
 // `last_success_at` is untouched here, which is the whole point of the state:
 // the reader keeps the date of the last figures they can trust.
 func markSyncFailed(ctx context.Context, tx pgx.Tx, connectionID ids.UUID) error {
-	if _, err := storekit.LockRow(ctx, tx, entityConnection, connectionID, storekit.LiveOnly); err != nil {
+	if _, err := storekit.LockRow(ctx, tx, entityConnection, connectionID, storekit.NoArchiveColumn); err != nil {
 		return err
 	}
 	before, err := readConnectionState(ctx, tx, connectionID)

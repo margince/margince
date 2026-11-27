@@ -15,21 +15,25 @@
   "search": "semantic",
   "self_judged": false,
   "stamp": {
-    "scenario": "d27e96ea330020e6",
-    "tools": "23049cd9100732dc",
-    "instructions": "c5c644eee9719be0",
+    "scenario": "7f9423abdc578829",
+    "tools": "61f542b10384c4bb",
+    "instructions": "d707a123fe53827f",
     "judge": "claude-haiku-5-5",
-    "harness": "024566e70b0c3db3",
-    "commit": "53246e5fe328e22058409bea6b0b93e8a29005ee",
-    "ran_at": "2026-11-22T03:26:27Z",
-    "graded_commit": "53246e5fe328e22058409bea6b0b93e8a29005ee",
-    "graded_at": "2026-11-22T03:26:27Z"
+    "harness": "0fe690d35efcc703",
+    "parsers": {
+      "gemini:cli": "fa1db64bc14e971b",
+      "gpt:cli": "d48ca27c983f8b3f"
+    },
+    "commit": "7d7339123d4a6f8f5fae60563a8467d7502fe1d3",
+    "ran_at": "2026-11-26T20:04:21Z",
+    "graded_commit": "7d7339123d4a6f8f5fae60563a8467d7502fe1d3",
+    "graded_at": "2026-11-26T20:04:21Z"
   },
   "usage": {
-    "input_tokens": 126202,
-    "output_tokens": 8118,
+    "input_tokens": 124865,
+    "output_tokens": 10351,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 769280,
+    "cache_read_input_tokens": 1333120,
     "runs_measured": 3,
     "runs_costed": 0,
     "cost_usd": null
@@ -38,31 +42,41 @@
     {
       "passed": false,
       "tools": [
-        "catch_me_up_on",
         "find_records",
-        "get_worklist",
         "list_records",
         "prep_for_meeting",
         "read_context",
         "read_record",
-        "read_workspace",
         "search_context",
         "search_records",
         "whoami"
+      ],
+      "refused": [
+        "find_records",
+        "read_context",
+        "read_record"
       ]
     },
     {
       "passed": true,
       "tools": [
-        "catch_me_up_on",
+        "describe_list_filters",
+        "describe_query_vocabulary",
         "find_records",
-        "list_records",
         "prep_for_meeting",
+        "query_workspace",
+        "read_attention",
         "read_context",
         "read_record",
-        "search_context",
+        "read_workspace",
+        "review_commitments",
         "search_records",
         "whoami"
+      ],
+      "refused": [
+        "check_availability",
+        "find_records",
+        "read_context"
       ]
     },
     {
@@ -76,32 +90,46 @@
         "read_context",
         "read_record",
         "review_commitments",
-        "search_records",
-        "whoami"
+        "search_records"
+      ],
+      "refused": [
+        "find_records",
+        "read_context",
+        "read_record"
       ]
     }
   ],
   "efficiency": {
     "runs": 3,
     "calls": {
-      "median": 20,
-      "min": 16,
-      "max": 24
+      "median": 22,
+      "min": 19,
+      "max": 26
     },
     "refused": {
-      "median": 6,
-      "min": 4,
+      "median": 7,
+      "min": 6,
       "max": 10
     },
+    "retries": {
+      "median": 6,
+      "min": 6,
+      "max": 10
+    },
+    "client_refused": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
     "prompt_tokens": {
-      "median": 272606,
-      "min": 258078,
-      "max": 364798
+      "median": 423433,
+      "min": 335033,
+      "max": 699519
     },
     "output_tokens": {
-      "median": 2909,
-      "min": 2189,
-      "max": 3020
+      "median": 3400,
+      "min": 2552,
+      "max": 4399
     }
   }
 }

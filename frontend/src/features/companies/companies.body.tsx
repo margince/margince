@@ -149,7 +149,12 @@ export function CompanyRecordBody({
   const dossierNames = recordNamesIn(view);
   return (
     <>
-      {tab === "partner" && <PartnerTab companyId={company.id} />}
+      {tab === "partner" && (
+        <PartnerTab
+          companyId={company.id}
+          programEnded={company.partner_program_ended}
+        />
+      )}
       {/* The partial-read notice stands in the overview's stack, not above it.
           The sentence and the column it qualifies are one body. Above it, the
           notice's card would meet the stack's first pane at the border. */}
@@ -241,6 +246,7 @@ export function CompanyRecordBody({
           {!view?.sections_omitted?.includes("contacts") && (
             <CompanyContactsList
               companyId={company.id}
+              hidden={view?.contacts_hidden}
               mayCreate={canWriteCompany}
               bandSlot={(narrow) => (
                 <CoverageBand
@@ -260,6 +266,7 @@ export function CompanyRecordBody({
           {!view?.sections_omitted?.includes("billing_contacts") && (
             <BillingContactsPanel
               contacts={view?.billing_contacts}
+              hidden={view?.billing_contacts_hidden}
               companyId={company.id}
             />
           )}
@@ -291,10 +298,7 @@ export function CompanyRecordBody({
           (historical)". The tab strip cannot say that, because a tab label
           names a place, not its qualifier. */}
       {tab === "finance" && !company.archived_at && (
-        <CompanyFinanceCard
-          companyId={company.id}
-          lifecycle={company.lifecycle}
-        />
+        <CompanyFinanceCard companyId={company.id} lifecycle={company.status} />
       )}
       {tab === "documents" && (
         // The tab's stacked column, so the two panels are spaced like every

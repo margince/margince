@@ -99,4 +99,13 @@ export type ExtensionDescriptor = {
   readonly secretScope: "user" | "workspace" | "";
 };
 
+/** The drawer headings an app may sit under: extension.AppGroups(). */
+export const EXTENSION_APP_GROUPS = [
+  "records",
+  "work",
+  "intelligence",
+] as const;
+
+export type ExtensionAppGroup = (typeof EXTENSION_APP_GROUPS)[number];
+
 export const extensions: readonly ExtensionDescriptor[] = [];

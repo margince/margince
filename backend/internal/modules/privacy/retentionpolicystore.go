@@ -145,7 +145,7 @@ func validateRetentionAction(scope RetentionScope, action string) error {
 }
 
 // RetainDaysCeiling is a century, in days, mirrored by the frontend's
-// RETAIN_DAYS.max (gates/frontendretaindays_test.go).
+// RETAIN_DAYS.max (gates/frontendlimits_test.go).
 //
 // The selectors read a policy as `now() - make_interval(days => retain_days)`,
 // and Postgres answers "timestamp out of range" somewhere past two million
@@ -315,6 +315,10 @@ func (s *PolicyStore) Update(ctx context.Context, id ids.UUID, patch PolicyPatch
 		if err := validateRetentionAction(out.Scope, out.Action); err != nil {
 			return err
 		}
+		out.SuppressedByPosture = retainOnly && isDestructive(out.Action)
+		if moved, _ := storekit.ChangedColumns(auditImage(before), auditImage(out)); len(moved) == 0 {
+			return nil
+		}
 		if _, err := tx.Exec(ctx, `
 			UPDATE retention_policy
 			SET retain_days = $2, action = $3, lawful_basis = $4, enabled = $5
@@ -322,7 +326,6 @@ func (s *PolicyStore) Update(ctx context.Context, id ids.UUID, patch PolicyPatch
 			id, out.RetainDays, out.Action, out.LawfulBasis, out.Enabled); err != nil {
 			return err
 		}
-		out.SuppressedByPosture = retainOnly && isDestructive(out.Action)
 		_, err = storekit.Audit(ctx, tx, "update", retentionPolicyEntity, id,
 			auditImage(before), auditImage(out))
 		return err

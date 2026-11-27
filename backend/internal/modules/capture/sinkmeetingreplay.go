@@ -10,6 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -64,32 +65,35 @@ func (s *Sink) meetingForSeat(ctx context.Context, tx pgx.Tx, rec connector.Norm
 		return ids.ActivityID{}, false, err
 	}
 	var own ids.ActivityID
-	var live bool
-	err = tx.QueryRow(ctx, `SELECT id,kind='meeting' AND archived_at IS NULL AND restricted_at IS NULL
- FROM activity WHERE source_system=@source_system AND source_id=@key FOR UPDATE`, pgx.StrictNamedArgs{
+	err = tx.QueryRow(ctx, `SELECT id FROM activity WHERE source_system=@source_system AND source_id=@key`, pgx.StrictNamedArgs{
 		fieldSourceSystem: rec.NaturalKey.SourceSystem, "key": rec.NaturalKey.SourceID,
-	}).Scan(&own, &live)
+	}).Scan(&own)
 	if err == nil {
-		if !live {
-			return ids.ActivityID{}, false, nil
-		}
-		held, err := SeatHoldsActivityTx(ctx, tx, own)
-		return own, held, err
+		return lockedMeetingForSeat(ctx, tx, own)
 	}
 	if !errors.Is(err, pgx.ErrNoRows) {
 		return ids.ActivityID{}, false, fmt.Errorf("capture: finding the meeting to replay: %w", err)
 	}
 	if !found {
-		return ids.ActivityID{}, false, nil
+		return s.meetingOfOwnDelivery(ctx, tx, rec.NaturalKey)
 	}
-	err = tx.QueryRow(ctx, `SELECT id FROM activity WHERE id=@id AND kind='meeting'
- AND archived_at IS NULL AND restricted_at IS NULL FOR UPDATE`, pgx.StrictNamedArgs{"id": matched}).Scan(&own)
-	if errors.Is(err, pgx.ErrNoRows) {
+	return lockedMeetingForSeat(ctx, tx, matched)
+}
+
+// lockedMeetingForSeat locks the meeting's attendees and then its row, the order
+// every meeting writer keeps. It answers the meeting when it is live and the seat's.
+func lockedMeetingForSeat(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (ids.ActivityID, bool, error) {
+	if err := storekit.LockMeetingAttendeePage(ctx, tx, []ids.UUID{id.UUID}); err != nil {
+		return ids.ActivityID{}, false, fmt.Errorf("capture: locking the meeting a calendar names: %w", err)
+	}
+	var live bool
+	err := tx.QueryRow(ctx, `SELECT kind='meeting' AND archived_at IS NULL AND restricted_at IS NULL FROM activity WHERE id=$1`, id).Scan(&live)
+	if errors.Is(err, pgx.ErrNoRows) || (err == nil && !live) {
 		return ids.ActivityID{}, false, nil
 	}
 	if err != nil {
-		return ids.ActivityID{}, false, fmt.Errorf("capture: locking the matched meeting to replay: %w", err)
+		return ids.ActivityID{}, false, fmt.Errorf("capture: reading the meeting a calendar names: %w", err)
 	}
-	held, err := SeatHoldsActivityTx(ctx, tx, own)
-	return own, held, err
+	held, err := SeatHoldsActivityTx(ctx, tx, id)
+	return id, held, err
 }

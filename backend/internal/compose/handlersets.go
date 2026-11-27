@@ -22,11 +22,13 @@ import (
 	"github.com/margince/margince/backend/internal/compose/leaddraft"
 	"github.com/margince/margince/backend/internal/compose/loggedtouch"
 	"github.com/margince/margince/backend/internal/compose/meetingbrief"
+	"github.com/margince/margince/backend/internal/compose/memberhandoff"
 	"github.com/margince/margince/backend/internal/compose/pipelinetrace"
 	"github.com/margince/margince/backend/internal/compose/project360"
 	"github.com/margince/margince/backend/internal/compose/readerrendering"
 	"github.com/margince/margince/backend/internal/compose/recordreferences"
 	"github.com/margince/margince/backend/internal/compose/roombrief"
+	"github.com/margince/margince/backend/internal/compose/taskexplain"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/aiactivity"
@@ -69,6 +71,7 @@ type (
 	channelHandlers         = capture.ChannelHandlers
 	chatLinkHandlers        = chatlinks.Handlers
 	chatEventHandlers       = chatlinks.EventHandlers
+	whatsAppEventHandlers   = capture.WhatsAppEventHandlers
 	traceHandlers           = capture.TraceHandlers
 	pipelineTraceHandlers   = pipelinetrace.Handlers
 	contactsHandlers        = contacts.Handlers
@@ -81,11 +84,13 @@ type (
 	approvalsHandlers       = approvals.Handlers
 	searchHandlers          = search.Handlers
 	consentHandlers         = consent.Handlers
+	handoffHandlers         = memberhandoff.Handlers
 	collectionsHandlers     = collections.Handlers
 	signalsHandlers         = signals.Handlers
 	privacyHandlers         = privacy.Handlers
 	automationHandlers      = automation.Handlers
 	voiceHandlers           = ai.Handlers
+	teamRulesHandlers       = ai.TeamRulesHandlers
 	customfieldsHandlers    = customfields.Handlers
 	webhooksHandlers        = webhooks.Handlers
 	webFormsHandlers        = webforms.Handlers
@@ -95,6 +100,7 @@ type (
 	contact360Handlers      = contact360.Handlers
 	project360Handlers      = project360.Handlers
 	contactBriefHandlers    = contactbrief.Handlers
+	taskExplainHandlers     = taskexplain.Handlers
 	contactResearchHandlers = contactresearch.Handlers
 	meetingBriefHandlers    = meetingbrief.Handlers
 	dealStatusHandlers      = dealstatus.Handlers
@@ -134,6 +140,7 @@ func (s *Server) wireContact360(pool *pgxpool.Pool) {
 		contactbrief.NewService(pool, s.contact360Svc, nil, nil, time.Now).
 			WithEmailSummaries(emailRows(pool)),
 	)
+	s.taskExplainHandlers = taskexplain.NewHandlers(s.taskExplainService(pool, nil, nil))
 	// The pre-meeting brief shares that composite read and adds the claim
 	// reader for the rest of the room. It caches NOTHING (ADR-0097 D5): it is
 	// opened minutes before a meeting, so a stored artifact would be the one

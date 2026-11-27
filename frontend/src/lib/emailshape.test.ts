@@ -7,7 +7,6 @@ import { looksLikeEmail } from "./emailshape";
 describe("an email address a form lets through", () => {
   it.each([
     "o'brien@example.com",
-    "asker@localhost",
     "first.last+tag@sub.example.org",
     " padded@example.com ",
   ])("takes %s, which the server accepts", (address) => {
@@ -19,6 +18,10 @@ describe("an email address a form lets through", () => {
     "@example.com",
     "asker@",
     "two@at@example.com",
+    "a@b",
+    "asker@localhost",
+    "asker@example.",
+    "asker@example..com",
     "with space@example.com",
     "",
   ])("refuses %j", (text) => {

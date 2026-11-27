@@ -33,17 +33,19 @@ import (
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // offerDeskCompanyPerms is the offer desk that may also read companies.
 //
-// offerDeskPerms carries no `company` grant at all, and VisibleSubset
-// withholds every id when the object grant is missing — so a fixture built on
-// it would pass whatever capture privacy did, which is the wrong subject. This
-// set isolates the row-scope arm: the grant is present for both seats, and the
-// only thing separating them is who the company was captured private to.
+// OfferDeskPerms carries no `company` grant at all.
+// VisibleSubset withholds every id when the object grant is missing.
+// A fixture built on it would pass whatever capture privacy did.
+// That is the wrong subject.
+// This set isolates the row-scope arm. The grant is present for both seats.
+// The only thing separating them is who the company was captured private to.
 var offerDeskCompanyPerms = principal.Permissions{
 	RoleKeys: []string{"deal_desk"},
 	Objects: map[string]principal.ObjectGrant{
@@ -190,26 +192,17 @@ func TestAnOfferKeepsABuyerTheReaderCanOpen(t *testing.T) {
 	}
 }
 
-// The snapshot the SEND froze is the real one, even when the sender is the seat
-// the buyer is hidden FROM.
+// A send by a seat that cannot open the buyer company is refused.
 //
-// This is what decides where the withholding goes. The tempting placement is
-// readOffer — the one read every path shares — but that is also the read the
-// write paths take their current state from: sendSnapshots freezes the buyer's
-// legal block from the offer it is handed. Withheld there, this send would
-// record a blank buyer, destroying the evidence rather than protecting it, and
-// silently, because the offer would look sent.
-//
-// So the rule is applied where things LEAVE the server, and both halves are
-// asserted here: the stored record names the company, and the response the
-// sender gets does not.
-func TestASendFreezesTheRealBuyerEvenWhenTheSenderCannotSeeIt(t *testing.T) {
+// The send freezes the buyer's display and legal name onto the offer.
+// A seat that may not read that company must not record them. The
+// refusal leaves the offer a draft with nothing frozen, and its message names
+// no company.
+func TestASendByASeatThatCannotOpenTheBuyerIsRefused(t *testing.T) {
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	admin := e.Admin()
 
-	// Private to Rep2 BEFORE the send, and the deal belongs to Rep3 — so the
-	// seat doing the sending is not the seat the company is visible to.
 	hidden := e.SeedCompany(t, "Ashgrove Holdings", &e.Rep2)
 	deal := ids.From[ids.DealKind](e.SeedDeal(t, "Ashgrove renewal", pipeline, open, &e.Rep3))
 	hiddenID := companyIDOf(hidden)
@@ -230,30 +223,69 @@ func TestASendFreezesTheRealBuyerEvenWhenTheSenderCannotSeeIt(t *testing.T) {
 	}
 	e.MakeCapturePrivate(t, "company", hidden, e.Rep2)
 	offer := ids.From[ids.OfferKind](ids.UUID(created.Id))
-	sent, err := e.Deals.SendOffer(desk, offer, nil)
-	if err != nil {
-		t.Fatalf("send offer: %v", err)
-	}
 
-	// The response withholds it: the sender still cannot open that company.
-	if sent.BuyerCompanyId != nil || sent.BuyerSnapshot != nil {
-		t.Errorf("the send response names a buyer this seat cannot open (id=%v snapshot=%v)",
-			sent.BuyerCompanyId, sent.BuyerSnapshot)
-	}
+	_, err = e.Deals.SendOffer(desk, offer, nil)
+	requireBuyerNotReadable(t, err, "Ashgrove")
+	requireStillADraftWithNoSnapshot(t, e, offer)
+}
 
-	// And the record is real. A blank one here is worse than the disclosure:
-	// the offer looks sent and nothing says who to.
-	var frozen string
+// requireBuyerNotReadable holds a refusal to the one answer for an unreadable
+// buyer. The message must not repeat the company's name.
+func requireBuyerNotReadable(t *testing.T, err error, companyName string) {
+	t.Helper()
+	var refused *deals.BuyerNotReadableError
+	if !errors.As(err, &refused) || !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("answer = %v, want a BuyerNotReadableError that is a permission denial", err)
+	}
+	if strings.Contains(err.Error(), companyName) {
+		t.Errorf("the refusal names the company: %v", err)
+	}
+}
+
+func requireStillADraftWithNoSnapshot(t *testing.T, e *Env, offer ids.OfferID) {
+	t.Helper()
+	var status, frozen string
 	ctx := e.Admin()
 	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
-			`SELECT coalesce(buyer_snapshot::text, '') FROM offer WHERE id = $1`,
-			offer.UUID).Scan(&frozen)
+			`SELECT status, coalesce(buyer_snapshot::text, '') FROM offer WHERE id = $1`,
+			offer.UUID).Scan(&status, &frozen)
 	}); err != nil {
-		t.Fatalf("reading the stored snapshot: %v", err)
+		t.Fatalf("reading the stored offer: %v", err)
 	}
-	if !strings.Contains(frozen, hidden.String()) {
-		t.Errorf("the stored buyer snapshot does not name the company the offer was sent to: %q — withholding reached the write path and destroyed the legal record", frozen)
+	if status != "draft" || frozen != "" {
+		t.Errorf("the refused send left status=%q snapshot=%q, want a draft with nothing frozen", status, frozen)
+	}
+}
+
+// A seat with no company grant at all is refused the send of an offer that
+// names a buyer.
+func TestASendWithoutTheCompanyGrantIsRefused(t *testing.T) {
+	e := Setup(t)
+	offer, _, _ := draftOfferOnAColleaguesCompany(t, e)
+	wide := e.As(e.Rep3, []ids.UUID{e.Team1}, offerDeskWideNoCompanyPerms)
+
+	_, err := e.Deals.SendOffer(wide, offer, nil)
+	requireBuyerNotReadable(t, err, "Meridian")
+	requireStillADraftWithNoSnapshot(t, e, offer)
+}
+
+// The same seat sends an offer that names no company.
+func TestASendWithoutTheCompanyGrantSucceedsForAnOfferWithNoBuyer(t *testing.T) {
+	e := Setup(t)
+	wide := e.As(e.Rep3, []ids.UUID{e.Team1}, offerDeskWideNoCompanyPerms)
+	pipeline, open, _ := DealFixture(t, e)
+	bare := ids.From[ids.DealKind](e.SeedDeal(t, "No account yet", pipeline, open, &e.Rep3))
+	description, price := "Retainer", int64(10000)
+	created, err := e.Deals.CreateOffer(wide, bare, deals.CreateOfferInput{
+		Currency: "EUR", Source: "manual",
+		LineItems: []deals.OfferLineInputRow{{Description: &description, Quantity: "1", UnitPriceMinor: &price}},
+	})
+	if err != nil {
+		t.Fatalf("create an offer with no buyer: %v", err)
+	}
+	if _, err := e.Deals.SendOffer(wide, ids.From[ids.OfferKind](ids.UUID(created.Id)), nil); err != nil {
+		t.Errorf("sending an offer with no buyer company without the company grant: %v", err)
 	}
 }
 
@@ -285,34 +317,51 @@ func TestTheSendFreezesTheRealBuyerWhateverTheResponseWithholds(t *testing.T) {
 	}
 }
 
-// The DOCUMENT says no more than the read does.
+// The render is refused for a seat that cannot open the buyer.
 //
-// PrepareRender gathers the buyer legal block the PDF prints — display name
-// and, where the record carries one, legal name. That block is read from the
-// live company while the offer is a draft and from the frozen snapshot
-// once sent, and neither read asked whether this seat may open the company. So
-// the API withheld the buyer while the PDF printed its name: the two halves of
-// one offer disagreeing about the same record, with the more disclosing half
-// being the one that gets stored and sent.
-func TestARenderSaysNoMoreAboutTheBuyerThanTheReadDoes(t *testing.T) {
+// A document without the buyer block names nobody. A seat with no company
+// grant and a seat that capture privacy hides this company from are both
+// refused the same way. The offer here is sent, so the block would come from
+// the frozen snapshot, and the refusal holds for it too.
+func TestARenderIsRefusedForASeatThatCannotOpenTheBuyer(t *testing.T) {
 	e := Setup(t)
-	offer, _, privateCompany := seedOfferOnAPrivateCompany(t, e)
-	desk := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDeskWideNoCompanyPerms)
+	offer, _, _ := seedOfferOnAPrivateCompany(t, e)
 
-	ingredients, err := e.Deals.PrepareRender(desk, offer)
-	if err != nil {
-		t.Fatalf("preparing the render: %v — the offer is anchored on a deal this seat writes, so the render itself must reach its ingredients", err)
+	for name, perms := range map[string]principal.Permissions{
+		"no company grant":      offerDeskWideNoCompanyPerms,
+		"company hidden by row": offerDeskWideCompanyPerms,
+	} {
+		t.Run(name, func(t *testing.T) {
+			desk := e.As(e.Rep1, []ids.UUID{e.Team1}, perms)
+			_, err := e.Deals.PrepareRender(desk, offer)
+			requireBuyerNotReadable(t, err, "Meridian")
+		})
 	}
-	if ingredients.Offer.BuyerCompanyId != nil {
-		t.Errorf("the render's offer names buyer company %v, which this seat's own company read would refuse", *ingredients.Offer.BuyerCompanyId)
+}
+
+// The refusal reaches the HTTP caller as a 403 and stores nothing.
+func TestTheRenderEndpointAnswers403ForABuyerTheSeatCannotOpen(t *testing.T) {
+	e := Setup(t)
+	offer, _, _ := seedOfferOnAPrivateCompany(t, e)
+	desk := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDeskWideNoCompanyPerms)
+	h := deals.NewHandlers(e.DB(), installseam.Deals()).WithBlobstore(blobstore.NewMemory())
+
+	rec := httptest.NewRecorder()
+	h.RenderOffer(rec, httptest.NewRequest(http.MethodPost, "/v1/offers/"+offer.String()+"/render", nil).WithContext(desk),
+		crmcontracts.Id(offer.UUID), crmcontracts.RenderOfferParams{})
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("render = %d %s, want 403", rec.Code, rec.Body.String())
 	}
-	if ingredients.BuyerBlock != nil {
-		t.Errorf("the buyer block %v reaches the document — it carries the company's display name and legal name, which is strictly more than the id the API withholds beside it",
-			ingredients.BuyerBlock)
+	if strings.Contains(rec.Body.String(), "Meridian") {
+		t.Errorf("the refusal names the company: %s", rec.Body.String())
 	}
-	// Named so a future reader can see which company the block would have been
-	// about; the assertions above are what fail.
-	t.Logf("the buyer withheld from this seat is %v", privateCompany)
+	var ref string
+	ctx := e.Admin()
+	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `SELECT coalesce(pdf_asset_ref, '') FROM offer WHERE id = $1`, offer.UUID).Scan(&ref)
+	}); err != nil || ref != "" {
+		t.Errorf("the refused render stored a rendering: ref=%q err=%v", ref, err)
+	}
 }
 
 // And the colleague who CAN open the company still gets a complete document. A
@@ -327,6 +376,9 @@ func TestARenderKeepsTheBuyerBlockForASeatThatCanOpenIt(t *testing.T) {
 	ingredients, err := e.Deals.PrepareRender(owner, offer)
 	if err != nil {
 		t.Fatalf("preparing the render: %v", err)
+	}
+	if len(ingredients.BuyerBlock) > 3 {
+		t.Errorf("the buyer block carries more than the company id and its two names: %v", ingredients.BuyerBlock)
 	}
 	if ingredients.Offer.BuyerCompanyId == nil {
 		t.Error("the render's offer names no buyer for the seat that owns the company")
@@ -496,5 +548,46 @@ func requireNoRendering(t *testing.T, rec *httptest.ResponseRecorder, what strin
 	}
 	if rec.Code != http.StatusNotFound || problem["code"] != "not_found" {
 		t.Fatalf("%s = %d %v, want 404 not_found", what, rec.Code, problem["code"])
+	}
+}
+
+// An agent presents its granting user's own permissions, so it is refused the
+// buyer that user is refused. No agent tool sends or renders an offer, so this
+// holds the store entry points an agent principal could still reach.
+func TestAnAgentWhoseUserCannotOpenTheBuyerIsRefusedASend(t *testing.T) {
+	e := Setup(t)
+	draft, _, _ := draftOfferOnAColleaguesCompany(t, e)
+
+	noGrant := e.AgentFor(t, e.Rep3, []ids.UUID{e.Team1}, offerDeskWideNoCompanyPerms)
+	_, err := e.Deals.SendOffer(noGrant, draft, nil)
+	requireBuyerNotReadable(t, err, "Meridian")
+	requireStillADraftWithNoSnapshot(t, e, draft)
+}
+
+func TestAnAgentWhoseUserCannotOpenTheBuyerIsRefusedARender(t *testing.T) {
+	e := Setup(t)
+	sent, _, _ := seedOfferOnAPrivateCompany(t, e)
+
+	hidden := e.AgentFor(t, e.Rep1, []ids.UUID{e.Team1}, offerDeskWideCompanyPerms)
+	_, err := e.Deals.PrepareRender(hidden, sent)
+	requireBuyerNotReadable(t, err, "Meridian")
+}
+
+// An archived buyer stays readable: the company read serves it under
+// include_archived to a seat that may open it, so render and send do too.
+func TestAnArchivedBuyerCompanyStillRendersAndSendsForASeatThatCanOpenIt(t *testing.T) {
+	e := Setup(t)
+	offer, _, company := draftOfferOnAColleaguesCompany(t, e)
+	if _, err := e.Contacts.ArchiveCompany(e.Admin(), companyIDOf(company), nil); err != nil {
+		t.Fatalf("archiving the buyer company: %v", err)
+	}
+	desk := e.As(e.Rep3, []ids.UUID{e.Team1}, offerDeskCompanyPerms)
+
+	ingredients, err := e.Deals.PrepareRender(desk, offer)
+	if err != nil || ingredients.BuyerBlock["display_name"] != "Meridian Labs" {
+		t.Fatalf("render with an archived buyer = %v, %v; want the buyer block", ingredients.BuyerBlock, err)
+	}
+	if _, err := e.Deals.SendOffer(desk, offer, nil); err != nil {
+		t.Errorf("send with an archived buyer: %v", err)
 	}
 }

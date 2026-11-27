@@ -89,7 +89,17 @@ func (o SignOff) under(body string) string {
 	if o.Text == "" {
 		return body
 	}
-	return strings.TrimRight(body, "\n") + "\n\n" + o.Text
+	return o.authored(body) + "\n\n" + o.Text
+}
+
+// authored is the part of body that stays the author's once this sign-off is
+// put under it. The delivery records its length, so a send that repeats this
+// one can start from the author's words alone.
+func (o SignOff) authored(body string) string {
+	if o.Text == "" {
+		return body
+	}
+	return strings.TrimRight(body, "\n")
 }
 
 // signOff is what a send of this message appends: the caller's own signature,

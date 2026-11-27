@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -131,6 +132,8 @@ type Hit struct {
 	WorksAt *Employer
 	// LogoURL is set on a `company` hit wearing a logo, when a reader is bound.
 	LogoURL *string
+	// DealID is set on a `deal_room` hit alone: the deal the room belongs to.
+	DealID *ids.UUID
 	// Standing is set on a contact, company, deal, lead or project hit the
 	// caller may read: what a result list shows beside the name.
 	Standing *crmcontracts.SearchHitStanding
@@ -206,12 +209,12 @@ func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
 			"q holds %d words and a search takes at most %d; keep the words that name what you are looking for",
 			words, maxQueryWords)}
 	}
-	types := requestedTypes(in)
+	types := requestedTypes(ctx, in)
 	if in.Typeahead && !namesOnlyMail(in.Types) && fragmentTooShortForMail(query) {
 		types = slices.DeleteFunc(slices.Clone(types), func(t string) bool { return t == entityActivity })
 	}
 	for _, t := range types {
-		if !knownEntity(t) {
+		if !knownEntity(ctx, t) {
 			return Page{}, &BadQueryError{Field: "types", Reason: fmt.Sprintf("unknown type %q", t)}
 		}
 	}
@@ -409,9 +412,12 @@ func (e *QueryTooBroadError) FieldFault() (field, code, message string) {
 		"add another word, or narrow it by record type"
 }
 
-func knownEntity(t string) bool {
-	if _, declared := recordkinds.Lookup(t); declared {
-		return true
+// knownEntity is a core searchable type or an extension kind the caller can
+// read. A removed kind and an unreadable one are both unknown.
+func knownEntity(ctx context.Context, t string) bool {
+	if recordkinds.IsExtensionName(t) {
+		_, readable := auth.ReadableKind(ctx, t)
+		return readable
 	}
 	for _, b := range searchBranches {
 		if b.entity == t {

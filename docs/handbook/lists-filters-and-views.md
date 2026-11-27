@@ -18,11 +18,11 @@ What each list offers:
 
 | List | Search | Filters | Tabs | Table and board | Bulk actions |
 |---|---|---|---|---|---|
-| **Contacts** | name or job title, or exact email | Owner, Team, Tags | All, Mine, Shared with me | table only | Assign owner, Add or Remove tag, Create task, Add to Shortlist, Archive |
-| **Companies** | name, legal name or industry, or exact domain | Owner, Team, **Employees**, Partner kinds, Relationship stage and Stage meaning (if you may see partners), Tags, Lifecycle, Relationship type, Activity | All, Mine, Customers, Prospects | table only | Assign owner, Add or Remove tag, Create task, Add to Shortlist, Archive |
-| **Leads** | name, company name or job title, or exact email or LinkedIn URL | Status, Score, Response, Origin, Owner, Team, Tags, **Industry**, **Country**, **Company size** | Mine, All, Unassigned, New and unassigned, New, Contacted, Engaged, Hot, Overdue | both | Assign, Disqualify |
-| **Deals** | name or description | Owner, Team, Stage, Company, Tags, Close date, Value, Currency, **Country**, Status, Stalled only, Partner-sourced, Probability, Motion, Priority, Linked as, Source, Partner | All, Mine | both, opens on Board | Assign owner, Move to stage, Add or Remove tag, Create task, Add to Shortlist, Archive |
-| **Projects** | name or project key | Owner, Team, Phase | All, In delivery | table only | none |
+| **Contacts** | name or job title, or exact email | Owner, Team, Tag | All, Mine, Shared with me | table only | Assign owner, Add or Remove tag, Create task, Add to Shortlist, Archive |
+| **Companies** | name, legal name or industry, or exact domain | Owner, Team, **Company size**, Partner kinds, Relationship stage and Stage meaning (if you may see partners), Tag, Lifecycle, Relationship type, Activity | All, Mine, Customers, Prospects | table only | Assign owner, Add or Remove tag, Create task, Add to Shortlist, Archive |
+| **Leads** | name, company name or job title, or exact email or LinkedIn URL | Status, Score, Response, Origin, Owner, Team, Tag, **Industry**, **Country**, **Company size** | Mine, All, Unassigned, New and unassigned, New, Contacted, Engaged, Hot, Overdue | both | Assign, Disqualify |
+| **Deals** | name or description | Owner, Team, Stage, Company, Tag, Close date, Value, Currency, **Country**, Status, Stalled only, Partner-sourced, Probability, Motion, Priority, Linked as, Source, Partner | All, Mine | both, opens on Board | Assign owner, Move to stage, Add or Remove tag, Create task, Add to Shortlist, Archive |
+| **Projects** | name or project key | Owner, Team, Phase | All, Delivering | table only | none |
 
 **Response** on Leads shows only while a target for the first answer is turned on, and so does the **Overdue** tab. **Industry**, **Country** and **Company size** on Leads read the company the lead is linked to. A lead counts under its own typed **Industry** in three cases. It has no linked company, that company has no industry, or you cannot open that company. They show only if you may open companies. On Deals, **Value** shows once your company has a main currency, and **Linked as**, **Source** and **Partner** only when there is something to pick.
 
@@ -45,8 +45,8 @@ Also called: look up by email, search by email, who is this address, find a send
 ### How do I filter a list?
 To filter a list in Margince, open the list and press **View** → **Filters**. Pick what to filter by, then pick the value.
 1. Press **View**, then **Filters**; **Search attributes** makes the list of choices shorter.
-2. Pick a field, such as **Owner** or **Tags**, then a value, such as **Owned by you**.
-3. The filter stands under the search as a chip ("Owner is Owned by you"). Add another from **View** → **Filters**.
+2. Pick a field, such as **Owner** or **Tag**, then a value, such as **You**.
+3. The filter stands under the search as a chip ("Owner is You"). Add another from **View** → **Filters**.
 4. Press the chip to change its value. Its **⋮** button, then **Delete filter**, takes it off.
 A row must match every filter, and each filter holds one value.
 Also called: narrow down, refine, facet, filter by.
@@ -57,8 +57,8 @@ On the **Mine** tab, an empty list says "No contacts owned by you." with **Show 
 Also called: reset filters, show everything again, remove filter.
 
 ### How do I see only my records, or the records I own?
-To see only the records you own in Margince, open **Contacts**, **Companies** or **Leads** and press the **Mine** tab in the header row. **Deals** has it too. On **Projects**, press **View** → **Filters** → **Owner** → **Owned by you**.
-1. The **Owner** filter lists **Owned by you**, then every active colleague by name, then **Unassigned**.
+To see only the records you own in Margince, open **Contacts**, **Companies** or **Leads** and press the **Mine** tab in the header row. **Deals** has it too. On **Projects**, press **View** → **Filters** → **Owner** → **You**.
+1. The **Owner** filter lists **You**, then every active colleague by name, then **Unassigned**.
 2. **Leads** opens on **Mine** for a user who sees only their own leads. It opens on **All** for one who can see the team's or everyone's.
 Also called: my contacts, my deals, my accounts, assigned to me, owned by me.
 
@@ -96,8 +96,7 @@ You can sort the **Company** column on **Contacts**, so sorting by it groups con
 Also called: contacts at an account, everyone at a customer, staff of a client.
 
 ### How do I filter a list by tag?
-To filter a list by tag in Margince, open **Contacts**, **Companies** or **Deals**, press **View** → **Filters** → **Tags**, and pick the tag.
-One tag at a time: a second tag takes the place of the first. **Any tag** takes the filter off. To see every record with a tag across all record types, open the tag's own page. A record shows its tags under **Tags**; see [Tags](records.md#tags).
+To filter a list by tag in Margince, open **Contacts**, **Companies** or **Deals**, press **View** → **Filters** → **Tag**, and pick the tag. One tag at a time: a second tag takes the place of the first. **Any tag** takes the filter off. To see every record with a tag across all record types, open the tag's own page. A record shows its tags under **Tags**; see [Tags](records.md#tags).
 Also called: filter by label, show tagged records, segment by tag.
 
 ### Why are some contacts tagged `machine-address`?
@@ -155,14 +154,14 @@ Also called: add column, remove column, reorder columns, change table layout.
 
 ### How do I show more rows per page?
 To show more rows on a Margince list, open **Rows per page** at the bottom of the list. Pick **25 per page**, **50 per page** or **100 per page**.
-Use **Previous** and **Next**, or a page number, to move through the pages. The count at the top says how many match, for example "1 to 25 of 200 contacts". Where Margince does not have the full count, it says "loaded" instead.
+Use **Previous** and **Next**, or a page number, to move through the pages. The count at the top says how many match, for example "1 to 25 of 200 contacts". The page numbers end with the last page: press it to go to the end. Where Margince does not have the full count, it says "loaded" instead and shows only **Previous** and **Next** until the last page is read.
+
 Also called: page size, see all records, load more.
 
 ## Archived records on a list
 
 ### How do I see archived records?
-To see archived records in Margince, open the list (**Contacts**, **Companies**, **Leads**, **Deals** or **Projects**) and press **View** → **Show archived**.
-Archived rows show with the live ones, with an **Archived** mark, until you press **Show archived** again. On **Leads**, disqualified and qualified leads are the archived ones, and the **Status** filter set to **Qualified** or **Disqualified** lists them without **Show archived**. An archived record opens read-only, and **Undo** on its archive entry in its history brings back a contact, company or deal. See [Contacts, companies, leads, deals and projects](records.md).
+To see archived records in Margince, open the list (**Contacts**, **Companies**, **Leads**, **Deals** or **Projects**) and press **View** → **Show archived**. Archived rows show with the live ones, with an **Archived** mark, until you press **Show archived** again. On **Leads**, disqualified and qualified leads are the archived ones, and the **Status** filter set to **Qualified** or **Disqualified** lists them without **Show archived**. An archived record opens read-only, and **Undo** on its archive entry in its history brings back a contact, company or deal. See [Contacts, companies, leads, deals and projects](records.md).
 Also called: show deleted, find an archived contact, closed records, inactive.
 
 ## Views
@@ -175,22 +174,25 @@ A view in Margince is a tab in a list's header row that sets the list's filters 
 To save a view of a list in Margince, set the list up as you want it. Press **View**, then **Save view** at the bottom of the panel. Give it a **Name** and press **Save**.
 1. Search, filter, sort or press **Show archived**. **Save view** shows once one of these differs from how the list opened.
 2. Press **View** → **Save view** and, in **Save this view**, type a **Name**.
-3. Press **Save**. The view becomes a new tab next to the others.
-On **Deals**, **Save view** is on the **Table** only, and the view also keeps the pipeline.
+3. Press **Save**. The view becomes a new tab next to the others, and "View saved" shows.
+On **Deals**, **Save view** is on the **Table** only, and the view also keeps the pipeline. Two views of one list cannot have the same name: Margince asks for another one. While the list is the same as one of your saved views, the panel offers no **Save view**.
 Also called: save a filter, save a search, bookmark a list, smart list, saved list.
 
+### How do I change a saved view?
+To change a saved view in Margince, press its tab and change the search, the filters, the sort or **Show archived**. Then press **View** → **Update “{name}”** at the bottom of the panel, and the view opens with the changed list from then on. To keep the old view as well, press **Save as new view** beside it instead. If the view changed somewhere else since the list loaded, Margince saves nothing and says so. Open the list again and make the change again.
+Also called: edit a saved view, update a view, replace a view.
+
 ### How do I open a saved view?
-To open a saved view in Margince, open the list it was saved on. Press its tab in the header row, next to **All** and **Mine**. The list takes the saved filters, search, sort and **Show archived** at once.
-A view saved on **Filters and views** opens there instead: press its name in the library.
+To open a saved view in Margince, open the list it was saved on. Press its tab in the header row, next to **All** and **Mine**. The list takes the saved filters, search, sort and **Show archived** at once. Every saved view also opens from its name on **Filters and views**. A view with conditions from **Filters and views** has a tab with an arrow on its list, and the tab opens it back there.
 Also called: use my saved list, go back to my filter.
 
 ### How do I rename or delete a saved view?
-To rename or delete a saved view in Margince, open the list it was saved on. Press **View** → **Manage views**. **Saved views** lists each view.
+To rename or delete a saved view in Margince, open its list and press **View** → **Manage views**. **Saved views** lists each view.
 1. To rename one, choose **Rename** on its row, change the **Name** and press **Save**.
 2. To delete one, choose **Delete** on its row, then **Delete view**. Its tab goes; the records it listed do not change.
 **Manage views** shows once you have saved a view for that list.
 
-A view saved on **Filters and views** has no tab. Press **⋯** on its row in the library, or next to its name once it is open. Choose **Rename**, or **Delete view** and then **Delete view** again to confirm.
+You can also press **⋯** on the view's row on **Filters and views**. A view built there also has **⋯** next to its name once it is open. Choose **Rename**, or **Delete view** and then **Delete view** again to confirm. A name that another view of the same list has is refused, as in **Manage views**.
 Also called: remove a saved view, edit a view, change a view's name.
 
 ### Can I share a saved view with my team?
@@ -203,14 +205,14 @@ Also called: team view, shared list, share a filter, share a segment.
 
 ## Filters and views: detailed filters
 
-**Filters and views** in the sidebar (under **Work**) is the Margince screen for a filter that a list's toolbar cannot build. That means many rules, "any of" instead of "all of", groups inside groups, custom fields, and a colleague other than you. It covers **Contacts**, **Companies**, **Deals** and **Leads**. A filter runs again every time you look, so it always shows the matches of today.
+**Filters and views** in the sidebar (under **Work**) is the Margince screen for a filter that a list's toolbar cannot build. That means many rules, "any of" instead of "all of", groups inside groups, custom fields, and a colleague other than you. Its filters cover **Contacts**, **Companies**, **Deals** and **Leads**. A filter runs again every time you look, so it always shows the matches of today.
 
-The screen opens on the library of every saved view and list you can use. You can narrow it by search and by record type. **Mine** holds your saved views and every list you own, whoever can find it. **Shared with me** holds the lists that someone else owns or that have no owner. With Lists off, one group, **Saved views**, holds your views.
+The screen opens on the library of every saved view and list you can use. You can narrow it by search and by record type. A view saved on a list, **Projects** included, opens that list and says which, such as "Saved on the Contacts list". **Mine** holds your saved views and every list you own, whoever can find it. **Shared with me** holds the lists that someone else owns or that have no owner. With Lists off, one group, **Saved views**, holds your views.
 
 ### How do I build a filter?
 To build a detailed filter in Margince, open **Filters and views** in the sidebar. Press **New filter** and pick **Contacts**, **Companies**, **Deals** or **Leads**.
 1. The new filter opens with two ways to start. Under **Build it condition by condition**, press **Add condition**.
-2. Pick a field under **Select field**. Then pick how to compare (**is**, **is not**, **is any of**, **contains**…) and the value.
+2. Pick a field under **Select field**. Then pick how to compare (**is**, **is not**, **is any of**, **contains**…) and the value. A typed value ignores capitals, blanks before or after it, and marks such as the one in "Müller". So **is** "cto" finds "CTO", and **contains** "Muller" finds "Müller", as **Search** does.
 3. Press **Add condition** for more. The **and** between conditions means all of them must match.
 4. Press an **and** to switch that one word to **or**. Each word between two conditions switches by itself. **and** comes before **or**. So "A and B or C" matches A and B together, or C alone. Conditions joined by **and** sit in a box headed **All of these**.
 5. **Add a group**, next to **Add condition**, puts a group inside the filter. At the top of a group, press **All of these** or **Any of these** to choose how its conditions match. Groups go at most 4 levels down.
@@ -244,7 +246,7 @@ To save a filter built on **Filters and views**, fill at least one condition and
 1. Type a **Name**. Under **Keep it as**, choose **Saved view** (only you can find it) or **Live List** (see [Live Lists and Shortlists](#live-lists-and-shortlists)).
 2. Press **Save view** or **Save list**. A saved view opens as its own page, and a Live List opens the list's page.
 
-To use a saved view again, press its name in the library. It opens and shows its conditions as a sentence. Press **Edit conditions**, change them, then press **Save changes**, or **Save as new view** to keep both. If the view changed somewhere else since you opened it, Margince saves nothing and offers **Reload view**. A filter saved here does not show as a tab on the list screens. A list's saved view does not show in the library.
+To use a saved view again, press its name in the library. It opens and shows its conditions as a sentence. Press **Edit conditions**, change them, then press **Save changes**, or **Save as new view** to keep both. If the view changed somewhere else since you opened it, Margince saves nothing and offers **Reload view**. A view with conditions from here shows as a tab on its list, with an arrow, and that tab opens it here.
 
 Also called: save a segment, keep an advanced search.
 
@@ -253,8 +255,7 @@ Also called: save a segment, keep an advanced search.
 ### How do I select several records at once?
 To select many records in Margince, open **Contacts**, **Companies**, **Leads** or **Deals** as a **Table**. Tick the box at the start of each row. A bar shows above the rows saying "{count} selected", with the actions for that list. Archived rows have no box, and neither do closed deals or qualified and disqualified leads. **Projects** have no way to tick many rows: change those one at a time.
 
-The box in the name column's heading ticks every row on the page that has a box. Once one row is ticked, the bar ends with **Select all**, which ticks every record that matches the list. One change takes at most 500 records, so **Select all** stops at 500 and says so. **Clear selection** unticks them all.
-
+The box in the name column's heading ticks every row on the page that has a box. Once one row is ticked, the bar ends with **Select all**, which ticks every record that matches the list. One change takes at most 500 records, so **Select all** stops at 500 and says so. On a long list it takes a moment, and the bar says how far it is, for example "Selecting 150 of 500…". **Clear selection** unticks them all.
 Also called: multi-select, bulk edit, mass update, select all.
 
 ### How do I reassign several contacts, companies or deals to a colleague?
@@ -273,16 +274,16 @@ Also called: bulk actions, mass archive, bulk disqualify.
 
 ### Can I tag several records at once?
 Yes. To tag many records in Margince, tick them on the **Contacts**, **Companies** or **Deals** table. Choose **Pick a tag** in the bar for many rows, and press **Add tag** or **Remove tag**.
-1. A window shows how many records will change, and each record left as it is with its reason. For example "Already has or lacks this tag" or "No permission to change".
+1. A window shows how many records will change, and each record left as it is with its reason. For example "Already has this tag" or "No permission to change".
 2. Press **Add tag** or **Remove tag** to confirm. **Undo** in the message takes the tag off only the records it just tagged.
-To work with the tagged records after that, use **View** → **Filters** → **Tags** on the list.
+To work with the tagged records after that, use **View** → **Filters** → **Tag** on the list.
 Also called: bulk tag, mass tag, tag many contacts, label several deals at once.
 
 ### Can I create a task for several records at once?
 Yes. Tick the records on the **Contacts**, **Companies** or **Deals** table and press **Create task** in the bar for many rows.
 1. Fill in **What has to be done**, and if you want a **Due date** and an **Assignee**. Without an assignee the tasks are yours.
 2. Press **Preview**, check the window, and press **Create tasks**. Each record gets its own task.
-**Undo** in the message archives the tasks it just created. A task someone has completed or edited since is left as it is.
+The message says how many were created, such as "5 tasks created.", and its **Undo** archives them. A task someone has completed or edited since is left as it is.
 Also called: bulk task, follow up with many, mass follow-up.
 
 ## Live Lists and Shortlists
@@ -303,7 +304,7 @@ To start a Shortlist in Margince, open **Filters and views** and press **New Sho
 1. Type a **Name**, pick the **Record type**, and if you like say **What it is for**. **Who can find it** starts on **A team**; pick **Only me** to keep it to yourself. If you are in no team, it starts on **Only me**, and you cannot pick **A team**.
 2. Press **Create list**.
 3. Add records from a record's page: press **Add to Shortlist** and pick the Shortlist (or **A new Shortlist…**).
-Add a note under **Why (optional)** and press **Add**. To add many records at once, tick them on the list screen. Pick the Shortlist under **Add to Shortlist** in the bar for many rows. On a contact, company, deal or lead page, **Lists** also holds **Add to Shortlist** and **All lists**.
+Add a note under **Why (optional)** and press **Add**, and the message says "Added to" with the Shortlist's name. To add many records at once, tick them on the list screen. Pick the Shortlist under **Add to Shortlist** in the bar for many rows. On a contact, company, deal or lead page, **Lists** also holds **Add to Shortlist** and **All lists**.
 Also called: static list, hand-picked list, target list, account list.
 
 ### Who can find a list?
@@ -352,9 +353,9 @@ Also called: bulk edit a list, reassign everyone on a list, export a list.
 ### What does "Uses a retired field" mean on a list?
 A Live List's row in the library shows **Uses a retired field** when its filter names a custom field that has been archived. Its page says "This filter uses a retired field". The list still works on the values already stored, but nothing new is recorded in that field. Its steward should change the clause with **Edit filter** on the notice. Before you archive a custom field, Margince names the Live Lists that filter on it.
 
-In the library, **Filter no longer works** means a field the filter names has changed, so the filter cannot run. The list's page says "This filter no longer works". Its steward fixes it the same way, with **Edit filter**.
+In the library, **Filter no longer works** means a field the filter names has changed, so the filter cannot run. The list's page says "This filter no longer works". Its steward fixes it the same way, with **Edit filter**. **Records unavailable** means the extension that added the list's records was removed. The list shows no members and cannot be exported, and its page says "These records are unavailable". It works again once the extension is back.
 
-Also called: broken list, list warning, archived custom field.
+Also called: broken list, list warning, archived custom field, removed extension.
 
 ### How do I change a Live List's filter?
 To change which records a Margince Live List holds, open the list and press **Edit filter**. Or choose **Edit filter** under **⋯** on its row in the library. Its conditions open with a notice that names the list.
@@ -365,9 +366,9 @@ If someone changed the list after you opened it, Margince says so and saves noth
 Also called: edit a list's criteria, change a segment, update a smart list.
 
 ### How do I rename, archive or restore a list?
-To change a list in Margince, open it, press **⋯** beside its name and choose **Edit list**. Change the **Name**, **What it is for** and **Who can find it**, then press **Save**. Only whoever may change the list (see [What is a list's steward?](#what-is-a-lists-steward)) sees **⋯**.
-- **Archive list**, last under the same **⋯**, makes the list read-only. Its members and history are kept, and **Restore** on the list's page brings it back.
-- If an automation uses the list, archiving it names the automations first. They pause, and restoring the list does not start them again.
+To change a list in Margince, open it, press **⋯** beside its name and choose **Edit list**. Change the **Name**, **What it is for** and **Who can find it**, then press **Save**, and "List saved" shows. Only whoever may change the list (see [What is a list's steward?](#what-is-a-lists-steward)) sees **⋯**.
+- **Archive list**, last under the same **⋯**, makes the list read-only at once, and the message offers **Undo**. Its members and history are kept, and **Restore** on the list's page brings it back.
+- If an automation uses the list, archiving it names the automations first and offers no **Undo**. They pause, and restoring the list does not start them again.
 Also called: delete a list, rename a list, change who can see a list.
 
 ### Can an automation act on a Live List?
@@ -382,7 +383,6 @@ Yes. **Settings** → **Automations** has these rules that watch a Live List:
 It also pauses when the list is archived, when its filter stops working, or when you can no longer find the list. A paused rule says why and stays paused until its owner starts it again. Restoring or fixing the list does not start it again. A rule cannot start again while its list is archived or its filter is broken. A follow-up task never names the list, because the list may be private.
 
 The first check of a Live List sets its starting members and makes no work. The first check after a filter change also makes no work. New rules skip records changed by an import. To include them, choose **Also act on records changed by imports**. A rule set up before this choice was added keeps its old setting until you review it.
-
 Also called: list trigger, when someone joins a list, list workflow.
 
 ### Why can I not find Lists?

@@ -6,7 +6,7 @@ The 8 tables owned by `dealrooms`, as the migrations build them. [Back to the en
 
 ## deal_room
 
-14 columns · primary key `(id)` · referenced by 6 foreign keys
+15 columns · primary key `(id)` · referenced by 6 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -21,6 +21,7 @@ The 8 tables owned by `dealrooms`, as the migrations build them. [Back to the en
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `captured_by` | `text` | yes | Server-stamped from the authenticated principal; never client-supplied. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
+| `search_tsv` | `tsvector`, generated as `(((setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(title, ''::text))), 'A'::"char") \|\| setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(title, ''::text))), 'A'::"char")) \|\| setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(welcome_message, ''::text))), 'B'::"char")) \|\| setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(welcome_message, ''::text))), 'B'::"char"))` |  | Computed by the database. It cannot be written directly. |
 | `source` | `text` | yes | Which internal channel the record arrived by. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 | `version` | `bigint`, default `1` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
@@ -45,6 +46,7 @@ The 8 tables owned by `dealrooms`, as the migrations build them. [Back to the en
 - `deal_room_one_open_room_per_deal`: `gist (deal_id, tstzrange(created_at, expires_at)) WHERE ((state = ANY (ARRAY['draft', 'building', 'ready', 'publishing', 'live', 'paused'])) AND (archived_at IS NULL))`
 - `deal_room_pkey`: `unique, btree (id)`
 - `idx_deal_room_deal`: `btree (deal_id)`
+- `idx_deal_room_search`: `gin (search_tsv)`
 
 **Triggers**
 
@@ -183,7 +185,7 @@ The 8 tables owned by `dealrooms`, as the migrations build them. [Back to the en
 
 ## deal_room_invitation
 
-14 columns · primary key `(id)` · referenced by 0 foreign keys
+12 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -193,14 +195,12 @@ The 8 tables owned by `dealrooms`, as the migrations build them. [Back to the en
 | `delivered_at` | `timestamp with time zone` |  |  |
 | `expires_at` | `timestamp with time zone` | yes |  |
 | `failed_at` | `timestamp with time zone` |  |  |
-| `failure_reason` | `text` |  |  |
 | `participant_id` | `uuid` | yes | Points at `deal_room_participant.id`. |
 | `sent_at` | `timestamp with time zone` |  |  |
 | `superseded_at` | `timestamp with time zone` |  |  |
 | `token_hash` | `bytea` | yes |  |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
-| `source` | `text` | yes | Which internal channel the record arrived by. |
 
 **Points at**
 
@@ -210,6 +210,7 @@ The 8 tables owned by `dealrooms`, as the migrations build them. [Back to the en
 
 **Rules**
 
+- `deal_room_invitation_attempt_no_check`: `CHECK ((attempt_no > 0))`
 - `deal_room_invitation_expires_after_creation`: `CHECK ((expires_at > created_at))`
 - `deal_room_invitation_token_hash_check`: `CHECK ((octet_length(token_hash) = 32))`
 - `uq_deal_room_invitation_attempt`: `UNIQUE (participant_id, attempt_no)`
@@ -224,8 +225,8 @@ The 8 tables owned by `dealrooms`, as the migrations build them. [Back to the en
 
 **Triggers**
 
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"source": 20000, "captured_by": 20000, "failure_reason": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"failure_reason":2000,"source":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "captured_by": 20000, "failure_reason": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"failure_reason":2000,"source":20000}')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"captured_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"captured_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000}')`
 
 ## deal_room_participant
 
@@ -278,7 +279,7 @@ The 8 tables owned by `dealrooms`, as the migrations build them. [Back to the en
 
 ## deal_room_session
 
-10 columns · primary key `(id)` · referenced by 0 foreign keys
+9 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -291,7 +292,6 @@ The 8 tables owned by `dealrooms`, as the migrations build them. [Back to the en
 | `token_hash` | `bytea` | yes |  |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
-| `source` | `text` | yes | Which internal channel the record arrived by. |
 
 **Points at**
 
@@ -316,8 +316,8 @@ The 8 tables owned by `dealrooms`, as the migrations build them. [Back to the en
 
 **Triggers**
 
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"source": 20000, "captured_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"source":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "captured_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"source":20000}')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"captured_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"captured_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000}')`
 
 ## deal_room_thread
 

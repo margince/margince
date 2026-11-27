@@ -30,19 +30,17 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// agentOfferDraftCtx binds the acting principal the compose orchestrator
-// uses when it calls AddStagedOfferLines: a system-type actor carrying
-// the agent:offer-drafting identity, exactly like deals' own overnight
-// reconciler (reconcile.go) and contacts's coldstart/enrich approval
-// effects (compose/coldstartaccept.go) — auth.Require's RBAC check is a
-// no-op for a system principal, and storekit.Audit/Emit stamp this
-// identity onto the audit_log row automatically, which is the only place
-// offer_line_item's AI provenance lands (the table itself carries no
-// captured_by column).
+// agentOfferDraftCtx binds the principal the compose orchestrator uses when
+// it calls AddStagedOfferLines: agent:offer-drafting acting for Rep1 with
+// Rep1's grants. The audit row is the only place offer_line_item's AI
+// provenance lands, as the table has no captured_by column.
 func agentOfferDraftCtx(e *Env) context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
-	return principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: "agent:offer-drafting"})
+	return principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalAgent, ID: "agent:offer-drafting", UserID: e.Rep1, OnBehalfOf: e.Rep1,
+		TeamIDs: []ids.UUID{e.Team1}, Permissions: OfferDeskPerms, Scopes: principal.NewScopeSet(principal.ScopeWrite),
+	})
 }
 
 // baseDraftOffer seeds a deal and a draft offer carrying one human-entered
@@ -84,7 +82,7 @@ func groundedStagedLines() []deals.StagedOfferLineInput {
 
 func TestAddStagedOfferLinesInsertsEvidencedLinesExcludedFromTotals(t *testing.T) {
 	e := Setup(t)
-	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDeskPerms)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, OfferDeskPerms)
 	offerID := baseDraftOffer(ctx, t, e, "Staged-add deal")
 
 	before, err := e.Deals.GetOffer(ctx, offerID, storekit.LiveOnly)
@@ -149,7 +147,7 @@ func TestAddStagedOfferLinesInsertsEvidencedLinesExcludedFromTotals(t *testing.T
 
 func TestAddStagedOfferLinesThenAcceptCountsInTotals(t *testing.T) {
 	e := Setup(t)
-	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDeskPerms)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, OfferDeskPerms)
 	offerID := baseDraftOffer(ctx, t, e, "Staged-accept deal")
 
 	added, err := e.Deals.AddStagedOfferLines(agentOfferDraftCtx(e), offerID, groundedStagedLines())
@@ -188,7 +186,7 @@ func TestAddStagedOfferLinesThenAcceptCountsInTotals(t *testing.T) {
 
 func TestAddStagedOfferLinesUngroundedPriceIsTheHonestZeroSentinel(t *testing.T) {
 	e := Setup(t)
-	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDeskPerms)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, OfferDeskPerms)
 	offerID := baseDraftOffer(ctx, t, e, "Ungrounded-price deal")
 
 	// A price the drafting engine could not ground: zero sentinel, never
@@ -258,7 +256,7 @@ func TestAddStagedOfferLinesUngroundedPriceIsTheHonestZeroSentinel(t *testing.T)
 // false, true stays true.
 func TestOfferRegenerateCopiesPriceGroundedForwardUnchanged(t *testing.T) {
 	e := Setup(t)
-	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDeskPerms)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, OfferDeskPerms)
 	offerID := baseDraftOffer(ctx, t, e, "Regen-price-grounded deal")
 
 	staged := []deals.StagedOfferLineInput{
@@ -301,7 +299,7 @@ func TestOfferRegenerateCopiesPriceGroundedForwardUnchanged(t *testing.T) {
 
 func TestAddStagedOfferLinesDeniesWithoutOfferUpdateGrant(t *testing.T) {
 	e := Setup(t)
-	admin := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDeskPerms)
+	admin := e.As(e.Rep1, []ids.UUID{e.Team1}, OfferDeskPerms)
 	offerID := baseDraftOffer(admin, t, e, "Staged-deny deal")
 
 	readOnly := principal.Permissions{
@@ -317,7 +315,7 @@ func TestAddStagedOfferLinesDeniesWithoutOfferUpdateGrant(t *testing.T) {
 
 func TestAddStagedOfferLinesRejectsANonDraftOffer(t *testing.T) {
 	e := Setup(t)
-	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDeskPerms)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, OfferDeskPerms)
 	offerID := baseDraftOffer(ctx, t, e, "Staged-nondraft deal")
 
 	e.WsExec(t, `UPDATE offer SET status = 'sent' WHERE id = $1`, offerID.UUID)
@@ -329,7 +327,7 @@ func TestAddStagedOfferLinesRejectsANonDraftOffer(t *testing.T) {
 
 func TestAddStagedOfferLinesAuditCarriesTheAgentProvenance(t *testing.T) {
 	e := Setup(t)
-	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDeskPerms)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, OfferDeskPerms)
 	offerID := baseDraftOffer(ctx, t, e, "Staged-provenance deal")
 
 	if _, err := e.Deals.AddStagedOfferLines(agentOfferDraftCtx(e), offerID, groundedStagedLines()); err != nil {
@@ -338,7 +336,7 @@ func TestAddStagedOfferLinesAuditCarriesTheAgentProvenance(t *testing.T) {
 	if n := e.WsCount(t,
 		`SELECT count(*) FROM audit_log
 		 WHERE entity_type = 'offer' AND entity_id = $1 AND action = 'update'
-		   AND actor_type = 'system' AND actor_id = 'agent:offer-drafting'`,
+		   AND actor_type = 'agent' AND actor_id = 'agent:offer-drafting'`,
 		offerID.UUID); n != 1 {
 		t.Fatalf("staged-lines audit row does not carry the agent:offer-drafting provenance")
 	}

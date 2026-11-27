@@ -5,14 +5,10 @@ package ai
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
-	"net/url"
 	"regexp"
-	"strings"
 	"sync"
 	"time"
 
@@ -152,49 +148,33 @@ func (s *vertexTokenSource) exchange(ctx context.Context, issuedAt time.Time) (s
 	if err != nil {
 		return "", 0, err
 	}
-	form := url.Values{"grant_type": {googlejwt.JWTBearerGrant}, "assertion": {assertion}}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, vertexTokenURI, strings.NewReader(form.Encode()))
-	if err != nil {
-		return "", 0, errors.New("ai: gemini_vertex: building the token request failed")
+	token, err := googlejwt.Exchange(ctx, s.http, vertexTokenURI, assertion)
+	if refused, ok := errors.AsType[googlejwt.ErrExchangeRefused](err); ok {
+		return "", 0, tokenExchangeRefused(refused)
 	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	resp, err := s.http.Do(req)
+	if err != nil && (errors.Is(err, googlejwt.ErrNoAccessToken) || errors.Is(err, googlejwt.ErrUnreadableResponse)) {
+		return "", 0, errors.New("ai: gemini_vertex: token exchange: the response carried no usable access token")
+	}
 	if err != nil {
 		return "", 0, fmt.Errorf("ai: gemini_vertex: token exchange: %w", parseFault(err))
 	}
-	//craft:ignore swallowed-errors best-effort close of a bounded body already read — the status and decode decide the outcome
-	defer func() { _ = resp.Body.Close() }()
-	var body struct {
-		AccessToken string `json:"access_token"`
-		ExpiresIn   int64  `json:"expires_in"`
-		Error       string `json:"error"`
-	}
-	raw, readErr := io.ReadAll(io.LimitReader(resp.Body, 16<<10))
-	decodeErr := json.Unmarshal(raw, &body)
-	if resp.StatusCode != http.StatusOK {
-		return "", 0, tokenExchangeRefused(resp.StatusCode, body.Error)
-	}
-	if readErr != nil || decodeErr != nil || body.AccessToken == "" || body.ExpiresIn <= 0 {
+	if token.ExpiresIn <= 0 {
 		return "", 0, errors.New("ai: gemini_vertex: token exchange: the response carried no usable access token")
 	}
-	return body.AccessToken, time.Duration(body.ExpiresIn) * time.Second, nil
+	return token.AccessToken, token.ExpiresIn, nil
 }
-
-// oauthErrorCode is the shape of an RFC 6749 error code. Anything else in
-// that field is vendor prose and is not repeated.
-var oauthErrorCode = regexp.MustCompile(`^[a-z_]{1,64}$`)
 
 // errKeyRefused is Google refusing the key itself — a 4xx on the exchange
 // other than a throttle, as for a revoked key or a deleted account — which
 // waiting will not fix.
 var errKeyRefused = errors.New("the service-account key was refused by Google")
 
-func tokenExchangeRefused(status int, code string) error {
-	detail := fmt.Sprintf("http %d", status)
-	if oauthErrorCode.MatchString(code) {
-		detail += ", " + code
+func tokenExchangeRefused(refused googlejwt.ErrExchangeRefused) error {
+	detail := fmt.Sprintf("http %d", refused.Status)
+	if refused.Code != "" {
+		detail += ", " + refused.Code
 	}
-	if status >= 400 && status < 500 && status != http.StatusTooManyRequests {
+	if refused.Permanent() {
 		return fmt.Errorf("ai: gemini_vertex: token exchange refused: %s: %w", detail, errKeyRefused)
 	}
 	return fmt.Errorf("ai: gemini_vertex: token exchange refused: %s", detail)

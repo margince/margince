@@ -51,6 +51,17 @@ type pendingChunk struct {
 // ask answers `retrieval_unavailable` there — a distinct outcome from a corpus
 // that simply does not cover the question.
 func (s *Store) EmbedDocument(ctx context.Context, documentID ids.UUID, e vectorkit.Embedder) (int, error) {
+	return s.embedWithCarried(ctx, documentID, nil, e)
+}
+
+// EmbedIngest is EmbedDocument for the attempt src opened. A passage whose text
+// the document held before the attempt, under the live binding, gets that vector
+// back. It goes through the same CAS write and is not counted as a model call.
+func (s *Store) EmbedIngest(ctx context.Context, documentID ids.UUID, src IngestSource, e vectorkit.Embedder) (int, error) {
+	return s.embedWithCarried(ctx, documentID, src.carried, e)
+}
+
+func (s *Store) embedWithCarried(ctx context.Context, documentID ids.UUID, carried carriedVectors, e vectorkit.Embedder) (int, error) {
 	identity, dims := e.EmbedIdentity()
 	if identity == "" {
 		return 0, nil
@@ -58,6 +69,13 @@ func (s *Store) EmbedDocument(ctx context.Context, documentID ids.UUID, e vector
 	pending, err := s.chunksNeedingEmbedding(ctx, documentID, identity)
 	if err != nil {
 		return 0, err
+	}
+	reused, vectors, pending := carried.take(pending, identity)
+	for start := 0; start < len(reused); start += embedBatch {
+		end := min(start+embedBatch, len(reused))
+		if _, err := s.storeVectors(ctx, reused[start:end], vectors[start:end], identity); err != nil {
+			return 0, err
+		}
 	}
 	embedded := 0
 	for start := 0; start < len(pending); start += embedBatch {
@@ -176,7 +194,7 @@ func (s *Store) storeVectors(ctx context.Context, batch []pendingChunk, vectors 
 		for i, c := range batch {
 			tag, err := tx.Exec(ctx,
 				`UPDATE knowledge_chunk
-				 SET embedding = $2::vector, embed_identity = $3, embedded_at = now()
+				 SET embedding = $2::vector, embed_identity = $3
 				 WHERE id = $1 AND chunk_hash = $4 AND archived_at IS NULL
 				   AND embed_identity IS NOT DISTINCT FROM $5`,
 				c.id, vectorkit.Literal(vectors[i]), identity, c.hash, storedIdentityArg(c))

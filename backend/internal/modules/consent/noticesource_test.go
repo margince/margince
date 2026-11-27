@@ -4,8 +4,11 @@
 package consent
 
 import (
+	"encoding/json"
 	"testing"
 	"time"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
 func TestSourceAssessmentRequiresEvidenceAndRejectsFutureDates(t *testing.T) {
@@ -29,6 +32,30 @@ func TestSourceAssessmentRequiresEvidenceAndRejectsFutureDates(t *testing.T) {
 			_, owed, err := (SourceAssessment{Kind: tc.kind, ObtainedAt: tc.obtained, Note: tc.note, Now: now}).validate()
 			if (err == nil) != tc.valid || (err == nil && owed != tc.owed) {
 				t.Fatalf("owed=%t err=%v", owed, err)
+			}
+		})
+	}
+}
+
+// The contract lets a body that selects evidence leave out the note. A note is
+// needed only when nothing is selected.
+func TestAnAbsentNoteIsNeededOnlyWithoutSelectedEvidence(t *testing.T) {
+	now := time.Date(2026, 6, 1, 12, 0, 0, 0, time.UTC)
+	for _, tc := range []struct {
+		name, body string
+		valid      bool
+	}{
+		{"evidence selected", `{"kind":"subject_initiated","selected_evidence":{"kind":"activity","id":"019ff000-0000-7000-8000-000000000001"}}`, true},
+		{"nothing selected", `{"kind":"subject_initiated"}`, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var req crmcontracts.AssessNoticeSource
+			if err := json.Unmarshal([]byte(tc.body), &req); err != nil {
+				t.Fatal(err)
+			}
+			_, _, err := sourceAssessmentOf(req, now).validate()
+			if (err == nil) != tc.valid {
+				t.Fatalf("err=%v, want valid=%t", err, tc.valid)
 			}
 		})
 	}

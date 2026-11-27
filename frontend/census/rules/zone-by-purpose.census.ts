@@ -68,6 +68,22 @@ export function code(path: string, source: string): string {
 // cannot stand in for.
 const pinnedZones: { file: string; why: string }[] = [
   {
+    file: "features/companies/companyactivity.test.ts",
+    why: "A date-only activity must read as its own date for a reader far east of UTC, where its stored noon is already the next day; only a named zone at UTC+14 tells that apart from the instant's day.",
+  },
+  {
+    file: "features/contacts/contactstanding.peeks.test.ts",
+    why: "A date-only activity must read as its own date for a reader far east of UTC, where its stored noon is already the next day; only a named zone at UTC+14 tells that apart from the instant's day.",
+  },
+  {
+    file: "features/deals/deal360/dealverdict.test.ts",
+    why: "A date-only activity must read as its own date for a reader far east of UTC, where its stored noon is already the next day; only a named zone at UTC+14 tells that apart from the instant's day.",
+  },
+  {
+    file: "features/capture/connection-account.test.tsx",
+    why: "The unread mail notice prints its dates in the reader's zone; a named zone apart from UTC proves the wire instants are converted, whatever zone the runner is in.",
+  },
+  {
     file: "features/companies/companystanding.events.test.ts",
     why: "A task with only a date must read as its picked day for readers east and west of the picker and the company; only named zones apart from the runner's tell that from the instant's own day.",
   },
@@ -104,7 +120,11 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Serves an installation zone far east of UTC so the Review on field's earliest day is checked against the installation's today, not the runner's.",
   },
   {
-    file: "app/palettestanding.test.ts",
+    file: "components/taskmeta.late.test.ts",
+    why: "Pins the record zone so a late task's due day and its count of days late read the same on every runner: the line under test prints a day.",
+  },
+  {
+    file: "lib/searchstanding.test.ts",
     why: "Pins the reader's zone so a hit's close and due dates read the same on every runner: the lines under test print a day.",
   },
   {
@@ -656,6 +676,14 @@ const pinnedZones: { file: string; why: string }[] = [
   {
     file: "features/sign-in/installation-settings.test.tsx",
     why: "Asserts that same card shows the configured zone verbatim — the one screen where the zone name is the content.",
+  },
+  {
+    file: "features/sign-in/installation-settings.testkit.tsx",
+    why: "The stubbed installation settings those card suites read; the configured company zone is the record's own value, not a clock.",
+  },
+  {
+    file: "features/sign-in/installation-settings.refusal.test.tsx",
+    why: "The dialog EDITS the company time zone; its refusal cases type zone names an admin would, and assert the patch that sends them.",
   },
   {
     file: "features/onboarding/onboarding-conversation/basis-act.stories.tsx",

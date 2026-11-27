@@ -88,7 +88,7 @@ export function isRadiusOperand(value: unknown): value is RadiusOperand {
   );
 }
 
-/** storekit's `MaxRelativeDays`, held equal by gates/frontendrelativedays_test.go. */
+/** storekit's `MaxRelativeDays`, held equal by gates/frontendlimits_test.go. */
 export const MAX_DAYS_AGO = 36600;
 
 export function isRelativeDate(value: unknown): value is RelativeDate {
@@ -285,7 +285,7 @@ function hasUsableOperand(op: FilterOp, value: LeafValue): boolean {
     case "in":
       return Array.isArray(value) && value.length > 0;
     case "contains":
-      return typeof value === "string" && value !== "";
+      return typeof value === "string" && value.trim() !== "";
     case "within_radius":
       return isRadiusOperand(value);
     default:

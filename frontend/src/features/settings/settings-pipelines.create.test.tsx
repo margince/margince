@@ -1,7 +1,9 @@
 /** @vitest-environment happy-dom */
+import "@testing-library/jest-dom/vitest";
 import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { en } from "../../i18n/en";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import {
   jsonResponse,
@@ -232,7 +234,7 @@ describe("PipelinesCard: a name already in use", () => {
   });
 });
 
-describe("PipelinesCard: a new stage's win probability", () => {
+describe("PipelinesCard: a new stage's refusals", () => {
   async function openNewStage(posted: unknown[], answer?: () => Response) {
     server([SALES]);
     const served = globalThis.fetch;
@@ -250,6 +252,36 @@ describe("PipelinesCard: a new stage's win probability", () => {
     await user.type(form.getByLabelText("Name *"), "Discovery");
     return { user, form };
   }
+
+  it("asks for the win probability of an open stage before sending", async () => {
+    const posted: unknown[] = [];
+    const { user, form } = await openNewStage(posted);
+    await user.click(form.getByRole("button", { name: "Create" }));
+    expect(await form.findByText("Win probability is required.")).toBeTruthy();
+    expect(posted).toEqual([]);
+  });
+
+  it("says on the name field that the pipeline already has the stage", async () => {
+    const posted: unknown[] = [];
+    const { user, form } = await openNewStage(posted, () =>
+      jsonResponse(
+        {
+          status: 409,
+          code: "stage_name_taken",
+          detail: 'this pipeline already has a stage called "Discovery"',
+        },
+        409,
+      ),
+    );
+    const name = form.getByLabelText("Name *");
+    expect(name).toHaveAttribute("data-character-limit", "120");
+    await user.type(form.getByLabelText(/Win probability/), "40");
+    await user.click(form.getByRole("button", { name: "Create" }));
+    await waitFor(() =>
+      expect(name).toHaveAccessibleDescription(en["stage.nameTaken"]),
+    );
+    expect(posted).toHaveLength(1);
+  });
 
   it("asks for a whole number before sending", async () => {
     const posted: unknown[] = [];

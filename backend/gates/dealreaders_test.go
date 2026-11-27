@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-//gate:kind census H2
-
 package gates
 
 // `deal` is an RBAC object, and until this gate nothing held the object half of
@@ -27,8 +25,6 @@ package gates
 // account page's advice band, and a pre-meeting brief.
 
 import (
-	"go/ast"
-	"path"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
@@ -59,6 +55,7 @@ var dealGate = objectGate{
 // the gated set: removing the deal condition could only WIDEN the result the
 // caller already sees.
 var predicateDealReads = gatekit.Waive(map[string]string{
+	"internal/modules/activities/whichdealanswer.go:dealOpen":                        "asks whether a deal Margince asked a colleague about, or the one a questioned mail was filed on, is still open. Only a boolean leaves, and it only decides whether the question can still be answered with that deal",
 	"internal/modules/activities/dealproject.go:dropOrphanedInheritedProject":        "asks whether any deal of the activity, or the deal it is moving to, still belongs to the inherited project. Only the activity's own project link is deleted and returned; no deal column leaves the statement",
 	"internal/platform/auth/sharedwith.go:ActivityWorksOnClause":                     "the done-for-you filter (compose/magic): whether a machine change on an activity is the reader's own work, asked through the owner and grants of the records it is linked to. No column of the record is selected, and the clause only narrows a read the activity audience gate already admitted",
 	"internal/modules/contacts/mergecontractguard.go:refuseCrossCompanyContracts":    "Checks whether merging two authorized companies would preserve contract filing. Only a boolean reaches a generic refusal; no deal reference, amount or stage leaves the query. A viewer filter would miss an inaccessible deal and permit the merge to expose its contract through another company.",
@@ -110,8 +107,6 @@ var predicateDealReads = gatekit.Waive(map[string]string{
 	"internal/platform/auth/contractgate.go:ContractVisibleClause":                   "the contract visibility predicate. A contract hangs off a deal or, failing that, an account, so the clause asks whether the caller may see one of the two and admits the CONTRACT on that basis. Every column it selects belongs to the contract; the deal is reached only by EXISTS",
 	"internal/modules/contracts/writability.go:ensureAnchorWritable":                 "resolves only the effective anchor after writableContract has read the contract through its scope and held its row. ContractAnchorSQL shares the read policy, and EnsureWritable gates the selected anchor; no commercial deal field is returned",
 	"internal/platform/auth/contractgate.go:ContractAnchorTx":                        "returns the anchor of a contract under contract.read and ContractVisibleClause, shared by attachment filing and webhook delivery. It exposes no commercial deal fields and requires the contract grant rather than a separate grant on its inherited anchor",
-	"internal/modules/dealrooms/room_list.go:roomPage":                               "the room list. `roomColumns` selects the room's own columns and whether its named human is active — and `JOIN deal d` is there for dealScopeClause, so a room on a deal the caller may not open is absent. No deal column is projected",
-	"internal/modules/dealrooms/room_read.go:readRoom":                               "one room, same projection and same reason: the deal join carries the room's row visibility and contributes no column of its own",
 	"internal/modules/dealrooms/room_write.go:resolveSteward":                        "reads the deal's `owner_id` so a new room is stewarded by whoever owns the deal it is about. A USER id, inside CreateDealRoom's own write",
 	"internal/modules/deals/stageremoval.go:refuseIfOccupied":                        "`count(*) FROM deal WHERE stage_id = $1` — the guard that refuses archiving a stage deals still sit in. Reached from ArchiveStage past auth.Require(pipeline, delete), and its only effect is a refusal",
 	"internal/modules/deals/stages.go:refuseTerminalWithOpenDeals":                   "the twin guard: a stage cannot be made terminal while open deals occupy it. Same shape, past auth.Require(pipeline, update), and the number never leaves as anything but a refusal",
@@ -131,6 +126,7 @@ var predicateDealReads = gatekit.Waive(map[string]string{
 // gate would admit them anyway and the entry records why asking was never the
 // point.
 var lifecycleDealReads = gatekit.Waive(map[string]string{
+	"internal/modules/privacy/erasurebriefcache.go:summarisedRecords":           "the contact-delete-authorized eraser and the retention anonymize read a deal only for its company id, to delete the cached summaries of both inside the same transaction. Only ids leave the statement, and they go to the store that deletes them",
 	"internal/modules/deals/proposalstage.go:ProposalStageFor":                  "the deal a sent proposal went out on, read under the system principal by the suggester to decide whether the owner is asked at all. The name, stage and status leave only into an approval whose decider is the deal's owner, and whose deciding takes deal update (approvals decisionGrants) and the owner-only narrowing (seatnarrowing.go)",
 	"internal/modules/deals/proposalstage.go:proposalStillApplies":              "re-reads a deal's status, hold and stage under the deal's row lock inside the accept, past the approvals engine's deal update grant for the deciding owner. Only a refusal reason leaves it",
 	"internal/modules/deals/proposalstage.go:ProposalStageOutdated":             "whether a waiting proposal question has nothing left to ask, read under the system principal by the sweep that withdraws it. One boolean leaves, and no deal field",
@@ -159,7 +155,6 @@ var lifecycleDealReads = gatekit.Waive(map[string]string{
 	"internal/modules/weeklyplan/linkedkeys.go":                                 "the backfill of the per-type record keys asks only whether the deal its row names still exists, under the system principal behind auth.RequireSystem. The answer decides whether the row is keyed or ends as the key's ON DELETE action would end it, and no deal column leaves the statement",
 	"internal/compose/extsystemread.go:readDealSummary":                         "an extension unit's system read of one deal (Runtime.Deals().Get). It runs as the delivery's or tick's PrincipalSystem and answers only on an unattended Runtime: systemRead refuses it with ErrAttendedRead on any invocation a caller could receive the answer from. A unit that shows the deal to a colleague asks Authority().CanRead, which is auth.VisibleTo under that colleague's own grants",
 	"internal/compose/extsystemread.go:dealResponsibleQuery":                    "the statement readDealResponsible runs, in that same unattended system read: only user ids and an owner flag leave it",
-	"internal/compose/extsystemread.go:readDealResponsible":                     "the same unattended system read for the colleagues a deal names (Runtime.Deals().Responsible): the deal is read for its existence and its owner_id, and only user ids leave the statement. Refused on an attended Runtime by systemRead",
 	"internal/compose/systemmail/dealmail.go:ReadDeal":                          "an extension unit's system read of the emails linked to one deal (Runtime.Activities().Mail). It asks only whether the deal exists, selecting no deal column, and runs unattended as PrincipalSystem behind the unit's declared activities read",
 	"internal/modules/privacy/reportingquestions.go:heldQuestionSource":         "Retention lifecycle checks legal holds on every record behind a kept question answer before selecting an edition for expiry; it returns edition ids to the audited eraser, not source records to a reader.",
 	"internal/modules/privacy/reportingretention.go:reportingRetentionSelector": "Retention lifecycle checks legal holds across all linked subjects before selecting an edition for expiry; it returns edition ids to the audited eraser, not source records to a reader.",
@@ -170,6 +165,7 @@ var lifecycleDealReads = gatekit.Waive(map[string]string{
 	"internal/modules/deals/suggestion.go:SuggestionCompanyFreeClause": "asks whether a company has an open deal, and selects no deal column. Composed into the system-only writer and superseding pass, the scout's system-principal read, and an acceptance that has already asked the deal create grant and holds the suggestion under the reader's visibility clause",
 
 	"internal/compose/assuranceseam.go":                                        "the assurance scan's subject statement, selecting a deal's owner, amount and currency so a finding can be raised against it. assurancebundle.go records that the pass runs as PrincipalSystem over the whole installation; what a human later reads is AssuranceExceptions, which asks both halves",
+	"internal/compose/assurancepair/assurancepair.go":                          "the assurance scan's pair statement, joining two deals of one account to count the evidence they share, as the input check's system principal. What a human reads is AssuranceExceptions, which asks both halves for the deal a finding is filed on, and WithholdHidden then asks the row half again for the second deal before its id is shown",
 	"internal/compose/captureofflinedemo.go:fillParties":                       "the offline capture demo's fixture parties, read to seed a mailbox that has something to capture against. Demo seeding rather than a product read path, where the demo binds its own principal",
 	"internal/modules/activities/retentionstamp.go:StampCorrespondenceForDeal": "the retention stamp freezes the deal's NAME into the evidence at the moment the correspondence qualifies, because a rename or a delete must not take the proof with it. It runs inside the qualifying write and the name goes onto the evidence row, never to a caller",
 	"internal/modules/deals/wonstints.go:wonStints":                            "the won deals' stage stints the close-date sweep's pace, a deal's health pace and the forecast's stuck signal take a percentile of. Each caller reduces it to one number per stage, never a deal: the sweep on its schedule, the health reads behind the deal object gate at their entry, the forecast as the system",
@@ -193,13 +189,13 @@ var lifecycleDealReads = gatekit.Waive(map[string]string{
 // graph is by NAME and a gated Store.X would then vouch for an ungated
 // Handlers.X.
 var calleeGatedDealReads = gatekit.Waive(map[string]string{
+	"internal/modules/activities/linksuggestiondeal.go:withDealFacts":       "the value and close date of a deal in the reader's link suggestion queue. Its one caller, decidable, runs it after mayDecide asked auth.VisibleTo for the deal and visibleTargetName read it live; the value and its currency leave only through auth.MaskedColumnSQL",
 	"internal/modules/deals/managerrequest.go:dropManagerRequest":           "reads only the manager-request columns of the deal an advance is closing, to end them in the same patch. Its one caller, the stage move, asks auth.Require for deal update and holds the row lock first. The three columns are written back as null and are never returned",
 	"internal/compose/recordowner/recordowner.go:recordOwners":              "the owner and name of a record a colleague asks its owner about: a handover, or edit access. Read after contacts.OwnerAskableTx asked the record type's read and update grants and its row scope, for the decision precheck under the deciding owner, or for the line telling the colleague who asked, under the decider or the expiry sweep's system principal; the name goes only to the colleague who asked for that record while they could see it",
 	"internal/modules/activities/emailtarget.go:dealContactCandidatesSQL":   "the stakeholders of a task's deal, as the record an email about the task goes to. linkedCandidates asks auth.ReadGranted for deal and renders its row scope; the object arrives as a PARAMETER. No deal column but the join leaves",
 	"internal/modules/activities/emailtarget.go:dealCompanyCandidatesSQL":   "the company of a task's deal, as the record an email about the task goes to. linkedCandidates asks auth.ReadGranted for deal and renders its row scope; the object arrives as a PARAMETER. No deal column but the join leaves",
 	"internal/compose/metricmixsettle.go:wonDealValues":                     "the converted value of won deals whose ids came off readDealMetricFacts, which reads only the gated deal population. The value goes through reportingFactValue and follows the reader's field mask",
 	"internal/compose/capturedealtopicread.go:readDealTopicDeals":           "the names, projects and recent mail subjects of the deals a topic check weighs, under the deal row scope. Its one caller, readDealTopicInput, asks auth.Require(ctx, \"deal\", read) first",
-	"internal/modules/activities/dealdecline.go:offeredDeals":               "the ids of the open deals a deal question offered, under the deal row scope. Its one caller, DeclineDeal, asks auth.Require(ctx, \"deal\", read) first. No deal column but the id leaves",
 	"internal/modules/activities/dealdeclineproject.go:projectCameFromDeal": "reads one deal's project_id to test the message's project link; only a boolean leaves. Its one caller chain starts at DeclineDeal, which asks auth.Require(ctx, \"deal\", read) and auth.EnsureVisibleExisting on that deal first",
 	"internal/modules/deals/correctionreceipts.go:correctionReceiptSelect":  "the SELECT list and joins every change report shares; it has no WHERE of its own. Its three callers, RecentCorrectionsOwnedBy, DealChanges and TeamChanges, ask auth.Require(ctx, \"deal\", read) first and add the row scope",
 	"internal/modules/deals/verdictapply.go:addProbabilityValuation":        "the amount, currency and stage probability a probability change is valued from, under the row lock ApplyVerdict took after auth.Require and auth.EnsureWritable. They go only into that change's audit evidence",
@@ -255,18 +251,20 @@ var calleeGatedDealReads = gatekit.Waive(map[string]string{
 
 // ruledDealReads: a DISCLOSING read the product has ruled needs no deal grant.
 var ruledDealReads = gatekit.Waive(map[string]string{
-	"internal/modules/deals/recordsourcecorrect.go:CorrectDealSourcesTx":      "the id and source of deals whose source is off the fixed list, read under the row lock by the source data task. storekit.CorrectRecordSources asks auth.RequireSystem before the statement runs, and only ids leave it",
-	"internal/modules/deals/recordsourcecorrect.go:CountUnlistedDealSources":  "how many deals still hold a source off the fixed list, for the source data task's estimate. Its one caller asks auth.Require for data_task read, and only a capped count leaves",
-	"internal/modules/deals/legalreviewdesk.go:raiseLegalReview":              "the name and owner of the deal a request was just opened on, read in the requester's own transaction after RequestLegalReview asked deal read and update and locked the row. The name goes into the inbox entry of seats that answer reviews, who read the deal's pack under the review grant without a deal grant, and the owner only keeps the deal's own side off the list",
-	"internal/compose/assurancefloor/assurancefloor.go:seats":                 "the owners of the deals a forecast-call finding names as moved, read only to count the seats behind that finding's figures for the small-group floor of Show individual performance. Only seat ids leave, into the floor's yes or no; no deal field reaches the reader, who needs only the forecast grant a call finding asks",
-	"internal/compose/winchance/forecastchances.go:forecastSettledSignalsSQL": "the signals and outcome of every deal a frozen forecast settled, and its owner as a seat for the small-group floor, read installation-wide as the system to learn each signal's effect. Only per-signal counts and seat ids leave; no deal field reaches a reader",
-	"internal/compose/winchance/forecastchances.go:forecastStageEntriesSQL":   "each deal's first recorded entry into an open stage and how it stood at the cutoff, read installation-wide as the system to estimate each stage's won share. Only per-stage outcomes and day counts leave, and each entry's owner as a seat for the small-group floor; no deal field reaches a reader",
-	"internal/modules/assurance/freshness.go:readFreshness":                   "how many deals changed since the last check, and their owners as seats for the small-group floor. Its one caller, LatestRun, asks auth.Require for forecast read; only counts and seat ids leave, no deal field",
-	"internal/compose/winchance/forecastchancetable.go:openForecastDeals":     "every open deal's stage and typed chance, read installation-wide as the system to build the chance each deal is weighted by. Only per-stage and per-deal chances leave it, keyed by ids the reader's own report or roll-up already holds",
-	"internal/modules/deals/wonstints.go:StuckAfterDealPipelines":             "the pipelines of deals the caller's own row-scoped forecast already holds, to read their won-deal stage pace. Only stage paces leave it",
-	"internal/compose/winchance/winchances.go:forecastDealsByID":              "the stage, typed chance and own probability of deals the caller has just read through a gated deal read, filter or queue, to resolve the one win chance of each. Only the resolved chance leaves, for ids the reader already holds",
-	"internal/modules/activities/projectfiling.go":                            "the undo of a project filing share-locks the deals the activity is linked to, and their offers, so a deal's win or an offer's send stamping the correspondence serializes with the undo (shareLockQualifyingRecords selects deal ids to lock them and returns only a count). The boolean question of whether a linked deal qualifies the activity is the retentionscope fragment, waived under its own key; the refusal it feeds is worded generically for a caller without the deal grant",
-	"internal/modules/privacy/legalholdlist.go":                               "the litigation-hold census: one UNION over the five holdable tables, selecting an id and a display name for rows where legal_hold is set. Gated on the retention-policy authority and refused to a non-human principal at its own entry, which is the posture the sibling restricted-records list already takes — a controller asked what a hold is preserving has to be told which records those are, and the grant that governs the retention ladder is the one that governs seeing what overrides it. No field of the record is read beyond its name",
+	"internal/modules/deals/dealmergefollow.go:FollowMergeTx":                  "answers the id a merged-away deal redirects to, for the extension system read of who is responsible. Its one caller has asked the system-read deal grant first, and only an id leaves the statement",
+	"internal/modules/deals/recordsourcecorrect.go:CorrectDealSourcesTx":       "the id and source of deals whose source is off the fixed list, read under the row lock by the source data task. storekit.CorrectRecordSources asks auth.RequireSystem before the statement runs, and only ids leave it",
+	"internal/modules/deals/recordsourcecorrect.go:CountUnlistedDealSources":   "how many deals still hold a source off the fixed list, for the source data task's estimate. Its one caller asks auth.Require for data_task read, and only a capped count leaves",
+	"internal/modules/deals/legalreviewdesk.go:raiseLegalReview":               "the name and owner of the deal a request was just opened on, read in the requester's own transaction after RequestLegalReview asked deal read and update and locked the row. The name goes into the inbox entry of seats that answer reviews, who read the deal's pack under the review grant without a deal grant, and the owner only keeps the deal's own side off the list",
+	"internal/compose/assurancefloor/assurancefloor.go:seats":                  "the owners of the deals a forecast-call finding names as moved, read only to count the seats behind that finding's figures for the small-group floor of Show individual performance. Only seat ids leave, into the floor's yes or no; no deal field reaches the reader, who needs only the forecast grant a call finding asks",
+	"internal/compose/winchance/forecastchances.go:forecastSettledSignalsSQL":  "the signals and outcome of every deal a frozen forecast settled, and its owner as a seat for the small-group floor, read installation-wide as the system to learn each signal's effect. Only per-signal counts and seat ids leave; no deal field reaches a reader",
+	"internal/compose/winchance/forecastaccuracy.go:forecastSettledChancesSQL": "the chances a frozen forecast gave each deal that later settled, read installation-wide as the system to measure how well the forecast did. The new predicate only asks whether a deal was merged away, so a duplicate's outcome is not counted twice. Nothing about a deal reaches a caller, only the chances the freeze already recorded for each settled deal",
+	"internal/compose/winchance/forecastchances.go:forecastStageEntriesSQL":    "each deal's first recorded entry into an open stage and how it stood at the cutoff, read installation-wide as the system to estimate each stage's won share. Only per-stage outcomes and day counts leave, and each entry's owner as a seat for the small-group floor; no deal field reaches a reader",
+	"internal/modules/assurance/freshness.go:readFreshness":                    "how many deals changed since the last check, and their owners as seats for the small-group floor. Its one caller, LatestRun, asks auth.Require for forecast read; only counts and seat ids leave, no deal field",
+	"internal/compose/winchance/forecastchancetable.go:openForecastDeals":      "every open deal's stage and typed chance, read installation-wide as the system to build the chance each deal is weighted by. Only per-stage and per-deal chances leave it, keyed by ids the reader's own report or roll-up already holds",
+	"internal/modules/deals/wonstints.go:StuckAfterDealPipelines":              "the pipelines of deals the caller's own row-scoped forecast already holds, to read their won-deal stage pace. Only stage paces leave it",
+	"internal/compose/winchance/winchances.go:forecastDealsByID":               "the stage, typed chance and own probability of deals the caller has just read through a gated deal read, filter or queue, to resolve the one win chance of each. Only the resolved chance leaves, for ids the reader already holds",
+	"internal/modules/activities/projectfiling.go":                             "the undo of a project filing share-locks the deals the activity is linked to, and their offers, so a deal's win or an offer's send stamping the correspondence serializes with the undo (shareLockQualifyingRecords selects deal ids to lock them and returns only a count). The boolean question of whether a linked deal qualifies the activity is the retentionscope fragment, waived under its own key; the refusal it feeds is worded generically for a caller without the deal grant",
+	"internal/modules/privacy/legalholdlist.go":                                "the litigation-hold census: one UNION over the five holdable tables, selecting an id and a display name for rows where legal_hold is set. Gated on the retention-policy authority and refused to a non-human principal at its own entry, which is the posture the sibling restricted-records list already takes — a controller asked what a hold is preserving has to be told which records those are, and the grant that governs the retention ladder is the one that governs seeing what overrides it. No field of the record is read beyond its name",
 })
 
 // deferredDealReads: a DISCLOSING read that is still ungated, each naming
@@ -293,65 +291,10 @@ var dealVerdicts = []namedVerdict{
 	{"deferred", deferredDealReads},
 }
 
-// wantMinimumGatedDealSites is the floor below the count of sites that
-// satisfy the gate today. It exists for the reason every floor in this
-// directory does: an extractor that stops recognising SQL finds no sites and
-// reports nothing, which is indistinguishable from a clean tree.
-const wantMinimumGatedDealSites = 16
-
-var dealReaderScope = gatekit.Scope{
-	Roots:   []string{"internal"},
-	Subject: readsDealTable,
-	Exempt:  gatekit.Waive(map[string]string{}),
-}
-
-func readsDealTable(filePath string, file *ast.File) bool {
-	return gatekit.FileReadsTable(filePath, file, dealGate.literal)
-}
-
-func TestEveryReaderOfTheDealTableCarriesTheObjectGateOrAVerdict(t *testing.T) {
-	t.Parallel()
-	files := dealReaderScope.Files(t)
-	walk := dealGate.walkPackages(t, files)
-	consts := constantTable{}
-
-	var satisfied int
-	for _, parsed := range files {
-		pkg := path.Dir(parsed.Path)
-		for _, site := range dealGate.readSites(parsed, consts.of(t, pkg)) {
-			subject := site.subject(parsed.Path)
-			carriesGate := walk.carries(t, dealGate, parsed, site, consts.of(t, pkg))
-			verdict := verdictIn(t, subject, dealVerdicts)
-
-			switch {
-			case carriesGate && verdict != "":
-				t.Errorf("%s carries the deal object gate AND a %s verdict — remove the verdict, it "+
-					"now describes code that is gated", subject, verdict)
-			case carriesGate:
-				satisfied++
-			case verdict == "":
-				t.Errorf("%s reads the deal table without the object gate and without a verdict.\n"+
-					"  Reading a deal discloses the commercial position — the figure, the stage "+
-					"and the close date — which is what the deal grant governs.\n"+
-					"  Either ask auth.Require(ctx, \"deal\", …) — or auth.ReadGranted where the "+
-					"read must degrade rather than refuse — or declare it in "+
-					"predicateDealReads / lifecycleDealReads / calleeGatedDealReads / "+
-					"ruledDealReads with the reason it needs no gate.\n"+
-					"  Left alone it is indistinguishable from a read nobody considered.\n"+
-					"  The read: %s", subject, site.sql)
-			}
-		}
-	}
-
-	if satisfied < wantMinimumGatedDealSites {
-		t.Errorf("only %d deal reads satisfy the object gate, want at least %d — a literal extractor "+
-			"that stopped recognising this tree's SQL would report exactly this, and it reads the "+
-			"same as a clean tree", satisfied, wantMinimumGatedDealSites)
-	}
-	t.Logf("deal reads: %d gated, %d predicate, %d lifecycle, %d callee-gated, %d ruled, %d DEFERRED (still disclosing)",
-		satisfied, len(predicateDealReads.Subjects()), len(lifecycleDealReads.Subjects()),
-		len(calleeGatedDealReads.Subjects()), len(ruledDealReads.Subjects()), len(deferredDealReads.Subjects()))
-
+// sweepDealVerdicts fails a verdict no read matched any more. The
+// gate census asks for each sweep by name, so the list is written out.
+func sweepDealVerdicts(t *testing.T) {
+	t.Helper()
 	predicateDealReads.AssertAllMatched(t)
 	lifecycleDealReads.AssertAllMatched(t)
 	calleeGatedDealReads.AssertAllMatched(t)
@@ -359,3 +302,8 @@ func TestEveryReaderOfTheDealTableCarriesTheObjectGateOrAVerdict(t *testing.T) {
 	ruledDealReads.AssertAllMatched(t)
 	deferredDealReads.AssertAllMatched(t)
 }
+
+// wantMinimumGatedDealSites is the floor below the count of sites that
+// satisfy the gate today. An extractor that stops recognising SQL finds no sites
+// and reports nothing, which reads the same as a clean tree.
+const wantMinimumGatedDealSites = 16

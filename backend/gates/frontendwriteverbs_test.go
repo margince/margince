@@ -76,7 +76,7 @@ func frontendMomentVerbWrites(t *testing.T) map[string]bool {
 	if end < 0 {
 		t.Fatalf("%s: the MOMENT_VERB_WRITES literal is unterminated", frontendWriteVerbs)
 	}
-	body := tsComment.ReplaceAllString(string(source)[start:start+end], " ")
+	body := gatekit.TSWithoutComments(string(source)[start : start+end])
 	entries := map[string]bool{}
 	for entry := range strings.SplitSeq(body, ",") {
 		entry = strings.TrimSpace(entry)

@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -83,6 +84,20 @@ func TestAFieldChangeNamesTheFieldsAndTheSource(t *testing.T) {
 	}
 	if line.Reason == nil || line.Reason.Key != "magic.why.site_read" || (*line.Reason.Values)["site"] != "studiolegal.de" {
 		t.Fatalf("reason %v, want the site it was read on", line.Reason)
+	}
+}
+
+// An agent's change says why in the agent's own words, the reason it had to
+// give for the write.
+func TestAnAgentsFieldChangeGivesTheReasonItStated(t *testing.T) {
+	line, _, ok := lineOf(unmasked(t), auditRow("agent:deepread",
+		`{"title": "Analyst"}`, `{"title": "CTO"}`,
+		`{"stated_reason": "Her signature on 14 Nov names her CTO."}`, clocktest.Now(t)))
+	if !ok {
+		t.Fatal("a field change was not shown")
+	}
+	if line.Reason == nil || line.Reason.Key != "magic.why.stated" || (*line.Reason.Values)["why"] != "Her signature on 14 Nov names her CTO." {
+		t.Fatalf("reason %v, want the reason the agent gave", line.Reason)
 	}
 }
 
@@ -383,5 +398,31 @@ func TestACreatedActivityIsNamedByItsKind(t *testing.T) {
 		if d, ok := describe(row); !ok || d.summary.Key != want {
 			t.Errorf("%s: summary = %q (described %v), want %q", kind, d.summary.Key, ok, want)
 		}
+	}
+}
+
+// A change that is one action reads as that action, never as its field names.
+func TestAPlainChangeReadsAsOneAction(t *testing.T) {
+	for name, tc := range map[string]struct{ before, after, want string }{
+		"a calendar guest sync": {
+			`{"guests_added": null, "guest_links_added": null}`, `{"guests_added": 2, "guest_links_added": 1}`,
+			"magic.action.guests_synced_from_calendar",
+		},
+		"a task marked done":  {`{"is_done": false}`, `{"is_done": true}`, "magic.action.task_done"},
+		"a task reopened":     {`{"is_done": true}`, `{"is_done": false}`, "magic.action.task_reopened"},
+		"guests and a title":  {`{"guests_added": null, "subject": "A"}`, `{"guests_added": 1, "subject": "B"}`, "magic.action.fields_changed"},
+		"done and a due date": {`{"is_done": false, "due_at": null}`, `{"is_done": true, "due_at": "2026-12-01"}`, "magic.action.fields_changed"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			row := auditRow("system:calendar", tc.before, tc.after, `{}`, clocktest.Now(t))
+			row.EntityType = typeActivity
+			line, _, ok := lineOf(unmasked(t), row)
+			if !ok {
+				t.Fatal("the change was not shown")
+			}
+			if line.Summary.Key != tc.want {
+				t.Errorf("summary %q, want %q", line.Summary.Key, tc.want)
+			}
+		})
 	}
 }

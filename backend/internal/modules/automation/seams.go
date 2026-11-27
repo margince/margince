@@ -57,6 +57,7 @@ type Approvals interface {
 // automation wants to do and for the action to be identified again once
 // decided.
 type StageRequest struct {
+	Why            *systemtext.Component
 	SystemText     *systemtext.Message
 	Kind           string          // the action kind being staged, e.g. "send_email"
 	ProposedChange json.RawMessage // the action's args, as the approver will see them
@@ -209,6 +210,8 @@ type ListRef struct {
 	Version    int64
 	// Invalid says the list's latest check could not evaluate its filter.
 	Invalid bool
+	// Unavailable says no installed extension declares the list's kind.
+	Unavailable bool
 }
 
 // ListChange is one record a Live List's check saw joining or leaving.

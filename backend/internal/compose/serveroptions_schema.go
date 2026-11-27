@@ -31,14 +31,10 @@ import (
 // never mounted — a role that runs no runtime DDL declares that by
 // omission, the same posture as WithBlobstore/WithKeyvault.
 //
-// WHICH posture this option should have under the role-separation invariant is
-// still open: issue #651 records the decision. The two candidates are keeping
-// the 501 above as the honest answer for a role that legitimately holds no owner
-// DSN, or relocating the two DDL operations behind a process that does. It is a
-// product call about a CORE module — the extension tier depends on neither
-// outcome — so it is filed rather than settled here, and the pointer sits at the
-// function a reader arrives at with the question rather than in an issue tracker
-// they would first have to think to search.
+// The 501 is the posture for a role that holds no owner DSN. Create and
+// SetOptions stay in the API, so adding a custom field stays one call for an
+// admin instead of an operator task. The app role never holds the owner DSN,
+// and AssertRuntimeRole fails the boot if it does.
 func WithSchemaPool(schemaPool *pgxpool.Pool) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
 		s.customfieldsHandlers = customfields.NewHandlers(pool, schemaPool)
@@ -133,8 +129,6 @@ func WithPasswordLogin(enabled bool) Option {
 	}
 }
 
-// Every send option below records onto s.send and NOTHING else. The HTTP
-// handlers' own store is reconciled from that one value once every option has
-// run (New's applySendPath), and the tool surface is rebuilt over it here, so
-// no option can configure one transport and leave the others silently
-// without.
+// Every send option below records onto s.send and nothing else. After the last
+// option, New's applySendPath gives that one value to the HTTP handlers, and
+// New builds the tool surface over it. So no transport is left without it.

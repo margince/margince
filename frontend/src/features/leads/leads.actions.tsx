@@ -7,13 +7,13 @@ import { LogActivityAction } from "../../components/logactivity.action";
 import { Button, OverflowMenu } from "../../design-system/atoms";
 import { IconAction, tipText, VerbWord } from "../../design-system/iconaction";
 import { useT } from "../../i18n";
+import { leadIdentityName } from "../../lib/leadname";
 import { ACTION_PARAM, CALL_ACTION } from "../../lib/leads.address";
 import { useShortcut } from "../../lib/shortcuts";
 import { useUrlParams } from "../../lib/urlstate";
 import { RecordEmailVerb } from "../records/recordemail";
 import { ShareAction } from "../records/share";
 import { ReopenAction, terminalSentence } from "./leadband";
-import { leadIdentityName } from "./leadname";
 import { promoteEligible } from "./leadpresentation";
 import type { Lead, LeadWriter } from "./leads";
 import { DisqualifyDialog } from "./leads.disqualify";
@@ -88,7 +88,7 @@ export function LeadActions({
   const t = useT();
   // Independent of the terminal check: a live lead a seat may not log against
   // is refused for this reason, not that one.
-  const activity = useActivityGate(writableTarget(lead));
+  const activity = useActivityGate("lead", writableTarget(lead));
   const archived = lead.archived_at ? terminalReasonId : undefined;
   const logRefused = archived ?? activity.refusedId;
   // An archive is the page's sentence, so only its id reaches here.

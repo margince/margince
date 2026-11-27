@@ -21,6 +21,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
@@ -146,50 +147,63 @@ func TestASetUpApprovedBeforeAHumanSetsUpTheProgramIsRefusedAndChangesNothing(t 
 }
 
 func TestASetUpOnAnArchivedProgramStartsFromTheDefaults(t *testing.T) {
-	c := setupChannelSendNoGmail(t)
-	invoke := c.partnerSetUpInvoker(t)
-	company := c.enrichTarget(t)
-	c.humanSetsUpPartner(t, company, "tier3_25")
-	if err := apptest.InWorkspace(c.AppEnv, t, func(tx pgx.Tx) error {
-		if _, err := tx.Exec(context.Background(),
-			`UPDATE partner SET archived_at = now(), cert_status = 'certified', certified_staff = 7, retention_rate = 90,
-			        served_segments = ARRAY['smb'], partner_fit_score = 80, partner_fit_score_computed = 40,
-			        partner_fit_override_reason = 'human call', relationship_stage = 'active'
+	for _, tier := range []string{"", "tier3_25"} {
+		t.Run("stored tier "+tier, func(t *testing.T) {
+			c := setupChannelSendNoGmail(t)
+			invoke := c.partnerSetUpInvoker(t)
+			company := c.enrichTarget(t)
+			c.humanSetsUpPartner(t, company, tier)
+			if err := apptest.InWorkspace(c.AppEnv, t, func(tx pgx.Tx) error {
+				if _, err := tx.Exec(context.Background(),
+					`UPDATE partner SET archived_at = now(), cert_status = 'certified', certified_staff = 7, retention_rate = 90,
+			        served_segments = ARRAY['smb'], relationship_stage = 'active'
 			  WHERE company_id = $1`, company); err != nil {
-			return err
-		}
-		_, err := tx.Exec(context.Background(),
-			`UPDATE company_relationship_type SET archived_at = now() WHERE company_id = $1 AND relationship_type = 'partner'`, company)
-		return err
-	}); err != nil {
-		t.Fatalf("archiving the program: %v", err)
-	}
+					return err
+				}
+				_, err := tx.Exec(context.Background(),
+					`UPDATE company_relationship_type SET archived_at = now() WHERE company_id = $1 AND relationship_type = 'partner'`, company)
+				return err
+			}); err != nil {
+				t.Fatalf("archiving the program: %v", err)
+			}
 
-	staged := c.stagedApproval(t, invoke, setUpArgs(company))
-	if status := c.Call(t, "POST", "/v1/approvals/"+staged.ApprovalID.String()+"/approve", AnyMap{}, nil, nil); status != http.StatusOK {
-		t.Fatalf("human approve → %d", status)
-	}
-	if _, err := invoke(setUpRetry(company, staged.ApprovalID.String())); err != nil {
-		t.Fatalf("approved retry → %v", err)
-	}
-	if _, _, tier, live := c.partnerRow(t, company); tier != nil || !live {
-		t.Errorf("revived program has tier %v live %v, want no tier and live", tier, live)
-	}
-	var cert, stage string
-	var staff int16
-	var retention, fit *int16
-	var segments []string
-	var reason *string
-	if err := apptest.InWorkspace(c.AppEnv, t, func(tx pgx.Tx) error {
-		return tx.QueryRow(context.Background(),
-			`SELECT cert_status, certified_staff, retention_rate, served_segments, partner_fit_score,
-			        partner_fit_override_reason, relationship_stage FROM partner WHERE company_id = $1`,
-			company).Scan(&cert, &staff, &retention, &segments, &fit, &reason, &stage)
-	}); err != nil {
-		t.Fatalf("reading the revived program: %v", err)
-	}
-	if cert != "applied" || staff != 0 || retention != nil || len(segments) != 0 || fit != nil || reason != nil || stage != "contacted" {
-		t.Errorf("revived program kept old terms: cert %q staff %d retention %v segments %v fit %v reason %v stage %q",
-			cert, staff, retention, segments, fit, reason, stage)
+			staged := c.stagedApproval(t, invoke, setUpArgs(company))
+			if status := c.Call(t, "POST", "/v1/approvals/"+staged.ApprovalID.String()+"/approve", AnyMap{}, nil, nil); status != http.StatusOK {
+				t.Fatalf("human approve → %d", status)
+			}
+			_, retryErr := invoke(setUpRetry(company, staged.ApprovalID.String()))
+			if tier != "" {
+				var refusal *httperr.DetailedError
+				if !errors.As(retryErr, &refusal) || refusal.Code != "agent_sets_no_margin_tier" {
+					t.Fatalf("financial restart: %v", retryErr)
+				}
+				if _, _, stored, live := c.partnerRow(t, company); live || stored == nil || *stored != tier {
+					t.Fatalf("refused restart changed tier=%v live=%v", stored, live)
+				}
+				return
+			}
+			if retryErr != nil {
+				t.Fatalf("approved retry → %v", retryErr)
+			}
+			if _, _, tier, live := c.partnerRow(t, company); tier != nil || !live {
+				t.Errorf("revived program has tier %v live %v, want no tier and live", tier, live)
+			}
+			var cert, stage string
+			var staff int16
+			var retention *int16
+			var segments []string
+			if err := apptest.InWorkspace(c.AppEnv, t, func(tx pgx.Tx) error {
+				return tx.QueryRow(context.Background(),
+					`SELECT cert_status, certified_staff, retention_rate, served_segments, relationship_stage
+			   FROM partner WHERE company_id = $1`,
+					company).Scan(&cert, &staff, &retention, &segments, &stage)
+			}); err != nil {
+				t.Fatalf("reading the revived program: %v", err)
+			}
+			if cert != "applied" || staff != 0 || retention != nil || len(segments) != 0 || stage != "contacted" {
+				t.Errorf("revived program kept old terms: cert %q staff %d retention %v segments %v stage %q",
+					cert, staff, retention, segments, stage)
+			}
+		})
 	}
 }

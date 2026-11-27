@@ -20,6 +20,8 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/draftreply"
+	"github.com/margince/margince/backend/internal/compose/draftrules"
+	"github.com/margince/margince/backend/internal/compose/draftvoice"
 	"github.com/margince/margince/backend/internal/compose/promptlang"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -37,23 +39,27 @@ type introNote struct {
 
 // writeIntroNote asks the model, and falls back to the template.
 //
-// The floor is not a degraded answer. A forwardable note is short and its facts
-// are few, so a template states every one of them honestly — a deployment with
-// no model lane gets a note a colleague can actually paste rather than an
-// apology about a lane they cannot configure. What the model buys is phrasing,
-// and generated_by says which one wrote it.
+// The floor is not a degraded answer. A note is short and its facts are few, so
+// a template states every one. A deployment with no model lane gets a note a
+// colleague can paste. The model buys phrasing, and generated_by says which
+// one wrote it.
 func writeIntroNote(
-	ctx context.Context, lane Completer, facts noteFacts,
-) crmcontracts.CompanyEmailDraft {
+	ctx context.Context, lane Completer, rules draftvoice.RulesReader, facts noteFacts,
+) (crmcontracts.CompanyEmailDraft, error) {
 	floor := noteFloor(facts)
 	if lane == nil {
-		return wireIntroNote(floor, crmcontracts.WrittenByDeterministic, facts)
+		return wireIntroNote(floor, crmcontracts.WrittenByDeterministic, facts), nil
 	}
-	written, err := noteFromModel(ctx, lane, facts)
+	// Workspace policy: no model draft without it, so a failed read refuses.
+	teamRules, err := draftvoice.LoadTeamRules(ctx, rules, nil)
 	if err != nil {
-		return wireIntroNote(floor, crmcontracts.WrittenByDeterministic, facts)
+		return crmcontracts.CompanyEmailDraft{}, err
 	}
-	return wireIntroNote(written, crmcontracts.WrittenByModel, facts)
+	if written, modelErr := noteFromModel(ai.WithFloor(ctx), lane, facts, teamRules); modelErr == nil {
+		return wireIntroNote(written, crmcontracts.WrittenByModel, facts), nil
+	}
+	// A failed model note degrades to the floor, which is still a sendable note.
+	return wireIntroNote(floor, crmcontracts.WrittenByDeterministic, facts), nil
 }
 
 // noteFromModel writes the note and checks what came back.
@@ -61,9 +67,9 @@ func writeIntroNote(
 // ai.Ask re-asks through the SAME parse the answer path runs, so a
 // reply this site would refuse goes back to the model with the reason.
 func noteFromModel(
-	ctx context.Context, lane Completer, facts noteFacts,
+	ctx context.Context, lane Completer, facts noteFacts, teamRules string,
 ) (introNote, error) {
-	res, err := ai.Ask(ctx, lane, noteRequest(facts), func(text string) error {
+	res, err := ai.Ask(ctx, lane, noteRequest(facts, teamRules), func(text string) error {
 		_, parseErr := parseIntroNote(text, facts)
 		return parseErr
 	})
@@ -95,7 +101,7 @@ Rules you must not break:
 // injection surface on this call.
 //
 //promptvoice:exempt the note is forwarded under the sender's own name to a customer; Margince's register ("no greetings", "say I for what you did") would contradict the greeting it opens with.
-func noteRequest(facts noteFacts) model.Request {
+func noteRequest(facts noteFacts, teamRules string) model.Request {
 	fence := promptfence.New()
 	// Withheld from the model's input on an indirect route, not only from the
 	// template. The band and date describe the intermediary's edge rather than
@@ -124,10 +130,10 @@ func noteRequest(facts noteFacts) model.Request {
 		payload = []byte("{}")
 	}
 	return model.Request{
-		System: noteSystem + "\n" +
+		System: noteSystem + "\n\n" + draftrules.TeamRules + "\n" +
 			promptlang.Rule(string(noteLang(facts.lang))) + "\n\n" +
-			fence.Rule("the facts of the introduction"),
-		Messages:       []model.Message{{Role: "user", Content: fence.Wrap(string(payload))}},
+			fence.Rule("the facts of the introduction") + "\n" + fence.PolicyRule(),
+		Messages:       []model.Message{{Role: "user", Content: draftvoice.WithTeamRules(fence, teamRules, fence.Wrap(string(payload)))}},
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		ResponseSchema: noteSchema(),
 		SecretStripper: ai.NewSecretStripper(),
@@ -471,11 +477,16 @@ func IntroNoteFactsFor(fixture IntroNoteFixture) (noteFacts, error) {
 
 // IntroNoteRequestFor builds the model call this site sends, from a fixture.
 func IntroNoteRequestFor(fixture IntroNoteFixture) (model.Request, error) {
+	return IntroNoteRequestWithRules(fixture, "")
+}
+
+// IntroNoteRequestWithRules is IntroNoteRequestFor for a workspace that saved team rules.
+func IntroNoteRequestWithRules(fixture IntroNoteFixture, teamRules string) (model.Request, error) {
 	facts, err := IntroNoteFactsFor(fixture)
 	if err != nil {
 		return model.Request{}, err
 	}
-	return noteRequest(facts), nil
+	return noteRequest(facts, teamRules), nil
 }
 
 // CheckIntroNote runs the production check over a reply.

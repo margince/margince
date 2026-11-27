@@ -37,6 +37,8 @@ import (
 // (tableownership: this module). The profile half lives here; the
 // corpus-source half (ingest, manifest, meter) is voicesources.go.
 type VoiceStore struct {
+	// TeamRulesReader serves the drafters' read of the workspace's team rules.
+	TeamRulesReader
 	// db binds the workspace this store runs for (ADR-0091 §9 step 3).
 	db  *database.DB
 	now func() time.Time
@@ -55,7 +57,7 @@ type VoiceStore struct {
 // NewVoiceStore opens the voice store on a handle already bound to the
 // workspace it serves.
 func NewVoiceStore(db *database.DB) *VoiceStore {
-	return &VoiceStore{db: db, now: time.Now}
+	return &VoiceStore{TeamRulesReader: TeamRulesReader{db: db}, db: db, now: time.Now}
 }
 
 // VoiceProfile is the §B0.2 artifact pair: derived voice_profile_md
@@ -67,7 +69,6 @@ type VoiceProfile struct {
 	ID                  ids.UUID
 	OwnerID             *ids.UserID
 	Scope               string
-	ModelRef            *string
 	Status              string
 	VoiceProfileMD      string
 	ProfileVersion      int
@@ -104,11 +105,11 @@ type UpdateVoiceProfileInput struct {
 	IfVersion           *int64
 }
 
-const voiceProfileColumns = `id, owner_id, scope, model_ref, status, voice_profile_md, profile_version, personality_md, auto_learning_enabled, active_source_hash, last_built_at, source, captured_by, version, created_at, updated_at, archived_at`
+const voiceProfileColumns = `id, owner_id, scope, status, voice_profile_md, profile_version, personality_md, auto_learning_enabled, active_source_hash, last_built_at, source, captured_by, version, created_at, updated_at, archived_at`
 
 func scanVoiceProfile(row pgx.Row) (VoiceProfile, error) {
 	var p VoiceProfile
-	err := row.Scan(&p.ID, &p.OwnerID, &p.Scope, &p.ModelRef, &p.Status, &p.VoiceProfileMD,
+	err := row.Scan(&p.ID, &p.OwnerID, &p.Scope, &p.Status, &p.VoiceProfileMD,
 		&p.ProfileVersion, &p.PersonalityMD, &p.AutoLearningEnabled, &p.ActiveSourceHash,
 		&p.LastBuiltAt, &p.Source, &p.CapturedBy, &p.Version, &p.CreatedAt, &p.UpdatedAt, &p.ArchivedAt)
 	return p, err
@@ -311,6 +312,10 @@ func (s *VoiceStore) updateVoiceProfile(ctx context.Context, tx pgx.Tx, id ids.U
 	}
 	if in.IfVersion != nil && *in.IfVersion != before.Version {
 		return VoiceProfile{}, apperrors.ErrVersionSkew
+	}
+	if (in.PersonalityMD == nil || *in.PersonalityMD == before.PersonalityMD) &&
+		(in.AutoLearningEnabled == nil || *in.AutoLearningEnabled == before.AutoLearningEnabled) {
+		return before, nil
 	}
 	p, err := scanVoiceProfile(tx.QueryRow(ctx, storekit.SQLf(`
 			UPDATE voice_profile SET

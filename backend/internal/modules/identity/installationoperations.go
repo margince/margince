@@ -21,40 +21,44 @@ import (
 // contract's OperationSettings, in the same order, so the handler converts
 // one to the other and the compiler holds the two equal.
 type OperationSettings struct {
-	AgentRunnerIntervalSeconds       int
-	CloseDateSweepIntervalSeconds    int
-	FollowUpReconcileIntervalSeconds int
-	GeocodeBackfillIntervalSeconds   int
-	GmailWatchRenewWithinHours       int
-	GmailWatchScanIntervalSeconds    int
-	GraphWatchRenewWithinHours       int
-	GraphWatchScanIntervalSeconds    int
-	RetentionSweepIntervalSeconds    int
-	SendMaxAgeHours                  int
-	SendRateLimit                    int
-	SendRateWindowSeconds            int
-	TechnicalBackfillIntervalSeconds int
-	TimeScanIntervalSeconds          int
-	WebhookRetryIntervalSeconds      int
+	AgentRunnerIntervalSeconds                   int
+	CaptureConfidentialityVerdictIntervalSeconds int
+	CaptureCounterpartyVerdictIntervalSeconds    int
+	CloseDateSweepIntervalSeconds                int
+	FollowUpReconcileIntervalSeconds             int
+	GeocodeBackfillIntervalSeconds               int
+	GmailWatchRenewWithinHours                   int
+	GmailWatchScanIntervalSeconds                int
+	GraphWatchRenewWithinHours                   int
+	GraphWatchScanIntervalSeconds                int
+	RetentionSweepIntervalSeconds                int
+	SendMaxAgeHours                              int
+	SendRateLimit                                int
+	SendRateWindowSeconds                        int
+	TechnicalBackfillIntervalSeconds             int
+	TimeScanIntervalSeconds                      int
+	WebhookRetryIntervalSeconds                  int
 }
 
 // OperationPatch is a sparse write of those values: a nil field is left as it is.
 type OperationPatch struct {
-	AgentRunnerIntervalSeconds       *int
-	CloseDateSweepIntervalSeconds    *int
-	FollowUpReconcileIntervalSeconds *int
-	GeocodeBackfillIntervalSeconds   *int
-	GmailWatchRenewWithinHours       *int
-	GmailWatchScanIntervalSeconds    *int
-	GraphWatchRenewWithinHours       *int
-	GraphWatchScanIntervalSeconds    *int
-	RetentionSweepIntervalSeconds    *int
-	SendMaxAgeHours                  *int
-	SendRateLimit                    *int
-	SendRateWindowSeconds            *int
-	TechnicalBackfillIntervalSeconds *int
-	TimeScanIntervalSeconds          *int
-	WebhookRetryIntervalSeconds      *int
+	AgentRunnerIntervalSeconds                   *int
+	CaptureConfidentialityVerdictIntervalSeconds *int
+	CaptureCounterpartyVerdictIntervalSeconds    *int
+	CloseDateSweepIntervalSeconds                *int
+	FollowUpReconcileIntervalSeconds             *int
+	GeocodeBackfillIntervalSeconds               *int
+	GmailWatchRenewWithinHours                   *int
+	GmailWatchScanIntervalSeconds                *int
+	GraphWatchRenewWithinHours                   *int
+	GraphWatchScanIntervalSeconds                *int
+	RetentionSweepIntervalSeconds                *int
+	SendMaxAgeHours                              *int
+	SendRateLimit                                *int
+	SendRateWindowSeconds                        *int
+	TechnicalBackfillIntervalSeconds             *int
+	TimeScanIntervalSeconds                      *int
+	WebhookRetryIntervalSeconds                  *int
 }
 
 type operationField struct {
@@ -68,6 +72,8 @@ type operationField struct {
 func (o *OperationSettings) fields() []operationField {
 	return []operationField{
 		{AgentRunnerIntervalSeconds, &o.AgentRunnerIntervalSeconds},
+		{CaptureConfidentialityVerdictIntervalSeconds, &o.CaptureConfidentialityVerdictIntervalSeconds},
+		{CaptureCounterpartyVerdictIntervalSeconds, &o.CaptureCounterpartyVerdictIntervalSeconds},
 		{CloseDateSweepIntervalSeconds, &o.CloseDateSweepIntervalSeconds},
 		{FollowUpReconcileIntervalSeconds, &o.FollowUpReconcileIntervalSeconds},
 		{GeocodeBackfillIntervalSeconds, &o.GeocodeBackfillIntervalSeconds},
@@ -91,6 +97,8 @@ func (p OperationPatch) writes() ([]pendingWrite, error) {
 		value *int
 	}{
 		{AgentRunnerIntervalSeconds, p.AgentRunnerIntervalSeconds},
+		{CaptureConfidentialityVerdictIntervalSeconds, p.CaptureConfidentialityVerdictIntervalSeconds},
+		{CaptureCounterpartyVerdictIntervalSeconds, p.CaptureCounterpartyVerdictIntervalSeconds},
 		{CloseDateSweepIntervalSeconds, p.CloseDateSweepIntervalSeconds},
 		{FollowUpReconcileIntervalSeconds, p.FollowUpReconcileIntervalSeconds},
 		{GeocodeBackfillIntervalSeconds, p.GeocodeBackfillIntervalSeconds},

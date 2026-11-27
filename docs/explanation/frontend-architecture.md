@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/App.tsx frontend/src/bootstrap.ts frontend/src/main.tsx frontend/index.html frontend/src/app/startup-session.ts frontend/src/app/navigation-prefetch.ts frontend/src/app/nav.ts frontend/src/app/shell.tsx frontend/src/app/pagemeta.ts frontend/src/lib/router.tsx frontend/src/lib/screenaddress.ts frontend/src/lib/navigatefrom.ts frontend/src/lib/historydepth.ts frontend/src/lib/urlstate.ts frontend/src/App.views.tsx frontend/src/App.screens.tsx frontend/src/App.screencode.ts frontend/src/app/startup-reads.ts frontend/src/app/reservedpages.ts frontend/src/lib/essentialscreens.ts frontend/src/lib/session.ts frontend/src/design-system/tokens.css frontend/src/i18n frontend/scripts/feature-boundaries.ts -->
+<!-- describes: frontend/src/App.tsx frontend/src/bootstrap.ts frontend/src/main.tsx frontend/index.html frontend/src/app/startup-session.ts frontend/src/app/navigation-prefetch.ts frontend/src/app/recordprefetch.ts frontend/src/app/nav.ts frontend/src/app/shell.tsx frontend/src/app/pagemeta.ts frontend/src/lib/router.tsx frontend/src/lib/screenaddress.ts frontend/src/lib/navigatefrom.ts frontend/src/lib/historydepth.ts frontend/src/lib/urlstate.ts frontend/src/App.views.tsx frontend/src/App.screens.tsx frontend/src/App.screencode.ts frontend/src/app/startup-reads.ts frontend/src/app/reservedpages.ts frontend/src/lib/essentialscreens.ts frontend/src/lib/session.ts frontend/src/design-system/tokens.css frontend/src/i18n frontend/scripts/feature-boundaries.ts -->
 # The frontend: how the web app is put together
 
 Read this before you change anything under `frontend/`. Most of the rules of
@@ -208,6 +208,10 @@ refuses a second one while the first is in flight.
   that grants the object, and only into an empty cache entry. It cancels the
   read when the pointer or focus leaves the link before a click. When the
   signed-in user or their grants change, it drops the entries it filled.
+
+  `frontend/src/app/recordprefetch.ts` hands it every link to a contact's
+  page, on any screen. A resting pointer, a press or focus on the link starts
+  the reads that page waits on: the contact row, its 360 and latest-inbound.
 
   The order of choice is: the user's own choice, then the languages the browser
   asks for, then the default. English with no setting is `en-GB`, never
@@ -492,7 +496,8 @@ even if the test tree breaks.
 | Action rows | `frontend/census/rules/actionrow.census.ts` | an element whose direct parts are two or more buttons and nothing else, and that does not get `gap: var(--gapActions)` from a class it names or from its own `style` value. That includes a class that **no CSS file declares**, which a gate that reads only CSS cannot see. A line is skipped with `{/* ds:ignore <reason> */}` |
 | Contract type drift | `make frontend-check` | `pnpm gen:api` changes `src/api/schema.d.ts` or `public-events.ts` |
 | Lint | `pnpm lint` (Biome) | style and lint findings over `src` and `index.html` |
-| Design test | `frontend/census/rules/conformance.census.ts`, `design-system/conformance.test.ts` | the same rules read from the AST, not from text, plus copy users see that is written in the code outside the `i18n` catalogs, and a wrong web app manifest |
+| Design test | `frontend/census/rules/conformance.census.ts` | the same rules read from the AST, not from text, plus copy users see that is written in the code outside the `i18n` catalogs |
+| Install manifest | `frontend/src/lib/pwa-manifest.test.ts` | a web app manifest that will not install or that drifts: a wrong name, start address or display mode, a missing icon size, an app action outside the scope, or an install colour that differs from the tokens |
 | Service worker | `frontend/scripts/vite-pwa.test.ts`, `frontend/census/rules/serviceworker-registrar.census.ts` | the web app build not writing `/sw.js`. The worker answering from `Cache Storage` anything but a failed page load and the offline page with its script. The worker catching a path the API owns, keeping a cache that is not its own, or keeping its cache name when what it holds changed. Any shipped module but `src/lib/pwa.ts`, in any kind of script, reaching for `navigator.serviceWorker` ([pwa.md](pwa.md)) |
 | CSS file owners | `frontend/census/rules/stylesheetnamespace.census.ts` | the class names of a screen declared in a CSS file other than the screen's own, in every `.css` under `frontend/src` and in the frontend layer of each extension |
 | Address writers | `frontend/census/rules/effect-address-writers.census.ts` | a module-level address writer (`replaceParams`, `replaceDial`, `navigateReplacing`) reached from an effect, a settled request or code after an `await` |
@@ -500,7 +505,7 @@ even if the test tree breaks.
 | Token values | `design-system/tokens.test.ts` | a Ledger-Green value that drifts from the design source |
 | Type check and build | `pnpm build` (`tsc -b && vite build`) | any type error |
 | Unit tests | `pnpm test` (Vitest) | the `*.test.tsx` files beside the code |
-| Render UAT | `make fe-uat` → `frontend/scripts/fe-uat.mjs` | a changed component with no story beside it, a changed story the build does not register, or a render that fails when run with no screen. It is **outside** `make check`: it is the UAT lane for the frontend alone, and it writes its result to `.tmp/fe-uat/manifest.json` |
+| Story render gate | `make fe-uat` → `frontend/scripts/fe-uat.mjs` | a changed component with no story beside it, a changed story the build does not register, or a render that fails when run with no screen. It is **outside** `make check`: it is the story render gate for the frontend alone, not the `uat` lane of screen tests on a fake API, and it writes its result to `.tmp/fe-uat/manifest.json` |
 | Screen checks | `make frontend-e2e` → `frontend/e2e/` | Playwright cases named for their AC, axe at WCAG 2.2 AA, and the `390px` `no-horizontal-scroll` sweep. The speed budget is the one in `make bench-mobile`: a `p95` over many runs, because one clock reading in a shared lane measures the machine it runs on |
 
 `craft static`, in `make check` and in CI, reads only the comment lines a
@@ -544,9 +549,9 @@ merge gate and needs Node and pnpm.
 | The evidence mark | `frontend/src/design-system/evidencemark.tsx` |
 | The Core and the code that renders it | `frontend/src/design-system/margince-core.tsx`, `margince-core-{engine,gl,shader,motion}.ts` |
 | The AI runtime tag | `frontend/src/design-system/airuntimechip.tsx` |
-| Design gates (tests) | `frontend/src/design-system/{conformance,tokens}.test.ts` |
+| Design gates (tests) | `frontend/src/design-system/tokens.test.ts` |
 | Design gates (shell script checks that fail closed) | `frontend/scripts/check-*.sh` |
-| Render UAT scoped to the change | `frontend/scripts/fe-uat.mjs` |
+| Story render gate scoped to the change | `frontend/scripts/fe-uat.mjs` |
 | Screen parts many features share | `frontend/src/components/` |
 | Features | `frontend/src/features/<name>/` (one folder per feature; `onboarding-conversation/` is the one state-machine folder) |
 | The feature boundary gate | `frontend/scripts/feature-boundaries.ts` |

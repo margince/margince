@@ -354,7 +354,7 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 | `opened_at` | `timestamp with time zone` |  |  |
 | `purpose_id` | `uuid` |  | Points at `consent_purpose.id`. |
 | `question_key` | `text` |  |  |
-| `question_locale` | `text` |  |  |
+| `question_locale` | `text` |  | Points at `language.code`. |
 | `question_version` | `integer` |  |  |
 | `subject_request_id` | `uuid` |  | Points at `consent_qualifying_event.id`. |
 | `token_hash` | `text` | yes |  |
@@ -366,6 +366,7 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 | `contact_id` | `contact` | deleting the parent deletes this row |
 | `lead_id` | `lead` | deleting the parent deletes this row |
 | `purpose_id` | `consent_purpose` | the parent cannot be deleted while this row points at it |
+| `question_locale` | `language` | the parent cannot be deleted while this row points at it |
 | `subject_request_id` | `consent_qualifying_event` | deleting the parent keeps this row and clears the link |
 
 **Rules**
@@ -579,7 +580,7 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 | `effective_until` | `timestamp with time zone` |  |  |
 | `jurisdiction` | `text` |  |  |
 | `key` | `text` | yes |  |
-| `locale` | `text` |  |  |
+| `locale` | `text` |  | Points at `language.code`. |
 | `published_at` | `timestamp with time zone` |  |  |
 | `purpose_id` | `uuid` |  | Points at `consent_purpose.id`. |
 | `subject_line` | `text` |  |  |
@@ -589,6 +590,7 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 | Columns | Table | When the parent goes |
 |---|---|---|
+| `locale` | `language` | the parent cannot be deleted while this row points at it |
 | `purpose_id` | `consent_purpose` | the parent cannot be deleted while this row points at it |
 
 **Rules**
@@ -893,6 +895,7 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 - `lead_privacy_notice_failed_shape`: `CHECK (((state = 'failed') = ((failure IS NOT NULL) AND (failed_at IS NOT NULL))))`
 - `lead_privacy_notice_failure`: `CHECK (((failure IS NULL) OR (failure = ANY (ARRAY['no_address', 'collision', 'refused', 'bounced']))))`
+- `lead_privacy_notice_locale_shape`: `CHECK (((locale IS NULL) OR (locale ~ '^[a-z]{2}(-[A-Z]{2})?$'))) NOT VALID`
 - `lead_privacy_notice_state`: `CHECK ((state = ANY (ARRAY['queued', 'failed'])))`
 
 **Indexes**

@@ -2,10 +2,13 @@
 jurisdiction: de
 version: 2
 created: 2026-09-04
+source-checked: 2026-11-25
 instruments:
   - name: "Gesetz gegen den unlauteren Wettbewerb (UWG)"
     provision: "§ 7"
     source-url: https://www.gesetze-im-internet.de/uwg_2004/__7.html
+    text-digest: db10cb20f0621dc694ed05728d7901f527b54c735493d685056b26203c360996
+    text-fetched: 2026-11-25
 record-confirmation-without-news: true
 reply-window: 8760h
 deal-follow-up-window: 4368h

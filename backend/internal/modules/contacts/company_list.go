@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/dormancy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/companytypes"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
@@ -58,12 +59,12 @@ type ListCompaniesInput struct {
 	// storekit.OwnershipClause, which also refuses two of them at once.
 	OwnerTeamID *ids.TeamID
 	Unassigned  *bool
-	// Two questions, asked separately because one value could not answer both:
-	// Lifecycle is where the account stands with us and holds one value at a
-	// time, while RelationshipType is what the company IS to us and holds
-	// several — a partner is routinely a customer as well. They replaced a
-	// single classification field, now retired.
-	Lifecycle        *string
+	// Two questions, asked separately because one value could not answer both.
+	// Status is where the account stands with us and holds one value at a time.
+	// RelationshipType is what the company is to us and holds several: a
+	// partner is often a customer as well. They replaced the retired
+	// classification field.
+	Status           *string
 	RelationshipType *string
 	// ExtensionRelationshipType is RelationshipType for an `ext:<unit>:<type>`
 	// value, kept apart so the closed core enum stays closed.
@@ -111,11 +112,11 @@ var companyListFields = map[string]storekit.SortField{
 	ownerIDColumn:      storekit.OwnerNameSort(companyEntity),
 	lastActivityColumn: storekit.Column(storekit.KindTimestamp),
 	columnDescription:  storekit.Column(fieldcatalog.TypeText),
-	// classification is retired and the column the list draws is lifecycle, so
+	// classification is retired and the column the list draws is status, so
 	// this is the one the header offers. By the stored value, which groups the
 	// seven states together; the funnel's own order is a question of its own
 	// and the deals list answers `status` the same way today.
-	filterLifecycle: storekit.Column(fieldcatalog.TypeText),
+	filterStatus: storekit.Column(fieldcatalog.TypeText),
 	// The three the list draws and does not store (company_sorts.go).
 	"website_url":     {Kind: fieldcatalog.TypeText, Expr: orderByPrimaryDomain},
 	"contact_count":   {Kind: fieldcatalog.TypeNumber, Expr: orderByContactCount},
@@ -315,12 +316,12 @@ func companyListSpec(in ListCompaniesInput, now time.Time) listPageSpec[crmcontr
 // when the contract never accepted the question. The check runs here, inside
 // the store, so it lands after listPage's auth.Require.
 func appendCompanyEnumClauses(where []string, in ListCompaniesInput, arg func(any) int) ([]string, error) {
-	if in.Lifecycle != nil {
-		if !crmcontracts.ListCompaniesParamsLifecycle(*in.Lifecycle).Valid() {
-			return nil, httperr.Validation("lifecycle", "not_a_known_value",
+	if in.Status != nil {
+		if !crmcontracts.ListCompaniesParamsStatus(*in.Status).Valid() {
+			return nil, httperr.Validation(filterStatus, "not_a_known_value",
 				"filter by one of the account stages the contract defines, or leave the parameter off")
 		}
-		where = append(where, storekit.SQLf("lifecycle = $%d", arg(*in.Lifecycle)))
+		where = append(where, storekit.SQLf("status = $%d", arg(*in.Status)))
 	}
 	if in.Industry != nil {
 		if !crmcontracts.ListCompaniesParamsIndustry(*in.Industry).Valid() {
@@ -435,5 +436,11 @@ func dormancyClause(rung string, ladder dormancy.Ladder, now time.Time, arg func
 			"filter by active, cooling, dormant or stale, or leave the parameter off")
 	}
 	asOf := fmt.Sprintf("$%d::timestamptz", arg(now))
-	return ladder.WindowOf(dormancy.Rung(rung)).SQL("company.last_activity_at", asOf), nil
+	// A date-only last activity sits in the window from the start of its own date,
+	// as the company page's reading counts it. The loosened window on the stored
+	// column is the indexed range; the precision is read only for the rows in it.
+	window := ladder.WindowOf(dormancy.Rung(rung))
+	lastActivity := occurredday.StartAtSQL("company.last_activity_at",
+		"(CASE WHEN "+LastActivityDaySQL("company")+" THEN 'day' ELSE 'instant' END)")
+	return window.Loosened().SQL("company.last_activity_at", asOf) + " AND " + window.SQL(lastActivity, asOf), nil
 }

@@ -26,7 +26,7 @@ This offers open stages only, and skips deals already on that stage. A note then
 ### How do I mark a deal as won?
 To mark a deal as won in Margince, move it to a stage whose **Stage type** is **Won**. In the pipeline you start with, that is the stage called Won. On the board, **Mark won** in the card's **…** menu does the same.
 1. Open the deal and click the Won stage on its **Stage** ladder. Or choose **Mark won** in the card's menu on **Board**, or drag the card to the Won column.
-2. The dialog says "This closes the deal as won. Nothing changes until you confirm."
+2. The dialog says "This closes the deal as won. Nothing changes until you confirm." If its project is still in Initiative or Pursuing, it adds "This also moves {project} to Delivering." Winning moves that project to Delivering, and its phase history names the won deal.
 3. Without a signed contract, the dialog asks **How was it won?** on opening. **Confirm** waits for your answer. **Other** also needs **Details**.
 4. Press **Confirm**. The deal closes.
 
@@ -60,7 +60,7 @@ Any real activity clears the mark; opening the record does not. If the deal was 
 
 ### How do I change the pipeline stages?
 To add, rename, reorder or remove stages, open the account menu → **Settings** → **Deals** (in the **Sales** group). With more than one pipeline, choose it under **All pipelines**.
-1. To add a stage, choose **New stage**. Fill in **Name**, **Stage type** (Open, Won or Lost) and **Win probability** (0 to 100).
+1. To add a stage, choose **New stage**. Fill in **Name**, **Stage type** (Open, Won or Lost) and **Win probability** (0 to 100). An open stage needs a win probability.
 2. A new open stage goes after the other open stages.
 3. To change a stage, open the **…** menu on its row and choose **Edit stage**. **Name in English**, **Name in German** and **Name in Vietnamese** give the stage a name per language. A colleague whose Margince is in that language sees it on deals and reports. The others see **Name**, and the row lists the names given.
 4. To reorder, drag an open stage by its handle, or select the handle and press the up or down arrow.

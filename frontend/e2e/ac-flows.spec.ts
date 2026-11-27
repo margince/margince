@@ -5,7 +5,9 @@ import { expect, type Page, test } from "@playwright/test";
 import { loadLocale } from "../src/i18n/catalogs";
 import { de } from "../src/i18n/de";
 import { meFixture } from "../src/testing/mefixture";
+import { expectNoAaViolations, settleAnimations } from "./a11y";
 import { copy } from "./copy";
+import { seededViews } from "./mockapi/fixtures";
 import { expectShellRendered } from "./screens";
 import { mockApi, servePrincipal } from "./seed";
 import { pageOverflow, textsOf } from "./waits";
@@ -275,9 +277,9 @@ test("AC-onboarding-1: onboarding is the rail-less conversational shell", async 
   ).toHaveCount(0);
 });
 
-test("AC-create-1: a contact is created from the list and lands on its 360", async ({
-  page,
-}) => {
+test("AC-create-1: a contact is created from the list and lands on its 360", {
+  tag: "@smoke",
+}, async ({ page }) => {
   await page.goto("/#/contacts");
   await page.getByRole("button", { name: "Neuer Kontakt" }).click();
   await page.getByLabel("Vollständiger Name").fill("Peter Neu");
@@ -412,7 +414,7 @@ test.describe("filters and views", () => {
     expect(await textsOf(page.getByRole("option"))).toEqual([
       "Branche",
       "Lebenszyklus",
-      "Tag",
+      de["filters.field.tag"],
       "Verantwortlich",
       // The custom field sorts after the core ones. A reader scanning for a
       // column they added finds it in one place rather than interleaved.
@@ -503,15 +505,18 @@ test.describe("filters and views", () => {
 
     // A tag leaf is reached through a join, so the engine narrows it to the link
     // operators. `enthält` is gone: a picker that offered it would produce a 422
-    // the reader could not interpret.
+    // the reader could not interpret. A record holds a set of tags, so the
+    // operators read as what the set includes.
     await page.getByRole("combobox", { name: "Feld" }).first().click();
-    await page.getByRole("option", { name: "Tag", exact: true }).click();
+    await page
+      .getByRole("option", { name: de["filters.field.tag"], exact: true })
+      .click();
     await page.getByRole("combobox", { name: "Operator" }).first().click();
     expect(await textsOf(page.getByRole("option"))).toEqual([
-      "ist",
-      "ist nicht",
-      "ist eines von",
-      "hat einen Wert",
+      de["filters.op.include"],
+      de["filters.op.notInclude"],
+      de["filters.op.includeAny"],
+      de["filters.op.includeSomeOrNone"],
     ]);
     await page.keyboard.press("Escape");
 
@@ -563,11 +568,7 @@ test.describe("filters and views", () => {
     await expect(page.getByRole("cell", { name: "logistics" })).toHaveCount(0);
     // The caption says 812 match and two are shown, so the reader knows this
     // is a sample rather than the whole selection.
-    await expect(
-      page.getByText(
-        "Erste Seite der Treffer, zum Prüfen des Filters. Nicht die vollständige Auswahl.",
-      ),
-    ).toBeVisible();
+    await expect(page.getByText(de["filters.resultsCaption"])).toBeVisible();
   });
 
   // The 390px sweep visits the library. A written condition adds a clause row
@@ -604,5 +605,54 @@ test.describe("filters and views", () => {
     // and a refresh have to land on the same object.
     await page.reload();
     await expect(objects).toHaveText("Kontakte");
+  });
+
+  test("AC-filters-and-views-9: a list's view opens on its list from the library, and a built view's tab opens it in the library", async ({
+    page,
+  }) => {
+    const byName = {
+      id: "v-by-name",
+      resource: "contacts",
+      name: "Nach Name",
+      owner_id: "u1",
+      shared_scope: "private",
+      query: { list: { q: "", sort: "full_name", filters: {} } },
+      version: 1,
+    };
+    await page.route(/\/v1\/views(\?.*)?$/, (route) => {
+      if (route.request().method() !== "GET") return route.fallback();
+      const resource = new URL(route.request().url()).searchParams.get(
+        "resource",
+      );
+      const views = [...seededViews, byName].filter(
+        (view) => resource === null || view.resource === resource,
+      );
+      return route.fulfill({
+        json: { data: views, page: { next_cursor: null, has_more: false } },
+      });
+    });
+    await settleAnimations(page);
+    await page.goto("/#/filters");
+    const row = page.getByRole("row").filter({ hasText: "Nach Name" });
+    await expect(
+      row.getByText(de["filters.library.savedOn.contacts"]),
+    ).toBeVisible();
+    await row.getByRole("link", { name: "Nach Name" }).click();
+    await expect(page).toHaveURL(/#\/contacts\?per=25&sort=full_name$/);
+    await expect(
+      page.getByRole("button", { name: "Nach Name", exact: true }),
+    ).toHaveAttribute("aria-pressed", "true");
+
+    const built = page.getByRole("link", {
+      name: de["views.opensInFilters"].replace("{name}", "Contacts I own"),
+    });
+    await expect(built).not.toHaveAttribute("aria-pressed");
+    await expectNoAaViolations(page, "contacts — a link tab on the rail");
+    await built.focus();
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL(/#\/filters\/contacts\/v-owned$/);
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Contacts I own" }),
+    ).toBeVisible();
   });
 });

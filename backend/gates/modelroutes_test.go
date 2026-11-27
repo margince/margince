@@ -33,8 +33,6 @@ import (
 	"strings"
 	"testing"
 
-	"gopkg.in/yaml.v3"
-
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
@@ -91,7 +89,7 @@ func contractModelRoutes(t *testing.T) map[string]string {
 	var doc struct {
 		Paths map[string]map[string]any `yaml:"paths"`
 	}
-	if err := yaml.Unmarshal(raw, &doc); err != nil {
+	if err := unmarshalYAML(raw, &doc); err != nil {
 		t.Fatalf("parsing the contract: %v", err)
 	}
 	marked := map[string]string{}
@@ -211,7 +209,7 @@ func contractPaths(t *testing.T) []string {
 	var doc struct {
 		Paths map[string]map[string]any `yaml:"paths"`
 	}
-	if err := yaml.Unmarshal(raw, &doc); err != nil {
+	if err := unmarshalYAML(raw, &doc); err != nil {
 		t.Fatalf("parsing the contract: %v", err)
 	}
 	paths := make([]string, 0, len(doc.Paths))
@@ -257,7 +255,7 @@ func modelRouteDeadlineList(t *testing.T, name string) []string {
 	if end < 0 {
 		t.Fatalf("%s's %s literal is unterminated", modelRouteDeadlineFile, name)
 	}
-	block := tsComment.ReplaceAllString(string(source)[start:start+end], " ")
+	block := gatekit.TSWithoutComments(string(source)[start : start+end])
 	var entries []string
 	for _, m := range goStringLiteral.FindAllStringSubmatch(block, -1) {
 		entries = append(entries, m[1])
@@ -319,7 +317,7 @@ func clientModelRoutes(t *testing.T) map[string]string {
 	if end < 0 {
 		t.Fatalf("%s's %s literal is unterminated", modelRouteClient, marker)
 	}
-	table := tsComment.ReplaceAllString(string(source)[start:start+end], " ")
+	table := gatekit.TSWithoutComments(string(source)[start : start+end])
 	entries := map[string]string{}
 	for _, m := range tsModelRouteEntry.FindAllStringSubmatch(table, -1) {
 		entries[m[1]] = m[2]
@@ -365,7 +363,7 @@ func TestTheClientsModelRouteDeadlineMatchesTheServers(t *testing.T) {
 	// commented-out or example declaration mentioning the same name is not a
 	// second real one, and without this the LAST match in source order would
 	// silently win over the real, live one above it.
-	text := tsComment.ReplaceAllString(string(source), " ")
+	text := gatekit.TSWithoutComments(string(source))
 	const name = "MODEL_ROUTE_TIMEOUT_MS"
 	var found []string
 	for _, m := range tsNumericConst.FindAllStringSubmatch(text, -1) {

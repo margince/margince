@@ -12,21 +12,25 @@
   "search": "semantic",
   "self_judged": false,
   "stamp": {
-    "scenario": "c18314eef9aea15e",
-    "tools": "6e82141203cec7ea",
-    "instructions": "c5c644eee9719be0",
+    "scenario": "87bf361416fe5a25",
+    "tools": "a21108d85bf3f67d",
+    "instructions": "d707a123fe53827f",
     "judge": "",
-    "harness": "024566e70b0c3db3",
-    "commit": "d76651445fdbe7445b1318837cd33cb56282f221",
-    "ran_at": "2026-11-21T19:11:24Z",
-    "graded_commit": "5808d1c0d9c1a63a8e4b2a14495d96f45c40c7fd",
-    "graded_at": "2026-11-21T23:34:28Z"
+    "harness": "0fe690d35efcc703",
+    "parsers": {
+      "gemini:cli": "fa1db64bc14e971b",
+      "gpt:cli": "d48ca27c983f8b3f"
+    },
+    "commit": "ad96834804cdd040c8f582fe5c8d31b0fa53f1ab",
+    "ran_at": "2026-11-26T08:18:29Z",
+    "graded_commit": "ad96834804cdd040c8f582fe5c8d31b0fa53f1ab",
+    "graded_at": "2026-11-26T08:18:29Z"
   },
   "usage": {
-    "input_tokens": 59494,
-    "output_tokens": 14468,
+    "input_tokens": 79463,
+    "output_tokens": 20057,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 135965,
+    "cache_read_input_tokens": 259748,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
@@ -39,53 +43,72 @@
         "find_records",
         "get_member",
         "get_user_handover",
-        "list_channel_connections",
         "list_colleagues",
         "list_records",
+        "preview_member_retirement",
+        "read_record",
         "read_workspace",
+        "search_records",
         "whoami"
+      ],
+      "refused": [
+        "read_workspace"
       ]
     },
     {
       "passed": true,
       "tools": [
         "describe_router_actions",
-        "find_records",
         "get_member",
         "get_user_handover",
+        "list_channel_connections",
         "list_colleagues",
-        "list_records",
+        "list_provider_connections",
+        "list_restricted_activities",
+        "preview_member_retirement",
+        "read_record",
         "read_workspace",
         "whoami"
-      ]
+      ],
+      "refused": []
     }
   ],
   "efficiency": {
     "runs": 2,
     "calls": {
-      "median": 6.5,
-      "min": 6,
-      "max": 7
+      "median": 12,
+      "min": 10,
+      "max": 14
     },
     "turns": {
-      "median": 6.5,
-      "min": 6,
-      "max": 7
+      "median": 7.5,
+      "min": 7,
+      "max": 8
     },
     "refused": {
+      "median": 0.5,
+      "min": 0,
+      "max": 1
+    },
+    "retries": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "client_refused": {
       "median": 0,
       "min": 0,
       "max": 0
     },
     "prompt_tokens": {
-      "median": 97729.5,
-      "min": 90539,
-      "max": 104920
+      "median": 169605.5,
+      "min": 135091,
+      "max": 204120
     },
     "output_tokens": {
-      "median": 7234,
-      "min": 6641,
-      "max": 7827
+      "median": 10028.5,
+      "min": 6917,
+      "max": 13140
     }
   }
 }

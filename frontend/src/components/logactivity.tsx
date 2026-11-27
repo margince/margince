@@ -22,14 +22,13 @@ import {
   subjectIsRequired,
   todayDay,
 } from "../lib/activitybody";
-import { useCanWrite } from "../lib/capability";
 import type { EntityKind } from "../lib/entity";
 import { unwrap } from "../lib/problem";
-import { useMe } from "../lib/session";
 import { ActivityBodyField } from "./activitybodyfield";
+import { useActivityGate } from "./activitygate";
 import { TaskAssigneeField } from "./assigneepicker";
 import { LogActivityEntries } from "./extensionentries";
-import { dueBoundsOf, latestDayOf } from "./logactivity.days";
+import { dueBoundsOf, earliestDayOf, latestDayOf } from "./logactivity.days";
 import { ActivityKindField } from "./logactivity.kindfield";
 import {
   completeLoggedTask,
@@ -315,6 +314,7 @@ export function LogActivityForm({
               {...control}
               value={isoOrBlank(draft.day)}
               // Match occurredFields so the picker and submission accept the same days.
+              min={earliestDayOf(draft.kind, recordZone)}
               max={latestDayOf(draft.kind, recordZone)}
               {...dueBoundsOf(draft.kind, recordZone)}
               today={isoOrBlank(todayDay(draft.kind, recordZone)) || undefined}
@@ -474,14 +474,12 @@ export function LogActivity({
   askedKind?: OpeningKind;
 }>) {
   const t = useT();
-  const me = useMe();
-  const canLog = useCanWrite("activity", "create");
-  const logRefused = me.data?.authorization !== undefined && !canLog;
+  const gate = useActivityGate(entityType);
   return (
     <Panel title={t("log.title")}>
       <PanelBody>
-        {logRefused ? (
-          <p>{t("record.logActivityRefused")}</p>
+        {gate.refusalKey ? (
+          <p>{t(gate.refusalKey)}</p>
         ) : (
           <LogActivityForm
             entityType={entityType}

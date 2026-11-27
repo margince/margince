@@ -13,7 +13,11 @@ package activities
 // both projections in one place is what keeps that difference deliberate.
 
 import (
+	"strings"
+	"unicode/utf8"
+
 	"github.com/margince/margince/backend/internal/shared/kernel/credentialmask"
+	"github.com/margince/margince/backend/internal/shared/kernel/deliveryrepeat"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
@@ -64,6 +68,29 @@ type outboundMessage struct {
 	provider string
 	// connection is the sender's mailbox of provider the send goes out from.
 	connection ids.UUID
+	// authored says how much of body and htmlBody the author wrote.
+	authored authorship
+}
+
+// authorship is what a delivery keeps so a send can repeat it. It holds the
+// part of the wire text the author wrote and what the send stated about why.
+type authorship struct {
+	body, html string
+	claims     []byte
+}
+
+// redactedMeetingLink stands in for a guest's management link in the copy the
+// workspace records. The link alone cancels or moves the host's meeting
+// through the public door. The row is served to every seat that may read mail.
+const redactedMeetingLink = "meeting-link-redacted"
+
+// withholdingFromRecord keeps secret in the delivery and out of the timeline
+// row, the way the footer's preference token is kept.
+func (p PreparedSend) withholdingFromRecord(secret string) PreparedSend {
+	if secret != "" {
+		p.message.recordedBody = strings.ReplaceAll(p.message.recordedBody, secret, redactedMeetingLink)
+	}
+	return p
 }
 
 // htmlAlternativeNote marks a timeline row whose message also went out as
@@ -168,6 +195,10 @@ func (m outboundMessage) delivery(activityID ids.UUID, chain threading, origin S
 		SplitFromThread: chain.splitFrom,
 		AnswersActivity: chain.answers,
 		ListUnsubscribe: m.listUnsubscribe,
+		Repeat: deliveryrepeat.Repeat{
+			BodyLen: utf8.RuneCountInString(m.authored.body), HTMLLen: utf8.RuneCountInString(m.authored.html),
+			Claims: m.authored.claims, From: m.in.ResentFrom,
+		},
 	}
 }
 

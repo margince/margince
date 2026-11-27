@@ -147,7 +147,7 @@ describe("AgentRail", () => {
   // wrong.
   it.each([
     ["a meeting", "activity"],
-    ["a kind this build does not know", "constellation"],
+    ["a kind this build does not know", "orbital-body"],
   ])("names %s as text rather than a link", async (_what, subjectType) => {
     withRuns(
       RUN({

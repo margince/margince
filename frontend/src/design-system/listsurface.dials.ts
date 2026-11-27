@@ -82,6 +82,8 @@ export type ListView = {
   label: string;
   sort?: string;
   filters?: Readonly<Record<string, string>>;
+  /** Opens `href` instead of narrowing this list; `name` says so aloud. */
+  link?: Readonly<{ href: string; name: string }>;
 };
 
 /**

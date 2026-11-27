@@ -57,8 +57,8 @@ func TestCustomerPaymentsNeverCountsAnUnsharedAccountAndRechecksEveryPage(t *tes
   (connection_id, external_customer_id, display_name, sync_hash, source, captured_by)
   VALUES ($%d, 'HIDDEN', 'Hidden', '', 'manual', 'human:test')`, a.connection)
 	paymentExec(t, a, `INSERT INTO finance_customer_link
-  (connection_id, company_id, external_customer_id, sync_hash, source, captured_by)
-  VALUES ($%d, $%d, 'HIDDEN', '', 'manual', 'human:test')`, a.connection, hidden)
+  (connection_id, company_id, external_customer_id, captured_by)
+  VALUES ($%d, $%d, 'HIDDEN', 'human:test')`, a.connection, hidden)
 	syncPayments(t, a)
 	ctx := paymentReader(a, reader, principal.RowScopeOwn)
 	own := paymentResponse(ctx, t, a, nil, 1)
@@ -196,11 +196,11 @@ func TestCustomerPaymentsDoesNotIncludeTheReplacedConnectionsInvoices(t *testing
 	a := setupSourceAdmin(t)
 	syncPayments(t, a)
 	replacement := ids.NewV7()
-	paymentExec(t, a, `INSERT INTO finance_connection (id,provider,status,credential_ref,source,captured_by,created_at)
-  VALUES ($%d,$%d,'active','offline://replacement','manual','human:test',now()+interval '1 second')`, replacement, fixtureProviderName)
+	paymentExec(t, a, `INSERT INTO finance_connection (id,provider,status,captured_by,created_at)
+  VALUES ($%d,$%d,'active','human:test',now()+interval '1 second')`, replacement, fixtureProviderName)
 	// The package shares one database, and every later test reads the newest connection.
 	t.Cleanup(func() {
-		a.ownerExec(t, `UPDATE finance_connection SET archived_at = now() WHERE id = $1`, replacement)
+		a.ownerExec(t, `UPDATE finance_connection SET status = 'disconnected' WHERE id = $1`, replacement)
 	})
 	got := paymentResponse(a.documentReader(principal.RowScopeAll), t, a, nil, 50)
 	if got.State != crmcontracts.FinanceSummaryStateSyncing || got.LinkedCompanies != 0 || got.InvoiceCount != 0 || len(got.Data) != 0 {

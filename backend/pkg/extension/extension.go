@@ -94,7 +94,7 @@ import (
 // prose lives on Name. The generator (tools/gen-composition) validates
 // through this same method, so scan-time acceptance can never drift from
 // boot-time validation.
-var nameGrammar = regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`)
+var nameGrammar = regexp.MustCompile(`^` + unitNamePart + `$`)
 
 // maxNameLength bounds the unit name's SHARE of PostgreSQL's 63-byte
 // identifier budget — a longer name would be silently TRUNCATED there,
@@ -229,6 +229,12 @@ type Extension struct {
 	// unit name one would undo the axis split from outside the core.
 	Channels []Channel
 
+	// Languages are the languages this unit lets stored data carry, beside the
+	// three core ships. The boot writes each into the language table, so a unit
+	// adds one with no core migration. A language with no UI catalogue falls
+	// back to English on screen, and a unit cannot remove a core language.
+	Languages []Language
+
 	// CompanyTypes are the company types this unit adds beside core's own. A
 	// unit sets them only on a company, under its own name, through
 	// Core.Companies().SetExtensionTypes; a type no unit declared is refused.
@@ -274,7 +280,9 @@ type Extension struct {
 	// operator which secrets a unit expects before it ever runs.
 	Secrets []SecretsRequest
 
-	MailHooks MailHooks // the two mail-capture hooks, see MailHooks
+	// MailHooks are the two mail-capture hooks. The manifest names them,
+	// because each reads the subject, addresses and text of captured mail.
+	MailHooks MailHooks
 	// Jobs are the scheduled background jobs the unit contributes: named
 	// cadenced passes that fan out over the fleet, one workspace per tick.
 	// Like a Tool this carries BEHAVIOR only — the cadence, wall clocks,

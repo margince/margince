@@ -19,11 +19,25 @@ import (
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-// shellDefaults is the `defaults.run.shell` key, at workflow or job level.
+// shellDefaults is the `defaults.run` block, at workflow or job level. Run is
+// nil when the block is absent, so absent tells apart from a block with no shell.
 type shellDefaults struct {
-	Run struct {
+	Run *struct {
 		Shell string `yaml:"shell"`
 	} `yaml:"run"`
+}
+
+// containerShell is the shell a job's steps get: a job's own `defaults.run`
+// replaces the workflow's whole block, so a job that sets only
+// `working-directory` there runs `sh`.
+func containerShell(workflow, job shellDefaults) string {
+	if job.Run != nil {
+		return job.Run.Shell
+	}
+	if workflow.Run != nil {
+		return workflow.Run.Shell
+	}
+	return ""
 }
 
 type containerWorkflow struct {
@@ -43,7 +57,7 @@ func TestEveryContainerJobRunsItsStepsInBash(t *testing.T) {
 			t.Fatalf("reading %s: %v", path, err)
 		}
 		var wf containerWorkflow
-		if err := yaml.Unmarshal(raw, &wf); err != nil {
+		if err := unmarshalYAML(raw, &wf); err != nil {
 			t.Fatalf("parsing %s: %v", path, err)
 		}
 		for name, job := range wf.Jobs {
@@ -51,12 +65,8 @@ func TestEveryContainerJobRunsItsStepsInBash(t *testing.T) {
 				continue
 			}
 			containerJobs++
-			shell := job.Defaults.Run.Shell
-			if shell == "" {
-				shell = wf.Defaults.Run.Shell
-			}
-			if shell != "bash" {
-				t.Errorf("%s: job %q runs in a container with default shell %q; set `defaults.run.shell: bash` on the workflow or the job",
+			if shell := containerShell(wf.Defaults, job.Defaults); shell != "bash" {
+				t.Errorf("%s: job %q runs in a container with default shell %q; set `defaults.run.shell: bash` on the job, or on the workflow when the job has no `defaults.run` of its own",
 					path, name, shell)
 			}
 		}
@@ -64,5 +74,38 @@ func TestEveryContainerJobRunsItsStepsInBash(t *testing.T) {
 	// The CI image runs jobs in several workflows, so a census of none read nothing.
 	if containerJobs == 0 {
 		t.Fatal("no workflow job declares a container; this gate read nothing")
+	}
+}
+
+func TestAJobsOwnRunDefaultsReplaceTheWorkflowsShell(t *testing.T) {
+	t.Parallel()
+	const workflow = `
+defaults:
+  run:
+    shell: bash
+jobs:
+  inherits:
+    container: image
+  replaces:
+    container: image
+    defaults:
+      run:
+        working-directory: .
+  restates:
+    container: image
+    defaults:
+      run:
+        shell: bash
+        working-directory: .
+`
+	var wf containerWorkflow
+	if err := unmarshalYAML([]byte(workflow), &wf); err != nil {
+		t.Fatalf("parsing the planted workflow: %v", err)
+	}
+	want := map[string]string{"inherits": "bash", "replaces": "", "restates": "bash"}
+	for name, shell := range want {
+		if got := containerShell(wf.Defaults, wf.Jobs[name].Defaults); got != shell {
+			t.Errorf("job %q: shell %q, want %q", name, got, shell)
+		}
 	}
 }

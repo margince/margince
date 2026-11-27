@@ -65,6 +65,9 @@ type EnsureChannelCounterpartyInput struct {
 	ActivityID ids.ActivityID // the captured activity to link
 	Source     string         // provenance channel, e.g. "telegram:<bot>:<chat>:<msg>"
 	CapturedBy string         // "connector:<provider>"
+	// LinkOnly files the activity under the contact the identity already names
+	// and creates none.
+	LinkOnly bool
 }
 
 // EnsureChannelCounterpartyResult reports what the ensure did. It carries no
@@ -76,6 +79,8 @@ type EnsureChannelCounterpartyResult struct {
 	// does. No contact was made, and the message is filed on the lead.
 	LeadID         ids.LeadID
 	DedupeRecorded bool
+	// Unresolved says LinkOnly found no contact, and the activity was left unlinked.
+	Unresolved bool
 	// Conflict is non-nil only when a later exact lane named a different
 	// contact than the one routing chose (dedupe.go's routeExact). It is a
 	// REPORT the caller decides what to do with (design §7.3/D8) — this
@@ -127,9 +132,7 @@ func (s *Store) ensureChannelCounterpartyTx(ctx context.Context, tx pgx.Tx, in E
 	// second binding — and the erasure writes by contact_id, so the rival it
 	// never named keeps the erased human's account and name for good.
 	if err := storekit.LockSubjectKeys(ctx, tx,
-		[]storekit.ChannelIdentityKey{
-			{Provider: in.Identity.Provider, ChannelUserID: in.Identity.ChannelUserID},
-		},
+		channelKeysOf(in.Identity),
 		// The address is locked too, and it is the half that covers the subject
 		// this path can otherwise reach mid-erasure: a human known only from
 		// mail holds no channel account, so an eraser locking accounts alone
@@ -156,6 +159,9 @@ func (s *Store) ensureChannelCounterpartyTx(ctx context.Context, tx pgx.Tx, in E
 	var res EnsureChannelCounterpartyResult
 	if err := s.resolveChannelContact(ctx, tx, in, &res); err != nil {
 		return EnsureChannelCounterpartyResult{}, err
+	}
+	if res.Unresolved {
+		return res, nil
 	}
 	if !res.LeadID.IsZero() {
 		allowed, err := mayReadLead(ctx)
@@ -186,26 +192,15 @@ func (s *Store) ensureChannelCounterpartyTx(ctx context.Context, tx pgx.Tx, in E
 	if err := s.linkActivityToContact(ctx, tx, in.ActivityID, res.ContactID); err != nil {
 		return EnsureChannelCounterpartyResult{}, err
 	}
+	// The identity the record names beside the main one belongs to the same
+	// human, so the contact holds both and an erasure suppresses both.
+	// One another contact already holds stays with that contact.
+	if alias := in.Identity.Alias; alias != nil {
+		if _, err := ResolveOrCreateChannelIdentity(ctx, tx, res.ContactID, *alias); err != nil && !errors.Is(err, ErrChannelIdentityInOtherScope) {
+			return EnsureChannelCounterpartyResult{}, err
+		}
+	}
 	return res, nil
-}
-
-// channelSubjectSuppressed asks both keys the subject can have been erased by.
-//
-// The channel key is the one this path always has. The address is asked only
-// when the record carries one, and asking it is not optional politeness: an
-// erasure keyed on an address would otherwise be undone by the subject's next
-// direct message, which arrives naming them by an account the suppression list
-// has never heard of. A13 says deletion sticks; it has to stick on every key the
-// record can be recognised by, not on the one this path happened to start with.
-func (s *Store) channelSubjectSuppressed(ctx context.Context, tx pgx.Tx, in EnsureChannelCounterpartyInput) (bool, error) {
-	suppressed, err := storekit.ChannelIdentitySuppressed(ctx, tx, in.Identity.Provider, in.Identity.ChannelUserID)
-	if err != nil || suppressed {
-		return suppressed, err
-	}
-	if in.CorroboratingEmail == "" {
-		return false, nil
-	}
-	return storekit.EmailSuppressed(ctx, tx, in.CorroboratingEmail)
 }
 
 // resolveChannelContact runs PO-F-1 over the channel identity and, when nothing
@@ -249,6 +244,10 @@ func (s *Store) resolveChannelContact(ctx context.Context, tx pgx.Tx, in EnsureC
 		return nil
 	}
 
+	if in.LinkOnly {
+		res.Unresolved = true
+		return nil
+	}
 	// The mail path's decision: a live lead holding the vouched address is the
 	// record, and no contact is made beside it.
 	if in.CorroboratingEmail != "" {
@@ -426,9 +425,9 @@ func refreshChannelUsername(ctx context.Context, tx pgx.Tx, ci connector.Channel
 	var previous *string
 	err := tx.QueryRow(ctx, `
 		SELECT id, contact_id, username FROM contact_channel_identity
-		 WHERE provider = $1 AND channel_user_id = $2 AND archived_at IS NULL
+		 WHERE provider = $1 AND channel_user_id = $2 AND account_scope = $3 AND archived_at IS NULL
 		 FOR UPDATE`,
-		ci.Provider, ci.ChannelUserID).Scan(&boundID, &contactID, &previous)
+		ci.Provider, ci.ChannelUserID, ci.AccountScope).Scan(&boundID, &contactID, &previous)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// Nothing is bound to this identity yet, which the bind above this call
 		// is what fixes.

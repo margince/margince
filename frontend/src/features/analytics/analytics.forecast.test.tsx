@@ -75,6 +75,8 @@ function readings(over: Record<string, unknown> = {}) {
 }
 
 type StubOpts = {
+  calls?: Record<string, unknown>[];
+  historyStatus?: number;
   readings?: Record<string, unknown>;
   onCall?: (body: Record<string, unknown>, key: string | null) => void;
   // Every URL the page READ from, so a test can assert what it asked for
@@ -110,6 +112,20 @@ function forecastStub(opts: StubOpts = {}) {
       }
       return jsonResponse({ id: "c1", ...body }, 201);
     }
+    if (method === "GET" && url.includes("/forecast/calls")) {
+      return jsonResponse(
+        { calls: opts.calls ?? [] },
+        opts.historyStatus ?? 200,
+      );
+    }
+    if (url.includes("/users/names")) {
+      return jsonResponse({
+        data: new URL(url).searchParams.getAll("id").map((id) => ({
+          id,
+          display_name: id === "u1" ? "Alex Quinn" : "Robin Chen",
+        })),
+      });
+    }
     if (url.includes("/forecast/assurance/exceptions")) {
       return jsonResponse({ data: [] });
     }
@@ -123,13 +139,9 @@ function forecastStub(opts: StubOpts = {}) {
       });
     }
     if (url.includes("/forecast/assurance")) {
-      if (opts.assuranceStatus === 404) {
-        // What the contract says a fresh installation gets: "no run has
-        // completed yet".
-        return jsonResponse(
-          { type: "about:blank", title: "Not Found", status: 404 },
-          404,
-        );
+      if (opts.assuranceStatus === 204) {
+        // What a fresh installation gets: no run has completed yet.
+        return new Response(null, { status: 204 });
       }
       // The run the review panel reads. Its own endpoint, so a test about the
       // call editor does not depend on what the check happened to find.
@@ -566,7 +578,7 @@ describe("ForecastView", () => {
   });
 
   it("offers the input check when no run has completed", async () => {
-    vi.stubGlobal("fetch", forecastStub({ assuranceStatus: 404 }));
+    vi.stubGlobal("fetch", forecastStub({ assuranceStatus: 204 }));
     render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
 
     expect(
@@ -656,16 +668,22 @@ describe("SharedForecastView", () => {
     range_low_minor: 90_000,
     range_high_minor: 210_000,
   };
-  function share(kind: "live" | "snapshot", over: Record<string, unknown>) {
+  // A live share carries no `as_of` of its own; its readings say when.
+  function share(
+    kind: "live" | "snapshot",
+    over: Record<string, unknown>,
+    view: Record<string, unknown> = {},
+  ) {
     vi.stubGlobal(
       "fetch",
       vi.fn(async () =>
         jsonResponse({
           kind,
           target: "forecast",
-          as_of: "2026-05-14T09:00:00Z",
+          ...(kind === "snapshot" ? { as_of: "2026-05-14T09:00:00Z" } : {}),
           withheld: false,
           readings: readings({ ...ranged, ...over }),
+          ...view,
         }),
       ),
     );
@@ -683,11 +701,33 @@ describe("SharedForecastView", () => {
     });
     expect(await screen.findByText("Won + Likely deals")).toBeTruthy();
     expect(screen.getByText("Modelled quarter finish")).toBeTruthy();
+    expect(screen.getByText("Live report · Whole company")).toBeTruthy();
     expect(
       screen.getByText(
-        /^Live report · .+ · Central European Summer Time · UTC\+2$/,
+        /^Actuals through .+ · Central European Summer Time · UTC\+2$/,
       ),
     ).toBeTruthy();
+  });
+
+  it("names the team a share covers, with its period, when the reader may name it", async () => {
+    share(
+      "snapshot",
+      { scope_kind: "team", scope_id: "t1" },
+      { scope_label: "Sales DACH" },
+    );
+    expect(await screen.findByText("Saved snapshot · Sales DACH")).toBeTruthy();
+    const period = screen.getByText("1 April – 30 June");
+    const through = screen.getByText(
+      "Actuals through 14/05/2026, 11:00 · Central European Summer Time · UTC+2",
+    );
+    expect(period.parentElement).toBe(through.parentElement);
+  });
+
+  // The server leaves out a name the reader's own access does not reach, so
+  // the page says only whose kind of records they are.
+  it("calls a colleague the reader may not name by the kind alone", async () => {
+    share("live", { scope_kind: "owner", scope_id: "u9" });
+    expect(await screen.findByText("Live report · Colleague")).toBeTruthy();
   });
 
   it("says a snapshot from before the landing was kept has no recorded basis", async () => {
@@ -733,5 +773,121 @@ describe("SharedForecastView", () => {
     share("live", {});
     expect(await screen.findByText("Modelled quarter finish")).toBeTruthy();
     expect(screen.queryByText("Basis not recorded")).toBeNull();
+  });
+});
+
+describe("the supporting words behind a manager forecast", () => {
+  const call = {
+    id: "call-latest",
+    period_start: "2026-04-01",
+    period_end: "2026-06-30",
+    scope_kind: "workspace",
+    amount_minor: 180000,
+    currency: "EUR",
+    author_id: "u1",
+    created_at: "2026-05-14T09:00:00Z",
+    note: "Budget confirmed by the buyer.",
+  };
+
+  it("shows the current note and author, and reads prior calls only when opened", async () => {
+    const reads: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      forecastStub({
+        readings: readings({
+          current_call: call,
+          scope_kind: "team",
+          scope_id: "resolved-team",
+        }),
+        calls: [
+          call,
+          {
+            ...call,
+            id: "call-earlier",
+            author_id: "u2",
+            note: "Budget still pending.",
+          },
+        ],
+        onRead: (url) => reads.push(url),
+      }),
+    );
+    render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit={false} />);
+    expect(await screen.findByText(call.note)).toBeTruthy();
+    expect(await screen.findByText("Alex Quinn")).toBeTruthy();
+    expect(reads.some((url) => url.includes("/forecast/calls"))).toBe(false);
+    const user = userEvent.setup({ delay: null });
+    await user.click(screen.getByText(en["forecast.callHistory"]));
+    expect(await screen.findByText("Budget still pending.")).toBeTruthy();
+    expect(await screen.findByText("Robin Chen")).toBeTruthy();
+    const history = reads.find((url) => url.includes("/forecast/calls"));
+    expect(history).toBeDefined();
+    const query = new URL(history ?? "http://unused.test").searchParams;
+    expect(query.get("period")).toBe("quarter");
+    expect(query.get("as_of")).toBe(call.period_start);
+    expect(query.get("scope_kind")).toBe("team");
+    expect(query.get("scope_id")).toBe("resolved-team");
+  });
+
+  it.each([{ call_withheld: true }, { scope_kind: "managed_teams" }])(
+    "offers no history when calls about the population are withheld: %j",
+    async (scope) => {
+      const reads: string[] = [];
+      vi.stubGlobal(
+        "fetch",
+        forecastStub({
+          readings: readings(scope),
+          onRead: (url) => reads.push(url),
+        }),
+      );
+      render(
+        <ForecastView selection={WORKSPACE_SELECTION} canSubmit={false} />,
+      );
+      await screen.findByText(en["forecast.question"]);
+      expect(screen.queryByText(en["forecast.callHistory"])).toBeNull();
+      expect(reads.some((url) => url.includes("/forecast/calls"))).toBe(false);
+    },
+  );
+  it.each(["live", "snapshot"])(
+    "shows stored note and author without reading history in a %s share",
+    async (kind) => {
+      const reads: string[] = [];
+      const base = forecastStub({ onRead: (url) => reads.push(url) });
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+          const url = String(input instanceof Request ? input.url : input);
+          if (url.includes("/forecast/shared/"))
+            return jsonResponse({
+              kind,
+              target: "forecast",
+              withheld: false,
+              readings: readings({ current_call: call }),
+            });
+          return base(input, init);
+        }),
+      );
+      render(<SharedForecastView token="fixture" />);
+      expect(await screen.findByText(call.note)).toBeTruthy();
+      expect(await screen.findByText("Alex Quinn")).toBeTruthy();
+      expect(screen.queryByText(en["forecast.callHistory"])).toBeNull();
+      expect(reads.some((url) => url.includes("/forecast/calls"))).toBe(false);
+    },
+  );
+
+  it("distinguishes empty history from a failed history read", async () => {
+    vi.stubGlobal("fetch", forecastStub());
+    const view = render(
+      <ForecastView selection={WORKSPACE_SELECTION} canSubmit={false} />,
+    );
+    await userEvent.click(await screen.findByText(en["forecast.callHistory"]));
+    expect(await screen.findByText(en["forecast.noCallHistory"])).toBeTruthy();
+    view.unmount();
+    vi.stubGlobal("fetch", forecastStub({ historyStatus: 500 }));
+    render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit={false} />);
+    await userEvent.click(await screen.findByText(en["forecast.callHistory"]));
+    expect(
+      await screen.findByRole("button", { name: en["common.retry"] }),
+    ).toBeTruthy();
+    expect(screen.queryByText(en["forecast.noCallHistory"])).toBeNull();
   });
 });

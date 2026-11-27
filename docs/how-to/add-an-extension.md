@@ -252,8 +252,12 @@ Copy `extensions/openchannel/api/crm.yaml`. These rules fail you if you miss the
 - **Paths start from the `servers` URL**, which already ends in `/v1`. Write `/ext/<name>/inbound`, never
   `/v1/ext/...`. The server puts the base path back when it mounts the route. Written twice, it publishes
   `/v1/v1/ext/...` to every generated client (the `composition` tool refuses it).
-- **Every path must be under `/ext/<your-unit>/`.** Another unit's space, a core path, or a path template
-  (`{id}`) are all refused.
+- Every path must be under `/ext/<your-unit>/`. Another unit's space or a core path is refused.
+- A path may name a record by its id, as in `GET /ext/<unit>/orders/{order_id}`. The part right after the
+  unit is fixed, so `/ext/<unit>/{id}` is refused. Declare each id as a parameter with `in: path`,
+  `required: true` and a plain schema: text, a number or true/false. The tool takes the id as an argument of
+  that name, for any method, so an agent passes it the same way. The same name again in the body or query is
+  refused, by `make gen` and with a 422 on a call.
 - **Arguments live where the method puts them.** A served extension operation *is* a tool call under the
   rules, so the seam reads its arguments from one place. That is the request body for POST, PUT and PATCH, and
   the query for GET. If you declare them on the other side, the generator fails with a named error. The seam
@@ -457,9 +461,8 @@ So the static check below also refuses role changes (`SET ROLE`, `RESET ROLE`, `
 `DO` blocks. It refuses `EXECUTE`, `PREPARE`, `CREATE FUNCTION` and functions that run a query string, such as
 `query_to_xml`.
 
-A separate database login for each unit would make the limit hold against such code. That is
-[issue 628](https://github.com/margince/margince/issues/628), closed until a unit from outside the first-party
-set is planned.
+A separate database login for each unit would make the limit hold against such code. Core has none
+([issue 628](https://github.com/margince/margince/issues/628)).
 
 `ErrCoreTableRefused` also appears when the role holds no rights on one of your own tables. That happens when a
 role other than the migrate role (`margince_owner`) created the table, because only its tables get the rights
@@ -638,6 +641,10 @@ asked for:
 | `Scope: extension.SecretScopeUser` | Settings → Connections | one user's own account in some place; no one else sees it |
 | `Scope: extension.SecretScopeWorkspace` | Settings → Integrations | the installation's shared key, kept by an operator |
 | no `Secrets` at all | no page | nothing to set up, so nothing to list; `#/ext/<name>` still routes |
+
+The unit's card under Settings, Extensions says "Ready" or "Needs setup". It needs setup while a workspace-scoped key
+you declare holds no value, or while an `OAuthApps` entry has no stored client. User-scoped keys never count.
+`GET /v1/extensions` names the missing items in `setup_missing`; nothing about it is stored.
 
 This has two results. **A unit declares one scope**: secrets that cover both are refused at `make gen`. A unit
 that is half one user's own account and half the installation's has no single page.
@@ -827,7 +834,7 @@ A unit that needs a value an admin sets does not build a settings screen. Declar
 ```go
 Settings: []extension.Setting{
 	{Key: "live", Label: "Send for real", Hint: "Off keeps every message a draft.", Kind: extension.SettingSwitch},
-	{Key: "region", Label: "Region", Kind: extension.SettingText},
+	{Key: "region", Label: "Region", Kind: extension.SettingText, Initial: "eu-west"},
 },
 ```
 
@@ -837,12 +844,15 @@ Settings: []extension.Setting{
 | `Label` | The name the admin sees. Required, one line, up to 60 characters. Shown as written, in one language. |
 | `Hint` | What the setting does. Optional, one line, up to 200 characters. |
 | `Kind` | `extension.SettingSwitch` holds `true` or `false` and starts `false`. `extension.SettingText` holds one line of up to 200 characters and starts empty. |
+| `Initial` | The value before an admin changes it. Optional. The `Kind` must hold it; left out, a switch starts `false` and a text starts empty. |
 
 Only an admin sees these settings, and only an admin can change them. Each change is saved with an audit row, like any installation setting. `make gen` and the start both refuse a declaration that breaks the table above, and the generated manifest lists the settings.
 
 An admin changes them with `PUT /v1/extensions/{name}/settings`. Send `overwrites_edited_fields` and a `declared` list of `key` and `value` pairs, for example `{"overwrites_edited_fields": false, "declared": [{"key": "region", "value": "eu-west"}]}`. A setting left out of the list keeps its value. A key the unit did not declare, or a value its kind cannot hold, is a 422 and saves nothing. A switch value is the text `true` or `false`.
 
-The core stores the values and does not yet hand them to the unit's code. Only core code reads them today. A unit that needs to read its own setting has to wait for that.
+A saved value wins over `Initial` from then on, across restarts and new versions of the unit. A new `Initial` reaches only a setting no admin has saved.
+
+The core stores the values and does not hand them to the unit's code. Only core code reads them.
 
 ## Declare a company type
 
@@ -864,6 +874,25 @@ The stored value is `ext:<unit>:<type>`, for example `ext:acme-pack:reseller`. T
 Set the types on a company with `Core().Companies().SetExtensionTypes(ctx, companyID, []string{"reseller"})`. Name the short types. The call replaces the types your unit holds on that company and leaves the types of other units alone. An empty list removes your own. A name you did not declare is `ErrInvalid`. It is a write, so a scheduled job gets `ErrForbidden`, and the caller needs the permission to update the company, like any other edit.
 
 A user or an agent can also set a declared value with `PATCH /v1/companies/{id}`, in `extension_relationship_types`. A value that no unit declares is refused with a 422 on that field and the code `invalid_enum`. A company that already holds a value keeps it when its unit is later removed, and a save that does not change it is accepted. `GET /v1/company-types` lists every declared value with its label, for any signed-in user. The company list takes a declared value in `extension_relationship_type`. The `relationship_type` filter stays core's own list.
+
+## Declare a language
+
+Core ships German, English and Vietnamese. Each column that holds a language, such as the language of a consent notice, points at the `language` table. So a typo cannot be stored. A unit that works in another language adds it with no core migration.
+
+```go
+Languages: []extension.Language{
+	{Code: "ar", Label: "Arabic"},
+},
+```
+
+| Field | Meaning |
+|---|---|
+| `Code` | A lower-case two-letter ISO 639-1 code. A code core already ships is refused. |
+| `Label` | The language's name in English. Required, at most 120 characters. |
+
+The start writes each declared language into the table before anything serves. It refuses a bad declaration with a message that names the unit. Two units may declare the same code. The row stays when a unit is removed, because stored rows still name it.
+
+A declared language does not change the screens. They show English for a language with no words of their own. An offer, a product text or a legal entity takes a language only if core ships it or a unit declares it.
 
 ## Declare a record kind
 
@@ -892,13 +921,25 @@ RecordKinds: []extension.RecordKindDeclaration{{
 | `Defaults` | Starting rights per system role. Leave it out and every role is refused until an admin ticks the kind's object. |
 | `DeletePolicy` | `extension.DeleteArchiveOnly` (the default) or `extension.DeleteErasable`. |
 | `View` | Optional. The name of the page under your screen that shows one record of the kind, such as `room-page`. A notice about a record of the kind opens `#/ext/<unit>/<view>`, with `record_type` and `record_id` in the query. Leave it out and the notice opens your screen itself. Read both in the screen with `useEntryContext`. |
+| `OwnerColumn` | Optional. The `uuid` column that holds the member who owns a row. Core then shows a reader the rows their role's own, team or all row scope allows, as for deals, and a row with no owner to every reader. Leave it out and the `read` right on the kind shows every row. Core's readers apply the scope. Your unit's own routes read the table with your own SQL, so apply the scope in that SQL too. |
 
 The kind is gated on the RBAC object `ext_<unit>_<kind>`. The unit's hyphens become `_` in that name. Before core links,
-tags or lists a record, it checks the `read` right and a live row. A caller without the right gets `404`. The start
+tags or lists a record, it checks the `read` right and a live row inside the kind's row scope. A caller without the right gets `404`. The start
 refuses a declaration that breaks the table above.
 
-The service reports itself unready while your table, a column or the unique index is missing. It does the same while
-`margince_app` holds fewer than the four rights on the table.
+Ship these indexes in the unit's migrations, because core's reads over your table use them:
+
+| Read | Index the table must hold |
+|---|---|
+| Search | A text search index over the lower-cased title column: `CREATE INDEX ON ext.<table> USING gin (lower(<title>) public.gin_trgm_ops)`. The title column is the `LabelField` of the `Timeline`, or else the first `NaturalKey` field. |
+| History, for each entry of `Timeline.Subjects` | An index whose first column is the subject's `Column` and whose second is the `AtColumn`: `CREATE INDEX ON ext.<table> (<column>, <at column>)`. |
+| Row scope, when `OwnerColumn` is set | An index whose first column is the owner column: `CREATE INDEX ON ext.<table> (<owner column>)`. |
+
+Each index covers every row, so give it no `WHERE`. The service reports itself unready while your table, a column,
+the unique index or one of these indexes is missing. It does the same while such an index is not valid, as after a
+failed `CREATE INDEX CONCURRENTLY`.
+The message names the statement that adds a missing index. It does the same while `margince_app` holds fewer than the
+four rights on the table.
 
 `GET /v1/record-kinds` lists the kinds a seat may read. The reference page
 [extension record kinds, links, signals and reports](../reference/extension-record-kinds-links-signals-and-reports.md#extension-record-kinds-and-link-registry)
@@ -1254,6 +1295,29 @@ Which half declares what is a rule, and the `composition` tool refuses the other
   tick.
 - **Both parts share one queue**, and the child's kind is the dispatcher's name plus `_ws`. No clock ever
   reaches a worker that no dispatcher fans out to.
+- **A dispatcher has one schedule**: a `cadence` such as `6h`, or `at` with a local time as `HH:MM`. Add `days`
+  to run `at` only on some days, written `mon` to `sun`; without `days` it runs every day. Both a `cadence` and an
+  `at`, or `days` with no `at`, are refused.
+
+```yaml
+ext_demo_report:
+  job: report
+  role: dispatcher
+  queue: default
+  timeout: 1m
+  at: "07:30"
+  days: [mon, tue, wed, thu, fri]
+```
+
+An `at` time counts in the company time zone an admin sets in Settings. A change of zone moves the next run within
+a minute.
+
+When the clock skips an hour, a time in that hour runs at the first minute after it. When the clock shows an hour
+twice, a time in it runs once. A start of the worker never runs an `at` job by itself. If the worker was down at a
+slot, the job runs once soon after the restart; otherwise it waits for its next slot.
+
+Job health lets an `at` job wait the longest gap between two of its slots. That is one day for a daily job, and three
+days for one that skips `sat` and `sun`.
 
 ```go
 Jobs: []extension.Job{{Name: "heartbeat", Handle: heartbeat}},
@@ -1322,9 +1386,9 @@ Declare each group of reads your unit makes:
 
 ```go
 SystemReads: []extension.SystemRead{
-	extension.SystemReadDeals,     // Deals().Get and Deals().Responsible
-	extension.SystemReadAuthority, // Authority().CanRead and CanWrite
-	extension.SystemReadDirectory, // Directory().Emails and ByRole (as actAs)
+	extension.SystemReadDeals,     // Deals().GetAs and ResponsibleAs (as actAs)
+	extension.SystemReadAuthority, // Authority().CanReadAs and CanWriteAs (as actAs)
+	extension.SystemReadDirectory, // Directory().EmailsAs and ByRole (as actAs)
 	extension.SystemReadActivities, // Activities().Mail
 	extension.SystemReadSetAside, // SetAside().Contact and Contacts
 	extension.SystemReadCompanies, // Companies().Get and List (as actAs)
@@ -1339,9 +1403,9 @@ unit reads without opening its source. `fixtures/extensions/crm-hello` is the sm
 subscription that reads the deal its event names.
 
 ```go
-deal, err := rt.Deals().Get(ctx, d.Entity.ID)            // extension.ErrNotFound once the deal is gone
-team, err := rt.Deals().Responsible(ctx, d.Entity.ID)    // owner first, then by email
-emails, err := rt.Directory().Emails(ctx, ids)           // active human members only
+deal, err := rt.Deals().GetAs(ctx, actAs, d.Entity.ID)           // extension.ErrNotFound once the deal is gone or out of the seat's scope
+team, err := rt.Deals().ResponsibleAs(ctx, actAs, d.Entity.ID)   // owner first, then by email
+emails, err := rt.Directory().EmailsAs(ctx, actAs, ids)          // active human members only
 mail, err := rt.Activities().Mail(ctx, member, d.Entity.ID, extension.MailQuery{}) // the deal's shared emails as that member may see the deal, newest first
 ```
 
@@ -1429,8 +1493,11 @@ mail, err := rt.Activities().Mail(ctx, member, d.Entity.ID, extension.MailQuery{
 
   A read is never bound to a colleague, so it does not
   stop when a colleague leaves. Each read writes one `system_log` row that names the unit, the read, the record
-  and `actAs`. `Deals().Get`, `Authority` and `Directory().Emails` keep their old shape until seat-bound
-  variants replace them.
+  and `actAs`.
+- **The forms without `actAs` are deprecated.** `Deals().Get`, `Deals().Responsible`, `Authority().CanRead`,
+  `CanWrite` and `Directory().Emails` run as the system, so no grant, row scope or field mask limits them. Use
+  the `As` form of each. A deal the service member cannot open answers `ErrNotFound`. A value field its role
+  masks comes back empty.
 - **A private reply is not seen.** A reply that sits only in a private mailbox is not in `Mail`. So "no reply
   yet" is a reminder for a colleague to check, not a fact. Never act on it alone, for example by sending a
   message.
@@ -1448,6 +1515,10 @@ writable, err := rt.Authority().CanWrite(ctx, user, deal)
 
 - **`CanRead(user, record, fields)`**: may `user` open the deal and read every field in `fields`? A field
   mask that hides one of them answers no. A mask counts even when users who may change the deal can see past it.
+- **`CanReadAs(actAs, user, record, fields)` and `CanWriteAs(actAs, user, record)`** ask the same on a job
+  tick or a bus delivery, as the service member. The member must open the deal, or the answer is
+  `ErrNotFound`. A question about a colleague also needs the `user_admin` read grant, or the answer is
+  `ErrForbidden`.
 - **`CanWrite(user, record)`**: could `user` change the deal now? The deal is live, and they hold a full
   seat. Their role holds `read` and `update` on deals, and they may change this deal, not only open it. A
   deal shared with them read-only answers no. It takes no fields.
@@ -1579,6 +1650,50 @@ Give every field your provider gives you, and decide nothing about who a contact
 fields its matching ladder may use, from your declaration. What each field must hold, and what breaks when it
 does not, is the connector contract in
 [explanation/ingress-gate-and-auto-capture.md](../explanation/ingress-gate-and-auto-capture.md).
+
+### A member-owned chat source
+
+A chat account belongs to one member. Pin a posture on the source to say so:
+
+```go
+Ingress: []extension.IngressSource{{
+	System:        "relay",
+	Lands:         []extension.RecordKind{extension.KindActivity},
+	PinnedPosture: extension.PostureClassified, // or PostureHeld; never wider
+}},
+```
+
+The member puts in the connection as a user-scoped secret for their own account. Your unit has no `channel_connection` row.
+A member asks you for something on your own HTTP route. The route stores the request in your own table and calls
+`rt.SyncNow`. Your job ingests it later, because a call with a caller never ingests.
+
+A chat message is kind `message`, with a counterparty named by an account on your own channel. It goes through the
+function every chat network shares. The pin is written as the import's `posture_at_import`. So the audience of the
+message and the check for private threads work as they do for mail in a member's mailbox. The pin replaces the posture
+derived from the member's mailboxes.
+
+A source with a pin lands chat messages only. Any other record answers `DispositionUnrepresentable`.
+
+Four things are new on this path:
+
+- **`Record.ChosenSubject`** names a contact or a lead that the member picked (`extension.ChosenSubject`). The core
+  checks it on the member's live rights. The message is linked to it directly, and nothing matches its counterparty by
+  identity. A subject the member cannot see answers `DispositionSubjectNotFound`, the same as one that does not exist.
+  It stores nothing, and the other records of the batch go on. Your cursor moves past it like past any answer.
+- **`Record.OccurredPrecision`** is `PrecisionInstant` (the default), `PrecisionDay` or `PrecisionUnknown`. The core
+  stores a day as a date with no time of day. With an unknown time you may leave `Activity.OccurredAt` zero.
+  The core then dates the record on the day it takes it in, as a day. The timeline has no separate stored "unknown", so it reads like a
+  day. The time the core takes a record in is never one you state.
+- **`Record.Parts` and `Record.PartDrops`** carry files, within `MaxInboundFiles`, `MaxInboundFileBytes` and
+  `MaxInboundMessageBytes`. The core reads each type again from the bytes. A retry keeps one copy of a file, as for
+  mail, and an erasure removes it.
+- **One saved place per member.** `rt.MemberIngestPosition(ctx, member, source)` answers the member's `MemberPosition`.
+  `rt.IngestMemberBatch(ctx, member, source, recs, position, version)` lands the records, then saves the place only
+  if `version` is still the one you read. A stale writer gets `ErrPositionConflict`, which is also an `ErrConflict`,
+  and reads the place again.
+
+Two members of one source never see each other's place. A source with a pin keeps a place per member, so `IngestBatch`
+and `IngestPosition` refuse it with `ErrInvalid`. They stay as they were for a source with no pin.
 
 ## Carry replies: give a transport
 
@@ -1809,6 +1924,18 @@ func TestNewDeclaresTheFloors(t *testing.T) {
 
 Check the floors, not only that `New()` returns. A test with no check proves nothing (`P3`, `tests-as-spec`).
 
+A unit that declares record kinds, link types or signal types checks them with `backend/pkg/extension/extensiontest`.
+Each check runs the rule core's start runs, and fails the test with the start's own message. The shape is in
+`extensions/finance-demo/financedemo_test.go`.
+
+| Check | What it fails |
+|---|---|
+| `extensiontest.Check(t, ext)` | A record kind, link type or signal type the start refuses, and a name the unit declares twice. |
+| `extensiontest.CheckLink(t, ext, linkType, from, to)` | A link type the unit does not declare, or one that does not join a `from` record to a `to` record. |
+| `extensiontest.CheckSignal(t, ext, kind, fields)` | A signal type the unit does not declare, or evidence its layout refuses. |
+
+The kit does not see other units, so a conflict between two units still shows only when the set is composed.
+
 ## Compose and check
 
 Add the unit to `instance/go.mod`, then run `make composition` again and run the gates. Do not run `go mod tidy`
@@ -1899,3 +2026,16 @@ At the next boot the core deletes the objects the removed unit kept with `rt.Obj
 No other core file or core test needs an edit. Removing it *turns the unit off* (routes answer 404, the list leaves
 the unit out, migrations skip it), but it does **not erase**. The unit's tables and rows, its `extension_secret`
 rows and any grants of its RBAC objects inside `role.permissions` all stay. There is no tool to erase them.
+
+Lists, saved views and reports over the unit's record kinds stay, and nothing else breaks:
+
+- A list over one of its kinds reads as health `unavailable`, with no count, no members and no filter. Its
+  export answers 422. The Live List check stores it as `invalid` and pauses the rules that watch it as
+  `list_unavailable`. It keeps the list's last members, so no one is recorded as having left.
+- A saved view over one of its kinds keeps its row. A change to its filter answers 422.
+- Its reports leave the report directory, because they are no longer registered.
+
+All of these come back when the unit is composed again. The paused rules stay paused until someone
+resumes them. A member who may not read a kind is told nothing about its lists: the library leaves them
+out, and a direct read answers 403. A new list, saved view or search over a kind answers the same 422
+whether the unit was removed or the caller may not read it.

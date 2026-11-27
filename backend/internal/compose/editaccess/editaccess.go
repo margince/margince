@@ -154,6 +154,9 @@ func (e Engine) Own(ctx context.Context, recordType string, id ids.UUID) (Reques
 		}
 		var err error
 		out, err = ownTx(ctx, tx, recordType, id)
+		if errors.Is(err, apperrors.ErrNotFound) {
+			return apperrors.ErrNothingYet
+		}
 		return err
 	})
 	return out, err

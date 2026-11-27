@@ -14,8 +14,12 @@ import { useT } from "../../i18n";
 import { fileListKeys } from "../../lib/attachmentkeys";
 import { unwrap } from "../../lib/problem";
 import { restoreLatestArchive } from "../../lib/recordrestore";
-import { invalidateRecord } from "../../lib/recordwritekeys";
+import {
+  invalidateRecord,
+  invalidateRetiredRecord,
+} from "../../lib/recordwritekeys";
 import { navigate } from "../../lib/router";
+import { useArchiveRefusal } from "../../lib/writerefusal";
 
 // The contact header's merge and archive commands.
 
@@ -64,6 +68,7 @@ export function ContactRecordActions({
   beforeArchive?: ReactNode;
 }>) {
   const t = useT();
+  const archiveRefusal = useArchiveRefusal("contact");
   const id = contact.id;
   // MergeAction/ArchiveAction's own invalidate/recordKey props
   // only reach the LIST cache and this record's own `["contact", id]` read.
@@ -98,7 +103,7 @@ export function ContactRecordActions({
           // Both ends of the merge: the source is gone and the survivor
           // may now carry fields the source contributed — a reader landing
           // on either via survivorRoute must not see pre-merge state.
-          await invalidateRecord(queryClient, "contact", contact.id);
+          await invalidateRetiredRecord(queryClient, "contact", contact.id);
           await invalidateRecord(queryClient, "contact", targetId);
           // The source's files and message links move to the survivor.
           await Promise.all(
@@ -121,7 +126,7 @@ export function ContactRecordActions({
       <ArchiveAction
         requires={{ object: "contact", action: "delete" }}
         archivable={contact.archivable ?? false}
-        refusedReason={t("contact.archiveRefused")}
+        refusedReason={archiveRefusal}
         disabledReasonId={disabledReasonId}
         label={t("record.archive")}
         confirmText={t("record.archiveConfirm")}
@@ -137,7 +142,7 @@ export function ContactRecordActions({
               },
             }),
           );
-          await invalidateRecord(queryClient, "contact", id);
+          await invalidateRetiredRecord(queryClient, "contact", id);
           return data;
         }}
         invalidate="contacts"

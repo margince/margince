@@ -21,7 +21,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"path/filepath"
 	"slices"
@@ -82,9 +81,8 @@ func TestEveryOfferedMaskObjectIsWithheldFromSomeRecordsHistory(t *testing.T) {
 // set and reports the clean result it never obtained.
 func historyEntityTypes(t *testing.T) []string {
 	t.Helper()
-	fset := token.NewFileSet()
-	consts := stringConstsByPackage(t, fset, []string{historyTypesPackage})[historyTypesPackage]
-	file, err := parser.ParseFile(fset, historyTypesFile, nil, 0)
+	consts := stringConstsByPackage(t, []string{historyTypesPackage})[historyTypesPackage]
+	file, err := gatekit.ParseFile(historyTypesFile, 0)
 	if err != nil {
 		t.Fatalf("reading %s: %v", historyTypesFile, err)
 	}

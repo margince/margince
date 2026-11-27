@@ -93,6 +93,16 @@ func dealClearPairs(current crmcontracts.Deal) map[string][]storekit.Clearable {
 			{Column: "currency", Current: current.Currency},
 		}
 	}
+	// Same rule for the one-off price: the currency stays while the ARR needs it.
+	clearAmount := []storekit.Clearable{
+		{Column: "amount_minor", Current: current.AmountMinor},
+	}
+	if current.ExpectedArrMinor == nil {
+		clearAmount = []storekit.Clearable{
+			{Column: "amount_minor", Current: current.AmountMinor},
+			{Column: "currency", Current: current.Currency},
+		}
+	}
 	// ONE composite literal, with literal keys. The clearable census reads
 	// these keys out of the source text, so a key added by assignment — or
 	// written as a constant — is invisible to it, and the census then reports
@@ -107,6 +117,10 @@ func dealClearPairs(current crmcontracts.Deal) map[string][]storekit.Clearable {
 		"partner_company_id":  partner,
 		"partner_attribution": partner,
 		"expected_arr_minor":  clearArr,
+		"amount_minor":        clearAmount,
+		// A client that blanks the price sends the currency as null beside it.
+		// Alone it is refused by moneyPairError while a figure is left.
+		"currency": {{Column: "currency", Current: current.Currency}},
 	}
 }
 

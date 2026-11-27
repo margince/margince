@@ -56,7 +56,7 @@ func (s *Dispatcher) initialize(rawParams json.RawMessage) (map[string]any, *rpc
 // The approvals sentence names a tool BY NAME, and RegisterApprovalTools
 // registers nothing without an inbox, so the sentence is served only beside it.
 func (s *Dispatcher) instructions() string {
-	guidance := orientation + s.startingTools() + surfaceInstructions
+	guidance := orientation + toolNamesRule + s.startingTools() + surfaceInstructions
 	if _, served := s.registry.Spec(listApprovalsToolName); !served {
 		return guidance
 	}
@@ -69,6 +69,12 @@ const orientation = "Margince is a CRM: contacts, companies, deals, leads, proje
 	"activity on them. When an answer names a record, give the reader its evidence web_url so " +
 	"they can open it. Money comes as <name>_minor in minor units with a readable <name>_display " +
 	"beside it; quote the display. "
+
+// toolNamesRule comes before the first tool this text names. The server cannot
+// know the prefix a client adds to a tool's name, so it names tools bare and says so.
+const toolNamesRule = "This server names its tools by their own names, here, in every tool " +
+	"description and in its answers. Your client may list each tool under a longer name with a " +
+	"prefix of its own; call a tool by the name your client lists. "
 
 // startingTools names the first tools to reach for, only those this composition
 // serves, for the same reason the approvals sentence is conditional.

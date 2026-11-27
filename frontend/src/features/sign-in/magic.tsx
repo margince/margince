@@ -6,7 +6,7 @@
 // happened. A receipt and a router, never a second inbox: no row carries a
 // verb, and a part with nothing to show draws nothing.
 
-import { useId } from "react";
+import { type ReactNode, useId } from "react";
 import { rowsOf } from "../../api/rows";
 import { Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
@@ -33,7 +33,7 @@ import { doneLinesApart } from "../../lib/magiccopy";
 import { useViewerZone } from "../../lib/viewerzone";
 import { sourceUnavailableText } from "../../lib/worklistcopy";
 import { MagicDoneCard } from "./magic.done";
-import { MagicLaneSection } from "./magic.lines";
+import { MagicLaneSection, WaitingApprovalCards } from "./magic.lines";
 import { spansDays } from "./magic.marks";
 import "../brief/brief.css";
 
@@ -41,6 +41,40 @@ import "../brief/brief.css";
 export const WAITING_LANES: readonly MagicLane[] = MAGIC_LANES.filter(
   (lane) => lane !== "done",
 );
+
+/** The waiting lanes Home keeps below its work; the decisions join the work. */
+export const STALLED_LANES: readonly MagicLane[] = WAITING_LANES.filter(
+  (lane) => lane !== "needs_you",
+);
+
+/**
+ * The decisions waiting on the reader that the day's cards do not already
+ * show, as Home task cards. Null when none wait, so Home can say it is caught up.
+ */
+export function useWaitingApprovals(
+  visibleApprovalIds: readonly string[] = [],
+): ReactNode {
+  const t = useT();
+  const zone = useViewerZone();
+  const magic = useMagic(useCan("deal", "read"));
+  const ready = queryState(magic) === "ready" ? magic.data : undefined;
+  const shown = distinctReceipt(ready, visibleApprovalIds, []);
+  const rows = rowsOf(shown?.needs_you);
+  if (!shown || rows.length === 0) return null;
+  return (
+    <>
+      <WaitingApprovalCards
+        title={t("magic.lane.needsYou")}
+        rows={rows}
+        zone={zone}
+        byDay={spansDays(shown.since, shown.as_of)}
+      />
+      {rowsOf(ready?.cut_at_limit).includes("needs_you") && (
+        <p className="t-caption">{t("magic.laneCut")}</p>
+      )}
+    </>
+  );
+}
 
 const LANE_HEADING: Readonly<Record<MagicLane, MessageKey>> = {
   done: "magic.lane.done",
@@ -62,11 +96,14 @@ export function MagicPanel({
   visibleReceiptIds = [],
   lanes = MAGIC_LANES,
   embedded = false,
+  heading = "magic.heading.brief",
 }: Readonly<{
   visibleApprovalIds?: readonly string[];
   visibleReceiptIds?: readonly string[];
   lanes?: readonly MagicLane[];
   embedded?: boolean;
+  /** What the waiting lanes are counted since; Home names the first brief before one exists. */
+  heading?: MessageKey;
 }> = {}) {
   const t = useT();
   const { locale } = useLocale();
@@ -154,7 +191,7 @@ export function MagicPanel({
   return (
     <section className="brief-section" aria-labelledby={titleId}>
       <Eyebrow as="h2" id={titleId} className="brief-section-label">
-        {t("magic.heading.brief")}
+        {t(heading)}
       </Eyebrow>
       {body}
     </section>

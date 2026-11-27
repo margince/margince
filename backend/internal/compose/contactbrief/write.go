@@ -197,7 +197,7 @@ func Write(
 	if lane == nil {
 		return floor, crmcontracts.WrittenByDeterministic, false
 	}
-	written, err := writeWithModel(ctx, lane, contactID, in, lang)
+	written, err := writeWithModel(ai.WithFloor(ctx), lane, contactID, in, lang)
 	if err != nil {
 		// The declared degrade posture, not a swallowed error. A model that is
 		// unavailable, over budget, or answering unparseable JSON must not take
@@ -306,4 +306,10 @@ func knownRecords(contactID string, in Input) map[Evidence]string {
 func contactThemselves(in Input) string {
 	in.Recent, in.Claims, in.Moment, in.OpenDeal = nil, nil, nil, nil
 	return claims.Source(in)
+}
+
+// CitableRecords is what a brief written from in may cite. The task explanation
+// cites through it, so the two ground one relationship by one rule.
+func CitableRecords(in Input) map[Evidence]string {
+	return knownRecords(in.ID, in)
 }

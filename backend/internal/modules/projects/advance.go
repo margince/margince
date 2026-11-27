@@ -103,14 +103,11 @@ func (s *Store) AdvanceProjectPhase(ctx context.Context, id ids.ProjectID, in Ad
 // a before-image, so a snapshot taken before the lock would overwrite a
 // concurrent writer's change with stale values.
 //
-// evidence records what authorized the write when it was NOT the caller's own
-// project.update grant. audit_log.authorization_rule is derived from the entity
-// and action, so it always reads `project.update`; a path that was admitted by
-// something else must say so here or the ledger claims a check that never ran.
-// nil is the ordinary case — a human advancing a project they may write.
+// trigger is nil for the ordinary case, a human advancing a project they may
+// write. A move something else caused passes one; see automaticMove.
 func recordPhaseTransition(ctx context.Context, tx pgx.Tx, id ids.ProjectID,
 	current crmcontracts.Project, fromPhase string, in AdvanceProjectPhaseInput, by string,
-	evidence map[string]any,
+	trigger *automaticMove,
 ) error {
 	p := phaseTransitionPatch(current, in)
 	if err := p.ApplyGuarded(ctx, tx, projectObject, id.UUID, in.IfVersion); err != nil {
@@ -122,21 +119,38 @@ func recordPhaseTransition(ctx context.Context, tx pgx.Tx, id ids.ProjectID,
 		return fmt.Errorf("apply project phase patch: %w", err)
 	}
 
+	var evidence map[string]any
+	var causeKind *ProjectPhaseHistoryCauseKind
+	var causeDeal *ids.UUID
+	if trigger != nil {
+		evidence = trigger.evidence
+		causeKind, causeDeal = &trigger.cause.Kind, &trigger.cause.DealID
+	}
 	auditID, err := storekit.AuditWithEvidence(ctx, tx, "advance_phase", projectObject, id.UUID,
 		p.Before(), p.After(), evidence)
 	if err != nil {
 		return fmt.Errorf("audit project advance: %w", err)
 	}
 	if _, err := tx.Exec(ctx,
-		`INSERT INTO project_phase_history (project_id, from_phase, to_phase, reason, changed_by, audit_log_id)
-		 VALUES ($1, $2, $3, $4, $5, $6)`,
-		id, fromPhase, in.ToPhase, in.Reason, by, auditID); err != nil {
+		`INSERT INTO project_phase_history
+		   (project_id, from_phase, to_phase, reason, cause_kind, cause_deal_id, audit_log_id)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+		id, fromPhase, in.ToPhase, in.Reason, causeKind, causeDeal, auditID); err != nil {
 		return fmt.Errorf("record project phase history: %w", err)
 	}
 	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, projectPhaseChangedPayload(fromPhase, in)); err != nil {
 		return fmt.Errorf("emit project.phase_changed: %w", err)
 	}
 	return nil
+}
+
+// automaticMove is a phase move the caller did not choose. evidence records
+// what authorized it, because audit_log.authorization_rule always reads
+// `project.update` and would otherwise claim a check that never ran. cause is
+// what the history row names as the reason for the move.
+type automaticMove struct {
+	evidence map[string]any
+	cause    PhaseCause
 }
 
 // projectPhaseChangedPayload builds the event body in one place, so a

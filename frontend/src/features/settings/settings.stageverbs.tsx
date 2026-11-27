@@ -9,7 +9,11 @@ import { useRef, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ifMatch, requireVersion } from "../../api/version";
-import { type CreateField, CreateRecordModal } from "../../components/create";
+import {
+  type CreateConflict,
+  type CreateField,
+  CreateRecordModal,
+} from "../../components/create";
 import { fieldRefusals } from "../../components/create.refusals";
 import { EditAction } from "../../components/edit";
 import {
@@ -32,6 +36,7 @@ import {
   problemMessageOf,
   unwrap,
 } from "../../lib/problem";
+import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 import { winProbabilityFault } from "../../lib/wholenumber";
 
 type Pipeline = components["schemas"]["Pipeline"];
@@ -80,7 +85,12 @@ function stageFields(
 ): CreateField[] {
   const chance = { label: t("stage.winProb"), limit: percentLimit(locale) };
   return [
-    { key: "name", label: "stage.name", required: true },
+    {
+      key: "name",
+      label: "stage.name",
+      required: true,
+      maxLength: TEXT_LIMITS.label,
+    },
     ...translationFields(STAGE_NAME),
     {
       key: "semantic",
@@ -103,9 +113,20 @@ function stageFields(
       label: "stage.winProb",
       type: "number",
       limit: chance.limit,
+      // A blank would be stored as 0%, which the forecast reads as a stage that
+      // never wins. A closing stage's chance is fixed by its type.
+      requiredWhen: (values) => stageSemantic(values.semantic) === "open",
       validate: (value) => winProbabilityFault(value, locale, chance),
     },
   ];
+}
+
+function stageNameConflict(t: T): CreateConflict {
+  return {
+    field: "name",
+    code: "stage_name_taken",
+    sentence: t("stage.nameTaken"),
+  };
 }
 
 // The closing stages a pipeline cannot do without: the only live one of a kind.
@@ -159,7 +180,12 @@ export function StageCreate({
       toast.show(t("stage.added"));
     },
   });
-  const refused = fieldRefusals(mutation.error, fields, t);
+  const refused = fieldRefusals(
+    mutation.error,
+    fields,
+    t,
+    stageNameConflict(t),
+  );
   return (
     <>
       <Button
@@ -210,6 +236,7 @@ function StageEdit({
         win_probability: String(stage.win_probability),
       }}
       fields={stageFields(t, locale, fixedType ? stage.semantic : undefined)}
+      conflict={stageNameConflict(t)}
       update={async (values, _rows, opened) => {
         const answer = await api.PATCH("/stages/{id}", {
           params: {

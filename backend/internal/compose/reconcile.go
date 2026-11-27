@@ -118,7 +118,7 @@ func (s followUpStager) StageFollowUp(ctx context.Context, dealID ids.UUID, prop
 				return err
 			}
 			return stageFollowUpDraft(onBehalfOf(ctx, owner), tx, s.svc, draft.summary,
-				dealID, proposal.EvidenceActivityID.UUID, draft.proposal)
+				dealID, proposal.EvidenceActivityID.UUID, proposal.EvidenceOccurredAt, draft.proposal)
 		}
 		// An unowned deal has nobody to follow it up, so nothing is filed.
 		if owner.IsZero() {
@@ -323,8 +323,8 @@ func followUpDoer(ctx context.Context, tx pgx.Tx, proposal deals.FollowUpProposa
 // The task goes through the activities store, the RBAC-gated write a rep's own
 // "add task" takes. The single-use redemption claims it once, and the write is
 // idempotent on (source_system, source_id) keyed to the approval. So a
-// re-driven decision creates nothing twice. It runs as the overnight agent on
-// behalf of the deciding human, who is on the decision's own audit row.
+// re-driven decision creates nothing twice. It runs as the overnight agent
+// acting for the deciding human, under that human's grants.
 func followUpConfirmEffect(svc *approvals.Service, store *activities.Store, now func() time.Time) approvals.ApprovedEffect {
 	return func(ctx context.Context, approvalID ids.ApprovalID, proposedChange json.RawMessage, diffHash string) error {
 		proposal, err := deals.UnmarshalFollowUpProposal(proposedChange)
@@ -341,16 +341,11 @@ func followUpConfirmEffect(svc *approvals.Service, store *activities.Store, now 
 		if err != nil {
 			return err
 		}
-		decider, ok := principal.Actor(ctx)
+		// The approver, also when somebody else re-drives a failed effect.
+		approver, ok := approvals.ReleasedBy(ctx)
 		if !ok {
-			return errors.New("compose: follow-up effect without a deciding principal")
+			return errors.New("compose: follow-up effect without the member who approved it")
 		}
-		execCtx := principal.WithActor(ctx, principal.Principal{
-			Type:       principal.PrincipalSystem,
-			ID:         overnightAgent,
-			UserID:     decider.UserID,
-			OnBehalfOf: decider.UserID,
-		})
 		// Redemption and the write in ONE transaction. Consuming the approval
 		// first and writing after leaves the two able to disagree: the approval
 		// reads as redeemed while no task exists, and the audit row asserts a
@@ -362,8 +357,8 @@ func followUpConfirmEffect(svc *approvals.Service, store *activities.Store, now 
 		// still unconsumed, so deciding it again runs this effect again
 		// (approvals.effectIsStillOwed).
 		var gone string
-		err = svc.RedeemAndApply(ctx, approvalID, deals.FollowUpReconcileKind, diffHash,
-			func(tx pgx.Tx) error {
+		err = redeemForApprover(ctx, svc, approvalID, deals.FollowUpReconcileKind, diffHash, overnightAgent,
+			func(execCtx context.Context, tx pgx.Tx) error {
 				// Asked again here: a next step or a close landing between the
 				// precheck and this write makes the follow-up unneeded. The
 				// redemption commits with nothing written, and the decider is
@@ -372,7 +367,7 @@ func followUpConfirmEffect(svc *approvals.Service, store *activities.Store, now 
 				if gone, err = stillowed.FollowUpTx(ctx, tx, proposal.DealID.UUID, now().UTC()); err != nil || gone != "" {
 					return err
 				}
-				doer, err := followUpDoer(ctx, tx, proposal, decider.UserID)
+				doer, err := followUpDoer(ctx, tx, proposal, approver)
 				if err != nil {
 					return err
 				}
@@ -389,9 +384,13 @@ func followUpConfirmEffect(svc *approvals.Service, store *activities.Store, now 
 	}
 }
 
-// overnightAgent captures the overnight pass's follow-up tasks, so a task
-// reads as the agent's suggestion and not as something a rep typed.
+// overnightAgent writes a released follow-up proposal, acting for the decider,
+// so the task reads as the agent's suggestion and not as something a rep typed.
 const overnightAgent = "agent:overnight"
+
+// overnightSweep is the overnight pass itself, which acts for no one. The
+// tasks it files directly carry it.
+const overnightSweep = "system:overnight"
 
 // writeOvernightFollowUp puts the follow-up task on the deal owner's list, when
 // the owner still works here.
@@ -415,7 +414,7 @@ func writeOvernightFollowUp(
 	}
 	assignee := ids.From[ids.UserKind](owner)
 	in.AssigneeID = &assignee
-	return logTaskOrUnassignedTx(onBehalfOf(extractorContext(sweepCtx, overnightAgent), owner), tx, tasks, in)
+	return logTaskOrUnassignedTx(onBehalfOf(extractorContext(sweepCtx, overnightSweep), owner), tx, tasks, in)
 }
 
 // followUpAlreadyAnswered reports a proposal for this interaction that a rep

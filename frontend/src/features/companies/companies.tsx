@@ -111,20 +111,16 @@ function companyTabsFor(
   company: Company,
   tab: CompanyTab,
 ): readonly CompanyTab[] {
-  // Gated on the relationship type, not on `company.partner`: the Company
-  // read does not select the extension row, so that field is always absent
-  // and every partner would lose the tab. The type is equivalent and IS
-  // returned — a company carries it exactly when it has a programme, which the
-  // store enforces in both directions (ADR-0079).
+  // An ended program still has deals and commissions on its Partner tab.
   const isPartner = (company.relationship_types ?? []).includes("partner");
   const drop = new Set<CompanyTab>();
-  if (!isPartner && tab !== "partner") {
+  if (!isPartner && !company.partner_program_ended && tab !== "partner") {
     drop.add("partner");
   }
   // Finance is absent exactly where its card is absent, on FIN-AC-3's own list
   // — an account nobody has ever invoiced has no money to report, and a tab
   // that opens onto nothing is worse than one that is not there.
-  if (!hasFinance(company.lifecycle) && tab !== "finance") {
+  if (!hasFinance(company.status) && tab !== "finance") {
     drop.add("finance");
   }
   // An archived account's refused tabs would open onto nothing too.

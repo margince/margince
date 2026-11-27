@@ -41,7 +41,9 @@ func MarkInternalMailTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, autho
 	var audience string
 	var reason *string
 	var source, capturedBy string
-	if err := tx.QueryRow(ctx, `SELECT internal_mail_authorization, audience, audience_reason, source, captured_by
+	// The connector that read the mail names the field's origin. The row's
+	// source names only the capture channel.
+	if err := tx.QueryRow(ctx, `SELECT internal_mail_authorization, audience, audience_reason, split_part(captured_by, ':', 2), captured_by
   FROM activity WHERE id = $1 AND kind = 'email' AND restricted_at IS NULL
   AND archived_at IS NULL FOR UPDATE`, id).Scan(&existing, &audience, &reason, &source, &capturedBy); err != nil {
 		return err

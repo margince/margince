@@ -32,7 +32,7 @@ const company: Company = {
   workspace_id: "01a04298-1971-7076-8076-8064da20fd01",
   display_name: "Brandt Automotive GmbH",
   legal_name: "Brandt Automotive GmbH",
-  lifecycle: "customer",
+  status: "customer",
   owner_id: "01a04298-1971-7076-8076-8064da20fd02",
   industry: "automotive",
   size_band: "51-200",
@@ -77,7 +77,7 @@ function frame(
             proposal_ids: [],
             created_at: "2026-06-01T08:00:00Z",
           })
-        : jsonResponse({}, 404),
+        : new Response(null, { status: 204 }),
   };
   installFetchStub(routes);
   return (
@@ -156,7 +156,7 @@ export const CompleteProfileContext: Story = {
         jsonResponse({ data: [] }),
       [`GET /companies/${COMPANY}/facts`]: () => jsonResponse({ data: [] }),
       [`GET /companies/${COMPANY}/site-reads/latest`]: () =>
-        jsonResponse({}, 404),
+        new Response(null, { status: 204 }),
       [`GET /companies/${COMPANY}/technical-enrich/latest`]: () =>
         jsonResponse({ lanes: [] }),
       "GET /relationships": () =>

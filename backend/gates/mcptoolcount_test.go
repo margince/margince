@@ -128,7 +128,11 @@ const publishedToolCeiling = 48
 //
 // It is the measured size plus room for a copy fix, and no room for a new
 // action's text. Raising it is a decision made in the pull request that needs it.
-const publishedCatalogByteCeiling = 250_000
+// Raised to 250,800 when main's tool text met develop's in one list. Main added
+// update_record's why, change_compliance's routes and the sweep's text. Raised
+// to 250,900 for the link suggestion queue's three actions, which an agent
+// reads and decides for its colleague. Raised to 251,000 for pipeline_ids.
+const publishedCatalogByteCeiling = 251_000
 
 type mcpInfoFile struct {
 	Totals struct {

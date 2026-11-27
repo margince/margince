@@ -25,10 +25,8 @@ const (
 	AppGroupIntelligence AppGroup = "intelligence"
 )
 
-// AppGroups is every heading the drawer offers. The frontend's list mirrors
-// it.
-//
-// Held by: TestTheFrontendAppGroupsMatchTheGoOnes (backend/gates/frontendentryslots_test.go)
+// AppGroups lists the headings the drawer offers. gen-composition writes the
+// list into the SPA's @composition/extensions as EXTENSION_APP_GROUPS.
 func AppGroups() []AppGroup {
 	return []AppGroup{AppGroupRecords, AppGroupWork, AppGroupIntelligence}
 }
@@ -45,8 +43,8 @@ type App struct {
 	// Icon is a lucide glyph from the same curated list an Entry draws from.
 	Icon EntryIcon
 	// Label is a copy key from the unit's own frontend/i18n files, the name
-	// shown beside the icon. The generator refuses one that is missing from
-	// any locale.
+	// shown beside the icon. Empty shows the unit's own title, ext<Unit>.title.
+	// The generator refuses a key that is missing from any locale.
 	Label string
 	Group AppGroup
 	// Object is the unit's RBAC object a reader needs read on to be shown the
@@ -63,7 +61,7 @@ func (a App) Validate(unit Name) error {
 	if !a.Icon.Valid() {
 		return fmt.Errorf("%w: app icon %q is not one the design system offers", ErrInvalid, a.Icon)
 	}
-	if !strings.HasPrefix(a.Label, "ext") || strings.ContainsAny(a.Label, " \t\n") {
+	if a.Label != "" && (!strings.HasPrefix(a.Label, "ext") || strings.ContainsAny(a.Label, " \t\n")) {
 		return fmt.Errorf("%w: app label %q must be a copy key from the unit's own i18n files", ErrInvalid, a.Label)
 	}
 	if !a.Group.Valid() {

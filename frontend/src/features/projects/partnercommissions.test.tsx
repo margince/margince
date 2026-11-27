@@ -489,6 +489,21 @@ describe("the outstanding figure", () => {
     ]);
   });
 
+  // Each amount is bounded and their sum is not. Past 2^53 a total would print
+  // a number that is not the sum of what it was given.
+  it("leaves out a total too large to add exactly", () => {
+    const owed = outstandingByCurrency([
+      { ...accrued, amount_minor: 2 ** 52 },
+      { ...accrued, id: "c-2", amount_minor: 2 ** 52 },
+      { ...accrued, id: "c-3", amount_minor: 3000, currency: "USD" },
+    ]);
+
+    expect(owed).toEqual([
+      { currency: "EUR", amountMinor: undefined, entryCount: 2 },
+      { currency: "USD", amountMinor: 3000, entryCount: 1 },
+    ]);
+  });
+
   it("draws nothing when every entry is settled", async () => {
     stubCommissions([{ ...accrued, status: "paid" }]);
 

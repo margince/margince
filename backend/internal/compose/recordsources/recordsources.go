@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Package recordsources is the data task that moves deals, offers and projects
-// whose source predates the fixed list of channels onto a channel.
+// Package recordsources holds the data tasks that move records whose source
+// predates the fixed list of channels onto a channel.
 package recordsources
 
 import (
@@ -10,8 +10,11 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/projects"
+	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -36,6 +39,59 @@ func DataTask() datatask.Task {
 			step("deal_sources", deals.CorrectDealSourcesTx, deals.CountUnlistedDealSources),
 			step("offer_sources", deals.CorrectOfferSourcesTx, deals.CountUnlistedOfferSources),
 			step("project_sources", projects.CorrectProjectSourcesTx, projects.CountUnlistedProjectSources),
+		},
+	}
+}
+
+// SignalDataTask corrects signals, whose older source named the producer. The
+// producer moves to source_system, where the scan's readers select on it.
+func SignalDataTask() datatask.Task {
+	return datatask.Task{
+		ID: "core/1795589886_signal_source_channels", Version: 1,
+		Title:    systemtext.Literal("datatask.title.core.1795589886_signal_source_channels"),
+		Requires: []string{"core/1795589886"},
+		Steps: []datatask.Step{
+			step("signal_sources", signals.CorrectSignalSourcesTx, signals.CountUnlistedSignalSources),
+		},
+	}
+}
+
+// PartyDataTask corrects contacts and companies. A connector or writer an older
+// source named moves to source_system, so a captured row keeps its mailbox.
+func PartyDataTask() datatask.Task {
+	return datatask.Task{
+		ID: "core/1795624398_party_source_channels", Version: 1,
+		Title:    systemtext.Literal("datatask.title.core.1795624398_party_source_channels"),
+		Requires: []string{"core/1795624398"},
+		Steps: []datatask.Step{
+			step("contact_sources", contacts.CorrectContactSourcesTx, contacts.CountUnlistedContactSources),
+			step("company_sources", contacts.CorrectCompanySourcesTx, contacts.CountUnlistedCompanySources),
+		},
+	}
+}
+
+// LeadDataTask moves every lead whose source is off the fixed channel list onto
+// its channel, through the mapping contacts use.
+func LeadDataTask() datatask.Task {
+	return datatask.Task{
+		ID: "core/1795710028_lead_source_channels", Version: 1,
+		Title:    systemtext.Literal("datatask.title.core.1795710028_lead_source_channels"),
+		Requires: []string{"core/1795710028"},
+		Steps: []datatask.Step{
+			step("lead_sources", contacts.CorrectLeadSourcesTx, contacts.CountUnlistedLeadSources),
+		},
+	}
+}
+
+// ActivityDataTask moves every activity whose source is off the fixed channel
+// list onto its channel. The writer an older word named moves to source_system.
+func ActivityDataTask() datatask.Task {
+	return datatask.Task{
+		ID: "core/1795786877_activity_source_channels", Version: 1,
+		Title:    systemtext.Literal("datatask.title.core.1795786877_activity_source_channels"),
+		Requires: []string{"core/1795786877"},
+		Steps: []datatask.Step{
+			step("activity_sources", activities.CorrectActivitySourcesTx, activities.CountUnlistedActivitySources),
 		},
 	}
 }

@@ -55,6 +55,7 @@ function savedTab(
     filters: tab.filters ?? {},
     includeArchived: tab.includeArchived ?? false,
     perPage: tab.perPage ?? LIST_PAGE_SIZES[0],
+    version: 1,
   };
 }
 
@@ -73,6 +74,7 @@ function tabWithoutPageSize(
     sort: "",
     filters: {},
     includeArchived: false,
+    version: 1,
   };
 }
 
@@ -405,6 +407,36 @@ describe("view tabs — two views can ask for the same thing", () => {
     expect(
       screen.getByRole("button", { name: "Mine" }).getAttribute("aria-pressed"),
     ).toBe("false");
+  });
+});
+
+describe("a link tab", () => {
+  it("never lights, even over a list its dials would describe", async () => {
+    const fetchPage = vi.fn(async (_query: ListQuery, _cursor: string | null) =>
+      emptyPage(),
+    );
+    render(
+      <ListTableHarness
+        fetchPage={fetchPage}
+        dataViews={[
+          {
+            ...savedTab({ id: "v-vip", label: "VIP", sort: "-created_at" }),
+            link: { href: "#/filters/contacts/v-vip", name: "VIP, elsewhere" },
+          },
+          savedTab({ id: "v-new", label: "Newest", sort: "-created_at" }),
+        ]}
+      />,
+    );
+    await waitFor(() => expect(fetchPage).toHaveBeenCalled());
+
+    expect(
+      screen
+        .getByRole("button", { name: "Newest" })
+        .getAttribute("aria-pressed"),
+    ).toBe("true");
+    expect(
+      screen.getByRole("link", { name: "VIP, elsewhere" }).classList,
+    ).not.toContain("on");
   });
 });
 

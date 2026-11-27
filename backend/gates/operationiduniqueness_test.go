@@ -115,7 +115,7 @@ func contractDocuments(t *testing.T) []operationDocument {
 	// already names the core contract, and two gates disagreeing about where
 	// it lives is the shape that leaves one of them censusing nothing.
 	paths := []string{contractFile}
-	overlays, err := filepath.Glob(filepath.Join("..", "extensions", "*", "api", "crm.yaml"))
+	overlays, err := gatekit.Glob(filepath.Join("..", "extensions", "*", "api", "crm.yaml"))
 	if err != nil {
 		t.Fatalf("looking for extension contract overlays: %v", err)
 	}
@@ -175,7 +175,7 @@ func pathItemsIn(t *testing.T, file operationDocument) map[string]map[string]yam
 			Remove bool                 `yaml:"remove"`
 		} `yaml:"actions"`
 	}
-	if err := yaml.Unmarshal(file.raw, &doc); err != nil {
+	if err := unmarshalYAML(file.raw, &doc); err != nil {
 		t.Fatalf("parsing %s: %v", file.path, err)
 	}
 	if len(doc.Paths) > 0 {

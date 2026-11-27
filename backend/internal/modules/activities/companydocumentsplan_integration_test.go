@@ -47,7 +47,7 @@ func seedBusyAccount(ctx context.Context, t *testing.T, tx pgx.Tx, busy ids.UUID
 	         CASE WHEN g <= 200 THEN (SELECT id FROM seeded_busy) ELSE (SELECT id FROM seeded_company WHERE id <> (SELECT id FROM seeded_busy) ORDER BY id OFFSET g % 40 LIMIT 1) END company_id
 	    FROM generate_series(1, 4000) g;
 	INSERT INTO contact (id, full_name, source, captured_by)
-	  SELECT id, 'Employee '||g, 'seed', 'system' FROM seeded_contact;
+	  SELECT id, 'Employee '||g, 'manual', 'system' FROM seeded_contact;
 	INSERT INTO relationship (kind, contact_id, company_id, source, captured_by)
 	  SELECT 'employment', id, company_id, 'seed', 'system' FROM seeded_contact;
 	INSERT INTO pipeline (id, name) VALUES ('00000000-0000-7000-8000-00000000d0c5', 'Seeded');
@@ -63,7 +63,7 @@ func seedBusyAccount(ctx context.Context, t *testing.T, tx pgx.Tx, busy ids.UUID
 	  SELECT gen_random_uuid(), 5000 + s.i, c.id, c.company_id
 	    FROM generate_series(1, 40000) s(i) JOIN seeded_contact c ON c.g = 201 + s.i % 3800;
 	INSERT INTO activity (id, kind, subject, occurred_at, direction, source, captured_by)
-	  SELECT id, 'email', 'Mail '||g, now() - (g % 700) * interval '1 hour', 'inbound', 'seed', 'system'
+	  SELECT id, 'email', 'Mail '||g, now() - (g % 700) * interval '1 hour', 'inbound', 'api', 'system'
 	    FROM seeded_mail;
 	INSERT INTO activity_link (activity_id, entity_type, contact_id)
 	  SELECT id, 'contact', contact_id FROM seeded_mail WHERE g % 10 <> 0;

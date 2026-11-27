@@ -19,9 +19,11 @@ import { lastActivityColumn, ownerColumn } from "../../components/recordlist";
 import { Badge, EmptyState } from "../../design-system/atoms";
 import { Heading } from "../../design-system/heading";
 import { Chip } from "../../design-system/readings";
+import { ABSENT } from "../../format/absent";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { labelFor, valueFor } from "../../lib/labelfor";
+import { PROJECTS_INITIAL_SORT } from "../../lib/listopenings";
 import { unwrap } from "../../lib/problem";
 import { useSavedViews } from "../../lib/savedviews.queries";
 import { useViewerZone } from "../../lib/viewerzone";
@@ -99,7 +101,7 @@ function ProjectCompanyCell({
   return project.masked_fields?.includes("company_id") ? (
     <span data-testid="project-company-withheld">{t("state.withheld")}</span>
   ) : asText ? null : (
-    <span data-testid="project-company-none">—</span>
+    <span data-testid="project-company-none">{ABSENT}</span>
   );
 }
 
@@ -181,7 +183,7 @@ export function ProjectsScreen({
   const ownerChips = useOwnerChips();
   const state = useListQuery<Project>({
     key: "projects",
-    initialSort: "-last_activity_at",
+    initialSort: PROJECTS_INITIAL_SORT,
     fetchPage: fetchProjectsPage,
   });
   // Held back until the first page has answered: the first-run plate below

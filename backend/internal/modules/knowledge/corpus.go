@@ -130,11 +130,14 @@ func (s *Store) CreateCorpus(ctx context.Context, in NewCorpus) (crmcontracts.Kn
 				return err
 			}
 		}
+		if err := refuseShippedCorpusName(ctx, tx, ids.Nil, false, in.Name); err != nil {
+			return err
+		}
 		if _, err := tx.Exec(ctx,
 			`INSERT INTO knowledge_corpus (id, name, description, topic_statement, min_similarity, default_ask, captured_by)
 			 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
 			id, in.Name, in.Description, in.TopicStatement, in.MinSimilarity, in.DefaultAsk, by); err != nil {
-			return fmt.Errorf("insert knowledge corpus: %w", err)
+			return storekit.NameTaken(fmt.Errorf("insert knowledge corpus: %w", err), corpusEntry, in.Name, corpusNameIndex)
 		}
 		if _, err := storekit.Audit(ctx, tx, "create", "knowledge_corpus", id, nil, map[string]any{
 			"name":            in.Name,
@@ -195,6 +198,9 @@ func (s *Store) EditCorpus(ctx context.Context, id ids.UUID, in UpdateCorpus) (c
 			if err != nil {
 				return err
 			}
+			if err := refuseShippedCorpusName(ctx, tx, id, current.Shipped, name); err != nil {
+				return err
+			}
 			in.Name = &name
 		}
 		if in.DefaultAsk != nil && *in.DefaultAsk {
@@ -208,7 +214,7 @@ func (s *Store) EditCorpus(ctx context.Context, id ids.UUID, in UpdateCorpus) (c
 			return nil
 		}
 		if err := p.ApplyLocked(ctx, tx, lock); err != nil {
-			return fmt.Errorf("apply knowledge corpus patch: %w", err)
+			return storekit.NameTaken(fmt.Errorf("apply knowledge corpus patch: %w", err), corpusEntry, storekit.NameAfter(current.Name, in.Name), corpusNameIndex)
 		}
 		if _, err := storekit.Audit(ctx, tx, "update", "knowledge_corpus", id, p.Before(), p.After()); err != nil {
 			return fmt.Errorf("audit knowledge corpus update: %w", err)
@@ -221,9 +227,7 @@ func (s *Store) EditCorpus(ctx context.Context, id ids.UUID, in UpdateCorpus) (c
 }
 
 // buildCorpusPatch folds the sparse edit into a patch carrying each set
-// field's before/after image. updated_at is absent on purpose: the table's
-// BEFORE UPDATE trigger owns it, so a patch that named it would be the second
-// writer of one value.
+// field's before/after image.
 func buildCorpusPatch(current crmcontracts.KnowledgeCorpus, override *float64, in UpdateCorpus) *storekit.Patch {
 	p := storekit.NewPatch()
 	if in.Name != nil {
@@ -361,21 +365,32 @@ func (s *Store) ReadCorpus(ctx context.Context, id ids.UUID) (crmcontracts.Knowl
 	return out, err
 }
 
-// ListCorpora returns the workspace's live corpora, newest first.
+// ListCorpora returns the workspace's corpora, newest first: the live ones, and
+// the archived ones too under storekit.IncludeArchived.
 //
 // No cursor: a workspace defines corpora by hand, in ones and twos, and the
 // screen shows all of them. A page envelope here would be a contract promise
 // with no producer behind it.
-func (s *Store) ListCorpora(ctx context.Context) ([]crmcontracts.KnowledgeCorpus, error) {
+func (s *Store) ListCorpora(ctx context.Context, archived storekit.ArchivedFilter) ([]crmcontracts.KnowledgeCorpus, error) {
 	if err := auth.Require(ctx, "knowledge_corpus", principal.ActionRead); err != nil {
 		return nil, err
 	}
+	// The archived sets are listed for restoring them, so they take the grant
+	// that archives and restores.
+	if archived == storekit.IncludeArchived {
+		if err := auth.Require(ctx, "knowledge_corpus", principal.ActionDelete); err != nil {
+			return nil, err
+		}
+	}
 	out := []crmcontracts.KnowledgeCorpus{}
 	identity := s.embedIdentity()
+	live := ` WHERE archived_at IS NULL`
+	if archived == storekit.IncludeArchived {
+		live = ``
+	}
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx,
-			`SELECT `+corpusColumns+` FROM knowledge_corpus c
-			 WHERE archived_at IS NULL ORDER BY created_at DESC, id DESC`)
+			`SELECT `+corpusColumns+` FROM knowledge_corpus c`+live+` ORDER BY created_at DESC, id DESC`)
 		if err != nil {
 			return fmt.Errorf("list knowledge corpora: %w", err)
 		}
@@ -397,7 +412,7 @@ func (s *Store) ListCorpora(ctx context.Context) ([]crmcontracts.KnowledgeCorpus
 // Not a GROUP BY join: it drops a corpus with no documents, which must stay in
 // the list reporting zeros.
 var corpusColumns = `c.id, c.name, c.description, c.topic_statement, c.min_similarity,
-	c.default_ask, c.reindexing, c.created_at, c.archived_at, c.managed_source IS NOT NULL,
+	c.default_ask, c.reindexing, c.created_at, c.archived_at, c.managed_source IS NOT DISTINCT FROM '` + HandbookSource + `',
 	(SELECT count(*) FROM knowledge_document d WHERE d.corpus_id = c.id AND d.archived_at IS NULL),
 	(SELECT count(*) FROM knowledge_document d WHERE d.corpus_id = c.id AND d.archived_at IS NULL
 	    AND ` + ingestInFlight + `),
@@ -422,6 +437,7 @@ func (r corpusRow) wire(identity string) crmcontracts.KnowledgeCorpus {
 	overridden := r.override != nil
 	out.MinSimilarityOverridden = &overridden
 	out.Coverage.EmbedState = r.passages.state(identity)
+	out.ArchivedAt = r.archivedAt
 	return out
 }
 

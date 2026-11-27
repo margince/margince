@@ -169,6 +169,7 @@ features:
 
 identity:
   enabled_oidc_providers: null
+  google_directory_credential: ${file:/run/secrets/identity.google_directory_credential}
   mcp_client_check: false
   oauth_dynamic_registration: true
   oauth_metadata_documents: true
@@ -189,6 +190,8 @@ installation:
   call_telegram: true
   call_whatsapp: true
   call_zalo: true
+  capture_confidentiality_verdict_interval_seconds: 600
+  capture_counterparty_verdict_interval_seconds: 600
   close_date_sweep_interval_seconds: 86400
   country: ""
   date_format: locale
@@ -226,6 +229,7 @@ lists:
   enabled: true
 
 mcp:
+  call_log: null
   client_registration:
     dynamic: true
     metadata_document: true

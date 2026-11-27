@@ -5,9 +5,8 @@
 
 package gates
 
-// Anything in the compose tier that returns a record is a read, so a query that
-// hands back a reference to a row-scoped record applies that record's row
-// scope.
+// Anything in the compose tier that returns a record is a read. A query handing
+// back a reference to a row-scoped record applies that record's row scope.
 //
 // The class this closes is the reference held across time. A read model, a link
 // row and a graph edge all store somebody else's record id, and the scope was
@@ -60,7 +59,6 @@ import (
 const (
 	// composeTier is the subtree this gate judged first, still the only one whole.
 	composeTier = "internal/compose"
-
 	// rowScopeVocabularyPkg holds ownerScopedTables: the closed set of tables the
 	// row-scope primitives interpolate, and so the references this gate is about.
 	rowScopeVocabularyPkg = "internal/platform/auth"
@@ -74,6 +72,8 @@ const (
 
 // unscopedReferenceReads names the authority used instead of row scope, keyed by package and function.
 var unscopedReferenceReads = gatekit.Waive(map[string]string{
+	"internal/compose/tasktaken:linkedRecordsOf":    "the records one taken task is filed under, read in the take's transaction to find each record's owner. No record is served: only its owner is told, and only after mayBeTold asks the task's content gate as that owner",
+	"internal/compose:readDealSummary":              "the extension system read of one deal, which no caller scopes. It answers the deal's own merged_into_id, a deal id that names the deal carrying on, to a unit authorised for system deal reads under SystemReadDeals",
 	"internal/modules/forecasting:addTeamStandings": "a team freeze's deal ids go through the snapshot lens before the caller sees any: the lens applies the reader's deal row scope and the team's assertion check, as FocusLists does",
 	"internal/compose:adHocSpec":                    "the ad-hoc project vocabulary names the project's first customer; withProjectCompany registers it in spec.referenceScopes, so the report engine applies the company row scope and requireVocabularyGrants the company and relationship grants before it is served",
 	"internal/compose:withProjectCompany":           "a project report's company filter: the edge's company_id is compared with the bound company inside an EXISTS and never selected, and filterScopes read-gates the bound company before it binds",
@@ -224,7 +224,7 @@ var rowScopeSpellings = map[string]bool{
 	"ActivityDiscoverClause": true, "ActivityContentClause": true, "ActivityMessageContentClause": true,
 	"EnsureActivityVisible": true, "EnsureActivityVisibleLive": true,
 	"EnsureActivityContentVisible": true, "EnsureActivityContentVisibleLive": true,
-	"SignalScopeClause": true, "EnsureSignalVisible": true, "EnsureSignalVisibleLive": true,
+	"DealChildScopeClause": true, "SignalScopeClause": true, "EnsureSignalVisible": true, "EnsureSignalVisibleLive": true,
 	"RelationshipEndpointScope": true, "EnsureRelationshipVisible": true,
 	// EdgeReadScope returns RelationshipEndpointScope's clause behind the
 	// object gate. A read reaching it applies the endpoint bound as surely as
@@ -784,7 +784,7 @@ func referencedTables(sql string, vocab referenceVocabulary) []tableReference {
 	// ROLE. The schema says which table each one points at, so a reference is
 	// found by what it REFERS TO rather than by what it is called.
 	for column, table := range vocab.columns {
-		if column == table+"_id" || !vocab.tables[table] || boundToCallerArgument(sql, column) {
+		if column == table+"_id" || !vocab.tables[table] || !strings.Contains(sql, column) || boundToCallerArgument(sql, column) {
 			continue
 		}
 		at := namedColumn(column).FindStringIndex(sql)

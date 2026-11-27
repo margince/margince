@@ -18,13 +18,14 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const (
@@ -40,7 +41,7 @@ var leadMeetingStatusWords = map[string]bool{"held": true, "booked": true, "canc
 
 func TestOnlyLeadMeetingProofJudgesAMeetingOnALead(t *testing.T) {
 	t.Parallel()
-	files, err := filepath.Glob(filepath.Join(leadMeetingProofModule, "*.go"))
+	files, err := gatekit.Glob(filepath.Join(leadMeetingProofModule, "*.go"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -51,8 +52,8 @@ func TestOnlyLeadMeetingProofJudgesAMeetingOnALead(t *testing.T) {
 			continue
 		}
 		scanned++
-		fset := token.NewFileSet()
-		file, err := parser.ParseFile(fset, path, nil, 0)
+		fset := gatekit.SourceFileSet()
+		file, err := gatekit.ParseFile(path, 0)
 		if err != nil {
 			t.Fatalf("parse %s: %v", path, err)
 		}

@@ -11,7 +11,7 @@ import { defaultAgentAllowances } from "../../src/testing/agentallowances.fixtur
 import { meFixture } from "../../src/testing/mefixture";
 import { defaultOperations } from "../../src/testing/operationsettings.fixtures";
 import { E2E_ADMIN_GRANTS } from "./fixtures";
-import { type Handler, notFound } from "./server";
+import { type Handler, nothingYet } from "./server";
 
 // The signed-in principal, and the 401 a signed-out run gets. The 401 has a
 // problem body and is never an abort. An abort lands the caller on the
@@ -255,12 +255,13 @@ export const installationSetup: Handler = ({ json }, { options }) => {
 };
 
 // The acting human's wizard row. The shell gates on it, so a described
-// installation answers a finished creator row. An undescribed one has no row,
-// which the contract spells as 404.
-export const onboardingState: Handler = ({ json }, { undescribed }) => {
-  if (undescribed) {
-    return json(notFound, 404);
+// installation answers a finished creator row. An undescribed one has no row
+// yet, which the contract spells as 204.
+export const onboardingState: Handler = (request, state) => {
+  if (state.undescribed) {
+    return nothingYet(request, state);
   }
+  const { json } = request;
   return json({
     path: "creator",
     step: "complete",

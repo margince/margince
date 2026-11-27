@@ -42,19 +42,22 @@ func normalizedPattern(body string, insensitive bool) string {
 func goSplitterTables(t *testing.T) map[string][]string {
 	t.Helper()
 	out := goSplitterFileTables(t, goSplitter)
-	for name, entries := range goSplitterFileTables(t, "internal/shared/kernel/mailquote/attribution.go") {
-		if _, exists := out[name]; exists {
-			t.Fatalf("duplicate splitter vocabulary %s", name)
+	for _, path := range mailquoteVocabularyFiles {
+		for name, entries := range goSplitterFileTables(t, path) {
+			if _, exists := out[name]; exists {
+				t.Fatalf("duplicate splitter vocabulary %s", name)
+			}
+			out[name] = entries
 		}
-		out[name] = entries
-	}
-	for name, entries := range goSplitterFileTables(t, "internal/shared/kernel/mailquote/replyheader.go") {
-		if _, exists := out[name]; exists {
-			t.Fatalf("duplicate splitter vocabulary %s", name)
-		}
-		out[name] = entries
 	}
 	return out
+}
+
+// mailquoteVocabularyFiles hold the boundary rule both splitters share.
+var mailquoteVocabularyFiles = []string{
+	"internal/shared/kernel/mailquote/attribution.go",
+	"internal/shared/kernel/mailquote/replyheader.go",
+	"internal/shared/kernel/mailquote/owntext.go",
 }
 
 func goSplitterFileTables(t *testing.T, path string) map[string][]string {
@@ -139,10 +142,11 @@ func mustCompileArgument(t *testing.T, call *ast.CallExpr) (string, bool) {
 
 // goSplitterConst reads one integer constant out of the Go file.
 func goSplitterConst(t *testing.T, name string) int {
+	path := goSplitter
 	t.Helper()
-	file, err := gatekit.ParseFile(goSplitter, parser.SkipObjectResolution)
+	file, err := gatekit.ParseFile(path, parser.SkipObjectResolution)
 	if err != nil {
-		t.Fatalf("parsing %s: %v", goSplitter, err)
+		t.Fatalf("parsing %s: %v", path, err)
 	}
 	for _, decl := range file.Decls {
 		gen, ok := decl.(*ast.GenDecl)
@@ -156,24 +160,18 @@ func goSplitterConst(t *testing.T, name string) int {
 			}
 			lit, ok := value.Values[0].(*ast.BasicLit)
 			if !ok || lit.Kind != token.INT {
-				t.Fatalf("%s: %s is not an integer literal", goSplitter, name)
+				t.Fatalf("%s: %s is not an integer literal", path, name)
 			}
 			parsed, convErr := strconv.Atoi(lit.Value)
 			if convErr != nil {
-				t.Fatalf("%s: %s = %q is not a number", goSplitter, name, lit.Value)
+				t.Fatalf("%s: %s = %q is not a number", path, name, lit.Value)
 			}
 			return parsed
 		}
 	}
-	t.Fatalf("%s declares no const %s — this gate is reading a shape that is gone", goSplitter, name)
+	t.Fatalf("%s declares no const %s — this gate is reading a shape that is gone", path, name)
 	return 0
 }
-
-// tsComments strips comments before anything is parsed. Without it a line
-// MENTIONING a sign-off keeps this gate green after the real entry is deleted —
-// the lesson frontendminorunits_test.go records, applied here before it costs
-// anything.
-var tsComments = regexp.MustCompile(`(?s)//[^\n]*|/\*.*?\*/`)
 
 var (
 	// A declaration's body, up to the terminator its opening bracket implies.
@@ -198,7 +196,9 @@ func tsSplitterTables(t *testing.T) map[string][]string {
 	if err != nil {
 		t.Fatalf("reading %s: %v", tsSplitter, err)
 	}
-	source := tsComments.ReplaceAllString(string(raw), " ")
+	// Stripped first: a comment MENTIONING a sign-off would keep this gate green
+	// after the real entry is deleted.
+	source := gatekit.TSWithoutComments(string(raw))
 	out := map[string][]string{}
 	for _, match := range tsDeclaration.FindAllStringSubmatchIndex(source, -1) {
 		name := source[match[2]:match[3]]
@@ -274,7 +274,7 @@ func tsSplitterConst(t *testing.T, name string) int {
 	if err != nil {
 		t.Fatalf("reading %s: %v", tsSplitter, err)
 	}
-	source := tsComments.ReplaceAllString(string(raw), " ")
+	source := gatekit.TSWithoutComments(string(raw))
 	for _, m := range tsNumber.FindAllStringSubmatch(source, -1) {
 		if m[1] == name {
 			parsed, convErr := strconv.Atoi(m[2])

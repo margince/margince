@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import type { ListQuery } from "../../components/listquery";
+import { OpenedViewContext } from "../../components/listqueryviews";
 import { ListSurface } from "../../design-system/listsurface";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import {
@@ -11,7 +12,11 @@ import {
   jsonResponse,
   StoryProviders,
 } from "../../testing/story-utils";
-import { SavedViewsFailure, SaveViewAction } from "./savedviews";
+import {
+  SavedViewsFailure,
+  SaveViewAction,
+  useSavedViewTabs,
+} from "./savedviews";
 
 // A saved view is per-user list state, by name: saved beside a list's own
 // tools through the catalog's one naming dialog, and managed from the same
@@ -103,7 +108,9 @@ export const NamingAView: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByRole("button", { name: "Save view" }));
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Save view" }),
+    );
   },
 };
 
@@ -115,6 +122,51 @@ export const NothingWorthSaving: Story = {
   render: () => {
     routes();
     return <SaveViewAction resource="contacts" state={{ query: UNNARROWED }} />;
+  },
+};
+
+// The reader's own list view, as a tab stores it.
+const BY_OWNER = {
+  id: "v-3",
+  owner_id: "u-1",
+  resource: "contacts",
+  name: "Ann’s contacts",
+  query: { list: NARROWED },
+  version: 2,
+};
+
+function routesWithListView(): void {
+  routes({
+    "GET /views": () =>
+      jsonResponse({ ...VIEWS, data: [...VIEWS.data, BY_OWNER] }),
+    "PATCH /views/v-3": () => jsonResponse(BY_OWNER),
+  });
+}
+
+export const AlreadySaved: Story = {
+  // A saved view holds the list on screen, so a second save would only add a
+  // second tab of the same rows. Manage views stays.
+  render: () => {
+    routesWithListView();
+    return <SaveViewAction resource="contacts" state={{ query: NARROWED }} />;
+  },
+};
+
+export const OpenedViewChanged: Story = {
+  // The reader opened "Ann’s contacts" and changed its order. The view can be
+  // updated in place, or the change kept as a new view beside it.
+  render: () => {
+    routesWithListView();
+    return (
+      <OpenedViewContext.Provider
+        value={{ id: BY_OWNER.id, version: BY_OWNER.version }}
+      >
+        <SaveViewAction
+          resource="contacts"
+          state={{ query: { ...NARROWED, sort: "full_name" } }}
+        />
+      </OpenedViewContext.Provider>
+    );
   },
 };
 
@@ -169,5 +221,31 @@ export const TheRailFailedToLoad: Story = {
       within(failed).getByRole("button", { name: "Retry" }),
     ).toBeVisible();
     await expect(canvas.queryByRole("dialog")).toBeNull();
+  },
+};
+
+/** The contacts rail as the reader's views draw it, beside the All preset. */
+function ContactsRail() {
+  const tabs = useSavedViewTabs("contacts");
+  return (
+    <ListSurface title="Contacts" views={[{ label: "All" }, ...tabs]}>
+      <p>Rows</p>
+    </ListSurface>
+  );
+}
+
+// A view built in Filters and views cannot be applied to the list, so its tab
+// opens it there and trails an arrow. A view this build cannot read has none.
+export const BuiltViewOnTheRail: Story = {
+  render: () => {
+    routes();
+    return <ContactsRail />;
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByRole("link", {
+      name: "Gold tier in Berlin, opens in Filters and views",
+    });
+    await expect(canvas.queryByText("Saved by an older build")).toBeNull();
   },
 };

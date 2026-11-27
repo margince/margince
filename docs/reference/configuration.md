@@ -419,6 +419,7 @@ admin can also change under Settings. One that also says kept by a reset keeps i
 | Key | Env | Flag | Type | Default | Programs | Doc |
 |---|---|---|---|---|---|---|
 | `identity.enabled_oidc_providers` | `MARGINCE_IDENTITY_ENABLED_OIDC_PROVIDERS` | — | `list<string>`, stored, kept by a reset | — | api, worker | The sign-in providers offered, as a list of provider keys; unset offers every provider the deployment set up. |
+| `identity.google_directory_credential` | `MARGINCE_IDENTITY_GOOGLE_DIRECTORY_CREDENTIAL` | — | `string`, secret, stored, kept by a reset | — | api, worker | The service-account key and admin address that read a Google member's groups at sign-in, as JSON with `service_account_key` and `admin_subject`. |
 | `identity.mcp_client_check` | `MARGINCE_IDENTITY_MCP_CLIENT_CHECK` | — | `bool`, stored, kept by a reset | `false` | api, worker | Admins may run the `check_client` tool from an AI tool to test whether it can answer a form. |
 | `identity.oauth_dynamic_registration` | `MARGINCE_IDENTITY_OAUTH_DYNAMIC_REGISTRATION` | — | `bool`, stored, kept by a reset | `true` | api, worker | AI tools may register their own OAuth client (DCR) for new sign-ins. |
 | `identity.oauth_metadata_documents` | `MARGINCE_IDENTITY_OAUTH_METADATA_DOCUMENTS` | — | `bool`, stored, kept by a reset | `true` | api, worker | AI tools may sign in with a client ID that is the URL of their metadata document (CIMD). |
@@ -442,6 +443,8 @@ admin can also change under Settings. One that also says kept by a reset keeps i
 | `installation.call_telegram` | `MARGINCE_INSTALLATION_CALL_TELEGRAM` | — | `bool`, stored, kept by a reset | `true` | api, worker | Show a Telegram chat link next to a contact's phone number that starts with a country code. |
 | `installation.call_whatsapp` | `MARGINCE_INSTALLATION_CALL_WHATSAPP` | — | `bool`, stored, kept by a reset | `true` | api, worker | Show a WhatsApp chat link next to a contact's phone number that starts with a country code. |
 | `installation.call_zalo` | `MARGINCE_INSTALLATION_CALL_ZALO` | — | `bool`, stored, kept by a reset | `true` | api, worker | Show a Zalo chat link next to a contact's phone number that starts with a country code. |
+| `installation.capture_confidentiality_verdict_interval_seconds` | `MARGINCE_INSTALLATION_CAPTURE_CONFIDENTIALITY_VERDICT_INTERVAL_SECONDS` | — | `int`, `60` to `86400`, stored | `600` | api, worker | Seconds between the passes that judge whether colleagues may read a captured thread. |
+| `installation.capture_counterparty_verdict_interval_seconds` | `MARGINCE_INSTALLATION_CAPTURE_COUNTERPARTY_VERDICT_INTERVAL_SECONDS` | — | `int`, `60` to `86400`, stored | `600` | api, worker | Seconds between the passes that judge who a new sender is. |
 | `installation.close_date_sweep_interval_seconds` | `MARGINCE_INSTALLATION_CLOSE_DATE_SWEEP_INTERVAL_SECONDS` | — | `int`, `3600` to `604800`, stored | `86400` | api, worker | Seconds between the close-date sweeps. |
 | `installation.country` | `MARGINCE_INSTALLATION_COUNTRY` | — | `string`, stored, kept by a reset | `""` | api, worker | Where the installation is established, as a two-letter ISO 3166-1 code in small letters; empty for none. |
 | `installation.date_format` | `MARGINCE_INSTALLATION_DATE_FORMAT` | — | `string`, stored, kept by a reset | `locale` | api, worker | How dates are written: locale, dmy, mdy or ymd. |
@@ -491,6 +494,7 @@ admin can also change under Settings. One that also says kept by a reset keeps i
 
 | Key | Env | Flag | Type | Default | Programs | Doc |
 |---|---|---|---|---|---|---|
+| `mcp.call_log` | `MARGINCE_MCP_CALL_LOG` | — | `string` | — | api | Dev and debugging only, refused in production: a file the api adds one JSON line to for each `/mcp` call, with caller, tool, arguments, outcome and answer, secrets stripped. It holds personal data, and nothing caps or ages it; unset writes none. |
 | `mcp.client_registration.dynamic` | `MARGINCE_MCP_CLIENT_REGISTRATION_DYNAMIC` | — | `bool` | `true` | api | Let AI tools register their own OAuth client at `/oauth/register` (DCR); false keeps it off whatever the admin's switch in Settings > AI tool access says. |
 | `mcp.client_registration.metadata_document` | `MARGINCE_MCP_CLIENT_REGISTRATION_METADATA_DOCUMENT` | — | `bool` | `true` | api | Accept a client ID that is the URL of the tool's published metadata document (CIMD); false keeps it off whatever the admin's switch in Settings > AI tool access says. |
 | `mcp.client_registration.unused_limit` | `MARGINCE_MCP_CLIENT_REGISTRATION_UNUSED_LIMIT` | — | `int` | `1000` | api | Most clients that AI tools made themselves (at `/oauth/register` or by a metadata document) and that no sign-in has used yet; a new one past it removes the oldest such client. |

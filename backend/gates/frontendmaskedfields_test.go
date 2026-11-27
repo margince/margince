@@ -27,6 +27,7 @@ package gates
 // pairs out of the catalog this gate reads.
 
 import (
+	"bytes"
 	"fmt"
 	"io/fs"
 	"os"
@@ -157,6 +158,10 @@ func maskedFieldsDrawnUnder(root string) (map[string][]maskDrawing, error) {
 		if readErr != nil {
 			return readErr
 		}
+		// Every test is found from a maskedAnchor match, which spells this word.
+		if !bytes.Contains(source, []byte("masked")) {
+			return nil
+		}
 		for _, declaration := range declarationsIn(string(source)) {
 			for _, test := range maskedFieldTests(declaration) {
 				drawn[test.field] = append(drawn[test.field],
@@ -186,7 +191,7 @@ func maskedFieldsDrawnUnder(root string) (map[string][]maskDrawing, error) {
 func declarationsIn(source string) []string {
 	var declarations []string
 	current := strings.Builder{}
-	for line := range strings.SplitSeq(tsComment.ReplaceAllString(source, " "), "\n") {
+	for line := range strings.SplitSeq(gatekit.TSWithoutComments(source), "\n") {
 		if current.Len() > 0 && line != "" && !strings.HasPrefix(line, " ") && !strings.HasPrefix(line, "\t") {
 			declarations = append(declarations, current.String())
 			current.Reset()
@@ -241,7 +246,7 @@ type maskedFieldTest struct {
 // of the call it sits in, so a literal further down the file cannot be read as
 // a field this screen tests for, and a test spread over five lines still is.
 func maskedFieldTests(source string) []maskedFieldTest {
-	body := tsComment.ReplaceAllString(source, " ")
+	body := gatekit.TSWithoutComments(source)
 	var tests []maskedFieldTest
 	for _, anchor := range maskedAnchor.FindAllStringIndex(body, -1) {
 		window := balancedWindow(body[anchor[0]:])

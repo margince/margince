@@ -31,6 +31,10 @@ import (
 // lanewiring_test.go refuses the rest.
 const actionOpen crmcontracts.AttentionItemActions = "open"
 
+// actionSendAgain sends a bounced message again to the address the reader
+// types, through POST /attention/bounces/{id}/send-again.
+const actionSendAgain crmcontracts.AttentionItemActions = "send_again"
+
 // actionUndo puts back a change the system made without asking.
 //
 // Offered on a receipt alone, and only on one carrying an audit row to restore:
@@ -266,6 +270,7 @@ func approvalItem(approval crmcontracts.Approval, machine MachineSender) crmcont
 		Title:         approval.Summary,
 		SummaryParts:  approval.SummaryParts,
 		SystemDisplay: approval.SystemDisplay,
+		Why:           approval.Why,
 		Actions:       []crmcontracts.AttentionItemActions{"decide"},
 	}
 	if approvals.PreviewRefusal(approval.Preview) != nil {
@@ -343,6 +348,7 @@ func taskItem(task Task, asOf, until time.Time, loc *time.Location) crmcontracts
 		WebsiteInquiry: task.Inquiry,
 		Subject:        subjectOf(task.LinkType, task.LinkID), MayBeDone: task.MayBeDone,
 		RequestCheck: task.RequestCheck,
+		TaskType:     task.TaskType,
 		Actions:      taskActions(task),
 	}
 	if task.WebsiteInquiry {

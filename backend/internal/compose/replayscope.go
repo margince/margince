@@ -210,6 +210,7 @@ var replayableOperations = map[string]replayTarget{
 	"POST /v1/companies":                     {object: tableCompany, table: tableCompany, idPath: "id"},
 	"PATCH /v1/companies/{id}":               {object: tableCompany, table: tableCompany, idPath: "id"},
 	"POST /v1/companies/{id}/merge":          {object: tableCompany, table: tableCompany, idPath: "id"},
+	"POST /v1/deals/{id}/merge":              {object: tableDeal, table: tableDeal, idPath: "id"},
 	"POST /v1/companies/{id}/share-contacts": {object: tableCompany, table: tableCompany, pathParam: "id"}, //nolint:goconst // the replay gates read this map's keys as string literals
 	"POST /v1/companies/{id}/link-contacts": {
 		object: tableCompany, table: tableCompany, pathParam: "id",
@@ -419,8 +420,6 @@ var replayableOperations = map[string]replayTarget{
 	// and their rows are workspace-shared config with no owner column.
 	"POST /v1/lead-origins":              {object: objectCustomField, rowNote: noOwnerCatalog},
 	"PATCH /v1/lead-origins/{id}":        {object: objectCustomField, rowNote: noOwnerCatalog},
-	"POST /v1/lead-sources":              {object: objectCustomField, rowNote: noOwnerCatalog},
-	"PATCH /v1/lead-sources/{id}":        {object: objectCustomField, rowNote: noOwnerCatalog},
 	"POST /v1/acquisition-sources":       {object: objectCustomField, rowNote: noOwnerCatalog},
 	"PATCH /v1/acquisition-sources/{id}": {object: objectCustomField, rowNote: noOwnerCatalog},
 	"POST /v1/loss-reasons":              {object: objectCustomField, rowNote: noOwnerCatalog},

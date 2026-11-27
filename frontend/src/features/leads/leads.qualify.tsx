@@ -20,16 +20,14 @@ import { MoneyInput } from "../../design-system/moneyinput";
 import { Select } from "../../design-system/select";
 import { formatMoney } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
-import {
-  invalidateClosedLead,
-  leadPromotePreviewKey,
-} from "../../lib/leadkeys";
+import { leadPromotePreviewKey } from "../../lib/leadkeys";
+import { leadIdentityName } from "../../lib/leadname";
 import { defaultPipelineOf, usePipelines } from "../../lib/pipelines.queries";
 import { moneyLimit, unwrap } from "../../lib/problem";
+import { invalidateRetiredRecord } from "../../lib/recordwritekeys";
 import { useInstallationSettings } from "../../lib/uploadlimit";
 import { useViewerZone } from "../../lib/viewerzone";
 import { useLeadCompanyNameReading } from "./leadcompany";
-import { leadIdentityName } from "./leadname";
 import {
   amountRefusal,
   dealBlock,
@@ -228,7 +226,7 @@ function QualificationForm({
     onSuccess: (result) => {
       // The history key is among them: the promotion WROTE the audit row the
       // page reads its outcome from.
-      invalidateClosedLead(queryClient, lead.id);
+      void invalidateRetiredRecord(queryClient, "lead", lead.id);
       if (result.deal_id) {
         queryClient.invalidateQueries({ queryKey: ["deals"] });
       }

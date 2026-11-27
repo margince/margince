@@ -148,7 +148,7 @@ func admitActivityPatch(
 	// Reading the row is not the licence to change it: customer identity
 	// is workspace-readable, so the write arm is what keeps a colleague's
 	// correspondence theirs.
-	if err := auth.EnsureActivityWritableIn(ctx, tx, id.UUID, !held); err != nil {
+	if err := in.admitWriter(ctx, tx, id, held); err != nil {
 		return crmcontracts.Activity{}, held, err
 	}
 	// A held row must reach the UPDATE afterwards so its own CHECK trigger —
@@ -414,6 +414,7 @@ func applyActivityPatch(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in Up
 		UPDATE activity SET
 		  subject = coalesce($%[2]d, subject),
 		  body = CASE WHEN $%[3]d::text IS NULL THEN body ELSE nullif($%[3]d::text, '') END,
+		  body_own_end = CASE WHEN $%[3]d::text IS NULL AND $%[2]d::text IS NULL THEN body_own_end ELSE $%[30]d::int END,
 		  occurred_at = coalesce($%[4]d, occurred_at),
 		  due_at = CASE WHEN $%[11]d THEN NULL ELSE coalesce($%[5]d, due_at) END,
 		  remind_at = CASE WHEN $%[12]d THEN NULL ELSE coalesce($%[6]d, remind_at) END,
@@ -443,13 +444,12 @@ func applyActivityPatch(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in Up
 		    WHEN $%[8]d IS FALSE THEN NULL
 		    ELSE done_at END%[16]s
 		WHERE id = $%[1]d AND (archived_at IS NULL OR restricted_at IS NOT NULL)`,
-		row, arg(in.Subject), arg(in.Body), arg(in.OccurredAt), arg(in.DueAt),
-		arg(in.RemindAt), arg(in.AssigneeID), done, arg(in.MeetingStatus), arg(in.DurationSeconds),
+		row, arg(in.Subject), arg(in.Body), arg(in.OccurredAt), arg(in.DueAt), arg(in.RemindAt), arg(in.AssigneeID), done, arg(in.MeetingStatus), arg(in.DurationSeconds),
 		arg(in.clears("due_at")), arg(in.clears("remind_at")), arg(in.clears("assignee_id")),
 		arg(in.OccurredPrecision), arg(relabelledLanguage(current, in)),
 		customAssignments(in.customColumns, in.CustomFields, arg), arg(in.DueHasTime), arg(in.CallOutcome), arg(in.clears(fieldCallOutcome)), arg(in.sourceActivityID),
 		arg(pickedWall(in.DueIntent)), arg(pickedZone(in.DueIntent)), arg(pickedWall(in.RemindIntent)), arg(pickedZone(in.RemindIntent)), arg(pickedWall(in.MeetingIntent)), arg(pickedZone(in.MeetingIntent)),
-		arg(in.TaskType), arg(in.AIAssisted), arg(in.clears(auditFieldMeetingStatus)))
+		arg(in.TaskType), arg(in.AIAssisted), arg(in.clears(auditFieldMeetingStatus)), arg(patchedOwnEnd(current, in)))
 	query += fmt.Sprintf(" AND version = $%d", arg(current.Version))
 	result, err := tx.Exec(ctx, query, args...)
 	if err != nil {

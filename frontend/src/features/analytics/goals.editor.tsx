@@ -10,7 +10,7 @@ import { Checkbox, Textarea } from "../../design-system/field";
 import { refuseUnreadableField } from "../../design-system/formvalidity";
 import { MoneyInput } from "../../design-system/moneyinput";
 import {
-  formatAnalyticsMoney,
+  formatMoneyWhole,
   formatNumber,
   identifierNumber,
   monthName,
@@ -70,8 +70,9 @@ export function GoalEditor({
   );
   const total = monthsTotal(months);
   const path = { owner: plan.owner_id, year: plan.year, version: plan.version };
+  // The exact amount the editor saves: a rounded month would hide its cents.
   const money = (minor: number) =>
-    formatAnalyticsMoney(minor, plan.currency, locale);
+    formatMoneyWhole(minor, plan.currency, locale);
   const failed = [writes.save, writes.discard].find(
     (write) => write.isError,
   )?.error;
@@ -153,7 +154,7 @@ export function GoalEditor({
             )
           : t("goals.monthsSum", { total: money(total) })}
       </p>
-      {total !== null && yearly !== null && total !== yearly && (
+      {total !== null && yearly !== null && yearly > 0 && total !== yearly && (
         <Callout
           tone="warning"
           title={t("goals.sumDiffers", {
@@ -258,10 +259,15 @@ function YearlyGoal({
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const notPositive =
+    yearly !== null && yearly <= 0 ? t("goals.positiveFirst") : undefined;
   return (
     <>
       <div className="goal-editor-yearly">
-        <Field label={t("goals.yearly", { currency: plan.currency })}>
+        <Field
+          label={t("goals.yearly", { currency: plan.currency })}
+          error={notPositive}
+        >
           {(field) => (
             <MoneyInput
               {...field}
@@ -269,7 +275,7 @@ function YearlyGoal({
               blankWhenZero={yearly === null}
               currency={plan.currency}
               display={(minor) =>
-                formatAnalyticsMoney(minor, plan.currency, locale)
+                formatMoneyWhole(minor, plan.currency, locale)
               }
               onChangeMinor={onYearly}
               onClear={() => onYearly(null)}
@@ -278,7 +284,8 @@ function YearlyGoal({
         </Field>
         <Button
           variant="ghost"
-          disabled={yearly === null || yearly <= 0}
+          disabled={yearly === null}
+          reason={notPositive}
           onClick={(event) => {
             if (
               yearly !== null &&

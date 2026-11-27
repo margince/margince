@@ -7,7 +7,7 @@ in one container image, `ghcr.io/margince/ci`. It holds Go, the gate binaries, N
 Playwright starts, and the Ubuntu packages Chromium needs. So when the image can be pulled, these jobs
 install no toolchain and `uat` does not reach a package mirror. Without it they set up on the runner
 as before (below). A mirror that stopped answering during a font fetch has
-stopped a UAT shard before a test ran.
+stopped a `uat` shard (the screen tests) before a test ran.
 
 The rest of the merge gate is in [ci-pipeline.md](ci-pipeline.md).
 
@@ -125,4 +125,5 @@ pulled, again in it. `lint-cache.yml` lints in the image when it can, so its gol
   toolchain, or only Go for one small module. A pull would cost more than they save.
 - `vuln` reads the `plain` cache of the runner. So do the integration build and unit coverage jobs,
   which stay on the runner with the rest of their lane.
-- `test-budget` only reads two logs, so a pull would cost more than the job.
+- `ci` reads the verdict and the `deterministic-gates` logs for the test budget, so a pull would cost
+  more than the job.

@@ -108,9 +108,11 @@ type Binder func(ctx context.Context) (context.Context, error)
 // caller owns framing and hands it one rpcRequest at a time.
 type Dispatcher struct {
 	registry *Registry
-	bind     Binder
-	name     string
-	version  string
+	// callLog is where the HTTP door records each exchange; nil keeps none.
+	callLog CallLog
+	bind    Binder
+	name    string
+	version string
 	// resources publishes the read-only documents beside the tool surface
 	// (the query vocabulary today). Nil is a server with no resources, which
 	// is why the capability is advertised conditionally: claiming one with
@@ -143,8 +145,9 @@ type Dispatcher struct {
 	// inputState signs the questions a tool asks in the chat. Unarmed, no tool
 	// asks, and each does what it did before the question existed.
 	inputState inputStateSigner
-	// confirmGuard spends confirm codes (confirmcode.go); nil keeps the inbox.
-	confirmGuard ConfirmGuard
+	// replayGuard spends confirm codes and answered questions once. Nil asks
+	// nothing in the chat and keeps the inbox.
+	replayGuard ReplayGuard
 	// log receives the true cause of failures the tool client only sees
 	// generically — the client is an untrusted agent, so infrastructure
 	// detail (DSNs, hosts, wrap chains) stays server-side.
@@ -383,18 +386,18 @@ func (s *Dispatcher) call(ctx context.Context, params json.RawMessage, fr framin
 		p.Arguments = json.RawMessage(`{}`)
 	}
 
-	callCtx, err := s.bind(withRecordLinks(ctx, s.publicOrigin))
+	callCtx, err := s.bind(WithRecordLinks(ctx, s.publicOrigin))
 	if err != nil {
 		// The bind failure's cause (revoked vs expired vs infrastructure)
 		// is server-side knowledge; the client only learns that its
 		// credential no longer works.
 		s.log.Warn("mcp: authentication failed", "tool", p.Name, "err", err)
 		return toolError("authentication failed: the passport for this session was not accepted " +
-			"(it may be revoked, expired, or bound to another workspace). Nothing was changed — " +
-			"mint a new passport or contact the workspace admin.")
+			"(it may be revoked, expired, or bound to another workspace). Nothing was changed. " +
+			"Mint a new passport or contact the workspace admin.")
 	}
 	callCtx = s.withChatInput(callCtx, fr, p.Name, p.Arguments, params)
-	callCtx = withConversationConfirm(callCtx, conversationConfirm{signer: s.inputState, guard: s.confirmGuard, now: time.Now})
+	callCtx = withConversationConfirm(callCtx, conversationConfirm{signer: s.inputState, guard: s.replayGuard, now: time.Now})
 	spec, registered := s.registry.Spec(p.Name)
 	if registered && s.unoffered(callCtx, p.Name) {
 		return toolError(s.explain(p.Name, &UnknownToolError{Name: p.Name}))

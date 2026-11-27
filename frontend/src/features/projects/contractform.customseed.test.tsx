@@ -91,7 +91,7 @@ function stubApi() {
         });
       }
       if (path.endsWith("/custom-fields")) {
-        return jsonResponse({ data: catalog });
+        return jsonResponse({ page: { has_more: false }, data: catalog });
       }
       return jsonResponse({ data: [] });
     }),

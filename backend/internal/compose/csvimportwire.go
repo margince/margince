@@ -400,7 +400,7 @@ func readImportUpload(w http.ResponseWriter, r *http.Request, limit int64) (impo
 	if _, ok := csvTargets[object]; object != "" && !ok && !migration.IsZip(body) {
 		return importUpload{}, importwire.UnsupportedObject()
 	}
-	return importUpload{Object: object, FileName: path.Base(header.Filename), Body: body}, nil
+	return importUpload{Object: object, FileName: path.Base(httperr.MultipartFilename(header)), Body: body}, nil
 }
 
 func readAllUpload(file multipart.File) ([]byte, error) {
@@ -437,7 +437,7 @@ func applyImportMapping(out *crmcontracts.ImportRun, run migration.Run, m *migra
 	for _, p := range m.PartList() {
 		parts = append(parts, crmcontracts.ImportRunPart{
 			File: p.File, Object: crmcontracts.ImportObject(p.Object), RowCount: rowsOf(run.Report, p.Object),
-			Mapping: savedMappingOf(p),
+			RowsWritten: rowsWrittenOf(run, p.Object), Mapping: savedMappingOf(p),
 		})
 	}
 	out.Parts = &parts

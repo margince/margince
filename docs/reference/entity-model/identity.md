@@ -6,7 +6,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## app_user
 
-39 columns · primary key `(id)` · referenced by 154 foreign keys
+52 columns · primary key `(id)` · referenced by 153 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -14,6 +14,19 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 | `avatar_object_key` | `text` |  |  |
 | `avatar_origin` | `text` |  | One of `upload`, `google`. |
 | `avatar_removed_at` | `timestamp with time zone` |  |  |
+| `chat_telegram_code_expires_at` | `timestamp with time zone` |  |  |
+| `chat_telegram_code_hash` | `text` |  |  |
+| `chat_telegram_user_id` | `text` |  |  |
+| `chat_telegram_verified_at` | `timestamp with time zone` |  |  |
+| `chat_whatsapp_code_expires_at` | `timestamp with time zone` |  |  |
+| `chat_whatsapp_code_hash` | `text` |  |  |
+| `chat_whatsapp_phone` | `text` |  |  |
+| `chat_whatsapp_verified_at` | `timestamp with time zone` |  |  |
+| `chat_zalo_code_expires_at` | `timestamp with time zone` |  |  |
+| `chat_zalo_code_hash` | `text` |  |  |
+| `chat_zalo_oa_id` | `text` |  |  |
+| `chat_zalo_user_id` | `text` |  |  |
+| `chat_zalo_verified_at` | `timestamp with time zone` |  |  |
 | `combine_routine_email` | `boolean` |  |  |
 | `delivery_hour_local` | `integer` |  |  |
 | `display_name` | `text` | yes |  |
@@ -24,7 +37,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 | `greeting_name_chosen_at` | `timestamp with time zone` |  |  |
 | `is_agent` | `boolean`, default `false` | yes |  |
 | `last_active_at` | `timestamp with time zone` |  |  |
-| `locale` | `text` |  | One of `en`, `de`, `vi`. |
+| `locale` | `text` |  | Points at `language.code`. |
 | `locked_until` | `timestamp with time zone` |  |  |
 | `merged_into_user_id` | `uuid` |  | Points at `app_user.id`. |
 | `morning_brief_delivery` | `text` |  |  |
@@ -54,6 +67,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 | Columns | Table | When the parent goes |
 |---|---|---|
+| `locale` | `language` | the parent cannot be deleted while this row points at it |
 | `merged_into_user_id` | `app_user` | the parent cannot be deleted while this row points at it |
 | `routine_mail_team_id` | `team` | deleting the parent keeps this row and clears the link |
 
@@ -63,13 +77,19 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 - `app_user_agent_never_forced`: `CHECK ((NOT (is_agent AND must_change_password)))`
 - `app_user_avatar_names_its_origin`: `CHECK (((avatar_object_key IS NULL) = (avatar_origin IS NULL)))`
 - `app_user_avatar_origin_check`: `CHECK ((avatar_origin = ANY (ARRAY['upload', 'google'])))`
+- `app_user_chat_codes_expire`: `CHECK ((((chat_whatsapp_code_hash IS NULL) = (chat_whatsapp_code_expires_at IS NULL)) AND ((chat_telegram_code_hash IS NULL) = (chat_telegram_code_expires_at IS NULL)) AND ((chat_zalo_code_hash IS NULL) = (chat_zalo_code_expires_at IS NULL))))`
+- `app_user_chat_telegram_is_an_id`: `CHECK (((chat_telegram_user_id IS NULL) OR (chat_telegram_user_id ~ '^[0-9]{1,20}$')))`
+- `app_user_chat_telegram_is_verified`: `CHECK (((chat_telegram_user_id IS NULL) = (chat_telegram_verified_at IS NULL)))`
+- `app_user_chat_whatsapp_is_digits`: `CHECK (((chat_whatsapp_phone IS NULL) OR (chat_whatsapp_phone ~ '^[0-9]{5,20}$')))`
+- `app_user_chat_whatsapp_is_verified`: `CHECK (((chat_whatsapp_phone IS NULL) = (chat_whatsapp_verified_at IS NULL)))`
+- `app_user_chat_zalo_is_bounded`: `CHECK (((chat_zalo_user_id IS NULL) OR ((char_length(chat_zalo_user_id) <= 64) AND (char_length(chat_zalo_oa_id) <= 64))))`
+- `app_user_chat_zalo_is_verified`: `CHECK ((((chat_zalo_user_id IS NULL) = (chat_zalo_verified_at IS NULL)) AND ((chat_zalo_user_id IS NULL) = (chat_zalo_oa_id IS NULL))))`
 - `app_user_delivery_hour_check`: `CHECK (((delivery_hour_local IS NULL) OR ((delivery_hour_local >= 0) AND (delivery_hour_local <= 23))))`
 - `app_user_does_not_merge_into_itself`: `CHECK (((merged_into_user_id IS NULL) OR (merged_into_user_id <> id)))`
 - `app_user_email_is_canonical`: `CHECK ((email = lower(btrim(email))))`
 - `app_user_failed_login_count_check`: `CHECK ((failed_login_count >= 0))`
 - `app_user_forced_rotation_needs_a_password`: `CHECK ((NOT (must_change_password AND (password_hash IS NULL))))`
 - `app_user_greeting_name_length`: `CHECK (((greeting_name IS NULL) OR ((char_length(greeting_name) >= 1) AND (char_length(greeting_name) <= 120))))`
-- `app_user_locale_shipped`: `CHECK ((locale = ANY (ARRAY['en', 'de', 'vi'])))`
 - `app_user_merge_is_retired`: `CHECK (((merged_into_user_id IS NULL) OR (removed_at IS NOT NULL)))`
 - `app_user_morning_brief_delivery_check`: `CHECK (((morning_brief_delivery IS NULL) OR (morning_brief_delivery = ANY (ARRAY['none', 'email']))))`
 - `app_user_removed_is_deactivated`: `CHECK (((removed_at IS NULL) OR (status = 'deactivated')))`
@@ -91,6 +111,12 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 - `idx_app_user_live`: `btree (created_at, id) WHERE (archived_at IS NULL)`
 - `idx_app_user_login_folded`: `btree (email_domain_folded, lower(regexp_replace(email, '@[^@]*$', '')))`
 - `idx_app_user_merge_target`: `btree (merged_into_user_id) WHERE (merged_into_user_id IS NOT NULL)`
+- `uq_app_user_chat_telegram`: `unique, btree (chat_telegram_user_id) WHERE (chat_telegram_user_id IS NOT NULL)`
+- `uq_app_user_chat_telegram_code`: `unique, btree (chat_telegram_code_hash) WHERE (chat_telegram_code_hash IS NOT NULL)`
+- `uq_app_user_chat_whatsapp`: `unique, btree (chat_whatsapp_phone) WHERE (chat_whatsapp_phone IS NOT NULL)`
+- `uq_app_user_chat_whatsapp_code`: `unique, btree (chat_whatsapp_code_hash) WHERE (chat_whatsapp_code_hash IS NOT NULL)`
+- `uq_app_user_chat_zalo`: `unique, btree (chat_zalo_oa_id, chat_zalo_user_id) WHERE (chat_zalo_user_id IS NOT NULL)`
+- `uq_app_user_chat_zalo_code`: `unique, btree (chat_zalo_code_hash) WHERE (chat_zalo_code_hash IS NOT NULL)`
 - `uq_app_user_email`: `unique, btree (lower(email))`
 
 **Triggers**
@@ -100,22 +126,24 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 - `home_read_fence_identity`: `AFTER UPDATE OF merged_into_user_id, email_domain_folded FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence()`
 - `report_authority_user_change`: `BEFORE UPDATE OF status, archived_at, seat_type, is_agent FOR EACH STATEMENT EXECUTE FUNCTION advance_report_projection_authority()`
 - `report_authority_user_delete`: `BEFORE DELETE FOR EACH STATEMENT EXECUTE FUNCTION advance_report_projection_authority()`
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"email": 20000, "locale": 20000, "status": 20000, "timezone": 20000, "seat_type": 20000, "avatar_origin": 20000, "greeting_name": 120, "password_hash": 20000, "timezone_set_by": 20000, "weekly_delivery": 20000, "avatar_object_key": 20000, "service_extension": 20000, "routine_mail_scope": 20000, "email_domain_folded": 20000, "routine_delivery_time": 20000, "morning_brief_delivery": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"avatar_object_key":20000,"avatar_origin":20000,"email":20000,"email_domain_folded":20000,"greeting_name":120,"locale":20000,"morning_brief_delivery":20000,"password_hash":20000,"routine_delivery_time":20000,"routine_mail_scope":20000,"seat_type":20000,"service_extension":20000,"status":20000,"timezone":20000,"timezone_set_by":20000,"weekly_delivery":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"email": 20000, "locale": 20000, "status": 20000, "timezone": 20000, "seat_type": 20000, "avatar_origin": 20000, "greeting_name": 120, "password_hash": 20000, "timezone_set_by": 20000, "weekly_delivery": 20000, "avatar_object_key": 20000, "service_extension": 20000, "routine_mail_scope": 20000, "email_domain_folded": 20000, "routine_delivery_time": 20000, "morning_brief_delivery": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"avatar_object_key":20000,"avatar_origin":20000,"email":20000,"email_domain_folded":20000,"greeting_name":120,"locale":20000,"morning_brief_delivery":20000,"password_hash":20000,"routine_delivery_time":20000,"routine_mail_scope":20000,"seat_type":20000,"service_extension":20000,"status":20000,"timezone":20000,"timezone_set_by":20000,"weekly_delivery":20000}')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"email": 20000, "locale": 20000, "status": 20000, "timezone": 20000, "seat_type": 20000, "avatar_origin": 20000, "greeting_name": 120, "password_hash": 20000, "chat_zalo_oa_id": 20000, "timezone_set_by": 20000, "weekly_delivery": 20000, "avatar_object_key": 20000, "chat_zalo_user_id": 20000, "service_extension": 20000, "routine_mail_scope": 20000, "chat_whatsapp_phone": 20000, "chat_zalo_code_hash": 20000, "email_domain_folded": 20000, "chat_telegram_user_id": 20000, "routine_delivery_time": 20000, "morning_brief_delivery": 20000, "chat_telegram_code_hash": 20000, "chat_whatsapp_code_hash": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"avatar_object_key":20000,"avatar_origin":20000,"chat_telegram_code_hash":20000,"chat_telegram_user_id":20000,"chat_whatsapp_code_hash":20000,"chat_whatsapp_phone":20000,"chat_zalo_code_hash":20000,"chat_zalo_oa_id":20000,"chat_zalo_user_id":20000,"email":20000,"email_domain_folded":20000,"greeting_name":120,"locale":20000,"morning_brief_delivery":20000,"password_hash":20000,"routine_delivery_time":20000,"routine_mail_scope":20000,"seat_type":20000,"service_extension":20000,"status":20000,"timezone":20000,"timezone_set_by":20000,"weekly_delivery":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"email": 20000, "locale": 20000, "status": 20000, "timezone": 20000, "seat_type": 20000, "avatar_origin": 20000, "greeting_name": 120, "password_hash": 20000, "chat_zalo_oa_id": 20000, "timezone_set_by": 20000, "weekly_delivery": 20000, "avatar_object_key": 20000, "chat_zalo_user_id": 20000, "service_extension": 20000, "routine_mail_scope": 20000, "chat_whatsapp_phone": 20000, "chat_zalo_code_hash": 20000, "email_domain_folded": 20000, "chat_telegram_user_id": 20000, "routine_delivery_time": 20000, "morning_brief_delivery": 20000, "chat_telegram_code_hash": 20000, "chat_whatsapp_code_hash": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"avatar_object_key":20000,"avatar_origin":20000,"chat_telegram_code_hash":20000,"chat_telegram_user_id":20000,"chat_whatsapp_code_hash":20000,"chat_whatsapp_phone":20000,"chat_zalo_code_hash":20000,"chat_zalo_oa_id":20000,"chat_zalo_user_id":20000,"email":20000,"email_domain_folded":20000,"greeting_name":120,"locale":20000,"morning_brief_delivery":20000,"password_hash":20000,"routine_delivery_time":20000,"routine_mail_scope":20000,"seat_type":20000,"service_extension":20000,"status":20000,"timezone":20000,"timezone_set_by":20000,"weekly_delivery":20000}')`
 - `trg_app_user_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at()`
 
 ## auth_token
 
-10 columns · primary key `(id)` · referenced by 0 foreign keys
+12 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
+| `counterpart_user_id` | `uuid` |  | Points at `app_user.id`. |
 | `expires_at` | `timestamp with time zone` | yes |  |
 | `mail_failed_at` | `timestamp with time zone` |  |  |
 | `mail_queued_at` | `timestamp with time zone` |  |  |
 | `mail_sent_at` | `timestamp with time zone` |  |  |
-| `purpose` | `text` | yes | One of `password_reset`, `email_verify`, `invite`. |
+| `merge_survivor` | `boolean` |  |  |
+| `purpose` | `text` | yes | One of `password_reset`, `email_verify`, `invite`, `member_merge_confirm`. |
 | `token_hash` | `text` | yes |  |
 | `used_at` | `timestamp with time zone` |  |  |
 | `user_id` | `uuid` | yes | Points at `app_user.id`. |
@@ -125,17 +153,21 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 | Columns | Table | When the parent goes |
 |---|---|---|
+| `counterpart_user_id` | `app_user` | deleting the parent deletes this row |
 | `user_id` | `app_user` | deleting the parent deletes this row |
 
 **Rules**
 
+- `auth_token_counterpart_check`: `CHECK (((purpose = 'member_merge_confirm') = (counterpart_user_id IS NOT NULL)))`
 - `auth_token_expires_after_creation`: `CHECK ((expires_at > created_at))`
-- `auth_token_purpose_check`: `CHECK ((purpose = ANY (ARRAY['password_reset', 'email_verify', 'invite'])))`
+- `auth_token_merge_survivor_check`: `CHECK (((purpose = 'member_merge_confirm') = (merge_survivor IS NOT NULL)))`
+- `auth_token_purpose_check`: `CHECK ((purpose = ANY (ARRAY['password_reset', 'email_verify', 'invite', 'member_merge_confirm'])))`
 - `auth_token_token_hash_check`: `CHECK ((token_hash ~ '^[0-9a-f]{64}$'))`
 
 **Indexes**
 
 - `auth_token_pkey`: `unique, btree (id)`
+- `idx_auth_token_counterpart`: `btree (counterpart_user_id) WHERE (counterpart_user_id IS NOT NULL)`
 - `idx_auth_token_hash`: `unique, btree (token_hash)`
 - `idx_auth_token_user`: `btree (user_id, purpose) WHERE (used_at IS NULL)`
 - `idx_auth_token_user_cascade`: `btree (user_id)`
@@ -147,12 +179,11 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## federated_identity
 
-6 columns · primary key `(id)` · referenced by 0 foreign keys
+5 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
-| `email_at_link` | `text` | yes |  |
 | `provider` | `text` | yes |  |
 | `subject` | `text` | yes |  |
 | `user_id` | `uuid` | yes | Points at `app_user.id`. |
@@ -177,8 +208,8 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 **Triggers**
 
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"provider": 20000, "email_at_link": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"email_at_link":20000,"provider":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"provider": 20000, "email_at_link": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"email_at_link":20000,"provider":20000}')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"provider": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"provider":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"provider": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"provider":20000}')`
 
 ## field_mask
 
@@ -316,6 +347,9 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 - `oauth_authorization_code_code_hash_check`: `CHECK ((code_hash ~ '^[0-9a-f]{64}$'))`
 - `oauth_authorization_code_expires_after_creation`: `CHECK ((expires_at > created_at))`
+- `oauth_authorization_code_scopes_present`: `CHECK ((cardinality(scopes) > 0))`
+- `oauth_authorization_code_scopes_vocabulary`: `CHECK ((scopes <@ ARRAY['read', 'draft', 'write', 'send', 'enrich', 'offline_access']))`
+- `oauth_authorization_code_work_areas_vocabulary`: `CHECK ((work_areas <@ ARRAY['business', 'compliance', 'capture', 'workspace_settings', 'admin_settings', 'own_account', 'agent_governance', 'operator', 'public']))`
 - `oauth_code_unique`: `UNIQUE (code_hash)`
 
 **Indexes**
@@ -389,6 +423,12 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 | `client_id` | `oauth_client` | the parent cannot be deleted while this row points at it |
 | `lent_passport_id` | `passport` | deleting the parent keeps this row and clears the link |
 | `user_id` | `app_user` | deleting the parent deletes this row |
+
+**Rules**
+
+- `oauth_grant_scopes_present`: `CHECK ((cardinality(scopes) > 0))`
+- `oauth_grant_scopes_vocabulary`: `CHECK ((scopes <@ ARRAY['read', 'draft', 'write', 'send', 'enrich']))`
+- `oauth_grant_work_areas_vocabulary`: `CHECK ((work_areas <@ ARRAY['business', 'compliance', 'capture', 'workspace_settings', 'admin_settings', 'own_account', 'agent_governance', 'operator', 'public']))`
 
 **Indexes**
 
@@ -522,8 +562,11 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 - `passport_app_caller_pair`: `CHECK (((app_issuer IS NULL) = (app_subject IS NULL)))`
 - `passport_expires_after_creation`: `CHECK ((expires_at > created_at))`
+- `passport_scopes_present`: `CHECK ((cardinality(scopes) > 0))`
+- `passport_scopes_vocabulary`: `CHECK ((scopes <@ ARRAY['read', 'draft', 'write', 'send', 'enrich']))`
 - `passport_token_hash_check`: `CHECK ((token_hash ~ '^[0-9a-f]{64}$'))`
 - `passport_token_hash_key`: `UNIQUE (token_hash)`
+- `passport_work_areas_vocabulary`: `CHECK ((work_areas <@ ARRAY['business', 'compliance', 'capture', 'workspace_settings', 'admin_settings', 'own_account', 'agent_governance', 'operator', 'public']))`
 - `uq_passport_id_owner`: `UNIQUE (id, on_behalf_of)`
 
 **Indexes**
@@ -636,7 +679,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## role_assignment
 
-6 columns · primary key `(id)` · referenced by 0 foreign keys
+5 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -645,7 +688,6 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 | `team_id` | `uuid` |  | Points at `team.id`. |
 | `user_id` | `uuid` | yes | Points at `app_user.id`. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
-| `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 
 **Points at**
 
@@ -665,7 +707,6 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 **Triggers**
 
 - `report_authority_role_assignment`: `BEFORE INSERT OR DELETE OR UPDATE FOR EACH STATEMENT EXECUTE FUNCTION advance_report_projection_authority()`
-- `trg_role_assignment_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at()`
 
 ## session
 
@@ -737,7 +778,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## team
 
-6 columns · primary key `(id)` · referenced by 10 foreign keys
+6 columns · primary key `(id)` · referenced by 11 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -756,7 +797,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 **Indexes**
 
-- `team_name_unique`: `unique, btree (name) WHERE (archived_at IS NULL)`
+- `team_name_unique`: `unique, btree (lower(btrim(name))) WHERE (archived_at IS NULL)`
 - `team_pkey`: `unique, btree (id)`
 
 **Triggers**
@@ -770,7 +811,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## team_membership
 
-5 columns · primary key `(id)` · referenced by 0 foreign keys
+4 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -778,7 +819,6 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 | `team_id` | `uuid` | yes | Points at `team.id`. |
 | `user_id` | `uuid` | yes | Points at `app_user.id`. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
-| `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 
 **Points at**
 
@@ -802,7 +842,6 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 - `home_read_fence_team_membership_moved`: `AFTER UPDATE OF team_id, user_id FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence()`
 - `home_read_fence_team_membership_removed`: `AFTER DELETE FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence()`
 - `report_authority_team_membership`: `BEFORE INSERT OR DELETE OR UPDATE FOR EACH STATEMENT EXECUTE FUNCTION advance_report_projection_authority()`
-- `trg_team_membership_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at()`
 
 ## user_mfa
 
@@ -833,19 +872,14 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## workspace
 
-4 columns · primary key `(id)` · referenced by 0 foreign keys
+3 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
-| `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 
 **Indexes**
 
 - `workspace_pkey`: `unique, btree (id)`
-
-**Triggers**
-
-- `trg_workspace_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at()`

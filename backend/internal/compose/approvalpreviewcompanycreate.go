@@ -51,7 +51,7 @@ func (r approvalPreviewReader) companyCreationDetails(ctx context.Context, plan 
 		fieldIndustry: industry, fieldSizeBand: in.SizeBand, bulkParamOwner: in.OwnerID, refColParentCompany: in.ParentCompanyID,
 		fieldLinkedIn: in.LinkedInURL, fieldPhone: in.Phone, fieldEmail: in.Email, fieldSource: in.Source, previewFieldSourceSystem: in.SourceSystem,
 		previewFieldSourceAuthorName: in.Author.AuthorName, previewFieldSourceAuthorID: in.Author.AuthorID,
-		previewLifecycle: previewLifecycleUnknown,
+		previewFieldStatus: previewLifecycleUnknown,
 	}
 	maps.Copy(fields, plan.CustomFields)
 	if err := creationFieldsVisible(ctx, string(recordTypeCompany), map[string]any{previewFieldDomains: in.Domains, addressField: in.Address}); err != nil {

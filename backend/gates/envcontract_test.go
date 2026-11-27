@@ -133,7 +133,7 @@ func liveEnvVars(t *testing.T) map[string]string {
 			}
 		})
 	}
-	images, err := filepath.Glob("../Dockerfile*")
+	images, err := gatekit.Glob("../Dockerfile*")
 	if err != nil {
 		t.Fatalf("globbing Dockerfiles: %v", err)
 	}
@@ -200,9 +200,10 @@ func TestEveryEnvVarIsDocumented(t *testing.T) {
 // the one free to keep a row for a var that no longer exists.
 func TestConfigurationDocNamesOnlyLiveVars(t *testing.T) {
 	t.Parallel()
-	assertNamesOnlyLiveVars(t, configurationDoc)
-	assertNamesOnlyLiveVars(t, programsDoc)
-	assertNamesOnlyLiveVars(t, workerDoc)
+	live := liveEnvVars(t)
+	assertNamesOnlyLiveVars(t, live, configurationDoc)
+	assertNamesOnlyLiveVars(t, live, programsDoc)
+	assertNamesOnlyLiveVars(t, live, workerDoc)
 }
 
 // entrypointRequired is each var a deploy entrypoint stops without, mapped to
@@ -295,9 +296,8 @@ func namesInSection(t *testing.T, path, heading string) map[string]bool {
 	return names
 }
 
-func assertNamesOnlyLiveVars(t *testing.T, path string) {
+func assertNamesOnlyLiveVars(t *testing.T, live map[string]string, path string) {
 	t.Helper()
-	live := liveEnvVars(t)
 
 	var dead []string
 	for name := range namesIn(t, path) {

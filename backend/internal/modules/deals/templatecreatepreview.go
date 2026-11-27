@@ -26,6 +26,9 @@ func readyTemplateCreation(in CreateOfferTemplateInput) CreateOfferTemplateInput
 }
 
 func (s *Store) admitTemplateCreation(ctx context.Context, tx pgx.Tx, in CreateOfferTemplateInput) error {
+	if err := checkTemplateLocale(in.Locale); err != nil {
+		return err
+	}
 	var noExclusion ids.OfferTemplateID
 	if err := s.checkTemplateNameConflict(ctx, tx, noExclusion, in.Name); err != nil {
 		return err

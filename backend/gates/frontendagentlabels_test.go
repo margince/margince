@@ -31,7 +31,7 @@ import (
 )
 
 // tsAgentLabelKey reads one `"agentJob.<name>":` key out of the English
-// catalogue, after tsComment has stripped its comments.
+// catalogue, after gatekit.TSWithoutComments has stripped its comments.
 var tsAgentLabelKey = regexp.MustCompile(`"agentJob\.([a-z0-9_]+)"\s*:`)
 
 // agentPrincipalText is a string that is a whole named agent principal.
@@ -42,34 +42,32 @@ const agentPrefixText = "agent:"
 
 func TestEveryAgentPrincipalHasAFrontendLabel(t *testing.T) {
 	t.Parallel()
-	source, err := gatekit.ReadFile(frontendCatalogue)
-	if err != nil {
-		t.Fatalf("reading the frontend catalogue: %v", err)
-	}
-	labelled := map[string]bool{}
-	for _, m := range tsAgentLabelKey.FindAllStringSubmatch(tsComment.ReplaceAllString(string(source), " "), -1) {
-		labelled[m[1]] = true
-	}
-
-	bound := boundAgentPrincipals(t)
-	if len(bound) == 0 || len(labelled) == 0 {
-		t.Fatalf("read %d agent principals and %d labels — a census that reads nothing agrees with everything", len(bound), len(labelled))
-	}
-	for _, name := range sortedKeys(bound) {
-		if !labelled[name] {
-			t.Errorf("%s stamps agent principal %q, and %s has no \"agentJob.%s\" message (add it to de.ts and vi.ts too), so its provenance tag reads only \"Automated by an agent\"", bound[name], name, frontendCatalogue, name)
-		}
-	}
-	for _, name := range sortedKeys(labelled) {
-		if strings.HasPrefix(name, extension.NamespacePrefix) {
-			t.Errorf("%s labels agentJob.%s, an extension unit's principal; the core catalogue cannot follow a unit's jobs and the tag names it from its kind — delete the message", frontendCatalogue, name)
-			continue
-		}
-		if _, ok := bound[name]; !ok {
-			t.Errorf("%s labels agentJob.%s, which no agent principal in the backend stamps — delete the message or stamp the principal", frontendCatalogue, name)
-		}
-	}
+	assertPrincipalLabels(t, principalLabels{
+		kind: "agent", key: tsAgentLabelKey, keyPrefix: "agentJob", bound: boundAgentPrincipals(t),
+		retired: retiredAgentPrincipals,
+		unlabelled: "stamps agent principal %q, and %s has no \"agentJob.%s\" message (add it to de.ts and " +
+			"vi.ts too), so its provenance tag reads only \"Automated by an agent\"",
+		refuse: func(name string) (string, bool) {
+			return "an extension unit's principal; the core catalogue cannot follow a unit's jobs and the tag " +
+				"names it from its kind — delete the message", strings.HasPrefix(name, extension.NamespacePrefix)
+		},
+	})
+	retiredAgentPrincipals.AssertAllMatched(t)
 }
+
+// retiredAgentPrincipals are agent ids no code stamps any more, keyed by label
+// key. Rows written under them keep the id in captured_by or proposed_by, and
+// History names them by their old message.
+var retiredAgentPrincipals = gatekit.Waive(map[string]string{
+	"contact_share":   writtenBeforeSystemID,
+	"deal_scout":      writtenBeforeSystemID,
+	"employer_change": writtenBeforeSystemID,
+	"project_health":  writtenBeforeSystemID,
+	"tag_scout":       writtenBeforeSystemID,
+	"task_due_date":   writtenBeforeSystemID,
+})
+
+const writtenBeforeSystemID = "rows written before the job ran under its system: id still carry it, so its label stays though no code stamps it"
 
 // boundAgentPrincipals reads the named agent principals product code can
 // stamp, keyed by label key, valued by a file that names it. It reads every
@@ -256,7 +254,7 @@ var jobsYAMLDispatcher = regexp.MustCompile(`(?m)^\s*role: dispatcher\s*$`)
 // declare, valued by the file that declares it.
 func extensionDispatcherKinds(t *testing.T, root string) map[string]string {
 	t.Helper()
-	files, err := filepath.Glob(filepath.Join(root, "*", "api", "jobs.yaml"))
+	files, err := gatekit.Glob(filepath.Join(root, "*", "api", "jobs.yaml"))
 	if err != nil {
 		t.Fatalf("listing jobs fragments under %s: %v", root, err)
 	}
@@ -286,7 +284,7 @@ func extensionDispatcherKinds(t *testing.T, root string) map[string]string {
 // and job. The unit is its directory's name.
 func extensionDeclaredJobs(t *testing.T, root string) map[string]string {
 	t.Helper()
-	files, err := filepath.Glob(filepath.Join(root, "*", "*.go"))
+	files, err := gatekit.Glob(filepath.Join(root, "*", "*.go"))
 	if err != nil {
 		t.Fatalf("listing units under %s: %v", root, err)
 	}

@@ -21,7 +21,8 @@ import {
 } from "../../lib/customfields.logic";
 import { fieldCheckSentence, refusalSentences } from "../../lib/problem";
 import { useRecordKindDirectory } from "../../lib/recordkinds";
-import { ActivityKindsSelect } from "./customfields.kinds";
+import { TEXT_LIMITS } from "../../lib/textlimits_gen";
+import { ActivityKindsSelect, PipelinesSelect } from "./customfields.kinds";
 import { typeLabels } from "./customfields.labels";
 import { OptionRows } from "./customfields.optionrows";
 import "./customfields.css";
@@ -40,6 +41,8 @@ export type NewFieldDraft = {
   showInCreate: boolean;
   // The activity types an activity field shows on; empty is every type.
   activityKinds: string[];
+  // The pipelines a deal field shows in; empty is every pipeline.
+  pipelineIds: string[];
 };
 
 export function FieldBuilder({
@@ -68,6 +71,7 @@ export function FieldBuilder({
     type: t("cf.typeLabel"),
     currency: t("cf.currencyCode"),
     activity_kinds: t("cf.activityKinds"),
+    pipeline_ids: t("cf.pipelines"),
   };
   const refusal = (refused: unknown) =>
     refusalSentences(refused, t, labels, {
@@ -90,6 +94,7 @@ export function FieldBuilder({
     (one) => one !== "record" || kinds.length > 0,
   );
   const [activityKinds, setActivityKinds] = useState<string[]>([]);
+  const [pipelineIds, setPipelineIds] = useState<string[]>([]);
   const structural = looksStructural(label);
 
   // What the draft needs before it is sent, each on the field that lacks it.
@@ -127,6 +132,7 @@ export function FieldBuilder({
         options,
         showInCreate,
         activityKinds: object === "activity" ? activityKinds : [],
+        pipelineIds: object === "deal" ? pipelineIds : [],
       },
       (refused) => faults.show(refusal(refused).byField),
     );
@@ -147,6 +153,7 @@ export function FieldBuilder({
               <TextInput
                 {...control}
                 value={label}
+                maxLength={TEXT_LIMITS.label}
                 onChange={(event) => {
                   setLabel(event.target.value);
                   faults.edited("label");
@@ -267,6 +274,25 @@ export function FieldBuilder({
                 onChange={(next) => {
                   setActivityKinds(next);
                   faults.edited("activity_kinds");
+                }}
+              />
+            )}
+          </Field>
+        )}
+
+        {object === "deal" && (
+          <Field
+            label={labels.pipeline_ids}
+            hint={t("cf.pipelinesHint")}
+            error={faults.of("pipeline_ids")}
+          >
+            {(control) => (
+              <PipelinesSelect
+                {...control}
+                values={pipelineIds}
+                onChange={(next) => {
+                  setPipelineIds(next);
+                  faults.edited("pipeline_ids");
                 }}
               />
             )}

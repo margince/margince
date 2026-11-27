@@ -169,7 +169,7 @@ func (w leadWorkTasks) repliedTaskInput(lead ids.LeadID, arrival ids.UUID, title
 		SystemText: &systemtext.Message{Subject: systemtext.Prose(systemtext.Quote, "")}, Kind: activityKindTask, Subject: &title, OccurredAt: &at,
 		SourceSystem: &source, SourceID: &key, SourceActivityID: &arrival,
 		Links:      []activities.ActivityLinkInput{{EntityType: entityLead, EntityID: lead.UUID}},
-		Source:     systemActor,
+		Source:     provenance.RecordSourceAutomation,
 		Origin:     activities.OriginSystemRemediation,
 		AssigneeID: ownerAsAssignee(owner),
 	}
@@ -183,7 +183,7 @@ func (w leadWorkTasks) arrivalTaskInput(arrival contacts.LeadArrival, title, bod
 		SystemText: metadata, Kind: activityKindTask, Subject: &title, Body: &body, OccurredAt: &at,
 		SourceSystem: &source, SourceID: &key,
 		Links:      []activities.ActivityLinkInput{{EntityType: entityContact, EntityID: arrival.ContactID.UUID}},
-		Source:     systemActor,
+		Source:     provenance.RecordSourceAutomation,
 		Origin:     activities.OriginSystemRemediation,
 		AssigneeID: ownerAsAssignee(&arrival.OwnerID),
 	}

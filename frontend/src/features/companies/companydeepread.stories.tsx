@@ -48,10 +48,10 @@ function report(over: Partial<SiteReadReport> = {}): SiteReadReport {
 const LATEST = `GET /companies/${COMPANY}/site-reads/latest`;
 const REPORT = `GET /companies/${COMPANY}/site-reads/${READ}`;
 
-// 404 is the honest "never read": a read id lives only in the tab that started
-// the crawl, so the panel asks the server rather than its own memory.
+// 204 means "never read". A read id lives only in the tab that started the
+// crawl, so the panel asks the server rather than its own memory.
 const NEVER_READ: RouteMap = {
-  [LATEST]: () => new Response(null, { status: 404 }),
+  [LATEST]: () => new Response(null, { status: 204 }),
 };
 
 function panel(routes: RouteMap) {
@@ -146,8 +146,25 @@ export const StoppedEarly: Story = {
   }),
 };
 
-/** The crawl failed. Danger tone on the status, and still no page telling the
- *  reader what our internals said. */
+/** The crawl failed. Danger tone on the status, and the reason in the reader's
+ *  words for the recorded cause, never what our internals said. */
 export const Failed: Story = {
-  render: reporting({ status: "failed", phase: null }),
+  render: reporting({
+    status: "failed",
+    phase: null,
+    status_code: "internal",
+    status_detail:
+      "The read failed inside this system rather than at the site.",
+  }),
+};
+
+/** A failure that clears on its own names its next attempt. */
+export const FailedWillRetry: Story = {
+  render: reporting({
+    status: "failed",
+    phase: null,
+    status_code: "bot_blocked",
+    status_detail: "The site answered 403. Another attempt is scheduled.",
+    next_attempt_at: "2026-07-18T08:00:00Z",
+  }),
 };

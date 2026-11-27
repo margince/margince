@@ -78,16 +78,16 @@ func writeTechnicalFacts(ctx context.Context, tx pgx.Tx, in TechnicalEnrichment)
 	written := make([]map[string]any, 0, len(in.Observations))
 	for _, observation := range in.Observations {
 		tag, err := tx.Exec(ctx, `
-			INSERT INTO company_fact
-			  (company_id, category, field, value, value_key, evidence_snippet,
-			   source_url, source, captured_by, retrieved_at)
-			VALUES ($1, 'signal', $2, $3, $4, $5, $6, $7, $8, $9)
-			ON CONFLICT (company_id, category, field, value_key)
+			INSERT INTO field_provenance
+			  (object_type, object_id, field_name, value, value_key, evidence_snippet,
+			   evidence_ref, source, captured_by, retrieved_at)
+			VALUES ('company', $1, $2, $3, $4, $5, $6, $7, $8, $9)
+			ON CONFLICT (object_type, object_id, field_name, value_key) WHERE value IS NOT NULL
 			DO UPDATE SET value = EXCLUDED.value, evidence_snippet = EXCLUDED.evidence_snippet,
-			              source_url = EXCLUDED.source_url, source = EXCLUDED.source,
+			              evidence_ref = EXCLUDED.evidence_ref, source = EXCLUDED.source,
 			              captured_by = EXCLUDED.captured_by, retrieved_at = EXCLUDED.retrieved_at,
 			              captured_at = now()
-			WHERE company_fact.source NOT IN ('human', 'agent')`,
+			WHERE `+companyEvidenceReplaceableSQL(tableEvidence),
 			in.CompanyID, observation.Field, observation.Value, observation.ValueKey,
 			observation.Evidence, observation.SourceURL, companySourceTechnical,
 			technicalCapturedBy, in.ObservedAt)
@@ -125,13 +125,13 @@ func removeUnobservedTechnicalFacts(
 		observed = append(observed, observation.Field+technicalKeySeparator+observation.ValueKey)
 	}
 	rows, err := tx.Query(ctx, `
-		DELETE FROM company_fact
-		 WHERE company_id = $1
-		   AND category = 'signal'
-		   AND field = ANY($2)
-		   AND source NOT IN ('human', 'agent')
-		   AND (field || $4::text || value_key) <> ALL($3)
-		RETURNING field, value_key, value`,
+		DELETE FROM field_provenance
+		 WHERE object_type = 'company' AND object_id = $1 AND value IS NOT NULL
+		   AND company_fact_category(field_name) = 'signal'
+		   AND field_name = ANY($2)
+		   AND `+companyEvidenceReplaceableSQL(tableEvidence)+`
+		   AND (field_name || $4::text || value_key) <> ALL($3)
+		RETURNING field_name, value_key, value`,
 		in.CompanyID, fields, observed, technicalKeySeparator)
 	if err != nil {
 		return nil, fmt.Errorf("remove unobserved technical facts: %w", err)

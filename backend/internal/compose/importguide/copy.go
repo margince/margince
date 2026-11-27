@@ -21,6 +21,10 @@ type Column struct {
 	Aliases                     []string
 }
 
+// legacyCompanyNameHeader is the German header older export files carry for a
+// company name, kept as an alias so those files still map their column.
+const legacyCompanyNameHeader = "Firmenname"
+
 // Columns is the guide of every core import target, keyed by target or by
 // "object.target" where one object's column means something else.
 var Columns = withLabels(withActivityColumns(map[string]Column{
@@ -38,7 +42,7 @@ var Columns = withLabels(withActivityColumns(map[string]Column{
 		En: "The company's display name. Used to find an existing company when the row has no ref.",
 		De: "Der Anzeigename des Unternehmens. Hat die Zeile keine Ref, wird damit ein vorhandenes Unternehmen gesucht.",
 		Vi: "Tên hiển thị của công ty. Dùng để tìm công ty đã có khi dòng không có ref.",
-	}, Example: same("Acme GmbH"), RequiredOnNew: true, Aliases: []string{"Name"}},
+	}, Example: same("Acme GmbH"), RequiredOnNew: true, Aliases: []string{"Name", legacyCompanyNameHeader}},
 	"legal_name": {Description: langcopy.Phrase{
 		En: "The registered legal name, if it differs from the display name.",
 		De: "Der eingetragene rechtliche Name, falls er vom Anzeigenamen abweicht.",
@@ -53,7 +57,7 @@ var Columns = withLabels(withActivityColumns(map[string]Column{
 		En: "Number of employees, as one of the bands Margince uses.",
 		De: "Anzahl der Beschäftigten als eine der Größenklassen, die Margince verwendet.",
 		Vi: "Số nhân viên, theo một trong các nhóm quy mô Margince dùng.",
-	}, Example: same("1-10 · 11-50 · 51-200"), Aliases: []string{"Number of employees", "Anzahl Mitarbeiter"}},
+	}, Example: same("1-10 · 11-50 · 51-200"), Aliases: []string{"Employees", "Mitarbeitende", "Số nhân viên", "Number of employees", "Anzahl Mitarbeiter", "Beschäftigtenzahl"}},
 	"description": {Description: langcopy.Phrase{
 		En: "A short description of the company.",
 		De: "Eine kurze Beschreibung des Unternehmens.",
@@ -151,14 +155,14 @@ var Columns = withLabels(withActivityColumns(map[string]Column{
 	}, Example: same("info@acme.com")},
 	"title": {Description: langcopy.Phrase{
 		En: "Job title.",
-		De: "Berufsbezeichnung.",
+		De: "Jobtitel.",
 		Vi: "Chức danh.",
-	}, Example: langcopy.Phrase{En: "Head of Purchasing", De: "Leitung Einkauf", Vi: "Trưởng phòng mua hàng"}},
+	}, Example: langcopy.Phrase{En: "Head of Purchasing", De: "Leitung Einkauf", Vi: "Trưởng phòng mua hàng"}, Aliases: []string{"Position"}},
 	"company_name": {Description: langcopy.Phrase{
 		En: "The company the lead works for, as text. A lead links to no company record.",
 		De: "Das Unternehmen, für das der Lead arbeitet, als Text. Ein Lead ist mit keinem Unternehmen verknüpft.",
 		Vi: "Công ty nơi lead làm việc, dạng văn bản. Lead không liên kết với hồ sơ công ty nào.",
-	}, Example: same("Acme"), Aliases: []string{"Company"}},
+	}, Example: same("Acme"), Aliases: []string{"Company", legacyCompanyNameHeader}},
 	"lead.status": {Description: langcopy.Phrase{
 		En: "Where the lead stands: new, contacted or engaged. Leave it empty for new. A lead is qualified or disqualified in Margince, so a file cannot set those.",
 		De: "Wo der Lead steht: new, contacted oder engaged. Leer bedeutet new. Ein Lead wird in Margince qualifiziert oder disqualifiziert, daher kann eine Datei das nicht setzen.",
@@ -178,7 +182,7 @@ var Columns = withLabels(withActivityColumns(map[string]Column{
 		En: "The company this contact works for, by its name. The import links the company with that name, or creates one if none matches, and the import preview says when it will create one.",
 		De: "Das Unternehmen, für das dieser Kontakt arbeitet, mit seinem Namen. Der Import verknüpft das Unternehmen mit diesem Namen oder erstellt eines, wenn keines passt, und die Importvorschau sagt, wann sie eines erstellt.",
 		Vi: "Công ty nơi liên hệ này làm việc, theo tên. Lần nhập liên kết công ty có tên này, hoặc tạo công ty mới nếu không có công ty nào khớp, và bản xem trước lần nhập cho biết khi nào sẽ tạo.",
-	}, Example: same("Acme GmbH"), Aliases: []string{"Company"}},
+	}, Example: same("Acme GmbH"), Aliases: []string{"Company", legacyCompanyNameHeader}},
 	"company_ref": {Description: langcopy.Phrase{
 		En: "The company this contact works for: the company's ref in this upload or an earlier one, its domain, its exact name, or its Margince ID. If none matches, the import preview reports a broken link.",
 		De: "Das Unternehmen, für das dieser Kontakt arbeitet: die Ref des Unternehmens aus diesem oder einem früheren Import, seine Domain, sein genauer Name oder seine Margince-ID. Passt nichts, meldet die Importvorschau eine fehlerhafte Verknüpfung.",
@@ -196,13 +200,13 @@ var Columns = withLabels(withActivityColumns(map[string]Column{
 	}, Example: langcopy.Phrase{En: "Acme pumps renewal", De: "Acme Pumpen Verlängerung", Vi: "Gia hạn máy bơm Acme"}, RequiredOnNew: true},
 	"pipeline": {Description: langcopy.Phrase{
 		En: "The pipeline's name, as Margince spells it; case does not matter. Leave it empty to use the default pipeline.",
-		De: "Der Name der Pipeline, wie Margince ihn schreibt; Groß- und Kleinschreibung zählt nicht. Leer lassen, um die Standard-Pipeline zu nutzen.",
+		De: "Der Name der Pipeline, wie Margince ihn schreibt. Groß- und Kleinschreibung zählt nicht. Leer lassen, um die Standard-Pipeline zu nutzen.",
 		Vi: "Tên pipeline, đúng như Margince ghi; không phân biệt chữ hoa, chữ thường. Để trống để dùng pipeline mặc định.",
 	}, Example: same("Sales")},
 	"stage": {Description: langcopy.Phrase{
 		En: "The stage's name in that pipeline; case does not matter. A won or lost stage imports the deal as closed.",
-		De: "Der Name der Phase in dieser Pipeline; Groß- und Kleinschreibung zählt nicht. Mit einer gewonnenen oder verlorenen Phase wird der Deal als abgeschlossen importiert.",
-		Vi: "Tên giai đoạn trong pipeline đó; không phân biệt chữ hoa, chữ thường. Giai đoạn thắng hoặc thua sẽ nhập deal ở trạng thái đã đóng.",
+		De: "Der Name der Phase in dieser Pipeline. Groß- und Kleinschreibung zählt nicht. Mit einer gewonnenen oder verlorenen Phase wird der Deal als abgeschlossen importiert.",
+		Vi: "Tên giai đoạn trong pipeline đó; không phân biệt chữ hoa, chữ thường. Giai đoạn thắng hoặc thất bại sẽ nhập deal ở trạng thái đã đóng.",
 	}, Example: same("Qualified"), RequiredOnNew: true},
 	"amount": {Description: langcopy.Phrase{
 		En: "The deal's value as a plain number with a dot for decimals, with no currency sign and no thousands separator. Needs a currency.",
@@ -217,7 +221,7 @@ var Columns = withLabels(withActivityColumns(map[string]Column{
 	"close_date": {Description: langcopy.Phrase{
 		En: "When the deal closes or closed, as YYYY-MM-DD. An open deal's date cannot be in the past; a won or lost deal's may.",
 		De: "Wann der Deal abschließt oder abgeschlossen wurde, im Format YYYY-MM-DD. Bei einem offenen Deal darf das Datum nicht in der Vergangenheit liegen, bei einem gewonnenen oder verlorenen schon.",
-		Vi: "Ngày deal đóng hoặc đã đóng, theo dạng YYYY-MM-DD. Deal đang mở không được có ngày trong quá khứ; deal thắng hoặc thua thì được.",
+		Vi: "Ngày deal đóng hoặc đã đóng, theo dạng YYYY-MM-DD. Deal đang mở không được có ngày trong quá khứ; deal thắng hoặc thất bại thì được.",
 	}, Example: same("2026-09-30")},
 	"deal.company_ref": {Description: langcopy.Phrase{
 		En: "The deal's company: the company's ref in this upload or an earlier one, its domain, its exact name, or its Margince ID. If none matches, the import preview reports a broken link.",
@@ -236,8 +240,8 @@ var Columns = withLabels(withActivityColumns(map[string]Column{
 	}, Example: langcopy.Phrase{En: "Three pumps and a service contract", De: "Drei Pumpen und ein Wartungsvertrag", Vi: "Ba máy bơm và một hợp đồng bảo trì"}},
 	"lost_reason": {Description: langcopy.Phrase{
 		En: "Why a lost deal was lost. Needed when the stage is lost; written only when the row creates the deal.",
-		De: "Warum ein verlorener Deal verloren ging. Nötig, wenn die Phase verloren ist; wird nur geschrieben, wenn die Zeile den Deal erstellt.",
-		Vi: "Lý do deal bị thua. Bắt buộc khi giai đoạn là thua; chỉ được ghi khi dòng tạo deal mới.",
+		De: "Warum ein verlorener Deal verloren ging. Nötig, wenn die Phase verloren ist. Wird nur geschrieben, wenn die Zeile den Deal erstellt.",
+		Vi: "Lý do deal thất bại. Bắt buộc khi giai đoạn là thất bại; chỉ được ghi khi dòng tạo deal mới.",
 	}, Example: langcopy.Phrase{En: "Chose a cheaper supplier", De: "Günstigeren Anbieter gewählt", Vi: "Chọn nhà cung cấp rẻ hơn"}},
 }))
 

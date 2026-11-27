@@ -260,7 +260,7 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 			deal.String() + `"}]}`},
 		{"create_task", `{"subject":"conformance","body":"Conformance Deal asked for a check.","links":[{"entity_type":"deal","entity_id":"` +
 			deal.String() + `"}]}`},
-		{"update_record", `{"record_type":"contact","id":"` + contact.String() +
+		{"update_record", `{"why":"A test asks for this change.","record_type":"contact","id":"` + contact.String() +
 			`","fields":{"title":"Head of Conformance"}}`},
 		{"progress_deal", `{"deal_id":"` + deal.String() + `","to_stage_id":"` + open.String() +
 			`","note":"still open"}`},

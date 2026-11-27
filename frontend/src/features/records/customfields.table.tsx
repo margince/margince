@@ -27,9 +27,10 @@ import { formatDate } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { CfObject, CfType } from "../../lib/customfields.logic";
 import { useViewerZone } from "../../lib/viewerzone";
-import { AuditEntryLine } from "../settings/audit";
+import { AuditEntryLine, entryName } from "../settings/audit";
+import { fieldChangeKeys, fieldTarget } from "./customfields.changes";
 import { CustomFieldChoices } from "./customfields.choices";
-import { ActivityKindsSelect } from "./customfields.kinds";
+import { ActivityKindsSelect, PipelinesSelect } from "./customfields.kinds";
 import { objectLabels, typeLabels } from "./customfields.labels";
 import { CustomFieldTranslate } from "./customfields.translations";
 import "./customfields.css";
@@ -84,6 +85,7 @@ export function FieldTable({
   onArchive,
   onSetting,
   onKinds,
+  onPipelines,
   savingField,
 }: Readonly<{
   object: CfObject;
@@ -98,6 +100,8 @@ export function FieldTable({
   onSetting: (field: CustomField, setting: FieldSetting, on: boolean) => void;
   // The activity types an activity field shows on, written on each change.
   onKinds: (field: CustomField, kinds: string[]) => void;
+  // The pipelines a deal field shows in, written on each change.
+  onPipelines: (field: CustomField, pipelineIds: string[]) => void;
   // The id of the field whose settings are being written. Both its switches
   // wait, so a second flip cannot send a version the first one moved.
   savingField?: string;
@@ -156,6 +160,27 @@ export function FieldTable({
                   savingField === field.id
                 }
                 onChange={(kinds) => onKinds(field, kinds)}
+              />
+            ),
+          },
+        ]
+      : []),
+    ...(object === "deal"
+      ? [
+          {
+            key: "pipelines",
+            header: t("cf.pipelines"),
+            render: (field: CustomField) => (
+              <PipelinesSelect
+                aria-label={t("cf.pipelinesFor", { label: field.label })}
+                values={field.pipeline_ids ?? []}
+                disabled={
+                  !canEdit ||
+                  field.status !== "active" ||
+                  field.id === STAGED_ID ||
+                  savingField === field.id
+                }
+                onChange={(pipelineIds) => onPipelines(field, pipelineIds)}
               />
             ),
           },
@@ -318,19 +343,23 @@ function FieldMenu({
 }
 
 // The audit rows this screen's changes emit, newest first (AC-custom-fields-6/7).
-// Only what AuditLogEntry carries is drawn, never an invented display name.
+// A row names its field from `fields`, the catalog rows by id, and falls back
+// to what the entry itself carries; it never invents a name.
 export function AuditRail({
   entries,
+  fields,
   state,
   meUserId,
   onRetry,
 }: Readonly<{
   entries: AuditLogEntry[];
+  fields?: ReadonlyMap<string, CustomField>;
   state: SectionState;
   meUserId?: string;
   onRetry: () => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const recentFirst = [...entries].sort((a, b) =>
     stable(b.occurred_at, a.occurred_at),
   );
@@ -345,7 +374,18 @@ export function AuditRail({
       <ul className="cf-audit">
         {recentFirst.map((entry) => (
           <li key={entry.id}>
-            <AuditEntryLine entry={entry} meUserId={meUserId} />
+            <AuditEntryLine
+              entry={entry}
+              meUserId={meUserId}
+              changes={fieldChangeKeys(entry).map((key) => t(key))}
+              target={fieldTarget(
+                entry,
+                fields?.get(entry.entity_id),
+                entryName(entry),
+                t,
+                locale,
+              )}
+            />
           </li>
         ))}
       </ul>

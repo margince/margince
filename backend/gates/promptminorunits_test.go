@@ -571,7 +571,7 @@ func TestThePromptMinorUnitDetectorSeesWhatItClaimsTo(t *testing.T) {
 		writePromptFixture(t, filepath.Join(root, path), source)
 	}
 	findings, resolved := promptMinorUnitFindings(t, root, func(path string) (*ast.File, error) {
-		return parser.ParseFile(token.NewFileSet(), path, nil, parser.SkipObjectResolution)
+		return gatekit.ParseFile(path, parser.SkipObjectResolution)
 	})
 	brief, money := filepath.Join(root, "internal/brief"), filepath.Join(root, "internal/money")
 	var want []string

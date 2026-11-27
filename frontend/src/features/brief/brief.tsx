@@ -22,15 +22,16 @@ import { lazy } from "../../i18n/lazy";
 import { APPROVAL_PARAM } from "../../lib/approvalhref";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { markJourney } from "../../lib/journeymarks";
-import { useMagic } from "../../lib/magic.queries";
-import { usePendingMarginceChanges } from "../../lib/marginchanges";
 import { useMe } from "../../lib/session";
 import { TASK_PARAM } from "../../lib/taskreminders";
 import { replaceDial, useUrlParams } from "../../lib/urlstate";
 import { readerTask } from "../../lib/worklistcopy";
-import { pillFigure } from "../../lib/worklistcounts";
-import { DEFAULT_VIEW } from "../../lib/worklistviews";
-import { MagicPanel, WAITING_LANES } from "../sign-in/magic";
+import { drawerOpen } from "../../lib/worklistrouting";
+import {
+  MagicPanel,
+  STALLED_LANES,
+  useWaitingApprovals,
+} from "../sign-in/magic";
 import {
   useHandledForYou,
   useHomeDay,
@@ -51,6 +52,7 @@ import { DoneForYou } from "./brief.doneforyou";
 import { shownReceiptIds } from "./brief.doneforyou.groups";
 import { briefDay } from "./brief.facts";
 import { BriefFeed } from "./brief.feed";
+import { FirstDayPanel } from "./brief.firstday";
 import {
   dayRows,
   FOCUS_PARAM,
@@ -59,13 +61,17 @@ import {
   useStaleFocusCleared,
 } from "./brief.focuslink";
 import { BriefGlance } from "./brief.glance";
+import {
+  useDealReads,
+  useQueueFigure,
+  waitingHeading,
+} from "./brief.homereads";
 import { homeJourneyMarks } from "./brief.journey";
 import { CustomerPaymentsCard } from "./brief.payments";
 import { useMorningBrief, useWeeklyReview } from "./brief.queries";
 import {
   BriefQueue,
   closeQueue,
-  drawerOpen,
   loadWorklistScreen,
   openQueue,
 } from "./brief.queue";
@@ -99,11 +105,12 @@ export function BriefScreen() {
   );
   // The way into the reader's own Today: it always opens Mine, Today, every
   // category, so the number is the one the opened list shows.
+  const queueFigure = useQueueFigure(day);
   const queueToggle = (
     <PageAsideToggle
       controlled={{
         open: queueOpen,
-        ...(day && pillFigure(day, "all", DEFAULT_VIEW)),
+        ...queueFigure,
         labels: {
           show: t("brief.queue.show"),
           hide: t("brief.queue.hide"),
@@ -179,22 +186,6 @@ function dayAnswered(
   return state !== "loading" && reads.every((read) => !read.isPending);
 }
 
-// The deal reads never start for a reader without `deal.read`, so their
-// sections are not drawn and nothing waits for them.
-function useDealReads() {
-  const readsDeals = useCan("deal", "read");
-  const brief = useMorningBrief(readsDeals);
-  const magic = useMagic(readsDeals);
-  const pendingChanges = usePendingMarginceChanges(readsDeals);
-  return {
-    readsDeals,
-    brief,
-    magic,
-    pendingChanges,
-    dealReads: readsDeals ? [brief, magic] : [],
-  };
-}
-
 function PersonalMorning({
   query,
   queueToggle,
@@ -233,10 +224,18 @@ function PersonalMorning({
     : query.isError && !day
       ? "failed"
       : "ready";
-  const { readsDeals, brief, magic, pendingChanges, dealReads } =
+  const { readsDeals, brief, magic, pendingChanges, dealReads, firstDay } =
     useDealReads();
   const settled =
     handled.isSuccess && dealReads.every((read) => read.isSuccess);
+  // A decision the day's cards already show is answered there.
+  const waiting = useWaitingApprovals(
+    day?.focus?.items
+      .filter(
+        (item) => item.source === "approval" && item.actions.includes("decide"),
+      )
+      .map((item) => item.id),
+  );
   useEffect(() => {
     const marks = homeJourneyMarks({
       state,
@@ -261,6 +260,7 @@ function PersonalMorning({
         asideLabel={t("brief.rail")}
         main={
           <>
+            {firstDay && <FirstDayPanel />}
             <BriefFeed
               day={day}
               onContext={(item) => setSelected(identity(item))}
@@ -269,6 +269,7 @@ function PersonalMorning({
               refreshFailed={query.isRefetchError}
               onRetry={() => void query.refetch()}
               queueToggle={queueToggle}
+              waiting={waiting}
             />
             {/* What Margince finished stands with the work, where a reader
                 reviews or undoes it, not in the rail beside it. */}
@@ -292,14 +293,8 @@ function PersonalMorning({
                 />
                 <BriefSuggestions />
                 <MagicPanel
-                  lanes={WAITING_LANES}
-                  visibleApprovalIds={day?.focus?.items
-                    .filter(
-                      (item) =>
-                        item.source === "approval" &&
-                        item.actions.includes("decide"),
-                    )
-                    .map((item) => item.id)}
+                  lanes={STALLED_LANES}
+                  heading={waitingHeading(firstDay)}
                 />
               </>
             )}

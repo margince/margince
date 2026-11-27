@@ -41,8 +41,8 @@ func (p dealPlan) unchanged() bool { return p.changed == 0 && p.stakeholder == n
 
 // storedDeal is the part of the stored deal a plan decides on.
 type storedDeal struct {
-	PipelineID string `json:"pipeline_id"`
-	Status     string `json:"status"`
+	PipelineID ids.UUID `json:"pipeline_id"`
+	Status     string   `json:"status"`
 }
 
 // planDealUpdate reads the stored deal and decides what the row changes. A
@@ -66,13 +66,16 @@ func (w *csvWriters) planDealUpdate(
 	}
 	plan := dealPlan{patch: dealUpdateFrom(changed, typed), changed: len(changed), closedAt: dealCloseDate(fields, typed)}
 	if move := plan.patch.Move; move != nil {
-		if pipeline, ok := typed[dealTargetPipeline].(ids.PipelineID); ok && pipeline.String() != stored.PipelineID {
+		if pipeline, ok := typed[dealTargetPipeline].(ids.PipelineID); ok && pipeline.UUID != stored.PipelineID {
 			return plan, migration.Why(migration.ReasonDealPipelineFixed), nil
 		}
 		if stored.Status != string(deals.DealOpen) {
 			return plan, migration.Why(migration.ReasonDealAlreadyClosed), nil
 		}
 		move.LostReason = importString(fields, dealTargetLostReason)
+	}
+	if why, refused := w.dealRefusal(w.cols.deals.RefuseOutsidePipeline(stored.PipelineID, plan.patch.Deal.CustomFields), fields); refused {
+		return plan, why, nil
 	}
 	if w.staysOpenOnPastDate(fields, plan.patch, stored) {
 		return plan, migration.Why(migration.ReasonCloseDatePast, "value", fields[dealTargetCloseDate]), nil

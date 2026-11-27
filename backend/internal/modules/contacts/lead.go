@@ -220,21 +220,21 @@ func insertLeadRow(ctx context.Context, tx pgx.Tx, in CreateLeadInput, active []
 	fixed := []any{
 		id, in.FullName, in.Email, in.Title, in.CompanyName, foldedCompanyKey(in.CandidateCompanyKey),
 		in.LinkedInURL, in.Status, fit.Score, in.OwnerID, in.ProjectID, in.SourceSystem, in.SourceID, in.Source, by,
-		in.Phone, in.Origin, in.OriginDetail, leadEmailDomain(in.Email), in.Industry, in.OwnerID, in.PartnerCompanyID,
-		in.ProductID,
+		in.Phone, in.Origin, storedArrivalOrigin(in.Origin), in.OriginDetail, leadEmailDomain(in.Email), in.Industry, in.OwnerID,
+		in.PartnerCompanyID, in.ProductID,
 	}
 	holders := strings.Split(storekit.Placeholders(fixed), ",")
 	// The email is the third bind: lower() holds the dedupe key's spelling at the column, whatever door wrote it.
 	holders[2] = "lower(" + holders[2] + ")"
 	authorCols, authorHolders, base := storekit.AuthorInsertFragments(in.Author, fixed)
-	cfCols, cfHolders, args, err := storekit.InsertFragments(active, in.CustomFields, base)
+	cfCols, cfHolders, args, err := storekit.InsertFragmentsIn(ctx, tx, active, in.CustomFields, base)
 	if err != nil {
 		return ids.LeadID{}, err
 	}
 	_, err = tx.Exec(ctx,
 		`INSERT INTO lead (id, full_name, email, title, company_name, candidate_company_key,
 		                   linkedin_url, status, score, owner_id, project_id, source_system, source_id, source, captured_by,
-		                   phone, origin, origin_detail, email_domain_folded, `+leadIndustryField+`, `+arrivalOwnerColumn+`, `+leadPartnerField+`, `+leadProductField+authorCols+cfCols+`)
+		                   phone, origin, arrival_origin, origin_detail, email_domain_folded, `+leadIndustryField+`, `+arrivalOwnerColumn+`, `+leadPartnerField+`, `+leadProductField+authorCols+cfCols+`)
 		 VALUES (`+strings.Join(holders, ", ")+authorHolders+cfHolders+`)`,
 		args...)
 	if err != nil {
@@ -267,6 +267,11 @@ func normalizedCreateLeadInput(in CreateLeadInput) (CreateLeadInput, error) {
 	}
 	if _, err := parseWritableLeadStatus(in.Status); err != nil {
 		return CreateLeadInput{}, err
+	}
+	if in.FullName != nil {
+		if err := requireNameWithin(contactNameColumn, *in.FullName); err != nil {
+			return CreateLeadInput{}, err
+		}
 	}
 	if in.Email != nil {
 		parsed, err := values.ParseEmail(*in.Email)
@@ -301,17 +306,6 @@ func normalizedCreateLeadInput(in CreateLeadInput) (CreateLeadInput, error) {
 			"send at least one of full_name, email, phone, linkedin_url or company_name")
 	}
 	return in, nil
-}
-
-// hasLeadIdentity reports whether a lead names someone: a row with none of
-// these fields could never be recognised, worked or matched.
-func hasLeadIdentity(in CreateLeadInput) bool {
-	for _, field := range []*string{in.FullName, in.Email, in.Phone, in.LinkedInURL, in.CompanyName} {
-		if field != nil && strings.TrimSpace(*field) != "" {
-			return true
-		}
-	}
-	return false
 }
 
 // replayedLead resolves the (source_system, source_id) idempotency key:

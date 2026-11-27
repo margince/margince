@@ -26,8 +26,6 @@ import (
 
 var frontendAcquisitionKinds = filepath.Join(repoRoot, "frontend", "src", "lib", "acquisitionkinds.ts")
 
-var tsCommentInAcquisitionKinds = regexp.MustCompile(`(?s)//[^\n]*|/\*.*?\*/`)
-
 // Any quote style counts, so an entry spelled another way is still read.
 var tsQuotedEntry = regexp.MustCompile("\"([^\"]*)\"|'([^']*)'|`([^`]*)`")
 
@@ -51,8 +49,8 @@ func TestTheFrontendAcquisitionKindsMatchTheGoVocabulary(t *testing.T) {
 // AcquiredUnknownLegacy, so a kind added there under any name is counted.
 func goAcquisitionKinds(t *testing.T) map[string]bool {
 	t.Helper()
-	path := filepath.Join(repoRoot, "backend", "internal", "modules", "contacts", "acquisition.go")
-	file, err := parser.ParseFile(token.NewFileSet(), path, nil, parser.SkipObjectResolution)
+	path := filepath.Join("internal", "modules", "contacts", "acquisition.go")
+	file, err := gatekit.ParseFile(path, parser.SkipObjectResolution)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", path, err)
 	}
@@ -122,7 +120,7 @@ func tsAcquisitionKinds(t *testing.T) map[string]bool {
 	if end < 0 {
 		t.Fatalf("%s: ACQUISITION_KINDS is not closed by `] as const`", frontendAcquisitionKinds)
 	}
-	body = tsCommentInAcquisitionKinds.ReplaceAllString(body[:end], " ")
+	body = gatekit.TSWithoutComments(body[:end])
 	kinds := map[string]bool{}
 	for _, match := range tsQuotedEntry.FindAllStringSubmatch(body, -1) {
 		kinds[match[1]+match[2]+match[3]] = true

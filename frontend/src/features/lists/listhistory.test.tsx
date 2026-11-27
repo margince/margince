@@ -7,6 +7,8 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { formatDateTimeAbbrev } from "../../format/format";
+import { browserZone } from "../../format/timezone";
 import { en } from "../../i18n/en";
 import type { ListHistoryEntry } from "../../lib/lists.queries";
 import {
@@ -50,6 +52,15 @@ describe("ListHistoryPanel", () => {
       await screen.findByRole("button", { name: "MiTek" }),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Krones" })).toBeInTheDocument();
+  });
+
+  it("dates a change in the short form with its time", async () => {
+    panel(liveHistory);
+    expect(
+      await screen.findByText(
+        formatDateTimeAbbrev(liveHistory[0].occurred_at, "en", browserZone()),
+      ),
+    ).toBeInTheDocument();
   });
 
   it("says what a revision changed, the filter before and after in words", async () => {

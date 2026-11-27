@@ -24,7 +24,7 @@ var definitions = map[string]Definition{
 		Arguments: []string{argumentText},
 	},
 	"commitment.explanation": {
-		Words:     langcopy.Phrase{En: "Promiser: %s. Commitment in the email “%s”, sent %s.", De: "Zugesagt von: %s. Zusage in der E-Mail „%s“, gesendet am %s.", Vi: "Người cam kết: %s. Cam kết trong email “%s”, gửi ngày %s."},
+		Words:     langcopy.Phrase{En: "%s promised this in the email “%s”, sent %s.", De: "%s hat das in der E-Mail „%s“ vom %s zugesagt.", Vi: "%s đã hứa điều này trong email “%s”, gửi ngày %s."},
 		Arguments: []string{argumentText, argumentText, argumentDate},
 	},
 	"lead.reply":                               {Words: langcopy.Phrase{En: "Review qualification for %s", De: "Qualifizierung von %s prüfen", Vi: "Xem xét điều kiện của %s"}, Arguments: []string{argumentText}},
@@ -93,6 +93,7 @@ var definitions = map[string]Definition{
 	"assurance.finding.no_economic_buyer":  {Words: langcopy.Phrase{En: "nobody who can sign has been identified", De: "niemand mit Unterschriftsbefugnis bekannt ist", Vi: "chưa xác định được người có quyền ký"}, Arguments: []string{}},
 	"assurance.finding.commit_unpriced":    {Words: langcopy.Phrase{En: "the deal has no amount", De: "der Deal keinen Betrag hat", Vi: "deal chưa có giá trị"}, Arguments: []string{}},
 	"assurance.finding.stage_exit_unmet":   {Words: langcopy.Phrase{En: "the stage's exit criteria are not met", De: "die Ausstiegskriterien der Phase nicht erfüllt sind", Vi: "chưa đáp ứng tiêu chí để rời giai đoạn"}, Arguments: []string{}},
+	"assurance.finding.duplicate_motion":   {Words: langcopy.Phrase{En: "this deal looks like another open deal of the same account", De: "dieser Deal einem anderen offenen Deal desselben Kunden gleicht", Vi: "deal này giống một deal đang mở khác của cùng khách hàng"}, Arguments: []string{}},
 	"assurance.why":                        {Words: langcopy.Phrase{En: "Margince's nightly forecast check found that %s.", De: "Die nächtliche Prognoseprüfung hat festgestellt, dass %s.", Vi: "Kiểm tra dự báo hằng đêm của Margince phát hiện %s."}, Arguments: []string{argumentText}},
 	"assurance.why_more":                   {Words: langcopy.Phrase{En: "Margince's nightly forecast check found that %s, plus %d more on this deal.", De: "Die nächtliche Prognoseprüfung hat festgestellt, dass %s, und %d weitere Punkte bei diesem Deal.", Vi: "Kiểm tra dự báo hằng đêm của Margince phát hiện %s, cùng %d điểm khác ở deal này."}, Arguments: []string{argumentText, argumentCount}},
 }

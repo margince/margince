@@ -118,7 +118,7 @@ const (
 	textValueDetail = "{value:q}: {detail}"
 )
 
-var reasonCatalog = withRecordIDReasons(withUndoReasons(withActivityReasons(withDealReasons(map[ReasonCode]reasonEntry{
+var reasonCatalog = withWillDropReasons(withCellReasons(withRecordIDReasons(withUndoReasons(withActivityReasons(withDealReasons(map[ReasonCode]reasonEntry{
 	ReasonEmployerRefused: {text: map[textlang.Lang]string{
 		textlang.English:    "The employer could not be resolved. Choose an unambiguous company that you may link.",
 		textlang.German:     "Der Arbeitgeber konnte nicht zugeordnet werden. Wählen Sie ein eindeutiges Unternehmen, das Sie verknüpfen dürfen.",
@@ -282,7 +282,7 @@ var reasonCatalog = withRecordIDReasons(withUndoReasons(withActivityReasons(with
 	}},
 	ReasonIDNotVisible: {params: []string{paramValue}, text: map[textlang.Lang]string{
 		textlang.English:    "No company you can see has the id “{value}”. It may have been archived or merged away, or come from a different system.",
-		textlang.German:     "Kein Unternehmen, das Sie sehen können, hat die ID {value:q}. Es kann archiviert oder zusammengeführt worden sein oder zu einem Arbeitsbereich gehören, aus dem diese Datei nicht stammt.",
+		textlang.German:     "Kein Unternehmen, das Sie sehen können, hat die ID {value:q}. Es kann archiviert oder zusammengeführt worden sein oder aus einem anderen System stammen.",
 		textlang.Vietnamese: "Không có công ty nào bạn nhìn thấy có mã {value:q}. Có thể nó đã được lưu trữ, gộp, hoặc thuộc về một không gian làm việc mà tệp này không đến từ đó.",
 	}},
 	ReasonRefTakenByAnotherCompany: {params: []string{paramRef}, text: map[textlang.Lang]string{
@@ -345,10 +345,10 @@ var reasonCatalog = withRecordIDReasons(withUndoReasons(withActivityReasons(with
 		textlang.German:     "{value:q} kann nicht gelesen werden: Für dieses Währungsfeld ist keine Währung eingestellt.",
 		textlang.Vietnamese: "Không đọc được {value:q}: trường tiền tệ này chưa đặt đơn vị tiền.",
 	}},
-	ReasonNotAnAmount: {params: []string{paramValue, "currency"}, text: map[textlang.Lang]string{
-		textlang.English:    "“{value}” is not an amount in {currency}. Write it like 12000.50.",
-		textlang.German:     "{value:q} ist kein Betrag in {currency}. Schreiben Sie ihn so: 12000.50",
-		textlang.Vietnamese: "{value:q} không phải số tiền bằng {currency}. Hãy viết như 12000.50.",
+	ReasonNotAnAmount: {params: []string{paramValue, paramCurrency, paramExample}, text: map[textlang.Lang]string{
+		textlang.English:    "“{value}” is not an amount in {currency}. Write it like {example}.",
+		textlang.German:     "{value:q} ist kein Betrag in {currency}. Schreiben Sie ihn so: {example}",
+		textlang.Vietnamese: "{value:q} không phải số tiền bằng {currency}. Hãy viết như {example}.",
 	}},
 	ReasonNotYesNo: {params: []string{paramValue}, text: map[textlang.Lang]string{
 		textlang.English:    "“{value}” is not yes or no.",
@@ -411,8 +411,8 @@ var reasonCatalog = withRecordIDReasons(withUndoReasons(withActivityReasons(with
 		textlang.Vietnamese: "Cột công ty để trống nên hàng không nêu nhà tuyển dụng nào.",
 	}},
 	ReasonEmployerNotFound: {params: []string{paramName}, text: map[textlang.Lang]string{
-		textlang.English:    "No company named “{name}” is in the CRM, so there was nothing to link this contact to.",
-		textlang.German:     "Im CRM gibt es kein Unternehmen namens {name:q}, daher gab es nichts, womit dieser Kontakt verknüpft werden konnte.",
+		textlang.English:    "No company named “{name}” is in the CRM, so there is nothing to link this contact to.",
+		textlang.German:     "Im CRM gibt es kein Unternehmen namens {name:q}, daher gibt es nichts, womit dieser Kontakt verknüpft werden kann.",
 		textlang.Vietnamese: "Không có công ty nào tên {name:q} trong CRM nên không có gì để liên kết liên hệ này.",
 	}},
 	ReasonCannotEditAndTag: {params: []string{paramPlural}, text: map[textlang.Lang]string{
@@ -436,8 +436,8 @@ var reasonCatalog = withRecordIDReasons(withUndoReasons(withActivityReasons(with
 		textlang.Vietnamese: "Cột công ty để trống nên hàng không nêu nhà tuyển dụng nào. Hàng đã được nhập mà không có liên kết.",
 	}},
 	ReasonEmployerNotFoundDropped: {params: []string{paramName}, text: map[textlang.Lang]string{
-		textlang.English:    "No company named “{name}” is in the CRM, so there was nothing to link this contact to. The row was imported without the link.",
-		textlang.German:     "Im CRM gibt es kein Unternehmen namens {name:q}, daher gab es nichts, womit dieser Kontakt verknüpft werden konnte. Die Zeile wurde ohne Verknüpfung importiert.",
+		textlang.English:    "No company named “{name}” is in the CRM, so there is nothing to link this contact to. The row was imported without the link.",
+		textlang.German:     "Im CRM gibt es kein Unternehmen namens {name:q}, daher gibt es nichts, womit dieser Kontakt verknüpft werden kann. Die Zeile wurde ohne Verknüpfung importiert.",
 		textlang.Vietnamese: "Không có công ty nào tên {name:q} trong CRM nên không có gì để liên kết liên hệ này. Hàng đã được nhập mà không có liên kết.",
 	}},
 	ReasonAuthorTooLong: {params: []string{paramMax}, text: map[textlang.Lang]string{
@@ -490,4 +490,4 @@ var reasonCatalog = withRecordIDReasons(withUndoReasons(withActivityReasons(with
 		textlang.German:     "Der Datensatz konnte nicht zurückgenommen werden.",
 		textlang.Vietnamese: "Không thể hoàn tác bản ghi này.",
 	}},
-}))))
+}))))))

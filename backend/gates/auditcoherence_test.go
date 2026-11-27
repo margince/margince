@@ -5,23 +5,14 @@
 
 package gates
 
-// The audit_log action and actor_type vocabularies in crm.yaml match the
-// table's CHECK constraints. crm.yaml's
-// AuditLogEntry.action / .actor_type are duplicated as Postgres CHECK
-// constraints (audit_log_action_check / audit_log_actor_type_check), the
-// effective set being the highest-numbered migration that re-states each.
-// When the two copies drift, an action the contract defines and code emits
-// (e.g. send_email) is rejected by the DB at write time — a latent
-// audit-integrity bug that only a real INSERT surfaces.
+// The audit_log actor_type vocabulary in crm.yaml matches the table's CHECK
+// constraint. The effective set is the highest-numbered migration that
+// re-states it. When the two drift, the DB rejects an actor the contract
+// defines at write time. Only a real INSERT surfaces that audit-integrity bug.
 //
-// enumsync_test.go pins the columns backed by a Go enum type; audit_log's
-// action/actor_type carry no such type (they are written as string
-// literals), so this test is their coherence floor. crm.yaml is the source
-// of truth (P3): the contract set and the DDL CHECK must agree, with one
-// sanctioned asymmetry — auditActionDBOnly records verbs the DDL allows
-// ahead of the contract. That waiver is a ratchet: a waived verb must be in
-// the DDL and absent from the contract, so when the spec adopts it the entry
-// has to be removed or this test fails.
+// The action column is bound in enumsync_test.go to contracts.AuditAction,
+// which is generated from crm.yaml. actor_type is an inline enum with no
+// generated type of its own, so this test is its coherence floor.
 //
 // The contract is read by text scan, not a YAML library: the root
 // fitness-test package stays free of parser deps (the arch-lint boundary),
@@ -36,66 +27,25 @@ import (
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-// auditActionDBOnly: verbs the audit_log_action_check CHECK allows that the
-// contract does not (yet) define. Each carries a one-line reason.
-//
-// Empty, and the ratchet below is what keeps it that way: an entry must be in
-// the DDL and absent from the contract, so adopting a verb upstream forces its
-// removal. `resolve` was the last occupant — in the DDL since 0047 and
-// contract-side only from 0287, where the statutory-retention verbs closed the
-// same gap for `restrict` and `pin`.
-var auditActionDBOnly = gatekit.Waive(map[string]string{})
-
 func TestAuditLogEnumCoherence(t *testing.T) {
 	t.Parallel()
-	defer auditActionDBOnly.AssertAllMatched(t)
-	contractAction, contractActorType := auditLogContractEnums(t)
-	ddl := tableCheckSets(t) // reused from enumsync_test.go (last-wins over migrations)
-
-	cases := []struct {
-		column   string
-		contract []string
-		dbOnly   *gatekit.Waivers[string]
-	}{
-		{"audit_log.action", contractAction, auditActionDBOnly},
-		{"audit_log.actor_type", contractActorType, nil},
+	contract := auditLogContractActorType(t)
+	const column = "audit_log.actor_type"
+	got, ok := checkVocabularies(t)[column]
+	if !ok {
+		t.Fatalf("%s: no CHECK vocabulary found in the head catalog", column)
 	}
-
-	for _, c := range cases {
-		got, ok := ddl[c.column]
-		if !ok {
-			t.Errorf("%s: no CHECK (col IN (...)) constraint found in migrations", c.column)
-			continue
+	ddlSet, conSet := auditStrSet(got), auditStrSet(contract)
+	// Every contract value must be a legal DB value, else code that emits it
+	// would 500 at INSERT.
+	for _, v := range contract {
+		if _, ok := ddlSet[v]; !ok {
+			t.Errorf("%s: contract defines %q but the DDL CHECK rejects it — a write of this actor would 500; widen the CHECK in a new migration to match crm.yaml", column, v)
 		}
-		ddlSet := auditStrSet(got)
-		conSet := auditStrSet(c.contract)
-
-		// Direction 1 (dangerous): every contract value must be a legal DB
-		// value, else code that emits it would 500 at INSERT.
-		for _, v := range c.contract {
-			if _, ok := ddlSet[v]; !ok {
-				t.Errorf("%s: contract defines %q but the DDL CHECK rejects it — a write of this action would 500; widen the CHECK in a new migration to match crm.yaml", c.column, v)
-			}
-		}
-		// Direction 2: every DB value must be defined by the contract, unless
-		// explicitly waived as a DB-only verb.
-		for _, v := range got {
-			if _, ok := conSet[v]; ok {
-				continue
-			}
-			if c.dbOnly.Waived(t, v) {
-				continue
-			}
-			t.Errorf("%s: DDL CHECK allows %q but the contract does not define it — add it to crm.yaml (P3), or record it in auditActionDBOnly with a reason", c.column, v)
-		}
-		// The waiver is a ratchet: a waived verb must genuinely be DB-only.
-		for _, v := range c.dbOnly.Subjects() {
-			if _, ok := ddlSet[v]; !ok {
-				t.Errorf("%s: stale waiver %q — no DDL CHECK allows it; remove it from auditActionDBOnly", c.column, v)
-			}
-			if _, ok := conSet[v]; ok {
-				t.Errorf("%s: stale waiver %q — the contract now defines it; remove it from auditActionDBOnly", c.column, v)
-			}
+	}
+	for _, v := range got {
+		if _, ok := conSet[v]; !ok {
+			t.Errorf("%s: DDL CHECK allows %q but the contract does not define it — add it to crm.yaml (P3)", column, v)
 		}
 	}
 }
@@ -114,10 +64,10 @@ func TestAuditLogEnumCoherence(t *testing.T) {
 // So this reads the tree the way the other direction reads the migrations.
 func TestEveryAuditVerbTheCodeWritesIsLegal(t *testing.T) {
 	t.Parallel()
-	ddl := tableCheckSets(t)
+	ddl := checkVocabularies(t)
 	allowed, ok := ddl["audit_log.action"]
 	if !ok {
-		t.Fatal("audit_log.action: no CHECK (col IN (...)) constraint found in migrations")
+		t.Fatal("audit_log.action: no CHECK vocabulary found in the head catalog")
 	}
 	allowedSet := auditStrSet(allowed)
 
@@ -155,9 +105,9 @@ func TestEveryAuditVerbTheCodeWritesIsLegal(t *testing.T) {
 	}
 }
 
-// auditLogContractEnums returns the audit log's sorted action and actor_type
-// enums. AuditLogEntry and AuditHistoryEntry must both $ref AuditAction.
-func auditLogContractEnums(t *testing.T) (action, actorType []string) {
+// auditLogContractActorType returns the audit log's sorted actor_type enum.
+// AuditLogEntry and AuditHistoryEntry must both $ref AuditAction.
+func auditLogContractActorType(t *testing.T) []string {
 	t.Helper()
 	raw, err := gatekit.ReadFile("api/crm.yaml")
 	if err != nil {
@@ -172,17 +122,12 @@ func auditLogContractEnums(t *testing.T) (action, actorType []string) {
 				"drifts from the one the CHECK is held to", reader)
 		}
 	}
-
-	am := regexp.MustCompile(`(?m)^\s+enum:\s*\[([^\]]*)\]`).FindStringSubmatch(schemaBlock(t, doc, "AuditAction"))
-	if am == nil {
-		t.Fatal("contract: AuditAction enum not found")
-	}
 	// actor_type: an inline flow-mapping enum on the actor_type line.
 	tm := regexp.MustCompile(`actor_type:[^\n]*enum:\s*\[([^\]]*)\]`).FindStringSubmatch(block)
 	if tm == nil {
 		t.Fatal("contract: AuditLogEntry.actor_type enum not found")
 	}
-	return splitEnumList(am[1]), splitEnumList(tm[1])
+	return splitEnumList(tm[1])
 }
 
 // schemaBlock returns the text of a components.schemas.<name> block: from its

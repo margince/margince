@@ -215,7 +215,7 @@ func Write(
 	if lane == nil {
 		return floor, crmcontracts.WrittenByDeterministic
 	}
-	written, err := writeChecked(ctx, lane, surface, in, voice)
+	written, err := writeChecked(ai.WithFloor(ctx), lane, surface, in, voice)
 	if err != nil {
 		// The error is deliberately swallowed rather than returned — it is a
 		// fact about the lane, not about the record, and there is nothing the
@@ -283,7 +283,7 @@ func writeWithModel(
 	return ParseDraft(surface, res.Text, in)
 }
 
-// BuildRequest assembles the model call: the fenced record, the voice block,
+// BuildRequest assembles the model call: the fenced record, the team rules and voice blocks,
 // the caller's steering, and this surface's prompt and schema.
 func BuildRequest(surface Surface, in Input, voice draftvoice.Context) (model.Request, error) {
 	fence := promptfence.New()
@@ -292,8 +292,8 @@ func BuildRequest(surface Surface, in Input, voice draftvoice.Context) (model.Re
 		return model.Request{}, err
 	}
 	content := fence.Wrap(shown)
-	if block := voice.Block(fence); block != "" {
-		content += "\n\n" + block
+	if preamble := voice.Preamble(fence); preamble != "" {
+		content += "\n\n" + preamble
 	}
 	if steering := in.Steering(); steering != "" {
 		content += "\n\nThe salesperson asks for: " + steering

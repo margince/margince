@@ -3,8 +3,9 @@
 
 package compose
 
-// The core's half of the published system reads. They run as the invocation's
-// system actor, so no grant narrows them. systemRead is what makes that safe:
+// The core's half of the published system reads that take no actAs. They run as
+// the invocation's system actor, so no grant narrows them; extsystemseatdeals.go
+// holds their seat-bound forms. systemRead is what makes that safe:
 // they answer only on a job tick or a bus delivery, where no caller receives the
 // answer. CanRead then answers under one colleague's own grants and masks, and
 // so may also answer a signed-in human about themselves.
@@ -25,6 +26,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/companyscan"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -205,17 +207,18 @@ func readDealSummary(ctx context.Context, pool *pgxpool.Pool, id ids.UUID) (exte
 	out := extension.DealSummary{ID: id.String()}
 	var (
 		owner      *ids.UUID
+		mergedInto string
 		archivedAt *time.Time
 	)
 	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
 			SELECT d.name, s.name, d.status, d.amount_minor, d.currency, d.expected_close_date,
-			       d.owner_id, d.archived_at
+			       d.owner_id, d.archived_at, COALESCE(d.merged_into_id::text, '')
 			  FROM deal d
 			  JOIN stage s ON s.id = d.stage_id
 			 WHERE d.id = $1`, id).
 			Scan(&out.Name, &out.StageName, &out.Status, &out.AmountMinor, &out.Currency, &out.ExpectedClose,
-				&owner, &archivedAt)
+				&owner, &archivedAt, &mergedInto)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return extension.DealSummary{}, extension.ErrNotFound
@@ -230,6 +233,7 @@ func readDealSummary(ctx context.Context, pool *pgxpool.Pool, id ids.UUID) (exte
 		out.AmountDisplay = mailcopy.For(string(mailcopy.English)).Money(*out.AmountMinor, *out.Currency)
 	}
 	out.Archived = archivedAt != nil
+	out.MergedIntoID = mergedInto
 	return out, nil
 }
 
@@ -247,13 +251,14 @@ const dealResponsibleQuery = `
 func readDealResponsible(ctx context.Context, pool *pgxpool.Pool, id ids.UUID) ([]extension.Responsible, error) {
 	var out []extension.Responsible
 	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
-		var exists bool
-		if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM deal WHERE id = $1)`, id).Scan(&exists); err != nil {
-			return err
-		}
-		if !exists {
+		survivor, err := deals.FollowMergeTx(ctx, tx, id)
+		if errors.Is(err, pgx.ErrNoRows) {
 			return extension.ErrNotFound
 		}
+		if err != nil {
+			return err
+		}
+		id = survivor
 		rows, err := tx.Query(ctx, fmt.Sprintf(dealResponsibleQuery, workforce.LiveMemberSQL("u"), storekit.DealTeamSQL("d", "u.id")),
 			id, extension.MaxResponsible)
 		if err != nil {
@@ -286,11 +291,8 @@ func (a systemAuthority) CanRead(ctx context.Context, user extension.UserID, rec
 	if err != nil {
 		return false, err
 	}
-	known := dealFieldNames()
-	for _, field := range fields {
-		if !slices.Contains(known, field) {
-			return false, fmt.Errorf("%w: a deal has no field %q", extension.ErrInvalid, field)
-		}
+	if err := knownDealFields(fields); err != nil {
+		return false, err
 	}
 	if err := a.rt.traceSystemRead(ctx, extension.SystemReadAuthority, record.Type, record.ID); err != nil {
 		return false, err
@@ -426,17 +428,9 @@ func (d systemDirectory) Emails(ctx context.Context, users []extension.UserID) (
 	if err != nil {
 		return nil, err
 	}
-	if len(users) > extension.MaxResponsible {
-		return nil, fmt.Errorf("%w: %d users in one call, and the most is %d",
-			extension.ErrInvalid, len(users), extension.MaxResponsible)
-	}
-	wanted := make([]ids.UUID, 0, len(users))
-	for _, user := range users {
-		id, err := unitID(string(user), "user")
-		if err != nil {
-			return nil, err
-		}
-		wanted = append(wanted, id)
+	wanted, err := colleagueIDs(users)
+	if err != nil {
+		return nil, err
 	}
 	if len(wanted) == 0 {
 		return map[extension.UserID]string{}, nil

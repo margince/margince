@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/analytics/handoffassignee.tsx backend/internal/compose/memberhandoff/handlers.go frontend/src/features/settings/users-handover.tsx backend/internal/compose/handover.go frontend/src/features/settings/users-rolecell.tsx backend/internal/modules/capture/captureauthority.go frontend/src/features/settings/users-admin.tsx frontend/src/features/settings/users-memberverbs.tsx backend/internal/modules/identity/invitemail.go frontend/src/features/settings/roles-settings.tsx frontend/src/features/records/share.body.tsx backend/internal/modules/identity/internal/policy/defaults.go backend/internal/modules/identity/memberedit.go backend/internal/modules/identity/memberretirement.go backend/internal/modules/identity/seatceiling.go backend/internal/modules/identity/invite.go backend/internal/platform/auth/rowscope.go backend/internal/platform/auth/attachscope.go backend/internal/platform/auth/fieldmask.go backend/internal/modules/identity/roster.go frontend/src/components/recordteamassign.tsx backend/internal/modules/assignments/assignments_read.go backend/internal/modules/identity/ownercarry.go backend/internal/modules/contacts/contactcasesettings.go backend/internal/modules/contacts/contactcasedecide.go frontend/src/features/settings/sharedmergereviews.tsx backend/internal/modules/contacts/duplicatepairmerge.go frontend/src/app/licensebanner.tsx -->
+<!-- describes: frontend/src/features/analytics/handoffassignee.tsx backend/internal/compose/memberhandoff/handlers.go frontend/src/features/settings/users-handover.tsx backend/internal/compose/handover.go frontend/src/features/settings/users-rolecell.tsx backend/internal/modules/capture/captureauthority.go frontend/src/features/settings/users-admin.tsx frontend/src/features/settings/users-memberverbs.tsx backend/internal/modules/identity/invitemail.go frontend/src/features/settings/roles-settings.tsx frontend/src/features/records/share.body.tsx backend/internal/modules/identity/internal/policy/defaults.go backend/internal/modules/identity/memberedit.go backend/internal/modules/identity/memberretirement.go backend/internal/modules/identity/membermerge.go backend/internal/modules/identity/seatceiling.go backend/internal/modules/identity/invite.go backend/internal/platform/auth/rowscope.go backend/internal/platform/auth/attachscope.go backend/internal/platform/auth/fieldmask.go backend/internal/modules/identity/roster.go frontend/src/components/recordteamassign.tsx backend/internal/modules/assignments/assignments_read.go backend/internal/modules/identity/ownercarry.go backend/internal/modules/contacts/contactcasesettings.go backend/internal/modules/contacts/contactcasedecide.go frontend/src/features/settings/sharedmergereviews.tsx backend/internal/modules/contacts/duplicatepairmerge.go frontend/src/app/licensebanner.tsx -->
 # Seats, roles and who can see what
 
 What you can do in Margince is decided by three things, and one cannot stand in for another:
@@ -60,11 +60,11 @@ You cannot remove your own account or the last active admin. Removal cannot be u
 
 ### How do I merge duplicate accounts for the same colleague?
 
-Open the duplicate account's actions menu and choose **Merge duplicate**. Select the **Account to keep**, review the work and items, then confirm.
-The source must be an imported or invited account that has never been used to sign in. You cannot select your own account as the account to keep. The duplicate leaves the member list.
+Open the duplicate account's actions menu and choose **Merge duplicate**. Select the **Account to keep**, review the work and items, then confirm. You cannot select your own account as the account to keep. The duplicate leaves the member list. An account nobody has used (no password, no sign-in, no linked sign-in provider) merges at once. The editor of the account that stays lists the accounts merged into it.
 
-The surviving account keeps its name, email, roles, teams and sign-in settings, and retains the original account’s private records and mail. Connected accounts must be reconnected under the surviving member. Use this only for two accounts belonging to the same colleague. If the account you keep is deactivated, reactivate it after merging.
-The surviving member's editor lists the accounts merged into it. The original names stay in history.
+A used account merges only after confirmation. Pick the account to keep, then choose **Ask for confirmation**. Each of the two holders gets a link by email. The link signs nobody in and works once, for three days. When both have confirmed, the dialog lets you merge. A deactivated account needs no confirmation because its holder cannot give one, so two deactivated accounts merge on your say alone.
+
+You are never one of the two accounts, and two active accounts never merge on your say alone. The password, linked sign-in providers and second factor of the merged account do not move. Connected mailboxes are disconnected, and the account that stays connects its own. When an account cannot be merged, **Merge duplicate** stays in the menu greyed out, and the menu says why. The account that stays keeps its name, email, roles, teams and sign-in settings, and retains the original account’s private records and mail. If the account you keep is deactivated, reactivate it after merging.
 
 ### How do I reactivate a deactivated user?
 To bring back a colleague you deactivated, open **Settings → Members**. Open the **Actions for {name}** menu on their row and choose **Reactivate**.
@@ -160,11 +160,11 @@ Margince comes with six roles: Admin, Ops, Management, Team lead, User and Read-
 | Role | Sees | Changes |
 |---|---|---|
 | **Admin** | every normal record, and all settings | everything, settings included |
-| **Ops** | every normal record, and all settings | most of the daily work, but not members, teams, the audit log, the privacy list or a reset |
+| **Ops** | every normal record, and all settings except **Members**, **Audit log** and **Reset data** | most of the daily work, but not members, teams, the audit log, the privacy list or a reset |
 | **Management** | every record in the company | every record; no admin rights |
 | **Team lead** | records | records owned by anyone on a live team with them; settings read-only; no access to exchange rates, AI prices, imports or retention |
-| **User** | records | records they own; settings read-only; all of their own saved views |
-| **Read-only** | every record and most settings | nothing, except their own saved views; cannot connect a mailbox |
+| **User** | records, and these settings read-only: the rest of the sales settings, **Knowledge** and **Teams** | records they own; their own settings, **Products and offers** and **Mail capture** (adding only); all of their own saved views |
+| **Read-only** | every record, and these settings read-only: **Writing voice**, **Teams**, the sales settings, **Mail capture** and **Knowledge** | no records; their own **Account**, **Notifications**, **AI assistants** and **Connections** settings, and their own saved views; cannot connect a mailbox |
 
 This is the biggest difference between Admin and Ops: **Ops cannot manage members or teams.** It also cannot read the audit log or the privacy list, or reset the installation. It reads the list of roles but does not edit it. Everything else in daily running belongs to Ops.
 

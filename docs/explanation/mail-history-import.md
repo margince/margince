@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/modules/capture/backfill.go backend/internal/modules/capture/backfillpager.go backend/internal/modules/capture/backfillcheckpoint.go backend/internal/modules/capture/backfillyields.go backend/internal/modules/capture/gmail/backfill.go backend/internal/modules/capture/graph/backfill.go backend/internal/compose/costestimate backend/internal/compose/backfilltransport.go frontend/src/features/capture/backfill.tsx backend/internal/modules/capture/mailcoverage.go backend/internal/modules/capture/syncstate.go backend/internal/modules/capture/syncsnapshot.go backend/internal/modules/capture/registry.go backend/internal/modules/capture/registry_connections.go backend/internal/compose/mailcapturecoverageseam.go backend/internal/compose/mailcoverage/coverage.go backend/internal/modules/capture/backfillaccount.go backend/internal/modules/capture/backfillresume.go backend/internal/modules/capture/internalmailhistorystart.go backend/internal/modules/capture/registry_grant.go -->
+<!-- describes: backend/internal/modules/capture/backfill.go backend/internal/modules/capture/backfillpager.go backend/internal/modules/capture/backfillcheckpoint.go backend/internal/modules/capture/backfillyields.go backend/internal/modules/capture/gmail/backfill.go backend/internal/modules/capture/graph/backfill.go backend/internal/compose/costestimate backend/internal/compose/backfilltransport.go frontend/src/features/capture/backfill.tsx backend/internal/modules/capture/mailcoverage.go backend/internal/modules/capture/syncstate.go backend/internal/modules/capture/syncsnapshot.go backend/internal/modules/capture/registry.go backend/internal/modules/capture/registry_connections.go backend/internal/compose/mailcapturecoverageseam.go backend/internal/compose/mailcoverage/coverage.go backend/internal/modules/capture/backfillaccount.go backend/internal/modules/capture/backfillresume.go backend/internal/modules/capture/internalmailhistorystart.go backend/internal/modules/capture/registry_grant.go backend/internal/compose/capturesettings.go backend/internal/shared/ports/connector/backfilltuning.go -->
 # Mail history import: the capped scan back in time and its cost
 
 Connecting a mailbox starts *standing sync*: from then on, new mail comes in. A new connection is also
@@ -163,6 +163,27 @@ credential. The start is refused the same way (`403 role_cannot_capture`). An ad
 member a role that captures again. The next sync that works then puts the run back in the queue,
 as it does for a run a revoked credential ended.
 
+## Slow an import down
+
+Four settings pace every history import on the installation. Each one is 0 by default, and 0 keeps
+the connector's built-in value. The values and ranges are in
+[configuration.md](../reference/configuration.md).
+
+- `capture.history_page_size`: how many messages one page lists.
+- `capture.history_fetch_workers`: how many messages one page fetches at once.
+- `capture.history_lookahead`: how many messages a page may fetch before the earlier ones are
+  saved.
+- `capture.history_page_delay`: how long an import waits after it saves a page, before it starts
+  the next.
+
+When an import puts load on the database or the worker, raise `capture.history_page_delay` first.
+It spaces out the pages and leaves each page as it is. Fewer fetch workers lower the load on the
+provider and on the network of the worker, and make each page take longer. A smaller page makes each
+step of the import shorter.
+
+These four only slow an import. `capture.history_hold` stops it: queued imports wait, and no new page
+starts until the hold is off again.
+
 ## What the run learns about itself
 
 While it pages, the run measures its own yield, and that makes the *next* preview correct.
@@ -251,6 +272,19 @@ It passes no mailbox address or colleague account to the card.
 A sync that works is not proof of a complete Inbox and Sent history. Neither is a cursor or a
 finished history import. The import has a cap. Some messages can fail, and a provider can start
 again from a later point. The read cannot call that full history.
+
+A Gmail sync whose history cursor expired lists only the 50 newest messages and stores a new cursor.
+It records the span from the last good sync to the earliest message it read as the connection's
+unread span (`unread_from`, `unread_to`). The owner's connection row serves it as
+`unread_period`, beside `last_success_at` and the import's `done`, so neither reads as a complete
+mailbox. Connecting the same account again keeps the cursor and replays nothing.
+
+The recovery is a new history import whose window reaches back over the span. It reads the window
+through the same Sink as a sync. A message already captured lands on its provider key and writes no
+second activity, link, import row or audit row. Sender blocks, thread holds and audiences apply as
+on a first capture. A finished import that failed no message and reaches back over the span clears
+it (`settleUnreadPeriodTx`). `TestAHistoryImportRecoversASentFollowUpTheLostCursorLeftOut` holds
+this through the real Gmail connector.
 
 A calendar connection supplies no mail history. A reader who cannot read connections gets no claim of complete history.
 

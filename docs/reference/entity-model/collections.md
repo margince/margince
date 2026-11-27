@@ -85,11 +85,10 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 
 ## list_live_member
 
-5 columns · primary key `(list_id, entity_id)` · referenced by 0 foreign keys
+4 columns · primary key `(list_id, entity_id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
-| `definition_version` | `bigint` | yes |  |
 | `entity_id` | `uuid` | yes |  |
 | `entity_type` | `text` | yes |  |
 | `list_id` | `uuid` | yes | Points at `list.id`. |
@@ -103,7 +102,6 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 
 **Rules**
 
-- `list_live_member_definition_version_js_safe`: `CHECK (((definition_version >= '-9007199254740991'::bigint) AND (definition_version <= '9007199254740991'::bigint)))`
 - `list_live_member_entity_type_check`: `CHECK (((entity_type = ANY (ARRAY['contact', 'company', 'deal', 'lead', 'project'])) OR (entity_type ~ '^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$')))`
 
 **Indexes**
@@ -288,8 +286,8 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 
 **Indexes**
 
-- `idx_saved_view_owner`: `btree (owner_id, resource) WHERE (archived_at IS NULL)`
 - `idx_saved_view_owner_cascade`: `btree (owner_id)`
+- `saved_view_name_once`: `unique, btree (owner_id, resource, lower(btrim(name))) WHERE (archived_at IS NULL)`
 - `saved_view_pkey`: `unique, btree (id)`
 
 **Triggers**
@@ -336,13 +334,12 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 
 ## tag_interest_read
 
-5 columns · primary key `(activity_id)` · referenced by 0 foreign keys
+4 columns · primary key `(activity_id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `activity_id` | `uuid` | yes | Points at `activity.id`. |
 | `content_digest` | `text` | yes |  |
-| `read_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `tag_ids` | `uuid[]`, default `'{}'::uuid[]` | yes |  |
 | `vocabulary_digest` | `text` | yes |  |
 
@@ -363,7 +360,7 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 
 ## tag_suggestion
 
-12 columns · primary key `(id)` · referenced by 1 foreign key
+9 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -371,14 +368,11 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 | `company_id` | `uuid` |  | Points at `company.id`. |
 | `contact_id` | `uuid` |  | Points at `contact.id`. |
 | `decided_at` | `timestamp with time zone` |  |  |
-| `decided_by` | `uuid` |  | Points at `app_user.id`. |
 | `evidence_count` | `integer` | yes |  |
-| `evidence_through` | `timestamp with time zone` | yes |  |
 | `state` | `text`, default `'open'::text` | yes | One of `open`, `accepted`, `dismissed`, `superseded`. |
 | `tag_id` | `uuid` | yes | Points at `tag.id`. |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
-| `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 
 **Points at**
 
@@ -386,7 +380,6 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 |---|---|---|
 | `company_id` | `company` | deleting the parent deletes this row |
 | `contact_id` | `contact` | deleting the parent deletes this row |
-| `decided_by` | `app_user` | deleting the parent keeps this row and clears the link |
 | `tag_id` | `tag` | deleting the parent deletes this row |
 
 **Rules**
@@ -400,7 +393,6 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 
 - `idx_tag_suggestion_company`: `btree (company_id, tag_id, decided_at) WHERE (company_id IS NOT NULL)`
 - `idx_tag_suggestion_contact`: `btree (contact_id, tag_id, decided_at) WHERE (contact_id IS NOT NULL)`
-- `idx_tag_suggestion_decided_by`: `btree (decided_by) WHERE (decided_by IS NOT NULL)`
 - `idx_tag_suggestion_open`: `btree (created_at DESC, id DESC) WHERE (state = 'open')`
 - `idx_tag_suggestion_tag`: `btree (tag_id)`
 - `tag_suggestion_pkey`: `unique, btree (id)`
@@ -411,7 +403,6 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 
 - `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"state": 20000, "captured_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"state":20000}')`
 - `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"state": 20000, "captured_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"state":20000}')`
-- `trg_tag_suggestion_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at()`
 
 ## tag_suggestion_evidence
 

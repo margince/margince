@@ -120,6 +120,30 @@ func TestTheStandardContactFieldsSelectTheirRecords(t *testing.T) {
 	})
 }
 
+// A text condition ignores capitals, the spaces around the value and accents
+// whichever operator asks, as the list's search box does.
+func TestATextConditionIgnoresCapitalsSpacesAndAccents(t *testing.T) {
+	e, _ := listsApp(t, true)
+	jorg := createdID(t, e, "/v1/contacts", AnyMap{
+		"full_name": "Jörg Müller", "source": "manual", "title": "CTO",
+		"emails": []AnyMap{{"email": "jorg@textrule.example", "is_primary": true}},
+	})
+	ben := createdID(t, e, "/v1/contacts", AnyMap{
+		"full_name": "Ben Busy", "source": "manual", "title": "Engineer",
+		"emails": []AnyMap{{"email": "ben@textrule.example", "is_primary": true}},
+	})
+	expectSelects(t, e, "contact", []filterCase{
+		{leaf("title", "eq", "cto"), []string{jorg}},
+		{leaf("title", "eq", " CTO "), []string{jorg}},
+		{leaf("title", "neq", "cto"), []string{ben}},
+		{leaf("title", "in", []any{" cto", "nobody"}), []string{jorg}},
+		{leaf("name", "contains", " Muller "), []string{jorg}},
+		{leaf("name", "contains", "MÜLLER"), []string{jorg}},
+		{leaf("name", "eq", "jorg muller"), []string{jorg}},
+		{leaf("email", "eq", " JORG@textrule.example "), []string{jorg}},
+	})
+}
+
 func TestTheStandardCompanyFieldsSelectTheirRecords(t *testing.T) {
 	e, _ := listsApp(t, true)
 	quiet := createdID(t, e, "/v1/companies", AnyMap{
@@ -176,7 +200,7 @@ func TestTheStandardDealFieldsSelectTheirRecordsAndNeverMixCurrencies(t *testing
 func TestTheStandardLeadFieldsSelectTheirRecords(t *testing.T) {
 	e, _ := listsApp(t, true)
 	webinar := createdID(t, e, "/v1/leads", AnyMap{
-		"full_name": "Carla Webinar", "email": "carla@lead.example", "source": "webinar",
+		"full_name": "Carla Webinar", "email": "carla@lead.example", "source": "webform",
 	})
 	manual := createdID(t, e, "/v1/leads", AnyMap{"full_name": "Dan Manual", "source": "manual"})
 	var judged struct {
@@ -193,7 +217,7 @@ func TestTheStandardLeadFieldsSelectTheirRecords(t *testing.T) {
 		{leaf("name", "eq", "Dan Manual"), []string{manual}},
 		{leaf("email", "eq", "CARLA@lead.example"), []string{webinar}},
 		{leaf("email", "exists", false), []string{manual}},
-		{leaf("source", "eq", "webinar"), []string{webinar}},
+		{leaf("source", "eq", "webform"), []string{webinar}},
 		{leaf("score", "gte", 85), []string{webinar}},
 		{leaf("score", "gt", 85), []string{}},
 		{leaf("score", "lt", 84.5), []string{manual}},

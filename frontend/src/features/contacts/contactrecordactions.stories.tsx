@@ -76,7 +76,8 @@ function ContactMenu({
 
 const ROUTES = {
   "GET /me": meRoute({ contact: ["read", "update"] }),
-  "GET /custom-fields": () => jsonResponse({ data: [] }),
+  "GET /custom-fields": () =>
+    jsonResponse({ page: { has_more: false }, data: [] }),
 };
 
 export const OpenMenu: Story = {
@@ -118,5 +119,40 @@ export const RefusedByArchive: Story = {
   play: async () => {
     await userEvent.click(screen.getByRole("button", { name: "More actions" }));
     await screen.findByTestId("archive-record");
+  },
+};
+
+// A role that only reads: Archive names the role, since no owner can lift it.
+export const ArchiveRefusedReadOnlyRole: Story = {
+  render: () => {
+    installFetchStub({ ...ROUTES, "GET /me": meRoute({ contact: ["read"] }) });
+    return (
+      <StoryProviders>
+        <ContactMenu contact={{ ...ANNA, archivable: false }} />
+      </StoryProviders>
+    );
+  },
+  play: async () => {
+    await userEvent.click(screen.getByRole("button", { name: "More actions" }));
+    // Merge and Archive both name the role.
+    await screen.findAllByText(
+      "Your role can only read. Ask an administrator for another role.",
+    );
+  },
+};
+
+// A writing role on somebody else's contact: Archive is its owner's or a manager's.
+export const ArchiveRefusedNotYours: Story = {
+  render: () => {
+    installFetchStub(ROUTES);
+    return (
+      <StoryProviders>
+        <ContactMenu contact={{ ...ANNA, archivable: false }} />
+      </StoryProviders>
+    );
+  },
+  play: async () => {
+    await userEvent.click(screen.getByRole("button", { name: "More actions" }));
+    await screen.findByText("Only its owner or a manager can archive this.");
   },
 };

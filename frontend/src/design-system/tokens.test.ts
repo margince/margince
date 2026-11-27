@@ -6,6 +6,7 @@ import { chipInks } from "../../scripts/lib/chip-inks";
 import { declaredValues, rulesOf } from "../../scripts/lib/css-rules";
 import { CALLOUT_TONES } from "./callout";
 import {
+  channels,
   composite,
   contrastOf,
   luminance,
@@ -240,6 +241,15 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
         "--ladder4",
       ],
     } as const;
+    // Every ground a surface paints, whichever theme orders it; a tint or a
+    // control can land on any of them.
+    const grounds = [...new Set(Object.values(ladders).flat())];
+    // The tint surfaces.css mixes over a level's ground for a hovered or striped row.
+    const wash = (pal: Record<string, string>, kind: "hover" | "strip") => {
+      const [r, g, b] = channels(pal[`--${kind}Shade`]);
+      const share = Number.parseFloat(pal[`--${kind}Share`]) / 100;
+      return `rgba(${r}, ${g}, ${b}, ${share})`;
+    };
 
     for (const [theme, rungs] of Object.entries(ladders)) {
       it(`${theme}: each rung is strictly lighter than the one below it`, () => {
@@ -305,13 +315,7 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
     // surfaces.css mixes each level's hover and strip from these shades; level 1
     // must land where the page tokens stand.
     it("shades hover and strip off every level's ground, both themes", () => {
-      const wash = (hex: string, share: string) => {
-        const [r, g, b] = [1, 3, 5].map((at) =>
-          Number.parseInt(hex.slice(at, at + 2), 16),
-        );
-        return `rgba(${r}, ${g}, ${b}, ${Number.parseFloat(share) / 100})`;
-      };
-      const grounds = [
+      const levelGrounds = [
         "--bgElevated",
         "--ladder1Solid",
         "--ladder2",
@@ -320,15 +324,15 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
       ];
       const failures: string[] = [];
       for (const [theme, pal] of Object.entries(themes)) {
-        for (const kind of ["hover", "strip"]) {
-          const tint = wash(pal[`--${kind}Shade`], pal[`--${kind}Share`]);
+        for (const kind of ["hover", "strip"] as const) {
+          const tint = wash(pal, kind);
           const token = pal[`--bg${kind[0].toUpperCase()}${kind.slice(1)}`];
           const level1 = composite(tint, pal["--ladder1Solid"]);
           expect(contrastOf(level1, token), `${theme} ${kind}`).toBeLessThan(
             1.01,
           );
           const lifts = theme === "dark" && kind === "hover";
-          for (const ground of grounds) {
+          for (const ground of levelGrounds) {
             const shaded = composite(tint, pal[ground]);
             const step = contrastOf(shaded, pal[ground]);
             const lighter = luminanceOf(shaded) > luminanceOf(pal[ground]);
@@ -484,22 +488,10 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
         // it carries whatever the chip's rule sets, so every role that lands
         // on one is measured over it.
         ...chipInks.map((ink) => [ink, "--bgChip"]),
-        // A control face is translucent in dark, so it composites like a tint.
+        // A control face is a light wash in dark, so it composites like a tint.
         ["--textPrimary", "--bgControl"],
         ["--accentText", "--bgControl"],
       ] as const;
-      const grounds = [
-        "--bgPage",
-        "--bgElevated",
-        "--bgInset",
-        "--bgHover",
-        "--bgStrip",
-        "--bgWell",
-        "--ladder1Solid",
-        "--ladder2",
-        "--ladder3",
-        "--ladder4",
-      ];
       const failures: string[] = [];
       for (const [theme, pal] of Object.entries(themes)) {
         for (const [role, tint] of pairs) {
@@ -517,6 +509,85 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
       }
       expect(failures.join("\n")).toBe("");
     });
+
+    // Tinted grounds known to hold a field, named by hand: which box holds a
+    // field is a fact of the markup, not of the sheet. The warning strip holds
+    // a Select; the AI band holds the Purpose line and the language Select.
+    const washedBoxes = [".compose-strip-warning", ".compose-aiband"];
+    const composeRules = rulesOf([join(here, "../features/mail/compose.css")]);
+    const washOf = (box: string) =>
+      composeRules
+        .filter((rule) => rule.selector.trim() === box)
+        .flatMap((rule) => declaredValues(rule.body, "background"))
+        .map((value) => /^var\((--[\w-]+)\)$/.exec(value)?.[1] ?? value);
+    const fieldWashes = washedBoxes.flatMap(washOf);
+
+    // WCAG 1.4.11: a control's edge is often all that parts it from its ground.
+    // So it holds 3:1 on every ground, bare, hovered or striped, and under its face.
+    it("draws a control's border at 3:1 on every ground, both themes", () => {
+      for (const box of washedBoxes) {
+        expect(washOf(box), `${box} paints no wash`).not.toEqual([]);
+      }
+      const failures: string[] = [];
+      for (const [theme, pal] of Object.entries(themes)) {
+        const border = pal["--borderControl"];
+        expect(border, `${theme}: --borderControl missing`).toBeDefined();
+        for (const ground of [...grounds, "--bgField"]) {
+          expect(pal[ground], `${theme}: ${ground} missing`).toBeDefined();
+          const rows: [string, string][] = [
+            [ground, pal[ground]],
+            ...(["hover", "strip"] as const).map((kind): [string, string] => [
+              `${kind} over ${ground}`,
+              composite(wash(pal, kind), pal[ground]),
+            ]),
+          ];
+          // The field on a wash is filled, so the wash is measured bare.
+          const behinds = [
+            ...rows.flatMap(([named, painted]): [string, string][] => [
+              [named, painted],
+              [
+                `--bgControl over ${named}`,
+                composite(pal["--bgControl"], painted),
+              ],
+            ]),
+            ...fieldWashes.map((tint): [string, string] => [
+              `${tint} over ${ground}`,
+              composite(pal[tint], pal[ground]),
+            ]),
+          ];
+          for (const [named, behind] of behinds) {
+            const ratio = contrastOf(border, behind);
+            expect(Number.isFinite(ratio), `${theme}: ${named}`).toBe(true);
+            if (ratio < 3) {
+              failures.push(
+                `${theme}: --borderControl (${border}) on ${named} ` +
+                  `= ${ratio.toFixed(2)}:1, needs 3:1`,
+              );
+            }
+          }
+        }
+      }
+      expect(failures.join("\n")).toBe("");
+    });
+
+    // Focus doubles a field's edge in width (--focus-field); this ratio is the
+    // rest of the signal, so focus never rests on hue alone.
+    it("parts a focused field's edge from its resting edge, both themes", () => {
+      for (const [theme, pal] of Object.entries(themes)) {
+        expect(
+          pal["--focusEdge"],
+          `${theme}: --focusEdge missing`,
+        ).toBeDefined();
+        const ratio = contrastOf(pal["--focusEdge"], pal["--borderControl"]);
+        expect(
+          ratio,
+          `${theme}: --focusEdge on --borderControl`,
+        ).toBeGreaterThanOrEqual(1.5);
+      }
+      expect(normalize(light["--focus-field"])).toMatch(
+        /^0001pxvar\(--focusedge\),/,
+      );
+    });
   });
 
   // The material overlays are the ONLY non-canon literals in this file, and they
@@ -531,7 +602,7 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
     const dark = parseBlock(tokenDecls, '[data-theme="dark"]');
 
     it("lifts the accent so it reads on a dark ground", () => {
-      expect(normalize(dark["--accent"])).toBe("#16a34a");
+      expect(normalize(dark["--accent"])).toBe("#48a58f");
     });
 
     it("overrides only tokens the light theme defines — no orphan knobs", () => {
@@ -542,7 +613,7 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
 
     it("pins the dark grounds the ladder is measured from", () => {
       const dark = parseBlock(tokenDecls, '[data-theme="dark"]');
-      expect(normalize(dark["--bgPage"])).toBe("#0c1311");
+      expect(normalize(dark["--bgPage"])).toBe("#111816");
     });
 
     // A scrim sets a dialog apart by dimming the page it covers, in both
@@ -561,8 +632,8 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
     // from the light values and where the sweeps read them against near-black.
     it("pins both neutral inks", () => {
       const dark = parseBlock(tokenDecls, '[data-theme="dark"]');
-      expect(normalize(dark["--textPrimary"])).toBe("#edf6f4");
-      expect(normalize(dark["--textSecondary"])).toBe("#9aa8a3");
+      expect(normalize(dark["--textPrimary"])).toBe("#e1e8e6");
+      expect(normalize(dark["--textSecondary"])).toBe("#adb9b6");
     });
 
     it("keeps the ink field one plate in both themes", () => {

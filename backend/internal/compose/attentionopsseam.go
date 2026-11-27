@@ -144,11 +144,12 @@ func (c bookingGrantCalendar) Blocker(ctx context.Context, host ids.UserID, prov
 }
 
 func (b attentionBookingHealth) BookingConcerns(ctx context.Context) ([]attention.BookingConcern, error) {
-	concern, paused, err := b.store.BookingPageConcern(ctx)
-	if err != nil || !paused {
-		return nil, err
+	concerns, err := b.store.BookingPageConcerns(ctx)
+	out := make([]attention.BookingConcern, 0, len(concerns))
+	for _, concern := range concerns {
+		out = append(out, attention.BookingConcern{PageID: concern.PageID, Blocker: string(concern.Blocker), Title: concern.Title})
 	}
-	return []attention.BookingConcern{{PageID: concern.PageID, Blocker: string(concern.Blocker)}}, nil
+	return out, err
 }
 
 // attentionAIWork binds the AI-work-health lane to the same projection the
@@ -175,29 +176,6 @@ func (a attentionAIWork) Troubled(ctx context.Context, since time.Time, limit in
 			item.SubjectLabel = *run.SubjectLabel
 		}
 		out = append(out, item)
-	}
-	return out, nil
-}
-
-// attentionBounces binds the bounce lane to the comms store's own per-user
-// read of the stamp RecordBounce leaves; the contact-only refusal lives there.
-type attentionBounces struct{ store *comms.Store }
-
-func (b attentionBounces) HardBounces(ctx context.Context, since time.Time, limit int) ([]attention.BouncedSend, error) {
-	bounced, err := b.store.HardBouncesFor(ctx, since, limit)
-	if err != nil {
-		return nil, err
-	}
-	out := make([]attention.BouncedSend, 0, len(bounced))
-	for _, send := range bounced {
-		out = append(out, attention.BouncedSend{
-			ID:        send.ID,
-			Subject:   send.Subject,
-			Reason:    send.Reason,
-			BouncedAt: send.BouncedAt,
-			ContactID: send.ContactID,
-			Recipient: send.Recipient,
-		})
 	}
 	return out, nil
 }

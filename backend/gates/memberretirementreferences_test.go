@@ -7,7 +7,6 @@ package gates
 
 import (
 	"go/ast"
-	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -42,11 +41,8 @@ func TestEveryMemberForeignKeyHasARetirementPolicy(t *testing.T) {
 		policies[name] = readMemberGuard(t, entry.Value, constants)
 		return false
 	})
-	catalog, err := gatekit.ReadFile("migrations/testdata/head_catalog.txt")
-	if err != nil {
-		t.Fatal(err)
-	}
-	refs := regexp.MustCompile(`(?m)^public\.([^.\s]+)\.[^ \r\n]+ FOREIGN KEY \(([^)]+)\) REFERENCES app_user\(id\)`).FindAllStringSubmatch(string(catalog), -1)
+	catalog := headCatalog(t)
+	refs := regexp.MustCompile(`(?m)^public\.([^.\s]+)\.[^ \r\n]+ FOREIGN KEY \(([^)]+)\) REFERENCES app_user\(id\)`).FindAllStringSubmatch(catalog, -1)
 	if len(refs) < 100 {
 		t.Fatalf("member-reference census found only %d foreign keys", len(refs))
 	}
@@ -63,13 +59,13 @@ func TestEveryMemberForeignKeyHasARetirementPolicy(t *testing.T) {
 			t.Errorf("%s is not an installed member reference", key)
 		}
 	}
-	assertMemberWorkGuards(t, string(catalog), policies)
-	assertNoticeWorkStates(t, string(catalog), policies["privacy_notice_case.owner_user_id"].live)
+	assertMemberWorkGuards(t, catalog, policies)
+	assertNoticeWorkStates(t, catalog, policies["privacy_notice_case.owner_user_id"].live)
 }
 
 func memberPolicyConstants(t *testing.T) map[string]string {
 	t.Helper()
-	files, err := filepath.Glob("internal/compose/*.go")
+	files, err := gatekit.Glob("internal/compose/*.go")
 	if err != nil {
 		t.Fatal(err)
 	}

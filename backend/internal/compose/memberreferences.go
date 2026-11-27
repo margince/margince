@@ -6,25 +6,25 @@ package compose
 import (
 	"context"
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/retirementblockers"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 const (
 	memberScopeColumn    = "scope_id"
 	memberSourceArgument = "source_id"
-)
-
-const (
-	referenceRetain   = "retain"
-	referenceHandover = "handover"
-	referenceResolve  = "resolve"
-	memberLiveRows    = "archived_at IS NULL"
+	referenceRetain      = "retain"
+	referenceHandover    = "handover"
+	referenceResolve     = "resolve"
+	memberLiveRows       = "archived_at IS NULL"
 )
 
 type memberReference struct {
@@ -46,6 +46,7 @@ var memberReferences = map[string]memberReference{
 	"activity_participant.roster_seat":         {disposition: referenceRetain},
 	"activity_participant.user_id":             {disposition: referenceRetain},
 	"activity_reader_state.reader_id":          {disposition: referenceRetain},
+	"activity_link_suggestion.for_user":        {disposition: referenceRetain},
 	"activity_retention_evidence.decided_by":   {disposition: referenceRetain},
 	"agent_standing_grant.user_id":             {disposition: referenceRetain},
 	"ai_task_run.actor_user_id":                {disposition: referenceRetain},
@@ -59,6 +60,7 @@ var memberReferences = map[string]memberReference{
 	"approval_preference.user_id":              {disposition: referenceRetain},
 	"assurance_resolution.actor_id":            {disposition: referenceRetain},
 	"audit_log.on_behalf_of":                   {disposition: referenceRetain},
+	"auth_token.counterpart_user_id":           {disposition: referenceRetain},
 	"auth_token.user_id":                       {disposition: referenceRetain},
 	"automation.owner_id":                      {disposition: referenceResolve, live: `enabled AND archived_at IS NULL`, remedy: "automations"},
 	"booking_page.host_user_id":                {disposition: referenceResolve, live: jsonTrue, remedy: "booking_pages"},
@@ -79,6 +81,7 @@ var memberReferences = map[string]memberReference{
 	"capture_sender_override.user_id":          {disposition: referenceRetain},
 	"capture_thread_verdict.user_id":           {disposition: referenceRetain},
 	"channel_connection.connected_by":          {disposition: referenceRetain},
+	"channel_connection.owner_user_id":         {disposition: referenceRetain},
 	"chat_link.linked_by":                      {disposition: referenceRetain},
 	"comms_outbound.user_id":                   {disposition: referenceRetain},
 	"communication_instruction.directed_by":    {disposition: referenceRetain},
@@ -86,14 +89,10 @@ var memberReferences = map[string]memberReference{
 	"communication_review.initiated_by":        {disposition: referenceRetain},
 	"company.owner_id":                         {disposition: referenceHandover, live: memberLiveRows},
 	"company.source_author_id":                 {disposition: referenceRetain},
-	"company_brief.user_id":                    {disposition: referenceRetain},
 	"company_domain_disposition.owner_id":      {disposition: referenceRetain},
-	"company_dossier.user_id":                  {disposition: referenceRetain},
-	"company_growth_fit.user_id":               {disposition: referenceRetain},
 	"company_scan.user_id":                     {disposition: referenceRetain},
 	"contact.owner_id":                         {disposition: referenceHandover, live: memberLiveRows},
 	"contact.source_author_id":                 {disposition: referenceRetain},
-	"contact_brief.user_id":                    {disposition: referenceRetain},
 	"contact_moment_dismissal.user_id":         {disposition: referenceRetain},
 	"conversation_claim.corrected_by_user_id":  {disposition: referenceRetain},
 	"conversation_claim.taken_by_user_id":      {disposition: referenceRetain},
@@ -108,13 +107,12 @@ var memberReferences = map[string]memberReference{
 	"deal_room_thread.author_user_id":          {disposition: referenceRetain},
 	"deal_room_thread.resolved_by_user_id":     {disposition: referenceRetain},
 	"deal_stage_evidence.refuted_by":           {disposition: referenceRetain},
-	"deal_status_card.user_id":                 {disposition: referenceRetain},
-	"deal_suggestion.decided_by":               {disposition: referenceRetain},
 	"dedupe_candidate.disposed_by":             {disposition: referenceRetain},
 	"email_signature.owner_id":                 {disposition: referenceRetain},
 	"extension_secret.user_id":                 {disposition: referenceRetain},
 	"federated_identity.user_id":               {disposition: referenceRetain},
 	"forecast_call.author_id":                  {disposition: referenceRetain},
+	"generated_summary.user_id":                {disposition: referenceRetain},
 	"graph_interaction_edge.user_id":           {disposition: referenceRetain},
 	"intro_request.introducer_user_id":         {disposition: referenceResolve, live: `archived_at IS NULL AND closed_at IS NULL`, remedy: "introductions"},
 	"intro_request.requester_user_id":          {disposition: referenceRetain},
@@ -155,6 +153,7 @@ var memberReferences = map[string]memberReference{
 	"relationship_nudge_dismissal.reader_id":   {disposition: referenceRetain},
 	"report_definition.owner_id":               {disposition: referenceResolve, live: memberLiveRows, remedy: "reports"},
 	"report_definition_revision.created_by":    {disposition: referenceRetain},
+	"report_edition.owner_id":                  {disposition: referenceRetain},
 	"report_execution.owner_id":                {disposition: referenceRetain},
 	"report_run.asked_by":                      {disposition: referenceRetain},
 	"report_schedule.owner_id":                 {disposition: referenceResolve, live: `enabled`, remedy: "report_schedules"},
@@ -174,7 +173,6 @@ var memberReferences = map[string]memberReference{
 	"signal_resolution.resolved_by":            {disposition: referenceRetain},
 	"suggestion_dismissal.user_id":             {disposition: referenceRetain},
 	"system_log.on_behalf_of":                  {disposition: referenceRetain},
-	"tag_suggestion.decided_by":                {disposition: referenceRetain},
 	"team_membership.user_id":                  {disposition: referenceRetain},
 	"user_mfa.user_id":                         {disposition: referenceRetain},
 	"user_record_view.user_id":                 {disposition: referenceRetain},
@@ -190,32 +188,27 @@ var memberReferences = map[string]memberReference{
 	"worklist_snapshot.reader_id":              {disposition: referenceRetain},
 	"home_read_cache.reader_id":                {disposition: referenceRetain},
 	"home_read_forgotten.reader_id":            {disposition: referenceRetain},
+	"task_explanation.user_id":                 {disposition: referenceRetain},
 }
 
-func memberRetirementBlockers(ctx context.Context, tx pgx.Tx, source ids.UUID) ([]crmcontracts.MemberRetirementBlocker, error) {
-	blockers := []crmcontracts.MemberRetirementBlocker{}
-	for ref, policy := range memberReferences {
+// memberRetirementBlockers reads every resolve reference to the member. A record
+// link is built on the origin the call bound, so both doors link alike.
+func memberRetirementBlockers(ctx context.Context, tx pgx.Tx, source ids.UUID) (retirementblockers.Found, error) {
+	refs := []retirementblockers.Reference{}
+	for _, ref := range slices.Sorted(maps.Keys(memberReferences)) {
+		policy := memberReferences[ref]
 		switch policy.disposition {
 		case referenceRetain, referenceHandover:
 			continue
 		case referenceResolve:
 		default:
-			return nil, fmt.Errorf("unknown member-reference policy %q", ref)
+			return retirementblockers.Found{}, fmt.Errorf("unknown member-reference policy %q", ref)
 		}
 		table, column, ok := strings.Cut(ref, ".")
 		if !ok {
-			return nil, fmt.Errorf("invalid member-reference policy %q", ref)
+			return retirementblockers.Found{}, fmt.Errorf("invalid member-reference policy %q", ref)
 		}
-		args := []any{source}
-		query := fmt.Sprintf("SELECT EXISTS (SELECT 1 FROM %s WHERE %s = $%d AND (%s))", pgx.Identifier{table}.Sanitize(), pgx.Identifier{column}.Sanitize(), len(args), policy.live)
-		var remains bool
-		if err := tx.QueryRow(ctx, query, args...).Scan(&remains); err != nil {
-			return nil, err
-		}
-		if remains {
-			blockers = append(blockers, policy.remedy)
-		}
+		refs = append(refs, retirementblockers.Reference{Table: table, Column: column, Live: policy.live, Blocker: policy.remedy})
 	}
-	slices.Sort(blockers)
-	return blockers, nil
+	return retirementblockers.Find(ctx, tx, source, refs, agents.RecordLinkOrigin(ctx))
 }

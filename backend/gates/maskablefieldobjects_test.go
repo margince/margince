@@ -27,7 +27,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"path/filepath"
 	"strconv"
@@ -79,7 +78,7 @@ func TestEveryOfferedMaskObjectIsOneSomeModuleWithholdsOn(t *testing.T) {
 // the same package than the call that passes it.
 func maskedObjects(t *testing.T) map[string]string {
 	t.Helper()
-	consts := stringConstsByPackage(t, token.NewFileSet(), maskedObjectScope.Roots)
+	consts := stringConstsByPackage(t, maskedObjectScope.Roots)
 	found := make(map[string]string)
 	for _, source := range maskedObjectScope.Files(t) {
 		dir := filepath.ToSlash(filepath.Dir(source.Path))
@@ -153,12 +152,12 @@ func resolvedObject(t *testing.T, arg ast.Expr, consts map[string]string, dir, p
 // moment the object stopped being spelled twice.
 func borrowedConst(t *testing.T, name, dir string) (string, bool) {
 	t.Helper()
-	sources, err := filepath.Glob(filepath.Join(dir, "*.go"))
+	sources, err := gatekit.Glob(filepath.Join(dir, "*.go"))
 	if err != nil {
 		t.Fatalf("listing %s for %s: %v", dir, name, err)
 	}
 	for _, source := range sources {
-		file, err := parser.ParseFile(token.NewFileSet(), source, nil, 0)
+		file, err := gatekit.ParseFile(source, 0)
 		if err != nil {
 			t.Fatalf("parsing %s: %v", source, err)
 		}

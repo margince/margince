@@ -62,6 +62,11 @@ type Sink struct {
 	// purgeRemoved acts on a message the provider says the owner deleted. Nil
 	// captures mail and acts on no deletions.
 	purgeRemoved MessagePurger
+	// editChat and purgeChat act on a chat message the provider edited or
+	// deleted after it was filed. Nil acts on neither.
+	editChat  ChatEditor
+	purgeChat ChatPurger
+	memberAccounts
 	// tracePayloads is the deployment's capture.trace_payloads posture: with it
 	// on, the 24-hour trace keeps each message's sender and subject. Off is the
 	// default and the only value a member can cause.
@@ -127,6 +132,7 @@ const (
 	fieldSourceSystem = "source_system"
 	fieldSourceID     = "source_id"
 	fieldReason       = "reason"
+	fieldOutcome      = "outcome"
 	// fieldError carries the cause on a fault breadcrumb. Named once because
 	// two post-commit steps record one, and an operator filtering system_log
 	// must not have to know which of them spelled the key.
@@ -296,6 +302,9 @@ func (s *Sink) captureRecord(ctx context.Context, rec connector.NormalizedRecord
 
 			switch fields := rec.Fields.(type) {
 			case ActivityFields:
+				if err := memberGuardTx(ctx, tx, actor.UserID); err != nil {
+					return err
+				}
 				if attempt.activityLanding, err = s.landActivityTx(ctx, tx, rec, fields, actor.UserID); err != nil {
 					return err
 				}

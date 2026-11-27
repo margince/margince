@@ -41,13 +41,23 @@ var contextAnchorTypes = func() string {
 		// A text-only branch is not an anchor: a word has no neighbours to
 		// return, so naming one here would advertise a read that answers
 		// nothing.
-		if branch.textOnly {
+		if !branch.anchors() {
 			continue
 		}
 		names = append(names, branch.entity)
 	}
 	return strings.Join(names, ", ")
 }()
+
+// anchorsContext is false for a core type whose branch cannot anchor a read.
+func anchorsContext(entityType string) bool {
+	for _, branch := range searchBranches {
+		if branch.entity == entityType {
+			return branch.anchors()
+		}
+	}
+	return true
+}
 
 // GetRecordContext shadows the generated 501 stub with the assembled
 // context graph walk (Retriever.AssembleContext): anchor profile, recent
@@ -60,7 +70,7 @@ var contextAnchorTypes = func() string {
 func (h Handlers) GetRecordContext(w http.ResponseWriter, r *http.Request,
 	entityType string, id crmcontracts.Id, params crmcontracts.GetRecordContextParams,
 ) {
-	if !knownEntity(entityType) {
+	if !knownEntity(r.Context(), entityType) || !anchorsContext(entityType) {
 		httperr.Write(w, r, httperr.Validation("entity_type", "invalid_entity_type",
 			"entity_type must be one of "+contextAnchorTypes))
 		return

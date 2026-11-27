@@ -14,9 +14,11 @@ package gates
 // into the table fails here, because it carries no statement to read.
 
 import (
+	"fmt"
 	"go/ast"
 	"go/token"
 	"io/fs"
+	"maps"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -49,6 +51,8 @@ var attendeeSweeps = gatekit.Waive(map[string]string{
 		"activities a batch spans. It restates the address the row already carries",
 	"internal/modules/activities:CopyRosterSeatsTx": "copies a row's one roster seat into its seat set by row id, " +
 		"over whatever meetings a batch spans. Readers take both columns as one set, so no attendee set changes",
+	"internal/platform/database/storekit:LowercaseOlderParticipantAddresses": "lowercases the address a row already carries, over the rows " +
+		"its caller names, and folds two rows of one party into one. A caller that names a meeting holds its lock first",
 	"internal/modules/activities:storeParticipantEvidenceRows": "clears domain evidence by row id, across any activity a " +
 		"company change reaches. The attendee set stays the same",
 	"internal/compose/integration:LinkActivitySender":                             "an integration fixture, written before any judge runs",
@@ -81,9 +85,10 @@ func TestEveryAttendeeWriterTakesTheMeetingLock(t *testing.T) {
 	assertTheTextAgrees(t, byDir)
 	var unlocked []string
 	for dir, files := range byDir {
-		graph := packageCallGraph(t, dir)
+		graph := cloneCallGraph(packageCallGraph(t, dir))
 		// A package-qualified call is not an edge in the graph, so a function
-		// naming a lock is marked as calling the exclusive one.
+		// naming a lock is marked as calling the exclusive one. The copy keeps
+		// that mark from the shared graph.
 		for _, entry := range graph {
 			if entry.reads[attendeeWriteLock] || entry.reads["LockMeetingAttendeePage"] {
 				entry.calls[attendeeWriteLock] = true
@@ -121,7 +126,7 @@ func assertTheTextAgrees(t *testing.T, byDir map[string][]gatekit.ParsedFile) {
 	}
 	searched := map[string]bool{}
 	for path, src := range internalSources(t) {
-		if participantWrite.Match(src) {
+		if mayHoldWordsOf(string(src), participantWriteWords) && participantWrite.Match(src) {
 			searched[path] = true
 		}
 	}
@@ -254,11 +259,18 @@ func attendeeLockOrder(fn *ast.FuncDecl) (lockAt, rowLockAt token.Pos) {
 // attendeeCopy is a bulk COPY into the table, from SQL or from pgx's CopyFrom.
 var attendeeCopy = regexp.MustCompile(`(?is)\bCOPY\s+activity_participant\b|Identifier\{\s*"activity_participant"\s*\}`)
 
+// participantWriteWords and attendeeCopyWords are what every match of each
+// pattern holds, or nil when it promises none.
+var (
+	participantWriteWords = requiredWords(participantWrite)
+	attendeeCopyWords     = requiredWords(attendeeCopy)
+)
+
 // A COPY writes rows with no statement the census can read, so it is refused.
 func TestNothingCopiesIntoTheAttendeeTable(t *testing.T) {
 	t.Parallel()
 	for path, src := range internalSources(t) {
-		if attendeeCopy.Match(src) {
+		if mayHoldWordsOf(string(src), attendeeCopyWords) && attendeeCopy.Match(src) {
 			t.Errorf("%s copies into activity_participant. Write the rows with a statement that takes the attendee lock", path)
 		}
 	}
@@ -294,4 +306,56 @@ func internalSources(t *testing.T) map[string][]byte {
 
 func writesAttendees(entry *graphFunc) bool {
 	return slices.ContainsFunc(entry.statements, participantWrite.MatchString)
+}
+
+// cloneCallGraph is a deep copy of a shared graph, for a caller that adds edges.
+func cloneCallGraph(graph map[string]*graphFunc) map[string]*graphFunc {
+	out := make(map[string]*graphFunc, len(graph))
+	for key, entry := range graph {
+		out[key] = &graphFunc{
+			statements: slices.Clone(entry.statements),
+			calls:      maps.Clone(entry.calls),
+			reads:      maps.Clone(entry.reads),
+			shadowed:   maps.Clone(entry.shadowed),
+			hidden:     slices.Clone(entry.hidden),
+		}
+	}
+	return out
+}
+
+// The shared graph is what a fresh build answers, and a caller's edits to its
+// copy reach neither the shared graph nor the next caller.
+func TestEditsToACopyOfACallGraphStayOutOfTheSharedGraph(t *testing.T) {
+	t.Parallel()
+	edited := cloneCallGraph(packageCallGraph(t, privacyPackage))
+	if len(edited) == 0 {
+		t.Fatalf("%s gave an empty call graph, so this check compared nothing", privacyPackage)
+	}
+	for _, entry := range edited {
+		entry.calls["plantedCallee"] = true
+		entry.reads["plantedName"] = true
+		entry.shadowed["plantedName"] = true
+		entry.statements = append(entry.statements, "DELETE FROM planted")
+		entry.hidden = append(entry.hidden, "DELETE FROM planted")
+	}
+	edited["plantedFunction"] = &graphFunc{}
+	shared, fresh := packageCallGraph(t, privacyPackage), buildPackageCallGraph(t, privacyPackage)
+	got, want := callGraphLines(shared), callGraphLines(fresh)
+	if extra, lost := missing(got, want), missing(want, got); len(extra)+len(lost) > 0 {
+		t.Errorf("after a copy was edited, %d functions of the shared %s graph read differently from a fresh "+
+			"build, and %d of a fresh build are missing from it", len(extra), privacyPackage, len(lost))
+	}
+}
+
+// callGraphLines spells each function of a graph on one line, its sets sorted,
+// since a build appends a function's statements in map order.
+func callGraphLines(graph map[string]*graphFunc) []string {
+	var lines []string
+	for key, entry := range graph {
+		lines = append(lines, fmt.Sprintf("%s calls=%v reads=%v shadowed=%v statements=%q hidden=%q", key,
+			slices.Sorted(maps.Keys(entry.calls)), slices.Sorted(maps.Keys(entry.reads)),
+			slices.Sorted(maps.Keys(entry.shadowed)), slices.Sorted(slices.Values(entry.statements)),
+			slices.Sorted(slices.Values(entry.hidden))))
+	}
+	return lines
 }

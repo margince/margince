@@ -174,8 +174,8 @@ print("")' "$email"
 # worth spending: a row a reader finds in a failing transcript says which lane
 # put it there.
 FIXTURE_SOURCE="seed:llm-fixtures"
-# A deal, offer, project and partner take only one of six channels as source, so
-# their fixture rows name the channel they really came through.
+# A company, contact, deal, offer, project and partner take only one of six
+# channels as source, so their fixture rows name the channel they came through.
 CHANNEL_SOURCE="api"
 
 # with_source adds FIXTURE_SOURCE to a record's create body that names none,
@@ -188,7 +188,7 @@ with_source() {
   esac
   printf '%s' "$body" | FIXTURE_SOURCE="$FIXTURE_SOURCE" python3 -c 'import json,os,sys
 row=json.load(sys.stdin)
-channel = sys.argv[1] in ("/deals", "/projects", "/offers", "/partners")
+channel = sys.argv[1] in ("/activities", "/companies", "/contacts", "/deals", "/leads", "/offers", "/partners", "/projects", "/tasks")
 row.setdefault("source", "api" if channel else os.environ["FIXTURE_SOURCE"])
 print(json.dumps(row, ensure_ascii=False))' "$path"
 }
@@ -1072,7 +1072,7 @@ fi
 # reach disqualification rather than guess it.
 bruno="$(lead_id_by_email "Bruno Kellner" "bruno.kellner@ostsee-kaelte.test")"
 if [[ -z "$bruno" ]]; then
-  body="$(printf '{"full_name":"Bruno Kellner","email":"bruno.kellner@ostsee-kaelte.test","title":"Betriebsleiter","company_name":"Ostsee Kälte GmbH","status":"contacted","source":"referral","owner_id":"%s"}' "$me")"
+  body="$(printf '{"full_name":"Bruno Kellner","email":"bruno.kellner@ostsee-kaelte.test","title":"Betriebsleiter","company_name":"Ostsee Kälte GmbH","status":"contacted","source":"manual","owner_id":"%s"}' "$me")"
   bruno="$(create_or_die "/leads" "$body" "the dead-end lead")"
   # Half a year back and two days apart, RELATIVE like every other date here.
   # Fixed instants age: "nothing since" is the whole of what a model has to read
@@ -1136,7 +1136,7 @@ if [[ -z "$project" ]]; then
   # purpose: a project closed over an outstanding promise nobody mentioned is
   # the loss this case exists to catch.
   body="$(printf '{"subject":"Abnahmeprotokoll an Elbwerk schicken","body":"Nach der Übergabe unterschrieben zurück.","due_at":"%s","source":"%s","links":[{"entity_type":"project","entity_id":"%s"}]}' \
-    "$(days_ago 9)" "$FIXTURE_SOURCE" "$project")"
+    "$(days_ago 9)" "$CHANNEL_SOURCE" "$project")"
   create_or_die "/tasks" "$body" "the open commitment on the project" >/dev/null
 fi
 
@@ -1163,10 +1163,10 @@ fi
 
 # --- CASE 43: four fair leads, one of whose stage a human already chose -----
 #
-# All four are created by the admin's own session and none is sent a lifecycle,
+# All four are created by the admin's own session and none is sent a status,
 # so each starts at the column default 'unknown'. The fourth then gets 'target'
 # through a PATCH from the same session, so a human is the last writer of that
-# lifecycle. The agent's change over it applies at once and its answer names the
+# status. The agent's change over it applies at once and its answer names the
 # value it replaced, which is what case 43 asks the assistant to report.
 #
 # Owned by the caller, because these are the caller's own leads.
@@ -1181,10 +1181,10 @@ seed_fair_lead "Kieler Pumpenwerk GmbH" "Pumpentechnik" >/dev/null
 seed_fair_lead "Rhön Hydraulik AG" "Hydraulik" >/dev/null
 seed_fair_lead "Altmark Fördertechnik GmbH" "Fördertechnik" >/dev/null
 emsland="$(seed_fair_lead "Emsland Ventilbau GmbH" "Armaturen")"
-# A repeat still leaves a human as lifecycle's last writer, so a re-run converges.
-code="$(status_of PATCH "/companies/$emsland" '{"lifecycle":"target"}')"
+# A repeat still leaves a human as status's last writer, so a re-run converges.
+code="$(status_of PATCH "/companies/$emsland" '{"status":"target"}')"
 [[ "$code" = "200" ]] || {
-  echo "setting Emsland Ventilbau's lifecycle as a human answered HTTP $code" >&2; exit 1; }
+  echo "setting Emsland Ventilbau's status as a human answered HTTP $code" >&2; exit 1; }
 
 # --- CASES 44-49: the untried action tools ------------------------------------
 #
@@ -1282,7 +1282,7 @@ if [[ -z "$messe" ]]; then
   messe="$(create_or_die "/lists" '{"name":"Messe Hannover 2026","entity_type":"contact","list_type":"static","sharing":"workspace","purpose":"Everyone we spoke to at the Hannover fair"}' "the Messe Hannover shortlist")"
   mara_lead="$(lead_id_by_email "Mara Voigt" "mara.voigt@voigt-antriebe.test")"
   if [[ -z "$mara_lead" ]]; then
-    body="$(printf '{"full_name":"Mara Voigt","email":"mara.voigt@voigt-antriebe.test","company_name":"Voigt Antriebstechnik","status":"new","source":"fair","owner_id":"%s"}' "$me")"
+    body="$(printf '{"full_name":"Mara Voigt","email":"mara.voigt@voigt-antriebe.test","company_name":"Voigt Antriebstechnik","status":"new","source":"manual","owner_id":"%s"}' "$me")"
     mara_lead="$(create_or_die "/leads" "$body" "Mara Voigt's lead")"
   fi
   code="$(status_of POST "/leads/$mara_lead/promote" '{"trigger":"human_qualify","evidence":{"note":"Promoted at the fair stand"}}')"
@@ -1472,7 +1472,7 @@ if [[ -z "$goslar" ]]; then
     "$harzer" "$goslar")"
   create_or_die "/contracts" "$body" "the Leitstand Goslar service contract" >/dev/null
   body="$(printf '{"kind":"meeting","meeting_status":"held","occurred_at":"%s","subject":"Vertragsunterzeichnung Leitstand Goslar","body":"Servicevertrag mit Katrin Albers unterzeichnet.","source":"%s","links":[{"entity_type":"contact","entity_id":"%s"},{"entity_type":"project","entity_id":"%s"}]}' \
-    "$(days_ago 1)" "$FIXTURE_SOURCE" "$albers" "$goslar")"
+    "$(days_ago 1)" "$CHANNEL_SOURCE" "$albers" "$goslar")"
   create_or_die "/activities" "$body" "the Leitstand Goslar signing meeting" >/dev/null
 fi
 

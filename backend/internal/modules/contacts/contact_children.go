@@ -44,7 +44,11 @@ func replaceContactEmails(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, 
 	if emails == nil {
 		return nil
 	}
-	if err := parseContactContacts(emails, nil); err != nil {
+	held, err := liveContactEmails(ctx, tx, contactID)
+	if err != nil {
+		return err
+	}
+	if err := parseContactHandles(emails, nil, held); err != nil {
 		return err
 	}
 	// The claim check runs before anything is written and skips this contact's
@@ -53,11 +57,6 @@ func replaceContactEmails(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, 
 	// refuse the insert, but the aborted transaction cannot re-query — so the
 	// refusal would reach the caller with no incumbent id to name.
 	if err := ensureContactEmailsUnclaimedExcept(ctx, tx, contactID, emails); err != nil {
-		return err
-	}
-
-	held, err := liveContactEmails(ctx, tx, contactID)
-	if err != nil {
 		return err
 	}
 
@@ -142,19 +141,23 @@ func liveContactEmails(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) 
 	return held, nil
 }
 
-// parseContactContacts is the parse-don't-validate seam for a contact's
-// contact rows: addresses normalize to the lowercased form the dedupe
-// index compares (the SQL lower() below stays as defense in depth) and
-// phones normalize to E.164 — making the schema's "E.164 normalized at
-// write" contract true instead of documentary. Values are written back
-// in place so everything downstream handles only normalized strings.
-//
-// It also refuses a set that marks two addresses, or two numbers, primary.
-// Create, update and vCard import all pass through here. The refusal is typed
-// and comes before any write, instead of the bare conflict that
-// uq_contact_{email,phone}_primary would raise.
+// parseContactContacts is parseContactHandles for a contact that holds no
+// address yet.
 func parseContactContacts(emails []ContactEmailInput, phones []ContactPhoneInput) error {
+	return parseContactHandles(emails, phones, nil)
+}
+
+// parseContactHandles normalizes a contact's rows in place: addresses to the
+// lowercase the dedupe index compares, phones to E.164. It refuses two primary
+// rows of a kind before any write, where uq_contact_{email,phone}_primary would
+// raise a bare conflict. An address in held is one the contact already holds:
+// restating it writes nothing new, so it passes as stored.
+func parseContactHandles(emails []ContactEmailInput, phones []ContactPhoneInput, held map[string]bool) error {
 	for i, e := range emails {
+		if stored := strings.ToLower(strings.TrimSpace(e.Email)); held[stored] {
+			emails[i].Email = stored
+			continue
+		}
 		parsed, err := values.ParseEmail(e.Email)
 		if err != nil {
 			return err
@@ -163,6 +166,9 @@ func parseContactContacts(emails []ContactEmailInput, phones []ContactPhoneInput
 			return err
 		}
 		emails[i].Email = parsed.String()
+	}
+	if err := refuseRepeatedAddress(emails); err != nil {
+		return err
 	}
 	for i, p := range phones {
 		parsed, err := values.ParsePhone(p.Phone)
@@ -175,6 +181,22 @@ func parseContactContacts(emails []ContactEmailInput, phones []ContactPhoneInput
 		return err
 	}
 	return ensureOnePrimary("phone number", phones, func(p ContactPhoneInput) bool { return p.IsPrimary })
+}
+
+// refuseRepeatedAddress refuses one normalized address sent twice, before the
+// unique index answers it as a clash with some other record.
+func refuseRepeatedAddress(emails []ContactEmailInput) error {
+	first := make(map[string]int, len(emails))
+	for i, e := range emails {
+		if at, repeated := first[e.Email]; repeated {
+			return &values.ParseError{
+				Field: fmt.Sprintf("emails[%d].email", i), Code: "duplicate",
+				Message: fmt.Sprintf("the same address is at emails[%d] and emails[%d]; send it once", at, i),
+			}
+		}
+		first[e.Email] = i
+	}
+	return nil
 }
 
 //nolint:unparam // the same shape as its siblings; see writeContactSocial.
@@ -266,7 +288,7 @@ func scanContact(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 	var resolvedCountries []string
 	var version int64
 	var visibility string
-	var sourceSystem, authorName, authorSeatName *string
+	var authorName, authorSeatName *string
 	var authorID *ids.UUID
 	var mark, greetingRegister *string
 	// Null where the contact was typed, and null where the reader may not open
@@ -281,7 +303,7 @@ func scanContact(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 		&addr.Line1, &addr.Line2, &addr.City, &addr.Region, &addr.PostalCode, &addr.Country,
 		&resolvedCountries,
 		&mergedInto, &fromLead, &p.Source, &p.CapturedBy,
-		&sourceSystem, &authorID, &authorName, &authorSeatName,
+		&p.SourceSystem, &authorID, &authorName, &authorSeatName,
 		&version, &p.CreatedAt, &p.UpdatedAt, &p.ArchivedAt, &p.LastActivityAt, &p.LegalHold,
 		&mark, &greetingRegister, &warnedAt, &warnedFor, &createdFrom,
 	}
@@ -315,8 +337,8 @@ func scanContact(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 		p.GreetingRegister = &g
 	}
 	p.ImpersonationWarning = impersonationWarningOf(warnedAt, warnedFor)
-	p.Author = sourceAuthorOf(authorID, authorSeatName, authorName, sourceSystem)
-	p.ImportedFrom = provenance.ImportedFrom(sourceSystem)
+	p.Author = sourceAuthorOf(authorID, authorSeatName, authorName, p.SourceSystem)
+	p.ImportedFrom = provenance.ImportedFrom(p.SourceSystem)
 	return p, nil
 }
 

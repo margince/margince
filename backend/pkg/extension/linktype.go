@@ -28,8 +28,8 @@ type LinkType struct {
 
 // Validate refuses a type a stored value or a screen could not carry.
 func (t LinkType) Validate() error {
-	if !recordKindGrammar.MatchString(t.Type) || len(t.Type) > maxRecordKindLength {
-		return fmt.Errorf("link type %q is not a valid type name (a lower-case letter, then lower-case letters, digits and underscores, at most %d characters)", t.Type, maxRecordKindLength)
+	if !shortNameGrammar.MatchString(t.Type) || len(t.Type) > maxShortNameLength {
+		return fmt.Errorf("link type %q is not a valid type name (a lower-case letter, then lower-case letters, digits and underscores, at most %d characters)", t.Type, maxShortNameLength)
 	}
 	if strings.TrimSpace(t.Label) == "" {
 		return fmt.Errorf("link type %q has no label", t.Type)
@@ -42,9 +42,19 @@ func (t LinkType) Validate() error {
 	return nil
 }
 
+// Joins reports whether a link of the type may start on from and end on to. An
+// empty list on either side allows every end.
+func (t LinkType) Joins(from, to string) bool {
+	return endAllowed(t.From, from) && endAllowed(t.To, to)
+}
+
+func endAllowed(declared []string, end string) bool {
+	return slices.Contains(LinkEnds, end) && (len(declared) == 0 || slices.Contains(declared, end))
+}
+
 // LinkTypeValue is the stored and wire form of a unit's type. It is the one
 // place the form is built, so a unit can only ever name a value under its own
 // name.
 func LinkTypeValue(unit Name, typ string) string {
-	return RecordKindPrefix + string(unit) + ":" + typ
+	return QualifiedName(unit, typ)
 }
