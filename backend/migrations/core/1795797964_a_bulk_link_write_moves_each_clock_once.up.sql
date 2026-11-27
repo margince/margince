@@ -11,6 +11,7 @@ DECLARE
   definition text;
 BEGIN
   FOREACH clock_function IN ARRAY ARRAY[
+    'public.lock_last_activity_targets(uuid[],uuid[],uuid[],uuid[])'::regprocedure,
     'public.move_last_activity(regclass,uuid)'::regprocedure,
     'public.move_project_last_activity(uuid)'::regprocedure,
     'public.refresh_contact_strength_dates(uuid[])'::regprocedure,
@@ -25,6 +26,8 @@ BEGIN
 END;
 $$;
 
+-- Whole-reach prelocking follows company links; folds lock already-collected
+-- parents so they cannot discover an earlier lock while holding later ones.
 -- The later strength trigger locks contacts even when their activity cannot
 -- advance a clock, so those contacts must be locked before the project clock.
 CREATE FUNCTION advance_last_activities(tbl regclass, rids uuid[], ats timestamptz[]) RETURNS void

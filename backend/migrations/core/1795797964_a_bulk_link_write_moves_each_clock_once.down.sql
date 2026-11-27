@@ -179,6 +179,7 @@ DECLARE
   definition text;
 BEGIN
   FOREACH clock_function IN ARRAY ARRAY[
+    'public.lock_last_activity_targets(uuid[],uuid[],uuid[],uuid[])'::regprocedure,
     'public.move_last_activity(regclass,uuid)'::regprocedure,
     'public.move_project_last_activity(uuid)'::regprocedure,
     'public.refresh_contact_strength_dates(uuid[])'::regprocedure,

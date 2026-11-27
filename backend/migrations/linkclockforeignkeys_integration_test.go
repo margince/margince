@@ -14,7 +14,9 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/testdb"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func TestConcurrentLinkClockWritersKeepForeignKeyLocksCompatible(t *testing.T) {
@@ -58,7 +60,20 @@ func TestConcurrentLinkClockWritersKeepForeignKeyLocksCompatible(t *testing.T) {
 							pgx.Identifier{kind + "_id"}.Sanitize() + ` = @parent`
 					}
 					activities := []string{f.early, f.late}
-					assertConcurrentClockWrites(t, ownerDSN, kind, parentID, func(ctx context.Context, tx pgx.Tx, writerIndex int) error {
+					parentUUID, err := ids.Parse(parentID)
+					if err != nil {
+						t.Fatal(err)
+					}
+					targetIDs := []ids.UUID{parentUUID}
+					targetsByKind := map[string]storekit.LastActivityTargets{
+						"company": {Companies: targetIDs}, "contact": {Contacts: targetIDs},
+						"deal": {Deals: targetIDs}, "project": {Projects: targetIDs},
+					}
+					targets, ok := targetsByKind[kind]
+					if !ok {
+						t.Fatalf("no lock targets for %s", kind)
+					}
+					assertConcurrentClockWrites(t, ownerDSN, kind, parentID, targets, func(ctx context.Context, tx pgx.Tx, writerIndex int) error {
 						args := pgx.NamedArgs{"activity": activities[writerIndex]}
 						if operation != "update" {
 							args["kind"], args["parent"] = kind, parentID
@@ -102,7 +117,18 @@ func TestActivityStrengthPrelocksKeepForeignKeyLocksCompatible(t *testing.T) {
 	}
 	before := readClockRow(t, conn, "contact", f.contactA)
 	projects := []string{f.early, f.late}
-	assertConcurrentClockWrites(t, ownerDSN, "contact", f.contactA, func(ctx context.Context, tx pgx.Tx, writerIndex int) error {
+	contactID, err := ids.Parse(f.contactA)
+	if err != nil {
+		t.Fatal(err)
+	}
+	projectID, err := ids.Parse(f.projectP)
+	if err != nil {
+		t.Fatal(err)
+	}
+	targets := storekit.LastActivityTargets{
+		Contacts: []ids.UUID{contactID}, Projects: []ids.UUID{projectID},
+	}
+	assertConcurrentClockWrites(t, ownerDSN, "contact", f.contactA, targets, func(ctx context.Context, tx pgx.Tx, writerIndex int) error {
 		projectActivity := projects[writerIndex]
 		written, err := tx.Exec(ctx, `UPDATE activity
 			SET occurred_at = CASE WHEN id = @project THEN occurred_at + interval '1 day' ELSE occurred_at END,
@@ -131,7 +157,7 @@ func TestActivityStrengthPrelocksKeepForeignKeyLocksCompatible(t *testing.T) {
 	}
 }
 
-func assertConcurrentClockWrites(t *testing.T, ownerDSN, kind, parentID string, write func(context.Context, pgx.Tx, int) error) {
+func assertConcurrentClockWrites(t *testing.T, ownerDSN, kind, parentID string, targets storekit.LastActivityTargets, write func(context.Context, pgx.Tx, int) error) {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), 2*testdb.ProbeBudget)
 	defer cancel()
@@ -162,7 +188,10 @@ func assertConcurrentClockWrites(t *testing.T, ownerDSN, kind, parentID string, 
 	finished := make(chan error, len(writers))
 	for writerIndex, tx := range writers {
 		go func() {
-			err := write(ctx, tx, writerIndex)
+			err := storekit.LockLastActivityTargets(ctx, tx, targets)
+			if err == nil {
+				err = write(ctx, tx, writerIndex)
+			}
 			if err == nil {
 				err = tx.Commit(ctx)
 			} else if rollbackErr := tx.Rollback(context.Background()); rollbackErr != nil && !errors.Is(rollbackErr, pgx.ErrTxClosed) {
