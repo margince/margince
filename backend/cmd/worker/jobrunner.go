@@ -312,6 +312,9 @@ func newJobRunner(ctx context.Context, pool *pgxpool.Pool, logger *slog.Logger, 
 		NotificationMail:       compose.NotificationMailConfig(weeklyMail),
 		TranscriptProposeBrain: modelPath.TranscriptPropose,
 		StageEvidenceBrain:     modelPath.StageEvidenceExtract,
+		// How it stands reads with the summarize lane, as every brief does.
+		StandingLineBrain:          modelPath.Summarize,
+		StandingLineRoutingVersion: modelPath.RoutingVersion,
 		// The account scan registers regardless too: a queued scan on a
 		// brainless worker settles on the rules' floor with a reason.
 		AccountScanBrain:          modelPath.AccountScan,

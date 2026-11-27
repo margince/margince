@@ -26,8 +26,6 @@ import (
 
 var frontendJobKinds = filepath.Join(repoRoot, "frontend", "src", "features", "settings", "jobkinds.ts")
 
-var tsCommentInJobKinds = regexp.MustCompile(`(?s)//[^\n]*|/\*.*?\*/`)
-
 // tsJobKindEntry is one line of the literal: the kind and the catalog key that
 // names it. That key is its own, or the label of the principal it runs as.
 var tsJobKindEntry = regexp.MustCompile(`^"?([a-z0-9_]+)"?\s*:\s*"(?:jobs\.kind|systemJob)\.([a-z0-9_]+)",?$`)
@@ -106,7 +104,7 @@ func tsJobKindNames(source string) (map[string]bool, []string) {
 	}
 	named := map[string]bool{}
 	var problems []string
-	for line := range strings.SplitSeq(tsCommentInJobKinds.ReplaceAllString(body, ""), "\n") {
+	for line := range strings.SplitSeq(gatekit.TSWithoutComments(body), "\n") {
 		line = strings.TrimSpace(line)
 		if line == "" {
 			continue

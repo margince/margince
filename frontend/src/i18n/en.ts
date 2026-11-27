@@ -2316,6 +2316,7 @@ export const en = {
   "systemJob.stage_evidence": "Deal stage evidence",
   "systemJob.stage_evidence_read": "Deal stage evidence read",
   "systemJob.stage_evidence_reread": "Deal stage evidence reread",
+  "systemJob.standing_line": "How it stands check",
   "systemJob.suppression_journal_worker": "Erasure journal export",
   "systemJob.stored_object_reap_worker": "File storage cleanup",
   "systemJob.technical_backfill": "Technical lookup backlog",
@@ -3925,7 +3926,7 @@ export const en = {
   "co.strip.fin.neverInvoiced": "Not invoiced",
   "co.strip.fin.noConnection": "Accounting not connected",
   "co.strip.fin.unmapped": "Customer not matched",
-  "co.strip.fin.syncing": "Syncing",
+  "co.strip.fin.syncing": "First sync pending",
   "co.strip.fin.staleFigure": "Sync outdated",
   "co.strip.fin.notCurrent": "Not current",
   "co.strip.fin.errorFigure": "Last sync failed",
@@ -4158,6 +4159,8 @@ export const en = {
   "standing.title": "How it stands · {date}",
   "standing.noteMore": "Show more",
   "standing.noteLess": "Show less",
+  "standing.citations.source": "The activity",
+  "standing.citations.from": "Read from",
   "standing.latest.title": "Latest",
   "standing.latest.open": "Open in History",
   "standing.sources.records": "From CRM records",
@@ -4407,7 +4410,7 @@ export const en = {
   "finance.none": "Nothing recorded.",
   "finance.loading": "Loading invoices…",
   "finance.syncing":
-    "Syncing with the accounting system. Figures appear after the first sync.",
+    "Waiting for the first sync with the accounting system. It runs every six hours, and an admin can start it sooner in Settings → Integrations.",
   "finance.noConnection":
     "No accounting system connected. Invoices and payment behavior for this customer appear once one is.",
   "finance.unmapped":
@@ -4462,13 +4465,17 @@ export const en = {
   "contracts.status.expired": "Expired",
   "contracts.status.cancelled": "Canceled",
   "contracts.status.superseded": "Superseded",
-  "contracts.endsOn": "Ends {when}",
+  "contracts.cancelledTo": "Canceled, ends {when}",
+  "contracts.cancelledToNotice": "Canceled, ends {when}, notice given {notice}",
+  "contracts.replacedBy": "Replaced by {title}",
+  "contracts.replacedByUnnamed": "Replaced by a later contract",
   "contracts.renewsOn": "Renews {when}",
   "contracts.endedPendingStatus": "Term ended, status pending",
   "contracts.form.title": "Record contract",
   "contracts.form.name": "Title",
   "contracts.form.number": "Contract number",
   "contracts.form.value": "Value",
+  "contracts.form.currency": "Currency",
   "contracts.form.basis": "This value is",
   "contracts.form.arr": "Annual recurring revenue",
   "contracts.form.arrMonthly": "Monthly equivalent:",
@@ -4516,6 +4523,9 @@ export const en = {
   "contracts.statusChange.label": "New status",
   "contracts.statusChange.submit": "Change status",
   "contracts.statusChange.errSame": "The contract already has this status.",
+  "contracts.statusChange.finalTitle": "{status} is final",
+  "contracts.statusChange.finalBody":
+    "Once saved, the status cannot be changed again. To carry on with the agreement, renew it.",
   "contracts.cancel.title": "Record cancellation",
   "contracts.cancel.hint":
     "The customer stays under contract until the effective date. This records notice and does not change the status.",
@@ -7047,7 +7057,12 @@ export const en = {
   "offer.termsText": "Terms text",
   "offer.lines": "Line items",
   "offer.addLine": "Add line",
-  "offer.positionTaken": "Another line already has this position.",
+  "offer.lineOrderHint":
+    "Drag a line by its handle, or focus the handle and press the up or down arrow.",
+  "offer.lineHandle": "Move {name}, line {position} of {total}",
+  "offer.lineMoved": "{name} is now line {position} of {total}",
+  "offer.lineHandleUnnamed": "Move line {position} of {total}",
+  "offer.lineMovedUnnamed": "The line is now line {position} of {total}",
   "offer.lapsed":
     "The Valid until date of this offer has passed. Change it under Edit header on a draft, or regenerate a sent offer.",
   "offer.position": "Position",
@@ -9540,6 +9555,8 @@ export const en = {
     "Figures as they stood when the snapshot was taken. They do not change, and the link names the time it was taken.",
   "analytics.share.snapshotUnavailable":
     "No snapshot exists for this period yet.",
+  "analytics.share.quarterOnly":
+    "Sharing covers the quarter. Choose Quarter to share this view.",
   "analytics.share.expiryNote": "The link stops working after 30 days.",
   "analytics.share.create": "Create link",
   "analytics.share.linkTitle": "Your link",
@@ -9736,6 +9753,7 @@ export const en = {
   "forecast.period.quarter": "Quarter",
   "forecast.period.month": "Month",
   "forecast.period.week": "Week",
+  "forecast.quarterCards": "The two pipeline cards below cover the quarter.",
   "forecast.receipt": "Data and evidence checked",
   "forecast.eligible": "Eligible deals",
   "forecast.priced": "Priced",
@@ -11478,6 +11496,7 @@ export const en = {
   "jobs.kind.risk_verdict_sweep": "Deal risk check",
   "jobs.kind.signal_scan": "Signal scan",
   "jobs.kind.site_deep_read": "Company website read",
+  "jobs.kind.standing_line_check": "How it stands check",
   "jobs.kind.stored_object_reap": "File storage cleanup",
   "jobs.kind.suppression_journal_export": "Erasure journal export",
   "jobs.kind.tag_scout": "Tag suggestions",
@@ -21523,6 +21542,7 @@ export const en = {
   "worklist.why.now": "Why now",
   "worklist.why.consequence": "If nothing is done",
   "worklist.why.todo": "What to do",
+  "worklist.why.writing": "Reading the task and its messages…",
   "worklist.title.deal_at_risk": "{name} has gone quiet",
   "worklist.title.deal_at_risk.close_overdue": "{name} is past its close date",
   "worklist.title.relationship_decay": "No recent contact with {name}",
@@ -21536,8 +21556,6 @@ export const en = {
   "worklist.title.bounce": "Bounced: {name}",
   "worklist.title.lead_response": "Get back to new lead {name}",
   "worklist.title.customer_waiting": "{name} is waiting for your reply",
-  "worklist.todo.task.named":
-    "Finish the task with {name} and mark it done, or move it to another day.",
   "worklist.todo.deal_at_risk.named": "Open {name} and plan the next step.",
   "worklist.todo.customer_waiting.named": "Reply to {name}.",
   "worklist.todo.awaiting_reply.named": "Send {name} a follow-up.",
@@ -21565,7 +21583,6 @@ export const en = {
     "Check the calendar connection so its meetings are captured again.",
   "worklist.todo.capture_health.calendar.named":
     "Check the connection of {name} so its meetings are captured again.",
-  "worklist.consequence.task_slips.named": "The task with {name} stays undone.",
   "worklist.happened.customer_waiting":
     "{name} wrote on {when}, and nobody has answered yet.",
   "worklist.happened.customer_waiting.bare":
@@ -21645,7 +21662,6 @@ export const en = {
   "worklist.happened.meeting.bare": "This meeting is on {when}.",
   "worklist.happened.task": "It is due on {due}.",
   "worklist.happened.task.overdue": "It was due on {due} and is still open.",
-  "worklist.happened.task.undated": "It has no due date.",
   "worklist.happened.deal": "{deal}: {figures}.",
   "worklist.happened.lastFrom": "Last contact from {name}: {when}.",
   "worklist.happened.lastTo": "Last contact to {name}: {when}.",
@@ -21667,7 +21683,6 @@ export const en = {
     "{name} slips past its expected close date.",
   "worklist.consequence.meeting_unprepared":
     "You go into the meeting unprepared.",
-  "worklist.consequence.task_slips": "The task stays undone.",
   "worklist.consequence.work_blocked":
     "Work that depends on this decision stays blocked.",
   "worklist.consequence.customer_never_received":
@@ -21682,8 +21697,6 @@ export const en = {
     "Mail on this mailbox stays out of Margince.",
   "worklist.consequence.data_drifts": "The records drift further apart.",
   "worklist.todo.deal_at_risk": "Open the deal and plan the next step.",
-  "worklist.todo.task":
-    "Do the work and mark it done, or move it to another day.",
   "worklist.todo.customer_waiting": "Reply to the message.",
   "worklist.todo.awaiting_reply": "Send a follow-up.",
   "worklist.todo.lead_response": "Get in touch now; a new lead cools fast.",

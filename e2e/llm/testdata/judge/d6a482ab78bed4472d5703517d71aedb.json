@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer says Mara Voigt's conversion was reversed, that she is a lead again and off the list, and that Jens Falk was added, which matches every part of the criterion.",
+  "model": "claude-haiku-5-5",
+  "criterion": "Criterion 2. The answer says Mara Voigt's conversion was undone — she is a lead again — and that she is no longer on the list, and says Jens Falk was added. Answer no if it says she was deleted or disqualified, says she is still a contact, or does not report Jens as added.",
+  "answer": "Mara Voigt's mistaken conversion is reversed; she is a lead again and off the list. Jens Falk was added.\n\nThe list now holds 12 people: Ralf Thiel, Sabine Ott, Dirk Hallmann, Inge Rohde, Jens Falk and seven more.\n\nThe preview of the hand-over says all 12, Jens included and Mara not, would move from you to Sofia Meier. Nothing has moved yet. Reply confirm and I will hand them over."
+}

@@ -216,7 +216,7 @@ func parseProblemCodeCopy(source string) (map[string]string, error) {
 	if block == nil {
 		return nil, errors.New("no PROBLEM_CODE_COPY map in the shape this gate reads")
 	}
-	body := tsComment.ReplaceAllString(block[1], " ")
+	body := gatekit.TSWithoutComments(block[1])
 	entries := problemCopyEntry.FindAllStringSubmatch(body, -1)
 	if len(entries) == 0 {
 		return nil, errors.New("read no entries from PROBLEM_CODE_COPY: the walk has gone blind")

@@ -13,9 +13,10 @@ package gates
 
 import (
 	"bufio"
-	"bytes"
+	"go/ast"
 	"regexp"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
@@ -110,12 +111,9 @@ var catalogTextColumnLine = regexp.MustCompile(`^public\.([a-z_][a-z0-9_]*\.[a-z
 
 func TestAFreeTextDiscriminatorHasNoVocabularyCheck(t *testing.T) {
 	t.Parallel()
-	raw, err := gatekit.ReadFile(vocabularyCatalog)
-	if err != nil {
-		t.Fatal(err)
-	}
+	raw := headCatalog(t)
 	textColumns := map[string]bool{}
-	scanner := bufio.NewScanner(bytes.NewReader(raw))
+	scanner := bufio.NewScanner(strings.NewReader(raw))
 	scanner.Buffer(make([]byte, 0, 64*1024), 4*1024*1024)
 	for scanner.Scan() {
 		if m := catalogTextColumnLine.FindStringSubmatch(scanner.Text()); m != nil {
@@ -129,7 +127,7 @@ func TestAFreeTextDiscriminatorHasNoVocabularyCheck(t *testing.T) {
 	for _, column := range freeTextDiscriminators.Subjects() {
 		freeTextDiscriminators.Waived(t, column)
 		if !textColumns[column] {
-			t.Errorf("%s is not a text column in %s: remove its entry", column, vocabularyCatalog)
+			t.Errorf("%s is not a text column in %s: remove its entry", column, headCatalogPath)
 		}
 		if _, hasCheck := vocabularies[column]; hasCheck {
 			t.Errorf("%s now carries a vocabulary CHECK: remove its entry, and bind it in enumBindings", column)
@@ -154,10 +152,8 @@ func sqlSelectedKinds(t *testing.T, file, constName string) []string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	recorded := map[string]map[string]bool{}
-	recordStringConsts(recorded, parsed)
 	var kinds []string
-	for text := range recorded[constName] {
+	for _, text := range gatekit.StringConstantValues(t, []*ast.File{parsed})[constName] {
 		for _, m := range selectedLiteral.FindAllStringSubmatch(text, -1) {
 			kinds = append(kinds, m[1])
 		}

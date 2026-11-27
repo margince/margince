@@ -55,3 +55,45 @@ export const wonProposal: MagicLine = {
     ],
   },
 };
+
+export const commitmentProposal: MagicLine = {
+  id: "00000000-0000-7000-8000-0000000c0201",
+  occurred_at: "2026-09-13T08:27:00Z",
+  lane: "needs_you",
+  actor: { type: "agent", id: "capture" },
+  entity: {
+    type: "contact",
+    id: "00000000-0000-7000-8000-0000000c0202",
+    label: "Sebastian Krüger",
+  },
+  summary: {
+    key: "magic.action.approval_commitment_task_named",
+    values: {
+      kind: "commitment_task",
+      party: "Sebastian Krüger",
+      summary:
+        "Follow up on: Sebastian promises to get back to Josh once he has gathered all the feedback from the developers",
+    },
+  },
+  approval_kind: "commitment_task",
+  approval_preview: {
+    version: 2,
+    state: "ready",
+    reviewer_reason: "requested_decider",
+    changes: [
+      {
+        field: "step",
+        before: { kind: "empty", text: "" },
+        after: {
+          kind: "text",
+          text: "Follow up on: Sebastian promises to get back to Josh once he has gathered all the feedback from the developers",
+        },
+      },
+      {
+        field: "owner_id",
+        before: { kind: "empty", text: "" },
+        after: { kind: "reference", text: "Dana Weiss" },
+      },
+    ],
+  },
+};

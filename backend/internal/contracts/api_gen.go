@@ -38925,7 +38925,10 @@ type AuditHistoryEntry struct {
 	// never had one. With `on_behalf_of` set and no `on_behalf_of_name`,
 	// the authority was recorded and the member no longer resolves.
 	PassportId *openapi_types.UUID `json:"passport_id,omitempty"`
-	Summary    string              `json:"summary"`
+
+	// Reason Why a project's phase was moved, in the words given with the move, so a walk through the history says why each move was made. Null on every other row, on a move made without a reason, and for a reader whose role does not read the phase.
+	Reason  *string `json:"reason,omitempty"`
+	Summary string  `json:"summary"`
 
 	// UndidAuditLogId The history entry this one REVERSES, set on a row written by a restore and null on every other row. A reader pairs the two rather than showing a reversal as a fresh change. The opposite direction is deliberately NOT a field here: a row that HAS been reversed already says so through `undoable.reason = already_undone`, which is computed for the whole record rather than for one page, so a second field would be a second answer to a question already asked.
 	UndidAuditLogId *openapi_types.UUID `json:"undid_audit_log_id,omitempty"`
@@ -42259,6 +42262,11 @@ type Company360 struct {
 	// SinceLastVisit What changed on this account since the caller last acknowledged seeing it. Read-only:
 	// the 360 never advances the baseline — `POST /companies/{id}/view-ack` does.
 	SinceLastVisit *Company360SinceLastVisit `json:"since_last_visit,omitempty"`
+
+	// StandingLine Where a record stands after its latest activity, in one sentence the model wrote in
+	// the background when that activity landed. Shared by the record's readers, and served
+	// only to a reader who may open every activity it cites.
+	StandingLine *StandingLine `json:"standing_line,omitempty"`
 
 	// StateStrip The three readings a company page leads with (AC-company-13, PO-F-4). Each half is
 	// independently gated: a caller who may read the account but not its mail gets the account
@@ -45742,6 +45750,11 @@ type Contact360 struct {
 	// SinceLastVisit What changed on this contact since the caller last acknowledged seeing them.
 	// Read-only: the 360 never advances the baseline — `POST /contacts/{id}/view-ack` does.
 	SinceLastVisit *Contact360SinceLastVisit `json:"since_last_visit,omitempty"`
+
+	// StandingLine Where a record stands after its latest activity, in one sentence the model wrote in
+	// the background when that activity landed. Shared by the record's readers, and served
+	// only to a reader who may open every activity it cites.
+	StandingLine *StandingLine `json:"standing_line,omitempty"`
 
 	// Strength Deterministic relationship-strength (features/07 §4) — a transparent function over captured
 	// interaction features (recency, frequency, direction, reciprocity), NOT a trained model. A fixed
@@ -62433,6 +62446,11 @@ type Project360 struct {
 		Data []Project360Stakeholder `json:"data"`
 		Page PageInfo                `json:"page"`
 	} `json:"stakeholders,omitempty"`
+
+	// StandingLine Where a record stands after its latest activity, in one sentence the model wrote in
+	// the background when that activity landed. Shared by the record's readers, and served
+	// only to a reader who may open every activity it cites.
+	StandingLine *StandingLine `json:"standing_line,omitempty"`
 }
 
 // Project360Commitment defines model for Project360Commitment.
@@ -69337,7 +69355,10 @@ type SharedForecastView struct {
 
 	// Readings Four money readings over one period, the counts that say what they leave out, and the frame they were computed in.
 	Readings ForecastReadings `json:"readings"`
-	Target   string           `json:"target"`
+
+	// ScopeLabel The name of the population the readings cover, as this reader's own lens names it: the team, the team member, or the whole company. Absent when that lens does not reach the team member or team, so a link never names a subject its reader could not choose; `readings.scope_kind` still says which kind it is.
+	ScopeLabel *string `json:"scope_label,omitempty"`
+	Target     string  `json:"target"`
 
 	// Withheld Whether anything was kept back from this reader. A boolean and never a count: a count of what somebody may not see states how much of it there is.
 	Withheld bool `json:"withheld"`
@@ -70101,6 +70122,17 @@ type StageTransitionRecord struct {
 	UnsafeRate float64 `json:"unsafe_rate" maximum:"1" minimum:"0"`
 }
 
+// StandingLine Where a record stands after its latest activity, in one sentence the model wrote in
+// the background when that activity landed. Shared by the record's readers, and served
+// only to a reader who may open every activity it cites.
+type StandingLine struct {
+	// ActivityIds The activities the sentence rests on, as the model cited them. The page opens
+	// each one, so a reader can check the line against what was said.
+	ActivityIds []openapi_types.UUID `json:"activity_ids"`
+	Text        string               `json:"text"`
+	WrittenAt   time.Time            `json:"written_at"`
+}
+
 // StandingOverride A recorded exception for one contact, message category and sending company.
 type StandingOverride struct {
 	Authority string `json:"authority"`
@@ -70349,6 +70381,24 @@ type Taggable struct {
 
 // TaggableEntityType defines model for Taggable.EntityType.
 type TaggableEntityType string
+
+// TaskExplanation Why one task is on the reader's list, from that task's own records. Per reader, cached
+// on its inputs, every sentence cited. `generated_by` says whether the model or the
+// facts-only floor wrote it.
+type TaskExplanation struct {
+	GeneratedAt time.Time `json:"generated_at"`
+
+	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
+	// lane. `deterministic` — the structured fallback, used when no lane is configured,
+	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// surface runs refuse the model's answer. Never silently interchangeable: a reader
+	// deciding how much to trust a sentence needs to know which wrote it.
+	GeneratedBy WrittenBy `json:"generated_by"`
+
+	// Sentences Facts say what happened, an assessment what is at stake if nothing is done, a recommendation the one next step. A sentence whose citations cannot be resolved is dropped whole rather than shown uncited.
+	Sentences []CompanyBriefSentence `json:"sentences"`
+	TaskId    openapi_types.UUID     `json:"task_id"`
+}
 
 // TaskReminderClaim defines model for TaskReminderClaim.
 type TaskReminderClaim struct {
@@ -72510,9 +72560,11 @@ type UpdateOfferLineItemRequest struct {
 	DiscountPct  *float64                                `json:"discount_pct,omitempty" maximum:"100" minimum:"0"`
 
 	// IntervalCount How many billing periods the buyer commits to. Recurring lines only. Null while the term is still being settled; sending the offer refuses a recurring line that still has none.
-	IntervalCount *int     `json:"interval_count,omitempty" minimum:"1"`
-	Position      *int     `json:"position,omitempty" minimum:"1"`
-	Quantity      *float64 `json:"quantity,omitempty"`
+	IntervalCount *int `json:"interval_count,omitempty" minimum:"1"`
+
+	// Position Moves the line to this place in the offer. The lines between shift to make room, and the offer's lines are numbered from 1 again. A place past the last line puts it last.
+	Position *int     `json:"position,omitempty" minimum:"1"`
+	Quantity *float64 `json:"quantity,omitempty"`
 
 	// TaxCategory Take the rate from the tax rate sheet for the draft today. Refused together with `tax_rate` (422 `tax_rate_and_category`), and when the sheet has no rate (422 `tax_rate_missing`).
 	TaxCategory *UpdateOfferLineItemRequestTaxCategory `json:"tax_category,omitempty"`
@@ -78315,6 +78367,9 @@ type UploadAttachmentMultipartBody struct {
 	EntityId   openapi_types.UUID                      `json:"entity_id"`
 	EntityType UploadAttachmentMultipartBodyEntityType `json:"entity_type"`
 	File       openapi_types.File                      `json:"file"`
+
+	// ReuseIdentical When true, a live file with the same bytes already filed on this record, against the same agreement, is answered with 200 instead of storing a copy.
+	ReuseIdentical *bool `json:"reuse_identical,omitempty"`
 }
 
 // UploadAttachmentMultipartBodyEntityType defines parameters for UploadAttachment.
@@ -101635,6 +101690,9 @@ type ServerInterface interface {
 	// Reply on a captured messaging-channel conversation — runs directly, consent-gated.
 	// (POST /activities/{id}/send-message)
 	SendMessage(w http.ResponseWriter, r *http.Request, id Id, params SendMessageParams)
+	// Why one task is on the reader's list, written from that task's own records.
+	// (GET /activities/{id}/task-explanation)
+	GetTaskExplanation(w http.ResponseWriter, r *http.Request, id Id)
 	// Find the next steps this meeting transcript states — a background reading that ends in staged 🟡 proposals.
 	// (POST /activities/{id}/transcript-proposals)
 	ReadTranscriptForNextSteps(w http.ResponseWriter, r *http.Request, id Id)
@@ -105172,6 +105230,12 @@ func (_ Unimplemented) PreviewSendAuthorization(w http.ResponseWriter, r *http.R
 // Reply on a captured messaging-channel conversation — runs directly, consent-gated.
 // (POST /activities/{id}/send-message)
 func (_ Unimplemented) SendMessage(w http.ResponseWriter, r *http.Request, id Id, params SendMessageParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Why one task is on the reader's list, written from that task's own records.
+// (GET /activities/{id}/task-explanation)
+func (_ Unimplemented) GetTaskExplanation(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -113682,6 +113746,38 @@ func (siw *ServerInterfaceWrapper) SendMessage(w http.ResponseWriter, r *http.Re
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.SendMessage(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetTaskExplanation operation middleware
+func (siw *ServerInterfaceWrapper) GetTaskExplanation(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetTaskExplanation(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -162365,6 +162461,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/activities/{id}/send-message", wrapper.SendMessage)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/activities/{id}/task-explanation", wrapper.GetTaskExplanation)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/activities/{id}/transcript-proposals", wrapper.ReadTranscriptForNextSteps)

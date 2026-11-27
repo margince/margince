@@ -15,10 +15,10 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 14 |
-| Tool catalog | 244.1 KB |
+| Tool catalog | 244.3 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 63886 |
-| Largest tool | `read_details` (15.3 KB) |
+| Approx. wire tokens | 63940 |
+| Largest tool | `read_details` (15.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
 Those are the bytes on the wire: they carry each tool's output schema and the
@@ -34,9 +34,9 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 33.7 KB | 13% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 51.0 KB | 20% | Yes, every step |
-| Input schemas | 147.8 KB | 60% | Yes, every step |
+| Input schemas | 148.0 KB | 60% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.6 KB | 4% | Partly |
-| **Description + input schema** | **198.8 KB** | **81%** | **the recurring cost** |
+| **Description + input schema** | **199.0 KB** | **81%** | **the recurring cost** |
 
 Output schemas count in the total but are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -7207,6 +7207,24 @@ read_attention for what needs the user now, and read_record for a record's own f
         "system",
         "connector",
         "buyer"
+      ],
+      "type": "string"
+    },
+    "anchor_id": {
+      "description": "mail_draft only",
+      "format": "uuid",
+      "type": "string"
+    },
+    "anchor_type": {
+      "description": "mail_draft only",
+      "enum": [
+        "activity",
+        "forward",
+        "contact",
+        "company",
+        "deal",
+        "lead",
+        "project"
       ],
       "type": "string"
     },

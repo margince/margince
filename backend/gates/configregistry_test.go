@@ -18,6 +18,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose"
@@ -131,7 +132,27 @@ func legacySettingKeys(t *testing.T) map[string]string {
 	return out
 }
 
+// configCensuses holds the census once per test binary: two tests read it.
+// built stays false when a walk fails, so the next caller fails the same way.
+var configCensuses struct {
+	sync.Mutex
+	built  bool
+	census configCensus
+}
+
+// takeConfigCensus answers the shared census, read-only.
 func takeConfigCensus(t *testing.T) configCensus {
+	t.Helper()
+	configCensuses.Lock()
+	defer configCensuses.Unlock()
+	if !configCensuses.built {
+		configCensuses.census = buildConfigCensus(t)
+		configCensuses.built = true
+	}
+	return configCensuses.census
+}
+
+func buildConfigCensus(t *testing.T) configCensus {
 	t.Helper()
 	var census configCensus
 	fset := gatekit.SourceFileSet()

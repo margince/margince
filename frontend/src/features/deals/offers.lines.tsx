@@ -16,7 +16,6 @@ import {
   type FieldLabels,
   moneyLimit,
   percentLimit,
-  problemCodeOf,
   problemMessageOf,
   refusalSentences,
   unwrap,
@@ -139,9 +138,7 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
     onError: (error, { lineItemId }) => {
       refusals.refuse(
         lineItemId,
-        problemCodeOf(error) === "conflict"
-          ? t("offer.positionTaken")
-          : problemMessageOf(error, t, undefined, labels),
+        problemMessageOf(error, t, undefined, labels),
       );
     },
   });
@@ -178,6 +175,10 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
           onSave={(lineItemId, patch) =>
             updateMutation.mutateAsync({ lineItemId, patch })
           }
+          onMove={(lineItemId, position) =>
+            updateMutation.mutate({ lineItemId, patch: { position } })
+          }
+          moving={updateMutation.isPending}
           onRemove={(lineItemId) => removeMutation.mutate(lineItemId)}
           removing={removeMutation.isPending}
         />

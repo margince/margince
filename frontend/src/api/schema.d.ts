@@ -6776,6 +6776,39 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/activities/{id}/task-explanation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Why one task is on the reader's list, written from that task's own records.
+         * @description What happened, what it costs if nothing is done, and what to do, for one open task. A
+         *     sentence's `nature` says which: a `fact` is what happened, an `assessment` is what is at
+         *     stake, a `recommendation` is the one next step.
+         *
+         *     Written from the task, the message it came from, and the relationship with its contact
+         *     as the CALLER sees them, so it describes only records that caller could open. Cached per
+         *     reader on a fingerprint of those inputs and rewritten before the answer when they move.
+         *
+         *     Degrades rather than fails: with no model lane, the sentences are the facts alone,
+         *     each citing its message, and `generated_by` says so. It never falls back to a sentence
+         *     that would fit any task.
+         */
+        get: operations["getTaskExplanation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/activities/{id}/reader-rendering": {
         parameters: {
             query?: never;
@@ -37571,6 +37604,8 @@ export interface components {
              */
             as_of: string;
             company: components["schemas"]["Company"];
+            /** @description Absent until an activity was read, or when this reader may not open one it was written from. */
+            standing_line?: components["schemas"]["StandingLine"];
             /**
              * @description The ONE thing this account needs today, selected server-side by the same rule the contact page uses. Today it fires on what we OWE the account's contacts — a promise past its date, or the next one coming due — read from both places a promise is recorded: a task somebody filed, and a commitment an extractor read out of a conversation. Absent when the caller lacks a grant the rule needs, named in `sections_omitted` as `moments`; the quiet success state is a moment of kind `nothing_needed`, not an absence.
              *     The schema is `ContactMoment` because the card is the same card — same evidence, same dismissal, same verb. What differs is the subject, and the headline says whose promise it is.
@@ -37939,6 +37974,8 @@ export interface components {
              */
             as_of: string;
             contact: components["schemas"]["Contact"];
+            /** @description Absent until an activity was read, or when this reader may not open one it was written from. */
+            standing_line?: components["schemas"]["StandingLine"];
             /**
              * @description Who created the contact, from its earliest create audit row: for an agent, the
              *     colleague it worked for and the tool it was typed through, each when the row
@@ -38600,6 +38637,35 @@ export interface components {
             generated_by: components["schemas"]["WrittenBy"];
             /** @description Two to five sentences: who this contact is in the current commercial context, what they have explicitly cared about, what recently changed, and the unresolved decision or risk. A sentence whose citations cannot be resolved is dropped whole rather than shown uncited. */
             sentences: components["schemas"]["CompanyBriefSentence"][];
+        };
+        /**
+         * @description Why one task is on the reader's list, from that task's own records. Per reader, cached
+         *     on its inputs, every sentence cited. `generated_by` says whether the model or the
+         *     facts-only floor wrote it.
+         */
+        TaskExplanation: {
+            /** Format: uuid */
+            task_id: string;
+            /** Format: date-time */
+            generated_at: string;
+            generated_by: components["schemas"]["WrittenBy"];
+            /** @description Facts say what happened, an assessment what is at stake if nothing is done, a recommendation the one next step. A sentence whose citations cannot be resolved is dropped whole rather than shown uncited. */
+            sentences: components["schemas"]["CompanyBriefSentence"][];
+        };
+        /**
+         * @description Where a record stands after its latest activity, in one sentence the model wrote in
+         *     the background when that activity landed. Shared by the record's readers, and served
+         *     only to a reader who may open every activity it cites.
+         */
+        StandingLine: {
+            text: string;
+            /**
+             * @description The activities the sentence rests on, as the model cited them. The page opens
+             *     each one, so a reader can check the line against what was said.
+             */
+            activity_ids: string[];
+            /** Format: date-time */
+            written_at: string;
         };
         /**
          * @description Facts recorded for this contact, per purpose and channel, with their reason.
@@ -42709,6 +42775,8 @@ export interface components {
              */
             as_of: string;
             project: components["schemas"]["Project"];
+            /** @description Absent until an activity was read, or when this reader may not open one it was written from. */
+            standing_line?: components["schemas"]["StandingLine"];
             /** @description The sections withheld for lack of a grant — so a client can say "you can't see this" instead of "there is none". */
             sections_omitted: components["schemas"]["Project360Section"][];
             company?: components["schemas"]["Project360Company"];
@@ -52215,6 +52283,8 @@ export interface components {
              * @description The instant a snapshot share's state describes. Absent on a live share.
              */
             as_of?: string;
+            /** @description The name of the population the readings cover, as this reader's own lens names it: the team, the team member, or the whole company. Absent when that lens does not reach the team member or team, so a link never names a subject its reader could not choose; `readings.scope_kind` still says which kind it is. */
+            scope_label?: string;
             readings: components["schemas"]["ForecastReadings"];
             /** @description Whether anything was kept back from this reader. A boolean and never a count: a count of what somebody may not see states how much of it there is. */
             withheld: boolean;
@@ -54010,6 +54080,8 @@ export interface components {
                 [key: string]: unknown;
             } | null;
             summary: string;
+            /** @description Why a project's phase was moved, in the words given with the move, so a walk through the history says why each move was made. Null on every other row, on a move made without a reason, and for a reader whose role does not read the phase. */
+            reason?: string | null;
             /**
              * Format: uuid
              * @description The history entry this one REVERSES, set on a row written by a restore and null on every other row. A reader pairs the two rather than showing a reversal as a fresh change. The opposite direction is deliberately NOT a field here: a row that HAS been reversed already says so through `undoable.reason = already_undone`, which is computed for the whole record rather than for one page, so a second field would be a second answer to a question already asked.
@@ -60004,6 +60076,7 @@ export interface components {
         };
         /** @description Any subset; omit a field to leave it unchanged. Totals are derived and not settable (422). */
         UpdateOfferLineItemRequest: {
+            /** @description Moves the line to this place in the offer. The lines between shift to make room, and the offer's lines are numbered from 1 again. A place past the last line puts it last. */
             position?: number;
             description?: string;
             unit?: string;
@@ -76624,6 +76697,33 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MeetingBrief"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getTaskExplanation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The task's explanation. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskExplanation"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -104215,10 +104315,22 @@ export interface operations {
                     entity_id: string;
                     /** Format: binary */
                     file: string;
+                    /** @description When true, a live file with the same bytes already filed on this record, against the same agreement, is answered with 200 instead of storing a copy. */
+                    reuse_identical?: boolean;
                 };
             };
         };
         responses: {
+            /** @description The identical file the record already held, answered for `reuse_identical`. Nothing was stored. */
+            200: {
+                headers: {
+                    Location?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Attachment"];
+                };
+            };
             /** @description The stored attachment metadata. */
             201: {
                 headers: {

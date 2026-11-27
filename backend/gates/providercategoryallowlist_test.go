@@ -12,9 +12,9 @@ package gates
 // CHECK is a write that passes validation and dies on a constraint violation,
 // which reaches a reader as a 500.
 //
-// Both sides are read from SOURCE. A gate may not import a module (ADR-0054
-// §3), and parsing is the right shape anyway: what a reviewer checks is the
-// migration and the declaration, not a value assembled at runtime.
+// Both sides are read from source. A gate may not import a module (ADR-0054),
+// and parsing is the right shape anyway. A reviewer checks the schema and the
+// declaration, not a value assembled at runtime.
 
 import (
 	"regexp"
@@ -47,19 +47,22 @@ func TestTheProviderContainerAllowListIsOneSet(t *testing.T) {
 	}
 }
 
-// providerContainersInTheConstraint reads the tokens out of the migration that
-// states the allow-list.
-//
-// Only the quoted tokens inside the `value IN (...)` arm: the surrounding
-// prose names them too, and a comment must not be able to satisfy a gate.
+// providerContainerArm is the allow-list arm of the constraint, as the head
+// catalog spells it. The arm is one of three ORed terms, so the constraint is
+// no whole vocabulary and catalogVocabularies does not hold it.
+var providerContainerArm = regexp.MustCompile(
+	`capture_exclusion_container_is_personal CHECK .*value = ANY \(ARRAY\[([^\]]*)\]`)
+
+// providerContainersInTheConstraint reads the tokens out of the head catalog.
+// A later migration that changes the constraint updates it, and the migration
+// that first stated it would read stale.
 func providerContainersInTheConstraint(t *testing.T) []string {
 	t.Helper()
-	body := newestFileMatching(t, "migrations/core/*_a_provider_category_binds_everybody.up.sql")
-	arm := regexp.MustCompile(`(?s)value IN \((.*?)\)`).FindSubmatch(body)
+	arm := providerContainerArm.FindStringSubmatch(headCatalog(t))
 	if arm == nil {
-		t.Fatal("the migration no longer states the allow-list as a value IN (...) arm")
+		t.Fatalf("%s no longer states capture_exclusion_container_is_personal with a value = ANY arm", headCatalogPath)
 	}
-	return quotedTokens(arm[1])
+	return splitCatalogTokens(arm[1])
 }
 
 // providerContainersInTheModule reads them out of the slice capture declares.
@@ -97,12 +100,4 @@ func newestFileMatching(t *testing.T, pattern string) []byte {
 		t.Fatalf("reading %s: %v", matches[len(matches)-1], err)
 	}
 	return body
-}
-
-func quotedTokens(in []byte) []string {
-	var out []string
-	for _, m := range regexp.MustCompile(`'([^']+)'`).FindAllSubmatch(in, -1) {
-		out = append(out, string(m[1]))
-	}
-	return out
 }

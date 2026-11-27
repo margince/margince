@@ -18,7 +18,6 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/platform/database/textbounds"
-	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // companyWriteBodies are the request bodies whose fields land on company
@@ -42,11 +41,8 @@ var serverWrittenCompanyColumns = map[string]string{
 
 func TestEveryCompanyTextFieldPublishesItsColumnsLimit(t *testing.T) {
 	t.Parallel()
-	raw, err := gatekit.ReadFile(vocabularyCatalog)
-	if err != nil {
-		t.Fatal(err)
-	}
-	columns, err := textbounds.Columns(strings.NewReader(string(raw)))
+	raw := headCatalog(t)
+	columns, err := textbounds.Columns(strings.NewReader(raw))
 	if err != nil {
 		t.Fatal(err)
 	}

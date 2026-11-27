@@ -124,6 +124,10 @@ func (e *Eraser) redactSubjectActivities(ctx context.Context, tx pgx.Tx, subject
 			return nil, nil, err
 		}
 	}
+	// By the message ids too: mail matched on the subject's address has no link to them.
+	if err := purgeSummariesWrittenFrom(ctx, tx, subject, slices.Concat(activitiesRedacted, activitiesHeld)); err != nil {
+		return nil, nil, err
+	}
 
 	return activitiesRedacted, activitiesHeld, nil
 }
