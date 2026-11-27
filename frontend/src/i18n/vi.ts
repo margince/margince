@@ -18259,7 +18259,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "operations.captureCounterparty.label": "Kiểm tra bên gửi thư mới",
   "operations.captureCounterparty.help":
     "Tần suất mô hình kiểm tra các bên gửi thư mới.",
-  "operations.captureConfidentiality.label": "Đánh giá độ bảo mật của chuỗi thư",
+  "operations.captureConfidentiality.label":
+    "Đánh giá độ bảo mật của chuỗi thư",
   "operations.captureConfidentiality.help":
     "Tần suất đánh giá các chuỗi thư đã thu thập xem đồng nghiệp có được đọc hay không.",
   "operations.gmailWatchScan.label": "Kiểm tra thông báo đẩy Gmail",
