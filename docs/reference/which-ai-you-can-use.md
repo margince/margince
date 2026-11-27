@@ -20,8 +20,8 @@ Also called: which model should I use, best model, recommended model, which LLM,
 
 | Model setup | Where your data goes | Ready | Usable with care | Not reliable yet | Not measured |
 |---|---|---:|---:|---:|---:|
-| Google Gemini | global cloud | 28 | 9 | 0 | 1 |
-| Google Gemini in the EU, through Vertex AI | EU-hosted cloud | 28 | 9 | 0 | 1 |
+| Google Gemini | global cloud | 28 | 9 | 1 | 0 |
+| Google Gemini in the EU, through Vertex AI | EU-hosted cloud | 28 | 9 | 1 | 0 |
 | Anthropic Claude | global cloud | 33 | 4 | 0 | 1 |
 | OpenAI GPT-6, through OpenRouter | global cloud | 19 | 3 | 3 | 13 |
 | Open models from OpenAI and Mistral, through OpenRouter | global cloud | 12 | 12 | 7 | 7 |
@@ -30,7 +30,7 @@ Also called: which model should I use, best model, recommended model, which LLM,
 | Gemma 4 on your own server, through Ollama | your own servers | 0 | 0 | 0 | 38 |
 | Qwen3 on your own server, through vLLM | your own servers | 0 | 0 | 0 | 38 |
 
-92 of these 197 grades were measured on an older version of Margince and wait for a re-check.
+88 of these 199 grades were measured on an older version of Margince and wait for a re-check.
 
 ### What does a grade of a Margince AI feature mean?
 A grade of a Margince AI feature says how often it was right. **Ready** means right in at least 90 of every 100 tries: turn it on. **Usable with care** means right in most tries: have someone look over what it makes. **Not reliable yet** means wrong too often: leave it off. **Not measured** means nobody has tested that feature on that model yet.
@@ -41,8 +41,8 @@ Also called: grade, rating, certified, how reliable is the AI.
 
 | Model setup | Not reliable yet |
 |---|---|
-| Google Gemini | none |
-| Google Gemini in the EU, through Vertex AI | none |
+| Google Gemini | Record summary |
+| Google Gemini in the EU, through Vertex AI | Record summary |
 | Anthropic Claude | none |
 | OpenAI GPT-6, through OpenRouter | Thread confidentiality check<br>First-time sender check<br>Meeting follow-up extraction |
 | Open models from OpenAI and Mistral, through OpenRouter | Message classification<br>First-time sender check<br>Buying-role reading<br>Website research<br>Stage evidence extraction<br>Tag suggestions<br>Meeting follow-up extraction |
