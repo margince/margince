@@ -27,6 +27,20 @@ describe("the list-page-size-coverage rule", () => {
     ).toEqual([]);
   });
 
+  it("passes a fetcher that reads at an offset through the same limit", () => {
+    expect(
+      plantedFindings(rule, [screen("listFetchLimit(query.perPage, reach)")]),
+    ).toEqual([]);
+  });
+
+  it("reports a limit that only looks derived", () => {
+    expect(
+      plantedFindings(rule, [screen("listFetchLimit(query.perPage, 4)")]),
+    ).toEqual([
+      "src/features/planted.tsx sends the page limit listFetchLimit(query.perPage, 4)",
+    ]);
+  });
+
   it("reports a literal limit and a one-page limit", () => {
     expect(plantedFindings(rule, [screen("50")])).toEqual([
       "src/features/planted.tsx sends the page limit 50",

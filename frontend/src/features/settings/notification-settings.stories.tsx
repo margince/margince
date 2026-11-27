@@ -46,11 +46,12 @@ function standingDefaults(): Preference[] {
   ];
 }
 
-function story(items: Preference[], refuseWrites = false) {
+function story(items: Preference[], refuseWrites = false, mailSends = true) {
   return () => {
     installFetchStub({
       "GET /me": meRoute({}),
-      "GET /me/notification-preferences": () => jsonResponse({ items }),
+      "GET /me/notification-preferences": () =>
+        jsonResponse({ items, email_delivery_available: mailSends }),
       ...(refuseWrites && {
         "PUT /me/notification-preferences": () =>
           jsonResponse(
@@ -85,6 +86,12 @@ type Story = StoryObj<typeof NotificationSettingsCard>;
 // First visit: nothing decided, every row sitting on the standing default.
 export const StandingDefaults: Story = {
   render: story(standingDefaults()),
+};
+
+// An installation that sends no email: the page says so once, and a row offers
+// no mailed choice beyond the one it already holds.
+export const NoEmailOnThisInstallation: Story = {
+  render: story(standingDefaults(), false, false),
 };
 
 // Decisions the seat has made, beside classes still following the default. The

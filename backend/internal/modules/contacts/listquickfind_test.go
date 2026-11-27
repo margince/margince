@@ -3,16 +3,13 @@
 
 package contacts
 
-import (
-	"context"
-	"testing"
-)
+import "testing"
 
 func TestASearchOfOnlySpacesFiltersNothing(t *testing.T) {
 	for query, wantClauses := range map[string]int{"": 0, "   ": 0, " \t ": 0, "  acme  ": 1} {
 		var bound []any
 		filters := listFilters{IncludeArchived: true, Query: &query, entity: entityCompany, nameColumn: "display_name"}
-		where, err := filters.clauses(context.Background(), nil, nil, func(v any) int {
+		where, err := filters.clauses(nil, func(v any) int {
 			bound = append(bound, v)
 			return len(bound)
 		})

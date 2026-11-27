@@ -219,7 +219,6 @@ export function BlockedDomainsCard() {
               <PanelBody>
                 <p className="t-caption">
                   <CountLine
-                    unit={t("blockedDomains.unit")}
                     first={1}
                     last={list.data.length}
                     total={list.total}

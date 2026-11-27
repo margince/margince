@@ -166,6 +166,29 @@ describe("the tag vocabulary card", () => {
     ).toBeNull();
   });
 
+  // A merge cannot be undone, so the row names the survivor and offers no Restore.
+  it("lists a merged word under the tag it went into, with nothing to restore", async () => {
+    mount([
+      KEY_ACCOUNT,
+      {
+        ...RETIRED,
+        merged_into: { tag_id: KEY_ACCOUNT.id, name: KEY_ACCOUNT.name },
+      },
+    ]);
+    const row = await screen.findByTestId("tag-t-2");
+    expect(
+      within(row).getByText(
+        translate("en", "tagAdmin.mergedInto", { name: "Key Account" }),
+      ),
+    ).toBeInTheDocument();
+    expect(within(row).queryByText(en["tagAdmin.retired"])).toBeNull();
+    expect(
+      screen.queryByRole("button", {
+        name: translate("en", "table.rowActions", { name: "Trade Fair 2025" }),
+      }),
+    ).toBeNull();
+  });
+
   // Applying a tag is every seat's; coining one is not. The card is drawn for
   // a reader who may see the vocabulary, and the verbs answer to the grants.
   it("offers no verbs to a seat that may only read the vocabulary", async () => {

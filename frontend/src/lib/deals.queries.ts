@@ -145,6 +145,7 @@ export function useCloseDay(value: string | undefined): DayRange | undefined {
 
 export type DealListQuery = ReturnType<typeof dealsQueryParams> & {
   cursor?: string;
+  offset?: number;
 };
 
 export type DealListPage = Awaited<ReturnType<typeof readDealPage>>;
@@ -168,20 +169,40 @@ export function useDeals(f: DealFilters, enabled = true, limit = 100) {
   const readerScope = useHealthScope();
   return useInfiniteQuery({
     enabled: enabled && readerScope !== undefined,
-    // The days, not the dial's word: a list opened after the quarter turns
-    // never reuses the old quarter's cached page. Today is read at mount.
-    queryKey: ["deals", readerScope ?? "", f, closeDay, limit],
+    queryKey: dealsListKey(readerScope ?? "", f, closeDay, limit),
     // `as` steers useInfiniteQuery's TPageParam generic to the cursor type: a
     // bare `undefined` infers TPageParam=undefined and the string cursor no
     // longer type-checks.
     initialPageParam: undefined as string | undefined,
     queryFn: ({ pageParam, signal }) =>
-      readDealPage(
-        { ...dealsQueryParams({ ...f, closeDay }), limit, cursor: pageParam },
-        signal,
-      ),
+      readDealsAt(f, closeDay, { cursor: pageParam, limit }, signal),
     getNextPageParam: nextCursorOf,
   });
+}
+
+/** The deals list's cache key, which a page read at an offset keys under too. */
+export function dealsListKey(
+  readerScope: string,
+  f: DealFilters,
+  closeDay: DayRange | undefined,
+  limit: number,
+) {
+  // The days, not the dial's word: a list opened after the quarter turns
+  // never reuses the old quarter's cached page. Today is read at mount.
+  return ["deals", readerScope, f, closeDay, limit] as const;
+}
+
+/** One read of the deals the dials narrow to, by cursor or at an offset. */
+export function readDealsAt(
+  f: DealFilters,
+  closeDay: DayRange | undefined,
+  at: Readonly<{ cursor?: string; offset?: number; limit: number }>,
+  signal?: AbortSignal,
+) {
+  return readDealPage(
+    { ...dealsQueryParams({ ...f, closeDay }), ...at },
+    signal,
+  );
 }
 
 // dealsByStageReportFilters translates the board's own filter dials into the

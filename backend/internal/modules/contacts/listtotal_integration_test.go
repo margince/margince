@@ -106,7 +106,7 @@ func TestAListTotalCountsTheWholeSetRatherThanThePage(t *testing.T) {
 	}
 }
 
-func TestAListCountsOnItsFirstPageOnly(t *testing.T) {
+func TestAPageReadThroughACursorSendsNoTotal(t *testing.T) {
 	e := setupCapturePrivacy(t)
 	const seeded = 30
 	seedContacts(t, e, e.owner, seeded)
@@ -131,7 +131,7 @@ func TestAListCountsOnItsFirstPageOnly(t *testing.T) {
 		t.Fatalf("listing the second page: %v", err)
 	}
 	if second.Total != nil {
-		t.Fatalf("the second page sent total %d; only the first page counts", *second.Total)
+		t.Fatalf("the second page, read through a cursor, sent total %d; it sends none", *second.Total)
 	}
 }
 
@@ -209,7 +209,7 @@ func TestTheLeadWorkQueueCountsItsWholeSetToo(t *testing.T) {
 		t.Fatalf("listing the second queue page: %v", err)
 	}
 	if next.Total != nil {
-		t.Fatalf("the second queue page sent total %d; only the first page counts", *next.Total)
+		t.Fatalf("the second queue page, read through a cursor, sent total %d; it sends none", *next.Total)
 	}
 }
 

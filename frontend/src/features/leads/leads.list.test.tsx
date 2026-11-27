@@ -639,16 +639,19 @@ describe("LeadsScreen — archived marking (P-3)", () => {
 });
 
 describe("LeadsScreen — the count line", () => {
-  it("names one lead in the singular", async () => {
+  it("counts one lead as a range with no noun", async () => {
     stubFetch(async () =>
       jsonResponse({
         data: [lead],
         page: { next_cursor: null, has_more: false },
       }),
     );
-    render(<LeadsScreen />);
-    expect(await screen.findByText(/1 to 1 of 1 lead\b/)).toBeTruthy();
-    expect(screen.queryByText(/of 1 leads/)).toBeNull();
+    const { container } = render(<LeadsScreen />);
+    await waitFor(() =>
+      expect(container.querySelector(".lt-count")).toHaveTextContent(
+        /^1-1 of 1/,
+      ),
+    );
   });
 });
 
