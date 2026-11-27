@@ -37,6 +37,7 @@
       "field": "action",
       "actions": {
         "accept_document_fields": "accept_attachment_extraction",
+        "accept_link_suggestion": "accept_link_suggestion",
         "archive_document": "delete_attachment",
         "assign_inquiry": "assign_website_inquiry",
         "attach": "attach_document",
@@ -56,6 +57,7 @@
         "read_document_fields": "read_attachment_for_fields",
         "read_transcript": "read_transcript_for_next_steps",
         "ready": "confirm_meeting_ready",
+        "reject_link_suggestion": "reject_link_suggestion",
         "relink": "relink_activity",
         "relink_many": "relink_activities",
         "request_document_access": "request_attachment_access",
@@ -713,6 +715,7 @@
         "legal_entity_members": "list_legal_entity_members",
         "legal_holds": "list_legal_holds",
         "legal_review_settings": "get_legal_review_settings",
+        "link_suggestions": "list_link_suggestions",
         "link_types": "read_link_types",
         "list_filters": "describe_list_filters",
         "member": "get_member",

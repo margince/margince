@@ -2,10 +2,13 @@
 jurisdiction: it
 version: 1
 created: 2026-11-19
+source-checked: 2026-11-25
 instruments:
   - name: "Codice in materia di protezione dei dati personali (d.lgs. 30 giugno 2003, n. 196)"
     provision: "art. 130"
     source-url: https://www.normattiva.it/uri-res/N2Ls?urn:nir:stato:decreto.legislativo:2003-06-30;196~art130
+    text-digest: 230dcc805db6437536fe693c8d5b9bc9a3f2f89bef3c47f7de2f35dfdd4c7900
+    text-fetched: 2026-11-25
 consent-confirmation-needs-request: true
 fixtures:
   - finding: objection_route

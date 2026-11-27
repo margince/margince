@@ -58,6 +58,7 @@ func (r *fakeRuntime) Companies() Companies      { return nil }
 func (r *fakeRuntime) MailContent() MailContents { return nil }
 func (r *fakeRuntime) Models() Models            { return nil }
 func (r *fakeRuntime) Objects() Objects          { return nil }
+func (r *fakeRuntime) Knowledge() Knowledge      { return nil }
 
 func (r *fakeRuntime) Tx(ctx context.Context, fn func(context.Context, Tx) error) error {
 	if !r.live {

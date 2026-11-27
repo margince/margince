@@ -343,7 +343,7 @@ func (t sendEmailTool) Spec() mcp.ToolSpec {
 			"body":{"type":"string","minLength":1},
 			"consent_purpose":{"type":"string","description":"Legacy purpose key, optional. communication_context is what the engine decides on; this is read only where the context leaves the question open. Naming neither is allowed and the server resolves what it can from the thread, but a message it cannot place is refused rather than guessed at"},
 			"scheduled_at":{"type":"string","format":"date-time"` + timestampNote + `},
-			"scheduled_tz":{"type":"string","description":"IANA zone name the moment was chosen in (e.g. Europe/Berlin), required with scheduled_at. The send is deferred to that instant: no activity exists until it fires, and every gate re-runs then."},
+			"scheduled_tz":{"type":"string","description":"IANA zone name the moment was chosen in (for example Europe/Berlin), required with scheduled_at. The send is deferred to that instant: no activity exists until it fires, and every gate re-runs then."},
 			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}` + sendContextProperties + `},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[SendEmailResult](),

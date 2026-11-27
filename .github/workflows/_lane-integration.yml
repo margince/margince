@@ -231,9 +231,11 @@ jobs:
           PG_FSYNC: "off"
         run: make db-up
       # A statement that runs past 10 s logs its plan, so a statement timeout
-      # in a test shows why it was slow. The runner is thrown away, so the
-      # setting never reaches a dev container. The longer query text keeps the
-      # slow-statement reports from cutting the SQL short.
+      # in a test shows why it was slow. A statement the timeout cancels logs
+      # no plan, so its error logs the bound parameters beside its SQL. The
+      # runner is thrown away, so the settings never reach a dev container. The
+      # longer query text keeps the slow-statement reports from cutting the SQL
+      # short.
       - name: Log the plan of every slow statement
         working-directory: .
         run: |
@@ -251,8 +253,10 @@ jobs:
           docker exec "$container" pg_isready -U margince_owner -d postgres -q
           # Postgres knows the auto_explain settings only once the library is loaded.
           psql -c "ALTER SYSTEM SET auto_explain.log_min_duration = '10s'" \
-            -c "ALTER SYSTEM SET auto_explain.log_nested_statements = on" -c "SELECT pg_reload_conf()"
+            -c "ALTER SYSTEM SET auto_explain.log_nested_statements = on" \
+            -c "ALTER SYSTEM SET log_parameter_max_length_on_error = -1" -c "SELECT pg_reload_conf()"
           test "$(psql -tAc 'SHOW auto_explain.log_min_duration')" = "10s"
+          test "$(psql -tAc 'SHOW log_parameter_max_length_on_error')" = "-1"
       # Needs the checkout and not the binaries, so it runs while they build.
       # The shard step checks it again (INTEGRATION_TEMPLATE_READY).
       - name: Build the migrated template
@@ -370,13 +374,14 @@ jobs:
       #
       # A shard that stopped before its tests, as when the build failed, has no
       # directory, and an upload would add a second error to the one it gave.
-      # Postgres logs each slow plan; the shard log alone cannot show it.
+      # Postgres logs each slow plan and each statement the timeout cancelled;
+      # the shard log alone cannot show either.
       - name: Print the plans of slow statements
         if: ${{ failure() && steps.shard.outcome == 'failure' }}
         working-directory: .
         run: |
           container="$(bash scripts/dev-postgres-container.sh 15432)"
-          docker logs "$container" 2>&1 | grep -A200 "LOG:  duration:" | head -2000 || echo "no statement ran past 10 s"
+          docker logs "$container" 2>&1 | bash scripts/print-slow-statements.sh
       - name: Upload the shard manifest + coverage pods
         if: ${{ !cancelled() && steps.shard.outcome != 'skipped' }}
         uses: ./.github/actions/upload-artifact-retried
@@ -493,6 +498,23 @@ jobs:
         env:
           SHARDS_RESULT: ${{ needs.integration-shards.result }}
         run: '[ "$SHARDS_RESULT" = "success" ] || { echo "integration shards: $SHARDS_RESULT"; exit 1; }'
+      # Names the tree this run tested, so the merge queue can skip the lane on
+      # it (scripts/ci-integration-proven.sh). Not `integration-*`, which the
+      # download above reads as shard output.
+      - name: Name the tested tree
+        id: tree
+        working-directory: .
+        run: |
+          mkdir -p "$RUNNER_TEMP/proven"
+          git rev-parse 'HEAD^{tree}' | tee "$RUNNER_TEMP/proven/tree"
+          echo "sha=$(cat "$RUNNER_TEMP/proven/tree")" >> "$GITHUB_OUTPUT"
+      - name: Upload the proof for the merge queue
+        uses: ./.github/actions/upload-artifact-retried
+        with:
+          name: proven-integration-${{ steps.tree.outputs.sha }}
+          path: ${{ runner.temp }}/proven/tree
+          if-no-files-found: error
+          retention-days: 14
       # What this run measured, for cache-warm.yml to weigh the next splits by.
       # Only a run whose slices reconciled gets here. Neither step can fail the
       # lane: a lost file costs the next split some freshness, never a verdict.

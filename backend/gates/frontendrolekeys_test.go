@@ -75,8 +75,7 @@ func roleKeyComparisons(src string, keys []string) []string {
 // LEGACY_ADMIN_SEGMENT), and failing a constant nobody decides a role with is
 // the noise that gets a gate ignored.
 func roleKeyIsDecidedOn(src, key string) bool {
-	// Every shape below, the bound-key one included, spells the key quoted.
-	if !strings.Contains(src, "\""+key+"\"") && !strings.Contains(src, "'"+key+"'") && !strings.Contains(src, "`"+key+"`") {
+	if !quotedKeyMeetsAShape(src, key) {
 		return false
 	}
 	quoted := "(?:\"" + key + "\"|'" + key + "'|`" + key + "`)"
@@ -101,6 +100,36 @@ func roleKeyIsDecidedOn(src, key string) bool {
 		}
 	}
 	return boundKeyIsComparedOn(src, quoted)
+}
+
+// regexpSpace is what `\s` matches in Go's regexp syntax.
+const regexpSpace = "\t\n\f\r "
+
+// quotedKeyMeetsAShape is the cheap question in front of the shapes, whose
+// regexes are slow on the generated API schema. Every shape quotes the key, and
+// all but the array calls put a sign beside it, whitespace aside: `=` or `case`
+// before, `=` or `!` after. An array call's sign can sit lines away, so a
+// source holding one is asked whenever it quotes the key.
+func quotedKeyMeetsAShape(src, key string) bool {
+	arrayCall := strings.Contains(src, ".includes(") || strings.Contains(src, ".indexOf(")
+	for _, mark := range []string{`"`, `'`, "`"} {
+		quoted := mark + key + mark
+		for from := 0; ; {
+			at := strings.Index(src[from:], quoted)
+			if at < 0 {
+				break
+			}
+			at += from
+			from = at + len(quoted)
+			before := strings.TrimRight(src[:at], regexpSpace)
+			after := strings.TrimLeft(src[from:], regexpSpace)
+			if arrayCall || strings.HasSuffix(before, "=") || strings.HasSuffix(before, "case") ||
+				strings.HasPrefix(after, "=") || strings.HasPrefix(after, "!") {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // boundKeyIsComparedOn finds the two-step spelling: the key bound to a name,
@@ -257,8 +286,8 @@ func TestNoScreenDecidesAuthorizationFromARoleKey(t *testing.T) {
 	}
 	// A scan that read nothing reports PASS, which is the one way this gate
 	// could fail silently: the tree moved and nobody was told.
-	if scanned < 600 {
-		t.Fatalf("scanned only %d frontend sources, of roughly 690 eligible — the tree has moved and this gate "+
+	if scanned < 2700 {
+		t.Fatalf("scanned only %d frontend sources, of roughly 2,830 eligible — the tree has moved and this gate "+
 			"is reading part of it. The floor is close to the real count on purpose: losing one directory "+
 			"has to fail here rather than pass quietly", scanned)
 	}

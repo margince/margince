@@ -182,7 +182,7 @@ func (e *stagingEnv) agentWithoutPassport() context.Context {
 }
 
 // agentForRep is the product's own job acting for the rep: no passport, and the
-// rep named as the person it acts for.
+// rep named as the colleague it acts for.
 func (e *stagingEnv) agentForRep() context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
@@ -351,11 +351,11 @@ func TestAnAgentWithNoPassportIsRefusedTheStaging(t *testing.T) {
 
 	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
-	// Each shape names nobody in particular. One acts for a person who is not
+	// Each shape names nobody in particular. One acts for a colleague who is not
 	// its user. One holds a user and grants and acts for no one. One acts for
 	// somebody who is not a member of this workspace.
 	for name, agent := range map[string]principal.Principal{
-		"acting for a person it is not": {
+		"acting for a colleague it is not": {
 			Type: principal.PrincipalAgent, ID: "agent:no-passport", OnBehalfOf: e.rep,
 		},
 		"holding grants, acting for no one": {

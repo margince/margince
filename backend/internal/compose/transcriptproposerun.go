@@ -297,8 +297,8 @@ func fileFor(ctx context.Context, c *Commitment) context.Context {
 	return books
 }
 
-// meetingFiledUnder is every record the meeting is filed under, read as the
-// run's bookkeeping. A proposal carries them all, and accepting it is refused
+// meetingFiledUnder reads the records the meeting is filed under as the run's
+// bookkeeping. A proposal carries them all, and accepting it is refused
 // while any is one the decider cannot see. Read under the requester's scope,
 // the hidden ones would drop out and that refusal would never fire.
 func meetingFiledUnder(ctx context.Context, store transcriptReadStore, activityID ids.ActivityID) ([]activities.ActivityLinkInput, error) {

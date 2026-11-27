@@ -49,7 +49,7 @@ func TestThePnpmVersionHasOneSource(t *testing.T) {
 	// rather than restate it. The scan is over the workflow directory, not a
 	// list: a lane added tomorrow is covered the day it is written.
 	t.Run("no workflow states a version of its own", func(t *testing.T) {
-		files, err := filepath.Glob(filepath.Join(repoRoot, ".github", "workflows", "*.yml"))
+		files, err := gatekit.Glob(filepath.Join(repoRoot, ".github", "workflows", "*.yml"))
 		if err != nil {
 			t.Fatalf("listing workflows: %v", err)
 		}

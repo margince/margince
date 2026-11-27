@@ -28,12 +28,15 @@ const (
 	threadAudienceYoursColumn = "thread_audience_yours"
 )
 
+// sqlFalse is the column a reader gets when no import fact can be true.
+const sqlFalse = "false"
+
 // importFactColumns renders both columns for alias. thread_audience_yours is
 // true when ThreadAudienceSetter.Decide would act on the row. That needs a
 // human or agent caller on a seat that may write, holding activity:update, and
 // a row storekit.ThreadImportedByClause admits.
 func importFactColumns(ctx context.Context, alias string, arg func(any) int) map[string]string {
-	yours := "false"
+	yours := sqlFalse
 	if actor, ok := principal.Actor(ctx); ok && actor.HumanOrItsAgent() && actor.UserID != ids.Nil && mayUpdateActivities(ctx) {
 		yours = storekit.ThreadImportedByClause(alias, "$"+strconv.Itoa(arg(actor.UserID)))
 	}

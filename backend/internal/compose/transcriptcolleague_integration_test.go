@@ -6,9 +6,9 @@
 package compose
 
 // Who a transcript reading acts as. The reading, and the promise it files for
-// the person who asked, runs as that person's agent under their live grants.
+// the colleague who asked, runs as that colleague's agent under their live grants.
 // A promise it files for another colleague is the system's, on the asking
-// person's behalf, so its record says whose meeting it came from. The run row
+// colleague's behalf, so its record says whose meeting it came from. The run row
 // is the system's either way.
 
 import (

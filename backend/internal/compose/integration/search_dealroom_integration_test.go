@@ -89,7 +89,7 @@ func sortIDs(found []ids.UUID) {
 	slices.SortFunc(found, func(a, b ids.UUID) int { return strings.Compare(a.String(), b.String()) })
 }
 
-func roomHitIDs(t *testing.T, e *SearchEnv, ctx context.Context, query string) []ids.UUID {
+func roomHitIDs(ctx context.Context, t *testing.T, e *SearchEnv, query string) []ids.UUID {
 	t.Helper()
 	page, err := e.Store.Search(ctx, search.Input{Query: query, Types: []string{"deal_room"}})
 	if err != nil {
@@ -102,7 +102,7 @@ func roomHitIDs(t *testing.T, e *SearchEnv, ctx context.Context, query string) [
 	return found
 }
 
-func searchEnvRoomList(t *testing.T, e *SearchEnv, ctx context.Context) []ids.UUID {
+func searchEnvRoomList(ctx context.Context, t *testing.T, e *SearchEnv) []ids.UUID {
 	t.Helper()
 	rooms, _, err := dealrooms.NewStore(e.DB()).ListRooms(ctx, dealrooms.ListRoomsInput{})
 	if err != nil {
@@ -128,19 +128,19 @@ func TestASeatFindsTheDealRoomsTheRoomListShowsIt(t *testing.T) {
 		"all":    e.asSeat(e.Rep1, e.Team1, principal.RowScopeAll, roomSeats(true)),
 		"own":    e.asSeat(e.Rep3, e.Team2, principal.RowScopeOwn, roomSeats(true)),
 	} {
-		got := roomHitIDs(t, e, ctx, "harbour")
+		got := roomHitIDs(ctx, t, e, "harbour")
 		sortIDs(got)
 		want := []ids.UUID{f.first, f.second}
 		sortIDs(want)
 		if !slices.Equal(got, want) {
 			t.Errorf("%s: search found %v, want the two live rooms %v", name, got, want)
 		}
-		listed := searchEnvRoomList(t, e, ctx)
+		listed := searchEnvRoomList(ctx, t, e)
 		sortIDs(listed)
 		if !slices.Equal(got, listed) {
 			t.Errorf("%s: search found %v but the room list shows %v", name, got, listed)
 		}
-		if byMessage := roomHitIDs(t, e, ctx, "walkthrough"); !slices.Equal(byMessage, []ids.UUID{f.first}) {
+		if byMessage := roomHitIDs(ctx, t, e, "walkthrough"); !slices.Equal(byMessage, []ids.UUID{f.first}) {
 			t.Errorf("%s: searching the welcome message found %v, want the one room", name, byMessage)
 		}
 	}
@@ -152,7 +152,7 @@ func TestASeatWithoutRoomReadFindsNoDealRoom(t *testing.T) {
 	e := SetupSearch(t)
 	seedRooms(t, e)
 	ctx := e.asSeat(e.Rep1, e.Team1, principal.RowScopeAll, roomSeats(false))
-	if got := roomHitIDs(t, e, ctx, "harbour"); len(got) != 0 {
+	if got := roomHitIDs(ctx, t, e, "harbour"); len(got) != 0 {
 		t.Errorf("a seat without deal_room read found rooms %v", got)
 	}
 }
@@ -229,7 +229,7 @@ func TestASeatWithoutDealReadFindsNoRoomAndListsNone(t *testing.T) {
 	delete(grants, "deal")
 	ctx := e.asSeat(e.Rep1, e.Team1, principal.RowScopeAll, grants)
 
-	if got := roomHitIDs(t, e, ctx, "harbour"); len(got) != 0 {
+	if got := roomHitIDs(ctx, t, e, "harbour"); len(got) != 0 {
 		t.Errorf("a seat without deal read found rooms %v", got)
 	}
 	perType := 5
@@ -262,8 +262,8 @@ func TestARoomOfAnArchivedOrClosedDealIsFoundWhenTheListShowsIt(t *testing.T) {
 	}
 	ctx := e.asSeat(e.Rep1, e.Team1, principal.RowScopeTeam, roomSeats(true))
 
-	found := roomHitIDs(t, e, ctx, "harbour")
-	listed := searchEnvRoomList(t, e, ctx)
+	found := roomHitIDs(ctx, t, e, "harbour")
+	listed := searchEnvRoomList(ctx, t, e)
 	sortIDs(found)
 	sortIDs(listed)
 	if !slices.Equal(found, listed) {

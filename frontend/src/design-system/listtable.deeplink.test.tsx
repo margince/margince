@@ -25,7 +25,14 @@ function Walk({
   page,
   probe,
   bodyOwnsPaging = false,
-}: Readonly<{ page?: number; probe: Probe; bodyOwnsPaging?: boolean }>) {
+  counted = false,
+}: Readonly<{
+  page?: number;
+  probe: Probe;
+  bodyOwnsPaging?: boolean;
+  /** The server counts the list, as a record list's first read does. */
+  counted?: boolean;
+}>) {
   const [loaded, setLoaded] = useState(READ);
   return (
     <LocaleProvider initial="en">
@@ -37,6 +44,7 @@ function Walk({
         page={page}
         onPage={(next) => probe.pages.push(next)}
         hasMore={loaded < ALL}
+        total={counted ? ALL : undefined}
         bodyOwnsPaging={bodyOwnsPaging}
         onLoadMore={() => {
           probe.reads += 1;
@@ -105,6 +113,36 @@ describe("pressing Next on the last loaded page", () => {
       }
     });
     await waitFor(() => expect(screen.getByText("r-50")).toBeTruthy());
+    expect(probe.reads).toBe(1);
+  });
+});
+
+describe("pressing the last page of a counted list", () => {
+  const LAST = Math.ceil(ALL / 25);
+  const lastPage = () => screen.getByRole("button", { name: `Page ${LAST}` });
+
+  it("walks the cursor until that page is the one drawn", async () => {
+    const user = userEvent.setup();
+    const probe = probeOf();
+    render(<Walk probe={probe} counted />);
+
+    await user.click(lastPage());
+
+    await waitFor(() => expect(screen.getByText("r-408")).toBeTruthy());
+    expect(probe.reads).toBe(Math.ceil((ALL - READ) / READ));
+    expect(lastPage().getAttribute("aria-current")).toBe("page");
+    expect(lastPage().getAttribute("aria-busy")).toBeNull();
+  });
+
+  it("marks the asked page busy while its rows are still being read", async () => {
+    const user = userEvent.setup();
+    const probe: Probe = { reads: 0, pages: [], held: [] };
+    render(<Walk probe={probe} counted />);
+
+    await user.click(lastPage());
+
+    expect(lastPage().getAttribute("aria-busy")).toBe("true");
+    expect(lastPage().getAttribute("aria-current")).toBeNull();
     expect(probe.reads).toBe(1);
   });
 });

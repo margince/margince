@@ -70,7 +70,7 @@ func transcriptProposeInsertOpts() *river.InsertOpts {
 
 // withTranscriptReader binds the reading's bookkeeping: system:transcript_read,
 // on behalf of the human who asked. The principals are the reading's own,
-// never deep read's. Borrowing those once told the person deciding a proposal
+// never deep read's. Borrowing those once told the colleague deciding a proposal
 // that the site crawler had read their meeting.
 func withTranscriptReader(ctx context.Context, requestedBy string, readID ids.UUID) context.Context {
 	requester := requestedByUserID(requestedBy)

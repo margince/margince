@@ -209,7 +209,7 @@ func (r *GoogleGroupsReader) groupsPage(ctx context.Context, token, userKey, pag
 		Groups []struct {
 			Email string `json:"email"`
 		} `json:"groups"`
-		NextPageToken string `json:"nextPageToken"`
+		NextPageToken string `json:"nextPageToken"` //nolint:tagliatelle // the Directory API's own field name, not ours to rename
 	}
 	raw, readErr := io.ReadAll(io.LimitReader(resp.Body, maxDirectoryResponse))
 	if readErr != nil {

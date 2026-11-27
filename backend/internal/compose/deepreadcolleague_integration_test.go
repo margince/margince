@@ -5,10 +5,10 @@
 
 package compose
 
-// Who a deep read acts as. A read a person asked for writes its findings as
-// that person's agent, under their live grants. A read Margince started itself
+// Who a deep read acts as. A read a colleague asked for writes its findings as
+// that colleague's agent, under their live grants. A read Margince started itself
 // writes them as system:deep_read. Either way the dossier row is kept by
-// system:deep_read, so a read the person may no longer finish still ends.
+// system:deep_read, so a read the colleague may no longer finish still ends.
 
 import (
 	"context"
@@ -17,7 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 )
 
-func TestADeepReadAPersonAskedForWritesAsTheirAgentAndKeepsItsRowAsTheSystem(t *testing.T) {
+func TestADeepReadAColleagueAskedForWritesAsTheirAgentAndKeepsItsRowAsTheSystem(t *testing.T) {
 	e := integration.Setup(t)
 	company := insertCompany(t, e, e.Rep1, "acme.example", "")
 	worker, _ := newDeepReadTestWorker(e, acmeDeepSite(), acmeDeepBrain())

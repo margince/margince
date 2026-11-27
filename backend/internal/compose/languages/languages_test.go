@@ -6,7 +6,6 @@ package languages_test
 import (
 	"slices"
 	"strings"
-
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/languages"

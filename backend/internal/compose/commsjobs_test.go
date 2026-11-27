@@ -256,6 +256,7 @@ type stubSenders struct {
 }
 
 func (s stubSenders) RecheckSharedReply(context.Context, ids.UserID, ids.UUID) error { return s.err }
+
 func (s stubSenders) SenderFor(context.Context, ids.UserID, capture.Mailbox) (connector.EmailSender, connector.Auth, []string, error) {
 	return s.sender, connector.Auth("cred"), s.granted, s.err
 }

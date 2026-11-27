@@ -117,8 +117,9 @@ func (s *Store) RestoreProfileField(ctx context.Context, contactID ids.ContactID
 			// is keyed by the number being brought back, so leaving this one
 			// would go on presenting a retired number as current.
 			if _, err := tx.Exec(ctx, `
-				DELETE FROM contact_profile_field
-				 WHERE contact_id = $1 AND field = $2 AND value_key = $3`,
+				DELETE FROM field_provenance
+				 WHERE object_type = 'contact' AND object_id = $1 AND field_name = $2 AND value_key = $3
+				   AND value IS NOT NULL`,
 				contactID, field, undo.valueKey); err != nil {
 				return fmt.Errorf("contacts: withdrawing the replaced number's evidence: %w", err)
 			}
@@ -188,10 +189,14 @@ type profileFieldUndo struct {
 // lands, so a statement arriving mid-undo cannot slip between the "is this
 // still ours" test and the write it authorises.
 func readUndo(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, field, valueKey string) (profileFieldUndo, error) {
+	if err := moveLegacyEvidence(ctx, tx, entityContact, contactID.UUID); err != nil {
+		return profileFieldUndo{}, err
+	}
 	rows, err := tx.Query(ctx, `
-		SELECT value, value_key, superseded_value, superseded_captured_by, source_ref
-		  FROM contact_profile_field
-		 WHERE contact_id = $1 AND field = $2 AND superseded_value IS NOT NULL
+		SELECT value, value_key, superseded_value, superseded_captured_by, evidence_ref
+		  FROM field_provenance
+		 WHERE object_type = 'contact' AND object_id = $1 AND field_name = $2 AND value IS NOT NULL
+		   AND superseded_value IS NOT NULL
 		   AND ($3 = '' OR value_key = $3)
 		 ORDER BY value_key
 		 LIMIT 2

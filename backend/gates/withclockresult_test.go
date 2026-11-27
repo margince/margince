@@ -14,9 +14,11 @@ package gates
 // `withClock` keeps the same promise.
 
 import (
+	"errors"
 	"fmt"
 	"go/ast"
 	"go/parser"
+	"go/scanner"
 	"go/token"
 	"os"
 	"slices"
@@ -46,18 +48,32 @@ func TestWithClockReturnsACopyWhoseResultIsUsed(t *testing.T) {
 			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") {
 				return err
 			}
-			src, err := gatekit.ReadFile(path) // #nosec G304 -- a *.go file from walking the trusted backend tree
+			src, err := gatekit.ReadFile(path)
 			if err != nil {
 				return err
 			}
-			found, seen := withClockFindings(path, src)
+			// isWithClockName folds case, so every judged method and counted call holds the folded name.
+			if !mayHoldFolded(string(src), strings.ToLower(withClockName)) {
+				return nil
+			}
+			file, err := gatekit.ParseFile(path, 0)
+			if errors.As(err, new(scanner.ErrorList)) {
+				// A file that does not parse is left to the compiler.
+				return nil
+			}
+			if err != nil {
+				return err
+			}
+			found, seen := withClockFindingsIn(gatekit.SourceFileSet(), file)
 			calls += seen
 			for _, f := range found {
 				t.Error(f)
 			}
 			return nil
 		})
-		if err != nil && !os.IsNotExist(err) {
+		// A missing root is a finding. The floor below counts calls, and the
+		// other roots alone can meet it, so a lost root would go unseen.
+		if err != nil {
 			t.Fatalf("walking %s: %v", root, err)
 		}
 	}
@@ -126,6 +142,10 @@ func withClockFindings(path string, src []byte) (found []withClockFinding, calls
 	if err != nil {
 		return nil, 0
 	}
+	return withClockFindingsIn(fset, file)
+}
+
+func withClockFindingsIn(fset *token.FileSet, file *ast.File) (found []withClockFinding, calls int) {
 	discarded := func(n ast.Node, how string) {
 		found = append(found, withClockFinding{fset.Position(n.Pos()), "the result of WithClock is " + how +
 			". WithClock returns a copy, so this call changes nothing; keep the result, or call SetClock"})
@@ -163,7 +183,9 @@ func withClockFindings(path string, src []byte) (found []withClockFinding, calls
 	return found, calls
 }
 
-func isWithClockName(name string) bool { return strings.EqualFold(name, "WithClock") }
+const withClockName = "WithClock"
+
+func isWithClockName(name string) bool { return strings.EqualFold(name, withClockName) }
 
 func isWithClockCall(expr ast.Expr) bool {
 	call, ok := expr.(*ast.CallExpr)

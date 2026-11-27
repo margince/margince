@@ -144,8 +144,7 @@ func (a *ChatAsker) send(ctx context.Context, provider string, connection ids.UU
 // claim.
 func (a *ChatAsker) settle(ctx context.Context, batch ids.UUID, messageID string, sendErr error) error {
 	retry, retryAfter := true, time.Duration(0)
-	var limited *connector.RateLimitedError
-	if errors.As(sendErr, &limited) {
+	if limited, ok := errors.AsType[*connector.RateLimitedError](sendErr); ok {
 		retryAfter = limited.RetryAfter
 	}
 	switch {

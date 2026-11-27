@@ -306,6 +306,7 @@ var actDefinitions = map[string]Definition{
 	"act.verbs.restore_company_suggestion":         {Words: langcopy.Phrase{En: "Restore company suggestion", De: "Zurückgestellten Vorschlag zurückholen", Vi: "Hiện lại đề xuất đã bỏ qua"}},
 	"act.verbs.restore_contact_moment":             {Words: langcopy.Phrase{En: "Restore contact moment", De: "Ausgeblendeten Hinweis zurückholen", Vi: "Hiện lại gợi ý đã ẩn"}},
 	"act.verbs.restore_contact_profile_field":      {Words: langcopy.Phrase{En: "Restore contact profile field", De: "Früheren Wert eines Kontaktfelds zurückholen", Vi: "Khôi phục giá trị cũ của trường liên hệ"}},
+	"act.verbs.restore_corpus":                     {Words: langcopy.Phrase{En: "Restore corpus", De: "Wissenssammlung wiederherstellen", Vi: "Khôi phục kho tri thức"}},
 	"act.verbs.restore_deal_move":                  {Words: langcopy.Phrase{En: "Restore deal move", De: "Zurückgestellten Schritt eines Deals zurückholen", Vi: "Đưa lại bước đã tạm gác của giao dịch"}},
 	"act.verbs.restore_owner_identity":             {Words: langcopy.Phrase{En: "Restore owner identity", De: "Eigene Adresse wiederherstellen", Vi: "Khôi phục địa chỉ của mình"}},
 	"act.verbs.restore_pipeline":                   {Words: langcopy.Phrase{En: "Restore pipeline", De: "Pipeline wieder aktivieren", Vi: "Dùng lại pipeline"}},

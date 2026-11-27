@@ -31,6 +31,7 @@ func declareLanguage(t *testing.T, code string) {
 		for _, q := range []string{
 			`DELETE FROM product_translation WHERE language = $1`,
 			`UPDATE legal_entity SET default_language = NULL WHERE default_language = $1`,
+			`UPDATE offer SET language = NULL WHERE language = $1`,
 			`DELETE FROM language WHERE code = $1`,
 		} {
 			if _, err := owner.Exec(context.Background(), q, code); err != nil {

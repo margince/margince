@@ -111,7 +111,7 @@ func readWorkflow(t *testing.T, path string) workflowFile {
 		t.Fatalf("reading %s: %v", path, err)
 	}
 	var parsed workflowFile
-	if err := yaml.Unmarshal(body, &parsed); err != nil {
+	if err := unmarshalYAML(body, &parsed); err != nil {
 		t.Fatalf("parsing %s: %v", path, err)
 	}
 	return parsed
@@ -129,7 +129,7 @@ func filterScopes(t *testing.T, workflow workflowFile) map[string][]string {
 				continue
 			}
 			var declared map[string]yaml.Node
-			if err := yaml.Unmarshal([]byte(step.With.Filters), &declared); err != nil {
+			if err := unmarshalYAML([]byte(step.With.Filters), &declared); err != nil {
 				t.Fatalf("parsing the %s filters: %v", pathsFilterAction, err)
 			}
 			scopes := map[string][]string{}
@@ -454,10 +454,9 @@ func unscoped(lane filteredLane, scopes map[string][]string) []string {
 	return missing
 }
 
-// scopeClaims answers the three pattern shapes the classifier uses: a literal
-// path, a directory tree, and a basename anywhere in the tree. A shape it does
-// not recognise leaves the path unclaimed rather than claimed, because the way
-// this gate must not fail is by reporting a pass over patterns it never read.
+// scopeClaims answers the pattern shapes the classifier uses: a literal path, a
+// tree, a glob in one directory, and a basename anywhere. An unknown shape
+// claims nothing. This gate must not pass over patterns it never read.
 func scopeClaims(path string, patterns []string) bool {
 	for _, pattern := range patterns {
 		pattern = strings.Trim(pattern, "'")
@@ -467,6 +466,8 @@ func scopeClaims(path string, patterns []string) bool {
 		case strings.HasSuffix(pattern, "/**") &&
 			strings.HasPrefix(path, strings.TrimSuffix(pattern, "**")):
 			return true
+		case globInOneDirectory(pattern, path):
+			return true
 		case strings.HasPrefix(pattern, "**/") &&
 			(path == strings.TrimPrefix(pattern, "**/") ||
 				strings.HasSuffix(path, strings.TrimPrefix(pattern, "**"))):
@@ -474,6 +475,16 @@ func scopeClaims(path string, patterns []string) bool {
 		}
 	}
 	return false
+}
+
+// globInOneDirectory matches `scripts/release*` the way paths-filter does: the
+// star stops at a slash.
+func globInOneDirectory(pattern, path string) bool {
+	if strings.Contains(pattern, "**") {
+		return false
+	}
+	matched, err := filepath.Match(pattern, path)
+	return err == nil && matched
 }
 
 func TestEveryFilteredLaneRunsOnAChangeToTheScriptsItExecutes(t *testing.T) {

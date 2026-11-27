@@ -347,7 +347,7 @@ func memberActing(ctx context.Context, binding connector.ChatBinding, member ids
 	return chatActingContext(principal.WithActor(ctx, actor), binding)
 }
 
-// phoneInText finds a phone number as people write one.
+// phoneInText finds a phone number as it is usually written.
 var phoneInText = regexp.MustCompile(`\+?\d[\d\s().-]{5,18}\d`)
 
 // The shortest and longest phone number the answer may name, in digits.

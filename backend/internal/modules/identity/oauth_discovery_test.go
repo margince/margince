@@ -83,7 +83,7 @@ func TestDiscoveryAdvertisesEveryGrantableScope(t *testing.T) {
 			}
 		}
 		for _, advertised := range document.scopes {
-			if advertised == scopeOfflineAccess {
+			if advertised == ScopeOfflineAccess {
 				continue
 			}
 			if !validScopes[principal.Scope(advertised)] {
@@ -105,20 +105,20 @@ func TestOnlyTheAuthorizationServerAdvertisesOfflineAccess(t *testing.T) {
 
 	server := scopesAdvertisedBy(t, h.OAuthServerMetadata,
 		"https://crm.example.com/.well-known/oauth-authorization-server")
-	if !slices.Contains(server, scopeOfflineAccess) {
+	if !slices.Contains(server, ScopeOfflineAccess) {
 		t.Errorf("authorization server scopes_supported = %v, want %q so a client knows it may renew",
-			server, scopeOfflineAccess)
+			server, ScopeOfflineAccess)
 	}
 	if len(server) != len(passportScopeVocabulary)+1 {
 		t.Errorf("authorization server scopes_supported = %v, want the closed vocabulary plus %q and nothing else",
-			server, scopeOfflineAccess)
+			server, ScopeOfflineAccess)
 	}
 
 	resource := scopesAdvertisedBy(t, h.ProtectedResourceMetadata,
 		"https://crm.example.com/.well-known/oauth-protected-resource")
-	if slices.Contains(resource, scopeOfflineAccess) {
+	if slices.Contains(resource, ScopeOfflineAccess) {
 		t.Errorf("protected resource scopes_supported = %v, want no %q: it grants no access to a record",
-			resource, scopeOfflineAccess)
+			resource, ScopeOfflineAccess)
 	}
 	if len(resource) != len(passportScopeVocabulary) {
 		t.Errorf("protected resource scopes_supported = %v, want exactly the closed vocabulary", resource)

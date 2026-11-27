@@ -2,10 +2,14 @@
 jurisdiction: pl
 version: 1
 created: 2026-11-19
+source-checked: 2026-11-25
 instruments:
   - name: "Ustawa z dnia 12 lipca 2024 r. Prawo komunikacji elektronicznej"
     provision: "art. 398"
     source-url: https://eli.gov.pl/eli/DU/2024/1221/ogl
+    text-url: https://eli.gov.pl/api/acts/DU/2024/1221/text.pdf
+    text-digest: 6ffec62972a8c37d0533f1459a3b8936965c91fe8f044defb109924ef0e7cca4
+    text-fetched: 2026-11-25
 marketing-exceptions: []
 fixtures:
   - finding: objection_route

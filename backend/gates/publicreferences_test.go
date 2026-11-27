@@ -42,6 +42,8 @@ import (
 	"sort"
 	"strings"
 	"testing"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
@@ -172,14 +174,102 @@ func assertFileCitesNothingPrivate(t *testing.T, rel string) {
 	for i, line := range strings.Split(string(body), "\n") {
 		shown := line
 		line = strings.ReplaceAll(line, registryPullTarget, "")
-		for _, f := range forbidden {
+		for p, f := range forbidden {
 			if f.docsOnly && filepath.Ext(rel) != ".md" {
 				continue
 			}
-			if f.pattern.MatchString(line) {
+			if mayMatchForbidden(p, line) && f.pattern.MatchString(line) {
 				t.Errorf("%s:%d carries a %s — %s\n\t%s",
 					rel, i+1, f.name, f.why, strings.TrimSpace(shown))
 			}
+		}
+	}
+}
+
+// forbiddenWords holds, index for index with forbidden, the words every match of
+// that pattern contains. Derived from the pattern, so an edit to one cannot
+// leave a stale list beside it.
+var forbiddenWords = func() [][]string {
+	words := make([][]string, len(forbidden))
+	for i, f := range forbidden {
+		words[i] = requiredWords(f.pattern)
+	}
+	return words
+}()
+
+// mayMatchForbidden is false only when line holds none of the words pattern i
+// requires. A pattern that requires none is always asked.
+func mayMatchForbidden(i int, line string) bool {
+	return mayHoldWordsOf(line, forbiddenWords[i])
+}
+
+// The fold the regexp engine uses is derived here from the Unicode tables Go
+// ships, so a rune a later table adds is caught.
+func TestMayHoldFoldedNeverSkipsTextACaseInsensitiveWordMatches(t *testing.T) {
+	t.Parallel()
+	for r := rune(utf8.RuneSelf); r <= unicode.MaxRune; r++ {
+		for fold := unicode.SimpleFold(r); fold != r; fold = unicode.SimpleFold(fold) {
+			if fold >= utf8.RuneSelf || !unicode.IsLetter(fold) {
+				continue
+			}
+			word := string(unicode.ToLower(fold))
+			if !regexp.MustCompile("(?i)" + word).MatchString(string(r)) {
+				t.Fatalf("(?i)%s does not match U+%04X, so this test no longer reads the fold the regexp engine uses", word, r)
+			}
+			if !mayHoldFolded(string(r), word) {
+				t.Errorf("(?i)%s matches U+%04X, and mayHoldFolded skips text holding it", word, r)
+			}
+		}
+	}
+}
+
+func TestRequiredWordsAreWordsEveryMatchHolds(t *testing.T) {
+	t.Parallel()
+	for pattern, want := range map[string][]string{
+		`specs/`:               {"specs/"},
+		`(?i)Margince-`:        {"margince-"},
+		`foo|bar`:              {"foo", "bar"},
+		`(^|[^\w])specs/[a-z]`: {"specs/"},
+		`a\d+longer`:           {"longer"},
+		`(ab|cd)e+`:            {"ab", "cd"},
+		`x{2,}`:                {"x"},
+	} {
+		if got := requiredWords(regexp.MustCompile(pattern)); !slices.Equal(got, want) {
+			t.Errorf("requiredWords(%q) = %q, want %q", pattern, got, want)
+		}
+	}
+	// A pattern a line can match without any fixed word promises none, so the
+	// regex must always run.
+	for _, pattern := range []string{`a?b?`, `[ab]+`, `a|\d`, `.*`, `x{0,3}`} {
+		if got := requiredWords(regexp.MustCompile(pattern)); got != nil {
+			t.Errorf("requiredWords(%q) = %q, but a match need hold none of them", pattern, got)
+		}
+	}
+}
+
+func TestEveryForbiddenPatternIsAskedOfTheLinesItMatches(t *testing.T) {
+	t.Parallel()
+	samples := map[string]string{
+		"private repository name":        "see the " + strings.ToUpper(privateProjectName) + " repository",
+		"private specification path":     "read specs/billing first",
+		"private pull-request reference": "as foundation PR #12 decided",
+		"private GitHub owner path":      "cloned from gradionhq/tools",
+		"private specification document": "as business/12-pricing says",
+	}
+	for i, f := range forbidden {
+		if forbiddenWords[i] == nil {
+			t.Errorf("%s: its pattern promises no word, so every line pays for its regex", f.name)
+		}
+		line, ok := samples[f.name]
+		if !ok {
+			t.Errorf("%s has no sample line here; add one that the pattern matches", f.name)
+			continue
+		}
+		if !f.pattern.MatchString(line) {
+			t.Errorf("%s: the sample %q does not match the pattern, so it proves nothing", f.name, line)
+		}
+		if !mayMatchForbidden(i, line) {
+			t.Errorf("%s: the words %q skip %q, a line the pattern matches", f.name, forbiddenWords[i], line)
 		}
 	}
 }

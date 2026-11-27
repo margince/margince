@@ -132,7 +132,6 @@ func WithReplyDraft(brain completer) Option {
 		drafter := newReplyDrafter(pool, brain, s.log)
 		s.replyDrafter = drafter
 		s.activitiesHandlers = s.WithEmailDrafter(drafter)
-		s.rebuildToolRegistry(pool)
 	}
 }
 
@@ -188,7 +187,7 @@ func (d replyDrafter) DraftEmailWithProvenance(ctx context.Context, anchor ids.U
 	if err != nil {
 		return activities.DraftResult{}, err
 	}
-	draft, voiceVersion, draftRef, err := d.completeVoiced(ctx, anchor, data, voice)
+	draft, voiceVersion, draftRef, err := d.completeVoiced(ai.WithFloor(ctx), anchor, data, voice)
 	if err != nil {
 		// Drafting is an assistive read, not the authority to send. Preserve
 		// the deterministic floor and leave the routed ai_call failure visible.

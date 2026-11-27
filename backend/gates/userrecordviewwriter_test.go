@@ -78,6 +78,10 @@ var writesViewBaseline = regexp.MustCompile(
 	`(?is)(INSERT\s+INTO|UPDATE(?:\s+ONLY)?)\s+` +
 		`(?:"?[\w$]+"?\s*\.\s*)*(?:(?-i:"user_record_view")|user_record_view)(?:[^\w$".]|$)`)
 
+// viewBaselineWords lets the census skip a file no write can be in, because
+// every write matches writesViewBaseline.
+var viewBaselineWords = requiredWords(writesViewBaseline)
+
 // TestUserRecordViewHasOneWriter is the census `company360.RecordVisit`'s doc
 // comment names.
 func TestUserRecordViewHasOneWriter(t *testing.T) {
@@ -107,12 +111,19 @@ func TestUserRecordViewHasOneWriter(t *testing.T) {
 			if filepath.Base(path) == "userrecordviewwriter_test.go" {
 				return nil
 			}
-			source, readErr := gatekit.ReadFile(path) // #nosec G304 -- a *.go path from walking the trusted source tree
+			src, readErr := gatekit.ReadFile(path)
 			if readErr != nil {
 				return readErr
 			}
 			judged++
-			for _, line := range gatekit.SQLStatementsIn(t, path, string(source)) {
+			if !mayHoldFolded(string(src), viewBaselineWords...) {
+				return nil
+			}
+			file, parseErr := gatekit.ParseFile(path, 0)
+			if parseErr != nil {
+				return parseErr
+			}
+			for _, line := range gatekit.SQLStatementsOf(file) {
 				if writesViewBaseline.MatchString(line) {
 					findings = append(findings, rel+": "+gatekit.FirstLineOf(line))
 				}
@@ -170,6 +181,9 @@ func TestTheViewBaselineCensusSeesWhatItClaimsTo(t *testing.T) {
 	for _, statement := range caught {
 		if !writesViewBaseline.MatchString(statement) {
 			t.Errorf("the census does not see a write it must:\n\t%s", statement)
+		}
+		if !mayHoldFolded(statement, viewBaselineWords...) {
+			t.Errorf("the census skips a file whose only write is:\n\t%s", statement)
 		}
 	}
 	missed := []string{

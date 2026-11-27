@@ -14,80 +14,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
-func TestEveryCellIsCheckedAgainstItsFieldsType(t *testing.T) {
-	picklist := fieldcatalog.Column{Name: "cf_tier", Type: fieldcatalog.TypePicklist, Options: []string{"Gold", "Silver"}}
-	multi := fieldcatalog.Column{Name: "cf_comp", Type: fieldcatalog.TypeMultiselect, Options: []string{"HubSpot", "Other"}}
-	money := fieldcatalog.Column{Name: "cf_value", Type: fieldcatalog.TypeCurrency, Currency: "EUR"}
-	vnd := fieldcatalog.Column{Name: "cf_vnd", Type: fieldcatalog.TypeCurrency, Currency: "VND"}
-	noCurrency := fieldcatalog.Column{Name: "cf_amount", Type: fieldcatalog.TypeCurrency}
-	date := fieldcatalog.Column{Name: "cf_renewal", Type: fieldcatalog.TypeDate}
-	number := fieldcatalog.Column{Name: "cf_seats", Type: fieldcatalog.TypeNumber}
-	flag := fieldcatalog.Column{Name: "cf_active", Type: fieldcatalog.TypeBoolean}
-	for _, tc := range []struct {
-		col     fieldcatalog.Column
-		raw     string
-		want    any
-		problem string
-	}{
-		{picklist, "gold", "Gold", ""},
-		{picklist, "  Silver ", "Silver", ""},
-		{picklist, "Bronze", nil, "not one of the allowed values: Gold, Silver"},
-		{multi, "hubspot; Other", []string{"HubSpot", "Other"}, ""},
-		{multi, "HubSpot, Other", nil, "separate several values with semicolons"},
-		{multi, "HubSpot; Bronze", nil, "not one of the allowed values: HubSpot, Other"},
-		{money, "12000.50", float64(1200050), ""},
-		{money, "12.000,50", nil, "not an amount in EUR"},
-		{money, "€ 12,000", nil, "not an amount in EUR"},
-		{money, "12k", nil, "not an amount in EUR"},
-		{vnd, "1500000", float64(1500000), ""},
-		{vnd, "1500000.5", nil, "not an amount in VND"},
-		{noCurrency, "12000.50", nil, "has no currency set"},
-		{date, "2026-03-02", "2026-03-02", ""},
-		{date, "03/02/2026", nil, "Write it as YYYY-MM-DD"},
-		{date, "2.3.2026", nil, "Write it as YYYY-MM-DD"},
-		{date, "2026-03-02 10:00", nil, "Write it as YYYY-MM-DD"},
-		{date, "45351", nil, "Write it as YYYY-MM-DD"},
-		{number, "24", "24", ""},
-		{number, "24 seats", nil, "is not a number"},
-		{flag, "Yes", true, ""},
-		{flag, "0", false, ""},
-		{flag, "maybe", nil, "is not yes or no"},
-	} {
-		got, problem := checkCell(tc.col.Name, tc.col, tc.raw, true)
-		if tc.problem == "" {
-			if problem != nil || !reflect.DeepEqual(got, tc.want) {
-				t.Errorf("%s %q → %v, %+v; want %v", tc.col.Type, tc.raw, got, problem, tc.want)
-			}
-			continue
-		}
-		if problem == nil || !strings.Contains(problem.Message, tc.problem) || problem.Value != tc.raw {
-			t.Errorf("%s %q → problem %+v, want one saying %q and quoting the value", tc.col.Type, tc.raw, problem, tc.problem)
-		}
-		if problem != nil && problem.Target != tc.col.Name {
-			t.Errorf("%s %q → problem on %q, want the target %q", tc.col.Type, tc.raw, problem.Target, tc.col.Name)
-		}
-	}
-}
-
-func TestAPicklistProblemNamesNoOptionToACallerWithoutCustomFieldRead(t *testing.T) {
-	picklist := fieldcatalog.Column{Name: "cf_tier", Type: fieldcatalog.TypePicklist, Options: []string{"Gold", "Silver"}}
-	multi := fieldcatalog.Column{Name: "cf_comp", Type: fieldcatalog.TypeMultiselect, Options: []string{"HubSpot", "Other"}}
-	for _, tc := range []struct {
-		col fieldcatalog.Column
-		raw string
-	}{{picklist, "Bronze"}, {multi, "HubSpot; Bronze"}} {
-		_, problem := checkCell(tc.col.Name, tc.col, tc.raw, false)
-		if problem == nil || !strings.Contains(problem.Message, "not one of this field’s allowed values") {
-			t.Fatalf("%s %q → problem %+v, want the refusal without the list", tc.col.Type, tc.raw, problem)
-		}
-		for _, option := range tc.col.Options {
-			if strings.Contains(problem.Message, option) && !strings.Contains(tc.raw, option) {
-				t.Errorf("%s %q → %q names the option %q", tc.col.Type, tc.raw, problem.Message, option)
-			}
-		}
-	}
-}
-
 func seatsCatalog() importCatalog {
 	return importCatalog{byName: map[string]fieldcatalog.Column{
 		"cf_seats": {Name: "cf_seats", Type: fieldcatalog.TypeNumber},
@@ -95,24 +21,35 @@ func seatsCatalog() importCatalog {
 	}}
 }
 
-func TestACoreProblemWinsOverACustomFieldProblem(t *testing.T) {
-	fields := map[string]string{fieldDisplayName: "Acme", fieldSizeBand: "240", "cf_seats": "many"}
-	if _, problem := checkRow(migration.ObjectCompany, fields, seatsCatalog()); problem == nil || problem.Target != fieldSizeBand {
-		t.Fatalf("problem = %+v, want the size_band one", problem)
+// firstOf is a check's typed cells and the first problem it found, for a test
+// about one cell.
+func firstOf(typed map[string]any, problems []*cellProblem) (map[string]any, *cellProblem) {
+	if len(problems) == 0 {
+		return typed, nil
 	}
-	delete(fields, fieldSizeBand)
-	if _, problem := checkRow(migration.ObjectCompany, fields, seatsCatalog()); problem == nil || problem.Target != "cf_seats" {
-		t.Fatalf("problem = %+v, want the cf_seats one", problem)
+	return typed, problems[0]
+}
+
+// A row is checked to its last cell, so one upload names every cell to correct.
+func TestEveryProblemOfARowIsListedCoreCellsFirst(t *testing.T) {
+	fields := map[string]string{fieldDisplayName: "Acme", fieldSizeBand: "240", fieldDomain: "not a domain", "cf_seats": "many"}
+	typed, problems := checkRow(migration.ObjectCompany, fields, seatsCatalog())
+	var targets []string
+	for _, problem := range problems {
+		targets = append(targets, problem.Target)
+	}
+	if typed != nil || !reflect.DeepEqual(targets, []string{fieldDomain, fieldSizeBand, "cf_seats"}) {
+		t.Fatalf("typed = %v, problems on %v; want none typed and the domain, size_band and cf_seats cells", typed, targets)
 	}
 }
 
 func TestACheckedRowCarriesOnlyItsFilledCustomFieldsTyped(t *testing.T) {
 	fields := map[string]string{fieldDisplayName: "Acme", "cf_tier": "gold", "cf_seats": ""}
-	typed, problem := checkRow(migration.ObjectCompany, fields, seatsCatalog())
+	typed, problem := firstOf(checkRow(migration.ObjectCompany, fields, seatsCatalog()))
 	if problem != nil || !reflect.DeepEqual(typed, map[string]any{"cf_tier": "Gold"}) {
 		t.Fatalf("typed = %v, problem %+v; want only cf_tier in the catalog's spelling", typed, problem)
 	}
-	if typed, _ := checkRow(migration.ObjectCompany, map[string]string{fieldDisplayName: "Acme"}, seatsCatalog()); typed != nil {
+	if typed, _ := firstOf(checkRow(migration.ObjectCompany, map[string]string{fieldDisplayName: "Acme"}, seatsCatalog())); typed != nil {
 		t.Fatalf("typed = %v, want nil for a row with no custom field", typed)
 	}
 }
@@ -121,7 +58,7 @@ func TestACheckedRowCarriesOnlyItsFilledCustomFieldsTyped(t *testing.T) {
 // value is refused rather than reaching a store that has no column for it.
 func TestAValueForAFieldNoLongerActiveIsRefused(t *testing.T) {
 	fields := map[string]string{fieldDisplayName: "Acme", "cf_gone": "x"}
-	if _, problem := checkRow(migration.ObjectCompany, fields, seatsCatalog()); problem == nil || problem.Target != "cf_gone" {
+	if _, problem := firstOf(checkRow(migration.ObjectCompany, fields, seatsCatalog())); problem == nil || problem.Target != "cf_gone" {
 		t.Fatalf("problem = %+v, want one on cf_gone", problem)
 	}
 }
@@ -137,11 +74,11 @@ func TestAProblemNamesTheFilesOwnHeader(t *testing.T) {
 // multi-byte letters lands and one more character does not.
 func TestADescriptionOverTheColumnsLengthIsAProblemOfItsCell(t *testing.T) {
 	atCap := strings.Repeat("ü", contacts.CompanyDescriptionMax)
-	if _, problem := checkRow(migration.ObjectCompany, map[string]string{fieldDisplayName: "Acme", descriptionField: atCap}, importCatalog{}); problem != nil {
+	if _, problem := firstOf(checkRow(migration.ObjectCompany, map[string]string{fieldDisplayName: "Acme", descriptionField: atCap}, importCatalog{})); problem != nil {
 		t.Fatalf("problem = %+v, want none for a description at the cap", problem)
 	}
 	over := atCap + "x"
-	_, problem := checkRow(migration.ObjectCompany, map[string]string{fieldDisplayName: "Acme", descriptionField: over}, importCatalog{})
+	_, problem := firstOf(checkRow(migration.ObjectCompany, map[string]string{fieldDisplayName: "Acme", descriptionField: over}, importCatalog{}))
 	if problem == nil || problem.Target != descriptionField || problem.Why.Code != migration.ReasonDescriptionTooLong ||
 		!strings.Contains(problem.Message, strconv.Itoa(contacts.CompanyDescriptionMax+1)) {
 		t.Fatalf("problem = %+v, want the description refused with its length", problem)
@@ -152,15 +89,15 @@ func TestADescriptionOverTheColumnsLengthIsAProblemOfItsCell(t *testing.T) {
 // the row with the same reason the commit gives. A lead may still hold one.
 func TestAContactRowWithASendingSystemsAddressIsSkipped(t *testing.T) {
 	fields := map[string]string{fieldFullName: "Signing-Noreply", fieldEmail: "signing-noreply@example.com"}
-	_, problem := checkRow(migration.ObjectContact, fields, importCatalog{})
+	_, problem := firstOf(checkRow(migration.ObjectContact, fields, importCatalog{}))
 	if problem == nil || problem.Target != fieldEmail || problem.Why.Code != migration.ReasonEmailNamesNoContact {
 		t.Fatalf("problem = %+v, want the email refused as %s", problem, migration.ReasonEmailNamesNoContact)
 	}
-	if _, problem := checkRow(migration.ObjectLead, fields, importCatalog{}); problem != nil {
+	if _, problem := firstOf(checkRow(migration.ObjectLead, fields, importCatalog{})); problem != nil {
 		t.Fatalf("lead problem = %+v, want none: only the contacts store refuses the address", problem)
 	}
 	fields[fieldEmail] = "anna.notify.weber@example.com"
-	if _, problem := checkRow(migration.ObjectContact, fields, importCatalog{}); problem != nil {
+	if _, problem := firstOf(checkRow(migration.ObjectContact, fields, importCatalog{})); problem != nil {
 		t.Fatalf("problem = %+v, want none for a human whose name holds a marker word", problem)
 	}
 }
@@ -169,12 +106,12 @@ func TestAContactRowWithASendingSystemsAddressIsSkipped(t *testing.T) {
 // provider's own domain is not.
 func TestImportRefusesHubSpotBCC(t *testing.T) {
 	fields := map[string]string{fieldFullName: "Logger", fieldEmail: "4711@bcc.eu1.hubspot.com"}
-	if _, problem := checkRow(migration.ObjectContact, fields, importCatalog{}); problem == nil ||
+	if _, problem := firstOf(checkRow(migration.ObjectContact, fields, importCatalog{})); problem == nil ||
 		problem.Why.Code != migration.ReasonEmailNamesNoContact {
 		t.Fatalf("problem = %+v, want the BCC address refused", problem)
 	}
 	fields[fieldEmail] = "anna@hubspot.com"
-	if _, problem := checkRow(migration.ObjectContact, fields, importCatalog{}); problem != nil {
+	if _, problem := firstOf(checkRow(migration.ObjectContact, fields, importCatalog{})); problem != nil {
 		t.Fatalf("problem = %+v, want none for a human at the provider", problem)
 	}
 }

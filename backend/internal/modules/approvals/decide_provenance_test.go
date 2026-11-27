@@ -39,13 +39,13 @@ func TestServerProposedTurnsOnThePassport(t *testing.T) {
 // The other end of the same distinction: what makes a NULL passport_id TRUE.
 //
 // serverProposed reads the column and answers "the server made this". An agent
-// with no passport and no person it acts for would write NULL there too. Its
+// with no passport and no colleague it acts for would write NULL there too. Its
 // proposal would then read as the server's. The self-approval refusal compares
 // the two passports, so against a NULL it never fires. The credential would
 // release the call it made.
-func TestAnAgentStagesOnItsPassportOrForANamedPerson(t *testing.T) {
+func TestAnAgentStagesOnItsPassportOrForANamedColleague(t *testing.T) {
 	minted := ids.From[ids.PassportKind](ids.NewV7())
-	person := ids.NewV7()
+	colleague := ids.NewV7()
 	for name, tc := range map[string]struct {
 		actor   principal.Principal
 		refused bool
@@ -59,15 +59,15 @@ func TestAnAgentStagesOnItsPassportOrForANamedPerson(t *testing.T) {
 			actor:   principal.Principal{Type: principal.PrincipalAgent, ID: "agent:x"},
 			refused: true,
 		},
-		// The product's own job acting for a named person: the row carries
-		// that person in on_behalf_of, and no credential exists to release it.
-		"an agent presenting none, acting for a named person": {
+		// The product's own job acting for a named colleague: the row carries
+		// that colleague in on_behalf_of, and no credential exists to release it.
+		"an agent presenting none, acting for a named colleague": {
 			actor: principal.Principal{
-				Type: principal.PrincipalAgent, ID: "agent:x", UserID: person, OnBehalfOf: person,
+				Type: principal.PrincipalAgent, ID: "agent:x", UserID: colleague, OnBehalfOf: colleague,
 			},
 		},
 		// Two independent ids name nobody in particular: whose job is it?
-		"an agent presenting none, its user and its principal two people": {
+		"an agent presenting none, its user and its principal two colleagues": {
 			actor: principal.Principal{
 				Type: principal.PrincipalAgent, ID: "agent:x", UserID: ids.NewV7(), OnBehalfOf: ids.NewV7(),
 			},
@@ -75,7 +75,7 @@ func TestAnAgentStagesOnItsPassportOrForANamedPerson(t *testing.T) {
 		},
 		"an agent presenting none, with grants and a user but acting for no one": {
 			actor: principal.Principal{
-				Type: principal.PrincipalAgent, ID: "agent:x", UserID: person,
+				Type: principal.PrincipalAgent, ID: "agent:x", UserID: colleague,
 				Permissions: principal.Permissions{RowScope: principal.RowScopeAll},
 			},
 			refused: true,
@@ -105,13 +105,13 @@ func TestAnAgentStagesOnItsPassportOrForANamedPerson(t *testing.T) {
 
 // The product's own job stages with no passport, so the passport comparison
 // cannot see it approving its own row. It is refused by the id it staged
-// under, and the person it acts for, or another job for them, still decides.
+// under, and the colleague it acts for, or another job for them, still decides.
 func TestAJobDoesNotApproveTheRowItStaged(t *testing.T) {
-	person := ids.NewV7()
-	on := ids.From[ids.UserKind](person)
+	colleague := ids.NewV7()
+	on := ids.From[ids.UserKind](colleague)
 	staged := row{Kind: "advance_deal", ProposedBy: "agent:rate-refresh", OnBehalfOf: &on}
 	job := principal.Principal{
-		Type: principal.PrincipalAgent, ID: "agent:rate-refresh", UserID: person, OnBehalfOf: person,
+		Type: principal.PrincipalAgent, ID: "agent:rate-refresh", UserID: colleague, OnBehalfOf: colleague,
 		Scopes: principal.NewScopeSet(principal.ScopeWrite),
 	}
 	if err := agentMayDecide(context.Background(), job, staged, true, ownReleaseAllowed); !errors.Is(err, apperrors.ErrPermissionDenied) {
@@ -120,6 +120,6 @@ func TestAJobDoesNotApproveTheRowItStaged(t *testing.T) {
 	other := job
 	other.ID = "agent:auto-apply"
 	if err := agentMayDecide(context.Background(), other, staged, true, ownReleaseAllowed); err != nil {
-		t.Fatalf("another job acting for the same person was refused: %v", err)
+		t.Fatalf("another job acting for the same colleague was refused: %v", err)
 	}
 }

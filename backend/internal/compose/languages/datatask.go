@@ -21,10 +21,12 @@ const (
 	// foreign key on every language column.
 	MigrationVersion = "core/1795713760"
 
-	// ReasonNotRegistered and ReasonBadLocale name the two things a stored value
-	// can be wrong about. Their sentences and remedies are in systemtext.
+	// ReasonNotRegistered names a stored value the language table does not hold.
+	// Its sentence and remedy are in systemtext.
 	ReasonNotRegistered = "language_not_registered"
-	ReasonBadLocale     = "locale_shape_invalid"
+	// ReasonBadLocale names a stored locale that is not a language with an
+	// optional region. Its sentence and remedy are in systemtext.
+	ReasonBadLocale = "locale_shape_invalid"
 
 	notRegistered = `t.%[1]s IS NOT NULL AND NOT EXISTS (SELECT 1 FROM language l WHERE l.code = t.%[1]s)`
 	badLocale     = `t.%[1]s IS NOT NULL AND t.%[1]s !~ '^[a-z]{2}(-[A-Z]{2})?$'`
@@ -39,6 +41,8 @@ type column struct {
 
 // columns lists every column the task checks. The language-column gate holds
 // Checked to the head catalog, so a column added there cannot be left out.
+//
+//nolint:goconst // each name is that table's own column, not one shared word
 var columns = []column{
 	{table: "activity", name: "language", id: "id"},
 	{table: "app_user", name: "locale", id: "id"},
@@ -56,7 +60,7 @@ var columns = []column{
 
 // DataTask reports each stored value the language table or a locale shape would
 // refuse. It changes no row and guesses no mapping. A key added not valid leaves
-// older rows unchecked, and a person reads the report to decide what each means.
+// older rows unchecked, and an admin reads the report to decide what each means.
 func DataTask() datatask.Task {
 	steps := make([]datatask.Step, len(columns))
 	for i, c := range columns {

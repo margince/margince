@@ -99,3 +99,25 @@ func TestTheThresholdSeparatesANoteFromAWall(t *testing.T) {
 		t.Errorf("a %d-character one-liner was accepted", len([]rune(long)))
 	}
 }
+
+// A body the model stopped writing after its greeting.
+//
+// Flash-Lite returned `Hello Helen,` as the whole body on a reply it had a
+// full intent for. Nothing else caught it: the greeting is valid, and a short
+// line is not an unbroken block.
+func TestABodyThatStopsAfterItsGreetingIsAFinding(t *testing.T) {
+	for _, body := range []string{"Hello Helen,", "Guten Tag Marek Janetzke,\n", "  Hallo Alex,  "} {
+		if !slices.Contains(rules(body), "greeting-only") {
+			t.Errorf("a body of only a greeting was accepted: %q", body)
+		}
+	}
+}
+
+// A short real message is not a greeting with nothing after it.
+func TestAShortMessageIsNotAGreetingOnlyBody(t *testing.T) {
+	for _, body := range []string{"Marcus, passt Donnerstag?", "Hello Helen,\n\nThe offer follows by Friday.", "Danke."} {
+		if slices.Contains(rules(body), "greeting-only") {
+			t.Errorf("a message with content was called greeting-only: %q", body)
+		}
+	}
+}

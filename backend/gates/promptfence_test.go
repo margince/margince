@@ -70,7 +70,7 @@ var claimWithoutFence = gatekit.Waive(map[string]string{})
 func sourceWithoutComments(t *testing.T, path string) string {
 	t.Helper()
 	fset := gatekit.SourceFileSet()
-	file, err := gatekit.ParseFile(path, 0)
+	file, err := gatekit.ParseFileWithoutComments(path)
 	if err != nil {
 		// A Go file the tree cannot parse is a real defect, not a file to skip.
 		t.Fatalf("parsing %s: %v", path, err)
@@ -143,6 +143,9 @@ func TestNoPromptDeclaresAFixedDataBoundary(t *testing.T) {
 // case like that states itself rather than being admitted silently.
 func TestEveryPromptThatPromisesADataBoundaryBuildsOne(t *testing.T) {
 	t.Parallel()
+	// The waivers are asked only about an unfenced claim, so an entry whose
+	// file now builds its fence, or no longer claims, is reported stale.
+	defer claimWithoutFence.AssertAllMatched(t)
 	var offenders []string
 	claimants := 0
 	goFilesUnderTree(t, func(path, body string) {
@@ -183,21 +186,6 @@ func TestEveryPromptThatPromisesADataBoundaryBuildsOne(t *testing.T) {
 	}
 }
 
-// An entry naming a file that no longer claims a data boundary reads stale
-// here: this is the sweep that reaches every non-test Go file with no further
-// filter, so it is the one that owns AssertAllMatched. It holds that each entry
-// still names a claim, not that the claim still needs waiving — a file that now
-// mints its fence as well still matches, and stays matched.
-func TestEveryBoundaryClaimWaiverIsStillReachable(t *testing.T) {
-	t.Parallel()
-	defer claimWithoutFence.AssertAllMatched(t)
-	goFilesUnderTree(t, func(path, body string) {
-		if boundaryClaim.MatchString(body) {
-			claimWithoutFence.Waived(t, path)
-		}
-	})
-}
-
 // claimantsIn counts the functions in one file that make the boundary claim, and
 // names the ones that cannot reach a fence.
 //
@@ -219,7 +207,7 @@ func TestEveryBoundaryClaimWaiverIsStillReachable(t *testing.T) {
 func claimantsIn(t *testing.T, path string) (claiming int, unfenced []string) {
 	t.Helper()
 	fset := gatekit.SourceFileSet()
-	file, err := gatekit.ParseFile(path, 0)
+	file, err := gatekit.ParseFileWithoutComments(path)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", path, err)
 	}

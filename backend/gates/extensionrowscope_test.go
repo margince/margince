@@ -102,7 +102,7 @@ func packageDirs(t *testing.T, root string) []string {
 // spells the ext schema.
 func extSchemaFunctions(t *testing.T, dir string, consts map[string]map[string]string, byName map[string]string) []*ast.FuncDecl {
 	t.Helper()
-	sources, err := filepath.Glob(filepath.Join(dir, "*.go"))
+	sources, err := gatekit.Glob(filepath.Join(dir, "*.go"))
 	if err != nil {
 		t.Fatal(err)
 	}

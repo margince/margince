@@ -49,7 +49,7 @@ func tablesKeyedByRequest(t *testing.T) map[string]requestKeyedTable {
 	t.Helper()
 	root := gatekit.ModuleRoot(t)
 	keyed := map[string]requestKeyedTable{}
-	migrations, err := filepath.Glob(filepath.Join(root, "migrations", "core", "*.up.sql"))
+	migrations, err := gatekit.Glob(filepath.Join(root, "migrations", "core", "*.up.sql"))
 	if err != nil {
 		t.Fatalf("listing the migrations: %v", err)
 	}

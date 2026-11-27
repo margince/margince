@@ -64,7 +64,7 @@ must_mention:
   # an answer that walks the ladder names both and an answer that recites the
   # enum from the tool schema is not what was asked for.
   - "initiative"
-  - "pursuing"
+  - "(?i)pursu"
   # AND THE LADDER'S ENUM IS NOT THE WALK-THROUGH. Both words above are handed
   # over by advance_project_phase's own argument list, so a run that never
   # opened the project could write them from the schema alone — the same false

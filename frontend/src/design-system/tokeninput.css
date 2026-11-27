@@ -27,6 +27,7 @@
 .token-input.is-disabled {
   cursor: not-allowed;
   background: var(--bgInset);
+  border-color: var(--borderStrong);
 }
 
 /* The box shares the frame's row with the tokens and takes what is left, with a
@@ -36,7 +37,7 @@
  * product that does not wear `.input` itself — the frame around it does. Left
  * out, a reader's tokens were typed at the engine's own 13.33px inside a field
  * sized by the house. */
-.token-box {
+.token-input .token-box {
   flex: 1 1 6rem;
   min-width: 4rem;
   font: inherit;
@@ -64,11 +65,11 @@
  * the thing that draws. It answers for the remove buttons too: pressing Tab
  * through the tokens keeps the field lit while the reader is inside it. */
 .token-input:focus-within {
-  border-color: var(--accent);
-  box-shadow: var(--focus-glow);
+  border-color: var(--focusEdge);
+  box-shadow: var(--focus-field);
 }
 .token-input:has([aria-invalid="true"]):focus-within {
-  box-shadow: var(--focus-glow-danger);
+  box-shadow: var(--focus-field-danger);
 }
 
 /* A pill: the value inset from its rounded start, the remove mark's own

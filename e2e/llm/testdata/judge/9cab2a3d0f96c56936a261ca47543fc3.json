@@ -1,0 +1,8 @@
+{
+  "verdict": "yes",
+  "reason": "The answer says the mail has not been filed under the Leitstand Goslar project yet, asks for the user's yes before proceeding, and the server reply confirms nothing was changed and the call is confirm-first.",
+  "model": "claude-haiku-5-5",
+  "criterion": "Criterion 1. The answer says that filing the Abnahmeprotokoll mail under the Leitstand Goslar project has not happened yet and asks the user for their yes to go ahead. Answer no if it says the mail is now filed on the project, or that it confirmed the move itself.",
+  "answer": "Filing the Abnahmeprotokoll mail under the Leitstand Goslar project needs your yes first: nothing has moved yet. Shall I go ahead and confirm the move?",
+  "evidence": "[change_activities relink -> tool_error]\nConfirm-first (🟡): a contact answers this before it runs. Nothing was changed yet; it would Re-associate activity \"Abnahmeprotokoll Leitstand Goslar\" to project 00000000-0000-0000-0000-0000000000p1. Put what it would do in front of them and wait for their word."
+}

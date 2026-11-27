@@ -2,7 +2,10 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
 import { Badge } from "../../design-system/atoms";
+import { de } from "../../i18n/de";
+import { en } from "../../i18n/en";
 import { StoryProviders } from "../../testing/story-utils";
 import type {
   BoardDocument,
@@ -227,17 +230,34 @@ export const WriteRefused: Story = {
   }),
 };
 
+// Closed and bare, so a row draws no reply box and no faces. Not full threads:
+// 1,204 of them miss fe-uat's render deadline.
+const MANY_ROOM_THREADS = Array.from({ length: 1204 }, (_, index) =>
+  thread({ id: `thread-${index}`, state: "resolved", comments: [] }),
+);
+
+async function expectRoomBadge(
+  canvasElement: HTMLElement,
+  title: string,
+  count: string,
+) {
+  const room = await within(canvasElement).findByRole("region", {
+    name: title,
+  });
+  const figure = await within(room).findByText(count);
+  await expect(figure.closest(".panel-head .badge")).not.toBeNull();
+}
+
 /**
  * A count wide enough to be written in a notation. The room panel's badge is a
  * magnitude, and four digits is where de-DE first groups — below it the figure
  * reads the same in every language and proves nothing.
  */
 export const ManyRoomThreads: Story = {
-  render: board(
-    Array.from({ length: 1204 }, (_, index) =>
-      thread({ id: `thread-${index}` }),
-    ),
-  ),
+  render: board(MANY_ROOM_THREADS),
+  play: async ({ canvasElement }) => {
+    await expectRoomBadge(canvasElement, en["threads.roomTitle"], "1,204");
+  },
 };
 
 /** The same board in German: the longer copy, and the badge in the reader's own
@@ -249,14 +269,15 @@ export const ManyRoomThreadsGerman: Story = {
         title="Dokumente"
         groups={GROUPS}
         documents={DOCUMENTS}
-        threads={Array.from({ length: 1204 }, (_, index) =>
-          thread({ id: `thread-${index}` }),
-        )}
+        threads={MANY_ROOM_THREADS}
         verbs={SELLER_VERBS}
         empty="In diesem Raum liegt noch kein Dokument."
       />
     </StoryProviders>
   ),
+  play: async ({ canvasElement }) => {
+    await expectRoomBadge(canvasElement, de["threads.roomTitle"], "1.204");
+  },
 };
 
 /** Long content: a comment nobody wrote in one line, which the thread has to

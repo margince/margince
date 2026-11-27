@@ -34,22 +34,23 @@ const meetingTranscriptSharedSQL = `t.audience = 'workspace' AND t.restricted_at
 	AND cardinality(t.redacted_fields) = 0`
 
 // meetingCompanyPresentSQL holds while transcript t still has a participant
-// who could speak for the company of field alias. That is a stated, standing
+// who could speak for the company in column company. That is a stated, standing
 // party in a role a reading attributes, and the company is its current primary
 // employer. A reading takes its speakers from activities.PartiesOf under the
 // same tests.
-func meetingCompanyPresentSQL(field string) string {
+func meetingCompanyPresentSQL(company string) string {
 	return `EXISTS (SELECT 1 FROM activity_participant p JOIN relationship rel ON rel.contact_id = p.contact_id
 		WHERE p.activity_id = t.id AND p.role IN ('from', 'to', 'cc', 'organizer', 'attendee')
 		  AND NOT ` + auth.ParticipantUnstatedSQL("p") + ` AND ` + auth.ParticipantStandsSQL("p", "t") + `
-		  AND rel.company_id = ` + field + `.company_id AND rel.kind = 'employment'
+		  AND rel.company_id = ` + company + ` AND rel.kind = 'employment'
 		  AND rel.archived_at IS NULL AND ` + employment.CurrentPrimarySQL("rel") + `)`
 }
 
-// meetingFieldStandsSQL holds while field alias may keep its meeting value:
-// its transcript t is shared and still has someone from the company.
-func meetingFieldStandsSQL(field string) string {
-	return `(` + meetingTranscriptSharedSQL + `) AND ` + meetingCompanyPresentSQL(field)
+// meetingFieldStandsSQL holds while an evidence row may keep its meeting value.
+// Its transcript t is shared and still has someone from the company the
+// column names.
+func meetingFieldStandsSQL(company string) string {
+	return `(` + meetingTranscriptSharedSQL + `) AND ` + meetingCompanyPresentSQL(company)
 }
 
 // RetractStaleMeetingProfilesTx removes up to limit company fields whose
@@ -62,14 +63,18 @@ func RetractStaleMeetingProfilesTx(ctx context.Context, tx pgx.Tx, limit int) (i
 	if err := auth.RequireSystem(ctx); err != nil {
 		return 0, err
 	}
+	if err := moveLegacyMeetingEvidence(ctx, tx, limit); err != nil {
+		return 0, err
+	}
 	rows, err := tx.Query(ctx, `WITH picked AS MATERIALIZED (
-		  SELECT s.id FROM company_profile_field s JOIN activity t ON t.id = s.source_activity_id
-		   WHERE s.source = 'meeting' AND NOT (`+meetingFieldStandsSQL("s")+`)
+		  SELECT s.id FROM field_provenance s JOIN activity t ON t.id = s.source_activity_id
+		   WHERE s.object_type = 'company' AND s.value IS NOT NULL
+		     AND s.source = 'meeting' AND NOT (`+meetingFieldStandsSQL("s.object_id")+`)
 		   ORDER BY s.id LIMIT $1 FOR UPDATE OF s SKIP LOCKED)
-		DELETE FROM company_profile_field f USING activity t
-		WHERE f.id IN (SELECT id FROM picked)
-		  AND f.source = 'meeting' AND t.id = f.source_activity_id AND NOT (`+meetingFieldStandsSQL("f")+`)
-		RETURNING f.company_id, f.field, f.value`, limit)
+		DELETE FROM field_provenance f USING activity t
+		WHERE f.id IN (SELECT id FROM picked) AND f.object_type = 'company' AND f.value IS NOT NULL
+		  AND f.source = 'meeting' AND t.id = f.source_activity_id AND NOT (`+meetingFieldStandsSQL("f.object_id")+`)
+		RETURNING f.object_id, f.field_name, f.value`, limit)
 	if err != nil {
 		return 0, fmt.Errorf("remove the company fields whose meeting no longer stands: %w", err)
 	}
@@ -161,13 +166,16 @@ func writeMeetingFieldsTx(
 	ctx context.Context, tx pgx.Tx, company ids.CompanyID, transcript ids.ActivityID, by string,
 	fields []MeetingProfileField, images *meetingFieldImages,
 ) error {
+	if err := moveLegacyEvidence(ctx, tx, entityCompany, company.UUID); err != nil {
+		return err
+	}
 	for _, field := range fields {
 		var was *string
 		if err := tx.QueryRow(ctx, `SELECT value FROM company_profile_field WHERE company_id = $1 AND field = $2`,
 			company, field.Field).Scan(&was); err != nil && !errors.Is(err, pgx.ErrNoRows) {
 			return fmt.Errorf("read profile field %s before a meeting writes it: %w", field.Field, err)
 		}
-		value := textbounds.Fit("public.company_profile_field.value", field.Value)
+		value := textbounds.Fit("public.field_provenance.value", field.Value)
 		tag, err := tx.Exec(ctx, upsertCompanyProfileField,
 			company, field.Field, value, "", nil, field.Confidence, CompanySourceMeeting, by, false, transcript.UUID)
 		if err != nil {
@@ -247,11 +255,15 @@ func retractUnstatedMeetingFields(
 			keepCompanies, keepFields = append(keepCompanies, company.UUID), append(keepFields, field.Field)
 		}
 	}
+	if err := moveLegacyEvidence(ctx, tx, entityCompany, changeable...); err != nil {
+		return err
+	}
 	rows, err := tx.Query(ctx, `
-		DELETE FROM company_profile_field f
-		 WHERE f.source = 'meeting' AND f.source_activity_id = $1 AND f.company_id = ANY($4::uuid[])
-		   AND (f.company_id, f.field) NOT IN (SELECT * FROM unnest($2::uuid[], $3::text[]))
-		RETURNING f.company_id, f.field, f.value`, transcript.UUID, keepCompanies, keepFields, changeable)
+		DELETE FROM field_provenance f
+		 WHERE f.object_type = 'company' AND f.value IS NOT NULL
+		   AND f.source = 'meeting' AND f.source_activity_id = $1 AND f.object_id = ANY($4::uuid[])
+		   AND (f.object_id, f.field_name) NOT IN (SELECT * FROM unnest($2::uuid[], $3::text[]))
+		RETURNING f.object_id, f.field_name, f.value`, transcript.UUID, keepCompanies, keepFields, changeable)
 	if err != nil {
 		return fmt.Errorf("remove the fields a meeting no longer states: %w", err)
 	}

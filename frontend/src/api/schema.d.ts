@@ -16140,7 +16140,10 @@ export interface paths {
          *     conversion rate against it, because changing it would re-mean every roll-up built on
          *     those rates (ADR-0085 §7). Before that point it is freely changeable, which is the
          *     case this serves: an installation that chose wrong in its configuration and noticed
-         *     in week one. Audit-only write (no event stream, EVT-NOEVT-3).
+         *     in week one. The refusal's field error keeps its English `message` and carries
+         *     `params` that mirror `BaseCurrencyLock`: `reason`, `count` as a decimal string, and
+         *     `base_currency` only when the lock names one, so a client words it as it words the
+         *     read's `base_currency_lock`. Audit-only write (no event stream, EVT-NOEVT-3).
          */
         patch: operations["updateInstallationSettings"];
         trace?: never;
@@ -29318,7 +29321,8 @@ export interface components {
             timezone?: string;
             /**
              * @description ISO-4217 code. Refused with `setting_frozen` once anything has frozen a conversion
-             *     rate against the current base.
+             *     rate against the current base. The refusal's `params` mirror `BaseCurrencyLock`:
+             *     `reason`, `count` as a decimal string, and `base_currency` when the lock names one.
              */
             base_currency?: string;
             /**
@@ -31171,6 +31175,11 @@ export interface components {
             next_sync_due_at?: string | null;
             /** @description Summary of the connection's backfill run; state `none` when never run. */
             backfill?: components["schemas"]["BackfillStatus"];
+            /**
+             * @description A period no sync of this mailbox read: a sync found its provider cursor gone and listed only the newest mail, or a first sync could not reach back to where it was to start. A successful sync since, and a finished import, do not clear it. Only an import whose window reaches back over it, and that failed no message, does. Absent when there is none.
+             *     A recent `last_success_at` and a `backfill` in state `done` say a poll and a scan completed. This period says which mail neither of them read, so the owner knows to import a window that covers it.
+             */
+            unread_period?: components["schemas"]["CaptureUnreadPeriod"];
             /**
              * @description This mailbox's own answer to reading contact details out of its mail, or null to
              *     follow the tenant default (`CaptureSettings.signature_enrich`). Null is a third state
@@ -34751,7 +34760,7 @@ export interface components {
          * @description Why a row was skipped or warned about, so a screen can say it in the reader's language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code. `run_in_flight` is the one refusal code: it answers a commit or undo on a run another attempt holds, and no row carries it.
          * @enum {string}
          */
-        ImportReasonCode: "activity_empty" | "activity_held" | "address_erased" | "address_not_split" | "activity_link_ambiguous" | "activity_link_ambiguous_dropped" | "activity_type_unknown" | "activity_type_unnamed" | "activity_unlinked" | "amount_negative" | "author_too_long" | "cannot_create" | "cannot_create_tags" | "cannot_edit" | "cannot_edit_and_tag" | "cannot_link_stakeholders" | "cannot_read_pipelines" | "cannot_read_tags" | "cannot_write_type" | "close_date_future" | "close_date_past" | "company_domain_matched" | "company_duplicate_found" | "company_duplicate_skipped" | "company_link_on_meeting" | "company_name_empty" | "contact_duplicate_found" | "contact_duplicate_skipped" | "contact_email_held" | "contact_holds_lead" | "contact_not_found" | "contact_not_found_dropped" | "contact_channel_missing" | "contact_unnamed" | "currency_not_a_code" | "currency_unset" | "deal_already_closed" | "deal_company_has_contracts" | "deal_legal_gate" | "deal_not_found" | "deal_not_found_dropped" | "deal_pipeline_fixed" | "description_too_long" | "direction_unknown" | "domain_held" | "duplicate_email" | "duration_not_valid_for_kind" | "email_names_no_contact" | "duration_out_of_range" | "employer_column_empty" | "employer_column_empty_dropped" | "employer_not_found" | "employer_not_found_dropped" | "employer_refused" | "employer_will_create" | "empty_payload" | "field_inactive" | "fx_rate_missing" | "id_not_a_company_id" | "id_not_a_record_id" | "id_not_visible" | "id_record_not_visible" | "id_on_non_company" | "lead_not_found" | "lead_not_found_dropped" | "lead_status_not_importable" | "lead_status_unknown" | "link_ambiguous" | "link_ambiguous_dropped" | "link_contact_not_imported" | "link_edge_unsupported" | "link_malformed" | "link_not_attachable" | "link_not_found" | "link_not_found_dropped" | "link_row_not_imported" | "link_row_skipped" | "link_row_skipped_dropped" | "link_type_unknown" | "linkedin_held" | "lost_reason_missing" | "meeting_not_taken_place" | "meeting_status_not_valid_for_kind" | "meeting_status_unknown" | "message_not_importable" | "natural_key_taken" | "not_a_date" | "note_repeated" | "not_a_domain" | "not_a_number" | "not_an_amount" | "not_an_email" | "not_yes_no" | "occurred_at_future" | "occurred_at_unnamed" | "option_not_allowed" | "option_not_in_list" | "options_need_semicolons" | "owner_refused" | "owner_unknown" | "phone_needs_country" | "pipeline_no_open_stage" | "pipeline_unknown" | "pipeline_unnamed" | "record_archived" | "ref_taken_by_another_company" | "ref_taken_by_another_record" | "row_key_empty" | "row_key_repeated" | "run_in_flight" | "size_band_invalid" | "stage_unknown" | "stage_unnamed" | "stored_values_kept" | "tag_created" | "tag_name_invalid" | "tag_new" | "task_not_importable" | "timestamp_needs_zone" | "too_many_links" | "undo_edited" | "undo_failed" | "undo_grant_lost" | "undo_not_visible" | "undo_rule_protects" | "undo_still_referenced" | "value_refused" | "value_too_long" | "value_unreadable";
+        ImportReasonCode: "activity_empty" | "activity_held" | "address_erased" | "address_not_split" | "activity_link_ambiguous" | "activity_link_ambiguous_dropped" | "activity_link_ambiguous_will_drop" | "activity_type_unknown" | "activity_type_unnamed" | "activity_unlinked" | "amount_negative" | "amount_needs_currency" | "amount_too_many_decimals" | "author_too_long" | "cannot_create" | "cannot_create_tags" | "cannot_edit" | "cannot_edit_and_tag" | "cannot_link_stakeholders" | "cannot_read_pipelines" | "cannot_read_tags" | "cannot_write_type" | "close_date_far" | "close_date_future" | "close_date_past" | "company_domain_matched" | "company_duplicate_found" | "company_duplicate_skipped" | "company_link_on_meeting" | "company_name_empty" | "contact_duplicate_found" | "contact_duplicate_skipped" | "contact_email_held" | "contact_holds_lead" | "contact_not_found" | "contact_not_found_dropped" | "contact_not_found_will_drop" | "contact_channel_missing" | "contact_unnamed" | "currency_not_a_code" | "currency_not_money" | "currency_unset" | "deal_already_closed" | "deal_company_has_contracts" | "deal_legal_gate" | "deal_not_found" | "deal_not_found_dropped" | "deal_not_found_will_drop" | "deal_pipeline_fixed" | "description_too_long" | "direction_unknown" | "domain_held" | "duplicate_email" | "duration_not_valid_for_kind" | "email_names_no_contact" | "duration_out_of_range" | "employer_column_empty" | "employer_column_empty_dropped" | "employer_column_empty_will_drop" | "employer_not_found" | "employer_not_found_dropped" | "employer_not_found_will_drop" | "employer_refused" | "employer_will_create" | "empty_payload" | "field_inactive" | "fx_rate_missing" | "id_not_a_company_id" | "id_not_a_record_id" | "id_not_visible" | "id_record_not_visible" | "id_on_non_company" | "lead_not_found" | "lead_not_found_dropped" | "lead_not_found_will_drop" | "lead_status_not_importable" | "lead_status_unknown" | "link_ambiguous" | "link_ambiguous_dropped" | "link_ambiguous_will_drop" | "link_contact_not_imported" | "link_edge_unsupported" | "link_malformed" | "link_not_attachable" | "link_not_found" | "link_not_found_dropped" | "link_not_found_will_drop" | "link_row_not_imported" | "link_row_skipped" | "link_row_skipped_dropped" | "link_row_skipped_will_drop" | "link_type_unknown" | "linkedin_held" | "lost_reason_missing" | "meeting_not_taken_place" | "meeting_status_not_valid_for_kind" | "meeting_status_unknown" | "message_not_importable" | "natural_key_taken" | "not_a_date" | "note_repeated" | "not_a_domain" | "not_a_number" | "not_a_phone" | "not_an_amount" | "not_an_email" | "not_yes_no" | "occurred_at_future" | "occurred_at_unnamed" | "option_not_allowed" | "option_not_in_list" | "options_need_semicolons" | "owner_refused" | "owner_unknown" | "phone_needs_country" | "pipeline_no_open_stage" | "pipeline_unknown" | "pipeline_unnamed" | "record_archived" | "ref_taken_by_another_company" | "ref_taken_by_another_record" | "row_key_empty" | "row_key_repeated" | "run_in_flight" | "size_band_invalid" | "stage_unknown" | "stage_unnamed" | "stored_values_kept" | "tag_created" | "tag_name_invalid" | "tag_new" | "task_not_importable" | "timestamp_needs_zone" | "too_many_links" | "undo_edited" | "undo_failed" | "undo_grant_lost" | "undo_not_visible" | "undo_rule_protects" | "undo_still_referenced" | "value_refused" | "value_too_long" | "value_unreadable";
         /**
          * @description Exactly one of two shapes: `object` and `mapping` (and optionally
          *     `source_key`) for one CSV, or `parts` for a ZIP, each part with its own
@@ -35002,7 +35011,7 @@ export interface components {
             /** @description A picklist or multiselect field's allowed values, for a caller who may read custom fields. Absent otherwise. */
             options?: string[];
         };
-        /** @description One row the import could not take, named by its line so a human can go fix it. A problem of a whole file, such as a tag the file names that does not exist yet, has no line. */
+        /** @description One problem of a row, named by its line so a human can go fix it. A row with several cells at fault has one issue for each, and counts once in `skipped`. A problem of a whole file, such as a tag the file names that does not exist yet, has no line. */
         ImportRowIssue: {
             /** @description The line in the uploaded file, counting the header as line 1. Absent when the problem belongs to the whole file. */
             line?: number;
@@ -35187,6 +35196,8 @@ export interface components {
             file_name?: string;
             /** @description The name the run's source is filed under. */
             source_name?: string;
+            /** @description Rows the upload counted in the file, a ZIP's files added together. Present while the run keeps what the upload read of the file, in a list too, so a draft no test has read still says how many rows it holds. */
+            readonly row_count?: number;
             /** @description The files the run imports, in import order. A single CSV is one part. */
             parts?: components["schemas"]["ImportRunPart"][];
             /**
@@ -35288,6 +35299,8 @@ export interface components {
             object: components["schemas"]["ImportObject"];
             /** @description Rows the file holds, once a dry run has read it; 0 before. */
             row_count: number;
+            /** @description Rows of the file the run created or updated. Present once the run has written: `complete`, `failed`, `undoing` or `undone`. */
+            readonly rows_written?: number;
             /** @description `{source column -> target field}` as the run saved it, the shape `updateImportRun` accepts, so a reader restores its edits from the run. Absent while the run holds none. */
             mapping?: {
                 [key: string]: string;
@@ -46400,12 +46413,12 @@ export interface components {
             supersedes_id?: string | null;
             /**
              * Format: uuid
-             * @description The account an upload is filed under: the company it was uploaded on, or the account of the deal it was uploaded on at that time. A file that came with a captured mail carries none; the account's Documents list reaches it through the mail's links as they are now. A read path rather than a second parent: visibility stays the primary parent's, and a company merge moves it.
+             * @description The account a file is filed under, worked out when it is read: the company it is filed on, or the company of the deal it is filed on now. A file on any other record names none; the account's Documents list reaches a mail's file through the mail's links as they are now. A read path rather than a second parent: visibility stays the primary parent's.
              */
             readonly company_id?: string | null;
             /**
              * Format: uuid
-             * @description The agreement this file belongs to: the same kind of roll-up as company_id above, and likewise not a second parent. Set at upload by the contact filing the paper; never inferred from a filename or a date, which is the guess the document state exists to refuse.
+             * @description The agreement this file is about. A read path rather than a second parent: visibility stays the primary parent's. Set at upload by the member filing the paper; never inferred from a filename or a date, which is the guess the document state exists to refuse.
              */
             readonly contract_id?: string | null;
             /** @description True for a file a private message carried that was recorded by name, size and type only: no bytes were kept, so there is nothing to download (404) or read. Also true for any row with a `url`, which is a pointer and has no bytes. */
@@ -55676,7 +55689,7 @@ export interface components {
                 if_version?: boolean;
                 /** @description Whether the app asks its user to confirm it first. */
                 ask_user_first?: boolean;
-                /** @description Whether it takes filename, content_type and content_base64. */
+                /** @description Whether it takes filename, content_type and content_base64 or content_text. */
                 uploads_a_file?: boolean;
                 /** @description The JSON schema of its body argument. */
                 body?: {
@@ -57427,12 +57440,6 @@ export interface components {
              * @description The won deal that activated the partner.
              */
             readonly activation_deal_id?: string | null;
-            /** @description Current partner-fit score; if partner_fit_override_reason is non-null this is the Commercial Judgement value. */
-            partner_fit_score?: number | null;
-            /** @description Retained machine-computed partner-fit value while a Commercial Judgement override is in force. */
-            readonly partner_fit_score_computed?: number | null;
-            /** @description Non-null ⇒ partner_fit_score is a human Commercial Judgement override and recompute is suppressed until cleared. */
-            readonly partner_fit_override_reason?: string | null;
             /**
              * @deprecated
              * @description Never set; always null. Kept so existing clients keep compiling.
@@ -66317,6 +66324,12 @@ export interface components {
             embed_state: components["schemas"]["KnowledgeEmbedState"];
             /** Format: date-time */
             created_at: string;
+            /** @description The id the document's source gave it (a Google Drive file id), set only on a document an extension keeps in step with that source. Null for an upload. */
+            external_id?: string | null;
+            /** @description What the source said about the document (owner, department, country, type, effective and review dates, audience), as the extension read it. A field the source did not state is absent, never guessed. Absent for an upload. */
+            meta?: {
+                [key: string]: string;
+            };
         };
         /** @description The corpus as an ANSWER needs it: enough to name what was searched and to quote the topic statement back in a refusal, and nothing else. It is not KnowledgeCorpus, because that one carries coverage — which the answer already reports at its own top level — and an answer shipping the same counts down two paths is two components rendering different numbers on one screen with nothing to fail when they disagree. The settings a corpus is administered by (min_similarity, default_ask, reindexing) are no business of a reply. */
         KnowledgeAnswerCorpus: {
@@ -66349,6 +66362,10 @@ export interface components {
             end_column?: number;
             /** @description A verbatim span from the retrieved passages, whitespace-collapsed and matched before this claim was allowed to exist. */
             quote: string;
+            /** @description What the cited document's source said about it (owner, effective date and so on), so a reader sees which version and date the quote comes from. Absent for an uploaded document. */
+            meta?: {
+                [key: string]: string;
+            };
             section?: components["schemas"]["KnowledgeClaimSection"];
             opens?: components["schemas"]["KnowledgeClaimOpens"];
         };
@@ -109317,6 +109334,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
+            422: components["responses"]["ValidationError"];
         };
     };
     createCorpus: {
@@ -109629,6 +109647,13 @@ export interface operations {
             content: {
                 "application/json": {
                     question: string;
+                    /**
+                     * @description Optional. When present and not empty, only documents whose `meta.audience` is one
+                     *     of these values are searched and cited. Values compare with no case, no accents and
+                     *     `đ` as `d`. A document with no audience is left out. When no document matches, the
+                     *     outcome is `not_covered`. Absent or empty, every document is searched.
+                     */
+                    audiences?: string[];
                 };
             };
         };

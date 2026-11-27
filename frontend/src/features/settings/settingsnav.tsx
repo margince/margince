@@ -16,7 +16,6 @@ import { Suspense, useCallback } from "react";
 import type { NavLevelEntry, NavLevelGroup, NavSection } from "../../app/nav";
 import { lazy } from "../../i18n/lazy";
 import { useCompanyContextShown } from "../../lib/companycontextreach";
-import { unitsForSecretScope } from "../../lib/extensions";
 import type { Route } from "../../lib/router";
 import { useMe } from "../../lib/session";
 import {
@@ -26,13 +25,12 @@ import {
   SETTINGS_PAGES,
   type SettingsPage,
   type SettingsPageId,
-  type SettingsReach,
   type SettingsTabRow,
-  settingsReach,
   tabReadsOnly,
   visibleSettingsPages,
   visibleSettingsTabs,
 } from "../../lib/settingscatalog";
+import { catalogContext, useSettingsReach } from "../../lib/settingsreach";
 import { settingsRouteTarget } from "../../lib/settingsrouting";
 import { PAGE_ICONS } from "./settingsnavicons";
 
@@ -376,29 +374,6 @@ function useTabContext(): CatalogContext {
     ...catalogContext(),
     companyContextShown: useCompanyContextShown(),
   };
-}
-
-// Which extension units this build composed. Read here rather than inside the
-// catalog: the extensions registry sits behind a build alias. Imported there,
-// it would drag that alias into a module importable from anywhere.
-export function catalogContext(): CatalogContext {
-  return {
-    composedUnitScopes: (["workspace", "user"] as const).filter(
-      (scope) => unitsForSecretScope(scope).length > 0,
-    ),
-  };
-}
-
-/**
- * The same pages, split into the ones this reader can act on and the ones they
- * can only consult.
- *
- * The hook half of `settingsReach`, taking the same two facts as the visibility
- * hook above so the rail, the settings home and the read-only banner resolve one
- * partition rather than each deciding "can this contact act?" for itself.
- */
-export function useSettingsReach(): SettingsReach {
-  return settingsReach(useMe().data, catalogContext());
 }
 
 /** Whether this reader may open one tab of a page, for search to ask. */

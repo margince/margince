@@ -1,16 +1,14 @@
 /* The source email, read inside the task it explains.
  *
- * A bordered block on the sunken ground rather than a bare run of paragraphs:
- * the message is somebody else's words quoted inside the task's own panel, and
- * without an edge the mail's first line reads as a continuation of the task's
- * note above it. */
+ * A hairline above it rather than a box around it: the message is somebody
+ * else's words, and the line keeps its first line from reading as the task's
+ * own note, while a box inside the pane would be one more surface to read. */
 .sourceemail {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  padding: var(--space-3);
-  border: 1px solid var(--groundEdge);
-  border-radius: var(--r-md);
+  padding-block-start: var(--space-3);
+  border-block-start: 1px solid var(--borderSubtle);
 }
 
 /* The section's own name, at the weight of a label rather than a heading: it
