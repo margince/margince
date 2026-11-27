@@ -578,6 +578,7 @@ func TestADraftedProductLineTakesTheProductsNameInTheOffersLanguage(t *testing.T
 // The model is not asked for a tax rate. A drafted line carries the sheet's
 // standard rate for the installation's country.
 func TestADraftedLineOnNoProductIsTaxedFromTheSheetsStandardRate(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDraftPerms)
 	offerID, source := seedDraftOfferWithDealActivity(ctx, t, e, "Sheet-taxed deal",
@@ -603,6 +604,7 @@ func TestADraftedLineOnNoProductIsTaxedFromTheSheetsStandardRate(t *testing.T) {
 
 // With no standard rate on the sheet, the draft is refused and stages nothing.
 func TestADraftWithNoStandardRateOnTheSheetIsRefusedAndStagesNothing(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDraftPerms)
 	offerID, source := seedDraftOfferWithDealActivity(ctx, t, e, "Unrated deal",

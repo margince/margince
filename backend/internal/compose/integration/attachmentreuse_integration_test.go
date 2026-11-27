@@ -63,6 +63,7 @@ func uploadTo(ctx context.Context, t *testing.T, h activities.Handlers, contact 
 }
 
 func TestAnIdenticalUploadAttachesTheFileTheRecordHolds(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	h := activities.NewHandlers(e.DB()).WithUploadLimit(uploadCeiling).WithBlobstore(blobstore.NewMemory())
 	ctx := e.Admin()

@@ -53,6 +53,7 @@ func lineOrder(ctx context.Context, t *testing.T, e *Env, offerID ids.OfferID) [
 }
 
 func TestMovingALineOntoATakenPositionShiftsTheOthers(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, OfferDeskPerms)
 	offerID, lines := threeLineOffer(ctx, t, e)
@@ -89,6 +90,7 @@ func TestMovingALineOntoATakenPositionShiftsTheOthers(t *testing.T) {
 // A gap left by a removed line closes on the next move. The place counts the
 // lines a reader sees, not the numbers they held.
 func TestAMoveCountsPlacesAcrossAGap(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, OfferDeskPerms)
 	offerID, lines := threeLineOffer(ctx, t, e)

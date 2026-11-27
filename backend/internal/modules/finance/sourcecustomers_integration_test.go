@@ -171,6 +171,7 @@ func TestLinkingMovesACustomerAndUnlinkingTakesItOff(t *testing.T) {
 // A company reads as syncing until a pass mirrors its new link, so the link
 // queues one; a refused link queues nothing.
 func TestALinkQueuesThePassThatMirrorsIt(t *testing.T) {
+	t.Parallel()
 	a := setupSourceAdmin(t)
 	a.syncDirectory(t)
 	ctx := a.admin()

@@ -28,6 +28,7 @@ import (
 )
 
 func TestBothPrivacyActsDestroyTheSummariesWrittenFromTheSubjectsWords(t *testing.T) {
+	t.Parallel()
 	acts := map[string]func(*Env, ids.UUID) error{
 		"erasure": func(e *Env, subject ids.UUID) error {
 			return privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(e.Admin(), subject, "subject request")
