@@ -9745,6 +9745,9 @@ export const en = {
   "forecast.partialTitle": "Not every deal is priced",
   "forecast.partial":
     "{priced} of {eligible} deals are priced. Unpriced deals add nothing to the totals above.",
+  "forecast.callHistory": "Call history",
+  "forecast.callAuthor": "Submitted by",
+  "forecast.noCallHistory": "No forecast calls for this period.",
   "forecast.currentCall": "Manager forecast",
   "forecast.currentCallDetailOver": "Updated {date} · {gap} above won + Likely",
   "forecast.currentCallDetailUnder":

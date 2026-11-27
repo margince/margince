@@ -9534,6 +9534,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "forecast.partialTitle": "Không phải deal nào cũng có giá",
   "forecast.partial":
     "{priced} trên {eligible} deal có giá. Deal chưa có giá không cộng thêm gì vào các tổng ở trên.",
+  "forecast.callHistory": "Lịch sử dự báo",
+  "forecast.callAuthor": "Người gửi",
+  "forecast.noCallHistory": "Chưa có dự báo nào cho kỳ này.",
   "forecast.currentCall": "Nhận định của quản lý",
   "forecast.currentCallDetailOver":
     "Cập nhật {date} · cao hơn {gap} so với đã chốt + khả năng cao",

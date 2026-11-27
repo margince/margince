@@ -33,6 +33,7 @@ import { type AnalyticsSelection, writableScope } from "./analytics.context";
 import { ForecastAccuracy } from "./analytics.forecast.accuracy";
 import { ForecastAnswer, ForecastLanding } from "./analytics.forecast.answer";
 import { ForecastCallEditor } from "./analytics.forecast.calleditor";
+import { ForecastCallHistory } from "./analytics.forecast.callhistory";
 import { ForecastDeals, openForecastDeals } from "./analytics.forecast.deals";
 import { forecastFit, periodDial } from "./analytics.forecast.fit";
 import { ForecastReview } from "./analytics.forecast.review";
@@ -159,6 +160,13 @@ export function ForecastView({
                     period={period}
                     landing={false}
                     density="plate"
+                    callHistory={
+                      <ForecastCallHistory
+                        readings={data}
+                        period={period}
+                        locale={locale}
+                      />
+                    }
                     onOpenDeals={openForecastDeals}
                   />
                   {/* What to check comes before the deals and charts: a

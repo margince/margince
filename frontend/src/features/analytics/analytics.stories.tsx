@@ -230,6 +230,12 @@ const routes: RouteMap = {
   // (the assurance read answers 404, its ordinary first state), and the size
   // the first check would have.
   "GET /forecast": () => jsonResponse(forecastReadings),
+  "GET /users/names": (_body, url) =>
+    jsonResponse({
+      data: url.searchParams
+        .getAll("id")
+        .map((id) => ({ id, display_name: "Alex Quinn" })),
+    }),
   "GET /forecast/assurance": () => jsonResponse({}, 404),
   "GET /forecast/assurance/preview": () =>
     jsonResponse({

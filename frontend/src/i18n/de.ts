@@ -9801,6 +9801,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "forecast.partialTitle": "Nicht jeder Deal ist bepreist",
   "forecast.partial":
     "{priced} von {eligible} Deals sind bepreist. Deals ohne Preis tragen nichts zu den Summen oben bei.",
+  "forecast.callHistory": "Bisherige Prognosen",
+  "forecast.callAuthor": "Eingereicht von",
+  "forecast.noCallHistory": "Für diesen Zeitraum liegen keine Prognosen vor.",
   "forecast.currentCall": "Einschätzung",
   "forecast.currentCallDetailOver":
     "Aktualisiert {date} · {gap} über gewonnenen + wahrscheinlichen Deals",
