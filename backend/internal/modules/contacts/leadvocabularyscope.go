@@ -5,10 +5,8 @@ package contacts
 
 // What a lead vocabulary row's count may count.
 //
-// Its own file because it is the one place both vocabularies and the
-// discovered-source roll-up go through, and because the question it settles is
-// not the source list's: a `lead_source` row is configuration, and the number
-// beside it is lead data.
+// Its own file because both vocabularies go through it. A row is
+// configuration, and the number beside it is lead data.
 
 import (
 	"context"

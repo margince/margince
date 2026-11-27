@@ -16,10 +16,12 @@ package gates
 // request-key index are the tables this covers, so adding one to a new table enrols
 // its writers without touching this file.
 //
-// What this holds and nothing else does: that an insert carrying a request key has a
-// conflict clause AT ALL. A statement with no ON CONFLICT is valid SQL against a
-// partial index — it simply raises 23505 on the second delivery — so no check of a
-// clause's shape can see it, only a check that asks why a keyed insert has none.
+// What this holds and nothing else does: an insert carrying a request key has a
+// conflict clause at all. That clause infers on the index's own columns. A statement
+// with no ON CONFLICT is valid SQL against a partial index, and it raises 23505 on
+// the second delivery. No check of a clause's shape can see that. Whether the clause
+// repeats the index's predicate is asked of every upsert by
+// TestAnUpsertOntoAPartialIndexRepeatsItsPredicate.
 
 import (
 	"path/filepath"
@@ -31,55 +33,29 @@ import (
 )
 
 var (
-	// CREATE UNIQUE INDEX … ON <table> (room_id, request_id) WHERE <predicate>
-	requestKeyIndex = regexp.MustCompile(
-		`(?is)CREATE\s+UNIQUE\s+INDEX\s+(\w+)\s+ON\s+(\w+)\s*\(([^)]*request_id[^)]*)\)\s*WHERE\s+([^;]+);`)
 	insertStatement = regexp.MustCompile(`(?is)INSERT\s+INTO\s+(\w+)\s*\(([^)]*)\)`)
-	onConflict      = regexp.MustCompile(`(?is)ON\s+CONFLICT\s*\(([^)]*)\)\s*(?:WHERE\s+([^)]*?))?\s*DO\s+NOTHING`)
+	onConflict      = regexp.MustCompile(`(?is)ON\s+CONFLICT\s*\(([^)]*)\)\s*(?:WHERE\s+[^)]*?)?\s*DO\s+NOTHING`)
 )
 
-type requestKeyedTable struct {
-	index     string
-	columns   string
-	predicate string
-}
-
-// tablesKeyedByRequest reads the migrations for every request-key index there is.
-func tablesKeyedByRequest(t *testing.T) map[string]requestKeyedTable {
+// tablesKeyedByRequest picks every partial unique index keyed by request_id from
+// the head catalog. It reads through the predicate gate's reader, so the two gates
+// cannot see different indexes.
+func tablesKeyedByRequest(t *testing.T) map[string]uniqueIndex {
 	t.Helper()
-	root := gatekit.ModuleRoot(t)
-	keyed := map[string]requestKeyedTable{}
-	migrations, err := gatekit.Glob(filepath.Join(root, "migrations", "core", "*.up.sql"))
-	if err != nil {
-		t.Fatalf("listing the migrations: %v", err)
-	}
-	for _, path := range migrations {
-		body, err := gatekit.ReadFile(path)
-		if err != nil {
-			t.Fatalf("reading %s: %v", path, err)
-		}
-		for _, found := range requestKeyIndex.FindAllStringSubmatch(string(body), -1) {
-			keyed[found[2]] = requestKeyedTable{
-				index:     found[1],
-				columns:   normaliseList(found[3]),
-				predicate: strings.TrimSpace(found[4]),
+	keyed := map[string]uniqueIndex{}
+	for table, indexes := range uniqueIndexesByTable(t) {
+		for _, index := range indexes {
+			if index.predicate != "" && strings.Contains(index.columns, "request_id") {
+				keyed[table] = index
 			}
 		}
 	}
 	if len(keyed) == 0 {
-		t.Fatal("no request-key index found in the migrations — this gate reads the schema " +
-			"for its subject, so an empty corpus means the pattern below has stopped matching " +
+		t.Fatal("no partial request-key index found in the head catalog — this gate reads the " +
+			"schema for its subject, so an empty corpus means the reading has stopped matching " +
 			"rather than that nothing needs covering")
 	}
 	return keyed
-}
-
-func normaliseList(columns string) string {
-	parts := strings.Split(columns, ",")
-	for i, part := range parts {
-		parts[i] = strings.TrimSpace(part)
-	}
-	return strings.Join(parts, ", ")
 }
 
 func TestARequestKeyedInsertIsWrittenConflictFirst(t *testing.T) {
@@ -132,39 +108,24 @@ func TestARequestKeyedInsertIsWrittenConflictFirst(t *testing.T) {
 		if written[table] == 0 {
 			t.Errorf("%s is keyed by %s and no writer in the tree inserts into it with a "+
 				"request_id: either the index protects nothing, or this gate has stopped "+
-				"seeing the statement that writes it", table, index.index)
+				"seeing the statement that writes it", table, index.name)
 		}
 	}
 }
 
-func assertConflictFirst(t *testing.T, where, table string, want requestKeyedTable, statement string) {
+func assertConflictFirst(t *testing.T, where, table string, want uniqueIndex, statement string) {
 	t.Helper()
 	clause := onConflict.FindStringSubmatch(statement)
 	if clause == nil {
 		t.Errorf("%s: an insert into %s carries request_id and no ON CONFLICT … DO NOTHING. "+
 			"%s refuses the second delivery of one attempt, so without the clause a "+
 			"double-click raises 23505 and the caller is told its own write failed",
-			where, table, want.index)
+			where, table, want.name)
 		return
 	}
-	if got := normaliseList(clause[1]); got != want.columns {
+	if got := flattenColumns(clause[1]); got != want.columns {
 		t.Errorf("%s: the insert into %s infers on (%s) and %s is on (%s). Inference is "+
 			"by expression, so a mismatch is not refused at build time — it raises 42P10 "+
-			"on the first replay", where, table, got, want.index, want.columns)
+			"on the first replay", where, table, got, want.name, want.columns)
 	}
-	// A partial index is matched only by a statement that repeats its predicate.
-	// Omit it and the clause infers nothing, which is the same 42P10 at runtime.
-	if got := strings.TrimSpace(clause[2]); !sameCondition(got, want.predicate) {
-		t.Errorf("%s: the insert into %s guards its conflict with %q and %s is partial on %q. "+
-			"Postgres matches a partial index only when the statement repeats its predicate",
-			where, table, got, want.index, want.predicate)
-	}
-}
-
-// sameCondition compares two SQL conditions ignoring spacing and case.
-func sameCondition(a, b string) bool {
-	flatten := func(s string) string {
-		return strings.Join(strings.Fields(strings.ToUpper(s)), " ")
-	}
-	return flatten(a) == flatten(b)
 }

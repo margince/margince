@@ -100,9 +100,6 @@ function stubLeadScreenFetch(
           sections: [],
         });
       }
-      if (url.endsWith("/v1/lead-sources")) {
-        return jsonResponse({ data: [] });
-      }
       if (url.endsWith("/v1/leads/settings")) {
         return jsonResponse({
           first_response_enabled: false,

@@ -39,6 +39,15 @@ var companySourceSQL = partySourceSQL{
 		   FROM unnest($1::uuid[], $2::text[]) AS moved(id, source) WHERE r.id = moved.id`,
 }
 
+// leadSourceSQL reads a lead's older word as a contact's, since a lead is
+// promoted into one. A lead's source_system is its replay key, so it stays.
+var leadSourceSQL = partySourceSQL{
+	page: `SELECT id, source, party_source_channel(source, source_system) FROM lead
+		  WHERE id > $1 AND ` + unlistedPartySource + ` ORDER BY id LIMIT $2 FOR UPDATE`,
+	update: `UPDATE lead r SET source = moved.source
+		   FROM unnest($1::uuid[], $2::text[]) AS moved(id, source) WHERE r.id = moved.id`,
+}
+
 // CorrectContactSourcesTx moves one page of contacts whose source predates the
 // fixed list. A row on the list is left out, so a replay changes nothing. Each
 // contact announces it as contact.updated, as an edit of the field would.
@@ -77,6 +86,24 @@ func CorrectCompanySourcesTx(ctx context.Context, tx pgx.Tx, after ids.UUID, lim
 	return moved, nil
 }
 
+// CorrectLeadSourcesTx is CorrectContactSourcesTx for leads.
+func CorrectLeadSourcesTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit int, runID ids.UUID) ([]ids.UUID, error) {
+	corrected, err := storekit.CorrectRecordSources(ctx, tx, entityLead, leadSourceSQL.page, leadSourceSQL.update, after, limit, runID)
+	if err != nil {
+		return nil, err
+	}
+	moved := make([]ids.UUID, len(corrected))
+	for i, row := range corrected {
+		if err := storekit.EmitEvent(ctx, tx, row.AuditID, row.ID, crmcontracts.PublicEventLeadUpdated{
+			ChangedFields: map[string]any{storekit.RecordSourceField: row.Source},
+		}); err != nil {
+			return nil, fmt.Errorf("emit lead.updated: %w", err)
+		}
+		moved[i] = row.ID
+	}
+	return moved, nil
+}
+
 // countUnlisted runs a count of the rows a correction would still move,
 // reading at most maximum+1.
 func countUnlisted(ctx context.Context, q datatask.Querier, table, sql string, maximum int64) (int64, error) {
@@ -97,4 +124,10 @@ func CountUnlistedContactSources(ctx context.Context, q datatask.Querier, maximu
 func CountUnlistedCompanySources(ctx context.Context, q datatask.Querier, maximum int64) (int64, error) {
 	return countUnlisted(ctx, q, entityCompany,
 		`SELECT count(*) FROM (SELECT 1 FROM company WHERE `+unlistedPartySource+` LIMIT $1) unlisted`, maximum)
+}
+
+// CountUnlistedLeadSources counts the leads CorrectLeadSourcesTx would still move.
+func CountUnlistedLeadSources(ctx context.Context, q datatask.Querier, maximum int64) (int64, error) {
+	return countUnlisted(ctx, q, entityLead,
+		`SELECT count(*) FROM (SELECT 1 FROM lead WHERE `+unlistedPartySource+` LIMIT $1) unlisted`, maximum)
 }

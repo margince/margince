@@ -15,7 +15,7 @@ type BulkChangePreview = components["schemas"]["BulkChangePreview"];
 /** The contract's bound on one bulk selection (`BulkChangePreviewRequest.items`). */
 export const BULK_MAX_ITEMS = 500;
 
-/** A declared mirror of the server's `bulkConfirmAbove`; frontendbulkconfirm_test.go fails if they differ. */
+/** A declared mirror of the server's `bulkConfirmAbove`; frontendlimits_test.go fails if they differ. */
 export const BULK_CONFIRM_ABOVE = 10;
 type BulkChangeResult = components["schemas"]["BulkChangeResult"];
 
