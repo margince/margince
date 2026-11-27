@@ -447,7 +447,7 @@ func importMeetingFor(t *testing.T, e *integration.SearchEnv, contact ids.Contac
 		OccurredAt:   &start,
 		SourceSystem: &system,
 		SourceId:     &sourceID,
-		Source:       "hubspot_import:1",
+		Source:       "import",
 		IcalUid:      &uid,
 		IcalInstance: &instance,
 	}

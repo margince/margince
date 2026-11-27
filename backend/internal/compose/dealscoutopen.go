@@ -28,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
@@ -187,7 +188,7 @@ func (o scoutDealOpener) recordOnTimeline(ctx context.Context, tx pgx.Tx, deal i
 	note, _, err := o.activities.LogActivityTx(ctx, tx, activities.LogActivityInput{
 		SystemText: &systemtext.Message{Subject: systemtext.Sentence("deal.opened", systemtext.Text(company)), Body: systemtext.Sentence("deal.opened_body", systemtext.Excerpt(0, utf8.RuneCountInString(basis)))},
 		Kind:       string(crmcontracts.ActivityKindNote), Subject: &subject, Body: &body, Origin: activities.OriginSystemRemediation,
-		Links: []activities.ActivityLinkInput{{EntityType: entityTypeDeal, EntityID: deal}},
+		Source: provenance.RecordSourceAutomation, Links: []activities.ActivityLinkInput{{EntityType: entityTypeDeal, EntityID: deal}},
 	})
 	if err != nil {
 		return ids.Nil, fmt.Errorf("compose: writing the opening on the deal's timeline: %w", err)

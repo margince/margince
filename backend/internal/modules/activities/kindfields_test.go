@@ -44,7 +44,7 @@ func TestTheImportAndTheWireRefuseTheSameKindFields(t *testing.T) {
 	for name, c := range cases {
 		t.Run(name, func(t *testing.T) {
 			_, wire := LogActivityInputFrom(crmcontracts.CreateActivityRequest{
-				Kind: crmcontracts.CreateActivityRequestKind(c.kind), Source: "test",
+				Kind: crmcontracts.CreateActivityRequestKind(c.kind), Source: "manual",
 				DurationSeconds: c.duration, MeetingStatus: c.status, ChannelProvider: c.provider,
 				CallOutcome: c.outcome, Subject: new("Spoke to the buyer"),
 			})
@@ -74,7 +74,7 @@ func TestTheWireReportsASourceBeforeAKindField(t *testing.T) {
 	held := crmcontracts.CreateActivityRequestMeetingStatus("held")
 	transport := "whatsapp"
 	_, err = LogActivityInputFrom(crmcontracts.CreateActivityRequest{
-		Kind: crmcontracts.CreateActivityRequestKind("note"), Source: "test",
+		Kind: crmcontracts.CreateActivityRequestKind("note"), Source: "manual",
 		MeetingStatus: &held, ChannelProvider: &transport,
 	})
 	if _, ok := errors.AsType[*MeetingStatusKindError](err); !ok {
@@ -111,7 +111,7 @@ func TestATaskOnlyFieldOnANoteNamesTheField(t *testing.T) {
 	if err := checkTaskFieldsKind("note", taskFields{isDone: &notDone}); err != nil {
 		t.Errorf("is_done false is what a note already holds, got %v", err)
 	}
-	_, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{Kind: "note", Source: "test", DueAt: &due})
+	_, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{Kind: "note", Source: "manual", DueAt: &due})
 	if refusal, ok := errors.AsType[*KindFieldError](err); !ok || refusal.Field != "due_at" {
 		t.Errorf("create of a note with a due date answered %v, want a refusal naming due_at", err)
 	}

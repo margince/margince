@@ -5,6 +5,8 @@ package activities
 
 import (
 	"context"
+	"fmt"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -20,6 +22,9 @@ import (
 func insertLoggedActivityRow(ctx context.Context, tx pgx.Tx, in LogActivityInput, by string, assignee, host *ids.UserID) (ids.ActivityID, time.Time, error) {
 	// After every link is settled, inherited ones included.
 	if err := checkLoggedMark(ctx, in); err != nil {
+		return ids.ActivityID{}, time.Time{}, err
+	}
+	if err := checkSystemWord(in); err != nil {
 		return ids.ActivityID{}, time.Time{}, err
 	}
 	id := ids.New[ids.ActivityKind]()
@@ -77,6 +82,15 @@ func insertLoggedActivityRow(ctx context.Context, tx pgx.Tx, in LogActivityInput
 	}
 
 	return id, occurredAt, nil
+}
+
+// checkSystemWord holds a writer passing the system's older word to an identity
+// systemWordSQL reads, so the follow-ups that complete such work find it.
+func checkSystemWord(in LogActivityInput) error {
+	if in.Source == systemSource && in.SourceSystem != nil && !slices.Contains(systemTaskSources, *in.SourceSystem) {
+		return fmt.Errorf("activities: a system task under source_system %q is one no follow-up reads; add it to provenance.SystemTaskSources", *in.SourceSystem)
+	}
+	return nil
 }
 
 // Satellites and the first meeting transition commit with the activity row.

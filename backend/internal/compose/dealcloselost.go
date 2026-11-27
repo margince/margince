@@ -30,6 +30,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/kernel/viability"
@@ -157,7 +158,7 @@ func (c silentDealCloser) recordOnTimeline(ctx context.Context, tx pgx.Tx, decis
 	note, _, err := c.activities.LogActivityTx(ctx, tx, activities.LogActivityInput{
 		SystemText: &systemtext.Message{Subject: systemtext.Sentence("deal.lost"), Body: component},
 		Kind:       string(crmcontracts.ActivityKindNote), Subject: &subject, Body: &body, Origin: activities.OriginSystemRemediation,
-		Links: []activities.ActivityLinkInput{{EntityType: entityTypeDeal, EntityID: decision.deal.UUID}},
+		Source: provenance.RecordSourceAutomation, Links: []activities.ActivityLinkInput{{EntityType: entityTypeDeal, EntityID: decision.deal.UUID}},
 	})
 	if err != nil {
 		return ids.Nil, fmt.Errorf("compose: writing the close on the deal's timeline: %w", err)

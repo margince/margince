@@ -97,7 +97,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `raw` | `jsonb` |  | The unparsed upstream payload the row was built from, kept for replay and debugging. |
 | `search_tsv` | `tsvector` |  | Full-text search vector, maintained by the database. |
-| `source` | `text` | yes | Where the row came from. |
+| `source` | `text` | yes | The channel the row arrived by: `api`, `automation`, `capture`, `import`, `manual` or `webform`. |
 | `source_system` | `text` |  | Which system this record came from: `email` for any captured or sent mail (one identity across gmail/outlook/imap), else gcal/outlook/transcript or a caller's own. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 | `version` | `bigint`, default `1` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
@@ -160,6 +160,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 - `activity_retention_class_known`: `CHECK (((retention_class IS NULL) OR (retention_class = 'commercial_correspondence')))`
 - `activity_retention_class_stamped`: `CHECK (((retention_class IS NULL) = (retention_class_at IS NULL)))`
 - `activity_source_author_needs_a_source`: `CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL)))`
+- `activity_source_check`: `CHECK ((source = ANY (ARRAY['api', 'automation', 'capture', 'import', 'manual', 'webform']))) NOT VALID`
 - `activity_system_text_shape`: `CHECK (((system_text IS NULL) OR ((jsonb_typeof(system_text) = 'object') AND (((system_text ->> 'schema_version') = '1') IS TRUE) AND (octet_length((system_text)) <= 8192))))`
 - `activity_task_fields`: `CHECK (((kind = 'task') OR ((due_at IS NULL) AND (assignee_id IS NULL) AND (is_done = false) AND (remind_at IS NULL))))`
 - `activity_task_type_check`: `CHECK ((task_type = ANY (ARRAY['reply', 'reach_out', 'meet', 'review', 'decide', 'do'])))`
@@ -214,6 +215,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 - `activity_refuse_restricted_mutation`: `BEFORE DELETE OR UPDATE FOR EACH ROW EXECUTE FUNCTION activity_refuse_restricted_mutation()`
 - `activity_search_tsv_insert`: `BEFORE INSERT FOR EACH ROW EXECUTE FUNCTION activity_keeps_search_tsv()`
 - `activity_search_tsv_update`: `BEFORE UPDATE OF subject, body, language, body_own_end, search_tsv FOR EACH ROW WHEN ((((((old.subject IS DISTINCT FROM new.subject) OR (old.body IS DISTINCT FROM new.body)) OR (old.language IS DISTINCT FROM new.language)) OR (old.body_own_end IS DISTINCT FROM new.body_own_end)) OR (old.search_tsv IS DISTINCT FROM new.search_tsv))) EXECUTE FUNCTION activity_keeps_search_tsv()`
+- `activity_source_channel`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN ((new.source <> ALL (ARRAY['api', 'automation', 'capture', 'import', 'manual', 'webform']))) EXECUTE FUNCTION move_activity_source_onto_its_channel()`
 - `activity_strength_dates`: `AFTER UPDATE REFERENCING OLD TABLE AS changed_from NEW TABLE AS changed_to FOR EACH STATEMENT EXECUTE FUNCTION trg_activity_strength_dates()`
 - `activity_system_text_retire`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION retire_changed_system_text()`
 - `advance_activity_domain_evidence_version`: `BEFORE UPDATE OF occurred_at, occurred_precision, archived_at, restricted_at FOR EACH ROW EXECUTE FUNCTION advance_activity_domain_evidence_version()`

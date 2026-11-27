@@ -33,11 +33,10 @@ import (
 // LastTouchCandidate is one REMINDER-ELIGIBLE linked entity whose most
 // recent GENUINE engagement (across every kind and every link) landed
 // before the caller's cutoff. "Genuine" excludes the automation engine's
-// own output — source AND captured_by together (systemSource,
-// systemCapturedBy, followupresolve.go), because source alone rides the
-// client create wire and a planted value must not let a caller hide real
-// engagement or move a record's anchor; "eligible" is the live-work test
-// each entity type gets in the query — see LastTouchBefore.
+// own output: its own name and captured_by together (systemWordSQL,
+// systemCapturedBy, followupresolve.go). A planted name must not let a caller
+// hide real engagement or move a record's anchor. "Eligible" is the live-work
+// test each entity type gets in the query (LastTouchBefore).
 type LastTouchCandidate struct {
 	EntityType string
 	EntityID   ids.UUID
@@ -53,16 +52,16 @@ type LastTouchCandidate struct {
 // Mail from a sending system, an invitation and a meeting still to come or
 // called off are not contact. Every recency clock reads that rule (relstrength).
 //
-// The three positions bind systemSource, systemCapturedBy and
-// systemCapturedByPattern; source alone is a client's to spell, so it is
-// excluded only together with captured_by.
+// The three positions bind systemTaskSources, systemCapturedBy and
+// systemCapturedByPattern; the system's name is excluded only together with
+// captured_by, which no client writes.
 func genuineEngagement(alias string, sourcePos, capturedByPos, patternPos int) string {
 	return storekit.SQLf(`%[1]s.archived_at IS NULL`+auth.AudienceWorkspaceOnly(alias)+`
 				  AND `+relstrength.WrittenByHumanSQL(alias)+`
 				  AND `+relstrength.HadContactSQL(alias, "now()")+`
-				  AND NOT (%[1]s.source = $%[2]d
-				           AND (%[1]s.captured_by = $%[3]d OR %[1]s.captured_by LIKE $%[4]d))`,
-		alias, sourcePos, capturedByPos, patternPos)
+				  AND NOT (`+systemWordSQL(alias, storekit.SQLf("$%d", sourcePos))+`
+				           AND (%[1]s.captured_by = $%[2]d OR %[1]s.captured_by LIKE $%[3]d))`,
+		alias, capturedByPos, patternPos)
 }
 
 // Contact evidence, account folding and mailbox protection stay shared between
@@ -193,7 +192,7 @@ func openChildReminderHoldsAccount() string {
 		         WHERE t.kind = 'task'
 		           AND t.is_done = false AND t.archived_at IS NULL
 		           AND t.source_system = $6
-		           AND t.source = $1
+		           AND ` + systemWordSQL("t", "$1") + `
 		           AND (t.captured_by = $4 OR t.captured_by LIKE $5)
 		           AND coalesce(cd.company_id, ce.company_id) = q.entity_id`
 }
@@ -236,7 +235,7 @@ func openReminderHoldsEntityFrom(sourcePredicate string) string {
 		           AND t.kind = 'task'
 		           AND t.is_done = false AND t.archived_at IS NULL
 		           AND ` + sourcePredicate + `
-		           AND t.source = $1
+		           AND ` + systemWordSQL("t", "$1") + `
 		           AND (t.captured_by = $4 OR t.captured_by LIKE $5)`
 }
 
@@ -332,7 +331,7 @@ func (s *Store) scanLastTouch(ctx context.Context, cutoff time.Time, limit int, 
 		// vocabulary (linktarget.go), the same source the coalesce
 		// expression is built from, so a renamed record type cannot leave a
 		// stale string behind in this query.
-		args := []any{systemSource, cutoff, limit, systemCapturedBy, systemCapturedByPattern}
+		args := []any{systemTaskSources, cutoff, limit, systemCapturedBy, systemCapturedByPattern}
 		if population == nil {
 			args = append(args, reminder)
 		}

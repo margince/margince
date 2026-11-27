@@ -210,6 +210,13 @@ func EngineTaskSources() []string {
 	return append(EngineReminderSources(), WebsiteInquirySource, LeadForContactSource)
 }
 
+// SystemTaskSources are the identities of the work the system opens under its
+// own name, which a follow-up completes. Such work may also name none. Another
+// writer's task, such as a commitment's, keeps its own lifecycle.
+func SystemTaskSources() []string {
+	return append(EngineTaskSources(), LeadSLATaskSource, AssuranceTaskSource, LeadRepliedSource)
+}
+
 // EngineTaskSource reports whether source is one of EngineTaskSources.
 func EngineTaskSource(source string) bool { return slices.Contains(EngineTaskSources(), source) }
 

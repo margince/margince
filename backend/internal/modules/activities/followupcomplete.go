@@ -116,7 +116,7 @@ func (s *Store) CompleteQuietRemindersReachedBy(ctx context.Context, activityID 
 			   OR l.company_id IN (SELECT reach.company_id FROM (%[4]s) reach
 			                       WHERE reach.activity_id = $%[1]d)))`,
 		landed, arg(provenance.EngineReminderSources()),
-		genuineEngagement("landed", arg(systemSource), arg(systemCapturedBy), arg(systemCapturedByPattern)),
+		genuineEngagement("landed", arg(systemTaskSources), arg(systemCapturedBy), arg(systemCapturedByPattern)),
 		CompanyReachSet(),
 		reminderAnchor("a", arg(provenance.ReminderAnchorSeparator)))
 	return s.completeOpenSystemTasks(ctx, where, arg, &args)
@@ -160,7 +160,7 @@ func (s *Store) ReopenQuietRemindersStillQuietAround(
 			     WHERE %[3]s AND touch.occurred_at > coalesce(%[4]s, '-infinity') -- occurred_at raw: past the reminder's anchor, a window's lower edge
 			)`,
 		arg(provenance.EngineReminderSources()), sameRecord,
-		genuineEngagement("touch", arg(systemSource), arg(systemCapturedBy), arg(systemCapturedByPattern)),
+		genuineEngagement("touch", arg(systemTaskSources), arg(systemCapturedBy), arg(systemCapturedByPattern)),
 		reminderAnchor("a", arg(provenance.ReminderAnchorSeparator)))
 	return s.flipSystemTasks(ctx, where, arg, &args, true)
 }
@@ -196,13 +196,12 @@ func reminderAnchor(alias string, separatorPos int) string {
 // The count is what THIS call completed, which is also why skew is not an
 // error: another firing completing the task is the outcome this one wanted.
 //
-// "System-minted" is decided by source AND captured_by together: source
-// rides the client create wire verbatim (any caller can spell "system" —
-// see systemSource's doc), while captured_by is stamped from the authenticated
-// principal — a planted source alone hands nothing to this path. It
-// answers a COUNT rather than rows, so nothing about which records exist
-// leaves a call that takes no read gate of its own; each completion's
-// write is gated inside UpdateActivity.
+// "System-minted" is decided by the system's own name (systemWordSQL) and by
+// captured_by. captured_by is stamped from the authenticated principal, so a
+// planted name alone hands nothing to this path. It answers a count rather
+// than rows. So nothing about which records exist leaves a call that takes no
+// read gate of its own, and each completion's write is gated inside
+// UpdateActivity.
 //
 // `column` is unexported and passed only by the two callers above, each a
 // compile-time literal ("lead_id" / "contact_id") — never a value off a
@@ -283,7 +282,7 @@ func (s *Store) flipSystemTasks(
 }
 
 // systemCapturedSQL is the stamp half of "system-minted", which is decided by
-// the stamp together with source = systemSource.
+// the stamp together with systemWordSQL.
 func systemCapturedSQL(alias, exact, pattern string) string {
 	return storekit.SQLf("(%[1]s.captured_by = %[2]s OR %[1]s.captured_by LIKE %[3]s)", alias, exact, pattern)
 }
@@ -303,12 +302,12 @@ func selectSystemTasks(
 ) ([]systemTask, error) {
 	query := storekit.SQLf(`
 		SELECT a.id, a.version FROM activity a
-		WHERE %s AND a.kind = $%d AND a.source = $%d
+		WHERE %s AND a.kind = $%d AND %s
 		  AND %s
 		  AND a.is_done = $%d AND a.archived_at IS NULL
 		ORDER BY a.id FOR UPDATE OF a`,
 		where,
-		arg(string(crmcontracts.ActivityKindTask)), arg(systemSource),
+		arg(string(crmcontracts.ActivityKindTask)), systemWordSQL("a", fmt.Sprintf("$%d", arg(systemTaskSources))),
 		systemCapturedSQL("a", fmt.Sprintf("$%d", arg(systemCapturedBy)), fmt.Sprintf("$%d", arg(systemCapturedByPattern))), arg(done))
 	rows, err := tx.Query(ctx, query, (*args)...)
 	if err != nil {

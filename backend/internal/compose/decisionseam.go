@@ -112,6 +112,7 @@ func (s salesDecisions) Record(ctx context.Context, in crmcontracts.SalesDecisio
 			AssigneeID:       &owner,
 			SourceSystem:     &source,
 			SourceID:         &sourceID,
+			Source:           provenance.RecordSourceManual,
 			Links:            []activities.ActivityLinkInput{{EntityType: "deal", EntityID: deal}},
 			LinksFromRequest: true,
 		})

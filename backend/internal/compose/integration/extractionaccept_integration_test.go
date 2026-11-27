@@ -154,7 +154,7 @@ func (a acceptEnv) acceptNoteCount(t *testing.T, field, body, capturedBy string)
 	return a.WsCount(t, `
 		SELECT count(*) FROM activity a
 		JOIN activity_link al ON al.activity_id = a.id
-		WHERE a.kind = 'note' AND a.source = 'attachment_extraction_accept'
+		WHERE a.kind = 'note' AND a.source_system = 'attachment_extraction_accept'
 		  AND a.subject = $1 AND a.body = $2 AND a.captured_by = $3
 		  AND al.entity_type = 'deal' AND al.deal_id = $4`,
 		"Extraction accepted: "+field, body, capturedBy, a.deal)
@@ -164,7 +164,7 @@ func (a acceptEnv) acceptNoteCount(t *testing.T, field, body, capturedBy string)
 // assertions pin on it.
 func (a acceptEnv) totalAcceptNotes(t *testing.T) int {
 	t.Helper()
-	return a.WsCount(t, `SELECT count(*) FROM activity WHERE source = 'attachment_extraction_accept'`)
+	return a.WsCount(t, `SELECT count(*) FROM activity WHERE source_system = 'attachment_extraction_accept'`)
 }
 
 // requireUntouchedDeal asserts the refusal left the seeded deal exactly as
@@ -286,7 +286,7 @@ func TestAcceptAttachmentExtractionRefusesNonDealAttachment(t *testing.T) {
 	if _, ok := errors.AsType[*compose.UnsupportedEntityTypeError](err); !ok {
 		t.Fatalf("err = %v, want UnsupportedEntityTypeError (only a deal-scoped attachment has a deal to write)", err)
 	}
-	if n := e.WsCount(t, `SELECT count(*) FROM activity WHERE source = 'attachment_extraction_accept'`); n != 0 {
+	if n := e.WsCount(t, `SELECT count(*) FROM activity WHERE source_system = 'attachment_extraction_accept'`); n != 0 {
 		t.Errorf("the refused non-deal accept still wrote %d note(s), want 0", n)
 	}
 }

@@ -23,24 +23,22 @@ import (
 )
 
 // recordSourceHeld maps a table whose source is held to the list onto the
-// create request that carries it.
-//
-// gatekit:fixture the held tables and the request each one's source arrives on
-var recordSourceHeld = map[string]string{
-	"company": "CreateCompanyRequest",
-	"contact": "CreateContactRequest",
-	"deal":    "CreateDealRequest",
-	"lead":    "CreateLeadRequest",
-	"offer":   "CreateOfferRequest",
-	"project": "CreateProjectRequest",
-	"signal":  "CreateSignalRequest",
+// create requests that carry it. A task is an activity, so both its requests
+// write one table.
+var recordSourceHeld = map[string][]string{
+	"activity": {"CreateActivityRequest", "CreateTaskRequest"},
+	"company":  {"CreateCompanyRequest"},
+	"contact":  {"CreateContactRequest"},
+	"deal":     {"CreateDealRequest"},
+	"lead":     {"CreateLeadRequest"},
+	"offer":    {"CreateOfferRequest"},
+	"project":  {"CreateProjectRequest"},
+	"signal":   {"CreateSignalRequest"},
 }
 
 // recordSourceFree names each create request whose source is still free text,
 // with the reason. A request that gains the enum moves to recordSourceHeld.
 var recordSourceFree = gatekit.Waive(map[string]string{
-	"CreateActivityRequest":     "an activity's source also names the code that wrote the row, and readers select on those words",
-	"CreateTaskRequest":         "a task is an activity and shares its source",
 	"CreateRelationshipRequest": "a relationship's source cites the record or mail the edge was read from",
 	"CreateCustomFieldRequest":  "a custom field is configuration, not a record that arrives by a channel",
 	"CreateProductRequest":      "a product is catalog data, not a record that arrives by a channel",
@@ -115,7 +113,7 @@ func recordSourceFindings(vocabulary []string, checks, triggers, requests map[st
 	free := recordSourceFree.Reasons()
 	var findings []string
 	held := map[string]bool{}
-	for table, request := range recordSourceHeld {
+	for table, tableRequests := range recordSourceHeld {
 		// A held table with no check means recordSourceLists stopped reading one.
 		if _, ok := checks[table]; !ok {
 			findings = append(findings, table+": no "+table+"_source_check in the head catalog")
@@ -123,9 +121,11 @@ func recordSourceFindings(vocabulary []string, checks, triggers, requests map[st
 		if trigger, ok := triggers[table]; ok && !equalSets(vocabulary, trigger) {
 			findings = append(findings, table+": the update trigger lists "+strings.Join(trigger, ", "))
 		}
-		held[request] = true
-		if !equalSets(vocabulary, requests[request]) {
-			findings = append(findings, request+": the contract's source enum is ["+strings.Join(requests[request], ", ")+"]")
+		for _, request := range tableRequests {
+			held[request] = true
+			if !equalSets(vocabulary, requests[request]) {
+				findings = append(findings, request+": the contract's source enum is ["+strings.Join(requests[request], ", ")+"]")
+			}
 		}
 	}
 	// Other tables check a source against words of their own; one that
@@ -184,9 +184,11 @@ func TestTheRecordSourceGateSeesEachWayTheListCanDrift(t *testing.T) {
 	vocabulary := []string{"api", "manual"}
 	agreeing := func() (checks, triggers, requests map[string][]string) {
 		checks, triggers, requests = map[string][]string{}, map[string][]string{}, map[string][]string{}
-		for table, request := range recordSourceHeld {
+		for table, tableRequests := range recordSourceHeld {
 			checks[table], triggers[table] = vocabulary, vocabulary
-			requests[request] = vocabulary
+			for _, request := range tableRequests {
+				requests[request] = vocabulary
+			}
 		}
 		for request := range recordSourceFree.Reasons() {
 			requests[request] = nil
@@ -198,14 +200,15 @@ func TestTheRecordSourceGateSeesEachWayTheListCanDrift(t *testing.T) {
 		t.Fatalf("an agreeing tree was reported: %v", findings)
 	}
 	for name, drift := range map[string]func(checks, triggers, requests map[string][]string){
-		"a held table with no check":      func(checks, _, _ map[string][]string) { delete(checks, "company") },
-		"a trigger that is shorter":       func(_, triggers, _ map[string][]string) { triggers["offer"] = []string{"manual"} },
-		"a contract enum that is shorter": func(_, _, requests map[string][]string) { requests["CreateOfferRequest"] = []string{"manual"} },
-		"a held request with no enum":     func(_, _, requests map[string][]string) { requests["CreateProjectRequest"] = nil },
-		"a check on a table not held":     func(checks, _, _ map[string][]string) { checks["activity"] = vocabulary },
-		"a new request with a source":     func(_, _, requests map[string][]string) { requests["CreateTicketRequest"] = nil },
+		"a held table with no check":       func(checks, _, _ map[string][]string) { delete(checks, "company") },
+		"a trigger that is shorter":        func(_, triggers, _ map[string][]string) { triggers["offer"] = []string{"manual"} },
+		"a contract enum that is shorter":  func(_, _, requests map[string][]string) { requests["CreateOfferRequest"] = []string{"manual"} },
+		"a held request with no enum":      func(_, _, requests map[string][]string) { requests["CreateProjectRequest"] = nil },
+		"a check on a table not held":      func(checks, _, _ map[string][]string) { checks["relationship"] = vocabulary },
+		"a second request that is shorter": func(_, _, requests map[string][]string) { requests["CreateTaskRequest"] = []string{"manual"} },
+		"a new request with a source":      func(_, _, requests map[string][]string) { requests["CreateTicketRequest"] = nil },
 		"a free request that gained an enum": func(_, _, requests map[string][]string) {
-			requests["CreateActivityRequest"] = vocabulary
+			requests["CreateDealRoomRequest"] = vocabulary
 		},
 		"a free request that lost its source": func(_, _, requests map[string][]string) { delete(requests, "CreateProductRequest") },
 	} {

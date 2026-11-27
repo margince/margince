@@ -61254,8 +61254,11 @@ components:
         source:
           type: string
           description: >-
-            Where the row came from. `manual` is anything typed, by a member or by an assistant
-            working for one, so it never says who typed it: `captured_by` and `recorded_by_agent` do.
+            The channel the row arrived by: `api`, `automation`, `capture`, `import`, `manual` or `webform`.
+            `manual` is anything typed, by a member or by an assistant working for one, so it never says
+            who typed it: `captured_by` and `recorded_by_agent` do. `source_system` names the connector
+            or the product's own writer when there is one. An older row can show another value until the
+            background correction reaches it.
         captured_by: { type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.' }
         recorded_by_agent:
           type: boolean
@@ -61678,7 +61681,7 @@ components:
             properties:
               entity_type: { type: string, enum: [contact, company, deal, lead, project], x-extensible-enum: true }
               entity_id: { type: string, format: uuid }
-        source: { type: string }
+        source: { type: string, enum: [api, automation, capture, import, manual, webform], x-extensible-enum: true, x-go-type: string, description: 'The channel this task arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. Any other value is 422 `invalid_source`.' }
       additionalProperties: false
     ActivityDealFilingRecordType:
       type: string
@@ -61874,7 +61877,7 @@ components:
             properties:
               entity_type: { type: string, enum: [contact, company, deal, lead, project] }
               entity_id: { type: string, format: uuid }
-        source: { type: string }
+        source: { type: string, enum: [api, automation, capture, import, manual, webform], x-go-type: string, description: 'The channel this activity arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. The other system and the activity''s id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`.' }
         raw:
           type: [object, 'null']
           additionalProperties: true
