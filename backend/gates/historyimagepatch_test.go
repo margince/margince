@@ -48,7 +48,7 @@ func (r historyImageReader) selectedKeys(in historyImageArg, selector *ast.Selec
 // Reading setter calls avoids taking the private map fields as an unknown image.
 func (r historyImageReader) patchKeys(in historyImageArg, call *ast.CallExpr, depth int) ([]string, bool) {
 	selector, ok := call.Fun.(*ast.SelectorExpr)
-	if !ok || (selector.Sel.Name != "Before" && selector.Sel.Name != "After") {
+	if !ok || (selector.Sel.Name != "Before" && selector.Sel.Name != "After" && selector.Sel.Name != "Moved") {
 		return nil, false
 	}
 	callee := auditCallee(in.pkg.info, call)

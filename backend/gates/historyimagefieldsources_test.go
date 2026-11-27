@@ -13,8 +13,10 @@ type historyFieldSource struct {
 	image historyImageArg
 	key   bool
 }
-type historyFieldSources map[*types.Var][]historyFieldSource
-type historyFieldFactory func() historyFieldSources
+type (
+	historyFieldSources map[*types.Var][]historyFieldSource
+	historyFieldFactory func() historyFieldSources
+)
 
 var historyFieldSourceCache sync.Map
 

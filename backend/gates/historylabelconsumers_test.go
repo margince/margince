@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+//gate:kind falsification H3
+
 package gates
 
 import (
-	"github.com/margince/margince/backend/internal/compose"
 	"regexp"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/compose"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
@@ -50,6 +53,7 @@ func historySettingObjects(t *testing.T) []string {
 }
 
 func TestHistoryLabelsReadCapitalAndDottedWireKeys(t *testing.T) {
+	t.Parallel()
 	source := `const LABELS = new Map<string, MessageKey>([["FullName","full"],["social.linkedin","linkedin"]]);`
 	keys := tsMapKeys(t, "planted.ts", source, "const LABELS = new Map<string, MessageKey>([")
 	if !keys["FullName"] || !keys["social.linkedin"] {

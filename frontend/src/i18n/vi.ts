@@ -14,13 +14,22 @@ import type { MessageKey } from "./en";
 //     "pháp nhân" (onboarding's legal-block copy). The two senses share no
 //     string in this catalog and must stay that way.
 export const vi: Readonly<Record<MessageKey, string>> = {
+  "history.field.email_security": "Bảo mật email",
+  "history.field.employee_range": "Khoảng số nhân viên",
+  "history.field.founded_year": "Năm thành lập",
+  "history.field.hosting_provider": "Nhà cung cấp dịch vụ lưu trữ web",
+  "history.field.mail_provider": "Nhà cung cấp email",
+  "history.field.named_customer": "Khách hàng được nêu tên",
+  "history.field.quantified_outcome": "Kết quả định lượng",
+  "history.field.served_industry": "Ngành phục vụ",
   "systemJob.website_lead_owner": "Thông báo phụ trách lead từ trang web",
   "history.field.close_date_provisional": "Ngày chốt dự kiến tạm thời",
   "history.field.commercial_mode": "Mô hình thương mại",
   "history.field.commercial_revision": "Phiên bản dữ liệu thương mại",
   "history.field.converted_from_lead_id": "Lead ban đầu",
   "history.field.deals.maintenance_writes_enabled": "Bật bảo trì cơ hội",
-  "history.field.deals.silent_close_days": "Số ngày trước khi đánh dấu cơ hội ít hoạt động",
+  "history.field.deals.silent_close_days":
+    "Số ngày trước khi đánh dấu cơ hội ít hoạt động",
   "history.field.Unowned": "Chưa được phân công",
   "history.field.activated_at": "Kích hoạt lúc",
   "history.field.activation_basis": "Cơ sở kích hoạt",
@@ -44,8 +53,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.field.claim_kind": "Loại cam kết",
   "history.field.claim_status": "Trạng thái cam kết",
   "history.field.commitment_admission": "Kiểm tra bằng chứng cam kết",
-  "history.field.commitment_admission_erased": "Kiểm tra bằng chứng cam kết đã xóa",
-  "history.field.commitment_admission_redacted": "Kiểm tra bằng chứng cam kết đã che",
+  "history.field.commitment_admission_erased":
+    "Kiểm tra bằng chứng cam kết đã xóa",
+  "history.field.commitment_admission_redacted":
+    "Kiểm tra bằng chứng cam kết đã che",
   "history.field.commitment_locator": "Tham chiếu nguồn cam kết",
   "history.field.corroboration": "Bằng chứng bổ trợ",
   "history.field.counterparty_email": "Email bên đối tác",
@@ -66,7 +77,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.field.invitation_sender": "Bên gửi lời mời",
   "history.field.judged_evidence": "Bằng chứng đã xét",
   "history.field.judged_through_activity_id": "Bằng chứng đã xét đến",
-  "history.field.lead_id": "Lead",
+  "history.field.lead_id": "Khách hàng tiềm năng",
   "history.field.lift_basis": "Lý do gỡ hạn chế",
   "history.field.logo_icon": "Biểu tượng công ty",
   "history.field.lost_reason_basis": "Bằng chứng cho lý do mất",
@@ -85,7 +96,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.field.next_step_due_at": "Bước tiếp theo đến hạn",
   "history.field.owed_verdict": "Kết quả yêu cầu",
   "history.field.owed_verdict_ruleset": "Phiên bản quy tắc yêu cầu",
-  "history.field.participant_addresses_not_lowercase": "Địa chỉ tham dự có chữ hoa",
+  "history.field.participant_addresses_not_lowercase":
+    "Địa chỉ tham dự có chữ hoa",
   "history.field.participant_seats": "Thành viên tham dự",
   "history.field.participant_users": "Tài khoản tham dự",
   "history.field.partner_accepted_at": "Chấp nhận đối tác lúc",
@@ -111,7 +123,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.field.sla_breached_at": "Quá hạn phản hồi lúc",
   "history.field.snoozed_intent": "Thao tác đã hoãn",
   "history.field.snoozed_until": "Hoãn đến",
-  "history.field.social.linkedin": "LinkedIn",
+  "history.field.social.linkedin": "Hồ sơ LinkedIn",
   "history.field.source_activity_id": "Hoạt động nguồn",
   "history.field.source_id": "Tham chiếu nguồn",
   "history.field.source_revision": "Phiên bản nguồn",
@@ -124,7 +136,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.field.task_activity_id": "Công việc",
   "history.field.updated_at": "Cập nhật lúc",
   "history.field.verdict": "Kết quả",
-  "payments.longOverdue": "Quá hạn lâu: {count} hóa đơn",
+  "payments.longOverdue_one": "Quá hạn lâu: {count} hóa đơn",
+  "payments.longOverdue_other": "Quá hạn lâu: {count} hóa đơn",
   "payments.checkWriteOff":
     "Kiểm tra có cần xóa nợ các hóa đơn này trong {provider} không.",
   "payments.checkWriteOffUnknown":

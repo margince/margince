@@ -615,7 +615,7 @@ describe("a field refusal read in the reader's language", () => {
 
   it("never says no cause was reported when the server named a field and a code", () => {
     const line = problemMessageOf(
-      // problem-code:unknown-field — exercises the generic fallback for an unknown server rule.
+      // problem-code:unknown-field: exercises the generic fallback for an unknown server rule.
       refusal({ field: "note", code: "not_a_known_code", message: "bad note" }),
       german,
     );
@@ -666,7 +666,7 @@ describe("a field refusal read in the reader's language", () => {
   it("words the callout and the line under the field the same way", () => {
     const error = refusal({
       field: "note",
-      // problem-code:unknown-field — exercises the generic fallback for an unknown server rule.
+      // problem-code:unknown-field: exercises the generic fallback for an unknown server rule.
       code: "not_a_known_code",
       message: "bad note",
     });

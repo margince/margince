@@ -34015,14 +34015,14 @@ func (e GetHiddenBacklogRowsParamsRule) Valid() bool {
 	}
 }
 
-// AIFeedbackInput A human's verdict on one derived claim.
+// AIFeedbackInput A human's result on one derived claim.
 type AIFeedbackInput struct {
 	ClaimKind AIFeedbackInputClaimKind `json:"claim_kind"`
 
-	// ClaimPath What the claim is ABOUT, not what it says — `profile_field:title`, `moment:replied_after_gap`. Hashed server-side into the stable claim key, so the same logical claim maps to the same verdict across every re-derivation.
+	// ClaimPath What the claim is ABOUT, not what it says — `profile_field:title`, `moment:replied_after_gap`. Hashed server-side into the stable claim key, so the same logical claim maps to the same result across every re-derivation.
 	ClaimPath string `json:"claim_path"`
 
-	// CorrectedValue The human's value. Required for `corrected` and refused for the other two — a corrected verdict with no value is an answer that was lost on the way in.
+	// CorrectedValue The human's value. Required for `corrected` and refused for the other two — a corrected result with no value is an answer that was lost on the way in.
 	CorrectedValue *string `json:"corrected_value,omitempty"`
 
 	// Note Why, in the human's words. Optional and never shown to a model.
@@ -34033,13 +34033,13 @@ type AIFeedbackInput struct {
 	SubjectType AIFeedbackInputSubjectType `json:"subject_type"`
 
 	// ValueCapturedAt The `captured_at` of the value the client rendered. Send back whatever the read handed you (`ContactProfileField.captured_at`), beside `value_shown`.
-	// It RANKS two submissions about the same claim rather than deciding what either is about. Both stamps are the server's own, so a page that rendered the newer value carries the later one — and a correction typed against a value that has since moved is refused with 409 rather than replacing the verdict a colleague recorded about the value that stands.
+	// It RANKS two submissions about the same claim rather than deciding what either is about. Both stamps are the server's own, so a page that rendered the newer value carries the later one — and a correction typed against a value that has since moved is refused with 409 rather than replacing the result a colleague recorded about the value that stands.
 	// Optional, and omitting it is not an error: a submission that carries no stamp is not ranked against anything and simply lands.
 	ValueCapturedAt *time.Time `json:"value_captured_at,omitempty"`
 
 	// ValueShown The value the client RENDERED — the sentence the human actually had in front of them when they decided. Send back whatever the read handed you (`ContactProfileField.value`).
-	// This is what the verdict is ABOUT, and the reader compares it against the value it is asked to apply the verdict to. A record whose value has moved on since the page was drawn keeps the verdict on file and does not apply it, which is the point: a correction to one sentence must not be applied to a different one.
-	// Optional. Omitting it falls back to comparing WHEN the verdict was recorded against when the value last changed — a proxy, and the answer every verdict recorded before this field existed still gets.
+	// This is what the result is ABOUT, and the reader compares it against the value it is asked to apply the result to. A record whose value has moved on since the page was drawn keeps the result on file and does not apply it, which is the point: a correction to one sentence must not be applied to a different one.
+	// Optional. Omitting it falls back to comparing WHEN the result was recorded against when the value last changed — a proxy, and the answer every result recorded before this field existed still gets.
 	ValueShown *string                `json:"value_shown,omitempty"`
 	Verdict    AIFeedbackInputVerdict `json:"verdict"`
 }
@@ -34316,7 +34316,7 @@ type ActingIdentity struct {
 // what the DB CHECK would reject, rather than 500-ing at write time).
 // `channel_provider` is the same kind of constraint in both directions: non-null exactly
 // when `kind=message` (ADR-0107).
-// **Custom fields**: the values of the workspace's activity custom fields arrive as extra
+// **Custom fields**: the values of the company's activity custom fields arrive as extra
 // top-level `cf_` keys. They are content, so they are absent whenever `content_state` is
 // `withheld`.
 type Activity struct {
@@ -34333,10 +34333,10 @@ type Activity struct {
 	// AttendeeResponses Meeting only: the answers the colleagues and the linked contacts you see gave the invitation, for those a calendar stated one for. A guest in `guests` carries their own `response`. Filled and withheld like `guests`.
 	AttendeeResponses *[]MeetingAttendeeResponse `json:"attendee_responses,omitempty"`
 
-	// Audience Who may read this activity's CONTENT once the row is discoverable at all. `workspace` — everyone who can discover it (the default); `participants` — the humans on it (the capturing mailbox owner, anyone stamped as a participant by seat); `selected` — the participants plus the users and teams named through PATCH /activities/{id}/audience. Set only through that endpoint, by a human with write authority over the activity. The colleague who sent a mail that only another member's mailbox captured may read that one copy, when their login address is at one of the workspace's own domains.
+	// Audience Who may read this activity's CONTENT once the row is discoverable at all. `workspace` — everyone who can discover it (the default); `participants` — the humans on it (the capturing mailbox owner, anyone stamped as a participant by seat); `selected` — the participants plus the users and teams named through PATCH /activities/{id}/audience. Set only through that endpoint, by a human with write authority over the activity. The colleague who sent a mail that only another member's mailbox captured may read that one copy, when their login address is at one of the company's own domains.
 	Audience *ActivityAudience `json:"audience,omitempty"`
 
-	// AudienceReason Why `audience` is what it is, for a captured message whose audience the system derived rather than a human set: `posture` (a mailbox asked for it), `workspace_floor` (the workspace turned mail sharing off), `no_record` (the message is filed under no record), `no_counterparty` (the message named nobody a record could be filed under), `pending_verdict` (nothing has judged the message yet), `verdict` (a classifier held the thread), `counterparty` (the importing seat holds mail with one of its parties), `explicitly_confidential` (the subject marks it confidential), `members_only` (every party is a member of the workspace; no verdict opens it, the mailbox owner sharing the thread does), `manual` (a human said so). A classifier's own kind, such as `legal`, may stand in for `verdict`. Null on a row nothing derived. WITHHELD with the content — the reason describes what the message is about, so a colleague who may not read a held message does not learn why it is held either; it is absent whenever `content_state` is `withheld`.
+	// AudienceReason Why `audience` is what it is, for a captured message whose audience the system derived rather than a human set: `posture` (a mailbox asked for it), `workspace_floor` (the company turned mail sharing off), `no_record` (the message is filed under no record), `no_counterparty` (the message named nobody a record could be filed under), `pending_verdict` (nothing has judged the message yet), `verdict` (a classifier held the thread), `counterparty` (the importing seat holds mail with one of its parties), `explicitly_confidential` (the subject marks it confidential), `members_only` (every party is a member of the company; no result opens it, the mailbox owner sharing the thread does), `manual` (a human said so). A classifier's own kind, such as `legal`, may stand in for `verdict`. Null on a row nothing derived. WITHHELD with the content — the reason describes what the message is about, so a colleague who may not read a held message does not learn why it is held either; it is absent whenever `content_state` is `withheld`.
 	AudienceReason *string `json:"audience_reason,omitempty"`
 
 	// Author Who wrote this where it came FROM, present only on a record imported from another system whose importer named the author. Null on everything else, which is most rows: a message captured from a mailbox or typed here has no author but the one `captured_by` already names.
@@ -34366,7 +34366,7 @@ type Activity struct {
 	// CanShareInternal Whether this caller may replace selected individual readers of this internal operational message. Absent for ordinary or withheld activities.
 	CanShareInternal *bool `json:"can_share_internal,omitempty"`
 
-	// CaptureLabel What this message turned out to be, from the batched capture classification. Null means unclassified, which is a backlog state and not a verdict of "ordinary". Other means neither a commitment nor a meeting; it says nothing about importance.
+	// CaptureLabel What this message turned out to be, from the batched capture classification. Null means unclassified, which is a backlog state and not a result of "ordinary". Other means neither a commitment nor a meeting; it says nothing about importance.
 	CaptureLabel *ActivityCaptureLabel `json:"capture_label,omitempty"`
 
 	// CapturedBy Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.
@@ -34383,7 +34383,7 @@ type Activity struct {
 	// ColleagueIds The colleagues recorded as taking part: the one who logged a call or meeting, the ones named as attending, and the seats capture stamped on a captured one, never a blind copy. Filled wherever one activity is answered whole (its read, its update); a list leaves it out. Withheld with the content, so it is absent whenever `content_state` is `withheld`.
 	ColleagueIds *[]openapi_types.UUID `json:"colleague_ids,omitempty"`
 
-	// CommitmentAdmissions Decisions about promises read from this source, included on list and detail reads when its content is visible.
+	// CommitmentAdmissions Decisions about commitments read from this source, included on list and detail reads when its content is visible.
 	CommitmentAdmissions *[]CommitmentAdmission `json:"commitment_admissions,omitempty"`
 
 	// ContentState Whether this response carries the activity's content. `withheld` means the caller may discover the row (a linked record is theirs to read) but is not in its audience: only the safe markers are filled — id, kind, channel_provider, occurred_at, direction, audience, links, is_done/due_at for a task, call_outcome for a call, provenance and timestamps — and subject, body, thread_key, capture_label, source_id and raw are null. An `available` row is complete.
@@ -34496,7 +34496,7 @@ type Activity struct {
 	// RemindIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
 	RemindIntent *IntentTime `json:"remind_intent,omitempty"`
 
-	// ReplyChannel Task only. For a `reply` or `reach_out` task, the kind of the activity it follows (`source_activity_id`), so the answer goes back the way the conversation went: a promise made in a mail is kept by mail. Null for every other type, and for a task with no source of one of these kinds.
+	// ReplyChannel Task only. For a `reply` or `reach_out` task, the kind of the activity it follows (`source_activity_id`), so the answer goes back the way the conversation went: a commitment made in a mail is kept by mail. Null for every other type, and for a task with no source of one of these kinds.
 	ReplyChannel *ActivityReplyChannel `json:"reply_channel,omitempty"`
 
 	// Source Where the row came from. `manual` is anything typed, by a member or by an assistant working for one, so it never says who typed it: `captured_by` and `recorded_by_agent` do.
@@ -34546,7 +34546,7 @@ type ActivityAutomaticKind string
 // ActivityCallOutcome How a call ended: reached, not_reached (nobody answered), voicemail (left a voicemail), call_back_later (asked to be called back), put_through (passed to someone else who took it). Call only, optional. Only reached and put_through, or no outcome, count as contact.
 type ActivityCallOutcome string
 
-// ActivityCaptureLabel What this message turned out to be, from the batched capture classification. Null means unclassified, which is a backlog state and not a verdict of "ordinary". Other means neither a commitment nor a meeting; it says nothing about importance.
+// ActivityCaptureLabel What this message turned out to be, from the batched capture classification. Null means unclassified, which is a backlog state and not a result of "ordinary". Other means neither a commitment nor a meeting; it says nothing about importance.
 type ActivityCaptureLabel string
 
 // ActivityContentState Whether this response carries the activity's content. `withheld` means the caller may discover the row (a linked record is theirs to read) but is not in its audience: only the safe markers are filled — id, kind, channel_provider, occurred_at, direction, audience, links, is_done/due_at for a task, call_outcome for a call, provenance and timestamps — and subject, body, thread_key, capture_label, source_id and raw are null. An `available` row is complete.
@@ -34579,7 +34579,7 @@ type ActivityMeetingStatus string
 // a message owed our answer is `none`, as for mail.
 type ActivityMessageMove string
 
-// ActivityReplyChannel Task only. For a `reply` or `reach_out` task, the kind of the activity it follows (`source_activity_id`), so the answer goes back the way the conversation went: a promise made in a mail is kept by mail. Null for every other type, and for a task with no source of one of these kinds.
+// ActivityReplyChannel Task only. For a `reply` or `reach_out` task, the kind of the activity it follows (`source_activity_id`), so the answer goes back the way the conversation went: a commitment made in a mail is kept by mail. Null for every other type, and for a task with no source of one of these kinds.
 type ActivityReplyChannel string
 
 // ActivityAudience Who may read an activity's content — see Activity.audience.
@@ -34594,12 +34594,12 @@ type ActivityAuthor struct {
 	// IsReader The author is the signed-in caller.
 	IsReader bool `json:"is_reader"`
 
-	// Kind `colleague` is a seat in this workspace, recorded as such by capture or by the seat that logged it. `machine` is a sending system rather than a human (`automatic_kind` sending_system). `contact_record` is a contact this caller may see. `unresolved` is an address, or an imported author's name, that resolved to neither.
+	// Kind `colleague` is a seat in this company, recorded as such by capture or by the seat that logged it. `machine` is a sending system rather than a human (`automatic_kind` sending_system). `contact_record` is a contact this caller may see. `unresolved` is an address, or an imported author's name, that resolved to neither.
 	Kind   ActivityAuthorKind  `json:"kind"`
 	UserId *openapi_types.UUID `json:"user_id,omitempty"`
 }
 
-// ActivityAuthorKind `colleague` is a seat in this workspace, recorded as such by capture or by the seat that logged it. `machine` is a sending system rather than a human (`automatic_kind` sending_system). `contact_record` is a contact this caller may see. `unresolved` is an address, or an imported author's name, that resolved to neither.
+// ActivityAuthorKind `colleague` is a seat in this company, recorded as such by capture or by the seat that logged it. `machine` is a sending system rather than a human (`automatic_kind` sending_system). `contact_record` is a contact this caller may see. `unresolved` is an address, or an imported author's name, that resolved to neither.
 type ActivityAuthorKind string
 
 // ActivityDealDecline defines model for ActivityDealDecline.
@@ -35099,7 +35099,7 @@ type AgentAllowanceSettings struct {
 	// AgentCallsPerWindow How many calls of any kind one passport or connection may make per window, a tool call or an API request, reads included. Default 1000.
 	AgentCallsPerWindow int `json:"agent_calls_per_window" maximum:"20000" minimum:"50"`
 
-	// AgentEgressPerWindow How many calls that send something out of the workspace one passport or connection may make per window. Default 20.
+	// AgentEgressPerWindow How many calls that send something out of the company one passport or connection may make per window. Default 20.
 	AgentEgressPerWindow int `json:"agent_egress_per_window" maximum:"200" minimum:"1"`
 
 	// AgentWindowHours How long the window in force lasts, in hours. Default 24. Every passport's window
@@ -35204,7 +35204,7 @@ type AgentClientSecret struct {
 	Scopes string `json:"scopes"`
 }
 
-// AgentCommitment One open promise: a task, or a promise read from a conversation, with when it is due.
+// AgentCommitment One open commitment: a task, or a commitment read from a conversation, with when it is due.
 type AgentCommitment struct {
 	About        []AgentCommitmentSubject `json:"about"`
 	AssigneeId   *openapi_types.UUID      `json:"assignee_id,omitempty"`
@@ -35494,7 +35494,7 @@ type AgentTool struct {
 	// Description What the tool is for, as an MCP client is told it: the outcome it produces, its limits, when a neighbouring tool is the better call, and what to keep from its result — followed by this server's own governance clause, which is absent for a tool that runs immediately and needs only the read scope.
 	Description string `json:"description"`
 
-	// Egress True if the tool reaches outside the workspace.
+	// Egress True if the tool reaches outside the company.
 	Egress bool `json:"egress"`
 
 	// Name The tool name (tools/list identity).
@@ -36731,10 +36731,10 @@ type AiRouteCandidate struct {
 
 // AiRouteCertification What the certification records say about this model for this task, read by the same rule as the feature's `certification` grade, so the lead candidate and the feature never disagree. Absent on a candidate that grade calls not_measured.
 type AiRouteCertification struct {
-	// Current Every record behind the verdict still describes the prompts this build sends.
+	// Current Every record behind the result still describes the prompts this build sends.
 	Current bool `json:"current"`
 
-	// Verdict The worst verdict across the task's sites and across the records of this model.
+	// Verdict The worst result across the task's sites and across the records of this model.
 	Verdict string `json:"verdict"`
 }
 
@@ -37045,7 +37045,7 @@ type AiTierBinding struct {
 // never stored or returned, and is accepted on any binding.
 type AiTierBindingThinkingLevel string
 
-// AiUsage AI usage + budget (AIRT-WIRE-1): the AIRT-PARAM-33 meter aggregated per day × task × tier, plus the budget band. Token-denominated; cost_est_minor is computed on read from the workspace's ai_model_rate price sheet as of each call's day (ADR-0067, price-on-read) — omitted, never a fabricated 0, when a task line's window carries no priced call, and accompanied by unpriced_calls when it is a partial total.
+// AiUsage AI usage + budget (AIRT-WIRE-1): the AIRT-PARAM-33 meter aggregated per day × task × tier, plus the budget band. Token-denominated; cost_est_minor is computed on read from the company's ai_model_rate price sheet as of each call's day (ADR-0067, price-on-read) — omitted, never a fabricated 0, when a task line's window carries no priced call, and accompanied by unpriced_calls when it is a partial total.
 type AiUsage struct {
 	Budget struct {
 		// Band < 80% / 80–100% soft-degrade / ≥ 100% non-interactive queued (AIRT-PARAM-9..11).
@@ -37395,7 +37395,7 @@ type AnalyticsScope struct {
 	// Assertable Whether this caller may record a forecast call or issue a share about this population. Absent from a server that predates the field; a screen then offers the controls and the write route decides.
 	Assertable *bool `json:"assertable,omitempty"`
 
-	// Id The team or contact measured. Absent for workspace and managed_teams, which name no single subject.
+	// Id The team or contact measured. Absent for company and managed_teams, which name no single subject.
 	Id *openapi_types.UUID `json:"id,omitempty"`
 
 	// Kind `managed_teams` is a team manager's own default — their teams and themselves. It is RESOLVED, never requested: a caller names one team, or names nothing and is given this.
@@ -37404,7 +37404,7 @@ type AnalyticsScope struct {
 	// Label What to call this population on screen.
 	Label string `json:"label"`
 
-	// Measurable Whether this population is within the caller's own record access: the workspace for a seat that reads every record, a team for its members. Analytics offers the totals of a scope outside it. Progress reads only a scope inside it.
+	// Measurable Whether this population is within the caller's own record access: the company for a seat that reads every record, a team for its members. Analytics offers the totals of a scope outside it. Progress reads only a scope inside it.
 	Measurable *bool `json:"measurable,omitempty"`
 }
 
@@ -37552,7 +37552,7 @@ type Approval struct {
 
 	// BundleId The act that staged this proposal together with its siblings: today, a website read's company facts and the leads it published. Null for a proposal staged on its own. It is a grouping id, not a foreign key: there is no
 	// bundle entity, and every member keeps its own diff hash, version pin, expiry and
-	// verdict (ADR-0036 — the staged row IS the authority object). Decide the whole set with
+	// result (ADR-0036 — the staged row IS the authority object). Decide the whole set with
 	// `POST /approval-bundles/{bundle_id}/approve|reject`, or any member on its own.
 	//
 	// A proposal that is re-staged identically JOINS the row already pending and MOVES onto
@@ -37569,7 +37569,7 @@ type Approval struct {
 
 	// EffectFailedAt When the work an APPROVED decision released failed to run. Absent on every
 	// row whose effect ran — an approved row carrying this is a decision a contact
-	// made whose promised work never happened.
+	// made whose agreed work never happened.
 	EffectFailedAt *time.Time `json:"effect_failed_at,omitempty"`
 
 	// EffectFailure The sentence a reader is shown about that failure, written for them and never copied from the executor's error. Present exactly when `effect_failed_at` is.
@@ -37665,10 +37665,10 @@ type ApprovalBundleMember struct {
 	// Approval A staged 🟡 confirm-first action awaiting human decision.
 	Approval Approval `json:"approval"`
 
-	// Outcome What THIS call did to the member. `decided` — the verdict was recorded now.
-	// `already_decided` — it carried a verdict before this call, which is left standing
+	// Outcome What THIS call did to the member. `decided` — the result was recorded now.
+	// `already_decided` — it carried a result before this call, which is left standing
 	// (the status says which). `expired` — it lapsed undecided and is no longer
-	// approvable; re-propose instead. `effect_failed` — the verdict IS recorded and
+	// approvable; re-propose instead. `effect_failed` — the result IS recorded and
 	// audited, but the follow-on change did not land; the member reads approved and
 	// unredeemed, and the server log carries the cause. `refused` — its kind refused
 	// approving it before anything was decided (the same check a single approval runs),
@@ -37676,10 +37676,10 @@ type ApprovalBundleMember struct {
 	Outcome ApprovalBundleMemberOutcome `json:"outcome"`
 }
 
-// ApprovalBundleMemberOutcome What THIS call did to the member. `decided` — the verdict was recorded now.
-// `already_decided` — it carried a verdict before this call, which is left standing
+// ApprovalBundleMemberOutcome What THIS call did to the member. `decided` — the result was recorded now.
+// `already_decided` — it carried a result before this call, which is left standing
 // (the status says which). `expired` — it lapsed undecided and is no longer
-// approvable; re-propose instead. `effect_failed` — the verdict IS recorded and
+// approvable; re-propose instead. `effect_failed` — the result IS recorded and
 // audited, but the follow-on change did not land; the member reads approved and
 // unredeemed, and the server log carries the cause. `refused` — its kind refused
 // approving it before anything was decided (the same check a single approval runs),
@@ -38120,14 +38120,14 @@ type AssuranceFreshness struct {
 	// ChangedSince The oldest change the check has not read. Absent when there is none.
 	ChangedSince *time.Time `json:"changed_since,omitempty"`
 
-	// State `out_of_date` when any input changed after the check read it. Its verdict and findings stay as the check left them until the next run. `unknown` when no complete check recorded its inputs, or when a committed input change is still waiting to be read. A complete check can read these changes before the background consumer catches up.
+	// State `out_of_date` when any input changed after the check read it. Its result and findings stay as the check left them until the next run. `unknown` when no complete check recorded its inputs, or when a committed input change is still waiting to be read. A complete check can read these changes before the background consumer catches up.
 	State AssuranceFreshnessState `json:"state"`
 
 	// WorkspaceChanged A change that reaches every deal: a stage the deals are judged against, or a forecast call made after the check.
 	WorkspaceChanged bool `json:"workspace_changed"`
 }
 
-// AssuranceFreshnessState `out_of_date` when any input changed after the check read it. Its verdict and findings stay as the check left them until the next run. `unknown` when no complete check recorded its inputs, or when a committed input change is still waiting to be read. A complete check can read these changes before the background consumer catches up.
+// AssuranceFreshnessState `out_of_date` when any input changed after the check read it. Its result and findings stay as the check left them until the next run. `unknown` when no complete check recorded its inputs, or when a committed input change is still waiting to be read. A complete check can read these changes before the background consumer catches up.
 type AssuranceFreshnessState string
 
 // AssuranceReviewDeliveries The open customer reviews by how far their task delivery got. A delivery is a background job queued with the check; a failed one is queued again by the next check.
@@ -38476,7 +38476,7 @@ type Attention struct {
 	// Its own lane rather than rows in `planned`, because the two rest on different
 	// records and answer different questions. A `planned` row is a TASK somebody
 	// entered; a commitment is a claim extracted from a captured conversation, and it
-	// carries the promise's own words and its evidence. Nothing appears in both.
+	// carries the commitment's own words and its evidence. Nothing appears in both.
 	//
 	// Absent — not empty — on an installation whose feed does not read claims.
 	Commitments *[]AttentionItem `json:"commitments,omitempty"`
@@ -38807,7 +38807,7 @@ type AttentionCounts struct {
 	// CaptureHealth How many capture connections need the reader's hand — one per connection, the full count rather than a bounded page.
 	CaptureHealth *int `json:"capture_health,omitempty" minimum:"0"`
 
-	// Commitments How many promises are due by the end of the installation's day — EVERY one this caller may see, not the bounded page below it, the same reading `planned` carries. A rep past the bound sees the soonest-due ones, which is the order the lane is in.
+	// Commitments How many commitments are due by the end of the installation's day — EVERY one this caller may see, not the bounded page below it, the same reading `planned` carries. A rep past the bound sees the soonest-due ones, which is the order the lane is in.
 	Commitments *int `json:"commitments,omitempty" minimum:"0"`
 
 	// DealSuggestionsOpen Open Deal Scout suggestions this caller can see — every piece of whose evidence they may read. Absent when the reader may not read suggestions at all, or when the suggestion read failed; the Worklist names a failed read as a `deal_suggestion` source in `sources_unavailable`.
@@ -39026,7 +39026,7 @@ type AttentionItem struct {
 	// reader may not see is counted in `contact_count` and never named.
 	DomainContext *DomainQuestionContext `json:"domain_context,omitempty"`
 
-	// DomainNote The site triage's own sentence on a `vendor_verdict` domain question, in the workspace language.
+	// DomainNote The site triage's own sentence on a `vendor_verdict` domain question, in the company language.
 	DomainNote *string `json:"domain_note,omitempty"`
 
 	// DomainReasonCode The domain question's reason code, rendered in the reader's language.
@@ -39071,7 +39071,7 @@ type AttentionItem struct {
 	// Kind The producer's own sub-type (an approval kind, a dedupe entity type) — for the icon and the label, never for authority.
 	Kind *string `json:"kind,omitempty"`
 
-	// MayBeDone Our later mail on the promise's thread to one of its recipients, which may have kept it. The row then asks whether it is done instead of listing it as open, and `overdue` is false while it asks. Its `claim_key` is the one the contact page and the company page use, so one Not yet holds on all three. Absent when there is no such mail, when the task is closed, or when the reader answered Not yet to this mail; the row is then overdue again if its date has passed.
+	// MayBeDone Our later mail on the commitment's thread to one of its recipients, which may have kept it. The row then asks whether it is done instead of listing it as open, and `overdue` is false while it asks. Its `claim_key` is the one the contact page and the company page use, so one Not yet holds on all three. Absent when there is no such mail, when the task is closed, or when the reader answered Not yet to this mail; the row is then overdue again if its date has passed.
 	MayBeDone *WorklistMayBeDone `json:"may_be_done,omitempty"`
 
 	// NoticeOrigin The original change behind a notification, distinct from the automation delivering it. Historical origins are recovered only through an exact event causation link.
@@ -39148,7 +39148,7 @@ type AttentionItem struct {
 	// SourceRecord The evidence record behind this work, distinct from its account or counterparty. Its label is resolved under current read permissions; the reference grants no access.
 	SourceRecord *AttentionSubject `json:"source_record,omitempty"`
 
-	// Staged What the verdict engine already worked out about a staged contact decision, so a
+	// Staged What the result engine already worked out about a staged contact decision, so a
 	// surface can group alike questions without reading the proposal a second time.
 	//
 	// Read from the payload the engine staged rather than re-derived, because a second
@@ -39187,7 +39187,7 @@ type AttentionItem struct {
 	Undo *AppliedUndo `json:"undo,omitempty"`
 
 	// Version The version of the row this item's own verbs write to, present where it names one — a
-	// task or a promise today. Carried for the reason `email_summary` carries one: a lane that offers
+	// task or a commitment today. Carried for the reason `email_summary` carries one: a lane that offers
 	// `complete` and `snooze` has to name the row those presses condition on, or two contacts
 	// acting on one task each overwrite the other and neither is told.
 	Version *RowVersion `json:"version,omitempty"`
@@ -39324,7 +39324,7 @@ type AttentionRelationshipFacts struct {
 // surfaces cannot come to disagree about who this contact is.
 type AttentionRelationshipFactsStrength string
 
-// AttentionStagedFacts What the verdict engine already worked out about a staged contact decision, so a
+// AttentionStagedFacts What the result engine already worked out about a staged contact decision, so a
 // surface can group alike questions without reading the proposal a second time.
 //
 // Read from the payload the engine staged rather than re-derived, because a second
@@ -39338,7 +39338,7 @@ type AttentionStagedFacts struct {
 	// AccountTermination A current account termination intervention with a ready lifecycle approval preview and a named decision owner.
 	AccountTermination *bool `json:"account_termination,omitempty"`
 
-	// KnownCompany The address's domain already names a company in this workspace.
+	// KnownCompany The address's domain already names a company in this company.
 	KnownCompany *bool `json:"known_company,omitempty"`
 
 	// MachineSender The address is a sending system rather than a contact.
@@ -39630,7 +39630,7 @@ type Authorization struct {
 	// RefusedLeadFilters The `listLeads` query parameters this caller is refused whatever their value: `403` where a grant the filter reads is missing, such as `industry`, `country` and `size_band` for a seat that may not read companies, and `list_id` where the caller may not read lists. Computed by the list resolution and clauses the list runs, so a client withholds exactly the dials the list would refuse. Absent from a server that does not compute it, and empty when nothing is refused.
 	RefusedLeadFilters *[]string `json:"refused_lead_filters,omitempty"`
 
-	// RowScope How far the grants above reach: the caller's own rows, every row belonging to a live team they share, or every row in the workspace. Widened to the maximum any of the caller's roles holds, the same union the server applies.
+	// RowScope How far the grants above reach: the caller's own rows, every row belonging to a live team they share, or every row in the company. Widened to the maximum any of the caller's roles holds, the same union the server applies.
 	// It is a THIRD axis, independent of the seat ceiling and the object grants, and a client that ignores it will describe a team lead's reach as if it were an admin's.
 	// The server never sends a value outside this enum: an unresolved scope is narrowed to `own` before it reaches the wire, so a client reading a value it does not recognize is reading a newer server and should narrow it the same way.
 	// This does not let a client decide which rows it gets — the server's scope clauses do that on every query. It is what a client needs to EXPLAIN the answer it got, and to label a setting as reaching only the reader, their team, or the company.
@@ -39640,7 +39640,7 @@ type Authorization struct {
 	SeatType AuthorizationSeatType `json:"seat_type"`
 }
 
-// AuthorizationRowScope How far the grants above reach: the caller's own rows, every row belonging to a live team they share, or every row in the workspace. Widened to the maximum any of the caller's roles holds, the same union the server applies.
+// AuthorizationRowScope How far the grants above reach: the caller's own rows, every row belonging to a live team they share, or every row in the company. Widened to the maximum any of the caller's roles holds, the same union the server applies.
 // It is a THIRD axis, independent of the seat ceiling and the object grants, and a client that ignores it will describe a team lead's reach as if it were an admin's.
 // The server never sends a value outside this enum: an unresolved scope is narrowed to `own` before it reaches the wire, so a client reading a value it does not recognize is reading a newer server and should narrow it the same way.
 // This does not let a client decide which rows it gets — the server's scope clauses do that on every query. It is what a client needs to EXPLAIN the answer it got, and to label a setting as reaching only the reader, their team, or the company.
@@ -39928,7 +39928,7 @@ type AutomationRetryResult struct {
 	// or connection was revoked or expired.
 	Refusal *AutomationRetryResultRefusal `json:"refusal,omitempty"`
 
-	// Retried True when the firing was re-dispatched. It does NOT promise the firing then
+	// Retried True when the firing was re-dispatched. It does not guarantee the firing then
 	// succeeded — a retry of a rule whose cause is still present fails again, and
 	// that failure is recorded as its own run for the same reasons the first was.
 	Retried bool `json:"retried"`
@@ -40087,7 +40087,7 @@ type BackfillPreview struct {
 	// EstimateIsFloor True when `estimated_messages` is a LOWER BOUND rather than a total — the window holds at least that many and how many more was not counted. Gmail counts by paging message ids under a cap, so a large mailbox hits it; Graph answers an exact `$count` and never does. A client MUST qualify the number when this is true ("at least 20,000"), because a floor shown as a count is short by multiples and a reader has no way to tell which kind they are looking at — and this is the number they are consenting to. Absent means the count is exact. It is NOT a reason to refuse: the scope being consented to is the mailbox and the period, and the count is supporting detail.
 	EstimateIsFloor *bool `json:"estimate_is_floor,omitempty"`
 
-	// EstimateQuality observed = priced from this workspace's ai_call history; heuristic = cold-start work-shape floor or a defaulted ratio.
+	// EstimateQuality observed = priced from this company's ai_call history; heuristic = cold-start work-shape floor or a defaulted ratio.
 	EstimateQuality *BackfillPreviewEstimateQuality `json:"estimate_quality,omitempty"`
 
 	// EstimatedAiTokens The estimator's input-anchored token figure across classify+enrich+embeddings for that count; absent on estimator fault (ADR-0068).
@@ -40104,7 +40104,7 @@ type BackfillPreview struct {
 	Window       BackfillPreviewWindow       `json:"window"`
 }
 
-// BackfillPreviewEstimateQuality observed = priced from this workspace's ai_call history; heuristic = cold-start work-shape floor or a defaulted ratio.
+// BackfillPreviewEstimateQuality observed = priced from this company's ai_call history; heuristic = cold-start work-shape floor or a defaulted ratio.
 type BackfillPreviewEstimateQuality string
 
 // BackfillPreviewWindow defines model for BackfillPreview.Window.
@@ -40232,7 +40232,7 @@ type BillingContactRole string
 
 // BlockedDomain One domain and where its company question stands. `suppressed` refuses it a company —
 // a vendor or bulk sender the business does not sell to — while `admitted` is a human
-// deliberately letting one in, which no later verdict may undo.
+// deliberately letting one in, which no later result may undo.
 //
 // `undecided` is the third state and it is not a decision: the question was asked, the
 // machine declined to answer it, and nobody has since.
@@ -40342,7 +40342,7 @@ type BlockedDomainListResponse struct {
 	Data []BlockedDomain `json:"data"`
 
 	// Total How many decisions exist, which is not how many are returned. Refusals accumulate
-	// automatically from every bulk-sender verdict, so a list that quietly stopped at its
+	// automatically from every bulk-sender result, so a list that quietly stopped at its
 	// page size would tell an operator their domain was never refused when it was.
 	Total int `json:"total"`
 }
@@ -40354,7 +40354,7 @@ type BlockedDomainListResponse struct {
 // text of the original it forwarded, not the sender's own words. `unassessed`: a mail
 // stored before this was recorded and not yet checked against its stored original.
 // `unverifiable`: a mail stored before this was recorded whose original is gone or no longer
-// decodes, so its text can never be checked. Automatic work (promises, requests and their
+// decodes, so its text can never be checked. Automatic work (commitments, requests and their
 // settlement, and the events read from a conversation) is read only from a `complete` mail
 // body.
 type BodyCompleteness string
@@ -40493,7 +40493,7 @@ type BulkChangeExecuteRequest struct {
 	// verb but `archive`, `move_stage` and `complete`: a lead leaves the queue by being
 	// disqualified, which has no bulk verb. A contact and a company take neither `move_stage` nor
 	// `complete`.
-	// A `worklist_item` is a task or a promise (a conversation claim) as the Worklist lists it,
+	// A `worklist_item` is a task or a commitment (a conversation claim) as the Worklist lists it,
 	// named by the id its row carries; `complete` is its only verb, and no other kind takes it.
 	RecordType BulkRecordType `json:"record_type"`
 
@@ -40516,7 +40516,7 @@ type BulkChangeExecuteRequest struct {
 	// stage `stage_id` names, exactly as `advanceDeal` does, and only deals take it. A deal that is
 	// won or lost, or whose pipeline does not hold the stage, is left alone; closing a deal asks for
 	// its own reason and stays a single-record move. `complete` marks a `worklist_item` done:
-	// a task exactly as `updateActivity` with `is_done: true` does, a promise exactly as
+	// a task exactly as `updateActivity` with `is_done: true` does, a commitment exactly as
 	// `settleConversationClaim` with `outcome: done` does.
 	Verb BulkVerb `json:"verb"`
 }
@@ -40542,7 +40542,7 @@ type BulkChangePreview struct {
 	// verb but `archive`, `move_stage` and `complete`: a lead leaves the queue by being
 	// disqualified, which has no bulk verb. A contact and a company take neither `move_stage` nor
 	// `complete`.
-	// A `worklist_item` is a task or a promise (a conversation claim) as the Worklist lists it,
+	// A `worklist_item` is a task or a commitment (a conversation claim) as the Worklist lists it,
 	// named by the id its row carries; `complete` is its only verb, and no other kind takes it.
 	RecordType BulkRecordType `json:"record_type"`
 
@@ -40560,7 +40560,7 @@ type BulkChangePreview struct {
 	// stage `stage_id` names, exactly as `advanceDeal` does, and only deals take it. A deal that is
 	// won or lost, or whose pipeline does not hold the stage, is left alone; closing a deal asks for
 	// its own reason and stays a single-record move. `complete` marks a `worklist_item` done:
-	// a task exactly as `updateActivity` with `is_done: true` does, a promise exactly as
+	// a task exactly as `updateActivity` with `is_done: true` does, a commitment exactly as
 	// `settleConversationClaim` with `outcome: done` does.
 	Verb BulkVerb `json:"verb"`
 }
@@ -40582,7 +40582,7 @@ type BulkChangePreviewRequest struct {
 	// verb but `archive`, `move_stage` and `complete`: a lead leaves the queue by being
 	// disqualified, which has no bulk verb. A contact and a company take neither `move_stage` nor
 	// `complete`.
-	// A `worklist_item` is a task or a promise (a conversation claim) as the Worklist lists it,
+	// A `worklist_item` is a task or a commitment (a conversation claim) as the Worklist lists it,
 	// named by the id its row carries; `complete` is its only verb, and no other kind takes it.
 	RecordType BulkRecordType `json:"record_type"`
 
@@ -40605,7 +40605,7 @@ type BulkChangePreviewRequest struct {
 	// stage `stage_id` names, exactly as `advanceDeal` does, and only deals take it. A deal that is
 	// won or lost, or whose pipeline does not hold the stage, is left alone; closing a deal asks for
 	// its own reason and stays a single-record move. `complete` marks a `worklist_item` done:
-	// a task exactly as `updateActivity` with `is_done: true` does, a promise exactly as
+	// a task exactly as `updateActivity` with `is_done: true` does, a commitment exactly as
 	// `settleConversationClaim` with `outcome: done` does.
 	Verb BulkVerb `json:"verb"`
 }
@@ -40667,7 +40667,7 @@ type BulkOperation struct {
 	// verb but `archive`, `move_stage` and `complete`: a lead leaves the queue by being
 	// disqualified, which has no bulk verb. A contact and a company take neither `move_stage` nor
 	// `complete`.
-	// A `worklist_item` is a task or a promise (a conversation claim) as the Worklist lists it,
+	// A `worklist_item` is a task or a commitment (a conversation claim) as the Worklist lists it,
 	// named by the id its row carries; `complete` is its only verb, and no other kind takes it.
 	RecordType BulkRecordType `json:"record_type"`
 	Skipped    []BulkSkip     `json:"skipped"`
@@ -40697,7 +40697,7 @@ type BulkOperation struct {
 	// stage `stage_id` names, exactly as `advanceDeal` does, and only deals take it. A deal that is
 	// won or lost, or whose pipeline does not hold the stage, is left alone; closing a deal asks for
 	// its own reason and stays a single-record move. `complete` marks a `worklist_item` done:
-	// a task exactly as `updateActivity` with `is_done: true` does, a promise exactly as
+	// a task exactly as `updateActivity` with `is_done: true` does, a commitment exactly as
 	// `settleConversationClaim` with `outcome: done` does.
 	Verb BulkVerb `json:"verb"`
 }
@@ -40706,7 +40706,7 @@ type BulkOperation struct {
 type BulkRecordState struct {
 	Archived bool `json:"archived"`
 
-	// Done For `complete`, whether the task or promise is done.
+	// Done For `complete`, whether the task or commitment is done.
 	Done *bool `json:"done,omitempty"`
 
 	// Listed For a list verb, whether the record is on the Shortlist.
@@ -40727,7 +40727,7 @@ type BulkRecordState struct {
 // verb but `archive`, `move_stage` and `complete`: a lead leaves the queue by being
 // disqualified, which has no bulk verb. A contact and a company take neither `move_stage` nor
 // `complete`.
-// A `worklist_item` is a task or a promise (a conversation claim) as the Worklist lists it,
+// A `worklist_item` is a task or a commitment (a conversation claim) as the Worklist lists it,
 // named by the id its row carries; `complete` is its only verb, and no other kind takes it.
 type BulkRecordType string
 
@@ -40770,7 +40770,7 @@ type BulkSkip struct {
 	// purged. `value_taken`: another live record now holds its email or domain.
 	// `no_previous_owner`: it had no owner before the reassignment. Undoing `create_task` archives
 	// each task the change created, and skips one completed or edited since as `changed_since_batch`.
-	// Undoing `complete` opens each task or promise again, and skips one changed since the same way.
+	// Undoing `complete` opens each task or commitment again, and skips one changed since the same way.
 	// Undoing `move_stage` moves each deal back to the stage it stood on, as a new move that
 	// writes its own stage history row (marked as the reversal of the first) and its own
 	// `deal.stage_changed` event. The first move's row and event stay, and whatever reacted to
@@ -40791,7 +40791,7 @@ type BulkSkip struct {
 // purged. `value_taken`: another live record now holds its email or domain.
 // `no_previous_owner`: it had no owner before the reassignment. Undoing `create_task` archives
 // each task the change created, and skips one completed or edited since as `changed_since_batch`.
-// Undoing `complete` opens each task or promise again, and skips one changed since the same way.
+// Undoing `complete` opens each task or commitment again, and skips one changed since the same way.
 // Undoing `move_stage` moves each deal back to the stage it stood on, as a new move that
 // writes its own stage history row (marked as the reversal of the first) and its own
 // `deal.stage_changed` event. The first move's row and event stay, and whatever reacted to
@@ -40829,7 +40829,7 @@ type BulkUndoRequest struct {
 // stage `stage_id` names, exactly as `advanceDeal` does, and only deals take it. A deal that is
 // won or lost, or whose pipeline does not hold the stage, is left alone; closing a deal asks for
 // its own reason and stays a single-record move. `complete` marks a `worklist_item` done:
-// a task exactly as `updateActivity` with `is_done: true` does, a promise exactly as
+// a task exactly as `updateActivity` with `is_done: true` does, a commitment exactly as
 // `settleConversationClaim` with `outcome: done` does.
 type BulkVerb string
 
@@ -40952,13 +40952,13 @@ type CaptureActivityFunnel struct {
 	// Captured Landed; the sender was known or became known.
 	Captured *int `json:"captured,omitempty"`
 
-	// Deferred Landed; the sender is a stranger and the question is STILL open. A message whose sender has since been judged is counted under what the verdict decided, not under the bucket it was filed in at capture time.
+	// Deferred Landed; the sender is a stranger and the question is STILL open. A message whose sender has since been judged is counted under what the result decided, not under the bucket it was filed in at capture time.
 	Deferred *int `json:"deferred,omitempty"`
 
 	// Fault The derivation failed. The message itself is unaffected unless the reason says otherwise.
 	Fault *int `json:"fault,omitempty"`
 
-	// Internal Never landed: every party was on the workspace's own mail domains.
+	// Internal Never landed: every party was on the company's own mail domains.
 	Internal *int `json:"internal,omitempty"`
 
 	// Suppressed Landed; the sender is mail infrastructure, so no record was derived.
@@ -40976,7 +40976,7 @@ type CaptureActivityResponse struct {
 	// PayloadCaptureEnabled The deployment's `capture.trace_payloads` posture. False means no entry in this window carries `counterparty` or `subject` because the operator did not turn payload capture on — as against an individual row that simply has none.
 	PayloadCaptureEnabled bool `json:"payload_capture_enabled"`
 
-	// SenderVerdict When one verdict pass runs. Derived from the cadence the job declares and from the queue itself, never from a number written down beside the screen: a second copy of the schedule drifts from the one the worker actually keeps, and the reader would be told a time nothing fires at.
+	// SenderVerdict When one result pass runs. Derived from the cadence the job declares and from the queue itself, never from a number written down beside the screen: a second copy of the schedule drifts from the one the worker actually keeps, and the reader would be told a time nothing fires at.
 	SenderVerdict *CaptureVerdictClock `json:"sender_verdict,omitempty"`
 
 	// WindowHours The window these counts cover. Fixed at 24.
@@ -41109,7 +41109,7 @@ type CaptureConnection struct {
 	//
 	// `classified` is the default for a new connection, and a rebind to a different account
 	// resets to `held`: the previous mailbox's answer is not the new one's to inherit.
-	// `shared` additionally needs the workspace to allow it
+	// `shared` additionally needs the company to allow it
 	// (`CaptureSettings.shared_posture_allowed`), because a mailbox read into a shared CRM
 	// is what the works-council agreement in the DACH package is about.
 	//
@@ -41162,7 +41162,7 @@ type CaptureConnection struct {
 //
 // `classified` is the default for a new connection, and a rebind to a different account
 // resets to `held`: the previous mailbox's answer is not the new one's to inherit.
-// `shared` additionally needs the workspace to allow it
+// `shared` additionally needs the company to allow it
 // (`CaptureSettings.shared_posture_allowed`), because a mailbox read into a shared CRM
 // is what the works-council agreement in the DACH package is about.
 //
@@ -41266,7 +41266,7 @@ type CaptureConsent struct {
 }
 
 // CaptureCounterpartyHold One seat's decision that their mail with a party is nobody else's. Per user, never
-// workspace-wide: one seat's lawyer says nothing about another seat's, and a shared list
+// company-wide: one seat's lawyer says nothing about another seat's, and a shared list
 // would let anyone keep a colleague's customer out of the CRM by naming their domain.
 type CaptureCounterpartyHold struct {
 	CreatedAt *time.Time          `json:"created_at,omitempty"`
@@ -41300,7 +41300,7 @@ type CaptureExclusion struct {
 
 	// Kind What the rule names. `address` and `domain` match the parties a message names; `container` matches where the provider FILED it — a Gmail label, a Graph folder, an IMAP mailbox.
 	// A container value is `<provider>:<id>`, where the id is the provider's own token and is stored exactly as given: `gmail:Label_12` (a system label is its name, `gmail:CATEGORY_PROMOTIONS`), `graph:<folderId>`, `imap:INBOX/Family`. Qualified because an id means nothing without the namespace it belongs to, and unfolded because a Graph folder id is base64url and an IMAP mailbox name is case-sensitive — folding either would merge two containers into one rule.
-	// A container rule is `user` scope only: the list belongs to the mailbox's owner, and a workspace rule would bind every colleague's connection to a place that does not exist there.
+	// A container rule is `user` scope only: the list belongs to the mailbox's owner, and a company rule would bind every colleague's connection to a place that does not exist there.
 	Kind CaptureExclusionKind `json:"kind"`
 
 	// Scope Whose rule it is — the installation's, or the caller's own for the mailbox they connected.
@@ -41312,7 +41312,7 @@ type CaptureExclusion struct {
 
 // CaptureExclusionKind What the rule names. `address` and `domain` match the parties a message names; `container` matches where the provider FILED it — a Gmail label, a Graph folder, an IMAP mailbox.
 // A container value is `<provider>:<id>`, where the id is the provider's own token and is stored exactly as given: `gmail:Label_12` (a system label is its name, `gmail:CATEGORY_PROMOTIONS`), `graph:<folderId>`, `imap:INBOX/Family`. Qualified because an id means nothing without the namespace it belongs to, and unfolded because a Graph folder id is base64url and an IMAP mailbox name is case-sensitive — folding either would merge two containers into one rule.
-// A container rule is `user` scope only: the list belongs to the mailbox's owner, and a workspace rule would bind every colleague's connection to a place that does not exist there.
+// A container rule is `user` scope only: the list belongs to the mailbox's owner, and a company rule would bind every colleague's connection to a place that does not exist there.
 type CaptureExclusionKind string
 
 // CaptureExclusionListResponse defines model for CaptureExclusionListResponse.
@@ -41342,7 +41342,7 @@ type CaptureHealth struct {
 	GeneratedAt        time.Time                  `json:"generated_at"`
 
 	// HeldMeetings Captured records already filed under a contact that are still held to their
-	// participants because, when they arrived, they named nobody the workspace knew. The
+	// participants because, when they arrived, they named nobody the company knew. The
 	// nightly link reconcile lifts every one of them, so anything counted here is backlog.
 	// Counted with the pass's own selector and without its per-tick bound.
 	HeldMeetings CaptureHeldMeetings `json:"held_meetings"`
@@ -41370,7 +41370,7 @@ type CaptureHealthCategories struct {
 }
 
 // CaptureHeldMeetings Captured records already filed under a contact that are still held to their
-// participants because, when they arrived, they named nobody the workspace knew. The
+// participants because, when they arrived, they named nobody the company knew. The
 // nightly link reconcile lifts every one of them, so anything counted here is backlog.
 // Counted with the pass's own selector and without its per-tick bound.
 type CaptureHeldMeetings struct {
@@ -41570,10 +41570,10 @@ type CaptureSenderDecision struct {
 	ContactName *string `json:"contact_name,omitempty"`
 
 	// Decision What YOU decided instead, absent when you have not. `personal` is the standing decision a
-	// private verdict leaves; only the classifier writes it, and withdrawing it lifts it.
+	// private result leaves; only the classifier writes it, and withdrawing it lifts it.
 	Decision *CaptureSenderDecisionDecision `json:"decision,omitempty"`
 
-	// DeletesAt When this sender's oldest message is destroyed. Present only for a `personal` verdict
+	// DeletesAt When this sender's oldest message is destroyed. Present only for a `personal` result
 	// you have not overruled — every other kind is withheld rather than destroyed, and
 	// deciding this sender is business cancels the deletion. Later mail from the same sender
 	// runs its own window, so this date names the next message to go rather than all of them.
@@ -41610,7 +41610,7 @@ type CaptureSenderDecision struct {
 }
 
 // CaptureSenderDecisionDecision What YOU decided instead, absent when you have not. `personal` is the standing decision a
-// private verdict leaves; only the classifier writes it, and withdrawing it lifts it.
+// private result leaves; only the classifier writes it, and withdrawing it lifts it.
 type CaptureSenderDecisionDecision string
 
 // CaptureSenderListResponse defines model for CaptureSenderListResponse.
@@ -41620,7 +41620,7 @@ type CaptureSenderListResponse struct {
 	Total      *int                    `json:"total,omitempty"`
 }
 
-// CaptureSettings The workspace-shared capture posture (ADR-0072, CAP-PARAM-7). Read by every role,
+// CaptureSettings The company-shared capture posture (ADR-0072, CAP-PARAM-7). Read by every role,
 // changed only by admin/ops.
 type CaptureSettings struct {
 	// AutoEnrich When true, every company with a primary domain and no dossier gets a governed
@@ -41655,7 +41655,7 @@ type CaptureSettings struct {
 	// shows each as read-only. Empty when nothing is locked. A write ignores it.
 	Locks *SettingLocks `json:"locks,omitempty"`
 
-	// MailSharing The workspace's capture-sharing posture, ON by default: captured correspondence is
+	// MailSharing The company's capture-sharing posture, ON by default: captured correspondence is
 	// readable by every colleague who can see the contact. Switched OFF, everything captured
 	// FROM THEN ON is held to its participants and the capturing member — already-captured
 	// correspondence keeps the audience it has. Turning it off makes shared pipeline work
@@ -41690,7 +41690,7 @@ type CaptureSettings struct {
 	// mail already captured. It governs what a seat may newly ask for.
 	SharedPostureAllowed bool `json:"shared_posture_allowed"`
 
-	// SignatureEnrich The workspace DEFAULT for reading stated contact details — a title, a phone number, an
+	// SignatureEnrich The company DEFAULT for reading stated contact details — a title, a phone number, an
 	// address, a company — out of mail a contact sent us. It governs both readers: the
 	// signature of the message, and a vCard attached to it. Nothing is inferred: a value the
 	// mail does not state is not written. Reading happens within minutes of the mail arriving;
@@ -41701,7 +41701,7 @@ type CaptureSettings struct {
 	// out of capture by address or domain and says nothing about reading contact details.
 	// Default is ON.
 	//
-	// "Workspace" here is the storage tenant, not the word the product shows a reader —
+	// "Company" here is the storage tenant, not the word the product shows a reader —
 	// the surface calls it the company's default.
 	SignatureEnrich bool `json:"signature_enrich"`
 
@@ -41709,7 +41709,7 @@ type CaptureSettings struct {
 	// one. An automatic read also runs under its own lower page ceiling.
 	SiteRead SiteReadLimits `json:"site_read"`
 
-	// VerdictPassCap How many unresolved senders one counterparty verdict run asks the model about per run, answered or not. The senders beyond the cap wait for the next run.
+	// VerdictPassCap How many unresolved senders one counterparty result run asks the model about per run, answered or not. The senders beyond the cap wait for the next run.
 	// Read at the start of every run, so a change applies without a restart.
 	// Default 200.
 	VerdictPassCap int `json:"verdict_pass_cap" maximum:"1000" minimum:"1"`
@@ -41743,7 +41743,7 @@ type CaptureSourceEntry struct {
 }
 
 // CaptureSweepHealth When one repair pass last ran and last succeeded, from the receipt each pass writes
-// per workspace turn. Never names what the pass worked on.
+// per company turn. Never names what the pass worked on.
 type CaptureSweepHealth struct {
 	// CadenceSeconds How often the job that runs this pass is scheduled. Null when it has no fixed cadence.
 	CadenceSeconds *int `json:"cadence_seconds,omitempty"`
@@ -41808,10 +41808,10 @@ type CaptureTraceEntry struct {
 	// Outcome What the pipeline did with this message AT THE TIME. It never changes; `outcome_now` is what to count and to filter on.
 	Outcome CaptureTraceEntryOutcome `json:"outcome"`
 
-	// OutcomeNow The bucket this message counts under today. Equal to `outcome` unless the message was deferred and the sender has since been judged: a `real` verdict reads as captured and a noise, rejected or suppressed one as suppressed, because the question that made the outcome provisional has been answered. The funnel counts are grouped by this same expression, so a list filtered on it agrees with the counters above it — they disagreed, and the screen said `SENT FOR A VERDICT 49` over forty-nine rows each reading `judged noise`.
+	// OutcomeNow The bucket this message counts under today. Equal to `outcome` unless the message was deferred and the sender has since been judged: a `real` result reads as captured and a noise, rejected or suppressed one as suppressed, because the question that made the outcome provisional has been answered. The funnel counts are grouped by this same expression, so a list filtered on it agrees with the counters above it — they disagreed, and the screen said `SENT FOR A VERDICT 49` over forty-nine rows each reading `judged noise`.
 	OutcomeNow CaptureTraceEntryOutcomeNow `json:"outcome_now"`
 
-	// Reason A class this installation chose, never a provider's text and never content. The ones that change what the outcome MEANS: `deferral_capped` (no verdict is coming — a ceiling refused the question), `noise_prior` and `decided_prior` (it landed, but a prior decision means no record will appear), `internal_only`, `own_addresses_only` (every party was the mailbox owner's own address and no forwarded customer mail was found), `no_granting_human`, `invisible_incumbent`, `derivation_failed`.
+	// Reason A class this installation chose, never a provider's text and never content. The ones that change what the outcome MEANS: `deferral_capped` (no result is coming — a ceiling refused the question), `noise_prior` and `decided_prior` (it landed, but a prior decision means no record will appear), `internal_only`, `own_addresses_only` (every party was the mailbox owner's own address and no forwarded customer mail was found), `no_granting_human`, `invisible_incumbent`, `derivation_failed`.
 	Reason *string `json:"reason,omitempty"`
 
 	// Resolution What later became of a DEFERRED message's sender, read from the disposition ledger rather than copied into the trace: the ledger is keyed by sender and the trace by message, and one sender's answer covers several messages.
@@ -41824,7 +41824,7 @@ type CaptureTraceEntry struct {
 // CaptureTraceEntryOutcome What the pipeline did with this message AT THE TIME. It never changes; `outcome_now` is what to count and to filter on.
 type CaptureTraceEntryOutcome string
 
-// CaptureTraceEntryOutcomeNow The bucket this message counts under today. Equal to `outcome` unless the message was deferred and the sender has since been judged: a `real` verdict reads as captured and a noise, rejected or suppressed one as suppressed, because the question that made the outcome provisional has been answered. The funnel counts are grouped by this same expression, so a list filtered on it agrees with the counters above it — they disagreed, and the screen said `SENT FOR A VERDICT 49` over forty-nine rows each reading `judged noise`.
+// CaptureTraceEntryOutcomeNow The bucket this message counts under today. Equal to `outcome` unless the message was deferred and the sender has since been judged: a `real` result reads as captured and a noise, rejected or suppressed one as suppressed, because the question that made the outcome provisional has been answered. The funnel counts are grouped by this same expression, so a list filtered on it agrees with the counters above it — they disagreed, and the screen said `SENT FOR A VERDICT 49` over forty-nine rows each reading `judged noise`.
 type CaptureTraceEntryOutcomeNow string
 
 // CaptureTraceFiling Who last decided which deal this mail is filed on, when anyone did. The actor is `core` for the installation's own rule, or the name of the extension whose hook changed or failed the decision. A hook that failed decided nothing: the mail keeps the link it had and is tried again later.
@@ -41847,7 +41847,7 @@ type CaptureTraceFilingResult string
 
 // CaptureTraceResolution What later became of a DEFERRED message's sender, read from the disposition ledger rather than copied into the trace: the ledger is keyed by sender and the trace by message, and one sender's answer covers several messages.
 type CaptureTraceResolution struct {
-	// Kind Who wrote, when the verdict said: contact | role_mailbox | company_sender | newsletter | transactional | spam | personal | advisor. The last two belong to the mailbox owner rather than to the business: personal is a private correspondent, advisor a professional they engage personally.
+	// Kind Who wrote, when the result said: contact | role_mailbox | company_sender | newsletter | transactional | spam | personal | advisor. The last two belong to the mailbox owner rather than to the business: personal is a private correspondent, advisor a professional they engage personally.
 	Kind       *string                      `json:"kind,omitempty"`
 	ResolvedAt *time.Time                   `json:"resolved_at,omitempty"`
 	Status     CaptureTraceResolutionStatus `json:"status"`
@@ -41865,7 +41865,7 @@ type CaptureUnreadPeriod struct {
 	To time.Time `json:"to"`
 }
 
-// CaptureVerdictClock When one verdict pass runs. Derived from the cadence the job declares and from the queue itself, never from a number written down beside the screen: a second copy of the schedule drifts from the one the worker actually keeps, and the reader would be told a time nothing fires at.
+// CaptureVerdictClock When one result pass runs. Derived from the cadence the job declares and from the queue itself, never from a number written down beside the screen: a second copy of the schedule drifts from the one the worker actually keeps, and the reader would be told a time nothing fires at.
 type CaptureVerdictClock struct {
 	// EverySeconds How often this pass is scheduled. Zero for a deployment where no clock runs it.
 	EverySeconds int `json:"every_seconds" minimum:"0"`
@@ -41909,7 +41909,7 @@ type ChangeUserRoleRequest struct {
 	Role string `json:"role"`
 }
 
-// ChannelConnection One workspace-level messaging-channel binding. The bot token and the Dispact events secret never appear in this shape: both live sealed in the vault.
+// ChannelConnection One company-level messaging-channel binding. The bot token and the Dispact events secret never appear in this shape: both live sealed in the vault.
 type ChannelConnection struct {
 	// Address The web address of a self-hosted provider's install (Dispact). Absent for Telegram.
 	Address *string `json:"address,omitempty"`
@@ -42081,7 +42081,7 @@ type ChannelProviderEntry struct {
 	Provider ProviderRef `json:"provider"`
 
 	// SuppliesTransport Whether this provider can carry an outbound message at all; a capture-only
-	// transport reports false. Deliberately NOT "can this workspace send" — that
+	// transport reports false. Deliberately NOT "can this company send" — that
 	// reads `channel_connection`, a tenant table, and answering both here would
 	// re-conflate a deployment fact with a tenant one.
 	SuppliesTransport bool `json:"supplies_transport"`
@@ -42160,7 +42160,7 @@ type CitedProvision struct {
 // names the gap in `gaps` rather than substituting a plausible value.
 type ClaimEvidence struct {
 	// ClaimVersion The version of the stored claim this receipt was built from, the same number the claim's
-	// list read carries. A verdict sent with it as `If-Match` answers for exactly what the
+	// list read carries. A result sent with it as `If-Match` answers for exactly what the
 	// receipt shows.
 	ClaimVersion *int64 `json:"claim_version,omitempty"`
 
@@ -42410,28 +42410,28 @@ type CommissionSummaryRow struct {
 	Status CommissionStatus `json:"status"`
 }
 
-// CommitmentAdmission A recorded decision about whether a promise creates current work. Re-reading replaces this decision without changing human-owned work.
+// CommitmentAdmission A recorded decision about whether a commitment creates current work. Re-reading replaces this decision without changing human-owned work.
 type CommitmentAdmission struct {
 	CurrentWork bool                 `json:"current_work"`
 	EvaluatedAt time.Time            `json:"evaluated_at"`
 	EvidenceIds []openapi_types.UUID `json:"evidence_ids"`
 	Locator     string               `json:"locator"`
 
-	// Meaning The source-supported state and deadline precision of a possible promise.
+	// Meaning The source-supported state and deadline precision of a possible commitment.
 	Meaning *CommitmentMeaning `json:"meaning,omitempty"`
 	Outcome string             `json:"outcome"`
 
 	// RenewedAt The renewing message's source time when the decision was recorded.
 	RenewedAt *time.Time `json:"renewed_at,omitempty"`
 
-	// RenewedBy The later message that explicitly renewed this promise.
+	// RenewedBy The later message that explicitly renewed this commitment.
 	RenewedBy   *openapi_types.UUID `json:"renewed_by,omitempty"`
 	RuleVersion string              `json:"rule_version"`
 	SourceQuote string              `json:"source_quote"`
 	Summary     string              `json:"summary"`
 }
 
-// CommitmentMeaning The source-supported state and deadline precision of a possible promise.
+// CommitmentMeaning The source-supported state and deadline precision of a possible commitment.
 type CommitmentMeaning struct {
 	// Condition The unmet condition in the source's own words, otherwise empty.
 	Condition string `json:"condition"`
@@ -42442,7 +42442,7 @@ type CommitmentMeaning struct {
 	// DeadlineQuote The source's deadline words, empty when no deadline was stated.
 	DeadlineQuote string `json:"deadline_quote"`
 
-	// State Whether the promise is open, completed, conditional, optional, a request, or unclear.
+	// State Whether the commitment is open, completed, conditional, optional, a request, or unclear.
 	State string `json:"state"`
 }
 
@@ -42617,7 +42617,7 @@ type Company struct {
 	// cannot be archived or merged. A caller that offers company actions should tell it apart.
 	IsAnchor *bool `json:"is_anchor,omitempty"`
 
-	// LastActivityAt When something last happened with this account: the newest `occurred_at` at or before now of a workspace-audience activity linked to it, so a booked meeting counts once it starts. A task never counts, whoever filed it, and neither does a canceled or no-show meeting. It is maintained on the activity write as `deal.last_activity_at` is (a read accelerator that a rebuild must reproduce). NULL until the first such activity. Sortable (DM-VOCAB-2).
+	// LastActivityAt When something last happened with this account: the newest `occurred_at` at or before now of a company-audience activity linked to it, so a booked meeting counts once it starts. A task never counts, whoever filed it, and neither does a canceled or no-show meeting. It is maintained on the activity write as `deal.last_activity_at` is (a read accelerator that a rebuild must reproduce). NULL until the first such activity. Sortable (DM-VOCAB-2).
 	// A message limited to its participants does NOT move this date, even for a reader who may read that message. The value is one number every reader sees, so it can only count what every reader may see.
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
 
@@ -42642,7 +42642,7 @@ type Company struct {
 	LogoUrl      *string             `json:"logo_url,omitempty"`
 	MergedIntoId *openapi_types.UUID `json:"merged_into_id,omitempty"`
 
-	// OpenDealCount How many open, live deals belong to this account (PO-EXT-10; AC-companies-2/3's Open deals column), counted across the WHOLE workspace — the same population the account's `computed_fields` open-pipeline row sums (founder decision 2026-08-18: a pipeline figure on an account is a fact about the account, not about who may open each deal). The key is ABSENT entirely, not 0, for a role without `deal:read` or without `computed_field:read` (STATE-4, the `computed_fields` gate). Present on `listCompanies` and `getCompany`; write responses omit it.
+	// OpenDealCount How many open, live deals belong to this account (PO-EXT-10; AC-companies-2/3's Open deals column), counted across the WHOLE company — the same population the account's `computed_fields` open-pipeline row sums (founder decision 2026-08-18: a pipeline figure on an account is a fact about the account, not about who may open each deal). The key is ABSENT entirely, not 0, for a role without `deal:read` or without `computed_field:read` (STATE-4, the `computed_fields` gate). Present on `listCompanies` and `getCompany`; write responses omit it.
 	OpenDealCount *int                `json:"open_deal_count,omitempty" minimum:"0"`
 	OwnerId       *openapi_types.UUID `json:"owner_id,omitempty"`
 
@@ -42688,7 +42688,7 @@ type Company struct {
 	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version *RowVersion `json:"version,omitempty" minimum:"1"`
 
-	// Visibility Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the workspace through a sender verdict, or through `visibility` on `PATCH /companies/{id}`, which moves it BOTH ways for anybody the write gate admits. Read-only HERE, on the read schema, the same as the contact column beside it: the update request carries the writable copy.
+	// Visibility Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the company through a sender result, or through `visibility` on `PATCH /companies/{id}`, which moves it BOTH ways for anybody the write gate admits. Read-only HERE, on the read schema, the same as the contact column beside it: the update request carries the writable copy.
 	Visibility *CompanyVisibility `json:"visibility,omitempty"`
 
 	// WebsiteUrl The company's readable website, DERIVED from its primary domain row. There is deliberately no website column — a second store for a fact company_domain already owns is the duplication ADR-0085 closes. Not accepted on write.
@@ -42711,7 +42711,7 @@ type CompanySizeBand string
 // CompanyStatus Where the account stands with us. Single-valued: an account is at one point in a sales motion at a time. `unknown` is the default and means it — the retired `classification` defaulted to `prospect` and, having no writer, rendered that default on every unassessed account as though someone had judged it. `onboarding` means the contract is signed and set-up runs. `live` means the agreed first scope is in use, and only a signed-in user may set it: an agent, automation, approval or import gets 422 `lifecycle_live_needs_a_human`.
 type CompanyStatus string
 
-// CompanyVisibility Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the workspace through a sender verdict, or through `visibility` on `PATCH /companies/{id}`, which moves it BOTH ways for anybody the write gate admits. Read-only HERE, on the read schema, the same as the contact column beside it: the update request carries the writable copy.
+// CompanyVisibility Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the company through a sender result, or through `visibility` on `PATCH /companies/{id}`, which moves it BOTH ways for anybody the write gate admits. Read-only HERE, on the read schema, the same as the contact column beside it: the update request carries the writable copy.
 type CompanyVisibility string
 
 // Company360 The company record page in one payload. Every section except `company` is
@@ -42776,8 +42776,8 @@ type Company360 struct {
 	// ListMemberships The Shortlists this company is on that the caller may find. Absent while the installation has not switched lists on.
 	ListMemberships *[]List `json:"list_memberships,omitempty"`
 
-	// Moment The ONE thing this account needs today, selected server-side by the same rule the contact page uses. Today it fires on what we OWE the account's contacts — a promise past its date, or the next one coming due — read from both places a promise is recorded: a task somebody filed, and a commitment an extractor read out of a conversation. Absent when the caller lacks a grant the rule needs, named in `sections_omitted` as `moments`; the quiet success state is a moment of kind `nothing_needed`, not an absence.
-	// The schema is `ContactMoment` because the card is the same card — same evidence, same dismissal, same verb. What differs is the subject, and the headline says whose promise it is.
+	// Moment The ONE thing this account needs today, selected server-side by the same rule the contact page uses. Today it fires on what we OWE the account's contacts — a commitment past its date, or the next one coming due — read from both places a commitment is recorded: a task somebody filed, and a commitment an extractor read out of a conversation. Absent when the caller lacks a grant the rule needs, named in `sections_omitted` as `moments`; the quiet success state is a moment of kind `nothing_needed`, not an absence.
+	// The schema is `ContactMoment` because the card is the same card — same evidence, same dismissal, same verb. What differs is the subject, and the headline says whose commitment it is.
 	Moment *ContactMoment `json:"moment,omitempty"`
 
 	// NextMeeting The next meeting with this account that has not happened yet, and who is in it.
@@ -42804,7 +42804,7 @@ type Company360 struct {
 		Page PageInfo             `json:"page"`
 	} `json:"next_steps,omitempty"`
 
-	// OpenCommitments The promises read out of conversations that are still open, ours and theirs. Absent,
+	// OpenCommitments The commitments read out of conversations that are still open, ours and theirs. Absent,
 	// with `commitments` named in `sections_omitted`, when the caller lacks the contact or
 	// activity grant. Never an empty list standing in for a refusal. Claims carry no
 	// project, so a project-narrowed page lists them account-wide. `attention_withheld` is
@@ -42859,7 +42859,7 @@ type Company360 struct {
 
 	// Suggestions What this account looks like it needs next, computed from its own records —
 	// no model involved. Each carries WHY, so a rep can disagree with the reason
-	// rather than with a verdict.
+	// rather than with a result.
 	Suggestions *[]Company360Suggestion `json:"suggestions,omitempty"`
 
 	// SuggestionsDropped How many further suggestions this caller has that `suggestions` does not
@@ -42880,17 +42880,17 @@ type Company360 struct {
 // Company360SectionsOmitted defines model for Company360.SectionsOmitted.
 type Company360SectionsOmitted string
 
-// Company360Commitment One open promise read out of a conversation with a contact at this account, in the order
+// Company360Commitment One open commitment read out of a conversation with a contact at this account, in the order
 // overdue, then dated, then undated.
 //
-// `kind` says whose promise it is. An `ours` commitment was made by our side and names no
+// `kind` says whose commitment it is. An `ours` commitment was made by our side and names no
 // owner: nothing on file says who holds it, so the reader says it is ours and nothing
 // more. A `theirs` commitment names the contact who made it.
 type Company360Commitment struct {
-	// ActivityId The message the promise was read from, which is what a citation opens.
+	// ActivityId The message the commitment was read from, which is what a citation opens.
 	ActivityId openapi_types.UUID `json:"activity_id"`
 
-	// Body The promise, verbatim.
+	// Body The commitment, verbatim.
 	Body        string                   `json:"body"`
 	ClaimId     openapi_types.UUID       `json:"claim_id"`
 	ContactId   openapi_types.UUID       `json:"contact_id"`
@@ -43139,7 +43139,7 @@ type Company360NextStep struct {
 	ActivityId openapi_types.UUID  `json:"activity_id"`
 	AssigneeId *openapi_types.UUID `json:"assignee_id,omitempty"`
 
-	// AssigneeName The assignee's name while they are a live workspace member. Null when the task has no
+	// AssigneeName The assignee's name while they are a live company member. Null when the task has no
 	// assignee or the name cannot be given, so a reader says nothing about who holds it
 	// instead of printing an id.
 	AssigneeName *string `json:"assignee_name,omitempty"`
@@ -43158,7 +43158,7 @@ type Company360NextStep struct {
 	LinkedContactId *openapi_types.UUID `json:"linked_contact_id,omitempty"`
 	LinkedDealId    *openapi_types.UUID `json:"linked_deal_id,omitempty"`
 
-	// MayBeDone The question whether a promise task is done, asked because we wrote to a recipient on its thread after the promise.
+	// MayBeDone The question whether a commitment task is done, asked because we wrote to a recipient on its thread after the commitment.
 	// The contact page asks the same question under the same `claim_key`. Not yet is answered by
 	// `POST /contacts/{contact_id}/moment/dismiss` with `claim_key` and `evidence_fingerprint`, and holds on both surfaces until we write again.
 	MayBeDone *WorklistMayBeDone `json:"may_be_done,omitempty"`
@@ -43247,7 +43247,7 @@ type Company360StateStrip struct {
 
 	// Commercial Null when the caller has no deal grant.
 	Commercial *struct {
-		// BaseCurrency The ISO-4217 currency `open_pipeline_minor_base` is expressed in — the workspace's base. Travels WITH the figure rather than being looked up separately, because a converted sum rendered under a currency fetched from somewhere else is exactly the unlabelled cross-currency total §4.2 forbids. Null whenever the figure is.
+		// BaseCurrency The ISO-4217 currency `open_pipeline_minor_base` is expressed in — the company's base. Travels WITH the figure rather than being looked up separately, because a converted sum rendered under a currency fetched from somewhere else is exactly the unlabelled cross-currency total §4.2 forbids. Null whenever the figure is.
 		BaseCurrency *string `json:"base_currency,omitempty"`
 
 		// ConvertedCount How many of `priced_count` needed a currency conversion to enter the sum — the rest were already in the base. Zero means the total is a same-currency sum and no rate stands behind it.
@@ -43260,7 +43260,7 @@ type Company360StateStrip struct {
 		NextCloseOn *openapi_types.Date `json:"next_close_on,omitempty"`
 		OpenCount   int                 `json:"open_count" minimum:"0"`
 
-		// OpenPipelineMinorBase The open pipeline in the workspace's base currency, integer minor units. Null when NO open deal carries a figure that can be converted — distinct from zero, which would claim a priced pipeline worth nothing.
+		// OpenPipelineMinorBase The open pipeline in the company's base currency, integer minor units. Null when NO open deal carries a figure that can be converted — distinct from zero, which would claim a priced pipeline worth nothing.
 		OpenPipelineMinorBase *int `json:"open_pipeline_minor_base,omitempty"`
 
 		// PricedCount How many of `open_count` contributed to the sum. A deal with no amount, and one whose currency has no conversion rate on its date, both contribute nothing — so a total below `open_count` covers PART of the pipeline, and the page says so rather than showing a figure that is quietly short (plan §4.2: never a cross-currency sum without its conversion source).
@@ -43538,7 +43538,7 @@ type CompanyAnswer struct {
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
 	// lane. `deterministic` — the structured fallback, used when no lane is configured,
-	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// the company's AI budget is exhausted, the model call fails, or the checks the
 	// surface runs refuse the model's answer. Never silently interchangeable: a reader
 	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
@@ -43546,7 +43546,7 @@ type CompanyAnswer struct {
 	// Question The prepared questions. Fixed, because each one names the records its answer is
 	// written from — which is what makes the answer citable.
 	//
-	// `whats_open` — the open deals, the open tasks and the open commitments (promises
+	// `whats_open` — the open deals, the open tasks and the open commitments (commitments
 	// read out of conversations, not tasks). Deliberately not approvals: an
 	// approval is not a citable record type here, and an answer that named one could
 	// not be checked the way every other sentence can.
@@ -43579,7 +43579,7 @@ type CompanyBrief struct {
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
 	// lane. `deterministic` — the structured fallback, used when no lane is configured,
-	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// the company's AI budget is exhausted, the model call fails, or the checks the
 	// surface runs refuse the model's answer. Never silently interchangeable: a reader
 	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
@@ -44026,7 +44026,7 @@ type CompanyDossier struct {
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
 	// lane. `deterministic` — the structured fallback, used when no lane is configured,
-	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// the company's AI budget is exhausted, the model call fails, or the checks the
 	// surface runs refuse the model's answer. Never silently interchangeable: a reader
 	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
@@ -44099,7 +44099,7 @@ type CompanyEmailDraft struct {
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
 	// lane. `deterministic` — the structured fallback, used when no lane is configured,
-	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// the company's AI budget is exhausted, the model call fails, or the checks the
 	// surface runs refuse the model's answer. Never silently interchangeable: a reader
 	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
@@ -44302,7 +44302,7 @@ type CompanyGraph struct {
 	// this" instead of "there is none". `contacts` withheld also withholds
 	// `deal_stakeholder` edges and the signal route, because both name a contact.
 	//
-	// `our_side` is the workspace members connected to the account — the owner and the
+	// `our_side` is the company members connected to the account — the owner and the
 	// teammates who have interacted with its contacts. It needs BOTH the contact and the
 	// activity grant, because each of its edges names a contact and is derived from a
 	// recorded interaction; either one missing withholds the whole group.
@@ -44355,8 +44355,8 @@ type CompanyGraphEdge struct {
 	// points at it; the account points at each child).
 	// `partner_of` / `referred_by` / `co_sell_with` — the partner edges, from
 	// the company that records the edge to its counterparty.
-	// `owns` — `from` is the workspace member who owns the account.
-	// `in_contact_with` — `from` is the workspace member who has been IN recorded
+	// `owns` — `from` is the company member who owns the account.
+	// `in_contact_with` — `from` is the company member who has been IN recorded
 	// interactions (email, call, meeting) with the contact at `to`. It is drawn from
 	// the recorded participants of those interactions, so it holds for
 	// connector-captured mail as well as manually logged activity. Every participant
@@ -44381,7 +44381,7 @@ type CompanyGraphEdge struct {
 	// observed between two externals — so the score leans on recency and frequency.
 	//
 	// It is the per-user relationship strength (PO-F-3b): the same recency ×
-	// frequency × reciprocity arithmetic as the workspace-wide contact score, over
+	// frequency × reciprocity arithmetic as the company-wide contact score, over
 	// only the interactions THIS colleague was in. It is deliberately not comparable
 	// by addition to the contact's own score — one answers "how warm is this contact
 	// to us", the other "to this contact among us", and neither is derivable from the
@@ -44416,8 +44416,8 @@ type CompanyGraphEdge struct {
 // points at it; the account points at each child).
 // `partner_of` / `referred_by` / `co_sell_with` — the partner edges, from
 // the company that records the edge to its counterparty.
-// `owns` — `from` is the workspace member who owns the account.
-// `in_contact_with` — `from` is the workspace member who has been IN recorded
+// `owns` — `from` is the company member who owns the account.
+// `in_contact_with` — `from` is the company member who has been IN recorded
 // interactions (email, call, meeting) with the contact at `to`. It is drawn from
 // the recorded participants of those interactions, so it holds for
 // connector-captured mail as well as manually logged activity. Every participant
@@ -44448,7 +44448,7 @@ type CompanyGraphNode struct {
 	Id     openapi_types.UUID `json:"id"`
 
 	// Kind `company`, `contact` and `deal` are the account's own records.
-	// `user` is a member of THIS workspace — someone on our side who is connected to the
+	// `user` is a member of THIS company — someone on our side who is connected to the
 	// account. A user node carries its display name as the `label` and nothing else:
 	// `detail`, `strength` and `strength_bucket` are null and `on_signal_route` is ABSENT,
 	// because §4 measures our relationship with the account's contacts, not with each
@@ -44456,7 +44456,7 @@ type CompanyGraphNode struct {
 	// a client reads its absence as "not on the signal's route".
 	Kind CompanyGraphNodeKind `json:"kind"`
 
-	// Label The record's display name — the company's, the contact's full name, the deal's name, the workspace member's display name.
+	// Label The record's display name — the company's, the contact's full name, the deal's name, the company member's display name.
 	Label string `json:"label"`
 
 	// LogoUrl The company node's resolved logo, same value `Company.logo_url` carries.
@@ -44486,7 +44486,7 @@ type CompanyGraphNode struct {
 }
 
 // CompanyGraphNodeKind `company`, `contact` and `deal` are the account's own records.
-// `user` is a member of THIS workspace — someone on our side who is connected to the
+// `user` is a member of THIS company — someone on our side who is connected to the
 // account. A user node carries its display name as the `label` and nothing else:
 // `detail`, `strength` and `strength_bucket` are null and `on_signal_route` is ABSENT,
 // because §4 measures our relationship with the account's contacts, not with each
@@ -44516,7 +44516,7 @@ type CompanyGraphSignalRoute struct {
 	SignalId  openapi_types.UUID `json:"signal_id"`
 }
 
-// CompanyGrowthFit Cached per reader (DOSS-DDL-2), because it folds seat-dependent workspace context
+// CompanyGrowthFit Cached per reader (DOSS-DDL-2), because it folds seat-dependent company context
 // and makes recommendations.
 //
 // Every claim below carries the records it was written from, exactly like a dossier
@@ -44548,7 +44548,7 @@ type CompanyGrowthFit struct {
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
 	// lane. `deterministic` — the structured fallback, used when no lane is configured,
-	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// the company's AI budget is exhausted, the model call fails, or the checks the
 	// surface runs refuse the model's answer. Never silently interchangeable: a reader
 	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
@@ -44579,7 +44579,7 @@ type CompanyGrowthFit struct {
 
 	// SubScores The band, taken apart (DOSS-AC-17..20, ADR-0095). Four named dimensions over the
 	// same evidence the band is assessed from, each with a 0-100 score and the reason for
-	// it, so a reader who disagrees with the verdict can see which input carried it.
+	// it, so a reader who disagrees with the result can see which input carried it.
 	//
 	// ABSENT below the abstention floor, exactly as the band is `unknown` there — never
 	// zeroes and never a partial set, because a dimension scored 0 is a claim about the
@@ -44587,7 +44587,7 @@ type CompanyGrowthFit struct {
 	//
 	// This does NOT reintroduce the score DOSS-AC-12 refuses. That criterion forbids a
 	// composite that survives its own missing inputs; nothing here sums or averages these
-	// four into one figure (DOSS-AC-19), and the band remains the verdict.
+	// four into one figure (DOSS-AC-19), and the band remains the result.
 	SubScores *[]GrowthFitSubScore `json:"sub_scores,omitempty"`
 
 	// Whitespace What we sell that this company does not yet buy.
@@ -44887,7 +44887,7 @@ type CompanyProfileInput struct {
 // CompanyQuestion The prepared questions. Fixed, because each one names the records its answer is
 // written from — which is what makes the answer citable.
 //
-// `whats_open` — the open deals, the open tasks and the open commitments (promises
+// `whats_open` — the open deals, the open tasks and the open commitments (commitments
 // read out of conversations, not tasks). Deliberately not approvals: an
 // approval is not a citable record type here, and an answer that named one could
 // not be checked the way every other sentence can.
@@ -45381,7 +45381,7 @@ type ComposedExtension struct {
 	// Routes The unit's published operations, one entry per method+path pair. Sorted by path then method. A bare path would under-report the surface — one path serving GET and DELETE is two capabilities to an operator auditing what a unit can do, and collapsing them hides the destructive one behind the harmless one.
 	Routes []ComposedExtensionRoute `json:"routes"`
 
-	// SetupMissing What an admin still has to set before the unit can work: each workspace secret the unit declares that holds no value, then each OAuth app it declares with no stored client. Empty means the unit is ready. Worked out on each read from the declaration and the stored values; nothing about it is stored. Each part needs the caller's right to read that setting: admin for a workspace secret, capture_settings.read for an OAuth app. A part the caller may not read is left out. The field is absent when that hides a part and nothing visible is missing, and from an older server.
+	// SetupMissing What an admin still has to set before the unit can work: each company secret the unit declares that holds no value, then each OAuth app it declares with no stored client. Empty means the unit is ready. Worked out on each read from the declaration and the stored values; nothing about it is stored. Each part needs the caller's right to read that setting: admin for a company secret, capture_settings.read for an OAuth app. A part the caller may not read is left out. The field is absent when that hides a part and nothing visible is missing, and from an older server.
 	SetupMissing *[]ComposedExtensionSetupItem `json:"setup_missing,omitempty"`
 
 	// Version The unit's own declared version. It carries NO authority (ADR-0120 §7): operator decisions bind to manifest digests, never to this string. Display only.
@@ -45538,7 +45538,7 @@ type ConfirmFieldOrigin struct {
 
 // ConfirmPage What a confirm link answers, which depends on what the link was FOR.
 //
-// A record link asks the contact to check what the workspace holds about them; a consent link
+// A record link asks the contact to check what the company holds about them; a consent link
 // asks one subscription question and must not disclose the record. Those are different
 // payloads and this endpoint has always returned both — the schema said only the first, so a
 // client that trusted the contract read `provenance` off a body that never carries it and
@@ -45707,7 +45707,7 @@ type ConnectConnectorRequest struct {
 	// open-redirect surface. Ignored by credential providers, which never redirect.
 	ReturnTo *ConnectConnectorRequestReturnTo `json:"return_to,omitempty"`
 
-	// ShareAcknowledged Accepted and ignored. Mail sharing is a workspace setting (`CaptureSettings.mail_sharing`,
+	// ShareAcknowledged Accepted and ignored. Mail sharing is a company setting (`CaptureSettings.mail_sharing`,
 	// ON by default, admin-switchable) rather than a per-connect acknowledgment; this field
 	// remains only so a client that still sends it keeps working.
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
@@ -45776,7 +45776,7 @@ type ConnectSharedMailboxRequest struct {
 	// BackupOwnerId The backup owner. It must be an active member of the reader team who can hold work (else `422` `backup_owner_not_in_reader_team`). Absent names none on a new mailbox and keeps a reconnected one's.
 	BackupOwnerId *openapi_types.UUID `json:"backup_owner_id,omitempty"`
 
-	// Gmail A Google Workspace service account the admin delegated `gmail.readonly` to.
+	// Gmail A Google Company service account the admin delegated `gmail.readonly` to.
 	Gmail *SharedGmailCredentials `json:"gmail,omitempty"`
 
 	// Graph The customer's own Entra app registration, which reads the mailbox with application permission.
@@ -45895,7 +45895,7 @@ type ConnectorContainers struct {
 // and needs no word at all.
 type ConnectorContextTag struct {
 	// Archived The chosen word has since been archived. The connector then files NOTHING —
-	// an archived word is one the workspace retired, and applying it anyway would
+	// an archived word is one the company retired, and applying it anyway would
 	// keep a retired vocabulary alive from a setting nobody looks at.
 	//
 	// Said here rather than left silent, because the alternative is a connector that
@@ -46025,7 +46025,7 @@ type ConsumerMailBaselineResponse struct {
 	Total int `json:"total"`
 }
 
-// ConsumerMailDomain One entry on the workspace's own consumer-mail list. `extra` marks a
+// ConsumerMailDomain One entry on the company's own consumer-mail list. `extra` marks a
 // consumer domain the shipped baseline missed; `never` takes one back out of the baseline
 // that claimed it. Either way the domain is stored in its registrable form, which is what
 // the matcher keys on.
@@ -46077,7 +46077,7 @@ type Contact struct {
 	CapturedBy *string `json:"captured_by,omitempty"`
 
 	// Consent Per-purpose consent summary (ADR-0011). Read-only derived view of the `contact_consent`
-	// rows; one entry per purpose the workspace tracks. The single flat `consent_state` flag was
+	// rows; one entry per purpose the company tracks. The single flat `consent_state` flag was
 	// REMOVED — consent is per-purpose and demonstrable (data-model.md §3.4). Mutate via
 	// `POST /contacts/{id}/consent`; read the full proof log via `GET /contacts/{id}/consent`.
 	Consent *[]ContactConsentState `json:"consent,omitempty"`
@@ -46143,7 +46143,7 @@ type Contact struct {
 	// showing that a conversation exists even when a reply cannot currently be delivered.
 	Reachability *[]ContactReachability `json:"reachability,omitempty"`
 
-	// RelationshipMark Set when the workspace's relationship to this contact is not an ordinary one. `vendor_marketing` is a named sender who only pitches something to this business and whom nobody here has answered. The default contact lists leave a marked contact out; a text search and a read by id still find it. Null is not marked. Written through `PATCH /contacts/{id}` or by the sender check, never by the request body of a create.
+	// RelationshipMark Set when the company's relationship to this contact is not an ordinary one. `vendor_marketing` is a named sender who only pitches something to this business and whom nobody here has answered. The default contact lists leave a marked contact out; a text search and a read by id still find it. Null is not marked. Written through `PATCH /contacts/{id}` or by the sender check, never by the request body of a create.
 	RelationshipMark *ContactRelationshipMark `json:"relationship_mark,omitempty"`
 
 	// Salutation Explicitly supplied by the contact, an import or an API caller. Never inferred from a name or signature. Null means unset; none means no gendered form.
@@ -46172,7 +46172,7 @@ type Contact struct {
 	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version *RowVersion `json:"version,omitempty" minimum:"1"`
 
-	// Visibility Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the workspace through a verdict or through the owner's own `POST /contacts/{id}/publish`, and never travels back.
+	// Visibility Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the company through a result or through the owner's own `POST /contacts/{id}/publish`, and never travels back.
 	Visibility *ContactVisibility `json:"visibility,omitempty"`
 
 	// Writable Whether THIS caller may change THIS row: the same question the server's write gate answers on a mutation — the owner, the owner's team where the role is team-scoped, a live `write` record grant, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed.
@@ -46183,10 +46183,10 @@ type Contact struct {
 // ContactGreetingRegister How a message to this contact opens: `formal` takes the surname, `familiar` the first name. A rep sets it once and every draft to the contact uses it ahead of what the thread suggests. Null means nobody set it, and a draft reads the register from the correspondence.
 type ContactGreetingRegister string
 
-// ContactRelationshipMark Set when the workspace's relationship to this contact is not an ordinary one. `vendor_marketing` is a named sender who only pitches something to this business and whom nobody here has answered. The default contact lists leave a marked contact out; a text search and a read by id still find it. Null is not marked. Written through `PATCH /contacts/{id}` or by the sender check, never by the request body of a create.
+// ContactRelationshipMark Set when the company's relationship to this contact is not an ordinary one. `vendor_marketing` is a named sender who only pitches something to this business and whom nobody here has answered. The default contact lists leave a marked contact out; a text search and a read by id still find it. Null is not marked. Written through `PATCH /contacts/{id}` or by the sender check, never by the request body of a create.
 type ContactRelationshipMark string
 
-// ContactVisibility Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the workspace through a verdict or through the owner's own `POST /contacts/{id}/publish`, and never travels back.
+// ContactVisibility Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the company through a result or through the owner's own `POST /contacts/{id}/publish`, and never travels back.
 type ContactVisibility string
 
 // Contact360 The contact record page in one payload. Record sections may be absent when their
@@ -46198,13 +46198,13 @@ type Contact360 struct {
 		Page PageInfo   `json:"page"`
 	} `json:"activities,omitempty"`
 
-	// AsOf The assembly clock. Mail coverage carries its own evaluation time; Read Committed does not promise one snapshot across sections.
+	// AsOf The assembly clock. Mail coverage carries its own evaluation time; Read Committed does not guarantee one snapshot across sections.
 	AsOf time.Time `json:"as_of"`
 
 	// BillingRoles The companies this contact handles invoices for, and in what capacity. Absent when the caller lacks the company or relationship grant, named in `sections_omitted` as `billing_roles`; a company outside the caller's row scope is not listed.
 	BillingRoles *[]BillingCompany `json:"billing_roles,omitempty"`
 
-	// Claims What was promised, asked and decided in captured conversations (ADR-0097 D1) — one store behind the commitments card and the what-matters card, which differ only by kind. Every claim carries the activity it was read from and the verbatim snippet, so a reader can check it rather than trust it.
+	// Claims What was agreed, asked and decided in captured conversations (ADR-0097 D1) — one store behind the commitments card and the what-matters card, which differ only by kind. Every claim carries the activity it was read from and the verbatim snippet, so a reader can check it rather than trust it.
 	Claims *[]ConversationClaim `json:"claims,omitempty"`
 
 	// Commercial The open deal this contact sits on, with the money on it and who else is in the room. Absent when the caller has no deal grant (`sections_omitted`: `commercial`); present with `deal` null when they have the grant and there is no open deal — "no open deal" and "you may not see deals" are different facts.
@@ -46272,7 +46272,7 @@ type Contact360 struct {
 	// LastOutboundPrecision How to read `last_outbound_at`, from the row it names. Absent when that is null or absent.
 	LastOutboundPrecision *OccurredPrecision `json:"last_outbound_precision,omitempty"`
 
-	// LastTouchBasis Which messages the last-touch fields count: `readable_by_caller` means the messages whose content this caller may open (the activity content gate, contact reach, project narrowing and the human-message rules). The last-message dates, `relationship_direction`, `relationship_changes` and the follow-up `moment` all read this basis, so they agree with the History the caller can read. Shared metrics use a different basis on purpose: `strength` and the colleague network count only messages the whole workspace may see, so every colleague reads the same number. Absent together with the last-touch fields.
+	// LastTouchBasis Which messages the last-touch fields count: `readable_by_caller` means the messages whose content this caller may open (the activity content gate, contact reach, project narrowing and the human-message rules). The last-message dates, `relationship_direction`, `relationship_changes` and the follow-up `moment` all read this basis, so they agree with the History the caller can read. Shared metrics use a different basis on purpose: `strength` and the colleague network count only messages the whole company may see, so every colleague reads the same number. Absent together with the last-touch fields.
 	LastTouchBasis *Contact360LastTouchBasis `json:"last_touch_basis,omitempty"`
 
 	// MailCoverage The calling reader's mail capture for the requested interval. This does
@@ -46349,7 +46349,7 @@ type Contact360 struct {
 	Strength *RelationshipStrength `json:"strength,omitempty"`
 }
 
-// Contact360LastTouchBasis Which messages the last-touch fields count: `readable_by_caller` means the messages whose content this caller may open (the activity content gate, contact reach, project narrowing and the human-message rules). The last-message dates, `relationship_direction`, `relationship_changes` and the follow-up `moment` all read this basis, so they agree with the History the caller can read. Shared metrics use a different basis on purpose: `strength` and the colleague network count only messages the whole workspace may see, so every colleague reads the same number. Absent together with the last-touch fields.
+// Contact360LastTouchBasis Which messages the last-touch fields count: `readable_by_caller` means the messages whose content this caller may open (the activity content gate, contact reach, project narrowing and the human-message rules). The last-message dates, `relationship_direction`, `relationship_changes` and the follow-up `moment` all read this basis, so they agree with the History the caller can read. Shared metrics use a different basis on purpose: `strength` and the colleague network count only messages the whole company may see, so every colleague reads the same number. Absent together with the last-touch fields.
 type Contact360LastTouchBasis string
 
 // Contact360SectionsOmitted defines model for Contact360.SectionsOmitted.
@@ -46514,7 +46514,7 @@ type ContactBrief struct {
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
 	// lane. `deterministic` — the structured fallback, used when no lane is configured,
-	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// the company's AI budget is exhausted, the model call fails, or the checks the
 	// surface runs refuse the model's answer. Never silently interchangeable: a reader
 	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
@@ -46553,13 +46553,13 @@ type ContactCase struct {
 	Edges      []ContactCaseEdge   `json:"edges"`
 	Members    []ContactCaseMember `json:"members"`
 
-	// MergeMode `ordinary`: the caller may change every member. `delegated`: the caller owns a member and the workspace policy lets them merge the rest. `pair`: the caller may change one end of an open pair, and may merge exactly those two members, keeping the other end and its owner, who must be a live human seat. `none`: none of these.
+	// MergeMode `ordinary`: the caller may change every member. `delegated`: the caller owns a member and the company policy lets them merge the rest. `pair`: the caller may change one end of an open pair, and may merge exactly those two members, keeping the other end and its owner, who must be a live human seat. `none`: none of these.
 	MergeMode ContactCaseMergeMode `json:"merge_mode"`
 
 	// Owners The live owners of the members. Each of them sees the case in their own Worklist.
 	Owners []ContactCaseOwner `json:"owners"`
 
-	// PolicyEnabled Whether the workspace lets any owner of a member merge the case (`contacts.shared_merge_reviews`).
+	// PolicyEnabled Whether the company lets any owner of a member merge the case (`contacts.shared_merge_reviews`).
 	PolicyEnabled bool `json:"policy_enabled"`
 
 	// Reason Why `can_merge` is false.
@@ -46579,7 +46579,7 @@ type ContactCase struct {
 	TooLarge bool `json:"too_large"`
 }
 
-// ContactCaseMergeMode `ordinary`: the caller may change every member. `delegated`: the caller owns a member and the workspace policy lets them merge the rest. `pair`: the caller may change one end of an open pair, and may merge exactly those two members, keeping the other end and its owner, who must be a live human seat. `none`: none of these.
+// ContactCaseMergeMode `ordinary`: the caller may change every member. `delegated`: the caller owns a member and the company policy lets them merge the rest. `pair`: the caller may change one end of an open pair, and may merge exactly those two members, keeping the other end and its owner, who must be a live human seat. `none`: none of these.
 type ContactCaseMergeMode string
 
 // ContactCaseReason Why `can_merge` is false.
@@ -46795,7 +46795,7 @@ type ContactConsentGuardEntry struct {
 	// QualifyingEvent The recorded event that flipped business correspondence to allowed, when one did.
 	QualifyingEvent *ConsentQualifyingEvent `json:"qualifying_event,omitempty"`
 
-	// Reason The answer in English words — "she wrote to you on 2 May", "opt-out 12 Jul", "no consent recorded". A verdict a rep cannot explain to the contact is not usable.
+	// Reason The answer in English words — "she wrote to you on 2 May", "opt-out 12 Jul", "no consent recorded". A result a rep cannot explain to the contact is not usable.
 	Reason string `json:"reason"`
 
 	// ReasonAt When the objection behind an `objection` reason was recorded, when the record carries it.
@@ -47163,7 +47163,7 @@ type ContactMoment struct {
 	// Headline The reason in one line, written from the evidence — never a model's paraphrase of it.
 	Headline string `json:"headline"`
 
-	// MayBeDone Present when the moment is a promise we owe AND we wrote to the contact after it was
+	// MayBeDone Present when the moment is a commitment we owe AND we wrote to the contact after it was
 	// made: the card asks whether that email kept it, and never decides on its own. `Done`
 	// completes the task (`PATCH /activities/{id}` with `is_done`) or settles the claim
 	// (`POST /claims/{id}/settle` with `done`). `Not yet` dismisses this moment through
@@ -47181,8 +47181,8 @@ type ContactMoment struct {
 	// `call` dials the contact's primary phone number; a client that knows it ignores the
 	// destination. The destination is `activity_log`, so a client that predates `call` opens the
 	// log form instead of drawing a button that does nothing. The server names it only for a
-	// promise whose task was filed from a logged call, on a live contact that has a number.
-	// Writing to them then stays as the second action, and a card that asks whether the promise
+	// commitment whose task was filed from a logged call, on a live contact that has a number.
+	// Writing to them then stays as the second action, and a card that asks whether the commitment
 	// is done carries the call as a second action too.
 	RecommendedAction ContactMomentAction `json:"recommended_action"`
 
@@ -47218,8 +47218,8 @@ type ContactMomentConfidence string
 // `call` dials the contact's primary phone number; a client that knows it ignores the
 // destination. The destination is `activity_log`, so a client that predates `call` opens the
 // log form instead of drawing a button that does nothing. The server names it only for a
-// promise whose task was filed from a logged call, on a live contact that has a number.
-// Writing to them then stays as the second action, and a card that asks whether the promise
+// commitment whose task was filed from a logged call, on a live contact that has a number.
+// Writing to them then stays as the second action, and a card that asks whether the commitment
 // is done carries the call as a second action too.
 type ContactMomentAction struct {
 	BlockedReason *string `json:"blocked_reason,omitempty"`
@@ -47276,7 +47276,7 @@ type ContactMomentEvidence struct {
 	Label      string              `json:"label"`
 	ObservedAt *time.Time          `json:"observed_at,omitempty"`
 
-	// ObservedPrecision How to read `observed_at` when it is an activity's time, from the row it names. `day` means only its UTC date is known, so a reader takes no time from it. Absent with `observed_at`, and beside a promise's due date.
+	// ObservedPrecision How to read `observed_at` when it is an activity's time, from the row it names. `day` means only its UTC date is known, so a reader takes no time from it. Absent with `observed_at`, and beside a commitment's due date.
 	ObservedPrecision *OccurredPrecision `json:"observed_precision,omitempty"`
 
 	// Snippet A verbatim excerpt of the evidence, never a summary of it.
@@ -47287,14 +47287,14 @@ type ContactMomentEvidence struct {
 // ContactMomentEvidenceType defines model for ContactMomentEvidence.Type.
 type ContactMomentEvidenceType string
 
-// ContactMomentMayBeDone Present when the moment is a promise we owe AND we wrote to the contact after it was
+// ContactMomentMayBeDone Present when the moment is a commitment we owe AND we wrote to the contact after it was
 // made: the card asks whether that email kept it, and never decides on its own. `Done`
 // completes the task (`PATCH /activities/{id}` with `is_done`) or settles the claim
 // (`POST /claims/{id}/settle` with `done`). `Not yet` dismisses this moment through
 // `POST /contacts/{id}/moment/dismiss`; the email is part of its fingerprint, so a
 // later email asks again.
 type ContactMomentMayBeDone struct {
-	// EmailActivityId The newest attested outbound email to the contact sent after the promise was made.
+	// EmailActivityId The newest attested outbound email to the contact sent after the commitment was made.
 	EmailActivityId openapi_types.UUID `json:"email_activity_id"`
 	PromiseId       openapi_types.UUID `json:"promise_id"`
 
@@ -47433,7 +47433,7 @@ type ContactProfileField struct {
 	// CapturedBy `agent:enrich` until a human edits the field, `human:<uuid>` after; this is how the page says "corrected by you".
 	CapturedBy string `json:"captured_by"`
 
-	// ClaimKey The stable identity of this field as a claim. Pass it to `POST /ai/feedback` as `claim_path` to correct or confirm the value — keyed on WHICH field, so the verdict survives the value being re-derived.
+	// ClaimKey The stable identity of this field as a claim. Pass it to `POST /ai/feedback` as `claim_path` to correct or confirm the value — keyed on WHICH field, so the result survives the value being re-derived.
 	ClaimKey   *string  `json:"claim_key,omitempty"`
 	Confidence *float32 `json:"confidence,omitempty" maximum:"1" minimum:"0"`
 
@@ -47744,7 +47744,7 @@ type ContactStopLiftBlockedBy string
 type ContextEntityRef struct {
 	Id openapi_types.UUID `json:"id"`
 
-	// Type `user` is a workspace MEMBER, not a record — it appears only in the
+	// Type `user` is a company MEMBER, not a record — it appears only in the
 	// `who_knows` section, where the item is a colleague who interacts with the
 	// anchor contact. It carries the member's display name as `summary` and
 	// routes nowhere: a client renders it as a name, not as a link to a record.
@@ -47754,7 +47754,7 @@ type ContextEntityRef struct {
 	Type ContextEntityRefType `json:"type"`
 }
 
-// ContextEntityRefType `user` is a workspace MEMBER, not a record — it appears only in the
+// ContextEntityRefType `user` is a company MEMBER, not a record — it appears only in the
 // `who_knows` section, where the item is a colleague who interacts with the
 // anchor contact. It carries the member's display name as `summary` and
 // routes nowhere: a client renders it as a name, not as a link to a record.
@@ -48027,7 +48027,7 @@ type ControllerSend struct {
 // is final against the machine — a later run may add claims but never overwrites or
 // resurrects a corrected one while its evidence fingerprint is unchanged.
 type ConversationClaim struct {
-	// AutoKept Margince closed this promise to invite someone because a guest accepted a later meeting. `POST /claims/{id}/reopen` undoes it. `evidence` is left out when the reader may not open that meeting.
+	// AutoKept Margince closed this commitment to invite someone because a guest accepted a later meeting. `POST /claims/{id}/reopen` undoes it. `evidence` is left out when the reader may not open that meeting.
 	AutoKept *ConversationClaimAutoKept `json:"auto_kept,omitempty"`
 
 	// Body What the claim says, in the reader's language. The verbatim evidence is `source_quote`, beside it.
@@ -48041,7 +48041,7 @@ type ConversationClaim struct {
 	// Kind The eight kinds one extraction mechanism produces. They share a
 	// lifecycle — extracted → cited → correctable → dismissible — and differ only here.
 	//
-	// `commitment_ours` / `commitment_theirs` — a promise, by us or by them.
+	// `commitment_ours` / `commitment_theirs` — a commitment, by us or by them.
 	// `open_question` — an unanswered business question.
 	// `decision` — an agreed choice, historical memory unless corrected.
 	// `priority` / `objection` / `success_criterion` / `decision_process` — the
@@ -48051,7 +48051,7 @@ type ConversationClaim struct {
 	// dropped from the product.
 	Kind ConversationClaimKind `json:"kind"`
 
-	// LooksKept A guest of the name the promise to invite someone names, at the same company, accepted a later meeting this reader may open. On an open promise with no responsible seat this is a hint and nothing is settled; the reader decides through the settle verb. On `auto_kept` it is the evidence Margince closed on.
+	// LooksKept A guest of the name the commitment to invite someone names, at the same company, accepted a later meeting this reader may open. On an open commitment with no responsible seat this is a hint and nothing is settled; the reader decides through the settle verb. On `auto_kept` it is the evidence Margince closed on.
 	LooksKept *ConversationClaimLooksKept `json:"looks_kept,omitempty"`
 
 	// NeedsReview This commitment does not pass the current evidence checks. Show the warning instead of presenting it as a current obligation.
@@ -48071,16 +48071,16 @@ type ConversationClaim struct {
 	// Status `open`: the loop is live. `done` — kept or answered. `dismissed` — a human said it was never a claim, and it stays so the next run cannot resurrect it.
 	Status ConversationClaimStatus `json:"status"`
 
-	// TakenAt When the promise was taken over. Kept when the colleague's account is deleted.
+	// TakenAt When the commitment was taken over. Kept when the colleague's account is deleted.
 	TakenAt *time.Time `json:"taken_at,omitempty"`
 
 	// TakenByName The display name of `taken_by_user_id`, so the card can say who took it over.
 	TakenByName *string `json:"taken_by_name,omitempty"`
 
-	// TakenByUserId The colleague who took over this promise when nobody was asked to keep it. Null when nobody took it over, and after that colleague's account was deleted.
+	// TakenByUserId The colleague who took over this commitment when nobody was asked to keep it. Null when nobody took it over, and after that colleague's account was deleted.
 	TakenByUserId *openapi_types.UUID `json:"taken_by_user_id,omitempty"`
 
-	// TaskActivityId The task an extracted `commitment_ours` created, so completing either side completes both. Null for every other kind — a reminder about THEIR promise is a rep action, not an auto-task.
+	// TaskActivityId The task an extracted `commitment_ours` created, so completing either side completes both. Null for every other kind — a reminder about THEIR commitment is a rep action, not an auto-task.
 	TaskActivityId *openapi_types.UUID `json:"task_activity_id,omitempty"`
 
 	// TaskOpen True when the task `task_activity_id` names is open and this reader may see it. Set only by the contact 360 read; absent elsewhere and when the claim names no task. `next_steps` is capped, so a claim whose task is past the cap still counts as owed, and one whose task is done or hidden does not.
@@ -48090,16 +48090,16 @@ type ConversationClaim struct {
 // ConversationClaimStatus `open`: the loop is live. `done` — kept or answered. `dismissed` — a human said it was never a claim, and it stays so the next run cannot resurrect it.
 type ConversationClaimStatus string
 
-// ConversationClaimAutoKept Margince closed this promise to invite someone because a guest accepted a later meeting. `POST /claims/{id}/reopen` undoes it. `evidence` is left out when the reader may not open that meeting.
+// ConversationClaimAutoKept Margince closed this commitment to invite someone because a guest accepted a later meeting. `POST /claims/{id}/reopen` undoes it. `evidence` is left out when the reader may not open that meeting.
 type ConversationClaimAutoKept struct {
-	// Evidence A guest of the name the promise to invite someone names, at the same company, accepted a later meeting this reader may open. On an open promise with no responsible seat this is a hint and nothing is settled; the reader decides through the settle verb. On `auto_kept` it is the evidence Margince closed on.
+	// Evidence A guest of the name the commitment to invite someone names, at the same company, accepted a later meeting this reader may open. On an open commitment with no responsible seat this is a hint and nothing is settled; the reader decides through the settle verb. On `auto_kept` it is the evidence Margince closed on.
 	Evidence *ConversationClaimLooksKept `json:"evidence,omitempty"`
 }
 
 // ConversationClaimKind The eight kinds one extraction mechanism produces. They share a
 // lifecycle — extracted → cited → correctable → dismissible — and differ only here.
 //
-// `commitment_ours` / `commitment_theirs` — a promise, by us or by them.
+// `commitment_ours` / `commitment_theirs` — a commitment, by us or by them.
 // `open_question` — an unanswered business question.
 // `decision` — an agreed choice, historical memory unless corrected.
 // `priority` / `objection` / `success_criterion` / `decision_process` — the
@@ -48109,7 +48109,7 @@ type ConversationClaimAutoKept struct {
 // dropped from the product.
 type ConversationClaimKind string
 
-// ConversationClaimLooksKept A guest of the name the promise to invite someone names, at the same company, accepted a later meeting this reader may open. On an open promise with no responsible seat this is a hint and nothing is settled; the reader decides through the settle verb. On `auto_kept` it is the evidence Margince closed on.
+// ConversationClaimLooksKept A guest of the name the commitment to invite someone names, at the same company, accepted a later meeting this reader may open. On an open commitment with no responsible seat this is a hint and nothing is settled; the reader decides through the settle verb. On `auto_kept` it is the evidence Margince closed on.
 type ConversationClaimLooksKept struct {
 	GuestName string             `json:"guest_name"`
 	MeetingAt time.Time          `json:"meeting_at"`
@@ -48144,7 +48144,7 @@ type ConversationMemoryEntry struct {
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
 	// lane. `deterministic` — the structured fallback, used when no lane is configured,
-	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// the company's AI budget is exhausted, the model call fails, or the checks the
 	// surface runs refuse the model's answer. Never silently interchangeable: a reader
 	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy *WrittenBy `json:"generated_by,omitempty"`
@@ -48216,7 +48216,7 @@ type CreateAcquisitionSourceRequest struct {
 	SortOrder *int    `json:"sort_order,omitempty"`
 }
 
-// CreateActivityRequest The workspace's active activity custom fields travel as extra top-level `cf_` keys. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`. A value for a field that does not apply to the activity's kind returns `422 field_not_valid_for_kind`.
+// CreateActivityRequest The company's active activity custom fields travel as extra top-level `cf_` keys. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`. A value for a field that does not apply to the activity's kind returns `422 field_not_valid_for_kind`.
 type CreateActivityRequest struct {
 	// AiAssisted True when an AI model rewrote the subject or body the caller sends, as Polish wording (`POST /rewrites`) does. The activity then reads `ai_assisted`. Needs `ai_assisted_on`. Only a human sets it: an agent or a connector is refused with 422 on `ai_assisted`. Absent means false.
 	AiAssisted *bool `json:"ai_assisted,omitempty"`
@@ -48225,7 +48225,7 @@ type CreateActivityRequest struct {
 	AiAssistedOn *ActivityLink       `json:"ai_assisted_on,omitempty"`
 	AssigneeId   *openapi_types.UUID `json:"assignee_id,omitempty"`
 
-	// AttendeeUserIds Meeting or call only: the colleagues who attended besides the caller. Each one is recorded as a participant, so the meeting counts toward their relationship with every linked contact, the same as a meeting captured from a calendar. Any other kind returns `422 code: field_not_valid_for_kind`. An id that is not an active member of this workspace returns `422 code: not_a_colleague`, and more than 25 ids return `422 code: too_many_attendees`.
+	// AttendeeUserIds Meeting or call only: the colleagues who attended besides the caller. Each one is recorded as a participant, so the meeting counts toward their relationship with every linked contact, the same as a meeting captured from a calendar. Any other kind returns `422 code: field_not_valid_for_kind`. An id that is not an active member of this company returns `422 code: not_a_colleague`, and more than 25 ids return `422 code: too_many_attendees`.
 	AttendeeUserIds *[]openapi_types.UUID `json:"attendee_user_ids,omitempty"`
 	Body            *string               `json:"body,omitempty"`
 
@@ -48386,7 +48386,7 @@ type CreateCaptureExclusionRequest struct {
 
 	// Kind What the rule names. `address` and `domain` match the parties a message names; `container` matches where the provider FILED it — a Gmail label, a Graph folder, an IMAP mailbox.
 	// A container value is `<provider>:<id>`, where the id is the provider's own token and is stored exactly as given: `gmail:Label_12` (a system label is its name, `gmail:CATEGORY_PROMOTIONS`), `graph:<folderId>`, `imap:INBOX/Family`. Qualified because an id means nothing without the namespace it belongs to, and unfolded because a Graph folder id is base64url and an IMAP mailbox name is case-sensitive — folding either would merge two containers into one rule.
-	// A container rule is `user` scope only: the list belongs to the mailbox's owner, and a workspace rule would bind every colleague's connection to a place that does not exist there.
+	// A container rule is `user` scope only: the list belongs to the mailbox's owner, and a company rule would bind every colleague's connection to a place that does not exist there.
 	Kind CaptureExclusionKind `json:"kind"`
 
 	// Scope Whose rule it is — the installation's, or the caller's own for the mailbox they connected.
@@ -49053,7 +49053,7 @@ type CreateOfferRequest struct {
 	// Source The channel this record arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. The other system and the record's id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`.
 	Source string `json:"source"`
 
-	// TemplateId Optional offer_template to render with; unset falls back to the workspace's default template for the offer's locale.
+	// TemplateId Optional offer_template to render with; unset falls back to the company's default template for the offer's locale.
 	TemplateId *openapi_types.UUID `json:"template_id,omitempty"`
 	TermsText  *string             `json:"terms_text,omitempty"`
 	ValidUntil *openapi_types.Date `json:"valid_until,omitempty"`
@@ -49593,7 +49593,7 @@ type CreateZaloOAConnectionRequest struct {
 	RefreshToken string `json:"refreshToken"`
 }
 
-// CustomField A workspace-defined runtime field on an existing core object. Mirrors the
+// CustomField A company-defined runtime field on an existing core object. Mirrors the
 // `custom_field` catalog table — the system-of-record for every runtime-added
 // column (CUSTOM-FIELDS-SCHEMA-1). `column_name` is the physical `cf_`-prefixed
 // identifier, stable across rename; `status=retired` hides the field from the API
@@ -50045,7 +50045,7 @@ type Deal struct {
 	// LastActivityPrecision How to read `last_activity_at`, from the activity it names. A day entry counts its quiet days from its own date. Absent when that is null.
 	LastActivityPrecision *OccurredPrecision `json:"last_activity_precision,omitempty"`
 
-	// LastEmail The newest email on this deal that the whole workspace may see — what a board card states as "last mail, N days ago" beside the deal, so a rep reads the silence without opening every card. Null on a deal nobody has mailed about. Counts what `last_activity_at` counts, narrowed to mail: workspace-audience rows only, and never the product's own system writing — a message limited to its participants must not move a date every colleague reads, and a mail the installation sent itself is not the buyer engaging. The rows a reader may discover through `GET /activities` can therefore be newer than this instant.
+	// LastEmail The newest email on this deal that the whole company may see — what a board card states as "last mail, N days ago" beside the deal, so a rep reads the silence without opening every card. Null on a deal nobody has mailed about. Counts what `last_activity_at` counts, narrowed to mail: company-audience rows only, and never the product's own system writing — a message limited to its participants must not move a date every colleague reads, and a mail the installation sent itself is not the buyer engaging. The rows a reader may discover through `GET /activities` can therefore be newer than this instant.
 	LastEmail *DealLastEmail `json:"last_email,omitempty"`
 
 	// LegalHold True while a litigation or investigation hold is preserving this record. A held record is never acted on by a retention sweep and an Art. 17 erasure against it is refused, so a screen that offers either action has to know. Placed and lifted through /retention/legal-holds, never by an ordinary edit.
@@ -50093,7 +50093,7 @@ type Deal struct {
 	// StageWinProbability The probability of the deal's current stage, so a client can show it beside a probability set on the deal.
 	StageWinProbability *int `json:"stage_win_probability,omitempty" maximum:"100" minimum:"0"`
 
-	// Stalled Derived — no activity past the threshold (absolute duration). A booked workspace-audience meeting ahead keeps the deal off stalled until it starts or is called off.
+	// Stalled Derived — no activity past the threshold (absolute duration). A booked company-audience meeting ahead keeps the deal off stalled until it starts or is called off.
 	Stalled   *bool      `json:"stalled,omitempty"`
 	Status    DealStatus `json:"status"`
 	Tags      *[]RowTag  `json:"tags,omitempty"`
@@ -50227,7 +50227,7 @@ type DealAdvanced struct {
 	// LastActivityPrecision How to read `last_activity_at`, from the activity it names. A day entry counts its quiet days from its own date. Absent when that is null.
 	LastActivityPrecision *OccurredPrecision `json:"last_activity_precision,omitempty"`
 
-	// LastEmail The newest email on this deal that the whole workspace may see — what a board card states as "last mail, N days ago" beside the deal, so a rep reads the silence without opening every card. Null on a deal nobody has mailed about. Counts what `last_activity_at` counts, narrowed to mail: workspace-audience rows only, and never the product's own system writing — a message limited to its participants must not move a date every colleague reads, and a mail the installation sent itself is not the buyer engaging. The rows a reader may discover through `GET /activities` can therefore be newer than this instant.
+	// LastEmail The newest email on this deal that the whole company may see — what a board card states as "last mail, N days ago" beside the deal, so a rep reads the silence without opening every card. Null on a deal nobody has mailed about. Counts what `last_activity_at` counts, narrowed to mail: company-audience rows only, and never the product's own system writing — a message limited to its participants must not move a date every colleague reads, and a mail the installation sent itself is not the buyer engaging. The rows a reader may discover through `GET /activities` can therefore be newer than this instant.
 	LastEmail *DealLastEmail `json:"last_email,omitempty"`
 
 	// LegalHold True while a litigation or investigation hold is preserving this record. A held record is never acted on by a retention sweep and an Art. 17 erasure against it is refused, so a screen that offers either action has to know. Placed and lifted through /retention/legal-holds, never by an ordinary edit.
@@ -50276,7 +50276,7 @@ type DealAdvanced struct {
 	// StageWinProbability The probability of the deal's current stage, so a client can show it beside a probability set on the deal.
 	StageWinProbability *int `json:"stage_win_probability,omitempty" maximum:"100" minimum:"0"`
 
-	// Stalled Derived — no activity past the threshold (absolute duration). A booked workspace-audience meeting ahead keeps the deal off stalled until it starts or is called off.
+	// Stalled Derived — no activity past the threshold (absolute duration). A booked company-audience meeting ahead keeps the deal off stalled until it starts or is called off.
 	Stalled   *bool              `json:"stalled,omitempty"`
 	Status    DealAdvancedStatus `json:"status"`
 	Tags      *[]RowTag          `json:"tags,omitempty"`
@@ -50404,7 +50404,7 @@ type DealCommitment struct {
 	// OccurredPrecision How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
 	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
 
-	// Overdue True once the whole due day is over in the installation's timezone. A promise due today, or with no due day, is not overdue.
+	// Overdue True once the whole due day is over in the installation's timezone. A commitment due today, or with no due day, is not overdue.
 	Overdue bool `json:"overdue"`
 
 	// SourceActivityId The captured activity it was read from.
@@ -50608,7 +50608,7 @@ type DealFollowUpDrafts struct {
 	Segment string              `json:"segment"`
 }
 
-// DealLastEmail The newest workspace-visible email on a deal, as `Deal.last_email` carries it.
+// DealLastEmail The newest company-visible email on a deal, as `Deal.last_email` carries it.
 type DealLastEmail struct {
 	// Direction Which way the mail went. Null on a logged email that named no direction, which is a fact about how it was captured rather than about the exchange.
 	Direction  *DealLastEmailDirection `json:"direction"`
@@ -50852,7 +50852,7 @@ type DealRevisionRequest struct {
 type DealRoleProposalResult struct {
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
 	// lane. `deterministic` — the structured fallback, used when no lane is configured,
-	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// the company's AI budget is exhausted, the model call fails, or the checks the
 	// surface runs refuse the model's answer. Never silently interchangeable: a reader
 	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
@@ -50966,7 +50966,7 @@ type DealRoomBrief struct {
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
 	// lane. `deterministic` — the structured fallback, used when no lane is configured,
-	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// the company's AI budget is exhausted, the model call fails, or the checks the
 	// surface runs refuse the model's answer. Never silently interchangeable: a reader
 	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy               `json:"generated_by"`
@@ -51310,7 +51310,7 @@ type DealStatusCard struct {
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
 	// lane. `deterministic` — the structured fallback, used when no lane is configured,
-	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// the company's AI budget is exhausted, the model call fails, or the checks the
 	// surface runs refuse the model's answer. Never silently interchangeable: a reader
 	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
@@ -51690,7 +51690,7 @@ type DeclineActivityDealRequest struct {
 type DedupeCandidate struct {
 	// CanDecide Whether THIS caller could dismiss the pair or undo a decision on it.
 	// That needs write authority over BOTH ends: dismissing suppresses both
-	// records as duplicates for the whole workspace. Whether the caller may
+	// records as duplicates for the whole company. Whether the caller may
 	// merge the pair is `can_merge`.
 	//
 	// The pair is LISTED either way, because the contact who can see a
@@ -52022,7 +52022,7 @@ type DomainQuestion struct {
 	EffectiveUrl  *string                `json:"effective_url,omitempty"`
 	EvidenceAt    *time.Time             `json:"evidence_at,omitempty"`
 
-	// Note The site triage's own sentence on a `vendor_verdict` question, in the workspace language.
+	// Note The site triage's own sentence on a `vendor_verdict` question, in the company language.
 	Note          *string   `json:"note,omitempty"`
 	ReasonCode    string    `json:"reason_code"`
 	RedirectChain *[]string `json:"redirect_chain,omitempty"`
@@ -52048,7 +52048,7 @@ type DomainQuestionContext struct {
 	HiddenSenders bool `json:"hidden_senders"`
 
 	// LinkedContactCount How many contacts the reader may see that confirming a company would employ there: every
-	// live contact with an address on the domain, less workspace seats and anyone who already
+	// live contact with an address on the domain, less company seats and anyone who already
 	// holds a primary employment. Those keep the employer they have.
 	LinkedContactCount int `json:"linked_contact_count" minimum:"0"`
 
@@ -52483,7 +52483,7 @@ type EmailParty struct {
 	ContactId   *openapi_types.UUID `json:"contact_id,omitempty"`
 	DisplayName *string             `json:"display_name,omitempty"`
 
-	// UserId Set when the address belongs to a seat in this workspace.
+	// UserId Set when the address belongs to a seat in this company.
 	UserId *openapi_types.UUID `json:"user_id,omitempty"`
 }
 
@@ -52596,7 +52596,7 @@ type EmailSignOff struct {
 
 	// Kind `signature`: the caller's own, from Settings. `closing`: the caller has written
 	// none, so the send closes with a plain greeting and their name when available.
-	// `template`: the workspace's template, filled in with the caller's values. `none`:
+	// `template`: the company's template, filled in with the caller's values. `none`:
 	// this send appends nothing.
 	Kind EmailSignOffKind `json:"kind"`
 
@@ -52607,7 +52607,7 @@ type EmailSignOff struct {
 
 // EmailSignOffKind `signature`: the caller's own, from Settings. `closing`: the caller has written
 // none, so the send closes with a plain greeting and their name when available.
-// `template`: the workspace's template, filled in with the caller's values. `none`:
+// `template`: the company's template, filled in with the caller's values. `none`:
 // this send appends nothing.
 type EmailSignOffKind string
 
@@ -52635,16 +52635,16 @@ type EmailSignature struct {
 	// expanding placeholders. Empty sanitized content uses the usual fallback.
 	Html string `json:"html"`
 
-	// Phone The member's phone number, filled into the workspace template's `{phone}`.
+	// Phone The member's phone number, filled into the company template's `{phone}`.
 	Phone string `json:"phone"`
 
 	// TemplateActive The member's mail has a signature template: their legal entity's own, or else the
-	// workspace's. Every send this member makes then signs with that template, filled in
+	// company's. Every send this member makes then signs with that template, filled in
 	// with their name, title and phone, instead of `body`, unless effective personal `html` is set.
 	// An agent's send carries no sign-off.
 	TemplateActive bool `json:"template_active"`
 
-	// Title The member's title, filled into the workspace template's `{title}`.
+	// Title The member's title, filled into the company template's `{title}`.
 	Title     string     `json:"title"`
 	UpdatedAt *time.Time `json:"updated_at,omitempty"`
 }
@@ -52661,7 +52661,7 @@ type EmailSignatureDraft struct {
 	// Phone The caller's phone as edited.
 	Phone *string `json:"phone,omitempty"`
 
-	// Template The workspace template as edited. Empty previews a workspace with none.
+	// Template The company template as edited. Empty previews a company with none.
 	Template *string `json:"template,omitempty"`
 
 	// Title The caller's title as edited.
@@ -52674,7 +52674,7 @@ type EmailSignatureTemplate struct {
 	// shows each as read-only. Empty when nothing is locked. A write ignores it.
 	Locks *SettingLocks `json:"locks,omitempty"`
 
-	// Template The workspace's signature layout as HTML, with the placeholders `{name}`, `{title}`,
+	// Template The company's signature layout as HTML, with the placeholders `{name}`, `{title}`,
 	// `{phone}`, `{logo}` and `{imprint}`. `{logo}` embeds the logo of the legal entity the
 	// sender works for, sized for mail, in the message itself; the default entity's logo is
 	// the company's own, and an entity with no logo shows none. `{imprint}` is that entity's
@@ -52865,7 +52865,7 @@ type EmbedReindexStatus struct {
 	// EntitiesPending Fleet-wide count of live entities lacking a current-identity embedding row.
 	EntitiesPending int `json:"entities_pending"`
 
-	// PopulatedIdentity The identity the last reindex run was RELEASED under (embed_store_binding.populated_identity) — a run releases when no workspace of it has an outcome left to reach, exhausted attempts included, so this is not a claim that every workspace was re-embedded under it. entities_pending is what tells you the difference.
+	// PopulatedIdentity The identity the last reindex run was RELEASED under (embed_store_binding.populated_identity) — a run releases when no company of it has an outcome left to reach, exhausted attempts included, so this is not a claim that every company was re-embedded under it. entities_pending is what tells you the difference.
 	PopulatedIdentity string `json:"populated_identity"`
 
 	// ReindexNeeded Derived fresh on every read (never a stored flag): true when configured_identity != populated_identity, or entities_pending > 0.
@@ -53502,7 +53502,7 @@ type FilterVocabularyField struct {
 	// type, and where this reader may not learn the currency.
 	Currency *string `json:"currency,omitempty"`
 
-	// Custom Whether this is a workspace-defined custom-field column. Where true,
+	// Custom Whether this is a company-defined custom-field column. Where true,
 	// `name` is the catalog's `column_name` — join on it to show an admin's
 	// `label`, which the catalog owns and this vocabulary does not.
 	//
@@ -53528,7 +53528,7 @@ type FilterVocabularyField struct {
 	// box: a value outside the set compiles and matches nothing, so a typo
 	// reads as a settled answer instead of a mistake.
 	//
-	// For a workspace-defined field these are the catalog's own `options`
+	// For a company-defined field these are the catalog's own `options`
 	// for the same column. For a core field they are the values the
 	// contract enumerates, minus null — a null in one of those enums is the
 	// column's nullability, and `exists` is how a filter asks about that.
@@ -53734,7 +53734,7 @@ type FollowUpSettings struct {
 	PrivateMailRequests *bool `json:"private_mail_requests,omitempty"`
 
 	// SharePrivateQuoteRequests Whether a request for a quotation found in private mail is shared with the whole
-	// workspace (`activities.share_private_quote_requests`, on by default). When on, what
+	// company (`activities.share_private_quote_requests`, on by default). When on, what
 	// the customer asked for becomes visible on the deal it opens. It needs
 	// `private_mail_requests` on as well. Only mail private by a mailbox setting is
 	// shared; mail held for any other reason never is. A GET always carries it; a PATCH
@@ -53849,17 +53849,17 @@ type ForecastAssurancePreview struct {
 	// Findings What would be raised, grouped by type and severity. Counts only — no deal is named and no amount is given.
 	Findings []AssuranceFindingCount `json:"findings"`
 
-	// Readiness The verdict this pass would reach. `checks_incomplete` here means the preview itself could not read a required source — starting on it would produce a run that says the same.
+	// Readiness The result this pass would reach. `checks_incomplete` here means the preview itself could not read a required source — starting on it would produce a run that says the same.
 	Readiness *ForecastAssurancePreviewReadiness `json:"readiness,omitempty"`
 
 	// Sources Which sources the preview could reach, and how far.
 	Sources []ForecastAssuranceSource `json:"sources"`
 
-	// Started Whether any pass has ever run in this workspace. False is a workspace the nightly sweep is skipping until somebody starts it — which is what makes this a first check rather than a recheck.
+	// Started Whether any pass has ever run in this company. False is a company the nightly sweep is skipping until somebody starts it — which is what makes this a first check rather than a recheck.
 	Started bool `json:"started"`
 }
 
-// ForecastAssurancePreviewReadiness The verdict this pass would reach. `checks_incomplete` here means the preview itself could not read a required source — starting on it would produce a run that says the same.
+// ForecastAssurancePreviewReadiness The result this pass would reach. `checks_incomplete` here means the preview itself could not read a required source — starting on it would produce a run that says the same.
 type ForecastAssurancePreviewReadiness string
 
 // ForecastAssuranceSource defines model for ForecastAssuranceSource.
@@ -54293,7 +54293,7 @@ type ForecastShare struct {
 	Id        openapi_types.UUID `json:"id"`
 	Kind      ForecastShareKind  `json:"kind"`
 
-	// ScopeId Whose forecast, for a team or owner scope. Absent for the workspace.
+	// ScopeId Whose forecast, for a team or owner scope. Absent for the company.
 	ScopeId   *openapi_types.UUID    `json:"scope_id,omitempty"`
 	ScopeKind ForecastShareScopeKind `json:"scope_kind"`
 
@@ -54415,7 +54415,7 @@ type FormerMemberRequest struct {
 	Source *string `json:"source,omitempty"`
 }
 
-// FxRate One effective-dated FX rate converting from_currency into the workspace base (to_currency). rate is a decimal string (numeric(20,10)), never a float.
+// FxRate One effective-dated FX rate converting from_currency into the company base (to_currency). rate is a decimal string (numeric(20,10)), never a float.
 type FxRate struct {
 	EffectiveDate openapi_types.Date `json:"effective_date"`
 	FromCurrency  string             `json:"from_currency"`
@@ -54423,20 +54423,20 @@ type FxRate struct {
 	// Rate Decimal rate (from -> base), always positive. Plain decimal, up to 10 integer and 10 fractional digits (numeric(20,10)).
 	Rate string `json:"rate"`
 
-	// ToCurrency The workspace base currency.
+	// ToCurrency The company base currency.
 	ToCurrency string `json:"to_currency"`
 }
 
 // FxRateCurrencyListResponse defines model for FxRateCurrencyListResponse.
 type FxRateCurrencyListResponse struct {
-	// BaseCurrency The workspace's base currency, which every code in `data` converts into. Served here as well as on the installation settings, so a role that may read deals but not those settings still learns which currency a picker leads with.
+	// BaseCurrency The company's base currency, which every code in `data` converts into. Served here as well as on the installation settings, so a role that may read deals but not those settings still learns which currency a picker leads with.
 	BaseCurrency string   `json:"base_currency"`
 	Data         []string `json:"data" unique:"items"`
 }
 
 // FxRateListResponse defines model for FxRateListResponse.
 type FxRateListResponse struct {
-	// BaseCurrency The workspace's base currency — every rate in `data` converts TO this (AAD-PARAM-N-1, ADR-0085). Served from the workspace itself rather than inferred from the first rate row, so a workspace that has entered no rates can still state its own base.
+	// BaseCurrency The company's base currency — every rate in `data` converts TO this (AAD-PARAM-N-1, ADR-0085). Served from the company itself rather than inferred from the first rate row, so a company that has entered no rates can still state its own base.
 	BaseCurrency *string  `json:"base_currency,omitempty"`
 	Data         []FxRate `json:"data"`
 }
@@ -54459,7 +54459,7 @@ type GmailSignatureImportState string
 
 // GoogleDirectoryInput defines model for GoogleDirectoryInput.
 type GoogleDirectoryInput struct {
-	// AdminSubject The Workspace admin the service account acts for. The Directory API refuses a delegated read that names no admin.
+	// AdminSubject The Company admin the service account acts for. The Directory API refuses a delegated read that names no admin.
 	AdminSubject *openapi_types.Email `json:"admin_subject,omitempty"`
 
 	// ServiceAccountJson The service account's JSON key file, as Google issues it.
@@ -54537,7 +54537,7 @@ type GrowthFitSubScore struct {
 	// Reason One sentence saying what this score was read from.
 	Reason string `json:"reason"`
 
-	// Score 0-100 for THIS dimension only. Never summed or averaged with the others (DOSS-AC-19) — the band is the verdict, and these are what it was read from.
+	// Score 0-100 for THIS dimension only. Never summed or averaged with the others (DOSS-AC-19) — the band is the result, and these are what it was read from.
 	Score int `json:"score" maximum:"100" minimum:"0"`
 }
 
@@ -54842,12 +54842,12 @@ type HeldThread struct {
 	// ledger's own column. `has_message` says which of the two it is.
 	ActivityId *openapi_types.UUID `json:"activity_id,omitempty"`
 
-	// Attempts How many times a verdict has been asked for. This is the outage signal: a pending row
+	// Attempts How many times a result has been asked for. This is the outage signal: a pending row
 	// whose attempts stop climbing is a model that stopped answering.
 	Attempts int `json:"attempts"`
 
 	// HasMessage The message this thread began with still EXISTS. False only where it was erased while
-	// the verdict stood — which the ledger deliberately survives, because losing the verdict
+	// the result stood — which the ledger deliberately survives, because losing the result
 	// would re-open a thread a classifier already held.
 	//
 	// Existence, not readability: it stays true for a message whose content is withheld from
@@ -54872,21 +54872,21 @@ type HeldThread struct {
 	// OccurredPrecision How to read `occurred_at`, present beside it. `day` means only its date is known, its UTC date, so a client draws no time.
 	OccurredPrecision *OccurredPrecision `json:"occurred_precision,omitempty"`
 
-	// ParticipantCount How many addresses outside the workspace that message names, of which `participants`
+	// ParticipantCount How many addresses outside the company that message names, of which `participants`
 	// shows up to five. Absent when `participants` is.
 	ParticipantCount *int `json:"participant_count,omitempty" minimum:"0"`
 
-	// Participants Up to five addresses outside the workspace on the message that opened the thread, so you
+	// Participants Up to five addresses outside the company on the message that opened the thread, so you
 	// can tell who a held thread is with. Colleagues are left out. Present exactly when
 	// `activity_id` is: a message you may not read, or one that was erased, names nobody.
 	Participants *[]HeldThreadParticipant `json:"participants,omitempty"`
 
-	// Pending No verdict has landed yet. Stated as its own field rather than left to a client
+	// Pending No result has landed yet. Stated as its own field rather than left to a client
 	// comparing `status`, because it decides the order these arrive in and a reader that
 	// derived it differently would sort them differently.
 	Pending bool `json:"pending"`
 
-	// Status The ledger's own word: `pending` while no verdict has landed, `held` or `unsure` once
+	// Status The ledger's own word: `pending` while no result has landed, `held` or `unsure` once
 	// one has, `held_by_owner` where you said so yourself.
 	Status string `json:"status"`
 
@@ -54900,7 +54900,7 @@ type HeldThread struct {
 	ThreadKey string `json:"thread_key"`
 }
 
-// HeldThreadCounts The caller's whole held list by status, whatever a page narrows to. `stalled` is the pending threads asked about as often as the verdict ever will be: a lane that stopped answering, not one that is slow.
+// HeldThreadCounts The caller's whole held list by status, whatever a page narrows to. `stalled` is the pending threads asked about as often as the result ever will be: a lane that stopped answering, not one that is slow.
 type HeldThreadCounts struct {
 	Held        int `json:"held" minimum:"0"`
 	HeldByOwner int `json:"held_by_owner" minimum:"0"`
@@ -54911,16 +54911,16 @@ type HeldThreadCounts struct {
 
 // HeldThreadListResponse defines model for HeldThreadListResponse.
 type HeldThreadListResponse struct {
-	// Counts The caller's whole held list by status, whatever a page narrows to. `stalled` is the pending threads asked about as often as the verdict ever will be: a lane that stopped answering, not one that is slow.
+	// Counts The caller's whole held list by status, whatever a page narrows to. `stalled` is the pending threads asked about as often as the result ever will be: a lane that stopped answering, not one that is slow.
 	Counts HeldThreadCounts `json:"counts"`
 	Data   []HeldThread     `json:"data"`
 	Page   PageInfo         `json:"page"`
 
-	// ThreadVerdict When one verdict pass runs. Derived from the cadence the job declares and from the queue itself, never from a number written down beside the screen: a second copy of the schedule drifts from the one the worker actually keeps, and the reader would be told a time nothing fires at.
+	// ThreadVerdict When one result pass runs. Derived from the cadence the job declares and from the queue itself, never from a number written down beside the screen: a second copy of the schedule drifts from the one the worker actually keeps, and the reader would be told a time nothing fires at.
 	ThreadVerdict *CaptureVerdictClock `json:"thread_verdict,omitempty"`
 }
 
-// HeldThreadParticipant One address outside the workspace on a held thread's opening message.
+// HeldThreadParticipant One address outside the company on a held thread's opening message.
 type HeldThreadParticipant struct {
 	// Address The folded address the message named.
 	Address string `json:"address"`
@@ -54949,7 +54949,7 @@ type HiddenBacklog struct {
 	// other numbers becomes decoration — this is what a check asserts on.
 	Clear bool `json:"clear"`
 
-	// Colleagues Mail from one of the workspace's own email domains. ALSO NOBODY'S CHOICE, and
+	// Colleagues Mail from one of the company's own email domains. ALSO NOBODY'S CHOICE, and
 	// watched because the rule is only as good as the domain list behind it: a
 	// domain entered by mistake suppresses a real customer's correspondence for
 	// everybody, and this is the figure that would show it.
@@ -54962,12 +54962,12 @@ type HiddenBacklog struct {
 	// InformsUs Mail the classifier judged to ask nothing of us — a report, a receipt, a
 	// notification — hidden by this rule alone. A MODEL'S CHOICE, and watched for
 	// that reason: one model call's opinion about a customer's mail ends the
-	// obligation, so a wrong verdict has to show up somewhere a lead can see it. A
-	// request a human accepted is never hidden by it, whatever the verdict.
+	// obligation, so a wrong result has to show up somewhere a lead can see it. A
+	// request a human accepted is never hidden by it, whatever the result.
 	InformsUs int `json:"informs_us" minimum:"0"`
 
 	// NotSales Work somebody judged to be no business of the queue's. SOMEBODY'S CHOICE, and
-	// the judgement worth watching: it hides the thread from the WHOLE workspace and
+	// the judgement worth watching: it hides the thread from the WHOLE company and
 	// never lifts, so one rep's mistake removes a customer from everybody's day
 	// permanently.
 	NotSales int `json:"not_sales" minimum:"0"`
@@ -55033,7 +55033,7 @@ type HiddenBacklog struct {
 	Truncated bool `json:"truncated"`
 
 	// Unlinked Inbound mail that qualifies in every other way and is attached to no record the
-	// workspace sells to. ALSO NOBODY'S CHOICE, and genuinely ambiguous: usually it
+	// company sells to. ALSO NOBODY'S CHOICE, and genuinely ambiguous: usually it
 	// is right — a rep's dentist is not a customer — and it is also where a real
 	// customer lands when capture failed to link their thread. Its own figure for
 	// that reason rather than folded into a total.
@@ -55135,7 +55135,7 @@ type HomeRepairCounts struct {
 	Normalize  *int `json:"normalize,omitempty" minimum:"0"`
 	Reclassify int  `json:"reclassify" minimum:"0"`
 
-	// Revalidate Older settled request verdicts the email-request settlement pass judges again.
+	// Revalidate Older settled request results the email-request settlement pass judges again.
 	Revalidate *int `json:"revalidate,omitempty" minimum:"0"`
 	Review     int  `json:"review" minimum:"0"`
 	Supersede  int  `json:"supersede" minimum:"0"`
@@ -55233,7 +55233,7 @@ type ImportColumn struct {
 // ImportDraftStep The wizard step a draft reopens on.
 type ImportDraftStep string
 
-// ImportFormat The files an import takes, for this workspace. The template ZIP, the
+// ImportFormat The files an import takes, for this company. The template ZIP, the
 // column guide and the screen's file order are all read from it.
 type ImportFormat struct {
 	// Files One file per object, in `order`.
@@ -55257,7 +55257,7 @@ type ImportFormatVersion string
 // mapped onto; `label` is what the screen shows, set for a custom field.
 // A header shows `label` when present, else `name`.
 type ImportFormatColumn struct {
-	// Custom Whether this is one of the workspace's custom fields.
+	// Custom Whether this is one of the company's custom fields.
 	Custom bool `json:"custom"`
 
 	// Description What goes in the column.
@@ -55692,7 +55692,7 @@ type ImportRun struct {
 	// EtaScope `object` means the estimate covers the item the run is on, which is not the last; `run` means it covers what is left of the run.
 	EtaScope *ImportRunEtaScope `json:"eta_scope,omitempty"`
 
-	// EtaSecondsHigh The latest it is likely done, in seconds from now. A range, never a promise: the speed of one minute is not the speed of the next.
+	// EtaSecondsHigh The latest it is likely done, in seconds from now. A range, never a commitment: the speed of one minute is not the speed of the next.
 	EtaSecondsHigh *int `json:"eta_seconds_high,omitempty" minimum:"1"`
 
 	// EtaSecondsLow The soonest the item in `eta_scope` is likely done, in seconds from now. Absent whenever `rate_rows_per_second` is.
@@ -56929,13 +56929,13 @@ type IntroRequest struct {
 	// withdrew it).
 	//
 	// WHAT `replied` MEANS, exactly. It is set only by the server, from a message
-	// this workspace's own connectors captured: inbound, sent BY the contact, and
+	// this company's own connectors captured: inbound, sent BY the contact, and
 	// after the introduction. Nothing a human types can reach it.
 	//
 	// It is a fact about the CONTACT, not about one thread. The colleague makes
 	// the introduction from their own mailbox, outside the product, so there is
 	// no thread for a reply to be matched against — what the server can honestly
-	// observe is that the contact wrote to this workspace after being introduced.
+	// observe is that the contact wrote to this company after being introduced.
 	// Where several asks about one contact are awaiting a reply, that message
 	// answers all of them. Reading it as more than that — as proof they answered
 	// one specific introduction — is a claim the evidence does not carry.
@@ -57036,13 +57036,13 @@ type IntroRequestReplaceInput struct {
 // withdrew it).
 //
 // WHAT `replied` MEANS, exactly. It is set only by the server, from a message
-// this workspace's own connectors captured: inbound, sent BY the contact, and
+// this company's own connectors captured: inbound, sent BY the contact, and
 // after the introduction. Nothing a human types can reach it.
 //
 // It is a fact about the CONTACT, not about one thread. The colleague makes
 // the introduction from their own mailbox, outside the product, so there is
 // no thread for a reply to be matched against — what the server can honestly
-// observe is that the contact wrote to this workspace after being introduced.
+// observe is that the contact wrote to this company after being introduced.
 // Where several asks about one contact are awaiting a reply, that message
 // answers all of them. Reading it as more than that — as proof they answered
 // one specific introduction — is a claim the evidence does not carry.
@@ -57236,7 +57236,7 @@ type JobKindHealth struct {
 	Discarded          *int `json:"discarded,omitempty"`
 	ExpectationSeconds *int `json:"expectation_seconds,omitempty"`
 
-	// FleetWide True for a dispatcher — a job that fans work out and does no tenant work of its own. Its rows carry no workspace.
+	// FleetWide True for a dispatcher — a job that fans work out and does no tenant work of its own. Its rows carry no company.
 	FleetWide bool `json:"fleet_wide"`
 
 	// Kind The stable job identifier River persists in river_job.kind.
@@ -57393,7 +57393,7 @@ type KnowledgeAnswer struct {
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
 	// lane. `deterministic` — the structured fallback, used when no lane is configured,
-	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// the company's AI budget is exhausted, the model call fails, or the checks the
 	// surface runs refuse the model's answer. Never silently interchangeable: a reader
 	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
@@ -57479,7 +57479,7 @@ type KnowledgeCorpus struct {
 	Coverage   KnowledgeCoverage `json:"coverage"`
 	CreatedAt  time.Time         `json:"created_at"`
 
-	// DefaultAsk The corpus the command palette's ask lands on. At most one per workspace.
+	// DefaultAsk The corpus the command palette's ask lands on. At most one per company.
 	DefaultAsk  bool               `json:"default_ask"`
 	Description *string            `json:"description,omitempty"`
 	Id          openapi_types.UUID `json:"id"`
@@ -57497,11 +57497,11 @@ type KnowledgeCorpus struct {
 	// Shipped True for the handbook set that ships with Margince. It cannot be archived and takes no uploads. Its name, topic, floor and default can still be edited, and an update keeps those edits.
 	Shipped bool `json:"shipped"`
 
-	// TopicStatement What this corpus covers, in the workspace's own words. Quoted back whenever the corpus refuses, so it is read by a contact at their least patient moment — write it as a sentence, not a label.
+	// TopicStatement What this corpus covers, in the company's own words. Quoted back whenever the corpus refuses, so it is read by a contact at their least patient moment — write it as a sentence, not a label.
 	TopicStatement string `json:"topic_statement"`
 }
 
-// KnowledgeCorpusList Every corpus, unpaged. A workspace defines these by hand, in ones and twos, and the screen shows all of them — a cursor here would be a promise with no producer behind it.
+// KnowledgeCorpusList Every corpus, unpaged. A company defines these by hand, in ones and twos, and the screen shows all of them — a cursor here would be a commitment with no producer behind it.
 type KnowledgeCorpusList struct {
 	Items []KnowledgeCorpus `json:"items"`
 }
@@ -57643,7 +57643,7 @@ type LastExchange struct {
 	// what the DB CHECK would reject, rather than 500-ing at write time).
 	// `channel_provider` is the same kind of constraint in both directions: non-null exactly
 	// when `kind=message` (ADR-0107).
-	// **Custom fields**: the values of the workspace's activity custom fields arrive as extra
+	// **Custom fields**: the values of the company's activity custom fields arrive as extra
 	// top-level `cf_` keys. They are content, so they are absent whenever `content_state` is
 	// `withheld`.
 	Activity Activity `json:"activity"`
@@ -57677,7 +57677,7 @@ type LatestInbound struct {
 	// what the DB CHECK would reject, rather than 500-ing at write time).
 	// `channel_provider` is the same kind of constraint in both directions: non-null exactly
 	// when `kind=message` (ADR-0107).
-	// **Custom fields**: the values of the workspace's activity custom fields arrive as extra
+	// **Custom fields**: the values of the company's activity custom fields arrive as extra
 	// top-level `cf_` keys. They are content, so they are absent whenever `content_state` is
 	// `withheld`.
 	Activity Activity `json:"activity"`
@@ -57705,7 +57705,7 @@ type LatestInboundList struct {
 	// what the DB CHECK would reject, rather than 500-ing at write time).
 	// `channel_provider` is the same kind of constraint in both directions: non-null exactly
 	// when `kind=message` (ADR-0107).
-	// **Custom fields**: the values of the workspace's activity custom fields arrive as extra
+	// **Custom fields**: the values of the company's activity custom fields arrive as extra
 	// top-level `cf_` keys. They are content, so they are absent whenever `content_state` is
 	// `withheld`.
 	LastInbound *Activity `json:"last_inbound,omitempty"`
@@ -57719,7 +57719,7 @@ type LatestInboundList struct {
 	// what the DB CHECK would reject, rather than 500-ing at write time).
 	// `channel_provider` is the same kind of constraint in both directions: non-null exactly
 	// when `kind=message` (ADR-0107).
-	// **Custom fields**: the values of the workspace's activity custom fields arrive as extra
+	// **Custom fields**: the values of the company's activity custom fields arrive as extra
 	// top-level `cf_` keys. They are content, so they are absent whenever `content_state` is
 	// `withheld`.
 	LastOutbound *Activity `json:"last_outbound,omitempty"`
@@ -58404,8 +58404,8 @@ type LegalEntity struct {
 
 	// SignatureTemplate The mail signature layout of a sender assigned to this entity, with the placeholders
 	// of `EmailSignatureTemplate.template`, up to 4000 characters. Null means the
-	// workspace's template. Always null on the default entity, which signs with the
-	// workspace's template (`/email-signature-template`).
+	// company's template. Always null on the default entity, which signs with the
+	// company's template (`/email-signature-template`).
 	SignatureTemplate *string   `json:"signature_template,omitempty"`
 	UpdatedAt         time.Time `json:"updated_at"`
 
@@ -58716,7 +58716,7 @@ type LicenseEntitlement struct {
 	// claims existed. Such a license verifies exactly like any other, so a client renders the
 	// rows it has rather than placeholders for the ones it does not.
 	//
-	// The two verdicts are the server's, so a client cannot arrive at a different answer
+	// The two results are the server's, so a client cannot arrive at a different answer
 	// than the one the installation acts on. `in_grace` says the license is past its expiry
 	// and still accepted — it works today and will stop. `renewal_due` says expiry is near
 	// enough to act on; the window is the same 90 days the module's grace period runs for,
@@ -58751,7 +58751,7 @@ type LicenseEntitlement struct {
 	// `state` is `absent` on a production installation that has been set up; a development or
 	// test installation runs unlicensed with no trial.
 	//
-	// The trial starts when the installation's oldest workspace was created, archived ones
+	// The trial starts when the installation's oldest company was created, archived ones
 	// included, and lasts 14 days, with no grace period. Once `ended` is true, and until a
 	// license is configured, every agent tool call is refused with `trial_ended`, and so is
 	// every HTTP change except these: the license routes, `POST /v1/exports`, the data-subject
@@ -58772,7 +58772,7 @@ type LicenseEntitlementState string
 // claims existed. Such a license verifies exactly like any other, so a client renders the
 // rows it has rather than placeholders for the ones it does not.
 //
-// The two verdicts are the server's, so a client cannot arrive at a different answer
+// The two results are the server's, so a client cannot arrive at a different answer
 // than the one the installation acts on. `in_grace` says the license is past its expiry
 // and still accepted — it works today and will stop. `renewal_due` says expiry is near
 // enough to act on; the window is the same 90 days the module's grace period runs for,
@@ -58817,7 +58817,7 @@ type LicenseHolder struct {
 // `state` is `absent` on a production installation that has been set up; a development or
 // test installation runs unlicensed with no trial.
 //
-// The trial starts when the installation's oldest workspace was created, archived ones
+// The trial starts when the installation's oldest company was created, archived ones
 // included, and lasts 14 days, with no grace period. Once `ended` is true, and until a
 // license is configured, every agent tool call is refused with `trial_ended`, and so is
 // every HTTP change except these: the license routes, `POST /v1/exports`, the data-subject
@@ -58831,7 +58831,7 @@ type LicenseTrial struct {
 	// EndsAt The first instant the trial no longer covers.
 	EndsAt time.Time `json:"ends_at"`
 
-	// StartedAt When the installation's workspace was created.
+	// StartedAt When the installation's company was created.
 	StartedAt time.Time `json:"started_at"`
 }
 
@@ -59689,7 +59689,7 @@ type MagicNotShown struct {
 	// `unknown_entity_type` — a CRM entity kind this build cannot scope, and therefore
 	// cannot safely show. Counted rather than served: showing a row this read cannot
 	// place is showing a row it cannot prove the reader may see. The count is
-	// workspace-wide machine changes to CRM entities, not the reader's own. Infrastructure
+	// company-wide machine changes to CRM entities, not the reader's own. Infrastructure
 	// and configuration audits do not contribute. It is reported only to a
 	// seat holding `ai_diagnostics` read. Its absence for any other seat is not a zero.
 	// `out_of_scope` — a row about a record outside the reader's own scope. Counted
@@ -59702,7 +59702,7 @@ type MagicNotShown struct {
 // `unknown_entity_type` — a CRM entity kind this build cannot scope, and therefore
 // cannot safely show. Counted rather than served: showing a row this read cannot
 // place is showing a row it cannot prove the reader may see. The count is
-// workspace-wide machine changes to CRM entities, not the reader's own. Infrastructure
+// company-wide machine changes to CRM entities, not the reader's own. Infrastructure
 // and configuration audits do not contribute. It is reported only to a
 // seat holding `ai_diagnostics` read. Its absence for any other seat is not a zero.
 // `out_of_scope` — a row about a record outside the reader's own scope. Counted
@@ -59738,13 +59738,13 @@ type MagicReceipt struct {
 	// in would turn internal churn into apparent value. Reporting the count instead
 	// means a preview showing five lines can never imply it is showing everything.
 	//
-	// The `unknown_entity_type` entry counts workspace-wide machine changes to CRM entities
+	// The `unknown_entity_type` entry counts company-wide machine changes to CRM entities
 	// this build cannot place. Infrastructure and configuration audits do not contribute
 	// to this count. It is reported only to a seat holding `ai_diagnostics` read. Its
 	// absence for any other seat is not a zero.
 	NotShown []MagicNotShown `json:"not_shown"`
 
-	// NotShownCountWithheld True when the reader cannot inspect workspace-wide unsupported record counts. Those counts are withheld; absence of described actions does not establish a complete receipt.
+	// NotShownCountWithheld True when the reader cannot inspect company-wide unsupported record counts. Those counts are withheld; absence of described actions does not establish a complete receipt.
 	NotShownCountWithheld *bool `json:"not_shown_count_withheld,omitempty"`
 
 	// Since The start of the window reported, resolved by the server. A client shows it, because "nothing happened" over an hour and over a day are different claims.
@@ -60158,7 +60158,7 @@ type MeResponse struct {
 	// `team_oversight.read`; `teams_led` for a lead, who opens the teams they are on;
 	// `none` for everyone else, a read-only seat included. Separate from a worklist's
 	// `scope_options`, because the `team` worklist is the team's live work and the
-	// week is a lead's verdict on named colleagues. `GET /me` and `GET /worklist` both
+	// week is a lead's result on named colleagues. `GET /me` and `GET /worklist` both
 	// carry it, from one rule. Absent from an older server, which a client reads as
 	// `none`.
 	TeamWeek *TeamWeekReach       `json:"team_week,omitempty"`
@@ -60212,7 +60212,7 @@ type MeetingBrief struct {
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
 	// lane. `deterministic` — the structured fallback, used when no lane is configured,
-	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// the company's AI budget is exhausted, the model call fails, or the checks the
 	// surface runs refuse the model's answer. Never silently interchangeable: a reader
 	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
@@ -60267,11 +60267,11 @@ type MeetingBriefSection struct {
 	// `goal` — the single next-step target; it leads because burying the ask is the
 	// canonical prep failure.
 	// `what_changed` — what happened after the READER last dealt with this deal's contacts:
-	// promises made, objections raised, decisions taken, conversations held, files that
+	// commitments made, objections raised, decisions taken, conversations held, files that
 	// changed hands. Its first line names the baseline; when the reader has never dealt
 	// with them it says so ("first contact") rather than "nothing changed".
 	// `attendees` — who is in the room, with the first-timers flagged.
-	// `commitments` — what was promised, ours and theirs, each with its source and status.
+	// `commitments` — what was agreed, ours and theirs, each with its source and status.
 	// `deal_state` — where the deal stands: last conversation, objections, open questions.
 	// `risks` — watch-outs; absent rather than empty when there are none.
 	// `talking_points` — each tied to a specific captured statement.
@@ -60290,11 +60290,11 @@ type MeetingBriefSection struct {
 // `goal` — the single next-step target; it leads because burying the ask is the
 // canonical prep failure.
 // `what_changed` — what happened after the READER last dealt with this deal's contacts:
-// promises made, objections raised, decisions taken, conversations held, files that
+// commitments made, objections raised, decisions taken, conversations held, files that
 // changed hands. Its first line names the baseline; when the reader has never dealt
 // with them it says so ("first contact") rather than "nothing changed".
 // `attendees` — who is in the room, with the first-timers flagged.
-// `commitments` — what was promised, ours and theirs, each with its source and status.
+// `commitments` — what was agreed, ours and theirs, each with its source and status.
 // `deal_state` — where the deal stands: last conversation, objections, open questions.
 // `risks` — watch-outs; absent rather than empty when there are none.
 // `talking_points` — each tied to a specific captured statement.
@@ -60446,7 +60446,7 @@ type MeetingPlan struct {
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
 	// lane. `deterministic` — the structured fallback, used when no lane is configured,
-	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// the company's AI budget is exhausted, the model call fails, or the checks the
 	// surface runs refuse the model's answer. Never silently interchangeable: a reader
 	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
@@ -60582,7 +60582,7 @@ type MeetingPlanQuestion struct {
 // summary in front at `outline`, so a half-built plan never displaces what already worked.
 type MeetingPlanReadiness string
 
-// MeetingPlanResponse What to say, what to show, and what not to promise. Three sentences rather than a paragraph, because a rep reads this while walking.
+// MeetingPlanResponse What to say, what to show, and what not to commitment. Three sentences rather than a paragraph, because a rep reads this while walking.
 type MeetingPlanResponse struct {
 	Avoid string `json:"avoid"`
 	Say   string `json:"say"`
@@ -60591,7 +60591,7 @@ type MeetingPlanResponse struct {
 
 // MeetingPlanRisk The one thing that can change this conversation, and what to do when it does.
 type MeetingPlanRisk struct {
-	// ResponsePlan What to say, what to show, and what not to promise. Three sentences rather than a paragraph, because a rep reads this while walking.
+	// ResponsePlan What to say, what to show, and what not to commitment. Three sentences rather than a paragraph, because a rep reads this while walking.
 	ResponsePlan MeetingPlanResponse  `json:"response_plan"`
 	Text         CompanyBriefSentence `json:"text"`
 }
@@ -60952,7 +60952,7 @@ type MorningBrief struct {
 	// Stored with the run rather than resolved on read: the base currency can still be changed until deals freeze it, so a norm computed against EUR must not later be captioned with the USD in force by then. Absent on a run assembled before this field existed — a brief is one row per rep per local day, so those age out within a day.
 	RevenueNormCurrency *string `json:"revenue_norm_currency,omitempty"`
 
-	// RevenueNormMinor The workspace-P90 (or fallback) base value the revenue factor normalized against.
+	// RevenueNormMinor The company-P90 (or fallback) base value the revenue factor normalized against.
 	RevenueNormMinor *int64 `json:"revenue_norm_minor,omitempty"`
 }
 
@@ -61059,12 +61059,12 @@ type MorningBriefItemLineage struct {
 // MorningDigest The CAP-DDL-6 payload: what capture did overnight and what awaits the human (CAP-WIRE-6).
 type MorningDigest struct {
 	Capture struct {
-		// ActivitiesCreated Number of mail activities from the reader's own imports in the window that are live, unrestricted and readable by the workspace. Equal to messages_synced by definition.
+		// ActivitiesCreated Number of mail activities from the reader's own imports in the window that are live, unrestricted and readable by the company. Equal to messages_synced by definition.
 		ActivitiesCreated *int `json:"activities_created,omitempty"`
 		CompaniesCreated  *int `json:"companies_created,omitempty"`
 		ContactsCreated   *int `json:"contacts_created,omitempty"`
 
-		// MessagesSynced Number of mail activities from the reader's own imports in the window that are live, unrestricted and readable by the workspace. Equal to activities_created by definition.
+		// MessagesSynced Number of mail activities from the reader's own imports in the window that are live, unrestricted and readable by the company. Equal to activities_created by definition.
 		MessagesSynced *int `json:"messages_synced,omitempty"`
 	} `json:"capture"`
 	Connectors []struct {
@@ -61078,7 +61078,7 @@ type MorningDigest struct {
 
 	// Projects What moved on the bodies of work in the window, and which have gone quiet. Absent
 	// from a digest built without the section; each list is empty when nothing happened.
-	// Workspace-level like the counts above: a project is read by every seat holding the
+	// Company-level like the counts above: a project is read by every seat holding the
 	// grant.
 	Projects *struct {
 		// GoneQuiet The projects being pursued or delivered that nothing has been filed against for
@@ -61266,11 +61266,11 @@ type NewForecastShare struct {
 	// Kind `live` re-runs the reading under whoever opens it. `snapshot` serves a frozen state, re-summed over the rows that reader may see.
 	Kind NewForecastShareKind `json:"kind"`
 
-	// ScopeId Whose forecast, for a team or owner scope. Refused with the workspace scope, which names no subject.
+	// ScopeId Whose forecast, for a team or owner scope. Refused with the `workspace` scope, which names no subject.
 	ScopeId   *openapi_types.UUID        `json:"scope_id,omitempty"`
 	ScopeKind *NewForecastShareScopeKind `json:"scope_kind,omitempty"`
 
-	// SnapshotId The frozen state a snapshot share serves. Required for `snapshot` and refused for `live`, which has none — a snapshot share with no snapshot would fall back to serving live data, a different promise from the one its kind makes.
+	// SnapshotId The frozen state a snapshot share serves. Required for `snapshot` and refused for `live`, which has none — a snapshot share with no snapshot would fall back to serving live data, different behavior from what its kind guarantees.
 	SnapshotId *openapi_types.UUID `json:"snapshot_id,omitempty"`
 
 	// Target Which reading the link opens.
@@ -61654,7 +61654,7 @@ type NotificationItem struct {
 		// recipient's own account settings), `retained_email_signature` (the departed member's
 		// signature in the controller review), `activity` (open the retained note in its
 		// drawer), `legal_entity` (Company settings), `signature_template` (Company
-		// settings; `id` identifies the erasure whose review flagged the workspace template),
+		// settings; `id` identifies the erasure whose review flagged the company template),
 		// or `approval_history` (the audit log narrowed to the approval `id`).
 		Type string `json:"type"`
 	} `json:"target,omitempty"`
@@ -61805,7 +61805,7 @@ type Offer struct {
 	// NetTcvMinor The total the buyer commits to: one-off lines in full, plus each recurring line's per-period net multiplied by the periods committed. A recurring line with no settled term contributes nothing, because there is no committed total until somebody says how long.
 	NetTcvMinor *int64 `json:"net_tcv_minor,omitempty"`
 
-	// OfferNumber Human-facing Angebot number, minted server-side, unique per workspace (with revision).
+	// OfferNumber Human-facing Angebot number, minted server-side, unique per company (with revision).
 	OfferNumber *string `json:"offer_number,omitempty"`
 
 	// PdfAssetRef Rendered PDF ref, set by renderOffer. Null, as are buyer_company_id and buyer_snapshot, for a reader who cannot open the buyer company; cleared when a draft's buyer changes.
@@ -61824,7 +61824,7 @@ type Offer struct {
 	// TaxMinor Σ line taxes; derived, never client-set. Zero when money_withheld.
 	TaxMinor *int64 `json:"tax_minor,omitempty"`
 
-	// TemplateId The offer_template used for locale/layout at render time; unset falls back to the workspace's default template for the offer's locale.
+	// TemplateId The offer_template used for locale/layout at render time; unset falls back to the company's default template for the offer's locale.
 	TemplateId *openapi_types.UUID `json:"template_id,omitempty"`
 	TermsText  *string             `json:"terms_text,omitempty"`
 	UpdatedAt  time.Time           `json:"updated_at"`
@@ -61962,7 +61962,7 @@ type OfferListResponse struct {
 	Page PageInfo `json:"page"`
 }
 
-// OfferTemplate A branded, workspace-governed DE/EN PDF layout for offers (data-model §12.6). Mirrors the `offer_template` table. Deliberately carries no source/captured_by — like CustomField, this is workspace-authored config, not a captured record; provenance lives in the audit row, not this schema.
+// OfferTemplate A branded, company-governed DE/EN PDF layout for offers (data-model §12.6). Mirrors the `offer_template` table. Deliberately carries no source/captured_by — like CustomField, this is company-authored config, not a captured record; provenance lives in the audit row, not this schema.
 type OfferTemplate struct {
 	ArchivedAt *time.Time         `json:"archived_at,omitempty"`
 	CreatedAt  time.Time          `json:"created_at"`
@@ -61977,7 +61977,7 @@ type OfferTemplate struct {
 	// Locale DE/EN at launch (de-DE, en-US); drives the rendered PDF label set.
 	Locale string `json:"locale"`
 
-	// Name Unique per workspace among live (non-archived) templates.
+	// Name Unique per company among live (non-archived) templates.
 	Name      string    `json:"name"`
 	UpdatedAt time.Time `json:"updated_at"`
 
@@ -62176,7 +62176,7 @@ type OnboardingStateSourceMode string
 // OnboardingStateStep defines model for OnboardingState.Step.
 type OnboardingStateStep string
 
-// OpenCommitments What `review_commitments` answers: the open promises, overdue first, as of one instant.
+// OpenCommitments What `review_commitments` answers: the open commitments, overdue first, as of one instant.
 type OpenCommitments struct {
 	AsOf        string            `json:"as_of"`
 	Commitments []AgentCommitment `json:"commitments"`
@@ -62679,7 +62679,7 @@ type Pipeline struct {
 	CreatedAt  *time.Time         `json:"created_at,omitempty"`
 	Id         openapi_types.UUID `json:"id"`
 
-	// IsDefault At most one default per workspace.
+	// IsDefault At most one default per company.
 	IsDefault bool       `json:"is_default"`
 	Name      string     `json:"name"`
 	Position  int        `json:"position"`
@@ -62734,14 +62734,14 @@ type PipelineStageRung struct {
 	// Subject Only under the payload posture, and only from the caller's own stored rows.
 	Subject *string `json:"subject,omitempty"`
 
-	// SubjectKind WHAT this rung's answer is about. Required because the stages do not share a subject: the verdict is asked once per SENDER, so rendering it without saying whose would read as a claim about this one message.
+	// SubjectKind WHAT this rung's answer is about. Required because the stages do not share a subject: the result is asked once per SENDER, so rendering it without saying whose would read as a claim about this one message.
 	SubjectKind PipelineStageRungSubjectKind `json:"subject_kind"`
 }
 
 // PipelineStageRungStatus `not_applicable` says the stage did not apply. `unknown` says this surface cannot establish what happened — past the retention window those are different claims and only one is honest. `unknown` is also what a non-owner gets, unconditionally, so that its presence discloses nothing: a swept window and rows that are not yours produce the same absence, and the reader is frequently the message's own owner whose rows were deleted rather than hidden. `not_reported` says this surface does not report the stage at all; `reason` says which kind.
 type PipelineStageRungStatus string
 
-// PipelineStageRungSubjectKind WHAT this rung's answer is about. Required because the stages do not share a subject: the verdict is asked once per SENDER, so rendering it without saying whose would read as a claim about this one message.
+// PipelineStageRungSubjectKind WHAT this rung's answer is about. Required because the stages do not share a subject: the result is asked once per SENDER, so rendering it without saying whose would read as a claim about this one message.
 type PipelineStageRungSubjectKind string
 
 // PipelineTrace One message's journey through the ingress pipeline, as a member reads it. Assembled from two sources: rows capture stored, and live state the pipeline's own modules already keep. Nothing here is a copy of a durable record — a copy would be a second source that can disagree with the first.
@@ -62806,7 +62806,7 @@ type PreferenceCenter struct {
 		// side of the consent line — on a marketing lane nobody has opted in, on direct correspondence
 		// nobody has objected — so a client that rendered the raw state called a live lane "not
 		// subscribed". Render this; never re-derive it. It is a recorded decision, never a delivery
-		// verdict: whether mail can actually be sent also depends on facts this surface must not disclose.
+		// result: whether mail can actually be sent also depends on facts this surface must not disclose.
 		Choice PreferenceCenterPurposesChoice `json:"choice"`
 
 		// GrantNeedsConfirmation DEPRECATED, kept for one release as the inverse of `can_opt_in` on unlocked purposes. Read
@@ -62852,7 +62852,7 @@ type PreferenceCenter struct {
 // side of the consent line — on a marketing lane nobody has opted in, on direct correspondence
 // nobody has objected — so a client that rendered the raw state called a live lane "not
 // subscribed". Render this; never re-derive it. It is a recorded decision, never a delivery
-// verdict: whether mail can actually be sent also depends on facts this surface must not disclose.
+// result: whether mail can actually be sent also depends on facts this surface must not disclose.
 type PreferenceCenterPurposesChoice string
 
 // PreferenceCenterPurposesState The raw stored state. Prefer `choice`, which reads it correctly for the purpose class.
@@ -63032,7 +63032,7 @@ type PrivacyInformationController struct {
 //
 // It carries LESS than the record page: the acquisition and the purposes, not the contact's
 // employer, phone, address or provenance trail. Telling somebody what is held is a different
-// act from showing them their file, and this message promised the first.
+// act from showing them their file, and this message described the first.
 type PrivacyInformationPage struct {
 	// AcquiredAs How this contact was obtained, in the closed vocabulary
 	// `contact_acquisition_evidence.kind` uses. It is what Art. 14(2)(f) requires: the source
@@ -63204,7 +63204,7 @@ type Product struct {
 	Id             openapi_types.UUID `json:"id"`
 	Name           string             `json:"name"`
 
-	// Sku Optional; unique per workspace while live.
+	// Sku Optional; unique per company while live.
 	Sku    *string `json:"sku,omitempty"`
 	Source string  `json:"source"`
 
@@ -63344,7 +63344,7 @@ type Project struct {
 	// Key The short handle a human writes in a subject line. Letter-led and bounded so it can never be a bare number, which would match dates, amounts and order numbers. Unique among LIVE projects; archiving frees it.
 	Key *string `json:"key,omitempty"`
 
-	// LastActivityAt The newest workspace-audience activity filed under the project, maintained from the timeline on link write. A task never counts, whoever filed it. It is a read accelerator that a rebuild must reproduce. A message limited to its participants does not move it, even for a reader who may read that message: one number every reader sees can only count what every reader may see.
+	// LastActivityAt The newest company-audience activity filed under the project, maintained from the timeline on link write. A task never counts, whoever filed it. It is a read accelerator that a rebuild must reproduce. A message limited to its participants does not move it, even for a reader who may read that message: one number every reader sees can only count what every reader may see.
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
 
 	// LastActivityPrecision How to read `last_activity_at`, from the activity it names. A day entry counts its quiet days from its own date. Absent when that is null.
@@ -63659,7 +63659,7 @@ type ProjectFilingUndoDecision struct {
 	Redacted *bool `json:"redacted,omitempty"`
 }
 
-// ProjectHandoff What `prepare_handoff` answers: the project, the deals it was sold through, the stakeholders, the open promises and the gaps.
+// ProjectHandoff What `prepare_handoff` answers: the project, the deals it was sold through, the stakeholders, the open commitments and the gaps.
 type ProjectHandoff struct {
 	AsOf      string              `json:"as_of"`
 	CompanyId *openapi_types.UUID `json:"company_id,omitempty"`
@@ -63764,14 +63764,14 @@ type ProjectScope struct {
 	Total     *int               `json:"total,omitempty" minimum:"0"`
 }
 
-// PromiseTakeOver A promise one colleague took over, and the task it became.
+// PromiseTakeOver A commitment one colleague took over, and the task it became.
 type PromiseTakeOver struct {
 	ClaimId       openapi_types.UUID `json:"claim_id"`
 	TakenAt       time.Time          `json:"taken_at"`
 	TakenByName   *string            `json:"taken_by_name,omitempty"`
 	TakenByUserId openapi_types.UUID `json:"taken_by_user_id"`
 
-	// TaskActivityId The task the promise became, owned by `taken_by_user_id`.
+	// TaskActivityId The task the commitment became, owned by `taken_by_user_id`.
 	TaskActivityId openapi_types.UUID `json:"task_activity_id"`
 }
 
@@ -63870,7 +63870,7 @@ type PromoteLeadResponse struct {
 // live set.
 type Provider = string
 
-// ProviderCategoryCost What one category costs, per credit pool. `free` is the whole worst case being nothing — a category free to REQUEST but carrying a charged fallback is not free, and calling it so would put a spend behind a control that promises none.
+// ProviderCategoryCost What one category costs, per credit pool. `free` is the whole worst case being nothing — a category free to REQUEST but carrying a charged fallback is not free, and calling it so would put a spend behind a control that commitments none.
 type ProviderCategoryCost struct {
 	Category string `json:"category"`
 
@@ -64054,7 +64054,7 @@ type ProviderLookupBacklog struct {
 type ProviderMonthlySpend struct {
 	// ChargedCredits Credits consumed: the provider's actual charge where it reported one, otherwise
 	// the reservation still held. An unreconciled hold counts as charged, because
-	// assuming a refund nobody promised understates the bill.
+	// assuming a refund nobody agreed understates the bill.
 	ChargedCredits int `json:"charged_credits" minimum:"0"`
 
 	// HeldCredits Credits held by runs in `submission_unknown` — outcome never learned (PI-AC-4).
@@ -64817,8 +64817,8 @@ type RecordCommunicationContextRequest struct {
 // source review answered "met face to face" does; for anyone else they stay open.
 type RecordCommunicationContextRequestKind string
 
-// RecordConfirmationPage One contact's own view of what the workspace holds about them, for the no-login confirm page.
-// A purpose-built projection and never the Contact360 read model, which carries this workspace's
+// RecordConfirmationPage One contact's own view of what the company holds about them, for the no-login confirm page.
+// A purpose-built projection and never the Contact360 read model, which carries this company's
 // working notes — owner, lifecycle, scores — rather than the subject's own data.
 type RecordConfirmationPage struct {
 	// AsksNews False when the recipient's country bars asking about news in a details check. The page
@@ -64890,7 +64890,7 @@ type RecordConversationClaimRequest struct {
 	// Kind The eight kinds one extraction mechanism produces. They share a
 	// lifecycle — extracted → cited → correctable → dismissible — and differ only here.
 	//
-	// `commitment_ours` / `commitment_theirs` — a promise, by us or by them.
+	// `commitment_ours` / `commitment_theirs` — a commitment, by us or by them.
 	// `open_question` — an unanswered business question.
 	// `decision` — an agreed choice, historical memory unless corrected.
 	// `priority` / `objection` / `success_criterion` / `decision_process` — the
@@ -65303,7 +65303,7 @@ type RejectCompanyResponse struct {
 
 	// Domain One domain and where its company question stands. `suppressed` refuses it a company —
 	// a vendor or bulk sender the business does not sell to — while `admitted` is a human
-	// deliberately letting one in, which no later verdict may undo.
+	// deliberately letting one in, which no later result may undo.
 	//
 	// `undecided` is the third state and it is not a decision: the question was asked, the
 	// machine declined to answer it, and nobody has since.
@@ -65917,7 +65917,7 @@ type ReportRun struct {
 	// Query The question as it was saved, with one addition: `limit` is always present and is the bound this read applied, including the default when the asker named none.
 	Query AnalyticsQuery `json:"query"`
 
-	// StoredFloor The group floor that judged the ORIGINAL answer. Reported, never applied — this read is floored by the installation's current setting. Two runs served under different floors make different promises about what is missing.
+	// StoredFloor The group floor that judged the ORIGINAL answer. Reported, never applied — this read is floored by the installation's current setting. Two runs served under different floors provide different guarantees about missing data.
 	StoredFloor int `json:"stored_floor"`
 }
 
@@ -65950,11 +65950,11 @@ type ReportRunSummary struct {
 type ReportScope struct {
 	Id *openapi_types.UUID `json:"id,omitempty"`
 
-	// Kind Whose figures the report covers: one owner, one team, or the whole workspace. id names the owner or team.
+	// Kind Whose figures the report covers: one owner, one team, or the whole company. id names the owner or team.
 	Kind ReportScopeKind `json:"kind"`
 }
 
-// ReportScopeKind Whose figures the report covers: one owner, one team, or the whole workspace. id names the owner or team.
+// ReportScopeKind Whose figures the report covers: one owner, one team, or the whole company. id names the owner or team.
 type ReportScopeKind string
 
 // ReportSetupObjective defines model for ReportSetupObjective.
@@ -65971,7 +65971,7 @@ type ReportSetupProposal struct {
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
 	// lane. `deterministic` — the structured fallback, used when no lane is configured,
-	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// the company's AI budget is exhausted, the model call fails, or the checks the
 	// surface runs refuse the model's answer. Never silently interchangeable: a reader
 	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
@@ -67035,7 +67035,7 @@ type RequestLegalReviewRequest struct {
 // RequestReply We replied after a request, and our reply is still the newest message on its thread.
 // One rule decides it, so the deal card, its risk line and its next move agree on whose
 // move it is. The request itself stays open until its reminder is done or a settlement
-// verdict records it settled.
+// result records it settled.
 type RequestReply struct {
 	// ByReader The reader sent the reply. False when a colleague did.
 	ByReader bool `json:"by_reader"`
@@ -67058,7 +67058,7 @@ type RequestReply struct {
 	// RequestActivityId The request we replied to.
 	RequestActivityId openapi_types.UUID `json:"request_activity_id"`
 
-	// StillAsked What the settlement pass found still asked, quoted from the request. Absent when no still_owed verdict quoted one.
+	// StillAsked What the settlement pass found still asked, quoted from the request. Absent when no still_owed result quoted one.
 	StillAsked *string `json:"still_asked,omitempty"`
 }
 
@@ -67096,7 +67096,7 @@ type ResolveInputCheck struct {
 // ResolveInputCheckOutcome What kind of answer this is. `condition_cleared` is absent on purpose: it is the check's own, and a contact naming it would be saying the condition stopped being true without anything having looked. `separate` answers only a `duplicate_motion` finding, says its two deals are not one buying motion, and has no expiry: the pair is not flagged again.
 type ResolveInputCheckOutcome string
 
-// ResponseMetrics What the workspace did with its work over one window. Three questions: how fast it
+// ResponseMetrics What the company did with its work over one window. Three questions: how fast it
 // answered what it answered, how much it put down instead, and how often a deal the
 // queue called material and at risk got a next step booked the same day.
 //
@@ -67107,7 +67107,7 @@ type ResolveInputCheckOutcome string
 type ResponseMetrics struct {
 	// Answered How many inbound sales messages got a reply in the window. It is the
 	// denominator `median_minutes` is worth reading against: a fast median over three
-	// answered messages says less about the workspace than a slower one over three
+	// answered messages says less about the company than a slower one over three
 	// hundred.
 	Answered int `json:"answered" minimum:"0"`
 
@@ -67131,7 +67131,7 @@ type ResponseMetrics struct {
 	// The set is the one the day's FIRST pass judged: a pass runs hourly, the first one
 	// after local midnight records the day, and later passes that day add nothing — so a
 	// deal turning at risk in the afternoon waits for tomorrow. The bar is the
-	// workspace's own, the median of the whole at-risk pipeline over every amount,
+	// company's own, the median of the whole at-risk pipeline over every amount,
 	// judged once for everybody; it cannot be recomputed for a past day, so nothing
 	// before `at_risk_recorded_since` exists to count.
 	//
@@ -67163,11 +67163,11 @@ type ResponseMetrics struct {
 	// less judgement the more of it happened.
 	//
 	// Over the conversations THIS caller may open, like every figure beside it. Two
-	// readers of the same workspace can therefore see different totals here, and each
+	// readers of the same company can therefore see different totals here, and each
 	// is answering "how much of the work I can see is being put down".
 	Disposed int `json:"disposed" minimum:"0"`
 
-	// DisposedNotSales How many of those were the workspace-wide judgement. Its own figure because it
+	// DisposedNotSales How many of those were the company-wide judgement. Its own figure because it
 	// is the one that costs everybody: the other two hide a row from one reader, this
 	// one hides the conversation from all of them and does not lift.
 	DisposedNotSales int `json:"disposed_not_sales" minimum:"0"`
@@ -67502,10 +67502,10 @@ type Role struct {
 	// ArchivedAt When the role was archived. Absent or null for a live role.
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
 
-	// IsSystem True for a role the workspace bootstrap seeded and the RBAC migrations top up. It is NOT an immutability flag — a system role's grants are editable through `setRoleObjectGrant`, which is what makes granting an extension object possible at all on an installation that never defined a custom role. A client may surface it as "shipped with the product", never as "read-only".
+	// IsSystem True for a role the company bootstrap seeded and the RBAC migrations top up. It is NOT an immutability flag — a system role's grants are editable through `setRoleObjectGrant`, which is what makes granting an extension object possible at all on an installation that never defined a custom role. A client may surface it as "shipped with the product", never as "read-only".
 	IsSystem bool `json:"is_system"`
 
-	// Key The stable key a role assignment and every refusal names (`admin`, `rep`, …). Unique per workspace, and the path segment `setRoleObjectGrant` addresses.
+	// Key The stable key a role assignment and every refusal names (`admin`, `rep`, …). Unique per company, and the path segment `setRoleObjectGrant` addresses.
 	Key string `json:"key"`
 
 	// Name The operator-facing label. Display only — nothing resolves a role by it.
@@ -67524,7 +67524,7 @@ type Role struct {
 // RoleRowScope Whose records the grants reach: the holder's own, those of everyone sharing a live team with them, or every record. A document storing none reads as `own`, the narrowest, which is how authentication reads it too.
 type RoleRowScope string
 
-// RoleDirectory Every role this workspace defines. Not paginated and deliberately not: the set is bounded by what an operator created (six seeded, plus a handful at most), the editor needs all of it to render, and a cursor over it would be ceremony over a complete answer.
+// RoleDirectory Every role this company defines. Not paginated and deliberately not: the set is bounded by what an operator created (six seeded, plus a handful at most), the editor needs all of it to render, and a cursor over it would be ceremony over a complete answer.
 type RoleDirectory struct {
 	Roles []Role `json:"roles"`
 
@@ -67643,7 +67643,7 @@ type SalesAssessment struct {
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
 	// lane. `deterministic` — the structured fallback, used when no lane is configured,
-	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// the company's AI budget is exhausted, the model call fails, or the checks the
 	// surface runs refuse the model's answer. Never silently interchangeable: a reader
 	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy  WrittenBy                `json:"generated_by"`
@@ -67816,7 +67816,7 @@ type SalesGoalPlanState string
 type SalesGoalProposal struct {
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
 	// lane. `deterministic` — the structured fallback, used when no lane is configured,
-	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// the company's AI budget is exhausted, the model call fails, or the checks the
 	// surface runs refuse the model's answer. Never silently interchangeable: a reader
 	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
@@ -68126,7 +68126,7 @@ type SalesProgressDeal struct {
 	// Deal A deal. Mirrors the `deal` table.
 	Deal Deal `json:"deal"`
 
-	// NextTask The earliest-due open task on the deal that every workspace reader may see. Absent when there is none.
+	// NextTask The earliest-due open task on the deal that every company reader may see. Absent when there is none.
 	NextTask *SalesProgressNextTask `json:"next_task,omitempty"`
 
 	// SaleType What the deal's priced lines sell. `partly_classified` when lines of another kind or an unpriced remainder sit beside the classified ones, `unclassified` when no line is a product or a service, or the lines add up to more than the deal. Absent when the deal's amount is masked from the caller.
@@ -68321,10 +68321,10 @@ type SaveEmailSignatureRequest struct {
 	// expanding placeholders. Empty sanitized content uses the usual fallback.
 	Html *string `json:"html,omitempty"`
 
-	// Phone The member's phone number, for the workspace template. Omitted leaves it as it is.
+	// Phone The member's phone number, for the company template. Omitted leaves it as it is.
 	Phone *string `json:"phone,omitempty"`
 
-	// Title The member's title, for the workspace template. Omitted leaves it as it is.
+	// Title The member's title, for the company template. Omitted leaves it as it is.
 	Title *string `json:"title,omitempty"`
 }
 
@@ -68405,10 +68405,10 @@ type SaveRetainedEmailSignatureRequest struct {
 	// expanding placeholders. Empty sanitized content uses the usual fallback.
 	Html *string `json:"html,omitempty"`
 
-	// Phone The member's phone number, for the workspace template. Omitted leaves it as it is.
+	// Phone The member's phone number, for the company template. Omitted leaves it as it is.
 	Phone *string `json:"phone,omitempty"`
 
-	// Title The member's title, for the workspace template. Omitted leaves it as it is.
+	// Title The member's title, for the company template. Omitted leaves it as it is.
 	Title *string `json:"title,omitempty"`
 }
 
@@ -68486,7 +68486,7 @@ type ScheduledSend struct {
 	AttachmentsUnavailable *int `json:"attachments_unavailable,omitempty" minimum:"1"`
 
 	// Bcc Visible to the SENDER, who is the only contact this record is readable by. A scheduled
-	// message's blind-copy list is not workspace-readable the way a sent activity is.
+	// message's blind-copy list is not company-readable the way a sent activity is.
 	Bcc  *[]openapi_types.Email `json:"bcc,omitempty"`
 	Body *string                `json:"body,omitempty"`
 	Cc   *[]openapi_types.Email `json:"cc,omitempty"`
@@ -68739,14 +68739,14 @@ type SchedulingTeamMember struct {
 
 	// State `pending`: the member has not confirmed yet. `confirmed`: the member takes part.
 	// `left`: the member left the link; remove them to take bookings again. `unavailable`:
-	// the member left the workspace or Margince cannot read their calendar.
+	// the member left the company or Margince cannot read their calendar.
 	State  *SchedulingTeamMemberState `json:"state,omitempty"`
 	UserId openapi_types.UUID         `json:"user_id"`
 }
 
 // SchedulingTeamMemberState `pending`: the member has not confirmed yet. `confirmed`: the member takes part.
 // `left`: the member left the link; remove them to take bookings again. `unavailable`:
-// the member left the workspace or Margince cannot read their calendar.
+// the member left the company or Margince cannot read their calendar.
 type SchedulingTeamMemberState string
 
 // SchedulingTeamRequest defines model for SchedulingTeamRequest.
@@ -69397,12 +69397,12 @@ type SendAuthorizationPreviewRecipient struct {
 	Verdict SendAuthorizationPreviewRecipientVerdict `json:"verdict"`
 
 	// WouldRefuse Whether this answer actually STOPS the message on this installation. Not the same
-	// question as the verdict, and the only one a surface should draw a refusal from.
+	// question as the result, and the only one a surface should draw a refusal from.
 	//
-	// Three things decide it and the engine already weighs them together: the verdict,
+	// Three things decide it and the engine already weighs them together: the result,
 	// the rollout mode for the resolved category, and whether the reason is one no mode
 	// may soften. Under `observe` a `deny` is recorded and the send still goes, so a
-	// composer reading the verdict alone would show a rollout position as a rule and
+	// composer reading the result alone would show a rollout position as a rule and
 	// talk a rep out of a message that would have gone.
 	WouldRefuse *bool `json:"would_refuse,omitempty"`
 }
@@ -70153,11 +70153,11 @@ type SetMailPostureRequest struct {
 	// marked.
 	DefaultSender *bool `json:"default_sender,omitempty"`
 
-	// Posture See CaptureConnection.mail_posture. `shared` needs the workspace opt-in.
+	// Posture See CaptureConnection.mail_posture. `shared` needs the company opt-in.
 	Posture *SetMailPostureRequestPosture `json:"posture,omitempty"`
 }
 
-// SetMailPostureRequestPosture See CaptureConnection.mail_posture. `shared` needs the workspace opt-in.
+// SetMailPostureRequestPosture See CaptureConnection.mail_posture. `shared` needs the company opt-in.
 type SetMailPostureRequestPosture string
 
 // SetMyAgentGrantRequest The rep's answer for one scheduled agent.
@@ -70317,15 +70317,15 @@ type SettingsAvailability struct {
 
 // SettleClaimRequest How a claim finished.
 type SettleClaimRequest struct {
-	// Outcome `done` says the promised thing happened. `dismissed` says it no longer stands —
-	// the extractor read a promise into words that were not one, or the ask was
+	// Outcome `done` says the agreed action happened. `dismissed` says it no longer stands —
+	// the extractor read a commitment into words that were not one, or the ask was
 	// withdrawn. `open` is absent on purpose: this endpoint settles, and re-opening a
 	// settled claim is a different act nobody has asked for.
 	Outcome SettleClaimRequestOutcome `json:"outcome"`
 }
 
-// SettleClaimRequestOutcome `done` says the promised thing happened. `dismissed` says it no longer stands —
-// the extractor read a promise into words that were not one, or the ask was
+// SettleClaimRequestOutcome `done` says the agreed action happened. `dismissed` says it no longer stands —
+// the extractor read a commitment into words that were not one, or the ask was
 // withdrawn. `open` is absent on purpose: this endpoint settles, and re-opening a
 // settled claim is a different act nobody has asked for.
 type SettleClaimRequestOutcome string
@@ -70333,7 +70333,7 @@ type SettleClaimRequestOutcome string
 // ShareCaptureHoldHistoryResponse defines model for ShareCaptureHoldHistoryResponse.
 type ShareCaptureHoldHistoryResponse struct {
 	// Released How many of the caller's own imports stopped being held for this reason. Not the same
-	// as how many messages the workspace can now read: a message a colleague also holds
+	// as how many messages the company can now read: a message a colleague also holds
 	// stays limited, because the audience is the strictest answer across every seat that
 	// imported it. Zero means every message the caller's holds caught is held for some
 	// other reason too, or was captured before the product recorded more than one reason.
@@ -70380,7 +70380,7 @@ type SharedForecastView struct {
 	// AsOf The instant a snapshot share's state describes. Absent on a live share.
 	AsOf *time.Time `json:"as_of,omitempty"`
 
-	// Kind Which promise this view makes. A reader shown a frozen number needs to know it is frozen, and as of when.
+	// Kind What this view guarantees. A reader shown a frozen number needs to know it is frozen, and as of when.
 	Kind SharedForecastViewKind `json:"kind"`
 
 	// Readings Four money readings over one period, the counts that say what they leave out, and the frame they were computed in.
@@ -70391,10 +70391,10 @@ type SharedForecastView struct {
 	Withheld bool `json:"withheld"`
 }
 
-// SharedForecastViewKind Which promise this view makes. A reader shown a frozen number needs to know it is frozen, and as of when.
+// SharedForecastViewKind What this view guarantees. A reader shown a frozen number needs to know it is frozen, and as of when.
 type SharedForecastViewKind string
 
-// SharedGmailCredentials A Google Workspace service account the admin delegated `gmail.readonly` to.
+// SharedGmailCredentials A Google Company service account the admin delegated `gmail.readonly` to.
 type SharedGmailCredentials struct {
 	// ServiceAccountKey The JSON key file of the service account, as text. Sealed to the vault; never returned.
 	ServiceAccountKey *string `json:"service_account_key,omitempty"`
@@ -70432,7 +70432,7 @@ type SharedMailbox struct {
 	// Id The connection id. It stays the same across a disconnect and a reconnect.
 	Id openapi_types.UUID `json:"id"`
 
-	// MailVisibility `held` keeps its mail to the reader team and the message's own participants; `shared` opens it to the workspace.
+	// MailVisibility `held` keeps its mail to the reader team and the message's own participants; `shared` opens it to the company.
 	MailVisibility SharedMailboxMailVisibility `json:"mail_visibility"`
 	Provider       SharedMailboxProvider       `json:"provider"`
 
@@ -70447,7 +70447,7 @@ type SharedMailbox struct {
 	UnreadPeriod *CaptureUnreadPeriod `json:"unread_period,omitempty"`
 }
 
-// SharedMailboxMailVisibility `held` keeps its mail to the reader team and the message's own participants; `shared` opens it to the workspace.
+// SharedMailboxMailVisibility `held` keeps its mail to the reader team and the message's own participants; `shared` opens it to the company.
 type SharedMailboxMailVisibility string
 
 // SharedMailboxProvider defines model for SharedMailbox.Provider.
@@ -70891,7 +70891,7 @@ type Stage struct {
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
 	CreatedAt  *time.Time `json:"created_at,omitempty"`
 
-	// DealCount Live deals on this stage that the caller may see. Absent when the caller may not read deals, because a zero would claim the stage is empty. `archiveStage` refuses with `stage_occupied` on every live deal, counted whether or not the caller may see it, so a zero here does not promise the removal succeeds.
+	// DealCount Live deals on this stage that the caller may see. Absent when the caller may not read deals, because a zero would claim the stage is empty. `archiveStage` refuses with `stage_occupied` on every live deal, counted whether or not the caller may see it, so a zero here does not guarantee the removal succeeds.
 	DealCount *int `json:"deal_count,omitempty" minimum:"0"`
 
 	// ExitCriteria The stage's live exit criteria, split by whether each blocks a deal leaving.
@@ -71313,7 +71313,7 @@ type Tag struct {
 // TagColor defines model for Tag.Color.
 type TagColor string
 
-// TagDetail One tag with how much of the workspace carries it.
+// TagDetail One tag with how much of the company carries it.
 type TagDetail struct {
 	ArchivedAt  *time.Time         `json:"archived_at,omitempty"`
 	Color       *TagDetailColor    `json:"color,omitempty"`
@@ -71525,7 +71525,7 @@ type TeamBoardCounts struct {
 
 	// PromisesDue Assigned conversation commitments due by the instant the board was read.
 	// Only open, current commitment tasks count, under the same admission and age
-	// rules as the assignee's Worklist. Future and undated promises do not count.
+	// rules as the assignee's Worklist. Future and undated commitments do not count.
 	// This count is always read; zero means no visible commitments are due.
 	PromisesDue int `json:"promises_due"`
 
@@ -71569,7 +71569,7 @@ type TeamBoardMemberActivation string
 //
 // EVERY EXCEPTION NAMES ITS BASIS. `threshold` says what the row was judged against
 // — the policy state that decided it, never a number invented for the reading — so a
-// lead disputing the row can see the rule rather than the verdict alone. A condition
+// lead disputing the row can see the rule rather than the result alone. A condition
 // with no stated basis is a claim the reader cannot check, and this surface exists to
 // be checked.
 type TeamException struct {
@@ -71742,7 +71742,7 @@ type TeamMarginceOwnerlessDealReason string
 // `team_oversight.read`; `teams_led` for a lead, who opens the teams they are on;
 // `none` for everyone else, a read-only seat included. Separate from a worklist's
 // `scope_options`, because the `team` worklist is the team's live work and the
-// week is a lead's verdict on named colleagues. `GET /me` and `GET /worklist` both
+// week is a lead's result on named colleagues. `GET /me` and `GET /worklist` both
 // carry it, from one rule. Absent from an older server, which a client reads as
 // `none`.
 type TeamWeekReach string
@@ -72059,7 +72059,7 @@ type TechnicalEnrichStarted struct {
 	// the caller can be told honestly: River deduplicates by arguments, so pressing
 	// the button while a lookup is already in flight JOINS it — and the insert does
 	// not report which of the two happened. A `running` this endpoint could not tell
-	// apart from `queued` would be a promise the handler cannot keep.
+	// apart from `queued` would be a commitment the handler cannot keep.
 	Status TechnicalEnrichStartedStatus `json:"status"`
 }
 
@@ -72067,17 +72067,17 @@ type TechnicalEnrichStarted struct {
 // the caller can be told honestly: River deduplicates by arguments, so pressing
 // the button while a lookup is already in flight JOINS it — and the insert does
 // not report which of the two happened. A `running` this endpoint could not tell
-// apart from `queued` would be a promise the handler cannot keep.
+// apart from `queued` would be a commitment the handler cannot keep.
 type TechnicalEnrichStartedStatus string
 
 // TechnicalEnrichStatus What each public source last did for one account. Per lane rather than per run: the
-// three fail independently, so one verdict would hide which of them is stale.
+// three fail independently, so one result would hide which of them is stale.
 type TechnicalEnrichStatus struct {
 	CompanyId openapi_types.UUID    `json:"company_id"`
 	Lanes     []TechnicalEnrichLane `json:"lanes"`
 }
 
-// TelegramBusinessConnection One Telegram Business account the owner linked to the workspace's bot. Nothing from the account is stored until an admin approves it.
+// TelegramBusinessConnection One Telegram Business account the owner linked to the company's bot. Nothing from the account is stored until an admin approves it.
 type TelegramBusinessConnection struct {
 	// AccountId The owner's Telegram user id, the key a repeated link keeps its row by.
 	AccountId string `json:"accountId"`
@@ -72134,7 +72134,7 @@ type ThreadAudienceOutcome struct {
 	// Messages How many of the thread's messages you imported, and the decision reached.
 	Messages int `json:"messages"`
 
-	// Shared Whether the messages are now readable by the workspace. False after a share means
+	// Shared Whether the messages are now readable by the company. False after a share means
 	// somebody else still holds them.
 	Shared bool `json:"shared"`
 }
@@ -72240,7 +72240,7 @@ type TranscriptSummaryPoint struct {
 type TransferProjectOwnershipRequest struct {
 	FromOwnerId openapi_types.UUID `json:"from_owner_id"`
 
-	// ToOwnerId An active user of the workspace (422 otherwise).
+	// ToOwnerId An active user of the company (422 otherwise).
 	ToOwnerId openapi_types.UUID `json:"to_owner_id"`
 }
 
@@ -72446,7 +72446,7 @@ type UpdateAcquisitionSourceRequest struct {
 	SortOrder *int    `json:"sort_order,omitempty"`
 }
 
-// UpdateActivityRequest A sparse patch. The workspace's active activity custom fields travel as extra top-level `cf_` keys, and an explicit `null` clears one. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`. A value for a field that does not apply to the stored kind returns `422 field_not_valid_for_kind`; a `null` clears it all the same.
+// UpdateActivityRequest A sparse patch. The company's active activity custom fields travel as extra top-level `cf_` keys, and an explicit `null` clears one. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`. A value for a field that does not apply to the stored kind returns `422 field_not_valid_for_kind`; a `null` clears it all the same.
 type UpdateActivityRequest struct {
 	// AiAssisted True marks the activity's words as AI-assisted, when a model rewrote the subject or body this patch writes. The mark stays once set, so false and absent change nothing. Only a human sets it: an agent or a connector is refused with 422 on `ai_assisted`.
 	AiAssisted *bool               `json:"ai_assisted,omitempty"`
@@ -72598,7 +72598,7 @@ type UpdateCaptureSettingsRequest struct {
 	// InternalMail Only a human administrator may change source authorization. This authorizes future capture only, never a historical import.
 	InternalMail *UpdateInternalMailRequest `json:"internal_mail,omitempty"`
 
-	// MailSharing Toggle the workspace mail-sharing posture; affects correspondence captured from now on — mail, and chat on a transport whose credential belongs to one member.
+	// MailSharing Toggle the company mail-sharing posture; affects correspondence captured from now on — mail, and chat on a transport whose credential belongs to one member.
 	MailSharing *bool `json:"mail_sharing,omitempty"`
 
 	// MailSyncIntervalSeconds Set how long a mailbox waits between syncs, in seconds.
@@ -72622,7 +72622,7 @@ type UpdateCaptureSettingsRequest struct {
 	// SiteReadWallSeconds Set the time limit of one website crawl, in seconds.
 	SiteReadWallSeconds *int `json:"site_read_wall_seconds,omitempty" maximum:"600" minimum:"30"`
 
-	// VerdictPassCap Set how many unresolved senders one counterparty verdict run judges.
+	// VerdictPassCap Set how many unresolved senders one counterparty result run judges.
 	VerdictPassCap *int `json:"verdict_pass_cap,omitempty" maximum:"1000" minimum:"1"`
 }
 
@@ -72685,7 +72685,7 @@ type UpdateCompanyRequest struct {
 	// An ORDINARY field, writable in BOTH directions by anybody the write gate admits, on the
 	// same terms as `visibility` on `PATCH /contacts/{id}`. Capture mints a company
 	// owner-scoped from a message nothing has judged yet, and until this field existed the
-	// only way out was a sender verdict — so a company the classifier never asked about, or
+	// only way out was a sender result — so a company the classifier never asked about, or
 	// judged wrong, stayed private to its mailbox owner with no door at all. A machine's
 	// decision no human could undo is the same reasoning that made the contact column
 	// writable both ways.
@@ -72717,7 +72717,7 @@ type UpdateCompanyRequestStatus string
 // An ORDINARY field, writable in BOTH directions by anybody the write gate admits, on the
 // same terms as `visibility` on `PATCH /contacts/{id}`. Capture mints a company
 // owner-scoped from a message nothing has judged yet, and until this field existed the
-// only way out was a sender verdict — so a company the classifier never asked about, or
+// only way out was a sender result — so a company the classifier never asked about, or
 // judged wrong, stayed private to its mailbox owner with no door at all. A machine's
 // decision no human could undo is the same reasoning that made the contact column
 // writable both ways.
@@ -73889,7 +73889,7 @@ type UpdateStageRequestSemantic string
 //
 // Clearing is spelled as a VALUE, not as null. `color: "none"` removes the colour and
 // `description: ""` removes the text, because a decoded absent field and a decoded null
-// are the same thing in the generated request type — a contract that promised the two
+// are the same thing in the generated request type — a contract that agreed the two
 // meant different things would be promising something no server can honour.
 //
 // The name cannot be cleared. A tag without one cannot be applied or read.
@@ -74029,7 +74029,7 @@ type UpsertPartnerRequestPartnerRole string
 
 // User A seat — human or first-party agent. Mirrors `app_user`.
 type User struct {
-	// AllowedActions The member verbs the CALLER would be admitted to on this user right now, computed by the same checks those endpoints run: the `user_admin` verb each takes, a seat that may write, the ceiling over the target (a non-admin never acts on an admin, and otherwise holds everything the verb reaches), the member's status and kind, the last-admin guard, an archived role still held, the licensed seat ceiling on reactivation, whether this installation can build a set-password link, and whether the member has a confirmed second factor to remove. `hand_over` is `handOverUserWork` on this member. `resend_invite` is `resendUserInvite`, offered for an invited human member when this installation can send mail. Present on `listUsers`'s management view for a human caller only; absent means not computed, and a client offers nothing then. It is an offer, not a promise: every write re-checks under its lock, and `change_role` says a role change is possible at all — which roles, is `listAssignableRoles`'s answer.
+	// AllowedActions The member verbs the CALLER would be admitted to on this user right now, computed by the same checks those endpoints run: the `user_admin` verb each takes, a seat that may write, the ceiling over the target (a non-admin never acts on an admin, and otherwise holds everything the verb reaches), the member's status and kind, the last-admin guard, an archived role still held, the licensed seat ceiling on reactivation, whether this installation can build a set-password link, and whether the member has a confirmed second factor to remove. `hand_over` is `handOverUserWork` on this member. `resend_invite` is `resendUserInvite`, offered for an invited human member when this installation can send mail. Present on `listUsers`'s management view for a human caller only; absent means not computed, and a client offers nothing then. It is an offer, not a commitment: every write re-checks under its lock, and `change_role` says a role change is possible at all — which roles, is `listAssignableRoles`'s answer.
 	AllowedActions *[]UserAllowedActions `json:"allowed_actions,omitempty"`
 	ArchivedAt     *time.Time            `json:"archived_at,omitempty"`
 
@@ -74631,7 +74631,7 @@ type WebForm struct {
 	HandlingCutoverAt *time.Time         `json:"handling_cutover_at,omitempty"`
 	Id                openapi_types.UUID `json:"id"`
 
-	// Intake Present only while the intake refuses posts to this form with 429. `throttled`: too many posts lately, so some are refused; `since` is when that began. `blocked`: every post is refused until `until`. `paused_all`: every form of the workspace or installation refuses posts until `until`, because all forms together receive too many. Answered on the list and on one form's read.
+	// Intake Present only while the intake refuses posts to this form with 429. `throttled`: too many posts lately, so some are refused; `since` is when that began. `blocked`: every post is refused until `until`. `paused_all`: every form of the company or installation refuses posts until `until`, because all forms together receive too many. Answered on the list and on one form's read.
 	Intake *struct {
 		Since *time.Time         `json:"since,omitempty"`
 		State WebFormIntakeState `json:"state"`
@@ -74730,7 +74730,7 @@ type WebFormCreated struct {
 	HandlingCutoverAt *time.Time         `json:"handling_cutover_at,omitempty"`
 	Id                openapi_types.UUID `json:"id"`
 
-	// Intake Present only while the intake refuses posts to this form with 429. `throttled`: too many posts lately, so some are refused; `since` is when that began. `blocked`: every post is refused until `until`. `paused_all`: every form of the workspace or installation refuses posts until `until`, because all forms together receive too many. Answered on the list and on one form's read.
+	// Intake Present only while the intake refuses posts to this form with 429. `throttled`: too many posts lately, so some are refused; `since` is when that began. `blocked`: every post is refused until `until`. `paused_all`: every form of the company or installation refuses posts until `until`, because all forms together receive too many. Answered on the list and on one form's read.
 	Intake *struct {
 		Since *time.Time                `json:"since,omitempty"`
 		State WebFormCreatedIntakeState `json:"state"`
@@ -74997,7 +74997,7 @@ type WebsiteInquiryAssignment struct {
 	// what the DB CHECK would reject, rather than 500-ing at write time).
 	// `channel_provider` is the same kind of constraint in both directions: non-null exactly
 	// when `kind=message` (ADR-0107).
-	// **Custom fields**: the values of the workspace's activity custom fields arrive as extra
+	// **Custom fields**: the values of the company's activity custom fields arrive as extra
 	// top-level `cf_` keys. They are content, so they are absent whenever `content_state` is
 	// `withheld`.
 	Task Activity `json:"task"`
@@ -75878,7 +75878,7 @@ type WeeklyScorecardLeadBlock struct {
 	Promoted               int `json:"promoted" minimum:"0"`
 }
 
-// WhatsAppConnection One WhatsApp Business phone number connected to the workspace. No secret is part of it.
+// WhatsAppConnection One WhatsApp Business phone number connected to the company. No secret is part of it.
 type WhatsAppConnection struct {
 	ConnectedAt time.Time `json:"connectedAt"`
 
@@ -75911,7 +75911,7 @@ type WhatsAppConnectionStatus string
 
 // WhatsAppConnectionCreated defines model for WhatsAppConnectionCreated.
 type WhatsAppConnectionCreated struct {
-	// Connection One WhatsApp Business phone number connected to the workspace. No secret is part of it.
+	// Connection One WhatsApp Business phone number connected to the company. No secret is part of it.
 	Connection WhatsAppConnection `json:"connection"`
 
 	// VerifyToken The token Meta sends in the webhook subscription check. Made by the server and shown only in this response.
@@ -76036,7 +76036,7 @@ type WorkingHours struct {
 // cannot compare the position of one lane with another to work out that an item
 // several screens down matters more.
 //
-// `sources_unavailable` carries the same promise `/attention`'s `lanes_omitted`
+// `sources_unavailable` carries the same completeness guarantee `/attention`'s `lanes_omitted`
 // does, widened: a source the caller may not read is named as `withheld`, and one
 // that failed to answer is named as `failed`. Both keep the summary from claiming a
 // clear day it did not actually see.
@@ -76235,7 +76235,7 @@ type Worklist struct {
 	// breakdown of that total and was not one.
 	//
 	// These are INDEPENDENT SIGNALS, not a partition, and they do not sum to `total`.
-	// `due` is asked of every item whatever its level, so an overdue promise counts in
+	// `due` is asked of every item whatever its level, so an overdue commitment counts in
 	// both `urgent` and `due` — deliberately, because a reader wants both answers about
 	// it. Read them as four questions about one day rather than four slices of it.
 	//
@@ -76252,7 +76252,7 @@ type Worklist struct {
 	// `team_oversight.read`; `teams_led` for a lead, who opens the teams they are on;
 	// `none` for everyone else, a read-only seat included. Separate from a worklist's
 	// `scope_options`, because the `team` worklist is the team's live work and the
-	// week is a lead's verdict on named colleagues. `GET /me` and `GET /worklist` both
+	// week is a lead's result on named colleagues. `GET /me` and `GET /worklist` both
 	// carry it, from one rule. Absent from an older server, which a client reads as
 	// `none`.
 	TeamWeek *TeamWeekReach `json:"team_week,omitempty"`
@@ -76377,7 +76377,7 @@ type WorklistBatchKey string
 // lands in exactly one of them.
 //
 // The order below is the order they are read in, and it is a precedence rather than a
-// set of independent tests: an overdue promise is urgent, not due-today, because the
+// set of independent tests: an overdue commitment is urgent, not due-today, because the
 // first arm that matches takes the row. Without a precedence the same item would be
 // counted twice and the sentence would add up to more than the day holds.
 //
@@ -76395,7 +76395,7 @@ type WorklistBuckets struct {
 	// Review Work in the `review` and `system_health` destinations. Completed-work receipts are served separately and never contribute to this queue count.
 	Review int `json:"review" minimum:"0"`
 
-	// Urgent Seller work at the top two levels: somebody is waiting, or a promise is breaking. The same rule as the sibling `urgent`, narrowed to `today` rows.
+	// Urgent Seller work at the top two levels: somebody is waiting, or a commitment is breaking. The same rule as the sibling `urgent`, narrowed to `today` rows.
 	Urgent int `json:"urgent" minimum:"0"`
 }
 
@@ -76647,7 +76647,7 @@ type WorklistDealVerdict struct {
 	// evidence-validated, used when no card is cached.
 	//
 	// Both are READINGS, and there is deliberately no third member for the
-	// deterministic case. A row with no reading carries no verdict at all: its
+	// deterministic case. A row with no reading carries no result at all: its
 	// typed `because` reasons are the deterministic explanation, they are already
 	// on every row, and a client draws them under their own heading rather than
 	// under this one.
@@ -76658,8 +76658,8 @@ type WorklistDealVerdict struct {
 	// `blocked` — something specific is in the way.
 	// `cold` — recorded evidence that engagement ended, as assessed on `as_of`.
 	//
-	// The same four the deal page's own verdict carries, because they ARE that
-	// verdict. Held by backend/gates/worklistverdictstandings_test.go, which
+	// The same four the deal page's own result carries, because they ARE that
+	// result. Held by backend/gates/worklistverdictstandings_test.go, which
 	// derives this set from DealStatusCardVerdict's description rather than
 	// keeping a second list of them.
 	//
@@ -76676,7 +76676,7 @@ type WorklistDealVerdict struct {
 // evidence-validated, used when no card is cached.
 //
 // Both are READINGS, and there is deliberately no third member for the
-// deterministic case. A row with no reading carries no verdict at all: its
+// deterministic case. A row with no reading carries no result at all: its
 // typed `because` reasons are the deterministic explanation, they are already
 // on every row, and a client draws them under their own heading rather than
 // under this one.
@@ -76687,8 +76687,8 @@ type WorklistDealVerdictSource string
 // `blocked` — something specific is in the way.
 // `cold` — recorded evidence that engagement ended, as assessed on `as_of`.
 //
-// The same four the deal page's own verdict carries, because they ARE that
-// verdict. Held by backend/gates/worklistverdictstandings_test.go, which
+// The same four the deal page's own result carries, because they ARE that
+// result. Held by backend/gates/worklistverdictstandings_test.go, which
 // derives this set from DealStatusCardVerdict's description rather than
 // keeping a second list of them.
 //
@@ -76934,7 +76934,7 @@ type WorklistItem struct {
 	// reader may not see is counted in `contact_count` and never named.
 	DomainContext *DomainQuestionContext `json:"domain_context,omitempty"`
 
-	// DomainNote The site triage's own sentence on a `vendor_verdict` domain question, in the workspace language.
+	// DomainNote The site triage's own sentence on a `vendor_verdict` domain question, in the company language.
 	DomainNote *string `json:"domain_note,omitempty"`
 
 	// DomainReasonCode The domain question's reason code, rendered in the reader's language.
@@ -76980,13 +76980,13 @@ type WorklistItem struct {
 	Kind *string `json:"kind,omitempty"`
 
 	// Level The hard priority band, and the whole of the product rule: 0 pinned by the
-	// reader, or a task assigned to the reader whose reminder came due, 1 a customer waiting or a deadline arriving, 2 a promise due or an
+	// reader, or a task assigned to the reader whose reminder came due, 1 a customer waiting or a deadline arriving, 2 a commitment due or an
 	// approved action that failed, 3 material revenue at risk, 4 an assigned task
 	// or a smaller deal drifting, 5 a decision blocking customer work, 6 data
 	// hygiene. Levels are never mixed by a score.
 	Level int `json:"level" maximum:"6" minimum:"0"`
 
-	// MayBeDone Our later mail on the promise's thread to one of its recipients, which may have kept it. The row then asks whether it is done instead of listing it as open, and `overdue` is false while it asks. Its `claim_key` is the one the contact page and the company page use, so one Not yet holds on all three. Absent when there is no such mail, when the task is closed, or when the reader answered Not yet to this mail; the row is then overdue again if its date has passed.
+	// MayBeDone Our later mail on the commitment's thread to one of its recipients, which may have kept it. The row then asks whether it is done instead of listing it as open, and `overdue` is false while it asks. Its `claim_key` is the one the contact page and the company page use, so one Not yet holds on all three. Absent when there is no such mail, when the task is closed, or when the reader answered Not yet to this mail; the row is then overdue again if its date has passed.
 	MayBeDone *WorklistMayBeDone `json:"may_be_done,omitempty"`
 
 	// Move The next step this row suggests, and what it would act on.
@@ -77243,7 +77243,7 @@ type WorklistItemPrimaryAction string
 // row rather than a hundred. Its own facts ride in `batch`.
 type WorklistItemSource string
 
-// WorklistMayBeDone The question whether a promise task is done, asked because we wrote to a recipient on its thread after the promise.
+// WorklistMayBeDone The question whether a commitment task is done, asked because we wrote to a recipient on its thread after the commitment.
 // The contact page asks the same question under the same `claim_key`. Not yet is answered by
 // `POST /contacts/{contact_id}/moment/dismiss` with `claim_key` and `evidence_fingerprint`, and holds on both surfaces until we write again.
 type WorklistMayBeDone struct {
@@ -77252,7 +77252,7 @@ type WorklistMayBeDone struct {
 	// ContactId The recipient the mail was written to.
 	ContactId openapi_types.UUID `json:"contact_id"`
 
-	// EmailActivityId The mail that may have kept the promise.
+	// EmailActivityId The mail that may have kept the commitment.
 	EmailActivityId     openapi_types.UUID `json:"email_activity_id"`
 	EvidenceFingerprint string             `json:"evidence_fingerprint"`
 	WroteAt             time.Time          `json:"wrote_at"`
@@ -77696,7 +77696,7 @@ type WorklistSourceUnavailableReason string
 // breakdown of that total and was not one.
 //
 // These are INDEPENDENT SIGNALS, not a partition, and they do not sum to `total`.
-// `due` is asked of every item whatever its level, so an overdue promise counts in
+// `due` is asked of every item whatever its level, so an overdue commitment counts in
 // both `urgent` and `due` — deliberately, because a reader wants both answers about
 // it. Read them as four questions about one day rather than four slices of it.
 //
@@ -77714,7 +77714,7 @@ type WorklistSummary struct {
 	// lands in exactly one of them.
 	//
 	// The order below is the order they are read in, and it is a precedence rather than a
-	// set of independent tests: an overdue promise is urgent, not due-today, because the
+	// set of independent tests: an overdue commitment is urgent, not due-today, because the
 	// first arm that matches takes the row. Without a precedence the same item would be
 	// counted twice and the sentence would add up to more than the day holds.
 	//
@@ -77732,7 +77732,7 @@ type WorklistSummary struct {
 	//
 	// Sent because without it those items reached no figure at all — a queue holding
 	// nothing but at-risk deals reported "0 urgent, 0 due, 0 routine" over a page full
-	// of rows, which is the one thing this line promises cannot happen.
+	// of rows, which is the one thing this line guarantees cannot happen.
 	InPlay *int `json:"in_play,omitempty" minimum:"0"`
 
 	// LowerPriority Routine work: decisions that block nothing, and data hygiene.
@@ -77747,7 +77747,7 @@ type WorklistSummary struct {
 	// Total How many candidates the requested view holds. The same population as the `considered` figures of that view's categories. Upcoming work is never counted here: none of it is due today.
 	Total int `json:"total" minimum:"0"`
 
-	// Urgent Items at the top two levels: somebody is waiting, or a promise is breaking.
+	// Urgent Items at the top two levels: somebody is waiting, or a commitment is breaking.
 	Urgent int `json:"urgent" minimum:"0"`
 }
 
@@ -77898,12 +77898,12 @@ type WorkspaceQueryResult struct {
 
 // WrittenBy Which writer produced a piece of generated prose. `model` — the configured model
 // lane. `deterministic` — the structured fallback, used when no lane is configured,
-// the workspace's AI budget is exhausted, the model call fails, or the checks the
+// the company's AI budget is exhausted, the model call fails, or the checks the
 // surface runs refuse the model's answer. Never silently interchangeable: a reader
 // deciding how much to trust a sentence needs to know which wrote it.
 type WrittenBy string
 
-// ZaloOAConnection One Zalo Official Account connected to the workspace. No secret is part of it.
+// ZaloOAConnection One Zalo Official Account connected to the company. No secret is part of it.
 type ZaloOAConnection struct {
 	// AppId The Zalo app that serves the Official Account.
 	AppId       string             `json:"appId"`
@@ -78197,7 +78197,7 @@ type ListActivitiesParams struct {
 	// cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
 	// accepted multi-field spelling; any other comma-separated multi-field spec returns
 	// `422 code: sort_unsupported`. **Allowed sort fields per resource** are the columns that
-	// resource's list publishes, plus the workspace's active `cf_` columns (custom columns carry no
+	// resource's list publishes, plus the company's active `cf_` columns (custom columns carry no
 	// index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
 	// they can order by: a header that cannot be clicked is a dead control. Some columns are not
 	// yet offered even so — one that orders by a JOINED value, such as a stage by its position in
@@ -78369,7 +78369,7 @@ type RelinkThreadParams struct {
 
 // SetThreadAudienceJSONBody defines parameters for SetThreadAudience.
 type SetThreadAudienceJSONBody struct {
-	// Share True to share the thread with the workspace, false to keep it private.
+	// Share True to share the thread with the company, false to keep it private.
 	Share bool `json:"share"`
 }
 
@@ -78432,7 +78432,7 @@ type SetActivityAudienceParams struct {
 // ClearActivityDispositionParams defines parameters for ClearActivityDisposition.
 type ClearActivityDispositionParams struct {
 	// Scope `mine` clears this reader's own snooze or not-mine. `thread` withdraws the
-	// workspace-wide not-sales judgement, which anybody who can read the message may do:
+	// company-wide not-sales judgement, which anybody who can read the message may do:
 	// the judgement was never one contact's property.
 	Scope *ClearActivityDispositionParamsScope `form:"scope,omitempty" json:"scope,omitempty"`
 }
@@ -80004,10 +80004,10 @@ type DecideCommissionEntryParams struct {
 
 // ListOpenCommitmentsParams defines parameters for ListOpenCommitments.
 type ListOpenCommitmentsParams struct {
-	// AssigneeId Narrow to one owner's promises. Omit it for everyone's.
+	// AssigneeId Narrow to one owner's commitments. Omit it for everyone's.
 	AssigneeId *openapi_types.UUID `form:"assignee_id,omitempty" json:"assignee_id,omitempty"`
 
-	// ProjectId Keep only promises filed under this project or under none.
+	// ProjectId Keep only commitments filed under this project or under none.
 	ProjectId *openapi_types.UUID `form:"project_id,omitempty" json:"project_id,omitempty"`
 
 	// Limit Cap the set. 50 is also the ceiling.
@@ -80071,7 +80071,7 @@ type ListCompaniesParams struct {
 	// cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
 	// accepted multi-field spelling; any other comma-separated multi-field spec returns
 	// `422 code: sort_unsupported`. **Allowed sort fields per resource** are the columns that
-	// resource's list publishes, plus the workspace's active `cf_` columns (custom columns carry no
+	// resource's list publishes, plus the company's active `cf_` columns (custom columns carry no
 	// index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
 	// they can order by: a header that cannot be clicked is a dead control. Some columns are not
 	// yet offered even so — one that orders by a JOINED value, such as a stage by its position in
@@ -80086,7 +80086,7 @@ type ListCompaniesParams struct {
 	// IncludeAnchor Include this installation's own company. It is excluded by default because this list
 	// answers "which companies are we selling to", and the company running the CRM is not one
 	// of them (ADR-0082). Modeled on `include_archived` (API-LIST-4): a class of rows
-	// almost never wanted, never silently unreachable. Surfaces whose subject IS the workspace
+	// almost never wanted, never silently unreachable. Surfaces whose subject IS the company
 	// — recording that a contact works here, own-company project work — set it.
 	IncludeAnchor *bool `form:"include_anchor,omitempty" json:"include_anchor,omitempty"`
 
@@ -80347,7 +80347,7 @@ type AskAboutCompanyJSONBody struct {
 	// Question The prepared questions. Fixed, because each one names the records its answer is
 	// written from — which is what makes the answer citable.
 	//
-	// `whats_open` — the open deals, the open tasks and the open commitments (promises
+	// `whats_open` — the open deals, the open tasks and the open commitments (commitments
 	// read out of conversations, not tasks). Deliberately not approvals: an
 	// approval is not a citable record type here, and an answer that named one could
 	// not be checked the way every other sentence can.
@@ -81243,7 +81243,7 @@ type ListContactsParams struct {
 	// cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
 	// accepted multi-field spelling; any other comma-separated multi-field spec returns
 	// `422 code: sort_unsupported`. **Allowed sort fields per resource** are the columns that
-	// resource's list publishes, plus the workspace's active `cf_` columns (custom columns carry no
+	// resource's list publishes, plus the company's active `cf_` columns (custom columns carry no
 	// index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
 	// they can order by: a header that cannot be clicked is a dead control. Some columns are not
 	// yet offered even so — one that orders by a JOINED value, such as a stage by its position in
@@ -81987,7 +81987,7 @@ type ListCustomFieldsParams struct {
 	// cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
 	// accepted multi-field spelling; any other comma-separated multi-field spec returns
 	// `422 code: sort_unsupported`. **Allowed sort fields per resource** are the columns that
-	// resource's list publishes, plus the workspace's active `cf_` columns (custom columns carry no
+	// resource's list publishes, plus the company's active `cf_` columns (custom columns carry no
 	// index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
 	// they can order by: a header that cannot be clicked is a dead control. Some columns are not
 	// yet offered even so — one that orders by a JOINED value, such as a stage by its position in
@@ -82213,7 +82213,7 @@ type ListDealRoomsParams struct {
 	// cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
 	// accepted multi-field spelling; any other comma-separated multi-field spec returns
 	// `422 code: sort_unsupported`. **Allowed sort fields per resource** are the columns that
-	// resource's list publishes, plus the workspace's active `cf_` columns (custom columns carry no
+	// resource's list publishes, plus the company's active `cf_` columns (custom columns carry no
 	// index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
 	// they can order by: a header that cannot be clicked is a dead control. Some columns are not
 	// yet offered even so — one that orders by a JOINED value, such as a stage by its position in
@@ -82430,7 +82430,7 @@ type ListDealsParams struct {
 	// cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
 	// accepted multi-field spelling; any other comma-separated multi-field spec returns
 	// `422 code: sort_unsupported`. **Allowed sort fields per resource** are the columns that
-	// resource's list publishes, plus the workspace's active `cf_` columns (custom columns carry no
+	// resource's list publishes, plus the company's active `cf_` columns (custom columns carry no
 	// index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
 	// they can order by: a header that cannot be clicked is a dead control. Some columns are not
 	// yet offered even so — one that orders by a JOINED value, such as a stage by its position in
@@ -83017,7 +83017,7 @@ type ExtOauthCallbackParams struct {
 	// Code The vendor's authorization code
 	Code *string `form:"code,omitempty" json:"code,omitempty"`
 
-	// State Signed binding to the workspace
+	// State Signed binding to the company
 	State string `form:"state" json:"state"`
 
 	// Error Set instead of `code` when the admin declined.
@@ -83103,7 +83103,7 @@ type GetForecastParams struct {
 	AsOf      *openapi_types.Date         `form:"as_of,omitempty" json:"as_of,omitempty"`
 	ScopeKind *GetForecastParamsScopeKind `form:"scope_kind,omitempty" json:"scope_kind,omitempty"`
 
-	// ScopeId Whose forecast, for a team or owner scope. Refused with the workspace scope, which names no subject.
+	// ScopeId Whose forecast, for a team or owner scope. Refused with the `workspace` scope, which names no subject.
 	ScopeId *openapi_types.UUID `form:"scope_id,omitempty" json:"scope_id,omitempty"`
 
 	// Contributions Add `contributions`, one row per deal in the won or open reading that the caller may read, with the chance it is weighted by and why.
@@ -83129,7 +83129,7 @@ type ListInputChecksParams struct {
 	// ScopeKind Narrows the findings to the deals of one population, as the forecast and the reports measure it. Omitted means every finding the caller can see. A scope the caller may not measure is refused.
 	ScopeKind *ListInputChecksParamsScopeKind `form:"scope_kind,omitempty" json:"scope_kind,omitempty"`
 
-	// ScopeId The team or owner, for a team or owner scope. Refused with the workspace scope, which names no subject.
+	// ScopeId The team or owner, for a team or owner scope. Refused with the `workspace` scope, which names no subject.
 	ScopeId *openapi_types.UUID `form:"scope_id,omitempty" json:"scope_id,omitempty"`
 
 	// ProductId Narrows deal findings to this product. Other findings cover the selected population.
@@ -83167,7 +83167,7 @@ type ListForecastCallsParams struct {
 	AsOf      *openapi_types.Date               `form:"as_of,omitempty" json:"as_of,omitempty"`
 	ScopeKind *ListForecastCallsParamsScopeKind `form:"scope_kind,omitempty" json:"scope_kind,omitempty"`
 
-	// ScopeId Whose forecast, for a team or owner scope. A workspace scope names none.
+	// ScopeId Whose forecast, for a team or owner scope. A `workspace` scope names none.
 	ScopeId *openapi_types.UUID `form:"scope_id,omitempty" json:"scope_id,omitempty"`
 }
 
@@ -83581,7 +83581,7 @@ type ListLeadsParams struct {
 	// cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
 	// accepted multi-field spelling; any other comma-separated multi-field spec returns
 	// `422 code: sort_unsupported`. **Allowed sort fields per resource** are the columns that
-	// resource's list publishes, plus the workspace's active `cf_` columns (custom columns carry no
+	// resource's list publishes, plus the company's active `cf_` columns (custom columns carry no
 	// index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
 	// they can order by: a header that cannot be clicked is a dead control. Some columns are not
 	// yet offered even so — one that orders by a JOINED value, such as a stage by its position in
@@ -84373,7 +84373,7 @@ type ListOfferTemplatesParams struct {
 	// cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
 	// accepted multi-field spelling; any other comma-separated multi-field spec returns
 	// `422 code: sort_unsupported`. **Allowed sort fields per resource** are the columns that
-	// resource's list publishes, plus the workspace's active `cf_` columns (custom columns carry no
+	// resource's list publishes, plus the company's active `cf_` columns (custom columns carry no
 	// index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
 	// they can order by: a header that cannot be clicked is a dead control. Some columns are not
 	// yet offered even so — one that orders by a JOINED value, such as a stage by its position in
@@ -84724,7 +84724,7 @@ type ListPartnersParams struct {
 	// cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
 	// accepted multi-field spelling; any other comma-separated multi-field spec returns
 	// `422 code: sort_unsupported`. **Allowed sort fields per resource** are the columns that
-	// resource's list publishes, plus the workspace's active `cf_` columns (custom columns carry no
+	// resource's list publishes, plus the company's active `cf_` columns (custom columns carry no
 	// index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
 	// they can order by: a header that cannot be clicked is a dead control. Some columns are not
 	// yet offered even so — one that orders by a JOINED value, such as a stage by its position in
@@ -84941,7 +84941,7 @@ type ListProductsParams struct {
 	// cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
 	// accepted multi-field spelling; any other comma-separated multi-field spec returns
 	// `422 code: sort_unsupported`. **Allowed sort fields per resource** are the columns that
-	// resource's list publishes, plus the workspace's active `cf_` columns (custom columns carry no
+	// resource's list publishes, plus the company's active `cf_` columns (custom columns carry no
 	// index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
 	// they can order by: a header that cannot be clicked is a dead control. Some columns are not
 	// yet offered even so — one that orders by a JOINED value, such as a stage by its position in
@@ -85033,7 +85033,7 @@ type ListProjectsParams struct {
 	// cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
 	// accepted multi-field spelling; any other comma-separated multi-field spec returns
 	// `422 code: sort_unsupported`. **Allowed sort fields per resource** are the columns that
-	// resource's list publishes, plus the workspace's active `cf_` columns (custom columns carry no
+	// resource's list publishes, plus the company's active `cf_` columns (custom columns carry no
 	// index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
 	// they can order by: a header that cannot be clicked is a dead control. Some columns are not
 	// yet offered even so — one that orders by a JOINED value, such as a stage by its position in
@@ -86403,7 +86403,7 @@ type SearchParams struct {
 	// PerType Answer GROUPED instead of as one ranked list: up to this many hits of EACH type, each type's best first. Relevance is not comparable across types — a message naming an account ten times outranks the account itself — so a short ranked list can hold nothing but messages, while a grouped answer carries every type that matched. `data` holds each type's hits together, best first. The page is the whole answer, so it takes no `cursor` and no `limit`; `types_with_more` names the types holding more than it carries, and asking again without `per_type`, with `types` set to one of them, pages through the rest. A type the time budget stopped is left out of `data` and named in `types_timed_out`.
 	PerType *int `form:"per_type,omitempty" json:"per_type,omitempty" maximum:"20" minimum:"1"`
 
-	// WithEmployees Also find the contacts who currently work at a company the query matches, each carrying that company as `works_at`. A contact the query matches by its own text is returned once, as itself; one found only through its employer ranks after every contact matched by its own text. Staff are read from the best-matching companies only, as many as a grouped page can show (20), so a word matching hundreds of accounts reaches the contacts at its strongest matches rather than at all of them. It needs the caller to read contacts, companies and the employment between them, and finds no one through the installation's own company or through a query using the websearch operators (`or`, `-word`, quotes), where `-acme` would reach every other company in the workspace. Honoured by both page shapes, so a contact a grouped page shows is also on the ranked list narrowed to `types=contact`.
+	// WithEmployees Also find the contacts who currently work at a company the query matches, each carrying that company as `works_at`. A contact the query matches by its own text is returned once, as itself; one found only through its employer ranks after every contact matched by its own text. Staff are read from the best-matching companies only, as many as a grouped page can show (20), so a word matching hundreds of accounts reaches the contacts at its strongest matches rather than at all of them. It needs the caller to read contacts, companies and the employment between them, and finds no one through the installation's own company or through a query using the websearch operators (`or`, `-word`, quotes), where `-acme` would reach every other company in the company. Honoured by both page shapes, so a contact a grouped page shows is also on the ranked list narrowed to `types=contact`.
 	WithEmployees *bool `form:"with_employees,omitempty" json:"with_employees,omitempty"`
 
 	// Typeahead The caller is a search box answering each keystroke. Messages (`activity`) are left out of the answer while the word being typed is under 4 letters, because a short prefix matches a large share of all messages and ranking them is the slow part. Every other type is searched from the first letter as usual. A query that ends in a finished word, or uses the websearch operators, has no word being typed and keeps its messages, and so does a request whose `types` names messages alone. Only a human caller's flag is honoured.
@@ -86704,7 +86704,7 @@ type ListTagsParams struct {
 	// IncludeArchived Include soft-deleted (archived) rows. Default false.
 	IncludeArchived *IncludeArchived `form:"include_archived,omitempty" json:"include_archived,omitempty"`
 
-	// WithCarriedBy Also count, per tag, the records this caller may see carrying it, as `carried_by`. The count reads every tagging in the workspace, so a caller that only needs the words leaves it off.
+	// WithCarriedBy Also count, per tag, the records this caller may see carrying it, as `carried_by`. The count reads every tagging in the company, so a caller that only needs the words leaves it off.
 	WithCarriedBy *bool `form:"with_carried_by,omitempty" json:"with_carried_by,omitempty"`
 }
 
@@ -87453,7 +87453,7 @@ type GetWorklistParams struct {
 	// going quiet, meetings and duplicate pairs are read under the caller's row
 	// scope, so `team` and `all` return what that tier reaches and `mine` narrows
 	// below it. The intrinsically per-user sources do not, and cannot: a notice is
-	// addressed to one contact, a mailbox belongs to one, a promise was made by one,
+	// addressed to one contact, a mailbox belongs to one, a commitment was made by one,
 	// and an approved action failed for the human who approved it. `all` therefore
 	// means "every shared record I may see, plus my own personal queue" — not a
 	// licence to read a colleague's inbox.
@@ -87466,8 +87466,8 @@ type GetWorklistParams struct {
 	// link lands on a different population is a number that lies about where it goes.
 	//
 	// `urgent` is the population `WorklistSummary.urgent` counts: somebody waiting
-	// or a promise breaking, which is levels 0 to 2. It is a LEVEL and not a
-	// category, so it crosses every lane — a customer waiting, an overdue promise
+	// or a commitment breaking, which is levels 0 to 2. It is a LEVEL and not a
+	// category, so it crosses every lane — a customer waiting, an overdue commitment
 	// and a failed approved action are one question about the morning, and the
 	// figure that asks it had no door of its own until this value existed. Read
 	// from the row's own level, never the one a pin overwrote: a reader who pins
@@ -87600,7 +87600,7 @@ type GetWorklistParams struct {
 	// reader's own.
 	//
 	// It narrows the shared, record-bearing work — their tasks and their deals. It
-	// does NOT reach their mailbox, their notices or their promises: those sources
+	// does NOT reach their mailbox, their notices or their commitments: those sources
 	// are bound to the acting user inside the modules that own them, exactly as
 	// they are under `team` and `all`. Reading somebody's queue is not reading
 	// their inbox.
@@ -87697,7 +87697,7 @@ type UndoMeetingReadyParams struct {
 // GetResponseMetricsParams defines parameters for GetResponseMetrics.
 type GetResponseMetricsParams struct {
 	// Days How many days back the window reaches. Capped at 90: past that the figure stops
-	// describing how the workspace works now and starts averaging over a change in
+	// describing how the company works now and starts averaging over a change in
 	// how it works.
 	Days *int `form:"days,omitempty" json:"days,omitempty" maximum:"90" minimum:"1"`
 }
@@ -103298,7 +103298,7 @@ type ServerInterface interface {
 	// One call — attempt ladder, routing identity, context provenance, captured payload.
 	// (GET /ai/calls/{id})
 	GetAiCall(w http.ResponseWriter, r *http.Request, id Id)
-	// Record a human's verdict on a claim the system derived — the correction the next re-derivation must respect.
+	// Record a human's result on a claim the system derived — the correction the next re-derivation must respect.
 	// (POST /ai/feedback)
 	RecordAIFeedback(w http.ResponseWriter, r *http.Request)
 	// Whether the model lanes are answering.
@@ -103310,7 +103310,7 @@ type ServerInterface interface {
 	// Turn the daily model price sync on or off (ai_model_rate update).
 	// (PUT /ai/price-sync)
 	ReplaceAiPriceSync(w http.ResponseWriter, r *http.Request)
-	// Authenticated AI configuration posture for transparent human-facing workspaces.
+	// Authenticated AI configuration posture for transparent human-facing companies.
 	// (GET /ai/profile)
 	GetAiProfile(w http.ResponseWriter, r *http.Request)
 	// Which AI providers are not answering, and why.
@@ -103370,7 +103370,7 @@ type ServerInterface interface {
 	// What AI cost over a window, this month by default, as one figure.
 	// (GET /ai/usage/summary)
 	GetAiUsageSummary(w http.ResponseWriter, r *http.Request, params GetAiUsageSummaryParams)
-	// The companies at risk in one population: single-threaded deals, companies in pipeline nobody has exchanged a word with, and won companies gone silent. Each row carries the facts behind its verdict. Counts for every view come with each answer; rows come for the view asked for. The thresholds are the framework's, and the answer prints them.
+	// The companies at risk in one population: single-threaded deals, companies in pipeline nobody has exchanged a word with, and won companies gone silent. Each row carries the facts behind its result. Counts for every view come with each answer; rows come for the view asked for. The thresholds are the framework's, and the answer prints them.
 	// (GET /analytics/account-coverage)
 	GetAccountCoverage(w http.ResponseWriter, r *http.Request, params GetAccountCoverageParams)
 	// The Sales review's assessment of one selection: a few sentences on what the measured figures show, each citing the cells it rests on, and one next decision on a deal the reader may see. Written by the model and kept per reader until the figures or the recorded decisions move; without a model, or when the model's reply cannot be grounded, it answers no sentences and `generated_by` says so, and the page shows its own summary.
@@ -103709,13 +103709,13 @@ type ServerInterface interface {
 	// Redeem a reset token and set a new password.
 	// (POST /auth/reset-password)
 	ResetPassword(w http.ResponseWriter, r *http.Request)
-	// List the workspace's configured automation instances.
+	// List the company's configured automation instances.
 	// (GET /automations)
 	ListAutomations(w http.ResponseWriter, r *http.Request, params ListAutomationsParams)
 	// Configure an automation instance from a catalog type (created paused).
 	// (POST /automations)
 	CreateAutomation(w http.ResponseWriter, r *http.Request)
-	// The closed starter library of automation types the workspace can instantiate.
+	// The closed starter library of automation types the company can instantiate.
 	// (GET /automations/catalog)
 	ListAutomationCatalog(w http.ResponseWriter, r *http.Request)
 	// Run one failed firing again, from the event that triggered it.
@@ -103790,7 +103790,7 @@ type ServerInterface interface {
 	// What the capture pipeline did with your messages in the last 24 hours.
 	// (GET /capture/activity)
 	ListMyCaptureActivity(w http.ResponseWriter, r *http.Request, params ListMyCaptureActivityParams)
-	// The same window for the workspace's shared channel connections.
+	// The same window for the company's shared channel connections.
 	// (GET /capture/activity/workspace)
 	ListWorkspaceCaptureActivity(w http.ResponseWriter, r *http.Request, params ListWorkspaceCaptureActivityParams)
 	// Where each domain's company question stands.
@@ -103805,7 +103805,7 @@ type ServerInterface interface {
 	// Search the shipped consumer-mail baseline.
 	// (GET /capture/consumer-mail-baseline)
 	ListConsumerMailBaseline(w http.ResponseWriter, r *http.Request, params ListConsumerMailBaselineParams)
-	// The workspace's own consumer-mail domain list.
+	// The company's own consumer-mail domain list.
 	// (GET /capture/consumer-mail-domains)
 	ListConsumerMailDomains(w http.ResponseWriter, r *http.Request)
 	// Add a consumer-mail domain, or carve one out.
@@ -103838,19 +103838,19 @@ type ServerInterface interface {
 	// Answer an open domain question by keeping the company.
 	// (POST /capture/domain-questions/{domain}/keep)
 	KeepDomainQuestion(w http.ResponseWriter, r *http.Request, domain string)
-	// Answer an open vendor question by keeping the vendor verdict.
+	// Answer an open vendor question by keeping the vendor result.
 	// (POST /capture/domain-questions/{domain}/keep-vendor)
 	KeepDomainAsVendor(w http.ResponseWriter, r *http.Request, domain string)
-	// The workspace's own email domains.
+	// The company's own email domains.
 	// (GET /capture/email-domains)
 	ListWorkspaceEmailDomains(w http.ResponseWriter, r *http.Request)
-	// Register one of the workspace's own email domains.
+	// Register one of the company's own email domains.
 	// (POST /capture/email-domains)
 	CreateWorkspaceEmailDomain(w http.ResponseWriter, r *http.Request)
-	// Stop treating a domain as the workspace's own.
+	// Stop treating a domain as the company's own.
 	// (DELETE /capture/email-domains/{domain})
 	DeleteWorkspaceEmailDomain(w http.ResponseWriter, r *http.Request, domain string)
-	// The addresses and domains capture keeps out — the workspace's rules and the caller's own.
+	// The addresses and domains capture keeps out — the company's rules and the caller's own.
 	// (GET /capture/exclusions)
 	ListCaptureExclusions(w http.ResponseWriter, r *http.Request)
 	// Keep an address or a domain out of capture.
@@ -103886,10 +103886,10 @@ type ServerInterface interface {
 	// Overrule what the classifier decided about a sender.
 	// (PUT /capture/senders/{address}/decision)
 	SetCaptureSenderDecision(w http.ResponseWriter, r *http.Request, address string)
-	// The workspace's capture settings.
+	// The company's capture settings.
 	// (GET /capture/settings)
 	GetCaptureSettings(w http.ResponseWriter, r *http.Request)
-	// Update the workspace's capture settings (admin/ops).
+	// Update the company's capture settings (admin/ops).
 	// (PATCH /capture/settings)
 	UpdateCaptureSettings(w http.ResponseWriter, r *http.Request)
 	// The same ladder, opened from a row of the capture-activity window.
@@ -103907,43 +103907,43 @@ type ServerInterface interface {
 	// What has been going on with one record, in one cited picture.
 	// (GET /catch-up)
 	CatchUpOnRecord(w http.ResponseWriter, r *http.Request, params CatchUpOnRecordParams)
-	// List the workspace's messaging-channel connections.
+	// List the company's messaging-channel connections.
 	// (GET /channel-connections)
 	ListChannelConnections(w http.ResponseWriter, r *http.Request)
-	// Connect a messaging-channel bot for the whole workspace.
+	// Connect a messaging-channel bot for the whole company.
 	// (POST /channel-connections)
 	ConnectChannel(w http.ResponseWriter, r *http.Request)
-	// List the Telegram Business accounts linked to the workspace's bot.
+	// List the Telegram Business accounts linked to the company's bot.
 	// (GET /channel-connections/telegram-business)
 	ListTelegramBusinessConnections(w http.ResponseWriter, r *http.Request)
-	// Disconnect a Telegram Business account from the workspace.
+	// Disconnect a Telegram Business account from the company.
 	// (DELETE /channel-connections/telegram-business/{id})
 	DisconnectTelegramBusinessConnection(w http.ResponseWriter, r *http.Request, id Id)
-	// Approve a Telegram Business account for the workspace.
+	// Approve a Telegram Business account for the company.
 	// (POST /channel-connections/telegram-business/{id}/approve)
 	ApproveTelegramBusinessConnection(w http.ResponseWriter, r *http.Request, id Id)
 	// Change who may read a business account's messages.
 	// (PATCH /channel-connections/telegram-business/{id}/visibility)
 	UpdateTelegramBusinessConnectionVisibility(w http.ResponseWriter, r *http.Request, id Id)
-	// List the WhatsApp Business numbers connected to the workspace.
+	// List the WhatsApp Business numbers connected to the company.
 	// (GET /channel-connections/whatsapp)
 	ListWhatsAppConnections(w http.ResponseWriter, r *http.Request)
-	// Connect a WhatsApp Business number to the workspace.
+	// Connect a WhatsApp Business number to the company.
 	// (POST /channel-connections/whatsapp)
 	CreateWhatsAppConnection(w http.ResponseWriter, r *http.Request)
-	// Disconnect a WhatsApp Business number from the workspace.
+	// Disconnect a WhatsApp Business number from the company.
 	// (DELETE /channel-connections/whatsapp/{id})
 	DisconnectWhatsAppConnection(w http.ResponseWriter, r *http.Request, id Id)
 	// Change who may read a WhatsApp number's messages.
 	// (PATCH /channel-connections/whatsapp/{id}/visibility)
 	UpdateWhatsAppConnectionVisibility(w http.ResponseWriter, r *http.Request, id Id)
-	// List the Zalo Official Accounts connected to the workspace.
+	// List the Zalo Official Accounts connected to the company.
 	// (GET /channel-connections/zalo-oa)
 	ListZaloOAConnections(w http.ResponseWriter, r *http.Request)
-	// Connect a Zalo Official Account to the workspace.
+	// Connect a Zalo Official Account to the company.
 	// (POST /channel-connections/zalo-oa)
 	CreateZaloOAConnection(w http.ResponseWriter, r *http.Request)
-	// Disconnect a Zalo Official Account from the workspace.
+	// Disconnect a Zalo Official Account from the company.
 	// (DELETE /channel-connections/zalo-oa/{id})
 	DisconnectZaloOAConnection(w http.ResponseWriter, r *http.Request, id Id)
 	// Change who may read a Zalo Official Account's messages.
@@ -103988,13 +103988,13 @@ type ServerInterface interface {
 	// Which messaging transports THIS installation has registered.
 	// (GET /channel-providers)
 	ListChannelProviders(w http.ResponseWriter, r *http.Request)
-	// Undo Margince's close of a promise.
+	// Undo Margince's close of a commitment.
 	// (POST /claims/{id}/reopen)
 	ReopenConversationClaim(w http.ResponseWriter, r *http.Request, id Id)
-	// Say a promise was kept, or that it no longer stands.
+	// Say a commitment was kept, or that it no longer stands.
 	// (POST /claims/{id}/settle)
 	SettleConversationClaim(w http.ResponseWriter, r *http.Request, id Id)
-	// Take over a promise one of us made that nobody was asked to keep.
+	// Take over a commitment one of us made that nobody was asked to keep.
 	// (POST /claims/{id}/take-over)
 	TakeOverConversationClaim(w http.ResponseWriter, r *http.Request, id Id)
 	// Website cold-start read-back — returns a staged proposal with evidence.
@@ -104015,7 +104015,7 @@ type ServerInterface interface {
 	// Approve, pay, or void one entry.
 	// (POST /commissions/{id}/decide)
 	DecideCommissionEntry(w http.ResponseWriter, r *http.Request, id Id, params DecideCommissionEntryParams)
-	// The promises still open, overdue first.
+	// The commitments still open, overdue first.
 	// (GET /commitments)
 	ListOpenCommitments(w http.ResponseWriter, r *http.Request, params ListOpenCommitmentsParams)
 	// What a refused send was refused for, and for whom.
@@ -104306,7 +104306,7 @@ type ServerInterface interface {
 	// Dismiss the owner's current mailbox silence warning.
 	// (POST /connectors/{provider}/silence/dismiss)
 	DismissConnectorSilence(w http.ResponseWriter, r *http.Request, provider CaptureProvider, params DismissConnectorSilenceParams)
-	// List the workspace's consent purposes (e.g. transactional, marketing_email, profiling).
+	// List the company's consent purposes (e.g. transactional, marketing_email, profiling).
 	// (GET /consent-purposes)
 	ListConsentPurposes(w http.ResponseWriter, r *http.Request)
 	// Define a consent purpose — a human-only admin write.
@@ -104363,7 +104363,7 @@ type ServerInterface interface {
 	// Regenerate this contact's brief, ignoring the cached one.
 	// (POST /contacts/{id}/brief)
 	RegenerateContactBrief(w http.ResponseWriter, r *http.Request, id Id)
-	// Record something promised, asked or decided in a captured conversation.
+	// Record something agreed, asked or decided in a captured conversation.
 	// (POST /contacts/{id}/claims)
 	RecordConversationClaim(w http.ResponseWriter, r *http.Request, id Id)
 	// Read a contact's per-purpose consent state plus the append-only proof log.
@@ -104642,7 +104642,7 @@ type ServerInterface interface {
 	// Open the suggested deal or link the evidence to an existing deal.
 	// (POST /deal-suggestions/{id}/accept)
 	AcceptDealSuggestion(w http.ResponseWriter, r *http.Request, id Id, params AcceptDealSuggestionParams)
-	// Record that the suggestion is not a deal, for the whole workspace.
+	// Record that the suggestion is not a deal, for the whole company.
 	// (POST /deal-suggestions/{id}/dismiss)
 	DismissDealSuggestion(w http.ResponseWriter, r *http.Request, id Id, params DismissDealSuggestionParams)
 	// List deals (live by default; cursor-paginated). Supports Kanban-by-stage reads.
@@ -104813,10 +104813,10 @@ type ServerInterface interface {
 	// The calling user's morning digest — what capture did overnight.
 	// (GET /digest)
 	GetMorningDigest(w http.ResponseWriter, r *http.Request)
-	// The workspace's signature template.
+	// The company's signature template.
 	// (GET /email-signature-template)
 	GetEmailSignatureTemplate(w http.ResponseWriter, r *http.Request)
-	// Set the workspace's signature template (admin/ops).
+	// Set the company's signature template (admin/ops).
 	// (PUT /email-signature-template)
 	SaveEmailSignatureTemplate(w http.ResponseWriter, r *http.Request)
 	// Start a new email conversation from a record — runs directly, consent-gated.
@@ -104858,7 +104858,7 @@ type ServerInterface interface {
 	// Export a filtered slice of one object (or a saved view / dynamic list) to an open format.
 	// (POST /exports)
 	CreateFilteredExport(w http.ResponseWriter, r *http.Request)
-	// Download the whole-workspace export bundle.
+	// Download the whole-company export bundle.
 	// (GET /exports/bundle)
 	DownloadExportBundle(w http.ResponseWriter, r *http.Request)
 	// OAuth redirect callback — completes an admin's consent to an extension unit's app.
@@ -104996,19 +104996,19 @@ type ServerInterface interface {
 	// Remove a currency from the FX rate sheet.
 	// (DELETE /fx-rates/{from})
 	RemoveFxRate(w http.ResponseWriter, r *http.Request, from string)
-	// List this workspace's recent CSV import runs, newest first.
+	// List this company's recent CSV import runs, newest first.
 	// (GET /imports)
 	ListImportRuns(w http.ResponseWriter, r *http.Request, params ListImportRunsParams)
 	// Create an import run from an uploaded source and a column mapping, and start its test run.
 	// (POST /imports)
 	CreateImportRun(w http.ResponseWriter, r *http.Request)
-	// Describe the files an import takes, column by column, for this workspace.
+	// Describe the files an import takes, column by column, for this company.
 	// (GET /imports/format)
 	GetImportFormat(w http.ResponseWriter, r *http.Request, params GetImportFormatParams)
 	// Upload a file to import, and read back what its columns actually contain.
 	// (POST /imports/sources)
 	UploadImportSource(w http.ResponseWriter, r *http.Request)
-	// Download the import template for this workspace.
+	// Download the import template for this company.
 	// (GET /imports/template)
 	DownloadImportTemplate(w http.ResponseWriter, r *http.Request)
 	// Read one import run's lifecycle state.
@@ -105125,7 +105125,7 @@ type ServerInterface interface {
 	// Withdraw your ask and make a fresh ask through another route.
 	// (POST /intro-requests/{id}/replace)
 	ReplaceIntroRequest(w http.ResponseWriter, r *http.Request, id Id)
-	// The document corpora this workspace has defined.
+	// The document corpora this company has defined.
 	// (GET /knowledge/corpora)
 	ListCorpora(w http.ResponseWriter, r *http.Request, params ListCorporaParams)
 	// Define a document corpus.
@@ -105242,7 +105242,7 @@ type ServerInterface interface {
 	// Recipients copied on inbound correspondence who have no contact or live lead.
 	// (GET /leads/{id}/conversation-suggestions)
 	ListLeadConversationSuggestions(w http.ResponseWriter, r *http.Request, id Id)
-	// Reverse a promotion (formulas §26) — the audited undo ADR-0008 §4 promises.
+	// Reverse a promotion (formulas §26) — the audited undo defined in ADR-0008 §4.
 	// (POST /leads/{id}/demote)
 	DemoteLead(w http.ResponseWriter, r *http.Request, id Id, params DemoteLeadParams)
 	// Draft an email to this lead, grounded in their record.
@@ -105818,7 +105818,7 @@ type ServerInterface interface {
 	// Show what a mailed return link will store, before it is confirmed (anonymous).
 	// (POST /public/booking/{host_slug}/return/preview)
 	PreviewBookingReturn(w http.ResponseWriter, r *http.Request, hostSlug string)
-	// What the workspace holds about this contact (anonymous, token-authed).
+	// What the company holds about this contact (anonymous, token-authed).
 	// (GET /public/confirm/{token})
 	GetConfirmDetails(w http.ResponseWriter, r *http.Request, token string)
 	// Submit corrections and a marketing answer (anonymous, token-authed).
@@ -105890,7 +105890,7 @@ type ServerInterface interface {
 	// Reply in a thread as the buyer.
 	// (POST /public/rooms/threads/{threadId}/comments)
 	ReplyBuyerRoomThread(w http.ResponseWriter, r *http.Request, threadId openapi_types.UUID)
-	// Everything a workspace query plan may say, for this caller.
+	// Everything a company query plan may say, for this caller.
 	// (GET /query-vocabulary)
 	DescribeQueryVocabulary(w http.ResponseWriter, r *http.Request)
 	// The views the read_view agent tool reads, and the arguments each takes.
@@ -106052,7 +106052,7 @@ type ServerInterface interface {
 	// Rewrite the words a rep has on screen under one rewrite verb.
 	// (POST /rewrites)
 	RewriteText(w http.ResponseWriter, r *http.Request)
-	// List the workspace's roles with their object grants and row scope.
+	// List the company's roles with their object grants and row scope.
 	// (GET /roles)
 	ListRoles(w http.ResponseWriter, r *http.Request, params ListRolesParams)
 	// Create a role by copying an existing one. Human-only.
@@ -106250,7 +106250,7 @@ type ServerInterface interface {
 	// Apply the suggested tag, as the caller.
 	// (POST /tag-suggestions/{id}/accept)
 	AcceptTagSuggestion(w http.ResponseWriter, r *http.Request, id Id)
-	// Record that the evidence does not earn the tag, for the whole workspace.
+	// Record that the evidence does not earn the tag, for the whole company.
 	// (POST /tag-suggestions/{id}/dismiss)
 	DismissTagSuggestion(w http.ResponseWriter, r *http.Request, id Id)
 	// List tags.
@@ -106262,7 +106262,7 @@ type ServerInterface interface {
 	// Archive a tag.
 	// (DELETE /tags/{id})
 	ArchiveTag(w http.ResponseWriter, r *http.Request, id Id)
-	// Read one tag, with how much of the workspace carries it.
+	// Read one tag, with how much of the company carries it.
 	// (GET /tags/{id})
 	GetTag(w http.ResponseWriter, r *http.Request, id Id)
 	// Rename, recolour or describe a tag.
@@ -106292,7 +106292,7 @@ type ServerInterface interface {
 	// Record a standard or reduced tax rate for a country from a day on.
 	// (POST /tax-rates)
 	RecordTaxRate(w http.ResponseWriter, r *http.Request)
-	// List workspace teams — cursor-paginated. Read-only.
+	// List company teams — cursor-paginated. Read-only.
 	// (GET /teams)
 	ListTeams(w http.ResponseWriter, r *http.Request, params ListTeamsParams)
 	// Create a team. Needs `team_admin.create`.
@@ -106307,7 +106307,7 @@ type ServerInterface interface {
 	// Put a member on a team. Admin only; idempotent.
 	// (PUT /teams/{id}/members/{userId})
 	AddTeamMember(w http.ResponseWriter, r *http.Request, id Id, userId openapi_types.UUID)
-	// List workspace members (roster) — cursor-paginated. Read-only.
+	// List company members (roster) — cursor-paginated. Read-only.
 	// (GET /users)
 	ListUsers(w http.ResponseWriter, r *http.Request, params ListUsersParams)
 	// Invite a new member. Admin-only.
@@ -106490,7 +106490,7 @@ type ServerInterface interface {
 	// Rotate a form's minted signing secret (returns the new secret once).
 	// (POST /web-forms/{id}/rotate-secret)
 	RotateWebFormSecret(w http.ResponseWriter, r *http.Request, id Id)
-	// List the workspace's outbound webhook subscriptions.
+	// List the company's outbound webhook subscriptions.
 	// (GET /webhook-subscriptions)
 	ListWebhookSubscriptions(w http.ResponseWriter, r *http.Request, params ListWebhookSubscriptionsParams)
 	// Register an outbound webhook subscription (returns the signing secret once).
@@ -106589,7 +106589,7 @@ type ServerInterface interface {
 	// Take back your "I'm ready" for a meeting — the undo behind it.
 	// (POST /worklist/ready/undo)
 	UndoMeetingReady(w http.ResponseWriter, r *http.Request, params UndoMeetingReadyParams)
-	// How fast the workspace answers, how much of the queue it puts down, and how often an at-risk deal gets a next step.
+	// How fast the company answers, how much of the queue it puts down, and how often an at-risk deal gets a next step.
 	// (GET /worklist/response)
 	GetResponseMetrics(w http.ResponseWriter, r *http.Request, params GetResponseMetricsParams)
 	// One row per teammate — who is carrying what, so a lead can see where to help.
@@ -106598,7 +106598,7 @@ type ServerInterface interface {
 	// What Margince changed on your team's deals.
 	// (GET /worklist/team/changes)
 	GetTeamMarginceChanges(w http.ResponseWriter, r *http.Request, params GetTeamMarginceChangesParams)
-	// Answer a query plan over the workspace's records.
+	// Answer a query plan over the company's records.
 	// (POST /workspace-queries)
 	QueryWorkspace(w http.ResponseWriter, r *http.Request)
 }
@@ -107051,7 +107051,7 @@ func (_ Unimplemented) GetAiCall(w http.ResponseWriter, r *http.Request, id Id) 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Record a human's verdict on a claim the system derived — the correction the next re-derivation must respect.
+// Record a human's result on a claim the system derived — the correction the next re-derivation must respect.
 // (POST /ai/feedback)
 func (_ Unimplemented) RecordAIFeedback(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -107075,7 +107075,7 @@ func (_ Unimplemented) ReplaceAiPriceSync(w http.ResponseWriter, r *http.Request
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Authenticated AI configuration posture for transparent human-facing workspaces.
+// Authenticated AI configuration posture for transparent human-facing companies.
 // (GET /ai/profile)
 func (_ Unimplemented) GetAiProfile(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -107195,7 +107195,7 @@ func (_ Unimplemented) GetAiUsageSummary(w http.ResponseWriter, r *http.Request,
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// The companies at risk in one population: single-threaded deals, companies in pipeline nobody has exchanged a word with, and won companies gone silent. Each row carries the facts behind its verdict. Counts for every view come with each answer; rows come for the view asked for. The thresholds are the framework's, and the answer prints them.
+// The companies at risk in one population: single-threaded deals, companies in pipeline nobody has exchanged a word with, and won companies gone silent. Each row carries the facts behind its result. Counts for every view come with each answer; rows come for the view asked for. The thresholds are the framework's, and the answer prints them.
 // (GET /analytics/account-coverage)
 func (_ Unimplemented) GetAccountCoverage(w http.ResponseWriter, r *http.Request, params GetAccountCoverageParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -107873,7 +107873,7 @@ func (_ Unimplemented) ResetPassword(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// List the workspace's configured automation instances.
+// List the company's configured automation instances.
 // (GET /automations)
 func (_ Unimplemented) ListAutomations(w http.ResponseWriter, r *http.Request, params ListAutomationsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -107885,7 +107885,7 @@ func (_ Unimplemented) CreateAutomation(w http.ResponseWriter, r *http.Request) 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// The closed starter library of automation types the workspace can instantiate.
+// The closed starter library of automation types the company can instantiate.
 // (GET /automations/catalog)
 func (_ Unimplemented) ListAutomationCatalog(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -108035,7 +108035,7 @@ func (_ Unimplemented) ListMyCaptureActivity(w http.ResponseWriter, r *http.Requ
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// The same window for the workspace's shared channel connections.
+// The same window for the company's shared channel connections.
 // (GET /capture/activity/workspace)
 func (_ Unimplemented) ListWorkspaceCaptureActivity(w http.ResponseWriter, r *http.Request, params ListWorkspaceCaptureActivityParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -108065,7 +108065,7 @@ func (_ Unimplemented) ListConsumerMailBaseline(w http.ResponseWriter, r *http.R
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// The workspace's own consumer-mail domain list.
+// The company's own consumer-mail domain list.
 // (GET /capture/consumer-mail-domains)
 func (_ Unimplemented) ListConsumerMailDomains(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -108131,31 +108131,31 @@ func (_ Unimplemented) KeepDomainQuestion(w http.ResponseWriter, r *http.Request
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Answer an open vendor question by keeping the vendor verdict.
+// Answer an open vendor question by keeping the vendor result.
 // (POST /capture/domain-questions/{domain}/keep-vendor)
 func (_ Unimplemented) KeepDomainAsVendor(w http.ResponseWriter, r *http.Request, domain string) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// The workspace's own email domains.
+// The company's own email domains.
 // (GET /capture/email-domains)
 func (_ Unimplemented) ListWorkspaceEmailDomains(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Register one of the workspace's own email domains.
+// Register one of the company's own email domains.
 // (POST /capture/email-domains)
 func (_ Unimplemented) CreateWorkspaceEmailDomain(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Stop treating a domain as the workspace's own.
+// Stop treating a domain as the company's own.
 // (DELETE /capture/email-domains/{domain})
 func (_ Unimplemented) DeleteWorkspaceEmailDomain(w http.ResponseWriter, r *http.Request, domain string) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// The addresses and domains capture keeps out — the workspace's rules and the caller's own.
+// The addresses and domains capture keeps out — the company's rules and the caller's own.
 // (GET /capture/exclusions)
 func (_ Unimplemented) ListCaptureExclusions(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -108227,13 +108227,13 @@ func (_ Unimplemented) SetCaptureSenderDecision(w http.ResponseWriter, r *http.R
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// The workspace's capture settings.
+// The company's capture settings.
 // (GET /capture/settings)
 func (_ Unimplemented) GetCaptureSettings(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Update the workspace's capture settings (admin/ops).
+// Update the company's capture settings (admin/ops).
 // (PATCH /capture/settings)
 func (_ Unimplemented) UpdateCaptureSettings(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -108269,31 +108269,31 @@ func (_ Unimplemented) CatchUpOnRecord(w http.ResponseWriter, r *http.Request, p
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// List the workspace's messaging-channel connections.
+// List the company's messaging-channel connections.
 // (GET /channel-connections)
 func (_ Unimplemented) ListChannelConnections(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Connect a messaging-channel bot for the whole workspace.
+// Connect a messaging-channel bot for the whole company.
 // (POST /channel-connections)
 func (_ Unimplemented) ConnectChannel(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// List the Telegram Business accounts linked to the workspace's bot.
+// List the Telegram Business accounts linked to the company's bot.
 // (GET /channel-connections/telegram-business)
 func (_ Unimplemented) ListTelegramBusinessConnections(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Disconnect a Telegram Business account from the workspace.
+// Disconnect a Telegram Business account from the company.
 // (DELETE /channel-connections/telegram-business/{id})
 func (_ Unimplemented) DisconnectTelegramBusinessConnection(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Approve a Telegram Business account for the workspace.
+// Approve a Telegram Business account for the company.
 // (POST /channel-connections/telegram-business/{id}/approve)
 func (_ Unimplemented) ApproveTelegramBusinessConnection(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -108305,19 +108305,19 @@ func (_ Unimplemented) UpdateTelegramBusinessConnectionVisibility(w http.Respons
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// List the WhatsApp Business numbers connected to the workspace.
+// List the WhatsApp Business numbers connected to the company.
 // (GET /channel-connections/whatsapp)
 func (_ Unimplemented) ListWhatsAppConnections(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Connect a WhatsApp Business number to the workspace.
+// Connect a WhatsApp Business number to the company.
 // (POST /channel-connections/whatsapp)
 func (_ Unimplemented) CreateWhatsAppConnection(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Disconnect a WhatsApp Business number from the workspace.
+// Disconnect a WhatsApp Business number from the company.
 // (DELETE /channel-connections/whatsapp/{id})
 func (_ Unimplemented) DisconnectWhatsAppConnection(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -108329,19 +108329,19 @@ func (_ Unimplemented) UpdateWhatsAppConnectionVisibility(w http.ResponseWriter,
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// List the Zalo Official Accounts connected to the workspace.
+// List the Zalo Official Accounts connected to the company.
 // (GET /channel-connections/zalo-oa)
 func (_ Unimplemented) ListZaloOAConnections(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Connect a Zalo Official Account to the workspace.
+// Connect a Zalo Official Account to the company.
 // (POST /channel-connections/zalo-oa)
 func (_ Unimplemented) CreateZaloOAConnection(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Disconnect a Zalo Official Account from the workspace.
+// Disconnect a Zalo Official Account from the company.
 // (DELETE /channel-connections/zalo-oa/{id})
 func (_ Unimplemented) DisconnectZaloOAConnection(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -108431,19 +108431,19 @@ func (_ Unimplemented) ListChannelProviders(w http.ResponseWriter, r *http.Reque
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Undo Margince's close of a promise.
+// Undo Margince's close of a commitment.
 // (POST /claims/{id}/reopen)
 func (_ Unimplemented) ReopenConversationClaim(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Say a promise was kept, or that it no longer stands.
+// Say a commitment was kept, or that it no longer stands.
 // (POST /claims/{id}/settle)
 func (_ Unimplemented) SettleConversationClaim(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Take over a promise one of us made that nobody was asked to keep.
+// Take over a commitment one of us made that nobody was asked to keep.
 // (POST /claims/{id}/take-over)
 func (_ Unimplemented) TakeOverConversationClaim(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -108485,7 +108485,7 @@ func (_ Unimplemented) DecideCommissionEntry(w http.ResponseWriter, r *http.Requ
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// The promises still open, overdue first.
+// The commitments still open, overdue first.
 // (GET /commitments)
 func (_ Unimplemented) ListOpenCommitments(w http.ResponseWriter, r *http.Request, params ListOpenCommitmentsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -109067,7 +109067,7 @@ func (_ Unimplemented) DismissConnectorSilence(w http.ResponseWriter, r *http.Re
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// List the workspace's consent purposes (e.g. transactional, marketing_email, profiling).
+// List the company's consent purposes (e.g. transactional, marketing_email, profiling).
 // (GET /consent-purposes)
 func (_ Unimplemented) ListConsentPurposes(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -109181,7 +109181,7 @@ func (_ Unimplemented) RegenerateContactBrief(w http.ResponseWriter, r *http.Req
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Record something promised, asked or decided in a captured conversation.
+// Record something agreed, asked or decided in a captured conversation.
 // (POST /contacts/{id}/claims)
 func (_ Unimplemented) RecordConversationClaim(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -109739,7 +109739,7 @@ func (_ Unimplemented) AcceptDealSuggestion(w http.ResponseWriter, r *http.Reque
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Record that the suggestion is not a deal, for the whole workspace.
+// Record that the suggestion is not a deal, for the whole company.
 // (POST /deal-suggestions/{id}/dismiss)
 func (_ Unimplemented) DismissDealSuggestion(w http.ResponseWriter, r *http.Request, id Id, params DismissDealSuggestionParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -110081,13 +110081,13 @@ func (_ Unimplemented) GetMorningDigest(w http.ResponseWriter, r *http.Request) 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// The workspace's signature template.
+// The company's signature template.
 // (GET /email-signature-template)
 func (_ Unimplemented) GetEmailSignatureTemplate(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Set the workspace's signature template (admin/ops).
+// Set the company's signature template (admin/ops).
 // (PUT /email-signature-template)
 func (_ Unimplemented) SaveEmailSignatureTemplate(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -110171,7 +110171,7 @@ func (_ Unimplemented) CreateFilteredExport(w http.ResponseWriter, r *http.Reque
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Download the whole-workspace export bundle.
+// Download the whole-company export bundle.
 // (GET /exports/bundle)
 func (_ Unimplemented) DownloadExportBundle(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -110447,7 +110447,7 @@ func (_ Unimplemented) RemoveFxRate(w http.ResponseWriter, r *http.Request, from
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// List this workspace's recent CSV import runs, newest first.
+// List this company's recent CSV import runs, newest first.
 // (GET /imports)
 func (_ Unimplemented) ListImportRuns(w http.ResponseWriter, r *http.Request, params ListImportRunsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -110459,7 +110459,7 @@ func (_ Unimplemented) CreateImportRun(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Describe the files an import takes, column by column, for this workspace.
+// Describe the files an import takes, column by column, for this company.
 // (GET /imports/format)
 func (_ Unimplemented) GetImportFormat(w http.ResponseWriter, r *http.Request, params GetImportFormatParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -110471,7 +110471,7 @@ func (_ Unimplemented) UploadImportSource(w http.ResponseWriter, r *http.Request
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Download the import template for this workspace.
+// Download the import template for this company.
 // (GET /imports/template)
 func (_ Unimplemented) DownloadImportTemplate(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -110705,7 +110705,7 @@ func (_ Unimplemented) ReplaceIntroRequest(w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// The document corpora this workspace has defined.
+// The document corpora this company has defined.
 // (GET /knowledge/corpora)
 func (_ Unimplemented) ListCorpora(w http.ResponseWriter, r *http.Request, params ListCorporaParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -110939,7 +110939,7 @@ func (_ Unimplemented) ListLeadConversationSuggestions(w http.ResponseWriter, r 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Reverse a promotion (formulas §26) — the audited undo ADR-0008 §4 promises.
+// Reverse a promotion (formulas §26) — the audited undo defined in ADR-0008 §4.
 // (POST /leads/{id}/demote)
 func (_ Unimplemented) DemoteLead(w http.ResponseWriter, r *http.Request, id Id, params DemoteLeadParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -112091,7 +112091,7 @@ func (_ Unimplemented) PreviewBookingReturn(w http.ResponseWriter, r *http.Reque
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// What the workspace holds about this contact (anonymous, token-authed).
+// What the company holds about this contact (anonymous, token-authed).
 // (GET /public/confirm/{token})
 func (_ Unimplemented) GetConfirmDetails(w http.ResponseWriter, r *http.Request, token string) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -112235,7 +112235,7 @@ func (_ Unimplemented) ReplyBuyerRoomThread(w http.ResponseWriter, r *http.Reque
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Everything a workspace query plan may say, for this caller.
+// Everything a company query plan may say, for this caller.
 // (GET /query-vocabulary)
 func (_ Unimplemented) DescribeQueryVocabulary(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -112559,7 +112559,7 @@ func (_ Unimplemented) RewriteText(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// List the workspace's roles with their object grants and row scope.
+// List the company's roles with their object grants and row scope.
 // (GET /roles)
 func (_ Unimplemented) ListRoles(w http.ResponseWriter, r *http.Request, params ListRolesParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -112955,7 +112955,7 @@ func (_ Unimplemented) AcceptTagSuggestion(w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Record that the evidence does not earn the tag, for the whole workspace.
+// Record that the evidence does not earn the tag, for the whole company.
 // (POST /tag-suggestions/{id}/dismiss)
 func (_ Unimplemented) DismissTagSuggestion(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -112979,7 +112979,7 @@ func (_ Unimplemented) ArchiveTag(w http.ResponseWriter, r *http.Request, id Id)
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Read one tag, with how much of the workspace carries it.
+// Read one tag, with how much of the company carries it.
 // (GET /tags/{id})
 func (_ Unimplemented) GetTag(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -113039,7 +113039,7 @@ func (_ Unimplemented) RecordTaxRate(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// List workspace teams — cursor-paginated. Read-only.
+// List company teams — cursor-paginated. Read-only.
 // (GET /teams)
 func (_ Unimplemented) ListTeams(w http.ResponseWriter, r *http.Request, params ListTeamsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -113069,7 +113069,7 @@ func (_ Unimplemented) AddTeamMember(w http.ResponseWriter, r *http.Request, id 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// List workspace members (roster) — cursor-paginated. Read-only.
+// List company members (roster) — cursor-paginated. Read-only.
 // (GET /users)
 func (_ Unimplemented) ListUsers(w http.ResponseWriter, r *http.Request, params ListUsersParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -113435,7 +113435,7 @@ func (_ Unimplemented) RotateWebFormSecret(w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// List the workspace's outbound webhook subscriptions.
+// List the company's outbound webhook subscriptions.
 // (GET /webhook-subscriptions)
 func (_ Unimplemented) ListWebhookSubscriptions(w http.ResponseWriter, r *http.Request, params ListWebhookSubscriptionsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -113633,7 +113633,7 @@ func (_ Unimplemented) UndoMeetingReady(w http.ResponseWriter, r *http.Request, 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// How fast the workspace answers, how much of the queue it puts down, and how often an at-risk deal gets a next step.
+// How fast the company answers, how much of the queue it puts down, and how often an at-risk deal gets a next step.
 // (GET /worklist/response)
 func (_ Unimplemented) GetResponseMetrics(w http.ResponseWriter, r *http.Request, params GetResponseMetricsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -113651,7 +113651,7 @@ func (_ Unimplemented) GetTeamMarginceChanges(w http.ResponseWriter, r *http.Req
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Answer a query plan over the workspace's records.
+// Answer a query plan over the company's records.
 // (POST /workspace-queries)
 func (_ Unimplemented) QueryWorkspace(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -113668,7 +113668,6 @@ type MiddlewareFunc func(http.Handler) http.Handler
 
 // ListAcquisitionSources operation middleware
 func (siw *ServerInterfaceWrapper) ListAcquisitionSources(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -113690,7 +113689,6 @@ func (siw *ServerInterfaceWrapper) ListAcquisitionSources(w http.ResponseWriter,
 
 // CreateAcquisitionSource operation middleware
 func (siw *ServerInterfaceWrapper) CreateAcquisitionSource(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -113739,7 +113737,6 @@ func (siw *ServerInterfaceWrapper) CreateAcquisitionSource(w http.ResponseWriter
 
 // UpdateAcquisitionSource operation middleware
 func (siw *ServerInterfaceWrapper) UpdateAcquisitionSource(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -113816,7 +113813,6 @@ func (siw *ServerInterfaceWrapper) UpdateAcquisitionSource(w http.ResponseWriter
 
 // ListActivities operation middleware
 func (siw *ServerInterfaceWrapper) ListActivities(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -114104,7 +114100,6 @@ func (siw *ServerInterfaceWrapper) ListActivities(w http.ResponseWriter, r *http
 
 // LogActivity operation middleware
 func (siw *ServerInterfaceWrapper) LogActivity(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -114153,7 +114148,6 @@ func (siw *ServerInterfaceWrapper) LogActivity(w http.ResponseWriter, r *http.Re
 
 // GetActivityDealFiling operation middleware
 func (siw *ServerInterfaceWrapper) GetActivityDealFiling(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -114207,7 +114201,6 @@ func (siw *ServerInterfaceWrapper) GetActivityDealFiling(w http.ResponseWriter, 
 
 // GetFollowUpSettings operation middleware
 func (siw *ServerInterfaceWrapper) GetFollowUpSettings(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -114229,7 +114222,6 @@ func (siw *ServerInterfaceWrapper) GetFollowUpSettings(w http.ResponseWriter, r 
 
 // UpdateFollowUpSettings operation middleware
 func (siw *ServerInterfaceWrapper) UpdateFollowUpSettings(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -114251,7 +114243,6 @@ func (siw *ServerInterfaceWrapper) UpdateFollowUpSettings(w http.ResponseWriter,
 
 // ListLatestInbound operation middleware
 func (siw *ServerInterfaceWrapper) ListLatestInbound(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -114305,7 +114296,6 @@ func (siw *ServerInterfaceWrapper) ListLatestInbound(w http.ResponseWriter, r *h
 
 // RelinkActivities operation middleware
 func (siw *ServerInterfaceWrapper) RelinkActivities(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -114354,7 +114344,6 @@ func (siw *ServerInterfaceWrapper) RelinkActivities(w http.ResponseWriter, r *ht
 
 // RelinkThread operation middleware
 func (siw *ServerInterfaceWrapper) RelinkThread(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -114403,7 +114392,6 @@ func (siw *ServerInterfaceWrapper) RelinkThread(w http.ResponseWriter, r *http.R
 
 // SetThreadAudience operation middleware
 func (siw *ServerInterfaceWrapper) SetThreadAudience(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -114437,7 +114425,6 @@ func (siw *ServerInterfaceWrapper) SetThreadAudience(w http.ResponseWriter, r *h
 
 // ArchiveActivity operation middleware
 func (siw *ServerInterfaceWrapper) ArchiveActivity(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -114495,7 +114482,6 @@ func (siw *ServerInterfaceWrapper) ArchiveActivity(w http.ResponseWriter, r *htt
 
 // GetActivity operation middleware
 func (siw *ServerInterfaceWrapper) GetActivity(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -114529,7 +114515,6 @@ func (siw *ServerInterfaceWrapper) GetActivity(w http.ResponseWriter, r *http.Re
 
 // UpdateActivity operation middleware
 func (siw *ServerInterfaceWrapper) UpdateActivity(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -114606,7 +114591,6 @@ func (siw *ServerInterfaceWrapper) UpdateActivity(w http.ResponseWriter, r *http
 
 // SetActivityAudience operation middleware
 func (siw *ServerInterfaceWrapper) SetActivityAudience(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -114664,7 +114648,6 @@ func (siw *ServerInterfaceWrapper) SetActivityAudience(w http.ResponseWriter, r 
 
 // AnswerCalendarInvitation operation middleware
 func (siw *ServerInterfaceWrapper) AnswerCalendarInvitation(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -114698,7 +114681,6 @@ func (siw *ServerInterfaceWrapper) AnswerCalendarInvitation(w http.ResponseWrite
 
 // DeclineActivityDeal operation middleware
 func (siw *ServerInterfaceWrapper) DeclineActivityDeal(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -114732,7 +114714,6 @@ func (siw *ServerInterfaceWrapper) DeclineActivityDeal(w http.ResponseWriter, r 
 
 // SetActivityDealRelevance operation middleware
 func (siw *ServerInterfaceWrapper) SetActivityDealRelevance(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -114766,7 +114747,6 @@ func (siw *ServerInterfaceWrapper) SetActivityDealRelevance(w http.ResponseWrite
 
 // ClearActivityDisposition operation middleware
 func (siw *ServerInterfaceWrapper) ClearActivityDisposition(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -114816,7 +114796,6 @@ func (siw *ServerInterfaceWrapper) ClearActivityDisposition(w http.ResponseWrite
 
 // SetActivityDisposition operation middleware
 func (siw *ServerInterfaceWrapper) SetActivityDisposition(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -114850,7 +114829,6 @@ func (siw *ServerInterfaceWrapper) SetActivityDisposition(w http.ResponseWriter,
 
 // DraftEmail operation middleware
 func (siw *ServerInterfaceWrapper) DraftEmail(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -114884,7 +114862,6 @@ func (siw *ServerInterfaceWrapper) DraftEmail(w http.ResponseWriter, r *http.Req
 
 // GetEmailPresentation operation middleware
 func (siw *ServerInterfaceWrapper) GetEmailPresentation(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -114934,7 +114911,6 @@ func (siw *ServerInterfaceWrapper) GetEmailPresentation(w http.ResponseWriter, r
 
 // AssignWebsiteInquiry operation middleware
 func (siw *ServerInterfaceWrapper) AssignWebsiteInquiry(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -114992,7 +114968,6 @@ func (siw *ServerInterfaceWrapper) AssignWebsiteInquiry(w http.ResponseWriter, r
 
 // PreviewWebsiteInquiryAssignment operation middleware
 func (siw *ServerInterfaceWrapper) PreviewWebsiteInquiryAssignment(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -115026,7 +115001,6 @@ func (siw *ServerInterfaceWrapper) PreviewWebsiteInquiryAssignment(w http.Respon
 
 // GetMeetingBrief operation middleware
 func (siw *ServerInterfaceWrapper) GetMeetingBrief(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -115076,7 +115050,6 @@ func (siw *ServerInterfaceWrapper) GetMeetingBrief(w http.ResponseWriter, r *htt
 
 // ReadActivityPipelineTrace operation middleware
 func (siw *ServerInterfaceWrapper) ReadActivityPipelineTrace(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -115110,7 +115083,6 @@ func (siw *ServerInterfaceWrapper) ReadActivityPipelineTrace(w http.ResponseWrit
 
 // GetActivityProjectFiling operation middleware
 func (siw *ServerInterfaceWrapper) GetActivityProjectFiling(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -115144,7 +115116,6 @@ func (siw *ServerInterfaceWrapper) GetActivityProjectFiling(w http.ResponseWrite
 
 // UndoActivityProjectFiling operation middleware
 func (siw *ServerInterfaceWrapper) UndoActivityProjectFiling(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -115176,7 +115147,6 @@ func (siw *ServerInterfaceWrapper) UndoActivityProjectFiling(w http.ResponseWrit
 
 // RenderActivityForReader operation middleware
 func (siw *ServerInterfaceWrapper) RenderActivityForReader(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -115208,7 +115178,6 @@ func (siw *ServerInterfaceWrapper) RenderActivityForReader(w http.ResponseWriter
 
 // RelinkActivity operation middleware
 func (siw *ServerInterfaceWrapper) RelinkActivity(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -115285,7 +115254,6 @@ func (siw *ServerInterfaceWrapper) RelinkActivity(w http.ResponseWriter, r *http
 
 // ClaimTaskReminderDelivery operation middleware
 func (siw *ServerInterfaceWrapper) ClaimTaskReminderDelivery(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -115317,7 +115285,6 @@ func (siw *ServerInterfaceWrapper) ClaimTaskReminderDelivery(w http.ResponseWrit
 
 // GetReplyRecipient operation middleware
 func (siw *ServerInterfaceWrapper) GetReplyRecipient(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -115351,7 +115318,6 @@ func (siw *ServerInterfaceWrapper) GetReplyRecipient(w http.ResponseWriter, r *h
 
 // SendEmail operation middleware
 func (siw *ServerInterfaceWrapper) SendEmail(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -115428,7 +115394,6 @@ func (siw *ServerInterfaceWrapper) SendEmail(w http.ResponseWriter, r *http.Requ
 
 // PreviewSendAuthorization operation middleware
 func (siw *ServerInterfaceWrapper) PreviewSendAuthorization(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -115462,7 +115427,6 @@ func (siw *ServerInterfaceWrapper) PreviewSendAuthorization(w http.ResponseWrite
 
 // SendMessage operation middleware
 func (siw *ServerInterfaceWrapper) SendMessage(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -115539,7 +115503,6 @@ func (siw *ServerInterfaceWrapper) SendMessage(w http.ResponseWriter, r *http.Re
 
 // TakeTask operation middleware
 func (siw *ServerInterfaceWrapper) TakeTask(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -115595,7 +115558,6 @@ func (siw *ServerInterfaceWrapper) TakeTask(w http.ResponseWriter, r *http.Reque
 
 // ReadTranscriptForNextSteps operation middleware
 func (siw *ServerInterfaceWrapper) ReadTranscriptForNextSteps(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -115629,7 +115591,6 @@ func (siw *ServerInterfaceWrapper) ReadTranscriptForNextSteps(w http.ResponseWri
 
 // GetLatestTranscriptRead operation middleware
 func (siw *ServerInterfaceWrapper) GetLatestTranscriptRead(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -115663,7 +115624,6 @@ func (siw *ServerInterfaceWrapper) GetLatestTranscriptRead(w http.ResponseWriter
 
 // GetTranscriptRead operation middleware
 func (siw *ServerInterfaceWrapper) GetTranscriptRead(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -115706,7 +115666,6 @@ func (siw *ServerInterfaceWrapper) GetTranscriptRead(w http.ResponseWriter, r *h
 
 // ListActivityReviewTemplates operation middleware
 func (siw *ServerInterfaceWrapper) ListActivityReviewTemplates(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -115728,7 +115687,6 @@ func (siw *ServerInterfaceWrapper) ListActivityReviewTemplates(w http.ResponseWr
 
 // CreateActivityReviewTemplate operation middleware
 func (siw *ServerInterfaceWrapper) CreateActivityReviewTemplate(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -115777,7 +115735,6 @@ func (siw *ServerInterfaceWrapper) CreateActivityReviewTemplate(w http.ResponseW
 
 // UpdateActivityReviewTemplate operation middleware
 func (siw *ServerInterfaceWrapper) UpdateActivityReviewTemplate(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -115811,7 +115768,6 @@ func (siw *ServerInterfaceWrapper) UpdateActivityReviewTemplate(w http.ResponseW
 
 // GetAutomaticWorkHealth operation middleware
 func (siw *ServerInterfaceWrapper) GetAutomaticWorkHealth(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -115852,7 +115808,6 @@ func (siw *ServerInterfaceWrapper) GetAutomaticWorkHealth(w http.ResponseWriter,
 
 // GetCaptureHealth operation middleware
 func (siw *ServerInterfaceWrapper) GetCaptureHealth(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -115874,7 +115829,6 @@ func (siw *ServerInterfaceWrapper) GetCaptureHealth(w http.ResponseWriter, r *ht
 
 // ListDataTasks operation middleware
 func (siw *ServerInterfaceWrapper) ListDataTasks(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -115896,7 +115850,6 @@ func (siw *ServerInterfaceWrapper) ListDataTasks(w http.ResponseWriter, r *http.
 
 // ControlDataTask operation middleware
 func (siw *ServerInterfaceWrapper) ControlDataTask(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -115918,7 +115871,6 @@ func (siw *ServerInterfaceWrapper) ControlDataTask(w http.ResponseWriter, r *htt
 
 // GetExtensionIngestHealth operation middleware
 func (siw *ServerInterfaceWrapper) GetExtensionIngestHealth(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -115940,7 +115892,6 @@ func (siw *ServerInterfaceWrapper) GetExtensionIngestHealth(w http.ResponseWrite
 
 // ActivateHomeRepair operation middleware
 func (siw *ServerInterfaceWrapper) ActivateHomeRepair(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -115962,7 +115913,6 @@ func (siw *ServerInterfaceWrapper) ActivateHomeRepair(w http.ResponseWriter, r *
 
 // PreviewHomeRepair operation middleware
 func (siw *ServerInterfaceWrapper) PreviewHomeRepair(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -115984,7 +115934,6 @@ func (siw *ServerInterfaceWrapper) PreviewHomeRepair(w http.ResponseWriter, r *h
 
 // GetJobHealth operation middleware
 func (siw *ServerInterfaceWrapper) GetJobHealth(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -116006,7 +115955,6 @@ func (siw *ServerInterfaceWrapper) GetJobHealth(w http.ResponseWriter, r *http.R
 
 // GetJobHealthHistory operation middleware
 func (siw *ServerInterfaceWrapper) GetJobHealthHistory(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -116086,7 +116034,6 @@ func (siw *ServerInterfaceWrapper) GetJobHealthHistory(w http.ResponseWriter, r 
 
 // PreviewMailDealRepair operation middleware
 func (siw *ServerInterfaceWrapper) PreviewMailDealRepair(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -116108,7 +116055,6 @@ func (siw *ServerInterfaceWrapper) PreviewMailDealRepair(w http.ResponseWriter, 
 
 // GetRecoveryHealth operation middleware
 func (siw *ServerInterfaceWrapper) GetRecoveryHealth(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -116130,7 +116076,6 @@ func (siw *ServerInterfaceWrapper) GetRecoveryHealth(w http.ResponseWriter, r *h
 
 // PauseReportingSchedules operation middleware
 func (siw *ServerInterfaceWrapper) PauseReportingSchedules(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -116150,7 +116095,6 @@ func (siw *ServerInterfaceWrapper) PauseReportingSchedules(w http.ResponseWriter
 
 // ResetData operation middleware
 func (siw *ServerInterfaceWrapper) ResetData(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -116170,7 +116114,6 @@ func (siw *ServerInterfaceWrapper) ResetData(w http.ResponseWriter, r *http.Requ
 
 // GetSystemHealth operation middleware
 func (siw *ServerInterfaceWrapper) GetSystemHealth(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -116192,7 +116135,6 @@ func (siw *ServerInterfaceWrapper) GetSystemHealth(w http.ResponseWriter, r *htt
 
 // GetVacuumRecommendations operation middleware
 func (siw *ServerInterfaceWrapper) GetVacuumRecommendations(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -116212,7 +116154,6 @@ func (siw *ServerInterfaceWrapper) GetVacuumRecommendations(w http.ResponseWrite
 
 // DownloadAgentSkillBundle operation middleware
 func (siw *ServerInterfaceWrapper) DownloadAgentSkillBundle(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -116232,7 +116173,6 @@ func (siw *ServerInterfaceWrapper) DownloadAgentSkillBundle(w http.ResponseWrite
 
 // ListAgentTools operation middleware
 func (siw *ServerInterfaceWrapper) ListAgentTools(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -116254,7 +116194,6 @@ func (siw *ServerInterfaceWrapper) ListAgentTools(w http.ResponseWriter, r *http
 
 // DeleteAiModelRate operation middleware
 func (siw *ServerInterfaceWrapper) DeleteAiModelRate(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -116319,7 +116258,6 @@ func (siw *ServerInterfaceWrapper) DeleteAiModelRate(w http.ResponseWriter, r *h
 
 // ListAiModelRates operation middleware
 func (siw *ServerInterfaceWrapper) ListAiModelRates(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -116373,7 +116311,6 @@ func (siw *ServerInterfaceWrapper) ListAiModelRates(w http.ResponseWriter, r *ht
 
 // SetAiModelRate operation middleware
 func (siw *ServerInterfaceWrapper) SetAiModelRate(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -116395,7 +116332,6 @@ func (siw *ServerInterfaceWrapper) SetAiModelRate(w http.ResponseWriter, r *http
 
 // ProposeAiModelRateRefresh operation middleware
 func (siw *ServerInterfaceWrapper) ProposeAiModelRateRefresh(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -116415,7 +116351,6 @@ func (siw *ServerInterfaceWrapper) ProposeAiModelRateRefresh(w http.ResponseWrit
 
 // RefreshAiModelRates operation middleware
 func (siw *ServerInterfaceWrapper) RefreshAiModelRates(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -116437,7 +116372,6 @@ func (siw *ServerInterfaceWrapper) RefreshAiModelRates(w http.ResponseWriter, r 
 
 // ListAgentUsageByUser operation middleware
 func (siw *ServerInterfaceWrapper) ListAgentUsageByUser(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -116457,7 +116391,6 @@ func (siw *ServerInterfaceWrapper) ListAgentUsageByUser(w http.ResponseWriter, r
 
 // ListAvailableModels operation middleware
 func (siw *ServerInterfaceWrapper) ListAvailableModels(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -116546,7 +116479,6 @@ func (siw *ServerInterfaceWrapper) ListAvailableModels(w http.ResponseWriter, r 
 
 // GetAiBudget operation middleware
 func (siw *ServerInterfaceWrapper) GetAiBudget(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -116568,7 +116500,6 @@ func (siw *ServerInterfaceWrapper) GetAiBudget(w http.ResponseWriter, r *http.Re
 
 // ReplaceAiBudget operation middleware
 func (siw *ServerInterfaceWrapper) ReplaceAiBudget(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -116588,7 +116519,6 @@ func (siw *ServerInterfaceWrapper) ReplaceAiBudget(w http.ResponseWriter, r *htt
 
 // PreviewAiBudget operation middleware
 func (siw *ServerInterfaceWrapper) PreviewAiBudget(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -116610,7 +116540,6 @@ func (siw *ServerInterfaceWrapper) PreviewAiBudget(w http.ResponseWriter, r *htt
 
 // GetAiCallStats operation middleware
 func (siw *ServerInterfaceWrapper) GetAiCallStats(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -116716,7 +116645,6 @@ func (siw *ServerInterfaceWrapper) GetAiCallStats(w http.ResponseWriter, r *http
 
 // GetAiTaskFlow operation middleware
 func (siw *ServerInterfaceWrapper) GetAiTaskFlow(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -116770,7 +116698,6 @@ func (siw *ServerInterfaceWrapper) GetAiTaskFlow(w http.ResponseWriter, r *http.
 
 // ListAiCalls operation middleware
 func (siw *ServerInterfaceWrapper) ListAiCalls(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -116954,7 +116881,6 @@ func (siw *ServerInterfaceWrapper) ListAiCalls(w http.ResponseWriter, r *http.Re
 
 // GetAiCall operation middleware
 func (siw *ServerInterfaceWrapper) GetAiCall(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -116988,7 +116914,6 @@ func (siw *ServerInterfaceWrapper) GetAiCall(w http.ResponseWriter, r *http.Requ
 
 // RecordAIFeedback operation middleware
 func (siw *ServerInterfaceWrapper) RecordAIFeedback(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -117008,7 +116933,6 @@ func (siw *ServerInterfaceWrapper) RecordAIFeedback(w http.ResponseWriter, r *ht
 
 // GetAiHealth operation middleware
 func (siw *ServerInterfaceWrapper) GetAiHealth(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -117030,7 +116954,6 @@ func (siw *ServerInterfaceWrapper) GetAiHealth(w http.ResponseWriter, r *http.Re
 
 // GetAiPriceSync operation middleware
 func (siw *ServerInterfaceWrapper) GetAiPriceSync(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -117052,7 +116975,6 @@ func (siw *ServerInterfaceWrapper) GetAiPriceSync(w http.ResponseWriter, r *http
 
 // ReplaceAiPriceSync operation middleware
 func (siw *ServerInterfaceWrapper) ReplaceAiPriceSync(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -117074,7 +116996,6 @@ func (siw *ServerInterfaceWrapper) ReplaceAiPriceSync(w http.ResponseWriter, r *
 
 // GetAiProfile operation middleware
 func (siw *ServerInterfaceWrapper) GetAiProfile(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -117096,7 +117017,6 @@ func (siw *ServerInterfaceWrapper) GetAiProfile(w http.ResponseWriter, r *http.R
 
 // GetAiProviderHealth operation middleware
 func (siw *ServerInterfaceWrapper) GetAiProviderHealth(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -117118,7 +117038,6 @@ func (siw *ServerInterfaceWrapper) GetAiProviderHealth(w http.ResponseWriter, r 
 
 // ListAiProviderKeys operation middleware
 func (siw *ServerInterfaceWrapper) ListAiProviderKeys(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -117138,7 +117057,6 @@ func (siw *ServerInterfaceWrapper) ListAiProviderKeys(w http.ResponseWriter, r *
 
 // DeleteAiProviderKey operation middleware
 func (siw *ServerInterfaceWrapper) DeleteAiProviderKey(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -117170,7 +117088,6 @@ func (siw *ServerInterfaceWrapper) DeleteAiProviderKey(w http.ResponseWriter, r 
 
 // SetAiProviderKey operation middleware
 func (siw *ServerInterfaceWrapper) SetAiProviderKey(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -117202,7 +117119,6 @@ func (siw *ServerInterfaceWrapper) SetAiProviderKey(w http.ResponseWriter, r *ht
 
 // TestAiProviderKey operation middleware
 func (siw *ServerInterfaceWrapper) TestAiProviderKey(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -117234,7 +117150,6 @@ func (siw *ServerInterfaceWrapper) TestAiProviderKey(w http.ResponseWriter, r *h
 
 // ListProviderLocations operation middleware
 func (siw *ServerInterfaceWrapper) ListProviderLocations(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -117268,7 +117183,6 @@ func (siw *ServerInterfaceWrapper) ListProviderLocations(w http.ResponseWriter, 
 
 // SetAiProviderSettings operation middleware
 func (siw *ServerInterfaceWrapper) SetAiProviderSettings(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -117300,7 +117214,6 @@ func (siw *ServerInterfaceWrapper) SetAiProviderSettings(w http.ResponseWriter, 
 
 // GetAiRouting operation middleware
 func (siw *ServerInterfaceWrapper) GetAiRouting(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -117322,7 +117235,6 @@ func (siw *ServerInterfaceWrapper) GetAiRouting(w http.ResponseWriter, r *http.R
 
 // ReplaceAiRouting operation middleware
 func (siw *ServerInterfaceWrapper) ReplaceAiRouting(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -117342,7 +117254,6 @@ func (siw *ServerInterfaceWrapper) ReplaceAiRouting(w http.ResponseWriter, r *ht
 
 // PreviewAiRouting operation middleware
 func (siw *ServerInterfaceWrapper) PreviewAiRouting(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -117364,7 +117275,6 @@ func (siw *ServerInterfaceWrapper) PreviewAiRouting(w http.ResponseWriter, r *ht
 
 // GetAiRoutingSchema operation middleware
 func (siw *ServerInterfaceWrapper) GetAiRoutingSchema(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -117386,7 +117296,6 @@ func (siw *ServerInterfaceWrapper) GetAiRoutingSchema(w http.ResponseWriter, r *
 
 // GetAiStatus operation middleware
 func (siw *ServerInterfaceWrapper) GetAiStatus(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -117408,7 +117317,6 @@ func (siw *ServerInterfaceWrapper) GetAiStatus(w http.ResponseWriter, r *http.Re
 
 // GetAiTaskOverrides operation middleware
 func (siw *ServerInterfaceWrapper) GetAiTaskOverrides(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -117430,7 +117338,6 @@ func (siw *ServerInterfaceWrapper) GetAiTaskOverrides(w http.ResponseWriter, r *
 
 // ReplaceAiTaskOverrides operation middleware
 func (siw *ServerInterfaceWrapper) ReplaceAiTaskOverrides(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -117450,7 +117357,6 @@ func (siw *ServerInterfaceWrapper) ReplaceAiTaskOverrides(w http.ResponseWriter,
 
 // PreviewAiTaskOverrides operation middleware
 func (siw *ServerInterfaceWrapper) PreviewAiTaskOverrides(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -117472,7 +117378,6 @@ func (siw *ServerInterfaceWrapper) PreviewAiTaskOverrides(w http.ResponseWriter,
 
 // GetAiTeamRules operation middleware
 func (siw *ServerInterfaceWrapper) GetAiTeamRules(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -117492,7 +117397,6 @@ func (siw *ServerInterfaceWrapper) GetAiTeamRules(w http.ResponseWriter, r *http
 
 // ReplaceAiTeamRules operation middleware
 func (siw *ServerInterfaceWrapper) ReplaceAiTeamRules(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -117512,7 +117416,6 @@ func (siw *ServerInterfaceWrapper) ReplaceAiTeamRules(w http.ResponseWriter, r *
 
 // GetAiUsage operation middleware
 func (siw *ServerInterfaceWrapper) GetAiUsage(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -117566,7 +117469,6 @@ func (siw *ServerInterfaceWrapper) GetAiUsage(w http.ResponseWriter, r *http.Req
 
 // GetAiUsageSummary operation middleware
 func (siw *ServerInterfaceWrapper) GetAiUsageSummary(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -117620,7 +117522,6 @@ func (siw *ServerInterfaceWrapper) GetAiUsageSummary(w http.ResponseWriter, r *h
 
 // GetAccountCoverage operation middleware
 func (siw *ServerInterfaceWrapper) GetAccountCoverage(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -117687,7 +117588,6 @@ func (siw *ServerInterfaceWrapper) GetAccountCoverage(w http.ResponseWriter, r *
 
 // AssessSalesReview operation middleware
 func (siw *ServerInterfaceWrapper) AssessSalesReview(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -117709,7 +117609,6 @@ func (siw *ServerInterfaceWrapper) AssessSalesReview(w http.ResponseWriter, r *h
 
 // GetAnalyticsContext operation middleware
 func (siw *ServerInterfaceWrapper) GetAnalyticsContext(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -117731,7 +117630,6 @@ func (siw *ServerInterfaceWrapper) GetAnalyticsContext(w http.ResponseWriter, r 
 
 // GetDataCoverage operation middleware
 func (siw *ServerInterfaceWrapper) GetDataCoverage(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -117753,7 +117651,6 @@ func (siw *ServerInterfaceWrapper) GetDataCoverage(w http.ResponseWriter, r *htt
 
 // ListSalesDecisions operation middleware
 func (siw *ServerInterfaceWrapper) ListSalesDecisions(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -117898,7 +117795,6 @@ func (siw *ServerInterfaceWrapper) ListSalesDecisions(w http.ResponseWriter, r *
 
 // RecordSalesDecision operation middleware
 func (siw *ServerInterfaceWrapper) RecordSalesDecision(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -117947,7 +117843,6 @@ func (siw *ServerInterfaceWrapper) RecordSalesDecision(w http.ResponseWriter, r 
 
 // RecordSalesDecisionOutcome operation middleware
 func (siw *ServerInterfaceWrapper) RecordSalesDecisionOutcome(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -117981,7 +117876,6 @@ func (siw *ServerInterfaceWrapper) RecordSalesDecisionOutcome(w http.ResponseWri
 
 // CompareReportingEditions operation middleware
 func (siw *ServerInterfaceWrapper) CompareReportingEditions(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -118035,7 +117929,6 @@ func (siw *ServerInterfaceWrapper) CompareReportingEditions(w http.ResponseWrite
 
 // GetReportingEdition operation middleware
 func (siw *ServerInterfaceWrapper) GetReportingEdition(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -118069,7 +117962,6 @@ func (siw *ServerInterfaceWrapper) GetReportingEdition(w http.ResponseWriter, r 
 
 // GetReportingEditionEvidence operation middleware
 func (siw *ServerInterfaceWrapper) GetReportingEditionEvidence(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -118184,7 +118076,6 @@ func (siw *ServerInterfaceWrapper) GetReportingEditionEvidence(w http.ResponseWr
 
 // ExportReportingEdition operation middleware
 func (siw *ServerInterfaceWrapper) ExportReportingEdition(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -118218,7 +118109,6 @@ func (siw *ServerInterfaceWrapper) ExportReportingEdition(w http.ResponseWriter,
 
 // EvaluateReporting operation middleware
 func (siw *ServerInterfaceWrapper) EvaluateReporting(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -118467,7 +118357,6 @@ func (siw *ServerInterfaceWrapper) EvaluateReporting(w http.ResponseWriter, r *h
 
 // ExportReportingEvaluation operation middleware
 func (siw *ServerInterfaceWrapper) ExportReportingEvaluation(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -118755,7 +118644,6 @@ func (siw *ServerInterfaceWrapper) ExportReportingEvaluation(w http.ResponseWrit
 
 // GetReportingEvidence operation middleware
 func (siw *ServerInterfaceWrapper) GetReportingEvidence(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -119121,7 +119009,6 @@ func (siw *ServerInterfaceWrapper) GetReportingEvidence(w http.ResponseWriter, r
 
 // GetReportingExecution operation middleware
 func (siw *ServerInterfaceWrapper) GetReportingExecution(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -119155,7 +119042,6 @@ func (siw *ServerInterfaceWrapper) GetReportingExecution(w http.ResponseWriter, 
 
 // RetryReportingExecution operation middleware
 func (siw *ServerInterfaceWrapper) RetryReportingExecution(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -119189,7 +119075,6 @@ func (siw *ServerInterfaceWrapper) RetryReportingExecution(w http.ResponseWriter
 
 // ExplainAnalyticsCell operation middleware
 func (siw *ServerInterfaceWrapper) ExplainAnalyticsCell(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -119211,7 +119096,6 @@ func (siw *ServerInterfaceWrapper) ExplainAnalyticsCell(w http.ResponseWriter, r
 
 // GetReportingFramework operation middleware
 func (siw *ServerInterfaceWrapper) GetReportingFramework(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -119233,7 +119117,6 @@ func (siw *ServerInterfaceWrapper) GetReportingFramework(w http.ResponseWriter, 
 
 // PublishReportingFramework operation middleware
 func (siw *ServerInterfaceWrapper) PublishReportingFramework(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -119286,7 +119169,6 @@ func (siw *ServerInterfaceWrapper) PublishReportingFramework(w http.ResponseWrit
 
 // ListSalesInitiatives operation middleware
 func (siw *ServerInterfaceWrapper) ListSalesInitiatives(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -119327,7 +119209,6 @@ func (siw *ServerInterfaceWrapper) ListSalesInitiatives(w http.ResponseWriter, r
 
 // CreateSalesInitiative operation middleware
 func (siw *ServerInterfaceWrapper) CreateSalesInitiative(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -119349,7 +119230,6 @@ func (siw *ServerInterfaceWrapper) CreateSalesInitiative(w http.ResponseWriter, 
 
 // GetSalesInitiative operation middleware
 func (siw *ServerInterfaceWrapper) GetSalesInitiative(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -119383,7 +119263,6 @@ func (siw *ServerInterfaceWrapper) GetSalesInitiative(w http.ResponseWriter, r *
 
 // UpdateSalesInitiative operation middleware
 func (siw *ServerInterfaceWrapper) UpdateSalesInitiative(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -119441,7 +119320,6 @@ func (siw *ServerInterfaceWrapper) UpdateSalesInitiative(w http.ResponseWriter, 
 
 // LaunchSalesInitiative operation middleware
 func (siw *ServerInterfaceWrapper) LaunchSalesInitiative(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -119499,7 +119377,6 @@ func (siw *ServerInterfaceWrapper) LaunchSalesInitiative(w http.ResponseWriter, 
 
 // ListSalesInitiativeMembers operation middleware
 func (siw *ServerInterfaceWrapper) ListSalesInitiativeMembers(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -119549,7 +119426,6 @@ func (siw *ServerInterfaceWrapper) ListSalesInitiativeMembers(w http.ResponseWri
 
 // ReplaceSalesInitiativeMembers operation middleware
 func (siw *ServerInterfaceWrapper) ReplaceSalesInitiativeMembers(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -119583,7 +119459,6 @@ func (siw *ServerInterfaceWrapper) ReplaceSalesInitiativeMembers(w http.Response
 
 // GetReportingMetrics operation middleware
 func (siw *ServerInterfaceWrapper) GetReportingMetrics(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -119605,7 +119480,6 @@ func (siw *ServerInterfaceWrapper) GetReportingMetrics(w http.ResponseWriter, r 
 
 // GetSalesProgress operation middleware
 func (siw *ServerInterfaceWrapper) GetSalesProgress(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -119698,7 +119572,6 @@ func (siw *ServerInterfaceWrapper) GetSalesProgress(w http.ResponseWriter, r *ht
 
 // ListSalesProgressDeals operation middleware
 func (siw *ServerInterfaceWrapper) ListSalesProgressDeals(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -119778,7 +119651,6 @@ func (siw *ServerInterfaceWrapper) ListSalesProgressDeals(w http.ResponseWriter,
 
 // SummarizeSalesProgress operation middleware
 func (siw *ServerInterfaceWrapper) SummarizeSalesProgress(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -119798,7 +119670,6 @@ func (siw *ServerInterfaceWrapper) SummarizeSalesProgress(w http.ResponseWriter,
 
 // RunAnalyticsQuery operation middleware
 func (siw *ServerInterfaceWrapper) RunAnalyticsQuery(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -119820,7 +119691,6 @@ func (siw *ServerInterfaceWrapper) RunAnalyticsQuery(w http.ResponseWriter, r *h
 
 // ListReportingReports operation middleware
 func (siw *ServerInterfaceWrapper) ListReportingReports(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -119887,7 +119757,6 @@ func (siw *ServerInterfaceWrapper) ListReportingReports(w http.ResponseWriter, r
 
 // CreateReportingReport operation middleware
 func (siw *ServerInterfaceWrapper) CreateReportingReport(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -119936,7 +119805,6 @@ func (siw *ServerInterfaceWrapper) CreateReportingReport(w http.ResponseWriter, 
 
 // DescribeReportBlocks operation middleware
 func (siw *ServerInterfaceWrapper) DescribeReportBlocks(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -119958,7 +119826,6 @@ func (siw *ServerInterfaceWrapper) DescribeReportBlocks(w http.ResponseWriter, r
 
 // RenderAnalyticsReport operation middleware
 func (siw *ServerInterfaceWrapper) RenderAnalyticsReport(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -119980,7 +119847,6 @@ func (siw *ServerInterfaceWrapper) RenderAnalyticsReport(w http.ResponseWriter, 
 
 // DescribeReportVocabulary operation middleware
 func (siw *ServerInterfaceWrapper) DescribeReportVocabulary(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -120002,7 +119868,6 @@ func (siw *ServerInterfaceWrapper) DescribeReportVocabulary(w http.ResponseWrite
 
 // ArchiveReportingReport operation middleware
 func (siw *ServerInterfaceWrapper) ArchiveReportingReport(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -120036,7 +119901,6 @@ func (siw *ServerInterfaceWrapper) ArchiveReportingReport(w http.ResponseWriter,
 
 // GetReportingReport operation middleware
 func (siw *ServerInterfaceWrapper) GetReportingReport(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -120070,7 +119934,6 @@ func (siw *ServerInterfaceWrapper) GetReportingReport(w http.ResponseWriter, r *
 
 // UpdateReportingReport operation middleware
 func (siw *ServerInterfaceWrapper) UpdateReportingReport(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -120132,7 +119995,6 @@ func (siw *ServerInterfaceWrapper) UpdateReportingReport(w http.ResponseWriter, 
 
 // DiscardReportingReportDraft operation middleware
 func (siw *ServerInterfaceWrapper) DiscardReportingReportDraft(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -120194,7 +120056,6 @@ func (siw *ServerInterfaceWrapper) DiscardReportingReportDraft(w http.ResponseWr
 
 // SaveReportingReportDraft operation middleware
 func (siw *ServerInterfaceWrapper) SaveReportingReportDraft(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -120256,7 +120117,6 @@ func (siw *ServerInterfaceWrapper) SaveReportingReportDraft(w http.ResponseWrite
 
 // PublishReportingReportDraft operation middleware
 func (siw *ServerInterfaceWrapper) PublishReportingReportDraft(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -120318,7 +120178,6 @@ func (siw *ServerInterfaceWrapper) PublishReportingReportDraft(w http.ResponseWr
 
 // ListReportingEditions operation middleware
 func (siw *ServerInterfaceWrapper) ListReportingEditions(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -120381,7 +120240,6 @@ func (siw *ServerInterfaceWrapper) ListReportingEditions(w http.ResponseWriter, 
 
 // FreezeReportingEdition operation middleware
 func (siw *ServerInterfaceWrapper) FreezeReportingEdition(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -120443,7 +120301,6 @@ func (siw *ServerInterfaceWrapper) FreezeReportingEdition(w http.ResponseWriter,
 
 // EvaluateReportingReport operation middleware
 func (siw *ServerInterfaceWrapper) EvaluateReportingReport(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -120493,7 +120350,6 @@ func (siw *ServerInterfaceWrapper) EvaluateReportingReport(w http.ResponseWriter
 
 // ListReportingExecutions operation middleware
 func (siw *ServerInterfaceWrapper) ListReportingExecutions(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -120556,7 +120412,6 @@ func (siw *ServerInterfaceWrapper) ListReportingExecutions(w http.ResponseWriter
 
 // AnswerReportingQuestionCard operation middleware
 func (siw *ServerInterfaceWrapper) AnswerReportingQuestionCard(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -120615,7 +120470,6 @@ func (siw *ServerInterfaceWrapper) AnswerReportingQuestionCard(w http.ResponseWr
 
 // ExplainReportingQuestionCard operation middleware
 func (siw *ServerInterfaceWrapper) ExplainReportingQuestionCard(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -120674,7 +120528,6 @@ func (siw *ServerInterfaceWrapper) ExplainReportingQuestionCard(w http.ResponseW
 
 // PreviewReportingReportAsRole operation middleware
 func (siw *ServerInterfaceWrapper) PreviewReportingReportAsRole(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -120735,7 +120588,6 @@ func (siw *ServerInterfaceWrapper) PreviewReportingReportAsRole(w http.ResponseW
 
 // ListReportingReportRevisions operation middleware
 func (siw *ServerInterfaceWrapper) ListReportingReportRevisions(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -120769,7 +120621,6 @@ func (siw *ServerInterfaceWrapper) ListReportingReportRevisions(w http.ResponseW
 
 // RestoreReportingReportRevision operation middleware
 func (siw *ServerInterfaceWrapper) RestoreReportingReportRevision(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -120840,7 +120691,6 @@ func (siw *ServerInterfaceWrapper) RestoreReportingReportRevision(w http.Respons
 
 // ListReportingSchedules operation middleware
 func (siw *ServerInterfaceWrapper) ListReportingSchedules(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -120874,7 +120724,6 @@ func (siw *ServerInterfaceWrapper) ListReportingSchedules(w http.ResponseWriter,
 
 // CreateReportingSchedule operation middleware
 func (siw *ServerInterfaceWrapper) CreateReportingSchedule(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -120908,7 +120757,6 @@ func (siw *ServerInterfaceWrapper) CreateReportingSchedule(w http.ResponseWriter
 
 // ListReportRuns operation middleware
 func (siw *ServerInterfaceWrapper) ListReportRuns(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -120975,7 +120823,6 @@ func (siw *ServerInterfaceWrapper) ListReportRuns(w http.ResponseWriter, r *http
 
 // GetReportRun operation middleware
 func (siw *ServerInterfaceWrapper) GetReportRun(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -121009,7 +120856,6 @@ func (siw *ServerInterfaceWrapper) GetReportRun(w http.ResponseWriter, r *http.R
 
 // ExplainReportRunCell operation middleware
 func (siw *ServerInterfaceWrapper) ExplainReportRunCell(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -121043,7 +120889,6 @@ func (siw *ServerInterfaceWrapper) ExplainReportRunCell(w http.ResponseWriter, r
 
 // SearchReportEvidence operation middleware
 func (siw *ServerInterfaceWrapper) SearchReportEvidence(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -121077,7 +120922,6 @@ func (siw *ServerInterfaceWrapper) SearchReportEvidence(w http.ResponseWriter, r
 
 // ListSalesGoalSellers operation middleware
 func (siw *ServerInterfaceWrapper) ListSalesGoalSellers(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -121118,7 +120962,6 @@ func (siw *ServerInterfaceWrapper) ListSalesGoalSellers(w http.ResponseWriter, r
 
 // GetSalesGoalPlan operation middleware
 func (siw *ServerInterfaceWrapper) GetSalesGoalPlan(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -121161,7 +121004,6 @@ func (siw *ServerInterfaceWrapper) GetSalesGoalPlan(w http.ResponseWriter, r *ht
 
 // DiscardSalesGoalDraft operation middleware
 func (siw *ServerInterfaceWrapper) DiscardSalesGoalDraft(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -121230,7 +121072,6 @@ func (siw *ServerInterfaceWrapper) DiscardSalesGoalDraft(w http.ResponseWriter, 
 
 // SaveSalesGoalDraft operation middleware
 func (siw *ServerInterfaceWrapper) SaveSalesGoalDraft(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -121318,7 +121159,6 @@ func (siw *ServerInterfaceWrapper) SaveSalesGoalDraft(w http.ResponseWriter, r *
 
 // ProposeSalesGoalMonths operation middleware
 func (siw *ServerInterfaceWrapper) ProposeSalesGoalMonths(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -121359,7 +121199,6 @@ func (siw *ServerInterfaceWrapper) ProposeSalesGoalMonths(w http.ResponseWriter,
 
 // PublishSalesGoalPlan operation middleware
 func (siw *ServerInterfaceWrapper) PublishSalesGoalPlan(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -121447,7 +121286,6 @@ func (siw *ServerInterfaceWrapper) PublishSalesGoalPlan(w http.ResponseWriter, r
 
 // WithdrawSalesGoalPlan operation middleware
 func (siw *ServerInterfaceWrapper) WithdrawSalesGoalPlan(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -121516,7 +121354,6 @@ func (siw *ServerInterfaceWrapper) WithdrawSalesGoalPlan(w http.ResponseWriter, 
 
 // UpdateReportingSchedule operation middleware
 func (siw *ServerInterfaceWrapper) UpdateReportingSchedule(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -121578,7 +121415,6 @@ func (siw *ServerInterfaceWrapper) UpdateReportingSchedule(w http.ResponseWriter
 
 // GetAnalyticsSchema operation middleware
 func (siw *ServerInterfaceWrapper) GetAnalyticsSchema(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -121600,7 +121436,6 @@ func (siw *ServerInterfaceWrapper) GetAnalyticsSchema(w http.ResponseWriter, r *
 
 // GetSdrSummary operation middleware
 func (siw *ServerInterfaceWrapper) GetSdrSummary(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -121667,7 +121502,6 @@ func (siw *ServerInterfaceWrapper) GetSdrSummary(w http.ResponseWriter, r *http.
 
 // ListSdrWaitingHandoffs operation middleware
 func (siw *ServerInterfaceWrapper) ListSdrWaitingHandoffs(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -121773,7 +121607,6 @@ func (siw *ServerInterfaceWrapper) ListSdrWaitingHandoffs(w http.ResponseWriter,
 
 // ListSdrUpcomingMeetings operation middleware
 func (siw *ServerInterfaceWrapper) ListSdrUpcomingMeetings(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -121879,7 +121712,6 @@ func (siw *ServerInterfaceWrapper) ListSdrUpcomingMeetings(w http.ResponseWriter
 
 // GetSdrTeamReview operation middleware
 func (siw *ServerInterfaceWrapper) GetSdrTeamReview(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -121946,7 +121778,6 @@ func (siw *ServerInterfaceWrapper) GetSdrTeamReview(w http.ResponseWriter, r *ht
 
 // ProposeReportSetup operation middleware
 func (siw *ServerInterfaceWrapper) ProposeReportSetup(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -121968,7 +121799,6 @@ func (siw *ServerInterfaceWrapper) ProposeReportSetup(w http.ResponseWriter, r *
 
 // ListReportingTargets operation middleware
 func (siw *ServerInterfaceWrapper) ListReportingTargets(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -122061,7 +121891,6 @@ func (siw *ServerInterfaceWrapper) ListReportingTargets(w http.ResponseWriter, r
 
 // CreateReportingTarget operation middleware
 func (siw *ServerInterfaceWrapper) CreateReportingTarget(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -122083,7 +121912,6 @@ func (siw *ServerInterfaceWrapper) CreateReportingTarget(w http.ResponseWriter, 
 
 // GetReportingTarget operation middleware
 func (siw *ServerInterfaceWrapper) GetReportingTarget(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -122117,7 +121945,6 @@ func (siw *ServerInterfaceWrapper) GetReportingTarget(w http.ResponseWriter, r *
 
 // UpdateReportingTarget operation middleware
 func (siw *ServerInterfaceWrapper) UpdateReportingTarget(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -122179,7 +122006,6 @@ func (siw *ServerInterfaceWrapper) UpdateReportingTarget(w http.ResponseWriter, 
 
 // DescribeAnalyticsVocabulary operation middleware
 func (siw *ServerInterfaceWrapper) DescribeAnalyticsVocabulary(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -122201,7 +122027,6 @@ func (siw *ServerInterfaceWrapper) DescribeAnalyticsVocabulary(w http.ResponseWr
 
 // ApproveApprovalBundle operation middleware
 func (siw *ServerInterfaceWrapper) ApproveApprovalBundle(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -122235,7 +122060,6 @@ func (siw *ServerInterfaceWrapper) ApproveApprovalBundle(w http.ResponseWriter, 
 
 // RejectApprovalBundle operation middleware
 func (siw *ServerInterfaceWrapper) RejectApprovalBundle(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -122269,7 +122093,6 @@ func (siw *ServerInterfaceWrapper) RejectApprovalBundle(w http.ResponseWriter, r
 
 // ListApprovals operation middleware
 func (siw *ServerInterfaceWrapper) ListApprovals(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -122414,7 +122237,6 @@ func (siw *ServerInterfaceWrapper) ListApprovals(w http.ResponseWriter, r *http.
 
 // CountPendingApprovals operation middleware
 func (siw *ServerInterfaceWrapper) CountPendingApprovals(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -122434,7 +122256,6 @@ func (siw *ServerInterfaceWrapper) CountPendingApprovals(w http.ResponseWriter, 
 
 // GetApproval operation middleware
 func (siw *ServerInterfaceWrapper) GetApproval(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -122468,7 +122289,6 @@ func (siw *ServerInterfaceWrapper) GetApproval(w http.ResponseWriter, r *http.Re
 
 // ApproveApproval operation middleware
 func (siw *ServerInterfaceWrapper) ApproveApproval(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -122526,7 +122346,6 @@ func (siw *ServerInterfaceWrapper) ApproveApproval(w http.ResponseWriter, r *htt
 
 // AcknowledgeApprovalFailure operation middleware
 func (siw *ServerInterfaceWrapper) AcknowledgeApprovalFailure(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -122560,7 +122379,6 @@ func (siw *ServerInterfaceWrapper) AcknowledgeApprovalFailure(w http.ResponseWri
 
 // RejectApproval operation middleware
 func (siw *ServerInterfaceWrapper) RejectApproval(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -122594,7 +122412,6 @@ func (siw *ServerInterfaceWrapper) RejectApproval(w http.ResponseWriter, r *http
 
 // ArchiveRecordAssignment operation middleware
 func (siw *ServerInterfaceWrapper) ArchiveRecordAssignment(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -122628,7 +122445,6 @@ func (siw *ServerInterfaceWrapper) ArchiveRecordAssignment(w http.ResponseWriter
 
 // UpdateRecordAssignment operation middleware
 func (siw *ServerInterfaceWrapper) UpdateRecordAssignment(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -122686,7 +122502,6 @@ func (siw *ServerInterfaceWrapper) UpdateRecordAssignment(w http.ResponseWriter,
 
 // GetAssistantProfile operation middleware
 func (siw *ServerInterfaceWrapper) GetAssistantProfile(w http.ResponseWriter, r *http.Request) {
-
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetAssistantProfile(w, r)
 	}))
@@ -122700,7 +122515,6 @@ func (siw *ServerInterfaceWrapper) GetAssistantProfile(w http.ResponseWriter, r 
 
 // ListAttachments operation middleware
 func (siw *ServerInterfaceWrapper) ListAttachments(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -122780,7 +122594,6 @@ func (siw *ServerInterfaceWrapper) ListAttachments(w http.ResponseWriter, r *htt
 
 // UploadAttachment operation middleware
 func (siw *ServerInterfaceWrapper) UploadAttachment(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -122802,7 +122615,6 @@ func (siw *ServerInterfaceWrapper) UploadAttachment(w http.ResponseWriter, r *ht
 
 // AddAttachmentLink operation middleware
 func (siw *ServerInterfaceWrapper) AddAttachmentLink(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -122824,7 +122636,6 @@ func (siw *ServerInterfaceWrapper) AddAttachmentLink(w http.ResponseWriter, r *h
 
 // PreviewAttachmentLink operation middleware
 func (siw *ServerInterfaceWrapper) PreviewAttachmentLink(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -122844,7 +122655,6 @@ func (siw *ServerInterfaceWrapper) PreviewAttachmentLink(w http.ResponseWriter, 
 
 // DeleteAttachment operation middleware
 func (siw *ServerInterfaceWrapper) DeleteAttachment(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -122878,7 +122688,6 @@ func (siw *ServerInterfaceWrapper) DeleteAttachment(w http.ResponseWriter, r *ht
 
 // DownloadAttachment operation middleware
 func (siw *ServerInterfaceWrapper) DownloadAttachment(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -122912,7 +122721,6 @@ func (siw *ServerInterfaceWrapper) DownloadAttachment(w http.ResponseWriter, r *
 
 // GetAttachmentExtraction operation middleware
 func (siw *ServerInterfaceWrapper) GetAttachmentExtraction(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -122962,7 +122770,6 @@ func (siw *ServerInterfaceWrapper) GetAttachmentExtraction(w http.ResponseWriter
 
 // ReadAttachmentForFields operation middleware
 func (siw *ServerInterfaceWrapper) ReadAttachmentForFields(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -122996,7 +122803,6 @@ func (siw *ServerInterfaceWrapper) ReadAttachmentForFields(w http.ResponseWriter
 
 // AcceptAttachmentExtraction operation middleware
 func (siw *ServerInterfaceWrapper) AcceptAttachmentExtraction(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -123030,7 +122836,6 @@ func (siw *ServerInterfaceWrapper) AcceptAttachmentExtraction(w http.ResponseWri
 
 // FileChatCapture operation middleware
 func (siw *ServerInterfaceWrapper) FileChatCapture(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -123062,7 +122867,6 @@ func (siw *ServerInterfaceWrapper) FileChatCapture(w http.ResponseWriter, r *htt
 
 // GetAttachmentExtractionReading operation middleware
 func (siw *ServerInterfaceWrapper) GetAttachmentExtractionReading(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -123103,7 +122907,6 @@ func (siw *ServerInterfaceWrapper) GetAttachmentExtractionReading(w http.Respons
 
 // UpdateAttachmentMetadata operation middleware
 func (siw *ServerInterfaceWrapper) UpdateAttachmentMetadata(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -123137,7 +122940,6 @@ func (siw *ServerInterfaceWrapper) UpdateAttachmentMetadata(w http.ResponseWrite
 
 // RequestAttachmentAccess operation middleware
 func (siw *ServerInterfaceWrapper) RequestAttachmentAccess(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -123171,7 +122973,6 @@ func (siw *ServerInterfaceWrapper) RequestAttachmentAccess(w http.ResponseWriter
 
 // GetAttention operation middleware
 func (siw *ServerInterfaceWrapper) GetAttention(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -123191,7 +122992,6 @@ func (siw *ServerInterfaceWrapper) GetAttention(w http.ResponseWriter, r *http.R
 
 // SendBouncedMessageAgain operation middleware
 func (siw *ServerInterfaceWrapper) SendBouncedMessageAgain(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -123223,7 +123023,6 @@ func (siw *ServerInterfaceWrapper) SendBouncedMessageAgain(w http.ResponseWriter
 
 // ListAuditLog operation middleware
 func (siw *ServerInterfaceWrapper) ListAuditLog(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -123368,7 +123167,6 @@ func (siw *ServerInterfaceWrapper) ListAuditLog(w http.ResponseWriter, r *http.R
 
 // GetAuthCapabilities operation middleware
 func (siw *ServerInterfaceWrapper) GetAuthCapabilities(w http.ResponseWriter, r *http.Request) {
-
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetAuthCapabilities(w, r)
 	}))
@@ -123382,7 +123180,6 @@ func (siw *ServerInterfaceWrapper) GetAuthCapabilities(w http.ResponseWriter, r 
 
 // ChangePassword operation middleware
 func (siw *ServerInterfaceWrapper) ChangePassword(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -123402,7 +123199,6 @@ func (siw *ServerInterfaceWrapper) ChangePassword(w http.ResponseWriter, r *http
 
 // ConfirmMemberMerge operation middleware
 func (siw *ServerInterfaceWrapper) ConfirmMemberMerge(w http.ResponseWriter, r *http.Request) {
-
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ConfirmMemberMerge(w, r)
 	}))
@@ -123416,7 +123212,6 @@ func (siw *ServerInterfaceWrapper) ConfirmMemberMerge(w http.ResponseWriter, r *
 
 // RequestPasswordReset operation middleware
 func (siw *ServerInterfaceWrapper) RequestPasswordReset(w http.ResponseWriter, r *http.Request) {
-
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.RequestPasswordReset(w, r)
 	}))
@@ -123430,7 +123225,6 @@ func (siw *ServerInterfaceWrapper) RequestPasswordReset(w http.ResponseWriter, r
 
 // Login operation middleware
 func (siw *ServerInterfaceWrapper) Login(w http.ResponseWriter, r *http.Request) {
-
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.Login(w, r)
 	}))
@@ -123444,7 +123238,6 @@ func (siw *ServerInterfaceWrapper) Login(w http.ResponseWriter, r *http.Request)
 
 // Logout operation middleware
 func (siw *ServerInterfaceWrapper) Logout(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -123464,7 +123257,6 @@ func (siw *ServerInterfaceWrapper) Logout(w http.ResponseWriter, r *http.Request
 
 // CompleteMfaChallenge operation middleware
 func (siw *ServerInterfaceWrapper) CompleteMfaChallenge(w http.ResponseWriter, r *http.Request) {
-
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CompleteMfaChallenge(w, r)
 	}))
@@ -123478,7 +123270,6 @@ func (siw *ServerInterfaceWrapper) CompleteMfaChallenge(w http.ResponseWriter, r
 
 // OidcSignInCallback operation middleware
 func (siw *ServerInterfaceWrapper) OidcSignInCallback(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -123546,7 +123337,6 @@ func (siw *ServerInterfaceWrapper) OidcSignInCallback(w http.ResponseWriter, r *
 
 // StartOidcSignIn operation middleware
 func (siw *ServerInterfaceWrapper) StartOidcSignIn(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -123588,7 +123378,6 @@ func (siw *ServerInterfaceWrapper) StartOidcSignIn(w http.ResponseWriter, r *htt
 
 // ResetPassword operation middleware
 func (siw *ServerInterfaceWrapper) ResetPassword(w http.ResponseWriter, r *http.Request) {
-
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ResetPassword(w, r)
 	}))
@@ -123602,7 +123391,6 @@ func (siw *ServerInterfaceWrapper) ResetPassword(w http.ResponseWriter, r *http.
 
 // ListAutomations operation middleware
 func (siw *ServerInterfaceWrapper) ListAutomations(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -123656,7 +123444,6 @@ func (siw *ServerInterfaceWrapper) ListAutomations(w http.ResponseWriter, r *htt
 
 // CreateAutomation operation middleware
 func (siw *ServerInterfaceWrapper) CreateAutomation(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -123678,7 +123465,6 @@ func (siw *ServerInterfaceWrapper) CreateAutomation(w http.ResponseWriter, r *ht
 
 // ListAutomationCatalog operation middleware
 func (siw *ServerInterfaceWrapper) ListAutomationCatalog(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -123700,7 +123486,6 @@ func (siw *ServerInterfaceWrapper) ListAutomationCatalog(w http.ResponseWriter, 
 
 // RetryAutomationRun operation middleware
 func (siw *ServerInterfaceWrapper) RetryAutomationRun(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -123734,7 +123519,6 @@ func (siw *ServerInterfaceWrapper) RetryAutomationRun(w http.ResponseWriter, r *
 
 // DeleteAutomation operation middleware
 func (siw *ServerInterfaceWrapper) DeleteAutomation(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -123768,7 +123552,6 @@ func (siw *ServerInterfaceWrapper) DeleteAutomation(w http.ResponseWriter, r *ht
 
 // GetAutomation operation middleware
 func (siw *ServerInterfaceWrapper) GetAutomation(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -123802,7 +123585,6 @@ func (siw *ServerInterfaceWrapper) GetAutomation(w http.ResponseWriter, r *http.
 
 // UpdateAutomation operation middleware
 func (siw *ServerInterfaceWrapper) UpdateAutomation(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -123860,7 +123642,6 @@ func (siw *ServerInterfaceWrapper) UpdateAutomation(w http.ResponseWriter, r *ht
 
 // PreviewAutomation operation middleware
 func (siw *ServerInterfaceWrapper) PreviewAutomation(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -123894,7 +123675,6 @@ func (siw *ServerInterfaceWrapper) PreviewAutomation(w http.ResponseWriter, r *h
 
 // ListAutomationRuns operation middleware
 func (siw *ServerInterfaceWrapper) ListAutomationRuns(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -123970,7 +123750,6 @@ func (siw *ServerInterfaceWrapper) ListAutomationRuns(w http.ResponseWriter, r *
 
 // GetAutonomy operation middleware
 func (siw *ServerInterfaceWrapper) GetAutonomy(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -123990,7 +123769,6 @@ func (siw *ServerInterfaceWrapper) GetAutonomy(w http.ResponseWriter, r *http.Re
 
 // UpdateAutonomy operation middleware
 func (siw *ServerInterfaceWrapper) UpdateAutonomy(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -124010,7 +123788,6 @@ func (siw *ServerInterfaceWrapper) UpdateAutonomy(w http.ResponseWriter, r *http
 
 // UpdateAutoApplyInstallation operation middleware
 func (siw *ServerInterfaceWrapper) UpdateAutoApplyInstallation(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -124030,7 +123807,6 @@ func (siw *ServerInterfaceWrapper) UpdateAutoApplyInstallation(w http.ResponseWr
 
 // GetAvailability operation middleware
 func (siw *ServerInterfaceWrapper) GetAvailability(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -124123,7 +123899,6 @@ func (siw *ServerInterfaceWrapper) GetAvailability(w http.ResponseWriter, r *htt
 
 // BookMeeting operation middleware
 func (siw *ServerInterfaceWrapper) BookMeeting(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -124170,7 +123945,6 @@ func (siw *ServerInterfaceWrapper) BookMeeting(w http.ResponseWriter, r *http.Re
 
 // GetMorningBrief operation middleware
 func (siw *ServerInterfaceWrapper) GetMorningBrief(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -124192,7 +123966,6 @@ func (siw *ServerInterfaceWrapper) GetMorningBrief(w http.ResponseWriter, r *htt
 
 // GenerateMorningBrief operation middleware
 func (siw *ServerInterfaceWrapper) GenerateMorningBrief(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -124214,7 +123987,6 @@ func (siw *ServerInterfaceWrapper) GenerateMorningBrief(w http.ResponseWriter, r
 
 // AnnotateMorningBrief operation middleware
 func (siw *ServerInterfaceWrapper) AnnotateMorningBrief(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -124236,7 +124008,6 @@ func (siw *ServerInterfaceWrapper) AnnotateMorningBrief(w http.ResponseWriter, r
 
 // MarkBriefItemActed operation middleware
 func (siw *ServerInterfaceWrapper) MarkBriefItemActed(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -124270,7 +124041,6 @@ func (siw *ServerInterfaceWrapper) MarkBriefItemActed(w http.ResponseWriter, r *
 
 // MarkBriefItemDismissed operation middleware
 func (siw *ServerInterfaceWrapper) MarkBriefItemDismissed(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -124304,7 +124074,6 @@ func (siw *ServerInterfaceWrapper) MarkBriefItemDismissed(w http.ResponseWriter,
 
 // SnoozeBriefItem operation middleware
 func (siw *ServerInterfaceWrapper) SnoozeBriefItem(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -124338,7 +124107,6 @@ func (siw *ServerInterfaceWrapper) SnoozeBriefItem(w http.ResponseWriter, r *htt
 
 // UnsnoozeBriefItem operation middleware
 func (siw *ServerInterfaceWrapper) UnsnoozeBriefItem(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -124372,7 +124140,6 @@ func (siw *ServerInterfaceWrapper) UnsnoozeBriefItem(w http.ResponseWriter, r *h
 
 // ExecuteBulkChange operation middleware
 func (siw *ServerInterfaceWrapper) ExecuteBulkChange(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -124421,7 +124188,6 @@ func (siw *ServerInterfaceWrapper) ExecuteBulkChange(w http.ResponseWriter, r *h
 
 // PreviewBulkChange operation middleware
 func (siw *ServerInterfaceWrapper) PreviewBulkChange(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -124443,7 +124209,6 @@ func (siw *ServerInterfaceWrapper) PreviewBulkChange(w http.ResponseWriter, r *h
 
 // GetBulkChange operation middleware
 func (siw *ServerInterfaceWrapper) GetBulkChange(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -124477,7 +124242,6 @@ func (siw *ServerInterfaceWrapper) GetBulkChange(w http.ResponseWriter, r *http.
 
 // UndoBulkChange operation middleware
 func (siw *ServerInterfaceWrapper) UndoBulkChange(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -124535,7 +124299,6 @@ func (siw *ServerInterfaceWrapper) UndoBulkChange(w http.ResponseWriter, r *http
 
 // PreviewBulkUndo operation middleware
 func (siw *ServerInterfaceWrapper) PreviewBulkUndo(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -124569,7 +124332,6 @@ func (siw *ServerInterfaceWrapper) PreviewBulkUndo(w http.ResponseWriter, r *htt
 
 // ListMyCaptureActivity operation middleware
 func (siw *ServerInterfaceWrapper) ListMyCaptureActivity(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -124623,7 +124385,6 @@ func (siw *ServerInterfaceWrapper) ListMyCaptureActivity(w http.ResponseWriter, 
 
 // ListWorkspaceCaptureActivity operation middleware
 func (siw *ServerInterfaceWrapper) ListWorkspaceCaptureActivity(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -124677,7 +124438,6 @@ func (siw *ServerInterfaceWrapper) ListWorkspaceCaptureActivity(w http.ResponseW
 
 // ListBlockedDomains operation middleware
 func (siw *ServerInterfaceWrapper) ListBlockedDomains(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -124699,7 +124459,6 @@ func (siw *ServerInterfaceWrapper) ListBlockedDomains(w http.ResponseWriter, r *
 
 // SetBlockedDomain operation middleware
 func (siw *ServerInterfaceWrapper) SetBlockedDomain(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -124721,7 +124480,6 @@ func (siw *ServerInterfaceWrapper) SetBlockedDomain(w http.ResponseWriter, r *ht
 
 // ReopenWithheldDomain operation middleware
 func (siw *ServerInterfaceWrapper) ReopenWithheldDomain(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -124755,7 +124513,6 @@ func (siw *ServerInterfaceWrapper) ReopenWithheldDomain(w http.ResponseWriter, r
 
 // ListConsumerMailBaseline operation middleware
 func (siw *ServerInterfaceWrapper) ListConsumerMailBaseline(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -124796,7 +124553,6 @@ func (siw *ServerInterfaceWrapper) ListConsumerMailBaseline(w http.ResponseWrite
 
 // ListConsumerMailDomains operation middleware
 func (siw *ServerInterfaceWrapper) ListConsumerMailDomains(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -124818,7 +124574,6 @@ func (siw *ServerInterfaceWrapper) ListConsumerMailDomains(w http.ResponseWriter
 
 // AddConsumerMailDomain operation middleware
 func (siw *ServerInterfaceWrapper) AddConsumerMailDomain(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -124840,7 +124595,6 @@ func (siw *ServerInterfaceWrapper) AddConsumerMailDomain(w http.ResponseWriter, 
 
 // RemoveConsumerMailDomain operation middleware
 func (siw *ServerInterfaceWrapper) RemoveConsumerMailDomain(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -124874,7 +124628,6 @@ func (siw *ServerInterfaceWrapper) RemoveConsumerMailDomain(w http.ResponseWrite
 
 // ListCaptureContactsAwaitingDecision operation middleware
 func (siw *ServerInterfaceWrapper) ListCaptureContactsAwaitingDecision(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -124896,7 +124649,6 @@ func (siw *ServerInterfaceWrapper) ListCaptureContactsAwaitingDecision(w http.Re
 
 // ListCaptureCounterpartyHolds operation middleware
 func (siw *ServerInterfaceWrapper) ListCaptureCounterpartyHolds(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -124918,7 +124670,6 @@ func (siw *ServerInterfaceWrapper) ListCaptureCounterpartyHolds(w http.ResponseW
 
 // CreateCaptureCounterpartyHold operation middleware
 func (siw *ServerInterfaceWrapper) CreateCaptureCounterpartyHold(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -124940,7 +124691,6 @@ func (siw *ServerInterfaceWrapper) CreateCaptureCounterpartyHold(w http.Response
 
 // ShareCaptureCounterpartyHoldHistory operation middleware
 func (siw *ServerInterfaceWrapper) ShareCaptureCounterpartyHoldHistory(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -124962,7 +124712,6 @@ func (siw *ServerInterfaceWrapper) ShareCaptureCounterpartyHoldHistory(w http.Re
 
 // DeleteCaptureCounterpartyHold operation middleware
 func (siw *ServerInterfaceWrapper) DeleteCaptureCounterpartyHold(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -124996,7 +124745,6 @@ func (siw *ServerInterfaceWrapper) DeleteCaptureCounterpartyHold(w http.Response
 
 // ListDomainQuestions operation middleware
 func (siw *ServerInterfaceWrapper) ListDomainQuestions(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -125063,7 +124811,6 @@ func (siw *ServerInterfaceWrapper) ListDomainQuestions(w http.ResponseWriter, r 
 
 // DiscardDomainQuestion operation middleware
 func (siw *ServerInterfaceWrapper) DiscardDomainQuestion(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -125097,7 +124844,6 @@ func (siw *ServerInterfaceWrapper) DiscardDomainQuestion(w http.ResponseWriter, 
 
 // KeepDomainQuestion operation middleware
 func (siw *ServerInterfaceWrapper) KeepDomainQuestion(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -125131,7 +124877,6 @@ func (siw *ServerInterfaceWrapper) KeepDomainQuestion(w http.ResponseWriter, r *
 
 // KeepDomainAsVendor operation middleware
 func (siw *ServerInterfaceWrapper) KeepDomainAsVendor(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -125165,7 +124910,6 @@ func (siw *ServerInterfaceWrapper) KeepDomainAsVendor(w http.ResponseWriter, r *
 
 // ListWorkspaceEmailDomains operation middleware
 func (siw *ServerInterfaceWrapper) ListWorkspaceEmailDomains(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -125187,7 +124931,6 @@ func (siw *ServerInterfaceWrapper) ListWorkspaceEmailDomains(w http.ResponseWrit
 
 // CreateWorkspaceEmailDomain operation middleware
 func (siw *ServerInterfaceWrapper) CreateWorkspaceEmailDomain(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -125209,7 +124952,6 @@ func (siw *ServerInterfaceWrapper) CreateWorkspaceEmailDomain(w http.ResponseWri
 
 // DeleteWorkspaceEmailDomain operation middleware
 func (siw *ServerInterfaceWrapper) DeleteWorkspaceEmailDomain(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -125243,7 +124985,6 @@ func (siw *ServerInterfaceWrapper) DeleteWorkspaceEmailDomain(w http.ResponseWri
 
 // ListCaptureExclusions operation middleware
 func (siw *ServerInterfaceWrapper) ListCaptureExclusions(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -125265,7 +125006,6 @@ func (siw *ServerInterfaceWrapper) ListCaptureExclusions(w http.ResponseWriter, 
 
 // CreateCaptureExclusion operation middleware
 func (siw *ServerInterfaceWrapper) CreateCaptureExclusion(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -125287,7 +125027,6 @@ func (siw *ServerInterfaceWrapper) CreateCaptureExclusion(w http.ResponseWriter,
 
 // DeleteCaptureExclusion operation middleware
 func (siw *ServerInterfaceWrapper) DeleteCaptureExclusion(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -125321,7 +125060,6 @@ func (siw *ServerInterfaceWrapper) DeleteCaptureExclusion(w http.ResponseWriter,
 
 // PurgeCaptureExclusion operation middleware
 func (siw *ServerInterfaceWrapper) PurgeCaptureExclusion(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -125408,7 +125146,6 @@ func (siw *ServerInterfaceWrapper) PurgeCaptureExclusion(w http.ResponseWriter, 
 
 // ListHeldThreads operation middleware
 func (siw *ServerInterfaceWrapper) ListHeldThreads(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -125540,7 +125277,6 @@ func (siw *ServerInterfaceWrapper) ListHeldThreads(w http.ResponseWriter, r *htt
 
 // ListCaptureOwnerIdentities operation middleware
 func (siw *ServerInterfaceWrapper) ListCaptureOwnerIdentities(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -125562,7 +125298,6 @@ func (siw *ServerInterfaceWrapper) ListCaptureOwnerIdentities(w http.ResponseWri
 
 // CreateCaptureOwnerIdentity operation middleware
 func (siw *ServerInterfaceWrapper) CreateCaptureOwnerIdentity(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -125584,7 +125319,6 @@ func (siw *ServerInterfaceWrapper) CreateCaptureOwnerIdentity(w http.ResponseWri
 
 // DeleteCaptureOwnerIdentity operation middleware
 func (siw *ServerInterfaceWrapper) DeleteCaptureOwnerIdentity(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -125618,7 +125352,6 @@ func (siw *ServerInterfaceWrapper) DeleteCaptureOwnerIdentity(w http.ResponseWri
 
 // RestoreCaptureOwnerIdentity operation middleware
 func (siw *ServerInterfaceWrapper) RestoreCaptureOwnerIdentity(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -125652,7 +125385,6 @@ func (siw *ServerInterfaceWrapper) RestoreCaptureOwnerIdentity(w http.ResponseWr
 
 // ListCaptureSenders operation middleware
 func (siw *ServerInterfaceWrapper) ListCaptureSenders(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -125745,7 +125477,6 @@ func (siw *ServerInterfaceWrapper) ListCaptureSenders(w http.ResponseWriter, r *
 
 // DeleteCaptureSenderDecision operation middleware
 func (siw *ServerInterfaceWrapper) DeleteCaptureSenderDecision(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -125779,7 +125510,6 @@ func (siw *ServerInterfaceWrapper) DeleteCaptureSenderDecision(w http.ResponseWr
 
 // SetCaptureSenderDecision operation middleware
 func (siw *ServerInterfaceWrapper) SetCaptureSenderDecision(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -125813,7 +125543,6 @@ func (siw *ServerInterfaceWrapper) SetCaptureSenderDecision(w http.ResponseWrite
 
 // GetCaptureSettings operation middleware
 func (siw *ServerInterfaceWrapper) GetCaptureSettings(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -125833,7 +125562,6 @@ func (siw *ServerInterfaceWrapper) GetCaptureSettings(w http.ResponseWriter, r *
 
 // UpdateCaptureSettings operation middleware
 func (siw *ServerInterfaceWrapper) UpdateCaptureSettings(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -125853,7 +125581,6 @@ func (siw *ServerInterfaceWrapper) UpdateCaptureSettings(w http.ResponseWriter, 
 
 // ReadCaptureTracePipeline operation middleware
 func (siw *ServerInterfaceWrapper) ReadCaptureTracePipeline(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -125887,7 +125614,6 @@ func (siw *ServerInterfaceWrapper) ReadCaptureTracePipeline(w http.ResponseWrite
 
 // ListUnroutedMail operation middleware
 func (siw *ServerInterfaceWrapper) ListUnroutedMail(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -125907,7 +125633,6 @@ func (siw *ServerInterfaceWrapper) ListUnroutedMail(w http.ResponseWriter, r *ht
 
 // RestoreUnroutedAddress operation middleware
 func (siw *ServerInterfaceWrapper) RestoreUnroutedAddress(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -125939,7 +125664,6 @@ func (siw *ServerInterfaceWrapper) RestoreUnroutedAddress(w http.ResponseWriter,
 
 // RefuseUnroutedAddress operation middleware
 func (siw *ServerInterfaceWrapper) RefuseUnroutedAddress(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -125971,7 +125695,6 @@ func (siw *ServerInterfaceWrapper) RefuseUnroutedAddress(w http.ResponseWriter, 
 
 // CatchUpOnRecord operation middleware
 func (siw *ServerInterfaceWrapper) CatchUpOnRecord(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -126064,7 +125787,6 @@ func (siw *ServerInterfaceWrapper) CatchUpOnRecord(w http.ResponseWriter, r *htt
 
 // ListChannelConnections operation middleware
 func (siw *ServerInterfaceWrapper) ListChannelConnections(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -126086,7 +125808,6 @@ func (siw *ServerInterfaceWrapper) ListChannelConnections(w http.ResponseWriter,
 
 // ConnectChannel operation middleware
 func (siw *ServerInterfaceWrapper) ConnectChannel(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -126106,7 +125827,6 @@ func (siw *ServerInterfaceWrapper) ConnectChannel(w http.ResponseWriter, r *http
 
 // ListTelegramBusinessConnections operation middleware
 func (siw *ServerInterfaceWrapper) ListTelegramBusinessConnections(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -126126,7 +125846,6 @@ func (siw *ServerInterfaceWrapper) ListTelegramBusinessConnections(w http.Respon
 
 // DisconnectTelegramBusinessConnection operation middleware
 func (siw *ServerInterfaceWrapper) DisconnectTelegramBusinessConnection(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -126158,7 +125877,6 @@ func (siw *ServerInterfaceWrapper) DisconnectTelegramBusinessConnection(w http.R
 
 // ApproveTelegramBusinessConnection operation middleware
 func (siw *ServerInterfaceWrapper) ApproveTelegramBusinessConnection(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -126190,7 +125908,6 @@ func (siw *ServerInterfaceWrapper) ApproveTelegramBusinessConnection(w http.Resp
 
 // UpdateTelegramBusinessConnectionVisibility operation middleware
 func (siw *ServerInterfaceWrapper) UpdateTelegramBusinessConnectionVisibility(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -126222,7 +125939,6 @@ func (siw *ServerInterfaceWrapper) UpdateTelegramBusinessConnectionVisibility(w 
 
 // ListWhatsAppConnections operation middleware
 func (siw *ServerInterfaceWrapper) ListWhatsAppConnections(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -126242,7 +125958,6 @@ func (siw *ServerInterfaceWrapper) ListWhatsAppConnections(w http.ResponseWriter
 
 // CreateWhatsAppConnection operation middleware
 func (siw *ServerInterfaceWrapper) CreateWhatsAppConnection(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -126262,7 +125977,6 @@ func (siw *ServerInterfaceWrapper) CreateWhatsAppConnection(w http.ResponseWrite
 
 // DisconnectWhatsAppConnection operation middleware
 func (siw *ServerInterfaceWrapper) DisconnectWhatsAppConnection(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -126294,7 +126008,6 @@ func (siw *ServerInterfaceWrapper) DisconnectWhatsAppConnection(w http.ResponseW
 
 // UpdateWhatsAppConnectionVisibility operation middleware
 func (siw *ServerInterfaceWrapper) UpdateWhatsAppConnectionVisibility(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -126326,7 +126039,6 @@ func (siw *ServerInterfaceWrapper) UpdateWhatsAppConnectionVisibility(w http.Res
 
 // ListZaloOAConnections operation middleware
 func (siw *ServerInterfaceWrapper) ListZaloOAConnections(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -126346,7 +126058,6 @@ func (siw *ServerInterfaceWrapper) ListZaloOAConnections(w http.ResponseWriter, 
 
 // CreateZaloOAConnection operation middleware
 func (siw *ServerInterfaceWrapper) CreateZaloOAConnection(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -126366,7 +126077,6 @@ func (siw *ServerInterfaceWrapper) CreateZaloOAConnection(w http.ResponseWriter,
 
 // DisconnectZaloOAConnection operation middleware
 func (siw *ServerInterfaceWrapper) DisconnectZaloOAConnection(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -126398,7 +126108,6 @@ func (siw *ServerInterfaceWrapper) DisconnectZaloOAConnection(w http.ResponseWri
 
 // UpdateZaloOAConnectionVisibility operation middleware
 func (siw *ServerInterfaceWrapper) UpdateZaloOAConnectionVisibility(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -126430,7 +126139,6 @@ func (siw *ServerInterfaceWrapper) UpdateZaloOAConnectionVisibility(w http.Respo
 
 // DisconnectChannel operation middleware
 func (siw *ServerInterfaceWrapper) DisconnectChannel(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -126464,7 +126172,6 @@ func (siw *ServerInterfaceWrapper) DisconnectChannel(w http.ResponseWriter, r *h
 
 // ReplaceChannelToken operation middleware
 func (siw *ServerInterfaceWrapper) ReplaceChannelToken(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -126496,7 +126203,6 @@ func (siw *ServerInterfaceWrapper) ReplaceChannelToken(w http.ResponseWriter, r 
 
 // ReceiveDispactChannelEvent operation middleware
 func (siw *ServerInterfaceWrapper) ReceiveDispactChannelEvent(w http.ResponseWriter, r *http.Request) {
-
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ReceiveDispactChannelEvent(w, r)
 	}))
@@ -126510,7 +126216,6 @@ func (siw *ServerInterfaceWrapper) ReceiveDispactChannelEvent(w http.ResponseWri
 
 // VerifyWhatsAppWebhook operation middleware
 func (siw *ServerInterfaceWrapper) VerifyWhatsAppWebhook(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -126569,7 +126274,6 @@ func (siw *ServerInterfaceWrapper) VerifyWhatsAppWebhook(w http.ResponseWriter, 
 
 // ReceiveWhatsAppWebhook operation middleware
 func (siw *ServerInterfaceWrapper) ReceiveWhatsAppWebhook(w http.ResponseWriter, r *http.Request) {
-
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ReceiveWhatsAppWebhook(w, r)
 	}))
@@ -126583,7 +126287,6 @@ func (siw *ServerInterfaceWrapper) ReceiveWhatsAppWebhook(w http.ResponseWriter,
 
 // ReceiveZaloOAWebhook operation middleware
 func (siw *ServerInterfaceWrapper) ReceiveZaloOAWebhook(w http.ResponseWriter, r *http.Request) {
-
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ReceiveZaloOAWebhook(w, r)
 	}))
@@ -126597,7 +126300,6 @@ func (siw *ServerInterfaceWrapper) ReceiveZaloOAWebhook(w http.ResponseWriter, r
 
 // UnlinkChannel operation middleware
 func (siw *ServerInterfaceWrapper) UnlinkChannel(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -126640,7 +126342,6 @@ func (siw *ServerInterfaceWrapper) UnlinkChannel(w http.ResponseWriter, r *http.
 
 // GetChannelLink operation middleware
 func (siw *ServerInterfaceWrapper) GetChannelLink(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -126683,7 +126384,6 @@ func (siw *ServerInterfaceWrapper) GetChannelLink(w http.ResponseWriter, r *http
 
 // SetChannelVerbosity operation middleware
 func (siw *ServerInterfaceWrapper) SetChannelVerbosity(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -126726,7 +126426,6 @@ func (siw *ServerInterfaceWrapper) SetChannelVerbosity(w http.ResponseWriter, r 
 
 // LinkChannel operation middleware
 func (siw *ServerInterfaceWrapper) LinkChannel(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -126769,7 +126468,6 @@ func (siw *ServerInterfaceWrapper) LinkChannel(w http.ResponseWriter, r *http.Re
 
 // ListLinkableChannels operation middleware
 func (siw *ServerInterfaceWrapper) ListLinkableChannels(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -126810,7 +126508,6 @@ func (siw *ServerInterfaceWrapper) ListLinkableChannels(w http.ResponseWriter, r
 
 // FileChannelMessage operation middleware
 func (siw *ServerInterfaceWrapper) FileChannelMessage(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -126853,7 +126550,6 @@ func (siw *ServerInterfaceWrapper) FileChannelMessage(w http.ResponseWriter, r *
 
 // ListChannelProviders operation middleware
 func (siw *ServerInterfaceWrapper) ListChannelProviders(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -126875,7 +126571,6 @@ func (siw *ServerInterfaceWrapper) ListChannelProviders(w http.ResponseWriter, r
 
 // ReopenConversationClaim operation middleware
 func (siw *ServerInterfaceWrapper) ReopenConversationClaim(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -126907,7 +126602,6 @@ func (siw *ServerInterfaceWrapper) ReopenConversationClaim(w http.ResponseWriter
 
 // SettleConversationClaim operation middleware
 func (siw *ServerInterfaceWrapper) SettleConversationClaim(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -126941,7 +126635,6 @@ func (siw *ServerInterfaceWrapper) SettleConversationClaim(w http.ResponseWriter
 
 // TakeOverConversationClaim operation middleware
 func (siw *ServerInterfaceWrapper) TakeOverConversationClaim(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -126975,7 +126668,6 @@ func (siw *ServerInterfaceWrapper) TakeOverConversationClaim(w http.ResponseWrit
 
 // ColdStartReadback operation middleware
 func (siw *ServerInterfaceWrapper) ColdStartReadback(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -126995,7 +126687,6 @@ func (siw *ServerInterfaceWrapper) ColdStartReadback(w http.ResponseWriter, r *h
 
 // ColdStartPreview operation middleware
 func (siw *ServerInterfaceWrapper) ColdStartPreview(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -127015,7 +126706,6 @@ func (siw *ServerInterfaceWrapper) ColdStartPreview(w http.ResponseWriter, r *ht
 
 // ListCommissionEntries operation middleware
 func (siw *ServerInterfaceWrapper) ListCommissionEntries(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -127108,7 +126798,6 @@ func (siw *ServerInterfaceWrapper) ListCommissionEntries(w http.ResponseWriter, 
 
 // GetCommissionSummary operation middleware
 func (siw *ServerInterfaceWrapper) GetCommissionSummary(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -127130,7 +126819,6 @@ func (siw *ServerInterfaceWrapper) GetCommissionSummary(w http.ResponseWriter, r
 
 // GetCommissionEntry operation middleware
 func (siw *ServerInterfaceWrapper) GetCommissionEntry(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -127164,7 +126852,6 @@ func (siw *ServerInterfaceWrapper) GetCommissionEntry(w http.ResponseWriter, r *
 
 // DecideCommissionEntry operation middleware
 func (siw *ServerInterfaceWrapper) DecideCommissionEntry(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -127222,7 +126909,6 @@ func (siw *ServerInterfaceWrapper) DecideCommissionEntry(w http.ResponseWriter, 
 
 // ListOpenCommitments operation middleware
 func (siw *ServerInterfaceWrapper) ListOpenCommitments(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -127289,7 +126975,6 @@ func (siw *ServerInterfaceWrapper) ListOpenCommitments(w http.ResponseWriter, r 
 
 // GetCommunicationReview operation middleware
 func (siw *ServerInterfaceWrapper) GetCommunicationReview(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -127323,7 +127008,6 @@ func (siw *ServerInterfaceWrapper) GetCommunicationReview(w http.ResponseWriter,
 
 // RecordCommunicationContext operation middleware
 func (siw *ServerInterfaceWrapper) RecordCommunicationContext(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -127357,7 +127041,6 @@ func (siw *ServerInterfaceWrapper) RecordCommunicationContext(w http.ResponseWri
 
 // CorrectCommunicationWording operation middleware
 func (siw *ServerInterfaceWrapper) CorrectCommunicationWording(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -127389,7 +127072,6 @@ func (siw *ServerInterfaceWrapper) CorrectCommunicationWording(w http.ResponseWr
 
 // DirectCommunicationSend operation middleware
 func (siw *ServerInterfaceWrapper) DirectCommunicationSend(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -127445,7 +127127,6 @@ func (siw *ServerInterfaceWrapper) DirectCommunicationSend(w http.ResponseWriter
 
 // ListCompanies operation middleware
 func (siw *ServerInterfaceWrapper) ListCompanies(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -127824,7 +127505,6 @@ func (siw *ServerInterfaceWrapper) ListCompanies(w http.ResponseWriter, r *http.
 
 // CreateCompany operation middleware
 func (siw *ServerInterfaceWrapper) CreateCompany(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -127873,7 +127553,6 @@ func (siw *ServerInterfaceWrapper) CreateCompany(w http.ResponseWriter, r *http.
 
 // GetCompanyForAddress operation middleware
 func (siw *ServerInterfaceWrapper) GetCompanyForAddress(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -127914,7 +127593,6 @@ func (siw *ServerInterfaceWrapper) GetCompanyForAddress(w http.ResponseWriter, r
 
 // ArchiveCompany operation middleware
 func (siw *ServerInterfaceWrapper) ArchiveCompany(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -127972,7 +127650,6 @@ func (siw *ServerInterfaceWrapper) ArchiveCompany(w http.ResponseWriter, r *http
 
 // GetCompany operation middleware
 func (siw *ServerInterfaceWrapper) GetCompany(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -128006,7 +127683,6 @@ func (siw *ServerInterfaceWrapper) GetCompany(w http.ResponseWriter, r *http.Req
 
 // UpdateCompany operation middleware
 func (siw *ServerInterfaceWrapper) UpdateCompany(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -128083,7 +127759,6 @@ func (siw *ServerInterfaceWrapper) UpdateCompany(w http.ResponseWriter, r *http.
 
 // GetCompany360 operation middleware
 func (siw *ServerInterfaceWrapper) GetCompany360(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -128133,7 +127808,6 @@ func (siw *ServerInterfaceWrapper) GetCompany360(w http.ResponseWriter, r *http.
 
 // GetCompanyAccess operation middleware
 func (siw *ServerInterfaceWrapper) GetCompanyAccess(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -128194,7 +127868,6 @@ func (siw *ServerInterfaceWrapper) GetCompanyAccess(w http.ResponseWriter, r *ht
 
 // AskAboutCompany operation middleware
 func (siw *ServerInterfaceWrapper) AskAboutCompany(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -128228,7 +127901,6 @@ func (siw *ServerInterfaceWrapper) AskAboutCompany(w http.ResponseWriter, r *htt
 
 // GetCompanyBrief operation middleware
 func (siw *ServerInterfaceWrapper) GetCompanyBrief(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -128278,7 +127950,6 @@ func (siw *ServerInterfaceWrapper) GetCompanyBrief(w http.ResponseWriter, r *htt
 
 // RegenerateCompanyBrief operation middleware
 func (siw *ServerInterfaceWrapper) RegenerateCompanyBrief(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -128328,7 +127999,6 @@ func (siw *ServerInterfaceWrapper) RegenerateCompanyBrief(w http.ResponseWriter,
 
 // GetCompanyCaptureTriage operation middleware
 func (siw *ServerInterfaceWrapper) GetCompanyCaptureTriage(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -128362,7 +128032,6 @@ func (siw *ServerInterfaceWrapper) GetCompanyCaptureTriage(w http.ResponseWriter
 
 // ListCompanyContacts operation middleware
 func (siw *ServerInterfaceWrapper) ListCompanyContacts(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -128464,7 +128133,6 @@ func (siw *ServerInterfaceWrapper) ListCompanyContacts(w http.ResponseWriter, r 
 
 // ListCompanyContracts operation middleware
 func (siw *ServerInterfaceWrapper) ListCompanyContracts(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -128553,7 +128221,6 @@ func (siw *ServerInterfaceWrapper) ListCompanyContracts(w http.ResponseWriter, r
 
 // GetCompanyCoverage operation middleware
 func (siw *ServerInterfaceWrapper) GetCompanyCoverage(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -128587,7 +128254,6 @@ func (siw *ServerInterfaceWrapper) GetCompanyCoverage(w http.ResponseWriter, r *
 
 // DeepReadCompany operation middleware
 func (siw *ServerInterfaceWrapper) DeepReadCompany(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -128621,7 +128287,6 @@ func (siw *ServerInterfaceWrapper) DeepReadCompany(w http.ResponseWriter, r *htt
 
 // ListCompanyDocuments operation middleware
 func (siw *ServerInterfaceWrapper) ListCompanyDocuments(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -128736,7 +128401,6 @@ func (siw *ServerInterfaceWrapper) ListCompanyDocuments(w http.ResponseWriter, r
 
 // GetCompanyDossier operation middleware
 func (siw *ServerInterfaceWrapper) GetCompanyDossier(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -128770,7 +128434,6 @@ func (siw *ServerInterfaceWrapper) GetCompanyDossier(w http.ResponseWriter, r *h
 
 // RefreshCompanyDossier operation middleware
 func (siw *ServerInterfaceWrapper) RefreshCompanyDossier(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -128804,7 +128467,6 @@ func (siw *ServerInterfaceWrapper) RefreshCompanyDossier(w http.ResponseWriter, 
 
 // DraftCompanyEmail operation middleware
 func (siw *ServerInterfaceWrapper) DraftCompanyEmail(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -128836,7 +128498,6 @@ func (siw *ServerInterfaceWrapper) DraftCompanyEmail(w http.ResponseWriter, r *h
 
 // ScrapeCompany operation middleware
 func (siw *ServerInterfaceWrapper) ScrapeCompany(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -128870,7 +128531,6 @@ func (siw *ServerInterfaceWrapper) ScrapeCompany(w http.ResponseWriter, r *http.
 
 // GetClaimEvidence operation middleware
 func (siw *ServerInterfaceWrapper) GetClaimEvidence(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -128922,7 +128582,6 @@ func (siw *ServerInterfaceWrapper) GetClaimEvidence(w http.ResponseWriter, r *ht
 
 // ListCompanyFacts operation middleware
 func (siw *ServerInterfaceWrapper) ListCompanyFacts(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -128956,7 +128615,6 @@ func (siw *ServerInterfaceWrapper) ListCompanyFacts(w http.ResponseWriter, r *ht
 
 // CreateCompanyFact operation middleware
 func (siw *ServerInterfaceWrapper) CreateCompanyFact(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -129033,7 +128691,6 @@ func (siw *ServerInterfaceWrapper) CreateCompanyFact(w http.ResponseWriter, r *h
 
 // DeleteCompanyFact operation middleware
 func (siw *ServerInterfaceWrapper) DeleteCompanyFact(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -129138,7 +128795,6 @@ func (siw *ServerInterfaceWrapper) DeleteCompanyFact(w http.ResponseWriter, r *h
 
 // UpdateCompanyFact operation middleware
 func (siw *ServerInterfaceWrapper) UpdateCompanyFact(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -129243,7 +128899,6 @@ func (siw *ServerInterfaceWrapper) UpdateCompanyFact(w http.ResponseWriter, r *h
 
 // ConfirmCompanyFact operation middleware
 func (siw *ServerInterfaceWrapper) ConfirmCompanyFact(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -129348,7 +129003,6 @@ func (siw *ServerInterfaceWrapper) ConfirmCompanyFact(w http.ResponseWriter, r *
 
 // GetCompanyFinanceSummary operation middleware
 func (siw *ServerInterfaceWrapper) GetCompanyFinanceSummary(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -129382,7 +129036,6 @@ func (siw *ServerInterfaceWrapper) GetCompanyFinanceSummary(w http.ResponseWrite
 
 // GetCompanyGraph operation middleware
 func (siw *ServerInterfaceWrapper) GetCompanyGraph(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -129416,7 +129069,6 @@ func (siw *ServerInterfaceWrapper) GetCompanyGraph(w http.ResponseWriter, r *htt
 
 // GetCompanyGrowthFit operation middleware
 func (siw *ServerInterfaceWrapper) GetCompanyGrowthFit(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -129450,7 +129102,6 @@ func (siw *ServerInterfaceWrapper) GetCompanyGrowthFit(w http.ResponseWriter, r 
 
 // RefreshCompanyGrowthFit operation middleware
 func (siw *ServerInterfaceWrapper) RefreshCompanyGrowthFit(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -129484,7 +129135,6 @@ func (siw *ServerInterfaceWrapper) RefreshCompanyGrowthFit(w http.ResponseWriter
 
 // GetCompanyHierarchyRollup operation middleware
 func (siw *ServerInterfaceWrapper) GetCompanyHierarchyRollup(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -129573,7 +129223,6 @@ func (siw *ServerInterfaceWrapper) GetCompanyHierarchyRollup(w http.ResponseWrit
 
 // ListIntroPaths operation middleware
 func (siw *ServerInterfaceWrapper) ListIntroPaths(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -129607,7 +129256,6 @@ func (siw *ServerInterfaceWrapper) ListIntroPaths(w http.ResponseWriter, r *http
 
 // DraftIntroRequest operation middleware
 func (siw *ServerInterfaceWrapper) DraftIntroRequest(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -129641,7 +129289,6 @@ func (siw *ServerInterfaceWrapper) DraftIntroRequest(w http.ResponseWriter, r *h
 
 // ListCompanyLinkCandidates operation middleware
 func (siw *ServerInterfaceWrapper) ListCompanyLinkCandidates(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -129675,7 +129322,6 @@ func (siw *ServerInterfaceWrapper) ListCompanyLinkCandidates(w http.ResponseWrit
 
 // LinkCompanyContacts operation middleware
 func (siw *ServerInterfaceWrapper) LinkCompanyContacts(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -129733,7 +129379,6 @@ func (siw *ServerInterfaceWrapper) LinkCompanyContacts(w http.ResponseWriter, r 
 
 // GetCompanyLinkedInReach operation middleware
 func (siw *ServerInterfaceWrapper) GetCompanyLinkedInReach(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -129767,7 +129412,6 @@ func (siw *ServerInterfaceWrapper) GetCompanyLinkedInReach(w http.ResponseWriter
 
 // GetCompanyLogo operation middleware
 func (siw *ServerInterfaceWrapper) GetCompanyLogo(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -129801,7 +129445,6 @@ func (siw *ServerInterfaceWrapper) GetCompanyLogo(w http.ResponseWriter, r *http
 
 // GetCompanyLogoIcon operation middleware
 func (siw *ServerInterfaceWrapper) GetCompanyLogoIcon(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -129835,7 +129478,6 @@ func (siw *ServerInterfaceWrapper) GetCompanyLogoIcon(w http.ResponseWriter, r *
 
 // MergeCompany operation middleware
 func (siw *ServerInterfaceWrapper) MergeCompany(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -129931,7 +129573,6 @@ func (siw *ServerInterfaceWrapper) MergeCompany(w http.ResponseWriter, r *http.R
 
 // ListCompanyOfferedValues operation middleware
 func (siw *ServerInterfaceWrapper) ListCompanyOfferedValues(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -129965,7 +129606,6 @@ func (siw *ServerInterfaceWrapper) ListCompanyOfferedValues(w http.ResponseWrite
 
 // EndPartnerProgram operation middleware
 func (siw *ServerInterfaceWrapper) EndPartnerProgram(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -130023,7 +129663,6 @@ func (siw *ServerInterfaceWrapper) EndPartnerProgram(w http.ResponseWriter, r *h
 
 // GetPartner operation middleware
 func (siw *ServerInterfaceWrapper) GetPartner(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -130057,7 +129696,6 @@ func (siw *ServerInterfaceWrapper) GetPartner(w http.ResponseWriter, r *http.Req
 
 // UpsertPartner operation middleware
 func (siw *ServerInterfaceWrapper) UpsertPartner(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -130115,7 +129753,6 @@ func (siw *ServerInterfaceWrapper) UpsertPartner(w http.ResponseWriter, r *http.
 
 // SetUpPartner operation middleware
 func (siw *ServerInterfaceWrapper) SetUpPartner(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -130192,7 +129829,6 @@ func (siw *ServerInterfaceWrapper) SetUpPartner(w http.ResponseWriter, r *http.R
 
 // ListCompanyProfileFields operation middleware
 func (siw *ServerInterfaceWrapper) ListCompanyProfileFields(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -130226,7 +129862,6 @@ func (siw *ServerInterfaceWrapper) ListCompanyProfileFields(w http.ResponseWrite
 
 // UpdateCompanyProfileField operation middleware
 func (siw *ServerInterfaceWrapper) UpdateCompanyProfileField(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -130331,7 +129966,6 @@ func (siw *ServerInterfaceWrapper) UpdateCompanyProfileField(w http.ResponseWrit
 
 // ConfirmCompanyProfileField operation middleware
 func (siw *ServerInterfaceWrapper) ConfirmCompanyProfileField(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -130436,7 +130070,6 @@ func (siw *ServerInterfaceWrapper) ConfirmCompanyProfileField(w http.ResponseWri
 
 // RejectCompany operation middleware
 func (siw *ServerInterfaceWrapper) RejectCompany(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -130511,7 +130144,6 @@ func (siw *ServerInterfaceWrapper) RejectCompany(w http.ResponseWriter, r *http.
 
 // GetCompanyScan operation middleware
 func (siw *ServerInterfaceWrapper) GetCompanyScan(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -130545,7 +130177,6 @@ func (siw *ServerInterfaceWrapper) GetCompanyScan(w http.ResponseWriter, r *http
 
 // EnsureCompanyScan operation middleware
 func (siw *ServerInterfaceWrapper) EnsureCompanyScan(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -130579,7 +130210,6 @@ func (siw *ServerInterfaceWrapper) EnsureCompanyScan(w http.ResponseWriter, r *h
 
 // ShareCompanyContacts operation middleware
 func (siw *ServerInterfaceWrapper) ShareCompanyContacts(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -130637,7 +130267,6 @@ func (siw *ServerInterfaceWrapper) ShareCompanyContacts(w http.ResponseWriter, r
 
 // GetLatestSiteRead operation middleware
 func (siw *ServerInterfaceWrapper) GetLatestSiteRead(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -130671,7 +130300,6 @@ func (siw *ServerInterfaceWrapper) GetLatestSiteRead(w http.ResponseWriter, r *h
 
 // GetSiteRead operation middleware
 func (siw *ServerInterfaceWrapper) GetSiteRead(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -130714,7 +130342,6 @@ func (siw *ServerInterfaceWrapper) GetSiteRead(w http.ResponseWriter, r *http.Re
 
 // GetCompanyStrength operation middleware
 func (siw *ServerInterfaceWrapper) GetCompanyStrength(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -130748,7 +130375,6 @@ func (siw *ServerInterfaceWrapper) GetCompanyStrength(w http.ResponseWriter, r *
 
 // RestoreCompanySuggestion operation middleware
 func (siw *ServerInterfaceWrapper) RestoreCompanySuggestion(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -130798,7 +130424,6 @@ func (siw *ServerInterfaceWrapper) RestoreCompanySuggestion(w http.ResponseWrite
 
 // DismissCompanySuggestion operation middleware
 func (siw *ServerInterfaceWrapper) DismissCompanySuggestion(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -130832,7 +130457,6 @@ func (siw *ServerInterfaceWrapper) DismissCompanySuggestion(w http.ResponseWrite
 
 // TechnicalEnrichCompany operation middleware
 func (siw *ServerInterfaceWrapper) TechnicalEnrichCompany(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -130866,7 +130490,6 @@ func (siw *ServerInterfaceWrapper) TechnicalEnrichCompany(w http.ResponseWriter,
 
 // GetLatestTechnicalEnrich operation middleware
 func (siw *ServerInterfaceWrapper) GetLatestTechnicalEnrich(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -130900,7 +130523,6 @@ func (siw *ServerInterfaceWrapper) GetLatestTechnicalEnrich(w http.ResponseWrite
 
 // GetCompanyVatCheck operation middleware
 func (siw *ServerInterfaceWrapper) GetCompanyVatCheck(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -130934,7 +130556,6 @@ func (siw *ServerInterfaceWrapper) GetCompanyVatCheck(w http.ResponseWriter, r *
 
 // RequestCompanyVatCheck operation middleware
 func (siw *ServerInterfaceWrapper) RequestCompanyVatCheck(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -130968,7 +130589,6 @@ func (siw *ServerInterfaceWrapper) RequestCompanyVatCheck(w http.ResponseWriter,
 
 // AcknowledgeCompanyView operation middleware
 func (siw *ServerInterfaceWrapper) AcknowledgeCompanyView(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -131002,7 +130622,6 @@ func (siw *ServerInterfaceWrapper) AcknowledgeCompanyView(w http.ResponseWriter,
 
 // GetAnchorCompany operation middleware
 func (siw *ServerInterfaceWrapper) GetAnchorCompany(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -131024,7 +130643,6 @@ func (siw *ServerInterfaceWrapper) GetAnchorCompany(w http.ResponseWriter, r *ht
 
 // PutAnchorCompany operation middleware
 func (siw *ServerInterfaceWrapper) PutAnchorCompany(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -131046,7 +130664,6 @@ func (siw *ServerInterfaceWrapper) PutAnchorCompany(w http.ResponseWriter, r *ht
 
 // ListCompanyTypes operation middleware
 func (siw *ServerInterfaceWrapper) ListCompanyTypes(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -131068,7 +130685,6 @@ func (siw *ServerInterfaceWrapper) ListCompanyTypes(w http.ResponseWriter, r *ht
 
 // GetAnchorCompanyContext operation middleware
 func (siw *ServerInterfaceWrapper) GetAnchorCompanyContext(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -131109,7 +130725,6 @@ func (siw *ServerInterfaceWrapper) GetAnchorCompanyContext(w http.ResponseWriter
 
 // GetAnchorCompanyContextCapabilities operation middleware
 func (siw *ServerInterfaceWrapper) GetAnchorCompanyContextCapabilities(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -131131,7 +130746,6 @@ func (siw *ServerInterfaceWrapper) GetAnchorCompanyContextCapabilities(w http.Re
 
 // DeleteAnchorCompanyLogo operation middleware
 func (siw *ServerInterfaceWrapper) DeleteAnchorCompanyLogo(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -131153,7 +130767,6 @@ func (siw *ServerInterfaceWrapper) DeleteAnchorCompanyLogo(w http.ResponseWriter
 
 // UploadAnchorCompanyLogo operation middleware
 func (siw *ServerInterfaceWrapper) UploadAnchorCompanyLogo(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -131175,7 +130788,6 @@ func (siw *ServerInterfaceWrapper) UploadAnchorCompanyLogo(w http.ResponseWriter
 
 // DeleteAnchorCompanyLogoIcon operation middleware
 func (siw *ServerInterfaceWrapper) DeleteAnchorCompanyLogoIcon(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -131197,7 +130809,6 @@ func (siw *ServerInterfaceWrapper) DeleteAnchorCompanyLogoIcon(w http.ResponseWr
 
 // UploadAnchorCompanyLogoIcon operation middleware
 func (siw *ServerInterfaceWrapper) UploadAnchorCompanyLogoIcon(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -131219,7 +130830,6 @@ func (siw *ServerInterfaceWrapper) UploadAnchorCompanyLogoIcon(w http.ResponseWr
 
 // StartAnchorCompanySiteRead operation middleware
 func (siw *ServerInterfaceWrapper) StartAnchorCompanySiteRead(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -131266,7 +130876,6 @@ func (siw *ServerInterfaceWrapper) StartAnchorCompanySiteRead(w http.ResponseWri
 
 // GetAnchorCompanySiteRead operation middleware
 func (siw *ServerInterfaceWrapper) GetAnchorCompanySiteRead(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -131300,7 +130909,6 @@ func (siw *ServerInterfaceWrapper) GetAnchorCompanySiteRead(w http.ResponseWrite
 
 // ConfirmAnchorCompanySiteRead operation middleware
 func (siw *ServerInterfaceWrapper) ConfirmAnchorCompanySiteRead(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -131358,7 +130966,6 @@ func (siw *ServerInterfaceWrapper) ConfirmAnchorCompanySiteRead(w http.ResponseW
 
 // GetAnchorCompanySiteReadLogo operation middleware
 func (siw *ServerInterfaceWrapper) GetAnchorCompanySiteReadLogo(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -131392,7 +130999,6 @@ func (siw *ServerInterfaceWrapper) GetAnchorCompanySiteReadLogo(w http.ResponseW
 
 // MessageAnchorCompanySiteRead operation middleware
 func (siw *ServerInterfaceWrapper) MessageAnchorCompanySiteRead(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -131426,7 +131032,6 @@ func (siw *ServerInterfaceWrapper) MessageAnchorCompanySiteRead(w http.ResponseW
 
 // ListConfirmSubmissions operation middleware
 func (siw *ServerInterfaceWrapper) ListConfirmSubmissions(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -131506,7 +131111,6 @@ func (siw *ServerInterfaceWrapper) ListConfirmSubmissions(w http.ResponseWriter,
 
 // ResolveConfirmSubmission operation middleware
 func (siw *ServerInterfaceWrapper) ResolveConfirmSubmission(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -131540,7 +131144,6 @@ func (siw *ServerInterfaceWrapper) ResolveConfirmSubmission(w http.ResponseWrite
 
 // ListConnectors operation middleware
 func (siw *ServerInterfaceWrapper) ListConnectors(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -131562,7 +131165,6 @@ func (siw *ServerInterfaceWrapper) ListConnectors(w http.ResponseWriter, r *http
 
 // CancelConnectorBackfill operation middleware
 func (siw *ServerInterfaceWrapper) CancelConnectorBackfill(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -131612,7 +131214,6 @@ func (siw *ServerInterfaceWrapper) CancelConnectorBackfill(w http.ResponseWriter
 
 // GetConnectorBackfillStatus operation middleware
 func (siw *ServerInterfaceWrapper) GetConnectorBackfillStatus(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -131660,7 +131261,6 @@ func (siw *ServerInterfaceWrapper) GetConnectorBackfillStatus(w http.ResponseWri
 
 // StartConnectorBackfill operation middleware
 func (siw *ServerInterfaceWrapper) StartConnectorBackfill(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -131710,7 +131310,6 @@ func (siw *ServerInterfaceWrapper) StartConnectorBackfill(w http.ResponseWriter,
 
 // PreviewConnectorBackfill operation middleware
 func (siw *ServerInterfaceWrapper) PreviewConnectorBackfill(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -131760,7 +131359,6 @@ func (siw *ServerInterfaceWrapper) PreviewConnectorBackfill(w http.ResponseWrite
 
 // ConnectorOAuthCallback operation middleware
 func (siw *ServerInterfaceWrapper) ConnectorOAuthCallback(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -131828,7 +131426,6 @@ func (siw *ServerInterfaceWrapper) ConnectorOAuthCallback(w http.ResponseWriter,
 
 // ConnectConnector operation middleware
 func (siw *ServerInterfaceWrapper) ConnectConnector(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -131860,7 +131457,6 @@ func (siw *ServerInterfaceWrapper) ConnectConnector(w http.ResponseWriter, r *ht
 
 // ListConnectorContainers operation middleware
 func (siw *ServerInterfaceWrapper) ListConnectorContainers(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -131910,7 +131506,6 @@ func (siw *ServerInterfaceWrapper) ListConnectorContainers(w http.ResponseWriter
 
 // SetConnectorContextTag operation middleware
 func (siw *ServerInterfaceWrapper) SetConnectorContextTag(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -131960,7 +131555,6 @@ func (siw *ServerInterfaceWrapper) SetConnectorContextTag(w http.ResponseWriter,
 
 // DisconnectConnector operation middleware
 func (siw *ServerInterfaceWrapper) DisconnectConnector(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -132010,7 +131604,6 @@ func (siw *ServerInterfaceWrapper) DisconnectConnector(w http.ResponseWriter, r 
 
 // SetConnectorHistoryBaseline operation middleware
 func (siw *ServerInterfaceWrapper) SetConnectorHistoryBaseline(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -132060,7 +131653,6 @@ func (siw *ServerInterfaceWrapper) SetConnectorHistoryBaseline(w http.ResponseWr
 
 // SetConnectorMailPosture operation middleware
 func (siw *ServerInterfaceWrapper) SetConnectorMailPosture(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -132110,7 +131702,6 @@ func (siw *ServerInterfaceWrapper) SetConnectorMailPosture(w http.ResponseWriter
 
 // SetConnectorSignatureEnrichment operation middleware
 func (siw *ServerInterfaceWrapper) SetConnectorSignatureEnrichment(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -132160,7 +131751,6 @@ func (siw *ServerInterfaceWrapper) SetConnectorSignatureEnrichment(w http.Respon
 
 // DismissConnectorSilence operation middleware
 func (siw *ServerInterfaceWrapper) DismissConnectorSilence(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -132210,7 +131800,6 @@ func (siw *ServerInterfaceWrapper) DismissConnectorSilence(w http.ResponseWriter
 
 // ListConsentPurposes operation middleware
 func (siw *ServerInterfaceWrapper) ListConsentPurposes(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -132232,7 +131821,6 @@ func (siw *ServerInterfaceWrapper) ListConsentPurposes(w http.ResponseWriter, r 
 
 // CreateConsentPurpose operation middleware
 func (siw *ServerInterfaceWrapper) CreateConsentPurpose(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -132252,7 +131840,6 @@ func (siw *ServerInterfaceWrapper) CreateConsentPurpose(w http.ResponseWriter, r
 
 // ListConsentPurposeSendCounts operation middleware
 func (siw *ServerInterfaceWrapper) ListConsentPurposeSendCounts(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -132293,7 +131880,6 @@ func (siw *ServerInterfaceWrapper) ListConsentPurposeSendCounts(w http.ResponseW
 
 // ArchiveConsentPurpose operation middleware
 func (siw *ServerInterfaceWrapper) ArchiveConsentPurpose(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -132325,7 +131911,6 @@ func (siw *ServerInterfaceWrapper) ArchiveConsentPurpose(w http.ResponseWriter, 
 
 // RenameConsentPurpose operation middleware
 func (siw *ServerInterfaceWrapper) RenameConsentPurpose(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -132357,7 +131942,6 @@ func (siw *ServerInterfaceWrapper) RenameConsentPurpose(w http.ResponseWriter, r
 
 // ListContacts operation middleware
 func (siw *ServerInterfaceWrapper) ListContacts(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -132619,7 +132203,6 @@ func (siw *ServerInterfaceWrapper) ListContacts(w http.ResponseWriter, r *http.R
 
 // CreateContact operation middleware
 func (siw *ServerInterfaceWrapper) CreateContact(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -132668,7 +132251,6 @@ func (siw *ServerInterfaceWrapper) CreateContact(w http.ResponseWriter, r *http.
 
 // ImportCardPhoto operation middleware
 func (siw *ServerInterfaceWrapper) ImportCardPhoto(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -132690,7 +132272,6 @@ func (siw *ServerInterfaceWrapper) ImportCardPhoto(w http.ResponseWriter, r *htt
 
 // DismissRelationshipNudges operation middleware
 func (siw *ServerInterfaceWrapper) DismissRelationshipNudges(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -132712,7 +132293,6 @@ func (siw *ServerInterfaceWrapper) DismissRelationshipNudges(w http.ResponseWrit
 
 // QuickCaptureContact operation middleware
 func (siw *ServerInterfaceWrapper) QuickCaptureContact(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -132759,7 +132339,6 @@ func (siw *ServerInterfaceWrapper) QuickCaptureContact(w http.ResponseWriter, r 
 
 // ImportVCards operation middleware
 func (siw *ServerInterfaceWrapper) ImportVCards(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -132800,7 +132379,6 @@ func (siw *ServerInterfaceWrapper) ImportVCards(w http.ResponseWriter, r *http.R
 
 // ArchiveContact operation middleware
 func (siw *ServerInterfaceWrapper) ArchiveContact(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -132858,7 +132436,6 @@ func (siw *ServerInterfaceWrapper) ArchiveContact(w http.ResponseWriter, r *http
 
 // GetContact operation middleware
 func (siw *ServerInterfaceWrapper) GetContact(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -132892,7 +132469,6 @@ func (siw *ServerInterfaceWrapper) GetContact(w http.ResponseWriter, r *http.Req
 
 // UpdateContact operation middleware
 func (siw *ServerInterfaceWrapper) UpdateContact(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -132969,7 +132545,6 @@ func (siw *ServerInterfaceWrapper) UpdateContact(w http.ResponseWriter, r *http.
 
 // GetContact360 operation middleware
 func (siw *ServerInterfaceWrapper) GetContact360(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -133019,7 +132594,6 @@ func (siw *ServerInterfaceWrapper) GetContact360(w http.ResponseWriter, r *http.
 
 // GetContactAccess operation middleware
 func (siw *ServerInterfaceWrapper) GetContactAccess(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -133080,7 +132654,6 @@ func (siw *ServerInterfaceWrapper) GetContactAccess(w http.ResponseWriter, r *ht
 
 // RetractAcquisitionRequest operation middleware
 func (siw *ServerInterfaceWrapper) RetractAcquisitionRequest(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -133114,7 +132687,6 @@ func (siw *ServerInterfaceWrapper) RetractAcquisitionRequest(w http.ResponseWrit
 
 // GetContactBrief operation middleware
 func (siw *ServerInterfaceWrapper) GetContactBrief(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -133148,7 +132720,6 @@ func (siw *ServerInterfaceWrapper) GetContactBrief(w http.ResponseWriter, r *htt
 
 // RegenerateContactBrief operation middleware
 func (siw *ServerInterfaceWrapper) RegenerateContactBrief(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -133182,7 +132753,6 @@ func (siw *ServerInterfaceWrapper) RegenerateContactBrief(w http.ResponseWriter,
 
 // RecordConversationClaim operation middleware
 func (siw *ServerInterfaceWrapper) RecordConversationClaim(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -133216,7 +132786,6 @@ func (siw *ServerInterfaceWrapper) RecordConversationClaim(w http.ResponseWriter
 
 // GetContactConsent operation middleware
 func (siw *ServerInterfaceWrapper) GetContactConsent(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -133250,7 +132819,6 @@ func (siw *ServerInterfaceWrapper) GetContactConsent(w http.ResponseWriter, r *h
 
 // RecordConsent operation middleware
 func (siw *ServerInterfaceWrapper) RecordConsent(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -133308,7 +132876,6 @@ func (siw *ServerInterfaceWrapper) RecordConsent(w http.ResponseWriter, r *http.
 
 // ListContactOverrides operation middleware
 func (siw *ServerInterfaceWrapper) ListContactOverrides(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -133371,7 +132938,6 @@ func (siw *ServerInterfaceWrapper) ListContactOverrides(w http.ResponseWriter, r
 
 // RevokeOverride operation middleware
 func (siw *ServerInterfaceWrapper) RevokeOverride(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -133414,7 +132980,6 @@ func (siw *ServerInterfaceWrapper) RevokeOverride(w http.ResponseWriter, r *http
 
 // RequestDetailsConfirmation operation middleware
 func (siw *ServerInterfaceWrapper) RequestDetailsConfirmation(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -133472,7 +133037,6 @@ func (siw *ServerInterfaceWrapper) RequestDetailsConfirmation(w http.ResponseWri
 
 // IssueDoubleOptIn operation middleware
 func (siw *ServerInterfaceWrapper) IssueDoubleOptIn(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -133530,7 +133094,6 @@ func (siw *ServerInterfaceWrapper) IssueDoubleOptIn(w http.ResponseWriter, r *ht
 
 // GetContactConsentGuard operation middleware
 func (siw *ServerInterfaceWrapper) GetContactConsentGuard(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -133564,7 +133127,6 @@ func (siw *ServerInterfaceWrapper) GetContactConsentGuard(w http.ResponseWriter,
 
 // PreviewControllerMail operation middleware
 func (siw *ServerInterfaceWrapper) PreviewControllerMail(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -133627,7 +133189,6 @@ func (siw *ServerInterfaceWrapper) PreviewControllerMail(w http.ResponseWriter, 
 
 // ExportContactOptOutRecords operation middleware
 func (siw *ServerInterfaceWrapper) ExportContactOptOutRecords(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -133661,7 +133222,6 @@ func (siw *ServerInterfaceWrapper) ExportContactOptOutRecords(w http.ResponseWri
 
 // SendPrivacyNotice operation middleware
 func (siw *ServerInterfaceWrapper) SendPrivacyNotice(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -133719,7 +133279,6 @@ func (siw *ServerInterfaceWrapper) SendPrivacyNotice(w http.ResponseWriter, r *h
 
 // RecordQualifyingEvent operation middleware
 func (siw *ServerInterfaceWrapper) RecordQualifyingEvent(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -133753,7 +133312,6 @@ func (siw *ServerInterfaceWrapper) RecordQualifyingEvent(w http.ResponseWriter, 
 
 // RetractQualifyingEvent operation middleware
 func (siw *ServerInterfaceWrapper) RetractQualifyingEvent(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -133796,7 +133354,6 @@ func (siw *ServerInterfaceWrapper) RetractQualifyingEvent(w http.ResponseWriter,
 
 // ListContactStops operation middleware
 func (siw *ServerInterfaceWrapper) ListContactStops(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -133830,7 +133387,6 @@ func (siw *ServerInterfaceWrapper) ListContactStops(w http.ResponseWriter, r *ht
 
 // SuppressContact operation middleware
 func (siw *ServerInterfaceWrapper) SuppressContact(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -133864,7 +133420,6 @@ func (siw *ServerInterfaceWrapper) SuppressContact(w http.ResponseWriter, r *htt
 
 // LiftSuppression operation middleware
 func (siw *ServerInterfaceWrapper) LiftSuppression(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -133907,7 +133462,6 @@ func (siw *ServerInterfaceWrapper) LiftSuppression(w http.ResponseWriter, r *htt
 
 // LiftContactRestriction operation middleware
 func (siw *ServerInterfaceWrapper) LiftContactRestriction(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -133948,7 +133502,6 @@ func (siw *ServerInterfaceWrapper) LiftContactRestriction(w http.ResponseWriter,
 
 // ListContactConversationSuggestions operation middleware
 func (siw *ServerInterfaceWrapper) ListContactConversationSuggestions(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -133982,7 +133535,6 @@ func (siw *ServerInterfaceWrapper) ListContactConversationSuggestions(w http.Res
 
 // DraftContactEmail operation middleware
 func (siw *ServerInterfaceWrapper) DraftContactEmail(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -134014,7 +133566,6 @@ func (siw *ServerInterfaceWrapper) DraftContactEmail(w http.ResponseWriter, r *h
 
 // LinkContactEmployer operation middleware
 func (siw *ServerInterfaceWrapper) LinkContactEmployer(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -134070,7 +133621,6 @@ func (siw *ServerInterfaceWrapper) LinkContactEmployer(w http.ResponseWriter, r 
 
 // PreviewContactEmploymentImport operation middleware
 func (siw *ServerInterfaceWrapper) PreviewContactEmploymentImport(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -134104,7 +133654,6 @@ func (siw *ServerInterfaceWrapper) PreviewContactEmploymentImport(w http.Respons
 
 // ApplyContactEmploymentImport operation middleware
 func (siw *ServerInterfaceWrapper) ApplyContactEmploymentImport(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -134138,7 +133687,6 @@ func (siw *ServerInterfaceWrapper) ApplyContactEmploymentImport(w http.ResponseW
 
 // CreateContactEnrichmentRun operation middleware
 func (siw *ServerInterfaceWrapper) CreateContactEnrichmentRun(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -134196,7 +133744,6 @@ func (siw *ServerInterfaceWrapper) CreateContactEnrichmentRun(w http.ResponseWri
 
 // GetContactEnrichmentRun operation middleware
 func (siw *ServerInterfaceWrapper) GetContactEnrichmentRun(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -134239,7 +133786,6 @@ func (siw *ServerInterfaceWrapper) GetContactEnrichmentRun(w http.ResponseWriter
 
 // GetContactGraph operation middleware
 func (siw *ServerInterfaceWrapper) GetContactGraph(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -134273,7 +133819,6 @@ func (siw *ServerInterfaceWrapper) GetContactGraph(w http.ResponseWriter, r *htt
 
 // ClearContactImpersonationWarning operation middleware
 func (siw *ServerInterfaceWrapper) ClearContactImpersonationWarning(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -134305,7 +133850,6 @@ func (siw *ServerInterfaceWrapper) ClearContactImpersonationWarning(w http.Respo
 
 // DraftIntroNote operation middleware
 func (siw *ServerInterfaceWrapper) DraftIntroNote(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -134339,7 +133883,6 @@ func (siw *ServerInterfaceWrapper) DraftIntroNote(w http.ResponseWriter, r *http
 
 // ListIntroRequests operation middleware
 func (siw *ServerInterfaceWrapper) ListIntroRequests(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -134373,7 +133916,6 @@ func (siw *ServerInterfaceWrapper) ListIntroRequests(w http.ResponseWriter, r *h
 
 // CreateIntroRequest operation middleware
 func (siw *ServerInterfaceWrapper) CreateIntroRequest(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -134407,7 +133949,6 @@ func (siw *ServerInterfaceWrapper) CreateIntroRequest(w http.ResponseWriter, r *
 
 // RecordIntroduction operation middleware
 func (siw *ServerInterfaceWrapper) RecordIntroduction(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -134441,7 +133982,6 @@ func (siw *ServerInterfaceWrapper) RecordIntroduction(w http.ResponseWriter, r *
 
 // MergeContact operation middleware
 func (siw *ServerInterfaceWrapper) MergeContact(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -134518,7 +134058,6 @@ func (siw *ServerInterfaceWrapper) MergeContact(w http.ResponseWriter, r *http.R
 
 // RestoreContactMoment operation middleware
 func (siw *ServerInterfaceWrapper) RestoreContactMoment(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -134581,7 +134120,6 @@ func (siw *ServerInterfaceWrapper) RestoreContactMoment(w http.ResponseWriter, r
 
 // DismissContactMoment operation middleware
 func (siw *ServerInterfaceWrapper) DismissContactMoment(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -134615,7 +134153,6 @@ func (siw *ServerInterfaceWrapper) DismissContactMoment(w http.ResponseWriter, r
 
 // GetContactNetwork operation middleware
 func (siw *ServerInterfaceWrapper) GetContactNetwork(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -134649,7 +134186,6 @@ func (siw *ServerInterfaceWrapper) GetContactNetwork(w http.ResponseWriter, r *h
 
 // RestoreRelationshipNudge operation middleware
 func (siw *ServerInterfaceWrapper) RestoreRelationshipNudge(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -134683,7 +134219,6 @@ func (siw *ServerInterfaceWrapper) RestoreRelationshipNudge(w http.ResponseWrite
 
 // GetRelationshipNudge operation middleware
 func (siw *ServerInterfaceWrapper) GetRelationshipNudge(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -134717,7 +134252,6 @@ func (siw *ServerInterfaceWrapper) GetRelationshipNudge(w http.ResponseWriter, r
 
 // DismissRelationshipNudge operation middleware
 func (siw *ServerInterfaceWrapper) DismissRelationshipNudge(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -134751,7 +134285,6 @@ func (siw *ServerInterfaceWrapper) DismissRelationshipNudge(w http.ResponseWrite
 
 // GetContactProfileFields operation middleware
 func (siw *ServerInterfaceWrapper) GetContactProfileFields(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -134785,7 +134318,6 @@ func (siw *ServerInterfaceWrapper) GetContactProfileFields(w http.ResponseWriter
 
 // RestoreContactProfileField operation middleware
 func (siw *ServerInterfaceWrapper) RestoreContactProfileField(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -134844,7 +134376,6 @@ func (siw *ServerInterfaceWrapper) RestoreContactProfileField(w http.ResponseWri
 
 // PublishCapturedContact operation middleware
 func (siw *ServerInterfaceWrapper) PublishCapturedContact(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -134878,7 +134409,6 @@ func (siw *ServerInterfaceWrapper) PublishCapturedContact(w http.ResponseWriter,
 
 // RunContactResearch operation middleware
 func (siw *ServerInterfaceWrapper) RunContactResearch(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -134912,7 +134442,6 @@ func (siw *ServerInterfaceWrapper) RunContactResearch(w http.ResponseWriter, r *
 
 // SaveContactResearch operation middleware
 func (siw *ServerInterfaceWrapper) SaveContactResearch(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -134946,7 +134475,6 @@ func (siw *ServerInterfaceWrapper) SaveContactResearch(w http.ResponseWriter, r 
 
 // GetContactStrength operation middleware
 func (siw *ServerInterfaceWrapper) GetContactStrength(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -134980,7 +134508,6 @@ func (siw *ServerInterfaceWrapper) GetContactStrength(w http.ResponseWriter, r *
 
 // AcknowledgeContactView operation middleware
 func (siw *ServerInterfaceWrapper) AcknowledgeContactView(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -135014,7 +134541,6 @@ func (siw *ServerInterfaceWrapper) AcknowledgeContactView(w http.ResponseWriter,
 
 // SearchContext operation middleware
 func (siw *ServerInterfaceWrapper) SearchContext(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -135081,7 +134607,6 @@ func (siw *ServerInterfaceWrapper) SearchContext(w http.ResponseWriter, r *http.
 
 // CreateContract operation middleware
 func (siw *ServerInterfaceWrapper) CreateContract(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -135130,7 +134655,6 @@ func (siw *ServerInterfaceWrapper) CreateContract(w http.ResponseWriter, r *http
 
 // ArchiveContract operation middleware
 func (siw *ServerInterfaceWrapper) ArchiveContract(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -135164,7 +134688,6 @@ func (siw *ServerInterfaceWrapper) ArchiveContract(w http.ResponseWriter, r *htt
 
 // GetContract operation middleware
 func (siw *ServerInterfaceWrapper) GetContract(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -135198,7 +134721,6 @@ func (siw *ServerInterfaceWrapper) GetContract(w http.ResponseWriter, r *http.Re
 
 // UpdateContract operation middleware
 func (siw *ServerInterfaceWrapper) UpdateContract(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -135256,7 +134778,6 @@ func (siw *ServerInterfaceWrapper) UpdateContract(w http.ResponseWriter, r *http
 
 // CancelContract operation middleware
 func (siw *ServerInterfaceWrapper) CancelContract(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -135314,7 +134835,6 @@ func (siw *ServerInterfaceWrapper) CancelContract(w http.ResponseWriter, r *http
 
 // RenewContract operation middleware
 func (siw *ServerInterfaceWrapper) RenewContract(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -135372,7 +134892,6 @@ func (siw *ServerInterfaceWrapper) RenewContract(w http.ResponseWriter, r *http.
 
 // ChangeContractStatus operation middleware
 func (siw *ServerInterfaceWrapper) ChangeContractStatus(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -135430,7 +134949,6 @@ func (siw *ServerInterfaceWrapper) ChangeContractStatus(w http.ResponseWriter, r
 
 // ListCustomFields operation middleware
 func (siw *ServerInterfaceWrapper) ListCustomFields(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -135523,7 +135041,6 @@ func (siw *ServerInterfaceWrapper) ListCustomFields(w http.ResponseWriter, r *ht
 
 // CreateCustomField operation middleware
 func (siw *ServerInterfaceWrapper) CreateCustomField(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -135572,7 +135089,6 @@ func (siw *ServerInterfaceWrapper) CreateCustomField(w http.ResponseWriter, r *h
 
 // RenameCustomField operation middleware
 func (siw *ServerInterfaceWrapper) RenameCustomField(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -135649,7 +135165,6 @@ func (siw *ServerInterfaceWrapper) RenameCustomField(w http.ResponseWriter, r *h
 
 // ListCustomFieldChoiceUse operation middleware
 func (siw *ServerInterfaceWrapper) ListCustomFieldChoiceUse(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -135683,7 +135198,6 @@ func (siw *ServerInterfaceWrapper) ListCustomFieldChoiceUse(w http.ResponseWrite
 
 // ListCustomFieldLiveLists operation middleware
 func (siw *ServerInterfaceWrapper) ListCustomFieldLiveLists(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -135717,7 +135231,6 @@ func (siw *ServerInterfaceWrapper) ListCustomFieldLiveLists(w http.ResponseWrite
 
 // UpdateCustomFieldOptions operation middleware
 func (siw *ServerInterfaceWrapper) UpdateCustomFieldOptions(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -135775,7 +135288,6 @@ func (siw *ServerInterfaceWrapper) UpdateCustomFieldOptions(w http.ResponseWrite
 
 // RetireCustomField operation middleware
 func (siw *ServerInterfaceWrapper) RetireCustomField(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -135833,7 +135345,6 @@ func (siw *ServerInterfaceWrapper) RetireCustomField(w http.ResponseWriter, r *h
 
 // ListDataSubjectRequests operation middleware
 func (siw *ServerInterfaceWrapper) ListDataSubjectRequests(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -135900,7 +135411,6 @@ func (siw *ServerInterfaceWrapper) ListDataSubjectRequests(w http.ResponseWriter
 
 // CreateDataSubjectRequest operation middleware
 func (siw *ServerInterfaceWrapper) CreateDataSubjectRequest(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -135949,7 +135459,6 @@ func (siw *ServerInterfaceWrapper) CreateDataSubjectRequest(w http.ResponseWrite
 
 // GetDataSubjectRequestDeadline operation middleware
 func (siw *ServerInterfaceWrapper) GetDataSubjectRequestDeadline(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -136003,7 +135512,6 @@ func (siw *ServerInterfaceWrapper) GetDataSubjectRequestDeadline(w http.Response
 
 // UpdateDataSubjectRequest operation middleware
 func (siw *ServerInterfaceWrapper) UpdateDataSubjectRequest(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -136037,7 +135545,6 @@ func (siw *ServerInterfaceWrapper) UpdateDataSubjectRequest(w http.ResponseWrite
 
 // DownloadDataSubjectPackage operation middleware
 func (siw *ServerInterfaceWrapper) DownloadDataSubjectPackage(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -136069,7 +135576,6 @@ func (siw *ServerInterfaceWrapper) DownloadDataSubjectPackage(w http.ResponseWri
 
 // GetPendingMarginceChanges operation middleware
 func (siw *ServerInterfaceWrapper) GetPendingMarginceChanges(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -136091,7 +135597,6 @@ func (siw *ServerInterfaceWrapper) GetPendingMarginceChanges(w http.ResponseWrit
 
 // UndoMarginceChanges operation middleware
 func (siw *ServerInterfaceWrapper) UndoMarginceChanges(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -136111,7 +135616,6 @@ func (siw *ServerInterfaceWrapper) UndoMarginceChanges(w http.ResponseWriter, r 
 
 // ListDealRooms operation middleware
 func (siw *ServerInterfaceWrapper) ListDealRooms(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -136230,7 +135734,6 @@ func (siw *ServerInterfaceWrapper) ListDealRooms(w http.ResponseWriter, r *http.
 
 // CreateDealRoom operation middleware
 func (siw *ServerInterfaceWrapper) CreateDealRoom(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -136279,7 +135782,6 @@ func (siw *ServerInterfaceWrapper) CreateDealRoom(w http.ResponseWriter, r *http
 
 // ArchiveDealRoom operation middleware
 func (siw *ServerInterfaceWrapper) ArchiveDealRoom(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -136337,7 +135839,6 @@ func (siw *ServerInterfaceWrapper) ArchiveDealRoom(w http.ResponseWriter, r *htt
 
 // GetDealRoom operation middleware
 func (siw *ServerInterfaceWrapper) GetDealRoom(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -136371,7 +135872,6 @@ func (siw *ServerInterfaceWrapper) GetDealRoom(w http.ResponseWriter, r *http.Re
 
 // UpdateDealRoom operation middleware
 func (siw *ServerInterfaceWrapper) UpdateDealRoom(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -136429,7 +135929,6 @@ func (siw *ServerInterfaceWrapper) UpdateDealRoom(w http.ResponseWriter, r *http
 
 // GetDealRoomBrief operation middleware
 func (siw *ServerInterfaceWrapper) GetDealRoomBrief(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -136463,7 +135962,6 @@ func (siw *ServerInterfaceWrapper) GetDealRoomBrief(w http.ResponseWriter, r *ht
 
 // CloseDealRoom operation middleware
 func (siw *ServerInterfaceWrapper) CloseDealRoom(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -136497,7 +135995,6 @@ func (siw *ServerInterfaceWrapper) CloseDealRoom(w http.ResponseWriter, r *http.
 
 // ListDealRoomDocuments operation middleware
 func (siw *ServerInterfaceWrapper) ListDealRoomDocuments(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -136531,7 +136028,6 @@ func (siw *ServerInterfaceWrapper) ListDealRoomDocuments(w http.ResponseWriter, 
 
 // AddDealRoomDocument operation middleware
 func (siw *ServerInterfaceWrapper) AddDealRoomDocument(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -136565,7 +136061,6 @@ func (siw *ServerInterfaceWrapper) AddDealRoomDocument(w http.ResponseWriter, r 
 
 // RemoveDealRoomDocument operation middleware
 func (siw *ServerInterfaceWrapper) RemoveDealRoomDocument(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -136632,7 +136127,6 @@ func (siw *ServerInterfaceWrapper) RemoveDealRoomDocument(w http.ResponseWriter,
 
 // UpdateDealRoomDocument operation middleware
 func (siw *ServerInterfaceWrapper) UpdateDealRoomDocument(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -136699,7 +136193,6 @@ func (siw *ServerInterfaceWrapper) UpdateDealRoomDocument(w http.ResponseWriter,
 
 // SetDealRoomExpiry operation middleware
 func (siw *ServerInterfaceWrapper) SetDealRoomExpiry(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -136757,7 +136250,6 @@ func (siw *ServerInterfaceWrapper) SetDealRoomExpiry(w http.ResponseWriter, r *h
 
 // ListDealRoomParticipants operation middleware
 func (siw *ServerInterfaceWrapper) ListDealRoomParticipants(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -136807,7 +136299,6 @@ func (siw *ServerInterfaceWrapper) ListDealRoomParticipants(w http.ResponseWrite
 
 // InviteDealRoomParticipant operation middleware
 func (siw *ServerInterfaceWrapper) InviteDealRoomParticipant(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -136841,7 +136332,6 @@ func (siw *ServerInterfaceWrapper) InviteDealRoomParticipant(w http.ResponseWrit
 
 // UpdateDealRoomParticipant operation middleware
 func (siw *ServerInterfaceWrapper) UpdateDealRoomParticipant(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -136884,7 +136374,6 @@ func (siw *ServerInterfaceWrapper) UpdateDealRoomParticipant(w http.ResponseWrit
 
 // ResendDealRoomInvitation operation middleware
 func (siw *ServerInterfaceWrapper) ResendDealRoomInvitation(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -136927,7 +136416,6 @@ func (siw *ServerInterfaceWrapper) ResendDealRoomInvitation(w http.ResponseWrite
 
 // RevokeDealRoomParticipant operation middleware
 func (siw *ServerInterfaceWrapper) RevokeDealRoomParticipant(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -136970,7 +136458,6 @@ func (siw *ServerInterfaceWrapper) RevokeDealRoomParticipant(w http.ResponseWrit
 
 // PauseDealRoom operation middleware
 func (siw *ServerInterfaceWrapper) PauseDealRoom(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -137004,7 +136491,6 @@ func (siw *ServerInterfaceWrapper) PauseDealRoom(w http.ResponseWriter, r *http.
 
 // PreviewDealRoom operation middleware
 func (siw *ServerInterfaceWrapper) PreviewDealRoom(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -137036,7 +136522,6 @@ func (siw *ServerInterfaceWrapper) PreviewDealRoom(w http.ResponseWriter, r *htt
 
 // ResumeDealRoom operation middleware
 func (siw *ServerInterfaceWrapper) ResumeDealRoom(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -137070,7 +136555,6 @@ func (siw *ServerInterfaceWrapper) ResumeDealRoom(w http.ResponseWriter, r *http
 
 // ListDealRoomThreads operation middleware
 func (siw *ServerInterfaceWrapper) ListDealRoomThreads(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -137120,7 +136604,6 @@ func (siw *ServerInterfaceWrapper) ListDealRoomThreads(w http.ResponseWriter, r 
 
 // OpenDealRoomThread operation middleware
 func (siw *ServerInterfaceWrapper) OpenDealRoomThread(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -137154,7 +136637,6 @@ func (siw *ServerInterfaceWrapper) OpenDealRoomThread(w http.ResponseWriter, r *
 
 // ReplyDealRoomThread operation middleware
 func (siw *ServerInterfaceWrapper) ReplyDealRoomThread(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -137197,7 +136679,6 @@ func (siw *ServerInterfaceWrapper) ReplyDealRoomThread(w http.ResponseWriter, r 
 
 // ResolveDealRoomThread operation middleware
 func (siw *ServerInterfaceWrapper) ResolveDealRoomThread(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -137240,7 +136721,6 @@ func (siw *ServerInterfaceWrapper) ResolveDealRoomThread(w http.ResponseWriter, 
 
 // ListDealSuggestions operation middleware
 func (siw *ServerInterfaceWrapper) ListDealSuggestions(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -137372,7 +136852,6 @@ func (siw *ServerInterfaceWrapper) ListDealSuggestions(w http.ResponseWriter, r 
 
 // GetDealSuggestion operation middleware
 func (siw *ServerInterfaceWrapper) GetDealSuggestion(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -137406,7 +136885,6 @@ func (siw *ServerInterfaceWrapper) GetDealSuggestion(w http.ResponseWriter, r *h
 
 // AcceptDealSuggestion operation middleware
 func (siw *ServerInterfaceWrapper) AcceptDealSuggestion(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -137464,7 +136942,6 @@ func (siw *ServerInterfaceWrapper) AcceptDealSuggestion(w http.ResponseWriter, r
 
 // DismissDealSuggestion operation middleware
 func (siw *ServerInterfaceWrapper) DismissDealSuggestion(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -137522,7 +136999,6 @@ func (siw *ServerInterfaceWrapper) DismissDealSuggestion(w http.ResponseWriter, 
 
 // ListDeals operation middleware
 func (siw *ServerInterfaceWrapper) ListDeals(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -137992,7 +137468,6 @@ func (siw *ServerInterfaceWrapper) ListDeals(w http.ResponseWriter, r *http.Requ
 
 // CreateDeal operation middleware
 func (siw *ServerInterfaceWrapper) CreateDeal(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -138041,7 +137516,6 @@ func (siw *ServerInterfaceWrapper) CreateDeal(w http.ResponseWriter, r *http.Req
 
 // ListAtRiskRelationships operation middleware
 func (siw *ServerInterfaceWrapper) ListAtRiskRelationships(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -138082,7 +137556,6 @@ func (siw *ServerInterfaceWrapper) ListAtRiskRelationships(w http.ResponseWriter
 
 // DraftDealFollowUps operation middleware
 func (siw *ServerInterfaceWrapper) DraftDealFollowUps(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -138150,7 +137623,6 @@ func (siw *ServerInterfaceWrapper) DraftDealFollowUps(w http.ResponseWriter, r *
 
 // ListSlippingDeals operation middleware
 func (siw *ServerInterfaceWrapper) ListSlippingDeals(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -138217,7 +137689,6 @@ func (siw *ServerInterfaceWrapper) ListSlippingDeals(w http.ResponseWriter, r *h
 
 // ArchiveDeal operation middleware
 func (siw *ServerInterfaceWrapper) ArchiveDeal(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -138275,7 +137746,6 @@ func (siw *ServerInterfaceWrapper) ArchiveDeal(w http.ResponseWriter, r *http.Re
 
 // GetDeal operation middleware
 func (siw *ServerInterfaceWrapper) GetDeal(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -138309,7 +137779,6 @@ func (siw *ServerInterfaceWrapper) GetDeal(w http.ResponseWriter, r *http.Reques
 
 // UpdateDeal operation middleware
 func (siw *ServerInterfaceWrapper) UpdateDeal(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -138386,7 +137855,6 @@ func (siw *ServerInterfaceWrapper) UpdateDeal(w http.ResponseWriter, r *http.Req
 
 // AdvanceDeal operation middleware
 func (siw *ServerInterfaceWrapper) AdvanceDeal(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -138482,7 +137950,6 @@ func (siw *ServerInterfaceWrapper) AdvanceDeal(w http.ResponseWriter, r *http.Re
 
 // AcceptAppliedDealChange operation middleware
 func (siw *ServerInterfaceWrapper) AcceptAppliedDealChange(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -138553,7 +138020,6 @@ func (siw *ServerInterfaceWrapper) AcceptAppliedDealChange(w http.ResponseWriter
 
 // CorrectDealCloseDay operation middleware
 func (siw *ServerInterfaceWrapper) CorrectDealCloseDay(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -138611,7 +138077,6 @@ func (siw *ServerInterfaceWrapper) CorrectDealCloseDay(w http.ResponseWriter, r 
 
 // GetDealCommitments operation middleware
 func (siw *ServerInterfaceWrapper) GetDealCommitments(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -138645,7 +138110,6 @@ func (siw *ServerInterfaceWrapper) GetDealCommitments(w http.ResponseWriter, r *
 
 // GetDealCoverage operation middleware
 func (siw *ServerInterfaceWrapper) GetDealCoverage(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -138679,7 +138143,6 @@ func (siw *ServerInterfaceWrapper) GetDealCoverage(w http.ResponseWriter, r *htt
 
 // ListDealDocuments operation middleware
 func (siw *ServerInterfaceWrapper) ListDealDocuments(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -138768,7 +138231,6 @@ func (siw *ServerInterfaceWrapper) ListDealDocuments(w http.ResponseWriter, r *h
 
 // UnhideDealDocument operation middleware
 func (siw *ServerInterfaceWrapper) UnhideDealDocument(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -138811,7 +138273,6 @@ func (siw *ServerInterfaceWrapper) UnhideDealDocument(w http.ResponseWriter, r *
 
 // HideDealDocument operation middleware
 func (siw *ServerInterfaceWrapper) HideDealDocument(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -138854,7 +138315,6 @@ func (siw *ServerInterfaceWrapper) HideDealDocument(w http.ResponseWriter, r *ht
 
 // ListDealLegalReviews operation middleware
 func (siw *ServerInterfaceWrapper) ListDealLegalReviews(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -138888,7 +138348,6 @@ func (siw *ServerInterfaceWrapper) ListDealLegalReviews(w http.ResponseWriter, r
 
 // RequestLegalReview operation middleware
 func (siw *ServerInterfaceWrapper) RequestLegalReview(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -138922,7 +138381,6 @@ func (siw *ServerInterfaceWrapper) RequestLegalReview(w http.ResponseWriter, r *
 
 // GetDealLines operation middleware
 func (siw *ServerInterfaceWrapper) GetDealLines(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -138956,7 +138414,6 @@ func (siw *ServerInterfaceWrapper) GetDealLines(w http.ResponseWriter, r *http.R
 
 // AddDealLine operation middleware
 func (siw *ServerInterfaceWrapper) AddDealLine(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -138990,7 +138447,6 @@ func (siw *ServerInterfaceWrapper) AddDealLine(w http.ResponseWriter, r *http.Re
 
 // UseDealEstimate operation middleware
 func (siw *ServerInterfaceWrapper) UseDealEstimate(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -139024,7 +138480,6 @@ func (siw *ServerInterfaceWrapper) UseDealEstimate(w http.ResponseWriter, r *htt
 
 // RemoveDealLine operation middleware
 func (siw *ServerInterfaceWrapper) RemoveDealLine(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -139083,7 +138538,6 @@ func (siw *ServerInterfaceWrapper) RemoveDealLine(w http.ResponseWriter, r *http
 
 // UpdateDealLine operation middleware
 func (siw *ServerInterfaceWrapper) UpdateDealLine(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -139126,7 +138580,6 @@ func (siw *ServerInterfaceWrapper) UpdateDealLine(w http.ResponseWriter, r *http
 
 // ClearDealManagerRequest operation middleware
 func (siw *ServerInterfaceWrapper) ClearDealManagerRequest(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -139160,7 +138613,6 @@ func (siw *ServerInterfaceWrapper) ClearDealManagerRequest(w http.ResponseWriter
 
 // RequestDealManager operation middleware
 func (siw *ServerInterfaceWrapper) RequestDealManager(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -139194,7 +138646,6 @@ func (siw *ServerInterfaceWrapper) RequestDealManager(w http.ResponseWriter, r *
 
 // ListDealMarginceChanges operation middleware
 func (siw *ServerInterfaceWrapper) ListDealMarginceChanges(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -139283,7 +138734,6 @@ func (siw *ServerInterfaceWrapper) ListDealMarginceChanges(w http.ResponseWriter
 
 // MergeDeal operation middleware
 func (siw *ServerInterfaceWrapper) MergeDeal(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -139377,7 +138827,6 @@ func (siw *ServerInterfaceWrapper) MergeDeal(w http.ResponseWriter, r *http.Requ
 
 // MoveDealPipeline operation middleware
 func (siw *ServerInterfaceWrapper) MoveDealPipeline(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -139435,7 +138884,6 @@ func (siw *ServerInterfaceWrapper) MoveDealPipeline(w http.ResponseWriter, r *ht
 
 // UndoDealPipelineMove operation middleware
 func (siw *ServerInterfaceWrapper) UndoDealPipelineMove(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -139491,7 +138939,6 @@ func (siw *ServerInterfaceWrapper) UndoDealPipelineMove(w http.ResponseWriter, r
 
 // RestoreDealMove operation middleware
 func (siw *ServerInterfaceWrapper) RestoreDealMove(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -139541,7 +138988,6 @@ func (siw *ServerInterfaceWrapper) RestoreDealMove(w http.ResponseWriter, r *htt
 
 // DismissDealMove operation middleware
 func (siw *ServerInterfaceWrapper) DismissDealMove(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -139575,7 +139021,6 @@ func (siw *ServerInterfaceWrapper) DismissDealMove(w http.ResponseWriter, r *htt
 
 // ListDealOffers operation middleware
 func (siw *ServerInterfaceWrapper) ListDealOffers(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -139651,7 +139096,6 @@ func (siw *ServerInterfaceWrapper) ListDealOffers(w http.ResponseWriter, r *http
 
 // CreateOffer operation middleware
 func (siw *ServerInterfaceWrapper) CreateOffer(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -139709,7 +139153,6 @@ func (siw *ServerInterfaceWrapper) CreateOffer(w http.ResponseWriter, r *http.Re
 
 // ListDealOutcomeReviews operation middleware
 func (siw *ServerInterfaceWrapper) ListDealOutcomeReviews(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -139743,7 +139186,6 @@ func (siw *ServerInterfaceWrapper) ListDealOutcomeReviews(w http.ResponseWriter,
 
 // CreateDealOutcomeReview operation middleware
 func (siw *ServerInterfaceWrapper) CreateDealOutcomeReview(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -139777,7 +139219,6 @@ func (siw *ServerInterfaceWrapper) CreateDealOutcomeReview(w http.ResponseWriter
 
 // ListDealProducts operation middleware
 func (siw *ServerInterfaceWrapper) ListDealProducts(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -139811,7 +139252,6 @@ func (siw *ServerInterfaceWrapper) ListDealProducts(w http.ResponseWriter, r *ht
 
 // ReplaceDealProducts operation middleware
 func (siw *ServerInterfaceWrapper) ReplaceDealProducts(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -139845,7 +139285,6 @@ func (siw *ServerInterfaceWrapper) ReplaceDealProducts(w http.ResponseWriter, r 
 
 // ProgressDeal operation middleware
 func (siw *ServerInterfaceWrapper) ProgressDeal(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -139922,7 +139361,6 @@ func (siw *ServerInterfaceWrapper) ProgressDeal(w http.ResponseWriter, r *http.R
 
 // ProposeDealRoles operation middleware
 func (siw *ServerInterfaceWrapper) ProposeDealRoles(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -139956,7 +139394,6 @@ func (siw *ServerInterfaceWrapper) ProposeDealRoles(w http.ResponseWriter, r *ht
 
 // ListStageEvidence operation middleware
 func (siw *ServerInterfaceWrapper) ListStageEvidence(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -139990,7 +139427,6 @@ func (siw *ServerInterfaceWrapper) ListStageEvidence(w http.ResponseWriter, r *h
 
 // RevertStageProgression operation middleware
 func (siw *ServerInterfaceWrapper) RevertStageProgression(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -140031,7 +139467,6 @@ func (siw *ServerInterfaceWrapper) RevertStageProgression(w http.ResponseWriter,
 
 // ListDealStakeholders operation middleware
 func (siw *ServerInterfaceWrapper) ListDealStakeholders(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -140065,7 +139500,6 @@ func (siw *ServerInterfaceWrapper) ListDealStakeholders(w http.ResponseWriter, r
 
 // GetDealStatus operation middleware
 func (siw *ServerInterfaceWrapper) GetDealStatus(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -140154,7 +139588,6 @@ func (siw *ServerInterfaceWrapper) GetDealStatus(w http.ResponseWriter, r *http.
 
 // GetDealViability operation middleware
 func (siw *ServerInterfaceWrapper) GetDealViability(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -140186,7 +139619,6 @@ func (siw *ServerInterfaceWrapper) GetDealViability(w http.ResponseWriter, r *ht
 
 // GetDealWinEvidence operation middleware
 func (siw *ServerInterfaceWrapper) GetDealWinEvidence(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -140220,7 +139652,6 @@ func (siw *ServerInterfaceWrapper) GetDealWinEvidence(w http.ResponseWriter, r *
 
 // ListDedupeCandidates operation middleware
 func (siw *ServerInterfaceWrapper) ListDedupeCandidates(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -140313,7 +139744,6 @@ func (siw *ServerInterfaceWrapper) ListDedupeCandidates(w http.ResponseWriter, r
 
 // GetDedupeCandidate operation middleware
 func (siw *ServerInterfaceWrapper) GetDedupeCandidate(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -140347,7 +139777,6 @@ func (siw *ServerInterfaceWrapper) GetDedupeCandidate(w http.ResponseWriter, r *
 
 // DisposeDedupeCandidate operation middleware
 func (siw *ServerInterfaceWrapper) DisposeDedupeCandidate(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -140381,7 +139810,6 @@ func (siw *ServerInterfaceWrapper) DisposeDedupeCandidate(w http.ResponseWriter,
 
 // UndoDedupeDisposition operation middleware
 func (siw *ServerInterfaceWrapper) UndoDedupeDisposition(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -140415,7 +139843,6 @@ func (siw *ServerInterfaceWrapper) UndoDedupeDisposition(w http.ResponseWriter, 
 
 // ListContactCases operation middleware
 func (siw *ServerInterfaceWrapper) ListContactCases(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -140482,7 +139909,6 @@ func (siw *ServerInterfaceWrapper) ListContactCases(w http.ResponseWriter, r *ht
 
 // GetContactCase operation middleware
 func (siw *ServerInterfaceWrapper) GetContactCase(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -140516,7 +139942,6 @@ func (siw *ServerInterfaceWrapper) GetContactCase(w http.ResponseWriter, r *http
 
 // MergeContactCase operation middleware
 func (siw *ServerInterfaceWrapper) MergeContactCase(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -140550,7 +139975,6 @@ func (siw *ServerInterfaceWrapper) MergeContactCase(w http.ResponseWriter, r *ht
 
 // PreviewContactCaseMerge operation middleware
 func (siw *ServerInterfaceWrapper) PreviewContactCaseMerge(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -140584,7 +140008,6 @@ func (siw *ServerInterfaceWrapper) PreviewContactCaseMerge(w http.ResponseWriter
 
 // GetContactCaseSettings operation middleware
 func (siw *ServerInterfaceWrapper) GetContactCaseSettings(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -140606,7 +140029,6 @@ func (siw *ServerInterfaceWrapper) GetContactCaseSettings(w http.ResponseWriter,
 
 // UpdateContactCaseSettings operation middleware
 func (siw *ServerInterfaceWrapper) UpdateContactCaseSettings(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -140628,7 +140050,6 @@ func (siw *ServerInterfaceWrapper) UpdateContactCaseSettings(w http.ResponseWrit
 
 // GetMorningDigest operation middleware
 func (siw *ServerInterfaceWrapper) GetMorningDigest(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -140648,7 +140069,6 @@ func (siw *ServerInterfaceWrapper) GetMorningDigest(w http.ResponseWriter, r *ht
 
 // GetEmailSignatureTemplate operation middleware
 func (siw *ServerInterfaceWrapper) GetEmailSignatureTemplate(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -140670,7 +140090,6 @@ func (siw *ServerInterfaceWrapper) GetEmailSignatureTemplate(w http.ResponseWrit
 
 // SaveEmailSignatureTemplate operation middleware
 func (siw *ServerInterfaceWrapper) SaveEmailSignatureTemplate(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -140692,7 +140111,6 @@ func (siw *ServerInterfaceWrapper) SaveEmailSignatureTemplate(w http.ResponseWri
 
 // SendCompanyEmail operation middleware
 func (siw *ServerInterfaceWrapper) SendCompanyEmail(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -140760,7 +140178,6 @@ func (siw *ServerInterfaceWrapper) SendCompanyEmail(w http.ResponseWriter, r *ht
 
 // PreviewAccountSendAuthorization operation middleware
 func (siw *ServerInterfaceWrapper) PreviewAccountSendAuthorization(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -140782,7 +140199,6 @@ func (siw *ServerInterfaceWrapper) PreviewAccountSendAuthorization(w http.Respon
 
 // PreviewEmailSignOff operation middleware
 func (siw *ServerInterfaceWrapper) PreviewEmailSignOff(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -140804,7 +140220,6 @@ func (siw *ServerInterfaceWrapper) PreviewEmailSignOff(w http.ResponseWriter, r 
 
 // EmbedReindexStart operation middleware
 func (siw *ServerInterfaceWrapper) EmbedReindexStart(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -140826,7 +140241,6 @@ func (siw *ServerInterfaceWrapper) EmbedReindexStart(w http.ResponseWriter, r *h
 
 // EmbedReindexIdentities operation middleware
 func (siw *ServerInterfaceWrapper) EmbedReindexIdentities(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -140848,7 +140262,6 @@ func (siw *ServerInterfaceWrapper) EmbedReindexIdentities(w http.ResponseWriter,
 
 // EmbedReindexPreview operation middleware
 func (siw *ServerInterfaceWrapper) EmbedReindexPreview(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -140870,7 +140283,6 @@ func (siw *ServerInterfaceWrapper) EmbedReindexPreview(w http.ResponseWriter, r 
 
 // EmbedReindexStatus operation middleware
 func (siw *ServerInterfaceWrapper) EmbedReindexStatus(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -140892,7 +140304,6 @@ func (siw *ServerInterfaceWrapper) EmbedReindexStatus(w http.ResponseWriter, r *
 
 // BackfillEmploymentImport operation middleware
 func (siw *ServerInterfaceWrapper) BackfillEmploymentImport(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -140914,7 +140325,6 @@ func (siw *ServerInterfaceWrapper) BackfillEmploymentImport(w http.ResponseWrite
 
 // ResolveEntities operation middleware
 func (siw *ServerInterfaceWrapper) ResolveEntities(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -140936,7 +140346,6 @@ func (siw *ServerInterfaceWrapper) ResolveEntities(w http.ResponseWriter, r *htt
 
 // ListExistingCustomerNotices operation middleware
 func (siw *ServerInterfaceWrapper) ListExistingCustomerNotices(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -140956,7 +140365,6 @@ func (siw *ServerInterfaceWrapper) ListExistingCustomerNotices(w http.ResponseWr
 
 // DeclareExistingCustomerNotice operation middleware
 func (siw *ServerInterfaceWrapper) DeclareExistingCustomerNotice(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -140976,7 +140384,6 @@ func (siw *ServerInterfaceWrapper) DeclareExistingCustomerNotice(w http.Response
 
 // WithdrawExistingCustomerNotice operation middleware
 func (siw *ServerInterfaceWrapper) WithdrawExistingCustomerNotice(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -141008,7 +140415,6 @@ func (siw *ServerInterfaceWrapper) WithdrawExistingCustomerNotice(w http.Respons
 
 // CreateFilteredExport operation middleware
 func (siw *ServerInterfaceWrapper) CreateFilteredExport(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -141028,7 +140434,6 @@ func (siw *ServerInterfaceWrapper) CreateFilteredExport(w http.ResponseWriter, r
 
 // DownloadExportBundle operation middleware
 func (siw *ServerInterfaceWrapper) DownloadExportBundle(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -141048,7 +140453,6 @@ func (siw *ServerInterfaceWrapper) DownloadExportBundle(w http.ResponseWriter, r
 
 // ExtOauthCallback operation middleware
 func (siw *ServerInterfaceWrapper) ExtOauthCallback(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -141116,7 +140520,6 @@ func (siw *ServerInterfaceWrapper) ExtOauthCallback(w http.ResponseWriter, r *ht
 
 // ConnectExtOauth operation middleware
 func (siw *ServerInterfaceWrapper) ConnectExtOauth(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -141148,7 +140551,6 @@ func (siw *ServerInterfaceWrapper) ConnectExtOauth(w http.ResponseWriter, r *htt
 
 // ListExtensionHistory operation middleware
 func (siw *ServerInterfaceWrapper) ListExtensionHistory(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -141200,7 +140602,6 @@ func (siw *ServerInterfaceWrapper) ListExtensionHistory(w http.ResponseWriter, r
 
 // ListExtensionReports operation middleware
 func (siw *ServerInterfaceWrapper) ListExtensionReports(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -141220,7 +140621,6 @@ func (siw *ServerInterfaceWrapper) ListExtensionReports(w http.ResponseWriter, r
 
 // ListExtensions operation middleware
 func (siw *ServerInterfaceWrapper) ListExtensions(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -141242,7 +140642,6 @@ func (siw *ServerInterfaceWrapper) ListExtensions(w http.ResponseWriter, r *http
 
 // GetExtensionSettings operation middleware
 func (siw *ServerInterfaceWrapper) GetExtensionSettings(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -141276,7 +140675,6 @@ func (siw *ServerInterfaceWrapper) GetExtensionSettings(w http.ResponseWriter, r
 
 // UpdateExtensionSettings operation middleware
 func (siw *ServerInterfaceWrapper) UpdateExtensionSettings(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -141308,7 +140706,6 @@ func (siw *ServerInterfaceWrapper) UpdateExtensionSettings(w http.ResponseWriter
 
 // GetFieldHistory operation middleware
 func (siw *ServerInterfaceWrapper) GetFieldHistory(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -141414,7 +140811,6 @@ func (siw *ServerInterfaceWrapper) GetFieldHistory(w http.ResponseWriter, r *htt
 
 // PreviewFilter operation middleware
 func (siw *ServerInterfaceWrapper) PreviewFilter(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -141436,7 +140832,6 @@ func (siw *ServerInterfaceWrapper) PreviewFilter(w http.ResponseWriter, r *http.
 
 // ProposeFilter operation middleware
 func (siw *ServerInterfaceWrapper) ProposeFilter(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -141458,7 +140853,6 @@ func (siw *ServerInterfaceWrapper) ProposeFilter(w http.ResponseWriter, r *http.
 
 // GetFilterVocabulary operation middleware
 func (siw *ServerInterfaceWrapper) GetFilterVocabulary(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -141499,7 +140893,6 @@ func (siw *ServerInterfaceWrapper) GetFilterVocabulary(w http.ResponseWriter, r 
 
 // GetCustomerPayments operation middleware
 func (siw *ServerInterfaceWrapper) GetCustomerPayments(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -141553,7 +140946,6 @@ func (siw *ServerInterfaceWrapper) GetCustomerPayments(w http.ResponseWriter, r 
 
 // DownloadFinanceInvoicePdf operation middleware
 func (siw *ServerInterfaceWrapper) DownloadFinanceInvoicePdf(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -141587,7 +140979,6 @@ func (siw *ServerInterfaceWrapper) DownloadFinanceInvoicePdf(w http.ResponseWrit
 
 // DisconnectFinanceSource operation middleware
 func (siw *ServerInterfaceWrapper) DisconnectFinanceSource(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -141609,7 +141000,6 @@ func (siw *ServerInterfaceWrapper) DisconnectFinanceSource(w http.ResponseWriter
 
 // GetFinanceSource operation middleware
 func (siw *ServerInterfaceWrapper) GetFinanceSource(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -141631,7 +141021,6 @@ func (siw *ServerInterfaceWrapper) GetFinanceSource(w http.ResponseWriter, r *ht
 
 // ConnectFinanceSource operation middleware
 func (siw *ServerInterfaceWrapper) ConnectFinanceSource(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -141651,7 +141040,6 @@ func (siw *ServerInterfaceWrapper) ConnectFinanceSource(w http.ResponseWriter, r
 
 // ListFinanceSourceCustomers operation middleware
 func (siw *ServerInterfaceWrapper) ListFinanceSourceCustomers(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -141705,7 +141093,6 @@ func (siw *ServerInterfaceWrapper) ListFinanceSourceCustomers(w http.ResponseWri
 
 // UnlinkFinanceSourceCustomer operation middleware
 func (siw *ServerInterfaceWrapper) UnlinkFinanceSourceCustomer(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -141739,7 +141126,6 @@ func (siw *ServerInterfaceWrapper) UnlinkFinanceSourceCustomer(w http.ResponseWr
 
 // LinkFinanceSourceCustomer operation middleware
 func (siw *ServerInterfaceWrapper) LinkFinanceSourceCustomer(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -141773,7 +141159,6 @@ func (siw *ServerInterfaceWrapper) LinkFinanceSourceCustomer(w http.ResponseWrit
 
 // SyncFinanceSource operation middleware
 func (siw *ServerInterfaceWrapper) SyncFinanceSource(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -141795,7 +141180,6 @@ func (siw *ServerInterfaceWrapper) SyncFinanceSource(w http.ResponseWriter, r *h
 
 // GetForecast operation middleware
 func (siw *ServerInterfaceWrapper) GetForecast(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -141888,7 +141272,6 @@ func (siw *ServerInterfaceWrapper) GetForecast(w http.ResponseWriter, r *http.Re
 
 // GetForecastAssurance operation middleware
 func (siw *ServerInterfaceWrapper) GetForecastAssurance(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -141910,7 +141293,6 @@ func (siw *ServerInterfaceWrapper) GetForecastAssurance(w http.ResponseWriter, r
 
 // GetForecastAssuranceEnforcement operation middleware
 func (siw *ServerInterfaceWrapper) GetForecastAssuranceEnforcement(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -141930,7 +141312,6 @@ func (siw *ServerInterfaceWrapper) GetForecastAssuranceEnforcement(w http.Respon
 
 // SetForecastAssuranceEnforcement operation middleware
 func (siw *ServerInterfaceWrapper) SetForecastAssuranceEnforcement(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -141950,7 +141331,6 @@ func (siw *ServerInterfaceWrapper) SetForecastAssuranceEnforcement(w http.Respon
 
 // ListInputChecks operation middleware
 func (siw *ServerInterfaceWrapper) ListInputChecks(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -142043,7 +141423,6 @@ func (siw *ServerInterfaceWrapper) ListInputChecks(w http.ResponseWriter, r *htt
 
 // CloseLostInputCheck operation middleware
 func (siw *ServerInterfaceWrapper) CloseLostInputCheck(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -142075,7 +141454,6 @@ func (siw *ServerInterfaceWrapper) CloseLostInputCheck(w http.ResponseWriter, r 
 
 // ResolveInputCheck operation middleware
 func (siw *ServerInterfaceWrapper) ResolveInputCheck(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -142109,7 +141487,6 @@ func (siw *ServerInterfaceWrapper) ResolveInputCheck(w http.ResponseWriter, r *h
 
 // WaitInputCheck operation middleware
 func (siw *ServerInterfaceWrapper) WaitInputCheck(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -142141,7 +141518,6 @@ func (siw *ServerInterfaceWrapper) WaitInputCheck(w http.ResponseWriter, r *http
 
 // PreviewForecastAssurance operation middleware
 func (siw *ServerInterfaceWrapper) PreviewForecastAssurance(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -142163,7 +141539,6 @@ func (siw *ServerInterfaceWrapper) PreviewForecastAssurance(w http.ResponseWrite
 
 // StartForecastAssuranceRun operation middleware
 func (siw *ServerInterfaceWrapper) StartForecastAssuranceRun(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -142185,7 +141560,6 @@ func (siw *ServerInterfaceWrapper) StartForecastAssuranceRun(w http.ResponseWrit
 
 // ListForecastCalls operation middleware
 func (siw *ServerInterfaceWrapper) ListForecastCalls(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -142265,7 +141639,6 @@ func (siw *ServerInterfaceWrapper) ListForecastCalls(w http.ResponseWriter, r *h
 
 // RecordForecastCall operation middleware
 func (siw *ServerInterfaceWrapper) RecordForecastCall(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -142314,7 +141687,6 @@ func (siw *ServerInterfaceWrapper) RecordForecastCall(w http.ResponseWriter, r *
 
 // GetForecastFocus operation middleware
 func (siw *ServerInterfaceWrapper) GetForecastFocus(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -142355,7 +141727,6 @@ func (siw *ServerInterfaceWrapper) GetForecastFocus(w http.ResponseWriter, r *ht
 
 // GetForecastMovement operation middleware
 func (siw *ServerInterfaceWrapper) GetForecastMovement(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -142422,7 +141793,6 @@ func (siw *ServerInterfaceWrapper) GetForecastMovement(w http.ResponseWriter, r 
 
 // OpenForecastShare operation middleware
 func (siw *ServerInterfaceWrapper) OpenForecastShare(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -142456,7 +141826,6 @@ func (siw *ServerInterfaceWrapper) OpenForecastShare(w http.ResponseWriter, r *h
 
 // ExportForecastShare operation middleware
 func (siw *ServerInterfaceWrapper) ExportForecastShare(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -142490,7 +141859,6 @@ func (siw *ServerInterfaceWrapper) ExportForecastShare(w http.ResponseWriter, r 
 
 // ListForecastShares operation middleware
 func (siw *ServerInterfaceWrapper) ListForecastShares(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -142512,7 +141880,6 @@ func (siw *ServerInterfaceWrapper) ListForecastShares(w http.ResponseWriter, r *
 
 // CreateForecastShare operation middleware
 func (siw *ServerInterfaceWrapper) CreateForecastShare(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -142534,7 +141901,6 @@ func (siw *ServerInterfaceWrapper) CreateForecastShare(w http.ResponseWriter, r 
 
 // RevokeForecastShare operation middleware
 func (siw *ServerInterfaceWrapper) RevokeForecastShare(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -142568,7 +141934,6 @@ func (siw *ServerInterfaceWrapper) RevokeForecastShare(w http.ResponseWriter, r 
 
 // GetForecastStageChances operation middleware
 func (siw *ServerInterfaceWrapper) GetForecastStageChances(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -142590,7 +141955,6 @@ func (siw *ServerInterfaceWrapper) GetForecastStageChances(w http.ResponseWriter
 
 // ListFxRates operation middleware
 func (siw *ServerInterfaceWrapper) ListFxRates(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -142631,7 +141995,6 @@ func (siw *ServerInterfaceWrapper) ListFxRates(w http.ResponseWriter, r *http.Re
 
 // SetFxRate operation middleware
 func (siw *ServerInterfaceWrapper) SetFxRate(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -142653,7 +142016,6 @@ func (siw *ServerInterfaceWrapper) SetFxRate(w http.ResponseWriter, r *http.Requ
 
 // ListFxRateCurrencies operation middleware
 func (siw *ServerInterfaceWrapper) ListFxRateCurrencies(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -142675,7 +142037,6 @@ func (siw *ServerInterfaceWrapper) ListFxRateCurrencies(w http.ResponseWriter, r
 
 // ProposeFxRateRefresh operation middleware
 func (siw *ServerInterfaceWrapper) ProposeFxRateRefresh(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -142697,7 +142058,6 @@ func (siw *ServerInterfaceWrapper) ProposeFxRateRefresh(w http.ResponseWriter, r
 
 // RemoveFxRate operation middleware
 func (siw *ServerInterfaceWrapper) RemoveFxRate(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -142729,7 +142089,6 @@ func (siw *ServerInterfaceWrapper) RemoveFxRate(w http.ResponseWriter, r *http.R
 
 // ListImportRuns operation middleware
 func (siw *ServerInterfaceWrapper) ListImportRuns(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -142796,7 +142155,6 @@ func (siw *ServerInterfaceWrapper) ListImportRuns(w http.ResponseWriter, r *http
 
 // CreateImportRun operation middleware
 func (siw *ServerInterfaceWrapper) CreateImportRun(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -142818,7 +142176,6 @@ func (siw *ServerInterfaceWrapper) CreateImportRun(w http.ResponseWriter, r *htt
 
 // GetImportFormat operation middleware
 func (siw *ServerInterfaceWrapper) GetImportFormat(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -142859,7 +142216,6 @@ func (siw *ServerInterfaceWrapper) GetImportFormat(w http.ResponseWriter, r *htt
 
 // UploadImportSource operation middleware
 func (siw *ServerInterfaceWrapper) UploadImportSource(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -142879,7 +142235,6 @@ func (siw *ServerInterfaceWrapper) UploadImportSource(w http.ResponseWriter, r *
 
 // DownloadImportTemplate operation middleware
 func (siw *ServerInterfaceWrapper) DownloadImportTemplate(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -142901,7 +142256,6 @@ func (siw *ServerInterfaceWrapper) DownloadImportTemplate(w http.ResponseWriter,
 
 // GetImportRun operation middleware
 func (siw *ServerInterfaceWrapper) GetImportRun(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -142935,7 +142289,6 @@ func (siw *ServerInterfaceWrapper) GetImportRun(w http.ResponseWriter, r *http.R
 
 // UpdateImportRun operation middleware
 func (siw *ServerInterfaceWrapper) UpdateImportRun(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -142969,7 +142322,6 @@ func (siw *ServerInterfaceWrapper) UpdateImportRun(w http.ResponseWriter, r *htt
 
 // ApproveImportRun operation middleware
 func (siw *ServerInterfaceWrapper) ApproveImportRun(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -143003,7 +142355,6 @@ func (siw *ServerInterfaceWrapper) ApproveImportRun(w http.ResponseWriter, r *ht
 
 // CancelImportRun operation middleware
 func (siw *ServerInterfaceWrapper) CancelImportRun(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -143037,7 +142388,6 @@ func (siw *ServerInterfaceWrapper) CancelImportRun(w http.ResponseWriter, r *htt
 
 // DownloadImportProblems operation middleware
 func (siw *ServerInterfaceWrapper) DownloadImportProblems(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -143087,7 +142437,6 @@ func (siw *ServerInterfaceWrapper) DownloadImportProblems(w http.ResponseWriter,
 
 // GetImportRunReport operation middleware
 func (siw *ServerInterfaceWrapper) GetImportRunReport(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -143121,7 +142470,6 @@ func (siw *ServerInterfaceWrapper) GetImportRunReport(w http.ResponseWriter, r *
 
 // UndoImportRun operation middleware
 func (siw *ServerInterfaceWrapper) UndoImportRun(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -143155,7 +142503,6 @@ func (siw *ServerInterfaceWrapper) UndoImportRun(w http.ResponseWriter, r *http.
 
 // ValidateImportRun operation middleware
 func (siw *ServerInterfaceWrapper) ValidateImportRun(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -143189,7 +142536,6 @@ func (siw *ServerInterfaceWrapper) ValidateImportRun(w http.ResponseWriter, r *h
 
 // ListAgentClients operation middleware
 func (siw *ServerInterfaceWrapper) ListAgentClients(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -143241,7 +142587,6 @@ func (siw *ServerInterfaceWrapper) ListAgentClients(w http.ResponseWriter, r *ht
 
 // RegisterAgentClient operation middleware
 func (siw *ServerInterfaceWrapper) RegisterAgentClient(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -143261,7 +142606,6 @@ func (siw *ServerInterfaceWrapper) RegisterAgentClient(w http.ResponseWriter, r 
 
 // DeleteAgentClient operation middleware
 func (siw *ServerInterfaceWrapper) DeleteAgentClient(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -143293,7 +142637,6 @@ func (siw *ServerInterfaceWrapper) DeleteAgentClient(w http.ResponseWriter, r *h
 
 // UpdateAgentClient operation middleware
 func (siw *ServerInterfaceWrapper) UpdateAgentClient(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -143325,7 +142668,6 @@ func (siw *ServerInterfaceWrapper) UpdateAgentClient(w http.ResponseWriter, r *h
 
 // RotateAgentClientSecret operation middleware
 func (siw *ServerInterfaceWrapper) RotateAgentClientSecret(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -143357,7 +142699,6 @@ func (siw *ServerInterfaceWrapper) RotateAgentClientSecret(w http.ResponseWriter
 
 // GetAuthenticationPolicy operation middleware
 func (siw *ServerInterfaceWrapper) GetAuthenticationPolicy(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -143377,7 +142718,6 @@ func (siw *ServerInterfaceWrapper) GetAuthenticationPolicy(w http.ResponseWriter
 
 // DeleteGoogleDirectory operation middleware
 func (siw *ServerInterfaceWrapper) DeleteGoogleDirectory(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -143397,7 +142737,6 @@ func (siw *ServerInterfaceWrapper) DeleteGoogleDirectory(w http.ResponseWriter, 
 
 // GetGoogleDirectory operation middleware
 func (siw *ServerInterfaceWrapper) GetGoogleDirectory(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -143417,7 +142756,6 @@ func (siw *ServerInterfaceWrapper) GetGoogleDirectory(w http.ResponseWriter, r *
 
 // SetGoogleDirectory operation middleware
 func (siw *ServerInterfaceWrapper) SetGoogleDirectory(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -143437,7 +142775,6 @@ func (siw *ServerInterfaceWrapper) SetGoogleDirectory(w http.ResponseWriter, r *
 
 // GetInstallationConfiguration operation middleware
 func (siw *ServerInterfaceWrapper) GetInstallationConfiguration(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -143457,7 +142794,6 @@ func (siw *ServerInterfaceWrapper) GetInstallationConfiguration(w http.ResponseW
 
 // GetInstallationJurisdiction operation middleware
 func (siw *ServerInterfaceWrapper) GetInstallationJurisdiction(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -143479,7 +142815,6 @@ func (siw *ServerInterfaceWrapper) GetInstallationJurisdiction(w http.ResponseWr
 
 // DownloadJurisdictionDocument operation middleware
 func (siw *ServerInterfaceWrapper) DownloadJurisdictionDocument(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -143513,7 +142848,6 @@ func (siw *ServerInterfaceWrapper) DownloadJurisdictionDocument(w http.ResponseW
 
 // GetLicenseEntitlement operation middleware
 func (siw *ServerInterfaceWrapper) GetLicenseEntitlement(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -143533,7 +142867,6 @@ func (siw *ServerInterfaceWrapper) GetLicenseEntitlement(w http.ResponseWriter, 
 
 // CheckLicenseNow operation middleware
 func (siw *ServerInterfaceWrapper) CheckLicenseNow(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -143553,7 +142886,6 @@ func (siw *ServerInterfaceWrapper) CheckLicenseNow(w http.ResponseWriter, r *htt
 
 // ListOauthApps operation middleware
 func (siw *ServerInterfaceWrapper) ListOauthApps(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -143573,7 +142905,6 @@ func (siw *ServerInterfaceWrapper) ListOauthApps(w http.ResponseWriter, r *http.
 
 // DeleteOauthApp operation middleware
 func (siw *ServerInterfaceWrapper) DeleteOauthApp(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -143605,7 +142936,6 @@ func (siw *ServerInterfaceWrapper) DeleteOauthApp(w http.ResponseWriter, r *http
 
 // GetOauthApp operation middleware
 func (siw *ServerInterfaceWrapper) GetOauthApp(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -143637,7 +142967,6 @@ func (siw *ServerInterfaceWrapper) GetOauthApp(w http.ResponseWriter, r *http.Re
 
 // SetOauthApp operation middleware
 func (siw *ServerInterfaceWrapper) SetOauthApp(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -143669,7 +142998,6 @@ func (siw *ServerInterfaceWrapper) SetOauthApp(w http.ResponseWriter, r *http.Re
 
 // GetSeatUsage operation middleware
 func (siw *ServerInterfaceWrapper) GetSeatUsage(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -143689,7 +143017,6 @@ func (siw *ServerInterfaceWrapper) GetSeatUsage(w http.ResponseWriter, r *http.R
 
 // GetInstallationSettings operation middleware
 func (siw *ServerInterfaceWrapper) GetInstallationSettings(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -143709,7 +143036,6 @@ func (siw *ServerInterfaceWrapper) GetInstallationSettings(w http.ResponseWriter
 
 // UpdateInstallationSettings operation middleware
 func (siw *ServerInterfaceWrapper) UpdateInstallationSettings(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -143729,7 +143055,6 @@ func (siw *ServerInterfaceWrapper) UpdateInstallationSettings(w http.ResponseWri
 
 // GetFiscalYearImpact operation middleware
 func (siw *ServerInterfaceWrapper) GetFiscalYearImpact(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -143749,7 +143074,6 @@ func (siw *ServerInterfaceWrapper) GetFiscalYearImpact(w http.ResponseWriter, r 
 
 // GetInstallationSetup operation middleware
 func (siw *ServerInterfaceWrapper) GetInstallationSetup(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -143769,7 +143093,6 @@ func (siw *ServerInterfaceWrapper) GetInstallationSetup(w http.ResponseWriter, r
 
 // GetDispactAppManifest operation middleware
 func (siw *ServerInterfaceWrapper) GetDispactAppManifest(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -143789,7 +143112,6 @@ func (siw *ServerInterfaceWrapper) GetDispactAppManifest(w http.ResponseWriter, 
 
 // GetIntegrationsSettings operation middleware
 func (siw *ServerInterfaceWrapper) GetIntegrationsSettings(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -143809,7 +143131,6 @@ func (siw *ServerInterfaceWrapper) GetIntegrationsSettings(w http.ResponseWriter
 
 // UpdateIntegrationsSettings operation middleware
 func (siw *ServerInterfaceWrapper) UpdateIntegrationsSettings(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -143829,7 +143150,6 @@ func (siw *ServerInterfaceWrapper) UpdateIntegrationsSettings(w http.ResponseWri
 
 // CancelIntroRequest operation middleware
 func (siw *ServerInterfaceWrapper) CancelIntroRequest(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -143863,7 +143183,6 @@ func (siw *ServerInterfaceWrapper) CancelIntroRequest(w http.ResponseWriter, r *
 
 // CompleteIntroRequest operation middleware
 func (siw *ServerInterfaceWrapper) CompleteIntroRequest(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -143897,7 +143216,6 @@ func (siw *ServerInterfaceWrapper) CompleteIntroRequest(w http.ResponseWriter, r
 
 // DecideIntroRequest operation middleware
 func (siw *ServerInterfaceWrapper) DecideIntroRequest(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -143931,7 +143249,6 @@ func (siw *ServerInterfaceWrapper) DecideIntroRequest(w http.ResponseWriter, r *
 
 // ReplaceIntroRequest operation middleware
 func (siw *ServerInterfaceWrapper) ReplaceIntroRequest(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -143965,7 +143282,6 @@ func (siw *ServerInterfaceWrapper) ReplaceIntroRequest(w http.ResponseWriter, r 
 
 // ListCorpora operation middleware
 func (siw *ServerInterfaceWrapper) ListCorpora(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -144006,7 +143322,6 @@ func (siw *ServerInterfaceWrapper) ListCorpora(w http.ResponseWriter, r *http.Re
 
 // CreateCorpus operation middleware
 func (siw *ServerInterfaceWrapper) CreateCorpus(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -144028,7 +143343,6 @@ func (siw *ServerInterfaceWrapper) CreateCorpus(w http.ResponseWriter, r *http.R
 
 // ArchiveCorpus operation middleware
 func (siw *ServerInterfaceWrapper) ArchiveCorpus(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -144062,7 +143376,6 @@ func (siw *ServerInterfaceWrapper) ArchiveCorpus(w http.ResponseWriter, r *http.
 
 // ReadCorpus operation middleware
 func (siw *ServerInterfaceWrapper) ReadCorpus(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -144096,7 +143409,6 @@ func (siw *ServerInterfaceWrapper) ReadCorpus(w http.ResponseWriter, r *http.Req
 
 // UpdateCorpus operation middleware
 func (siw *ServerInterfaceWrapper) UpdateCorpus(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -144130,7 +143442,6 @@ func (siw *ServerInterfaceWrapper) UpdateCorpus(w http.ResponseWriter, r *http.R
 
 // AskCorpus operation middleware
 func (siw *ServerInterfaceWrapper) AskCorpus(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -144164,7 +143475,6 @@ func (siw *ServerInterfaceWrapper) AskCorpus(w http.ResponseWriter, r *http.Requ
 
 // ListCorpusDocuments operation middleware
 func (siw *ServerInterfaceWrapper) ListCorpusDocuments(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -144198,7 +143508,6 @@ func (siw *ServerInterfaceWrapper) ListCorpusDocuments(w http.ResponseWriter, r 
 
 // UploadCorpusDocument operation middleware
 func (siw *ServerInterfaceWrapper) UploadCorpusDocument(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -144232,7 +143541,6 @@ func (siw *ServerInterfaceWrapper) UploadCorpusDocument(w http.ResponseWriter, r
 
 // RestoreCorpus operation middleware
 func (siw *ServerInterfaceWrapper) RestoreCorpus(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -144266,7 +143574,6 @@ func (siw *ServerInterfaceWrapper) RestoreCorpus(w http.ResponseWriter, r *http.
 
 // DeleteCorpusDocument operation middleware
 func (siw *ServerInterfaceWrapper) DeleteCorpusDocument(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -144298,7 +143605,6 @@ func (siw *ServerInterfaceWrapper) DeleteCorpusDocument(w http.ResponseWriter, r
 
 // DownloadCorpusDocument operation middleware
 func (siw *ServerInterfaceWrapper) DownloadCorpusDocument(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -144332,7 +143638,6 @@ func (siw *ServerInterfaceWrapper) DownloadCorpusDocument(w http.ResponseWriter,
 
 // SuggestLabelTranslation operation middleware
 func (siw *ServerInterfaceWrapper) SuggestLabelTranslation(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -144352,7 +143657,6 @@ func (siw *ServerInterfaceWrapper) SuggestLabelTranslation(w http.ResponseWriter
 
 // ConfirmSendWithoutLawfulBasis operation middleware
 func (siw *ServerInterfaceWrapper) ConfirmSendWithoutLawfulBasis(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -144372,7 +143676,6 @@ func (siw *ServerInterfaceWrapper) ConfirmSendWithoutLawfulBasis(w http.Response
 
 // ListLeadDisqualifyReasons operation middleware
 func (siw *ServerInterfaceWrapper) ListLeadDisqualifyReasons(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -144394,7 +143697,6 @@ func (siw *ServerInterfaceWrapper) ListLeadDisqualifyReasons(w http.ResponseWrit
 
 // CreateLeadDisqualifyReason operation middleware
 func (siw *ServerInterfaceWrapper) CreateLeadDisqualifyReason(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -144443,7 +143745,6 @@ func (siw *ServerInterfaceWrapper) CreateLeadDisqualifyReason(w http.ResponseWri
 
 // DeleteLeadDisqualifyReason operation middleware
 func (siw *ServerInterfaceWrapper) DeleteLeadDisqualifyReason(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -144477,7 +143778,6 @@ func (siw *ServerInterfaceWrapper) DeleteLeadDisqualifyReason(w http.ResponseWri
 
 // UpdateLeadDisqualifyReason operation middleware
 func (siw *ServerInterfaceWrapper) UpdateLeadDisqualifyReason(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -144535,7 +143835,6 @@ func (siw *ServerInterfaceWrapper) UpdateLeadDisqualifyReason(w http.ResponseWri
 
 // ListLeadOrigins operation middleware
 func (siw *ServerInterfaceWrapper) ListLeadOrigins(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -144557,7 +143856,6 @@ func (siw *ServerInterfaceWrapper) ListLeadOrigins(w http.ResponseWriter, r *htt
 
 // CreateLeadOrigin operation middleware
 func (siw *ServerInterfaceWrapper) CreateLeadOrigin(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -144606,7 +143904,6 @@ func (siw *ServerInterfaceWrapper) CreateLeadOrigin(w http.ResponseWriter, r *ht
 
 // DeleteLeadOrigin operation middleware
 func (siw *ServerInterfaceWrapper) DeleteLeadOrigin(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -144640,7 +143937,6 @@ func (siw *ServerInterfaceWrapper) DeleteLeadOrigin(w http.ResponseWriter, r *ht
 
 // UpdateLeadOrigin operation middleware
 func (siw *ServerInterfaceWrapper) UpdateLeadOrigin(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -144698,7 +143994,6 @@ func (siw *ServerInterfaceWrapper) UpdateLeadOrigin(w http.ResponseWriter, r *ht
 
 // GetLeadSignalCatalog operation middleware
 func (siw *ServerInterfaceWrapper) GetLeadSignalCatalog(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -144720,7 +144015,6 @@ func (siw *ServerInterfaceWrapper) GetLeadSignalCatalog(w http.ResponseWriter, r
 
 // ListLeadSources operation middleware
 func (siw *ServerInterfaceWrapper) ListLeadSources(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -144742,7 +144036,6 @@ func (siw *ServerInterfaceWrapper) ListLeadSources(w http.ResponseWriter, r *htt
 
 // CreateLeadSource operation middleware
 func (siw *ServerInterfaceWrapper) CreateLeadSource(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -144791,7 +144084,6 @@ func (siw *ServerInterfaceWrapper) CreateLeadSource(w http.ResponseWriter, r *ht
 
 // DeleteLeadSource operation middleware
 func (siw *ServerInterfaceWrapper) DeleteLeadSource(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -144825,7 +144117,6 @@ func (siw *ServerInterfaceWrapper) DeleteLeadSource(w http.ResponseWriter, r *ht
 
 // UpdateLeadSource operation middleware
 func (siw *ServerInterfaceWrapper) UpdateLeadSource(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -144883,7 +144174,6 @@ func (siw *ServerInterfaceWrapper) UpdateLeadSource(w http.ResponseWriter, r *ht
 
 // ListLeads operation middleware
 func (siw *ServerInterfaceWrapper) ListLeads(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -145249,7 +144539,6 @@ func (siw *ServerInterfaceWrapper) ListLeads(w http.ResponseWriter, r *http.Requ
 
 // CreateLead operation middleware
 func (siw *ServerInterfaceWrapper) CreateLead(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -145298,7 +144587,6 @@ func (siw *ServerInterfaceWrapper) CreateLead(w http.ResponseWriter, r *http.Req
 
 // AssignLeads operation middleware
 func (siw *ServerInterfaceWrapper) AssignLeads(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -145318,7 +144606,6 @@ func (siw *ServerInterfaceWrapper) AssignLeads(w http.ResponseWriter, r *http.Re
 
 // GetLeadSettings operation middleware
 func (siw *ServerInterfaceWrapper) GetLeadSettings(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -145340,7 +144627,6 @@ func (siw *ServerInterfaceWrapper) GetLeadSettings(w http.ResponseWriter, r *htt
 
 // UpdateLeadSettings operation middleware
 func (siw *ServerInterfaceWrapper) UpdateLeadSettings(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -145362,7 +144648,6 @@ func (siw *ServerInterfaceWrapper) UpdateLeadSettings(w http.ResponseWriter, r *
 
 // DisqualifyLead operation middleware
 func (siw *ServerInterfaceWrapper) DisqualifyLead(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -145396,7 +144681,6 @@ func (siw *ServerInterfaceWrapper) DisqualifyLead(w http.ResponseWriter, r *http
 
 // GetLead operation middleware
 func (siw *ServerInterfaceWrapper) GetLead(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -145430,7 +144714,6 @@ func (siw *ServerInterfaceWrapper) GetLead(w http.ResponseWriter, r *http.Reques
 
 // UpdateLead operation middleware
 func (siw *ServerInterfaceWrapper) UpdateLead(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -145507,7 +144790,6 @@ func (siw *ServerInterfaceWrapper) UpdateLead(w http.ResponseWriter, r *http.Req
 
 // RecordLeadQualifyingEvent operation middleware
 func (siw *ServerInterfaceWrapper) RecordLeadQualifyingEvent(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -145541,7 +144823,6 @@ func (siw *ServerInterfaceWrapper) RecordLeadQualifyingEvent(w http.ResponseWrit
 
 // RetractLeadQualifyingEvent operation middleware
 func (siw *ServerInterfaceWrapper) RetractLeadQualifyingEvent(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -145584,7 +144865,6 @@ func (siw *ServerInterfaceWrapper) RetractLeadQualifyingEvent(w http.ResponseWri
 
 // ListLeadStops operation middleware
 func (siw *ServerInterfaceWrapper) ListLeadStops(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -145618,7 +144898,6 @@ func (siw *ServerInterfaceWrapper) ListLeadStops(w http.ResponseWriter, r *http.
 
 // LiftLeadSuppression operation middleware
 func (siw *ServerInterfaceWrapper) LiftLeadSuppression(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -145661,7 +144940,6 @@ func (siw *ServerInterfaceWrapper) LiftLeadSuppression(w http.ResponseWriter, r 
 
 // ListLeadConversationSuggestions operation middleware
 func (siw *ServerInterfaceWrapper) ListLeadConversationSuggestions(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -145695,7 +144973,6 @@ func (siw *ServerInterfaceWrapper) ListLeadConversationSuggestions(w http.Respon
 
 // DemoteLead operation middleware
 func (siw *ServerInterfaceWrapper) DemoteLead(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -145753,7 +145030,6 @@ func (siw *ServerInterfaceWrapper) DemoteLead(w http.ResponseWriter, r *http.Req
 
 // DraftLeadEmail operation middleware
 func (siw *ServerInterfaceWrapper) DraftLeadEmail(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -145785,7 +145061,6 @@ func (siw *ServerInterfaceWrapper) DraftLeadEmail(w http.ResponseWriter, r *http
 
 // LinkLeadCompany operation middleware
 func (siw *ServerInterfaceWrapper) LinkLeadCompany(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -145819,7 +145094,6 @@ func (siw *ServerInterfaceWrapper) LinkLeadCompany(w http.ResponseWriter, r *htt
 
 // ListLeadManualSignals operation middleware
 func (siw *ServerInterfaceWrapper) ListLeadManualSignals(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -145853,7 +145127,6 @@ func (siw *ServerInterfaceWrapper) ListLeadManualSignals(w http.ResponseWriter, 
 
 // SetLeadManualSignal operation middleware
 func (siw *ServerInterfaceWrapper) SetLeadManualSignal(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -145887,7 +145160,6 @@ func (siw *ServerInterfaceWrapper) SetLeadManualSignal(w http.ResponseWriter, r 
 
 // ClearLeadManualSignal operation middleware
 func (siw *ServerInterfaceWrapper) ClearLeadManualSignal(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -145930,7 +145202,6 @@ func (siw *ServerInterfaceWrapper) ClearLeadManualSignal(w http.ResponseWriter, 
 
 // AcceptPartnerLead operation middleware
 func (siw *ServerInterfaceWrapper) AcceptPartnerLead(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -145988,7 +145259,6 @@ func (siw *ServerInterfaceWrapper) AcceptPartnerLead(w http.ResponseWriter, r *h
 
 // PromoteLead operation middleware
 func (siw *ServerInterfaceWrapper) PromoteLead(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -146065,7 +145335,6 @@ func (siw *ServerInterfaceWrapper) PromoteLead(w http.ResponseWriter, r *http.Re
 
 // PreviewLeadPromotion operation middleware
 func (siw *ServerInterfaceWrapper) PreviewLeadPromotion(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -146128,7 +145397,6 @@ func (siw *ServerInterfaceWrapper) PreviewLeadPromotion(w http.ResponseWriter, r
 
 // QualifyLead operation middleware
 func (siw *ServerInterfaceWrapper) QualifyLead(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -146205,7 +145473,6 @@ func (siw *ServerInterfaceWrapper) QualifyLead(w http.ResponseWriter, r *http.Re
 
 // ReopenLead operation middleware
 func (siw *ServerInterfaceWrapper) ReopenLead(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -146263,7 +145530,6 @@ func (siw *ServerInterfaceWrapper) ReopenLead(w http.ResponseWriter, r *http.Req
 
 // ExplainLeadScore operation middleware
 func (siw *ServerInterfaceWrapper) ExplainLeadScore(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -146339,7 +145605,6 @@ func (siw *ServerInterfaceWrapper) ExplainLeadScore(w http.ResponseWriter, r *ht
 
 // ListLegalEntities operation middleware
 func (siw *ServerInterfaceWrapper) ListLegalEntities(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -146380,7 +145645,6 @@ func (siw *ServerInterfaceWrapper) ListLegalEntities(w http.ResponseWriter, r *h
 
 // CreateLegalEntity operation middleware
 func (siw *ServerInterfaceWrapper) CreateLegalEntity(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -146402,7 +145666,6 @@ func (siw *ServerInterfaceWrapper) CreateLegalEntity(w http.ResponseWriter, r *h
 
 // GetLegalEntity operation middleware
 func (siw *ServerInterfaceWrapper) GetLegalEntity(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -146436,7 +145699,6 @@ func (siw *ServerInterfaceWrapper) GetLegalEntity(w http.ResponseWriter, r *http
 
 // UpdateLegalEntity operation middleware
 func (siw *ServerInterfaceWrapper) UpdateLegalEntity(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -146494,7 +145756,6 @@ func (siw *ServerInterfaceWrapper) UpdateLegalEntity(w http.ResponseWriter, r *h
 
 // ArchiveLegalEntity operation middleware
 func (siw *ServerInterfaceWrapper) ArchiveLegalEntity(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -146552,7 +145813,6 @@ func (siw *ServerInterfaceWrapper) ArchiveLegalEntity(w http.ResponseWriter, r *
 
 // DeleteLegalEntityLogo operation middleware
 func (siw *ServerInterfaceWrapper) DeleteLegalEntityLogo(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -146610,7 +145870,6 @@ func (siw *ServerInterfaceWrapper) DeleteLegalEntityLogo(w http.ResponseWriter, 
 
 // UploadLegalEntityLogo operation middleware
 func (siw *ServerInterfaceWrapper) UploadLegalEntityLogo(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -146668,7 +145927,6 @@ func (siw *ServerInterfaceWrapper) UploadLegalEntityLogo(w http.ResponseWriter, 
 
 // GetLegalEntityLogo operation middleware
 func (siw *ServerInterfaceWrapper) GetLegalEntityLogo(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -146702,7 +145960,6 @@ func (siw *ServerInterfaceWrapper) GetLegalEntityLogo(w http.ResponseWriter, r *
 
 // ListLegalEntityMembers operation middleware
 func (siw *ServerInterfaceWrapper) ListLegalEntityMembers(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -146736,7 +145993,6 @@ func (siw *ServerInterfaceWrapper) ListLegalEntityMembers(w http.ResponseWriter,
 
 // AssignLegalEntityMember operation middleware
 func (siw *ServerInterfaceWrapper) AssignLegalEntityMember(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -146770,7 +146026,6 @@ func (siw *ServerInterfaceWrapper) AssignLegalEntityMember(w http.ResponseWriter
 
 // ListLegalReviews operation middleware
 func (siw *ServerInterfaceWrapper) ListLegalReviews(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -146837,7 +146092,6 @@ func (siw *ServerInterfaceWrapper) ListLegalReviews(w http.ResponseWriter, r *ht
 
 // GetLegalReviewSettings operation middleware
 func (siw *ServerInterfaceWrapper) GetLegalReviewSettings(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -146859,7 +146113,6 @@ func (siw *ServerInterfaceWrapper) GetLegalReviewSettings(w http.ResponseWriter,
 
 // UpdateLegalReviewSettings operation middleware
 func (siw *ServerInterfaceWrapper) UpdateLegalReviewSettings(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -146881,7 +146134,6 @@ func (siw *ServerInterfaceWrapper) UpdateLegalReviewSettings(w http.ResponseWrit
 
 // GetLegalReview operation middleware
 func (siw *ServerInterfaceWrapper) GetLegalReview(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -146915,7 +146167,6 @@ func (siw *ServerInterfaceWrapper) GetLegalReview(w http.ResponseWriter, r *http
 
 // DecideLegalReview operation middleware
 func (siw *ServerInterfaceWrapper) DecideLegalReview(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -146949,7 +146200,6 @@ func (siw *ServerInterfaceWrapper) DecideLegalReview(w http.ResponseWriter, r *h
 
 // WithdrawLegalReview operation middleware
 func (siw *ServerInterfaceWrapper) WithdrawLegalReview(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -146983,7 +146233,6 @@ func (siw *ServerInterfaceWrapper) WithdrawLegalReview(w http.ResponseWriter, r 
 
 // ListLinkSuggestions operation middleware
 func (siw *ServerInterfaceWrapper) ListLinkSuggestions(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -147005,7 +146254,6 @@ func (siw *ServerInterfaceWrapper) ListLinkSuggestions(w http.ResponseWriter, r 
 
 // AcceptLinkSuggestion operation middleware
 func (siw *ServerInterfaceWrapper) AcceptLinkSuggestion(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -147039,7 +146287,6 @@ func (siw *ServerInterfaceWrapper) AcceptLinkSuggestion(w http.ResponseWriter, r
 
 // RejectLinkSuggestion operation middleware
 func (siw *ServerInterfaceWrapper) RejectLinkSuggestion(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -147073,7 +146320,6 @@ func (siw *ServerInterfaceWrapper) RejectLinkSuggestion(w http.ResponseWriter, r
 
 // ListLinkTypes operation middleware
 func (siw *ServerInterfaceWrapper) ListLinkTypes(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -147095,7 +146341,6 @@ func (siw *ServerInterfaceWrapper) ListLinkTypes(w http.ResponseWriter, r *http.
 
 // DescribeListFilters operation middleware
 func (siw *ServerInterfaceWrapper) DescribeListFilters(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -147117,7 +146362,6 @@ func (siw *ServerInterfaceWrapper) DescribeListFilters(w http.ResponseWriter, r 
 
 // ListLists operation middleware
 func (siw *ServerInterfaceWrapper) ListLists(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -147210,7 +146454,6 @@ func (siw *ServerInterfaceWrapper) ListLists(w http.ResponseWriter, r *http.Requ
 
 // CreateList operation middleware
 func (siw *ServerInterfaceWrapper) CreateList(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -147232,7 +146475,6 @@ func (siw *ServerInterfaceWrapper) CreateList(w http.ResponseWriter, r *http.Req
 
 // ArchiveList operation middleware
 func (siw *ServerInterfaceWrapper) ArchiveList(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -147266,7 +146508,6 @@ func (siw *ServerInterfaceWrapper) ArchiveList(w http.ResponseWriter, r *http.Re
 
 // GetList operation middleware
 func (siw *ServerInterfaceWrapper) GetList(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -147300,7 +146541,6 @@ func (siw *ServerInterfaceWrapper) GetList(w http.ResponseWriter, r *http.Reques
 
 // UpdateList operation middleware
 func (siw *ServerInterfaceWrapper) UpdateList(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -147334,7 +146574,6 @@ func (siw *ServerInterfaceWrapper) UpdateList(w http.ResponseWriter, r *http.Req
 
 // ListListHistory operation middleware
 func (siw *ServerInterfaceWrapper) ListListHistory(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -147397,7 +146636,6 @@ func (siw *ServerInterfaceWrapper) ListListHistory(w http.ResponseWriter, r *htt
 
 // ListListMembers operation middleware
 func (siw *ServerInterfaceWrapper) ListListMembers(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -147473,7 +146711,6 @@ func (siw *ServerInterfaceWrapper) ListListMembers(w http.ResponseWriter, r *htt
 
 // AddListMember operation middleware
 func (siw *ServerInterfaceWrapper) AddListMember(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -147507,7 +146744,6 @@ func (siw *ServerInterfaceWrapper) AddListMember(w http.ResponseWriter, r *http.
 
 // RemoveListMember operation middleware
 func (siw *ServerInterfaceWrapper) RemoveListMember(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -147541,7 +146777,6 @@ func (siw *ServerInterfaceWrapper) RemoveListMember(w http.ResponseWriter, r *ht
 
 // RestoreListMember operation middleware
 func (siw *ServerInterfaceWrapper) RestoreListMember(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -147573,7 +146808,6 @@ func (siw *ServerInterfaceWrapper) RestoreListMember(w http.ResponseWriter, r *h
 
 // ExplainListMember operation middleware
 func (siw *ServerInterfaceWrapper) ExplainListMember(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -147616,7 +146850,6 @@ func (siw *ServerInterfaceWrapper) ExplainListMember(w http.ResponseWriter, r *h
 
 // RestoreList operation middleware
 func (siw *ServerInterfaceWrapper) RestoreList(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -147650,7 +146883,6 @@ func (siw *ServerInterfaceWrapper) RestoreList(w http.ResponseWriter, r *http.Re
 
 // VisitList operation middleware
 func (siw *ServerInterfaceWrapper) VisitList(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -147684,7 +146916,6 @@ func (siw *ServerInterfaceWrapper) VisitList(w http.ResponseWriter, r *http.Requ
 
 // ListLossReasons operation middleware
 func (siw *ServerInterfaceWrapper) ListLossReasons(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -147706,7 +146937,6 @@ func (siw *ServerInterfaceWrapper) ListLossReasons(w http.ResponseWriter, r *htt
 
 // CreateLossReason operation middleware
 func (siw *ServerInterfaceWrapper) CreateLossReason(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -147755,7 +146985,6 @@ func (siw *ServerInterfaceWrapper) CreateLossReason(w http.ResponseWriter, r *ht
 
 // ListLegacyLossReasons operation middleware
 func (siw *ServerInterfaceWrapper) ListLegacyLossReasons(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -147796,7 +147025,6 @@ func (siw *ServerInterfaceWrapper) ListLegacyLossReasons(w http.ResponseWriter, 
 
 // ApplyLegacyLossReasons operation middleware
 func (siw *ServerInterfaceWrapper) ApplyLegacyLossReasons(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -147818,7 +147046,6 @@ func (siw *ServerInterfaceWrapper) ApplyLegacyLossReasons(w http.ResponseWriter,
 
 // DecideLegacyLossReason operation middleware
 func (siw *ServerInterfaceWrapper) DecideLegacyLossReason(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -147876,7 +147103,6 @@ func (siw *ServerInterfaceWrapper) DecideLegacyLossReason(w http.ResponseWriter,
 
 // UpdateLossReason operation middleware
 func (siw *ServerInterfaceWrapper) UpdateLossReason(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -147953,7 +147179,6 @@ func (siw *ServerInterfaceWrapper) UpdateLossReason(w http.ResponseWriter, r *ht
 
 // GetMagic operation middleware
 func (siw *ServerInterfaceWrapper) GetMagic(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -148007,7 +147232,6 @@ func (siw *ServerInterfaceWrapper) GetMagic(w http.ResponseWriter, r *http.Reque
 
 // GetMagicLineRecords operation middleware
 func (siw *ServerInterfaceWrapper) GetMagicLineRecords(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -148083,7 +147307,6 @@ func (siw *ServerInterfaceWrapper) GetMagicLineRecords(w http.ResponseWriter, r 
 
 // GetMailDraft operation middleware
 func (siw *ServerInterfaceWrapper) GetMailDraft(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -148137,7 +147360,6 @@ func (siw *ServerInterfaceWrapper) GetMailDraft(w http.ResponseWriter, r *http.R
 
 // SaveMailDraft operation middleware
 func (siw *ServerInterfaceWrapper) SaveMailDraft(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -148186,7 +147408,6 @@ func (siw *ServerInterfaceWrapper) SaveMailDraft(w http.ResponseWriter, r *http.
 
 // DiscardMailDraft operation middleware
 func (siw *ServerInterfaceWrapper) DiscardMailDraft(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -148220,7 +147441,6 @@ func (siw *ServerInterfaceWrapper) DiscardMailDraft(w http.ResponseWriter, r *ht
 
 // GetCurrentPrincipal operation middleware
 func (siw *ServerInterfaceWrapper) GetCurrentPrincipal(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -148259,7 +147479,6 @@ func (siw *ServerInterfaceWrapper) GetCurrentPrincipal(w http.ResponseWriter, r 
 
 // ListMyAgentGrants operation middleware
 func (siw *ServerInterfaceWrapper) ListMyAgentGrants(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -148279,7 +147498,6 @@ func (siw *ServerInterfaceWrapper) ListMyAgentGrants(w http.ResponseWriter, r *h
 
 // SetMyAgentGrant operation middleware
 func (siw *ServerInterfaceWrapper) SetMyAgentGrant(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -148311,7 +147529,6 @@ func (siw *ServerInterfaceWrapper) SetMyAgentGrant(w http.ResponseWriter, r *htt
 
 // GetMyAiActivity operation middleware
 func (siw *ServerInterfaceWrapper) GetMyAiActivity(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -148352,7 +147569,6 @@ func (siw *ServerInterfaceWrapper) GetMyAiActivity(w http.ResponseWriter, r *htt
 
 // ListApprovalPreferences operation middleware
 func (siw *ServerInterfaceWrapper) ListApprovalPreferences(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -148372,7 +147588,6 @@ func (siw *ServerInterfaceWrapper) ListApprovalPreferences(w http.ResponseWriter
 
 // UpdateApprovalPreference operation middleware
 func (siw *ServerInterfaceWrapper) UpdateApprovalPreference(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -148392,7 +147607,6 @@ func (siw *ServerInterfaceWrapper) UpdateApprovalPreference(w http.ResponseWrite
 
 // DeleteMyAvatar operation middleware
 func (siw *ServerInterfaceWrapper) DeleteMyAvatar(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -148412,7 +147626,6 @@ func (siw *ServerInterfaceWrapper) DeleteMyAvatar(w http.ResponseWriter, r *http
 
 // UploadMyAvatar operation middleware
 func (siw *ServerInterfaceWrapper) UploadMyAvatar(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -148432,7 +147645,6 @@ func (siw *ServerInterfaceWrapper) UploadMyAvatar(w http.ResponseWriter, r *http
 
 // GetMyBriefDelivery operation middleware
 func (siw *ServerInterfaceWrapper) GetMyBriefDelivery(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -148454,7 +147666,6 @@ func (siw *ServerInterfaceWrapper) GetMyBriefDelivery(w http.ResponseWriter, r *
 
 // SaveMyBriefDelivery operation middleware
 func (siw *ServerInterfaceWrapper) SaveMyBriefDelivery(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -148474,7 +147685,6 @@ func (siw *ServerInterfaceWrapper) SaveMyBriefDelivery(w http.ResponseWriter, r 
 
 // ListMyChatIdentities operation middleware
 func (siw *ServerInterfaceWrapper) ListMyChatIdentities(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -148494,7 +147704,6 @@ func (siw *ServerInterfaceWrapper) ListMyChatIdentities(w http.ResponseWriter, r
 
 // RemoveMyChatIdentity operation middleware
 func (siw *ServerInterfaceWrapper) RemoveMyChatIdentity(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -148526,7 +147735,6 @@ func (siw *ServerInterfaceWrapper) RemoveMyChatIdentity(w http.ResponseWriter, r
 
 // StartMyChatVerification operation middleware
 func (siw *ServerInterfaceWrapper) StartMyChatVerification(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -148558,7 +147766,6 @@ func (siw *ServerInterfaceWrapper) StartMyChatVerification(w http.ResponseWriter
 
 // SaveMyDisplayName operation middleware
 func (siw *ServerInterfaceWrapper) SaveMyDisplayName(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -148580,7 +147787,6 @@ func (siw *ServerInterfaceWrapper) SaveMyDisplayName(w http.ResponseWriter, r *h
 
 // GetMyEmailSignature operation middleware
 func (siw *ServerInterfaceWrapper) GetMyEmailSignature(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -148602,7 +147808,6 @@ func (siw *ServerInterfaceWrapper) GetMyEmailSignature(w http.ResponseWriter, r 
 
 // SaveMyEmailSignature operation middleware
 func (siw *ServerInterfaceWrapper) SaveMyEmailSignature(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -148624,7 +147829,6 @@ func (siw *ServerInterfaceWrapper) SaveMyEmailSignature(w http.ResponseWriter, r
 
 // GetMyGmailSignature operation middleware
 func (siw *ServerInterfaceWrapper) GetMyGmailSignature(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -148644,7 +147848,6 @@ func (siw *ServerInterfaceWrapper) GetMyGmailSignature(w http.ResponseWriter, r 
 
 // SaveMyGreetingName operation middleware
 func (siw *ServerInterfaceWrapper) SaveMyGreetingName(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -148666,7 +147869,6 @@ func (siw *ServerInterfaceWrapper) SaveMyGreetingName(w http.ResponseWriter, r *
 
 // GetMyLinkedInAccount operation middleware
 func (siw *ServerInterfaceWrapper) GetMyLinkedInAccount(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -148688,7 +147890,6 @@ func (siw *ServerInterfaceWrapper) GetMyLinkedInAccount(w http.ResponseWriter, r
 
 // SaveMyLinkedInAccount operation middleware
 func (siw *ServerInterfaceWrapper) SaveMyLinkedInAccount(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -148710,7 +147911,6 @@ func (siw *ServerInterfaceWrapper) SaveMyLinkedInAccount(w http.ResponseWriter, 
 
 // ImportLinkedInConnections operation middleware
 func (siw *ServerInterfaceWrapper) ImportLinkedInConnections(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -148732,7 +147932,6 @@ func (siw *ServerInterfaceWrapper) ImportLinkedInConnections(w http.ResponseWrit
 
 // GetMyLinkedInReach operation middleware
 func (siw *ServerInterfaceWrapper) GetMyLinkedInReach(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -148786,7 +147985,6 @@ func (siw *ServerInterfaceWrapper) GetMyLinkedInReach(w http.ResponseWriter, r *
 
 // SaveMyLocale operation middleware
 func (siw *ServerInterfaceWrapper) SaveMyLocale(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -148808,7 +148006,6 @@ func (siw *ServerInterfaceWrapper) SaveMyLocale(w http.ResponseWriter, r *http.R
 
 // DisableMyMfa operation middleware
 func (siw *ServerInterfaceWrapper) DisableMyMfa(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -148828,7 +148025,6 @@ func (siw *ServerInterfaceWrapper) DisableMyMfa(w http.ResponseWriter, r *http.R
 
 // GetMyMfa operation middleware
 func (siw *ServerInterfaceWrapper) GetMyMfa(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -148848,7 +148044,6 @@ func (siw *ServerInterfaceWrapper) GetMyMfa(w http.ResponseWriter, r *http.Reque
 
 // StartMyTotpEnrolment operation middleware
 func (siw *ServerInterfaceWrapper) StartMyTotpEnrolment(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -148868,7 +148063,6 @@ func (siw *ServerInterfaceWrapper) StartMyTotpEnrolment(w http.ResponseWriter, r
 
 // ConfirmMyTotp operation middleware
 func (siw *ServerInterfaceWrapper) ConfirmMyTotp(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -148888,7 +148082,6 @@ func (siw *ServerInterfaceWrapper) ConfirmMyTotp(w http.ResponseWriter, r *http.
 
 // ListNotificationPreferences operation middleware
 func (siw *ServerInterfaceWrapper) ListNotificationPreferences(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -148910,7 +148103,6 @@ func (siw *ServerInterfaceWrapper) ListNotificationPreferences(w http.ResponseWr
 
 // SaveNotificationPreference operation middleware
 func (siw *ServerInterfaceWrapper) SaveNotificationPreference(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -148930,7 +148122,6 @@ func (siw *ServerInterfaceWrapper) SaveNotificationPreference(w http.ResponseWri
 
 // ListMySessions operation middleware
 func (siw *ServerInterfaceWrapper) ListMySessions(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -148950,7 +148141,6 @@ func (siw *ServerInterfaceWrapper) ListMySessions(w http.ResponseWriter, r *http
 
 // RevokeMySession operation middleware
 func (siw *ServerInterfaceWrapper) RevokeMySession(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -148982,7 +148172,6 @@ func (siw *ServerInterfaceWrapper) RevokeMySession(w http.ResponseWriter, r *htt
 
 // SaveMyTimezone operation middleware
 func (siw *ServerInterfaceWrapper) SaveMyTimezone(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -149004,7 +148193,6 @@ func (siw *ServerInterfaceWrapper) SaveMyTimezone(w http.ResponseWriter, r *http
 
 // GetMyWorkingHours operation middleware
 func (siw *ServerInterfaceWrapper) GetMyWorkingHours(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -149026,7 +148214,6 @@ func (siw *ServerInterfaceWrapper) GetMyWorkingHours(w http.ResponseWriter, r *h
 
 // SaveMyWorkingHours operation middleware
 func (siw *ServerInterfaceWrapper) SaveMyWorkingHours(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -149048,7 +148235,6 @@ func (siw *ServerInterfaceWrapper) SaveMyWorkingHours(w http.ResponseWriter, r *
 
 // PrepForMeeting operation middleware
 func (siw *ServerInterfaceWrapper) PrepForMeeting(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -149141,7 +148327,6 @@ func (siw *ServerInterfaceWrapper) PrepForMeeting(w http.ResponseWriter, r *http
 
 // ListNotices operation middleware
 func (siw *ServerInterfaceWrapper) ListNotices(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -149195,7 +148380,6 @@ func (siw *ServerInterfaceWrapper) ListNotices(w http.ResponseWriter, r *http.Re
 
 // RaiseNotice operation middleware
 func (siw *ServerInterfaceWrapper) RaiseNotice(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -149217,7 +148401,6 @@ func (siw *ServerInterfaceWrapper) RaiseNotice(w http.ResponseWriter, r *http.Re
 
 // MarkAllNoticesRead operation middleware
 func (siw *ServerInterfaceWrapper) MarkAllNoticesRead(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -149239,7 +148422,6 @@ func (siw *ServerInterfaceWrapper) MarkAllNoticesRead(w http.ResponseWriter, r *
 
 // MarkNoticeRead operation middleware
 func (siw *ServerInterfaceWrapper) MarkNoticeRead(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -149273,7 +148455,6 @@ func (siw *ServerInterfaceWrapper) MarkNoticeRead(w http.ResponseWriter, r *http
 
 // GetConsentRequest operation middleware
 func (siw *ServerInterfaceWrapper) GetConsentRequest(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -149325,7 +148506,6 @@ func (siw *ServerInterfaceWrapper) GetConsentRequest(w http.ResponseWriter, r *h
 
 // ListOfferTemplates operation middleware
 func (siw *ServerInterfaceWrapper) ListOfferTemplates(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -149418,7 +148598,6 @@ func (siw *ServerInterfaceWrapper) ListOfferTemplates(w http.ResponseWriter, r *
 
 // CreateOfferTemplate operation middleware
 func (siw *ServerInterfaceWrapper) CreateOfferTemplate(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -149467,7 +148646,6 @@ func (siw *ServerInterfaceWrapper) CreateOfferTemplate(w http.ResponseWriter, r 
 
 // ArchiveOfferTemplate operation middleware
 func (siw *ServerInterfaceWrapper) ArchiveOfferTemplate(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -149525,7 +148703,6 @@ func (siw *ServerInterfaceWrapper) ArchiveOfferTemplate(w http.ResponseWriter, r
 
 // GetOfferTemplate operation middleware
 func (siw *ServerInterfaceWrapper) GetOfferTemplate(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -149559,7 +148736,6 @@ func (siw *ServerInterfaceWrapper) GetOfferTemplate(w http.ResponseWriter, r *ht
 
 // UpdateOfferTemplate operation middleware
 func (siw *ServerInterfaceWrapper) UpdateOfferTemplate(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -149636,7 +148812,6 @@ func (siw *ServerInterfaceWrapper) UpdateOfferTemplate(w http.ResponseWriter, r 
 
 // ArchiveOffer operation middleware
 func (siw *ServerInterfaceWrapper) ArchiveOffer(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -149694,7 +148869,6 @@ func (siw *ServerInterfaceWrapper) ArchiveOffer(w http.ResponseWriter, r *http.R
 
 // GetOffer operation middleware
 func (siw *ServerInterfaceWrapper) GetOffer(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -149728,7 +148902,6 @@ func (siw *ServerInterfaceWrapper) GetOffer(w http.ResponseWriter, r *http.Reque
 
 // UpdateOffer operation middleware
 func (siw *ServerInterfaceWrapper) UpdateOffer(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -149786,7 +148959,6 @@ func (siw *ServerInterfaceWrapper) UpdateOffer(w http.ResponseWriter, r *http.Re
 
 // AcceptOffer operation middleware
 func (siw *ServerInterfaceWrapper) AcceptOffer(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -149844,7 +149016,6 @@ func (siw *ServerInterfaceWrapper) AcceptOffer(w http.ResponseWriter, r *http.Re
 
 // AddOfferLineItem operation middleware
 func (siw *ServerInterfaceWrapper) AddOfferLineItem(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -149878,7 +149049,6 @@ func (siw *ServerInterfaceWrapper) AddOfferLineItem(w http.ResponseWriter, r *ht
 
 // RemoveOfferLineItem operation middleware
 func (siw *ServerInterfaceWrapper) RemoveOfferLineItem(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -149921,7 +149091,6 @@ func (siw *ServerInterfaceWrapper) RemoveOfferLineItem(w http.ResponseWriter, r 
 
 // UpdateOfferLineItem operation middleware
 func (siw *ServerInterfaceWrapper) UpdateOfferLineItem(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -149964,7 +149133,6 @@ func (siw *ServerInterfaceWrapper) UpdateOfferLineItem(w http.ResponseWriter, r 
 
 // DownloadOfferPdf operation middleware
 func (siw *ServerInterfaceWrapper) DownloadOfferPdf(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -149998,7 +149166,6 @@ func (siw *ServerInterfaceWrapper) DownloadOfferPdf(w http.ResponseWriter, r *ht
 
 // RefreshOfferFromDeal operation middleware
 func (siw *ServerInterfaceWrapper) RefreshOfferFromDeal(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -150056,7 +149223,6 @@ func (siw *ServerInterfaceWrapper) RefreshOfferFromDeal(w http.ResponseWriter, r
 
 // RegenerateOffer operation middleware
 func (siw *ServerInterfaceWrapper) RegenerateOffer(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -150114,7 +149280,6 @@ func (siw *ServerInterfaceWrapper) RegenerateOffer(w http.ResponseWriter, r *htt
 
 // RejectOffer operation middleware
 func (siw *ServerInterfaceWrapper) RejectOffer(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -150172,7 +149337,6 @@ func (siw *ServerInterfaceWrapper) RejectOffer(w http.ResponseWriter, r *http.Re
 
 // RenderOffer operation middleware
 func (siw *ServerInterfaceWrapper) RenderOffer(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -150230,7 +149394,6 @@ func (siw *ServerInterfaceWrapper) RenderOffer(w http.ResponseWriter, r *http.Re
 
 // SendOffer operation middleware
 func (siw *ServerInterfaceWrapper) SendOffer(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -150307,7 +149470,6 @@ func (siw *ServerInterfaceWrapper) SendOffer(w http.ResponseWriter, r *http.Requ
 
 // MessageOnboardingCompany operation middleware
 func (siw *ServerInterfaceWrapper) MessageOnboardingCompany(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -150327,7 +149489,6 @@ func (siw *ServerInterfaceWrapper) MessageOnboardingCompany(w http.ResponseWrite
 
 // GetOnboardingCompanyProposal operation middleware
 func (siw *ServerInterfaceWrapper) GetOnboardingCompanyProposal(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -150368,7 +149529,6 @@ func (siw *ServerInterfaceWrapper) GetOnboardingCompanyProposal(w http.ResponseW
 
 // GetOnboardingState operation middleware
 func (siw *ServerInterfaceWrapper) GetOnboardingState(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -150390,7 +149550,6 @@ func (siw *ServerInterfaceWrapper) GetOnboardingState(w http.ResponseWriter, r *
 
 // PutOnboardingState operation middleware
 func (siw *ServerInterfaceWrapper) PutOnboardingState(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -150439,7 +149598,6 @@ func (siw *ServerInterfaceWrapper) PutOnboardingState(w http.ResponseWriter, r *
 
 // GetAgentOpenAPIDocument operation middleware
 func (siw *ServerInterfaceWrapper) GetAgentOpenAPIDocument(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -150461,7 +149619,6 @@ func (siw *ServerInterfaceWrapper) GetAgentOpenAPIDocument(w http.ResponseWriter
 
 // ListPartnerStages operation middleware
 func (siw *ServerInterfaceWrapper) ListPartnerStages(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -150483,7 +149640,6 @@ func (siw *ServerInterfaceWrapper) ListPartnerStages(w http.ResponseWriter, r *h
 
 // CreatePartnerStage operation middleware
 func (siw *ServerInterfaceWrapper) CreatePartnerStage(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -150532,7 +149688,6 @@ func (siw *ServerInterfaceWrapper) CreatePartnerStage(w http.ResponseWriter, r *
 
 // DeletePartnerStage operation middleware
 func (siw *ServerInterfaceWrapper) DeletePartnerStage(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -150564,7 +149719,6 @@ func (siw *ServerInterfaceWrapper) DeletePartnerStage(w http.ResponseWriter, r *
 
 // UpdatePartnerStage operation middleware
 func (siw *ServerInterfaceWrapper) UpdatePartnerStage(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -150622,7 +149776,6 @@ func (siw *ServerInterfaceWrapper) UpdatePartnerStage(w http.ResponseWriter, r *
 
 // ListPartners operation middleware
 func (siw *ServerInterfaceWrapper) ListPartners(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -150754,7 +149907,6 @@ func (siw *ServerInterfaceWrapper) ListPartners(w http.ResponseWriter, r *http.R
 
 // ListPassports operation middleware
 func (siw *ServerInterfaceWrapper) ListPassports(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -150774,7 +149926,6 @@ func (siw *ServerInterfaceWrapper) ListPassports(w http.ResponseWriter, r *http.
 
 // IssuePassport operation middleware
 func (siw *ServerInterfaceWrapper) IssuePassport(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -150794,7 +149945,6 @@ func (siw *ServerInterfaceWrapper) IssuePassport(w http.ResponseWriter, r *http.
 
 // RevokePassport operation middleware
 func (siw *ServerInterfaceWrapper) RevokePassport(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -150826,7 +149976,6 @@ func (siw *ServerInterfaceWrapper) RevokePassport(w http.ResponseWriter, r *http
 
 // ReleasePassportAppBinding operation middleware
 func (siw *ServerInterfaceWrapper) ReleasePassportAppBinding(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -150858,7 +150007,6 @@ func (siw *ServerInterfaceWrapper) ReleasePassportAppBinding(w http.ResponseWrit
 
 // SetPassportAreas operation middleware
 func (siw *ServerInterfaceWrapper) SetPassportAreas(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -150890,7 +150038,6 @@ func (siw *ServerInterfaceWrapper) SetPassportAreas(w http.ResponseWriter, r *ht
 
 // ListPipelines operation middleware
 func (siw *ServerInterfaceWrapper) ListPipelines(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -150931,7 +150078,6 @@ func (siw *ServerInterfaceWrapper) ListPipelines(w http.ResponseWriter, r *http.
 
 // CreatePipeline operation middleware
 func (siw *ServerInterfaceWrapper) CreatePipeline(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -150980,7 +150126,6 @@ func (siw *ServerInterfaceWrapper) CreatePipeline(w http.ResponseWriter, r *http
 
 // ReorderPipelines operation middleware
 func (siw *ServerInterfaceWrapper) ReorderPipelines(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -151029,7 +150174,6 @@ func (siw *ServerInterfaceWrapper) ReorderPipelines(w http.ResponseWriter, r *ht
 
 // ArchivePipeline operation middleware
 func (siw *ServerInterfaceWrapper) ArchivePipeline(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -151087,7 +150231,6 @@ func (siw *ServerInterfaceWrapper) ArchivePipeline(w http.ResponseWriter, r *htt
 
 // GetPipeline operation middleware
 func (siw *ServerInterfaceWrapper) GetPipeline(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -151121,7 +150264,6 @@ func (siw *ServerInterfaceWrapper) GetPipeline(w http.ResponseWriter, r *http.Re
 
 // UpdatePipeline operation middleware
 func (siw *ServerInterfaceWrapper) UpdatePipeline(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -151179,7 +150321,6 @@ func (siw *ServerInterfaceWrapper) UpdatePipeline(w http.ResponseWriter, r *http
 
 // RestorePipeline operation middleware
 func (siw *ServerInterfaceWrapper) RestorePipeline(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -151213,7 +150354,6 @@ func (siw *ServerInterfaceWrapper) RestorePipeline(w http.ResponseWriter, r *htt
 
 // ReorderStages operation middleware
 func (siw *ServerInterfaceWrapper) ReorderStages(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -151290,7 +150430,6 @@ func (siw *ServerInterfaceWrapper) ReorderStages(w http.ResponseWriter, r *http.
 
 // GetControllerParticulars operation middleware
 func (siw *ServerInterfaceWrapper) GetControllerParticulars(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -151312,7 +150451,6 @@ func (siw *ServerInterfaceWrapper) GetControllerParticulars(w http.ResponseWrite
 
 // SetControllerParticulars operation middleware
 func (siw *ServerInterfaceWrapper) SetControllerParticulars(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -151332,7 +150470,6 @@ func (siw *ServerInterfaceWrapper) SetControllerParticulars(w http.ResponseWrite
 
 // ListNoticeCaseReviews operation middleware
 func (siw *ServerInterfaceWrapper) ListNoticeCaseReviews(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -151399,7 +150536,6 @@ func (siw *ServerInterfaceWrapper) ListNoticeCaseReviews(w http.ResponseWriter, 
 
 // GetNoticeCaseReview operation middleware
 func (siw *ServerInterfaceWrapper) GetNoticeCaseReview(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -151433,7 +150569,6 @@ func (siw *ServerInterfaceWrapper) GetNoticeCaseReview(w http.ResponseWriter, r 
 
 // AssignNoticeCaseReview operation middleware
 func (siw *ServerInterfaceWrapper) AssignNoticeCaseReview(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -151467,7 +150602,6 @@ func (siw *ServerInterfaceWrapper) AssignNoticeCaseReview(w http.ResponseWriter,
 
 // GetNoticeSourceEvidence operation middleware
 func (siw *ServerInterfaceWrapper) GetNoticeSourceEvidence(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -151517,7 +150651,6 @@ func (siw *ServerInterfaceWrapper) GetNoticeSourceEvidence(w http.ResponseWriter
 
 // AssessNoticeSource operation middleware
 func (siw *ServerInterfaceWrapper) AssessNoticeSource(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -151551,7 +150684,6 @@ func (siw *ServerInterfaceWrapper) AssessNoticeSource(w http.ResponseWriter, r *
 
 // PreviewNoticeSource operation middleware
 func (siw *ServerInterfaceWrapper) PreviewNoticeSource(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -151585,7 +150717,6 @@ func (siw *ServerInterfaceWrapper) PreviewNoticeSource(w http.ResponseWriter, r 
 
 // ListNoticeCases operation middleware
 func (siw *ServerInterfaceWrapper) ListNoticeCases(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -151652,7 +150783,6 @@ func (siw *ServerInterfaceWrapper) ListNoticeCases(w http.ResponseWriter, r *htt
 
 // GetNoticeCase operation middleware
 func (siw *ServerInterfaceWrapper) GetNoticeCase(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -151686,7 +150816,6 @@ func (siw *ServerInterfaceWrapper) GetNoticeCase(w http.ResponseWriter, r *http.
 
 // AssignNoticeCase operation middleware
 func (siw *ServerInterfaceWrapper) AssignNoticeCase(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -151720,7 +150849,6 @@ func (siw *ServerInterfaceWrapper) AssignNoticeCase(w http.ResponseWriter, r *ht
 
 // ExcuseNoticeCase operation middleware
 func (siw *ServerInterfaceWrapper) ExcuseNoticeCase(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -151752,7 +150880,6 @@ func (siw *ServerInterfaceWrapper) ExcuseNoticeCase(w http.ResponseWriter, r *ht
 
 // GetRetainedEmailSignature operation middleware
 func (siw *ServerInterfaceWrapper) GetRetainedEmailSignature(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -151784,7 +150911,6 @@ func (siw *ServerInterfaceWrapper) GetRetainedEmailSignature(w http.ResponseWrit
 
 // SaveRetainedEmailSignature operation middleware
 func (siw *ServerInterfaceWrapper) SaveRetainedEmailSignature(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -151816,7 +150942,6 @@ func (siw *ServerInterfaceWrapper) SaveRetainedEmailSignature(w http.ResponseWri
 
 // ListProducts operation middleware
 func (siw *ServerInterfaceWrapper) ListProducts(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -151935,7 +151060,6 @@ func (siw *ServerInterfaceWrapper) ListProducts(w http.ResponseWriter, r *http.R
 
 // CreateProduct operation middleware
 func (siw *ServerInterfaceWrapper) CreateProduct(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -151984,7 +151108,6 @@ func (siw *ServerInterfaceWrapper) CreateProduct(w http.ResponseWriter, r *http.
 
 // ArchiveProduct operation middleware
 func (siw *ServerInterfaceWrapper) ArchiveProduct(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -152042,7 +151165,6 @@ func (siw *ServerInterfaceWrapper) ArchiveProduct(w http.ResponseWriter, r *http
 
 // GetProduct operation middleware
 func (siw *ServerInterfaceWrapper) GetProduct(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -152076,7 +151198,6 @@ func (siw *ServerInterfaceWrapper) GetProduct(w http.ResponseWriter, r *http.Req
 
 // UpdateProduct operation middleware
 func (siw *ServerInterfaceWrapper) UpdateProduct(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -152134,7 +151255,6 @@ func (siw *ServerInterfaceWrapper) UpdateProduct(w http.ResponseWriter, r *http.
 
 // ListProductTranslations operation middleware
 func (siw *ServerInterfaceWrapper) ListProductTranslations(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -152168,7 +151288,6 @@ func (siw *ServerInterfaceWrapper) ListProductTranslations(w http.ResponseWriter
 
 // DeleteProductTranslation operation middleware
 func (siw *ServerInterfaceWrapper) DeleteProductTranslation(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -152209,7 +151328,6 @@ func (siw *ServerInterfaceWrapper) DeleteProductTranslation(w http.ResponseWrite
 
 // PutProductTranslation operation middleware
 func (siw *ServerInterfaceWrapper) PutProductTranslation(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -152252,7 +151370,6 @@ func (siw *ServerInterfaceWrapper) PutProductTranslation(w http.ResponseWriter, 
 
 // ListProjects operation middleware
 func (siw *ServerInterfaceWrapper) ListProjects(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -152423,7 +151540,6 @@ func (siw *ServerInterfaceWrapper) ListProjects(w http.ResponseWriter, r *http.R
 
 // CreateProject operation middleware
 func (siw *ServerInterfaceWrapper) CreateProject(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -152491,7 +151607,6 @@ func (siw *ServerInterfaceWrapper) CreateProject(w http.ResponseWriter, r *http.
 
 // GetProjectKeyPreview operation middleware
 func (siw *ServerInterfaceWrapper) GetProjectKeyPreview(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -152530,7 +151645,6 @@ func (siw *ServerInterfaceWrapper) GetProjectKeyPreview(w http.ResponseWriter, r
 
 // TransferProjectOwnership operation middleware
 func (siw *ServerInterfaceWrapper) TransferProjectOwnership(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -152579,7 +151693,6 @@ func (siw *ServerInterfaceWrapper) TransferProjectOwnership(w http.ResponseWrite
 
 // ArchiveProject operation middleware
 func (siw *ServerInterfaceWrapper) ArchiveProject(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -152656,7 +151769,6 @@ func (siw *ServerInterfaceWrapper) ArchiveProject(w http.ResponseWriter, r *http
 
 // GetProject operation middleware
 func (siw *ServerInterfaceWrapper) GetProject(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -152690,7 +151802,6 @@ func (siw *ServerInterfaceWrapper) GetProject(w http.ResponseWriter, r *http.Req
 
 // UpdateProject operation middleware
 func (siw *ServerInterfaceWrapper) UpdateProject(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -152786,7 +151897,6 @@ func (siw *ServerInterfaceWrapper) UpdateProject(w http.ResponseWriter, r *http.
 
 // GetProject360 operation middleware
 func (siw *ServerInterfaceWrapper) GetProject360(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -152820,7 +151930,6 @@ func (siw *ServerInterfaceWrapper) GetProject360(w http.ResponseWriter, r *http.
 
 // AdvanceProjectPhase operation middleware
 func (siw *ServerInterfaceWrapper) AdvanceProjectPhase(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -152916,7 +152025,6 @@ func (siw *ServerInterfaceWrapper) AdvanceProjectPhase(w http.ResponseWriter, r 
 
 // SetProjectCompany operation middleware
 func (siw *ServerInterfaceWrapper) SetProjectCompany(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -152974,7 +152082,6 @@ func (siw *ServerInterfaceWrapper) SetProjectCompany(w http.ResponseWriter, r *h
 
 // RemoveProjectCompany operation middleware
 func (siw *ServerInterfaceWrapper) RemoveProjectCompany(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -153041,7 +152148,6 @@ func (siw *ServerInterfaceWrapper) RemoveProjectCompany(w http.ResponseWriter, r
 
 // PrepareProjectHandoff operation middleware
 func (siw *ServerInterfaceWrapper) PrepareProjectHandoff(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -153075,7 +152181,6 @@ func (siw *ServerInterfaceWrapper) PrepareProjectHandoff(w http.ResponseWriter, 
 
 // ListProjectHealthAssessments operation middleware
 func (siw *ServerInterfaceWrapper) ListProjectHealthAssessments(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -153138,7 +152243,6 @@ func (siw *ServerInterfaceWrapper) ListProjectHealthAssessments(w http.ResponseW
 
 // CreateProjectHealthAssessment operation middleware
 func (siw *ServerInterfaceWrapper) CreateProjectHealthAssessment(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -153196,7 +152300,6 @@ func (siw *ServerInterfaceWrapper) CreateProjectHealthAssessment(w http.Response
 
 // CorrectProjectHealthAssessment operation middleware
 func (siw *ServerInterfaceWrapper) CorrectProjectHealthAssessment(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -153263,7 +152366,6 @@ func (siw *ServerInterfaceWrapper) CorrectProjectHealthAssessment(w http.Respons
 
 // UndoProjectHealthAssessment operation middleware
 func (siw *ServerInterfaceWrapper) UndoProjectHealthAssessment(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -153328,7 +152430,6 @@ func (siw *ServerInterfaceWrapper) UndoProjectHealthAssessment(w http.ResponseWr
 
 // ListProjectStakeholders operation middleware
 func (siw *ServerInterfaceWrapper) ListProjectStakeholders(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -153362,7 +152463,6 @@ func (siw *ServerInterfaceWrapper) ListProjectStakeholders(w http.ResponseWriter
 
 // SetProjectStakeholder operation middleware
 func (siw *ServerInterfaceWrapper) SetProjectStakeholder(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -153420,7 +152520,6 @@ func (siw *ServerInterfaceWrapper) SetProjectStakeholder(w http.ResponseWriter, 
 
 // RemoveProjectStakeholder operation middleware
 func (siw *ServerInterfaceWrapper) RemoveProjectStakeholder(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -153487,7 +152586,6 @@ func (siw *ServerInterfaceWrapper) RemoveProjectStakeholder(w http.ResponseWrite
 
 // ListProviderConnections operation middleware
 func (siw *ServerInterfaceWrapper) ListProviderConnections(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -153509,7 +152607,6 @@ func (siw *ServerInterfaceWrapper) ListProviderConnections(w http.ResponseWriter
 
 // DisconnectProvider operation middleware
 func (siw *ServerInterfaceWrapper) DisconnectProvider(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -153543,7 +152640,6 @@ func (siw *ServerInterfaceWrapper) DisconnectProvider(w http.ResponseWriter, r *
 
 // UpdateProviderConnection operation middleware
 func (siw *ServerInterfaceWrapper) UpdateProviderConnection(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -153618,7 +152714,6 @@ func (siw *ServerInterfaceWrapper) UpdateProviderConnection(w http.ResponseWrite
 
 // ConnectProvider operation middleware
 func (siw *ServerInterfaceWrapper) ConnectProvider(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -153674,7 +152769,6 @@ func (siw *ServerInterfaceWrapper) ConnectProvider(w http.ResponseWriter, r *htt
 
 // DeleteProviderData operation middleware
 func (siw *ServerInterfaceWrapper) DeleteProviderData(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -153706,7 +152800,6 @@ func (siw *ServerInterfaceWrapper) DeleteProviderData(w http.ResponseWriter, r *
 
 // GetPublicBookingCompanyLogo operation middleware
 func (siw *ServerInterfaceWrapper) GetPublicBookingCompanyLogo(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -153739,7 +152832,6 @@ func (siw *ServerInterfaceWrapper) GetPublicBookingCompanyLogo(w http.ResponseWr
 
 // BookPublicMeeting operation middleware
 func (siw *ServerInterfaceWrapper) BookPublicMeeting(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -153802,7 +152894,6 @@ func (siw *ServerInterfaceWrapper) BookPublicMeeting(w http.ResponseWriter, r *h
 
 // GetPublicAvailability operation middleware
 func (siw *ServerInterfaceWrapper) GetPublicAvailability(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -153883,7 +152974,6 @@ func (siw *ServerInterfaceWrapper) GetPublicAvailability(w http.ResponseWriter, 
 
 // GetPublicBookingPreview operation middleware
 func (siw *ServerInterfaceWrapper) GetPublicBookingPreview(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -153925,7 +153015,6 @@ func (siw *ServerInterfaceWrapper) GetPublicBookingPreview(w http.ResponseWriter
 
 // GetPublicSchedulingProfile operation middleware
 func (siw *ServerInterfaceWrapper) GetPublicSchedulingProfile(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -153967,7 +153056,6 @@ func (siw *ServerInterfaceWrapper) GetPublicSchedulingProfile(w http.ResponseWri
 
 // RequestBookingReturn operation middleware
 func (siw *ServerInterfaceWrapper) RequestBookingReturn(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -153993,7 +153081,6 @@ func (siw *ServerInterfaceWrapper) RequestBookingReturn(w http.ResponseWriter, r
 
 // ConfirmBookingReturn operation middleware
 func (siw *ServerInterfaceWrapper) ConfirmBookingReturn(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -154019,7 +153106,6 @@ func (siw *ServerInterfaceWrapper) ConfirmBookingReturn(w http.ResponseWriter, r
 
 // PreviewBookingReturn operation middleware
 func (siw *ServerInterfaceWrapper) PreviewBookingReturn(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -154045,7 +153131,6 @@ func (siw *ServerInterfaceWrapper) PreviewBookingReturn(w http.ResponseWriter, r
 
 // GetConfirmDetails operation middleware
 func (siw *ServerInterfaceWrapper) GetConfirmDetails(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -154071,7 +153156,6 @@ func (siw *ServerInterfaceWrapper) GetConfirmDetails(w http.ResponseWriter, r *h
 
 // SubmitConfirmDetails operation middleware
 func (siw *ServerInterfaceWrapper) SubmitConfirmDetails(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -154097,7 +153181,6 @@ func (siw *ServerInterfaceWrapper) SubmitConfirmDetails(w http.ResponseWriter, r
 
 // SubmitWebForm operation middleware
 func (siw *ServerInterfaceWrapper) SubmitWebForm(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -154123,7 +153206,6 @@ func (siw *ServerInterfaceWrapper) SubmitWebForm(w http.ResponseWriter, r *http.
 
 // GetPublicMeetingInvitation operation middleware
 func (siw *ServerInterfaceWrapper) GetPublicMeetingInvitation(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -154149,7 +153231,6 @@ func (siw *ServerInterfaceWrapper) GetPublicMeetingInvitation(w http.ResponseWri
 
 // ChangePublicMeetingInvitation operation middleware
 func (siw *ServerInterfaceWrapper) ChangePublicMeetingInvitation(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -154175,7 +153256,6 @@ func (siw *ServerInterfaceWrapper) ChangePublicMeetingInvitation(w http.Response
 
 // GetPublicMeetingAvailability operation middleware
 func (siw *ServerInterfaceWrapper) GetPublicMeetingAvailability(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -154230,7 +153310,6 @@ func (siw *ServerInterfaceWrapper) GetPublicMeetingAvailability(w http.ResponseW
 
 // GetPreferenceCenter operation middleware
 func (siw *ServerInterfaceWrapper) GetPreferenceCenter(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -154256,7 +153335,6 @@ func (siw *ServerInterfaceWrapper) GetPreferenceCenter(w http.ResponseWriter, r 
 
 // UpdatePreferences operation middleware
 func (siw *ServerInterfaceWrapper) UpdatePreferences(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -154282,7 +153360,6 @@ func (siw *ServerInterfaceWrapper) UpdatePreferences(w http.ResponseWriter, r *h
 
 // PublicStopContact operation middleware
 func (siw *ServerInterfaceWrapper) PublicStopContact(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -154308,7 +153385,6 @@ func (siw *ServerInterfaceWrapper) PublicStopContact(w http.ResponseWriter, r *h
 
 // OneClickUnsubscribe operation middleware
 func (siw *ServerInterfaceWrapper) OneClickUnsubscribe(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -154350,7 +153426,6 @@ func (siw *ServerInterfaceWrapper) OneClickUnsubscribe(w http.ResponseWriter, r 
 
 // GetPublicMeetingProposal operation middleware
 func (siw *ServerInterfaceWrapper) GetPublicMeetingProposal(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -154376,7 +153451,6 @@ func (siw *ServerInterfaceWrapper) GetPublicMeetingProposal(w http.ResponseWrite
 
 // AcceptPublicMeetingProposal operation middleware
 func (siw *ServerInterfaceWrapper) AcceptPublicMeetingProposal(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -154402,7 +153476,6 @@ func (siw *ServerInterfaceWrapper) AcceptPublicMeetingProposal(w http.ResponseWr
 
 // GetPublicProposalAvailability operation middleware
 func (siw *ServerInterfaceWrapper) GetPublicProposalAvailability(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -154457,7 +153530,6 @@ func (siw *ServerInterfaceWrapper) GetPublicProposalAvailability(w http.Response
 
 // GetPublicRecordPreview operation middleware
 func (siw *ServerInterfaceWrapper) GetPublicRecordPreview(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -154492,7 +153564,6 @@ func (siw *ServerInterfaceWrapper) GetPublicRecordPreview(w http.ResponseWriter,
 
 // ListBuyerRoomDocuments operation middleware
 func (siw *ServerInterfaceWrapper) ListBuyerRoomDocuments(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, DealRoomSessionScopes, []string{})
@@ -154512,7 +153583,6 @@ func (siw *ServerInterfaceWrapper) ListBuyerRoomDocuments(w http.ResponseWriter,
 
 // DownloadBuyerRoomDocument operation middleware
 func (siw *ServerInterfaceWrapper) DownloadBuyerRoomDocument(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -154544,7 +153614,6 @@ func (siw *ServerInterfaceWrapper) DownloadBuyerRoomDocument(w http.ResponseWrit
 
 // ExchangeDealRoomCredential operation middleware
 func (siw *ServerInterfaceWrapper) ExchangeDealRoomCredential(w http.ResponseWriter, r *http.Request) {
-
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ExchangeDealRoomCredential(w, r)
 	}))
@@ -154558,7 +153627,6 @@ func (siw *ServerInterfaceWrapper) ExchangeDealRoomCredential(w http.ResponseWri
 
 // RequestDealRoomLink operation middleware
 func (siw *ServerInterfaceWrapper) RequestDealRoomLink(w http.ResponseWriter, r *http.Request) {
-
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.RequestDealRoomLink(w, r)
 	}))
@@ -154572,7 +153640,6 @@ func (siw *ServerInterfaceWrapper) RequestDealRoomLink(w http.ResponseWriter, r 
 
 // GetBuyerRoom operation middleware
 func (siw *ServerInterfaceWrapper) GetBuyerRoom(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, DealRoomSessionScopes, []string{})
@@ -154592,7 +153659,6 @@ func (siw *ServerInterfaceWrapper) GetBuyerRoom(w http.ResponseWriter, r *http.R
 
 // PeekDealRoomCredential operation middleware
 func (siw *ServerInterfaceWrapper) PeekDealRoomCredential(w http.ResponseWriter, r *http.Request) {
-
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PeekDealRoomCredential(w, r)
 	}))
@@ -154606,7 +153672,6 @@ func (siw *ServerInterfaceWrapper) PeekDealRoomCredential(w http.ResponseWriter,
 
 // SignOutBuyerRoom operation middleware
 func (siw *ServerInterfaceWrapper) SignOutBuyerRoom(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, DealRoomSessionScopes, []string{})
@@ -154626,7 +153691,6 @@ func (siw *ServerInterfaceWrapper) SignOutBuyerRoom(w http.ResponseWriter, r *ht
 
 // ListBuyerRoomThreads operation middleware
 func (siw *ServerInterfaceWrapper) ListBuyerRoomThreads(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -154665,7 +153729,6 @@ func (siw *ServerInterfaceWrapper) ListBuyerRoomThreads(w http.ResponseWriter, r
 
 // OpenBuyerRoomThread operation middleware
 func (siw *ServerInterfaceWrapper) OpenBuyerRoomThread(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, DealRoomSessionScopes, []string{})
@@ -154685,7 +153748,6 @@ func (siw *ServerInterfaceWrapper) OpenBuyerRoomThread(w http.ResponseWriter, r 
 
 // ReplyBuyerRoomThread operation middleware
 func (siw *ServerInterfaceWrapper) ReplyBuyerRoomThread(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -154717,7 +153779,6 @@ func (siw *ServerInterfaceWrapper) ReplyBuyerRoomThread(w http.ResponseWriter, r
 
 // DescribeQueryVocabulary operation middleware
 func (siw *ServerInterfaceWrapper) DescribeQueryVocabulary(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -154739,7 +153800,6 @@ func (siw *ServerInterfaceWrapper) DescribeQueryVocabulary(w http.ResponseWriter
 
 // DescribeReadViews operation middleware
 func (siw *ServerInterfaceWrapper) DescribeReadViews(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -154761,7 +153821,6 @@ func (siw *ServerInterfaceWrapper) DescribeReadViews(w http.ResponseWriter, r *h
 
 // ResolveRecipientCountries operation middleware
 func (siw *ServerInterfaceWrapper) ResolveRecipientCountries(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -154781,7 +153840,6 @@ func (siw *ServerInterfaceWrapper) ResolveRecipientCountries(w http.ResponseWrit
 
 // DescribeRecordFields operation middleware
 func (siw *ServerInterfaceWrapper) DescribeRecordFields(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -154803,7 +153861,6 @@ func (siw *ServerInterfaceWrapper) DescribeRecordFields(w http.ResponseWriter, r
 
 // ListRecordGrants operation middleware
 func (siw *ServerInterfaceWrapper) ListRecordGrants(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -154907,7 +153964,6 @@ func (siw *ServerInterfaceWrapper) ListRecordGrants(w http.ResponseWriter, r *ht
 
 // CreateRecordGrant operation middleware
 func (siw *ServerInterfaceWrapper) CreateRecordGrant(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -154956,7 +154012,6 @@ func (siw *ServerInterfaceWrapper) CreateRecordGrant(w http.ResponseWriter, r *h
 
 // RevokeRecordGrant operation middleware
 func (siw *ServerInterfaceWrapper) RevokeRecordGrant(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -155014,7 +154069,6 @@ func (siw *ServerInterfaceWrapper) RevokeRecordGrant(w http.ResponseWriter, r *h
 
 // ListRecordKinds operation middleware
 func (siw *ServerInterfaceWrapper) ListRecordKinds(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -155036,7 +154090,6 @@ func (siw *ServerInterfaceWrapper) ListRecordKinds(w http.ResponseWriter, r *htt
 
 // ListRecordLinks operation middleware
 func (siw *ServerInterfaceWrapper) ListRecordLinks(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -155088,7 +154141,6 @@ func (siw *ServerInterfaceWrapper) ListRecordLinks(w http.ResponseWriter, r *htt
 
 // CreateRecordLink operation middleware
 func (siw *ServerInterfaceWrapper) CreateRecordLink(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -155108,7 +154160,6 @@ func (siw *ServerInterfaceWrapper) CreateRecordLink(w http.ResponseWriter, r *ht
 
 // DeleteRecordLink operation middleware
 func (siw *ServerInterfaceWrapper) DeleteRecordLink(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -155140,7 +154191,6 @@ func (siw *ServerInterfaceWrapper) DeleteRecordLink(w http.ResponseWriter, r *ht
 
 // ListRecordRoles operation middleware
 func (siw *ServerInterfaceWrapper) ListRecordRoles(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -155162,7 +154212,6 @@ func (siw *ServerInterfaceWrapper) ListRecordRoles(w http.ResponseWriter, r *htt
 
 // CreateRecordRole operation middleware
 func (siw *ServerInterfaceWrapper) CreateRecordRole(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -155211,7 +154260,6 @@ func (siw *ServerInterfaceWrapper) CreateRecordRole(w http.ResponseWriter, r *ht
 
 // UpdateRecordRole operation middleware
 func (siw *ServerInterfaceWrapper) UpdateRecordRole(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -155269,7 +154317,6 @@ func (siw *ServerInterfaceWrapper) UpdateRecordRole(w http.ResponseWriter, r *ht
 
 // ReadRecordReferences operation middleware
 func (siw *ServerInterfaceWrapper) ReadRecordReferences(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -155323,7 +154370,6 @@ func (siw *ServerInterfaceWrapper) ReadRecordReferences(w http.ResponseWriter, r
 
 // GetRecordLists operation middleware
 func (siw *ServerInterfaceWrapper) GetRecordLists(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -155366,7 +154412,6 @@ func (siw *ServerInterfaceWrapper) GetRecordLists(w http.ResponseWriter, r *http
 
 // GetRecordTags operation middleware
 func (siw *ServerInterfaceWrapper) GetRecordTags(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -155409,7 +154454,6 @@ func (siw *ServerInterfaceWrapper) GetRecordTags(w http.ResponseWriter, r *http.
 
 // GetRecordContext operation middleware
 func (siw *ServerInterfaceWrapper) GetRecordContext(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -155466,7 +154510,6 @@ func (siw *ServerInterfaceWrapper) GetRecordContext(w http.ResponseWriter, r *ht
 
 // GetRecordHistory operation middleware
 func (siw *ServerInterfaceWrapper) GetRecordHistory(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -155551,7 +154594,6 @@ func (siw *ServerInterfaceWrapper) GetRecordHistory(w http.ResponseWriter, r *ht
 
 // RestoreRecordChange operation middleware
 func (siw *ServerInterfaceWrapper) RestoreRecordChange(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -155629,7 +154671,6 @@ func (siw *ServerInterfaceWrapper) RestoreRecordChange(w http.ResponseWriter, r 
 
 // ClaimRecord operation middleware
 func (siw *ServerInterfaceWrapper) ClaimRecord(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -155696,7 +154737,6 @@ func (siw *ServerInterfaceWrapper) ClaimRecord(w http.ResponseWriter, r *http.Re
 
 // WithdrawEditAccessRequest operation middleware
 func (siw *ServerInterfaceWrapper) WithdrawEditAccessRequest(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -155739,7 +154779,6 @@ func (siw *ServerInterfaceWrapper) WithdrawEditAccessRequest(w http.ResponseWrit
 
 // GetEditAccessRequest operation middleware
 func (siw *ServerInterfaceWrapper) GetEditAccessRequest(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -155782,7 +154821,6 @@ func (siw *ServerInterfaceWrapper) GetEditAccessRequest(w http.ResponseWriter, r
 
 // RequestEditAccess operation middleware
 func (siw *ServerInterfaceWrapper) RequestEditAccess(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -155849,7 +154887,6 @@ func (siw *ServerInterfaceWrapper) RequestEditAccess(w http.ResponseWriter, r *h
 
 // WithdrawOwnershipOffer operation middleware
 func (siw *ServerInterfaceWrapper) WithdrawOwnershipOffer(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -155892,7 +154929,6 @@ func (siw *ServerInterfaceWrapper) WithdrawOwnershipOffer(w http.ResponseWriter,
 
 // GetOwnershipOffer operation middleware
 func (siw *ServerInterfaceWrapper) GetOwnershipOffer(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -155935,7 +154971,6 @@ func (siw *ServerInterfaceWrapper) GetOwnershipOffer(w http.ResponseWriter, r *h
 
 // OfferOwnershipTransfer operation middleware
 func (siw *ServerInterfaceWrapper) OfferOwnershipTransfer(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -156002,7 +155037,6 @@ func (siw *ServerInterfaceWrapper) OfferOwnershipTransfer(w http.ResponseWriter,
 
 // ListOwnershipOfferCandidates operation middleware
 func (siw *ServerInterfaceWrapper) ListOwnershipOfferCandidates(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -156045,7 +155079,6 @@ func (siw *ServerInterfaceWrapper) ListOwnershipOfferCandidates(w http.ResponseW
 
 // WithdrawOwnershipRequest operation middleware
 func (siw *ServerInterfaceWrapper) WithdrawOwnershipRequest(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -156088,7 +155121,6 @@ func (siw *ServerInterfaceWrapper) WithdrawOwnershipRequest(w http.ResponseWrite
 
 // GetOwnershipRequest operation middleware
 func (siw *ServerInterfaceWrapper) GetOwnershipRequest(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -156131,7 +155163,6 @@ func (siw *ServerInterfaceWrapper) GetOwnershipRequest(w http.ResponseWriter, r 
 
 // RequestOwnershipTransfer operation middleware
 func (siw *ServerInterfaceWrapper) RequestOwnershipTransfer(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -156198,7 +155229,6 @@ func (siw *ServerInterfaceWrapper) RequestOwnershipTransfer(w http.ResponseWrite
 
 // ListRecordAssignments operation middleware
 func (siw *ServerInterfaceWrapper) ListRecordAssignments(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -156241,7 +155271,6 @@ func (siw *ServerInterfaceWrapper) ListRecordAssignments(w http.ResponseWriter, 
 
 // CreateRecordAssignment operation middleware
 func (siw *ServerInterfaceWrapper) CreateRecordAssignment(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -156308,7 +155337,6 @@ func (siw *ServerInterfaceWrapper) CreateRecordAssignment(w http.ResponseWriter,
 
 // ListRelationships operation middleware
 func (siw *ServerInterfaceWrapper) ListRelationships(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -156427,7 +155455,6 @@ func (siw *ServerInterfaceWrapper) ListRelationships(w http.ResponseWriter, r *h
 
 // CreateRelationship operation middleware
 func (siw *ServerInterfaceWrapper) CreateRelationship(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -156449,7 +155476,6 @@ func (siw *ServerInterfaceWrapper) CreateRelationship(w http.ResponseWriter, r *
 
 // ArchiveRelationship operation middleware
 func (siw *ServerInterfaceWrapper) ArchiveRelationship(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -156507,7 +155533,6 @@ func (siw *ServerInterfaceWrapper) ArchiveRelationship(w http.ResponseWriter, r 
 
 // UpdateRelationship operation middleware
 func (siw *ServerInterfaceWrapper) UpdateRelationship(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -156565,7 +155590,6 @@ func (siw *ServerInterfaceWrapper) UpdateRelationship(w http.ResponseWriter, r *
 
 // RunReport operation middleware
 func (siw *ServerInterfaceWrapper) RunReport(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -156599,7 +155623,6 @@ func (siw *ServerInterfaceWrapper) RunReport(w http.ResponseWriter, r *http.Requ
 
 // ExplainReport operation middleware
 func (siw *ServerInterfaceWrapper) ExplainReport(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -156701,7 +155724,6 @@ func (siw *ServerInterfaceWrapper) ExplainReport(w http.ResponseWriter, r *http.
 
 // ListRetentionPolicies operation middleware
 func (siw *ServerInterfaceWrapper) ListRetentionPolicies(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -156723,7 +155745,6 @@ func (siw *ServerInterfaceWrapper) ListRetentionPolicies(w http.ResponseWriter, 
 
 // CreateRetentionPolicy operation middleware
 func (siw *ServerInterfaceWrapper) CreateRetentionPolicy(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -156743,7 +155764,6 @@ func (siw *ServerInterfaceWrapper) CreateRetentionPolicy(w http.ResponseWriter, 
 
 // DeleteRetentionPolicy operation middleware
 func (siw *ServerInterfaceWrapper) DeleteRetentionPolicy(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -156775,7 +155795,6 @@ func (siw *ServerInterfaceWrapper) DeleteRetentionPolicy(w http.ResponseWriter, 
 
 // UpdateRetentionPolicy operation middleware
 func (siw *ServerInterfaceWrapper) UpdateRetentionPolicy(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -156807,7 +155826,6 @@ func (siw *ServerInterfaceWrapper) UpdateRetentionPolicy(w http.ResponseWriter, 
 
 // ListArchivedActivities operation middleware
 func (siw *ServerInterfaceWrapper) ListArchivedActivities(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -156898,7 +155916,6 @@ func (siw *ServerInterfaceWrapper) ListArchivedActivities(w http.ResponseWriter,
 
 // DeleteArchivedActivities operation middleware
 func (siw *ServerInterfaceWrapper) DeleteArchivedActivities(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -156945,7 +155962,6 @@ func (siw *ServerInterfaceWrapper) DeleteArchivedActivities(w http.ResponseWrite
 
 // ListLegalHolds operation middleware
 func (siw *ServerInterfaceWrapper) ListLegalHolds(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -156999,7 +156015,6 @@ func (siw *ServerInterfaceWrapper) ListLegalHolds(w http.ResponseWriter, r *http
 
 // LiftLegalHold operation middleware
 func (siw *ServerInterfaceWrapper) LiftLegalHold(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -157064,7 +156079,6 @@ func (siw *ServerInterfaceWrapper) LiftLegalHold(w http.ResponseWriter, r *http.
 
 // PlaceLegalHold operation middleware
 func (siw *ServerInterfaceWrapper) PlaceLegalHold(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -157131,7 +156145,6 @@ func (siw *ServerInterfaceWrapper) PlaceLegalHold(w http.ResponseWriter, r *http
 
 // ListRestrictedActivities operation middleware
 func (siw *ServerInterfaceWrapper) ListRestrictedActivities(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -157185,7 +156198,6 @@ func (siw *ServerInterfaceWrapper) ListRestrictedActivities(w http.ResponseWrite
 
 // PinActivityToFloor operation middleware
 func (siw *ServerInterfaceWrapper) PinActivityToFloor(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -157243,7 +156255,6 @@ func (siw *ServerInterfaceWrapper) PinActivityToFloor(w http.ResponseWriter, r *
 
 // ReleaseRestrictedActivity operation middleware
 func (siw *ServerInterfaceWrapper) ReleaseRestrictedActivity(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -157299,7 +156310,6 @@ func (siw *ServerInterfaceWrapper) ReleaseRestrictedActivity(w http.ResponseWrit
 
 // GetRetentionSettings operation middleware
 func (siw *ServerInterfaceWrapper) GetRetentionSettings(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -157321,7 +156331,6 @@ func (siw *ServerInterfaceWrapper) GetRetentionSettings(w http.ResponseWriter, r
 
 // UpdateRetentionSettings operation middleware
 func (siw *ServerInterfaceWrapper) UpdateRetentionSettings(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -157341,7 +156350,6 @@ func (siw *ServerInterfaceWrapper) UpdateRetentionSettings(w http.ResponseWriter
 
 // RewriteText operation middleware
 func (siw *ServerInterfaceWrapper) RewriteText(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -157361,7 +156369,6 @@ func (siw *ServerInterfaceWrapper) RewriteText(w http.ResponseWriter, r *http.Re
 
 // ListRoles operation middleware
 func (siw *ServerInterfaceWrapper) ListRoles(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -157402,7 +156409,6 @@ func (siw *ServerInterfaceWrapper) ListRoles(w http.ResponseWriter, r *http.Requ
 
 // CreateRole operation middleware
 func (siw *ServerInterfaceWrapper) CreateRole(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -157422,7 +156428,6 @@ func (siw *ServerInterfaceWrapper) CreateRole(w http.ResponseWriter, r *http.Req
 
 // UpdateRole operation middleware
 func (siw *ServerInterfaceWrapper) UpdateRole(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -157478,7 +156483,6 @@ func (siw *ServerInterfaceWrapper) UpdateRole(w http.ResponseWriter, r *http.Req
 
 // ArchiveRole operation middleware
 func (siw *ServerInterfaceWrapper) ArchiveRole(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -157510,7 +156514,6 @@ func (siw *ServerInterfaceWrapper) ArchiveRole(w http.ResponseWriter, r *http.Re
 
 // SetRoleObjectGrant operation middleware
 func (siw *ServerInterfaceWrapper) SetRoleObjectGrant(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -157575,7 +156578,6 @@ func (siw *ServerInterfaceWrapper) SetRoleObjectGrant(w http.ResponseWriter, r *
 
 // RestoreRole operation middleware
 func (siw *ServerInterfaceWrapper) RestoreRole(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -157607,7 +156609,6 @@ func (siw *ServerInterfaceWrapper) RestoreRole(w http.ResponseWriter, r *http.Re
 
 // RestoreRoleGrants operation middleware
 func (siw *ServerInterfaceWrapper) RestoreRoleGrants(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -157667,7 +156668,6 @@ func (siw *ServerInterfaceWrapper) RestoreRoleGrants(w http.ResponseWriter, r *h
 
 // DescribeRouterActions operation middleware
 func (siw *ServerInterfaceWrapper) DescribeRouterActions(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -157721,7 +156721,6 @@ func (siw *ServerInterfaceWrapper) DescribeRouterActions(w http.ResponseWriter, 
 
 // ListScheduledSends operation middleware
 func (siw *ServerInterfaceWrapper) ListScheduledSends(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -157762,7 +156761,6 @@ func (siw *ServerInterfaceWrapper) ListScheduledSends(w http.ResponseWriter, r *
 
 // GetScheduledSend operation middleware
 func (siw *ServerInterfaceWrapper) GetScheduledSend(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -157796,7 +156794,6 @@ func (siw *ServerInterfaceWrapper) GetScheduledSend(w http.ResponseWriter, r *ht
 
 // RescheduleScheduledSend operation middleware
 func (siw *ServerInterfaceWrapper) RescheduleScheduledSend(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -157854,7 +156851,6 @@ func (siw *ServerInterfaceWrapper) RescheduleScheduledSend(w http.ResponseWriter
 
 // CancelScheduledSend operation middleware
 func (siw *ServerInterfaceWrapper) CancelScheduledSend(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -157888,7 +156884,6 @@ func (siw *ServerInterfaceWrapper) CancelScheduledSend(w http.ResponseWriter, r 
 
 // GetSchedulingCalendars operation middleware
 func (siw *ServerInterfaceWrapper) GetSchedulingCalendars(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -157929,7 +156924,6 @@ func (siw *ServerInterfaceWrapper) GetSchedulingCalendars(w http.ResponseWriter,
 
 // CreateMeetingInvitation operation middleware
 func (siw *ServerInterfaceWrapper) CreateMeetingInvitation(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -157997,7 +156991,6 @@ func (siw *ServerInterfaceWrapper) CreateMeetingInvitation(w http.ResponseWriter
 
 // GetMeetingInvitation operation middleware
 func (siw *ServerInterfaceWrapper) GetMeetingInvitation(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -158031,7 +157024,6 @@ func (siw *ServerInterfaceWrapper) GetMeetingInvitation(w http.ResponseWriter, r
 
 // ChangeMeetingInvitation operation middleware
 func (siw *ServerInterfaceWrapper) ChangeMeetingInvitation(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -158065,7 +157057,6 @@ func (siw *ServerInterfaceWrapper) ChangeMeetingInvitation(w http.ResponseWriter
 
 // GetMeetingAvailability operation middleware
 func (siw *ServerInterfaceWrapper) GetMeetingAvailability(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -158128,7 +157119,6 @@ func (siw *ServerInterfaceWrapper) GetMeetingAvailability(w http.ResponseWriter,
 
 // GetSchedulingProfile operation middleware
 func (siw *ServerInterfaceWrapper) GetSchedulingProfile(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -158150,7 +157140,6 @@ func (siw *ServerInterfaceWrapper) GetSchedulingProfile(w http.ResponseWriter, r
 
 // PutSchedulingProfile operation middleware
 func (siw *ServerInterfaceWrapper) PutSchedulingProfile(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -158172,7 +157161,6 @@ func (siw *ServerInterfaceWrapper) PutSchedulingProfile(w http.ResponseWriter, r
 
 // PutSchedulingAlias operation middleware
 func (siw *ServerInterfaceWrapper) PutSchedulingAlias(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -158194,7 +157182,6 @@ func (siw *ServerInterfaceWrapper) PutSchedulingAlias(w http.ResponseWriter, r *
 
 // MarkBookingPageShared operation middleware
 func (siw *ServerInterfaceWrapper) MarkBookingPageShared(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -158216,7 +157203,6 @@ func (siw *ServerInterfaceWrapper) MarkBookingPageShared(w http.ResponseWriter, 
 
 // ListMeetingProposals operation middleware
 func (siw *ServerInterfaceWrapper) ListMeetingProposals(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -158257,7 +157243,6 @@ func (siw *ServerInterfaceWrapper) ListMeetingProposals(w http.ResponseWriter, r
 
 // CreateMeetingProposal operation middleware
 func (siw *ServerInterfaceWrapper) CreateMeetingProposal(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -158306,7 +157291,6 @@ func (siw *ServerInterfaceWrapper) CreateMeetingProposal(w http.ResponseWriter, 
 
 // ListSchedulingTeamCandidates operation middleware
 func (siw *ServerInterfaceWrapper) ListSchedulingTeamCandidates(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -158328,7 +157312,6 @@ func (siw *ServerInterfaceWrapper) ListSchedulingTeamCandidates(w http.ResponseW
 
 // ListSchedulingTeamLinks operation middleware
 func (siw *ServerInterfaceWrapper) ListSchedulingTeamLinks(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -158350,7 +157333,6 @@ func (siw *ServerInterfaceWrapper) ListSchedulingTeamLinks(w http.ResponseWriter
 
 // CreateSchedulingTeamLink operation middleware
 func (siw *ServerInterfaceWrapper) CreateSchedulingTeamLink(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -158370,7 +157352,6 @@ func (siw *ServerInterfaceWrapper) CreateSchedulingTeamLink(w http.ResponseWrite
 
 // DeleteSchedulingTeamLink operation middleware
 func (siw *ServerInterfaceWrapper) DeleteSchedulingTeamLink(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -158402,7 +157383,6 @@ func (siw *ServerInterfaceWrapper) DeleteSchedulingTeamLink(w http.ResponseWrite
 
 // UpdateSchedulingTeamLink operation middleware
 func (siw *ServerInterfaceWrapper) UpdateSchedulingTeamLink(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -158434,7 +157414,6 @@ func (siw *ServerInterfaceWrapper) UpdateSchedulingTeamLink(w http.ResponseWrite
 
 // AnswerSchedulingTeamLink operation middleware
 func (siw *ServerInterfaceWrapper) AnswerSchedulingTeamLink(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -158466,7 +157445,6 @@ func (siw *ServerInterfaceWrapper) AnswerSchedulingTeamLink(w http.ResponseWrite
 
 // ListSchedulingTeamRequests operation middleware
 func (siw *ServerInterfaceWrapper) ListSchedulingTeamRequests(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -158488,7 +157466,6 @@ func (siw *ServerInterfaceWrapper) ListSchedulingTeamRequests(w http.ResponseWri
 
 // AnswerSchedulingTeamRequest operation middleware
 func (siw *ServerInterfaceWrapper) AnswerSchedulingTeamRequest(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -158520,7 +157497,6 @@ func (siw *ServerInterfaceWrapper) AnswerSchedulingTeamRequest(w http.ResponseWr
 
 // GetHandoffAssignee operation middleware
 func (siw *ServerInterfaceWrapper) GetHandoffAssignee(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -158554,7 +157530,6 @@ func (siw *ServerInterfaceWrapper) GetHandoffAssignee(w http.ResponseWriter, r *
 
 // ReassignHandoff operation middleware
 func (siw *ServerInterfaceWrapper) ReassignHandoff(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -158588,7 +157563,6 @@ func (siw *ServerInterfaceWrapper) ReassignHandoff(w http.ResponseWriter, r *htt
 
 // Search operation middleware
 func (siw *ServerInterfaceWrapper) Search(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -158720,7 +157694,6 @@ func (siw *ServerInterfaceWrapper) Search(w http.ResponseWriter, r *http.Request
 
 // AskSearchData operation middleware
 func (siw *ServerInterfaceWrapper) AskSearchData(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -158742,7 +157715,6 @@ func (siw *ServerInterfaceWrapper) AskSearchData(w http.ResponseWriter, r *http.
 
 // ListSharedMailboxes operation middleware
 func (siw *ServerInterfaceWrapper) ListSharedMailboxes(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -158762,7 +157734,6 @@ func (siw *ServerInterfaceWrapper) ListSharedMailboxes(w http.ResponseWriter, r 
 
 // ConnectSharedMailbox operation middleware
 func (siw *ServerInterfaceWrapper) ConnectSharedMailbox(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -158782,7 +157753,6 @@ func (siw *ServerInterfaceWrapper) ConnectSharedMailbox(w http.ResponseWriter, r
 
 // ListReplyableSharedMailboxes operation middleware
 func (siw *ServerInterfaceWrapper) ListReplyableSharedMailboxes(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -158802,7 +157772,6 @@ func (siw *ServerInterfaceWrapper) ListReplyableSharedMailboxes(w http.ResponseW
 
 // UpdateSharedMailbox operation middleware
 func (siw *ServerInterfaceWrapper) UpdateSharedMailbox(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -158834,7 +157803,6 @@ func (siw *ServerInterfaceWrapper) UpdateSharedMailbox(w http.ResponseWriter, r 
 
 // DisconnectSharedMailbox operation middleware
 func (siw *ServerInterfaceWrapper) DisconnectSharedMailbox(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -158866,7 +157834,6 @@ func (siw *ServerInterfaceWrapper) DisconnectSharedMailbox(w http.ResponseWriter
 
 // StartSharedMailboxHistoryImport operation middleware
 func (siw *ServerInterfaceWrapper) StartSharedMailboxHistoryImport(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -158898,7 +157865,6 @@ func (siw *ServerInterfaceWrapper) StartSharedMailboxHistoryImport(w http.Respon
 
 // ListSignals operation middleware
 func (siw *ServerInterfaceWrapper) ListSignals(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -159017,7 +157983,6 @@ func (siw *ServerInterfaceWrapper) ListSignals(w http.ResponseWriter, r *http.Re
 
 // CreateSignal operation middleware
 func (siw *ServerInterfaceWrapper) CreateSignal(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -159066,7 +158031,6 @@ func (siw *ServerInterfaceWrapper) CreateSignal(w http.ResponseWriter, r *http.R
 
 // ArchiveSignal operation middleware
 func (siw *ServerInterfaceWrapper) ArchiveSignal(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -159100,7 +158064,6 @@ func (siw *ServerInterfaceWrapper) ArchiveSignal(w http.ResponseWriter, r *http.
 
 // GetSignal operation middleware
 func (siw *ServerInterfaceWrapper) GetSignal(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -159134,7 +158097,6 @@ func (siw *ServerInterfaceWrapper) GetSignal(w http.ResponseWriter, r *http.Requ
 
 // UpdateSignal operation middleware
 func (siw *ServerInterfaceWrapper) UpdateSignal(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -159211,7 +158173,6 @@ func (siw *ServerInterfaceWrapper) UpdateSignal(w http.ResponseWriter, r *http.R
 
 // GetSignalIntroPath operation middleware
 func (siw *ServerInterfaceWrapper) GetSignalIntroPath(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -159245,7 +158206,6 @@ func (siw *ServerInterfaceWrapper) GetSignalIntroPath(w http.ResponseWriter, r *
 
 // ResolveSignal operation middleware
 func (siw *ServerInterfaceWrapper) ResolveSignal(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -159303,7 +158263,6 @@ func (siw *ServerInterfaceWrapper) ResolveSignal(w http.ResponseWriter, r *http.
 
 // GetSignalWarmth operation middleware
 func (siw *ServerInterfaceWrapper) GetSignalWarmth(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -159337,7 +158296,6 @@ func (siw *ServerInterfaceWrapper) GetSignalWarmth(w http.ResponseWriter, r *htt
 
 // ListTransitionPolicies operation middleware
 func (siw *ServerInterfaceWrapper) ListTransitionPolicies(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -159369,7 +158327,6 @@ func (siw *ServerInterfaceWrapper) ListTransitionPolicies(w http.ResponseWriter,
 
 // SetTransitionPolicy operation middleware
 func (siw *ServerInterfaceWrapper) SetTransitionPolicy(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -159401,7 +158358,6 @@ func (siw *ServerInterfaceWrapper) SetTransitionPolicy(w http.ResponseWriter, r 
 
 // ResumeTransitionPolicy operation middleware
 func (siw *ServerInterfaceWrapper) ResumeTransitionPolicy(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -159433,7 +158389,6 @@ func (siw *ServerInterfaceWrapper) ResumeTransitionPolicy(w http.ResponseWriter,
 
 // GetStageAutomationReport operation middleware
 func (siw *ServerInterfaceWrapper) GetStageAutomationReport(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -159453,7 +158408,6 @@ func (siw *ServerInterfaceWrapper) GetStageAutomationReport(w http.ResponseWrite
 
 // ListStages operation middleware
 func (siw *ServerInterfaceWrapper) ListStages(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -159507,7 +158461,6 @@ func (siw *ServerInterfaceWrapper) ListStages(w http.ResponseWriter, r *http.Req
 
 // CreateStage operation middleware
 func (siw *ServerInterfaceWrapper) CreateStage(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -159556,7 +158509,6 @@ func (siw *ServerInterfaceWrapper) CreateStage(w http.ResponseWriter, r *http.Re
 
 // ArchiveStage operation middleware
 func (siw *ServerInterfaceWrapper) ArchiveStage(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -159614,7 +158566,6 @@ func (siw *ServerInterfaceWrapper) ArchiveStage(w http.ResponseWriter, r *http.R
 
 // GetStage operation middleware
 func (siw *ServerInterfaceWrapper) GetStage(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -159648,7 +158599,6 @@ func (siw *ServerInterfaceWrapper) GetStage(w http.ResponseWriter, r *http.Reque
 
 // UpdateStage operation middleware
 func (siw *ServerInterfaceWrapper) UpdateStage(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -159725,7 +158675,6 @@ func (siw *ServerInterfaceWrapper) UpdateStage(w http.ResponseWriter, r *http.Re
 
 // ListStageExitCriteria operation middleware
 func (siw *ServerInterfaceWrapper) ListStageExitCriteria(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -159775,7 +158724,6 @@ func (siw *ServerInterfaceWrapper) ListStageExitCriteria(w http.ResponseWriter, 
 
 // CreateStageExitCriterion operation middleware
 func (siw *ServerInterfaceWrapper) CreateStageExitCriterion(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -159833,7 +158781,6 @@ func (siw *ServerInterfaceWrapper) CreateStageExitCriterion(w http.ResponseWrite
 
 // ArchiveStageExitCriterion operation middleware
 func (siw *ServerInterfaceWrapper) ArchiveStageExitCriterion(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -159900,7 +158847,6 @@ func (siw *ServerInterfaceWrapper) ArchiveStageExitCriterion(w http.ResponseWrit
 
 // UpdateStageExitCriterion operation middleware
 func (siw *ServerInterfaceWrapper) UpdateStageExitCriterion(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -159967,7 +158913,6 @@ func (siw *ServerInterfaceWrapper) UpdateStageExitCriterion(w http.ResponseWrite
 
 // GetStatus operation middleware
 func (siw *ServerInterfaceWrapper) GetStatus(w http.ResponseWriter, r *http.Request) {
-
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetStatus(w, r)
 	}))
@@ -159981,7 +158926,6 @@ func (siw *ServerInterfaceWrapper) GetStatus(w http.ResponseWriter, r *http.Requ
 
 // HeadStatus operation middleware
 func (siw *ServerInterfaceWrapper) HeadStatus(w http.ResponseWriter, r *http.Request) {
-
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.HeadStatus(w, r)
 	}))
@@ -159995,7 +158939,6 @@ func (siw *ServerInterfaceWrapper) HeadStatus(w http.ResponseWriter, r *http.Req
 
 // GetTagSuggestion operation middleware
 func (siw *ServerInterfaceWrapper) GetTagSuggestion(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -160029,7 +158972,6 @@ func (siw *ServerInterfaceWrapper) GetTagSuggestion(w http.ResponseWriter, r *ht
 
 // AcceptTagSuggestion operation middleware
 func (siw *ServerInterfaceWrapper) AcceptTagSuggestion(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -160063,7 +159005,6 @@ func (siw *ServerInterfaceWrapper) AcceptTagSuggestion(w http.ResponseWriter, r 
 
 // DismissTagSuggestion operation middleware
 func (siw *ServerInterfaceWrapper) DismissTagSuggestion(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -160097,7 +159038,6 @@ func (siw *ServerInterfaceWrapper) DismissTagSuggestion(w http.ResponseWriter, r
 
 // ListTags operation middleware
 func (siw *ServerInterfaceWrapper) ListTags(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -160151,7 +159091,6 @@ func (siw *ServerInterfaceWrapper) ListTags(w http.ResponseWriter, r *http.Reque
 
 // CreateTag operation middleware
 func (siw *ServerInterfaceWrapper) CreateTag(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -160173,7 +159112,6 @@ func (siw *ServerInterfaceWrapper) CreateTag(w http.ResponseWriter, r *http.Requ
 
 // ArchiveTag operation middleware
 func (siw *ServerInterfaceWrapper) ArchiveTag(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -160207,7 +159145,6 @@ func (siw *ServerInterfaceWrapper) ArchiveTag(w http.ResponseWriter, r *http.Req
 
 // GetTag operation middleware
 func (siw *ServerInterfaceWrapper) GetTag(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -160241,7 +159178,6 @@ func (siw *ServerInterfaceWrapper) GetTag(w http.ResponseWriter, r *http.Request
 
 // UpdateTag operation middleware
 func (siw *ServerInterfaceWrapper) UpdateTag(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -160299,7 +159235,6 @@ func (siw *ServerInterfaceWrapper) UpdateTag(w http.ResponseWriter, r *http.Requ
 
 // RemoveTag operation middleware
 func (siw *ServerInterfaceWrapper) RemoveTag(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -160333,7 +159268,6 @@ func (siw *ServerInterfaceWrapper) RemoveTag(w http.ResponseWriter, r *http.Requ
 
 // ApplyTag operation middleware
 func (siw *ServerInterfaceWrapper) ApplyTag(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -160367,7 +159301,6 @@ func (siw *ServerInterfaceWrapper) ApplyTag(w http.ResponseWriter, r *http.Reque
 
 // RestoreTagApplication operation middleware
 func (siw *ServerInterfaceWrapper) RestoreTagApplication(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -160399,7 +159332,6 @@ func (siw *ServerInterfaceWrapper) RestoreTagApplication(w http.ResponseWriter, 
 
 // MergeTags operation middleware
 func (siw *ServerInterfaceWrapper) MergeTags(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -160433,7 +159365,6 @@ func (siw *ServerInterfaceWrapper) MergeTags(w http.ResponseWriter, r *http.Requ
 
 // RestoreTag operation middleware
 func (siw *ServerInterfaceWrapper) RestoreTag(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -160467,7 +159398,6 @@ func (siw *ServerInterfaceWrapper) RestoreTag(w http.ResponseWriter, r *http.Req
 
 // CreateTask operation middleware
 func (siw *ServerInterfaceWrapper) CreateTask(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -160516,7 +159446,6 @@ func (siw *ServerInterfaceWrapper) CreateTask(w http.ResponseWriter, r *http.Req
 
 // ListTaxRates operation middleware
 func (siw *ServerInterfaceWrapper) ListTaxRates(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -160557,7 +159486,6 @@ func (siw *ServerInterfaceWrapper) ListTaxRates(w http.ResponseWriter, r *http.R
 
 // RecordTaxRate operation middleware
 func (siw *ServerInterfaceWrapper) RecordTaxRate(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -160579,7 +159507,6 @@ func (siw *ServerInterfaceWrapper) RecordTaxRate(w http.ResponseWriter, r *http.
 
 // ListTeams operation middleware
 func (siw *ServerInterfaceWrapper) ListTeams(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -160659,7 +159586,6 @@ func (siw *ServerInterfaceWrapper) ListTeams(w http.ResponseWriter, r *http.Requ
 
 // CreateTeam operation middleware
 func (siw *ServerInterfaceWrapper) CreateTeam(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -160681,7 +159607,6 @@ func (siw *ServerInterfaceWrapper) CreateTeam(w http.ResponseWriter, r *http.Req
 
 // UpdateTeam operation middleware
 func (siw *ServerInterfaceWrapper) UpdateTeam(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -160715,7 +159640,6 @@ func (siw *ServerInterfaceWrapper) UpdateTeam(w http.ResponseWriter, r *http.Req
 
 // RemoveTeamMember operation middleware
 func (siw *ServerInterfaceWrapper) RemoveTeamMember(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -160758,7 +159682,6 @@ func (siw *ServerInterfaceWrapper) RemoveTeamMember(w http.ResponseWriter, r *ht
 
 // AddTeamMember operation middleware
 func (siw *ServerInterfaceWrapper) AddTeamMember(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -160801,7 +159724,6 @@ func (siw *ServerInterfaceWrapper) AddTeamMember(w http.ResponseWriter, r *http.
 
 // ListUsers operation middleware
 func (siw *ServerInterfaceWrapper) ListUsers(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -160894,7 +159816,6 @@ func (siw *ServerInterfaceWrapper) ListUsers(w http.ResponseWriter, r *http.Requ
 
 // InviteUser operation middleware
 func (siw *ServerInterfaceWrapper) InviteUser(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -160943,7 +159864,6 @@ func (siw *ServerInterfaceWrapper) InviteUser(w http.ResponseWriter, r *http.Req
 
 // PreviewAccess operation middleware
 func (siw *ServerInterfaceWrapper) PreviewAccess(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -160995,7 +159915,6 @@ func (siw *ServerInterfaceWrapper) PreviewAccess(w http.ResponseWriter, r *http.
 
 // ListAssignableRoles operation middleware
 func (siw *ServerInterfaceWrapper) ListAssignableRoles(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -161017,7 +159936,6 @@ func (siw *ServerInterfaceWrapper) ListAssignableRoles(w http.ResponseWriter, r 
 
 // CreateFormerMember operation middleware
 func (siw *ServerInterfaceWrapper) CreateFormerMember(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -161039,7 +159957,6 @@ func (siw *ServerInterfaceWrapper) CreateFormerMember(w http.ResponseWriter, r *
 
 // NameSeats operation middleware
 func (siw *ServerInterfaceWrapper) NameSeats(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -161080,7 +159997,6 @@ func (siw *ServerInterfaceWrapper) NameSeats(w http.ResponseWriter, r *http.Requ
 
 // DeclareServiceMember operation middleware
 func (siw *ServerInterfaceWrapper) DeclareServiceMember(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -161100,7 +160016,6 @@ func (siw *ServerInterfaceWrapper) DeclareServiceMember(w http.ResponseWriter, r
 
 // ArchiveServiceMember operation middleware
 func (siw *ServerInterfaceWrapper) ArchiveServiceMember(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -161132,7 +160047,6 @@ func (siw *ServerInterfaceWrapper) ArchiveServiceMember(w http.ResponseWriter, r
 
 // GetMember operation middleware
 func (siw *ServerInterfaceWrapper) GetMember(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -161166,7 +160080,6 @@ func (siw *ServerInterfaceWrapper) GetMember(w http.ResponseWriter, r *http.Requ
 
 // UpdateMember operation middleware
 func (siw *ServerInterfaceWrapper) UpdateMember(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -161200,7 +160113,6 @@ func (siw *ServerInterfaceWrapper) UpdateMember(w http.ResponseWriter, r *http.R
 
 // GetUserAccess operation middleware
 func (siw *ServerInterfaceWrapper) GetUserAccess(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -161232,7 +160144,6 @@ func (siw *ServerInterfaceWrapper) GetUserAccess(w http.ResponseWriter, r *http.
 
 // GetUserAvatar operation middleware
 func (siw *ServerInterfaceWrapper) GetUserAvatar(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -161280,7 +160191,6 @@ func (siw *ServerInterfaceWrapper) GetUserAvatar(w http.ResponseWriter, r *http.
 
 // DeactivateUser operation middleware
 func (siw *ServerInterfaceWrapper) DeactivateUser(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -161314,7 +160224,6 @@ func (siw *ServerInterfaceWrapper) DeactivateUser(w http.ResponseWriter, r *http
 
 // GetUserHandover operation middleware
 func (siw *ServerInterfaceWrapper) GetUserHandover(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -161348,7 +160257,6 @@ func (siw *ServerInterfaceWrapper) GetUserHandover(w http.ResponseWriter, r *htt
 
 // HandOverUserWork operation middleware
 func (siw *ServerInterfaceWrapper) HandOverUserWork(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -161406,7 +160314,6 @@ func (siw *ServerInterfaceWrapper) HandOverUserWork(w http.ResponseWriter, r *ht
 
 // MergeMembers operation middleware
 func (siw *ServerInterfaceWrapper) MergeMembers(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -161483,7 +160390,6 @@ func (siw *ServerInterfaceWrapper) MergeMembers(w http.ResponseWriter, r *http.R
 
 // RequestMemberMerge operation middleware
 func (siw *ServerInterfaceWrapper) RequestMemberMerge(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -161515,7 +160421,6 @@ func (siw *ServerInterfaceWrapper) RequestMemberMerge(w http.ResponseWriter, r *
 
 // RemoveUserMfa operation middleware
 func (siw *ServerInterfaceWrapper) RemoveUserMfa(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -161547,7 +160452,6 @@ func (siw *ServerInterfaceWrapper) RemoveUserMfa(w http.ResponseWriter, r *http.
 
 // IssueUserPasswordLink operation middleware
 func (siw *ServerInterfaceWrapper) IssueUserPasswordLink(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -161579,7 +160483,6 @@ func (siw *ServerInterfaceWrapper) IssueUserPasswordLink(w http.ResponseWriter, 
 
 // ReactivateUser operation middleware
 func (siw *ServerInterfaceWrapper) ReactivateUser(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -161613,7 +160516,6 @@ func (siw *ServerInterfaceWrapper) ReactivateUser(w http.ResponseWriter, r *http
 
 // RemoveMember operation middleware
 func (siw *ServerInterfaceWrapper) RemoveMember(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -161647,7 +160549,6 @@ func (siw *ServerInterfaceWrapper) RemoveMember(w http.ResponseWriter, r *http.R
 
 // ResendUserInvite operation middleware
 func (siw *ServerInterfaceWrapper) ResendUserInvite(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -161705,7 +160606,6 @@ func (siw *ServerInterfaceWrapper) ResendUserInvite(w http.ResponseWriter, r *ht
 
 // PreviewMemberRetirement operation middleware
 func (siw *ServerInterfaceWrapper) PreviewMemberRetirement(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -161768,7 +160668,6 @@ func (siw *ServerInterfaceWrapper) PreviewMemberRetirement(w http.ResponseWriter
 
 // ChangeUserRole operation middleware
 func (siw *ServerInterfaceWrapper) ChangeUserRole(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -161802,7 +160701,6 @@ func (siw *ServerInterfaceWrapper) ChangeUserRole(w http.ResponseWriter, r *http
 
 // ListUserSessions operation middleware
 func (siw *ServerInterfaceWrapper) ListUserSessions(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -161834,7 +160732,6 @@ func (siw *ServerInterfaceWrapper) ListUserSessions(w http.ResponseWriter, r *ht
 
 // RevokeUserSession operation middleware
 func (siw *ServerInterfaceWrapper) RevokeUserSession(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -161875,7 +160772,6 @@ func (siw *ServerInterfaceWrapper) RevokeUserSession(w http.ResponseWriter, r *h
 
 // ListSavedViews operation middleware
 func (siw *ServerInterfaceWrapper) ListSavedViews(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -161929,7 +160825,6 @@ func (siw *ServerInterfaceWrapper) ListSavedViews(w http.ResponseWriter, r *http
 
 // CreateSavedView operation middleware
 func (siw *ServerInterfaceWrapper) CreateSavedView(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -161951,7 +160846,6 @@ func (siw *ServerInterfaceWrapper) CreateSavedView(w http.ResponseWriter, r *htt
 
 // ArchiveSavedView operation middleware
 func (siw *ServerInterfaceWrapper) ArchiveSavedView(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -161985,7 +160879,6 @@ func (siw *ServerInterfaceWrapper) ArchiveSavedView(w http.ResponseWriter, r *ht
 
 // GetSavedView operation middleware
 func (siw *ServerInterfaceWrapper) GetSavedView(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -162019,7 +160912,6 @@ func (siw *ServerInterfaceWrapper) GetSavedView(w http.ResponseWriter, r *http.R
 
 // UpdateSavedView operation middleware
 func (siw *ServerInterfaceWrapper) UpdateSavedView(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -162077,7 +160969,6 @@ func (siw *ServerInterfaceWrapper) UpdateSavedView(w http.ResponseWriter, r *htt
 
 // ListVoiceProfiles operation middleware
 func (siw *ServerInterfaceWrapper) ListVoiceProfiles(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -162099,7 +160990,6 @@ func (siw *ServerInterfaceWrapper) ListVoiceProfiles(w http.ResponseWriter, r *h
 
 // CreateVoiceProfile operation middleware
 func (siw *ServerInterfaceWrapper) CreateVoiceProfile(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -162148,7 +161038,6 @@ func (siw *ServerInterfaceWrapper) CreateVoiceProfile(w http.ResponseWriter, r *
 
 // DeleteVoiceProfile operation middleware
 func (siw *ServerInterfaceWrapper) DeleteVoiceProfile(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -162206,7 +161095,6 @@ func (siw *ServerInterfaceWrapper) DeleteVoiceProfile(w http.ResponseWriter, r *
 
 // GetVoiceProfile operation middleware
 func (siw *ServerInterfaceWrapper) GetVoiceProfile(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -162240,7 +161128,6 @@ func (siw *ServerInterfaceWrapper) GetVoiceProfile(w http.ResponseWriter, r *htt
 
 // UpdateVoiceProfile operation middleware
 func (siw *ServerInterfaceWrapper) UpdateVoiceProfile(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -162298,7 +161185,6 @@ func (siw *ServerInterfaceWrapper) UpdateVoiceProfile(w http.ResponseWriter, r *
 
 // CreateVoiceBuild operation middleware
 func (siw *ServerInterfaceWrapper) CreateVoiceBuild(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -162356,7 +161242,6 @@ func (siw *ServerInterfaceWrapper) CreateVoiceBuild(w http.ResponseWriter, r *ht
 
 // GetVoiceBuild operation middleware
 func (siw *ServerInterfaceWrapper) GetVoiceBuild(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -162399,7 +161284,6 @@ func (siw *ServerInterfaceWrapper) GetVoiceBuild(w http.ResponseWriter, r *http.
 
 // ClearVoiceCorpus operation middleware
 func (siw *ServerInterfaceWrapper) ClearVoiceCorpus(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -162474,7 +161358,6 @@ func (siw *ServerInterfaceWrapper) ClearVoiceCorpus(w http.ResponseWriter, r *ht
 
 // ListVoiceProfileDeltas operation middleware
 func (siw *ServerInterfaceWrapper) ListVoiceProfileDeltas(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -162537,7 +161420,6 @@ func (siw *ServerInterfaceWrapper) ListVoiceProfileDeltas(w http.ResponseWriter,
 
 // RejectVoiceDraft operation middleware
 func (siw *ServerInterfaceWrapper) RejectVoiceDraft(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -162593,7 +161475,6 @@ func (siw *ServerInterfaceWrapper) RejectVoiceDraft(w http.ResponseWriter, r *ht
 
 // GetVoiceLearningSummary operation middleware
 func (siw *ServerInterfaceWrapper) GetVoiceLearningSummary(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -162627,7 +161508,6 @@ func (siw *ServerInterfaceWrapper) GetVoiceLearningSummary(w http.ResponseWriter
 
 // ListVoiceCorpusSources operation middleware
 func (siw *ServerInterfaceWrapper) ListVoiceCorpusSources(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -162661,7 +161541,6 @@ func (siw *ServerInterfaceWrapper) ListVoiceCorpusSources(w http.ResponseWriter,
 
 // IngestVoiceCorpusSource operation middleware
 func (siw *ServerInterfaceWrapper) IngestVoiceCorpusSource(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -162719,7 +161598,6 @@ func (siw *ServerInterfaceWrapper) IngestVoiceCorpusSource(w http.ResponseWriter
 
 // PreviewVoiceCorpusSource operation middleware
 func (siw *ServerInterfaceWrapper) PreviewVoiceCorpusSource(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -162753,7 +161631,6 @@ func (siw *ServerInterfaceWrapper) PreviewVoiceCorpusSource(w http.ResponseWrite
 
 // LearnVoiceFromSentMail operation middleware
 func (siw *ServerInterfaceWrapper) LearnVoiceFromSentMail(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -162809,7 +161686,6 @@ func (siw *ServerInterfaceWrapper) LearnVoiceFromSentMail(w http.ResponseWriter,
 
 // DeleteVoiceCorpusSource operation middleware
 func (siw *ServerInterfaceWrapper) DeleteVoiceCorpusSource(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -162874,7 +161750,6 @@ func (siw *ServerInterfaceWrapper) DeleteVoiceCorpusSource(w http.ResponseWriter
 
 // UpdateVoiceCorpusSource operation middleware
 func (siw *ServerInterfaceWrapper) UpdateVoiceCorpusSource(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -162941,7 +161816,6 @@ func (siw *ServerInterfaceWrapper) UpdateVoiceCorpusSource(w http.ResponseWriter
 
 // ListVoiceProfileVersions operation middleware
 func (siw *ServerInterfaceWrapper) ListVoiceProfileVersions(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -163004,7 +161878,6 @@ func (siw *ServerInterfaceWrapper) ListVoiceProfileVersions(w http.ResponseWrite
 
 // ApplyVoiceProfileVersion operation middleware
 func (siw *ServerInterfaceWrapper) ApplyVoiceProfileVersion(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -163090,7 +161963,6 @@ func (siw *ServerInterfaceWrapper) ApplyVoiceProfileVersion(w http.ResponseWrite
 
 // RejectVoiceProfileVersion operation middleware
 func (siw *ServerInterfaceWrapper) RejectVoiceProfileVersion(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -163176,7 +162048,6 @@ func (siw *ServerInterfaceWrapper) RejectVoiceProfileVersion(w http.ResponseWrit
 
 // RollbackVoiceProfileVersion operation middleware
 func (siw *ServerInterfaceWrapper) RollbackVoiceProfileVersion(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -163243,7 +162114,6 @@ func (siw *ServerInterfaceWrapper) RollbackVoiceProfileVersion(w http.ResponseWr
 
 // ListWebForms operation middleware
 func (siw *ServerInterfaceWrapper) ListWebForms(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -163284,7 +162154,6 @@ func (siw *ServerInterfaceWrapper) ListWebForms(w http.ResponseWriter, r *http.R
 
 // CreateWebForm operation middleware
 func (siw *ServerInterfaceWrapper) CreateWebForm(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -163306,7 +162175,6 @@ func (siw *ServerInterfaceWrapper) CreateWebForm(w http.ResponseWriter, r *http.
 
 // ArchiveWebForm operation middleware
 func (siw *ServerInterfaceWrapper) ArchiveWebForm(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -163340,7 +162208,6 @@ func (siw *ServerInterfaceWrapper) ArchiveWebForm(w http.ResponseWriter, r *http
 
 // GetWebForm operation middleware
 func (siw *ServerInterfaceWrapper) GetWebForm(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -163374,7 +162241,6 @@ func (siw *ServerInterfaceWrapper) GetWebForm(w http.ResponseWriter, r *http.Req
 
 // UpdateWebForm operation middleware
 func (siw *ServerInterfaceWrapper) UpdateWebForm(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -163432,7 +162298,6 @@ func (siw *ServerInterfaceWrapper) UpdateWebForm(w http.ResponseWriter, r *http.
 
 // SaveWebFormHandling operation middleware
 func (siw *ServerInterfaceWrapper) SaveWebFormHandling(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -163488,7 +162353,6 @@ func (siw *ServerInterfaceWrapper) SaveWebFormHandling(w http.ResponseWriter, r 
 
 // HandleExistingWebFormInquiries operation middleware
 func (siw *ServerInterfaceWrapper) HandleExistingWebFormInquiries(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -163522,7 +162386,6 @@ func (siw *ServerInterfaceWrapper) HandleExistingWebFormInquiries(w http.Respons
 
 // PreviewWebFormHandling operation middleware
 func (siw *ServerInterfaceWrapper) PreviewWebFormHandling(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -163556,7 +162419,6 @@ func (siw *ServerInterfaceWrapper) PreviewWebFormHandling(w http.ResponseWriter,
 
 // RotateWebFormSecret operation middleware
 func (siw *ServerInterfaceWrapper) RotateWebFormSecret(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -163588,7 +162450,6 @@ func (siw *ServerInterfaceWrapper) RotateWebFormSecret(w http.ResponseWriter, r 
 
 // ListWebhookSubscriptions operation middleware
 func (siw *ServerInterfaceWrapper) ListWebhookSubscriptions(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -163627,7 +162488,6 @@ func (siw *ServerInterfaceWrapper) ListWebhookSubscriptions(w http.ResponseWrite
 
 // CreateWebhookSubscription operation middleware
 func (siw *ServerInterfaceWrapper) CreateWebhookSubscription(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -163647,7 +162507,6 @@ func (siw *ServerInterfaceWrapper) CreateWebhookSubscription(w http.ResponseWrit
 
 // PreviewWebhookBody operation middleware
 func (siw *ServerInterfaceWrapper) PreviewWebhookBody(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -163667,7 +162526,6 @@ func (siw *ServerInterfaceWrapper) PreviewWebhookBody(w http.ResponseWriter, r *
 
 // ArchiveWebhookSubscription operation middleware
 func (siw *ServerInterfaceWrapper) ArchiveWebhookSubscription(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -163699,7 +162557,6 @@ func (siw *ServerInterfaceWrapper) ArchiveWebhookSubscription(w http.ResponseWri
 
 // GetWebhookSubscription operation middleware
 func (siw *ServerInterfaceWrapper) GetWebhookSubscription(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -163731,7 +162588,6 @@ func (siw *ServerInterfaceWrapper) GetWebhookSubscription(w http.ResponseWriter,
 
 // UpdateWebhookSubscription operation middleware
 func (siw *ServerInterfaceWrapper) UpdateWebhookSubscription(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -163787,7 +162643,6 @@ func (siw *ServerInterfaceWrapper) UpdateWebhookSubscription(w http.ResponseWrit
 
 // ListWebhookDeliveries operation middleware
 func (siw *ServerInterfaceWrapper) ListWebhookDeliveries(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -163848,7 +162703,6 @@ func (siw *ServerInterfaceWrapper) ListWebhookDeliveries(w http.ResponseWriter, 
 
 // ReplayWebhookDelivery operation middleware
 func (siw *ServerInterfaceWrapper) ReplayWebhookDelivery(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -163889,7 +162743,6 @@ func (siw *ServerInterfaceWrapper) ReplayWebhookDelivery(w http.ResponseWriter, 
 
 // RotateWebhookSecret operation middleware
 func (siw *ServerInterfaceWrapper) RotateWebhookSecret(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -163921,7 +162774,6 @@ func (siw *ServerInterfaceWrapper) RotateWebhookSecret(w http.ResponseWriter, r 
 
 // AddWeeklyPlanCommitment operation middleware
 func (siw *ServerInterfaceWrapper) AddWeeklyPlanCommitment(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -163943,7 +162795,6 @@ func (siw *ServerInterfaceWrapper) AddWeeklyPlanCommitment(w http.ResponseWriter
 
 // EditWeeklyPlanCommitment operation middleware
 func (siw *ServerInterfaceWrapper) EditWeeklyPlanCommitment(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -163977,7 +162828,6 @@ func (siw *ServerInterfaceWrapper) EditWeeklyPlanCommitment(w http.ResponseWrite
 
 // AskForWeeklyPlanHelp operation middleware
 func (siw *ServerInterfaceWrapper) AskForWeeklyPlanHelp(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -164011,7 +162861,6 @@ func (siw *ServerInterfaceWrapper) AskForWeeklyPlanHelp(w http.ResponseWriter, r
 
 // AnswerWeeklyPlanCommitment operation middleware
 func (siw *ServerInterfaceWrapper) AnswerWeeklyPlanCommitment(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -164045,7 +162894,6 @@ func (siw *ServerInterfaceWrapper) AnswerWeeklyPlanCommitment(w http.ResponseWri
 
 // SetWeeklyPlanCommitmentState operation middleware
 func (siw *ServerInterfaceWrapper) SetWeeklyPlanCommitmentState(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -164079,7 +162927,6 @@ func (siw *ServerInterfaceWrapper) SetWeeklyPlanCommitmentState(w http.ResponseW
 
 // GetCurrentWeeklyPlan operation middleware
 func (siw *ServerInterfaceWrapper) GetCurrentWeeklyPlan(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -164101,7 +162948,6 @@ func (siw *ServerInterfaceWrapper) GetCurrentWeeklyPlan(w http.ResponseWriter, r
 
 // StartWeeklyPlan operation middleware
 func (siw *ServerInterfaceWrapper) StartWeeklyPlan(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -164123,7 +162969,6 @@ func (siw *ServerInterfaceWrapper) StartWeeklyPlan(w http.ResponseWriter, r *htt
 
 // SetWeeklyPlanContract operation middleware
 func (siw *ServerInterfaceWrapper) SetWeeklyPlanContract(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -164145,7 +162990,6 @@ func (siw *ServerInterfaceWrapper) SetWeeklyPlanContract(w http.ResponseWriter, 
 
 // GetTeammateWeeklyPlan operation middleware
 func (siw *ServerInterfaceWrapper) GetTeammateWeeklyPlan(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -164179,7 +163023,6 @@ func (siw *ServerInterfaceWrapper) GetTeammateWeeklyPlan(w http.ResponseWriter, 
 
 // ListWeeklyReviews operation middleware
 func (siw *ServerInterfaceWrapper) ListWeeklyReviews(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -164201,7 +163044,6 @@ func (siw *ServerInterfaceWrapper) ListWeeklyReviews(w http.ResponseWriter, r *h
 
 // GetLatestWeeklyReview operation middleware
 func (siw *ServerInterfaceWrapper) GetLatestWeeklyReview(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -164242,7 +163084,6 @@ func (siw *ServerInterfaceWrapper) GetLatestWeeklyReview(w http.ResponseWriter, 
 
 // GetTeamWeeklyReview operation middleware
 func (siw *ServerInterfaceWrapper) GetTeamWeeklyReview(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -164296,7 +163137,6 @@ func (siw *ServerInterfaceWrapper) GetTeamWeeklyReview(w http.ResponseWriter, r 
 
 // GetActingIdentity operation middleware
 func (siw *ServerInterfaceWrapper) GetActingIdentity(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -164318,7 +163158,6 @@ func (siw *ServerInterfaceWrapper) GetActingIdentity(w http.ResponseWriter, r *h
 
 // GetWorklist operation middleware
 func (siw *ServerInterfaceWrapper) GetWorklist(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -164450,7 +163289,6 @@ func (siw *ServerInterfaceWrapper) GetWorklist(w http.ResponseWriter, r *http.Re
 
 // MarkWorklistRowsDone operation middleware
 func (siw *ServerInterfaceWrapper) MarkWorklistRowsDone(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -164472,7 +163310,6 @@ func (siw *ServerInterfaceWrapper) MarkWorklistRowsDone(w http.ResponseWriter, r
 
 // ReopenWorklistRows operation middleware
 func (siw *ServerInterfaceWrapper) ReopenWorklistRows(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -164494,7 +163331,6 @@ func (siw *ServerInterfaceWrapper) ReopenWorklistRows(w http.ResponseWriter, r *
 
 // GetTeamExceptions operation middleware
 func (siw *ServerInterfaceWrapper) GetTeamExceptions(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -164516,7 +163352,6 @@ func (siw *ServerInterfaceWrapper) GetTeamExceptions(w http.ResponseWriter, r *h
 
 // GetHandledForYou operation middleware
 func (siw *ServerInterfaceWrapper) GetHandledForYou(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -164557,7 +163392,6 @@ func (siw *ServerInterfaceWrapper) GetHandledForYou(w http.ResponseWriter, r *ht
 
 // GetHiddenBacklog operation middleware
 func (siw *ServerInterfaceWrapper) GetHiddenBacklog(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -164579,7 +163413,6 @@ func (siw *ServerInterfaceWrapper) GetHiddenBacklog(w http.ResponseWriter, r *ht
 
 // GetHiddenBacklogRows operation middleware
 func (siw *ServerInterfaceWrapper) GetHiddenBacklogRows(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -164613,7 +163446,6 @@ func (siw *ServerInterfaceWrapper) GetHiddenBacklogRows(w http.ResponseWriter, r
 
 // UnpinWorklistRow operation middleware
 func (siw *ServerInterfaceWrapper) UnpinWorklistRow(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -164667,7 +163499,6 @@ func (siw *ServerInterfaceWrapper) UnpinWorklistRow(w http.ResponseWriter, r *ht
 
 // PinWorklistRow operation middleware
 func (siw *ServerInterfaceWrapper) PinWorklistRow(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -164689,7 +163520,6 @@ func (siw *ServerInterfaceWrapper) PinWorklistRow(w http.ResponseWriter, r *http
 
 // ConfirmMeetingReady operation middleware
 func (siw *ServerInterfaceWrapper) ConfirmMeetingReady(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -164757,7 +163587,6 @@ func (siw *ServerInterfaceWrapper) ConfirmMeetingReady(w http.ResponseWriter, r 
 
 // UndoMeetingReady operation middleware
 func (siw *ServerInterfaceWrapper) UndoMeetingReady(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -164825,7 +163654,6 @@ func (siw *ServerInterfaceWrapper) UndoMeetingReady(w http.ResponseWriter, r *ht
 
 // GetResponseMetrics operation middleware
 func (siw *ServerInterfaceWrapper) GetResponseMetrics(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -164866,7 +163694,6 @@ func (siw *ServerInterfaceWrapper) GetResponseMetrics(w http.ResponseWriter, r *
 
 // GetTeamBoard operation middleware
 func (siw *ServerInterfaceWrapper) GetTeamBoard(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -164907,7 +163734,6 @@ func (siw *ServerInterfaceWrapper) GetTeamBoard(w http.ResponseWriter, r *http.R
 
 // GetTeamMarginceChanges operation middleware
 func (siw *ServerInterfaceWrapper) GetTeamMarginceChanges(w http.ResponseWriter, r *http.Request) {
-
 	var err error
 	_ = err
 
@@ -164948,7 +163774,6 @@ func (siw *ServerInterfaceWrapper) GetTeamMarginceChanges(w http.ResponseWriter,
 
 // QueryWorkspace operation middleware
 func (siw *ServerInterfaceWrapper) QueryWorkspace(w http.ResponseWriter, r *http.Request) {
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})

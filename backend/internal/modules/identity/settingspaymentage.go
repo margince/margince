@@ -5,8 +5,10 @@ package identity
 
 import (
 	"context"
-	"fmt"
+	"errors"
+
 	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/platform/config"
 )
 
@@ -17,14 +19,22 @@ var PaymentLongOverdueDays = config.DefineStored(config.Spec[int]{
 	Type: config.Int, Default: config.Some(365),
 	Validate: func(days int) error {
 		if days < 1 || days > 3650 {
-			return fmt.Errorf("long overdue age must be 1..3650 days")
+			return errors.New("long overdue age must be 1..3650 days")
 		}
 		return nil
 	},
-	Doc: "Days overdue after which Home folds invoices into Long overdue. Company totals stay the same.",
+	Doc: "Days past the due date before Home groups invoices at the bottom. Company totals stay the same.",
 }, config.Store{Cacheable: true, RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, SurvivesDataReset: true, MachineryApplied: true})
 
 // PaymentAgeForFinance applies the grouping preference without granting settings access.
 func PaymentAgeForFinance(ctx context.Context, tx pgx.Tx) (int, error) {
 	return config.StoredApplyTx(ctx, tx, config.Bound(), PaymentLongOverdueDays)
+}
+
+func (in InstallationPatch) paymentAgeWrites() ([]pendingWrite, error) {
+	value, err := encodeStoredField(PaymentLongOverdueDays, in.PaymentLongOverdueDays)
+	if err != nil {
+		return nil, err
+	}
+	return []pendingWrite{value}, nil
 }

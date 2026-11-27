@@ -1761,6 +1761,14 @@
           "maximum": 129600,
           "default": 43200
         },
+        "payment_long_overdue_days": {
+          "description": "Days overdue after which Home folds invoices into Long overdue. Company totals stay the same.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "default": 365
+        },
         "retention_sweep_interval_seconds": {
           "description": "Seconds between the retention sweeps.",
           "type": [

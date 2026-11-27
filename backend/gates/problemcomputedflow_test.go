@@ -48,8 +48,7 @@ func (r *problemFileReader) calculatedCode(span tsSpan, path []string, depth int
 				value, ok = args[i], true
 			}
 			if !ok {
-				bound[tr.word(param.from)] = codeRead{}
-				continue
+				return codeRead{}, false
 			}
 			read, known := r.resolve(value, nil, depth+1)
 			if !known || read.helper != "" {
@@ -67,7 +66,7 @@ func (r *problemFileReader) calculatedCode(span tsSpan, path []string, depth int
 		r.flowValues = bound
 		result, known, _ := r.flowBody(fn.body, path, depth+1)
 		r.flowValues = old
-		return result, known
+		return result, known && len(result.literals) > 0
 	}
 	return codeRead{}, false
 }
@@ -90,6 +89,12 @@ func (r *problemFileReader) flowBody(body tsSpan, path []string, depth int) (cod
 	var result codeRead
 	known := true
 	for at := body.from + 1; at < body.to-1; at++ {
+		switch tr.word(at) {
+		case "switch", "try", "for", "while", "do", "throw":
+			// Opaque control flow must remain in the unresolved census.
+			return result, false, false
+		}
+
 		if tr.word(at) == "if" && tr.is(at+1, "(") {
 			end := tr.match[at+1]
 			condition, decided := r.flowCondition(tsSpan{at + 2, end})
@@ -139,7 +144,7 @@ func (r *problemFileReader) flowBody(body tsSpan, path []string, depth int) (cod
 			at = tr.match[at]
 		}
 	}
-	return result, known, false
+	return result, known && len(result.literals) > 0, false
 }
 
 func (r *problemFileReader) flowStatement(from, limit int) tsSpan {

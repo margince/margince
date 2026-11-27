@@ -117,9 +117,7 @@ export function CustomerPaymentsCard({
                 )}
             />
             {(summary?.long_overdue?.invoice_count ?? 0) > 0 && (
-              <Disclosure
-                summary={<LongOverdueSummary summary={summary} />}
-              >
+              <Disclosure summary={<LongOverdueSummary summary={summary} />}>
                 <PaymentInvoices
                   rows={pages
                     .flatMap((page) => page.data)
@@ -215,9 +213,7 @@ function PaymentOverview({
       )}
       {(summary.long_overdue?.invoice_count ?? 0) > 0 && (
         <PanelBody>
-          <Disclosure
-            summary={<LongOverdueSummary summary={summary} />}
-          >
+          <Disclosure summary={<LongOverdueSummary summary={summary} />}>
             {summary.long_overdue?.totals.map((total) => (
               <p key={total.currency} className="t-num">
                 {formatMoney(total.amount_minor, total.currency, locale)}
@@ -321,9 +317,17 @@ function PaymentInvoices({ rows }: Readonly<{ rows: PaymentInvoice[] }>) {
 }
 
 function LongOverdueSummary({ summary }: Readonly<{ summary?: Payments }>) {
- const t = useT(); const { locale } = useLocale();
- return <>
-  {t("payments.longOverdue", { count: formatNumber(summary?.long_overdue?.invoice_count ?? 0, locale) })}
-  {summary?.long_overdue?.totals.map((total) => <span className="t-num" key={total.currency}> · {formatMoney(total.amount_minor, total.currency, locale)}</span>)}
- </>;
+  const plural = usePlural();
+  const { locale } = useLocale();
+  return (
+    <>
+      {plural("payments.longOverdue", summary?.long_overdue?.invoice_count ?? 0)}
+      {summary?.long_overdue?.totals.map((total) => (
+        <span className="t-num" key={total.currency}>
+          {" "}
+          · {formatMoney(total.amount_minor, total.currency, locale)}
+        </span>
+      ))}
+    </>
+  );
 }

@@ -57,14 +57,31 @@ func (r historyImageReader) imageFieldRead(in historyImageArg, field string, dep
 		known := true
 		found := false
 		ast.Inspect(in.decl.Body, func(node ast.Node) bool {
+			if spec, ok := node.(*ast.ValueSpec); ok {
+				for at, name := range spec.Names {
+					if in.pkg.info.Defs[name] != object {
+						continue
+					}
+					found = true
+					if at < len(spec.Values) {
+						child := in
+						child.expr = spec.Values[at]
+						child.before = spec.Pos()
+						got, ok := r.imageFieldRead(child, field, depth+1, leaf)
+						keys = append(keys, got...)
+						known = known && ok
+					}
+				}
+			}
 			assignment, ok := node.(*ast.AssignStmt)
-			if !ok {
+			if !ok || (in.before > 0 && assignment.Pos() >= in.before) {
 				return true
 			}
 			for at, target := range assignment.Lhs {
 				if selector, ok := target.(*ast.SelectorExpr); ok && selector.Sel.Name == field {
 					if base, ok := selector.X.(*ast.Ident); ok && in.pkg.info.ObjectOf(base) == object && at < len(assignment.Rhs) {
 						child := in
+						child.before = assignment.Pos()
 						child.expr = assignment.Rhs[at]
 						got, ok := leaf(child, depth+1)
 						keys = append(keys, got...)
@@ -77,6 +94,7 @@ func (r historyImageReader) imageFieldRead(in historyImageArg, field string, dep
 					continue
 				}
 				child := in
+				child.before = assignment.Pos()
 				child.expr = assignment.Rhs[at]
 				got, ok := r.imageFieldRead(child, field, depth+1, leaf)
 				keys = append(keys, got...)

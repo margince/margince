@@ -394,10 +394,15 @@ describe("onboarding gate", () => {
                   headers: { "Content-Type": "application/json" },
                 },
               )
-            : new Response(JSON.stringify({ code: status === 403 ? "permission_denied" : "not_found" }), {
-                status,
-                headers: { "Content-Type": "application/problem+json" },
-              });
+            : new Response(
+                JSON.stringify({
+                  code: status === 403 ? "permission_denied" : "not_found",
+                }),
+                {
+                  status,
+                  headers: { "Content-Type": "application/problem+json" },
+                },
+              );
         }
         return new Response(JSON.stringify({ data: [], page: {} }), {
           status: 200,

@@ -4,7 +4,6 @@
 package agentloope2e
 
 import (
- "github.com/margince/margince/backend/internal/compose/aitasks"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -14,6 +13,8 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+
+	"github.com/margince/margince/backend/internal/compose/aitasks"
 )
 
 // Criterion is the judge's answer to one yes/no question about a run.
@@ -27,8 +28,8 @@ type Criterion struct {
 // answer to each criterion.
 type Run struct {
 	Recovery *aitasks.LoopRecoveryMeasure `json:"recovery,omitempty"`
- Failures []Failure   `json:"failures"`
-	Criteria []Criterion `json:"criteria"`
+	Failures []Failure                    `json:"failures"`
+	Criteria []Criterion                  `json:"criteria"`
 }
 
 // ChecksPassed says the end state failed no check.

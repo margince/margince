@@ -66,6 +66,7 @@ func TestTheHTTPStatusWinsOverAProblemBodyStatus(t *testing.T) {
 }
 
 func TestComputedStatusCallbacksKeepTheirCodeBranchesTogether(t *testing.T) {
+	t.Parallel()
 	for name, source := range map[string]string{
 		"callback":    `function statusFor(code:string){if(code==="unauthorized"){return 401;}return 404;} for(const code of ["unauthorized","not_found"]){Response.json({code},{status:statusFor(code)});}`,
 		"conditional": `const status = missing ? 404 : 401; const code = missing ? "not_found" : "unauthorized"; Response.json({code},{status});`,
@@ -91,6 +92,7 @@ func TestComputedStatusCallbacksKeepTheirCodeBranchesTogether(t *testing.T) {
 }
 
 func TestComputedProblemBranchesExposeBothWrongPairs(t *testing.T) {
+	t.Parallel()
 	source := `const status = missing ? 404 : 401; const code = missing ? "unauthorized" : "not_found"; Response.json({code},{status});`
 	tree, err := parseTS(source, "swapped.test.ts")
 	if err != nil {
@@ -106,5 +108,31 @@ func TestComputedProblemBranchesExposeBothWrongPairs(t *testing.T) {
 	}
 	if !wrong[problemStatusPair{404, "unauthorized"}] || !wrong[problemStatusPair{401, "not_found"}] {
 		t.Fatalf("wrong computed pairs were lost: %v", wrong)
+	}
+}
+
+func TestOpaqueProblemStatusFlowStaysInTheUnresolvedCensus(t *testing.T) {
+	t.Parallel()
+	for _, source := range []string{
+		`const status=(k)=>{switch(k){case "a":return 404;default:return 500}};Response.json({code:"unauthorized"},{status:status("a")});`,
+		`const status=(k)=>{try{return 404}catch{return 500}};Response.json({code:"unauthorized"},{status:status("a")});`,
+		`const status=(k)=>{for(const x of k){return 404}return 500};Response.json({code:"unauthorized"},{status:status("a")});`,
+		`const status=(k)=>k;Response.json({code:"unauthorized"},{status:status()});`,
+	} {
+		tree, err := parseTS(source, "opaque.test.ts")
+		if err != nil {
+			t.Fatal(err)
+		}
+		scan := scanProblemFile("opaque.test.ts", source, tree, map[string]bool{})
+		if len(scan.mocks) == 0 {
+			t.Fatal("an unreadable status made its mock disappear")
+		}
+		found := false
+		for _, mock := range scan.mocks {
+			found = found || mock.statusUnknown
+		}
+		if !found {
+			t.Fatalf("an opaque status was accepted as finite: %+v", scan.mocks)
+		}
 	}
 }

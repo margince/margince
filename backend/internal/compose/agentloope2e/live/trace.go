@@ -4,7 +4,6 @@
 package live
 
 import (
- "github.com/margince/margince/backend/internal/compose/aitasks"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -12,6 +11,8 @@ import (
 	"path/filepath"
 	"slices"
 	"sync"
+
+	"github.com/margince/margince/backend/internal/compose/aitasks"
 
 	"github.com/margince/margince/backend/internal/compose/agentloope2e"
 	"github.com/margince/margince/backend/internal/modules/agents/runner"
@@ -48,14 +49,14 @@ func (r *Recorder) Calls() []ai.Call {
 // never into a commit.
 type Trace struct {
 	Recovery *aitasks.LoopRecoveryMeasure `json:"recovery,omitempty"`
- Scenario string                 `json:"scenario"`
-	Binding  agentloope2e.Binding   `json:"binding"`
-	Run      int                    `json:"run"`
-	Status   string                 `json:"status"`
-	Steps    []runner.Step          `json:"steps"`
-	Calls    []ai.Call              `json:"model_calls"`
-	Failures []agentloope2e.Failure `json:"failures"`
-	Writes   []agentloope2e.Write   `json:"writes"`
+	Scenario string                       `json:"scenario"`
+	Binding  agentloope2e.Binding         `json:"binding"`
+	Run      int                          `json:"run"`
+	Status   string                       `json:"status"`
+	Steps    []runner.Step                `json:"steps"`
+	Calls    []ai.Call                    `json:"model_calls"`
+	Failures []agentloope2e.Failure       `json:"failures"`
+	Writes   []agentloope2e.Write         `json:"writes"`
 }
 
 // Write files the trace under dir and answers its path.

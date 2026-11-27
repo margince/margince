@@ -4,10 +4,11 @@
 package agentloope2e
 
 import (
- "github.com/margince/margince/backend/internal/compose/aitasks"
 	"fmt"
 	"slices"
 	"strings"
+
+	"github.com/margince/margince/backend/internal/compose/aitasks"
 
 	"github.com/margince/margince/backend/internal/modules/agents/runner"
 )
@@ -27,8 +28,8 @@ type Write struct {
 // Snapshot is the end state of one run. Only a completed run passes: a degraded
 // run, or one waiting for an approval, never reached its final answer.
 type Snapshot struct {
-	Recovery *aitasks.LoopRecoveryMeasure
- RunStatus runner.Outcome
+	Recovery  *aitasks.LoopRecoveryMeasure
+	RunStatus runner.Outcome
 	Writes    []Write
 }
 
@@ -63,12 +64,12 @@ func Check(sc Scenario, got Snapshot) []Failure {
 	if got.RunStatus != runner.OutcomeCompleted {
 		fail(CheckRunCompleted, "the run ended %q, not %q", got.RunStatus, runner.OutcomeCompleted)
 	}
- if sc.Recovery != "" {
-  if got.Recovery == nil || !got.Recovery.FirstStepCorrect || !got.Recovery.Completed || got.Recovery.Refusals < 1 || !got.Recovery.Recovered || got.Recovery.TerminalRepeated {
-   fail("refusal_recovery", "worker trace did not prove recovery: %+v", got.Recovery)
-  }
- }
- if sc.NoWrites && len(got.Writes) > 0 {
+	if sc.Recovery != "" {
+		if got.Recovery == nil || !got.Recovery.FirstStepCorrect || !got.Recovery.Completed || got.Recovery.Refusals < 1 || !got.Recovery.Recovered || got.Recovery.TerminalRepeated {
+			fail("refusal_recovery", "worker trace did not prove recovery: %+v", got.Recovery)
+		}
+	}
+	if sc.NoWrites && len(got.Writes) > 0 {
 		fail(CheckNoWrites, "the right answer was to write nothing, and the run made %d write(s)", len(got.Writes))
 		return failed
 	}

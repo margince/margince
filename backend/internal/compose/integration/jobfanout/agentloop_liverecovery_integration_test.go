@@ -8,7 +8,9 @@ package jobfanout
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"reflect"
 	"sync/atomic"
 	"testing"
 
@@ -89,7 +91,7 @@ func measureLiveRecovery(sc agentloope2e.Scenario, snap agentloope2e.Snapshot, s
 		if refused(step) {
 			measure.Refusals++
 		}
-		if i > 0 && steps[0].TerminalRefusal && step.Tool == steps[0].Tool && bytes.Equal(step.Args, steps[0].Args) {
+		if i > 0 && steps[0].TerminalRefusal && step.Tool == steps[0].Tool && sameRecoveryArgs(step.Args, steps[0].Args) {
 			measure.TerminalRepeated = true
 		}
 	}
@@ -103,7 +105,25 @@ func TestLiveLaneRecoversEachRealRefusalAndFilesTheDatabaseResult(t *testing.T) 
 	for _, kind := range []string{"bad_arguments", "unknown_field", "field_shape", "unsupported"} {
 		t.Run(kind, func(t *testing.T) {
 			lane, sc, _, _ := scriptedLane(t, "morning_brief_recovers_"+kind, 1)
-			lane.serve = servedBy(scriptedModelNamed(t, "does_the_job"))
+			candidate := scriptedModelNamed(t, "does_the_job")
+			original := candidate.script
+			candidate.script = func(t *testing.T, run loopRun) []string {
+				steps := original(t, run)
+				if run.sc.Recovery != "unsupported" {
+					return steps
+				}
+				refused := toolStep(t, "read_record", integration.AnyMap{"record_type": "deal", "id": run.probe.deals[run.sc.Worklist[0]]})
+				// The candidate can still read the brief, its activity evidence and catch-up.
+				// A terminal read refusal must not be repeated even when the goal finishes.
+				var recovered []string
+				for _, step := range steps {
+					if step != refused {
+						recovered = append(recovered, step)
+					}
+				}
+				return recovered
+			}
+			lane.serve = servedBy(candidate)
 			verdict, err := lane.certify(t, sc)
 			if err != nil {
 				t.Fatal(err)
@@ -121,9 +141,10 @@ func TestLiveLaneRecoversEachRealRefusalAndFilesTheDatabaseResult(t *testing.T) 
 
 func TestLiveRecoveryCannotPassARepeatedTerminalCallOrAnUnfinishedGoal(t *testing.T) {
 	sc := agentloope2e.Scenario{Agent: agentloope2e.MorningBrief, Recovery: "unsupported", NoWrites: true}
-	seed := runner.Step{ModelID: "fixture/recovery", Tool: "read_record", Args: []byte(`{"id":"same"}`), Admission: runner.AdmissionRefused, TerminalRefusal: true}
+	seed := runner.Step{ModelID: "fixture/recovery", Tool: "read_record", Args: []byte(`{"id":"same","record_type":"deal"}`), Admission: runner.AdmissionRefused, TerminalRefusal: true}
 	repeated := seed
 	repeated.ModelID = "candidate"
+	repeated.Args = []byte(`{"record_type":"deal","id":"same"}`)
 	snap := agentloope2e.Snapshot{RunStatus: runner.OutcomeCompleted}
 	measure := measureLiveRecovery(sc, snap, []runner.Step{seed, {Tool: "read_brief", Admission: "executed"}, repeated})
 	if !measure.TerminalRepeated || measure.Recovered {
@@ -134,4 +155,12 @@ func TestLiveRecoveryCannotPassARepeatedTerminalCallOrAnUnfinishedGoal(t *testin
 	if measure.Completed || measure.Recovered {
 		t.Fatal("unfinished worker was called recovered")
 	}
+}
+
+func sameRecoveryArgs(a, b []byte) bool {
+	var left, right any
+	if json.Unmarshal(a, &left) != nil || json.Unmarshal(b, &right) != nil {
+		return bytes.Equal(a, b)
+	}
+	return reflect.DeepEqual(left, right)
 }

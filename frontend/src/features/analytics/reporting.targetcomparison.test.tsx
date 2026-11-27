@@ -154,13 +154,11 @@ it("offers the selection the server can compare and applies it as given", async 
     },
     onApply,
   );
-  await userEvent
-    .setup()
-    .click(
-      screen.getByRole("button", {
-        name: englishCopy["reporting.compare.apply.manager_call_pipeline"],
-      }),
-    );
+  await userEvent.setup().click(
+    screen.getByRole("button", {
+      name: englishCopy["reporting.compare.apply.manager_call_pipeline"],
+    }),
+  );
   expect(onApply).toHaveBeenCalledWith(supported);
 });
 
@@ -212,12 +210,10 @@ it("takes the Overview from its default pipeline to all pipelines in one click",
       <ReportingOverview view="sales" scope={reportingStoryScope} />
     </StoryProviders>,
   );
-  await userEvent
-    .setup()
-    .click(
-      await screen.findByRole("button", {
-        name: englishCopy["reporting.compare.apply.manager_call_pipeline"],
-      }),
-    );
+  await userEvent.setup().click(
+    await screen.findByRole("button", {
+      name: englishCopy["reporting.compare.apply.manager_call_pipeline"],
+    }),
+  );
   expect(window.location.hash).toContain("pipeline=all");
 });

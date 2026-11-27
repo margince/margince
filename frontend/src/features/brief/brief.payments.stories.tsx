@@ -127,22 +127,35 @@ export const LongOverdue: Story = {
         totals: [{ currency: "EUR", amount_minor: 3800000 }],
         customers: [],
       },
-      data: [invoice, {
-        ...invoice,
-        invoice_id: "older-invoice",
-        number: "OLD-001",
-        due_at: "2025-01-01",
-        days_overdue: 620,
-        open_minor: 3800000,
-      }],
+      data: [
+        invoice,
+        {
+          ...invoice,
+          invoice_id: "older-invoice",
+          number: "OLD-001",
+          due_at: "2025-01-01",
+          days_overdue: 620,
+          open_minor: 3800000,
+        },
+      ],
     });
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const label = englishCopy["payments.longOverdue"].replace("{count}", "1");
-    expect((await canvas.findByText(label)).closest("details")).not.toHaveAttribute("open");
-    await userEvent.click(canvas.getByRole("button", { name: englishCopy["payments.viewInvoices"] }));
-    const drawer = within(await within(document.body).findByRole("dialog", { name: englishCopy["payments.viewInvoices"] }));
+    expect(
+      (await canvas.findByText(label)).closest("details"),
+    ).not.toHaveAttribute("open");
+    await userEvent.click(
+      canvas.getByRole("button", {
+        name: englishCopy["payments.viewInvoices"],
+      }),
+    );
+    const drawer = within(
+      await within(document.body).findByRole("dialog", {
+        name: englishCopy["payments.viewInvoices"],
+      }),
+    );
     expect(drawer.getByText("OLD-001")).not.toBeVisible();
     await userEvent.click(drawer.getByText(label));
     await waitFor(() => expect(drawer.getByText("OLD-001")).toBeVisible());

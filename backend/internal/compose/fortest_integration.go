@@ -16,13 +16,13 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/loopfault"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
- "github.com/margince/margince/backend/internal/compose/loopfault"
 )
 
 // ActAsImportRunForTest binds the principal an import attempt runs as, through
@@ -58,5 +58,5 @@ func WithConsentClockForTest(now func() time.Time) Option {
 
 // WithRunnerReadFailureForTest refuses selected reads inside the real registry.
 func WithRunnerReadFailureForTest(fail loopfault.Failure) RunnerOption {
- return func(s *RunnerService) { s.features.readFailure = fail }
+	return func(s *RunnerService) { s.features.readFailure = fail }
 }

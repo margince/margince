@@ -19,7 +19,7 @@ import (
 )
 
 // TestSourceJournalWriteCosts measures the real transaction, audit and outbox path.
-// It deliberately asserts rows rather than a wall-clock ceiling on a shared laptop.
+// It asserts rows and reports timing without a wall-clock ceiling on a shared laptop.
 func TestSourceJournalWriteCosts(t *testing.T) {
 	o := seedOlder(t)
 	id := o.e.SeedDeal(t, "Ordinary journal cost", o.pipeline, o.stage, nil)

@@ -5,6 +5,7 @@ package gates
 
 import (
 	"go/ast"
+	"go/token"
 	"go/types"
 	"strings"
 )
@@ -117,6 +118,10 @@ func (r historyImageReader) rangeStrings(in historyImageArg, name *ast.Ident, de
 }
 
 func (r historyImageReader) sliceStrings(in historyImageArg, depth int) ([]string, bool) {
+	if isNilExpr(in.pkg.info, in.expr) {
+		return nil, true
+	}
+
 	if depth > 32 {
 		return nil, false
 	}
@@ -160,29 +165,43 @@ func (r historyImageReader) sliceStrings(in historyImageArg, depth int) ([]strin
 			known := true
 			found := false
 			ast.Inspect(in.decl.Body, func(node ast.Node) bool {
+				if spec, ok := node.(*ast.ValueSpec); ok {
+					for at, name := range spec.Names {
+						if in.pkg.info.Defs[name] != object {
+							continue
+						}
+						found = true
+						if at < len(spec.Values) {
+							child := in
+							child.expr = spec.Values[at]
+							child.before = spec.Pos()
+							keys, ok := r.sliceStrings(child, depth+1)
+							out = append(out, keys...)
+							known = known && ok
+						}
+					}
+				}
 				assignment, ok := node.(*ast.AssignStmt)
-				if !ok {
+				if !ok || (in.before > 0 && assignment.Pos() >= in.before) {
 					return true
 				}
 				for at, target := range assignment.Lhs {
 					name, ok := target.(*ast.Ident)
-					if !ok || in.pkg.info.ObjectOf(name) != object || at >= len(assignment.Rhs) {
+					if !ok || in.pkg.info.ObjectOf(name) != object {
 						continue
 					}
-					expr := assignment.Rhs[at]
-					if call, ok := expr.(*ast.CallExpr); ok {
-						if name, ok := call.Fun.(*ast.Ident); ok && name.Name == "append" {
-							for _, arg := range call.Args[1:] {
-								keys, ok := r.strings(in, arg, depth+1)
-								out = append(out, keys...)
-								known = known && ok
-							}
-							found = true
-							continue
-						}
-					}
 					child := in
-					child.expr = expr
+					child.before = assignment.Pos()
+					child.result = 0
+					if len(assignment.Rhs) == 1 {
+						child.expr = assignment.Rhs[0]
+						child.result = at
+					} else if at < len(assignment.Rhs) {
+						child.expr = assignment.Rhs[at]
+					} else {
+						known = false
+						continue
+					}
 					keys, ok := r.sliceStrings(child, depth+1)
 					out = append(out, keys...)
 					known = known && ok
@@ -216,10 +235,36 @@ func (r historyImageReader) sliceStrings(in historyImageArg, depth int) ([]strin
 			}
 		}
 	case *ast.SelectorExpr:
+		if values, known := r.storedFieldValues(in, value, depth+1, true, r.sliceStrings); known {
+			return values, true
+		}
 		child := in
 		child.expr = value.X
 		return r.imageFieldRead(child, value.Sel.Name, depth+1, r.sliceStrings)
 	case *ast.CallExpr:
+		if name, ok := value.Fun.(*ast.Ident); ok && name.Name == "make" {
+			return nil, true
+		}
+		if name, ok := value.Fun.(*ast.Ident); ok && name.Name == "append" {
+			var out []string
+			for at, arg := range value.Args {
+				child := in
+				child.expr = arg
+				child.result = 0
+				var keys []string
+				var known bool
+				if at == 0 || (value.Ellipsis != token.NoPos && at == len(value.Args)-1) {
+					keys, known = r.sliceStrings(child, depth+1)
+				} else {
+					keys, known = r.strings(in, arg, depth+1)
+				}
+				out = append(out, keys...)
+				if !known {
+					return out, false
+				}
+			}
+			return out, true
+		}
 		return r.returnedValues(in, value, depth+1, r.sliceStrings)
 	}
 	return nil, false

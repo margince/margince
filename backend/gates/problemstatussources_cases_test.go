@@ -116,6 +116,7 @@ func TestAFieldFaultCanBeSpreadFromATypedTable(t *testing.T) {
 }
 
 func TestMessageFaultFollowsInheritedAndConditionalUnwrap(t *testing.T) {
+	t.Parallel()
 	for name, source := range map[string]string{
 		"inherited":   `type parent struct{};func(parent)Unwrap()error{return apperrors.ErrConflict};type child struct{parent};func(child)MessageFault()(string,string){return "sample","held"}`,
 		"conditional": `type child struct{missing bool};func(e child)Unwrap()error{if e.missing{return apperrors.ErrNotFound};return apperrors.ErrConflict};func(child)MessageFault()(string,string){return "sample","held"}`,
@@ -142,6 +143,7 @@ func TestMessageFaultFollowsInheritedAndConditionalUnwrap(t *testing.T) {
 }
 
 func TestGoFieldCodesFollowEveryFiniteWriterForm(t *testing.T) {
+	t.Parallel()
 	for name, source := range map[string]string{
 		"tuple":        `func codes()(int,string){return 0,"tuple_code"};func w(){_,code:=codes();_=httperr.Validation("name",code,"refused")}`,
 		"indexed":      `type row struct{Code string};var rows=map[string]row{"one":{Code:"indexed_code"}};func w(){picked:=rows["one"];_=httperr.Validation("name",picked.Code,"refused")}`,

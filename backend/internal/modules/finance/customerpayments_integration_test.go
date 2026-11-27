@@ -8,11 +8,12 @@ package finance
 import (
 	"context"
 	"encoding/json"
-	"github.com/jackc/pgx/v5"
 	"net/http"
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -264,7 +265,7 @@ func TestHomePaymentAgeDoesNotChangeACompanysFinanceTotals(t *testing.T) {
 	syncPayments(t, a)
 	a.store.SetClock(func() time.Time { return ledgerEpoch.AddDate(0, 0, 400) })
 	ctx := a.documentReader(principal.RowScopeAll)
-	before, err := a.store.SummaryFor(ctx, ids.From[ids.CompanyKind](a.company))
+	before, err := a.store.SummaryFor(ctx, a.company)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -282,7 +283,7 @@ func TestHomePaymentAgeDoesNotChangeACompanysFinanceTotals(t *testing.T) {
 	if current.InvoiceCount != aged.InvoiceCount || !reflect.DeepEqual(current.Totals, aged.Totals) {
 		t.Fatal("age setting changed Home totals")
 	}
-	after, err := a.store.SummaryFor(ctx, ids.From[ids.CompanyKind](a.company))
+	after, err := a.store.SummaryFor(ctx, a.company)
 	if err != nil {
 		t.Fatal(err)
 	}

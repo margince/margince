@@ -188,7 +188,13 @@ it.each([403, 503])(
   "does not treat a %s failure as legacy support",
   async (status) => {
     const { post } = renderPanel(written, "sales", true, () =>
-      jsonResponse({ status, code: status === 403 ? "permission_denied" : "service_unavailable" }, status),
+      jsonResponse(
+        {
+          status,
+          code: status === 403 ? "permission_denied" : "service_unavailable",
+        },
+        status,
+      ),
     );
     expect(await screen.findByRole("button", { name: "Retry" })).toBeVisible();
     expect(post).toHaveBeenCalledOnce();

@@ -26,6 +26,7 @@ func catalogProseRetiredWords(text string) []string {
 }
 
 func TestThePublishedToolProseUsesTheProductVocabulary(t *testing.T) {
+	t.Parallel()
 	source, err := gatekit.ReadFile(publishedCatalog)
 	if err != nil {
 		t.Fatal(err)
@@ -46,6 +47,7 @@ func TestThePublishedToolProseUsesTheProductVocabulary(t *testing.T) {
 }
 
 func TestCatalogVocabularyKeepsWireNamesAndRejectsRetiredProse(t *testing.T) {
+	t.Parallel()
 	for _, text := range []string{"Read the workspace.", "Open promises across the company.", "The classifier verdict is available.", "What was promised to customers?"} {
 		if len(catalogProseRetiredWords(text)) == 0 {
 			t.Errorf("accepted retired prose %q", text)

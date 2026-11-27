@@ -128,13 +128,11 @@ describe("ReportingTargets", () => {
     ).toBeTruthy();
     expect(within(row).getByText("€1,140,000")).toBeTruthy();
     expect(within(row).getByText("Sales goals 2026 · 12 months")).toBeTruthy();
-    await userEvent
-      .setup()
-      .click(
-        within(row).getByRole("button", {
-          name: englishCopy["reporting.openGoals"],
-        }),
-      );
+    await userEvent.setup().click(
+      within(row).getByRole("button", {
+        name: englishCopy["reporting.openGoals"],
+      }),
+    );
     expect(window.location.hash).toContain(
       `seller=${goalRoster.data[1]?.owner_id}`,
     );

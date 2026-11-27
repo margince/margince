@@ -184,7 +184,7 @@ func (h installationSettingsHandlers) UpdateInstallationSettings(w http.Response
 	// Same again: the entry's own validator holds the 1..168 bound and names
 	// this field when it refuses, so a second check here would say less.
 	patch.DeadWorkBannerHours = req.DeadWorkBannerHours
- patch.PaymentLongOverdueDays = req.PaymentLongOverdueDays
+	patch.PaymentLongOverdueDays = req.PaymentLongOverdueDays
 	patch.OAuthAccessTokenTTLMinutes = req.OauthAccessTokenTtlMinutes
 	// Same reasoning as the month above: the entry validates against the shared
 	// kernel's set. An unknown measure comes back naming this field and quoting
@@ -254,14 +254,14 @@ func (h installationSettingsHandlers) UpdateInstallationSettings(w http.Response
 // reason, or one off the contract's enum, tells a client nothing.
 func (h installationSettingsHandlers) toContract(s identity.InstallationSettings) crmcontracts.InstallationSettings {
 	out := crmcontracts.InstallationSettings{
-		Name:                 s.Name,
-		Timezone:             s.Timezone,
-		BaseCurrency:         s.BaseCurrency,
-		BaseLanguage:         crmcontracts.InstallationSettingsBaseLanguage(s.BaseLanguage),
-		MemberLanguages:      memberLanguages(s.MemberLanguages),
-		FiscalYearStartMonth: s.FiscalYearStartMonth,
-		DeadWorkBannerHours:  s.DeadWorkBannerHours,
- PaymentLongOverdueDays: new(s.PaymentLongOverdueDays),
+		Name:                   s.Name,
+		Timezone:               s.Timezone,
+		BaseCurrency:           s.BaseCurrency,
+		BaseLanguage:           crmcontracts.InstallationSettingsBaseLanguage(s.BaseLanguage),
+		MemberLanguages:        memberLanguages(s.MemberLanguages),
+		FiscalYearStartMonth:   s.FiscalYearStartMonth,
+		DeadWorkBannerHours:    s.DeadWorkBannerHours,
+		PaymentLongOverdueDays: new(s.PaymentLongOverdueDays),
 		ForecastForwardMeasure: crmcontracts.InstallationSettingsForecastForwardMeasure(
 			s.ForecastForwardMeasure,
 		),

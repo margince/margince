@@ -2,6 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import ts from "typescript";
+import { join } from "node:path";
+import { srcDir } from "../tree";
 import type { CensusRule } from "../tree";
 
 export const MIN_CATALOG_ASSERTION_LENGTH = 12;
@@ -123,7 +125,7 @@ export function literalCatalogAssertions(
 }
 
 export const rule: CensusRule = {
-  name: "rendered catalog assertions follow the catalog",
+  name: "catalog-assertions",
   corpus: (tree) =>
     tree.files.filter(
       (file) =>
@@ -133,12 +135,12 @@ export const rule: CensusRule = {
     ...(corpus.length > 500
       ? []
       : ["fewer than 500 test and story modules were read"]),
-    ...(tree.at("src/i18n/en.ts")?.source
+    ...(tree.at(join(srcDir, "i18n/en.ts"))?.source
       ? []
       : ["the English catalog was not read"]),
   ],
   across: (corpus, tree) => {
-    const catalog = tree.at("src/i18n/en.ts")?.source;
+    const catalog = tree.at(join(srcDir, "i18n/en.ts"))?.source;
     if (!catalog) {
       return ["the English catalog could not be parsed"];
     }

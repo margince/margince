@@ -36,8 +36,8 @@ type Store struct {
 	// panel rather than failing.
 	billingContacts BillingContactReader
 	// sources resolves the providers Connect can open; nil offers none.
-	sources Sources
- paymentAge PaymentAgeReader
+	sources    Sources
+	paymentAge PaymentAgeReader
 }
 
 // BaseCurrencyFunc resolves the installation's reporting currency inside a

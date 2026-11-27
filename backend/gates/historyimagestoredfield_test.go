@@ -7,31 +7,74 @@ import (
 	"go/ast"
 	"go/types"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
+	"sync"
 )
 
-var historySelectColumns = regexp.MustCompile(`(?is)SELECT\s+([a-z_.,\s]+)\s+FROM\s+([a-z_]+)\b`)
-var historyInsertColumns = regexp.MustCompile(`(?is)INSERT\s+INTO\s+([a-z_]+)\s*\(([^)]+)\)\s*VALUES\s*\(([^)]+)\)`)
+type historyStoredCacheKey struct {
+	index  *auditIndex
+	field  *types.Var
+	flavor int
+}
+type historyStoredCacheValue struct {
+	values []string
+	known  bool
+}
+
+var historyStoredReads sync.Map
+
+var (
+	historySelectColumns = regexp.MustCompile(`(?is)SELECT\s+(.+?)\s+FROM\s+([a-z_]+)\b`)
+	historyInsertColumns = regexp.MustCompile(`(?is)INSERT\s+INTO\s+([a-z_]+)\s*\(([^)]+)\)\s*VALUES\s*\(([^)]+)\)`)
+)
 
 // A private field read back from a ledger has the vocabulary its insert stored.
 // Require the same typed field at both ends; an arbitrary scanned string stays unreadable.
 func (r historyImageReader) storedFieldStrings(in historyImageArg, selected *ast.SelectorExpr, depth int) ([]string, bool) {
+	return r.storedFieldValues(in, selected, depth, false, func(child historyImageArg, d int) ([]string, bool) { return r.strings(child, child.expr, d) })
+}
+
+func (r historyImageReader) storedFieldValues(in historyImageArg, selected *ast.SelectorExpr, depth int, array bool, read func(historyImageArg, int) ([]string, bool)) (cacheValues []string, cacheKnown bool) {
 	if depth > 32 {
 		return nil, false
 	}
 	field, ok := in.pkg.info.Uses[selected.Sel].(*types.Var)
-	if !ok || !field.IsField() || field.Exported() {
+	if !ok || !field.IsField() || (field.Exported() && !array) {
 		return nil, false
 	}
 	field = field.Origin()
+	flavor := 1
+	if array {
+		flavor = 2
+	}
+	cacheKey := historyStoredCacheKey{r.index, field, flavor}
+	if cached, ok := historyStoredReads.Load(cacheKey); ok {
+		value := cached.(historyStoredCacheValue)
+		return value.values, value.known
+	}
+	outer := len(r.storedFieldBusy) == 0
+	if outer {
+		defer func() {
+			historyStoredReads.Store(cacheKey, historyStoredCacheValue{slices.Clone(cacheValues), cacheKnown})
+		}()
+	}
+	if r.storedFieldBusy == nil {
+		r.storedFieldBusy = map[*types.Var]bool{}
+	}
+	if r.storedFieldBusy[field] {
+		return nil, true
+	}
+	r.storedFieldBusy[field] = true
+	defer delete(r.storedFieldBusy, field)
 	writes := r.index.fields().writes[field]
 	var values []string
 	table, column := "", ""
 	scanned := false
 	for _, write := range writes {
 		if write.value != nil {
-			got, ok := r.strings(historyImageArg{pkg: write.pkg, decl: write.decl}, write.value, depth+1)
+			got, ok := read(historyImageArg{expr: write.value, pkg: write.pkg, decl: write.decl}, depth+1)
 			if !ok {
 				return nil, false
 			}
@@ -52,6 +95,7 @@ func (r historyImageReader) storedFieldStrings(in historyImageArg, selected *ast
 	}
 	inserted := false
 	known := true
+	updateColumn := regexp.MustCompile(`(?is)\bUPDATE\s+` + regexp.QuoteMeta(table) + `\s+SET\s+` + regexp.QuoteMeta(column) + `\s*=`)
 	for at := range r.index.pkgs {
 		pkg := &r.index.pkgs[at]
 		for _, file := range pkg.files {
@@ -64,7 +108,7 @@ func (r historyImageReader) storedFieldStrings(in historyImageArg, selected *ast
 				if !ok {
 					return true
 				}
-				if regexp.MustCompile(`(?is)\bUPDATE\s+` + regexp.QuoteMeta(table) + `\s+SET\s+` + regexp.QuoteMeta(column) + `\s*=`).MatchString(sql) {
+				if updateColumn.MatchString(sql) {
 					known = false
 				}
 				match := historyInsertColumns.FindStringSubmatch(sql)
@@ -130,24 +174,43 @@ func historyScannedField(pkg *typedPackage, fn *ast.FuncDecl, field *types.Var) 
 	for _, sql := range queries {
 		match := historySelectColumns.FindStringSubmatch(sql)
 		if match == nil {
-			continue
+			insert := historyInsertColumns.FindStringSubmatch(sql)
+			_, returned, ok := strings.Cut(sql, "RETURNING ")
+			if insert == nil || !ok {
+				continue
+			}
+			match = []string{"", returned, insert[1]}
 		}
 		columns := strings.Split(match[1], ",")
 		if position < len(columns) {
-			return match[2], strings.TrimSpace(columns[position]), true
+			_, column, _ := strings.Cut(strings.TrimSpace(columns[position]), ".")
+			if column == "" {
+				column = strings.TrimSpace(columns[position])
+			}
+			return match[2], column, true
 		}
 	}
 	return "", "", false
 }
 
 // Private constructor fields can carry a local closure's parameter as their key.
-func (r historyImageReader) privateFieldStrings(in historyImageArg, selected *ast.SelectorExpr, depth int) ([]string, bool) {
+func (r historyImageReader) privateFieldStrings(in historyImageArg, selected *ast.SelectorExpr, depth int) (cacheValues []string, cacheKnown bool) {
 	if depth > 32 {
 		return nil, false
 	}
 	field := auditSelectedField(in.pkg.info, selected)
 	if field == nil || field.Exported() {
 		return nil, false
+	}
+	cacheKey := historyStoredCacheKey{r.index, field, 3}
+	if cached, ok := historyStoredReads.Load(cacheKey); ok {
+		value := cached.(historyStoredCacheValue)
+		return value.values, value.known
+	}
+	if len(r.stringFieldBusy) == 0 {
+		defer func() {
+			historyStoredReads.Store(cacheKey, historyStoredCacheValue{slices.Clone(cacheValues), cacheKnown})
+		}()
 	}
 	if r.stringFieldBusy == nil {
 		r.stringFieldBusy = map[*types.Var]bool{}

@@ -424,13 +424,11 @@ describe("what the drawer says about who reads a message", () => {
         vi.fn(async () => Response.json({ ...outcome, activity_ids: [] })),
       );
 
-      await userEvent
-        .setup()
-        .click(
-          screen.getByRole("button", {
-            name: englishCopy["compose.threadShare"],
-          }),
-        );
+      await userEvent.setup().click(
+        screen.getByRole("button", {
+          name: englishCopy["compose.threadShare"],
+        }),
+      );
 
       expect(await screen.findByText(said)).toBeTruthy();
     },

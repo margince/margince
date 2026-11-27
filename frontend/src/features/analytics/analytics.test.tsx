@@ -137,13 +137,11 @@ describe("the data coverage section", () => {
     await userEvent
       .setup()
       .click(await screen.findByRole("button", { name: "Setup" }));
-    await userEvent
-      .setup()
-      .click(
-        await screen.findByRole("button", {
-          name: en["analytics.sectionCoverage"],
-        }),
-      );
+    await userEvent.setup().click(
+      await screen.findByRole("button", {
+        name: en["analytics.sectionCoverage"],
+      }),
+    );
     expect(await screen.findByText("Checked")).toBeTruthy();
     expect(screen.getByText("mailbox")).toBeTruthy();
     expect(screen.getByText(en["analytics.covNotConnected"])).toBeTruthy();
@@ -156,13 +154,11 @@ describe("the data coverage section", () => {
     await userEvent
       .setup()
       .click(await screen.findByRole("button", { name: "Setup" }));
-    await userEvent
-      .setup()
-      .click(
-        await screen.findByRole("button", {
-          name: en["analytics.sectionCoverage"],
-        }),
-      );
+    await userEvent.setup().click(
+      await screen.findByRole("button", {
+        name: en["analytics.sectionCoverage"],
+      }),
+    );
     expect(
       await screen.findByText(en["analytics.coverageNeverRun"]),
     ).toBeTruthy();

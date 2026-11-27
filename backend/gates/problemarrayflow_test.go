@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+//gate:kind falsification H3
+
 package gates
 
 import (
@@ -138,6 +140,7 @@ func TestEveryProblemMockBodyAgreesWithItsTransport(t *testing.T) {
 }
 
 func TestProblemArraysFollowParametersRestAndSpread(t *testing.T) {
+	t.Parallel()
 	for name, source := range map[string]string{
 		"parameter": `function refuse(errors:Fault[]){return {status:422,code:"validation_error",details:{errors}}} refuse([{field:"name",code:"too_long"}]);`,
 		"rest":      `function refuse(...faults:Fault[]){return {status:422,code:"validation_error",details:{errors:faults}}} refuse({field:"name",code:"too_long"});`,
@@ -160,6 +163,7 @@ func TestProblemArraysFollowParametersRestAndSpread(t *testing.T) {
 }
 
 func TestProblemBodyStatusMismatchIsFoundThroughHelpers(t *testing.T) {
+	t.Parallel()
 	for _, source := range []string{
 		`Response.json({status:404,code:"unauthorized"},{status:401});`,
 		`function refused(code:string){return {status:404,code}} Response.json(refused("unauthorized"),{status:401});`,

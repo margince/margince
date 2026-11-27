@@ -85,7 +85,7 @@ type DealTaskSettler interface {
 // declared verb with no tool is not a gap to describe here:
 // TestEveryDeclaredToolVerbIsRegistered fails the build for it.
 func RegisterCoreTools(r *Registry, p datasource.SystemOfRecordProvider, stages StageResolver, promoter LeadPromoter, consumerMail ConsumerMail, duplicates OpenDuplicatesFor, tagOffer TagOfferFor) {
-	r.Register(readRecord{p: p, name: r.seats, sidecars: r.recordSidecars})
+	r.Register(readRecord{p: p, name: r.seats, sidecars: r.recordSidecars, fail: r.readRecordFailure})
 	r.Register(createRecord{p: p, duplicates: duplicates, tagOffer: tagOffer, language: r.language, words: r.changeWords})
 	r.Register(updateRecord{p: p, language: r.language, words: r.changeWords})
 	r.Register(logActivity{p: p})
@@ -167,6 +167,7 @@ type readRecord struct {
 	p        datasource.SystemOfRecordProvider
 	name     SeatNamer
 	sidecars RecordSidecarsFor
+	fail     func(context.Context, datasource.EntityRef) error
 }
 
 func (t readRecord) Spec() mcp.ToolSpec {
@@ -188,6 +189,11 @@ func (t readRecord) Handle(ctx context.Context, in json.RawMessage) (json.RawMes
 	ref, err := DecodeReadRecordArguments(in)
 	if err != nil {
 		return nil, err
+	}
+	if t.fail != nil {
+		if err := t.fail(ctx, ref); err != nil {
+			return nil, err
+		}
 	}
 	rec, err := t.p.Read(ctx, ref)
 	if err != nil {

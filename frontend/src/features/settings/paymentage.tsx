@@ -10,7 +10,7 @@ import { lockReasonOr } from "../../format/settinglocks";
 import { useT } from "../../i18n";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { useInstallationSettings } from "../../lib/uploadlimit";
-import { useUpdateInstallationSettings } from "../sign-in/installation-settings";
+import { useUpdateInstallationSettings } from "../../lib/installation-settings.update";
 
 const PAYMENT_AGE_BOUNDS = {
   payment_long_overdue_days: { min: 1, max: 3650 },

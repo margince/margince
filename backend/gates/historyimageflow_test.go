@@ -29,6 +29,7 @@ type historyImageReader struct {
 	fieldScanBusy   map[*types.Var]bool
 	patchBusy       map[types.Object]bool
 	stringFieldBusy map[*types.Var]bool
+	storedFieldBusy map[*types.Var]bool
 }
 
 func historyStructKeys(typ types.Type) ([]string, bool) {
@@ -106,7 +107,7 @@ func (r historyImageReader) keys(in historyImageArg, depth int) ([]string, bool)
 				}
 			}
 		}
-		if selector, ok := value.Fun.(*ast.SelectorExpr); ok && (selector.Sel.Name == "Before" || selector.Sel.Name == "After") {
+		if selector, ok := value.Fun.(*ast.SelectorExpr); ok && (selector.Sel.Name == "Before" || selector.Sel.Name == "After" || selector.Sel.Name == "Moved") {
 			if callee := auditCallee(in.pkg.info, value); callee != nil && strings.Contains(callee.FullName(), "/storekit.Patch).") {
 				return r.patchKeys(in, value, depth)
 			}
@@ -176,7 +177,6 @@ func (r historyImageReader) namedKeys(in historyImageArg, name *ast.Ident, depth
 	var keys []string
 	found, known := false, true
 	ast.Inspect(in.decl.Body, func(node ast.Node) bool {
-
 		if call, ok := node.(*ast.CallExpr); ok && len(call.Args) == 2 {
 			callee := auditCallee(in.pkg.info, call)
 			receiver, isName := call.Args[0].(*ast.Ident)

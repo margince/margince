@@ -31,7 +31,9 @@ func TestAgentLoopScenariosJudgeTheEndStateOfAScriptedModel(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, sc := range scenarios {
- if sc.Recovery != "" { continue } // TestLiveLaneRecoversEachRealRefusalAndFilesTheDatabaseResult drives these through the worker.
+		if sc.Recovery != "" {
+			continue
+		} // TestLiveLaneRecoversEachRealRefusalAndFilesTheDatabaseResult drives these through the worker.
 		for _, model := range loopModels {
 			if !model.want.applies(sc) {
 				continue

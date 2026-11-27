@@ -108,13 +108,11 @@ describe("HealthChecks", () => {
 
   it("opens the page that sets a check up", async () => {
     renderChecks();
-    await userEvent
-      .setup()
-      .click(
-        screen.getByRole("button", {
-          name: englishCopy["health.setup.providersSilent.action"],
-        }),
-      );
+    await userEvent.setup().click(
+      screen.getByRole("button", {
+        name: englishCopy["health.setup.providersSilent.action"],
+      }),
+    );
     expect(window.location.hash).toBe("#/settings/models");
   });
 

@@ -84,13 +84,11 @@ describe("an offer made from the deal", () => {
     expect(
       await screen.findByText(englishCopy["offer.fromDeal.stale"]),
     ).toBeTruthy();
-    await userEvent
-      .setup()
-      .click(
-        screen.getByRole("button", {
-          name: englishCopy["offer.fromDeal.refresh"],
-        }),
-      );
+    await userEvent.setup().click(
+      screen.getByRole("button", {
+        name: englishCopy["offer.fromDeal.refresh"],
+      }),
+    );
     await waitFor(() => expect(posted).toEqual([{ expected_revision: 3 }]));
   });
 

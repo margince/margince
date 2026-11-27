@@ -3,13 +3,22 @@
 // use {name} and are filled by t(key, params).
 // Every value is written to docs/reference/ui-copy-style.md.
 export const en = {
+  "history.field.email_security": "Email security",
+  "history.field.employee_range": "Employee count range",
+  "history.field.founded_year": "Year founded",
+  "history.field.hosting_provider": "Hosting provider",
+  "history.field.mail_provider": "Email provider",
+  "history.field.named_customer": "Named customers",
+  "history.field.quantified_outcome": "Measured outcome",
+  "history.field.served_industry": "Industries served",
   "systemJob.website_lead_owner": "Telling the website lead owner",
   "history.field.close_date_provisional": "Provisional close date",
   "history.field.commercial_mode": "Commercial model",
   "history.field.commercial_revision": "Commercial revision",
   "history.field.converted_from_lead_id": "Original lead",
   "history.field.deals.maintenance_writes_enabled": "Deal maintenance enabled",
-  "history.field.deals.silent_close_days": "Days before marking a deal as quiet",
+  "history.field.deals.silent_close_days":
+    "Days before marking a deal as quiet",
   "history.field.Unowned": "Without owner",
   "history.field.activated_at": "Activated on",
   "history.field.activation_basis": "Activation basis",
@@ -33,8 +42,10 @@ export const en = {
   "history.field.claim_kind": "Commitment type",
   "history.field.claim_status": "Commitment status",
   "history.field.commitment_admission": "Commitment evidence check",
-  "history.field.commitment_admission_erased": "Commitment evidence check erased",
-  "history.field.commitment_admission_redacted": "Commitment evidence check redacted",
+  "history.field.commitment_admission_erased":
+    "Commitment evidence check erased",
+  "history.field.commitment_admission_redacted":
+    "Commitment evidence check redacted",
   "history.field.commitment_locator": "Commitment source reference",
   "history.field.corroboration": "Supporting evidence",
   "history.field.counterparty_email": "Counterparty email",
@@ -74,7 +85,8 @@ export const en = {
   "history.field.next_step_due_at": "Next step due on",
   "history.field.owed_verdict": "Request result",
   "history.field.owed_verdict_ruleset": "Request rules version",
-  "history.field.participant_addresses_not_lowercase": "Participant addresses with mixed case",
+  "history.field.participant_addresses_not_lowercase":
+    "Participant addresses with mixed case",
   "history.field.participant_seats": "Participant members",
   "history.field.participant_users": "Participating users",
   "history.field.partner_accepted_at": "Partner accepted on",
@@ -113,7 +125,8 @@ export const en = {
   "history.field.task_activity_id": "Task",
   "history.field.updated_at": "Updated on",
   "history.field.verdict": "Result",
-  "payments.longOverdue": "Long overdue: {count} invoices",
+  "payments.longOverdue_one": "Long overdue: {count} invoice",
+  "payments.longOverdue_other": "Long overdue: {count} invoices",
   "payments.checkWriteOff": "Check whether to write these off in {provider}.",
   "payments.checkWriteOffUnknown":
     "Check whether to write these off in your accounting system.",

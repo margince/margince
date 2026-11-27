@@ -50,13 +50,11 @@ it("points an empty own scope to Whole company", async () => {
   expect(
     screen.getByText(englishCopy["analytics.emptyOwnTitle"]),
   ).toBeInTheDocument();
-  await userEvent
-    .setup()
-    .click(
-      screen.getByRole("button", {
-        name: englishCopy["analytics.emptyOwnAction"],
-      }),
-    );
+  await userEvent.setup().click(
+    screen.getByRole("button", {
+      name: englishCopy["analytics.emptyOwnAction"],
+    }),
+  );
   expect(select).toHaveBeenCalledWith(company);
 });
 

@@ -161,10 +161,14 @@ func keepSourceAudits(ctx context.Context, tx pgx.Tx, idsWritten []ids.UUID, mat
 		return nil
 	}
 	state, err := database.Remember(owner, "source_commit_state", func() (*sourceCommitState, error) {
-		return &sourceCommitState{audits: map[ids.UUID]sourceChange{}, owners: map[ids.UUID]context.Context{}, ctx: ctx}, nil
+		return &sourceCommitState{ctx: ctx}, nil
 	})
 	if err != nil {
 		return err
+	}
+	if len(matched) > 0 && state.audits == nil {
+		state.audits = map[ids.UUID]sourceChange{}
+		state.owners = map[ids.UUID]context.Context{}
 	}
 	for index, change := range matched {
 		auditID := idsWritten[index]

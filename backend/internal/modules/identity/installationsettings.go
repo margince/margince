@@ -50,7 +50,7 @@ type InstallationSettings struct {
 	// it calls dead work a problem. The full count stays a report figure; this
 	// bounds the one that is styled as an alarm.
 	PaymentLongOverdueDays int
- DeadWorkBannerHours int
+	DeadWorkBannerHours    int
 	// OAuthAccessTokenTTLMinutes is how long a connector's access token lives.
 	OAuthAccessTokenTTLMinutes int
 	// ForecastForwardMeasure is which remaining-pipeline reading a projected
@@ -82,15 +82,15 @@ type InstallationSettings struct {
 // them are *string and a transposed pair would write a language into the
 // currency row and pass the type checker.
 type InstallationPatch struct {
-	Name                 *string
-	Timezone             *string
-	BaseCurrency         *string
-	BaseLanguage         *string
-	DateFormat           *string
-	TimeFormat           *string
-	FiscalYearStartMonth *int
+	Name                   *string
+	Timezone               *string
+	BaseCurrency           *string
+	BaseLanguage           *string
+	DateFormat             *string
+	TimeFormat             *string
+	FiscalYearStartMonth   *int
 	PaymentLongOverdueDays *int
- DeadWorkBannerHours  *int
+	DeadWorkBannerHours    *int
 	// OAuthAccessTokenTTLMinutes reaches the next token minted, never one
 	// already issued.
 	OAuthAccessTokenTTLMinutes *int
@@ -210,8 +210,10 @@ func (s *InstallationSettingsStore) GetInstallation(ctx context.Context) (Instal
 		return InstallationSettings{}, err
 	}
 	paymentAge, err := config.StoredVal(ctx, s.config, PaymentLongOverdueDays)
- if err != nil { return InstallationSettings{}, err }
- bannerHours, err := config.StoredVal(ctx, s.config, DeadWorkBannerHours)
+	if err != nil {
+		return InstallationSettings{}, err
+	}
+	bannerHours, err := config.StoredVal(ctx, s.config, DeadWorkBannerHours)
 	if err != nil {
 		return InstallationSettings{}, err
 	}
@@ -247,7 +249,7 @@ func (s *InstallationSettingsStore) GetInstallation(ctx context.Context) (Instal
 		Name: name, Timezone: zone, BaseCurrency: currency, BaseLanguage: language, DateFormat: dateFormat, TimeFormat: timeFormat,
 		FiscalYearStartMonth:       fiscalStart,
 		DeadWorkBannerHours:        bannerHours,
- PaymentLongOverdueDays: paymentAge,
+		PaymentLongOverdueDays:     paymentAge,
 		OAuthAccessTokenTTLMinutes: tokenTTL,
 		ForecastForwardMeasure:     measure,
 		BaseCurrencyLocked:         locked, BaseCurrencyLock: lock,
@@ -322,9 +324,7 @@ func encodeInstallationPatch(in InstallationPatch) ([]pendingWrite, error) {
 	if err != nil {
 		return nil, err
 	}
-	paymentAge, err := encodeStoredField(PaymentLongOverdueDays, in.PaymentLongOverdueDays)
- if err != nil { return nil, err }
- bannerHours, err := encodeStoredField(DeadWorkBannerHours, in.DeadWorkBannerHours)
+	bannerHours, err := encodeStoredField(DeadWorkBannerHours, in.DeadWorkBannerHours)
 	if err != nil {
 		return nil, err
 	}
@@ -372,10 +372,10 @@ func encodeInstallationPatch(in InstallationPatch) ([]pendingWrite, error) {
 	if err != nil {
 		return nil, err
 	}
-	fields := []pendingWrite{name, zone, currency, language, fiscal, bannerHours, paymentAge, tokenTTL, measure, providers, dateFormat, timeFormat, requireSSO, requireMFA, groupRoleMap, country, dynamic, metadataDocuments}
+	fields := []pendingWrite{name, zone, currency, language, fiscal, bannerHours, tokenTTL, measure, providers, dateFormat, timeFormat, requireSSO, requireMFA, groupRoleMap, country, dynamic, metadataDocuments}
 	for _, group := range []func() ([]pendingWrite, error){
 		in.Operations.writes, in.AgentAllowances.writes, in.callMessengerWrites, in.individualPerformanceWrites,
-		in.forecastSelfCorrectingWrites, in.forecastLikelyThresholdWrites, in.clientCheckWrites,
+		in.forecastSelfCorrectingWrites, in.forecastLikelyThresholdWrites, in.clientCheckWrites, in.paymentAgeWrites,
 	} {
 		writes, err := group()
 		if err != nil {

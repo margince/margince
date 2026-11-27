@@ -296,13 +296,11 @@ describe("Ask about this account, scoped to a project", () => {
         projects={view.projects}
       />,
     );
-    await userEvent
-      .setup()
-      .click(
-        screen.getByRole("button", {
-          name: englishCopy["co.ask.q.whats_open"],
-        }),
-      );
+    await userEvent.setup().click(
+      screen.getByRole("button", {
+        name: englishCopy["co.ask.q.whats_open"],
+      }),
+    );
 
     await waitFor(() => expect(seen).toHaveLength(1));
     expect(seen[0].body).toEqual({ question: "whats_open" });

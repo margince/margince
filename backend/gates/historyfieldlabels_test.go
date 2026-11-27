@@ -144,11 +144,23 @@ func labelFindings(emitted map[string]string, contract, synthetic map[string]boo
 // sharedHistoryWords ratifies each hand-built key that a contract column
 // already claims.
 var sharedHistoryWords = gatekit.Waive(map[string]string{
-	"company_id":  "the confirmed company link on a lead names the same company that the record form and its history label name",
-	"email":       "the contact's address either way — the stranded-capture sweep names the field an edit names",
-	"occurred_at": "when the thing happened, for an activity's column and for a qualifying event alike",
-	"social":      "the contact's social profiles, whether a LinkedIn match or a human filled them in",
-	"source":      "where the record came from, for an activity's column and for a withdrawal's press",
+	"address_city":        "the merge and name-fill writers name the same stored contact column that the record editor and History label name",
+	"address_country":     "the merge and name-fill writers name the same stored contact column that the record editor and History label name",
+	"address_line1":       "the merge and name-fill writers name the same stored contact column that the record editor and History label name",
+	"address_line2":       "the merge and name-fill writers name the same stored contact column that the record editor and History label name",
+	"address_postal_code": "the merge and name-fill writers name the same stored contact column that the record editor and History label name",
+	"address_region":      "the merge and name-fill writers name the same stored contact column that the record editor and History label name",
+	"first_name":          "the merge and name-fill writers name the same stored contact column that the record editor and History label name",
+	"full_name":           "the merge and name-fill writers name the same stored contact column that the record editor and History label name",
+	"greeting_register":   "the merge and name-fill writers name the same stored contact column that the record editor and History label name",
+	"last_name":           "the merge and name-fill writers name the same stored contact column that the record editor and History label name",
+	"salutation":          "the merge and name-fill writers name the same stored contact column that the record editor and History label name",
+	"title":               "the merge and name-fill writers name the same stored contact column that the record editor and History label name",
+	"company_id":          "the confirmed company link on a lead names the same company that the record form and its history label name",
+	"email":               "the contact's address either way — the stranded-capture sweep names the field an edit names",
+	"occurred_at":         "when the thing happened, for an activity's column and for a qualifying event alike",
+	"social":              "the contact's social profiles, whether a LinkedIn match or a human filled them in",
+	"source":              "where the record came from, for an activity's column and for a withdrawal's press",
 })
 
 // runtimeAuditImages ratifies a site whose image this walk cannot read: the map

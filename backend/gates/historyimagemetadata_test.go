@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -99,7 +100,17 @@ func (r historyImageReader) metadataStrings(in historyImageArg, expr ast.Expr) (
 			return true
 		}
 		if len(call.Args) > 1 {
-			if sql, ok := auditConstString(in.pkg.info, call.Args[1]); ok && strings.Contains(sql, "field_provenance") && strings.Contains(sql, "RETURNING f.object_id, f.field_name") && strings.Contains(sql, "object_type = 'company'") {
+			var pieces []string
+			ast.Inspect(call.Args[1], func(node ast.Node) bool {
+				if literal, ok := node.(*ast.BasicLit); ok {
+					if text, err := strconv.Unquote(literal.Value); err == nil {
+						pieces = append(pieces, text)
+					}
+				}
+				return true
+			})
+			sql := strings.Join(pieces, "")
+			if strings.Contains(sql, "field_provenance") && strings.Contains(sql, "RETURNING f.object_id, f.field_name") && strings.Contains(sql, "object_type = 'company'") {
 				constrained = true
 			}
 		}
