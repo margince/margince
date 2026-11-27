@@ -130,6 +130,7 @@ var predicateDealReads = gatekit.Waive(map[string]string{
 // gate would admit them anyway and the entry records why asking was never the
 // point.
 var lifecycleDealReads = gatekit.Waive(map[string]string{
+	"internal/modules/privacy/erasurebriefcache.go:summarisedRecords":           "the contact-delete-authorized eraser and the retention anonymize read a deal only for its company id, to delete the cached summaries of both inside the same transaction. Only ids leave the statement, and they go to the store that deletes them",
 	"internal/modules/deals/proposalstage.go:ProposalStageFor":                  "the deal a sent proposal went out on, read under the system principal by the suggester to decide whether the owner is asked at all. The name, stage and status leave only into an approval whose decider is the deal's owner, and whose deciding takes deal update (approvals decisionGrants) and the owner-only narrowing (seatnarrowing.go)",
 	"internal/modules/deals/proposalstage.go:proposalStillApplies":              "re-reads a deal's status, hold and stage under the deal's row lock inside the accept, past the approvals engine's deal update grant for the deciding owner. Only a refusal reason leaves it",
 	"internal/modules/deals/proposalstage.go:ProposalStageOutdated":             "whether a waiting proposal question has nothing left to ask, read under the system principal by the sweep that withdraws it. One boolean leaves, and no deal field",
