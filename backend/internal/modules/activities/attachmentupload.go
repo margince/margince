@@ -126,19 +126,9 @@ func (s *Store) upload(ctx context.Context, in AttachmentInput, reuse bool) (crm
 		return crmcontracts.Attachment{}, false, err
 	}
 
-	checksum, size, err := blobstore.Digest(in.Content)
+	checksum, size, err := digestUpload(in)
 	if err != nil {
 		return crmcontracts.Attachment{}, false, err
-	}
-	// Refused HERE, where the contact still has the file in front of them and can
-	// pick the one they meant. A file with no content is not a limit one
-	// transport dislikes — no send path anywhere can do anything with it — and
-	// the counted size is the only honest witness: a declared length can
-	// disagree with the bytes, which is why nothing declares one.
-	//
-	// Before the object is stored, so an empty upload leaves nothing behind.
-	if size == 0 {
-		return crmcontracts.Attachment{}, false, &EmptyUploadError{Filename: in.Filename}
 	}
 	if reuse {
 		if held, found, err := s.identicalAttachment(ctx, in, checksum, size); err != nil || found {
@@ -240,6 +230,20 @@ func (s *Store) identicalAttachment(ctx context.Context, in AttachmentInput, che
 // and are shown by the same list.
 //
 // The type is resolved from the typed name and then held against the bytes.
+// digestUpload counts and hashes the bytes, and refuses an empty file before
+// any object is stored. The counted size decides, because a declared length can
+// disagree with the bytes.
+func digestUpload(in AttachmentInput) (string, int64, error) {
+	checksum, size, err := blobstore.Digest(in.Content)
+	if err != nil {
+		return "", 0, err
+	}
+	if size == 0 {
+		return "", 0, &EmptyUploadError{Filename: in.Filename}
+	}
+	return checksum, size, nil
+}
+
 func acceptUploadedFile(in AttachmentInput) (AttachmentInput, error) {
 	typed := in.Filename
 	in.Filename = extension.SafeFilename(in.Filename, 0)

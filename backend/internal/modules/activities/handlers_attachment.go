@@ -16,6 +16,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// formFlagSet is how a multipart form field spells a boolean flag that is on.
+const formFlagSet = "true"
+
 // multipartSpillBytes is how much of an upload is held in memory before the
 // rest goes to a temp file.
 //
@@ -160,7 +163,7 @@ func (h Handlers) UploadAttachment(w http.ResponseWriter, r *http.Request) {
 	}
 	// 200, not 201, when the sender asked for a file the record already holds
 	// instead of a copy, and it was there.
-	att, reused, err := h.store.upload(r.Context(), in, r.FormValue("reuse_identical") == "true")
+	att, reused, err := h.store.upload(r.Context(), in, r.FormValue("reuse_identical") == formFlagSet)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
