@@ -886,7 +886,6 @@ public.import_run.error document checked: fixed stop causes only
 public.import_run.job_status document
 public.import_run.phase document
 public.import_run.phase_object document
-public.import_run.source document
 public.import_run.source_name exempt generated from independently checked source columns
 public.import_run.source_ref document
 public.import_run.status document

@@ -23,7 +23,7 @@ An area with no inbound key is a candidate for a separate module. Its outbound k
 | [collections](collections.md) | 13 | 101 | 1 | 9 | 6 |
 | [commissions](commissions.md) | 1 | 18 | 0 | 2 | 2 |
 | [comms](comms.md) | 1 | 47 | 5 | 6 | 1 |
-| [compose](compose.md) | 42 | 390 | 3 | 30 | 26 |
+| [compose](compose.md) | 42 | 388 | 3 | 30 | 26 |
 | [consent](consent.md) | 23 | 319 | 2 | 42 | 23 |
 | [contacts](contacts.md) | 49 | 718 | 75 | 36 | 13 |
 | [continuity](continuity.md) | 1 | 7 | 0 | 0 | 0 |
@@ -32,13 +32,13 @@ An area with no inbound key is a candidate for a separate module. Its outbound k
 | [dealrooms](dealrooms.md) | 8 | 92 | 0 | 8 | 1 |
 | [deals](deals.md) | 26 | 379 | 26 | 16 | 2 |
 | [finance](finance.md) | 5 | 78 | 0 | 3 | 0 |
-| [forecasting](forecasting.md) | 4 | 94 | 1 | 2 | 0 |
+| [forecasting](forecasting.md) | 4 | 93 | 1 | 2 | 0 |
 | [identity](identity.md) | 22 | 204 | 153 | 6 | 5 |
 | [initiatives](initiatives.md) | 5 | 40 | 0 | 2 | 1 |
 | [integrations](integrations.md) | 5 | 59 | 3 | 3 | 1 |
 | [introductions](introductions.md) | 1 | 31 | 0 | 6 | 1 |
 | [knowledge](knowledge.md) | 3 | 38 | 0 | 0 | 0 |
-| [migration](migration.md) | 2 | 42 | 0 | 0 | 0 |
+| [migration](migration.md) | 2 | 41 | 0 | 0 | 0 |
 | [notices](notices.md) | 3 | 26 | 0 | 3 | 3 |
 | [platform](platform.md) | 13 | 93 | 1 | 7 | 5 |
 | [privacy](privacy.md) | 2 | 14 | 0 | 0 | 0 |

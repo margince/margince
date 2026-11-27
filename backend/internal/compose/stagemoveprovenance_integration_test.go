@@ -28,8 +28,8 @@ import (
 
 // importRunSeedSQL opens a running CSV import, the run every write of an import
 // job is marked with.
-const importRunSeedSQL = `INSERT INTO import_run (id, connector, status, source_ref, source, captured_by)
-	VALUES ($1, 'csv', 'running', 'deals.csv', 'upload', 'human:test')`
+const importRunSeedSQL = `INSERT INTO import_run (id, connector, status, source_ref, captured_by)
+	VALUES ($1, 'csv', 'running', 'deals.csv', 'human:test')`
 
 // importer is the context the import job writes under: a member allowed to
 // import, with every write marked as landed by one run.

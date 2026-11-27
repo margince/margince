@@ -31,7 +31,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 353 |
-| Columns | 4337 |
+| Columns | 4333 |
 | Foreign keys | 619 |
 | Owning areas | 40 |
 
@@ -320,7 +320,7 @@ erDiagram
 | [`forecast_call`](forecasting.md#forecast_call) | forecasting | 14 | 2 |
 | [`forecast_capture_status`](forecasting.md#forecast_capture_status) | forecasting | 6 | 0 |
 | [`forecast_contribution`](forecasting.md#forecast_contribution) | forecasting | 34 | 0 |
-| [`forecast_snapshot`](forecasting.md#forecast_snapshot) | forecasting | 40 | 2 |
+| [`forecast_snapshot`](forecasting.md#forecast_snapshot) | forecasting | 39 | 2 |
 | [`fx_rate`](deals.md#fx_rate) | deals | 7 | 0 |
 | [`generated_summary`](platform.md#generated_summary) | platform | 9 | 0 |
 | [`geocode_cache`](contacts.md#geocode_cache) | contacts | 5 | 0 |
@@ -333,7 +333,7 @@ erDiagram
 | [`home_read_forgotten`](compose.md#home_read_forgotten) | compose | 2 | 0 |
 | [`idempotency_key`](compose.md#idempotency_key) | compose | 10 | 0 |
 | [`import_record_map`](migration.md#import_record_map) | migration | 7 | 0 |
-| [`import_run`](migration.md#import_run) | migration | 35 | 1 |
+| [`import_run`](migration.md#import_run) | migration | 34 | 1 |
 | [`installation_state`](platform.md#installation_state) | platform | 3 | 0 |
 | [`intro_request`](introductions.md#intro_request) | introductions | 31 | 0 |
 | [`knowledge_chunk`](knowledge.md#knowledge_chunk) | knowledge | 10 | 0 |
@@ -457,7 +457,7 @@ erDiagram
 | [`team_weekly_review`](compose.md#team_weekly_review) | compose | 30 | 4 |
 | [`team_weekly_review_coverage`](compose.md#team_weekly_review_coverage) | compose | 13 | 0 |
 | [`team_weekly_review_member`](compose.md#team_weekly_review_member) | compose | 5 | 0 |
-| [`team_weekly_review_outlook`](compose.md#team_weekly_review_outlook) | compose | 15 | 0 |
+| [`team_weekly_review_outlook`](compose.md#team_weekly_review_outlook) | compose | 14 | 0 |
 | [`team_weekly_review_rep`](compose.md#team_weekly_review_rep) | compose | 12 | 2 |
 | [`team_weekly_review_rep_funnel`](compose.md#team_weekly_review_rep_funnel) | compose | 13 | 0 |
 | [`team_weekly_review_rep_pattern`](compose.md#team_weekly_review_rep_pattern) | compose | 5 | 0 |
@@ -483,7 +483,7 @@ erDiagram
 | [`weekly_review_driver`](compose.md#weekly_review_driver) | compose | 7 | 0 |
 | [`weekly_review_learning`](compose.md#weekly_review_learning) | compose | 5 | 1 |
 | [`weekly_review_learning_citation`](compose.md#weekly_review_learning_citation) | compose | 5 | 0 |
-| [`weekly_review_outlook`](compose.md#weekly_review_outlook) | compose | 15 | 0 |
+| [`weekly_review_outlook`](compose.md#weekly_review_outlook) | compose | 14 | 0 |
 | [`weekly_review_scorecard`](compose.md#weekly_review_scorecard) | compose | 25 | 0 |
 | [`withdrawal_credential`](consent.md#withdrawal_credential) | consent | 12 | 0 |
 | [`workflow_run`](automation.md#workflow_run) | automation | 9 | 0 |

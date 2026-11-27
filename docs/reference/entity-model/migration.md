@@ -40,7 +40,7 @@ The 2 tables owned by `migration`, as the migrations build them. [Back to the en
 
 ## import_run
 
-35 columns · primary key `(id)` · referenced by 1 foreign key
+34 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -76,7 +76,6 @@ The 2 tables owned by `migration`, as the migrations build them. [Back to the en
 | `undo_report` | `jsonb` |  |  |
 | `captured_by` | `text` | yes | Server-stamped from the authenticated principal; never client-supplied. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
-| `source` | `text` | yes | Which internal channel the record arrived by. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 | `version` | `integer`, default `1` | yes | Bumped by every saved change of a choice. |
 
@@ -97,5 +96,5 @@ The 2 tables owned by `migration`, as the migrations build them. [Back to the en
 
 **Triggers**
 
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"error": 20000, "phase": 20000, "source": 20000, "status": 20000, "connector": 20000, "draft_step": 20000, "job_status": 20000, "source_ref": 20000, "approved_by": 20000, "captured_by": 20000, "phase_object": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"approved_by":20000,"captured_by":20000,"connector":20000,"draft_step":20000,"error":20000,"job_status":20000,"phase":20000,"phase_object":20000,"source":20000,"source_ref":20000,"status":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"error": 20000, "phase": 20000, "source": 20000, "status": 20000, "connector": 20000, "draft_step": 20000, "job_status": 20000, "source_ref": 20000, "approved_by": 20000, "captured_by": 20000, "phase_object": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"approved_by":20000,"captured_by":20000,"connector":20000,"draft_step":20000,"error":20000,"job_status":20000,"phase":20000,"phase_object":20000,"source":20000,"source_ref":20000,"status":20000}')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"error": 20000, "phase": 20000, "status": 20000, "connector": 20000, "draft_step": 20000, "job_status": 20000, "source_ref": 20000, "approved_by": 20000, "captured_by": 20000, "phase_object": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"approved_by":20000,"captured_by":20000,"connector":20000,"draft_step":20000,"error":20000,"job_status":20000,"phase":20000,"phase_object":20000,"source_ref":20000,"status":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"error": 20000, "phase": 20000, "status": 20000, "connector": 20000, "draft_step": 20000, "job_status": 20000, "source_ref": 20000, "approved_by": 20000, "captured_by": 20000, "phase_object": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"approved_by":20000,"captured_by":20000,"connector":20000,"draft_step":20000,"error":20000,"job_status":20000,"phase":20000,"phase_object":20000,"source_ref":20000,"status":20000}')`
