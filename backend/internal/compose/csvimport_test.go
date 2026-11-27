@@ -495,7 +495,7 @@ func TestImportedRowsCarryTheReservedProvenance(t *testing.T) {
 func TestSkippedLinesReachTheObjectsReport(t *testing.T) {
 	report := migration.Report{Objects: []migration.ObjectReport{{Object: migration.ObjectLead}}}
 
-	out := withSkippedLines(report, migration.ObjectLead, []migration.SkippedLine{{Line: 7, Reason: "no key"}})
+	out := importwire.WithSkippedLines(report, migration.ObjectLead, []migration.SkippedLine{{Line: 7, Reason: "no key"}})
 
 	if len(out.Objects[0].Skipped) != 1 {
 		t.Fatalf("skips = %+v, want the source's own disclosure", out.Objects[0].Skipped)
@@ -504,7 +504,7 @@ func TestSkippedLinesReachTheObjectsReport(t *testing.T) {
 		t.Fatalf("line = %d, want 7 — the report must send a human to the right line", got)
 	}
 	// An object the report does not carry cannot silently swallow them either.
-	untouched := withSkippedLines(report, migration.ObjectCompany, []migration.SkippedLine{{Line: 2}})
+	untouched := importwire.WithSkippedLines(report, migration.ObjectCompany, []migration.SkippedLine{{Line: 2}})
 	if len(untouched.Objects[0].Skipped) != 1 {
 		t.Fatalf("skips = %+v, want the lead's own single skip", untouched.Objects[0].Skipped)
 	}

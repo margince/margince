@@ -18,6 +18,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/importwire"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -184,13 +185,13 @@ func withGrantProblems(
 ) migration.Report {
 	first := ""
 	for _, part := range parts {
-		report = withWarnings(report, part.Object, missingGrants(ctx, grantsFor([]migration.PartMapping{part}, tagGrants{})))
+		report = importwire.WithWarnings(report, part.Object, missingGrants(ctx, grantsFor([]migration.PartMapping{part}, tagGrants{})))
 		if first == "" || slices.Index(migration.ImportOrder, part.Object) < slices.Index(migration.ImportOrder, first) {
 			first = part.Object
 		}
 	}
 	tags := slices.ContainsFunc(parts, func(p migration.PartMapping) bool { return columnFor(p.Fields, csvTargetTags) != "" })
-	return withWarnings(report, first, append(missingGrants(ctx, grantsFor(nil, tagGrants{applies: tags})), late...))
+	return importwire.WithWarnings(report, first, append(missingGrants(ctx, grantsFor(nil, tagGrants{applies: tags})), late...))
 }
 
 // createRefusal is the skip of a row whose type the importer may not create.
