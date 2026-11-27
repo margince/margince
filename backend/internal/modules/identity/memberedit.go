@@ -60,7 +60,7 @@ func (s *Service) UpdateMember(ctx context.Context, actor Identity, member ids.U
 		return err
 	}
 	in.Name = displayNameLine(in.Name)
-	email, err := values.ParseEmail(in.Email)
+	email, err := values.ParseEmailReference(in.Email)
 	if err != nil {
 		return err
 	}
@@ -138,6 +138,9 @@ func (s *Service) editMemberIdentityTx(ctx context.Context, tx pgx.Tx, actor Ide
 		}
 	}
 	if email != in.Email {
+		if _, err := values.ParseEmail(in.Email); err != nil {
+			return err
+		}
 		if err := requireUnusedMemberEmail(ctx, tx, member); err != nil {
 			return err
 		}

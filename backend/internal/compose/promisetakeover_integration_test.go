@@ -364,7 +364,7 @@ func TestAPromiseFromAQuotedSubjectIsTakenOverOnceWithoutBackslashes(t *testing.
 		t.Fatalf("two presses wrote %d tasks, want 1", n)
 	}
 	body := f.e.WsScalar(t, `SELECT body FROM activity WHERE id = $1`, ids.UUID(first.TaskActivityId))
-	if want := "Promise taken over from “" + subject + "”. Nobody was asked to keep it."; body != want {
+	if want := "Commitment taken over from “" + subject + "”. Nobody was asked to keep it."; body != want {
 		t.Errorf("the task body reads %s, want %s", body, want)
 	}
 	if bound := f.e.WsCount(t, `SELECT count(*) FROM activity WHERE id = $1 AND system_text ? 'body'`, ids.UUID(first.TaskActivityId)); bound != 1 {

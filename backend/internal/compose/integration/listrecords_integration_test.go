@@ -16,11 +16,21 @@ package integration
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
+	"net/http"
+	"slices"
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/compose/offsetlists"
+	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 func TestListRecordsNarrowsRatherThanAnsweringEveryRow(t *testing.T) {
@@ -81,5 +91,121 @@ func TestListRecordsNarrowsByOwner(t *testing.T) {
 	}
 	if strings.Contains(string(out), theirs.String()) {
 		t.Errorf("a contact owned by someone else came back from an owner-filtered list:\n%s", out)
+	}
+}
+
+// An offset page through the tool is the HTTP list's page at that offset: the same rows in the same order.
+func TestListRecordsAtAnOffsetAnswersTheRowsTheHTTPListAnswersThere(t *testing.T) {
+	e := apptest.SetupApp(t)
+	apptest.BootstrapWorkspaceSession(t, e, "Tool Offset", "admin@tooloffset.test", "Admin")
+	for _, name := range []string{"Offset Alpha", "Offset Beta", "Offset Gamma", "Offset Delta"} {
+		body := map[string]any{"display_name": name, "source": "manual"}
+		if status := e.Call(t, "POST", "/v1/companies", body, nil, nil); status != http.StatusCreated {
+			t.Fatalf("creating company %q = %d", name, status)
+		}
+	}
+	var web offsetPage
+	if status := e.Call(t, "GET", "/v1/companies?offset=1&limit=2", nil, nil, &web); status != http.StatusOK {
+		t.Fatalf("GET /v1/companies?offset=1 = %d", status)
+	}
+	registry := compose.NewRegistry(e.Pool, compose.SendPath{})
+	ctx := apptest.AdminContext(t, e, AdminPerms)
+
+	out, err := registry.Invoke(ctx, "list_records", json.RawMessage(`{"record_type":"company","offset":1,"limit":2}`))
+	if err != nil {
+		t.Fatalf("listing companies at an offset: %v", err)
+	}
+	var answer struct {
+		Data struct {
+			Records []struct {
+				ID string `json:"id"`
+			} `json:"records"`
+			NextCursor string `json:"next_cursor"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(out, &answer); err != nil {
+		t.Fatalf("reading the list_records answer: %v", err)
+	}
+	tool := answer.Data
+	toolRows, webRows := make([]string, 0, len(tool.Records)), make([]string, 0, len(web.Data))
+	for _, record := range tool.Records {
+		toolRows = append(toolRows, record.ID)
+	}
+	for _, row := range web.Data {
+		webRows = append(webRows, row.ID)
+	}
+	if len(webRows) != 2 || !slices.Equal(toolRows, webRows) {
+		t.Errorf("list_records at offset 1 answered %v, and the HTTP list answered %v", toolRows, webRows)
+	}
+	if tool.NextCursor == "" || web.Page.NextCursor == nil {
+		t.Errorf("an offset page with rows after it carries next_cursor %q (tool) and %v (HTTP), want both", tool.NextCursor, web.Page.NextCursor)
+	}
+
+	_, err = registry.Invoke(ctx, "list_records", json.RawMessage(`{"record_type":"partner","offset":1}`))
+	fault, ok := httperr.Classify(err)
+	if !ok || fault.Status != http.StatusUnprocessableEntity || len(fault.Fields) != 1 ||
+		fault.Fields[0].Field != "offset" || fault.Fields[0].Code != "offset_unsupported" {
+		t.Errorf("a partner list at an offset answered %v, want 422 field=offset code=offset_unsupported", err)
+	}
+}
+
+// Every type outside offsetlists.Types is refused an offset before a
+// module is asked, and every type inside it opens its list at one.
+func TestSearchRefusesAnOffsetOnEveryOtherType(t *testing.T) {
+	for _, et := range datasource.EntityTypes() {
+		if slices.Contains(offsetlists.Types(), et) {
+			continue
+		}
+		_, err := (&compose.Provider{}).Search(t.Context(), datasource.SearchQuery{EntityTypes: []datasource.EntityType{et}, Offset: new(1)})
+		if _, ok := errors.AsType[*datasource.OffsetUnsupportedError](err); !ok {
+			t.Errorf("a %s list at an offset answered %v, want the offset refusal", et, err)
+		}
+	}
+}
+
+func TestEveryOffsetListTypePagesByOffset(t *testing.T) {
+	e := Setup(t)
+	pipeline, open, _ := DealFixture(t, e)
+	company := e.SeedCompany(t, "Offset customer", &e.Rep1)
+	seed := map[datasource.EntityType]func(i int){
+		datasource.EntityContact: func(i int) { e.SeedContact(t, fmt.Sprintf("Offset contact %d", i), &e.Rep1) },
+		datasource.EntityCompany: func(i int) { e.SeedCompany(t, fmt.Sprintf("Offset company %d", i), &e.Rep1) },
+		datasource.EntityLead: func(i int) {
+			name, email := fmt.Sprintf("Offset lead %d", i), fmt.Sprintf("offset%d@lead.test", i)
+			if _, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{
+				FullName: &name, Email: &email, Source: provenance.RecordSourceManual,
+			}); err != nil {
+				t.Fatal(err)
+			}
+		},
+		datasource.EntityDeal:    func(i int) { e.SeedDeal(t, fmt.Sprintf("Offset deal %d", i), pipeline, open, &e.Rep1) },
+		datasource.EntityProject: func(i int) { seedProject(e.Admin(), t, e, fmt.Sprintf("Offset project %d", i), company, &e.Rep1) },
+	}
+	provider := compose.NewProvider(e.Pool)
+	for _, et := range offsetlists.Types() {
+		create, known := seed[et]
+		if !known {
+			t.Errorf("%s pages by offset and this test cannot seed it: add its seeder", et)
+			continue
+		}
+		for i := range 3 {
+			create(i)
+		}
+		read := func(offset *int, limit int) []ids.UUID {
+			t.Helper()
+			res, err := provider.Search(e.Admin(), datasource.SearchQuery{EntityTypes: []datasource.EntityType{et}, Offset: offset, Limit: limit})
+			if err != nil {
+				t.Fatalf("listing %s at offset %v: %v", et, offset, err)
+			}
+			out := make([]ids.UUID, 0, len(res.Records))
+			for _, record := range res.Records {
+				out = append(out, record.Ref.ID)
+			}
+			return out
+		}
+		whole := read(nil, 50)
+		if got := read(new(1), 1); len(whole) < 3 || !slices.Equal(got, whole[1:2]) {
+			t.Errorf("%s at offset 1 read %v, want the second row of %v", et, got, whole)
+		}
 	}
 }

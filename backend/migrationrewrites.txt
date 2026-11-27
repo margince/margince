@@ -333,7 +333,12 @@
 1795710028_a_lead_source_names_a_channel.up.sql | * | adds an unvalidated check and the trigger that maps a lead's source on later writes, and drops the lead_source list of a handful of rows; it changes no lead row
 1795710028_a_lead_source_names_a_channel.down.sql | * | runs only on a rollback; restores the lead_source list with its seven built-in rows and changes no lead row
 1795675792_the_token_count_floors_are_validated.up.sql | ai_usage | ai_usage holds one row per day, task and tier a call was metered on, with no retention, so it grows by at most tasks times tiers rows a day; the correction scans it once, as the VALIDATE that follows must anyway, and changes only rows a negative count lowered below zero
+1795802752_the_text_limits_follow_the_review_template_columns.up.sql | * | replaces the two text-bound triggers on activity_review_template; they act on later writes only, and no existing row is changed
+1795802752_the_text_limits_follow_the_review_template_columns.down.sql | * | restores the two text-bound triggers on activity_review_template as they stood before; no existing row is changed
 1795772278_a_saved_view_name_is_unique_for_its_owner_and_resource.up.sql | * | renames only later duplicate personal view names; each view is entered by its owner, so the changed set is empty or a handful of settings
 1795772278_a_saved_view_name_is_unique_for_its_owner_and_resource.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1795755969_the_group_six_text_limits_follow_their_columns.up.sql | * | re-creates the text_bound triggers of assurance_run, finance_invoice and contact_provider_claim without the dropped columns' keys; it changes no existing row
 1795755969_the_group_six_text_limits_follow_their_columns.down.sql | * | re-creates those six text_bound triggers as they were; it changes no existing row
+1795787423_a_merged_tag_names_the_tag_it_went_into.up.sql | tag | only tags a merge archived are written, one per merge an admin ran by hand; each is found through the indexed audit trail of the archived tags, so the set is a handful of rows
+1795807780_the_identifier_spelling_checks_are_validated.up.sql | * | the procedural body only counts rows and validates or drops eleven named CHECKs; it changes no row
+1795807780_the_identifier_spelling_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing

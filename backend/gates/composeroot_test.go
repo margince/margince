@@ -169,7 +169,9 @@ const (
 	// the How it stands job and its page case, and the task explanation's
 	// certification case and its test. The job needs the unexported job
 	// context; the cases drive the contact page.
-	composeRootProductionLines = 232_389
+	// Raised by 1 production line for the notices handlers' mail delivery, set on
+	// the unexported server options.
+	composeRootProductionLines = 232_390
 	// Raised by 18 test lines for the link suggestion tool cases.
 	// Raised by 2 test lines for the actor census waivers of the two jobs that
 	// bind their colleague inside a method.
@@ -186,8 +188,12 @@ const (
 	// Raised by 197 test lines for the re-ingest vector reuse cases, which drive
 	// the unexported knowledge ingest worker and its embedder fixture.
 	// Raised by 3 test lines for the generated Prefer parameter the unwired
-	// transcript read now takes.
-	composeRootTestLines = 364_314
+	// transcript read now takes. Raised by 1 test line for the second staged
+	// approval in the site-read finish case, which checks a repeated id keeps
+	// its first place.
+	// Raised by 21 test lines for the case that reads a timeline entry's request
+	// state into the deal status input, which is unexported.
+	composeRootTestLines = 364_339
 )
 
 // A read under these floors stopped early or read the wrong place, and would

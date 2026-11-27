@@ -90,7 +90,7 @@ func TestAQuietDealIsDrawnOnlyWhileItsOwnersMailIsVisible(t *testing.T) {
 			}
 			// The reminder says which silence it is about, so its owner can
 			// judge it against their own sent mail.
-			want := "Check in — no activity since " + quietSince.Format(time.DateOnly)
+			want := "Check in: no activity since " + quietSince.Format(time.DateOnly)
 			if got := reminderSubjectOn(t, deal); got != want {
 				t.Errorf("reminder subject = %q, want %q", got, want)
 			}

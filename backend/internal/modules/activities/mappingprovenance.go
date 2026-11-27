@@ -40,7 +40,7 @@ func refuseReservedProvenance(req crmcontracts.CreateActivityRequest, adm proven
 		}
 	}
 	// `source` is nobody's to forge, and the admission says nothing about it.
-	if err := provenance.Refuse("source", req.Source); err != nil {
+	if err := provenance.RefuseSource(req.Source); err != nil {
 		return err
 	}
 	// After the namespace refusal, which names the reserved field more precisely.

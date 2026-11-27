@@ -82,7 +82,7 @@ func (h Handlers) RequestPasswordReset(w http.ResponseWriter, r *http.Request) {
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	email, err := values.ParseEmail(req.Email)
+	email, err := values.ParseEmailReference(req.Email)
 	if err != nil {
 		httperr.Write(w, r, httperr.Validation("email", "invalid_email", "a valid email address is required"))
 		return

@@ -33903,7 +33903,7 @@ type AcceptDealSuggestionRequest struct {
 	ExistingDealId *openapi_types.UUID `json:"existing_deal_id,omitempty"`
 
 	// Name Without one the deal is named after the company.
-	Name *string `json:"name,omitempty"`
+	Name *string `json:"name,omitempty" singleline:"true"`
 
 	// NoAmount Open the deal with no amount, dropping the one the suggestion proposed. Refused together with amount_minor or currency.
 	NoAmount *bool               `json:"no_amount,omitempty"`
@@ -34833,7 +34833,7 @@ type AddDealRoomDocumentRequest struct {
 	Source   string `json:"source"`
 
 	// Title The buyer-facing name. Defaults to the attachment's filename.
-	Title *string `json:"title,omitempty"`
+	Title *string `json:"title,omitempty" singleline:"true"`
 }
 
 // Address Structured postal address.
@@ -44681,7 +44681,7 @@ type CompanyProfileInput struct {
 	DesiredOutcomes  *string `json:"desired_outcomes,omitempty"`
 
 	// DisplayName The installation's name too. The company's own record holds it, so a blank name answers `422 required` and a changed name past 120 characters `422 too_long`.
-	DisplayName string  `json:"display_name"`
+	DisplayName string  `json:"display_name" singleline:"true"`
 	History     *string `json:"history,omitempty"`
 	Icp         *string `json:"icp,omitempty"`
 	Industry    *string `json:"industry,omitempty"`
@@ -46697,8 +46697,7 @@ type ContactEmail struct {
 // ContactEmailEmailType defines model for ContactEmail.EmailType.
 type ContactEmailEmailType string
 
-// ContactEmailInput One address on a contact, as a writer supplies it. One schema for create and update,
-// so the two cannot describe an address differently.
+// ContactEmailInput One address supplied when creating a contact.
 type ContactEmailInput struct {
 	// Email An address whose local part names a sending system (noreply@, notifications@, receipts@ and the like) is refused with 422 `email_names_no_one`: nobody answers there, so it names no contact.
 	Email     openapi_types.Email         `json:"email"`
@@ -46711,6 +46710,10 @@ type ContactEmailInput struct {
 
 // ContactEmailInputEmailType defines model for ContactEmailInput.EmailType.
 type ContactEmailInputEmailType string
+
+// ContactEmailReplacementInput Mirrors ContactEmailInput except for the state-dependent address ceiling.
+// A held legacy address may remain unchanged; a new address must fit the write limit.
+type ContactEmailReplacementInput = ContactEmailInput
 
 // ContactEmployer The account a contact works at today, by their current primary employment edge — the one `uq_rel_current_primary_employer` keeps unique per contact, so a contact has at most one.
 type ContactEmployer struct {
@@ -48193,7 +48196,7 @@ type CreateActivityReviewTemplateRequestOutcome string
 // CreateAutomationRequest defines model for CreateAutomationRequest.
 type CreateAutomationRequest struct {
 	Key    string                 `json:"key"`
-	Name   string                 `json:"name"`
+	Name   string                 `json:"name" singleline:"true"`
 	Params map[string]interface{} `json:"params"`
 }
 
@@ -48403,7 +48406,7 @@ type CreateContractRequest struct {
 	RenewalOn            *openapi_types.Date              `json:"renewal_on,omitempty"`
 	SignedOn             *openapi_types.Date              `json:"signed_on,omitempty"`
 	StartsOn             *openapi_types.Date              `json:"starts_on,omitempty"`
-	Title                string                           `json:"title"`
+	Title                string                           `json:"title" singleline:"true"`
 	ValueBasis           *CreateContractRequestValueBasis `json:"value_basis,omitempty"`
 	ValueMinor           *int64                           `json:"value_minor,omitempty"`
 	AdditionalProperties map[string]interface{}           `json:"-"`
@@ -48541,7 +48544,7 @@ type CreateDealRoomRequest struct {
 
 	// StewardUserId Defaults to the deal's owner when omitted.
 	StewardUserId  *openapi_types.UUID `json:"steward_user_id,omitempty"`
-	Title          string              `json:"title"`
+	Title          string              `json:"title" singleline:"true"`
 	WelcomeMessage *string             `json:"welcome_message,omitempty"`
 }
 
@@ -48821,7 +48824,7 @@ type CreateListRequest struct {
 	// EntityType A record type a filter may be built over: one of core's five, or `ext:<unit>:<kind>` for a kind an extension declared. A kind no installed extension declares answers 404 on the vocabulary and 422 on a preview.
 	EntityType FilterResource             `json:"entity_type"`
 	ListType   *CreateListRequestListType `json:"list_type,omitempty"`
-	Name       string                     `json:"name"`
+	Name       string                     `json:"name" singleline:"true"`
 	Purpose    *string                    `json:"purpose,omitempty"`
 	Sharing    *CreateListRequestSharing  `json:"sharing,omitempty"`
 	StewardId  *openapi_types.UUID        `json:"steward_id,omitempty"`
@@ -48926,7 +48929,7 @@ type CreatePartnerStageRequest struct {
 // CreatePipelineRequest defines model for CreatePipelineRequest.
 type CreatePipelineRequest struct {
 	IsDefault *bool  `json:"is_default,omitempty"`
-	Name      string `json:"name"`
+	Name      string `json:"name" singleline:"true"`
 	Position  *int   `json:"position,omitempty"`
 
 	// Stages Optional initial stages.
@@ -49156,12 +49159,14 @@ type CreateRoleRequest struct {
 	CopyFrom string `json:"copy_from"`
 
 	// Name The new role's name. Unique among live roles, ignoring case.
-	Name string `json:"name"`
+	Name string `json:"name" singleline:"true"`
 }
 
 // CreateSavedViewRequest defines model for CreateSavedViewRequest.
 type CreateSavedViewRequest struct {
-	Name  string                 `json:"name" singleline:"true"`
+	Name string `json:"name" singleline:"true"`
+
+	// Query At most 65536 bytes as JSON; a larger one is 422 `too_large` on `query`.
 	Query map[string]interface{} `json:"query"`
 
 	// Resource The list a saved view is over: one of core's lists, or `ext:<unit>:<kind>` for a kind an extension declared. One schema for the record, the create body and the list filter, so the three cannot drift.
@@ -49218,7 +49223,7 @@ type CreateStageExitCriterionRequest struct {
 
 // CreateStageRequest defines model for CreateStageRequest.
 type CreateStageRequest struct {
-	Name string `json:"name"`
+	Name string `json:"name" singleline:"true"`
 
 	// NameTranslations An admin-named label in further UI languages, keyed by language. A reader whose UI
 	// language has an entry sees it; any other reader sees the stored label. On a write the
@@ -49291,7 +49296,7 @@ type CreateTaskRequestLinksEntityType string
 
 // CreateTeamRequest defines model for CreateTeamRequest.
 type CreateTeamRequest struct {
-	Name string `json:"name"`
+	Name string `json:"name" singleline:"true"`
 }
 
 // CreateVoiceBuildRequest defines model for CreateVoiceBuildRequest.
@@ -49316,7 +49321,7 @@ type CreateWebFormRequest struct {
 	ConsentWording       *string             `json:"consent_wording,omitempty"`
 	FieldMap             *map[string]string  `json:"field_map,omitempty"`
 	LeadOrigin           *string             `json:"lead_origin,omitempty"`
-	Name                 string              `json:"name"`
+	Name                 string              `json:"name" singleline:"true"`
 	OwnerId              *openapi_types.UUID `json:"owner_id,omitempty"`
 	PrivacyNotice        *string             `json:"privacy_notice,omitempty"`
 	PrivacyNoticeUrl     *string             `json:"privacy_notice_url,omitempty"`
@@ -50922,6 +50927,7 @@ type DealRoomInvitationIssued struct {
 
 // DealRoomLinkRequest defines model for DealRoomLinkRequest.
 type DealRoomLinkRequest struct {
+	// Email Looks up an existing participant; stored addresses past the current write limit are accepted.
 	Email openapi_types.Email `json:"email"`
 }
 
@@ -54204,9 +54210,9 @@ type ForecastSufficiencyBasis string
 
 // FormerMemberRequest A colleague who already left, recorded so imported history can name them. No password and no invitation: this creates a seat that cannot be signed into.
 type FormerMemberRequest struct {
-	DisplayName string `json:"display_name"`
+	DisplayName string `json:"display_name" singleline:"true"`
 
-	// Email Their work address as the source system spelled it. It is the identity the seat is keyed on, so a second record for the same address is refused.
+	// Email Their work address as the source system spelled it. It is the identity the seat is keyed on, so a second record for the same address is refused. A new address holds at most 254 characters. A longer stored address may still resolve a merged member to its survivor.
 	Email openapi_types.Email `json:"email"`
 
 	// LeftAt When they left, when the source system knows it. Recorded on the audit row.
@@ -56747,7 +56753,7 @@ type InviteDealRoomParticipantRequest struct {
 	// Capability Defaults to `view` — the least that lets someone read the room.
 	Capability *DealRoomParticipantCapability `json:"capability,omitempty"`
 	Email      openapi_types.Email            `json:"email"`
-	FullName   string                         `json:"full_name"`
+	FullName   string                         `json:"full_name" singleline:"true"`
 	Source     string                         `json:"source"`
 }
 
@@ -56767,7 +56773,7 @@ type InviteEmailHandoff struct {
 
 // InviteUserRequest Admin-supplied details for a new member. No password — the invite issues a set-password token.
 type InviteUserRequest struct {
-	DisplayName string              `json:"display_name"`
+	DisplayName string              `json:"display_name" singleline:"true"`
 	Email       openapi_types.Email `json:"email"`
 
 	// GreetingName The name the member's greetings use, when the given name read off `display_name` is not it. Optional; absent, empty or null leaves it unset.
@@ -58508,7 +58514,7 @@ type LinkContactEmployerRequest struct {
 	CompanyName *string `json:"company_name,omitempty"`
 
 	// Title Their job title at this company, stored as the employment's `role`.
-	Title *string `json:"title,omitempty"`
+	Title *string `json:"title,omitempty" singleline:"true"`
 }
 
 // LinkContactEmployerResult The contact with its employer, and what this call wrote.
@@ -61347,7 +61353,12 @@ type NotificationPreference struct {
 // NotificationPreferenceList The calling seat's whole set — one entry per class the product sends, always all of them,
 // so a screen rendering one row per class never has to take the others from its own memory.
 type NotificationPreferenceList struct {
-	Items []NotificationPreference `json:"items"`
+	// EmailDeliveryAvailable Whether this installation sends its own mail. False means `email` and `digest` reach
+	// no mailbox: the notice still lands in the app, and no message leaves. A screen says
+	// so beside the choices rather than offering mail that will not arrive. It answers the
+	// caller's own delivery, so every seat that reads its settings is told.
+	EmailDeliveryAvailable bool                     `json:"email_delivery_available"`
+	Items                  []NotificationPreference `json:"items"`
 }
 
 // OccurredPrecision How much of an activity's time is known. `instant` is a real moment. `day` is a date with no time of day: the stored instant is noon UTC of that date, so its date is the UTC date, whatever the installation's zone. A meeting of this precision never holds its host's calendar slot.
@@ -62078,7 +62089,7 @@ type PageInfo struct {
 	// NextCursor Opaque cursor for the next page, or null if none.
 	NextCursor *string `json:"next_cursor,omitempty"`
 
-	// Total How many rows match this request in total, ignoring the cursor and the page size — what the reader is told the list holds. Optional because a keyset page does not need one: a list that omits it says it does not count, never that it counted zero, so a client reads absence as unknown and falls back to how many rows it has loaded. Where it is sent it is exact rather than an estimate, counted over the same filters and the same row scope as the page beside it, in the same transaction, so the two cannot disagree about what matching means. The contact, company and lead lists count on the first page only and send no total with a cursor, so a client keeps the first page's total while it loads further pages.
+	// Total How many rows match this request in total, ignoring the cursor and the page size — what the reader is told the list holds. Optional because a keyset page does not need one: a list that omits it says it does not count, never that it counted zero, so a client reads absence as unknown and falls back to how many rows it has loaded. Where it is sent it is exact rather than an estimate, counted over the same filters and the same row scope as the page beside it, in the same transaction, so the two cannot disagree about what matching means. The contact, company, lead, deal and project lists count on a page read without a cursor, which is the first page or a page opened by `offset`, and send no total with a cursor, so a client keeps that total while it loads further pages.
 	Total *int `json:"total,omitempty" minimum:"0"`
 }
 
@@ -63944,7 +63955,7 @@ type PutOnboardingStateRequestStep string
 type PutProductTranslationRequest struct {
 	// Description Left out or empty, the language has a name and no description.
 	Description *string `json:"description,omitempty"`
-	Name        string  `json:"name"`
+	Name        string  `json:"name" singleline:"true"`
 }
 
 // QualifyDealRequest Open a deal in the same transaction as the promotion. Omit both ids to use the
@@ -63959,7 +63970,7 @@ type QualifyDealRequest struct {
 	Currency *string `json:"currency,omitempty"`
 
 	// Name Defaults to "<company> — <stage>" or the lead's name.
-	Name       *string             `json:"name,omitempty"`
+	Name       *string             `json:"name,omitempty" singleline:"true"`
 	PipelineId *openapi_types.UUID `json:"pipeline_id,omitempty"`
 	StageId    *openapi_types.UUID `json:"stage_id,omitempty"`
 }
@@ -64014,7 +64025,7 @@ type QuickCaptureContactRequest struct {
 
 	// Email Refused with 422 `email_names_no_one` when the local part names a sending system, as ContactEmailInput.email is.
 	Email    *openapi_types.Email `json:"email,omitempty"`
-	FullName string               `json:"full_name"`
+	FullName string               `json:"full_name" singleline:"true"`
 	Phone    *string              `json:"phone,omitempty"`
 
 	// ProfileUrl The LinkedIn profile this was read from. Stored, never fetched. It must be a LinkedIn profile (`/in/<name>`): a page off LinkedIn is refused with 422 `linkedin_url_not_linkedin` on this field, and a company page with `linkedin_url_not_profile`.
@@ -64022,7 +64033,7 @@ type QuickCaptureContactRequest struct {
 
 	// Role What they do at that employer, when it differs from `title`.
 	Role  *string `json:"role,omitempty"`
-	Title *string `json:"title,omitempty"`
+	Title *string `json:"title,omitempty" singleline:"true"`
 }
 
 // QuickCaptureContactResult The contact as created, plus the employer when one was attached.
@@ -64904,7 +64915,7 @@ type RefusedRecipientSubjectKind string
 // RegisterAgentClientRequest defines model for RegisterAgentClientRequest.
 type RegisterAgentClientRequest struct {
 	// Name Shown on the consent screen and in the client list.
-	Name string `json:"name"`
+	Name string `json:"name" singleline:"true"`
 
 	// RedirectUris Exact callback URLs. https, or http on localhost or 127.0.0.1, where the port is ignored.
 	RedirectUris []string `json:"redirect_uris"`
@@ -65240,7 +65251,7 @@ type RenewContractRequest struct {
 	RenewalOn        *openapi_types.Date `json:"renewal_on,omitempty"`
 	SignedOn         *openapi_types.Date `json:"signed_on,omitempty"`
 	StartsOn         *openapi_types.Date `json:"starts_on,omitempty"`
-	Title            string              `json:"title"`
+	Title            string              `json:"title" singleline:"true"`
 
 	// ValueBasis Stated explicitly rather than inherited: an open-ended agreement becoming a fixed term changes what its value measures.
 	ValueBasis           RenewContractRequestValueBasis `json:"value_basis"`
@@ -66341,7 +66352,7 @@ type ReportingReportInput struct {
 
 	// Description What the report is for, in the author's words. Blank text clears it. Left out of an update, the stored one is kept.
 	Description *string            `json:"description,omitempty"`
-	Name        string             `json:"name"`
+	Name        string             `json:"name" singleline:"true"`
 	Selection   ReportingSelection `json:"selection"`
 }
 
@@ -67569,7 +67580,7 @@ type SalesInitiativeInput struct {
 
 	// LeadRule A predicate tree in the record type's list vocabulary, the same tree a dynamic list's definition carries. Untyped here for the reason that definition is: the predicate engine is the grammar's authority and answers a precise 422.
 	LeadRule        *SalesInitiativeRule `json:"lead_rule,omitempty"`
-	Name            string               `json:"name"`
+	Name            string               `json:"name" singleline:"true"`
 	ObjectiveMetric ReportingMetricID    `json:"objective_metric"`
 
 	// OwnerId Defaults to the caller.
@@ -67958,7 +67969,7 @@ type SaveEmailSignatureRequest struct {
 	Phone *string `json:"phone,omitempty"`
 
 	// Title The member's title, for the workspace template. Omitted leaves it as it is.
-	Title *string `json:"title,omitempty"`
+	Title *string `json:"title,omitempty" singleline:"true"`
 }
 
 // SaveLinkedInAccountRequest defines model for SaveLinkedInAccountRequest.
@@ -67980,7 +67991,7 @@ type SaveMyDisplayNameRequest struct {
 	// DisplayName The name colleagues see. Surrounding whitespace is trimmed and a name
 	// that is only whitespace is refused — the same bounds the invite form
 	// applies, because this writes the same column.
-	DisplayName string `json:"display_name"`
+	DisplayName string `json:"display_name" singleline:"true"`
 }
 
 // SaveMyGreetingNameRequest defines model for SaveMyGreetingNameRequest.
@@ -68042,7 +68053,7 @@ type SaveRetainedEmailSignatureRequest struct {
 	Phone *string `json:"phone,omitempty"`
 
 	// Title The member's title, for the workspace template. Omitted leaves it as it is.
-	Title *string `json:"title,omitempty"`
+	Title *string `json:"title,omitempty" singleline:"true"`
 }
 
 // SaveWorkingHoursRequest The hours and days to store. The zone they are read on is the caller's
@@ -68369,7 +68380,7 @@ type SchedulingTeamLinkRequest struct {
 
 	// TeamMembers Only `user_id` is read. A member's answer is theirs to give.
 	TeamMembers []SchedulingTeamMember `json:"team_members"`
-	Title       string                 `json:"title"`
+	Title       string                 `json:"title" singleline:"true"`
 }
 
 // SchedulingTeamMember defines model for SchedulingTeamMember.
@@ -68398,7 +68409,7 @@ type SchedulingTeamRequest struct {
 	State  SchedulingTeamRequestState `json:"state"`
 
 	// Title The team link's name, which is the meeting title it offers.
-	Title string `json:"title"`
+	Title string `json:"title" singleline:"true"`
 }
 
 // SchedulingTeamRequestState defines model for SchedulingTeamRequest.State.
@@ -69593,7 +69604,7 @@ type SendRefusalRecipient struct {
 
 // ServiceMemberRequest A member for an extension's unattended feed. No password and no way in.
 type ServiceMemberRequest struct {
-	DisplayName string `json:"display_name"`
+	DisplayName string `json:"display_name" singleline:"true"`
 
 	// Extension The extension unit the member serves, by its manifest name. Only that unit may act as the member. A name no installed unit carries is accepted and simply never used.
 	Extension string `json:"extension"`
@@ -70953,7 +70964,13 @@ type Tag struct {
 	CreatedAt   *time.Time         `json:"created_at,omitempty"`
 	Description *string            `json:"description,omitempty"`
 	Id          openapi_types.UUID `json:"id"`
-	Name        string             `json:"name"`
+
+	// MergedInto The tag a merge folded this one into, named as it reads now. Present only on a tag
+	// archived by a merge, and such a tag cannot be restored. The named tag is the next merge
+	// destination and may itself have been merged since; follow each `merged_into` until a tag
+	// has none to find the tag that carries the records now.
+	MergedInto *RowTag `json:"merged_into,omitempty"`
+	Name       string  `json:"name"`
 
 	// Suggestible Whether captured mail and meeting notes may suggest this tag. A suggestible tag
 	// carries a description of what interest looks like, and that description is what
@@ -70973,7 +70990,13 @@ type TagDetail struct {
 	CreatedAt   *time.Time         `json:"created_at,omitempty"`
 	Description *string            `json:"description,omitempty"`
 	Id          openapi_types.UUID `json:"id"`
-	Name        string             `json:"name"`
+
+	// MergedInto The tag a merge folded this one into, named as it reads now. Present only on a tag
+	// archived by a merge, and such a tag cannot be restored. The named tag is the next merge
+	// destination and may itself have been merged since; follow each `merged_into` until a tag
+	// has none to find the tag that carries the records now.
+	MergedInto *RowTag `json:"merged_into,omitempty"`
+	Name       string  `json:"name"`
 
 	// Suggestible Whether captured mail and meeting notes may suggest this tag. A suggestible tag
 	// carries a description of what interest looks like, and that description is what
@@ -72234,7 +72257,7 @@ type UpdateAttachmentMetadataRequestDocState string
 type UpdateAutomationRequest struct {
 	// InitialRunConfirmed Confirm the initial-run preview when enabling a scheduled rule or changing its active population. Existing matching records may receive work on the next scan.
 	InitialRunConfirmed *bool   `json:"initial_run_confirmed,omitempty"`
-	Name                *string `json:"name,omitempty"`
+	Name                *string `json:"name,omitempty" singleline:"true"`
 
 	// OwnerId Hand the rule to another member, who must be a seat the caller may make an owner (an active human seat that can write, inside the caller's write scope), else `422` with `code: owner_not_assignable`. Cannot be cleared.
 	OwnerId *openapi_types.UUID            `json:"owner_id,omitempty"`
@@ -72325,7 +72348,7 @@ type UpdateCompanyRequest struct {
 	Description *string `json:"description,omitempty"`
 	DisplayName *string `json:"display_name,omitempty" singleline:"true"`
 
-	// Domains Replace-set of the company's live domains (add new, archive removed, flip is_primary). Absent = untouched; an empty array clears all domains.
+	// Domains Replace-set of the company's live domains (add new, archive removed, flip is_primary). Absent = untouched; an empty array clears all domains. A list past 100 domains is 422 `too_many`, unless the company already holds at least as many.
 	Domains *[]CompanyDomainInput `json:"domains,omitempty"`
 
 	// Email The company's general address, for example info@example.com. It never creates or matches a contact.
@@ -72426,9 +72449,14 @@ type UpdateContactRequest struct {
 	// Omitting the field leaves the addresses untouched, like every other field
 	// here. Sending an empty array removes them all, which is a real answer — a
 	// contact who no longer has a working address is a fact worth recording.
-	Emails    *[]ContactEmailInput `json:"emails,omitempty"`
-	FirstName *string              `json:"first_name,omitempty" singleline:"true"`
-	FullName  *string              `json:"full_name,omitempty" singleline:"true"`
+	//
+	// A list past 25 addresses is 422 `too_many`, unless the contact already
+	// holds at least as many: a longer stored list may be sent back, and not grown.
+	// Held legacy addresses may remain unchanged. New addresses must fit the
+	// normalized 254-byte ceiling and name a dotted domain.
+	Emails    *[]ContactEmailReplacementInput `json:"emails,omitempty"`
+	FirstName *string                         `json:"first_name,omitempty" singleline:"true"`
+	FullName  *string                         `json:"full_name,omitempty" singleline:"true"`
 
 	// GreetingRegister Sets how a message to the contact opens (`formal` or `familiar`), or clears it (null) so drafts read the register from the correspondence again.
 	GreetingRegister *UpdateContactRequestGreetingRegister `json:"greeting_register,omitempty"`
@@ -72444,7 +72472,8 @@ type UpdateContactRequest struct {
 	// that now reaches somebody else.
 	//
 	// Omitting the field leaves the numbers untouched. Sending an empty array
-	// removes them all.
+	// removes them all. A list past 25 numbers is 422 `too_many`, unless the
+	// contact already holds at least as many.
 	//
 	// `Contact360.dead_addresses` already names which address bounced; until now the
 	// contract's own remedy for that was to visit the contact page, because the write
@@ -72527,7 +72556,7 @@ type UpdateContractRequest struct {
 	RenewalOn            *openapi_types.Date              `json:"renewal_on,omitempty"`
 	SignedOn             *openapi_types.Date              `json:"signed_on,omitempty"`
 	StartsOn             *openapi_types.Date              `json:"starts_on,omitempty"`
-	Title                *string                          `json:"title,omitempty"`
+	Title                *string                          `json:"title,omitempty" singleline:"true"`
 	ValueBasis           *UpdateContractRequestValueBasis `json:"value_basis,omitempty"`
 	ValueMinor           *int64                           `json:"value_minor,omitempty"`
 	AdditionalProperties map[string]interface{}           `json:"-"`
@@ -72694,7 +72723,7 @@ type UpdateDealRoomDocumentRequest struct {
 	// for the reason `DealRoomParticipantCapability` gives.
 	GroupKey *DealRoomDocumentGroup `json:"group_key,omitempty"`
 	Position *int                   `json:"position,omitempty"`
-	Title    *string                `json:"title,omitempty"`
+	Title    *string                `json:"title,omitempty" singleline:"true"`
 }
 
 // UpdateDealRoomParticipantRequest Any subset; omit a field to leave it unchanged.
@@ -72714,7 +72743,7 @@ type UpdateDealRoomParticipantRequest struct {
 	// Email Only while their credential is unconsumed. Changing it invalidates the link
 	// already sent; resend to issue a new one.
 	Email    *openapi_types.Email `json:"email,omitempty"`
-	FullName *string              `json:"full_name,omitempty"`
+	FullName *string              `json:"full_name,omitempty" singleline:"true"`
 }
 
 // UpdateDealRoomRequest Any subset; omit a field to leave it unchanged. HUMAN-ONLY: an invited buyer
@@ -72725,7 +72754,7 @@ type UpdateDealRoomParticipantRequest struct {
 // operation rather than riding an auto-execute patch.
 type UpdateDealRoomRequest struct {
 	StewardUserId  *openapi_types.UUID `json:"steward_user_id,omitempty"`
-	Title          *string             `json:"title,omitempty"`
+	Title          *string             `json:"title,omitempty" singleline:"true"`
 	WelcomeMessage *string             `json:"welcome_message,omitempty"`
 }
 
@@ -72975,7 +73004,7 @@ type UpdateInstallationSettingsRequest struct {
 	// form still saves. Any other value is refused with `422 set_on_company_profile`: the
 	// installation's name is the anchor company's display name, changed through `PUT /company`.
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-	Name *string `json:"name,omitempty"`
+	Name *string `json:"name,omitempty" singleline:"true"`
 
 	// OauthAccessTokenTtlMinutes Set how long a connector's access token lives, in minutes. Reaches the next token minted.
 	OauthAccessTokenTtlMinutes *int `json:"oauth_access_token_ttl_minutes,omitempty" maximum:"129600" minimum:"5"`
@@ -73195,7 +73224,7 @@ type UpdateLegalEntityRequest struct {
 type UpdateListRequest struct {
 	// Definition A Live List's new filter tree.
 	Definition *map[string]interface{} `json:"definition,omitempty"`
-	Name       *string                 `json:"name,omitempty"`
+	Name       *string                 `json:"name,omitempty" singleline:"true"`
 
 	// Purpose Null removes the purpose.
 	Purpose   *string                   `json:"purpose,omitempty"`
@@ -73221,9 +73250,9 @@ type UpdateLossReasonRequest struct {
 
 // UpdateMemberRequest defines model for UpdateMemberRequest.
 type UpdateMemberRequest struct {
-	DisplayName string `json:"display_name"`
+	DisplayName string `json:"display_name" singleline:"true"`
 
-	// Email May change only before the account has been used to sign in.
+	// Email May change only before the account has been used to sign in. A new address holds at most 254 characters; an unchanged stored address may be longer.
 	Email             openapi_types.Email `json:"email"`
 	ExpectedUpdatedAt time.Time           `json:"expected_updated_at"`
 
@@ -73317,7 +73346,7 @@ type UpdatePartnerStageRequest struct {
 // UpdatePipelineRequest defines model for UpdatePipelineRequest.
 type UpdatePipelineRequest struct {
 	IsDefault *bool   `json:"is_default,omitempty"`
-	Name      *string `json:"name,omitempty"`
+	Name      *string `json:"name,omitempty" singleline:"true"`
 	Position  *int    `json:"position,omitempty"`
 }
 
@@ -73441,7 +73470,7 @@ type UpdateRetentionSettingsRequest struct {
 
 // UpdateRoleRequest A sparse patch. An absent field is left as it is.
 type UpdateRoleRequest struct {
-	Name     *string                    `json:"name,omitempty"`
+	Name     *string                    `json:"name,omitempty" singleline:"true"`
 	RowScope *UpdateRoleRequestRowScope `json:"row_scope,omitempty"`
 }
 
@@ -73450,7 +73479,9 @@ type UpdateRoleRequestRowScope string
 
 // UpdateSavedViewRequest A partial update; omitted fields keep their stored value.
 type UpdateSavedViewRequest struct {
-	Name  *string                 `json:"name,omitempty" singleline:"true"`
+	Name *string `json:"name,omitempty" singleline:"true"`
+
+	// Query Replaces the stored query whole. At most 65536 bytes as JSON; a larger one is 422 `too_large` on `query`.
 	Query *map[string]interface{} `json:"query,omitempty"`
 }
 
@@ -73523,7 +73554,7 @@ type UpdateStageExitCriterionRequest struct {
 
 // UpdateStageRequest defines model for UpdateStageRequest.
 type UpdateStageRequest struct {
-	Name *string `json:"name,omitempty"`
+	Name *string `json:"name,omitempty" singleline:"true"`
 
 	// NameTranslations An admin-named label in further UI languages, keyed by language. A reader whose UI
 	// language has an entry sees it; any other reader sees the stored label. On a write the
@@ -73562,7 +73593,7 @@ type UpdateTagRequestColor string
 type UpdateTeamRequest struct {
 	// Archived true archives the team (its memberships stop resolving row scope and shares); false restores it.
 	Archived *bool   `json:"archived,omitempty"`
-	Name     *string `json:"name,omitempty"`
+	Name     *string `json:"name,omitempty" singleline:"true"`
 }
 
 // UpdateTelegramBusinessConnectionVisibilityRequest defines model for UpdateTelegramBusinessConnectionVisibilityRequest.
@@ -73600,7 +73631,7 @@ type UpdateWebFormRequest struct {
 	// HandlingAutomationId Explicit conversion to a reviewed inquiry policy for this form. Clear only through a reviewed return to legacy handling.
 	HandlingAutomationId *openapi_types.UUID `json:"handling_automation_id,omitempty"`
 	LeadOrigin           *string             `json:"lead_origin,omitempty"`
-	Name                 *string             `json:"name,omitempty"`
+	Name                 *string             `json:"name,omitempty" singleline:"true"`
 	OwnerId              *openapi_types.UUID `json:"owner_id,omitempty"`
 	PrivacyNotice        *string             `json:"privacy_notice,omitempty"`
 	PrivacyNoticeUrl     *string             `json:"privacy_notice_url,omitempty"`
@@ -74730,7 +74761,7 @@ type WebsiteInquiryHandlingRequest struct {
 	// (ErrVersionSkew) so the client re-reads before retrying.
 	AutomationVersion *RowVersion          `json:"automation_version,omitempty" minimum:"1"`
 	Enabled           bool                 `json:"enabled"`
-	Name              string               `json:"name"`
+	Name              string               `json:"name" singleline:"true"`
 	Policy            WebsiteInquiryPolicy `json:"policy"`
 }
 
@@ -77669,6 +77700,9 @@ type Limit = int
 // ListMembershipFilter defines model for ListMembershipFilter.
 type ListMembershipFilter = openapi_types.UUID
 
+// Offset defines model for Offset.
+type Offset = int
+
 // PreferAbsent defines model for PreferAbsent.
 type PreferAbsent = string
 
@@ -77830,7 +77864,8 @@ type ListActivitiesParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -78392,7 +78427,8 @@ type ListAiCallsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -78727,7 +78763,8 @@ type ListSalesProgressDealsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -78851,7 +78888,8 @@ type ListReportRunsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -79062,7 +79100,8 @@ type ListApprovalsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -79185,7 +79224,8 @@ type ListAttachmentsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -79240,7 +79280,8 @@ type ListAuditLogParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -79315,7 +79356,8 @@ type ListAutomationsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -79341,7 +79383,8 @@ type ListAutomationRunsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -79501,7 +79544,8 @@ type ListMyCaptureActivityParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -79517,7 +79561,8 @@ type ListWorkspaceCaptureActivityParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -79539,7 +79584,8 @@ type ListDomainQuestionsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -79581,7 +79627,8 @@ type ListHeldThreadsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -79658,7 +79705,8 @@ type ListCommissionEntriesParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -79732,12 +79780,16 @@ type ListCompaniesParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Offset Rows to skip in the list's own order (its filters, row scope and `sort`), to open a page without walking the cursor to it. The answer carries `page.next_cursor`, so reading on from there uses the keyset. Refused with `422` (`field: offset`) together with `cursor`, and past 10000; a deeper page is reached through the cursor.
+	Offset *Offset `form:"offset,omitempty" json:"offset,omitempty" maximum:"10000" minimum:"0"`
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
@@ -80012,7 +80064,8 @@ type GetCompanyAccessParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -80079,7 +80132,8 @@ type ListCompanyContactsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -80098,7 +80152,8 @@ type ListCompanyContractsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -80121,7 +80176,8 @@ type ListCompanyDocumentsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -80941,12 +80997,16 @@ type ListContactsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Offset Rows to skip in the list's own order (its filters, row scope and `sort`), to open a page without walking the cursor to it. The answer carries `page.next_cursor`, so reading on from there uses the keyset. Refused with `422` (`field: offset`) together with `cursor`, and past 10000; a deeper page is reached through the cursor.
+	Offset *Offset `form:"offset,omitempty" json:"offset,omitempty" maximum:"10000" minimum:"0"`
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
@@ -81230,7 +81290,8 @@ type GetContactAccessParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -81278,7 +81339,8 @@ type ListContactOverridesParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -81690,7 +81752,8 @@ type ListCustomFieldsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -81857,7 +81920,8 @@ type ListDataSubjectRequestsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -81916,7 +81980,8 @@ type ListDealRoomsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -82125,12 +82190,16 @@ type ListDealsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Offset Rows to skip in the list's own order (its filters, row scope and `sort`), to open a page without walking the cursor to it. The answer carries `page.next_cursor`, so reading on from there uses the keyset. Refused with `422` (`field: offset`) together with `cursor`, and past 10000; a deeper page is reached through the cursor.
+	Offset *Offset `form:"offset,omitempty" json:"offset,omitempty" maximum:"10000" minimum:"0"`
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
@@ -82457,7 +82526,8 @@ type ListDealDocumentsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -82574,7 +82644,8 @@ type ListDealOffersParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -82765,7 +82836,8 @@ type GetFieldHistoryParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -82810,7 +82882,8 @@ type ListFinanceSourceCustomersParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -82977,7 +83050,8 @@ type ListImportRunsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -83052,7 +83126,8 @@ type ListAgentClientsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -83223,12 +83298,16 @@ type ListLeadsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Offset Rows to skip in the list's own order (its filters, row scope and `sort`), to open a page without walking the cursor to it. The answer carries `page.next_cursor`, so reading on from there uses the keyset. Refused with `422` (`field: offset`) together with `cursor`, and past 10000; a deeper page is reached through the cursor.
+	Offset *Offset `form:"offset,omitempty" json:"offset,omitempty" maximum:"10000" minimum:"0"`
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
@@ -83627,7 +83706,8 @@ type ExplainLeadScoreParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -83730,7 +83810,8 @@ type ListListHistoryParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -83746,7 +83827,8 @@ type ListListMembersParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -84025,7 +84107,8 @@ type ListOfferTemplatesParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -84391,7 +84474,8 @@ type ListPartnersParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -84608,7 +84692,8 @@ type ListProductsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -84700,12 +84785,16 @@ type ListProjectsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Offset Rows to skip in the list's own order (its filters, row scope and `sort`), to open a page without walking the cursor to it. The answer carries `page.next_cursor`, so reading on from there uses the keyset. Refused with `422` (`field: offset`) together with `cursor`, and past 10000; a deeper page is reached through the cursor.
+	Offset *Offset `form:"offset,omitempty" json:"offset,omitempty" maximum:"10000" minimum:"0"`
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
@@ -84960,7 +85049,8 @@ type ListProjectHealthAssessmentsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -85357,7 +85447,8 @@ type ListRecordGrantsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -85500,7 +85591,8 @@ type GetRecordHistoryParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -85686,7 +85778,8 @@ type ListRelationshipsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -85765,7 +85858,8 @@ type ListArchivedActivitiesParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -85810,7 +85904,8 @@ type ListLegalHoldsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -85884,7 +85979,8 @@ type ListRestrictedActivitiesParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -86121,7 +86217,8 @@ type SearchParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -86142,7 +86239,8 @@ type ListSignalsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -86467,7 +86565,8 @@ type ListTeamsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -86489,7 +86588,8 @@ type ListUsersParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -86801,7 +86901,8 @@ type ListVoiceProfileDeltasParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -86924,7 +87025,8 @@ type ListVoiceProfileVersionsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -87086,7 +87188,8 @@ type ListWebhookDeliveriesParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -127172,6 +127275,19 @@ func (siw *ServerInterfaceWrapper) ListCompanies(w http.ResponseWriter, r *http.
 		return
 	}
 
+	// ------------- Optional query parameter "offset" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "offset", r.URL.Query(), &params.Offset, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "offset"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "offset", Err: err})
+		}
+		return
+	}
+
 	// ------------- Optional query parameter "limit" -------------
 
 	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
@@ -132139,6 +132255,19 @@ func (siw *ServerInterfaceWrapper) ListContacts(w http.ResponseWriter, r *http.R
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "offset" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "offset", r.URL.Query(), &params.Offset, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "offset"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "offset", Err: err})
 		}
 		return
 	}
@@ -137291,6 +137420,19 @@ func (siw *ServerInterfaceWrapper) ListDeals(w http.ResponseWriter, r *http.Requ
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "offset" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "offset", r.URL.Query(), &params.Offset, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "offset"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "offset", Err: err})
 		}
 		return
 	}
@@ -144520,6 +144662,19 @@ func (siw *ServerInterfaceWrapper) ListLeads(w http.ResponseWriter, r *http.Requ
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "offset" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "offset", r.URL.Query(), &params.Offset, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "offset"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "offset", Err: err})
 		}
 		return
 	}
@@ -151932,6 +152087,19 @@ func (siw *ServerInterfaceWrapper) ListProjects(w http.ResponseWriter, r *http.R
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "offset" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "offset", r.URL.Query(), &params.Offset, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "offset"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "offset", Err: err})
 		}
 		return
 	}

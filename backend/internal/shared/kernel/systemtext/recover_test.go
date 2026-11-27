@@ -24,3 +24,28 @@ func TestCanonicalRecoveryPreservesArgumentsAndTranslatedMeaning(t *testing.T) {
 		t.Fatalf("human prose recovered as %+v: %v", recovered, err)
 	}
 }
+
+func TestTheBookingTitleRecoversToItsCodeInEveryEnglishWording(t *testing.T) {
+	definition, _ := definitionOf("booking.meeting")
+	for _, title := range storedWordings(definition, textlang.English) {
+		recovered, err := RecoverCanonicalText(title)
+		if err != nil || recovered == nil || recovered.Code != "booking.meeting" {
+			t.Errorf("%q recovered as %+v, not booking.meeting: %v", title, recovered, err)
+		}
+	}
+}
+
+func BenchmarkRecoverCanonicalText(b *testing.B) {
+	for name, text := range map[string]string{
+		"template": Canonical(Sentence("lead.reply", Label("Lena")), textlang.English),
+		"prose":    "My own instructions for Lena",
+	} {
+		b.Run(name, func(b *testing.B) {
+			for b.Loop() {
+				if _, err := RecoverCanonicalText(text); err != nil {
+					b.Fatal(err)
+				}
+			}
+		})
+	}
+}

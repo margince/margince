@@ -1464,7 +1464,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.basis.implementation": "Chỉ triển khai",
   "reporting.productReports": "Doanh số sản phẩm",
   "reporting.productReportsPurpose":
-    "Mở Đánh giá doanh số cho một sản phẩm. Không cần thiết lập và không ghi gì cả.",
+    "Mở Tổng kết bán hàng cho một sản phẩm. Không cần thiết lập và không ghi gì cả.",
   "reporting.noProducts":
     "Chưa có sản phẩm đang hoạt động. Thêm sản phẩm trong Cài đặt để báo cáo về chúng.",
   "reporting.actualsThrough": "Số liệu thực tế đến {at} · {zone}",
@@ -3620,7 +3620,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "scrollSentinel.more": "Còn thêm mục.",
   "list.viewAll": "Tất cả",
   "list.viewHot": "Lead nóng",
-  "table.range": "{first} đến {last} trong số {count} {unit}",
+  "table.range": "{first}-{last} trong {count}",
   "table.pagination": "Phân trang",
   "table.rowActions": "Thao tác cho {name}",
   "table.page": "Trang {number}",
@@ -3646,15 +3646,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "table.dialsRefused": "Không thể hiển thị danh sách với bộ lọc này.",
   "table.none": "Chưa có {unit} nào.",
   "table.actions": "Thao tác",
-  "table.rangeLoaded": "Đã tải {first} đến {last} trong {count} {unit}",
+  "table.rangeLoaded": "{first}-{last} trong {count} đã tải",
   "table.rangeIn": "{range} thuộc {scope}",
   "unit.contacts": "liên hệ",
   "unit.companies": "công ty",
   "unit.deals": "deal",
   "unit.leads": "lead",
-  "unit.contact": "liên hệ",
-  "unit.company": "công ty",
-  "unit.lead": "lead",
   "unit.worklistItems": "việc và cam kết",
   "unit.partners": "đối tác",
   "unit.products": "sản phẩm",
@@ -4939,7 +4936,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.commitment.unnamedColleague": "Tên đồng nghiệp không khả dụng",
   "approval.commitment.unverifiedNamed": "Chưa xác minh: {name}",
   "approval.commitment.unresolved": "Chưa xác định người cam kết",
-  "approval.commitment.assignNamed": "Tạo công việc giao cho {name}.",
+  "approval.commitment.assignNamed": "Tạo việc giao cho {name}.",
   "approval.field.owner": "Người chịu trách nhiệm",
   "approval.field.sourceText": "Văn bản gốc",
   "approval.field.to": "Đến",
@@ -5781,6 +5778,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "tagAdmin.usedBy_one": "{count} hồ sơ",
   "tagAdmin.usedBy_other": "{count} hồ sơ",
   "tagAdmin.retired": "Đã ngừng dùng",
+  "tagAdmin.mergedInto": "Đã gộp vào {name}",
   "tagAdmin.retiredToast": "Đã ngừng dùng {name}",
   "tagAdmin.restoredToast": "Đã khôi phục {name}",
   "tags.archived": "trong kho lưu trữ",
@@ -5849,6 +5847,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "tagResult.resultsTitle": "Hồ sơ có thẻ này",
   "tagResult.nothingCarries":
     "Chưa có hồ sơ nào gắn thẻ này. Gắn thẻ từ bất kỳ liên hệ, công ty, deal hoặc lead nào.",
+  "tagResult.retiredNothing":
+    "Không có hồ sơ nào gắn thẻ này. Thẻ đã ngừng dùng nên không thể gắn vào hồ sơ.",
+  "tagResult.mergedBody":
+    "Thẻ này đã được gộp vào {name}. Các hồ sơ từng có thẻ này đã nhận thẻ {name} khi gộp.",
+  "tagResult.openKept": "Mở {name}",
   "tagResult.loadingRows": "Đang tải {kind}…",
   "tagResult.noneLeft": "Không còn hồ sơ nào gắn thẻ này",
   "tagResult.unnamed": "Chưa đặt tên",
@@ -8847,7 +8850,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "tasks.origin.privacy_request":
     "Được tạo khi liên hệ yêu cầu chỉnh sửa, xóa hoặc ngừng sử dụng dữ liệu của họ. Pháp luật nước họ quy định thời hạn của việc này.",
   "tasks.origin.analytics_decision":
-    "Ghi từ một lần xem xét bán hàng: một quyết định có thành viên chịu trách nhiệm và ngày xem lại. Ghi kết quả trong Quyết định từ lần xem xét trước.",
+    "Ghi từ Tổng kết bán hàng: một quyết định có thành viên chịu trách nhiệm và ngày xem lại. Ghi kết quả trong Quyết định từ lần xem xét trước.",
   "tasks.origin.overnight_reconcile":
     "Việc này được tạo từ một bước tiếp theo do lượt rà soát ban đêm đề xuất.",
   "tasks.origin.commitment":
@@ -8874,7 +8877,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.sectionPipeline": "Pipeline",
   "analytics.sectionOverview": "Tổng quan",
   "analytics.overview.views": "Chế độ xem tổng quan",
-  "analytics.overview.sales": "Báo cáo bán hàng",
+  "analytics.overview.sales": "Tổng kết bán hàng",
   "analytics.overview.prospecting": "Tìm khách của tôi",
   "analytics.overview.readings": "Chỉ số chính",
   "analytics.overview.charts": "Biểu đồ",
@@ -10882,7 +10885,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "import.test.nothing.done": "Xong",
   "import.test.nothing.empty": "Tệp có dòng tiêu đề nhưng không có dòng nào.",
   "import.test.reupload": "Sửa và tải lại",
-  "import.test.issuesUnit": "vấn đề",
   "import.test.import_one": "Nhập 1 dòng",
   "import.test.import_other": "Nhập {count} dòng",
   "import.test.importAnyway_one": "Vẫn nhập 1 dòng",
@@ -11876,6 +11878,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "notifications.delivery.in_app": "Trong ứng dụng",
   "notifications.delivery.email": "Qua email",
   "notifications.delivery.digest": "Bản tổng hợp hằng ngày",
+  "notifications.noMailTitle": "Chưa thiết lập email",
+  "notifications.noMail":
+    "Bản cài đặt này không gửi email thông báo, nên Qua email, Bản tổng hợp hằng ngày và các bản tóm tắt qua email không đến hộp thư nào. Mọi thông báo vẫn hiện trong ứng dụng.",
+  "notifications.noMailGuide": "Cách thiết lập email",
   "privacynotice.title": "Thông tin đang lưu về quý khách",
   "privacynotice.intro":
     "Thông báo này cho quý khách biết về việc xử lý dữ liệu cá nhân của quý khách. Quý khách không cần trả lời hay làm gì.",
@@ -13312,7 +13318,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Chỉ quản trị viên hoặc thành viên Vận hành mới có thể thay đổi quyết định về tên miền. Bạn chỉ có quyền xem danh sách này.",
   "blockedDomains.none":
     "Chưa có tên miền nào bị từ chối. Kết quả về người gửi hàng loạt và các lần từ chối thủ công sẽ hiển thị ở đây.",
-  "blockedDomains.unit": "quyết định tên miền",
   "blockedDomains.col.domain": "Tên miền",
   "blockedDomains.col.admission": "Quyết định",
   "blockedDomains.col.source": "Nguồn quyết định",
@@ -16961,7 +16966,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aicalls.open": "Mở lượt gọi {feature} lúc {when}",
   "aicalls.col.when": "Thời điểm",
   "aicalls.filtersLabel": "Bộ lọc",
-  "aicalls.unit": "lượt gọi",
   "aicalls.col.feature": "Tính năng",
   "aicalls.col.model": "Mô hình",
   "aicalls.col.tokens": "Token vào / ra",
@@ -23082,11 +23086,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.commitment.tentative": "Chưa chắc chắn: họ nói sẽ cố gắng",
   "approval.commitment.promiseStatus": "Trạng thái cam kết",
   "approval.commitment.notFulfilled":
-    "Tạo công việc không có nghĩa là cam kết đã được thực hiện.",
+    "Tạo việc không có nghĩa là cam kết đã được thực hiện.",
   "approval.commitment.inactiveAssignment":
-    "Không thể tạo công việc cho {name}: tài khoản này không thể nhận công việc. Bỏ đề xuất này và tạo công việc cho một đồng nghiệp đang hoạt động.",
-  "approval.commitment.createTask_other": "Tạo {count} công việc",
-  "approval.commitment.createTask_one": "Tạo công việc",
+    "Không thể tạo việc cho {name}: tài khoản này không thể nhận việc. Bỏ đề xuất này và tạo việc cho một đồng nghiệp đang hoạt động.",
+  "approval.commitment.createTask_other": "Tạo {count} việc",
+  "approval.commitment.createTask_one": "Tạo việc",
   "magic.action.approval_commitment_task_named": "{party}: {summary}",
   "magic.action.approval_commitment_task_summary": "{summary}",
   "magic.action.approval_commitment_task_unverified":

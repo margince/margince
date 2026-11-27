@@ -3666,10 +3666,9 @@ export const en = {
   "list.viewAll": "All",
   "list.viewHot": "Hot",
 
-  // The list surface (design-system/listtable.tsx). The count says "loaded"
-  // rather than a total on purpose: paging is a keyset cursor, so the number
-  // of rows in hand is the only figure the client can state honestly.
-  "table.range": "{first} to {last} of {count} {unit}",
+  // The list surface (design-system/listtable.tsx). Without a server total the
+  // range says "loaded": the rows in hand are the only figure the client knows.
+  "table.range": "{first}-{last} of {count}",
   "table.pagination": "Pages",
   "table.rowActions": "Actions for {name}",
   "table.page": "Page {number}",
@@ -3695,15 +3694,12 @@ export const en = {
   "table.dialsRefused": "This list cannot be shown with these filters.",
   "table.none": "No {unit} yet.",
   "table.actions": "Actions",
-  "table.rangeLoaded": "{first} to {last} of {count} {unit} loaded",
+  "table.rangeLoaded": "{first}-{last} of {count} loaded",
   "table.rangeIn": "{range} in {scope}",
   "unit.contacts": "contacts",
   "unit.companies": "companies",
   "unit.deals": "deals",
   "unit.leads": "leads",
-  "unit.contact": "contact",
-  "unit.company": "company",
-  "unit.lead": "lead",
   "unit.worklistItems": "tasks and commitments",
   "unit.partners": "partners",
   "unit.products": "products",
@@ -5869,6 +5865,7 @@ export const en = {
   "tagAdmin.usedBy_one": "{count} record",
   "tagAdmin.usedBy_other": "{count} records",
   "tagAdmin.retired": "Retired",
+  "tagAdmin.mergedInto": "Merged into {name}",
   "tagAdmin.retiredToast": "{name} retired",
   "tagAdmin.restoredToast": "{name} restored",
   "tags.archived": "archived",
@@ -5937,6 +5934,11 @@ export const en = {
   "tagResult.resultsTitle": "Records with this tag",
   "tagResult.nothingCarries":
     "No records have this tag yet. Apply it from any contact, company, deal or lead.",
+  "tagResult.retiredNothing":
+    "No records have this tag. It is retired, so it cannot be added to a record.",
+  "tagResult.mergedBody":
+    "This tag was merged into {name}. The records that had it received {name} in the merge.",
+  "tagResult.openKept": "Open {name}",
   "tagResult.loadingRows": "Loading {kind}…",
   "tagResult.noneLeft": "No records have this tag anymore",
   "tagResult.unnamed": "Unnamed",
@@ -11158,7 +11160,6 @@ export const en = {
   "import.test.nothing.done": "Done",
   "import.test.nothing.empty": "The file has a header and no rows.",
   "import.test.reupload": "Fix and re-upload",
-  "import.test.issuesUnit": "issues",
   "import.test.import_one": "Import 1 row",
   "import.test.import_other": "Import {count} rows",
   "import.test.importAnyway_one": "Import 1 row anyway",
@@ -12156,6 +12157,10 @@ export const en = {
   "notifications.delivery.in_app": "In the app",
   "notifications.delivery.email": "Email",
   "notifications.delivery.digest": "Daily digest",
+  "notifications.noMailTitle": "Email is not set up",
+  "notifications.noMail":
+    "This installation sends no notification email, so Email, Daily digest and the email summaries reach no mailbox. Every notice still shows in the app.",
+  "notifications.noMailGuide": "How to set up email",
   "privacynotice.title": "What we hold about you",
   "privacynotice.intro":
     "We are telling you this because the law requires it. You do not need to reply or do anything.",
@@ -13593,7 +13598,6 @@ export const en = {
     "Only an administrator or operations user can change domain decisions. The list is read-only for you.",
   "blockedDomains.none":
     "No domains refused yet. Bulk-sender results and manual refusals appear here.",
-  "blockedDomains.unit": "domain decisions",
   "blockedDomains.col.domain": "Domain",
   "blockedDomains.col.admission": "Decision",
   "blockedDomains.col.source": "Decided by",
@@ -17282,7 +17286,6 @@ export const en = {
   "aicalls.open": "Open the {feature} call from {when}",
   "aicalls.col.when": "When",
   "aicalls.filtersLabel": "Filters",
-  "aicalls.unit": "calls",
   "aicalls.col.feature": "Feature",
   "aicalls.col.model": "Model",
   "aicalls.col.tokens": "Tokens in / out",

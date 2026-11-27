@@ -218,7 +218,7 @@ Also called: delete an attachment, remove a document.
 ### How do I edit or delete a document I uploaded?
 To change or remove an uploaded document in Margince, open the **⋯** menu on its tile or row in **Documents**. This works on a contact, a company and a deal. Choose **Edit** or **Delete**. The menu is missing when you may not edit the record. It is also missing on a file that came with an email or chat message, because that file belongs to its message.
 - **Edit**: opens a small dialog for **Title**, **Category** and **State** (**Draft**, **Current**, **Final** or **Superseded**). Only the fields you change are saved. On a company's library, a **Superseded** document leaves the list until you choose **Show superseded**. On a contact or a deal it stays in the list and is marked as superseded.
-- **Delete**: asks first and names the file. The file leaves every Documents list that showed it. A saved link to it then opens a page that says "This file was deleted or you no longer have access."
+- **Delete**: asks first and names the file. The file leaves every Documents list that showed it. A saved link to it then opens a page that says "This file was deleted or is no longer accessible."
 Also called: rename a document, change a document's category, mark a document superseded, remove a wrong upload.
 
 ## Document sets — asking your documents questions

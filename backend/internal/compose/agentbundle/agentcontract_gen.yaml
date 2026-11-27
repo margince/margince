@@ -547,6 +547,7 @@ paths:
         `relationship_mark`. A text search (`q`) still finds a marked contact. Leads never appear here.
       parameters:
         - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Offset'
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/ListMembershipFilter'
         - $ref: '#/components/parameters/Sort'
@@ -1888,6 +1889,7 @@ paths:
       summary: List companies (live by default; cursor-paginated).
       parameters:
         - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Offset'
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/ListMembershipFilter'
         - $ref: '#/components/parameters/Sort'
@@ -4295,6 +4297,7 @@ paths:
       summary: List deals (live by default; cursor-paginated). Supports Kanban-by-stage reads.
       parameters:
         - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Offset'
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/ListMembershipFilter'
         - $ref: '#/components/parameters/Sort'
@@ -5415,6 +5418,7 @@ paths:
       summary: List projects (live by default; cursor-paginated).
       parameters:
         - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Offset'
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/Sort'
         - $ref: '#/components/parameters/IncludeArchived'
@@ -8939,6 +8943,7 @@ paths:
         Explicit sort values retain their documented field ordering.
       parameters:
         - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Offset'
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/ListMembershipFilter'
         - $ref: '#/components/parameters/Sort'
@@ -13424,7 +13429,9 @@ paths:
       description: |-
         The undo for a retirement somebody regrets. It refuses when a LIVE tag has taken the
         name in the meantime: two words a reader cannot tell apart is the exact state the
-        vocabulary exists to prevent, and the caller has to rename one of them first.
+        vocabulary exists to prevent, and the caller has to rename one of them first. It also
+        refuses a tag that carries `merged_into`: the merge moved its records to the survivor,
+        and a restore would not move them back.
 
         Needs the passport permission Change records.
 
@@ -27366,11 +27373,18 @@ components:
         Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
         effective `sort` of the originating request (field + direction) plus the last row's keyset
         (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-        under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+        under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+        to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
         together with a `sort` that differs from the one the cursor was minted under returns
         `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
         **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
         remaining pages see, so re-issue the query without the cursor when changing filters.
+    Offset:
+      name: offset
+      in: query
+      schema: {type: integer, minimum: 0, maximum: 10000}
+      description: >-
+        Rows to skip in the list's own order (its filters, row scope and `sort`), to open a page without walking the cursor to it. The answer carries `page.next_cursor`, so reading on from there uses the keyset. Refused with `422` (`field: offset`) together with `cursor`, and past 10000; a deeper page is reached through the cursor.
     Limit:
       name: limit
       in: query
@@ -32355,11 +32369,18 @@ components:
       description: |-
         The calling seat's whole set — one entry per class the product sends, always all of them,
         so a screen rendering one row per class never has to take the others from its own memory.
-      required: [items]
+      required: [items, email_delivery_available]
       properties:
         items:
           type: array
           items: {$ref: '#/components/schemas/NotificationPreference'}
+        email_delivery_available:
+          type: boolean
+          description: |-
+            Whether this installation sends its own mail. False means `email` and `digest` reach
+            no mailbox: the notice still lands in the app, and no message leaves. A screen says
+            so beside the choices rather than offering mail that will not arrive. It answers the
+            caller's own delivery, so every seat that reads its settings is told.
     NotificationItem:
       type: object
       description: |-
@@ -32496,7 +32517,7 @@ components:
           type: integer
           minimum: 0
           description: >-
-            How many rows match this request in total, ignoring the cursor and the page size — what the reader is told the list holds. Optional because a keyset page does not need one: a list that omits it says it does not count, never that it counted zero, so a client reads absence as unknown and falls back to how many rows it has loaded. Where it is sent it is exact rather than an estimate, counted over the same filters and the same row scope as the page beside it, in the same transaction, so the two cannot disagree about what matching means. The contact, company and lead lists count on the first page only and send no total with a cursor, so a client keeps the first page's total while it loads further pages.
+            How many rows match this request in total, ignoring the cursor and the page size — what the reader is told the list holds. Optional because a keyset page does not need one: a list that omits it says it does not count, never that it counted zero, so a client reads absence as unknown and falls back to how many rows it has loaded. Where it is sent it is exact rather than an estimate, counted over the same filters and the same row scope as the page beside it, in the same transaction, so the two cannot disagree about what matching means. The contact, company, lead, deal and project lists count on a page read without a cursor, which is the first page or a page opened by `offset`, and send no total with a cursor, so a client keeps that total while it loads further pages.
     Address:
       type: [object, 'null']
       description: Structured postal address.
@@ -33242,9 +33263,11 @@ components:
         address: {$ref: '#/components/schemas/Address'}
         emails:
           type: array
+          maxItems: 25
           items: {$ref: '#/components/schemas/ContactEmailInput'}
         phones:
           type: array
+          maxItems: 25
           items: {$ref: '#/components/schemas/ContactPhoneInput'}
         source: {type: string, enum: [api, automation, capture, import, manual, webform], description: 'The channel this contact arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. The other system and the contact''s id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`.'}
         source_id: {type: [string, 'null'], maxLength: 128, description: 'The id this contact has in source_system. Needs source_system, and the pair is unique: a second contact with the same pair is 409.'}
@@ -33418,8 +33441,22 @@ components:
     ContactEmailInput:
       type: object
       description: |-
-        One address on a contact, as a writer supplies it. One schema for create and update,
-        so the two cannot describe an address differently.
+        One address supplied when creating a contact.
+      required: [email]
+      properties:
+        email:
+          type: string
+          maxLength: 254
+          format: email
+          description: 'An address whose local part names a sending system (noreply@, notifications@, receipts@ and the like) is refused with 422 `email_names_no_one`: nobody answers there, so it names no contact.'
+        email_type: {type: string, enum: [work, personal, other], default: work}
+        is_primary: {type: boolean, default: false, description: 'The one primary address of the contact, whatever its type. More than one row marked primary is refused with 409 `multiple_primary`. A new contact whose rows name none gets its first row as primary.'}
+        position: {type: integer, default: 0}
+    ContactEmailReplacementInput:
+      type: object
+      description: |-
+        Mirrors ContactEmailInput except for the state-dependent address ceiling.
+        A held legacy address may remain unchanged; a new address must fit the write limit.
       required: [email]
       properties:
         email:
@@ -33475,7 +33512,7 @@ components:
         address: {$ref: '#/components/schemas/Address'}
         emails:
           type: array
-          items: {$ref: '#/components/schemas/ContactEmailInput'}
+          items: {$ref: '#/components/schemas/ContactEmailReplacementInput'}
           description: |-
             REPLACES the contact's addresses with exactly this list, which is what a
             correction needs: a bounced address is fixed by sending the set that should
@@ -33749,7 +33786,7 @@ components:
           pattern: '^https://([a-z]{2,3}\.)?linkedin\.com/company/[^/?#]+/?$'
         legal_name: {type: [string, 'null'], maxLength: 500}
         phone: {type: [string, 'null'], maxLength: 20000, description: "The company's main number. A formatted number is accepted and stored in E.164 form (for example +49301234567). It is never a contact's own number."}
-        email: {type: [string, 'null'], format: email, maxLength: 20000, description: "The company's general address, for example info@example.com. It never creates or matches a contact."}
+        email: {type: [string, 'null'], format: email, maxLength: 254, description: "The company's general address, for example info@example.com. It never creates or matches a contact."}
         description: {type: [string, 'null'], maxLength: 20000, description: A description of what the company does.}
         industry: {type: [string, 'null'], maxLength: 2000, description: 'An industry code, or text the server can map to one. Text that names no code stores no code and is kept in the description.'}
         size_band: {type: [string, 'null'], enum: [null, '1-10', '11-50', '51-200', '201-500', '501-1000', '1001-5000', '5000+']}
@@ -33758,6 +33795,7 @@ components:
         parent_company_id: {type: [string, 'null'], format: uuid}
         domains:
           type: array
+          maxItems: 100
           items: {$ref: '#/components/schemas/CompanyDomainInput'}
         source: {type: string, enum: [api, automation, capture, import, manual, webform], description: 'The channel this company arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. The other system and the company''s id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`.'}
         source_system: {type: [string, 'null'], maxLength: 128, description: 'Which external system this record came from, when a caller imported it.'}
@@ -33776,7 +33814,7 @@ components:
         display_name: {type: string, maxLength: 120}
         legal_name: {type: [string, 'null'], maxLength: 500}
         phone: {type: [string, 'null'], maxLength: 20000, description: "The company's main number. A formatted number is accepted and stored in E.164 form (for example +49301234567). It is never a contact's own number."}
-        email: {type: [string, 'null'], format: email, maxLength: 20000, description: "The company's general address, for example info@example.com. It never creates or matches a contact."}
+        email: {type: [string, 'null'], format: email, maxLength: 254, description: "The company's general address, for example info@example.com. It never creates or matches a contact."}
         description: {type: [string, 'null'], maxLength: 20000, description: 'A description of what the company does. Absent leaves it untouched; an empty string clears it, the same spelling every other nullable text field on this record uses.'}
         industry: {type: [string, 'null'], maxLength: 2000, description: 'An industry code, or text the server can map to one. Text that names no code stores no code and is kept in the description.'}
         size_band: {type: [string, 'null'], enum: [null, '1-10', '11-50', '51-200', '201-500', '501-1000', '1001-5000', '5000+']}
@@ -33792,7 +33830,7 @@ components:
             archived answers 422 naming this field. Absent leaves it untouched.
         domains:
           type: array
-          description: Replace-set of the company's live domains (add new, archive removed, flip is_primary). Absent = untouched; an empty array clears all domains.
+          description: Replace-set of the company's live domains (add new, archive removed, flip is_primary). Absent = untouched; an empty array clears all domains. A list past 100 domains is 422 `too_many`, unless the company already holds at least as many.
           items: {$ref: '#/components/schemas/CompanyDomainInput'}
         visibility:
           type: string
@@ -42330,7 +42368,7 @@ components:
             properties:
               entity_type: {type: string, enum: [contact, company, deal, lead, project]}
               entity_id: {type: string, format: uuid}
-        source: {type: string, enum: [api, automation, capture, import, manual, webform], description: 'The channel this task arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. Any other value is 422 `invalid_source`.'}
+        source: {type: string, maxLength: 128, enum: [api, automation, capture, import, manual, webform], description: 'The channel this task arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. Any other value is 422 `invalid_source`.'}
       additionalProperties: false
     ActivityDealFilingRecordType:
       type: string
@@ -42465,7 +42503,7 @@ components:
             properties:
               entity_type: {type: string, enum: [contact, company, deal, lead, project]}
               entity_id: {type: string, format: uuid}
-        source: {type: string, enum: [api, automation, capture, import, manual, webform], description: 'The channel this activity arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. The other system and the activity''s id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`.'}
+        source: {type: string, maxLength: 128, enum: [api, automation, capture, import, manual, webform], description: 'The channel this activity arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. The other system and the activity''s id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`.'}
         raw:
           type: [object, 'null']
           additionalProperties: true
@@ -44445,7 +44483,7 @@ components:
       type: object
       properties:
         full_name: {type: [string, 'null'], maxLength: 120}
-        email: {type: [string, 'null'], format: email}
+        email: {type: [string, 'null'], maxLength: 254, format: email}
         phone: {type: [string, 'null'], description: "E.164, as a contact's number is. One number: a lead is one enquiry until it is promoted, and the number carries to the contact it becomes."}
         linkedin_url: {type: [string, 'null']}
         title: {type: [string, 'null']}
@@ -44487,7 +44525,7 @@ components:
         POST /leads/{id}/promote. Both terminal states are therefore excluded from this enum.
       properties:
         full_name: {type: [string, 'null'], maxLength: 120}
-        email: {type: [string, 'null'], format: email}
+        email: {type: [string, 'null'], maxLength: 254, format: email}
         phone: {type: [string, 'null'], description: "E.164, as a contact's number is. One number: a lead is one enquiry until it is promoted, and the number carries to the contact it becomes."}
         title: {type: [string, 'null']}
         company_name: {type: [string, 'null']}
@@ -46206,6 +46244,13 @@ components:
         created_at: {type: string, format: date-time}
         updated_at: {type: string, format: date-time}
         archived_at: {type: [string, 'null'], format: date-time}
+        merged_into:
+          allOf: [{$ref: '#/components/schemas/RowTag'}]
+          description: |-
+            The tag a merge folded this one into, named as it reads now. Present only on a tag
+            archived by a merge, and such a tag cannot be restored. The named tag is the next merge
+            destination and may itself have been merged since; follow each `merged_into` until a tag
+            has none to find the tag that carries the records now.
         carried_by:
           type: integer
           readOnly: true
@@ -46279,6 +46324,13 @@ components:
         created_at: {type: string, format: date-time}
         updated_at: {type: string, format: date-time}
         archived_at: {type: [string, 'null'], format: date-time}
+        merged_into:
+          allOf: [{$ref: '#/components/schemas/RowTag'}]
+          description: |-
+            The tag a merge folded this one into, named as it reads now. Present only on a tag
+            archived by a merge, and such a tag cannot be restored. The named tag is the next merge
+            destination and may itself have been merged since; follow each `merged_into` until a tag
+            has none to find the tag that carries the records now.
         usage: {$ref: '#/components/schemas/TagUsage'}
     TagSuggestion:
       type: object
@@ -48483,13 +48535,13 @@ components:
       properties:
         resource: {$ref: '#/components/schemas/SavedViewTarget'}
         name: {type: string}
-        query: {type: object, additionalProperties: true}
+        query: {type: object, additionalProperties: true, description: 'At most 65536 bytes as JSON; a larger one is 422 `too_large` on `query`.'}
     UpdateSavedViewRequest:
       type: object
       description: A partial update; omitted fields keep their stored value.
       properties:
         name: {type: string}
-        query: {type: object, additionalProperties: true}
+        query: {type: object, additionalProperties: true, description: 'Replaces the stored query whole. At most 65536 bytes as JSON; a larger one is 422 `too_large` on `query`.'}
     SavedViewListResponse:
       type: object
       required: [data, page]
@@ -48502,7 +48554,7 @@ components:
       required: [display_name, email, expected_updated_at]
       properties:
         display_name: {type: string, minLength: 1, maxLength: 120}
-        email: {type: string, format: email, description: May change only before the account has been used to sign in.}
+        email: {type: string, format: email, description: 'May change only before the account has been used to sign in. A new address holds at most 254 characters; an unchanged stored address may be longer.'}
         role: {type: string, description: Omit to keep the current roles.}
         team_ids:
           type: array
@@ -48782,7 +48834,7 @@ components:
           type: string
           format: email
           description: >-
-            Their work address as the source system spelled it. It is the identity the seat is keyed on, so a second record for the same address is refused.
+            Their work address as the source system spelled it. It is the identity the seat is keyed on, so a second record for the same address is refused. A new address holds at most 254 characters. A longer stored address may still resolve a merged member to its survivor.
         display_name: {type: string, minLength: 1, maxLength: 120}
         role:
           type: string
@@ -48804,7 +48856,7 @@ components:
       description: Admin-supplied details for a new member. No password — the invite issues a set-password token.
       required: [email, display_name, role]
       properties:
-        email: {type: string, format: email}
+        email: {type: string, maxLength: 254, format: email}
         display_name: {type: string, minLength: 1, maxLength: 120}
         greeting_name:
           type: [string, 'null']
@@ -56043,7 +56095,7 @@ components:
           description: |-
             When buyer access lapses. A past instant is accepted and stored as the
             time of the call, so the room opens with buyer access already ended.
-        source: {type: string}
+        source: {type: string, maxLength: 128}
       additionalProperties: false
     UpdateDealRoomRequest:
       type: object
@@ -56149,12 +56201,12 @@ components:
       required: [full_name, email, source]
       properties:
         full_name: {type: string, minLength: 1}
-        email: {type: string, format: email}
+        email: {type: string, maxLength: 254, format: email}
         capability:
           allOf:
             - $ref: '#/components/schemas/DealRoomParticipantCapability'
           description: Defaults to `view` — the least that lets someone read the room.
-        source: {type: string}
+        source: {type: string, maxLength: 128}
       additionalProperties: false
     UpdateDealRoomParticipantRequest:
       type: object
@@ -56163,6 +56215,7 @@ components:
         full_name: {type: string, minLength: 1}
         email:
           type: string
+          maxLength: 254
           format: email
           description: |-
             Only while their credential is unconsumed. Changing it invalidates the link
@@ -56286,7 +56339,7 @@ components:
           minLength: 1
           description: The buyer-facing name. Defaults to the attachment's filename.
         position: {type: integer, description: Order within the group. Defaults to 0.}
-        source: {type: string}
+        source: {type: string, maxLength: 128}
       additionalProperties: false
     UpdateDealRoomDocumentRequest:
       type: object
@@ -56354,7 +56407,7 @@ components:
         required_change:
           type: boolean
           description: Only with a document. Marks the thread as one the seller still owes an answer on.
-        source: {type: string, description: 'Provenance. A user''s client names it on the seller edge. An agent that omits it records `agent`, and a buyer''s comment always records the credential.'}
+        source: {type: string, maxLength: 128, description: 'Provenance. A user''s client names it on the seller edge. An agent that omits it records `agent`, and a buyer''s comment always records the credential.'}
         request_id:
           type: string
           format: uuid
@@ -56367,7 +56420,7 @@ components:
       required: [body]
       properties:
         body: {type: string, minLength: 1}
-        source: {type: string, description: 'Provenance. A user''s client names it on the seller edge. An agent that omits it records `agent`, and a buyer''s comment always records the credential.'}
+        source: {type: string, maxLength: 128, description: 'Provenance. A user''s client names it on the seller edge. An agent that omits it records `agent`, and a buyer''s comment always records the credential.'}
         request_id:
           type: string
           format: uuid
