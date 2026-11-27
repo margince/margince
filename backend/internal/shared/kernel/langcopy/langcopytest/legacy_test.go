@@ -104,4 +104,9 @@ func TestStyleByLanguageHoldsEachLanguageInItsRegister(t *testing.T) {
 	if !reports(got.errors, "en 1 ") || !reports(got.errors, "no de entry") || len(got.errors) != 2 {
 		t.Errorf("a list table missing German reported %v, want its second English line and the missing entry", got.errors)
 	}
+	empty := map[textlang.Lang][]string{textlang.English: {"Saved"}, textlang.German: nil, textlang.Vietnamese: {}}
+	got = run(func(r reporter) { StyleByLanguage(r, empty) })
+	if !reports(got.errors, "empty de list") || !reports(got.errors, "empty vi list") || len(got.errors) != 2 {
+		t.Errorf("a list table with no German or Vietnamese sentence reported %v, want both languages named", got.errors)
+	}
 }

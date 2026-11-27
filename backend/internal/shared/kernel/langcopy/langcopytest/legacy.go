@@ -97,25 +97,38 @@ func CensusByLanguage[T any](t reporter, table map[textlang.Lang]T, holes map[st
 func StyleByLanguage[T any](t reporter, table map[textlang.Lang]T, register ...Register) {
 	t.Helper()
 	speaker := named(t, register)
-	english := entrySentences(t, table[textlang.English])
+	english := map[string]string{}
+	if entry, ok := table[textlang.English]; ok {
+		english = entrySentences(t, textlang.English, entry)
+	}
 	for _, lang := range textlang.Shipped {
 		entry, ok := table[lang]
 		if !ok {
 			t.Errorf("copy has no %s entry", lang)
 			continue
 		}
-		for name, sentence := range entrySentences(t, entry) {
+		sentences := english
+		if lang != textlang.English {
+			sentences = entrySentences(t, lang, entry)
+		}
+		for name, sentence := range sentences {
 			judge(t, speaker, lang, name, sentence, english[name])
 		}
 	}
 }
 
+// entrySentences keys a list by index, so the languages' lists may differ in
+// length. An empty one would hold its language to nothing.
+//
 //craft:ignore naked-any an entry is a struct of sentences or a list of them
-func entrySentences(t reporter, entry any) map[string]string {
+func entrySentences(t reporter, lang textlang.Lang, entry any) map[string]string {
 	t.Helper()
 	list, isList := entry.([]string)
 	if !isList {
 		return Sentences(t, entry)
+	}
+	if len(list) == 0 {
+		t.Errorf("copy has an empty %s list, so no %s sentence is checked", lang, lang)
 	}
 	sentences := make(map[string]string, len(list))
 	for i, sentence := range list {

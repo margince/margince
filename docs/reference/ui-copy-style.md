@@ -263,7 +263,7 @@ string spells any more, and rewrites both pins to match. A line dropped by hand
 sets both pins in the same change. Run it from `backend/`:
 
 ```sh
-go test ./internal/shared/kernel/langcopy/langcopytest -run TestRecutStyleBaseline -recut
+go test ./internal/shared/kernel/langcopy/langcopytest -run '^TestRecutStyleBaseline$' -recut
 ```
 
 The check does not reach:

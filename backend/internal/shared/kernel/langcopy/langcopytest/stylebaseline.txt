@@ -9,7 +9,7 @@
 # wantStyleWaivers and wantStyleDigest in stylebaseline_test.go to match.
 # A line dropped by hand changes both pins in the same change.
 # From backend/:
-#   go test ./internal/shared/kernel/langcopy/langcopytest -run TestRecutStyleBaseline -recut
+#   go test ./internal/shared/kernel/langcopy/langcopytest -run '^TestRecutStyleBaseline$' -recut
 en.contraction	"Asking a colleague for context isn't available yet"
 en.contraction	"The model's answer didn't match the records, so only the rule-based advice is shown."
 en.dash	"%d deals moved backwards — review the recovery plan"

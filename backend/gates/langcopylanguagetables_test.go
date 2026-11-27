@@ -12,6 +12,8 @@ package gates
 // it. Unseen: a table filled by assignment, and a walk of part of a table.
 
 import (
+	"bytes"
+	"cmp"
 	"go/ast"
 	"go/parser"
 	"go/token"
@@ -66,15 +68,22 @@ const (
 const containerPrefix = `(?:map\[[^\[\]]*\]|\[[^\[\]]*\]|\*)*`
 
 var (
-	languageMapType = regexp.MustCompile(`type\s+(\w+)\s+` + containerPrefix + `map\[textlang\.Lang\]`)
-	namedType       = regexp.MustCompile(`(?m)type\s+(\w+)\s+(?:=\s*)?(\w+)[ \t]*(?:$|;|//)`)
+	textlangImported = regexp.MustCompile(`(\w+)[ \t]+"` + regexp.QuoteMeta(textlangImport) + `"`)
+	namedType        = regexp.MustCompile(`(?m)type\s+(\w+)\s+(?:=\s*)?(\w+)[ \t]*(?:$|;|//)`)
 )
 
-// languageLiteral matches a literal of a language map, of a named type that
-// holds one, or of a container whose elements are either.
-func languageLiteral(mapTypes []string) *regexp.Regexp {
-	spelled := []string{`map\[textlang\.Lang\]`}
-	for _, name := range mapTypes {
+// languageSpelling is how one directory's text spells a language-keyed map
+// and the named types that hold one.
+type languageSpelling struct {
+	keyedMap string
+	mapTypes []string
+}
+
+// literal matches a literal of a language map, of a named type that holds one,
+// or of a container whose elements are either.
+func (s languageSpelling) literal() *regexp.Regexp {
+	spelled := []string{s.keyedMap}
+	for _, name := range s.mapTypes {
 		spelled = append(spelled, name+`\{`)
 	}
 	return regexp.MustCompile(`(?:[=:]|return)\s*` + containerPrefix + `(?:` + strings.Join(spelled, "|") + `)`)
@@ -83,7 +92,7 @@ func languageLiteral(mapTypes []string) *regexp.Regexp {
 func TestEveryLanguageKeyedCopyTableIsHeldToTheStylePages(t *testing.T) {
 	t.Parallel()
 	packages, checks := languagePackages(t, "."), langcopytestChecks(t)
-	tables, read := 0, map[string]bool{}
+	tables, spans := 0, map[string][][2]int{}
 	for _, dir := range slices.Sorted(maps.Keys(packages)) {
 		pkg := packages[dir]
 		held := pkg.held(checks)
@@ -106,29 +115,31 @@ func TestEveryLanguageKeyedCopyTableIsHeldToTheStylePages(t *testing.T) {
 				t.Errorf("unstyledLanguageTables names %s in %s, which holds no such language-keyed table; delete it", name, dir)
 			}
 		}
-		maps.Copy(read, pkg.literalIn)
+		maps.Copy(spans, pkg.spans)
 	}
 	for dir := range unstyledLanguageTables {
 		if _, exists := packages[dir]; !exists {
 			t.Errorf("unstyledLanguageTables names %s, which holds no language-keyed table; delete it", dir)
 		}
 	}
-	flagged := languageLiteralFiles(t, ".")
-	for _, path := range flagged {
-		if !read[path] {
-			t.Errorf("%s spells a language-keyed literal that the syntax scan did not read as a table", path)
-		}
+	literals := languageLiteralsIn(languageTexts(t, "."))
+	for _, literal := range unreadLiterals(literals, spans) {
+		t.Errorf("%s:%d spells a language-keyed literal outside every table the syntax scan read",
+			literal.path, literal.line)
 	}
-	t.Logf("%d language-keyed tables, %d files the text census flags", tables, len(flagged))
+	flagged := map[string]bool{}
+	for _, literal := range literals {
+		flagged[literal.path] = true
+	}
+	t.Logf("%d language-keyed tables, %d literals in %d files the text census flags", tables, len(literals), len(flagged))
 	if len(flagged) == 0 {
 		t.Fatal("the text census flags no file, so it is reading a tree that holds no copy table")
 	}
 }
 
-// languageLiteralFiles is the census the syntax arm answers to: each non-test
-// Go file under root that spells a language-keyed literal. It reads plain text
-// and skips no directory, so a directory the arm stops reading fails.
-func languageLiteralFiles(t *testing.T, root string) []string {
+// languageTexts reads each non-test Go file under root as plain text. It skips
+// no directory, so a directory the syntax scan stops reading fails.
+func languageTexts(t *testing.T, root string) map[string][]byte {
 	t.Helper()
 	texts := map[string][]byte{}
 	err := gatekit.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
@@ -145,42 +156,91 @@ func languageLiteralFiles(t *testing.T, root string) []string {
 	if err != nil {
 		t.Fatalf("reading the module as text for language-keyed literals: %v", err)
 	}
-	mapTypes := languageMapTypes(texts)
-	literals := map[string]*regexp.Regexp{}
-	var flagged []string
+	return texts
+}
+
+// spelledLiteral is where the text census reads a language-keyed literal:
+// the byte offset of the = : or return before it, and that offset's line.
+type spelledLiteral struct {
+	path         string
+	offset, line int
+}
+
+// languageLiteralsIn is the census the syntax scan answers to. It holds one
+// entry per literal, so a table the scan reads cannot stand in for its neighbour.
+func languageLiteralsIn(texts map[string][]byte) []spelledLiteral {
+	spellings, literals := languageSpellings(texts), map[string]*regexp.Regexp{}
+	var found []spelledLiteral
 	for path, text := range texts {
 		dir := filepath.Dir(path)
 		if literals[dir] == nil {
-			literals[dir] = languageLiteral(mapTypes[dir])
+			literals[dir] = spellings[dir].literal()
 		}
-		if literals[dir].Match(text) {
-			flagged = append(flagged, path)
+		for _, match := range literals[dir].FindAllIndex(text, -1) {
+			line := bytes.Count(text[:match[0]], []byte("\n")) + 1
+			found = append(found, spelledLiteral{path: path, offset: match[0], line: line})
 		}
 	}
-	slices.Sort(flagged)
-	return flagged
+	slices.SortFunc(found, func(a, b spelledLiteral) int {
+		return cmp.Or(strings.Compare(a.path, b.path), cmp.Compare(a.offset, b.offset))
+	})
+	return found
 }
 
-func languageMapTypes(texts map[string][]byte) map[string][]string {
-	keyed, namedAs := map[string]map[string]bool{}, map[string]map[string]string{}
-	for path, text := range texts {
-		dir := filepath.Dir(path)
-		if keyed[dir] == nil {
-			keyed[dir], namedAs[dir] = map[string]bool{}, map[string]string{}
+// unreadLiterals answers the literals that lie in no declaration the syntax
+// scan read as a table, by the byte ranges it read in each file.
+func unreadLiterals(literals []spelledLiteral, tables map[string][][2]int) []spelledLiteral {
+	var unread []spelledLiteral
+	for _, literal := range literals {
+		within := func(span [2]int) bool { return span[0] <= literal.offset && literal.offset < span[1] }
+		if !slices.ContainsFunc(tables[literal.path], within) {
+			unread = append(unread, literal)
 		}
-		for _, declared := range languageMapType.FindAllSubmatch(text, -1) {
-			keyed[dir][string(declared[1])] = true
+	}
+	return unread
+}
+
+func languageSpellings(texts map[string][]byte) map[string]languageSpelling {
+	byDir := map[string][][]byte{}
+	for path, text := range texts {
+		byDir[filepath.Dir(path)] = append(byDir[filepath.Dir(path)], text)
+	}
+	spellings := map[string]languageSpelling{}
+	for dir, dirTexts := range byDir {
+		spellings[dir] = spellingIn(dirTexts)
+	}
+	return spellings
+}
+
+// spellingIn reads every import alias of textlang and every name declared for
+// textlang.Lang before the map types, since any file may hold either.
+func spellingIn(texts [][]byte) languageSpelling {
+	qualifiers, namedAs := []string{"textlang"}, map[string]string{}
+	for _, text := range texts {
+		for _, imported := range textlangImported.FindAllSubmatch(text, -1) {
+			qualifiers = append(qualifiers, string(imported[1]))
 		}
 		for _, declared := range namedType.FindAllSubmatch(text, -1) {
-			namedAs[dir][string(declared[1])] = string(declared[2])
+			namedAs[string(declared[1])] = string(declared[2])
 		}
 	}
-	names := map[string][]string{}
-	for dir := range keyed {
-		withNamedChains(keyed[dir], namedAs[dir])
-		names[dir] = slices.Sorted(maps.Keys(keyed[dir]))
+	lang := `(?:` + strings.Join(qualifiers, "|") + `)\.Lang\b`
+	keys := declaredAs(texts, `type\s+(\w+)\s+(?:=\s*)?`+lang, namedAs)
+	keyedMap := `map\[(?:` + strings.Join(append([]string{lang}, keys...), "|") + `)\]`
+	return languageSpelling{keyedMap: keyedMap, mapTypes: declaredAs(texts, `type\s+(\w+)\s+`+containerPrefix+keyedMap, namedAs)}
+}
+
+// declaredAs answers the types a declaration matching pattern names, and each
+// type declared as one of them.
+func declaredAs(texts [][]byte, pattern string, namedAs map[string]string) []string {
+	declaration, declared := regexp.MustCompile(pattern), map[string]bool{}
+	for _, text := range texts {
+		for _, match := range declaration.FindAllSubmatch(text, -1) {
+			declared[string(match[1])] = true
+		}
 	}
-	return names
+	withNamedChains(declared, namedAs)
+	return slices.Sorted(maps.Keys(declared))
 }
 
 // withNamedChains runs to a fixed point, so a cycle of names ends and stays unkeyed.
@@ -240,15 +300,7 @@ func TestNotices(t *testing.T) {
 func reader() (langcopytest.Register, string) { return langcopytest.Agent("x"), "" }
 func TestGreetings(t *testing.T) { register, _ := reader(); register.EnglishText(t, "x", greetings["en"]) }
 `
-	pkg := &languagePackage{tables: map[string]string{}, literalIn: map[string]bool{}}
-	for name, text := range map[string]string{"copy.go": source, "copy_test.go": walk} {
-		file, err := parser.ParseFile(token.NewFileSet(), name, text, parser.SkipObjectResolution)
-		if err != nil {
-			t.Fatal(err)
-		}
-		pkg.add(name, file)
-	}
-	pkg.resolve()
+	pkg := parsedLanguagePackage(t, map[string]string{"copy.go": source, "copy_test.go": walk})
 	want := []string{"buildShown", "greetings", "messages", "nested", "notices", "orphaned", "unwalked", "walked"}
 	if got := slices.Sorted(maps.Keys(pkg.tables)); !slices.Equal(got, want) {
 		t.Errorf("the arm read the tables %v, want %v", got, want)
@@ -259,10 +311,10 @@ func TestGreetings(t *testing.T) { register, _ := reader(); register.EnglishText
 		t.Errorf("the arm read the walked tables as %v", held)
 	}
 	chained := []byte("type raw map[textlang.Lang]string\ntype copyTable raw\ntype looped looping\ntype looping looped\n")
-	if got := languageMapTypes(map[string][]byte{"copy/copy.go": chained})["copy"]; !slices.Equal(got, []string{"copyTable", "raw"}) {
+	if got := spellingIn([][]byte{chained}).mapTypes; !slices.Equal(got, []string{"copyTable", "raw"}) {
 		t.Errorf("the text census reads the language map types %v, want [copyTable raw]", got)
 	}
-	literal := languageLiteral([]string{"byKey"})
+	literal := spellingIn([][]byte{[]byte("type byKey map[string]map[textlang.Lang]string\n")}).literal()
 	for _, line := range []string{"var nested = map[string]map[textlang.Lang]string{", "return []*byKey{"} {
 		if !literal.MatchString(line) {
 			t.Errorf("the text census does not read %q as a language-keyed literal", line)
@@ -270,16 +322,95 @@ func TestGreetings(t *testing.T) { register, _ := reader(); register.EnglishText
 	}
 }
 
+// TestTheLanguageTableArmReadsNamesAcrossFiles is the vacuity check for a name
+// one file declares and another spells. One file holds three tables: keyed
+// directly, keyed by an alias, and of a map type declared under another import
+// name of textlang. The text census reads each literal apart. A test file that
+// does not import langcopytest walks the alias table through a helper's Register.
+func TestTheLanguageTableArmReadsNamesAcrossFiles(t *testing.T) {
+	t.Parallel()
+	files := map[string]string{
+		"keys.go": `package copy
+import tl "github.com/margince/margince/backend/internal/shared/kernel/textlang"
+type locale = tl.Lang
+type byKey map[string]map[tl.Lang]string
+`,
+		"tables.go": `package copy
+import "github.com/margince/margince/backend/internal/shared/kernel/textlang"
+var direct = map[textlang.Lang]string{textlang.English: "Saved"}
+var aliased = map[locale]string{textlang.English: "We saved it"}
+var elided = byKey{"saved": {textlang.English: "We saved it"}}
+`,
+		"reader_test.go": `package copy
+import "github.com/margince/margince/backend/internal/shared/kernel/langcopy/langcopytest"
+func reader() (langcopytest.Register, string) { return langcopytest.Agent("x"), "" }
+`,
+		"copy_test.go": `package copy
+func TestAliased(t *testing.T) { register, _ := reader(); register.EnglishText(t, "x", aliased["en"]) }
+`,
+	}
+	pkg := parsedLanguagePackage(t, files)
+	if got, want := slices.Sorted(maps.Keys(pkg.tables)), []string{"aliased", "direct", "elided"}; !slices.Equal(got, want) {
+		t.Errorf("the arm read the tables %v, want %v", got, want)
+	}
+	if held := pkg.held(langcopytestChecks(t)); !held["aliased"] || held["direct"] || held["elided"] {
+		t.Errorf("the arm read the walked tables as %v, want aliased alone", held)
+	}
+	texts := map[string][]byte{}
+	for name, text := range files {
+		if !strings.HasSuffix(name, "_test.go") {
+			texts["copy/"+name] = []byte(text)
+		}
+	}
+	literals := languageLiteralsIn(texts)
+	if got := len(literals); got != 3 {
+		t.Errorf("the text census reads %d language-keyed literals, want 3: %v", got, literals)
+	}
+	if unread := unreadLiterals(literals, pkg.spans); len(unread) != 0 {
+		t.Errorf("the syntax scan holds no table at the literals %v", unread)
+	}
+	pkg.spans["copy/tables.go"] = pkg.spans["copy/tables.go"][:1]
+	if unread := unreadLiterals(literals, pkg.spans); len(unread) != 2 {
+		t.Errorf("with only the first table of tables.go read, the census reports %v, want the two after it", unread)
+	}
+}
+
+func parsedLanguagePackage(t *testing.T, files map[string]string) *languagePackage {
+	t.Helper()
+	pkg := newLanguagePackage()
+	for name, text := range files {
+		file, err := parser.ParseFile(token.NewFileSet(), name, text, parser.SkipObjectResolution)
+		if err != nil {
+			t.Fatal(err)
+		}
+		pkg.add("copy/"+name, file)
+	}
+	pkg.resolve()
+	return pkg
+}
+
 // languagePackage is one directory's language-keyed tables and the tests that
 // may walk them.
 type languagePackage struct {
 	files, tests []*ast.File
 	paths        []string
-	// tables maps a top-level name to where its language-keyed literal stands.
-	tables    map[string]string
-	literalIn map[string]bool
-	mapTypes  map[string]bool
-	typeSpecs map[string]ast.Expr
+	// tables maps a top-level name to where its language-keyed literal stands,
+	// and spans each file to the byte ranges of those declarations.
+	tables             map[string]string
+	spans              map[string][][2]int
+	langKeys, mapTypes map[string]bool
+	typeSpecs          map[string]qualifiedType
+}
+
+// qualifiedType is a type expression with the name its own file imports textlang
+// under, which a file spelling the type's name may import under another.
+type qualifiedType struct {
+	expr ast.Expr
+	lang string
+}
+
+func newLanguagePackage() *languagePackage {
+	return &languagePackage{tables: map[string]string{}, spans: map[string][][2]int{}}
 }
 
 func languagePackages(t *testing.T, root string) map[string]*languagePackage {
@@ -305,7 +436,7 @@ func languagePackages(t *testing.T, root string) map[string]*languagePackage {
 		}
 		dir := filepath.ToSlash(filepath.Dir(path))
 		if packages[dir] == nil {
-			packages[dir] = &languagePackage{tables: map[string]string{}, literalIn: map[string]bool{}}
+			packages[dir] = newLanguagePackage()
 		}
 		packages[dir].add(path, file)
 		return nil
@@ -331,16 +462,15 @@ func (p *languagePackage) add(path string, file *ast.File) {
 }
 
 // resolve finds the tables once every file of the directory is in, since a
-// named map type and its literals may sit in different files.
+// named type and its literals may sit in different files.
 func (p *languagePackage) resolve() {
-	p.mapTypes, p.typeSpecs = map[string]bool{}, map[string]ast.Expr{}
+	p.langKeys, p.mapTypes, p.typeSpecs = map[string]bool{}, map[string]bool{}, map[string]qualifiedType{}
 	namedAs := map[string]string{}
 	for _, file := range p.files {
 		lang := textlangQualifier(file)
 		ast.Inspect(file, func(node ast.Node) bool {
 			if spec, ok := node.(*ast.TypeSpec); ok {
-				p.typeSpecs[spec.Name.Name] = spec.Type
-				p.mapTypes[spec.Name.Name] = languageKeyed(spec.Type, lang, nil)
+				p.typeSpecs[spec.Name.Name] = qualifiedType{spec.Type, lang}
 				if underlying, named := ast.Unparen(spec.Type).(*ast.Ident); named {
 					namedAs[spec.Name.Name] = underlying.Name
 				}
@@ -348,45 +478,60 @@ func (p *languagePackage) resolve() {
 			return true
 		})
 	}
+	for name, spec := range p.typeSpecs {
+		p.langKeys[name] = isTextlangLang(spec)
+	}
+	withNamedChains(p.langKeys, namedAs)
+	for name, spec := range p.typeSpecs {
+		p.mapTypes[name] = p.keyedMap(spec)
+	}
 	withNamedChains(p.mapTypes, namedAs)
 	for i, file := range p.files {
 		lang := textlangQualifier(file)
 		for _, decl := range file.Decls {
 			for name, part := range declParts(decl) {
-				implied := map[*ast.CompositeLit]ast.Expr{}
-				ast.Inspect(part, func(node ast.Node) bool {
-					literal, ok := node.(*ast.CompositeLit)
-					if !ok {
-						return true
-					}
-					literalType := literal.Type
-					if literalType == nil {
-						literalType = implied[literal]
-					}
-					if !languageKeyed(literalType, lang, p.mapTypes) {
-						p.imply(literal, literalType, implied)
-						return true
-					}
-					if _, seen := p.tables[name]; !seen {
-						p.tables[name] = p.paths[i] + ": " + name
-					}
-					p.literalIn[p.paths[i]] = true
-					return false
-				})
+				if !p.holdsLanguageLiteral(part, lang) {
+					continue
+				}
+				if _, seen := p.tables[name]; !seen {
+					p.tables[name] = p.paths[i] + ": " + name
+				}
+				span := [2]int{int(part.Pos() - file.FileStart), int(part.End() - file.FileStart)}
+				p.spans[p.paths[i]] = append(p.spans[p.paths[i]], span)
 			}
 		}
 	}
 }
 
+// holdsLanguageLiteral reports whether part spells a language-keyed literal,
+// its type written out or implied by the literal around it.
+func (p *languagePackage) holdsLanguageLiteral(part ast.Node, lang string) bool {
+	found, implied := false, map[*ast.CompositeLit]qualifiedType{}
+	ast.Inspect(part, func(node ast.Node) bool {
+		literal, ok := node.(*ast.CompositeLit)
+		if !ok || found {
+			return !found
+		}
+		literalType := qualifiedType{literal.Type, lang}
+		if literal.Type == nil {
+			literalType = implied[literal]
+		}
+		found = p.languageKeyed(literalType)
+		p.imply(literal, literalType, implied)
+		return !found
+	})
+	return found
+}
+
 // imply gives each element literal that elides its type the element type of
 // the literal around it. So {lang: …} inside a map of language maps is read.
-func (p *languagePackage) imply(literal *ast.CompositeLit, literalType ast.Expr, implied map[*ast.CompositeLit]ast.Expr) {
+func (p *languagePackage) imply(literal *ast.CompositeLit, literalType qualifiedType, implied map[*ast.CompositeLit]qualifiedType) {
 	keyType, elementType := p.elementTypes(literalType)
-	elide := func(element, elementType ast.Expr) {
-		if pointer, ok := elementType.(*ast.StarExpr); ok {
-			elementType = pointer.X
+	elide := func(element ast.Expr, elementType qualifiedType) {
+		if pointer, ok := elementType.expr.(*ast.StarExpr); ok {
+			elementType.expr = pointer.X
 		}
-		if inner, ok := element.(*ast.CompositeLit); ok && inner.Type == nil && elementType != nil {
+		if inner, ok := element.(*ast.CompositeLit); ok && inner.Type == nil && elementType.expr != nil {
 			implied[inner] = elementType
 		}
 	}
@@ -401,22 +546,22 @@ func (p *languagePackage) imply(literal *ast.CompositeLit, literalType ast.Expr,
 
 // elementTypes answers the key and element types of a map, slice or array
 // type, through the package's named types. A struct elides nothing.
-func (p *languagePackage) elementTypes(container ast.Expr) (keyType, elementType ast.Expr) {
+func (p *languagePackage) elementTypes(container qualifiedType) (keyType, elementType qualifiedType) {
 	for range len(p.typeSpecs) + 1 {
-		switch t := container.(type) {
+		switch t := container.expr.(type) {
 		case *ast.MapType:
-			return t.Key, t.Value
+			return qualifiedType{t.Key, container.lang}, qualifiedType{t.Value, container.lang}
 		case *ast.ArrayType:
-			return nil, t.Elt
+			return qualifiedType{}, qualifiedType{t.Elt, container.lang}
 		case *ast.ParenExpr:
-			container = t.X
+			container.expr = t.X
 		case *ast.Ident:
 			container = p.typeSpecs[t.Name]
 		default:
-			return nil, nil
+			return qualifiedType{}, qualifiedType{}
 		}
 	}
-	return nil, nil
+	return qualifiedType{}, qualifiedType{}
 }
 
 // held answers the tables a test that reaches langcopytest names, directly or
@@ -554,19 +699,33 @@ func declaredIn(node ast.Node) map[string]bool {
 
 // languageKeyed reports whether a literal's type is a map keyed by
 // textlang.Lang, or a map type of the package declared so.
-func languageKeyed(expr ast.Expr, qualifier string, mapTypes map[string]bool) bool {
-	switch e := expr.(type) {
-	case *ast.MapType:
-		key, ok := e.Key.(*ast.SelectorExpr)
-		if !ok || key.Sel.Name != "Lang" {
-			return false
-		}
-		x, ok := key.X.(*ast.Ident)
-		return ok && qualifier != "" && x.Name == qualifier
-	case *ast.Ident:
-		return mapTypes[e.Name]
+func (p *languagePackage) languageKeyed(literalType qualifiedType) bool {
+	if name, named := ast.Unparen(literalType.expr).(*ast.Ident); named {
+		return p.mapTypes[name.Name]
 	}
-	return false
+	return p.keyedMap(literalType)
+}
+
+// keyedMap reports whether a type is a map keyed by textlang.Lang. The key is
+// spelled with its file's qualifier or by a name the package declares for it.
+func (p *languagePackage) keyedMap(typ qualifiedType) bool {
+	m, ok := ast.Unparen(typ.expr).(*ast.MapType)
+	if !ok {
+		return false
+	}
+	if key, named := ast.Unparen(m.Key).(*ast.Ident); named {
+		return p.langKeys[key.Name]
+	}
+	return isTextlangLang(qualifiedType{m.Key, typ.lang})
+}
+
+func isTextlangLang(typ qualifiedType) bool {
+	key, ok := ast.Unparen(typ.expr).(*ast.SelectorExpr)
+	if !ok || key.Sel.Name != "Lang" {
+		return false
+	}
+	x, ok := key.X.(*ast.Ident)
+	return ok && typ.lang != "" && x.Name == typ.lang
 }
 
 func textlangQualifier(file *ast.File) string {
@@ -688,10 +847,11 @@ func langcopytestChecks(t *testing.T) styleChecks {
 }
 
 // calledBy reports whether call runs a style check: a langcopytest function, or
-// a check method of a value langcopytest gave, such as a Register.
+// a check method of a value langcopytest gave, such as a Register. A file that
+// does not import langcopytest may still call a method on a value it was given.
 func (c styleChecks) calledBy(call *ast.CallExpr, qualifier string, values langcopytestValues) bool {
 	selector, ok := uninstantiated(call).(*ast.SelectorExpr)
-	if !ok || qualifier == "" {
+	if !ok {
 		return false
 	}
 	if x, isIdent := selector.X.(*ast.Ident); isIdent && x.Name == qualifier {

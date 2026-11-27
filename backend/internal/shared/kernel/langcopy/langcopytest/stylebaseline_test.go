@@ -216,11 +216,15 @@ func waiverOrder(a, b Waiver) int {
 	return cmp.Or(strings.Compare(a.Rule, b.Rule), strings.Compare(a.Text, b.Text), strings.Compare(a.English, b.English))
 }
 
+// recutCommand runs the recut alone, from backend/: the tests that fail a stale
+// line must not run beside the one that drops it.
+const recutCommand = "go test ./internal/shared/kernel/langcopy/langcopytest -run '^TestRecutStyleBaseline$' -recut"
+
 // TestRecutStyleBaseline drops the lines the two tests above fail for a
 // sentence that passes or is gone. It never adds a line.
 func TestRecutStyleBaseline(t *testing.T) {
 	if !*recut {
-		t.Skip("drops stale lines from stylebaseline.txt; run with -recut")
+		t.Skip("TestRecutStyleBaseline drops stale lines from stylebaseline.txt; run it from backend/ with: " + recutCommand)
 	}
 	waivers, err := StyleBaseline()
 	if err != nil {
@@ -233,9 +237,24 @@ func TestRecutStyleBaseline(t *testing.T) {
 			kept = append(kept, w)
 		}
 	}
-	writeBaseline(t, "stylebaseline.txt", kept)
-	writePins(t, "stylebaseline_test.go", kept)
+	if err := recutFiles("stylebaseline.txt", "stylebaseline_test.go", kept); err != nil {
+		t.Fatal(err)
+	}
 	t.Logf("kept %d of %d waivers", len(kept), len(waivers))
+}
+
+func TestTheRecutCommandReadsTheSameWhereverItIsShown(t *testing.T) {
+	t.Parallel()
+	page := filepath.Join(gatekit.ModuleRoot(t), "..", "docs", "reference", "ui-copy-style.md")
+	text, err := os.ReadFile(page)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for shown, where := range map[string]string{string(text): page, baselineText: baselinePath} {
+		if !strings.Contains(shown, recutCommand) {
+			t.Errorf("%s does not show the recut command %s", where, recutCommand)
+		}
+	}
 }
 
 func TestTheRecutRewritesBothPinsToTheLinesItKept(t *testing.T) {
@@ -246,8 +265,9 @@ func TestTheRecutRewritesBothPinsToTheLinesItKept(t *testing.T) {
 	if err := os.WriteFile(pins, []byte(stale), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	writeBaseline(t, baseline, kept)
-	writePins(t, pins, kept)
+	if err := recutFiles(baseline, pins, kept); err != nil {
+		t.Fatal(err)
+	}
 	written, err := os.ReadFile(baseline)
 	if err != nil {
 		t.Fatal(err)
@@ -262,26 +282,48 @@ func TestTheRecutRewritesBothPinsToTheLinesItKept(t *testing.T) {
 	}
 }
 
-func writePins(t *testing.T, path string, kept []Waiver) {
-	t.Helper()
-	source, err := os.ReadFile(path)
+func TestARecutWhosePinsCannotBeRewrittenWritesNeitherFile(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	pins, baseline := filepath.Join(dir, "pin_test.go"), filepath.Join(dir, "stylebaseline.txt")
+	const unpinned, held = "package x\n", "en.we\t\"We saved it.\"\n"
+	for path, text := range map[string]string{pins: unpinned, baseline: held} {
+		if err := os.WriteFile(path, []byte(text), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if recutFiles(baseline, pins, syntheticWaivers) == nil {
+		t.Fatal("a recut into a file that declares no pins reported no error")
+	}
+	for path, want := range map[string]string{pins: unpinned, baseline: held} {
+		if got, err := os.ReadFile(path); err != nil || string(got) != want {
+			t.Errorf("the failed recut left %s as %q, want it untouched as %q: %v", path, got, want, err)
+		}
+	}
+}
+
+// recutFiles prepares the baseline and its pins before it writes either, so a
+// pin it cannot rewrite leaves both files as they were.
+func recutFiles(baselineFile, pinsFile string, kept []Waiver) error {
+	source, err := os.ReadFile(pinsFile)
 	if err != nil {
-		t.Fatal(err)
+		return err
 	}
 	for _, pin := range []*regexp.Regexp{styleWaiverPin, styleDigestPin} {
 		if len(pin.FindAll(source, -1)) != 1 {
-			t.Fatalf("%s no longer declares %s once on a line of its own", path, pin)
+			return fmt.Errorf("%s no longer declares %s once on a line of its own", pinsFile, pin)
 		}
 	}
 	source = styleWaiverPin.ReplaceAllLiteral(source, []byte("const wantStyleWaivers = "+strconv.Itoa(len(kept))))
 	source = styleDigestPin.ReplaceAllLiteral(source, []byte(`const wantStyleDigest = "`+styleDigest(kept)+`"`))
-	if err := os.WriteFile(path, source, 0o600); err != nil {
-		t.Fatal(err)
+	if err := os.WriteFile(baselineFile, baselineHolding(kept), 0o600); err != nil {
+		return err
 	}
+	return os.WriteFile(pinsFile, source, 0o600)
 }
 
-func writeBaseline(t *testing.T, path string, waivers []Waiver) {
-	t.Helper()
+// baselineHolding is the baseline's header comments, then the kept lines.
+func baselineHolding(kept []Waiver) []byte {
 	var out bytes.Buffer
 	for line := range strings.SplitSeq(baselineText, "\n") {
 		if !strings.HasPrefix(line, "#") {
@@ -289,10 +331,8 @@ func writeBaseline(t *testing.T, path string, waivers []Waiver) {
 		}
 		out.WriteString(line + "\n")
 	}
-	for _, w := range waivers {
+	for _, w := range kept {
 		out.WriteString(w.line() + "\n")
 	}
-	if err := os.WriteFile(path, out.Bytes(), 0o600); err != nil {
-		t.Fatal(err)
-	}
+	return out.Bytes()
 }
