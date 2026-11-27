@@ -23,7 +23,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // routeCandidateCap bounds the list for the same reason the groups are capped:
@@ -177,9 +177,9 @@ func evidenceOf(e *crmcontracts.ContactGraphEdge, now time.Time, loc *time.Locat
 		TwoWay:          twoWayExchange(countOf(e.Inbound90d), e.Sent90d, countOf(e.Outbound90d)),
 	}
 	if e.LastAt != nil {
-		last := *e.LastAt
-		days := elapsed.Days(last, now, loc)
-		ev.LastAt = &last
+		last := occurredday.Moment{At: *e.LastAt, DateOnly: e.LastPrecision != nil && occurredday.IsDay(*e.LastPrecision)}
+		days := occurredday.DaysSince(last, now, loc)
+		ev.LastAt, ev.LastPrecision = &last.At, e.LastPrecision
 		ev.DaysSinceLast = &days
 	}
 	return ev

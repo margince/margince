@@ -21,6 +21,7 @@ import {
   formatAnalyticsMoney,
   formatAnalyticsNumber,
 } from "../../format/format";
+import { sumMinor } from "../../format/minorsum";
 import { useLocale, useT } from "../../i18n";
 import { analyticsSectionHref } from "../../lib/analytics.address";
 import { fromHere } from "../../lib/navigatefrom";
@@ -424,9 +425,11 @@ function Review({
   const metricName = useMetricNames();
   const context = useAnalyticsContext();
   const metricLabel = metricName(goal.objective);
-  const value = (members?.data ?? [])
-    .filter((member) => member.included && member.record_type === "deal")
-    .reduce((sum, member) => sum + (member.amount_minor_base ?? 0), 0);
+  const value = sumMinor(
+    (members?.data ?? [])
+      .filter((member) => member.included && member.record_type === "deal")
+      .map((member) => member.amount_minor_base ?? 0),
+  );
   return (
     <>
       <Heading size="small" as="h3">
@@ -449,11 +452,14 @@ function Review({
           })}
           {" · "}
           {t("reporting.knownDealValue", {
-            value: formatAnalyticsMoney(
-              value,
-              context.data?.base_currency ?? "",
-              locale,
-            ),
+            value:
+              value === undefined
+                ? t("format.tooLargeExact")
+                : formatAnalyticsMoney(
+                    value,
+                    context.data?.base_currency ?? "",
+                    locale,
+                  ),
           })}
         </p>
       )}

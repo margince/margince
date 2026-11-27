@@ -90,9 +90,9 @@ const editTimezone = (page: Page) =>
     ),
   });
 
-test("Cancel discards a settings dialog's draft, so leaving the page asks nothing", async ({
-  page,
-}) => {
+test("Cancel discards a settings dialog's draft, so leaving the page asks nothing", {
+  tag: "@smoke",
+}, async ({ page }) => {
   await page.goto("/#/settings/company/regional");
   await editTimezone(page).click();
   const saved = await timezone(page).inputValue();

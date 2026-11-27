@@ -15,7 +15,7 @@ import (
 )
 
 // The direct case keeps every projection column as declared, bar three it gates
-// per query. Body and raw sit behind the content decision. The reply channel
+// per query and the two import facts, which render per caller. Body and raw sit behind the content decision. The reply channel
 // sits behind the caller's audience on the source it reads.
 func TestDirectCaseGatesOnlyBodyRawAndTheReplyChannelSource(t *testing.T) {
 	const opaqueDecision = "coalesce(a.audience = 'workspace', false)"
@@ -53,6 +53,8 @@ func TestDirectCaseGatesOnlyBodyRawAndTheReplyChannelSource(t *testing.T) {
 				case column.sql == storekit.ReplyChannelSQL("a", ""):
 					want = storekit.ReplyChannelSQL("a", sourceAudience)
 					gated++
+				case column.sql == mailboxImportedColumn || column.sql == threadAudienceYoursColumn:
+					want = importFactColumns(ctx, "a", arg)[column.sql]
 				case i == len(columns)-2:
 					want = "CASE WHEN a.internal_mail_authorization IS NOT NULL THEN (" + share + ") ELSE NULL END AS can_share_internal"
 				case i == len(columns)-1:

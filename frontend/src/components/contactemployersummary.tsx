@@ -4,6 +4,7 @@ import type { components } from "../api/schema";
 import { Avatar } from "../design-system/atoms";
 import { CompanyLogo } from "../design-system/companylogo";
 import { formatNumber } from "../format/format";
+import { listFormat } from "../format/formatters";
 import { type Locale, translatePlural, type useT } from "../i18n";
 import { throwProblem } from "../lib/problem";
 
@@ -41,12 +42,37 @@ export function useEmployerSummary(companyId: string) {
   });
 }
 
+// Who holds contacts at a company that this reader may not see, as one
+// sentence naming them, or null when nobody does. The employer facts line and
+// the company list's Contacts cell both say it. A count of 0 then never reads
+// as "no contacts" while a colleague holds some.
+export function hiddenHoldersNotice(
+  holders: Company["hidden_contact_holders"],
+  locale: Locale,
+): string | null {
+  if (!holders || holders.length === 0) {
+    return null;
+  }
+  const names = listFormat(locale, { type: "conjunction" }).format(
+    holders.map((holder) => holder.display_name),
+  );
+  return translatePlural(
+    locale,
+    "contact.employer.hiddenHolders",
+    holders.length,
+    { names },
+  );
+}
+
 // The counts line under the company name: contacts, then open deals, joined
 // the way the rest of this rail joins two short facts on one line. Callers
 // gate on `contact_count`/`open_deal_count` being present at all: a company
 // the reader lacks the grants to see either number for renders neither.
 export function employerFacts(
-  company: Pick<Company, "contact_count" | "open_deal_count">,
+  company: Pick<
+    Company,
+    "contact_count" | "open_deal_count" | "hidden_contact_holders"
+  >,
   t: ReturnType<typeof useT>,
   locale: Locale,
 ): string {
@@ -72,6 +98,10 @@ export function employerFacts(
             { count: formatNumber(company.open_deal_count, locale) },
           ),
     );
+  }
+  const notice = hiddenHoldersNotice(company.hidden_contact_holders, locale);
+  if (notice) {
+    parts.push(notice);
   }
   return parts.join(" · ");
 }

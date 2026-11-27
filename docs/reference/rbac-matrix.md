@@ -65,6 +65,7 @@ changes none.
 | `ai_diagnostics` | -R-- | -R-- | ---- | ---- | ---- | -R-- |
 | `ai_model_rate` | CRU- | ---- | ---- | ---- | ---- | CRU- |
 | `ai_routing` | -RU- | ---- | ---- | ---- | ---- | -RU- |
+| `ai_team_rules` | -RU- | -R-- | -R-- | -R-- | -R-- | -RU- |
 | `audit_log` | -R-- | ---- | ---- | ---- | ---- | ---- |
 | `authentication_policy` | -RU- | -R-- | ---- | ---- | ---- | -R-- |
 | `automation` | CRUD | -R-- | -R-- | -R-- | -R-- | CRUD |

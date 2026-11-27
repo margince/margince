@@ -15,6 +15,12 @@
       "label": "Ledger customer"
     }
   ],
+  "languages": [
+    {
+      "code": "it",
+      "label": "Italian"
+    }
+  ],
   "record_kinds": [
     {
       "kind": "ledger_account",

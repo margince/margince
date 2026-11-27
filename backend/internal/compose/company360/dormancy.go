@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/activitywhen"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -31,7 +32,7 @@ var suggestGoneDormant = crmcontracts.Company360SuggestionKindGoneDormant
 type dormancyInputs struct {
 	reading      dormancy.Reading
 	ladder       dormancy.Ladder
-	lastActivity *time.Time
+	lastActivity *occurredday.Moment
 	// followUp is the installation's switch for the suggestion.
 	followUp bool
 	// owner is who the follow-up is prepared for. Nil raises no suggestion:
@@ -50,10 +51,14 @@ func readDormancyInputs(
 	if err != nil {
 		return dormancyInputs{}, err
 	}
+	var last *occurredday.Moment
+	if heading.lastActivity != nil {
+		last = &occurredday.Moment{At: *heading.lastActivity, DateOnly: heading.lastActivityDateOnly}
+	}
 	out := dormancyInputs{
-		reading:      policy.Ladder.Read(heading.lastActivity, now, loc),
+		reading:      policy.Ladder.Read(last, now, loc),
 		ladder:       policy.Ladder,
-		lastActivity: heading.lastActivity,
+		lastActivity: last,
 		followUp:     policy.FollowUp,
 	}
 	if heading.owner == nil || !policy.FollowUp {
@@ -110,13 +115,17 @@ func (d dormancyInputs) quietSince(newest lastMessage, now time.Time, loc *time.
 
 // wire is the strip's reading, with the rule beside it.
 func (d dormancyInputs) wire() *crmcontracts.DormancyReading {
-	return &crmcontracts.DormancyReading{
-		Rung:           crmcontracts.DormancyRung(d.reading.Rung),
-		LastActivityAt: d.lastActivity,
-		SilentDays:     d.reading.SilentDays,
-		NoActivity:     d.reading.NoActivity,
-		LadderDays:     d.ladder.Days(),
+	out := &crmcontracts.DormancyReading{
+		Rung:       crmcontracts.DormancyRung(d.reading.Rung),
+		SilentDays: d.reading.SilentDays,
+		NoActivity: d.reading.NoActivity,
+		LadderDays: d.ladder.Days(),
 	}
+	if d.lastActivity != nil {
+		out.LastActivityAt = &d.lastActivity.At
+		out.LastActivityPrecision = activitywhen.PrecisionOf(*d.lastActivity)
+	}
+	return out
 }
 
 // goneDormantSuggestion prepares a follow-up task for the owner of an account
@@ -135,7 +144,7 @@ func goneDormantSuggestion(companyID ids.CompanyID, in suggestionInputs) *crmcon
 	evidence := []crmcontracts.CompanyBriefEvidence{{
 		EntityType: crmcontracts.CompanyBriefEvidenceEntityTypeCompany,
 		EntityId:   openapi_types.UUID(companyID.UUID),
-		At:         new(*d.lastActivity),
+		At:         new(d.lastActivity.At),
 		Origin:     new(said.Say(suggestionWords.OriginLastActivity)),
 	}}
 	subject := said.Say(suggestionWords.DormantAccount)
@@ -148,10 +157,10 @@ func goneDormantSuggestion(companyID ids.CompanyID, in suggestionInputs) *crmcon
 	out := &crmcontracts.Company360Suggestion{
 		Kind:        suggestGoneDormant,
 		Reason:      fmt.Sprintf(said.Say(suggestionWords.DormantReason), d.reading.SilentDays),
-		Fingerprint: fingerprint(string(suggestGoneDormant), d.lastActivity.UTC().Format(time.RFC3339Nano), evidence),
+		Fingerprint: fingerprint(string(suggestGoneDormant), d.lastActivity.At.UTC().Format(time.RFC3339Nano), evidence),
 		Evidence:    evidence,
 		Title:       new(subject),
-		DueAt:       new(*d.lastActivity),
+		DueAt:       new(d.lastActivity.At),
 	}
 	setAddTask(out, step)
 	return out

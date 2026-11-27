@@ -26,6 +26,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 func contractPath(t *testing.T, name string) string {
@@ -107,6 +108,7 @@ func TestNoContractEnumSpellsARegisteredTransport(t *testing.T) {
 
 	allowed := botBindingProviderSets(ctx, t, owner)
 
+	defer memberChatNetworkEnums.AssertAllMatched(t)
 	for _, item := range contractEnums(t, raw) {
 		members := item.Members
 		trimmed := make(map[string]bool, len(members))
@@ -117,7 +119,8 @@ func TestNoContractEnumSpellsARegisteredTransport(t *testing.T) {
 			continue
 		}
 		for _, provider := range providers {
-			if trimmed[provider] && !independentLinkedInMeaning(item.Path, provider) {
+			if trimmed[provider] && !independentLinkedInMeaning(item.Path, provider) &&
+				!memberChatNetworkEnums.Waived(t, item.Path) {
 				t.Errorf("contract enum %s %v spells the registered transport %q; a provider vocabulary is a deployment fact and cannot live in an installation-independent enum — use ProviderRef",
 					item.Path, members, provider)
 			}
@@ -191,6 +194,13 @@ func TestActivityKindTableMatchesTheContractKindEnum(t *testing.T) {
 		}
 	}
 }
+
+// memberChatNetworkEnums name the chat network a member's own account is on, as
+// the member links it. They are networks, not this deployment's transports.
+var memberChatNetworkEnums = gatekit.Waive(map[string]string{
+	"components/schemas/ChatNetwork":                          "the network of a member's own chat account, as the member links it; a network offers or lacks a personal account link whatever this deployment registers",
+	"paths//me/chat-identities/{network}/parameters/0/schema": "the same network, named in the route a member links or unlinks their own account on",
+})
 
 // connectRequestProviderPath is the enum of the bot connectors ConnectChannel
 // takes a token for. An account connection rides on one of them and is never

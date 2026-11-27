@@ -8,6 +8,7 @@ package integration
 import (
 	"context"
 	"encoding/json"
+	"maps"
 	"net/http"
 	"testing"
 	"time"
@@ -243,4 +244,193 @@ func TestADayEntryRendersAtNoonUTCOnEveryDoor(t *testing.T) {
 	occurredAt("tool", d.tool(t, "log_activity", map[string]any{
 		"kind": "note", "subject": "Fair", "occurred_at": noon, "occurred_precision": "day",
 	}))
+}
+
+// A deal says how to read its last activity, from the activity the clock
+// names, on its own read and in the list.
+func TestADealSaysWhetherItsLastActivityIsADay(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	stages := apptest.DiscoverSeededPipeline(t, e)
+	company := createdID(t, e, "/v1/companies", AnyMap{"display_name": "Day Deals GmbH", "source": "manual"})
+	newDeal := func(name string) string {
+		return createdID(t, e, "/v1/deals", AnyMap{
+			"name": name, "pipeline_id": stages.PipelineID,
+			"stage_id": stages.Open, "company_id": company, "source": "manual",
+		})
+	}
+	cases := map[string]AnyMap{
+		"day":     {"occurred_at": "2025-03-09T12:00:00Z", "occurred_precision": "day"},
+		"instant": {"occurred_at": "2025-03-09T12:00:00Z"},
+	}
+	for want, when := range cases {
+		dealID := newDeal("Deal read as " + want)
+		note := AnyMap{
+			"kind": "note", "subject": "Met at the fair", "source": "manual",
+			"links": []AnyMap{{"entity_type": "deal", "entity_id": dealID}},
+		}
+		maps.Copy(note, when)
+		mustCall(t, e, "POST", "/v1/activities", note, http.StatusCreated, nil)
+		var deal struct {
+			Precision string `json:"last_activity_precision"`
+		}
+		mustCall(t, e, "GET", "/v1/deals/"+dealID, nil, http.StatusOK, &deal)
+		if deal.Precision != want {
+			t.Errorf("a deal whose last activity is a %s reads last_activity_precision %q", want, deal.Precision)
+		}
+		var list struct {
+			Data []struct {
+				ID        string `json:"id"`
+				Precision string `json:"last_activity_precision"`
+			} `json:"data"`
+		}
+		mustCall(t, e, "GET", "/v1/deals?limit=200", nil, http.StatusOK, &list)
+		for _, row := range list.Data {
+			if row.ID == dealID && row.Precision != want {
+				t.Errorf("the deal list reads a %s last activity as %q", want, row.Precision)
+			}
+		}
+	}
+	var untouched struct {
+		Precision *string `json:"last_activity_precision"`
+	}
+	mustCall(t, e, "GET", "/v1/deals/"+newDeal("Untouched deal"), nil, http.StatusOK, &untouched)
+	if untouched.Precision != nil {
+		t.Errorf("a deal with no activity reads last_activity_precision %q, want none", *untouched.Precision)
+	}
+}
+
+// A project says how to read its last activity on its own read and in the
+// rollup its page draws.
+func TestAProjectSaysWhetherItsLastActivityIsADay(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	company := createdID(t, e, "/v1/companies", AnyMap{"display_name": "Day Projects GmbH", "source": "manual"})
+	for _, want := range []string{"day", "instant"} {
+		project := createdID(t, e, "/v1/projects", AnyMap{"name": "Rollout " + want, "company_id": company, "source": "manual"})
+		note := AnyMap{
+			"kind": "note", "subject": "Met at the fair", "source": "manual",
+			"occurred_at": "2025-03-09T12:00:00Z", "links": []AnyMap{{"entity_type": "project", "entity_id": project}},
+		}
+		if want == "day" {
+			note["occurred_precision"] = "day"
+		}
+		mustCall(t, e, "POST", "/v1/activities", note, http.StatusCreated, nil)
+		var read struct {
+			Precision string `json:"last_activity_precision"`
+		}
+		mustCall(t, e, "GET", "/v1/projects/"+project, nil, http.StatusOK, &read)
+		var page struct {
+			Rollups struct {
+				Precision string `json:"last_activity_precision"`
+			} `json:"rollups"`
+		}
+		mustCall(t, e, "GET", "/v1/projects/"+project+"/360", nil, http.StatusOK, &page)
+		if read.Precision != want || page.Rollups.Precision != want {
+			t.Errorf("a project whose last activity is a %s reads %q on the record and %q in the rollup",
+				want, read.Precision, page.Rollups.Precision)
+		}
+	}
+}
+
+// A company, its dormancy reading and its project cards say how to read their
+// last activity, from the activity each stored clock names.
+func TestACompanySaysWhetherItsLastActivityIsADay(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	for _, want := range []string{"day", "instant"} {
+		company := createdID(t, e, "/v1/companies", AnyMap{"display_name": "Clock " + want + " GmbH", "source": "manual"})
+		project := createdID(t, e, "/v1/projects", AnyMap{"name": "Rollout " + want, "company_id": company, "source": "manual"})
+		note := AnyMap{
+			"kind": "note", "subject": "Met at the fair", "source": "manual", "occurred_at": "2025-03-09T12:00:00Z",
+			"links": []AnyMap{{"entity_type": "company", "entity_id": company}, {"entity_type": "project", "entity_id": project}},
+		}
+		if want == "day" {
+			note["occurred_precision"] = "day"
+		}
+		mustCall(t, e, "POST", "/v1/activities", note, http.StatusCreated, nil)
+		var record struct {
+			Precision string `json:"last_activity_precision"`
+		}
+		mustCall(t, e, "GET", "/v1/companies/"+company, nil, http.StatusOK, &record)
+		var page struct {
+			StateStrip struct {
+				Dormancy struct {
+					Precision string `json:"last_activity_precision"`
+				} `json:"dormancy"`
+			} `json:"state_strip"`
+			Projects []struct {
+				Precision string `json:"last_activity_precision"`
+			} `json:"projects"`
+		}
+		mustCall(t, e, "GET", "/v1/companies/"+company+"/360", nil, http.StatusOK, &page)
+		if record.Precision != want || page.StateStrip.Dormancy.Precision != want {
+			t.Errorf("a company whose last activity is a %s reads %q on the record and %q in its dormancy",
+				want, record.Precision, page.StateStrip.Dormancy.Precision)
+		}
+		if len(page.Projects) != 1 || page.Projects[0].Precision != want {
+			t.Errorf("its project card reads %+v, want one card read as %s", page.Projects, want)
+		}
+	}
+}
+
+// An activity the clock does not count says nothing about its precision, even at
+// the clock's own instant. A called-off meeting tied with a date-only note
+// leaves the company and the project reading the note's date.
+func TestAnUncountedActivityAtTheClocksInstantDecidesNoPrecision(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	company := createdID(t, e, "/v1/companies", AnyMap{"display_name": "Tied Clock GmbH", "source": "manual"})
+	project := createdID(t, e, "/v1/projects", AnyMap{"name": "Tied rollout", "company_id": company, "source": "manual"})
+	callShowingBody(t, e, "POST", "/v1/activities", AnyMap{
+		"kind": "note", "subject": "Met at the fair", "source": "manual",
+		"occurred_at": "2025-03-09T12:00:00Z", "occurred_precision": "day",
+		"links": []AnyMap{{"entity_type": "company", "entity_id": company}, {"entity_type": "project", "entity_id": project}},
+	}, nil, http.StatusCreated)
+	// A meeting is with a contact, never filed against a company, so it reaches
+	// the company through an employee whose job had begun by then.
+	buyer := createdID(t, e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Tied Buyer", "source": "manual"})
+	callShowingBody(t, e, "POST", "/v1/relationships", AnyMap{
+		"kind": "employment", "contact_id": buyer, "company_id": company, "source": "manual",
+		"started_at": "2020-01-01", "is_current_primary": true,
+	}, nil, http.StatusCreated)
+	// It is logged first and called off afterwards, the way a rep does it.
+	var meeting versionedWire
+	logged := callShowingBody(t, e, "POST", "/v1/activities", AnyMap{
+		"kind": "meeting", "subject": "Called off", "source": "manual", "occurred_at": "2025-03-09T12:00:00Z",
+		"links": []AnyMap{{"entity_type": "contact", "entity_id": buyer}, {"entity_type": "project", "entity_id": project}},
+	}, nil, http.StatusCreated)
+	if err := json.Unmarshal(logged, &meeting); err != nil {
+		t.Fatalf("decoding the logged meeting %s: %v", logged, err)
+	}
+	callShowingBody(t, e, "PATCH", "/v1/activities/"+meeting.ID, AnyMap{"meeting_status": "canceled"},
+		withIfMatch(nil, meeting.Version), http.StatusOK)
+	var record, card struct {
+		Precision string `json:"last_activity_precision"`
+	}
+	mustCall(t, e, "GET", "/v1/companies/"+company, nil, http.StatusOK, &record)
+	var page struct {
+		Projects []struct {
+			Precision string `json:"last_activity_precision"`
+		} `json:"projects"`
+	}
+	mustCall(t, e, "GET", "/v1/companies/"+company+"/360", nil, http.StatusOK, &page)
+	if len(page.Projects) == 1 {
+		card.Precision = page.Projects[0].Precision
+	}
+	if record.Precision != "day" || card.Precision != "day" {
+		t.Errorf("with a called-off meeting tied to the note, the company reads %q and its project %q, want day for both",
+			record.Precision, card.Precision)
+	}
+}
+
+// callShowingBody is a call that must answer want, and names the server's
+// answer when it does not, so a refused arrange step says why.
+func callShowingBody(t *testing.T, e *apptest.AppEnv, method, path string, body AnyMap, headers map[string]string, want int) json.RawMessage {
+	t.Helper()
+	var answer json.RawMessage
+	if status := e.Call(t, method, path, body, headers, &answer); status != want {
+		t.Fatalf("%s %s → %d, want %d: %s", method, path, status, want, answer)
+	}
+	return answer
 }

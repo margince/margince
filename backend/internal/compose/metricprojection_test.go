@@ -14,15 +14,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-func reportingTestZone(t *testing.T) *time.Location {
-	t.Helper()
-	zone, err := time.LoadLocation("Europe/Berlin")
-	if err != nil {
-		t.Fatal(err)
-	}
-	return zone
-}
-
 func reportingTestMetric(t *testing.T, id crmcontracts.ReportingMetricID) crmcontracts.ReportingMetricDefinition {
 	t.Helper()
 	index := slices.IndexFunc(reportingMetrics, func(spec metricSpec) bool { return spec.definition.Id == id })
@@ -38,7 +29,7 @@ func reportingTestMoney(owner ids.UUID, at time.Time, minor int64) reporting.Fac
 }
 
 func TestReportingWeekAndTargetActualHaveIndependentNumerators(t *testing.T) {
-	zone := reportingTestZone(t)
+	zone := berlin(t)
 	at := time.Date(2026, 10, 5, 9, 0, 0, 0, zone)
 	interval := crmcontracts.ReportingWindow{StartAt: time.Date(2026, 9, 28, 0, 0, 0, 0, zone), EndAt: time.Date(2026, 10, 5, 0, 0, 0, 0, zone)}
 	target := crmcontracts.ReportingWindow{StartAt: time.Date(2026, 10, 1, 0, 0, 0, 0, zone), EndAt: time.Date(2026, 11, 1, 0, 0, 0, 0, zone)}
@@ -52,7 +43,7 @@ func TestReportingWeekAndTargetActualHaveIndependentNumerators(t *testing.T) {
 }
 
 func TestReportingPreviousWeekPreservesLocalMidnightAcrossDST(t *testing.T) {
-	zone := reportingTestZone(t)
+	zone := berlin(t)
 	start := time.Date(2026, 3, 30, 0, 0, 0, 0, zone)
 	previous := reportingPrevious(crmcontracts.ReportingContext{PeriodKind: "last_week", Interval: crmcontracts.ReportingWindow{StartAt: start, EndAt: start.AddDate(0, 0, 7)}})
 	want := time.Date(2026, 3, 23, 0, 0, 0, 0, zone)
@@ -63,7 +54,7 @@ func TestReportingPreviousWeekPreservesLocalMidnightAcrossDST(t *testing.T) {
 
 // A completed fiscal quarter or year compares with the whole one before it.
 func TestACompletedQuarterOrYearComparesWithTheWholePeriodBefore(t *testing.T) {
-	zone := reportingTestZone(t)
+	zone := berlin(t)
 	start := time.Date(2026, 4, 1, 0, 0, 0, 0, zone)
 	for _, test := range []struct {
 		kind   string
@@ -81,7 +72,7 @@ func TestACompletedQuarterOrYearComparesWithTheWholePeriodBefore(t *testing.T) {
 }
 
 func TestThisWeekComparesWithLastWeekToTheSameLocalClockAcrossDST(t *testing.T) {
-	zone := reportingTestZone(t)
+	zone := berlin(t)
 	start := time.Date(2026, 3, 30, 0, 0, 0, 0, zone)
 	cutoff := time.Date(2026, 4, 1, 9, 30, 0, 0, zone).UTC()
 	previous := reportingPrevious(crmcontracts.ReportingContext{PeriodKind: "this_week", Interval: crmcontracts.ReportingWindow{StartAt: start, EndAt: cutoff}})
@@ -96,7 +87,7 @@ func TestThisWeekComparesWithLastWeekToTheSameLocalClockAcrossDST(t *testing.T) 
 // A week that began in October is read on 1 November. The week counts its
 // own days, and the month target counts November up to the cutoff.
 func TestThisWeekAcrossAMonthEndKeepsTheMonthTargetToItsOwnDays(t *testing.T) {
-	zone := reportingTestZone(t)
+	zone := berlin(t)
 	at := time.Date(2026, 11, 1, 18, 0, 0, 0, zone)
 	interval := crmcontracts.ReportingWindow{StartAt: time.Date(2026, 10, 26, 0, 0, 0, 0, zone), EndAt: at}
 	target := crmcontracts.ReportingWindow{StartAt: time.Date(2026, 11, 1, 0, 0, 0, 0, zone), EndAt: time.Date(2026, 12, 1, 0, 0, 0, 0, zone)}
@@ -116,7 +107,7 @@ func TestThisWeekAcrossAMonthEndKeepsTheMonthTargetToItsOwnDays(t *testing.T) {
 }
 
 func TestReportingMarchComparisonStopsAtFebruaryBoundary(t *testing.T) {
-	zone := reportingTestZone(t)
+	zone := berlin(t)
 	start := time.Date(2027, 3, 1, 0, 0, 0, 0, zone)
 	end := time.Date(2027, 3, 31, 15, 0, 0, 0, zone)
 	frame := crmcontracts.ReportingContext{PeriodKind: "this_month", Interval: crmcontracts.ReportingWindow{StartAt: start, EndAt: end}, EvaluatedAt: end}
@@ -174,7 +165,7 @@ func TestReportingIncompleteEmptyHistoryDoesNotBecomeACompleteZero(t *testing.T)
 }
 
 func TestReportingFrozenMonthRestoresItsCalendarAcrossDST(t *testing.T) {
-	zone := reportingTestZone(t)
+	zone := berlin(t)
 	start, end := time.Date(2026, 10, 1, 0, 0, 0, 0, zone), time.Date(2026, 11, 1, 0, 0, 0, 0, zone)
 	before := crmcontracts.ReportingEvaluation{
 		Context:   crmcontracts.ReportingContext{Timezone: zone.String(), Currency: "EUR", PeriodKind: "custom", Interval: crmcontracts.ReportingWindow{StartAt: start, EndAt: end}, EvaluatedAt: end},
@@ -220,7 +211,7 @@ func TestReportingFrozenWinRateUsesOnlyItsPermittedClosedCohort(t *testing.T) {
 }
 
 func TestReportingOutcomesUseTheSelectedIntervalAcrossMonths(t *testing.T) {
-	zone := reportingTestZone(t)
+	zone := berlin(t)
 	start := time.Date(2026, 9, 28, 0, 0, 0, 0, zone)
 	frame := crmcontracts.ReportingContext{Timezone: zone.String(), PeriodKind: "last_week", Interval: crmcontracts.ReportingWindow{StartAt: start, EndAt: start.AddDate(0, 0, 7)}, EvaluatedAt: start.AddDate(0, 0, 8)}
 	facts := []reporting.Fact{}

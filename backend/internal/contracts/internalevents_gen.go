@@ -55,6 +55,7 @@ const (
 	HistoryImportStarted InternalEventSharedMailboxChangedChange = "history_import_started"
 	ReadersChanged       InternalEventSharedMailboxChangedChange = "readers_changed"
 	Reconnected          InternalEventSharedMailboxChangedChange = "reconnected"
+	ReplyChanged         InternalEventSharedMailboxChangedChange = "reply_changed"
 	VisibilityChanged    InternalEventSharedMailboxChangedChange = "visibility_changed"
 )
 
@@ -72,6 +73,8 @@ func (e InternalEventSharedMailboxChangedChange) Valid() bool {
 	case ReadersChanged:
 		return true
 	case Reconnected:
+		return true
+	case ReplyChanged:
 		return true
 	case VisibilityChanged:
 		return true

@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 14 |
-| Tool catalog | 244.3 KB |
+| Tool catalog | 244.9 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 63940 |
+| Approx. wire tokens | 64103 |
 | Largest tool | `read_details` (15.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -33,10 +33,10 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 33.7 KB | 13% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 51.0 KB | 20% | Yes, every step |
-| Input schemas | 148.0 KB | 60% | Yes, every step |
+| Descriptions (incl. governance clause) | 51.1 KB | 20% | Yes, every step |
+| Input schemas | 148.6 KB | 60% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.6 KB | 4% | Partly |
-| **Description + input schema** | **199.0 KB** | **81%** | **the recurring cost** |
+| **Description + input schema** | **199.7 KB** | **81%** | **the recurring cost** |
 
 Output schemas count in the total but are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -68,9 +68,9 @@ descriptions and input schemas are what each step pays for.
 | [`archive_record`](#archive_record) | Archive a record |  |  | 299 |
 | [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 894 |
 | [`change_access`](#change_access) | Share records and set up members and teams |  |  | 1152 |
-| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 3006 |
+| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 3063 |
 | [`change_attention`](#change_attention) | Act on proposals, notices and the weekly plan |  |  | 1833 |
-| [`change_capture`](#change_capture) | Decide what comes into the CRM |  |  | 1959 |
+| [`change_capture`](#change_capture) | Decide what comes into the CRM |  |  | 1986 |
 | [`change_compliance`](#change_compliance) | Record consent, stops, holds and privacy work |  |  | 1289 |
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 620 |
 | [`change_my_settings`](#change_my_settings) | Change the user's own preferences and voice |  |  | 867 |
@@ -78,7 +78,7 @@ descriptions and input schemas are what each step pays for.
 | [`change_record_parts`](#change_record_parts) | Change the parts of a record |  |  | 1017 |
 | [`change_relationships`](#change_relationships) | Work a company's relationships and briefs |  |  | 816 |
 | [`change_reports`](#change_reports) | Work saved reports and the forecast |  |  | 2014 |
-| [`change_settings`](#change_settings) | Change how the workspace is set up |  |  | 3221 |
+| [`change_settings`](#change_settings) | Change how the workspace is set up |  |  | 3261 |
 | [`change_state`](#change_state) | Move a lead, deal, project or partner |  |  | 2362 |
 | [`change_tags`](#change_tags) | Change tags |  |  | 650 |
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 375 |
@@ -87,7 +87,7 @@ descriptions and input schemas are what each step pays for.
 | [`decide_approvals`](#decide_approvals) | Approve or reject staged actions |  |  | 463 |
 | [`draft_outbound`](#draft_outbound) | Draft an email or follow-ups |  |  | 523 |
 | [`enrich`](#enrich) | Enrich a company from its website |  |  | 446 |
-| [`find_records`](#find_records) | Find records | yes |  | 2099 |
+| [`find_records`](#find_records) | Find records | yes |  | 2102 |
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes | [`ui://margince/approval-queue.html`](#approval_queue_view) | 475 |
 | [`list_documents`](#list_documents) | List a record's documents or read one | yes |  | 351 |
 | [`preview_import`](#preview_import) | Preview an import |  |  | 1008 |
@@ -105,7 +105,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_reports`](#read_reports) | Read sales reports | yes |  | 3353 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 357 |
 | [`read_view`](#read_view) | Read a view | yes |  | 1921 |
-| [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2994 |
+| [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 3012 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 617 |
 | [`run_research`](#run_research) | Run AI work for your user |  |  | 1421 |
 | [`schedule_meeting`](#schedule_meeting) | Invite to a meeting |  |  | 527 |
@@ -812,13 +812,14 @@ invitation did not go out. Use schedule_meeting to book a meeting still to come,
 move_deal when the same event moves a deal, so move and note are one change, and change_reports
 record_decision for a sales review's decision, which a note cannot track. Keep the activity id; a
 relink needs it. A staged answer's approval id is what the retry carries. (Governance: runs
-immediately for accept_document_fields, archive_document, assign_inquiry, attach, attach_link,
-bring_back, cancel_send, check_new_send, check_send, deal_relevance, decline_deal, discard_draft,
-file_channel_message, hide_document, log, preview_inquiry_assignment, preview_sign_off,
-read_document_fields, read_transcript, ready, request_document_access, reschedule_send, save_draft,
-set_aside, set_audience, set_document_details, set_thread_audience, show_document, task, unready;
-decided per call from its arguments for relink, relink_many; ask the user first for the actions
-archive_document, assign_inquiry.)
+immediately for accept_document_fields, accept_link_suggestion, archive_document, assign_inquiry,
+attach, attach_link, bring_back, cancel_send, check_new_send, check_send, deal_relevance,
+decline_deal, discard_draft, file_channel_message, hide_document, log, preview_inquiry_assignment,
+preview_sign_off, read_document_fields, read_transcript, ready, reject_link_suggestion,
+request_document_access, reschedule_send, save_draft, set_aside, set_audience, set_document_details,
+set_thread_audience, show_document, task, unready; decided per call from its arguments for relink,
+relink_many; ask the user first for the actions archive_document, assign_inquiry,
+reject_link_suggestion.)
 ```
 
 <details><summary>Input schema</summary>
@@ -827,9 +828,10 @@ archive_document, assign_inquiry.)
 {
   "properties": {
     "action": {
-      "description": "accept_document_fields: Accept staged extraction fields onto the attachment's deal (deal-scoped attachments only)\narchive_document: Archive an attachment (soft delete)\nassign_inquiry: Take an inquiry or hand its lead and this task to a colleague in one transaction\nattach: Put a file the user gave you on a company, contact, deal, lead or project, where it appears on the record's Documents tab, or on one activity such as the meeting it came from\nattach_link: Add a web link to a record's documents\nbring_back: Pick the message back up — the undo behind every set-aside verb\ncancel_send: Withdraw a scheduled message before it fires\ncheck_new_send: Would a new message with no thread behind it be allowed, and on what ground\ncheck_send: Would this reply be allowed, and on what ground — asked before a word is typed\ndeal_relevance: Say whether an activity linked to a deal is about that deal, or take that back\ndecline_deal: Say a captured message is not about a deal, or about none of the deals its question offered\ndiscard_draft: Discard one of the caller's unsent messages\nfile_channel_message: File a summary of one message in a record's channel, or of its thread, as a note\nhide_document: Stop listing a captured file on this deal without touching the file\nlog: Record something that happened (a call, a meeting, a note, a message) on every record it was about\npreview_inquiry_assignment: Show the inquiry task and record ownership before taking or assigning it\npreview_sign_off: The sign-off a send of this message would append beneath it\nread_document_fields: Find the deal facts this attached document states — a background reading that ends in staged, evidence-carrying fields\nread_transcript: Find the next steps this meeting transcript states — a background reading that ends in staged 🟡 proposals\nready: Say the user is ready for a meeting they attend, so their Worklist stops asking them to prepare it\nrelink: Fix what a recorded activity is about, when a captured mail or meeting landed on the wrong record or on none\nrelink_many: Move up to 500 named activities onto one record, all or nothing\nrequest_document_access: Request access to a restricted attachment (audit row only — no notification system)\nreschedule_send: Move a scheduled message to a different moment\nsave_draft: Save the caller's unsent message for one anchor, replacing what was saved before\nset_aside: Put a waiting message down, so the Worklist stops offering it\nset_audience: Limit (or re-open) who may see this activity's content\nset_document_details: Set a document's category, title, state or supersedes pointer\nset_thread_audience: Share a thread with the team, or keep it private\nshow_document: List the file on this deal again\ntask: Put a to-do on someone's list: what is owed, by whom, on which records\nunready: Take back the user's confirmation that they are ready for a meeting",
+      "description": "accept_document_fields: Accept staged extraction fields onto the attachment's deal (deal-scoped attachments only)\naccept_link_suggestion: Accept a suggestion, filing the message under its record\narchive_document: Archive an attachment (soft delete)\nassign_inquiry: Take an inquiry or hand its lead and this task to a colleague in one transaction\nattach: Put a file the user gave you on a company, contact, deal, lead or project, where it appears on the record's Documents tab, or on one activity such as the meeting it came from\nattach_link: Add a web link to a record's documents\nbring_back: Pick the message back up — the undo behind every set-aside verb\ncancel_send: Withdraw a scheduled message before it fires\ncheck_new_send: Would a new message with no thread behind it be allowed, and on what ground\ncheck_send: Would this reply be allowed, and on what ground — asked before a word is typed\ndeal_relevance: Say whether an activity linked to a deal is about that deal, or take that back\ndecline_deal: Say a captured message is not about a deal, or about none of the deals its question offered\ndiscard_draft: Discard one of the caller's unsent messages\nfile_channel_message: File a summary of one message in a record's channel, or of its thread, as a note\nhide_document: Stop listing a captured file on this deal without touching the file\nlog: Record something that happened (a call, a meeting, a note, a message) on every record it was about\npreview_inquiry_assignment: Show the inquiry task and record ownership before taking or assigning it\npreview_sign_off: The sign-off a send of this message would append beneath it\nread_document_fields: Find the deal facts this attached document states — a background reading that ends in staged, evidence-carrying fields\nread_transcript: Find the next steps this meeting transcript states — a background reading that ends in staged 🟡 proposals\nready: Say the user is ready for a meeting they attend, so their Worklist stops asking them to prepare it\nreject_link_suggestion: Reject a suggestion\nrelink: Fix what a recorded activity is about, when a captured mail or meeting landed on the wrong record or on none\nrelink_many: Move up to 500 named activities onto one record, all or nothing\nrequest_document_access: Request access to a restricted attachment (audit row only — no notification system)\nreschedule_send: Move a scheduled message to a different moment\nsave_draft: Save the caller's unsent message for one anchor, replacing what was saved before\nset_aside: Put a waiting message down, so the Worklist stops offering it\nset_audience: Limit (or re-open) who may see this activity's content\nset_document_details: Set a document's category, title, state or supersedes pointer\nset_thread_audience: Share a thread with the team, or keep it private\nshow_document: List the file on this deal again\ntask: Put a to-do on someone's list: what is owed, by whom, on which records\nunready: Take back the user's confirmation that they are ready for a meeting",
       "enum": [
         "accept_document_fields",
+        "accept_link_suggestion",
         "archive_document",
         "assign_inquiry",
         "attach",
@@ -849,6 +851,7 @@ archive_document, assign_inquiry.)
         "read_document_fields",
         "read_transcript",
         "ready",
+        "reject_link_suggestion",
         "relink",
         "relink_many",
         "request_document_access",
@@ -1000,7 +1003,7 @@ archive_document, assign_inquiry.)
       "type": "object"
     },
     "id": {
-      "description": "accept_document_fields, archive_document, assign_inquiry, bring_back, cancel_send, check_send, deal_relevance, decline_deal, discard_draft, file_channel_message, hide_document, preview_inquiry_assignment, read_document_fields, read_transcript, request_document_access, reschedule_send, set_aside, set_audience, set_document_details, show_document only",
+      "description": "accept_document_fields, accept_link_suggestion, archive_document, assign_inquiry, bring_back, cancel_send, check_send, deal_relevance, decline_deal, discard_draft, file_channel_message, hide_document, preview_inquiry_assignment, read_document_fields, read_transcript, reject_link_suggestion, request_document_access, reschedule_send, set_aside, set_audience, set_document_details, show_document only",
       "type": "string"
     },
     "idempotency_key": {
@@ -1232,7 +1235,7 @@ withdraw_owner_identity.)
 {
   "properties": {
     "action": {
-      "description": "read_workspace topic actions lists each action's body\nadd_consumer_mail_domain: Add a consumer-mail domain, or carve one out\nadd_counterparty_hold: Keep one party's mail to the contacts on it\nadd_exclusion: Keep an address or a domain out of capture\nadd_owner_identity: Declare another address as your own\nadd_workspace_email_domain: Register one of the workspace's own email domains\narchive_corpus: Archive a corpus and everything filed in it\ncancel_backfill: Cancel a running backfill — captured rows are retained\ncancel_import_run: Cancel a draft, a test run, or a report nobody will approve\ncreate_corpus: Define a document corpus\ndiscard_domain: Answer an open domain question by excluding the domain from your own capture\ndisconnect_channel: Disconnect a messaging channel (archives the binding and destroys the credential)\ndisconnect_mailbox: Disconnect the calling user's mail/calendar capture\ndismiss_mailbox_silence: Dismiss the owner's current mailbox silence warning\nimport_linkedin_connections: Import your own LinkedIn connections export\nimport_vcards: Import a .vcf address-card file\nkeep_domain_as_company: Answer an open domain question by keeping the company\nkeep_domain_as_vendor: Answer an open vendor question by keeping the vendor verdict\nlift_counterparty_hold: Lift a counterparty hold\nlift_exclusion: Lift an exclusion\nremove_consumer_mail_domain: Withdraw a consumer-mail list entry (admin/ops)\nremove_workspace_email_domain: Stop treating a domain as the workspace's own\nreopen_domain: Ask about an undecided domain again (admin/ops)\nrestore_owner_identity: Put back one of your own addresses you just withdrew\nset_blocked_domain: Block a domain, or unblock one\nset_channel_verbosity: Choose how much Margince posts into a record's channel\nset_context_tag: Set the word this connector files what it captures under\nset_history_baseline: Set the date this mailbox's automatic commitment suggestions start from\nset_mail_posture: Set what this mailbox asks of the mail it brings in\nset_sender_decision: Overrule what the classifier decided about a sender\nset_signature_enrichment: Set this mailbox's own answer to the nightly signature pass\nshare_counterparty_hold_history: Re-open the mail the caller's counterparty holds already caught\nundo_import_run: Reverse a completed CSV import run\nunlink_channel: Stop syncing a record with its chat channel\nupdate_corpus: Edit a corpus — its words, its floor, or which one the palette asks\nupdate_import_run: Save choices on a draft import run\nupload_corpus_document: Add a document to this corpus\nvalidate_import_run: Test a draft import run against the estate\nwithdraw_owner_identity: Withdraw one of your own addresses\nwithdraw_sender_decision: Withdraw your decision and hand the sender back to the classifier",
+      "description": "read_workspace topic actions lists each action's body\nadd_consumer_mail_domain: Add a consumer-mail domain, or carve one out\nadd_counterparty_hold: Keep one party's mail to the contacts on it\nadd_exclusion: Keep an address or a domain out of capture\nadd_owner_identity: Declare another address as your own\nadd_workspace_email_domain: Register one of the workspace's own email domains\narchive_corpus: Archive a corpus and everything filed in it\ncancel_backfill: Cancel a running backfill — captured rows are retained\ncancel_import_run: Cancel a draft, a test run, or a report nobody will approve\ncreate_corpus: Define a document corpus\ndiscard_domain: Answer an open domain question by excluding the domain from your own capture\ndisconnect_channel: Disconnect a messaging channel (archives the binding and destroys the credential)\ndisconnect_mailbox: Disconnect the calling user's mail/calendar capture\ndismiss_mailbox_silence: Dismiss the owner's current mailbox silence warning\nimport_linkedin_connections: Import your own LinkedIn connections export\nimport_vcards: Import a .vcf address-card file\nkeep_domain_as_company: Answer an open domain question by keeping the company\nkeep_domain_as_vendor: Answer an open vendor question by keeping the vendor verdict\nlift_counterparty_hold: Lift a counterparty hold\nlift_exclusion: Lift an exclusion\nremove_consumer_mail_domain: Withdraw a consumer-mail list entry (admin/ops)\nremove_workspace_email_domain: Stop treating a domain as the workspace's own\nreopen_domain: Ask about an undecided domain again (admin/ops)\nrestore_corpus: Bring an archived corpus back with everything filed in it\nrestore_owner_identity: Put back one of your own addresses you just withdrew\nset_blocked_domain: Block a domain, or unblock one\nset_channel_verbosity: Choose how much Margince posts into a record's channel\nset_context_tag: Set the word this connector files what it captures under\nset_history_baseline: Set the date this mailbox's automatic commitment suggestions start from\nset_mail_posture: Set what this mailbox asks of the mail it brings in\nset_sender_decision: Overrule what the classifier decided about a sender\nset_signature_enrichment: Set this mailbox's own answer to the nightly signature pass\nshare_counterparty_hold_history: Re-open the mail the caller's counterparty holds already caught\nundo_import_run: Reverse a completed CSV import run\nunlink_channel: Stop syncing a record with its chat channel\nupdate_corpus: Edit a corpus — its words, its floor, or which one the palette asks\nupdate_import_run: Save choices on a draft import run\nupload_corpus_document: Add a document to this corpus\nvalidate_import_run: Test a draft import run against the estate\nwithdraw_owner_identity: Withdraw one of your own addresses\nwithdraw_sender_decision: Withdraw your decision and hand the sender back to the classifier",
       "enum": [
         "add_consumer_mail_domain",
         "add_counterparty_hold",
@@ -1256,6 +1259,7 @@ withdraw_owner_identity.)
         "remove_consumer_mail_domain",
         "remove_workspace_email_domain",
         "reopen_domain",
+        "restore_corpus",
         "restore_owner_identity",
         "set_blocked_domain",
         "set_channel_verbosity",
@@ -2061,9 +2065,9 @@ update_record to change one record. (Ask the user first for the actions activate
 apply_legacy_loss_reasons, archive_automation, archive_exit_criterion, archive_legal_entity,
 archive_pipeline, archive_saved_view, archive_stage, archive_web_form, control_data_task,
 create_custom_field, create_web_form, disconnect_finance_source, disconnect_provider,
-handle_website_inquiries, link_finance_customer, record_tax_rate, reorder_stages,
-retire_custom_field, set_ai_model_rate, set_fx_rate, update_automation, update_custom_field_options,
-update_exit_criterion, update_web_form, upsert_partner.)
+end_partner_program, handle_website_inquiries, link_finance_customer, record_tax_rate,
+reorder_stages, retire_custom_field, set_ai_model_rate, set_fx_rate, update_automation,
+update_custom_field_options, update_exit_criterion, update_web_form, upsert_partner.)
 ```
 
 <details><summary>Input schema</summary>
@@ -2072,7 +2076,7 @@ update_exit_criterion, update_web_form, upsert_partner.)
 {
   "properties": {
     "action": {
-      "description": "read_workspace topic actions lists each action's body\nactivate_home_repair: Activate exactly the reviewed automatic Home work\napply_legacy_loss_reasons: Apply the reviewed legacy mappings to the lost deals they match\narchive_automation: Delete an automation instance\narchive_exit_criterion: Remove a criterion from its stage (soft delete; archive is the delete)\narchive_legal_entity: Archive a legal entity nobody works for any more\narchive_pipeline: Retire a pipeline (soft delete; archive is the delete)\narchive_saved_view: Archive a saved view\narchive_stage: Remove a stage from its pipeline (soft delete; archive is the delete)\narchive_web_form: Archive a website form; its address stops taking submissions\nconfirm_site_read: Confirm a selected onboarding draft into the anchor company atomically\ncontrol_data_task: Pause, resume, retry or estimate a background correction\ncreate_acquisition_source: Add an acquisition source\ncreate_automation: Configure an automation instance from a catalog type (created paused)\ncreate_custom_field: Define a new custom field on an existing core object (a schema change)\ncreate_disqualify_reason: Add a disqualification reason\ncreate_exit_criterion: Add an exit criterion to a stage\ncreate_lead_origin: Add a lead origin\ncreate_legal_entity: Describe a further legal entity\ncreate_loss_reason: Add a loss reason\ncreate_partner_stage: Add a partner stage\ncreate_pipeline: Create a pipeline\ncreate_review_template: Add the question set an outcome's reviews ask from now on\ncreate_saved_view: Save a per-user view (columns, sort, filter state) for a resource\ncreate_stage: Create a stage in a pipeline\ncreate_web_form: Create a website form; a human sees its minted signing secret once\ndecide_legacy_loss_reason: Decide which loss reason one legacy note counts under\ndelete_disqualify_reason: Remove a disqualification reason no lead carries\ndelete_lead_origin: Remove a lead origin nothing uses\ndisconnect_finance_source: Disconnect the accounting source (admin/ops)\ndisconnect_provider: Disconnect a provider and destroy its sealed credential\nhandle_website_inquiries: Handle explicitly selected accepted inquiries using the reviewed saved policy\nlink_finance_customer: Link a source customer to a company (admin/ops)\nmark_booking_page_shared: Record that the caller shared their booking link\npropose_fx_rate_refresh: Enqueue an async FX-rate refresh (stages 🟡 proposals)\nput_product_translation: Set the product's name and description in one language\nrecord_tax_rate: Record a standard or reduced tax rate for a country from a day on\nrefresh_ai_model_rates: Re-price the models this installation calls from the providers' own catalogues\nremove_legal_entity_logo: Take a legal entity's logo off\nremove_own_logo: Take the installation's own company logo off the record\nremove_own_logo_icon: Take the installation's own square logo icon off the record\nrename_custom_field: Rename a custom field or change whether create dialogs offer it (not a schema change)\nreorder_pipelines: Put the live pipelines in a new order\nreorder_stages: Put a pipeline's stages in a new order\nrestore_pipeline: Put a retired pipeline back in use\nretire_custom_field: Retire (soft-retire) a custom field\nretry_automation_run: Run one failed firing again, from the event that triggered it\nsave_booking_alias: Choose, change or clear the caller's friendly booking address\nsave_booking_page: Configure and activate the caller's booking page\nsave_my_linkedin: Record or correct your own LinkedIn profile\nsave_own_company: Save the installation's own company\nset_ai_model_rate: Set an AI model price effective today or later (append-forward)\nset_ai_price_sync: Turn the daily model price sync on or off (ai_model_rate update)\nset_fx_rate: Set an FX rate effective today or later, or in the past before any stored rate\nsync_finance_source: Queue a sync of the connected source now (admin/ops)\nunlink_finance_customer: Remove a customer's link (admin/ops)\nupdate_acquisition_source: Relabel, reorder or retire an acquisition source\nupdate_automation: Update params or flip status (enable / pause)\nupdate_custom_field_options: Edit a picklist custom field's allowed options (regenerates the column's CHECK)\nupdate_disqualify_reason: Rename, reorder or (de)activate a disqualification reason\nupdate_duplicate_settings: Let any owner of a duplicate merge the whole case, or not\nupdate_exit_criterion: Edit a criterion's label, kind, requiredness, hint or position\nupdate_follow_up_settings: Change the follow-up window or the private-mail request check (admin/ops)\nupdate_lead_origin: Rename, reorder, re-weight or retire a lead origin\nupdate_lead_settings: Change how this installation handles leads (admin/ops)\nupdate_legal_entity: Change a legal entity's description\nupdate_legal_review_settings: Switch legal review on or off for this installation\nupdate_loss_reason: Relabel, reorder or retire a loss reason\nupdate_partner_stage: Rename, reorder, retire or re-mean a partner stage\nupdate_pipeline: Update a pipeline (rename / reorder / set default — bounded config)\nupdate_review_template: Edit the questions for future outcome reviews, or retire or restore a template\nupdate_saved_view: Update a saved view's name or query state\nupdate_stage: Update a stage (rename / reorder / probability)\nupdate_web_form: Change a website form, pause it or resume it\nupload_company_logo: Replace the installation's own company logo with an uploaded image\nupload_company_logo_icon: Replace the installation's own square logo icon with an uploaded image\nupload_legal_entity_logo: Replace a legal entity's logo with an uploaded image\nupsert_partner: Create/update the partner extension on a company (adds `partner` to its relationship types)",
+      "description": "read_workspace topic actions lists each action's body\nactivate_home_repair: Activate exactly the reviewed automatic Home work\napply_legacy_loss_reasons: Apply the reviewed legacy mappings to the lost deals they match\narchive_automation: Delete an automation instance\narchive_exit_criterion: Remove a criterion from its stage (soft delete; archive is the delete)\narchive_legal_entity: Archive a legal entity nobody works for any more\narchive_pipeline: Retire a pipeline (soft delete; archive is the delete)\narchive_saved_view: Archive a saved view\narchive_stage: Remove a stage from its pipeline (soft delete; archive is the delete)\narchive_web_form: Archive a website form; its address stops taking submissions\nconfirm_site_read: Confirm a selected onboarding draft into the anchor company atomically\ncontrol_data_task: Pause, resume, retry or estimate a background correction\ncreate_acquisition_source: Add an acquisition source\ncreate_automation: Configure an automation instance from a catalog type (created paused)\ncreate_custom_field: Define a new custom field on an existing core object (a schema change)\ncreate_disqualify_reason: Add a disqualification reason\ncreate_exit_criterion: Add an exit criterion to a stage\ncreate_lead_origin: Add a lead origin\ncreate_legal_entity: Describe a further legal entity\ncreate_loss_reason: Add a loss reason\ncreate_partner_stage: Add a partner stage\ncreate_pipeline: Create a pipeline\ncreate_review_template: Add the question set an outcome's reviews ask from now on\ncreate_saved_view: Save a per-user view (columns, sort, filter state) for a resource\ncreate_stage: Create a stage in a pipeline\ncreate_web_form: Create a website form; a human sees its minted signing secret once\ndecide_legacy_loss_reason: Decide which loss reason one legacy note counts under\ndelete_disqualify_reason: Remove a disqualification reason no lead carries\ndelete_lead_origin: Remove a lead origin nothing uses\ndisconnect_finance_source: Disconnect the accounting source (admin/ops)\ndisconnect_provider: Disconnect a provider and destroy its sealed credential\nend_partner_program: End the partner program while keeping the company and commission history\nhandle_website_inquiries: Handle explicitly selected accepted inquiries using the reviewed saved policy\nlink_finance_customer: Link a source customer to a company (admin/ops)\nmark_booking_page_shared: Record that the caller shared their booking link\npropose_fx_rate_refresh: Enqueue an async FX-rate refresh (stages 🟡 proposals)\nput_product_translation: Set the product's name and description in one language\nrecord_tax_rate: Record a standard or reduced tax rate for a country from a day on\nrefresh_ai_model_rates: Re-price the models this installation calls from the providers' own catalogues\nremove_legal_entity_logo: Take a legal entity's logo off\nremove_own_logo: Take the installation's own company logo off the record\nremove_own_logo_icon: Take the installation's own square logo icon off the record\nrename_custom_field: Rename a custom field or change whether create dialogs offer it (not a schema change)\nreorder_pipelines: Put the live pipelines in a new order\nreorder_stages: Put a pipeline's stages in a new order\nrestore_pipeline: Put a retired pipeline back in use\nretire_custom_field: Retire (soft-retire) a custom field\nretry_automation_run: Run one failed firing again, from the event that triggered it\nsave_booking_alias: Choose, change or clear the caller's friendly booking address\nsave_booking_page: Configure and activate the caller's booking page\nsave_my_linkedin: Record or correct your own LinkedIn profile\nsave_own_company: Save the installation's own company\nset_ai_model_rate: Set an AI model price effective today or later (append-forward)\nset_ai_price_sync: Turn the daily model price sync on or off (ai_model_rate update)\nset_fx_rate: Set an FX rate effective today or later, or in the past before any stored rate\nsync_finance_source: Queue a sync of the connected source now (admin/ops)\nunlink_finance_customer: Remove a customer's link (admin/ops)\nupdate_acquisition_source: Relabel, reorder or retire an acquisition source\nupdate_automation: Update params or flip status (enable / pause)\nupdate_custom_field_options: Edit a picklist custom field's allowed options (regenerates the column's CHECK)\nupdate_disqualify_reason: Rename, reorder or (de)activate a disqualification reason\nupdate_duplicate_settings: Let any owner of a duplicate merge the whole case, or not\nupdate_exit_criterion: Edit a criterion's label, kind, requiredness, hint or position\nupdate_follow_up_settings: Change the follow-up window or the private-mail request check (admin/ops)\nupdate_lead_origin: Rename, reorder, re-weight or retire a lead origin\nupdate_lead_settings: Change how this installation handles leads (admin/ops)\nupdate_legal_entity: Change a legal entity's description\nupdate_legal_review_settings: Switch legal review on or off for this installation\nupdate_loss_reason: Relabel, reorder or retire a loss reason\nupdate_partner_stage: Rename, reorder, retire or re-mean a partner stage\nupdate_pipeline: Update a pipeline (rename / reorder / set default — bounded config)\nupdate_review_template: Edit the questions for future outcome reviews, or retire or restore a template\nupdate_saved_view: Update a saved view's name or query state\nupdate_stage: Update a stage (rename / reorder / probability)\nupdate_web_form: Change a website form, pause it or resume it\nupload_company_logo: Replace the installation's own company logo with an uploaded image\nupload_company_logo_icon: Replace the installation's own square logo icon with an uploaded image\nupload_legal_entity_logo: Replace a legal entity's logo with an uploaded image\nupsert_partner: Create/update the partner extension on a company (adds `partner` to its relationship types)",
       "enum": [
         "activate_home_repair",
         "apply_legacy_loss_reasons",
@@ -2104,6 +2108,7 @@ update_exit_criterion, update_web_form, upsert_partner.)
         "delete_lead_origin",
         "disconnect_finance_source",
         "disconnect_provider",
+        "end_partner_program",
         "handle_website_inquiries",
         "link_finance_customer",
         "mark_booking_page_shared",
@@ -2171,7 +2176,7 @@ update_exit_criterion, update_web_form, upsert_partner.)
       "type": "string"
     },
     "id": {
-      "description": "archive_automation, archive_exit_criterion, archive_legal_entity, archive_pipeline, archive_saved_view, archive_stage, archive_web_form, create_exit_criterion, delete_disqualify_reason, delete_lead_origin, handle_website_inquiries, put_product_translation, remove_legal_entity_logo, rename_custom_field, reorder_stages, restore_pipeline, retire_custom_field, retry_automation_run, update_acquisition_source, update_automation, update_custom_field_options, update_disqualify_reason, update_exit_criterion, update_lead_origin, update_legal_entity, update_loss_reason, update_partner_stage, update_pipeline, update_review_template, update_saved_view, update_stage, update_web_form, upload_legal_entity_logo, upsert_partner only",
+      "description": "archive_automation, archive_exit_criterion, archive_legal_entity, archive_pipeline, archive_saved_view, archive_stage, archive_web_form, create_exit_criterion, delete_disqualify_reason, delete_lead_origin, end_partner_program, handle_website_inquiries, put_product_translation, remove_legal_entity_logo, rename_custom_field, reorder_stages, restore_pipeline, retire_custom_field, retry_automation_run, update_acquisition_source, update_automation, update_custom_field_options, update_disqualify_reason, update_exit_criterion, update_lead_origin, update_legal_entity, update_loss_reason, update_partner_stage, update_pipeline, update_review_template, update_saved_view, update_stage, update_web_form, upload_legal_entity_logo, upsert_partner only",
       "type": "string"
     },
     "idempotency_key": {
@@ -2179,7 +2184,7 @@ update_exit_criterion, update_web_form, upsert_partner.)
       "type": "string"
     },
     "if_version": {
-      "description": "archive_exit_criterion, archive_legal_entity, archive_pipeline, archive_stage, remove_legal_entity_logo, rename_custom_field, reorder_stages, update_acquisition_source, update_automation, update_exit_criterion, update_legal_entity, update_loss_reason, update_saved_view, update_stage, update_web_form, upload_legal_entity_logo, upsert_partner only: The version the caller read; the write is refused as skew if the record moved since",
+      "description": "archive_exit_criterion, archive_legal_entity, archive_pipeline, archive_stage, end_partner_program, remove_legal_entity_logo, rename_custom_field, reorder_stages, update_acquisition_source, update_automation, update_exit_criterion, update_legal_entity, update_loss_reason, update_saved_view, update_stage, update_web_form, upload_legal_entity_logo, upsert_partner only: The version the caller read; the write is refused as skew if the record moved since",
       "type": "integer"
     },
     "request_body": {
@@ -3628,6 +3633,7 @@ next_cursor to read on.
           "company",
           "contact",
           "deal",
+          "deal_room",
           "lead",
           "offer_template",
           "product",
@@ -9540,7 +9546,7 @@ user first for the actions ai_call, ai_calls.)
       "type": "string"
     },
     "include_archived": {
-      "description": "legal_entities, pipelines, roles, saved_views, web_forms only",
+      "description": "corpora, legal_entities, pipelines, roles, saved_views, web_forms only",
       "type": "boolean"
     },
     "include_inactive": {
@@ -9865,6 +9871,7 @@ user first for the actions ai_call, ai_calls.)
         "channel_connections",
         "channel_providers",
         "colleagues",
+        "company_types",
         "confirm_submissions",
         "connector_containers",
         "connectors",
@@ -9902,6 +9909,8 @@ user first for the actions ai_call, ai_calls.)
         "legal_entity_members",
         "legal_holds",
         "legal_review_settings",
+        "link_suggestions",
+        "link_types",
         "list_filters",
         "member",
         "member_retirement",
@@ -9923,6 +9932,7 @@ user first for the actions ai_call, ai_calls.)
         "query",
         "record_fields",
         "record_history",
+        "record_kinds",
         "recovery_health",
         "report_blocks",
         "report_vocabulary",

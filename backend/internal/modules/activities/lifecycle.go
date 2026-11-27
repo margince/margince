@@ -148,7 +148,7 @@ func admitActivityPatch(
 	// Reading the row is not the licence to change it: customer identity
 	// is workspace-readable, so the write arm is what keeps a colleague's
 	// correspondence theirs.
-	if err := auth.EnsureActivityWritableIn(ctx, tx, id.UUID, !held); err != nil {
+	if err := in.admitWriter(ctx, tx, id, held); err != nil {
 		return crmcontracts.Activity{}, held, err
 	}
 	// A held row must reach the UPDATE afterwards so its own CHECK trigger —

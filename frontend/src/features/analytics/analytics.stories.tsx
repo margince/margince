@@ -229,6 +229,12 @@ const routes: RouteMap = {
   // The Forecast section's own reads: the period's readings, no check run yet,
   // and the size of the first check. No run yet answers 204.
   "GET /forecast": () => jsonResponse(forecastReadings),
+  "GET /users/names": (_body, url) =>
+    jsonResponse({
+      data: url.searchParams
+        .getAll("id")
+        .map((id) => ({ id, display_name: "Alex Quinn" })),
+    }),
   "GET /forecast/assurance": () => new Response(null, { status: 204 }),
   "GET /forecast/assurance/preview": () =>
     jsonResponse({

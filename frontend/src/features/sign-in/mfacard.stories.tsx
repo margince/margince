@@ -133,7 +133,11 @@ export const RecoveryCodes: Story = {
   play: async ({ canvasElement }) => {
     const page = within(canvasElement.ownerDocument.body);
     await userEvent.type(
-      await page.findByRole("textbox", { name: /code from the app/i }),
+      await page.findByLabelText(/current password/i),
+      "own password",
+    );
+    await userEvent.type(
+      page.getByRole("textbox", { name: /code from the app/i }),
       "123456",
     );
     await userEvent.click(page.getByRole("button", { name: "Turn on" }));

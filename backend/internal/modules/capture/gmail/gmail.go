@@ -67,6 +67,7 @@ var (
 	_ connector.GrantedScoper  = (*Connector)(nil)
 
 	_ connector.SharedMailboxReader = (*Connector)(nil)
+	_ connector.SharedMailboxSender = (*Connector)(nil)
 )
 
 // authState is the persisted credential bundle (the opaque connector.Auth).

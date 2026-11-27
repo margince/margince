@@ -97,8 +97,8 @@ func conversationConfirmFrom(ctx context.Context) (conversationConfirm, bool) {
 }
 
 // confirmsInConversation reports whether its own user can confirm this refused
-// call here. The MCP door armed it, the decision is that user's, and someone is
-// present to ask.
+// call here. The MCP door armed it and the connected credential acts for
+// that user, whether the client is chatting or automatic.
 func confirmsInConversation(ctx context.Context, waitsEvenForItsUser bool, refusal error) bool {
 	if !waitsEvenForItsUser || !errors.Is(refusal, apperrors.ErrRequiresApproval) {
 		return false

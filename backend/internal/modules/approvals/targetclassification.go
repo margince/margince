@@ -23,13 +23,10 @@ import (
 // probeFor classifies one staged target type. An unlisted type answers
 // probeNoRule (the zero value) and fails closed.
 //
-// A unit's table is existence-probed, for the reason every workspace-shared
-// target is: the unit's store applies no row scope of its own, so the row half
-// is existence and the authority is the object-read floor plus the decision
-// grants. Consulted after the static table, so a unit that named a core type
-// could not reclassify it — and RegisterExtensionKinds refuses that name
-// outright, so this ordering is the second of two reasons rather than the only
-// one.
+// A unit's table is existence-probed. The row must exist and lie inside the
+// kind's row scope; the authority is the object-read floor plus the decision
+// grants. The static table is asked first, so a unit cannot reclassify a core
+// type. RegisterExtensionKinds also refuses that name outright.
 func probeFor(targetType string) targetProbe {
 	if probe, classified := targetProbes[targetType]; classified {
 		return probe

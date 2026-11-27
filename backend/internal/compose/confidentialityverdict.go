@@ -259,10 +259,10 @@ func (e *ConfidentialityVerdictEngine) apply(
 	won := false
 	err := withRetryingWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
 		won = false
-		if err := storekit.WaitThreadKeysTx(ctx, tx, []string{row.ThreadKey}); err != nil {
+		if err := storekit.WaitThreadKeysTx(ctx, tx, row.LockKeys()); err != nil {
 			return err
 		}
-		if err := capture.LockThreadHoldTx(ctx, tx, row.ThreadKey); err != nil {
+		if err := storekit.LockThreadKeysTx(ctx, tx, row.LockKeys()...); err != nil {
 			return err
 		}
 		seen, err := threadAddressesTx(ctx, tx, row)
@@ -280,16 +280,12 @@ func (e *ConfidentialityVerdictEngine) apply(
 		// audience is derived across every seat's capture_import contribution,
 		// so a thread ledger updated on its own is an answer with no effect:
 		// the message stays exactly as held as it was born.
-		if err := e.threads.RecordOutcomeTx(ctx, tx, row, status, kind); err != nil {
-			return err
-		}
-		// The same answer, applied to the messages of this thread this seat had
-		// already imported when it came back. A message that arrives AFTER a
-		// verdict inherits it; one that arrived before it used to keep its
-		// import posture for good, because the thread's question is answered
-		// and the unique ledger row stops a second one being opened. Import
-		// order is the accident; the admission rule is unchanged.
-		outcome, err := e.threads.RecordOutcomeOnWholeThreadTx(ctx, tx, row.ThreadKey, row.UserID, status, kind, seen)
+		//
+		// A mail answer reaches the message the model read and then the
+		// thread's other messages, including ones that arrived before it came
+		// back. Import order is the accident; the admission rule is unchanged.
+		// A chat answer reaches the burst's messages the model read.
+		outcome, err := e.threads.RecordOutcomeOnRowTx(ctx, tx, row, status, kind, seen)
 		if err != nil {
 			return err
 		}
@@ -301,7 +297,7 @@ func (e *ConfidentialityVerdictEngine) apply(
 		// holding it — as ONE set, because the anchor is an activity row like
 		// the rest and taking it first was a lock order nothing else agreed to.
 		return activities.RecomputeAudiencesTx(ctx, tx,
-			append(judgedMessageIDs(row), asActivityIDs(outcome.Stamped)...))
+			append(judgedMessageIDs(row), asActivityIDs(outcome.Touched())...))
 	})
 	if err != nil {
 		// The thread key is workspace-internal and already in this workspace's
@@ -373,7 +369,7 @@ func threadAddressesTx(ctx context.Context, tx pgx.Tx, row capture.PendingThread
 // to recompute, and the verdict is still worth recording for the threads that
 // inherit from it.
 func judgedMessageIDs(row capture.PendingThread) []ids.ActivityID {
-	if row.ActivityID == ids.Nil {
+	if row.ActivityID == ids.Nil || row.IsBurst() {
 		return nil
 	}
 	return []ids.ActivityID{ids.From[ids.ActivityKind](row.ActivityID)}

@@ -149,7 +149,7 @@ Across the whole product, removing a record keeps it. An archived record leaves 
 Some examples of the difference in the product's own words:
 
 - Archiving a project "removes this project from the active list and frees its key." The project is then read-only: "This project is archived and takes no changes."
-- Archiving a document set stops the set, and everything filed in it, from showing up in search. Nothing is destroyed.
+- Archiving a document set stops the set, and everything filed in it, from showing up in search. Nothing is destroyed, and **Restore set** brings it back.
 - Merging two records destroys nothing either: the record merged away is archived, and
   the one you keep takes over its history, tasks, tags and links. A merge cannot be undone.
   Both values are kept; choosing a side decides which record stays and which value shows first.

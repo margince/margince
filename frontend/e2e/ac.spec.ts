@@ -744,7 +744,9 @@ test.describe("ADR-0076: the unauthenticated surface", () => {
   // The accessible NAME, not the text: the greeting is typed, so two of its
   // three layers are `aria-hidden` copies — one holding the final height open,
   // one carrying the partial string — and `textContent` would read all three.
-  test("has exactly one h1, and it is the greeting", async ({ page }) => {
+  test("has exactly one h1, and it is the greeting", { tag: "@smoke" }, async ({
+    page,
+  }) => {
     await page.goto("/");
     const headings = page.getByRole("heading", { level: 1 });
     await expect(headings).toHaveCount(1);

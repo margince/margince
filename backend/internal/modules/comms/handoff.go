@@ -63,6 +63,9 @@ func (d *Dispatcher) authorizedHandoff(ctx context.Context, del Delivery, seam s
 		outcome, wait, err := d.retry(ctx, del.ID, err)
 		return receipt, outcome, wait, err
 	}
+	if outcome, wait, err := d.recheckMailboxReply(bounded, del, seam); outcome != outcomeUndecided {
+		return receipt, outcome, wait, err
+	}
 	if outcome, wait, err := d.guardAtMostOnce(bounded, del, seam); outcome != outcomeUndecided || err != nil {
 		return receipt, outcome, wait, err
 	}
@@ -79,4 +82,22 @@ func (d *Dispatcher) authorizedHandoff(ctx context.Context, del Delivery, seam s
 		err = errors.Join(err, connector.ErrSendOutcomeUnknown)
 	}
 	return receipt, outcomeUndecided, 0, err
+}
+
+// recheckMailboxReply is the last question before the wire for a send through a
+// mailbox the sender does not own. It asks whether this seat may still reply as
+// it. A refusal parks the reply. Any other failure retries.
+func (d *Dispatcher) recheckMailboxReply(ctx context.Context, del Delivery, seam sendSeam) (Outcome, time.Duration, error) {
+	if seam.recheck == nil {
+		return outcomeUndecided, 0, nil
+	}
+	err := seam.recheck(ctx)
+	switch {
+	case err == nil:
+		return outcomeUndecided, 0, nil
+	case errors.Is(err, ErrNotMailboxReader):
+		return d.park(ctx, del.ID, notMailboxReaderReason)
+	default:
+		return d.retry(ctx, del.ID, err)
+	}
 }

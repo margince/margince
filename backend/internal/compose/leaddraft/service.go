@@ -159,7 +159,10 @@ func (s *Service) Draft(
 	}
 	// Loaded after the lead read, so a caller who may not see this lead is
 	// refused before their voice profile is touched at all.
-	voice := draftvoice.Load(ctx, s.voice, s.log)
+	voice, err := draftvoice.Load(ctx, s.voice, s.log)
+	if err != nil {
+		return crmcontracts.CompanyEmailDraft{}, nil, err
+	}
 	// The draft is written FOR this lead, out of their correspondence — the
 	// request carries what they wrote. Naming them is what lets an erasure that
 	// wipes the lead destroy the captured payload holding those words.

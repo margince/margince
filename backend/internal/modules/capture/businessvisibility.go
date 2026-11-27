@@ -38,21 +38,8 @@ func (s *ChannelStore) ChangeBusinessVisibility(ctx context.Context, id ids.UUID
 		if err != nil {
 			return err
 		}
-		if link.SeatID == nil {
-			return fmt.Errorf("approve this business connection before changing its visibility: %w", apperrors.ErrConflict)
-		}
-		seat, err := scanSharedMailbox(tx.QueryRow(ctx, `SELECT `+sharedMailboxColumns+` FROM capture_connection
-		  WHERE id = $1 AND user_id IS NULL AND archived_at IS NULL FOR UPDATE`, *link.SeatID))
-		if errors.Is(err, pgx.ErrNoRows) {
-			return apperrors.ErrNotFound
-		}
-		if err != nil {
+		if err := changeSeatPostureTx(ctx, tx, link.SeatID, posture); err != nil {
 			return err
-		}
-		if seat.Posture != posture {
-			if _, err := changeSharedPostureTx(ctx, tx, seat, posture); err != nil {
-				return err
-			}
 		}
 		out, _, err = lockBusinessConnection(ctx, tx, id)
 		return err
@@ -61,4 +48,26 @@ func (s *ChannelStore) ChangeBusinessVisibility(ctx context.Context, id ids.UUID
 		return BusinessConnection{}, businessErr("changing the visibility of", err)
 	}
 	return out, nil
+}
+
+// changeSeatPostureTx moves the chat seat of an approved account to posture, the
+// change a shared mailbox's PATCH makes. Both networks' visibility routes call it.
+// An account with no seat is a conflict, since approval makes the seat.
+func changeSeatPostureTx(ctx context.Context, tx pgx.Tx, seatID *ids.UUID, posture string) error {
+	if seatID == nil {
+		return fmt.Errorf("approve this business connection before changing its visibility: %w", apperrors.ErrConflict)
+	}
+	seat, err := scanSharedMailbox(tx.QueryRow(ctx, `SELECT `+sharedMailboxColumns+` FROM capture_connection
+	  WHERE id = $1 AND user_id IS NULL AND archived_at IS NULL FOR UPDATE`, *seatID))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return apperrors.ErrNotFound
+	}
+	if err != nil {
+		return err
+	}
+	if seat.Posture == posture {
+		return nil
+	}
+	_, err = changeSharedPostureTx(ctx, tx, seat, posture)
+	return err
 }

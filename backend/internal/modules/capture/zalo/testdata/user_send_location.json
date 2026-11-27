@@ -1,0 +1,1 @@
+{"app_id":"1111222233334444","event_name":"user_send_location","timestamp":"1764070003000","sender":{"id":"5550001"},"recipient":{"id":"9990001"},"message":{"msg_id":"msg-in-4","attachments":[{"type":"location","payload":{"coordinates":{"latitude":"10.7769","longitude":"106.7009"}}}]}}

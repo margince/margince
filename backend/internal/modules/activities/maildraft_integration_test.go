@@ -228,7 +228,10 @@ func TestADraftsTrailRecordsEachActWithoutItsContent(t *testing.T) {
 	anchor := replyAnchor(e.seedAnchor(t, "", ""))
 	saved := saveDraft(ctx, t, e, anchor)
 	store := draftStore(e)
-	if _, err := store.SaveMailDraft(ctx, anchor, typedDraft(), &saved.Version); err != nil {
+	// A replace that changes the body, since a save of the stored content writes nothing.
+	edited := typedDraft()
+	edited.Body = "The whole thought"
+	if _, err := store.SaveMailDraft(ctx, anchor, edited, &saved.Version); err != nil {
 		t.Fatalf("replacing: %v", err)
 	}
 	if err := store.DiscardMailDraft(ctx, saved.ID); err != nil {
@@ -239,7 +242,7 @@ func TestADraftsTrailRecordsEachActWithoutItsContent(t *testing.T) {
 	if strings.Join(actions, ",") != "create,update,delete" {
 		t.Errorf("audit trail = %v, want create, update, delete", actions)
 	}
-	for _, word := range []string{"buyer@example.test", "Re: pricing", "Half a thought"} {
+	for _, word := range []string{"buyer@example.test", "Re: pricing", "Half a thought", "The whole thought"} {
 		if strings.Contains(images, word) {
 			t.Errorf("the draft's audit images quote %q; they carry the anchor and version only", word)
 		}

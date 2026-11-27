@@ -145,9 +145,11 @@ function MonthTotals({
           narrow="row"
           label={t("aiusage.col.cost")}
           value={
-            totals.cost === undefined
-              ? t("aiusage.notPriced")
-              : formatMoney(totals.cost, currency, locale)
+            totals.costTooLarge
+              ? t("format.tooLargeExact")
+              : totals.cost === undefined
+                ? t("aiusage.notPriced")
+                : formatMoney(totals.cost, currency, locale)
           }
         />
         <StatCard

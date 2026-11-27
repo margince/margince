@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { unwrap } from "./problem";
@@ -32,4 +32,56 @@ export function useSaveSignInPolicy() {
       ]);
     },
   });
+}
+
+/** The Google directory connection's status, keyed apart from the policy. */
+export const GOOGLE_DIRECTORY_KEY = [
+  "authentication-policy",
+  "google-directory",
+] as const;
+
+/** Whether the connection is set up and how its newest check went. */
+export function useGoogleDirectory(enabled: boolean) {
+  return useQuery({
+    queryKey: GOOGLE_DIRECTORY_KEY,
+    enabled,
+    queryFn: async () =>
+      unwrap(
+        await api.GET("/installation/authentication-policy/google-directory"),
+      ),
+  });
+}
+
+/**
+ * Stores the credential (the server checks it against Google first) or removes
+ * it. Never cached: the variables hold the key file.
+ */
+export function useChangeGoogleDirectory() {
+  const queryClient = useQueryClient();
+  const refresh = () =>
+    queryClient.invalidateQueries({ queryKey: GOOGLE_DIRECTORY_KEY });
+  const store = useMutation({
+    gcTime: 0,
+    mutationFn: async (credential: {
+      service_account_json: string;
+      admin_subject: string;
+    }) =>
+      unwrap(
+        await api.PUT("/installation/authentication-policy/google-directory", {
+          body: credential,
+        }),
+      ),
+    onSuccess: refresh,
+  });
+  const remove = useMutation({
+    mutationFn: async () => {
+      unwrap(
+        await api.DELETE(
+          "/installation/authentication-policy/google-directory",
+        ),
+      );
+    },
+    onSuccess: refresh,
+  });
+  return { store, remove };
 }

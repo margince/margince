@@ -70,6 +70,10 @@
   white-space: pre-wrap;
 }
 
+.buyer-notice {
+  margin: 0;
+}
+
 /* Two columns under the hero: the board, and beside it the contact. The side
    is the width of a record page's side rail and keeps it, so the gallery is
    what flexes; under 900px the two stack, contact after documents, because on

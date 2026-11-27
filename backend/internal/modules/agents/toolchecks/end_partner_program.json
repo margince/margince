@@ -1,0 +1,10 @@
+{
+  "verb": "end_partner_program",
+  "checks": [
+    "company.update"
+  ],
+  "takes": [
+    "company",
+    "live_partner"
+  ]
+}

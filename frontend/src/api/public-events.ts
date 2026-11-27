@@ -1601,9 +1601,9 @@ export interface components {
             /** @description The name now in force, trimmed. Never empty: a name of only whitespace is refused, and a save that moved nothing writes nothing and publishes nothing. */
             display_name: string;
         };
-        /** @description Payload for user_greeting_name.changed — the name a member's colleagues greet them by changed (identity/greetingname.go). The member saved it themselves, or their first sign-in through a login provider filled an empty one from the provider's given name. A subscriber that drafts a greeting to this member reads it, because the first word of the display name is not always the name somebody is greeted by. */
+        /** @description Payload for user_greeting_name.changed. The name a member's colleagues greet them by changed (identity/greetingname.go). The member saved it themselves, or their first sign-in through a login provider filled an empty one from the provider's given name. A subscriber that drafts a greeting to this member reads it, because the display name does not always say the name somebody is greeted by. */
         PublicEventUserGreetingNameChanged: {
-            /** @description The greeting name now in force, trimmed. Null when it was cleared, and greetings fall back to the first word of the display name. */
+            /** @description The greeting name now in force, trimmed. Null when it was cleared, and greetings fall back to the given name of the display name. */
             greeting_name: string | null;
         };
         /** @description Payload for linkedin_account.changed. A member recorded or corrected their own LinkedIn authorization (contacts/linkedinaccount.go's SaveMyLinkedInAccount). Consent to read a professional network is the same class of fact as consent.changed. So it is audited and published rather than written silently. The payload leaves out the profile URL, which is the member's own identifier. A subscriber needs to know that the authorization moved, not what their LinkedIn address is. */

@@ -55,8 +55,20 @@ func (s *Service) Redeem(ctx context.Context, id ids.ApprovalID, tool, diffHash 
 // same transaction. Effects that can expose a half-applied state use this
 // path: a failed domain write leaves the approval unconsumed and retryable.
 func (s *Service) RedeemAndApply(ctx context.Context, id ids.ApprovalID, tool, diffHash string, apply func(pgx.Tx) error) error {
+	return s.RedeemAndApplyAfter(ctx, id, tool, diffHash, nil, apply)
+}
+
+// RedeemAndApplyAfter is RedeemAndApply with first run in the transaction
+// before the approval row is locked. An effect that reads a member's authority
+// takes the authorization hold there, as that lock comes before any row.
+func (s *Service) RedeemAndApplyAfter(ctx context.Context, id ids.ApprovalID, tool, diffHash string, first, apply func(pgx.Tx) error) error {
 	return storekit.RetryLockCycles(ctx, func() error {
 		return s.db.Tx(ctx, func(tx pgx.Tx) error {
+			if first != nil {
+				if err := first(tx); err != nil {
+					return err
+				}
+			}
 			if _, _, err := s.RedeemInTx(ctx, tx, id, tool, diffHash); err != nil {
 				return err
 			}

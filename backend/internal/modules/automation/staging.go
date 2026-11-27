@@ -36,6 +36,7 @@ func stageForApproval(ctx context.Context, approvals Approvals, language baselan
 		return ids.ApprovalID{}, fmt.Errorf("automation: canonicalizing %s for staging: %w", action.Kind, err)
 	}
 	return approvals.Stage(ctx, StageRequest{
+		Why:            action.Why,
 		Kind:           string(action.Kind),
 		ProposedChange: canonical,
 		DiffHash:       diffHash,
@@ -49,7 +50,7 @@ func stageForApproval(ctx context.Context, approvals Approvals, language baselan
 // HeldDraftKind keeps paused rule drafts on the existing approval queue.
 const HeldDraftKind = "held_draft"
 
-func stageHeldDraft(ctx context.Context, approvals Approvals, language baselanguage.Resolver, target datasource.EntityRef, proposal HeldDraftProposal) (ids.ApprovalID, error) {
+func stageHeldDraft(ctx context.Context, approvals Approvals, language baselanguage.Resolver, target datasource.EntityRef, proposal HeldDraftProposal, why *systemtext.Component) (ids.ApprovalID, error) {
 	if approvals == nil {
 		return ids.ApprovalID{}, ErrNoApprovalStaging
 	}
@@ -62,6 +63,7 @@ func stageHeldDraft(ctx context.Context, approvals Approvals, language baselangu
 		return ids.ApprovalID{}, fmt.Errorf("automation: canonicalizing a held draft for staging: %w", err)
 	}
 	return approvals.Stage(ctx, StageRequest{
+		Why:            why,
 		Kind:           HeldDraftKind,
 		ProposedChange: canonical,
 		DiffHash:       diffHash,

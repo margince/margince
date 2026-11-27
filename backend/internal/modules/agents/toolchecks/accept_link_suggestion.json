@@ -1,0 +1,10 @@
+{
+  "verb": "accept_link_suggestion",
+  "checks": [
+    "activity.update",
+    "deal.read"
+  ],
+  "takes": [
+    "link_suggestion"
+  ]
+}

@@ -193,8 +193,10 @@ function EnrichedField({
             // The record's zone: when the machine read this is a fact about the
             // record, and the correction beside it is judged against that day.
             when: formatDate(field.captured_at, locale, readerZone),
-          })}{" "}
-          — “{field.evidence_snippet}”
+          })}
+          {field.evidence_snippet?.trim()
+            ? ` — ${t("commitment.quote", { quote: field.evidence_snippet })}`
+            : null}
         </p>
 
         {/* What this value replaced. The replacement is otherwise silent: the

@@ -14,6 +14,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // The peer arm's budget. Same shape as the direct arm: over-fetch recency-
@@ -112,6 +113,7 @@ func (h Reads) addPeerGroup(
 			StrengthBucket:  crmcontracts.ContactGraphEdgeStrengthBucket(score.Bucket),
 			Interactions90d: peer.Edge.Count90d,
 			LastAt:          &lastAt,
+			LastPrecision:   occurredday.ClockPrecision[crmcontracts.OccurredPrecision](&lastAt, peer.Edge.LastAtDateOnly),
 		})
 	}
 	return qualified - shown, nil

@@ -45,7 +45,7 @@ const noticeKindVCardStagingFailed = "vcard_staging_failed"
 // subject, which here is the mailbox's granting human. That is the right
 // reviewer: the card arrived in their mailbox.
 func (w *vcardIngestWorker) stageReviews(ctx context.Context, activity ids.UUID, entries []contacts.VCardEntry, results []contacts.VCardResult) error {
-	return stageReviewsWith(ctx, w.log, activity, vcardCreateStager(w.pool), w.recordStagingFailure, entries, results)
+	return stageReviewsWith(ctx, w.log, activity, VCardCreateStager(w.pool), w.recordStagingFailure, entries, results)
 }
 
 // recordStagingFailure is stageReviews' failure-notice port: the same
@@ -82,25 +82,23 @@ func (w *vcardIngestWorker) recordStagingFailure(ctx context.Context, activity i
 		// withdraws this notice to say so; "if you don't see it" is the phrasing
 		// that reads true under both outcomes.
 		Body: systemtext.Literal("vcard.failure.body"),
-		// Keyed on the CARD's own content, not its position in the batch: the
-		// entries a retry re-reads are ordered by the attachment rows'
-		// created_at (liveCardKeys), which a concurrent archive or a new
-		// attachment can shift between one attempt and the next. A key keyed
-		// on position would then dedupe the WRONG card's earlier notice, or
-		// miss the same card's, on nothing more than an unrelated attachment
-		// changing underneath it. vcardStagingFailureKey uses the identity
-		// vcardCreateStager's own proposal already keys on instead.
+		// Keyed on the card's own content, not its position in the batch. A retry
+		// re-reads the entries in attachment order (liveCardKeys). A concurrent
+		// archive or new attachment can shift that order. A positional key would
+		// then dedupe the wrong card's earlier notice.
+		// vcardStagingFailureKey uses the identity VCardCreateStager's proposal
+		// keys on instead.
 		DedupeKey: fmt.Sprintf("%s:%s:%s", noticeKindVCardStagingFailed, activity, vcardStagingFailureKey(entry)),
 		Target:    notices.Target{Type: string(recordTypeActivity), ID: activity},
 	})
 	return err
 }
 
-// vcardStagingFailureKey is a card's stable identity across retries — the
-// same full_name/emails/company triple vcardCreateStager's own proposal
-// identity keys on (vcardcreateproposal.go), so two cards that would collide
-// as one proposal also collide as one notice, and a card that merely moved
-// position in a re-read batch does not raise a second line for itself.
+// vcardStagingFailureKey is a card's stable identity across retries. It is the
+// full_name, emails and company triple that VCardCreateStager's proposal
+// identity keys on (vcardcreateproposal.go). Two cards that collide as one
+// proposal also collide as one notice. A card that moved position in a
+// re-read batch raises no second line for itself.
 func vcardStagingFailureKey(entry contacts.VCardEntry) string {
 	sum := sha256.Sum256([]byte(contacts.NormalizeContactName(entry.FullName) + "\x00" +
 		loweredCardEmails(entry) + "\x00" + strings.TrimSpace(entry.Company)))
@@ -108,9 +106,9 @@ func vcardStagingFailureKey(entry contacts.VCardEntry) string {
 }
 
 // stageReviewsWith is stageReviews against an injected stager and failure
-// notice, so a test can make one card's stage fail without needing a real
-// staging conflict — what is under test is the aggregation below, not
-// vcardCreateStager's own SQL or recordStagingFailure's own write.
+// notice, so a test can make one card's stage fail without a real staging
+// conflict. What is under test is the aggregation below, not
+// VCardCreateStager's SQL or recordStagingFailure's write.
 //
 // Every eligible card gets its own attempt: one card's staging fault must not
 // cost its siblings in the same message their own review, the way ImportVCards

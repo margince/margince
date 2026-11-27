@@ -32,6 +32,9 @@ type PurgeSubject struct {
 	// SoleImports are the activities whose only capture_import row is this
 	// seat's. Nobody else's claim survives them, so they are destroyed.
 	SoleImports []ids.UUID
+	// StillPurgeable, when set, is asked of each SoleImports row under its lock,
+	// and a row it refuses is kept.
+	StillPurgeable func(ctx context.Context, tx pgx.Tx, id ids.UUID) (bool, error)
 	// SharedImports are the activities a colleague also imported. This seat's
 	// import row and participant row go; the message stays, for them.
 	SharedImports []ids.UUID

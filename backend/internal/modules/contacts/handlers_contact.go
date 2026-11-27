@@ -190,9 +190,10 @@ func (h Handlers) ImportVCards(w http.ResponseWriter, r *http.Request, params cr
 		writeStoreErr(w, r, err)
 		return
 	}
-	h.stageVCardReviews(r.Context(), entries, results)
+	staged := h.stageVCardReviews(r.Context(), entries, results)
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.VCardImportReport{
-		Results: toContractVCardResults(results),
+		Results:         toContractVCardResults(results),
+		StagedForReview: staged,
 	})
 }
 
@@ -206,16 +207,16 @@ func (h Handlers) importCards(ctx context.Context, entries []VCardEntry, company
 }
 
 // stageVCardReviews turns each near-match the import refused to create into a
-// durable proposal, so the question outlives the upload response instead of
-// dying with it. A staging fault does not fail the upload — the cards are
-// already written or refused, and failing now would un-tell the reader what
-// DID happen — but it is not silent either: the card's own result line says
-// the review could not be queued and that re-importing retries, because a 200
-// that quietly dropped the promised review is the invisibility this staging
-// exists to end.
-func (h Handlers) stageVCardReviews(ctx context.Context, entries []VCardEntry, results []VCardResult) {
+// durable proposal, so the question outlives the upload response.
+//
+// A staging fault does not fail the upload, because the other cards are
+// already written or refused. The card's own result line says the review could
+// not be queued and that importing again retries. It returns how many cards
+// now wait in the inbox.
+func (h Handlers) stageVCardReviews(ctx context.Context, entries []VCardEntry, results []VCardResult) int {
+	staged := 0
 	if h.stageVCardReview == nil {
-		return
+		return staged
 	}
 	for i := range results {
 		if !results[i].Outcome.AwaitsApproval() {
@@ -225,8 +226,11 @@ func (h Handlers) stageVCardReviews(ctx context.Context, entries []VCardEntry, r
 			slog.ErrorContext(ctx, "contacts: a vCard near-match could not be proposed for review",
 				"card_index", results[i].Index, "err", err)
 			results[i].Reason = "this card resembles an existing contact, and the review could not be queued; import the card again to retry"
+			continue
 		}
+		staged++
 	}
+	return staged
 }
 
 func toContractVCardResults(results []VCardResult) []crmcontracts.VCardImportResult {

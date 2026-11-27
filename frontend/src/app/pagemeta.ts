@@ -8,16 +8,19 @@ import { opensAFocusedFiltersPage } from "../lib/filtersaddress";
 import { useReadsTeamProgress } from "../lib/progressreader";
 import type { Route, Screen } from "../lib/router";
 import { SETTINGS_SCREEN } from "../lib/settingsrouting";
+import { useUrlParams } from "../lib/urlstate";
 import {
   entryLabel,
   NAV,
   type NavLevelEntry,
   type NavSection,
   navLabelKey,
+  opensWorklistPanel,
   parentScreenOf,
   recordKindOf,
   reservedPageTitle,
 } from "./nav";
+import { useOfferLocation } from "./offerlocation";
 
 // What the chrome knows about a page before the page renders: its name, its
 // one-line description, and which entry of a section it is.
@@ -92,7 +95,6 @@ export const PAGE_SUB_KEYS: Record<string, MessageKey> = {
 // thing, not the NAV rail) carry their own title key. Every authenticated route
 // resolves to real copy — a raw screen slug is never shown as a page title.
 export const OFF_RAIL_TITLE_KEYS: Record<string, MessageKey> = {
-  worklist: "nav.brief",
   settings: "nav.settings",
   offers: "nav.offers",
   partners: "nav.partners",
@@ -189,10 +191,14 @@ export function usePagePath(
 ): [string, ...string[]] {
   const t = useT();
   const { locale } = useLocale();
-  const navItem = NAV.find((item) => item.screen === route.screen);
+  const [params] = useUrlParams();
+  const shownScreen = opensWorklistPanel(route, params)
+    ? "worklist"
+    : route.screen;
+  const navItem = NAV.find((item) => item.screen === shownScreen);
   const readsTeam = useReadsTeamProgress();
   const screenTitle = resolveTitle(
-    route.screen,
+    shownScreen,
     navLabelKey(navItem, readsTeam),
     t,
   );
@@ -201,6 +207,8 @@ export function usePagePath(
   const recordKind = recordKindOf(route);
   const recordId = recordKind && route.id;
   const { name } = useEntityName(recordKind ?? "contact", recordId);
+  const offerLocation = useOfferLocation(route);
+  if (offerLocation) return offerLocation.title;
   if (recordId) {
     return name ? [name, screenTitle] : [screenTitle];
   }

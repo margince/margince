@@ -1421,6 +1421,18 @@
             "type": "string"
           }
         },
+        "google_directory_credential": {
+          "description": "The service-account key and admin address that read a Google member's groups at sign-in, as JSON with service_account_key and admin_subject.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^\\s*$|^\\s*\\$\\{(env|file):[^}]*[^}\\s][^}]*\\}\\s*$",
+          "examples": [
+            "${env:VARIABLE_NAME}",
+            "${file:/run/secrets/name}"
+          ]
+        },
         "mcp_client_check": {
           "description": "Admins may run the check_client tool from an AI tool to test whether it can answer a form.",
           "type": [

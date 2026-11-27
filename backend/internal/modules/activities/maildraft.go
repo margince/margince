@@ -263,6 +263,14 @@ func insertMailDraft(ctx context.Context, tx pgx.Tx, author ids.UUID, anchor Mai
 func replaceMailDraft(ctx context.Context, tx pgx.Tx, author ids.UUID, anchor MailDraftAnchor, content MailDraftContent, expected int64) (MailDraft, error) {
 	args := mailDraftArgs(author, anchor, content)
 	args[fieldVersion], args["editor"] = expected, content.EditorState
+	unchanged, err := draftHoldsContent(ctx, tx, args)
+	if err != nil {
+		return MailDraft{}, err
+	}
+	if unchanged {
+		return scanMailDraft(tx.QueryRow(ctx, `SELECT `+mailDraftColumns+` FROM mail_draft
+ WHERE author_id=@author AND anchor_type=@anchor_type AND anchor_id=@anchor_id`, args))
+	}
 	row := tx.QueryRow(ctx, `
  UPDATE mail_draft
  SET to_addresses=@to,cc_addresses=@cc,bcc_addresses=@bcc,

@@ -26,6 +26,7 @@ import { useMe } from "../../lib/session";
 import { TASK_PARAM } from "../../lib/taskreminders";
 import { replaceDial, useUrlParams } from "../../lib/urlstate";
 import { readerTask } from "../../lib/worklistcopy";
+import { drawerOpen } from "../../lib/worklistrouting";
 import {
   MagicPanel,
   STALLED_LANES,
@@ -71,7 +72,6 @@ import { useMorningBrief, useWeeklyReview } from "./brief.queries";
 import {
   BriefQueue,
   closeQueue,
-  drawerOpen,
   loadWorklistScreen,
   openQueue,
 } from "./brief.queue";

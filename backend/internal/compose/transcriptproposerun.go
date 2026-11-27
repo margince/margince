@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // transcriptTargetType is the transcript a proposal is filed against. The
@@ -41,7 +42,7 @@ func (p *TranscriptProposer) Read(ctx context.Context, store transcriptReadStore
 }
 
 func (p *TranscriptProposer) readTranscript(ctx context.Context, store transcriptReadStore, readID ids.UUID, activityID ids.ActivityID) error {
-	claim, err := store.BeginTranscriptRead(ctx, readID, activities.TranscriptReadLease)
+	claim, err := store.BeginTranscriptRead(runBooks(ctx), readID, activities.TranscriptReadLease)
 	if err != nil {
 		return err
 	}
@@ -61,7 +62,7 @@ func (p *TranscriptProposer) retryable(
 		return cause
 	}
 	// Detached: a try that ran out of time still hands its reading back.
-	releaseCtx, cancel := terminalCtx(ctx)
+	releaseCtx, cancel := terminalCtx(runBooks(ctx))
 	defer cancel()
 	if err := store.ReleaseTranscriptRead(releaseCtx, claim.ID, *claim.StartedAt); err != nil {
 		p.log.WarnContext(ctx, "could not release a transcript reading being retried",
@@ -79,6 +80,9 @@ func (p *TranscriptProposer) readClaimed(ctx context.Context, store transcriptRe
 			return p.fail(ctx, store, readID, activityID, *failure)
 		}
 		// A transient fault is the job's to retry, not a verdict for the rep.
+		return err
+	}
+	if reading.Links, err = meetingFiledUnder(ctx, store, activityID); err != nil {
 		return err
 	}
 	// Checked again: the body can be edited between the request and the reading.
@@ -172,7 +176,7 @@ func (p *TranscriptProposer) finishUnderLock(
 		if err != nil {
 			return err
 		}
-		return store.FinishTranscriptReadTx(ctx, tx, readID, outcome)
+		return store.FinishTranscriptReadTx(runBooks(ctx), tx, readID, outcome)
 	})
 }
 
@@ -229,7 +233,8 @@ func (p *TranscriptProposer) stage(
 			out.known[derefSeat(commitment.Seat)]++
 			continue
 		}
-		outcome, id, err := p.dispatch.DispatchTx(ctx, tx, commitment, bundleID)
+		filer := fileFor(ctx, &commitment)
+		outcome, id, err := p.dispatch.DispatchTx(filer, tx, commitment, bundleID)
 		if err != nil {
 			return transcriptStaging{}, err
 		}
@@ -274,4 +279,32 @@ func refusedTranscriptFailure(err error) activities.TranscriptFailure {
 		return activities.TranscriptFailure{Code: activities.TranscriptFailureNoModel}
 	}
 	return activities.TranscriptFailure{Code: activities.TranscriptFailureRefused}
+}
+
+// fileFor is who files a commitment the reading found. The requester's own
+// promise is the requester's agent's to file, under their grants. Another
+// colleague's is the system's, on the requester's behalf, so its record says
+// whose meeting it came from.
+func fileFor(ctx context.Context, c *Commitment) context.Context {
+	reader, ok := principal.Actor(ctx)
+	if ok && c.Seat != nil && *c.Seat == reader.OnBehalfOf {
+		return ctx
+	}
+	books := runBooks(ctx)
+	if system, ok := principal.Actor(books); ok && system.Type == principal.PrincipalSystem {
+		c.Extractor = system.ID
+	}
+	return books
+}
+
+// meetingFiledUnder reads the records the meeting is filed under as the run's
+// bookkeeping. A proposal carries them all, and accepting it is refused
+// while any is one the decider cannot see. Read under the requester's scope,
+// the hidden ones would drop out and that refusal would never fire.
+func meetingFiledUnder(ctx context.Context, store transcriptReadStore, activityID ids.ActivityID) ([]activities.ActivityLinkInput, error) {
+	whole, err := store.ReadTranscript(runBooks(ctx), activityID)
+	if err != nil {
+		return nil, err
+	}
+	return whole.Links, nil
 }

@@ -14,6 +14,7 @@ import {
   RELATIONSHIP_TYPE_LABELS,
   SIZE_BAND_OPTIONS,
 } from "../../components/companylookups";
+import { hiddenHoldersNotice } from "../../components/contactemployersummary";
 import { CreateAction } from "../../components/create";
 import { useObjectCustomFields } from "../../components/customfields.form";
 import {
@@ -290,7 +291,20 @@ export function CompaniesScreen({
             header: t("company.contactCount"),
             initiallyHidden: true,
             numeric: true,
-            cell: (company: Company) => company.contact_count ?? "",
+            cell: (company: Company) => {
+              const notice = hiddenHoldersNotice(
+                company.hidden_contact_holders,
+                locale,
+              );
+              return notice ? (
+                <>
+                  {company.contact_count ?? ""}
+                  <span className="t-sub"> {notice}</span>
+                </>
+              ) : (
+                (company.contact_count ?? "")
+              );
+            },
             // A reader shown no count is ordered by none: such rows go last.
             sort: "contact_count",
           },

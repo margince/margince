@@ -9,6 +9,7 @@ import {
   formatAnalyticsMoneyOrAbsent,
   formatAnalyticsNumber,
 } from "../../format/format";
+import { sumMinor } from "../../format/minorsum";
 import { type Locale, usePlural, useT } from "../../i18n";
 import { WIN_PROBABILITY_DIAL } from "../../lib/dealranges";
 import { dealsFilteredBy, type scopeDealDials } from "../../lib/dealsaddress";
@@ -401,12 +402,12 @@ export function StageTable({
 }
 
 // A column summed down the stages, or null when no stage answered it: absent
-// is not zero.
-function sumKnown(values: readonly (number | null)[]): number | null {
+// is not zero. Undefined is a sum past what a number holds without loss.
+function sumKnown(
+  values: readonly (number | null)[],
+): number | null | undefined {
   const priced = values.filter((value): value is number => value != null);
-  return priced.length === 0
-    ? null
-    : priced.reduce((total, value) => total + value, 0);
+  return priced.length === 0 ? null : sumMinor(priced);
 }
 
 // The whole pipeline above its stages. Every stage row is already in the base
@@ -447,21 +448,33 @@ function PipelineTotals({
       <StatCard
         narrow="row"
         label={t("analytics.unweighted")}
-        value={withPartial(
-          formatAnalyticsMoneyOrAbsent(rawMinor, baseCurrency, locale),
-          coverage,
-          t,
-        )}
+        value={
+          rawMinor === undefined
+            ? t("format.tooLargeExact")
+            : withPartial(
+                formatAnalyticsMoneyOrAbsent(rawMinor, baseCurrency, locale),
+                coverage,
+                t,
+              )
+        }
         detail={footnote}
       />
       <StatCard
         narrow="row"
         label={t("analytics.weighted")}
-        value={withPartial(
-          formatAnalyticsMoneyOrAbsent(weightedMinor, baseCurrency, locale),
-          coverage,
-          t,
-        )}
+        value={
+          weightedMinor === undefined
+            ? t("format.tooLargeExact")
+            : withPartial(
+                formatAnalyticsMoneyOrAbsent(
+                  weightedMinor,
+                  baseCurrency,
+                  locale,
+                ),
+                coverage,
+                t,
+              )
+        }
         detail={footnote}
       />
     </StatStrip>

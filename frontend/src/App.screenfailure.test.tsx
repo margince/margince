@@ -15,7 +15,8 @@ import {
 // route. The dispatch under test stays unstubbed.
 const fragile = vi.hoisted(() => ({ broken: true }));
 
-vi.mock("@composition/extensions", () => ({
+vi.mock("@composition/extensions", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@composition/extensions")>()),
   extensions: [
     {
       name: "notes",

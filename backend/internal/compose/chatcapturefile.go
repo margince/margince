@@ -23,7 +23,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // ChatCaptureFile executes fileChatCapture.
@@ -101,18 +100,14 @@ func bodyIsTheReading(read activities.ExtractionRead, body string) bool {
 }
 
 // asChatReader is the principal an unedited body is written under: the reader,
-// acting for the user who confirmed it.
+// acting for the user who confirmed it, under that user's grants. With no
+// user bound the write stays on ctx, and the store's gate refuses it there.
 func asChatReader(ctx context.Context) context.Context {
-	human, ok := principal.Actor(ctx)
-	if !ok {
+	reader, err := agentForActor(ctx, extractionExecutorID)
+	if err != nil {
 		return ctx
 	}
-	return principal.WithActor(ctx, principal.Principal{
-		Type:       principal.PrincipalSystem,
-		ID:         extractionExecutorID,
-		UserID:     human.UserID,
-		OnBehalfOf: human.UserID,
-	})
+	return reader
 }
 
 // chatCaptureHandlers is the transport for fileChatCapture.

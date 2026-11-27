@@ -94,7 +94,7 @@ func attachCompanyPartners(ctx context.Context, tx pgx.Tx, companies []crmcontra
 		companyIDs[i] = ids.UUID(companies[i].Id)
 	}
 	rows, err := tx.Query(ctx, `SELECT `+partnerColumns+` FROM partner
-		WHERE company_id = ANY($1) AND `+livePartnerSQL(""), companyIDs)
+		WHERE company_id = ANY($1)`, companyIDs)
 	if err != nil {
 		return fmt.Errorf("read the companies' partner programmes: %w", err)
 	}
@@ -102,7 +102,16 @@ func attachCompanyPartners(ctx context.Context, tx pgx.Tx, companies []crmcontra
 	if err != nil {
 		return fmt.Errorf("collect the companies' partner programmes: %w", err)
 	}
-	partners, err := wirePartners(ctx, tx, partnerRows)
+	ended := make(map[ids.UUID]bool)
+	live := make([]partnerRow, 0, len(partnerRows))
+	for _, row := range partnerRows {
+		if row.ArchivedAt != nil {
+			ended[row.CompanyID.UUID] = true
+		} else {
+			live = append(live, row)
+		}
+	}
+	partners, err := wirePartners(ctx, tx, live)
 	if err != nil {
 		return err
 	}
@@ -112,6 +121,10 @@ func attachCompanyPartners(ctx context.Context, tx pgx.Tx, companies []crmcontra
 	}
 	for i := range companies {
 		companies[i].Partner = byCompany[ids.UUID(companies[i].Id)]
+		if ended[ids.UUID(companies[i].Id)] {
+			yes := true
+			companies[i].PartnerProgramEnded = &yes
+		}
 	}
 	return nil
 }

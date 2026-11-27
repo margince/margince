@@ -95,6 +95,9 @@ func (s *Store) mergeCompanyTx(
 	if err != nil {
 		return crmcontracts.Company{}, err
 	}
+	if err := refuseLiveIntoEndedPartner(ctx, tx, sourceID.UUID, targetID.UUID); err != nil {
+		return crmcontracts.Company{}, err
+	}
 	if err := companyMergeAllowed(ctx, tx, sourceID, targetID); err != nil {
 		return crmcontracts.Company{}, err
 	}
