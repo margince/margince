@@ -15,6 +15,8 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
 const calledOffRefold = "1791342035_stored_clocks_drop_called_off_meetings.up.sql"
@@ -26,7 +28,7 @@ type clockRow struct {
 	updatedAt    time.Time
 }
 
-func readClockRow(t *testing.T, conn *pgx.Conn, table, id string) clockRow {
+func readClockRow(t *testing.T, conn storekit.RowQuerier, table, id string) clockRow {
 	t.Helper()
 	var r clockRow
 	if err := conn.QueryRow(context.Background(),

@@ -89,8 +89,9 @@ func TestTheBatchClockMigrationReappliesAfterRollback(t *testing.T) {
 	early := time.Date(2026, 3, 2, 9, 0, 0, 0, time.UTC)
 	f := seedLinkClockFixture(t, conn, early, early.AddDate(0, 0, 7), early.AddDate(0, 0, 14))
 	if _, err := conn.Exec(ctx, `INSERT INTO activity_link (activity_id, entity_type, contact_id, project_id)
-		VALUES (@activity, 'contact', @contact, NULL), (@activity, 'project', NULL, @project)`,
-		pgx.NamedArgs{"activity": f.early, "contact": f.contactA, "project": f.projectP}); err != nil {
+		VALUES (@early, 'contact', @contact, NULL), (@early, 'project', NULL, @project),
+		       (@late, 'contact', @contact, NULL), (@late, 'project', NULL, @project)`,
+		pgx.NamedArgs{"early": f.early, "late": f.late, "contact": f.contactA, "project": f.projectP}); err != nil {
 		t.Fatal(err)
 	}
 	core, err := migrations.CoreHistory()
@@ -121,6 +122,16 @@ func TestTheBatchClockMigrationReappliesAfterRollback(t *testing.T) {
 	if !slices.Equal(rowTriggers, []string{"activity_last_activity", "activity_project_last_activity"}) {
 		t.Fatalf("rollback restored row triggers %v", rowTriggers)
 	}
+	deleted, err := tx.Exec(ctx, `DELETE FROM activity_link WHERE activity_id = @activity`, pgx.NamedArgs{"activity": f.late})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if deleted.RowsAffected() != 2 {
+		t.Fatalf("deleted %d links, want the contact and project links", deleted.RowsAffected())
+	}
+	assertLinkClocks(t, conn, "rolled-back link triggers", []clockWant{
+		{"contact", "contact", f.contactA, &early}, {"project", "project", f.projectP, &early},
+	})
 	next := early.AddDate(0, 0, 1)
 	if _, err := tx.Exec(ctx, `UPDATE activity SET occurred_at = @at WHERE id = @activity`,
 		pgx.NamedArgs{"at": next, "activity": f.early}); err != nil {

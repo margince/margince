@@ -18,8 +18,9 @@ type LastActivityTargets struct {
 	Contacts, Deals, Companies, Projects []ids.UUID
 }
 
-// LockLastActivityTargets holds the full reach before attach probes or writes.
-// Its non-key locks serialize date writers while admitting foreign-key shares.
+// LockLastActivityTargets locks the enumerated reach before probes or writes.
+// Non-key locks admit foreign-key shares; relationships added concurrently
+// still require retrying the transaction with RetryLockCycles.
 func LockLastActivityTargets(ctx context.Context, tx pgx.Tx, targets LastActivityTargets) error {
 	if len(targets.Contacts)+len(targets.Deals)+len(targets.Companies)+len(targets.Projects) == 0 {
 		return nil

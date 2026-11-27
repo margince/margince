@@ -22,7 +22,7 @@ import (
 func TestConcurrentLinkClockWritersKeepForeignKeyLocksCompatible(t *testing.T) {
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
-	for _, operation := range []string{"insert", "update", "delete"} {
+	for _, operation := range []string{"insert", "redate", "move", "delete"} {
 		t.Run(operation, func(t *testing.T) {
 			for _, kind := range []string{"company", "contact", "deal", "project"} {
 				t.Run(kind, func(t *testing.T) {
@@ -45,8 +45,20 @@ func TestConcurrentLinkClockWritersKeepForeignKeyLocksCompatible(t *testing.T) {
 							t.Fatal(err)
 						}
 					}
-					if operation == "update" {
+					if operation == "redate" || operation == "move" {
 						clockAt = late.AddDate(0, 0, 1)
+					}
+					destinations := make([]string, 2)
+					if operation == "move" {
+						if err := conn.QueryRow(ctx, `WITH moved AS (
+							INSERT INTO activity (kind, subject, occurred_at, audience, source, captured_by)
+							VALUES ('note', 'move early', @early, 'workspace', 'manual', 'test'),
+							       ('note', 'move late', @late, 'workspace', 'manual', 'test') RETURNING id, subject
+						) SELECT (SELECT id::text FROM moved WHERE subject = 'move early'),
+						         (SELECT id::text FROM moved WHERE subject = 'move late')`,
+							pgx.NamedArgs{"early": early.AddDate(0, 0, 1), "late": clockAt}).Scan(&destinations[0], &destinations[1]); err != nil {
+							t.Fatal(err)
+						}
 					}
 					expectedAt := &clockAt
 					if operation == "delete" {
@@ -54,8 +66,11 @@ func TestConcurrentLinkClockWritersKeepForeignKeyLocksCompatible(t *testing.T) {
 					}
 					write := insertPrefix + ` VALUES (@activity, @kind, @parent)`
 					switch operation {
-					case "update":
+					case "redate":
 						write = `UPDATE activity SET occurred_at = occurred_at + interval '1 day' WHERE id = @activity`
+					case "move":
+						write = `UPDATE activity_link SET activity_id = @destination
+							WHERE activity_id = @activity AND entity_type = @kind AND ` + pgx.Identifier{kind + "_id"}.Sanitize() + ` = @parent`
 					case "delete":
 						write = `DELETE FROM activity_link WHERE activity_id = @activity AND entity_type = @kind AND ` +
 							pgx.Identifier{kind + "_id"}.Sanitize() + ` = @parent`
@@ -76,8 +91,11 @@ func TestConcurrentLinkClockWritersKeepForeignKeyLocksCompatible(t *testing.T) {
 					}
 					assertConcurrentClockWrites(t, ownerDSN, kind, parentID, targets, func(ctx context.Context, tx pgx.Tx, writerIndex int) error {
 						args := pgx.NamedArgs{"activity": activities[writerIndex]}
-						if operation != "update" {
+						if operation != "redate" {
 							args["kind"], args["parent"] = kind, parentID
+						}
+						if operation == "move" {
+							args["destination"] = destinations[writerIndex]
 						}
 						written, err := tx.Exec(ctx, write, args)
 						if err != nil {

@@ -167,22 +167,23 @@ func TestALinkStatementMovesAClockWithoutEditingTheRecord(t *testing.T) {
 	headSchema(t, conn)
 
 	early := time.Date(2026, 3, 2, 9, 0, 0, 0, time.UTC)
-	f := seedLinkClockFixture(t, conn, early, early.AddDate(0, 0, 7), early.AddDate(0, 0, 14))
+	late := early.AddDate(0, 0, 7)
+	f := seedLinkClockFixture(t, conn, early, late, early.AddDate(0, 0, 14))
 	before := readClockRow(t, conn, "contact", f.contactA)
-	if _, err := conn.Exec(context.Background(), `INSERT INTO activity_link (activity_id, entity_type, contact_id)
+	tx := recordClockUpdates(t, conn)
+	if _, err := tx.Exec(context.Background(), `INSERT INTO activity_link (activity_id, entity_type, contact_id)
 		VALUES ($1, 'contact', $3), ($2, 'contact', $3)`, f.early, f.late, f.contactA); err != nil {
 		t.Fatalf("linking: %v", err)
 	}
-	after := readClockRow(t, conn, "contact", f.contactA)
-	if after.lastActivity == nil || after.version != before.version || !after.updatedAt.Equal(before.updatedAt) {
+	assertClockWriteOrder(t, tx, []string{"contact/" + f.contactA})
+	after := readClockRow(t, tx, "contact", f.contactA)
+	if !sameClock(after.lastActivity, &late) || after.version != before.version || !after.updatedAt.Equal(before.updatedAt) {
 		t.Errorf("the link moved the clock to %v and the version %d -> %d, updated_at %v -> %v; want a clock and no edit",
 			after.lastActivity, before.version, after.version, before.updatedAt, after.updatedAt)
 	}
 }
 
-// Clock updates retain their row locks, so their write order records the
-// contact-before-project order an activity update also takes.
-func TestALinkStatementLocksItsContactBeforeItsProject(t *testing.T) {
+func TestALinkStatementWritesItsContactBeforeItsProject(t *testing.T) {
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	headSchema(t, conn)
@@ -254,7 +255,7 @@ func TestActivityAndLinkChangesRefreshTheirWholeReachInTheSameOrder(t *testing.T
 	assertClockWriteOrder(t, tx, want)
 }
 
-func TestAnActivityStatementLocksItsProjectsInIDOrder(t *testing.T) {
+func TestAnActivityStatementWritesItsProjectsInIDOrder(t *testing.T) {
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	headSchema(t, conn)
