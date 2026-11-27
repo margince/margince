@@ -73,7 +73,7 @@ describe("the attention card for slipping deals", () => {
     const root = mount(slippingFixture.data);
     root.querySelector<HTMLButtonElement>(".attention-row button")?.click();
     expect(asked).toHaveLength(1);
-    expect(asked[0]).toContain('"Acme renewal"');
+    expect(asked[0]).toContain("“Acme renewal”");
     expect(asked[0]).toContain("0195c3a0-0000-7000-8000-0000000000d1");
   });
 
@@ -117,12 +117,12 @@ describe("the attention card for open promises", () => {
   it("counts the promises by state and marks the late and the unowned", () => {
     const root = mount(commitmentsFixture.data);
     expectReadable(root);
-    expect(root.querySelector("h1")?.textContent).toBe("Open promises");
+    expect(root.querySelector("h1")?.textContent).toBe("Open commitments");
     expect(lead(root)).toBe("1overdue");
     expect(root.querySelector(".view-ring")?.textContent).toBe("2open");
     expect(legend(root)).toEqual(["Overdue1", "Coming up0", "No date1"]);
     expect(root.querySelector(".view-hero-sentence")?.textContent).toBe(
-      "1 promise has nobody to keep it.",
+      "1 commitment has nobody to keep it.",
     );
     expect(root.textContent).toContain("6 days late");
     expect(root.textContent).toContain("Nobody owns this");

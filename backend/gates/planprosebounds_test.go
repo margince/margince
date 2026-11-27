@@ -126,7 +126,7 @@ func planGoBounds(t *testing.T) map[string]int {
 // current one is what the database actually enforces.
 func planSchemaBounds(t *testing.T) map[string]int {
 	t.Helper()
-	files, err := filepath.Glob(filepath.Join("migrations", "core", "*.up.sql"))
+	files, err := gatekit.Glob(filepath.Join("migrations", "core", "*.up.sql"))
 	if err != nil {
 		t.Fatalf("listing migrations: %v", err)
 	}
@@ -174,7 +174,7 @@ func boundedColumnOf(constraint string) string {
 
 func planModuleFiles(t *testing.T) []string {
 	t.Helper()
-	files, err := filepath.Glob(filepath.Join("internal", "modules", "weeklyplan", "*.go"))
+	files, err := gatekit.Glob(filepath.Join("internal", "modules", "weeklyplan", "*.go"))
 	if err != nil {
 		t.Fatalf("listing the weeklyplan module: %v", err)
 	}

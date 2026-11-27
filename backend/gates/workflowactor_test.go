@@ -108,7 +108,7 @@ func systemActorBindings(t *testing.T, dir string) []actorBinding {
 	// Read here rather than through parsePackageFiles, which the call-graph
 	// censuses share: that one returns syntax without paths, and a finding
 	// naming only the module is one a reader has to go looking for.
-	sources, err := filepath.Glob(filepath.Join(dir, "*.go"))
+	sources, err := gatekit.Glob(filepath.Join(dir, "*.go"))
 	if err != nil {
 		t.Fatalf("listing %s to find the actors it binds: %v", dir, err)
 	}

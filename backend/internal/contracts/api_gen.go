@@ -33962,7 +33962,7 @@ type Activity struct {
 	DueIntent *IntentTime `json:"due_intent,omitempty"`
 
 	// DurationSeconds Meeting/call only.
-	DurationSeconds *int `json:"duration_seconds,omitempty"`
+	DurationSeconds *int `json:"duration_seconds,omitempty" minimum:"0"`
 
 	// EmailSummary Present exactly when `kind=email`. What the canonical email row renders, so a list does not have to fetch a message per visible line to draw one. Every other kind carries none, and a reader branches on its presence rather than on the kind word.
 	EmailSummary *EmailSummary `json:"email_summary,omitempty"`
@@ -47641,7 +47641,7 @@ type CreateActivityRequest struct {
 
 	// DueIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
 	DueIntent       *IntentTime           `json:"due_intent,omitempty"`
-	DurationSeconds *int                  `json:"duration_seconds,omitempty"`
+	DurationSeconds *int                  `json:"duration_seconds,omitempty" minimum:"0"`
 	FollowUpTask    *ActivityFollowUpTask `json:"follow_up_task,omitempty"`
 
 	// HostUserId Meeting only: the member of this company who HELD it, which is not the same question as who typed it up. Omit it for a meeting you held yourself and the server fills in the caller; name a colleague when you are minuting theirs, so it counts into their week rather than yours. A label and never an authority — what a caller may read is decided before this field is filled in.
@@ -61700,7 +61700,10 @@ type PassportSummary struct {
 	Connection *PassportConnection `json:"connection,omitempty"`
 	CreatedAt  time.Time           `json:"created_at"`
 	ExpiresAt  *time.Time          `json:"expires_at,omitempty"`
-	Id         openapi_types.UUID  `json:"id"`
+
+	// GrantedBy The member who granted the passport its authority. A server built before this field omits it.
+	GrantedBy *openapi_types.UUID `json:"granted_by,omitempty"`
+	Id        openapi_types.UUID  `json:"id"`
 
 	// Label Human-given name for the passport (e.g. "Marcus's Claude").
 	Label      string     `json:"label"`
@@ -76911,6 +76914,9 @@ type PermissionDenied = Problem
 
 // RetentionHeld RFC 7807 problem+json with a stable machine `code` and structured `details`.
 type RetentionHeld = Problem
+
+// Retired RFC 7807 problem+json with a stable machine `code` and structured `details`.
+type Retired = Problem
 
 // RoleCannotCapture RFC 7807 problem+json with a stable machine `code` and structured `details`.
 type RoleCannotCapture = Problem

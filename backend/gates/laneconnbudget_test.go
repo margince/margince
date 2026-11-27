@@ -78,11 +78,11 @@ func laneTerm(t *testing.T, script, name string) int {
 // real finding and is not one.
 func gateWorkflows(t *testing.T) string {
 	t.Helper()
-	paths, err := filepath.Glob(filepath.Join(filepath.Dir(ciWorkflowPath), "ci.yml"))
+	paths, err := gatekit.Glob(filepath.Join(filepath.Dir(ciWorkflowPath), "ci.yml"))
 	if err != nil {
 		t.Fatalf("listing the gate caller: %v", err)
 	}
-	lanes, err := filepath.Glob(filepath.Join(filepath.Dir(ciWorkflowPath), "_lane-*.yml"))
+	lanes, err := gatekit.Glob(filepath.Join(filepath.Dir(ciWorkflowPath), "_lane-*.yml"))
 	if err != nil {
 		t.Fatalf("listing lane workflows: %v", err)
 	}

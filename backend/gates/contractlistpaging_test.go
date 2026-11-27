@@ -260,7 +260,7 @@ func pagedListContract(t *testing.T) pagedListSpec {
 		t.Fatalf("reading the contract: %v", err)
 	}
 	var doc pagedListSpec
-	if err := yaml.Unmarshal(raw, &doc); err != nil {
+	if err := unmarshalYAML(raw, &doc); err != nil {
 		t.Fatalf("parsing the contract: %v", err)
 	}
 	if len(doc.Paths) == 0 {

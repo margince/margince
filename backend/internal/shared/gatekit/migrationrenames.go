@@ -60,7 +60,7 @@ func CurrentNames(dir string) map[string]string {
 // buildRenames walks the core migrations in apply order and collects every
 // rename, following a chain so a name moved twice lands on where it is now.
 func buildRenames(dir string) map[string]string {
-	files, err := filepath.Glob(filepath.Join(dir, "*.up.sql"))
+	files, err := Glob(filepath.Join(dir, "*.up.sql"))
 	if err != nil || len(files) == 0 {
 		return nil
 	}

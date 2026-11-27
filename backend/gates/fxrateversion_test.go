@@ -112,7 +112,7 @@ func TestEveryGoReadOfTheRateSheetPicksAVersion(t *testing.T) {
 		if strings.HasSuffix(path, "_test.go") {
 			continue
 		}
-		file, err := parser.ParseFile(gatekit.SourceFileSet(), path, nil, parser.SkipObjectResolution)
+		file, err := gatekit.ParseFile(path, parser.SkipObjectResolution)
 		if err != nil {
 			t.Fatalf("parsing %s: %v", path, err)
 		}
@@ -177,7 +177,7 @@ var (
 // replaces an earlier one, and a drop removes it.
 func latestSQLDefinitions(t *testing.T) map[string]string {
 	t.Helper()
-	files, err := filepath.Glob("migrations/core/*.up.sql")
+	files, err := gatekit.Glob("migrations/core/*.up.sql")
 	if err != nil || len(files) == 0 {
 		t.Fatalf("listing the core migrations: %v (%d files)", err, len(files))
 	}

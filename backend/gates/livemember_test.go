@@ -36,12 +36,14 @@ package gates
 // archived_at IS NULL` in two places and is not a workforce question at all.
 
 import (
+	"bytes"
 	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 
@@ -139,6 +141,11 @@ var appUserAlias = regexp.MustCompile(`(?i)\bapp_user\b(?:\s+AS)?\s+([a-z]\w*)`)
 // is exactly why nobody would notice the day something did.
 var readsAppUser = regexp.MustCompile(`(?i)\bapp_user\b`)
 
+// liveMemberWords lets the census skip a file appUserStatements takes nothing
+// from, because each pattern that admits a statement there holds one of them.
+var liveMemberWords = slices.Concat(requiredWords(readsAppUser), requiredWords(onlyTheLivenessPair),
+	requiredWords(onlyTheActivatablePair), requiredWords(anyArchivedNil))
+
 func TestOnlyOneSpellingOfALiveMember(t *testing.T) {
 	t.Parallel()
 	// A ratification that stops matching covers a site that has moved or been
@@ -153,6 +160,13 @@ func TestOnlyOneSpellingOfALiveMember(t *testing.T) {
 		// The definition itself, and this file, which plants deliberate defects
 		// below as the detector's own evidence.
 		if slash == liveMemberOwner || filepath.Base(path) == "livemember_test.go" {
+			continue
+		}
+		src, err := gatekit.ReadFile(path)
+		if err != nil {
+			t.Fatalf("reading %s: %v", path, err)
+		}
+		if !mayHoldFolded(string(src), liveMemberWords...) {
 			continue
 		}
 		file, err := gatekit.ParseFile(path, 0)
@@ -246,6 +260,14 @@ func TestEveryLiveMemberAliasIsALiteral(t *testing.T) {
 		// a table: livemember_test.go passes tc.alias and injects into nothing,
 		// because the string it builds is compared rather than executed.
 		if strings.HasSuffix(path, "_test.go") || filepath.ToSlash(path) == liveMemberDelegate {
+			continue
+		}
+		src, err := gatekit.ReadFile(path)
+		if err != nil {
+			t.Fatalf("reading %s: %v", path, err)
+		}
+		// Every finding and every counted call names the helper as an identifier.
+		if !bytes.Contains(src, []byte(liveMemberHelper)) {
 			continue
 		}
 		file, err := gatekit.ParseFile(path, 0)
@@ -900,6 +922,9 @@ func TestTheLiveMemberDetectorSeesWhatItClaimsTo(t *testing.T) {
 				head += "import (\n\t\"fmt\"\n\n\t\"" + workforcePath + "\"\n)\n"
 			default:
 				head += "import (\n\t\"fmt\"\n\n\t\"" + identityPath + "\"\n)\n"
+			}
+			if tc.arm != "" && !mayHoldFolded(tc.src, liveMemberWords...) {
+				t.Errorf("the census skips a file holding only this probe, so it never judges it:\n%s", tc.src)
 			}
 			file, err := parser.ParseFile(fset, "probe.go", head+tc.src, 0)
 			if err != nil {

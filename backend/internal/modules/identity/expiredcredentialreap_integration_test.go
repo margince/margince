@@ -56,9 +56,9 @@ func TestOnlyADeadCredentialIsReaped(t *testing.T) {
 		{
 			name:  "an invite already used, expiry ahead",
 			table: "auth_token",
-			cols:  "user_id, purpose, token_hash, expires_at, used_at",
-			dead:  "$1, 'invite', encode(sha256('reap-dead'), 'hex'), now() + interval '1 day', now()",
-			live:  "$1, 'invite', encode(sha256('reap-live'), 'hex'), now() + interval '1 day', NULL",
+			cols:  "user_id, token_hash, expires_at, used_at",
+			dead:  "$1, encode(sha256('reap-dead'), 'hex'), now() + interval '1 day', now()",
+			live:  "$1, encode(sha256('reap-live'), 'hex'), now() + interval '1 day', NULL",
 		},
 		{
 			name:  "a consumed setup token, which carries no expiry at all",

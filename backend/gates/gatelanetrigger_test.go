@@ -134,7 +134,7 @@ func readsFromTheTree(root, path string) (string, bool) {
 		return "", false
 	}
 	if strings.ContainsAny(path, "*?") {
-		matches, err := filepath.Glob(filepath.Join(root, path))
+		matches, err := gatekit.Glob(filepath.Join(root, path))
 		return path, err == nil && len(matches) > 0
 	}
 	_, err := os.Stat(filepath.Join(root, path))

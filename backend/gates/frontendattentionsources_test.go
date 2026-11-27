@@ -31,8 +31,6 @@ import (
 	"strings"
 	"testing"
 
-	"gopkg.in/yaml.v3"
-
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
@@ -75,7 +73,7 @@ func contractSources(t *testing.T) []string {
 		t.Fatalf("reading the API contract: %v", err)
 	}
 	var parsed contract
-	if err := yaml.Unmarshal(document, &parsed); err != nil {
+	if err := unmarshalYAML(document, &parsed); err != nil {
 		t.Fatalf("parsing the API contract: %v", err)
 	}
 	sources := parsed.Components.Schemas.WorklistItem.Properties.Source.Enum

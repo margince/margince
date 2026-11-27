@@ -108,7 +108,7 @@ func seedUnitState(t *testing.T, e *apptest.AppEnv) map[string]map[string]any {
 	var invoice string
 	if err := e.Owner.QueryRow(t.Context(), `SELECT i.id::text FROM finance_invoice i
 		   JOIN finance_connection c ON c.id = i.connection_id
-		  WHERE i.external_id = $1 AND c.archived_at IS NULL AND c.status <> 'disconnected'`, billedInvoice).Scan(&invoice); err != nil {
+		  WHERE i.external_id = $1 AND c.status <> 'disconnected'`, billedInvoice).Scan(&invoice); err != nil {
 		t.Fatalf("the sync mirrored no invoice for the billed customer: %v", err)
 	}
 	return map[string]map[string]any{

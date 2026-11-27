@@ -392,7 +392,7 @@ func (t searchRecords) addNearMatches(ctx context.Context, result *SearchRecords
 	if len(result.NearMatches) > 0 {
 		result.Notes = append(result.Notes, QueryNote{
 			Code: CodeNearMatchesOnly,
-			Detail: "no record matches these words; near_matches lists records whose names are spelt " +
+			Detail: "no record matches these words; near_matches lists records whose names are spelled " +
 				"close to them, and they are not matches",
 		})
 	}

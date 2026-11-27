@@ -270,23 +270,15 @@ func TestRecencyReadersOutsideTheHelpersExcludeRemediation(t *testing.T) {
 				"census is guarding a file that moved", file, what, err)
 			continue
 		}
-		// EITHER spelling satisfies this. A reader may name the origin itself,
-		// or call the shared fragment that names every system origin — which is
-		// what all four do now, so that a THIRD system origin reaches them
-		// without anyone having to remember these four files.
-		//
-		// The fragment is the stronger form and is held separately
-		// (TestEveryRecencyReadingExcludesTheSystemOrigins asserts no reader
-		// spells the exclusion by hand, and TestTheOneSpellingExcludesEvery-
-		// SystemOrigin holds the fragment to the vocabulary). This census stays
-		// because it names WHICH files ask the question at all — the fact a
-		// pattern-matching gate cannot recover.
+		// Only the shared fragment satisfies this. It names every system origin,
+		// so a third one reaches these files without anyone remembering them.
+		// TestEveryRecencyReadingExcludesTheSystemOrigins refuses a hand-spelled
+		// exclusion anyway. This census stays because it names which files ask
+		// the question at all, which a pattern-matching gate cannot recover.
 		body := string(raw)
-		if !strings.Contains(body, remediationOrigin) &&
-			!slices.ContainsFunc(engagementFragments, func(f string) bool { return strings.Contains(body, f) }) {
-			t.Errorf("%s computes %s and neither mentions %q nor calls one of %v — a second spelling "+
-				"of last_activity_at that still counts work the product filed "+
-				"about the record", file, what, remediationOrigin, engagementFragments)
+		if !slices.ContainsFunc(engagementFragments, func(f string) bool { return strings.Contains(body, f) }) {
+			t.Errorf("%s computes %s and calls none of %v — a second spelling of last_activity_at "+
+				"that still counts work the product filed about the record", file, what, engagementFragments)
 		}
 	}
 }

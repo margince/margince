@@ -187,7 +187,7 @@ func describeReportCatalog(catalog []ReportCatalogEntry) string {
 	}
 	var b strings.Builder
 	b.WriteString("The prebuilt report to run. Send `report` ALONE for the default answer listed ")
-	b.WriteString("below — that call takes no other argument and needs nothing read first. ")
+	b.WriteString("below: that call takes no other argument and needs nothing read first. ")
 	writeReportDefaults(&b, catalog)
 	b.WriteString("A report's `filters` and `aggregates` are its own, ")
 	b.WriteString("published at ")

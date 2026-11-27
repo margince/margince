@@ -124,8 +124,8 @@ func duplicateWarning(n int) Warning {
 	return Warning{
 		Code: CodeDuplicateFiled,
 		Message: subject + ", so the pair was filed for a human to review. " +
-			"The record was still created and nothing was merged — " +
-			"read the candidate's evidence before offering to merge them. " +
+			"The record was still created and nothing was merged. " +
+			"Read the candidate's evidence before offering to merge them. " +
 			"Tell the user the pair is waiting for that review; whether the two are one " +
 			"is the reviewer's call, not yours.",
 	}

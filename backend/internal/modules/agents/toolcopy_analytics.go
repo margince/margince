@@ -12,7 +12,7 @@ package agents
 // carrying a list that would be wrong for somebody. The refusal path makes
 // that safe: an unknown name is refused by name with the allowed set.
 var runAnalyticsQueryCopy = toolCopy{
-	Purpose: "Compute a grouped aggregate — counts, sums, averages, medians — over a " +
+	Purpose: "Compute a grouped aggregate (counts, sums, averages, medians) over a " +
 		"governed population, in the database. The answer carries its columns, rows and " +
 		"schema version; groups too small to disclose are withheld, never estimated.",
 	Limits: "Populations, dimensions and measures come from margince://schema/analytics, " +
