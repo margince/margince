@@ -29,12 +29,14 @@ GATE="$SCRIPT_DIR/check-ds-spacing.sh"
 # shellcheck source=scripts/lib-git-fixture.sh
 source "$SCRIPT_DIR/../../scripts/lib-git-fixture.sh"
 
-# The gate is deliberately fail-open outside a git checkout (a source export, a
-# container that refuses a dubious-ownership repo). Its test has to skip on the
-# same terms rather than turn `make fe-ds-gates` red for a reason that has
-# nothing to do with spacing.
+# Outside a git checkout the gate skips on a local run and fails in CI, and this
+# test follows the same rule.
 ROOT="$(cd "$SCRIPT_DIR" && git rev-parse --show-toplevel 2>/dev/null || true)"
 if [[ -z "$ROOT" ]]; then
+  if [[ -n "${CI:-}" && "${CI}" != "false" && "${CI}" != "0" ]]; then
+    echo "FAIL: DS spacing census: not a git checkout, so CI cannot test the gate" >&2
+    exit 1
+  fi
   echo "==> DS spacing census: not a git checkout — skipped"
   exit 0
 fi
@@ -214,6 +216,22 @@ expect_output "CI with a base and a raw px added" "frontend/src/screens/row.css:
 printf '.row { padding: var(--space-2); }\n.gap { margin-top: var(--space-3); }\n' >"$FIX/frontend/src/screens/row.css"
 git -C "$FIX" -c user.name=Fixture -c user.email=fixture@example.test commit --quiet -am token
 expect_exit pass "CI with a base and a token added" CI=true DS_SPACING_BASE="$FIX_BASE"
+
+printf '.late { margin-top: 7px; }\n' >>"$FIX/frontend/src/screens/row.css"
+git -C "$FIX" -c user.name=Fixture -c user.email=fixture@example.test commit --quiet -am late
+git -C "$FIX" update-ref refs/remotes/origin/main HEAD
+expect_exit pass "origin/main at the tip, so nothing is new" CI=true
+expect_exit fail "DS_SPACING_BASE wins over origin/main" CI=true DS_SPACING_BASE="$FIX_BASE"
+expect_output "DS_SPACING_BASE wins over origin/main" "frontend/src/screens/row.css:3: margin-top: 7px"
+git -C "$FIX" update-ref -d refs/remotes/origin/main
+
+# A base whose commit is present and whose tree is not, as a shallow clone can
+# leave it: git diff fails, and in CI that must not read as "nothing to gate".
+BASE_TREE="$(git -C "$FIX" rev-parse "$FIX_BASE^{tree}")"
+rm -f "$FIX/.git/objects/${BASE_TREE:0:2}/${BASE_TREE:2}"
+expect_exit fail "CI with a base whose tree is missing" CI=true DS_SPACING_BASE="$FIX_BASE"
+expect_output "CI with a base whose tree is missing" "git diff against"
+expect_exit pass "a local run with a base whose tree is missing" CI=false DS_SPACING_BASE="$FIX_BASE"
 
 if [[ "$FAILURES" -ne 0 ]]; then
   echo "" >&2

@@ -85,6 +85,17 @@ untracked() {
   git -C "$REPO_ROOT" ls-files --others --exclude-standard -- "$@" 2>/dev/null || true
 }
 
+# A failing git diff reads as "nothing to gate", so in CI it fails the check.
+tracked_diff() {
+  if git -C "$REPO_ROOT" diff "$@" 2>/dev/null; then
+    return 0
+  fi
+  if in_ci; then
+    echo "FAIL: DS spacing check: git diff against ${BASE:0:12} failed; is the base's tree in this clone?" >&2
+    return 1
+  fi
+}
+
 # The unit trees join the pathspecs: a unit's screen is shipped UI in the same
 # bundle, and a spacing gate that stopped at frontend/src would hold the core to
 # a scale the extension tier escapes.
@@ -105,21 +116,23 @@ CSS_PATHSPEC=('frontend/src/*.css' 'extensions/*/frontend/*.css')
 
 # Read-loop rather than mapfile — the CI/dev host ships bash 3.2 (no mapfile),
 # same portability constraint as check-ds-purity.sh.
+TRACKED_TSX="$(tracked_diff --name-only --diff-filter=d "$BASE" -- "${TSX_PATHSPEC[@]}")" || exit 1
 CHANGED_TSX=()
 while IFS= read -r f; do
   [[ -n "$f" ]] && CHANGED_TSX+=("$f")
 done < <(
-  git -C "$REPO_ROOT" diff --name-only --diff-filter=d "$BASE" -- "${TSX_PATHSPEC[@]}" 2>/dev/null || true
+  printf '%s\n' "$TRACKED_TSX"
   untracked "${TSX_PATHSPEC[@]}"
 )
 
+TRACKED_CSS="$(tracked_diff --name-only --diff-filter=d "$BASE" -- "${CSS_PATHSPEC[@]}")" || exit 1
 CHANGED_CSS=()
 while IFS= read -r f; do
   [[ -z "$f" ]] && continue
   [[ "$f" == frontend/src/design-system/* ]] && continue
   CHANGED_CSS+=("$f")
 done < <(
-  git -C "$REPO_ROOT" diff --name-only --diff-filter=d "$BASE" -- "${CSS_PATHSPEC[@]}" 2>/dev/null || true
+  printf '%s\n' "$TRACKED_CSS"
   untracked "${CSS_PATHSPEC[@]}"
 )
 
@@ -129,7 +142,7 @@ done < <(
 added_diff() {
   local f="$1"
   if git -C "$REPO_ROOT" ls-files --error-unmatch "$f" >/dev/null 2>&1; then
-    git -C "$REPO_ROOT" diff --unified=0 "$BASE" -- "$f" 2>/dev/null || true
+    tracked_diff --unified=0 "$BASE" -- "$f"
   else
     git -C "$REPO_ROOT" diff --no-index --unified=0 -- /dev/null "$f" 2>/dev/null || true
   fi
@@ -151,8 +164,9 @@ CSS_HEADER_DONE=0
 # counter, an added line consumes one, and a removed line consumes none because
 # it does not exist in the new file.
 for f in ${CHANGED_TSX[@]+"${CHANGED_TSX[@]}"}; do
+  diff_out="$(added_diff "$f")" || exit 1
   hits=$(
-    added_diff "$f" \
+    printf '%s\n' "$diff_out" \
       | awk '
           /^@@/ {
             match($0, /\+[0-9]+/); ln = substr($0, RSTART + 1, RLENGTH - 1) + 0; next
@@ -185,7 +199,7 @@ for f in ${CHANGED_CSS[@]+"${CHANGED_CSS[@]}"}; do
   # instead of guessed at from one diff line in isolation. Skipped when the
   # diff carries no hunks (a mode-only change), which also keeps awk's
   # first-file test from mistaking the stylesheet for the diff.
-  diff_out=$(added_diff "$f")
+  diff_out="$(added_diff "$f")" || exit 1
   [[ -n "$diff_out" ]] || continue
 
   hits=$(
