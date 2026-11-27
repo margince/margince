@@ -61,11 +61,19 @@ func deferredOf(tx pgx.Tx) (*deferredTx, bool) {
 //
 //nolint:ireturn // pgx.Tx is the driver's transaction interface.
 func underlying(tx pgx.Tx) pgx.Tx {
-	if d, ok := deferredOf(tx); ok {
-		return d.Tx
+	for {
+		if wrapped, ok := tx.(interface{ Unwrap() pgx.Tx }); ok {
+			tx = wrapped.Unwrap()
+			continue
+		}
+		return tx
 	}
-	return tx
 }
+
+// Unwrap answers the transaction behind the deferred statements.
+//
+//nolint:ireturn // pgx.Tx is the driver's transaction interface.
+func (d *deferredTx) Unwrap() pgx.Tx { return d.Tx }
 
 // open starts a scope whose opening statements ride on the next exchange.
 func (d *deferredTx) open(statements ...deferredStatement) *deferredScope {

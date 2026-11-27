@@ -161,3 +161,8 @@ func (r tallyRow) Scan(dest ...any) error {
 	}
 	return err
 }
+
+// Unwrap preserves the database transaction's commit bookkeeping.
+//
+//nolint:ireturn // pgx.Tx is the driver's transaction interface.
+func (t *tallyTx) Unwrap() pgx.Tx { return t.Tx }

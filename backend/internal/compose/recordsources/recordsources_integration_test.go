@@ -120,8 +120,8 @@ func TestTheTaskMovesEveryOlderSourceOntoItsChannel(t *testing.T) {
 		t.Errorf("%d update event(s) announce the corrected deal and project, want 2", n)
 	}
 	if n := o.e.WsCount(t, `SELECT count(*) FROM event_outbox o
-		WHERE o.envelope->'entity'->>'id' = $1`, offer.String()); n != 0 {
-		t.Errorf("the corrected offer sent %d event(s), want none", n)
+		WHERE o.envelope->'entity'->>'id' = $1`, offer.String()); n != 1 {
+		t.Errorf("the corrected offer sent %d event(s), want its source update", n)
 	}
 	if n := o.e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_id = $1 AND action = 'update'`, typed); n != 0 {
 		t.Errorf("a deal already on the list got %d audit row(s)", n)
