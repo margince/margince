@@ -203,6 +203,27 @@
       "question": "How far is this quarter from its sales target, and does the open pipeline cover what is left?",
       "tool": "read_reporting",
       "expects": "The gap between the target and the expected landing, what is left to win, and the open pipeline over that remainder, over all open deals and over qualified deals. A manager call is the whole quarter and is never added to what is already won. The tool's comparison is the web evaluation's, figure for figure."
+    },
+    {
+      "id": "X01",
+      "persona": "rep",
+      "question": "Which open deals have had no activity in the last 30 days?",
+      "tool": "run_analytics_query",
+      "expects": "The days_since_activity filter (at least 30) on an open-deal population. A deal never touched is quiet, and a deal whose only entry is a meeting still to come is quiet too, because the stored clock counts what happened."
+    },
+    {
+      "id": "X02",
+      "persona": "rep",
+      "question": "Which open deals have no meeting booked?",
+      "tool": "run_analytics_query",
+      "expects": "The meeting_ahead filter set to false, the deal list's own rule for a meeting still to come. A deal with only past contact has no meeting booked."
+    },
+    {
+      "id": "X03",
+      "persona": "rep",
+      "question": "How much open pipeline sits with companies nobody has been in touch with for 60 days?",
+      "tool": "run_analytics_query",
+      "expects": "The company_days_since_activity filter (at least 60) on pipeline-current, summing the base amount. A company never touched counts, a deal with no company does not, and a company the asker may not open leaves the answer."
     }
   ]
 }

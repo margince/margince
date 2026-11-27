@@ -4,6 +4,7 @@
 package compose
 
 import (
+	"github.com/margince/margince/backend/internal/compose/quietfilters"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -35,6 +36,11 @@ func creditedSeatIsFilter() string {
 
 // withCommercialFilters adds the deal list's motion, priority and source
 // filters. listPredicates matches each the way the list does.
+func withQuietFilters(spec reportSpec) reportSpec {
+	spec.filters, spec.scopeVia, spec.grants = quietfilters.Extend(spec.filters, spec.scopeVia, spec.grants)
+	return spec
+}
+
 func withCommercialFilters(filters map[string]string) map[string]string {
 	for name := range deals.CommercialFilterPredicates("t") {
 		filters[name] = "t." + name
@@ -91,7 +97,7 @@ var projectFilterScope = map[string]string{fieldProjectID: tableProject}
 const fieldDaysInStage = "days_in_stage"
 
 var prebuiltReports = map[string]reportSpec{
-	"open-deals-per-company": {
+	"open-deals-per-company": withQuietFilters(reportSpec{
 		entity:    datasource.EntityDeal,
 		table:     tableDeal,
 		baseWhere: whereOpenDeal,
@@ -130,7 +136,7 @@ var prebuiltReports = map[string]reportSpec{
 		defaultAggs: []reportAggregate{
 			{Fn: aggFnCount, As: "open_deals"},
 		},
-	},
+	}),
 	// How long deals have sat where they are.
 	//
 	// Measured from the last time a deal ENTERED its current stage, not from
@@ -184,7 +190,7 @@ var prebuiltReports = map[string]reportSpec{
 			{Fn: aggFnP75, Field: fieldDaysInStage, As: "p75_days"},
 		},
 	},
-	"deals-by-stage": {
+	"deals-by-stage": withQuietFilters(reportSpec{
 		entity:    datasource.EntityDeal,
 		table:     tableDeal,
 		joins:     []string{joinStageForWinProbability},
@@ -212,13 +218,9 @@ var prebuiltReports = map[string]reportSpec{
 		}),
 		sumCoverage: baseMoneyCoverage(),
 		partialSums: true,
-		// No stage_id filter: nothing serves it (the screen groups BY stage_id
-		// instead), and a filter key this report has no caller for is public
-		// agent surface (the run_report catalog, mcp-info.{json,md}) with no
-		// concrete use behind it. The rest match the board's own filter dials:
-		// partner_sourced and stalled are boolean-valued expressions, which
-		// the engine's generic `expr = $n` rendering already handles with no
-		// special-casing.
+		// No stage_id filter: the screen groups BY stage_id instead, and a
+		// filter with no caller is public agent surface. The rest match the
+		// board's own filter dials.
 		filters: withCommercialFilters(map[string]string{
 			fieldWinProbabilityBand: winProbabilityBandExpr,
 			fieldPipelineID:         colPipelineID,
@@ -226,11 +228,9 @@ var prebuiltReports = map[string]reportSpec{
 			fieldOwnerID:            colOwnerID,
 			fieldCompanyID:          colCompanyID,
 			fieldPartnerSourced:     deals.PartnerSourcedSQL("t"),
-			// Narrowing to ONE partner, beside the boolean that asks whether
-			// there is one. The board's totals are read from this report with
-			// the deals screen's own filter dials, so a dial the screen offers
-			// and this report refuses answers 422 — and the board then falls
-			// back to counting loaded cards, which looks like a working total.
+			// One partner, beside the boolean. A dial the screen offers and
+			// this report refuses answers 422, and the board then counts
+			// loaded cards, which looks like a working total.
 			fieldPartnerCompanyID: colPartnerCompanyID,
 			fieldStalled:          deals.StalledSQL("t"),
 			fieldCurrency:         colCurrency,
@@ -250,7 +250,7 @@ var prebuiltReports = map[string]reportSpec{
 			{Fn: aggFnCount, As: aliasDeals},
 			{Fn: aggFnSum, Field: fieldAmountMinor, As: "amount_minor_sum"},
 		},
-	},
+	}),
 	// Every lead by status, INCLUDING the two terminal ones.
 	//
 	// It is the only lead read that counts the promoted and the disqualified.
@@ -368,7 +368,7 @@ var prebuiltReports = map[string]reportSpec{
 	// (reportspecs_pipeline.go). Beside deals-by-stage rather than replacing
 	// it: that report is the board's own totals, where a won deal still
 	// belongs to the stage it was won in.
-	"pipeline-current": pipelineCurrentSpec(),
+	"pipeline-current": withQuietFilters(pipelineCurrentSpec()),
 	// The SDR funnel's last conversion (reportmeetingconversion.go): what share
 	// of the meetings somebody got HELD became work an AE took on. It joins the
 	// handoff acceptance rather than looking for a deal at the same company,
@@ -387,7 +387,7 @@ var prebuiltReports = map[string]reportSpec{
 	// expression the drill-through rows expose. Stakeholders never join
 	// in: the grain is one row per deal, so a multi-stakeholder deal
 	// counts once (AC-F2).
-	objectForecast: {
+	objectForecast: withQuietFilters(reportSpec{
 		entity:    datasource.EntityDeal,
 		table:     tableDeal,
 		joins:     []string{joinStageForWinProbability},
@@ -436,11 +436,8 @@ var prebuiltReports = map[string]reportSpec{
 			fieldWinProbabilityBand: winProbabilityBandExpr,
 			fieldCurrency:           colCurrency,
 			fieldProjectID:          colProjectID,
-			// Narrowing to ONE partner, the dial the deals screen now offers.
-			// partner_sourced is deliberately absent here and present on
-			// deals-by-stage: that report's filters mirror the board's dials,
-			// and a forecast asks which partner rather than whether there is
-			// one.
+			// One partner, the deals screen's dial. partner_sourced stays on
+			// deals-by-stage, whose filters mirror the board's dials.
 			fieldPartnerCompanyID: colPartnerCompanyID,
 		},
 		filterScopes: projectFilterScope,
@@ -454,7 +451,7 @@ var prebuiltReports = map[string]reportSpec{
 			{Fn: aggFnSum, Field: fieldAmountMinor, As: "unweighted_minor"},
 			{Fn: aggFnSum, Field: fieldWeightedAmountMinor, As: "weighted_minor"},
 		},
-	},
+	}),
 }
 
 const currentStageEntryJoin = `LEFT JOIN LATERAL (
