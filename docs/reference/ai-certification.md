@@ -1124,7 +1124,7 @@ under [Certification by provider and model](#certification-by-provider-and-model
 
 🟡 Mostly: Ready in 38 of the 55 places we tested; 1 more work if someone looks over the result; 16 more right every time, on too few tries to grade alone.
 
-14 of these results were measured on an older version of the product and are re-check pending.
+15 of these results were measured on an older version of the product and are re-check pending.
 
 | Model | Where it ran | Places tested | ✅ | ⚠️ | ❌ | Tries right |
 |---|---|---:|---:|---:|---:|---|
@@ -1164,7 +1164,7 @@ under [Certification by provider and model](#certification-by-provider-and-model
 | [`draft_reply/reply`](#draft_replyreply) | `anthropic · claude-sonnet-5-5 · cloud_frontier` | ✅ Ready · re-check pending | Right every time (18 of 18, at least 91%) | `gemini-3.1-flash-lite` |
 | [`enrich/signature`](#enrichsignature) | `anthropic · claude-haiku-5-5 · cloud_frontier` | ✅ Ready | Right every time (12 of 12, at least 87%) | checked mechanically |
 | [`growth_fit/growth_fit`](#growth_fitgrowth_fit) | `anthropic · claude-sonnet-5-5 · cloud_frontier` | ✅ Ready | Right every time (12 of 12, at least 87%) | `gemini-3.1-flash-lite` |
-| [`nl_search/filter_propose`](#nl_searchfilter_propose) | `anthropic · claude-sonnet-5-5 · cloud_frontier` | ✅ Ready | Right every time (27 of 27, at least 94%) | `gemini-3.8-flash` |
+| [`nl_search/filter_propose`](#nl_searchfilter_propose) | `anthropic · claude-sonnet-5-5 · cloud_frontier` | ✅ Ready · re-check pending | Right every time (27 of 27, at least 94%) | `gemini-3.8-flash` |
 | [`nl_search/search_data_plan`](#nl_searchsearch_data_plan) | `anthropic · claude-sonnet-5-5 · cloud_frontier` | ✅ Ready · re-check pending | Right every time (21 of 21, at least 92%) | `gemini-3.8-flash` |
 | [`offer_draft/draft`](#offer_draftdraft) | `anthropic · claude-haiku-5-5 · cloud_frontier` | ✅ Ready · re-check pending | Right every time (15 of 15, at least 90%) | `gemini-3.1-flash-lite` |
 | [`owed_verdict/owed`](#owed_verdictowed) | `anthropic · claude-haiku-5-5 · cloud_frontier` | ✅ Ready | Right every time (27 of 27, at least 94%) | checked mechanically |
@@ -1429,9 +1429,9 @@ under [Certification by provider and model](#certification-by-provider-and-model
 | | |
 |---|---:|
 | Shipped invocation sites | 64 |
-| … best state `current` | 53 |
+| … best state `current` | 52 |
 | … best state `partial` | 0 |
-| … best state `stale` | 9 |
+| … best state `stale` | 10 |
 | … `absent` on every binding | 2 |
 | Scenarios in the corpus | 352 |
 | Committed records | 463 |
@@ -1439,7 +1439,7 @@ under [Certification by provider and model](#certification-by-provider-and-model
 
 #### Why the stale records went stale
 
-Counted per record (one task and binding pair) over the 368 stale record(s) this build can attribute. A record covers every site its task ships, so the JSON beside this page carries it once per site: its 585 `stale_cause` entries are these 368 records. A record appears on more than one row below when a change moved a case and the prompt built from it together.
+Counted per record (one task and binding pair) over the 368 stale record(s) this build can attribute. A record covers every site its task ships, so the JSON beside this page carries it once per site: its 586 `stale_cause` entries are these 368 records. A record appears on more than one row below when a change moved a case and the prompt built from it together.
 
 | What moved | Records | What it means |
 |---|---:|---|
@@ -1531,7 +1531,7 @@ Which model to run each site on, and what that choice rests on.
 | [`draft_reply/reply`](#draft_replyreply) | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `certified` | 1.00 [0.96, 1.00] | `current` | 6 | 16 |
 | [`enrich/signature`](#enrichsignature) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 [0.88, 1.00] | `current` | 4 | 10 |
 | [`growth_fit/growth_fit`](#growth_fitgrowth_fit) | `anthropic · claude-sonnet-5-5 · cloud_frontier` | `certified` | 1.00 [0.88, 1.00] | `current` | 2 | 15 |
-| [`nl_search/filter_propose`](#nl_searchfilter_propose) | `anthropic · claude-sonnet-5-5 · cloud_frontier` | `certified` | 1.00 [0.94, 1.00] | `current` | 9 | 15 |
+| [`nl_search/filter_propose`](#nl_searchfilter_propose) | - | - | - | `stale` | 9 | 15 |
 | [`nl_search/search_data_plan`](#nl_searchsearch_data_plan) | - | - | - | `stale` | 7 | 4 |
 | [`offer_draft/draft`](#offer_draftdraft) | - | - | - | `stale` | 5 | 15 |
 | [`owed_verdict/owed`](#owed_verdictowed) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 [0.94, 1.00] | `current` | 9 | 10 |
@@ -1594,7 +1594,7 @@ record's own p50 and p95 are in the site tables.
 | Provider | Model | Env | Sites | `current` | `partial` | `stale` | Runs | Passed | Reliability | Slowest p95 | `certified` | `too_few_runs` | `supported_degraded` | `not_supported` |
 |---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `anthropic` | `claude-haiku-5-5` | `cloud_frontier` | 55 | 40 | 0 | 15 | 1335 | 1311 | 0.98 [0.98, 0.99] | 31838ms | 32 | 14 | 8 | 1 |
-| `anthropic` | `claude-sonnet-5-5` | `cloud_frontier` | 52 | 40 | 0 | 12 | 999 | 981 | 0.98 [0.98, 0.99] | 69604ms | 30 | 18 | 4 | 0 |
+| `anthropic` | `claude-sonnet-5-5` | `cloud_frontier` | 52 | 39 | 0 | 13 | 999 | 981 | 0.98 [0.98, 0.99] | 69604ms | 30 | 18 | 4 | 0 |
 | `gemini` | `gemini-3.1-flash-lite` | `cloud_frontier` | 58 | 46 | 0 | 12 | 1623 | 1573 | 0.97 [0.96, 0.97] | 10127ms | 24 | 10 | 18 | 6 |
 | `gemini` | `gemini-3.1-pro-preview` | `cloud_frontier` | 6 | 0 | 0 | 6 | 216 | 207 | 0.96 [0.94, 0.97] | 14416ms | 2 | 3 | 1 | 0 |
 | `gemini` | `gemini-3.5-flash` | `cloud_frontier` | 40 | 0 | 0 | 40 | 468 | 468 | 1.00 [1.00, 1.00] | 16000ms | 19 | 19 | 1 | 1 |
@@ -1896,6 +1896,7 @@ model, real network).
 | `growth_fit/growth_fit` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): growth_fit_calls_a_company_outside_our_market_weak, growth_fit_reads_their_facts_against_our_offering |
 | `growth_fit/growth_fit` | `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | 2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): growth_fit_calls_a_company_outside_our_market_weak, growth_fit_reads_their_facts_against_our_offering |
 | `nl_search/filter_propose` | `anthropic · claude-haiku-5-5 · cloud_frontier` | 9 scenarios it scored have changed since (how a run is graded): nl_search_bounds_a_score_and_a_start_date, nl_search_keeps_an_or_across_two_fields, nl_search_names_back_a_prediction_it_cannot_express, nl_search_reads_a_custom_field_by_its_label, nl_search_reads_a_list_of_countries_as_membership, nl_search_reads_german_input and 3 more |
+| `nl_search/filter_propose` | `anthropic · claude-sonnet-5-5 · cloud_frontier` | 9 scenarios it scored have changed since (how a run is graded): nl_search_bounds_a_score_and_a_start_date, nl_search_keeps_an_or_across_two_fields, nl_search_names_back_a_prediction_it_cannot_express, nl_search_reads_a_custom_field_by_its_label, nl_search_reads_a_list_of_countries_as_membership, nl_search_reads_german_input and 3 more |
 | `nl_search/filter_propose` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 9 scenarios it scored have changed since (how a run is graded): nl_search_bounds_a_score_and_a_start_date, nl_search_keeps_an_or_across_two_fields, nl_search_names_back_a_prediction_it_cannot_express, nl_search_reads_a_custom_field_by_its_label, nl_search_reads_a_list_of_countries_as_membership, nl_search_reads_german_input and 3 more |
 | `nl_search/filter_propose` | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | 9 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): nl_search_bounds_a_score_and_a_start_date, nl_search_keeps_an_or_across_two_fields, nl_search_names_back_a_prediction_it_cannot_express, nl_search_reads_a_custom_field_by_its_label, nl_search_reads_a_list_of_countries_as_membership, nl_search_reads_german_input and 3 more; the provider's wire translation changed since the run; graded by judge claude-sonnet-4-6, and this build grades with claude-sonnet-5-5 (it also scored nl_search_counts_a_record_nobody_contacted_as_quiet, nl_search_reads_a_country_as_its_iso_code, which the corpus no longer holds) |
 | `nl_search/filter_propose` | `gemini · gemini-3.5-flash-lite · cloud_frontier` | 9 scenarios it scored have changed since (the prompt this build sends and how a run is graded): nl_search_bounds_a_score_and_a_start_date, nl_search_keeps_an_or_across_two_fields, nl_search_names_back_a_prediction_it_cannot_express, nl_search_reads_a_custom_field_by_its_label, nl_search_reads_a_list_of_countries_as_membership, nl_search_reads_german_input and 3 more; the provider's wire translation changed since the run |
@@ -3295,7 +3296,7 @@ Records (15):
 Certified without the company context production prepends (`offer`, `market`): this lane runs with no database to assemble it from.
 
 <details>
-<summary><code>nl_search/filter_propose</code>: 9 scenario(s), 15 record(s), best state current</summary>
+<summary><code>nl_search/filter_propose</code>: 9 scenario(s), 15 record(s), best state stale</summary>
 
 ##### `nl_search/filter_propose`
 
@@ -3320,7 +3321,7 @@ Records (15):
 | Binding | State | Scenarios | Band | Judge | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `anthropic · claude-haiku-5-5 · cloud_frontier` | `stale` | 0/9 | `supported_degraded` | `gemini-3.1-flash-lite` | 60 | 60 | 1.00 [0.97, 1.00] | 3242ms | 6363ms | 60 | 0 | 0 | 0 |
-| `anthropic · claude-sonnet-5-5 · cloud_frontier` | `current` | 9/9 | `certified` | `gemini-3.8-flash` | 27 | 27 | 1.00 [0.94, 1.00] | 2549ms | 4198ms | 27 | 0 | 0 | 0 |
+| `anthropic · claude-sonnet-5-5 · cloud_frontier` | `stale` | 0/9 | `certified` | `gemini-3.8-flash` | 27 | 27 | 1.00 [0.94, 1.00] | 2549ms | 4198ms | 27 | 0 | 0 | 0 |
 | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/9 | `certified` | `claude-sonnet-5-5` | 27 | 27 | 1.00 [0.94, 1.00] | 1338ms | 1696ms | 27 | 0 | 0 | 0 |
 | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/9 | `certified` | `claude-sonnet-4-6` | 33 | 33 | 1.00 [0.95, 1.00] | 2621ms | 4359ms | 33 | 0 | 0 | 0 |
 | `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/9 | `certified` | `claude-sonnet-5-5` | 27 | 27 | 1.00 [0.94, 1.00] | 1311ms | 1637ms | 27 | 0 | 0 | 0 |

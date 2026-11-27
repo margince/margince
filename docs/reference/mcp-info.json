@@ -10270,7 +10270,8 @@
               "display_name": {
                 "maxLength": 120,
                 "minLength": 1,
-                "type": "string"
+                "type": "string",
+                "x-single-line": true
               },
               "email": {
                 "description": "Their work address as the source system spelled it. It is the identity the seat is keyed on, so a second record for the same address is refused. A new address holds at most 254 characters. A longer stored address may still resolve a merged member to its survivor.",
@@ -10363,7 +10364,8 @@
               "name": {
                 "maxLength": 120,
                 "minLength": 1,
-                "type": "string"
+                "type": "string",
+                "x-single-line": true
               }
             },
             "required": [
@@ -10671,7 +10673,8 @@
               "display_name": {
                 "maxLength": 120,
                 "minLength": 1,
-                "type": "string"
+                "type": "string",
+                "x-single-line": true
               },
               "email": {
                 "description": "May change only before the account has been used to sign in. A new address holds at most 254 characters; an unchanged stored address may be longer.",
@@ -10773,7 +10776,8 @@
               "name": {
                 "maxLength": 120,
                 "minLength": 1,
-                "type": "string"
+                "type": "string",
+                "x-single-line": true
               }
             },
             "type": "object"
@@ -12454,7 +12458,8 @@
               "name": {
                 "description": "Without one the deal is named after the company.",
                 "minLength": 1,
-                "type": "string"
+                "type": "string",
+                "x-single-line": true
               },
               "no_amount": {
                 "description": "Open the deal with no amount, dropping the one the suggestion proposed. Refused together with amount_minor or currency.",
@@ -15115,7 +15120,8 @@
                 "description": "The name colleagues see. Surrounding whitespace is trimmed and a name that is only whitespace is refused — the same bounds the invite form applies, because this writes the same column.",
                 "maxLength": 120,
                 "minLength": 1,
-                "type": "string"
+                "type": "string",
+                "x-single-line": true
               }
             },
             "required": [
@@ -15667,7 +15673,8 @@
               },
               "title": {
                 "minLength": 1,
-                "type": "string"
+                "type": "string",
+                "x-single-line": true
               },
               "value_basis": {
                 "default": "total",
@@ -15816,7 +15823,8 @@
               },
               "title": {
                 "minLength": 1,
-                "type": "string"
+                "type": "string",
+                "x-single-line": true
               },
               "value_basis": {
                 "description": "Stated explicitly rather than inherited: an open-ended agreement becoming a fixed term changes what its value measures.",
@@ -16002,7 +16010,8 @@
               },
               "title": {
                 "minLength": 1,
-                "type": "string"
+                "type": "string",
+                "x-single-line": true
               },
               "value_basis": {
                 "enum": [
@@ -16124,7 +16133,8 @@
               },
               "full_name": {
                 "minLength": 1,
-                "type": "string"
+                "type": "string",
+                "x-single-line": true
               }
             },
             "type": "object"
@@ -16906,7 +16916,8 @@
               "name": {
                 "maxLength": 120,
                 "minLength": 1,
-                "type": "string"
+                "type": "string",
+                "x-single-line": true
               },
               "objective_metric": {
                 "enum": [
@@ -16993,7 +17004,8 @@
               "name": {
                 "maxLength": 120,
                 "minLength": 1,
-                "type": "string"
+                "type": "string",
+                "x-single-line": true
               },
               "selection": {
                 "additionalProperties": false,
@@ -18316,7 +18328,8 @@
               "name": {
                 "maxLength": 120,
                 "minLength": 1,
-                "type": "string"
+                "type": "string",
+                "x-single-line": true
               },
               "objective_metric": {
                 "enum": [
@@ -18407,7 +18420,8 @@
               "name": {
                 "maxLength": 120,
                 "minLength": 1,
-                "type": "string"
+                "type": "string",
+                "x-single-line": true
               },
               "selection": {
                 "additionalProperties": false,
@@ -19329,7 +19343,8 @@
                     "description": "The installation's name too. The company's own record holds it, so a blank name answers `422 required` and a changed name past 120 characters `422 too_long`.",
                     "maxLength": 120,
                     "minLength": 1,
-                    "type": "string"
+                    "type": "string",
+                    "x-single-line": true
                   },
                   "history": {
                     "type": "string"
@@ -19522,7 +19537,8 @@
                 "type": "string"
               },
               "name": {
-                "type": "string"
+                "type": "string",
+                "x-single-line": true
               },
               "params": {
                 "additionalProperties": true,
@@ -19930,7 +19946,8 @@
               },
               "name": {
                 "maxLength": 120,
-                "type": "string"
+                "type": "string",
+                "x-single-line": true
               },
               "position": {
                 "default": 0,
@@ -20109,7 +20126,8 @@
             "properties": {
               "name": {
                 "maxLength": 120,
-                "type": "string"
+                "type": "string",
+                "x-single-line": true
               },
               "name_translations": {
                 "additionalProperties": false,
@@ -20202,7 +20220,8 @@
               "name": {
                 "maxLength": 120,
                 "minLength": 1,
-                "type": "string"
+                "type": "string",
+                "x-single-line": true
               },
               "owner_id": {
                 "format": "uuid",
@@ -20424,7 +20443,8 @@
               "name": {
                 "maxLength": 120,
                 "minLength": 1,
-                "type": "string"
+                "type": "string",
+                "x-single-line": true
               }
             },
             "required": [
@@ -20903,7 +20923,8 @@
                 "description": "The installation's name too. The company's own record holds it, so a blank name answers `422 required` and a changed name past 120 characters `422 too_long`.",
                 "maxLength": 120,
                 "minLength": 1,
-                "type": "string"
+                "type": "string",
+                "x-single-line": true
               },
               "history": {
                 "type": "string"
@@ -21125,7 +21146,8 @@
                 "type": "boolean"
               },
               "name": {
-                "type": "string"
+                "type": "string",
+                "x-single-line": true
               },
               "owner_id": {
                 "description": "Hand the rule to another member, who must be a seat the caller may make an owner (an active human seat that can write, inside the caller's write scope), else `422` with `code: owner_not_assignable`. Cannot be cleared.",
@@ -21695,7 +21717,8 @@
               },
               "name": {
                 "maxLength": 120,
-                "type": "string"
+                "type": "string",
+                "x-single-line": true
               },
               "position": {
                 "type": "integer"
@@ -21811,7 +21834,8 @@
             "properties": {
               "name": {
                 "maxLength": 120,
-                "type": "string"
+                "type": "string",
+                "x-single-line": true
               },
               "name_translations": {
                 "additionalProperties": false,
@@ -21900,7 +21924,8 @@
               "name": {
                 "maxLength": 120,
                 "minLength": 1,
-                "type": "string"
+                "type": "string",
+                "x-single-line": true
               },
               "owner_id": {
                 "format": "uuid",
@@ -29284,7 +29309,8 @@
               "title": {
                 "description": "The buyer-facing name. Defaults to the attachment's filename.",
                 "minLength": 1,
-                "type": "string"
+                "type": "string",
+                "x-single-line": true
               }
             },
             "required": [
@@ -29480,7 +29506,8 @@
               },
               "full_name": {
                 "minLength": 1,
-                "type": "string"
+                "type": "string",
+                "x-single-line": true
               },
               "source": {
                 "maxLength": 128,
@@ -29809,7 +29836,8 @@
               "display_name": {
                 "maxLength": 120,
                 "minLength": 1,
-                "type": "string"
+                "type": "string",
+                "x-single-line": true
               },
               "email": {
                 "format": "email",
@@ -29991,7 +30019,8 @@
               "title": {
                 "description": "The member's title, for the workspace template. Omitted leaves it as it is.",
                 "maxLength": 120,
-                "type": "string"
+                "type": "string",
+                "x-single-line": true
               }
             },
             "required": [
@@ -30236,7 +30265,8 @@
               },
               "title": {
                 "minLength": 1,
-                "type": "string"
+                "type": "string",
+                "x-single-line": true
               },
               "welcome_message": {
                 "type": "string"
@@ -30266,7 +30296,8 @@
               },
               "title": {
                 "minLength": 1,
-                "type": "string"
+                "type": "string",
+                "x-single-line": true
               }
             },
             "type": "object"

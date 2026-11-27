@@ -7,6 +7,10 @@ package mcp
 // inside one is a member of that data, so no walk below reads or rewrites it.
 var dataKeys = map[string]bool{"enum": true, "const": true, "default": true, "examples": true}
 
+// namedSchemas are the keywords whose children are schemas keyed by a name the
+// schema's author chose. A key there is a name, whatever word it spells.
+var namedSchemas = map[string]bool{"properties": true, "patternProperties": true, "$defs": true, "definitions": true}
+
 // RewriteSchemaDescriptions replaces each schema "description" string under a
 // decoded JSON schema with fn's answer, deleting the key when the answer is
 // empty. It reports whether any changed. The registry reads the names a schema
@@ -15,10 +19,19 @@ var dataKeys = map[string]bool{"enum": true, "const": true, "default": true, "ex
 //
 //craft:ignore naked-any a decoded JSON schema is any by construction; the walk reads its maps, slices and strings
 func RewriteSchemaDescriptions(node any, fn func(string) string) bool {
+	return rewriteDescriptions(node, fn, false)
+}
+
+//craft:ignore naked-any a decoded JSON schema is any by construction; the walk reads its maps, slices and strings
+func rewriteDescriptions(node any, fn func(string) string, names bool) bool {
 	changed := false
 	switch v := node.(type) {
 	case map[string]any:
 		for key, child := range v {
+			if names {
+				changed = rewriteDescriptions(child, fn, false) || changed
+				continue
+			}
 			if dataKeys[key] {
 				continue
 			}
@@ -33,15 +46,11 @@ func RewriteSchemaDescriptions(node any, fn func(string) string) bool {
 				}
 				continue
 			}
-			if RewriteSchemaDescriptions(child, fn) {
-				changed = true
-			}
+			changed = rewriteDescriptions(child, fn, namedSchemas[key]) || changed
 		}
 	case []any:
 		for _, child := range v {
-			if RewriteSchemaDescriptions(child, fn) {
-				changed = true
-			}
+			changed = rewriteDescriptions(child, fn, false) || changed
 		}
 	}
 	return changed

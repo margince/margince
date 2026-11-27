@@ -340,3 +340,5 @@
 1795755969_the_group_six_text_limits_follow_their_columns.up.sql | * | re-creates the text_bound triggers of assurance_run, finance_invoice and contact_provider_claim without the dropped columns' keys; it changes no existing row
 1795755969_the_group_six_text_limits_follow_their_columns.down.sql | * | re-creates those six text_bound triggers as they were; it changes no existing row
 1795787423_a_merged_tag_names_the_tag_it_went_into.up.sql | tag | only tags a merge archived are written, one per merge an admin ran by hand; each is found through the indexed audit trail of the archived tags, so the set is a handful of rows
+1795807780_the_identifier_spelling_checks_are_validated.up.sql | * | the procedural body only counts rows and validates or drops eleven named CHECKs; it changes no row
+1795807780_the_identifier_spelling_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing

@@ -71,7 +71,11 @@ func TestADescriptionInsideSchemaDataIsNotRewritten(t *testing.T) {
 	if !strings.Contains(got, `"enum":[{"description":"Use read_b."}]`) {
 		t.Errorf("a data member under enum was rewritten: %s", got)
 	}
-	if strings.Contains(got, `"description":"Use read_b."}`+`,"properties"`) {
+	var decoded map[string]any
+	if err := json.Unmarshal([]byte(got), &decoded); err != nil {
+		t.Fatalf("the filtered schema is not JSON: %v", err)
+	}
+	if _, kept := decoded["description"]; kept {
 		t.Errorf("the schema's own description still names the tool: %s", got)
 	}
 }
@@ -85,5 +89,18 @@ func TestTheStepSchemaCarriesNoSentenceNamingAToolThatIsNotOffered(t *testing.T)
 	}
 	if got := string(stepSchema([]mcp.ToolSpec{spec})); strings.Contains(got, "describe_list_filters") {
 		t.Errorf("the step schema still names a tool the run is not offered: %s", got)
+	}
+}
+
+func TestAPropertyNamedLikeAKeywordKeepsItsDescriptionFiltered(t *testing.T) {
+	t.Parallel()
+	schema := `{"properties":{"default":{"type":"string","description":"Use read_b."}},"const":9007199254740993}`
+	spec := mcp.ToolSpec{Name: "a", InputSchema: json.RawMessage(schema), NamedTools: []string{"read_b"}}
+	got := string(AsOffered([]mcp.ToolSpec{spec})[0].InputSchema)
+	if strings.Contains(got, "read_b") {
+		t.Errorf("a property named default kept its sentence: %s", got)
+	}
+	if !strings.Contains(got, "9007199254740993") {
+		t.Errorf("a numeric literal changed while the schema was rewritten: %s", got)
 	}
 }

@@ -12,6 +12,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/pipelinetrace"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -173,7 +174,7 @@ func excludedForTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecor
 	addresses := make([]string, 0, len(rec.Addresses))
 	domains := make([]string, 0, len(rec.Addresses))
 	for _, a := range rec.Addresses {
-		addresses = append(addresses, strings.ToLower(strings.TrimSpace(a)))
+		addresses = append(addresses, correspondence.Fold(a))
 		if d := owndomain.OfAddress(a); d != "" {
 			domains = append(domains, d)
 		}

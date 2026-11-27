@@ -96,6 +96,10 @@ var permanentlyUnvalidated = gatekit.Waive(map[unvalidatedSubject]string{
 		"it, and the update that lifts its restriction clears the duration. Until then an update that " +
 		"carries an old negative duration clears it, so the row stays editable; validating needs a " +
 		"minimum upgrade-from release, and no restricted row left holding a negative duration",
+	"activity_participant.activity_participant_address_one_spelling": "" +
+		"rows captured before correspondence.Fold dropped characters that draw nothing may hold one. " +
+		"The update trigger cleans such a row on its next write, folding it into a twin it now names. " +
+		"No migration may scan the table, so validating needs a data task that cleans the older rows",
 	"activity_participant.activity_participant_address_is_canonical": "" +
 		"rows written before the check hold the address as typed, and the participant address data " +
 		"task lowercases them after the migrations ran. A VALIDATE would fail the upgrade of an " +

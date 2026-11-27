@@ -37,7 +37,9 @@ func withoutSentencesNaming(spec mcp.ToolSpec, offered map[string]bool) mcp.Tool
 	}
 	spec.Description = dropSentencesNaming(spec.Description, gone)
 	var schema any
-	if err := json.Unmarshal(spec.InputSchema, &schema); err != nil {
+	dec := json.NewDecoder(bytes.NewReader(spec.InputSchema))
+	dec.UseNumber()
+	if err := dec.Decode(&schema); err != nil {
 		return spec
 	}
 	if !mcp.RewriteSchemaDescriptions(schema, func(text string) string { return dropSentencesNaming(text, gone) }) {
