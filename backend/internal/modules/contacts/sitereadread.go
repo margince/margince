@@ -78,7 +78,7 @@ func (s *Store) LatestSiteRead(ctx context.Context, companyID ids.CompanyID) (Si
 		var err error
 		out, err = latestSiteReadTx(ctx, tx, companyID.UUID)
 		if errors.Is(err, pgx.ErrNoRows) {
-			return apperrors.ErrNotFound
+			return apperrors.ErrNothingYet
 		}
 		if err != nil {
 			return fmt.Errorf("get latest site read: %w", err)

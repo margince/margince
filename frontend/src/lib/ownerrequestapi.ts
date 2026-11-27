@@ -24,7 +24,7 @@ export type RequestRoute<K extends string, R> = Readonly<{
 
 /**
  * The hooks over one request route. The read answers null when the viewer has
- * no open request: the route answers 404 then, and that 404 is the answer.
+ * no open request: the route answers 204 then, and that 204 is the answer.
  */
 export function ownerRequestHooks<K extends string, R>(
   name: string,
@@ -37,12 +37,8 @@ export function ownerRequestHooks<K extends string, R>(
       enabled,
       queryFn: async (): Promise<R | null> => {
         const { data, error, response } = await route.read({ recordType, id });
-        if (error) {
-          if (response.status === 404) {
-            return null;
-          }
-          throwProblem(error);
-        }
+        if (response.status === 204) return null;
+        if (error) throwProblem(error);
         return data ?? null;
       },
     });

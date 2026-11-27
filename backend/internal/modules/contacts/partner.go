@@ -309,7 +309,7 @@ func (s *Store) GetPartner(ctx context.Context, companyID ids.CompanyID) (crmcon
 			`SELECT `+partnerColumns+` FROM partner WHERE company_id = $1 AND `+livePartnerSQL(""),
 			companyID))
 		if errors.Is(err, pgx.ErrNoRows) {
-			return apperrors.ErrNotFound // the company is not a partner
+			return apperrors.ErrNothingYet // the company is not a partner
 		}
 		if err != nil {
 			return err

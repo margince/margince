@@ -77,7 +77,7 @@ function recoveredRefusal(
 
 type ConfirmRecoveryArgs = Readonly<{
   refetchRead: UseQueryResult<CompanySiteRead, Error>["refetch"];
-  refetchProposal: UseQueryResult<Proposal, Error>["refetch"];
+  refetchProposal: UseQueryResult<Proposal | null, Error>["refetch"];
   finishConfirm: (profile: CompanyProfile) => void;
 }>;
 
@@ -169,7 +169,7 @@ export function useConfirmRecovery({
           refreshed !== undefined &&
           (refreshed.status === "ready" || refreshed.status === "partial") &&
           proposalOutcome.status === "fulfilled" &&
-          quotesReadVersion(proposalOutcome.value.data, refreshed);
+          quotesReadVersion(proposalOutcome.value.data ?? undefined, refreshed);
         setNotReadyBlocked(!released);
         if (released) {
           // The block this notice names has ended, so the sentence is no

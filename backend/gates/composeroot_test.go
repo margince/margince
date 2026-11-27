@@ -185,6 +185,8 @@ const (
 	// sheet. They drive the unexported offer drafter and its staged line.
 	// Raised by 197 test lines for the re-ingest vector reuse cases, which drive
 	// the unexported knowledge ingest worker and its embedder fixture.
+	// Raised by 3 test lines for the generated Prefer parameter the unwired
+	// transcript read now takes.
 	composeRootTestLines = 364_314
 )
 

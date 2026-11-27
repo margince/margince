@@ -226,9 +226,8 @@ const routes: RouteMap = {
   "POST /reports/open-deals-per-company": () =>
     run("open-deals-per-company", companyRows),
   "GET /reports/pipeline-current/derivation": () => jsonResponse(derivation),
-  // The Forecast section's own reads: the period's readings, no check run yet
-  // (the assurance read answers 404, its ordinary first state), and the size
-  // the first check would have.
+  // The Forecast section's own reads: the period's readings, no check run yet,
+  // and the size of the first check. No run yet answers 204.
   "GET /forecast": () => jsonResponse(forecastReadings),
   "GET /users/names": (_body, url) =>
     jsonResponse({
@@ -236,7 +235,7 @@ const routes: RouteMap = {
         .getAll("id")
         .map((id) => ({ id, display_name: "Alex Quinn" })),
     }),
-  "GET /forecast/assurance": () => jsonResponse({}, 404),
+  "GET /forecast/assurance": () => new Response(null, { status: 204 }),
   "GET /forecast/assurance/preview": () =>
     jsonResponse({
       started: false,

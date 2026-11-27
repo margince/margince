@@ -5,7 +5,6 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent } from "storybook/test";
 import {
   installFetchStub,
-  jsonResponse,
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
@@ -23,8 +22,7 @@ export const Setup: Story = {
   render: () => {
     installFetchStub({
       "GET /me": meRoute({ company: ["read", "update"], partner: ["update"] }),
-      "GET /companies/o-1/partner": () =>
-        jsonResponse({ title: "Not found", detail: "no partner" }, 404),
+      "GET /companies/o-1/partner": () => new Response(null, { status: 204 }),
     });
     return (
       <StoryProviders>

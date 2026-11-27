@@ -429,7 +429,7 @@ func (s *Store) LatestTranscriptRead(ctx context.Context, activityID ids.Activit
 			 ORDER BY created_at DESC
 			 LIMIT 1`, activityID))
 		if errors.Is(err, pgx.ErrNoRows) {
-			return fmt.Errorf("%w: no transcript read for activity %s", apperrors.ErrNotFound, activityID)
+			return fmt.Errorf("%w: no transcript read for activity %s", apperrors.ErrNothingYet, activityID)
 		}
 		if err != nil {
 			return fmt.Errorf("read latest transcript read: %w", err)

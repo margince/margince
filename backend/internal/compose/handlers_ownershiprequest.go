@@ -46,7 +46,7 @@ func (h ownershipRequestHandlers) RequestOwnershipTransfer(
 	httperr.WriteJSON(w, status, wireOwnershipRequest(out))
 }
 
-func (h ownershipRequestHandlers) GetOwnershipRequest(w http.ResponseWriter, r *http.Request, recordType string, id crmcontracts.Id) {
+func (h ownershipRequestHandlers) GetOwnershipRequest(w http.ResponseWriter, r *http.Request, recordType string, id crmcontracts.Id, _ crmcontracts.GetOwnershipRequestParams) {
 	out, err := h.transfers.Own(r.Context(), recordType, ids.UUID(id), transferAsked)
 	if err != nil {
 		httperr.Write(w, r, err)
@@ -99,7 +99,7 @@ func (h ownershipRequestHandlers) OfferOwnershipTransfer(
 	httperr.WriteJSON(w, status, wireOwnershipOffer(out))
 }
 
-func (h ownershipRequestHandlers) GetOwnershipOffer(w http.ResponseWriter, r *http.Request, recordType string, id crmcontracts.Id) {
+func (h ownershipRequestHandlers) GetOwnershipOffer(w http.ResponseWriter, r *http.Request, recordType string, id crmcontracts.Id, _ crmcontracts.GetOwnershipOfferParams) {
 	out, err := h.transfers.Own(r.Context(), recordType, ids.UUID(id), transferOffered)
 	if err != nil {
 		httperr.Write(w, r, err)

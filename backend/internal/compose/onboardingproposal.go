@@ -55,9 +55,9 @@ func (e *onboardingProposalEngine) get(w http.ResponseWriter, r *http.Request, p
 		return
 	}
 	if state.SiteReadID == nil {
-		// A state without a read has nothing to propose from — the same
-		// 404 shape as "no state yet", not an empty proposal.
-		httperr.Write(w, r, apperrors.ErrNotFound)
+		// A state without a read has nothing to propose from yet: the same
+		// answer as "no state yet", not an empty proposal.
+		httperr.Write(w, r, apperrors.ErrNothingYet)
 		return
 	}
 	read, comparisons, err := e.contacts.GetCompanySiteRead(r.Context(), *state.SiteReadID)
