@@ -25,13 +25,13 @@ An area with no inbound key is a candidate for a separate module. Its outbound k
 | [comms](comms.md) | 1 | 51 | 5 | 6 | 1 |
 | [compose](compose.md) | 44 | 398 | 11 | 30 | 26 |
 | [consent](consent.md) | 23 | 319 | 2 | 44 | 23 |
-| [contacts](contacts.md) | 50 | 719 | 75 | 38 | 14 |
+| [contacts](contacts.md) | 50 | 718 | 75 | 38 | 14 |
 | [continuity](continuity.md) | 1 | 7 | 0 | 0 | 0 |
 | [contracts](contracts.md) | 1 | 29 | 2 | 3 | 0 |
 | [customfields](customfields.md) | 1 | 20 | 0 | 1 | 0 |
 | [dealrooms](dealrooms.md) | 8 | 93 | 0 | 8 | 1 |
 | [deals](deals.md) | 26 | 379 | 26 | 18 | 2 |
-| [finance](finance.md) | 5 | 77 | 0 | 3 | 0 |
+| [finance](finance.md) | 5 | 74 | 0 | 3 | 0 |
 | [forecasting](forecasting.md) | 4 | 88 | 1 | 2 | 0 |
 | [identity](identity.md) | 22 | 217 | 155 | 7 | 5 |
 | [initiatives](initiatives.md) | 5 | 40 | 0 | 2 | 1 |
