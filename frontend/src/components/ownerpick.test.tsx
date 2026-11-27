@@ -53,7 +53,11 @@ const COLLEAGUES = [
 
 type RosterAnswer = "everyone" | "refused" | "endless";
 
-function stubRoster(answer: RosterAnswer = "everyone", viewer = "u-viewer") {
+function stubRoster(
+  answer: RosterAnswer = "everyone",
+  viewer = "u-viewer",
+  colleagues: readonly unknown[] = COLLEAGUES,
+) {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL) => {
@@ -75,7 +79,7 @@ function stubRoster(answer: RosterAnswer = "everyone", viewer = "u-viewer") {
         "cursor",
       );
       return jsonResponse({
-        data: laterPage ? [] : COLLEAGUES,
+        data: laterPage ? [] : colleagues,
         page: { next_cursor: answer === "endless" ? "more" : null },
       });
     }),
@@ -164,6 +168,24 @@ describe("OwnerPick", () => {
     );
     expect(onAssigned).toHaveBeenCalledTimes(1);
     expect(await screen.findByText("Assigned to Jane Doe")).toBeInTheDocument();
+  });
+
+  // The roster answers in no useful order; the list reads by name, viewer first.
+  // Mutation: drop the sort or the viewer's move and the order breaks.
+  it("lists the viewer first, then colleagues by name", async () => {
+    stubRoster("everyone", "u-7", [
+      { id: "u-9", display_name: "Zoe Weber", email: "zoe@example.test" },
+      ...COLLEAGUES,
+      { id: "u-3", display_name: "Anna Berg", email: "anna@example.test" },
+    ]);
+    const user = userEvent.setup();
+    render();
+
+    const panel = await openPicker(user);
+    await panel.findByRole("option", { name: "Omar Haddad" });
+    expect(
+      panel.getAllByRole("option").map((option) => option.textContent),
+    ).toEqual(["Omar Haddad", "Anna Berg", "Jane Doe", "Zoe Weber"]);
   });
 
   it("offers Unassigned first where the record may go back to the queue, and a pick clears the owner", async () => {
