@@ -561,7 +561,6 @@ export function filterView(
     owner_id: "u-1",
     resource,
     name,
-    shared_scope: "private",
     query: { filter },
     version: 1,
   };

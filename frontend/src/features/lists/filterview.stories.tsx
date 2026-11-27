@@ -57,7 +57,6 @@ const VIEW = {
   owner_id: "00000000-0000-4000-8000-000000000001",
   resource: "contacts",
   name: "Berlin contacts, quiet 45 days",
-  shared_scope: "private",
   query: {
     filter: {
       and: [

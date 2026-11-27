@@ -31,7 +31,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 356 |
-| Columns | 4408 |
+| Columns | 4404 |
 | Foreign keys | 630 |
 | Owning areas | 40 |
 
@@ -163,7 +163,7 @@ erDiagram
 | [`activity_reply_verdict_history`](activities.md#activity_reply_verdict_history) | activities | 6 | 0 |
 | [`activity_request_settlement`](activities.md#activity_request_settlement) | activities | 11 | 0 |
 | [`activity_retention_evidence`](activities.md#activity_retention_evidence) | activities | 12 | 0 |
-| [`activity_review_response`](activities.md#activity_review_response) | activities | 16 | 0 |
+| [`activity_review_response`](activities.md#activity_review_response) | activities | 15 | 0 |
 | [`activity_review_template`](activities.md#activity_review_template) | activities | 16 | 0 |
 | [`activity_sales_state`](activities.md#activity_sales_state) | activities | 3 | 0 |
 | [`agent_run`](agents.md#agent_run) | agents | 15 | 0 |
@@ -236,7 +236,7 @@ erDiagram
 | [`communication_decision`](consent.md#communication_decision) | consent | 32 | 0 |
 | [`communication_instruction`](consent.md#communication_instruction) | consent | 21 | 2 |
 | [`communication_override`](consent.md#communication_override) | consent | 12 | 1 |
-| [`communication_review`](consent.md#communication_review) | consent | 10 | 2 |
+| [`communication_review`](consent.md#communication_review) | consent | 9 | 2 |
 | [`communication_suppression`](consent.md#communication_suppression) | consent | 18 | 1 |
 | [`company`](contacts.md#company) | contacts | 46 | 49 |
 | [`company_address_country`](contacts.md#company_address_country) | contacts | 3 | 0 |
@@ -271,7 +271,7 @@ erDiagram
 | [`contact_signature_enrich_state`](contacts.md#contact_signature_enrich_state) | contacts | 13 | 0 |
 | [`contact_social`](contacts.md#contact_social) | contacts | 5 | 0 |
 | [`contract`](contracts.md#contract) | contracts | 29 | 3 |
-| [`conversation_claim`](contacts.md#conversation_claim) | contacts | 21 | 0 |
+| [`conversation_claim`](contacts.md#conversation_claim) | contacts | 20 | 0 |
 | [`currency_minor_digits`](platform.md#currency_minor_digits) | platform | 2 | 0 |
 | [`custom_field`](customfields.md#custom_field) | customfields | 20 | 0 |
 | [`data_subject_request`](consent.md#data_subject_request) | consent | 17 | 1 |
@@ -435,7 +435,7 @@ erDiagram
 | [`sales_initiative_revision`](initiatives.md#sales_initiative_revision) | initiatives | 6 | 0 |
 | [`sales_target`](reporting.md#sales_target) | reporting | 12 | 1 |
 | [`sales_target_revision`](reporting.md#sales_target_revision) | reporting | 4 | 0 |
-| [`saved_view`](collections.md#saved_view) | collections | 10 | 0 |
+| [`saved_view`](collections.md#saved_view) | collections | 9 | 0 |
 | [`scheduled_send`](activities.md#scheduled_send) | activities | 23 | 1 |
 | [`sdr_handoff`](contacts.md#sdr_handoff) | contacts | 17 | 1 |
 | [`sdr_handoff_event`](contacts.md#sdr_handoff_event) | contacts | 10 | 0 |

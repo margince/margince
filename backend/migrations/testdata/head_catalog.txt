@@ -880,7 +880,6 @@ public.activity_review_response.activity_review_response_occurrence_fkey FOREIGN
 public.activity_review_response.activity_review_response_outcome_check CHECK ((outcome = ANY (ARRAY['won'::text, 'lost'::text])))
 public.activity_review_response.activity_review_response_pkey PRIMARY KEY (id)
 public.activity_review_response.activity_review_response_questions_shape CHECK (((jsonb_typeof(questions) = 'array'::text) AND (jsonb_array_length(questions) > 0)))
-public.activity_review_response.activity_review_response_revision_check CHECK ((revision >= 1))
 public.activity_review_response.answers jsonb NOT NULL gen=- def=-
 public.activity_review_response.captured_by text NOT NULL gen=- def=-
 public.activity_review_response.choice_answers jsonb NOT NULL gen=- def='{}'::jsonb
@@ -890,7 +889,6 @@ public.activity_review_response.deal_id uuid NOT NULL gen=- def=-
 public.activity_review_response.id uuid NOT NULL gen=- def=uuidv7()
 public.activity_review_response.outcome text NOT NULL gen=- def=-
 public.activity_review_response.questions jsonb NOT NULL gen=- def=-
-public.activity_review_response.revision integer NOT NULL gen=- def=1
 public.activity_review_response.source text NOT NULL gen=- def=-
 public.activity_review_response.submission_id uuid NOT NULL gen=- def=-
 public.activity_review_response.template_key text NOT NULL gen=- def=-
@@ -3261,7 +3259,6 @@ public.communication_override_pkey CREATE UNIQUE INDEX communication_override_pk
 public.communication_review acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.communication_review.communication_review_delivery_intent_id_fkey FOREIGN KEY (delivery_intent_id) REFERENCES scheduled_send(id) ON DELETE CASCADE
 public.communication_review.communication_review_initiated_by_fkey FOREIGN KEY (initiated_by) REFERENCES app_user(id) ON DELETE SET NULL
-public.communication_review.communication_review_kind CHECK ((kind = 'single'::text))
 public.communication_review.communication_review_pkey PRIMARY KEY (id)
 public.communication_review.communication_review_resolution_shape CHECK (((state = ANY (ARRAY['resolved'::text, 'superseded'::text, 'cancelled'::text])) = (resolved_at IS NOT NULL)))
 public.communication_review.communication_review_state CHECK ((state = ANY (ARRAY['needs_context'::text, 'needs_repair'::text, 'resolved'::text, 'superseded'::text, 'cancelled'::text])))
@@ -3270,15 +3267,14 @@ public.communication_review.communication_review_supersession_shape CHECK (((sta
 public.communication_review.delivery_intent_id uuid gen=- def=-
 public.communication_review.id uuid NOT NULL gen=- def=uuidv7()
 public.communication_review.initiated_by uuid gen=- def=-
-public.communication_review.kind text NOT NULL gen=- def='single'::text
 public.communication_review.opened_at timestamp with time zone NOT NULL gen=- def=now()
 public.communication_review.reason_code text NOT NULL gen=- def=-
 public.communication_review.refusals jsonb NOT NULL gen=- def='[]'::jsonb
 public.communication_review.resolved_at timestamp with time zone gen=- def=-
 public.communication_review.state text NOT NULL gen=- def='needs_context'::text
 public.communication_review.superseded_by uuid gen=- def=-
-public.communication_review.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.communication_review FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"kind": 20000, "state": 20000, "reason_code": 2000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"kind":20000,"reason_code":2000,"state":20000}')
-public.communication_review.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.communication_review FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "state": 20000, "reason_code": 2000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"kind":20000,"reason_code":2000,"state":20000}')
+public.communication_review.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.communication_review FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"state": 20000, "reason_code": 2000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"reason_code":2000,"state":20000}')
+public.communication_review.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.communication_review FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"state": 20000, "reason_code": 2000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"reason_code":2000,"state":20000}')
 public.communication_review_by_initiator CREATE INDEX communication_review_by_initiator ON public.communication_review USING btree (initiated_by, opened_at DESC)
 public.communication_review_one_live_per_intent CREATE UNIQUE INDEX communication_review_one_live_per_intent ON public.communication_review USING btree (delivery_intent_id) WHERE ((delivery_intent_id IS NOT NULL) AND (resolved_at IS NULL))
 public.communication_review_pkey CREATE UNIQUE INDEX communication_review_pkey ON public.communication_review USING btree (id)
@@ -5049,7 +5045,6 @@ public.conversation_claim.due_at timestamp with time zone gen=- def=-
 public.conversation_claim.evidence_fingerprint text NOT NULL gen=- def=-
 public.conversation_claim.id uuid NOT NULL gen=- def=uuidv7()
 public.conversation_claim.kind text NOT NULL gen=- def=-
-public.conversation_claim.needs_review boolean NOT NULL gen=- def=false
 public.conversation_claim.source text NOT NULL gen=- def=-
 public.conversation_claim.source_activity_id uuid NOT NULL gen=- def=-
 public.conversation_claim.source_quote text NOT NULL gen=- def=-
@@ -10317,11 +10312,9 @@ public.saved_view.saved_view_owner_fkey FOREIGN KEY (owner_id) REFERENCES app_us
 public.saved_view.saved_view_owner_id_retirement_guard CREATE TRIGGER saved_view_owner_id_retirement_guard BEFORE INSERT OR UPDATE ON public.saved_view FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')
 public.saved_view.saved_view_pkey PRIMARY KEY (id)
 public.saved_view.saved_view_resource_check CHECK (((resource = ANY (ARRAY['contacts'::text, 'companies'::text, 'deals'::text, 'activities'::text, 'leads'::text, 'partners'::text, 'projects'::text])) OR (resource ~ '^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$'::text)))
-public.saved_view.saved_view_shared_scope_check CHECK ((shared_scope = ANY (ARRAY['private'::text, 'team'::text, 'workspace'::text])))
 public.saved_view.saved_view_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
-public.saved_view.shared_scope text NOT NULL gen=- def='private'::text
-public.saved_view.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.saved_view FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"name": 120, "resource": 20000, "shared_scope": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"name":120,"resource":20000,"shared_scope":20000}')
-public.saved_view.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.saved_view FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"name": 120, "resource": 20000, "shared_scope": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"name":120,"resource":20000,"shared_scope":20000}')
+public.saved_view.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.saved_view FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"name": 120, "resource": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"name":120,"resource":20000}')
+public.saved_view.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.saved_view FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"name": 120, "resource": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"name":120,"resource":20000}')
 public.saved_view.trg_saved_view_updated CREATE TRIGGER trg_saved_view_updated BEFORE UPDATE ON public.saved_view FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.saved_view.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.saved_view.version bigint NOT NULL gen=- def=1

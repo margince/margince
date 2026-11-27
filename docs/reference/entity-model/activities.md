@@ -827,7 +827,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## activity_review_response
 
-16 columns · primary key `(id)` · referenced by 0 foreign keys
+15 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -839,7 +839,6 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 | `deal_id` | `uuid` | yes | Points at `deal.id`. |
 | `outcome` | `text` | yes | One of `won`, `lost`. |
 | `questions` | `jsonb` | yes |  |
-| `revision` | `integer`, default `1` | yes |  |
 | `submission_id` | `uuid` | yes |  |
 | `template_key` | `text` | yes |  |
 | `template_version` | `integer` | yes |  |
@@ -862,7 +861,6 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 - `activity_review_response_answers_shape`: `CHECK ((jsonb_typeof(answers) = 'object'))`
 - `activity_review_response_outcome_check`: `CHECK ((outcome = ANY (ARRAY['won', 'lost'])))`
 - `activity_review_response_questions_shape`: `CHECK (((jsonb_typeof(questions) = 'array') AND (jsonb_array_length(questions) > 0)))`
-- `activity_review_response_revision_check`: `CHECK ((revision >= 1))`
 
 **Indexes**
 

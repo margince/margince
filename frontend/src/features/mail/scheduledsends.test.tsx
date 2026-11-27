@@ -285,7 +285,6 @@ it.each([
           Response.json({
             id: reviewId,
             state: "needs_context",
-            kind: "single",
             reason_code: "consent_withdrawn",
             refusals: [],
             warning: { version: "override-v2", text: "The refusal stands." },

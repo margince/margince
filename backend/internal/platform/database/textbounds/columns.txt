@@ -440,7 +440,6 @@ public.communication_override.captured_by document
 public.communication_override.category document
 public.communication_override.decided_by_level document
 public.communication_override.reason note
-public.communication_review.kind document
 public.communication_review.reason_code note
 public.communication_review.state document
 public.communication_suppression.address document
@@ -1303,7 +1302,6 @@ public.sales_target.scope_kind document
 public.sales_target.unit document
 public.saved_view.name label
 public.saved_view.resource document
-public.saved_view.shared_scope document
 public.scheduled_send.agent_actor_id document
 public.scheduled_send.held_reason note
 public.scheduled_send.origin_kind document

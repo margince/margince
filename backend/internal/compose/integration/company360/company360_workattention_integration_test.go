@@ -18,6 +18,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -103,7 +104,7 @@ func TestCompany360_AProjectCarriesTheOpenCommitmentTheyMade(t *testing.T) {
 	// Through the real writer, so the claim carries the evidence and the
 	// fingerprint a hand-inserted row would not have.
 	body := "we'll confirm the depot slot once facilities sign off"
-	recordClaim(t, e, contactID, projectID, body, "open", false)
+	recordClaim(t, e, contactID, projectID, body, "open")
 
 	view := assemble(t, e, companyID)
 	attention := projectAttention(t, view, projectID)
@@ -120,7 +121,7 @@ func TestCompany360_AProjectCarriesTheOpenCommitmentTheyMade(t *testing.T) {
 	}
 }
 
-func TestCompany360_ADisputedOrSettledCommitmentIsNotStatedAsFact(t *testing.T) {
+func TestCompany360_ASettledCommitmentIsNotStatedAsFact(t *testing.T) {
 	e := integration.Setup(t)
 	companyID := e.SeedCompany(t, "Disputed Account", nil)
 	project, err := e.Projects.CreateProject(e.Admin(), projects.CreateProjectInput{
@@ -131,12 +132,9 @@ func TestCompany360_ADisputedOrSettledCommitmentIsNotStatedAsFact(t *testing.T) 
 	}
 	projectID := ids.UUID(project.Id)
 	contactID := e.SeedContact(t, "Ida Keller", nil)
-	// Newest first, and both must lose: a settled claim is no longer owed,
-	// and needs_review means the extractor found contradicting evidence — the
-	// claim contract calls newest-wins no resolution, so presenting either as
-	// "they owe us this" states a contested thing as a fact.
-	recordClaim(t, e, contactID, projectID, "already delivered", "done", false)
-	recordClaim(t, e, contactID, projectID, "contradicted by a later mail", "open", true)
+	// Done and dismissed claims remain in history without stating an obligation.
+	recordClaim(t, e, contactID, projectID, "already delivered", "done")
+	recordClaim(t, e, contactID, projectID, "contradicted by a later mail", "dismissed")
 
 	view := assemble(t, e, companyID)
 	if row := findProject(t, view, projectID); row.Attention != nil {
@@ -219,7 +217,7 @@ func logTaskUnder(
 // message filed under the project — the shape the extractor produces.
 func recordClaim(
 	t *testing.T, e *integration.Env, contactID, projectID ids.UUID,
-	body, status string, needsReview bool,
+	body, status string,
 ) {
 	t.Helper()
 	subject := "Depot slot"
@@ -237,12 +235,10 @@ func recordClaim(
 		ContactID: ids.From[ids.ContactKind](contactID), Kind: "commitment_theirs",
 		Body: body, ActivityID: ids.UUID(message.Id), Quote: body, Source: "manual",
 	})
-	// Status and needs_review are the extractor's own lifecycle columns and
-	// have no writer on this path; set directly so the read's filter is
-	// exercised against the states it exists to reject.
-	if status != "open" || needsReview {
-		e.WsExec(t, `UPDATE conversation_claim SET status = $2, needs_review = $3 WHERE id = $1`,
-			ids.UUID(claim.Id), status, needsReview)
+	// Exercise both terminal states in the read.
+	if status != "open" {
+		e.WsExec(t, `UPDATE conversation_claim SET status = $2 WHERE id = $1`,
+			ids.UUID(claim.Id), status)
 	}
 }
 
@@ -304,7 +300,7 @@ func TestCompany360_ACommitmentNeedsTheContactGrantAndNotOnlyTheRowScope(t *test
 	projectID := ids.UUID(project.Id)
 	contactID := e.SeedContact(t, "Ida Keller", nil)
 	body := "we'll confirm the depot slot once facilities sign off"
-	recordClaim(t, e, contactID, projectID, body, "open", false)
+	recordClaim(t, e, contactID, projectID, body, "open")
 
 	// The claim names a CONTACT and its row carries their name and what they
 	// said. Row scope alone admits nobody to contacts — it narrows a set the
@@ -342,7 +338,7 @@ func TestCompany360_ACommitmentByAnInvisibleContactIsReportedRatherThanDropped(t
 	other := e.Rep3
 	contactID := e.SeedContact(t, "Ida Keller", &other)
 	recordClaim(t, e, contactID, projectID,
-		"we'll confirm the depot slot once facilities sign off", "open", false)
+		"we'll confirm the depot slot once facilities sign off", "open")
 	e.WsExec(t, `UPDATE contact SET visibility = 'owner' WHERE id = $1`, contactID)
 
 	view, err := company360Service(e).Assemble(
@@ -434,5 +430,35 @@ func TestCompany360_ClosedProjectsOverflowingTheCapDoNotClaimMoreWorkInFlight(t 
 	}
 	if findProject(t, view, ids.UUID(live.Id)).Phase == crmcontracts.Company360ProjectPhaseClosed {
 		t.Fatal("the live project is missing from the page, so the assertion above is vacuous")
+	}
+}
+
+func TestCompany360_AnOldMachineCommitmentDoesNotStateAnObligation(t *testing.T) {
+	e := integration.Setup(t)
+	now := time.Date(2026, 10, 21, 12, 0, 0, 0, time.UTC)
+	old := now.AddDate(-2, 0, 0)
+	e.Contacts.SetClock(func() time.Time { return now })
+	company := e.SeedCompany(t, "Old commitment account", nil)
+	project, err := e.Projects.CreateProject(e.Admin(), projects.CreateProjectInput{Name: "Old promise", CompanyID: ids.From[ids.CompanyKind](company), Source: "manual"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	contact := ids.From[ids.ContactKind](e.SeedContact(t, "Promise contact", nil))
+	quote := "We will confirm the depot slot"
+	message, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{Kind: "meeting", Body: &quote, OccurredAt: &old, MeetingStatus: new("held"), Source: "manual", Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact.UUID}, {EntityType: "project", EntityID: ids.UUID(project.Id)}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	actor := principal.SystemActing(e.Admin(), "system:signal_scan")
+	e.RecordClaim(actor, t, contacts.ClaimInput{ContactID: contact, Kind: "commitment_theirs", Body: quote, ActivityID: ids.UUID(message.Id), Quote: quote, Source: "manual", Locator: "old-depot-slot"})
+	admission := crmcontracts.CommitmentAdmission{Locator: "old-depot-slot", Summary: quote, SourceQuote: quote, CurrentWork: true, RuleVersion: activities.CommitmentAdmissionVersion, EvidenceIds: []crmcontracts.Id{message.Id}, EvaluatedAt: old, Meaning: &crmcontracts.CommitmentMeaning{State: "open", DeadlinePrecision: "none"}}
+	if err := e.DB().Tx(actor, func(tx pgx.Tx) error {
+		return activities.RecordCommitmentAdmissionTx(actor, tx, ids.From[ids.ActivityKind](ids.UUID(message.Id)), admission)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	view := assemble(t, e, company)
+	if row := findProject(t, view, ids.UUID(project.Id)); row.Attention != nil {
+		t.Fatalf("old machine claim stated as obligation: %+v", row.Attention)
 	}
 }
