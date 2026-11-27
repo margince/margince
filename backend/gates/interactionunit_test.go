@@ -177,13 +177,9 @@ func namesAny(stmt string, tables []string) bool {
 // is then invisible to a census that says nothing about it.
 func interactionProjectionTables(t *testing.T) []string {
 	t.Helper()
-	const catalog = "migrations/testdata/head_catalog.txt"
-	schema, err := gatekit.ReadFile(catalog)
-	if err != nil {
-		t.Fatalf("reading the schema head: %v", err)
-	}
+	schema := headCatalog(t)
 	var tables []string
-	for line := range strings.SplitSeq(string(schema), "\n") {
+	for line := range strings.SplitSeq(schema, "\n") {
 		qualified, _, isColumn := strings.Cut(line, " ")
 		if !isColumn || !strings.HasSuffix(qualified, ".count_90d") {
 			continue

@@ -12,7 +12,6 @@ package gates
 // without being listed here.
 
 import (
-	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
@@ -43,12 +42,9 @@ var acceptsExtensionKind = gatekit.Waive(map[string]string{
 func TestOnlyTheNamedColumnsAcceptAnExtensionKind(t *testing.T) {
 	t.Parallel()
 	defer acceptsExtensionKind.AssertAllMatched(t)
-	body, err := gatekit.ReadFile(filepath.Join(gatekit.ModuleRoot(t), "migrations", "testdata", "head_catalog.txt"))
-	if err != nil {
-		t.Fatalf("reading the head catalog: %v", err)
-	}
+	body := headCatalog(t)
 	seen := map[string]bool{}
-	for line := range strings.SplitSeq(string(body), "\n") {
+	for line := range strings.SplitSeq(body, "\n") {
 		found := kindListCheck.FindStringSubmatch(line)
 		if found == nil || (!strings.Contains(found[3], "'contact'") && !strings.Contains(found[3], "'contacts'")) {
 			continue

@@ -52,10 +52,7 @@ func TestStoredStrengthDatesFoldAsTheLiveRead(t *testing.T) {
 
 func TestEveryInputOfTheStoredStrengthDatesHasATrigger(t *testing.T) {
 	t.Parallel()
-	raw, err := gatekit.ReadFile(vocabularyCatalog)
-	if err != nil {
-		t.Fatal(err)
-	}
+	raw := headCatalog(t)
 	wiring, err := gatekit.ReadFile("internal/compose/installationcountry.go")
 	if err != nil {
 		t.Fatal(err)
@@ -70,7 +67,7 @@ func TestEveryInputOfTheStoredStrengthDatesHasATrigger(t *testing.T) {
 		}
 		return strengthDatesUnwatched.Waived(t, input)
 	}
-	for _, finding := range strengthDatesFindings(reads, strengthDatesTriggers(string(raw)),
+	for _, finding := range strengthDatesFindings(reads, strengthDatesTriggers(raw),
 		currentFunctionBodies(t, strengthDatesTriggerFunctionRe), waived) {
 		t.Error(finding)
 	}

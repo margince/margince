@@ -73,12 +73,11 @@ func TestTheLedgerStatusSetMatchesItsConstraint(t *testing.T) {
 
 // ledgerStatusesFromCatalog reads the accepted values off the recorded CHECK.
 func ledgerStatusesFromCatalog() ([]string, error) {
-	path := filepath.Join(repoRoot, "backend", "migrations", "testdata", "head_catalog.txt")
-	raw, err := gatekit.ReadFile(path)
+	raw, err := headCatalogText()
 	if err != nil {
 		return nil, fmt.Errorf("reading the head catalog: %w", err)
 	}
-	for line := range strings.SplitSeq(string(raw), "\n") {
+	for line := range strings.SplitSeq(raw, "\n") {
 		if !strings.Contains(line, statusCheck) {
 			continue
 		}

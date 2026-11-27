@@ -22,11 +22,8 @@ import (
 
 func TestEveryTextColumnHasAnExplicitLengthPolicy(t *testing.T) {
 	t.Parallel()
-	raw, err := gatekit.ReadFile(vocabularyCatalog)
-	if err != nil {
-		t.Fatal(err)
-	}
-	columns, err := textbounds.Columns(strings.NewReader(string(raw)))
+	raw := headCatalog(t)
+	columns, err := textbounds.Columns(strings.NewReader(raw))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -51,7 +48,7 @@ func TestEveryTextColumnHasAnExplicitLengthPolicy(t *testing.T) {
 			t.Errorf("text policy names missing column %s", key)
 		}
 	}
-	for _, line := range strings.Split(string(raw), "\n") {
+	for _, line := range strings.Split(raw, "\n") {
 		if match := catalogTextColumn.FindStringSubmatch(line); match != nil {
 			key := "public." + match[1] + "." + match[2]
 			if !seen[key] {
@@ -74,11 +71,8 @@ func TestFrontendTextLimitsComeFromTheSharedValues(t *testing.T) {
 
 func TestEveryBoundedTextColumnChecksNewAndChangedValues(t *testing.T) {
 	t.Parallel()
-	raw, err := gatekit.ReadFile(vocabularyCatalog)
-	if err != nil {
-		t.Fatal(err)
-	}
-	columns, err := textbounds.Columns(strings.NewReader(string(raw)))
+	raw := headCatalog(t)
+	columns, err := textbounds.Columns(strings.NewReader(raw))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -87,7 +81,7 @@ func TestEveryBoundedTextColumnChecksNewAndChangedValues(t *testing.T) {
 		t.Fatal(err)
 	}
 	guards := map[string]string{}
-	for _, line := range strings.Split(string(raw), "\n") {
+	for _, line := range strings.Split(raw, "\n") {
 		if strings.Contains(line, " CREATE TRIGGER text_bound_") {
 			key, definition, found := strings.Cut(line, " ")
 			if found {
@@ -122,20 +116,17 @@ func TestEveryBoundedTextColumnChecksNewAndChangedValues(t *testing.T) {
 // So it must be, column for column, the condition the registry generates today.
 func TestAGuardThatNamesItsColumnsIsTheConditionTheRegistryGenerates(t *testing.T) {
 	t.Parallel()
-	raw, err := gatekit.ReadFile(vocabularyCatalog)
+	raw := headCatalog(t)
+	columns, err := textbounds.Columns(strings.NewReader(raw))
 	if err != nil {
 		t.Fatal(err)
 	}
-	columns, err := textbounds.Columns(strings.NewReader(string(raw)))
-	if err != nil {
-		t.Fatal(err)
-	}
-	wanted, err := textbounds.PolicyBounds(string(raw))
+	wanted, err := textbounds.PolicyBounds(raw)
 	if err != nil {
 		t.Fatal(err)
 	}
 	conditions := map[string]string{}
-	for _, line := range strings.Split(string(raw), "\n") {
+	for _, line := range strings.Split(raw, "\n") {
 		if match := catalogTextGuard.FindStringSubmatch(line); match != nil {
 			conditions[match[1]] = strippedCondition(match[2])
 		}
@@ -183,11 +174,8 @@ func normalizedTextGuard(definition string) string {
 // would serialize two more whole rows per mutation.
 func TestTheWriteShapeTablesCarryNoTextGuard(t *testing.T) {
 	t.Parallel()
-	raw, err := gatekit.ReadFile(vocabularyCatalog)
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, line := range strings.Split(string(raw), "\n") {
+	raw := headCatalog(t)
+	for _, line := range strings.Split(raw, "\n") {
 		for _, table := range []string{"audit_log", "event_outbox"} {
 			if strings.HasPrefix(line, "public."+table+".text_bound_") || strings.HasPrefix(line, "public."+table+".custom_text_bound_") {
 				t.Errorf("%s carries a text guard: %s", table, strings.Fields(line)[0])
@@ -201,15 +189,12 @@ func TestTheWriteShapeTablesCarryNoTextGuard(t *testing.T) {
 // one exists the guard still refuses at the old limit, which this test sees.
 func TestEveryTextGuardHoldsExactlyTheRegistryBounds(t *testing.T) {
 	t.Parallel()
-	raw, err := gatekit.ReadFile(vocabularyCatalog)
+	raw := headCatalog(t)
+	guards, err := textbounds.GuardBounds(raw)
 	if err != nil {
 		t.Fatal(err)
 	}
-	guards, err := textbounds.GuardBounds(string(raw))
-	if err != nil {
-		t.Fatal(err)
-	}
-	wanted, err := textbounds.PolicyBounds(string(raw))
+	wanted, err := textbounds.PolicyBounds(raw)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -239,11 +224,8 @@ var contentColumnName = regexp.MustCompile(`(^|_)(body|html|md|markdown|content|
 
 func TestContentColumnsOnTheDocumentLimitSayWhatTheirWritersWereCheckedFor(t *testing.T) {
 	t.Parallel()
-	raw, err := gatekit.ReadFile(vocabularyCatalog)
-	if err != nil {
-		t.Fatal(err)
-	}
-	columns, err := textbounds.Columns(strings.NewReader(string(raw)))
+	raw := headCatalog(t)
+	columns, err := textbounds.Columns(strings.NewReader(raw))
 	if err != nil {
 		t.Fatal(err)
 	}
