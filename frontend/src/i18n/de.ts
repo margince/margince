@@ -14323,7 +14323,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Zu viele falsche Codes. Warte ein paar Minuten und versuche es dann erneut.",
   "mfa.tooManyPasswords":
     "Zu viele falsche Passwörter. Warte eine Minute und versuche es dann erneut.",
-  "mfa.passwordHint": "Das Passwort, mit dem du dich anmeldest.",
+  "mfa.passwordHint":
+    "Dein Margince-Passwort, nicht das von Google oder Microsoft.",
   "mfa.confirmFailedTitle": "Zweistufige Anmeldung nicht eingeschaltet",
   "mfa.onTitle": "Zweistufige Anmeldung an",
   "mfa.onBody": "Alle anderen Geräte wurden abgemeldet.",

@@ -14276,7 +14276,7 @@ export const en = {
   "mfa.tooManyCodes": "Too many wrong codes. Wait a few minutes, then retry.",
   "mfa.tooManyPasswords":
     "Too many wrong passwords. Wait a minute, then retry.",
-  "mfa.passwordHint": "The password you sign in with.",
+  "mfa.passwordHint": "Your Margince password, not a Google or Microsoft one.",
   "mfa.confirmFailedTitle": "Two-step sign-in not turned on",
   "mfa.onTitle": "Two-step sign-in on",
   "mfa.onBody": "All other devices were signed out.",
