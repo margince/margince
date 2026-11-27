@@ -162,7 +162,7 @@ func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {
 		customerlinks.DataTask(),
 		qualifytasks.DuplicatesDataTask(now), qualifytasks.TextDataTask(),
 		companyprofiles.OfferDuplicatesTask(),
-		qualifytasks.SystemTextDataTask(), employmentrepair.DataTask(contacts.NewStore(InstallationDB(pool))), halfvectors.DataTask(), recordsources.DataTask(), recordsources.SignalDataTask(), recordsources.PartyDataTask(), recordsources.LeadDataTask(), rolemailboxseats.DataTask(), participantaddresses.DataTask(),
+		qualifytasks.SystemTextDataTask(), employmentrepair.DataTask(contacts.NewStore(InstallationDB(pool))), halfvectors.DataTask(), recordsources.DataTask(), recordsources.SignalDataTask(), recordsources.PartyDataTask(), recordsources.LeadDataTask(), recordsources.ActivityDataTask(), rolemailboxseats.DataTask(), participantaddresses.DataTask(),
 		activities.TeamLinksDataTask(activities.NewStore(InstallationDB(pool)).WithTeamRequestNotice(teamRequestNotice{}), now), contacts.LegacyEvidenceDataTask(),
 		leadArrivalOriginDataTask(), languages.DataTask(), negativecounts.DataTask(),
 	}

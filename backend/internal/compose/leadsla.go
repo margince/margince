@@ -116,7 +116,7 @@ func (w leadSLAEscalation) Apply(ctx context.Context, ev workflow.Event, eff wor
 		SourceSystem: &sourceSystem,
 		SourceID:     &sourceID,
 		Links:        []activities.ActivityLinkInput{{EntityType: entityLead, EntityID: ev.Entity.ID}},
-		Source:       systemActor,
+		Source:       provenance.RecordSourceAutomation,
 		// Work the product files about the lead, not a touch of it: a human
 		// origin would make the breach read as the lead's latest activity.
 		Origin: activities.OriginSystemRemediation,

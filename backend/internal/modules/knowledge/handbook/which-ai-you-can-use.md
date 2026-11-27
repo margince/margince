@@ -30,7 +30,7 @@ Also called: which model should I use, best model, recommended model, which LLM,
 | Gemma 4 on your own server, through Ollama | your own servers | 0 | 0 | 0 | 38 |
 | Qwen3 on your own server, through vLLM | your own servers | 0 | 0 | 0 | 38 |
 
-[114 of these 197 grades](https://github.com/margince/margince/blob/main/docs/reference/ai-certification.md#stale-records-and-why) were measured on an older version of Margince and wait for a re-check.
+[117 of these 197 grades](https://github.com/margince/margince/blob/main/docs/reference/ai-certification.md#stale-records-and-why) were measured on an older version of Margince and wait for a re-check.
 
 ### What does a grade of a Margince AI feature mean?
 A grade of a Margince AI feature says how often it was right. **Ready** means right in at least 90 of every 100 tries: turn it on. **Usable with care** means right in most tries: have someone look over what it makes. **Not reliable yet** means wrong too often: leave it off. **Not measured** means nobody has tested that feature on that model yet.
@@ -45,7 +45,7 @@ Also called: which AI tool works with Margince, Claude, Codex, Gemini, ChatGPT, 
 | `claude-sonnet-5-5` | Claude Code CLI | 81 of 81 (2 not yet run) | 🟢 Yes |
 | `claude-sonnet-5-5` | Claude Agent SDK | 2 of 2 (81 not yet run) | ⚪ Not enough tested yet |
 | `gemini-4-hydrogen-medium` | Antigravity CLI | 81 of 81 (2 not yet run) | 🟢 Yes |
-| `gpt-5.6-sol` | Codex CLI | 77 of 82 (1 not yet run) | 🟡 Mostly |
+| `gpt-5.6-sol` | Codex CLI | 80 of 82 (1 not yet run) | 🟡 Mostly |
 
 ### Can I use an AI assistant that is not in the table?
 Yes. An AI assistant that is not in the table can still connect to Margince. It can do what you could do yourself, and nothing more. We have not measured how well it does the jobs, so check what it does before you rely on it.
