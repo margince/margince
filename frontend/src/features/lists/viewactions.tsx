@@ -44,8 +44,9 @@ export function RenameViewAction({
   // must not lend a stale name a newer If-Match.
   const [read, setRead] = useState(view);
   const unread = siblings.data === undefined;
-  const readProblem =
-    unread && siblings.isError ? problemMessageOf(siblings.error, t) : null;
+  const readProblem = siblings.isError
+    ? problemMessageOf(siblings.error, t)
+    : null;
   return (
     <>
       <Button
@@ -75,8 +76,8 @@ export function RenameViewAction({
         }
         nameProblem={nameTaken ? t("views.nameTaken") : null}
         onSave={(name) => {
-          // A name checked against views not yet read would pass any name.
-          if (siblings.data === undefined) {
+          // Names not read, or read before a failed refetch, would pass any name.
+          if (siblings.data === undefined || siblings.isError) {
             return;
           }
           const taken = viewNameTaken(siblings.data, name, view.id);

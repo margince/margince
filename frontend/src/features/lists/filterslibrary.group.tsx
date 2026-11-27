@@ -48,9 +48,11 @@ export function LibraryGroupPanel({
   const failedViews = viewsHere && reads.viewsFailed;
   const failedLists = listsHere && reads.listsFailed;
   const settled = !pending && !failedViews && !failedLists;
-  const empty = settled && rows.length === 0 && !narrowed;
+  // Rows held from the previous archived toggle cannot say the group is empty.
+  const held = listsHere && reads.listsHeld;
+  const empty = settled && !held && rows.length === 0 && !narrowed;
   const counted =
-    settled && !reads.truncated && !(listsHere && reads.listsHeld) ? (
+    settled && !held && !reads.truncated ? (
       <span className="t-num">{formatNumber(rows.length, locale)}</span>
     ) : undefined;
   return (

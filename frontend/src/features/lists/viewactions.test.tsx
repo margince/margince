@@ -256,6 +256,15 @@ describe("renaming a view before the reader's views are read", () => {
     return { patches, answer: (response: Response) => answer(response) };
   }
 
+  const refused = () =>
+    Response.json(
+      { title: "Forbidden", status: 403, detail: "The views read failed." },
+      {
+        status: 403,
+        headers: { "Content-Type": "application/problem+json" },
+      },
+    );
+
   const renameTo = async (user: UserEvent, name: string) => {
     const field = screen.getByRole("textbox", { name: en["views.name"] });
     await user.clear(field);
@@ -297,14 +306,6 @@ describe("renaming a view before the reader's views are read", () => {
 
   it("says the views read failed rather than saving a name it could not check", async () => {
     const held = holdViews();
-    const refused = () =>
-      Response.json(
-        { title: "Forbidden", status: 403, detail: "The views read failed." },
-        {
-          status: 403,
-          headers: { "Content-Type": "application/problem+json" },
-        },
-      );
     const user = userEvent.setup();
     render(<RenameViewAction view={VIEW} resource="contacts" />, {
       wrapper: Providers,
@@ -314,6 +315,44 @@ describe("renaming a view before the reader's views are read", () => {
     await user.click(screen.getByRole("button", { name: en["views.rename"] }));
     // Opening the dialog asks again; that answer is refused too.
     await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+    held.answer(refused());
+    await renameTo(user, "Berlin leads");
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "The views read failed.",
+    );
+    expect(held.patches).toEqual([]);
+  });
+
+  it("says a failed read again and saves nothing, though an earlier read's names are still held", async () => {
+    const held = holdViews();
+    function ReadAgain() {
+      const views = useSavedViews("contacts");
+      return (
+        <button type="button" onClick={() => void views.refetch()}>
+          Read again
+        </button>
+      );
+    }
+    const user = userEvent.setup();
+    render(
+      <>
+        <ReadAgain />
+        <RenameViewAction view={VIEW} resource="contacts" />
+      </>,
+      { wrapper: Providers },
+    );
+    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
+    held.answer(
+      Response.json({
+        data: [VIEW],
+        page: { next_cursor: null, has_more: false },
+      }),
+    );
+    await user.click(screen.getByRole("button", { name: "Read again" }));
+    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+    held.answer(refused());
+    await user.click(screen.getByRole("button", { name: en["views.rename"] }));
+    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(3));
     held.answer(refused());
     await renameTo(user, "Berlin leads");
     expect(await screen.findByRole("alert")).toHaveTextContent(
