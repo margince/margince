@@ -29,9 +29,9 @@ package gates
 
 import (
 	"bufio"
+	"bytes"
 	"go/ast"
 	"go/token"
-	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -332,18 +332,16 @@ var catalogColumnRe = regexp.MustCompile(`^public\.([a-z_][a-z0-9_]*)\.([a-z_][a
 func catalogTextColumns(t *testing.T) map[string]map[string]string {
 	t.Helper()
 	const catalog = "migrations/testdata/head_catalog.txt"
-	file, err := os.Open(catalog)
+	body, err := gatekit.ReadFile(catalog)
 	if err != nil {
-		t.Fatalf("opening %s: %v", catalog, err)
+		t.Fatalf("reading %s: %v", catalog, err)
 	}
-	//craft:ignore swallowed-errors a read-only close on a file this test is finished with; the read itself is asserted above
-	defer func() { _ = file.Close() }()
 	// Keyed to the column's TYPE, not merely its presence: both text and jsonb
 	// are collected here, and a failure that calls a jsonb column a text one
 	// sends the reader to check the wrong thing and to doubt the finding while
 	// they do it.
 	out := map[string]map[string]string{}
-	scanner := bufio.NewScanner(file)
+	scanner := bufio.NewScanner(bytes.NewReader(body))
 	scanner.Buffer(make([]byte, 0, 64*1024), 4*1024*1024)
 	for scanner.Scan() {
 		m := catalogColumnRe.FindStringSubmatch(scanner.Text())

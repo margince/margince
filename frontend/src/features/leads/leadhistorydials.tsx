@@ -111,6 +111,7 @@ export function useLeadHistoryDials({
           />
         )}
         <Select
+          appearance="compact"
           aria-label={t("chronology.label")}
           options={HISTORY_CUTS.map((cut) => ({
             value: cut,

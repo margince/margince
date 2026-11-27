@@ -98,7 +98,7 @@ func apiBasisEnums(t *testing.T) []map[string]bool {
 		t.Fatalf("reading crm.yaml: %v", err)
 	}
 	var root yaml.Node
-	if err := yaml.Unmarshal(raw, &root); err != nil {
+	if err := unmarshalYAML(raw, &root); err != nil {
 		t.Fatalf("parsing crm.yaml: %v", err)
 	}
 	var found []map[string]bool

@@ -14,6 +14,6 @@ var resolveEntitiesCopy = toolCopy{
 	Instead: "Use search_records to find a record you know exists, and resolve_duplicates once a contact " +
 		"has decided that two records are one.",
 	Retain: "Call this BEFORE creating a contact or company, whoever named it. Act on " +
-		"`matched`; on `ambiguous` ask which is meant; on `unresolved` say what you will create — " +
+		"`matched`; on `ambiguous` ask which is meant; on `unresolved` say what you will create: " +
 		"a miss is not proof nothing exists.",
 }

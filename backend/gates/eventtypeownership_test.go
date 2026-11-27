@@ -36,8 +36,6 @@ import (
 	"strings"
 	"testing"
 
-	"gopkg.in/yaml.v3"
-
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
@@ -177,7 +175,7 @@ func internalContractEventTypes(t *testing.T) []string {
 	if err != nil {
 		t.Fatalf("reading the internal payload contract: %v", err)
 	}
-	if err := yaml.Unmarshal(raw, &doc); err != nil {
+	if err := unmarshalYAML(raw, &doc); err != nil {
 		t.Fatalf("parsing the internal payload contract: %v", err)
 	}
 	out := make([]string, 0, len(doc.Components.Schemas))

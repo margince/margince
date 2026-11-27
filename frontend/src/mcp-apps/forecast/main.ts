@@ -245,7 +245,7 @@ function checksCard(answer: Record<string, unknown>): HTMLElement {
   const verdict = readinessWords(asText(answer.readiness));
   const freshness = asRecord(answer.freshness);
   const stale = asText(freshness.state) === "out_of_date";
-  const card = panel("The forecast's inputs", {
+  const card = panel("The forecast’s inputs", {
     level: "h1",
     action: stale
       ? badge("Out of date", "warning")
@@ -255,7 +255,7 @@ function checksCard(answer: Record<string, unknown>): HTMLElement {
   const deals = asFiniteNumber(answer.eligible_deals);
   const changed = asFiniteNumber(freshness.changed_deals) ?? 0;
   const sentence = stale
-    ? `Records changed after the last check read them${changed > 0 ? ` (${changed} ${changed === 1 ? "deal" : "deals"})` : ""}, so its verdict, ${verdict.label.toLowerCase()}, may no longer hold.`
+    ? `Records changed after the last check read them${changed > 0 ? ` (${changed} ${changed === 1 ? "deal" : "deals"})` : ""}, so its result, ${verdict.label.toLowerCase()}, may no longer hold.`
     : verdict.sentence;
   body.appendChild(
     el(
@@ -341,7 +341,7 @@ function findingsCard(answer: Record<string, unknown>): HTMLElement {
   body.appendChild(
     rowAction("Walk me through them", () =>
       askAssistant(
-        "Walk me through what my forecast's inputs still need, most material first, and what I should fix.",
+        "Walk me through what my forecast’s inputs still need, most material first, and what to fix.",
       ),
     ),
   );

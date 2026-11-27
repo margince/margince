@@ -175,7 +175,7 @@ func contractSchema(t *testing.T, name string) contractSchemaFields {
 			Schemas map[string]contractSchemaFields `yaml:"schemas"`
 		} `yaml:"components"`
 	}
-	if err := yaml.Unmarshal(raw, &doc); err != nil {
+	if err := unmarshalYAML(raw, &doc); err != nil {
 		t.Fatalf("parsing %s: %v", contractFile, err)
 	}
 	schema, ok := doc.Components.Schemas[name]

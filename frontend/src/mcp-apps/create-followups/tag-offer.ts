@@ -112,7 +112,7 @@ function choices(
       el(
         "p",
         "refusal",
-        `The workspace has no tag called “${offer.name}”, and your seat cannot add one.`,
+        `The company has no tag called “${offer.name}”, and your seat cannot add one.`,
       ),
     );
     return row;

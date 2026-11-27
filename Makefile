@@ -34,13 +34,13 @@ endif
 # target's prerequisites.
 ROOT_SCRIPT_GATES := check-craft-doc test-dev-isolation test-dev-dsn test-dev-env-local test-api-entrypoint \
   test-dev-cleanup test-disk-headroom test-dev-ready test-composed-units test-compose-recreate-guard \
-  test-golangci-guard test-scheduled-report test-clock-drift-host test-renovate-liveness test-pace-workflow test-ci-verdict test-merge-verdict \
+  test-golangci-guard test-scheduled-report test-clock-drift-host test-renovate-liveness test-pace-workflow test-ci-verdict test-ci-integration-proven test-merge-verdict \
   test-review-coverage test-home-budget-compare test-repeat-changed-tests \
   test-laneorder test-shardqueue test-lane-binaries test-integration-artifacts check-image-pins check-early-pipe-readers check-host-ports ci-doc-parity \
   make-target-parity test-make-target-parity contract-breaking-check \
   test-contract-frontend-drift migration-versions test-migration-versions \
   test-lanes env-reads gofmt go-file-length fe-file-length test-fe-file-length test-test-budget rls-store-path \
-  comment-budget test-comment-budget comment-density test-keep-unchanged-mtimes test-phase-timer test-check-lane-end \
+  comment-budget test-comment-budget comment-density test-keep-unchanged-mtimes test-phase-timer test-check-lane-end test-slow-statements \
   check-extension-modules go-work-sum \
   no-jurisdiction test-no-jurisdiction \
   pkg-freeze test-pkg-freeze \
@@ -94,7 +94,7 @@ MINIO_PORT ?= 29000
 
 .PHONY: gate-timings preflight
 .PHONY: repeat-changed-tests test-repeat-changed-tests
-.PHONY: help help-all install dev-fresh prod prod-stop check check-config check-all check-backend check-root-gates check-release check-lane-craft check-lane-gates check-lane-backend check-lane-fe check-q check-go check-gates check-fe test-gate-slot dev dev-stop dev-sweep dev-snapshot dev-restore dev-logs infra-up seed-dev seed-analytics verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check bench-home home-budget test-home-budget-compare e2e-company e2e-brief e2e-llm e2e-llm-guards e2e-llm-report fe-install fe-typecheck fe-typecheck-composed fe-lint fe-compiler-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-census fe-unit-merge fe-clock-drift backend-clock-drift fe-edge-padding fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing ds-spacing-roles space-tokens native-controls ext-imports action-rows storybook fe-uat craft-static craft-review test-craft-review craft-residue craft-prose check-craft-doc test-craft-pin test-golangci-guard test-scheduled-report test-clock-drift-host test-renovate-liveness test-pace-workflow test-ci-verdict test-merge-verdict test-review-coverage test-laneorder test-shardqueue test-lane-binaries test-integration-artifacts secret-scan test-secret-scan test-sbom-sign release-sign test-sbom-census embedded-binary-licenses test-embedded-binary-licenses test-dev-dsn test-dev-env-local test-testdb-redis test-lane-timeout-report test-dev-isolation test-dev-cleanup test-disk-headroom test-dev-ready test-composed-units test-compose-recreate-guard test-api-entrypoint check-image-pins check-early-pipe-readers check-host-ports ci-doc-parity make-target-parity test-make-target-parity check-ext-migrations check-extension-modules go-work-sum contract-breaking-check messaging-rules-drift policy-refresh contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length fe-file-length test-fe-file-length test-budget test-input-census test-input-census-judge test-strict-lint-packages test-test-budget comment-budget test-comment-budget comment-density test-keep-unchanged-mtimes test-check-lane-end test-phase-timer comment-stats comment-stats-pin slop-trend rls-store-path no-jurisdiction test-no-jurisdiction pkg-freeze test-pkg-freeze test-release-tag-version test-release-dist-version test-release-license-stamped test-release-policy-sources-fresh test-release-version-file test-build-revision test-release-tag-on-main test-release-tag-go-proxy test-release-notes test-release-bundle test-release-compose test-release-version-stamped test-closing-declaration test-release-patch-base test-release-changelog docs-describing test-docs-describing test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-census sbom-validate sbom-sign release-sign sbom-check sbom-gate
+.PHONY: help help-all install dev-fresh prod prod-stop check check-config check-all check-backend check-root-gates check-release check-lane-craft check-lane-gates check-lane-backend check-lane-fe check-q check-go check-gates check-fe test-gate-slot dev dev-stop dev-sweep dev-snapshot dev-restore dev-logs infra-up seed-dev seed-analytics verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check bench-home home-budget test-home-budget-compare e2e-company e2e-brief e2e-llm e2e-llm-guards e2e-llm-report fe-install fe-typecheck fe-typecheck-composed fe-lint fe-compiler-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-census fe-unit-merge fe-clock-drift backend-clock-drift fe-edge-padding fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing ds-spacing-roles space-tokens native-controls ext-imports action-rows storybook fe-uat craft-static craft-review test-craft-review craft-residue craft-prose check-craft-doc test-craft-pin test-golangci-guard test-scheduled-report test-clock-drift-host test-renovate-liveness test-pace-workflow test-ci-verdict test-ci-integration-proven test-merge-verdict test-review-coverage test-laneorder test-shardqueue test-lane-binaries test-integration-artifacts secret-scan test-secret-scan test-sbom-sign release-sign test-sbom-census embedded-binary-licenses test-embedded-binary-licenses test-dev-dsn test-dev-env-local test-testdb-redis test-lane-timeout-report test-dev-isolation test-dev-cleanup test-disk-headroom test-dev-ready test-composed-units test-compose-recreate-guard test-api-entrypoint check-image-pins check-early-pipe-readers check-host-ports ci-doc-parity make-target-parity test-make-target-parity check-ext-migrations check-extension-modules go-work-sum contract-breaking-check messaging-rules-drift policy-refresh contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length fe-file-length test-fe-file-length test-budget test-input-census test-input-census-judge test-strict-lint-packages test-test-budget comment-budget test-comment-budget comment-density test-keep-unchanged-mtimes test-check-lane-end test-slow-statements test-phase-timer comment-stats comment-stats-pin slop-trend rls-store-path no-jurisdiction test-no-jurisdiction pkg-freeze test-pkg-freeze test-release-tag-version test-release-dist-version test-release-license-stamped test-release-policy-sources-fresh test-release-version-file test-build-revision test-release-tag-on-main test-release-tag-go-proxy test-release-notes test-release-bundle test-release-compose test-release-version-stamped test-closing-declaration test-release-patch-base test-release-changelog docs-describing test-docs-describing test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-census sbom-validate sbom-sign release-sign sbom-check sbom-gate
 # Bare `make` lists every command instead of running the first target.
 .DEFAULT_GOAL := help
 
@@ -1381,6 +1381,11 @@ test-pace-workflow:
 test-ci-verdict:
 	@./scripts/test-ci-verdict.sh
 
+## test-ci-integration-proven — prove the merge queue skips the integration lane
+## only on a tree that a run of the entry's own pull request passed.
+test-ci-integration-proven:
+	@./scripts/test-ci-integration-proven.sh
+
 ## test-merge-verdict — prove the push-time alarm still tells an ABSENT verdict
 ## from a green one. The alarm is silent when it is working, so "it did not go
 ## off" is precisely the signal that was already untrustworthy; and the case it
@@ -1551,6 +1556,12 @@ test-phase-timer:
 ## lane is named, the end of its log is printed, and make check fails.
 test-check-lane-end:
 	@bash scripts/check-lane-end.test.sh
+
+## test-slow-statements — print-slow-statements.sh's own test: a failed
+## integration shard prints each slow plan and each statement the statement
+## timeout cancelled, with its parameters, and nothing else from the log.
+test-slow-statements:
+	@bash scripts/print-slow-statements.test.sh
 
 ## test-lanes — hermetic-unit-lane enforcement: no untagged test may open a
 ## real Postgres/Redis; real-infra suites carry //go:build integration.

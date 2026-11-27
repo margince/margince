@@ -105,7 +105,7 @@ var addsAFoldedColumn = regexp.MustCompile(`ALTER TABLE (\w+) ADD COLUMN IF NOT 
 // so a new one is held here without being listed.
 func foldedColumns(t *testing.T) []foldedColumn {
 	t.Helper()
-	paths, err := filepath.Glob(filepath.Join(gatekit.ModuleRoot(t), "migrations", "core", "*.up.sql"))
+	paths, err := gatekit.Glob(filepath.Join(gatekit.ModuleRoot(t), "migrations", "core", "*.up.sql"))
 	if err != nil || len(paths) == 0 {
 		t.Fatalf("reading the core migrations: %v (found %d)", err, len(paths))
 	}

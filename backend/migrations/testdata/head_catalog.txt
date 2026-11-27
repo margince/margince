@@ -1076,7 +1076,9 @@ public.agent_task_pkey CREATE UNIQUE INDEX agent_task_pkey ON public.agent_task 
 public.ai_call acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.ai_call.agent_run_id uuid gen=- def=-
 public.ai_call.ai_call_cache_write_tokens_js_safe CHECK (((cache_write_tokens >= '-9007199254740991'::bigint) AND (cache_write_tokens <= '9007199254740991'::bigint)))
+public.ai_call.ai_call_cache_write_tokens_not_negative CHECK ((cache_write_tokens >= 0)) NOT VALID
 public.ai_call.ai_call_cached_tokens_js_safe CHECK (((cached_tokens >= '-9007199254740991'::bigint) AND (cached_tokens <= '9007199254740991'::bigint)))
+public.ai_call.ai_call_cached_tokens_not_negative CHECK ((cached_tokens >= 0)) NOT VALID
 public.ai_call.ai_call_config_fk FOREIGN KEY (config_hash) REFERENCES ai_call_config(hash) ON DELETE RESTRICT
 public.ai_call.ai_call_context_fingerprint_check CHECK (((context_fingerprint = ''::text) OR (context_fingerprint ~ '^[0-9a-f]{64}$'::text)))
 public.ai_call.ai_call_context_scopes_check CHECK ((context_scopes <@ ARRAY['identity'::text, 'positioning'::text, 'sales'::text, 'offer'::text, 'market'::text, 'proof'::text, 'administrative'::text]))
@@ -1087,10 +1089,13 @@ public.ai_call.ai_call_kind_check CHECK ((kind = ANY (ARRAY['completion'::text, 
 public.ai_call.ai_call_latency_ms_js_safe CHECK (((latency_ms >= '-9007199254740991'::bigint) AND (latency_ms <= '9007199254740991'::bigint)))
 public.ai_call.ai_call_pkey PRIMARY KEY (id)
 public.ai_call.ai_call_reasoning_tokens_js_safe CHECK (((reasoning_tokens >= '-9007199254740991'::bigint) AND (reasoning_tokens <= '9007199254740991'::bigint)))
+public.ai_call.ai_call_reasoning_tokens_not_negative CHECK ((reasoning_tokens >= 0)) NOT VALID
 public.ai_call.ai_call_source_check CHECK ((served_identity_source = ANY (ARRAY['response'::text, 'echo'::text, 'configured'::text])))
 public.ai_call.ai_call_subject_shape CHECK (((subject_type IS NULL) = (subject_id IS NULL)))
 public.ai_call.ai_call_tokens_in_js_safe CHECK (((tokens_in >= '-9007199254740991'::bigint) AND (tokens_in <= '9007199254740991'::bigint)))
+public.ai_call.ai_call_tokens_in_not_negative CHECK ((tokens_in >= 0)) NOT VALID
 public.ai_call.ai_call_tokens_out_js_safe CHECK (((tokens_out >= '-9007199254740991'::bigint) AND (tokens_out <= '9007199254740991'::bigint)))
+public.ai_call.ai_call_tokens_out_not_negative CHECK ((tokens_out >= 0)) NOT VALID
 public.ai_call.attempt integer NOT NULL gen=- def=1
 public.ai_call.attempt_reason text NOT NULL gen=- def=''::text
 public.ai_call.cache_hit boolean NOT NULL gen=- def=false
@@ -1270,10 +1275,14 @@ public.ai_task_run_state_rank(state text) secdef=false cfg=- acl=-
     END
   
 public.ai_usage acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.ai_usage.ai_usage_cached_hits_not_negative CHECK ((cached_hits >= 0))
 public.ai_usage.ai_usage_calls_js_safe CHECK (((calls >= '-9007199254740991'::bigint) AND (calls <= '9007199254740991'::bigint)))
+public.ai_usage.ai_usage_calls_not_negative CHECK ((calls >= 0))
 public.ai_usage.ai_usage_pkey PRIMARY KEY (day, task, tier)
 public.ai_usage.ai_usage_tokens_in_js_safe CHECK (((tokens_in >= '-9007199254740991'::bigint) AND (tokens_in <= '9007199254740991'::bigint)))
+public.ai_usage.ai_usage_tokens_in_not_negative CHECK ((tokens_in >= 0))
 public.ai_usage.ai_usage_tokens_out_js_safe CHECK (((tokens_out >= '-9007199254740991'::bigint) AND (tokens_out <= '9007199254740991'::bigint)))
+public.ai_usage.ai_usage_tokens_out_not_negative CHECK ((tokens_out >= 0))
 public.ai_usage.cached_hits bigint NOT NULL gen=- def=0
 public.ai_usage.calls bigint NOT NULL gen=- def=0
 public.ai_usage.day date NOT NULL gen=- def=-
@@ -4510,6 +4519,47 @@ public.contact_social_contact_id_platform_key CREATE UNIQUE INDEX contact_social
 public.contact_social_pkey CREATE UNIQUE INDEX contact_social_pkey ON public.contact_social USING btree (id)
 public.contact_strength_dates(cid uuid) secdef=false cfg=- acl=- 
   SELECT max(a.occurred_at),
+		       max(a.occurred_at) FILTER (WHERE (((a.direction = 'inbound' AND (EXISTS (
+		SELECT 1 FROM activity_participant ap
+		 WHERE ap.activity_id = a.id AND ap.role = 'from'
+		   AND CASE WHEN ap.address IS NULL
+		              OR EXISTS (SELECT 1 FROM contact_email se
+		                          WHERE se.contact_id = ap.contact_id AND se.email = lower(ap.address)
+		                            AND (se.archived_at IS NULL OR EXISTS (
+		                                 SELECT 1 FROM contact_email ne
+		                                  WHERE ne.email = lower(ap.address) AND ne.archived_at IS NULL
+		                                    AND ne.contact_id <> ap.contact_id)))
+		            THEN ap.contact_id = cid
+		            ELSE (EXISTS (SELECT 1 FROM contact_email own
+		         WHERE own.contact_id = cid AND own.archived_at IS NULL AND own.email = lower(ap.address))
+		 AND NOT EXISTS (SELECT 1 FROM contact_email other
+		         WHERE other.email = lower(ap.address) AND other.contact_id <> cid)) END) OR (NOT EXISTS (SELECT 1 FROM activity_participant af
+		 WHERE af.activity_id = a.id AND af.role = 'from')
+		AND (EXISTS (SELECT 1 FROM contact_email own
+		         WHERE own.contact_id = cid AND own.archived_at IS NULL AND own.email = a.counterparty_email)
+		 AND NOT EXISTS (SELECT 1 FROM contact_email other
+		         WHERE other.email = a.counterparty_email AND other.contact_id <> cid))))) OR (a.direction IS NULL AND a.kind IN ('email','message') AND EXISTS (
+		SELECT 1 FROM activity_participant df
+		 WHERE df.activity_id = a.id AND df.role = 'from' AND df.user_id IS NULL AND CASE WHEN df.address IS NULL
+		              OR EXISTS (SELECT 1 FROM contact_email se
+		                          WHERE se.contact_id = df.contact_id AND se.email = lower(df.address)
+		                            AND (se.archived_at IS NULL OR EXISTS (
+		                                 SELECT 1 FROM contact_email ne
+		                                  WHERE ne.email = lower(df.address) AND ne.archived_at IS NULL
+		                                    AND ne.contact_id <> df.contact_id)))
+		            THEN df.contact_id = cid
+		            ELSE (EXISTS (SELECT 1 FROM contact_email own
+		         WHERE own.contact_id = cid AND own.archived_at IS NULL AND own.email = lower(df.address))
+		 AND NOT EXISTS (SELECT 1 FROM contact_email other
+		         WHERE other.email = lower(df.address) AND other.contact_id <> cid)) END
+		   AND NOT EXISTS (SELECT 1 FROM contact_email held
+		         WHERE held.email = lower(df.address) AND held.archived_at IS NULL AND held.contact_id <> cid)
+		   AND NOT EXISTS (SELECT 1 FROM activity_participant df2
+		         WHERE df2.activity_id = a.id AND df2.role = 'from' AND df2.id <> df.id)))) OR (a.kind IN ('meeting','call') AND (EXISTS (SELECT 1 FROM activity_participant tp
+		 WHERE tp.activity_id = a.id AND tp.contact_id = cid AND tp.role IN ('from','to','cc','bcc','attendee','organizer')
+		   AND tp.response IS DISTINCT FROM 'declined')
+	   OR NOT EXISTS (SELECT 1 FROM activity_participant tp
+		 WHERE tp.activity_id = a.id AND tp.contact_id IS NOT NULL))))),
 		       max(a.occurred_at) FILTER (WHERE ((a.direction = 'inbound' AND (EXISTS (
 		SELECT 1 FROM activity_participant ap
 		 WHERE ap.activity_id = a.id AND ap.role = 'from'
@@ -4529,12 +4579,25 @@ public.contact_strength_dates(cid uuid) secdef=false cfg=- acl=-
 		AND (EXISTS (SELECT 1 FROM contact_email own
 		         WHERE own.contact_id = cid AND own.archived_at IS NULL AND own.email = a.counterparty_email)
 		 AND NOT EXISTS (SELECT 1 FROM contact_email other
-		         WHERE other.email = a.counterparty_email AND other.contact_id <> cid))))) OR (a.kind IN ('meeting','call') AND (EXISTS (SELECT 1 FROM activity_participant tp
-		 WHERE tp.activity_id = a.id AND tp.contact_id = cid AND tp.role IN ('from','to','cc','bcc','attendee','organizer')
-		   AND tp.response IS DISTINCT FROM 'declined')
-	   OR NOT EXISTS (SELECT 1 FROM activity_participant tp
-		 WHERE tp.activity_id = a.id AND tp.contact_id IS NOT NULL))))),
-		       max(a.occurred_at) FILTER (WHERE (a.direction = 'inbound' AND (EXISTS (
+		         WHERE other.email = a.counterparty_email AND other.contact_id <> cid))))) OR (a.direction IS NULL AND a.kind IN ('email','message') AND EXISTS (
+		SELECT 1 FROM activity_participant df
+		 WHERE df.activity_id = a.id AND df.role = 'from' AND df.user_id IS NULL AND CASE WHEN df.address IS NULL
+		              OR EXISTS (SELECT 1 FROM contact_email se
+		                          WHERE se.contact_id = df.contact_id AND se.email = lower(df.address)
+		                            AND (se.archived_at IS NULL OR EXISTS (
+		                                 SELECT 1 FROM contact_email ne
+		                                  WHERE ne.email = lower(df.address) AND ne.archived_at IS NULL
+		                                    AND ne.contact_id <> df.contact_id)))
+		            THEN df.contact_id = cid
+		            ELSE (EXISTS (SELECT 1 FROM contact_email own
+		         WHERE own.contact_id = cid AND own.archived_at IS NULL AND own.email = lower(df.address))
+		 AND NOT EXISTS (SELECT 1 FROM contact_email other
+		         WHERE other.email = lower(df.address) AND other.contact_id <> cid)) END
+		   AND NOT EXISTS (SELECT 1 FROM contact_email held
+		         WHERE held.email = lower(df.address) AND held.archived_at IS NULL AND held.contact_id <> cid)
+		   AND NOT EXISTS (SELECT 1 FROM activity_participant df2
+		         WHERE df2.activity_id = a.id AND df2.role = 'from' AND df2.id <> df.id))))),
+		       (CASE WHEN max(a.occurred_at) FILTER (WHERE a.occurred_precision = 'instant' AND (((a.direction = 'inbound' AND (EXISTS (
 		SELECT 1 FROM activity_participant ap
 		 WHERE ap.activity_id = a.id AND ap.role = 'from'
 		   AND CASE WHEN ap.address IS NULL
@@ -4553,8 +4616,24 @@ public.contact_strength_dates(cid uuid) secdef=false cfg=- acl=-
 		AND (EXISTS (SELECT 1 FROM contact_email own
 		         WHERE own.contact_id = cid AND own.archived_at IS NULL AND own.email = a.counterparty_email)
 		 AND NOT EXISTS (SELECT 1 FROM contact_email other
-		         WHERE other.email = a.counterparty_email AND other.contact_id <> cid)))))),
-		       (CASE WHEN max(a.occurred_at) FILTER (WHERE a.occurred_precision = 'instant' AND ((a.direction = 'inbound' AND (EXISTS (
+		         WHERE other.email = a.counterparty_email AND other.contact_id <> cid))))) OR (a.direction IS NULL AND a.kind IN ('email','message') AND EXISTS (
+		SELECT 1 FROM activity_participant df
+		 WHERE df.activity_id = a.id AND df.role = 'from' AND df.user_id IS NULL AND CASE WHEN df.address IS NULL
+		              OR EXISTS (SELECT 1 FROM contact_email se
+		                          WHERE se.contact_id = df.contact_id AND se.email = lower(df.address)
+		                            AND (se.archived_at IS NULL OR EXISTS (
+		                                 SELECT 1 FROM contact_email ne
+		                                  WHERE ne.email = lower(df.address) AND ne.archived_at IS NULL
+		                                    AND ne.contact_id <> df.contact_id)))
+		            THEN df.contact_id = cid
+		            ELSE (EXISTS (SELECT 1 FROM contact_email own
+		         WHERE own.contact_id = cid AND own.archived_at IS NULL AND own.email = lower(df.address))
+		 AND NOT EXISTS (SELECT 1 FROM contact_email other
+		         WHERE other.email = lower(df.address) AND other.contact_id <> cid)) END
+		   AND NOT EXISTS (SELECT 1 FROM contact_email held
+		         WHERE held.email = lower(df.address) AND held.archived_at IS NULL AND held.contact_id <> cid)
+		   AND NOT EXISTS (SELECT 1 FROM activity_participant df2
+		         WHERE df2.activity_id = a.id AND df2.role = 'from' AND df2.id <> df.id)))))) = max(a.occurred_at) FILTER (WHERE ((a.direction = 'inbound' AND (EXISTS (
 		SELECT 1 FROM activity_participant ap
 		 WHERE ap.activity_id = a.id AND ap.role = 'from'
 		   AND CASE WHEN ap.address IS NULL
@@ -4573,7 +4652,25 @@ public.contact_strength_dates(cid uuid) secdef=false cfg=- acl=-
 		AND (EXISTS (SELECT 1 FROM contact_email own
 		         WHERE own.contact_id = cid AND own.archived_at IS NULL AND own.email = a.counterparty_email)
 		 AND NOT EXISTS (SELECT 1 FROM contact_email other
-		         WHERE other.email = a.counterparty_email AND other.contact_id <> cid))))))) = max(a.occurred_at) FILTER (WHERE (a.direction = 'inbound' AND (EXISTS (
+		         WHERE other.email = a.counterparty_email AND other.contact_id <> cid))))) OR (a.direction IS NULL AND a.kind IN ('email','message') AND EXISTS (
+		SELECT 1 FROM activity_participant df
+		 WHERE df.activity_id = a.id AND df.role = 'from' AND df.user_id IS NULL AND CASE WHEN df.address IS NULL
+		              OR EXISTS (SELECT 1 FROM contact_email se
+		                          WHERE se.contact_id = df.contact_id AND se.email = lower(df.address)
+		                            AND (se.archived_at IS NULL OR EXISTS (
+		                                 SELECT 1 FROM contact_email ne
+		                                  WHERE ne.email = lower(df.address) AND ne.archived_at IS NULL
+		                                    AND ne.contact_id <> df.contact_id)))
+		            THEN df.contact_id = cid
+		            ELSE (EXISTS (SELECT 1 FROM contact_email own
+		         WHERE own.contact_id = cid AND own.archived_at IS NULL AND own.email = lower(df.address))
+		 AND NOT EXISTS (SELECT 1 FROM contact_email other
+		         WHERE other.email = lower(df.address) AND other.contact_id <> cid)) END
+		   AND NOT EXISTS (SELECT 1 FROM contact_email held
+		         WHERE held.email = lower(df.address) AND held.archived_at IS NULL AND held.contact_id <> cid)
+		   AND NOT EXISTS (SELECT 1 FROM activity_participant df2
+		         WHERE df2.activity_id = a.id AND df2.role = 'from' AND df2.id <> df.id))))) THEN 'instant'
+		WHEN max(a.occurred_at) FILTER (WHERE ((a.direction = 'inbound' AND (EXISTS (
 		SELECT 1 FROM activity_participant ap
 		 WHERE ap.activity_id = a.id AND ap.role = 'from'
 		   AND CASE WHEN ap.address IS NULL
@@ -4592,27 +4689,24 @@ public.contact_strength_dates(cid uuid) secdef=false cfg=- acl=-
 		AND (EXISTS (SELECT 1 FROM contact_email own
 		         WHERE own.contact_id = cid AND own.archived_at IS NULL AND own.email = a.counterparty_email)
 		 AND NOT EXISTS (SELECT 1 FROM contact_email other
-		         WHERE other.email = a.counterparty_email AND other.contact_id <> cid)))))) THEN 'instant'
-		WHEN max(a.occurred_at) FILTER (WHERE (a.direction = 'inbound' AND (EXISTS (
-		SELECT 1 FROM activity_participant ap
-		 WHERE ap.activity_id = a.id AND ap.role = 'from'
-		   AND CASE WHEN ap.address IS NULL
+		         WHERE other.email = a.counterparty_email AND other.contact_id <> cid))))) OR (a.direction IS NULL AND a.kind IN ('email','message') AND EXISTS (
+		SELECT 1 FROM activity_participant df
+		 WHERE df.activity_id = a.id AND df.role = 'from' AND df.user_id IS NULL AND CASE WHEN df.address IS NULL
 		              OR EXISTS (SELECT 1 FROM contact_email se
-		                          WHERE se.contact_id = ap.contact_id AND se.email = lower(ap.address)
+		                          WHERE se.contact_id = df.contact_id AND se.email = lower(df.address)
 		                            AND (se.archived_at IS NULL OR EXISTS (
 		                                 SELECT 1 FROM contact_email ne
-		                                  WHERE ne.email = lower(ap.address) AND ne.archived_at IS NULL
-		                                    AND ne.contact_id <> ap.contact_id)))
-		            THEN ap.contact_id = cid
+		                                  WHERE ne.email = lower(df.address) AND ne.archived_at IS NULL
+		                                    AND ne.contact_id <> df.contact_id)))
+		            THEN df.contact_id = cid
 		            ELSE (EXISTS (SELECT 1 FROM contact_email own
-		         WHERE own.contact_id = cid AND own.archived_at IS NULL AND own.email = lower(ap.address))
+		         WHERE own.contact_id = cid AND own.archived_at IS NULL AND own.email = lower(df.address))
 		 AND NOT EXISTS (SELECT 1 FROM contact_email other
-		         WHERE other.email = lower(ap.address) AND other.contact_id <> cid)) END) OR (NOT EXISTS (SELECT 1 FROM activity_participant af
-		 WHERE af.activity_id = a.id AND af.role = 'from')
-		AND (EXISTS (SELECT 1 FROM contact_email own
-		         WHERE own.contact_id = cid AND own.archived_at IS NULL AND own.email = a.counterparty_email)
-		 AND NOT EXISTS (SELECT 1 FROM contact_email other
-		         WHERE other.email = a.counterparty_email AND other.contact_id <> cid)))))) IS NOT NULL THEN 'day' END),
+		         WHERE other.email = lower(df.address) AND other.contact_id <> cid)) END
+		   AND NOT EXISTS (SELECT 1 FROM contact_email held
+		         WHERE held.email = lower(df.address) AND held.archived_at IS NULL AND held.contact_id <> cid)
+		   AND NOT EXISTS (SELECT 1 FROM activity_participant df2
+		         WHERE df2.activity_id = a.id AND df2.role = 'from' AND df2.id <> df.id))))) IS NOT NULL THEN 'day' END),
 		       max(a.occurred_at) FILTER (WHERE (a.direction = 'outbound')),
 		       (CASE WHEN max(a.occurred_at) FILTER (WHERE a.occurred_precision = 'day' AND ((a.direction = 'outbound'))) = max(a.occurred_at) FILTER (WHERE (a.direction = 'outbound')) THEN 'day'
 		WHEN max(a.occurred_at) FILTER (WHERE (a.direction = 'outbound')) IS NOT NULL THEN 'instant' END)
@@ -4632,6 +4726,47 @@ public.contact_strength_dates(cid uuid) secdef=false cfg=- acl=-
 
 public.contact_strength_dates_among(cid uuid, aids uuid[]) secdef=false cfg=- acl=- 
   SELECT max(a.occurred_at),
+		       max(a.occurred_at) FILTER (WHERE (((a.direction = 'inbound' AND (EXISTS (
+		SELECT 1 FROM activity_participant ap
+		 WHERE ap.activity_id = a.id AND ap.role = 'from'
+		   AND CASE WHEN ap.address IS NULL
+		              OR EXISTS (SELECT 1 FROM contact_email se
+		                          WHERE se.contact_id = ap.contact_id AND se.email = lower(ap.address)
+		                            AND (se.archived_at IS NULL OR EXISTS (
+		                                 SELECT 1 FROM contact_email ne
+		                                  WHERE ne.email = lower(ap.address) AND ne.archived_at IS NULL
+		                                    AND ne.contact_id <> ap.contact_id)))
+		            THEN ap.contact_id = cid
+		            ELSE (EXISTS (SELECT 1 FROM contact_email own
+		         WHERE own.contact_id = cid AND own.archived_at IS NULL AND own.email = lower(ap.address))
+		 AND NOT EXISTS (SELECT 1 FROM contact_email other
+		         WHERE other.email = lower(ap.address) AND other.contact_id <> cid)) END) OR (NOT EXISTS (SELECT 1 FROM activity_participant af
+		 WHERE af.activity_id = a.id AND af.role = 'from')
+		AND (EXISTS (SELECT 1 FROM contact_email own
+		         WHERE own.contact_id = cid AND own.archived_at IS NULL AND own.email = a.counterparty_email)
+		 AND NOT EXISTS (SELECT 1 FROM contact_email other
+		         WHERE other.email = a.counterparty_email AND other.contact_id <> cid))))) OR (a.direction IS NULL AND a.kind IN ('email','message') AND EXISTS (
+		SELECT 1 FROM activity_participant df
+		 WHERE df.activity_id = a.id AND df.role = 'from' AND df.user_id IS NULL AND CASE WHEN df.address IS NULL
+		              OR EXISTS (SELECT 1 FROM contact_email se
+		                          WHERE se.contact_id = df.contact_id AND se.email = lower(df.address)
+		                            AND (se.archived_at IS NULL OR EXISTS (
+		                                 SELECT 1 FROM contact_email ne
+		                                  WHERE ne.email = lower(df.address) AND ne.archived_at IS NULL
+		                                    AND ne.contact_id <> df.contact_id)))
+		            THEN df.contact_id = cid
+		            ELSE (EXISTS (SELECT 1 FROM contact_email own
+		         WHERE own.contact_id = cid AND own.archived_at IS NULL AND own.email = lower(df.address))
+		 AND NOT EXISTS (SELECT 1 FROM contact_email other
+		         WHERE other.email = lower(df.address) AND other.contact_id <> cid)) END
+		   AND NOT EXISTS (SELECT 1 FROM contact_email held
+		         WHERE held.email = lower(df.address) AND held.archived_at IS NULL AND held.contact_id <> cid)
+		   AND NOT EXISTS (SELECT 1 FROM activity_participant df2
+		         WHERE df2.activity_id = a.id AND df2.role = 'from' AND df2.id <> df.id)))) OR (a.kind IN ('meeting','call') AND (EXISTS (SELECT 1 FROM activity_participant tp
+		 WHERE tp.activity_id = a.id AND tp.contact_id = cid AND tp.role IN ('from','to','cc','bcc','attendee','organizer')
+		   AND tp.response IS DISTINCT FROM 'declined')
+	   OR NOT EXISTS (SELECT 1 FROM activity_participant tp
+		 WHERE tp.activity_id = a.id AND tp.contact_id IS NOT NULL))))),
 		       max(a.occurred_at) FILTER (WHERE ((a.direction = 'inbound' AND (EXISTS (
 		SELECT 1 FROM activity_participant ap
 		 WHERE ap.activity_id = a.id AND ap.role = 'from'
@@ -4651,12 +4786,25 @@ public.contact_strength_dates_among(cid uuid, aids uuid[]) secdef=false cfg=- ac
 		AND (EXISTS (SELECT 1 FROM contact_email own
 		         WHERE own.contact_id = cid AND own.archived_at IS NULL AND own.email = a.counterparty_email)
 		 AND NOT EXISTS (SELECT 1 FROM contact_email other
-		         WHERE other.email = a.counterparty_email AND other.contact_id <> cid))))) OR (a.kind IN ('meeting','call') AND (EXISTS (SELECT 1 FROM activity_participant tp
-		 WHERE tp.activity_id = a.id AND tp.contact_id = cid AND tp.role IN ('from','to','cc','bcc','attendee','organizer')
-		   AND tp.response IS DISTINCT FROM 'declined')
-	   OR NOT EXISTS (SELECT 1 FROM activity_participant tp
-		 WHERE tp.activity_id = a.id AND tp.contact_id IS NOT NULL))))),
-		       max(a.occurred_at) FILTER (WHERE (a.direction = 'inbound' AND (EXISTS (
+		         WHERE other.email = a.counterparty_email AND other.contact_id <> cid))))) OR (a.direction IS NULL AND a.kind IN ('email','message') AND EXISTS (
+		SELECT 1 FROM activity_participant df
+		 WHERE df.activity_id = a.id AND df.role = 'from' AND df.user_id IS NULL AND CASE WHEN df.address IS NULL
+		              OR EXISTS (SELECT 1 FROM contact_email se
+		                          WHERE se.contact_id = df.contact_id AND se.email = lower(df.address)
+		                            AND (se.archived_at IS NULL OR EXISTS (
+		                                 SELECT 1 FROM contact_email ne
+		                                  WHERE ne.email = lower(df.address) AND ne.archived_at IS NULL
+		                                    AND ne.contact_id <> df.contact_id)))
+		            THEN df.contact_id = cid
+		            ELSE (EXISTS (SELECT 1 FROM contact_email own
+		         WHERE own.contact_id = cid AND own.archived_at IS NULL AND own.email = lower(df.address))
+		 AND NOT EXISTS (SELECT 1 FROM contact_email other
+		         WHERE other.email = lower(df.address) AND other.contact_id <> cid)) END
+		   AND NOT EXISTS (SELECT 1 FROM contact_email held
+		         WHERE held.email = lower(df.address) AND held.archived_at IS NULL AND held.contact_id <> cid)
+		   AND NOT EXISTS (SELECT 1 FROM activity_participant df2
+		         WHERE df2.activity_id = a.id AND df2.role = 'from' AND df2.id <> df.id))))),
+		       (CASE WHEN max(a.occurred_at) FILTER (WHERE a.occurred_precision = 'instant' AND (((a.direction = 'inbound' AND (EXISTS (
 		SELECT 1 FROM activity_participant ap
 		 WHERE ap.activity_id = a.id AND ap.role = 'from'
 		   AND CASE WHEN ap.address IS NULL
@@ -4675,8 +4823,24 @@ public.contact_strength_dates_among(cid uuid, aids uuid[]) secdef=false cfg=- ac
 		AND (EXISTS (SELECT 1 FROM contact_email own
 		         WHERE own.contact_id = cid AND own.archived_at IS NULL AND own.email = a.counterparty_email)
 		 AND NOT EXISTS (SELECT 1 FROM contact_email other
-		         WHERE other.email = a.counterparty_email AND other.contact_id <> cid)))))),
-		       (CASE WHEN max(a.occurred_at) FILTER (WHERE a.occurred_precision = 'instant' AND ((a.direction = 'inbound' AND (EXISTS (
+		         WHERE other.email = a.counterparty_email AND other.contact_id <> cid))))) OR (a.direction IS NULL AND a.kind IN ('email','message') AND EXISTS (
+		SELECT 1 FROM activity_participant df
+		 WHERE df.activity_id = a.id AND df.role = 'from' AND df.user_id IS NULL AND CASE WHEN df.address IS NULL
+		              OR EXISTS (SELECT 1 FROM contact_email se
+		                          WHERE se.contact_id = df.contact_id AND se.email = lower(df.address)
+		                            AND (se.archived_at IS NULL OR EXISTS (
+		                                 SELECT 1 FROM contact_email ne
+		                                  WHERE ne.email = lower(df.address) AND ne.archived_at IS NULL
+		                                    AND ne.contact_id <> df.contact_id)))
+		            THEN df.contact_id = cid
+		            ELSE (EXISTS (SELECT 1 FROM contact_email own
+		         WHERE own.contact_id = cid AND own.archived_at IS NULL AND own.email = lower(df.address))
+		 AND NOT EXISTS (SELECT 1 FROM contact_email other
+		         WHERE other.email = lower(df.address) AND other.contact_id <> cid)) END
+		   AND NOT EXISTS (SELECT 1 FROM contact_email held
+		         WHERE held.email = lower(df.address) AND held.archived_at IS NULL AND held.contact_id <> cid)
+		   AND NOT EXISTS (SELECT 1 FROM activity_participant df2
+		         WHERE df2.activity_id = a.id AND df2.role = 'from' AND df2.id <> df.id)))))) = max(a.occurred_at) FILTER (WHERE ((a.direction = 'inbound' AND (EXISTS (
 		SELECT 1 FROM activity_participant ap
 		 WHERE ap.activity_id = a.id AND ap.role = 'from'
 		   AND CASE WHEN ap.address IS NULL
@@ -4695,7 +4859,25 @@ public.contact_strength_dates_among(cid uuid, aids uuid[]) secdef=false cfg=- ac
 		AND (EXISTS (SELECT 1 FROM contact_email own
 		         WHERE own.contact_id = cid AND own.archived_at IS NULL AND own.email = a.counterparty_email)
 		 AND NOT EXISTS (SELECT 1 FROM contact_email other
-		         WHERE other.email = a.counterparty_email AND other.contact_id <> cid))))))) = max(a.occurred_at) FILTER (WHERE (a.direction = 'inbound' AND (EXISTS (
+		         WHERE other.email = a.counterparty_email AND other.contact_id <> cid))))) OR (a.direction IS NULL AND a.kind IN ('email','message') AND EXISTS (
+		SELECT 1 FROM activity_participant df
+		 WHERE df.activity_id = a.id AND df.role = 'from' AND df.user_id IS NULL AND CASE WHEN df.address IS NULL
+		              OR EXISTS (SELECT 1 FROM contact_email se
+		                          WHERE se.contact_id = df.contact_id AND se.email = lower(df.address)
+		                            AND (se.archived_at IS NULL OR EXISTS (
+		                                 SELECT 1 FROM contact_email ne
+		                                  WHERE ne.email = lower(df.address) AND ne.archived_at IS NULL
+		                                    AND ne.contact_id <> df.contact_id)))
+		            THEN df.contact_id = cid
+		            ELSE (EXISTS (SELECT 1 FROM contact_email own
+		         WHERE own.contact_id = cid AND own.archived_at IS NULL AND own.email = lower(df.address))
+		 AND NOT EXISTS (SELECT 1 FROM contact_email other
+		         WHERE other.email = lower(df.address) AND other.contact_id <> cid)) END
+		   AND NOT EXISTS (SELECT 1 FROM contact_email held
+		         WHERE held.email = lower(df.address) AND held.archived_at IS NULL AND held.contact_id <> cid)
+		   AND NOT EXISTS (SELECT 1 FROM activity_participant df2
+		         WHERE df2.activity_id = a.id AND df2.role = 'from' AND df2.id <> df.id))))) THEN 'instant'
+		WHEN max(a.occurred_at) FILTER (WHERE ((a.direction = 'inbound' AND (EXISTS (
 		SELECT 1 FROM activity_participant ap
 		 WHERE ap.activity_id = a.id AND ap.role = 'from'
 		   AND CASE WHEN ap.address IS NULL
@@ -4714,27 +4896,24 @@ public.contact_strength_dates_among(cid uuid, aids uuid[]) secdef=false cfg=- ac
 		AND (EXISTS (SELECT 1 FROM contact_email own
 		         WHERE own.contact_id = cid AND own.archived_at IS NULL AND own.email = a.counterparty_email)
 		 AND NOT EXISTS (SELECT 1 FROM contact_email other
-		         WHERE other.email = a.counterparty_email AND other.contact_id <> cid)))))) THEN 'instant'
-		WHEN max(a.occurred_at) FILTER (WHERE (a.direction = 'inbound' AND (EXISTS (
-		SELECT 1 FROM activity_participant ap
-		 WHERE ap.activity_id = a.id AND ap.role = 'from'
-		   AND CASE WHEN ap.address IS NULL
+		         WHERE other.email = a.counterparty_email AND other.contact_id <> cid))))) OR (a.direction IS NULL AND a.kind IN ('email','message') AND EXISTS (
+		SELECT 1 FROM activity_participant df
+		 WHERE df.activity_id = a.id AND df.role = 'from' AND df.user_id IS NULL AND CASE WHEN df.address IS NULL
 		              OR EXISTS (SELECT 1 FROM contact_email se
-		                          WHERE se.contact_id = ap.contact_id AND se.email = lower(ap.address)
+		                          WHERE se.contact_id = df.contact_id AND se.email = lower(df.address)
 		                            AND (se.archived_at IS NULL OR EXISTS (
 		                                 SELECT 1 FROM contact_email ne
-		                                  WHERE ne.email = lower(ap.address) AND ne.archived_at IS NULL
-		                                    AND ne.contact_id <> ap.contact_id)))
-		            THEN ap.contact_id = cid
+		                                  WHERE ne.email = lower(df.address) AND ne.archived_at IS NULL
+		                                    AND ne.contact_id <> df.contact_id)))
+		            THEN df.contact_id = cid
 		            ELSE (EXISTS (SELECT 1 FROM contact_email own
-		         WHERE own.contact_id = cid AND own.archived_at IS NULL AND own.email = lower(ap.address))
+		         WHERE own.contact_id = cid AND own.archived_at IS NULL AND own.email = lower(df.address))
 		 AND NOT EXISTS (SELECT 1 FROM contact_email other
-		         WHERE other.email = lower(ap.address) AND other.contact_id <> cid)) END) OR (NOT EXISTS (SELECT 1 FROM activity_participant af
-		 WHERE af.activity_id = a.id AND af.role = 'from')
-		AND (EXISTS (SELECT 1 FROM contact_email own
-		         WHERE own.contact_id = cid AND own.archived_at IS NULL AND own.email = a.counterparty_email)
-		 AND NOT EXISTS (SELECT 1 FROM contact_email other
-		         WHERE other.email = a.counterparty_email AND other.contact_id <> cid)))))) IS NOT NULL THEN 'day' END),
+		         WHERE other.email = lower(df.address) AND other.contact_id <> cid)) END
+		   AND NOT EXISTS (SELECT 1 FROM contact_email held
+		         WHERE held.email = lower(df.address) AND held.archived_at IS NULL AND held.contact_id <> cid)
+		   AND NOT EXISTS (SELECT 1 FROM activity_participant df2
+		         WHERE df2.activity_id = a.id AND df2.role = 'from' AND df2.id <> df.id))))) IS NOT NULL THEN 'day' END),
 		       max(a.occurred_at) FILTER (WHERE (a.direction = 'outbound')),
 		       (CASE WHEN max(a.occurred_at) FILTER (WHERE a.occurred_precision = 'day' AND ((a.direction = 'outbound'))) = max(a.occurred_at) FILTER (WHERE (a.direction = 'outbound')) THEN 'day'
 		WHEN max(a.occurred_at) FILTER (WHERE (a.direction = 'outbound')) IS NOT NULL THEN 'instant' END)
@@ -8090,13 +8269,16 @@ public.meeting_readiness.text_bound_insert CREATE TRIGGER text_bound_insert AFTE
 public.meeting_readiness.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.meeting_readiness FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"revision": 20000, "agenda_fingerprint": 20000, "participants_fingerprint": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"agenda_fingerprint":20000,"participants_fingerprint":20000,"revision":20000}')
 public.meeting_readiness_pkey CREATE UNIQUE INDEX meeting_readiness_pkey ON public.meeting_readiness USING btree (attendee_id, activity_id)
 public.member_identity_family(member uuid) secdef=false cfg=- acl=- 
-  WITH RECURSIVE member_identities(id) AS (
-    SELECT member
-    UNION
-    SELECT retired.id FROM app_user retired JOIN member_identities survivor
-      ON retired.merged_into_user_id = survivor.id
-     WHERE retired.removed_at IS NOT NULL)
-  SELECT array_agg(id) FROM member_identities
+BEGIN
+  RETURN (
+    WITH RECURSIVE member_identities(id) AS (
+      SELECT member
+      UNION
+      SELECT retired.id FROM app_user retired JOIN member_identities survivor
+        ON retired.merged_into_user_id = survivor.id
+       WHERE retired.removed_at IS NOT NULL)
+    SELECT array_agg(id) FROM member_identities);
+END;
 
 public.mfa_challenge_spent acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.mfa_challenge_spent.expires_at timestamp with time zone NOT NULL gen=- def=-
@@ -11245,8 +11427,8 @@ BEGIN
   PERFORM touch_strength_dates_of_activities(ARRAY(
     SELECT DISTINCT unnest(ARRAY[o.activity_id, n.activity_id])
       FROM moved_from o JOIN moved_to n ON n.id = o.id
-     WHERE (o.activity_id, o.role, o.contact_id, o.address, o.response)
-           IS DISTINCT FROM (n.activity_id, n.role, n.contact_id, n.address, n.response)));
+     WHERE (o.activity_id, o.role, o.contact_id, o.address, o.response, o.user_id)
+           IS DISTINCT FROM (n.activity_id, n.role, n.contact_id, n.address, n.response, n.user_id)));
   RETURN NULL;
 END;
 
