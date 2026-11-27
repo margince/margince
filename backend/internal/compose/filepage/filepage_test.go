@@ -128,9 +128,9 @@ func openGoneAttachment(accept, language string) *httptest.ResponseRecorder {
 
 func TestAGoneFileOpenedInATabReadsASentenceInTheReadersLanguage(t *testing.T) {
 	for language, sentence := range map[string]string{
-		"en": "This file was deleted or you no longer have access.",
-		"de": "Diese Datei wurde gelöscht oder du hast keinen Zugriff mehr darauf.",
-		"vi": "Tệp này đã bị xóa hoặc bạn không còn quyền truy cập.",
+		"en": "This file was deleted or is no longer accessible.",
+		"de": "Diese Datei wurde gelöscht oder ist nicht mehr zugänglich.",
+		"vi": "Tệp này đã bị xóa hoặc không thể truy cập nữa.",
 	} {
 		rec := openGoneAttachment("text/html,application/xhtml+xml,*/*;q=0.8", language)
 		if rec.Code != http.StatusNotFound || !strings.HasPrefix(rec.Header().Get("Content-Type"), "text/html") {

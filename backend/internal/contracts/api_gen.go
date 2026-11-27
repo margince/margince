@@ -46697,8 +46697,7 @@ type ContactEmail struct {
 // ContactEmailEmailType defines model for ContactEmail.EmailType.
 type ContactEmailEmailType string
 
-// ContactEmailInput One address on a contact, as a writer supplies it. One schema for create and update,
-// so the two cannot describe an address differently.
+// ContactEmailInput One address supplied when creating a contact.
 type ContactEmailInput struct {
 	// Email An address whose local part names a sending system (noreply@, notifications@, receipts@ and the like) is refused with 422 `email_names_no_one`: nobody answers there, so it names no contact.
 	Email     openapi_types.Email         `json:"email"`
@@ -46711,6 +46710,10 @@ type ContactEmailInput struct {
 
 // ContactEmailInputEmailType defines model for ContactEmailInput.EmailType.
 type ContactEmailInputEmailType string
+
+// ContactEmailReplacementInput Mirrors ContactEmailInput except for the state-dependent address ceiling.
+// A held legacy address may remain unchanged; a new address must fit the write limit.
+type ContactEmailReplacementInput = ContactEmailInput
 
 // ContactEmployer The account a contact works at today, by their current primary employment edge — the one `uq_rel_current_primary_employer` keeps unique per contact, so a contact has at most one.
 type ContactEmployer struct {
@@ -49154,7 +49157,9 @@ type CreateRoleRequest struct {
 
 // CreateSavedViewRequest defines model for CreateSavedViewRequest.
 type CreateSavedViewRequest struct {
-	Name  string                 `json:"name" singleline:"true"`
+	Name string `json:"name" singleline:"true"`
+
+	// Query At most 65536 bytes as JSON; a larger one is 422 `too_large` on `query`.
 	Query map[string]interface{} `json:"query"`
 
 	// Resource The list a saved view is over: one of core's lists, or `ext:<unit>:<kind>` for a kind an extension declared. One schema for the record, the create body and the list filter, so the three cannot drift.
@@ -50906,6 +50911,7 @@ type DealRoomInvitationIssued struct {
 
 // DealRoomLinkRequest defines model for DealRoomLinkRequest.
 type DealRoomLinkRequest struct {
+	// Email Looks up an existing participant; stored addresses past the current write limit are accepted.
 	Email openapi_types.Email `json:"email"`
 }
 
@@ -54190,7 +54196,7 @@ type ForecastSufficiencyBasis string
 type FormerMemberRequest struct {
 	DisplayName string `json:"display_name" singleline:"true"`
 
-	// Email Their work address as the source system spelled it. It is the identity the seat is keyed on, so a second record for the same address is refused.
+	// Email Their work address as the source system spelled it. It is the identity the seat is keyed on, so a second record for the same address is refused. A new address holds at most 254 characters. A longer stored address may still resolve a merged member to its survivor.
 	Email openapi_types.Email `json:"email"`
 
 	// LeftAt When they left, when the source system knows it. Recorded on the audit row.
@@ -72326,7 +72332,7 @@ type UpdateCompanyRequest struct {
 	Description *string `json:"description,omitempty"`
 	DisplayName *string `json:"display_name,omitempty" singleline:"true"`
 
-	// Domains Replace-set of the company's live domains (add new, archive removed, flip is_primary). Absent = untouched; an empty array clears all domains.
+	// Domains Replace-set of the company's live domains (add new, archive removed, flip is_primary). Absent = untouched; an empty array clears all domains. A list past 100 domains is 422 `too_many`, unless the company already holds at least as many.
 	Domains *[]CompanyDomainInput `json:"domains,omitempty"`
 
 	// Email The company's general address, for example info@example.com. It never creates or matches a contact.
@@ -72427,9 +72433,14 @@ type UpdateContactRequest struct {
 	// Omitting the field leaves the addresses untouched, like every other field
 	// here. Sending an empty array removes them all, which is a real answer — a
 	// contact who no longer has a working address is a fact worth recording.
-	Emails    *[]ContactEmailInput `json:"emails,omitempty"`
-	FirstName *string              `json:"first_name,omitempty" singleline:"true"`
-	FullName  *string              `json:"full_name,omitempty" singleline:"true"`
+	//
+	// A list past 25 addresses is 422 `too_many`, unless the contact already
+	// holds at least as many: a longer stored list may be sent back, and not grown.
+	// Held legacy addresses may remain unchanged. New addresses must fit the
+	// normalized 254-byte ceiling and name a dotted domain.
+	Emails    *[]ContactEmailReplacementInput `json:"emails,omitempty"`
+	FirstName *string                         `json:"first_name,omitempty" singleline:"true"`
+	FullName  *string                         `json:"full_name,omitempty" singleline:"true"`
 
 	// GreetingRegister Sets how a message to the contact opens (`formal` or `familiar`), or clears it (null) so drafts read the register from the correspondence again.
 	GreetingRegister *UpdateContactRequestGreetingRegister `json:"greeting_register,omitempty"`
@@ -72445,7 +72456,8 @@ type UpdateContactRequest struct {
 	// that now reaches somebody else.
 	//
 	// Omitting the field leaves the numbers untouched. Sending an empty array
-	// removes them all.
+	// removes them all. A list past 25 numbers is 422 `too_many`, unless the
+	// contact already holds at least as many.
 	//
 	// `Contact360.dead_addresses` already names which address bounced; until now the
 	// contract's own remedy for that was to visit the contact page, because the write
@@ -73224,7 +73236,7 @@ type UpdateLossReasonRequest struct {
 type UpdateMemberRequest struct {
 	DisplayName string `json:"display_name" singleline:"true"`
 
-	// Email May change only before the account has been used to sign in.
+	// Email May change only before the account has been used to sign in. A new address holds at most 254 characters; an unchanged stored address may be longer.
 	Email             openapi_types.Email `json:"email"`
 	ExpectedUpdatedAt time.Time           `json:"expected_updated_at"`
 
@@ -73451,7 +73463,9 @@ type UpdateRoleRequestRowScope string
 
 // UpdateSavedViewRequest A partial update; omitted fields keep their stored value.
 type UpdateSavedViewRequest struct {
-	Name  *string                 `json:"name,omitempty" singleline:"true"`
+	Name *string `json:"name,omitempty" singleline:"true"`
+
+	// Query Replaces the stored query whole. At most 65536 bytes as JSON; a larger one is 422 `too_large` on `query`.
 	Query *map[string]interface{} `json:"query,omitempty"`
 }
 

@@ -322,8 +322,8 @@ func referenceKeyFromItsOwner(t *testing.T, e *integration.Env, kind storedobjec
 			ids.NewV7(), e.SeedWonDealLinkedTo(t), key)
 	case storedobjects.KindImport:
 		e.WsExec(t, `
-			INSERT INTO import_run (connector, status, mapping, source_ref, source, captured_by)
-			VALUES ('csv', 'validating', '{}'::jsonb, $1, 'upload', 'human:test')`, key)
+			INSERT INTO import_run (connector, status, mapping, source_ref, captured_by)
+			VALUES ('csv', 'validating', '{}'::jsonb, $1, 'human:test')`, key)
 	case storedobjects.KindRawOriginal:
 		e.WsExec(t, `INSERT INTO raw_capture (source_system, source_id, payload, payload_object)
 			VALUES ('telegram', 'referenced-original', '{}'::jsonb,

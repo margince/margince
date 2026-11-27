@@ -38,7 +38,7 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 
 ## finance_customer_link
 
-10 columns · primary key `(id)` · referenced by 2 foreign keys
+9 columns · primary key `(id)` · referenced by 2 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -46,7 +46,6 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 | `company_id` | `uuid` | yes | Points at `company.id`. |
 | `connection_id` | `uuid` | yes | Points at `finance_connection.id`. |
 | `external_customer_id` | `text` | yes |  |
-| `source_updated_at` | `timestamp with time zone` |  |  |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |

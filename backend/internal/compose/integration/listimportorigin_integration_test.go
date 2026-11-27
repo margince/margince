@@ -21,7 +21,7 @@ func TestListRulesExcludeImportedChangesBeforeCountingAndLimiting(t *testing.T) 
 	f.clock = time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
 	f.check(t)
 	ctx := principal.SystemActing(f.e.Admin(), "system:import-origin-test")
-	run, err := migration.NewRunStore(f.e.DB()).Create(ctx, migration.CreateRunInput{Connector: "csv", Source: "manual", SourceRef: "demo-customers.csv"})
+	run, err := migration.NewRunStore(f.e.DB()).Create(ctx, migration.CreateRunInput{Connector: "csv", SourceRef: "demo-customers.csv"})
 	if err != nil {
 		t.Fatal(err)
 	}

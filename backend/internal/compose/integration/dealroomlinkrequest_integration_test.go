@@ -11,9 +11,13 @@ package integration
 import (
 	"context"
 	"net/http"
+	"strings"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 func TestASellersNewLinkAnswersTheBuyersRequest(t *testing.T) {
@@ -37,6 +41,26 @@ func TestASellersNewLinkAnswersTheBuyersRequest(t *testing.T) {
 	}
 	if got := linkRequestedAt(t, e, room); got != nil {
 		t.Errorf("after the seller issued a new link the roster still shows the ask (%v)", *got)
+	}
+}
+
+func TestABuyerCanRequestALinkForALegacyLongAddress(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	room := openRoomWithABuyer(t, e)
+	participant := participantOf(t, e, room)
+	address := strings.Repeat("a", values.MaxEmailLength) + "@legacy.test"
+	if _, err := e.Pool.Exec(context.Background(),
+		`UPDATE deal_room_participant SET email = @email WHERE id = @participant`,
+		pgx.StrictNamedArgs{"email": address, "participant": participant}); err != nil {
+		t.Fatal(err)
+	}
+	if status := publicCall(t, e, "POST", "/v1/public/rooms/link-request",
+		AnyMap{"email": strings.ToUpper(address)}, nil, nil); status != http.StatusAccepted {
+		t.Fatalf("link request = %d, want 202", status)
+	}
+	if linkRequestedAt(t, e, room) == nil {
+		t.Fatal("the roster does not show the legacy address's request")
 	}
 }
 

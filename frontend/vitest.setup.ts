@@ -361,20 +361,20 @@ if (skewRequest !== "") {
     // zero arguments; the no-argument form is the one this lane moves.
     constructor(...args: [] | ConstructorParameters<typeof Date>) {
       if (args.length === 0) {
-        super(RealDate.now() + skewMs);
+        super(vi.getRealSystemTime() + skewMs);
         return;
       }
       super(...args);
     }
     static now(): number {
-      return RealDate.now() + skewMs;
+      return vi.getRealSystemTime() + skewMs;
     }
   }
   globalThis.Date = SkewedDate as DateConstructor;
   // The instrument proves itself before any test runs. Everything this lane
   // reports rests on the clock actually having moved, and that is one
   // assignment away from being true of nothing.
-  const shifted = Date.now() - RealDate.now();
+  const shifted = Date.now() - vi.getRealSystemTime();
   if (Math.abs(shifted - skewMs) > 1000) {
     throw new Error(
       `the clock-drift skew did not take: Date.now() is ${shifted}ms ahead, want ${skewMs}ms`,
