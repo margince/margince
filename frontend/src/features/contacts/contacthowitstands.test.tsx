@@ -4,6 +4,7 @@ import { cleanup, fireEvent, render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { OpenSourceProvider } from "../../lib/opensource";
 import { ContactHowItStands } from "./contacthowitstands";
 
 type Contact360 = components["schemas"]["Contact360"];
@@ -118,4 +119,78 @@ it("opens a figure's tab through the page's own tab move", () => {
   if (!lastReply) throw new Error("the last-reply figure has no way in");
   fireEvent.click(lastReply);
   expect(onOpenTab).toHaveBeenCalledWith("timeline");
+});
+
+it("says what the newest mail said once a status line is written", () => {
+  const line =
+    "Dana Buyer accepted the revised offer and asked for the contract draft by Friday.";
+  const { container } = render(
+    <QueryClientProvider client={new QueryClient()}>
+      <LocaleProvider initial="en">
+        <ContactHowItStands
+          view={{
+            ...VIEW,
+            relationship_direction: "two_way",
+            standing_line: {
+              text: line,
+              activity_ids: ["a-1", "a-2"],
+              written_at: AS_OF,
+            },
+          }}
+          onOpenTab={() => undefined}
+        />
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+  const sentence = container.querySelector(".standing-sheet-sentence");
+  expect(sentence?.textContent).toBe(line);
+  expect(container.textContent).not.toContain("Both sides have written.");
+  expect(container.textContent).toContain("Margince · 2 sources");
+});
+
+it("opens the mail a status line was read from", () => {
+  const openSource = vi.fn();
+  const mail: components["schemas"]["Activity"] = {
+    id: "a-1",
+    kind: "email",
+    occurred_at: "2026-08-12T15:00:00Z",
+    occurred_precision: "instant",
+    offers_email: false,
+    is_done: false,
+    content_state: "available",
+    source: "manual",
+    captured_by: "human:u-1",
+    created_at: "2026-08-12T15:00:00Z",
+    updated_at: "2026-08-12T15:00:00Z",
+  };
+  const { getByRole } = render(
+    <QueryClientProvider client={new QueryClient()}>
+      <LocaleProvider initial="en">
+        <OpenSourceProvider openSource={openSource}>
+          <ContactHowItStands
+            view={{
+              ...VIEW,
+              activities: {
+                data: [mail],
+                page: { has_more: false },
+              },
+              standing_line: {
+                text: "Dana Buyer asked for the contract draft by Friday.",
+                activity_ids: ["a-1"],
+                written_at: AS_OF,
+              },
+            }}
+            onOpenTab={() => undefined}
+          />
+        </OpenSourceProvider>
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+  fireEvent.click(getByRole("button", { name: /^Email · 12 Aug$/ }));
+  expect(openSource).toHaveBeenCalledWith("a-1");
+});
+
+it("keeps the page's own reading while no status line is written", () => {
+  const text = standingText({ ...VIEW, relationship_direction: "two_way" });
+  expect(text).toContain("Both sides have written.");
 });

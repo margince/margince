@@ -27,7 +27,9 @@ import {
 } from "../../i18n";
 import type { CompanyTab } from "../../lib/companytab";
 import { useCompanyZone } from "../../lib/companyzone";
+import { useSourceOpener } from "../../lib/opensource";
 import { latestWord } from "../../lib/standinglatest";
+import { withStandingLine } from "../../lib/standingline";
 import { activityMarks } from "../../lib/standingmarks";
 import { useViewerZone } from "../../lib/viewerzone";
 import { companyActivityVerdict } from "./companyactivity";
@@ -73,6 +75,7 @@ export function CompanyHowItStands({
   const payment = usePaymentHealth(companyId);
   const healthReason = useHealthReason();
   // The 360's page seeds the line; a wider zoom pages older rows from the list.
+  const openSource = useSourceOpener();
   const history = useRecordTimeline("company", companyId, {
     firstPage: view?.activities,
     enabled: Boolean(view?.activities),
@@ -114,6 +117,11 @@ export function CompanyHowItStands({
     unrated: companyActivityVerdict(view, { t, locale, zone }),
   });
   const word = t(verdict.word);
+  const reading = withStandingLine(
+    { word, sentence: verdict.sentence, tone: verdict.tone },
+    view.standing_line,
+    { rows: history.activities, t, locale, zone, open: openSource },
+  );
   const words = { t, plural, locale, zone, companyZone };
   const { events, gap } = companyTimeline(view, words);
   const peeks: Partial<Record<RatedDimension["key"], StandingPeek>> = {
@@ -129,7 +137,9 @@ export function CompanyHowItStands({
           ? t("co.spine.today")
           : formatDayMonth(view.as_of, locale, zone)
       }
-      verdict={{ word, sentence: verdict.sentence, tone: verdict.tone }}
+      sources={reading.sources}
+      verdict={reading.verdict}
+      citations={reading.citations}
       latest={latestWord(history.activities, {
         ...words,
         record: zone,

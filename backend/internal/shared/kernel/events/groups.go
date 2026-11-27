@@ -98,6 +98,10 @@ func Groups() []Group {
 		// accrues money and must never be stalled behind an evidence write,
 		// and evidence must keep flowing when an accrual is wedged. The two
 		// share a stream and nothing else.
+		// How it stands asks whether a record's status line still holds once
+		// an activity lands on it. Its own group: a model call per activity
+		// must never hold up the evidence ledger beside it.
+		{Name: "cg:standing-line", Streams: forEntities(activityStreamEntity), Types: StandingLineTypes},
 		{Name: "cg:stage-evidence", Streams: forEntities(dealStreamEntity, activityStreamEntity), Types: StageEvidenceTypes},
 		// How each proposed stage move was received, counted on the ledger the
 		// launch gate reads. The APPROVAL stream, because a verdict rides

@@ -11,8 +11,10 @@ import { formatDayMonth } from "../../format/format.dates";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { useCompanyZone } from "../../lib/companyzone";
 import type { ContactTab } from "../../lib/contacttab";
+import { useSourceOpener } from "../../lib/opensource";
 import { navigate } from "../../lib/router";
 import { latestWord } from "../../lib/standinglatest";
+import { withStandingLine } from "../../lib/standingline";
 import { activityMarks } from "../../lib/standingmarks";
 import { useViewerZone } from "../../lib/viewerzone";
 import { contactDims, contactVerdict } from "./contactstanding";
@@ -59,15 +61,22 @@ export function ContactHowItStands({
     { t, plural, locale, zone, companyZone },
     openHistory,
   );
-  const verdict = contactVerdict(view, t) ?? {
-    word: t("record.notShown"),
-    tone: "neutral" as const,
-  };
+  const openSource = useSourceOpener();
+  const { verdict, sources, citations } = withStandingLine(
+    contactVerdict(view, t) ?? {
+      word: t("record.notShown"),
+      tone: "neutral" as const,
+    },
+    view.standing_line,
+    { rows: history.activities, t, locale, zone, open: openSource },
+  );
   const dims = contactDims(view, t, locale, { zone, companyZone });
   return (
     <HowItStands
       date={formatDayMonth(view.as_of, locale, zone)}
+      sources={sources}
       verdict={verdict}
+      citations={citations}
       latest={latestWord(history.activities, {
         ...words,
         record: zone,

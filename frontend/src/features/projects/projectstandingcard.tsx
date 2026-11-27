@@ -11,8 +11,10 @@ import { formatDayMonth } from "../../format/format.dates";
 import { PROJECT_PHASES } from "../../format/projectphase";
 import { type Locale, useLocale, usePlural, useT } from "../../i18n";
 import { useCompanyZone } from "../../lib/companyzone";
+import { useSourceOpener } from "../../lib/opensource";
 import { reveal } from "../../lib/reveal";
 import { latestWord } from "../../lib/standinglatest";
+import { withStandingLine } from "../../lib/standingline";
 import { activityMarks } from "../../lib/standingmarks";
 import { useViewerZone } from "../../lib/viewerzone";
 import { useUndoProjectHealth } from "./projecthealth.queries";
@@ -122,18 +124,27 @@ export function ProjectStanding({
     commitments: commitmentsPeek(view, ctx, reveal(PROJECT_COMMITMENTS_ANCHOR)),
     deals: dealsPeek(view, ctx),
   };
-  const verdict = projectVerdict(view, ctx);
   const reading = projectReading(view);
+  const aiHealth = reading.kind === "assessed" && reading.byAI;
+  // The health job's own sentence keeps its undo, so the line stands aside.
+  const openSource = useSourceOpener();
+  const line = withStandingLine(
+    projectVerdict(view, ctx),
+    aiHealth ? undefined : view.standing_line,
+    { rows: history.activities, t, locale, zone, open: openSource },
+  );
+  const verdict = line.verdict;
   return (
     <HowItStands
       date={formatDayMonth(view.as_of, locale, zone)}
       sources={
-        reading.kind === "assessed" && !reading.byAI
+        line.sources ??
+        (reading.kind === "assessed" && !reading.byAI
           ? { by: "colleague" }
-          : { by: "records" }
+          : { by: "records" })
       }
       verdict={
-        reading.kind === "assessed" && reading.byAI
+        aiHealth
           ? {
               ...verdict,
               sentence: (
@@ -147,6 +158,7 @@ export function ProjectStanding({
             }
           : verdict
       }
+      citations={line.citations}
       latest={latestWord(history.activities, {
         ...ctx,
         record: zone,
