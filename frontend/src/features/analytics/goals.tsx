@@ -7,6 +7,7 @@ import { AppLink } from "../../design-system/applink";
 import { Badge, Button, Field } from "../../design-system/atoms";
 import { Avatar } from "../../design-system/avatar";
 import { DataTable } from "../../design-system/datatable";
+import { PageZones } from "../../design-system/pagezones";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { Meter } from "../../design-system/readings";
@@ -22,7 +23,7 @@ import { type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCompanyZone } from "../../lib/companyzone";
 import { labelFor, valueFor } from "../../lib/labelfor";
-import { navigate, routeHash } from "../../lib/router";
+import { routeHash } from "../../lib/router";
 import { hashWithParams, replaceDial, useUrlParams } from "../../lib/urlstate";
 import { GoalBars, GoalMonths } from "./goals.bars";
 import { GoalEditor, WithdrawConfirm } from "./goals.editor";
@@ -84,17 +85,14 @@ export function SalesGoalsScreen() {
               (each) => each.owner_id === params.get("seller"),
             ) ?? answer.data[0];
           const listed = answer.data.length > 1;
+          // The plan is the work column, so on a phone it comes before the
+          // list of team members rather than after all of them.
           return (
-            <div className={listed ? "goals-board" : undefined}>
-              {listed && (
-                <Roster
-                  roster={answer}
-                  selected={seller?.owner_id}
-                  year={<YearSelect year={year} now={now} />}
-                />
-              )}
-              <div className="goals-board-plan">
-                {seller && (
+            <PageZones
+              shape={listed ? "rail" : "single"}
+              mainClassName="goals-board-plan"
+              main={
+                seller && (
                   <SellerPlan
                     owner={seller.owner_id}
                     year={year}
@@ -102,9 +100,19 @@ export function SalesGoalsScreen() {
                       listed ? undefined : <YearSelect year={year} now={now} />
                     }
                   />
-                )}
-              </div>
-            </div>
+                )
+              }
+              rail={
+                listed && (
+                  <Roster
+                    roster={answer}
+                    selected={seller?.owner_id}
+                    year={<YearSelect year={year} now={now} />}
+                  />
+                )
+              }
+              railLabel={t("goals.roster")}
+            />
           );
         }}
       </QueryGate>
@@ -136,9 +144,9 @@ function YearSelect({ year, now }: Readonly<{ year: number; now: Date }>) {
   );
 }
 
-function openProgress(owner: string, year: number) {
-  navigate(
-    { screen: "progress" },
+function progressHref(owner: string, year: number): string {
+  return hashWithParams(
+    routeHash({ screen: "progress" }),
     new Map([
       ["period", "year"],
       ["year", identifierNumber(year)],
@@ -182,12 +190,12 @@ function SellerPlan({
               }
               footer={
                 answer.published ? undefined : (
-                  <Button
-                    variant="link"
-                    onClick={() => openProgress(answer.owner_id, answer.year)}
+                  <AppLink
+                    className="btn btn-link"
+                    href={progressHref(answer.owner_id, answer.year)}
                   >
                     {t("goals.viewProgress")}
-                  </Button>
+                  </AppLink>
                 )
               }
             >
@@ -313,12 +321,12 @@ function YearSoFar({ plan }: Readonly<{ plan: SalesGoalPlan }>) {
           />
         </>
       )}
-      <Button
-        variant="link"
-        onClick={() => openProgress(plan.owner_id, plan.year)}
+      <AppLink
+        className="btn btn-link"
+        href={progressHref(plan.owner_id, plan.year)}
       >
         {t("goals.viewProgress")}
-      </Button>
+      </AppLink>
     </div>
   );
 }
