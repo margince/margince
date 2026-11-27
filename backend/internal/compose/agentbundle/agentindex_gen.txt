@@ -421,10 +421,6 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `PUT /leads/{id}/manual-signals` | setLeadManualSignal | Enter or replace a manual scoring factor. | Change records | at once |
 | `GET /lead-signal-catalog` | getLeadSignalCatalog | The factors and bands a rep may use as lead scoring input. | Read records | at once |
 | `DELETE /leads/{id}/manual-signals/{factor}` | clearLeadManualSignal | Withdraw a manual scoring factor. | Change records | at once |
-| `GET /lead-sources` | listLeadSources | List lead sources, active and inactive, in display order. | Read records | at once |
-| `POST /lead-sources` | createLeadSource | Add a lead source. | Change records | at once |
-| `PATCH /lead-sources/{id}` | updateLeadSource | Rename, reorder, re-weight or (de)activate a lead source. | Change records | at once |
-| `DELETE /lead-sources/{id}` | deleteLeadSource | Remove a lead source nothing uses. | Change records | at once |
 | `GET /lead-origins` | listLeadOrigins | List lead origins, active and retired, in display order. | Read records | at once |
 | `POST /lead-origins` | createLeadOrigin | Add a lead origin. | Change records | at once |
 | `PATCH /lead-origins/{id}` | updateLeadOrigin | Rename, reorder, re-weight or retire a lead origin. | Change records | at once |

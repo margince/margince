@@ -119,14 +119,14 @@ func TestEndToEnd_coreSalesFlow(t *testing.T) {
 		"full_name":    "Cold Prospect",
 		"email":        "cold@example.org",
 		"company_name": "Unknown AG",
-		"source":       "import:batch-1",
+		"source":       "import",
 	}, nil, &lead)
 	if status != http.StatusCreated {
 		t.Fatalf("create lead = %d %v", status, lead)
 	}
 	status = e.Call(t, "POST", "/v1/leads", AnyMap{
 		"email":  "cold@example.org",
-		"source": "import:batch-2",
+		"source": "import",
 	}, nil, nil)
 	if status != http.StatusConflict {
 		t.Fatalf("duplicate lead = %d, want 409", status)
