@@ -109,8 +109,8 @@ func seedOpenReviewFor(ctx context.Context, t *testing.T, e *channelConsentEnv, 
 	t.Helper()
 	var id ids.UUID
 	if err := e.owner.QueryRow(ctx, `
-		INSERT INTO communication_review (state, kind, reason_code, refusals, initiated_by)
-		SELECT 'needs_repair', 'single', $1,
+		INSERT INTO communication_review (state, reason_code, refusals, initiated_by)
+		SELECT 'needs_repair', $1,
 		       jsonb_agg(jsonb_build_object('address', 'anna@example.test', 'reason_code', r)), $3
 		  FROM unnest($1::text || $2::text[]) AS r
 		RETURNING id`, reason, more, e.user).Scan(&id); err != nil {

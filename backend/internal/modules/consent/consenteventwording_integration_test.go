@@ -104,13 +104,36 @@ func TestConsentStateTracksEachProofVersionAndClearsOnWithdrawal(t *testing.T) {
 	e := setupChannelConsent(t)
 	shown := "Send the newsletter"
 	for _, version := range []string{"policy-1", "policy-2"} {
-		if _, err := e.store.Record(e.ctx, RecordInput{ContactID: e.contact, PurposeID: e.newsletter, NewState: "granted", PolicyText: &shown, PolicyVersion: &version}); err != nil {
-			t.Fatal(err)
+		in := RecordInput{ContactID: e.contact, PurposeID: e.newsletter, NewState: "granted", PolicyText: &shown, PolicyVersion: &version}
+		grant, err := e.store.Record(e.ctx, in)
+		if err != nil || !grant.Changed {
+			t.Fatalf("grant %s: changed=%v err=%v", version, grant.Changed, err)
 		}
-		wordingOf(t, e)
+		assertStateProofVersion(t, e, grant, &version)
+		unchanged, err := e.store.Record(e.ctx, in)
+		if err != nil || unchanged.Changed {
+			t.Fatalf("idempotent grant: changed=%v err=%v", unchanged.Changed, err)
+		}
+		withdrawal, err := e.store.Record(e.ctx, RecordInput{ContactID: e.contact, PurposeID: e.newsletter, NewState: "withdrawn"})
+		if err != nil || !withdrawal.Changed {
+			t.Fatalf("withdrawal: changed=%v err=%v", withdrawal.Changed, err)
+		}
+		assertStateProofVersion(t, e, withdrawal, nil)
 	}
-	if _, err := e.store.Record(e.ctx, RecordInput{ContactID: e.contact, PurposeID: e.newsletter, NewState: "withdrawn"}); err != nil {
+}
+
+func assertStateProofVersion(t *testing.T, e *channelConsentEnv, proof State, want *string) {
+	t.Helper()
+	var state, event *string
+	if err := e.owner.QueryRow(e.ctx, `
+		SELECT c.policy_version, e.policy_version FROM contact_consent c
+		JOIN consent_event e ON e.id = $3
+		WHERE c.contact_id = $1 AND c.purpose_id = $2`, e.contact, e.newsletter, proof.ProofEventID).Scan(&state, &event); err != nil {
 		t.Fatal(err)
 	}
-	wordingOf(t, e)
+	for name, got := range map[string]*string{"state": state, "proof": event} {
+		if (got == nil) != (want == nil) || (got != nil && *got != *want) {
+			t.Errorf("%s policy version = %v, want %v", name, got, want)
+		}
+	}
 }

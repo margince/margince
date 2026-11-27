@@ -237,14 +237,13 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 ## communication_review
 
-10 columns · primary key `(id)` · referenced by 2 foreign keys
+9 columns · primary key `(id)` · referenced by 2 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `delivery_intent_id` | `uuid` |  | The held message this review can resume. |
 | `initiated_by` | `uuid` |  | Points at `app_user.id`. |
-| `kind` | `text`, default `'single'::text` | yes | Always `single`: the column exists for the values it may hold later. |
 | `opened_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `reason_code` | `text` | yes | The strongest reason across the recipients, so a queue can order without opening the snapshot. |
 | `refusals` | `jsonb`, default `'[]'::jsonb` | yes | What was refused, per recipient. |
@@ -262,7 +261,6 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 **Rules**
 
-- `communication_review_kind`: `CHECK ((kind = 'single'))`
 - `communication_review_resolution_shape`: `CHECK (((state = ANY (ARRAY['resolved', 'superseded', 'cancelled'])) = (resolved_at IS NOT NULL)))`
 - `communication_review_state`: `CHECK ((state = ANY (ARRAY['needs_context', 'needs_repair', 'resolved', 'superseded', 'cancelled'])))`
 - `communication_review_supersession_shape`: `CHECK (((state = 'superseded') = (superseded_by IS NOT NULL)))`
@@ -276,8 +274,8 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 **Triggers**
 
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"kind": 20000, "state": 20000, "reason_code": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"kind":20000,"reason_code":2000,"state":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "state": 20000, "reason_code": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"kind":20000,"reason_code":2000,"state":20000}')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"state": 20000, "reason_code": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"reason_code":2000,"state":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"state": 20000, "reason_code": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"reason_code":2000,"state":20000}')`
 
 ## communication_suppression
 

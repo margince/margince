@@ -227,7 +227,7 @@ func sarJudgementSections(pkg *SARPackage, contactID ids.ContactID, authored []i
 		   WHERE ev.source_type = 'activity' AND ev.source_id = ANY($1)`, messages},
 		// The claims erasure deletes: those about the subject, and those read from a
 		// message they wrote or are linked to. Reading and quote follow the body.
-		{&pkg.ConversationClaims, `SELECT c.kind, c.status, c.due_at, c.needs_review, c.source,
+		{&pkg.ConversationClaims, `SELECT c.kind, c.status, c.due_at, c.source,
 		          c.created_at, c.corrected_at, c.archived_at, true AS derived,
 		          CASE WHEN ` + sarContentDisclosed + ` THEN c.body END AS reading,
 		          CASE WHEN ` + sarContentDisclosed + ` THEN c.source_quote END AS quote,

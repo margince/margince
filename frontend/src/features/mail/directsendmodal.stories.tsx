@@ -12,7 +12,6 @@ import { DirectSendModal } from "./directsendmodal";
 const review: components["schemas"]["CommunicationReview"] = {
   id: "01a0aaaa-bbbb-7ccc-8ddd-eeeeffff0001",
   state: "needs_repair",
-  kind: "single",
   reason_code: "no_marketing_consent",
   refusals: [
     {

@@ -26,14 +26,13 @@ import (
 // A saved view is per-user view state (B-E15.12, runtime-config-surface.md
 // §3): it is owned by exactly one human and read back only by that owner.
 // V1 is private — shared/team views are a fast-follow — so the store
-// stamps and enforces owner_id = the caller and writes shared_scope
-// 'private', never widening visibility from the request body. The
+// stamps and enforces owner_id = the caller. The
 // visibility gate here is ownership + tenant RLS, not the shared-record
 // row-scope clause, because a view is a personal preference and not a
 // workspace record governed by the RBAC object matrix's own/team/all
 // scope.
 
-const savedViewColumns = `id, owner_id, shared_scope, resource, name, query, version, created_at, updated_at, archived_at`
+const savedViewColumns = `id, owner_id, resource, name, query, version, created_at, updated_at, archived_at`
 
 // The one key inside a saved view's `query` that carries a filter tree, and the
 // wire field a refusal of it names. Spelled once so the create/update gate and
@@ -48,37 +47,34 @@ const (
 const selectSavedView = "SELECT " + savedViewColumns + " FROM saved_view WHERE "
 
 type savedViewRow struct {
-	ID          ids.SavedViewID
-	OwnerID     ids.UserID
-	SharedScope string
-	Resource    string
-	Name        string
-	Query       map[string]any
-	Version     int64
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
-	ArchivedAt  *time.Time
+	ID         ids.SavedViewID
+	OwnerID    ids.UserID
+	Resource   string
+	Name       string
+	Query      map[string]any
+	Version    int64
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+	ArchivedAt *time.Time
 }
 
 func wireSavedView(v savedViewRow) crmcontracts.SavedView {
-	scope := crmcontracts.SavedViewSharedScope(v.SharedScope)
 	return crmcontracts.SavedView{
-		Id:          openapi_types.UUID(v.ID.UUID),
-		OwnerId:     openapi_types.UUID(v.OwnerID.UUID),
-		SharedScope: &scope,
-		Resource:    v.Resource,
-		Name:        v.Name,
-		Query:       v.Query,
-		Version:     v.Version,
-		CreatedAt:   &v.CreatedAt,
-		UpdatedAt:   &v.UpdatedAt,
-		ArchivedAt:  v.ArchivedAt,
+		Id:         openapi_types.UUID(v.ID.UUID),
+		OwnerId:    openapi_types.UUID(v.OwnerID.UUID),
+		Resource:   v.Resource,
+		Name:       v.Name,
+		Query:      v.Query,
+		Version:    v.Version,
+		CreatedAt:  &v.CreatedAt,
+		UpdatedAt:  &v.UpdatedAt,
+		ArchivedAt: v.ArchivedAt,
 	}
 }
 
 func scanSavedView(r pgx.Row) (savedViewRow, error) {
 	var v savedViewRow
-	err := r.Scan(&v.ID, &v.OwnerID, &v.SharedScope, &v.Resource,
+	err := r.Scan(&v.ID, &v.OwnerID, &v.Resource,
 		&v.Name, &v.Query, &v.Version, &v.CreatedAt, &v.UpdatedAt, &v.ArchivedAt)
 	return v, err
 }
@@ -182,8 +178,8 @@ func (s *Store) CreateSavedView(ctx context.Context, in CreateSavedViewInput) (s
 	var out savedViewRow
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		row := tx.QueryRow(ctx, `
-			INSERT INTO saved_view (owner_id, shared_scope, resource, name, query)
-			VALUES ($1, 'private', $2, $3, $4)
+			INSERT INTO saved_view (owner_id, resource, name, query)
+			VALUES ($1, $2, $3, $4)
 			RETURNING `+savedViewColumns,
 			owner, in.Resource, in.Name, in.Query)
 		var err error

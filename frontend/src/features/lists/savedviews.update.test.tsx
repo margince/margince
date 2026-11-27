@@ -53,7 +53,6 @@ const BY_NAME: ListQuery = {
 const VIP = {
   id: "v-1",
   owner_id: "u-1",
-  shared_scope: "private" as const,
   resource: "contacts",
   name: "VIP by name",
   version: 4,

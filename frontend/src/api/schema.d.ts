@@ -39153,7 +39153,7 @@ export interface components {
             status: "open" | "done" | "dismissed";
             /** Format: date-time */
             due_at?: string | null;
-            /** @description Contradictory evidence exists for this claim. The surface shows both sources and asks — newest-wins is not a resolution. */
+            /** @description This commitment does not pass the current evidence checks. Show the warning instead of presenting it as a current obligation. */
             needs_review: boolean;
             /**
              * Format: date-time
@@ -48626,7 +48626,6 @@ export interface components {
             answers: {
                 [key: string]: string;
             };
-            revision: number;
             /** Format: date-time */
             created_at: string;
             /** Format: date-time */
@@ -51904,12 +51903,6 @@ export interface components {
             id: string;
             /** Format: uuid */
             owner_id: string;
-            /**
-             * @description V1 enforces private.
-             * @default private
-             * @enum {string}
-             */
-            shared_scope: "private" | "team" | "workspace";
             resource: components["schemas"]["SavedViewTarget"];
             name: string;
             /** @description The saved column choice, sort, and filter state, in the list-view vocabulary; persisted and restored verbatim. */
@@ -58384,8 +58377,6 @@ export interface components {
              * @enum {string}
              */
             state: "needs_context" | "needs_repair" | "resolved" | "superseded" | "cancelled";
-            /** @enum {string} */
-            kind: "single";
             /**
              * Format: uuid
              * @description The held message this review can resume. A refused send freezes the message into a held

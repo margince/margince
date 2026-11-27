@@ -299,7 +299,6 @@ function reviewOf(
   return jsonResponse({
     id,
     state: "needs_context",
-    kind: "single",
     reason_code: refusals[0]?.reason_code ?? "no_compatible_evidence",
     refusals,
   });

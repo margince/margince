@@ -5779,21 +5779,6 @@ func (e CommunicationEvidenceSubjectEntityType) Valid() bool {
 	}
 }
 
-// Defines values for CommunicationReviewKind.
-const (
-	CommunicationReviewKindSingle CommunicationReviewKind = "single"
-)
-
-// Valid indicates whether the value is a known member of the CommunicationReviewKind enum.
-func (e CommunicationReviewKind) Valid() bool {
-	switch e {
-	case CommunicationReviewKindSingle:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for CommunicationReviewState.
 const (
 	CommunicationReviewStateCancelled    CommunicationReviewState = "cancelled"
@@ -23839,27 +23824,6 @@ func (e SaveMyTimezoneRequestSource) Valid() bool {
 	case SaveMyTimezoneRequestSourceBrowser:
 		return true
 	case SaveMyTimezoneRequestSourceChosen:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for SavedViewSharedScope.
-const (
-	SavedViewSharedScopePrivate   SavedViewSharedScope = "private"
-	SavedViewSharedScopeTeam      SavedViewSharedScope = "team"
-	SavedViewSharedScopeWorkspace SavedViewSharedScope = "workspace"
-)
-
-// Valid indicates whether the value is a known member of the SavedViewSharedScope enum.
-func (e SavedViewSharedScope) Valid() bool {
-	switch e {
-	case SavedViewSharedScopePrivate:
-		return true
-	case SavedViewSharedScopeTeam:
-		return true
-	case SavedViewSharedScopeWorkspace:
 		return true
 	default:
 		return false
@@ -42335,9 +42299,8 @@ type CommunicationReview struct {
 	// Null for a review whose message could not be held: a channel reply, which the held row's
 	// shape cannot carry; a recipient the installation has since been asked to forget; or a hold
 	// that failed while the refusal still had to be answered.
-	DeliveryIntentId *openapi_types.UUID     `json:"delivery_intent_id,omitempty"`
-	Id               openapi_types.UUID      `json:"id"`
-	Kind             CommunicationReviewKind `json:"kind"`
+	DeliveryIntentId *openapi_types.UUID `json:"delivery_intent_id,omitempty"`
+	Id               openapi_types.UUID  `json:"id"`
 
 	// ReasonCode The strongest reason across the recipients, so a queue can order without opening the snapshot.
 	ReasonCode string `json:"reason_code"`
@@ -42366,9 +42329,6 @@ type CommunicationReview struct {
 	// decision is unspent. The original reason remains on the instruction.
 	WordingCorrection *WordingCorrectionContext `json:"wording_correction,omitempty"`
 }
-
-// CommunicationReviewKind defines model for CommunicationReview.Kind.
-type CommunicationReviewKind string
 
 // CommunicationReviewState What is NEEDED rather than who is blocked: `needs_context` is a fact about the message
 // and stays true whoever is looking at it. `needs_repair` is a refusal no evidence can
@@ -47864,7 +47824,7 @@ type ConversationClaim struct {
 	// LooksKept A guest of the name the promise to invite someone names, at the same company, accepted a later meeting this reader may open. On an open promise with no responsible seat this is a hint and nothing is settled; the reader decides through the settle verb. On `auto_kept` it is the evidence Margince closed on.
 	LooksKept *ConversationClaimLooksKept `json:"looks_kept,omitempty"`
 
-	// NeedsReview Contradictory evidence exists for this claim. The surface shows both sources and asks — newest-wins is not a resolution.
+	// NeedsReview This commitment does not pass the current evidence checks. Show the warning instead of presenting it as a current obligation.
 	NeedsReview bool       `json:"needs_review"`
 	OccurredAt  *time.Time `json:"occurred_at,omitempty"`
 
@@ -61986,7 +61946,6 @@ type OutcomeReview struct {
 
 	// Questions The questions as they were asked, FROZEN at submission. The template they came from is editable, and an edit must not change what this review appears to have asked.
 	Questions       []ReviewQuestion `json:"questions"`
-	Revision        int              `json:"revision"`
 	TemplateKey     string           `json:"template_key"`
 	TemplateVersion int              `json:"template_version"`
 	UpdatedAt       time.Time        `json:"updated_at"`
@@ -68070,18 +68029,12 @@ type SavedView struct {
 	Query map[string]interface{} `json:"query"`
 
 	// Resource The list a saved view is over: one of core's lists, or `ext:<unit>:<kind>` for a kind an extension declared. One schema for the record, the create body and the list filter, so the three cannot drift.
-	Resource SavedViewTarget `json:"resource"`
-
-	// SharedScope V1 enforces private.
-	SharedScope *SavedViewSharedScope `json:"shared_scope,omitempty"`
-	UpdatedAt   *time.Time            `json:"updated_at,omitempty"`
+	Resource  SavedViewTarget `json:"resource"`
+	UpdatedAt *time.Time      `json:"updated_at,omitempty"`
 
 	// Version Optimistic-concurrency version; echo it in If-Match on update.
 	Version int64 `json:"version"`
 }
-
-// SavedViewSharedScope V1 enforces private.
-type SavedViewSharedScope string
 
 // SavedViewListResponse defines model for SavedViewListResponse.
 type SavedViewListResponse struct {

@@ -440,7 +440,6 @@ public.communication_override.captured_by document
 public.communication_override.category document
 public.communication_override.decided_by_level document
 public.communication_override.reason note
-public.communication_review.kind document
 public.communication_review.reason_code note
 public.communication_review.state document
 public.communication_suppression.address document
@@ -931,6 +930,9 @@ public.knowledge_document.ingest_detail document checked: fixed sentences and nu
 public.knowledge_document.ingest_status document
 public.knowledge_document.managed_source document
 public.knowledge_document.storage_key document
+public.language.code exempt bounded by a two-letter shape CHECK
+public.language.label label
+public.language.source document
 public.lawful_basis_confirmation.country document
 public.lead.arrival_origin document
 public.lead.candidate_company_key document
@@ -954,9 +956,6 @@ public.lead.source_system document
 public.lead.status document
 public.lead.status_set_by document
 public.lead.title label
-public.language.code exempt bounded by a two-letter shape CHECK
-public.language.label label
-public.language.source document
 public.lead_disqualify_reason.label label
 public.lead_disqualify_reason.label_key exempt generated from independently checked source columns
 public.lead_disqualify_reason.shipped_label label
@@ -1301,7 +1300,6 @@ public.sales_target.scope_kind document
 public.sales_target.unit document
 public.saved_view.name label
 public.saved_view.resource document
-public.saved_view.shared_scope document
 public.scheduled_send.agent_actor_id document
 public.scheduled_send.held_reason note
 public.scheduled_send.origin_kind document

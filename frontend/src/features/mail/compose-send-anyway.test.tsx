@@ -42,7 +42,6 @@ const INLINE_TEXT = "Why send this one message anyway?";
 const REVIEW = {
   id: "r-1",
   state: "needs_context",
-  kind: "single",
   reason_code: "marketing_objection",
   assessment_revision: "rev-1",
   delivery_intent_id: "intent-1",

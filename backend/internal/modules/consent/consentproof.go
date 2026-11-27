@@ -89,6 +89,13 @@ func upsertConsentWithProof(
 	ctx context.Context, tx pgx.Tx, in RecordInput, sub subject,
 	doiConfirmedAt *time.Time, capturedAt time.Time, keptUntil *time.Time, actorID string,
 ) (ids.UUID, error) {
+	// The version travels with the text, both-or-neither, held by
+	// consent_event_wording_pairs. Doors that show wording without naming a
+	// version — the preference centre, the confirm link — get the default here
+	// rather than each spelling one, because a version each invented would be a
+	// second answer to "which wording was this". Set HERE and not in admitRecord,
+	// which takes its input by value: a default written there never reaches the
+	// INSERT, and the CHECK would refuse every row that door writes.
 	text, version := wordingFor(ConsentState(in.NewState), in.PolicyText, in.PolicyVersion)
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO contact_consent (`+sub.column+`, purpose_id, state, lawful_basis, captured_at, source, policy_version)
@@ -114,13 +121,6 @@ func upsertConsentWithProof(
 		named := string(in.MailboxProof)
 		trigger = &named
 	}
-	// The version travels with the text, both-or-neither, held by
-	// consent_event_wording_pairs. Doors that show wording without naming a
-	// version — the preference centre, the confirm link — get the default here
-	// rather than each spelling one, because a version each invented would be a
-	// second answer to "which wording was this". Set HERE and not in admitRecord,
-	// which takes its input by value: a default written there never reaches the
-	// INSERT, and the CHECK would refuse every row that door writes.
 	// The published row this rests on, where the door knew which one. Written
 	// BESIDE policy_text rather than instead of it: the text stays readable
 	// without a join, and the id is what a reader checks it against.

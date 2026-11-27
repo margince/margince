@@ -1101,7 +1101,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## conversation_claim
 
-21 columns · primary key `(id)` · referenced by 0 foreign keys
+20 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -1113,7 +1113,6 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `due_at` | `timestamp with time zone` |  |  |
 | `evidence_fingerprint` | `text` | yes |  |
 | `kind` | `text` | yes | One of `commitment_ours`, `commitment_theirs`, `open_question`, `decision`, `priority`, `objection` and 2 more. |
-| `needs_review` | `boolean`, default `false` | yes | Contradictory evidence exists for this claim. |
 | `source_activity_id` | `uuid` | yes | Points at `activity.id`. |
 | `source_quote` | `text` | yes | The verbatim excerpt this was read from, never a summary of it, so the reader can check the claim against what was written. |
 | `status` | `text`, default `'open'::text` | yes | `open`: the loop is live. |

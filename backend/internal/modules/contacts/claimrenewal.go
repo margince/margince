@@ -16,7 +16,7 @@ import (
 
 func renewClaimDeadline(ctx context.Context, tx pgx.Tx, in ClaimInput, claim crmcontracts.ConversationClaim, by string) (crmcontracts.ConversationClaim, error) {
 	actor, ok := principal.Actor(ctx)
-	if !ok || storekit.StampIsForAUser(actor.ID) || claim.Status != crmcontracts.ConversationClaimStatusOpen || claim.CorrectedAt != nil || claim.NeedsReview || in.DueAt == nil {
+	if !ok || storekit.StampIsForAUser(actor.ID) || claim.Status != crmcontracts.ConversationClaimStatusOpen || claim.CorrectedAt != nil || in.DueAt == nil {
 		return claim, nil
 	}
 	var args []any

@@ -31,7 +31,6 @@ const INLINE_WARNING = {
 const REVIEW = {
   id: "r-1",
   state: "open",
-  kind: "single",
   reason_code: "no_compatible_evidence",
   refusals: [],
   warning: INLINE_WARNING,

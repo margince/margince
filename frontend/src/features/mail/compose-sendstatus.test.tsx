@@ -66,7 +66,6 @@ describe("a refused send", () => {
       "POST /activities/act-1/send-email": refusedSend({
         id: "r-1",
         state: "open",
-        kind: "single",
         reason_code: "something_new",
         refusals: [{ address: "a@x.com", reason_code: "something_new" }],
       }),

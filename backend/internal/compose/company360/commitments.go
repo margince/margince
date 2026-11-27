@@ -9,7 +9,7 @@ package company360
 //
 // Both sides come from the contacts store reads that the moment card and the
 // deal page already use. Those reads decide grants, the employment edge and the
-// needs_review exclusion. The "ours" read is shared with the moment card.
+// current evidence checks. The "ours" read is shared with the moment card.
 
 import (
 	"context"

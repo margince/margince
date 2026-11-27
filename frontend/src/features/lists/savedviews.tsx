@@ -37,7 +37,7 @@ import { ManageViewsButton } from "./savedviews.manage";
 // what the list is showing, and it makes no claim it cannot keep.
 //
 // It is per-user and private (the server stamps owner_id from the caller and
-// writes shared_scope 'private'), so nothing here asks who may see it — the
+// enforces the caller as owner), so nothing here asks who may see it — the
 // answer is always "only you", and a picker that implied otherwise would be
 // promising a sharing model V1 does not have.
 

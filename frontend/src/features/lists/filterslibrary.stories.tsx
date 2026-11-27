@@ -47,7 +47,6 @@ const view = (
 ): SavedView => ({
   id,
   owner_id: READER_ID,
-  shared_scope: "private",
   resource,
   name,
   query: { filter },
