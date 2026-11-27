@@ -485,7 +485,7 @@ func dealAmountBuilderNames(t testing.TB, columns *regexp.Regexp) map[string]boo
 	t.Helper()
 	names := map[string]bool{}
 	var functions []*ast.FuncDecl
-	err := gatekit.WalkDir("internal", func(filePath string, info fs.DirEntry, err error) error {
+	collect := func(filePath string, info fs.DirEntry, err error) error {
 		if err != nil || info.IsDir() || !strings.HasSuffix(filePath, ".go") ||
 			strings.HasSuffix(filePath, "_test.go") || strings.HasSuffix(filePath, "_gen.go") {
 			return err
@@ -503,9 +503,12 @@ func dealAmountBuilderNames(t testing.TB, columns *regexp.Regexp) map[string]boo
 			}
 		}
 		return nil
-	})
-	if err != nil {
-		t.Fatalf("deriving the deal-amount builders: %v", err)
+	}
+	// A builder in a sibling tree hides a caller there as well as one in internal.
+	for _, root := range append([]string{"internal"}, besideTheModule...) {
+		if err := gatekit.WalkDir(root, collect); err != nil {
+			t.Fatalf("deriving the deal-amount builders under %s: %v", root, err)
+		}
 	}
 	for changed := true; changed; {
 		changed = false

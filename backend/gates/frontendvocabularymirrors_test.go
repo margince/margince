@@ -211,9 +211,14 @@ func tsArrayStrings(t *testing.T, path, marker string) []string {
 		t.Fatalf("%s: the literal after %q is unterminated", path, marker)
 	}
 	var values []string
-	for _, entry := range tsTopLevel(body) {
+	entries := tsTopLevel(body)
+	for i, entry := range entries {
 		entry = strings.TrimSpace(entry)
 		if entry == "" {
+			// A trailing comma leaves one empty entry; an empty one inside is a hole.
+			if i < len(entries)-1 {
+				t.Errorf("%s: the list after %q has an empty entry, an undefined slot this gate cannot read", path, marker)
+			}
 			continue
 		}
 		quote := entry[0]

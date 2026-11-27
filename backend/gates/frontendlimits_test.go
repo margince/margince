@@ -44,32 +44,32 @@ func TestTheFrontendsCopiesOfServerLimitsMatchTheirOwners(t *testing.T) {
 	limits := []frontendLimit{
 		{
 			file: "../frontend/src/components/create.fields.ts", name: "EARLIEST_DAY",
-			read:  regexp.MustCompile(`\bEARLIEST_DAY\s*=\s*"([^"]*)"`),
+			read:  regexp.MustCompile(`\bEARLIEST_DAY\s*=\s*"([^"]*)"\s*;`),
 			owner: fixed(datasource.AcceptedInstantMin),
 			drift: screenRefusesApart,
 		},
 		{
 			file: "../frontend/src/components/create.fields.ts", name: "LATEST_DAY",
-			read:  regexp.MustCompile(`\bLATEST_DAY\s*=\s*"([^"]*)"`),
+			read:  regexp.MustCompile(`\bLATEST_DAY\s*=\s*"([^"]*)"\s*;`),
 			owner: fixed(datasource.AcceptedInstantMax),
 			drift: screenRefusesApart,
 		},
 		{
 			file: "../frontend/src/lib/installationcompany.ts", name: "COMPANY_NAME_MAX",
-			read: regexp.MustCompile(`\bCOMPANY_NAME_MAX\s*=\s*(\d+)`),
+			read: regexp.MustCompile(`\bCOMPANY_NAME_MAX\s*=\s*(\d+)\s*;`),
 			// The anchor company's write refuses a name past this.
 			owner: fixed(strconv.Itoa(values.TextLabelCharacters)),
 			drift: screenRefusesApart,
 		},
 		{
 			file: "../frontend/src/features/settings/rates.tsx", name: "RATE_DIGITS",
-			read:  regexp.MustCompile(`\bRATE_DIGITS\s*=\s*(\d+)`),
+			read:  regexp.MustCompile(`\bRATE_DIGITS\s*=\s*(\d+)\s*;`),
 			owner: fxRateDigits,
 			drift: screenRefusesApart,
 		},
 		{
 			file: "../frontend/src/design-system/rowtags.tsx", name: "WIRE_ROW_TAG_CAP",
-			read:  regexp.MustCompile(`const WIRE_ROW_TAG_CAP\s*=\s*(\d+)\b`),
+			read:  regexp.MustCompile(`const WIRE_ROW_TAG_CAP\s*=\s*(\d+)\s*;`),
 			owner: fixed(strconv.Itoa(storekit.RowTagCap)),
 			drift: "a row page carries storekit.RowTagCap tags, so the strip counts the rest off an array that stopped early",
 		},
@@ -129,7 +129,7 @@ func TestTheFrontendsCopiesOfServerLimitsMatchTheirOwners(t *testing.T) {
 		},
 		{
 			file: "../frontend/src/features/automations/remoteimagebox.ts", name: "REMOTE_IMAGE_BOX",
-			read:  regexp.MustCompile(`export const REMOTE_IMAGE_BOX\s*=\s*["']([^"']*)["']`),
+			read:  regexp.MustCompile(`export const REMOTE_IMAGE_BOX\s*=\s*["']([^"'\n]*)["']\s*;`),
 			owner: fixed(activities.RemoteImageBoxAttribute),
 			drift: "the approval card looks for a box activities.RemoteImageBoxAttribute never marks, so it finds none",
 		},
