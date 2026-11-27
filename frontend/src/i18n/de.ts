@@ -10027,7 +10027,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Wird im Team an Datensätzen, die du bearbeitest, in Auswahllisten und im Audit-Log angezeigt.",
   "settings.greetingName": "Rufname",
   "settings.greetingNameHelp":
-    "Mit diesem Namen wirst du in entworfenen Nachrichten und Begrüßungen angesprochen. Lässt du das Feld leer, gilt das erste Wort deines Anzeigenamens.",
+    "Mit diesem Namen wirst du in entworfenen Nachrichten und Begrüßungen angesprochen. Lässt du das Feld leer, gilt dein Vorname, bei einem vietnamesischen Familiennamen das letzte Wort.",
   "settings.installApp": "Margince-App",
   "settings.installAppHelp":
     "Margince wird auf diesem Gerät als App mit eigenem Fenster und Symbol installiert.",
@@ -16946,7 +16946,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "users.namePlaceholder": "Vollständiger Name",
   "users.greetingLabel": "Rufname",
   "users.greetingHint":
-    "Optional. Nur angeben, wenn der Rufname nicht das erste Wort des vollständigen Namens ist.",
+    "Optional. Leer gilt der Vorname, bei einem vietnamesischen Familiennamen das letzte Wort des Namens.",
   "users.deactivateConfirmTitle": "{name} deaktivieren?",
   "users.deactivateConfirmBody":
     "Die Person wird überall abgemeldet, und ihre Agenten-Passports werden sofort widerrufen. Die Person kann später reaktiviert werden und muss sich dann erneut anmelden.",

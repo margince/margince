@@ -33,3 +33,11 @@ describe("greetingNameOf", () => {
     expect(greetingNameOf({ display_name: "  " })).toBeNull();
   });
 });
+
+it("greets a Vietnamese colleague by the given name, written last", () => {
+  expect(greetingNameOf({ display_name: "Phan Phương Chi" })).toBe("Chi");
+  expect(greetingNameOf({ display_name: "Nguyen Van An" })).toBe("An");
+  expect(greetingNameOf({ display_name: "Đặng Thu Hà" })).toBe("Hà");
+  expect(greetingNameOf({ display_name: "Anna Le" })).toBe("Anna");
+  expect(greetingNameOf({ display_name: "Nguyen" })).toBe("Nguyen");
+});

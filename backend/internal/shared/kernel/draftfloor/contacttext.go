@@ -82,14 +82,14 @@ func FirstName(full string) string {
 }
 
 // GreetingName is the name a greeting to a colleague uses: the greeting name
-// they chose when there is one, else the first word of their display name,
-// which is wrong for "Dr. Sofia Meier" and for a family name written first.
+// they chose when there is one, else the given name of their display name
+// (GivenName), which is still wrong for "Dr. Sofia Meier".
 // The screen applies the same rule in frontend/src/format/greetingname.ts.
 func GreetingName(greeting, display string) string {
 	if chosen := NameLine(greeting); chosen != "" {
 		return chosen
 	}
-	return FirstName(display)
+	return GivenName(display)
 }
 
 // NameLine is a typed name as one line: every run of whitespace, line breaks

@@ -183,7 +183,9 @@ func (s *Service) Get(ctx context.Context, companyID ids.CompanyID, force bool) 
 	if err != nil {
 		return zero, err
 	}
-	lang := identity.BaseLanguageForPrompt(ctx, s.pool)
+	// Written in the reader's language: the cache is per reader and its
+	// fingerprint names the language, so another language writes it again.
+	lang := identity.ReaderLanguageForPrompt(ctx, s.pool)
 	fingerprint, err := Fingerprint(in, s.routingVersion(), lang)
 	if err != nil {
 		return zero, err

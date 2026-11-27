@@ -197,7 +197,7 @@ func (s *GrowthFitService) Get(ctx context.Context, companyID ids.CompanyID, for
 	if err != nil {
 		return zero, err
 	}
-	lang := identity.BaseLanguageForPrompt(ctx, s.pool)
+	lang := identity.ReaderLanguageForPrompt(ctx, s.pool)
 	fingerprint, err := growthFitFingerprint(in, s.routingVersion(), offering, lang)
 	if err != nil {
 		return zero, err

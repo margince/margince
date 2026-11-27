@@ -9752,7 +9752,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Hiển thị với đồng nghiệp trên hồ sơ bạn sửa, trong bộ chọn và trong nhật ký hoạt động.",
   "settings.greetingName": "Tên gọi",
   "settings.greetingNameHelp":
-    "Tên dùng để chào bạn trong bản nháp và lời chào. Nếu để trống, sẽ dùng từ đầu tiên của tên hiển thị.",
+    "Tên dùng để chào bạn trong bản nháp và lời chào. Nếu để trống, sẽ dùng tên của bạn (từ cuối cùng với tên tiếng Việt).",
   "settings.installApp": "Ứng dụng Margince",
   "settings.installAppHelp":
     "Thêm Margince vào thiết bị này thành ứng dụng có cửa sổ và biểu tượng riêng.",
@@ -16477,7 +16477,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "users.namePlaceholder": "Họ và tên",
   "users.greetingLabel": "Tên gọi",
   "users.greetingHint":
-    "Không bắt buộc. Để trống thì lời chào sẽ dùng từ đầu tiên của họ và tên.",
+    "Không bắt buộc. Để trống thì lời chào sẽ dùng tên (từ cuối cùng với tên tiếng Việt).",
   "users.deactivateConfirmTitle": "Vô hiệu hóa {name}?",
   "users.deactivateConfirmBody":
     "Thành viên này sẽ bị đăng xuất ở mọi nơi, và mọi passport họ đã cấp cho agent sẽ bị thu hồi ngay. Có thể kích hoạt lại sau, khi đó họ phải đăng nhập lại.",

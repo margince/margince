@@ -9960,7 +9960,7 @@ export const en = {
     "Shown to colleagues on records you edit, in pickers and in the audit log.",
   "settings.greetingName": "Greeting name",
   "settings.greetingNameHelp":
-    "The name you are greeted by in drafted messages and greetings. Empty uses the first word of your display name.",
+    "The name you are greeted by in drafted messages and greetings. Empty uses your first name, or the last word after a Vietnamese family name.",
   "settings.installApp": "Margince app",
   "settings.installAppHelp":
     "Adds Margince to this device as an app with its own window and icon.",
@@ -16807,7 +16807,7 @@ export const en = {
   "users.namePlaceholder": "Full name",
   "users.greetingLabel": "Greeting name",
   "users.greetingHint":
-    "Optional. Leave empty to let greetings use the first word of the full name.",
+    "Optional. Leave empty to let greetings use the first name, or the last word after a Vietnamese family name.",
   "users.deactivateConfirmTitle": "Deactivate {name}?",
   "users.deactivateConfirmBody":
     "They are signed out everywhere and their agent passports are revoked immediately. They can be reactivated later and must then sign in again.",
