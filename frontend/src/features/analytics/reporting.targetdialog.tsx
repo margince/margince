@@ -1,3 +1,4 @@
+import { MeasurableRosterState, useMeasurableScopes } from "./measurablescopes";
 import "./reporting.css";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
@@ -69,6 +70,12 @@ export function ReportingTargetDialog({
   const fiscalStart = installation.data?.fiscal_year_start_month;
   const [periodStart, setPeriodStart] = useState(
     initialTargetPeriod(target, context),
+  );
+  const people = useMeasurableScopes(
+    context.allowed_scopes.filter((scope) => scope.kind !== "managed_teams"),
+    Number(context.as_of.slice(0, 4)),
+    !target,
+    true,
   );
   const [pipeline, setPipeline] = useState(
     target?.definition.pipeline_id ?? "",
@@ -178,15 +185,16 @@ export function ReportingTargetDialog({
           {target ? (
             <p>{scopeName(scope, t)}</p>
           ) : (
-            <AnalyticsScopePicker
-              scopes={context.allowed_scopes.filter(
-                (scope) => scope.kind !== "managed_teams",
-              )}
-              selected={{ ...scope, label: scope.label ?? "" }}
-              onSelect={(scope) =>
-                setScope({ ...scope, id: scope.id ?? undefined })
-              }
-            />
+            <>
+              <MeasurableRosterState read={people} />
+              <AnalyticsScopePicker
+                scopes={people.scopes}
+                selected={{ ...scope, label: scope.label ?? "" }}
+                onSelect={(scope) =>
+                  setScope({ ...scope, id: scope.id ?? undefined })
+                }
+              />
+            </>
           )}
           <TargetPipelineField
             definition={definition}
