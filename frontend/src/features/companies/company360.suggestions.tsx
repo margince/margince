@@ -4,7 +4,6 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
-import { Panel, PanelBody } from "../../design-system/panel";
 import { sectionState } from "../../design-system/surfacestate";
 import { activityDay } from "../../format/activitywhen";
 import { formatNumber } from "../../format/format";
@@ -167,7 +166,6 @@ export function useSuggestionsBody({
   onOpenEmail,
   onPerform,
   advice,
-  keep,
 }: Readonly<{
   companyId: string;
   view?: Company360;
@@ -186,11 +184,6 @@ export function useSuggestionsBody({
   // merged, deduplicated and capped once. A second list here would be a second
   // answer to "what needs a contact".
   advice?: { findings: Suggestion[]; dropped: number };
-  // Which advice this caller draws; absent, all of it (the advice card). The
-  // Tasks tab passes a predicate because it shows the steps, not the moves. A
-  // tab called Tasks listing a stalled deal would be the advice card again
-  // under a heading that says otherwise.
-  keep?: (suggestion: Suggestion) => boolean;
 }>): {
   // Whether the section has rows worth showing. A withheld, empty or
   // unavailable suggestion block carries none. Advice is additive, and
@@ -200,11 +193,8 @@ export function useSuggestionsBody({
   // How many rows `rows` draws: one node carries several, so a caller weighing
   // what the list holds cannot count them for itself.
   count: number;
-  // Whether any row this section draws offers to answer a specific message.
-  //
-  // Computed from the post-filter list, not the raw advice. A caller skips its
-  // generic "write to them" row only when the reader can see the specific one.
-  // Otherwise a `keep` that filtered the reply out would leave neither offered.
+  // Whether any row this section draws offers to answer a specific message. A
+  // caller skips its generic "write to them" row only when this one is drawn.
   hasDraftReply: boolean;
   // The truncation count and a failed dismissal, additive on top of whatever
   // else the caller's own footer carries.
@@ -244,19 +234,15 @@ export function useSuggestionsBody({
     }
   };
 
-  const all: Suggestion[] = advice?.findings ?? view?.suggestions ?? [];
+  const suggestions: Suggestion[] = advice?.findings ?? view?.suggestions ?? [];
   const nameOf = recordNamesIn(view);
   const dropped = advice ? advice.dropped : view?.suggestions_dropped;
   const state = sectionState(
     view,
     "suggestions",
     Boolean(advice ?? view?.suggestions),
-    all.length,
+    suggestions.length,
   );
-  // The state is read off the whole section, because that is what the grant
-  // and the omission are about. `keep` then narrows what this caller draws. A
-  // caller left with nothing shows nothing, as an empty section does.
-  const suggestions = keep ? all.filter(keep) : all;
   if (state !== "ready" || suggestions.length === 0) {
     const failure = notNow.failure;
     const footer = failure ? <DismissFailed failure={failure} /> : undefined;
@@ -270,11 +256,9 @@ export function useSuggestionsBody({
       footer,
     };
   }
-  // How many the cap dropped, said once on the page. The finds list says it,
-  // being the list left when the proposed steps are set aside. The proposed steps
-  // report none. "2 more" under them would count advice that panel was never
-  // going to draw.
-  const notShown = keep === proposesAStep ? 0 : (dropped ?? 0);
+  // How many the cap dropped. A truncated list with no count reads as "that is
+  // everything".
+  const notShown = dropped ?? 0;
   const footer =
     notShown > 0 || notNow.failure || write.isError ? (
       <>
@@ -357,45 +341,4 @@ export function useSuggestionsBody({
     ),
     footer,
   };
-}
-
-// A suggestion that would become a task. The action decides it, not the kind.
-// A rule that names a prepared step offers one whatever it fired on. Reading
-// the kind here would leave the next such rule out.
-export function proposesAStep(suggestion: Suggestion): boolean {
-  return suggestion.action?.kind === "add_task";
-}
-
-/**
- * ProposedNextSteps is the advice that would become a task, drawn where the
- * tasks are.
- *
- * A recommended step nobody has accepted yet is not on the task list. Without
- * this, a reader who opens Tasks to see what happens next finds nothing
- * scheduled, though a step was worked out two cards away.
- *
- * Only the advice that names a step. A stalled deal and an unanswered mail are
- * moves too, and neither is a task. Drawing them here would copy the advice
- * card under a heading that says otherwise.
- */
-export function ProposedNextSteps(
-  props: Readonly<{
-    companyId: string;
-    view?: Company360;
-    onOpenRecord?: (entityType: string, entityId: string) => void;
-    onOpenReceipt: OpenReceipt;
-    onOpenEmail?: (activityId: string) => void;
-  }>,
-) {
-  const t = useT();
-  const body = useSuggestionsBody({ ...props, keep: proposesAStep });
-  if (!body.ready) {
-    return null;
-  }
-  return (
-    <Panel title={t("co.next.proposed")}>
-      {body.rows}
-      {body.footer && <PanelBody>{body.footer}</PanelBody>}
-    </Panel>
-  );
 }

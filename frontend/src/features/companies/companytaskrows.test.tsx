@@ -11,7 +11,7 @@ import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { pretendReaderZone } from "../../testing/readerzone.testkit";
 import { StoryProviders } from "../../testing/story-utils";
-import { CompanyTaskTable } from "./companytaskstable";
+import { CompanyTaskRows } from "./companytaskrows";
 
 // The screen reads the browser's zone here, so the suite names it.
 beforeEach(() => pretendReaderZone(UTC_ZONE));
@@ -48,30 +48,30 @@ function view(steps: NextStep[]): Company360 {
   };
 }
 
-function renderTable(steps: NextStep[]) {
+function renderRows(steps: NextStep[]) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   return render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <CompanyTaskTable view={view(steps)} />
+        <CompanyTaskRows view={view(steps)} />
       </LocaleProvider>
     </QueryClientProvider>,
   );
 }
 
 function rowOf(subject: string): HTMLElement {
-  const row = screen.getByText(subject).closest("tr");
+  const row = screen.getByText(subject).closest<HTMLElement>(".co-taskrow");
   if (!row) {
-    throw new Error(`no table row holds ${subject}`);
+    throw new Error(`no task row holds ${subject}`);
   }
   return row;
 }
 
-describe("CompanyTaskTable: where each task stands on the 360's own day", () => {
-  it("counts a late task's days from as_of, and the days left on a dated one", () => {
-    renderTable([
+describe("CompanyTaskRows: where each task stands on the 360's own day", () => {
+  it("counts a late task's days from as_of, and draws no due chip on an undated one", () => {
+    renderRows([
       step({
         activity_id: "a-1",
         subject: "Send Dana the renewal paperwork",
@@ -95,27 +95,26 @@ describe("CompanyTaskTable: where each task stands on the 360's own day", () => 
       within(rowOf("Prepare the walkthrough brief")).getByText("In 6 days"),
     ).toBeTruthy();
     expect(
-      within(rowOf("Find a second contact")).getByText("No due date"),
-    ).toBeTruthy();
+      within(rowOf("Find a second contact")).queryByText("No due date"),
+    ).toBeNull();
   });
 
-  it("names the table after its card and draws no tick for a reader who cannot write", () => {
-    renderTable([step({ due_at: "2026-08-13T15:00:00Z" })]);
+  it("draws no tick for a reader who cannot write", () => {
+    renderRows([step({ due_at: "2026-08-13T15:00:00Z" })]);
 
-    expect(screen.getByRole("table", { name: "Tasks" })).toBeTruthy();
     expect(screen.getByText("Due today")).toBeTruthy();
     expect(screen.queryByRole("checkbox")).toBeNull();
   });
 
-  it("says the account has no open task rather than drawing an empty table", () => {
-    renderTable([]);
+  it("says the account has no open task rather than drawing no row", () => {
+    const { container } = renderRows([]);
 
     expect(screen.getByText("No open tasks for this company.")).toBeTruthy();
-    expect(screen.queryByRole("table")).toBeNull();
+    expect(container.querySelector(".co-taskrow")).toBeNull();
   });
 });
 
-describe("CompanyTaskTable: a promise our later mail may have kept", () => {
+describe("CompanyTaskRows: a promise our later mail may have kept", () => {
   const kept = step({
     may_be_done: {
       contact_id: "p-1",
@@ -130,7 +129,7 @@ describe("CompanyTaskTable: a promise our later mail may have kept", () => {
   it("asks the Worklist's question where the list offers the tick", () => {
     render(
       <StoryProviders>
-        <CompanyTaskTable view={view([kept])} renderTick={() => null} />
+        <CompanyTaskRows view={view([kept])} renderTick={() => null} />
       </StoryProviders>,
     );
     const row = rowOf(kept.subject);
@@ -145,9 +144,27 @@ describe("CompanyTaskTable: a promise our later mail may have kept", () => {
   });
 
   it("asks nothing in a list that offers no tick", () => {
-    renderTable([kept]);
+    renderRows([kept]);
     expect(
       screen.queryByRole("button", { name: en["worklist.mayBeDone.done"] }),
     ).toBeNull();
+  });
+});
+
+describe("CompanyTaskRows: the chip line Home's cards draw", () => {
+  it("names the kind of work and the task's lead paragraph, not its details", () => {
+    renderRows([
+      step({
+        task_type: "meet",
+        body: "Dana agreed to look at the samples together.\n\nRoom 2, bring the binder.",
+      }),
+    ]);
+    const row = rowOf("Send Dana the renewal paperwork");
+
+    expect(within(row).getByText(en["task.type.meet"])).toBeTruthy();
+    expect(
+      within(row).getByText("Dana agreed to look at the samples together."),
+    ).toBeTruthy();
+    expect(within(row).queryByText(/Room 2/)).toBeNull();
   });
 });

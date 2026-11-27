@@ -621,8 +621,7 @@ describe("a suggestion on its company's page", () => {
     vi.stubGlobal("fetch", stubBackend({ suggestions: [signalled] }));
     draw(<CompanySuggestions companyId="co-1" />);
 
-    expect(await screen.findByText("Suggested deal")).toBeTruthy();
-    expect(screen.getByText("Acme GmbH: buying signals")).toBeTruthy();
+    expect(await screen.findByText("Acme GmbH: buying signals")).toBeTruthy();
     expect(
       screen.getByText("Signal: They asked for a second phase"),
     ).toBeTruthy();

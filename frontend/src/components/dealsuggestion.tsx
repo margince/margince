@@ -18,7 +18,7 @@ import { ErrorLine } from "../design-system/errorline";
 import { refuseUnreadableField } from "../design-system/formvalidity";
 import { Heading } from "../design-system/heading";
 import { MoneyInput } from "../design-system/moneyinput";
-import { Panel, PanelBody } from "../design-system/panel";
+import { PanelRow } from "../design-system/panel";
 import { useFieldFaults } from "../design-system/savepage";
 import { Select } from "../design-system/select";
 import { Row } from "../design-system/stack";
@@ -428,29 +428,19 @@ export function AcceptSuggestionDialog({
 }
 
 /**
- * The company page's block: this account's open suggestion, beside its signals.
- * Absent when there is none, because "the scout has nothing to say" is not
- * news worth a panel. Plain rather than tinted: the staging card inside already
- * carries the agent's mark, and a second indigo panel would be a second lead.
+ * This account's open deal suggestions, as rows of the company's Tasks list
+ * under what Margince suggests. Nothing when there is none, because "the
+ * scout has nothing to say" is not news worth a row.
  */
 export function CompanySuggestions({
   companyId,
 }: Readonly<{ companyId: string }>) {
-  const t = useT();
   const query = useDealSuggestions({ company_id: companyId });
-  const suggestions = query.data ?? [];
-  if (suggestions.length === 0) {
-    return null;
-  }
-  return (
-    <Panel title={t("dealSuggestion.companyTitle")}>
-      <PanelBody>
-        {suggestions.map((suggestion) => (
-          <DealSuggestionCard key={suggestion.id} suggestion={suggestion} />
-        ))}
-      </PanelBody>
-    </Panel>
-  );
+  return (query.data ?? []).map((suggestion) => (
+    <PanelRow key={suggestion.id} className="dealsuggestion-row">
+      <DealSuggestionCard suggestion={suggestion} />
+    </PanelRow>
+  ));
 }
 
 /**

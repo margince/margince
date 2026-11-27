@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { Panel } from "../../design-system/panel";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import type { AccountScan } from "./accountscan";
@@ -53,7 +54,14 @@ function Needs({ view, opts }: { view?: Company360; opts: ShowOptions }) {
     onPrepareMeeting: opts.onPrepareMeeting,
     scan: opts.scan,
   });
-  return <NeedsList reading={reading} />;
+  return (
+    <Panel
+      title="Tasks"
+      footer={reading.state === "ready" ? reading.footer : undefined}
+    >
+      <NeedsList reading={reading} />
+    </Panel>
+  );
 }
 
 function show(view?: Company360, opts: ShowOptions = {}) {

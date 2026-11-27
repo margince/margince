@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../../api/schema";
+import { Panel } from "../../design-system/panel";
 import { company360 } from "../../testing/company.fixtures";
 import {
   installFetchStub,
@@ -10,8 +11,9 @@ import {
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
-import { DealsCard, ProposedNextSteps } from "./company360";
-import { CompanyTaskTable } from "./companytaskstable";
+import { DealsCard } from "./company360";
+import { CompanyTaskList } from "./companytasklist";
+import { CompanyTaskRows } from "./companytaskrows";
 
 // The company view's Panel-shaped cards, rendered straight from a payload
 // rather than through the screen — so the three answers a card can give are
@@ -347,7 +349,9 @@ function Cards({ view }: Readonly<{ view: View }>) {
     <StoryProviders>
       <div style={{ display: "grid", gap: "var(--space-3)", maxWidth: 420 }}>
         <DealsCard view={view} />
-        <CompanyTaskTable view={view} />
+        <Panel title="Tasks">
+          <CompanyTaskRows view={view} />
+        </Panel>
       </div>
     </StoryProviders>
   );
@@ -361,15 +365,9 @@ export const SectionWithheld: Story = {
 
 export const NothingYet: Story = { render: () => <Cards view={empty} /> };
 
-// The open-task list with a step nobody has accepted yet standing above it:
-// the account has an open deal, nothing is scheduled, and the rule that
-// noticed both has worked out the one thing to do about it. The byline and
-// the indigo verb are the claim the row makes — a machine wrote this sentence
-// — and pressing it writes the task the list beneath is currently empty of.
-//
-// No seeded demo account reaches this pairing, and for a structural reason:
-// every one of them already carries an open task, which is exactly the
-// condition that silences the rule.
+// The Tasks list with a step nobody has accepted yet: an open deal and
+// nothing scheduled. The byline says a machine wrote the step, and its verb
+// writes the task. No demo account reaches this, because each carries a task.
 const recommending: View = {
   ...company360,
   ...populated,
@@ -402,11 +400,15 @@ function RecommendedStep() {
   return (
     <StoryProviders>
       <div style={{ display: "grid", gap: "var(--space-3)", maxWidth: 420 }}>
-        <CompanyTaskTable view={recommending} />
-        <ProposedNextSteps
+        <CompanyTaskList
           companyId="o-1"
           view={recommending}
+          onPrepareMeeting={() => undefined}
+          onDraftTo={() => undefined}
+          onOpenRecord={() => undefined}
           onOpenReceipt={() => undefined}
+          onOpenEmail={() => undefined}
+          onPerform={() => undefined}
         />
       </div>
     </StoryProviders>

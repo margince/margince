@@ -34,3 +34,9 @@
 .form-row.dealsuggestion-money > .field:first-child {
   flex-grow: 2;
 }
+
+/* A suggestion as a row of the account's Tasks list: the card fills the row. */
+.dealsuggestion-row > * {
+  flex: 1 1 auto;
+  min-width: 0;
+}

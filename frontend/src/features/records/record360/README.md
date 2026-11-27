@@ -15,7 +15,7 @@ Every record page reads in the same order, and the parts are here:
 
 - `reading.tsx`: the two reference sections a reader looks up and does not read through, side by side
   (`RecordReadingPair`).
-- `today.tsx`: the "Needs attention" panel (`TodayPanel`) and its two row shapes. One is the move
+- `today.tsx`: the two row shapes of a record's "what to do now" list. One is the move
   the agent is asking for (`FoundMove`); the other is a to-do the record already has (`TodoRow`).
 - `setaside.ts`: the "Not now" a move carries and the Undo after it (`useSetAside`). Each page hands
   in its own two calls, so the deal, contact and company moves are put off the same way.

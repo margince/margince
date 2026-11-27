@@ -18,8 +18,6 @@ export { DealsCard } from "./company360.deals";
 export { medianDaysLabel } from "./company360.strip";
 export {
   nextCommitmentLine,
-  ProposedNextSteps,
-  proposesAStep,
   recordNamesIn,
   type SuggestionAction,
   useSuggestionsBody,

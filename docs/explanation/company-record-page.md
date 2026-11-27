@@ -404,7 +404,7 @@ it. And both hold the caller's activity row scope, so a rep sees the last messag
 The same rule applies: every part is null when it cannot be worked out, because zero is a claim about the
 account.
 
-The signals *card* is separate. It reads `GET /signals` itself with `status=open`. So it owns its own
+The signals *group* on the Tasks tab is separate. It reads `GET /signals` itself with `status=open`. So it owns its own
 loading, `unavailable` and empty states, and does not take those of the 360.
 
 ## The visit baseline

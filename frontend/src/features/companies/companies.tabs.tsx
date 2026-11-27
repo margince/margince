@@ -1,4 +1,3 @@
-import type { ReactNode } from "react";
 import {
   TaskCompleteCheck,
   TaskQuickActions,
@@ -12,16 +11,11 @@ import type { CompanyTab } from "../../lib/companytab";
 import type { OpenReceipt } from "../records/record360";
 import { TaskDetailModal } from "../worklist/taskdetailmodal";
 import type { Company, Company360View } from "./companies";
-import {
-  DealsCard,
-  ProposedNextSteps,
-  type SuggestionAction,
-} from "./company360";
+import { DealsCard, type SuggestionAction } from "./company360";
 import { CompanyNewDealAction } from "./companyactions";
 import { CompanyContractState, CompanyLastOffer } from "./companycommercial";
 import { CompanyProjectsPanel } from "./companyprojects";
-import { CompanyTasksFinds } from "./companytasksfinds";
-import { CompanyTaskTable } from "./companytaskstable";
+import { CompanyTaskList } from "./companytasklist";
 import "./company360.css";
 import "./companytabs.css";
 
@@ -108,23 +102,15 @@ export function CompanyDealsAndTasksTabs({
           view={view}
           failed={failed}
           onOpenTask={onOpenTask}
-          onOpenRecord={onOpenRecord}
-          onOpenReceipt={onOpenReceipt}
           update={taskUpdate}
-          finds={
-            view && (
-              <CompanyTasksFinds
-                companyId={company.id}
-                view={view}
-                onPrepareMeeting={onPrepareMeeting}
-                onDraftTo={onDraftTo}
-                onOpenRecord={onOpenRecord}
-                onOpenReceipt={onOpenReceipt}
-                onOpenEmail={onOpenEmail}
-                onPerform={onPerform}
-              />
-            )
-          }
+          verbs={{
+            onPrepareMeeting,
+            onDraftTo,
+            onOpenRecord,
+            onOpenReceipt,
+            onOpenEmail,
+            onPerform,
+          }}
         />
       )}
       {tab === "tasks" && !company.archived_at && openTaskId && (
@@ -178,30 +164,36 @@ function CompanyDealsTab({
 }
 
 // CompanyTasksTab: the account's open tasks, with the tick-to-complete verb
-// the work queue offers (taskactions.tsx). It is one mutation, so a task
-// finished here is finished on the queue too.
+// the work queue offers (taskactions.tsx), then what Margince suggests and the
+// account's signals, as one list. The tick is one mutation, so a task finished
+// here is finished on the queue too.
 //
-// A withheld section is caught here first: the table leaves it to its caller,
+// A withheld section is caught here first: the list leaves it to its caller,
 // and a blank tab body is what the four-states rule forbids.
 function CompanyTasksTab({
   companyId,
   view,
   failed,
   onOpenTask,
-  onOpenRecord,
-  onOpenReceipt,
   update,
-  finds,
+  verbs,
 }: Readonly<{
   companyId: string;
   view?: Company360View;
   failed: boolean;
   onOpenTask: (activityId: string) => void;
-  onOpenRecord: (entityType: string, entityId: string) => void;
-  onOpenReceipt: OpenReceipt;
   update: ReturnType<typeof useTaskUpdate>;
-  // What Margince found beyond the proposed steps, under them.
-  finds?: ReactNode;
+  // What the suggestions perform: the meeting brief, the composer, the
+  // citations' drawers and a suggestion's own action.
+  verbs: Pick<
+    Parameters<typeof CompanyTaskList>[0],
+    | "onPrepareMeeting"
+    | "onDraftTo"
+    | "onOpenRecord"
+    | "onOpenReceipt"
+    | "onOpenEmail"
+    | "onPerform"
+  >;
 }>) {
   const t = useT();
   if (!view && !failed) {
@@ -230,40 +222,31 @@ function CompanyTasksTab({
       </Panel>
     );
   }
-  // The list first, then the advice that would become a task. Each is its own
-  // card, so the recommended steps never read as rows already on the list.
   return (
-    <div className="co-tab-stack">
-      <CompanyTaskTable
-        view={view}
-        onOpenTask={(step) => onOpenTask(step.activity_id)}
-        renderTick={(step) => (
-          <TaskCompleteCheck
-            activityId={step.activity_id}
-            subject={step.subject}
-            version={step.version}
-            update={update}
-          />
-        )}
-        renderAction={(step) => (
-          <TaskQuickActions
-            activityId={step.activity_id}
-            version={step.version}
-            dueAt={step.due_at}
-            dueHasTime={step.due_has_time}
-            dueIntent={step.due_intent}
-            update={update}
-            showComplete={false}
-          />
-        )}
-      />
-      <ProposedNextSteps
-        companyId={companyId}
-        view={view}
-        onOpenRecord={onOpenRecord}
-        onOpenReceipt={onOpenReceipt}
-      />
-      {finds}
-    </div>
+    <CompanyTaskList
+      companyId={companyId}
+      view={view}
+      onOpenTask={(step) => onOpenTask(step.activity_id)}
+      renderTick={(step) => (
+        <TaskCompleteCheck
+          activityId={step.activity_id}
+          subject={step.subject}
+          version={step.version}
+          update={update}
+        />
+      )}
+      renderAction={(step) => (
+        <TaskQuickActions
+          activityId={step.activity_id}
+          version={step.version}
+          dueAt={step.due_at}
+          dueHasTime={step.due_has_time}
+          dueIntent={step.due_intent}
+          update={update}
+          showComplete={false}
+        />
+      )}
+      {...verbs}
+    />
   );
 }

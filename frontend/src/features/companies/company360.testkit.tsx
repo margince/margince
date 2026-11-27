@@ -7,9 +7,9 @@ import { LocaleProvider } from "../../i18n";
 import { meFixture, READS_RECORDS } from "../../testing/mefixture";
 import { RecordShell } from "../../testing/recordshell.testkit";
 import { CompanyScreen } from "./companies";
-import { ProposedNextSteps, type SuggestionAction } from "./company360";
+import type { SuggestionAction } from "./company360";
 import { type CompanyOverviewProps, CompanyReading } from "./companyreading";
-import { CompanyTasksFinds } from "./companytasksfinds";
+import { CompanyTaskList } from "./companytasklist";
 
 // The rules the composite read exists to keep:
 //
@@ -257,30 +257,22 @@ export function overviewReading(
   );
 }
 
-// The advice rows, through the Tasks tab the record page mounts them on: the
-// proposed steps, then the other finds.
+// The advice rows, through the Tasks list the record page mounts them in.
 export function renderSuggestions(
   three60: Company360,
   onPerform: (action: SuggestionAction) => void = () => {},
 ) {
   render(
-    <>
-      <ProposedNextSteps
-        companyId={three60.company.id}
-        view={three60}
-        onOpenReceipt={() => {}}
-      />
-      <CompanyTasksFinds
-        companyId={three60.company.id}
-        view={three60}
-        onPrepareMeeting={() => {}}
-        onDraftTo={() => {}}
-        onOpenRecord={() => {}}
-        onOpenReceipt={() => {}}
-        onOpenEmail={() => {}}
-        onPerform={onPerform}
-      />
-    </>,
+    <CompanyTaskList
+      companyId={three60.company.id}
+      view={three60}
+      onPrepareMeeting={() => {}}
+      onDraftTo={() => {}}
+      onOpenRecord={() => {}}
+      onOpenReceipt={() => {}}
+      onOpenEmail={() => {}}
+      onPerform={onPerform}
+    />,
   );
 }
 

@@ -14,7 +14,7 @@ import {
   stub,
   view,
 } from "./company360.testkit";
-import { CompanyTaskTable } from "./companytaskstable";
+import { CompanyTaskRows } from "./companytaskrows";
 
 // useMe only asks /v1/me once a workspace slug is resolved, and useCan denies
 // until it answers — so without the slug every in-place editor on this page
@@ -37,7 +37,7 @@ function renderNextSteps(
   three60: Company360,
   onOpenTask?: (step: { activity_id: string }) => void,
 ) {
-  render(<CompanyTaskTable view={three60} onOpenTask={onOpenTask} />);
+  render(<CompanyTaskRows view={three60} onOpenTask={onOpenTask} />);
 }
 
 describe("company view — withheld sections", () => {

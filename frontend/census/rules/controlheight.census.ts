@@ -210,9 +210,9 @@ export const ACCEPTED = new Map<string, string>([
       "thing in a row rather than a list of today's verb groups",
   ],
   [
-    ".co-lead .today-verb .btn, .co-lead .co-todo .btn, .co-lead .panel-head .btn",
+    ".co-tasklist .today-verb .btn, .co-tasklist .co-todo .btn, .co-tasklist .panel-head .btn",
     "the 44px target floor a coarse pointer owes an aimed-at control " +
-      "(WCAG 2.5.8), scoped to the needs-you panel's verbs and its head link — " +
+      "(WCAG 2.5.8), scoped to the Tasks list's suggestion verbs and its head link — " +
       "named one by one rather than as the pane, so the sources under a move's " +
       "reason stay an inline citation run at their own height",
   ],
