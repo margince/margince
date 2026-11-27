@@ -64,12 +64,7 @@ type ChannelPollTarget struct {
 // walk takes. A single broken tenant must not stop every other workspace's
 // messages arriving.
 func DueChannelConnections(ctx context.Context, pool *pgxpool.Pool, provider string) ([]DueChannelConnection, error) {
-	// rls-exempt: fleet enumeration — the workspace table is not workspace-scoped; a scheduled poll carries no tenant, so every workspace is scanned under its own GUC.
-	rows, err := pool.Query(ctx, `SELECT id FROM workspace WHERE archived_at IS NULL`)
-	if err != nil {
-		return nil, fmt.Errorf("capture: listing workspaces for the channel poll scan: %w", err)
-	}
-	workspaces, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	workspaces, err := database.LiveWorkspaces(ctx, pool)
 	if err != nil {
 		return nil, err
 	}

@@ -235,7 +235,7 @@ database:
 **The workspace goes with the context.** Every statement runs inside one transaction. The reads and writes
 of a firing all open through `database.WithWorkspaceTx` (see [write-backbone.md](write-backbone.md)),
 which refuses before any SQL when no workspace is bound. The clock scan is the one place that reads
-across the installation (`enumerateWorkspaces`, a pool query marked `rls-exempt` over the `workspace`
+across the installation (`database.LiveWorkspaces`, a pool query marked `rls-exempt` over the `workspace`
 table). It opens a context per workspace again before any work per record. So nothing after it runs
 without a tenant.
 

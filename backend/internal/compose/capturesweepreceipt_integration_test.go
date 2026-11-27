@@ -167,7 +167,7 @@ func TestEveryPassLeavesAnOKReceiptForEachWorkspace(t *testing.T) {
 		t.Fatalf("the link reconcile: %v", err)
 	}
 
-	workspaces, err := enumerateWorkspaces(ctx, e.Pool)
+	workspaces, err := database.LiveWorkspaces(ctx, e.Pool)
 	if err != nil {
 		t.Fatal(err)
 	}
