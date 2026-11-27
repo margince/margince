@@ -5,8 +5,7 @@
 
 package integration
 
-// A Worklist Done whose body breaks the limits the contract declares is the
-// contract's 422 naming `rows`, not a bare 400.
+// Done refusals name the input to fix, so callers can repair the request.
 
 import (
 	"net/http"
@@ -15,24 +14,27 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
-func TestAWorklistDoneBreakingItsDeclaredLimitsIsA422NamingRows(t *testing.T) {
+func TestAWorklistDoneNamesTheInvalidInput(t *testing.T) {
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Done Refusals", "admin@donerefusals.test", "Admin")
 
 	const aRowID = "00000000-0000-7000-8000-0000000000aa"
-	cases := map[string]AnyMap{
-		"no rows":             {"rows": []AnyMap{}},
-		"a lane with no Done": {"rows": []AnyMap{{"source": "task", "row_id": aRowID}}},
+	cases := map[string]struct {
+		body  AnyMap
+		field string
+	}{
+		"no rows":             {AnyMap{"rows": []AnyMap{}}, "rows"},
+		"a lane with no Done": {AnyMap{"rows": []AnyMap{{"source": "task", "row_id": aRowID}}}, "rows[0].source"},
 	}
-	for name, body := range cases {
+	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
 			var problem problemBody
-			status := e.Call(t, "PUT", "/v1/worklist/done", body, nil, &problem)
+			status := e.Call(t, "PUT", "/v1/worklist/done", tc.body, nil, &problem)
 			if status != http.StatusUnprocessableEntity {
 				t.Fatalf("→ %d %+v, want 422", status, problem)
 			}
-			if !namesField(problem, "rows") {
-				t.Fatalf("the 422 names %+v, want rows", problem.Details.Errors)
+			if !namesField(problem, tc.field) {
+				t.Fatalf("the 422 names %+v, want %s", problem.Details.Errors, tc.field)
 			}
 		})
 	}

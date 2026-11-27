@@ -96,8 +96,8 @@
             "state": "current"
           },
           "abandoned": 0,
-          "runs": 24,
-          "passed": 24,
+          "runs": 27,
+          "passed": 27,
           "cases_failing_often": 0,
           "cases_below_quality_bar": 0,
           "scope": "full_invocation",
@@ -1237,8 +1237,8 @@
             }
           },
           "abandoned": 0,
-          "runs": 24,
-          "passed": 24,
+          "runs": 27,
+          "passed": 27,
           "cases_failing_often": 0,
           "cases_below_quality_bar": 0,
           "measured_on": {
@@ -10747,18 +10747,18 @@
           "sites_current": 57,
           "sites_partial": 0,
           "sites_stale": 0,
-          "runs": 1536,
-          "passed": 1497,
-          "reliability": 0.974609375,
+          "runs": 1545,
+          "passed": 1509,
+          "reliability": 0.9766990291262136,
           "reliability_interval": {
-            "lower": 0.968936,
-            "upper": 0.979269
+            "lower": 0.971251,
+            "upper": 0.981135
           },
-          "slowest_p95_ms": 9462,
+          "slowest_p95_ms": 9335,
           "bands": {
             "certified": 23,
-            "supported_degraded": 19,
-            "not_supported": 5,
+            "supported_degraded": 20,
+            "not_supported": 4,
             "too_few_runs": 10
           }
         },
@@ -10773,14 +10773,14 @@
           "sites_current": 54,
           "sites_partial": 0,
           "sites_stale": 0,
-          "runs": 972,
-          "passed": 965,
-          "reliability": 0.992798353909465,
+          "runs": 975,
+          "passed": 968,
+          "reliability": 0.9928205128205129,
           "reliability_interval": {
-            "lower": 0.988396,
-            "upper": 0.995538
+            "lower": 0.988432,
+            "upper": 0.995552
           },
-          "slowest_p95_ms": 66776,
+          "slowest_p95_ms": 44747,
           "bands": {
             "certified": 33,
             "supported_degraded": 3,
@@ -10833,8 +10833,8 @@
           },
           "band": "certified",
           "state": "current",
-          "runs": 12,
-          "passed": 12,
+          "runs": 15,
+          "passed": 15,
           "records": 2,
           "judge": "claude-sonnet-5-5"
         },
@@ -14334,18 +14334,18 @@
       "sites_current": 57,
       "sites_partial": 0,
       "sites_stale": 3,
-      "runs": 1695,
-      "passed": 1639,
-      "reliability": 0.9669616519174041,
+      "runs": 1704,
+      "passed": 1651,
+      "reliability": 0.9688967136150235,
       "reliability_interval": {
-        "lower": 0.96093,
-        "upper": 0.972089
+        "lower": 0.963039,
+        "upper": 0.973851
       },
-      "slowest_p95_ms": 9462,
+      "slowest_p95_ms": 9335,
       "bands": {
         "certified": 24,
-        "supported_degraded": 19,
-        "not_supported": 7,
+        "supported_degraded": 20,
+        "not_supported": 6,
         "too_few_runs": 10
       }
     },
@@ -14487,14 +14487,14 @@
       "sites_current": 54,
       "sites_partial": 0,
       "sites_stale": 0,
-      "runs": 972,
-      "passed": 965,
-      "reliability": 0.992798353909465,
+      "runs": 975,
+      "passed": 968,
+      "reliability": 0.9928205128205129,
       "reliability_interval": {
-        "lower": 0.988396,
-        "upper": 0.995538
+        "lower": 0.988432,
+        "upper": 0.995552
       },
-      "slowest_p95_ms": 66776,
+      "slowest_p95_ms": 44747,
       "bands": {
         "certified": 33,
         "supported_degraded": 3,
@@ -15545,17 +15545,17 @@
           "scenarios_measured": 4,
           "scenarios_total": 4,
           "runs": 21,
-          "passed": 19,
-          "reliability": 0.9047619047619048,
+          "passed": 21,
+          "reliability": 1,
           "reliability_interval": {
-            "lower": 0.791063,
-            "upper": 0.959737
+            "lower": 0.927459,
+            "upper": 1
           },
-          "latency_p50_ms": 7042,
-          "latency_p95_ms": 9462,
+          "latency_p50_ms": 6356,
+          "latency_p95_ms": 9335,
           "reported": {
-            "accepted": 19,
-            "wrong_answer": 2,
+            "accepted": 21,
+            "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
@@ -15705,8 +15705,8 @@
             "lower": 0.879604,
             "upper": 1
           },
-          "latency_p50_ms": 27191,
-          "latency_p95_ms": 66776,
+          "latency_p50_ms": 25585,
+          "latency_p95_ms": 44747,
           "reported": {
             "accepted": 12,
             "wrong_answer": 0,
@@ -16065,11 +16065,11 @@
           "thinking_level": "low"
         },
         "band": "certified",
-        "runs": 12,
-        "passed": 12,
+        "runs": 15,
+        "passed": 15,
         "reliability": 1,
         "reliability_interval": {
-          "lower": 0.879604,
+          "lower": 0.901307,
           "upper": 1
         },
         "state": "current"
@@ -16192,22 +16192,22 @@
             "env": "cloud_frontier"
           },
           "state": "current",
-          "band": "not_supported",
+          "band": "supported_degraded",
           "judge": "claude-sonnet-5-5",
           "scenarios_measured": 4,
           "scenarios_total": 4,
-          "runs": 21,
-          "passed": 16,
-          "reliability": 0.7619047619047619,
+          "runs": 30,
+          "passed": 26,
+          "reliability": 0.8666666666666667,
           "reliability_interval": {
-            "lower": 0.62663,
-            "upper": 0.859183
+            "lower": 0.767881,
+            "upper": 0.927387
           },
-          "latency_p50_ms": 7042,
-          "latency_p95_ms": 9462,
+          "latency_p50_ms": 6356,
+          "latency_p95_ms": 9335,
           "reported": {
-            "accepted": 16,
-            "wrong_answer": 5,
+            "accepted": 26,
+            "wrong_answer": 4,
             "invalid": 0,
             "abstained": 0
           },
@@ -16350,17 +16350,17 @@
           "judge": "claude-sonnet-5-5",
           "scenarios_measured": 4,
           "scenarios_total": 4,
-          "runs": 12,
-          "passed": 12,
+          "runs": 15,
+          "passed": 15,
           "reliability": 1,
           "reliability_interval": {
-            "lower": 0.879604,
+            "lower": 0.901307,
             "upper": 1
           },
-          "latency_p50_ms": 27191,
-          "latency_p95_ms": 66776,
+          "latency_p50_ms": 25585,
+          "latency_p95_ms": 44747,
           "reported": {
-            "accepted": 12,
+            "accepted": 15,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0

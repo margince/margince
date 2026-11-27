@@ -167,6 +167,9 @@ func parseContactHandles(emails []ContactEmailInput, phones []ContactPhoneInput,
 		}
 		emails[i].Email = parsed.String()
 	}
+	if err := refuseRepeatedAddress(emails); err != nil {
+		return err
+	}
 	for i, p := range phones {
 		parsed, err := values.ParsePhone(p.Phone)
 		if err != nil {
@@ -178,6 +181,22 @@ func parseContactHandles(emails []ContactEmailInput, phones []ContactPhoneInput,
 		return err
 	}
 	return ensureOnePrimary("phone number", phones, func(p ContactPhoneInput) bool { return p.IsPrimary })
+}
+
+// refuseRepeatedAddress refuses one normalized address sent twice, before the
+// unique index answers it as a clash with some other record.
+func refuseRepeatedAddress(emails []ContactEmailInput) error {
+	first := make(map[string]int, len(emails))
+	for i, e := range emails {
+		if at, repeated := first[e.Email]; repeated {
+			return &values.ParseError{
+				Field: fmt.Sprintf("emails[%d].email", i), Code: "duplicate",
+				Message: fmt.Sprintf("the same address is at emails[%d] and emails[%d]; send it once", at, i),
+			}
+		}
+		first[e.Email] = i
+	}
+	return nil
 }
 
 //nolint:unparam // the same shape as its siblings; see writeContactSocial.
