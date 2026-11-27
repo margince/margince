@@ -227,7 +227,7 @@ export function DsrDetail({
   const t = useT();
   const queryClient = useQueryClient();
   const canWork = useCanWrite("privacy_request", "update");
-  const [closing, setClosing] = useState<DsrClosing>(() => requestClosing(dsr));
+  const [closing, editClosing] = useClosingDraft(dsr);
   const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
   const email = useRequesterEmail();
 
@@ -268,7 +268,7 @@ export function DsrDetail({
   }
 
   function draft(change: Partial<DsrClosing>) {
-    setClosing((current) => ({ ...current, ...change }));
+    editClosing(change);
     if ("requesterEmail" in change) faults.edited(REQUESTER_EMAIL);
     if (patch.isError) patch.reset();
   }
@@ -483,6 +483,23 @@ function answerText(dsr: DataSubjectRequest, t: Translator): string {
   if (written === null) return t("privacy.answerRemoved");
   const fixed = ERASURE_ANSWER_LABEL[written];
   return fixed ? t(fixed) : written;
+}
+
+// An answer drafted before the request was retired may name who asked, so it
+// goes with the retirement. One typed after it is the officer's to send.
+function useClosingDraft(
+  dsr: DataSubjectRequest,
+): readonly [DsrClosing, (change: Partial<DsrClosing>) => void] {
+  const [draft, setDraft] = useState<DsrClosing>(() => requestClosing(dsr));
+  const retired = Boolean(dsr.resolution_removed);
+  const [answerRetired, setAnswerRetired] = useState(retired);
+  const closing =
+    answerRetired === retired ? draft : { ...draft, resolution: "" };
+  function edit(change: Partial<DsrClosing>) {
+    setDraft((current) => ({ ...current, ...change }));
+    if ("resolution" in change) setAnswerRetired(retired);
+  }
+  return [closing, edit];
 }
 
 function requestClosing(dsr: DataSubjectRequest): DsrClosing {

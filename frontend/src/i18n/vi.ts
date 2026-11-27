@@ -11508,11 +11508,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "privacy.purposeKey": "Khóa",
   "privacy.purposeLabel": "Nhãn",
   "privacy.purposeKeyHint":
-    "Chữ thường, chữ số và dấu gạch dưới, ví dụ marketing_email. Khóa đi theo nhãn cho đến khi bạn tự nhập.",
+    "Chỉ dùng chữ cái a đến z (không dấu), chữ số 0 đến 9 và dấu gạch dưới, ví dụ marketing_email. Khóa đi theo nhãn cho đến khi bạn tự nhập.",
   "privacy.purposeKeyShape":
-    "Khóa chỉ được chứa chữ thường, chữ số và dấu gạch dưới.",
+    "Khóa chỉ được chứa chữ cái a đến z (không dấu), chữ số 0 đến 9 và dấu gạch dưới.",
   "privacy.purposeLabelTaken":
-    "{label} đã đọc giống như vậy. Chọn một nhãn để phân biệt hai mục đích.",
+    "Nhãn này giống với {label}. Chọn một nhãn khác để phân biệt hai mục đích.",
   "privacy.purposeDoi": "Cần xác nhận kép",
   "privacy.purposeFrequency": "Tần suất",
   "privacy.purposeFrequency.weekly": "Khoảng mỗi tuần một lần",

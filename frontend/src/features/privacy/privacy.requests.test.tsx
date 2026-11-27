@@ -398,6 +398,91 @@ it("prefills the identity check for a request opened through its confirm link", 
   ).toContain(en["privacy.identityCheck.confirm_link"]);
 });
 
+// A refetch can bring the request back retired while its drawer is open. The
+// answer drafted before then may name who asked, so no later write carries it.
+describe("a request retired while its drawer is open", () => {
+  const DRAFTED: DataSubjectRequest = {
+    ...NAMED,
+    kind: "access",
+    status: "open",
+    resolution: "Sent the package to Lena Hoffmann.",
+    identity_verified: true,
+  };
+  const RETIRED: DataSubjectRequest = {
+    ...DRAFTED,
+    subject_ref: "erased+d1",
+    subject_label: null,
+    subject_kind: null,
+    subject_erased: true,
+    resolution: "erased",
+    resolution_removed: true,
+  };
+
+  function renderRetiring() {
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const drawer = (dsr: DataSubjectRequest) => (
+      <DsrDetail
+        dsr={dsr}
+        titleId="dsr-title"
+        nowMs={Date.parse("2026-07-15T00:00:00Z")}
+        onClose={() => {}}
+        onFulfilErasure={() => {}}
+      />
+    );
+    const view = rtlRender(drawer(DRAFTED), {
+      wrapper: ({ children }) => (
+        <QueryClientProvider client={client}>
+          <LocaleProvider initial="en">{children}</LocaleProvider>
+        </QueryClientProvider>
+      ),
+    });
+    return () => view.rerender(drawer(RETIRED));
+  }
+
+  async function answerBox() {
+    return screen.findByRole("textbox", { name: en["privacy.resolution"] });
+  }
+
+  // Mutation: keep the draft across the retirement and the old answer is sent.
+  it("sends no answer drafted before the retirement", async () => {
+    const patched: Patched[] = [];
+    stub(undefined, patched);
+    const retire = renderRetiring();
+    expect(await answerBox()).toHaveValue(DRAFTED.resolution);
+
+    retire();
+    expect(await answerBox()).toHaveValue("");
+    await userEvent.click(
+      await screen.findByRole("button", { name: en["privacy.inProgress"] }),
+    );
+
+    await waitFor(() => expect(patched).toHaveLength(1));
+    expect(patched[0]?.body).toEqual({ status: "in_progress" });
+  });
+
+  it("sends an answer typed after the retirement", async () => {
+    const patched: Patched[] = [];
+    stub(undefined, patched);
+    const retire = renderRetiring();
+    await answerBox();
+
+    retire();
+    const user = userEvent.setup();
+    await user.type(await answerBox(), "Nothing left to send.");
+    await user.click(
+      await screen.findByRole("button", { name: en["privacy.inProgress"] }),
+    );
+
+    await waitFor(() => expect(patched).toHaveLength(1));
+    expect(patched[0]?.body).toEqual({
+      status: "in_progress",
+      resolution: "Nothing left to send.",
+    });
+  });
+});
+
 describe("closing a request with the requester's address", () => {
   const ACCESS: DataSubjectRequest = {
     ...NAMED,

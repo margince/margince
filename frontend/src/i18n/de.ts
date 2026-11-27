@@ -11833,11 +11833,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "privacy.purposeKey": "Schlüssel",
   "privacy.purposeLabel": "Bezeichnung",
   "privacy.purposeKeyHint":
-    "Kleinbuchstaben, Ziffern und Unterstriche, etwa marketing_email. Er folgt der Bezeichnung, bis du einen eigenen eingibst.",
+    "Nur die Buchstaben a bis z (ohne Umlaute), die Ziffern 0 bis 9 und Unterstriche, etwa marketing_email. Er folgt der Bezeichnung, bis du einen eigenen eingibst.",
   "privacy.purposeKeyShape":
-    "Der Schlüssel darf nur Kleinbuchstaben, Ziffern und Unterstriche enthalten.",
+    "Der Schlüssel darf nur die Buchstaben a bis z (ohne Umlaute), die Ziffern 0 bis 9 und Unterstriche enthalten.",
   "privacy.purposeLabelTaken":
-    "{label} liest sich bereits so. Wähle eine Bezeichnung, die die beiden unterscheidet.",
+    "Diese Bezeichnung ähnelt {label}. Wähle eine andere, um die beiden Zwecke zu unterscheiden.",
   "privacy.purposeDoi": "Double-Opt-in erforderlich",
   "privacy.purposeFrequency": "Wie oft",
   "privacy.purposeFrequency.weekly": "Etwa einmal pro Woche",

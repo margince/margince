@@ -11789,11 +11789,11 @@ export const en = {
   "privacy.purposeKey": "Key",
   "privacy.purposeLabel": "Label",
   "privacy.purposeKeyHint":
-    "Lower-case letters, digits and underscores, such as marketing_email. It follows the label until you type your own.",
+    "Only the letters a to z (no accents), the digits 0 to 9 and underscores, such as marketing_email. It follows the label until you type your own.",
   "privacy.purposeKeyShape":
-    "Key may hold only lower-case letters, digits and underscores.",
+    "Key may hold only the letters a to z (no accents), the digits 0 to 9 and underscores.",
   "privacy.purposeLabelTaken":
-    "{label} already reads this way. Choose a label that tells the two apart.",
+    "This label reads like {label}. Choose another label to tell the two purposes apart.",
   "privacy.purposeDoi": "Requires double opt-in",
   "privacy.purposeFrequency": "How often",
   "privacy.purposeFrequency.weekly": "About once a week",

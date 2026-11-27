@@ -34,7 +34,7 @@ func (s *Store) CreatePurpose(ctx context.Context, key, label string, requiresDO
 		return Purpose{}, &ValidationError{Field: fieldKey, Reason: "key and label are required"}
 	}
 	if !commsauthz.PurposeKeyPattern.MatchString(key) {
-		return Purpose{}, &ValidationError{Field: fieldKey, Reason: "use only lower-case letters, digits and underscores, such as marketing_email"}
+		return Purpose{}, &ValidationError{Field: fieldKey, Reason: "use only the letters a to z, the digits 0 to 9 and underscores, such as marketing_email"}
 	}
 	if frequency == "" {
 		frequency = string(crmcontracts.ConsentPurposeFrequencyMonthly)
@@ -82,7 +82,7 @@ func refuseConfusableLabel(ctx context.Context, tx pgx.Tx, label string) error {
 	for _, purpose := range listed {
 		if purposeReading(purpose.Label) == wanted || purposeReading(purpose.Key) == wanted {
 			return &ValidationError{Field: "label", Reason: fmt.Sprintf(
-				"%q already reads this way; choose a label that tells the two purposes apart", purpose.Label)}
+				"this label reads like %q; choose another label to tell the two purposes apart", purpose.Label)}
 		}
 	}
 	return nil

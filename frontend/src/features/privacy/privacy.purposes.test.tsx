@@ -210,7 +210,7 @@ describe("Add purpose", () => {
 
     expect(
       await screen.findByText(
-        "Transactional email already reads this way. Choose a label that tells the two apart.",
+        "This label reads like Transactional email. Choose another label to tell the two purposes apart.",
       ),
     ).toBeVisible();
     expect(
