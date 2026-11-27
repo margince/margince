@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/extregistrytest"
 	"github.com/margince/margince/backend/internal/shared/ports/recordkinds"
@@ -442,6 +443,36 @@ func TestActivityKindsAreStoredSortedOnceAndNullForEveryKind(t *testing.T) {
 	}
 	if got := storedKinds([]string{"meeting", "call", "meeting"}); strings.Join(got, ",") != "call,meeting" {
 		t.Fatalf("kinds must store sorted and once, got %v", got)
+	}
+}
+
+func TestValidateNarrowsOnlyADealFieldToPipelines(t *testing.T) {
+	pipeline := []ids.UUID{ids.New[ids.PipelineKind]().UUID}
+	for _, tc := range []struct {
+		object      string
+		pipelines   []ids.UUID
+		wantRefusal bool
+	}{
+		{"deal", pipeline, false},
+		{"deal", nil, false},
+		{"contact", nil, false},
+		{"contact", pipeline, true},
+		{"activity", pipeline, true},
+	} {
+		errs := Validate(FieldSpec{Object: tc.object, Label: "Tier", Type: TypeText, Source: "manual", PipelineIDs: tc.pipelines})
+		if got := hasFieldError(errs, fieldPipelines, codePipelinesNotDeal); got != tc.wantRefusal {
+			t.Errorf("%s field with %d pipelines: refused = %v, want %v (%+v)", tc.object, len(tc.pipelines), got, tc.wantRefusal, errs)
+		}
+	}
+}
+
+func TestPipelinesAreStoredSortedOnceAndNullForEveryPipeline(t *testing.T) {
+	if got := storedPipelines([]ids.UUID{}); got != nil {
+		t.Fatalf("no pipelines must store NULL, got %v", got)
+	}
+	low, high := ids.UUID{1}, ids.UUID{2}
+	if got := storedPipelines([]ids.UUID{high, low, high}); len(got) != 2 || got[0] != low || got[1] != high {
+		t.Fatalf("pipelines must store sorted and once, got %v", got)
 	}
 }
 

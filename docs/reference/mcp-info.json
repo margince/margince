@@ -19605,6 +19605,14 @@
                 },
                 "type": "array"
               },
+              "pipeline_ids": {
+                "description": "The pipelines the field applies to. Only a deal field may name any; omitted or empty means every pipeline. An id that is not a live pipeline, or ids on another object's field, is refused with a 422.",
+                "items": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "type": "array"
+              },
               "show_in_create": {
                 "default": true,
                 "description": "Whether the field is offered in create dialogs. Omitted means true. An import that keeps provenance from a previous system creates its field with this off.",
@@ -20612,6 +20620,13 @@
                 },
                 "description": "Each picklist option's name in further UI languages, keyed by the option as stored. The stored option stays the value written on records; only its display changes. On a write the map replaces the stored one, and an option the field does not offer is 422 `invalid_translation`.",
                 "type": "object"
+              },
+              "pipeline_ids": {
+                "items": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "type": "array"
               },
               "reportable": {
                 "type": "boolean"

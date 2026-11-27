@@ -6,6 +6,7 @@ import { RecordListsActions } from "../../components/addtoshortlist";
 import { useEmployerSummary } from "../../components/contactemployersummary";
 import {
   customFieldHref,
+  dealNarrowing,
   useCustomFieldDisplay,
   useObjectCustomFields,
 } from "../../components/customfields.form";
@@ -98,7 +99,7 @@ function DealAsideBody({
   const change = useSectionEdits(deal, edit, locale, tagRows.length > 0);
   const owner = useMemberName(deal.owner_id).data;
   const access = useViewOnlyAccess("deal", deal);
-  const cf = useObjectCustomFields("deal");
+  const cf = useObjectCustomFields("deal", "record", dealNarrowing(deal));
   const display = useCustomFieldDisplay();
   const reads = {
     viewerId,

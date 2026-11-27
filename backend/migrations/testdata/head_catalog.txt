@@ -4775,6 +4775,7 @@ public.custom_field.custom_field_activity_kinds_check CHECK (((activity_kinds IS
 public.custom_field.custom_field_activity_kinds_vocabulary CHECK ((activity_kinds <@ ARRAY['call'::text, 'email'::text, 'meeting'::text, 'message'::text, 'note'::text, 'task'::text]))
 public.custom_field.custom_field_created_by_fkey FOREIGN KEY (created_by) REFERENCES app_user(id) ON DELETE RESTRICT
 public.custom_field.custom_field_object_check CHECK ((object = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'activity'::text, 'project'::text, 'relationship'::text, 'partner'::text, 'contract'::text])))
+public.custom_field.custom_field_pipeline_ids_check CHECK (((pipeline_ids IS NULL) OR ((object = 'deal'::text) AND (cardinality(pipeline_ids) > 0))))
 public.custom_field.custom_field_pkey PRIMARY KEY (id)
 public.custom_field.custom_field_reportable_type_check CHECK (((NOT reportable) OR ((object = ANY (ARRAY['deal'::text, 'company'::text])) AND (type = ANY (ARRAY['picklist'::text, 'boolean'::text])))))
 public.custom_field.custom_field_status_check CHECK ((status = ANY (ARRAY['active'::text, 'retired'::text])))
@@ -4786,6 +4787,7 @@ public.custom_field.label_translations jsonb NOT NULL gen=- def='{}'::jsonb
 public.custom_field.object text NOT NULL gen=- def=-
 public.custom_field.option_translations jsonb NOT NULL gen=- def='{}'::jsonb
 public.custom_field.options jsonb gen=- def=-
+public.custom_field.pipeline_ids uuid[] gen=- def=-
 public.custom_field.reportable boolean NOT NULL gen=- def=false
 public.custom_field.show_in_create boolean NOT NULL gen=- def=true
 public.custom_field.slug text NOT NULL gen=- def=-

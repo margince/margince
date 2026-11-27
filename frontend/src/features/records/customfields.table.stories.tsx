@@ -111,6 +111,7 @@ function Table({
           onArchive={noop}
           onSetting={noop}
           onKinds={noop}
+          onPipelines={noop}
         />
       </Panel>
     </StoryProviders>

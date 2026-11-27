@@ -29,7 +29,7 @@ import type { CfObject, CfType } from "../../lib/customfields.logic";
 import { useViewerZone } from "../../lib/viewerzone";
 import { AuditEntryLine } from "../settings/audit";
 import { CustomFieldChoices } from "./customfields.choices";
-import { ActivityKindsSelect } from "./customfields.kinds";
+import { ActivityKindsSelect, PipelinesSelect } from "./customfields.kinds";
 import { objectLabels, typeLabels } from "./customfields.labels";
 import { CustomFieldTranslate } from "./customfields.translations";
 import "./customfields.css";
@@ -84,6 +84,7 @@ export function FieldTable({
   onArchive,
   onSetting,
   onKinds,
+  onPipelines,
   savingField,
 }: Readonly<{
   object: CfObject;
@@ -98,6 +99,8 @@ export function FieldTable({
   onSetting: (field: CustomField, setting: FieldSetting, on: boolean) => void;
   // The activity types an activity field shows on, written on each change.
   onKinds: (field: CustomField, kinds: string[]) => void;
+  // The pipelines a deal field shows in, written on each change.
+  onPipelines: (field: CustomField, pipelineIds: string[]) => void;
   // The id of the field whose settings are being written. Both its switches
   // wait, so a second flip cannot send a version the first one moved.
   savingField?: string;
@@ -156,6 +159,27 @@ export function FieldTable({
                   savingField === field.id
                 }
                 onChange={(kinds) => onKinds(field, kinds)}
+              />
+            ),
+          },
+        ]
+      : []),
+    ...(object === "deal"
+      ? [
+          {
+            key: "pipelines",
+            header: t("cf.pipelines"),
+            render: (field: CustomField) => (
+              <PipelinesSelect
+                aria-label={t("cf.pipelinesFor", { label: field.label })}
+                values={field.pipeline_ids ?? []}
+                disabled={
+                  !canEdit ||
+                  field.status !== "active" ||
+                  field.id === STAGED_ID ||
+                  savingField === field.id
+                }
+                onChange={(pipelineIds) => onPipelines(field, pipelineIds)}
               />
             ),
           },
