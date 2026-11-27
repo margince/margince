@@ -397,4 +397,4 @@ only tone marks, NFC, quotes, dashes and !, and Verbatim none. `langcopytest/sty
 `make style-baseline-shrinks` fails a line its copy at the merge base with `main` lacks, a swap included. `wantStyleWaivers` and `wantStyleDigest` pin its count and
 SHA-256, and the [recut](ui-copy-style.md#copy-the-server-writes) only drops passing or gone lines. Not reached: a member's own draft (`draftfloor`, intro notes),
 the demo mail of `capture/offlinedemo`, the word lists of `draftcheck`, `salutation` and `searchplan`, text returned from a `switch`, and strings outside a table:
-problem details, `crm.yaml` and MCP tool copy (#13561, #13562).
+problem details, `crm.yaml` and MCP tool copy (#13561, #13562). A table whose map type another package declares is not reached either.

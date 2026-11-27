@@ -272,6 +272,8 @@ The check does not reach:
 - the demo mail of `capture/offlinedemo`;
 - word lists a matcher reads (`draftcheck`, `salutation`, `searchplan`);
 - text a function returns from a `switch` and not from a table;
+- a table whose map type another package declares, which the census of
+  language-keyed tables cannot resolve;
 - strings outside a table: problem details, `crm.yaml` and the copy of MCP tools,
   which issues #13561 and #13562 track.
 
