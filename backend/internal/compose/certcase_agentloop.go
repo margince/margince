@@ -344,9 +344,15 @@ func (agentLoopReplay) PromptWindow() int { return runner.MinimumPromptWindow }
 // answers, then grades what that run wrote. The order is the meaning: a run the
 // loop did not bring to its end has no work to grade.
 func (c *agentLoopCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
+	outcome, _ := c.EvaluateRecovery(trace)
+	return outcome
+}
+
+// EvaluateRecovery shares the replay used by grading and recovery reporting.
+func (c *agentLoopCase) EvaluateRecovery(trace aitasks.Trace) (aitasks.Outcome, *aitasks.LoopRecoveryMeasure) {
 	var recorded agentLoopRun
 	if err := json.Unmarshal([]byte(trace.Output), &recorded); err != nil {
-		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: agentLoopSite + ": the run was not recorded: " + err.Error()}
+		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: agentLoopSite + ": the run was not recorded: " + err.Error()}, nil
 	}
 	next := 0
 	res, err := runner.New(c.tools, agentLoopReplay{replies: recorded.Replies, next: &next}).
@@ -355,7 +361,7 @@ func (c *agentLoopCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 		return aitasks.Outcome{
 			Result: aitasks.OutcomeInvalid,
 			Detail: agentLoopSite + ": the loop could not replay the run: " + err.Error(),
-		}
+		}, nil
 	}
 	if res.Outcome != runner.OutcomeCompleted {
 		// The report is an operator artifact about why the run did not end. So it

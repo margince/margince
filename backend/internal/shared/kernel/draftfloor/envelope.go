@@ -211,7 +211,7 @@ func langOrDefault(lang textlang.Lang) textlang.Lang {
 }
 
 // SalutationValue reads an explicitly stored choice without deriving one from
-// the person's name, signature or language.
+// the contact's name, signature or language.
 func SalutationValue[T ~string](value *T) string {
 	if value == nil {
 		return ""

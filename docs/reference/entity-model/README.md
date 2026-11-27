@@ -31,7 +31,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 356 |
-| Columns | 4404 |
+| Columns | 4407 |
 | Foreign keys | 630 |
 | Owning areas | 40 |
 
@@ -43,10 +43,10 @@ Ranked by how many foreign keys point at them.
 |---|---|--:|--:|
 | [`app_user`](identity.md#app_user) | [identity](identity.md) | 52 | 152 |
 | [`activity`](activities.md#activity) | [activities](activities.md) | 93 | 50 |
-| [`contact`](contacts.md#contact) | [contacts](contacts.md) | 49 | 50 |
+| [`contact`](contacts.md#contact) | [contacts](contacts.md) | 50 | 50 |
 | [`company`](contacts.md#company) | [contacts](contacts.md) | 46 | 49 |
 | [`deal`](deals.md#deal) | [deals](deals.md) | 53 | 31 |
-| [`lead`](contacts.md#lead) | [contacts](contacts.md) | 50 | 20 |
+| [`lead`](contacts.md#lead) | [contacts](contacts.md) | 51 | 20 |
 | [`project`](projects.md#project) | [projects](projects.md) | 24 | 13 |
 | [`team`](identity.md#team) | [identity](identity.md) | 6 | 11 |
 | [`legal_entity`](contacts.md#legal_entity) | [contacts](contacts.md) | 30 | 9 |
@@ -257,7 +257,7 @@ erDiagram
 | [`consent_purpose`](consent.md#consent_purpose) | consent | 8 | 8 |
 | [`consent_qualifying_event`](consent.md#consent_qualifying_event) | consent | 17 | 2 |
 | [`consent_text_version`](consent.md#consent_text_version) | consent | 14 | 1 |
-| [`contact`](contacts.md#contact) | contacts | 49 | 50 |
+| [`contact`](contacts.md#contact) | contacts | 50 | 50 |
 | [`contact_acquisition_evidence`](contacts.md#contact_acquisition_evidence) | contacts | 15 | 1 |
 | [`contact_address_country`](contacts.md#contact_address_country) | contacts | 3 | 0 |
 | [`contact_channel_identity`](contacts.md#contact_channel_identity) | contacts | 15 | 0 |
@@ -345,7 +345,7 @@ erDiagram
 | [`knowledge_document`](knowledge.md#knowledge_document) | knowledge | 17 | 1 |
 | [`language`](compose.md#language) | compose | 3 | 8 |
 | [`lawful_basis_confirmation`](consent.md#lawful_basis_confirmation) | consent | 9 | 0 |
-| [`lead`](contacts.md#lead) | contacts | 50 | 20 |
+| [`lead`](contacts.md#lead) | contacts | 51 | 20 |
 | [`lead_disqualify_reason`](contacts.md#lead_disqualify_reason) | contacts | 11 | 1 |
 | [`lead_manual_signal`](contacts.md#lead_manual_signal) | contacts | 12 | 0 |
 | [`lead_origin`](contacts.md#lead_origin) | contacts | 13 | 2 |
@@ -478,7 +478,7 @@ erDiagram
 | [`voice_profile`](ai.md#voice_profile) | ai | 17 | 5 |
 | [`voice_profile_delta`](ai.md#voice_profile_delta) | ai | 10 | 0 |
 | [`voice_profile_version`](ai.md#voice_profile_version) | ai | 24 | 5 |
-| [`web_form`](webforms.md#web_form) | webforms | 25 | 1 |
+| [`web_form`](webforms.md#web_form) | webforms | 26 | 1 |
 | [`web_form_last_post`](webforms.md#web_form_last_post) | webforms | 2 | 0 |
 | [`webhook_delivery`](webhooks.md#webhook_delivery) | webhooks | 19 | 0 |
 | [`webhook_subscription`](webhooks.md#webhook_subscription) | webhooks | 13 | 1 |

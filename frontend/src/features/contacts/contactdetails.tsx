@@ -30,13 +30,13 @@ import { linkedinUrl } from "../../format/weburl";
 import { useLocale, useT } from "../../i18n";
 import { ADDRESS_KEYS } from "../../lib/addresscolumns";
 import { useCanWriteRecord } from "../../lib/capability";
+import { salutationLabel } from "../../lib/contactsalutation";
 import {
   currentEmployer,
   useEmploymentZone,
 } from "../../lib/employmentcurrency";
 import { labelFor } from "../../lib/labelfor";
 import { useMemberName } from "../../lib/membernames";
-import { salutationLabel } from "../../lib/personsalutation";
 import { routeHash } from "../../lib/router";
 import { useRecordCarriesTags } from "../../lib/tags.queries";
 import { useViewerZone } from "../../lib/viewerzone";

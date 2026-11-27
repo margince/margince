@@ -18,4 +18,3 @@ export const Mailbox: Story = { args: { refusal: "mailbox" } };
 
 // A sender who has connected no mailbox is told to connect one.
 export const NoMailbox: Story = { args: { refusal: "noMailbox" } };
-

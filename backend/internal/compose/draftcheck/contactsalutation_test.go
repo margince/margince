@@ -4,9 +4,10 @@
 package draftcheck_test
 
 import (
+	"testing"
+
 	"github.com/margince/margince/backend/internal/compose/draftcheck"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
-	"testing"
 )
 
 func TestAnInventedOrMismatchedSalutationIsReplacedWithTheStoredGreeting(t *testing.T) {

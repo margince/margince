@@ -5,7 +5,7 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import type { ListQuery } from "../../components/listquery";
 import type { MessageKey } from "../../i18n/en";
-import { salutationChoice } from "../../lib/personsalutation";
+import { salutationChoice } from "../../lib/contactsalutation";
 import { ProblemError, unwrap } from "../../lib/problem";
 import { listQueryParams } from "../../lib/tagfilter";
 import type { Lead } from "./leads.list";

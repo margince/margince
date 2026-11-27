@@ -1496,13 +1496,14 @@ Payload for offer.superseded, a sent offer was regenerated into a fresh draft re
 
 Record: `offer` · version 1
 
-Payload for offer.updated: a draft offer was edited, its header or its line items. Names what changed and carries no values, so a subscriber reads the offer for them.
+Payload for offer.updated: an offer was edited or its stored source was normalized. Names the changed fields. Source normalization also carries the stored source and may occur after the offer left draft status.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
 | `data.changed_fields` | array of string | yes | The offer fields the edit moved, by their column names. A line edit names line_items, beside any total it moved. |
 | `data.deal_id` | string (uuid) | yes | The deal this offer belongs to. |
-| `data.offer_id` | string (uuid) | yes | The edited draft offer. |
+| `data.offer_id` | string (uuid) | yes | The edited offer. |
+| `data.source` | string | no | The stored source channel when this edit changed it, including a trigger's normalization. |
 
 ### `onboarding.state_changed`
 

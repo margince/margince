@@ -153,10 +153,9 @@ const (
 // reply failed a privacy check: it showed a reader what they must not see. A
 // reply the validator refused never reached a reader, so it never leaks.
 type Outcome struct {
-	Recovery *LoopRecoveryMeasure
-	Result   string
-	Detail   string
-	Leak     bool
+	Result string
+	Detail string
+	Leak   bool
 }
 
 // KnownOutcome reports whether result is one of the four things a certified
@@ -180,3 +179,6 @@ type LoopRecoveryMeasure struct {
 	Recovered        bool `json:"recovered"`
 	TerminalRepeated bool `json:"terminal_repeated"`
 }
+
+// RefusalRecoveryBand starts a candidate after a fixture-owned failed tool call.
+const RefusalRecoveryBand = "refusal_recovery"

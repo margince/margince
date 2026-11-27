@@ -48,14 +48,17 @@ export function salutationLabel(
     : undefined;
 }
 
-export function salutationFilter(t: ReturnType<typeof useT>) {
+export function salutationFilter() {
   return {
     key: "salutation",
     label: "create.salutation" as const,
     allLabel: "salutation.any" as const,
-    options: salutationOptions(t).map((option) => ({
-      ...option,
-      value: option.value || "unset",
-    })),
+    options: [
+      { value: "unset", label: "salutation.unset" as const },
+      ...Object.entries(SALUTATION_LABELS).map(([value, label]) => ({
+        value,
+        label,
+      })),
+    ],
   };
 }

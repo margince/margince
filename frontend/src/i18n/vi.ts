@@ -7631,7 +7631,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "salutation.mr": "Ông",
   "salutation.ms": "Bà",
   "salutation.none": "Không dùng danh xưng theo giới",
-  "salutation.hint": "Chỉ ghi lựa chọn người đó cung cấp. Không đoán từ tên.",
+  "salutation.hint": "Chỉ ghi lựa chọn liên hệ đã cung cấp. Không đoán từ tên.",
   "history.field.salutation": "Danh xưng",
   "create.fullName": "Họ và tên",
   "create.firstName": "Tên",
@@ -18740,10 +18740,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "webForms.field.senderSecretHint":
     "Khóa ký API Webflow trả về một lần khi tạo webhook. Webhook do một ứng dụng OAuth tạo thì được ký bằng client secret của ứng dụng đó. Để trống cho đến khi có: trước đó biểu mẫu không nhận bài gửi nào.",
   "webForms.field.senderSecretKeep": "Để trống để giữ khóa đã lưu.",
-  "webForms.field.notifyOwnerHint": "Thông báo khi nhận biểu mẫu hoặc khi kế hoạch xử lý giao người phụ trách. Phân công sau đó trong không gian làm việc không gửi thông báo bổ sung.",
-  "webForms.field.notifyOwner": "Thông báo cho người phụ trách mỗi lượt gửi mới",
-  "notifications.class.website_lead.label": "Khách hàng mới từ website",
-  "notifications.class.website_lead.help": "Biểu mẫu website được gửi cho khách hàng tiềm năng hoặc người liên hệ do bạn phụ trách.",
+  "webForms.field.notifyOwnerHint":
+    "Thông báo khi nhận biểu mẫu hoặc sau bước phân công của kế hoạch xử lý. Phân công sau đó trong công ty không gửi thêm thông báo.",
+  "webForms.field.notifyOwner":
+    "Thông báo cho người phụ trách mỗi lượt gửi mới",
+  "notifications.class.website_lead.label": "Lead mới từ trang web",
+  "notifications.class.website_lead.help":
+    "Lượt gửi biểu mẫu trên trang web cho lead hoặc liên hệ do bạn phụ trách.",
   "webForms.field.consentRequired": "Yêu cầu đồng ý trước khi nhận bài gửi",
   "webForms.field.consentWording": "Nội dung đồng ý",
   "webForms.field.consentWordingHint":

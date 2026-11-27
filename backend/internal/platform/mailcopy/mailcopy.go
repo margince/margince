@@ -23,14 +23,7 @@ const (
 	Vietnamese Language = "vi"
 )
 
-// Fallback is the language a message is written in when the installation names
-// one this build has no copy for.
-//
-// It is a FALLBACK rather than a refusal because the alternative is sending
-// nothing: a password link that does not arrive is worse for its reader than an
-// English one, and a weekly summary is worth reading in the wrong language. A
-// build that adds a language to the contract and not to this catalog is caught
-// by the gate, not by a rep's mailbox.
+// Fallback keeps password links and other notices readable when a language has no copy.
 const Fallback = English
 
 // Languages is every language this build carries copy for, in a stable order.

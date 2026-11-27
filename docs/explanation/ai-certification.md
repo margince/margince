@@ -170,24 +170,27 @@ can run up to 12 tries, so the judge is still most of the cost. On the default `
 use of a subscription, not money. The subscription's session limit is shared with all else that uses
 it, so keep a sweep to two or three tasks at the same time.
 
-## Refusal recovery in the scheduled-agent loop
+## Refusal recovery after a tool call
 
-The `refusal_recovery` band seeds one refused read before the candidate's first
-turn. The production runner executes that fixture-owned call. Argument-value,
-unknown-field and field-shape errors pass through read_record's real decoder;
-the fourth case declares an unsupported backend. The candidate receives the real
-refusal observation. The seeded call is marked in the trace and never charged as
-a model request. Normal cases keep the scheduled agent's production budget.
-Recovery cases have at most six runner turns, including the seed and final answer.
+The `refusal_recovery` band starts with one refused read before the first model
+reply. The real runner makes that call. Three cases use the decoder from
+`read_record`. One case answers `unsupported_by_sor`. The model receives the real
+refusal.
 
-Each recovery run reports the first candidate turn's correctness separately from
-mechanical completion of the goal. The record and scenario row keep both counts
-with the same denominator. The judge separately grades the finding's quality and
-sees no code-computed recovery verdict. The report also names observed refusals,
-repaired runs and repeated terminal calls. Only the case's selected refusal class
-counts as its recovery event; missing records and unrelated refusals do not.
-A final answer cannot hide a repeated terminal call or a required write omitted.
-Failed and withheld candidate calls remain in the denominator.
+This seeded call is marked in the trace and costs no model request.
+Normal cases keep their production budget. Recovery cases have at most six
+runner turns, including the seeded call and final answer.
 
-Offline replay tests exercise all four refusal types without model calls or real
-writes. Model certification is measured only by an explicitly requested run.
+The report keeps the first reply's result apart from whether the run ends with
+all required writes. Both rates count every run in the band. The judge grades
+the finding separately and sees no recovery result made by the code.
+The report also counts refused calls, repairs and repeated terminal calls.
+
+Only the case's selected refusal type counts as a recovery event. Missing
+records and other refusals do not count. A final answer cannot hide a repeated
+terminal call or a missing required write. Failed and `withheld` replies still
+count in both rates.
+
+Local replay tests check all four refusal types. They call no model and write
+no real records. Model certification needs a requested run. The live worker
+lane starts from real records; the fixture runner owns this recovery band.

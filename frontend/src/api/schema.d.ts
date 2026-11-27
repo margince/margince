@@ -36201,7 +36201,7 @@ export interface components {
             retrieved_at: string;
         };
         /**
-         * @description Explicitly supplied by a person, an import or an API caller. Never inferred from a name or signature. Null means unset; none means no gendered form.
+         * @description Explicitly supplied by the contact, an import or an API caller. Never inferred from a name or signature. Null means unset; none means no gendered form.
          * @enum {string|null}
          */
         Salutation: "mr" | "ms" | "none" | null;
@@ -97153,6 +97153,7 @@ export interface operations {
             };
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     renameConsentPurpose: {

@@ -9,7 +9,7 @@
 
 import type { components } from "../../api/schema";
 import type { CreateField, CreateFieldOption } from "../../components/create";
-import { salutationChoice } from "../../lib/personsalutation";
+import { salutationChoice } from "../../lib/contactsalutation";
 import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 
 type UpdateLeadRequest = components["schemas"]["UpdateLeadRequest"];

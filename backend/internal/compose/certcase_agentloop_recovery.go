@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	agentLoopRecoveryBand  = "refusal_recovery"
+	agentLoopRecoveryBand  = aitasks.RefusalRecoveryBand
 	agentLoopRecoverySteps = 6
 )
 
@@ -43,16 +43,13 @@ func (s agentLoopToolSurface) recoveryRefusalKind(tool string, args json.RawMess
 	}
 	_, err := agents.DecodeReadRecordArguments(args)
 	if err != nil {
-		var unknown *datasource.UnknownFieldError
-		if errors.As(err, &unknown) {
+		if _, ok := errors.AsType[*datasource.UnknownFieldError](err); ok {
 			return "unknown_field"
 		}
-		var wrongType *json.UnmarshalTypeError
-		if errors.As(err, &wrongType) {
+		if _, ok := errors.AsType[*json.UnmarshalTypeError](err); ok {
 			return "field_shape"
 		}
-		var shape *datasource.FieldShapeError
-		if errors.As(err, &shape) && shape.Got != "" {
+		if shape, ok := errors.AsType[*datasource.FieldShapeError](err); ok && shape.Got != "" {
 			return "field_shape"
 		}
 		return "bad_arguments"
@@ -179,22 +176,21 @@ func (c *agentLoopCase) recoveryMeasure(res runner.Result, replies []string) *ag
 	return out
 }
 
-func (c *agentLoopCase) withRecoveryMeasure(outcome aitasks.Outcome, res runner.Result, replies []string) aitasks.Outcome {
+func (c *agentLoopCase) withRecoveryMeasure(outcome aitasks.Outcome, res runner.Result, replies []string) (aitasks.Outcome, *aitasks.LoopRecoveryMeasure) {
 	measure := c.recoveryMeasure(res, replies)
 	if measure == nil {
-		return outcome
+		return outcome, nil
 	}
-	outcome.Recovery = measure
 	if measure.TerminalRepeated && outcome.Result == aitasks.OutcomeAccepted {
 		outcome.Result = aitasks.OutcomeWrongAnswer
 		outcome.Detail = "a terminally unsupported tool was called again"
 	}
 	encoded, err := json.Marshal(measure)
 	if err != nil {
-		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: err.Error()}
+		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: err.Error()}, measure
 	}
 	outcome.Detail += "; recovery=" + string(encoded)
-	return outcome
+	return outcome, measure
 }
 
 // RecoveryMeasure keeps failed or withheld recovery runs in the denominator.
@@ -203,7 +199,7 @@ func (c *agentLoopCase) RecoveryMeasure(trace aitasks.Trace) *aitasks.LoopRecove
 	if c.band != agentLoopRecoveryBand {
 		return nil
 	}
-	if measure := c.Evaluate(trace).Recovery; measure != nil {
+	if _, measure := c.EvaluateRecovery(trace); measure != nil {
 		return measure
 	}
 	return &aitasks.LoopRecoveryMeasure{}

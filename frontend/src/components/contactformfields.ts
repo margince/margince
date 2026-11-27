@@ -1,6 +1,6 @@
 import { EMAIL_TYPE_LABEL, PHONE_TYPE_LABEL } from "../format/contactchannels";
 import { GREETING_REGISTER_LABEL } from "../format/greetingregister";
-import { salutationChoice, salutationField } from "../lib/personsalutation";
+import { salutationChoice, salutationField } from "../lib/contactsalutation";
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 

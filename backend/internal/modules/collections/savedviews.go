@@ -23,14 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/recordkinds"
 )
 
-// A saved view is per-user view state (B-E15.12, runtime-config-surface.md
-// §3): it is owned by exactly one human and read back only by that owner.
-// V1 is private — shared/team views are a fast-follow — so the store
-// stamps and enforces owner_id = the caller. The
-// visibility gate here is ownership + tenant RLS, not the shared-record
-// row-scope clause, because a view is a personal preference and not a
-// workspace record governed by the RBAC object matrix's own/team/all
-// scope.
+// Saved views belong to one user. Reads enforce ownership and workspace RLS.
 
 const savedViewColumns = `id, owner_id, resource, name, query, version, created_at, updated_at, archived_at`
 

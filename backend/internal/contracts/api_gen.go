@@ -42793,7 +42793,7 @@ type Company360Contact struct {
 	// contact is gone, what happened is not.
 	Routes *Company360ContactRoutes `json:"routes,omitempty"`
 
-	// Salutation Explicitly supplied by a person, an import or an API caller. Never inferred from a name or signature. Null means unset; none means no gendered form.
+	// Salutation Explicitly supplied by the contact, an import or an API caller. Never inferred from a name or signature. Null means unset; none means no gendered form.
 	Salutation *Salutation `json:"salutation,omitempty"`
 
 	// Strength Deterministic relationship-strength (features/07 §4) — a transparent function over captured
@@ -46001,7 +46001,7 @@ type Contact struct {
 	// RelationshipMark Set when the workspace's relationship to this contact is not an ordinary one. `vendor_marketing` is a named sender who only pitches something to this business and whom nobody here has answered. The default contact lists leave a marked contact out; a text search and a read by id still find it. Null is not marked. Written through `PATCH /contacts/{id}` or by the sender check, never by the request body of a create.
 	RelationshipMark *ContactRelationshipMark `json:"relationship_mark,omitempty"`
 
-	// Salutation Explicitly supplied by a person, an import or an API caller. Never inferred from a name or signature. Null means unset; none means no gendered form.
+	// Salutation Explicitly supplied by the contact, an import or an API caller. Never inferred from a name or signature. Null means unset; none means no gendered form.
 	Salutation *Salutation `json:"salutation,omitempty"`
 
 	// Social The contact's links by platform: github, linkedin, twitter. linkedin is a LinkedIn profile link.
@@ -48382,7 +48382,7 @@ type CreateContactRequest struct {
 	OwnerId     *openapi_types.UUID  `json:"owner_id,omitempty"`
 	Phones      *[]ContactPhoneInput `json:"phones,omitempty"`
 
-	// Salutation Explicitly supplied by a person, an import or an API caller. Never inferred from a name or signature. Null means unset; none means no gendered form.
+	// Salutation Explicitly supplied by the contact, an import or an API caller. Never inferred from a name or signature. Null means unset; none means no gendered form.
 	Salutation *Salutation `json:"salutation,omitempty"`
 
 	// Social Links by platform. Only github, linkedin and twitter are taken; any other key is refused with 422 `social_platform_unknown`. linkedin takes only a LinkedIn profile link (https://www.linkedin.com/in/<name>).
@@ -48778,7 +48778,7 @@ type CreateLeadRequest struct {
 	ProductId *openapi_types.UUID `json:"product_id,omitempty"`
 	ProjectId *openapi_types.UUID `json:"project_id,omitempty"`
 
-	// Salutation Explicitly supplied by a person, an import or an API caller. Never inferred from a name or signature. Null means unset; none means no gendered form.
+	// Salutation Explicitly supplied by the contact, an import or an API caller. Never inferred from a name or signature. Null means unset; none means no gendered form.
 	Salutation *Salutation `json:"salutation,omitempty"`
 
 	// Source How the row was written. Optional: the server writes `manual` when none is sent. Never scored; send `origin` for where the lead came from.
@@ -57585,7 +57585,7 @@ type Lead struct {
 	// RoutedAt When routing assigned an owner. Starts the §18 first-response clock; null means the clock starts at created_at.
 	RoutedAt *time.Time `json:"routed_at,omitempty"`
 
-	// Salutation Explicitly supplied by a person, an import or an API caller. Never inferred from a name or signature. Null means unset; none means no gendered form.
+	// Salutation Explicitly supplied by the contact, an import or an API caller. Never inferred from a name or signature. Null means unset; none means no gendered form.
 	Salutation *Salutation `json:"salutation,omitempty"`
 
 	// Score Lead-local scoring; never reads the contact graph. While an override is in force this is the human-set value (see score_override_reason).
@@ -67977,7 +67977,7 @@ type SalesProgressSummaryRequestPeriod string
 // SalesProgressSummaryRequestScopeKind Absent reads the caller's own figures.
 type SalesProgressSummaryRequestScopeKind string
 
-// Salutation Explicitly supplied by a person, an import or an API caller. Never inferred from a name or signature. Null means unset; none means no gendered form.
+// Salutation Explicitly supplied by the contact, an import or an API caller. Never inferred from a name or signature. Null means unset; none means no gendered form.
 type Salutation string
 
 // SaveContactResearchClaim One claim a human accepted, with the evidence that makes it checkable.
@@ -72468,7 +72468,7 @@ type UpdateContactRequest struct {
 	// RelationshipMark Marks the contact (`vendor_marketing`) or clears the mark (null). The mark records who set it, so a mark set by hand is never lifted by the automatic check that lifts the mark the sender check set.
 	RelationshipMark *UpdateContactRequestRelationshipMark `json:"relationship_mark,omitempty"`
 
-	// Salutation Explicitly supplied by a person, an import or an API caller. Never inferred from a name or signature. Null means unset; none means no gendered form.
+	// Salutation Explicitly supplied by the contact, an import or an API caller. Never inferred from a name or signature. Null means unset; none means no gendered form.
 	Salutation *Salutation `json:"salutation,omitempty"`
 
 	// Social Merged into the stored links: a key not sent keeps its link, and a key sent as "" or null removes it. Only github, linkedin and twitter are taken; any other key is refused with 422 `social_platform_unknown`. linkedin takes only a LinkedIn profile link (https://www.linkedin.com/in/<name>).
@@ -73137,7 +73137,7 @@ type UpdateLeadRequest struct {
 	// ProjectId The body of work this lead belongs to; carries no same-company guard, also for a lead linked to a company.
 	ProjectId *openapi_types.UUID `json:"project_id,omitempty"`
 
-	// Salutation Explicitly supplied by a person, an import or an API caller. Never inferred from a name or signature. Null means unset; none means no gendered form.
+	// Salutation Explicitly supplied by the contact, an import or an API caller. Never inferred from a name or signature. Null means unset; none means no gendered form.
 	Salutation *Salutation `json:"salutation,omitempty"`
 
 	// Score Manual human score override (formulas §3.1, AC-S1). Omit to keep the computed lead-local score. Setting it REQUIRES `score_override_reason`; passing null clears the override and resumes recompute.

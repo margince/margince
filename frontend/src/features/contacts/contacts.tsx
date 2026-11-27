@@ -22,7 +22,7 @@ import {
   useListRefusal,
 } from "../../design-system/listtable";
 import { useLocale, useT } from "../../i18n";
-import { salutationFilter } from "../../lib/personsalutation";
+import { salutationFilter } from "../../lib/contactsalutation";
 import { useViewerId } from "../../lib/session";
 import { useViewerZone } from "../../lib/viewerzone";
 import { useActionRefusal } from "../../lib/writerefusal";
@@ -246,7 +246,7 @@ function ContactsList({ startCreating }: Readonly<{ startCreating: boolean }>) {
           lastActivityColumn<Contact>(t, locale, readerZone),
           createdColumn<Contact>(t, locale, readerZone),
         ]}
-        chips={[salutationFilter(t)]}
+        chips={[salutationFilter()]}
         saveView={<SaveViewAction resource="contacts" state={state} />}
         notice={<SavedViewsFailure resource="contacts" />}
         rowKey={(contact) => contact.id}

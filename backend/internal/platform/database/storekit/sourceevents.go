@@ -6,6 +6,7 @@ package storekit
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"slices"
 
@@ -36,7 +37,7 @@ func emitSourceChange(ctx context.Context, tx pgx.Tx, auditID ids.UUID, change s
 		payload = crmcontracts.PublicEventProjectUpdated{ChangedFields: fields}
 	case "offer":
 		if change.DealID == nil {
-			return fmt.Errorf("a source update for an offer needs its deal")
+			return errors.New("a source update for an offer needs its deal")
 		}
 		payload = crmcontracts.PublicEventOfferUpdated{ChangedFields: []string{"source"}, Source: &change.After, OfferId: openapi_types.UUID(change.ID), DealId: openapi_types.UUID(*change.DealID)}
 	default:
@@ -54,12 +55,12 @@ func stageSourceChange(tx pgx.Tx, staged *stagedEvent) error {
 	if !database.Marked(database.CommitOwner(tx), sourceAuditMemo+auditID.String()) || staged.env.Type != staged.env.Entity.Type+".updated" {
 		return nil
 	}
-	change, err := database.Remember(database.CommitOwner(tx), sourceAuditMemo+auditID.String(), func() (sourceChange, error) { return sourceChange{}, fmt.Errorf("source audit metadata is missing") })
+	change, err := database.Remember(database.CommitOwner(tx), sourceAuditMemo+auditID.String(), func() (sourceChange, error) { return sourceChange{}, errors.New("source audit metadata is missing") })
 	if err != nil {
 		return err
 	}
 	if staged.env.Entity.ID != change.ID || staged.env.Entity.Type != change.EntityType {
-		return fmt.Errorf("source event does not match its audit record")
+		return errors.New("source event does not match its audit record")
 	}
 	var payload map[string]json.RawMessage
 	if err := json.Unmarshal(staged.env.Payload, &payload); err != nil {

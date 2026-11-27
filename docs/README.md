@@ -7,8 +7,7 @@ Step-by-step guides for sales and delivery teams are in [user-guide/README.md](.
 for the developer who changes or runs the code. So a product task goes in the handbook, not in
 `how-to/`.
 
-These docs explain how to build and run Margince. It is a CRM with one company per installation, and
-the server refuses a second one. The backend is a Go API under `/v1`, and the React web app ships
+These docs explain how to build and run Margince. It is a CRM with one company per installation, and the server refuses a second one. The backend is a Go API under `/v1`, and the React web app ships
 on its own. The docs follow the four kinds of [Diátaxis](https://diataxis.fr/), and the pages in
 `operations/` say how to install and run Margince. Tutorials help you learn, how-to guides do tasks,
 reference pages are to look things up, and explanation pages say why. The
@@ -182,7 +181,7 @@ ready before we need it, because the first date comes 24 hours after we learn of
 ### Reference: look it up
 
 - [API changes](reference/api-compatibility.md): when an API may change.
-- [API rate limits](reference/api-rate-limits.md): enforced ceilings, shared counters and retry headers.
+- [API limits](reference/api-rate-limits.md): request counts and wait times.
 - [modules.md](reference/modules.md): each module, what it owns, its tables and its API.
 - [entity-model/](reference/entity-model/README.md): every table and field, one page per part
   of the product.

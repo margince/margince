@@ -6,9 +6,10 @@
 package contacts
 
 import (
+	"testing"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"testing"
 )
 
 func TestSalutationFiltersKeepAnUnsetChoiceDistinctFromNone(t *testing.T) {

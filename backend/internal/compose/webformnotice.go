@@ -60,16 +60,16 @@ func tellWebsiteLeadOwner(ctx context.Context, db *database.DB, formID, source i
 		if note.WebForm == nil {
 			return nil
 		}
-		person, company := "", ""
+		contactName, company := "", ""
 		if note.WebForm.FullName != nil {
-			person = *note.WebForm.FullName
+			contactName = *note.WebForm.FullName
 		}
 		if note.WebForm.Company != nil {
 			company = *note.WebForm.Company
 		}
 		subject := fmt.Sprintf(systemtext.Copy("form.owner_subject", textlang.English), mailcopy.OneLine(form.Name))
-		body := fmt.Sprintf(systemtext.Copy("form.owner_body", textlang.English), mailcopy.OneLine(person), mailcopy.OneLine(company), mailcopy.OneLine(note.WebForm.Email))
-		message := &systemtext.Message{Subject: systemtext.Sentence("form.owner_subject", systemtext.Label(form.Name)), Body: systemtext.Sentence("form.owner_body", systemtext.Label(person), systemtext.Label(company), systemtext.Label(note.WebForm.Email))}
+		body := fmt.Sprintf(systemtext.Copy("form.owner_body", textlang.English), mailcopy.OneLine(contactName), mailcopy.OneLine(company), mailcopy.OneLine(note.WebForm.Email))
+		message := &systemtext.Message{Subject: systemtext.Sentence("form.owner_subject", systemtext.Label(form.Name)), Body: systemtext.Sentence("form.owner_body", systemtext.Label(contactName), systemtext.Label(company), systemtext.Label(note.WebForm.Email))}
 		return db.Tx(bound, func(tx pgx.Tx) error {
 			noticeID, fresh, err := notices.NewStore(db).CreateTxNew(bound, tx, notices.NewNotice{Recipient: ids.From[ids.UserKind](*owner), Kind: notices.KindWebsiteLead, Subject: subject, Body: body, SystemText: message, Target: target, DedupeKey: "website_lead:" + source.String()})
 			if err != nil || !fresh {

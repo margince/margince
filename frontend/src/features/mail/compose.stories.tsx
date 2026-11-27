@@ -97,19 +97,6 @@ const VOICE_PROFILE = {
   page: { next_cursor: null, has_more: false },
 };
 
-// The 422 body httperr.Validation actually emits: the top-level `code` is the
-// same for every validation problem, and the rule that fired is named per
-// field under details.errors. A story that hoisted the specific code to the
-// top level would frame a refusal the server cannot produce.
-function validationProblem(field: string, code: string, message: string) {
-  return {
-    code: "validation_error",
-    title: "Unprocessable Entity",
-    detail: message,
-    details: { errors: [{ field, code, message }] },
-  };
-}
-
 // Renders the composer over a given route map, always serving the consent
 // purposes the purpose selector needs on top of the story's own routes.
 function composeStory(routes: RouteMap) {

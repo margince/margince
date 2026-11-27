@@ -4,9 +4,10 @@
 package draftcheck
 
 import (
-	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"regexp"
 	"strings"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 )
 
 var addressedTitle = regexp.MustCompile(`(?i)\b(mr|mrs|ms|herr|frau)\.?\s+\p{L}`)

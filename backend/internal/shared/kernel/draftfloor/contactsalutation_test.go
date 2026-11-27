@@ -4,8 +4,9 @@
 package draftfloor_test
 
 import (
-	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 )
 
 func TestFormalGreetingsUseOnlyAnExplicitSalutation(t *testing.T) {

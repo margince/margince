@@ -28845,6 +28845,7 @@ paths:
         '204': { description: Archived. }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /consent-purposes/send-counts:
     get:
@@ -37053,7 +37054,7 @@ paths:
   #   /voice-profiles     (E07; now SPECIFIED above, B-E07.4/.5a — corpus sources via /voice-profiles/{id}/sources)
   #   /drafting-assets    (E07/E08; approval flips `approved` — admin/🟡)
   #   /agent-connections  (E10; revoke via POST /agent-connections/{id}/revoke; events read-only)
-  #   /saved-views        (E15; owner-only)
+  #   /saved-views        (owned and read only by the signed-in user)
   #   /webhook-subscriptions (E10/S-E10.6, A51; HTTPS-only target_url, event_types ⊆ the published
   #                       events.md §2 catalog, signing_secret_ref; state active|paused. create/update
   #                       is 🟡 — registers outbound egress; x-mcp-tool create_record tier confirmation_required.
@@ -51165,7 +51166,7 @@ components:
       type: [string, 'null']
       enum: [mr, ms, none, null]
       x-extensible-enum: true
-      description: Explicitly supplied by a person, an import or an API caller. Never inferred from a name or signature. Null means unset; none means no gendered form.
+      description: Explicitly supplied by the contact, an import or an API caller. Never inferred from a name or signature. Null means unset; none means no gendered form.
 
     Contact:
       type: object

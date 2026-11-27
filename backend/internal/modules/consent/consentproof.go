@@ -89,13 +89,8 @@ func upsertConsentWithProof(
 	ctx context.Context, tx pgx.Tx, in RecordInput, sub subject,
 	doiConfirmedAt *time.Time, capturedAt time.Time, keptUntil *time.Time, actorID string,
 ) (ids.UUID, error) {
-	// The version travels with the text, both-or-neither, held by
-	// consent_event_wording_pairs. Doors that show wording without naming a
-	// version — the preference centre, the confirm link — get the default here
-	// rather than each spelling one, because a version each invented would be a
-	// second answer to "which wording was this". Set HERE and not in admitRecord,
-	// which takes its input by value: a default written there never reaches the
-	// INSERT, and the CHECK would refuse every row that door writes.
+	// Default the wording and version together before inserting either value.
+	// admitRecord takes its input by value, so a default there would be lost.
 	text, version := wordingFor(ConsentState(in.NewState), in.PolicyText, in.PolicyVersion)
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO contact_consent (`+sub.column+`, purpose_id, state, lawful_basis, captured_at, source, policy_version)

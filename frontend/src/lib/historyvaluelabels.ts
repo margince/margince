@@ -18,8 +18,8 @@ import { PROMOTION_TRIGGER_LABEL } from "../format/promotion";
 import { type Locale, translate } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { CALL_OUTCOME_LABEL } from "./calloutcome";
+import { SALUTATION_LABELS } from "./contactsalutation";
 import { KIND_LABELS } from "./partnerstages.queries";
-import { SALUTATION_LABELS } from "./personsalutation";
 import { TASK_TYPE_LABELS } from "./tasktype";
 
 // The words for a closed vocabulary a change row stores by its wire spelling,

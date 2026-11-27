@@ -1,10 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Package httperr is the single sentinel→HTTP choke point
-// (architecture/11 §1): handlers return errs sentinels and this mapper
-// produces the RFC 7807 problem+json body with the contract's stable
-// machine code. No handler hand-writes a status body.
+// Package httperr maps fixed errors to the API problem contract.
 package httperr
 
 import (
@@ -35,8 +32,6 @@ type problem struct {
 	Details map[string]any `json:"details,omitempty"`
 }
 
-// mapping is the fixed sentinel registry from interfaces.md §0. Adding an
-// entry happens together with the interfaces.md change, never ad hoc.
 var mapping = []struct {
 	sentinel error
 	status   int
@@ -62,7 +57,6 @@ var mapping = []struct {
 	{apperrors.ErrRetentionHold, http.StatusLocked, "locked"},
 }
 
-// versionSkewDetail tells a reader who lost a version race what to do next.
 const versionSkewDetail = "This record changed after you opened it. Reload it to see the change, then make yours again."
 
 // clientInputValidation maps the typed errors that mean "the CALLER got the

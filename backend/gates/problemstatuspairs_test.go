@@ -111,7 +111,7 @@ func (p *pairCensus) bind(fn *ast.FuncDecl, call *ast.CallExpr, unit *goUnit, in
 	old := p.codes.fieldBindings
 	p.codes.fieldBindings = maps.Clone(old)
 	if p.codes.fieldBindings == nil {
-		p.codes.fieldBindings = map[*ast.Object]fieldCodeExpr{}
+		p.codes.fieldBindings = map[*ast.Object]fieldCodeExpr{} //nolint:staticcheck // Parser objects bind local assignments in this syntax-only census.
 	}
 	index := 0
 	for _, parameter := range fn.Type.Params.List {

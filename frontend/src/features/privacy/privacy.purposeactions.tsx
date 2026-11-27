@@ -8,14 +8,22 @@ import type { components } from "../../api/schema";
 import { Button, Field, TextInput } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { OverflowMenu } from "../../design-system/overflowmenu";
-import { useT } from "../../i18n";
-import { problemCodeOf, refusalSentences, unwrap } from "../../lib/problem";
+import { useFieldFaults } from "../../design-system/savepage";
+import { useLocale, useT } from "../../i18n";
+import {
+  blankRequired,
+  problemCodeOf,
+  refusalSentences,
+  unwrap,
+} from "../../lib/problem";
 
 type Purpose = components["schemas"]["ConsentPurpose"];
 type Change = { mode: "rename" | "archive"; label: string };
 
 export function PurposeActions({ purpose }: Readonly<{ purpose: Purpose }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
   const queryClient = useQueryClient();
   const [mode, setMode] = useState<Change["mode"] | null>(null);
   const [label, setLabel] = useState(purpose.label);
@@ -48,6 +56,7 @@ export function PurposeActions({ purpose }: Readonly<{ purpose: Purpose }>) {
     : null;
   function open(next: Change["mode"]) {
     change.reset();
+    faults.show(new Map());
     setLabel(purpose.label);
     setMode(next);
   }
@@ -75,17 +84,27 @@ export function PurposeActions({ purpose }: Readonly<{ purpose: Purpose }>) {
           mode === "archive" ? t("record.archive") : t("record.save")
         }
         confirmVariant={mode === "archive" ? "danger" : "primary"}
-        confirmDisabled={mode === "rename" && label.trim() === ""}
         onConfirm={() => {
-          if (mode) change.mutate({ mode, label });
+          if (!mode || change.isPending) return;
+          if (
+            mode === "rename" &&
+            faults.show(
+              blankRequired(locale, {
+                label: [t("privacy.purposeLabel"), label],
+              }),
+            )
+          )
+            return;
+          change.mutate({ mode, label });
         }}
+        bodyRef={faultsRoot}
         error={error}
       >
         <p>{t("privacy.purposeAppendOnly")}</p>
         {mode === "rename" && (
           <Field
             label={t("privacy.purposeLabel")}
-            error={refusal.byField.get("label")}
+            error={faults.of("label") ?? refusal.byField.get("label")}
           >
             {(control) => (
               <TextInput
@@ -93,6 +112,7 @@ export function PurposeActions({ purpose }: Readonly<{ purpose: Purpose }>) {
                 value={label}
                 required
                 onChange={(event) => {
+                  faults.edited("label");
                   setLabel(event.target.value);
                   change.reset();
                 }}

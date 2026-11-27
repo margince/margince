@@ -107,7 +107,7 @@ func (c *emittedCensus) readFieldResult(call *ast.CallExpr, index int, unit *goU
 	old := c.fieldBindings
 	c.fieldBindings = maps.Clone(old)
 	if c.fieldBindings == nil {
-		c.fieldBindings = map[*ast.Object]fieldCodeExpr{}
+		c.fieldBindings = map[*ast.Object]fieldCodeExpr{} //nolint:staticcheck // Parser objects bind local assignments in this syntax-only census.
 	}
 	defer func() { c.fieldBindings = old }()
 	position := 0
@@ -290,9 +290,7 @@ func (c *emittedCensus) readRouteProblemRelay(expr ast.Expr, unit *goUnit, in *a
 	source := newEmittedCensus(c.t, c.units)
 	source.readSources()
 	c.faults = append(c.faults, source.faults...)
-	for code, at := range source.codes {
-		c.codes[code] = at
-	}
+	maps.Copy(c.codes, source.codes)
 	return true
 }
 
@@ -353,7 +351,7 @@ func (c *emittedCensus) rangeElementType(expr ast.Expr, unit *goUnit) (ast.Expr,
 	if !known {
 		return nil, nil, false
 	}
-	for depth := 0; depth < 8; depth++ {
+	for range 8 {
 		switch collection := typ.(type) {
 		case *ast.ArrayType:
 			return collection.Elt, owner, true

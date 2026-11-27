@@ -3,20 +3,19 @@
 
 package gates
 
-import "strconv"
+import (
+	"strconv"
+	"strings"
+)
 
 func helperSourceKey(source codeSource) string {
-	key := strconv.Itoa(source.index) + "/" + strconv.FormatBool(source.field) + "/" + strconv.Itoa(source.fixedStatus)
-	for _, part := range source.path {
-		key += "/" + part
-	}
+	parts := []string{strconv.Itoa(source.index), strconv.FormatBool(source.field), strconv.Itoa(source.fixedStatus)}
+	parts = append(parts, source.path...)
 	if source.status != nil {
-		key += "/status/" + strconv.Itoa(source.status.index)
-		for _, part := range source.status.path {
-			key += "/" + part
-		}
+		parts = append(parts, "status", strconv.Itoa(source.status.index))
+		parts = append(parts, source.status.path...)
 	}
-	return key
+	return strings.Join(parts, "/")
 }
 
 func (r *problemFileReader) registerHelper(name string, source codeSource) bool {

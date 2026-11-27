@@ -7,7 +7,7 @@ import {
   salutationChoice,
   salutationField,
   salutationFilter,
-} from "./personsalutation";
+} from "./contactsalutation";
 
 describe("explicit salutations", () => {
   it("keeps an unset choice, a clear and an explicit none distinct", () => {
@@ -25,7 +25,7 @@ describe("explicit salutations", () => {
       "ms",
       "none",
     ]);
-    expect(salutationFilter(t).options.map((option) => option.value)).toEqual([
+    expect(salutationFilter().options.map((option) => option.value)).toEqual([
       "unset",
       "mr",
       "ms",

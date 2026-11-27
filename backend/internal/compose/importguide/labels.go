@@ -13,6 +13,7 @@ import (
 var companyName = langcopy.Phrase{En: "Company name", De: "Unternehmensname", Vi: "Tên công ty"}
 
 var labels = map[string]langcopy.Phrase{
+	"salutation":           {En: "Salutation", De: "Anrede", Vi: "Cách xưng hô"},
 	"activity.owner_email": {En: "Owner (email)", De: "Verantwortlich (E-Mail)", Vi: "Người chịu trách nhiệm (email)"},
 	"address.city":         {En: "City", De: "Stadt", Vi: "Thành phố"},
 	"address.country":      {En: "Country", De: "Land", Vi: "Quốc gia"},

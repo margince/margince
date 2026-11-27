@@ -15,15 +15,15 @@ anything. This page shows what each declared agent pays, how much room that leav
 what to check before adding a tool. Each tool's own cost is the Prompt tokens column of
 [mcp-info.md](mcp-info.md#index).
 
-The heaviest menu is `overnight_at_risk_sweep`: 6715 of the window's 32768 tokens per step (20%).
+The heaviest menu is `overnight_at_risk_sweep`: 6731 of the window's 32768 tokens per step (20%).
 
 ## The declared agents
 
 | Agent | Tools | Of served | Listing | Step schema | Per step | Of the window | Headroom | Dangling refs | Temptation |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `morning_brief` | 5 | 5 of 48 | 2044 | 1646 | 4420 | 13% | 11964 | 0 | 4 |
-| `overnight_at_risk_sweep` | 7 | 7 of 48 | 3357 | 2628 | 6715 | 20% | 9669 | 4 | 5 |
-| _whole served catalog's listing, for scale; no run is offered it_ | 48 |  | 54161 |  |  | 165% |  |  |  |
+| `morning_brief` | 5 | 5 of 48 | 2052 | 1653 | 4436 | 13% | 11948 | 0 | 4 |
+| `overnight_at_risk_sweep` | 7 | 7 of 48 | 3364 | 2636 | 6731 | 20% | 9653 | 4 | 5 |
+| _whole served catalog's listing, for scale; no run is offered it_ | 48 |  | 54168 |  |  | 165% |  |  |  |
 
 ### `morning_brief`
 
@@ -40,8 +40,8 @@ there are no items, finish without inventing a brief. A tool refusal means the f
 saved: correct it before claiming completion.
 ```
 
-Attaches 5 tools and pays 4420 tokens on every step (2044 listing, 1646 step schema), leaving
-11964 of its budget and 28348 tokens of the
+Attaches 5 tools and pays 4436 tokens on every step (2052 listing, 1653 step schema), leaving
+11948 of its budget and 28332 tokens of the
 window for the goal, the grounding and everything it reads.
 
 - `annotate_brief`
@@ -65,8 +65,8 @@ body states the finding and the evidence (cite the records you read). A note wit
 refused. Do not advance stages, send anything, or archive anything.
 ```
 
-Attaches 7 tools and pays 6715 tokens on every step (3357 listing, 2628 step schema), leaving
-9669 of its budget and 26053 tokens of the
+Attaches 7 tools and pays 6731 tokens on every step (3364 listing, 2636 step schema), leaving
+9653 of its budget and 26037 tokens of the
 window for the goal, the grounding and everything it reads.
 
 - `at_risk_relationships`
@@ -145,7 +145,7 @@ menu. Lowering it is not always an improvement either: a tool its goal needs rai
 this count whenever its copy names a neighbour.
 
 **Temptation weight** sums, over an agent's tools, how many of that agent's own
-certification scenarios (of 8 in the corpus) name the tool as the wrong reach. Each
+certification scenarios (of 12 in the corpus) name the tool as the wrong reach. Each
 scenario certifies one scheduled agent's window (its goal and its tools), so a near
 miss is a tool that run can see and reach for.
 
@@ -154,6 +154,13 @@ Each scenario lists the tools its goal makes tempting, in a `near_misses:` list 
 expected step. A weight of 5 does not mean a model went wrong five times; it means five
 scenarios name a tool on this menu as the reach to avoid. The measurement that
 would replace it is sampling real runs for chosen-vs-wanted.
+
+**4 scenarios were skipped by the scan** and are named here rather than dropped:
+
+- morning_brief_recovers_bad_arguments.yaml (this scan could not read its expected step, so a wrong reach cannot be told from the right one)
+- morning_brief_recovers_field_shape.yaml (this scan could not read its expected step, so a wrong reach cannot be told from the right one)
+- morning_brief_recovers_unknown_field.yaml (this scan could not read its expected step, so a wrong reach cannot be told from the right one)
+- morning_brief_recovers_unsupported.yaml (this scan could not read its expected step, so a wrong reach cannot be told from the right one)
 
 ## Related
 

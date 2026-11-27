@@ -457,7 +457,7 @@ func (r *problemFileReader) readObject(open int) {
 		for _, literal := range read.literals {
 			actual, unknown := r.statusFromSpan(context.value, literal, status)
 			before := len(r.scan.mocks)
-			r.addFieldMocks([]int{literal}, actual, entry.keyAt, true, field)
+			r.addFieldMocks([]int{literal}, actual, entry.keyAt, problemMockFlags{own: true, field: field})
 			for i := before; i < len(r.scan.mocks); i++ {
 				r.scan.mocks[i].statusUnknown = unknown
 			}
@@ -465,16 +465,14 @@ func (r *problemFileReader) readObject(open int) {
 	}
 }
 
-// addMocks records each literal a code resolved to, at its own line when it
-// is not the code entry's own value.
-func (r *problemFileReader) addMocks(literals []int, status, at int, own bool) {
-	r.addFieldMocks(literals, status, at, own, false)
+type problemMockFlags struct {
+	own, field bool
 }
 
-func (r *problemFileReader) addFieldMocks(literals []int, status, at int, own, field bool) {
+func (r *problemFileReader) addFieldMocks(literals []int, status, at int, flags problemMockFlags) {
 	for _, mock := range r.mocksOf(literals, status) {
-		mock.own = own && mock.line == r.line(at)
-		mock.field = field
+		mock.own = flags.own && mock.line == r.line(at)
+		mock.field = flags.field
 		r.scan.mocks = append(r.scan.mocks, mock)
 	}
 }
@@ -948,7 +946,7 @@ func (r *problemFileReader) readCall(call int, source codeSource) bool {
 		for _, literal := range read.literals {
 			resolved, unknown := r.statusForCodeLiteral(args, source, literal, status)
 			before := len(r.scan.mocks)
-			r.addFieldMocks([]int{literal}, resolved, call, false, source.field)
+			r.addFieldMocks([]int{literal}, resolved, call, problemMockFlags{field: source.field})
 			for i := before; i < len(r.scan.mocks); i++ {
 				r.scan.mocks[i].statusUnknown = unknown
 			}

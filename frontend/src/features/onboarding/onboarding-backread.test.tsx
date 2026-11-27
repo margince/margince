@@ -286,7 +286,10 @@ describe("the scope preview", () => {
       [PREVIEW_ROUTE]: () =>
         Response.json(
           { code: "provider_unreachable", detail: "The mailbox went quiet." },
-          {status:502,headers:{ "Content-Type": "application/problem+json" }},
+          {
+            status: 502,
+            headers: { "Content-Type": "application/problem+json" },
+          },
         ),
       [START_ROUTE]: (body) => {
         starts.push(body);

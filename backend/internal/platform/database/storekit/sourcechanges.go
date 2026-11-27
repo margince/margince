@@ -6,6 +6,7 @@ package storekit
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -180,7 +181,7 @@ func keepSourceAudits(ctx context.Context, tx pgx.Tx, idsWritten []ids.UUID, mat
 		}
 		return nil
 	}) {
-		return fmt.Errorf("source changes need a database-owned transaction")
+		return errors.New("source changes need a database-owned transaction")
 	}
 	return nil
 }

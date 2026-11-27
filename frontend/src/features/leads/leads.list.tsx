@@ -31,13 +31,13 @@ import { QueryGate } from "../../design-system/querystates";
 import { useOwnToast } from "../../design-system/toast";
 import { industryOptions } from "../../format/industry";
 import { useLocale, useT } from "../../i18n";
+import { salutationField, salutationFilter } from "../../lib/contactsalutation";
 import { leadIdentityName } from "../../lib/leadname";
 import {
   originFilterOptions,
   originPickOptions,
   useLeadOrigins,
 } from "../../lib/leadorigins";
-import { salutationField, salutationFilter } from "../../lib/personsalutation";
 import { unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
 import { readStored, STORAGE_KEYS, writeStored } from "../../lib/storage";
@@ -389,7 +389,7 @@ function LeadsWorkbench({
         }}
         rowRoute={(lead) => ({ screen: "leads", id: lead.id })}
         chips={[
-          salutationFilter(t),
+          salutationFilter(),
           {
             key: "status",
             label: "lead.filterStatus",

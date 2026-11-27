@@ -30,16 +30,22 @@ func recoveryFixture(t *testing.T, kind string) agentLoopFixture {
 func recoveryRecordRead() string {
 	return `{"tool":"read_record","args":{"record_type":"activity","id":"` + agentLoopActivityID.String() + `"}}`
 }
+
 func recoveryDealRead() string {
 	return `{"tool":"read_record","args":{"record_type":"deal","id":"` + agentLoopDealID.String() + `"}}`
 }
 
 func measuredRecovery(t *testing.T, outcome aitasks.Outcome) aitasks.LoopRecoveryMeasure {
 	t.Helper()
-	if outcome.Recovery == nil {
+	_, encoded, ok := strings.Cut(outcome.Detail, "; recovery=")
+	if !ok {
 		t.Fatal("the replay omitted its recovery measurement")
 	}
-	return *outcome.Recovery
+	var measure aitasks.LoopRecoveryMeasure
+	if err := json.Unmarshal([]byte(encoded), &measure); err != nil {
+		t.Fatal(err)
+	}
+	return measure
 }
 
 func TestTheRecoveryBandRepairsRealRefusalsAlongTheWholeGoalPath(t *testing.T) {

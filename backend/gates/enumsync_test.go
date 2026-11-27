@@ -38,6 +38,8 @@ import (
 // record (datasource.RecordType) never names an activity, while a thing
 // hung OFF an object (datasource.EntityType) can.
 var enumBindings = map[string]struct{ pkgDir, typeName string }{
+	"contact.salutation":     {"internal/contracts", "Salutation"},
+	"lead.salutation":        {"internal/contracts", "Salutation"},
 	"activity.capture_label": {"internal/contracts", "ActivityCaptureLabel"},
 	// Which check the ingress grammar refused a record on. The core writes the
 	// class and the column holds the vocabulary, so a class Go learned and the

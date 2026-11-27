@@ -7,6 +7,7 @@ package privacy
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -21,7 +22,11 @@ func TestAnonymizingALegacySourceKeepsThePrivacyCertificateEmpty(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer func() { _ = tx.Rollback(ctx) }()
+	defer func() {
+		if err := tx.Rollback(ctx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			t.Errorf("rolling back the source fixture: %v", err)
+		}
+	}()
 	for _, sql := range []string{
 		`ALTER TABLE contact DROP CONSTRAINT contact_source_check`,
 		`ALTER TABLE contact DISABLE TRIGGER contact_source_channel`,

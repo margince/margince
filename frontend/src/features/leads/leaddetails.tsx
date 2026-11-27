@@ -26,13 +26,13 @@ import { formatDateAbbrev } from "../../format/format";
 import { industryWords } from "../../format/industry";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { salutationLabel } from "../../lib/contactsalutation";
 import {
   addedViaFor,
   originLabelFor,
   useLeadOrigins,
 } from "../../lib/leadorigins";
 import { useListsAvailable, useRecordLists } from "../../lib/lists.queries";
-import { salutationLabel } from "../../lib/personsalutation";
 import { useViewerZone } from "../../lib/viewerzone";
 import { LeadCompany, useLeadCompanyFactsSection } from "./leadcompany";
 import { useLeadPickerFlows } from "./leaddetailsflows";
@@ -113,12 +113,6 @@ function useAboutRows(lead: Lead, mayChange: boolean): DetailRow[] {
         </>
       ),
     },
-    {
-      key: "salutation",
-      term: t("create.salutation"),
-      empty: !lead.salutation,
-      value: salutationLabel(lead.salutation, t) ?? t("field.unset"),
-    },
     text("title", "create.contactTitle"),
     // The linked company's industry speaks for the lead, and shows under it.
     ...(leadIndustry(lead)?.from === "company"
@@ -156,6 +150,13 @@ function useAboutRows(lead: Lead, mayChange: boolean): DetailRow[] {
 function useReachRows(lead: Lead): DetailRow[] {
   const t = useT();
   return [
+    {
+      key: "salutation",
+      term: t("create.salutation"),
+      empty: !lead.salutation,
+      value: salutationLabel(lead.salutation, t) ?? t("field.unset"),
+    },
+
     ...reachRows(lead, t, {
       email: <EmailValue lead={lead} />,
       // The number dials, as on a contact.

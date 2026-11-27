@@ -112,10 +112,7 @@ func publicDealRoom(store *dealrooms.Store, limits publicDealRoomLimiters, origi
 	}
 }
 
-// linkRequestRefusedBy takes the link-request buckets in order of cost: the
-// per-IP one first so a single source is refused before it eats into the
-// ceiling everyone shares, the per-address one last because reading it means
-// reading the body.
+// Read the cheapest buckets first. The per-address check needs the request body.
 func linkRequestRefusedBy(limits publicDealRoomLimiters, r *http.Request) *ratelimit.Limiter {
 	if !limits.linkPerIP.Allow(httpserver.ClientIP(r)) {
 		return limits.linkPerIP

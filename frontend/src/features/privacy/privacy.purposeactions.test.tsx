@@ -138,3 +138,18 @@ it("offers no purpose changes without the update grant", async () => {
     screen.queryByRole("button", { name: en["table.actions"] }),
   ).toBeNull();
 });
+
+it("keeps Save available and focuses a blank purpose label without writing", async () => {
+  const { writes, user } = setup();
+  const dialog = await open(user, en["privacy.purposeRename"]);
+  const label = within(dialog).getByRole("textbox", {
+    name: en["privacy.purposeLabel"],
+  });
+  await user.clear(label);
+  const save = within(dialog).getByRole("button", { name: en["record.save"] });
+  expect(save).toBeEnabled();
+  await user.click(save);
+  await waitFor(() => expect(label).toHaveAttribute("aria-invalid", "true"));
+  expect(label).toHaveFocus();
+  expect(writes).toHaveLength(0);
+});

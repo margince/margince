@@ -7834,7 +7834,7 @@ export const en = {
   "salutation.ms": "Ms",
   "salutation.none": "No gendered salutation",
   "salutation.hint":
-    "Only record a choice the person gave you. Never guess it from their name.",
+    "Only record a choice the contact gave you. Never guess it from their name.",
   "history.field.salutation": "Salutation",
   "create.fullName": "Full name",
   "create.firstName": "First name",
@@ -19053,10 +19053,12 @@ export const en = {
   "webForms.field.senderSecretHint":
     "The secret the Webflow API answers once when it makes the webhook. A webhook an OAuth app makes is signed with that app’s client secret instead. Leave it empty until you have it: the form takes no posts until then.",
   "webForms.field.senderSecretKeep": "Leave empty to keep the stored secret.",
-  "webForms.field.notifyOwnerHint": "Tells the owner when the post lands, or after its handling plan assigns one. Later workspace routing raises no delayed notice.",
+  "webForms.field.notifyOwnerHint":
+    "Tells the owner when the post lands, or after its handling plan assigns one. Later company routing raises no delayed notice.",
   "webForms.field.notifyOwner": "Tell the owner about each new post",
   "notifications.class.website_lead.label": "New website leads",
-  "notifications.class.website_lead.help": "An accepted website form post on a lead or contact you own.",
+  "notifications.class.website_lead.help":
+    "An accepted website form post on a lead or contact you own.",
   "webForms.field.consentRequired":
     "Require consent before a submission is taken",
   "webForms.field.consentWording": "Consent wording",

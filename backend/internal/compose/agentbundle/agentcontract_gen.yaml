@@ -33066,7 +33066,7 @@ components:
     Salutation:
       type: [string, 'null']
       enum: [mr, ms, none, null]
-      description: Explicitly supplied by a person, an import or an API caller. Never inferred from a name or signature. Null means unset; none means no gendered form.
+      description: Explicitly supplied by the contact, an import or an API caller. Never inferred from a name or signature. Null means unset; none means no gendered form.
     Contact:
       type: object
       description: A contact. Mirrors the `contact` table.

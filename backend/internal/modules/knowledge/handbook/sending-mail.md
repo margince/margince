@@ -55,22 +55,18 @@ The composer in Margince does not send until four things are filled in, and name
 - "Enter a message before sending.": the **Body** is empty.
 - "Select the reason for contact.": you picked no **Reason for contact**. A reply to their own message needs none.
 
-A channel reply, such as Telegram, has no subject, so Margince checks only the body and the reason.
-Also called: validation error, why is Send not working.
+A channel reply, such as Telegram, has no subject, so Margince checks only the body and the reason. Also called: validation error, why is Send not working.
 
 ### Can I use an email template?
 Margince has no email templates, snippets or canned replies in the composer. To start from something ready, press **Draft email**, which drafts in your own writing voice. Margince also keeps what you type as a draft, so you can come back to it. Only you can open your draft. If you leave and an admin hands over your work, your drafts go to the colleague who takes over. Margince adds your **Email signature** for you.
 
-Offer templates are a different thing: they shape an offer, not an email. See [Offers and the rate card](offers-and-products.md).
-Also called: canned response, saved reply, mail template, snippet.
+Offer templates are a different thing: they shape an offer, not an email. See [Offers and the rate card](offers-and-products.md). Also called: canned response, saved reply, mail template, snippet.
 
 ## The composer
 
-You reach the Margince composer from a contact, a company, a deal, a lead, or
-the reply action on any message.
+You reach the Margince composer from a contact, a company, a deal, a lead, or the reply action on any message.
 
-The composer opens as a window at the bottom of the page, so the page stays in view
-behind it. It stays open when you go to another page. Fold it to its title bar
+The composer opens as a window at the bottom of the page, so the page stays in view behind it. It stays open when you go to another page. Fold it to its title bar
 with **Minimize**, make it larger with **Expand**, or drag its top or left
 side. Drag its title bar to slide it left or right. On a phone it fills the
 screen.

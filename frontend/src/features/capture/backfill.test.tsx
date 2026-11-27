@@ -337,7 +337,10 @@ describe("the connect-time backfill payoff", () => {
       previewRoute: () =>
         Response.json(
           { code: "provider_unreachable", detail: "No answer from Gmail." },
-          {status:502,headers:{ "Content-Type": "application/problem+json" }},
+          {
+            status: 502,
+            headers: { "Content-Type": "application/problem+json" },
+          },
         ),
       onStart: countsStatus("running", { captured: 0 }),
     });

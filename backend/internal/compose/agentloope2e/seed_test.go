@@ -4,9 +4,13 @@
 package agentloope2e
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/compose/aitasks"
+	"gopkg.in/yaml.v3"
 )
 
 const sweepScenario = `name: sweep
@@ -66,9 +70,8 @@ func TestASeedLoadsWithItsDealsLookedUpByName(t *testing.T) {
 	}
 }
 
-// Every shipped scenario loads, and each agent_loop certification case has
-// one, so a case added to the certification corpus cannot go without an
-// end-state twin.
+// Live database scenarios cover unseeded runs. The recovery band supplies a
+// failed call through the fixture runner before asking its candidate to act.
 func TestEveryCertificationCaseHasAShippedScenario(t *testing.T) {
 	scenarios, err := LoadScenarios("scenarios")
 	if err != nil {
@@ -82,14 +85,37 @@ func TestEveryCertificationCaseHasAShippedScenario(t *testing.T) {
 	if err != nil || len(cases) == 0 {
 		t.Fatalf("no certification cases found: %v", err)
 	}
+	liveCases := 0
 	for _, path := range cases {
 		name := strings.TrimSuffix(filepath.Base(path), ".yaml")
-		if !named[name] {
-			t.Errorf("certification case %s has no scenario under scenarios/", name)
+		body, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var header struct {
+			Fixture struct {
+				Band string `yaml:"band"`
+			} `yaml:"fixture"`
+		}
+		if err := yaml.Unmarshal(body, &header); err != nil {
+			t.Fatal(err)
+		}
+		switch header.Fixture.Band {
+		case "":
+			liveCases++
+			if !named[name] {
+				t.Errorf("certification case %s has no scenario under scenarios/", name)
+			}
+		case aitasks.RefusalRecoveryBand:
+			if named[name] {
+				t.Errorf("%s claims a live database scenario for a fixture-seeded failure", name)
+			}
+		default:
+			t.Errorf("%s names an unknown certification band %q", name, header.Fixture.Band)
 		}
 	}
-	if len(scenarios) != len(cases) {
-		t.Errorf("%d scenarios for %d certification cases, want one each", len(scenarios), len(cases))
+	if len(scenarios) != liveCases {
+		t.Errorf("%d live scenarios for %d unseeded certification cases, want one each", len(scenarios), liveCases)
 	}
 }
 

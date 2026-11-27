@@ -88,7 +88,7 @@ type paramRef struct {
 
 type emittedCensus struct {
 	fieldCodes    bool
-	fieldBindings map[*ast.Object]fieldCodeExpr
+	fieldBindings map[*ast.Object]fieldCodeExpr //nolint:staticcheck // Parser objects bind local assignments in this syntax-only census.
 	fieldDepth    int
 	units         []*goUnit
 	consts        map[string]map[string]string
