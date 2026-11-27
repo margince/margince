@@ -11,7 +11,6 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/contacts"
-	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // The mark reference check reads every column a mark's key can be stored in.
@@ -58,7 +57,7 @@ func TestTheMarkReferenceCheckReadsEveryMarkColumn(t *testing.T) {
 // corpus by existing.
 func markColumnsInTheSchema(t *testing.T) []string {
 	t.Helper()
-	catalog := readFile(t, gatekit.ModuleRoot(t)+"/migrations/testdata/head_catalog.txt")
+	catalog := headCatalog(t)
 	pattern := regexp.MustCompile(`(?m)^public\.(\w+)\.(logo\w*_object_key) text`)
 	var found []string
 	for _, m := range pattern.FindAllStringSubmatch(catalog, -1) {

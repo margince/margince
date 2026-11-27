@@ -66,51 +66,13 @@ var whereClause = regexp.MustCompile(`(?is)\bWHERE\b(.*)$`)
 // then matches nothing.
 const byIDUpdateFloor = 250
 
-var (
-	// createTableLine opens a CREATE TABLE block; versionColumnLine marks
-	// the block's table as optimistic-locking. Line-based on purpose:
-	// column definitions nest parentheses (generated tsvector columns)
-	// beyond what a block regex can pair.
-	createTableLine   = regexp.MustCompile(`(?i)^\s*CREATE TABLE (?:IF NOT EXISTS )?([a-z_]+)\s*\(`)
-	versionColumnLine = regexp.MustCompile(`(?i)^\s*version\s+bigint`)
-)
-
-// versionedTables derives the set of optimistic-locking tables from the
-// migration sources: any CREATE TABLE whose columns include "version".
+// versionedTables derives the set of optimistic-locking tables from the head
+// catalog: every table carrying a bigint version column.
 func versionedTables(t *testing.T) map[string]bool {
 	t.Helper()
-	tables := map[string]bool{}
-	for _, root := range []string{"migrations/core", "migrations/custom"} {
-		err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
-			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".up.sql") {
-				return err
-			}
-			raw, err := gatekit.ReadFile(path) // #nosec G304 G122 -- path is a *.up.sql file from walking the trusted migrations tree
-			if err != nil {
-				return err
-			}
-			current := ""
-			for line := range strings.SplitSeq(withCurrentNames(string(raw)), "\n") {
-				if m := createTableLine.FindStringSubmatch(line); m != nil {
-					current = m[1]
-					continue
-				}
-				if strings.HasPrefix(line, ");") {
-					current = ""
-					continue
-				}
-				if current != "" && versionColumnLine.MatchString(line) {
-					tables[current] = true
-				}
-			}
-			return nil
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-	}
+	tables := parseHeadCatalog(t).tablesWithColumn("version", "bigint")
 	if len(tables) < 10 {
-		t.Fatalf("derived only %d versioned tables from migrations — the derivation is broken, not the schema", len(tables))
+		t.Fatalf("derived only %d versioned tables from %s — the derivation is broken, not the schema", len(tables), headCatalogPath)
 	}
 	return tables
 }
@@ -258,7 +220,7 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	"internal/modules/customfields:Update":          "runs under the catalog row lock minted by lockField (FOR UPDATE before every decision read), with the If-Match version checked under that lock",
 	"internal/modules/customfields:Retire":          "runs under the catalog row lock minted by lockField (FOR UPDATE before every decision read); the flip is an absolute idempotent transition besides",
 	"internal/modules/customfields:setOptionsInTx":  "runs under the catalog row lock minted by lockPicklistField (FOR UPDATE before every decision read), plus the per-table advisory lock serializeSchemaChange mints",
-	"internal/modules/deals:UpdateOfferLineItem":    "runs under the parent offer's row lock taken by visibleOfferLocked, which serializes every line edit",
+	"internal/modules/deals:applyOfferLinePatch":    "runs only inside UpdateOfferLineItem, under the parent offer's row lock taken by visibleOfferLocked, which serializes every line edit",
 	"internal/modules/signals:dropUnattributable":   "runs only inside resolveTx, under its signal row lock (storekit.LockRow before the terminal-state pre-read)",
 	"internal/modules/signals:resolveToCompany":     "runs only inside resolveTx, under its signal row lock (storekit.LockRow before the terminal-state pre-read)",
 	"internal/modules/signals:flagAmbiguous":        "runs only inside resolveTx, under its signal row lock (storekit.LockRow before the terminal-state pre-read)",

@@ -1,0 +1,47 @@
+name: standing_line_says_what_was_said
+task: summarize
+site: standing_line
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+fixture:
+  record_kind: contact
+  previous_line: "Sebastian Sachsinger asked for a revised offer with the extra licences."
+  # The newest mail moves the picture on: the offer was accepted and the
+  # contract draft is wanted. The older ones only explain it.
+  activities:
+    - kind: email
+      days_ago: 1
+      author: Sebastian Sachsinger
+      side: customer
+      subject: "Re: Revised offer"
+      text: >
+        Thanks, the revised offer works for us. Please send the contract draft
+        by Friday so our legal team can review it before the board meeting.
+    - kind: email
+      days_ago: 3
+      author: Lena Hoffmann
+      side: our team
+      subject: "Revised offer"
+      text: Attached is the revised offer with the 40 extra licences.
+    - kind: email
+      days_ago: 6
+      author: Sebastian Sachsinger
+      side: customer
+      subject: "Licences"
+      text: Could you revise the offer to include 40 extra licences?
+expect:
+  outcome: accepted
+  answer:
+    keep: false
+    names_token: contract draft
+    avoids: ["both sides have written"]
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40
+  rubric: >
+    Score whether the line says where things stand after the newest mail:
+    Sebastian Sachsinger accepted the revised offer and asked for the contract
+    draft by Friday for his legal team. Penalise a line that only says who
+    wrote or that an exchange happened, one that keeps the outdated previous
+    line, one that says "you" or "we", and any invented date or amount.
