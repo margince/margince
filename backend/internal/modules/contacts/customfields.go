@@ -62,6 +62,17 @@ func (c CustomColumns) Has(name string) bool {
 	return slices.ContainsFunc(c.cols, func(col fieldcatalog.Column) bool { return col.Name == name })
 }
 
+// Allows reports whether text is an option of the named picklist column. Any
+// other column is not this check's to refuse, and the write's own CHECK keeps it.
+func (c CustomColumns) Allows(name, text string) bool {
+	for _, col := range c.cols {
+		if col.Name == name && len(col.Options) > 0 {
+			return slices.Contains(col.Options, text)
+		}
+	}
+	return true
+}
+
 // ActiveContactColumns is the caller-side half of GetContactTx. A caller that
 // opens the transaction itself reads this first and threads the answer in.
 // The read takes a connection of its own.
