@@ -34,8 +34,11 @@ func TestOnlyRefusedCardsReachTheReviewStager(t *testing.T) {
 		return nil
 	})
 
-	h.stageVCardReviews(context.Background(), entries, results)
+	waiting := h.stageVCardReviews(context.Background(), entries, results)
 
+	if waiting != 1 {
+		t.Errorf("the report counts %d cards waiting, want the one refused card", waiting)
+	}
 	if len(staged) != 1 || staged[0].FullName != "Anna Weber" {
 		t.Fatalf("staged %+v, want exactly the refused card", staged)
 	}
@@ -61,9 +64,12 @@ func TestAStagingFaultDoesNotStopTheOtherCards(t *testing.T) {
 		}
 		return nil
 	})
-	h.stageVCardReviews(context.Background(), entries, results)
+	waiting := h.stageVCardReviews(context.Background(), entries, results)
 	if staged != 2 {
 		t.Errorf("the loop stopped after the fault: %d of 2 cards offered", staged)
+	}
+	if waiting != 1 {
+		t.Errorf("the report counts %d cards waiting, want only the one that was staged", waiting)
 	}
 }
 

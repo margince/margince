@@ -63,7 +63,7 @@ func (s *Store) previewActorDealCreation(ctx context.Context, in CreateDealInput
 			return err
 		}
 		if terminal != nil {
-			in.StageID, err = s.RefuseImportBirth(ctx, tx, in, terminal)
+			in.StageID, err = s.RefuseImportBirth(ctx, tx, in, terminal, CustomColumns{cols: active})
 			if err != nil {
 				return err
 			}

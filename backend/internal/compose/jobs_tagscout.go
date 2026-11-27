@@ -18,7 +18,7 @@ import (
 )
 
 // tagScoutActor raises the tag suggestions, so each reads as the scout's claim.
-const tagScoutActor = "agent:tag-scout"
+const tagScoutActor = "system:tag-scout"
 
 // TagScoutArgs runs one fleet-wide tag scout pass.
 type TagScoutArgs struct{}

@@ -144,7 +144,7 @@ func inWorkspace() (context.Context, ids.WorkspaceID) {
 }
 
 func objectsFor(unit string, store blobstore.Store) extcapability.Objects {
-	return extcapability.Objects{Store: store, Unit: unit, Gate: allow}
+	return extcapability.Objects{Store: store, Ledger: (&ledger{}).run, Unit: unit, Gate: allow}
 }
 
 func TestAnObjectLivesUnderTheUnitsOwnPrefixAndNowhereElse(t *testing.T) {

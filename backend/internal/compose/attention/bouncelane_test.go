@@ -23,7 +23,7 @@ type stubBounces struct {
 	since time.Time
 }
 
-func (s *stubBounces) HardBounces(_ context.Context, since time.Time, _ int) ([]BouncedSend, error) {
+func (s *stubBounces) HardBouncesFor(_ context.Context, since time.Time, _ int) ([]BouncedSend, error) {
 	s.since = since
 	return s.rows, s.err
 }
@@ -69,6 +69,32 @@ func TestABouncedSendNamesItselfAndOpensTheContact(t *testing.T) {
 	unfiled := (*out.Bounces)[1]
 	if unfiled.Subject != nil || len(unfiled.Actions) != 0 {
 		t.Errorf("a send filed under nobody must carry no subject and no verbs, got %v / %v", unfiled.Subject, unfiled.Actions)
+	}
+}
+
+func TestABounceOffersSendAgainExactlyWhenTheStoreSaysItMayBeSentAgain(t *testing.T) {
+	contact := ids.NewV7()
+	cases := map[string]struct {
+		send BouncedSend
+		want []crmcontracts.AttentionItemActions
+	}{
+		"may be sent again": {
+			BouncedSend{ID: ids.NewV7(), ContactID: contact, CanSendAgain: true},
+			[]crmcontracts.AttentionItemActions{actionOpen, actionSendAgain},
+		},
+		"already sent again, or itself a repeat": {
+			BouncedSend{ID: ids.NewV7(), ContactID: contact},
+			[]crmcontracts.AttentionItemActions{actionOpen},
+		},
+		"filed under no contact": {
+			BouncedSend{ID: ids.NewV7(), CanSendAgain: true},
+			[]crmcontracts.AttentionItemActions{},
+		},
+	}
+	for name, tc := range cases {
+		if got := bounceItem(tc.send).Actions; !slices.Equal(got, tc.want) {
+			t.Errorf("%s: actions = %v, want %v", name, got, tc.want)
+		}
 	}
 }
 

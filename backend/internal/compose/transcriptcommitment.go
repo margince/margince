@@ -22,10 +22,24 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
-// transcriptProposalActor is who a commitment read out of a transcript is
-// captured by: the reader's, not the confirming human's own note. The human is
-// on the decision's audit row, which is where "who approved this" belongs.
+// transcriptProposalActor is the reader agent a commitment read out of a
+// transcript is captured by, when it is the requester's own promise. Another
+// colleague's is filed by transcriptReadSystemID (fileFor).
 const transcriptProposalActor = "agent:transcript-proposer"
+
+// sameJobFilers are the other ids the job that filed under extractor files
+// under. A transcript reading files its requester's promises as its agent and
+// other colleagues' as the system. Before that split it filed every one as the
+// agent, so a re-read renews what either id filed.
+func sameJobFilers(extractor string) []string {
+	switch extractor {
+	case transcriptProposalActor:
+		return []string{transcriptReadSystemID}
+	case transcriptReadSystemID:
+		return []string{transcriptProposalActor}
+	}
+	return nil
+}
 
 // commitmentFrom rechecks the quoted promiser against the meeting participants.
 func (p *TranscriptProposer) commitmentFrom(
@@ -49,8 +63,7 @@ func (p *TranscriptProposer) commitmentFrom(
 		Links:            reading.Links,
 		Evidence:         stepEvidence(step, reading.Lines, activityID),
 	}
-	reader := extractorContext(ctx, transcriptProposalActor)
-	parties, err := p.messages.PartiesOf(reader, tx, activityID.UUID)
+	parties, err := p.messages.PartiesOf(ctx, tx, activityID.UUID)
 	if err != nil {
 		return Commitment{}, err
 	}

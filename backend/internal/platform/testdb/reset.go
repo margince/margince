@@ -135,7 +135,7 @@ const PreservedReferenceTables = `('activity_kind', 'channel_provider', ` +
 	`'lead_origin', 'lead_disqualify_reason', 'sdr_handoff_reason', 'field_mask', ` +
 	`'currency_minor_digits', 'deal_acquisition_source', 'deal_loss_reason', 'record_role', 'partner_stage', ` +
 	`'maskable_field', 'report_projection_fence', 'home_read_fence', ` +
-	`'activity_review_template', 'activity_own_sent_mail_repair_cutoff', 'legal_entity')`
+	`'activity_review_template', 'activity_own_sent_mail_repair_cutoff', 'legal_entity', 'language')`
 
 // reclaimSlack is how much a table may grow past its empty size before a reset
 // TRUNCATEs it instead of DELETEing it. Growth, not absolute size, is the

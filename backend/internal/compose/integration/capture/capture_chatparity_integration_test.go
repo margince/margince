@@ -105,10 +105,21 @@ func chatSeatFor(t *testing.T, e *integration.SearchEnv, posture string, team bo
 	return seat
 }
 
-// chatFollowsContactSharing runs the sequence with the mail and the chat seat
-// under one posture. Under shared, publishing the contact opens both activities
-// to a colleague. Under classified both stay held until a verdict judges them.
-func chatFollowsContactSharing(t *testing.T, posture string, team bool) {
+// chatFixture is one member's mail with a contact and the chat account of that
+// contact, under one seat posture. The contact is private to its owner.
+type chatFixture struct {
+	env     captureEnv
+	e       *integration.SearchEnv
+	mail    ids.UUID
+	contact ids.ContactID
+	binding connector.ChatBinding
+	ctx     context.Context
+}
+
+// newChatFixture sets the mailbox posture, files the contact's first mail, binds
+// the contact's chat identity and seats the chat account.
+func newChatFixture(t *testing.T, posture string, team bool) chatFixture {
+	t.Helper()
 	env := newCaptureEnv(t)
 	e := env.e
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
@@ -151,6 +162,15 @@ func chatFollowsContactSharing(t *testing.T, posture string, team bool) {
 		binding.Ownership, binding.OwnerUserID = connector.ChatOwnedByWorkspace, ids.Nil
 		ctx = workspaceConnectorCtx(e)
 	}
+	return chatFixture{env: env, e: e, mail: mail, contact: contact, binding: binding, ctx: ctx}
+}
+
+// chatFollowsContactSharing runs the sequence with the mail and the chat seat
+// under one posture. Under shared, publishing the contact opens both activities
+// to a colleague. Under classified both stay held until a verdict judges them.
+func chatFollowsContactSharing(t *testing.T, posture string, team bool) {
+	fx := newChatFixture(t, posture, team)
+	e, mail, contact, binding, ctx := fx.e, fx.mail, fx.contact, fx.binding, fx.ctx
 	chat, err := capturemod.FileChatMessage(ctx,
 		compose.NewCaptureSink(e.Pool, compose.CaptureConfig{}),
 		binding,
@@ -177,19 +197,7 @@ func chatFollowsContactSharing(t *testing.T, posture string, team bool) {
 	}
 
 	store := contacts.NewStore(e.DB()).WithSenderStamp(activities.StampProvenSendersTx)
-	ownerCtx := func() context.Context {
-		ctx := principal.WithWorkspaceID(context.Background(), e.WS)
-		ctx = principal.WithCorrelationID(ctx, ids.NewV7())
-		return principal.WithActor(ctx, principal.Principal{
-			Type: principal.PrincipalHuman, ID: "human:" + e.Rep1.String(), UserID: e.Rep1, SeatType: principal.SeatFull,
-			Permissions: principal.Permissions{
-				RoleKeys: []string{"rep"}, RowScope: principal.RowScopeAll,
-				Objects: map[string]principal.ObjectGrant{
-					"contact": {Read: true, Update: true}, "activity": {Read: true, Update: true},
-				},
-			},
-		})
-	}
+	ownerCtx := func() context.Context { return ownerOf(e) }
 	if err := store.PromoteOwnCapturedContact(ownerCtx(), contact); err != nil {
 		t.Fatalf("publishing the contact: %v", err)
 	}
@@ -206,6 +214,22 @@ func chatFollowsContactSharing(t *testing.T, posture string, team bool) {
 		t.Fatalf("making the contact private again: %v", err)
 	}
 	same("a contact made private again")
+}
+
+// ownerOf is the member whose mail and chat the fixture holds, acting through
+// the contact and activity writers.
+func ownerOf(e *integration.SearchEnv) context.Context {
+	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
+	return principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + e.Rep1.String(), UserID: e.Rep1, SeatType: principal.SeatFull,
+		Permissions: principal.Permissions{
+			RoleKeys: []string{"rep"}, RowScope: principal.RowScopeAll,
+			Objects: map[string]principal.ObjectGrant{
+				"contact": {Read: true, Update: true}, "activity": {Read: true, Update: true},
+			},
+		},
+	})
 }
 
 // connectorSeatCtx is the connector principal the chat ingest runs as, acting

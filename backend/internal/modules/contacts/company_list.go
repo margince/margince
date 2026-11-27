@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/dormancy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/companytypes"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
@@ -435,5 +436,11 @@ func dormancyClause(rung string, ladder dormancy.Ladder, now time.Time, arg func
 			"filter by active, cooling, dormant or stale, or leave the parameter off")
 	}
 	asOf := fmt.Sprintf("$%d::timestamptz", arg(now))
-	return ladder.WindowOf(dormancy.Rung(rung)).SQL("company.last_activity_at", asOf), nil
+	// A date-only last activity sits in the window from the start of its own date,
+	// as the company page's reading counts it. The loosened window on the stored
+	// column is the indexed range; the precision is read only for the rows in it.
+	window := ladder.WindowOf(dormancy.Rung(rung))
+	lastActivity := occurredday.StartAtSQL("company.last_activity_at",
+		"(CASE WHEN "+LastActivityDaySQL("company")+" THEN 'day' ELSE 'instant' END)")
+	return window.Loosened().SQL("company.last_activity_at", asOf) + " AND " + window.SQL(lastActivity, asOf), nil
 }

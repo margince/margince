@@ -74,14 +74,24 @@ func (h analyticsQueryHandlers) ListExtensionHistory(w http.ResponseWriter, r *h
 
 // extensionRecordEntries reads, kind by kind, the rows that reference the
 // record. A kind the caller may not read is left out, as in the kind directory.
+// Of a kind they may read, they see the rows inside its row scope.
 func extensionRecordEntries(ctx context.Context, tx pgx.Tx, entity string, id ids.UUID) ([]crmcontracts.ExtensionHistoryEntry, error) {
 	var out []crmcontracts.ExtensionHistoryEntry
 	for _, d := range recordkinds.All() {
-		query, ok := extensionHistoryQuery(d, entity)
-		if !ok || !auth.Allows(ctx, d.Name, principal.ActionRead) {
+		if !auth.Allows(ctx, d.Name, principal.ActionRead) {
 			continue
 		}
-		rows, err := tx.Query(ctx, query, id)
+		args := []any{id}
+		arg := func(v any) int { args = append(args, v); return len(args) }
+		scope, err := auth.ExtensionScopeClause(ctx, d.Name, "t", arg)
+		if err != nil {
+			return nil, err
+		}
+		query, ok := extensionHistoryQuery(d, entity, scope)
+		if !ok {
+			continue
+		}
+		rows, err := tx.Query(ctx, query, args...)
 		if err != nil {
 			return nil, err
 		}
@@ -110,10 +120,11 @@ func extensionRecordEntries(ctx context.Context, tx pgx.Tx, entity string, id id
 	return out, nil
 }
 
-// extensionHistoryQuery is the read of one kind's rows about one core record.
-// It answers false for a kind with no timeline, or none for this record.
-// The declaration validated every identifier. Each is quoted anyway.
-func extensionHistoryQuery(d recordkinds.Declared, entity string) (string, bool) {
+// extensionHistoryQuery is the read of one kind's rows about one core record,
+// bound as $1, narrowed by scope unless it is empty. It answers false for a
+// kind with no timeline, or none for this record. The declaration validated
+// every identifier. Each is quoted anyway.
+func extensionHistoryQuery(d recordkinds.Declared, entity, scope string) (string, bool) {
 	if d.Timeline == nil {
 		return "", false
 	}
@@ -122,9 +133,12 @@ func extensionHistoryQuery(d recordkinds.Declared, entity string) (string, bool)
 		return "", false
 	}
 	q := func(name string) string { return pgx.Identifier{name}.Sanitize() }
+	if scope != "" {
+		scope = ` AND ` + scope
+	}
 	return `SELECT t.id, coalesce(t.` + q(d.Timeline.LabelField) + `::text, ''), t.` + q(d.Timeline.AtColumn) +
 		` FROM ` + extSchemaPrefix + q(d.Table) + ` t WHERE t.` + q(d.Timeline.Subjects[i].Column) +
-		` = $1 AND t.archived_at IS NULL AND t.` + q(d.Timeline.AtColumn) + ` IS NOT NULL` +
+		` = $1 AND t.archived_at IS NULL AND t.` + q(d.Timeline.AtColumn) + ` IS NOT NULL` + scope +
 		` ORDER BY t.` + q(d.Timeline.AtColumn) + ` DESC, t.id DESC LIMIT ` + strconv.Itoa(extensionHistoryCap), true
 }
 

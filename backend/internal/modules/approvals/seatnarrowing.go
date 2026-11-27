@@ -51,7 +51,7 @@ var selfOnlyKinds = map[string]bool{
 	// contact:create holder a readable copy of a colleague's contacts. This is
 	// the shape a LinkedIn match is NOT — there the subject is a contact the
 	// decider can already read.
-	"vcard_create": true,
+	KindVCardCreate: true,
 	// A held draft is the fourth, and it is about WHOSE MAILBOX the message
 	// leaves from rather than who may read it. Releasing one sends it, and the
 	// send stamps its identity from the approving human: comms.stagingUser

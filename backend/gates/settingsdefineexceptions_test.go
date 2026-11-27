@@ -17,6 +17,8 @@ const (
 	// settings, which one stored setting cannot name. Compose locks it while
 	// they set it.
 	bootFieldsApart = "its boot source is several per-field settings one stored setting cannot carry; compose locks it while they set it"
+	// proseText is a long text an administrator writes in the app.
+	proseText = "an administrator's text of up to 20000 characters, written in the app; a boot environment variable is no place for it"
 	// keyedByUnit is a map whose keys the composed units decide, which no
 	// boot setting can name.
 	keyedByUnit = "one entry per composed unit, keyed by the unit's name; a boot setting cannot name keys the build decides"
@@ -38,6 +40,7 @@ var settingsDefineExceptions = map[string]string{
 	"identity.extension_setting_values":           keyedByUnit,
 
 	"ai.price_sync_last_run":         productState,
+	"ai.team_rules":                  proseText,
 	"privacy.retention_floor_carry":  productState,
 	"installation.smtp_password_ref": productState,
 	"installation.license_token_ref": productState,

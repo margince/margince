@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
@@ -29,7 +30,9 @@ type closeFacts struct {
 	// their participants may read included. Only the dates are read: a private
 	// reply keeps a deal open without its content reaching any report.
 	anyProgressAt *time.Time
-	refusalAt     *time.Time
+	// anyProgressDateOnly says anyProgressAt names only a date.
+	anyProgressDateOnly bool
+	refusalAt           *time.Time
 	// refusal is the newest message judged a refusal; zero when none was.
 	refusal ids.UUID
 	// replyOwed is a current customer request on the deal that nobody has
@@ -65,6 +68,8 @@ var closeFactsSQL = `
 	         WHERE al.deal_id = d.id AND a.archived_at IS NULL AND a.kind IN ('note', 'call', 'meeting')
 	           AND a.origin = $4 AND starts_with(a.captured_by, $5) AND a.created_at > u.undone_at),
 	       (SELECT max(a.occurred_at) FROM activity a JOIN activity_link al ON al.activity_id = a.id
+	         WHERE al.deal_id = d.id AND a.archived_at IS NULL AND %[1]s),
+	       (SELECT ` + occurredday.LatestPrecisionSQL("a", "") + ` FROM activity a JOIN activity_link al ON al.activity_id = a.id
 	         WHERE al.deal_id = d.id AND a.archived_at IS NULL AND %[1]s),
 	       refusal.id, refusal.occurred_at,
 	       ` + deals.PauseEndsSQL("d") + `,
@@ -119,13 +124,15 @@ func closeFactsRead(ctx context.Context, tx pgx.Tx, now time.Time, dealIDs []str
 		var deal string
 		var f closeFacts
 		var refusal *ids.UUID
-		if err := rows.Scan(&deal, &f.undoneAt, &f.workedAt, &f.anyProgressAt, &refusal, &f.refusalAt,
+		var progressPrecision *string
+		if err := rows.Scan(&deal, &f.undoneAt, &f.workedAt, &f.anyProgressAt, &progressPrecision, &refusal, &f.refusalAt,
 			&f.waitUntil, &f.meetingAhead, &f.mailboxes); err != nil {
 			return nil, fmt.Errorf("compose: reading what keeps a deal open: %w", err)
 		}
 		if refusal != nil {
 			f.refusal = *refusal
 		}
+		f.anyProgressDateOnly = occurredday.IsStatedDay(progressPrecision)
 		out[deal] = f
 	}
 	return out, rows.Err()

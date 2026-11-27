@@ -39,6 +39,9 @@ type ConnectionView struct {
 	FailingSince   *time.Time
 	// Import progress does not attest a complete mail interval.
 	Backfill *BackfillRun
+	// HistoryNarrowing is nil unless earlier mail is still being narrowed.
+	HistoryNarrowing *HistoryNarrowing
+	narrowingHeld    *bool
 	// UnreadFrom and UnreadTo bound the mail no sync read, both or neither.
 	UnreadFrom, UnreadTo *time.Time
 	// A missing signature choice follows the workspace setting.

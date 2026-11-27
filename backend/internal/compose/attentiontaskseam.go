@@ -375,8 +375,10 @@ func (t attentionTasks) markReadOnly(ctx context.Context, tasks []attention.Task
 		if err != nil {
 			return err
 		}
+		mayTake := activities.MayTakeTasks(ctx) == nil
 		for i := range tasks {
 			tasks[i].ReadOnly = !writable[tasks[i].ID]
+			tasks[i].Takeable = tasks[i].Takeable && mayTake
 			inquiry := tasks[i].Inquiry
 			if inquiry != nil && inquiry.CanTake != nil && *inquiry.CanTake && tasks[i].ReadOnly && (tasks[i].LinkType != entityLead || inquiry.RecordOwnerId != nil) {
 				inquiry.CanTake = new(false)

@@ -42,6 +42,9 @@ export const SCREENS = [
   "unsubscribe",
   // reach:external a double opt-in link, followed out of the reader's mailbox.
   "confirm",
+  // reach:external the address a merge-confirmation mail carries, opened by an
+  // account's holder who may not be signed in.
+  "confirm-merge",
   "room",
   // reach:external where a provider returns a human who has just lent an agent
   // their authority; it is a redirect target, never a destination.
@@ -208,6 +211,8 @@ const HASH_CREDENTIALS: ReadonlyArray<{ screen: Screen; param: string }> = [
   // as SCREENS above spells it. Importing a screen from the router would be a
   // cycle, and the `Screen` type still fails a rename.
   { screen: "reset-password", param: "token" },
+  // The emailed merge confirmation: `#/confirm-merge?token=<token>`.
+  { screen: "confirm-merge", param: "token" },
   // The link an erased subject asked for to be stored again:
   // `#/book/<slug>?return=<token>`.
   { screen: "book", param: "return" },

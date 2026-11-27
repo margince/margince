@@ -16,6 +16,9 @@ import (
 // right — it carries no owner_id, and its visibility is entirely its deal's.
 const roomObject = "deal_room"
 
+// A room is seen through its deal, so every room read also needs this grant.
+const dealObject = "deal"
+
 // The parent table every room read scopes through. A caller who cannot see the
 // deal cannot see its room, so `deal` — not `deal_room` — is the table the
 // row-scope clause names.

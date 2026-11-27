@@ -91,7 +91,7 @@ func seedSuggestions(t *testing.T, e *integration.Env, count int, owners ...*ids
 			Evidence: []collections.TagSuggestionEvidence{{ActivityID: note, OccurredAt: noted}},
 		})
 	}
-	system := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), "agent:deal-scout")
+	system := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), "system:deal-scout")
 	if err := database.WithWorkspaceTx(system, e.Pool, func(tx pgx.Tx) error {
 		for i := range count {
 			raised, err := deals.RecordSuggestionTx(system, tx, dealDrafts[i])

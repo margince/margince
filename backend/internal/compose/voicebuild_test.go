@@ -12,7 +12,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -91,34 +90,21 @@ func TestClaimTimeReadsTheClaimGeneration(t *testing.T) {
 	}
 }
 
-func TestVoiceBuildWorkerCtxBindsTheOwnerDelegate(t *testing.T) {
-	ws, user := ids.NewV7(), ids.NewV7()
-	ctx, err := voiceBuildWorkerCtx(context.Background(), VoiceBuildArgs{
-		Workspace: ws, ProfileID: ids.NewV7().String(),
-		BuildID: ids.NewV7().String(), RequestedBy: user.String(),
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if bound, ok := principal.WorkspaceID(ctx); !ok || bound != ws {
-		t.Fatalf("the build ran under workspace %v (bound=%t), want the %s its args declared", bound, ok, ws)
-	}
-	actor, ok := principal.Actor(ctx)
-	if !ok || actor.ID != "agent:voice-builder" {
-		t.Fatalf("the build's actor is %+v, want the owner-scoped agent:voice-builder delegate", actor)
-	}
-	if actor.OnBehalfOf != user {
-		t.Fatalf("the delegate acts on behalf of %s, want the requesting owner %s", actor.OnBehalfOf, user)
-	}
-	if _, err := voiceBuildWorkerCtx(context.Background(), VoiceBuildArgs{
+// The principals themselves are read against a real seat in
+// voicebuildcolleague_integration_test.go. These are the refusals that come
+// before any seat is read.
+func TestVoiceBuildWorkerCtxRefusesArgsItCannotBind(t *testing.T) {
+	worker := &voiceBuildWorker{}
+	user := ids.NewV7()
+	if _, _, err := worker.voiceBuildWorkerCtx(context.Background(), VoiceBuildArgs{
 		RequestedBy: user.String(),
 	}); err == nil {
 		t.Fatal("args carrying no workspace must be an explicit error — binding a zero id would fail at the first tenant query instead")
 	}
-	if _, err := voiceBuildWorkerCtx(context.Background(), VoiceBuildArgs{
-		Workspace: ws, RequestedBy: "",
+	if _, _, err := worker.voiceBuildWorkerCtx(context.Background(), VoiceBuildArgs{
+		Workspace: ids.NewV7(), RequestedBy: "",
 	}); err == nil {
-		t.Fatal("a missing requester must be an explicit error — the runner acts as the owner's delegate")
+		t.Fatal("a missing requester must be an explicit error — the runner acts for the owner")
 	}
 }
 

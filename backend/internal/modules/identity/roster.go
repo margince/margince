@@ -72,7 +72,8 @@ type userRow struct {
 	// or the member never signed in.
 	LastActiveAt *time.Time
 	CreatedAt    time.Time
-	Unused       bool
+	// Usage says why a member is not unused; Unused is its negation.
+	Usage memberUsage
 	// InviteMailState is nil unless the read asked and an invitation was mailed.
 	InviteMailState *string
 	UpdatedAt       time.Time
@@ -124,7 +125,7 @@ const lastActive = `CASE WHEN $1::boolean THEN
 	  ELSE NULL::timestamptz END`
 
 var userColumns = `id, email, display_name, status, is_agent, seat_type, ` +
-	roleKeys + `, ` + teamIDs + `, ` + lastActive + `, created_at, service_extension, updated_at, ` + mergedAccounts + `, ` + unusedMemberSQL("app_user") +
+	roleKeys + `, ` + teamIDs + `, ` + lastActive + `, created_at, service_extension, updated_at, ` + mergedAccounts + `, ` + memberUsageColumns("app_user") +
 	`, ` + inviteMailState + `, avatar_object_key`
 
 // $1 is the "read role keys?" flag on every user query below, so the aggregate
@@ -194,7 +195,7 @@ var listUsersAllFilteredQuery = `
 func scanUser(r pgx.Row) (userRow, error) {
 	var u userRow
 	err := r.Scan(&u.ID, &u.Email, &u.DisplayName, &u.Status, &u.IsAgent, &u.SeatType,
-		&u.Roles, &u.TeamIDs, &u.LastActiveAt, &u.CreatedAt, &u.ServiceExtension, &u.UpdatedAt, &u.MergedFrom, &u.Unused,
+		&u.Roles, &u.TeamIDs, &u.LastActiveAt, &u.CreatedAt, &u.ServiceExtension, &u.UpdatedAt, &u.MergedFrom, &u.Usage.PasswordSet, &u.Usage.SignedIn, &u.Usage.ProviderLinked,
 		&u.InviteMailState, &u.AvatarKey)
 	return u, err
 }
@@ -273,7 +274,7 @@ func (s *Service) ListUsers(ctx context.Context, in ListUsersInput) (RosterPage,
 		withholdActivity(ctx, nil, rows, nil)
 		return RosterPage{Users: rows, Page: page, Management: mayManage}, err
 	}
-	var actions map[ids.UUID][]memberAction
+	var actions map[ids.UUID]memberOffer
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		grants, err := loadGrantsFor(ctx, tx, rowIDs(rows))
 		if err != nil {
@@ -317,7 +318,7 @@ type RosterPage struct {
 	Management bool
 	// Actions are the verbs the caller would be admitted to on each member, nil
 	// when the page is not the management view or nobody human asked.
-	Actions map[ids.UUID][]memberAction
+	Actions map[ids.UUID]memberOffer
 }
 
 // ListTeamsInput narrows and pages the team list; Q is a case-insensitive

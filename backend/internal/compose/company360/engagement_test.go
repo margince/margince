@@ -11,11 +11,12 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/dormancy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // onRung is an account on rung whose stored clock is set.
 func onRung(rung dormancy.Rung) dormancyInputs {
-	last := time.Date(2026, 5, 1, 12, 0, 0, 0, time.UTC)
+	last := occurredday.Moment{At: time.Date(2026, 5, 1, 12, 0, 0, 0, time.UTC)}
 	return dormancyInputs{reading: dormancy.Reading{Rung: rung}, ladder: dormancy.Default, lastActivity: &last}
 }
 

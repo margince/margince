@@ -21,7 +21,7 @@ func scanEdges(ctx context.Context, rows pgx.Rows) ([]InteractionEdge, error) {
 		var e InteractionEdge
 		if err := rows.Scan(&e.UserID, &e.ContactID, &e.LastAt, &e.LastInboundAt, &e.LastOutbound, &e.LastMetAt,
 			&e.LateCount90d, &e.LateOutCount90d,
-			&e.Count90d, &e.InCount90d, &e.OutCount90d, &e.SentCount90d, &e.CountTotal); err != nil {
+			&e.Count90d, &e.InCount90d, &e.OutCount90d, &e.SentCount90d, &e.CountTotal, &e.LastAtDateOnly); err != nil {
 			return nil, err
 		}
 		if !mayReadAuthorship {

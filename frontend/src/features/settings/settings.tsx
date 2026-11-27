@@ -356,7 +356,7 @@ export const SETTINGS_PAGE_VIEWS = {
     (
       [
         { AiRoutingCard },
-        { AiTasksCard },
+        { AiTasksCard, TeamRulesCard },
         { PrivateMailRequestsCard },
         { ModelPricesCard },
         { AiProviderKeysCard },
@@ -372,6 +372,7 @@ export const SETTINGS_PAGE_VIEWS = {
           </>
         ),
         prices: <ModelPricesCard />,
+        rules: <TeamRulesCard />,
       }),
   ),
   mcp: page(

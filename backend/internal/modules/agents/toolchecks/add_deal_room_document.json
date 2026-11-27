@@ -1,6 +1,7 @@
 {
   "verb": "add_deal_room_document",
   "checks": [
+    "deal.read",
     "deal_room.create"
   ],
   "takes": [

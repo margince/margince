@@ -10,6 +10,7 @@ package contacts
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -17,6 +18,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
@@ -96,10 +98,36 @@ func fillContactCounts(ctx context.Context, tx pgx.Tx, idx map[openapi_types.UUI
 	if err != nil {
 		return err
 	}
-	return fillCount(ctx, tx, idx,
+	if err := fillCount(ctx, tx, idx,
 		`SELECT rel.company_id, count(DISTINCT p.id)`+from+`
 		 GROUP BY rel.company_id`, args,
-		func(o *crmcontracts.Company, n int) { o.ContactCount = &n })
+		func(o *crmcontracts.Company, n int) { o.ContactCount = &n }); err != nil {
+		return err
+	}
+	return fillHiddenContactHolders(ctx, tx, idx, companyIDs)
+}
+
+// fillHiddenContactHolders names, per company, the live colleagues who own a
+// current contact there that the caller may not see. It reads the section
+// the count reads (employmentSection), turned around, so the holders and the
+// count cannot describe different people. Only who to ask is carried: no
+// contact and no number.
+func fillHiddenContactHolders(ctx context.Context, tx pgx.Tx, idx map[openapi_types.UUID]*crmcontracts.Company, companyIDs []ids.UUID) error {
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	section, err := employmentSection(ctx, fmt.Sprintf("rel.company_id = ANY($%d)", arg(companyIDs)), arg)
+	if err != nil {
+		return err
+	}
+	holders, err := storekit.ReadHiddenHolders(ctx, tx, section, "rel.company_id::text", args)
+	if err != nil {
+		return err
+	}
+	for id, company := range idx {
+		list := storekit.HoldersWire(holders[id.String()])
+		company.HiddenContactHolders = &list
+	}
+	return nil
 }
 
 // countedEmploymentFrom is the FROM and WHERE of "which contacts work here that
@@ -109,34 +137,55 @@ func fillContactCounts(ctx context.Context, tx pgx.Tx, idx map[openapi_types.UUI
 // statement from here — the page counts the whole set at once, the sort counts
 // per row — so a reader sees the number the list was arranged by rather than a
 // second reading of the same question.
-//
-// It takes the gates itself rather than being handed them: which employment
-// EDGES this caller may traverse bounds the count as much as which CONTACTS they
-// may see, and a caller that had to remember to pass either could forget one
-// and get a counting oracle over edges it is refused everywhere else.
 func countedEmploymentFrom(ctx context.Context, companyBinding string, arg func(any) int) (string, error) {
-	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
+	section, err := employmentSection(ctx, companyBinding, arg)
+	if err != nil {
 		return "", err
+	}
+	return section.VisibleFrom(""), nil
+}
+
+// employmentSection is an account's current employees, split by what the
+// caller may see. Which employment edges this caller may traverse bounds the
+// set as much as which contacts they may see.
+//
+// It takes the gates itself rather than being handed them. A caller that had
+// to pass either could forget one, and count edges it is refused elsewhere.
+func employmentSection(ctx context.Context, companyBinding string, arg func(any) int) (storekit.HiddenSection, error) {
+	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
+		return storekit.HiddenSection{}, err
 	}
 	edgeBound, err := auth.EdgeReadScope(ctx, "rel", arg)
 	if err != nil {
-		return "", err
+		return storekit.HiddenSection{}, err
 	}
-	if edgeBound != "" {
-		edgeBound = " AND " + edgeBound
-	}
-	scope, err := contactScopePredicate(ctx, arg)
+	scope, err := auth.RowScopeClauseFor(ctx, "contact", "p", arg)
 	if err != nil {
-		return "", err
+		return storekit.HiddenSection{}, err
 	}
-	if scope != "" {
-		scope = " AND " + scope
+	exclusion, err := auth.ExclusionClauseFor(ctx, "contact", "p")
+	if err != nil {
+		return storekit.HiddenSection{}, err
 	}
-	return `
-		 FROM relationship rel
-		 JOIN contact p ON p.id = rel.contact_id AND p.archived_at IS NULL
-		 WHERE ` + companyBinding + `
-		   AND ` + employment.CurrentMembershipSQL("rel") + edgeBound + scope, nil
+	return storekit.HiddenSection{
+		From:    "relationship rel JOIN contact p ON p.id = rel.contact_id AND p.archived_at IS NULL",
+		Where:   storekit.BoundedBy(companyBinding, employment.CurrentMembershipSQL("rel"), exclusion),
+		Entry:   "p.id",
+		Owner:   "p.owner_id",
+		Visible: storekit.BoundedBy(edgeBound, scope),
+	}, nil
+}
+
+// HiddenCompanyContactsTx is what row scope withheld from the account's
+// roster: how many current employees, and which colleagues own them.
+func HiddenCompanyContactsTx(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) (storekit.HiddenRows, error) {
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	section, err := employmentSection(ctx, fmt.Sprintf("rel.company_id = $%d", arg(companyID)), arg)
+	if err != nil {
+		return storekit.HiddenRows{}, err
+	}
+	return storekit.ReadHiddenRows(ctx, tx, section, args)
 }
 
 // fillOpenDealCounts reads the 0065 company_open_pipeline_rollup view
