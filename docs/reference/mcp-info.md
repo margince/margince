@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 14 |
-| Tool catalog | 244.7 KB |
+| Tool catalog | 244.9 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 64059 |
+| Approx. wire tokens | 64108 |
 | Largest tool | `read_details` (15.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -34,9 +34,9 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 33.7 KB | 13% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 51.1 KB | 20% | Yes, every step |
-| Input schemas | 148.4 KB | 60% | Yes, every step |
+| Input schemas | 148.6 KB | 60% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.6 KB | 4% | Partly |
-| **Description + input schema** | **199.5 KB** | **81%** | **the recurring cost** |
+| **Description + input schema** | **199.7 KB** | **81%** | **the recurring cost** |
 
 Output schemas count in the total but are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -87,7 +87,7 @@ descriptions and input schemas are what each step pays for.
 | [`decide_approvals`](#decide_approvals) | Approve or reject staged actions |  |  | 463 |
 | [`draft_outbound`](#draft_outbound) | Draft an email or follow-ups |  |  | 523 |
 | [`enrich`](#enrich) | Enrich a company from its website |  |  | 446 |
-| [`find_records`](#find_records) | Find records | yes |  | 2053 |
+| [`find_records`](#find_records) | Find records | yes |  | 2102 |
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes | [`ui://margince/approval-queue.html`](#approval_queue_view) | 475 |
 | [`list_documents`](#list_documents) | List a record's documents or read one | yes |  | 351 |
 | [`preview_import`](#preview_import) | Preview an import |  |  | 1008 |
@@ -3577,6 +3577,12 @@ next_cursor to read on.
       "description": "list, meaning, search only; at most 25 for meaning, search.",
       "maximum": 50,
       "minimum": 1,
+      "type": "integer"
+    },
+    "offset": {
+      "description": "list only: Skips rows in the list's order; cannot be sent with cursor. Contact, company, deal, lead and project lists only.",
+      "maximum": 10000,
+      "minimum": 0,
       "type": "integer"
     },
     "per_type": {

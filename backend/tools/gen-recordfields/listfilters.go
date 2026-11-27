@@ -102,7 +102,7 @@ func operationsByID(paths map[string]map[string]yaml.Node) (map[string]*operatio
 }
 
 // pagingParameters are the list controls the tool declares itself.
-var pagingParameters = map[string]bool{"cursor": true, "limit": true}
+var pagingParameters = map[string]bool{"cursor": true, "limit": true, "offset": true}
 
 // listFiltersFor reads one operation's query parameters, the shared ones given
 // by $ref included. A passport lists by sort, include_archived and the capture

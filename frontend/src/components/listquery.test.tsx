@@ -322,7 +322,15 @@ describe("listFetchLimit — one read carries the page shown and the next", () =
   });
 
   it("reads the page shown and the one Next opens, at every offered size", () => {
-    expect(LIST_PAGE_SIZES.map(listFetchLimit)).toEqual([50, 100, 200]);
+    expect(LIST_PAGE_SIZES.map((size) => listFetchLimit(size))).toEqual([
+      50, 100, 200,
+    ]);
+  });
+
+  it("walks past the offset cap in the widest reads the server takes", () => {
+    expect(
+      LIST_PAGE_SIZES.map((size) => listFetchLimit(size, { pastCap: true })),
+    ).toEqual([200, 200, 200]);
   });
 });
 

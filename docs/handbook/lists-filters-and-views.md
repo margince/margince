@@ -6,7 +6,7 @@ The list screens in Margince are **Contacts**, **Companies**, **Leads**, **Deals
 
 ## How a list screen looks
 
-Every Margince list screen has the same three rows. The header row holds the view tabs (such as **All** and **Mine**), the count ("1 to 25 of 200 contacts") and the create button. On a phone drag the tabs left or right. The toolbar row holds the **Search** box and one **View** button, and the rows sit under it. A table ends with **Previous**, **Next** and **Rows per page**; a board has **Load more** in each **Deals** column and one below **Leads**. Click a row to open the record.
+Every Margince list screen has the same three rows. The header row holds the view tabs (such as **All** and **Mine**), the count ("1-25 of 200") and the create button. On a phone drag the tabs left or right. The toolbar row holds the **Search** box and one **View** button, and the rows sit under it. A table ends with the pages, **Previous**, **Next** and **Rows per page**; a board has **Load more** in each **Deals** column and one below **Leads**. Click a row to open the record.
 
 **View** opens a panel: a small window on a computer, a full screen on a phone. On **Deals** and **Leads** the **Table** / **Board** switch is at the top. Then comes one row for each setting: **Pipeline** (Deals, with several pipelines), **Filters**, **Sort** and **Columns**. Each row shows its value now, and a dot when it differs from how the list opens (never for **Default order**). Press a row to open its step, and press the step's name at the top to go back. Next come **Show archived** and **Compact**, which are On or Off.
 
@@ -154,7 +154,7 @@ Also called: add column, remove column, reorder columns, change table layout.
 
 ### How do I show more rows per page?
 To show more rows on a Margince list, open **Rows per page** at the bottom of the list. Pick **25 per page**, **50 per page** or **100 per page**.
-Use **Previous** and **Next**, or a page number, to move through the pages. The count at the top says how many match, for example "1 to 25 of 200 contacts". The page numbers end with the last page: press it to go to the end. Where Margince does not have the full count, it says "loaded" instead and shows only **Previous** and **Next** until the last page is read.
+Use **Previous** and **Next**, or a page number, to move through the pages. The count at the top says which rows show, for example "1-25 of 200", and the same count sits beside or under the page numbers. The page numbers end with the last page, and a screen narrower than a computer's shows fewer of them, with arrows for **Previous** and **Next**. Where Margince does not have the full count, the count says "loaded" and the page numbers end with "…" until the last page is read.
 
 Also called: page size, see all records, load more.
 

@@ -39,21 +39,18 @@ const (
 // undated deal last.
 const AtRiskSort = closeDateField
 
-// atRiskTerms adds the at-risk predicate and the position sink to a list read.
-// Both halves are judged at the window's own instant, never the database's.
-func (in ListDealsInput) atRiskTerms(pre *storekit.ListPrelude, where []string) []string {
-	if in.positions != nil {
-		pre.CollectPositions(in.positions)
-	}
+// atRiskTerms adds the at-risk predicate to a list read. Both halves are
+// judged at the window's own instant, never the database's.
+func (in ListDealsInput) atRiskTerms(arg func(any) int, where []string) []string {
 	window := in.AtRisk
 	if window == nil {
 		return where
 	}
 	quiet := func() string {
-		return quietAtSQL("", window.QuietForDays, fmt.Sprintf("$%d::timestamptz", pre.Arg(window.AsOf)))
+		return quietAtSQL("", window.QuietForDays, fmt.Sprintf("$%d::timestamptz", arg(window.AsOf)))
 	}
 	closes := func() string {
-		return fmt.Sprintf("(status = 'open' AND expected_close_date < $%d)", pre.Arg(window.CloseBefore.Format(time.DateOnly)))
+		return fmt.Sprintf("(status = 'open' AND expected_close_date < $%d)", arg(window.CloseBefore.Format(time.DateOnly)))
 	}
 	switch window.Arm {
 	case AtRiskQuiet:

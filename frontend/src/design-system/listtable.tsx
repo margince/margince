@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { AnsweredSearch } from "./answeredsearch";
 import { EmptyState, useScrollRegion } from "./atoms";
-import { ListSurface, rangeLine } from "./listsurface";
+import { ListSurface, type PageRange, rangeLine } from "./listsurface";
 import { useColumnWidths, useFrozenEdge } from "./listtable.layout";
 import {
   orderedColumns,
@@ -68,7 +68,6 @@ export function ListTable<Row>({
   onRowClick,
   rowHref,
   unit,
-  unitOne,
   emptyNote,
   emptyLine,
   search,
@@ -90,13 +89,14 @@ export function ListTable<Row>({
   onLoadMore,
   hideShortChrome = false,
   total: serverTotal,
+  jumped,
   perPage: controlledPerPage,
   onPerPage,
   page: controlledPage,
   onPage,
   keepsPage,
   bodyRef,
-  pending = false,
+  pending: rowsPending = false,
   problem,
   widthsKey,
   tools,
@@ -170,8 +170,10 @@ export function ListTable<Row>({
       hasMore,
       onLoadMore,
       total: serverTotal,
+      jumped,
       reachAsked: !bodyOwnsPaging,
       keepsPage,
+      pending: rowsPending,
     },
     {
       search: search?.value,
@@ -183,6 +185,7 @@ export function ListTable<Row>({
     },
     scroller,
   );
+  const { pending } = paging;
   const all = useSelectAll({
     rows,
     pageRows: paging.pageRows,
@@ -250,6 +253,14 @@ export function ListTable<Row>({
       emptyRow,
     ],
   );
+  const onScreen: PageRange = {
+    first: paging.from + 1,
+    last: paging.from + paging.pageRows.length,
+    total: serverTotal ?? rows.length,
+    // "Loaded" is the caveat for a number the client counted itself; an exact
+    // total needs none.
+    more: hasMore && serverTotal === undefined,
+  };
   const emptyBlock = (
     <div className="lt-emptyline">
       <EmptyState>{emptyRow}</EmptyState>
@@ -267,14 +278,7 @@ export function ListTable<Row>({
         bodyOwnsPaging
           ? bodyCount
           : rangeLine(pending, {
-              unit,
-              unitOne,
-              first: paging.from + 1,
-              last: paging.from + paging.pageRows.length,
-              total: serverTotal ?? rows.length,
-              // "Loaded so far" is the caveat for a number the client
-              // counted itself; an exact total needs none.
-              more: hasMore && serverTotal === undefined,
+              ...onScreen,
               scope: countScope,
               sortedBy: sortedColumn(columns, sort)?.header,
             })
@@ -311,6 +315,7 @@ export function ListTable<Row>({
               asked={paging.asked}
               hasMore={hasMore}
               perPage={paging.perPage}
+              range={onScreen}
               onGoto={paging.goto}
               onPerPage={paging.setPerPage}
             />

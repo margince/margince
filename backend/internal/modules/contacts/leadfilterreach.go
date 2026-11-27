@@ -32,7 +32,7 @@ func LeadListFilterReach(ctx context.Context, members storekit.ListMemberFilterR
 			return err
 		}
 		in.Membership = membership
-		_, err = leadListWhere(ctx, *in, nil, nil, leadSLAPolicy{}, func(any) int { return 1 })
+		_, err = leadListWhere(ctx, *in, nil, leadSLAPolicy{}, func(any) int { return 1 })
 		return err
 	})
 }
