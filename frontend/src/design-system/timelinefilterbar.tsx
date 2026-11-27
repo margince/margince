@@ -148,6 +148,7 @@ export function TimelineFilterBar({
           <DateBound label={t("timeline.filters.from")} htmlFor={fromId}>
             <DateInput
               id={fromId}
+              calendarLabel={t("timeline.filters.pickFrom")}
               value={value.after ?? ""}
               max={value.before || undefined}
               onChange={(event) =>
@@ -158,6 +159,7 @@ export function TimelineFilterBar({
           <DateBound label={t("timeline.filters.to")} htmlFor={toId}>
             <DateInput
               id={toId}
+              calendarLabel={t("timeline.filters.pickTo")}
               value={value.before ?? ""}
               min={value.after || undefined}
               onChange={(event) =>

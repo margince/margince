@@ -29,7 +29,7 @@ var seededStageNames = map[string]map[string]string{
 	"Proposal":           {"de": "Angebot", "vi": "Đề xuất"},
 	"Negotiation":        {"de": "Verhandlung", "vi": "Đàm phán"},
 	defaultWonStageName:  {"de": "Gewonnen", "vi": "Thắng"},
-	defaultLostStageName: {"de": "Verloren", "vi": "Thua"},
+	defaultLostStageName: {"de": "Verloren", "vi": "Thất bại"},
 }
 
 // seededTranslations answers a copy of the seeded translations of name, nil

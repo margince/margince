@@ -3372,6 +3372,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Summe kann nicht berechnet werden, da ein Wechselkurs fehlt.",
   "rollup.computedAt": "Berechnet am {when}",
   "rollup.wonIn": "Gewonnen in {period}",
+  "rollup.quarterOf": "Q{quarter} {year}",
   "rollup.periodNote":
     "Gewonnene Deals zählen in {period} nach dem Tag, an dem sie gewonnen wurden. Der gewichtete Deal-Wert zeigt die offenen Deals von heute.",
   "rollup.period.label": "Zeitraum für gewonnene Deals",
@@ -4175,6 +4176,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "timeline.filters.search": "Diesen Verlauf durchsuchen",
   "timeline.filters.from": "Von",
   "timeline.filters.to": "Bis",
+  "timeline.filters.pickFrom": "Startdatum wählen",
+  "timeline.filters.pickTo": "Enddatum wählen",
   "timeline.filters.searchOmitsLimited":
     "Die Suche schließt Threads aus, deren Inhalt du nicht öffnen kannst.",
   "tab.contacts": "Kontakte",
@@ -4910,6 +4913,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.evidence.verifiedAt": "Von einer Person bestätigt am {when}",
   "co.evidence.confidence": "Konfidenz des Modells {percent} %",
   "co.evidence.gaps": "Nicht erfasst: {fields}.",
+  "co.evidence.field.source_url": "Quelle",
+  "co.evidence.field.excerpt": "Auszug",
+  "co.evidence.field.actor": "Erfasst von",
+  "co.evidence.field.connector": "Verbindung",
+  "co.evidence.field.import": "Import",
+  "co.evidence.field.produced_by": "Erstellt von",
   "co.evidence.kind.site_read": "Aus der Analyse der Unternehmenswebsite",
   "co.evidence.kind.connector": "Aus einem verbundenen System",
   "co.evidence.kind.human": "Von einer Person eingegeben",
@@ -10027,7 +10036,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Wird im Team an Datensätzen, die du bearbeitest, in Auswahllisten und im Audit-Log angezeigt.",
   "settings.greetingName": "Rufname",
   "settings.greetingNameHelp":
-    "Mit diesem Namen wirst du in entworfenen Nachrichten und Begrüßungen angesprochen. Lässt du das Feld leer, gilt das erste Wort deines Anzeigenamens.",
+    "Mit diesem Namen wirst du in entworfenen Nachrichten und Begrüßungen angesprochen. Lässt du das Feld leer, gilt dein Vorname, bei einem vietnamesischen Familiennamen das letzte Wort.",
   "settings.installApp": "Margince-App",
   "settings.installAppHelp":
     "Margince wird auf diesem Gerät als App mit eigenem Fenster und Symbol installiert.",
@@ -16964,7 +16973,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "users.namePlaceholder": "Vollständiger Name",
   "users.greetingLabel": "Rufname",
   "users.greetingHint":
-    "Optional. Nur angeben, wenn der Rufname nicht das erste Wort des vollständigen Namens ist.",
+    "Optional. Leer gilt der Vorname, bei einem vietnamesischen Familiennamen das letzte Wort des Namens.",
   "users.deactivateConfirmTitle": "{name} deaktivieren?",
   "users.deactivateConfirmBody":
     "Die Person wird überall abgemeldet, und ihre Agenten-Passports werden sofort widerrufen. Die Person kann später reaktiviert werden und muss sich dann erneut anmelden.",
@@ -23540,6 +23549,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "magic.action.company_profile_read":
     "Technisches Profil des Unternehmens analysiert",
   "magic.action.fields_changed": "{fields} geändert",
+  "magic.action.guests_synced_from_calendar":
+    "Gäste aus dem Kalender aktualisiert",
+  "magic.action.task_done": "Aufgabe als erledigt markiert",
+  "magic.action.task_reopened": "Aufgabe wieder geöffnet",
   "magic.action.retention_lead_anonymize":
     "Nicht konvertierte Leads nach Ablauf der Aufbewahrungsfrist anonymisiert",
   "magic.action.retention_lead_archive":
@@ -23645,6 +23658,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "magic.records.fromTo": "{from} → {to}",
   "magic.records.hidden_value": "verborgen",
   "magic.records.empty_value": "leer",
+  "magic.records.filled_value": "ausgefüllt",
   "magic.records.count_one": "{count} Datensatz",
   "magic.records.count_other": "{count} Datensätze",
   "magic.undoReason.noCompletedChange":

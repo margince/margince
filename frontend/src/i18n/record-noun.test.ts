@@ -352,7 +352,27 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "create.addressErased",
   ],
   vi: [
+    // "Người phụ trách" is the person responsible for a record, and "mọi
+    // người" is everyone: both are human beings.
+    "approvalPreferences.explain",
+    "reporting.owner",
+    "contact.attachRefused",
+    "record.attachRefused",
+    "companyReach.none",
+    "vcardImport.whichFile",
+    "analytics.overview.targetWho",
+    "senders.sub",
+    "hold.holdDomain",
+    "settings.boundary.deniedBody",
+    "settings.voice.sentMailConsent",
+    "autonomy.kind.lifecycle_change.help",
+    "captureReview.verdictCap.help",
+    "deal.committee.owner",
+    "worklist.scope.label",
+    "progress.whoSetsGoals",
     "forecast.callAuthor",
+    "settings.voice.worksTranscripts",
+    "co.evidence.field.actor",
     // "Người tổ chức" is the meeting's organizer, a person.
     "meetingChange.line.details",
     "worklist.ask.changedInvitation",
@@ -575,7 +595,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "settings.voice.speakerQuestion",
     "settings.voice.speakerWhy",
     "settings.voice.worksNot",
-    "settings.voice.worksTranscripts",
     "users.access.title",
     "worklist.because.champion_unknown",
     "worklist.because.no_champion",
@@ -849,7 +868,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "ownerPick.change",
     // A human being on the committee, or who owns or sets something, not the record type.
     "co.overview.noEconomicBuyer",
-    "co.aside.visibleEveryone",
     "co.aside.visibleOnlyOwner",
     "co.aside.visibleTheOwnerAndShared_one",
     "co.aside.visibleTheOwnerAndShared_other",

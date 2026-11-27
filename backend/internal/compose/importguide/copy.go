@@ -206,7 +206,7 @@ var Columns = withLabels(withProjectColumns(withActivityColumns(map[string]Colum
 	"stage": {Description: langcopy.Phrase{
 		En: "The stage's name in that pipeline; case does not matter. A won or lost stage imports the deal as closed.",
 		De: "Der Name der Phase in dieser Pipeline. Groß- und Kleinschreibung zählt nicht. Mit einer gewonnenen oder verlorenen Phase wird der Deal als abgeschlossen importiert.",
-		Vi: "Tên giai đoạn trong pipeline đó; không phân biệt chữ hoa, chữ thường. Giai đoạn thắng hoặc thua sẽ nhập deal ở trạng thái đã đóng.",
+		Vi: "Tên giai đoạn trong pipeline đó; không phân biệt chữ hoa, chữ thường. Giai đoạn thắng hoặc thất bại sẽ nhập deal ở trạng thái đã đóng.",
 	}, Example: same("Qualified"), RequiredOnNew: true},
 	"amount": {Description: langcopy.Phrase{
 		En: "The deal's value as a plain number with a dot for decimals, with no currency sign and no thousands separator. Needs a currency.",
@@ -221,7 +221,7 @@ var Columns = withLabels(withProjectColumns(withActivityColumns(map[string]Colum
 	"close_date": {Description: langcopy.Phrase{
 		En: "When the deal closes or closed, as YYYY-MM-DD. An open deal's date cannot be in the past; a won or lost deal's may.",
 		De: "Wann der Deal abschließt oder abgeschlossen wurde, im Format YYYY-MM-DD. Bei einem offenen Deal darf das Datum nicht in der Vergangenheit liegen, bei einem gewonnenen oder verlorenen schon.",
-		Vi: "Ngày deal đóng hoặc đã đóng, theo dạng YYYY-MM-DD. Deal đang mở không được có ngày trong quá khứ; deal thắng hoặc thua thì được.",
+		Vi: "Ngày deal đóng hoặc đã đóng, theo dạng YYYY-MM-DD. Deal đang mở không được có ngày trong quá khứ; deal thắng hoặc thất bại thì được.",
 	}, Example: same("2026-09-30")},
 	"deal.company_ref": {Description: langcopy.Phrase{
 		En: "The deal's company: the company's ref in this upload or an earlier one, its domain, its exact name, or its Margince ID. If none matches, the import preview reports a broken link.",
@@ -241,7 +241,7 @@ var Columns = withLabels(withProjectColumns(withActivityColumns(map[string]Colum
 	"lost_reason": {Description: langcopy.Phrase{
 		En: "Why a lost deal was lost. Needed when the stage is lost; written only when the row creates the deal.",
 		De: "Warum ein verlorener Deal verloren ging. Nötig, wenn die Phase verloren ist. Wird nur geschrieben, wenn die Zeile den Deal erstellt.",
-		Vi: "Lý do deal bị thua. Bắt buộc khi giai đoạn là thua; chỉ được ghi khi dòng tạo deal mới.",
+		Vi: "Lý do deal thất bại. Bắt buộc khi giai đoạn là thất bại; chỉ được ghi khi dòng tạo deal mới.",
 	}, Example: langcopy.Phrase{En: "Chose a cheaper supplier", De: "Günstigeren Anbieter gewählt", Vi: "Chọn nhà cung cấp rẻ hơn"}},
 })))
 

@@ -80,7 +80,7 @@ it("sets Vietnamese headings in a face that loads the Vietnamese subset", () => 
       (face) => face.family === family && face.file.includes("-vietnamese-"),
     )
     .map((face) => face.weight);
-  expect(vietnameseWeights.sort()).toEqual(["400", "500", "700"]);
+  expect(vietnameseWeights.sort(stable)).toEqual(["400", "500", "700"]);
 });
 
 it("swaps every face in when it arrives", () => {
