@@ -11,7 +11,7 @@ import { dealCloseOutcome } from "./approvalpreview";
 // snake_case in the German UI is not a translation of anything.
 //
 // The set is the approvals module's grant maps, and this map is pinned against
-// them by backend/gates/frontendapprovalkinds_test.go, which DERIVES the corpus
+// them by backend/gates/frontendvocabularymirrors_test.go, which DERIVES the corpus
 // rather than restating it. The gate this replaced compared against a list
 // hand-copied into the frontend's own test, and a mirror of a mirror agrees
 // with itself: eleven stageable kinds had no label and two labels named kinds
