@@ -481,8 +481,9 @@ describe("a request retired while its drawer is open", () => {
       resolution: "Nothing left to send.",
     });
   });
-  // A case with no answer yet keeps none through the retirement, so the flag on
-  // the subject is what tells the drawer that a typed draft went stale.
+
+  // A case with no answer yet keeps none through the retirement. The flag on the
+  // subject is then what tells the drawer that a typed draft went stale.
   //
   // Mutation: reset only on a changed answer and the typed draft is sent.
   it("sends no draft typed on an unanswered case before the retirement", async () => {
