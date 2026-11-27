@@ -4549,7 +4549,9 @@ paths:
         the company carries it. `linkCompanyContacts` accepts exactly these contacts.
 
         A candidate with no current employer is also attached by the daily link reconcile,
-        so the list's lasting use is contacts who work elsewhere today.
+        so the list's lasting use is contacts who work elsewhere today. The reconcile does not
+        re-make a link somebody removed: a contact whose job at this company was ended or
+        archived stays unlinked until a user links them again.
 
         Ordered by name, then id. At most 50 candidates; `truncated` is true when more exist.
         Needs read on companies, contacts and relationships. A caller without
@@ -10014,6 +10016,39 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/WebsiteInquiryAssignment' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/VersionConflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '423': { $ref: '#/components/responses/RetentionHeld' }
+
+  /activities/{id}/take:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Activities]
+      operationId: takeTask
+      security: [{ cookieAuth: [] }]
+      x-agent-access: human-only
+      x-human-only-reason: security   # taking a task makes its taker the holder in front of the record's owner; an agent may not decide that for its user
+      summary: Take an open task nobody holds.
+      description: >-
+        Makes the caller the assignee of an open task that has no assignee. Anyone who can see the
+        task and may change tasks can take it, whether or not they could change this task before:
+        a task nobody holds has no owner to protect. The owner of each record the task is filed
+        under is told, and can give the task to someone else with `PATCH /activities/{id}`.
+        The write is pinned with `If-Match`. A task someone took first, a task that is done, a
+        task that is not a task and a website-inquiry task (which has its own take through
+        `POST /activities/{id}/inquiry-assignment`) answer `409`. A caller who may not change
+        tasks answers `403`, and a task the caller cannot see `404`.
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+      responses:
+        '200':
+          description: The task, now assigned to the caller.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Activity' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/VersionConflict' }

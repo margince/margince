@@ -231,6 +231,9 @@ type Task struct {
 	// ReadOnly says the reader may see the task but not change it, so the row
 	// offers no verb that writes to it.
 	ReadOnly bool
+	// Takeable says the reader may press "Take it": an open task nobody holds
+	// that no writer routes, on a seat that may take tasks.
+	Takeable bool
 	// ReminderDue says the reader is the assignee and the reminder came due.
 	ReminderDue bool
 	// later says the later window read this task. Undated there, it is agreed

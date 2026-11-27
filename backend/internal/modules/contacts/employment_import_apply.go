@@ -137,7 +137,7 @@ func (s *Store) applyEmploymentEpisode(ctx context.Context, tx pgx.Tx, contact i
 			return err
 		}
 	}
-	relationship, state, err := s.linkEmploymentEpisode(ctx, tx, contact, *company, e, capturedBy)
+	relationship, state, err := s.linkEmploymentEpisode(ctx, tx, contact, *company, e, capturedBy, action != employmentResolve)
 	if err != nil {
 		return err
 	}

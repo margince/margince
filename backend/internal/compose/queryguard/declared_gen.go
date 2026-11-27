@@ -660,6 +660,7 @@ var Declared = map[string][]string{
 	"POST /v1/activities/{id}/send-email":                                      {},
 	"POST /v1/activities/{id}/send-email:preview":                              {},
 	"POST /v1/activities/{id}/send-message":                                    {},
+	"POST /v1/activities/{id}/take":                                            {},
 	"POST /v1/activities/{id}/transcript-proposals":                            {},
 	"POST /v1/activity-review-templates":                                       {},
 	"POST /v1/admin/data-tasks/control":                                        {},
