@@ -22,7 +22,7 @@ The lane that produces its results is `make e2e-llm`; it is paid and opt-in, so 
 | `claude-sonnet-5-5` | Claude Code CLI | 81 of 83 | 🟢 Yes | 4 | 5 | Reliable on 81 of 81 jobs tried. 81 of them measured on an earlier listing. A model of the same family judged its answers. |
 | `claude-sonnet-5-5` | Claude Agent SDK | 2 of 83 | ⚪ Not enough tested yet | 13.5 | 14.5 | Reliable on 2 of 2 jobs tried. 2 of them measured on an earlier listing. A model of the same family judged its answers. |
 | `gemini-4-hydrogen-medium` | Antigravity CLI | 81 of 83 | 🟢 Yes | 8 | 6.5 | Reliable on 81 of 81 jobs tried. 81 of them measured on an earlier listing. |
-| `gpt-5.6-sol` | Codex CLI | 82 of 83 | 🟡 Mostly | 9 | - | Reliable on 76 of 82 jobs tried; not yet: Tidy up the deal room; Tidy the fair list; File it on the meeting and the contract; Ask the company; They raised money; Filed in the wrong place. 82 of them measured on an earlier listing. |
+| `gpt-5.6-sol` | Codex CLI | 82 of 83 | 🟡 Mostly | 9 | - | Reliable on 77 of 82 jobs tried; not yet: Tidy up the deal room; File it on the meeting and the contract; Ask the company; They raised money; Filed in the wrong place. 82 of them measured on an earlier listing. |
 
 An assistant rated **Yes** was reliable on every job we tried. One rated **Mostly** was reliable on at least 80 in every 100, and one rated **Not yet** on fewer. We say **Not enough tested yet** when we tried it on under half the jobs.
 
@@ -59,7 +59,7 @@ One row per everyday job, one column per assistant. ✅ did it reliably, ❌ not
 | Chase what is slipping | Only the slipping deal is chased<br>A send that could not go is not reported as sent<br>The reason is the workspace's | an admin | ✅ earlier listing | - | ✅ earlier listing | ✅ earlier listing |
 | Move the deal on | The deal moves to the stage the call named<br>The move leaves its reason on the deal<br>The forecast change is explained from what was read<br>A deal moves on the deal tools | an admin | ✅ earlier listing | - | ✅ earlier listing | ✅ earlier listing |
 | Get us in a room | A recorded booking is not an invitation<br>The unsent invitation is reported as not sent<br>The two are kept apart | an admin | ✅ earlier listing | - | ✅ earlier listing | ✅ earlier listing |
-| Tidy the fair list | The list is read before it is changed<br>A wrong promotion is demoted<br>The bulk change covers who is left | an admin | - | ✅ earlier listing | - | ❌ earlier listing |
+| Tidy the fair list | The list is read before it is changed<br>A wrong promotion is demoted<br>The bulk change covers who is left | an admin | - | ✅ earlier listing | - | ✅ earlier listing |
 | That whole thread is filed wrong | A conversation moves as a whole | an admin | ✅ earlier listing | - | ✅ earlier listing | ✅ earlier listing |
 | Who can introduce us, and what is going cold | The introduction route runs through a colleague<br>The thin deals are the flagged ones<br>The official number is the report's<br>A claim is checked against the records | an admin | ✅ re-graded earlier listing | - | ✅ earlier listing | ✅ earlier listing |
 | What moved my quarter | A repricing is reported as one<br>A slip out of the quarter is not called a loss<br>The movement adds up to the difference between the freezes | an admin | ✅ re-graded earlier listing | - | ✅ earlier listing | ✅ earlier listing |
@@ -200,7 +200,7 @@ Which model drove the lane, and how it went. The tool columns further down are t
 | `claude-sonnet-5-5@claude-cli` | 81 of 83 | 81 | 0 | 164/168 | 98% | 4 over 81 | 0.5 | 0.25 | 0 |
 | `claude-sonnet-5-5@claude-sdk` | 2 of 83 | 2 | 0 | 4/4 | 100% | 13.5 over 2 | 1.75 | - | 0 |
 | `gemini-4-hydrogen-medium@agy-cli` | 81 of 83 | 81 | 0 | 162/164 | 99% | 8 over 81 | 0.5 | 0 | 0 |
-| `gpt-5.6-sol@codex-cli` | 82 of 83 | 76 | 6 | 154/172 | 90% | 9 over 82 | 2 | 2 | 0 |
+| `gpt-5.6-sol@codex-cli` | 82 of 83 | 77 | 5 | 156/173 | 90% | 9 over 82 | 2 | 2 | 0 |
 
 > `claude-sonnet-5-5@claude-cli` has no committed run for 2 of 83 cases.
 
@@ -211,7 +211,7 @@ Which model drove the lane, and how it went. The tool columns further down are t
 > `gpt-5.6-sol@codex-cli` has no committed run for 1 of 83 cases.
 
 <!-- prose:allow sentence a generated list of case names -->
-> `gpt-5.6-sol@codex-cli` below its bar on: case107_tidy_up_the_room, case47_tidy_the_fair_list, case59_file_it_on_the_meeting_and_the_contract, case6_ask_the_company, case99_they_raised_money, case9_filed_in_the_wrong_place
+> `gpt-5.6-sol@codex-cli` below its bar on: case107_tidy_up_the_room, case59_file_it_on_the_meeting_and_the_contract, case6_ask_the_company, case99_they_raised_money, case9_filed_in_the_wrong_place
 
 ## Your AI assistant and the night helpers
 
@@ -399,7 +399,7 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case46_get_us_in_a_room](../../e2e/llm/scenarios/case46-get-us-in-a-room.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass, on an earlier listing (tool copy, server instructions and resources) | 2/2 | 2 | 11 | 7 | 2 | 1 | **1** A recorded booking is not an invitation<br>**2** The unsent invitation is reported as not sent<br>**3** The two are kept apart | - |
 | [case46_get_us_in_a_room](../../e2e/llm/scenarios/case46-get-us-in-a-room.yaml) | `gpt-5.6-sol@codex-cli` | pass, on an earlier listing (tool copy, server instructions and resources) | 2/3 | 2 | 20 (11–23) | - | 6 (2–6) | 4 (1–5) | **1** A recorded booking is not an invitation<br>**2** The unsent invitation is reported as not sent<br>**3** The two are kept apart | - |
 | [case47_tidy_the_fair_list](../../e2e/llm/scenarios/case47-tidy-the-fair-list.yaml) | `claude-sonnet-5-5@claude-sdk` | pass, on an earlier listing (scenario, tool copy, server instructions and resources, harness) | 2/2 | 2 | 15.5 (14–17) | 16.5 (15–18) | 2.5 (1–4) | - | **1** The list is read before it is changed<br>**2** A wrong promotion is demoted<br>**3** The bulk change covers who is left | - |
-| [case47_tidy_the_fair_list](../../e2e/llm/scenarios/case47-tidy-the-fair-list.yaml) | `gpt-5.6-sol@codex-cli` | **FAIL**, on an earlier listing (scenario, tool copy, server instructions and resources) | 0/2 | 2 | 17.5 (16–19) | - | 5.5 (5–6) | 4.5 (4–5) | **1** The list is read before it is changed<br>**2** A wrong promotion is demoted<br>**3** The bulk change covers who is left | - |
+| [case47_tidy_the_fair_list](../../e2e/llm/scenarios/case47-tidy-the-fair-list.yaml) | `gpt-5.6-sol@codex-cli` | pass, on an earlier listing (tool copy, server instructions and resources) | 2/3 | 2 | 15 (15–17) | - | 3 (2–3) | 2 (1–2) | **1** The list is read before it is changed<br>**2** A wrong promotion is demoted<br>**3** The bulk change covers who is left | - |
 | [case48_that_whole_thread_is_filed_wrong](../../e2e/llm/scenarios/case48-that-whole-thread-is-filed-wrong.yaml) | `claude-sonnet-5-5@claude-cli` | pass, on an earlier listing (tool copy, server instructions and resources, harness) | 2/2 | 2 | 6.5 (5–8) | 7.5 (6–9) | 1 (0–2) | - | **1** A conversation moves as a whole | - |
 | [case48_that_whole_thread_is_filed_wrong](../../e2e/llm/scenarios/case48-that-whole-thread-is-filed-wrong.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass, on an earlier listing (tool copy, server instructions and resources) | 2/2 | 2 | 8 (7–9) | 6.5 (6–7) | 1 | 1 | **1** A conversation moves as a whole | - |
 | [case48_that_whole_thread_is_filed_wrong](../../e2e/llm/scenarios/case48-that-whole-thread-is-filed-wrong.yaml) | `gpt-5.6-sol@codex-cli` | pass, on an earlier listing (tool copy, server instructions and resources, harness, transcript parser) | 2/2 | 2 | 9 (7–11) | - | 2.5 (2–3) | - | **1** A conversation moves as a whole | - |

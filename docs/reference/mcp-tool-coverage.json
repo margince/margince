@@ -82,15 +82,14 @@
       "name": "gpt-5.6-sol",
       "trust": "🟡 Mostly",
       "cases_with_a_committed_run": 82,
-      "cases_that_reached_their_bar": 76,
-      "cases_below_their_bar": 6,
+      "cases_that_reached_their_bar": 77,
+      "cases_below_their_bar": 5,
       "cases_measured_on_an_earlier_listing": 82,
-      "runs": 172,
-      "passed": 154,
-      "reliability": 0.8953488372093024,
+      "runs": 173,
+      "passed": 156,
+      "reliability": 0.9017341040462428,
       "cases_below_their_bar_named": [
         "case107_tidy_up_the_room",
-        "case47_tidy_the_fair_list",
         "case59_file_it_on_the_meeting_and_the_contract",
         "case6_ask_the_company",
         "case99_they_raised_money",
@@ -6667,33 +6666,32 @@
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
-          "runs": 2,
-          "passed": 0,
+          "runs": 3,
+          "passed": 2,
           "pass_at": 2,
-          "held": false,
+          "held": true,
           "driver": "gpt:cli",
           "search": "semantic",
           "efficiency": {
-            "runs": 2,
+            "runs": 3,
             "calls": {
-              "median": 17.5,
-              "min": 16,
-              "max": 19
+              "median": 15,
+              "min": 15,
+              "max": 17
             },
             "turns": null,
             "refused": {
-              "median": 5.5,
-              "min": 5,
-              "max": 6
+              "median": 3,
+              "min": 2,
+              "max": 3
             },
             "retries": {
-              "median": 4.5,
-              "min": 4,
-              "max": 5
+              "median": 2,
+              "min": 1,
+              "max": 2
             }
           },
           "measured_on_an_earlier_listing": [
-            "scenario",
             "tool copy",
             "server instructions and resources"
           ]
@@ -13336,6 +13334,7 @@
         "case44_chase_what_is_slipping",
         "case45_move_the_deal_on",
         "case46_get_us_in_a_room",
+        "case47_tidy_the_fair_list",
         "case49_who_can_introduce_us",
         "case5_before_the_meeting",
         "case50_what_moved_my_quarter",
