@@ -27,13 +27,13 @@ func TestARouteBackedWriteRepeatedUnderItsRetryKeyWritesOnce(t *testing.T) {
 	// A real meter, so the test sees what the replay charged.
 	e := setupConnectorWith(t, compose.WithAgentVolume(agentvolume.New(redistest.Client(t), agentvolume.Limits{}, time.Hour)))
 	bearer, passport := apptest.PassportWithID(t, e.AppEnv, "retrying client", "read", "write")
-	// Unique per run, because a lead source's label is unique and the lane repeats tests.
+	// Unique per run, because a lead origin's label is unique and the lane repeats tests.
 	run := ids.NewV7().String()
-	label, key := "Retry Keyed Lead Source "+run, "lost-answer-"+run
+	label, key := "Retry Keyed Lead Origin "+run, "lost-answer-"+run
 	create := func() string {
 		got := mcpRaw(t, e.AppEnv, http.MethodPost, "/mcp", fmt.Sprintf(
 			`{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"change_settings","arguments":{`+
-				`"action":"create_lead_source","idempotency_key":%q,"request_body":{"label":%q}}}}`, key, label),
+				`"action":"create_lead_origin","idempotency_key":%q,"request_body":{"label":%q}}}}`, key, label),
 			withContentType(bearer))
 		if got.StatusCode != http.StatusOK {
 			t.Fatalf("tools/call → %d %s", got.StatusCode, got.Body)
@@ -52,11 +52,11 @@ func TestARouteBackedWriteRepeatedUnderItsRetryKeyWritesOnce(t *testing.T) {
 		t.Errorf("the retry answered\n%s\nwant the first call's answer\n%s", retry, first)
 	}
 	var count int
-	if err := e.Owner.QueryRow(t.Context(), `SELECT count(*) FROM lead_source WHERE label = $1`, label).Scan(&count); err != nil {
-		t.Fatalf("counting lead sources: %v", err)
+	if err := e.Owner.QueryRow(t.Context(), `SELECT count(*) FROM lead_origin WHERE label = $1`, label).Scan(&count); err != nil {
+		t.Fatalf("counting lead origins: %v", err)
 	}
 	if count != 1 {
-		t.Fatalf("%d lead sources named %q, want the one the first call wrote", count, label)
+		t.Fatalf("%d lead origins named %q, want the one the first call wrote", count, label)
 	}
 	// The replay changed nothing, so it spent no second write.
 	var listed struct {

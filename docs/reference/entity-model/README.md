@@ -30,8 +30,8 @@ module to put a change in, read [modules.md](../modules.md).
 
 | | |
 |---|--:|
-| Tables | 356 |
-| Columns | 4396 |
+| Tables | 355 |
+| Columns | 4386 |
 | Foreign keys | 630 |
 | Owning areas | 40 |
 
@@ -112,7 +112,7 @@ erDiagram
 | [comms](comms.md) | 1 |
 | [compose](compose.md) | 44 |
 | [consent](consent.md) | 23 |
-| [contacts](contacts.md) | 50 |
+| [contacts](contacts.md) | 49 |
 | [continuity](continuity.md) | 1 |
 | [contracts](contracts.md) | 1 |
 | [customfields](customfields.md) | 1 |
@@ -351,7 +351,6 @@ erDiagram
 | [`lead_origin`](contacts.md#lead_origin) | contacts | 13 | 2 |
 | [`lead_privacy_notice`](consent.md#lead_privacy_notice) | consent | 12 | 0 |
 | [`lead_score_history`](contacts.md#lead_score_history) | contacts | 9 | 0 |
-| [`lead_source`](contacts.md#lead_source) | contacts | 10 | 0 |
 | [`legal_entity`](contacts.md#legal_entity) | contacts | 30 | 9 |
 | [`legal_entity_member`](contacts.md#legal_entity_member) | contacts | 4 | 0 |
 | [`legal_review`](deals.md#legal_review) | deals | 17 | 1 |

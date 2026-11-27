@@ -126,3 +126,6 @@ e06b489fdb0933d51d647b0db5372040c8721241 795eff56dc341f7e3d642a100f30d8663826971
 f9ecac1b7d6487d7009b52b104eb3b897b853fa3 7b6bdd36904679aeba15f5c1412ace36fef476ff ratified-develop-s-which-deal-question-as-a-link-suggestion-13581-carried-into-main
 69a1ada64532ca9501646c6d46b6b2be3b3aaff5 bf999a7424d334a31d7305d81a8dcd684be8f75a ratified-main-s-contract-changes-carried-into-develop-in-the-back-sync
 693c2fe5ed9234dd67326833d73e2011ca9b1b33 bf999a7424d334a31d7305d81a8dcd684be8f75a ratified-develop-s-which-deal-question-as-a-link-suggestion-13581-carried-into-main
+69a1ada64532ca9501646c6d46b6b2be3b3aaff5 0d31c0903b3a8eac111ad76a83c3aa3afb45b3d5 ratified-a-lead-source-of-six-channels-and-the-lead-source-list-retired
+69a1ada64532ca9501646c6d46b6b2be3b3aaff5 807cd70ff3d7a24459dfd4afd2787d44a4f1b4a8 ratified-develop-s-which-deal-question-as-a-link-suggestion-13581-carried-into-main
+795eff56dc341f7e3d642a100f30d8663826971f 807cd70ff3d7a24459dfd4afd2787d44a4f1b4a8 ratified-main-s-contract-changes-carried-into-develop-in-the-back-sync

@@ -53,6 +53,7 @@ var writesWithoutARowProbe = gatekit.Waive(map[string]string{
 	"internal/modules/contacts:BackfillArrivalOriginTx":             "the arrival-origin data task runs on the system principal and records the origin each lead arrived with, from the audit trail or the lead itself; a row probe would leave leads outside one identity's scope unfilled",
 	"internal/modules/contacts:CorrectContactSourcesTx":             "the source data task for contacts, decided the same way as CorrectDealSourcesTx",
 	"internal/modules/contacts:CorrectCompanySourcesTx":             "the source data task for companies, decided the same way as CorrectDealSourcesTx",
+	"internal/modules/contacts:CorrectLeadSourcesTx":                "the source data task for leads, decided the same way as CorrectDealSourcesTx",
 	"internal/modules/deals:CorrectDealSourcesTx":                   "the source data task runs on the system principal, which storekit.CorrectRecordSources requires, and selects deals by an unlisted source, not by caller identity; a row probe would leave deals outside one identity's scope uncorrected",
 	"internal/modules/projects:CorrectProjectSourcesTx":             "the source data task for projects, decided the same way as CorrectDealSourcesTx",
 	"internal/modules/contacts:touchWhenAddressFilled":              "moves the version after a bought address or number was filled; ApplyProviderClaims holds the contact through auth.HoldWritableLive before any fill, so this adds no access of its own",

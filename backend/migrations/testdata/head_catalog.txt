@@ -14,6 +14,7 @@ public.activity.activity_call_outcome_kind_check CHECK (((call_outcome IS NULL) 
 public.activity.activity_capture_label_check CHECK ((capture_label = ANY (ARRAY['commitment'::text, 'meeting'::text, 'other'::text, 'noise'::text])))
 public.activity.activity_capture_label_stamped CHECK (((capture_label IS NULL) = (capture_labeled_at IS NULL)))
 public.activity.activity_channel_provider_fkey FOREIGN KEY (channel_provider) REFERENCES channel_provider(provider) ON DELETE RESTRICT
+public.activity.activity_clears_negative_duration CREATE TRIGGER activity_clears_negative_duration BEFORE UPDATE ON public.activity FOR EACH ROW WHEN (((old.duration_seconds < 0) AND (NOT (new.duration_seconds IS DISTINCT FROM old.duration_seconds)))) EXECUTE FUNCTION activity_clears_negative_duration()
 public.activity.activity_clears_reply_settled CREATE TRIGGER activity_clears_reply_settled AFTER UPDATE OF thread_key, kind, channel_provider, direction, archived_at, occurred_at, occurred_precision, counterparty_email ON public.activity FOR EACH ROW EXECUTE FUNCTION activity_clears_reply_settled()
 public.activity.activity_colleague_mail_is_outbound CHECK (((sent_by_colleague IS NULL) OR (direction = 'outbound'::text)))
 public.activity.activity_day_holds_no_host_slot CHECK (((occurred_precision = 'instant'::text) OR (NOT claims_host_slot)))
@@ -21,6 +22,7 @@ public.activity.activity_direction_check CHECK (((direction IS NULL) OR (directi
 public.activity.activity_done_at CHECK (((is_done = false) OR (done_at IS NOT NULL)))
 public.activity.activity_due_intent_pair CHECK (valid_intent_time(due_wall, due_zone))
 public.activity.activity_due_time_follows_due_at CREATE TRIGGER activity_due_time_follows_due_at BEFORE INSERT OR UPDATE OF due_at, due_has_time ON public.activity FOR EACH ROW EXECUTE FUNCTION activity_due_time_follows_due_at()
+public.activity.activity_duration_not_negative CHECK (((duration_seconds IS NULL) OR (duration_seconds >= 0))) NOT VALID
 public.activity.activity_exact_booking_duration CHECK (((NOT booking_interval_exact) OR ((duration_seconds IS NOT NULL) AND (duration_seconds > 0))))
 public.activity.activity_guests_left_out_check CHECK ((guests_left_out >= 0))
 public.activity.activity_host_user_id_fkey FOREIGN KEY (host_user_id) REFERENCES app_user(id) ON DELETE SET NULL (host_user_id)
@@ -219,6 +221,12 @@ BEGIN
             CONSTRAINT = 'activity_class_needs_evidence';
   END IF;
   RETURN NULL;
+END;
+
+public.activity_clears_negative_duration() secdef=false cfg=- acl=- 
+BEGIN
+    NEW.duration_seconds := NULL;
+    RETURN NEW;
 END;
 
 public.activity_clears_reply_settled() secdef=false cfg=- acl=- 
@@ -6754,6 +6762,7 @@ public.idx_activity_link_suggestion_activity CREATE INDEX idx_activity_link_sugg
 public.idx_activity_link_suggestion_for_user CREATE INDEX idx_activity_link_suggestion_for_user ON public.activity_link_suggestion USING btree (for_user) WHERE (for_user IS NOT NULL)
 public.idx_activity_link_suggestion_pending CREATE INDEX idx_activity_link_suggestion_pending ON public.activity_link_suggestion USING btree (created_at, id) WHERE (status = 'pending'::text)
 public.idx_activity_meeting_host CREATE INDEX idx_activity_meeting_host ON public.activity USING btree (host_user_id, occurred_at) WHERE ((kind = 'meeting'::text) AND (archived_at IS NULL))
+public.idx_activity_negative_duration CREATE INDEX idx_activity_negative_duration ON public.activity USING btree (id) WHERE ((duration_seconds < 0) AND (restricted_at IS NULL))
 public.idx_activity_occurred_live CREATE INDEX idx_activity_occurred_live ON public.activity USING btree (occurred_at DESC) WHERE (archived_at IS NULL)
 public.idx_activity_owed_ruleset CREATE INDEX idx_activity_owed_ruleset ON public.activity USING btree (owed_verdict_ruleset, occurred_at) WHERE ((owed_verdict IS NOT NULL) AND (direction = 'inbound'::text) AND (kind = ANY (ARRAY['email'::text, 'message'::text])) AND (archived_at IS NULL) AND (audience = 'workspace'::text) AND (restricted_at IS NULL))
 public.idx_activity_participants_by_reason CREATE INDEX idx_activity_participants_by_reason ON public.activity USING btree (audience_reason, occurred_at DESC, id) WHERE ((audience = 'participants'::text) AND (restricted_at IS NULL) AND (archived_at IS NULL))
@@ -6781,6 +6790,7 @@ public.idx_agent_task_expiry CREATE INDEX idx_agent_task_expiry ON public.agent_
 public.idx_agent_task_passport CREATE INDEX idx_agent_task_passport ON public.agent_task USING btree (passport_id)
 public.idx_ai_call_agent_run CREATE INDEX idx_ai_call_agent_run ON public.ai_call USING btree (agent_run_id)
 public.idx_ai_call_correlation CREATE INDEX idx_ai_call_correlation ON public.ai_call USING btree (correlation_id)
+public.idx_ai_call_negative_tokens CREATE INDEX idx_ai_call_negative_tokens ON public.ai_call USING btree (id) WHERE ((tokens_in < 0) OR (tokens_out < 0) OR (reasoning_tokens < 0) OR (cached_tokens < 0) OR (cache_write_tokens < 0))
 public.idx_ai_call_occurred CREATE INDEX idx_ai_call_occurred ON public.ai_call USING btree (occurred_at DESC)
 public.idx_alink_company CREATE INDEX idx_alink_company ON public.activity_link USING btree (company_id) WHERE (company_id IS NOT NULL)
 public.idx_alink_contact CREATE INDEX idx_alink_contact ON public.activity_link USING btree (contact_id) WHERE (contact_id IS NOT NULL)
@@ -7681,6 +7691,8 @@ public.lead.lead_score_range CHECK (((score >= 0) AND (score <= 100)))
 public.lead.lead_sla_breach_follows_creation CHECK (((sla_breached_at IS NULL) OR (sla_breached_at >= created_at)))
 public.lead.lead_source_author_id_fkey FOREIGN KEY (source_author_id) REFERENCES app_user(id) ON DELETE SET NULL
 public.lead.lead_source_author_needs_a_source CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL)))
+public.lead.lead_source_channel CREATE TRIGGER lead_source_channel BEFORE INSERT OR UPDATE ON public.lead FOR EACH ROW WHEN ((new.source <> ALL (ARRAY['api'::text, 'automation'::text, 'capture'::text, 'import'::text, 'manual'::text, 'webform'::text]))) EXECUTE FUNCTION move_lead_source_onto_its_channel()
+public.lead.lead_source_check CHECK ((source = ANY (ARRAY['api'::text, 'automation'::text, 'capture'::text, 'import'::text, 'manual'::text, 'webform'::text]))) NOT VALID
 public.lead.lead_status_check CHECK ((status = ANY (ARRAY['new'::text, 'contacted'::text, 'engaged'::text, 'promoted'::text, 'disqualified'::text])))
 public.lead.lead_status_set_by_check CHECK (((status_set_by IS NULL) OR (status_set_by = ANY (ARRAY['human'::text, 'system'::text]))))
 public.lead.lead_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
@@ -7835,26 +7847,6 @@ public.lead_score_history.score_computed smallint NOT NULL gen=- def=-
 public.lead_score_history.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.lead_score_history FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"override_reason": 2000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"override_reason":2000}')
 public.lead_score_history.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.lead_score_history FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"override_reason": 2000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"override_reason":2000}')
 public.lead_score_history_pkey CREATE UNIQUE INDEX lead_score_history_pkey ON public.lead_score_history USING btree (id)
-public.lead_source acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.lead_source.active boolean NOT NULL gen=- def=true
-public.lead_source.created_at timestamp with time zone NOT NULL gen=- def=now()
-public.lead_source.id uuid NOT NULL gen=- def=uuidv7()
-public.lead_source.intent text NOT NULL gen=- def='neutral'::text
-public.lead_source.key text NOT NULL gen=- def=-
-public.lead_source.label text NOT NULL gen=- def=-
-public.lead_source.lead_source_intent_check CHECK ((intent = ANY (ARRAY['high'::text, 'neutral'::text, 'low'::text])))
-public.lead_source.lead_source_key_shape CHECK (((key = lower(key)) AND (length(btrim(key)) > 0)))
-public.lead_source.lead_source_label_present CHECK ((length(btrim(label)) > 0))
-public.lead_source.lead_source_pkey PRIMARY KEY (id)
-public.lead_source.lead_source_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
-public.lead_source.sort_order integer NOT NULL gen=- def=0
-public.lead_source.system boolean NOT NULL gen=- def=false
-public.lead_source.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.lead_source FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"key": 20000, "label": 120, "intent": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"intent":20000,"key":20000,"label":120}')
-public.lead_source.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.lead_source FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"key": 20000, "label": 120, "intent": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"intent":20000,"key":20000,"label":120}')
-public.lead_source.trg_lead_source_updated CREATE TRIGGER trg_lead_source_updated BEFORE UPDATE ON public.lead_source FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
-public.lead_source.updated_at timestamp with time zone NOT NULL gen=- def=now()
-public.lead_source.version bigint NOT NULL gen=- def=1
-public.lead_source_pkey CREATE UNIQUE INDEX lead_source_pkey ON public.lead_source USING btree (id)
 public.legal_entity acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.legal_entity.address_city text gen=- def=-
 public.legal_entity.address_line1 text gen=- def=-
@@ -8395,6 +8387,12 @@ BEGIN
       UPDATE company SET last_activity_at = v WHERE id = rid AND last_activity_at IS DISTINCT FROM v;
   END CASE;
   PERFORM set_config('margince.last_activity_move', 'off', true);
+END;
+
+public.move_lead_source_onto_its_channel() secdef=false cfg=- acl=- 
+BEGIN
+ NEW.source := party_source_channel(NEW.source, NEW.source_system);
+ RETURN NEW;
 END;
 
 public.move_party_source_onto_its_channel() secdef=false cfg=- acl=- 
@@ -11881,7 +11879,6 @@ public.uq_lead_manual_signal_live CREATE UNIQUE INDEX uq_lead_manual_signal_live
 public.uq_lead_privacy_notice_delivery CREATE UNIQUE INDEX uq_lead_privacy_notice_delivery ON public.lead_privacy_notice USING btree (delivery_id) WHERE (delivery_id IS NOT NULL)
 public.uq_lead_privacy_notice_lead CREATE UNIQUE INDEX uq_lead_privacy_notice_lead ON public.lead_privacy_notice USING btree (lead_id) WHERE (lead_id IS NOT NULL)
 public.uq_lead_source CREATE UNIQUE INDEX uq_lead_source ON public.lead USING btree (source_system, source_id) WHERE ((source_system IS NOT NULL) AND (source_id IS NOT NULL))
-public.uq_lead_source_key CREATE UNIQUE INDEX uq_lead_source_key ON public.lead_source USING btree (key)
 public.uq_legal_entity_default CREATE UNIQUE INDEX uq_legal_entity_default ON public.legal_entity USING btree ((true)) WHERE is_default
 public.uq_legal_entity_live_name CREATE UNIQUE INDEX uq_legal_entity_live_name ON public.legal_entity USING btree (lower(display_name)) WHERE ((archived_at IS NULL) AND (NOT is_default))
 public.uq_legal_review_open_deal CREATE UNIQUE INDEX uq_legal_review_open_deal ON public.legal_review USING btree (deal_id) WHERE (status = 'requested'::text)

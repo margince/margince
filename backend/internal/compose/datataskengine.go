@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/invitationsenders"
 	"github.com/margince/margince/backend/internal/compose/languages"
 	"github.com/margince/margince/backend/internal/compose/meetingrosters"
+	"github.com/margince/margince/backend/internal/compose/negativecounts"
 	"github.com/margince/margince/backend/internal/compose/offernetdeals"
 	"github.com/margince/margince/backend/internal/compose/participantaddresses"
 	"github.com/margince/margince/backend/internal/compose/provensenders"
@@ -160,8 +161,8 @@ func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {
 		customerlinks.DataTask(),
 		qualifytasks.DuplicatesDataTask(now), qualifytasks.TextDataTask(),
 		companyprofiles.OfferDuplicatesTask(),
-		qualifytasks.SystemTextDataTask(), employmentrepair.DataTask(contacts.NewStore(InstallationDB(pool))), halfvectors.DataTask(), recordsources.DataTask(), recordsources.SignalDataTask(), recordsources.PartyDataTask(), rolemailboxseats.DataTask(), participantaddresses.DataTask(),
+		qualifytasks.SystemTextDataTask(), employmentrepair.DataTask(contacts.NewStore(InstallationDB(pool))), halfvectors.DataTask(), recordsources.DataTask(), recordsources.SignalDataTask(), recordsources.PartyDataTask(), recordsources.LeadDataTask(), rolemailboxseats.DataTask(), participantaddresses.DataTask(),
 		activities.TeamLinksDataTask(activities.NewStore(InstallationDB(pool)).WithTeamRequestNotice(teamRequestNotice{}), now), contacts.LegacyEvidenceDataTask(),
-		leadArrivalOriginDataTask(), languages.DataTask(),
+		leadArrivalOriginDataTask(), languages.DataTask(), negativecounts.DataTask(),
 	}
 }
