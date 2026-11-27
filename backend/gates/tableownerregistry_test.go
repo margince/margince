@@ -88,7 +88,6 @@ var tableOwners = map[string]string{
 	"lead":                    "internal/modules/contacts",
 	"lead_score_history":      "internal/modules/contacts",
 	"lead_manual_signal":      "internal/modules/contacts",
-	"lead_source":             "internal/modules/contacts",
 	"lead_origin":             "internal/modules/contacts",
 	"lead_disqualify_reason":  "internal/modules/contacts",
 	"partner_stage":           "internal/modules/contacts",

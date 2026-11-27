@@ -3,7 +3,7 @@
 
 // The keys a contact's `social` map takes. The server refuses any other key, so
 // this is a declared mirror of the backend's socialplatform.Keys(), and
-// backend/gates/frontendsocialplatforms_test.go fails when the two differ.
+// backend/gates/frontendvocabularymirrors_test.go fails when the two differ.
 export const SOCIAL_PLATFORMS = ["github", "linkedin", "twitter"] as const;
 
 // The listed links of a stored social map. A key written before the list

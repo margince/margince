@@ -55,7 +55,7 @@ func IsAssignedCountry(code string) bool {
 }
 
 // AssignedCountryCodes is the assigned set in code order. The frontend's
-// country filter mirrors it (gates/frontendcountries_test.go).
+// country filter mirrors it (gates/frontendvocabularymirrors_test.go).
 func AssignedCountryCodes() []string {
 	return slices.Clone(assignedCountryCodes)
 }

@@ -102,6 +102,7 @@ var dailyFlows = []dailyFlow{
 	{Name: "lists", ID: "PERF-2", Budget: Perf2Budget, PerCall: true, Calls: listCalls},
 	{Name: "record_open", ID: "PERF-1", Budget: perf1RecordOpenBudget, PerCall: true, Calls: recordOpenCalls},
 	{Name: "contact_360", ID: "PERF-7", Budget: search.Perf7Budget, Calls: contact360Calls},
+	{Name: "contact_page", ID: "PERF-1", Budget: perf1RecordOpenBudget, PerCall: true, Recorded: true, Calls: contactPageCalls},
 	{Name: "company_360", ID: "PERF-7", Budget: search.Perf7Budget, Calls: company360Calls},
 	{Name: "search_to_deal", Journey: true, Calls: searchToDealCalls},
 	{Name: "search_to_company", Journey: true, Calls: func(in dailyInput) []dailyCall {
@@ -119,6 +120,17 @@ var dailyFlows = []dailyFlow{
 
 func contact360Calls(in dailyInput) []dailyCall {
 	return []dailyCall{{Path: "/v1/contacts/" + in.ContactID + "/360"}}
+}
+
+// contactPageCalls are the reads the contact page sends beside its 360 before
+// it draws; record_open times only the row.
+func contactPageCalls(in dailyInput) []dailyCall {
+	page := "/v1/contacts/" + in.ContactID
+	return []dailyCall{
+		{Name: "latest_inbound", Path: "/v1/activities/latest-inbound?entity_type=contact&entity_id=" + in.ContactID},
+		{Name: "consent_guard", Path: page + "/consent/guard"},
+		{Name: "files", Path: "/v1/attachments?entity_type=contact&entity_id=" + in.ContactID + "&limit=20"},
+	}
 }
 
 // company360Calls is the read that loads the company screen's whole page, every

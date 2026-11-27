@@ -11,6 +11,9 @@ import {
 } from "./vite-inline-views";
 
 let server: ViteDevServer;
+// "localhost" can bind ::1 while a fetch of it dials 127.0.0.1, as in the CI
+// container. So the server binds one address, and the fetch names it.
+const LOOPBACK = "127.0.0.1";
 /** Where the server this spec started is actually listening. */
 let base: string;
 
@@ -38,7 +41,7 @@ beforeAll(async () => {
   server = await createServer({
     configFile: false,
     plugins: [serveMcpApps()],
-    server: { port: 0 },
+    server: { port: 0, host: LOOPBACK },
     // Nothing here serves the SPA, so crawling its entry to pre-bundle
     // dependencies is work this spec neither needs nor can do without the SPA's
     // own plugins.
@@ -65,7 +68,7 @@ function servedAt(started: ViteDevServer): string {
       `the dev server is not listening on a TCP port: ${String(address)}`,
     );
   }
-  return `http://localhost:${address.port}`;
+  return `http://${address.address}:${address.port}`;
 }
 
 afterAll(async () => {
@@ -143,7 +146,7 @@ it("lets a second server stand beside the first", async () => {
   const second = await createServer({
     configFile: false,
     plugins: [serveMcpApps()],
-    server: { port: 0 },
+    server: { port: 0, host: LOOPBACK },
     optimizeDeps: { noDiscovery: true },
     logLevel: "error",
   });

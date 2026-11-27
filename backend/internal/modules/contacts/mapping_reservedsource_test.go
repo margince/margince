@@ -245,9 +245,9 @@ func TestALeadFromAContactReachesTheStoreRefusal(t *testing.T) {
 	}
 }
 
-// A contact or company arrives by one of the fixed channels. A mailbox stamp
+// A contact, company or lead arrives by one of the fixed channels. A mailbox stamp
 // on the wire is 422 invalid_source, naming the field the caller must change.
-func TestTheContactAndCompanyWiresHoldSourceToTheChannels(t *testing.T) {
+func TestThePartyWiresHoldSourceToTheChannels(t *testing.T) {
 	var refused *provenance.RecordSourceError
 	if _, err := ContactCreationInput(crmcontracts.CreateContactRequest{
 		LinkedinUrl: new("https://www.linkedin.com/in/fixture-contact"),
@@ -259,6 +259,11 @@ func TestTheContactAndCompanyWiresHoldSourceToTheChannels(t *testing.T) {
 		DisplayName: "Stamped", Source: "gmail:msg-1",
 	}); !errors.As(err, &refused) {
 		t.Errorf("company: err = %v, want the source refused", err)
+	}
+	if _, err := LeadCreationInput(crmcontracts.CreateLeadRequest{
+		FullName: new("Stamped"), Source: new("crawl"),
+	}); !errors.As(err, &refused) {
+		t.Errorf("lead: err = %v, want the source refused", err)
 	}
 	if _, code, _ := refused.FieldFault(); code != "invalid_source" {
 		t.Errorf("the refusal answers %q, want invalid_source", code)
