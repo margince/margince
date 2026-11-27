@@ -17,11 +17,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
-// assignmentVocabularyObject is the RBAC object the role catalog is gated by:
-// the custom-field catalog's posture — everyone reads, admin/ops write — which
-// is exactly this list's posture. deal_acquisition_source and lead_source are
-// gated the same way, so the three administered vocabularies answer to one
-// object rather than three near-identical entries in the policy matrix.
+// assignmentVocabularyObject is the RBAC object the role catalog is gated by.
+// It has the custom-field catalog's posture: everyone reads, admin and ops
+// write. deal_acquisition_source and lead_origin use the same object, so the
+// three lists need no near-identical entries in the policy matrix.
 const assignmentVocabularyObject = "custom_field"
 
 // Store owns record_role and record_assignment (data-seam ownership,

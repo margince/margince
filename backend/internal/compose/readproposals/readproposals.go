@@ -21,7 +21,7 @@ import (
 )
 
 // keyedTablesMigration creates the two tables the task fills.
-const keyedTablesMigration = "core/1795716570"
+const keyedTablesMigration = "core/1795756890"
 
 // copyAudit is the audit policy of both steps.
 var copyAudit = datatask.AuditPolicy{
@@ -38,8 +38,8 @@ type copier struct {
 // DataTask walks site reads, then transcript reads, in key order.
 func DataTask() datatask.Task {
 	return datatask.Task{
-		ID: "core/1795716570_read_proposals_keyed", Version: 1,
-		Title:    systemtext.Literal("datatask.title.core.1795716570_read_proposals_keyed"),
+		ID: "core/1795756890_read_proposals_keyed", Version: 1,
+		Title:    systemtext.Literal("datatask.title.core.1795756890_read_proposals_keyed"),
 		Requires: []string{keyedTablesMigration},
 		Steps: []datatask.Step{
 			step("copy_site_read_proposals", copier{contacts.CopySiteReadProposalsTx, contacts.CountSiteReadsToCopyProposals}),

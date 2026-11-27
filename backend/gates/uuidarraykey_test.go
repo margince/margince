@@ -44,9 +44,9 @@ var keylessUUIDArrays = gatekit.Waive(map[string]string{
 	"consent_qualifying_event.recorded_for_entities":    "the legal entities a consent ground was recorded for; consent evidence must outlive what it names",
 	"mail_draft.attachment_ids":                         "a draft must never hold back the archive or erasure of a document, so each read resolves the ids and leaves out a gone one",
 	"meeting_invitation.team_user_ids":                  "the colleagues whose time a team booking holds, written with the booking and found by a GIN index; " + seatsAreRetired,
-	"site_read.proposal_ids":                            "site_read_proposal now holds the keyed copy; the array goes once core/1795716570_read_proposals_keyed has finished",
+	"site_read.proposal_ids":                            "site_read_proposal now holds the keyed copy; the array goes once core/1795756890_read_proposals_keyed has finished",
 	"tag_interest_read.tag_ids":                         "a cached model answer read only under the vocabulary digest it was made with; tagsuggest.VocabularyDigest covers every tag id, so a removed tag retires the answer",
-	"transcript_read.proposal_ids":                      "transcript_read_proposal now holds the keyed copy; the array goes once core/1795716570_read_proposals_keyed has finished",
+	"transcript_read.proposal_ids":                      "transcript_read_proposal now holds the keyed copy; the array goes once core/1795756890_read_proposals_keyed has finished",
 })
 
 func TestAUUIDArraySaysWhyItKeepsNoForeignKey(t *testing.T) {

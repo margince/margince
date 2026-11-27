@@ -41,10 +41,6 @@ const liveOnlyClause = ` AND archived_at IS NULL`
 // signal. Every lead read is FROM the unaliased table, which is what lets
 // them name lead.id. A restricted activity (A165: held under a statutory
 // retention obligation) is in none of them, the same as in every other read.
-// leadSourceLabelSQL is the source in the words the catalog gives it, which is
-// what the Source column prints. The stored key is an identifier; a reader
-// sorting the column means the label beside it.
-const leadSourceLabelSQL = `(SELECT s.label FROM lead_source s WHERE s.key = lead.source)`
 
 // leadWebFormNameSQL is the current name of the website form a lead came
 // through. A deleted form leaves it NULL, and the lead still reads as a web form.
@@ -131,7 +127,7 @@ func leadColumns(ctx context.Context, arg func(any) int) (string, error) {
 	` + sourceAuthorSeatNameSQL("lead") + `,
 	version, created_at, updated_at, archived_at,
 	routed_at, first_response_at, first_response_marked_by,
-	` + leadSourceLabelSQL + `, ` + leadWebFormNameSQL + `,
+	` + leadWebFormNameSQL + `,
 	origin, origin_detail, ` + leadOriginLabelSQL + `,
 	disqualify_reason_id, disqualify_note,
 	(SELECT r.label FROM lead_disqualify_reason r WHERE r.id = lead.disqualify_reason_id),
@@ -283,7 +279,7 @@ func scanLead(row pgx.Row, active []fieldcatalog.Column, policy leadSLAPolicy, n
 		&refs.promoted, &l.PromotedAt, &refs.mergedInto, &refs.fromContact, &l.Source, &l.CapturedBy,
 		&authorID, &authorName, &authorSeatName,
 		&version, &l.CreatedAt, &l.UpdatedAt, &l.ArchivedAt,
-		&l.RoutedAt, &l.FirstResponseAt, &markedBy, &l.SourceLabel, &l.WebFormName, &l.Origin, &l.OriginDetail, &l.OriginLabel, &refs.disqualifyReason, &l.DisqualifyNote, &l.DisqualifyReason,
+		&l.RoutedAt, &l.FirstResponseAt, &markedBy, &l.WebFormName, &l.Origin, &l.OriginDetail, &l.OriginLabel, &refs.disqualifyReason, &l.DisqualifyNote, &l.DisqualifyReason,
 		&statusSetBy, &refs.qualifiedDeal, &evidence,
 		&l.LastActivityAt, &lastActivityPrecision,
 		pgtype.CompositeFields{&openTasks, &nextTask, &l.NextTaskDueAt},

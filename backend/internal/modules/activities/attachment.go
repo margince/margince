@@ -14,6 +14,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -244,9 +245,12 @@ func (s *Store) ListAttachments(ctx context.Context, entityType string, entityID
 	}
 	var out []crmcontracts.Attachment
 	var page storekit.Page
-	err := s.tx(ctx, func(tx pgx.Tx) (err error) {
-		out, page, err = listAttachments(ctx, tx, entityType, entityID, cursor, limit)
-		return err
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		// The row scope makes each statement plan far longer than it runs.
+		return database.ReuseGenericPlansTx(ctx, tx, func() (err error) {
+			out, page, err = listAttachments(ctx, tx, entityType, entityID, cursor, limit)
+			return err
+		})
 	})
 	return out, page, err
 }

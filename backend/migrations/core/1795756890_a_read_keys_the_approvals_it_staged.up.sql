@@ -4,7 +4,7 @@
 -- A site read and a transcript read each list the approvals they staged. A
 -- uuid[] cannot carry a foreign key, so each list gains a table whose rows key
 -- the approval, and position keeps the order the read staged them in. The data
--- task core/1795716570_read_proposals_keyed fills it from the older reads.
+-- task core/1795756890_read_proposals_keyed fills it from the older reads.
 SET LOCAL lock_timeout = '3s';
 
 CREATE TABLE site_read_proposal (
