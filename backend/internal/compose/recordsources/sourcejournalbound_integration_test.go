@@ -103,7 +103,7 @@ func TestSourceJournalTransfersEachPendingChangeWithoutRepeatingTheWholeDocument
 		}
 		meter := journalMeterTx{Tx: tx, transferred: &transferred}
 		previous := "Unrelated journal audit"
-		for i := 0; i < edits; i++ {
+		for i := range edits {
 			name := fmt.Sprintf("Unrelated journal audit %d", i)
 			if _, err := tx.Exec(ctx, `UPDATE company SET display_name=$2,version=version+1,updated_at=now() WHERE id=$1`, company, name); err != nil {
 				return err
