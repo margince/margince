@@ -267,6 +267,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `approvalselfonlyreaders_test.go` | H2 | Staging needs action authority before a proposal exists. |
 | `approvalsummarycopy_test.go` | H1 | An approval's summary is written through a per-language copy table, never as an English sentence in product code. |
 | `approvalwhy_test.go` | H1 | Every approval says why it was staged: the reason in words, or the quoted evidence it rests on. |
+| `archivefilter_test.go` | H2 | A storekit row write names the archive filter its table can answer. |
 | `arrayvocabulary_test.go` | H3 | A text array either closes its set in the database or says why its set is open. |
 | `assigneeeligibility_test.go` | H2 | A seat's fitness to receive work has one spelling, wherever it is asked. |
 | `assurancerules_test.go` | H3 | Every assurance rule proves both halves of its judgement. |

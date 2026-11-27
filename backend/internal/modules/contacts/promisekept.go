@@ -91,7 +91,7 @@ type keptPromiseRow struct {
 // that is gone or is not a live promise to invite someone.
 func lockKeptPromise(ctx context.Context, tx pgx.Tx, claim ids.UUID) (keptPromiseRow, bool, error) {
 	var row keptPromiseRow
-	if _, err := storekit.LockRow(ctx, tx, "conversation_claim", claim, storekit.LiveOnly); err != nil {
+	if _, err := storekit.LockRow(ctx, tx, "conversation_claim", claim, storekit.NoArchiveColumn); err != nil {
 		if errors.Is(err, apperrors.ErrNotFound) {
 			return row, false, nil
 		}

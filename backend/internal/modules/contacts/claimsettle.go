@@ -95,7 +95,7 @@ func lockWritableClaim(ctx context.Context, tx pgx.Tx, claimID ids.UUID) (ids.UU
 	// second overwrites the first — 204 to both callers, and the loser's
 	// audit row claims it moved a claim that was already settled. The
 	// conflict below only refuses a settlement it can SEE.
-	if _, err := storekit.LockRow(ctx, tx, "conversation_claim", claimID, storekit.LiveOnly); err != nil {
+	if _, err := storekit.LockRow(ctx, tx, "conversation_claim", claimID, storekit.NoArchiveColumn); err != nil {
 		return ids.UUID{}, "", err
 	}
 	var contactID, activityID ids.UUID

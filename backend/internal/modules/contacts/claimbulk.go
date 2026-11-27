@@ -42,7 +42,7 @@ func (s *Store) LockClaimForBulkTx(ctx context.Context, tx pgx.Tx, id ids.UUID) 
 	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
 		return BulkClaim{}, err
 	}
-	if _, err := storekit.LockRow(ctx, tx, "conversation_claim", id, storekit.LiveOnly); err != nil {
+	if _, err := storekit.LockRow(ctx, tx, "conversation_claim", id, storekit.NoArchiveColumn); err != nil {
 		return BulkClaim{}, err
 	}
 	var claim BulkClaim

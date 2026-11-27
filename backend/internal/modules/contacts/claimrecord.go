@@ -237,7 +237,7 @@ func (s *Store) SetClaimTaskTx(ctx context.Context, tx pgx.Tx, claimID, taskID i
 	if err := auth.EnsureActivityContentVisibleLive(ctx, tx, taskID); err != nil {
 		return err
 	}
-	if _, err := storekit.LockRow(ctx, tx, "conversation_claim", claimID, storekit.LiveOnly); err != nil {
+	if _, err := storekit.LockRow(ctx, tx, "conversation_claim", claimID, storekit.NoArchiveColumn); err != nil {
 		return err
 	}
 	var contactID ids.UUID
