@@ -137,8 +137,8 @@ describe("history value labels", () => {
   // type. That is only sound while one field name means one thing, so two
   // record types may share a field only with disjoint codes.
   it("never gives two record types the same code under one field", () => {
-    // Company and contact visibility is one setting with one meaning.
-    const sameMeaning = new Set(["visibility"]);
+    // Visibility and explicit salutation each have the same meaning across record types.
+    const sameMeaning = new Set(["visibility", "salutation"]);
     // A company and a lead both rule a record out as `disqualified`, and every
     // language words the two alike.
     const sameCode = new Set(["status=disqualified"]);

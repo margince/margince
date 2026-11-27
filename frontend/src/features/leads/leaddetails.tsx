@@ -32,6 +32,7 @@ import {
   useLeadOrigins,
 } from "../../lib/leadorigins";
 import { useListsAvailable, useRecordLists } from "../../lib/lists.queries";
+import { salutationLabel } from "../../lib/personsalutation";
 import { useViewerZone } from "../../lib/viewerzone";
 import { LeadCompany, useLeadCompanyFactsSection } from "./leadcompany";
 import { useLeadPickerFlows } from "./leaddetailsflows";
@@ -111,6 +112,12 @@ function useAboutRows(lead: Lead, mayChange: boolean): DetailRow[] {
           <LeadCompany lead={lead} nameShown />
         </>
       ),
+    },
+    {
+      key: "salutation",
+      term: t("create.salutation"),
+      empty: !lead.salutation,
+      value: salutationLabel(lead.salutation, t) ?? t("field.unset"),
     },
     text("title", "create.contactTitle"),
     // The linked company's industry speaks for the lead, and shows under it.

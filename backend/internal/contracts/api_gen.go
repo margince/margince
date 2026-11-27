@@ -23770,6 +23770,27 @@ func (e SalesProgressSummaryRequestScopeKind) Valid() bool {
 	}
 }
 
+// Defines values for Salutation.
+const (
+	SalutationMr   Salutation = "mr"
+	SalutationMs   Salutation = "ms"
+	SalutationNone Salutation = "none"
+)
+
+// Valid indicates whether the value is a known member of the Salutation enum.
+func (e Salutation) Valid() bool {
+	switch e {
+	case SalutationMr:
+		return true
+	case SalutationMs:
+		return true
+	case SalutationNone:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SaveContactResearchClaimField.
 const (
 	SaveContactResearchClaimFieldAddress     SaveContactResearchClaimField = "address"
@@ -31945,6 +31966,30 @@ func (e ResolveConfirmSubmissionJSONBodyResolution) Valid() bool {
 	}
 }
 
+// Defines values for ListContactsParamsSalutation.
+const (
+	ListContactsParamsSalutationMr    ListContactsParamsSalutation = "mr"
+	ListContactsParamsSalutationMs    ListContactsParamsSalutation = "ms"
+	ListContactsParamsSalutationNone  ListContactsParamsSalutation = "none"
+	ListContactsParamsSalutationUnset ListContactsParamsSalutation = "unset"
+)
+
+// Valid indicates whether the value is a known member of the ListContactsParamsSalutation enum.
+func (e ListContactsParamsSalutation) Valid() bool {
+	switch e {
+	case ListContactsParamsSalutationMr:
+		return true
+	case ListContactsParamsSalutationMs:
+		return true
+	case ListContactsParamsSalutationNone:
+		return true
+	case ListContactsParamsSalutationUnset:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListContactsParamsCapturedByKind.
 const (
 	ListContactsParamsCapturedByKindAgent     ListContactsParamsCapturedByKind = "agent"
@@ -32701,6 +32746,30 @@ func (e DownloadImportProblemsParamsLang) Valid() bool {
 	case DownloadImportProblemsParamsLangEn:
 		return true
 	case DownloadImportProblemsParamsLangVi:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListLeadsParamsSalutation.
+const (
+	ListLeadsParamsSalutationMr    ListLeadsParamsSalutation = "mr"
+	ListLeadsParamsSalutationMs    ListLeadsParamsSalutation = "ms"
+	ListLeadsParamsSalutationNone  ListLeadsParamsSalutation = "none"
+	ListLeadsParamsSalutationUnset ListLeadsParamsSalutation = "unset"
+)
+
+// Valid indicates whether the value is a known member of the ListLeadsParamsSalutation enum.
+func (e ListLeadsParamsSalutation) Valid() bool {
+	switch e {
+	case ListLeadsParamsSalutationMr:
+		return true
+	case ListLeadsParamsSalutationMs:
+		return true
+	case ListLeadsParamsSalutationNone:
+		return true
+	case ListLeadsParamsSalutationUnset:
 		return true
 	default:
 		return false
@@ -42761,6 +42830,9 @@ type Company360Contact struct {
 	// contact is gone, what happened is not.
 	Routes *Company360ContactRoutes `json:"routes,omitempty"`
 
+	// Salutation Explicitly supplied by a person, an import or an API caller. Never inferred from a name or signature. Null means unset; none means no gendered form.
+	Salutation *Salutation `json:"salutation,omitempty"`
+
 	// Strength Deterministic relationship-strength (features/07 §4) — a transparent function over captured
 	// interaction features (recency, frequency, direction, reciprocity), NOT a trained model. A fixed
 	// interaction set + fixed clock yields a stable value (P6/P12). The `factors` decompose the score and
@@ -45966,6 +46038,9 @@ type Contact struct {
 	// RelationshipMark Set when the workspace's relationship to this contact is not an ordinary one. `vendor_marketing` is a named sender who only pitches something to this business and whom nobody here has answered. The default contact lists leave a marked contact out; a text search and a read by id still find it. Null is not marked. Written through `PATCH /contacts/{id}` or by the sender check, never by the request body of a create.
 	RelationshipMark *ContactRelationshipMark `json:"relationship_mark,omitempty"`
 
+	// Salutation Explicitly supplied by a person, an import or an API caller. Never inferred from a name or signature. Null means unset; none means no gendered form.
+	Salutation *Salutation `json:"salutation,omitempty"`
+
 	// Social The contact's links by platform: github, linkedin, twitter. linkedin is a LinkedIn profile link.
 	Social *map[string]interface{} `json:"social,omitempty"`
 
@@ -48344,6 +48419,9 @@ type CreateContactRequest struct {
 	OwnerId     *openapi_types.UUID  `json:"owner_id,omitempty"`
 	Phones      *[]ContactPhoneInput `json:"phones,omitempty"`
 
+	// Salutation Explicitly supplied by a person, an import or an API caller. Never inferred from a name or signature. Null means unset; none means no gendered form.
+	Salutation *Salutation `json:"salutation,omitempty"`
+
 	// Social Links by platform. Only github, linkedin and twitter are taken; any other key is refused with 422 `social_platform_unknown`. linkedin takes only a LinkedIn profile link (https://www.linkedin.com/in/<name>).
 	Social *map[string]interface{} `json:"social,omitempty"`
 
@@ -48736,6 +48814,9 @@ type CreateLeadRequest struct {
 	// ProductId The product the lead is interested in. Omit it when nobody knows yet.
 	ProductId *openapi_types.UUID `json:"product_id,omitempty"`
 	ProjectId *openapi_types.UUID `json:"project_id,omitempty"`
+
+	// Salutation Explicitly supplied by a person, an import or an API caller. Never inferred from a name or signature. Null means unset; none means no gendered form.
+	Salutation *Salutation `json:"salutation,omitempty"`
 
 	// Source How the row was written. Optional: the server writes `manual` when none is sent. Never scored; send `origin` for where the lead came from.
 	Source *string `json:"source,omitempty"`
@@ -57537,6 +57618,9 @@ type Lead struct {
 
 	// RoutedAt When routing assigned an owner. Starts the §18 first-response clock; null means the clock starts at created_at.
 	RoutedAt *time.Time `json:"routed_at,omitempty"`
+
+	// Salutation Explicitly supplied by a person, an import or an API caller. Never inferred from a name or signature. Null means unset; none means no gendered form.
+	Salutation *Salutation `json:"salutation,omitempty"`
 
 	// Score Lead-local scoring; never reads the contact graph. While an override is in force this is the human-set value (see score_override_reason).
 	Score int `json:"score"`
@@ -67932,6 +68016,9 @@ type SalesProgressSummaryRequestPeriod string
 // SalesProgressSummaryRequestScopeKind Absent reads the caller's own figures.
 type SalesProgressSummaryRequestScopeKind string
 
+// Salutation Explicitly supplied by a person, an import or an API caller. Never inferred from a name or signature. Null means unset; none means no gendered form.
+type Salutation string
+
 // SaveContactResearchClaim One claim a human accepted, with the evidence that makes it checkable.
 type SaveContactResearchClaim struct {
 	// Field Which profile field this fills. A closed set, so a claim cannot be stored under a name no reader looks for.
@@ -72426,6 +72513,9 @@ type UpdateContactRequest struct {
 	// RelationshipMark Marks the contact (`vendor_marketing`) or clears the mark (null). The mark records who set it, so a mark set by hand is never lifted by the automatic check that lifts the mark the sender check set.
 	RelationshipMark *UpdateContactRequestRelationshipMark `json:"relationship_mark,omitempty"`
 
+	// Salutation Explicitly supplied by a person, an import or an API caller. Never inferred from a name or signature. Null means unset; none means no gendered form.
+	Salutation *Salutation `json:"salutation,omitempty"`
+
 	// Social Merged into the stored links: a key not sent keeps its link, and a key sent as "" or null removes it. Only github, linkedin and twitter are taken; any other key is refused with 422 `social_platform_unknown`. linkedin takes only a LinkedIn profile link (https://www.linkedin.com/in/<name>).
 	Social *map[string]interface{} `json:"social,omitempty"`
 	Title  *string                 `json:"title,omitempty" singleline:"true"`
@@ -73091,6 +73181,9 @@ type UpdateLeadRequest struct {
 
 	// ProjectId The body of work this lead belongs to; carries no same-company guard, also for a lead linked to a company.
 	ProjectId *openapi_types.UUID `json:"project_id,omitempty"`
+
+	// Salutation Explicitly supplied by a person, an import or an API caller. Never inferred from a name or signature. Null means unset; none means no gendered form.
+	Salutation *Salutation `json:"salutation,omitempty"`
 
 	// Score Manual human score override (formulas §3.1, AC-S1). Omit to keep the computed lead-local score. Setting it REQUIRES `score_override_reason`; passing null clears the override and resumes recompute.
 	Score *int `json:"score,omitempty" maximum:"100" minimum:"0"`
@@ -80818,6 +80911,9 @@ type ListConsentPurposeSendCountsParams struct {
 
 // ListContactsParams defines parameters for ListContacts.
 type ListContactsParams struct {
+	// Salutation Filter by an explicit salutation; unset finds records whose choice is null.
+	Salutation *ListContactsParamsSalutation `form:"salutation,omitempty" json:"salutation,omitempty"`
+
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
@@ -80964,6 +81060,9 @@ type ListContactsParams struct {
 	// and does not say whether the contact exists.
 	RelatedTo *openapi_types.UUID `form:"related_to,omitempty" json:"related_to,omitempty"`
 }
+
+// ListContactsParamsSalutation defines parameters for ListContacts.
+type ListContactsParamsSalutation string
 
 // ListContactsParamsCapturedByKind defines parameters for ListContacts.
 type ListContactsParamsCapturedByKind string
@@ -83140,6 +83239,9 @@ type UpdateLeadSourceParams struct {
 
 // ListLeadsParams defines parameters for ListLeads.
 type ListLeadsParams struct {
+	// Salutation Filter by an explicit salutation; unset finds records whose choice is null.
+	Salutation *ListLeadsParamsSalutation `form:"salutation,omitempty" json:"salutation,omitempty"`
+
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
@@ -83303,6 +83405,9 @@ type ListLeadsParams struct {
 	// (403 otherwise), and counts only partners the caller can open.
 	PartnerAccepted *bool `form:"partner_accepted,omitempty" json:"partner_accepted,omitempty"`
 }
+
+// ListLeadsParamsSalutation defines parameters for ListLeads.
+type ListLeadsParamsSalutation string
 
 // ListLeadsParamsCapturedByKind defines parameters for ListLeads.
 type ListLeadsParamsCapturedByKind string
@@ -91049,6 +91154,14 @@ func (a *Contact) UnmarshalJSON(b []byte) error {
 		delete(object, "relationship_mark")
 	}
 
+	if raw, found := object["salutation"]; found {
+		err = json.Unmarshal(raw, &a.Salutation)
+		if err != nil {
+			return fmt.Errorf("error reading 'salutation': %w", err)
+		}
+		delete(object, "salutation")
+	}
+
 	if raw, found := object["social"]; found {
 		err = json.Unmarshal(raw, &a.Social)
 		if err != nil {
@@ -91368,6 +91481,13 @@ func (a Contact) MarshalJSON() ([]byte, error) {
 		object["relationship_mark"], err = json.Marshal(a.RelationshipMark)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'relationship_mark': %w", err)
+		}
+	}
+
+	if a.Salutation != nil {
+		object["salutation"], err = json.Marshal(a.Salutation)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'salutation': %w", err)
 		}
 	}
 
@@ -93077,6 +93197,14 @@ func (a *CreateContactRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "phones")
 	}
 
+	if raw, found := object["salutation"]; found {
+		err = json.Unmarshal(raw, &a.Salutation)
+		if err != nil {
+			return fmt.Errorf("error reading 'salutation': %w", err)
+		}
+		delete(object, "salutation")
+	}
+
 	if raw, found := object["social"]; found {
 		err = json.Unmarshal(raw, &a.Social)
 		if err != nil {
@@ -93245,6 +93373,13 @@ func (a CreateContactRequest) MarshalJSON() ([]byte, error) {
 		object["phones"], err = json.Marshal(a.Phones)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'phones': %w", err)
+		}
+	}
+
+	if a.Salutation != nil {
+		object["salutation"], err = json.Marshal(a.Salutation)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'salutation': %w", err)
 		}
 	}
 
@@ -94090,6 +94225,14 @@ func (a *CreateLeadRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "project_id")
 	}
 
+	if raw, found := object["salutation"]; found {
+		err = json.Unmarshal(raw, &a.Salutation)
+		if err != nil {
+			return fmt.Errorf("error reading 'salutation': %w", err)
+		}
+		delete(object, "salutation")
+	}
+
 	if raw, found := object["source"]; found {
 		err = json.Unmarshal(raw, &a.Source)
 		if err != nil {
@@ -94260,6 +94403,13 @@ func (a CreateLeadRequest) MarshalJSON() ([]byte, error) {
 		object["project_id"], err = json.Marshal(a.ProjectId)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'project_id': %w", err)
+		}
+	}
+
+	if a.Salutation != nil {
+		object["salutation"], err = json.Marshal(a.Salutation)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'salutation': %w", err)
 		}
 	}
 
@@ -97660,6 +97810,14 @@ func (a *Lead) UnmarshalJSON(b []byte) error {
 		delete(object, "routed_at")
 	}
 
+	if raw, found := object["salutation"]; found {
+		err = json.Unmarshal(raw, &a.Salutation)
+		if err != nil {
+			return fmt.Errorf("error reading 'salutation': %w", err)
+		}
+		delete(object, "salutation")
+	}
+
 	if raw, found := object["score"]; found {
 		err = json.Unmarshal(raw, &a.Score)
 		if err != nil {
@@ -98136,6 +98294,13 @@ func (a Lead) MarshalJSON() ([]byte, error) {
 		object["routed_at"], err = json.Marshal(a.RoutedAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'routed_at': %w", err)
+		}
+	}
+
+	if a.Salutation != nil {
+		object["salutation"], err = json.Marshal(a.Salutation)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'salutation': %w", err)
 		}
 	}
 
@@ -100694,6 +100859,14 @@ func (a *UpdateContactRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "relationship_mark")
 	}
 
+	if raw, found := object["salutation"]; found {
+		err = json.Unmarshal(raw, &a.Salutation)
+		if err != nil {
+			return fmt.Errorf("error reading 'salutation': %w", err)
+		}
+		delete(object, "salutation")
+	}
+
 	if raw, found := object["social"]; found {
 		err = json.Unmarshal(raw, &a.Social)
 		if err != nil {
@@ -100811,6 +100984,13 @@ func (a UpdateContactRequest) MarshalJSON() ([]byte, error) {
 		object["relationship_mark"], err = json.Marshal(a.RelationshipMark)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'relationship_mark': %w", err)
+		}
+	}
+
+	if a.Salutation != nil {
+		object["salutation"], err = json.Marshal(a.Salutation)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'salutation': %w", err)
 		}
 	}
 
@@ -101596,6 +101776,14 @@ func (a *UpdateLeadRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "project_id")
 	}
 
+	if raw, found := object["salutation"]; found {
+		err = json.Unmarshal(raw, &a.Salutation)
+		if err != nil {
+			return fmt.Errorf("error reading 'salutation': %w", err)
+		}
+		delete(object, "salutation")
+	}
+
 	if raw, found := object["score"]; found {
 		err = json.Unmarshal(raw, &a.Score)
 		if err != nil {
@@ -101736,6 +101924,13 @@ func (a UpdateLeadRequest) MarshalJSON() ([]byte, error) {
 		object["project_id"], err = json.Marshal(a.ProjectId)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'project_id': %w", err)
+		}
+	}
+
+	if a.Salutation != nil {
+		object["salutation"], err = json.Marshal(a.Salutation)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'salutation': %w", err)
 		}
 	}
 
@@ -131766,6 +131961,19 @@ func (siw *ServerInterfaceWrapper) ListContacts(w http.ResponseWriter, r *http.R
 	// Parameter object where we will unmarshal all parameters from the context
 	var params ListContactsParams
 
+	// ------------- Optional query parameter "salutation" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "salutation", r.URL.Query(), &params.Salutation, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "salutation"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "salutation", Err: err})
+		}
+		return
+	}
+
 	// ------------- Optional query parameter "cursor" -------------
 
 	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
@@ -144258,6 +144466,19 @@ func (siw *ServerInterfaceWrapper) ListLeads(w http.ResponseWriter, r *http.Requ
 
 	// Parameter object where we will unmarshal all parameters from the context
 	var params ListLeadsParams
+
+	// ------------- Optional query parameter "salutation" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "salutation", r.URL.Query(), &params.Salutation, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "salutation"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "salutation", Err: err})
+		}
+		return
+	}
 
 	// ------------- Optional query parameter "cursor" -------------
 

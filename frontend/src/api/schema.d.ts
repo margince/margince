@@ -36175,8 +36175,14 @@ export interface components {
              */
             retrieved_at: string;
         };
+        /**
+         * @description Explicitly supplied by a person, an import or an API caller. Never inferred from a name or signature. Null means unset; none means no gendered form.
+         * @enum {string|null}
+         */
+        Salutation: "mr" | "ms" | "none" | null;
         /** @description A contact. Mirrors the `contact` table. */
         Contact: {
+            salutation?: components["schemas"]["Salutation"];
             /** @description The live request the contact's acquisition records: they asked for a quote or a meeting, or gave permission in person. A send may rest on it with no age limit until somebody takes it back (`retractAcquisitionRequest`). Served on a read of one contact; absent when there is none or it was taken back, and on lists. */
             readonly acquisition_request?: components["schemas"]["ContactAcquisitionRequest"];
             /**
@@ -36338,6 +36344,7 @@ export interface components {
         };
         /** @description Requires at least one nonblank email, phone or LinkedIn URL (including social.linkedin). Name-only requests return 422 contact_channel_required. CSV import retains and warns about name-only rows. Contact creation also resolves available employer evidence atomically. A business work email requires company:create for shared domain resolution, including when triage is pending. An explicit employer additionally requires the company and relationship authority used by linking. A refusal rolls back the contact instead of silently omitting employment. */
         CreateContactRequest: {
+            salutation?: components["schemas"]["Salutation"];
             full_name: string;
             /**
              * Format: uuid
@@ -36623,6 +36630,7 @@ export interface components {
         };
         /** @description Partial update. Omitted fields are unchanged. */
         UpdateContactRequest: {
+            salutation?: components["schemas"]["Salutation"];
             /**
              * @description Sets how a message to the contact opens (`formal` or `familiar`), or clears it (null) so drafts read the register from the correspondence again.
              * @enum {string|null}
@@ -38065,6 +38073,7 @@ export interface components {
         };
         /** @description One current employee of the account, as the company view shows them. */
         Company360Contact: {
+            salutation?: components["schemas"]["Salutation"];
             /** Format: uuid */
             contact_id: string;
             full_name: string;
@@ -48073,6 +48082,7 @@ export interface components {
         };
         /** @description A thin, segregated prospect. Mirrors the `lead` table. */
         Lead: {
+            salutation?: components["schemas"]["Salutation"];
             /** @description True while a litigation or investigation hold is preserving this record. A held record is never acted on by a retention sweep and an Art. 17 erasure against it is refused, so a screen that offers either action has to know. Placed and lifted through /retention/legal-holds, never by an ordinary edit. */
             readonly legal_hold?: boolean;
             tags?: components["schemas"]["RowTag"][];
@@ -48266,6 +48276,7 @@ export interface components {
             [key: string]: unknown;
         };
         CreateLeadRequest: {
+            salutation?: components["schemas"]["Salutation"];
             full_name?: string | null;
             /** Format: email */
             email?: string | null;
@@ -48332,6 +48343,7 @@ export interface components {
          *     POST /leads/{id}/promote. Both terminal states are therefore excluded from this enum.
          */
         UpdateLeadRequest: {
+            salutation?: components["schemas"]["Salutation"];
             full_name?: string | null;
             /** Format: email */
             email?: string | null;
@@ -68189,6 +68201,8 @@ export interface operations {
     listContacts: {
         parameters: {
             query?: {
+                /** @description Filter by an explicit salutation; unset finds records whose choice is null. */
+                salutation?: "mr" | "ms" | "none" | "unset";
                 /**
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset
@@ -81709,6 +81723,8 @@ export interface operations {
     listLeads: {
         parameters: {
             query?: {
+                /** @description Filter by an explicit salutation; unset finds records whose choice is null. */
+                salutation?: "mr" | "ms" | "none" | "unset";
                 /**
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset

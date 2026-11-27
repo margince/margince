@@ -158,6 +158,7 @@ func LeadInput(landing webforms.Landing) contacts.CreateLeadInput {
 		Email:        &e.Email,
 		FullName:     optional(textbounds.Fit("public.lead.full_name", e.FullName)),
 		Title:        optional(textbounds.Fit("public.lead.title", e.Title)),
+		Salutation:   submittedSalutation(e.Salutation),
 		CompanyName:  optional(textbounds.Fit("public.lead.company_name", e.Company)),
 		SourceSystem: &system, SourceID: &key,
 		Source: webFormLeadSource, Origin: landing.LeadOrigin, OriginDetail: optional(originDetail(e)),
@@ -249,6 +250,7 @@ func webFormNote(landing webforms.Landing) string {
 	line("Phone", e.Phone)
 	line("Company", e.Company)
 	line("Title", e.Title)
+	line("Salutation", e.Salutation)
 	for _, f := range e.Extra {
 		line(f.Name, f.Value)
 	}
@@ -391,4 +393,9 @@ func optional(s string) *string {
 		return nil
 	}
 	return &s
+}
+
+// submittedSalutation keeps the same explicit-choice mapping as CSV import.
+func submittedSalutation(value string) *crmcontracts.Salutation {
+	return contacts.SubmittedSalutation(value)
 }

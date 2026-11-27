@@ -176,9 +176,10 @@ func (s *Store) ListLeads(ctx context.Context, in ListLeadsInput) ([]crmcontract
 
 // ListLeadsInput is one read of the lead list: its page, its sort and what it narrows by.
 type ListLeadsInput struct {
-	Cursor *string
-	Limit  *int
-	Status *string
+	Salutation *string
+	Cursor     *string
+	Limit      *int
+	Status     *string
 	// OwnerID, OwnerTeamID and Unassigned are the owner dials every
 	// owner-scoped list carries (DM-VOCAB-OWN-1), bound through
 	// storekit.OwnershipClause as contact and company bind them.
@@ -282,6 +283,9 @@ func leadNarrowing(ctx context.Context, in ListLeadsInput, policy leadSLAPolicy,
 	}
 	if in.Source != nil {
 		where = append(where, leadSourceClause(*in.Source, arg))
+	}
+	if clause := salutationListClause(leadEntity, in.Salutation, arg); clause != "" {
+		where = append(where, clause)
 	}
 	if in.Origin != nil {
 		where = append(where, leadOriginClause(*in.Origin, arg))

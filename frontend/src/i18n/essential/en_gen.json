@@ -2914,6 +2914,7 @@
   "create.saving": "Creating…",
   "vcardImport.action": "Import vCards",
   "vcardImport.title": "Import business cards",
+  "history.field.salutation": "Salutation",
   "create.addressLine1": "Street and number",
   "create.addressLine2": "Address line 2",
   "create.city": "City",

@@ -27,6 +27,7 @@ type UpdateLeadInput struct {
 	// Trail names what the audit trail calls this write; zero is an update.
 	Trail               storekit.AuditTrail
 	FullName            *string
+	Salutation          *crmcontracts.Salutation
 	Email               *string
 	Phone               *string
 	Title               *string
@@ -401,6 +402,9 @@ func buildLeadPatch(current crmcontracts.Lead, in UpdateLeadInput) (*storekit.Pa
 			return nil, false, err
 		}
 		p.Set(leadPhoneColumn, current.Phone, parsed.String())
+	}
+	if err := patchSalutation(p, current.Salutation, in.Salutation); err != nil {
+		return nil, false, err
 	}
 	if in.Title != nil {
 		p.Set("title", current.Title, *in.Title)

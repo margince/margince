@@ -37,6 +37,7 @@ import {
   originPickOptions,
   useLeadOrigins,
 } from "../../lib/leadorigins";
+import { salutationField, salutationFilter } from "../../lib/personsalutation";
 import { unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
 import { readStored, STORAGE_KEYS, writeStored } from "../../lib/storage";
@@ -293,6 +294,7 @@ function LeadsWorkbench({
             }
             fields={[
               ...LEAD_IDENTITY_CREATE_FIELDS,
+              salutationField(t),
               {
                 key: "industry",
                 label: "create.industry",
@@ -387,6 +389,7 @@ function LeadsWorkbench({
         }}
         rowRoute={(lead) => ({ screen: "leads", id: lead.id })}
         chips={[
+          salutationFilter(t),
           {
             key: "status",
             label: "lead.filterStatus",

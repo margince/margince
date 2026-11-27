@@ -38,6 +38,11 @@ func (h Handlers) ListLeads(w http.ResponseWriter, r *http.Request, params crmco
 			CompanyID: idArg[ids.CompanyKind](params.PartnerCompanyId), Accepted: params.PartnerAccepted,
 		},
 	}
+	if params.Salutation != nil {
+		word := string(*params.Salutation)
+		in.Salutation = &word
+	}
+
 	mode, err := storekit.ParseTagMode((*string)(params.TagMode))
 	if err != nil {
 		httperr.Write(w, r, httperr.Validation("tag_mode", "invalid", err.Error()))

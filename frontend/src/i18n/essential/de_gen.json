@@ -2914,6 +2914,7 @@
   "create.saving": "Wird erstellt…",
   "vcardImport.action": "vCards importieren",
   "vcardImport.title": "Visitenkarten importieren",
+  "history.field.salutation": "Anredeform",
   "create.addressLine1": "Straße und Hausnummer",
   "create.addressLine2": "Adresszusatz",
   "create.city": "Stadt",
