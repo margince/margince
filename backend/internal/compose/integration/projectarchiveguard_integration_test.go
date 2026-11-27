@@ -67,8 +67,7 @@ func TestAnEditCommittedWhileTheProjectArchiveWaitsKeepsTheProject(t *testing.T)
 func waitForALockWaiter(t *testing.T) {
 	t.Helper()
 	conn := OwnerConn(t)
-	deadline := time.Now().Add(10 * time.Second)
-	for time.Now().Before(deadline) {
+	for range 500 {
 		var waiting bool
 		if err := conn.QueryRow(t.Context(), `SELECT EXISTS (SELECT 1 FROM pg_stat_activity WHERE wait_event_type = 'Lock' AND datname = current_database())`).Scan(&waiting); err != nil {
 			t.Fatalf("reading the lock waiters: %v", err)

@@ -92,8 +92,7 @@ var csvTargets = map[string][]string{
 		activityTargetType, activityTargetSubject, activityTargetBody, activityTargetOccurredAt, activityTargetLinks,
 		activityTargetDuration, activityTargetMeetingStatus, activityTargetDirection, csvTargetAuthor, csvTargetOwner,
 	},
-	// A project keeps its company and phase from its birth. A product has no owner,
-	// tags or custom fields.
+	// A project keeps its company and phase from birth. A product has no owner or tags.
 	migration.ObjectProject: importrecords.ProjectTargets,
 	migration.ObjectProduct: importrecords.ProductTargets,
 }

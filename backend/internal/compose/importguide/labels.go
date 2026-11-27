@@ -10,6 +10,11 @@ import (
 // labels is what the mapping step calls each core target, in the words the
 // record pages use for the same field. A target with no entry here would show
 // its internal name, so withLabels refuses one at start-up.
+var (
+	companyRef        = langcopy.Phrase{En: "Company ref", De: "Unternehmens-Ref", Vi: "Ref công ty"}
+	recordDescription = langcopy.Phrase{En: "Description", De: "Beschreibung", Vi: "Mô tả"}
+)
+
 var companyName = langcopy.Phrase{En: "Company name", De: "Unternehmensname", Vi: "Tên công ty"}
 
 var labels = map[string]langcopy.Phrase{
@@ -31,17 +36,17 @@ var labels = map[string]langcopy.Phrase{
 	"company.email":           {En: "General email address", De: "Allgemeine E-Mail-Adresse", Vi: "Địa chỉ email chung"},
 	"company.linkedin_url":    {En: "LinkedIn page", De: "LinkedIn-Seite", Vi: "Trang LinkedIn"},
 	"company_name":            companyName,
-	"company_ref":             {En: "Company ref", De: "Unternehmens-Ref", Vi: "Ref công ty"},
+	"company_ref":             companyRef,
 	"contact.company_name":    companyName,
 	"contact_ref":             {En: "Contact ref", De: "Kontakt-Ref", Vi: "Ref liên hệ"},
 	"currency":                {En: "Currency", De: "Währung", Vi: "Tiền tệ"},
-	"deal.company_ref":        {En: "Company ref", De: "Unternehmens-Ref", Vi: "Ref công ty"},
-	"deal.description":        {En: "Description", De: "Beschreibung", Vi: "Mô tả"},
+	"deal.company_ref":        companyRef,
+	"deal.description":        recordDescription,
 	"deal.name":               {En: "Deal name", De: "Name des Deals", Vi: "Tên giao dịch"},
 	"deal.ref":                {En: "Deal ref", De: "Deal-Ref", Vi: "Ref giao dịch"},
 	"deal_ref":                {En: "Deal ref", De: "Deal-Ref", Vi: "Ref giao dịch"},
 	"default_tax_rate":        {En: "Default tax rate (%)", De: "Standardsteuersatz (%)", Vi: "Thuế suất mặc định (%)"},
-	"description":             {En: "Description", De: "Beschreibung", Vi: "Mô tả"},
+	"description":             recordDescription,
 	"direction":               {En: "Direction", De: "Richtung", Vi: "Hướng"},
 	"domain":                  {En: "Domain", De: "Domain", Vi: "Tên miền"},
 	"duration_minutes":        {En: "Duration (minutes)", De: "Dauer (Minuten)", Vi: "Thời lượng (phút)"},
@@ -64,10 +69,10 @@ var labels = map[string]langcopy.Phrase{
 	"phase":                   {En: "Project phase", De: "Projektphase", Vi: "Giai đoạn dự án"},
 	"phone":                   {En: "Phone", De: "Telefon", Vi: "Điện thoại"},
 	"pipeline":                same("Pipeline"),
-	"product.description":     {En: "Description", De: "Beschreibung", Vi: "Mô tả"},
+	"product.description":     recordDescription,
 	"product.name":            {En: "Product name", De: "Produktname", Vi: "Tên sản phẩm"},
-	"project.company_ref":     {En: "Company ref", De: "Unternehmens-Ref", Vi: "Ref công ty"},
-	"project.description":     {En: "Description", De: "Beschreibung", Vi: "Mô tả"},
+	"project.company_ref":     companyRef,
+	"project.description":     recordDescription,
 	"project.name":            {En: "Project name", De: "Projektname", Vi: "Tên dự án"},
 	"ref":                     {En: "Your own key (ref)", De: "Dein eigener Schlüssel (Ref)", Vi: "Khóa riêng của bạn (ref)"},
 	"salutation":              {En: "Salutation", De: "Anrede", Vi: "Cách xưng hô"},

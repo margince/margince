@@ -20,6 +20,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// CreateProduct inserts the product and its audit row in the store's own
+// transaction. Use CreateProductTx when the write must share a caller-opened one.
 func (s *Store) CreateProduct(ctx context.Context, in CreateProductInput) (crmcontracts.Product, error) {
 	plan, by, err := s.prepareProductWrite(ctx, in)
 	if err != nil {

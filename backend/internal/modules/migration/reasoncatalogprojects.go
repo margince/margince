@@ -14,6 +14,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
+// The values the project sentences name, besides the shared ones.
+const (
+	paramNames  = "names"
+	paramDetail = "detail"
+)
+
 // Reason codes for project and product rows.
 const (
 	ReasonProjectUnnamed        ReasonCode = "project_unnamed"
@@ -50,7 +56,7 @@ var projectReasons = map[ReasonCode]reasonEntry{
 		textlang.German:     "Ein Projekt behält das Unternehmen, für das es erstellt wurde, daher wird diese Zeile nicht übernommen. Lassen Sie die Unternehmensspalte unverändert oder importieren Sie die Zeile als neues Projekt.",
 		textlang.Vietnamese: "Dự án giữ công ty mà nó được tạo cho, nên hàng này không được áp dụng. Hãy giữ nguyên cột công ty, hoặc nhập hàng này làm dự án mới.",
 	}},
-	ReasonProjectPhaseUnknown: {params: []string{paramValue, "names"}, text: map[textlang.Lang]string{
+	ReasonProjectPhaseUnknown: {params: []string{paramValue, paramNames}, text: map[textlang.Lang]string{
 		textlang.English:    "“{value}” is not a phase a project starts in. The phases are: {names}.",
 		textlang.German:     "{value:q} ist keine Startphase eines Projekts. Mögliche Phasen: {names}.",
 		textlang.Vietnamese: "{value:q} không phải giai đoạn bắt đầu của dự án. Các giai đoạn: {names}.",
@@ -65,7 +71,7 @@ var projectReasons = map[ReasonCode]reasonEntry{
 		textlang.German:     "Das geplante Enddatum liegt vor dem Startdatum.",
 		textlang.Vietnamese: "Ngày kết thúc dự kiến nằm trước ngày bắt đầu.",
 	}},
-	ReasonProjectDealRefused: {params: []string{"detail"}, text: map[textlang.Lang]string{
+	ReasonProjectDealRefused: {params: []string{paramDetail}, text: map[textlang.Lang]string{
 		textlang.English:    "The deal cannot start this project: {detail}",
 		textlang.German:     "Der Deal kann dieses Projekt nicht starten: {detail}",
 		textlang.Vietnamese: "Deal không thể khởi động dự án này: {detail}",

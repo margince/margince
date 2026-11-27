@@ -96,6 +96,8 @@ func ReadColumns(ctx context.Context, stores Stores, object string) (Columns, er
 }
 
 // For is the record type of a project or product import object.
+//
+//nolint:ireturn // one Record seam serves both types and None, so the caller holds the interface
 func For(stores Stores, object string, cols Columns) Record {
 	if object == migration.ObjectProject {
 		return projectRecord{stores: stores, cols: cols.projects}
