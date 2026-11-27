@@ -11342,6 +11342,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "„{value}“ liegt in der Vergangenheit, und das Abschlussdatum eines offenen Deals darf das nicht sein.",
   "import.reason.lost_reason_missing":
     "Ein verlorener Deal braucht den Grund, warum er verloren ging.",
+  "import.reason.deal_field_not_for_pipeline":
+    "Das benutzerdefinierte Feld {field} gilt nicht für Deals in der Pipeline dieses Deals, daher wird die Zeile übersprungen. Leere die Zelle oder importiere den Deal in eine Pipeline, für die das Feld gilt.",
   "import.reason.deal_pipeline_fixed":
     "Dieser Deal liegt in einer anderen Pipeline als in der Datei angegeben. Ein Import verschiebt keinen Deal zwischen Pipelines, daher wird die Zeile übersprungen.",
   "companies.contractMergeBlocked":
@@ -15253,6 +15255,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "cf.activityKindsEvery": "Jeder Typ",
   "cf.activityKindsFor": "Typen, bei denen „{label}“ erscheint",
   "cf.activityKindsSaved": "„{label}“ erscheint jetzt bei den gewählten Typen",
+  "cf.pipelines": "Gezeigt in",
+  "cf.pipelinesHint":
+    "Leer lassen, um das Feld bei Deals in jeder Pipeline zu zeigen.",
+  "cf.pipelinesEvery": "Jede Pipeline",
+  "cf.pipelinesArchived": "Archivierte Pipeline",
+  "cf.pipelinesFor": "Pipelines, in denen „{label}“ erscheint",
+  "cf.pipelinesSaved":
+    "„{label}“ erscheint jetzt bei Deals in den gewählten Pipelines",
   "cf.col.inCreate": "Beim Erstellen",
   "cf.showInCreateFor": "„{label}“ beim Erstellen zeigen",
   "cf.shownInCreate": "„{label}“ beim Erstellen eingeblendet",

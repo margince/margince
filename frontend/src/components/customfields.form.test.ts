@@ -3,12 +3,14 @@ import { MONEY_ABSENT } from "../format/format";
 import { type Translator, translate } from "../i18n";
 import type { CustomField } from "./customfields.form";
 import {
+  appliesToPipeline,
   customFieldDisplay,
   customFieldHref,
   customFieldsRecordSlice,
   customFieldsToBody,
   customFieldsToPatch,
   customFieldToFormField,
+  dealNarrowing,
   fieldsForSurface,
 } from "./customfields.form";
 
@@ -98,6 +100,60 @@ describe("fieldsForSurface", () => {
         held: { cf_visit_report: null },
       }),
     ).toEqual([]);
+  });
+});
+
+describe("deal fields narrowed to pipelines", () => {
+  const partnerTier = cf({
+    id: "tier",
+    object: "deal",
+    column_name: "cf_partner_tier",
+    pipeline_ids: ["pipe-a"],
+  });
+  const region = cf({
+    id: "region",
+    object: "deal",
+    column_name: "cf_region",
+    pipeline_ids: null,
+  });
+
+  it("applies with no list, a matching list and not a non-matching list", () => {
+    expect(appliesToPipeline(region, "pipe-b")).toBe(true);
+    expect(appliesToPipeline(partnerTier, "pipe-a")).toBe(true);
+    expect(appliesToPipeline(partnerTier, "pipe-b")).toBe(false);
+  });
+
+  it("offers the field only on a deal of its pipeline", () => {
+    expect(
+      fieldsForSurface([partnerTier, region], "create", {
+        pipelineId: "pipe-b",
+      }),
+    ).toEqual([region]);
+    expect(
+      fieldsForSurface([partnerTier, region], "create", {
+        pipelineId: "pipe-a",
+      }),
+    ).toEqual([partnerTier, region]);
+  });
+
+  it("offers every field until the pipeline is known", () => {
+    expect(
+      fieldsForSurface([partnerTier, region], "create", {
+        pipelineId: undefined,
+      }),
+    ).toEqual([partnerTier, region]);
+  });
+
+  it("keeps a field on a deal that holds a value for it, so it can be cleared", () => {
+    const moved = dealNarrowing({
+      pipeline_id: "pipe-b",
+      cf_partner_tier: "gold",
+    });
+    expect(fieldsForSurface([partnerTier], "record", moved)).toEqual([
+      partnerTier,
+    ]);
+    const empty = dealNarrowing({ pipeline_id: "pipe-b" });
+    expect(fieldsForSurface([partnerTier], "record", empty)).toEqual([]);
   });
 });
 

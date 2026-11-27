@@ -15,6 +15,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
@@ -121,6 +122,8 @@ type FieldSpec struct {
 	ShowInCreate *bool
 	// ActivityKinds narrows an activity field to some kinds; empty means every kind.
 	ActivityKinds []string
+	// PipelineIDs narrows a deal field to some pipelines; empty means every pipeline.
+	PipelineIDs []ids.UUID
 }
 
 // FieldError is one field-level validation failure, matching the contract's
@@ -221,6 +224,7 @@ func Validate(spec FieldSpec) []FieldError {
 	if strings.TrimSpace(spec.Source) == "" {
 		errs = append(errs, FieldError{Field: fieldSource, Code: codeRequired})
 	}
+	errs = append(errs, checkPipelineScope(spec.Object, spec.PipelineIDs)...)
 	return append(errs, checkActivityKinds(spec.Object, spec.ActivityKinds)...)
 }
 
