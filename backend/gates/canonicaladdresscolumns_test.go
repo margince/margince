@@ -63,7 +63,7 @@ func holdsCanonicalForm(def, column string) bool {
 	return false
 }
 
-// holdsOneSpelling reports whether a CHECK definition holds column to the one
+// holdsOneSpelling reports whether a CHECK definition holds column to the
 // spelling values writes: composed accents and nothing that draws nothing.
 func holdsOneSpelling(def, column string) bool {
 	return strings.Contains(def, "(is_identifier_text("+column+"))")

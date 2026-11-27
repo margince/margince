@@ -60,14 +60,25 @@ func TestAnAddressTypedWithAHiddenCharacterAndAnAccentIsTheSameAddress(t *testin
 	}
 }
 
+// A name refused here shows on screen in another order than the one stored.
 func TestANameThatReversesItsOrderIsRefused(t *testing.T) {
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Names", "admin@names.test", "Admin")
-	var refusal map[string]any
-	status := e.Call(t, "POST", "/v1/contacts", body{"source": "manual", "linkedin_url": apptest.ContactProfile(),
-		"full_name": "Invoice \u202egnp.exe"}, nil, &refusal)
-	if status != http.StatusUnprocessableEntity || !strings.Contains(fmt.Sprint(refusal), "direction_override") {
-		t.Errorf("a contact name with a direction override → %d %v, want 422 direction_override", status, refusal)
+	const reversed = "Invoice \u202egnp.exe"
+	for _, write := range []struct {
+		path, field string
+		rest        body
+	}{
+		{"/v1/contacts", "full_name", body{"source": "manual", "linkedin_url": apptest.ContactProfile()}},
+		{"/v1/teams", "name", body{}},
+		{"/v1/pipelines", "name", body{}},
+	} {
+		var refusal map[string]any
+		write.rest[write.field] = reversed
+		status := e.Call(t, "POST", write.path, write.rest, nil, &refusal)
+		if status != http.StatusUnprocessableEntity || !strings.Contains(fmt.Sprint(refusal), "invalid_characters") {
+			t.Errorf("POST %s with a direction override in %s → %d %v, want 422 invalid_characters", write.path, write.field, status, refusal)
+		}
 	}
 	if status, _ := createContact(t, e, body{"linkedin_url": apptest.ContactProfile(), "full_name": "Đội José"}); status != http.StatusCreated {
 		t.Errorf("a name with accents → %d, want 201", status)

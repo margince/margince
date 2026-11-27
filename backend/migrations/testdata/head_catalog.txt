@@ -512,6 +512,7 @@ public.activity_participant storage=autovacuum_vacuum_scale_factor=0.02,autovacu
 public.activity_participant.activity_id uuid NOT NULL gen=- def=-
 public.activity_participant.activity_participant_activity_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
 public.activity_participant.activity_participant_address_is_canonical CHECK ((address = lower(btrim(address)))) NOT VALID
+public.activity_participant.activity_participant_address_one_spelling CHECK (is_identifier_text(address)) NOT VALID
 public.activity_participant.activity_participant_contact_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
 public.activity_participant.activity_participant_identity CHECK (((user_id IS NOT NULL) OR (contact_id IS NOT NULL) OR (address IS NOT NULL) OR (channel_user_id IS NOT NULL)))
 public.activity_participant.activity_participant_past_party_cap_unresolved CHECK (((NOT past_party_cap) OR ((user_id IS NULL) AND (contact_id IS NULL))))
@@ -525,7 +526,7 @@ public.activity_participant.activity_participant_strength_dates_removed CREATE T
 public.activity_participant.activity_participant_user_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.activity_participant.address text gen=- def=-
 public.activity_participant.address_domain_folded text gen=- def=-
-public.activity_participant.address_is_stored_lowercase CREATE TRIGGER address_is_stored_lowercase BEFORE UPDATE ON public.activity_participant FOR EACH ROW WHEN ((new.address <> lower(btrim(new.address)))) EXECUTE FUNCTION store_participant_address_lowercase()
+public.activity_participant.address_is_stored_lowercase CREATE TRIGGER address_is_stored_lowercase BEFORE UPDATE ON public.activity_participant FOR EACH ROW WHEN ((new.address <> lower(btrim(identifier_spelling(new.address))))) EXECUTE FUNCTION store_participant_address_lowercase()
 public.activity_participant.channel_user_id text gen=- def=-
 public.activity_participant.contact_id uuid gen=- def=-
 public.activity_participant.created_at timestamp with time zone NOT NULL gen=- def=now()
@@ -6765,6 +6766,7 @@ public.idempotency_key.response_status integer gen=- def=-
 public.idempotency_key.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.idempotency_key FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"key": 20000, "endpoint": 20000, "principal_id": 20000, "request_digest": 20000, "response_content_type": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"endpoint":20000,"key":20000,"principal_id":20000,"request_digest":20000,"response_content_type":20000}')
 public.idempotency_key.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.idempotency_key FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"key": 20000, "endpoint": 20000, "principal_id": 20000, "request_digest": 20000, "response_content_type": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"endpoint":20000,"key":20000,"principal_id":20000,"request_digest":20000,"response_content_type":20000}')
 public.idempotency_key_pkey CREATE UNIQUE INDEX idempotency_key_pkey ON public.idempotency_key USING btree (principal_id, key, endpoint)
+public.identifier_spelling(value text) secdef=false cfg=- acl=- 
 public.idx_aam_subject CREATE INDEX idx_aam_subject ON public.activity_audience_member USING btree (subject_type, subject_id)
 public.idx_activity_answer_mail_subject CREATE INDEX idx_activity_answer_mail_subject ON public.activity USING btree (counterparty_email, kind, lower(btrim(regexp_replace(regexp_replace(COALESCE(subject, ''::text), '^(\s*(re|aw|antw)\s*:)+\s*'::text, ''::text, 'i'::text), '\s+'::text, ' '::text, 'g'::text))), occurred_at) WHERE ((direction = 'outbound'::text) AND counterparty_outbound_attested AND (restricted_at IS NULL) AND (audience = 'workspace'::text) AND (archived_at IS NULL))
 public.idx_activity_answer_touch CREATE INDEX idx_activity_answer_touch ON public.activity USING btree (id, occurred_at) WHERE (((kind = 'call'::text) OR ((kind = 'meeting'::text) AND (meeting_status = 'held'::text))) AND (restricted_at IS NULL) AND (audience = 'workspace'::text) AND (archived_at IS NULL))
@@ -10864,7 +10866,7 @@ public.store_participant_address_lowercase() secdef=false cfg=- acl=-
 DECLARE
  folded record;
 BEGIN
- NEW.address := lower(btrim(NEW.address));
+ NEW.address := lower(btrim(identifier_spelling(NEW.address)));
  WITH gone AS (
   DELETE FROM activity_participant twin
    WHERE twin.activity_id = NEW.activity_id AND twin.role = NEW.role AND twin.id <> NEW.id

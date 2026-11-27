@@ -13,6 +13,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"golang.org/x/net/idna"
 	"golang.org/x/net/publicsuffix"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // Fold folds a mail domain to the one form own domains are compared in:
@@ -21,7 +23,7 @@ import (
 // A domain IDNA cannot read stays lowercased rather than dropped, so a parse
 // failure never reads as "ours", the answer that loses correspondence.
 func Fold(domain string) string {
-	domain = strings.ToLower(strings.TrimSpace(domain))
+	domain = strings.ToLower(values.IdentifierText(domain))
 	domain = strings.TrimSuffix(domain, ".")
 	if domain == "" {
 		return ""

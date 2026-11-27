@@ -339,3 +339,4 @@
 1795755969_the_group_six_text_limits_follow_their_columns.down.sql | * | re-creates those six text_bound triggers as they were; it changes no existing row
 1795796655_the_identifier_spelling_checks_are_validated.up.sql | * | the procedural body only counts rows and validates or drops eleven named CHECKs; it changes no row
 1795796655_the_identifier_spelling_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795796654_an_identifier_has_one_spelling.down.sql | * | runs only on a rollback: restores the participant trigger and its function as they stood before and drops the checks; it changes no row

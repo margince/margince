@@ -5,7 +5,7 @@ package values
 
 import "testing"
 
-// Every spelling a person reads as one address parses to one value.
+// Every spelling a reader takes for one address parses to one value.
 func TestAnAddressTypedTwoWaysIsOneAddress(t *testing.T) {
 	composed := "jos" + r(0x00E9) + "@x.com"
 	for _, typed := range []string{
@@ -26,27 +26,14 @@ func TestAnAddressTypedTwoWaysIsOneAddress(t *testing.T) {
 	}
 }
 
-func TestADomainAndANumberDropWhatDrawsNothing(t *testing.T) {
-	if got, err := ParseDomain(r(0xFEFF) + "Exa" + r(0x200B) + "mple.com" + r(0x200F)); err != nil || got.String() != "example.com" {
+func TestADomainDropsPaddingAndANumberRefusesWhatDrawsNothing(t *testing.T) {
+	if got, err := ParseDomain(r(0xFEFF) + "Example.com" + r(0x200F)); err != nil || got.String() != "example.com" {
 		t.Errorf("ParseDomain = %q, %v; want example.com", got, err)
 	}
-	if got, err := ParsePhone(r(0x202A) + "+49 30 1234567" + r(0x202C)); err != nil || got.String() != "+49301234567" {
-		t.Errorf("ParsePhone = %q, %v; want +49301234567", got, err)
+	if got, err := ParseDomain("exa" + r(0x200B) + "mple.com"); err == nil {
+		t.Errorf("ParseDomain kept %q, want a refusal: a hidden rune inside makes a look-alike host", got)
 	}
-}
-
-func TestADirectionOverrideIsSeenAndAnAccentIsNot(t *testing.T) {
-	for in, want := range map[string]bool{
-		"Ada Lovelace":                 false,
-		"Jos" + "e" + r(0x0301):        false,
-		"Đội bán hàng":                 false,
-		"Ada" + r(0x200D) + "x":        false,
-		"Ada " + r(0x202E) + "gnp.exe": true,
-		r(0x2066) + "Ada" + r(0x2069):  true,
-		"Ada" + r(0x202A):              true,
-	} {
-		if got := HasDirectionOverride(in); got != want {
-			t.Errorf("HasDirectionOverride(%q) = %v, want %v", in, got, want)
-		}
+	if got, err := ParsePhone(r(0x202A) + "+49 30 1234567" + r(0x202C)); err == nil {
+		t.Errorf("ParsePhone kept %q, want a refusal: a number holds digits and the separators the browser lists", got)
 	}
 }

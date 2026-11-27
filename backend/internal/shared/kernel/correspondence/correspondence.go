@@ -21,10 +21,14 @@
 //
 // Tier 0 rather than storekit, for the reason contactaddress beside it gives:
 // storekit owns no domain, and who the workspace corresponds with is a domain
-// rule. stdlib only, which the tier requires.
+// rule. It imports only values, which spells an identifier once for the tier.
 package correspondence
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
+)
 
 // LockEntity names the lock's subject for storekit.LockWriteIdentity.
 const LockEntity = "capture_correspondence"
@@ -35,10 +39,11 @@ func LockIdentity(address string) string {
 	return Fold(address)
 }
 
-// Fold is how an address is compared, matching activity.counterparty_email and
-// contact_email so a lookup is index-backed without a runtime case fold.
+// Fold is how an address is compared and stored: values.IdentifierText, lowercased.
+// It matches activity.counterparty_email and contact_email, so a lookup needs no
+// runtime case fold.
 func Fold(address string) string {
-	return strings.ToLower(strings.TrimSpace(address))
+	return strings.ToLower(values.IdentifierText(address))
 }
 
 // LocalPartBase is a local part without its plus-addressing tag: the mailbox

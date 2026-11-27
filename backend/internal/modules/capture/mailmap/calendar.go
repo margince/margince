@@ -31,6 +31,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/kernel/calendarevent"
 	"github.com/margince/margince/backend/internal/shared/kernel/calendarmethod"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -112,7 +113,7 @@ func (m Message) recordCounterparty() connector.Counterparty {
 		return connector.Counterparty{}
 	}
 	return connector.Counterparty{
-		Email:           strings.ToLower(strings.TrimSpace(m.counterparty)),
+		Email:           correspondence.Fold(m.counterparty),
 		DisplayName:     m.counterpartyName,
 		Domain:          domainOf(m.counterparty),
 		Direction:       m.direction,

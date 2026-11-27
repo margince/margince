@@ -1,3 +1,6 @@
+-- SPDX-License-Identifier: BUSL-1.1
+-- SPDX-FileCopyrightText: 2026 Gradion
+
 -- Validate the spelling checks the migration before this one added NOT VALID.
 -- Its own file, so the scan runs under VALIDATE's lighter lock. A check that an
 -- existing row breaks is dropped with a notice naming it and the count: PostgreSQL

@@ -40,6 +40,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -296,7 +297,8 @@ func resolveWithdrawalTokenTx(ctx context.Context, tx pgx.Tx, token string) (Wit
 		  FROM withdrawal_credential
 		 WHERE token_hash = $1 AND revoked_at IS NULL AND expires_at > now()`,
 		hashPublicToken(token)).Scan(
-		&ref.CredentialID, &ref.Address, &contactID, &leadID, &ref.Scope, &purposeID)
+		&ref.CredentialID, &ref.Address, &contactID, &leadID, &ref.Scope, &purposeID,
+	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return WithdrawalRef{}, apperrors.ErrNotFound
 	}
@@ -414,7 +416,7 @@ func (s *Store) RevokeSubjectCredentialsTx(
 // purposes too. Consolidating them would change the cap's lock key, which does
 // not belong in a slice about withdrawal links.
 func normalizeAddress(address string) string {
-	return strings.ToLower(strings.TrimSpace(address))
+	return correspondence.Fold(address)
 }
 
 // purposeKeyByID reads the key a named-purpose credential was minted for, so

@@ -7,10 +7,10 @@ import (
 	"context"
 	"fmt"
 	"slices"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -30,7 +30,7 @@ func StopOnAddressesSQL(alias, lowered, hashes string) string {
 func StopAddressArgs(addresses ...string) (lowered, hashes []string) {
 	lowered = make([]string, 0, len(addresses))
 	for _, address := range addresses {
-		if trimmed := strings.ToLower(strings.TrimSpace(address)); trimmed != "" {
+		if trimmed := correspondence.Fold(address); trimmed != "" {
 			lowered = append(lowered, trimmed)
 		}
 	}

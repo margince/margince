@@ -42577,7 +42577,7 @@ components:
       type: object
       required: [name, sender]
       properties:
-        name: { type: string, minLength: 1, maxLength: 120 }
+        name: { x-single-line: true, type: string, minLength: 1, maxLength: 120 }
         sender: { $ref: '#/components/schemas/WebFormSender' }
         sender_secret: { type: string, minLength: 16, maxLength: 512, description: 'The secret a builder signs with. `typeform` and `tally` get a minted one without it; a `webflow` form refuses every post until Webflow''s secret is pasted. Refused for any other sender.' }
         allowed_origins:
@@ -42607,7 +42607,7 @@ components:
           type: [string, 'null']
           format: uuid
           description: 'Explicit conversion to a reviewed inquiry policy for this form. Clear only through a reviewed return to legacy handling.'
-        name: { type: string, minLength: 1, maxLength: 120 }
+        name: { x-single-line: true, type: string, minLength: 1, maxLength: 120 }
         sender_secret: { type: string, minLength: 16, maxLength: 512 }
         allowed_origins:
           type: array
@@ -43115,6 +43115,7 @@ components:
       description: A sparse installation-settings patch (admin/ops, human-only).
       properties:
         name:
+          x-single-line: true
           type: string
           maxLength: 200
           deprecated: true
@@ -47912,7 +47913,7 @@ components:
       description: 'The caller''s corrections. An omitted field keeps the suggestion''s value.'
       properties:
         existing_deal_id: { type: string, format: uuid, description: 'Link this evidence to a live deal at the same company instead of creating one. Requires permission to update that deal; cannot be combined with corrections.' }
-        name: { type: string, minLength: 1, description: 'Without one the deal is named after the company.' }
+        name: { x-single-line: true, type: string, minLength: 1, description: 'Without one the deal is named after the company.' }
         amount_minor: { type: integer, format: int64, minimum: 0 }
         no_amount: { type: boolean, description: 'Open the deal with no amount, dropping the one the suggestion proposed. Refused together with amount_minor or currency.' }
         currency: { type: string, pattern: '^[A-Z]{3}$' }
@@ -51434,6 +51435,7 @@ components:
           format: uuid
           description: An existing company this contact works at now. Not with `company_name`.
         company_name:
+          x-single-line: true
           type: [string, 'null']
           description: The employer name to resolve or create. Not with `company_id`; blank leaves resolution to the work email domain.
         acquisition_source:
@@ -51460,13 +51462,14 @@ components:
         flatter than CreateContactRequest: one email and one phone rather than the
         arrays, because a form optimized for typing has one box each.
       properties:
-        full_name: { type: string }
-        title: { type: [string, 'null'] }
+        full_name: { x-single-line: true, type: string }
+        title: { x-single-line: true, type: [string, 'null'] }
         company_id:
           type: [string, 'null']
           format: uuid
           description: An existing employer. Wins over `company_name` when both arrive.
         company_name:
+          x-single-line: true
           type: [string, 'null']
           description: A new employer to create, when no existing record was picked.
         role:
@@ -51515,9 +51518,11 @@ components:
           format: uuid
           description: An existing company to link.
         company_name:
+          x-single-line: true
           type: [string, 'null']
           description: A company to create and link. Must not be blank when sent.
         title:
+          x-single-line: true
           type: [string, 'null']
           description: Their job title at this company, stored as the employment's `role`.
       additionalProperties: false
@@ -58252,6 +58257,7 @@ components:
             leaves it unchanged. Rendering uses the signature sanitizer without
             expanding placeholders. Empty sanitized content uses the usual fallback.
         title:
+          x-single-line: true
           type: string
           maxLength: 120
           description: The member's title, for the workspace template. Omitted leaves it as it is.
@@ -58265,6 +58271,7 @@ components:
       required: [display_name]
       properties:
         display_name:
+          x-single-line: true
           type: string
           minLength: 1
           maxLength: 120
@@ -59067,7 +59074,7 @@ components:
       type: object
       required: [name, objective_metric, deadline]
       properties:
-        name: { type: string, minLength: 1, maxLength: 120 }
+        name: { x-single-line: true, type: string, minLength: 1, maxLength: 120 }
         description: { type: [string, 'null'], maxLength: 20000 }
         owner_id: { type: [string, 'null'], format: uuid, description: Defaults to the caller. }
         objective_metric: { $ref: '#/components/schemas/ReportingMetricID' }
@@ -60455,7 +60462,7 @@ components:
         deal_id: { type: [string, 'null'], format: uuid }
         project_id: { type: [string, 'null'], format: uuid }
         contract_number: { type: [string, 'null'] }
-        title: { type: string, minLength: 1 }
+        title: { x-single-line: true, type: string, minLength: 1 }
         value_minor: { type: [integer, 'null'], format: int64 }
         currency: { type: [string, 'null'], minLength: 3, maxLength: 3 }
         arr_minor: { type: [integer, 'null'], format: int64, description: 'Annual recurring revenue in minor units of `currency`. Null means no recurring component, which is not zero.' }
@@ -60477,7 +60484,7 @@ components:
         deal_id: { type: [string, 'null'], format: uuid }
         project_id: { type: [string, 'null'], format: uuid }
         contract_number: { type: [string, 'null'] }
-        title: { type: string, minLength: 1 }
+        title: { x-single-line: true, type: string, minLength: 1 }
         value_minor: { type: [integer, 'null'], format: int64 }
         currency: { type: [string, 'null'], minLength: 3, maxLength: 3 }
         arr_minor: { type: [integer, 'null'], format: int64, description: 'Annual recurring revenue in minor units of `currency`. Null means no recurring component, which is not zero.' }
@@ -60524,7 +60531,7 @@ components:
         term to the deal that won the old one. Both must belong to the counterparty the successor
         inherits, and a caller may not name one it cannot see.
       properties:
-        title: { type: string, minLength: 1 }
+        title: { x-single-line: true, type: string, minLength: 1 }
         deal_id: { type: [string, 'null'], format: uuid }
         project_id: { type: [string, 'null'], format: uuid }
         contract_number: { type: [string, 'null'] }
@@ -61426,7 +61433,7 @@ components:
       required: [pipeline_id, name, position]
       properties:
         pipeline_id: { type: string, format: uuid }
-        name: { type: string, maxLength: 120 }
+        name: { x-single-line: true, type: string, maxLength: 120 }
         position: { type: integer }
         semantic: { type: string, enum: [open, won, lost], default: open }
         win_probability: { type: integer, minimum: 0, maximum: 100, default: 0 }
@@ -61435,7 +61442,7 @@ components:
     UpdateStageRequest:
       type: object
       properties:
-        name: { type: string, maxLength: 120 }
+        name: { x-single-line: true, type: string, maxLength: 120 }
         position: { type: integer }
         semantic: { type: string, enum: [open, won, lost] }
         win_probability: { type: integer, minimum: 0, maximum: 100 }
@@ -61680,7 +61687,7 @@ components:
       type: object
       required: [name]
       properties:
-        name: { type: string, maxLength: 120 }
+        name: { x-single-line: true, type: string, maxLength: 120 }
         is_default: { type: boolean, default: false }
         position: { type: integer, default: 0 }
         stages:
@@ -61703,7 +61710,7 @@ components:
           description: |
             Accepted and ignored. The stage joins the pipeline this request creates; the field
             stays so a client written when nested stages reused `CreateStageRequest` is not refused.
-        name: { type: string, maxLength: 120 }
+        name: { x-single-line: true, type: string, maxLength: 120 }
         position:
           type: integer
           description: Omitted or 0, the stage takes its place in the list (1-based).
@@ -61713,7 +61720,7 @@ components:
     UpdatePipelineRequest:
       type: object
       properties:
-        name: { type: string, maxLength: 120 }
+        name: { x-single-line: true, type: string, maxLength: 120 }
         is_default: { type: boolean }
         position: { type: integer }
 
@@ -61998,11 +62005,11 @@ components:
         notice_minutes: { type: integer, minimum: 0, maximum: 10080 }
         horizon_days: { type: integer, minimum: 1, maximum: 90 }
         buffer_minutes: { type: integer, minimum: 0, maximum: 120 }
-        title: { type: string, maxLength: 200 }
+        title: { x-single-line: true, type: string, maxLength: 200 }
         use_default_title: { type: boolean, description: Use the built-in meeting title. Explicitly false preserves the supplied title as custom wording. }
         location: { type: string, maxLength: 1000 }
         host_name: { type: string, maxLength: 200, description: Derived from the host account display name; request values are ignored. Names longer than 200 characters are abbreviated for this profile. }
-        company_name: { type: string, maxLength: 200, description: The name of the legal entity an admin assigns the host to; request values are ignored. Names longer than 200 characters are abbreviated for this profile. }
+        company_name: { x-single-line: true, type: string, maxLength: 200, description: The name of the legal entity an admin assigns the host to; request values are ignored. Names longer than 200 characters are abbreviated for this profile. }
         logo_url: { type: string, maxLength: 2000, description: The logo of the legal entity the host works for and absent when it has none; request values are ignored. Absolute when the public origin is configured; otherwise relative to the API origin. }
         slug: { type: string, readOnly: true }
         alias: { type: string, readOnly: true, description: "The host's live friendly address under `/book/`, absent when none is set. Change it with `PUT /scheduling/profile/alias`." }
@@ -62088,7 +62095,7 @@ components:
       additionalProperties: false
       required: [title, team_members]
       properties:
-        title: { type: string, maxLength: 200 }
+        title: { x-single-line: true, type: string, maxLength: 200 }
         enabled: { type: boolean, description: Absent means on. }
         team_members:
           type: array
@@ -66425,7 +66432,7 @@ components:
       properties:
         pipeline_id: { type: [string, 'null'], format: uuid }
         stage_id: { type: [string, 'null'], format: uuid }
-        name: { type: [string, 'null'], description: 'Defaults to "<company> — <stage>" or the lead''s name.' }
+        name: { x-single-line: true, type: [string, 'null'], description: 'Defaults to "<company> — <stage>" or the lead''s name.' }
         amount_minor: { type: [integer, 'null'], format: int64 }
         currency: { type: [string, 'null'], description: 'ISO-4217; required with amount_minor.' }
 
@@ -67881,7 +67888,7 @@ components:
       type: object
       required: [name, entity_type]
       properties:
-        name: { type: string, minLength: 1 }
+        name: { x-single-line: true, type: string, minLength: 1 }
         entity_type: { $ref: '#/components/schemas/FilterResource' }
         list_type: { type: string, enum: [static, dynamic], default: static }
         definition: { type: [object, 'null'], additionalProperties: true }
@@ -67895,7 +67902,7 @@ components:
       required: [version]
       properties:
         version: { type: integer, format: int64, description: 'The version the caller read.' }
-        name: { type: string, minLength: 1 }
+        name: { x-single-line: true, type: string, minLength: 1 }
         purpose: { type: [string, 'null'], description: 'Null removes the purpose.' }
         definition: { type: object, additionalProperties: true, description: 'A Live List''s new filter tree.' }
         sharing: { type: string, enum: [private, team, workspace] }
@@ -69917,6 +69924,7 @@ components:
       - selection
       properties:
         name:
+          x-single-line: true
           type: string
           minLength: 1
           maxLength: 120
@@ -70855,7 +70863,7 @@ components:
       additionalProperties: false
       required: [display_name, email, expected_updated_at]
       properties:
-        display_name: { type: string, minLength: 1, maxLength: 120 }
+        display_name: { x-single-line: true, type: string, minLength: 1, maxLength: 120 }
         email: { type: string, format: email, description: May change only before the account has been used to sign in. }
         role: { type: string, description: Omit to keep the current roles. }
         team_ids:
@@ -71245,7 +71253,7 @@ components:
           description: >-
             The extension unit the member serves, by its manifest name. Only that unit may act as
             the member. A name no installed unit carries is accepted and simply never used.
-        display_name: { type: string, minLength: 1, maxLength: 120 }
+        display_name: { x-single-line: true, type: string, minLength: 1, maxLength: 120 }
     FormerMemberRequest:
       type: object
       description: >-
@@ -71259,7 +71267,7 @@ components:
           description: >-
             Their work address as the source system spelled it. It is the identity the
             seat is keyed on, so a second record for the same address is refused.
-        display_name: { type: string, minLength: 1, maxLength: 120 }
+        display_name: { x-single-line: true, type: string, minLength: 1, maxLength: 120 }
         role:
           type: string
           maxLength: 64
@@ -71284,7 +71292,7 @@ components:
       required: [email, display_name, role]
       properties:
         email: { type: string, format: email }
-        display_name: { type: string, minLength: 1, maxLength: 120 }
+        display_name: { x-single-line: true, type: string, minLength: 1, maxLength: 120 }
         greeting_name:
           type: [string, 'null']
           maxLength: 120
@@ -71379,11 +71387,11 @@ components:
       type: object
       required: [name]
       properties:
-        name: { type: string, minLength: 1, maxLength: 120 }
+        name: { x-single-line: true, type: string, minLength: 1, maxLength: 120 }
     UpdateTeamRequest:
       type: object
       properties:
-        name: { type: string, minLength: 1, maxLength: 120 }
+        name: { x-single-line: true, type: string, minLength: 1, maxLength: 120 }
         archived: { type: boolean, description: 'true archives the team (its memberships stop resolving row scope and shares); false restores it.' }
 
     IssuePasswordLinkResponse:
@@ -74184,6 +74192,7 @@ components:
           maxLength: 64
           description: The key of the live role the new one starts as a copy of.
         name:
+          x-single-line: true
           type: string
           minLength: 1
           maxLength: 120
@@ -74196,6 +74205,7 @@ components:
       description: A sparse patch. An absent field is left as it is.
       properties:
         name:
+          x-single-line: true
           type: string
           minLength: 1
           maxLength: 120
@@ -76900,7 +76910,7 @@ components:
         CompanyProfileInput or ConfirmCompanySiteReadRequest contract. Values are bounded because the
         same draft may be supplied as context to the conversational assistant.
       properties:
-        display_name: { type: [string, 'null'], maxLength: 2000 }
+        display_name: { x-single-line: true, type: [string, 'null'], maxLength: 2000 }
         offer_summary: { type: [string, 'null'], maxLength: 20000 }
         icp: { type: [string, 'null'], maxLength: 20000 }
         value_proposition: { type: [string, 'null'], maxLength: 20000 }
@@ -76911,7 +76921,7 @@ components:
         buying_intents: { type: [string, 'null'], maxLength: 2000 }
         common_objections: { type: [string, 'null'], maxLength: 2000 }
         sales_motion: { type: [string, 'null'], maxLength: 2000 }
-        legal_name: { type: [string, 'null'], maxLength: 2000 }
+        legal_name: { x-single-line: true, type: [string, 'null'], maxLength: 2000 }
         registered_address: { type: [string, 'null'], maxLength: 2000 }
         register_vat: { type: [string, 'null'], maxLength: 2000 }
         legal_form: { type: [string, 'null'], maxLength: 2000 }
@@ -77151,7 +77161,7 @@ components:
       required: [name]
       additionalProperties: false
       properties:
-        name: { type: string, minLength: 1, maxLength: 120 }
+        name: { x-single-line: true, type: string, minLength: 1, maxLength: 120 }
         description:
           type: string
           maxLength: 20000
@@ -77232,8 +77242,8 @@ components:
         sent empty is cleared.
       required: [display_name]
       properties:
-        display_name: { type: string, minLength: 1, maxLength: 120, description: 'The installation''s name too. The company''s own record holds it, so a blank name answers `422 required` and a changed name past 120 characters `422 too_long`.' }
-        legal_name: { type: [string, 'null'], description: The registered legal entity. }
+        display_name: { x-single-line: true, type: string, minLength: 1, maxLength: 120, description: 'The installation''s name too. The company''s own record holds it, so a blank name answers `422 required` and a changed name past 120 characters `422 too_long`.' }
+        legal_name: { x-single-line: true, type: [string, 'null'], description: The registered legal entity. }
         registered_address: { type: [string, 'null'], description: The registered address as one formatted line. }
         register_vat: { type: [string, 'null'], description: 'VAT ID / commercial register entry (e.g. DE123456789, HRB 12345 B). Rows predate register_number and may hold either; a new read puts the VAT ID here and the register entry in register_number.' }
         legal_form: { type: [string, 'null'], description: 'The legal form as the imprint prints it (GmbH, AG, Ltd).' }
@@ -79811,6 +79821,7 @@ components:
       required: [name, redirect_uris]
       properties:
         name:
+          x-single-line: true
           type: string
           minLength: 1
           maxLength: 120
@@ -80203,6 +80214,7 @@ components:
       properties:
         locks: { $ref: '#/components/schemas/SettingLocks', readOnly: true }
         legal_name:
+          x-single-line: true
           type: string
           maxLength: 500
           description: 'Who is writing, as the law would name them. Art. 13(1)(a) GDPR''s identity of the controller, and the advertiser under Decree 91/2020.'
@@ -80275,7 +80287,7 @@ components:
           type: string
           pattern: '^[a-z]{2}$'
           description: The language, as a base language the installation can send mail in.
-        legal_name: { type: string, maxLength: 500 }
+        legal_name: { x-single-line: true, type: string, maxLength: 500 }
         postal_address: { type: string, maxLength: 500 }
         privacy_contact: { type: string, maxLength: 500 }
         objection_route: { type: string, maxLength: 500 }
@@ -81252,7 +81264,7 @@ components:
       required: [key, name, params]
       properties:
         key: { type: string }
-        name: { type: string }
+        name: { x-single-line: true, type: string }
         params: { type: object, additionalProperties: true }
 
     UpdateAutomationRequest:
@@ -81262,7 +81274,7 @@ components:
         initial_run_confirmed:
           type: boolean
           description: Confirm the initial-run preview when enabling a scheduled rule or changing its active population. Existing matching records may receive work on the next scan.
-        name: { type: [string, 'null'] }
+        name: { x-single-line: true, type: [string, 'null'] }
         params: { type: [object, 'null'], additionalProperties: true }
         status: { type: [string, 'null'], enum: [enabled, paused, null] }
         owner_id:
@@ -81995,7 +82007,7 @@ components:
       required: [deal_id, title, source]
       properties:
         deal_id: { type: string, format: uuid }
-        title: { type: string, minLength: 1 }
+        title: { x-single-line: true, type: string, minLength: 1 }
         welcome_message: { type: [string, 'null'] }
         steward_user_id:
           type: [string, 'null']
@@ -82020,7 +82032,7 @@ components:
         is a change to what an outside party can reach, so it has its own human-only
         operation rather than riding an auto-execute patch.
       properties:
-        title: { type: string, minLength: 1 }
+        title: { x-single-line: true, type: string, minLength: 1 }
         welcome_message: { type: [string, 'null'] }
         steward_user_id: { type: [string, 'null'], format: uuid }
       additionalProperties: false
@@ -82149,7 +82161,7 @@ components:
       type: object
       required: [full_name, email, source]
       properties:
-        full_name: { type: string, minLength: 1 }
+        full_name: { x-single-line: true, type: string, minLength: 1 }
         email: { type: string, format: email }
         capability:
           allOf:
@@ -82162,7 +82174,7 @@ components:
       type: object
       description: Any subset; omit a field to leave it unchanged.
       properties:
-        full_name: { type: string, minLength: 1 }
+        full_name: { x-single-line: true, type: string, minLength: 1 }
         email:
           type: string
           format: email

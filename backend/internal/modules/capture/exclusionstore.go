@@ -30,6 +30,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -309,7 +310,7 @@ func parseSingleAddress(raw string) (string, bool) {
 	if utf8.RuneCountInString(raw) > maxIndexedAddressChars {
 		return "", false
 	}
-	trimmed := strings.TrimSpace(raw)
+	trimmed := values.IdentifierText(raw)
 	addr, err := mail.ParseAddress(trimmed)
 	if err != nil || addr.Name != "" || !strings.EqualFold(addr.Address, trimmed) || !strings.Contains(addr.Address, "@") {
 		return "", false

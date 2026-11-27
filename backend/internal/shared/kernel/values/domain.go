@@ -23,9 +23,12 @@ type Domain struct{ s string }
 // cannot transcode, so callers go through owndomain.ParseDomain, which stores
 // the punycode form.
 func ParseDomain(raw string) (Domain, error) {
-	trimmed := identifierText(raw)
+	trimmed := IdentifierText(raw)
 	if trimmed == "" {
 		return Domain{}, &ParseError{Field: "domain", Code: "domain_empty", Message: "a domain is required"}
+	}
+	if hidesInside(raw) {
+		return Domain{}, &ParseError{Field: "domain", Code: "domain_malformed", Message: "the domain holds a character that does not show; type it again without one"}
 	}
 	host := trimmed
 	if strings.Contains(host, "://") {

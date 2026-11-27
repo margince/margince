@@ -34,6 +34,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
@@ -101,7 +102,7 @@ type HardBounceFact struct {
 // delivery report that rolled back would refuse mail on the strength of a
 // failure that never happened.
 func RecordHardBounceTx(ctx context.Context, tx pgx.Tx, fact HardBounceFact) error {
-	address := strings.ToLower(strings.TrimSpace(fact.Address))
+	address := correspondence.Fold(fact.Address)
 	if address == "" {
 		return errors.New("consent: a hard bounce names no address")
 	}

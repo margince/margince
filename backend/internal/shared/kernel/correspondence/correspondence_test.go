@@ -21,6 +21,8 @@ func TestOneAddressHasOneKeyHoweverItIsWritten(t *testing.T) {
 		"first.last@company.example",
 		"  first.last@company.example  ",
 		"FIRST.LAST@COMPANY.EXAMPLE",
+		"\u200bfirst.last@company.example\ufeff",
+		"first.\u2060last@company.example",
 	}
 	want := LockIdentity(spellings[0])
 	if want == "" {
@@ -37,6 +39,15 @@ func TestOneAddressHasOneKeyHoweverItIsWritten(t *testing.T) {
 
 // Different addresses must NOT share a key, or one sender's write blocks every
 // other sender's.
+// An accent typed as a letter and a combining mark folds to the composed
+// letter, the spelling contact_email stores.
+func TestFoldComposesAnAccent(t *testing.T) {
+	t.Parallel()
+	if got, want := Fold("Jose\u0301@Buyer.Example"), "jos\u00e9@buyer.example"; got != want {
+		t.Errorf("Fold = %q, want %q", got, want)
+	}
+}
+
 func TestTwoAddressesDoNotShareAKey(t *testing.T) {
 	t.Parallel()
 

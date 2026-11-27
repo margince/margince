@@ -4,9 +4,8 @@
 package storekit
 
 import (
-	"strings"
-
 	"github.com/margince/margince/backend/internal/platform/mailidentity"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 )
 
 // EmailLookups are the stored spellings a lookup of these addresses matches.
@@ -17,7 +16,7 @@ func EmailLookups(emails ...string) []string {
 	out := make([]string, 0, 2*len(emails))
 	seen := map[string]bool{}
 	for _, email := range emails {
-		typed := strings.ToLower(strings.TrimSpace(email))
+		typed := correspondence.Fold(email)
 		if typed == "" {
 			continue
 		}
