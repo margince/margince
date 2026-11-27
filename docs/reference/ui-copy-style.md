@@ -104,9 +104,11 @@ items and most help text are statements that address no one.
 - **Spacing.** One space between words, never two. A value may start or end
   with a space only when it is a fragment the code joins around markup. There
   the code depends on that edge space.
-- **Numbers** as digits, with a comma as the thousands separator. `to` for
-  ranges (`1 to 4`, never `1-4`), `of` for part of a set (`3 of 12`). No
-  ordinals in UI (`1st`, `2nd`).
+- **Numbers** as digits, with a comma as the thousands separator. A range of
+  figures is two numbers joined by a hyphen with no spaces (`1-4`); that hyphen
+  is not a dash. A sentence keeps its words (`from 1 to 4`), and so does a
+  range of dates. `of` for part of a set (`3 of 12`). No ordinals in UI
+  (`1st`, `2nd`).
 - **Abbreviations**: none of `e.g.`, `i.e.`, `etc.`, `vs.`, `w/` or `&`. Write
   `for example`, `that is`, `and`. Known acronyms are fine when the reader shares
   them: CRM, API, VAT, DNS, IMAP, PDF, CSV, UTC.

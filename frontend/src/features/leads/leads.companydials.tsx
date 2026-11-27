@@ -118,6 +118,8 @@ export function useRefusalOf<Row>(
       ? {
           ...listQuery,
           rows: [],
+          held: [],
+          jumped: undefined,
           isPending: false,
           isError: false,
           hasMore: false,

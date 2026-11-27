@@ -6,11 +6,14 @@ package agents
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"maps"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -124,6 +127,61 @@ func TestTheCallReachesTheSeamAsItWasAsked(t *testing.T) {
 	}
 	if q.Text != "" {
 		t.Errorf("the query carries text %q — an enumeration asks for no term, and a term would narrow it", q.Text)
+	}
+	if q.Offset != nil {
+		t.Errorf("the query skips %d rows, and the caller asked for none", *q.Offset)
+	}
+}
+
+// offset is declared with the bound the list store holds, and reaches the seam as asked.
+func TestAnOffsetReachesTheSeamWithinTheStoresBound(t *testing.T) {
+	seam := &listProbeProvider{}
+	tool := listRecords{p: seam, filters: bindableFilters(probeVocabulary{})}
+	var declared struct {
+		Properties struct {
+			Offset struct {
+				Type    string `json:"type"`
+				Minimum *int   `json:"minimum"`
+				Maximum *int   `json:"maximum"`
+			} `json:"offset"`
+		} `json:"properties"`
+	}
+	if err := json.Unmarshal(tool.Spec().InputSchema, &declared); err != nil {
+		t.Fatalf("list_records' input schema does not parse: %v", err)
+	}
+	if offset := declared.Properties.Offset; offset.Type != "integer" || offset.Minimum == nil || *offset.Minimum != 0 ||
+		offset.Maximum == nil || *offset.Maximum != storekit.MaxListOffset {
+		t.Errorf("offset is declared %+v, want an integer from 0 to %d", offset, storekit.MaxListOffset)
+	}
+
+	if _, err := tool.Handle(t.Context(), json.RawMessage(`{"record_type":"contact","offset":40,"limit":20}`)); err != nil {
+		t.Fatalf("listing contacts at an offset: %v", err)
+	}
+	if len(seam.queries) != 1 || seam.queries[0].Offset == nil || *seam.queries[0].Offset != 40 {
+		t.Errorf("the seam saw %+v, want one query skipping 40 rows", seam.queries)
+	}
+}
+
+// An offset the store would refuse is refused before the seam, on the offset field.
+func TestAnOffsetBesideACursorOrPastTheCapIsRefusedBeforeTheSeam(t *testing.T) {
+	for call, want := range map[string]string{
+		`{"record_type":"contact","offset":40,"cursor":"c1"}`:                               "offset_with_cursor",
+		`{"record_type":"contact","offset":` + strconv.Itoa(storekit.MaxListOffset+1) + `}`: "out_of_range",
+	} {
+		seam := &listProbeProvider{}
+		tool := listRecords{p: seam, filters: bindableFilters(probeVocabulary{})}
+		_, err := tool.Handle(t.Context(), json.RawMessage(call))
+		refusal, ok := errors.AsType[*storekit.OffsetError](err)
+		if !ok {
+			t.Errorf("%s answered %v, want the offset refusal", call, err)
+			continue
+		}
+		if field, code, _ := refusal.FieldFault(); field != "offset" || code != want {
+			t.Errorf("%s was refused on %s=%s, want offset=%s", call, field, code, want)
+		}
+		if seam.queries != nil {
+			t.Errorf("%s reached the seam before it was refused", call)
+		}
 	}
 }
 
