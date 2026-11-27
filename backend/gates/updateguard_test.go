@@ -347,7 +347,7 @@ func lockTableConsts(t *testing.T, fset *token.FileSet, cache map[string]map[str
 	if consts, ok := cache[dir]; ok {
 		return consts
 	}
-	consts := stringConsts(t, fset, parsePackageDir(t, fset, dir))
+	consts := gatekit.StringConstantsOf(t, parsePackageDir(t, fset, dir))
 	cache[dir] = consts
 	return consts
 }

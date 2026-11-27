@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-//gate:kind census H2
-
 package gates
 
 // `relationship` is a first-class RBAC object, and it is the only join table in
@@ -43,8 +41,6 @@ package gates
 // and is judged at file scope, as it is there.
 
 import (
-	"go/ast"
-	"path"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
@@ -216,8 +212,8 @@ var lifecycleEdgeReads = gatekit.Waive(map[string]string{
 // It is a real verdict and not a quiet exclusion, which is the distinction
 // #1831 drew when it refused a bare exemption list: a bare list reads as
 // "handled", this reads as "decided, and not yet done". The hole stays
-// countable — `go test -run TestEveryReaderOfTheRelationshipTable -v` prints
-// the count.
+// countable: `go test -run TestEveryReaderOfAnObjectTable/relationship -v`
+// prints the count.
 //
 // Every reason here names its issue. That is a convention rather than a checked
 // rule, deliberately: a parallel map of reasons to police it is exactly what
@@ -280,74 +276,6 @@ var ruledEdgeReads = gatekit.Waive(map[string]string{
 // only a collapse is a finding.
 const wantMinimumGatedSites = 16
 
-// edgeReaderScope is every non-test, non-generated file under internal/ that
-// reads the relationship table by name.
-var edgeReaderScope = gatekit.Scope{
-	Roots:   []string{"internal"},
-	Subject: readsRelationshipTable,
-	Exempt:  gatekit.Waive(map[string]string{}),
-}
-
-func readsRelationshipTable(filePath string, file *ast.File) bool {
-	return gatekit.FileReadsTable(filePath, file, relationshipGate.literal)
-}
-
-func TestEveryReaderOfTheRelationshipTableCarriesTheEdgeGateOrAVerdict(t *testing.T) {
-	t.Parallel()
-	files := edgeReaderScope.Files(t)
-	walk := relationshipGate.walkPackages(t, files)
-	consts := constantTable{}
-
-	var satisfied int
-	for _, parsed := range files {
-		pkg := path.Dir(parsed.Path)
-		for _, site := range relationshipGate.readSites(parsed, consts.of(t, pkg)) {
-			subject := site.subject(parsed.Path)
-			// Its own body first, then the helpers IT CALLS — never its own
-			// name. A by-name lookup would let a gated Store.X vouch for an
-			// ungated Handlers.X, which is the vouching this gate is
-			// per-function precisely to prevent.
-			carriesGate := walk.carries(t, relationshipGate, parsed, site, consts.of(t, pkg))
-			verdict := verdictIn(t, subject, edgeVerdicts)
-
-			switch {
-			case carriesGate && verdict != "":
-				// A satisfied site that is ALSO waived is the way this census
-				// silently stops counting down: a deferred read that later gets
-				// its gate keeps matching its waiver for ever, and the hole
-				// reads as open when it is closed.
-				t.Errorf("%s carries the edge gate AND a %s verdict — remove the verdict, it now "+
-					"describes code that is gated", subject, verdict)
-			case carriesGate:
-				satisfied++
-			case verdict == "":
-				t.Errorf("%s reads the relationship table without the edge gate and without a verdict.\n"+
-					"  Reading an edge discloses its endpoints AS A PAIR, which is what relationship.read "+
-					"governs — the endpoints' own grants do not cover it.\n"+
-					"  Either call auth.EdgeReadScope, or declare the read in predicateEdgeReads / lifecycleEdgeReads / "+
-					"calleeGatedEdgeReads / ruledEdgeReads / deferredEdgeReads with the reason it needs no gate.\n"+
-					"  Left alone it is indistinguishable from a read nobody considered.\n"+
-					"  The read: %s", subject, site.sql)
-			}
-		}
-	}
-
-	if satisfied < wantMinimumGatedSites {
-		t.Errorf("only %d relationship reads satisfy the edge gate, want at least %d — a literal "+
-			"extractor that stopped recognising this tree's SQL would report exactly this, and it "+
-			"reads the same as a clean tree", satisfied, wantMinimumGatedSites)
-	}
-	t.Logf("edge reads: %d gated, %d predicate, %d lifecycle, %d callee-gated, %d ruled, %d DEFERRED (still disclosing)",
-		satisfied, len(predicateEdgeReads.Subjects()), len(lifecycleEdgeReads.Subjects()),
-		len(calleeGatedEdgeReads.Subjects()), len(ruledEdgeReads.Subjects()), len(deferredEdgeReads.Subjects()))
-
-	predicateEdgeReads.AssertAllMatched(t)
-	lifecycleEdgeReads.AssertAllMatched(t)
-	calleeGatedEdgeReads.AssertAllMatched(t)
-	ruledEdgeReads.AssertAllMatched(t)
-	deferredEdgeReads.AssertAllMatched(t)
-}
-
 // edgeVerdicts are the five declarations, in the order a reader meets them
 // above. Named as one list because "which declaration a read sits in IS its
 // verdict" is only true if every declaration is asked — a set left off this
@@ -359,4 +287,15 @@ var edgeVerdicts = []namedVerdict{
 	{"callee-gated", calleeGatedEdgeReads},
 	{"ruled", ruledEdgeReads},
 	{"deferred", deferredEdgeReads},
+}
+
+// sweepEdgeVerdicts fails a verdict no read matched any more. The
+// gate census asks for each sweep by name, so the list is written out.
+func sweepEdgeVerdicts(t *testing.T) {
+	t.Helper()
+	predicateEdgeReads.AssertAllMatched(t)
+	lifecycleEdgeReads.AssertAllMatched(t)
+	calleeGatedEdgeReads.AssertAllMatched(t)
+	ruledEdgeReads.AssertAllMatched(t)
+	deferredEdgeReads.AssertAllMatched(t)
 }

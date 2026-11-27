@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-//gate:kind census H2
-
 package gates
 
 // `company` is an RBAC object, and until this gate nothing held the object half
@@ -29,8 +27,6 @@ package gates
 // recognises it.
 
 import (
-	"go/ast"
-	"path"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
@@ -255,68 +251,18 @@ var companyVerdicts = []namedVerdict{
 	{"ruled", ruledCompanyReads},
 }
 
-// wantMinimumGatedCompanySites is the floor below the count of sites that
-// satisfy the gate today. It exists for the reason every floor in this
-// directory does: an extractor that stops recognising SQL finds no sites and
-// reports nothing, which is indistinguishable from a clean tree.
-const wantMinimumGatedCompanySites = 12
-
-var companyReaderScope = gatekit.Scope{
-	Roots:   []string{"internal"},
-	Subject: readsCompanyTable,
-	Exempt:  gatekit.Waive(map[string]string{}),
-}
-
-func readsCompanyTable(filePath string, file *ast.File) bool {
-	return gatekit.FileReadsTable(filePath, file, companyGate.literal)
-}
-
-func TestEveryReaderOfTheCompanyTableCarriesTheObjectGateOrAVerdict(t *testing.T) {
-	t.Parallel()
-	files := companyReaderScope.Files(t)
-	walk := companyGate.walkPackages(t, files)
-	consts := constantTable{}
-
-	var satisfied int
-	for _, parsed := range files {
-		pkg := path.Dir(parsed.Path)
-		for _, site := range companyGate.readSites(parsed, consts.of(t, pkg)) {
-			subject := site.subject(parsed.Path)
-			carriesGate := walk.carries(t, companyGate, parsed, site, consts.of(t, pkg))
-			verdict := verdictIn(t, subject, companyVerdicts)
-
-			switch {
-			case carriesGate && verdict != "":
-				t.Errorf("%s carries the company object gate AND a %s verdict — remove the verdict, it "+
-					"now describes code that is gated", subject, verdict)
-			case carriesGate:
-				satisfied++
-			case verdict == "":
-				t.Errorf("%s reads the company table without the object gate and without a verdict.\n"+
-					"  Reading a company discloses who the installation sells to, which is what the "+
-					"company grant governs.\n"+
-					"  Either ask auth.Require(ctx, \"company\", …) — or auth.ReadGranted where the "+
-					"read must degrade rather than refuse — or declare it in "+
-					"predicateCompanyReads / lifecycleCompanyReads / calleeGatedCompanyReads / "+
-					"ruledCompanyReads with the reason it needs no gate.\n"+
-					"  Left alone it is indistinguishable from a read nobody considered.\n"+
-					"  The read: %s", subject, site.sql)
-			}
-		}
-	}
-
-	if satisfied < wantMinimumGatedCompanySites {
-		t.Errorf("only %d company reads satisfy the object gate, want at least %d — a literal extractor "+
-			"that stopped recognising this tree's SQL would report exactly this, and it reads the "+
-			"same as a clean tree", satisfied, wantMinimumGatedCompanySites)
-	}
-	t.Logf("company reads: %d gated, %d predicate, %d lifecycle, %d callee-gated, %d ruled",
-		satisfied, len(predicateCompanyReads.Subjects()), len(lifecycleCompanyReads.Subjects()),
-		len(calleeGatedCompanyReads.Subjects()), len(ruledCompanyReads.Subjects()))
-
+// sweepCompanyVerdicts fails a verdict no read matched any more. The
+// gate census asks for each sweep by name, so the list is written out.
+func sweepCompanyVerdicts(t *testing.T) {
+	t.Helper()
 	predicateCompanyReads.AssertAllMatched(t)
 	lifecycleCompanyReads.AssertAllMatched(t)
 	calleeGatedCompanyReads.AssertAllMatched(t)
 	notTheCompanyTable.AssertAllMatched(t)
 	ruledCompanyReads.AssertAllMatched(t)
 }
+
+// wantMinimumGatedCompanySites is the floor below the count of sites that
+// satisfy the gate today. An extractor that stops recognising SQL finds no sites
+// and reports nothing, which reads the same as a clean tree.
+const wantMinimumGatedCompanySites = 12

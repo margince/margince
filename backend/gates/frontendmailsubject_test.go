@@ -50,7 +50,7 @@ func TestTheFrontendSubjectPrefixesMatchTheGoOnes(t *testing.T) {
 			t.Fatalf("%s no longer declares %s as an array literal", frontendMailSubject, name)
 		}
 		var inTS []string
-		for _, m := range tsQuotedWord.FindAllSubmatch(tsComment.ReplaceAll(list[1], nil), -1) {
+		for _, m := range tsQuotedWord.FindAllSubmatch([]byte(gatekit.TSWithoutComments(string(list[1]))), -1) {
 			inTS = append(inTS, string(m[1]))
 		}
 		slices.Sort(inTS)

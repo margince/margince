@@ -36,7 +36,7 @@ func TestTheFrontendFamilyNameListMatchesTheGoOne(t *testing.T) {
 		t.Fatalf("%s no longer declares VIETNAMESE_FAMILY_NAMES as a Set literal; this gate reads a shape that is gone", frontendGreetingName)
 	}
 	var inTS []string
-	for _, m := range tsFamilyName.FindAllSubmatch(tsComment.ReplaceAll(list[1], nil), -1) {
+	for _, m := range tsFamilyName.FindAllSubmatch([]byte(gatekit.TSWithoutComments(string(list[1]))), -1) {
 		inTS = append(inTS, string(m[1]))
 	}
 	inGo := draftfloor.VietnameseFamilyNames()

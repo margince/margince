@@ -352,7 +352,28 @@ var maskVerdicts = []namedVerdict{
 	{"deferred", deferredMaskedAmountReads},
 }
 
-const wantMinimumMaskedAmountSites = 10
+// sweepMaskVerdicts fails a verdict no read matched any more. The
+// gate census asks for each sweep by name, so the list is written out.
+func sweepMaskVerdicts(t *testing.T) {
+	t.Helper()
+	predicateMaskedAmountReads.AssertAllMatched(t)
+	lifecycleMaskedAmountReads.AssertAllMatched(t)
+	calleeGatedMaskedAmountReads.AssertAllMatched(t)
+	writePreimageMaskedAmountReads.AssertAllMatched(t)
+	notTheDealAmount.AssertAllMatched(t)
+	ruledMaskedAmountReads.AssertAllMatched(t)
+	deferredMaskedAmountReads.AssertAllMatched(t)
+}
+
+// maskCensus judges each deal-amount read the way the object-table censuses
+// judge theirs, with the field mask as its gate.
+var maskCensus = objectTableCensus{
+	gate: maskGate, verdicts: maskVerdicts, floor: 10, register: "maskedamountreaders_test.go", sweep: sweepMaskVerdicts,
+	reads: "a deal's amount", gateNoun: "the field mask",
+	discloses: "a figure the deal list withholds under a mask; a second surface that prints it, or a total " +
+		"that sums it, hands back what the list withheld",
+	admission: "auth.MaskedColumnSQL to render the column, or auth.MaskExcludedClause to filter the rows",
+}
 
 // maskedAmountScope is built around the derived builder set, so the sweep and
 // the site extraction ask one question rather than two that can drift.
@@ -703,50 +724,24 @@ func TestEveryReaderOfADealAmountCarriesTheMaskOrAVerdict(t *testing.T) {
 				// otherwise read as ungated.
 				carriesGate = carriesGate || maskGate.fileHoldsAGatedFunction(t, parsed, gated[pkg], consts.of(t, pkg))
 			}
-			verdict := verdictIn(t, subject, maskVerdicts)
-			switch {
-			case carriesGate && verdict != "":
-				t.Errorf("%s carries the field mask AND a %s verdict — remove the verdict, it now "+
-					"describes code that is masked", subject, verdict)
-			case carriesGate:
+			finding, masked := maskCensus.judgeSite(t, subject, carriesGate, gatekit.FirstLineOf(reads[0].SQL))
+			if masked {
 				satisfied++
-			case verdict == "":
-				t.Errorf("%s reads a deal's amount without the field mask and without a verdict.\n"+
-					"  A mask withholds the figure on the deal list; a second surface that prints "+
-					"it — or a total that sums it — hands back what the list withheld.\n"+
-					"  Either render the column through auth.MaskedColumnSQL, filter the rows with "+
-					"auth.MaskExcludedClause, or declare it in predicateMaskedAmountReads / "+
-					"lifecycleMaskedAmountReads / calleeGatedMaskedAmountReads / "+
-					"writePreimageMaskedAmountReads / ruledMaskedAmountReads with the reason "+
-					"it needs neither.\n"+
-					"  The read: %s", subject, gatekit.FirstLineOf(reads[0].SQL))
+			}
+			if finding != "" {
+				t.Error(finding)
 			}
 		}
 	}
-	if satisfied < wantMinimumMaskedAmountSites {
-		t.Errorf("only %d deal-amount reads carry the mask, want at least %d — an extractor that "+
-			"stopped recognising this tree's SQL would report exactly this, and it reads the same "+
-			"as a tree where every figure is guarded", satisfied, wantMinimumMaskedAmountSites)
-	}
+	maskCensus.assertFloor(t, satisfied)
 	if inMaskOwner == 0 {
 		t.Errorf("no file under %s is in this census, though the module owns the deal, the column "+
 			"and the mask. That module was exempt wholesale once and an unguarded project-header "+
 			"total lived inside it the whole time: a subject that stops reaching the owner sweeps "+
 			"a smaller tree and reports PASS with nothing left to notice", maskOwner)
 	}
-	t.Logf("deal-amount reads: %d masked (%d files in the mask owner), %d predicate, %d lifecycle, "+
-		"%d callee-gated, %d write-preimage, %d ruled, %d DEFERRED",
-		satisfied, inMaskOwner, len(predicateMaskedAmountReads.Subjects()), len(lifecycleMaskedAmountReads.Subjects()),
-		len(calleeGatedMaskedAmountReads.Subjects()), len(writePreimageMaskedAmountReads.Subjects()),
-		len(ruledMaskedAmountReads.Subjects()), len(deferredMaskedAmountReads.Subjects()))
-
-	predicateMaskedAmountReads.AssertAllMatched(t)
-	lifecycleMaskedAmountReads.AssertAllMatched(t)
-	calleeGatedMaskedAmountReads.AssertAllMatched(t)
-	writePreimageMaskedAmountReads.AssertAllMatched(t)
-	notTheDealAmount.AssertAllMatched(t)
-	ruledMaskedAmountReads.AssertAllMatched(t)
-	deferredMaskedAmountReads.AssertAllMatched(t)
+	t.Logf("%d of the files read are in the mask owner", inMaskOwner)
+	maskCensus.sweep(t)
 	outsideInternal.AssertAllMatched(t)
 }
 

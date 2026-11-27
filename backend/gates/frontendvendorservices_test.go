@@ -51,7 +51,7 @@ func TestTheFrontendVendorPairsMatchTheServersChain(t *testing.T) {
 		t.Fatalf("%s's VENDOR_SERVICES is no longer an object literal this gate can bound",
 			frontendVendorServices)
 	}
-	literal := tsComment.ReplaceAllString(body[open:open+end], " ")
+	literal := gatekit.TSWithoutComments(body[open : open+end])
 
 	inTS := map[string]string{}
 	oneConsent := map[string]bool{}
