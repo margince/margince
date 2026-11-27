@@ -9,7 +9,6 @@ import (
 	"go/ast"
 	"go/token"
 	"maps"
-	"net/http"
 	"slices"
 	"strconv"
 	"testing"
@@ -266,7 +265,8 @@ func TestEveryProblemMockUsesAStatusItsCodeIsSentWith(t *testing.T) {
 		if mock.field || mock.computed || client[mock] {
 			continue
 		}
-		if mock.statusUnknown {
+		if mock.statusUnknown && mockFile.MatchString(mock.path) {
+			t.Errorf("%s:%d: unresolved HTTP status for Problem code %q; extend the finite status reader", mock.path, mock.line, mock.code)
 			continue
 		}
 		if mock.status == 0 {
@@ -362,53 +362,11 @@ func (p *pairCensus) guardedStatusRelay(status, code ast.Expr, unit *goUnit, in 
 }
 
 func (p *pairCensus) messageMethodStatuses(message *ast.FuncDecl, unit *goUnit, fallback []int) []int {
-	receiver, known := methodReceiverType(message)
-	if !known {
-		return fallback
+	if statuses, known := p.finiteMessageStatuses(message, unit); known {
+		return statuses
 	}
-	var unwrap *ast.FuncDecl
-	var unwrapOwner *goUnit
-	for _, owner := range p.codes.units {
-		if owner.dir == unit.dir {
-			for _, decl := range owner.file.Decls {
-				fn, ok := decl.(*ast.FuncDecl)
-				if !ok || fn.Name.Name != "Unwrap" || fn.Body == nil {
-					continue
-				}
-				if name, method := methodReceiverType(fn); method && name == receiver {
-					unwrap, unwrapOwner = fn, owner
-				}
-			}
-		}
-	}
-	if unwrap == nil {
-		if statuses := p.isMethodStatuses(receiver, unit); len(statuses) > 0 {
-			return statuses
-		}
-		return []int{http.StatusUnprocessableEntity}
-	}
-	var out []int
-	ast.Inspect(unwrap.Body, func(node ast.Node) bool {
-		returned, ok := node.(*ast.ReturnStmt)
-		if !ok || len(returned.Results) != 1 {
-			return true
-		}
-		wanted, known := p.codes.literalType(unwrapOwner, returned.Results[0])
-		if !known {
-			return true
-		}
-		for _, row := range p.codes.tableRows() {
-			named, known := p.codes.literalType(row.unit, row.sentinel)
-			if known && named == wanted {
-				out = append(out, p.statuses(row.status, row.unit, nil, 0)...)
-			}
-		}
-		return true
-	})
-	if len(out) == 0 {
-		return fallback
-	}
-	return slices.Compact(out)
+	p.faults = append(p.faults, p.codes.at(unit, message)+": cannot follow the MessageFault status through Unwrap; extend the finite reader")
+	return fallback
 }
 
 func methodReceiverType(fn *ast.FuncDecl) (string, bool) {

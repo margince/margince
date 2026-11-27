@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { writeMessage } from "../../design-system/richtext-testing";
 import { pickOption } from "../../design-system/select-testing";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
+import { en as englishCopy } from "../../i18n/en";
 import { isPreviewDoor } from "../../testing/sendpermission.testkit";
 import {
   activity202,
@@ -116,9 +117,13 @@ describe("a recipient's country on the chip", () => {
     expect(
       await screen.findByText("Austria, your setting for this message"),
     ).toBeTruthy();
-    await user.click(screen.getByRole("button", { name: "Clear country" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: englishCopy["compose.country.clear"],
+      }),
+    );
     expect(
-      await screen.findByText("No country for this message."),
+      await screen.findByText(englishCopy["compose.country.cleared"]),
     ).toBeTruthy();
     await pressSend(user);
     await waitFor(() =>
@@ -138,10 +143,14 @@ describe("a recipient's country on the chip", () => {
     await writeTo(user, "a@x.com");
     await user.click(await countryOf("a@x.com"));
     await user.click(
-      await screen.findByRole("button", { name: "Clear country" }),
+      await screen.findByRole("button", {
+        name: englishCopy["compose.country.clear"],
+      }),
     );
     await user.click(
-      screen.getByRole("button", { name: "Use the record’s country" }),
+      screen.getByRole("button", {
+        name: englishCopy["compose.country.useRecord"],
+      }),
     );
     expect(
       await screen.findByText("Germany, from the employer’s address"),
@@ -177,10 +186,10 @@ describe("a recipient's country in the saved draft", () => {
       [LOOKUP]: recordCountry,
     });
     await openComposer();
-    await screen.findByText("Saved draft restored");
+    await screen.findByText(englishCopy["compose.savedDraftRestored"]);
     await user.click(await countryOf("a@x.com"));
     expect(
-      await screen.findByText("No country for this message."),
+      await screen.findByText(englishCopy["compose.country.cleared"]),
     ).toBeTruthy();
     await user.keyboard("{Escape}");
     await user.type(screen.getByLabelText("Subject"), " again");

@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import { feature, status } from "../../testing/ai-admin.testkit";
 import { meFixture } from "../../testing/mefixture";
 import {
@@ -93,9 +94,11 @@ export const Default: Story = {
   render: story(),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await canvas.findByRole("table", { name: "Everyday cloud" });
+    await canvas.findByRole("table", {
+      name: englishCopy["aiTier.cheap_cloud"],
+    });
     canvas.getByRole("table", { name: "Premium" });
-    canvas.getByRole("table", { name: "Embedding model" });
+    canvas.getByRole("table", { name: englishCopy["aiTier.embeddings"] });
   },
 };
 export const Dark: Story = { render: story(), globals: { theme: "dark" } };

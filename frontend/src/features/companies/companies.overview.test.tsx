@@ -66,7 +66,7 @@ describe("CompanyScreen — next-step suggestions", () => {
     await waitFor(() =>
       expect(screen.getByText(stalledSuggestion.reason)).toBeTruthy(),
     );
-    expect(screen.getByText("Stalled deal")).toBeTruthy();
+    expect(screen.getByText(en["co.suggest.kind.stalled_deal"])).toBeTruthy();
     // The evidence is reachable: a suggestion the rep cannot check is a
     // verdict. It sits behind the reason rather than beside it, so checking
     // costs one gesture and reading the advice costs none.
@@ -92,7 +92,9 @@ describe("CompanyScreen — next-step suggestions", () => {
     await openTasks();
 
     await userEvent.click(
-      await screen.findByRole("button", { name: "Create draft" }),
+      await screen.findByRole("button", {
+        name: en["co.suggest.act.draftReply"],
+      }),
     );
     // The composer stands over the record. The details it covers are still
     // where the reader left them.
@@ -179,7 +181,9 @@ describe("CompanyScreen — next-step suggestions", () => {
 
     await screen.findByRole("heading", { name: "Signals" });
     expect(
-      screen.queryByRole("heading", { name: "Needs attention" }),
+      screen.queryByRole("heading", {
+        name: en["connectors.health.attention"],
+      }),
     ).toBeNull();
     expect(screen.queryByRole("button", { name: "Not now" })).toBeNull();
   });
@@ -194,7 +198,7 @@ describe("CompanyScreen — next-step suggestions", () => {
     renderSuggestionsFor(three60);
 
     await screen.findByText(/^Not included: suggestions\./);
-    expect(screen.queryByText("Nothing needs attention right now.")).toBeNull();
+    expect(screen.queryByText(en["today.quiet"])).toBeNull();
   });
 
   it("dismisses by fingerprint and leaves the row for the server to remove", async () => {
@@ -276,11 +280,11 @@ describe("CompanyScreen — Ask Margince", () => {
 
     await waitFor(() =>
       expect(
-        screen.getByRole("button", { name: "What is open here?" }),
+        screen.getByRole("button", { name: en["co.ask.q.whats_open"] }),
       ).toBeTruthy(),
     );
     await userEvent.click(
-      screen.getByRole("button", { name: "What is open here?" }),
+      screen.getByRole("button", { name: en["co.ask.q.whats_open"] }),
     );
 
     await waitFor(() => expect(asked).toEqual({ question: "whats_open" }));
@@ -290,10 +294,12 @@ describe("CompanyScreen — Ask Margince", () => {
       ).toBeTruthy(),
     );
     // Which writer produced it is never implied.
-    expect(screen.getByText("Written by Margince")).toBeTruthy();
+    expect(screen.getByText(en["co.brief.by.model"])).toBeTruthy();
     // The question is repeated over its answer, so a reader who has scrolled
     // cannot pair the wrong one with it.
-    expect(screen.getAllByText("What is open here?").length).toBeGreaterThan(1);
+    expect(
+      screen.getAllByText(en["co.ask.q.whats_open"]).length,
+    ).toBeGreaterThan(1);
   });
 
   it("says there is nothing to answer from rather than nothing at all", async () => {
@@ -307,11 +313,11 @@ describe("CompanyScreen — Ask Margince", () => {
 
     await waitFor(() =>
       expect(
-        screen.getByRole("button", { name: "What is open here?" }),
+        screen.getByRole("button", { name: en["co.ask.q.whats_open"] }),
       ).toBeTruthy(),
     );
     await userEvent.click(
-      screen.getByRole("button", { name: "What is open here?" }),
+      screen.getByRole("button", { name: en["co.ask.q.whats_open"] }),
     );
 
     await waitFor(() =>
@@ -330,11 +336,11 @@ describe("CompanyScreen — Ask Margince", () => {
 
     await waitFor(() =>
       expect(
-        screen.getByRole("button", { name: "What is open here?" }),
+        screen.getByRole("button", { name: en["co.ask.q.whats_open"] }),
       ).toBeTruthy(),
     );
     await userEvent.click(
-      screen.getByRole("button", { name: "What is open here?" }),
+      screen.getByRole("button", { name: en["co.ask.q.whats_open"] }),
     );
 
     await waitFor(() =>
@@ -359,7 +365,7 @@ describe("CompanyScreen — the Overview and the details beside it", () => {
     // No titled cards in the details: groups, not a "Details" panel.
     expect(pane?.querySelector(".panel-title")).toBeNull();
     expect(pane?.textContent).toContain("Ownership");
-    expect(pane?.textContent).toContain("Registration");
+    expect(pane?.textContent).toContain(en["record.registration"]);
   });
 
   it("draws the cards under How it stands, with no tasks card while none is open", async () => {
@@ -376,7 +382,7 @@ describe("CompanyScreen — the Overview and the details beside it", () => {
         ".co-overview-grid .panel-head-flat .panel-title",
       ) ?? [],
     ).map((title) => title.textContent);
-    expect(cards).toEqual(["Deals and projects", "Latest", "Contacts"]);
+    expect(cards).toEqual([en["tab.dealsProjects"], "Latest", "Contacts"]);
     for (const gone of [
       "Growth fit",
       "Signals",
@@ -401,7 +407,7 @@ describe("CompanyScreen — the Overview and the details beside it", () => {
     ).toBeTruthy();
     await openProfile();
     expect(
-      await screen.findByRole("heading", { name: "Ask about this company" }),
+      await screen.findByRole("heading", { name: en["co.assistant.title"] }),
     ).toBeTruthy();
   });
 
@@ -652,10 +658,8 @@ describe("CompanyScreen — the Overview and the details beside it", () => {
     // So these match the title at the start, not the whole band.
     const opensWith = (title: string) =>
       headings().some((one) => one?.startsWith(title));
-    await waitFor(() =>
-      expect(opensWith("How they sell and to whom")).toBe(true),
-    );
-    expect(opensWith("Company facts")).toBe(true);
+    await waitFor(() => expect(opensWith(en["co.narrative.title"])).toBe(true));
+    expect(opensWith(en["co.facts.title"])).toBe(true);
     // The roll-up is one of the panes that runs its own read, so it arrives
     // on its own clock rather than with the ones above.
     await waitFor(() => expect(opensWith("Roll-up")).toBe(true));

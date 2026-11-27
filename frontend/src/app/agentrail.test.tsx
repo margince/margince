@@ -210,8 +210,8 @@ describe("AgentRail", () => {
     await openPanel(user, container);
     await waitFor(() => {
       const runtime = panel().querySelector(".armeta")?.textContent ?? "";
-      expect(runtime).toContain("Development AI");
-      expect(runtime).toContain("Offline development mode");
+      expect(runtime).toContain(en["auth.coreDevelopment"]);
+      expect(runtime).toContain(en["auth.coreModeDevelopment"]);
     });
   });
 

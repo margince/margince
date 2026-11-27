@@ -17,6 +17,7 @@ import {
 } from "./confirmsubscription";
 import "../settings/preferences.css";
 import "./confirm.css";
+import { en as englishCopy } from "../../i18n/en";
 
 // The confirm link's other answer: one named subscription and nothing else.
 //
@@ -114,8 +115,10 @@ export const ConfirmingTheSubscription: Story = {
   },
   play: async () => {
     await userEvent.click(
-      await screen.findByRole("button", { name: "Confirm subscription" }),
+      await screen.findByRole("button", {
+        name: englishCopy["confirm.subscription.confirm"],
+      }),
     );
-    await screen.findByText("You are subscribed");
+    await screen.findByText(englishCopy["confirm.subscription.alreadyTitle"]);
   },
 };

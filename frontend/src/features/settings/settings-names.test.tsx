@@ -11,6 +11,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { PageSaveBar, SavePageProvider } from "../../design-system/savepage";
 import { SettingList } from "../../design-system/settingrow";
+import { en as englishCopy } from "../../i18n/en";
 import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 import { meFixture } from "../../testing/mefixture";
 import {
@@ -58,7 +59,9 @@ afterEach(() => {
 
 it("offers no save until a name moves", async () => {
   mount(() => jsonResponse({ greeting_name: "Ada" }));
-  await screen.findByRole("textbox", { name: "Greeting name" });
+  await screen.findByRole("textbox", {
+    name: englishCopy["settings.greetingName"],
+  });
   expect(screen.queryByRole("button", { name: "Save" })).toBeNull();
 });
 
@@ -67,12 +70,14 @@ it("keeps an unchanged earlier long name while saving the greeting", async () =>
   const name = "界".repeat(TEXT_LIMITS.label + 1);
   const sent = mount(() => jsonResponse({ greeting_name: "Ada" }), name);
   const greeting = await screen.findByRole("textbox", {
-    name: "Greeting name",
+    name: englishCopy["settings.greetingName"],
   });
   await waitFor(() =>
-    expect(screen.getByRole("textbox", { name: "Display name" })).toHaveValue(
-      name,
-    ),
+    expect(
+      screen.getByRole("textbox", {
+        name: englishCopy["settings.displayName"],
+      }),
+    ).toHaveValue(name),
   );
   await user.type(greeting, "Ada");
   await user.click(screen.getByRole("button", { name: "Save" }));
@@ -81,7 +86,9 @@ it("keeps an unchanged earlier long name while saving the greeting", async () =>
 
 it("refuses a newly typed name beyond the shared label bound", async () => {
   mount(() => jsonResponse({}));
-  const display = await screen.findByRole("textbox", { name: "Display name" });
+  const display = await screen.findByRole("textbox", {
+    name: englishCopy["settings.displayName"],
+  });
   fireEvent.change(display, {
     target: { value: "界".repeat(TEXT_LIMITS.label + 1) },
   });
@@ -92,7 +99,9 @@ it("writes the greeting name from the page's save bar", async () => {
   const user = userEvent.setup();
   const sent = mount(() => jsonResponse({ greeting_name: "Ada" }));
   await user.type(
-    await screen.findByRole("textbox", { name: "Greeting name" }),
+    await screen.findByRole("textbox", {
+      name: englishCopy["settings.greetingName"],
+    }),
     "Ada",
   );
   await user.click(screen.getByRole("button", { name: "Save" }));
@@ -111,7 +120,9 @@ it("says a refused save on the bar and under the refused field, and keeps what w
         },
       ),
   );
-  const field = await screen.findByRole("textbox", { name: "Greeting name" });
+  const field = await screen.findByRole("textbox", {
+    name: englishCopy["settings.greetingName"],
+  });
   await user.type(field, "Ada");
   await user.click(screen.getByRole("button", { name: "Save" }));
   const alerts = await screen.findAllByRole("alert");
@@ -120,7 +131,9 @@ it("says a refused save on the bar and under the refused field, and keeps what w
   // its own id, so a screen reader hears which field was refused.
   const named = (field.getAttribute("aria-describedby") ?? "").split(" ");
   expect(alerts.some((alert) => named.includes(alert.id))).toBe(true);
-  const other = screen.getByRole("textbox", { name: "Display name" });
+  const other = screen.getByRole("textbox", {
+    name: englishCopy["settings.displayName"],
+  });
   expect(other.getAttribute("aria-describedby") ?? "").not.toContain(
     alerts.find((alert) => named.includes(alert.id))?.id ?? "none",
   );
@@ -129,7 +142,9 @@ it("says a refused save on the bar and under the refused field, and keeps what w
 it("does not save on the Enter that ends an IME composition", async () => {
   const user = userEvent.setup();
   const sent = mount(() => jsonResponse({ greeting_name: "Việt" }));
-  const field = await screen.findByRole("textbox", { name: "Greeting name" });
+  const field = await screen.findByRole("textbox", {
+    name: englishCopy["settings.greetingName"],
+  });
   await user.type(field, "Việt");
   fireEvent.keyDown(field, { key: "Enter", isComposing: true });
   fireEvent.keyDown(field, { key: "Enter", keyCode: 229 });

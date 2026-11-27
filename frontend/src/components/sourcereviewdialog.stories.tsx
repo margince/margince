@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { userEvent, within } from "storybook/test";
 import { browserZone } from "../format/timezone";
+import { en as englishCopy } from "../i18n/en";
 import { SourceHost } from "../testing/sourcehost";
 import {
   jsonResponse,
@@ -86,7 +87,9 @@ export const SelectedSourcePreview: Story = {
       await panel.findByRole("radio", { name: /Original booking/ }),
     );
     await userEvent.click(
-      panel.getByRole("radio", { name: "Met face to face" }),
+      panel.getByRole("radio", {
+        name: englishCopy["notice.source.answer.met"],
+      }),
     );
     await userEvent.type(
       panel.getByRole("textbox", { name: "Obtained on" }),
@@ -104,7 +107,9 @@ export const SubjectAlreadyReachedOut: Story = {
       await panel.findByRole("radio", { name: /Original booking/ }),
     );
     await userEvent.click(
-      panel.getByRole("radio", { name: "Met face to face" }),
+      panel.getByRole("radio", {
+        name: englishCopy["notice.source.answer.met"],
+      }),
     );
     await userEvent.type(
       panel.getByRole("textbox", { name: "Obtained on" }),

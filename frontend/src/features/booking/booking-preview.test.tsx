@@ -16,6 +16,7 @@ import { PageSaveBar, SavePageProvider } from "../../design-system/savepage";
 import { formatTimeOfDay, fullDayName } from "../../format/format";
 import { formatDayFull, formatTimeRange } from "../../format/meetingtime";
 import { browserZone, dayInZone } from "../../format/timezone";
+import { en as englishCopy } from "../../i18n/en";
 import {
   bookingConnection,
   bookingHours,
@@ -300,7 +301,7 @@ it("says when a month has no free time rather than hiding availability", async (
     </StoryProviders>,
   );
   expect(
-    await screen.findByText("No free times this month. Try the next month."),
+    await screen.findByText(englishCopy["book.noTimesMonth"]),
   ).toBeTruthy();
   expect(
     screen
@@ -406,7 +407,9 @@ it("returns from settings to a preview with the newly saved values in a fresh ca
     }),
   );
   await user.click(screen.getByRole("button", { name: "Edit link" }));
-  const title = await screen.findByLabelText("Meeting name");
+  const title = await screen.findByLabelText(
+    englishCopy["scheduling.meetingName"],
+  );
   await user.clear(title);
   await user.type(title, "Newly saved title");
   await user.click(screen.getByRole("button", { name: "Save link" }));
@@ -491,7 +494,7 @@ it("explains calendar setup without requesting availability when no provider is 
   );
   expect(await screen.findByText(/Choose a calendar in Settings/)).toBeTruthy();
   expect(
-    screen.getByRole("link", { name: "Open meeting settings" }),
+    screen.getByRole("link", { name: englishCopy["scheduling.openSettings"] }),
   ).toBeTruthy();
   expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
   expect(availability).not.toHaveBeenCalled();

@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { CompanyProjectsPanel } from "./companyprojects";
 
@@ -46,8 +47,14 @@ function draw(view: Company360 | undefined) {
 describe("the account's projects panel", () => {
   it("holds the loading state, not an empty plate, while the 360 is in flight", () => {
     draw(undefined);
-    expect(screen.queryByRole("button", { name: "Attach project" })).toBeNull();
-    expect(screen.queryByText("No projects yet")).toBeNull();
+    expect(
+      screen.queryByRole("button", {
+        name: englishCopy["projectLinks.attach"],
+      }),
+    ).toBeNull();
+    expect(
+      screen.queryByText(englishCopy["projectLinks.emptyTitle"]),
+    ).toBeNull();
     // The panel is still named, so a reader can tell WHICH reading is on its
     // way.
     expect(
@@ -69,8 +76,14 @@ describe("the account's projects panel", () => {
       },
       sections_omitted: ["projects"],
     });
-    expect(screen.queryByRole("button", { name: "Attach project" })).toBeNull();
-    expect(screen.queryByText("No projects yet")).toBeNull();
+    expect(
+      screen.queryByRole("button", {
+        name: englishCopy["projectLinks.attach"],
+      }),
+    ).toBeNull();
+    expect(
+      screen.queryByText(englishCopy["projectLinks.emptyTitle"]),
+    ).toBeNull();
   });
 
   it("lists the account's live projects once the section answers", () => {
@@ -237,7 +250,9 @@ describe("starting a project from the account", () => {
     stubServer({ project: ["read"] });
     draw(ANSWERED);
 
-    expect(await screen.findByText("Attach project")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["projectLinks.attach"]),
+    ).toBeTruthy();
     expect(screen.queryByRole("button", { name: "New project" })).toBeNull();
   });
 });

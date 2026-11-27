@@ -4,6 +4,7 @@
 package live
 
 import (
+ "github.com/margince/margince/backend/internal/compose/aitasks"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -46,7 +47,8 @@ func (r *Recorder) Calls() []ai.Call {
 // everything the run touched, so it goes under the gitignored .tmp folder and
 // never into a commit.
 type Trace struct {
-	Scenario string                 `json:"scenario"`
+	Recovery *aitasks.LoopRecoveryMeasure `json:"recovery,omitempty"`
+ Scenario string                 `json:"scenario"`
 	Binding  agentloope2e.Binding   `json:"binding"`
 	Run      int                    `json:"run"`
 	Status   string                 `json:"status"`

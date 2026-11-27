@@ -103,7 +103,7 @@ function Card({
 const cardRendered: NonNullable<Story["play"]> = async ({ canvasElement }) => {
   const canvas = within(canvasElement);
   await canvas.findByTestId("automation-au-6");
-  await canvas.findByRole("columnheader", { name: "Authorized by" });
+  await canvas.findByRole("columnheader", { name: en["auto.colOwner"] });
 };
 
 export const AdminCard: Story = {
@@ -193,7 +193,7 @@ export const ConfigurationStates: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await canvas.findByText("Needs setup");
-    await canvas.findByText("Needs attention");
+    await canvas.findByText(en["auto.setup.needsAttention"]);
     await expect(canvas.getAllByText("On").length).toBeGreaterThan(0);
   },
 };

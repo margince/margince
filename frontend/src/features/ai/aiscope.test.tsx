@@ -11,6 +11,7 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import { ContactMeetingBrief } from "../brief/meetingbrief";
 import { CompanyScreen } from "../companies/companies";
@@ -164,7 +165,7 @@ describe("Ask about this account, scoped to a project", () => {
     await user.click(screen.getByRole("combobox", { name: "Project" }));
     await user.click(screen.getByRole("option", { name: /ERP-27/ }));
     await user.click(
-      screen.getByRole("button", { name: "What is open here?" }),
+      screen.getByRole("button", { name: englishCopy["co.ask.q.whats_open"] }),
     );
 
     await waitFor(() =>
@@ -209,7 +210,7 @@ describe("Ask about this account, scoped to a project", () => {
     await user.click(screen.getByRole("combobox", { name: "Project" }));
     await user.click(screen.getByRole("option", { name: /ERP-27/ }));
     await user.click(
-      screen.getByRole("button", { name: "What is open here?" }),
+      screen.getByRole("button", { name: englishCopy["co.ask.q.whats_open"] }),
     );
     expect(await screen.findByText(/ERP cutover is waiting/)).toBeTruthy();
 
@@ -258,7 +259,7 @@ describe("Ask about this account, scoped to a project", () => {
       ).toContain("DC-4"),
     );
     await user.click(
-      screen.getByRole("button", { name: "What is open here?" }),
+      screen.getByRole("button", { name: englishCopy["co.ask.q.whats_open"] }),
     );
     await waitFor(() => expect(seen).toHaveLength(1));
     expect(seen[0].body).toEqual({
@@ -271,7 +272,7 @@ describe("Ask about this account, scoped to a project", () => {
       <AskSection companyId="o-1" onOpenReceipt={() => {}} projects={[]} />,
     );
     await user.click(
-      screen.getByRole("button", { name: "What is open here?" }),
+      screen.getByRole("button", { name: englishCopy["co.ask.q.whats_open"] }),
     );
     await waitFor(() => expect(seen).toHaveLength(2));
     expect(seen[1].body).toEqual({ question: "whats_open" });
@@ -297,7 +298,11 @@ describe("Ask about this account, scoped to a project", () => {
     );
     await userEvent
       .setup()
-      .click(screen.getByRole("button", { name: "What is open here?" }));
+      .click(
+        screen.getByRole("button", {
+          name: englishCopy["co.ask.q.whats_open"],
+        }),
+      );
 
     await waitFor(() => expect(seen).toHaveLength(1));
     expect(seen[0].body).toEqual({ question: "whats_open" });
@@ -408,11 +413,15 @@ describe("Prepare meeting on the company page", () => {
     // The meeting is a find on the Tasks tab; the overview has no such verb.
     await user.click(await screen.findByRole("button", { name: /^Tasks/ }));
     await user.click(
-      await screen.findByRole("button", { name: "Prepare meeting" }),
+      await screen.findByRole("button", {
+        name: englishCopy["today.meeting.prepare"],
+      }),
     );
 
     expect(
-      await screen.findByRole("heading", { name: "Meeting brief" }),
+      await screen.findByRole("heading", {
+        name: englishCopy["contact.meeting.title"],
+      }),
     ).toBeTruthy();
     await waitFor(() =>
       expect(seen.some((s) => s.url === "/activities/a-1/meeting-brief")).toBe(

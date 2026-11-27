@@ -13,6 +13,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { StakeholdersCard } from "./projectsections";
 
 // A project's stakeholders were readable and nothing more: the card listed a
@@ -154,7 +155,9 @@ describe("the stakeholders on a project", () => {
     // contact's name too, and picking the row navigates away instead.
     const dialog = within(screen.getByRole("dialog"));
     await user.type(
-      dialog.getByPlaceholderText("Search contacts by name"),
+      dialog.getByPlaceholderText(
+        englishCopy["project.stakeholders.searchLabel"],
+      ),
       "mai",
     );
     settleSearch();
@@ -162,7 +165,7 @@ describe("the stakeholders on a project", () => {
     await user.click(dialog.getByLabelText("Role"));
     await user.click(
       within(screen.getByRole("listbox")).getByRole("option", {
-        name: "Delivery lead",
+        name: englishCopy["project.role.delivery_lead"],
       }),
     );
     await user.click(dialog.getByRole("button", { name: "Add" }));
@@ -284,7 +287,9 @@ describe("the stakeholders on a project", () => {
     await user.click(screen.getByTestId("add-project-stakeholder"));
     const dialog = within(screen.getByRole("dialog"));
     await user.type(
-      dialog.getByPlaceholderText("Search contacts by name"),
+      dialog.getByPlaceholderText(
+        englishCopy["project.stakeholders.searchLabel"],
+      ),
       "mai",
     );
     settleSearch();

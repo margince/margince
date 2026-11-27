@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -53,11 +54,11 @@ export const DueAtATime: Story = {
     );
     const page = within(canvasElement.ownerDocument.body);
     await expect(
-      page.getByRole("button", { name: "1 hour before it is due" }),
+      page.getByRole("button", { name: englishCopy["tasks.remind.beforeDue"] }),
     ).toBeVisible();
-    await expect(page.queryByRole("button", { name: "Remove reminder" })).toBe(
-      null,
-    );
+    await expect(
+      page.queryByRole("button", { name: englishCopy["tasks.remind.remove"] }),
+    ).toBe(null);
   },
 };
 
@@ -76,7 +77,7 @@ export const AlreadySet: Story = {
     // The chip names the reminder, and the menu says it again over its lines.
     await expect(page.getAllByText(/^Reminder set for /)).toHaveLength(2);
     await expect(
-      page.getByRole("button", { name: "Remove reminder" }),
+      page.getByRole("button", { name: englishCopy["tasks.remind.remove"] }),
     ).toBeVisible();
   },
 };

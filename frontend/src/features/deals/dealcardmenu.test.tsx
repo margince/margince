@@ -11,6 +11,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { stubClipboard } from "../../design-system/clipboard-testing";
+import { en as englishCopy } from "../../i18n/en";
 import { askedToClose } from "./deal360/confirmadvance.testkit";
 import { DealsScreen } from "./deals";
 import {
@@ -214,9 +215,11 @@ describe("deal card menu on the deals board", () => {
     const client = newClient();
     render(<DealsScreen />, client);
     const menu = await openCardMenu(user);
-    await user.click(menu.getByRole("button", { name: "Move to stage" }));
+    await user.click(
+      menu.getByRole("button", { name: englishCopy["deals.bulkStage"] }),
+    );
     const search = await screen.findByRole("combobox", {
-      name: "Pick a stage",
+      name: englishCopy["deals.bulkStagePick"],
     });
     await user.type(search, "Prop");
     const setData = vi.fn();
@@ -309,7 +312,9 @@ describe("deal card menu on the deals board", () => {
     const user = userEvent.setup();
     render(<DealsScreen />);
     const menu = await openCardMenu(user);
-    await user.click(menu.getByRole("button", { name: "Move to stage" }));
+    await user.click(
+      menu.getByRole("button", { name: englishCopy["deals.bulkStage"] }),
+    );
     await user.click(await screen.findByRole("option", { name: "Won" }));
 
     await askedToClose("Won");
@@ -367,8 +372,8 @@ describe("changing a deal's owner from its card", () => {
       .map((button) => button.textContent);
     const moves = names.indexOf("Mark won");
     expect(names.slice(moves + 1, moves + 3)).toEqual([
-      "Change close date",
-      "Change owner",
+      englishCopy["deal.card.changeCloseDate"],
+      englishCopy["bulk.confirmReassign"],
     ]);
   });
 
@@ -387,7 +392,9 @@ describe("changing a deal's owner from its card", () => {
     const invalidate = vi.spyOn(client, "invalidateQueries");
     render(<DealsScreen />, client);
     const menu = await openCardMenu(user);
-    await user.click(menu.getByRole("button", { name: "Change owner" }));
+    await user.click(
+      menu.getByRole("button", { name: englishCopy["bulk.confirmReassign"] }),
+    );
     await user.click(
       await screen.findByRole("option", { name: "Dana Fischer" }),
     );
@@ -416,7 +423,9 @@ describe("changing a deal's owner from its card", () => {
     const client = newClient();
     render(<DealsScreen />, client);
     const menu = await openCardMenu(user);
-    await user.click(menu.getByRole("button", { name: "Change owner" }));
+    await user.click(
+      menu.getByRole("button", { name: englishCopy["bulk.confirmReassign"] }),
+    );
     const current = await screen.findByRole("option", { name: "Dana Fischer" });
     expect(current).toHaveAttribute("aria-selected", "true");
     await user.click(current);
@@ -437,7 +446,9 @@ describe("changing a deal's owner from its card", () => {
     const user = userEvent.setup();
     render(<DealsScreen />);
     const menu = await openCardMenu(user);
-    await user.click(menu.getByRole("button", { name: "Change owner" }));
+    await user.click(
+      menu.getByRole("button", { name: englishCopy["bulk.confirmReassign"] }),
+    );
     await user.click(
       await screen.findByRole("option", { name: "Dana Fischer" }),
     );
@@ -459,14 +470,22 @@ describe("changing a deal's owner from its card", () => {
     const menu = await openCardMenu(user);
     await menu.findByRole("button", { name: "Copy link" });
 
-    expect(menu.queryByRole("button", { name: "Change owner" })).toBeNull();
+    expect(
+      menu.queryByRole("button", { name: englishCopy["bulk.confirmReassign"] }),
+    ).toBeNull();
   });
 });
 
 async function openCloseDate(user: ReturnType<typeof userEvent.setup>) {
   const menu = await openCardMenu(user);
-  await user.click(menu.getByRole("button", { name: "Change close date" }));
-  return within(await screen.findByRole("dialog", { name: "Expected close" }));
+  await user.click(
+    menu.getByRole("button", {
+      name: englishCopy["deal.card.changeCloseDate"],
+    }),
+  );
+  return within(
+    await screen.findByRole("dialog", { name: englishCopy["deals.close"] }),
+  );
 }
 
 describe("changing a deal's close date from its card", () => {
@@ -483,7 +502,9 @@ describe("changing a deal's close date from its card", () => {
     const invalidate = vi.spyOn(client, "invalidateQueries");
     render(<DealsScreen />, client);
     const dialog = await openCloseDate(user);
-    const box = dialog.getByRole("textbox", { name: "Expected close" });
+    const box = dialog.getByRole("textbox", {
+      name: englishCopy["deals.close"],
+    });
     expect(box).toHaveValue("14/03/2027");
     await user.clear(box);
     await user.type(box, "2027-04-30{Enter}");
@@ -527,16 +548,16 @@ describe("changing a deal's close date from its card", () => {
     render(<DealsScreen />);
     const dialog = await openCloseDate(user);
     await user.type(
-      dialog.getByRole("textbox", { name: "Expected close" }),
+      dialog.getByRole("textbox", { name: englishCopy["deals.close"] }),
       "2020-01-02{Enter}",
     );
 
     expect(await dialog.findByRole("alert")).toHaveTextContent(
       "An open deal cannot close in the past.",
     );
-    expect(dialog.getByRole("textbox", { name: "Expected close" })).toHaveValue(
-      "02/01/2020",
-    );
+    expect(
+      dialog.getByRole("textbox", { name: englishCopy["deals.close"] }),
+    ).toHaveValue("02/01/2020");
   });
 
   it("refuses a day the server cannot store on the field, before sending", async () => {
@@ -548,7 +569,9 @@ describe("changing a deal's close date from its card", () => {
     const user = userEvent.setup();
     render(<DealsScreen />);
     const dialog = await openCloseDate(user);
-    const box = dialog.getByRole("textbox", { name: "Expected close" });
+    const box = dialog.getByRole("textbox", {
+      name: englishCopy["deals.close"],
+    });
     await user.type(box, "31/12/9999{Enter}");
 
     expect(
@@ -565,14 +588,18 @@ describe("changing a deal's close date from its card", () => {
     const user = userEvent.setup();
     render(<DealsScreen />);
     const menu = await openCardMenu(user);
-    menu.getByRole("button", { name: "Change close date" }).focus();
+    menu
+      .getByRole("button", { name: englishCopy["deal.card.changeCloseDate"] })
+      .focus();
     await user.keyboard("{Enter}");
     const dialog = await screen.findByRole("dialog", {
-      name: "Expected close",
+      name: englishCopy["deals.close"],
     });
     await waitFor(() =>
       expect(document.activeElement).toBe(
-        within(dialog).getByRole("textbox", { name: "Expected close" }),
+        within(dialog).getByRole("textbox", {
+          name: englishCopy["deals.close"],
+        }),
       ),
     );
 
@@ -593,10 +620,14 @@ describe("changing a deal's close date from its card", () => {
       const user = userEvent.setup();
       render(<DealsScreen />);
       const menu = await openCardMenu(user);
-      await menu.findByRole("button", { name: "Change owner" });
+      await menu.findByRole("button", {
+        name: englishCopy["bulk.confirmReassign"],
+      });
 
       expect(
-        menu.queryByRole("button", { name: "Change close date" }),
+        menu.queryByRole("button", {
+          name: englishCopy["deal.card.changeCloseDate"],
+        }),
       ).toBeNull();
     },
   );
@@ -614,7 +645,9 @@ describe("changing a deal's close date from its card", () => {
     const client = newClient();
     render(<DealsScreen />, client);
     const dialog = await openCloseDate(user);
-    const box = dialog.getByRole("textbox", { name: "Expected close" });
+    const box = dialog.getByRole("textbox", {
+      name: englishCopy["deals.close"],
+    });
     await user.clear(box);
     await user.type(box, "2027-04-30{Tab}");
 
@@ -634,7 +667,9 @@ describe("changing a deal's close date from its card", () => {
     const client = newClient();
     render(<DealsScreen />, client);
     const menu = await openCardMenu(user);
-    const item = menu.getByRole("button", { name: "Change close date" });
+    const item = menu.getByRole("button", {
+      name: englishCopy["deal.card.changeCloseDate"],
+    });
     void client
       .getMutationCache()
       .build(client, {
@@ -645,7 +680,9 @@ describe("changing a deal's close date from its card", () => {
 
     await waitFor(() => expect(item).toHaveAttribute("aria-busy", "true"));
     await user.click(item);
-    expect(screen.queryByRole("dialog", { name: "Expected close" })).toBeNull();
+    expect(
+      screen.queryByRole("dialog", { name: englishCopy["deals.close"] }),
+    ).toBeNull();
   });
 
   it.each([
@@ -659,7 +696,9 @@ describe("changing a deal's close date from its card", () => {
     await menu.findByRole("button", { name: "Copy link" });
 
     expect(
-      menu.queryByRole("button", { name: "Change close date" }),
+      menu.queryByRole("button", {
+        name: englishCopy["deal.card.changeCloseDate"],
+      }),
     ).toBeNull();
   });
 });

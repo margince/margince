@@ -9,6 +9,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { EvidenceMark } from "./evidencemark";
 import { Heading } from "./heading";
 import { armHoverIntent } from "./hoverintent-testing";
@@ -188,7 +189,7 @@ describe("evidence mark", () => {
     // straight after the click passes just as well over a panel that never
     // opened, which is the one outcome this case must not read as success.
     await screen.findByRole("region");
-    expect(screen.queryByText("Full history")).toBeNull();
+    expect(screen.queryByText(englishCopy["evidence.fullHistory"])).toBeNull();
   });
 
   it("hands the reader through to the full history when one exists", async () => {
@@ -205,7 +206,7 @@ describe("evidence mark", () => {
     );
     const trigger = screen.getByRole("button", { name: /1998/ });
     await user.click(trigger);
-    await user.click(screen.getByText("Full history"));
+    await user.click(screen.getByText(englishCopy["evidence.fullHistory"]));
 
     expect(opened).toBe(true);
     // The panel closes on the way out, so the reader does not return to a
@@ -230,7 +231,7 @@ describe("evidence mark", () => {
     // else on the page entirely rather than on the one control the panel
     // offers.
     expect(document.activeElement).toBe(
-      screen.getByText("Full history").closest("button"),
+      screen.getByText(englishCopy["evidence.fullHistory"]).closest("button"),
     );
   });
 
@@ -253,7 +254,7 @@ describe("evidence mark", () => {
     // A pointer that merely settled is not a reader asking to be moved: the
     // page must not grab focus off whatever they were doing.
     expect(document.activeElement).not.toBe(
-      screen.getByText("Full history").closest("button"),
+      screen.getByText(englishCopy["evidence.fullHistory"]).closest("button"),
     );
     fireEvent.pointerLeave(mark);
     await waitFor(() => expect(screen.queryByRole("region")).toBeNull());

@@ -3,6 +3,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { KnowledgeCard } from "./knowledge";
 import {
   ADMIN,
@@ -77,7 +78,9 @@ describe("KnowledgeCard", () => {
     expect(await screen.findByText(/0 of 4 passages searchable/)).toBeTruthy();
     // The set says why nothing is searchable, and a read document draws no
     // green "Imported" beside it to contradict that.
-    expect(screen.getByText("Not searchable")).toBeTruthy();
+    expect(
+      screen.getByText(englishCopy["knowledge.notSearchable"]),
+    ).toBeTruthy();
     expect(screen.getByText(/no embedding model is set up/i)).toBeTruthy();
     expect(await screen.findByText("operating.md")).toBeTruthy();
     expect(screen.queryByText("Imported")).toBeNull();
@@ -94,7 +97,9 @@ describe("KnowledgeCard", () => {
       screen.queryByRole("button", { name: "Actions for How-to" }),
     ).toBeNull();
     expect(
-      screen.queryByRole("button", { name: "New document set" }),
+      screen.queryByRole("button", {
+        name: englishCopy["knowledge.new.title"],
+      }),
     ).toBeNull();
   });
 
@@ -102,7 +107,9 @@ describe("KnowledgeCard", () => {
     vi.stubGlobal("fetch", backendFor(ADMIN, { sets: [] }).fetchMock);
     render(<KnowledgeCard />);
 
-    expect(await screen.findByText("No document sets yet.")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["knowledge.empty"]),
+    ).toBeTruthy();
     expect(screen.queryByRole("table")).toBeNull();
   });
 
@@ -128,8 +135,10 @@ describe("KnowledgeCard", () => {
     await user.click(
       await screen.findByRole("button", { name: "Documents in How-to" }),
     );
-    const reason = await screen.findByText("Passages are still being indexed.");
-    expect(reason.textContent).toBe("Passages are still being indexed.");
+    const reason = await screen.findByText(
+      englishCopy["knowledge.reason.indexing"],
+    );
+    expect(reason.textContent).toBe(englishCopy["knowledge.reason.indexing"]);
   });
 
   it("withholds the list from a reader with no grant, rather than showing an empty one", async () => {
@@ -159,7 +168,9 @@ describe("KnowledgeCard", () => {
     // uploading.
     const row = await screen.findByTestId(`knowledge-set-${SET_ID}`);
     expect(within(row).getByText("Reindexing")).toBeTruthy();
-    expect(within(row).queryByText("Not searchable")).toBeNull();
+    expect(
+      within(row).queryByText(englishCopy["knowledge.notSearchable"]),
+    ).toBeNull();
     await user.click(
       within(row).getByRole("button", { name: "Documents in How-to" }),
     );
@@ -188,7 +199,9 @@ describe("KnowledgeCard", () => {
     // The STATE and the REASON are two separate things on screen, and the case
     // asserts both: the badge alone would leave a reader knowing a file failed
     // and not which remedy it wants.
-    expect(screen.getByText("Could not be read")).toBeTruthy();
+    expect(
+      screen.getByText(englishCopy["knowledge.ingest.failed"]),
+    ).toBeTruthy();
     expect(
       screen.getByText("This document could not be read into passages."),
     ).toBeTruthy();
@@ -201,7 +214,9 @@ describe("KnowledgeCard", () => {
     render(<KnowledgeCard />);
 
     await user.click(
-      await screen.findByRole("button", { name: "New document set" }),
+      await screen.findByRole("button", {
+        name: englishCopy["knowledge.new.title"],
+      }),
     );
     const dialog = within(await screen.findByRole("dialog"));
     const create = dialog.getByRole("button", { name: "Create" });
@@ -235,7 +250,9 @@ describe("KnowledgeCard", () => {
     render(<KnowledgeCard />);
 
     await user.click(
-      await screen.findByRole("button", { name: "New document set" }),
+      await screen.findByRole("button", {
+        name: englishCopy["knowledge.new.title"],
+      }),
     );
     const dialog = within(await screen.findByRole("dialog"));
     const name = dialog.getByLabelText(/^name/i);
@@ -312,13 +329,19 @@ describe("KnowledgeCard", () => {
     ).toBeInTheDocument();
     // Only the file that can be added is held, and nothing was sent.
     expect(
-      screen.getByRole("button", { name: "Add document" }),
+      screen.getByRole("button", {
+        name: englishCopy["knowledge.upload.label"],
+      }),
     ).not.toBeDisabled();
     expect(screen.getByText("notes.md")).toBeInTheDocument();
     expect(backend.posts).toHaveLength(0);
 
     // Sending the rest keeps naming the files the drop refused.
-    await userEvent.click(screen.getByRole("button", { name: "Add document" }));
+    await userEvent.click(
+      screen.getByRole("button", {
+        name: englishCopy["knowledge.upload.label"],
+      }),
+    );
     await waitFor(() => expect(backend.posts).toHaveLength(1));
     expect(screen.getByText(/^big\.txt: The file exceeds/)).toBeInTheDocument();
   });
@@ -353,16 +376,24 @@ describe("KnowledgeCard", () => {
       await screen.findByLabelText(/add document/i),
       new File(["PK"], "contract.docx", { type: "" }),
     );
-    await user.click(screen.getByRole("button", { name: "Add document" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: englishCopy["knowledge.upload.label"],
+      }),
+    );
 
     expect(
       await screen.findByText(
         "contract.docx: Word files are not supported. Save it as plain text, Markdown, CSV or JSON first.",
       ),
     ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Add document" })).toBeDisabled();
     expect(
-      screen.getByText("Drop a text file here, or select one"),
+      screen.getByRole("button", {
+        name: englishCopy["knowledge.upload.label"],
+      }),
+    ).toBeDisabled();
+    expect(
+      screen.getByText(englishCopy["knowledge.upload.empty"]),
     ).toBeInTheDocument();
   });
 
@@ -395,12 +426,18 @@ describe("KnowledgeCard", () => {
       await screen.findByLabelText(/add document/i),
       new File(["# Notes"], "notes.md", { type: "text/markdown" }),
     );
-    await user.click(screen.getByRole("button", { name: "Add document" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: englishCopy["knowledge.upload.label"],
+      }),
+    );
 
     expect(await screen.findByText(/^notes\.md: /)).toBeInTheDocument();
     expect(screen.getByText("notes.md")).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Add document" }),
+      screen.getByRole("button", {
+        name: englishCopy["knowledge.upload.label"],
+      }),
     ).not.toBeDisabled();
   });
 
@@ -569,7 +606,9 @@ describe("KnowledgeCard documents", () => {
       );
     };
     expect(status("a-searchable.md")).toEqual([]);
-    expect(status("b-unbound.md")).toEqual(["Not searchable"]);
+    expect(status("b-unbound.md")).toEqual([
+      englishCopy["knowledge.notSearchable"],
+    ]);
     expect(status("c-partial.md")).toEqual(["Indexing"]);
     // Still importing says so, and only so.
     expect(status("d-queued.md")).toEqual(["Queued"]);
@@ -620,7 +659,9 @@ describe("KnowledgeCard documents", () => {
     );
     expect(badges).toEqual(["Queued"]);
     // The set says it once, with its reason, above its documents.
-    expect(screen.getAllByText("Not searchable")).toHaveLength(1);
+    expect(
+      screen.getAllByText(englishCopy["knowledge.notSearchable"]),
+    ).toHaveLength(1);
   });
 
   it("marks the one stale document under a set still indexing", async () => {
@@ -684,9 +725,7 @@ describe("KnowledgeCard documents", () => {
     const dialog = within(screen.getByRole("dialog"));
     await user.click(dialog.getByRole("button", { name: "Delete" }));
     expect(
-      await dialog.findByText(
-        "This page ships with Margince, so it cannot be deleted.",
-      ),
+      await dialog.findByText(englishCopy["knowledge.deleteShipped"]),
     ).toBeInTheDocument();
   });
 });

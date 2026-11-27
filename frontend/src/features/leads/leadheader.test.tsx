@@ -181,7 +181,7 @@ describe("the lead page's head", () => {
     const pill = row
       .closest(".record-split-pills")
       ?.querySelector(".badge:last-child");
-    expect(pill?.textContent).toBe("Disqualified");
+    expect(pill?.textContent).toBe(en["lead.disqualified"]);
     expect(pill?.classList.contains("badge-warning")).toBe(true);
   });
 });

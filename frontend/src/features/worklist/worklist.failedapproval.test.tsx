@@ -9,6 +9,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { WorklistScreen } from "./worklist";
 
 // A failed approval's way off the list: acknowledge posts the failure
@@ -160,7 +161,7 @@ describe("a failed approval on the Worklist", () => {
     await user.click(screen.getByRole("button", { name: "Acknowledge" }));
 
     expect(
-      await screen.findByText("Item was not marked as seen. Retry."),
+      await screen.findByText(englishCopy["worklist.verb.acknowledgeFailed"]),
     ).toBeTruthy();
     expect(screen.getByText(failedTitle)).toBeTruthy();
   });
@@ -175,7 +176,9 @@ describe("a failed approval on the Worklist", () => {
     await screen.findByText(failedTitle);
     await user.click(screen.getByRole("button", { name: "Run again" }));
 
-    expect(await screen.findByText("Approved change completed")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["worklist.verb.approvalRetried"]),
+    ).toBeTruthy();
     expect(posted).toEqual(["/v1/approvals/a1/approve"]);
   });
 
@@ -207,7 +210,9 @@ describe("a failed approval on the Worklist", () => {
         .hasAttribute("disabled"),
     ).toBe(true);
     release();
-    expect(await screen.findByText("Approved change completed")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["worklist.verb.approvalRetried"]),
+    ).toBeTruthy();
   });
 
   it("says so and keeps the row when the retry fails again", async () => {
@@ -221,9 +226,7 @@ describe("a failed approval on the Worklist", () => {
     await user.click(screen.getByRole("button", { name: "Run again" }));
 
     expect(
-      await screen.findByText(
-        "The approved change still did not run. Retry later, or acknowledge it.",
-      ),
+      await screen.findByText(englishCopy["worklist.verb.approvalRetryFailed"]),
     ).toBeTruthy();
     expect(screen.getByText(failedTitle)).toBeTruthy();
   });

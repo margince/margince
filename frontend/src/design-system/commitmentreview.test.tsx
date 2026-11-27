@@ -10,6 +10,7 @@ import { type Locale, LocaleProvider } from "../i18n";
 
 afterEach(cleanup);
 
+import { en as englishCopy } from "../i18n/en";
 import { CommitmentReview } from "./commitmentreview";
 
 const decision = {
@@ -31,15 +32,13 @@ describe("commitment review", () => {
       </LocaleProvider>,
     );
     const summary = screen
-      .getAllByText("Commitment review")[0]
+      .getAllByText(englishCopy["commitment.review.title"])[0]
       ?.closest("summary");
     if (!summary) throw new Error("Review disclosure is missing");
     await user.click(summary);
     expect(screen.getByText(decision.source_quote)).not.toBeNull();
     expect(
-      screen.getByText(
-        "Later messages were not fully read. The commitment may already be fulfilled.",
-      ),
+      screen.getByText(englishCopy["commitment.review.incomplete"]),
     ).not.toBeNull();
   });
   it("does not relist admitted work as withheld", () => {

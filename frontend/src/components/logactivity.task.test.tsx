@@ -2,6 +2,7 @@
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../i18n/en";
 import { LogActivity } from "./logactivity";
 import {
   type Captured,
@@ -117,7 +118,9 @@ describe("assigning a task at create time", () => {
     renderTaskComposer(captured);
     const user = userEvent.setup();
     await user.type(await screen.findByLabelText("Subject *"), "Call back");
-    const time = screen.getByRole("textbox", { name: "Time (optional)" });
+    const time = screen.getByRole("textbox", {
+      name: englishCopy["log.dueTime"],
+    });
     await user.tripleClick(screen.getByRole("textbox", { name: "Due date" }));
     await user.keyboard("27/10/2027");
     await user.tab();
@@ -158,7 +161,7 @@ describe("assigning a task at create time", () => {
     });
     render(<LogActivity entityType="contact" entityId="p1" />);
     await screen.findByLabelText("Subject *");
-    expect(screen.queryByLabelText("Time (optional)")).toBeNull();
+    expect(screen.queryByLabelText(englishCopy["log.dueTime"])).toBeNull();
   });
 
   it("does not offer an agent seat as an assignee", async () => {
@@ -190,7 +193,7 @@ describe("clearing the due date of a task", () => {
     const user = userEvent.setup();
     await user.type(await screen.findByLabelText("Subject *"), "Call back");
     await user.type(
-      screen.getByRole("textbox", { name: "Time (optional)" }),
+      screen.getByRole("textbox", { name: englishCopy["log.dueTime"] }),
       "abc",
     );
     await user.tab();
@@ -200,7 +203,9 @@ describe("clearing the due date of a task", () => {
     await user.tab();
 
     expect(screen.queryByText(/Enter a time as/)).toBeNull();
-    const time = screen.getByRole("textbox", { name: "Time (optional)" });
+    const time = screen.getByRole("textbox", {
+      name: englishCopy["log.dueTime"],
+    });
     expect((time as HTMLInputElement).value).toBe("");
     await user.click(screen.getByRole("button", { name: "Log" }));
     await waitFor(() =>

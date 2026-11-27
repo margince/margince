@@ -4,6 +4,7 @@ import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { messageText } from "../../design-system/richtext-testing";
+import { en as englishCopy } from "../../i18n/en";
 import { pressDraft } from "../../testing/composedraft.testkit";
 import { contactDocuments } from "../../testing/contactdocuments";
 import {
@@ -228,7 +229,7 @@ describe("RelinkModal", () => {
     );
     await user.click(
       screen.getByRole("checkbox", {
-        name: "Move rest of thread",
+        name: englishCopy["compose.relinkThread"],
       }),
     );
     await user.click(screen.getByRole("button", { name: "Relink" }));
@@ -265,7 +266,7 @@ describe("RelinkModal", () => {
     );
     expect(
       screen.queryByRole("checkbox", {
-        name: "Move rest of thread",
+        name: englishCopy["compose.relinkThread"],
       }),
     ).toBeNull();
   });
@@ -360,7 +361,9 @@ describe("ComposeWindow", () => {
 
     await pressDraft(user);
 
-    await screen.findByRole("heading", { name: "AI-assisted draft" });
+    await screen.findByRole("heading", {
+      name: englishCopy["compose.aiDisclosureTitle"],
+    });
     expect(
       screen.getByText("Drafted with AI assistance. Review before sending."),
     ).toBeTruthy();
@@ -394,7 +397,9 @@ describe("ComposeWindow", () => {
 
     await pressDraft(user);
 
-    await screen.findByRole("heading", { name: "AI-assisted draft" });
+    await screen.findByRole("heading", {
+      name: englishCopy["compose.aiDisclosureTitle"],
+    });
     expect(screen.getByText(/This draft was written by AI/i)).toBeTruthy();
   });
 
@@ -457,7 +462,7 @@ describe("ComposeWindow", () => {
     expect(
       await screen.findByText("Built from your writing samples · v3"),
     ).toBeTruthy();
-    expect(screen.getByText("Provisional voice")).toBeTruthy();
+    expect(screen.getByText(englishCopy["compose.provisional"])).toBeTruthy();
   });
 
   it("warns when the sender's voice could not be loaded for the draft", async () => {
@@ -554,7 +559,7 @@ describe("ComposeWindow", () => {
     expect(
       await screen.findByText("Built from your writing samples · v3"),
     ).toBeTruthy();
-    expect(screen.queryByText("Provisional voice")).toBeNull();
+    expect(screen.queryByText(englishCopy["compose.provisional"])).toBeNull();
   });
 
   it("shows an unavailable note on a 501 draft, keeping the form usable", async () => {
@@ -601,21 +606,29 @@ describe("ComposeWindow", () => {
 
     // Nothing is said before the reader has asked to send: a form reporting
     // what is missing while they are still typing is scolding them.
-    expect(screen.queryByText("Enter a subject.")).toBeNull();
+    expect(
+      screen.queryByText(englishCopy["compose.missingSubject"]),
+    ).toBeNull();
 
     await user.click(send);
 
-    expect(screen.getByText("Add at least one recipient.")).toBeTruthy();
-    expect(screen.getByText("Enter a subject.")).toBeTruthy();
-    expect(screen.getByText("Enter a message before sending.")).toBeTruthy();
-    expect(screen.getByText("Select the reason for contact.")).toBeTruthy();
+    expect(
+      screen.getByText(englishCopy["compose.emptyRecipients"]),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(englishCopy["compose.missingSubject"]),
+    ).toBeTruthy();
+    expect(screen.getByText(englishCopy["compose.missingBody"])).toBeTruthy();
+    expect(screen.getByText(englishCopy["compose.missingWhy"])).toBeTruthy();
     expect(
       sent.filter((call) => call.key.startsWith("POST /activities")),
     ).toHaveLength(0);
 
     // And they stop being said as the fields are answered.
     await fillSendableForm(user);
-    expect(screen.queryByText("Enter a subject.")).toBeNull();
+    expect(
+      screen.queryByText(englishCopy["compose.missingSubject"]),
+    ).toBeNull();
   });
 
   it("sends the edited email with no approval token and with an idempotency key", async () => {
@@ -688,11 +701,15 @@ describe("ComposeWindow", () => {
 
     // The refusal opened no review, so it names no cause, consent included.
     const refused = await screen.findByText(
-      "This message was not sent. Your draft is kept. Ask an admin to update Margince, then send again.",
+      englishCopy["compose.sendAnyway.unreviewed"],
     );
     expect(refused.textContent).not.toMatch(/consent/i);
     // The server offered no move, so none is drawn, and the modal stays open.
-    expect(screen.queryByRole("link", { name: "Open contact" })).toBeNull();
+    expect(
+      screen.queryByRole("link", {
+        name: englishCopy["notifications.action.openContact"],
+      }),
+    ).toBeNull();
     expect(onClose).not.toHaveBeenCalled();
   });
 

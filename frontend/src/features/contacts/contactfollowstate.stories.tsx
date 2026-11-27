@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import {
   jsonResponse,
   StoryProviders,
@@ -40,10 +41,12 @@ export const Stopped: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(
-      await canvas.findByText("You stopped following this contact."),
+      await canvas.findByText(englishCopy["contact.follow.stopped"]),
     ).toBeVisible();
     await expect(
-      canvas.getByRole("button", { name: "Resume following" }),
+      canvas.getByRole("button", {
+        name: englishCopy["contact.follow.resume"],
+      }),
     ).toBeVisible();
   },
 };

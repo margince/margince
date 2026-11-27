@@ -156,6 +156,9 @@ export function useUpdateInstallationSettings(onSaved?: () => void) {
       // An open page would keep text written in the old language or zone.
       // The switch changes what every reading may show, so nothing cached
       // under the old answer may be drawn again.
+      if (patch.payment_long_overdue_days !== undefined) {
+        void queryClient.resetQueries({ queryKey: ["customer-payments"] });
+      }
       if (
         patch.individual_performance !== undefined ||
         patch.forecast_self_correcting !== undefined ||

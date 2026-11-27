@@ -15,6 +15,7 @@ import {
   MONEY_ABSENT,
 } from "../format/format";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { lastEmailAgo } from "../testing/dealmail";
 import { DealCard } from "./dealcard";
 import { armHoverIntent } from "./hoverintent-testing";
@@ -562,7 +563,7 @@ describe("RecordView + timeline", () => {
     ).toBeTruthy();
     expect(screen.getByText("12/06/2026")).toBeTruthy();
     expect(screen.getByText("Automated by capture")).toBeTruthy();
-    expect(screen.getByText("Typed by you")).toBeTruthy();
+    expect(screen.getByText(englishCopy["trust.typedByYou"])).toBeTruthy();
   });
 
   it("keeps the whole message in the document, clamped but never cut", () => {
@@ -839,7 +840,7 @@ describe("TimelineText on a mail row", () => {
     expect(screen.queryByText(/Mit freundlichen Grüßen/)).toBeNull();
 
     await user.click(
-      screen.getByRole("button", { name: "Show signature and quoted text" }),
+      screen.getByRole("button", { name: englishCopy["timeline.tailMore"] }),
     );
     expect(screen.getByText(/Mit freundlichen Grüßen/)).toBeTruthy();
     expect(screen.getByText(/Kunde GmbH/)).toBeTruthy();
@@ -857,10 +858,10 @@ describe("TimelineText on a mail row", () => {
     );
 
     await user.click(
-      screen.getByRole("button", { name: "Show signature and quoted text" }),
+      screen.getByRole("button", { name: englishCopy["timeline.tailMore"] }),
     );
     await user.click(
-      screen.getByRole("button", { name: "Hide signature and quoted text" }),
+      screen.getByRole("button", { name: englishCopy["timeline.tailLess"] }),
     );
     expect(screen.queryByText(/Mit freundlichen Grüßen/)).toBeNull();
   });
@@ -894,7 +895,7 @@ describe("TimelineText on a mail row", () => {
     expect(screen.getByText(/Viele Grüße an das Team/)).toBeTruthy();
     expect(
       screen.queryByRole("button", {
-        name: "Show signature and quoted text",
+        name: englishCopy["timeline.tailMore"],
       }),
     ).toBeNull();
   });
@@ -910,7 +911,7 @@ describe("TimelineText on a mail row", () => {
     );
     expect(
       screen.queryByRole("button", {
-        name: "Show signature and quoted text",
+        name: englishCopy["timeline.tailMore"],
       }),
     ).toBeNull();
   });
@@ -949,7 +950,7 @@ describe("TimelineText on a mail row", () => {
       </LocaleProvider>,
     );
     await user.click(
-      screen.getByRole("button", { name: "Show signature and quoted text" }),
+      screen.getByRole("button", { name: englishCopy["timeline.tailMore"] }),
     );
     expect(screen.getByText(/Kunde GmbH/)).toBeTruthy();
 
@@ -980,7 +981,7 @@ describe("TimelineText on a mail row", () => {
     );
     expect(screen.queryByRole("link")).toBeNull();
     await user.click(
-      screen.getByRole("button", { name: "Show signature and quoted text" }),
+      screen.getByRole("button", { name: englishCopy["timeline.tailMore"] }),
     );
     expect(
       screen.getByRole("link", { name: "https://kunde.de/impressum" }),

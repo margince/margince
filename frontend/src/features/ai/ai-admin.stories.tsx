@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { focusManager } from "@tanstack/react-query";
 import { expect, userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import { allowance, feature, status } from "../../testing/ai-admin.testkit";
 import { meFixture } from "../../testing/mefixture";
 import {
@@ -94,11 +95,11 @@ export const Preview: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByRole("button", { name: "Edit allowance" }),
+      await canvas.findByRole("button", { name: englishCopy["aiAdmin.edit"] }),
     );
     await userEvent.click(
       await within(canvasElement.ownerDocument.body).findByRole("button", {
-        name: "Preview effects",
+        name: englishCopy["aiAdmin.preview"],
       }),
     );
   },
@@ -139,14 +140,14 @@ export const ChangedWhileEditing: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByRole("button", { name: "Edit allowance" }),
+      await canvas.findByRole("button", { name: englishCopy["aiAdmin.edit"] }),
     );
     // A window coming back into focus reads the allowance again.
     focusManager.setFocused(false);
     focusManager.setFocused(true);
     await expect(
       await within(canvasElement.ownerDocument.body).findByRole("button", {
-        name: "Reload values",
+        name: englishCopy["aiAdmin.reload"],
       }),
     ).toBeInTheDocument();
     focusManager.setFocused(undefined);

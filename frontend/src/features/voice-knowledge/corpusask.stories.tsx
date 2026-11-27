@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../../api/schema";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -354,7 +355,7 @@ export const HandTyped: Story = {
   play: async () => {
     const canvas = dialog();
     await userEvent.type(
-      await canvas.findByLabelText("Your question"),
+      await canvas.findByLabelText(englishCopy["corpusAsk.question"]),
       "how long are captured messages kept",
     );
     await pressAsk();

@@ -8,6 +8,7 @@ import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { parseHash } from "../lib/router";
 import {
   forgetSeat,
@@ -168,7 +169,9 @@ describe("SetupReminder", () => {
     await userEvent.setup().click(chip);
 
     const panel = screen.getByRole("region", { name: /Finish setup/ });
-    within(panel).getByRole("heading", { name: "Finish setting up" });
+    within(panel).getByRole("heading", {
+      name: englishCopy["setup.reminder.title"],
+    });
     const steps = within(panel).getAllByRole("listitem");
     expect(
       steps.map((step) => step.querySelector(".t-name")?.textContent),
@@ -185,10 +188,14 @@ describe("SetupReminder", () => {
     `);
     expect(steps[0].textContent).toContain("ada@example.test, Google");
     expect(steps[1].getAttribute("aria-current")).toBe("step");
-    expect(steps[1].textContent).toContain("Skipped during setup.");
+    expect(steps[1].textContent).toContain(
+      englishCopy["setup.caption.calendarSkipped"],
+    );
     // The booking link waits on the calendar: it explains, wears the grey
     // Waiting badge and offers no verb.
-    expect(steps[6].textContent).toContain("Needs a calendar.");
+    expect(steps[6].textContent).toContain(
+      englishCopy["setup.caption.bookingNeedsCalendar"],
+    );
     expect(within(steps[6]).queryByRole("button")).toBeNull();
     expect(steps[6].querySelector(".badge")?.textContent).toBe("Waiting");
     // The current step's verb is primary; the other open ones are not.
@@ -200,7 +207,7 @@ describe("SetupReminder", () => {
     within(panel).getByText("4 of 7 done");
     expect(
       within(panel)
-        .getByRole("meter", { name: "Setup progress" })
+        .getByRole("meter", { name: englishCopy["setup.reminder.progress"] })
         .getAttribute("aria-valuenow"),
     ).toBe("4");
   });
@@ -211,7 +218,11 @@ describe("SetupReminder", () => {
     const user = userEvent.setup();
     await user.click(await trigger());
 
-    await user.click(screen.getByRole("button", { name: "Connect calendar" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: englishCopy["setup.action.calendar"],
+      }),
+    );
     expect(window.location.hash).toBe("#/settings/connections");
   });
 
@@ -233,7 +244,9 @@ describe("SetupReminder", () => {
     const steps = within(
       screen.getByRole("region", { name: /Finish setup/ }),
     ).getAllByRole("listitem");
-    expect(steps[1].textContent).toContain("Expired or cannot add bookings.");
+    expect(steps[1].textContent).toContain(
+      englishCopy["setup.caption.calendarReconnect"],
+    );
     const reconnect = within(steps[1]).getByRole("button");
     expect(reconnect.textContent).toBe("Reconnect");
     expect(reconnect.className).toContain("btn-primary");
@@ -260,7 +273,9 @@ describe("SetupReminder", () => {
     view.rerouted("#/deals", true);
 
     expect(screen.queryByRole("button", { name: /Finish setup/ })).toBeNull();
-    expect(screen.getByRole("link", { name: "Back to setup" })).toBeTruthy();
+    expect(
+      screen.getByRole("link", { name: englishCopy["shell.backToSetup"] }),
+    ).toBeTruthy();
   });
 
   it("hides until the next sign-in, and comes back after it", async () => {
@@ -269,13 +284,15 @@ describe("SetupReminder", () => {
     const user = userEvent.setup();
     await user.click(await trigger());
     await user.click(
-      screen.getByRole("button", { name: "Hide until next sign-in" }),
+      screen.getByRole("button", { name: englishCopy["setup.reminder.hide"] }),
     );
 
     expect(screen.queryByRole("button", { name: /Finish setup/ })).toBeNull();
     // Focus stays in the top bar rather than falling to the page body.
     expect(document.activeElement).toBe(
-      screen.getByRole("button", { name: "Search or ask Margince" }),
+      screen.getByRole("button", {
+        name: englishCopy["shell.searchEverything"],
+      }),
     );
     expect(readStored(STORAGE_KEYS.setupReminderHidden)).toBe("1");
     first.unmount();
@@ -338,7 +355,7 @@ describe("SetupReminder at phone width", () => {
       .getAllByRole("menuitem")
       .map((row) => row.textContent ?? "");
     expect(rows.indexOf("Finish setup4 of 7")).toBe(
-      rows.indexOf("Help and feedback") + 1,
+      rows.indexOf(englishCopy["shell.helpMenu"]) + 1,
     );
     // The row leads where the panel's current step would.
     expect(
@@ -353,7 +370,7 @@ describe("SetupReminder at phone width", () => {
     await mountTopBar().answered();
     expect(await trigger()).toBeTruthy();
     expect((await openAccount(userEvent.setup())).join()).not.toContain(
-      "Finish setup",
+      englishCopy["setup.reminder.trigger"],
     );
   });
 
@@ -364,11 +381,13 @@ describe("SetupReminder at phone width", () => {
     const user = userEvent.setup();
     await user.click(await trigger());
     await user.click(
-      screen.getByRole("button", { name: "Hide until next sign-in" }),
+      screen.getByRole("button", { name: englishCopy["setup.reminder.hide"] }),
     );
     act(() => viewport.narrow());
     await view.answered();
-    expect((await openAccount(user)).join()).not.toContain("Finish setup");
+    expect((await openAccount(user)).join()).not.toContain(
+      englishCopy["setup.reminder.trigger"],
+    );
   });
 
   it("keeps focus and the tabstop on Sign out when the row arrives under it", async () => {
@@ -432,7 +451,7 @@ describe("SetupReminder at phone width", () => {
     });
     await mountTopBar().answered();
     expect((await openAccount(userEvent.setup())).join()).not.toContain(
-      "Finish setup",
+      englishCopy["setup.reminder.trigger"],
     );
   });
 });

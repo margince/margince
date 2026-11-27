@@ -8,6 +8,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import {
   attentionReport,
   healthReport,
@@ -93,7 +94,9 @@ describe("HealthChecks", () => {
 
   it("says what happened, why it matters and what to do for each check not set up", () => {
     renderChecks();
-    const setup = screen.getByRole("list", { name: "Not set up yet" });
+    const setup = screen.getByRole("list", {
+      name: englishCopy["health.group.setup"],
+    });
     const rows = within(setup).getAllByRole("listitem");
     expect(rows).toHaveLength(2);
     for (const row of rows) {
@@ -107,14 +110,20 @@ describe("HealthChecks", () => {
     renderChecks();
     await userEvent
       .setup()
-      .click(screen.getByRole("button", { name: "Open AI models" }));
+      .click(
+        screen.getByRole("button", {
+          name: englishCopy["health.setup.providersSilent.action"],
+        }),
+      );
     expect(window.location.hash).toBe("#/settings/models");
   });
 
   it("links a step that happens outside the app to its guide", () => {
     renderChecks();
     expect(
-      screen.getByRole("link", { name: "Read the restore guide" }),
+      screen.getByRole("link", {
+        name: englishCopy["health.setup.recovery.action"],
+      }),
     ).toHaveAttribute("href", expect.stringContaining("run-a-restore-drill"));
   });
 
@@ -135,11 +144,11 @@ describe("HealthChecks", () => {
         />
       </LocaleProvider>,
     );
-    const group = screen.getByRole("list", { name: "For information" });
+    const group = screen.getByRole("list", {
+      name: englishCopy["health.group.information"],
+    });
     expect(
-      within(group)
-        .getByText("This source could not be read")
-        .closest(".badge"),
+      within(group).getByText(englishCopy["health.failed"]).closest(".badge"),
     ).toHaveClass("badge-danger");
   });
 });

@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { FactorSources } from "./leads.score.sources";
 
 type ScoreFactor = components["schemas"]["LeadScoreFactor"];
@@ -77,7 +78,7 @@ describe("the activities behind a score factor", () => {
     await userEvent.click(screen.getByRole("button", { name: /1 activities/ }));
 
     expect(
-      await screen.findByText("Content for participants only"),
+      await screen.findByText(englishCopy["timeline.withheld"]),
     ).toBeTruthy();
   });
 

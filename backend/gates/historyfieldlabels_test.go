@@ -26,19 +26,6 @@ package gates
 // second thing to keep current, and the copy that stopped finding them reads
 // green over whatever it no longer sees.
 //
-// THE EVENT DOORS, not the imaged ones. AuditEvent and AuditEventWithEvidence
-// are the writes with NO before-image — an occurrence recorded on a record —
-// and a free-form key is what such a write has instead of a column. Audit and
-// its two siblings record a field TRANSITION, which is the contract census's
-// subject. The line is not watertight: RecordVatCheck writes the same map
-// through Audit on a re-check and AuditEvent on a first one, and there are 65
-// imaged sites whose images this walk cannot read at all — margince#5863 holds
-// that half, with the measurement.
-//
-// What the line does NOT leave open is a key quietly migrating out of scope. A
-// writer moved from an event door to an imaged one leaves its label here with
-// nothing emitting it, and the stale-entry direction below fails on exactly
-// that.
 
 import (
 	"fmt"
@@ -74,17 +61,22 @@ func TestEveryProjectedAuditKeyHasALabel(t *testing.T) {
 	defer sharedHistoryWords.AssertAllMatched(t)
 
 	actions, entities := fieldHistoryProjection(t)
+	evidenceFields, reachEntities := historyEvidenceFields(t), historyReachEntities(t)
 	callsByPackage := map[string]callIndex{}
 	emitted := map[string]string{}
+	needsRatification := map[string]bool{}
 	for _, site := range auditDoorSitesOf(t) {
 		verbs, known := site.verbs()
 		// The record's history prints a merge's images beside an update's
 		// fields, on the archived record and on the survivor.
 		readAsALine := known && slices.Contains(verbs, mergeAuditVerb)
-		if site.door.before >= 0 && !readAsALine {
-			continue
-		}
 		types, typeKnown := site.values(site.door.entity)
+		if strings.HasSuffix(site.use.pkg.path, "/platform/settings") {
+			types, typeKnown = historySettingObjects(t), true
+		}
+		if !typeKnown {
+			types, typeKnown = (historyImageReader{index: site.index, evidenceFields: evidenceFields, reachEntities: reachEntities}).strings(historyImageArg{pkg: site.use.pkg, decl: site.use.decl}, site.argAt(site.door.entity), 0)
+		}
 		// An unread verb or record type is read as projected rather than
 		// skipped, so a site this walk cannot place still has its keys judged.
 		if (known && !anyProjected(verbs, actions) && !readAsALine) || (typeKnown && !anyProjected(types, entities)) {
@@ -96,6 +88,9 @@ func TestEveryProjectedAuditKeyHasALabel(t *testing.T) {
 			callsByPackage[site.use.pkg.path] = calls
 		}
 		for _, key := range site.imageKeys(t, calls) {
+			if site.door.before < 0 || readAsALine {
+				needsRatification[key] = true
+			}
 			if _, seen := emitted[key]; !seen {
 				emitted[key] = site.key()
 			}
@@ -107,7 +102,7 @@ func TestEveryProjectedAuditKeyHasALabel(t *testing.T) {
 	}
 	contract, synthetic := historyLabelMaps(t)
 	for _, finding := range labelFindings(emitted, contract, synthetic, func(key string) bool {
-		return sharedHistoryWords.Waived(t, key)
+		return !needsRatification[key] || sharedHistoryWords.Waived(t, key)
 	}) {
 		t.Error(finding)
 	}
@@ -149,6 +144,7 @@ func labelFindings(emitted map[string]string, contract, synthetic map[string]boo
 // sharedHistoryWords ratifies each hand-built key that a contract column
 // already claims.
 var sharedHistoryWords = gatekit.Waive(map[string]string{
+	"company_id":  "the confirmed company link on a lead names the same company that the record form and its history label name",
 	"email":       "the contact's address either way — the stranded-capture sweep names the field an edit names",
 	"occurred_at": "when the thing happened, for an activity's column and for a qualifying event alike",
 	"social":      "the contact's social profiles, whether a LinkedIn match or a human filled them in",
@@ -173,29 +169,19 @@ func anyProjected(values []string, projected map[string]bool) bool {
 
 // imageKeys reads the field names this site's audit images name. An image built
 // where the walk cannot follow is a finding rather than an absence.
-func (s auditDoorSite) imageKeys(t *testing.T, callers callIndex) []string {
+func (s auditDoorSite) imageKeys(t *testing.T, _ callIndex) []string {
 	t.Helper()
 	var keys []string
+	reader := historyImageReader{index: s.index, evidenceFields: historyEvidenceFields(t), reachEntities: historyReachEntities(t)}
+	if strings.HasSuffix(s.use.pkg.path, "/platform/settings") {
+		reader.settingKeys = historyProjectedSettingsKeys(t)
+	}
 	for _, arg := range s.imageArgs() {
-		literals, resolved := s.resolveImage(arg, callers)
-		if !resolved {
-			if !runtimeAuditImages.Waived(t, s.key()) {
-				t.Errorf("%s: %s builds its audit image where this gate cannot read it, so the field names inside it are judged by nobody.\n"+
-					"\tSpell the map at the call, or ratify it in runtimeAuditImages with what keeps its keys off the History tab.", s.key(), s.door.name)
-			}
-			continue
+		read, ok := reader.keys(historyImageArg{expr: arg, pkg: s.use.pkg, decl: s.use.decl}, 0)
+		if !ok && !runtimeAuditImages.Waived(t, s.key()) {
+			t.Errorf("%s: %s builds an image this gate cannot follow; extend the image reader so its field labels are checked", s.key(), s.door.name)
 		}
-		for _, element := range allElements(literals) {
-			pair, isPair := element.(*ast.KeyValueExpr)
-			if !isPair {
-				continue
-			}
-			if key, resolved := auditConstString(s.use.pkg.info, pair.Key); resolved {
-				keys = append(keys, key)
-			} else if !runtimeAuditImages.Waived(t, s.key()) {
-				t.Errorf("%s: %s names an audit field this gate cannot resolve to a string, so the History tab's word for it is judged by nobody.", s.key(), s.door.name)
-			}
-		}
+		keys = append(keys, read...)
 	}
 	return keys
 }
@@ -472,7 +458,7 @@ func readProjectionKeys(t *testing.T, expr ast.Expr, consts map[string]string, w
 // in either quote style, so an entry written the other way cannot vanish from a
 // census. Comments are stripped first (tsComment): a line MENTIONING a key would
 // otherwise keep a gate green after the real entry was deleted.
-var tsLabelEntry = regexp.MustCompile(`\[\s*["']([a-z0-9_]+)["']\s*,`)
+var tsLabelEntry = regexp.MustCompile(`\[\s*["']([A-Za-z0-9_.]+)["']\s*,`)
 
 // historyLabelMaps reads both label maps out of the screen module.
 func historyLabelMaps(t *testing.T) (contract, synthetic map[string]bool) {
@@ -481,8 +467,11 @@ func historyLabelMaps(t *testing.T) (contract, synthetic map[string]bool) {
 	if err != nil {
 		t.Fatalf("reading the history label maps: %v", err)
 	}
-	return tsMapKeys(t, historyLabelSource, string(source), contractLabelMap),
-		tsMapKeys(t, historyLabelSource, string(source), syntheticLabelMap)
+	contract = tsMapKeys(t, historyLabelSource, string(source), contractLabelMap)
+	for key := range historyAuxiliaryLabels(t, string(source)) {
+		contract[key] = true
+	}
+	return contract, tsMapKeys(t, historyLabelSource, string(source), syntheticLabelMap)
 }
 
 // tsMapKeys reads the keys of the Map literal opened by marker in path's source.

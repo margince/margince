@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -257,8 +258,12 @@ describe("consent and channels", () => {
     );
 
     // The reported symptom: "Email — Allowed" on a contact with no address.
-    expect(rail.getByText("No address on file")).toBeTruthy();
-    expect(rail.getByText("No number on file")).toBeTruthy();
+    expect(
+      rail.getByText(englishCopy["contact.rail.noEmailAddress"]),
+    ).toBeTruthy();
+    expect(
+      rail.getByText(englishCopy["contact.rail.noPhoneNumber"]),
+    ).toBeTruthy();
   });
 
   it("gives the channel they are actually reached on its own row", async () => {
@@ -272,7 +277,9 @@ describe("consent and channels", () => {
     // Named by the directory and carrying the correspondence verdict, which the
     // send gate answers per purpose and not per transport.
     expect(await rail.findByText("Zalo OA")).toBeTruthy();
-    expect(rail.getByText("Permission to write recorded")).toBeTruthy();
+    expect(
+      rail.getByText(englishCopy["contact.consent.fact.saidWeMayWrite"]),
+    ).toBeTruthy();
   });
 
   it("keeps the row when the identity can no longer be delivered to", async () => {
@@ -284,9 +291,13 @@ describe("consent and channels", () => {
     );
 
     expect(await rail.findByText("Zalo OA")).toBeTruthy();
-    expect(rail.getByText("Not deliverable")).toBeTruthy();
+    expect(
+      rail.getByText(englishCopy["contact.rail.channelNotDeliverable"]),
+    ).toBeTruthy();
     // A blocked channel must not read as a granted one.
-    expect(rail.queryByText("Permission to write recorded")).toBeNull();
+    expect(
+      rail.queryByText(englishCopy["contact.consent.fact.saidWeMayWrite"]),
+    ).toBeNull();
   });
 
   it("still reports the verdict for a contact who has an address", () => {
@@ -294,11 +305,17 @@ describe("consent and channels", () => {
       viewWith({ emails: true, activities: [anActivity({})] }),
     );
 
-    expect(rail.getByText("Permission to write recorded")).toBeTruthy();
-    expect(rail.queryByText("No address on file")).toBeNull();
+    expect(
+      rail.getByText(englishCopy["contact.consent.fact.saidWeMayWrite"]),
+    ).toBeTruthy();
+    expect(
+      rail.queryByText(englishCopy["contact.rail.noEmailAddress"]),
+    ).toBeNull();
     // The column states the verdict; the reason behind it is the Research
     // tab's consent panel's to give.
-    expect(rail.queryByText("They agreed to be written to")).toBeNull();
+    expect(
+      rail.queryByText(englishCopy["consent.reason.said_we_may_write"]),
+    ).toBeNull();
   });
 
   it("gives each purpose's reason on the Research tab's consent panel", async () => {
@@ -313,9 +330,11 @@ describe("consent and channels", () => {
     );
 
     expect(
-      await screen.findByText("They agreed to be written to"),
+      await screen.findByText(englishCopy["consent.reason.said_we_may_write"]),
     ).toBeTruthy();
-    expect(screen.getByText("Permission to write recorded")).toBeTruthy();
+    expect(
+      screen.getByText(englishCopy["contact.consent.fact.saidWeMayWrite"]),
+    ).toBeTruthy();
   });
 });
 
@@ -325,7 +344,7 @@ describe("a message the reader may not read", () => {
 
     // The row stays — a reader can tell a limited conversation from one that
     // never happened.
-    expect(screen.getByText("Not shared with you")).toBeTruthy();
+    expect(screen.getByText(englishCopy["email.withheldSubject"])).toBeTruthy();
     // And none of what it carries reaches the card.
     expect(screen.queryByText("Angebot Q4")).toBeNull();
     expect(screen.queryByText(/Können wir Dienstag sprechen/)).toBeNull();

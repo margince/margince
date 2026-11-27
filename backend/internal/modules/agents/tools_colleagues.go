@@ -131,7 +131,7 @@ func attachEveryColleague(ctx context.Context, list ColleagueLister, out *ListCo
 	if err != nil {
 		noteWarning(ctx, CodeRosterUnreadable,
 			"Nobody here is spelled that way. The rest of the roster could not be read to show "+
-				"you who is, so treat this as unknown rather than as an empty workspace.")
+				"you who is, so treat this as unknown rather than as an empty company.")
 		return
 	}
 	if everyone == nil {
@@ -140,7 +140,7 @@ func attachEveryColleague(ctx context.Context, list ColleagueLister, out *ListCo
 	out.AllColleagues, out.AllColleaguesTruncated = &everyone, truncated
 	if len(everyone) == 0 {
 		noteWarning(ctx, CodeNameMatchedNoColleague,
-			"This workspace has no colleagues who can receive work.")
+			"This company has no colleagues who can receive work.")
 		return
 	}
 	if truncated {

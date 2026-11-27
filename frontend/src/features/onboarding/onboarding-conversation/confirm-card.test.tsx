@@ -20,6 +20,7 @@ import type { components } from "../../../api/schema";
 import { Avatar } from "../../../design-system/atoms";
 import { stable } from "../../../format/collate";
 import { LocaleProvider } from "../../../i18n";
+import { en as englishCopy } from "../../../i18n/en";
 import { EMPTY_DRAFT } from "../onboarding";
 import { CompanyConfirmCard } from "./confirm-card";
 
@@ -172,7 +173,9 @@ describe("a field the read did not return", () => {
     // The read fetched an imprint page and the field still came back empty:
     // the site does not state it, which is a different fact from not having
     // looked — and both are different from an unexplained empty box.
-    expect(row("legal_name")).toHaveTextContent("Omitted, not guessed");
+    expect(row("legal_name")).toHaveTextContent(
+      englishCopy["ob.conv.triage.omittedLabel"],
+    );
     expect(
       screen.getByText(
         "Registered legal name: Not stated on your legal notice or imprint page. Add it manually.",
@@ -240,7 +243,9 @@ describe("a field the read did not return", () => {
   it("claims no omission at all when no read ever ran", () => {
     renderCard(null);
 
-    expect(screen.queryAllByText("Omitted, not guessed")).toHaveLength(0);
+    expect(
+      screen.queryAllByText(englishCopy["ob.conv.triage.omittedLabel"]),
+    ).toHaveLength(0);
     // The field is still on the board and still fillable — it is simply not
     // something anyone looked for yet.
     expect(row("legal_name")).toBeInTheDocument();
@@ -281,7 +286,7 @@ describe("a field the read did not return", () => {
     // row is empty — the same line the manual path shows, where nothing ever
     // read a site to have missed it.
     await user.click(within(offer).getByRole("button", { name: "Show less" }));
-    expect(offer).toHaveTextContent("Nothing here yet. Add it manually.");
+    expect(offer).toHaveTextContent(englishCopy["ob.conv.triage.emptyHint"]);
   });
 });
 
@@ -388,7 +393,9 @@ describe("a value chosen from the read's own candidates", () => {
     // Not a band, not a zero: nothing graded this value, so the row says who
     // it came from instead of how sure anything is.
     expect(legalName.querySelector(".confidence")).toBeNull();
-    expect(legalName).toHaveTextContent("read from your legal notice");
+    expect(legalName).toHaveTextContent(
+      englishCopy["ob.conv.triage.stateQuoted"],
+    );
   });
 
   it("shows no evidence line at all when the candidate printed no quote", async () => {
@@ -398,6 +405,8 @@ describe("a value chosen from the read's own candidates", () => {
     const legalName = row("legal_name");
     expect(legalName.querySelector(".evidence-chip")).toBeNull();
     expect(legalName.querySelector(".confidence")).toBeNull();
-    expect(legalName).toHaveTextContent("read from your legal notice");
+    expect(legalName).toHaveTextContent(
+      englishCopy["ob.conv.triage.stateQuoted"],
+    );
   });
 });

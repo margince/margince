@@ -106,14 +106,14 @@ describe("who wrote this record", () => {
     renderRail(COMPANY);
 
     await waitFor(() => expect(sourceText()).toBe("Typed by Sofia Meier"));
-    expect(screen.queryByText("Typed by a person")).toBeNull();
+    expect(screen.queryByText(en["trust.typedByHuman"])).toBeNull();
   });
 
   it("names the hand that typed it, not a uuid, when the roster cannot resolve them", async () => {
     stub([{ id: "u-owner", display_name: "Mira Voss" }]);
     renderRail(COMPANY);
 
-    await waitFor(() => expect(sourceText()).toBe("Typed by a person"));
+    await waitFor(() => expect(sourceText()).toBe(en["trust.typedByHuman"]));
     expect(document.body.textContent).not.toContain("u-author");
   });
 });
@@ -178,7 +178,7 @@ describe("a record an agent created", () => {
     stub([]);
     renderRail({ ...COMPANY, captured_by: AGENT });
 
-    await waitFor(() => expect(sourceText()).toBe("Automated by an agent"));
+    await waitFor(() => expect(sourceText()).toBe(en["trust.agentUnnamed"]));
   });
 });
 

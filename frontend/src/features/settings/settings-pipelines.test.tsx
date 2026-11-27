@@ -3,6 +3,7 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
+import { en as englishCopy } from "../../i18n/en";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import {
   jsonResponse,
@@ -280,7 +281,7 @@ describe("PipelinesCard: who is shown what", () => {
   it("shows create controls for an admin", async () => {
     server({});
     renderPage();
-    expect(await screen.findByText("New pipeline")).toBeTruthy();
+    expect(await screen.findByText(englishCopy["pipeline.new"])).toBeTruthy();
   });
 
   it("gives a reader the catalog and the ladder, and no grip or row verb", async () => {
@@ -405,8 +406,10 @@ describe("PipelinesCard: the catalog", () => {
     server({ soloInUse: true, onlyPipeline: true });
     renderPage();
     const sales = await screen.findByRole("region", { name: "Sales" });
-    expect(within(sales).getByText("New pipeline")).toBeTruthy();
-    expect(screen.queryByRole("region", { name: "All pipelines" })).toBeNull();
+    expect(within(sales).getByText(englishCopy["pipeline.new"])).toBeTruthy();
+    expect(
+      screen.queryByRole("region", { name: englishCopy["pipeline.catalog"] }),
+    ).toBeNull();
   });
 
   it("tells a reader of a lone pipeline that more are possible, just not by them", async () => {
@@ -433,7 +436,7 @@ describe("PipelinesCard: the catalog", () => {
     const user = userEvent.setup();
     const backend = server({});
     renderPage();
-    await user.click(await screen.findByText("New pipeline"));
+    await user.click(await screen.findByText(englishCopy["pipeline.new"]));
     await user.type(screen.getByLabelText(/Name/), "Partnerships");
     await user.click(screen.getByRole("button", { name: "Create" }));
     await waitFor(() =>
@@ -470,7 +473,7 @@ describe("PipelinesCard: the ladder", () => {
     const won = screen.getByTestId("stage-s2");
     expect(within(won).getByRole("img", { name: "Stays last" })).toBeTruthy();
     expect(within(won).getByText("Won")).toBeTruthy();
-    expect(within(won).getByText("Ends the deal")).toBeTruthy();
+    expect(within(won).getByText(englishCopy["stage.endsDeal"])).toBeTruthy();
     // "Lost" already says it: no second "Lost" beside it.
     expect(
       within(screen.getByTestId("stage-s3")).getAllByText("Lost"),
@@ -511,7 +514,9 @@ describe("PipelinesCard: the ladder", () => {
     expect(criteriaReads()).toHaveLength(0);
     await user.click(toggle);
     expect(toggle.getAttribute("aria-expanded")).toBe("true");
-    const add = await screen.findByRole("button", { name: "Add criterion" });
+    const add = await screen.findByRole("button", {
+      name: englishCopy["stage.criteria.add"],
+    });
     expect(
       document.getElementById(add.getAttribute("aria-describedby") ?? "")
         ?.textContent,
@@ -696,7 +701,9 @@ describe("PipelinesCard: the ladder", () => {
       within(confirm).getByText(/leaves the pipeline/).textContent,
     ).toContain("Qualify");
     await user.click(
-      within(confirm).getByRole("button", { name: "Remove stage" }),
+      within(confirm).getByRole("button", {
+        name: englishCopy["stage.removeConfirm"],
+      }),
     );
     await waitFor(() =>
       expect(backend.writes("DELETE", "/stages/s1")).toHaveLength(1),
@@ -744,9 +751,13 @@ describe("PipelinesCard: the ladder", () => {
       await screen.findByRole("button", { name: "Actions for Qualify" }),
     );
     await user.click(screen.getByRole("button", { name: "Remove" }));
-    await user.click(screen.getByRole("button", { name: "Remove stage" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["stage.removeConfirm"] }),
+    );
     expect(await screen.findByText(/Acme rollout/)).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Remove stage" })).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: englishCopy["stage.removeConfirm"] }),
+    ).toBeTruthy();
   });
 
   it("adds a criterion from the row menu, with the stage's criteria open behind it", async () => {
@@ -756,9 +767,13 @@ describe("PipelinesCard: the ladder", () => {
     await user.click(
       await screen.findByRole("button", { name: "Actions for Qualify" }),
     );
-    await user.click(screen.getByRole("button", { name: "Add criterion" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["stage.criteria.add"] }),
+    );
     expect(
-      await screen.findByRole("dialog", { name: "Add criterion" }),
+      await screen.findByRole("dialog", {
+        name: englishCopy["stage.criteria.add"],
+      }),
     ).toBeTruthy();
     expect(
       screen
@@ -780,9 +795,13 @@ describe("PipelinesCard: the ladder", () => {
       await screen.findByRole("button", { name: "Actions for Qualify" }),
     );
     await user.click(screen.getByRole("button", { name: "Remove" }));
-    await user.click(screen.getByRole("button", { name: "Remove stage" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["stage.removeConfirm"] }),
+    );
     expect(await screen.findByText(/changed after you opened it/)).toBeTruthy();
-    await user.click(screen.getByRole("button", { name: "Remove stage" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["stage.removeConfirm"] }),
+    );
     await waitFor(() =>
       expect(backend.writes("DELETE", "/stages/s1")).toHaveLength(2),
     );
@@ -804,7 +823,9 @@ describe("PipelinesCard: the ladder", () => {
       await screen.findByRole("button", { name: "Actions for Qualify" }),
     );
     await user.click(screen.getByRole("button", { name: "Remove" }));
-    const confirm = screen.getByRole("button", { name: "Remove stage" });
+    const confirm = screen.getByRole("button", {
+      name: englishCopy["stage.removeConfirm"],
+    });
     await user.click(confirm);
     await waitFor(() =>
       expect(backend.writes("DELETE", "/stages/s1")).toHaveLength(1),
@@ -827,7 +848,11 @@ describe("PipelinesCard: the ladder", () => {
         await screen.findByRole("button", { name: `Actions for ${name}` }),
       );
       await user.click(screen.getByRole("button", { name: "Remove" }));
-      await user.click(screen.getByRole("button", { name: "Remove stage" }));
+      await user.click(
+        screen.getByRole("button", {
+          name: englishCopy["stage.removeConfirm"],
+        }),
+      );
       await waitFor(() => expect(screen.queryByText(name)).toBeNull());
     }
     expect(screen.queryByRole("button", { name: /^Actions for / })).toBeNull();
@@ -849,7 +874,9 @@ describe("PipelinesCard: the ladder", () => {
       await screen.findByRole("button", { name: "Actions for Qualify" }),
     );
     await user.click(screen.getByRole("button", { name: "Remove" }));
-    await user.click(screen.getByRole("button", { name: "Remove stage" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["stage.removeConfirm"] }),
+    );
     await waitFor(() =>
       expect(screen.queryByRole("table", { name: "Stages" })).toBeNull(),
     );
@@ -895,7 +922,9 @@ describe("PipelinesCard: the ladder", () => {
       await screen.findByRole("button", { name: "Actions for Closed won" }),
     );
     expect(screen.getByRole("button", { name: "Edit stage" })).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Add criterion" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: englishCopy["stage.criteria.add"] }),
+    ).toBeNull();
     expect(screen.queryByRole("button", { name: "Remove" })).toBeNull();
   });
 });
@@ -962,7 +991,9 @@ describe("PipelinesCard: the pipeline's own verbs", () => {
       await screen.findByRole("button", { name: /^Enterprise/ }),
     );
     await user.click(
-      await screen.findByRole("button", { name: "Make default" }),
+      await screen.findByRole("button", {
+        name: englishCopy["pipeline.makeDefault"],
+      }),
     );
     await waitFor(() =>
       expect(backend.writes("PATCH", "/pipelines/pl-live")).toHaveLength(1),

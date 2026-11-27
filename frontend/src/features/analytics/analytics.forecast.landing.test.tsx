@@ -51,7 +51,7 @@ describe("the projected landing", () => {
 
     // One label over every measure, with the basis leading the detail.
     expect(screen.getByText("Landing")).toBeTruthy();
-    expect(screen.getByText("Won + Likely deals")).toBeTruthy();
+    expect(screen.getByText(en["forecast.basis.likely"])).toBeTruthy();
     expect(
       screen.getByText(`${money(400_00)} won + ${money(500_00)} to come`),
     ).toBeTruthy();
@@ -73,7 +73,7 @@ describe("the projected landing", () => {
       />,
     );
 
-    expect(screen.getByText("Manager’s call")).toBeTruthy();
+    expect(screen.getByText(en["forecast.basis.manager_call"])).toBeTruthy();
     expect(
       screen.getByText(`Records alone project ${money(650_00)}`),
     ).toBeTruthy();
@@ -304,11 +304,7 @@ describe("the modelled finish beside the landing", () => {
     expect(
       screen.getByText(`${money(610_00)} to ${money(880_00)}`),
     ).toBeTruthy();
-    expect(
-      screen.getByText(
-        "Central 80% of modelled outcomes under current chances",
-      ),
-    ).toBeTruthy();
+    expect(screen.getByText(en["forecast.model.detail"])).toBeTruthy();
     expect(
       screen.getByText(`Includes ${money(400_00)} already won`),
     ).toBeTruthy();
@@ -326,11 +322,7 @@ describe("the modelled finish beside the landing", () => {
     expect(
       screen.queryByText(`Includes ${money(400_00)} already won`),
     ).toBeNull();
-    expect(
-      screen.queryByText(
-        "Central 80% of modelled outcomes under current chances",
-      ),
-    ).toBeNull();
+    expect(screen.queryByText(en["forecast.model.detail"])).toBeNull();
   });
 
   it("names the deals without an exchange rate when every deal is priced", () => {
@@ -369,9 +361,7 @@ describe("the modelled finish beside the landing", () => {
   it("says when no range was drawn", () => {
     draw(model({ range: undefined, onOpen: vi.fn() }));
     expect(screen.getByText("No range")).toBeTruthy();
-    expect(
-      screen.getByText("No modelled range was drawn for this period."),
-    ).toBeTruthy();
+    expect(screen.getByText(en["forecast.model.noneDetail"])).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Open" })).toBeNull();
   });
 

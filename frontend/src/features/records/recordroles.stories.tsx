@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -120,7 +121,7 @@ export const Adder: Story = {
   render: story(ADDER),
   play: async ({ canvasElement }) => {
     await within(canvasElement).findByText(
-      "Your role can add entries but not change them",
+      englishCopy["leadSources.addOnlyTitle"],
     );
   },
 };
@@ -164,9 +165,7 @@ export const DuplicateRole: Story = {
     await userEvent.click(dialog.getByRole("checkbox", { name: "Deal" }));
     await userEvent.click(dialog.getByRole("checkbox", { name: "Colleague" }));
     await userEvent.click(dialog.getByRole("button", { name: "Add role" }));
-    await dialog.findByText(
-      "A role with this name or key already exists. Choose another name.",
-    );
+    await dialog.findByText(englishCopy["recordRoles.duplicate"]);
   },
 };
 
@@ -205,7 +204,7 @@ export const RefusedSwitch: Story = {
       name: "Delivery lead can be newly assigned",
     });
     await userEvent.click(refused);
-    await canvas.findByText("Change was not saved");
+    await canvas.findByText(englishCopy["leadSources.notSaved"]);
     await expect(refused).toHaveAccessibleDescription(
       expect.stringContaining("Change was not saved"),
     );

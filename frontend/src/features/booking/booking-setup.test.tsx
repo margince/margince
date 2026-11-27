@@ -10,6 +10,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { stubClipboard } from "../../design-system/clipboard-testing";
+import { en as englishCopy } from "../../i18n/en";
 import {
   bookingConnection,
   bookingContact,
@@ -44,7 +45,7 @@ it("books from an empty Meetings tab with this contact selected", async () => {
     activities: { data: [], page: { has_more: false } },
   });
   await user.click(
-    await screen.findByRole("button", { name: "Book a meeting" }),
+    await screen.findByRole("button", { name: englishCopy["scheduling.new"] }),
   );
   expect(window.location.hash).toBe("#/book/contact-p-1");
 });
@@ -64,20 +65,21 @@ it("opens meeting settings in another tab without discarding the invitation draf
     </StoryProviders>,
   );
   const settings = await screen.findByRole("link", {
-    name: "Open meeting settings",
+    name: englishCopy["scheduling.openSettings"],
   });
   expect(settings.getAttribute("href")).toBe("/#/settings/meetings");
   expect(settings.getAttribute("target")).toBe("_blank");
   await user.type(
-    screen.getByLabelText("Message for your guest"),
+    screen.getByLabelText(englishCopy["scheduling.agenda"]),
     "Keep my draft",
   );
-  expect(screen.queryByLabelText("Calendar provider")).toBeNull();
+  expect(
+    screen.queryByLabelText(englishCopy["scheduling.provider"]),
+  ).toBeNull();
   expect(screen.queryByLabelText("Invitation calendar")).toBeNull();
-  expect(screen.getByLabelText("Message for your guest")).toHaveProperty(
-    "value",
-    "Keep my draft",
-  );
+  expect(
+    screen.getByLabelText(englishCopy["scheduling.agenda"]),
+  ).toHaveProperty("value", "Keep my draft");
 });
 for (const status of [
   "pending",
@@ -102,18 +104,22 @@ for (const status of [
       </StoryProviders>,
     );
     await user.click(
-      await screen.findByRole("button", { name: "Cancel meeting" }),
+      await screen.findByRole("button", {
+        name: englishCopy["scheduling.cancel"],
+      }),
     );
     const dialog = await screen.findByRole("dialog");
     await user.click(
-      within(dialog).getByRole("button", { name: "Cancel meeting" }),
+      within(dialog).getByRole("button", {
+        name: englishCopy["scheduling.cancel"],
+      }),
     );
     await waitFor(() =>
       expect(changes).toEqual([{ action: "cancel", version: 1 }]),
     );
     await waitFor(() =>
       expect(screen.getByRole("status").textContent).toBe(
-        "Canceling your meeting…",
+        englishCopy["scheduling.canceling"],
       ),
     );
   });
@@ -175,28 +181,34 @@ it("refreshes the worker's version after a cancellation conflict", async () => {
     </StoryProviders>,
   );
   await user.click(
-    await screen.findByRole("button", { name: "Cancel meeting" }),
+    await screen.findByRole("button", {
+      name: englishCopy["scheduling.cancel"],
+    }),
   );
   const dialog = await screen.findByRole("dialog");
   await user.click(
-    within(dialog).getByRole("button", { name: "Cancel meeting" }),
+    within(dialog).getByRole("button", {
+      name: englishCopy["scheduling.cancel"],
+    }),
   );
   expect(
-    await within(dialog).findByText(
-      "The meeting changed. Review the updated details and try again.",
-    ),
+    await within(dialog).findByText(englishCopy["book.meetingChanged"]),
   ).toBeTruthy();
   await waitFor(() =>
     expect(
-      within(dialog).getByRole("button", { name: "Cancel meeting" }),
+      within(dialog).getByRole("button", {
+        name: englishCopy["scheduling.cancel"],
+      }),
     ).toHaveProperty("disabled", false),
   );
   await user.click(
-    within(dialog).getByRole("button", { name: "Cancel meeting" }),
+    within(dialog).getByRole("button", {
+      name: englishCopy["scheduling.cancel"],
+    }),
   );
   await waitFor(() =>
     expect(screen.getByRole("status").textContent).toBe(
-      "Canceling your meeting…",
+      englishCopy["scheduling.canceling"],
     ),
   );
   expect(changes).toEqual([
@@ -219,12 +231,12 @@ it("warns when an active public page cannot send calendar invitations", async ()
   );
   expect(
     await screen.findByText(
-      "Your booking page is active, but calendar invitations are unavailable. Open meeting settings to check the connection or pause the page.",
+      englishCopy["scheduling.publicCalendarUnavailable"],
     ),
   ).toBeTruthy();
   expect(
     screen
-      .getByRole("switch", { name: "Accept bookings" })
+      .getByRole("switch", { name: englishCopy["scheduling.acceptBookings"] })
       .getAttribute("aria-checked"),
   ).toBe("true");
 });
@@ -247,7 +259,9 @@ it("pauses a public link without overwriting meeting settings saved in another t
       <BookingProfileScreen />
     </StoryProviders>,
   );
-  const pause = await screen.findByRole("switch", { name: "Accept bookings" });
+  const pause = await screen.findByRole("switch", {
+    name: englishCopy["scheduling.acceptBookings"],
+  });
   latest = { ...latest, horizon_days: 90, calendar_id: "another-calendar" };
   await user.click(pause);
   await waitFor(() => expect(writes).toHaveLength(1));
@@ -275,7 +289,9 @@ it("keeps focus on Accept bookings after its answer comes back", async () => {
       <BookingProfileScreen />
     </StoryProviders>,
   );
-  const accept = await screen.findByRole("switch", { name: "Accept bookings" });
+  const accept = await screen.findByRole("switch", {
+    name: englishCopy["scheduling.acceptBookings"],
+  });
   await user.click(accept);
   await waitFor(() =>
     expect(accept.getAttribute("aria-checked")).toBe("false"),
@@ -294,9 +310,11 @@ it("names the link once on its own page, in the heading and not again on the car
       <BookingProfileScreen />
     </StoryProviders>,
   );
-  await screen.findByRole("switch", { name: "Accept bookings" });
+  await screen.findByRole("switch", {
+    name: englishCopy["scheduling.acceptBookings"],
+  });
   expect(
-    screen.getAllByRole("heading", { name: "My booking link" }),
+    screen.getAllByRole("heading", { name: englishCopy["scheduling.myLink"] }),
   ).toHaveLength(1);
   expect(screen.getAllByText(/One link for your email signature/)).toHaveLength(
     1,
@@ -324,9 +342,13 @@ it("keeps focus on Accept bookings when the answer brings the first link", async
       <BookingProfileScreen />
     </StoryProviders>,
   );
-  const accept = await screen.findByRole("switch", { name: "Accept bookings" });
+  const accept = await screen.findByRole("switch", {
+    name: englishCopy["scheduling.acceptBookings"],
+  });
   await user.click(accept);
-  await screen.findByRole("textbox", { name: "My booking link" });
+  await screen.findByRole("textbox", {
+    name: englishCopy["scheduling.myLink"],
+  });
   expect(accept.getAttribute("aria-checked")).toBe("true");
   expect(document.activeElement).toBe(accept);
 });
@@ -348,15 +370,19 @@ it("hands focus back to Replace link once the new link lands", async () => {
       <BookingProfileScreen />
     </StoryProviders>,
   );
-  const replace = await screen.findByRole("button", { name: "Replace link" });
+  const replace = await screen.findByRole("button", {
+    name: englishCopy["scheduling.replaceAction"],
+  });
   await user.click(replace);
   const dialog = await screen.findByRole("dialog");
   await user.click(
-    within(dialog).getByRole("button", { name: "Replace booking link" }),
+    within(dialog).getByRole("button", {
+      name: englishCopy["scheduling.replace"],
+    }),
   );
   await waitFor(() =>
     expect(
-      screen.getByRole("textbox", { name: "My booking link" }),
+      screen.getByRole("textbox", { name: englishCopy["scheduling.myLink"] }),
     ).toHaveProperty("value", "https://book.example/new-link"),
   );
   await waitFor(() => expect(document.activeElement).toBe(replace));
@@ -382,15 +408,19 @@ it("keeps a failed copy's remedy over a replaced link until the next copy", asyn
   stubClipboard("refuses");
   await user.click(await screen.findByRole("button", { name: "Copy link" }));
   await screen.findByText(/clipboard access denied/i);
-  await user.click(screen.getByRole("button", { name: "Replace link" }));
+  await user.click(
+    screen.getByRole("button", {
+      name: englishCopy["scheduling.replaceAction"],
+    }),
+  );
   await user.click(
     within(await screen.findByRole("dialog")).getByRole("button", {
-      name: "Replace booking link",
+      name: englishCopy["scheduling.replace"],
     }),
   );
   await waitFor(() =>
     expect(
-      screen.getByRole("textbox", { name: "My booking link" }),
+      screen.getByRole("textbox", { name: englishCopy["scheduling.myLink"] }),
     ).toHaveProperty("value", "https://book.example/new-link"),
   );
   expect(screen.getByText(/clipboard access denied/i)).toBeTruthy();

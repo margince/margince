@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../i18n/en";
 import { Button } from "./atoms";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -493,7 +494,9 @@ describe("base.css draws the federated door without touching the mark", () => {
 describe("the link variant is the .link-button affordance, not a copy of it", () => {
   it("emits the class the stylesheet keys on", () => {
     render(<Button variant="link">Make private</Button>);
-    expect(classesOf("Make private")).toContain("btn-link");
+    expect(classesOf(englishCopy["compose.threadMakePrivate"])).toContain(
+      "btn-link",
+    );
   });
 
   // The look has ONE declaration, and this holds both halves of that.

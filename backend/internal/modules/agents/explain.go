@@ -105,7 +105,7 @@ func (s *Dispatcher) explain(tool string, err error) string {
 		// falling through to the generic branch would tell the agent to retry
 		// a permanent refusal and burn a scheduled run's whole step budget on
 		// it.
-		return "This workspace's system of record cannot serve this tool, and no retry will change that. " +
+		return "This company's system of record cannot serve this tool, and no retry will change that. " +
 			"Do not retry it; use another tool, or tell the user this capability is unavailable here. (" + refusalDetail(err) + ")"
 	case errors.As(err, &unknownTool):
 		// A name that is not on the surface at all — the model invented it, or
@@ -177,7 +177,7 @@ const runFaultAdvice = "The tool failed for an internal reason; nothing may have
 // have fixed and offers a retry that cannot help — so a gate can assert a
 // refusal did NOT land here without keeping a second copy of the sentence.
 const internalFaultAdvice = "The tool failed for an internal reason; nothing may have changed. " +
-	"Retry, and if it keeps failing contact the workspace admin."
+	"Retry, and if it keeps failing contact the company admin."
 
 // explainClassified answers every error with no bespoke branch above by
 // asking the ONE taxonomy (httperr.Classify) instead of repeating the

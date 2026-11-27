@@ -175,7 +175,10 @@ async function openWholeRecord(): Promise<void> {
 async function editCompanyName(): Promise<void> {
   fireEvent.click(
     await screen.findByRole("button", {
-      name: en["ob.digest.editLine"].replace("{label}", "Company name"),
+      name: en["ob.digest.editLine"].replace(
+        "{label}",
+        en["ob.field.display_name"],
+      ),
     }),
   );
   const control = await screen.findByRole("textbox");

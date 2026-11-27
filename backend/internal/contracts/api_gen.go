@@ -49716,6 +49716,13 @@ type CustomFieldLiveLists struct {
 	UnseenCount int `json:"unseen_count"`
 }
 
+// CustomerPaymentAgedGroup defines model for CustomerPaymentAgedGroup.
+type CustomerPaymentAgedGroup struct {
+	Customers    []CustomerPaymentCustomer `json:"customers"`
+	InvoiceCount int                       `json:"invoice_count" minimum:"0"`
+	Totals       []CustomerPaymentTotal    `json:"totals"`
+}
+
 // CustomerPaymentCustomer defines model for CustomerPaymentCustomer.
 type CustomerPaymentCustomer struct {
 	AmountMinor  int64              `json:"amount_minor"`
@@ -49750,15 +49757,17 @@ type CustomerPayments struct {
 	AccessScope  string `json:"access_scope"`
 	CompanyCount int    `json:"company_count" minimum:"0"`
 
-	// Customers Up to three company and currency groups, oldest overdue invoice first.
+	// Customers Up to three company and currency groups of actionable invoices, recently overdue first and then larger amounts within each currency.
 	Customers    []CustomerPaymentCustomer `json:"customers"`
 	Data         []CustomerPaymentInvoice  `json:"data"`
 	InvoiceCount int                       `json:"invoice_count" minimum:"0"`
 	LastSyncedAt *time.Time                `json:"last_synced_at,omitempty"`
 
 	// LinkedCompanies Readable, live linked companies eligible for the payment overview.
-	LinkedCompanies int      `json:"linked_companies" minimum:"0"`
-	Page            PageInfo `json:"page"`
+	LinkedCompanies int                       `json:"linked_companies" minimum:"0"`
+	LongOverdue     *CustomerPaymentAgedGroup `json:"long_overdue,omitempty"`
+	LongOverdueDays *int                      `json:"long_overdue_days,omitempty" maximum:"3650" minimum:"1"`
+	Page            PageInfo                  `json:"page"`
 
 	// Provider The accounting source's key. Show `provider_name` to a reader.
 	Provider *string `json:"provider,omitempty"`
@@ -56660,6 +56669,9 @@ type InstallationSettings struct {
 	// mailbox subscription is renewed, and how fast one mailbox sends. A running worker reads
 	// them again within a minute of a change, so none needs a restart.
 	Operations OperationSettings `json:"operations"`
+
+	// PaymentLongOverdueDays Days overdue after which Home folds invoices into Long overdue. Default 365. Company totals do not change.
+	PaymentLongOverdueDays *int `json:"payment_long_overdue_days,omitempty" maximum:"3650" minimum:"1"`
 
 	// SignInProviders Every external sign-in provider this deployment holds credentials for, and whether
 	// the installation currently offers it on the login screen. The list is what the
@@ -73317,6 +73329,9 @@ type UpdateInstallationSettingsRequest struct {
 	// before, whether they have groups or not. Omit the field to leave the map unchanged; send an
 	// empty object to clear it; sending a map replaces the whole stored map.
 	OidcGroupRoleMap *map[string]string `json:"oidc_group_role_map,omitempty"`
+
+	// PaymentLongOverdueDays Days overdue after which Home folds invoices into Long overdue. Default 365. Company totals do not change.
+	PaymentLongOverdueDays *int `json:"payment_long_overdue_days,omitempty" maximum:"3650" minimum:"1"`
 
 	// RequireMfa Require a second factor for password sign-in. Password sessions without a confirmed
 	// authenticator are confined to MFA enrolment routes. Provider sessions rely on the

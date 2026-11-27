@@ -177,6 +177,8 @@ export const Refused: Story = {
     const control = await canvas.findByRole("switch", { name: SWITCH });
     await userEvent.click(control);
     await expect(control).toHaveAttribute("aria-checked", "true");
-    await expect(canvas.getByText("Settings not saved")).toBeInTheDocument();
+    await expect(
+      canvas.getByText(en["installationSettings.saveFailed"]),
+    ).toBeInTheDocument();
   },
 };

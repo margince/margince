@@ -16,6 +16,7 @@ import { SLOWEST_MEASURED_TEST_MS } from "../../../vitest.budget";
 import type { components } from "../../api/schema";
 import { createQueryClient } from "../../app/queryclient";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { CompanyContextCard, ManualCompanySetup } from "./company-context";
 
 type Capabilities = components["schemas"]["CompanyContextCapabilities"];
@@ -350,7 +351,7 @@ async function renderReview() {
   // profile and the input filled a tick later.
   const refresh = await screen.findByRole(
     "button",
-    { name: "Refresh from website" },
+    { name: englishCopy["settings.companyRefresh"] },
     {
       timeout: SETTLE_MS,
       onTimeout: diagnose(stub, container, "the refresh button"),
@@ -359,7 +360,7 @@ async function renderReview() {
   fireEvent.click(refresh);
   await screen.findByRole(
     "heading",
-    { name: "Review what changed" },
+    { name: englishCopy["settings.companyRefreshReady"] },
     {
       timeout: SETTLE_MS,
       onTimeout: diagnose(stub, container, "the review heading"),
@@ -420,7 +421,11 @@ describe("CompanyContextCard refresh review", () => {
         screen.queryByRole("checkbox", { name: /Ideal customer/ }),
       ).toBeNull();
       expect(screen.queryByRole("checkbox", { name: /Industry/ })).toBeNull();
-      expect(screen.getByRole("radio", { name: "Keep current" })).toBeTruthy();
+      expect(
+        screen.getByRole("radio", {
+          name: englishCopy["settings.companyResolution.keep_current"],
+        }),
+      ).toBeTruthy();
     },
     TEST_MS,
   );
@@ -468,11 +473,15 @@ describe("CompanyContextCard write posture", () => {
       // Stated once, on the profile card, rather than annotated onto each absent
       // control or repeated on the brand card above it.
       expect(screen.getAllByText(READ_ONLY)).toHaveLength(1);
-      const facts = screen.getByRole("region", { name: "Business context" });
+      const facts = screen.getByRole("region", {
+        name: englishCopy["settings.companyContextTitle"],
+      });
       expect(within(facts).getByText(READ_ONLY)).toBeTruthy();
       expect(screen.queryByRole("button", { name: EDIT_OFFER })).toBeNull();
       expect(
-        screen.queryByRole("button", { name: "Edit business context" }),
+        screen.queryByRole("button", {
+          name: englishCopy["settings.companyEditContext"],
+        }),
       ).toBeNull();
       expect(screen.queryByRole("button", { name: REFRESH })).toBeNull();
     },
@@ -488,7 +497,9 @@ describe("CompanyContextCard write posture", () => {
       // buttons for anybody.
       expect(screen.getByRole("button", { name: EDIT_OFFER })).toBeTruthy();
       expect(
-        screen.getByRole("button", { name: "Edit business context" }),
+        screen.getByRole("button", {
+          name: englishCopy["settings.companyEditContext"],
+        }),
       ).toBeTruthy();
       expect(screen.getByRole("button", { name: REFRESH })).toBeTruthy();
       // A reader who may write is told nothing about a posture they do not have.
@@ -518,7 +529,7 @@ describe("CompanyContextCard write posture", () => {
       // out of sight.
       expect(
         within(dialog).getByLabelText<HTMLInputElement>(
-          "Registered legal name",
+          englishCopy["ob.field.legal_name"],
         ),
       ).toBeTruthy();
       // Focus lands on the fact whose verb was pressed, so a keyboard reader who
@@ -527,7 +538,7 @@ describe("CompanyContextCard write posture", () => {
         () =>
           expect(document.activeElement).toBe(
             within(dialog).getByRole("textbox", {
-              name: "Products and services",
+              name: englishCopy["ob.field.offer_summary"],
             }),
           ),
         { timeout: SETTLE_MS },
@@ -550,7 +561,9 @@ describe("CompanyContextCard write posture", () => {
       await waitFor(
         () =>
           expect(document.activeElement).toBe(
-            within(dialog).getByRole("textbox", { name: "Ideal customer" }),
+            within(dialog).getByRole("textbox", {
+              name: englishCopy["ob.field.icp"],
+            }),
           ),
         { timeout: SETTLE_MS },
       );
@@ -564,7 +577,9 @@ describe("CompanyContextCard write posture", () => {
       await renderAs(ME_EDITOR);
 
       fireEvent.click(
-        screen.getByRole("button", { name: "Edit business context" }),
+        screen.getByRole("button", {
+          name: englishCopy["settings.companyEditContext"],
+        }),
       );
       const dialog = await screen.findByRole("dialog", undefined, {
         timeout: SETTLE_MS,
@@ -572,7 +587,9 @@ describe("CompanyContextCard write posture", () => {
       await waitFor(
         () =>
           expect(document.activeElement).toBe(
-            within(dialog).getByRole("textbox", { name: "Company name" }),
+            within(dialog).getByRole("textbox", {
+              name: englishCopy["ob.field.display_name"],
+            }),
           ),
         { timeout: SETTLE_MS },
       );
@@ -621,7 +638,7 @@ describe("CompanyContextCard refresh failures", () => {
     );
     const refresh = await screen.findByRole(
       "button",
-      { name: "Refresh from website" },
+      { name: englishCopy["settings.companyRefresh"] },
       { timeout: SETTLE_MS },
     );
     await userEvent.click(refresh);
@@ -657,7 +674,7 @@ describe("CompanyContextCard refresh failures", () => {
 
     expect(
       await screen.findByText(
-        "The status of this website read was lost. Start the refresh again.",
+        englishCopy["settings.companyRefreshUnreadable"],
         undefined,
         { timeout: SETTLE_MS },
       ),
@@ -808,11 +825,9 @@ describe("CompanyContextCard after a failed refetch", () => {
       await act(() => client.refetchQueries({ queryKey: ["company"] }));
 
       expect(
-        await screen.findByText(
-          "Could not load this view. Reload the page.",
-          undefined,
-          { timeout: SETTLE_MS },
-        ),
+        await screen.findByText(englishCopy["common.error"], undefined, {
+          timeout: SETTLE_MS,
+        }),
       ).toBeTruthy();
       expect(screen.queryByRole("heading", { name: "Brand" })).toBeNull();
     },
@@ -864,7 +879,7 @@ describe("CompanyContextCard save refusals", () => {
       fireEvent.click(
         await screen.findByRole(
           "button",
-          { name: "Edit business context" },
+          { name: englishCopy["settings.companyEditContext"] },
           { timeout: SETTLE_MS },
         ),
       );
@@ -872,7 +887,9 @@ describe("CompanyContextCard save refusals", () => {
         timeout: SETTLE_MS,
       });
       fireEvent.click(
-        within(dialog).getByRole("button", { name: "Save company context" }),
+        within(dialog).getByRole("button", {
+          name: englishCopy["settings.companySave"],
+        }),
       );
 
       const said = await within(dialog).findByText(
@@ -884,7 +901,7 @@ describe("CompanyContextCard save refusals", () => {
       expect(within(dialog).getAllByText(/at most 120/)).toHaveLength(1);
       expect(within(dialog).queryByText(/failed validation/)).toBeNull();
       const name = within(dialog).getByRole("textbox", {
-        name: "Company name",
+        name: englishCopy["ob.field.display_name"],
       });
       expect(name.getAttribute("aria-invalid")).toBe("true");
       expect(name.getAttribute("data-character-limit")).toBe("120");
@@ -935,7 +952,9 @@ describe("ManualCompanySetup save refusals", () => {
       await user.type(box, "Acme");
     }
     await user.click(
-      screen.getByRole("button", { name: "Create company context" }),
+      screen.getByRole("button", {
+        name: englishCopy["settings.companyCreateWorkspace"],
+      }),
     );
 
     expect(
@@ -971,7 +990,9 @@ describe("ManualCompanySetup once saved", () => {
       await user.type(box, "Acme");
     }
     await user.click(
-      screen.getByRole("button", { name: "Create company context" }),
+      screen.getByRole("button", {
+        name: englishCopy["settings.companyCreateWorkspace"],
+      }),
     );
 
     await waitFor(() => expect(globalThis.location.hash).toBe("#/home"));

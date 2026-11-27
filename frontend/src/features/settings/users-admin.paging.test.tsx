@@ -5,6 +5,7 @@
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { UsersAdminCard } from "./users-admin";
 import { backend, jsonResponse, ROSTER, render } from "./users-admin.testkit";
 
@@ -52,12 +53,14 @@ describe("the members list past its first page", () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     vi.useFakeTimers({ shouldAdvanceTime: true });
     await user.type(
-      screen.getByRole("searchbox", { name: "Search members" }),
+      screen.getByRole("searchbox", { name: englishCopy["users.search"] }),
       "Lena",
     );
     expect(screen.getByText("Lena Late")).toBeTruthy();
     expect(screen.queryByText("Ada Active")).toBeNull();
-    await user.clear(screen.getByRole("searchbox", { name: "Search members" }));
+    await user.clear(
+      screen.getByRole("searchbox", { name: englishCopy["users.search"] }),
+    );
     expect(screen.getByText("Ada Active")).toBeTruthy();
   });
 });

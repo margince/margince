@@ -3,6 +3,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import {
   fillSendableForm,
   footScheduleConfirm,
@@ -64,7 +65,9 @@ describe("ComposeWindow send refusals", () => {
     expect(await screen.findByText(/without permission to send/i)).toBeTruthy();
     expect(
       screen
-        .getByRole("link", { name: "Reconnect your mailbox" })
+        .getByRole("link", {
+          name: englishCopy["compose.mailboxNotSendCapableGoto"],
+        })
         .getAttribute("href"),
     ).toBe("/#/settings/connections");
     expect(screen.queryByText(MAILBOX_NOT_SEND_CAPABLE.detail)).toBeNull();
@@ -102,7 +105,9 @@ describe("ComposeWindow send refusals", () => {
     ).toBeInTheDocument();
     expect(
       screen
-        .getByRole("link", { name: "Connect a mailbox" })
+        .getByRole("link", {
+          name: englishCopy["compose.mailboxNotConnectedGoto"],
+        })
         .getAttribute("href"),
     ).toBe("/#/settings/connections");
     expect(screen.queryByText(/capture only/i)).toBeNull();
@@ -117,7 +122,9 @@ describe("ComposeWindow send refusals", () => {
       await screen.findByText(/No mailbox is connected/i),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("link", { name: "Connect a mailbox" }),
+      screen.getByRole("link", {
+        name: englishCopy["compose.mailboxNotConnectedGoto"],
+      }),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Send" })).toBeDisabled();
   });
@@ -182,10 +189,12 @@ describe("ComposeWindow send refusals", () => {
     await screen.findByRole("combobox", { name: WHY_ASK });
     await fillSendableForm(user);
     await user.click(
-      screen.getByRole("button", { name: "Other ways to send" }),
+      screen.getByRole("button", { name: englishCopy["compose.sendOptions"] }),
     );
     await user.click(
-      await screen.findByRole("button", { name: "Schedule send" }),
+      await screen.findByRole("button", {
+        name: englishCopy["compose.schedule"],
+      }),
     );
     await user.click(
       await screen.findByRole("button", { name: /Tomorrow morning/ }),

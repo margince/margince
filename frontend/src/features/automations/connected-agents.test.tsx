@@ -11,6 +11,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { SettingsScreen, settingsAddress } from "../settings/settings";
 import { ConnectedAgentsCard } from "./connected-agents";
 
@@ -211,8 +212,10 @@ describe("ConnectedAgentsCard", () => {
     renderConnectedAgents({ scopes: ["read", "enrich"] });
     // A human who ticked "Use AI and buy data" cannot map a raw "enrich" chip
     // back to the decision they made.
-    expect(await screen.findByText("Read records")).toBeTruthy();
-    expect(screen.getByText("Use AI and buy data")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["passport.scope.read"]),
+    ).toBeTruthy();
+    expect(screen.getByText(englishCopy["passport.scope.enrich"])).toBeTruthy();
     expect(screen.queryByText("enrich")).toBeNull();
   });
 
@@ -286,7 +289,9 @@ describe("ConnectedAgentsCard", () => {
     vi.stubGlobal("fetch", backend({ passports: [MINTED] }));
     render(<ConnectedAgentsCard />);
     await waitFor(() =>
-      expect(screen.getByText("No AI tool connected yet.")).toBeTruthy(),
+      expect(
+        screen.getByText(englishCopy["agents.noneConnected"]),
+      ).toBeTruthy(),
     );
   });
 
@@ -309,7 +314,7 @@ describe("ConnectedAgentsCard", () => {
           document.querySelector('[data-testid="connection-pp-lapsed"]'),
         ).toBeTruthy(),
       );
-      expect(screen.getByText("Credential expired")).toBeTruthy();
+      expect(screen.getByText(englishCopy["agents.lapsed"])).toBeTruthy();
       // The column and the folded caption both say it is over, never "Expires".
       expect(screen.getAllByText(/^Expired 30\/07\/2026$/)).toHaveLength(1);
       expect(screen.getByText(/· Expired 30\/07\/2026/)).toBeTruthy();
@@ -395,7 +400,9 @@ describe("ConnectedAgentsCard", () => {
     // The DELETE firing is not the claim — the row leaving the list is. Without
     // this the test passes on a refetch that never happens.
     await waitFor(() =>
-      expect(screen.getByText("No AI tool connected yet.")).toBeTruthy(),
+      expect(
+        screen.getByText(englishCopy["agents.noneConnected"]),
+      ).toBeTruthy(),
     );
     expect(document.querySelector('[data-testid^="connection-"]')).toBeNull();
   });
@@ -420,7 +427,9 @@ describe("ConnectedAgentsCard", () => {
     );
 
     await waitFor(() =>
-      expect(screen.getByText("No AI tool connected yet.")).toBeTruthy(),
+      expect(
+        screen.getByText(englishCopy["agents.noneConnected"]),
+      ).toBeTruthy(),
     );
     expect(opener.isConnected).toBe(false);
     // The region that held the row, which now reads back what is left — the
@@ -430,7 +439,7 @@ describe("ConnectedAgentsCard", () => {
       throw new Error("focus left the document entirely after the disconnect");
     }
     expect(landed).not.toBe(document.body);
-    expect(landed.textContent).toContain("No AI tool connected yet.");
+    expect(landed.textContent).toContain(englishCopy["agents.noneConnected"]);
   });
 });
 
@@ -458,7 +467,11 @@ describe("ConnectedAgentsCard: disconnected tools", () => {
     const user = userEvent.setup();
     await user.click(toggle);
     expect(await screen.findByText("Old Gemini")).toBeTruthy();
-    await user.click(screen.getByRole("button", { name: "Hide disconnected" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: englishCopy["agents.hideDisconnected"],
+      }),
+    );
     expect(screen.queryByText("Old Gemini")).toBeNull();
   });
 
@@ -481,7 +494,11 @@ describe("ConnectedAgentsCard: disconnected tools", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(screen.getByText("Claude Code")).toBeTruthy();
 
-    await user.click(screen.getByRole("button", { name: "Hide disconnected" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: englishCopy["agents.hideDisconnected"],
+      }),
+    );
     expect(screen.queryByText("Claude Code")).toBeNull();
     expect(
       screen.getByRole("button", { name: "Show 1 disconnected tool" }),
@@ -493,7 +510,7 @@ describe("ConnectedAgentsCard: disconnected tools", () => {
     render(<ConnectedAgentsCard />);
 
     await screen.findByRole("button", { name: "Show 1 disconnected tool" });
-    expect(screen.getByText("No AI tool connected yet.")).toBeTruthy();
+    expect(screen.getByText(englishCopy["agents.noneConnected"])).toBeTruthy();
     expect(screen.queryByText("Old Gemini")).toBeNull();
   });
 });
@@ -541,7 +558,7 @@ describe("ConnectedAgentsCard focus after a disconnect", () => {
     expect(document.activeElement).toBe(
       document.querySelector('[data-connection="pp-second"]'),
     );
-    expect(screen.getByText("Disconnected")).toBeTruthy();
+    expect(screen.getByText(englishCopy["agents.disconnected"])).toBeTruthy();
   });
 });
 
@@ -586,7 +603,9 @@ describe("ConnectedAgentsCard: work areas", () => {
       }),
     );
     expect(
-      await screen.findByRole("dialog", { name: "Change areas" }),
+      await screen.findByRole("dialog", {
+        name: englishCopy["passportAreas.open"],
+      }),
     ).toBeTruthy();
   });
 

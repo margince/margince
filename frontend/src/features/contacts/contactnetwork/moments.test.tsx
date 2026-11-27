@@ -126,7 +126,7 @@ describe("the Progress timeline", () => {
       [ask()],
     );
     expect(rowTexts()).toHaveLength(1);
-    expect(screen.getByText("Hidden for your role")).toBeTruthy();
+    expect(screen.getByText(en["state.withheld"])).toBeTruthy();
     expect(screen.queryByText(en["contact.network.noMoments"])).toBeNull();
   });
 
@@ -134,7 +134,7 @@ describe("the Progress timeline", () => {
     renderTimeline(undefined, [ask()]);
     expect(rowTexts()).toHaveLength(1);
     expect(screen.queryByText(en["contact.network.noMoments"])).toBeNull();
-    expect(screen.queryByText("Hidden for your role")).toBeNull();
+    expect(screen.queryByText(en["state.withheld"])).toBeNull();
   });
 
   it("says nothing has moved only when there is neither a change nor an ask", () => {

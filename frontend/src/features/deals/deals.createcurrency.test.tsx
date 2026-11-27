@@ -14,6 +14,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { INSTALLATION_SETTINGS_KEY } from "../../lib/uploadlimit";
 import { meFixture } from "../../testing/mefixture";
 import { DealsScreen } from "./deals";
@@ -192,15 +193,17 @@ describe("the New deal currency", () => {
     await pickOption(user, dialog.getByLabelText("Owner"), "Anna Weber");
     await pickOption(
       user,
-      dialog.getByLabelText("Acquisition source"),
+      dialog.getByLabelText(englishCopy["deal.acquisitionSource"]),
       "Referral",
     );
     await waitFor(() =>
-      expect(dialog.getByLabelText("Referring partner")).toBeTruthy(),
+      expect(
+        dialog.getByLabelText(englishCopy["deal.partnerCompany"]),
+      ).toBeTruthy(),
     );
     await pickOption(
       user,
-      dialog.getByLabelText("Referring partner"),
+      dialog.getByLabelText(englishCopy["deal.partnerCompany"]),
       "Xentral",
     );
     await user.click(dialog.getByRole("button", { name: "Create" }));

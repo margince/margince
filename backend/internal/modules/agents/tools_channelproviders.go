@@ -56,7 +56,7 @@ func RegisterChannelProviderTools(r *Registry, directory ChannelProviderDirector
 
 var listChannelProvidersCopy = toolCopy{
 	Purpose: "Find out which messaging transports exist in THIS installation, and what each is called.",
-	Limits: "It reports what the installation composed, not what this workspace has connected. " +
+	Limits: "It reports what the installation composed, not what this company has connected. " +
 		"supplies_transport=false means the transport cannot carry an outbound message at all, so a reply on it " +
 		"will be refused however the conversation was captured.",
 	Instead: "To read the messages themselves, use list_records on activity and filter by channel_provider.",

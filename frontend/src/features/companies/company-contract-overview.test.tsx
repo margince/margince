@@ -11,6 +11,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { company360, companyBackstop } from "../../testing/company.fixtures";
 import { stubFetch } from "../../testing/company.testkit";
 import { CompanyScreen } from "./companies";
@@ -111,7 +112,7 @@ describe("the Deals tab's commercial card reports the contract standing", () => 
     // a card holding one line that says nothing is there.
     await screen.findByRole("heading", { name: "Deals" });
     expect(screen.queryByRole("heading", { name: "Commercial" })).toBeNull();
-    expect(screen.queryByText("No contract on record")).toBeNull();
+    expect(screen.queryByText(englishCopy["contracts.state.none"])).toBeNull();
   });
 
   it("draws no figure for an agreement nobody priced", async () => {
@@ -166,6 +167,6 @@ describe("the Deals tab's commercial card reports the contract standing", () => 
     await screen.findByRole("heading", { name: "Deals" });
     expect(screen.queryByRole("heading", { name: "Commercial" })).toBeNull();
     expect(screen.queryByText(/Under contract/)).toBeNull();
-    expect(screen.queryByText("No contract on record")).toBeNull();
+    expect(screen.queryByText(englishCopy["contracts.state.none"])).toBeNull();
   });
 });

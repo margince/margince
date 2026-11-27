@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   meRoute,
@@ -78,7 +79,7 @@ export const AnswersPerAddress: Story = {
       }),
     ).toBeVisible();
     await expect(
-      page.getByRole("button", { name: "Remove from contacts" }),
+      page.getByRole("button", { name: englishCopy["senders.waiting.remove"] }),
     ).toBeVisible();
   },
 };

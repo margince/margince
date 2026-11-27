@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import { StoryProviders } from "../../testing/story-utils";
 import { AnalyticsScreen } from "./analytics";
 import { SalesHeader } from "./analytics.overview.salesheader";
@@ -36,7 +37,7 @@ export const Loaded: Story = {
   ),
   play: async ({ canvasElement }) => {
     await within(canvasElement).findByRole("region", {
-      name: "Opening readings",
+      name: englishCopy["analytics.overview.readings"],
     });
   },
 };

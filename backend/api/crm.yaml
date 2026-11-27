@@ -43056,6 +43056,12 @@ components:
         changed only by admin/ops.
       required: [name, timezone, base_currency, base_language, fiscal_year_start_month, dead_work_banner_hours, oauth_access_token_ttl_minutes, forecast_forward_measure, base_currency_locked, max_upload_bytes, sign_in_providers, operations, agent_allowances, call_whatsapp, call_telegram, call_zalo, individual_performance, forecast_self_correcting, forecast_likely_threshold]
       properties:
+        payment_long_overdue_days:
+          type: integer
+          minimum: 1
+          maximum: 3650
+          description: Days overdue after which Home folds invoices into Long overdue. Default 365. Company totals do not change.
+
         locks: { $ref: '#/components/schemas/SettingLocks' }
         name:
           type: string
@@ -43262,6 +43268,12 @@ components:
       type: object
       description: A sparse installation-settings patch (admin/ops, human-only).
       properties:
+        payment_long_overdue_days:
+          type: integer
+          minimum: 1
+          maximum: 3650
+          description: Days overdue after which Home folds invoices into Long overdue. Default 365. Company totals do not change.
+
         name:
           type: string
           maxLength: 200
@@ -53251,6 +53263,10 @@ components:
       type: object
       required: [state, access_scope, linked_companies, invoice_count, company_count, totals, customers, data, page]
       properties:
+        long_overdue_days: { type: integer, minimum: 1, maximum: 3650 }
+        long_overdue:
+          $ref: '#/components/schemas/CustomerPaymentAgedGroup'
+
         state: { $ref: '#/components/schemas/FinanceSummaryState' }
         access_scope:
           type: string
@@ -53275,12 +53291,24 @@ components:
         customers:
           type: array
           maxItems: 3
-          description: Up to three company and currency groups, oldest overdue invoice first.
+          description: Up to three company and currency groups of actionable invoices, recently overdue first and then larger amounts within each currency.
           items: { $ref: '#/components/schemas/CustomerPaymentCustomer' }
         data:
           type: array
           items: { $ref: '#/components/schemas/CustomerPaymentInvoice' }
         page: { $ref: '#/components/schemas/PageInfo' }
+    CustomerPaymentAgedGroup:
+      type: object
+      required: [invoice_count, totals, customers]
+      properties:
+        invoice_count: { type: integer, minimum: 0 }
+        totals:
+          type: array
+          items: { $ref: '#/components/schemas/CustomerPaymentTotal' }
+        customers:
+          type: array
+          maxItems: 3
+          items: { $ref: '#/components/schemas/CustomerPaymentCustomer' }
     CustomerPaymentTotal:
       type: object
       required: [currency, amount_minor]

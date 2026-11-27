@@ -19,6 +19,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { EmailAccessEditor } from "./emailaccesseditor";
 
 type EmailPresentation = components["schemas"]["EmailPresentation"];
@@ -188,13 +189,15 @@ describe("what the drawer says about who reads a message", () => {
     // Who reads a message is a fact about it, like its date. A reader without
     // standing to widen it is still told what it is: the mark in a word, and
     // the sentence that says what the word means for them.
-    expect(screen.getByText("Participants")).toBeTruthy();
     expect(
-      screen.getByText("Only the people on this message can read it."),
+      screen.getByText(englishCopy["visibility.participants"]),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(englishCopy["email.access.sentence.participants"]),
     ).toBeTruthy();
     // And offered nothing to press, because the server said so.
     expect(
-      screen.queryByRole("button", { name: "Change visibility" }),
+      screen.queryByRole("button", { name: englishCopy["compose.audience"] }),
     ).toBeNull();
   });
 
@@ -216,7 +219,7 @@ describe("what the drawer says about who reads a message", () => {
     );
 
     expect(
-      screen.queryByRole("button", { name: "Change visibility" }),
+      screen.queryByRole("button", { name: englishCopy["compose.audience"] }),
     ).toBeNull();
     expect(screen.queryByRole("button", { name: /Share/ })).toBeNull();
   });
@@ -262,7 +265,7 @@ describe("what the drawer says about who reads a message", () => {
     // false statement about a message limited to contacts this reader cannot
     // name, so nothing is drawn for it.
     expect(
-      screen.getByText("Only the people named below can read this."),
+      screen.getByText(englishCopy["email.access.sentence.selected"]),
     ).toBeTruthy();
     expect(screen.queryByRole("list")).toBeNull();
   });
@@ -281,7 +284,9 @@ describe("what the drawer says about who reads a message", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "Change visibility" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["compose.audience"] }),
+    );
 
     // THE point of this editor. The timeline row's dialog opens blank, so a
     // reader could only replace a set, never edit one. Here Ana is already
@@ -306,9 +311,11 @@ describe("what the drawer says about who reads a message", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "Change visibility" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["compose.audience"] }),
+    );
     const confirm = await screen.findByRole("button", {
-      name: "Save visibility",
+      name: englishCopy["compose.audienceConfirm"],
     });
 
     // Nothing moved yet: the audience is the same and so is the set.
@@ -335,9 +342,11 @@ describe("what the drawer says about who reads a message", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "Change visibility" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["compose.audience"] }),
+    );
     const confirm = await screen.findByRole("button", {
-      name: "Save visibility",
+      name: englishCopy["compose.audienceConfirm"],
     });
 
     // Unticking the only member leaves a limit nobody meant. Narrowing a
@@ -363,10 +372,10 @@ describe("what the drawer says about who reads a message", () => {
     // captured message's audience is derived from every importing mailbox, so
     // what this reader changes is their own contribution to the thread.
     expect(
-      screen.getByRole("button", { name: "Share with the company" }),
+      screen.getByRole("button", { name: englishCopy["compose.threadShare"] }),
     ).toBeTruthy();
     expect(
-      screen.queryByRole("button", { name: "Change visibility" }),
+      screen.queryByRole("button", { name: englishCopy["compose.audience"] }),
     ).toBeNull();
   });
 
@@ -385,7 +394,11 @@ describe("what the drawer says about who reads a message", () => {
     // A shared thread offers the verb that seals it, never a verb naming the
     // state it is already in — that reads as the opposite of what the press
     // does.
-    expect(screen.getByRole("button", { name: "Make private" })).toBeTruthy();
+    expect(
+      screen.getByRole("button", {
+        name: englishCopy["compose.threadMakePrivate"],
+      }),
+    ).toBeTruthy();
     expect(screen.queryByRole("button", { name: /Share/ })).toBeNull();
   });
 
@@ -413,7 +426,11 @@ describe("what the drawer says about who reads a message", () => {
 
       await userEvent
         .setup()
-        .click(screen.getByRole("button", { name: "Share with the company" }));
+        .click(
+          screen.getByRole("button", {
+            name: englishCopy["compose.threadShare"],
+          }),
+        );
 
       expect(await screen.findByText(said)).toBeTruthy();
     },
@@ -434,7 +451,7 @@ describe("what the drawer says about who reads a message", () => {
 
     // The button sits beside ONE message. Without this the press reads as a
     // change to that message alone, and it is not.
-    expect(screen.getByText("Applies to the whole thread.")).toBeTruthy();
+    expect(screen.getByText(englishCopy["compose.threadScope"])).toBeTruthy();
   });
 });
 
@@ -455,8 +472,12 @@ describe("the mark under the subject", () => {
     // Two facts, two marks: what the limit IS, and what decided it. The
     // reason arrives as a token and is translated — a line reading
     // `explicitly_confidential` would be worse than one reading nothing.
-    expect(screen.getByText("Participants")).toBeTruthy();
-    expect(screen.getByText("Marked confidential")).toBeTruthy();
+    expect(
+      screen.getByText(englishCopy["visibility.participants"]),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(englishCopy["compose.reason.explicitlyConfidential"]),
+    ).toBeTruthy();
     expect(screen.queryByText("explicitly_confidential")).toBeNull();
   });
 
@@ -473,7 +494,9 @@ describe("the mark under the subject", () => {
     // A message nothing held has nothing to explain, and an empty second mark
     // beside the first would read as a fact the response failed to fill in.
     expect(screen.getByText("Team")).toBeTruthy();
-    expect(screen.queryByText("Marked confidential")).toBeNull();
+    expect(
+      screen.queryByText(englishCopy["compose.reason.explicitlyConfidential"]),
+    ).toBeNull();
   });
 
   it("draws no reason for a token it cannot name", () => {
@@ -490,7 +513,9 @@ describe("the mark under the subject", () => {
     // A reason the server learned to give and the map has not renders nothing
     // rather than the raw token. The gate holds the two sides together; this
     // is what the screen does while they are apart.
-    expect(screen.getByText("Participants")).toBeTruthy();
+    expect(
+      screen.getByText(englishCopy["visibility.participants"]),
+    ).toBeTruthy();
     expect(screen.queryByText("a_reason_shipped_after_this_build")).toBeNull();
   });
 
@@ -533,9 +558,5 @@ it("keeps internal operational sharing on the individual message and offers no w
   expect(
     screen.queryByRole("radio", { name: /everyone|workspace/i }),
   ).toBeNull();
-  expect(
-    screen.getByText(
-      "This changes the named readers of this message only. Participants retain access. Saving a new selection replaces the previous named readers.",
-    ),
-  ).toBeTruthy();
+  expect(screen.getByText(englishCopy["internalMail.shareNote"])).toBeTruthy();
 });

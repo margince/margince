@@ -16,6 +16,7 @@ import type {
   BoardMoneyColumn,
 } from "../../design-system/pipelineboard";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import {
   type WriteTo,
   WriteToProvider,
@@ -224,15 +225,15 @@ describe("DealPipelineBoard", () => {
       const { panel } = await openMenu("Fleet retrofit");
       expect(itemNames(panel)).toEqual([
         "Move to Proposal",
-        "Move to stage",
+        englishCopy["deals.bulkStage"],
         "Mark won",
         "Mark lost",
-        "Change close date",
-        "Change owner",
-        "Deal summary",
+        englishCopy["deal.card.changeCloseDate"],
+        englishCopy["ownerPick.change"],
+        englishCopy["deal.card.summaryItem"],
         "Add task",
         "Copy link",
-        "Archive deal",
+        englishCopy["deal.archive"],
       ]);
     });
 
@@ -254,7 +255,9 @@ describe("DealPipelineBoard", () => {
         onAdvance,
       });
       const { user, panel } = await openMenu("Fleet retrofit");
-      await user.click(panel.getByRole("button", { name: "Move to stage" }));
+      await user.click(
+        panel.getByRole("button", { name: englishCopy["deals.bulkStage"] }),
+      );
       await user.click(await screen.findByRole("option", { name: "Won" }));
       expect(onAdvance).toHaveBeenCalledWith("d1", "s3");
     });
@@ -295,7 +298,10 @@ describe("DealPipelineBoard", () => {
         document.getElementById(trigger.getAttribute("aria-controls") ?? "") ??
           document.body,
       );
-      expect(itemNames(panel)).toEqual(["Deal summary", "Copy link"]);
+      expect(itemNames(panel)).toEqual([
+        englishCopy["deal.card.summaryItem"],
+        "Copy link",
+      ]);
     });
 
     // The deal page's rule: a seat that may not change the deal is offered
@@ -308,7 +314,7 @@ describe("DealPipelineBoard", () => {
       });
       const { panel } = await openMenu("Fleet retrofit");
       expect(itemNames(panel)).toEqual([
-        "Deal summary",
+        englishCopy["deal.card.summaryItem"],
         "Add task",
         "Copy link",
       ]);
@@ -324,7 +330,7 @@ describe("DealPipelineBoard", () => {
       const { panel } = await openMenu("Fleet retrofit");
       expect(panel.queryByRole("button", { name: "Move to Won" })).toBeNull();
       expect(itemNames(panel).slice(0, 3)).toEqual([
-        "Move to stage",
+        englishCopy["deals.bulkStage"],
         "Mark won",
         "Mark lost",
       ]);

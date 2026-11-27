@@ -54,17 +54,17 @@ var whatsSlippingCopy = toolCopy{
 }
 
 var reviewCommitmentsCopy = toolCopy{
-	Purpose: "Answer \"what has the team promised and not delivered?\": the open promises across the " +
-		"workspace, most overdue first, from BOTH places a promise is recorded (a task somebody " +
+	Purpose: "Answer \"which commitments has the team not delivered?\": the open commitments across the " +
+		"company, most overdue first, from BOTH places a commitment is recorded (a task somebody " +
 		"filed, and a commitment read out of a captured conversation, which carries the sentence " +
 		"it was read from). Each names when it came due and the record it was made about.",
-	Limits: "It reads what the workspace captured: a promise made in an uncaptured call, or in a " +
-		"thread nobody filed, is absent. The two sources are not linked, so a promise both said " +
+	Limits: "It reads what the company captured: a commitment made in an uncaptured call, or in a " +
+		"thread nobody filed, is absent. The two sources are not linked, so a commitment both said " +
 		"and typed can appear twice. Narrowing by assignee or project returns recorded TASKS " +
 		"alone (a conversation commitment carries neither), so a narrowed answer is a smaller " +
 		"question than the unnarrowed one. It is scoped to the records the caller may see.",
 	Instead: "Use whats_slipping_this_week when the question is which DEALS are at risk rather " +
-		"than which promises are outstanding, and catch_me_up_on for everything that has happened " +
+		"than which commitments are outstanding, and catch_me_up_on for everything that has happened " +
 		"on one record.",
 	Retain: "Each item carries source (task | conversation) and the id for that source (task_id " +
 		"or claim_id), plus assignee_id where a task has one. Every state is judged against " +
@@ -73,7 +73,7 @@ var reviewCommitmentsCopy = toolCopy{
 
 var prepareHandoffCopy = toolCopy{
 	Purpose: "Assemble what the delivery side of one project needs from the sales side: who owns " +
-		"it, who to call at the client, what was sold, by when, and what is already promised, " +
+		"it, who to call at the client, what was sold, by when, and existing commitments, " +
 		"with a named gap for each of those the records do not answer.",
 	Limits: "It reports what the records say and reads nothing outside them; each gap names the " +
 		"field it was read off. It is scoped to the records the caller may see, so a gap means the " +
@@ -100,7 +100,7 @@ var readProject360Copy = toolCopy{
 var whoKnowsCopy = toolCopy{
 	Purpose: "Answer \"who here knows this contact?\": the colleagues with a relationship to one " +
 		"contact, warmest first, with the interaction counts that ground the warmth.",
-	Limits: "It reports relationships this workspace can evidence from its own recorded " +
+	Limits: "It reports relationships this company can evidence from its own recorded " +
 		"interactions, so a genuine relationship nobody has logged does not appear. Never spoken " +
 		"is reported as no relationship rather than a score of zero.",
 	Instead: "Use intro_path_to when you want a route into a COMPANY rather than the colleagues who " +
@@ -126,7 +126,7 @@ var companyCoverageCopy = toolCopy{
 var introPathToCopy = toolCopy{
 	Purpose: "Find a warm route into a company: who the team already knows there, and which colleague " +
 		"could make the introduction.",
-	Limits: "It walks the relationships this workspace has recorded. A company nobody here has " +
+	Limits: "It walks the relationships this company has recorded. A company nobody here has " +
 		"ever spoken to has no warm path, and saying so is the correct answer rather than a " +
 		"failure.",
 	Instead: "Use who_knows when you already have the specific contact and want the colleagues " +
@@ -159,7 +159,7 @@ var runReportCopy = toolCopy{
 	// report with what each answers — a sample of a list printed directly below
 	// it, paid for on every listing of the whole surface.
 	Purpose: "Answer a question about totals, counts or breakdowns by running one of this " +
-		"workspace's prebuilt reports.",
+		"company's prebuilt reports.",
 	Limits: "Only the named reports exist, each with its own filter, grouping and measure names; " +
 		"anything else is refused. It aggregates: how many and how much, never which record.",
 	Instead: "Use search_records or whats_slipping_this_week when the answer is the records " +
@@ -188,7 +188,7 @@ var annotateBriefCopy = toolCopy{
 
 var readBriefCopy = toolCopy{
 	Purpose: "Read the ranked queue the user you act for sees when they open their morning " +
-		"brief: the deals the workspace decided are worth their attention today, in order, " +
+		"brief: the deals the company decided are worth their attention today, in order, " +
 		"with the rows behind each ranking.",
 	Limits: "It re-reads the last assembled run rather than building a new one, so its as_of " +
 		"says how current it is, and it is that user's own queue: it cannot be asked for " +
@@ -201,7 +201,7 @@ var readBriefCopy = toolCopy{
 }
 
 var readRelationshipsCopy = toolCopy{
-	Purpose: "Read the relationships this workspace has recorded, from the one id you name. " +
+	Purpose: "Read the relationships this company has recorded, from the one id you name. " +
 		"contact_id: the colleagues who know that contact, warmest first. company_id: a warm " +
 		"route into the company: who the team knows there and which colleague could make the introduction. " +
 		"deal_id: which roles at the deal's company the team has a relationship with, and where the " +
@@ -220,7 +220,7 @@ var readProjectCopy = toolCopy{
 	Purpose: "Read one project. overview: its whole page of company, current health, phase history (each move with " +
 		"its reason, and time per phase), deals, stakeholders, contracts, documents, open commitments, timeline, filing " +
 		"coverage, totals. handoff: what the delivery side needs from sales (who owns it, who " +
-		"to call at the client, what was sold, by when, what is already promised), with a named " +
+		"to call at the client, what was sold, by when, existing commitments), with a named " +
 		"gap for each the records do not answer.",
 	Limits: "overview cuts each section at 25 rows and flags it truncated; sections_omitted names " +
 		"what your grants withhold. A handoff gap means the field is empty as far as the caller " +

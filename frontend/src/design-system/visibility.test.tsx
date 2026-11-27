@@ -17,6 +17,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { Button } from "./atoms";
 import { type Visibility, VisibilityBadge, VisibilityLine } from "./visibility";
 
@@ -85,7 +86,9 @@ describe("VisibilityLine", () => {
     );
     const line = container.querySelector(".visibility-line");
     expect(line?.querySelector(".visibility")).toBeInTheDocument();
-    expect(line?.querySelector("button")).toHaveTextContent("Make private");
+    expect(line?.querySelector("button")).toHaveTextContent(
+      englishCopy["compose.threadMakePrivate"],
+    );
   });
 
   // jsdom loads no stylesheet and computes no layout, so where the slot SITS

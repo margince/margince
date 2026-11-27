@@ -6,6 +6,7 @@ import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { formatAnalyticsMoney } from "../../format/format";
+import { en as englishCopy } from "../../i18n/en";
 import { AnalyticsScreen } from "./analytics";
 import { ownLensContext, render, reportsStub } from "./analytics.testkit";
 
@@ -167,7 +168,9 @@ it("asks every pipeline card for the picked record scope, and leaves delivery co
   render(<AnalyticsScreen />);
 
   expect(
-    await screen.findByRole("combobox", { name: "Record scope" }),
+    await screen.findByRole("combobox", {
+      name: englishCopy["analytics.scopeLabel"],
+    }),
   ).toBeTruthy();
   const pipelineReports = [
     "pipeline-current",
@@ -237,7 +240,11 @@ it("keeps the pipeline cards for a deal reader whose context read is refused", a
   expect(
     bodies.find((sent) => sent.key === "pipeline-current")?.body.scope,
   ).toBeUndefined();
-  expect(screen.queryByRole("combobox", { name: "Record scope" })).toBeNull();
+  expect(
+    screen.queryByRole("combobox", {
+      name: englishCopy["analytics.scopeLabel"],
+    }),
+  ).toBeNull();
 });
 
 it("shows a failed context read instead of totals for a scope the link did not ask for", async () => {
@@ -286,13 +293,17 @@ it("lists open pipeline by close month in calendar order, undated deals last", a
   await openPipeline();
 
   const table = await screen.findByRole("table", {
-    name: "Open pipeline by close month",
+    name: englishCopy["analytics.reportPipelineByCloseMonth"],
   });
   const months = within(table)
     .getAllByRole("row")
     .slice(1)
     .map((row) => within(row).getAllByRole("cell")[0]?.textContent);
-  expect(months).toEqual(["November 2026", "December 2026", "No close date"]);
+  expect(months).toEqual([
+    "November 2026",
+    "December 2026",
+    englishCopy["analytics.noCloseDate"],
+  ]);
 });
 
 it("says when a month's total leaves out deals, and why", async () => {
@@ -320,7 +331,7 @@ it("says when a month's total leaves out deals, and why", async () => {
   await openPipeline();
 
   const table = await screen.findByRole("table", {
-    name: "Open pipeline by close month",
+    name: englishCopy["analytics.reportPipelineByCloseMonth"],
   });
   expect(
     within(table).getByText("1 deal has no exchange rate (SEK)"),

@@ -2,6 +2,7 @@
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { en as englishCopy } from "../i18n/en";
 import { navigateReplacing } from "../lib/router";
 import { useUnsavedGuard } from "../lib/unsavedclaims";
 import { replaceDial } from "../lib/urlstate";
@@ -39,7 +40,10 @@ function ShellDialog({ draft = false }: Readonly<{ draft?: boolean }>) {
   );
 }
 
-const dialog = () => screen.queryByRole("dialog", { name: "Log activity" });
+const dialog = () =>
+  screen.queryByRole("dialog", {
+    name: englishCopy["shell.shortcuts.logActivity"],
+  });
 
 describe("a dialog the shell holds, open while the screen changes", () => {
   it("closes when the reader moves to another screen", () => {
@@ -78,7 +82,7 @@ describe("a dialog the shell holds, open while the screen changes", () => {
   it("asks before it drops a draft no screen holds", () => {
     render(<ShellDialog draft />);
     act(() => navigateReplacing({ screen: "deals" }));
-    expect(screen.getByText("Discard unsaved changes?")).toBeTruthy();
+    expect(screen.getByText(englishCopy["unsaved.title"])).toBeTruthy();
     expect(dialog()).not.toBeNull();
   });
 });

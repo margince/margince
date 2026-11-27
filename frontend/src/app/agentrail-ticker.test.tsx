@@ -8,6 +8,7 @@ import { act, cleanup, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { useAgentTicker } from "./agentrail-ticker";
 
 // The line under the orb, as a unit. What it says is the product's own promise
@@ -68,7 +69,7 @@ describe("useAgentTicker", () => {
   it("names a list read in the reader's own words, not the cache key's", async () => {
     render(harness(<Ticker />));
     await read(["deals"], { data: [] });
-    expect(line()).toBe("Loading pipeline");
+    expect(line()).toBe(englishCopy["agent.ticker.read.deals"]);
   });
 
   it("speaks the reader's language, record name included", async () => {
@@ -124,7 +125,7 @@ describe("useAgentTicker", () => {
   it("drops a line once its moment has passed", async () => {
     render(harness(<Ticker />));
     await read(["deals"], { data: [] });
-    expect(line()).toBe("Loading pipeline");
+    expect(line()).toBe(englishCopy["agent.ticker.read.deals"]);
     await act(async () => {
       vi.advanceTimersByTime(2000);
     });
@@ -135,6 +136,6 @@ describe("useAgentTicker", () => {
     render(harness(<Ticker />));
     await read(["deals"], { data: [] });
     await read(["tasks"], { data: [] });
-    expect(line()).toBe("Loading tasks");
+    expect(line()).toBe(englishCopy["agent.ticker.read.tasks"]);
   });
 });

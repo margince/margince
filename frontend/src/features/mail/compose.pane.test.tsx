@@ -61,7 +61,7 @@ describe("what the composer says this message is", () => {
     // A reader who is shown a dropdown here is being asked to restate what
     // the thread in front of them says. The warning bar stays empty.
     await screen.findByText(/Replying to “Re: Q3”/);
-    expect(screen.queryByLabelText("Reason for contact")).toBeNull();
+    expect(screen.queryByLabelText(en["compose.why"])).toBeNull();
   });
 
   it("sends a reply with no claim at all", async () => {
@@ -216,9 +216,7 @@ describe("what the composer says this message is", () => {
     writeMessage("Body", "First contact.");
     await pressSend(user);
 
-    expect(
-      await screen.findByText("Select the reason for contact."),
-    ).toBeTruthy();
+    expect(await screen.findByText(en["compose.missingWhy"])).toBeTruthy();
     expect(sent).toBe(false);
   });
 });
@@ -272,7 +270,7 @@ describe("the composer's conversation pane", () => {
       />,
     );
     await user.click(
-      await screen.findByRole("button", { name: "Show selected message" }),
+      await screen.findByRole("button", { name: en["compose.selectedShow"] }),
     );
     const quote = document.querySelector<HTMLElement>(".compose-earlier");
     if (!quote) throw new Error("reply quote is absent");
@@ -316,7 +314,7 @@ describe("the composer's conversation pane", () => {
       />,
     );
     await user.click(
-      await screen.findByRole("button", { name: "Show selected message" }),
+      await screen.findByRole("button", { name: en["compose.selectedShow"] }),
     );
     await screen.findByText("The signed order is attached.");
     await user.click(screen.getByRole("button", { name: /Change$/ }));
@@ -363,7 +361,7 @@ describe("the composer's conversation pane", () => {
     );
     await screen.findByText(/Following up on “Re: Q3”/);
     await user.click(
-      screen.getByRole("button", { name: "Show selected message" }),
+      screen.getByRole("button", { name: en["compose.selectedShow"] }),
     );
     const quote = document.querySelector<HTMLElement>(".compose-quoted");
     if (!quote) throw new Error("selected quote is absent");
@@ -426,7 +424,7 @@ describe("the composer's conversation pane", () => {
     // The words the draft answers are quoted under it; the withheld one is
     // not, since nobody here may read it.
     await user.click(
-      await screen.findByRole("button", { name: "Show selected message" }),
+      await screen.findByRole("button", { name: en["compose.selectedShow"] }),
     );
     expect(
       await screen.findByText("The signed order is attached."),
@@ -530,7 +528,7 @@ describe("the composer's conversation pane", () => {
     );
 
     await user.click(
-      await screen.findByRole("button", { name: "Show selected message" }),
+      await screen.findByRole("button", { name: en["compose.selectedShow"] }),
     );
     await waitFor(() =>
       expect(document.querySelector(".compose-earlier")?.textContent).toContain(

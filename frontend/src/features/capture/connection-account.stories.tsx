@@ -8,6 +8,7 @@ import { Panel, PanelBody } from "../../design-system/panel";
 import { ProviderList } from "../../design-system/providerrow";
 import { PageSaveBar, SavePageProvider } from "../../design-system/savepage";
 import { accountsOf } from "../../format/connectorprovider";
+import { en as englishCopy } from "../../i18n/en";
 import type { ImportWindow } from "../../lib/connect-account";
 import {
   installFetchStub,
@@ -310,7 +311,7 @@ async function openBringsIn(canvasElement: HTMLElement) {
   );
   await userEvent.click(
     await within(canvasElement.ownerDocument.body).findByRole("button", {
-      name: "Change what it brings in",
+      name: englishCopy["connectors.menu.bringsIn"],
     }),
   );
 }
@@ -333,7 +334,9 @@ export const NarrowingPosture: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByRole("combobox", { name: "Mail visibility" }),
+      await canvas.findByRole("combobox", {
+        name: englishCopy["connectors.mailPosture.label"],
+      }),
     );
     await userEvent.click(
       await within(canvasElement.ownerDocument.body).findByRole("option", {

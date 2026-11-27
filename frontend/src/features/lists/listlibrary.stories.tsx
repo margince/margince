@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import type { SavedView } from "../../lib/savedviews.queries";
 import {
   listsMe,
@@ -180,7 +181,7 @@ export const StartingAShortlist: Story = {
   play: async ({ canvasElement }) => {
     await userEvent.click(
       await within(canvasElement).findByRole("button", {
-        name: "New Shortlist",
+        name: englishCopy["lists.newShortlist"],
       }),
     );
     await within(document.body).findByRole("dialog");

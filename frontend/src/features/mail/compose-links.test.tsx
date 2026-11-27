@@ -13,6 +13,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { writeMessage } from "../../design-system/richtext-testing";
 import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { pressDraft } from "../../testing/composedraft.testkit";
 import { CONNECTED_ROSTER } from "../../testing/mailroster.testkit";
 import { installComposeClock, pressSend } from "./compose.testkit";
@@ -778,7 +779,7 @@ it.each(["proj-2", ""])(
         onClose={vi.fn()}
       />,
     );
-    await screen.findByText("Saved draft restored");
+    await screen.findByText(englishCopy["compose.savedDraftRestored"]);
     act(() =>
       answerProjects(
         jsonResponse({

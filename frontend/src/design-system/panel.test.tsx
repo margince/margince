@@ -17,6 +17,7 @@ import {
 } from "../../census/rules/panel.census";
 import { stable } from "../format/collate";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { TOUCH_TARGET_PX } from "../testing/css";
 import { EmptyState } from "./atoms";
 import { PANEL_TONES, Panel, PanelBody, PanelIntro } from "./panel";
@@ -47,7 +48,7 @@ describe("a panel's help", () => {
     );
     const region = screen.getByRole("region", { name: "Growth fit" });
     const mark = within(region).getByRole("button", {
-      name: "About this section",
+      name: englishCopy["section.help"],
     });
     // The title still names the region alone.
     expect(within(region).getByRole("heading").textContent).toBe("Growth fit");

@@ -11,6 +11,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { installFetchStub, jsonResponse } from "../testing/story-utils";
 import { ContactRestrictedMark, ContactStops, LeadStops } from "./stops";
 
@@ -80,9 +81,15 @@ describe("the stops on a contact", () => {
     });
     render(<ContactStops contactId="p-1" />);
 
-    expect(await screen.findByText("Objected to marketing")).toBeTruthy();
+    expect(
+      await screen.findByText(
+        englishCopy["consent.stopKind.marketing_objection"],
+      ),
+    ).toBeTruthy();
     expect(screen.getByText(/Recorded by Rita Rep/)).toBeTruthy();
-    await user.click(screen.getByRole("button", { name: "Correct this stop" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["consent.stopCorrect"] }),
+    );
 
     const dialog = await screen.findByRole("dialog");
     const confirm = Array.from(dialog.querySelectorAll("button")).find(
@@ -91,7 +98,7 @@ describe("the stops on a contact", () => {
     if (!confirm) throw new Error("the dialog has no confirm button");
     await user.click(confirm);
     expect(lifted).not.toHaveBeenCalled();
-    expect(screen.getByText("This field is required.")).toBeTruthy();
+    expect(screen.getByText(englishCopy["record.fieldRequired"])).toBeTruthy();
     expect(document.activeElement).toBe(screen.getByRole("textbox"));
 
     await user.type(screen.getByRole("textbox"), "typed on the wrong contact");
@@ -112,7 +119,7 @@ describe("the stops on a contact", () => {
 
     expect(
       await screen.findByText(
-        "The contact set this stop. Only they can change it.",
+        englishCopy["consent.stopBlocked.subject_decision"],
       ),
     ).toBeTruthy();
     expect(screen.getByText(/means telling the contact first/)).toBeTruthy();
@@ -137,7 +144,9 @@ describe("lifting a restriction", () => {
     render(<ContactStops contactId="p-1" />);
 
     await user.click(
-      await screen.findByRole("button", { name: "Lift the restriction" }),
+      await screen.findByRole("button", {
+        name: englishCopy["consent.restrictionLift"],
+      }),
     );
     expect(
       await screen.findByText(/first sends the contact a notice/),
@@ -221,12 +230,12 @@ describe("a lift already underway", () => {
     render(<ContactStops contactId="p-1" />);
 
     expect(
-      await screen.findByText(
-        "The notice was sent. The restriction is ending.",
-      ),
+      await screen.findByText(englishCopy["consent.restrictionLiftSent"]),
     ).toBeTruthy();
     expect(
-      screen.queryByRole("button", { name: "Lift the restriction" }),
+      screen.queryByRole("button", {
+        name: englishCopy["consent.restrictionLift"],
+      }),
     ).toBeNull();
   });
 });
@@ -244,8 +253,14 @@ describe("the stops on a lead", () => {
     });
     render(<LeadStops leadId="l-1" />);
 
-    expect(await screen.findByText("Objected to marketing")).toBeTruthy();
-    await user.click(screen.getByRole("button", { name: "Correct this stop" }));
+    expect(
+      await screen.findByText(
+        englishCopy["consent.stopKind.marketing_objection"],
+      ),
+    ).toBeTruthy();
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["consent.stopCorrect"] }),
+    );
     await user.type(
       await screen.findByRole("textbox"),
       "typed on the wrong lead",
@@ -270,7 +285,11 @@ describe("the restriction mark on a contact", () => {
         jsonResponse({ stops: [TYPED_OBJECTION, RESTRICTION] }),
     });
     render(<ContactRestrictedMark contactId="p-1" />);
-    expect(await screen.findByText("Processing is restricted")).toBeTruthy();
+    expect(
+      await screen.findByText(
+        englishCopy["consent.stopKind.processing_restriction"],
+      ),
+    ).toBeTruthy();
   });
 
   it("stays away for a stop that is not a restriction", async () => {
@@ -278,6 +297,10 @@ describe("the restriction mark on a contact", () => {
     installFetchStub({ [STOPS_ROUTE]: stops });
     render(<ContactRestrictedMark contactId="p-1" />);
     await waitFor(() => expect(stops).toHaveBeenCalled());
-    expect(screen.queryByText("Processing is restricted")).toBeNull();
+    expect(
+      screen.queryByText(
+        englishCopy["consent.stopKind.processing_restriction"],
+      ),
+    ).toBeNull();
   });
 });

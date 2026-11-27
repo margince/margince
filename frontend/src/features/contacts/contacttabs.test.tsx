@@ -15,6 +15,7 @@ import { pickOption } from "../../design-system/select-testing";
 import { telUri } from "../../format/contacturi";
 import { UTC_ZONE } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { pretendReaderZone } from "../../testing/readerzone.testkit";
 import { jsonResponse, stubWithSession } from "../../testing/story-utils";
 import { ContactDealsTab } from "./contactdeals";
@@ -208,7 +209,9 @@ describe("the timeline tab", () => {
     expect(
       screen.getByRole("button", { name: "All" }).getAttribute("aria-pressed"),
     ).toBe("false");
-    expect(screen.queryByLabelText("Activity kind")).toBeNull();
+    expect(
+      screen.queryByLabelText(englishCopy["timeline.filters.kind"]),
+    ).toBeNull();
   });
 
   // The record's chronology holds the exchanges and the record's own edits, and
@@ -265,7 +268,9 @@ describe("the timeline tab", () => {
     withProviders(<ContactTimelineTab contactId="p-1" view={view} />);
 
     await user.click(screen.getByRole("button", { name: "Threads" }));
-    await user.click(screen.getByLabelText("Activity kind"));
+    await user.click(
+      screen.getByLabelText(englishCopy["timeline.filters.kind"]),
+    );
 
     const listbox = await screen.findByRole("listbox");
     const offered = within(listbox)
@@ -282,13 +287,17 @@ describe("the timeline tab", () => {
     const user = userEvent.setup();
     withProviders(<ContactTimelineTab contactId="p-1" view={view} />);
 
-    await pickOption(user, screen.getByLabelText("Activity kind"), "Meetings");
+    await pickOption(
+      user,
+      screen.getByLabelText(englishCopy["timeline.filters.kind"]),
+      "Meetings",
+    );
     await user.click(screen.getByRole("button", { name: "Threads" }));
 
     await waitFor(() =>
-      expect(screen.getByLabelText("Activity kind").textContent).toContain(
-        "All kinds",
-      ),
+      expect(
+        screen.getByLabelText(englishCopy["timeline.filters.kind"]).textContent,
+      ).toContain("All kinds"),
     );
   });
 
@@ -338,7 +347,7 @@ describe("the timeline tab", () => {
   it("says the section is withheld rather than drawing it empty", () => {
     withProviders(<ContactTimelineTab contactId="p-1" view={withheld} />);
     expect(screen.queryByText(/Nothing has been logged/)).toBeNull();
-    expect(screen.getByText("Hidden for your role")).toBeTruthy();
+    expect(screen.getByText(englishCopy["state.withheld"])).toBeTruthy();
   });
 
   // The same obligation on the new cut, which reads that same withheld
@@ -352,7 +361,7 @@ describe("the timeline tab", () => {
     await user.click(screen.getByRole("button", { name: "Threads" }));
 
     expect(screen.queryByText(/No conversations with them yet/)).toBeNull();
-    expect(screen.getByText("Hidden for your role")).toBeTruthy();
+    expect(screen.getByText(englishCopy["state.withheld"])).toBeTruthy();
   });
 });
 
@@ -457,7 +466,11 @@ describe("Call on the timeline tab", () => {
     );
     withProviders(<ContactTimelineTab contactId="p-1" />);
 
-    await pickOption(user, screen.getByLabelText("Activity kind"), "Calls");
+    await pickOption(
+      user,
+      screen.getByLabelText(englishCopy["timeline.filters.kind"]),
+      "Calls",
+    );
 
     expect(await screen.findByText("Called about the renewal")).toBeTruthy();
     expect(screen.queryByRole("link", { name: "Call" })).toBeNull();
@@ -469,7 +482,9 @@ describe("the deals tab", () => {
     withProviders(<ContactDealsTab view={view} />);
     expect(screen.getByText("Fleet renewal 2026")).toBeTruthy();
     expect(screen.getByText("Proposal")).toBeTruthy();
-    expect(screen.getByText("Economic buyer")).toBeTruthy();
+    expect(
+      screen.getByText(englishCopy["co.roleLabel.economic_buyer"]),
+    ).toBeTruthy();
   });
 
   // The card draws its money, its close date and its company off the deal
@@ -611,10 +626,14 @@ describe("the deals tab", () => {
     );
     withProviders(<ContactDealsTab view={view} />);
 
-    const add = await screen.findByRole("button", { name: "Add to a deal" });
+    const add = await screen.findByRole("button", {
+      name: englishCopy["rel.seatOnDeal"],
+    });
     await userEvent.click(add);
 
-    expect(screen.getByRole("heading", { name: "Add to a deal" })).toBeTruthy();
+    expect(
+      screen.getByRole("heading", { name: englishCopy["rel.seatOnDeal"] }),
+    ).toBeTruthy();
 
     // NARROWED TO THE DEAL EDGE, asserted on what the picker SEARCHES.
     //
@@ -712,7 +731,9 @@ describe("the deals tab", () => {
     // Awaited through the rows, so the absence is read AFTER the grant probe
     // has answered rather than before it has run.
     await screen.findByText("Fleet renewal 2026");
-    expect(screen.queryByRole("button", { name: "Add to a deal" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: englishCopy["rel.seatOnDeal"] }),
+    ).toBeNull();
   });
 
   // The contact's own door into the rooms they sit in: an admin removing
@@ -784,7 +805,7 @@ describe("the deals tab", () => {
 
     // Awaited through a control the grant probe draws, so the absence below
     // is read after the probe has answered rather than before it ran.
-    await screen.findByRole("button", { name: "Add to a deal" });
+    await screen.findByRole("button", { name: englishCopy["rel.seatOnDeal"] });
     expect(screen.queryByText("Fleet renewal room")).toBeNull();
     expect(asked).toBe(false);
   });
@@ -875,7 +896,9 @@ describe("the meetings tab", () => {
       />,
     );
     await screen.findByText("Depot walkthrough");
-    const actions = screen.getAllByRole("button", { name: "Prepare brief" });
+    const actions = screen.getAllByRole("button", {
+      name: englishCopy["contact.meeting.brief"],
+    });
     expect(actions.length).toBe(2);
     await userEvent.setup().click(actions[0]);
     expect(briefed.length).toBe(1);
@@ -904,10 +927,14 @@ describe("the meetings tab", () => {
     // The row is DRAWN — the reader learns a meeting happened — and carries no
     // verb. Its subject is redacted, which is the whole point of the state.
     expect(
-      await screen.findByText("Content for participants only"),
+      await screen.findByText(englishCopy["timeline.withheld"]),
     ).toBeTruthy();
     expect(screen.queryByText("Board session")).toBeNull();
-    expect(screen.queryByRole("button", { name: "Prepare brief" })).toBeNull();
+    expect(
+      screen.queryByRole("button", {
+        name: englishCopy["contact.meeting.brief"],
+      }),
+    ).toBeNull();
   });
 
   it("offers no brief when the surface cannot open one", async () => {
@@ -916,7 +943,11 @@ describe("the meetings tab", () => {
     serveMeetings([held]);
     withProviders(<ContactMeetingsTab view={view} />);
     await screen.findByText("Depot walkthrough");
-    expect(screen.queryByRole("button", { name: "Prepare brief" })).toBeNull();
+    expect(
+      screen.queryByRole("button", {
+        name: englishCopy["contact.meeting.brief"],
+      }),
+    ).toBeNull();
   });
 
   it("names the meeting the reader picked, not the soonest one", async () => {
@@ -931,7 +962,9 @@ describe("the meetings tab", () => {
       />,
     );
     await screen.findByText("Depot walkthrough");
-    const actions = screen.getAllByRole("button", { name: "Prepare brief" });
+    const actions = screen.getAllByRole("button", {
+      name: englishCopy["contact.meeting.brief"],
+    });
     // The booked meeting leads the tab; the held one follows it.
     await userEvent.setup().click(actions[1]);
     expect(briefed).toEqual(["a-2"]);

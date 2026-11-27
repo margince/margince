@@ -18,6 +18,7 @@ import { stubClipboard } from "../../design-system/clipboard-testing";
 import { formatDayMonth, MONEY_ABSENT } from "../../format/format";
 import { formatTimeRange } from "../../format/meetingtime";
 import { LocaleProvider, translate } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { proposalEmailBody } from "../../lib/booking-proposal-message";
 import { ViewerZoneProvider } from "../../lib/viewerzone";
 import {
@@ -116,7 +117,9 @@ it("lists the invitations still waiting on the contact, between upcoming and hel
   ).toEqual(["Upcoming", "Waiting on Dana", "Held"]);
   // A link that offers no times says what it is instead.
   const intro = screen.getByText("Intro call").closest("article");
-  expect(intro?.textContent).toContain("Personal link");
+  expect(intro?.textContent).toContain(
+    englishCopy["contact.meetings.personalLink"],
+  );
   const zone = "UTC";
   // Each offered time is its own label, so a reader scans them as a set.
   for (const slot of bookingSlots)
@@ -146,7 +149,9 @@ it("hides the waiting section when nothing is waiting", async () => {
       "success",
     ),
   );
-  expect(screen.getByText("No upcoming meetings.")).toBeTruthy();
+  expect(
+    screen.getByText(englishCopy["contact.meetings.noneBooked"]),
+  ).toBeTruthy();
   expect(screen.queryByRole("heading", { name: /Waiting on/ })).toBeNull();
 });
 
@@ -172,9 +177,13 @@ it("withdraws an invitation by archiving it, then reads the list and the timelin
   );
   await user.click(await screen.findByRole("button", { name: "Withdraw" }));
   const dialog = await screen.findByRole("dialog");
-  expect(within(dialog).getByText("Withdraw this invitation?")).toBeTruthy();
+  expect(
+    within(dialog).getByText(englishCopy["contact.meetings.withdrawTitle"]),
+  ).toBeTruthy();
   await user.click(
-    within(dialog).getByRole("button", { name: "Withdraw invitation" }),
+    within(dialog).getByRole("button", {
+      name: englishCopy["contact.meetings.withdrawConfirm"],
+    }),
   );
   await waitFor(() => expect(archived).toEqual([proposed.id]));
   await waitFor(() =>
@@ -184,7 +193,9 @@ it("withdraws an invitation by archiving it, then reads the list and the timelin
   // The Withdraw button that opened the dialog went with its card.
   await waitFor(() =>
     expect(document.activeElement).toBe(
-      screen.getByRole("button", { name: "Book a meeting" }),
+      screen.getByRole("button", {
+        name: englishCopy["scheduling.bookContact"],
+      }),
     ),
   );
   // The archived proposal still sits on the contact's timeline until it is read again.
@@ -218,7 +229,7 @@ it("takes a withdrawn invitation's files out of the contact's Documents count", 
   await user.click(await screen.findByRole("button", { name: "Withdraw" }));
   await user.click(
     within(await screen.findByRole("dialog")).getByRole("button", {
-      name: "Withdraw invitation",
+      name: englishCopy["contact.meetings.withdrawConfirm"],
     }),
   );
   await docs.shows(1);
@@ -265,7 +276,9 @@ it("offers the host's booking link while the page takes bookings", async () => {
     "GET /scheduling/profile": () => jsonResponse(bookingProfile),
   });
   expect(
-    await screen.findByRole("button", { name: "Copy my booking link" }),
+    await screen.findByRole("button", {
+      name: englishCopy["contact.meetings.copyBookingLink"],
+    }),
   ).toBeTruthy();
 });
 
@@ -276,7 +289,9 @@ it("lets only the link copied last read Copied, since the clipboard holds one", 
     "GET /scheduling/profile": () => jsonResponse(bookingProfile),
   });
   await user.click(
-    await screen.findByRole("button", { name: "Copy my booking link" }),
+    await screen.findByRole("button", {
+      name: englishCopy["contact.meetings.copyBookingLink"],
+    }),
   );
   await screen.findByRole("button", { name: "Copied" });
   await user.click(screen.getByRole("button", { name: "Copy link" }));
@@ -289,7 +304,9 @@ it("lets only the link copied last read Copied, since the clipboard holds one", 
   );
   expect(screen.getAllByRole("button", { name: "Copied" })).toHaveLength(1);
   expect(
-    screen.getByRole("button", { name: "Copy my booking link" }),
+    screen.getByRole("button", {
+      name: englishCopy["contact.meetings.copyBookingLink"],
+    }),
   ).toBeTruthy();
 });
 
@@ -304,7 +321,9 @@ it("keeps a paused booking link to itself", async () => {
     ),
   );
   expect(
-    screen.queryByRole("button", { name: "Copy my booking link" }),
+    screen.queryByRole("button", {
+      name: englishCopy["contact.meetings.copyBookingLink"],
+    }),
   ).toBeNull();
 });
 
@@ -312,9 +331,7 @@ it("does not ask for proposals when the reader may not book", async () => {
   const asked = vi.fn(() => [proposed]);
   mount(asked, {}, {});
   expect(
-    await screen.findByText(
-      "Your role can only read. Ask an administrator for another role.",
-    ),
+    await screen.findByText(englishCopy["record.roleReadsOnly"]),
   ).toBeTruthy();
   expect(asked).not.toHaveBeenCalled();
   expect(screen.queryByRole("heading", { name: /Waiting on/ })).toBeNull();
@@ -390,7 +407,7 @@ it("offers the next meeting's join link and its own page, from the invitation th
   );
   const join = await screen.findByRole("link", { name: "Join Google Meet" });
   expect(join.getAttribute("href")).toBe(
-    "https://meet.google.com/abc-defg-hij",
+    englishCopy["scheduling.locationExample"],
   );
   // The end comes from the invitation, which the calendar keeps current.
   expect(
@@ -550,7 +567,7 @@ it("does not ask for meetings the reader's role may not see", async () => {
     sections_omitted: ["activities"],
   });
   const held = await screen.findByRole("region", { name: "Held" });
-  expect(within(held).getByText("Hidden for your role")).toBeTruthy();
+  expect(within(held).getByText(englishCopy["state.withheld"])).toBeTruthy();
   expect(listed).not.toHaveBeenCalled();
   // The figures claim no count they could not read: no zero, no "None yet".
   const heldFigure = screen
@@ -685,7 +702,9 @@ it("does not call the held list empty, or count what is ahead, while a page is s
   await within(upcoming).findByText("Planning");
   expect(within(upcoming).queryByText("2")).toBeNull();
   const held = screen.getByRole("region", { name: "Held" });
-  expect(within(held).queryByText("No meetings logged.")).toBeNull();
+  expect(
+    within(held).queryByText(englishCopy["contact.meetings.noneLogged"]),
+  ).toBeNull();
   expect(within(held).getByRole("button", { name: "Load more" })).toBeTruthy();
 });
 
@@ -703,7 +722,9 @@ it.each([false, undefined])(
       await screen.findByText(translate("en", "contact.attachRefused")),
     ).toBeTruthy();
     expect(
-      screen.getByRole("button", { name: "Book a meeting" }),
+      screen.getByRole("button", {
+        name: englishCopy["scheduling.bookContact"],
+      }),
     ).toHaveProperty("disabled", true);
   },
 );

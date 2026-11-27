@@ -11,6 +11,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { ADDRESSABLE_DEAL_DIALS, type DealDial } from "../../lib/dealsaddress";
 import { companyNamesAnswer } from "../../testing/companynames.testkit";
 import { meFixture } from "../../testing/mefixture";
@@ -245,7 +246,9 @@ describe("the deals list opened from an address", () => {
         name: "More actions for the Status filter",
       }),
     );
-    await user.click(screen.getByRole("button", { name: "Delete filter" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["table.deleteFilter"] }),
+    );
 
     await waitFor(() =>
       expect(seen.dealUrls.at(-1)?.includes("status=")).toBe(false),

@@ -7,7 +7,7 @@ package agents
 // answers.
 
 var describeQueryVocabularyCopy = toolCopy{
-	Purpose: "Answer what a query plan may SAY in this workspace: the record types that can be " +
+	Purpose: "Answer what a query plan may SAY in this company: the record types that can be " +
 		"asked about, the fields nameable on each, the operators each field admits, and the one " +
 		"relationship hop a plan may take. It is the vocabulary query_workspace refuses against, " +
 		"so it holds the spelling of a field whose name a plan got wrong.",

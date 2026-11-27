@@ -8,6 +8,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import { ChannelReplyAction } from "./compose";
 import {
@@ -154,7 +155,9 @@ describe("what a row offers to write", () => {
         within(dialog).getByRole("button", { name: "Draft email" }),
       ).toBeTruthy();
       expect(
-        within(dialog).getByRole("textbox", { name: "Purpose of the email" }),
+        within(dialog).getByRole("textbox", {
+          name: englishCopy["compose.newIntent"],
+        }),
       ).toBeTruthy();
     },
   );

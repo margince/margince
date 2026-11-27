@@ -2,6 +2,7 @@
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import {
   AGENT_CLIENT_SCOPES,
   agentClientList,
@@ -47,12 +48,14 @@ describe("MCP clients", () => {
     expect(gemini.queryByText("Disabled")).toBeNull();
     expect(gemini.getByText("Active")).toBeTruthy();
     const old = within(row(SELF_REGISTERED_CLIENT));
-    expect(old.getByText("Registered itself")).toBeTruthy();
+    expect(old.getByText(englishCopy["agentClients.by.dcr"])).toBeTruthy();
     expect(old.getByText("Never")).toBeTruthy();
     expect(old.getByText("Disabled")).toBeTruthy();
     expect(old.queryByText("Active")).toBeNull();
     expect(
-      within(row(PUBLISHED_CLIENT)).getByText("Published identity"),
+      within(row(PUBLISHED_CLIENT)).getByText(
+        englishCopy["agentClients.by.cimd"],
+      ),
     ).toBeTruthy();
   });
 
@@ -61,9 +64,13 @@ describe("MCP clients", () => {
       "GET /installation/agent-clients": () => json(agentClientList([])),
     });
     renderWithClient(<AgentClientsCard />);
-    expect(await screen.findByText("No MCP client yet.")).toBeTruthy();
     expect(
-      screen.getByRole("button", { name: "Register a client" }),
+      await screen.findByText(englishCopy["agentClients.empty"]),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("button", {
+        name: englishCopy["agentClients.register.open"],
+      }),
     ).toBeTruthy();
   });
 
@@ -92,10 +99,12 @@ describe("MCP clients", () => {
     );
     renderWithClient(<AgentClientsCard />);
     expect(
-      await screen.findByText("Only an admin can change MCP clients."),
+      await screen.findByText(englishCopy["agentClients.readOnly"]),
     ).toBeTruthy();
     expect(
-      screen.queryByRole("button", { name: "Register a client" }),
+      screen.queryByRole("button", {
+        name: englishCopy["agentClients.register.open"],
+      }),
     ).toBeNull();
     expect(
       screen.queryByRole("button", { name: "Actions for Gemini Enterprise" }),
@@ -147,7 +156,9 @@ describe("MCP clients", () => {
     renderWithClient(<AgentClientsCard />);
     await openMenu(user, "Gemini Enterprise");
     await user.click(screen.getByRole("button", { name: "Disable" }));
-    expect(await screen.findByText("The client was not changed")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["agentClients.toggleFailed"]),
+    ).toBeTruthy();
   });
 
   it("offers a rotate only for an admin's client with a secret", async () => {
@@ -158,9 +169,17 @@ describe("MCP clients", () => {
     });
     renderWithClient(<AgentClientsCard />);
     await openMenu(user, "Claude Code");
-    expect(screen.queryByRole("button", { name: "Rotate secret…" })).toBeNull();
+    expect(
+      screen.queryByRole("button", {
+        name: englishCopy["agentClients.rotate.open"],
+      }),
+    ).toBeNull();
     await openMenu(user, "Gemini Enterprise");
-    expect(screen.getByRole("button", { name: "Rotate secret…" })).toBeTruthy();
+    expect(
+      screen.getByRole("button", {
+        name: englishCopy["agentClients.rotate.open"],
+      }),
+    ).toBeTruthy();
   });
 
   it("tells an admin deleting a DCR client that the switch keeps such tools out", async () => {
@@ -201,7 +220,9 @@ describe("MCP clients", () => {
       ),
     ).toBeTruthy();
     await user.click(
-      within(dialog).getByRole("button", { name: "Delete client" }),
+      within(dialog).getByRole("button", {
+        name: englishCopy["agentClients.delete.confirm"],
+      }),
     );
     await waitFor(() => expect(screen.queryByText("Claude Code")).toBeNull());
     expect(
@@ -241,19 +262,33 @@ describe("MCP clients", () => {
     });
     renderWithClient(<AgentClientsCard />);
     await openMenu(user, "Gemini Enterprise");
-    await user.click(screen.getByRole("button", { name: "Rotate secret…" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: englishCopy["agentClients.rotate.open"],
+      }),
+    );
     expect(
       await screen.findByText("Rotate the secret of Gemini Enterprise?"),
     ).toBeTruthy();
-    await user.click(screen.getByRole("button", { name: "Rotate secret" }));
-    expect(await screen.findByText("New client secret")).toBeTruthy();
+    await user.click(
+      screen.getByRole("button", {
+        name: englishCopy["agentClients.rotate.confirm"],
+      }),
+    );
     expect(
-      screen.getByRole("textbox", { name: "Client secret" }).textContent,
+      await screen.findByText(englishCopy["agentClients.rotate.resultTitle"]),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("textbox", {
+        name: englishCopy["agentClients.value.secret"],
+      }).textContent,
     ).toBe("mcs_rotated_secret_value");
     expect(screen.getByRole("textbox", { name: "Client ID" }).textContent).toBe(
       "mc_7f3a9d2c41e8",
     );
-    expect(screen.getByText("Copy the secret now")).toBeTruthy();
+    expect(
+      screen.getByText(englishCopy["agentClients.result.secretOnceTitle"]),
+    ).toBeTruthy();
     expect(
       calls.filter((call) => call.key.startsWith("POST")).map((c) => c.key),
     ).toEqual([`POST /installation/agent-clients/${GEMINI_CLIENT.id}/secret`]);
@@ -262,7 +297,11 @@ describe("MCP clients", () => {
       expect(screen.queryByText("mcs_rotated_secret_value")).toBeNull(),
     );
     await openMenu(user, "Gemini Enterprise");
-    await user.click(screen.getByRole("button", { name: "Rotate secret…" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: englishCopy["agentClients.rotate.open"],
+      }),
+    );
     expect(
       await screen.findByText("Rotate the secret of Gemini Enterprise?"),
     ).toBeTruthy();

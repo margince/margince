@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent } from "storybook/test";
 import type { components } from "../../api/schema";
 import { Button, OverflowMenu } from "../../design-system/atoms";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -135,9 +136,7 @@ export const ArchiveRefusedReadOnlyRole: Story = {
   play: async () => {
     await userEvent.click(screen.getByRole("button", { name: "More actions" }));
     // Merge and Archive both name the role.
-    await screen.findAllByText(
-      "Your role can only read. Ask an administrator for another role.",
-    );
+    await screen.findAllByText(englishCopy["record.roleReadsOnly"]);
   },
 };
 
@@ -153,6 +152,6 @@ export const ArchiveRefusedNotYours: Story = {
   },
   play: async () => {
     await userEvent.click(screen.getByRole("button", { name: "More actions" }));
-    await screen.findByText("Only its owner or a manager can archive this.");
+    await screen.findByText(englishCopy["record.archiveRefused"]);
   },
 };

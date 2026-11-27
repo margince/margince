@@ -8,6 +8,7 @@ import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { armHoverIntent } from "../../design-system/hoverintent-testing";
+import { en as englishCopy } from "../../i18n/en";
 import { ColumnGuide, ColumnGuideButton } from "./import.guide";
 import { render } from "./import.testkit";
 
@@ -56,7 +57,9 @@ describe("the column guide", () => {
       />,
     );
     await user.click(screen.getByRole("button", { name: "pipeline" }));
-    expect(await screen.findByText("Needed on a new row")).toBeVisible();
+    expect(
+      await screen.findByText(englishCopy["import.guide.required"]),
+    ).toBeVisible();
   });
 
   it("shows a custom field by its label and names its key and file", async () => {
@@ -78,7 +81,7 @@ describe("the column guide", () => {
     expect(
       await screen.findByText("cf_tier · companies.csv · custom field"),
     ).toBeVisible();
-    expect(screen.queryByText("Needed on a new row")).toBeNull();
+    expect(screen.queryByText(englishCopy["import.guide.required"])).toBeNull();
   });
 
   it("names the Guide button beside a chosen field by the column it explains", async () => {

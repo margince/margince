@@ -22,6 +22,8 @@ type paymentPosition struct {
 	Connection ids.UUID  `json:"c"`
 	Due        time.Time `json:"d"`
 	Invoice    ids.UUID  `json:"i"`
+ Currency string `json:"u"`
+ Amount int64 `json:"a"`
 }
 
 // CustomerPayments scopes every figure so hidden financial activity cannot affect counts.
@@ -66,7 +68,7 @@ func paymentCursor(cursor *string) (paymentPosition, error) {
 		return paymentPosition{}, nil
 	}
 	after, err := storekit.DecodeOpaque[paymentPosition](*cursor)
-	if err != nil || after.Connection == (ids.UUID{}) || after.Invoice == (ids.UUID{}) || after.Due.IsZero() {
+	if err != nil || after.Connection == (ids.UUID{}) || after.Invoice == (ids.UUID{}) || after.Due.IsZero() || after.Currency == "" || after.Amount <= 0 {
 		return paymentPosition{}, &storekit.MalformedCursorError{}
 	}
 	return after, nil
@@ -80,7 +82,12 @@ func (s *Store) readCustomerPayments(ctx context.Context, tx pgx.Tx, connectionI
 		return err
 	}
 	defer rows.Close()
-	fold := newPaymentFold()
+ fold := newPaymentFold()
+ if s.paymentAge != nil {
+  age, err := s.paymentAge(ctx, tx)
+  if err != nil { return err }
+  fold.age = age
+ }
 	now := s.now()
 	for rows.Next() {
 		row, err := scanPaymentRow(rows)
@@ -105,9 +112,10 @@ func (s *Store) readCustomerPayments(ctx context.Context, tx pgx.Tx, connectionI
 		return fmt.Errorf("read customer payments: %w", err)
 	}
 	fold.fill(out, connectionID)
-	out.AccessScope += now.Format("2006-01-02")
+	out.AccessScope += fmt.Sprintf("%s:%d", now.Format("2006-01-02"), fold.age)
 	if out.State == crmcontracts.FinanceSummaryStateSyncing {
 		out.InvoiceCount, out.CompanyCount = 0, 0
+ out.LongOverdue = &crmcontracts.CustomerPaymentAgedGroup{Totals: []crmcontracts.CustomerPaymentTotal{}, Customers: []crmcontracts.CustomerPaymentCustomer{}}
 		out.Totals, out.Customers = []crmcontracts.CustomerPaymentTotal{}, []crmcontracts.CustomerPaymentCustomer{}
 		out.Data = []crmcontracts.CustomerPaymentInvoice{}
 		return nil
@@ -115,7 +123,7 @@ func (s *Store) readCustomerPayments(ctx context.Context, tx pgx.Tx, connectionI
 	if len(out.Data) > limit {
 		out.Data = out.Data[:limit]
 		last := out.Data[limit-1]
-		token, err := storekit.EncodeOpaque(paymentPosition{connectionID, last.DueAt.Time, ids.UUID(last.InvoiceId)})
+		token, err := storekit.EncodeOpaque(paymentPosition{Connection: connectionID, Due: last.DueAt.Time, Invoice: ids.UUID(last.InvoiceId), Currency: last.Currency, Amount: last.OpenMinor})
 		if err != nil {
 			return err
 		}
@@ -128,6 +136,8 @@ func followsPayment(invoice crmcontracts.CustomerPaymentInvoice, after paymentPo
 	if after.Invoice == (ids.UUID{}) {
 		return true
 	}
-	return invoice.DueAt.After(after.Due) ||
-		(invoice.DueAt.Equal(after.Due) && invoice.InvoiceId.String() > after.Invoice.String())
+ if !invoice.DueAt.Equal(after.Due) { return invoice.DueAt.Before(after.Due) }
+ if invoice.Currency != after.Currency { return invoice.Currency > after.Currency }
+ if invoice.OpenMinor != after.Amount { return invoice.OpenMinor < after.Amount }
+ return invoice.InvoiceId.String() > after.Invoice.String()
 }

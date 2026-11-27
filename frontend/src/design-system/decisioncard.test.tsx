@@ -7,6 +7,7 @@ import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../i18n/en";
 import { PLAIN_SUMMARY_WORDS } from "./approvalsummary.testkit";
 import {
   type DecisionApproval,
@@ -239,7 +240,11 @@ describe("DecisionCard — a kind that says what it shows", () => {
     expect(screen.getByText("Proposed date")).toBeInTheDocument();
     expect(screen.getByText("01.10.2026")).toBeInTheDocument();
     expect(screen.getByText("Issues")).toBeInTheDocument();
-    expect(screen.getByText("no recent progress")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        englishCopy["approval.field.closeDateFlag.unrealistic_stale"],
+      ),
+    ).toBeInTheDocument();
     // Never the wire.
     expect(screen.queryByText("deal_id")).not.toBeInTheDocument();
     expect(
@@ -891,7 +896,9 @@ it.each(["row", "deck"] as const)(
     );
     expect(screen.getByText("Account stage")).toBeInTheDocument();
     expect(screen.getByText("Customer")).toBeInTheDocument();
-    expect(screen.getByText("Former customer")).toBeInTheDocument();
+    expect(
+      screen.getByText(englishCopy["company.lifecycle.former_customer"]),
+    ).toBeInTheDocument();
     expect(screen.queryByText("raw_before")).not.toBeInTheDocument();
     expect(screen.queryByText("raw_after")).not.toBeInTheDocument();
   },

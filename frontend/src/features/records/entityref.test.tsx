@@ -300,7 +300,7 @@ describe("EntityRef", () => {
     );
     render(<EntityRef kind="company" id="o-403" />);
 
-    expect(await screen.findByText("Name did not load")).toBeTruthy();
+    expect(await screen.findByText(en["ref.nameLoadFailed"])).toBeTruthy();
     // Painting the id here would report the reference as settled: a reader
     // cannot tell a record with no name from one they were refused, and the
     // second is the one worth acting on.
@@ -320,7 +320,7 @@ describe("EntityRef", () => {
     // and retrying produces the same one. The id is what a reader is left to
     // trace, so this is the settled reading rather than the failed one.
     await waitFor(() => expect(screen.getByText("d-gone")).toBeTruthy());
-    expect(screen.queryByText("Name did not load")).toBeNull();
+    expect(screen.queryByText(en["ref.nameLoadFailed"])).toBeNull();
   });
 
   it("says the name could not be read when the roster lookup fails", async () => {
@@ -330,7 +330,7 @@ describe("EntityRef", () => {
     );
     render(<EntityRef kind="user" id="u-500" />);
 
-    expect(await screen.findByText("Name did not load")).toBeTruthy();
+    expect(await screen.findByText(en["ref.nameLoadFailed"])).toBeTruthy();
     expect(screen.queryByText("u-500")).toBeNull();
   });
 
@@ -764,7 +764,7 @@ describe("the roster walk", () => {
     // did load, this reads as a roster that simply does not carry `t-2`, and
     // the id would be printed as the settled answer for a read that never
     // finished.
-    expect(await screen.findByText("Name did not load")).toBeTruthy();
+    expect(await screen.findByText(en["ref.nameLoadFailed"])).toBeTruthy();
     expect(screen.queryByText("t-2")).toBeNull();
   });
 
@@ -775,7 +775,7 @@ describe("the roster walk", () => {
     // The bound is what makes an unstoppable cursor a short list instead of a
     // page that never paints — and the picker states the shortfall rather than
     // presenting what it read as the whole workspace.
-    expect(await screen.findByText("Showing part of the list")).toBeTruthy();
+    expect(await screen.findByText(en["state.partial"])).toBeTruthy();
     // Ten pages, once: the entries and the truncation flag are two readings of
     // ONE cache entry, so a surface asking for both does not walk twice.
     expect(cursors).toHaveLength(10);
@@ -789,7 +789,7 @@ describe("the roster walk", () => {
     // list holds it, and the id is what is left to trace. A roster that ran out
     // of pages has answered nothing about it, and printing the id would state
     // that non-answer as settled fact.
-    expect(await screen.findByText("Name did not load")).toBeTruthy();
+    expect(await screen.findByText(en["ref.nameLoadFailed"])).toBeTruthy();
     expect(screen.queryByText("t-far")).toBeNull();
   });
 });

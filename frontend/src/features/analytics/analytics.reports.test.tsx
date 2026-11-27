@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { formatAnalyticsMoney, MONEY_ABSENT } from "../../format/format";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { vi as viCatalog } from "../../i18n/vi";
 import { AnalyticsScreen } from "./analytics";
 import { buildStageAggregates } from "./analytics.pipeline";
@@ -187,9 +188,7 @@ describe("reports never sum money across currencies", () => {
     render(<AnalyticsScreen />);
     await openPipeline();
     expect(
-      await screen.findByText(
-        "Some totals are too large to show exactly, so they are left out.",
-      ),
+      await screen.findByText(englishCopy["format.someTooLargeExact"]),
     ).toBeTruthy();
   });
 

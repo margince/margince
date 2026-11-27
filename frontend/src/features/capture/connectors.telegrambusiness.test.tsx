@@ -13,6 +13,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import { TelegramBusinessPanel } from "./connectors.telegrambusiness";
 
@@ -190,7 +191,9 @@ describe("the Telegram Business panel", () => {
     expect(
       await screen.findByText(/Enters @acme_sales_bot and chooses/),
     ).toBeVisible();
-    expect(await screen.findByText("No business account linked")).toBeVisible();
+    expect(
+      await screen.findByText(englishCopy["connectors.tgbiz.emptyTitle"]),
+    ).toBeVisible();
   });
 
   it("shows one row per status with its own badge and verbs", async () => {
@@ -200,38 +203,46 @@ describe("the Telegram Business panel", () => {
     expect(rows).toHaveLength(3);
 
     expect(within(rows[0]).getByText("Mira Keller")).toBeVisible();
-    expect(within(rows[0]).getByText("Waiting for approval")).toBeVisible();
+    expect(
+      within(rows[0]).getByText(englishCopy["connectors.tgbiz.statusPending"]),
+    ).toBeVisible();
     expect(
       within(rows[0]).getByRole("button", {
-        name: "Approve as company account",
+        name: englishCopy["connectors.tgbiz.approve"],
       }),
     ).toBeVisible();
 
     expect(within(rows[1]).getByText("Connected")).toBeVisible();
     expect(
       within(rows[1]).queryByRole("button", {
-        name: "Approve as company account",
+        name: englishCopy["connectors.tgbiz.approve"],
       }),
     ).toBeNull();
     expect(
-      within(rows[1]).getByRole("button", { name: "Change who reads" }),
+      within(rows[1]).getByRole("button", {
+        name: englishCopy["connectors.tgbiz.changeReaders"],
+      }),
     ).toBeVisible();
     expect(
       within(rows[1]).getByRole("button", { name: "Actions for Jonas Weiss" }),
     ).toBeVisible();
 
-    expect(within(rows[2]).getByText("Switched off in Telegram")).toBeVisible();
+    expect(
+      within(rows[2]).getByText(englishCopy["connectors.tgbiz.statusOff"]),
+    ).toBeVisible();
     expect(within(rows[2]).getByText(/switched this link off/)).toBeVisible();
     expect(
       within(rows[2]).queryByRole("button", {
-        name: "Approve as company account",
+        name: englishCopy["connectors.tgbiz.approve"],
       }),
     ).toBeNull();
   });
 
   async function openApprove(user: ReturnType<typeof userEvent.setup>) {
     await user.click(
-      await screen.findByRole("button", { name: "Approve as company account" }),
+      await screen.findByRole("button", {
+        name: englishCopy["connectors.tgbiz.approve"],
+      }),
     );
     return screen.findByRole("dialog");
   }
@@ -243,7 +254,7 @@ describe("the Telegram Business panel", () => {
     const dialog = await openApprove(user);
     expect(within(dialog).getByText(/only the team you choose/)).toBeVisible();
     const confirm = within(dialog).getByRole("button", {
-      name: "Approve as company account",
+      name: englishCopy["connectors.tgbiz.approve"],
     });
     await user.click(confirm);
     await waitFor(() =>
@@ -274,7 +285,7 @@ describe("the Telegram Business panel", () => {
     await user.click(await screen.findByRole("option", { name: "Sales desk" }));
     await user.click(
       within(dialog).getByRole("button", {
-        name: "Approve as company account",
+        name: englishCopy["connectors.tgbiz.approve"],
       }),
     );
     return dialog;
@@ -307,7 +318,7 @@ describe("the Telegram Business panel", () => {
     const dialog = await approveWithTeam(user);
     expect(
       await within(dialog).findByText(
-        "Choose the team that reads this account’s messages.",
+        englishCopy["connectors.tgbiz.readerTeamRequired"],
       ),
     ).toBeVisible();
   });
@@ -336,18 +347,24 @@ describe("the Telegram Business panel", () => {
     ).toBeVisible();
     expect(within(rows[2]).getByText(/each chat is held/)).toBeVisible();
     expect(
-      within(rows[2]).queryByRole("button", { name: "Change who reads" }),
+      within(rows[2]).queryByRole("button", {
+        name: englishCopy["connectors.tgbiz.changeReaders"],
+      }),
     ).toBeNull();
   });
 
   async function openVisibility(user: ReturnType<typeof userEvent.setup>) {
     await user.click(
-      await screen.findByRole("button", { name: "Change who reads" }),
+      await screen.findByRole("button", {
+        name: englishCopy["connectors.tgbiz.changeReaders"],
+      }),
     );
     const dialog = await screen.findByRole("dialog");
     await user.click(within(dialog).getByRole("radio", { name: /Shared/ }));
     await user.click(
-      within(dialog).getByRole("button", { name: "Change visibility" }),
+      within(dialog).getByRole("button", {
+        name: englishCopy["connectors.tgbiz.visibilityConfirm"],
+      }),
     );
     return dialog;
   }

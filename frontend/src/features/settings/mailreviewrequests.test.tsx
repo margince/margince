@@ -15,6 +15,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { stubClipboard } from "../../design-system/clipboard-testing";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -68,15 +69,19 @@ it("offers personal choices only to the current owner and prepares a request for
       </LocaleProvider>
     </QueryClientProvider>,
   );
-  await user.click(screen.getByRole("button", { name: "Ask a mailbox owner" }));
+  await user.click(
+    screen.getByRole("button", { name: englishCopy["health.askOwner"] }),
+  );
   const dialog = await screen.findByRole("dialog", {
-    name: "Mailbox decisions",
+    name: englishCopy["health.mailReviewOwners"],
   });
   expect(
     await within(dialog).findByText("2 sender decisions waiting"),
   ).toBeVisible();
   expect(
-    within(dialog).getAllByRole("button", { name: "Review my choices" }),
+    within(dialog).getAllByRole("button", {
+      name: englishCopy["health.openMyReviews"],
+    }),
   ).toHaveLength(1);
   await user.click(
     within(dialog).getByRole("button", {
@@ -92,7 +97,9 @@ it("offers personal choices only to the current owner and prepares a request for
     "00000000-0000-4000-8000-000000000002",
   );
   await user.click(
-    within(dialog).getByRole("button", { name: "Review my choices" }),
+    within(dialog).getByRole("button", {
+      name: englishCopy["health.openMyReviews"],
+    }),
   );
   expect(window.location.hash).toBe("#/home?queue=1&queue_view=decisions");
 });

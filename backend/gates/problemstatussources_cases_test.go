@@ -114,3 +114,65 @@ func TestAFieldFaultCanBeSpreadFromATypedTable(t *testing.T) {
 		t.Fatalf("spread table lost codes: %v", found)
 	}
 }
+
+func TestMessageFaultFollowsInheritedAndConditionalUnwrap(t *testing.T) {
+	for name, source := range map[string]string{
+		"inherited":   `type parent struct{};func(parent)Unwrap()error{return apperrors.ErrConflict};type child struct{parent};func(child)MessageFault()(string,string){return "sample","held"}`,
+		"conditional": `type child struct{missing bool};func(e child)Unwrap()error{if e.missing{return apperrors.ErrNotFound};return apperrors.ErrConflict};func(child)MessageFault()(string,string){return "sample","held"}`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			unit := problemSourceUnit(t, `package sample;import "github.com/margince/margince/backend/internal/shared/apperrors";`+source)
+			pairs := pairCensus{codes: newEmittedCensus(t, append(readGoUnits(t, "internal"), unit))}
+			for _, decl := range unit.file.Decls {
+				fn, ok := decl.(*ast.FuncDecl)
+				if !ok || fn.Name.Name != "MessageFault" {
+					continue
+				}
+				statuses, known := pairs.finiteMessageStatuses(fn, unit)
+				want := []int{409}
+				if name == "conditional" {
+					want = []int{404, 409}
+				}
+				if !known || !slices.Equal(statuses, want) {
+					t.Fatalf("Unwrap statuses=%v known=%v, want%v", statuses, known, want)
+				}
+			}
+		})
+	}
+}
+
+func TestGoFieldCodesFollowEveryFiniteWriterForm(t *testing.T) {
+	for name, source := range map[string]string{
+		"tuple":        `func codes()(int,string){return 0,"tuple_code"};func w(){_,code:=codes();_=httperr.Validation("name",code,"refused")}`,
+		"indexed":      `type row struct{Code string};var rows=map[string]row{"one":{Code:"indexed_code"}};func w(){picked:=rows["one"];_=httperr.Validation("name",picked.Code,"refused")}`,
+		"concatenated": `func suffix(tail string)string{return "prefix_"+tail};func w(){_=httperr.Validation("name",suffix("code"),"refused")}`,
+		"plural":       `type fault struct{Code string};type faults struct{};func(faults)FieldFaults()[]fault{return []fault{{Code:"plural_code"}}}`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			unit := problemSourceUnit(t, `package sample;import "github.com/margince/margince/backend/internal/platform/httperr";`+source)
+			census := newEmittedCensus(t, []*goUnit{unit})
+			census.fieldCodes = true
+			census.readPluralFieldSources()
+			for _, decl := range unit.file.Decls {
+				fn, ok := decl.(*ast.FuncDecl)
+				if !ok {
+					continue
+				}
+				ast.Inspect(fn.Body, func(node ast.Node) bool {
+					call, ok := node.(*ast.CallExpr)
+					if !ok || len(call.Args) < 2 {
+						return true
+					}
+					if selected, ok := call.Fun.(*ast.SelectorExpr); ok && selected.Sel.Name == "Validation" {
+						census.read(call.Args[1], unit, fn)
+					}
+					return true
+				})
+			}
+			want := map[string]string{"tuple": "tuple_code", "indexed": "indexed_code", "concatenated": "prefix_code", "plural": "plural_code"}[name]
+			if _, found := census.codes[want]; !found || len(census.faults) > 0 {
+				t.Fatalf("lost %s: codes%v faults%v", name, census.codes, census.faults)
+			}
+		})
+	}
+}

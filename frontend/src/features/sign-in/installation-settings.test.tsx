@@ -8,6 +8,7 @@ import { UnsavedGuard, useHasUnsavedChanges } from "../../components/unsaved";
 import { pickOption } from "../../design-system/select-testing";
 import { formatDate } from "../../format/format";
 import { useLocale } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { LANGUAGE_DEPENDENT_QUERY_PREFIXES } from "./aicaches";
 import { InstallationSettingsCard } from "./installation-settings";
 import {
@@ -55,7 +56,7 @@ describe("InstallationSettingsCard", () => {
     // aria-describedby — so the sentence reaches a reader who lands on the
     // refused control, not only one who happens past the paragraph.
     const reason = screen.getByText(
-      "Only an administrator or operations user can change these settings.",
+      englishCopy["installationSettings.readOnly"],
     );
     expect(reason.id).not.toBe("");
     for (const fact of [/edit company time zone/i, /edit base currency/i]) {
@@ -283,10 +284,12 @@ describe("InstallationSettingsCard", () => {
     await user.type(zone, "Europe/Vienna");
     await user.keyboard("{Escape}");
     const question = await screen.findByRole("dialog", {
-      name: "Discard unsaved changes?",
+      name: englishCopy["unsaved.title"],
     });
     await user.click(
-      within(question).getByRole("button", { name: "Discard changes" }),
+      within(question).getByRole("button", {
+        name: englishCopy["unsaved.discard"],
+      }),
     );
 
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
@@ -307,7 +310,9 @@ describe("InstallationSettingsCard", () => {
     render(<InstallationSettingsCard part="forecast" />);
     const forecast = await openFrom(user, /edit likely threshold/i);
     expect(
-      within(forecast).getByRole("heading", { name: "Forecast rules" }),
+      within(forecast).getByRole("heading", {
+        name: englishCopy["installationSettings.forecastTitle"],
+      }),
     ).toBeTruthy();
     expect(within(forecast).getByLabelText(/likely threshold/i)).toBeTruthy();
     expect(within(forecast).queryByLabelText(/company time zone/i)).toBeNull();
@@ -317,11 +322,17 @@ describe("InstallationSettingsCard", () => {
     render(<InstallationSettingsCard part="regional" />);
     const regional = await openFrom(user, /edit fiscal year starts/i);
     expect(
-      within(regional).getByRole("heading", { name: "Regional and calendar" }),
+      within(regional).getByRole("heading", {
+        name: englishCopy["settings.part.company.regional"],
+      }),
     ).toBeTruthy();
     expect(within(regional).getByLabelText(/company time zone/i)).toBeTruthy();
     expect(within(regional).queryByLabelText(/likely threshold/i)).toBeNull();
-    expect(within(regional).queryByText("Projection basis")).toBeNull();
+    expect(
+      within(regional).queryByText(
+        englishCopy["installationSettings.forwardMeasure"],
+      ),
+    ).toBeNull();
   });
 
   it("refuses a fact a boot source sets, says where to change it, and saves the rest", async () => {
@@ -582,22 +593,28 @@ describe("the calling switches", () => {
     render(<InstallationSettingsCard />);
 
     await user.click(
-      await screen.findByRole("switch", { name: "WhatsApp chat" }),
+      await screen.findByRole("switch", {
+        name: englishCopy["installationSettings.callWhatsApp"],
+      }),
     );
     const telegram = screen.getByRole<HTMLButtonElement>("switch", {
-      name: "Telegram chat",
+      name: englishCopy["installationSettings.callTelegram"],
     });
     await waitFor(() => expect(telegram.disabled).toBe(true));
     expect(
       screen
-        .getByRole("switch", { name: "WhatsApp chat" })
+        .getByRole("switch", {
+          name: englishCopy["installationSettings.callWhatsApp"],
+        })
         .getAttribute("aria-busy"),
     ).toBe("true");
     release();
     await waitFor(() => expect(telegram.disabled).toBe(false));
     expect(
       screen
-        .getByRole("switch", { name: "WhatsApp chat" })
+        .getByRole("switch", {
+          name: englishCopy["installationSettings.callWhatsApp"],
+        })
         .getAttribute("aria-checked"),
     ).toBe("false");
   });
@@ -609,7 +626,7 @@ describe("the calling switches", () => {
     render(<InstallationSettingsCard />);
 
     const whatsapp = await screen.findByRole("switch", {
-      name: "WhatsApp chat",
+      name: englishCopy["installationSettings.callWhatsApp"],
     });
     expect(whatsapp.getAttribute("aria-checked")).toBe("true");
     await user.click(whatsapp);
@@ -630,9 +647,11 @@ describe("the calling switches", () => {
     vi.stubGlobal("fetch", fetchMock);
     render(<InstallationSettingsCard />);
 
-    await screen.findByRole("switch", { name: "WhatsApp chat" });
+    await screen.findByRole("switch", {
+      name: englishCopy["installationSettings.callWhatsApp"],
+    });
     const reason = screen.getByText(
-      "Only an administrator or operations user can change these settings.",
+      englishCopy["installationSettings.readOnly"],
     );
     for (const name of ["WhatsApp chat", "Telegram chat", "Zalo chat"]) {
       const control = screen.getByRole<HTMLButtonElement>("switch", { name });
@@ -664,8 +683,9 @@ describe("the calling switches", () => {
     const lock = screen.getByText(reason);
     expect(zalo.getAttribute("aria-describedby") ?? "").toContain(lock.id);
     expect(
-      screen.getByRole<HTMLButtonElement>("switch", { name: "WhatsApp chat" })
-        .disabled,
+      screen.getByRole<HTMLButtonElement>("switch", {
+        name: englishCopy["installationSettings.callWhatsApp"],
+      }).disabled,
     ).toBe(false);
   });
 });

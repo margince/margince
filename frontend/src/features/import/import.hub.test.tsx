@@ -8,6 +8,7 @@ import { QueryClient } from "@tanstack/react-query";
 import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { ImportCard } from "./import";
 import {
   formatFixture,
@@ -119,7 +120,7 @@ describe("the data import hub", () => {
     const rows = await screen.findAllByRole("row");
     await user.click(within(rows[1]).getByRole("button", { name: "Cancel" }));
     expect(
-      await screen.findByText("The import was not canceled"),
+      await screen.findByText(englishCopy["import.cancelFailed"]),
     ).toBeVisible();
   });
 
@@ -224,7 +225,9 @@ describe("the data import hub", () => {
     );
     expect(times.every((time) => time !== undefined)).toBe(true);
     expect(new Set(times).size).toBe(4);
-    expect(within(tested).getByText("Test run ready")).toBeVisible();
+    expect(
+      within(tested).getByText(englishCopy["import.status.awaiting_approval"]),
+    ).toBeVisible();
     expect(
       within(tested).getByRole("link", { name: "Continue" }),
     ).toHaveAttribute("href", expect.stringContaining("run=r3"));
@@ -288,7 +291,9 @@ describe("the data import hub", () => {
       }),
     );
     render(<ImportCard />);
-    const panel = await screen.findByRole("region", { name: "Recent imports" });
+    const panel = await screen.findByRole("region", {
+      name: englishCopy["import.recent.title"],
+    });
     expect(within(panel).queryByRole("table")).toBeNull();
     act(() =>
       answerDrafts(
@@ -313,7 +318,7 @@ describe("the data import hub", () => {
     render(<ImportCard />);
     await user.click(await screen.findByRole("button", { name: "Undo" }));
     const dialog = await screen.findByRole("dialog", {
-      name: "Undo this import?",
+      name: englishCopy["import.undoConfirm.title"],
     });
     expect(
       within(dialog).getByText(
@@ -346,7 +351,7 @@ describe("the data import hub", () => {
       render(<ImportCard />);
       await user.click(await screen.findByRole("button", { name: "Undo" }));
       const dialog = await screen.findByRole("dialog", {
-        name: "Undo this import?",
+        name: englishCopy["import.undoConfirm.title"],
       });
       await user.click(
         within(dialog).getByRole("button", { name: "Undo import" }),
@@ -366,7 +371,9 @@ describe("the data import hub", () => {
   it("shows no history panel before the first import", async () => {
     const sent = stubRoutes();
     render(<ImportCard />);
-    expect(await screen.findByText("Upload your data")).toBeVisible();
+    expect(
+      await screen.findByText(englishCopy["import.hub.uploadLabel"]),
+    ).toBeVisible();
     await waitFor(() =>
       expect(
         sent.filter((one) => one.path === "GET /imports").length,
@@ -374,7 +381,9 @@ describe("the data import hub", () => {
     );
     await act(async () => {});
     expect(
-      screen.queryByRole("heading", { name: "Recent imports" }),
+      screen.queryByRole("heading", {
+        name: englishCopy["import.recent.title"],
+      }),
     ).toBeNull();
   });
 
@@ -383,7 +392,7 @@ describe("the data import hub", () => {
     stubRoutes();
     render(<ImportCard />);
     await user.upload(
-      await screen.findByLabelText("Upload your data"),
+      await screen.findByLabelText(englishCopy["import.hub.uploadLabel"]),
       new File(["Email\n"], "leads.csv"),
     );
     expect(globalThis.location.hash).toBe("#/settings/import/run");
@@ -403,7 +412,7 @@ describe("the data import hub", () => {
     await waitFor(() =>
       expect(sent.map((s) => s.path)).toContain("GET /imports/format"),
     );
-    await screen.findByLabelText("Upload your data");
+    await screen.findByLabelText(englishCopy["import.hub.uploadLabel"]);
     expect(sent.map((s) => s.path)).not.toContain("POST /imports/sources");
   });
 });

@@ -5,6 +5,7 @@
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import {
   day,
   jsonResponse,
@@ -250,7 +251,7 @@ describe("a clear day says whose it is", () => {
       await screen.findByText("Nothing is waiting on Rep One."),
     ).toBeTruthy();
     // The reader is not the subject of somebody else's empty day.
-    expect(screen.queryByText("Nothing is waiting on you.")).toBeNull();
+    expect(screen.queryByText(englishCopy["worklist.clear"])).toBeNull();
   });
 
   // A colleague the roster cannot name falls back to the sentence that names
@@ -260,7 +261,7 @@ describe("a clear day says whose it is", () => {
     stubClearDayFor([]);
     renderWorklist("en", REP);
 
-    expect(await screen.findByText("Nothing is waiting on you.")).toBeTruthy();
+    expect(await screen.findByText(englishCopy["worklist.clear"])).toBeTruthy();
     expect(screen.queryByText(new RegExp(REP))).toBeNull();
   });
 });

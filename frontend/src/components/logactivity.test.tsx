@@ -13,6 +13,7 @@ import { writeMessage } from "../design-system/richtext-testing";
 import { pickOption } from "../design-system/select-testing";
 import { calendarDay } from "../format/calendarday";
 import { formatTimeOfDay } from "../format/format";
+import { en as englishCopy } from "../i18n/en";
 import { LogActivity } from "./logactivity";
 import { LogActivityAction } from "./logactivity.action";
 import {
@@ -197,8 +198,8 @@ describe("log activity from a 360", () => {
       "No outcome",
       "Reached",
       "Not reached",
-      "Left a voicemail",
-      "Call back later",
+      englishCopy["activity.callOutcome.voicemail"],
+      englishCopy["activity.callOutcome.call_back_later"],
       "Put through",
     ]);
     expect(
@@ -666,7 +667,9 @@ describe("log activity from a 360", () => {
       screen.getByLabelText("Type"),
       "Meeting",
     );
-    await userEvent.click(screen.getByLabelText("This text is a transcript"));
+    await userEvent.click(
+      screen.getByLabelText(englishCopy["log.asTranscript"]),
+    );
     // The label swaps once checked — pasting is a transcript, not "details".
     expect(screen.queryByLabelText("Details")).toBeNull();
     await userEvent.type(screen.getByLabelText("Subject *"), "Kickoff call");
@@ -699,7 +702,9 @@ describe("log activity from a 360", () => {
       screen.getByLabelText("Type"),
       "Meeting",
     );
-    await userEvent.click(screen.getByLabelText("This text is a transcript"));
+    await userEvent.click(
+      screen.getByLabelText(englishCopy["log.asTranscript"]),
+    );
     await userEvent.type(screen.getByLabelText("Subject *"), "Kickoff call");
     // fireEvent rather than userEvent.type: a leading space/newline is
     // exactly the thing under test, and userEvent.type mangles literal
@@ -725,11 +730,15 @@ describe("log activity from a 360", () => {
       screen.getByLabelText("Type"),
       "Meeting",
     );
-    await userEvent.click(screen.getByLabelText("This text is a transcript"));
+    await userEvent.click(
+      screen.getByLabelText(englishCopy["log.asTranscript"]),
+    );
     const file = new File(["Anna: hello from a file"], "meeting.txt", {
       type: "text/plain",
     });
-    const input = screen.getByLabelText("Or upload a file") as HTMLInputElement;
+    const input = screen.getByLabelText(
+      englishCopy["log.transcriptUpload"],
+    ) as HTMLInputElement;
     await userEvent.upload(input, file);
     await waitFor(() =>
       expect(
@@ -746,7 +755,9 @@ describe("log activity from a 360", () => {
       screen.getByLabelText("Type"),
       "Meeting",
     );
-    await userEvent.click(screen.getByLabelText("This text is a transcript"));
+    await userEvent.click(
+      screen.getByLabelText(englishCopy["log.asTranscript"]),
+    );
     const file = new File(
       ["WEBVTT\n\n00:00.000 --> 00:01.000\nhi"],
       "meeting.vtt",
@@ -754,7 +765,9 @@ describe("log activity from a 360", () => {
         type: "text/vtt",
       },
     );
-    const input = screen.getByLabelText("Or upload a file") as HTMLInputElement;
+    const input = screen.getByLabelText(
+      englishCopy["log.transcriptUpload"],
+    ) as HTMLInputElement;
     // fireEvent rather than userEvent.upload: accept is advisory (a real
     // browser's file picker can be switched to "All files"), and
     // userEvent.upload refuses to fire a change event for a file it judges
@@ -763,7 +776,9 @@ describe("log activity from a 360", () => {
     Object.defineProperty(input, "files", { value: [file] });
     fireEvent.change(input);
     await waitFor(() =>
-      expect(screen.getByText("Only a .txt file is accepted.")).toBeTruthy(),
+      expect(
+        screen.getByText(englishCopy["log.transcriptUploadRejected"]),
+      ).toBeTruthy(),
     );
     expect(
       (screen.getByLabelText("Transcript") as HTMLTextAreaElement).value,
@@ -778,16 +793,20 @@ describe("log activity from a 360", () => {
       screen.getByLabelText("Type"),
       "Meeting",
     );
-    await userEvent.click(screen.getByLabelText("This text is a transcript"));
+    await userEvent.click(
+      screen.getByLabelText(englishCopy["log.asTranscript"]),
+    );
     const file = new File(["Anna: hello"], "meeting.txt", {
       type: "text/plain",
     });
     vi.spyOn(file, "text").mockRejectedValue(new Error("unreadable"));
-    const input = screen.getByLabelText("Or upload a file") as HTMLInputElement;
+    const input = screen.getByLabelText(
+      englishCopy["log.transcriptUpload"],
+    ) as HTMLInputElement;
     await userEvent.upload(input, file);
     await waitFor(() =>
       expect(
-        screen.getByText("File could not be read. Paste the text instead."),
+        screen.getByText(englishCopy["log.transcriptUploadFailed"]),
       ).toBeTruthy(),
     );
     expect(
@@ -847,7 +866,9 @@ describe("the Details field", () => {
       screen.getByLabelText("Type"),
       "Meeting",
     );
-    await userEvent.click(screen.getByLabelText("This text is a transcript"));
+    await userEvent.click(
+      screen.getByLabelText(englishCopy["log.asTranscript"]),
+    );
 
     expect(screen.getByLabelText("Transcript").tagName).toBe("TEXTAREA");
     expect(screen.queryByRole("toolbar")).toBeNull();

@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { pickOption } from "../design-system/select-testing";
 import { LocaleProvider, translate } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { SEND_PERMISSION_KEY } from "../lib/usesendpermission";
 import { CountryQuestion } from "./countryquestion";
 
@@ -105,7 +106,9 @@ describe("the question for an unknown recipient country", () => {
       screen.getByRole("combobox", { name: "Country" }),
       "United States",
     );
-    await user.click(screen.getByRole("button", { name: "Save country" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["countryQuestion.save"] }),
+    );
 
     await waitFor(() =>
       expect(invalidated).toHaveBeenCalledWith({
@@ -132,7 +135,9 @@ describe("the question for an unknown recipient country", () => {
       screen.getByRole("combobox", { name: "Country" }),
       "United States",
     );
-    await user.click(screen.getByRole("button", { name: "Save country" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["countryQuestion.save"] }),
+    );
 
     expect(
       await screen.findByText(translate("en", "countryQuestion.alreadySet")),
@@ -160,7 +165,9 @@ describe("the question for an unknown recipient country", () => {
       screen.getByRole("combobox", { name: "Country" }),
       "United States",
     );
-    await user.click(screen.getByRole("button", { name: "Save country" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["countryQuestion.save"] }),
+    );
 
     expect(await screen.findByRole("alert")).toBeVisible();
   });
@@ -170,7 +177,11 @@ describe("the question for an unknown recipient country", () => {
     draw(preview(refused({ ask_country: true })));
     await userEvent
       .setup()
-      .click(screen.getByRole("button", { name: "Save country" }));
+      .click(
+        screen.getByRole("button", {
+          name: englishCopy["countryQuestion.save"],
+        }),
+      );
 
     expect(await screen.findByRole("alert")).toBeVisible();
     expect(fetched).not.toHaveBeenCalled();

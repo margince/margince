@@ -184,6 +184,7 @@ func (h installationSettingsHandlers) UpdateInstallationSettings(w http.Response
 	// Same again: the entry's own validator holds the 1..168 bound and names
 	// this field when it refuses, so a second check here would say less.
 	patch.DeadWorkBannerHours = req.DeadWorkBannerHours
+ patch.PaymentLongOverdueDays = req.PaymentLongOverdueDays
 	patch.OAuthAccessTokenTTLMinutes = req.OauthAccessTokenTtlMinutes
 	// Same reasoning as the month above: the entry validates against the shared
 	// kernel's set. An unknown measure comes back naming this field and quoting
@@ -260,6 +261,7 @@ func (h installationSettingsHandlers) toContract(s identity.InstallationSettings
 		MemberLanguages:      memberLanguages(s.MemberLanguages),
 		FiscalYearStartMonth: s.FiscalYearStartMonth,
 		DeadWorkBannerHours:  s.DeadWorkBannerHours,
+ PaymentLongOverdueDays: new(s.PaymentLongOverdueDays),
 		ForecastForwardMeasure: crmcontracts.InstallationSettingsForecastForwardMeasure(
 			s.ForecastForwardMeasure,
 		),

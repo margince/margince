@@ -61,7 +61,9 @@ func (l liveLane) attempt(t *testing.T, sc agentloope2e.Scenario, run int) live.
 	re.requireDayHeadroom(t, sc)
 	world := re.seedLoopWorld(t, sc)
 	probe := re.probeSeed(t, sc, world)
-	svc := l.serve(t, re, loopRun{sc: sc, world: world, probe: probe})
+	runCase := loopRun{sc: sc, world: world, probe: probe}
+ svc := l.serve(t, re, runCase)
+ if sc.Recovery != "" { svc = re.withSeededRecovery(t, svc, runCase) }
 
 	trigger := fmt.Sprintf("%s:e2e-live-%d-%d", sc.Agent, run, wallNow().UnixNano())
 	re.enqueue(t, string(sc.Agent), trigger, &re.passportID)
@@ -75,8 +77,9 @@ func (l liveLane) attempt(t *testing.T, sc agentloope2e.Scenario, run int) live.
 		}
 	}
 	status, steps, _ := re.runRow(t, trigger)
+ if sc.Recovery != "" { observed.snap.Recovery = measureLiveRecovery(sc, observed.snap, steps) }
 	trace := live.Trace{
-		Scenario: sc.Name, Binding: l.cfg.Binding, Run: run, Status: status, Steps: steps,
+		Recovery: observed.snap.Recovery, Scenario: sc.Name, Binding: l.cfg.Binding, Run: run, Status: status, Steps: steps,
 		Failures: agentloope2e.Check(sc, observed.snap), Writes: observed.snap.Writes,
 	}
 	if recorder != nil {

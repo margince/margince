@@ -490,7 +490,7 @@ export const ABounceThatMayBeSentAgain: Story = {
     );
     await expect(
       await within(document.body).findByRole("textbox", {
-        name: "Corrected address",
+        name: en["worklist.verb.sendAgainAddress"],
       }),
     ).toBeVisible();
   },

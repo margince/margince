@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import {
   legalOn,
   queueItem,
@@ -111,7 +112,7 @@ export const SwitchRefused: Story = {
     const canvas = within(canvasElement);
     const toggle = await canvas.findByRole("switch");
     await userEvent.click(toggle);
-    await canvas.findByText("Setting was not saved.");
+    await canvas.findByText(englishCopy["legalReview.notSaved"]);
     await expect(toggle).toHaveAccessibleDescription(
       expect.stringContaining("Setting was not saved."),
     );

@@ -10,6 +10,7 @@ import {
 } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { steppedClock } from "../testing/steppedclock";
 import { useArrivalFocus } from "./arrivalfocus";
 import { Button } from "./atoms";
@@ -332,7 +333,9 @@ describe("a confirmation carrying a verb", () => {
     });
     await acting.click(press("show"));
     await acting.click(press("show second"));
-    expect(screen.getByRole("status")).toHaveTextContent("Task completed");
+    expect(screen.getByRole("status")).toHaveTextContent(
+      englishCopy["worklist.verb.completed"],
+    );
     await acting.click(press("Close"));
     expect(screen.getByRole("status")).toHaveTextContent("Moved to Jana.");
   });
@@ -441,7 +444,7 @@ describe("a refusal", () => {
     expect(screen.getByRole("status")).toHaveTextContent("Not hidden.");
     act(() => toast().dismiss());
     expect(screen.getByRole("status")).toHaveTextContent(
-      "Hidden from this deal",
+      englishCopy["dealfiles.hidden"],
     );
     wait(7900);
     expect(press("Undo")).toBeInTheDocument();
@@ -484,7 +487,7 @@ describe("a refusal", () => {
       toast().show("Not saved.", { tone: "danger" });
     });
     expect(screen.getByRole("status")).toHaveTextContent(
-      "Hidden from this deal",
+      englishCopy["dealfiles.hidden"],
     );
   });
 
@@ -508,7 +511,7 @@ describe("a refusal", () => {
       toast().show("Hidden from this deal", undo(second));
     });
     expect(screen.getByRole("status")).toHaveTextContent(
-      "Hidden from this deal",
+      englishCopy["dealfiles.hidden"],
     );
     await acting.click(press("Undo"));
     expect(second).toHaveBeenCalledOnce();
@@ -528,7 +531,7 @@ describe("a refusal", () => {
     expect(screen.getByRole("status")).toHaveTextContent("Not sent.");
     await acting.click(press("Close"));
     expect(screen.getByRole("status")).toHaveTextContent(
-      "Hidden from this deal",
+      englishCopy["dealfiles.hidden"],
     );
   });
 

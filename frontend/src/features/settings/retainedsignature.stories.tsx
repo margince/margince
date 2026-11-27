@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { type Locale, translate } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -68,7 +69,9 @@ export const Saved: Story = {
         name: translate("en", "settings.signatureHtmlLabel"),
       }),
     ).toHaveValue(retained().signature.html);
-    await expect(canvas.getByTitle("Saved signature preview")).toBeVisible();
+    await expect(
+      canvas.getByTitle(englishCopy["settings.signatureReviewPreview"]),
+    ).toBeVisible();
   },
 };
 export const Draft: Story = {
@@ -139,7 +142,9 @@ export const ConcurrentEdit: Story = {
     await userEvent.type(body, "My retained draft");
     await userEvent.click(canvas.getByRole("button", { name: "Save" }));
     await expect(
-      await canvas.findByRole("button", { name: "Keep my draft" }),
+      await canvas.findByRole("button", {
+        name: englishCopy["settings.signatureReviewKeepDraft"],
+      }),
     ).toBeVisible();
     await expect(body).toHaveValue("My retained draft");
     await expect(canvas.getByRole("button", { name: "Save" })).toBeDisabled();

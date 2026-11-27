@@ -217,7 +217,7 @@ it("prefills the contact and saved details, then offers two picked times in one 
     screen.getByRole("heading", { name: "Book a meeting with Nina Weber" }),
   ).toBeTruthy();
   expect(
-    await screen.findByRole("button", { name: "Pick at least 2 times" }),
+    await screen.findByRole("button", { name: en["scheduling.pickTwo"] }),
   ).toHaveProperty("disabled", true);
   for (const slot of bookingSlots)
     await user.click(
@@ -243,7 +243,7 @@ it("prefills the contact and saved details, then offers two picked times in one 
   expect(screen.getByText(/Link created/)).toBeTruthy();
 
   // The link carries what was proposed, so a change after it means another one.
-  await user.type(screen.getByLabelText("Meeting title"), "!");
+  await user.type(screen.getByLabelText(en["scheduling.subject"]), "!");
   expect(screen.queryByText(/Link created/)).toBeNull();
   expect(screen.getByText(/so it gets a new link/)).toBeTruthy();
 });
@@ -263,7 +263,7 @@ it("removes an offered time from the review list", async () => {
     }),
   );
   expect(screen.getByText("0 of 3")).toBeTruthy();
-  expect(screen.getByText("Pick 2 or 3 times in the calendar.")).toBeTruthy();
+  expect(screen.getByText(en["scheduling.pickOfferEmpty"])).toBeTruthy();
 });
 
 it("sends an agreed time as an invitation without a video link when switched off", async () => {
@@ -274,10 +274,10 @@ it("sends an agreed time as an invitation without a video link when switched off
     await screen.findByRole("radio", { name: /Send an invite/ }),
   );
   await user.click(
-    screen.getByRole("switch", { name: "Add Google Meet link" }),
+    screen.getByRole("switch", { name: en["scheduling.videoGoogle"] }),
   );
   await user.click(screen.getByText(/^Details/));
-  const location = screen.getByLabelText("Location or meeting link");
+  const location = screen.getByLabelText(en["scheduling.location"]);
   await user.clear(location);
   await user.type(location, "Office, Room 2");
   await user.click(
@@ -307,13 +307,13 @@ it("sends an agreed time as an invitation without a video link when switched off
 it("shows the calendar setup step instead of times when no calendar can send invites", async () => {
   const { paths } = mount(false);
   expect(
-    await screen.findByRole("link", { name: "Open meeting settings" }),
+    await screen.findByRole("link", { name: en["scheduling.openSettings"] }),
   ).toBeTruthy();
   expect(
     screen.getByText(/Set up calendars and availability in Settings/),
   ).toBeTruthy();
   expect(
-    screen.getByRole("button", { name: "Connect a calendar first" }),
+    screen.getByRole("button", { name: en["scheduling.connectFirst"] }),
   ).toHaveProperty("disabled", true);
   expect(paths.some((path) => path.endsWith("/availability"))).toBe(false);
 });
@@ -328,14 +328,16 @@ it("lets the guest pick for a personal link, showing the open times without aski
   );
   // The same week stays on screen as the times the guest will choose from,
   // and none of them is a time the host can pick.
-  expect(screen.getByRole("heading", { name: "Your open times" })).toBeTruthy();
+  expect(
+    screen.getByRole("heading", { name: en["scheduling.openTimes"] }),
+  ).toBeTruthy();
   expect(screen.getByText(slot)).toBeTruthy();
   expect(screen.queryByRole("button", { name: slot })).toBeNull();
   expect(screen.getByText("Nina Weber picks the time")).toBeTruthy();
   // The link books a meeting of the length chosen here.
   await user.click(screen.getByRole("button", { name: "45 min" }));
   await user.click(
-    screen.getByRole("button", { name: "Create link and review email" }),
+    screen.getByRole("button", { name: en["scheduling.createLinkReview"] }),
   );
   await waitFor(() => expect(proposals).toHaveLength(1));
   expect(proposals[0]).toMatchObject({ options: [], duration_minutes: 45 });
@@ -350,10 +352,9 @@ it("stops at the booking horizon when paging forward by week", async () => {
   expect(
     await screen.findByRole("button", { name: "Next week" }),
   ).toHaveProperty("disabled", true);
-  expect(screen.getByRole("button", { name: "Previous week" })).toHaveProperty(
-    "disabled",
-    false,
-  );
+  expect(
+    screen.getByRole("button", { name: en["scheduling.previousWeek"] }),
+  ).toHaveProperty("disabled", false);
 });
 it("searches beyond a busy month in bounded requests and finds November within a longer horizon", async () => {
   const user = userEvent.setup();
@@ -364,7 +365,7 @@ it("searches beyond a busy month in bounded requests and finds November within a
   }));
   const { windows } = mount(true, 90, () => (++calls < 3 ? [] : novemberSlots));
   await user.click(
-    await screen.findByRole("button", { name: "Find next available times" }),
+    await screen.findByRole("button", { name: en["scheduling.findNext"] }),
   );
   await waitFor(() => expect(windows).toHaveLength(3));
   expect(
@@ -394,7 +395,7 @@ it("finds a meeting crossing a search chunk boundary without losing it", async (
       : [],
   );
   await user.click(
-    await screen.findByRole("button", { name: "Find next available times" }),
+    await screen.findByRole("button", { name: en["scheduling.findNext"] }),
   );
   expect(
     await screen.findByRole("button", { name: slotName(start) }),
@@ -426,7 +427,7 @@ it("ends a forward search cleanly when the server's horizon ends before the brow
         },
   );
   await user.click(
-    await screen.findByRole("button", { name: "Find next available times" }),
+    await screen.findByRole("button", { name: en["scheduling.findNext"] }),
   );
   expect(
     await screen.findByText(/No available times within the booking horizon/),
@@ -437,7 +438,7 @@ it("ends a forward search cleanly when the server's horizon ends before the brow
 it("keeps the contact draft usable if the hours response is missing its required window", async () => {
   const user = userEvent.setup();
   mount(true, 30, () => bookingSlots, { chosen: false });
-  const message = await screen.findByLabelText("Message for your guest");
+  const message = await screen.findByLabelText(en["scheduling.agenda"]);
   await user.type(message, "Keep this draft");
   expect(screen.getByDisplayValue("Keep this draft")).toBeTruthy();
   expect(await screen.findByDisplayValue("nina@brandt.example")).toBeTruthy();
@@ -502,7 +503,7 @@ it("drops the starting deal when the booking contact changes", async () => {
   const user = userEvent.setup();
   mount(true, 30, () => bookingSlots, bookingHours, {}, { dealId: "d-2" });
   await user.type(
-    await screen.findByRole("searchbox", { name: "Who are you meeting?" }),
+    await screen.findByRole("searchbox", { name: en["scheduling.contact"] }),
     "Other",
   );
   await user.click(await screen.findByRole("button", { name: "Other buyer" }));

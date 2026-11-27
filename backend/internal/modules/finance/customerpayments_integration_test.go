@@ -8,7 +8,9 @@ package finance
 import (
 	"context"
 	"encoding/json"
+	"github.com/jackc/pgx/v5"
 	"net/http"
+	"reflect"
 	"testing"
 	"time"
 
@@ -211,7 +213,7 @@ func TestCustomerPaymentsDoesNotIncludeTheReplacedConnectionsInvoices(t *testing
 func TestCustomerPaymentsRejectsMalformedAndWrongSourceCursors(t *testing.T) {
 	a := setupSourceAdmin(t)
 	syncPayments(t, a)
-	wrong, err := storekit.EncodeOpaque(paymentPosition{ids.NewV7(), ledgerEpoch, ids.NewV7()})
+	wrong, err := storekit.EncodeOpaque(paymentPosition{Connection: ids.NewV7(), Due: ledgerEpoch, Invoice: ids.NewV7(), Currency: "EUR", Amount: 100})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -254,5 +256,37 @@ func TestCustomerPaymentsKeepsLastGoodFiguresWhenANewLinkFollowsAFailedSync(t *t
 	got := paymentResponse(ctx, t, a, nil, 50)
 	if got.State != crmcontracts.FinanceSummaryStateError || got.InvoiceCount != before.InvoiceCount || len(got.Totals) != len(before.Totals) || got.Totals[0] != before.Totals[0] {
 		t.Fatalf("new link erased failed-sync last-good figures: %+v", got)
+	}
+}
+
+func TestHomePaymentAgeDoesNotChangeACompanysFinanceTotals(t *testing.T) {
+	a := setupSourceAdmin(t)
+	syncPayments(t, a)
+	a.store.SetClock(func() time.Time { return ledgerEpoch.AddDate(0, 0, 400) })
+	ctx := a.documentReader(principal.RowScopeAll)
+	before, err := a.store.SummaryFor(ctx, ids.From[ids.CompanyKind](a.company))
+	if err != nil {
+		t.Fatal(err)
+	}
+	age := 365
+	a.store.paymentAge = func(context.Context, pgx.Tx) (int, error) { return age, nil }
+	aged := paymentResponse(ctx, t, a, nil, 50)
+	if aged.LongOverdue == nil || aged.LongOverdue.InvoiceCount == 0 || len(aged.Customers) != 0 {
+		t.Fatalf("older invoices escaped their group: %+v", aged)
+	}
+	age = 1000
+	current := paymentResponse(ctx, t, a, nil, 50)
+	if current.LongOverdue == nil || current.LongOverdue.InvoiceCount != 0 || len(current.Customers) == 0 {
+		t.Fatalf("age setting did not move invoices: %+v", current)
+	}
+	if current.InvoiceCount != aged.InvoiceCount || !reflect.DeepEqual(current.Totals, aged.Totals) {
+		t.Fatal("age setting changed Home totals")
+	}
+	after, err := a.store.SummaryFor(ctx, ids.From[ids.CompanyKind](a.company))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(before, after) {
+		t.Fatal("Home age setting changed company finance")
 	}
 }

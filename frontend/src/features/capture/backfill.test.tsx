@@ -12,6 +12,7 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { installFetchStub } from "../../testing/story-utils";
 import { BackfillPanel } from "./backfill";
 
@@ -168,7 +169,7 @@ describe("the connect-time backfill payoff", () => {
       await screen.findByRole("button", { name: /Start a new import/ }),
     );
     const picker = await screen.findByRole("combobox", {
-      name: "How far back",
+      name: englishCopy["backfill.windowLabel"],
     });
     expect(picker.textContent).toContain("6 months");
     expect(screen.queryByText(/imports undefined/)).toBeNull();
@@ -184,7 +185,7 @@ describe("the connect-time backfill payoff", () => {
     });
     render(<BackfillPanel onClose={noop} provider="gmail" />);
     const picker = await screen.findByRole("combobox", {
-      name: "How far back",
+      name: englishCopy["backfill.windowLabel"],
     });
     expect(picker.textContent).toContain("6 months");
     await user.click(picker);
@@ -321,7 +322,9 @@ describe("the connect-time backfill payoff", () => {
     });
     render(<BackfillPanel onClose={noop} provider="gmail" />);
 
-    expect(await screen.findByText("Counting emails…")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["backfill.previewLoading"]),
+    ).toBeTruthy();
     await user.click(screen.getByRole("button", { name: /Start import/ }));
 
     await waitFor(() =>
@@ -370,11 +373,13 @@ describe("the connect-time backfill payoff", () => {
     expect(await screen.findByText("128")).toBeTruthy();
     expect(screen.getByText("47")).toBeTruthy();
     expect(screen.getByText("12")).toBeTruthy();
-    expect(screen.getByText("Emails added")).toBeTruthy();
-    expect(screen.getByText("New contacts")).toBeTruthy();
+    expect(screen.getByText(englishCopy["backfill.statEmails"])).toBeTruthy();
+    expect(screen.getByText(englishCopy["backfill.statContacts"])).toBeTruthy();
     // "to check", not created: the count is domains this run raised a company
     // question for, and a domain becomes a company only if its site says so.
-    expect(screen.getByText("Companies to check")).toBeTruthy();
+    expect(
+      screen.getByText(englishCopy["backfill.statCompanies"]),
+    ).toBeTruthy();
   });
 
   it("shows the celebratory done state when the run completes", async () => {
@@ -435,8 +440,11 @@ describe("the connect-time backfill payoff", () => {
     // Opened on the window this mailbox already ran, because the server only
     // ever widens — a picker that opens on a refusal wastes the first press.
     expect(
-      (await screen.findByRole("combobox", { name: "How far back" }))
-        .textContent,
+      (
+        await screen.findByRole("combobox", {
+          name: englishCopy["backfill.windowLabel"],
+        })
+      ).textContent,
     ).toContain("1 year");
 
     await user.click(
@@ -675,7 +683,7 @@ describe("a failure nobody wrote for a reader", () => {
     );
 
     expect(
-      await screen.findByText("The request failed. No cause reported."),
+      await screen.findByText(englishCopy["common.errorNoCause"]),
     ).toBeTruthy();
     // The wording nobody wrote for a user stays off the screen entirely.
     expect(screen.queryByText(/ECONNREFUSED/)).toBeNull();
@@ -728,11 +736,13 @@ describe("internal history consent", () => {
     const user = userEvent.setup();
     render(<BackfillPanel onClose={noop} provider="gmail" />);
     const consent = await screen.findByRole("checkbox", {
-      name: "Include authorized internal mail in a new history import",
+      name: englishCopy["internalMail.includeHistory"],
     });
     expect(consent).toHaveProperty("checked", false);
     expect(screen.getByText(/Customer Operations/)).toBeTruthy();
-    await user.click(screen.getByRole("button", { name: "Start import" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["backfill.startCta"] }),
+    );
     await waitFor(() =>
       expect(requestsTo(calls, "/backfill", "POST")).toHaveLength(1),
     );
@@ -746,10 +756,12 @@ describe("internal history consent", () => {
     render(<BackfillPanel onClose={noop} provider="gmail" />);
     await user.click(
       await screen.findByRole("checkbox", {
-        name: "Include authorized internal mail in a new history import",
+        name: englishCopy["internalMail.includeHistory"],
       }),
     );
-    await user.click(screen.getByRole("button", { name: "Start import" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["backfill.startCta"] }),
+    );
     await waitFor(() =>
       expect(requestsTo(calls, "/backfill", "POST")).toHaveLength(1),
     );

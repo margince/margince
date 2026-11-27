@@ -9,6 +9,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { AppLink } from "../../design-system/applink";
 import { translate } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { readingsDay, taskRow } from "../../testing/brief.fixtures";
 import { jsonResponse, render, stubApi } from "../../testing/brief.testkit";
 import {
@@ -104,8 +105,12 @@ describe("a row opened from the Worklist drawer", () => {
       </>,
     );
 
-    expect(linkTo("Open contact").get("from")).toBe("worklist");
-    expect(linkTo("Open contact").get("queue_scope")).toBe("team");
+    expect(linkTo(englishCopy["task.next.openContact"]).get("from")).toBe(
+      "worklist",
+    );
+    expect(
+      linkTo(englishCopy["task.next.openContact"]).get("queue_scope"),
+    ).toBe("team");
     expect(linkTo("Privacy").has("from")).toBe(false);
     expect(linkTo("Elsewhere").has("from")).toBe(false);
   });

@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Panel } from "../design-system/panel";
 import { translate } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import {
   emptyPage,
   ListTableHarness,
@@ -80,7 +81,9 @@ describe("a press that takes its own button away", () => {
     const user = userEvent.setup();
     render(<ListTableHarness fetchPage={fetchPage} />);
     await user.click(
-      await screen.findByRole("button", { name: "Clear filters" }),
+      await screen.findByRole("button", {
+        name: englishCopy["table.clearFilters"],
+      }),
     );
     expect(screen.getByRole("region")).toBeInTheDocument();
     expect(screen.getByRole("searchbox", { name: "Search" })).toHaveFocus();

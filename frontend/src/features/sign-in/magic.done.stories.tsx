@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import type { MagicLine, MagicReceipt } from "../../lib/magic.queries";
 import {
   jsonResponse,
@@ -153,7 +154,9 @@ export const DetailsOpened: Story = {
     const opened = details.closest("details");
     if (!opened) throw new Error("Details is not a disclosure");
     await expect(
-      await within(opened).findByText("This kind of change cannot be undone."),
+      await within(opened).findByText(
+        englishCopy["history.undo.notReplayable"],
+      ),
     ).toBeVisible();
   },
 };

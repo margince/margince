@@ -59,7 +59,7 @@ export const Choosing: Story = {
   play: async ({ canvasElement }) => {
     await userEvent.click(
       await within(canvasElement).findByRole("button", {
-        name: "Add to Shortlist",
+        name: en["lists.addToShortlist"],
       }),
     );
     await within(document.body).findByRole("dialog");
@@ -84,7 +84,7 @@ export const AlreadyOnIt: Story = {
   play: async ({ canvasElement }) => {
     await userEvent.click(
       await within(canvasElement).findByRole("button", {
-        name: "Add to Shortlist",
+        name: en["lists.addToShortlist"],
       }),
     );
     const page = within(document.body);
@@ -96,7 +96,7 @@ export const AlreadyOnIt: Story = {
     );
     await userEvent.click(page.getByRole("button", { name: "Add" }));
     await expect(
-      await page.findByText("Already on this Shortlist."),
+      await page.findByText(en["lists.alreadyOnShortlist"]),
     ).toBeVisible();
   },
 };

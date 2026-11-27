@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { expect, userEvent, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { workEmailAddress } from "./contactformfields";
 import type { CreateField, FormRows } from "./create.fields";
 import { RecordFormBody } from "./create.form";
@@ -99,9 +100,7 @@ export const PrefilledFromWorkEmail: Story = {
       "dana.buyer@nordlicht-logistik.de",
     );
     await expect(
-      await canvas.findByText(
-        "Matched to an existing company by the work email domain.",
-      ),
+      await canvas.findByText(englishCopy["create.companyPrefilled"]),
     ).toBeVisible();
     await expect(canvas.getByRole("combobox", { name: "Company" })).toHaveValue(
       "Nordlicht Logistik AG",

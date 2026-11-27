@@ -42,7 +42,7 @@ it("never asks for what needs deal read, and draws no failed section, for a role
   expect(await screen.findByText(/Test/)).toBeInTheDocument();
   for (const path of DEAL_READS)
     expect(calls.some((call) => call.path.endsWith(path))).toBe(false);
-  expect(screen.queryByText("This section did not load.")).toBeNull();
+  expect(screen.queryByText(en["state.failed"])).toBeNull();
   expect(screen.queryByText(en["magic.failed"])).toBeNull();
   expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
 });

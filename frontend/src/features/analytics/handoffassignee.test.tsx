@@ -5,6 +5,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import { WaitingRow } from "./analytics.outcomes.sdr";
 import { HandoffAssigneeModal } from "./handoffassignee";
@@ -93,7 +94,9 @@ it("keeps the chosen receiver after refusal and retries with the current version
   );
   const closed = mount();
   const confirm = () =>
-    screen.getByRole("button", { name: "Reassign handoff" });
+    screen.getByRole("button", {
+      name: englishCopy["analytics.handoffReassign"],
+    });
   expect(confirm()).toBeDisabled();
   await waitFor(() => expect(screen.getByRole("combobox")).not.toBeDisabled());
   await user.click(screen.getByRole("combobox"));
@@ -128,9 +131,15 @@ it("prevents reassignment once the server says the handoff was answered", async 
   vi.stubGlobal("fetch", fetch);
   mount();
   await screen.findByText(/Accepted handoffs keep/);
-  await user.click(screen.getByRole("button", { name: "Reassign handoff" }));
+  await user.click(
+    screen.getByRole("button", {
+      name: englishCopy["analytics.handoffReassign"],
+    }),
+  );
   expect(
-    screen.getByRole("button", { name: "Reassign handoff" }),
+    screen.getByRole("button", {
+      name: englishCopy["analytics.handoffReassign"],
+    }),
   ).toBeDisabled();
   expect(
     fetch.mock.calls.every(
@@ -181,7 +190,9 @@ it("opens a fresh assignment from a waiting row without member administration", 
     />,
   );
   await user.click(
-    await screen.findByRole("button", { name: "Reassign handoff" }),
+    await screen.findByRole("button", {
+      name: englishCopy["analytics.handoffReassign"],
+    }),
   );
   await screen.findByRole("dialog");
   await waitFor(() =>

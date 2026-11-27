@@ -11,6 +11,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { WebhooksCard } from "./webhooks";
 
@@ -119,7 +120,7 @@ describe("WebhooksCard", () => {
 
     await waitFor(() =>
       expect(
-        screen.getByText("https://example.test/hooks/margince"),
+        screen.getByText(englishCopy["webhooks.field.targetUrlPlaceholder"]),
       ).toBeTruthy(),
     );
     expect(screen.getByText("deal.stage_changed")).toBeTruthy();
@@ -132,7 +133,7 @@ describe("WebhooksCard", () => {
 
     await waitFor(() =>
       expect(
-        screen.getByText("https://example.test/hooks/margince"),
+        screen.getByText(englishCopy["webhooks.field.targetUrlPlaceholder"]),
       ).toBeTruthy(),
     );
     expect(screen.queryByTestId("new-webhook-subscription")).toBeNull();
@@ -159,7 +160,7 @@ describe("WebhooksCard", () => {
 
     await waitFor(() =>
       expect(
-        screen.getByText("https://example.test/hooks/margince"),
+        screen.getByText(englishCopy["webhooks.field.targetUrlPlaceholder"]),
       ).toBeTruthy(),
     );
     expect(screen.getByRole("button", { name: "Edit" })).toBeTruthy();
@@ -178,7 +179,7 @@ describe("WebhooksCard", () => {
 
     await waitFor(() =>
       expect(
-        screen.getByText("https://example.test/hooks/margince"),
+        screen.getByText(englishCopy["webhooks.field.targetUrlPlaceholder"]),
       ).toBeTruthy(),
     );
     await openRowActions(userEvent.setup());
@@ -209,7 +210,7 @@ describe("WebhooksCard", () => {
     // The subscription itself still reads: what it targets, which events it
     // takes, and its delivery health stay inspectable.
     expect(
-      screen.getByText("https://example.test/hooks/margince"),
+      screen.getByText(englishCopy["webhooks.field.targetUrlPlaceholder"]),
     ).toBeTruthy();
   });
 
@@ -296,7 +297,7 @@ describe("WebhooksCard", () => {
     // The existing subscription is still listed (read-only).
     await waitFor(() =>
       expect(
-        screen.getByText("https://example.test/hooks/margince"),
+        screen.getByText(englishCopy["webhooks.field.targetUrlPlaceholder"]),
       ).toBeTruthy(),
     );
     expect(
@@ -334,7 +335,7 @@ describe("WebhooksCard", () => {
     render(<WebhooksCard />);
 
     await waitFor(() =>
-      expect(screen.getByText("Nothing here yet.")).toBeTruthy(),
+      expect(screen.getByText(englishCopy["common.empty"])).toBeTruthy(),
     );
   });
 
@@ -344,7 +345,7 @@ describe("WebhooksCard", () => {
 
     await waitFor(() =>
       expect(
-        screen.getByText("https://example.test/hooks/margince"),
+        screen.getByText(englishCopy["webhooks.field.targetUrlPlaceholder"]),
       ).toBeTruthy(),
     );
     expect(screen.queryByTestId("new-webhook-subscription")).toBeNull();
@@ -356,7 +357,7 @@ describe("WebhooksCard", () => {
 
     await waitFor(() =>
       expect(
-        screen.getByText("https://example.test/hooks/margince"),
+        screen.getByText(englishCopy["webhooks.field.targetUrlPlaceholder"]),
       ).toBeTruthy(),
     );
     expect(screen.queryByTestId("edit-webhook-subscription")).toBeNull();
@@ -545,7 +546,9 @@ describe("WebhooksCard — deliveries panel (Task 10)", () => {
     expect(screen.getByText("500")).toBeTruthy();
     expect(screen.getByText("connection refused")).toBeTruthy();
     expect(screen.getByText("Delivered")).toBeTruthy();
-    expect(screen.getByText("Dead-lettered")).toBeTruthy();
+    expect(
+      screen.getByText(englishCopy["webhooks.deliveries.status.dead_lettered"]),
+    ).toBeTruthy();
     // Dead-lettered rows read as a visually distinct group, not just a badge
     // buried in an undifferentiated list.
     expect(screen.getByTestId("dead-letter-group")).toBeTruthy();
@@ -649,7 +652,11 @@ describe("WebhooksCard — deliveries panel (Task 10)", () => {
       const badges = screen.getAllByText("Delivered");
       expect(badges.length).toBe(2);
     });
-    expect(screen.queryByText("Dead-lettered")).toBeNull();
+    expect(
+      screen.queryByText(
+        englishCopy["webhooks.deliveries.status.dead_lettered"],
+      ),
+    ).toBeNull();
   });
 
   it("hides the replay action for a non-admin/ops role", async () => {
@@ -724,7 +731,7 @@ describe("WebhooksCard — rotate secret", () => {
     // word, as it should.
     await user.click(
       within(screen.getByRole("dialog")).getByRole("button", {
-        name: "Rotate secret",
+        name: englishCopy["webhooks.rotate"],
       }),
     );
 

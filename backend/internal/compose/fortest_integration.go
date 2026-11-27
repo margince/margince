@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
+ "github.com/margince/margince/backend/internal/compose/loopfault"
 )
 
 // ActAsImportRunForTest binds the principal an import attempt runs as, through
@@ -53,4 +54,9 @@ func TeamServiceForTest(pool *pgxpool.Pool) *identity.Service {
 // WithConsentClockForTest pins the consent store's clock; the store is shared, so option order does not matter.
 func WithConsentClockForTest(now func() time.Time) Option {
 	return func(s *Server, _ *pgxpool.Pool) { s.consentHandlers = s.WithClock(now) }
+}
+
+// WithRunnerReadFailureForTest refuses selected reads inside the real registry.
+func WithRunnerReadFailureForTest(fail loopfault.Failure) RunnerOption {
+ return func(s *RunnerService) { s.features.readFailure = fail }
 }

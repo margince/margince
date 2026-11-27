@@ -20,6 +20,7 @@ import "./features/automations/oauthconsent";
 import "./features/contacts/contacts";
 import "./App.settings";
 import "./features/settings/settings";
+import { en as englishCopy } from "./i18n/en";
 
 // Two places decide, on their own, where a session belongs when the
 // installation has not described itself, and each rewrites the hash to say so.
@@ -393,7 +394,7 @@ describe("onboarding gate", () => {
                   headers: { "Content-Type": "application/json" },
                 },
               )
-            : new Response(JSON.stringify({ code: "not_found" }), {
+            : new Response(JSON.stringify({ code: status === 403 ? "permission_denied" : "not_found" }), {
                 status,
                 headers: { "Content-Type": "application/problem+json" },
               });
@@ -460,7 +461,9 @@ describe("onboarding gate", () => {
       { seat: "read" },
     );
     mount();
-    await screen.findByRole("navigation", { name: "Primary navigation" });
+    await screen.findByRole("navigation", {
+      name: englishCopy["shell.railAria"],
+    });
     expect(routeHash(parseHash(window.location.hash))).toBe("#/contacts");
   });
 
@@ -501,7 +504,9 @@ describe("onboarding gate", () => {
     window.location.hash = "#/contacts";
     stubCompany(403, undefined, { roles: ["rep"] });
     mount();
-    await screen.findByRole("navigation", { name: "Primary navigation" });
+    await screen.findByRole("navigation", {
+      name: englishCopy["shell.railAria"],
+    });
     expect(routeHash(parseHash(window.location.hash))).toBe("#/contacts");
     expect(companyReads()).toHaveLength(0);
   });
@@ -536,7 +541,9 @@ describe("onboarding gate", () => {
       },
     );
     mount();
-    const back = await screen.findByRole("link", { name: "Back to setup" });
+    const back = await screen.findByRole("link", {
+      name: englishCopy["shell.backToSetup"],
+    });
     expect(window.location.hash).toBe("#/settings/account");
     expect(screen.queryByRole("button", { name: /^Notifications/ })).toBeNull();
     await userEvent.setup().click(back);
@@ -596,7 +603,9 @@ describe("onboarding gate", () => {
       },
     );
     mount();
-    await screen.findByRole("navigation", { name: "Primary navigation" });
+    await screen.findByRole("navigation", {
+      name: englishCopy["shell.railAria"],
+    });
     expect(routeHash(parseHash(window.location.hash))).toBe("#/contacts");
     expect(requestsEndingIn("/v1/onboarding/state")).toHaveLength(0);
   });
@@ -622,7 +631,9 @@ describe("onboarding gate", () => {
       { roles: ["rep"], seat: "read" },
     );
     mount();
-    await screen.findByRole("navigation", { name: "Primary navigation" });
+    await screen.findByRole("navigation", {
+      name: englishCopy["shell.railAria"],
+    });
     expect(routeHash(parseHash(window.location.hash))).toBe("#/contacts");
     expect(companyReads()).toHaveLength(0);
   });
@@ -645,7 +656,9 @@ describe("onboarding gate", () => {
         },
       );
       mount();
-      await screen.findByRole("navigation", { name: "Primary navigation" });
+      await screen.findByRole("navigation", {
+        name: englishCopy["shell.railAria"],
+      });
       expect(routeHash(parseHash(window.location.hash))).toBe("#/contacts");
     },
   );
@@ -676,7 +689,7 @@ describe("onboarding gate", () => {
     mount();
     await waitFor(() => expect(requestsEndingIn(ROLLOUT)).not.toHaveLength(0));
     expect(
-      screen.queryByRole("navigation", { name: "Primary navigation" }),
+      screen.queryByRole("navigation", { name: englishCopy["shell.railAria"] }),
     ).toBeNull();
     release();
     await waitFor(() =>
@@ -697,7 +710,9 @@ describe("onboarding gate", () => {
     const releaseRollout = holdAnswersTo(ROLLOUT);
     const releaseRow = holdAnswersTo("/v1/onboarding/state");
     mount();
-    await screen.findByRole("navigation", { name: "Primary navigation" });
+    await screen.findByRole("navigation", {
+      name: englishCopy["shell.railAria"],
+    });
     expect(requestsEndingIn(ROLLOUT)).not.toHaveLength(0);
     releaseRollout();
     await waitFor(() =>
@@ -814,7 +829,7 @@ describe("onboarding gate", () => {
     mount();
     await waitFor(() => expect(requestsEndingIn(ROLLOUT)).not.toHaveLength(0));
     expect(
-      screen.queryByRole("navigation", { name: "Primary navigation" }),
+      screen.queryByRole("navigation", { name: englishCopy["shell.railAria"] }),
     ).toBeNull();
     release();
     await waitFor(() =>
@@ -828,7 +843,9 @@ describe("onboarding gate", () => {
     mount();
     // The company resolves before this settles, so a gate that redirected
     // would have replaced the hash by now.
-    await screen.findByRole("navigation", { name: "Primary navigation" });
+    await screen.findByRole("navigation", {
+      name: englishCopy["shell.railAria"],
+    });
     // The SCREEN, not the whole address. A list spells its own opening dials
     // into the hash on arrival, so contacts settles at `#/contacts?sort=…` a
     // moment after the shell renders; an equality against the bare address
@@ -882,7 +899,9 @@ describe("onboarding gate", () => {
     // The consent screen itself is proof the gate never fired — an
     // onboarding redirect would have replaced the hash before this renders.
     expect(
-      await screen.findByRole("heading", { name: "Authorize access" }),
+      await screen.findByRole("heading", {
+        name: englishCopy["consent.title"],
+      }),
     ).toBeTruthy();
     expect(window.location.hash).toBe(pendingHash);
   });

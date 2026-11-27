@@ -5,6 +5,7 @@
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { REPORTING_FIXTURE_ZONE } from "../../testing/reporting.fixtures";
 import {
   installFetchStub,
@@ -103,11 +104,13 @@ it("lists what stands between the reader and numbers they can trust", async () =
   render(<AnalyticsScreen />);
 
   expect(
-    await screen.findByRole("heading", { name: "Needs your attention" }),
+    await screen.findByRole("heading", {
+      name: englishCopy["analytics.attention"],
+    }),
   ).toBeTruthy();
   expect(await screen.findByText("Deal a")).toBeTruthy();
   expect(screen.getByText("Deal b")).toBeTruthy();
-  expect(screen.getAllByText("Close date has passed")).toHaveLength(2);
+  expect(screen.getAllByText(englishCopy["review.closePast"])).toHaveLength(2);
   expect((await screen.findAllByText(/^Riley Rep · .+ at stake$/)).length).toBe(
     2,
   );
@@ -116,7 +119,7 @@ it("lists what stands between the reader and numbers they can trust", async () =
     await screen.findByText("10 of 12 open deals are priced"),
   ).toBeTruthy();
   expect(
-    await screen.findByText("1 data source was not fully checked"),
+    await screen.findByText(englishCopy["analytics.attentionCoverage_one"]),
   ).toBeTruthy();
 });
 
@@ -147,7 +150,9 @@ it("keeps the list when the performance evaluation fails", async () => {
   render(<AnalyticsScreen />);
 
   expect(
-    await screen.findByRole("heading", { name: "Needs your attention" }),
+    await screen.findByRole("heading", {
+      name: englishCopy["analytics.attention"],
+    }),
   ).toBeTruthy();
   expect(await screen.findByText("Deal a")).toBeTruthy();
 });
@@ -243,9 +248,11 @@ it("draws no panel when nothing needs the reader", async () => {
   );
   render(<AnalyticsScreen />);
 
-  await screen.findByRole("heading", { name: "Sales won over time" });
+  await screen.findByRole("heading", {
+    name: englishCopy["reporting.bookings_trend"],
+  });
   expect(
-    screen.queryByRole("heading", { name: "Needs your attention" }),
+    screen.queryByRole("heading", { name: englishCopy["analytics.attention"] }),
   ).toBeNull();
 });
 
@@ -267,7 +274,9 @@ it("asks nothing of the forecast for a reader without the forecast grant", async
   );
   render(<AnalyticsScreen />);
 
-  await screen.findByRole("heading", { name: "Sales won over time" });
+  await screen.findByRole("heading", {
+    name: englishCopy["reporting.bookings_trend"],
+  });
   expect(forecast).not.toHaveBeenCalled();
   expect(exceptions).not.toHaveBeenCalled();
 });

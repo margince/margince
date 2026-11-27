@@ -7,6 +7,7 @@ import { LocaleProvider } from "../i18n";
 import type { StageStep } from "./stageladder";
 import { LadderRun } from "./stageladder.run";
 import "./stageladder.css";
+import { en as englishCopy } from "../i18n/en";
 
 // The scrolling run both ladder shapes draw, alone: where it comes to rest.
 const meta: Meta<typeof LadderRun> = {
@@ -71,7 +72,9 @@ export const CurrentStageWiderThanTheRun: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const run = await canvas.findByRole("region", { name: "Stage" });
-    await canvas.findByRole("button", { name: "Show earlier stages" });
+    await canvas.findByRole("button", {
+      name: englishCopy["stageLadder.earlier"],
+    });
     const here = canvas.getByText(LONG_NAME).closest("li");
     if (!here) {
       throw new Error("The current stage drew no rung.");

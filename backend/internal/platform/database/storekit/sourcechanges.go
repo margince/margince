@@ -36,16 +36,33 @@ type sourceChange struct {
 
 var sourceEntities = map[string]bool{"contact": true, "company": true, "lead": true, "deal": true, "offer": true, "project": true}
 
-func readSourceChanges(ctx context.Context, tx pgx.Tx) (map[string]sourceChange, error) {
-	var raw []byte
-	if err := tx.QueryRow(ctx, `SELECT coalesce(nullif(current_setting('margince.source_changes', true), ''), '{}')::jsonb`).Scan(&raw); err != nil {
+func readSourceChanges(ctx context.Context, tx pgx.Tx, kind *string, identities []ids.UUID) (map[string]sourceChange, error) {
+	rows, err := tx.Query(ctx, `SELECT public.source_changes_for_audit(current_schema(), $1, $2)`, kind, identities)
+	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 	var changes map[string]sourceChange
-	if err := json.Unmarshal(raw, &changes); err != nil {
-		return nil, err
+	for rows.Next() {
+		var raw []byte
+		if err := rows.Scan(&raw); err != nil {
+			return nil, err
+		}
+		var change sourceChange
+		if err := json.Unmarshal(raw, &change); err != nil {
+			return nil, err
+		}
+		if changes == nil {
+			changes = map[string]sourceChange{}
+		}
+		changes[change.EntityType+":"+change.ID.String()] = change
 	}
-	return changes, nil
+	return changes, rows.Err()
+}
+
+func consumeSourceChanges(ctx context.Context, tx pgx.Tx, changes []ids.UUID) error {
+	_, err := tx.Exec(ctx, `SELECT public.consume_source_changes(current_schema(), $1)`, changes)
+	return err
 }
 
 func sourceAuditRows(ctx context.Context, tx pgx.Tx, action, entityType string, rows []auditRow) (map[int]sourceChange, error) {
@@ -56,11 +73,16 @@ func sourceAuditRows(ctx context.Context, tx pgx.Tx, action, entityType string, 
 	if !database.Memoized(owner) {
 		return nil, nil
 	}
-	changes, err := readSourceChanges(ctx, tx)
+	identities := make([]ids.UUID, len(rows))
+	for i := range rows {
+		identities[i] = rows[i].entityID
+	}
+	changes, err := readSourceChanges(ctx, tx, &entityType, identities)
 	if err != nil {
 		return nil, err
 	}
 	matched := map[int]sourceChange{}
+	var consumed []ids.UUID
 	for i := range rows {
 		key := entityType + ":" + rows[i].entityID.String()
 		change, found := changes[key]
@@ -68,6 +90,7 @@ func sourceAuditRows(ctx context.Context, tx pgx.Tx, action, entityType string, 
 			continue
 		}
 		if slices.Contains(AuditRedactionActions(), action) {
+			consumed = append(consumed, change.ChangeID)
 			delete(changes, key)
 			continue
 		}
@@ -84,6 +107,7 @@ func sourceAuditRows(ctx context.Context, tx pgx.Tx, action, entityType string, 
 			return nil, err
 		}
 		matched[i] = change
+		consumed = append(consumed, change.ChangeID)
 		delete(changes, key)
 	}
 
@@ -92,21 +116,12 @@ func sourceAuditRows(ctx context.Context, tx pgx.Tx, action, entityType string, 
 			return nil, err
 		}
 	}
-	if len(matched) > 0 || slices.Contains(AuditRedactionActions(), action) {
-		if err := saveSourceChanges(ctx, tx, changes); err != nil {
+	if len(consumed) > 0 {
+		if err := consumeSourceChanges(ctx, tx, consumed); err != nil {
 			return nil, err
 		}
 	}
 	return matched, nil
-}
-
-func saveSourceChanges(ctx context.Context, tx pgx.Tx, changes map[string]sourceChange) error {
-	raw, err := json.Marshal(changes)
-	if err != nil {
-		return err
-	}
-	_, err = tx.Exec(ctx, `SELECT set_config('margince.source_changes',$1,true)`, string(raw))
-	return err
 }
 
 func sourceImage(raw []byte, source string, systemChanged bool, system *string) ([]byte, error) {
@@ -206,11 +221,11 @@ func auditSourceChange(ctx context.Context, tx pgx.Tx, change sourceChange) erro
 }
 
 func flushSourceChanges(ctx context.Context, tx pgx.Tx) error {
-	pending, err := readSourceChanges(ctx, tx)
+	pending, err := readSourceChanges(ctx, tx, nil, nil)
 	if err != nil || len(pending) == 0 {
 		return err
 	}
-	if err := saveSourceChanges(ctx, tx, map[string]sourceChange{}); err != nil {
+	if err := consumeSourceChanges(ctx, tx, nil); err != nil {
 		return err
 	}
 	ordered := make([]sourceChange, 0, len(pending))

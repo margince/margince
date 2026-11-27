@@ -13,6 +13,7 @@ import { pickOption } from "../../design-system/select-testing";
 import { formatDayMonth, formatMoney } from "../../format/format";
 import { UTC_ZONE } from "../../format/timezone";
 import { translate } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { openChoiceDialog } from "../../testing/choicedialog.testkit";
 import { companyNamesAnswer } from "../../testing/companynames.testkit";
 import { meFixture } from "../../testing/mefixture";
@@ -118,7 +119,11 @@ function stubDealBackend(
  * So reaching any of them is two presses: the menu, then the row.
  */
 async function openHeaderMenu(user: UserEvent | typeof userEvent = userEvent) {
-  await user.click(await screen.findByRole("button", { name: "More actions" }));
+  await user.click(
+    await screen.findByRole("button", {
+      name: englishCopy["list.headActions"],
+    }),
+  );
 }
 
 // The deal's fields are written in the details drawer, behind the overflow.
@@ -587,11 +592,15 @@ describe("DealScreen — the stage stepper advances the deal", () => {
     await user.click(await screen.findByRole("button", { name: "Lost" }));
     await pickOption(
       user,
-      screen.getByRole("combobox", { name: "Why was it lost?" }),
+      screen.getByRole("combobox", {
+        name: englishCopy["deals.lostReasonCode"],
+      }),
       "Price",
     );
     await user.type(
-      screen.getByRole("textbox", { name: "Note (optional)" }),
+      screen.getByRole("textbox", {
+        name: englishCopy["deals.lostReasonNote"],
+      }),
       "typed then abandoned",
     );
     await user.click(screen.getByRole("button", { name: "Cancel" }));
@@ -600,12 +609,14 @@ describe("DealScreen — the stage stepper advances the deal", () => {
     expect(
       (
         screen.getByRole("textbox", {
-          name: "Note (optional)",
+          name: englishCopy["deals.lostReasonNote"],
         }) as HTMLInputElement
       ).value,
     ).toBe("");
     expect(
-      screen.getByRole("combobox", { name: "Why was it lost?" }).textContent,
+      screen.getByRole("combobox", {
+        name: englishCopy["deals.lostReasonCode"],
+      }).textContent,
     ).not.toContain("Price");
   });
 
@@ -662,11 +673,15 @@ describe("DealScreen — the stage stepper advances the deal", () => {
 
     await pickOption(
       user,
-      screen.getByRole("combobox", { name: "Why was it lost?" }),
+      screen.getByRole("combobox", {
+        name: englishCopy["deals.lostReasonCode"],
+      }),
       "Chose a competitor",
     );
     await user.type(
-      screen.getByRole("textbox", { name: "Note (optional)" }),
+      screen.getByRole("textbox", {
+        name: englishCopy["deals.lostReasonNote"],
+      }),
       "went with the incumbent",
     );
     await user.click(screen.getByRole("button", { name: "Confirm" }));
@@ -710,7 +725,7 @@ describe("DealScreen — an archived deal keeps its verbs, refused", () => {
       // sentence the control does not point at reaches no reader who needs it.
       const describedBy = control.getAttribute("aria-describedby");
       expect(document.getElementById(describedBy ?? "")?.textContent).toBe(
-        "This deal is archived and takes no changes.",
+        englishCopy["deal.archivedReadOnly"],
       );
     }
   });
@@ -744,7 +759,9 @@ describe("DealScreen — a live deal that is not the viewer's to change", () => 
     expect(screen.queryByRole("button", { name: "New offer" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Write brief" })).toBeNull();
 
-    expect(screen.getByRole("button", { name: "Log activity" })).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: englishCopy["log.title"] }),
+    ).toBeTruthy();
     await openHeaderMenu(user);
     expect(
       await screen.findByRole("button", { name: "Add task" }),
@@ -841,7 +858,9 @@ describe("DealScreen reopen", () => {
     await userEvent.clear(input);
     await userEvent.type(input, "12/08/2026{Enter}");
     await userEvent.click(
-      dialog.getByRole("button", { name: "Save close day" }),
+      dialog.getByRole("button", {
+        name: englishCopy["deal.correctCloseDayConfirm"],
+      }),
     );
     await waitFor(() => expect(posts.length).toBe(1));
     expect(posts[0]).toEqual([{ closed_on: "2026-08-12" }, "4"]);

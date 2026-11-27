@@ -3,6 +3,7 @@ import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Heading } from "./design-system/heading";
+import { en as englishCopy } from "./i18n/en";
 import {
   memoryStorage,
   renderApp,
@@ -122,7 +123,9 @@ describe("a unit's app in the home side drawer", () => {
   it("offers the entry under its heading, and pressing it draws the app", async () => {
     window.location.hash = "#/contacts";
     renderApp();
-    const entry = await screen.findByRole("link", { name: "Other accounts" });
+    const entry = await screen.findByRole("link", {
+      name: englishCopy["extUnits.user.title"],
+    });
     expect(entry.getAttribute("href")).toMatch(/#\/app\/notes$/);
     expect(entry.querySelector("svg")).not.toBeNull();
     await userEvent.setup().click(entry);
@@ -138,13 +141,17 @@ describe("a unit's app in the home side drawer", () => {
     renderApp();
     // The drawer shows the entry the reader may open, and only that one.
     expect(
-      await screen.findByRole("link", { name: "Installation add-ons" }),
+      await screen.findByRole("link", {
+        name: englishCopy["extUnits.workspace.title"],
+      }),
     ).toBeTruthy();
-    expect(screen.queryByRole("link", { name: "Other accounts" })).toBeNull();
+    expect(
+      screen.queryByRole("link", { name: englishCopy["extUnits.user.title"] }),
+    ).toBeNull();
     expect(screen.queryByText("Notes app screen")).toBeNull();
     expect(await screen.findAllByText("Not found")).not.toHaveLength(0);
     // The page chrome does not name the app to a reader who may not open it.
-    expect(screen.queryByText("Other accounts")).toBeNull();
+    expect(screen.queryByText(englishCopy["extUnits.user.title"])).toBeNull();
   });
 
   it("keeps the sub-setting at its own address, under Settings", async () => {

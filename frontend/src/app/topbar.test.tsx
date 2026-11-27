@@ -5,6 +5,7 @@
 import { cleanup, fireEvent, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../i18n/en";
 import type { Route } from "../lib/router";
 import {
   ignoreSearch,
@@ -44,7 +45,9 @@ describe("Top bar search (AC-shell-7)", () => {
     const { container } = renderTopBar({ screen: "home" }, { onOpenSearch });
 
     await user.click(
-      screen.getByRole("button", { name: "Search or ask Margince" }),
+      screen.getByRole("button", {
+        name: englishCopy["shell.searchEverything"],
+      }),
     );
     expect(onOpenSearch).toHaveBeenCalledTimes(1);
     // A field here would be a second search that answers to nothing: the
@@ -64,7 +67,9 @@ describe("Top bar search (AC-shell-7)", () => {
   it("is named for what it does, with the shortcut kept out of that name", () => {
     const { container } = renderTopBar({ screen: "home" });
     expect(
-      screen.getByRole("button", { name: "Search or ask Margince" }),
+      screen.getByRole("button", {
+        name: englishCopy["shell.searchEverything"],
+      }),
     ).toBeTruthy();
     // One cap per key, and the GROUP is what is hidden — a per-cap attribute
     // would leave the group announcing itself as the caps' container.
@@ -89,7 +94,7 @@ describe("Top bar search (AC-shell-7)", () => {
   it("takes its name from its printed words and announces the chord apart", () => {
     renderTopBar({ screen: "home" });
     const search = screen.getByRole("button", {
-      name: "Search or ask Margince",
+      name: englishCopy["shell.searchEverything"],
     });
     expect(search.hasAttribute("aria-label")).toBe(false);
     // Both modifiers answer, so both are announced: the keymap's own value.

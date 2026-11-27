@@ -20,6 +20,7 @@ import type { DealSuggestion } from "../../components/dealsuggestions.queries";
 import { pickOption } from "../../design-system/select-testing";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import { RecordShell } from "../../testing/recordshell.testkit";
 import { DealsScreen } from "./deals";
@@ -332,7 +333,9 @@ describe("a suggestion's card", () => {
     expect(screen.getByText("Sent: Angebot_2026.pdf")).toBeTruthy();
     expect(screen.getByText("Meeting held: Scoping workshop")).toBeTruthy();
     expect(
-      await screen.findByRole("button", { name: "Open this deal" }),
+      await screen.findByRole("button", {
+        name: englishCopy["dealSuggestion.open"],
+      }),
     ).toBeTruthy();
   });
 
@@ -347,7 +350,11 @@ describe("a suggestion's card", () => {
       ),
     );
     await screen.findByText("Automated by Deal Scout");
-    expect(screen.queryByRole("button", { name: "Open this deal" })).toBeNull();
+    expect(
+      screen.queryByRole("button", {
+        name: englishCopy["dealSuggestion.open"],
+      }),
+    ).toBeNull();
     expect(screen.queryByRole("button", { name: "Not a deal" })).toBeNull();
   });
 
@@ -363,11 +370,15 @@ describe("a suggestion's card", () => {
           />
         </>,
       );
-      await screen.findByRole("button", { name: "Open this deal" });
+      await screen.findByRole("button", {
+        name: englishCopy["dealSuggestion.open"],
+      });
       const previous = within(screen.getAllByTestId("deal-suggestion")[1]);
       expect(previous.getByText("Sent: Angebot_2026.pdf")).toBeTruthy();
       expect(
-        previous.queryByRole("button", { name: "Open this deal" }),
+        previous.queryByRole("button", {
+          name: englishCopy["dealSuggestion.open"],
+        }),
       ).toBeNull();
       expect(previous.queryByRole("button", { name: "Not a deal" })).toBeNull();
     },
@@ -380,7 +391,9 @@ describe("a suggestion's card", () => {
     draw(<DealSuggestionCard suggestion={suggestion} />);
 
     await user.click(
-      await screen.findByRole("button", { name: "Open this deal" }),
+      await screen.findByRole("button", {
+        name: englishCopy["dealSuggestion.open"],
+      }),
     );
     const name = screen.getByLabelText(/^Deal name/);
     await user.clear(name);
@@ -388,7 +401,10 @@ describe("a suggestion's card", () => {
     const amount = screen.getByLabelText("Amount");
     await user.clear(amount);
     await user.type(amount, "20000");
-    await user.type(screen.getByLabelText("Expected close"), "2026-12-01");
+    await user.type(
+      screen.getByLabelText(englishCopy["dealSuggestion.field.closeDate"]),
+      "2026-12-01",
+    );
     await user.click(screen.getByRole("button", { name: "Open deal" }));
 
     await waitFor(() => expect(sent).toHaveLength(1));
@@ -428,7 +444,9 @@ it("links evidence to an existing deal without sending creation fields", async (
   vi.stubGlobal("fetch", stubBackend({ suggestions: [], sent }));
   draw(<DealSuggestionCard suggestion={suggestion} />);
   await user.click(
-    await screen.findByRole("button", { name: "Link to existing deal" }),
+    await screen.findByRole("button", {
+      name: englishCopy["dealSuggestion.linkExisting"],
+    }),
   );
   const dialog = await screen.findByRole("dialog");
   await waitFor(() =>
@@ -444,11 +462,15 @@ it("links evidence to an existing deal without sending creation fields", async (
     "Fleet retrofit",
   );
   await user.click(
-    within(dialog).getByRole("button", { name: "Link to existing deal" }),
+    within(dialog).getByRole("button", {
+      name: englishCopy["dealSuggestion.linkExisting"],
+    }),
   );
   await waitFor(() => expect(sent).toHaveLength(1));
   expect(sent[0].body).toEqual({ existing_deal_id: "d1" });
-  expect(await screen.findByText("Evidence linked to the deal.")).toBeTruthy();
+  expect(
+    await screen.findByText(englishCopy["dealSuggestion.linked"]),
+  ).toBeTruthy();
 });
 
 describe("a suggestion on the pipeline board", () => {
@@ -538,7 +560,9 @@ describe("the accept dialog's pickers and the refusals", () => {
     draw(<DealSuggestionCard suggestion={suggestion} />);
 
     await user.click(
-      await screen.findByRole("button", { name: "Open this deal" }),
+      await screen.findByRole("button", {
+        name: englishCopy["dealSuggestion.open"],
+      }),
     );
     await pickOption(user, screen.getByLabelText("Currency"), "USD");
     await pickOption(user, await screen.findByLabelText("Stage"), "Proposal");
@@ -572,9 +596,7 @@ describe("the accept dialog's pickers and the refusals", () => {
       }),
     );
     expect(
-      await screen.findByText(
-        "Someone already decided this suggestion. Reload to see where it stands.",
-      ),
+      await screen.findByText(englishCopy["dealSuggestion.decided"]),
     ).toBeTruthy();
   });
 
@@ -596,7 +618,7 @@ describe("the accept dialog's pickers and the refusals", () => {
       }),
     );
     expect(
-      await screen.findByText("That did not go through. Try again."),
+      await screen.findByText(englishCopy["dealSuggestion.failed"]),
     ).toBeTruthy();
   });
 });
@@ -621,7 +643,9 @@ describe("a suggestion on its company's page", () => {
     vi.stubGlobal("fetch", stubBackend({ suggestions: [signalled] }));
     draw(<CompanySuggestions companyId="co-1" />);
 
-    expect(await screen.findByText("Suggested deal")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["dealSuggestion.companyTitle"]),
+    ).toBeTruthy();
     expect(screen.getByText("Acme GmbH: buying signals")).toBeTruthy();
     expect(
       screen.getByText("Signal: They asked for a second phase"),

@@ -10,6 +10,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { ProblemError } from "../lib/problem";
 import {
   ProjectLinks,
@@ -22,7 +23,7 @@ afterEach(cleanup);
 // The dialog's own confirm, not the section's verb of the same name behind it.
 function confirmAttach() {
   return within(screen.getByRole("dialog")).getByRole("button", {
-    name: "Attach project",
+    name: englishCopy["projectLinks.attach"],
   });
 }
 
@@ -64,14 +65,18 @@ describe("ProjectLinks", () => {
     draw();
     // One quiet line, no display heading over it: as a pane of its own the
     // section already carries its name in the head.
-    expect(screen.queryByText("No projects yet")).toBeNull();
+    expect(
+      screen.queryByText(englishCopy["projectLinks.emptyTitle"]),
+    ).toBeNull();
     // The instructional line, not a bare "nothing here": a reader who cannot
     // see any is the reader who needs telling how one appears.
     expect(screen.getByText(/once it is on a project/)).toBeTruthy();
     // And that line alone. As a pane of its own the section already carries
     // its name in the head, so a heading under it says the same word twice
     // and makes an absence the loudest thing in the column.
-    expect(screen.queryByText("No projects yet")).toBeNull();
+    expect(
+      screen.queryByText(englishCopy["projectLinks.emptyTitle"]),
+    ).toBeNull();
   });
 
   // Bare, the section is a GROUP inside a pane the caller holds: no pane of
@@ -87,9 +92,11 @@ describe("ProjectLinks", () => {
     );
     expect(
       container.querySelector(".panel-grouphead button")?.textContent,
-    ).toBe("Attach project");
+    ).toBe(englishCopy["projectLinks.attach"]);
     expect(container.querySelector(".empty-plate")).toBeTruthy();
-    expect(screen.getByText("No projects yet")).toBeTruthy();
+    expect(
+      screen.getByText(englishCopy["projectLinks.emptyTitle"]),
+    ).toBeTruthy();
   });
 
   it("offers to MOVE rather than attach when the record carries at most one", () => {
@@ -99,9 +106,13 @@ describe("ProjectLinks", () => {
     });
     // A deal holds one project, so a second "attach" would promise something
     // the write cannot do.
-    expect(screen.queryByRole("button", { name: "Attach project" })).toBeNull();
     expect(
-      screen.getByRole("button", { name: "Move to another project" }),
+      screen.queryByRole("button", {
+        name: englishCopy["projectLinks.attach"],
+      }),
+    ).toBeNull();
+    expect(
+      screen.getByRole("button", { name: englishCopy["projectLinks.move"] }),
     ).toBeTruthy();
   });
 
@@ -117,7 +128,9 @@ describe("ProjectLinks", () => {
       attach,
     });
 
-    await user.click(screen.getByRole("button", { name: "Attach project" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["projectLinks.attach"] }),
+    );
     await user.type(
       screen.getByRole("searchbox", { name: /Search projects/ }),
       "ware",
@@ -151,7 +164,9 @@ describe("ProjectLinks", () => {
       attach,
     });
 
-    await user.click(screen.getByRole("button", { name: "Attach project" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["projectLinks.attach"] }),
+    );
     expect(confirmAttach().hasAttribute("disabled")).toBe(true);
     await user.type(
       screen.getByRole("searchbox", { name: /Search projects/ }),
@@ -184,7 +199,9 @@ describe("ProjectLinks", () => {
       },
     });
 
-    await user.click(screen.getByRole("button", { name: "Attach project" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["projectLinks.attach"] }),
+    );
     await user.type(
       screen.getByRole("searchbox", { name: /Search projects/ }),
       "ware",
@@ -218,7 +235,9 @@ describe("ProjectLinks", () => {
       },
     });
 
-    await user.click(screen.getByRole("button", { name: "Attach project" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["projectLinks.attach"] }),
+    );
     await user.type(
       screen.getByRole("searchbox", { name: /Search projects/ }),
       "ware",
@@ -235,11 +254,15 @@ describe("ProjectLinks", () => {
     // And the other way round: a refused detach says nothing to the next
     // attach.
     await user.click(
-      screen.getByRole("button", { name: "Remove from project" }),
+      screen.getByRole("button", {
+        name: englishCopy["projectLinks.detachConfirm"],
+      }),
     );
     expect(await screen.findByText("not found")).toBeTruthy();
     await user.keyboard("{Escape}");
-    await user.click(screen.getByRole("button", { name: "Attach project" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["projectLinks.attach"] }),
+    );
     expect(
       screen.getByRole("searchbox", { name: /Search projects/ }),
     ).toBeTruthy();
@@ -258,7 +281,9 @@ describe("ProjectLinks", () => {
     // The confirm's own verb is distinct from the row's, so a reader — and a
     // screen reader — can tell the ask from the act.
     await user.click(
-      screen.getByRole("button", { name: "Remove from project" }),
+      screen.getByRole("button", {
+        name: englishCopy["projectLinks.detachConfirm"],
+      }),
     );
     await waitFor(() => expect(detach).toHaveBeenCalledWith("p1"));
   });
@@ -297,7 +322,9 @@ describe("ProjectLinks", () => {
         }),
     });
 
-    await user.click(screen.getByRole("button", { name: "Attach project" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["projectLinks.attach"] }),
+    );
     await user.type(
       screen.getByRole("searchbox", { name: /Search projects/ }),
       "ware",
@@ -348,12 +375,26 @@ describe("ProjectLinks", () => {
     // The project page's mirror links COMPANIES: a verb reading "Attach
     // project" there is wrong on screen and wrong in the dialog's accessible
     // name, which is what a screen reader announces.
-    expect(screen.getByRole("button", { name: "Attach company" })).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Attach project" })).toBeNull();
-    await openRemove(user, "Beta Systeme");
-    expect(screen.getByRole("button", { name: "Remove company" })).toBeTruthy();
     expect(
-      screen.queryByRole("button", { name: "Remove from project" }),
+      screen.getByRole("button", {
+        name: englishCopy["projectCompanies.attach"],
+      }),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("button", {
+        name: englishCopy["projectLinks.attach"],
+      }),
+    ).toBeNull();
+    await openRemove(user, "Beta Systeme");
+    expect(
+      screen.getByRole("button", {
+        name: englishCopy["projectCompanies.detachConfirm"],
+      }),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("button", {
+        name: englishCopy["projectLinks.detachConfirm"],
+      }),
     ).toBeNull();
   });
 
@@ -372,7 +413,9 @@ describe("ProjectLinks", () => {
       },
     });
 
-    await user.click(screen.getByRole("button", { name: "Attach project" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["projectLinks.attach"] }),
+    );
     await user.type(
       screen.getByRole("searchbox", { name: /Search projects/ }),
       "ware",
@@ -447,6 +490,8 @@ describe("RemoveLinkMenu", () => {
         name: "More actions for Brandt Automotive GmbH",
       }),
     ).toBeTruthy();
-    expect(screen.getByRole("button", { name: "More actions" })).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: englishCopy["record.moreActions"] }),
+    ).toBeTruthy();
   });
 });

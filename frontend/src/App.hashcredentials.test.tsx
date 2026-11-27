@@ -11,6 +11,7 @@ import { memoryStorage } from "./testing/appharness";
 // The screens these cases open, loaded while the file is collected. A screen's
 // first import costs seconds; inside a case it races the case's own waiters.
 import "./features/deals/buyerroom";
+import { en as englishCopy } from "./i18n/en";
 
 // The two emailed links that carry a credential in the hash — the Deal Room's
 // buyer invitation and the password reset — through the REAL App, which is
@@ -145,12 +146,17 @@ const CARRIERS: readonly Carrier[] = [
     address: (credential) => `#/reset-password?token=${credential}`,
     scrubbed: "#/reset-password",
     onScreen: () =>
-      screen.findByRole("heading", { name: "Choose new password" }),
+      screen.findByRole("heading", { name: englishCopy["auth.resetTitle"] }),
     spend: async (user) => {
-      await user.clear(screen.getByLabelText("New password"));
-      await user.type(screen.getByLabelText("New password"), PASSWORD);
+      await user.clear(screen.getByLabelText(englishCopy["auth.newPassword"]));
+      await user.type(
+        screen.getByLabelText(englishCopy["auth.newPassword"]),
+        PASSWORD,
+      );
       await user.click(
-        screen.getByRole("button", { name: "Set new password" }),
+        screen.getByRole("button", {
+          name: englishCopy["auth.setNewPassword"],
+        }),
       );
     },
     wire: "POST /auth/reset-password",
@@ -226,7 +232,7 @@ describe.each(CARRIERS)("$what, and the gates above the route", (carrier) => {
     // mounted, which is the whole premise of the defect.
     expect(sentTo(sent, carrier)).toEqual([]);
     expect(
-      await screen.findByText("App and server versions differ"),
+      await screen.findByText(englishCopy["release.skewTitle"]),
     ).toBeTruthy();
   });
 
@@ -247,7 +253,7 @@ describe.each(CARRIERS)("$what, and the gates above the route", (carrier) => {
     );
     expect(globalThis.location.href).not.toContain("cred_pasted");
     expect(
-      await screen.findByText("App and server versions differ"),
+      await screen.findByText(englishCopy["release.skewTitle"]),
     ).toBeTruthy();
     expect(sentTo(sent, carrier)).toEqual([]);
   });

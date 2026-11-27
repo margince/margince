@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -65,7 +66,7 @@ export const AttachingAProject: Story = {
     const canvas = within(canvasElement);
     await userEvent.click(await canvas.findByRole("button", { name: "Deals" }));
     const [attach] = await canvas.findAllByRole("button", {
-      name: "Attach project",
+      name: englishCopy["lead.rail.project.attach"],
     });
     if (!attach) throw new Error("the rail shows no Attach project button");
     await userEvent.click(attach);

@@ -12,6 +12,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { type Locale, LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { AiProviderKeysCard } from "./ai-provider-keys";
 
@@ -143,7 +144,9 @@ describe("AiProviderKeysCard", () => {
     render(<AiProviderKeysCard />);
     await screen.findByTestId("ai-provider-row-gemini");
     expect(
-      screen.queryByRole("button", { name: "Refresh model prices" }),
+      screen.queryByRole("button", {
+        name: englishCopy["aiRates.refresh.button"],
+      }),
     ).not.toBeInTheDocument();
   });
 
@@ -330,7 +333,9 @@ describe("AiProviderKeysCard", () => {
     // Removing a credential is the Remove button. The server would refuse a
     // blank write, so the press says the key is required instead.
     await user.click(within(row).getByRole("button", { name: /save key/i }));
-    expect(within(row).getByText("This field is required.")).toBeVisible();
+    expect(
+      within(row).getByText(englishCopy["record.fieldRequired"]),
+    ).toBeVisible();
     expect(box).toHaveFocus();
     expect(box).toHaveAttribute("aria-invalid", "true");
     expect(backend.puts).toHaveLength(0);
@@ -365,7 +370,9 @@ describe("AiProviderKeysCard", () => {
     expect(
       await within(entry).findByText("The vault is sealed."),
     ).toBeVisible();
-    expect(within(entry).getByText("Provider not updated")).toBeVisible();
+    expect(
+      within(entry).getByText(englishCopy["aiProviderKeys.saveFailed"]),
+    ).toBeVisible();
   });
 
   it("drops a typed key when the environment locks the field under an open dialog", async () => {

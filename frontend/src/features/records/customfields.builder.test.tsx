@@ -151,7 +151,7 @@ describe("FieldBuilder", () => {
     // start with one row; removing it is blocked
     await user.click(removes[removes.length - 1]);
     expect(screen.getByRole("status")).toHaveTextContent(
-      "A picklist needs at least one option",
+      en["cf.lastOptionBlocked"],
     );
     // And marked as a refusal: the completion dot beside it said the opposite
     // of what the sentence says, so the message wears the danger one.

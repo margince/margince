@@ -9,6 +9,7 @@ import {
 } from "../format/format";
 import { browserZone } from "../format/timezone";
 import { useLocale } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { playOpenViewStep } from "../testing/listview.play";
 import { phoneRow } from "../testing/phonerow";
 import { Badge, Button, OverflowMenu } from "./atoms";
@@ -560,7 +561,9 @@ export const ShortListWithoutChrome: Story = {
     const canvas = within(canvasElement);
     await canvas.findByRole("button", { name: "Sort by Company" });
     await expect(
-      canvas.queryByRole("combobox", { name: "Rows per page" }),
+      canvas.queryByRole("combobox", {
+        name: englishCopy["table.rowsPerPage"],
+      }),
     ).toBeNull();
     await expect(canvas.queryByRole("searchbox")).toBeNull();
     await expect(canvas.queryByText(/sorted by/)).toBeNull();
@@ -574,7 +577,9 @@ export const ShortListKeepsVerb: Story = {
     const canvas = within(canvasElement);
     await canvas.findByRole("button", { name: "Sort by Company" });
     // Under the narrow width the verbs fold into one menu.
-    const more = canvas.queryByRole("button", { name: "More actions" });
+    const more = canvas.queryByRole("button", {
+      name: englishCopy["list.headActions"],
+    });
     if (more) await userEvent.click(more);
     await expect(
       await within(canvasElement.ownerDocument.body).findByRole("button", {
@@ -593,7 +598,9 @@ export const ShortListEmpty: Story = {
     const canvas = within(canvasElement);
     await expect(await canvas.findByText("No companies yet.")).toBeVisible();
     await expect(canvas.queryByRole("columnheader")).toBeNull();
-    const archived = canvas.getByRole("button", { name: "Show archived" });
+    const archived = canvas.getByRole("button", {
+      name: englishCopy["list.showArchived"],
+    });
     await expect(archived).toBeVisible();
     await expect(archived).toHaveAttribute("aria-pressed", "false");
     await expect(canvas.queryByRole("searchbox")).toBeNull();
@@ -614,7 +621,7 @@ export const LongerListKeepsPager: Story = {
     const canvas = within(canvasElement);
     await canvas.findByRole("navigation", { name: "Pages" });
     await expect(
-      canvas.getByRole("combobox", { name: "Rows per page" }),
+      canvas.getByRole("combobox", { name: englishCopy["table.rowsPerPage"] }),
     ).toBeVisible();
     await expect(
       canvas.getByRole("combobox", { name: "Search" }),

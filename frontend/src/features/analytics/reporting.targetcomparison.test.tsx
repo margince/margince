@@ -3,6 +3,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { reportingStoryCatalog } from "../../testing/reporting.fixtures";
 import {
   installFetchStub,
@@ -82,7 +83,7 @@ it("shows the gap, what is left and the coverage the server compared", () => {
   expect(screen.getByText("Short of the €800,000 goal")).toBeVisible();
   expect(screen.getByText("3.6×")).toBeVisible();
   expect(
-    screen.getByText("Coverage, deals closing this quarter"),
+    screen.getByText(englishCopy["reporting.compare.coverageAll"]),
   ).toBeVisible();
 });
 
@@ -94,7 +95,9 @@ it("reads a target already won as reached, never as an endless coverage", () => 
     coverage: undefined,
     gap: -15_000_000, // ds:ignore the target comparison money gap, not a CSS gap
   });
-  expect(screen.getAllByText("Goal reached").length).toBeGreaterThan(0);
+  expect(
+    screen.getAllByText(englishCopy["reporting.compare.reached"]).length,
+  ).toBeGreaterThan(0);
   expect(screen.queryByText(/×$/)).toBeNull();
   expect(screen.getByText(/^Ahead of the /)).toBeVisible();
 });
@@ -153,7 +156,11 @@ it("offers the selection the server can compare and applies it as given", async 
   );
   await userEvent
     .setup()
-    .click(screen.getByRole("button", { name: "Show all pipelines" }));
+    .click(
+      screen.getByRole("button", {
+        name: englishCopy["reporting.compare.apply.manager_call_pipeline"],
+      }),
+    );
   expect(onApply).toHaveBeenCalledWith(supported);
 });
 
@@ -207,6 +214,10 @@ it("takes the Overview from its default pipeline to all pipelines in one click",
   );
   await userEvent
     .setup()
-    .click(await screen.findByRole("button", { name: "Show all pipelines" }));
+    .click(
+      await screen.findByRole("button", {
+        name: englishCopy["reporting.compare.apply.manager_call_pipeline"],
+      }),
+    );
   expect(window.location.hash).toContain("pipeline=all");
 });

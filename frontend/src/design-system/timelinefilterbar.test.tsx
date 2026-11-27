@@ -6,6 +6,7 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { SEARCH_DEBOUNCE_MS } from "./debouncedsearch";
 import { NO_TIMELINE_FILTERS, type TimelineFilters } from "./recordtimeline";
 import { TimelineFilterBar } from "./timelinefilterbar";
@@ -43,7 +44,7 @@ function Controlled({
 }
 
 const field = (): HTMLInputElement => {
-  const box = screen.getByLabelText("Search this timeline");
+  const box = screen.getByLabelText(englishCopy["timeline.filters.search"]);
   if (!(box instanceof HTMLInputElement)) {
     throw new Error("the search field is not an input");
   }

@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { EmailReading, EmailText } from "./emailtext";
 
 const meta = {
@@ -29,7 +30,9 @@ export const QuotedHistory: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const summary = canvas.getByText("Show quoted history").closest("summary");
+    const summary = canvas
+      .getByText(englishCopy["email.detail.showQuoted"])
+      .closest("summary");
     await expect(summary).toHaveAttribute("aria-expanded", "false");
     await expect(summary?.lastElementChild).toHaveClass("expander-chevron");
     if (summary) await userEvent.click(summary);
@@ -48,7 +51,9 @@ export const OutlookForward: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(canvas.getByText(/Can we meet on Tuesday/)).toBeVisible();
-    await expect(canvas.queryByText("Show quoted history")).toBeNull();
+    await expect(
+      canvas.queryByText(englishCopy["email.detail.showQuoted"]),
+    ).toBeNull();
   },
 };
 export const NoText: Story = {
@@ -63,9 +68,13 @@ export const NoText: Story = {
   ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(canvas.getByText("This message has no text.")).toBeVisible();
     await expect(
-      canvas.queryByRole("button", { name: "Show in my language" }),
+      canvas.getByText(englishCopy["email.thread.noText"]),
+    ).toBeVisible();
+    await expect(
+      canvas.queryByRole("button", {
+        name: englishCopy["readerRendering.show"],
+      }),
     ).toBeNull();
   },
 };

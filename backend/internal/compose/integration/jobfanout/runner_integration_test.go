@@ -53,6 +53,9 @@ type runnerEnv struct {
 	wsCtx context.Context
 
 	passportID ids.PassportID
+ scriptedPath compose.ModelPath
+ livePath *compose.ModelPath
+ newService func(compose.ModelPath, ...compose.RunnerOption) *compose.RunnerService
 }
 
 // stagingSpecName is the catalog entry the 🟡 tests drive.
@@ -154,10 +157,11 @@ func setupRunnerOn(t *testing.T, modelPath *compose.ModelPath) *runnerEnv {
 	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
 	// The worker's own grounding retriever, so a run here is seeded the way a
 	// production run is.
-	service := func(path compose.ModelPath) *compose.RunnerService {
+	service := func(path compose.ModelPath, opts ...compose.RunnerOption) *compose.RunnerService {
+ opts = append(opts, compose.WithSpecResolver(stagingSpec))
 		return compose.NewRunnerService(pool, path.AgentLoop, path.DraftReply,
 			search.NewRetriever(search.NewStore(compose.InstallationDB(pool)), path.Embedder), logger,
-			compose.SendPath{}, compose.WithSpecResolver(stagingSpec))
+			compose.SendPath{}, opts...)
 	}
 	var live *compose.RunnerService
 	if modelPath != nil {
@@ -165,6 +169,7 @@ func setupRunnerOn(t *testing.T, modelPath *compose.ModelPath) *runnerEnv {
 	}
 	return &runnerEnv{
 		AppEnv: e,
+ scriptedPath: scripted, livePath: modelPath, newService: service,
 		pool:   pool,
 		svc:    service(scripted),
 		live:   live,

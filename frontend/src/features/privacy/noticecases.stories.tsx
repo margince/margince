@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
+import { en as englishCopy } from "../../i18n/en";
 import type { GrantSpec } from "../../testing/mefixture";
 import {
   jsonResponse,
@@ -230,7 +231,7 @@ export const EndingADuty: Story = {
       await screen.findByRole("button", { name: "End without sending" }),
     );
     const dialog = within(await screen.findByRole("dialog"));
-    await dialog.findByText("Reason, in your own words");
+    await dialog.findByText(englishCopy["notice.excuseGround"]);
   },
 };
 
@@ -246,7 +247,9 @@ export const SendingANotice: Story = {
       await canvas.findByRole("button", { name: /^Actions for/ }),
     );
     await userEvent.click(
-      await screen.findByRole("button", { name: "Send privacy notice" }),
+      await screen.findByRole("button", {
+        name: englishCopy["noticeDuty.sendNotice"],
+      }),
     );
     const dialog = within(await screen.findByRole("dialog"));
     await dialog.findByText("lena@kps.test");
@@ -324,12 +327,14 @@ export const SourceReviewQueue: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByRole("button", { name: "Review source" }),
+      await canvas.findByRole("button", {
+        name: englishCopy["notice.source.review"],
+      }),
     );
     const actions = await canvas.findByRole("button", { name: /^Actions for/ });
     await userEvent.click(actions);
     const choices = await screen.findAllByRole("button", {
-      name: "Review source",
+      name: englishCopy["notice.source.review"],
     });
     const choice = choices.at(-1);
     if (!choice) throw new Error("Source assessment action was not offered");

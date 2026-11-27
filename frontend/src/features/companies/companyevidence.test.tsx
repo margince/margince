@@ -6,6 +6,7 @@ import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { EvidenceModal } from "./companyevidence";
 
 // The receipt is the affordance that makes the prose above it worth reading, so
@@ -76,7 +77,9 @@ describe("where a cited value came from", () => {
     expect(
       await screen.findByText(/What they offer: Load-shifting software/),
     ).toBeTruthy();
-    expect(screen.getByText("Read from company website")).toBeTruthy();
+    expect(
+      screen.getByText(englishCopy["co.evidence.kind.site_read"]),
+    ).toBeTruthy();
     expect(
       screen.getByText(/We build load-shifting software for industry/),
     ).toBeTruthy();
@@ -113,7 +116,9 @@ describe("where a cited value came from", () => {
       gaps: ["verified_at"],
     });
 
-    expect(await screen.findByText("Entered by a person")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["co.evidence.kind.human"]),
+    ).toBeTruthy();
     // A contact's assertion carries no model confidence, and a percentage
     // beside it would be a number nobody computed.
     expect(screen.queryByText(/confident/)).toBeNull();
@@ -182,7 +187,7 @@ describe("the receipt is a drawer beside the claim, not a box over it", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Next claim" }));
     await userEvent.click(
-      screen.getByRole("button", { name: "Previous claim" }),
+      screen.getByRole("button", { name: englishCopy["co.evidence.previous"] }),
     );
     expect(steps).toEqual([1, -1]);
   });
@@ -192,7 +197,7 @@ describe("the receipt is a drawer beside the claim, not a box over it", () => {
   it("marks a machine-written claim nobody has confirmed", async () => {
     show(SITE_READ);
     expect(
-      await screen.findByText("Extracted by AI · not confirmed"),
+      await screen.findByText(englishCopy["co.evidence.extractedUnconfirmed"]),
     ).toBeTruthy();
   });
 
@@ -332,7 +337,7 @@ describe("ruling on the claim from the drawer", () => {
     const writes = serve();
     open(true);
     expect(
-      await screen.findByText("Extracted by AI · not confirmed"),
+      await screen.findByText(englishCopy["co.evidence.extractedUnconfirmed"]),
     ).toBeTruthy();
 
     await userEvent.click(
@@ -340,7 +345,9 @@ describe("ruling on the claim from the drawer", () => {
     );
 
     await waitFor(() =>
-      expect(screen.queryByText("Extracted by AI · not confirmed")).toBeNull(),
+      expect(
+        screen.queryByText(englishCopy["co.evidence.extractedUnconfirmed"]),
+      ).toBeNull(),
     );
     expect(writes).toEqual([
       "POST /v1/companies/o-1/profile-fields/icp/confirm if-match=2",
@@ -354,7 +361,7 @@ describe("ruling on the claim from the drawer", () => {
   it("offers neither verb to a reader who may not change the company", async () => {
     serve();
     open(false);
-    await screen.findByText("Extracted by AI · not confirmed");
+    await screen.findByText(englishCopy["co.evidence.extractedUnconfirmed"]);
     expect(screen.queryByRole("button", { name: "Confirm" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Correct" })).toBeNull();
   });
@@ -362,7 +369,7 @@ describe("ruling on the claim from the drawer", () => {
   it("withholds the verbs when the list row is another version than the receipt", async () => {
     serve(9);
     open(true);
-    await screen.findByText("Extracted by AI · not confirmed");
+    await screen.findByText(englishCopy["co.evidence.extractedUnconfirmed"]);
     // Let the list settle before asserting an absence.
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(screen.queryByRole("button", { name: "Confirm" })).toBeNull();
@@ -375,7 +382,7 @@ describe("ruling on the claim from the drawer", () => {
       await screen.findByRole("button", { name: "Correct" }),
     );
     const box = await screen.findByRole("textbox", {
-      name: "Corrected value",
+      name: englishCopy["evidence.correctedValue"],
     });
     await userEvent.clear(box);
     await userEvent.type(box, "Typed for the first claim");
@@ -397,7 +404,7 @@ describe("ruling on the claim from the drawer", () => {
       await screen.findByRole("button", { name: "Correct" }),
     );
     const box = await screen.findByRole("textbox", {
-      name: "Corrected value",
+      name: englishCopy["evidence.correctedValue"],
     });
     await userEvent.clear(box);
     await userEvent.type(box, "Better wording");

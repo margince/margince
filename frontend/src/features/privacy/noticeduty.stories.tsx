@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import {
   jsonResponse,
   StoryProviders,
@@ -120,7 +121,9 @@ export const NoticePreview: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByRole("button", { name: "Send privacy notice" }),
+      await canvas.findByRole("button", {
+        name: englishCopy["noticeDuty.sendNotice"],
+      }),
     );
     await within(canvasElement.ownerDocument.body).findByText("steve@kps.test");
   },

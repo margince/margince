@@ -6,6 +6,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { forgetSeat } from "../../lib/storage";
 import { jsonResponse } from "../../testing/story-utils";
 import { outlookFor } from "./analytics.assessment.fixtures";
@@ -66,7 +67,9 @@ const qualificationTeam = () => {
 
 async function standing() {
   return within(
-    await screen.findByRole("region", { name: "Where the team stands" }),
+    await screen.findByRole("region", {
+      name: englishCopy["analytics.team.standing"],
+    }),
   );
 }
 
@@ -95,15 +98,21 @@ describe("Team prospecting", () => {
   it("is offered to a manager and not to an SDR measuring their own work", async () => {
     open("#/analytics", teamEvaluation);
     expect(
-      await screen.findByRole("button", { name: "Team prospecting" }),
+      await screen.findByRole("button", {
+        name: englishCopy["analytics.overview.team"],
+      }),
     ).toBeVisible();
     cleanup();
     open(TEAM_ADDRESS, teamEvaluation, { seat: "sdr" });
     expect(
-      await screen.findByRole("button", { name: "My prospecting" }),
+      await screen.findByRole("button", {
+        name: englishCopy["analytics.overview.prospecting"],
+      }),
     ).toHaveAttribute("aria-pressed", "true");
     expect(
-      screen.queryByRole("button", { name: "Team prospecting" }),
+      screen.queryByRole("button", {
+        name: englishCopy["analytics.overview.team"],
+      }),
     ).toBeNull();
   });
 
@@ -112,7 +121,9 @@ describe("Team prospecting", () => {
     await readings();
     // The catalog's own names, in the order the cards stand.
     expect(
-      screen.getByRole("region", { name: "Opening readings" }).textContent,
+      screen.getByRole("region", {
+        name: englishCopy["analytics.overview.readings"],
+      }).textContent,
     ).toMatch(/Accepted.*Meetings held.*Leads awaiting a first reply now/);
     const panel = await standing();
     expect(
@@ -207,14 +218,20 @@ describe("Team prospecting", () => {
     const row = rowOf(
       panel.getByText("3 handoffs were sent back in this period"),
     );
-    await user.click(within(row).getByRole("button", { name: "Show reasons" }));
+    await user.click(
+      within(row).getByRole("button", {
+        name: englishCopy["analytics.team.showReasons"],
+      }),
+    );
     const drawer = await screen.findByRole("dialog", {
-      name: "Why handoffs were sent back",
+      name: englishCopy["analytics.team.reasonsReturned"],
     });
     expect(
       within(drawer).getByText(/whenever the handoff was handed on: 3 in all/),
     ).toBeVisible();
-    const table = within(drawer).getByRole("table", { name: "Reasons given" });
+    const table = within(drawer).getByRole("table", {
+      name: englishCopy["analytics.team.reasons"],
+    });
     const cells = within(table)
       .getAllByRole("row")
       .slice(1)
@@ -248,7 +265,7 @@ describe("Team prospecting", () => {
     const members = await screen.findByRole("table", { name: "Members" });
     expect(headers(members)).toEqual([
       "Member",
-      "Meetings held",
+      englishCopy["analytics.team.meetings"],
       "Submitted",
       "Accepted",
       "Returned",
@@ -271,8 +288,8 @@ describe("Team prospecting", () => {
     });
     const strip = await readings();
     expectInOrder([
-      strip.getByText("Leads qualified"),
-      strip.getByText("Meetings held"),
+      strip.getByText(englishCopy["analytics.sdrReading.leads_promoted"]),
+      strip.getByText(englishCopy["analytics.team.meetings"]),
     ]);
     const panel = await standing();
     expect(panel.queryByText(/of the 12 leads that arrived/)).toBeNull();
@@ -280,9 +297,9 @@ describe("Team prospecting", () => {
     expect(headers(members)).toEqual([
       "Member",
       "Qualified",
-      "Meetings held",
-      "Period arrivals awaiting reply",
-      "Monthly target",
+      englishCopy["analytics.team.meetings"],
+      englishCopy["analytics.team.unanswered"],
+      englishCopy["analytics.team.target"],
     ]);
     const rows = within(members).getAllByRole("row");
     expect(within(rows[1]).getByText("5 of 8")).toBeVisible();
@@ -305,9 +322,11 @@ describe("Team prospecting", () => {
     });
     const members = await screen.findByRole("table", { name: "Members" });
     expect(headers(members)).toEqual(["Member"]);
-    expect(screen.getByText("Meetings are hidden from you.")).toBeVisible();
     expect(
-      screen.getByText("Qualified and unanswered leads are hidden from you."),
+      screen.getByText(englishCopy["analytics.team.meetingsHidden"]),
+    ).toBeVisible();
+    expect(
+      screen.getByText(englishCopy["analytics.team.leadsHidden"]),
     ).toBeVisible();
   });
 
@@ -331,9 +350,14 @@ describe("Team prospecting", () => {
       team: served(review),
     });
     const panel = await standing();
-    expect(panel.getByText("Handoffs are hidden from you.")).toBeVisible();
+    expect(
+      panel.getByText(englishCopy["analytics.team.handoffsHidden"]),
+    ).toBeVisible();
     const members = await screen.findByRole("table", { name: "Members" });
-    expect(headers(members)).toEqual(["Member", "Meetings held"]);
+    expect(headers(members)).toEqual([
+      "Member",
+      englishCopy["analytics.team.meetings"],
+    ]);
     expect(panel.queryByText(/Nothing waits on the team/)).toBeNull();
   });
 
@@ -366,7 +390,7 @@ describe("Team prospecting", () => {
       });
       const panel = await standing();
       expect(
-        panel.getByText("Leads waiting for a reply are hidden from you."),
+        panel.getByText(englishCopy["analytics.team.unansweredHidden"]),
       ).toBeVisible();
       expect(panel.queryByText(NOTHING)).toBeNull();
     });
@@ -379,7 +403,7 @@ describe("Team prospecting", () => {
       );
       const panel = await standing();
       expect(
-        panel.getByText("Leads waiting for a reply could not be read."),
+        panel.getByText(englishCopy["analytics.team.unansweredFailed"]),
       ).toBeVisible();
       expect(panel.queryByText(NOTHING)).toBeNull();
     });
@@ -394,7 +418,7 @@ describe("Team prospecting", () => {
       );
       const panel = await standing();
       expect(
-        panel.getByText("Leads waiting for a reply are still being read."),
+        panel.getByText(englishCopy["analytics.team.unansweredPending"]),
       ).toBeVisible();
       expect(panel.queryByText(NOTHING)).toBeNull();
     });
@@ -414,11 +438,11 @@ describe("Team prospecting", () => {
     const members = await screen.findByRole("table", { name: "Members" });
     expect(headers(members)).toEqual([
       "Member",
-      "Meetings held",
-      "Period arrivals awaiting reply",
+      englishCopy["analytics.team.meetings"],
+      englishCopy["analytics.team.unanswered"],
     ]);
     expect(
-      screen.getByText("Qualified leads are hidden from you."),
+      screen.getByText(englishCopy["analytics.team.qualifiedHidden"]),
     ).toBeVisible();
   });
 
@@ -436,9 +460,7 @@ describe("Team prospecting", () => {
         }),
     });
     expect(
-      await screen.findByText(
-        "Individual performance is off, so no member’s figures are shown.",
-      ),
+      await screen.findByText(englishCopy["analytics.team.membersWithheld"]),
     ).toBeVisible();
     const panel = await standing();
     expect(panel.getByText("2 handoffs wait for a decision")).toBeVisible();
@@ -446,7 +468,9 @@ describe("Team prospecting", () => {
     expect(screen.queryByText("Riley Rep")).toBeNull();
     expect(screen.queryByText("Sam SDR")).toBeNull();
     expect(
-      screen.queryByRole("button", { name: "View booked meetings" }),
+      screen.queryByRole("button", {
+        name: englishCopy["analytics.team.viewMeetings"],
+      }),
     ).toBeNull();
   });
 
@@ -476,7 +500,9 @@ describe("Team prospecting", () => {
     const asked = open(`${TEAM_ADDRESS}&scope=owner:${SELF}`, teamEvaluation, {
       template: "sdr",
     });
-    expect(await screen.findByText("Choose a team")).toBeVisible();
+    expect(
+      await screen.findByText(englishCopy["analytics.team.chooseTeam"]),
+    ).toBeVisible();
     expect(
       asked.some(({ url }) =>
         ["/v1/analytics/sdr-team", "/v1/analytics/evaluate"].includes(
@@ -507,9 +533,13 @@ describe("Team prospecting", () => {
     });
     expect(await screen.findByText(reason)).toBeVisible();
     expect(
-      screen.queryByRole("region", { name: "Where the team stands" }),
+      screen.queryByRole("region", {
+        name: englishCopy["analytics.team.standing"],
+      }),
     ).toBeNull();
-    expect(screen.queryByText("Team prospecting outlook")).toBeNull();
+    expect(
+      screen.queryByText(englishCopy["analytics.outlook.team"]),
+    ).toBeNull();
   });
 });
 
@@ -538,7 +568,7 @@ it("keeps a legacy server's member counts and arrival-cohort targets", async () 
   const table = await screen.findByRole("table", { name: "Members" });
   expect(
     within(table).getByRole("columnheader", {
-      name: "Arriving leads qualified",
+      name: englishCopy["analytics.team.arrivalQualified"],
     }),
   ).toBeVisible();
   expect(within(table).getByText("3 of 8")).toBeVisible();

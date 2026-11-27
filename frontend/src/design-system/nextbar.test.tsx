@@ -7,6 +7,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../i18n/en";
 import { NextBar } from "./nextbar";
 
 afterEach(cleanup);
@@ -14,14 +15,16 @@ afterEach(cleanup);
 describe("the Next bar", () => {
   it("says nothing is due rather than drawing an empty move", () => {
     render(<NextBar />);
-    expect(screen.getByText("Nothing is due next.")).toBeInTheDocument();
+    expect(
+      screen.getByText(englishCopy["standing.next.none"]),
+    ).toBeInTheDocument();
     expect(screen.queryByRole("button")).toBeNull();
   });
 
   it("says the caller's own sentence when it gives one", () => {
     render(<NextBar empty="No follow-up task recorded." />);
     expect(screen.getByText("No follow-up task recorded.")).toBeInTheDocument();
-    expect(screen.queryByText("Nothing is due next.")).toBeNull();
+    expect(screen.queryByText(englishCopy["standing.next.none"])).toBeNull();
   });
 
   it("draws the late tag, the reason, Snooze and the other tasks", () => {
@@ -71,7 +74,9 @@ describe("the Next bar", () => {
 
     await user.tab();
 
-    const card = screen.getByRole("region", { name: "Other open tasks" });
+    const card = screen.getByRole("region", {
+      name: englishCopy["co.overview.otherOpen"],
+    });
     expect(card).toHaveTextContent("Book the site visit");
     expect(card).toHaveTextContent("Update the capacity sheet");
   });

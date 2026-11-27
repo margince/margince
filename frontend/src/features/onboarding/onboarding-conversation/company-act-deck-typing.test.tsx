@@ -6,6 +6,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../../api/schema";
 import { LocaleProvider } from "../../../i18n";
+import { en as englishCopy } from "../../../i18n/en";
 import {
   jsonResponse,
   type RouteMap,
@@ -182,11 +183,13 @@ it("keeps the deck on the card being typed into, past the first character that d
   // the site read prefills the draft on its own query, separate from the
   // proposal that opens the deck.
   await screen.findByText("2 of 2 left");
-  const question = within(card()).getByText("Company name");
+  const question = within(card()).getByText(
+    englishCopy["ob.field.display_name"],
+  );
   const counter = within(card()).getByText(/^1 of \d+$/).textContent;
 
   const control = within(card()).getByRole("textbox", {
-    name: "Company name",
+    name: englishCopy["ob.field.display_name"],
   });
   expect(control).toHaveValue("");
 
@@ -195,14 +198,18 @@ it("keeps the deck on the card being typed into, past the first character that d
   // mid-keystroke.
   await user.type(control, "G");
 
-  expect(within(card()).getByText("Company name")).toBe(question);
+  expect(within(card()).getByText(englishCopy["ob.field.display_name"])).toBe(
+    question,
+  );
   expect(within(card()).getByText(counter as string)).toBeInTheDocument();
   expect(control).toHaveValue("G");
 
   // Past the first character, so the rest of the name lands too.
   await user.type(control, "radion");
 
-  expect(within(card()).getByText("Company name")).toBe(question);
+  expect(within(card()).getByText(englishCopy["ob.field.display_name"])).toBe(
+    question,
+  );
   expect(within(card()).getByText(counter as string)).toBeInTheDocument();
   expect(control).toHaveValue("Gradion");
 });
@@ -211,7 +218,9 @@ it("counts the lines corrected in the whole record, singular then plural", async
   const user = userEvent.setup();
   renderReview();
   await screen.findByText("2 of 2 left");
-  await user.click(screen.getByRole("button", { name: "Read full profile" }));
+  await user.click(
+    screen.getByRole("button", { name: englishCopy["ob.deck.readWhole"] }),
+  );
 
   const correct = async (index: number) => {
     await user.click(screen.getAllByRole("button", { name: /^Edit / })[index]);

@@ -17,6 +17,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { ToastProvider } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import {
   DomainQuestionAnswer,
@@ -87,9 +88,13 @@ it("opens empty maintenance review even when the queue has no question, then clo
   const user = userEvent.setup();
   transport(() => response({ data: [], page: { has_more: false } }));
   mount();
-  await user.click(screen.getByRole("button", { name: "Company questions" }));
+  await user.click(
+    screen.getByRole("button", {
+      name: englishCopy["worklist.domainReview.title"],
+    }),
+  );
   expect(
-    await screen.findByText("No company questions are open."),
+    await screen.findByText(englishCopy["worklist.domainReview.empty"]),
   ).toBeTruthy();
   await user.click(screen.getByRole("button", { name: "Close" }));
   expect(screen.queryByRole("dialog")).toBeNull();
@@ -110,7 +115,11 @@ it("pages all questions and explains forwarded and undated evidence", async () =
     );
   });
   mount();
-  await user.click(screen.getByRole("button", { name: "Company questions" }));
+  await user.click(
+    screen.getByRole("button", {
+      name: englishCopy["worklist.domainReview.title"],
+    }),
+  );
   expect(
     await screen.findByText("Which company does alias.example belong to?"),
   ).toBeTruthy();
@@ -121,12 +130,18 @@ it("pages all questions and explains forwarded and undated evidence", async () =
     screen.getByText("https://alias.example/ → https://destination.example/"),
   ).toBeTruthy();
   expect(screen.getByText(/Latest evidence:/)).toBeTruthy();
-  expect(screen.queryByRole("button", { name: "Create company" })).toBeNull();
+  expect(
+    screen.queryByRole("button", {
+      name: englishCopy["worklist.domainReview.create"],
+    }),
+  ).toBeNull();
   await user.click(screen.getByRole("button", { name: "Load more" }));
   expect(
     await screen.findByText("Which company does unreadable.example belong to?"),
   ).toBeTruthy();
-  expect(screen.getByText("Evidence date unavailable")).toBeTruthy();
+  expect(
+    screen.getByText(englishCopy["worklist.domainReview.noEvidenceDate"]),
+  ).toBeTruthy();
   expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
   expect(cursors).toEqual([null, "next-page"]);
 });
@@ -156,14 +171,18 @@ it("requires and submits an explicit company match for forwarded identity", asyn
     return response({ data: [forwarded], page: { has_more: false } });
   });
   mount();
-  await user.click(screen.getByRole("button", { name: "Company questions" }));
+  await user.click(
+    screen.getByRole("button", {
+      name: englishCopy["worklist.domainReview.title"],
+    }),
+  );
   const search = await screen.findByRole("searchbox", {
-    name: "Choose company",
+    name: englishCopy["worklist.domainQuestion.choose"],
   });
   await waitFor(() => expect(search.hasAttribute("disabled")).toBe(false));
   expect(
     screen
-      .getByRole("button", { name: "Match company" })
+      .getByRole("button", { name: englishCopy["worklist.domainReview.match"] })
       .hasAttribute("disabled"),
   ).toBe(true);
   vi.useFakeTimers();
@@ -175,7 +194,11 @@ it("requires and submits an explicit company match for forwarded identity", asyn
   await user.click(
     await screen.findByRole("button", { name: /Known company/ }),
   );
-  await user.click(screen.getByRole("button", { name: "Match company" }));
+  await user.click(
+    screen.getByRole("button", {
+      name: englishCopy["worklist.domainReview.match"],
+    }),
+  );
   await waitFor(() =>
     expect(writes).toEqual([
       { company_id: "00000000-0000-4000-8000-000000000001" },
@@ -200,10 +223,16 @@ it("sends deferral and restoration for the selected question", async () => {
     return response({ data: [row], page: { has_more: false } });
   });
   mount();
-  await user.click(screen.getByRole("button", { name: "Company questions" }));
+  await user.click(
+    screen.getByRole("button", {
+      name: englishCopy["worklist.domainReview.title"],
+    }),
+  );
   await user.click(await screen.findByRole("button", { name: "Not now" }));
   await user.click(
-    await screen.findByRole("button", { name: "Return to Review" }),
+    await screen.findByRole("button", {
+      name: englishCopy["worklist.domainReview.restore"],
+    }),
   );
   expect(await screen.findByRole("button", { name: "Not now" })).toBeTruthy();
   expect(
@@ -238,12 +267,16 @@ it.each([
     return response({ data: rows, page: { has_more: false } });
   });
   mount();
-  await user.click(screen.getByRole("button", { name: "Company questions" }));
+  await user.click(
+    screen.getByRole("button", {
+      name: englishCopy["worklist.domainReview.title"],
+    }),
+  );
   const button = await screen.findByRole("button", { name: label });
   await waitFor(() => expect(button.hasAttribute("disabled")).toBe(false));
   await user.click(button);
   expect(
-    await screen.findByText("No company questions are open."),
+    await screen.findByText(englishCopy["worklist.domainReview.empty"]),
   ).toBeTruthy();
   expect(writes).toHaveLength(1);
   expect(writes[0].endsWith(path)).toBe(true);
@@ -266,15 +299,25 @@ it("shows read failures and retains failed decisions for retry", async () => {
     return response({ data: [undecided], page: { has_more: false } });
   });
   mount();
-  await user.click(screen.getByRole("button", { name: "Company questions" }));
+  await user.click(
+    screen.getByRole("button", {
+      name: englishCopy["worklist.domainReview.title"],
+    }),
+  );
   expect(await screen.findByText("Review evidence has changed.")).toBeTruthy();
-  expect(screen.queryByText("No company questions are open.")).toBeNull();
+  expect(
+    screen.queryByText(englishCopy["worklist.domainReview.empty"]),
+  ).toBeNull();
   await user.click(screen.getByRole("button", { name: "Close" }));
   failedRead = false;
-  await user.click(screen.getByRole("button", { name: "Company questions" }));
+  await user.click(
+    screen.getByRole("button", {
+      name: englishCopy["worklist.domainReview.title"],
+    }),
+  );
   await user.click(
     await screen.findByRole("button", {
-      name: "Stop capturing in your mailboxes",
+      name: englishCopy["worklist.verb.discard"],
     }),
   );
   expect(await screen.findByText("Review evidence has changed.")).toBeTruthy();
@@ -290,20 +333,26 @@ it("allows personal deferral and exclusion without company-write permission", as
     false,
   );
   mount();
-  await user.click(screen.getByRole("button", { name: "Company questions" }));
+  await user.click(
+    screen.getByRole("button", {
+      name: englishCopy["worklist.domainReview.title"],
+    }),
+  );
   expect(
     (
-      await screen.findByRole("button", { name: "Create company" })
+      await screen.findByRole("button", {
+        name: englishCopy["worklist.domainReview.create"],
+      })
     ).hasAttribute("disabled"),
   ).toBe(true);
   expect(
     screen
-      .getByRole("button", { name: "Retry site read" })
+      .getByRole("button", { name: englishCopy["worklist.domainReview.retry"] })
       .hasAttribute("disabled"),
   ).toBe(true);
   expect(
     screen
-      .getByRole("button", { name: "Stop capturing in your mailboxes" })
+      .getByRole("button", { name: englishCopy["worklist.verb.discard"] })
       .hasAttribute("disabled"),
   ).toBe(false);
   expect(
@@ -333,9 +382,15 @@ it("opens review from a forwarded row without implicit company creation", async 
       <DomainQuestionMenu item={item} />
     </>,
   );
-  expect(screen.queryByRole("button", { name: "Create company" })).toBeNull();
+  expect(
+    screen.queryByRole("button", {
+      name: englishCopy["worklist.domainReview.create"],
+    }),
+  ).toBeNull();
   await user.click(
-    await screen.findByRole("button", { name: "Choose company" }),
+    await screen.findByRole("button", {
+      name: englishCopy["worklist.domainQuestion.choose"],
+    }),
   );
   expect(await screen.findByRole("dialog")).toBeTruthy();
   await user.click(screen.getByRole("button", { name: "Close" }));
@@ -369,10 +424,14 @@ it("keeps ordinary row decisions separate from forwarded review", async () => {
       <DomainQuestionMenu item={item} />
     </>,
   );
-  await user.click(screen.getByRole("button", { name: "Create company" }));
+  await user.click(
+    screen.getByRole("button", {
+      name: englishCopy["worklist.domainReview.create"],
+    }),
+  );
   await waitFor(() => expect(writes).toHaveLength(1));
   const discard = screen.getByRole("button", {
-    name: "Stop capturing in your mailboxes",
+    name: englishCopy["worklist.verb.discard"],
   });
   await waitFor(() => expect(discard.hasAttribute("disabled")).toBe(false));
   await user.click(discard);
@@ -422,9 +481,15 @@ it("answers a vendor question from the row with create company or keep as vendor
       <DomainQuestionMenu item={item} />
     </>,
   );
-  await user.click(screen.getByRole("button", { name: "Keep as vendor" }));
+  await user.click(
+    screen.getByRole("button", {
+      name: englishCopy["worklist.domainReview.keepVendor"],
+    }),
+  );
   await waitFor(() => expect(writes).toHaveLength(1));
-  const create = screen.getByRole("button", { name: "Create company" });
+  const create = screen.getByRole("button", {
+    name: englishCopy["worklist.domainReview.create"],
+  });
   await waitFor(() => expect(create.hasAttribute("disabled")).toBe(false));
   await user.click(create);
   await waitFor(() => expect(writes).toHaveLength(2));
@@ -459,7 +524,11 @@ it("offers no keep as vendor on a question that is not a vendor question", () =>
       <DomainQuestionMenu item={item} />
     </>,
   );
-  expect(screen.queryByRole("button", { name: "Keep as vendor" })).toBeNull();
+  expect(
+    screen.queryByRole("button", {
+      name: englishCopy["worklist.domainReview.keepVendor"],
+    }),
+  ).toBeNull();
 });
 
 it.each([
@@ -480,19 +549,25 @@ it.each([
       return response({ data: rows, page: { has_more: false } });
     });
     mount();
-    await user.click(screen.getByRole("button", { name: "Company questions" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: englishCopy["worklist.domainReview.title"],
+      }),
+    );
     expect(await screen.findByText(vendor.note ?? "")).toBeTruthy();
     expect(
       screen.getByText(/looks like a mail or hosting provider/),
     ).toBeTruthy();
     expect(
-      screen.queryByRole("button", { name: "Retry site read" }),
+      screen.queryByRole("button", {
+        name: englishCopy["worklist.domainReview.retry"],
+      }),
     ).toBeNull();
     const button = screen.getByRole("button", { name: label });
     await waitFor(() => expect(button.hasAttribute("disabled")).toBe(false));
     await user.click(button);
     expect(
-      await screen.findByText("No company questions are open."),
+      await screen.findByText(englishCopy["worklist.domainReview.empty"]),
     ).toBeTruthy();
     expect(writes).toHaveLength(1);
     expect(writes[0].endsWith(path)).toBe(true);

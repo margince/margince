@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import {
   installFetchStub,
@@ -55,7 +56,7 @@ function Offer({ colleague }: Readonly<{ colleague: string }>) {
 
 async function openForm() {
   await userEvent.click(
-    await screen.findByRole("button", { name: "Hand over to…" }),
+    await screen.findByRole("button", { name: englishCopy["handover.offer"] }),
   );
   const send = await screen.findByRole("button", { name: "Send offer" });
   const cancel = screen.getByRole("button", { name: "Cancel" });

@@ -15,6 +15,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
+import { en as englishCopy } from "../../i18n/en";
 import { forgetSeat } from "../../lib/storage";
 import { openView, openViewStep } from "../../testing/listview.testkit";
 import { meFixture } from "../../testing/mefixture";
@@ -243,9 +244,11 @@ describe("which question wins", () => {
       "aria-pressed",
       "true",
     );
-    expect(screen.queryByRole("button", { name: "Team prospecting" })).toBe(
-      null,
-    );
+    expect(
+      screen.queryByRole("button", {
+        name: englishCopy["analytics.overview.team"],
+      }),
+    ).toBe(null);
   });
 
   it("forgets every choice at sign-out", async () => {
@@ -275,11 +278,13 @@ describe("a remembered or shared question the reader can no longer ask", () => {
     chooseContext(READER, "sales", { pipeline: "retired" });
     const asked = open("#/analytics", answer, TWO);
     expect(
-      await screen.findByText("This view names a pipeline you cannot open"),
+      await screen.findByText(englishCopy["analytics.overview.pipelineGone"]),
     ).toBeVisible();
     expect(salesAsked(asked)).toHaveLength(0);
     await user.click(
-      screen.getByRole("button", { name: "Use the default pipeline" }),
+      screen.getByRole("button", {
+        name: englishCopy["analytics.overview.pipelineDefault"],
+      }),
     );
     await readings();
     expect(lastSales(asked).get("pipeline_id")).toBe("sales");
@@ -293,7 +298,7 @@ describe("a remembered or shared question the reader can no longer ask", () => {
       TWO,
     );
     expect(
-      await screen.findByText("This link names figures you cannot open"),
+      await screen.findByText(englishCopy["analytics.scopeRefused"]),
     ).toBeVisible();
     expect(salesAsked(asked)).toHaveLength(0);
     await user.click(screen.getByRole("button", { name: "Show DACH" }));
@@ -305,7 +310,9 @@ describe("a remembered or shared question the reader can no longer ask", () => {
 describe("every way out of Overview carries its question", () => {
   async function expectedFinishDoor() {
     const strip = await readings();
-    return strip.getByRole("link", { description: "Won + Likely deals" });
+    return strip.getByRole("link", {
+      description: englishCopy["forecast.basis.likely"],
+    });
   }
 
   it("opens Forecast from Expected finish with the question, and says what it cannot narrow to", async () => {
@@ -323,12 +330,14 @@ describe("every way out of Overview carries its question", () => {
     await user.click(door);
     expect(window.location.hash).toMatch(/^#\/analytics\/forecast\?/);
     expect(
-      await screen.findByText("The forecast covers every pipeline"),
+      await screen.findByText(englishCopy["forecast.mismatch.pipeline"]),
     ).toBeVisible();
     expect(forecastAsked(asked)).toHaveLength(0);
 
     await user.click(
-      screen.getByRole("button", { name: "Show all pipelines" }),
+      screen.getByRole("button", {
+        name: englishCopy["forecast.mismatch.allPipelines"],
+      }),
     );
     await waitFor(() => expect(forecastAsked(asked).length).toBeGreaterThan(0));
     expect(forecastAsked(asked)[0].url.searchParams.get("period")).toBe(
@@ -341,7 +350,9 @@ describe("every way out of Overview carries its question", () => {
     const asked = open("#/analytics", answer, { template: "sdr" });
     await user.click(await expectedFinishDoor());
     await waitFor(() => expect(forecastAsked(asked).length).toBeGreaterThan(0));
-    expect(screen.queryByText("The forecast covers every pipeline")).toBeNull();
+    expect(
+      screen.queryByText(englishCopy["forecast.mismatch.pipeline"]),
+    ).toBeNull();
   });
 
   it("leaves a modified click to the browser and follows Enter", async () => {
@@ -403,11 +414,13 @@ describe("every way out of Overview carries its question", () => {
     open("#/analytics/overview?overview=prospecting", answer, TWO);
     await readings();
     await userEvent.click(
-      await screen.findByRole("button", { name: "SDR outcomes" }),
+      await screen.findByRole("button", { name: englishCopy["reporting.sdr"] }),
     );
     expect(window.location.hash).toContain("#/analytics/sdr");
     expect(window.location.hash).toContain("period=this_week");
-    expect(screen.queryByRole("link", { name: "SDR outcomes" })).toBeNull();
+    expect(
+      screen.queryByRole("link", { name: englishCopy["reporting.sdr"] }),
+    ).toBeNull();
   });
 });
 
@@ -509,9 +522,7 @@ describe("Save view", () => {
       within(await openView(user)).getByRole("button", { name: "Save view" }),
     );
     expect(
-      await screen.findByText(
-        "Saving adds a report under Reports. Overview stays as it is.",
-      ),
+      await screen.findByText(englishCopy["analytics.overview.saveViewNote"]),
     ).toBeVisible();
     await user.type(
       screen.getByRole("textbox", { name: "Report name" }),
@@ -545,7 +556,7 @@ describe("a copied link", () => {
   it("is refused to a second reader who may not see its team, instead of showing their own", async () => {
     open("#/analytics", answer, TWO);
     const door = (await readings()).getByRole("link", {
-      description: "Won + Likely deals",
+      description: englishCopy["forecast.basis.likely"],
     });
     const href = door.getAttribute("href") ?? "";
     cleanup();
@@ -555,7 +566,7 @@ describe("a copied link", () => {
       seat: "sdr",
     });
     expect(
-      await screen.findByText("This link names figures you cannot open"),
+      await screen.findByText(englishCopy["analytics.scopeRefused"]),
     ).toBeVisible();
     expect(forecastAsked(asked)).toHaveLength(0);
   });
@@ -591,7 +602,7 @@ describe("doors to setup and templates", () => {
     await readings();
     const user = userEvent.setup({ delay: null });
     const templates = within(await openView(user)).getByRole("link", {
-      name: "Report templates",
+      name: englishCopy["analytics.overview.templates"],
     });
     expect(dialsOfLink(templates)).toEqual({ scope: `team:${TEAM.id}` });
     expect(fireEvent.click(templates, { ctrlKey: true })).toBe(true);

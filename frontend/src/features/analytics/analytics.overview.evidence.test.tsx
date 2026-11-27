@@ -7,6 +7,7 @@ import { QueryClient } from "@tanstack/react-query";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { forgetSeat } from "../../lib/storage";
 import { jsonResponse } from "../../testing/story-utils";
 import {
@@ -53,7 +54,7 @@ describe("one evidence interaction on Sales review", () => {
     const asked = openOverview("#/analytics", bySeat("leader"));
     const strip = await readings();
     const door = strip.getByRole("button", {
-      name: "View records",
+      name: englishCopy["reporting.viewRecords"],
       description: "Sales won",
     });
 
@@ -78,19 +79,21 @@ describe("one evidence interaction on Sales review", () => {
     const asked = openOverview("#/analytics", bySeat("leader"));
     const strip = await readings();
     const door = strip.getByRole("button", {
-      name: "View records",
-      description: "Pipeline due this quarter",
+      name: englishCopy["reporting.viewRecords"],
+      description: englishCopy["analytics.outlook.periodPipeline"],
     });
     await userEvent.click(door);
-    await screen.findByRole("dialog", { name: "Pipeline due this quarter" });
+    await screen.findByRole("dialog", {
+      name: englishCopy["analytics.outlook.periodPipeline"],
+    });
     await waitFor(() => expect(evidenceAsked(asked)).toHaveLength(1));
     expect(evidenceAsked(asked)[0]?.searchParams.get("context_id")).toBe(
       "forecast_period_deals",
     );
     expect(
       strip.getByRole("button", {
-        name: "View records",
-        description: "Pipeline due this quarter",
+        name: englishCopy["reporting.viewRecords"],
+        description: englishCopy["analytics.outlook.periodPipeline"],
       }),
     ).toBeVisible();
   });
@@ -121,7 +124,7 @@ describe("one evidence interaction on Sales review", () => {
     const strip = await readings();
     await user.click(
       strip.getByRole("button", {
-        name: "View records",
+        name: englishCopy["reporting.viewRecords"],
         description: "Sales won",
       }),
     );
@@ -144,11 +147,13 @@ describe("one evidence interaction on Sales review", () => {
     const strip = await readings();
     const forecast = strip.getByRole("link", {
       name: "Forecast",
-      description: "Won + Likely deals",
+      description: englishCopy["forecast.basis.likely"],
     });
     expect(forecast.getAttribute("href")).toMatch(/^\/#\/analytics\/forecast/);
     expect(
-      strip.queryByRole("button", { description: "Won + Likely deals" }),
+      strip.queryByRole("button", {
+        description: englishCopy["forecast.basis.likely"],
+      }),
     ).toBeNull();
   });
 
@@ -156,11 +161,13 @@ describe("one evidence interaction on Sales review", () => {
     const user = userEvent.setup({ delay: null });
     openScenario("populated", "sales");
     const strip = within(
-      await screen.findByRole("region", { name: "Opening readings" }),
+      await screen.findByRole("region", {
+        name: englishCopy["analytics.overview.readings"],
+      }),
     );
     const won = strip.getByRole("button", { description: "Sales won" });
     const forecast = strip.getByRole("button", {
-      description: "Won + Likely deals",
+      description: englishCopy["forecast.basis.likely"],
     });
     expect(won).toHaveAttribute("aria-pressed", "true");
     expect(forecast).toHaveAttribute("aria-pressed", "false");
@@ -169,12 +176,20 @@ describe("one evidence interaction on Sales review", () => {
 
     expect(forecast).toHaveAttribute("aria-pressed", "true");
     const plot = within(
-      screen.getByRole("region", { name: "Where the quarter can finish" }),
+      screen.getByRole("region", {
+        name: englishCopy["analytics.hero.chart.forecast"],
+      }),
     );
     expect(
-      plot.getByRole("link", { name: "Open forecast" }).getAttribute("href"),
+      plot
+        .getByRole("link", { name: englishCopy["analytics.hero.openForecast"] })
+        .getAttribute("href"),
     ).toMatch(/^\/#\/analytics\/forecast/);
-    expect(plot.queryByRole("button", { name: "View records" })).toBeNull();
+    expect(
+      plot.queryByRole("button", {
+        name: englishCopy["reporting.viewRecords"],
+      }),
+    ).toBeNull();
   });
 
   it("opens a measured zero as its explanation and an empty permitted population", async () => {
@@ -183,17 +198,17 @@ describe("one evidence interaction on Sales review", () => {
     // Sales won heads the chart, so its records open from the chart's foot.
     const plot = within(
       await screen.findByRole("region", {
-        name: "Sales won through the period",
+        name: englishCopy["analytics.hero.chart.won"],
       }),
     );
 
-    await user.click(plot.getByRole("button", { name: "View records" }));
+    await user.click(
+      plot.getByRole("button", { name: englishCopy["reporting.viewRecords"] }),
+    );
 
     const dialog = within(await screen.findByRole("dialog"));
     expect(
-      dialog.getByText(
-        "Nothing counted toward this figure, so no records are listed. The figure is a measured zero.",
-      ),
+      dialog.getByText(englishCopy["reporting.evidenceZero"]),
     ).toBeVisible();
     expect(await dialog.findByText("0 records shown")).toBeVisible();
     expect(evidenceAsked(asked)[0]?.searchParams.get("metric")).toBe(
@@ -207,17 +222,17 @@ describe("one evidence interaction on Sales review", () => {
     // Sales won heads the chart, so its records open from the chart's foot.
     const plot = within(
       await screen.findByRole("region", {
-        name: "Sales won through the period",
+        name: englishCopy["analytics.hero.chart.won"],
       }),
     );
 
-    await user.click(plot.getByRole("button", { name: "View records" }));
+    await user.click(
+      plot.getByRole("button", { name: englishCopy["reporting.viewRecords"] }),
+    );
 
     const dialog = within(await screen.findByRole("dialog"));
     expect(
-      dialog.getByText(
-        "This figure could not be read, so there are no records to list. Retry to read it again.",
-      ),
+      dialog.getByText(englishCopy["reporting.evidenceUnavailable"]),
     ).toBeVisible();
     expect(dialog.getByRole("button", { name: "Retry" })).toBeVisible();
     expect(dialog.queryByRole("table")).toBeNull();
@@ -233,16 +248,14 @@ describe("one evidence interaction on the prospecting views", () => {
 
     await user.click(
       strip.getByRole("button", {
-        name: "View records",
-        description: "Meetings held",
+        name: englishCopy["reporting.viewRecords"],
+        description: englishCopy["analytics.team.meetings"],
       }),
     );
 
     const dialog = within(await screen.findByRole("dialog"));
     expect(
-      dialog.getByText(
-        "This figure is hidden from you, so its records and their count are not shown.",
-      ),
+      dialog.getByText(englishCopy["reporting.evidenceWithheld"]),
     ).toBeVisible();
     expect(dialog.queryByText(/records? shown/)).toBeNull();
     expect(dialog.queryByRole("button", { name: "Retry" })).toBeNull();
@@ -253,7 +266,9 @@ describe("one evidence interaction on the prospecting views", () => {
     const user = userEvent.setup({ delay: null });
     openScenario("populated", "team");
     const standing = within(
-      await screen.findByRole("region", { name: "Where the team stands" }),
+      await screen.findByRole("region", {
+        name: englishCopy["analytics.team.standing"],
+      }),
     );
     const [first] = await standing.findAllByRole("button");
     if (!first) throw new Error("the populated team has a bottleneck");
@@ -271,15 +286,21 @@ describe("headline, actions and charts are ready on their own", () => {
   it("draws the figures and the actions while the chart read never answers", async () => {
     openOverview("#/analytics", bySeat("leader"), {}, undefined, isChartRead);
     const strip = await readings();
-    expect(strip.getByText("Pipeline due this quarter")).toBeVisible();
+    expect(
+      strip.getByText(englishCopy["analytics.outlook.periodPipeline"]),
+    ).toBeVisible();
     expect(
       within(
-        screen.getByRole("region", { name: "Opening readings" }),
+        screen.getByRole("region", {
+          name: englishCopy["analytics.overview.readings"],
+        }),
       ).getByText("€420,000"),
     ).toBeVisible();
     expect(screen.queryByRole("region", { name: "Summary" })).toBeNull();
     expect(
-      screen.queryByRole("heading", { name: "Open pipeline by stage" }),
+      screen.queryByRole("heading", {
+        name: englishCopy["reporting.stage_distribution"],
+      }),
     ).toBeNull();
   });
 
@@ -294,7 +315,9 @@ describe("headline, actions and charts are ready on their own", () => {
     // Announced where the charts would stand, with its own retry.
     expect(await screen.findByRole("alert")).toBeVisible();
     expect(screen.getByRole("button", { name: "Retry" })).toBeVisible();
-    expect(strip.getByText("Pipeline due this quarter")).toBeVisible();
+    expect(
+      strip.getByText(englishCopy["analytics.outlook.periodPipeline"]),
+    ).toBeVisible();
   });
 });
 
@@ -302,9 +325,11 @@ describe("a reading hidden whole", () => {
   it("says it is hidden, never that only a part of it is", async () => {
     openScenario("readingsWithheld", "team");
     const strip = await readings();
-    expect(strip.getAllByText("Hidden from you").length).toBeGreaterThan(0);
     expect(
-      strip.queryByText("Part of this figure is hidden from you"),
+      strip.getAllByText(englishCopy["analytics.prospect.withheld"]).length,
+    ).toBeGreaterThan(0);
+    expect(
+      strip.queryByText(englishCopy["analytics.overview.partlyHidden"]),
     ).toBeNull();
   });
 });
@@ -316,7 +341,7 @@ describe("a drawer belongs to the selection it was opened in", () => {
     const strip = await readings();
     await user.click(
       strip.getByRole("button", {
-        name: "View records",
+        name: englishCopy["reporting.viewRecords"],
         description: "Sales won",
       }),
     );
@@ -335,7 +360,9 @@ describe("a drawer belongs to the selection it was opened in", () => {
     const user = userEvent.setup({ delay: null });
     openScenario("populated", "team");
     const standing = within(
-      await screen.findByRole("region", { name: "Where the team stands" }),
+      await screen.findByRole("region", {
+        name: englishCopy["analytics.team.standing"],
+      }),
     );
     const [first] = await standing.findAllByRole("button");
     if (!first) throw new Error("the populated team has a bottleneck");
@@ -346,7 +373,9 @@ describe("a drawer belongs to the selection it was opened in", () => {
     window.location.hash = `${address}&period=last_week`;
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     window.location.hash = address;
-    await screen.findByRole("region", { name: "Where the team stands" });
+    await screen.findByRole("region", {
+      name: englishCopy["analytics.team.standing"],
+    });
 
     expect(screen.queryByRole("dialog")).toBeNull();
   });
@@ -370,12 +399,14 @@ describe("a keyboard-only path", () => {
     const user = userEvent.setup({ delay: null });
     openScenario("largeBacklog", "sales");
     const actions = within(
-      await screen.findByRole("region", { name: "Needs your attention" }),
+      await screen.findByRole("region", {
+        name: englishCopy["analytics.attention"],
+      }),
     );
     const [first] = await actions.findAllByRole("link");
     if (!first) throw new Error("the backlog review has an action");
     await tabTo(user, first);
-    const [label] = await screen.findAllByText("View chart as table");
+    const [label] = await screen.findAllByText(englishCopy["reporting.data"]);
     const table = label?.closest<HTMLElement>("summary, button");
     if (!table) throw new Error("a chart offers its table");
     await tabTo(user, table);
@@ -396,7 +427,9 @@ describe("a keyboard-only path", () => {
     const user = userEvent.setup({ delay: null });
     openScenario("populated", "team");
     const standing = within(
-      await screen.findByRole("region", { name: "Where the team stands" }),
+      await screen.findByRole("region", {
+        name: englishCopy["analytics.team.standing"],
+      }),
     );
     const [first] = await standing.findAllByRole("button");
     if (!first) throw new Error("the populated team has a bottleneck");

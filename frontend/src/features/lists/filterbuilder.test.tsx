@@ -8,6 +8,7 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
+import { en as englishCopy } from "../../i18n/en";
 import type { VocabularyField } from "../../lib/filterdata";
 import {
   encode,
@@ -196,7 +197,11 @@ describe("what the builder offers", () => {
 
     // A date admits ordering and equality; it does NOT admit contains or in, and
     // offering either would build a clause the engine refuses.
-    expect(screen.getByRole("option", { name: "is on or after" })).toBeTruthy();
+    expect(
+      screen.getByRole("option", {
+        name: englishCopy["filters.op.onOrAfterDate"],
+      }),
+    ).toBeTruthy();
     expect(screen.queryByRole("option", { name: "contains" })).toBeNull();
     expect(screen.queryByRole("option", { name: "is any of" })).toBeNull();
   });
@@ -215,7 +220,11 @@ describe("what the builder offers", () => {
     // The same operator, read the way its field's type means it. "is on or after"
     // on a score would send a reader looking for a calendar.
     expect(screen.getByRole("option", { name: "is at least" })).toBeTruthy();
-    expect(screen.queryByRole("option", { name: "is on or after" })).toBeNull();
+    expect(
+      screen.queryByRole("option", {
+        name: englishCopy["filters.op.onOrAfterDate"],
+      }),
+    ).toBeNull();
   });
 
   it("marks a workspace-defined field as one", () => {
@@ -229,7 +238,9 @@ describe("what the builder offers", () => {
     // The badge tells a reader this column is theirs and not the product's;
     // AC-filters-and-views-3 asks for it by name. Neutral, because the accent
     // is the page's one primary action.
-    const badge = screen.getByText("Custom field").closest(".badge");
+    const badge = screen
+      .getByText(englishCopy["filters.customBadge"])
+      .closest(".badge");
     expect(badge?.className).not.toContain("badge-accent");
     expect(screen.queryByText("owner id")).toBeNull();
   });
@@ -267,7 +278,7 @@ describe("what the builder offers", () => {
       <Harness start={newGroup("and", [newLeaf("owner_id", "eq", "u1")])} />,
     );
 
-    expect(screen.queryByText("Custom field")).toBeNull();
+    expect(screen.queryByText(englishCopy["filters.customBadge"])).toBeNull();
   });
 });
 
@@ -305,7 +316,7 @@ describe("an id clause names a record, not a uuid", () => {
     // not a uuid box either: nobody types one from memory, and one typed wrong
     // matches nothing and reads as "no companies match".
     const box = await screen.findByRole("combobox", {
-      name: "Search companies",
+      name: englishCopy["filters.searchRecords"],
     });
     expect(screen.queryByRole("combobox", { name: "Value" })).toBeNull();
 
@@ -340,10 +351,14 @@ describe("an id clause names a record, not a uuid", () => {
     // workspace has no such company", which is a settled answer to a question
     // that got one — the exact failure this whole surface exists to prevent.
     await user.type(
-      await screen.findByRole("combobox", { name: "Search companies" }),
+      await screen.findByRole("combobox", {
+        name: englishCopy["filters.searchRecords"],
+      }),
       "zzz",
     );
-    expect(await screen.findByText("No companies match")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["filters.noRecordMatches"]),
+    ).toBeTruthy();
   });
 
   it("names records one at a time for a list clause, and never as free text", async () => {
@@ -394,7 +409,9 @@ describe("an id clause names a record, not a uuid", () => {
     // search box stays open under what the clause already holds, because the
     // next pick is the point.
     await user.type(
-      await screen.findByRole("combobox", { name: "Search companies" }),
+      await screen.findByRole("combobox", {
+        name: englishCopy["filters.searchRecords"],
+      }),
       "north",
     );
     await user.click(await screen.findByRole("option", { name: "Northgate" }));
@@ -403,7 +420,9 @@ describe("an id clause names a record, not a uuid", () => {
       and: [{ field: "company_id", op: "in", value: ["company-1"] }],
     });
     expect(
-      screen.getByRole("combobox", { name: "Search companies" }),
+      screen.getByRole("combobox", {
+        name: englishCopy["filters.searchRecords"],
+      }),
     ).toBeTruthy();
   });
 
@@ -511,7 +530,9 @@ describe("editing the tree", () => {
     const user = userEvent.setup();
     render(<Harness start={newGroup("and", [])} />);
 
-    await user.click(screen.getByRole("button", { name: "Add condition" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["filters.addClause"] }),
+    );
 
     // No field until the reader picks one, and so no operator or value yet.
     expect(wire()).toEqual({ and: [{ field: "", op: "eq", value: "" }] });
@@ -663,7 +684,9 @@ describe("the join between conditions", () => {
     // "and" binds tighter, so the first two stay together as one run.
     expect(wire()).toEqual({ or: [{ and: [owner, name] }, score] });
     expect(words()).toEqual(["and", "or"]);
-    expect(screen.getByRole("group", { name: "All of these" })).toBeTruthy();
+    expect(
+      screen.getByRole("group", { name: englishCopy["filters.group.all"] }),
+    ).toBeTruthy();
   });
 
   it("flips the first connector alone, leaving the second as it was", async () => {
@@ -705,7 +728,9 @@ describe("the join between conditions", () => {
       />,
     );
 
-    const run = screen.getByRole("group", { name: "All of these" });
+    const run = screen.getByRole("group", {
+      name: englishCopy["filters.group.all"],
+    });
     await user.click(within(run).getByRole("button", { name: MATCH_ALL }));
 
     expect(wire()).toEqual({ or: [owner, name, score] });
@@ -739,14 +764,18 @@ describe("groups", () => {
         { or: [{ field: "", op: "eq", value: "" }] },
       ],
     });
-    expect(screen.getByRole("group", { name: "Any of these" })).toBeTruthy();
+    expect(
+      screen.getByRole("group", { name: englishCopy["filters.group.any"] }),
+    ).toBeTruthy();
   });
 
   it("offers no group in a filter with no condition yet", () => {
     resetIDsForTest();
     render(<Harness start={newGroup("and", [])} />);
 
-    expect(screen.getByRole("button", { name: "Add condition" })).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: englishCopy["filters.addClause"] }),
+    ).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Add a group" })).toBeNull();
   });
 
@@ -764,15 +793,21 @@ describe("groups", () => {
 
     // One condition has no connector word between rows, so the head is the
     // only place this group's join can be seen and changed.
-    const head = screen.getByRole("group", { name: "Conditions to match" });
+    const head = screen.getByRole("group", {
+      name: englishCopy["filters.group.match"],
+    });
     await user.click(
-      within(head).getByRole("button", { name: "All of these" }),
+      within(head).getByRole("button", {
+        name: englishCopy["filters.group.all"],
+      }),
     );
 
     expect(wire().and[1]).toEqual({
       and: [{ field: "full_name", op: "contains", value: "ann" }],
     });
-    expect(screen.getByRole("group", { name: "All of these" })).toBeTruthy();
+    expect(
+      screen.getByRole("group", { name: englishCopy["filters.group.all"] }),
+    ).toBeTruthy();
   });
 
   it("grows a nested group from its own foot", async () => {
@@ -788,7 +823,7 @@ describe("groups", () => {
     );
 
     await user.click(
-      screen.getByRole("button", { name: "Add condition to group" }),
+      screen.getByRole("button", { name: englishCopy["filters.addToGroup"] }),
     );
     expect(wire().and[1]).toEqual({
       or: [
@@ -798,7 +833,9 @@ describe("groups", () => {
     });
     // The group's own offer of a group, named apart from the root's.
     expect(
-      screen.getByRole("button", { name: "Add nested group" }),
+      screen.getByRole("button", {
+        name: englishCopy["filters.addGroupToGroup"],
+      }),
     ).toBeTruthy();
   });
 
@@ -818,7 +855,7 @@ describe("groups", () => {
       screen.getByRole("button", { name: "Remove Name condition" }),
     );
 
-    expect(screen.getByText("An empty group matches nothing.")).toBeTruthy();
+    expect(screen.getByText(englishCopy["filters.emptyGroup"])).toBeTruthy();
     expect(wire()).toEqual({
       and: [{ field: "owner_id", op: "eq", value: "u1" }, { or: [] }],
     });
@@ -836,14 +873,20 @@ describe("groups", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "Remove group" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["filters.removeGroup"] }),
+    );
 
     // The clause beside the group survives: removal names a node, and the root is
     // not offered a remove control at all.
     expect(wire()).toEqual({
       and: [{ field: "owner_id", op: "eq", value: "u1" }],
     });
-    expect(screen.queryByRole("button", { name: "Remove group" })).toBeNull();
+    expect(
+      screen.queryByRole("button", {
+        name: englishCopy["filters.removeGroup"],
+      }),
+    ).toBeNull();
   });
 
   it("stops offering a group at the engine's nesting bound", () => {
@@ -876,7 +919,9 @@ describe("groups", () => {
     // Every group holds two conditions. Depths 2 and 3 may still nest; depth 4
     // may not, or the tree is one the server refuses as filter_too_deep.
     expect(
-      screen.getAllByRole("button", { name: "Add nested group" }),
+      screen.getAllByRole("button", {
+        name: englishCopy["filters.addGroupToGroup"],
+      }),
     ).toHaveLength(2);
     expect(screen.getByRole("button", { name: "Add a group" })).toBeTruthy();
   });

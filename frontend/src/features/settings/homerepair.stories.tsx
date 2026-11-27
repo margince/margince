@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import { suggestion } from "../../testing/dealsuggestion.fixture";
 import { ReviewActionsProvider } from "../../testing/reviewactions";
 import {
@@ -75,13 +76,15 @@ export const DealSuggestions: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      canvas.getByRole("button", { name: "Deal suggestions" }),
+      canvas.getByRole("button", {
+        name: englishCopy["homeRepair.suggestions"],
+      }),
     );
     await userEvent.click(
-      canvas.getByRole("button", { name: "Preview items" }),
+      canvas.getByRole("button", { name: englishCopy["homeRepair.preview"] }),
     );
     await expect(
-      await canvas.findByText("Retire automatic deal suggestion"),
+      await canvas.findByText(englishCopy["homeRepair.supersede"]),
     ).toBeInTheDocument();
     await expect(
       canvas.getByRole("button", { name: "Apply 1 reviewed change" }),
@@ -94,10 +97,10 @@ export const Review: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      canvas.getByRole("button", { name: "Preview items" }),
+      canvas.getByRole("button", { name: englishCopy["homeRepair.preview"] }),
     );
     await expect(
-      await canvas.findByText("Keep for human review"),
+      await canvas.findByText(englishCopy["homeRepair.keepReview"]),
     ).toBeInTheDocument();
     await expect(
       canvas.getByRole("button", { name: "Apply 1 reviewed change" }),
@@ -109,10 +112,10 @@ export const ReadOnly: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      canvas.getByRole("button", { name: "Preview items" }),
+      canvas.getByRole("button", { name: englishCopy["homeRepair.preview"] }),
     );
     await expect(
-      await canvas.findByText("Keep for human review"),
+      await canvas.findByText(englishCopy["homeRepair.keepReview"]),
     ).toBeInTheDocument();
     await expect(
       canvas.queryByRole("button", { name: "Apply 1 reviewed change" }),
@@ -124,7 +127,7 @@ export const ChangedSinceReview: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      canvas.getByRole("button", { name: "Preview items" }),
+      canvas.getByRole("button", { name: englishCopy["homeRepair.preview"] }),
     );
     await userEvent.click(
       await canvas.findByRole("button", {
@@ -141,13 +144,13 @@ export const DuplicateProposal: Story = {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("button", { name: "Proposals" }));
     await userEvent.click(
-      canvas.getByRole("button", { name: "Preview items" }),
+      canvas.getByRole("button", { name: englishCopy["homeRepair.preview"] }),
     );
     await expect(
-      await canvas.findByText("Withdraw automatic proposal"),
+      await canvas.findByText(englishCopy["homeRepair.withdraw"]),
     ).toBeInTheDocument();
     await expect(
-      canvas.getByText("An identical pending proposal remains available."),
+      canvas.getByText(englishCopy["homeRepair.reason.duplicate"]),
     ).toBeInTheDocument();
   },
 };
@@ -157,10 +160,12 @@ export const MessageClassification: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      canvas.getByRole("button", { name: "Message results" }),
+      canvas.getByRole("button", {
+        name: englishCopy["homeRepair.classifications"],
+      }),
     );
     await userEvent.click(
-      canvas.getByRole("button", { name: "Preview items" }),
+      canvas.getByRole("button", { name: englishCopy["homeRepair.preview"] }),
     );
     await expect(
       await canvas.findByText(
@@ -182,10 +187,10 @@ export const SourceAndGeneratedDate: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      canvas.getByRole("button", { name: "Preview items" }),
+      canvas.getByRole("button", { name: englishCopy["homeRepair.preview"] }),
     );
     await expect(
-      await canvas.findByText("Correct source or generated date"),
+      await canvas.findByText(englishCopy["homeRepair.normalize"]),
     ).toBeVisible();
     await expect(
       canvas.getByRole("button", { name: "Apply 1 reviewed change" }),
