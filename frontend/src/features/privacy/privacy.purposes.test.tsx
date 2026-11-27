@@ -244,6 +244,21 @@ describe("Add purpose", () => {
     expect(posted).toHaveLength(0);
   });
 
+  // Case folds as on the server, so a capital sharp s reads as the listed one.
+  // Mutation: lower-case without upper-casing first and STRASSE is sent.
+  it("refuses a label that differs from a listed one only in a folded case", async () => {
+    const listed = { ...NEWSLETTER, id: "p4", key: "anschrift", label: "Straße" };
+    const posted = stub(refused({}, 500), [TRANSACTIONAL, listed]);
+    await addPurpose("street", "STRASSE");
+
+    expect(
+      await screen.findByText(
+        "This label reads like Straße. Choose another label to tell the two purposes apart.",
+      ),
+    ).toBeVisible();
+    expect(posted).toHaveLength(0);
+  });
+
   it("sends a label whose accent is another one", async () => {
     const created = {
       ...NEWSLETTER,

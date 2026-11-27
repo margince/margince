@@ -17,3 +17,14 @@ func TestALabelReadsTheSameWhicheverWayItsAccentIsEncoded(t *testing.T) {
 		t.Errorf("Bán tin reads as %q, want a reading of its own", listed)
 	}
 }
+
+// Case folds, so a capital word reads as the same word with its final sigma
+// or its sharp s.
+func TestALabelReadsTheSameInCapitals(t *testing.T) {
+	t.Parallel()
+	for listed, typed := range map[string]string{"Όρος": "ΌΡΟΣ", "Straße": "STRASSE"} {
+		if got, want := purposeReading(typed), purposeReading(listed); got != want {
+			t.Errorf("%s reads %q, %s reads %q; want one reading", typed, got, listed, want)
+		}
+	}
+}
