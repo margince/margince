@@ -42,9 +42,6 @@ func (s *Service) SetOptions(ctx context.Context, id ids.UUID, options []string)
 	if s.schemaPool == nil {
 		return crmcontracts.CustomField{}, ErrSchemaChangesUnavailable
 	}
-	if _, ok := principal.WorkspaceID(ctx); !ok {
-		return crmcontracts.CustomField{}, errors.New("customfields: no workspace bound to context")
-	}
 
 	tx, err := s.schemaPool.Begin(ctx)
 	if err != nil {
