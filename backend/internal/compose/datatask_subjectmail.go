@@ -20,7 +20,7 @@ import (
 
 func subjectMailDataTask(now func() time.Time) datatask.Task {
 	return datatask.Task{
-		ID: "core/1793502625_direct_sender_notice_duties", Version: 2,
+		ID: "core/1793502625_direct_sender_notice_duties", Version: 3,
 		Title: systemtext.Literal("datatask.title.core.1793502625_direct_sender_notice_duties"), Requires: []string{"core/1792474140", "core/1793514621"},
 		Steps: []datatask.Step{{
 			Name: "restore_bulk_sender_proof", Limit: 50, MinLimit: 1,
@@ -38,10 +38,9 @@ func subjectMailDataTask(now func() time.Time) datatask.Task {
 
 func subjectMailScopeSQL() string {
 	return `FROM (SELECT DISTINCT e.contact_id AS id FROM contact_acquisition_evidence e
- WHERE e.kind = 'unknown_legacy' AND ` + capturedAcquisition + `
- AND EXISTS (SELECT 1 FROM privacy_notice_case n WHERE n.acquisition_id = e.id
+ WHERE EXISTS (SELECT 1 FROM privacy_notice_case n WHERE n.acquisition_id = e.id
  AND n.state = ANY(@states))) c WHERE true
- AND EXISTS (SELECT 1 FROM ` + consent.SubjectMailFromSQL("c.id") + `)`
+ AND EXISTS (SELECT 1 FROM ` + consent.SubjectReachedOutFromSQL("c.id") + `)`
 }
 
 func estimateSubjectMailDuties(ctx context.Context, q datatask.Querier, maximum int64) (int64, bool, error) {
@@ -73,7 +72,7 @@ func settleSubjectMailBatch(ctx context.Context, tx pgx.Tx, in datatask.BatchIn,
 	for _, contact := range contacts {
 		var mail ids.UUID
 		var sent time.Time
-		err := tx.QueryRow(ctx, `SELECT a.id, a.occurred_at FROM `+consent.SubjectMailFromSQL("@subject_contact")+`
+		err := tx.QueryRow(ctx, `SELECT a.id, `+consent.SubjectReachedOutAtSQL("a")+` FROM `+consent.SubjectReachedOutFromSQL("@subject_contact")+`
    ORDER BY a.occurred_at, a.id LIMIT 1`, pgx.NamedArgs{"subject_contact": contact}).Scan(&mail, &sent)
 		if errors.Is(err, pgx.ErrNoRows) {
 			continue

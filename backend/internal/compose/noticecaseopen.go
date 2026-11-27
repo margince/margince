@@ -34,7 +34,6 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/consent"
-	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -81,7 +80,7 @@ func (n *NoticeCaseOpen) HandleEvent(ctx context.Context, env events.Envelope) e
 	switch {
 	case env.Type == string(crmcontracts.ContactCreated) && env.Entity.Type == noticeCaseContactEntity:
 		run = n.openFor
-	case env.Type == string(crmcontracts.ActivityCaptured) && env.Entity.Type == entityActivity:
+	case (env.Type == string(crmcontracts.ActivityCaptured) || env.Type == string(crmcontracts.ActivityUpdated)) && env.Entity.Type == entityActivity:
 		run = n.settleWhenSubjectWrote
 	default:
 		return nil
@@ -144,7 +143,7 @@ func (n *NoticeCaseOpen) openFor(ctx context.Context, tx pgx.Tx, contactID ids.U
 		return err
 	}
 	rows, err := tx.Query(ctx, `
-		SELECT e.id, e.kind, coalesce(e.occurred_at, e.captured_at),`+capturedAcquisition+`
+		SELECT e.id, e.kind, coalesce(e.occurred_at, e.captured_at)
 		  FROM contact_acquisition_evidence e
 		 WHERE e.contact_id = $1
 		   AND NOT EXISTS (
@@ -158,12 +157,11 @@ func (n *NoticeCaseOpen) openFor(ctx context.Context, tx pgx.Tx, contactID ids.U
 		id       ids.UUID
 		kind     string
 		obtained time.Time
-		captured bool
 	}
 	var pending []owed
 	for rows.Next() {
 		var o owed
-		if err := rows.Scan(&o.id, &o.kind, &o.obtained, &o.captured); err != nil {
+		if err := rows.Scan(&o.id, &o.kind, &o.obtained); err != nil {
 			rows.Close()
 			return fmt.Errorf("read an acquisition: %w", err)
 		}
@@ -188,11 +186,8 @@ func (n *NoticeCaseOpen) openFor(ctx context.Context, tx pgx.Tx, contactID ids.U
 		if !needsCase {
 			continue
 		}
-		// Their own mail was captured before this ran: the source capture could
-		// not name is the contact after all, and the duty it would open is one
-		// nobody owes. Capture's own unknowns only, the rule settleSender keeps.
-		// The other order — case first, mail second — is settleWhenSubjectWrote.
-		if wrote && o.captured && o.kind == contacts.AcquiredUnknownLegacy {
+		// Their own approach removes the duty for every acquisition source.
+		if wrote {
 			continue
 		}
 		// A known source without a date still owes notice; capture time is its latest possible bound.

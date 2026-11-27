@@ -17,6 +17,8 @@ package integration
 import (
 	"context"
 	"log/slog"
+	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -173,9 +175,8 @@ func TestABulkMailSettlesTheCaptureUnknownDuty(t *testing.T) {
 	}
 }
 
-// A duty opened because the address came from somebody else is not answered by
-// the contact writing later: the address still came from a referral.
-func TestAReferralStaysOwedAfterTheyWrite(t *testing.T) {
+// Their own approach closes the duty even when the original source was a referral.
+func TestAReferralClosesAfterTheyWrite(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	contact := contactAcquiredAs(t, e, "Referred", "referral")
@@ -184,8 +185,8 @@ func TestAReferralStaysOwedAfterTheyWrite(t *testing.T) {
 
 	driveCapturedMail(t, e, capturedMailFrom(t, e, "referred@customer.test", false))
 
-	if _, state, _, _ := noticeCaseFor(t, e, contact); state != "open" {
-		t.Errorf("a referral's case moved to %q after they wrote, want it still open", state)
+	if _, state, _, _ := noticeCaseFor(t, e, contact); state != "exempt_with_reason" {
+		t.Errorf("a referral's case moved to %q after they wrote, want it closed", state)
 	}
 }
 
@@ -206,8 +207,8 @@ func TestAHandLoggedMailSettlesNothing(t *testing.T) {
 	}
 }
 
-// Captured mail resolves capture's own uncertainty; a manually recorded source still needs review.
-func TestAnUnknownASeatStatedStillNeedsSourceReview(t *testing.T) {
+// Their own mail closes duties on manually recorded unknown sources too.
+func TestAnUnknownASeatStatedClosesWhenTheyWrite(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	contact := contactAcquiredAs(t, e, "Seat Unknown", "unknown_legacy")
@@ -216,8 +217,8 @@ func TestAnUnknownASeatStatedStillNeedsSourceReview(t *testing.T) {
 
 	driveCapturedMail(t, e, capturedMailFrom(t, e, "seat.unknown@customer.test", false))
 
-	if _, state, _, _ := noticeCaseFor(t, e, contact); state != "source_review" {
-		t.Errorf("a seat-stated unknown moved to %q after they wrote, want source review", state)
+	if _, state, _, _ := noticeCaseFor(t, e, contact); state != "exempt_with_reason" {
+		t.Errorf("a seat-stated unknown moved to %q after they wrote, want it closed", state)
 	}
 }
 
@@ -285,5 +286,53 @@ func TestUnverifiedBulkCannotSettleACaptureDuty(t *testing.T) {
 	driveCapturedMail(t, e, mail)
 	if _, state, _, _ := noticeCaseFor(t, e, contact); state != "source_review" {
 		t.Fatalf("unverified bulk settled the duty: %s", state)
+	}
+}
+
+func TestAReferralClosesAfterTheirPublicBooking(t *testing.T) {
+	e := setupBookingApp(t)
+	e.BootstrapWorkspace(t)
+	apptest.EnableGoogleBookingPage(t, e)
+	contact := contactAcquiredAs(t, e, "Referred booker", "referral")
+	withAddress(t, e, contact, "referred.booker@customer.test")
+	apptest.DriveNoticeCase(t, e, contact)
+	start := nextMonday().Add(6 * time.Hour)
+	var booked struct {
+		ID string `json:"id"`
+	}
+	status := publicCall(t, e, "POST", "/v1/public/booking/"+bookingSlug(t, e), AnyMap{
+		"start": start, "end": start.Add(30 * time.Minute),
+		"booker":  AnyMap{"name": "Referred booker", "email": "referred.booker@customer.test"},
+		"consent": AnyMap{"purpose_id": seededTransactionalPurposeID(t, e), "policy_version": "meeting-v1", "wording": "Contact me about this meeting."},
+	}, nil, &booked)
+	if status != http.StatusCreated {
+		t.Fatalf("booking: %d", status)
+	}
+	id, err := ids.Parse(booked.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	driveCapturedMail(t, e, id)
+	if _, state, _, _ := noticeCaseFor(t, e, contact); state != "exempt_with_reason" {
+		t.Fatalf("booking left duty %s", state)
+	}
+	var ground string
+	if err := e.Owner.QueryRow(context.Background(), `SELECT resolution_note FROM privacy_notice_case WHERE contact_id=$1`, contact).Scan(&ground); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(ground, booked.ID) {
+		t.Fatalf("ground does not name meeting: %s", ground)
+	}
+}
+
+func TestTheirMailBeforeAReferralPreventsOpeningTheDuty(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	contact := contactAcquiredAs(t, e, "Already wrote", "referral")
+	withAddress(t, e, contact, "already.wrote@customer.test")
+	capturedMailFrom(t, e, "already.wrote@customer.test", false)
+	apptest.DriveNoticeCase(t, e, contact)
+	if _, _, _, found := noticeCaseFor(t, e, contact); found {
+		t.Fatal("opened duty after the contact had already written")
 	}
 }
