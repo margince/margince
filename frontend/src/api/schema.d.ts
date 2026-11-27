@@ -58933,6 +58933,8 @@ export interface components {
             selected_evidence?: components["schemas"]["NoticeSourceEvidenceReference"];
         };
         NoticeSourcePreview: {
+            /** @description The contact's own mail or meeting removes the duty, regardless of the source selected. Does not disclose unreadable activity identifiers. */
+            readonly subject_reached_out?: boolean;
             preview_token: string;
             /** @enum {string} */
             rule: "none" | "art13" | "art14";

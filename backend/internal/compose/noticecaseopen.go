@@ -78,8 +78,17 @@ func (n *NoticeCaseOpen) HandleEvent(ctx context.Context, env events.Envelope) e
 	// and nothing fails when a consumer does nothing.
 	var run func(context.Context, pgx.Tx, ids.UUID) error
 	switch {
-	case env.Type == string(crmcontracts.ContactCreated) && env.Entity.Type == noticeCaseContactEntity:
+	case env.Entity.Type == noticeCaseContactEntity && env.Type == string(crmcontracts.ContactCreated):
 		run = n.openFor
+	case env.Entity.Type == noticeCaseContactEntity && (env.Type == string(crmcontracts.ContactUpdated) || env.Type == string(crmcontracts.ContactMerged)):
+		if env.Type == string(crmcontracts.ContactMerged) {
+			survivor, ok := survivorOf(env)
+			if !ok {
+				return nil
+			}
+			env.Entity.ID = survivor
+		}
+		run = n.settleContactApproach
 	case (env.Type == string(crmcontracts.ActivityCaptured) || env.Type == string(crmcontracts.ActivityUpdated)) && env.Entity.Type == entityActivity:
 		run = n.settleWhenSubjectWrote
 	default:
@@ -180,6 +189,11 @@ func (n *NoticeCaseOpen) openFor(ctx context.Context, tx pgx.Tx, contactID ids.U
 	wrote, err := contactWroteToUsTx(ctx, tx, contactID)
 	if err != nil {
 		return err
+	}
+	if wrote {
+		if err := n.settleContactApproach(ctx, tx, contactID); err != nil {
+			return err
+		}
 	}
 	for _, o := range pending {
 		duty, needsCase := consent.DutyFor(o.kind)

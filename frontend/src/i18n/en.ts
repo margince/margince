@@ -11965,6 +11965,8 @@ export const en = {
   "notice.source.openRecord": "View record",
   "notice.source.moreEvidence": "Show more evidence",
   "notice.source.preview": "Before you confirm",
+  "notice.source.previewReachedOut":
+    "The contact already reached out by email or a meeting, so no separate privacy notice is owed.",
   "notice.source.previewNone":
     "No separate notice duty follows from this source.",
   "notice.source.previewOwed": "A notice is still owed by {date}.",

@@ -11685,6 +11685,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "notice.source.openRecord": "Xem bản ghi",
   "notice.source.moreEvidence": "Xem thêm bằng chứng",
   "notice.source.preview": "Trước khi xác nhận",
+  "notice.source.previewReachedOut":
+    "Người liên hệ đã chủ động liên lạc qua email hoặc cuộc họp nên không còn nghĩa vụ thông báo quyền riêng tư riêng.",
   "notice.source.previewNone": "Nguồn này không tạo nghĩa vụ thông báo riêng.",
   "notice.source.previewOwed": "Vẫn phải thông báo chậm nhất ngày {date}.",
   "notice.source.previewLatest":

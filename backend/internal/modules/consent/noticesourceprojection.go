@@ -21,6 +21,7 @@ import (
 
 // SourceProjection is shared by confirmation and its read-only preview.
 type SourceProjection struct {
+	SubjectReachedOut    bool       `json:"subject_reached_out,omitempty"`
 	PreviewToken         string     `json:"preview_token"`
 	Rule                 NoticeRule `json:"rule"`
 	NoticeRequired       bool       `json:"notice_required"`
@@ -64,12 +65,13 @@ func prepareSourceProjectionTx(ctx context.Context, tx pgx.Tx, current NoticeCas
 		return SourceProjection{}, err
 	}
 	var reached ids.UUID
-	err = tx.QueryRow(ctx, `SELECT a.id FROM `+SubjectReachedOutFromSQL("$1::uuid")+` ORDER BY a.occurred_at, a.id LIMIT 1`, current.ContactID).Scan(&reached)
+	err = tx.QueryRow(ctx, `SELECT a.id FROM `+SubjectReachedOutFromSQL("$1::uuid")+` ORDER BY `+SubjectReachedOutAtSQL("a")+`, a.id LIMIT 1`, current.ContactID).Scan(&reached)
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return SourceProjection{}, err
 	}
 	if err == nil {
 		projection.reachedActivity = &reached
+		projection.SubjectReachedOut = true
 		projection.NoticeRequired, projection.DeadlineIsUpperBound = false, false
 		projection.Rule, projection.DueAt = RuleNone, nil
 	}

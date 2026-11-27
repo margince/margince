@@ -298,7 +298,9 @@ func TestAReferralClosesAfterTheirPublicBooking(t *testing.T) {
 	apptest.DriveNoticeCase(t, e, contact)
 	start := nextMonday().Add(6 * time.Hour)
 	var booked struct {
-		ID string `json:"id"`
+		Invitation struct {
+			ID string `json:"id"`
+		} `json:"invitation"`
 	}
 	status := publicCall(t, e, "POST", "/v1/public/booking/"+bookingSlug(t, e), AnyMap{
 		"start": start, "end": start.Add(30 * time.Minute),
@@ -308,7 +310,7 @@ func TestAReferralClosesAfterTheirPublicBooking(t *testing.T) {
 	if status != http.StatusCreated {
 		t.Fatalf("booking: %d", status)
 	}
-	id, err := ids.Parse(booked.ID)
+	id, err := ids.Parse(booked.Invitation.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -320,7 +322,7 @@ func TestAReferralClosesAfterTheirPublicBooking(t *testing.T) {
 	if err := e.Owner.QueryRow(context.Background(), `SELECT resolution_note FROM privacy_notice_case WHERE contact_id=$1`, contact).Scan(&ground); err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(ground, booked.ID) {
+	if !strings.Contains(ground, booked.Invitation.ID) {
 		t.Fatalf("ground does not name meeting: %s", ground)
 	}
 }
@@ -330,9 +332,17 @@ func TestTheirMailBeforeAReferralPreventsOpeningTheDuty(t *testing.T) {
 	e.BootstrapWorkspace(t)
 	contact := contactAcquiredAs(t, e, "Already wrote", "referral")
 	withAddress(t, e, contact, "already.wrote@customer.test")
-	capturedMailFrom(t, e, "already.wrote@customer.test", false)
+	mail := capturedMailFrom(t, e, "already.wrote@customer.test", false)
 	apptest.DriveNoticeCase(t, e, contact)
 	if _, _, _, found := noticeCaseFor(t, e, contact); found {
 		t.Fatal("opened duty after the contact had already written")
 	}
+	var proof ids.UUID
+	if err := e.Owner.QueryRow(context.Background(), `SELECT source_entity_id FROM contact_acquisition_evidence WHERE contact_id=$1 AND kind='subject_initiated'`, contact).Scan(&proof); err != nil {
+		t.Fatal(err)
+	}
+	if proof != mail {
+		t.Fatal("skipped duty did not record the original mail as evidence")
+	}
+
 }

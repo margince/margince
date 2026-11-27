@@ -61222,7 +61222,10 @@ type NoticeSourcePreview struct {
 	NoticeRequired       bool                    `json:"notice_required"`
 	PreviewToken         string                  `json:"preview_token"`
 	Rule                 NoticeSourcePreviewRule `json:"rule"`
-	Timezone             string                  `json:"timezone"`
+
+	// SubjectReachedOut The contact's own mail or meeting removes the duty, regardless of the source selected. Does not disclose unreadable activity identifiers.
+	SubjectReachedOut *bool  `json:"subject_reached_out,omitempty"`
+	Timezone          string `json:"timezone"`
 }
 
 // NoticeSourcePreviewRule defines model for NoticeSourcePreview.Rule.

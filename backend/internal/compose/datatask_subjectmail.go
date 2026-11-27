@@ -73,7 +73,7 @@ func settleSubjectMailBatch(ctx context.Context, tx pgx.Tx, in datatask.BatchIn,
 		var mail ids.UUID
 		var sent time.Time
 		err := tx.QueryRow(ctx, `SELECT a.id, `+consent.SubjectReachedOutAtSQL("a")+` FROM `+consent.SubjectReachedOutFromSQL("@subject_contact")+`
-   ORDER BY a.occurred_at, a.id LIMIT 1`, pgx.NamedArgs{"subject_contact": contact}).Scan(&mail, &sent)
+   ORDER BY `+consent.SubjectReachedOutAtSQL("a")+`, a.id LIMIT 1`, pgx.NamedArgs{"subject_contact": contact}).Scan(&mail, &sent)
 		if errors.Is(err, pgx.ErrNoRows) {
 			continue
 		}

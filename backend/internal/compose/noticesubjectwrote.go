@@ -146,3 +146,18 @@ func settleSenderCasesTx(ctx context.Context, tx pgx.Tx, contactID, mail ids.UUI
 	}
 	return closed, nil
 }
+
+// settleContactApproach is reached after merges and address changes, when
+// earlier correspondence may now belong to this contact.
+func (n *NoticeCaseOpen) settleContactApproach(ctx context.Context, tx pgx.Tx, contact ids.UUID) error {
+	var activity ids.UUID
+	var at time.Time
+	err := tx.QueryRow(ctx, `SELECT a.id, `+consent.SubjectReachedOutAtSQL("a")+` FROM `+consent.SubjectReachedOutFromSQL("$1::uuid")+` ORDER BY `+consent.SubjectReachedOutAtSQL("a")+`, a.id LIMIT 1`, contact).Scan(&activity, &at)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	return n.settleSender(ctx, tx, contact, activity, at)
+}

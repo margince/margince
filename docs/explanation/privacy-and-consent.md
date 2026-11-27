@@ -575,7 +575,7 @@ before a decision and the accept step all ask `siteLeadLaneRefusal`.
 `TestSiteLeadCaptureOpensOnlyWithAReviewedNotice` fails when the accept path stops calling the
 notice step. It also fails when the reviewed version is not the version the build sends.
 
-## Mail from the contact
+## A contact who reaches out
 
 Mail from a contact shows that they gave their own details; for `bulk_mail_attested`,
 `inbound_sender_authenticated` must also be true. Before closing old cases, the data task reads
@@ -596,7 +596,7 @@ missing one uses the capture date as a bound. The clock never starts again at re
 
 A data task moves live cases with an unknown source to review. It keeps their audit history,
 finished decisions and mail already on its way. If a send fails, the source is checked again.
-Later mail capture and data tasks keep a user's confirmed source decision.
+When a contact writes to us, books a meeting, organizes one or accepts its invitation, every still-owed notice duty closes regardless of the original source. The confirmed source remains recorded. The closure and audit name the mail or meeting. Queued disclosures and finished outcomes stay intact. The opener, source preview, event consumer, failed-delivery handler and repair task use one evidence rule.
 
 ## Where the code lives
 

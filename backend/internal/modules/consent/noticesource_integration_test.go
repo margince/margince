@@ -52,13 +52,6 @@ func TestAssessedSourceControlsTheDisclosureAndSurvivesAutomaticCorrections(t *t
 		t.Fatalf("disclosure=%+v err=%v", info, err)
 	}
 	if err := e.store.db.Tx(ctx, func(tx pgx.Tx) error {
-		closed, err := SettleWhenSubjectWroteTx(ctx, tx, []ids.UUID{acquisition}, now)
-		if err != nil {
-			return err
-		}
-		if closed != 0 {
-			t.Fatal("mail capture overwrote the confirmed source")
-		}
 		moved, err := ReviewUnverifiedNoticeTx(ctx, tx, id, now)
 		if moved {
 			t.Fatal("correction downgraded a confirmed source")
@@ -220,10 +213,6 @@ func TestUndatedIndirectAcquisitionSurvivesAutomaticCorrections(t *testing.T) {
 		}
 		if closed != 0 {
 			t.Fatal("known indirect source withdrawn")
-		}
-		closed, err = SettleWhenSubjectWroteTx(ctx, tx, []ids.UUID{acquisition}, now)
-		if closed != 0 {
-			t.Fatal("known indirect source settled by mail")
 		}
 		return err
 	}); err != nil {

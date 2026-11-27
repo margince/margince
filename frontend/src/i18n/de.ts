@@ -12013,6 +12013,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "notice.source.openRecord": "Datensatz ansehen",
   "notice.source.moreEvidence": "Weitere Nachweise anzeigen",
   "notice.source.preview": "Vor der Bestätigung",
+  "notice.source.previewReachedOut":
+    "Der Kontakt hat sich bereits per E-Mail oder über einen Termin gemeldet. Daher ist keine gesonderte Datenschutzinformation geschuldet.",
   "notice.source.previewNone":
     "Aus dieser Quelle folgt keine eigene Informationspflicht.",
   "notice.source.previewOwed": "Ein Datenschutzhinweis ist bis {date} fällig.",

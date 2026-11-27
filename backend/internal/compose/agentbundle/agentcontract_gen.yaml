@@ -55117,6 +55117,10 @@ components:
       type: object
       required: [preview_token, rule, notice_required, timezone, deadline_is_upper_bound]
       properties:
+        subject_reached_out:
+          type: boolean
+          readOnly: true
+          description: The contact's own mail or meeting removes the duty, regardless of the source selected. Does not disclose unreadable activity identifiers.
         preview_token: {type: string}
         rule: {type: string, enum: [none, art13, art14]}
         notice_required: {type: boolean}
