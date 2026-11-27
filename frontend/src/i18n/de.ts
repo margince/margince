@@ -11279,7 +11279,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "import.reason.lost_reason_missing":
     "Ein verlorener Deal braucht den Grund, warum er verloren ging.",
   "import.reason.deal_field_not_for_pipeline":
-    "Das benutzerdefinierte Feld {field} gilt nicht für Deals in der Pipeline dieses Deals, daher wird die Zeile übersprungen. Leeren Sie die Zelle oder importieren Sie den Deal in eine Pipeline, für die das Feld gilt.",
+    "Das benutzerdefinierte Feld {field} gilt nicht für Deals in der Pipeline dieses Deals, daher wird die Zeile übersprungen. Leere die Zelle oder importiere den Deal in eine Pipeline, für die das Feld gilt.",
   "import.reason.deal_pipeline_fixed":
     "Dieser Deal liegt in einer anderen Pipeline als in der Datei angegeben. Ein Import verschiebt keinen Deal zwischen Pipelines, daher wird die Zeile übersprungen.",
   "companies.contractMergeBlocked":
