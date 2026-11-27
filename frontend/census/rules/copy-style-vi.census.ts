@@ -288,6 +288,17 @@ export function copyFindings(
       .filter((token) => /\p{L}/u.test(token)).length;
 
   return [
+    ...offenders(
+      "uses kho lưu trữ for archive and reserves lưu trữ for retention",
+      ([source, key, value]) =>
+        /archiv/iu.test(englishOf(source)[key] ?? "") &&
+        /(?<!kho )lưu trữ/iu.test(
+          prose(value).replace(
+            /(?:thời hạn|quy tắc|nghĩa vụ) lưu trữ|lưu trữ pháp lý/giu,
+            "",
+          ),
+        ),
+    ),
     ...offenders("is NFC", ([, , value]) => value !== value.normalize("NFC")),
     ...matching(
       "marks the tone of an open oa, oe and uy on the first vowel",

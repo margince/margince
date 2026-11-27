@@ -41,7 +41,7 @@ var recordIDReasons = map[ReasonCode]reasonEntry{
 	ReasonIDRecordNotVisible: {params: []string{paramValue}, text: map[textlang.Lang]string{
 		textlang.English:    "No record you can see has the id “{value}”. It may have been archived or merged away, or come from a different system.",
 		textlang.German:     "Kein Datensatz, den Sie sehen können, hat die ID {value:q}. Er kann archiviert oder zusammengeführt worden sein oder aus einem anderen System stammen.",
-		textlang.Vietnamese: "Không có bản ghi nào bạn nhìn thấy có mã {value:q}. Có thể nó đã được lưu trữ hoặc gộp, hoặc đến từ một hệ thống khác.",
+		textlang.Vietnamese: "Không có bản ghi nào bạn nhìn thấy có mã {value:q}. Có thể nó đã được chuyển vào kho lưu trữ hoặc gộp, hoặc đến từ một hệ thống khác.",
 	}},
 	ReasonRefTakenByAnotherRecord: {params: []string{paramRef}, text: map[textlang.Lang]string{
 		textlang.English:    "The reference “{ref}” already stands for another record from an earlier import, so this row is not applied. Use a new reference for this row or fix the id column.",

@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import browserslist from "browserslist";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import spaConfig from "../vite.config";
 import {
   policyTargets,
@@ -11,6 +11,20 @@ import {
 } from "./browser-targets";
 
 describe("viteTargets", () => {
+  it.each(["1826-06-15", "2226-06-15"])(
+    "uses the same pinned Chromium releases with the clock at %s",
+    (date) => {
+      const expected = viteTargets(["samsung 30", "android 157"]);
+      vi.useFakeTimers();
+      try {
+        vi.setSystemTime(new Date(date));
+        expect(viteTargets(["samsung 30", "android 157"])).toEqual(expected);
+      } finally {
+        vi.useRealTimers();
+      }
+    },
+  );
+
   it("takes the oldest version listed for each engine, compared as numbers", () => {
     expect(
       viteTargets([

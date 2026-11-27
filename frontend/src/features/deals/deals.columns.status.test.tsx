@@ -45,6 +45,6 @@ it("names a deal's status in the reader's language, never the stored value", () 
     </LocaleProvider>,
   );
   expect(screen.getByText("Đang mở")).toBeTruthy();
-  expect(screen.getByText("Thất bại")).toBeTruthy();
+  expect(screen.getByText(translate("vi", "deals.statusLost"))).toBeTruthy();
   expect(screen.queryByText("open")).toBeNull();
 });

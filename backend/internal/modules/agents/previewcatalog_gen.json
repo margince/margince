@@ -41333,7 +41333,7 @@
     "archive_activity_preserve_content":
      "archive activity preserve content",
     "archive_channel":
-     "Liên kết kênh nhắn tin sẽ lưu trữ",
+     "Liên kết kênh nhắn tin sẽ chuyển vào kho lưu trữ",
     "archive_company_detach_scope":
      "archive company detach scope",
     "archive_company_type":
@@ -41343,9 +41343,9 @@
     "archive_deal_detach_scope":
      "archive deal detach scope",
     "archive_domain":
-     "Tên miền sẽ lưu trữ",
+     "Tên miền sẽ chuyển vào kho lưu trữ",
     "archive_email":
-     "Địa chỉ email sẽ lưu trữ",
+     "Địa chỉ email sẽ chuyển vào kho lưu trữ",
     "archive_lead_remove_tags":
      "archive lead remove tags",
     "archive_list":
@@ -41353,9 +41353,9 @@
     "archive_offer_preserve_lines":
      "archive offer preserve lines",
     "archive_partner":
-     "Chương trình đối tác sẽ lưu trữ",
+     "Chương trình đối tác sẽ chuyển vào kho lưu trữ",
     "archive_phone":
-     "Số điện thoại sẽ lưu trữ",
+     "Số điện thoại sẽ chuyển vào kho lưu trữ",
     "archive_primary_employer":
      "Nhà tuyển dụng chính mới",
     "archive_product_preserve_snapshots":
@@ -41371,7 +41371,7 @@
     "archive_role":
      "Vai trò trong liên kết này",
     "archive_stakeholder":
-     "Liên kết bên liên quan sẽ lưu trữ",
+     "Liên kết bên liên quan sẽ chuyển vào kho lưu trữ",
     "archive_tag":
      "Gán nhãn sẽ xóa",
     "archive_template_preserve_offers":
@@ -41805,7 +41805,7 @@
     "lost":
      "lost",
     "lost_reason":
-     "Lý do thất bại",
+     "Lý do thua",
     "low_balance":
      "low balance",
     "machine":
@@ -41905,7 +41905,7 @@
     "merge_company_partner_moved":
      "Chuyển chương trình đối tác sang công ty được giữ lại",
     "merge_company_partner_retained":
-     "Giữ chương trình đối tác tại công ty được lưu trữ",
+     "Giữ chương trình đối tác tại công ty được chuyển vào kho lưu trữ",
     "merge_company_payment":
      "Khoản thanh toán được chuyển",
     "merge_company_preserve_receipts":
@@ -41931,7 +41931,7 @@
     "merge_company_vat_check_moved":
      "Chuyển biên nhận VAT sang công ty được giữ lại",
     "merge_company_vat_check_retained":
-     "Giữ biên nhận VAT tại công ty được lưu trữ",
+     "Giữ biên nhận VAT tại công ty được chuyển vào kho lưu trữ",
     "merge_confirmation":
      "Xác nhận được chuyển",
     "merge_consent_event":
@@ -41973,9 +41973,9 @@
     "merge_file":
      "Tệp được chuyển",
     "merge_file_archived":
-     "Ngày lưu trữ tệp",
+     "Ngày chuyển tệp vào kho lưu trữ",
     "merge_finance_archived":
-     "Ngày lưu trữ khoản mục",
+     "Ngày chuyển khoản mục vào kho lưu trữ",
     "merge_grant_active":
      "Quyền truy cập vẫn có hiệu lực",
     "merge_grant_after":
@@ -50843,7 +50843,7 @@
     "merge_profile_field/text/linkedin_url":
      "Liên kết LinkedIn",
     "merge_profile_field/text/lost_reason":
-     "Lý do thất bại",
+     "Lý do thua",
     "merge_profile_field/text/meeting_documents_added":
      "Ghi chú cuộc họp được liên kết từ lịch",
     "merge_profile_field/text/meeting_guests_removed":
@@ -51211,7 +51211,7 @@
     "merge_profile_field/lifecycle/linkedin_url":
      "Liên kết LinkedIn",
     "merge_profile_field/lifecycle/lost_reason":
-     "Lý do thất bại",
+     "Lý do thua",
     "merge_profile_field/lifecycle/meeting_documents_added":
      "Ghi chú cuộc họp được liên kết từ lịch",
     "merge_profile_field/lifecycle/meeting_guests_removed":
@@ -56437,7 +56437,7 @@
     "state/boolean/true":
      "Có",
     "status/text/lost":
-     "Thất bại",
+     "Thua",
     "status/text/open":
      "Đang mở",
     "status/text/won":
