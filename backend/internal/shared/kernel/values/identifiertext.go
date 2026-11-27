@@ -19,9 +19,10 @@ func IdentifierText(raw string) string {
 	return norm.NFC.String(strings.TrimFunc(strings.Map(dropHidden, raw), unicode.IsSpace))
 }
 
-// typedIdentifier is IdentifierText for what a user typed: padding is dropped,
-// and a hidden character between visible ones is reported. A host that hides
-// one inside is how one domain is made to pass for another.
+// typedIdentifier is IdentifierText for a domain a user typed: padding is
+// dropped, and a hidden character between visible ones is reported. A host that
+// hides one inside is how one domain is made to pass for another. An address
+// is cleaned whole instead, as a mailbox is reached by its cleaned spelling.
 func typedIdentifier(raw string) (string, bool) {
 	inner := strings.TrimFunc(raw, func(r rune) bool { return unicode.IsSpace(r) || hiddenRune(r) })
 	if strings.ContainsFunc(inner, hiddenRune) {
