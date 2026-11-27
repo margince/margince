@@ -48263,7 +48263,7 @@ type CreateLeadDisqualifyReasonRequest struct {
 
 // CreateLeadOriginRequest defines model for CreateLeadOriginRequest.
 type CreateLeadOriginRequest struct {
-	// Intent What the scorer makes of a lead from this origin (the deprecated lead source list carries the same field, which nothing reads): high adds the high-intent points, low subtracts the low-intent penalty, neutral does neither.
+	// Intent What the scorer makes of a lead from this origin (lead origins carry it): high adds the high-intent points, low subtracts the low-intent penalty, neutral does neither.
 	Intent *LeadSourceIntent `json:"intent,omitempty"`
 
 	// Key Optional; derived from the label (lowercased, non-alphanumerics collapsed to `_`) when absent. Must be unique.
@@ -48309,7 +48309,7 @@ type CreateLeadRequest struct {
 	ProductId *openapi_types.UUID `json:"product_id,omitempty"`
 	ProjectId *openapi_types.UUID `json:"project_id,omitempty"`
 
-	// Source How the row was written. Optional: the server writes `manual` when none is sent. Never scored; send `origin` for where the lead came from.
+	// Source The channel this lead arrived by. Optional: the server writes `manual` when none is sent, and an integration sends `api`. The other system and the lead's id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`. Never scored; send `origin` for where the lead came from.
 	Source *string `json:"source,omitempty"`
 
 	// SourceAuthorId Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat's current name wins on read. captured_by still names the caller.
@@ -48328,17 +48328,6 @@ type CreateLeadRequest struct {
 
 // CreateLeadRequestStatus The activity-driven ladder: new → contacted (we reached out) → engaged (they answered or a meeting is booked/held) → promoted (qualified: a contact exists) | disqualified. contacted and engaged are set by the system from captured activity and may be set by hand.
 type CreateLeadRequestStatus string
-
-// CreateLeadSourceRequest defines model for CreateLeadSourceRequest.
-type CreateLeadSourceRequest struct {
-	// Intent What the scorer makes of a lead from this origin (the deprecated lead source list carries the same field, which nothing reads): high adds the high-intent points, low subtracts the low-intent penalty, neutral does neither.
-	Intent *LeadSourceIntent `json:"intent,omitempty"`
-
-	// Key Optional; derived from the label (lowercased, non-alphanumerics collapsed to `_`) when absent. Must be unique.
-	Key       *string `json:"key,omitempty"`
-	Label     string  `json:"label" singleline:"true"`
-	SortOrder *int    `json:"sort_order,omitempty"`
-}
 
 // CreateLegalEntityRequest defines model for CreateLegalEntityRequest.
 type CreateLegalEntityRequest struct {
@@ -51157,13 +51146,6 @@ type DirectCommunicationSendRequest struct {
 // of overrides needs to be countable — free text alone cannot answer "how often do we send
 // on a contract clause".
 type DirectCommunicationSendRequestReasonCode string
-
-// DiscoveredLeadSource A source value present on leads but absent from the administered list — a connector family, a seed, an import.
-type DiscoveredLeadSource struct {
-	// Key The stored value, or for `connector:<name>:<id>` values the `connector:<name>` family.
-	Key       string `json:"key"`
-	LeadCount int    `json:"lead_count"`
-}
 
 // DismissCaptureSilenceRequest defines model for DismissCaptureSilenceRequest.
 type DismissCaptureSilenceRequest struct {
@@ -57027,12 +57009,9 @@ type Lead struct {
 	// SlaState Derived from sla_deadline_at and first_response_at (formulas §18.1); null once responded or on a terminal lead. Orders the work queue above score (ADR-0119).
 	SlaState *LeadSlaState `json:"sla_state,omitempty"`
 
-	// Source How the row reached Margince: `manual` for a typed lead, or the value an import, connector or capture wrote (`connector:<name>:<id>`). It never scores and never feeds the origin filter or report; use `origin` for where the lead came from. The `lead_source` list that administered it is deprecated.
-	Source   string  `json:"source"`
-	SourceId *string `json:"source_id,omitempty"`
-
-	// SourceLabel The label the deprecated lead_source list gives `source`; null for connector, seed and other free values.
-	SourceLabel  *string `json:"source_label,omitempty"`
+	// Source The channel this lead arrived by: `api`, `automation`, `capture`, `import`, `manual` or `webform`. An older lead can show another value until the background correction reaches it. It never scores; use `origin` for where the lead came from.
+	Source       string  `json:"source"`
+	SourceId     *string `json:"source_id,omitempty"`
 	SourceSystem *string `json:"source_system,omitempty"`
 
 	// Status The activity-driven ladder: new → contacted (we reached out) → engaged (they answered or a meeting is booked/held) → promoted (qualified: a contact exists) | disqualified. contacted and engaged are set by the system from captured activity and may be set by hand.
@@ -57183,7 +57162,7 @@ type LeadOrigin struct {
 	CreatedAt time.Time          `json:"created_at"`
 	Id        openapi_types.UUID `json:"id"`
 
-	// Intent What the scorer makes of a lead from this origin (the deprecated lead source list carries the same field, which nothing reads): high adds the high-intent points, low subtracts the low-intent penalty, neutral does neither.
+	// Intent What the scorer makes of a lead from this origin (lead origins carry it): high adds the high-intent points, low subtracts the low-intent penalty, neutral does neither.
 	Intent LeadSourceIntent `json:"intent"`
 
 	// Key Lowercase stable key, the stored value. Never changes after creation.
@@ -57395,43 +57374,8 @@ type LeadSignalCatalogFactor struct {
 	Factor LeadManualSignalFactor `json:"factor"`
 }
 
-// LeadSource Deprecated: how a row reached Margince is no longer scored. One administered lead source. `key` is the value stored on `lead.source`; `label` is what a user sees.
-type LeadSource struct {
-	// Active Inactive sources leave the create form and the filter; leads carrying them keep the value.
-	Active    bool               `json:"active"`
-	CreatedAt time.Time          `json:"created_at"`
-	Id        openapi_types.UUID `json:"id"`
-
-	// Intent What the scorer makes of a lead from this origin (the deprecated lead source list carries the same field, which nothing reads): high adds the high-intent points, low subtracts the low-intent penalty, neutral does neither.
-	Intent LeadSourceIntent `json:"intent"`
-
-	// Key Lowercase stable key, the stored value. Never changes after creation.
-	Key   string `json:"key"`
-	Label string `json:"label"`
-
-	// LeadCount Live leads carrying this key.
-	LeadCount *int `json:"lead_count,omitempty"`
-	SortOrder int  `json:"sort_order"`
-
-	// System Built-in. Can be renamed, re-weighted and deactivated, never deleted.
-	System    *bool     `json:"system,omitempty"`
-	UpdatedAt time.Time `json:"updated_at"`
-
-	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
-	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
-	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
-	// (ErrVersionSkew) so the client re-reads before retrying.
-	Version *RowVersion `json:"version,omitempty" minimum:"1"`
-}
-
-// LeadSourceIntent What the scorer makes of a lead from this origin (the deprecated lead source list carries the same field, which nothing reads): high adds the high-intent points, low subtracts the low-intent penalty, neutral does neither.
+// LeadSourceIntent What the scorer makes of a lead from this origin (lead origins carry it): high adds the high-intent points, low subtracts the low-intent penalty, neutral does neither.
 type LeadSourceIntent string
-
-// LeadSourceListResponse defines model for LeadSourceListResponse.
-type LeadSourceListResponse struct {
-	Data       []LeadSource           `json:"data"`
-	Discovered []DiscoveredLeadSource `json:"discovered"`
-}
 
 // LegacyLossReason One note of lost deals a mapping speaks for.
 type LegacyLossReason struct {
@@ -72408,7 +72352,7 @@ type UpdateLeadDisqualifyReasonRequest struct {
 type UpdateLeadOriginRequest struct {
 	Active *bool `json:"active,omitempty"`
 
-	// Intent What the scorer makes of a lead from this origin (the deprecated lead source list carries the same field, which nothing reads): high adds the high-intent points, low subtracts the low-intent penalty, neutral does neither.
+	// Intent What the scorer makes of a lead from this origin (lead origins carry it): high adds the high-intent points, low subtracts the low-intent penalty, neutral does neither.
 	Intent    *LeadSourceIntent `json:"intent,omitempty"`
 	Label     *string           `json:"label,omitempty" singleline:"true"`
 	SortOrder *int              `json:"sort_order,omitempty"`
@@ -72494,16 +72438,6 @@ type UpdateLeadSettingsRequest struct {
 	// is recorded and left in the unassigned queue rather than addressed to somebody who
 	// never agreed to answer for it.
 	UnassignedEscalationUserId *openapi_types.UUID `json:"unassigned_escalation_user_id,omitempty"`
-}
-
-// UpdateLeadSourceRequest defines model for UpdateLeadSourceRequest.
-type UpdateLeadSourceRequest struct {
-	Active *bool `json:"active,omitempty"`
-
-	// Intent What the scorer makes of a lead from this origin (the deprecated lead source list carries the same field, which nothing reads): high adds the high-intent points, low subtracts the low-intent penalty, neutral does neither.
-	Intent    *LeadSourceIntent `json:"intent,omitempty"`
-	Label     *string           `json:"label,omitempty" singleline:"true"`
-	SortOrder *int              `json:"sort_order,omitempty"`
 }
 
 // UpdateLegalEntityRequest A field left out keeps its value; a field sent as an empty string is cleared.
@@ -82284,64 +82218,6 @@ type UpdateLeadOriginParams struct {
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
-// CreateLeadSourceParams defines parameters for CreateLeadSource.
-type CreateLeadSourceParams struct {
-	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
-	// create (API-CC-6). **Scope:** the key is unique within
-	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. A connected agent's principal is its connection, so a
-	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
-	// key as its `idempotency_key`. Reusing the same key with a *different* request body
-	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
-	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running and carries `Retry-After`;
-	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
-	// request under the key failed after it had started, so check whether it took effect before
-	// retrying under a new key.
-	// A request the server stopped for time answers `503 code: request_timed_out` with
-	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
-	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
-	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
-	// answer lost": without it the blind retry answers `409 version_skew`, because the first
-	// attempt already bumped the version.
-	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
-	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
-	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
-	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
-	// than half-honouring it, so read this contract, not the client, to know which calls are safe
-	// to retry blind.
-	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
-}
-
-// UpdateLeadSourceParams defines parameters for UpdateLeadSource.
-type UpdateLeadSourceParams struct {
-	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
-	// create (API-CC-6). **Scope:** the key is unique within
-	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. A connected agent's principal is its connection, so a
-	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
-	// key as its `idempotency_key`. Reusing the same key with a *different* request body
-	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
-	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running and carries `Retry-After`;
-	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
-	// request under the key failed after it had started, so check whether it took effect before
-	// retrying under a new key.
-	// A request the server stopped for time answers `503 code: request_timed_out` with
-	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
-	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
-	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
-	// answer lost": without it the blind retry answers `409 version_skew`, because the first
-	// attempt already bumped the version.
-	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
-	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
-	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
-	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
-	// than half-honouring it, so read this contract, not the client, to know which calls are safe
-	// to retry blind.
-	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
-}
-
 // ListLeadsParams defines parameters for ListLeads.
 type ListLeadsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
@@ -82450,7 +82326,7 @@ type ListLeadsParams struct {
 	// Mutually exclusive with `owner_id` and `owner_team_id`; combining them is `422`.
 	Unassigned *bool `form:"unassigned,omitempty" json:"unassigned,omitempty"`
 
-	// Source Filter by how the row was written (import, crawl, manual, `connector:<name>`, ...). Not the origin; use `origin` to filter by where the lead came from.
+	// Source Filter by the channel the lead arrived by. Not the origin; use `origin` to filter by where the lead came from.
 	Source *string `form:"source,omitempty" json:"source,omitempty"`
 
 	// Origin Filter by origin, an exact key from `/lead-origins`. Matched literally; `unset` names the leads with no origin.
@@ -87308,12 +87184,6 @@ type CreateLeadOriginJSONRequestBody = CreateLeadOriginRequest
 
 // UpdateLeadOriginJSONRequestBody defines body for UpdateLeadOrigin for application/json ContentType.
 type UpdateLeadOriginJSONRequestBody = UpdateLeadOriginRequest
-
-// CreateLeadSourceJSONRequestBody defines body for CreateLeadSource for application/json ContentType.
-type CreateLeadSourceJSONRequestBody = CreateLeadSourceRequest
-
-// UpdateLeadSourceJSONRequestBody defines body for UpdateLeadSource for application/json ContentType.
-type UpdateLeadSourceJSONRequestBody = UpdateLeadSourceRequest
 
 // CreateLeadJSONRequestBody defines body for CreateLead for application/json ContentType.
 type CreateLeadJSONRequestBody = CreateLeadRequest
@@ -96790,14 +96660,6 @@ func (a *Lead) UnmarshalJSON(b []byte) error {
 		delete(object, "source_id")
 	}
 
-	if raw, found := object["source_label"]; found {
-		err = json.Unmarshal(raw, &a.SourceLabel)
-		if err != nil {
-			return fmt.Errorf("error reading 'source_label': %w", err)
-		}
-		delete(object, "source_label")
-	}
-
 	if raw, found := object["source_system"]; found {
 		err = json.Unmarshal(raw, &a.SourceSystem)
 		if err != nil {
@@ -97254,13 +97116,6 @@ func (a Lead) MarshalJSON() ([]byte, error) {
 		object["source_id"], err = json.Marshal(a.SourceId)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'source_id': %w", err)
-		}
-	}
-
-	if a.SourceLabel != nil {
-		object["source_label"], err = json.Marshal(a.SourceLabel)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling 'source_label': %w", err)
 		}
 	}
 
@@ -103655,18 +103510,6 @@ type ServerInterface interface {
 	// The factors and bands a rep may use as lead scoring input.
 	// (GET /lead-signal-catalog)
 	GetLeadSignalCatalog(w http.ResponseWriter, r *http.Request)
-	// List lead sources, active and inactive, in display order.
-	// (GET /lead-sources)
-	ListLeadSources(w http.ResponseWriter, r *http.Request)
-	// Add a lead source.
-	// (POST /lead-sources)
-	CreateLeadSource(w http.ResponseWriter, r *http.Request, params CreateLeadSourceParams)
-	// Remove a lead source nothing uses.
-	// (DELETE /lead-sources/{id})
-	DeleteLeadSource(w http.ResponseWriter, r *http.Request, id Id)
-	// Rename, reorder, re-weight or (de)activate a lead source.
-	// (PATCH /lead-sources/{id})
-	UpdateLeadSource(w http.ResponseWriter, r *http.Request, id Id, params UpdateLeadSourceParams)
 	// List leads (their OWN list, distinct from contacts; cursor-paginated).
 	// (GET /leads)
 	ListLeads(w http.ResponseWriter, r *http.Request, params ListLeadsParams)
@@ -109139,30 +108982,6 @@ func (_ Unimplemented) UpdateLeadOrigin(w http.ResponseWriter, r *http.Request, 
 // The factors and bands a rep may use as lead scoring input.
 // (GET /lead-signal-catalog)
 func (_ Unimplemented) GetLeadSignalCatalog(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// List lead sources, active and inactive, in display order.
-// (GET /lead-sources)
-func (_ Unimplemented) ListLeadSources(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Add a lead source.
-// (POST /lead-sources)
-func (_ Unimplemented) CreateLeadSource(w http.ResponseWriter, r *http.Request, params CreateLeadSourceParams) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Remove a lead source nothing uses.
-// (DELETE /lead-sources/{id})
-func (_ Unimplemented) DeleteLeadSource(w http.ResponseWriter, r *http.Request, id Id) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Rename, reorder, re-weight or (de)activate a lead source.
-// (PATCH /lead-sources/{id})
-func (_ Unimplemented) UpdateLeadSource(w http.ResponseWriter, r *http.Request, id Id, params UpdateLeadSourceParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -142286,169 +142105,6 @@ func (siw *ServerInterfaceWrapper) GetLeadSignalCatalog(w http.ResponseWriter, r
 	handler.ServeHTTP(w, r)
 }
 
-// ListLeadSources operation middleware
-func (siw *ServerInterfaceWrapper) ListLeadSources(w http.ResponseWriter, r *http.Request) {
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListLeadSources(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// CreateLeadSource operation middleware
-func (siw *ServerInterfaceWrapper) CreateLeadSource(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	// Parameter object where we will unmarshal all parameters from the context
-	var params CreateLeadSourceParams
-
-	headers := r.Header
-
-	// ------------- Optional header parameter "Idempotency-Key" -------------
-	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
-		var IdempotencyKey IdempotencyKey
-		n := len(valueList)
-		if n != 1 {
-			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
-			return
-		}
-
-		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
-		if err != nil {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
-			return
-		}
-
-		params.IdempotencyKey = &IdempotencyKey
-
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.CreateLeadSource(w, r, params)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// DeleteLeadSource operation middleware
-func (siw *ServerInterfaceWrapper) DeleteLeadSource(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id Id
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.DeleteLeadSource(w, r, id)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// UpdateLeadSource operation middleware
-func (siw *ServerInterfaceWrapper) UpdateLeadSource(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id Id
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	// Parameter object where we will unmarshal all parameters from the context
-	var params UpdateLeadSourceParams
-
-	headers := r.Header
-
-	// ------------- Optional header parameter "Idempotency-Key" -------------
-	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
-		var IdempotencyKey IdempotencyKey
-		n := len(valueList)
-		if n != 1 {
-			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
-			return
-		}
-
-		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
-		if err != nil {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
-			return
-		}
-
-		params.IdempotencyKey = &IdempotencyKey
-
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.UpdateLeadSource(w, r, id, params)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
 // ListLeads operation middleware
 func (siw *ServerInterfaceWrapper) ListLeads(w http.ResponseWriter, r *http.Request) {
 
@@ -164519,18 +164175,6 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/lead-signal-catalog", wrapper.GetLeadSignalCatalog)
-	})
-	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/lead-sources", wrapper.ListLeadSources)
-	})
-	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/lead-sources", wrapper.CreateLeadSource)
-	})
-	r.Group(func(r chi.Router) {
-		r.Delete(options.BaseURL+"/lead-sources/{id}", wrapper.DeleteLeadSource)
-	})
-	r.Group(func(r chi.Router) {
-		r.Patch(options.BaseURL+"/lead-sources/{id}", wrapper.UpdateLeadSource)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/leads", wrapper.ListLeads)

@@ -102,7 +102,6 @@ components:
         - lead.merged
         - lead.sla_breached
         - lead.updated
-        - lead_source.changed
         - lead_disqualify_reason.changed
         - activity.captured
         - activity.archived
@@ -1969,38 +1968,6 @@ components:
       description: Payload for lead.disqualified — a lead was disqualified. Carries no data.
       additionalProperties: false
 
-    PublicEventLeadSourceChanged:
-      type: object
-      x-event-type: lead_source.changed
-      x-entity-type: lead_source
-      x-version: 1
-      description: >-
-        Deprecated: the lead source list no longer feeds the score, and a
-        separate breaking change retires it. Payload for lead_source.changed.
-        A lead source was added, edited or removed (contacts/leadsource.go). It rides the lead stream because
-        every lead carries a source value. A subscriber that renders or groups
-        by source re-reads the catalog on this event. The payload carries
-        `key` and not `label`. The key is what leads carry and what a
-        subscriber keys its own cache by. It is also the only thing left to
-        identify the entry once `deleted` has removed it. The label is mutable
-        and still readable while the entry exists. Publishing it here would
-        invite a subscriber to trust a copy that can go stale.
-      required:
-        - source_id
-        - change
-        - key
-      properties:
-        source_id:
-          type: string
-          format: uuid
-        change:
-          type: string
-          enum: [created, updated, deleted]
-        key:
-          type: string
-          description: The stable key leads carry, which never changes for a given source.
-      additionalProperties: false
-
     PublicEventLeadDisqualifyReasonChanged:
       type: object
       x-event-type: lead_disqualify_reason.changed
@@ -2009,11 +1976,11 @@ components:
       description: >-
         Payload for lead_disqualify_reason.changed. A disqualification reason
         was added, edited or removed (contacts/leaddisqualifyreason.go). It
-        rides the lead stream for the same reason lead_source.changed does. A
+        rides the lead stream because every disqualified lead names its reason. A
         subscriber reporting on why leads were disqualified re-reads the
-        catalog on this event. It carries `label` where the source event
-        carries `key`, because a reason has no key. The label is its identity,
-        and after `deleted` it is the only thing naming what went away.
+        catalog on this event. It carries `label` because a reason has no key.
+        The label is its identity, and after `deleted` it is the only thing
+        naming what went away.
       required:
         - reason_id
         - change

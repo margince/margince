@@ -68,15 +68,23 @@ var permanentlyUnvalidated = gatekit.Waive(map[unvalidatedSubject]string{
 	"company.company_source_check":                            unlistedRecordSource,
 	"contact.contact_source_check":                            unlistedRecordSource,
 	"deal.deal_source_check":                                  unlistedRecordSource,
+	"lead.lead_source_check":                                  unlistedRecordSource,
 	"offer.offer_source_check":                                unlistedRecordSource,
 	"project.project_source_check":                            unlistedRecordSource,
 	"signal.signal_source_check":                              unlistedRecordSource,
 	"finance_payment.finance_payment_names_its_customer_link": unnamedCustomerLink,
-	"ai_call.ai_call_tokens_in_not_negative":                  negativeHistory,
-	"ai_call.ai_call_tokens_out_not_negative":                 negativeHistory,
-	"ai_call.ai_call_reasoning_tokens_not_negative":           negativeHistory,
-	"ai_call.ai_call_cached_tokens_not_negative":              negativeHistory,
-	"ai_call.ai_call_cache_write_tokens_not_negative":         negativeHistory,
+	"activity.activity_duration_not_negative": "" +
+		"rows written before the API refused a negative duration may hold one, and the negative counts " +
+		"data task clears them after the migrations ran. A VALIDATE would fail the upgrade of an " +
+		"installation whose task has not finished. A restricted row is immutable, so the task leaves " +
+		"it, and the update that lifts its restriction clears the duration. Until then an update that " +
+		"carries an old negative duration clears it, so the row stays editable; validating needs a " +
+		"minimum upgrade-from release, and no restricted row left holding a negative duration",
+	"ai_call.ai_call_tokens_in_not_negative":          negativeHistory,
+	"ai_call.ai_call_tokens_out_not_negative":         negativeHistory,
+	"ai_call.ai_call_reasoning_tokens_not_negative":   negativeHistory,
+	"ai_call.ai_call_cached_tokens_not_negative":      negativeHistory,
+	"ai_call.ai_call_cache_write_tokens_not_negative": negativeHistory,
 	"activity_participant.activity_participant_address_is_canonical": "" +
 		"rows written before the check hold the address as typed, and the participant address data " +
 		"task lowercases them after the migrations ran. A VALIDATE would fail the upgrade of an " +
