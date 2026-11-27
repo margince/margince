@@ -12,8 +12,29 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/blobstore"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/storedobjects"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
+
+// LogoKeyKind is the object key's kind segment for every mark, the peer of
+// "attachment" (blobstore.WorkspaceKey). One kind, so the one logo sweep owns
+// the keys of company, site-read and legal-entity marks alike.
+const LogoKeyKind = "company_logo"
+
+// NewLogoBase mints the base key of ONE write attempt of a mark, under the id
+// every object of this installation was stored with. The attempt id is appended
+// here so two writers of one record's mark never write the same object: an
+// overwrite would leave the stored image and the row's recorded origin
+// describing different pictures. what names the record the object traces back to.
+func (s *Store) NewLogoBase(ctx context.Context, what string) (string, error) {
+	company, err := storekit.StoredKeyWorkspaceOn(ctx, s.db)
+	if err != nil {
+		return "", err
+	}
+	return blobstore.WorkspaceKey(ids.From[ids.WorkspaceKind](company), LogoKeyKind, what+"/"+ids.NewV7().String()), nil
+}
 
 // RecordLogoIntent declares a mark provisional before its bytes are put, taking the
 // BASE the caller minted and applying the suffix PutLogo stores under.

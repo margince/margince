@@ -113,7 +113,11 @@ func (s *Store) UploadAttachment(ctx context.Context, in AttachmentInput) (crmco
 	}
 
 	id := ids.NewV7()
-	key := blobstore.WorkspaceKey(workspaceID(ctx), string(storedobjects.KindAttachment), id.String())
+	keyWorkspace, err := s.storedKeyWorkspace(ctx)
+	if err != nil {
+		return crmcontracts.Attachment{}, err
+	}
+	key := blobstore.WorkspaceKey(keyWorkspace, string(storedobjects.KindAttachment), id.String())
 	// Before the digest, so a refused file is never stored.
 	in, err = acceptUploadedFile(in)
 	if err != nil {

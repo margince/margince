@@ -22,7 +22,6 @@ package compose
 
 import (
 	"context"
-	"errors"
 	"io"
 	"log/slog"
 	"net/http"
@@ -32,8 +31,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/imagenorm"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
@@ -86,16 +83,11 @@ func (h companyHandlers) uploadCompanyMark(w http.ResponseWriter, r *http.Reques
 	if !ok {
 		return
 	}
-	workspace, found := principal.WorkspaceID(r.Context())
-	if !found {
-		httperr.Write(w, r, errors.New("compose: a company logo upload outside a workspace context"))
+	markKey, err := h.store.NewLogoBase(r.Context(), company.CompanyID.String())
+	if err != nil {
+		httperr.Write(w, r, err)
 		return
 	}
-	// A key of this attempt's own, the same rule the resolve lane keeps: two
-	// writers of one company's mark must never write the same object, or the
-	// stored image and the record's provenance end up describing different
-	// pictures.
-	markKey := companyLogoKey(ids.From[ids.WorkspaceKind](workspace), company.CompanyID)
 	// Declared before the bytes exist, because a failed persist below leaves them
 	// deliberately: deleting an object the row may already name would show a broken
 	// image, so the ledger collects it instead.

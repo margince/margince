@@ -106,11 +106,12 @@ func (s *Store) StageCapturedFiles(
 	if len(files) == 0 || s.blob == nil {
 		return nil, nil
 	}
-	// Derived here, never accepted from the caller. This is a byte write the
-	// row-level policy cannot reach, so the one value deciding which tenant's
-	// prefix it lands under comes from the bound context, as it does for a
-	// human upload.
-	workspace := workspaceID(ctx)
+	// Derived here, never accepted from the caller: the stored-key id decides
+	// which prefix this byte write lands under, as it does for a human upload.
+	workspace, err := s.storedKeyWorkspace(ctx)
+	if err != nil {
+		return nil, err
+	}
 	// Bounded, because the caller holds a transaction open across this and the
 	// SENDER chose how many bytes there are. A stalled object store would
 	// otherwise pin a pool connection for as long as it liked, and a few
@@ -357,9 +358,7 @@ func (s *Store) DiscardCapturedFiles(ctx context.Context, staged []StagedFile) e
 	if len(deleted) == 0 {
 		return nil
 	}
-	// The workspace the keys were staged under, from the context, as the ledger
-	// recorded them: the capture path reaches this from an installation-wide handle.
-	return s.db.ForWorkspace(workspaceID(ctx)).Tx(ctx, func(tx pgx.Tx) error {
+	return s.db.Tx(ctx, func(tx pgx.Tx) error {
 		for _, key := range deleted {
 			if err := storedobjects.Clear(ctx, tx, key); err != nil {
 				return err

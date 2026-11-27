@@ -125,7 +125,7 @@ func TestTheConfirmationKeepsTheBadgeAContactChoseAndStillLandsTheLockup(t *test
 	if err != nil {
 		t.Fatalf("describe the company by hand: %v", err)
 	}
-	uploaded := blobstore.WorkspaceKey(ids.From[ids.WorkspaceKind](e.WS), companyLogoKind,
+	uploaded := blobstore.WorkspaceKey(ids.From[ids.WorkspaceKind](e.WS), contacts.LogoKeyKind,
 		saved.CompanyID.String()+"/uploaded-badge")
 	chosen := logoFixture(t, 64, 64)
 	if err := blob.Put(context.Background(), uploaded, bytes.NewReader(chosen),

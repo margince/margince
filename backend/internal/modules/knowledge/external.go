@@ -170,8 +170,10 @@ func (s *Store) UpsertExternal(
 	}
 
 	id := ids.NewV7()
-	key := blobstore.WorkspaceKey(ids.From[ids.WorkspaceKind](storekit.MustWorkspace(ctx)),
-		string(storedobjects.KindKnowledge), id.String())
+	key, err := s.documentKey(ctx, id)
+	if err != nil {
+		return none, "", err
+	}
 	if err := s.storeExternalBytes(ctx, key, in, size, media); err != nil {
 		return none, "", err
 	}
