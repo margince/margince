@@ -44,6 +44,7 @@ func TestEveryAgentPrincipalHasAFrontendLabel(t *testing.T) {
 	t.Parallel()
 	assertPrincipalLabels(t, principalLabels{
 		kind: "agent", key: tsAgentLabelKey, keyPrefix: "agentJob", bound: boundAgentPrincipals(t),
+		retired: retiredAgentPrincipals,
 		unlabelled: "stamps agent principal %q, and %s has no \"agentJob.%s\" message (add it to de.ts and " +
 			"vi.ts too), so its provenance tag reads only \"Automated by an agent\"",
 		refuse: func(name string) (string, bool) {
@@ -51,7 +52,22 @@ func TestEveryAgentPrincipalHasAFrontendLabel(t *testing.T) {
 				"names it from its kind — delete the message", strings.HasPrefix(name, extension.NamespacePrefix)
 		},
 	})
+	retiredAgentPrincipals.AssertAllMatched(t)
 }
+
+// retiredAgentPrincipals are agent ids no code stamps any more, keyed by label
+// key. Rows written under them keep the id in captured_by or proposed_by, and
+// History names them by their old message.
+var retiredAgentPrincipals = gatekit.Waive(map[string]string{
+	"contact_share":   writtenBeforeSystemID,
+	"deal_scout":      writtenBeforeSystemID,
+	"employer_change": writtenBeforeSystemID,
+	"project_health":  writtenBeforeSystemID,
+	"tag_scout":       writtenBeforeSystemID,
+	"task_due_date":   writtenBeforeSystemID,
+})
+
+const writtenBeforeSystemID = "rows written before the job ran under its system: id still carry it, so its label stays though no code stamps it"
 
 // boundAgentPrincipals reads the named agent principals product code can
 // stamp, keyed by label key, valued by a file that names it. It reads every

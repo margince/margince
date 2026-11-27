@@ -43,6 +43,7 @@ const GO_TO = [
   ["companies", "o", "nav.companies"],
   ["leads", "l", "nav.leads"],
   ["deals", "d", "nav.deals"],
+  ["worklist", "w", "nav.worklist"],
   ["projects", "p", "nav.projects"],
   ["filters", "f", "filters.title"],
   ["analytics", "a", "nav.analytics"],

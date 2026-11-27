@@ -18,6 +18,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -140,6 +141,12 @@ func placements(order []ranked) []placement {
 		}
 	}
 	return out
+}
+
+// sameOrder reports that order names the ladder's stages in the order they are
+// stored, which readLadder reads by position under the ladder's lock.
+func sameOrder(ladder, order []ranked) bool {
+	return slices.EqualFunc(ladder, order, func(a, b ranked) bool { return a.id == b.id })
 }
 
 // positionImages are the audit before- and after-images of a reorder, and the
@@ -279,7 +286,9 @@ func (s *Store) ReorderStages(ctx context.Context, pipelineID ids.PipelineID, st
 		if err := refuseClosingBeforeOpen(order, "stage_ids"); err != nil {
 			return err
 		}
-		if moves := placements(order); len(moves) > 0 {
+		// The ladder's order sent back as it stands is no move, even when its
+		// stored positions have gaps the renumbering would close.
+		if moves := placements(order); len(moves) > 0 && !sameOrder(ladder, order) {
 			if err := refuseMovingAGatedLadder(ctx, tx, pipelineID); err != nil {
 				return err
 			}

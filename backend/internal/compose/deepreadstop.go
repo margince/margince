@@ -108,7 +108,7 @@ func (w *siteDeepReadWorker) autoEnrichEnabled(ctx context.Context) (bool, error
 // wrong, an operator withdrew the standing decision that queued it, and a
 // failure is something to investigate while this is not.
 func (w *siteDeepReadWorker) abandon(ctx context.Context, readID ids.UUID, reason string) error {
-	tctx, cancel := terminalCtx(ctx)
+	tctx, cancel := terminalCtx(runBooks(ctx))
 	defer cancel()
 	if err := w.contacts.FinishSiteRead(tctx, readID, contacts.FinishSiteReadInput{Status: "cancelled"}); err != nil {
 		return fmt.Errorf("site deep read %s: recording the cancellation: %w", readID, err)
@@ -122,7 +122,7 @@ func (w *siteDeepReadWorker) abandon(ctx context.Context, readID ids.UUID, reaso
 // failure is safe by construction — BeginSiteRead CAS-misses and the attempt
 // no-ops.
 func (w *siteDeepReadWorker) fail(ctx context.Context, readID ids.UUID, cause error) error {
-	tctx, cancel := terminalCtx(ctx)
+	tctx, cancel := terminalCtx(runBooks(ctx))
 	defer cancel()
 	code, detail := diagnoseCrawlFailure(cause)
 	failure := contacts.FinishSiteReadInput{Status: "failed", StatusCode: code, StatusDetail: detail}

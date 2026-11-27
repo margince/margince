@@ -109,8 +109,8 @@ type UpsertPartnerInput struct {
 	Cleared   []string
 	IfVersion *int64
 	// MustCreate makes the write a set-up. It refuses a company with a live
-	// program. It starts the program from the column defaults, even when it
-	// revives an archived row that kept a tier, metrics or segments.
+	// program. It starts nonfinancial fields from their defaults. A stored
+	// margin tier stays in place and still requires a human with financial authority.
 	MustCreate bool
 }
 
@@ -162,6 +162,9 @@ func (s *Store) UpsertPartner(ctx context.Context, in UpsertPartnerInput) (crmco
 			return err
 		}
 		if err := refuseAgentPromotion(ctx, tx, in); err != nil {
+			return err
+		}
+		if err := requirePartnerRestartGrant(ctx, tx, in); err != nil {
 			return err
 		}
 		if in.MustCreate {
@@ -274,6 +277,11 @@ func upsertPartnerRow(ctx context.Context, tx pgx.Tx, up partnerUpsert) (partner
 		  next_step = CASE WHEN 'next_step' = ANY($12) THEN NULL ELSE coalesce($9, partner.next_step) END,
 		  next_step_due_at = CASE WHEN 'next_step_due_at' = ANY($12) THEN NULL ELSE coalesce($10, partner.next_step_due_at) END,
 		  served_segments = CASE WHEN 'served_segments' = ANY($12) THEN NULL ELSE coalesce($11, partner.served_segments) END,
+		  activated_at = CASE WHEN partner.archived_at IS NOT NULL THEN NULL ELSE partner.activated_at END,
+		  activation_basis = CASE WHEN partner.archived_at IS NOT NULL THEN NULL ELSE partner.activation_basis END,
+		  activated_by = CASE WHEN partner.archived_at IS NOT NULL THEN NULL ELSE partner.activated_by END,
+		  activation_lead_id = CASE WHEN partner.archived_at IS NOT NULL THEN NULL ELSE partner.activation_lead_id END,
+		  activation_deal_id = CASE WHEN partner.archived_at IS NOT NULL THEN NULL ELSE partner.activation_deal_id END,
 		  archived_at = NULL
 		RETURNING `+partnerColumns,
 		in.CompanyID, *in.PartnerKinds, in.CertStatus, in.MarginTier,

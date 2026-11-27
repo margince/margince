@@ -254,3 +254,51 @@ func TestADeclineAnswersByTheCallersAccess(t *testing.T) {
 		t.Fatalf("%d audit rows record the agent taking the project back, want 1", n)
 	}
 }
+
+// The question is answered in the link suggestion queue. Rejecting a deal
+// Margince suggested declines it on the conversation, as "none of them" does.
+// Accepting another files the conversation there and closes the rest.
+func TestTheDealQuestionIsAnsweredInTheLinkSuggestionQueue(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	w := newDealWorld(t, e)
+	w.employee(t, "alice@acme.example", w.customer)
+	operations := w.deal(t, "Acme operations")
+	reporting := w.deal(t, "Acme reporting")
+	rollout := w.deal(t, "Acme rollout")
+	env.syncSent(t, map[string]bool{"queue1@myco.example": true},
+		email(captureOwner, "", "alice@acme.example", "queue1@myco.example", ""))
+	env.sync(t, authenticated(mailFrom("alice@acme.example", "queue2@acme.example", "queue1@myco.example", "Re: project"), "acme.example"))
+	store := activities.NewStore(e.DB())
+	queue, err := store.ListLinkSuggestions(w.ctx)
+	if err != nil {
+		t.Fatalf("reading the queue: %v", err)
+	}
+	suggested := map[ids.UUID]ids.UUID{}
+	for _, suggestion := range queue {
+		suggested[ids.UUID(suggestion.EntityId)] = ids.UUID(suggestion.Id)
+	}
+	if len(queue) != 3 || len(suggested) != 3 {
+		t.Fatalf("the queue holds %+v, want one suggestion for each of the three deals", queue)
+	}
+
+	if _, err := store.RejectLinkSuggestion(w.ctx, suggested[operations]); err != nil {
+		t.Fatalf("rejecting a suggested deal: %v", err)
+	}
+	declined := `SELECT count(*) FROM audit_log WHERE after->>'declined' = 'true' AND after->>'entity_id' = '` + operations.String() + `'`
+	if n := countRows(t, e, declined); n != 2 {
+		t.Fatalf("rejecting the deal wrote %d declines, want one on each mail of the conversation", n)
+	}
+	if _, err := store.AcceptLinkSuggestion(w.ctx, suggested[reporting]); err != nil {
+		t.Fatalf("accepting a suggested deal: %v", err)
+	}
+	wantDeals(t, e, "queue1@myco.example", reporting)
+	wantDeals(t, e, "queue2@acme.example", reporting)
+	if n := openQuestions(t, e); n != 0 {
+		t.Fatalf("%d deal questions still open after the answer, want 0", n)
+	}
+	if n := countRows(t, e, `SELECT count(*) FROM activity_link_suggestion
+		 WHERE status = 'rejected' AND entity_id = '`+rollout.String()+`'`); n != 1 {
+		t.Fatalf("the deal not chosen was closed %d times, want once as rejected", n)
+	}
+}

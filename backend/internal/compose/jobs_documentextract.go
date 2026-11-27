@@ -16,6 +16,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/modelfailure"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -62,18 +63,18 @@ func documentExtractInsertOpts() *river.InsertOpts {
 	})
 }
 
-// withDocumentReader stamps the principal every write of this reading is
-// attributed to: the reader as the acting agent, the human who asked as the
-// owner of what it produces.
-func withDocumentReader(ctx context.Context, requestedBy string, readID ids.UUID) context.Context {
-	requester := requestedByUserID(requestedBy)
-	ctx = principal.WithActor(ctx, principal.Principal{
-		Type:       principal.PrincipalSystem,
-		ID:         documentExtractActor,
-		UserID:     requester,
-		OnBehalfOf: requester,
-	})
-	return principal.WithCorrelationID(ctx, readID)
+// documentReader is the reading's two principals: the agent opens and reads
+// the document under the requester's grants, and the system keeps the run row.
+var documentReader = colleagueJob{work: documentExtractActor, books: "system:document_read"}
+
+// withDocumentReader binds the reading's two principals for the human who
+// asked. work is nil when that human left or lost their seat.
+func (w *documentExtractWorker) withDocumentReader(ctx context.Context, requestedBy string, readID ids.UUID) (books, work context.Context, err error) {
+	books, work, err = forColleague(principal.WithCorrelationID(ctx, readID), w.users, requestedByUserID(requestedBy), documentReader)
+	if err != nil && !workRefused(err) {
+		return nil, nil, err
+	}
+	return books, work, nil
 }
 
 // documentExtractWorker runs one queued reading. It is always registered on the
@@ -85,6 +86,7 @@ type documentExtractWorker struct {
 	// already takes rather than the concrete store: the worker's whole
 	// relationship with the module is claim, open, finish.
 	pool       *pgxpool.Pool
+	users      *identity.Service
 	language   baselanguage.Resolver
 	activities documentReadStore
 	extractor  *DocumentExtractor
@@ -97,9 +99,12 @@ func (w *documentExtractWorker) Work(ctx context.Context, job *river.Job[Documen
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
-	wsCtx = withDocumentReader(wsCtx, args.RequestedBy, args.ExtractionReadID)
+	wsCtx, work, err := w.withDocumentReader(wsCtx, args.RequestedBy, args.ExtractionReadID)
+	if err != nil {
+		return jobs.FaultContext(ctx, err)
+	}
 	_, err = InstallationDB(w.pool).WithWorkLease(wsCtx, "document_extract", args.ExtractionReadID, w.log, func(owned context.Context) error {
-		return w.read(owned, args)
+		return w.read(owned, workIn(owned, work), args)
 	})
 	if jobs.Exhausted(job.JobRow, err) {
 		// As for a transcript, the reading was handed back for a try that will
@@ -120,11 +125,18 @@ func (w *documentExtractWorker) Work(ctx context.Context, job *river.Job[Documen
 	return jobs.FaultContext(ctx, err)
 }
 
-func (w *documentExtractWorker) read(wsCtx context.Context, args DocumentExtractArgs) error {
+// read keeps the run row under wsCtx and reads the document under work, which
+// is nil when the requester can no longer act.
+func (w *documentExtractWorker) read(wsCtx, work context.Context, args DocumentExtractArgs) error {
+	if work == nil {
+		_, err := w.closeUnread(wsCtx, args,
+			documentWords.Denied.In(documentCopyFor(string(w.language.Resolve(wsCtx))).Lang()))
+		return jobs.FaultContext(wsCtx, err)
+	}
 	if w.extractor == nil {
 		return jobs.FaultContext(wsCtx, w.declineUnread(wsCtx, args))
 	}
-	err := w.extractor.Read(wsCtx, w.activities, args.ExtractionReadID, args.AttachmentID)
+	err := w.extractor.Read(wsCtx, work, w.activities, args.ExtractionReadID, args.AttachmentID)
 	if errors.Is(err, apperrors.ErrConflict) {
 		// The CAS miss: the reading is no longer queued — a rival replica took
 		// it, or it was already closed. Nothing to do and nothing wrong.
@@ -178,6 +190,7 @@ func newDocumentExtractWorker(
 ) *documentExtractWorker {
 	worker := &documentExtractWorker{
 		pool:       pool,
+		users:      identity.NewService(pool),
 		language:   installationLanguage(pool),
 		activities: activities.NewStore(InstallationDB(pool)).WithBlobstore(blob),
 		log:        log,

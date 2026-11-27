@@ -88,6 +88,7 @@ func TestTheRoundTripFixtureLeavesNoFieldUnset(t *testing.T) {
 		Evidence:         commsauthz.Evidence{ActivityID: ids.NewV7()},
 		SendingEntity:    ids.NewV7(),
 		FromConnection:   ids.NewV7(),
+		ResentFrom:       ids.NewV7(),
 	}
 	v := reflect.ValueOf(in)
 	for i := range v.NumField() {

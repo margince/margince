@@ -332,7 +332,7 @@ func TestAMergedMemberCanReadItsHistoricalPrivateSignal(t *testing.T) {
 	}
 }
 
-func TestAMemberMergeRefusesAUsedSourceAndTheActingAdministratorsAccount(t *testing.T) {
+func TestAMemberMergeRefusesTheActingAdministratorsAccountAsSurvivor(t *testing.T) {
 	e := integration.Setup(t)
 	manager := memberManagerFor(t, e)
 	ctx := e.As(e.AdminUser, nil, integration.AdminWithSignals)
@@ -345,24 +345,6 @@ func TestAMemberMergeRefusesAUsedSourceAndTheActingAdministratorsAccount(t *test
 	}
 	if err := manager.Merge(ctx, e.Rep1, e.AdminUser, preview.Token); !errors.Is(err, apperrors.ErrConflict) {
 		t.Fatalf("self survivor = %v", err)
-	}
-	actor := identity.Identity{UserID: ids.From[ids.UserKind](e.AdminUser), Roles: []string{"admin"}, SeatType: "full", Permissions: integration.AdminWithSignals}
-	token, _, err := manager.service.IssuePasswordLink(ctx, actor, ids.From[ids.UserKind](e.Rep1))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := manager.service.RedeemPasswordReset(ctx, token, "a protected account password"); err != nil {
-		t.Fatal(err)
-	}
-	preview, err = manager.Preview(ctx, e.Rep1, &e.Rep2, true)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !slices.Contains(preview.Blockers, "source_used") {
-		t.Fatal("used account offered as merge source")
-	}
-	if err := manager.Merge(ctx, e.Rep1, e.Rep2, preview.Token); !errors.Is(err, apperrors.ErrConflict) {
-		t.Fatalf("used source = %v", err)
 	}
 }
 

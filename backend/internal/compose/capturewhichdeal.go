@@ -4,7 +4,8 @@
 package compose
 
 // The one "Which deal is this about?" question the capture deal rule raises
-// when several open deals fit a mail (capture.AskWhichDeal).
+// when several open deals fit a mail (capture.AskWhichDeal), asked through
+// activities.AskWhichDealTx.
 //
 // It goes only to the colleague the mailbox confirms is responsible: the seat
 // that sent it, or the one seat capture bound to its To. Copied seats, several
@@ -13,9 +14,6 @@ package compose
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
-	"errors"
 	"fmt"
 	"time"
 
@@ -23,7 +21,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/dealfiler"
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/deals"
@@ -32,19 +29,17 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
-// whichDealActor is the system identity the question task is written under.
+// whichDealActor is the system identity the question is proposed under.
 const whichDealActor = "system:capture-which-deal"
 
-// whichDealAsker writes the question as a task through the activities store.
-// The deals it offers are recorded on the task, so "none of them" declines
-// those and no others.
+// whichDealAsker proposes the question through the activities module. The
+// deals it offers are the suggestions, so "none of them" declines those and
+// no others.
 type whichDealAsker struct {
-	tasks *activities.Store
 	deals offeredDeals
 	now   func() time.Time
 }
@@ -53,11 +48,7 @@ type whichDealAsker struct {
 // both raise the same question. now is the clock that decides which mail is
 // current.
 func newWhichDealAsker(pool *pgxpool.Pool, now func() time.Time) whichDealAsker {
-	return whichDealAsker{
-		tasks: activities.NewStore(InstallationDB(pool)),
-		deals: deals.NewStore(InstallationDB(pool), DealsInstallation()),
-		now:   now,
-	}
+	return whichDealAsker{deals: deals.NewStore(InstallationDB(pool), DealsInstallation()), now: now}
 }
 
 // offeredDeals reads the open deals a question offers, from the deals module.
@@ -65,68 +56,35 @@ type offeredDeals interface {
 	OfferedDeals(ctx context.Context, tx pgx.Tx, projectID, companyID ids.UUID, stakeholders []ids.UUID) ([]ids.UUID, error)
 }
 
-// Ask raises the question at most once per thread. The task is keyed on the
-// thread, archived tasks included. A dismissed question is not asked again,
-// and a second mail in the thread adds none.
+// Ask raises the question for current mail only: an old mail captured today
+// makes no new work.
 func (a whichDealAsker) Ask(ctx context.Context, tx pgx.Tx, q capture.WhichDeal) error {
 	seat, err := a.respondent(ctx, tx, q.ActivityID.UUID)
 	if err != nil || seat.IsZero() {
 		return err
 	}
-	// Only current mail asks. An old mail captured today makes no new work,
-	// by the same clause every task reader applies to the question.
-	var thread string
-	var shared bool
+	var current bool
 	args := []any{q.ActivityID}
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	query := `
-		SELECT coalesce(nullif(a.thread_key, ''), a.id::text), ` + auth.WorkspaceAudienceSQL("a") + `
-		  FROM activity a WHERE a.id = $1 AND a.restricted_at IS NULL AND a.archived_at IS NULL
-		   AND ` + storekit.CurrentSourceMailClause("a.id", a.now(), arg)
-	err = tx.QueryRow(ctx, query, args...).Scan(&thread, &shared)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return nil
-	}
-	if err != nil {
-		return fmt.Errorf("compose: reading the mail a deal question is about: %w", err)
+		SELECT EXISTS (SELECT 1 FROM activity a WHERE a.id = $1 AND a.restricted_at IS NULL AND a.archived_at IS NULL
+		   AND ` + storekit.CurrentSourceMailClause("a.id", a.now(), arg) + `)`
+	if err := tx.QueryRow(ctx, query, args...).Scan(&current); err != nil || !current {
+		return err
 	}
 	lang, err := seatLanguage(ctx, tx, seat)
 	if err != nil {
 		return err
 	}
-	// The thread key is the sender's References root, so the key names the
-	// seat too. A sender reusing another mailbox's root cannot use up this
-	// seat's question.
-	sum := sha256.Sum256([]byte(seat.String() + "\x00" + thread))
-	key, subject, body := hex.EncodeToString(sum[:]), systemtext.Copy("capture.which_deal_subject", lang), systemtext.Copy("capture.which_deal_body", lang)
-	source, mail, assignee := provenance.WhichDealSource, q.ActivityID.UUID, ids.From[ids.UserKind](seat)
-	in := activities.LogActivityInput{
-		Kind: string(crmcontracts.ActivityKindTask), Subject: &subject, Body: &body,
-		SystemText:   &systemtext.Message{Subject: systemtext.Sentence("capture.which_deal_subject"), Body: systemtext.Sentence("capture.which_deal_body")},
-		SourceSystem: &source, SourceID: &key, Source: source, SourceActivityID: &mail,
-		AssigneeID: &assignee, Origin: activities.OriginSystemRemediation,
-	}
-	for _, record := range []struct {
-		kind agentRecordType
-		id   ids.UUID
-	}{{recordTypeCompany, q.CompanyID}, {recordTypeProject, q.ProjectID}} {
-		if !record.id.IsZero() {
-			in.Links = append(in.Links, activities.ActivityLinkInput{EntityType: string(record.kind), EntityID: record.id})
-		}
-	}
 	offered, err := a.deals.OfferedDeals(ctx, tx, q.ProjectID, q.CompanyID, q.StakeholderIDs)
 	if err != nil {
 		return err
 	}
-	raw := map[string]any{provenance.WhichDealOfferedKey: append([]ids.UUID{}, offered...)}
-	in.Raw = &raw
-	in.AdmitInvitedAssignee()
-	if !shared {
-		in.VisibleOnlyTo(seat)
-	}
 	writer := principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: whichDealActor, OnBehalfOf: seat})
-	_, _, err = a.tasks.LogActivityTx(writer, tx, in)
-	return err
+	return activities.AskWhichDealTx(writer, tx, activities.WhichDealQuestion{
+		Mail: q.ActivityID, Seat: seat, Deals: offered,
+		Reason: systemtext.Copy("capture.which_deal_subject", lang),
+	})
 }
 
 // respondent is the one colleague the mail names as responsible, or zero.

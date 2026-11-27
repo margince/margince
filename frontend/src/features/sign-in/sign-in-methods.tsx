@@ -33,6 +33,7 @@ import {
   useSaveSignInPolicy,
 } from "../../lib/sign-in-policy";
 import { useInstallationSettings } from "../../lib/uploadlimit";
+import { GoogleDirectoryPanel } from "./google-directory";
 import { GroupRoleGrants } from "./group-role-grants";
 import { useMyMfa } from "./mfa.queries";
 import "./sign-in-methods.css";
@@ -80,6 +81,7 @@ export function SignInMethodsCard({
   // settings but must not be able to grant itself a role through the directory.
   // Gated separately so the switches stay usable for them while the map does not.
   const canManageGrants = useCanWrite("authentication_policy", "update");
+  const canReadPolicy = useCan("authentication_policy", "read");
   // Reading a vendor app takes capture settings, which a custom role may lack.
   const canReadApps = useCan("capture_settings", "read");
   const settings = useAuthenticationPolicy();
@@ -107,13 +109,20 @@ export function SignInMethodsCard({
   // its own tab, so they are not fetched twice.
   if (part === "grants")
     return settings.data ? (
-      <GroupRoleGrants
-        // Defaulted: the field is contract-required, and a body that lost it
-        // hands over `undefined`.
-        initial={settings.data.oidc_group_role_map ?? {}}
-        canManage={canManageGrants}
-        lock={lockFor(locks, "identity.oidc_group_role_map", t)}
-      />
+      <>
+        <GroupRoleGrants
+          // Defaulted: the field is contract-required, and a body that lost it
+          // hands over `undefined`.
+          initial={settings.data.oidc_group_role_map ?? {}}
+          canManage={canManageGrants}
+          lock={lockFor(locks, "identity.oidc_group_role_map", t)}
+        />
+        <GoogleDirectoryPanel
+          canRead={canReadPolicy}
+          canManage={canManageGrants}
+          lock={lockFor(locks, "identity.google_directory_credential", t)}
+        />
+      </>
     ) : null;
 
   return (

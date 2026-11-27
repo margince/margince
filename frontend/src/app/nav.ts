@@ -6,6 +6,7 @@ import {
   Handshake,
   Home,
   Layers2,
+  ListChecks,
   type LucideIcon,
   Target,
   UserPlus,
@@ -14,10 +15,17 @@ import {
 import type { MessageKey } from "../i18n/en";
 import { screenEnabled, type Withheld } from "../lib/corefeatures";
 import { type EntityKind, SCREEN_ENTITY } from "../lib/entity";
-import { EXTENSION_APP_SCREEN, type UnitApp } from "../lib/extensionapps";
+import {
+  EXTENSION_APP_GROUPS,
+  EXTENSION_APP_SCREEN,
+  type ExtensionAppGroup,
+  type UnitApp,
+} from "../lib/extensionapps";
 import { EXTENSION_SCREEN } from "../lib/extensions";
 import { opensAFocusedFiltersPage } from "../lib/filtersaddress";
 import type { Route, Screen } from "../lib/router";
+import { NO_URL_PARAMS, type UrlParams } from "../lib/urlstate";
+import { drawerOpen } from "../lib/worklistrouting";
 import { CUSTOM_SCREEN, customNavItems } from "./custom";
 import { appItems } from "./navapps";
 import {
@@ -99,7 +107,7 @@ export const NAV_GROUPS: readonly NavGroup[] = [
         screen: "home",
         labelKey: "nav.brief",
         icon: Home,
-        aliases: ["worklist", "today"],
+        aliases: ["today"],
       },
     ],
   },
@@ -136,13 +144,9 @@ export const NAV_GROUPS: readonly NavGroup[] = [
   {
     headingKey: "nav.group.work",
     items: [
-      // The day's own surface, and the only door to the work that waits on a
-      // contact: decisions to answer, tasks to finish and duplicates to merge are
-      // lanes inside it. It leads the group because it is what a reader opens
-      // when the question is "what needs me?".
-      // A checklist rather than a sunrise: what this surface holds is the work
-      // that waits on a contact, and `Sun` says "morning" — which is the Brief's
-      // claim, not this one.
+      // Opens the Worklist panel on Home (`#/worklist` redirects there). A
+      // checklist glyph: `Sun` would claim the Brief's morning.
+      { screen: "worklist", labelKey: "nav.worklist", icon: ListChecks },
       // The body of work a deal is about. It starts during the deal and
       // outlives close-won, so what it belongs to is the work rather than the
       // record of the sale: a project in delivery has no deal column to stand
@@ -237,6 +241,7 @@ const RESERVED_PAGE_TITLES: Readonly<Record<ReservedPageScreen, MessageKey>> = {
 // destination, and the tab title names it after the page.
 const PARENT_SCREENS: Readonly<Partial<Record<Screen, Screen>>> = {
   partners: "companies",
+  offers: "deals",
 };
 
 export function parentScreenOf(route: Route): Screen | undefined {
@@ -267,6 +272,7 @@ export const RAIL_LESS_SCREENS: ReadonlySet<Screen> = new Set([
   "preferences",
   "unsubscribe",
   "confirm",
+  "confirm-merge",
   "room",
   "oauth-consent",
 ]);
@@ -283,18 +289,20 @@ export const RAIL_LESS_SCREENS: ReadonlySet<Screen> = new Set([
 // It carries the product's own destinations, a fork's, then the apps that
 // composed units declare (navapps.ts). Vanilla declares none, so its rows are
 // the ones rail.test.tsx pins.
-// Which of the three headings a fork screen names, keyed by the heading it
-// declares. A fork says "records" and this is what that means to the rail — the
-// mapping lives here rather than in app/custom.ts because the group KEYS are
-// this list's, and a fork naming a fourth one fails to typecheck against
-// CustomScreen["nav"]["group"] rather than rendering into nothing.
-const CUSTOM_NAV_GROUPS: Partial<
-  Record<MessageKey, "records" | "work" | "intelligence">
-> = {
-  "nav.group.records": "records",
-  "nav.group.work": "work",
-  "nav.group.intelligence": "intelligence",
-};
+// The app group each heading of the rail stands for: `nav.group.<group>`. A
+// group with no such copy key fails the typecheck here.
+const HEADING_GROUPS = new Map<MessageKey, ExtensionAppGroup>(
+  EXTENSION_APP_GROUPS.map((group): [MessageKey, ExtensionAppGroup] => [
+    `nav.group.${group}` as const satisfies MessageKey,
+    group,
+  ]),
+);
+
+function headingGroup(
+  headingKey: MessageKey | undefined,
+): ExtensionAppGroup | undefined {
+  return headingKey ? HEADING_GROUPS.get(headingKey) : undefined;
+}
 
 // A fork's own destinations, in the group each declared (app/custom.ts).
 //
@@ -314,7 +322,7 @@ const CUSTOM_NAV_GROUPS: Partial<
 function forkItems(
   headingKey: MessageKey | undefined,
 ): readonly NavLevelEntry[] {
-  const group = headingKey ? CUSTOM_NAV_GROUPS[headingKey] : undefined;
+  const group = headingGroup(headingKey);
   if (!group) {
     return [];
   }
@@ -353,10 +361,7 @@ function primaryLevel(
             icon: item.icon,
           })),
         ...forkItems(group.headingKey),
-        ...appItems(
-          group.headingKey ? CUSTOM_NAV_GROUPS[group.headingKey] : undefined,
-          apps,
-        ),
+        ...appItems(headingGroup(group.headingKey), apps),
       ],
     })).filter((group) => group.items.length > 0),
     ancestor: opensAPageBelow(route),
@@ -378,13 +383,24 @@ function opensAPageBelow(route: Route): boolean {
   );
 }
 
+/**
+ * Whether the address is Home with the Worklist panel open. The panel is not a
+ * route of its own, so the rail, the breadcrumb and the tab title all ask here.
+ */
+export function opensWorklistPanel(route: Route, params: UrlParams): boolean {
+  return route.screen === "home" && drawerOpen(params);
+}
+
 // Which primary row a route makes current. It is the route's screen for every
 // destination the product owns, and `settings` for a unit's — a unit screen
 // routes as `{screen: "ext", id: "<unit>"}` and has no row of its own. Nothing
 // in the sidebar renders that id today, so a unit route marks no row. The
 // mapping stays because a unit is reached from Settings, and the level machinery
 // asks it for every route.
-function activeRowFor(route: Route): string {
+function activeRowFor(route: Route, params: UrlParams): string {
+  if (opensWorklistPanel(route, params)) {
+    return "worklist";
+  }
   if (route.screen === EXTENSION_SCREEN) {
     return "settings";
   }
@@ -413,7 +429,7 @@ function activeRowFor(route: Route): string {
 
 /** Whether the page is one of Settings', which the account menu leads to. */
 export function underSettings(route: Route): boolean {
-  return activeRowFor(route) === "settings";
+  return activeRowFor(route, NO_URL_PARAMS) === "settings";
 }
 
 // The levels the sidebar shows for a route: the destinations, then whatever the
@@ -424,11 +440,12 @@ export function railTrail(
   disabled: readonly Withheld[] = [],
   readsTeam = false,
   apps: readonly UnitApp[] = [],
+  params: UrlParams = NO_URL_PARAMS,
 ): readonly NavTrailLevel[] {
   return navTrail(
     primaryLevel(route, disabled, readsTeam, apps),
     route,
-    activeRowFor(route),
+    activeRowFor(route, params),
     section,
   );
 }

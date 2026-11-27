@@ -184,7 +184,7 @@ func auditApplied(ctx context.Context, tx pgx.Tx, subject, run ids.UUID, provide
 		// Empty is what every one of these fields held: each fill carries its
 		// own emptiness predicate, so a field that landed was empty before.
 		before[f.field] = nil
-		after[f.field] = "filled"
+		after[f.field] = auditFilledMarker
 		names = append(names, f.field)
 	}
 	auditID, err := storekit.AuditWithEvidence(ctx, tx, "update", entityContact, subject, before, after,

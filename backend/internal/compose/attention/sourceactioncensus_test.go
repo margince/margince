@@ -87,17 +87,18 @@ var performedBySource = map[string][]crmcontracts.AttentionItemActions{
 	"brief_item": {"act", "set_aside", "dismiss", "open"},
 	// The contact's nudge dismissal, drawn by NudgeDismiss.
 	"relationship_decay": {"dismiss", "open"},
-	// Health and delivery rows navigate and nothing more: what fixes them lives
-	// on another screen, and a verb here would promise a repair this queue
-	// cannot make.
+	// Health rows navigate and nothing more: what fixes them lives on another
+	// screen, and a verb here would promise a repair this queue cannot make.
 	"capture_health": {"open"},
 	"booking_health": {"open"},
 	"ai_work_health": {"open"},
 	// `retry` reaches AutomationRetry; a failed firing carries it and a blocked
 	// one does not, because blocked is a refusal on purpose.
 	"automation_run": {"open", "retry"},
-	"bounce":         {"open"},
-	"undelivered":    {"open"},
+	// `send_again` posts the corrected address to the bounce's own endpoint, and
+	// only a bounce the comms store says may be sent again carries it.
+	"bounce":      {"open", "send_again"},
+	"undelivered": {"open"},
 	// Drawn by FailedApprovalAnswer: `acknowledge` posts the failure
 	// acknowledgement, and `retry` approves the row once more.
 	"failed_approval": {"open", "acknowledge", "retry"},
@@ -317,7 +318,7 @@ func aDayWithEveryLaneCarryingARow(t *testing.T) crmcontracts.Attention {
 		&stubDSRs{rows: []DSRCase{{ID: ids.NewV7(), Kind: "access", DueAt: readInstant}}},
 		&stubCaptureHealth{rows: []CaptureConcern{{ConnectionID: ids.NewV7(), Kind: "reauth_required", Provider: "gmail"}}},
 		&stubAIWork{rows: []TroubledRun{{ID: ids.NewV7(), State: "failed", OccurredAt: readInstant}}},
-		&stubBounces{rows: []BouncedSend{{ID: ids.NewV7(), Subject: "a bounced send", BouncedAt: readInstant, ContactID: ids.NewV7()}}},
+		&stubBounces{rows: []BouncedSend{{ID: ids.NewV7(), Subject: "a bounced send", BouncedAt: readInstant, ContactID: ids.NewV7(), CanSendAgain: true}}},
 		&stubAutomations{rows: []TroubledAutomationRun{{ID: ids.NewV7(), Name: "a broken rule", Outcome: "failed", OccurredAt: readInstant}}},
 		&stubNotices{rows: []UnreadNotice{{ID: ids.NewV7(), Kind: "automation", Subject: "a notice", CreatedAt: readInstant}}},
 		nil,

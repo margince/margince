@@ -5,14 +5,16 @@ package search
 
 import (
 	"fmt"
+	"math"
 	"slices"
 	"strings"
+
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
-// maxPerType bounds a grouped page. Every union element at this cap, the
-// employer arm included, stays within the largest ranked page, so a grouped
-// answer never costs more than a ranked one
-// (TestAGroupedPageFitsInTheLargestRankedPage).
+// maxPerType bounds one type's share of a grouped page. Every union element at
+// this cap can exceed the largest ranked page, so page lowers the share until the
+// whole answer fits (TestAGroupedPageFitsInTheLargestRankedPage).
 const maxPerType = 20
 
 // groupedShape is a few hits of EVERY type that matched, each type's best
@@ -91,6 +93,7 @@ func (g groupedShape) page(hits []Hit) Page { return g.pageWith(hits, nil) }
 // pageWith is page for a page whose timedOut types ran out of time and hold no
 // hits.
 func (g groupedShape) pageWith(hits []Hit, timedOut []string) Page {
+	perType := g.fittingPerType(hits)
 	seen := map[string]int{}
 	more := map[string]bool{}
 	// Non-nil even when nothing was cut: an empty list on a grouped page says
@@ -98,15 +101,50 @@ func (g groupedShape) pageWith(hits []Hit, timedOut []string) Page {
 	page := Page{Hits: make([]Hit, 0, len(hits)), TypesWithMore: []string{}, TypesTimedOut: []string{}}
 	for _, hit := range hits {
 		seen[hit.Type]++
-		if seen[hit.Type] > g.perType {
+		if seen[hit.Type] > perType {
 			more[hit.Type] = true
 			continue
 		}
 		page.Hits = append(page.Hits, hit)
 	}
+	// One row per type can still pass the page limit when more than that many
+	// types matched. The rows arrive type by type, so the cut falls on the last.
+	if limit := rankedPageLimit(); len(page.Hits) > limit {
+		for _, hit := range page.Hits[limit:] {
+			more[hit.Type] = true
+		}
+		page.Hits = page.Hits[:limit]
+	}
 	page.TypesWithMore = typesIn(more)
 	page.TypesTimedOut = typesIn(timedOutSet(timedOut))
 	return page
+}
+
+// fittingPerType is the largest share, at most perType, at which every type's
+// best rows together stay within the largest ranked page. Each type's rows arrive
+// best first, so lowering the share trims every type's worst rows alike.
+func (g groupedShape) fittingPerType(hits []Hit) int {
+	largest := rankedPageLimit()
+	for share := g.perType; share > 1; share-- {
+		seen := map[string]int{}
+		kept := 0
+		for _, hit := range hits {
+			seen[hit.Type]++
+			if seen[hit.Type] <= share {
+				kept++
+			}
+		}
+		if kept <= largest {
+			return share
+		}
+	}
+	return 1
+}
+
+// rankedPageLimit is the largest page a ranked search answers.
+func rankedPageLimit() int {
+	unbounded := math.MaxInt
+	return storekit.ClampLimit(&unbounded)
 }
 
 func timedOutSet(types []string) map[string]bool {

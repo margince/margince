@@ -32,7 +32,7 @@ import (
 const Kind = approvalsubject.KindTaskDueDate
 
 const (
-	actor        = "agent:" + Kind
+	actor        = "system:" + Kind
 	summaryCode  = "approval.taskDueAsked"
 	targetType   = "activity"
 	identityTask = "task_id"

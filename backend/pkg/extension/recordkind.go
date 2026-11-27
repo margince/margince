@@ -67,6 +67,11 @@ type RecordKindDeclaration struct {
 	// the kind, or empty for the screen itself. A notice about a record opens
 	// `#/ext/<unit>/<View>` with the record's kind and id in the query.
 	View string
+	// OwnerColumn, when set, is the `uuid` column that holds the member who owns
+	// a row. Core then reads the kind under the role's own, team or all row
+	// scope, as it reads deals. A row with no owner is everyone's. Empty leaves
+	// the kind all or nothing: the read right on it shows every row.
+	OwnerColumn string
 }
 
 // RecordKindTimeline says how a row of a kind reads as a History entry.
@@ -176,6 +181,9 @@ func (k RecordKindDeclaration) Validate(unit Name) error {
 	}
 	if err := k.validateTimeline(); err != nil {
 		return err
+	}
+	if k.OwnerColumn != "" && !shortNameGrammar.MatchString(k.OwnerColumn) {
+		return fmt.Errorf("record kind %q owner column %q is not a column name", k.Kind, k.OwnerColumn)
 	}
 	if k.View != "" && !nameGrammar.MatchString(k.View) {
 		return fmt.Errorf("record kind %q view %q must be one path segment of lower-case letters, digits and single hyphens", k.Kind, k.View)

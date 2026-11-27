@@ -36,32 +36,7 @@ func assertSaveChangesNothing(
 	t *testing.T, e *apptest.AppEnv, method, path string, body AnyMap, entityID string, version int64,
 ) {
 	t.Helper()
-	count := func(query string) int {
-		var n int
-		if err := e.Owner.QueryRow(t.Context(), query, entityID).Scan(&n); err != nil {
-			t.Fatalf("counting for %s: %v", entityID, err)
-		}
-		return n
-	}
-	const audits = `SELECT count(*) FROM audit_log WHERE entity_id = $1`
-	const events = `SELECT count(*) FROM event_outbox WHERE envelope::text LIKE '%' || $1 || '%'`
-	auditsBefore, eventsBefore := count(audits), count(events)
-
-	var answer versionedWire
-	headers := map[string]string{"If-Match": strconv.FormatInt(version, 10)}
-	if status := e.Call(t, method, path, body, headers, &answer); status != http.StatusOK {
-		t.Fatalf("%s %s with the stored values -> %d, want 200", method, path, status)
-	}
-	if answer.Version != version {
-		t.Errorf("%s %s with the stored values answered version %d, want the unchanged %d",
-			method, path, answer.Version, version)
-	}
-	if got := count(audits); got != auditsBefore {
-		t.Errorf("%s %s with the stored values wrote %d audit row(s), want none", method, path, got-auditsBefore)
-	}
-	if got := count(events); got != eventsBefore {
-		t.Errorf("%s %s with the stored values emitted %d event(s), want none", method, path, got-eventsBefore)
-	}
+	assertResendChangesNothing(t, e, resend{method: method, path: path, body: body, version: version, about: []string{entityID}})
 }
 
 func TestASaveOfTheStoredValuesChangesNothing(t *testing.T) {
@@ -275,25 +250,45 @@ func TestADealRoomExpirySetToItsStoredValueChangesNothing(t *testing.T) {
 //
 // gatekit:fixture the routes an HTTP probe covers and the test that probes each, expected data checked against the contract
 var noOpProbedRoutes = map[string]string{
-	"PUT /web-forms/{id}/handling":      "TestAReviewedInquiryPolicySavedUnchangedWritesNothing",
-	"PATCH /acquisition-sources/{id}":   "TestACatalogRowSavedAsItAlreadyIsChangesNothing",
-	"PATCH /loss-reasons/{id}":          "TestACatalogRowSavedAsItAlreadyIsChangesNothing",
-	"PATCH /contacts/{id}":              "TestTheFullFormPayloadOfAnUntouchedRecordChangesNothing",
-	"PATCH /companies/{id}":             "TestTheFullFormPayloadOfAnUntouchedRecordChangesNothing",
-	"PUT /companies/{id}/partner":       "TestASaveOfTheStoredValuesChangesNothing",
-	"PATCH /relationships/{id}":         "TestASaveOfTheStoredValuesChangesNothing",
-	"PATCH /tags/{id}":                  "TestASaveOfTheStoredValuesChangesNothing",
-	"PATCH /webhook-subscriptions/{id}": "TestAWebhookSubscriptionSavedAsItAlreadyIsChangesNothing",
-	"PATCH /web-forms/{id}":             "TestAWebsiteFormSavedAsItAlreadyIsChangesNothing",
-	"PUT /deal-rooms/{id}/expiry":       "TestADealRoomExpirySetToItsStoredValueChangesNothing",
-	"PUT /offer-templates/{id}":         "TestOtherRecordsSavedAsTheyAlreadyAreChangeNothing",
-	"PATCH /products/{id}":              "TestOtherRecordsSavedAsTheyAlreadyAreChangeNothing",
-	"PATCH /activities/{id}":            "TestOtherRecordsSavedAsTheyAlreadyAreChangeNothing",
-	"PATCH /leads/{id}":                 "TestOtherRecordsSavedAsTheyAlreadyAreChangeNothing",
-	"PATCH /deals/{id}":                 "TestOtherRecordsSavedAsTheyAlreadyAreChangeNothing",
-	"PATCH /projects/{id}":              "TestOtherRecordsSavedAsTheyAlreadyAreChangeNothing",
-	"PATCH /contracts/{id}":             "TestOtherRecordsSavedAsTheyAlreadyAreChangeNothing",
-	"PATCH /legal-entities/{id}":        "TestOtherRecordsSavedAsTheyAlreadyAreChangeNothing",
+	"PUT /web-forms/{id}/handling":                    "TestAReviewedInquiryPolicySavedUnchangedWritesNothing",
+	"PATCH /acquisition-sources/{id}":                 "TestACatalogRowSavedAsItAlreadyIsChangesNothing",
+	"PATCH /loss-reasons/{id}":                        "TestACatalogRowSavedAsItAlreadyIsChangesNothing",
+	"PATCH /contacts/{id}":                            "TestTheFullFormPayloadOfAnUntouchedRecordChangesNothing",
+	"PATCH /companies/{id}":                           "TestTheFullFormPayloadOfAnUntouchedRecordChangesNothing",
+	"PUT /companies/{id}/partner":                     "TestASaveOfTheStoredValuesChangesNothing",
+	"PATCH /relationships/{id}":                       "TestASaveOfTheStoredValuesChangesNothing",
+	"PATCH /tags/{id}":                                "TestASaveOfTheStoredValuesChangesNothing",
+	"PATCH /webhook-subscriptions/{id}":               "TestAWebhookSubscriptionSavedAsItAlreadyIsChangesNothing",
+	"PATCH /web-forms/{id}":                           "TestAWebsiteFormSavedAsItAlreadyIsChangesNothing",
+	"PUT /deal-rooms/{id}/expiry":                     "TestADealRoomExpirySetToItsStoredValueChangesNothing",
+	"PUT /offer-templates/{id}":                       "TestOtherRecordsSavedAsTheyAlreadyAreChangeNothing",
+	"PATCH /products/{id}":                            "TestOtherRecordsSavedAsTheyAlreadyAreChangeNothing",
+	"PATCH /activities/{id}":                          "TestOtherRecordsSavedAsTheyAlreadyAreChangeNothing",
+	"PATCH /leads/{id}":                               "TestOtherRecordsSavedAsTheyAlreadyAreChangeNothing",
+	"PATCH /deals/{id}":                               "TestOtherRecordsSavedAsTheyAlreadyAreChangeNothing",
+	"PATCH /projects/{id}":                            "TestOtherRecordsSavedAsTheyAlreadyAreChangeNothing",
+	"PATCH /contracts/{id}":                           "TestOtherRecordsSavedAsTheyAlreadyAreChangeNothing",
+	"PATCH /legal-entities/{id}":                      "TestOtherRecordsSavedAsTheyAlreadyAreChangeNothing",
+	"PATCH /stages/{id}":                              "TestSettingsSavedAsTheyAlreadyAreChangeNothing",
+	"PUT /pipelines/{id}/stage-order":                 "TestSettingsSavedAsTheyAlreadyAreChangeNothing",
+	"PATCH /stages/{id}/exit-criteria/{criterion_id}": "TestSettingsSavedAsTheyAlreadyAreChangeNothing",
+	"PATCH /roles/{key}":                              "TestSettingsSavedAsTheyAlreadyAreChangeNothing",
+	"PATCH /roles/{key}/objects/{object}":             "TestSettingsSavedAsTheyAlreadyAreChangeNothing",
+	"PATCH /views/{id}":                               "TestSettingsSavedAsTheyAlreadyAreChangeNothing",
+	"PATCH /automations/{id}":                         "TestSettingsSavedAsTheyAlreadyAreChangeNothing",
+	"PATCH /signals/{id}":                             "TestSettingsSavedAsTheyAlreadyAreChangeNothing",
+	"PATCH /analytics/initiatives/{id}":               "TestSettingsSavedAsTheyAlreadyAreChangeNothing",
+	"PATCH /custom-fields/{id}":                       "TestACustomFieldSavedAsItAlreadyIsChangesNothing",
+	"PATCH /voice-profiles/{id}":                      "TestAVoiceSavedAsItAlreadyIsChangesNothing",
+	"PATCH /voice-profiles/{id}/sources/{sourceId}":   "TestAVoiceSavedAsItAlreadyIsChangesNothing",
+	"PATCH /companies/{id}/facts/{factKey}":           "TestACompanyClaimResentAsItStandsChangesNothing",
+	"PATCH /companies/{id}/profile-fields/{field}":    "TestACompanyClaimResentAsItStandsChangesNothing",
+	"PATCH /deal-rooms/{id}":                          "TestADealRoomAndAnOfferSavedAsTheyAlreadyAreChangeNothing",
+	"PATCH /deal-rooms/{id}/documents/{documentId}":   "TestADealRoomAndAnOfferSavedAsTheyAlreadyAreChangeNothing",
+	"PATCH /offers/{id}":                              "TestADealRoomAndAnOfferSavedAsTheyAlreadyAreChangeNothing",
+	"PUT /mail-drafts":                                "TestAMessageSavedAsItAlreadyIsChangesNothing",
+	"PATCH /scheduled-sends/{id}":                     "TestAMessageSavedAsItAlreadyIsChangesNothing",
+	"PATCH /activities/{id}/audience":                 "TestAMessageSavedAsItAlreadyIsChangesNothing",
 }
 
 // Every probed route is a PATCH or a PUT. The contract-side check lives in the

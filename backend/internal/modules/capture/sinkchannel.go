@@ -51,6 +51,12 @@ type EnsureChannelRequest struct {
 	ActivityID         ids.UUID
 	Source             string
 	CapturedBy         string
+	// LinkOnly files the message under a contact the sender already has and
+	// creates none.
+	LinkOnly bool
+	// RequireHeld files the message only while it is still a held forward, which
+	// the ensure checks under the activity's lock.
+	RequireHeld bool
 }
 
 // WithChannelEnsurer returns a copy wired to the channel auto-create path. A
@@ -213,18 +219,21 @@ func (s *Sink) refuseErasedChannelAccount(ctx context.Context, tx pgx.Tx, cp con
 	if counterpartyShapeOf(cp) != shapeChannel {
 		return nil
 	}
-	ci := cp.ChannelIdentity
-	if err := storekit.LockChannelIdentities(ctx, tx, []storekit.ChannelIdentityKey{
-		{Provider: ci.Provider, ChannelUserID: ci.ChannelUserID},
-	}); err != nil {
+	var keys []storekit.ChannelIdentityKey
+	for _, ci := range cp.ChannelIdentity.All() {
+		keys = append(keys, storekit.ChannelIdentityKey{Provider: ci.Provider, ChannelUserID: storekit.ChannelSuppressionAccount(ci.AccountScope, ci.ChannelUserID)})
+	}
+	if err := storekit.LockChannelIdentities(ctx, tx, keys); err != nil {
 		return err
 	}
-	suppressed, err := storekit.ChannelIdentitySuppressed(ctx, tx, ci.Provider, ci.ChannelUserID)
-	if err != nil {
-		return err
-	}
-	if suppressed {
-		return fmt.Errorf("capture: the record's channel account is on the erasure suppression list: %w", connector.ErrSkip)
+	for _, key := range keys {
+		suppressed, err := storekit.ChannelIdentitySuppressed(ctx, tx, key.Provider, key.ChannelUserID)
+		if err != nil {
+			return err
+		}
+		if suppressed {
+			return fmt.Errorf("capture: the record's channel account is on the erasure suppression list: %w", connector.ErrSkip)
+		}
 	}
 	return nil
 }
@@ -261,6 +270,7 @@ func (s *Sink) ensureChannelCounterparty(ctx context.Context, rec connector.Norm
 		ActivityID:         ref.ID,
 		Source:             captureSource(rec),
 		CapturedBy:         decision.capturedBy,
+		LinkOnly:           decision.linkOnly,
 	})
 	if err != nil {
 		s.logEnsureFault(ctx, rec, err)

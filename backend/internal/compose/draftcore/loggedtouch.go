@@ -19,27 +19,24 @@ import (
 // ClassifyWithLogged counts past meetings as prior contact, even without mail.
 // A note is internal and never counts. A meeting counts as our side: nothing
 // claims the contact wrote.
-func ClassifyWithLogged(now time.Time, zone *time.Location, lastIn, lastOut time.Time, activities []crmcontracts.Activity) convstate.State {
-	if logged := lastLoggedTouch(activities, now, zone); logged.After(lastOut) {
+func ClassifyWithLogged(now time.Time, zone *time.Location, lastIn, lastOut occurredday.Moment, activities []crmcontracts.Activity) convstate.State {
+	if logged := lastLoggedTouch(activities, now, zone); !logged.At.IsZero() &&
+		(lastOut.At.IsZero() || convstate.Starts(logged, zone).After(convstate.Starts(lastOut, zone))) {
 		lastOut = logged
 	}
 	return convstate.Classify(now, lastIn, lastOut, zone)
 }
 
 // Date-only anchors can sort differently once read in the record calendar.
-func lastLoggedTouch(activities []crmcontracts.Activity, now time.Time, zone *time.Location) time.Time {
-	var latest time.Time
+func lastLoggedTouch(activities []crmcontracts.Activity, now time.Time, zone *time.Location) occurredday.Moment {
+	var latest occurredday.Moment
 	for _, activity := range activities {
 		if !CountsAsContact(activity, now, zone) {
 			continue
 		}
 		moment := activitywhen.MomentOf(activity)
-		at := moment.At
-		if moment.DateOnly {
-			at = occurredday.Begins(at, zone)
-		}
-		if at.After(latest) {
-			latest = at
+		if latest.At.IsZero() || convstate.Starts(moment, zone).After(convstate.Starts(latest, zone)) {
+			latest = moment
 		}
 	}
 	return latest

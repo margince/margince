@@ -52,6 +52,7 @@ const storedClock = "stored clock without a precision column, issue #8910"
 // place, each with the reason. Keyed "<spec> <schema path>.<property>" as the
 // census prints it.
 var precisionlessTimes = gatekit.Waive(map[string]string{
+	"api/crm.yaml GoogleDirectoryStatus.last_checked_at":                  "when the newest Google directory check ran, a server instant and not an activity time",
 	"api/crm.yaml CustomerPayments.last_synced_at":                        "when the accounting import finished; always an instant, never an activity date",
 	"api/crm.yaml LicenseTrial.ends_at":                                   "when an unlicensed installation's trial ends, a server instant derived from the workspace's creation, not an activity time",
 	"api/crm.yaml EmailCalendarChange.ends_at":                            "a meeting's end, read with the same starts_precision: an all-day meeting's end is a date as its start is",
@@ -137,21 +138,10 @@ var precisionlessTimes = gatekit.Waive(map[string]string{
 	"api/crm.yaml IngestVoiceCorpusSourceRequest.occurred_at":       "a voice sample's stated time, written to voice_corpus_source, not an activity",
 	"api/crm.yaml AttentionItem.subject_moved_at": "a lane's own moment the item's subject last moved, compared only with when " +
 		"the row was marked done; the description names occurred_at to say it is not that",
-	"api/crm.yaml Company.last_activity_at":                          storedClock,
 	"api/crm.yaml Contact.last_activity_at":                          storedClock,
-	"api/crm.yaml Deal.last_activity_at":                             storedClock,
-	"api/crm.yaml Project.last_activity_at":                          storedClock,
-	"api/crm.yaml SearchHitStanding.last_activity_at":                storedClock,
-	"api/crm.yaml Project360Rollups.last_activity_at":                storedClock,
-	"api/crm.yaml Company360Project.last_activity_at":                storedClock,
 	"api/crm.yaml TeamWeeklyStaleDeal.last_activity_at":              storedClock,
-	"api/crm.yaml ContactGraphEdge.last_at":                          storedClock,
-	"api/crm.yaml ContactGraphRouteEvidence.last_at":                 storedClock,
-	"api/crm.yaml ContactNetworkColleague.last_at":                   storedClock,
 	"api/crm.yaml ContactNetworkColleague.last_inbound_at":           storedClock,
 	"api/crm.yaml ContactNetworkColleague.last_outbound_at":          storedClock,
-	"api/crm.yaml Company360Route.last_interaction_at":               storedClock,
-	"api/crm.yaml DormancyReading.last_activity_at":                  storedClock,
 	"api/crm.yaml Partner.last_contact_at":                           storedClock,
 	"api/crm.yaml MorningBriefItemLineage.returned_with_activity_at": storedClock,
 	"api/crm.yaml StageEvidence.observed_at":                         storedClock,

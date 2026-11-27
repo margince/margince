@@ -365,6 +365,10 @@ func (s *Store) createDealInTx(ctx context.Context, tx pgx.Tx, in CreateDealInpu
 		return crmcontracts.Deal{}, err
 	}
 
+	if err := checkPipelineScope(in.PipelineID, active, in.CustomFields); err != nil {
+		return crmcontracts.Deal{}, err
+	}
+
 	id := ids.New[ids.DealKind]()
 	provenanceCols, provenanceHolders, base := storekit.ProvenanceInsertFragments(in.SourceID, in.Author, []any{
 		id, in.Name, in.AmountMinor, in.Currency, in.PipelineID, in.StageID,

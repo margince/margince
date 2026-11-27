@@ -228,7 +228,7 @@ Every seat can read all of them. All but one are for Admin and Ops to change, so
 
 ## AI usage, AI models and AI call log
 
-The AI group in Settings has the pages **AI models**, **AI tool access**, **AI usage** and **AI call log**. **AI models** has the tabs **Providers**, **Model tiers**, **AI tasks** and **Prices**. **AI usage** has **Allowance**, **Agent limits** and **Spend**.
+The AI group in Settings has the pages **AI models**, **AI tool access**, **AI usage** and **AI call log**. **AI models** has the tabs **Providers**, **Model tiers**, **AI tasks**, **Prices** and **Rules**. **AI usage** has **Allowance**, **Agent limits** and **Spend**.
 
 **Model routing**, on **AI models**, shows which model does each kind of work, listed by activity. What you see is the current setting; **AI call log** shows what ran. Settings that several kinds of work share sit under **Advanced**, and changing one can move several kinds of work at once. Prices show the cost of the text sent in and the text that comes back, per million tokens. To know where data goes and what it costs, check the model and provider shown on each row, not the tier name.
 

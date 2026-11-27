@@ -286,6 +286,52 @@ describe("VCardImport", () => {
     ).toBeInTheDocument();
   });
 
+  it("says how many cards wait in the Worklist and opens it", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          results: [
+            { index: 0, full_name: "Alan Turing", outcome: "needs_review" },
+            { index: 1, full_name: "Ada Lovelace", outcome: "needs_review" },
+          ],
+          staged_for_review: 2,
+        }),
+      ),
+    );
+
+    render(<VCardImportPage />);
+    await upload(user);
+
+    expect(await screen.findByTestId("vcard-import-staged")).toHaveTextContent(
+      "2 cards wait for your answer in the Worklist.",
+    );
+    await user.click(screen.getByRole("button", { name: "Open the Worklist" }));
+    expect(window.location.hash).toBe("#/worklist");
+  });
+
+  it("says nothing about the Worklist when no card waits", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          results: [
+            { index: 0, full_name: "Ada Lovelace", outcome: "created" },
+          ],
+          staged_for_review: 0,
+        }),
+      ),
+    );
+
+    render(<VCardImportPage />);
+    await upload(user);
+
+    await screen.findByTestId("vcard-import-report");
+    expect(screen.queryByTestId("vcard-import-staged")).toBeNull();
+  });
+
   it("shows under each card what the import did with every field", async () => {
     const user = userEvent.setup();
     vi.stubGlobal(

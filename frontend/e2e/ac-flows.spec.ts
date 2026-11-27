@@ -277,9 +277,9 @@ test("AC-onboarding-1: onboarding is the rail-less conversational shell", async 
   ).toHaveCount(0);
 });
 
-test("AC-create-1: a contact is created from the list and lands on its 360", async ({
-  page,
-}) => {
+test("AC-create-1: a contact is created from the list and lands on its 360", {
+  tag: "@smoke",
+}, async ({ page }) => {
   await page.goto("/#/contacts");
   await page.getByRole("button", { name: "Neuer Kontakt" }).click();
   await page.getByLabel("Vollständiger Name").fill("Peter Neu");

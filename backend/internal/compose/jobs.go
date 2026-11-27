@@ -19,6 +19,7 @@ import (
 	"github.com/riverqueue/river"
 	"github.com/riverqueue/river/rivertype"
 
+	"github.com/margince/margince/backend/internal/compose/chatedge"
 	"github.com/margince/margince/backend/internal/compose/chatsync"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/telegram"
@@ -152,11 +153,9 @@ type JobRunnerConfig struct {
 	// SECOND field of that pass's conjunction — a registry alone does not wire
 	// it.
 	GraphWatch GraphWatchConfig
-	// ChannelVault is the custodian of a channel connection's sealed bot token.
-	// Nil means this role registers no Telegram poller at all: a poll cannot
-	// authenticate without the token, so a dispatcher wired without a vault
-	// could only fail every job it enqueued. Declared by omission, the posture
-	// GmailRegistry already takes.
+	// ChannelVault is the custodian of a channel connection's sealed tokens. Nil
+	// registers no Telegram poller, because a poll cannot authenticate without
+	// its token, and a WhatsApp media download drops its file for want of one.
 	ChannelVault keyvault.Vault
 	// AIKeyVault holds the sealed vendor keys the price sweep lists models with.
 	// Nil lists with the environment's keys only; the sweep still registers.
@@ -166,6 +165,7 @@ type JobRunnerConfig struct {
 	// acceptance suites substitute a fake, because a poller left on the real
 	// client would reach api.telegram.org from a test run.
 	ChannelAPI telegram.API
+	ChatMedia  chatedge.MediaClients // the clients that download a chat message's files; nil fields take the real hosts
 	// CaptureConfig is the deployment's capture suppression-list config
 	// (CAP-PARAM-5/6). The Telegram ingest worker needs it to build the
 	// IDENTICAL guarded Sink every other capture path shares
@@ -365,7 +365,6 @@ func NewJobRunner(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*j
 	if err := reg.everyKindIsRegisteredWithItsDeclaredType(); err != nil {
 		return nil, err
 	}
-
 	return jobs.New(pool, jobs.Config{
 		Queues:          jobQueues(),
 		Workers:         reg.workers,
@@ -434,14 +433,13 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 		addListEvaluateJobs(reg, pool, cfg, log),
 		addFinanceJobs(reg, pool, cfg, log),
 		addAIPriceSyncJobs(reg, pool, cfg, log),
-		registerTelegramPoll(reg, pool, cfg, log),
+		append(registerTelegramPoll(reg, pool, cfg, log), registerZaloTokenRenew(reg, pool, cfg, log)...),
 		registerChatLinkFlush(reg, pool, cfg, log),
 		// The composed extension jobs, if any. Empty on every vanilla process:
 		// the ext_ kinds and their ticks do not exist there at all.
 		addExtensionJobs(reg, pool, schedulesOf(cfg), log),
 		placedSchedules(cfg),
 	)
-
 	return reg, periodic
 }
 
@@ -484,9 +482,11 @@ func placedSchedules(cfg JobRunnerConfig) []*river.PeriodicJob {
 		periodicFor(cfg, CounterpartyVerdictArgs{}),
 		periodicFor(cfg, ConfidentialityVerdictArgs{}),
 		periodicFor(cfg, CaptureTraceSweepArgs{}),
+		periodicFor(cfg, ChatClarificationSweepArgs{}),
 		periodicFor(cfg, CapturedDealRefileSweepArgs{}),
 		periodicFor(cfg, CompanyNamePromotionArgs{}),
 		periodicFor(cfg, CaptureBackfillReconcileArgs{}),
+		periodicFor(cfg, CaptureHistoryNarrowingArgs{}),
 		periodicFor(cfg, BriefGenerateArgs{}),
 		periodicFor(cfg, NotificationDigestArgs{}),
 		periodicFor(cfg, WeeklyReviewGenerateArgs{}),

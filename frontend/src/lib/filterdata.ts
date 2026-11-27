@@ -13,7 +13,7 @@ import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useCallback } from "react";
 import { api, FIRST_PAGE } from "../api/client";
 import type { components } from "../api/schema";
-import { useLocale } from "../i18n";
+import { isMessageKey, useLocale } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
   catalogOfRecord,
@@ -289,3 +289,29 @@ export function customColumnLabel(column: string): string {
 
 /** The wire shape a caller hands the preview, for tests that assert the body. */
 export type { EncodedPredicate };
+
+// The record nouns whose catalogs word a closed field's values, as
+// `lead.status.engaged`. The first that words a value names it.
+const OPTION_NOUNS = ["lead", "contact", "company", "deal", "project"] as const;
+
+/**
+ * A closed field's value as the record page words it, or the value itself
+ * where no record words it. The value picker and the filter sentence both read
+ * it, so a status reads the same in both.
+ */
+export function optionWords(
+  field: string,
+  option: string,
+  t: (key: MessageKey) => string,
+): string {
+  const word = `${option.charAt(0).toUpperCase()}${option.slice(1)}`;
+  for (const noun of OPTION_NOUNS) {
+    // The shapes the catalogs use: `lead.status.engaged`, `deals.statusWon`,
+    // and a company's status worded as its lifecycle.
+    const keys = [`${noun}.${field}.${option}`, `${noun}s.${field}${word}`];
+    if (field === "status") keys.push(`${noun}.lifecycle.${option}`);
+    const found = keys.find(isMessageKey);
+    if (found) return t(found);
+  }
+  return option;
+}

@@ -23,6 +23,22 @@ type SharedMailboxReader interface {
 	OpenShared(auth Auth) (Connector, Auth, error)
 }
 
+// SharedMailboxSender is a SharedMailboxReader that can also send as the
+// shared mailbox. It uses the same installation-wide grant: an app permission
+// to send, or a delegation that includes the send scope. The registry asks
+// whether an admin turned replies on for one mailbox. The connector only
+// answers how its provider sends once they have.
+type SharedMailboxSender interface {
+	SharedMailboxReader
+	// SharedSendScope is the provider's own name for the send permission. The
+	// registry stores it on the mailbox's row as the grant an admin attests.
+	// The dispatcher's authority gate asks for it as it does for a personal one.
+	SharedSendScope() string
+	// OpenSharedSender returns the sender and the auth one send as the shared
+	// mailbox uses. Its From address is the mailbox's own.
+	OpenSharedSender(auth Auth) (EmailSender, Auth, error)
+}
+
 // The classes a shared-mailbox probe is refused with. Each names what the
 // admin fixes, and none carries the provider's own text.
 const (

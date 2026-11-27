@@ -15,43 +15,35 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-func (s *Store) linkEmploymentEpisode(ctx context.Context, tx pgx.Tx, contact ids.ContactID, company ids.CompanyID, e employmentEvidence, capturedBy string) (*ids.UUID, string, error) {
+func (s *Store) linkEmploymentEpisode(ctx context.Context, tx pgx.Tx, contact ids.ContactID, company ids.CompanyID, e employmentEvidence, capturedBy string, automatic bool) (*ids.UUID, string, error) {
 	if err := auth.HoldWritableLive(ctx, tx, contactEntity, contact.UUID); err != nil {
 		return nil, "", err
 	}
-	args := []any{contact}
-	contactPos := len(args)
-	args = append(args, company)
-	companyPos := len(args)
-	rows, err := tx.Query(ctx, storekit.SQLf(`SELECT %s FROM relationship WHERE contact_id=$%d AND company_id=$%d AND kind='employment' ORDER BY id FOR UPDATE`, relationshipColumns, contactPos, companyPos), args...)
-	if err != nil {
-		return nil, "", err
-	}
-	relationships, err := scanRelationships(rows)
-	rows.Close()
+	relationships, err := lockPairEmployments(ctx, tx, contact, company)
 	if err != nil {
 		return nil, "", err
 	}
 	_, started := preciseEmploymentDate(e.Started)
 	_, ended := preciseEmploymentDate(e.Ended)
 	matched, state := matchEmploymentEpisode(relationships, e, started, ended)
-	mayEnd := false
-	if state == employmentNeedsReview && started != nil && e.validDateRange() && undatedEndAt(relationships, *started) {
-		if mayEnd, err = mayEndUndatedTx(ctx, tx, relationships); err != nil {
+	// Evidence that matches no row would make a new employment. For a pair
+	// somebody ended it waits for a human, who may still resolve it.
+	if automatic && matched == nil {
+		removed, err := pairEndedByHand(ctx, tx, contact, company)
+		if err != nil {
 			return nil, "", err
+		}
+		if removed {
+			return nil, employmentNeedsReview, nil
 		}
 	}
-	if mayEnd {
-		// A dated current role is newer than an undated one at the same
-		// company: the older one ends where the new one starts.
-		if err := s.endUndatedEmploymentsTx(ctx, tx, relationships, *started, employmentPrecision(e.Started), e, capturedBy); err != nil {
-			return nil, "", err
-		}
-		state = ""
+	if state, err = s.endOlderUndatedTx(ctx, tx, relationships, started, e, capturedBy, state); err != nil {
+		return nil, "", err
 	}
 	if state != "" {
 		return matched, state, nil
@@ -186,6 +178,46 @@ func (s *Store) endUndatedEmploymentsTx(
 		}
 	}
 	return nil
+}
+
+// endOlderUndatedTx ends the undated current roles at the company when dated
+// evidence would otherwise wait for review. The older role ends where the new
+// one starts. It answers the state that remains.
+func (s *Store) endOlderUndatedTx(ctx context.Context, tx pgx.Tx, relationships []relationshipRow, started *time.Time, e employmentEvidence, capturedBy, state string) (string, error) {
+	if state != employmentNeedsReview || started == nil || !e.validDateRange() || !undatedEndAt(relationships, *started) {
+		return state, nil
+	}
+	mayEnd, err := mayEndUndatedTx(ctx, tx, relationships)
+	if err != nil || !mayEnd {
+		return state, err
+	}
+	if err := s.endUndatedEmploymentsTx(ctx, tx, relationships, *started, employmentPrecision(e.Started), e, capturedBy); err != nil {
+		return state, err
+	}
+	return "", nil
+}
+
+// lockPairEmployments reads and locks every employment of one contact at one
+// company, oldest first.
+func lockPairEmployments(ctx context.Context, tx pgx.Tx, contact ids.ContactID, company ids.CompanyID) ([]relationshipRow, error) {
+	args := []any{contact}
+	contactPos := len(args)
+	args = append(args, company)
+	companyPos := len(args)
+	rows, err := tx.Query(ctx, storekit.SQLf(`SELECT %s FROM relationship WHERE contact_id=$%d AND company_id=$%d AND kind='employment' ORDER BY id FOR UPDATE`, relationshipColumns, contactPos, companyPos), args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return scanRelationships(rows)
+}
+
+// pairEndedByHand is whether somebody ended this contact's employment at the
+// company, so new evidence for the pair waits for a human.
+func pairEndedByHand(ctx context.Context, tx pgx.Tx, contact ids.ContactID, company ids.CompanyID) (bool, error) {
+	var removed bool
+	err := tx.QueryRow(ctx, "SELECT "+employment.EndedAtCompanySQL("$1::uuid", "$2::uuid"), contact, company).Scan(&removed)
+	return removed, err
 }
 
 // undatedEndAt reports whether every undated current employment began before

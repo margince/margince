@@ -38,7 +38,7 @@ import (
 )
 
 // agentTaskRetentionActor is the principal the sweep runs as.
-const agentTaskRetentionActor = "agent:agent_task_retention"
+const agentTaskRetentionActor = "system:agent_task_retention"
 
 // AgentTaskRetentionSweeper drops MCP task rows past their own expiry.
 type AgentTaskRetentionSweeper struct {
