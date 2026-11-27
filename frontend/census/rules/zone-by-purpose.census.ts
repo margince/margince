@@ -84,6 +84,10 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "The unread mail notice prints its dates in the reader's zone; a named zone apart from UTC proves the wire instants are converted, whatever zone the runner is in.",
   },
   {
+    file: "features/lists/listhistory.test.tsx",
+    why: "Pins the reader's zone so the abbreviated history timestamp is checked independently of the contributor's browser zone.",
+  },
+  {
     file: "features/companies/companystanding.events.test.ts",
     why: "A task with only a date must read as its picked day for readers east and west of the picker and the company; only named zones apart from the runner's tell that from the instant's own day.",
   },

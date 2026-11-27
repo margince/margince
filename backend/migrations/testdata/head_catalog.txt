@@ -918,7 +918,6 @@ public.activity_review_template.activity_review_template_label_shape CHECK ((btr
 public.activity_review_template.activity_review_template_outcome_check CHECK ((outcome = ANY (ARRAY['won'::text, 'lost'::text])))
 public.activity_review_template.activity_review_template_pkey PRIMARY KEY (id)
 public.activity_review_template.activity_review_template_questions_shape CHECK (((jsonb_typeof(questions) = 'array'::text) AND (jsonb_array_length(questions) > 0)))
-public.activity_review_template.captured_by text NOT NULL gen=- def=-
 public.activity_review_template.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.activity_review_template.id uuid NOT NULL gen=- def=uuidv7()
 public.activity_review_template.key text NOT NULL gen=- def=-
@@ -928,10 +927,9 @@ public.activity_review_template.outcome text NOT NULL gen=- def=-
 public.activity_review_template.questions jsonb NOT NULL gen=- def=-
 public.activity_review_template.shipped_label text gen=- def=-
 public.activity_review_template.shipped_label_key text gen=- def=-
-public.activity_review_template.source text NOT NULL gen=- def=-
 public.activity_review_template.system boolean NOT NULL gen=- def=false
-public.activity_review_template.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.activity_review_template FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"key": 20000, "label": 120, "source": 20000, "outcome": 20000, "captured_by": 20000, "shipped_label": 120, "shipped_label_key": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"key":20000,"label":120,"outcome":20000,"shipped_label":120,"shipped_label_key":20000,"source":20000}')
-public.activity_review_template.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.activity_review_template FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"key": 20000, "label": 120, "source": 20000, "outcome": 20000, "captured_by": 20000, "shipped_label": 120, "shipped_label_key": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"key":20000,"label":120,"outcome":20000,"shipped_label":120,"shipped_label_key":20000,"source":20000}')
+public.activity_review_template.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.activity_review_template FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"key": 20000, "label": 120, "outcome": 20000, "shipped_label": 120, "shipped_label_key": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"key":20000,"label":120,"outcome":20000,"shipped_label":120,"shipped_label_key":20000}')
+public.activity_review_template.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.activity_review_template FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"key": 20000, "label": 120, "outcome": 20000, "shipped_label": 120, "shipped_label_key": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"key":20000,"label":120,"outcome":20000,"shipped_label":120,"shipped_label_key":20000}')
 public.activity_review_template.trg_activity_review_template_question_keys CREATE TRIGGER trg_activity_review_template_question_keys BEFORE INSERT OR UPDATE OF questions ON public.activity_review_template FOR EACH ROW EXECUTE FUNCTION key_shipped_review_questions()
 public.activity_review_template.trg_activity_review_template_updated CREATE TRIGGER trg_activity_review_template_updated BEFORE UPDATE ON public.activity_review_template FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.activity_review_template.updated_at timestamp with time zone NOT NULL gen=- def=now()
@@ -6263,7 +6261,6 @@ public.finance_customer_link.finance_customer_link_mapping_key UNIQUE (id, conne
 public.finance_customer_link.finance_customer_link_pkey PRIMARY KEY (id)
 public.finance_customer_link.finance_customer_link_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.finance_customer_link.id uuid NOT NULL gen=- def=uuidv7()
-public.finance_customer_link.source_updated_at timestamp with time zone gen=- def=-
 public.finance_customer_link.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.finance_customer_link FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"captured_by": 20000, "external_customer_id": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"external_customer_id":20000}')
 public.finance_customer_link.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.finance_customer_link FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"captured_by": 20000, "external_customer_id": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"external_customer_id":20000}')
 public.finance_customer_link.trg_finance_customer_link_updated CREATE TRIGGER trg_finance_customer_link_updated BEFORE UPDATE ON public.finance_customer_link FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
@@ -6494,7 +6491,6 @@ END
 public.forecast_contribution_pkey CREATE UNIQUE INDEX forecast_contribution_pkey ON public.forecast_contribution USING btree (id)
 public.forecast_snapshot acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.forecast_snapshot.base_currency currency_code NOT NULL gen=- def=-
-public.forecast_snapshot.best_case_minor bigint gen=- def=-
 public.forecast_snapshot.call_id uuid gen=- def=-
 public.forecast_snapshot.captured_by text NOT NULL gen=- def=-
 public.forecast_snapshot.confirmed_date_count integer NOT NULL gen=- def=-
@@ -6503,7 +6499,6 @@ public.forecast_snapshot.definition_version text NOT NULL gen=- def=-
 public.forecast_snapshot.eligible_count integer NOT NULL gen=- def=-
 public.forecast_snapshot.evidence_minor bigint NOT NULL gen=- def=-
 public.forecast_snapshot.focus_on_target boolean gen=- def=-
-public.forecast_snapshot.forecast_snapshot_best_case_minor_js_safe CHECK (((best_case_minor >= '-9007199254740991'::bigint) AND (best_case_minor <= '9007199254740991'::bigint)))
 public.forecast_snapshot.forecast_snapshot_call_fkey FOREIGN KEY (call_id) REFERENCES forecast_call(id) ON DELETE SET NULL
 public.forecast_snapshot.forecast_snapshot_counts_are_tallies CHECK (((eligible_count >= 0) AND (priced_count >= 0) AND (confirmed_date_count >= 0) AND (fx_missing_count >= 0) AND (priced_count <= eligible_count) AND (confirmed_date_count <= eligible_count) AND (fx_missing_count <= eligible_count)))
 public.forecast_snapshot.forecast_snapshot_evidence_minor_js_safe CHECK (((evidence_minor >= '-9007199254740991'::bigint) AND (evidence_minor <= '9007199254740991'::bigint)))
@@ -6525,7 +6520,7 @@ public.forecast_snapshot.forecast_snapshot_range_quantiles_known CHECK (((range_
 public.forecast_snapshot.forecast_snapshot_range_runs_counted CHECK (((range_runs IS NULL) OR (range_runs >= 1)))
 public.forecast_snapshot.forecast_snapshot_range_version_present CHECK (((range_version IS NULL) OR (btrim(range_version) <> ''::text)))
 public.forecast_snapshot.forecast_snapshot_range_whole CHECK ((((range_low_minor IS NULL) = (range_high_minor IS NULL)) AND ((range_low_minor IS NULL) = (range_runs IS NULL)) AND ((range_low_minor IS NULL) = (range_quantiles IS NULL)) AND ((range_low_minor IS NULL) = (range_version IS NULL))))
-public.forecast_snapshot.forecast_snapshot_readings_not_negative CHECK (((won_minor >= 0) AND (evidence_minor >= 0) AND (best_case_minor >= 0) AND (open_minor >= 0) AND (weighted_minor >= 0)))
+public.forecast_snapshot.forecast_snapshot_readings_not_negative CHECK (((won_minor >= 0) AND (evidence_minor >= 0) AND (open_minor >= 0) AND (weighted_minor >= 0)))
 public.forecast_snapshot.forecast_snapshot_risk_signals_version_present CHECK (((risk_signals_version IS NULL) OR (btrim(risk_signals_version) <> ''::text)))
 public.forecast_snapshot.forecast_snapshot_scope_id_matches_kind CHECK (((scope_kind = 'workspace'::text) = (scope_id IS NULL)))
 public.forecast_snapshot.forecast_snapshot_scope_kind_check CHECK ((scope_kind = ANY (ARRAY['workspace'::text, 'team'::text, 'owner'::text])))
@@ -7245,15 +7240,14 @@ public.import_run.progress jsonb gen=- def=-
 public.import_run.progress_at timestamp with time zone gen=- def=-
 public.import_run.report jsonb gen=- def=-
 public.import_run.resume_count integer NOT NULL gen=- def=0
-public.import_run.source text NOT NULL gen=- def=-
 public.import_run.source_name text gen=s def=COALESCE((mapping ->> 'source_name'::text), ''::text)
 public.import_run.source_ref text NOT NULL gen=- def=-
 public.import_run.source_released_at timestamp with time zone gen=- def=-
 public.import_run.started_at timestamp with time zone gen=- def=-
 public.import_run.status text NOT NULL gen=- def='pending'::text
 public.import_run.superseded_by uuid gen=- def=-
-public.import_run.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.import_run FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"error": 20000, "phase": 20000, "source": 20000, "status": 20000, "connector": 20000, "draft_step": 20000, "job_status": 20000, "source_ref": 20000, "approved_by": 20000, "captured_by": 20000, "phase_object": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"approved_by":20000,"captured_by":20000,"connector":20000,"draft_step":20000,"error":20000,"job_status":20000,"phase":20000,"phase_object":20000,"source":20000,"source_ref":20000,"status":20000}')
-public.import_run.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.import_run FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"error": 20000, "phase": 20000, "source": 20000, "status": 20000, "connector": 20000, "draft_step": 20000, "job_status": 20000, "source_ref": 20000, "approved_by": 20000, "captured_by": 20000, "phase_object": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"approved_by":20000,"captured_by":20000,"connector":20000,"draft_step":20000,"error":20000,"job_status":20000,"phase":20000,"phase_object":20000,"source":20000,"source_ref":20000,"status":20000}')
+public.import_run.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.import_run FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"error": 20000, "phase": 20000, "status": 20000, "connector": 20000, "draft_step": 20000, "job_status": 20000, "source_ref": 20000, "approved_by": 20000, "captured_by": 20000, "phase_object": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"approved_by":20000,"captured_by":20000,"connector":20000,"draft_step":20000,"error":20000,"job_status":20000,"phase":20000,"phase_object":20000,"source_ref":20000,"status":20000}')
+public.import_run.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.import_run FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"error": 20000, "phase": 20000, "status": 20000, "connector": 20000, "draft_step": 20000, "job_status": 20000, "source_ref": 20000, "approved_by": 20000, "captured_by": 20000, "phase_object": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"approved_by":20000,"captured_by":20000,"connector":20000,"draft_step":20000,"error":20000,"job_status":20000,"phase":20000,"phase_object":20000,"source_ref":20000,"status":20000}')
 public.import_run.undo_report jsonb gen=- def=-
 public.import_run.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.import_run.version integer NOT NULL gen=- def=1
@@ -11210,7 +11204,6 @@ public.team_weekly_review_member.user_id uuid NOT NULL gen=- def=-
 public.team_weekly_review_member_pkey CREATE UNIQUE INDEX team_weekly_review_member_pkey ON public.team_weekly_review_member USING btree (id)
 public.team_weekly_review_outlook acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.team_weekly_review_outlook.base_currency currency_code NOT NULL gen=- def=-
-public.team_weekly_review_outlook.best_case_minor bigint gen=- def=-
 public.team_weekly_review_outlook.closing_landing_minor bigint gen=- def=-
 public.team_weekly_review_outlook.closing_snapshot_id uuid gen=- def=-
 public.team_weekly_review_outlook.commit_minor bigint gen=- def=-
@@ -11222,7 +11215,6 @@ public.team_weekly_review_outlook.period_end date NOT NULL gen=- def=-
 public.team_weekly_review_outlook.period_kind text NOT NULL gen=- def=-
 public.team_weekly_review_outlook.period_start date NOT NULL gen=- def=-
 public.team_weekly_review_outlook.team_weekly_review_id uuid NOT NULL gen=- def=-
-public.team_weekly_review_outlook.team_weekly_review_outlook_best_case_minor_js_safe CHECK (((best_case_minor >= '-9007199254740991'::bigint) AND (best_case_minor <= '9007199254740991'::bigint)))
 public.team_weekly_review_outlook.team_weekly_review_outlook_closing_landing_minor_js_safe CHECK (((closing_landing_minor >= '-9007199254740991'::bigint) AND (closing_landing_minor <= '9007199254740991'::bigint)))
 public.team_weekly_review_outlook.team_weekly_review_outlook_commit_minor_js_safe CHECK (((commit_minor >= '-9007199254740991'::bigint) AND (commit_minor <= '9007199254740991'::bigint)))
 public.team_weekly_review_outlook.team_weekly_review_outlook_currency_present CHECK ((btrim((base_currency)::text) <> ''::text))
@@ -12626,7 +12618,6 @@ public.weekly_review_learning_citation_pkey CREATE UNIQUE INDEX weekly_review_le
 public.weekly_review_learning_pkey CREATE UNIQUE INDEX weekly_review_learning_pkey ON public.weekly_review_learning USING btree (id)
 public.weekly_review_outlook acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.weekly_review_outlook.base_currency currency_code NOT NULL gen=- def=-
-public.weekly_review_outlook.best_case_minor bigint gen=- def=-
 public.weekly_review_outlook.closing_landing_minor bigint gen=- def=-
 public.weekly_review_outlook.closing_snapshot_id uuid gen=- def=-
 public.weekly_review_outlook.commit_minor bigint gen=- def=-
@@ -12640,7 +12631,6 @@ public.weekly_review_outlook.period_start date NOT NULL gen=- def=-
 public.weekly_review_outlook.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.weekly_review_outlook FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"period_kind": 20000, "forward_measure": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"forward_measure":20000,"period_kind":20000}')
 public.weekly_review_outlook.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.weekly_review_outlook FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"period_kind": 20000, "forward_measure": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"forward_measure":20000,"period_kind":20000}')
 public.weekly_review_outlook.weekly_review_id uuid NOT NULL gen=- def=-
-public.weekly_review_outlook.weekly_review_outlook_best_case_minor_js_safe CHECK (((best_case_minor >= '-9007199254740991'::bigint) AND (best_case_minor <= '9007199254740991'::bigint)))
 public.weekly_review_outlook.weekly_review_outlook_closing_landing_minor_js_safe CHECK (((closing_landing_minor >= '-9007199254740991'::bigint) AND (closing_landing_minor <= '9007199254740991'::bigint)))
 public.weekly_review_outlook.weekly_review_outlook_commit_minor_js_safe CHECK (((commit_minor >= '-9007199254740991'::bigint) AND (commit_minor <= '9007199254740991'::bigint)))
 public.weekly_review_outlook.weekly_review_outlook_currency_present CHECK ((btrim((base_currency)::text) <> ''::text))

@@ -28,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // FormerMemberInput is one departed colleague, as the system they worked in
@@ -95,6 +96,11 @@ func (s *Service) provisionFormerMember(ctx context.Context, actor Identity, in 
 	if err := s.refuseUntilDescribed(ctx); err != nil {
 		return ids.UserID{}, false, err
 	}
+	email, err := values.ParseEmailReference(in.Email)
+	if err != nil {
+		return ids.UserID{}, false, err
+	}
+	in.Email = email.String()
 	role := in.Role
 	if role == "" {
 		role = defaultFormerRole
@@ -117,6 +123,9 @@ func (s *Service) provisionFormerMember(ctx context.Context, actor Identity, in 
 		if found {
 			newUserID = survivor
 			return nil
+		}
+		if _, err := values.ParseEmail(in.Email); err != nil {
+			return err
 		}
 		if err := refuseRemovedEmail(ctx, tx, in.Email); err != nil {
 			return err

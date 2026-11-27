@@ -348,7 +348,7 @@ func RefuseWireAdmitting(source string, sourceSystem *string, importer bool) err
 			return err
 		}
 	}
-	return Refuse("source", source)
+	return RefuseSource(source)
 }
 
 // Refuse guards ONE provenance field on a create wire. The flip stamps

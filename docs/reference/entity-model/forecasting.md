@@ -157,13 +157,12 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 
 ## forecast_snapshot
 
-38 columns · primary key `(id)` · referenced by 2 foreign keys
+37 columns · primary key `(id)` · referenced by 2 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `base_currency` | `currency_code` | yes |  |
-| `best_case_minor` | `bigint` |  |  |
 | `call_id` | `uuid` |  | Points at `forecast_call.id`. |
 | `confirmed_date_count` | `integer` | yes |  |
 | `definition_version` | `text` | yes |  |
@@ -209,7 +208,6 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 
 **Rules**
 
-- `forecast_snapshot_best_case_minor_js_safe`: `CHECK (((best_case_minor >= '-9007199254740991'::bigint) AND (best_case_minor <= '9007199254740991'::bigint)))`
 - `forecast_snapshot_counts_are_tallies`: `CHECK (((eligible_count >= 0) AND (priced_count >= 0) AND (confirmed_date_count >= 0) AND (fx_missing_count >= 0) AND (priced_count <= eligible_count) AND (confirmed_date_count <= eligible_count) AND (fx_missing_count <= eligible_count)))`
 - `forecast_snapshot_evidence_minor_js_safe`: `CHECK (((evidence_minor >= '-9007199254740991'::bigint) AND (evidence_minor <= '9007199254740991'::bigint)))`
 - `forecast_snapshot_forward_measure_known`: `CHECK (((forward_measure IS NULL) OR (forward_measure = ANY (ARRAY['likely', 'qualified_likely', 'commit_evidence', 'qualified_commit_evidence', 'weighted', 'qualified_weighted', 'manager_call']))))`
@@ -227,7 +225,7 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 - `forecast_snapshot_range_runs_counted`: `CHECK (((range_runs IS NULL) OR (range_runs >= 1)))`
 - `forecast_snapshot_range_version_present`: `CHECK (((range_version IS NULL) OR (btrim(range_version) <> '')))`
 - `forecast_snapshot_range_whole`: `CHECK ((((range_low_minor IS NULL) = (range_high_minor IS NULL)) AND ((range_low_minor IS NULL) = (range_runs IS NULL)) AND ((range_low_minor IS NULL) = (range_quantiles IS NULL)) AND ((range_low_minor IS NULL) = (range_version IS NULL))))`
-- `forecast_snapshot_readings_not_negative`: `CHECK (((won_minor >= 0) AND (evidence_minor >= 0) AND (best_case_minor >= 0) AND (open_minor >= 0) AND (weighted_minor >= 0)))`
+- `forecast_snapshot_readings_not_negative`: `CHECK (((won_minor >= 0) AND (evidence_minor >= 0) AND (open_minor >= 0) AND (weighted_minor >= 0)))`
 - `forecast_snapshot_risk_signals_version_present`: `CHECK (((risk_signals_version IS NULL) OR (btrim(risk_signals_version) <> '')))`
 - `forecast_snapshot_scope_id_matches_kind`: `CHECK (((scope_kind = 'workspace') = (scope_id IS NULL)))`
 - `forecast_snapshot_scope_kind_check`: `CHECK ((scope_kind = ANY (ARRAY['workspace', 'team', 'owner'])))`

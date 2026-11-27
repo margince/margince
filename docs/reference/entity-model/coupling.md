@@ -10,7 +10,7 @@ An area with no inbound key is a candidate for a separate module. Its outbound k
 
 | Area | Tables | Columns | Inbound keys | Outbound keys | Outbound cascades |
 |---|--:|--:|--:|--:|--:|
-| [activities](activities.md) | 33 | 427 | 31 | 41 | 20 |
+| [activities](activities.md) | 33 | 425 | 31 | 41 | 20 |
 | [agents](agents.md) | 3 | 28 | 0 | 5 | 1 |
 | [ai](ai.md) | 12 | 191 | 0 | 3 | 0 |
 | [aiactivity](aiactivity.md) | 1 | 24 | 0 | 2 | 0 |
@@ -23,22 +23,22 @@ An area with no inbound key is a candidate for a separate module. Its outbound k
 | [collections](collections.md) | 13 | 102 | 1 | 9 | 6 |
 | [commissions](commissions.md) | 1 | 18 | 0 | 2 | 2 |
 | [comms](comms.md) | 1 | 51 | 5 | 6 | 1 |
-| [compose](compose.md) | 44 | 398 | 11 | 30 | 26 |
+| [compose](compose.md) | 44 | 396 | 11 | 30 | 26 |
 | [consent](consent.md) | 23 | 319 | 2 | 44 | 23 |
-| [contacts](contacts.md) | 50 | 718 | 75 | 38 | 14 |
+| [contacts](contacts.md) | 50 | 719 | 75 | 38 | 14 |
 | [continuity](continuity.md) | 1 | 7 | 0 | 0 | 0 |
 | [contracts](contracts.md) | 1 | 29 | 2 | 3 | 0 |
 | [customfields](customfields.md) | 1 | 20 | 0 | 1 | 0 |
 | [dealrooms](dealrooms.md) | 8 | 93 | 0 | 8 | 1 |
 | [deals](deals.md) | 26 | 379 | 26 | 18 | 2 |
-| [finance](finance.md) | 5 | 74 | 0 | 3 | 0 |
-| [forecasting](forecasting.md) | 4 | 88 | 1 | 2 | 0 |
+| [finance](finance.md) | 5 | 76 | 0 | 3 | 0 |
+| [forecasting](forecasting.md) | 4 | 87 | 1 | 2 | 0 |
 | [identity](identity.md) | 22 | 217 | 155 | 7 | 5 |
 | [initiatives](initiatives.md) | 5 | 40 | 0 | 2 | 1 |
 | [integrations](integrations.md) | 5 | 59 | 3 | 3 | 1 |
 | [introductions](introductions.md) | 1 | 31 | 0 | 6 | 1 |
 | [knowledge](knowledge.md) | 3 | 38 | 0 | 0 | 0 |
-| [migration](migration.md) | 2 | 42 | 0 | 0 | 0 |
+| [migration](migration.md) | 2 | 41 | 0 | 0 | 0 |
 | [notices](notices.md) | 3 | 26 | 0 | 3 | 3 |
 | [platform](platform.md) | 15 | 106 | 1 | 10 | 7 |
 | [privacy](privacy.md) | 2 | 14 | 0 | 0 | 0 |

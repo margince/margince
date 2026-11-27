@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/langcopy/langcopytest"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
@@ -39,6 +40,12 @@ func TestEveryUpdatableFieldHasALabelInEveryLanguage(t *testing.T) {
 				t.Errorf("%s: %q is labelled but no update shape has it", lang, field)
 			}
 		}
+	}
+	for field, label := range fieldLabelsByLang[textlang.English] {
+		langcopytest.EnglishText(t, field, label)
+	}
+	for field, label := range fieldLabelsByLang[textlang.Vietnamese] {
+		langcopytest.VietnameseText(t, field, label)
 	}
 }
 
