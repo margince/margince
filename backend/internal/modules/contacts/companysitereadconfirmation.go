@@ -40,12 +40,13 @@ func recordSiteReadConfirmation(ctx context.Context, tx pgx.Tx, read SiteRead, c
 	if err := storekit.EmitEvent(ctx, tx, auditID, confirmation.target.id.UUID, payload); err != nil {
 		return nil, fmt.Errorf("emit %s: %w", payload.EventType(), err)
 	}
-	// An empty proposal list is known, not SQL NULL.
 	if _, err := tx.Exec(ctx, `UPDATE site_read
-		SET company_id = $2, proposal_ids = coalesce($3, '{}'::uuid[]),
-		    confirmed_at = now(), updated_at = now()
-		WHERE id = $1`, read.ID, confirmation.target.id, confirmation.proposalIDs); err != nil {
+		SET company_id = $2, confirmed_at = now(), updated_at = now()
+		WHERE id = $1`, read.ID, confirmation.target.id); err != nil {
 		return nil, fmt.Errorf("mark website read confirmed: %w", err)
+	}
+	if _, err := storeSiteReadProposals(ctx, tx, read.ID, confirmation.proposalIDs); err != nil {
+		return nil, err
 	}
 	return after, nil
 }
