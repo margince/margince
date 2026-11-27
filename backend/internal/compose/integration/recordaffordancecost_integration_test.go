@@ -148,12 +148,13 @@ func TestRecordAffordancesShareAuthorityOnStoreReads(t *testing.T) {
 // recordReadCost is each store read's statement count on a one-row fixture.
 // Contacts, companies and deals answer both flags from one authority read, so
 // adding the update grant costs nothing. A lead or project reader without the
-// update grant skips its two authority statements.
+// update grant skips its two authority statements. The contact read's count
+// includes the two statements that switch it to generic plans and back.
 var recordReadCost = struct {
 	contact, company, deal, contactPage, companyPage, dealPage [2]int64
 	lead, project, leadPage, projectPage                       [2]int64
 }{
-	contact: [2]int64{15, 15}, company: [2]int64{12, 12}, deal: [2]int64{9, 9},
+	contact: [2]int64{17, 17}, company: [2]int64{12, 12}, deal: [2]int64{9, 9},
 	contactPage: [2]int64{12, 12}, companyPage: [2]int64{11, 11}, dealPage: [2]int64{7, 7},
 	lead: [2]int64{6, 8}, project: [2]int64{5, 7}, leadPage: [2]int64{7, 9}, projectPage: [2]int64{4, 6},
 }

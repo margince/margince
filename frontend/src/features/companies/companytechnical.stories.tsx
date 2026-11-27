@@ -114,9 +114,11 @@ function lanes(
       outcome: overrides[lane] ?? "applied",
       attempts: overrides[lane] === "failed" ? 3 : 0,
       last_success_at:
-        overrides[lane] === "failed"
-          ? "2026-08-20T07:00:00Z"
-          : "2026-08-27T07:12:00Z",
+        overrides[lane] === "never"
+          ? null
+          : overrides[lane] === "failed"
+            ? "2026-08-20T07:00:00Z"
+            : "2026-08-27T07:12:00Z",
       next_attempt_at: "2026-09-03T07:12:00Z",
     })),
   };
@@ -183,6 +185,30 @@ export const OneSourceDidNotAnswer: Story = {
         }),
       [`GET /companies/${COMPANY}/technical-enrich/latest`]: () =>
         jsonResponse(lanes({ certlog: "failed" })),
+    });
+    return (
+      <StoryProviders locale="de">
+        <TechnicalProfilePanel companyId={COMPANY} />
+      </StoryProviders>
+    );
+  },
+};
+
+/** A source that has never answered: no previous result to keep, so none is promised. */
+export const OneSourceNeverAnswered: Story = {
+  render: () => {
+    const never = lanes({ certlog: "never" });
+    installFetchStub({
+      "GET /me": A_READER,
+      [`GET /companies/${COMPANY}/facts`]: () =>
+        jsonResponse({ data: READ_FACTS }),
+      [`GET /companies/${COMPANY}/technical-enrich/latest`]: () =>
+        jsonResponse({
+          ...never,
+          lanes: (never.lanes as Record<string, unknown>[]).map((lane) =>
+            lane.lane === "certlog" ? { ...lane, outcome: "failed" } : lane,
+          ),
+        }),
     });
     return (
       <StoryProviders locale="de">

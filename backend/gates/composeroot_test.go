@@ -152,13 +152,19 @@ const (
 	// and its cases, met with develop's in the sync.
 	// Raised by 64 production lines and 1 test line when develop's chat
 	// clarification ask met the sync; develop's own ceiling already covers them.
+	// Raised by 2 production and 27 test lines for the unread mail period on the
+	// owner's connection row, mapped and checked in the unexported connection wire.
+	// Raised by 44 test lines for the contact page reads the plan reuse census
+	// drives through its unexported statement recorder and partial index check.
 	composeRootProductionLines = 232_131
 	// Raised by 18 test lines for the link suggestion tool cases.
 	// Raised by 2 test lines for the actor census waivers of the two jobs that
 	// bind their colleague inside a method.
 	// Raised by 48 test lines for main's gate that keeps an agent's offered text
 	// from naming a tool it is not offered.
-	composeRootTestLines = 363_792
+	// Raised by 37 test lines for main's unread mail period and contact page
+	// census cases, met with develop's in the sync.
+	composeRootTestLines = 363_829
 )
 
 // A read under these floors stopped early or read the wrong place, and would

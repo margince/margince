@@ -12,7 +12,7 @@ type Activity = components["schemas"]["Activity"];
 // title and a date, and nothing a reader can act on.
 //
 // A mirror of the backend's native task families
-// (storekit.TaskSourceFamilies); backend/gates/frontendtaskorigins_test.go
+// (storekit.TaskSourceFamilies); backend/gates/frontendvocabularymirrors_test.go
 // fails when the two stop naming the same sources.
 export const TASK_ORIGINS: Readonly<Record<string, MessageKey>> = {
   assurance: "tasks.origin.assurance",
