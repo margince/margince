@@ -14533,6 +14533,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "scheduling.defaultSubject": "Termin über Margince",
   "book.name": "Name",
   "book.email": "E-Mail-Adresse",
+  "book.privacyInformation": "Datenschutzhinweise",
+  "book.privacyMissing":
+    "Auf Ihrer Buchungsseite fehlt ein Link zu den Datenschutzhinweisen. Bitten Sie einen Administrator, unter Einstellungen → Unternehmen → Firmenangaben in E-Mails das Feld „Kontakt zum Datenschutz“ auszufüllen.",
   "book.consentWording":
     "Ich bin einverstanden, dass mein Name und meine E-Mail-Adresse gespeichert werden, um diesen Termin zu vereinbaren und im Anschluss daran nachzufassen.",
 

@@ -198,3 +198,8 @@ Also called: undo an erasure, unblock an erased address, store a contact again.
 Your booking link can use Google Meet or Microsoft Teams as its **Video call**. Then Margince asks your calendar for the link when the meeting is created. You pick it under **Edit link**. Google Meet needs bookings to land in a Google calendar, and Microsoft Teams in a Microsoft 365 calendar.
 
 The link can take a few seconds to appear. Until then the meeting says "The link appears once the calendar accepts the invitation." If the calendar makes no link, the invitation still goes out. The meeting says "The calendar did not add a video link. Add one in your calendar."
+
+The guest's consent checkbox shows the installation's privacy page, or its data protection
+contact when no page is set. The consent proof keeps the wording and the address the form
+showed. A later change to the address does not change that proof. When neither address is
+set, booking still works and the host's booking settings show a warning.

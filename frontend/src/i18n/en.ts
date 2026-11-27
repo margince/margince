@@ -14475,6 +14475,9 @@ export const en = {
   "scheduling.defaultSubject": "Meeting via Margince",
   "book.name": "Your name",
   "book.email": "Your email",
+  "book.privacyInformation": "Privacy information",
+  "book.privacyMissing":
+    "Your booking page has no privacy information link. Ask an administrator to fill in “Data protection contact” under Settings → Company → Company details in mail.",
   "book.consentWording":
     "I agree that my name and email are stored to arrange and follow up on this meeting.",
 

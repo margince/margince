@@ -63897,8 +63897,11 @@ type PublicSchedulingProfile struct {
 	OfferedLengths *[]int `json:"offered_lengths,omitempty"`
 
 	// Paused True when the page takes no bookings now: the host turned bookings off, or the calendar behind it cannot take them. The availability and booking calls then answer as for an unknown page.
-	Paused bool   `json:"paused"`
-	Title  string `json:"title"`
+	Paused bool `json:"paused"`
+
+	// PrivacyInformation The installation's privacy page, falling back to its privacy contact. Absent when neither is stated.
+	PrivacyInformation *string `json:"privacy_information,omitempty"`
+	Title              string  `json:"title"`
 
 	// VideoApp Present when new meetings get a video call link from the host's calendar.
 	VideoApp *PublicSchedulingProfileVideoApp `json:"video_app,omitempty"`
@@ -68283,8 +68286,11 @@ type SchedulingProfile struct {
 	NoticeMinutes int     `json:"notice_minutes" maximum:"10080" minimum:"0"`
 
 	// OfferedLengths Additional meeting lengths offered by this host. The default duration is always offered.
-	OfferedLengths *[]int                    `json:"offered_lengths,omitempty" unique:"items"`
-	Provider       SchedulingProfileProvider `json:"provider"`
+	OfferedLengths *[]int `json:"offered_lengths,omitempty" unique:"items"`
+
+	// PrivacyInformation The installation's privacy page, falling back to its privacy contact. Absent when neither is stated.
+	PrivacyInformation *string                   `json:"privacy_information,omitempty"`
+	Provider           SchedulingProfileProvider `json:"provider"`
 
 	// PublicUrl The address to share: `/book/{alias}` when an alias is set, else `/book/{slug}`, on the configured public origin. Absent when no usable public origin is configured.
 	PublicUrl   *string `json:"public_url,omitempty"`

@@ -61857,6 +61857,10 @@ components:
         every other field holds a neutral value (empty text, zero duration, `enabled: false`, no
         `video_app`), so the guest learns nothing about the calendar behind the page.
       properties:
+        privacy_information:
+          type: string
+          readOnly: true
+          description: The installation's privacy page, falling back to its privacy contact. Absent when neither is stated.
         host_name: { type: string }
         company_name: { type: string }
         logo_url: { type: string, description: Absolute public logo URL when the public origin is configured; otherwise relative to the API origin. }
@@ -61874,6 +61878,10 @@ components:
       type: object
       required: [enabled, provider, calendar_id, duration_minutes, notice_minutes, horizon_days, buffer_minutes, title, location]
       properties:
+        privacy_information:
+          type: string
+          readOnly: true
+          description: The installation's privacy page, falling back to its privacy contact. Absent when neither is stated.
         enabled: { type: boolean }
         provider: { type: string, enum: ['', gcal, graphcal], x-extensible-enum: true }
         calendar_id: { type: string, maxLength: 512 }

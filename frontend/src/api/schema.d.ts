@@ -44900,6 +44900,8 @@ export interface components {
          *     `video_app`), so the guest learns nothing about the calendar behind the page.
          */
         PublicSchedulingProfile: {
+            /** @description The installation's privacy page, falling back to its privacy contact. Absent when neither is stated. */
+            readonly privacy_information?: string;
             host_name: string;
             company_name: string;
             /** @description Absolute public logo URL when the public origin is configured; otherwise relative to the API origin. */
@@ -44920,6 +44922,8 @@ export interface components {
             video_app?: "google_meet" | "microsoft_teams";
         };
         SchedulingProfile: {
+            /** @description The installation's privacy page, falling back to its privacy contact. Absent when neither is stated. */
+            readonly privacy_information?: string;
             enabled: boolean;
             /** @enum {string} */
             provider: "" | "gcal" | "graphcal";

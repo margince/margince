@@ -169,6 +169,7 @@ func requestedPurpose(c crmcontracts.CaptureConsent) *ids.UUID {
 // operational purpose, and the marketing question admits only a purpose that
 // requires double opt-in. Folding them would give one call site two meanings.
 type ConsentCapturer interface {
+	BookingPrivacyInformation(ctx context.Context) (string, error)
 	ScopedPurpose(ctx context.Context, requested *ids.UUID) (ids.UUID, error)
 	ValidateMarketingPurpose(ctx context.Context, purposeID ids.UUID) error
 	// CaptureBookingConsent records the operational grant and, when the form

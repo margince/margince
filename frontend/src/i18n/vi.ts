@@ -14143,6 +14143,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "scheduling.defaultSubject": "Cuộc họp qua Margince",
   "book.name": "Họ và tên",
   "book.email": "Email",
+  "book.privacyInformation": "Thông tin về quyền riêng tư",
+  "book.privacyMissing":
+    "Trang đặt lịch chưa có liên kết đến thông tin về quyền riêng tư. Hãy nhờ quản trị viên điền “Liên hệ về bảo vệ dữ liệu” trong Cài đặt → Công ty → Thông tin công ty trong email.",
   "book.consentWording":
     "Tôi đồng ý cho lưu tên và email của mình để sắp xếp và liên hệ sau cuộc họp này.",
 
