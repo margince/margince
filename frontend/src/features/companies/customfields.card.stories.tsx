@@ -73,7 +73,8 @@ function story(
   return () => {
     installFetchStub({
       "GET /me": meRoute({ custom_field: ["read"] }),
-      "GET /custom-fields": () => jsonResponse({ data: fields }),
+      "GET /custom-fields": () =>
+        jsonResponse({ page: { has_more: false }, data: fields }),
     });
     return (
       <StoryProviders>

@@ -13,6 +13,7 @@ package gates
 // other declaration refers to it.
 
 import (
+	"bytes"
 	"io/fs"
 	"regexp"
 	"strings"
@@ -46,8 +47,14 @@ func TestTheTranscriptMarkerIsSpelledOnce(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		if path != transcriptMarkerHome && transcriptMarkerLiteralUse.Match(src) {
+		// Each pattern spells its word in this case: source_system in both use
+		// branches, ranscriptSource in every declared name.
+		if path != transcriptMarkerHome && bytes.Contains(src, []byte("source_system")) &&
+			transcriptMarkerLiteralUse.Match(src) {
 			t.Errorf("%s compares source_system with the marker spelled out; use %s", path, transcriptMarkerRef)
+		}
+		if !bytes.Contains(src, []byte("ranscriptSource")) {
+			return nil
 		}
 		for _, m := range transcriptMarkerDecl.FindAllStringSubmatch(string(src), -1) {
 			declared++

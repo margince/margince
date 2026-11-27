@@ -74,7 +74,7 @@ var sameTransactionValidators = map[string]bool{
 
 func TestAConstraintIsValidatedInItsOwnMigration(t *testing.T) {
 	t.Parallel()
-	files, err := filepath.Glob(filepath.Join("migrations", "core", "*.up.sql"))
+	files, err := gatekit.Glob(filepath.Join("migrations", "core", "*.up.sql"))
 	if err != nil {
 		t.Fatalf("listing core migrations: %v", err)
 	}

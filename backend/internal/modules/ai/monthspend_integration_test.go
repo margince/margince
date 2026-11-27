@@ -48,7 +48,8 @@ func newSpendLedger(t *testing.T, env *rateEnv) *spendLedger {
 	ws, ctx := env.seedWorkspace(context.Background(), t)
 	db := env.dbFor(ws)
 	l := &spendLedger{t: t, env: env, ws: ws, ctx: ctx, calls: NewCallMeter(db)}
-	l.meter = &Meter{db: db, now: func() time.Time { return l.clock }}
+	l.meter = NewMeter(db)
+	l.meter.now = func() time.Time { return l.clock }
 	l.rates = NewRateStore(db).SetClock(func() time.Time { return l.clock })
 	return l
 }

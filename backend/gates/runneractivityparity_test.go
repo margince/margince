@@ -17,7 +17,6 @@ package gates
 // place again.
 
 import (
-	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
@@ -59,7 +58,7 @@ func projectionStates(t *testing.T) []string {
 // search is over the whole namespace rather than a filename anyone can guess.
 func checkValues(t *testing.T, constraint string) []string {
 	t.Helper()
-	matches, err := filepath.Glob("migrations/core/*.up.sql")
+	matches, err := gatekit.Glob("migrations/core/*.up.sql")
 	if err != nil || len(matches) == 0 {
 		t.Fatalf("no core migrations found (err %v)", err)
 	}

@@ -1076,7 +1076,9 @@ public.agent_task_pkey CREATE UNIQUE INDEX agent_task_pkey ON public.agent_task 
 public.ai_call acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.ai_call.agent_run_id uuid gen=- def=-
 public.ai_call.ai_call_cache_write_tokens_js_safe CHECK (((cache_write_tokens >= '-9007199254740991'::bigint) AND (cache_write_tokens <= '9007199254740991'::bigint)))
+public.ai_call.ai_call_cache_write_tokens_not_negative CHECK ((cache_write_tokens >= 0)) NOT VALID
 public.ai_call.ai_call_cached_tokens_js_safe CHECK (((cached_tokens >= '-9007199254740991'::bigint) AND (cached_tokens <= '9007199254740991'::bigint)))
+public.ai_call.ai_call_cached_tokens_not_negative CHECK ((cached_tokens >= 0)) NOT VALID
 public.ai_call.ai_call_config_fk FOREIGN KEY (config_hash) REFERENCES ai_call_config(hash) ON DELETE RESTRICT
 public.ai_call.ai_call_context_fingerprint_check CHECK (((context_fingerprint = ''::text) OR (context_fingerprint ~ '^[0-9a-f]{64}$'::text)))
 public.ai_call.ai_call_context_scopes_check CHECK ((context_scopes <@ ARRAY['identity'::text, 'positioning'::text, 'sales'::text, 'offer'::text, 'market'::text, 'proof'::text, 'administrative'::text]))
@@ -1087,10 +1089,13 @@ public.ai_call.ai_call_kind_check CHECK ((kind = ANY (ARRAY['completion'::text, 
 public.ai_call.ai_call_latency_ms_js_safe CHECK (((latency_ms >= '-9007199254740991'::bigint) AND (latency_ms <= '9007199254740991'::bigint)))
 public.ai_call.ai_call_pkey PRIMARY KEY (id)
 public.ai_call.ai_call_reasoning_tokens_js_safe CHECK (((reasoning_tokens >= '-9007199254740991'::bigint) AND (reasoning_tokens <= '9007199254740991'::bigint)))
+public.ai_call.ai_call_reasoning_tokens_not_negative CHECK ((reasoning_tokens >= 0)) NOT VALID
 public.ai_call.ai_call_source_check CHECK ((served_identity_source = ANY (ARRAY['response'::text, 'echo'::text, 'configured'::text])))
 public.ai_call.ai_call_subject_shape CHECK (((subject_type IS NULL) = (subject_id IS NULL)))
 public.ai_call.ai_call_tokens_in_js_safe CHECK (((tokens_in >= '-9007199254740991'::bigint) AND (tokens_in <= '9007199254740991'::bigint)))
+public.ai_call.ai_call_tokens_in_not_negative CHECK ((tokens_in >= 0)) NOT VALID
 public.ai_call.ai_call_tokens_out_js_safe CHECK (((tokens_out >= '-9007199254740991'::bigint) AND (tokens_out <= '9007199254740991'::bigint)))
+public.ai_call.ai_call_tokens_out_not_negative CHECK ((tokens_out >= 0)) NOT VALID
 public.ai_call.attempt integer NOT NULL gen=- def=1
 public.ai_call.attempt_reason text NOT NULL gen=- def=''::text
 public.ai_call.cache_hit boolean NOT NULL gen=- def=false
@@ -1270,10 +1275,14 @@ public.ai_task_run_state_rank(state text) secdef=false cfg=- acl=-
     END
   
 public.ai_usage acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.ai_usage.ai_usage_cached_hits_not_negative CHECK ((cached_hits >= 0))
 public.ai_usage.ai_usage_calls_js_safe CHECK (((calls >= '-9007199254740991'::bigint) AND (calls <= '9007199254740991'::bigint)))
+public.ai_usage.ai_usage_calls_not_negative CHECK ((calls >= 0))
 public.ai_usage.ai_usage_pkey PRIMARY KEY (day, task, tier)
 public.ai_usage.ai_usage_tokens_in_js_safe CHECK (((tokens_in >= '-9007199254740991'::bigint) AND (tokens_in <= '9007199254740991'::bigint)))
+public.ai_usage.ai_usage_tokens_in_not_negative CHECK ((tokens_in >= 0))
 public.ai_usage.ai_usage_tokens_out_js_safe CHECK (((tokens_out >= '-9007199254740991'::bigint) AND (tokens_out <= '9007199254740991'::bigint)))
+public.ai_usage.ai_usage_tokens_out_not_negative CHECK ((tokens_out >= 0))
 public.ai_usage.cached_hits bigint NOT NULL gen=- def=0
 public.ai_usage.calls bigint NOT NULL gen=- def=0
 public.ai_usage.day date NOT NULL gen=- def=-
@@ -8260,13 +8269,16 @@ public.meeting_readiness.text_bound_insert CREATE TRIGGER text_bound_insert AFTE
 public.meeting_readiness.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.meeting_readiness FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"revision": 20000, "agenda_fingerprint": 20000, "participants_fingerprint": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"agenda_fingerprint":20000,"participants_fingerprint":20000,"revision":20000}')
 public.meeting_readiness_pkey CREATE UNIQUE INDEX meeting_readiness_pkey ON public.meeting_readiness USING btree (attendee_id, activity_id)
 public.member_identity_family(member uuid) secdef=false cfg=- acl=- 
-  WITH RECURSIVE member_identities(id) AS (
-    SELECT member
-    UNION
-    SELECT retired.id FROM app_user retired JOIN member_identities survivor
-      ON retired.merged_into_user_id = survivor.id
-     WHERE retired.removed_at IS NOT NULL)
-  SELECT array_agg(id) FROM member_identities
+BEGIN
+  RETURN (
+    WITH RECURSIVE member_identities(id) AS (
+      SELECT member
+      UNION
+      SELECT retired.id FROM app_user retired JOIN member_identities survivor
+        ON retired.merged_into_user_id = survivor.id
+       WHERE retired.removed_at IS NOT NULL)
+    SELECT array_agg(id) FROM member_identities);
+END;
 
 public.mfa_challenge_spent acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.mfa_challenge_spent.expires_at timestamp with time zone NOT NULL gen=- def=-

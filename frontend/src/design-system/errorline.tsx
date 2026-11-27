@@ -42,10 +42,9 @@ export function ErrorLine({
   // failure, and an empty string says nothing an alert could announce.
   const absent =
     error === undefined || error === null || error === false || error === "";
-  const line = useScrolledIntoDialogView(
-    standing === true,
-    absent ? null : error,
-  );
+  const line = useScrolledIntoDialogView<
+    HTMLParagraphElement & HTMLSpanElement
+  >(standing === true, absent ? null : error);
   const message = absent ? children : problemMessageOf(error, t);
   if (
     message === undefined ||
@@ -74,8 +73,11 @@ const SCROLLED_SURFACES = ".modal, .ob-stage-board";
 
 // Keyed on the thrown value, new per failed attempt, so an identical refusal
 // still scrolls; `children` is a new element every render, so it keys on text.
-function useScrolledIntoDialogView(standing: boolean, failure: unknown) {
-  const line = useRef<HTMLParagraphElement & HTMLSpanElement>(null);
+export function useScrolledIntoDialogView<Shown extends HTMLElement>(
+  standing: boolean,
+  failure: unknown,
+) {
+  const line = useRef<Shown>(null);
   const shown = useRef<unknown>(null);
   const reduced = usePrefersReducedMotion();
   useEffect(() => {

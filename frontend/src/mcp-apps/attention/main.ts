@@ -157,7 +157,7 @@ function slippingCard(answer: Record<string, unknown>): HTMLElement {
           ? {}
           : { bar: share(amount / stake.total, "flat") }),
         urgent: rank === 1,
-        question: `Catch me up on the deal "${name}" (${asText(deal.deal_id)}): what happened and what should I do next?`,
+        question: `Catch me up on the deal “${name}” (${asText(deal.deal_id)}): what happened, and what is my next step?`,
       }),
     );
   });
@@ -237,7 +237,7 @@ function atRiskCard(answer: Record<string, unknown>): HTMLElement {
         marker: dealTile(name),
         name,
         reasons: asList(deal.risks).map(asRecord).map(riskLine),
-        question: `Catch me up on the deal "${name}" (${asText(deal.deal_id)}): who do we know there, and how do we widen it?`,
+        question: `Catch me up on the deal “${name}” (${asText(deal.deal_id)}): who does my team know there, and how can my team widen its reach there?`,
       }),
     );
   });
@@ -261,9 +261,9 @@ function commitmentsCard(answer: Record<string, unknown>): HTMLElement {
     promises.filter((p) => asText(p.state) === s).length;
   const overdue = count("overdue");
   const unowned = promises.filter((p) => asText(p.assignee_name) === "").length;
-  const { card, body } = frame("Open promises", promises.length);
+  const { card, body } = frame("Open commitments", promises.length);
   if (promises.length === 0) {
-    body.appendChild(el("p", "intro", "No open promises to customers."));
+    body.appendChild(el("p", "intro", "No open commitments to customers."));
     return card;
   }
   const parts: Part[] = [
@@ -277,8 +277,8 @@ function commitmentsCard(answer: Record<string, unknown>): HTMLElement {
       caption: "overdue",
       sentence:
         unowned === 0
-          ? "Every promise has an owner."
-          : `${plural(unowned, "promise has", "promises have")} nobody to keep it.`,
+          ? "Every commitment has an owner."
+          : `${plural(unowned, "commitment has", "commitments have")} nobody to keep it.`,
       beside: ring(parts, String(promises.length), "open"),
     }),
   );
@@ -297,7 +297,7 @@ function promiseRow(
   promise: Record<string, unknown>,
   zone: string,
 ): HTMLElement {
-  const subject = asText(promise.subject) || "A promise";
+  const subject = asText(promise.subject) || "A commitment";
   const owner = asText(promise.assignee_name);
   const status = el("span", "meta attention-status");
   status.append(dueBadge(promise, zone), " ");
@@ -316,7 +316,7 @@ function promiseRow(
     name: subject,
     reasons,
     urgent: asText(promise.state) === "overdue",
-    question: `Catch me up on the promise "${subject}"${about.length > 0 ? ` to ${about.join(", ")}` : ""} (${promiseRef(promise)}): where does it stand, and what should happen next?`,
+    question: `Catch me up on the commitment “${subject}”${about.length > 0 ? ` to ${about.join(", ")}` : ""} (${promiseRef(promise)}): where does it stand, and what should happen next?`,
   });
 }
 

@@ -146,7 +146,7 @@ func attachEveryColleague(ctx context.Context, list ColleagueLister, out *ListCo
 	if truncated {
 		noteWarning(ctx, CodeNameMatchedNoColleague,
 			"Nobody here is spelled that way. `all_colleagues` is a CAPPED page of the roster, "+
-				"not all of it, so do not conclude from it that the colleague has no seat — narrow "+
+				"not all of it, so do not conclude from it that the colleague has no seat. Narrow "+
 				"differently, on a surname or an email fragment.")
 		return
 	}

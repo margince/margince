@@ -178,7 +178,7 @@ func (r *Registry) requireDeclaredPresence(name string, args json.RawMessage) er
 	}
 	return &BadArgsError{
 		Cause: errors.New(refusalSubject(missing) + " required by this tool's input schema"),
-		Guidance: fmt.Sprintf("supply %s — the schema advertised on tools/list names %s as required",
+		Guidance: fmt.Sprintf("supply %s: the schema advertised on tools/list names %s as required",
 			refusalNoun(missing), strings.Join(missing, ", ")),
 	}
 }

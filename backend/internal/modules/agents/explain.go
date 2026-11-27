@@ -113,7 +113,7 @@ func (s *Dispatcher) explain(tool string, err error) string {
 		// with no inbox, or a tool that cannot describe its own staging target.
 		// There is no proposal to point at, so the answer says what it can.
 		return "This is a confirm-first (🟡) action: a contact answers it before it runs, and not the " +
-			"credential that proposed it. Nothing was changed. Tell the user it is waiting — list_approvals " +
+			"credential that proposed it. Nothing was changed. Tell the user it is waiting: list_approvals " +
 			"with targets naming this record shows it, and they release it in the CRM. (" + refusalDetail(err) + ")"
 	case errors.As(err, &areaOff):
 		// Its words name the area and where the user turns it on, for the agent to
@@ -134,7 +134,7 @@ func (s *Dispatcher) explain(tool string, err error) string {
 	case errors.Is(err, apperrors.ErrVersionSkew):
 		return "The record changed since it was read; re-read it and retry with the new version. (" + refusalDetail(err) + ")"
 	case errors.Is(err, apperrors.ErrApprovalTokenInvalid):
-		return "The approval token was not accepted — it may be consumed, expired, or for a different call. " +
+		return "The approval token was not accepted: it may be consumed, expired, or for a different call. " +
 			"Ask for a fresh approval and retry. (" + refusalDetail(err) + ")"
 	case errors.Is(err, apperrors.ErrUnsupportedBySoR):
 		// A DECLARED capability gap (AC-OV-2), not a fault: this workspace's
@@ -174,7 +174,7 @@ func (s *Dispatcher) explain(tool string, err error) string {
 		// and must therefore never carry caller-influenced text; it exists for
 		// the fixed vocabularies reflected off the contract.
 		return "The arguments were rejected before the tool ran; nothing was changed. (" + badArgs.Error() + ") " +
-			"Correct them against the tool's inputSchema and call again — re-sending the same arguments will be rejected again."
+			"Correct them against the tool's inputSchema and call again. Re-sending the same arguments will be rejected again."
 	default:
 		return s.explainClassified(tool, err)
 	}
@@ -256,11 +256,11 @@ func (s *Dispatcher) explainClassified(tool string, err error) string {
 			"change that. (" + explained + ") Do not retry; tell the user to connect an AI model under Settings, AI."
 	}
 	if fault.Transient() {
-		return "This tool is temporarily unavailable — nothing was changed. (" + explained + ") " +
+		return "This tool is temporarily unavailable; nothing was changed. (" + explained + ") " +
 			"The same call can succeed later; wait before retrying, and tell the user if they are waiting on it."
 	}
 	return "This call was refused as issued and nothing was changed; repeating it unchanged will be refused the same way. (" +
-		explained + ") Correct the arguments and call again — or, if this is a governed refusal " +
+		explained + ") Correct the arguments and call again, or, if this is a governed refusal " +
 		"rather than a mistake, do not retry: tell the user what is blocking it."
 }
 
@@ -429,7 +429,7 @@ func stagedExplanation(staged *workflow.StagedApprovalError) string {
 		stagedReleasePath(staged) +
 		" Once released, this exact call repeats with \"approval_id\": \"" +
 		staged.ApprovalID.String() + "\". " +
-		"Blocks THIS call only — do the rest of what you were asked that does not depend on it, " +
+		"Blocks THIS call only. Do the rest of what you were asked that does not depend on it, " +
 		"and report what you DID alongside what is waiting."
 }
 
