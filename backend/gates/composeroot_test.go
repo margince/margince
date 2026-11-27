@@ -169,7 +169,8 @@ const (
 	// Raised by 1 test line when main's forecast scope label case met develop
 	// in the sync.
 	// Raised by 11 test lines for develop's shared-calendar meeting party cases.
-	composeRootTestLines = 363_841
+	// Raised by 5 test lines for the full seat a take test now binds.
+	composeRootTestLines = 363_846
 )
 
 // A read under these floors stopped early or read the wrong place, and would
