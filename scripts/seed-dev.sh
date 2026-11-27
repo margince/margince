@@ -219,6 +219,19 @@ echo "  OK: $API_BASE is up"
 echo "== seed-dev: demo installation =="
 sign_in_as_admin
 
+# `make seed-dev` runs this last, after seed-dev.sql has linked the demo
+# customers: the first finance pass mirrors only linked customers, so it is
+# queued once they exist, through the endpoint Sync now uses.
+if [[ "${1:-}" = "--queue-finance-sync" ]]; then
+  status="$(api POST /finance/source/sync)"
+  case "$status" in
+    202) echo "  OK: first finance sync queued" ;;
+    404|501) echo "  SKIP: no accounting source to sync (HTTP $status)" ;;
+    *) cat "$workdir/body" >&2; fail "POST /v1/finance/source/sync returned HTTP $status" ;;
+  esac
+  exit 0
+fi
+
 # The installation's own company — the anchor company, and the one row the
 # app shell gates on. GET /company 404s until it exists, and that 404 IS the
 # "this installation has not described itself yet" signal onboarding reads, so

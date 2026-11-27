@@ -4003,7 +4003,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.strip.fin.neverInvoiced": "Nicht fakturiert",
   "co.strip.fin.noConnection": "Buchhaltung nicht verbunden",
   "co.strip.fin.unmapped": "Kunde nicht zugeordnet",
-  "co.strip.fin.syncing": "Wird synchronisiert",
+  "co.strip.fin.syncing": "Erste Synchronisierung ausstehend",
   "co.strip.fin.staleFigure": "Synchronisierung veraltet",
   "co.strip.fin.notCurrent": "Nicht aktuell",
   "co.strip.fin.errorFigure": "Letzte Synchronisierung fehlgeschlagen",
@@ -4470,7 +4470,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "finance.none": "Nichts erfasst.",
   "finance.loading": "Rechnungen werden geladen…",
   "finance.syncing":
-    "Synchronisierung mit dem Buchhaltungssystem läuft. Die Zahlen erscheinen nach der ersten Synchronisierung.",
+    "Die erste Synchronisierung mit dem Buchhaltungssystem steht noch aus. Margince synchronisiert alle sechs Stunden, und ein Admin kann die Synchronisierung unter Einstellungen → Anbindungen früher starten.",
   "finance.noConnection":
     "Kein Buchhaltungssystem verbunden. Rechnungen und Zahlungsverhalten dieses Kunden erscheinen, sobald eines verbunden ist.",
   "finance.unmapped":
@@ -4527,13 +4527,17 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contracts.status.expired": "Ausgelaufen",
   "contracts.status.cancelled": "Gek\u00fcndigt",
   "contracts.status.superseded": "Ersetzt",
-  "contracts.endsOn": "Endet am {when}",
+  "contracts.cancelledTo": "Gekündigt zum {when}",
+  "contracts.cancelledToNotice": "Gekündigt zum {when}, Kündigung am {notice}",
+  "contracts.replacedBy": "Ersetzt durch {title}",
+  "contracts.replacedByUnnamed": "Durch einen späteren Vertrag ersetzt",
   "contracts.renewsOn": "Verl\u00e4ngert sich am {when}",
   "contracts.endedPendingStatus": "Laufzeit beendet, Status ausstehend",
   "contracts.form.title": "Vertrag erfassen",
   "contracts.form.name": "Titel",
   "contracts.form.number": "Vertragsnummer",
   "contracts.form.value": "Wert",
+  "contracts.form.currency": "Währung",
   "contracts.form.basis": "Dieser Wert ist",
   "contracts.form.arr": "Jährlich wiederkehrender Umsatz",
   "contracts.form.arrMonthly": "Monatlicher Gegenwert:",
@@ -4579,6 +4583,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contracts.statusChange.label": "Neuer Status",
   "contracts.statusChange.submit": "Status ändern",
   "contracts.statusChange.errSame": "Der Vertrag hat bereits diesen Status.",
+  "contracts.statusChange.finalTitle": "{status} ist endgültig",
+  "contracts.statusChange.finalBody":
+    "Nach dem Speichern lässt sich der Status nicht mehr ändern. Um die Vereinbarung fortzusetzen, verlängere sie.",
   "contracts.cancel.title": "Kündigung erfassen",
   "contracts.cancel.hint":
     "Der Kunde bleibt unter Vertrag, bis die Kündigung wirksam wird. Damit wird die Kündigung erfasst. Der Status ändert sich nicht.",
@@ -7097,7 +7104,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "offer.termsText": "Bedingungstext",
   "offer.lines": "Positionen",
   "offer.addLine": "Position hinzufügen",
-  "offer.positionTaken": "Eine andere Zeile hat schon diese Position.",
+  "offer.lineOrderHint":
+    "Ziehe eine Position am Griff, oder fokussiere den Griff und drücke die Pfeiltaste nach oben oder unten.",
+  "offer.lineHandle": "{name} verschieben, Position {position} von {total}",
+  "offer.lineMoved": "{name} ist jetzt Position {position} von {total}",
+  "offer.lineHandleUnnamed": "Position {position} von {total} verschieben",
+  "offer.lineMovedUnnamed":
+    "Die Position ist jetzt Position {position} von {total}",
   "offer.lapsed":
     "Das Datum „Gültig bis“ dieses Angebots ist überschritten. Ändere es bei einem Entwurf unter „Kopfdaten bearbeiten“ oder erzeuge für ein gesendetes Angebot eine neue Revision.",
   "offer.position": "Position",

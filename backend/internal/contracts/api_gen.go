@@ -72561,9 +72561,11 @@ type UpdateOfferLineItemRequest struct {
 	DiscountPct  *float64                                `json:"discount_pct,omitempty" maximum:"100" minimum:"0"`
 
 	// IntervalCount How many billing periods the buyer commits to. Recurring lines only. Null while the term is still being settled; sending the offer refuses a recurring line that still has none.
-	IntervalCount *int     `json:"interval_count,omitempty" minimum:"1"`
-	Position      *int     `json:"position,omitempty" minimum:"1"`
-	Quantity      *float64 `json:"quantity,omitempty"`
+	IntervalCount *int `json:"interval_count,omitempty" minimum:"1"`
+
+	// Position Moves the line to this place in the offer. The lines between shift to make room, and the offer's lines are numbered from 1 again. A place past the last line puts it last.
+	Position *int     `json:"position,omitempty" minimum:"1"`
+	Quantity *float64 `json:"quantity,omitempty"`
 
 	// TaxCategory Take the rate from the tax rate sheet for the draft today. Refused together with `tax_rate` (422 `tax_rate_and_category`), and when the sheet has no rate (422 `tax_rate_missing`).
 	TaxCategory *UpdateOfferLineItemRequestTaxCategory `json:"tax_category,omitempty"`
@@ -78357,6 +78359,9 @@ type UploadAttachmentMultipartBody struct {
 	EntityId   openapi_types.UUID                      `json:"entity_id"`
 	EntityType UploadAttachmentMultipartBodyEntityType `json:"entity_type"`
 	File       openapi_types.File                      `json:"file"`
+
+	// ReuseIdentical When true, a live file with the same bytes already filed on this record, against the same agreement, is answered with 200 instead of storing a copy.
+	ReuseIdentical *bool `json:"reuse_identical,omitempty"`
 }
 
 // UploadAttachmentMultipartBodyEntityType defines parameters for UploadAttachment.

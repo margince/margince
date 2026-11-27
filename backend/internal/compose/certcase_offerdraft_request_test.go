@@ -58,12 +58,12 @@ func TestOfferDraftCaseRunsWhatProductionRuns(t *testing.T) {
 			},
 			wantStaged: []deals.StagedOfferLineInput{
 				{
-					Description: "Kickoff workshop", Quantity: "1", UnitPriceMinor: 20000, TaxRate: "19.00",
+					Description: "Kickoff workshop", Quantity: "1", UnitPriceMinor: 20000,
 					Evidence:      deals.StagedOfferLineEvidence{Snippet: "agreed to 20000 cents for it", SourceID: offerDraftKickoffSource},
 					PriceGrounded: true,
 				},
 				{
-					Description: "Support plan", Quantity: "1", UnitPriceMinor: 5000, TaxRate: "19.00",
+					Description: "Support plan", Quantity: "1", UnitPriceMinor: 5000,
 					Evidence:      deals.StagedOfferLineEvidence{Snippet: "quote the standard support plan", SourceID: offerDraftSupportSource},
 					PriceGrounded: true,
 				},
@@ -80,7 +80,7 @@ func TestOfferDraftCaseRunsWhatProductionRuns(t *testing.T) {
 				)
 			},
 			wantStaged: []deals.StagedOfferLineInput{{
-				Description: "Kickoff workshop", Quantity: "1", UnitPriceMinor: 20000, TaxRate: "19.00",
+				Description: "Kickoff workshop", Quantity: "1", UnitPriceMinor: 20000,
 				Evidence:      deals.StagedOfferLineEvidence{Snippet: "agreed to 20000 cents for it", SourceID: offerDraftKickoffSource},
 				PriceGrounded: true,
 			}},

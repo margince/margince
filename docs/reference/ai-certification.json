@@ -553,7 +553,7 @@
             "model": "gemini-3.1-flash-lite",
             "env": "cloud_frontier"
           },
-          "band": "certified",
+          "band": "supported_degraded",
           "state": "current",
           "fallback": {
             "tier": "premium",
@@ -568,10 +568,10 @@
             "state": "current"
           },
           "abandoned": 0,
-          "runs": 15,
-          "passed": 15,
+          "runs": 21,
+          "passed": 21,
           "cases_failing_often": 0,
-          "cases_below_quality_bar": 0,
+          "cases_below_quality_bar": 1,
           "scope": "full_invocation",
           "judge": "claude-sonnet-5-5"
         },
@@ -1131,8 +1131,8 @@
         }
       ],
       "bands": {
-        "certified": 28,
-        "supported_degraded": 9,
+        "certified": 27,
+        "supported_degraded": 10,
         "not_supported": 0,
         "too_few_runs": 0
       },
@@ -1854,7 +1854,7 @@
             "model": "gemini-3.1-flash-lite",
             "env": "eu_hosted"
           },
-          "band": "certified",
+          "band": "supported_degraded",
           "state": "current",
           "fallback": {
             "tier": "premium",
@@ -1875,10 +1875,10 @@
             }
           },
           "abandoned": 0,
-          "runs": 15,
-          "passed": 15,
+          "runs": 21,
+          "passed": 21,
           "cases_failing_often": 0,
-          "cases_below_quality_bar": 0,
+          "cases_below_quality_bar": 1,
           "measured_on": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
@@ -2634,8 +2634,8 @@
         }
       ],
       "bands": {
-        "certified": 28,
-        "supported_degraded": 9,
+        "certified": 27,
+        "supported_degraded": 10,
         "not_supported": 0,
         "too_few_runs": 0
       },
@@ -11640,17 +11640,17 @@
           "sites_current": 44,
           "sites_partial": 0,
           "sites_stale": 4,
-          "runs": 1386,
-          "passed": 1353,
-          "reliability": 0.9761904761904762,
+          "runs": 1392,
+          "passed": 1359,
+          "reliability": 0.9762931034482759,
           "reliability_interval": {
-            "lower": 0.970351,
-            "upper": 0.980902
+            "lower": 0.970479,
+            "upper": 0.980985
           },
           "slowest_p95_ms": 10760,
           "bands": {
-            "certified": 22,
-            "supported_degraded": 16,
+            "certified": 21,
+            "supported_degraded": 17,
             "not_supported": 3,
             "too_few_runs": 7
           }
@@ -12147,8 +12147,9 @@
           "task": "offer_draft",
           "best": {
             "provider": "gemini",
-            "model": "gemini-3.1-flash-lite",
-            "env": "cloud_frontier"
+            "model": "gemini-3.8-flash",
+            "env": "cloud_frontier",
+            "thinking_level": "low"
           },
           "band": "certified",
           "state": "current",
@@ -14203,17 +14204,17 @@
       "sites_current": 51,
       "sites_partial": 0,
       "sites_stale": 7,
-      "runs": 1668,
-      "passed": 1618,
-      "reliability": 0.9700239808153477,
+      "runs": 1674,
+      "passed": 1624,
+      "reliability": 0.970131421744325,
       "reliability_interval": {
-        "lower": 0.964193,
-        "upper": 0.97493
+        "lower": 0.964321,
+        "upper": 0.97502
       },
       "slowest_p95_ms": 10760,
       "bands": {
-        "certified": 25,
-        "supported_degraded": 19,
+        "certified": 24,
+        "supported_degraded": 20,
         "not_supported": 5,
         "too_few_runs": 9
       }
@@ -29907,8 +29908,8 @@
       "best_state": "current",
       "recommended": {
         "binding": {
-          "provider": "gemini",
-          "model": "gemini-3.1-flash-lite",
+          "provider": "anthropic",
+          "model": "claude-haiku-5-5",
           "env": "cloud_frontier"
         },
         "band": "certified",
@@ -29972,8 +29973,8 @@
             "lower": 0.901307,
             "upper": 1
           },
-          "latency_p50_ms": 2560,
-          "latency_p95_ms": 6681,
+          "latency_p50_ms": 3027,
+          "latency_p95_ms": 5242,
           "reported": {
             "accepted": 12,
             "wrong_answer": 0,
@@ -30000,8 +30001,8 @@
             "lower": 0.901307,
             "upper": 1
           },
-          "latency_p50_ms": 2143,
-          "latency_p95_ms": 7416,
+          "latency_p50_ms": 2175,
+          "latency_p95_ms": 9026,
           "reported": {
             "accepted": 12,
             "wrong_answer": 0,
@@ -30017,21 +30018,21 @@
             "env": "cloud_frontier"
           },
           "state": "current",
-          "band": "certified",
+          "band": "supported_degraded",
           "judge": "claude-sonnet-5-5",
           "scenarios_measured": 5,
           "scenarios_total": 5,
-          "runs": 15,
-          "passed": 15,
+          "runs": 21,
+          "passed": 21,
           "reliability": 1,
           "reliability_interval": {
-            "lower": 0.901307,
+            "lower": 0.927459,
             "upper": 1
           },
-          "latency_p50_ms": 1370,
-          "latency_p95_ms": 1769,
+          "latency_p50_ms": 1302,
+          "latency_p95_ms": 2728,
           "reported": {
-            "accepted": 12,
+            "accepted": 18,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 3
@@ -30195,8 +30196,8 @@
             "lower": 0.901307,
             "upper": 1
           },
-          "latency_p50_ms": 3452,
-          "latency_p95_ms": 8106,
+          "latency_p50_ms": 3010,
+          "latency_p95_ms": 6032,
           "reported": {
             "accepted": 12,
             "wrong_answer": 0,
