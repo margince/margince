@@ -99,7 +99,6 @@ func draftedLine(description, evidence, sourceID string, priceFields ...string) 
 	fields := []string{
 		`"description":"` + description + `"`,
 		`"quantity":"1"`,
-		`"tax_rate":"19.00"`,
 		`"evidence_snippet":"` + evidence + `"`,
 		`"source_id":"` + offerDraftSourceRefs[sourceID] + `"`,
 	}

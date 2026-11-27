@@ -89,8 +89,8 @@ const (
 // candidate is re-verified against the actual context text below, so a
 // model that lies about its own citation gains nothing.
 const offerDraftSystem = `You draft offer line items for a CRM from a sales deal's own captured context.
-Return ONLY a JSON object: {"lines":[{"description":...,"quantity":"1","tax_rate":"19.00","evidence_snippet":...,"source_id":"s1","conversation_price_minor":12300,"product_id":"p1"}]}.
-- description, quantity, tax_rate, evidence_snippet, source_id are required for every line.
+Return ONLY a JSON object: {"lines":[{"description":...,"quantity":"1","evidence_snippet":...,"source_id":"s1","conversation_price_minor":12300,"product_id":"p1"}]}.
+- description, quantity, evidence_snippet, source_id are required for every line. State no tax rate: the CRM sets it.
 - evidence_snippet MUST be text copied VERBATIM from the context items below, and source_id MUST be that item's reference (s1, s2, ...).
 - conversation_price_minor is an INTEGER count of minor currency units (e.g. cents) and is set ONLY when the evidence itself states a price the customer discussed — omit it otherwise.
 - conversation_price_minor is the price of ONE unit of the line's quantity; the line's total is quantity × conversation_price_minor.
@@ -112,7 +112,6 @@ func offerDraftSystemFor(fence promptfence.Fence, lang string) string {
 type offerLineCandidate struct {
 	Description            string `json:"description"`
 	Quantity               string `json:"quantity"`
-	TaxRate                string `json:"tax_rate"`
 	EvidenceSnippet        string `json:"evidence_snippet"`
 	SourceID               string `json:"source_id"`
 	ConversationPriceMinor *int64 `json:"conversation_price_minor,omitempty"`
@@ -121,7 +120,7 @@ type offerLineCandidate struct {
 
 // offerDraftSchema is offerLineCandidate's shape; a field the prompt lets the model omit is null.
 var offerDraftSchema = schema.Must(schema.Record(schema.Field("lines", schema.Array(schema.Record(
-	schema.Field("description", schema.String()), schema.Field("quantity", schema.String()), schema.Field("tax_rate", schema.String()),
+	schema.Field("description", schema.String()), schema.Field("quantity", schema.String()),
 	schema.Field("evidence_snippet", schema.String()), schema.Field("source_id", schema.String()),
 	schema.Field("conversation_price_minor", schema.Optional(schema.Integer())), schema.Field("product_id", schema.Optional(schema.String())))))))
 
@@ -475,15 +474,10 @@ func (d offerDrafter) groundOfferLines(ctx context.Context, candidates []offerLi
 		if !ok {
 			continue
 		}
-		taxRate, ok := validDecimal(c.TaxRate)
-		if !ok {
-			continue
-		}
 
 		line := deals.StagedOfferLineInput{
 			Description: desc,
 			Quantity:    quantity,
-			TaxRate:     taxRate,
 			Evidence:    deals.StagedOfferLineEvidence{Snippet: snippet, SourceID: sourceID},
 		}
 		if err := d.resolvePrice(ctx, c, snippet, currency, language, &line); err != nil {

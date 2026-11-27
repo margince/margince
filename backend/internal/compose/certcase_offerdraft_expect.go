@@ -54,7 +54,7 @@ func (want offerDraftExpectedLine) figureOf(line deals.StagedOfferLineInput) (in
 		return line.UnitPriceMinor, nil
 	}
 	figures, err := deals.LineTotals(deals.OfferLineInput{
-		Quantity: line.Quantity, UnitPriceMinor: line.UnitPriceMinor, DiscountPct: "0", TaxRate: line.TaxRate,
+		Quantity: line.Quantity, UnitPriceMinor: line.UnitPriceMinor, DiscountPct: "0", TaxRate: "0",
 	})
 	return figures.NetMinor, err
 }
