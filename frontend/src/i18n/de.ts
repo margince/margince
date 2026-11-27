@@ -94,7 +94,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.participant_addresses_not_lowercase":
     "Teilnehmeradressen mit Großbuchstaben",
   "history.field.participant_seats": "Teilnehmende Mitglieder",
-  "history.field.participant_users": "Teilnehmende Personen",
+  "history.field.participant_users": "Teilnehmende Teammitglieder",
   "history.field.partner_accepted_at": "Partner angenommen am",
   "history.field.partner_accepted_by": "Partner angenommen von",
   "history.field.partner_archived_at": "Partner archiviert am",
