@@ -2003,6 +2003,7 @@
     "suppressContact": "consent",
     "syncFinanceSource": "finance_source",
     "takeOverConversationClaim": "contacts",
+    "takeTask": "activities",
     "technicalEnrichCompany": "companies",
     "testAiProviderKey": "ai_models",
     "transferProjectOwnership": "projects",

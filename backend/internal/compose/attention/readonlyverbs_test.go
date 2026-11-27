@@ -33,7 +33,7 @@ func TestARowTheReaderMayNotChangeOffersNoVerbThatWrites(t *testing.T) {
 	}
 }
 
-func TestOnlyATaskNobodyHoldsThatTheReaderMayChangeOffersTake(t *testing.T) {
+func TestOnlyATaskNobodyHoldsOffersTake(t *testing.T) {
 	asOf := time.Date(2026, 9, 1, 9, 0, 0, 0, time.UTC)
 	holder := ids.NewV7()
 	for name, tc := range map[string]struct {
@@ -41,7 +41,7 @@ func TestOnlyATaskNobodyHoldsThatTheReaderMayChangeOffersTake(t *testing.T) {
 		take bool
 	}{
 		"nobody holds it and they may change it": {Task{ID: ids.NewV7()}, true},
-		"nobody holds it and they may only read": {Task{ID: ids.NewV7(), ReadOnly: true}, false},
+		"nobody holds it and they may only read": {Task{ID: ids.NewV7(), ReadOnly: true}, true},
 		"a colleague holds it":                   {Task{ID: ids.NewV7(), AssigneeID: &holder}, false},
 	} {
 		item := taskItem(tc.task, asOf, asOf, time.UTC)

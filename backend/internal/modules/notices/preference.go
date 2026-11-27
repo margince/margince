@@ -103,6 +103,9 @@ const KindMeetingTeamRequest = "meeting_team_request"
 // KindDealValueNetBasis tells a deal's owner its value was re-stated without tax.
 const KindDealValueNetBasis = "deal_value_net_basis"
 
+// KindTaskTaken tells a record's owner that a colleague took an unassigned task filed under it.
+const KindTaskTaken = "task_taken"
+
 var classByKind = map[string]string{
 	"data_task_failed":             classSystem,
 	KindPrivacyReviewRequired:      classSystem,
@@ -116,6 +119,7 @@ var classByKind = map[string]string{
 	KindMeetingTeamRequest:         ClassApprovalPending,
 	KindExtension:                  classSystem,
 	KindDealValueNetBasis:          classSystem,
+	KindTaskTaken:                  classSystem,
 	KindProjectHealthAI:            classProjectHealth,
 	// The answer to a colleague's own request to be handed a record.
 	"ownership_request_accepted":  classSystem,
