@@ -17,6 +17,7 @@ import (
 // TestACounterBelowZeroIsRefused writes a negative value into every token
 // counter and expects the floor named for that column to refuse it.
 func TestACounterBelowZeroIsRefused(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	headSchema(t, conn)
@@ -51,6 +52,7 @@ func TestACounterBelowZeroIsRefused(t *testing.T) {
 // total a negative count lowered below zero, then migrates past the validation.
 // The total reads zero, the value the meter now stores, and the upgrade passes.
 func TestADayTotalBelowZeroIsRaisedToZeroBeforeItsFloorIsValidated(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	resetSchema(t, conn)

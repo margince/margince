@@ -18,7 +18,7 @@ import (
 // one of the actions on the object. It reads stored grants, so a seat whose role
 // changed a moment ago is judged by the new one. Only system work may ask: it
 // names who could act, which no seat's own request is entitled to.
-func LiveSeatsAllowingTx(ctx context.Context, tx pgx.Tx, object string, actions ...principal.Action) ([]ids.UserID, error) {
+func LiveSeatsAllowingTx(ctx context.Context, tx pgx.Tx, rbac RbacObjects, object string, actions ...principal.Action) ([]ids.UserID, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return nil, err
 	}
@@ -30,7 +30,7 @@ func LiveSeatsAllowingTx(ctx context.Context, tx pgx.Tx, object string, actions 
 	if err != nil {
 		return nil, err
 	}
-	grants, err := loadGrantsFor(ctx, tx, users)
+	grants, err := loadGrantsFor(ctx, tx, rbac, users)
 	if err != nil {
 		return nil, err
 	}

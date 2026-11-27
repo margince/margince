@@ -279,7 +279,7 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		WithContactEmployers(newContactsStore(db)).
 		WithMeetingOrganizers(activities.NewStore(db)).WithMeetingRooms(activities.NewStore(db)).
 		// Cached cards keep queue reads from starting model work.
-		WithDealMoves(attentionDealMoves{cards: newDealStatusService(pool, now).WithManagerStandings(managermove.Standings(newForecastStore(db)))}).
+		WithDealMoves(attentionDealMoves{cards: newDealStatusService(pool, now).WithManagerStandings(managermove.Standings(newForecastStore(db), installedRbacObjects()))}).
 		WithDealStandings(attentionDealStandings{cards: cards}).
 		WithBaseMoney(AttentionBaseMoney{Pool: pool}).
 		WithWeeklyPlans(attentionWeeklyPlan{store: WeeklyPlanStore(pool), pool: pool}).WithNamedTeams(newTeammatesSeam(pool)).WithTeammates(newTeammatesSeam(pool)).WithFormerTeammates(newTeammatesSeam(pool)).

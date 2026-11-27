@@ -101,7 +101,7 @@ func (s Sweeper) Swept(ctx context.Context, connection ids.UUID) {
 func NewPuller(pool *pgxpool.Pool, store *chatlinks.Store, chats LiveChats, lane ai.Completer, log *slog.Logger) *Puller {
 	return &Puller{
 		Pool: pool, Store: store, Chats: chats, Activities: activities.NewStore(chats.DB),
-		Contacts: contacts.NewStore(chats.DB), Lane: lane, Now: time.Now, Zone: time.UTC, Log: log,
+		Contacts: contacts.NewStore(chats.DB), Lane: lane, Now: time.Now, Zone: time.UTC, Log: log, Rbac: chats.Rbac,
 	}
 }
 
@@ -109,6 +109,6 @@ func NewPuller(pool *pgxpool.Pool, store *chatlinks.Store, chats LiveChats, lane
 func NewFiler(pool *pgxpool.Pool, store *chatlinks.Store, chats LiveChats, lane ai.Completer) *Filer {
 	return &Filer{
 		Pool: pool, Store: store, Chats: chats, Activities: activities.NewStore(chats.DB),
-		Contacts: contacts.NewStore(chats.DB), Lane: lane,
+		Contacts: contacts.NewStore(chats.DB), Lane: lane, Rbac: chats.Rbac,
 	}
 }

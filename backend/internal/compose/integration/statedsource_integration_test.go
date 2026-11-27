@@ -17,6 +17,7 @@ import (
 // TestAHandCreatedContactsPrivacyPageNamesTheStatedSource. A user creating a
 // contact by hand states its source. That source reaches the privacy page.
 func TestAHandCreatedContactsPrivacyPageNamesTheStatedSource(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupAppWithOptions(t, compose.WithOperatorMail(apptest.DiscardingMailer{}))
 	apptest.BootstrapWorkspaceSession(t, e, "Stated Source", "dpo@stated.test", "Admin")
 	var contact struct {

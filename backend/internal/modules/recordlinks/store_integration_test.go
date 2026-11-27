@@ -293,6 +293,7 @@ func TestRemovingALinkDeletesTheRowAndAuditsIt(t *testing.T) {
 }
 
 func TestALinkIsRemovableExactlyWhereDeleteSucceeds(t *testing.T) {
+	t.Parallel()
 	e := setupLinks(t)
 	// The colleague who owns the first deal links it to the caller's renewal; an
 	// all-rows seat may add to a deal it does not own.
@@ -332,6 +333,7 @@ func TestALinkIsRemovableExactlyWhereDeleteSucceeds(t *testing.T) {
 }
 
 func TestAReadOnlySeatSeesNoLinkAsRemovable(t *testing.T) {
+	t.Parallel()
 	e := setupLinks(t)
 	if _, err := e.store.Create(e.seat(e.rep, true, full()), e.dealLink(e.deal, "renews")); err != nil {
 		t.Fatal(err)

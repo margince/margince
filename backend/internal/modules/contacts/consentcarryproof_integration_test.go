@@ -110,6 +110,7 @@ func (e *promoteConsentEnv) assertProofRule(t *testing.T, kind consentCarryKind,
 // promotion. The gate reads the proof off the contact, so the carry copies it.
 // The lead's own events stay in place.
 func TestAPromotionCopiesTheConfirmedProofOfACarriedGrant(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	ctx := context.Background()
 	lead := e.seedConsentSubject(t, consentSubjectLead)
@@ -279,6 +280,7 @@ func TestACarriedWithdrawalKeepsTheAddressesItWasBoundTo(t *testing.T) {
 // on the contact. It keeps the withdrawal's retention floor, so retention cannot
 // reach the contact sooner than the lead whose subject refused.
 func TestACarriedWithdrawalKeepsItsRetentionFloor(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	ctx := context.Background()
 	lead := e.seedConsentSubject(t, consentSubjectLead)

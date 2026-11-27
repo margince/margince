@@ -17,6 +17,7 @@ import (
 // A decision's review day is a day of the installation's calendar. It reads
 // back as the day that was sent, and no door moves it to a day already over.
 func TestADecisionReviewDayIsAnInstallationDayOverEveryDoor(t *testing.T) {
+	t.Parallel()
 	for _, zone := range []string{"America/Los_Angeles", "Pacific/Auckland"} {
 		t.Run(zone, func(t *testing.T) {
 			e := apptest.SetupApp(t)

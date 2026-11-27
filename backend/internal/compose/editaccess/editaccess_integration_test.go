@@ -128,6 +128,7 @@ func decide(t *testing.T, e *integration.Env, approval ids.ApprovalID, approve b
 // answers the open request. After the owner approves, the colleague may change
 // the record, and its owner stays the same.
 func TestEditAccessIsAskedAndGivenOnEveryShareableKind(t *testing.T) {
+	t.Parallel()
 	for _, kind := range []string{"contact", "company", "lead", "deal", "project"} {
 		t.Run(kind, func(t *testing.T) {
 			e := integration.Setup(t)
@@ -168,6 +169,7 @@ func TestEditAccessIsAskedAndGivenOnEveryShareableKind(t *testing.T) {
 // Declining shares nothing and tells the colleague who asked. The same owner is
 // not asked the same thing a second time.
 func TestADeclinedEditAccessRequestTellsTheColleagueWhoAsked(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	grantEditorRole(t, e, e.Rep1, e.Rep3)
 	lead := seedRecord(t, e, "lead", e.Rep1)
@@ -194,6 +196,7 @@ func TestADeclinedEditAccessRequestTellsTheColleagueWhoAsked(t *testing.T) {
 
 // The colleague who asked takes the request back, and it is no longer theirs to read.
 func TestAWithdrawnEditAccessRequestLeavesTheInbox(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	grantEditorRole(t, e, e.Rep1, e.Rep3)
 	deal := seedRecord(t, e, "deal", e.Rep1)
@@ -216,6 +219,7 @@ func TestAWithdrawnEditAccessRequestLeavesTheInbox(t *testing.T) {
 // Nothing is asked of a record that is the asker's own, that nobody owns, or
 // from a read seat.
 func TestEditAccessIsNotAskedWhereThereIsNothingToAsk(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	grantEditorRole(t, e, e.Rep1, e.Rep3)
 	own := seedRecord(t, e, "lead", e.Rep3)
@@ -240,6 +244,7 @@ func TestEditAccessIsNotAskedWhereThereIsNothingToAsk(t *testing.T) {
 // ask. Until then a former owner who may still change the lead cannot approve
 // it. The card stays pending, so it can still be declined.
 func TestAFormerOwnerCannotApproveALeadThatMoved(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	grantEditorRole(t, e, e.Rep1, e.Rep3)
 	lead := seedRecord(t, e, "lead", e.Rep1)

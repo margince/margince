@@ -68,13 +68,15 @@ func (w noticeWorld) noticeCountAbout(t *testing.T, user, row ids.UUID) int {
 }
 
 func TestANoticeAboutAnExtensionKindReachesOnlyMembersWhoMayReadTheKind(t *testing.T) {
+	t.Parallel()
 	w := setupNotices(t)
 	row, kind := w.declareNoticeKind(t)
 	object := extension.RecordKindObject(coreUnit, "visit")
-	if err := identity.RegisterRbacObjects(identity.RbacObject(object)); err != nil {
+	rbac, err := NewRbacObjects([]identity.RbacObject{identity.RbacObject(object)}, nil)
+	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(identity.ResetRbacObjectsForTest)
+	w.composed = &Extensions{rbac: rbac}
 	if _, err := w.owner.Exec(context.Background(), `INSERT INTO role (key, name, permissions) VALUES
 		('visit-watcher', 'Visit watcher', jsonb_build_object('objects', jsonb_build_object($1::text, '{"read":true}'::jsonb), 'row_scope', 'all'))`, object); err != nil {
 		t.Fatal(err)
@@ -103,6 +105,7 @@ func TestANoticeAboutAnExtensionKindReachesOnlyMembersWhoMayReadTheKind(t *testi
 }
 
 func TestANoticeAboutAKindTheUnitDidNotDeclareIsInvalid(t *testing.T) {
+	t.Parallel()
 	w := setupNotices(t)
 	row, _ := w.declareNoticeKind(t)
 	err := w.readAs(t, w.user, readerPerms(principal.RowScopeAll, "deal"), func(ctx context.Context, core extension.Core) error {

@@ -31,6 +31,7 @@ import (
 // has more. In the corpus, some types fill the page by name. Others are found
 // only by a contained address, a domain, or the company a contact works at.
 func TestAGroupedPageKeepsEachTypesRankedHits(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedGroupedCorpus(t, e)
 	store := search.NewStore(e.DB())
@@ -67,6 +68,7 @@ func TestAGroupedPageKeepsEachTypesRankedHits(t *testing.T) {
 // run; when they do not, they do. The second half keeps the first from passing
 // on a corpus the scans never reached.
 func TestAFilledGroupedPageSkipsTheContainedAddressScans(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedGroupedCorpus(t, e)
 	statements := &statementLog{}

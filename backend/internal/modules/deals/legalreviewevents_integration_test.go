@@ -81,6 +81,7 @@ func wantFields(t *testing.T, got map[string]any, want map[string]string) {
 }
 
 func TestALegalReviewIsPublishedAsTheFactAloneEvenWhenItHasWords(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	dealID, _, _ := gatedDeal(t, e)
 	note := secretRequestNote

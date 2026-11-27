@@ -99,6 +99,7 @@ func TestBothOpenPipelineReadsAgreeOnAYenDeal(t *testing.T) {
 // rate. The SQL function once ordered by date alone and could answer with
 // either version of the day.
 func TestBothOpenPipelineReadsAgreeAfterASameDayRateCorrection(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	e.Deals.SetClock(func() time.Time { return roomFixedNow })
 	pipeline, open := pipelineFixtureFor(e.Admin(), t, e.Deals)

@@ -101,6 +101,7 @@ func derefLines(lines *[]crmcontracts.DealCoverageLine) []crmcontracts.DealCover
 }
 
 func TestAWorkspaceMessageDrawsALineWithItsDirectionAndDate(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	buyer := e.SeedContact(t, "Mai Tran", nil)
 	dealID := seatedDeal(t, e, buyer)
@@ -127,6 +128,7 @@ func TestAWorkspaceMessageDrawsALineWithItsDirectionAndDate(t *testing.T) {
 }
 
 func TestABuyersReplyDrawsALineWhereTheyWrote(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	buyer := e.SeedContact(t, "Mai Tran", nil)
 	dealID := seatedDeal(t, e, buyer)
@@ -144,6 +146,7 @@ func TestABuyersReplyDrawsALineWhereTheyWrote(t *testing.T) {
 }
 
 func TestASeatNobodyWroteToIsNotReachedWhenNothingIsWithheld(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	buyer := e.SeedContact(t, "Mai Tran", nil)
 	dealID := seatedDeal(t, e, buyer)
@@ -159,6 +162,7 @@ func TestASeatNobodyWroteToIsNotReachedWhenNothingIsWithheld(t *testing.T) {
 }
 
 func TestAMessageOutsideTheReadersAudienceShowsNoDateAndNoGap(t *testing.T) {
+	t.Parallel()
 	for _, audience := range []string{"participants", "selected"} {
 		t.Run(audience, func(t *testing.T) {
 			e := Setup(t)
@@ -183,6 +187,7 @@ func TestAMessageOutsideTheReadersAudienceShowsNoDateAndNoGap(t *testing.T) {
 }
 
 func TestANarrowedAudienceHidesTheLineAtOnceWithoutARefold(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	buyer := e.SeedContact(t, "Mai Tran", nil)
 	dealID := seatedDeal(t, e, buyer)
@@ -206,6 +211,7 @@ func TestANarrowedAudienceHidesTheLineAtOnceWithoutARefold(t *testing.T) {
 }
 
 func TestAContactTheReaderCannotReadGetsNoLineAndNoState(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	hidden := e.SeedContact(t, "Hidden Buyer", &e.AdminUser)
@@ -231,6 +237,7 @@ func TestAContactTheReaderCannotReadGetsNoLineAndNoState(t *testing.T) {
 }
 
 func TestAColleagueWhoLeftDrawsNoLineAndLeavesTheSeatUnknown(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	buyer := e.SeedContact(t, "Mai Tran", nil)
@@ -253,6 +260,7 @@ func TestAColleagueWhoLeftDrawsNoLineAndLeavesTheSeatUnknown(t *testing.T) {
 // A bare connector stamp names no mailbox, so the colleague's row on that mail
 // does not stand. The mail still exists, so the seat is unknown, not unreached.
 func TestAMailWhoseColleagueRowDoesNotStandDrawsNoLineAndLeavesTheSeatUnknown(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	buyer := e.SeedContact(t, "Mai Tran", nil)
@@ -273,6 +281,7 @@ func TestAMailWhoseColleagueRowDoesNotStandDrawsNoLineAndLeavesTheSeatUnknown(t 
 }
 
 func TestAReaderWithoutTheActivityGrantGetsNeitherLinesNorStates(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	buyer := e.SeedContact(t, "Mai Tran", nil)
 	dealID := seatedDeal(t, e, buyer)

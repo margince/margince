@@ -193,6 +193,7 @@ func TestAnOpenDealHasNoCloseDayToCorrect(t *testing.T) {
 // The rate a close froze is part of what a deal is, on the single read and on
 // a list row alike. A reopened deal carries none.
 func TestAClosedForeignDealCarriesTheRateItFroze(t *testing.T) {
+	t.Parallel()
 	e := setupClosedDealEnv(t)
 
 	read, err := e.store.GetDeal(e.asDealWriter(), e.deal, storekit.LiveOnly)

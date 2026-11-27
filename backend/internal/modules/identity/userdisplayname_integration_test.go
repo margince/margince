@@ -121,6 +121,7 @@ func TestCorrectingYourNameWritesTheSeatItsAuditAndItsEvent(t *testing.T) {
 }
 
 func TestASavedNameIsStoredAsOneVisibleLine(t *testing.T) {
+	t.Parallel()
 	svc, ctx, userID := seatChoosingALanguage(t)
 
 	seat, err := svc.SaveMyDisplayName(ctx, "Ada\u202e\u200b  Love\n\tlace")

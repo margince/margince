@@ -388,6 +388,7 @@ func TestANarrowedActivityIsWithdrawnAndItsPostRewritten(t *testing.T) {
 }
 
 func TestALinkAskingForTheTalkSoFarQueuesItsBotsPullAtOnce(t *testing.T) {
+	t.Parallel()
 	e := setupLinks(t)
 	ctx := e.seat(e.rep)
 	no, yes := false, true

@@ -395,6 +395,7 @@ func waitForALockWaiter(t *testing.T, e *revocationEnv) {
 
 // A member may not read the role directory, so /me names the roles they hold.
 func TestMeNamesACustomRoleItsHolderCannotLookUp(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "me-role-names")
 	key := e.customRole(t, "Sales assistant", "rep", nil)
 	member := e.seat(t, "assistant", key)

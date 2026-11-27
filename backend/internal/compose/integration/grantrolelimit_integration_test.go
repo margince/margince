@@ -63,6 +63,7 @@ func (e roleShareEnv) limitedShareAudits(t *testing.T, subject string) int {
 }
 
 func TestAnEditShareToAColleagueWhoseRoleCannotEditIsSavedAsViewOnly(t *testing.T) {
+	t.Parallel()
 	e := setupRoleShare(t)
 
 	limited := e.shareContact(t, "user", e.viewer)
@@ -82,6 +83,7 @@ func TestAnEditShareToAColleagueWhoseRoleCannotEditIsSavedAsViewOnly(t *testing.
 // Attaching an activity uses a write share. So a role that may log activities
 // but not change contacts keeps write, and can attach.
 func TestAnEditShareToARoleThatOnlyLogsActivitiesKeepsWrite(t *testing.T) {
+	t.Parallel()
 	e := setupRoleShare(t)
 	var role struct {
 		Key string `json:"key"`
@@ -107,6 +109,7 @@ func TestAnEditShareToARoleThatOnlyLogsActivitiesKeepsWrite(t *testing.T) {
 
 // A team's members hold different roles, so a team keeps the edit it was given.
 func TestAnEditShareToATeamIsNeverLimitedByRole(t *testing.T) {
+	t.Parallel()
 	e := setupRoleShare(t)
 	team := createdID(t, e.AppEnv, "/v1/teams", AnyMap{"name": "Mixed roles"})
 	for _, member := range []string{e.viewer, e.editor} {
@@ -135,6 +138,7 @@ func shareCompanyContacts(t *testing.T, e roleShareEnv, subject string) *bool {
 }
 
 func TestSharingCompanyContactsForEditWithAViewOnlyRoleSaysSo(t *testing.T) {
+	t.Parallel()
 	e := setupRoleShare(t)
 	// No contact works there yet: no grant is written, so the answer reveals nothing.
 	if limited := shareCompanyContacts(t, e, e.viewer); limited != nil {

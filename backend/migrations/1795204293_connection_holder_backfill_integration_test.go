@@ -19,6 +19,7 @@ import (
 // it. Live ones move to the agent's connection. A passport a human minted keeps
 // what it had.
 func TestTheConnectionHolderBackfillMovesOnlyLiveConnectedRows(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	resetSchema(t, conn)

@@ -14,17 +14,15 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
-// A pinned read instant decides the SLA state on every lead read. The live
-// clock is moved past the deadline, so a read that ignores the pin answers
-// breached.
+// A pinned read instant decides the SLA state on every lead read. The pin lies
+// two targets back, so the live clock is past the deadline and a read that
+// ignores the pin answers breached.
 func TestEveryLeadReadJudgesSLAByThePinnedInstant(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	e.enableFirstResponseSLA(t)
-	pinned := clocktest.Now(t).UTC().Truncate(time.Second)
+	pinned := clocktest.Now(t).Add(-2 * DefaultFirstResponseTarget).Truncate(time.Second)
 	lead := e.seedLeadCreatedAt(t, "pinned@example.test", pinned.Add(-time.Hour))
-	previousClock := leadSLAClock
-	leadSLAClock = func() time.Time { return pinned.Add(2 * DefaultFirstResponseTarget) }
-	t.Cleanup(func() { leadSLAClock = previousClock })
 	ctx := WithReadInstant(e.ctx, pinned)
 	within := crmcontracts.LeadSlaStateLeadSlaStateWithinTarget
 

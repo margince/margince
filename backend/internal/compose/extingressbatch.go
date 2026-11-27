@@ -89,7 +89,7 @@ func (r *callRuntime) consentedMember(ctx context.Context, on extension.UserID) 
 	if err != nil {
 		return member, err
 	}
-	consented, err := extensionMemberConsented(scoped, r.deps.pool, r.unit, member)
+	consented, err := extensionMemberConsented(scoped, r.deps, r.unit, member)
 	if err == nil && !consented {
 		err = fmt.Errorf("%w: that member has deposited no credential with this unit", extension.ErrForbidden)
 	}

@@ -24,6 +24,7 @@ import (
 )
 
 func TestARouteBackedWriteRepeatedUnderItsRetryKeyWritesOnce(t *testing.T) {
+	t.Parallel()
 	// A real meter, so the test sees what the replay charged.
 	e := setupConnectorWith(t, compose.WithAgentVolume(agentvolume.New(redistest.Client(t), agentvolume.Limits{}, time.Hour)))
 	bearer, passport := apptest.PassportWithID(t, e.AppEnv, "retrying client", "read", "write")

@@ -105,13 +105,8 @@ func TestAnUpdateOnlySeatSeesItsChangeConfirmed(t *testing.T) {
 // Sharing a private quotation request is its own switch: turning it off keeps
 // the AI reading private mail, and stops anything of it being shared.
 func TestAnAdminTurnsSharingPrivateQuoteRequestsOff(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
-	e.restoreFollowUpWindow(t)
-	t.Cleanup(func() {
-		if _, err := e.owner.Exec(context.Background(), `DELETE FROM setting WHERE key = $1`, SharePrivateQuoteRequests.Key()); err != nil {
-			t.Errorf("restoring the share setting: %v", err)
-		}
-	})
 	db := database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws))
 	h := NewHandlers(db).WithSettings(configtest.StoredOver(t, e.pool, ConfigSettings()))
 	admin := e.settingsAdmin(true)

@@ -36,6 +36,7 @@ func TestAZoneTheDatabaseLacksIsRefused(t *testing.T) {
 // A claim that sends a zone Go or the database does not know succeeds, and
 // the installation and its first admin are stored in UTC.
 func TestAClaimWithAZoneTheServerDoesNotKnowStoresUTC(t *testing.T) {
+	t.Parallel()
 	for name, sent := range map[string]string{
 		"a name neither engine knows": "Margince/Nowhere",
 		"a rule only Postgres reads":  "XYZ-3",
@@ -70,6 +71,7 @@ func TestAClaimWithAZoneTheServerDoesNotKnowStoresUTC(t *testing.T) {
 
 // A malformed zone is still refused: UTC stands in for an unknown name only.
 func TestAClaimWithAMalformedZoneIsRefused(t *testing.T) {
+	t.Parallel()
 	svc := newSetupService(t)
 	ctx := context.Background()
 	token, err := svc.MintSetupToken(ctx)

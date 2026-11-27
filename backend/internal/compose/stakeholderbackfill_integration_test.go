@@ -178,6 +178,7 @@ func (b *backfillEnv) finished(t *testing.T) bool {
 // A stakeholder's mail older than the waiting horizon is on no deal, and only
 // the backfill files it, and only inside the silent close window.
 func TestTheBackfillFilesAStakeholdersOldMailOnTheOpenDeal(t *testing.T) {
+	t.Parallel()
 	b := setupBackfill(t)
 	within := b.writes(t, 60)
 	beyond := b.writes(t, 150)
@@ -208,6 +209,7 @@ func TestTheBackfillFilesAStakeholdersOldMailOnTheOpenDeal(t *testing.T) {
 // Proof decides, as at capture: a Cc, an unauthenticated From and a consumer
 // mail provider's From each file nothing.
 func TestTheBackfillFilesNothingWithoutProof(t *testing.T) {
+	t.Parallel()
 	b := setupBackfill(t)
 	cc := b.o.capture(t, owedMail{
 		from: "eve@stranger.example", to: b.o.seat, cc: stakeholderAddress, subject: "Rollout plan",
@@ -232,6 +234,7 @@ func TestTheBackfillFilesNothingWithoutProof(t *testing.T) {
 // owner past the Home window. The mail now sits on the lost deal. Undo is the
 // existing one, and the next check keeps the reopened deal open.
 func TestTheBackfillOffersBackASilentCloseThatMissedMail(t *testing.T) {
+	t.Parallel()
 	b := setupBackfill(t)
 	missed := b.writes(t, 40)
 	b.seat(t, b.carol, b.silent)
@@ -268,6 +271,7 @@ func TestTheBackfillOffersBackASilentCloseThatMissedMail(t *testing.T) {
 // A close that was right, one the owner undid, and one with no missed mail
 // are not offered back.
 func TestTheBackfillOffersBackNothingThatWasRight(t *testing.T) {
+	t.Parallel()
 	b := setupBackfill(t)
 	b.seat(t, b.carol, b.silent)
 	b.run(t)
@@ -286,6 +290,7 @@ func TestTheBackfillOffersBackNothingThatWasRight(t *testing.T) {
 // While the backfill has not run, no deal closes for silence, and a refusal
 // still closes.
 func TestNoDealClosesForSilenceBeforeTheBackfillRan(t *testing.T) {
+	t.Parallel()
 	b := setupBackfill(t)
 	b.setBackfillFinished(t, false)
 	b.refuses(t, b.supported, b.now.AddDate(0, 0, -2))
@@ -318,6 +323,7 @@ func (b *backfillEnv) pending(t *testing.T) []ids.UUID {
 // A pass that stops after every mail resumes from the stored position, so the
 // model is asked once per mail and every mail is filed.
 func TestTheBackfillResumesWithoutAskingTwice(t *testing.T) {
+	t.Parallel()
 	b := setupBackfill(t)
 	first := b.writes(t, 60)
 	second := b.writes(t, 70)
@@ -342,6 +348,7 @@ func TestTheBackfillResumesWithoutAskingTwice(t *testing.T) {
 // A workspace with no activity has a zero ceiling. The backfill still runs its
 // phases and finishes, so the nightly silent close is not held for good.
 func TestTheBackfillFinishesInAWorkspaceWithNoActivity(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	integration.ApplyRiverSchema(t)
 	ctx := principal.WithCorrelationID(principal.SystemActing(o.e.Admin(), dealRefileActor), ids.NewV7())
@@ -373,6 +380,7 @@ func TestTheBackfillFinishesInAWorkspaceWithNoActivity(t *testing.T) {
 // A model outage fails the pass without moving its position or finishing it.
 // The next pass, with the model back, files the mail and finishes.
 func TestAnOutageInTheOpenPhaseIsRetriedNotSkipped(t *testing.T) {
+	t.Parallel()
 	b := setupBackfill(t)
 	mail := b.writes(t, 60)
 	b.seat(t, b.carol, b.silent)
@@ -399,6 +407,7 @@ func TestAnOutageInTheOpenPhaseIsRetriedNotSkipped(t *testing.T) {
 
 // The same outage in the silent-close phase.
 func TestAnOutageInTheClosePhaseIsRetriedNotSkipped(t *testing.T) {
+	t.Parallel()
 	b := setupBackfill(t)
 	missed := b.writes(t, 40)
 	b.seat(t, b.carol, b.silent)
@@ -428,6 +437,7 @@ func TestAnOutageInTheClosePhaseIsRetriedNotSkipped(t *testing.T) {
 // Mail before a close goes on the deal that was closed and on no deal opened
 // since, even when the same stakeholder sits on both.
 func TestTheClosePhaseFilesOnTheClosedDealAndNoOtherDeal(t *testing.T) {
+	t.Parallel()
 	b := setupBackfill(t)
 	missed := b.writes(t, 40)
 	b.seat(t, b.carol, b.silent)
@@ -455,6 +465,7 @@ func TestTheClosePhaseFilesOnTheClosedDealAndNoOtherDeal(t *testing.T) {
 // The check must confirm the closed deal. A model that says the mail is about
 // none of the offered deals files nothing and offers nothing.
 func TestTheClosePhaseFilesNothingTheTopicCheckDoesNotConfirm(t *testing.T) {
+	t.Parallel()
 	b := setupBackfill(t)
 	missed := b.writes(t, 40)
 	b.seat(t, b.carol, b.silent)
@@ -474,6 +485,7 @@ func TestTheClosePhaseFilesNothingTheTopicCheckDoesNotConfirm(t *testing.T) {
 // A thread only its participants may read is filed too, and the close is
 // offered back from its date alone.
 func TestTheClosePhaseFilesAParticipantsOnlyThread(t *testing.T) {
+	t.Parallel()
 	b := setupBackfill(t)
 	b.WsExec(t, `UPDATE capture_connection SET mail_posture = 'held' WHERE user_id = $1`, b.o.owner)
 	missed := b.writes(t, 40)
@@ -494,6 +506,7 @@ func TestTheClosePhaseFilesAParticipantsOnlyThread(t *testing.T) {
 // The window is the one the pass froze at its start. A change to the setting
 // between the phases moves neither the mail it files nor the offer.
 func TestTheOfferUsesTheWindowThePassFroze(t *testing.T) {
+	t.Parallel()
 	b := setupBackfill(t)
 	missed := b.writes(t, 100)
 	b.seat(t, b.carol, b.silent)
@@ -524,6 +537,7 @@ func TestTheOfferUsesTheWindowThePassFroze(t *testing.T) {
 // The open phase reads mail from the window's two edges: nothing older than it
 // and nothing after the pass's instant.
 func TestTheOpenPhaseReadsBothEdgesOfItsWindow(t *testing.T) {
+	t.Parallel()
 	b := setupBackfill(t)
 	inside := b.writes(t, 60)
 	tooOld := b.writes(t, 130)
@@ -565,6 +579,7 @@ var notAboutAnyDeal = dealTopicStub{answer: func(ids []string) string {
 // A close offered back lists at the instant it came back, so a page of newer
 // receipts does not push it off Home. The receipt still dates the close itself.
 func TestAnOfferedBackCloseOutranksNewerReceiptsOnHome(t *testing.T) {
+	t.Parallel()
 	b := setupBackfill(t)
 	b.writes(t, 40)
 	b.seat(t, b.carol, b.silent)

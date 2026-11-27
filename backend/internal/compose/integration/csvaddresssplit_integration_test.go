@@ -160,6 +160,7 @@ func assertCountryNamesStoredAsDE(t *testing.T, e *apptest.AppEnv) {
 }
 
 func TestCSVImportReadsCountryNamesAsCodesThroughPreviewApprovalAndCommit(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	profile, _ := importjobtest.UploadCSV(t, e, "company", countryNameFile)
 	run, _ := importjobtest.CreateRunWithMapping(t, e, "company", profile.SourceRef,
@@ -174,6 +175,7 @@ func TestCSVImportReadsCountryNamesAsCodesThroughPreviewApprovalAndCommit(t *tes
 }
 
 func TestZipImportReadsCountryNamesAsCodesThroughPreviewApprovalAndCommit(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	upload := uploadZip(t, e, "names.zip", zipBytes(t, map[string]string{"companies.csv": countryNameFile}))
 	run := stageBundle(t, e, upload.SourceRef, "names", []AnyMap{{
@@ -188,6 +190,7 @@ func TestZipImportReadsCountryNamesAsCodesThroughPreviewApprovalAndCommit(t *tes
 }
 
 func TestCSVImportRefusesAnUnknownCountryNameNamingItsRowAndColumn(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	profile, _ := importjobtest.UploadCSV(t, e, "company", "Company,Country\nLostwerk,Atlantis\n")
 	run, _ := importjobtest.CreateRunWithMapping(t, e, "company", profile.SourceRef,

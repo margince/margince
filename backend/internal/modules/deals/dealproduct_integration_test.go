@@ -116,6 +116,7 @@ func TestAcceptingAnOfferAllocatesTheDealsProducts(t *testing.T) {
 // changes the deal, so its deal.updated points at a deal audit row holding the
 // products before and after.
 func TestAnAcceptThatOnlySwapsProductsAuditsTheDeal(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	dealID, _, _ := twoStagePipeline(t, e.configEnv)
 	ctx := e.productCtx()

@@ -101,6 +101,7 @@ func settleTheQueuedRead(t *testing.T, e *integration.Env, svc *Service, company
 // With no model connected, a page open gets what is stored and nothing is
 // queued. Only an explicit force carries the refusal.
 func TestAnOpenWithNoModelConnectedIsQuietAndAForcedOneIsRefused(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Kranich Fördertechnik GmbH", &e.AdminUser))

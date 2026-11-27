@@ -41,7 +41,7 @@ func (s *Service) CarryOwnerAccessTx(ctx context.Context, tx pgx.Tx, recordType 
 		RecordType: recordType, RecordID: record, SubjectType: "user", SubjectID: owner,
 		Access: GrantAccessWrite, FitToRecipient: true,
 	}
-	access, cut, err := grantAccessFor(ctx, tx, in)
+	access, cut, err := grantAccessFor(ctx, tx, s.rbac, in)
 	if err != nil {
 		return out, err
 	}

@@ -30,9 +30,11 @@ const actor = "system:privacy-request-task"
 // operatorObject is what a privacy operator must read: the rights cases.
 const operatorObject = "privacy_request"
 
-// Writer writes request tasks through the activities store.
+// Writer writes request tasks through the activities store. Rbac is the
+// composition's vocabulary, which decides who counts as a privacy operator.
 type Writer struct {
 	Tasks *activities.Store
+	Rbac  identity.RbacObjects
 }
 
 var _ consent.RequestTasks = Writer{}
@@ -41,7 +43,7 @@ var _ consent.RequestTasks = Writer{}
 // the installation's language.
 func (w Writer) OpenRequestTaskTx(ctx context.Context, tx pgx.Tx, task consent.RequestTask) error {
 	writer := principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: actor})
-	operators, err := identity.PrivacyReviewOperatorsTx(writer, tx, operatorObject)
+	operators, err := identity.PrivacyReviewOperatorsTx(writer, tx, w.Rbac, operatorObject)
 	if err != nil {
 		return err
 	}

@@ -23,6 +23,7 @@ import (
 // Each case seeds enough matches the rep must not see to fill the page alone.
 // An own read that skipped a bound would answer with them.
 func TestAGroupedPageReadsOwnMatchesUnderTheCallersBounds(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.RepPerms)
 	mine := []ids.ContactID{seedOwned(t, e, "Corwin A", e.Rep1), seedOwned(t, e, "Corwin B", e.Rep1)}
@@ -66,6 +67,7 @@ func TestAGroupedPageReadsOwnMatchesUnderTheCallersBounds(t *testing.T) {
 // more, because a contained address adds one past them. One name match fewer,
 // and that address is on the page.
 func TestAGroupedPageAtTheCapStillCountsTheContainedAddress(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	byName := []ids.ContactID{seedContact(t, e, "Coby A", "a@north.example"), seedContact(t, e, "Coby B", "b@north.example")}
 	byAddress := seedContact(t, e, "Yuri Lenz", "yuri@cobyte.example")
@@ -83,6 +85,7 @@ func TestAGroupedPageAtTheCapStillCountsTheContainedAddress(t *testing.T) {
 // Equal scores at the cap are cut by id, as the ranked search cuts them. Names
 // run against creation order, so a cut by name keeps other contacts.
 func TestAGroupedPageCutsEqualScoresByID(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	var made []ids.UUID
 	for i := range 6 {

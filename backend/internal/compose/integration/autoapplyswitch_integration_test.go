@@ -57,6 +57,7 @@ func screenBound(ctx context.Context, t *testing.T, svc *approvals.Service) bool
 }
 
 func TestNothingAppliesWhileTheInstallationSwitchIsOff(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	svc := approvals.NewService(e.DB())
@@ -92,6 +93,7 @@ func TestNothingAppliesWhileTheInstallationSwitchIsOff(t *testing.T) {
 }
 
 func TestTurningTheInstallationSwitchOnLeavesAManualRepManual(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	svc := approvals.NewService(e.DB())
@@ -116,6 +118,7 @@ func TestTurningTheInstallationSwitchOnLeavesAManualRepManual(t *testing.T) {
 // A switch-off must wait for a transaction that already read "on", so nothing
 // applies after the admin's change has returned.
 func TestTheSwitchOffWaitsForAnApplyAlreadyInFlight(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.Admin()
 	done := make(chan error, 1)
@@ -180,14 +183,15 @@ func switchHandlers(t *testing.T, e *Env, environ ...string) approvals.Handlers 
 	t.Helper()
 	t.Cleanup(func() { e.WsExec(t, `DELETE FROM setting WHERE key = $1`, approvals.AutoApplyEnabled.Key()) })
 	cfg := configtest.StoredOver(t, e.Pool, approvals.ConfigSettings(), environ...)
-	locks := func(surface []config.Any) *[]crmcontracts.SettingLock {
-		l := compose.Locks(cfg, surface)
+	locks := func(ctx context.Context, surface []config.Any) *[]crmcontracts.SettingLock {
+		l := compose.Locks(ctx, cfg, surface)
 		return &l
 	}
 	return approvals.NewHandlers(approvals.NewService(e.DB())).WithSettings(cfg).WithLocks(locks)
 }
 
 func TestTheSwitchRouteTakesAnAdminAndRefusesEveryoneElse(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	h := switchHandlers(t, e)
 
@@ -217,6 +221,7 @@ func TestTheSwitchRouteTakesAnAdminAndRefusesEveryoneElse(t *testing.T) {
 }
 
 func TestABootLockedSwitchAnswers409WithItsLocks(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	h := switchHandlers(t, e, "MARGINCE_APPROVALS_AUTO_APPLY_ENABLED=true")
 

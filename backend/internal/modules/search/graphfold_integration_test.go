@@ -7,7 +7,6 @@ package search
 
 import (
 	"context"
-	"os"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -21,8 +20,9 @@ import (
 // millisecond. A bound of four rows reads part of both groups, so the anchor's
 // timeline must widen and name every copy of both mails.
 func TestTheAnchorTimelineWidensWhenItsBoundCutsTheOldestSecond(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
-	owner, err := pgx.Connect(ctx, os.Getenv("MARGINCE_TEST_DSN"))
+	owner, err := pgx.Connect(ctx, testdb.For(t).OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}

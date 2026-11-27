@@ -212,7 +212,7 @@ func TestRegisterExtensionsRejectsABadNeed(t *testing.T) {
 		"empty reason":       {{Capability: extension.CapabilityModels}},
 		"declared twice":     {good, good},
 	} {
-		err := RegisterExtensions(composableAll([]extension.Extension{{Name: "needy", Version: "0.0.1", Needs: needs}}), nil, nil)
+		_, err := RegisterExtensions(composableAll([]extension.Extension{{Name: "needy", Version: "0.0.1", Needs: needs}}), nil, nil)
 		if err == nil || !strings.Contains(err.Error(), `extension "needy"`) {
 			t.Errorf("%s: err = %v, want the boot to refuse the unit", name, err)
 		}

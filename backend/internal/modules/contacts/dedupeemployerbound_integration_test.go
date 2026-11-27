@@ -44,6 +44,7 @@ func (n planNode) rowsRead(tables map[string]bool) (rows float64, nodes int) {
 // Mutation: restore the relationship branch of contactCandidateQuery, which
 // unions in every current colleague of @employer.
 func TestTheCandidateReadSkipsColleaguesWhoseNamesDoNotMatch(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	employer := mustEmployer(t, e, "Crowded Works")
 	const staff = 3 * dedupeCandidateRows
@@ -80,6 +81,7 @@ func TestTheCandidateReadSkipsColleaguesWhoseNamesDoNotMatch(t *testing.T) {
 //
 // Mutation: switch off the same_family arm of contactCandidateQuery.
 func TestAColleagueWithTheSameFamilyNameIsACandidateThroughTheEmployer(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	employer := mustEmployer(t, e, "Shared Works")
 	colleague := mustContact(t, e, "Bartholomew Smith")

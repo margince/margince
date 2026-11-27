@@ -20,7 +20,6 @@ import (
 
 	"github.com/getkin/kin-openapi/openapi3"
 
-	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/pkg/extension"
@@ -50,8 +49,9 @@ func listNothing(context.Context, extension.Runtime, json.RawMessage) (json.RawM
 func boot(t *testing.T) *apptest.AppEnv {
 	t.Helper()
 	registerUnit(t)
-	e := apptest.SetupApp(t)
-	compose.BindExtensionRuntime(e.Pool, e.Vault)
+	composed := registered.ForkForTest()
+	e := apptest.SetupAppComposing(t, composed)
+	composed.BindRuntime(e.Pool, e.Vault)
 	apptest.BootstrapWorkspaceSession(t, e, "Cache Census", "cache@census.test", "Admin")
 	return e
 }
@@ -74,7 +74,7 @@ func readPaths(t *testing.T) []string {
 		}
 	}
 	contractReads := len(paths)
-	for _, verb := range compose.ComposedVerbs() {
+	for _, verb := range registered.Verbs() {
 		if verb.Method == http.MethodGet {
 			paths = append(paths, verb.ServedPath())
 		}
@@ -123,6 +123,7 @@ func repSeat(t *testing.T, e *apptest.AppEnv) *apptest.AppEnv {
 }
 
 func TestEveryReadUnderV1AnswersPrivateAndUnstored(t *testing.T) {
+	t.Parallel()
 	e := boot(t)
 	paths := readPaths(t)
 	for reader, seat := range map[string]*apptest.AppEnv{"the admin": e, "a rep": repSeat(t, e)} {
@@ -141,6 +142,7 @@ func TestEveryReadUnderV1AnswersPrivateAndUnstored(t *testing.T) {
 }
 
 func TestARefusalForNoSessionIsUnstored(t *testing.T) {
+	t.Parallel()
 	e := boot(t)
 	// A client of its own: the server's shared client carries the admin's cookie jar.
 	anonymous := &http.Client{Transport: e.TS.Client().Transport}

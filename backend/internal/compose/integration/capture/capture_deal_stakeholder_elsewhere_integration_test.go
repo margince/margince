@@ -35,6 +35,7 @@ func endSeat(t *testing.T, e *integration.SearchEnv, contact ids.UUID) {
 // A consultant works at a firm with no deal and sits on the committee of a
 // client's deal. Their mail goes on that deal.
 func TestCaptureFilesAStakeholdersMailOnADealAtAnotherCompany(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
@@ -57,6 +58,7 @@ func TestCaptureFilesAStakeholdersMailOnADealAtAnotherCompany(t *testing.T) {
 
 // Seats on two open deals at two companies are a question, offering both.
 func TestCaptureAsksWhenAStakeholderHoldsSeatsAtTwoCompanies(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
@@ -83,6 +85,7 @@ func TestCaptureAsksWhenAStakeholderHoldsSeatsAtTwoCompanies(t *testing.T) {
 // An ended seat, a contact with no seat and the mail's own company deciding
 // each leave the other company's deal alone.
 func TestCaptureFilesNothingOnAnotherCompanyWithoutALiveSeat(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
@@ -105,6 +108,7 @@ func TestCaptureFilesNothingOnAnotherCompanyWithoutALiveSeat(t *testing.T) {
 // The mail's own company still wins: its one open deal takes the mail even
 // when the sender sits on another company's deal.
 func TestCaptureKeepsTheMailsCompanyAheadOfASeatElsewhere(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
@@ -122,6 +126,7 @@ func TestCaptureKeepsTheMailsCompanyAheadOfASeatElsewhere(t *testing.T) {
 // nothing. Nobody is asked either, because an inbound mail names no colleague
 // the sender could not have typed.
 func TestCaptureFilesNothingOnAHeaderNamedSeat(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
@@ -143,6 +148,7 @@ func TestCaptureFilesNothingOnAHeaderNamedSeat(t *testing.T) {
 // A consumer-mail provider authenticates its own domain, not the address in
 // the From line, so an aligned From at one proves nothing about its writer.
 func TestCaptureFilesNothingOnAnAlignedConsumerMailSpoof(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)

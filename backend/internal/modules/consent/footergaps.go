@@ -46,7 +46,7 @@ func (s *Store) FooterGapsTx(ctx context.Context, tx pgx.Tx) ([]FooterGap, error
 	if err != nil {
 		return nil, err
 	}
-	installation, err := config.StoredApplyTx(ctx, tx, config.Bound(), ControllerIdentity)
+	installation, err := config.StoredApplyTx(ctx, tx, config.Bound(ctx), ControllerIdentity)
 	if err != nil {
 		return nil, err
 	}

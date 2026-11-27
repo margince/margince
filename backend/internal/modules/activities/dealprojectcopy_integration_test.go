@@ -20,6 +20,7 @@ import (
 // both onto the meeting it records. The named project lands; the deal's
 // project, which would otherwise come first, does not.
 func TestARecordedMeetingTakesTheTranscriptsNamedProjectOverTheDeals(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := context.Background()
 	customer, deal := seedCustomer(t, e), e.seedDeal(t, "ERP licences")

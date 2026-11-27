@@ -597,6 +597,7 @@ func bulkStatements(ctx context.Context, t *testing.T, run func(context.Context)
 }
 
 func TestABulkReassignmentCostsAFixedNumberOfStatementsPerRecord(t *testing.T) {
+	t.Parallel()
 	seeders := map[crmcontracts.BulkRecordType]func(*testing.T, *integration.Env, ids.UUID, int) []crmcontracts.BulkItem{
 		crmcontracts.BulkRecordTypeContact: seedBulkContacts,
 		crmcontracts.BulkRecordTypeCompany: seedBulkCompanies,

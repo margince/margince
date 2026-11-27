@@ -70,6 +70,7 @@ func survivorPhones(c crmcontracts.Contact) (numbers []string, primary string) {
 }
 
 func TestMergingThreeContactsThatShareANumberKeepsItOnce(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.editorCtx()
 	survivor := contactWithPhones(t, e, "Alice Wong", "alice@example.com", sharedNumber)
@@ -112,6 +113,7 @@ func TestMergingThreeContactsThatShareANumberKeepsItOnce(t *testing.T) {
 }
 
 func TestThePreferredMemberWinsTheSingleSlots(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.editorCtx()
 	fx := e.seedFlipFixture(ctx, t, "Bea Lund", "Old Employer", "Preferred Employer")
@@ -151,6 +153,7 @@ func TestThePreferredMemberWinsTheSingleSlots(t *testing.T) {
 }
 
 func TestWithoutAPreferenceTheSurvivorKeepsItsSlots(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.editorCtx()
 	fx := e.seedFlipFixture(ctx, t, "Cai Moreno", "Own Employer", "Other Employer")
@@ -203,6 +206,7 @@ func companyOfEdge(ctx context.Context, t *testing.T, e *dedupeEnv, edge ids.UUI
 // Enrichment applies rule 1 too: a signature restating a number the contact
 // already holds confirms it and adds no second row.
 func TestASignatureRestatingAHeldNumberAddsNoRow(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	contact := contactWithPhones(t, e, "Dina Roth", "dina@example.com", sharedNumber)
@@ -227,6 +231,7 @@ func valueOf[T ~string](p *T) string {
 // twin. The member's current edge takes the slot, so the survivor keeps a
 // current employer.
 func TestAPreferredEmployerTheSurvivorLeftBecomesItsCurrentOne(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.editorCtx()
 	fx := e.seedFlipFixture(ctx, t, "Eda Varga", "Current Employer", "Former Employer")
@@ -254,6 +259,7 @@ func TestAPreferredEmployerTheSurvivorLeftBecomesItsCurrentOne(t *testing.T) {
 // The address the review shows for a member is its reachable-first one, so a
 // member with no primary address still wins with that address.
 func TestAPreferredMemberWithNoPrimaryAddressWinsWithItsFirstAddress(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.editorCtx()
 	survivor := contactWithPhones(t, e, "Fia Holm", "fia@own.example")

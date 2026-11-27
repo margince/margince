@@ -213,6 +213,7 @@ func TestASuggestionForARecordTheReaderCannotSeeCannotBeDecided(t *testing.T) {
 }
 
 func TestTheQueueShowsOnlySuggestionsTheReaderMayDecide(t *testing.T) {
+	t.Parallel()
 	f := newSuggestionFixture(t)
 	f.propose(t, "deal", f.deal)
 	if queue, err := f.queue(); err != nil || len(queue) != 1 {
@@ -230,6 +231,7 @@ func TestTheQueueShowsOnlySuggestionsTheReaderMayDecide(t *testing.T) {
 }
 
 func TestUndecidableSuggestionsDoNotHideALaterOneTheReaderMayDecide(t *testing.T) {
+	t.Parallel()
 	f := newSuggestionFixture(t)
 	pipeline, stage := ids.NewV7(), ids.NewV7()
 	f.e.exec(t, `INSERT INTO pipeline (id, name) VALUES ($1, $2)`, pipeline, "Gone "+pipeline.String())

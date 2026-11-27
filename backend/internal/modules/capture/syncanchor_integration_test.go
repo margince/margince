@@ -145,6 +145,7 @@ func TestAnOutagePastTheBoundRecordsWhatNobodyRead(t *testing.T) {
 // anchor. The skipped span is recorded for the owner, and the retry reads from
 // the narrowed point rather than walking the oversized window again.
 func TestANarrowedAnchorRecordsTheSkippedSpanAndBindsTheRetry(t *testing.T) {
+	t.Parallel()
 	ctx, reg, _, _ := newCaptureRegistryFixture(t)
 	owner, _ := setupCaptureDB(t)
 	at := time.Date(2026, 3, 1, 9, 0, 0, 0, time.UTC)
@@ -180,6 +181,7 @@ func TestANarrowedAnchorRecordsTheSkippedSpanAndBindsTheRetry(t *testing.T) {
 // A sync another write overtook cannot narrow: the anchor and the unread span
 // stay as the newer write left them.
 func TestASupersededSyncCannotNarrowTheAnchor(t *testing.T) {
+	t.Parallel()
 	ctx, reg, _, _ := newCaptureRegistryFixture(t)
 	owner, _ := setupCaptureDB(t)
 	reg.SetClock(func() time.Time { return time.Date(2026, 3, 1, 9, 0, 0, 0, time.UTC) })

@@ -328,8 +328,8 @@ func TestASeatThatCannotReadPartnersSeesCompaniesWithoutTheirProgramme(t *testin
 }
 
 func TestThePartnerStageListHoldsEachLabelOnce(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
-	keepPartnerStagesAsSeeded(t, e)
 	ctx := asStageAdmin(e, stageAdminGrants())
 	stages := vocabularyList{
 		name: "partner stage", keyed: true,

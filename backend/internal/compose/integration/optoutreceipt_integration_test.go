@@ -432,6 +432,7 @@ func (l *receiptLaneEnv) withdrawingContact(t *testing.T, store *consent.Store, 
 // inside its year keeps its contact whole. One past it is anonymized, and its
 // registration and withdrawal stay in the export.
 func TestRetentionKeepsAWithdrawalWithNoStopOrReceipt(t *testing.T) {
+	t.Parallel()
 	l := setupReceiptLane(t)
 	l.e.WsExec(t, `INSERT INTO consent_purpose (key, label, class) VALUES ('newsletter', 'Newsletter', 'marketing')
 		ON CONFLICT (key) DO NOTHING`)
@@ -464,7 +465,7 @@ func TestRetentionKeepsAWithdrawalWithNoStopOrReceipt(t *testing.T) {
 	l.e.WsExec(t, `INSERT INTO retention_policy (object_type, category, retain_days, action)
 		VALUES ('contact', 'no_consent_no_deal', 1, 'anonymize')`)
 	svc := compose.NewRetentionServiceFor(l.e.DB(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
-	if err := svc.EvaluateInstallation(RetentionPassCtx(l.e.WS)); err != nil {
+	if err := svc.EvaluateInstallation(RetentionPassCtx(context.Background(), l.e.WS)); err != nil {
 		t.Fatalf("running retention: %v", err)
 	}
 

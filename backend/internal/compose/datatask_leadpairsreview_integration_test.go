@@ -75,6 +75,7 @@ func contactPairID(t *testing.T, e *integration.Env, a, b ids.ContactID) ids.UUI
 }
 
 func TestAnAmbiguousLeadFilesItsContactsForReviewAndMergesOnceTheyAreOne(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	lead, first, second := ambiguousLeadWithTwoContacts(t, e, "merge")
@@ -112,6 +113,7 @@ func TestAnAmbiguousLeadFilesItsContactsForReviewAndMergesOnceTheyAreOne(t *test
 }
 
 func TestADismissedPairLeavesTheLeadAloneAndOutOfTheCleanup(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	lead, first, second := ambiguousLeadWithTwoContacts(t, e, "dismiss")
@@ -137,6 +139,7 @@ func TestADismissedPairLeavesTheLeadAloneAndOutOfTheCleanup(t *testing.T) {
 }
 
 func TestALeadMatchingThreeContactsStaysUntilEveryPairIsDismissed(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	lead, first, second := ambiguousLeadWithTwoContacts(t, e, "three")
@@ -164,6 +167,7 @@ func TestALeadMatchingThreeContactsStaysUntilEveryPairIsDismissed(t *testing.T) 
 }
 
 func TestALeadMatchingMoreContactsThanTheCapFilesNothingAndStaysInScope(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	lead := repairLead(t, e, "Crowded Lead", nil)

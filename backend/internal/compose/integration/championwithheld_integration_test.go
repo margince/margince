@@ -156,6 +156,7 @@ func TestAVisibleCommitteeIsAnsweredRatherThanWithheld(t *testing.T) {
 // A stored role is free text, so a seat typed " Champion " or padded with a tab
 // names the champion.
 func TestAChampionStoredInOtherCaseIsNamed(t *testing.T) {
+	t.Parallel()
 	for _, typed := range []string{" Champion ", "\tChampion\n", "\u00a0champion"} {
 		t.Run(typed, func(t *testing.T) {
 			e := Setup(t)

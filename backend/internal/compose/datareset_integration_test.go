@@ -708,6 +708,7 @@ func TestAResetLeavesNoFactRevision(t *testing.T) {
 // A reset clears a refused send and the decision to send it anyway. What it
 // keeps is the audit row: who decided, when, and under which reason.
 func TestAResetClearsADirectedSendAndKeepsItsAuditRow(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	conn := integration.OwnerConn(t)
 	var review ids.UUID

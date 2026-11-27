@@ -133,6 +133,7 @@ func strayEnvelopes(t *testing.T, e *integration.Env, eventType string, entity i
 }
 
 func TestADealEventTheResetOrphanedIsSkippedByCommissionsAndTheRoomTimeline(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	fx := seedStrayDeal(t, e)
 	seat := e.As(e.AdminUser, nil, strayEventPerms)
@@ -175,6 +176,7 @@ func TestADealEventTheResetOrphanedIsSkippedByCommissionsAndTheRoomTimeline(t *t
 // stay pending for as long as the deal stays archived, so the entry is acked
 // and the note is dropped.
 func TestARoomCommentOnAnArchivedDealIsAckedNotLeftPending(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	fx := seedStrayDeal(t, e)
 	if _, err := e.Deals.ArchiveDeal(e.As(e.AdminUser, nil, strayEventPerms), fx.deal, nil); err != nil {
@@ -221,6 +223,7 @@ func orphanedRoomComment(t *testing.T, deal ids.DealID) events.Envelope {
 // The notice-case consumer reads a missing contact as nothing owed. The cohort
 // repair reports it as unactionable. Neither answer leaves the entry pending.
 func TestAContactCreatedTheResetOrphanedIsSkippedByItsConsumers(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	var contact ids.UUID
 	resetWithAWriteInTheWindow(t, e, func() { contact = e.SeedContact(t, "Selma Window", nil) })

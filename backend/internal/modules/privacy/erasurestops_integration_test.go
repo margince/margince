@@ -104,6 +104,7 @@ func contactName(ctx context.Context, t *testing.T, env *sarIdentifierEnv) strin
 
 // An erasure clears the register a rep chose for a named contact.
 func TestErasingAContactClearsItsGreetingRegister(t *testing.T) {
+	t.Parallel()
 	env := setupSARIdentifiers(t)
 	ctx := context.Background()
 	mustExec(ctx, t, env.owner, `UPDATE contact SET greeting_register = 'formal' WHERE id = $1`, env.contact)

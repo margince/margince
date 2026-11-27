@@ -20,6 +20,7 @@ import (
 )
 
 func TestTheTestRunCountsLookAlikesInsideTheFile(t *testing.T) {
+	t.Parallel()
 	companyMap := map[string]string{"Company": "display_name", "Street": "address.line1", "City": "address.city"}
 	contactMap := map[string]string{"Name": "full_name", "Email": "email", "Employer": "company_name"}
 	renameMap := map[string]string{"Id": "id", "Company": "display_name"}
@@ -163,6 +164,7 @@ func TestTheTestRunCountsLookAlikesInsideTheFile(t *testing.T) {
 // A contact employed at a company of the same upload is met with that
 // company's domains, however the row names it.
 func TestTheTestRunMeetsAContactAtItsEmployerOfTheSameUpload(t *testing.T) {
+	t.Parallel()
 	companies := AnyMap{"file": "companies.csv", "object": "company", "mapping": AnyMap{"ref": "ref", "name": "display_name", "domain": "domain"}}
 	for name, employer := range map[string]string{"company_ref": "k1", "company_name": "Twinco"} {
 		t.Run(name, func(t *testing.T) {

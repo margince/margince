@@ -91,16 +91,11 @@ func importHoldFor(reason string) (posture, status, why *string) {
 	return &held, nil, &reason
 }
 
-// privateMailRequestsOff turns the setting off until the test ends.
+// privateMailRequestsOff turns the setting off in the test's own database.
 func (e *loadEnv) privateMailRequestsOff(t *testing.T) {
 	t.Helper()
 	e.exec(t, `INSERT INTO setting (key, value) VALUES ($1, 'false'::jsonb)
 		ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`, PrivateMailRequests.Key())
-	t.Cleanup(func() {
-		if _, err := e.owner.Exec(context.Background(), `DELETE FROM setting WHERE key = $1`, PrivateMailRequests.Key()); err != nil {
-			t.Errorf("restoring the private-mail setting: %v", err)
-		}
-	})
 }
 
 // readerWroteFirst puts the rep's own sent mail earlier on message's thread.
@@ -154,6 +149,7 @@ func (e *loadEnv) hiddenFor(t *testing.T) HiddenBacklog {
 // Mail private only because mail sharing is off is offered to the model. Its
 // verdict lands, and the request it finds files a task its assignee alone reads.
 func TestRoutinePrivateMailIsJudgedAndFilesAPrivateTask(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	waiting := e.privateWait(t, "Can you confirm the price?", ReasonWorkspaceFloor)
 	if !unjudged(t, e)[waiting] {
@@ -200,6 +196,7 @@ func TestRoutinePrivateMailIsJudgedAndFilesAPrivateTask(t *testing.T) {
 // Held mail never reaches a model: it is neither offered nor written. It is
 // counted as unchecked for the reader who sees it waiting.
 func TestDeliberatelyHeldMailIsNeverOfferedToTheModel(t *testing.T) {
+	t.Parallel()
 	for _, reason := range protectedReasons {
 		t.Run(reason, func(t *testing.T) {
 			e := setupLoad(t)
@@ -223,6 +220,7 @@ func TestDeliberatelyHeldMailIsNeverOfferedToTheModel(t *testing.T) {
 
 // A verdict reached while mail was shared is not re-judged once it is held.
 func TestHeldMailIsNotReJudgedUnderNewRules(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	held := e.waitingFromToRep(t, "Contract terms", "buyer@customer.test", e.buyer(t))
 	if _, err := storeKnowing(e).SetOwedVerdict(asClassifier(e), held, OwedVerdictAsksUs, "prompts-old", dbNow(t, e)); err != nil {
@@ -243,6 +241,7 @@ func TestHeldMailIsNotReJudgedUnderNewRules(t *testing.T) {
 // With the setting off, routine private mail is not judged either. The queue
 // falls back on the reader having written first, and counts what went unchecked.
 func TestWithTheSettingOffPrivateMailFallsBackAndIsCounted(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	e.privateMailRequestsOff(t)
 	waiting := e.privateWait(t, "Re: our offer", ReasonWorkspaceFloor)
@@ -264,6 +263,7 @@ func TestWithTheSettingOffPrivateMailFallsBackAndIsCounted(t *testing.T) {
 // The reader-wrote evidence is the reader's own: a colleague's earlier mail on
 // the thread is not the rep having opened it.
 func TestAColleaguesEarlierMailIsNotTheReaderWritingFirst(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	e.privateMailRequestsOff(t)
 	waiting := e.privateWait(t, "Re: our offer", ReasonWorkspaceFloor)
@@ -279,6 +279,7 @@ func TestAColleaguesEarlierMailIsNotTheReaderWritingFirst(t *testing.T) {
 // Until the confidentiality verdict lands, nobody knows whether a thread is
 // confidential, so mail on a thread a seat still waits on is not offered.
 func TestRoutinePrivateMailWaitsForItsThreadVerdict(t *testing.T) {
+	t.Parallel()
 	for status, offered := range map[string]bool{"": true, "pending": false, "cleared": true} {
 		t.Run("thread verdict "+status, func(t *testing.T) {
 			e := setupLoad(t)
@@ -296,6 +297,7 @@ func TestRoutinePrivateMailWaitsForItsThreadVerdict(t *testing.T) {
 
 // A restricted message reaches no model, private for a routine reason or not.
 func TestARestrictedPrivateMessageIsNeitherOfferedNorJudged(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	mail := e.privateWait(t, "Contract terms", ReasonWorkspaceFloor)
 	e.exec(t, `INSERT INTO activity_retention_evidence (activity_id, basis, qualified_at, decided_by_name, reason)
@@ -315,6 +317,7 @@ func TestARestrictedPrivateMessageIsNeitherOfferedNorJudged(t *testing.T) {
 // Mail read while routine and held by a human before the verdict is written
 // keeps no verdict: the write asks the rule again.
 func TestMailHeldDuringTheModelCallIsNotJudged(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	mail := e.privateWait(t, "Contract terms", ReasonWorkspaceFloor)
 	if !unjudged(t, e)[mail] {
@@ -331,6 +334,7 @@ func TestMailHeldDuringTheModelCallIsNotJudged(t *testing.T) {
 // The fallback asks whether the seat owing the reply wrote first, not whoever
 // is reading: a colleague on the same mail sees the owner's evidence.
 func TestTheFallbackReadsTheOwnerNotTheViewer(t *testing.T) {
+	t.Parallel()
 	for writer, wrote := range map[string]bool{"owner": true, "viewer": false, "owner, unreadable to the viewer": false} {
 		t.Run(writer, func(t *testing.T) {
 			e := setupLoad(t)
@@ -355,6 +359,7 @@ func TestTheFallbackReadsTheOwnerNotTheViewer(t *testing.T) {
 // The rep's private reply settles a private request and closes its reminder.
 // With the check of private mail off, the request is not offered at all.
 func TestAPrivateRequestIsSettledByAPrivateReply(t *testing.T) {
+	t.Parallel()
 	for _, on := range []bool{true, false} {
 		t.Run(fmt.Sprintf("private mail checked %v", on), func(t *testing.T) {
 			e := setupLoad(t)
@@ -391,8 +396,8 @@ func TestAPrivateRequestIsSettledByAPrivateReply(t *testing.T) {
 // Only a human decides which mail reaches a model: an agent's write of the
 // setting is refused and changes nothing.
 func TestAnAgentCannotTurnThePrivateMailCheckOn(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
-	e.restoreFollowUpWindow(t)
 	e.privateMailRequestsOff(t)
 	db := database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws))
 	h := NewHandlers(db).WithSettings(configtest.StoredOver(t, e.pool, ConfigSettings()))
@@ -418,6 +423,7 @@ func TestAnAgentCannotTurnThePrivateMailCheckOn(t *testing.T) {
 // A seat's hold on the thread lands before the audience recompute does, so
 // routine private mail on a held thread is not offered either.
 func TestRoutinePrivateMailOnAHeldThreadIsNotOffered(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	waiting := e.privateWait(t, "Contract terms", ReasonPendingVerdict)
 	e.exec(t, `INSERT INTO capture_thread_verdict (thread_key, user_id, status) VALUES ($1, $2, 'held')`,
@@ -429,6 +435,7 @@ func TestRoutinePrivateMailOnAHeldThreadIsNotOffered(t *testing.T) {
 
 // A reminder out of private mail goes only to a seat that may read that mail.
 func TestNoReminderForASeatThatMayNotReadThePrivateMail(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	source := e.privateWait(t, "Please send the report", ReasonWorkspaceFloor)
 	system := asClassifier(e)
@@ -460,6 +467,7 @@ func TestNoReminderForASeatThatMayNotReadThePrivateMail(t *testing.T) {
 // Held mail keeps no automatic reminder, even with a verdict reached while it
 // was shared: the pass files only mail it may judge.
 func TestHeldMailFilesNoAutomaticReminder(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	source := seedEmailRequest(t, e, "Contract terms", "commitment", OwedVerdictAsksUs)
 	e.privateTo(t, source, e.rep, ReasonConfidentialMarker)
@@ -478,6 +486,7 @@ func TestHeldMailFilesNoAutomaticReminder(t *testing.T) {
 // Our own earlier mail goes to the model as context, so the same rule reads it.
 // A held message of ours is never the context of a verdict.
 func TestOurEarlierMailIsContextOnlyWhenTheModelMayReadIt(t *testing.T) {
+	t.Parallel()
 	for reason, carried := range map[string]bool{ReasonWorkspaceFloor: true, ReasonConfidentialMarker: false} {
 		t.Run(reason, func(t *testing.T) {
 			e := setupLoad(t)
@@ -494,6 +503,7 @@ func TestOurEarlierMailIsContextOnlyWhenTheModelMayReadIt(t *testing.T) {
 
 // A human review also sends the mail to a model, so it reads by the same rule.
 func TestReviewReadsRoutinePrivateMailAndNeverHeldMail(t *testing.T) {
+	t.Parallel()
 	for reason, readable := range map[string]bool{ReasonWorkspaceFloor: true, ReasonConfidentialMarker: false} {
 		t.Run(reason, func(t *testing.T) {
 			e := setupLoad(t)
@@ -520,8 +530,8 @@ func TestReviewReadsRoutinePrivateMailAndNeverHeldMail(t *testing.T) {
 // The setting is served and saved through the follow-up settings, and the
 // owed-reply check follows it.
 func TestAnAdminTurnsThePrivateMailCheckOff(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
-	e.restoreFollowUpWindow(t)
 	t.Cleanup(func() {
 		if _, err := e.owner.Exec(context.Background(), `DELETE FROM setting WHERE key = $1`, PrivateMailRequests.Key()); err != nil {
 			t.Errorf("restoring the private-mail setting: %v", err)

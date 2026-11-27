@@ -238,6 +238,7 @@ func TestReopeningAWonDealReversesWhatItEarned(t *testing.T) {
 // Whether a sourced win earns commission must not depend on when the event is
 // delivered. A deal archived after its win and before the accrual still accrues.
 func TestAWinWhoseDealWasArchivedBeforeDeliveryStillAccrues(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	fx := seedAccrualFixture(t, e, "tier2_20")
 	admin := e.As(e.AdminUser, nil, commissionAdminPerms)
@@ -264,6 +265,7 @@ func TestAWinWhoseDealWasArchivedBeforeDeliveryStillAccrues(t *testing.T) {
 // An archived partner keeps what it earned on a deal it sourced. Archiving the
 // partner company before the win is priced must not turn it into "no tier".
 func TestAWinWhosePartnerWasArchivedBeforeDeliveryStillAccrues(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	fx := seedAccrualFixture(t, e, "tier2_20")
 	admin := e.As(e.AdminUser, nil, commissionAdminPerms)

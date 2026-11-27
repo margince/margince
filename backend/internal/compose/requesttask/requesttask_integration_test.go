@@ -23,6 +23,7 @@ import (
 // TestARequestBecomesADatedTaskForThePrivacyOperator: the task is filed on
 // the contact, assigned to the privacy operator and due on the request's date.
 func TestARequestBecomesADatedTaskForThePrivacyOperator(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	e.WsExec(t, `INSERT INTO role_assignment (user_id, role_id) SELECT $1, id FROM role WHERE key = 'admin'`, e.AdminUser)
 	contact := e.SeedContact(t, "Lan Nguyen", nil)

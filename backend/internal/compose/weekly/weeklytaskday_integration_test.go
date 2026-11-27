@@ -21,6 +21,7 @@ import (
 // company zone. Picked from Los Angeles for the Sunday, its instant is already
 // Monday in Berlin, so a count by instant hands it to the next review.
 func TestADateOnlyTaskCountsInTheWeekOfItsPickedDate(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 	e.WsExec(t, `UPDATE setting SET value = to_jsonb($1::text) WHERE key = 'installation.timezone'`, "Europe/Berlin")
 	berlin, err := time.LoadLocation("Europe/Berlin")

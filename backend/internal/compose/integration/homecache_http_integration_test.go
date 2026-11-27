@@ -181,6 +181,7 @@ func TestACachedFirstPageKeepsTheWalkItsDefaultSpellingStarted(t *testing.T) {
 // A kept first page outlives the walk it started. It is served without that
 // walk, and its cursor pages on into the day.
 func TestACachedFirstPagePagesOnAfterItsWalkEnds(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Home Walk Ended", "admin@homewalkended.test", "Admin")
 	var admin ids.UUID

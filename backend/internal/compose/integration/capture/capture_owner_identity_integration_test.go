@@ -150,6 +150,7 @@ func TestAColleaguesIdentityIsNotMine(t *testing.T) {
 // acting seat's own addresses. A colleague's private address is not among
 // them, and a dropped message cannot be brought back.
 func TestMailWithAColleaguesPrivateAddressIsStoredNotDroppedAsInternal(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	const colleaguePrivate = "colleague@private.example"

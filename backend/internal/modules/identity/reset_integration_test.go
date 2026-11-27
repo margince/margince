@@ -124,6 +124,7 @@ func TestPasswordResetFlowEndToEnd(t *testing.T) {
 // reset must end every credential that could act as the account, not just
 // the session cookie that prompted the recovery.
 func TestPasswordResetRefusesTheAccountAddressAndKeepsTheToken(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "reset-email-password")
 	ctx := e.wsOnlyCtx()
 

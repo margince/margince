@@ -60,6 +60,7 @@ func TestTaskIntentSurvivesAnUnrelatedEditAndClearsWithTheDeadline(t *testing.T)
 }
 
 func TestAnImplausibleDueDateIsRefusedOnCreateAndOnMove(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	store := e.store(nil)
@@ -85,6 +86,7 @@ func TestAnImplausibleDueDateIsRefusedOnCreateAndOnMove(t *testing.T) {
 // planted with raw SQL. Editing a field that is not the due date must not be
 // refused for it.
 func TestAnUnmovedLegacyDueDateStaysEditableAndCanBeCompleted(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	store := e.store(nil)

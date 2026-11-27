@@ -117,6 +117,7 @@ func TestAnUnlicensedInstallationLocksWhenItsTrialEnds(t *testing.T) {
 // locks the installation through the real server. There is no grace period. A
 // change answers license_lapsed, /me tells every seat, and reads still answer.
 func TestALapsedLicenseLocksTheInstallation(t *testing.T) {
+	t.Parallel()
 	expired := func() licensecheck.Posture {
 		return licensecheck.Posture{State: licensecheck.StateValid, License: licensecheck.License{InGrace: true}}
 	}

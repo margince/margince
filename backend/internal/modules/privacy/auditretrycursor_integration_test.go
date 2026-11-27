@@ -118,6 +118,7 @@ func TestAuditRetrySweepReturnsToHeldLinkedCopiesAfterRelease(t *testing.T) {
 // Each phase reads only the audit rows it can act on. A history of ordinary
 // writes with no erasure in it costs one page per phase.
 func TestAnAuditPassOverOrdinaryWritesTakesOnePagePerPhase(t *testing.T) {
+	t.Parallel()
 	e := setupAuditBoundary(t)
 	withAuditRetryFixture(t, e, func(ctx context.Context) {
 		start := ids.NewV7()

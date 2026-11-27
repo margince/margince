@@ -164,6 +164,7 @@ func (w dealEvidenceWorld) healthEvidence(t *testing.T) *ids.UUID {
 }
 
 func TestABusinessMeetingMarkedPrivateStillCountsForTheDeal(t *testing.T) {
+	t.Parallel()
 	w := newDealEvidenceWorld(t)
 	at := w.now.AddDate(0, 0, -2)
 	review := w.meeting(t, "budget review", at, true)
@@ -186,6 +187,7 @@ func TestABusinessMeetingMarkedPrivateStillCountsForTheDeal(t *testing.T) {
 // A personal verdict on the thread takes its mail off the deal clock. The same
 // mail judged legal is confidential business and still counts.
 func TestAThreadHeldAsPersonalKeepsNoDealWarm(t *testing.T) {
+	t.Parallel()
 	for kind, counts := range map[string]bool{threadverdict.KindPersonal: false, "legal": true} {
 		t.Run(kind, func(t *testing.T) {
 			w := newDealEvidenceWorld(t)
@@ -205,6 +207,7 @@ func TestAThreadHeldAsPersonalKeepsNoDealWarm(t *testing.T) {
 // Each half of the check stands alone. One case keeps the personal reason after
 // the seat's import is gone. The other keeps a hold the reason does not name.
 func TestEitherSignOfAPersonalThreadKeepsTheDealClockStill(t *testing.T) {
+	t.Parallel()
 	for name, strip := range map[string]string{
 		"the reason without the hold": `DELETE FROM capture_import WHERE activity_id = $1`,
 		"the hold without the reason": `UPDATE activity SET audience_reason = 'posture' WHERE id = $1`,
@@ -227,6 +230,7 @@ func TestEitherSignOfAPersonalThreadKeepsTheDealClockStill(t *testing.T) {
 // either order. The second change alone moves the stored clock, so each order
 // proves one trigger: the verdict's, then the activity's.
 func TestEndingAPersonalHoldMovesTheDealClockBack(t *testing.T) {
+	t.Parallel()
 	clearReason := `UPDATE activity SET audience_reason = 'posture' WHERE id = $1`
 	deleteHold := `DELETE FROM capture_thread_verdict WHERE thread_key = $1`
 	for name, last := range map[string]string{"the verdict last": deleteHold, "the reason last": clearReason} {
@@ -258,6 +262,7 @@ func TestEndingAPersonalHoldMovesTheDealClockBack(t *testing.T) {
 // The deal verdict reads the dates of the deal's participants-only mail. A
 // thread held as personal gives it none; one held as legal still does.
 func TestTheDealVerdictReadsNoPersonalMailDate(t *testing.T) {
+	t.Parallel()
 	for kind, counts := range map[string]bool{threadverdict.KindPersonal: false, "legal": true} {
 		t.Run(kind, func(t *testing.T) {
 			w := newDealEvidenceWorld(t)
@@ -281,6 +286,7 @@ func TestTheDealVerdictReadsNoPersonalMailDate(t *testing.T) {
 // A deal clock stored before the rule still names the personal mail. The data
 // task refolds it, and a second pass changes nothing.
 func TestTheDataTaskTakesAPersonalMailOffAStoredDealClock(t *testing.T) {
+	t.Parallel()
 	w := newDealEvidenceWorld(t)
 	thread, at := "thread-"+ids.NewV7().String(), w.now.AddDate(0, 0, -2)
 	w.mail(t, thread, at)

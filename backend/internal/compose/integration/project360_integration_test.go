@@ -367,6 +367,7 @@ func TestProject360OmitsTheCompanyForACallerWithoutThatGrant(t *testing.T) {
 }
 
 func TestProject360ReadsAProjectWithNoCustomerAsHavingNone(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 	company := e.SeedCompany(t, "Acme", &e.Rep1)

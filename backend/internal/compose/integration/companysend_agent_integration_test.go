@@ -376,6 +376,7 @@ func (a *accountSendEnv) mintAccountSendPassport(t *testing.T) string {
 // project the probe cannot reach answers not-found on both doors, so the
 // refusal never says that a record the agent cannot reach exists.
 func TestAnAgentsPreviewAndSendAgreeOnAProjectLink(t *testing.T) {
+	t.Parallel()
 	a := accountSendOn(t, setupPreflightServingMCP(t))
 	live := createdRecord(t, a.AppEnv, "/v1/projects", AnyMap{"name": "Rollout", "company_id": a.company, "source": "manual"})
 	archived := createdRecord(t, a.AppEnv, "/v1/projects", AnyMap{"name": "Retired", "company_id": a.company, "source": "manual"})

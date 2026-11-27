@@ -92,6 +92,7 @@ func TestTheClassifyPassOffersAMessageDeclinedUnderAnotherPrompt(t *testing.T) {
 // An unsure answer is final only for its prompt too: stamped under a retired
 // one, the message is asked again and labeled.
 func TestTheClassifyPassOffersAMessageFoundUnsureUnderAnotherPrompt(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	stale := seedUnlabeledEmail(t, e, "please send the offer")
 	classifier, ctx := classifyPassFor(e, &scriptedClassifyBrain{})
@@ -113,6 +114,7 @@ func TestTheClassifyPassOffersAMessageFoundUnsureUnderAnotherPrompt(t *testing.T
 // The stamp is about the text the model read: a row whose version moved during
 // the call is not stamped, and is asked again.
 func TestAnUnsureStampSkipsAMessageThatChangedSinceItWasRead(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	id := seedUnlabeledEmail(t, e, "please send the offer")
 	classifier, ctx := classifyPassFor(e, &scriptedClassifyBrain{})
@@ -131,6 +133,7 @@ func TestAnUnsureStampSkipsAMessageThatChangedSinceItWasRead(t *testing.T) {
 
 // The owed stamp is held to the version read as well.
 func TestAnOwedStampSkipsAMessageThatChangedSinceItWasRead(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	id := seedWaitingMail(t, e, "Monatsreporting Juli")
 	store := activities.NewStore(InstallationDB(e.Pool))

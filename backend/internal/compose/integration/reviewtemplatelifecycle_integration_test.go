@@ -112,6 +112,7 @@ func writeWinReview(ctx context.Context, e *Env, deal ids.DealID, closing ids.UU
 }
 
 func TestAnAddedReviewTemplateIsAskedAndRetiresTheOneBefore(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	keepReviewTemplates(t)
 	ctx := reviewTemplateAdmin(e)
@@ -158,6 +159,7 @@ func TestAnAddedReviewTemplateIsAskedAndRetiresTheOneBefore(t *testing.T) {
 }
 
 func TestARetiredReviewTemplateIsNotAskedAndItsReviewsStillRead(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	keepReviewTemplates(t)
 	ctx := reviewTemplateAdmin(e)
@@ -211,6 +213,7 @@ func TestARetiredReviewTemplateIsNotAskedAndItsReviewsStillRead(t *testing.T) {
 }
 
 func TestOnlyAGrantedSeatAddsOrRetiresAReviewTemplate(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	keepReviewTemplates(t)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
@@ -263,6 +266,7 @@ func reviewTemplateEvents(t *testing.T, e *Env, id openapi_types.UUID) int {
 // A review opened on one template and submitted after another took its place
 // is refused, even when both stand at the same version.
 func TestAReviewOpenedOnOneTemplateIsRefusedOnTheNext(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	keepReviewTemplates(t)
 	ctx := reviewTemplateAdmin(e)
@@ -295,6 +299,7 @@ func TestAReviewOpenedOnOneTemplateIsRefusedOnTheNext(t *testing.T) {
 // Two admins add a template for one outcome at once. One wins and the other
 // gets a conflict. The outcome still asks one template.
 func TestTwoConcurrentAddsForOneOutcomeLeaveOneActiveTemplate(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	keepReviewTemplates(t)
 	ctx := reviewTemplateAdmin(e)

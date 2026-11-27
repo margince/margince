@@ -38,6 +38,7 @@ func registerReportTasks(t *testing.T) {
 }
 
 func TestAiUsageGroupsByExtensionTask(t *testing.T) {
+	t.Parallel()
 	registerReportTasks(t)
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
@@ -76,6 +77,7 @@ func TestAiUsageGroupsByExtensionTask(t *testing.T) {
 }
 
 func TestErasureFindsAnExtensionCallBySubject(t *testing.T) {
+	t.Parallel()
 	registerReportTasks(t)
 	e := Setup(t)
 	contactID := seedSubject(t, e)

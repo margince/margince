@@ -31,6 +31,7 @@ func (e *Env) setRate(t *testing.T, from, rate string) {
 // A removed currency leaves the sheet head, but its versions stay so a figure
 // pinned to an earlier revision still finds the rate it used.
 func TestARemovedCurrencyLeavesTheSheetAndKeepsItsHistory(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.Admin()
 	e.setRate(t, "JPY", "0.0060")
@@ -78,6 +79,7 @@ func (e *Env) effectiveRate(t *testing.T, from string) (string, time.Time, bool,
 
 // Removal needs the fx_rate update grant, as correcting a rate does.
 func TestRemovingACurrencyNeedsTheUpdateGrant(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	e.setRate(t, "USD", "0.9")
 	for name, grant := range map[string]principal.ObjectGrant{
@@ -101,6 +103,7 @@ func TestRemovingACurrencyNeedsTheUpdateGrant(t *testing.T) {
 // The base currency lock counts the currencies on the sheet, not its versions,
 // and a removal lifts it once the last one is gone.
 func TestRemovingEveryCurrencyUnlocksTheBaseCurrency(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.Admin()
 	store := identity.NewInstallationSettings(e.DB(), compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))

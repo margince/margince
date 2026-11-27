@@ -17,6 +17,7 @@ import (
 // Accepting an offer re-prices the deal, and the deal's own History has to say
 // what the value was before and what it is now.
 func TestAcceptingAnOfferRecordsTheDealsOldAndNewValueInItsHistory(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	deal := e.SeedDeal(t, "Repriced by offer", pipeline, open, &e.Rep1)

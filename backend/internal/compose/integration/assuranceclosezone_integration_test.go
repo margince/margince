@@ -22,6 +22,7 @@ import (
 // day is late there, though not yet in UTC. The close day is Saigon's today, so
 // the deal can still be saved after Saigon's midnight.
 func TestTheInputCheckReadsAPastCloseInTheInstallationZone(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	e.WsExec(t, `UPDATE setting SET value = '"Asia/Ho_Chi_Minh"'::jsonb WHERE key = 'installation.timezone'`)
 	saigon, err := time.LoadLocation("Asia/Ho_Chi_Minh")

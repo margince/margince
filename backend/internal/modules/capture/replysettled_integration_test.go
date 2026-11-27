@@ -21,6 +21,7 @@ import (
 // A captured mail and its participants clear only the stamps at or after the
 // mail's own time. The older settled mail on its thread keeps its stamps.
 func TestACapturedMailKeepsTheOlderSettledStampsOfItsThread(t *testing.T) {
+	t.Parallel()
 	owner, pool := setupCaptureDB(t)
 	ctx := context.Background()
 	ws := ids.NewV7()

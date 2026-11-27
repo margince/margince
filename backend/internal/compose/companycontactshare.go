@@ -61,7 +61,7 @@ func ShareCompanyContacts(ctx context.Context, db *database.DB, grants *identity
 		if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 			return err
 		}
-		if err := identity.ValidateRecordGrantRecipientTx(ctx, tx, in); err != nil {
+		if err := identity.ValidateRecordGrantRecipientTx(ctx, tx, installedRbacObjects(), in); err != nil {
 			return err
 		}
 		roster, err := contacts.LockCompanyRosterTx(ctx, tx, companyID)

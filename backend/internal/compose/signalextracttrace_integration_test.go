@@ -206,6 +206,7 @@ func TestATraceReadOfAThreadWithNoConversationIsNotKnown(t *testing.T) {
 // A promise read from a thread with routine-private mail stays with that mail:
 // the dispatch refuses it and the legacy conversion reads nothing.
 func TestAPromiseInRoutinePrivateMailIsNeverFiled(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	at := traceReadClock.Add(-48 * time.Hour)

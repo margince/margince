@@ -90,6 +90,7 @@ func connectionStatus(t *testing.T, id ids.UUID) (status, label string) {
 }
 
 func TestConnectingTheSameAccountAgainRepairsItsRow(t *testing.T) {
+	t.Parallel()
 	m := connectTwoMailboxes(t)
 	again, err := m.reg.Connect(m.ctx, "gmail", connector.Auth("work"))
 	if err != nil {
@@ -105,6 +106,7 @@ func TestConnectingTheSameAccountAgainRepairsItsRow(t *testing.T) {
 }
 
 func TestDisconnectingOneMailboxLeavesTheOtherSyncing(t *testing.T) {
+	t.Parallel()
 	m := connectTwoMailboxes(t)
 	if err := m.reg.Disconnect(m.ctx, capture.ProviderMailbox("gmail")); !errors.Is(err, capture.ErrMailboxAmbiguous) {
 		t.Fatalf("a provider-only disconnect with two live mailboxes = %v, want the ask to name one", err)
@@ -127,6 +129,7 @@ func TestDisconnectingOneMailboxLeavesTheOtherSyncing(t *testing.T) {
 }
 
 func TestAReconnectThatReturnsAnotherAccountIsRefused(t *testing.T) {
+	t.Parallel()
 	m := connectTwoMailboxes(t)
 	if _, err := m.reg.Grant(m.ctx, "gmail", connector.Auth("stranger"), m.work); !errors.Is(err, capture.ErrReconnectOtherAccount) {
 		t.Fatalf("a reconnect returning another account = %v, want it refused", err)
@@ -144,6 +147,7 @@ func TestAReconnectThatReturnsAnotherAccountIsRefused(t *testing.T) {
 }
 
 func TestTheSameMessageThroughTwoMailboxesIsStoredOnce(t *testing.T) {
+	t.Parallel()
 	m := connectTwoMailboxes(t)
 	for _, id := range []ids.UUID{m.work, m.other} {
 		if err := m.reg.SyncOnce(m.ctx, id); err != nil {
@@ -172,6 +176,7 @@ func TestTheSameMessageThroughTwoMailboxesIsStoredOnce(t *testing.T) {
 }
 
 func TestAHistoryImportOnOneMailboxLeavesTheOther(t *testing.T) {
+	t.Parallel()
 	m := connectTwoMailboxes(t)
 	work := capture.Mailbox{Provider: "gmail", ID: m.work}
 	other := capture.Mailbox{Provider: "gmail", ID: m.other}
@@ -201,6 +206,7 @@ func TestAHistoryImportOnOneMailboxLeavesTheOther(t *testing.T) {
 }
 
 func TestAReplyGoesOutFromTheMailboxTheMessageArrivedIn(t *testing.T) {
+	t.Parallel()
 	m := connectTwoMailboxes(t)
 	if err := m.reg.SyncOnce(m.ctx, m.other); err != nil {
 		t.Fatal(err)
@@ -246,6 +252,7 @@ func importsOf(t *testing.T, seat ids.UserID) int {
 }
 
 func TestAFolderRuleKeepsMailOutOfTheMailboxItWasPickedFromOnly(t *testing.T) {
+	t.Parallel()
 	m := connectTwoMailboxes(t)
 	m.connector.containers = []string{"gmail:Label_7"}
 	store := capture.NewExclusionStore(m.db)
@@ -270,6 +277,7 @@ func TestAFolderRuleKeepsMailOutOfTheMailboxItWasPickedFromOnly(t *testing.T) {
 }
 
 func TestTheMailboxThatCapturedAMessageIsTheOneThatDeliveredIt(t *testing.T) {
+	t.Parallel()
 	m := connectTwoMailboxes(t)
 	owner, _ := setupCaptureDB(t)
 	capturing := func() []ids.UUID {
@@ -303,6 +311,7 @@ func TestTheMailboxThatCapturedAMessageIsTheOneThatDeliveredIt(t *testing.T) {
 }
 
 func TestTheDefaultMailboxSendsNewMail(t *testing.T) {
+	t.Parallel()
 	m := connectTwoMailboxes(t)
 	other := capture.Mailbox{Provider: "gmail", ID: m.other}
 	if _, err := m.reg.SetMailboxSettings(m.ctx, other, capture.MailboxSettings{}); !errors.Is(err, apperrors.ErrInvalidArgument) {
@@ -332,6 +341,7 @@ func TestTheDefaultMailboxSendsNewMail(t *testing.T) {
 }
 
 func TestAColleaguesMailboxIsNotReachableByItsID(t *testing.T) {
+	t.Parallel()
 	m := connectTwoMailboxes(t)
 	owner, _ := setupCaptureDB(t)
 	colleague, theirs := ids.NewV7(), ids.NewV7()

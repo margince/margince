@@ -443,6 +443,7 @@ func TestOnlyAMemberAdministratorSeesRolesAndTeams(t *testing.T) {
 // A member administrator may not read the role directory, so each row names
 // the roles it shows by the name an admin gave them.
 func TestTheAdminSeesACustomRoleByItsName(t *testing.T) {
+	t.Parallel()
 	w := setupAccessWorld(t)
 	e := w.e
 	role, err := w.directory.CreateRole(e.Admin(), w.adminIdentity(), "rep", "Sales assistant")

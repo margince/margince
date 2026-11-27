@@ -251,6 +251,7 @@ func partyContacts(parties []crmcontracts.EmailParty) map[ids.UUID]bool {
 // An imported email names a party no contact holds by the address its header
 // gave. The row stores that address lowercase, whatever case the header used.
 func TestAHeaderAddressNoContactHoldsIsStoredLowercase(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	subject, direction := "Send the report", "inbound"
 	logged, _, err := storeKnowing(e).LogActivity(asClassifier(e), LogActivityInput{

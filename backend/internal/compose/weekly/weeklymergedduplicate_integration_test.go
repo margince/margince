@@ -19,6 +19,7 @@ import (
 // review counts archived wins, so the merge must take the duplicate out of the
 // count and leave the survivor's.
 func TestTwoWonDuplicatesMergedCountAsOneWin(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 	company := e.SeedCompany(t, "Twin Wins GmbH", nil)
 	first := ids.From[ids.DealKind](e.SeedOpenDealOn(t, "Twin win", company))

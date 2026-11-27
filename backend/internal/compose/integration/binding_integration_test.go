@@ -293,6 +293,7 @@ func TestReleaseReembeddingOnlyEverActsOnItsOwnRun(t *testing.T) {
 // marker back without stamping its target. The index then still names the model
 // it was released under, and a configured model equal to it reads no reindex.
 func TestAnAbandonedRunLeavesThePopulatedModelAsItWas(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	ctx := context.Background()
 	const original = "fake/orig@1024"

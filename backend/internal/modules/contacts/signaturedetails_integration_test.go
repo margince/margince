@@ -107,6 +107,7 @@ func quoted(name, value, evidence string) SignatureField {
 }
 
 func TestASignatureFillsAnEmptyAddressAndNeverOneAColleagueDecided(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	filled := `SELECT count(*) FROM contact WHERE id = $1 AND address_line1 = 'Hafenstrasse 12'
@@ -138,6 +139,7 @@ func TestASignatureFillsAnEmptyAddressAndNeverOneAColleagueDecided(t *testing.T)
 }
 
 func TestASignaturesFurtherEmailBecomesASecondAddressOfThatContactOnly(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	contactID, mail := e.signedMail(ctx, t, "Dana Second", signerMail{})
@@ -169,6 +171,7 @@ func TestASignaturesFurtherEmailBecomesASecondAddressOfThatContactOnly(t *testin
 }
 
 func TestASignaturesEmailLandsOnlyFromItsAuthenticatedSendersOwnDomain(t *testing.T) {
+	t.Parallel()
 	const stated = "dana.weber@acme-mail.example"
 	for name, tc := range map[string]struct {
 		mail  signerMail
@@ -197,6 +200,7 @@ func TestASignaturesEmailLandsOnlyFromItsAuthenticatedSendersOwnDomain(t *testin
 }
 
 func TestANarrowedSignatureTakesBackItsAddressAndEmail(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	contactID, mail := e.signedMail(ctx, t, "Dana Narrowed", signerMail{})
@@ -272,6 +276,7 @@ func (e *dedupeEnv) employee(ctx context.Context, t *testing.T, contactID *ids.C
 }
 
 func TestASignatureFillsItsOneEmployersEmptyStreet(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	street := `SELECT count(*) FROM company WHERE id = $1 AND address_line1 = 'Hafenstrasse 12' AND address_city = 'Hamburg'`
@@ -353,6 +358,7 @@ func (e *dedupeEnv) narrow(ctx context.Context, t *testing.T, mails ...ids.UUID)
 }
 
 func TestAValueTheSnippetDoesNotPrintWritesNothing(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	contactID, mail := e.signedMail(ctx, t, "Dana Injected", signerMail{domain: "acme-logistics.example"})
@@ -378,6 +384,7 @@ func TestAValueTheSnippetDoesNotPrintWritesNothing(t *testing.T) {
 }
 
 func TestASignatureValueStaysWhileAnotherMailStillStatesIt(t *testing.T) {
+	t.Parallel()
 	street := `SELECT count(*) FROM company WHERE id = $1 AND address_city = 'Hamburg'`
 	email := `SELECT count(*) FROM contact_email WHERE contact_id = $1 AND email = 'dana.weber@acme-mail.example' AND archived_at IS NULL`
 	address := `SELECT count(*) FROM contact WHERE id = $1 AND address_city = 'Hamburg'`
@@ -421,6 +428,7 @@ func TestASignatureValueStaysWhileAnotherMailStillStatesIt(t *testing.T) {
 }
 
 func TestANarrowingKeepsAnAddressAColleagueSetAgain(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	contactID, mail := e.signedMail(ctx, t, "Dana Decided", signerMail{})
@@ -442,6 +450,7 @@ func TestANarrowingKeepsAnAddressAColleagueSetAgain(t *testing.T) {
 }
 
 func TestTheStreetGoesWithTheLastMailThatVouchedForIt(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	contactID, vouched := e.signedMail(ctx, t, "Dana Vouched", signerMail{})

@@ -294,6 +294,7 @@ func (e *recencyEnv) seedCallOrMeeting(t *testing.T, deal ids.UUID, kind, direct
 // They are a colleague's mail that arrives inbound, a withheld mail, automatic
 // mail, mail forwarded to oneself, a call and a meeting. Sixty notes follow them.
 func TestLatestInboundDatesTheLastMessagesOverEveryRowNotOnePage(t *testing.T) {
+	t.Parallel()
 	e := setupRecency(t)
 	deal := e.seedQuietDeal(t, pinnedQuiet)
 	inbound := e.seedMail(t, deal, "inbound", pinnedQuiet.AddDate(0, 0, 1), "")

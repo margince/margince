@@ -65,6 +65,7 @@ func serveWorklist(ctx context.Context, c *homecache.Cache, reader ids.UUID) err
 }
 
 func TestAReaderWhoLeftIsLoggedAtDebugAndACacheFaultAtError(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	logs := recordLogs(t)
 	c := homecache.New(e.Pool)
@@ -104,6 +105,7 @@ func TestAReaderWhoLeftIsLoggedAtDebugAndACacheFaultAtError(t *testing.T) {
 // A client may leave after its write commits and before the answer is sent.
 // The write stands, so the writer's Home must still be forgotten.
 func TestAWriterWhoLeftAfterTheCommitStillHasTheirHomeMarkedBehind(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	c := homecache.New(e.Pool)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.RepPerms)

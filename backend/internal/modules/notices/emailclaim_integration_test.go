@@ -143,6 +143,7 @@ func TestAReleaseWithOneChangedClaimReleasesNone(t *testing.T) {
 
 // A notice its producer took back is not mailed, even when its job runs later.
 func TestARetractedNoticeIsNotMailed(t *testing.T) {
+	t.Parallel()
 	e := setupNotices(t)
 	id, err := e.store.Create(e.engineCtx(), NewNotice{Recipient: e.recipient, Kind: KindMeetingTeamRequest, Subject: "Ada added you to the booking link", DedupeKey: "team:retracted"})
 	if err != nil {
@@ -162,6 +163,7 @@ func TestARetractedNoticeIsNotMailed(t *testing.T) {
 // A burst claims the recipient's other live approval mails and leaves a
 // retracted one unclaimed.
 func TestABurstLeavesARetractedApprovalUnclaimed(t *testing.T) {
+	t.Parallel()
 	e := setupNotices(t)
 	keys := []string{ApprovalNoticeKey(ids.NewV7()), ApprovalNoticeKey(ids.NewV7()), ApprovalNoticeKey(ids.NewV7())}
 	notices := make([]ids.UUID, len(keys))
@@ -198,6 +200,7 @@ func TestABurstLeavesARetractedApprovalUnclaimed(t *testing.T) {
 // A reword gives a live line new words and leaves whether it was read alone. A
 // line taken back is left as it is.
 func TestARewordChangesOnlyALiveLine(t *testing.T) {
+	t.Parallel()
 	e := setupNotices(t)
 	for _, key := range []string{"team:live", "team:retracted"} {
 		if _, err := e.store.Create(e.engineCtx(), NewNotice{Recipient: e.recipient, Kind: KindMeetingTeamRequest, Subject: "Added to “Intro call”", DedupeKey: key}); err != nil {

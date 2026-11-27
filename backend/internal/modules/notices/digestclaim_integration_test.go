@@ -220,6 +220,7 @@ func (e *noticeEnv) ageDigestClaims(t *testing.T, by time.Duration) {
 // date label alone would send a second digest. A new edition waits for the gap,
 // whether the new label is later or earlier.
 func TestAZoneChangeDoesNotFileASecondDigestWithinTheGap(t *testing.T) {
+	t.Parallel()
 	e := setupNotices(t)
 	first, err := e.store.ClaimDigestRun(e.engineCtx(), e.recipient, digestWindow.Day)
 	if err != nil || !first {

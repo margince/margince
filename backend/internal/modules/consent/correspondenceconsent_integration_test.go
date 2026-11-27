@@ -278,6 +278,7 @@ func TestTheGuardAnswersOnTheSameWindowAsTheSend(t *testing.T) {
 // A stakeholder on an open deal, with nothing else on file, is no connection
 // for the guard: the guard reads no deal.
 func TestAnOpenDealAloneIsNoConnectionForTheGuard(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	e.seedPurpose(t, "business_correspondence", "business_correspondence")
 	e.openDeal(t, "open", true)

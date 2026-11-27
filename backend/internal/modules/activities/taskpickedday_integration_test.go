@@ -87,6 +87,7 @@ func wantWindow(t *testing.T, name string, got map[ids.UUID]bool, want []ids.UUI
 // Berlin company, task picked for the company's today from a zone west of it.
 // Its instant lands after Berlin's midnight, but its date is today.
 func TestADateOnlyTaskPickedWestOfTheCompanyIsInTodaysWindow(t *testing.T) {
+	t.Parallel()
 	p := newPickedDayEnv(t, "Europe/Berlin")
 	until := time.Date(2026, 11, 16, 23, 0, 0, 0, time.UTC)
 	horizon := until.AddDate(0, 0, 7)
@@ -114,6 +115,7 @@ func TestADateOnlyTaskPickedWestOfTheCompanyIsInTodaysWindow(t *testing.T) {
 // picked date is tomorrow for the company, though the instant is earlier than
 // the company's midnight, so today's window must not take it.
 func TestADateOnlyTaskPickedEastOfTheCompanyIsNotInTodaysWindow(t *testing.T) {
+	t.Parallel()
 	p := newPickedDayEnv(t, "Etc/GMT+12")
 	until := time.Date(2026, 11, 17, 12, 0, 0, 0, time.UTC)
 	asOf := time.Date(2026, 11, 16, 20, 0, 0, 0, time.UTC)
@@ -130,6 +132,7 @@ func TestADateOnlyTaskPickedEastOfTheCompanyIsNotInTodaysWindow(t *testing.T) {
 
 // A row with no chosen date keeps comparing by its instant.
 func TestATaskWithNoChosenDateIsStillJudgedByItsInstant(t *testing.T) {
+	t.Parallel()
 	p := newPickedDayEnv(t, "Europe/Berlin")
 	until := time.Date(2026, 11, 16, 23, 0, 0, 0, time.UTC)
 	asOf := time.Date(2026, 11, 16, 8, 0, 0, 0, time.UTC)
@@ -153,6 +156,7 @@ func TestATaskWithNoChosenDateIsStillJudgedByItsInstant(t *testing.T) {
 // An older client moves a task with due_at alone. The old chosen date must not
 // stay behind: the task is grouped by its new due.
 func TestAMoveWithDueAtAloneRegroupsADateOnlyTask(t *testing.T) {
+	t.Parallel()
 	p := newPickedDayEnv(t, "Europe/Berlin")
 	until := time.Date(2026, 11, 16, 23, 0, 0, 0, time.UTC)
 	asOf := time.Date(2026, 11, 16, 8, 0, 0, 0, time.UTC)
@@ -174,6 +178,7 @@ func TestAMoveWithDueAtAloneRegroupsADateOnlyTask(t *testing.T) {
 // The team board's count, the open-task sweep and Home's window share one rule.
 // A date-only task is late once its date is over in the company zone.
 func TestOverdueByPickedDateAgreesAcrossTheReaders(t *testing.T) {
+	t.Parallel()
 	p := newPickedDayEnv(t, "Europe/Berlin")
 	id := p.dated(t, "Yesterday from Los Angeles", "2026-11-16", "America/Los_Angeles")
 	today := p.dated(t, "Today from Los Angeles", "2026-11-17", "America/Los_Angeles")
@@ -206,6 +211,7 @@ func TestOverdueByPickedDateAgreesAcrossTheReaders(t *testing.T) {
 // The SQL sort key of a date-only task equals deadline.TaskDueOn on every row
 // of the table both read. That covers a DST day and a final fraction of a second.
 func TestTheSortKeyOfADateOnlyTaskMatchesTheGoDueRule(t *testing.T) {
+	t.Parallel()
 	raw, err := os.ReadFile("../../shared/kernel/deadline/testdata/pickedday.json")
 	if err != nil {
 		t.Fatal(err)
@@ -249,6 +255,7 @@ func TestTheSortKeyOfADateOnlyTaskMatchesTheGoDueRule(t *testing.T) {
 // UTC and Ho Chi Minh City's at 17:00 UTC. So one bound ends the 16th for the
 // member and not for the installation.
 func TestADateOnlyTaskIsJudgedInTheZoneTheListIsReadIn(t *testing.T) {
+	t.Parallel()
 	p := newPickedDayEnv(t, "Europe/Berlin")
 	until := time.Date(2026, 6, 16, 17, 0, 0, 0, time.UTC)
 	asOf := time.Date(2026, 6, 15, 18, 30, 0, 0, time.UTC)
@@ -268,6 +275,7 @@ func TestADateOnlyTaskIsJudgedInTheZoneTheListIsReadIn(t *testing.T) {
 // UTC for Berlin. So it sorts before a task timed 17:30 UTC on the member's own
 // list, and after it on a combined one.
 func TestTheDueOrderEndsAChosenDateInTheZoneTheListIsReadIn(t *testing.T) {
+	t.Parallel()
 	p := newPickedDayEnv(t, "Europe/Berlin")
 	until := time.Date(2026, 6, 18, 0, 0, 0, 0, time.UTC)
 	asOf := time.Date(2026, 6, 15, 18, 30, 0, 0, time.UTC)
@@ -300,6 +308,7 @@ func TestTheDueOrderEndsAChosenDateInTheZoneTheListIsReadIn(t *testing.T) {
 // Chi Minh City. A task dated 16 May is still listed for the installation.
 // It is gone from the member's own list.
 func TestTheThirtyDayAgeOutCountsDaysInTheZoneTheListIsReadIn(t *testing.T) {
+	t.Parallel()
 	p := newPickedDayEnv(t, "Europe/Berlin")
 	until := time.Date(2026, 6, 20, 0, 0, 0, 0, time.UTC)
 	asOf := time.Date(2026, 6, 15, 18, 30, 0, 0, time.UTC)
@@ -316,6 +325,7 @@ func TestTheThirtyDayAgeOutCountsDaysInTheZoneTheListIsReadIn(t *testing.T) {
 // zone of the screen asking. A task dated the 15th is late for Ho Chi Minh City
 // at 18:30 UTC and still due today for Berlin.
 func TestTheOpenPromiseSweepJudgesLatenessInTheZoneTheCallerReadsIn(t *testing.T) {
+	t.Parallel()
 	p := newPickedDayEnv(t, "Europe/Berlin")
 	asOf := time.Date(2026, 6, 15, 18, 30, 0, 0, time.UTC)
 	task := p.dated(t, "Dated the 15th", "2026-06-15", "Europe/Berlin")

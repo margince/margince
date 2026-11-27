@@ -247,6 +247,7 @@ func inviteMember(ctx context.Context, t *testing.T, e *revocationEnv, email, na
 // A live team's name is held once, compared trimmed and ignoring case, on
 // create, rename and restore. An archived team frees its name.
 func TestATeamNameIsHeldOnceAmongLiveTeams(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "team-names")
 	ctx := e.wsCtx(e.admin)
 	sales, err := e.svc.CreateTeam(ctx, e.admin, "DACH Sales")

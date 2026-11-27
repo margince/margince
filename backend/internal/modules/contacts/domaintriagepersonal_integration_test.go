@@ -50,6 +50,7 @@ func (e *dedupeEnv) assertHeldForAHuman(ctx context.Context, t *testing.T, domai
 // A lapsed domain now serving another business names no company: the site
 // accounts for neither the domain nor a company here, so a human answers.
 func TestASiteNamingAnotherBusinessOnTheDomainIsHeldForAHuman(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.openTriageFirst(ctx, t, "anna.weber@example-analytics.example", "Anna Weber", "example-analytics.example")

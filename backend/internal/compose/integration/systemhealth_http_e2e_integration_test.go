@@ -409,6 +409,7 @@ func TestHistoryContinuationExcludesRunsFinishedAfterItsCutoff(t *testing.T) {
 // The changes Home's receipt cannot place are a coverage fact, never a finding.
 // A seat without ai_diagnostics read is told nothing of them.
 func TestSystemHealthBreaksDownTheChangesHomeCannotPlace(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	ctx := principal.WithWorkspaceID(t.Context(), apptest.InstallationWorkspaceUUID(t.Context(), t, e.Pool))

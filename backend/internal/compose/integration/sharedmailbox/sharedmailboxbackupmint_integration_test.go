@@ -94,6 +94,7 @@ func (s *sharedMailboxSuite) questionsFor(t *testing.T, address string) (backups
 }
 
 func TestAStrangerToASharedMailboxBecomesTheBackupOwnersContact(t *testing.T) {
+	t.Parallel()
 	s := newSharedMailboxSuite(t)
 	box := s.backedMailbox(t)
 	s.syncOne(t, box, strangerMail("first@stranger.example"), "a question")
@@ -111,6 +112,7 @@ func TestAStrangerToASharedMailboxBecomesTheBackupOwnersContact(t *testing.T) {
 }
 
 func TestAVerdictMintsNothingForASeatNoLongerTheBackupOwner(t *testing.T) {
+	t.Parallel()
 	for name, lose := range map[string]func(s *sharedMailboxSuite, t *testing.T, box ids.UUID){
 		"another seat became the backup owner": func(s *sharedMailboxSuite, t *testing.T, box ids.UUID) {
 			s.ownerExec(t, `INSERT INTO team_membership (team_id, user_id) VALUES ($1, $2)`, s.e.Team1, s.e.AdminUser)
@@ -140,6 +142,7 @@ func TestAVerdictMintsNothingForASeatNoLongerTheBackupOwner(t *testing.T) {
 }
 
 func TestASenderTheBackupOwnerExcludedNeverBecomesTheirContact(t *testing.T) {
+	t.Parallel()
 	s := newSharedMailboxSuite(t)
 	box := s.backedMailbox(t)
 	s.excludeForBackup(t, strangerAddress)
@@ -172,6 +175,7 @@ func (s *sharedMailboxSuite) ownerExec(t *testing.T, sql string, args ...any) {
 }
 
 func TestASenderTheLadderKnowsIsMintedPrivateToTheBackupOwner(t *testing.T) {
+	t.Parallel()
 	s := newSharedMailboxSuite(t)
 	box := s.backedMailbox(t)
 	s.syncOne(t, box, strangerMail("first@stranger.example"), "a question")
@@ -198,6 +202,7 @@ func TestASenderTheLadderKnowsIsMintedPrivateToTheBackupOwner(t *testing.T) {
 }
 
 func TestANewsletterOrAMachineSenderMintsNothingForTheBackupOwner(t *testing.T) {
+	t.Parallel()
 	s := newSharedMailboxSuite(t)
 	box := s.backedMailbox(t)
 	machine := "noreply@acme-orders.example"
@@ -222,6 +227,7 @@ func TestANewsletterOrAMachineSenderMintsNothingForTheBackupOwner(t *testing.T) 
 }
 
 func TestASharedMailboxMintsNothingWithoutABackupOwnerWhoMayHoldIt(t *testing.T) {
+	t.Parallel()
 	for name, lose := range map[string]func(s *sharedMailboxSuite, t *testing.T, box ids.UUID){
 		"no backup owner": func(s *sharedMailboxSuite, t *testing.T, box ids.UUID) {
 			if code := s.setBackup(t, box, nil); code != http.StatusOK {
@@ -259,6 +265,7 @@ func TestASharedMailboxMintsNothingWithoutABackupOwnerWhoMayHoldIt(t *testing.T)
 }
 
 func TestASenderWhoseContactNoReaderMayReadGetsNoSecondContact(t *testing.T) {
+	t.Parallel()
 	s := newSharedMailboxSuite(t)
 	box := s.backedMailbox(t)
 	pat := s.privateContact(t, "Pat Private", "pat@private.example", s.e.Rep3)
@@ -277,6 +284,7 @@ func TestASenderWhoseContactNoReaderMayReadGetsNoSecondContact(t *testing.T) {
 }
 
 func TestSharedMailFilesOnALeadOnlyWhenAReaderMayReadLeads(t *testing.T) {
+	t.Parallel()
 	for name, tc := range map[string]struct {
 		withoutLeadRead bool
 		want            int

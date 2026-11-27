@@ -221,6 +221,7 @@ func setMeeting(t *testing.T, owner *pgx.Conn, id ids.UUID, status string) {
 // read over several companies. A contact who left an account for another one
 // moves the new account's clocks and no longer moves the old one's.
 func TestTheSetLastTouchReadsEachCompanysOwnRoster(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)

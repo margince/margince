@@ -49,7 +49,7 @@ var TimeFormat = config.DefineStored(config.Spec[string]{
 // text shown beside the app's own. It takes no read gate, for the timezone's
 // reason: every date the app shows discloses the notation anyway.
 func DateNotationTx(ctx context.Context, tx pgx.Tx, lang textlang.Lang) (datenotation.Notation, error) {
-	dateFormat, timeFormat, err := config.StoredApplyPairTx(ctx, tx, config.Bound(), DateFormat, TimeFormat)
+	dateFormat, timeFormat, err := config.StoredApplyPairTx(ctx, tx, config.Bound(ctx), DateFormat, TimeFormat)
 	if err != nil {
 		return datenotation.Notation{}, err
 	}

@@ -73,6 +73,7 @@ func (b *bookedLead) taskDone(t *testing.T) bool {
 }
 
 func TestABookingOnTheHostsLeadThroughThePublicPageClosesTheHostsTaskAndCancelReopensItOnce(t *testing.T) {
+	t.Parallel()
 	b := setupBookedLead(t)
 	b.book(t)
 	if !b.taskDone(t) {
@@ -118,6 +119,7 @@ func TestABookingOnTheHostsLeadThroughThePublicPageClosesTheHostsTaskAndCancelRe
 }
 
 func TestABookingOnALeadTheHostMayNoLongerWriteClosesNothing(t *testing.T) {
+	t.Parallel()
 	b := setupBookedLead(t)
 	colleague := SeedIDRow(t, b.e.Owner, `INSERT INTO app_user (id, email, display_name) VALUES ($1, 'colleague@booker.test', 'Colleague')`)
 	if _, err := b.e.Owner.Exec(context.Background(), `UPDATE lead SET owner_id=$2 WHERE id=$1`, b.lead, colleague); err != nil {

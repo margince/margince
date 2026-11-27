@@ -85,6 +85,7 @@ func (a account) endYesterday(t *testing.T, status *string) {
 // A departure day arrives and no row changes. The refold finds the company by
 // the end day alone, and only inside the window it is asked about.
 func TestACompanyClockDropsAnEmployeeWhoseDepartureDayArrivedWithoutAWrite(t *testing.T) {
+	t.Parallel()
 	a := newAccount(t)
 	a.endYesterday(t, nil)
 	ctx := principal.SystemActing(a.e.Admin(), "system:clock-refold-test")
@@ -107,6 +108,7 @@ func TestACompanyClockDropsAnEmployeeWhoseDepartureDayArrivedWithoutAWrite(t *te
 
 // A clock stored under the old predicate is refolded once after the upgrade.
 func TestTheUpgradeTaskRefoldsACompanyClockStoredUnderTheOldPredicate(t *testing.T) {
+	t.Parallel()
 	a := newAccount(t)
 	former := "former"
 	a.endYesterday(t, &former)
@@ -135,6 +137,7 @@ func TestTheUpgradeTaskRefoldsACompanyClockStoredUnderTheOldPredicate(t *testing
 // that moved "today" to the installation zone. The engine treats a step stored
 // at an older version as unfinished.
 func TestAnInstallThatFinishedVersionOneRefoldsAfterTheNewMigration(t *testing.T) {
+	t.Parallel()
 	a := newAccount(t)
 	now := clocktest.Now(t)
 	run := func(task datatask.Task) {

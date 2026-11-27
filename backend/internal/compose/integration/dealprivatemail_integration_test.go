@@ -88,6 +88,7 @@ func (w privateMailWorld) engaged(t *testing.T) []ids.UUID {
 }
 
 func TestAPrivateMailOnTheDealMovesOnlyItsClock(t *testing.T) {
+	t.Parallel()
 	w := newPrivateMailWorld(t)
 	w.privateMail(t, "inbound", 1, true)
 	w.privateMail(t, "outbound", 3, true)
@@ -115,6 +116,7 @@ func TestAPrivateMailOnTheDealMovesOnlyItsClock(t *testing.T) {
 }
 
 func TestAPrivateMailOnlyOnTheContactCountsForNoDeal(t *testing.T) {
+	t.Parallel()
 	w := newPrivateMailWorld(t)
 	w.privateMail(t, "inbound", 1, false)
 	w.privateMail(t, "outbound", 2, false)
@@ -133,6 +135,7 @@ func TestAPrivateMailOnlyOnTheContactCountsForNoDeal(t *testing.T) {
 }
 
 func TestAnOlderDealClockIsRefoldedByTheDataTaskQuery(t *testing.T) {
+	t.Parallel()
 	w := newPrivateMailWorld(t)
 	w.privateMail(t, "inbound", 4, true)
 	w.e.WsExec(t, `UPDATE deal SET last_activity_at = NULL WHERE id = $1`, w.deal.UUID)
@@ -146,6 +149,7 @@ func TestAnOlderDealClockIsRefoldedByTheDataTaskQuery(t *testing.T) {
 // reader outside its audience, and blanks its subject. The deal clock therefore
 // says nothing about the mail that the timeline does not.
 func TestTheTimelineAlreadyShowsAPrivateMailsTimeToANonParticipant(t *testing.T) {
+	t.Parallel()
 	w := newPrivateMailWorld(t)
 	w.privateMail(t, "inbound", 2, true)
 
@@ -168,6 +172,7 @@ func TestTheTimelineAlreadyShowsAPrivateMailsTimeToANonParticipant(t *testing.T)
 // The verdict reads the newest private mails. A change to any of them changes
 // the checksum that makes the deal due again, not only a change to the newest.
 func TestTheVerdictChecksumMovesWhenAnOlderPrivateMailChanges(t *testing.T) {
+	t.Parallel()
 	w := newPrivateMailWorld(t)
 	w.privateMail(t, "inbound", 5, true)
 	w.privateMail(t, "outbound", 1, true)

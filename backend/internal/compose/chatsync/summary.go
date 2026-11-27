@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/chatlinks/dispact"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -41,6 +42,7 @@ import (
 type summariser struct {
 	lane       ai.Completer
 	pool       *pgxpool.Pool
+	rbac       identity.RbacObjects
 	restricted func(context.Context, []string) (map[string]bool, error)
 }
 
@@ -76,7 +78,7 @@ func (p summariser) summarise(ctx context.Context, link chatlinks.Link, record c
 	if dropped {
 		in.Facts = append(in.Facts, restrictedMarker)
 	}
-	extra, err := readSummaryContext(ctx, p.pool, link, record, messages[0].PostedAt)
+	extra, err := readSummaryContext(ctx, p.pool, p.rbac, link, record, messages[0].PostedAt)
 	if err != nil {
 		return chatsummary.Reply{}, err
 	}

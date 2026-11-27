@@ -15,6 +15,7 @@ import (
 // The extension column reaches the table through the real writer, and a core
 // call leaves it empty.
 func TestACallRecordsTheExtensionItWasMadeFor(t *testing.T) {
+	t.Parallel()
 	env := setupRateStore(t)
 	ctx := context.Background()
 	ws, ctx := env.seedWorkspace(ctx, t)

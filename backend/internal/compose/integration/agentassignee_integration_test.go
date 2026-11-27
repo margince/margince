@@ -99,6 +99,7 @@ func TestATaskStillReachesAContact(t *testing.T) {
 // the caller sent. An unknown id, a retired colleague and an agent read alike,
 // so the answer discloses nothing about the seat.
 func TestARefusedSeatGetsOneAnswerOnEveryDoor(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	retired := ids.NewV7()
 	if _, err := OwnerConn(t).Exec(t.Context(), `

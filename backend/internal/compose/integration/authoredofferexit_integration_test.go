@@ -61,6 +61,7 @@ func (c *consentEnv) count(t *testing.T, query string) int {
 // its review in the 409. It goes out once on the sender's own reason, and the
 // next offer is decided again.
 func TestAnOfferInAReplyStopsAtSendAndGoesOnceOnAReason(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	c.useReviewableMarketingProfile(t)
 
@@ -275,6 +276,7 @@ func (c *consentEnv) answerWith(t *testing.T, anchor, subject, body string) int 
 // subject. A reschedule answering it queues on the first click. A rep who
 // quotes the pitch back, or puts an offer in the subject, has written an offer.
 func TestAQuotedPitchCountsOnlyWhenTheRepTypesItBack(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	c.useReviewableMarketingProfile(t)
 	const pitch = "Unser Angebot: 20 % Rabatt auf Ihre Lizenzen."
@@ -301,6 +303,7 @@ func TestAQuotedPitchCountsOnlyWhenTheRepTypesItBack(t *testing.T) {
 // failed authentication is the rep's.
 // Each anchor first answers a plain subject, so the fixture shows the cause.
 func TestASubjectTheContactDidNotWriteIsTheReps(t *testing.T) {
+	t.Parallel()
 	for name, anchor := range map[string]func(c *consentEnv, subject string) string{
 		"the rep's own pitch in the contact's thread": func(c *consentEnv, subject string) string {
 			return c.sentInto(t, c.capturedInbound(t, "Termin", exitReschedule), subject)

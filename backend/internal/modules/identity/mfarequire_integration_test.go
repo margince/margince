@@ -33,6 +33,7 @@ func (e *revocationEnv) requireMFAOn() {
 // The stored policy, read through the production reader, confines a password
 // session of a member with no factor.
 func TestAStoredRequireMFAConfinesAFactorlessPasswordSession(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "require-mfa-stored")
 	e.withVault()
 	cfg := unlockedConfig(t, e.pool)

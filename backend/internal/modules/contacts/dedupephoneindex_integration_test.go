@@ -18,6 +18,7 @@ import (
 //
 // Mutation: drop idx_contact_phone_live_phone from the migrations.
 func TestThePhoneLookupReadsItsIndex(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	var plan []string
 	err := e.store.tx(e.as(), func(tx pgx.Tx) error {

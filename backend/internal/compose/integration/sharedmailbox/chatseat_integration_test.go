@@ -106,6 +106,7 @@ func (s *sharedMailboxSuite) audienceOf(t *testing.T, activity ids.UUID) string 
 }
 
 func TestEverySharedMailboxRouteAnswersNotFoundForAChatSeat(t *testing.T) {
+	t.Parallel()
 	s := newSharedMailboxSuite(t)
 	seat := s.seatFor(t, "880002", s.e.Team1, ids.Nil)
 	for _, route := range []struct {
@@ -125,6 +126,7 @@ func TestEverySharedMailboxRouteAnswersNotFoundForAChatSeat(t *testing.T) {
 }
 
 func TestAHeldCompanyAccountKeepsItsMessagesFromColleaguesUntilTheAdminSharesIt(t *testing.T) {
+	t.Parallel()
 	s := newSharedMailboxSuite(t)
 	e := s.e
 	seat := s.seatFor(t, "880001", e.Team1, ids.Nil)
@@ -170,6 +172,7 @@ func TestAHeldCompanyAccountKeepsItsMessagesFromColleaguesUntilTheAdminSharesIt(
 }
 
 func TestAMemberAccountsMessageIsBornHeldUnderClassified(t *testing.T) {
+	t.Parallel()
 	s := newSharedMailboxSuite(t)
 	e := s.e
 	seat := s.seatFor(t, "880002", ids.Nil, e.Rep3)
@@ -202,6 +205,7 @@ func TestAMemberAccountsMessageIsBornHeldUnderClassified(t *testing.T) {
 }
 
 func TestEndingASeatKeepsItsMessagesWithTheReaderTeamAndAReconnectWakesIt(t *testing.T) {
+	t.Parallel()
 	s := newSharedMailboxSuite(t)
 	e := s.e
 	seat := s.seatFor(t, "880003", e.Team1, ids.Nil)

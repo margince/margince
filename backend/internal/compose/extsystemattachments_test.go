@@ -27,11 +27,11 @@ func TestTheAttachmentReadsNeedTheirDeclarationAnUnattendedCallAndASeat(t *testi
 			t.Errorf("%s: Attachments %v, OpenAttachment %v; want %v", what, list, open, want)
 		}
 	}
-	composeReader(t, extension.SystemReadMailContent)
+	binding.composed = composeReader(extension.SystemReadMailContent)
 	undeclared := deliveryRuntimeFor(ctx, "dealmirror", "1.0.0", "subscription/mirror", binding)
 	defer undeclared.release()
 	expect("an undeclared read", undeclared, seat, extension.ErrUndeclaredRead)
-	composeReader(t, extension.SystemReadMailAttachments)
+	binding.composed = composeReader(extension.SystemReadMailAttachments)
 	attended := runtimeFor(ctx, "dealmirror", "1.0.0", "tool/probe", binding)
 	defer attended.release()
 	expect("a signed-in call", attended, seat, extension.ErrAttendedRead)

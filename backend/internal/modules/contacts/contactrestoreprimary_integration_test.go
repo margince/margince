@@ -20,6 +20,7 @@ import (
 // with one of each, the first by reading order. The index ignores archived
 // rows, so the old shape survives in them.
 func TestRestoringAContactWithOldPerTypePrimariesKeepsTheFirstOfEach(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	actor, ok := principal.Actor(e.as())
 	if !ok {

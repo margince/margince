@@ -308,6 +308,7 @@ func TestTransmitKeepsTheStagedDataProtectionCountry(t *testing.T) {
 // pack was compiled from. The CHECK refuses a digest beside two codes or no
 // version, or in any spelling but lower-case hex.
 func TestADecisionRecordsTheDigestOfACompiledPack(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	digest := strings.Repeat("5e", 32)
 	testMessagingRules(t, messagingrules.Rules{Jurisdiction: "re", Version: 6, Digest: digest})

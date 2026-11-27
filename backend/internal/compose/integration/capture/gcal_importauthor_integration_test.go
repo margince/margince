@@ -25,6 +25,7 @@ import (
 // the owner's calendar meeting and brings its contact link. The guest is a
 // known contact, so the colleague may read the meeting.
 func TestAnImportNamingTheCalendarOwnerLandsOnTheirMeeting(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	ensureGuestContact(t, e, guestKnown)
@@ -51,6 +52,7 @@ func TestAnImportNamingTheCalendarOwnerLandsOnTheirMeeting(t *testing.T) {
 // An import naming any other seat as the author files its own meeting. The
 // calendar's meeting is its owner's, and a claim about someone else never joins it.
 func TestAnImportNamingAnotherAuthorFilesItsOwnMeeting(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	ensureGuestContact(t, e, guestKnown)
@@ -74,6 +76,7 @@ func TestAnImportNamingAnotherAuthorFilesItsOwnMeeting(t *testing.T) {
 // An importer that may read the calendar owner's meeting but not change it
 // files its own meeting, because the bind could move the meeting's status.
 func TestAnImporterWhoCannotChangeTheMeetingFilesItsOwn(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	ensureGuestContact(t, e, guestKnown)
@@ -100,6 +103,7 @@ func TestAnImporterWhoCannotChangeTheMeetingFilesItsOwn(t *testing.T) {
 // the author's calendar meeting at the same instant under the same title. The
 // calendar meeting gains the copy's records. Any other import stays as it is.
 func TestTheImportedCopiesTaskFoldsOnlyTheAuthorsCalendarCopy(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name    string
 		subject string

@@ -90,6 +90,7 @@ func typesOf(page search.Page) []string {
 }
 
 func TestAGroupedSearchShowsTheTypesThatAnsweredWhenMailRunsOutOfTime(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	seedOneWordEverywhere(t, e)
 	lockTable(t, e.Owner, "activity")
@@ -108,6 +109,7 @@ func TestAGroupedSearchShowsTheTypesThatAnsweredWhenMailRunsOutOfTime(t *testing
 }
 
 func TestAGroupedSearchWithTwoSlowTypesNamesBothInBranchOrder(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	seedOneWordEverywhere(t, e)
 	lockTable(t, e.Owner, "lead")
@@ -129,6 +131,7 @@ func TestAGroupedSearchWithTwoSlowTypesNamesBothInBranchOrder(t *testing.T) {
 }
 
 func TestAGroupedSearchFailsWhenATypeFailsForAnotherReasonThanTime(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	seedOneWordEverywhere(t, e)
 	ctx := context.Background()
@@ -152,6 +155,7 @@ func TestAGroupedSearchFailsWhenATypeFailsForAnotherReasonThanTime(t *testing.T)
 }
 
 func TestAnAllDeniedGroupedSearchAnswersAtOnceAndReadsNothing(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	seedOneWordEverywhere(t, e)
 	lockTable(t, e.Owner, "contact")
@@ -178,6 +182,7 @@ func TestAnAllDeniedGroupedSearchAnswersAtOnceAndReadsNothing(t *testing.T) {
 }
 
 func TestAGroupedSearchWithEveryTypeInTimeNamesNoType(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	seedOneWordEverywhere(t, e)
 	perType := 5
@@ -195,6 +200,7 @@ func TestAGroupedSearchWithEveryTypeInTimeNamesNoType(t *testing.T) {
 }
 
 func TestARankedSearchStillRefusesWhenMailRunsOutOfTime(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	seedOneWordEverywhere(t, e)
 	lockTable(t, e.Owner, "activity")
@@ -206,6 +212,7 @@ func TestARankedSearchStillRefusesWhenMailRunsOutOfTime(t *testing.T) {
 }
 
 func TestAGroupedSearchOfOnlyMailThatRunsOutOfTimeAnswersAnEmptyPage(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	seedOneWordEverywhere(t, e)
 	lockTable(t, e.Owner, "activity")
@@ -221,6 +228,7 @@ func TestAGroupedSearchOfOnlyMailThatRunsOutOfTimeAnswersAnEmptyPage(t *testing.
 }
 
 func TestBothSearchDoorsNameATypeThatRanOutOfTime(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "search-timed-out-doors", "read")
 	company := createdRecord(t, d.e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Quillfeather Werke"})
 	createdRecord(t, d.e, "/v1/activities", AnyMap{"kind": "task", "subject": "Quillfeather follow-up"})

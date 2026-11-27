@@ -22,6 +22,7 @@ import (
 )
 
 func TestARetriedPageKeepsTheCommittedCountAndSaysItIsRetrying(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	prov := &reportingConnector{pagedConnector: &pagedConnector{messages: 20, pageSize: 10}}
 	registry, grantCtx, runID := startReportingBackfill(t, e, prov, 0)
@@ -62,6 +63,7 @@ func TestARetriedPageKeepsTheCommittedCountAndSaysItIsRetrying(t *testing.T) {
 }
 
 func TestARestartedScanIsReportedAsARestartNotAsLostWork(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	prov := &reportingConnector{pagedConnector: &pagedConnector{messages: 20, pageSize: 10}}
 	registry, grantCtx, runID := startReportingBackfill(t, e, prov, 0)
@@ -101,6 +103,7 @@ func TestARestartedScanIsReportedAsARestartNotAsLostWork(t *testing.T) {
 }
 
 func TestContinuingAFailedRunKeepsItsRestartCount(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	registry, runID := startFlakyBackfill(t, e, []error{nil, connector.ErrCursorGone, nil, connector.ErrAuthRejected})
 	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)

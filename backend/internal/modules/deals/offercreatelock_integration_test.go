@@ -16,6 +16,7 @@ import (
 // offer, once to admit its lines. The second create must wait at the first
 // lock, or each holds a shared lock the other needs and Postgres aborts one.
 func TestTwoOfferCreatesOnOneDealBothLand(t *testing.T) {
+	t.Parallel()
 	e := setupSeamEnv(t)
 	deal := offerNumberDeal(t, e)
 	input := CreateOfferInput{Currency: "EUR", Source: "manual"}

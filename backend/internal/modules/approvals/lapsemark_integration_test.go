@@ -265,6 +265,7 @@ func TestOnlyTheExpirySweepMayMarkLapsedRedemptions(t *testing.T) {
 // Between the window closing and the sweep running, the decider's failure lane
 // carries the lapse. The sweep then records that same failure, not a second one.
 func TestALapseBeforeTheSweepIsInTheFailureLaneLikeASweptOne(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	id := e.lapsed(t)
 	e.pastTheWindow()
@@ -300,6 +301,7 @@ func TestALapseBeforeTheSweepIsInTheFailureLaneLikeASweptOne(t *testing.T) {
 }
 
 func TestALapseBeforeTheSweepCanBeAcknowledged(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	id := e.lapsed(t)
 	e.pastTheWindow()

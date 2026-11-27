@@ -62,7 +62,8 @@ func ReadTx(ctx context.Context, tx pgx.Tx, recordType string, id ids.UUID) (*id
 // for an unnamed record otherwise. A line to member then never names a record
 // they lost sight of, or one that was erased.
 func NameForTx(ctx context.Context, tx pgx.Tx, member ids.UUID, recordType string, id ids.UUID, lang textlang.Lang) (string, error) {
-	members, err := identity.MemberPrincipalsTx(ctx, tx, []ids.UUID{member})
+	// Every record type here is a core one, so the core vocabulary decides.
+	members, err := identity.MemberPrincipalsTx(ctx, tx, identity.RbacObjects{}, []ids.UUID{member})
 	if err != nil {
 		return "", err
 	}

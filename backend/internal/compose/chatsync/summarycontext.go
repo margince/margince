@@ -48,7 +48,7 @@ type summaryContext struct {
 // readSummaryContext reads the owner, and for a deal its company and contact
 // names. It also reads the note the channel filed for talk that ended before
 // the given time. A project has no company or contacts here.
-func readSummaryContext(ctx context.Context, pool *pgxpool.Pool, link chatlinks.Link, record chatRecord, before time.Time) (summaryContext, error) {
+func readSummaryContext(ctx context.Context, pool *pgxpool.Pool, rbac identity.RbacObjects, link chatlinks.Link, record chatRecord, before time.Time) (summaryContext, error) {
 	var out summaryContext
 	// One snapshot, so every group of readers judges the same company and edges.
 	err := database.WithWorkspaceSnapshot(ctx, pool, func(ctx context.Context) error {
@@ -60,7 +60,7 @@ func readSummaryContext(ctx context.Context, pool *pgxpool.Pool, link chatlinks.
 			if owner != "" {
 				out.facts = append(out.facts, "Owner: "+owner)
 			}
-			readers, err := noteReaders(ctx, tx, link)
+			readers, err := noteReaders(ctx, tx, rbac, link)
 			if err != nil {
 				return err
 			}
@@ -101,7 +101,7 @@ func liveOwner(ctx context.Context, tx pgx.Tx, record chatRecord) (string, error
 
 // noteReaders lists the live human members who may read the summary note. The
 // activity gate admits those holding read on the link's deal or project.
-func noteReaders(ctx context.Context, tx pgx.Tx, link chatlinks.Link) ([]principal.Principal, error) {
+func noteReaders(ctx context.Context, tx pgx.Tx, rbac identity.RbacObjects, link chatlinks.Link) ([]principal.Principal, error) {
 	rows, err := tx.Query(ctx, `SELECT u.id FROM app_user u WHERE `+workforce.LiveHumanSQL("u")+` ORDER BY u.id`)
 	if err != nil {
 		return nil, fmt.Errorf("chat summary: reading the members: %w", err)
@@ -110,7 +110,7 @@ func noteReaders(ctx context.Context, tx pgx.Tx, link chatlinks.Link) ([]princip
 	if err != nil {
 		return nil, err
 	}
-	byID, err := identity.MemberPrincipalsTx(ctx, tx, users)
+	byID, err := identity.MemberPrincipalsTx(ctx, tx, rbac, users)
 	if err != nil {
 		return nil, err
 	}

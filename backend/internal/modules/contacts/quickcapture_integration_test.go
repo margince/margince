@@ -257,6 +257,7 @@ func statedProfileURL(social *map[string]any) string {
 }
 
 func TestQuickCaptureRequiresAReachableContact(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	_, err := e.store.QuickCapture(e.as(), QuickCaptureInput{FullName: "Name Only"})
 	if err == nil {

@@ -474,6 +474,7 @@ func TestUnreferencedImportKeysAnswersAReleasedKey(t *testing.T) {
 }
 
 func TestAListedDraftCarriesTheRowsItsUploadCounted(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	counted, err := s.CreateDraftRun(ctx, CreateDraftRunInput{

@@ -81,6 +81,7 @@ func (f looksKeptFixture) hint(t *testing.T) *string {
 }
 
 func TestAnAcceptedLaterMeetingMakesThePromiseLookKeptAndSettlesNothing(t *testing.T) {
+	t.Parallel()
 	f := looksKeptPromise(t)
 	guest := f.hint(t)
 	if guest == nil || *guest != "Riley Reed" {
@@ -101,6 +102,7 @@ func TestAnAcceptedLaterMeetingMakesThePromiseLookKeptAndSettlesNothing(t *testi
 }
 
 func TestADifferentGuestWithTheSameNameAtAnotherCompanyIsNotTheOneInvited(t *testing.T) {
+	t.Parallel()
 	f := looksKeptPromise(t)
 	f.e.execAs(f.ctx, t, `DELETE FROM relationship WHERE contact_id = $1`, f.guest)
 	other := ids.NewV7()
@@ -113,6 +115,7 @@ func TestADifferentGuestWithTheSameNameAtAnotherCompanyIsNotTheOneInvited(t *tes
 }
 
 func TestOnlyAnAcceptedLiveLaterMeetingCounts(t *testing.T) {
+	t.Parallel()
 	for name, change := range map[string]string{
 		"declined":           `UPDATE activity_participant SET response = 'declined' WHERE activity_id = $1 AND response IS NOT NULL`,
 		"guest removed":      `DELETE FROM activity_participant WHERE activity_id = $1 AND response IS NOT NULL`,
@@ -132,6 +135,7 @@ func TestOnlyAnAcceptedLiveLaterMeetingCounts(t *testing.T) {
 }
 
 func TestAMeetingTheClaimsContactIsNotOnSuggestsNothing(t *testing.T) {
+	t.Parallel()
 	f := looksKeptPromise(t)
 	f.e.execAs(f.ctx, t, `DELETE FROM activity_participant WHERE activity_id = $1 AND contact_id = $2`, f.meeting, f.holder)
 	if got := f.hint(t); got != nil {
@@ -140,6 +144,7 @@ func TestAMeetingTheClaimsContactIsNotOnSuggestsNothing(t *testing.T) {
 }
 
 func TestAReaderWhoCannotSeeTheMeetingOrTheSourceGetsNoSuggestion(t *testing.T) {
+	t.Parallel()
 	f := looksKeptPromise(t)
 	f.e.execAs(f.ctx, t, `UPDATE activity SET audience = 'participants' WHERE id = $1`, f.meeting)
 	if got := f.hint(t); got != nil {

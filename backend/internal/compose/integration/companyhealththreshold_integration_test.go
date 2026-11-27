@@ -21,6 +21,7 @@ import (
 )
 
 func TestTheCompanyPageFollowsThePublishedThreadingThreshold(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedTwoEngagementAccount(t, e)
 	employAtAccount(t, e, f)

@@ -364,6 +364,7 @@ func newsletters(first time.Time, count int) []gmailNote {
 // it under the contact and settles the reminder. Mail the sync already read
 // lands no second time.
 func TestAHistoryImportRecoversASentFollowUpTheLostCursorLeftOut(t *testing.T) {
+	t.Parallel()
 	connected := time.Date(2026, 6, 1, 9, 0, 0, 0, time.UTC)
 	r := newRecoveryEnv(t, connected)
 	r.sync(t)

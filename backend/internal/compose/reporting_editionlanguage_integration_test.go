@@ -38,6 +38,7 @@ func TestAnEditionIsWrittenInTheBaseLanguageWhileTheOwnersLiveReadIsInTheirs(t *
 // An edition captured in the base language is downloaded by a German reader.
 // The file names each metric as the catalog on that reader's screen does.
 func TestAnEditionExportNamesItsMetricsAsTheReadersScreenDoes(t *testing.T) {
+	t.Parallel()
 	q := newQuestionEditions(t)
 	edition := q.send(t)
 	reader, _ := principal.Actor(q.human)

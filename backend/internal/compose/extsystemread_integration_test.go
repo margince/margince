@@ -617,11 +617,12 @@ func TestAnAttendedCanWriteAnswersTheCaller(t *testing.T) {
 
 // A model call leaves a system_log row naming the unit; a refused call leaves none.
 func TestAModelCallNamesTheUnitInTheAuditTrail(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	lane := &countingLane{}
-	composeNeeds(t, extensionRuntimeBinding{}, extension.Need{Capability: extension.CapabilityModels, Reason: "Summarises a thread."})
+	declared, _ := composeNeeds(t, extensionRuntimeBinding{}, extension.Need{Capability: extension.CapabilityModels, Reason: "Summarises a thread."})
 	ctx := e.Admin()
-	rt := runtimeFor(ctx, "summaries", "1.0.0", "tool/probe", extensionRuntimeBinding{pool: e.Pool, models: laneOf(lane)})
+	rt := runtimeFor(ctx, "summaries", "1.0.0", "tool/probe", extensionRuntimeBinding{pool: e.Pool, models: laneOf(lane), composed: declared.deps.composed})
 	defer rt.release()
 	const rows = `SELECT count(*) FROM system_log WHERE action = 'extension_model_call' AND detail->>'extension' = 'summaries'`
 	if text, err := rt.Models().Complete(ctx, askTask, oneMessage); err != nil || text != "ok" {
@@ -630,7 +631,7 @@ func TestAModelCallNamesTheUnitInTheAuditTrail(t *testing.T) {
 	if n := e.WsCount(t, rows); n != 1 {
 		t.Errorf("%d audit rows naming the unit after one call, want 1", n)
 	}
-	setComposedExtensions(nil)
+	rt.deps.composed = &Extensions{}
 	if _, err := rt.Models().Complete(ctx, askTask, oneMessage); !errors.Is(err, extension.ErrNotDeclared) {
 		t.Fatalf("a call after the declaration was removed: err = %v, want ErrNotDeclared", err)
 	}
@@ -642,13 +643,12 @@ func TestAModelCallNamesTheUnitInTheAuditTrail(t *testing.T) {
 // A boot with no store bound deletes nothing; the next boot with one deletes the
 // objects of a unit that left, and keeps another unit's.
 func TestARemovedUnitsObjectsAreSweptByALaterBootIfTheFirstHadNoStore(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	raw, _ := principal.WorkspaceID(ctx)
 	ws := ids.From[ids.WorkspaceKind](raw)
 	store := blobstore.NewMemory()
-	previous := boundExtensionRuntime().blob
-	t.Cleanup(func() { BindExtensionObjects(previous) })
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
 	put := func(unit string) string {
 		key := extcapability.Prefix(ws, unit) + "report"
@@ -667,23 +667,20 @@ func TestARemovedUnitsObjectsAreSweptByALaterBootIfTheFirstHadNoStore(t *testing
 		}
 		return true
 	}
-	observe := func(exts []extension.Extension) {
+	observe := func(exts []extension.Extension, objects blobstore.Store) {
 		t.Helper()
-		if err := ObserveExtensionInventory(ctx, e.Pool, log, exts); err != nil {
+		if err := ObserveExtensionInventory(ctx, e.Pool, log, exts, objects); err != nil {
 			t.Fatal(err)
 		}
 	}
-	BindExtensionObjects(store)
 	both := []extension.Extension{{Name: "keeper", Version: "1"}, {Name: "leaver", Version: "1"}}
-	observe(both)
+	observe(both, store)
 	keeper, leaver := put("keeper"), put("leaver")
-	BindExtensionObjects(nil)
-	observe(both[:1])
+	observe(both[:1], nil)
 	if !present(leaver) {
 		t.Fatal("a boot with no store deleted objects it could not reach")
 	}
-	BindExtensionObjects(store)
-	observe(both[:1])
+	observe(both[:1], store)
 	if present(leaver) {
 		t.Error("the removed unit's object survived a boot that had the store")
 	}

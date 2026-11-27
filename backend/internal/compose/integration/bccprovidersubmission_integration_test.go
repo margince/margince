@@ -36,6 +36,7 @@ type footedRefusal struct {
 // These are the bytes handed to Gmail, not what a recipient receives. Gmail
 // strips the Bcc header before delivery; this test does not model delivery.
 func TestABlindObjectionLeadsAndTheProviderSubmissionKeepsTheBlindCopyPrivate(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	c := &consentEnv{AppEnv: p.AppEnv, contactID: p.contactID, activityID: p.activityID}

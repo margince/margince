@@ -618,6 +618,7 @@ func TestCaptureDecidesAMessagesProjectOnlyOnce(t *testing.T) {
 // commit, so a message the ladder could not file the first time is filed by
 // the next pull.
 func TestAReplayFilesAMessageItsFirstCaptureLeftUnfiled(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	seed := newProjectSeeder(t, e)

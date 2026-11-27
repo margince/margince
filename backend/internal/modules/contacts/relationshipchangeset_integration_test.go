@@ -181,6 +181,7 @@ func TestAColleaguesReplyOnTheirThreadIsNotTheContactWriting(t *testing.T) {
 // message at that very instant is not yet in it. A day-entry meeting on that
 // date is, because its date began before the instant.
 func TestTheComparisonFoldStopsJustBeforeItsInstant(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	now := time.Date(2026, time.March, 10, 9, 0, 0, 0, time.UTC)
 	asOf := now.AddDate(0, 0, -relstrength.ComparisonDays)

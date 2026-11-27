@@ -69,6 +69,7 @@ func TestContactMergePreviewShowsPrimaryAddressDemotions(t *testing.T) {
 // keeps the survivor's row of it alone. That row stays primary, or takes the
 // source's primary flag when the survivor had no primary number.
 func TestContactMergePreviewShowsANumberTheSurvivorHolds(t *testing.T) {
+	t.Parallel()
 	for _, survivorPrimary := range []bool{true, false} {
 		t.Run(fmt.Sprintf("survivorPrimary=%t", survivorPrimary), func(t *testing.T) {
 			e := integration.Setup(t)

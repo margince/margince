@@ -153,6 +153,7 @@ func TestADeclinedMeetingDoesNotRefreshRecency(t *testing.T) {
 // A message held to its participants is not visible in the number either. It
 // moves no count, no date and no cited message, on the contact page or in a set.
 func TestAHeldMessageDoesNotMoveTheStrength(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	now := time.Date(2026, time.June, 1, 12, 0, 0, 0, time.UTC)
 	day := func(ago int) time.Time { return now.AddDate(0, 0, -ago) }

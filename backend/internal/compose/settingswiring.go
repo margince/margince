@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/settings"
+	"github.com/margince/margince/backend/internal/platform/sweepreach"
 )
 
 // settingsDefinitions is the whole catalog, in one list: the configuration
@@ -160,6 +161,7 @@ func DealsInstallation() deals.Installation {
 	inst.FollowOwner = followDealOwnerAndTell
 	inst.WinChances = chances.WinChances
 	inst.WinChanceSQL = chances.WinChanceSQL
+	inst.MergeReach = func() (sweepreach.Set, error) { return ExtensionData().Reach(), nil }
 	return inst
 }
 

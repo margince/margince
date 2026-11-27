@@ -84,6 +84,7 @@ func (p *preflightEnv) bounceHard(t *testing.T) {
 // first: the mailbox, then the dead address. Only then does the policy concern
 // offer Send anyway.
 func TestTheRepairComesBeforeThePolicyDecision(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	c := &consentEnv{AppEnv: p.AppEnv, contactID: p.contactID, activityID: p.activityID}
 	c.useReviewableMarketingProfile(t)

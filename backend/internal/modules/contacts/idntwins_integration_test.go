@@ -40,6 +40,7 @@ func (e *dedupeEnv) twinCompanies(ctx context.Context, t *testing.T) (ids.Compan
 }
 
 func TestAnAddressAtTwinSpellingsOfOneDomainAnswersNoCompany(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.twinCompanies(ctx, t)
@@ -51,6 +52,7 @@ func TestAnAddressAtTwinSpellingsOfOneDomainAnswersNoCompany(t *testing.T) {
 }
 
 func TestTheSweepSkipsADomainTwoCompaniesHold(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	first, second := e.twinCompanies(ctx, t)
@@ -69,6 +71,7 @@ func TestTheSweepSkipsADomainTwoCompaniesHold(t *testing.T) {
 }
 
 func TestALeadKeyNamesNoCompanyWhileTwoHoldItsDomain(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	first, second := e.twinCompanies(ctx, t)
@@ -105,6 +108,7 @@ func (e *dedupeEnv) archiveAllDomains(ctx context.Context, t *testing.T, company
 }
 
 func TestAnEditToTheOtherSpellingOfAKeyStillNamesTheLinkedCompany(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	company := e.createNamedCompany(ctx, t, "Bücher Verlag", "buecher-verlag.example")
@@ -125,6 +129,7 @@ func TestAnEditToTheOtherSpellingOfAKeyStillNamesTheLinkedCompany(t *testing.T) 
 }
 
 func TestALeadKeyIsStoredFoldedOnCreateAndUpdate(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	name := "Anna"

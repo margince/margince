@@ -126,6 +126,7 @@ func (f employerChangeFixture) question(t *testing.T) ids.ApprovalID {
 }
 
 func TestASecondMailJoinsTheOpenQuestion(t *testing.T) {
+	t.Parallel()
 	f := setupEmployerChange(t)
 	f.mailFromNewco(t, 30)
 	f.mailFromNewco(t, 60)
@@ -138,6 +139,7 @@ func TestASecondMailJoinsTheOpenQuestion(t *testing.T) {
 }
 
 func TestAcceptingMovesTheEmployerAndKeepsTheHistory(t *testing.T) {
+	t.Parallel()
 	f := setupEmployerChange(t)
 	f.mailFromNewco(t, 30)
 	if _, err := compose.NewApprovalsServiceWithEffects(f.e.Pool).Decide(f.ctx, f.question(t), true, nil); err != nil {
@@ -164,6 +166,7 @@ func TestAcceptingMovesTheEmployerAndKeepsTheHistory(t *testing.T) {
 }
 
 func TestADeclinedQuestionIsNotAskedAgain(t *testing.T) {
+	t.Parallel()
 	f := setupEmployerChange(t)
 	f.mailFromNewco(t, 30)
 	if _, err := compose.NewApprovalsServiceWithEffects(f.e.Pool).Decide(f.ctx, f.question(t), false, nil); err != nil {
@@ -181,6 +184,7 @@ func TestADeclinedQuestionIsNotAskedAgain(t *testing.T) {
 // The question carries the employment it would end. When a colleague moved
 // the contact since, accepting writes nothing.
 func TestAcceptingAfterTheEmployerChangedWritesNothing(t *testing.T) {
+	t.Parallel()
 	f := setupEmployerChange(t)
 	f.mailFromNewco(t, 30)
 	var oldEdge ids.UUID
@@ -210,6 +214,7 @@ func TestAcceptingAfterTheEmployerChangedWritesNothing(t *testing.T) {
 
 // A departed owner cannot be asked, and nobody else is asked in their place.
 func TestADepartedOwnerIsAskedNothingAndNobodyElseIs(t *testing.T) {
+	t.Parallel()
 	f := setupEmployerChange(t)
 	f.e.WsExec(t, `UPDATE app_user SET status = 'deactivated' WHERE id = $1`, f.e.Rep1)
 	f.mailFromNewco(t, 30)
@@ -220,6 +225,7 @@ func TestADepartedOwnerIsAskedNothingAndNobodyElseIs(t *testing.T) {
 
 // The question is answered as it stands: its day becomes the end date.
 func TestAnEditedAnswerIsRefused(t *testing.T) {
+	t.Parallel()
 	f := setupEmployerChange(t)
 	f.mailFromNewco(t, 30)
 	var raw []byte
@@ -247,6 +253,7 @@ func TestAnEditedAnswerIsRefused(t *testing.T) {
 // A question is put to the owner it names. When the contact changes hands it
 // is withdrawn, and the next mail asks the new owner.
 func TestAQuestionFollowsTheContactsOwner(t *testing.T) {
+	t.Parallel()
 	f := setupEmployerChange(t)
 	f.mailFromNewco(t, 30)
 	rep2 := f.e.Rep2
@@ -263,6 +270,7 @@ func TestAQuestionFollowsTheContactsOwner(t *testing.T) {
 
 // An accept from a member who no longer owns the contact writes nothing.
 func TestOnlyTheContactsCurrentOwnerAccepts(t *testing.T) {
+	t.Parallel()
 	f := setupEmployerChange(t)
 	f.mailFromNewco(t, 30)
 	rep2 := ids.From[ids.UserKind](f.e.Rep2)

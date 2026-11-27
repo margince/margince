@@ -89,6 +89,7 @@ func (e filesEnv) exports(t *testing.T, kind string) int {
 }
 
 func TestAWorkspaceMailsFileListsOpensAndReadsItsBytes(t *testing.T) {
+	t.Parallel()
 	e := setupFiles(t)
 	mail := e.mail(t, "workspace")
 	quote := e.file(t, mail, "quote.bin")
@@ -130,6 +131,7 @@ func (e filesEnv) restrictedMail(t *testing.T) ids.UUID {
 }
 
 func TestEveryHiddenFileAnswersAsOneThatDoesNotExist(t *testing.T) {
+	t.Parallel()
 	e := setupFiles(t)
 	hidden := map[string]ids.UUID{
 		"participants-only":  e.mail(t, "participants"),
@@ -175,6 +177,7 @@ func TestEveryHiddenFileAnswersAsOneThatDoesNotExist(t *testing.T) {
 }
 
 func TestAFileOutsideTheReadersScopeAnswersAsOneThatDoesNotExist(t *testing.T) {
+	t.Parallel()
 	e := setupFiles(t)
 	ctx := e.reader(t, principal.RowScopeOwn)
 	seat, _ := principal.Actor(ctx)
@@ -203,6 +206,7 @@ func TestAFileOutsideTheReadersScopeAnswersAsOneThatDoesNotExist(t *testing.T) {
 }
 
 func TestAUnitPastItsDailyOpensIsRefusedAndAnotherUnitIsNot(t *testing.T) {
+	t.Parallel()
 	e := setupFiles(t)
 	file := e.file(t, e.mail(t, "workspace"), "quote")
 	ctx := e.reader(t, principal.RowScopeAll)
@@ -224,6 +228,7 @@ func TestAUnitPastItsDailyOpensIsRefusedAndAnotherUnitIsNot(t *testing.T) {
 }
 
 func TestAFileOverTheBoundIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupFiles(t)
 	file := e.file(t, e.mail(t, "workspace"), "huge")
 	e.WsExec(t, `UPDATE attachment SET byte_size = $2 WHERE id = $1`, file, extension.MaxInboundFileBytes+1)

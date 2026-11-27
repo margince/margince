@@ -74,6 +74,7 @@ func (c *consentEnv) refusedAtSend(t *testing.T, status int, want string) {
 }
 
 func TestSendRefusesAnAdvertisingSubjectWithoutItsLabel(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	labelled, _ := subjectLabelCountries()
 	c.placeSubjectIn(t, c.contactID, labelled)
@@ -81,6 +82,7 @@ func TestSendRefusesAnAdvertisingSubjectWithoutItsLabel(t *testing.T) {
 }
 
 func TestSendRefusesRecipientsWhoseLabelsConflict(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	korean, singapore := subjectLabelCountries()
 	c.placeSubjectIn(t, c.contactID, korean)
@@ -98,6 +100,7 @@ func TestSendRefusesRecipientsWhoseLabelsConflict(t *testing.T) {
 }
 
 func TestThePreviewReportsAMissingSubjectLabel(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	labelled, _ := subjectLabelCountries()
 	c.placeSubjectIn(t, c.contactID, labelled)

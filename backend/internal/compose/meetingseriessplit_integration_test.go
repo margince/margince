@@ -114,6 +114,7 @@ func (s seriesSplit) splitUID() string {
 const weeklyUID = "weekly@google.com"
 
 func TestASeriesSplitByTheOrganizerShowsOneMeetingPerSlot(t *testing.T) {
+	t.Parallel()
 	s := newSeriesSplit(t)
 	old := s.sync(t, weeklyUID, splitHost, splitBuyer)
 	current := s.sync(t, s.splitUID(), splitHost, splitPeer, splitBuyer)
@@ -134,6 +135,7 @@ func TestASeriesSplitByTheOrganizerShowsOneMeetingPerSlot(t *testing.T) {
 }
 
 func TestASeriesSplitFoldsWhicheverSeriesArrivesFirst(t *testing.T) {
+	t.Parallel()
 	s := newSeriesSplit(t)
 	current := s.sync(t, s.splitUID(), splitHost, splitPeer, splitBuyer)
 	s.sync(t, weeklyUID, splitHost, splitBuyer)
@@ -145,6 +147,7 @@ func TestASeriesSplitFoldsWhicheverSeriesArrivesFirst(t *testing.T) {
 }
 
 func TestTwoSeriesAtOneSlotStayTwoMeetingsWhenTheyAreNotOne(t *testing.T) {
+	t.Parallel()
 	cases := map[string]struct {
 		organizers [2]string
 		split      bool
@@ -193,6 +196,7 @@ func storedSplitPair(t *testing.T, e *integration.Env, organizers [2]string) (id
 }
 
 func TestTheSplitSeriesTaskFoldsOnlyAPairThatIsOneMeeting(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name       string
 		organizers [2]string
@@ -238,6 +242,7 @@ func TestTheSplitSeriesTaskFoldsOnlyAPairThatIsOneMeeting(t *testing.T) {
 // A replay moves the split series' meeting after the pair was found. The fold
 // asks the rule again under the lock, so two meetings at two slots stay.
 func TestASeriesSplitFoldAsksTheRuleAgainUnderTheLock(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	old, current := storedSplitPair(t, e, [2]string{splitHost, splitHost})

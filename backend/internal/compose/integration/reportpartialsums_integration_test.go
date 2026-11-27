@@ -43,6 +43,7 @@ func onlyRow(t *testing.T, raw json.RawMessage) map[string]any {
 }
 
 func TestAPartialSumStatesWhatItLeavesOutOnEveryReportPathAndTool(t *testing.T) {
+	t.Parallel()
 	// CHF has no rate on the sheet, and the base currency is EUR.
 	mixed := []partialSumDeal{{10_000, "EUR"}, {10_000, "EUR"}, {5_000, "CHF"}, {0, ""}}
 	for _, tc := range []struct {
@@ -116,6 +117,7 @@ func anySlice(values []string) []any {
 // The sum and the currencies it names come from one statement, so a rate that
 // arrives later changes both together and never one of them.
 func TestARateArrivingChangesTheSumAndItsMissingCurrenciesTogether(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "partial-sums-rate", "read")
 	stages := apptest.DiscoverSeededPipeline(t, d.e)
 	for _, deal := range []partialSumDeal{{10_000, "EUR"}, {10_000, "CHF"}} {

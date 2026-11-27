@@ -319,6 +319,7 @@ func savePassCaps(t *testing.T, e *integration.Env, patch capture.SettingsPatch)
 }
 
 func TestTheVerdictRunJudgesNoMoreSendersThanTheSavedCap(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const passCap = 3
 	for range 12 {
@@ -340,6 +341,7 @@ func TestTheVerdictRunJudgesNoMoreSendersThanTheSavedCap(t *testing.T) {
 }
 
 func TestTheLabelRunSettlesNoMoreMessagesThanTheSavedCap(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	for i := range 3 * classifyBatchSize {
 		seedUnlabeledEmail(t, e, fmt.Sprintf("Anfrage %d", i))
@@ -356,6 +358,7 @@ func TestTheLabelRunSettlesNoMoreMessagesThanTheSavedCap(t *testing.T) {
 }
 
 func TestTheOwedReplyRunJudgesNoMoreNewMailThanTheSavedCap(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	for i := range 3 * owedBatchSize {
 		seedWaitingMail(t, e, fmt.Sprintf("Thread %d", i))

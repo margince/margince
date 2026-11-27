@@ -417,6 +417,7 @@ func TestASecondPassSeedsNoSecondRunForTheSameSeat(t *testing.T) {
 // A later pass inserts nothing for a seat it already seeded today. A seat that
 // granted since the last pass still gets today's occurrence.
 func TestALaterPassSkipsSeatsItSeededAndSeedsANewGrant(t *testing.T) {
+	t.Parallel()
 	re := setupRunner(t)
 	owner := integration.OwnerConn(t)
 
@@ -449,6 +450,7 @@ func TestALaterPassSkipsSeatsItSeededAndSeedsANewGrant(t *testing.T) {
 // records a seat only after its insert succeeded. A seat whose first insert
 // raised gets its occurrence on the next pass of the same day.
 func TestASeatWhoseSeedingFailedIsSeededOnALaterPass(t *testing.T) {
+	t.Parallel()
 	re := setupRunner(t)
 	owner := integration.OwnerConn(t)
 

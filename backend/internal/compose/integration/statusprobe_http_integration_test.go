@@ -37,6 +37,7 @@ func probeStatus(t *testing.T, e *apptest.AppEnv, method string) httpAnswer {
 }
 
 func TestAMonitorSendingHeadToTheStatusProbeHearsWhatGetHears(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	if early := probeStatus(t, e, http.MethodHead); early.status != http.StatusServiceUnavailable || early.body != "" {
 		t.Fatalf("HEAD before bootstrap = %d with %d body bytes, want 503 and none", early.status, len(early.body))

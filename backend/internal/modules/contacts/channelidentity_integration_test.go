@@ -158,6 +158,7 @@ func (e *dedupeEnv) countInWorkspace(ctx context.Context, t *testing.T, query st
 // Until the older (provider, channel_user_id) index is dropped, one user id binds
 // once across scopes, so only a collision in the same scope is asserted.
 func TestAnIdentityIsBoundOncePerAccountScope(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	first := e.seedContact(ctx, t, "First Scope", []string{"first@scope.test"}, nil)
@@ -190,6 +191,7 @@ func TestAnIdentityIsBoundOncePerAccountScope(t *testing.T) {
 // user id. The bind reports that as ErrChannelIdentityInOtherScope and neither
 // raises a unique violation nor hands back the other scope's contact.
 func TestAnIdentityBoundInAnotherScopeIsRefusedAsAConflict(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	first := e.seedContact(ctx, t, "Scope Holder", []string{"holder@scope.test"}, nil)

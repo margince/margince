@@ -95,6 +95,7 @@ func onlyRun(t *testing.T, e *apptest.AppEnv, rule string) crmcontracts.Automati
 }
 
 func TestARunNamesItsRecordTheTaskItCreatedAndTheStageThatFiredIt(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	f := moveADealIntoAWatchedStage(t, e)
@@ -121,6 +122,7 @@ func TestARunNamesItsRecordTheTaskItCreatedAndTheStageThatFiredIt(t *testing.T) 
 }
 
 func TestARunNamesOnlyTheRecordsTheReaderMayRead(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	e.DescribeCompany(t)
@@ -157,6 +159,7 @@ func TestARunNamesOnlyTheRecordsTheReaderMayRead(t *testing.T) {
 // A run on a captured contact only its owner may see. The reader holds contact
 // and deal read, and still gets none of the run's names.
 func TestARunOnARecordOutsideTheReadersScopeCarriesNoNames(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	e.DescribeCompany(t)
@@ -199,6 +202,7 @@ func TestARunOnARecordOutsideTheReadersScopeCarriesNoNames(t *testing.T) {
 // The rule's task is private to the admin who wrote it. A rep who reads the
 // deal still gets no subject for the task.
 func TestARunNamesNoCreatedTaskTheReaderMayNotRead(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	e.DescribeCompany(t)

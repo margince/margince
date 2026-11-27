@@ -35,16 +35,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-<<<<<<< HEAD
 // harnessList holds the harness's list. The product's list comes from
 // goPreservedTables, which the seed-reset parity reads it through too.
-const harnessList = "internal/platform/testdb/reset.go"
-=======
-const (
-	harnessList = "internal/platform/testdb/emptyschema.go"
-	sweepList   = "internal/compose/datasweep.go"
-)
->>>>>>> 18bde5b16b (test(testdb): remove Reset and the clone-reuse path)
+const harnessList = "internal/platform/testdb/emptyschema.go"
 
 // harnessOnly names tables the TEST harness spares that the product sweep does
 // not, with the reason each is not a product concern. Every entry is a

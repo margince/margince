@@ -14,11 +14,11 @@ import (
 
 // ValidateRecordGrantRecipientTx checks the recipient even when a bulk share
 // has no eligible records, so a read seat is refused before any record.
-func ValidateRecordGrantRecipientTx(ctx context.Context, tx pgx.Tx, in CreateGrantInput) error {
+func ValidateRecordGrantRecipientTx(ctx context.Context, tx pgx.Tx, rbac RbacObjects, in CreateGrantInput) error {
 	if err := grantRecipientExists(ctx, tx, in); err != nil {
 		return err
 	}
-	_, _, err := grantAccessFor(ctx, tx, in)
+	_, _, err := grantAccessFor(ctx, tx, rbac, in)
 	return err
 }
 

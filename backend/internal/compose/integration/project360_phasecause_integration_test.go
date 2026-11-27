@@ -38,6 +38,7 @@ func pursuedThenWon(t *testing.T, e *Env, name string) closeWonFixture {
 }
 
 func TestAWonDealNamesItselfAsTheCauseOfTheDeliveryMove(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := pursuedThenWon(t, e, "ERP replacement")
 
@@ -88,6 +89,7 @@ func wonCause(reader context.Context, t *testing.T, e *Env, project ids.ProjectI
 // A reader without the deal grant keeps the history and the cause kind, with
 // the deal unnamed.
 func TestTheCauseLeavesTheDealUnnamedForAReaderWithoutTheDealGrant(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := pursuedThenWon(t, e, "Hidden pursuit")
 
@@ -100,6 +102,7 @@ func TestTheCauseLeavesTheDealUnnamedForAReaderWithoutTheDealGrant(t *testing.T)
 // A deal reads workspace-wide (auth.identityTables), so the cause names it for
 // a seat whose team does not own it, as GetDeal answers that seat.
 func TestTheCauseNamesTheDealForASeatOnAnotherTeam(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := pursuedThenWon(t, e, "Scoped pursuit")
 	if _, err := e.Deals.UpdateDeal(e.Admin(), f.deal, deals.UpdateDealInput{OwnerID: userIDPtr(&e.Rep3)}); err != nil {
@@ -118,6 +121,7 @@ func TestTheCauseNamesTheDealForASeatOnAnotherTeam(t *testing.T) {
 
 // A history keeps naming the deal behind a move after that deal is archived.
 func TestTheCauseStillNamesAnArchivedDeal(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := pursuedThenWon(t, e, "Archived pursuit")
 	if _, err := e.Deals.ArchiveDeal(e.Admin(), f.deal, nil); err != nil {

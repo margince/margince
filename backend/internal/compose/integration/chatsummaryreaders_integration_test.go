@@ -26,6 +26,7 @@ import (
 const chatSummaryWord = "Zebrafish"
 
 func TestAChatSummaryNoteNeedsReadOnItsDealOnEveryReadPath(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, stage, deal, note := ids.NewV7(), ids.NewV7(), ids.NewV7(), ids.NewV7()
 	company := e.SeedCompany(t, "Brandt Automotive", nil)

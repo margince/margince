@@ -400,6 +400,7 @@ func TestEdgeHistoryInterleavesWithTheRecordsOwnRowsAcrossPages(t *testing.T) {
 // role, its previous value or its name among the changed fields. The anchor
 // record's own mask is empty, so only the relationship mask can explain it.
 func TestEdgeHistoryWithholdsAMaskedLinkRoleFromTheEdgeObject(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contact := e.SeedContact(t, "Ada Employed", &e.Rep1)
 	company := e.SeedCompany(t, "Employer GmbH", &e.Rep1)

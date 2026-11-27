@@ -25,23 +25,27 @@ import (
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
-func registerMailHooks(t *testing.T, hooks extension.MailHooks) {
+func registerMailHooks(t *testing.T, hooks extension.MailHooks) *compose.Extensions {
 	t.Helper()
 	if hooks.Reasons == nil {
 		hooks.Reasons = []string{"credit_hold", "names_reporting", "other_account", "stale", "pointing_elsewhere", "purchase_order", "kept"}
 	}
 	unit := extension.Extension{Name: "deal-rules", Version: "0.0.1", Description: "A unit composed by a test.", MailHooks: hooks}
-	if err := compose.RegisterExtensions([]extension.Extension{unit}, nil, nil); err != nil {
+	composed, err := compose.RegisterExtensions([]extension.Extension{unit}, nil, nil)
+	if err != nil {
 		t.Fatalf("registering the unit: %v", err)
 	}
 	t.Cleanup(func() {
-		if err := compose.RegisterExtensions(nil, nil, nil); err != nil {
+		if _, err := compose.RegisterExtensions(nil, nil, nil); err != nil {
 			t.Errorf("clearing the unit: %v", err)
 		}
 	})
+	return composed
 }
 
 // A deal hook drops the only open deal, so the mail files nowhere.
+//
+//testdb:serial registers the composed extension set, which the capture sink reads process-wide
 func TestADealHookCanKeepAMailOffTheOnlyOpenDeal(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e
@@ -67,6 +71,8 @@ func TestADealHookCanKeepAMailOffTheOnlyOpenDeal(t *testing.T) {
 // A deal hook names a deal. The link lands and its audit evidence names the
 // unit and the reason. A colleague then declines it: the hook cannot bring the
 // deal back, and the next capture leaves the mark as it was.
+//
+//testdb:serial registers the composed extension set, which the capture sink reads process-wide
 func TestADealHookDealDoesNotSurviveAColleaguesDecline(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e
@@ -103,6 +109,8 @@ func TestADealHookDealDoesNotSurviveAColleaguesDecline(t *testing.T) {
 
 // A parties hook that names a company core did not derive moves the rule to
 // that company's deal. One that names a company that does not exist is ignored.
+//
+//testdb:serial registers the composed extension set, which the capture sink reads process-wide
 func TestAPartiesHookAdjustsTheCompaniesTheRuleReads(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e
@@ -132,6 +140,8 @@ func TestAPartiesHookAdjustsTheCompaniesTheRuleReads(t *testing.T) {
 }
 
 // A deal hook cannot name a deal of a company the mail has nothing to do with.
+//
+//testdb:serial registers the composed extension set, which the capture sink reads process-wide
 func TestADealHookCannotReachADealOfAnotherCompany(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e
@@ -150,6 +160,8 @@ func TestADealHookCannotReachADealOfAnotherCompany(t *testing.T) {
 
 // A company has three open deals, and core's own reads name only the first two.
 // A hook may name any open deal of the company, the one with the highest id too.
+//
+//testdb:serial registers the composed extension set, which the capture sink reads process-wide
 func TestADealHookCanNameAnyOpenDealOfTheCompanyNotOnlyTheFirstTwo(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e
@@ -169,6 +181,8 @@ func TestADealHookCanNameAnyOpenDealOfTheCompanyNotOnlyTheFirstTwo(t *testing.T)
 
 // A deal hook reads the mail's text, looks the reference in it up in the
 // unit's own table and links that deal. The same Lookup cannot write.
+//
+//testdb:serial registers the composed extension set, which the capture sink reads process-wide
 func TestADealHookReadsTheBodyAndLooksARefUpInTheUnitsOwnData(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e
@@ -213,6 +227,8 @@ func TestADealHookReadsTheBodyAndLooksARefUpInTheUnitsOwnData(t *testing.T) {
 // A hook that fails decides nothing. Core does not fall back to its own answer.
 // The mail stays unfiled and the trace says which unit failed. The next capture
 // files it once the hook works again.
+//
+//testdb:serial registers the composed extension set, which the capture sink reads process-wide
 func TestAFailedHookLeavesTheMailUndecidedAndItIsFiledOnceTheHookWorks(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e
@@ -236,6 +252,8 @@ func TestAFailedHookLeavesTheMailUndecidedAndItIsFiledOnceTheHookWorks(t *testin
 }
 
 // A change that names no reason the unit declared is ignored, and says so.
+//
+//testdb:serial registers the composed extension set, which the capture sink reads process-wide
 func TestADealHookChangeWithoutADeclaredReasonIsIgnored(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e
@@ -260,6 +278,8 @@ func TestADealHookChangeWithoutADeclaredReasonIsIgnored(t *testing.T) {
 
 // A repair decides a mail once per mailbox that imported it, in one
 // transaction. A hook that fails for both leaves one lasting row, not two.
+//
+//testdb:serial registers the composed extension set, which the capture sink reads process-wide
 func TestARepairAcrossTwoMailboxesLogsAHookAnswerOnce(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e
@@ -277,12 +297,12 @@ func TestARepairAcrossTwoMailboxesLogsAHookAnswerOnce(t *testing.T) {
 	}
 
 	var calls atomic.Int32
-	registerMailHooks(t, extension.MailHooks{Deal: func(_ context.Context, _ extension.MailView, d extension.MailDeal) (extension.MailDeal, error) {
+	composed := registerMailHooks(t, extension.MailHooks{Deal: func(_ context.Context, _ extension.MailView, d extension.MailDeal) (extension.MailDeal, error) {
 		calls.Add(1)
 		return d, errors.New("the ledger is down")
 	}})
 	r := newRepairer(e, w)
-	r.repair.Hooks = mailhooks.New(compose.ComposedExtensions, e.Pool)
+	r.repair.Hooks = mailhooks.New(composed.Units, e.Pool)
 	r.run(t)
 	wantDeals(t, e, "hook11@acme.example", only)
 	if calls.Load() < 2 {
@@ -293,6 +313,8 @@ func TestARepairAcrossTwoMailboxesLogsAHookAnswerOnce(t *testing.T) {
 
 // A hook now answers `none` on a mail the rule filed, and the repair takes the
 // link back. The unlink's audit row names the unit, and so does the trace.
+//
+//testdb:serial registers the composed extension set, which the capture sink reads process-wide
 func TestARepairThatAHookMakesTakeALinkBackNamesTheUnit(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e
@@ -302,11 +324,11 @@ func TestARepairThatAHookMakesTakeALinkBackNamesTheUnit(t *testing.T) {
 	env.sync(t, mailFrom("alice@acme.example", "hook10@acme.example", "", "invoice"))
 	wantDeals(t, e, "hook10@acme.example", only)
 
-	registerMailHooks(t, extension.MailHooks{Deal: func(_ context.Context, _ extension.MailView, d extension.MailDeal) (extension.MailDeal, error) {
+	composed := registerMailHooks(t, extension.MailHooks{Deal: func(_ context.Context, _ extension.MailView, d extension.MailDeal) (extension.MailDeal, error) {
 		return extension.MailDeal{Outcome: "none", Reason: "credit_hold"}, nil
 	}})
 	r := newRepairer(e, w)
-	r.repair.Hooks = mailhooks.New(compose.ComposedExtensions, e.Pool)
+	r.repair.Hooks = mailhooks.New(composed.Units, e.Pool)
 	r.run(t)
 	wantDeals(t, e, "hook10@acme.example")
 	mail := activityOf(t, e, "hook10@acme.example")
@@ -320,6 +342,8 @@ func TestARepairThatAHookMakesTakeALinkBackNamesTheUnit(t *testing.T) {
 
 // A parties hook cannot name a company the mailbox owner may not see. The
 // answer is ignored and the trace says so. No deal of that company is reached.
+//
+//testdb:serial registers the composed extension set, which the capture sink reads process-wide
 func TestAPartiesHookCannotNameACompanyTheMailboxOwnerCannotSee(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e

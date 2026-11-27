@@ -11,6 +11,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"slices"
 	"sync"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -39,7 +40,7 @@ func RecordComposition(
 	ctx context.Context, pool *pgxpool.Pool, log *slog.Logger, composed *Extensions,
 ) error {
 	exts := composed.Units()
-	if err := ObserveExtensionInventory(ctx, pool, log, exts); err != nil {
+	if err := ObserveExtensionInventory(ctx, pool, log, exts, composed.binding().blob); err != nil {
 		return fmt.Errorf("compose: recording the composed extension set: %w", err)
 	}
 	if err := VerifyExtensionPrivacy(ctx, pool, exts); err != nil {
@@ -102,6 +103,14 @@ func ExtensionData() extprivacy.Registry {
 		return coreData()
 	}
 	return extensionData.registry
+}
+
+// installedUnits is the units of the installed composition, for the capture
+// hooks, which are built where no composition is in reach.
+func installedUnits() []extension.Extension {
+	extensionData.mu.RLock()
+	defer extensionData.mu.RUnlock()
+	return slices.Clone(extensionData.units)
 }
 
 // installedCompanyTypes is the company types the installed units declare, for

@@ -93,6 +93,7 @@ func TestACriterionKeyIsUniqueWithinItsStage(t *testing.T) {
 // A criterion added without a key gets one made from its label. A clash in the
 // same stage adds a number, and a label with no a-z letters gets the fallback.
 func TestACriterionWithoutAKeyGetsOneFromItsLabel(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	stageID := openStage(t, e, SemanticOpen)
 	add := func(label string) crmcontracts.StageExitCriterion {
@@ -120,6 +121,7 @@ func TestACriterionWithoutAKeyGetsOneFromItsLabel(t *testing.T) {
 
 // A key the caller sent as empty is refused, not minted.
 func TestAnEmptyCriterionKeyIsRefusedNotMinted(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	stageID := openStage(t, e, SemanticOpen)
 	_, err := e.store.CreateStageExitCriterion(e.as(), CreateCriterionInput{
@@ -133,6 +135,7 @@ func TestAnEmptyCriterionKeyIsRefusedNotMinted(t *testing.T) {
 // The live-key index backs the pre-check. Losing a race on it answers
 // criterion_key_taken for a chosen key and takes the next number for a minted one.
 func TestALostRaceOnTheLiveKeyIndexIsRecoverable(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	stageID := openStage(t, e, SemanticOpen)
 	addCriterion(t, e, stageID, "budget")
@@ -164,6 +167,7 @@ func TestALostRaceOnTheLiveKeyIndexIsRecoverable(t *testing.T) {
 
 // Minting has no ceiling: the next number is read from the highest in use.
 func TestMintingTakesTheNumberAfterTheHighestInUse(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	stageID := openStage(t, e, SemanticOpen)
 	addCriterion(t, e, stageID, "budget")
@@ -179,6 +183,7 @@ func TestMintingTakesTheNumberAfterTheHighestInUse(t *testing.T) {
 // The key is fixed at creation: an edit of label, kind, requiredness or hint
 // leaves it alone.
 func TestEditingACriterionNeverChangesItsKey(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	stageID := openStage(t, e, SemanticOpen)
 	criterion := addCriterion(t, e, stageID, "buyer_confirmed")

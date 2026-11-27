@@ -108,6 +108,7 @@ func TestIdempotencyFailedAttemptRetryIsAFreshExecution(t *testing.T) {
 
 // A refusal after a committed write keeps its key: the retry must not save twice.
 func TestARefusalAfterACommittedWriteIsNotRunAgain(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ending, end := context.WithCancel(e.Admin())
 	calls := 0

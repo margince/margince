@@ -16,6 +16,7 @@ import (
 // An older build queued version 2 rows without the sending entity, the chosen
 // mailbox or the stated countries. Such a row still fires and sends once.
 func TestAScheduledRowFromAnOlderBuildStillFires(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	p.stakeADeal(t)

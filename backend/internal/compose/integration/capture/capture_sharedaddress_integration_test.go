@@ -68,6 +68,7 @@ func statedSenders(t *testing.T, env captureEnv, sourceID string) (addresses []s
 }
 
 func TestMailFromAnAddressTwoSeatsReceiveAtKeepsThatAddressAsItsSender(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	receivesAtSharedAddress(t, env, env.e.Rep3)
 	const reply = "shared-reply@myco.example"
@@ -90,6 +91,7 @@ func TestMailFromAnAddressTwoSeatsReceiveAtKeepsThatAddressAsItsSender(t *testin
 // The seat is the only one who can have written from an address it alone
 // receives at, so no second end is stored for it.
 func TestMailFromAnAddressOneSeatReceivesAtStoresNoOtherSender(t *testing.T) {
+	t.Parallel()
 	for name, colleagueLeft := range map[string]bool{
 		"no colleague holds it":              false,
 		"the colleague who held it has left": true,

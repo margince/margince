@@ -27,6 +27,7 @@ import (
 const seatlessLinkMigration = "../../../../migrations/core/1795639497_a_business_link_without_a_seat_waits_for_approval.up.sql"
 
 func TestTheSharedMailboxRoutesAnswerNotFoundForAChatSeat(t *testing.T) {
+	t.Parallel()
 	c := setupTelegramConnected(t)
 	c.linkOnSeat(t, 880801, "bc-door", "connected", "held")
 	seat := c.seats(t)[0].id
@@ -57,6 +58,7 @@ func TestTheSharedMailboxRoutesAnswerNotFoundForAChatSeat(t *testing.T) {
 }
 
 func TestTheBusinessVisibilityRouteChangesTheSeatAndTheNextMessageFollowsIt(t *testing.T) {
+	t.Parallel()
 	c := setupTelegramConnected(t)
 	runner, sub := newTelegramWorker(t, c, compose.JobRunnerConfig{})
 	startTelegramWorker(t, runner)
@@ -101,6 +103,7 @@ func TestTheBusinessVisibilityRouteChangesTheSeatAndTheNextMessageFollowsIt(t *t
 }
 
 func TestALinkApprovedBeforeSeatsWaitsForApprovalAndFilesAgainOnceItHasASeat(t *testing.T) {
+	t.Parallel()
 	c := setupTelegramConnected(t)
 	runner, sub := newTelegramWorker(t, c, compose.JobRunnerConfig{})
 	startTelegramWorker(t, runner)

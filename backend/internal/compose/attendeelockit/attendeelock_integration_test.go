@@ -138,6 +138,7 @@ func (f *meetingFixture) whileABuyerJoins(judge func() error) {
 }
 
 func TestTheEvidenceWriterWaitsForAnAttendeeJoiningTheMeeting(t *testing.T) {
+	t.Parallel()
 	f := newMeetingFixture(t)
 	var facts deals.ActivityAuthorship
 	f.whileABuyerJoins(func() error {
@@ -153,6 +154,7 @@ func TestTheEvidenceWriterWaitsForAnAttendeeJoiningTheMeeting(t *testing.T) {
 }
 
 func TestTheMeetingProofPassWaitsForAnAttendeeJoiningTheMeeting(t *testing.T) {
+	t.Parallel()
 	f := newMeetingFixture(t)
 	system := principal.SystemActing(f.Admin(), "attendee-lock-test")
 	f.whileABuyerJoins(func() error {
@@ -168,6 +170,7 @@ func TestTheMeetingProofPassWaitsForAnAttendeeJoiningTheMeeting(t *testing.T) {
 // shared lock before it locks the meeting row, so the judge can still take the
 // row lock it reads under. Locked the other way round, the two deadlock.
 func TestARelinkWaitsForTheJudgeBeforeItLocksTheMeeting(t *testing.T) {
+	t.Parallel()
 	f := newMeetingFixture(t)
 	contact := f.SeedContact(t, "Ines Buyer", &f.AdminUser)
 	ctx := context.Background()
@@ -211,6 +214,7 @@ func TestARelinkWaitsForTheJudgeBeforeItLocksTheMeeting(t *testing.T) {
 // A writer naming two meetings takes the lower key first. With a holder on
 // the higher key, the writer must already hold the lower one while it waits.
 func TestAWriterTakesTheMeetingLocksInKeyOrder(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := context.Background()
 	first, second := ids.NewV7(), ids.NewV7()

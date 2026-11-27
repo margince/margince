@@ -43,6 +43,7 @@ func (e filesEnv) opensOn(t *testing.T, unit, at string) {
 }
 
 func TestAFileHiddenWhileItsBytesAreReadIsNotGiven(t *testing.T) {
+	t.Parallel()
 	e := setupFiles(t)
 	ctx := e.reader(t, principal.RowScopeAll)
 	for name, hide := range map[string]string{
@@ -69,6 +70,7 @@ func TestAFileHiddenWhileItsBytesAreReadIsNotGiven(t *testing.T) {
 }
 
 func TestTheCapIsAskedAgainAfterTheBytesAreRead(t *testing.T) {
+	t.Parallel()
 	e := setupFiles(t)
 	file := e.file(t, e.mail(t, "workspace"), "quote")
 	files := e.files("mirror")
@@ -82,6 +84,7 @@ func TestTheCapIsAskedAgainAfterTheBytesAreRead(t *testing.T) {
 }
 
 func TestAReadThatFailsLeavesNoExportRow(t *testing.T) {
+	t.Parallel()
 	e := setupFiles(t)
 	ctx := e.reader(t, principal.RowScopeAll)
 	mail := e.mail(t, "workspace")
@@ -108,6 +111,7 @@ func TestAReadThatFailsLeavesNoExportRow(t *testing.T) {
 }
 
 func TestOpensOfAnEarlierUTCDayDoNotCountTowardsTheCap(t *testing.T) {
+	t.Parallel()
 	e := setupFiles(t)
 	file := e.file(t, e.mail(t, "workspace"), "quote")
 	e.opensOn(t, "mirror", "now() - interval '1 day'")
@@ -117,6 +121,7 @@ func TestOpensOfAnEarlierUTCDayDoNotCountTowardsTheCap(t *testing.T) {
 }
 
 func TestADealsMailLeavesOutAMailUnderARestriction(t *testing.T) {
+	t.Parallel()
 	e := setupFiles(t)
 	shown, restricted := e.mail(t, "workspace"), e.restrictedMail(t)
 	query, err := ParseQuery(extension.MailQuery{})

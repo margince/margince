@@ -150,6 +150,7 @@ func assertBackoffKept(t *testing.T, c importCase, conn ids.UUID, backoff time.T
 }
 
 func TestAFinishedImportMakesAWeatheredSyncDueAtOnce(t *testing.T) {
+	t.Parallel()
 	for name, fault := range map[string]error{"rate_limited": rateLimit, "unreachable": connector.ErrUnreachable} {
 		t.Run(name, func(t *testing.T) {
 			syncFault := fault
@@ -174,12 +175,14 @@ func TestAFinishedImportMakesAWeatheredSyncDueAtOnce(t *testing.T) {
 }
 
 func TestAFinishedImportLeavesAnInternalFailureOnItsBackoff(t *testing.T) {
+	t.Parallel()
 	syncFault := errors.New("fixture defect")
 	c := failedSyncsThenImport(t, &syncFault, nil)
 	assertBackoffKept(t, c, c.conn, c.connBackoff, "an internal failure the import does not disprove")
 }
 
 func TestAnImportThatEndsInErrorLeavesTheBackoff(t *testing.T) {
+	t.Parallel()
 	syncFault := rateLimit
 	c := failedSyncsThenImport(t, &syncFault, apperrors.ErrPermissionDenied)
 	if c.importFinished {
@@ -189,6 +192,7 @@ func TestAnImportThatEndsInErrorLeavesTheBackoff(t *testing.T) {
 }
 
 func TestASyncStillLimitedAfterTheImportKeepsItsConcern(t *testing.T) {
+	t.Parallel()
 	syncFault := rateLimit
 	c := failedSyncsThenImport(t, &syncFault, nil)
 	if err := c.reg.SyncOnce(c.ctx, c.conn); !errors.Is(err, connector.ErrRateLimited) {

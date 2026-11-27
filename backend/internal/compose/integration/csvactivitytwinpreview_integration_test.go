@@ -25,6 +25,7 @@ func previewAndCommit(t *testing.T, files map[string]string) (preview, commit im
 // A note that links one record of the upload by its ref and again by its email
 // is one note twice. The dry run says so as the commit does.
 func TestTheTestRunNamesAsRepeatsTheNotesTheCommitCollapsesWhenARecordIsSpelledTwoWays(t *testing.T) {
+	t.Parallel()
 	preview, commit := previewAndCommit(t, map[string]string{
 		"contacts.csv": "ref,email,name\nP-1,jo@twin-spell.example,Jo\n",
 		"activities.csv": activityHeader + "\n" +
@@ -42,6 +43,7 @@ func TestTheTestRunNamesAsRepeatsTheNotesTheCommitCollapsesWhenARecordIsSpelledT
 // Two notes of one text on two records the upload creates stay two notes, in
 // the test run and in the commit.
 func TestTheTestRunKeepsApartNotesOnDifferentRecordsOfTheSameUpload(t *testing.T) {
+	t.Parallel()
 	preview, commit := previewAndCommit(t, map[string]string{
 		"contacts.csv": "ref,email,name\nP-1,jo@twin-apart.example,Jo\nP-2,li@twin-apart.example,Li\n",
 		"activities.csv": activityHeader + "\n" +
@@ -59,6 +61,7 @@ func TestTheTestRunKeepsApartNotesOnDifferentRecordsOfTheSameUpload(t *testing.T
 // A repeat that falls in a later slice than its twin is named by the test run
 // as often as the commit collapses it.
 func TestTheTestRunNamesARepeatInALaterSliceAsTheCommitDoes(t *testing.T) {
+	t.Parallel()
 	var rows strings.Builder
 	rows.WriteString("A-1,note,Fair recap,Met at the fair,2025-03-02,contact:P-1,,,\n")
 	for i := 2; i <= 500; i++ {
@@ -80,6 +83,7 @@ func TestTheTestRunNamesARepeatInALaterSliceAsTheCommitDoes(t *testing.T) {
 // A company whose ref reads like the identity of a company named by its name
 // is still a different company. Notes of one text on the two stay two notes.
 func TestTheTestRunKeepsApartACompanyRefThatLooksLikeANamedCompany(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	parts := append([]AnyMap{
 		{"file": "companies.csv", "object": "company", "mapping": AnyMap{"ref": "ref", "name": "display_name"}},

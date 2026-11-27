@@ -17,6 +17,7 @@ import (
 // it. The account page shows the bought title for a company on the same
 // domain, whichever of the two spellings the claim or the company holds.
 func TestABoughtTitleReachesTheAccountWhenTheDomainIsSpeltOtherwise(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct{ name, companyDomain, claimDomain string }{
 		{"claim in Unicode, company in punycode", "xn--bcher-kva.example", "Bücher.example"},
 		{"claim in punycode, company in Unicode", "bücher.example", "xn--bcher-kva.example"},

@@ -63,6 +63,7 @@ func seatWithEnd(t *testing.T, e *Env, deal ids.DealID, name string, end *time.T
 // The committee read, the deal coverage the card draws and the contact page
 // must agree, because each once answered this on its own.
 func TestADealSeatLeavesTheCommitteeOnItsEndDay(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	deal := ids.From[ids.DealKind](e.SeedDeal(t, "Seat currency", pipeline, open, &e.Rep1))
@@ -134,6 +135,7 @@ func memberSeat(t *testing.T, e *Env) context.Context {
 // The undo of seating a stakeholder takes the deal seat's removal rule, so the
 // Member role may undo it. The undo of an employment link still needs delete.
 func TestARepMayUndoSeatingAStakeholder(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	rep := memberSeat(t, e)
 	if err := e.Contacts.RefuseEdgeWrite(rep, "deal_stakeholder", "create"); err != nil {
@@ -148,6 +150,7 @@ func TestARepMayUndoSeatingAStakeholder(t *testing.T) {
 // without the delete grant. Every other kind of edge
 // still needs delete to decide.
 func TestARepDecidesTheStagedArchiveOfADealSeat(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	rep := memberSeat(t, e)
 	svc := compose.NewApprovalsService(e.DB())

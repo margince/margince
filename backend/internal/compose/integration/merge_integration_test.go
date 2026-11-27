@@ -97,6 +97,7 @@ func TestMergeContact_relinkSurvivorshipAndReferentialIntegrity(t *testing.T) {
 // target's does not become a second primary. A target with none takes the
 // source's.
 func TestMergeContact_keepsOnePrimaryAcrossTypes(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 

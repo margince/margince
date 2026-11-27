@@ -19,6 +19,7 @@ import (
 // A saved draft gives back a cleared country as cleared. It keeps no entry for
 // a recipient the author stated nothing about, or one no longer on the draft.
 func TestADraftKeepsAClearedCountryApartFromNone(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	anchor := MailDraftAnchor{Type: crmcontracts.MailDraftAnchorTypeContact, ID: e.seedContact(t, "Buyer")}
@@ -63,6 +64,7 @@ func TestADraftKeepsAClearedCountryApartFromNone(t *testing.T) {
 // An agent's draft keeps no stated country: only the author may move a
 // recipient's jurisdiction.
 func TestAnAgentsDraftKeepsNoStatedCountry(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := MailDraftAnchor{Type: crmcontracts.MailDraftAnchorTypeContact, ID: e.seedContact(t, "Buyer")}
 	content := agentDraft("First go")
@@ -79,6 +81,7 @@ func TestAnAgentsDraftKeepsNoStatedCountry(t *testing.T) {
 // The send's audit row names each recipient whose country the sender stated,
 // and nobody else.
 func TestTheSendsAuditNamesTheStatedCountries(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	anchor := e.seedAnchor(t, "", "")

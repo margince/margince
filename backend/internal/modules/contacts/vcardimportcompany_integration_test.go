@@ -38,6 +38,7 @@ func importCardsToCompany(t *testing.T, e *dedupeEnv, company ids.CompanyID, fil
 }
 
 func TestImportingToACompanyFilesEveryCreatedContactUnderItInsteadOfTheCardsOwnCompany(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	home := seedImportCompany(t, e, "Home Account GmbH")
@@ -67,6 +68,7 @@ func TestImportingToACompanyFilesEveryCreatedContactUnderItInsteadOfTheCardsOwnC
 }
 
 func TestImportingToACompanyLeavesAMatchedContactsEmployerAlone(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	home := seedImportCompany(t, e, "Home Account GmbH")
@@ -85,6 +87,7 @@ func TestImportingToACompanyLeavesAMatchedContactsEmployerAlone(t *testing.T) {
 }
 
 func TestImportingToACompanyTheCallerCannotReadWritesNothingNotEvenTheUpdates(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	cora := importCards(ctx, t, e, "BEGIN:VCARD\nFN:Cora Cadence\nEMAIL:cora@cadence.example\nEND:VCARD\n")[0]

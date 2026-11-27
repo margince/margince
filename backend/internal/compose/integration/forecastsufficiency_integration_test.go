@@ -184,6 +184,7 @@ func TestAComparablePeriodTotalsOnlyWhatItWon(t *testing.T) {
 // A won deal with no amount is counted as left out of its period. A period
 // where nothing converts has no total, not a total of zero.
 func TestAComparablePeriodNamesTheWonDealsItLeavesOutAndNeverReadsNothingAsZero(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	st := seedForecastFXPipeline(t, e)
 	seedNoAmount := func(closedAt time.Time) {

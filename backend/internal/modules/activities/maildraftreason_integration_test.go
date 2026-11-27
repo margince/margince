@@ -18,6 +18,7 @@ import (
 // The reason a rep typed for sending anyway comes back with the draft. It moves
 // only at the version the composer read, and stays off the audit trail.
 func TestADraftKeepsItsSendAnywayReasonUnderTheVersionCheck(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	anchor := MailDraftAnchor{Type: crmcontracts.MailDraftAnchorTypeContact, ID: e.seedContact(t, "Buyer")}

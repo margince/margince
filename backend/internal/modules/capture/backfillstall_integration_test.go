@@ -47,6 +47,7 @@ func (p *stalledHistory) BackfillPage(ctx context.Context, _ connector.Auth, _ t
 }
 
 func TestAMessageThatFailsThreeAttemptsInARowIsSkippedAndCounted(t *testing.T) {
+	t.Parallel()
 	provider := &stalledHistory{bad: []string{"bad-message"}}
 	ctx, reg, id := admissionRunWith(t, provider)
 	queue := &recordedBackfillQueue{generations: map[ids.UUID]int64{}}
@@ -78,6 +79,7 @@ func TestAMessageThatFailsThreeAttemptsInARowIsSkippedAndCounted(t *testing.T) {
 // strikes, then the second fails on its own. Neither loses its strikes before
 // the page commits.
 func TestTwoPermanentlyFailingMessagesAreBothSkippedAndThePageCommits(t *testing.T) {
+	t.Parallel()
 	provider := &stalledHistory{bad: []string{"bad-a", "bad-b"}}
 	ctx, reg, id := admissionRunWith(t, provider)
 	queue := &recordedBackfillQueue{generations: map[ids.UUID]int64{}}

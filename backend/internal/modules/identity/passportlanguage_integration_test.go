@@ -18,6 +18,7 @@ import (
 )
 
 func TestAnAgentReadsSystemTextInItsGrantingHumansLanguage(t *testing.T) {
+	t.Parallel()
 	for _, chosen := range []textlang.Lang{textlang.German, textlang.Vietnamese} {
 		t.Run(string(chosen), func(t *testing.T) {
 			e := setupRevocationEnv(t, "passport-language-"+string(chosen))
@@ -52,6 +53,7 @@ func TestAnAgentReadsSystemTextInItsGrantingHumansLanguage(t *testing.T) {
 }
 
 func TestAnAgentWhoseHumanNeverChoseReadsTheInstallationsBaseLanguage(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "passport-language-base")
 	setBaseLanguage(t, e, textlang.German)
 	t.Cleanup(func() { setBaseLanguage(t, e, textlang.English) })
@@ -87,6 +89,7 @@ func setBaseLanguage(t *testing.T, e *revocationEnv, lang textlang.Lang) {
 }
 
 func TestAFailedBaseLanguageReadLeavesTheCallersTransactionUsable(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "passport-language-savepoint")
 	ctx := e.wsCtx(e.admin)
 	if err := e.svc.db.Tx(ctx, func(tx pgx.Tx) error {

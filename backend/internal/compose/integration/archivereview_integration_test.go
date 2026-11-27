@@ -92,6 +92,7 @@ func listArchive(t *testing.T, h interface {
 // TestTheArchiveReviewListsOldArchivedMailWithWhatKeepsIt reads the archive as
 // the controller filters it: by age and by contact, each record with its keeper.
 func TestTheArchiveReviewListsOldArchivedMailWithWhatKeepsIt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedArchive(t, e)
 	h := compose.NewPrivacyHandlers(e.Pool)
@@ -133,6 +134,7 @@ func TestTheArchiveReviewListsOldArchivedMailWithWhatKeepsIt(t *testing.T) {
 // company read sees both names. One holding only the retention authority sees
 // the same ids with the names left empty.
 func TestTheArchiveReviewNamesOnlyThePartiesTheReaderMayRead(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedArchive(t, e)
 	h := compose.NewPrivacyHandlers(e.Pool)
@@ -175,6 +177,7 @@ func TestTheArchiveReviewNamesOnlyThePartiesTheReaderMayRead(t *testing.T) {
 // the review lists. Only the record nothing keeps is erased, with its audit
 // certificate and event. A reader without the grant is refused.
 func TestAnAdminDeletesOldArchivedMailAndTheKeptRecordsStay(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedArchive(t, e)
 	h := compose.NewPrivacyHandlers(e.Pool)

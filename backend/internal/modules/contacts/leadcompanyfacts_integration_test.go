@@ -421,6 +421,7 @@ func TestQualifyingCarriesTheTypedIndustryOnlyToACompanyWithNone(t *testing.T) {
 // LinkedIn profile and industry. The company comes from the work domain or
 // from the typed name the promoter chose to create.
 func TestQualifyingCarriesTheLinkedInProfileAndIndustryToWhatItCreates(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	owner := e.linker(e.owner, principal.RowScopeOwn)
 	for _, tc := range []struct {

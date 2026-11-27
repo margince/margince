@@ -223,6 +223,7 @@ func TestADeclineKeepsAProjectTheThreadFiled(t *testing.T) {
 // marks our mail not about that deal, the thread no longer files the reply
 // there.
 func TestAThreadMarkedNotAboutADealFilesNoReplyThere(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
@@ -247,6 +248,7 @@ func TestAThreadMarkedNotAboutADealFilesNoReplyThere(t *testing.T) {
 // colleague who may only read the deal answers the question and leaves the
 // link unmarked.
 func TestNoneOfThemMarksNoLinkedDealTheCallerMayNotChange(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)

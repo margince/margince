@@ -123,6 +123,7 @@ const wantRunOutcomes = 5
 // So the plan must probe workflow_run_unique on both columns.
 // The statements and the rows come from the engine itself.
 func TestRunClaimAndOutcomeStatementsReachTheirRowByTheUniqueIndex(t *testing.T) {
+	t.Parallel()
 	fx := setupAutomationDB(t)
 	engine := NewWorkflowEngine(database.BindTo(fx.pool, ids.From[ids.WorkspaceKind](fx.ws)), nil)
 	ctx := context.Background()

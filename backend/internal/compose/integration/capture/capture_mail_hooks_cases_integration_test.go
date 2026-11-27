@@ -64,6 +64,7 @@ func makePrivate(t *testing.T, w dealWorld, company, contact ids.UUID) {
 // A parties hook cannot name an archived company or contact. The answer is
 // ignored and the trace says so. The mail keeps the deal core chose.
 func TestAPartiesHookCannotNameAnArchivedCompanyOrContact(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
@@ -91,6 +92,7 @@ func TestAPartiesHookCannotNameAnArchivedCompanyOrContact(t *testing.T) {
 
 // A deal hook cannot name a deal that was archived: it is no longer open.
 func TestADealHookCannotNameAnArchivedDeal(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
@@ -110,6 +112,7 @@ func TestADealHookCannotNameAnArchivedDeal(t *testing.T) {
 
 // A parties hook cannot name a contact the mailbox owner may not see.
 func TestAPartiesHookCannotNameAContactTheMailboxOwnerCannotSee(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
@@ -126,6 +129,7 @@ func TestAPartiesHookCannotNameAContactTheMailboxOwnerCannotSee(t *testing.T) {
 
 // A meeting reaches the deal hook too, marked as one, and its answer counts.
 func TestADealHookSeesAMeetingAsOneAndCanKeepItOffTheDeal(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
@@ -150,6 +154,7 @@ func TestADealHookSeesAMeetingAsOneAndCanKeepItOffTheDeal(t *testing.T) {
 // A hook's Lookup runs as the unit role, which holds nothing on core tables
 // such as system_log. The read is refused, and the unit's answer decides.
 func TestAHooksLookupCannotReadSystemLog(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)

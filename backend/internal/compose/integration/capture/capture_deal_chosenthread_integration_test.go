@@ -38,6 +38,7 @@ func partnerReply(msgID, root string) []byte {
 }
 
 func TestCaptureFilesAReplyOnTheDealAColleagueChoseAtAnotherCompany(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w, _, deal := partnerWorld(t, env)
@@ -58,6 +59,7 @@ func TestCaptureFilesAReplyOnTheDealAColleagueChoseAtAnotherCompany(t *testing.T
 // Only a colleague's choice crosses companies. A deal link the connector wrote
 // on the partner's mail is the machine's, and the reply does not follow it.
 func TestCaptureFollowsNoAutomaticDealAtAnotherCompany(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	_, _, deal := partnerWorld(t, env)
@@ -74,6 +76,7 @@ func TestCaptureFollowsNoAutomaticDealAtAnotherCompany(t *testing.T) {
 // A colleague's "not about this deal" on the reply holds against the choice
 // made for the conversation, for live capture and for the repair.
 func TestADeclineOnTheReplyHoldsAgainstTheConversationsChosenDeal(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w, _, deal := partnerWorld(t, env)
@@ -99,6 +102,7 @@ func TestADeclineOnTheReplyHoldsAgainstTheConversationsChosenDeal(t *testing.T) 
 
 // A choice a colleague took back no longer leads the conversation.
 func TestADeclinedChoiceIsNotFollowed(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w, _, deal := partnerWorld(t, env)
@@ -116,6 +120,7 @@ func TestADeclinedChoiceIsNotFollowed(t *testing.T) {
 // Two colleagues chose two deals for one conversation. They disagree, so the
 // reply goes on neither, and the partner's own sole open deal does not decide.
 func TestTwoDealsChosenForOneConversationFileTheReplyOnNeither(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w, partner, rollout := partnerWorld(t, env)
@@ -137,6 +142,7 @@ func TestTwoDealsChosenForOneConversationFileTheReplyOnNeither(t *testing.T) {
 // The choice counts only on mail the capturing mailbox may read. A colleague's
 // private sent mail, filed on the deal by hand, leads none of our mail there.
 func TestAChoiceOnMailTheCapturingSeatCannotReadIsNotFollowed(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w, _, deal := partnerWorld(t, env)
@@ -157,6 +163,7 @@ func TestAChoiceOnMailTheCapturingSeatCannotReadIsNotFollowed(t *testing.T) {
 // A choice leads only the mail after it. A colleague who files a later mail
 // does not move an older one of the conversation, for the repair either.
 func TestALaterChoiceLeavesOlderMailOfTheConversationAlone(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w, _, deal := partnerWorld(t, env)
@@ -176,6 +183,7 @@ func TestALaterChoiceLeavesOlderMailOfTheConversationAlone(t *testing.T) {
 // confirms that deal by hand. The link stays one row, marked theirs, and the
 // rest of the conversation follows it.
 func TestARelinkOntoTheMachinesDealIsAColleaguesChoice(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w, _, deal := partnerWorld(t, env)

@@ -360,6 +360,7 @@ func TestAPromiseAnAgentRecordedIsOpenOnItsContact(t *testing.T) {
 // A source subject with quote marks is named in the language's own marks with
 // no backslash. A second press still finds the first task.
 func TestAPromiseFromAQuotedSubjectIsTakenOverOnceWithoutBackslashes(t *testing.T) {
+	t.Parallel()
 	subject := `Re: „Angebot“ "Q4"`
 	f := setupTakeOverAbout(t, subject)
 	first, err := f.h.TakeOver(f.priya, f.claim)

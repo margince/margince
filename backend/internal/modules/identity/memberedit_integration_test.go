@@ -104,6 +104,7 @@ func TestAMemberEmailEditCannotTakeAnotherAccount(t *testing.T) {
 
 // An invited member's address may still change, and not to one another seat holds.
 func TestAnInvitedMembersEmailEditCannotTakeAnotherAccount(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "invited-email-conflict")
 	ctx := e.wsCtx(e.admin)
 	invited, _, err := e.svc.InviteUser(ctx, e.admin, InviteUserInput{Email: "new@" + e.slug + ".test", DisplayName: "New", Role: "rep"})

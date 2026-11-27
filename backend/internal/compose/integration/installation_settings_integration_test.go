@@ -560,6 +560,7 @@ func TestBaseCurrencyWillNotMoveOutFromUnderAPricedRateSheet(t *testing.T) {
 // The refusal's params and the read's base_currency_lock spell one lock, so
 // they carry the same keys and values for every reason.
 func TestARefusedBaseCurrencyCarriesTheFactsTheReadShows(t *testing.T) {
+	t.Parallel()
 	for name, tc := range map[string]struct {
 		lock    func(*testing.T, *apptest.AppEnv, string)
 		reason  string

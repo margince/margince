@@ -184,6 +184,7 @@ func TestDoneRefusesAnUnknownLaneAndAnAgent(t *testing.T) {
 // A row with no id names no row the queue drew. Nor does a follow-up row whose
 // id is not an activity id. Both are refused as malformed.
 func TestDoneRefusesARowIdNoRowCouldCarry(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	s := handledStore(e)
 	for name, row := range map[string]WorklistRowRef{
@@ -246,6 +247,7 @@ func TestDoneTwiceOnOneMessageWritesItOnce(t *testing.T) {
 // follow-up keeps it on the activity, any other row in the Done set. A
 // colleague's Done and a row nobody marked are not the reader's.
 func TestAlreadyDoneReadsBothPlacesADoneIsKept(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	s := storeAddressing(e, readerAddress)
 	rep := e.followUpReader()

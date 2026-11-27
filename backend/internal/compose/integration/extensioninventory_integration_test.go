@@ -26,7 +26,7 @@ func TestExtensionInventoryLogsOnlyChanges(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	observe := func(exts ...extension.Extension) {
 		t.Helper()
-		if err := compose.ObserveExtensionInventory(ctx, env.Pool, logger, exts); err != nil {
+		if err := compose.ObserveExtensionInventory(ctx, env.Pool, logger, exts, nil); err != nil {
 			t.Fatalf("ObserveExtensionInventory: %v", err)
 		}
 	}

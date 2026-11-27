@@ -29,6 +29,7 @@ const (
 // A replay, a scheduled send coming due and an agent's send are no first Send
 // of a human. Each of them leaves the outcome and decision counts as they were.
 func TestOnlyAHumansFirstSendIsCounted(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t, compose.WithMetricsToken(sendMetricsToken))
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	p.stakeADeal(t)

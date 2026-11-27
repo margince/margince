@@ -62,6 +62,7 @@ func (f *teamFixture) slotsOn(t *testing.T, page BookingPage) []time.Time {
 }
 
 func TestThePersonalLinkOffersItsHostsTimeAloneBesideATeamLink(t *testing.T) {
+	t.Parallel()
 	f := newTeamFixture(t)
 	member := f.colleague(t, "Busy")
 	f.calendar.busyOf[member] = []connector.CalendarInterval{{Start: monday(10), End: monday(11)}}
@@ -89,6 +90,7 @@ func TestThePersonalLinkOffersItsHostsTimeAloneBesideATeamLink(t *testing.T) {
 }
 
 func TestAColleaguesOwnLinkChangesOnlyByRealBookings(t *testing.T) {
+	t.Parallel()
 	f := newTeamFixture(t)
 	member := f.colleague(t, "Member")
 	profile, err := f.store.SchedulingProfile(f.as(member))
@@ -125,6 +127,7 @@ func TestAColleaguesOwnLinkChangesOnlyByRealBookings(t *testing.T) {
 }
 
 func TestDeletingATeamLinkLeavesThePersonalLinkAsItWas(t *testing.T) {
+	t.Parallel()
 	f := newTeamFixture(t)
 	before, err := f.store.SchedulingProfile(f.ctx)
 	if err != nil {
@@ -163,6 +166,7 @@ func TestDeletingATeamLinkLeavesThePersonalLinkAsItWas(t *testing.T) {
 }
 
 func TestTwoTeamLinksAskTheColleagueOnEach(t *testing.T) {
+	t.Parallel()
 	f := newTeamFixture(t)
 	member := f.colleague(t, "Shared")
 	first, err := f.store.CreateSchedulingTeamLink(f.ctx, teamLinkRequest(member))
@@ -210,6 +214,7 @@ func (f *teamFixture) moveTeams(t *testing.T) datatask.BatchOut {
 }
 
 func TestTheDataTaskMovesAPersonalTeamOntoATeamLink(t *testing.T) {
+	t.Parallel()
 	f := newTeamFixture(t)
 	confirmed, pending := f.colleague(t, "Confirmed"), f.colleague(t, "Pending")
 	f.calendar.busyOf[confirmed] = []connector.CalendarInterval{{Start: monday(10), End: monday(11)}}
@@ -257,6 +262,7 @@ func (f *teamFixture) bookings(t *testing.T) int {
 // refused when, before it commits, the host switched the link off or named a
 // colleague who has not confirmed.
 func TestABookingRefusesALinkThatChangedAfterItOpened(t *testing.T) {
+	t.Parallel()
 	for name, change := range map[string]func(f *teamFixture, member ids.UserID){
 		"switched off": func(f *teamFixture, member ids.UserID) {
 			request := teamLinkRequest(member)
@@ -291,6 +297,7 @@ func TestABookingRefusesALinkThatChangedAfterItOpened(t *testing.T) {
 // A meeting reads the calendars of the link that booked it. A colleague who
 // left that link is not read for a move, though another link still names them.
 func TestAMoveReadsOnlyTheLinkThatBookedTheMeeting(t *testing.T) {
+	t.Parallel()
 	f := newTeamFixture(t)
 	alice := f.colleague(t, "Alice")
 	f.name(t, true, alice)
@@ -321,6 +328,7 @@ func TestAMoveReadsOnlyTheLinkThatBookedTheMeeting(t *testing.T) {
 
 // Taking an omitted switch as on would turn a link the host switched off back on.
 func TestAnUpdateWithoutTheSwitchKeepsItOff(t *testing.T) {
+	t.Parallel()
 	f := newTeamFixture(t)
 	member := f.colleague(t, "Member")
 	f.name(t, true, member)
@@ -339,6 +347,7 @@ func TestAnUpdateWithoutTheSwitchKeepsItOff(t *testing.T) {
 
 // A pending member's line follows the link's name; a confirmed member's does not.
 func TestARenamedLinkRewordsOnlyThePendingRequests(t *testing.T) {
+	t.Parallel()
 	f := newTeamFixture(t)
 	confirmed, pending := f.colleague(t, "Confirmed"), f.colleague(t, "Pending")
 	f.name(t, false, confirmed, pending)
@@ -364,6 +373,7 @@ func TestARenamedLinkRewordsOnlyThePendingRequests(t *testing.T) {
 // A team link offers the lengths of its host's personal page by the same rule.
 // An offered length gives times of that length, and any other is refused.
 func TestATeamLinkOffersThePersonalPagesLengths(t *testing.T) {
+	t.Parallel()
 	f := newTeamFixture(t)
 	profile, err := f.store.SchedulingProfile(f.ctx)
 	if err != nil {
@@ -397,6 +407,7 @@ func TestATeamLinkOffersThePersonalPagesLengths(t *testing.T) {
 // A meeting the personal page booked while it still held a team keeps its
 // colleagues after the team moves to a team link. A move still waits on them.
 func TestAMeetingBookedOnTheOldPersonalTeamKeepsItsColleaguesAfterTheMove(t *testing.T) {
+	t.Parallel()
 	f := newTeamFixture(t)
 	alice := f.colleague(t, "Alice")
 	yes := crmcontracts.SchedulingTeamMemberStateConfirmed
@@ -426,6 +437,7 @@ func TestAMeetingBookedOnTheOldPersonalTeamKeepsItsColleaguesAfterTheMove(t *tes
 // lock stays off it. The answer by host reads the links under the lock, so with
 // no other link to answer it is not found.
 func TestAnAnswerByHostDoesNotConfirmALinkTheColleagueLeftMeanwhile(t *testing.T) {
+	t.Parallel()
 	f := newTeamFixture(t)
 	member := f.colleague(t, "Member")
 	f.name(t, false, member)
@@ -440,6 +452,7 @@ func TestAnAnswerByHostDoesNotConfirmALinkTheColleagueLeftMeanwhile(t *testing.T
 // The same race with a second link still pending confirms that one and leaves
 // the left link alone.
 func TestAnAnswerByHostConfirmsTheOtherLinkWhenTheColleagueLeftOneMeanwhile(t *testing.T) {
+	t.Parallel()
 	f := newTeamFixture(t)
 	member := f.colleague(t, "Member")
 	f.name(t, false, member)

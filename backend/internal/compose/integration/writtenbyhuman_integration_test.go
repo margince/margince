@@ -15,6 +15,7 @@ import (
 // automatic_kind comes from give one answer for every row shape. A forward to
 // self is SQL's alone, so every row here is none.
 func TestTheGoAndSQLWrittenByHumanRulesAgree(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	var rows []relstrength.Evidence
 	for _, kind := range []string{"email", "call", "meeting", "message", "note"} {

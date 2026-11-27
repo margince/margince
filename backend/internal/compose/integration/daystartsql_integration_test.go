@@ -23,6 +23,7 @@ import (
 // picks the later of two instants. It also holds at a spring-forward midnight
 // that does not exist.
 func TestTheSQLDayStartIsTheFirstInstantOfTheDay(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	for _, tc := range []struct{ zone, day string }{
 		{"America/Havana", "2026-11-01"},

@@ -394,6 +394,7 @@ func TestTheBackfillReadsOnlyTheMessagesOwnStoredParts(t *testing.T) {
 // The re-read is the data task's alone: the daily participant pass reads no
 // mail by a missing calendar method.
 func TestTheParticipantBackfillLeavesTheCalendarMethodToTheTask(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	o.contact(t, "Pat Buyer", "pat@customer.example")
 	decline := o.captureRaw(t, declineMail(o.seat, o.now.Add(-time.Hour)))

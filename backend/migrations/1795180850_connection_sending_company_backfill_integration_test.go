@@ -20,6 +20,7 @@ import (
 // default one. A connection with no owner stays unscoped, and one that already
 // names a company keeps it.
 func TestConnectionsMadeBeforeTheScopeGetTheirOwnersCompany(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	resetSchema(t, conn)

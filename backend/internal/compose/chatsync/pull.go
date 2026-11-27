@@ -24,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/chatlinks"
 	"github.com/margince/margince/backend/internal/modules/chatlinks/dispact"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -47,6 +48,8 @@ type Puller struct {
 	// Zone is where a day ends for the end-of-day rule.
 	Zone *time.Location
 	Log  *slog.Logger
+	// Rbac is the vocabulary a summary's readers are judged under.
+	Rbac identity.RbacObjects
 }
 
 // Pull reads every active link of the connection. ctx carries the job's
@@ -184,7 +187,7 @@ func (p *Puller) judge(ctx context.Context, session chatlinks.Session, link chat
 	if err != nil {
 		return err
 	}
-	reply, err := summariser{lane: p.Lane, pool: p.Pool, restricted: p.restricted}.summarise(ctx, link, record, ep.messages, false)
+	reply, err := summariser{lane: p.Lane, pool: p.Pool, rbac: p.Rbac, restricted: p.restricted}.summarise(ctx, link, record, ep.messages, false)
 	switch {
 	case errors.Is(err, errNoModel):
 		p.Log.InfoContext(ctx, "chat episode passed over", "link", link.ID.String(), "first_seq", ep.firstSeq(), "reason", "no_model")

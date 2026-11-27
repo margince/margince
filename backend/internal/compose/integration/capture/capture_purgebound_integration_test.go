@@ -80,6 +80,7 @@ func confirmed(ctx context.Context, t *testing.T, seen compose.PurgeOutcome) con
 // Mail that arrives between the preview and the confirm is not destroyed. The
 // caller confirmed one count and was never shown a larger one.
 func TestAPurgeBoundToAPreviewRefusesMailThatArrivedAfterIt(t *testing.T) {
+	t.Parallel()
 	for _, before := range []int{0, 1} {
 		e := integration.Setup(t)
 		var first ids.UUID

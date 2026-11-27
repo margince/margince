@@ -19,6 +19,7 @@ import (
 // A colleague who attended a meeting keeps it in the week it was held. Losing
 // their guest row later changes nothing, because the held transition kept them.
 func TestAColleagueKeepsAHeldMeetingInItsWeekWhenTheirGuestRowIsLost(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 	week := time.Date(2026, 9, 14, 0, 0, 0, 0, time.UTC)
 	held, host := "held", ids.From[ids.UserKind](e.Rep1)

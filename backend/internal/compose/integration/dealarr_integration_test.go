@@ -370,6 +370,7 @@ func TestClearingTheRecurringFigureTakesTheCurrencyOnlyWhenNothingIsLeftToPrice(
 // An open deal's price can be removed. The currency goes with it unless the
 // recurring figure still needs it.
 func TestClearingTheAmountOfAnOpenDeal(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	admin := e.Admin()
@@ -423,6 +424,7 @@ func TestClearingTheAmountOfAnOpenDeal(t *testing.T) {
 
 // A won deal keeps its price: the refusal names the reopen, and nothing moves.
 func TestClearingTheAmountOfAWonDealIsRefused(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, won := DealFixture(t, e)
 	admin := e.Admin()

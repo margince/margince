@@ -15,6 +15,7 @@ import (
 // it holds, may release it. Each is refused before the message is tried again,
 // even when a consent granted since would now let it go.
 func TestOnlyAnAdmittedDirectorReleasesAHeldMessage(t *testing.T) {
+	t.Parallel()
 	unacknowledged := directed()
 	unacknowledged["acknowledged"] = false
 	misread := directedShowing("no_compatible_evidence")
@@ -66,6 +67,7 @@ func TestOnlyAnAdmittedDirectorReleasesAHeldMessage(t *testing.T) {
 // refuseAnotherSeatsHold) and the colleague sends the message. Each alone has
 // its own test in its module.
 func TestOnlyTheAuthorReleasesAMessageHeldAtSend(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	c.useReviewableMarketingProfile(t)
 	var refused struct {

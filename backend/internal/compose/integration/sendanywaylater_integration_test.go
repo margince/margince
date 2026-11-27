@@ -23,6 +23,7 @@ import (
 // Send anyway with a moment records the decision now and sends nothing until
 // the moment. The fire then spends the decision: one delivery, under it.
 func TestSendAnywayWithAMomentWaitsAndSpendsTheDecisionAtTheFire(t *testing.T) {
+	t.Parallel()
 	p, id := heldByAnObjectionAtFire(t)
 	review := p.liveReviewFor(t, id)
 	body := confirmationFor(t, p.AppEnv, review)
@@ -57,6 +58,7 @@ func TestSendAnywayWithAMomentWaitsAndSpendsTheDecisionAtTheFire(t *testing.T) {
 // A moment already past is refused before anything is recorded, and the
 // message stays held.
 func TestSendAnywayWithAPastMomentRecordsNothing(t *testing.T) {
+	t.Parallel()
 	p, id := heldByAnObjectionAtFire(t)
 	review := p.liveReviewFor(t, id)
 	body := confirmationFor(t, p.AppEnv, review)
@@ -80,6 +82,7 @@ func TestSendAnywayWithAPastMomentRecordsNothing(t *testing.T) {
 // A second Send anyway on a message that already went tells its sender so,
 // instead of a not-found. A colleague still learns nothing.
 func TestASecondSendAnywayHearsTheMessageAlreadyWent(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	c.useReviewableMarketingProfile(t)
 	if status, _ := c.send(t, "marketing_email"); status != http.StatusConflict {
@@ -116,6 +119,7 @@ func laterConfirmation(read servedReview) AnyMap {
 // Refusals that moved since the sender read the review answer a fresh review
 // at once, and record no decision for a later moment.
 func TestSendAnywayLaterOnMovedRefusalsAnswersAFreshReview(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	c.useReviewableMarketingProfile(t)
 	if status, _ := c.send(t, "marketing_email"); status != http.StatusConflict {
@@ -145,6 +149,7 @@ func TestSendAnywayLaterOnMovedRefusalsAnswersAFreshReview(t *testing.T) {
 // A message the engine now allows moves to its moment with no decision on
 // record: nothing needs overriding.
 func TestSendAnywayLaterRecordsNoDecisionTheEngineNoLongerNeeds(t *testing.T) {
+	t.Parallel()
 	p, c, read := refusedOffer(t)
 	p.grantMarketingConsent(t)
 	if status := c.Call(t, "POST", "/v1/communication-reviews/"+read.ID+"/direct-send", laterConfirmation(read), nil, nil); status != http.StatusAccepted {
@@ -160,6 +165,7 @@ func TestSendAnywayLaterRecordsNoDecisionTheEngineNoLongerNeeds(t *testing.T) {
 
 // A move that fails takes the decision with it: the two commit together.
 func TestSendAnywayLaterThatCannotMoveRecordsNoDecision(t *testing.T) {
+	t.Parallel()
 	p, id := heldByAnObjectionAtFire(t)
 	review := p.liveReviewFor(t, id)
 	body := confirmationFor(t, p.AppEnv, review)
@@ -194,6 +200,7 @@ func TestSendAnywayLaterThatCannotMoveRecordsNoDecision(t *testing.T) {
 // A message its sender cancelled was never sent: Send anyway on its review is
 // not found, not "already sent".
 func TestSendAnywayOnACancelledMessageIsNotFound(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	c.useReviewableMarketingProfile(t)
 	if status, _ := c.send(t, "marketing_email"); status != http.StatusConflict {
@@ -218,6 +225,7 @@ func TestSendAnywayOnACancelledMessageIsNotFound(t *testing.T) {
 // Another tab may send the message while a later Send anyway plans its move.
 // Its sender then hears that it already went, as the first check says.
 func TestSendAnywayLaterHearsTheMessageWentWhileItPlanned(t *testing.T) {
+	t.Parallel()
 	p, id := heldByAnObjectionAtFire(t)
 	review := p.liveReviewFor(t, id)
 	body := confirmationFor(t, p.AppEnv, review)
@@ -267,6 +275,7 @@ func TestSendAnywayLaterHearsTheMessageWentWhileItPlanned(t *testing.T) {
 // A later Send anyway locks the message row before the review, as a cancel and
 // the fire do. In the other order a cancel racing it deadlocks.
 func TestSendAnywayLaterLocksTheMessageBeforeTheReview(t *testing.T) {
+	t.Parallel()
 	p, id := heldByAnObjectionAtFire(t)
 	review := p.liveReviewFor(t, id)
 	reviewID, err := ids.Parse(review)
@@ -301,6 +310,7 @@ func TestSendAnywayLaterLocksTheMessageBeforeTheReview(t *testing.T) {
 // Send anyway at a chosen local time spends its decision at the fire. The
 // local time the move writes is not part of the message the sender approved.
 func TestSendAnywayAtALocalTimeSpendsTheDecisionAtTheFire(t *testing.T) {
+	t.Parallel()
 	p, id := heldByAnObjectionAtFire(t)
 	review := p.liveReviewFor(t, id)
 	body := confirmationFor(t, p.AppEnv, review)
@@ -329,6 +339,7 @@ func TestSendAnywayAtALocalTimeSpendsTheDecisionAtTheFire(t *testing.T) {
 // A decision on a held follow-up outlasts a reply hold the rep then releases.
 // The release notes when the replies were read, and that is not the message.
 func TestSendAnywayLaterOutlastsAReplyTheRepReviewed(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	p.activityID = logConsentInbound(t, p.AppEnv, p.contactID)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
@@ -362,6 +373,7 @@ func TestSendAnywayLaterOutlastsAReplyTheRepReviewed(t *testing.T) {
 // A decided message the recovery pass re-arms still spends its decision. The
 // re-arm stamp is the pass's cursor, not part of the approved message.
 func TestSendAnywayLaterOutlastsARecoveryReArm(t *testing.T) {
+	t.Parallel()
 	p, id := heldByAnObjectionAtFire(t)
 	review := p.liveReviewFor(t, id)
 	body := confirmationFor(t, p.AppEnv, review)
@@ -417,6 +429,7 @@ func momentIn(d time.Duration) string {
 // fire holds it with a reason the sender can read and opens a fresh review.
 // Approving that review sends, and the expired approval no longer blocks.
 func TestAStaleScheduledApprovalHoldsForAFreshReviewThatSends(t *testing.T) {
+	t.Parallel()
 	p, id := heldByAnObjectionAtFire(t)
 	first := p.liveReviewFor(t, id)
 	body := confirmationFor(t, p.AppEnv, first)

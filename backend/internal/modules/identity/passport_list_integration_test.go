@@ -208,6 +208,7 @@ func TestAPassportAndAGrantSharingAnIDAreStillTwoRows(t *testing.T) {
 
 // The list names who granted each passport, as the mint recorded it.
 func TestTheListNamesWhoGrantedEachPassport(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "passport-list-granter")
 	minted := e.mintOwnPassport(t, e.admin, []string{"read"})
 

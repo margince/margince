@@ -162,6 +162,7 @@ func TestADeclaredNoticeCarriesMarketingToAnExistingCustomer(t *testing.T) {
 // The stakeholder role is free text, so a buyer stored in other case or with
 // outer whitespace is still the buyer of the sale.
 func TestABuyerRoleInOtherCaseStillMakesACustomer(t *testing.T) {
+	t.Parallel()
 	for _, typed := range []string{" Economic_Buyer ", "\tEconomic_Buyer\n", "\u00a0economic_buyer"} {
 		t.Run(typed, func(t *testing.T) {
 			e, newsletter, _ := customerEnv(t)
@@ -391,6 +392,7 @@ func TestOnlyTheBuyerOfASaleIsItsCustomer(t *testing.T) {
 // seat that had ended by then makes nobody a customer, and a seat that ended
 // later still does.
 func TestASeatThatEndedBeforeTheSaleMakesNoCustomer(t *testing.T) {
+	t.Parallel()
 	e, newsletter, soldAt := customerEnv(t)
 	e.declare(t, e.defaultEntity(t), soldAt.Add(-year), nil, newsletter)
 	endSeat := func(days int) {
@@ -482,6 +484,7 @@ func TestTheDecisionRowNamesTheGroundItRestedOn(t *testing.T) {
 // records no address, so it is the buyer's address row held from before the
 // acceptance.
 func TestOnlyTheAddressThatCameWithTheSaleCarriesTheRoute(t *testing.T) {
+	t.Parallel()
 	e, newsletter, soldAt := customerEnv(t)
 	e.declare(t, e.defaultEntity(t), soldAt.Add(-year), nil, newsletter)
 	if got := e.decide(t, newsletterSend); got.Verdict != commsauthz.VerdictAllow {

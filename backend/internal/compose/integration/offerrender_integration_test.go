@@ -356,6 +356,7 @@ func TestOfferRenderPrintsWhatTheTemplateAndOfferFormsSaved(t *testing.T) {
 // An offer with no template prints with the default template of its own
 // language: its layout, and headings in that language.
 func TestOfferRenderNoTemplateTakesTheDefaultOfItsLanguage(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	dealID := e.SeedDeal(t, "Render default template deal", pipeline, open, &e.Rep1)
@@ -399,6 +400,7 @@ func TestOfferRenderNoTemplateTakesTheDefaultOfItsLanguage(t *testing.T) {
 // With no default for its language, an offer still prints headings in that
 // language, over an empty layout.
 func TestOfferRenderNoTemplateNoDefaultUsesTheOffersLanguage(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	dealID := e.SeedDeal(t, "Render no default deal", pipeline, open, &e.Rep1)

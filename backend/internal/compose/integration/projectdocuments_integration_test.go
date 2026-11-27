@@ -17,6 +17,7 @@ import (
 // filed under it, and nothing filed elsewhere. Every row comes from the real
 // activity and upload writers.
 func TestAProjectListsItsOwnUploadsAndTheFilesOfItsActivities(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 	store, _ := attachmentStore(e)

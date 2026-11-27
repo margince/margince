@@ -252,6 +252,7 @@ func (b failingDocumentBrain) Complete(context.Context, model.Request) (model.Re
 // timed out. Its last try closes it with a reason chosen from the cause,
 // instead of leaving it queued with no job behind it.
 func TestADocumentReadingIsHandedBackAndClosedOnItsLastTry(t *testing.T) {
+	t.Parallel()
 	env := integration.Setup(t)
 	pipeline, stage, _ := integration.DealFixture(t, env)
 	deal := env.SeedDeal(t, "Document tries", pipeline, stage, &env.Rep1)

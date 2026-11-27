@@ -36,6 +36,7 @@ func refusedOffer(t *testing.T) (*preflightEnv, *consentEnv, servedReview) {
 // Send anyway pressed in two tabs at once is one decision and one queued
 // message, and a worker that runs twice transmits it once.
 func TestSendAnywayFromTwoTabsQueuesAndDeliversOneMessage(t *testing.T) {
+	t.Parallel()
 	p, c, read := refusedOffer(t)
 	path := "/v1/communication-reviews/" + read.ID + "/direct-send"
 
@@ -71,6 +72,7 @@ func TestSendAnywayFromTwoTabsQueuesAndDeliversOneMessage(t *testing.T) {
 // A send or a Send anyway retried under its Idempotency-Key, as a client does
 // after a timeout, answers the recorded activity and queues nothing more.
 func TestASendRetriedUnderItsKeyQueuesOneMessage(t *testing.T) {
+	t.Parallel()
 	p, c, read := refusedOffer(t)
 	p.stakeADeal(t)
 	key := map[string]string{"Idempotency-Key": "send-" + read.ID}

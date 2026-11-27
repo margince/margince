@@ -596,6 +596,7 @@ func dealLists(ctx context.Context, e *configEnv) []dealList {
 // A deal list holds each label once, compared trimmed and ignoring case, and a
 // retired entry keeps its label. Create and rename answer the same conflict.
 func TestADealListHoldsEachLabelOnce(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	for _, list := range dealLists(e.asLossAdmin(), e) {
 		t.Run(list.name, func(t *testing.T) {
@@ -642,6 +643,7 @@ func TestADealListHoldsEachLabelOnce(t *testing.T) {
 // A label past the limit is refused as too long, naming label, before a key is
 // derived from it or a row is written.
 func TestADealListRefusesALabelPastTheLimitBeforeTheWrite(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	long := strings.Repeat("a", values.TextLabelCharacters+1)
 	for _, list := range dealLists(e.asLossAdmin(), e) {
@@ -671,6 +673,7 @@ func assertLabelTooLong(t *testing.T, err error, field string) {
 
 // A rename sent against an older version is a version skew, never a name clash.
 func TestADealListRenameAgainstAnOlderVersionIsAVersionSkew(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	ctx := e.asLossAdmin()
 	suffix := ids.NewV7().String()[24:]

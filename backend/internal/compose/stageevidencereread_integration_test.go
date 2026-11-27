@@ -149,6 +149,7 @@ func (f *rereadFixture) evidenceOn(mail ids.UUID) int {
 }
 
 func TestMailFromARemovedOwnDomainIsReadAgain(t *testing.T) {
+	t.Parallel()
 	f := newRereadFixture(t)
 	if _, err := f.own.Add(f.Admin(), "buyer-corp.test"); err != nil {
 		t.Fatal(err)
@@ -208,6 +209,7 @@ func TestMailFromARemovedOwnDomainIsReadAgain(t *testing.T) {
 }
 
 func TestTheSweepPagesThroughADomainsMail(t *testing.T) {
+	t.Parallel()
 	f := newRereadFixture(t)
 	if _, err := f.own.Add(f.Admin(), "buyer-corp.test"); err != nil {
 		t.Fatal(err)
@@ -241,6 +243,7 @@ func TestTheSweepPagesThroughADomainsMail(t *testing.T) {
 }
 
 func TestADomainListedAgainSpendsNoReading(t *testing.T) {
+	t.Parallel()
 	f := newRereadFixture(t)
 	if _, err := f.own.Add(f.Admin(), "buyer-corp.test"); err != nil {
 		t.Fatal(err)
@@ -259,6 +262,7 @@ func TestADomainListedAgainSpendsNoReading(t *testing.T) {
 }
 
 func TestWithNoModelLaneTheSweepQueuesNothing(t *testing.T) {
+	t.Parallel()
 	f := newRereadFixture(t)
 	f.mail("cfo@buyer-corp.test")
 	worker := newStageEvidenceRereadWorker(f.Pool, false, slog.New(slog.DiscardHandler))
@@ -272,6 +276,7 @@ func TestWithNoModelLaneTheSweepQueuesNothing(t *testing.T) {
 }
 
 func TestRemovingACandidateNobodyConfirmedQueuesNoSweep(t *testing.T) {
+	t.Parallel()
 	f := newRereadFixture(t)
 	f.WsExec(t, `INSERT INTO workspace_email_domain (domain) VALUES ('seen-once.test')`)
 	if err := f.own.Remove(f.Admin(), "seen-once.test"); err != nil {

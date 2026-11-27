@@ -58,6 +58,7 @@ func violated(ctx context.Context, t *testing.T, conn *pgx.Conn, sql string, arg
 }
 
 func TestAnApprovalRefusesATargetTypeNoWriterStages(t *testing.T) {
+	t.Parallel()
 	conn := connect(t, ownerDSNOf(t))
 	headSchema(t, conn)
 	ctx := context.Background()
@@ -81,6 +82,7 @@ func TestAnApprovalRefusesATargetTypeNoWriterStages(t *testing.T) {
 }
 
 func TestAcquisitionEvidenceCitesAnActivityOrADeal(t *testing.T) {
+	t.Parallel()
 	conn := connect(t, ownerDSNOf(t))
 	headSchema(t, conn)
 	ctx := context.Background()
@@ -147,6 +149,7 @@ func runValidation(ctx context.Context, t *testing.T, conn *pgx.Conn) {
 }
 
 func TestTheTargetTypeChecksValidateWhenNoRowBreaksThem(t *testing.T) {
+	t.Parallel()
 	conn := connect(t, ownerDSNOf(t))
 	headSchema(t, conn)
 	ctx := context.Background()
@@ -160,6 +163,7 @@ func TestTheTargetTypeChecksValidateWhenNoRowBreaksThem(t *testing.T) {
 }
 
 func TestAnOldRowWithAnUnknownTypeKeepsItsCheckNotValidAndTheUpgradeGoesOn(t *testing.T) {
+	t.Parallel()
 	conn := connect(t, ownerDSNOf(t))
 	headSchema(t, conn)
 	ctx := context.Background()
@@ -192,6 +196,7 @@ func TestAnOldRowWithAnUnknownTypeKeepsItsCheckNotValidAndTheUpgradeGoesOn(t *te
 }
 
 func TestAnOldApprovalWithAnUnknownTypeLosesTheCheckAndStaysUpdatable(t *testing.T) {
+	t.Parallel()
 	conn := connect(t, ownerDSNOf(t))
 	headSchema(t, conn)
 	ctx := context.Background()
@@ -231,6 +236,7 @@ func TestAnOldApprovalWithAnUnknownTypeLosesTheCheckAndStaysUpdatable(t *testing
 }
 
 func TestTheApprovalChecksAreValidatedWhenNoRowBreaksThem(t *testing.T) {
+	t.Parallel()
 	conn := connect(t, ownerDSNOf(t))
 	headSchema(t, conn)
 	ctx := context.Background()

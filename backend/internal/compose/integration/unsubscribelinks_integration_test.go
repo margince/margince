@@ -65,6 +65,7 @@ func grantCreatedPurpose(t *testing.T, c *consentEnv, key string) {
 // A correspondence send carries the all-marketing credential: its header names
 // no purpose, and the press stops marketing, never correspondence.
 func TestACorrespondenceSendsHeaderStopsMarketingNotCorrespondence(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	grantCreatedPurpose(t, c, "newsletter")
 	grantPurpose(t, c, c.purposes["business_correspondence"])
@@ -87,6 +88,7 @@ func TestACorrespondenceSendsHeaderStopsMarketingNotCorrespondence(t *testing.T)
 // A named link cannot be widened: a press naming another purpose is refused,
 // and its own press leaves the other purpose sending.
 func TestANamedHeaderCannotBeWidened(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	grantCreatedPurpose(t, c, "newsletter")
 	grantCreatedPurpose(t, c, "offers")

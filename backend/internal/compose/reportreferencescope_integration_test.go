@@ -394,6 +394,7 @@ func TestTheOwnerOfACapturedPartnerStillSeesItNamed(t *testing.T) {
 // company. The drill-through rows carry that company beside the partner,
 // blanked where the reader cannot open it and named where they can.
 func TestThePipelineDrillThroughNamesEachDealsOwnCompany(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	hidden := e.seedID(t, `INSERT INTO company (id, owner_id, display_name, visibility, source, captured_by)
 		VALUES ($1, $2, 'Hidden Account', 'owner', 'manual', 'human:x')`, e.Rep3)

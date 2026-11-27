@@ -30,6 +30,7 @@ const (
 )
 
 func TestANoticeNamesATargetTypeAnApprovalOrTheNoticeItselfCanName(t *testing.T) {
+	t.Parallel()
 	conn := connect(t, ownerDSNOf(t))
 	headSchema(t, conn)
 	ctx := context.Background()
@@ -49,6 +50,7 @@ func TestANoticeNamesATargetTypeAnApprovalOrTheNoticeItselfCanName(t *testing.T)
 }
 
 func TestAContributionNamesTheSourceOfAMetric(t *testing.T) {
+	t.Parallel()
 	conn := connect(t, ownerDSNOf(t))
 	headSchema(t, conn)
 	ctx := context.Background()
@@ -135,6 +137,7 @@ func present(ctx context.Context, t *testing.T, conn *pgx.Conn, name string) boo
 }
 
 func TestTheNoticeAndContributionChecksValidateWhenNoRowBreaksThem(t *testing.T) {
+	t.Parallel()
 	conn := connect(t, ownerDSNOf(t))
 	headSchema(t, conn)
 	ctx := context.Background()
@@ -148,6 +151,7 @@ func TestTheNoticeAndContributionChecksValidateWhenNoRowBreaksThem(t *testing.T)
 }
 
 func TestAnOldNoticeWithAnUnknownTargetLosesTheCheckAndStaysUpdatable(t *testing.T) {
+	t.Parallel()
 	conn := connect(t, ownerDSNOf(t))
 	headSchema(t, conn)
 	ctx := context.Background()

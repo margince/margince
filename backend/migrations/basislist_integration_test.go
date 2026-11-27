@@ -75,6 +75,7 @@ func basisConstraintCount(t *testing.T, conn *pgx.Conn, validated bool) int {
 }
 
 func TestAnOldBasisRowStaysAsItWasAndTheListStaysClosed(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	headSchema(t, conn)
@@ -123,6 +124,7 @@ func TestAnOldBasisRowStaysAsItWasAndTheListStaysClosed(t *testing.T) {
 }
 
 func TestACleanTableRefusesTheRetiredBasisInTheDatabase(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	headSchema(t, conn)

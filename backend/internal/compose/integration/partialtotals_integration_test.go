@@ -26,6 +26,7 @@ import (
 )
 
 func TestAnAccountsOpenAmountAddsTheDealsThatConvertAndCountsTheRest(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name     string
 		deals    []partialSumDeal
@@ -69,6 +70,7 @@ func TestAnAccountsOpenAmountAddsTheDealsThatConvertAndCountsTheRest(t *testing.
 }
 
 func TestATeamChangeGroupAddsTheDealsThatConvertAndCountsTheRest(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name            string
 		deals           []partialSumDeal
@@ -111,6 +113,7 @@ func TestATeamChangeGroupAddsTheDealsThatConvertAndCountsTheRest(t *testing.T) {
 // figure's coverage. A masked deal counts as one with no amount. Its currency
 // is never listed.
 func TestTheHierarchyWonCoverageNamesNoCurrencyOfAMaskedDeal(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	st := seedRollupStages(t, e)
 	now := clocktest.Now(t)
@@ -143,6 +146,7 @@ func TestTheHierarchyWonCoverageNamesNoCurrencyOfAMaskedDeal(t *testing.T) {
 // A reader whose deal currency is masked learns no currency and no count from
 // the company's open pipeline coverage. The figure still says it is partial.
 func TestACompanyOpenPipelineNamesNothingToAReaderWhoseCurrencyIsMasked(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	company := e.SeedCompany(t, "Masked Pipeline", &e.Rep1)

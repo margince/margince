@@ -30,7 +30,7 @@ type Handlers struct {
 	// settings holds the installation switch; nil answers 501 on its route.
 	settings *config.Config
 	// locks reports the settings a boot source sets on the switch's response.
-	locks func(surface []config.Any) *[]crmcontracts.SettingLock
+	locks func(ctx context.Context, surface []config.Any) *[]crmcontracts.SettingLock
 }
 
 func NewHandlers(svc *Service) Handlers { return Handlers{svc: svc} }

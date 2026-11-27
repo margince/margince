@@ -222,6 +222,7 @@ func TestAReplacedBindingReachesARunningRouterWithoutARestart(t *testing.T) {
 // it when the stored binding is removed. Both go through the watcher's own
 // database read, not a direct Rebind.
 func TestARoleBootedUnboundFollowsTheStoredBindingInAndOut(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	ctx := e.adminRoutingCtx()
 	store := ai.NewRoutingStore(compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))

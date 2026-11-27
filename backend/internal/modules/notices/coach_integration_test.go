@@ -251,6 +251,7 @@ func TestANoticeWithNoNoteStillSaysWhatItIsAbout(t *testing.T) {
 // A next-step notice reaches its recipient naming the deal, and their row
 // links to it.
 func TestANextStepNoticeReachesItsRecipientAboutTheirDeal(t *testing.T) {
+	t.Parallel()
 	e := setupNotices(t)
 	deal := ids.NewV7()
 	deals := dealsHolding{id: deal, deal: CoachDeal{

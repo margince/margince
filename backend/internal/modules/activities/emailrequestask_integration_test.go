@@ -19,6 +19,7 @@ import (
 // The ask is kept with the verdict, so any later pass that files the reminder
 // quotes it, whichever pass judged the mail.
 func TestARequestReminderQuotesWhatItsSenderAsked(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	source := seedEmailRequest(t, e, "Product report", "commitment", OwedVerdictAsksUs)
 	e.exec(t, `INSERT INTO activity_participant (activity_id, role, address, display_name) VALUES ($1, 'from', $2, 'Anna Weber')`, source, requestCounterparty)
@@ -38,6 +39,7 @@ func TestARequestReminderQuotesWhatItsSenderAsked(t *testing.T) {
 // A request whose row another writer holds is skipped by that pass, and the
 // next pass still quotes the ask the verdict kept.
 func TestARequestSkippedWhileLockedIsQuotedByTheNextPass(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	source := seedEmailRequest(t, e, "Product report", "commitment", OwedVerdictAsksUs)
 	store := storeKnowing(e)
@@ -75,6 +77,7 @@ func TestARequestSkippedWhileLockedIsQuotedByTheNextPass(t *testing.T) {
 // A filing that fails rolls back only the reminder; the ask stays with the
 // verdict, so the retry still quotes it.
 func TestARequestWhoseFilingFailedIsQuotedByTheRetry(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	source := seedEmailRequest(t, e, "Product report", "commitment", OwedVerdictAsksUs)
 	store := storeKnowing(e)
@@ -106,6 +109,7 @@ func TestARequestWhoseFilingFailedIsQuotedByTheRetry(t *testing.T) {
 // A later verdict without an ask forgets the earlier one, so a reminder never
 // quotes a sentence the current verdict did not keep.
 func TestAVerdictWithoutAnAskClearsTheOldOne(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	source := seedEmailRequest(t, e, "Product report", "commitment", OwedVerdictAsksUs)
 	store := storeKnowing(e)

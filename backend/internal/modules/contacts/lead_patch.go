@@ -9,7 +9,6 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
@@ -17,7 +16,7 @@ import (
 // reach them, each parsed the way its create path parses it.
 func setLeadContactFields(p *storekit.Patch, current crmcontracts.Lead, in UpdateLeadInput) error {
 	if in.FullName != nil {
-		name, err := httperr.RequireNonBlank("full_name", *in.FullName)
+		name, err := requireLeadName(*in.FullName)
 		if err != nil {
 			return err
 		}

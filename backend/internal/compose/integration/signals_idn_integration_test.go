@@ -29,6 +29,7 @@ func (e *SearchEnv) seedCompanyOnFoldedDomain(t *testing.T, name, domain string)
 // A signal naming a domain in Unicode, as a URL, an address or a bare host,
 // reaches the company stored under the punycode form.
 func TestASignalInEitherSpellingResolvesToTheCompanyOnThatDomain(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	store := signalStore(e)
 	company := e.seedCompanyOnFoldedDomain(t, "Bücher Verlag", "xn--bcher-kva.example")
@@ -52,6 +53,7 @@ func TestASignalInEitherSpellingResolvesToTheCompanyOnThatDomain(t *testing.T) {
 // Two companies holding one folded domain have no single owner, so the
 // signal is left for a human instead of picking one by id.
 func TestASignalOnADomainTwoCompaniesHoldIsNotAttributed(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	store := signalStore(e)
 	e.seedCompanyOnFoldedDomain(t, "Bücher Verlag", "xn--bcher-kva.example")

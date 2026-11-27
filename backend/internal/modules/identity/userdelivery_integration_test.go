@@ -128,6 +128,7 @@ func TestAnUnknownDeliveryChoiceIsRefused(t *testing.T) {
 
 // A team that is gone is a choice to correct on its field, not a missing route.
 func TestAGoneTeamIsRefusedOnItsField(t *testing.T) {
+	t.Parallel()
 	svc, ctx, userID := seatChoosingALanguage(t)
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + userID.String(), UserID: userID,

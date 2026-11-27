@@ -60,6 +60,7 @@ func audienceEnv(t *testing.T) (*ingestEnv, *steeredEmbedder, ids.UUID) {
 }
 
 func TestAnAudienceFilterKeepsOtherDocumentsOutOfRetrieval(t *testing.T) {
+	t.Parallel()
 	ie, emb, corpus := audienceEnv(t)
 
 	// "bep" (no accent, other case) names the kitchen document only.
@@ -82,6 +83,7 @@ func TestAnAudienceFilterKeepsOtherDocumentsOutOfRetrieval(t *testing.T) {
 }
 
 func TestAnAudienceFilterThatMatchesNothingIsNotCovered(t *testing.T) {
+	t.Parallel()
 	ie, emb, corpus := audienceEnv(t)
 	state, passages, err := ie.store.RetrieveFor(ie.ctx, corpus, "anything", emb, []string{"Franchise owners"})
 	if err != nil {

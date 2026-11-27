@@ -27,6 +27,7 @@ import (
 // Mutation: drop the marketing.OptOut branch from marketingVerdict and the
 // first case keeps no_marketing_consent.
 func TestAnOptOutCountryAllowsAdvertisingUntilARefusal(t *testing.T) {
+	t.Parallel()
 	testMessagingRules(t, messagingrules.Rules{Jurisdiction: "zo", Version: 1, MarketingMode: messagingrules.MarketingOptOut})
 
 	e := setupResolve(t)
@@ -53,6 +54,7 @@ func TestAnOptOutCountryAllowsAdvertisingUntilARefusal(t *testing.T) {
 //
 // Mutation: make packRulesFor read optOut from any pack and the first case allows.
 func TestAnOptInCountryStillRequiresConsent(t *testing.T) {
+	t.Parallel()
 	testMessagingRules(t, messagingrules.Rules{Jurisdiction: "zp", Version: 1, MarketingMode: messagingrules.MarketingOptIn})
 	testMessagingRules(t, messagingrules.Rules{Jurisdiction: "zy", Version: 1})
 	testMessagingRules(t, messagingrules.Rules{Jurisdiction: "zo", Version: 1, MarketingMode: messagingrules.MarketingOptOut})
@@ -72,6 +74,7 @@ func TestAnOptInCountryStillRequiresConsent(t *testing.T) {
 
 // A message that is not advertising never reads the mode.
 func TestTheMarketingModeLeavesTransactionalMailAlone(t *testing.T) {
+	t.Parallel()
 	testMessagingRules(t, messagingrules.Rules{Jurisdiction: "zo", Version: 1, MarketingMode: messagingrules.MarketingOptOut})
 
 	e := setupResolve(t)
@@ -91,6 +94,7 @@ func TestTheMarketingModeLeavesTransactionalMailAlone(t *testing.T) {
 // Mutation: drop the AsksCountry assignment in decidePreviewTx and the first
 // check fails.
 func TestAnUnknownCountryIsAskedForAndTheAnswerChangesTheVerdict(t *testing.T) {
+	t.Parallel()
 	testMessagingRules(t, messagingrules.Rules{Jurisdiction: "zo", Version: 1, MarketingMode: messagingrules.MarketingOptOut})
 
 	e := setupResolve(t)
@@ -133,6 +137,7 @@ func (e *resolveEnv) preview(t *testing.T) commsauthz.Decision {
 // Mutation: drop the packRulesFor(country).optOut test from decideLeadOnItsRecord
 // and the lead keeps no_marketing_consent.
 func TestALeadInAnOptOutCountryIsWrittenToUntilARefusal(t *testing.T) {
+	t.Parallel()
 	testMessagingRules(t, messagingrules.Rules{Jurisdiction: "zo", Version: 1, MarketingMode: messagingrules.MarketingOptOut})
 	e := setupLeadConsent(t)
 	company := ids.NewV7()
@@ -166,6 +171,7 @@ func TestALeadInAnOptOutCountryIsWrittenToUntilARefusal(t *testing.T) {
 // A lead takes its country from the selector a contact uses, through its
 // company. With no company it has no country and needs consent.
 func TestALeadWithNoCountryIsNotWrittenToWithoutConsent(t *testing.T) {
+	t.Parallel()
 	testMessagingRules(t, messagingrules.Rules{Jurisdiction: "zo", Version: 1, MarketingMode: messagingrules.MarketingOptOut})
 	e := setupLeadConsent(t)
 	tx, err := e.store.db.Pool().Begin(e.ctx)

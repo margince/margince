@@ -529,6 +529,7 @@ func TestAnInboundCopyFromASeatIsMarkedAsOurWords(t *testing.T) {
 }
 
 func TestTheInstallationSwitchStopsTheVerdictWrites(t *testing.T) {
+	t.Parallel()
 	v := setupDealVerdict(t)
 	integration.SetAutoApplyEnabled(t, v.Env, false)
 	v.run(t)

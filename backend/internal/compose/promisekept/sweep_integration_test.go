@@ -87,6 +87,7 @@ func sweep(t *testing.T, e *integration.Env) {
 }
 
 func TestTheSweepClosesThePromiseOfItsTaskAssignee(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	p := seedPromise(t, e, "a", nil)
 	p.assignTask(t, e, e.Rep1)
@@ -100,6 +101,7 @@ func TestTheSweepClosesThePromiseOfItsTaskAssignee(t *testing.T) {
 }
 
 func TestAManagerWhoRecordedAColleaguesPromiseIsNotItsOwner(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	p := seedPromise(t, e, "b", nil)
 	sweep(t, e)
@@ -109,6 +111,7 @@ func TestAManagerWhoRecordedAColleaguesPromiseIsNotItsOwner(t *testing.T) {
 }
 
 func TestAReassignedTaskIsJudgedByItsCurrentOwner(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	p := seedPromise(t, e, "c", &e.Rep1)
 	p.assignTask(t, e, e.Rep1)
@@ -125,6 +128,7 @@ func TestAReassignedTaskIsJudgedByItsCurrentOwner(t *testing.T) {
 }
 
 func TestEachOwnerIsJudgedByWhatTheyThemselvesMayRead(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	mine := seedPromise(t, e, "d", &e.Rep1)
 	mine.assignTask(t, e, e.Rep1)
@@ -140,6 +144,7 @@ func TestEachOwnerIsJudgedByWhatTheyThemselvesMayRead(t *testing.T) {
 }
 
 func TestASharedMailboxPromiseGoesToTheCustomersOwner(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	box := integration.ConnectSharedMailbox(t, integration.SharedMailboxRegistry(t, e.Pool, "imap"), e.WS, integration.SharedMailbox{
 		Provider: "imap", Address: "ops@fable.test", ReaderTeam: e.Team1, ConnectedBy: e.AdminUser, Posture: "held",

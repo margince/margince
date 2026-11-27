@@ -21,6 +21,7 @@ import (
 // deals-by-stage. For every commercial filter, "unset" included, the two must
 // count the same deals, or a filtered column's total disagrees with its cards.
 func TestTheDealListAndTheStageTotalsCountOneSetPerCommercialFilter(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	for _, deal := range []deals.CreateDealInput{
@@ -83,6 +84,7 @@ func TestTheDealListAndTheStageTotalsCountOneSetPerCommercialFilter(t *testing.T
 // An analytics question compares the commercial columns as plain values. The
 // list's "unset" word belongs to the report plan, and here is_null asks it.
 func TestAnAnalyticsQuestionComparesTheCommercialColumnsAsValues(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "deal-commercial-analytics", "read")
 	stages := apptest.DiscoverSeededPipeline(t, d.e)
 	// Five of each, so no filter separates out fewer than the privacy floor.

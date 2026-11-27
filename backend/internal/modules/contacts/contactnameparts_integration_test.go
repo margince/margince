@@ -78,6 +78,7 @@ func TestChangingANamePartUpdatesOnlyAPlainJoinedDisplayName(t *testing.T) {
 // An imported part that joins to the stored part past the import bound is
 // refused on full_name, and the stored name stays.
 func TestAnImportedPartJoiningPastTheBoundIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	part := ContactNameLimit * 2 / 3
 	last := strings.Repeat("b", part)
@@ -193,6 +194,7 @@ func TestAPartsEditDecidesOnTheDisplayNameCommittedBeforeIt(t *testing.T) {
 // A rename to another contact's name leaves no old name part behind, and a reload of
 // the record reads the parts as cleared. A part the rename states is kept as stated.
 func TestRenamingToAnotherNameClearsTheOldNameParts(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	for name, tc := range map[string]struct {

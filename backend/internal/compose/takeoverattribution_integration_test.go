@@ -169,6 +169,7 @@ func (r takeoverReading) claimStatus(t *testing.T, claim ids.UUID) string {
 }
 
 func TestANamedReadingsTaskSettlesTheEarlierUnplacedClaimSoNobodyTakesItOver(t *testing.T) {
+	t.Parallel()
 	r := newTakeoverReading(t)
 	const contract = "I will send the signed contract by Friday."
 	const prices = "I will also send the price list."
@@ -201,6 +202,7 @@ func TestANamedReadingsTaskSettlesTheEarlierUnplacedClaimSoNobodyTakesItOver(t *
 }
 
 func TestANamedProposalSettlesTheEarlierUnplacedClaimToo(t *testing.T) {
+	t.Parallel()
 	r := newTakeoverReading(t)
 	const contract = "I will send the signed contract by Friday."
 	claim := r.unplacedClaimOf(t, contract)
@@ -222,6 +224,7 @@ func TestANamedProposalSettlesTheEarlierUnplacedClaimToo(t *testing.T) {
 }
 
 func TestASettlementLeavesTheUnplacedClaimOfAnotherRecipientOpen(t *testing.T) {
+	t.Parallel()
 	r := newTakeoverReading(t)
 	const contract = "I will send the signed contract by Friday."
 	claimOfA := r.unplacedClaimOf(t, contract)
@@ -246,6 +249,7 @@ func TestASettlementLeavesTheUnplacedClaimOfAnotherRecipientOpen(t *testing.T) {
 }
 
 func TestARerunOfANamedReadingClosesAnUnplacedClaimStillOpen(t *testing.T) {
+	t.Parallel()
 	for name, confirm := range map[string]bool{"task": false, "proposal": true} {
 		t.Run(name, func(t *testing.T) {
 			r := newTakeoverReading(t)

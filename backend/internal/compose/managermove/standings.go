@@ -24,14 +24,15 @@ type ForecastReader interface {
 }
 
 // Standings is the dealstatus.ManagerStandings read over a forecast store, so
-// the forecast-based reasons follow the reader's own forecast access.
-func Standings(forecast ForecastReader) dealstatus.ManagerStandings {
+// the forecast-based reasons follow the reader's own forecast access. rbac is
+// the vocabulary a team lead's grants resolve under.
+func Standings(forecast ForecastReader, rbac identity.RbacObjects) dealstatus.ManagerStandings {
 	return func(ctx context.Context, tx pgx.Tx, owners map[ids.UUID]ids.UUID) (map[ids.UUID]dealstatus.ManagerStanding, error) {
-		return standingsOf(ctx, tx, forecast, owners)
+		return standingsOf(ctx, tx, forecast, rbac, owners)
 	}
 }
 
-func standingsOf(ctx context.Context, tx pgx.Tx, store ForecastReader, owners map[ids.UUID]ids.UUID) (map[ids.UUID]dealstatus.ManagerStanding, error) {
+func standingsOf(ctx context.Context, tx pgx.Tx, store ForecastReader, rbac identity.RbacObjects, owners map[ids.UUID]ids.UUID) (map[ids.UUID]dealstatus.ManagerStanding, error) {
 	dealIDs := make([]ids.UUID, 0, len(owners))
 	leads := map[ids.UUID][]ids.UUID{}
 	for deal, owner := range owners {
@@ -39,7 +40,7 @@ func standingsOf(ctx context.Context, tx pgx.Tx, store ForecastReader, owners ma
 		if _, asked := leads[owner]; asked {
 			continue
 		}
-		found, err := identity.TeamLeadsOfTx(ctx, tx, owner)
+		found, err := identity.TeamLeadsOfTx(ctx, tx, rbac, owner)
 		if err != nil {
 			return nil, err
 		}

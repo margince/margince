@@ -73,6 +73,7 @@ func (c mergeKeepsEnv) count(t *testing.T, sql string, args ...any) int {
 // a factor both leads answered, the survivor's own answer stands. The sent
 // link arrives expired, and each dropped factor is audited with what it held.
 func TestALeadMergeCarriesTheRetiredLeadsOpenWork(t *testing.T) {
+	t.Parallel()
 	c := setupMergeKeeps(t)
 	older := seedLead(t, c.e, "Pia Lund", "pia@lund.test", nil)
 	loser := seedLead(t, c.e, "Pia Lunde", "pia.lunde@lund.test", nil)
@@ -142,6 +143,7 @@ func TestALeadMergeCarriesTheRetiredLeadsOpenWork(t *testing.T) {
 // moved request's audit names the merge. A closed request stays on the record
 // it acted on.
 func TestAContactMergeCarriesResolvedSignalsAndOpenRequests(t *testing.T) {
+	t.Parallel()
 	c := setupMergeKeeps(t)
 	company := c.e.SeedCompany(t, "Lund Bau", nil)
 	retired := c.contactAt(t, "Jon Lund", "jon@lund.test")
@@ -181,6 +183,7 @@ func TestAContactMergeCarriesResolvedSignalsAndOpenRequests(t *testing.T) {
 // An erasure request a merge moved is fulfilled against the survivor, which
 // now holds the contact's data.
 func TestAnErasureRequestMovedByAMergeIsFulfilledOnTheSurvivor(t *testing.T) {
+	t.Parallel()
 	c := setupMergeKeeps(t)
 	retired := c.contactAt(t, "Eva Lund", "eva@lund.test")
 	survivor := c.contactAt(t, "Eva Lunde", "eva.lunde@lund.test")
@@ -220,6 +223,7 @@ func (c mergeKeepsEnv) erasureRequest(t *testing.T, contact ids.ContactID) ids.U
 // Where both leads hold a place in one initiative, the survivor's stands and
 // the retired lead's rows survive only as the audit's before-image.
 func TestALeadMergeKeepsTheRetiredLeadInItsInitiatives(t *testing.T) {
+	t.Parallel()
 	c := setupMergeKeeps(t)
 	store := compose.NewInitiativeStore(c.e.Pool)
 	loser := seedLead(t, c.e, "Ida Berg", "ida@berg.test", nil)
@@ -279,6 +283,7 @@ func TestALeadMergeKeepsTheRetiredLeadInItsInitiatives(t *testing.T) {
 // with the value. The provenance of a field the survivor kept its own value
 // for describes a value the merge did not keep, and stays.
 func TestAContactMergeMovesTheProvenanceOfTheValuesTheSurvivorTook(t *testing.T) {
+	t.Parallel()
 	c := setupMergeKeeps(t)
 	title := "Head of Purchasing"
 	created, err := c.e.Contacts.CreateContact(c.admin, contacts.CreateContactInput{FullName: "Tor Lund", Title: &title, Source: "manual"})
@@ -311,6 +316,7 @@ func TestAContactMergeMovesTheProvenanceOfTheValuesTheSurvivorTook(t *testing.T)
 // holding the contact would wait on a cycle the database cannot see. Both
 // complete: the fulfilment first, then the merge again.
 func TestAMergeRacingAnErasureOfTheSourcesRequestCompletesBoth(t *testing.T) {
+	t.Parallel()
 	c := setupMergeKeeps(t)
 	retired := c.contactAt(t, "Race Retired", "race@carry.test")
 	survivor := c.contactAt(t, "Race Survivor", "race-survivor@carry.test")

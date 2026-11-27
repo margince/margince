@@ -85,6 +85,7 @@ func TestADuplicateWrittenThroughLinkedInURLIsFiledAsATwin(t *testing.T) {
 }
 
 func TestANameOnlyContactRequestIsRefusedBeforeWriting(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	response := e.createOverTheWire(t, `{"full_name":"Name Only","source":"manual"}`)
 	if response.Code != http.StatusUnprocessableEntity || !strings.Contains(response.Body.String(), "contact_channel_required") {

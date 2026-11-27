@@ -108,6 +108,7 @@ func (f placedFixture) readerWithout(object string) context.Context {
 // An invoice and a payment are read with the finance grant. A seat without it
 // loses both lines and keeps the suggestion.
 func TestDoneForYouHidesTheLedgerFromASeatWithoutFinance(t *testing.T) {
+	t.Parallel()
 	f := newPlacedFixture(t)
 	writers := ledgerWriters(f)
 	writers["finance_invoice"](t)
@@ -130,6 +131,7 @@ func TestDoneForYouHidesTheLedgerFromASeatWithoutFinance(t *testing.T) {
 // evidence. Without the activity grant its meeting is unreadable, so the line
 // is hidden although the company and the deal grant are held.
 func TestDoneForYouHidesASuggestionWhoseEvidenceTheReaderCannotRead(t *testing.T) {
+	t.Parallel()
 	f := newPlacedFixture(t)
 	company, meeting := f.writeSuggestion(t)
 	full, _ := placedLines(f.readerWithout(""), t, f.e)
@@ -222,6 +224,7 @@ const homeLedger = "Home and the Worklist"
 // company, holds a record grant on it, or has every row in scope. A teammate of the owner and a seat
 // on another team read none of it, through any read; each is refused with 404.
 func TestOnlyTheOwnerReadsACompanysLedger(t *testing.T) {
+	t.Parallel()
 	f := newPlacedFixture(t)
 	f.syncLedger(t)
 	perms := withPlacedGrants(RepPerms, principal.ObjectGrant{Read: true})

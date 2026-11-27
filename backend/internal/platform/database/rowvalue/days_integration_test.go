@@ -14,6 +14,7 @@ import (
 // A date column and a timestamp at the same midnight UTC: only the date is a
 // calendar day, so only it leaves as YYYY-MM-DD.
 func TestAReaderSpellsADateAsItsDayAndLeavesAnInstantAlone(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	pool := censusPool(ctx, t)
 	rows, err := pool.Query(ctx,

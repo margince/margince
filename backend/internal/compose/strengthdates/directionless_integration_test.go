@@ -23,6 +23,7 @@ import (
 )
 
 func TestTheDirectionlessSenderTaskRefoldsTheContactsItMoves(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	admin := e.Admin()
 	replied := clocktest.Now(t).AddDate(0, 0, -2)

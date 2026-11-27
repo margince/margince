@@ -249,6 +249,7 @@ func TestAClaimWithNoPrincipalIsRefused(t *testing.T) {
 
 // A refused reuse names when the key was first spent and how that call stands.
 func TestAKeyHeldForDifferentArgumentsSaysWhenAndHowItWasFirstUsed(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name   string
 		settle func(ctx context.Context, claims agentClaims, attempt string) error

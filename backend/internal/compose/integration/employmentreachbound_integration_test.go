@@ -281,6 +281,7 @@ func TestAStartDateBoundsTheSameInEverySessionZone(t *testing.T) {
 // A departure still ahead is a notice period. An employment asserted as former
 // is over even with no end date.
 func TestTheCompanyClockReadsCurrentEmploymentLikeTheWalk(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	notice := time.Date(2099, time.January, 1, 0, 0, 0, 0, time.UTC)
 	former := "former"

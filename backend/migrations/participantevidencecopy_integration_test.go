@@ -40,6 +40,7 @@ func readParticipantEvidence(t *testing.T, conn *pgx.Conn, activity string) part
 // One statement changes several activities here, because a per-row copy that
 // read only the first changed row would pass a single-row test.
 func TestAnActivityChangeReachesItsParticipantRows(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	headSchema(t, conn)
@@ -88,6 +89,7 @@ func TestAnActivityChangeReachesItsParticipantRows(t *testing.T) {
 }
 
 func TestAParticipantRowStillNeedsItsActivity(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	headSchema(t, conn)
@@ -118,6 +120,7 @@ func TestAParticipantRowStillNeedsItsActivity(t *testing.T) {
 // The row lock must follow the advisory locks the other triggers take.
 // A participant insert takes those first, so the other order can deadlock.
 func TestTheStampWaitIsTheLastTriggerBeforeAnActivityUpdate(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	headSchema(t, conn)

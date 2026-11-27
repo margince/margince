@@ -37,6 +37,7 @@ func caseMergeStore(t *testing.T, e *integration.Env) *contacts.Store {
 }
 
 func TestACaseMergeKeepsASharedNumberOnceAndThePreferredAddress(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	store := caseMergeStore(t, e)
 	admin := e.Admin()

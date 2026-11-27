@@ -854,6 +854,7 @@ func TestTheMergeCardAgreesWithTheDispositionEndpoint(t *testing.T) {
 // Lifting a disposition reads the row it lifts. A candidate no longer there is
 // not-found, so a rolled-back merge never audits a reversal of nothing.
 func TestReopeningADedupeCandidateThatIsGoneIsNotFound(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	err := e.store.tx(ctx, func(tx pgx.Tx) error { return reopenDedupeCandidateTx(ctx, tx, ids.NewV7()) })

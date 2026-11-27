@@ -157,6 +157,7 @@ func TestARefusedTestRunReturnsToDraftOnlyFromItsOwnAttempt(t *testing.T) {
 }
 
 func TestARefusedTestRunKeepsItsRefusalUntilTheNextTest(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	l := claimedTest(ctx, t, s)

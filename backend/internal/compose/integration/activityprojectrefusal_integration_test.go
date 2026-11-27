@@ -30,6 +30,7 @@ var projectLinkArgs = map[string]map[string]any{
 // One links shape serves every change_activities action, so each action whose
 // project link the server refuses must say so, and only those.
 func TestEveryActivityActionSaysWhetherItRefusesAProject(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "activity-project-refusal", "read", "write")
 	company := createdRecord(t, d.e, "/v1/companies", AnyMap{"display_name": "Rollout Customer", "source": "manual"})
 	project := createdRecord(t, d.e, "/v1/projects", AnyMap{"name": "Rollout", "company_id": company, "source": "manual"})

@@ -23,6 +23,8 @@ import (
 	"slices"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/compose/extingress"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
@@ -131,7 +133,9 @@ func (r *callRuntime) refusedRecord(ctx context.Context, class extension.RecordR
 // unit retry a deliberate drop on every poll, forever, so it is a success here
 // with a disposition that says what happened.
 func (r *callRuntime) landRecord(ctx context.Context, sink *capture.Sink, rec extension.Record, declared extension.IngressSource, on extension.UserID) (extension.Result, error) {
-	ctx = capture.WithMemberGuard(ctx, extingress.MemberGuard(r.unit, memberConsentedTx))
+	ctx = capture.WithMemberGuard(ctx, extingress.MemberGuard(r.unit, func(ctx context.Context, tx pgx.Tx, unit string, member ids.UUID) (bool, error) {
+		return memberConsentedTx(ctx, tx, r.deps.composed, unit, member)
+	}))
 	chosen, err := extingress.ChosenRef(rec.ChosenSubject)
 	if err != nil {
 		return extension.Result{}, r.ingressRefusal(ctx, err)
@@ -176,7 +180,7 @@ func (r *callRuntime) fileRecord(
 		binding, msg, err := extingress.ChatInput(extingress.ChatSource{
 			CapturedBy: ingressPrincipalPrefix + r.unit, SourceSystem: r.sourceSystem(rec.System),
 			Member: extingress.UserUUID(on), Source: declared,
-			Credential: extingress.ChannelModel(composedChannelsFor(r.unit), rec.Activity.ChannelProvider), Now: time.Now().UTC(),
+			Credential: extingress.ChannelModel(r.deps.composed.channelsFor(r.unit), rec.Activity.ChannelProvider), Now: time.Now().UTC(),
 		}, rec)
 		if err != nil {
 			return datasource.EntityRef{}, err

@@ -433,6 +433,7 @@ func TestEmploymentImportEndsTheOlderUndatedRoleAtTheSameCompany(t *testing.T) {
 // evidence that created an employment names that employment and how to end it.
 // The evidence has no say over the edge.
 func TestEmploymentImportSaysWhenItChangedNothingAndWhyALinkedRoleStays(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := contacts.NewStore(e.DB())
 	subject := seedMergeSubject(t, e, "Linked evidence")

@@ -150,6 +150,7 @@ func TestAValueSortCursorFromAnotherDayIsRefused(t *testing.T) {
 // A correction to a rate the page was converted with changes the order.
 // A cursor minted before it is refused, so no deal is skipped or repeated.
 func TestAValueSortCursorFromBeforeARateCorrectionIsRefused(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	e.Deals.SetClock(func() time.Time { return fxTestNow })
 	day := fxTestNow.Truncate(24 * time.Hour)
@@ -173,6 +174,7 @@ func TestAValueSortCursorFromBeforeARateCorrectionIsRefused(t *testing.T) {
 
 // Removing a currency a page was converted with changes the order too.
 func TestAValueSortCursorFromBeforeARateRemovalIsRefused(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	e.Deals.SetClock(func() time.Time { return fxTestNow })
 	day := fxTestNow.Truncate(24 * time.Hour)
@@ -197,6 +199,7 @@ func TestAValueSortCursorFromBeforeARateRemovalIsRefused(t *testing.T) {
 // A correction to a currency no open deal is held in changes no order, so a
 // cursor minted before it still continues the page.
 func TestAValueSortCursorSurvivesACorrectionToAnUnusedCurrency(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	e.Deals.SetClock(func() time.Time { return fxTestNow })
 	day := fxTestNow.Truncate(24 * time.Hour)

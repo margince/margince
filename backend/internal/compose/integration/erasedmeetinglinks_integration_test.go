@@ -22,6 +22,7 @@ import (
 )
 
 func TestTheWiredSweepDestroysTheLinkSecretsOfErasedMeetings(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	vault := keyvault.NewMemory()
 	seal := func(secret string) string {

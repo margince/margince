@@ -132,6 +132,7 @@ func clearAsOwner(t *testing.T, e *integration.Env, contact ids.ContactID) {
 }
 
 func TestALaterMailShowingASignLabelsAContactWithNoVerdict(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	correspondWithLaterSender(t, e, laterMailSender)
 	captureLaterMailFrom(t, e, laterMailCleanName, laterMailSender)
@@ -153,6 +154,7 @@ func TestALaterMailShowingASignLabelsAContactWithNoVerdict(t *testing.T) {
 }
 
 func TestAContactAUserClearedStaysClearedAfterAnotherMailWithASign(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	correspondWithLaterSender(t, e, laterMailSender)
 	captureLaterMailFrom(t, e, laterMailCleanName, laterMailSender)
@@ -171,6 +173,7 @@ func TestAContactAUserClearedStaysClearedAfterAnotherMailWithASign(t *testing.T)
 }
 
 func TestAMailWithASignLeavesALabelledContactUntouched(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	correspondWithLaterSender(t, e, laterMailSender)
 	captureLaterMailFrom(t, e, laterMailSpoofedName, laterMailSender)
@@ -193,6 +196,7 @@ func TestAMailWithASignLeavesALabelledContactUntouched(t *testing.T) {
 
 // Two mails with a sign captured side by side write one label between them.
 func TestTwoMailsWithASignCapturedAtOnceRaiseOneWarning(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	correspondWithLaterSender(t, e, laterMailSender)
 	captureLaterMailFrom(t, e, laterMailCleanName, laterMailSender)
@@ -221,6 +225,7 @@ func TestTwoMailsWithASignCapturedAtOnceRaiseOneWarning(t *testing.T) {
 // A survivor that took a merged-away contact's open warning has a verdict. A
 // later mail with a sign from the suspect address writes nothing more.
 func TestAMailWithASignLeavesASurvivorThatCarriedAWarningUntouched(t *testing.T) {
+	t.Parallel()
 	const suspect = "boss@spoof.test"
 	e := integration.Setup(t)
 	correspondWithLaterSender(t, e, suspect)

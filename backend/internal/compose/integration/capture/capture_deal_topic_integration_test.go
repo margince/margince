@@ -65,6 +65,7 @@ func TestASuggestedDealIsFiledOnlyOnAConfidentAnswer(t *testing.T) {
 // A mail every model declines is remembered like a doubtful answer. It files on
 // no deal, and a later capture under the same prompt does not ask again.
 func TestADeclinedTopicCheckIsNotAskedAgain(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)

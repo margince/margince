@@ -17,6 +17,7 @@ import (
 // oldest, by creation time and then by id. That is the one the review writer
 // already asked, so no rep sees other questions after the upgrade.
 func TestTheOneTemplateMigrationKeepsTheOldestActiveTemplate(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	resetSchema(t, conn)

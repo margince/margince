@@ -318,6 +318,7 @@ func TestAnAgentCorrectedFactSurvivesTheNextDeepRead(t *testing.T) {
 // silently drop the human's agreement. Both sidecars run through the real
 // ApplyDeepRead with a proposal that differs from the stored value.
 func TestAConfirmedClaimSurvivesTheNextDeepRead(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := seedCompanyWithEvidence(ctx, t, e)

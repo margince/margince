@@ -252,6 +252,7 @@ func (f *failingMessageConnector) BackfillPage(ctx context.Context, auth connect
 // A page with one refused message among good ones commits: the failure is
 // counted, the good messages stay counted, and the cursor moves on.
 func TestBackfillPageWithARefusedMessageCommitsAndMovesOn(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	registry := newTestCaptureRegistry(e, newTestKeyvault(t, e))
 	registry.Register(&failingMessageConnector{&pagedConnector{messages: 25, pageSize: 10}})

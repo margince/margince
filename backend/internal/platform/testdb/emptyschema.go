@@ -26,7 +26,7 @@ const dataTables = `
 // PreservedReferenceTables lists, as SQL, the tables the migrations seed. A
 // fresh copy of the template holds rows in them, so the emptiness proof leaves
 // them out. gates/preservedtableparity_test.go reads this list.
-const PreservedReferenceTables = `('activity_kind', 'channel_provider', 'lead_source', ` +
+const PreservedReferenceTables = `('activity_kind', 'channel_provider', ` +
 	`'lead_origin', 'lead_disqualify_reason', 'sdr_handoff_reason', 'field_mask', ` +
 	`'currency_minor_digits', 'deal_acquisition_source', 'deal_loss_reason', 'record_role', 'partner_stage', ` +
 	`'maskable_field', 'report_projection_fence', 'home_read_fence', ` +

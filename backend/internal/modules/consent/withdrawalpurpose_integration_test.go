@@ -31,6 +31,7 @@ func seedClassedPurpose(t *testing.T, e *channelConsentEnv, key, class string, a
 // A link names a purpose only when it is a live marketing purpose. Every other
 // key gets the all-marketing credential, whose link names none.
 func TestTheMintNamesOnlyAPurposeALinkMayName(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedSubjectAddress(t, e)
 	address := "subject-" + e.contact.String() + "@example.test"
@@ -54,6 +55,7 @@ func TestTheMintNamesOnlyAPurposeALinkMayName(t *testing.T) {
 // An all-marketing credential's press naming a key no link may name stops all
 // marketing with a 200. It never stops correspondence, and never answers 4xx.
 func TestAnAllMarketingPressNamingAnUnlinkableKeyStopsAllMarketing(t *testing.T) {
+	t.Parallel()
 	for _, key := range []string{"wp_corr", "wp_retired", "no_such_purpose"} {
 		t.Run(key, func(t *testing.T) {
 			e := setupChannelConsent(t)
@@ -83,6 +85,7 @@ func TestAnAllMarketingPressNamingAnUnlinkableKeyStopsAllMarketing(t *testing.T)
 // A named credential stops its purpose by id. A stored key in mixed case must
 // not miss a lookup and widen the press to all marketing.
 func TestANamedCredentialWithAMixedCaseKeyStopsOnlyItsPurpose(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedSubjectAddress(t, e)
 	news := seedClassedPurpose(t, e, "wp_news", "marketing", false)

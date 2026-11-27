@@ -84,7 +84,7 @@ func (w *capturedDealRefileWorker) backfillState(ctx context.Context, args Captu
 			state = stored
 			return nil
 		}
-		window, err := config.StoredApplyTx(ctx, tx, config.Bound(), deals.SilentCloseDays)
+		window, err := config.StoredApplyTx(ctx, tx, config.Bound(ctx), deals.SilentCloseDays)
 		if err != nil {
 			return fmt.Errorf("compose: reading the silent close threshold: %w", err)
 		}

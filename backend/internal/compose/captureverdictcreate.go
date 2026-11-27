@@ -22,7 +22,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/relationshipmark"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -157,14 +156,14 @@ func createCounterpartyRecords(ctx context.Context, tx pgx.Tx, store *contacts.S
 		return counterpartyCreated{}, err
 	}
 	// Shared mail files only where its reader team reads, as at capture.
-	filing, err := capture.SharedMailboxFilingTx(ctx, tx, identity.HeldAuthorityTx, in.ActivityID, in.OwnerID)
+	filing, err := capture.SharedMailboxFilingTx(ctx, tx, heldAuthorityTx, in.ActivityID, in.OwnerID)
 	if err != nil {
 		return counterpartyCreated{}, err
 	}
 	res, err := store.EnsureCounterpartyTx(ctx, tx, contacts.EnsureCounterpartyInput{
 		LinkOnly:         filing.Shared,
 		ReaderTeam:       filing.ReaderTeam,
-		ReaderAuthority:  identity.ReadAuthorityTx,
+		ReaderAuthority:  readAuthorityTx,
 		Email:            in.Email,
 		DisplayName:      in.DisplayName,
 		Domain:           in.Domain,

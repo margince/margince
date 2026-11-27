@@ -78,6 +78,7 @@ func ownContact(t *testing.T, e *resolveEnv) {
 // Mutation: answer the default entity in recordEntityTx and every check after
 // joinBranch fails.
 func TestTheContactOwnersEntityAnswersForTheRecord(t *testing.T) {
+	t.Parallel()
 	registerBranchRules()
 	e := setupResolve(t)
 	ownContact(t, e)

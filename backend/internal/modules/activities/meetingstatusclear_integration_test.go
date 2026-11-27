@@ -19,6 +19,7 @@ import (
 // A status sent as null removes the answer. A canceled meeting asks again,
 // the history ends on booked, and one event reports the clear.
 func TestAMeetingStatusClearedWithNullAsksForTheOutcomeAgain(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	id := bookMeeting(t, e, "Harbor review", clocktest.Now(t).Add(-48*time.Hour))
 	moveTo(t, e, id, crmcontracts.ActivityMeetingStatusCanceled)
@@ -47,6 +48,7 @@ func TestAMeetingStatusClearedWithNullAsksForTheOutcomeAgain(t *testing.T) {
 
 // Clearing a status that is already none writes nothing, so the version holds.
 func TestClearingAnUnsetMeetingStatusChangesNothing(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	id := bookMeeting(t, e, "Harbor review", clocktest.Now(t).Add(-48*time.Hour))
 	cleared, err := meetingStore(e).UpdateActivity(meetingCtx(e), id, UpdateActivityInput{Clear: []string{auditFieldMeetingStatus}})
@@ -72,6 +74,7 @@ func TestClearingAnUnsetMeetingStatusChangesNothing(t *testing.T) {
 
 // Only a meeting has a status, so a null on a note is the same refusal a value is.
 func TestClearingTheMeetingStatusOfANoteIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	note, _, err := meetingStore(e).LogActivity(meetingCtx(e), LogActivityInput{
 		Kind: string(crmcontracts.ActivityKindNote), Body: new("Called back"), Source: "manual",

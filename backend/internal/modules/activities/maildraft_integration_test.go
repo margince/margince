@@ -576,6 +576,7 @@ func forwardAnchor(id ids.ActivityID) MailDraftAnchor {
 // A reply and a forward of one message are two messages, so each keeps its own
 // draft and saving one never replaces the other.
 func TestAForwardKeepsItsOwnDraftBesideTheReplysDraft(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	message := e.seedAnchor(t, "", "")
@@ -601,6 +602,7 @@ func TestAForwardKeepsItsOwnDraftBesideTheReplysDraft(t *testing.T) {
 // A forward quotes the message, so its draft passes the message's content gate
 // like a reply's, on save and on every read after.
 func TestAForwardDraftAnswersToTheMessagesRowScope(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeOwn)
 	hidden := e.seedAnchor(t, "", "")
@@ -620,6 +622,7 @@ func TestAForwardDraftAnswersToTheMessagesRowScope(t *testing.T) {
 // A forward goes out as a new conversation, so the send that carries it takes
 // its draft; a reply naming that draft does not.
 func TestSendingAForwardDiscardsItsDraftAndAReplyDoesNot(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	message := e.seedAnchor(t, "", "")

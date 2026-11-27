@@ -68,6 +68,7 @@ func TestImportingAnUnknownCardCreatesTheContactAndTheirEmployer(t *testing.T) {
 }
 
 func TestACardWithAnUnstorableValueIsReportedAndTheRestOfTheFileImports(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -755,6 +756,7 @@ func TestACardsLinkedInProfileIsStoredNormalized(t *testing.T) {
 }
 
 func TestANameOnlyCardIsImportedWithAChannelWarning(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	results := importCards(e.as(), t, e, "BEGIN:VCARD\nFN:Name Only\nEND:VCARD\n")
 	if len(results) != 1 || results[0].Outcome != VCardCreated || results[0].ContactID == nil {

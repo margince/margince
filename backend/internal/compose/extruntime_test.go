@@ -397,8 +397,7 @@ var oneMessage = extension.CompleteRequest{Messages: []extension.Message{{Role: 
 // Runtime for it in a fresh workspace.
 func composeNeeds(t *testing.T, deps extensionRuntimeBinding, needs ...extension.Need) (*callRuntime, context.Context) {
 	t.Helper()
-	setComposedExtensions([]extension.Extension{{Name: "summaries", Version: "1.0.0", Needs: needs}})
-	t.Cleanup(func() { setComposedExtensions(nil) })
+	deps.composed = composeUnit(extension.Extension{Name: "summaries", Version: "1.0.0", Needs: needs})
 	registerSummariesTasks(t)
 	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
 	deps.pool = &pgxpool.Pool{}
@@ -427,8 +426,8 @@ func TestAnUndeclaredCapabilityIsRefusedAndNeverReached(t *testing.T) {
 
 func TestAnUnattendedRuntimeRefusesInteractiveAndUndeclaredTasks(t *testing.T) {
 	lane := &countingLane{}
-	_, ctx := composeNeeds(t, extensionRuntimeBinding{}, extension.Need{Capability: extension.CapabilityModels, Reason: "Summarises a thread."})
-	deps := extensionRuntimeBinding{pool: &pgxpool.Pool{}, models: laneOf(lane)}
+	declared, ctx := composeNeeds(t, extensionRuntimeBinding{}, extension.Need{Capability: extension.CapabilityModels, Reason: "Summarises a thread."})
+	deps := extensionRuntimeBinding{pool: &pgxpool.Pool{}, models: laneOf(lane), composed: declared.deps.composed}
 	for name, mint := range map[string]func(context.Context, string, string, string, extensionRuntimeBinding) *callRuntime{
 		"job tick": jobRuntimeFor, "bus delivery": deliveryRuntimeFor,
 	} {
@@ -457,7 +456,7 @@ func TestADeclaredCapabilityGrantsOnlyItselfAndRemovingItCutsAccess(t *testing.T
 	if err := rt.Objects().Put(ctx, "a", []byte("x")); err != nil {
 		t.Fatalf("Put while declared: %v", err)
 	}
-	setComposedExtensions([]extension.Extension{{Name: "summaries", Version: "1.0.0"}})
+	rt.deps.composed = composeUnit(extension.Extension{Name: "summaries", Version: "1.0.0"})
 	if err := rt.Objects().Put(ctx, "a", []byte("x")); !errors.Is(err, extension.ErrNotDeclared) {
 		t.Errorf("Put after the declaration was removed: err = %v, want ErrNotDeclared", err)
 	}

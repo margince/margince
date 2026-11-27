@@ -16,6 +16,7 @@ import (
 // Our mail on a new thread is found by the sender's address. It answers only
 // when it went out the way their mail came in, and reached them.
 func TestAnOffThreadReplyAnswersOnlyWhenDeliveredOnTheirChannel(t *testing.T) {
+	t.Parallel()
 	asked := clocktest.Now(t).Add(-48 * time.Hour).Truncate(time.Second)
 	for name, tc := range map[string]struct {
 		kind, asked, answered, delivery string

@@ -200,6 +200,7 @@ func TestAPhotoProposalAndAReviewCarryNoFieldReport(t *testing.T) {
 // A card whose name is past the import bound is skipped with its length, and
 // the next card in the file still lands. A title cut to the column says so.
 func TestACardPastTheNameBoundIsSkippedAndACutTitleIsReported(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	limit := textbounds.LimitOf("public.contact.title")

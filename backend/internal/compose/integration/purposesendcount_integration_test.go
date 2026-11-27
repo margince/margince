@@ -52,6 +52,7 @@ func (c *consentEnv) replyAs(t *testing.T, purpose, claim string) {
 // Mutations: drop the disputed filter, the window bound, the archived filter
 // of the engine's purpose lookup, or the unknown grouping, and this fails.
 func TestPurposeSendCountsReadWhatTheEngineJudged(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "purpose-send-counts", "read")
 	c := seedConsentSubject(t, d.e)
 
@@ -109,6 +110,7 @@ func TestPurposeSendCountsReadWhatTheEngineJudged(t *testing.T) {
 
 // Mutation: drop the auth.Require in PurposeSendCounts and the rep reads it.
 func TestASeatWithoutTheComplianceGrantCannotReadTheSendCounts(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	const email, password = "rep@purpose-send-counts.test", "rep-purpose-send-counts-password"
 	c.DescribeCompany(t)

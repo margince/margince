@@ -48,6 +48,7 @@ func readMixedThread(t *testing.T, e *requestEnv, reason string, heldBy *ids.UUI
 // and only its explicit request is filed, shared. Mail private for any other
 // reason, or any private mail with a switch off, is never read.
 func TestOnlyAnExplicitRequestIsKeptFromRoutinePrivateMail(t *testing.T) {
+	t.Parallel()
 	e := setupRequests(t)
 	if asked := readMixedThread(t, e, activities.ReasonPosture, nil); asked == 0 {
 		t.Fatal("the routine-private thread was not read")

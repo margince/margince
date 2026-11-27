@@ -97,6 +97,7 @@ func TestAnUnwiredReaderDisclosesNothingItCannotBack(t *testing.T) {
 // A stored row that still holds the retired agreement is shown as the consent
 // it records. The page and the API output both show it, never "no basis".
 func TestAStoredRetiredAgreementIsShownAsConsent(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	e.store = e.store.WithNoticeHeldReader(&fixedHeld{held: NoticeHeld{
 		Uses: []NoticeUse{{PurposeKey: "business_correspondence", Basis: "vn_subject_agreement"}},

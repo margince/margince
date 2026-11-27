@@ -188,6 +188,7 @@ func assertRollupCountFields(t *testing.T, company crmcontracts.Company, want ro
 // A company with no open deal has no rollup row and shows 0, so it sorts as 0:
 // first going up, last going down.
 func TestTheOpenDealSortCountsACompanyWithoutDealsAsZero(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := companyRollupReader(e, 3, 3)
 	companies := seedRollupCountCompanies(t, e)

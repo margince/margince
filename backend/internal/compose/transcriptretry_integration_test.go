@@ -65,6 +65,7 @@ func (b *interruptedBrain) Complete(context.Context, model.Request) (model.Respo
 // River repeats a failed try a second later, inside the claim's lease. The
 // repeat must find a reading it can claim, or "reading…" has no job behind it.
 func TestATranscriptReadingWhoseModelCallFailedIsReadOnTheNextTry(t *testing.T) {
+	t.Parallel()
 	e := setupTranscript(t)
 	for name, failing := range map[string]completer{
 		"model failed": cannedBrain{err: ai.ErrAllTiersFailed}, "try timed out": &interruptedBrain{err: context.Canceled},
@@ -79,6 +80,7 @@ func TestATranscriptReadingWhoseModelCallFailedIsReadOnTheNextTry(t *testing.T) 
 // The last try closes its reading with a reason chosen from the cause. The
 // budget stop sleeps; a close another claim refuses sleeps one lease.
 func TestATranscriptReadingsLastTry(t *testing.T) {
+	t.Parallel()
 	var e *transcriptEnv // each case's own meeting, so no reading carries over
 	steal := func() {
 		if _, err := e.owner.Exec(t.Context(), `UPDATE transcript_read SET started_at = started_at - interval '1 second'

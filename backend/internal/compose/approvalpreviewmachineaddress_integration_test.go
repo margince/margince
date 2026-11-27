@@ -57,6 +57,7 @@ func TestAContactCreationOnASendingSystemsAddressShowsABlockingConflict(t *testi
 }
 
 func TestANameOnlyContactApprovalShowsTheChannelChoices(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	e.GrantRole(t, e.AdminUser, "admin")
 	ctx := e.As(e.AdminUser, nil, integration.AdminPerms)

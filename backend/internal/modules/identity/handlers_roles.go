@@ -39,7 +39,7 @@ func (h Handlers) ListRoles(w http.ResponseWriter, r *http.Request, params crmco
 	// the same URL — the same reasoning as the roster's private cache header,
 	// with a narrower audience.
 	w.Header().Set("Cache-Control", "private, no-store")
-	httperr.WriteJSON(w, http.StatusOK, crmcontracts.RoleDirectory{Roles: roles, Verbs: wireVerbs()})
+	httperr.WriteJSON(w, http.StatusOK, crmcontracts.RoleDirectory{Roles: roles, Verbs: wireVerbs(h.svc.rbac)})
 }
 
 // SetRoleObjectGrant (PATCH /roles/{key}/objects/{object}).
@@ -89,8 +89,8 @@ func (h Handlers) RestoreRoleGrants(w http.ResponseWriter, r *http.Request, key 
 }
 
 // wireVerbs maps the verbs each grantable object offers onto the contract.
-func wireVerbs() map[string][]crmcontracts.RoleDirectoryVerbs {
-	offered := policy.OfferedVerbsByObject()
+func wireVerbs(rbac RbacObjects) map[string][]crmcontracts.RoleDirectoryVerbs {
+	offered := policy.OfferedVerbsByObject(rbac.vocabulary)
 	out := make(map[string][]crmcontracts.RoleDirectoryVerbs, len(offered))
 	for object, verbs := range offered {
 		wire := make([]crmcontracts.RoleDirectoryVerbs, 0, len(verbs))

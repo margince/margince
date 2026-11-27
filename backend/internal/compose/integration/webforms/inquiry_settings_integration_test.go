@@ -179,6 +179,7 @@ func TestHandingAnEnabledInquiryRuleToARepWhoCannotCreateTasksIsRefused(t *testi
 }
 
 func TestArchivingAFormSwitchesOffItsHandlingPlanAndKeepsIt(t *testing.T) {
+	t.Parallel()
 	e := setupFormsApp(t)
 	form := createForm(t, e, integration.AnyMap{"name": "Inquiries", "sender": "browser", "allowed_origins": []string{siteOrigin}})
 	var saved crmcontracts.WebsiteInquiryHandling
@@ -203,6 +204,7 @@ func TestArchivingAFormSwitchesOffItsHandlingPlanAndKeepsIt(t *testing.T) {
 }
 
 func TestArchivingAFormWithoutAHandlingPlanSucceeds(t *testing.T) {
+	t.Parallel()
 	e := setupFormsApp(t)
 	form := createForm(t, e, integration.AnyMap{"name": "Plain", "sender": "browser", "allowed_origins": []string{siteOrigin}})
 	if status := e.Call(t, "DELETE", "/v1/web-forms/"+form.ID, nil, nil, nil); status != http.StatusOK {
@@ -211,6 +213,7 @@ func TestArchivingAFormWithoutAHandlingPlanSucceeds(t *testing.T) {
 }
 
 func TestArchivingAFormWithAPlanNeedsTheRightToChangeAutomations(t *testing.T) {
+	t.Parallel()
 	e := setupFormsApp(t)
 	e.DescribeCompany(t)
 	form := createForm(t, e, integration.AnyMap{"name": "Inquiries", "sender": "browser", "allowed_origins": []string{siteOrigin}})

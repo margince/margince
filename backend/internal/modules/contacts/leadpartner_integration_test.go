@@ -56,7 +56,7 @@ func messageCode(err error) string {
 func TestAcceptingAPartnersFirstLeadActivatesIt(t *testing.T) {
 	t.Parallel()
 	e := setupDedupe(t)
-	ctx, _ := pinLeadAuditClock(asStageAdmin(e, stageAdminGrants()))
+	ctx, _ := pinLeadAuditClock(asStageAdmin(e, stageAdminGrants()), t)
 	partnerID, _ := newPartnerCompany(ctx, t, e, "Referrer GmbH", UpsertPartnerInput{PartnerRole: "consulting", RelationshipStage: new("ready")})
 
 	first := acceptReferredLead(ctx, t, e, partnerID, "First Referral")

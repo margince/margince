@@ -147,6 +147,7 @@ func TestAcceptingAMeetingPromiseTheDeciderCanSeeWholeCarriesItsLinks(t *testing
 // carries on from the meeting. So a team-scope decider who may read but not
 // change those records still accepts it, and the task lands where it is.
 func TestAcceptingAMeetingPromiseOnAColleaguesRecordsCarriesItsLinks(t *testing.T) {
+	t.Parallel()
 	e := setupTranscript(t)
 	pipeline, open, _ := integration.DealFixture(t, e.Env)
 	deal := e.SeedDeal(t, "Acme rollout", pipeline, open, &e.Rep3)

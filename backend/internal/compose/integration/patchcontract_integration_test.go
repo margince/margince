@@ -148,6 +148,7 @@ func TestAPassportLifetimeFaultNamesTheLifetimeField(t *testing.T) {
 }
 
 func TestAPassportRequestWithABlankNameIsRefusedOnTheLabelField(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Passport name", "name@fable.test", "Admin")
 
@@ -172,6 +173,7 @@ func TestAPassportRequestWithABlankNameIsRefusedOnTheLabelField(t *testing.T) {
 }
 
 func TestAPassportRequestWithNoNameIsStillAccepted(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Passport legacy", "legacy@fable.test", "Admin")
 

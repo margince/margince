@@ -25,6 +25,7 @@ import (
 // undeclared type and ScopeNone. The expectation reads that table, not
 // MarkingEventTypes, so a type dropped from the list fails here.
 func TestAnEventStartsUnreadOnlyWhenTheDealCheckReadsItsType(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := principal.WithCorrelationID(principal.SystemActing(e.Admin(), "system:assurance-test"), ids.NewV7())
 	consumed := func(eventType string) bool {

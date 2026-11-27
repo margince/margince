@@ -24,6 +24,7 @@ import (
 )
 
 func TestAVietnameseDataQuestionAnswersWithTheWorkspaceAnalyticsNumbers(t *testing.T) {
+	t.Parallel()
 	lane := &scriptedLane{}
 	e := apptest.SetupAppWithOptions(t, compose.WithFilterProposals(lane))
 	e.BootstrapWorkspace(t)

@@ -41,6 +41,7 @@ func exportOf(t *testing.T, e *Env, contact ids.UUID) privacy.SARPackage {
 }
 
 func TestTheAccessExportNamesTheDoorThatAttestedAMessage(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contact := evidenceSubject(t, e)
 	mail := ids.NewV7()
@@ -71,6 +72,7 @@ func TestTheAccessExportNamesTheDoorThatAttestedAMessage(t *testing.T) {
 }
 
 func TestTheAccessExportNamesTheWordingVersionOfAConsentState(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contact := evidenceSubject(t, e)
 	// No writer stamps the version on the state row today; an older grant may

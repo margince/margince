@@ -43,6 +43,7 @@ func (e *resolveEnv) observeEveryCategory(t *testing.T) {
 // the sender stated, as the engine does. The record's market keeps a month-old
 // inbound only for a day; the stated one keeps it for the default year.
 func TestTheLegacyVerdictFollowsTheStatedCountry(t *testing.T) {
+	t.Parallel()
 	short := testMessagingRules(t, messagingrules.Rules{Version: 1, ReplyWindow: 24 * time.Hour})
 	long := testMessagingRules(t, messagingrules.Rules{Version: 1})
 	for name, c := range map[string]struct {

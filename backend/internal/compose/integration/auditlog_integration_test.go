@@ -241,6 +241,7 @@ func TestAuditLogNarrowsByActorAndByWindow(t *testing.T) {
 // filter's two meanings. A member includes the rows an agent wrote for them,
 // and an agent matches only its own rows.
 func TestAuditLogActorFilterIncludesWhatAnAgentDidForTheMember(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contactID := e.SeedContact(t, "Delegation Subject", nil)
 	base := time.Date(2026, 8, 1, 9, 0, 0, 0, time.UTC)

@@ -16,6 +16,7 @@ import (
 // Archiving a company or a contact removes its Shortlist memberships and logs each
 // removal on the list, and leaves another record's membership in place.
 func TestArchivingACompanyOrContactRemovesOnlyItsShortlistMemberships(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	contactID, companyID := e.seedEmployedContact(ctx, t,

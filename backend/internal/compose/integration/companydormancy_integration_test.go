@@ -46,6 +46,7 @@ func (w dealEvidenceWorld) companyClock(t *testing.T) *time.Time {
 // the hold alone keeps it off the company clock. Ending the hold gives the
 // company its date back, and only the verdict's trigger can move it then.
 func TestAPersonalHoldKeepsAWorkspaceMailOffTheCompanyClock(t *testing.T) {
+	t.Parallel()
 	w := newDealEvidenceWorld(t)
 	thread, at := "thread-"+ids.NewV7().String(), w.now.AddDate(0, 0, -2)
 	dinner := w.mail(t, thread, at)
@@ -63,6 +64,7 @@ func TestAPersonalHoldKeepsAWorkspaceMailOffTheCompanyClock(t *testing.T) {
 // A mail filed only on a deal reaches the company through it. Judged not about
 // the deal, it reaches the company no more; unjudged, it still does.
 func TestAMailJudgedNotAboutTheDealDoesNotWarmItsCompany(t *testing.T) {
+	t.Parallel()
 	w := newDealEvidenceWorld(t)
 	at := w.now.AddDate(0, 0, -3).Truncate(time.Second)
 	direction, subject := "inbound", "Lunch?"
@@ -86,6 +88,7 @@ func TestAMailJudgedNotAboutTheDealDoesNotWarmItsCompany(t *testing.T) {
 // A company clock stored before the rule still names the personal mail. The
 // data task refolds it once, and a second pass finds nothing.
 func TestTheDataTaskTakesAPersonalMailOffAStoredCompanyClock(t *testing.T) {
+	t.Parallel()
 	w := newDealEvidenceWorld(t)
 	thread, at := "thread-"+ids.NewV7().String(), w.now.AddDate(0, 0, -2)
 	w.mail(t, thread, at)
@@ -168,6 +171,7 @@ func goneDormant(page crmcontracts.Company360) *crmcontracts.Company360Suggestio
 // follow-up. Archiving the only activity leaves an account with no activity:
 // stale, with the marker, and no follow-up.
 func TestTheCompanyPageReadsTheLadderFromTheStoredClock(t *testing.T) {
+	t.Parallel()
 	a := newDormantAccount(t)
 	page := a.page(t)
 	reading := page.StateStrip.Dormancy
@@ -194,6 +198,7 @@ func TestTheCompanyPageReadsTheLadderFromTheStoredClock(t *testing.T) {
 
 // New activity moves the clock forward, and the account reads active again.
 func TestNewActivityWarmsADormantAccount(t *testing.T) {
+	t.Parallel()
 	a := newDormantAccount(t)
 	recent := a.now.AddDate(0, 0, -1).Truncate(time.Second)
 	direction, subject := "inbound", "Back from leave"
@@ -214,6 +219,7 @@ func TestNewActivityWarmsADormantAccount(t *testing.T) {
 
 // The installation switch drops the follow-up and keeps the ladder.
 func TestTheFollowUpSwitchKeepsTheLadder(t *testing.T) {
+	t.Parallel()
 	a := newDormantAccount(t)
 	a.e.WsExec(t, `INSERT INTO setting (key, value) VALUES ('contacts.dormancy_follow_up_enabled', 'false'::jsonb)
 		ON CONFLICT (key) DO UPDATE SET value = excluded.value`)
@@ -229,6 +235,7 @@ func TestTheFollowUpSwitchKeepsTheLadder(t *testing.T) {
 // An account nobody owns raises no follow-up: automatic work never falls to
 // somebody else.
 func TestAnUnownedDormantAccountRaisesNoFollowUp(t *testing.T) {
+	t.Parallel()
 	a := newDormantAccount(t)
 	a.e.WsExec(t, `UPDATE company SET owner_id = NULL WHERE id = $1`, a.company.UUID)
 	if follow := goneDormant(a.page(t)); follow != nil {
@@ -239,6 +246,7 @@ func TestAnUnownedDormantAccountRaisesNoFollowUp(t *testing.T) {
 // Accepting the follow-up files the task for the owner, and the card then
 // offers it no more, so a second press files no second task.
 func TestAcceptingTheFollowUpRetiresIt(t *testing.T) {
+	t.Parallel()
 	a := newDormantAccount(t)
 	follow := goneDormant(a.page(t))
 	if follow == nil || follow.Action == nil || follow.Action.Task == nil {
@@ -259,6 +267,7 @@ func TestAcceptingTheFollowUpRetiresIt(t *testing.T) {
 // An owner who cannot be handed a task gets no follow-up, and nobody else
 // gets it instead.
 func TestAnOwnerWhoCannotTakeATaskRaisesNoFollowUp(t *testing.T) {
+	t.Parallel()
 	for name, change := range map[string]string{
 		"deactivated": `UPDATE app_user SET status = 'deactivated' WHERE id = $1`,
 		"agent":       `UPDATE app_user SET is_agent = true WHERE id = $1`,
@@ -276,6 +285,7 @@ func TestAnOwnerWhoCannotTakeATaskRaisesNoFollowUp(t *testing.T) {
 // The stored clock leaves out mail only its participants see. A reader who
 // sees such mail from yesterday is not told the account is dormant.
 func TestTheStripIsNotDormantBesideMailTheReaderSawYesterday(t *testing.T) {
+	t.Parallel()
 	a := newDormantAccount(t)
 	yesterday := a.now.AddDate(0, 0, -1).Truncate(time.Second)
 	direction, subject := "inbound", "Quick question"
@@ -326,6 +336,7 @@ func heldThreadWithLaterMail(t *testing.T) (dealEvidenceWorld, string, ids.UUID,
 // The seat's import arrives after the message is filed on the thread it holds.
 // The import puts the message under the hold, and removing it takes it out.
 func TestAnImportUnderAnExistingHoldTakesTheMailOffTheDealClock(t *testing.T) {
+	t.Parallel()
 	w, thread, mail, at := heldThreadWithLaterMail(t)
 	w.e.WsExec(t, `UPDATE activity SET thread_key = $2 WHERE id = $1`, mail, thread)
 	w.e.WsExec(t, `INSERT INTO capture_import (activity_id, user_id) VALUES ($1, $2)`, mail, w.e.Rep1)
@@ -341,6 +352,7 @@ func TestAnImportUnderAnExistingHoldTakesTheMailOffTheDealClock(t *testing.T) {
 // The seat imported the message first and it then joins the held thread. The
 // change of thread moves the clock.
 func TestAMailMovedOntoAHeldThreadLeavesTheDealClock(t *testing.T) {
+	t.Parallel()
 	w, thread, mail, at := heldThreadWithLaterMail(t)
 	w.e.WsExec(t, `INSERT INTO capture_import (activity_id, user_id) VALUES ($1, $2)`, mail, w.e.Rep1)
 	w.e.WsExec(t, `UPDATE activity SET thread_key = $2 WHERE id = $1`, mail, thread)

@@ -18,12 +18,11 @@ import (
 )
 
 func TestAMailFileListsAndOpensForTheServiceMember(t *testing.T) {
+	t.Parallel()
 	s := setupSystemRead(t)
-	composeReader(t, extension.SystemReadMailAttachments)
+	s.declare(extension.SystemReadMailAttachments)
 	blob := blobstore.NewMemory()
-	previous := boundExtensionRuntime().blob
-	BindExtensionObjects(blob)
-	t.Cleanup(func() { BindExtensionObjects(previous) })
+	s.composed.BindObjects(blob)
 	seat := s.serviceSeat(t, seatReaderGrants)
 	mail, hidden := s.email(t, "workspace", ""), s.email(t, "participants", "")
 	quote := s.CaptureMailFile(t, blob, mail, "quote.bin", "application/octet-stream", []byte("%PDF-1.4 quote"))

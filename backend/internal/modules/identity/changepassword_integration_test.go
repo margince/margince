@@ -117,6 +117,7 @@ func TestChangePasswordHoldsTheLengthFloor(t *testing.T) {
 }
 
 func TestChangePasswordRefusesBlankRepeatedAndEmailPasswords(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "changepw-weak")
 	ctx := memberCtx(t, e)
 
@@ -581,6 +582,7 @@ func TestAnOperatorResetHoldsTheSameLengthFloorAsEveryOtherRoute(t *testing.T) {
 }
 
 func TestAnOperatorResetRefusesBlankAndEmailPasswords(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "operator-reset-weak")
 	for code, weak := range map[string]string{"blank": strings.Repeat(" ", 12), "email": e.member.Email} {
 		err := withOperatorTx(t, e, func(tx pgx.Tx) error {

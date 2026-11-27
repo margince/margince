@@ -25,6 +25,7 @@ import (
 // A provider's name, company and title past their columns' limit land cut to
 // it, so a capture never fails on text nobody can shorten.
 func TestACapturedLeadsTextPastItsLimitLandsCut(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.WS), ids.NewV7())
 	ctx = principal.WithActor(ctx, principal.Principal{

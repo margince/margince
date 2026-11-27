@@ -16,6 +16,7 @@ import (
 )
 
 func TestARepConfirmsRecipientPreferencesAndTheProviderReceivesOneEmail(t *testing.T) {
+	t.Parallel()
 	for _, kind := range []string{"subject_request", "marketing_objection", "processing_restriction", "withdrawn"} {
 		t.Run(kind, func(t *testing.T) {
 			p := setupPreflight(t)
@@ -83,6 +84,7 @@ func TestARepConfirmsRecipientPreferencesAndTheProviderReceivesOneEmail(t *testi
 }
 
 func TestASecondStopWithTheSameCodeNeedsAFreshConfirmation(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	stop := func() {
 		t.Helper()

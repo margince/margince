@@ -49,6 +49,7 @@ func (e *resolveEnv) stagedReason(t *testing.T, req commsauthz.Request) string {
 // preview warns, the confirmation is taken under the stated country, and
 // staging spends it.
 func TestAConfirmationFollowsAStatedCountryIntoTheWarning(t *testing.T) {
+	t.Parallel()
 	e, p := statedEnv(t)
 	placeContact(t, e.owner, e.contact, p.installation)
 	stated := commsauthz.CountryOverride{Address: e.address, Country: string(p.recipient)}
@@ -74,6 +75,7 @@ func TestAConfirmationFollowsAStatedCountryIntoTheWarning(t *testing.T) {
 // country owes no warning. A confirmation given under one country is not
 // spent by a send judged under another.
 func TestAConfirmationIsSpentOnlyUnderItsOwnCountry(t *testing.T) {
+	t.Parallel()
 	e, _ := statedEnv(t)
 	cleared := e.replyStating(commsauthz.CountryOverride{Address: e.address})
 	if e.previewMarks(t, cleared) {

@@ -54,6 +54,7 @@ func purposeKeyOf(t *testing.T, e *channelConsentEnv) string {
 // advertising purpose alone, while the seeded catalog's correspondence purpose
 // and a second live purpose stand beside it.
 func TestTheSubscribeAnswerGrantsTheAdvertisingPurposeAlone(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedDefaultCatalog(t, e.owner)
 	record := issueLink(t, e)
@@ -71,6 +72,7 @@ func TestTheSubscribeAnswerGrantsTheAdvertisingPurposeAlone(t *testing.T) {
 // A subscription link grants the one purpose it was minted for, and neither
 // the advertising nor the correspondence purpose beside it.
 func TestASubscriptionLinkGrantsItsOwnPurposeAlone(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedDefaultCatalog(t, e.owner)
 	seedSubjectAddress(t, e)
@@ -92,6 +94,7 @@ func TestASubscriptionLinkGrantsItsOwnPurposeAlone(t *testing.T) {
 // A consent link for correspondence grants correspondence alone, and not the
 // advertising purposes beside it.
 func TestACorrespondenceLinkGrantsCorrespondenceAlone(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedDefaultCatalog(t, e.owner)
 	seedSubjectAddress(t, e)

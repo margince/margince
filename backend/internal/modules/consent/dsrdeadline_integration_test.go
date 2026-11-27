@@ -106,6 +106,7 @@ func TestADeadlineLaterThanTheComputedOneIsRefused(t *testing.T) {
 // A deadline before the request arrived would make it overdue from its first
 // second. It is refused; a deadline on the day it arrived is kept.
 func TestADeadlineBeforeTheRequestArrivedIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupDSR(t)
 	received := time.Date(2026, time.October, 1, 9, 0, 0, 0, time.UTC)
 	at := received.Format(time.RFC3339)

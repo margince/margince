@@ -201,6 +201,7 @@ func TestWithNoModelAnEpisodeIsPassedOverUnfiled(t *testing.T) {
 }
 
 func TestAnEpisodeWhoseAuthorRestrictedProcessingIsPassedOverUnfiled(t *testing.T) {
+	t.Parallel()
 	e := setupPull(t)
 	contact := ids.NewV7()
 	e.exec(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Clara Contact', 'manual', 'system')`, contact)
@@ -540,6 +541,7 @@ func requireNotIn(t *testing.T, prompt string, banned ...string) {
 }
 
 func TestALaterEpisodeIsSentTheEarlierNoteAndOnlyWhatEveryReaderMayRead(t *testing.T) {
+	t.Parallel()
 	e := setupParties(t)
 	second := e.secondRequest(t)
 	requireIn(t, second, "Which discount for two years?", "Acme GmbH", "Clara Buyer", "Owen Owner", "agreed: option B")
@@ -547,6 +549,7 @@ func TestALaterEpisodeIsSentTheEarlierNoteAndOnlyWhatEveryReaderMayRead(t *testi
 }
 
 func TestAReaderWithoutTheCompanyOrContactOrEdgeReadLeavesThatNameOut(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name, object      string
 		present, withheld string
@@ -582,6 +585,7 @@ func (e *partyEnv) denyRead(t *testing.T, role, object string) {
 }
 
 func TestAMemberWhoCannotReadTheDealDoesNotBoundTheNames(t *testing.T) {
+	t.Parallel()
 	e := setupParties(t)
 	e.outsider(t)
 	e.denyRead(t, "rep", "contact")
@@ -590,6 +594,7 @@ func TestAMemberWhoCannotReadTheDealDoesNotBoundTheNames(t *testing.T) {
 }
 
 func TestAMemberWhoCanReadTheDealBoundsTheNames(t *testing.T) {
+	t.Parallel()
 	e := setupParties(t)
 	e.exec(t, `DELETE FROM role_assignment WHERE user_id = $1`, e.owner)
 	e.exec(t, `INSERT INTO role_assignment (role_id, user_id) SELECT id, $1 FROM role WHERE key = 'rep' AND is_system`, e.owner)
@@ -604,7 +609,7 @@ func (e *partyEnv) chatNotesAs(t *testing.T, user ids.UUID, query *string) int {
 	var found int
 	ws := principal.WithWorkspaceID(context.Background(), e.ws)
 	err := database.WithWorkspaceTx(ws, e.pool, func(tx pgx.Tx) error {
-		members, err := identity.MemberPrincipalsTx(ws, tx, []ids.UUID{user})
+		members, err := identity.MemberPrincipalsTx(ws, tx, identity.RbacObjects{}, []ids.UUID{user})
 		if err != nil {
 			return err
 		}
@@ -626,6 +631,7 @@ func (e *partyEnv) chatNotesAs(t *testing.T, user ids.UUID, query *string) int {
 }
 
 func TestTheFiledNoteIsReadByDealReadersOnlyInTheListAndInSearch(t *testing.T) {
+	t.Parallel()
 	e := setupParties(t)
 	outsider := e.outsider(t)
 	e.secondRequest(t)
@@ -641,6 +647,7 @@ func TestTheFiledNoteIsReadByDealReadersOnlyInTheListAndInSearch(t *testing.T) {
 }
 
 func TestADepartedOwnerIsNotNamed(t *testing.T) {
+	t.Parallel()
 	e := setupParties(t)
 	e.exec(t, `UPDATE app_user SET status = 'deactivated' WHERE id = $1`, e.owner)
 	second := e.secondRequest(t)
@@ -649,6 +656,7 @@ func TestADepartedOwnerIsNotNamed(t *testing.T) {
 }
 
 func TestANoteLimitedToItsParticipantsIsNotSent(t *testing.T) {
+	t.Parallel()
 	e := setupParties(t)
 	e.secondRequest(t)
 	e.exec(t, `UPDATE activity SET audience = 'participants' WHERE source_system = 'dispact'`)
@@ -685,6 +693,7 @@ func (e *pullEnv) previous(t *testing.T, before time.Time) string {
 }
 
 func TestThePreviousNoteIsChosenByWhenItsTalkEndedThenByChannelSequence(t *testing.T) {
+	t.Parallel()
 	e := setupPull(t)
 	at := func(minutes int) time.Time { return linkedAt.Add(time.Duration(minutes) * time.Minute) }
 	// A thread chosen later, rooted before the episode, whose replies run past it.

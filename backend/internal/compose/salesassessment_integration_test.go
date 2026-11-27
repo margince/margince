@@ -165,6 +165,7 @@ func seedRankedOpenDeals(t *testing.T, e *forecastEnv, start time.Time, company 
 // open deals that name their owner. Beside one evaluation it reads only the
 // reader's language and the decisions on those deals.
 func TestTheSalesAssessmentEvaluatesItsSelectionOnce(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	start := clocktest.Now(t).UTC().Truncate(time.Second)
 	manufacturing, _, open := seedInitiativeDeals(t, e, start)

@@ -84,6 +84,7 @@ func TestALinkToAnExtensionRecordNeedsALiveRowAndTheKindsReadRight(t *testing.T)
 // An extension record has no owner, so its kind's update right is the whole of
 // the write authority an attach asks. The tag writer asks the same right.
 func TestAnAttachToAnExtensionRecordNeedsTheKindsUpdateRight(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	live, _ := kindFixture(t)
 	reader := kindWorker(e, principal.ObjectGrant{Read: true})

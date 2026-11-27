@@ -17,6 +17,7 @@ import (
 )
 
 func TestAnUndeclaredTypeIsAckedWithoutADedupeMark(t *testing.T) {
+	t.Parallel()
 	e := setup(t)
 	const group = "cg:declared-types"
 	stream := "gw:events:crm:deal"

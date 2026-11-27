@@ -674,6 +674,7 @@ func TestSheetHeadLeavesOutTheRowThatNamesNoModelWhilePricingStillReadsIt(t *tes
 // lists them under different days. It prices each at the rate in force on its
 // own installation day.
 func TestCostReportDatesACallByTheInstallationDay(t *testing.T) {
+	t.Parallel()
 	e := setupRateStore(t)
 	ctx := context.Background()
 	ws, wsCtx := e.seedWorkspace(ctx, t)

@@ -81,6 +81,7 @@ func clearedAudits(t *testing.T, e *Env, contact ids.ContactID) (audits, events 
 }
 
 func TestACapturedSenderShowingASignServesTheWarningWithItsReason(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		name, displayName, address, domain string
 		want                               crmcontracts.ContactImpersonationWarningReason
@@ -115,6 +116,7 @@ func TestACapturedSenderShowingASignServesTheWarningWithItsReason(t *testing.T) 
 }
 
 func TestAnOrdinarySenderServesNoWarning(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contact := captureSuspectSender(t, e, "Carol Example", "carol@acme.test", "acme.test")
 	if got := warningOn(e.Admin(), t, e, contact); got != nil {
@@ -125,6 +127,7 @@ func TestAnOrdinarySenderServesNoWarning(t *testing.T) {
 // A contact outside the caller's row scope reads as absent on the read and on
 // the clear. Neither says the contact or its warning exists.
 func TestASeatThatCannotReadTheContactGetsNotFoundOnTheReadAndTheClear(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contact := captureSuspectSender(t, e, "Acme Billing", "billing@"+punycodeSenderDomain, punycodeSenderDomain)
 	e.MakeCapturePrivate(t, "contact", contact.UUID, e.Rep1)
@@ -144,6 +147,7 @@ func TestASeatThatCannotReadTheContactGetsNotFoundOnTheReadAndTheClear(t *testin
 }
 
 func TestLooksFineClearsTheWarningOnceWithItsAuditRowAndEvent(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contact := captureSuspectSender(t, e, "Acme Billing", "billing@"+punycodeSenderDomain, punycodeSenderDomain)
 	owner := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
@@ -178,6 +182,7 @@ func TestLooksFineClearsTheWarningOnceWithItsAuditRowAndEvent(t *testing.T) {
 // A clear names the warning its reader was shown. When a merge has put another
 // open warning on the contact since, the clear is refused and that one stands.
 func TestAClearOfAWarningThatWasReplacedIsAConflict(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	answered := captureSuspectSender(t, e, "Acme Billing", "billing@"+punycodeSenderDomain, punycodeSenderDomain)
 	shown := shownAt(e.Admin(), t, e, answered)
@@ -201,6 +206,7 @@ func TestAClearOfAWarningThatWasReplacedIsAConflict(t *testing.T) {
 // Neither a seat with no edit grant nor a user's agent clears the warning. The
 // agent holds its user's full grant, so the refusal is the human-only rule.
 func TestOnlyAUserWhoMayEditTheContactClearsTheWarning(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contact := captureSuspectSender(t, e, "Acme Billing", "billing@"+punycodeSenderDomain, punycodeSenderDomain)
 	reader := e.As(e.Rep2, []ids.UUID{e.Team1}, principal.Permissions{
@@ -248,6 +254,7 @@ func carriedAudits(t *testing.T, e *Env, survivor ids.ContactID) int {
 // A merge moves the suspect address onto the survivor, so the open warning
 // goes with it. An agent may merge, and must not answer the warning that way.
 func TestAMergeCarriesAnOpenWarningToTheSurvivor(t *testing.T) {
+	t.Parallel()
 	const otherDomain = crmcontracts.ContactImpersonationWarningReasonDisplayNameOtherDomain
 	e := Setup(t)
 	suspect := captureSuspectSender(t, e, "ceo@real-corp.example", "boss@spoof.test", "spoof.test")
@@ -267,6 +274,7 @@ func TestAMergeCarriesAnOpenWarningToTheSurvivor(t *testing.T) {
 // A survivor whose own warning a user cleared wears the merged-away contact's
 // open one: the answer was about another sender.
 func TestAMergeReopensASurvivorWhoseOwnWarningWasCleared(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	suspect := captureSuspectSender(t, e, "ceo@real-corp.example", "boss@spoof.test", "spoof.test")
 	answered := captureSuspectSender(t, e, "Acme Billing", "billing@"+punycodeSenderDomain, punycodeSenderDomain)
@@ -289,6 +297,7 @@ func TestAMergeReopensASurvivorWhoseOwnWarningWasCleared(t *testing.T) {
 // A survivor with an open warning keeps it, and a merge that carries nothing
 // writes no audit row for a carry.
 func TestAMergeKeepsTheSurvivorsOwnOpenWarning(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	suspect := captureSuspectSender(t, e, "ceo@real-corp.example", "boss@spoof.test", "spoof.test")
 	warned := captureSuspectSender(t, e, "Acme Billing", "billing@"+punycodeSenderDomain, punycodeSenderDomain)

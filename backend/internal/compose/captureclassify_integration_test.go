@@ -694,6 +694,7 @@ func TestAVerdictAboutAnEditedMessageStoresNeitherLabelNorReply(t *testing.T) {
 }
 
 func TestABatchOfOnlyBadAnswersDoesNotStarveTheMessagesBehindIt(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	confidence := map[string]float64{}
 	var bad []ids.UUID
@@ -727,6 +728,7 @@ func TestABatchOfOnlyBadAnswersDoesNotStarveTheMessagesBehindIt(t *testing.T) {
 }
 
 func TestOneBadAnswerKeepsTheOtherLabelsInItsBatch(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	first := seedUnlabeledEmail(t, e, "first")
 	percent := seedUnlabeledEmail(t, e, "ninety percent")

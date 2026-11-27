@@ -14,6 +14,7 @@ import (
 // Minor units of two currencies are not one scale, so the price order groups
 // by currency first and pages through each currency's amounts in turn.
 func TestProductPriceSortGroupsByCurrencyAcrossPages(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	// The package's tests share one catalogue, so the list is narrowed to this test's products.
 	query := e.ws.String()

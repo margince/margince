@@ -19,6 +19,7 @@ import (
 // checked the version is still using the run's copy. It waits, and the next
 // transaction sees what it wrote.
 func TestAFactWriterWaitsForTheCaptureThatCheckedTheVersion(t *testing.T) {
+	t.Parallel()
 	ctx, pool := laneEnv(t)
 	run := storekit.WithCaptureFactsRun(ctx)
 	domain := "barrier-" + ids.NewV7().String() + ".example"

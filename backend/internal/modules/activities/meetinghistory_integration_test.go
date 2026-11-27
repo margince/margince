@@ -532,6 +532,7 @@ func creditedSeats(t *testing.T, e *sendEnv, id ids.ActivityID) []string {
 // sync of the guest list cannot take them back. A booking keeps none, and a
 // guest who is added after the holding still adds credit.
 func TestAHoldingKeepsItsCreditedSeatsAndALaterGuestStillAdds(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := context.Background()
 	id := seedCreditedGuests(t, e)
@@ -569,6 +570,7 @@ func TestAHoldingKeepsItsCreditedSeatsAndALaterGuestStillAdds(t *testing.T) {
 // A meeting two colleagues attended is listed under each of them where a figure
 // groups by colleague, and counted once where it does not.
 func TestAMeetingIsListedUnderEveryCreditedColleagueAndCountedOnceInTotal(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	id := seedCreditedGuests(t, e)
 	ctx := context.Background()
@@ -602,6 +604,7 @@ func TestAMeetingIsListedUnderEveryCreditedColleagueAndCountedOnceInTotal(t *tes
 // A meeting logged as held with its guests keeps them in the held transition.
 // The guest list is written first, so losing a guest row later takes no credit.
 func TestAMeetingLoggedHeldKeepsItsGuestsWhenARowIsLost(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := context.Background()
 	held, start := string(crmcontracts.ActivityMeetingStatusHeld), clocktest.Now(t).Add(-48*time.Hour)
@@ -625,6 +628,7 @@ func TestAMeetingLoggedHeldKeepsItsGuestsWhenARowIsLost(t *testing.T) {
 // A guest list written after the first transition, as a calendar import does,
 // is kept by KeepMeetingCreditTx, and a later guest is not.
 func TestKeepingTheCreditOfAMeetingBornHeldAddsItsGuestList(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := context.Background()
 	id := bookMeeting(t, e, "Born held by a calendar", clocktest.Now(t).Add(-48*time.Hour))
@@ -653,6 +657,7 @@ func TestKeepingTheCreditOfAMeetingBornHeldAddsItsGuestList(t *testing.T) {
 // Un-holding and holding again keeps what the first holding credited, even when
 // the guest's row was lost in between.
 func TestAReHoldKeepsTheCreditOfTheFirstHold(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := context.Background()
 	id := seedCreditedGuests(t, e)

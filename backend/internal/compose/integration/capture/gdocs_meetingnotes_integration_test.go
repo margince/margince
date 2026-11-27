@@ -633,6 +633,7 @@ func TestNotesCanLandWithoutAuthorityToChangeTheMeeting(t *testing.T) {
 // there too, even on a contact a colleague owns. The contact already shows the
 // meeting; the notes add no record it did not reach.
 func TestNotesLandOnAColleaguesContactTheMeetingIsFiledOn(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	meeting, _, _ := meetingWithNotes(t, env)

@@ -96,6 +96,7 @@ func readFocus(t *testing.T, e *apptest.AppEnv, query string) map[string]crmcont
 }
 
 func TestTheDailyFreezeRanksATeamWithAGoalAndNoTeamWithout(t *testing.T) {
+	t.Parallel()
 	f := freezeFocus(t)
 	teams := readFocus(t, f.e, "")
 
@@ -124,6 +125,7 @@ func TestTheDailyFreezeRanksATeamWithAGoalAndNoTeamWithout(t *testing.T) {
 // found when named and left out when not, and a masked amount stays masked
 // while its deal keeps its rank.
 func TestAFocusListKeepsToTheReadersTeamAndItsAmountMask(t *testing.T) {
+	t.Parallel()
 	f := freezeFocus(t)
 	narrowSignedInRole(t, f.e, "focus_team_lens", `{}`)
 
@@ -149,6 +151,7 @@ func TestAFocusListKeepsToTheReadersTeamAndItsAmountMask(t *testing.T) {
 // A seat that may not read sales targets is not shown whether its team meets
 // its goal, nor the list made from that goal.
 func TestAFocusListNeedsTheGoalToBeReadable(t *testing.T) {
+	t.Parallel()
 	f := freezeFocus(t)
 	if own := readFocus(t, f.e, "")[f.goalTeam]; own.Status != crmcontracts.ForecastFocusTeamStatusBehind || len(own.Deals) != 2 {
 		t.Fatalf("before the role narrows the team reads %+v, want its list behind the goal", own)
@@ -164,6 +167,7 @@ func TestAFocusListNeedsTheGoalToBeReadable(t *testing.T) {
 // A colleague's one-seller team is refused when named, and the unnamed read
 // leaves it out and says so.
 func TestAFocusListUnderTheSwitchOffWithholdsTheGoal(t *testing.T) {
+	t.Parallel()
 	f := freezeFocus(t)
 	if own := readFocus(t, f.e, "")[f.goalTeam]; len(own.Deals) != 2 {
 		t.Fatalf("with the switch on the list reads %+v, want both deals", own.Deals)

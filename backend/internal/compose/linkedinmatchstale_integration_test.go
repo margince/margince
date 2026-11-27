@@ -18,6 +18,7 @@ import (
 )
 
 func TestArchivingTheSuggestedContactWithdrawsItsPendingProposal(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	contact := linkedInMatchFixture(ctx, t, e)
@@ -53,6 +54,7 @@ func TestArchivingTheSuggestedContactWithdrawsItsPendingProposal(t *testing.T) {
 }
 
 func TestMergingTheSuggestedContactReplacesItsPendingProposal(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	source := linkedInMatchFixture(ctx, t, e)

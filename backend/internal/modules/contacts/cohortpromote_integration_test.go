@@ -344,6 +344,7 @@ func earlierIDStrings(activities []ids.ActivityID) []string {
 // A contact the table no longer holds is reported as gone. A failed read is not,
 // so the caller can tell the two apart.
 func TestTheCohortRepairOfAContactThatIsGoneIsNotFound(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	err := e.store.tx(ctx, func(tx pgx.Tx) error {

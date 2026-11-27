@@ -32,6 +32,7 @@ func companyFactsLeft(ctx context.Context, t *testing.T, tx pgx.Tx, company ids.
 }
 
 func TestErasureDeletesTheCompanyFactsThatStateTheSubjectsDetails(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	tx := subjectColumnsTx(ctx, t)
 	subject, colleague, employer, other, third := ids.NewV7(), ids.NewV7(), ids.NewV7(), ids.NewV7(), ids.NewV7()

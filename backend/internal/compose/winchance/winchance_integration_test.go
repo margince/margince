@@ -16,7 +16,6 @@ import (
 	"context"
 	"errors"
 	"math"
-	"os"
 	"testing"
 	"time"
 
@@ -36,6 +35,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -60,10 +60,7 @@ type fixture struct {
 func newFixture(t *testing.T) *fixture {
 	t.Helper()
 	env := integration.Setup(t)
-	dsn := os.Getenv("MARGINCE_TEST_DSN")
-	if dsn == "" {
-		t.Fatal("MARGINCE_TEST_DSN not set: run make db-up (integration tests fail loudly, they never skip)")
-	}
+	dsn := testdb.For(t).OwnerDSN
 	owner, err := pgx.Connect(context.Background(), dsn)
 	if err != nil {
 		t.Fatal(err)
@@ -290,6 +287,7 @@ func (f *fixture) savedListCount(percent int) int {
 }
 
 func TestAQuietDealIsHalvedOnEverySurfaceWhileTheHistoryIsThin(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	for range 20 {
 		f.deal(f.env.Rep1, 0, nil, f.won)
@@ -311,6 +309,7 @@ func TestAQuietDealIsHalvedOnEverySurfaceWhileTheHistoryIsThin(t *testing.T) {
 }
 
 func TestAQuietDealMovesByTheEffectLearnedFromSettledForecasts(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	var quiet, calm []ids.DealID
 	var rows []forecasting.Contribution
@@ -361,6 +360,7 @@ func TestAQuietDealMovesByTheEffectLearnedFromSettledForecasts(t *testing.T) {
 // At a Likely threshold of 50 the stored 60% would be Likely and the 30% win
 // chance is not, so assurance and the forecast must read the chance.
 func TestAssuranceReadsTheWinChanceForLikely(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	for range 20 {
 		f.deal(f.env.Rep1, 0, nil, f.won)
@@ -451,6 +451,7 @@ func (f *fixture) showIndividualPerformance(on bool) {
 // deal closed within two weeks of its freeze is not counted. That chance was
 // read too late to be a forecast.
 func TestTheAccuracyViewSetsFrozenChancesAgainstHowDealsClosed(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	floor := analyticsquery.PercentileSampleFloor
 	n := 2 * floor
@@ -493,6 +494,7 @@ func day(month time.Month, d int) time.Time { return time.Date(2025, month, d, 1
 // freeze. That is the last freeze at least four weeks before the end. It is set
 // against what the first freeze after the end shows as won.
 func TestTheAccuracyViewSetsAQuartersFrozenLandingAgainstWhatWasWon(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	within := day(time.May, 15)
 	f.freezeQuarter(within, day(time.April, 2), forecasting.Readings{WonMinor: 0, WeightedMinor: 900}, "")
@@ -515,6 +517,7 @@ func TestTheAccuracyViewSetsAQuartersFrozenLandingAgainstWhatWasWon(t *testing.T
 // own or its team's rows may not. A mask never reaches a seat reading every
 // row, so a masked seat is one of these too.
 func TestTheAccuracyViewShowsLandingsOnlyToASeatThatMaySeeTheFrozenWorkspace(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	within := day(time.May, 15)
 	f.freezeQuarter(within, day(time.May, 20), forecasting.Readings{WonMinor: 100, WeightedMinor: 400}, "")
@@ -539,6 +542,7 @@ func TestTheAccuracyViewShowsLandingsOnlyToASeatThatMaySeeTheFrozenWorkspace(t *
 // With individual performance off, a landing that one colleague's deals make
 // up is withheld. The totals would give that colleague's pipeline away.
 func TestTheAccuracyViewWithholdsALandingOfOneColleague(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	deal := f.deal(f.env.Rep3, 0, nil)
 	owned := []forecasting.Contribution{{DealID: deal.String(), Owner: f.env.Rep3.String(), InOpen: true}}
@@ -560,6 +564,7 @@ func TestTheAccuracyViewWithholdsALandingOfOneColleague(t *testing.T) {
 // A quarter is finished when it ended on the installation's own calendar. At
 // 18:00 UTC on its last day it is already over in Tokyo and not yet in UTC.
 func TestTheAccuracyViewJudgesAFinishedQuarterByTheInstallationsDay(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t)
 	within := day(time.May, 15)
 	f.freezeQuarter(within, day(time.May, 20), forecasting.Readings{WonMinor: 100, WeightedMinor: 400}, "")

@@ -63,6 +63,7 @@ func (e *dedupeEnv) seedContactAddress(t *testing.T, contact ids.ContactID, addr
 }
 
 func TestADirectionlessReplyFromTheContactCountsAsTheirs(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	now := present()
 	sent, replied := now.AddDate(0, 0, -6), now.AddDate(0, 0, -2)
@@ -81,6 +82,7 @@ func TestADirectionlessReplyFromTheContactCountsAsTheirs(t *testing.T) {
 }
 
 func TestADirectionlessMailWithNoUnambiguousContactSenderIsNotTheirs(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	now := present()
 	sent, wrote := now.AddDate(0, 0, -6), now.AddDate(0, 0, -2)
@@ -118,6 +120,7 @@ func TestADirectionlessMailWithNoUnambiguousContactSenderIsNotTheirs(t *testing.
 
 // The page is the data task's: a member's request may not walk every contact.
 func TestOnlyTheSystemReadsTheDirectionlessSenderPage(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {

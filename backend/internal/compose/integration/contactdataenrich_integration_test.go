@@ -310,6 +310,7 @@ func TestAConnectorCreatedContactIsGovernedByTheInstallationsPosture(t *testing.
 // row after the event was staged. No retry finds it again, so the consumer
 // skips the entry instead of leaving it pending on cg:contact-data.
 func TestAContactCreatedForAContactThatIsGoneIsSkipped(t *testing.T) {
+	t.Parallel()
 	c := setupProviderConsumer(t, true)
 
 	err := c.consumer.HandleEvent(context.Background(), humanCreated(ids.NewV7()))

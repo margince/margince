@@ -185,6 +185,7 @@ func TestTheSweepSkipsADomainWhoseContactsThePlantWillRefuse(t *testing.T) {
 // It must not offer a domain that only ends in the same letters. The plant
 // refuses that address, so the domain would come back on every tick.
 func TestTheSweepOffersASubdomainAndNotALookalike(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 

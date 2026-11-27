@@ -109,6 +109,7 @@ func placeContact(t *testing.T, owner *pgx.Conn, contact ids.ContactID, code jur
 // that pack's language and owe its disclosures. A contact in the
 // installation's own country keeps the installation's.
 func TestTheRecipientsPackDecidesTheControllerMailAndThePages(t *testing.T) {
+	t.Parallel()
 	p := registerPackPair(t)
 	for _, c := range []struct {
 		name     string
@@ -184,6 +185,7 @@ func TestTheRecipientsPackDecidesTheControllerMailAndThePages(t *testing.T) {
 // request is opened with comes from the recipient-bound pack, and the
 // installation's month otherwise.
 func TestTheRecipientsPackSetsTheRequestDeadline(t *testing.T) {
+	t.Parallel()
 	p := registerPackPair(t)
 	received := time.Date(2026, time.November, 13, 9, 0, 0, 0, time.UTC)
 	for _, c := range []struct {
@@ -232,6 +234,7 @@ func (r *recordingTasks) OpenRequestTaskTx(_ context.Context, _ pgx.Tx, task Req
 // TestARequestWhoseTaskCannotBeWrittenIsNotRecorded: the task commits with
 // the request or neither does, so no request is left without its deadline work.
 func TestARequestWhoseTaskCannotBeWrittenIsNotRecorded(t *testing.T) {
+	t.Parallel()
 	p := registerPackPair(t)
 	e := setupChannelConsent(t)
 	seedSubjectAddress(t, e)
@@ -259,6 +262,7 @@ func TestARequestWhoseTaskCannotBeWrittenIsNotRecorded(t *testing.T) {
 // is due 10 days after it arrives and an erasure 20, each with its first
 // answer owed in 2 working days.
 func TestARecordPageRequestUnderTheRecipientsPackOpensDatedTasks(t *testing.T) {
+	t.Parallel()
 	p := registerPackPair(t)
 	e := setupChannelConsent(t)
 	stateTheController(t, e)
@@ -294,6 +298,7 @@ func TestARecordPageRequestUnderTheRecipientsPackOpensDatedTasks(t *testing.T) {
 // objection gets its receipt at once and a task due 15 days later. A contact
 // under the installation's pack gets no such task.
 func TestAnObjectionUnderTheRecipientsPackIsReceiptedAndOpensATask(t *testing.T) {
+	t.Parallel()
 	p := registerPackPair(t)
 	for _, c := range []struct {
 		name    string
@@ -348,6 +353,7 @@ func TestAnObjectionUnderTheRecipientsPackIsReceiptedAndOpensATask(t *testing.T)
 // consent does not cover correspondence. With nothing, the preview marks the
 // recipient for the warning.
 func TestNoDecisionUnderAPackWithoutLegitimateInterestsRestsOnThem(t *testing.T) {
+	t.Parallel()
 	p := registerPackPair(t)
 	e := setupResolve(t)
 	placeContact(t, e.owner, e.contact, p.recipient)
@@ -411,6 +417,7 @@ func stageTo(ctx context.Context, t *testing.T, e *resolveEnv) commsauthz.Decisi
 // confirmation, lets the confirmed one through, and refuses the next. An agent
 // spends only the confirmation of the user it acts for.
 func TestStagingSpendsTheConfirmationOnce(t *testing.T) {
+	t.Parallel()
 	p := registerPackPair(t)
 	e := setupResolve(t)
 	placeContact(t, e.owner, e.contact, p.recipient)
@@ -457,6 +464,7 @@ func withActivityCreate(ctx context.Context) context.Context {
 // the warning writes one audit row naming the user, and a retry while the
 // confirmation is open writes no second one. It needs the authority to send.
 func TestSendingDespiteTheWarningIsAuditedUnderTheConfirmingUser(t *testing.T) {
+	t.Parallel()
 	p := registerPackPair(t)
 	e := setupResolve(t)
 	placeContact(t, e.owner, e.contact, p.recipient)
@@ -498,6 +506,7 @@ func TestSendingDespiteTheWarningIsAuditedUnderTheConfirmingUser(t *testing.T) {
 // last link mail was in English gets the receipt in the language of the pack
 // that follows them.
 func TestTheOptOutReceiptIsWrittenInTheRecipientsPackLanguage(t *testing.T) {
+	t.Parallel()
 	p := registerPackPair(t)
 	e := setupChannelConsent(t)
 	seedSubjectAddress(t, e)
@@ -538,6 +547,7 @@ func TestTheOptOutReceiptIsWrittenInTheRecipientsPackLanguage(t *testing.T) {
 // follows the recipient, a restriction and a non-marketing withdrawal get the
 // request receipt at once. Each also gets a task due 15 days later.
 func TestARequestTheOptOutReceiptDoesNotCoverIsAnsweredAtOnce(t *testing.T) {
+	t.Parallel()
 	p := registerPackPair(t)
 	for _, c := range []struct {
 		name    string

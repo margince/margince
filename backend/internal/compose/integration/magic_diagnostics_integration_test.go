@@ -159,6 +159,7 @@ func TestInfrastructureUpdatesDoNotMakeAQuietReceiptIncomplete(t *testing.T) {
 // A list membership, a tagging and a product price change are upkeep. The
 // breakdown leaves them out and names the business change that is left.
 func TestTheUnplacedBreakdownLeavesOutUpkeepAndAddsUpToTheReceipt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	since := clocktest.Now(t).Add(-time.Hour)
 	seedUnplaceableMachineAction(t, e)

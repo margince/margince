@@ -291,6 +291,7 @@ func assertRosterUnauthorized(t *testing.T, e *apptest.AppEnv) {
 // The count is the seats the team dialog lists: humans, active or invited. An
 // agent, a suspended and an archived seat on the team count for nobody.
 func TestTeamMemberCountLeavesOutAgentSuspendedAndArchivedSeats(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 

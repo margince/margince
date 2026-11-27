@@ -20,7 +20,7 @@ const cursorKeyLabel = "margince worklist cursor v1"
 var unkeyedCursorKey = sha256.Sum256([]byte(cursorKeyLabel + " unkeyed"))
 
 func cursorKey() []byte {
-	return cursorKeyFrom(keyvault.DerivedKey(config.Bound(), cursorKeyLabel))
+	return cursorKeyFrom(keyvault.DerivedKey(config.ProcessBound(), cursorKeyLabel))
 }
 
 // cursorKeyFrom is the derived key, or the shared fallback when none is set.

@@ -124,6 +124,7 @@ func requireAsked(t *testing.T, asked *askedChanges, want int) {
 }
 
 func TestMailFromANewBusinessDomainAsksTheOwner(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	asked := e.askingStore()
 	ctx := e.as()
@@ -144,6 +145,7 @@ func TestMailFromANewBusinessDomainAsksTheOwner(t *testing.T) {
 }
 
 func TestAConsumerOrOwnDomainAsksNobody(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	asked := e.askingStore()
 	ctx := e.as()
@@ -178,6 +180,7 @@ func (e *dedupeEnv) claimOwnDomain(ctx context.Context, t *testing.T, domain str
 // A backfill reads old mail after the record was set up, and a contact who
 // still writes from the employer held has not left it.
 func TestOlderMailOrNewerMailFromTheEmployerHeldAsksNobody(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	asked := e.askingStore()
 	ctx := e.as()
@@ -193,6 +196,7 @@ func TestOlderMailOrNewerMailFromTheEmployerHeldAsksNobody(t *testing.T) {
 
 // A record no member made has no owner, and nobody else is asked instead.
 func TestAContactWithNoOwnerRaisesNothing(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	asked := e.askingStore()
 	m := e.seedMovedContact(e.asNonHuman(principal.PrincipalSystem), t)
@@ -201,6 +205,7 @@ func TestAContactWithNoOwnerRaisesNothing(t *testing.T) {
 }
 
 func TestALeadIsNotTouched(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	asked := e.askingStore()
 	ctx := e.as()
@@ -220,6 +225,7 @@ func TestALeadIsNotTouched(t *testing.T) {
 // A domain question settled after the mail arrived asks about the contacts
 // on it who already work somewhere else.
 func TestASettledDomainAsksAboutContactsEmployedElsewhere(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	asked := e.askingStore()
 	ctx := e.as()
@@ -248,6 +254,7 @@ func companyNameField(name string) SignatureField {
 // A signature names a company only by its name. So only the one company we
 // hold under that name counts, and never the employer held.
 func TestANewerSignatureNamingAnotherCompanyAsksTheOwner(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	asked := e.askingStore()
 	ctx := e.as()
@@ -272,6 +279,7 @@ func TestANewerSignatureNamingAnotherCompanyAsksTheOwner(t *testing.T) {
 }
 
 func TestASignatureSentFromTheEmployerHeldAsksNobody(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	asked := e.askingStore()
 	ctx := e.as()
@@ -286,6 +294,7 @@ func TestASignatureSentFromTheEmployerHeldAsksNobody(t *testing.T) {
 // The anchor company is the workspace's own. A signature naming it is a
 // colleague's, or somebody claiming to be one.
 func TestASignatureNamingTheAnchorCompanyAsksNobody(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	asked := e.askingStore()
 	ctx := e.as()
@@ -306,6 +315,7 @@ func TestASignatureNamingTheAnchorCompanyAsksNobody(t *testing.T) {
 // A contact who holds a colleague's address is that colleague, whose employer
 // is ours to know.
 func TestAColleaguesContactAsksNobody(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	asked := e.askingStore()
 	ctx := e.as()
@@ -322,6 +332,7 @@ func TestAColleaguesContactAsksNobody(t *testing.T) {
 
 // Archived mail is out of the owner's sight, so it is no evidence to show.
 func TestAnArchivedMessageAsksNobody(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	asked := e.askingStore()
 	ctx := e.as()
@@ -337,6 +348,7 @@ func TestAnArchivedMessageAsksNobody(t *testing.T) {
 // A restricted message is always archived as well (activity_restricted_is_archived),
 // so the archive filter is what keeps it out; this holds that it does.
 func TestARestrictedMessageAsksNobody(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	asked := e.askingStore()
 	ctx := e.as()

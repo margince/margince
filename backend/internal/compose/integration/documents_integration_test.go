@@ -91,6 +91,7 @@ func TestCompanyDocumentsHideAFileWhoseParentIsOutOfScope(t *testing.T) {
 // A deal's file follows the deal. The row still carries the company it was
 // filed under at upload, as an older row does, and the list does not read it.
 func TestADealMovedToAnotherCompanyTakesItsDocumentsAlong(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := activities.NewStore(e.DB())
 	pipeline, stage, _ := DealFixture(t, e)

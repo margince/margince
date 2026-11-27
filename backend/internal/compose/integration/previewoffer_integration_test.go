@@ -20,6 +20,7 @@ import (
 // The preview asks the question the send asks. An offer attached by file name
 // alone previews as a refusal, and the send then refuses it too.
 func TestAnOfferInAFileNamePreviewsAsTheSendDecides(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	c.useReviewableMarketingProfile(t)
 	anchor := c.inbound(t)

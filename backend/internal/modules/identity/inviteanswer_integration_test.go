@@ -12,7 +12,6 @@ import (
 	"maps"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"strings"
 	"sync"
 	"testing"
@@ -75,7 +74,7 @@ func endingRequests(t *testing.T, e *revocationEnv, ender *requestEnder) context
 	ctx, end := context.WithCancel(withIdentity(e.wsCtx(e.admin), e.admin))
 	t.Cleanup(end)
 	ender.end = end
-	pool, err := testdb.OwnPoolWith(context.Background(), os.Getenv("MARGINCE_TEST_APP_DSN"), func(cfg *pgxpool.Config) {
+	pool, err := testdb.OwnPoolWith(context.Background(), testdb.For(t).AppDSN, func(cfg *pgxpool.Config) {
 		ender.inner = cfg.ConnConfig.Tracer
 		cfg.ConnConfig.Tracer = ender
 	})
@@ -119,6 +118,7 @@ func answeredMember(t *testing.T, rec *httptest.ResponseRecorder) crmcontracts.U
 // A request that ends once the invite has committed still answers the member
 // it created, because nothing after the commit can fail.
 func TestAnInviteThatCommittedAnswersTheMember(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "invite-answer-commit")
 	ctx := endingRequests(t, e, &requestEnder{marker: "INSERT INTO app_user", atCommit: true})
 	h := NewHandlers(e.svc).WithPasswordLinkBase("https://crm.example.test")
@@ -140,6 +140,7 @@ func TestAnInviteThatCommittedAnswersTheMember(t *testing.T) {
 // A read of the answer that fails inside the invite rolls the member back. So
 // the refusal is true, and the invite sent again creates one member.
 func TestAnInviteWhoseAnswerCannotBeReadCreatesNobody(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "invite-answer-read")
 	ctx := endingRequests(t, e, &requestEnder{marker: getUserQuery})
 	h := NewHandlers(e.svc).WithPasswordLinkBase("https://crm.example.test")
@@ -163,6 +164,7 @@ func TestAnInviteWhoseAnswerCannotBeReadCreatesNobody(t *testing.T) {
 // An invite sent again for a member who is waiting on one names that member's
 // state, and creates nobody.
 func TestAnInviteSentAgainNamesTheWaitingMember(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "invite-answer-again")
 	h := NewHandlers(e.svc).WithPasswordLinkBase("https://crm.example.test")
 	ctx := withIdentity(e.wsCtx(e.admin), e.admin)
@@ -182,6 +184,7 @@ func TestAnInviteSentAgainNamesTheWaitingMember(t *testing.T) {
 // A resend whose request ends once the new link has committed still answers
 // the member, as the invite does.
 func TestAResendThatCommittedAnswersTheMember(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "invite-answer-resend")
 	unmailed := NewHandlers(e.svc).WithPasswordLinkBase("https://crm.example.test")
 	id := inviteThrough(t, e, unmailed, "resent@acme.test")
@@ -203,6 +206,7 @@ func TestAResendThatCommittedAnswersTheMember(t *testing.T) {
 // invitee only to a caller who may read the roster. A caller who may only
 // create members gets the seat refusal, as for any other address.
 func TestOnlyARosterReaderLearnsAnAddressWaitsOnAnInvitation(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "invite-answer-reader")
 	again := InviteUserInput{Email: "waiting@" + e.slug + ".test", DisplayName: "Waiting", Role: "rep"}
 	if _, _, err := e.svc.InviteUser(e.wsCtx(e.admin), e.admin, again); err != nil {

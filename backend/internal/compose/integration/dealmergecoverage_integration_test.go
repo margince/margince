@@ -82,6 +82,7 @@ var dealFKsTheMergeLeaves = gatekit.Waive(map[string]string{
 // TestEveryDealForeignKeyJoinsTheMerge fails when a table carrying a deal
 // foreign key is neither written by the merge path nor declared above.
 func TestEveryDealForeignKeyJoinsTheMerge(t *testing.T) {
+	t.Parallel()
 	defer dealFKsTheMergeLeaves.AssertAllMatched(t)
 
 	assertEveryForeignKeyJoinsTheMerge(t, mergeCensus{
@@ -94,6 +95,7 @@ func TestEveryDealForeignKeyJoinsTheMerge(t *testing.T) {
 // TestEveryDealKindIDReferenceJoinsTheMerge is the same census for the rows
 // that name a deal by kind and id, which no foreign key shows.
 func TestEveryDealKindIDReferenceJoinsTheMerge(t *testing.T) {
+	t.Parallel()
 	defer dealKindIDPairsTheMergeLeaves.AssertAllMatched(t)
 
 	assertEveryKindIDReferenceJoinsTheMerge(t, reach.Deal, append(slices.Clone(dealMergePathFiles), dealMergeSeamFiles(t)...), dealKindIDPairsTheMergeLeaves)

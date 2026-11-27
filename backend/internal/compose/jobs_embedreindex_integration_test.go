@@ -114,6 +114,7 @@ func TestEmbedReindexWorkerReportsAMarkerItCouldNotHandBack(t *testing.T) {
 // drift and hands the marker back without stamping its target, which no role
 // serves any more.
 func TestARunCutShortByAModelChangeKeepsThePopulatedModel(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := context.Background()
 	store := search.NewStore(InstallationDB(e.Pool))

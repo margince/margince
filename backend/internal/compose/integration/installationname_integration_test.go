@@ -267,6 +267,7 @@ func TestAnAnchorNameTheInstallationCannotCarryIsRefused(t *testing.T) {
 // so its company can still edit the rest of the profile. Only a hand-written
 // row can hold one now, because every writer refuses a new one.
 func TestAnExistingLongAnchorNameSavesUnchanged(t *testing.T) {
+	t.Parallel()
 	e := oneNameApp(t)
 	anchor := saveAnchor(t, e, "Profile Name AG")
 	stored := strings.Repeat("a", values.TextLabelCharacters+30)

@@ -7,7 +7,6 @@ package generatedsummary_test
 
 import (
 	"context"
-	"os"
 	"testing"
 	"time"
 
@@ -26,6 +25,7 @@ var writtenAt = time.Date(2026, 5, 4, 9, 30, 0, 0, time.UTC)
 // A summary is read back by the reader, kind and record it was stored under.
 // A neighbour that differs in one of the three reads its own.
 func TestASummaryIsKeyedOnItsReaderItsKindAndItsRecord(t *testing.T) {
+	t.Parallel()
 	e := setup(t)
 	company, other := e.company(t), e.company(t)
 	reader, colleague := e.reader(t), e.reader(t)
@@ -67,6 +67,7 @@ func TestASummaryIsKeyedOnItsReaderItsKindAndItsRecord(t *testing.T) {
 
 // Each kind is stored against the record type it summarises and read by it.
 func TestEachKindReadsBackFromItsOwnRecord(t *testing.T) {
+	t.Parallel()
 	e := setup(t)
 	reader := e.reader(t)
 	contact, deal, quiet := e.contact(t), e.deal(t), e.deal(t)
@@ -96,6 +97,7 @@ func TestEachKindReadsBackFromItsOwnRecord(t *testing.T) {
 // A company merge moves a reader's summaries to the survivor, and keeps the
 // survivor's own where the reader holds the same kind on both.
 func TestACompanyMergeCarriesSummariesTheSurvivorLacks(t *testing.T) {
+	t.Parallel()
 	e := setup(t)
 	reader, colleague := e.reader(t), e.reader(t)
 	retired, survivor, bystander := e.company(t), e.company(t), e.company(t)
@@ -133,6 +135,7 @@ func TestACompanyMergeCarriesSummariesTheSurvivorLacks(t *testing.T) {
 // Forgetting a contact deletes what was written about it for all readers, and
 // leaves the summaries of other records.
 func TestForgettingAContactDeletesItsSummariesForAllReaders(t *testing.T) {
+	t.Parallel()
 	e := setup(t)
 	reader, colleague := e.reader(t), e.reader(t)
 	subject, second, bystander := e.contact(t), e.contact(t), e.contact(t)
@@ -160,10 +163,7 @@ type env struct {
 
 func setup(t *testing.T) env {
 	t.Helper()
-	dsn := os.Getenv("MARGINCE_TEST_DSN")
-	if dsn == "" {
-		t.Fatal("MARGINCE_TEST_DSN is not set — run `make db-up` and try again (integration tests fail loudly, they never skip)")
-	}
+	dsn := testdb.For(t).OwnerDSN
 	pool, err := testdb.OwnPool(context.Background(), dsn)
 	if err != nil {
 		t.Fatal(err)

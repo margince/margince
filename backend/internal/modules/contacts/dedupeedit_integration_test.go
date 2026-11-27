@@ -110,6 +110,7 @@ func TestAddingAnUnrelatedDomainToACompanyFilesNothing(t *testing.T) {
 // A rename that ends the name match withdraws the pair it made; a rename that
 // keeps the brand keeps it.
 func TestRenamingACompanyAwayFromItsTwinClosesTheirPair(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	twin := e.plainCompany(ctx, t, "Kranbau Nord")

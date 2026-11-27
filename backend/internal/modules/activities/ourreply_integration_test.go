@@ -54,6 +54,7 @@ func asRepCompleting(t *testing.T, e *loadEnv) context.Context {
 // came hours later. The request stays current, and the one rule says we
 // replied, with the reminder the reader may mark done.
 func TestOurLaterReplyMarksTheRequestReplied(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	request := seedEmailRequest(t, e, "Please send the report", "commitment", OwedVerdictAsksUs)
 	mintReminder(t, e, requestInstant.Add(time.Hour))
@@ -77,6 +78,7 @@ func TestOurLaterReplyMarksTheRequestReplied(t *testing.T) {
 }
 
 func TestOurReplyQuotesWhatTheSettlementFoundStillAsked(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	request := seedEmailRequest(t, e, "Report and slides", "commitment", OwedVerdictAsksUs)
 	replyTo(t, e, request, "Here are the slides.", requestInstant.Add(time.Hour))
@@ -100,6 +102,7 @@ func TestOurReplyQuotesWhatTheSettlementFoundStillAsked(t *testing.T) {
 
 // Their newer message on the thread makes it our move again.
 func TestTheirNewerMessageTakesTheReplyBack(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	request := seedEmailRequest(t, e, "Pricing question", "commitment", OwedVerdictAsksUs)
 	mintReminder(t, e, requestInstant.Add(time.Hour))
@@ -122,6 +125,7 @@ func TestTheirNewerMessageTakesTheReplyBack(t *testing.T) {
 }
 
 func TestARequestWithNoReplyHasNoReplyState(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	request := seedEmailRequest(t, e, "Unanswered pricing", "commitment", OwedVerdictAsksUs)
 	mintReminder(t, e, requestInstant.Add(time.Hour))
@@ -134,6 +138,7 @@ func TestARequestWithNoReplyHasNoReplyState(t *testing.T) {
 // The rule offers a reminder to complete, so a request no reminder covers
 // stays the reply owed, however we answered.
 func TestARequestWithNoReminderHasNoReplyState(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	request := seedEmailRequest(t, e, "No reminder filed", "commitment", OwedVerdictAsksUs)
 	replyTo(t, e, request, "On it.", requestInstant.Add(time.Hour))
@@ -146,6 +151,7 @@ func TestARequestWithNoReminderHasNoReplyState(t *testing.T) {
 // Done goes through the ordinary task write. The request then leaves the
 // current set, so the card, its risk and its move stop naming it.
 func TestCompletingTheNamedReminderSettlesTheRequest(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	request := seedEmailRequest(t, e, "Contract draft", "commitment", OwedVerdictAsksUs)
 	mintReminder(t, e, requestInstant.Add(time.Hour))
@@ -184,6 +190,7 @@ func summaryAs(reader context.Context, t *testing.T, e *loadEnv, request ids.UUI
 // History's badge reads the same rule as the deal card: once we replied,
 // the request no longer says it needs a reply.
 func TestHistoryStopsSayingNeedsReplyOnceWeReplied(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	request := seedEmailRequest(t, e, "Badge after reply", "commitment", OwedVerdictAsksUs)
 	mintReminder(t, e, requestInstant.Add(time.Hour))
@@ -201,6 +208,7 @@ func TestHistoryStopsSayingNeedsReplyOnceWeReplied(t *testing.T) {
 // reads the request but holds neither the reminder nor its records sees that
 // we replied, and no reminder.
 func TestOurReplyNamesTheReminderOnlyToWhoMayChangeIt(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	request := seedEmailRequest(t, e, "Who may complete", "commitment", OwedVerdictAsksUs)
 	mintReminder(t, e, requestInstant.Add(time.Hour))
@@ -228,6 +236,7 @@ func TestOurReplyNamesTheReminderOnlyToWhoMayChangeIt(t *testing.T) {
 
 // A reply that never left, or came back, answered nothing.
 func TestAnUndeliveredReplyIsNotOurReply(t *testing.T) {
+	t.Parallel()
 	for name, delivery := range map[string]string{
 		"parked":  `'parked', NULL, NULL`,
 		"pending": `'pending', NULL, NULL`,
@@ -259,6 +268,7 @@ func TestAnUndeliveredReplyIsNotOurReply(t *testing.T) {
 // Their message dated only by its day came after our reply on that same day.
 // The day decides, not the order the rows were written in.
 func TestTheirMessageOnTheDayOfOurReplyTakesItBack(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	request := seedEmailRequest(t, e, "Same day", "commitment", OwedVerdictAsksUs)
 	mintReminder(t, e, requestInstant.Add(time.Hour))

@@ -29,6 +29,7 @@ const summariesByKind = `
 // The upgrade carries each cached summary into the shared table under its
 // kind, and a rollback returns each to the table it came from.
 func TestTheGeneratedSummariesMoveAndComeBack(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	resetSchema(t, conn)
@@ -103,6 +104,7 @@ func TestTheGeneratedSummariesMoveAndComeBack(t *testing.T) {
 
 // A summary leaves with the record it is about, whichever of the three that is.
 func TestADeletedRecordTakesItsGeneratedSummaries(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	headSchema(t, conn)
@@ -153,6 +155,7 @@ func TestADeletedRecordTakesItsGeneratedSummaries(t *testing.T) {
 
 // A kind is stored only against the record type it summarises, once per reader.
 func TestAGeneratedSummaryNamesTheRecordOfItsKind(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	headSchema(t, conn)

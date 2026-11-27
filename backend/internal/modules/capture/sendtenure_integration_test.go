@@ -74,6 +74,7 @@ func wroteToGiven(t *testing.T, sendAgo time.Duration, history func(context.Cont
 }
 
 func TestASendBeforeTheAddressLeftItsContactIsNotEvidence(t *testing.T) {
+	t.Parallel()
 	if wroteToAfter(t, 60*day, 30*day) {
 		t.Error("a send from before the address was archived still counts, so the next " +
 			"message mints the removed contact again")
@@ -82,6 +83,7 @@ func TestASendBeforeTheAddressLeftItsContactIsNotEvidence(t *testing.T) {
 
 // The control: the bound ends old evidence, and new evidence still counts.
 func TestASendAfterTheAddressLeftItsContactIsEvidence(t *testing.T) {
+	t.Parallel()
 	if !wroteToAfter(t, 30*day, 60*day) {
 		t.Error("a send after the address was archived was refused, so the bound refuses " +
 			"every send to an address that was ever archived")
@@ -89,6 +91,7 @@ func TestASendAfterTheAddressLeftItsContactIsEvidence(t *testing.T) {
 }
 
 func TestTheNewestReleaseOfAnAddressIsItsBound(t *testing.T) {
+	t.Parallel()
 	if wroteToAfter(t, 45*day, 60*day, 30*day) {
 		t.Error("a send between two archives of the address counts, so the bound reads " +
 			"an older archive than the newest")
@@ -99,6 +102,7 @@ func TestTheNewestReleaseOfAnAddressIsItsBound(t *testing.T) {
 // what the unarchive writer leaves. The bound then falls back to the archive
 // before it.
 func TestAnUnarchiveRestoresTheEarlierBound(t *testing.T) {
+	t.Parallel()
 	wrote := wroteToGiven(t, 45*day, func(ctx context.Context, tx pgx.Tx, address string) error {
 		if err := archiveAddressAt(ctx, tx, address, 60*day); err != nil {
 			return err
@@ -118,6 +122,7 @@ func TestAnUnarchiveRestoresTheEarlierBound(t *testing.T) {
 // A meeting after the release creates the record. Sends from before it still
 // read as an exchange, and they must not stand in for the meeting read.
 func TestAMeetingAfterTheReleaseCreatesDespiteOlderSends(t *testing.T) {
+	t.Parallel()
 	ctx, pool := meetingTenureEnv(t)
 	address := freshAddress()
 	var dealt dealtWith

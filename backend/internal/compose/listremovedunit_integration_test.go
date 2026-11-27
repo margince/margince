@@ -154,6 +154,7 @@ func checkOf(t *testing.T, e *integration.Env, list ids.ListID) collections.Live
 }
 
 func TestRemovingAUnitLeavesItsListsUnavailableAndComposingItAgainResumes(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	registerHistoryVisits(t)
 	store := collections.NewStore(e.DB())
@@ -195,6 +196,7 @@ func TestRemovingAUnitLeavesItsListsUnavailableAndComposingItAgainResumes(t *tes
 }
 
 func TestAMemberWithoutTheKindsReadRightIsToldNothingAboutItsLists(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	registerHistoryVisits(t)
 	store := collections.NewStore(e.DB())
@@ -232,6 +234,7 @@ func TestAMemberWithoutTheKindsReadRightIsToldNothingAboutItsLists(t *testing.T)
 }
 
 func TestCreatingOverAnUnreadableKindAnswersAsOverARemovedOne(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	registerHistoryVisits(t)
 	store := collections.NewStore(e.DB())

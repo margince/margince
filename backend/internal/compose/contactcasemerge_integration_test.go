@@ -327,6 +327,7 @@ func TestASeatOrAShareChangedAfterThePreviewMakesTheRevisionStale(t *testing.T) 
 }
 
 func TestACaseMergeWaitsOnAnEmploymentWriterInsteadOfDeadlocking(t *testing.T) {
+	t.Parallel()
 	c := setupCases(t)
 	members := c.seedCase(t, c.e.Rep1, c.e.Rep1, c.e.Rep1)
 	survivor := members[0]

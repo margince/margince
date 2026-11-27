@@ -17,6 +17,7 @@ import (
 // A staged agent mail is asked about the mailbox of the principal its release
 // runs as, not of the human who reviews it.
 func TestAnAgentMailIsAskedAboutTheMailboxItSendsFrom(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	reviewer := e.asHumanWith(grantsFor(map[string]principal.ObjectGrant{
 		objectActivity: {Create: true, Read: true},

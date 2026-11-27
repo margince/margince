@@ -107,6 +107,7 @@ func TestOfferedLengthsReachAvailabilityAndTheActualReservation(t *testing.T) {
 }
 
 func TestTheMainLinkOffersEveryLengthAndAPausedOrProposalPageNone(t *testing.T) {
+	t.Parallel()
 	f := newInvitationFixture(t)
 	handlers := Handlers{store: f.store}
 	profile := savePage(t, f, true)
@@ -138,6 +139,7 @@ func TestTheMainLinkOffersEveryLengthAndAPausedOrProposalPageNone(t *testing.T) 
 }
 
 func TestALengthRemovedAfterThePageLoadedIsRefusedAndNeverBookedAsTheDefault(t *testing.T) {
+	t.Parallel()
 	f := newInvitationFixture(t)
 	profile := savePage(t, f, true)
 	profile.OfferedLengths = new([]int{45})

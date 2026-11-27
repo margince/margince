@@ -101,6 +101,7 @@ func firstSeatID(t *testing.T, e *apptest.AppEnv, roomID string) string {
 
 // A second tab, or the same browser a day later, sends only the cookie.
 func TestTheKeptCookieAdmitsTheBuyerWithoutABearerAndOpensNoSellerRoute(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	b := openInBrowser(t, e, openRoomWithABuyer(t, e))
@@ -129,6 +130,7 @@ func TestTheKeptCookieAdmitsTheBuyerWithoutABearerAndOpensNoSellerRoute(t *testi
 // A page on another site can post a form to the exchange without a preflight,
 // as text/plain. It must not plant its own session in the buyer's browser.
 func TestAnExchangeAnotherSiteForgesPlantsNoCookie(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	room := openRoomWithABuyer(t, e)
@@ -151,6 +153,7 @@ func TestAnExchangeAnotherSiteForgesPlantsNoCookie(t *testing.T) {
 
 // Every buyer answer depends on the session, so none may sit in a cache.
 func TestNoBuyerEdgeAnswerIsCached(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	room := openRoomWithABuyer(t, e)
@@ -177,6 +180,7 @@ func TestNoBuyerEdgeAnswerIsCached(t *testing.T) {
 }
 
 func TestSigningOutEndsTheKeptCookieAndClearsIt(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	b := openInBrowser(t, e, openRoomWithABuyer(t, e))
@@ -201,6 +205,7 @@ func TestSigningOutEndsTheKeptCookieAndClearsIt(t *testing.T) {
 }
 
 func TestRevokingTheBuyerEndsTheKeptCookie(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	room := openRoomWithABuyer(t, e)
@@ -216,6 +221,7 @@ func TestRevokingTheBuyerEndsTheKeptCookie(t *testing.T) {
 }
 
 func TestArchivingTheRoomEndsTheKeptCookie(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	room := openRoomWithABuyer(t, e)
@@ -233,6 +239,7 @@ func TestArchivingTheRoomEndsTheKeptCookie(t *testing.T) {
 
 // The session's own expiry binds on the server, whatever the browser keeps.
 func TestALapsedSessionEndsTheKeptCookie(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	room := openRoomWithABuyer(t, e)
@@ -252,6 +259,7 @@ func TestALapsedSessionEndsTheKeptCookie(t *testing.T) {
 // Pausing withholds content and closing makes the room read-only. The kept
 // cookie gets the answer a fresh Bearer would.
 func TestAPausedOrClosedRoomBindsTheKeptCookie(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	room := openRoomWithABuyer(t, e)

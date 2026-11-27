@@ -56,6 +56,7 @@ func seedCorrectionOfKind(t *testing.T, e *configEnv, deal ids.DealID, kind stri
 // A change older than the first page of 20 is still found by what it is. A
 // deal page never has to page for the change it is about.
 func TestADealsOldestChangeIsFoundByKindBeyondTheFirstPage(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	deal, _, _ := seedOwnedDeal(t, e)
 	oldest := seedCorrectionOfKind(t, e, deal, "deal_close_date", 0)
@@ -109,6 +110,7 @@ func auditOf(t *testing.T, e *configEnv, correction ids.UUID) ids.UUID {
 // own choice, so Undo must not put the earlier value over it. The values alone
 // cannot tell this from an untouched date.
 func TestADateEditedAwayAndBackIsNoLongerUndoable(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	deal, _, _ := seedOwnedDeal(t, e)
 	correction := seedCorrectionOfKind(t, e, deal, "deal_close_date", 1)
@@ -131,6 +133,7 @@ func TestADateEditedAwayAndBackIsNoLongerUndoable(t *testing.T) {
 // A later write to another field leaves Undo open, whatever text that field
 // holds. A name that reads as a number or a bad date is only a name.
 func TestALaterWriteToAnotherFieldKeepsUndo(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	deal, _, _ := seedOwnedDeal(t, e)
 	correction := seedCorrectionOfKind(t, e, deal, "deal_close_date", 1)
@@ -151,6 +154,7 @@ func TestALaterWriteToAnotherFieldKeepsUndo(t *testing.T) {
 // A filtered list pages on its cursor like the whole one, so no change of the
 // kind asked for is skipped or repeated.
 func TestAFilteredChangeListPagesOnItsCursor(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	deal, _, _ := seedOwnedDeal(t, e)
 	seedCorrectionOfKind(t, e, deal, "deal_close_date", 0)

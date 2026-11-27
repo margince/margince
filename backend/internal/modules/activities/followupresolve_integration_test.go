@@ -271,6 +271,7 @@ func TestACapturedTouchCompletesTheSystemTaskAndLeavesTheHumans(t *testing.T) {
 }
 
 func TestTheWebsiteFormsOwnNoteLeavesTheLeadsFollowUpOpen(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
 	systemTask := e.seedTask(t, "system", "system")

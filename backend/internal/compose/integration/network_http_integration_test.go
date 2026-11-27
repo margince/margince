@@ -349,6 +349,7 @@ func TestAWonDealIsNotGoingCold(t *testing.T) {
 // running pause or a meeting booked ahead silences both. A pause that ended, a
 // meeting that happened and a cancelled booking silence neither.
 func TestGoingColdIsAbsentExactlyWhereTheDealIsNotStalled(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	now := clocktest.Now(t)

@@ -17,6 +17,7 @@ import (
 // pinned. That is the target and the second row a tag merge folds into. A later
 // edit to either moves the answer.
 func TestPinRecordsAnswersThePinsAStagingWouldTake(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	passport := e.seedPassport(t)
 	in := e.mergeCall(e.seedTag(t, "PinSource"), e.seedTag(t, "PinSurvivor"))
@@ -55,6 +56,7 @@ func TestPinRecordsAnswersThePinsAStagingWouldTake(t *testing.T) {
 // A kind staging declines to pin is not pinned by a confirmation either, and a
 // call with no target has nothing to pin.
 func TestPinRecordsKeepsTheStagingWaivers(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	ctx := e.asPassport(e.seedPassport(t))
 	waived := e.mergeCall(e.seedTag(t, "WaivedSource"), e.seedTag(t, "WaivedSurvivor"))

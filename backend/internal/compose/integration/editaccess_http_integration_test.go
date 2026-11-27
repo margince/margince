@@ -22,6 +22,7 @@ import (
 )
 
 func TestARepAsksTheOwnerOfALeadForEditAccessOverTheWire(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	e.DescribeCompany(t)
@@ -117,6 +118,7 @@ func (s editAccessSeats) pending(t *testing.T, approval string) bool {
 // A company that changes hands through its own route closes the request put to
 // its former owner.
 func TestACompanyThatChangedHandsClosesItsEditAccessRequest(t *testing.T) {
+	t.Parallel()
 	s := newEditAccessSeats(t)
 	company := createdID(t, s.admin, "/v1/companies", AnyMap{"display_name": "Brandt Logistik", "source": "manual", "owner_id": s.ownerID})
 	asked := s.ask(t, "company", company)
@@ -136,6 +138,7 @@ func TestACompanyThatChangedHandsClosesItsEditAccessRequest(t *testing.T) {
 // A member who leaves takes the requests put to them along. Their work is
 // handed on, and nobody answers a card on their behalf.
 func TestAnOwnerWhoLeftTakesTheirEditAccessRequestsAlong(t *testing.T) {
+	t.Parallel()
 	s := newEditAccessSeats(t)
 	lead := createdID(t, s.admin, "/v1/leads", AnyMap{"full_name": "Jonas Keller", "owner_id": s.ownerID})
 	asked := s.ask(t, "lead", lead)
@@ -154,6 +157,7 @@ func TestAnOwnerWhoLeftTakesTheirEditAccessRequestsAlong(t *testing.T) {
 // Once the owner makes the company private, the asker cannot read back the
 // requests they made before. That holds for the handover and edit access.
 func TestARequestOnACompanyTheAskerLostSightOfReadsAsNotFound(t *testing.T) {
+	t.Parallel()
 	s := newEditAccessSeats(t)
 	company := createdID(t, s.admin, "/v1/companies", AnyMap{"display_name": "Brandt Logistik", "source": "manual", "owner_id": s.ownerID})
 	s.ask(t, "company", company)

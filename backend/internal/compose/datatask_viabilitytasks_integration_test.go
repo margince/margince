@@ -24,6 +24,7 @@ import (
 // mailbox is read. Then Rep1's mailbox is read. Only Rep1's task holding
 // nothing but a past close date is one the viability decision answers.
 func TestTheDataTaskCompletesOnlyTasksTheViabilityDecisionAnswers(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	pipeline, open, _ := integration.DealFixture(t, e)
 	now := clocktest.Now(t)

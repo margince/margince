@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/chatlinks"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -45,7 +46,7 @@ func (e *partyEnv) parties(t *testing.T) (facts []string, widestArgs, readerCoun
 	ws := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.ws), chatLinksPrincipal)
 	widest := &widestStatement{}
 	err := database.WithWorkspaceTx(ws, e.pool, func(tx pgx.Tx) error {
-		readers, err := noteReaders(ws, tx, chatlinks.Link{DealID: &e.deal, ChannelSlug: "acme"})
+		readers, err := noteReaders(ws, tx, identity.RbacObjects{}, chatlinks.Link{DealID: &e.deal, ChannelSlug: "acme"})
 		if err != nil {
 			return err
 		}
@@ -74,6 +75,7 @@ func (e *partyEnv) members(t *testing.T, n int, role string) {
 // Every member of a workspace may read a summary note. One statement judging
 // them all at once grows with the workspace until the database runs out of memory.
 func TestTheStatementsThatJudgeSummaryReadersDoNotGrowWithTheWorkspace(t *testing.T) {
+	t.Parallel()
 	e := setupParties(t)
 	_, _, seeded := e.parties(t)
 	e.members(t, auth.MaxReadersPerClause-seeded, "management")
@@ -93,6 +95,7 @@ func TestTheStatementsThatJudgeSummaryReadersDoNotGrowWithTheWorkspace(t *testin
 // A reader in a later group still bounds the names. One refused the
 // stakeholder edge leaves the contacts out, though every earlier group may read them.
 func TestAReaderInTheLastGroupStillBoundsTheNames(t *testing.T) {
+	t.Parallel()
 	e := setupParties(t)
 	e.members(t, 2*auth.MaxReadersPerClause, "management")
 	e.denyRead(t, "rep", "relationship")

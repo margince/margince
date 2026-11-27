@@ -86,6 +86,7 @@ func readRecord(t *testing.T, e *apptest.AppEnv, path string) integration.AnyMap
 }
 
 func TestEveryFieldObjectHasAChoiceRemover(t *testing.T) {
+	t.Parallel()
 	wired := slices.Sorted(maps.Keys(compose.CustomFieldChoiceRemovers()))
 	objects := slices.Sorted(slices.Values(customfieldsmod.FieldObjects))
 	if !slices.Equal(wired, objects) {
@@ -97,6 +98,7 @@ func TestEveryFieldObjectHasAChoiceRemover(t *testing.T) {
 // The column becomes an identifier in the clearing UPDATE. So a remover refuses
 // a column the catalog does not list, before it writes.
 func TestARemoverRefusesAColumnTheCatalogDoesNotList(t *testing.T) {
+	t.Parallel()
 	e := schemaWiredEnv(t)
 	err := e.DB().Tx(t.Context(), func(tx pgx.Tx) error {
 		_, err := deals.RemoveCustomChoices(context.Background(), tx, fieldcatalog.Column{Name: "name", Type: fieldcatalog.TypePicklist}, []string{"Acme"})
@@ -108,6 +110,7 @@ func TestARemoverRefusesAColumnTheCatalogDoesNotList(t *testing.T) {
 }
 
 func TestRemovingAPicklistChoiceClearsItFromTheDealsThatHoldIt(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupAppWithOptions(t, compose.WithSchemaPool(integration.SchemaPool(t)), compose.WithListsEnabled(true))
 	e.BootstrapWorkspace(t)
 	region := newField(t, e, integration.AnyMap{"object": "deal", "label": "Sales region", "type": "picklist", "options": []string{"North", "West", "South"}, "source": "manual"})
@@ -182,6 +185,7 @@ func TestRemovingAPicklistChoiceClearsItFromTheDealsThatHoldIt(t *testing.T) {
 }
 
 func TestRemovingAMultiselectChoiceKeepsTheOtherChoices(t *testing.T) {
+	t.Parallel()
 	e := schemaWiredEnv(t)
 	field := newField(t, e, integration.AnyMap{"object": "company", "label": "Services", "type": "multiselect", "options": []string{"Audit", "Build", "Care"}, "source": "manual"})
 	col := field.ColumnName
@@ -209,6 +213,7 @@ func TestRemovingAMultiselectChoiceKeepsTheOtherChoices(t *testing.T) {
 // A record that cannot change refuses the clear, and the edit answers 409 with
 // the reason instead of failing on every retry. Nothing is cleared.
 func TestARecordThatCannotChangeRefusesTheEditWithAConflict(t *testing.T) {
+	t.Parallel()
 	e := schemaWiredEnv(t)
 	ctx := t.Context()
 

@@ -200,6 +200,7 @@ func TestACallerOpenedCreateWithValuesAndNoCatalogIsStillRefused(t *testing.T) {
 }
 
 func TestAURLCustomFieldImportsAWebAddressAndSkipsAnythingElse(t *testing.T) {
+	t.Parallel()
 	e := setupCustomFieldImportApp(t)
 	column := apptest.CreateCustomField(t, e, AnyMap{"object": "company", "label": "Order portal", "type": "url", "source": "manual"})
 	csv := "Name,Order portal\n" +

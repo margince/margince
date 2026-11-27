@@ -150,6 +150,7 @@ func TestTheWindowSaysWhatItWasReadFromRatherThanWhatTheHostHasConnected(t *test
 // A host with no calendar connected is told to connect one, not refused as if
 // a grant were missing. The answer is what an assistant tells its user.
 func TestReliableAvailabilityWithNoCalendarAsksForOne(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	now := time.Date(2026, 9, 27, 6, 0, 0, 0, time.UTC)
@@ -164,6 +165,7 @@ func TestReliableAvailabilityWithNoCalendarAsksForOne(t *testing.T) {
 // A guest is never told to connect a calendar: the host's setup is not theirs
 // to learn. The proposal link answers as a paused page; the host is still asked.
 func TestAGuestIsNotToldTheHostHasNoCalendar(t *testing.T) {
+	t.Parallel()
 	f := newInvitationFixture(t)
 	link, err := f.store.CreateProposal(f.ctx, crmcontracts.MeetingProposalRequest{ContactId: f.request.ContactId, AttendeeEmail: f.request.AttendeeEmail, Subject: f.request.Subject, DurationMinutes: 30})
 	if err != nil {

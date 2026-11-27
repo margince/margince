@@ -237,6 +237,7 @@ func TestSweepWorkspaceEmbeddingDriftNeverEnumeratesHeldMail(t *testing.T) {
 // recent pass heals a row written inside the window and leaves an older one.
 // The full pass heals the older row too.
 func TestTheRecentDriftPassHealsOnlyRowsInsideItsWindow(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	ctx := context.Background()
 	fake := ai.NewFakeClient()

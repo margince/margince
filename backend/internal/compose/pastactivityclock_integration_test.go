@@ -349,6 +349,7 @@ func readClockRow(t *testing.T, e *integration.Env, table string, id ids.UUID) c
 // A run never reads past a transaction still open, so the meeting waits for
 // the next run after that writer is done.
 func TestARefoldWaitsForATransactionStillOpen(t *testing.T) {
+	t.Parallel()
 	f := newAccountFixture(t)
 	mailed := f.now.AddDate(0, 0, -3)
 	f.log(t, "email", mailed)

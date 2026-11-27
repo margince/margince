@@ -98,6 +98,7 @@ func (c *telegramEnv) connectionAudits(t *testing.T, id string) int {
 }
 
 func TestABusinessConnectionWaitsForApprovalAndStoresNothing(t *testing.T) {
+	t.Parallel()
 	c := setupTelegramConnected(t)
 	runner, sub := newTelegramWorker(t, c, compose.JobRunnerConfig{})
 	startTelegramWorker(t, runner)
@@ -152,6 +153,7 @@ func (c *telegramEnv) liveBot(t *testing.T) (string, bool) {
 }
 
 func TestTwoBusinessAccountsOnOneBotGetTwoRows(t *testing.T) {
+	t.Parallel()
 	c := setupTelegramConnected(t)
 	runner, sub := newTelegramWorker(t, c, compose.JobRunnerConfig{})
 	startTelegramWorker(t, runner)
@@ -170,6 +172,7 @@ func TestTwoBusinessAccountsOnOneBotGetTwoRows(t *testing.T) {
 }
 
 func TestTurningALinkOffAndOnReturnsItToItsApprovalState(t *testing.T) {
+	t.Parallel()
 	c := setupTelegramConnected(t)
 	runner, sub := newTelegramWorker(t, c, compose.JobRunnerConfig{})
 	startTelegramWorker(t, runner)
@@ -206,6 +209,7 @@ func TestTurningALinkOffAndOnReturnsItToItsApprovalState(t *testing.T) {
 }
 
 func TestOnlyAnAdminApprovesOrDisconnectsABusinessConnection(t *testing.T) {
+	t.Parallel()
 	c := setupTelegramConnected(t)
 	runner, sub := newTelegramWorker(t, c, compose.JobRunnerConfig{})
 	startTelegramWorker(t, runner)
@@ -267,6 +271,7 @@ func TestOnlyAnAdminApprovesOrDisconnectsABusinessConnection(t *testing.T) {
 }
 
 func TestBusinessConnectionsLeaveTheBotConnectionsUntouched(t *testing.T) {
+	t.Parallel()
 	c := setupTelegramConnected(t)
 	runner, sub := newTelegramWorker(t, c, compose.JobRunnerConfig{})
 	startTelegramWorker(t, runner)
@@ -309,6 +314,7 @@ func TestBusinessConnectionsLeaveTheBotConnectionsUntouched(t *testing.T) {
 // one live bot never meets it. A child row of another provider is not a Telegram
 // link either, and the business endpoints neither list nor touch it.
 func TestTheBusinessEndpointsServeOnlyTelegramBusinessRows(t *testing.T) {
+	t.Parallel()
 	c := setupTelegramConnected(t)
 	runner, sub := newTelegramWorker(t, c, compose.JobRunnerConfig{})
 	startTelegramWorker(t, runner)

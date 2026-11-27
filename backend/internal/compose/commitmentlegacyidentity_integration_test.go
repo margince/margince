@@ -118,6 +118,7 @@ func TestAnUnattributedPromiseLaterFoundToBeTheCustomersIsFiledOnThem(t *testing
 // Accepting a commitment reads its source mail as it stands now. Mail that is
 // gone refuses the task, and so does private mail the holder may not open.
 func TestACommitmentFromMailThatIsGoneOrNotTheHoldersIsRefused(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	source, owner := ids.NewV7(), ids.NewV7()
 	e.WsExec(t, `INSERT INTO activity (id, kind, subject, direction, occurred_at, source, captured_by)

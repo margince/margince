@@ -262,6 +262,7 @@ func adminWithSettings(e *integration.Env) context.Context {
 }
 
 func TestAWriterOtherThanTheEditFormSupersedesAnEarlierSetEdit(t *testing.T) {
+	t.Parallel()
 	for _, tc := range scenarios() {
 		t.Run(tc.name, func(t *testing.T) {
 			e := integration.Setup(t)
@@ -293,6 +294,7 @@ func TestAWriterOtherThanTheEditFormSupersedesAnEarlierSetEdit(t *testing.T) {
 // Undoing the newest edit leaves the rows equal to the older edit's result, so
 // the older edit can be undone in turn.
 func TestUndoingSetEditsOneAfterAnotherWorks(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	cases := []struct {
 		name   string

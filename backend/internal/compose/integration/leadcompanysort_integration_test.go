@@ -17,6 +17,7 @@ import (
 // A linked lead orders by its company's current name, the one its cell shows,
 // and not by the name typed when the lead was filed.
 func TestTheLeadsListSortsALinkedLeadByItsCompanysCurrentName(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.Admin()
 
@@ -41,6 +42,7 @@ func TestTheLeadsListSortsALinkedLeadByItsCompanysCurrentName(t *testing.T) {
 // A linked company the reader may not see orders its lead by the typed name,
 // as if the lead were not linked. Its position must not reveal the hidden name.
 func TestALeadLinkedToAnUnreadableCompanySortsByTheTypedName(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 
 	mercator := seedLeadTypingCompany(t, e, "First lead", "Mercator")

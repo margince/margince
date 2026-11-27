@@ -220,6 +220,7 @@ var placedChildren = []string{
 }
 
 func TestDoneForYouPlacesEachChildOnTheRecordItBelongsTo(t *testing.T) {
+	t.Parallel()
 	for _, child := range placedChildren {
 		t.Run(child, func(t *testing.T) {
 			f := newPlacedFixture(t)
@@ -251,6 +252,7 @@ func writeEveryChild(t *testing.T, f placedFixture) []string {
 // A seat on another team does not work on the records, so it is shown none of
 // the children.
 func TestDoneForYouHidesAChildOnARecordTheReaderDoesNotWorkOn(t *testing.T) {
+	t.Parallel()
 	f := newPlacedFixture(t)
 	keys := writeEveryChild(t, f)
 	home, worklist := placedLines(f.e.As(f.e.Rep3, []ids.UUID{f.e.Team2}, withPlacedGrants(RepPerms, principal.ObjectGrant{Read: true})), t, f.e)
@@ -267,6 +269,7 @@ func TestDoneForYouHidesAChildOnARecordTheReaderDoesNotWorkOn(t *testing.T) {
 // A teammate works on the records but may not see a private company or contact.
 // The file and the introduction on them stay hidden from that teammate.
 func TestDoneForYouHidesAChildOnARecordKeptPrivateFromTheReader(t *testing.T) {
+	t.Parallel()
 	f := newPlacedFixture(t)
 	writers := placedWriters(f)
 	writers["attachment"](t)
@@ -293,6 +296,7 @@ func TestDoneForYouHidesAChildOnARecordKeptPrivateFromTheReader(t *testing.T) {
 // loses those lines and keeps the rest. Without the deal grant, nothing placed
 // on a deal shows.
 func TestDoneForYouHidesAChildWhoseGrantTheReaderLacks(t *testing.T) {
+	t.Parallel()
 	f := newPlacedFixture(t)
 	writeEveryChild(t, f)
 	onDeal := []string{"magic.action.create_offer", "magic.action.create_contract", "magic.action.create_deal_room", "magic.action.create_stage_evidence"}
@@ -324,6 +328,7 @@ func TestDoneForYouHidesAChildWhoseGrantTheReaderLacks(t *testing.T) {
 // who sees the deal but not that private company is not shown the contract.
 // The deal room on the same deal is the control that the deal is seen.
 func TestDoneForYouHidesAContractAnchoredOnACompanyTheReaderMayNotSee(t *testing.T) {
+	t.Parallel()
 	f := newPlacedFixture(t)
 	writers := placedWriters(f)
 	writers["contract"](t)
@@ -347,6 +352,7 @@ func TestDoneForYouHidesAContractAnchoredOnACompanyTheReaderMayNotSee(t *testing
 // A placed change leaves System health's count; one on a child no placement
 // can reach stays in it.
 func TestAPlacedChildLeavesTheUnplacedCount(t *testing.T) {
+	t.Parallel()
 	f := newPlacedFixture(t)
 	offer, err := f.e.Deals.CreateOffer(f.writer(t), ids.From[ids.DealKind](f.deal), deals.CreateOfferInput{Currency: "EUR", Source: "manual"})
 	mustWrite(t, err)
@@ -384,6 +390,7 @@ func TestAPlacedChildLeavesTheUnplacedCount(t *testing.T) {
 // introduction's own beyond its contact's scope. A teammate who works on the
 // contact is not shown it.
 func TestDoneForYouHidesAnIntroductionAskFromAColleagueOutsideIt(t *testing.T) {
+	t.Parallel()
 	f := newPlacedFixture(t)
 	_, err := introductions.NewStore(f.e.DB(), func() time.Time { return clocktest.Now(t) }).Create(f.writer(t), introductions.NewRequest{
 		ContactID: f.contact, IntroducerUser: f.e.AdminUser, RouteType: "direct",

@@ -72,6 +72,7 @@ func TestAResumeCannotSendWordingFromBeforeAConcurrentEdit(t *testing.T) {
 // Mutation: drop refuseAnotherSeatsHold from ResumeHeldSend and the other seat
 // stages the delivery.
 func TestOnlyTheAuthorResumesAHeldMessage(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	store := e.store(stubUnsubscribeLinker{token: testUnsubscribeTok, ok: true})

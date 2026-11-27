@@ -808,6 +808,7 @@ const destroyedReceipts = `SELECT count(*) FROM audit_log WHERE entity_type = 'c
 
 // A message the cascade skips is not certified as destroyed.
 func TestTheReceiptCountsWhatTheCascadeDeleted(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	gone := seedPurgeableMail(t, e, sweepAddress, "Eins", e.Rep1)
 	skipped := seedPurgeableMail(t, e, sweepAddress, "Zwei", e.Rep1)
@@ -828,6 +829,7 @@ func TestTheReceiptCountsWhatTheCascadeDeleted(t *testing.T) {
 
 // A purge run has no bulk_operation row, so the undo refuses it.
 func TestAPurgeRunCannotBeUndoneAsABulkChange(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedPurgeableMail(t, e, sweepAddress, "Eins", e.Rep1)
 	rule := seedOwnExclusion(t, e, e.Rep1, capture.ExclusionKindAddress, sweepAddress)
@@ -840,6 +842,7 @@ func TestAPurgeRunCannotBeUndoneAsABulkChange(t *testing.T) {
 }
 
 func TestThePurgeEndpointAnswersWhatTheReceiptStores(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	restrict(t, e, seedPurgeableMail(t, e, sweepAddress, "Klage", e.Rep1))
 	seedPurgeableMail(t, e, sweepAddress, "Zweite", e.Rep1)
@@ -864,6 +867,7 @@ func TestThePurgeEndpointAnswersWhatTheReceiptStores(t *testing.T) {
 }
 
 func TestTheVerdictWorkerCertifiesAStoppedPurge(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	mail := seedPurgeableMail(t, e, sweepAddress, "Eins", e.Rep1)
 	rule, purger := seedOwnExclusion(t, e, e.Rep1, capture.ExclusionKindAddress, sweepAddress), purgerFor(t, e)

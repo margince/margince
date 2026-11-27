@@ -265,6 +265,7 @@ func TestLeadSLAEscalationWritesBothHalvesOrNeither(t *testing.T) {
 
 // A failed escalation leaves neither half, and the bus redelivery then writes both once.
 func TestARedeliveredLeadSLAEscalationWritesTheTaskAndNoticeOnce(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	lead, ev, deadline, _ := breachedLeadEvent(t, e, owner)

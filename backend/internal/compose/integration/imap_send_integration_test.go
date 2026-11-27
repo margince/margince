@@ -69,6 +69,7 @@ func (p *preflightEnv) connectIMAP(t *testing.T, bundle connector.Auth) {
 }
 
 func TestAnIMAPMailboxSendsOnlyOnceSendingIsTurnedOn(t *testing.T) {
+	t.Parallel()
 	p := setupPreflightWithoutGoogleApp(t)
 	p.connectIMAP(t, imapBundle(t, false))
 
@@ -108,6 +109,7 @@ func (imapResolver) ResolveChannel(context.Context, ids.UserID, string) (connect
 
 // The owner reconnected the mailbox without sending after the mail was staged.
 func TestAnIMAPDeliveryWhoseMailboxNoLongerSendsParks(t *testing.T) {
+	t.Parallel()
 	p := setupPreflightWithoutGoogleApp(t)
 	p.connectIMAP(t, imapBundle(t, true))
 	p.stakeADeal(t)

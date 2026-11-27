@@ -53,7 +53,7 @@ type DormancyPolicy struct {
 
 // DormancyPolicyTx reads both settings in one statement.
 func DormancyPolicyTx(ctx context.Context, tx pgx.Tx) (DormancyPolicy, error) {
-	days, followUp, err := config.StoredApplyPairTx(ctx, tx, config.Bound(), DormancyDays, DormancyFollowUpEnabled)
+	days, followUp, err := config.StoredApplyPairTx(ctx, tx, config.Bound(ctx), DormancyDays, DormancyFollowUpEnabled)
 	if err != nil {
 		return DormancyPolicy{}, fmt.Errorf("contacts: reading the dormancy settings: %w", err)
 	}

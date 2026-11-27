@@ -7,7 +7,6 @@ package contact360
 
 import (
 	"context"
-	"os"
 	"testing"
 	"time"
 
@@ -23,8 +22,9 @@ import (
 // three seats, the copies alternating by the millisecond. A short bound reads
 // part of every group. The section must then widen, not show a partial count.
 func TestTheRecentSectionWidensWhenItsBoundCutsTheOldestSecond(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
-	owner, err := pgx.Connect(ctx, os.Getenv("MARGINCE_TEST_DSN"))
+	owner, err := pgx.Connect(ctx, testdb.For(t).OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -15,6 +15,7 @@ import (
 )
 
 func TestAURLFieldStoresAWebAddressAndRefusesAnythingElse(t *testing.T) {
+	t.Parallel()
 	e := schemaWiredEnv(t)
 	field := newField(t, e, integration.AnyMap{"object": "deal", "label": "Offer page", "type": "url", "source": "manual"})
 	if field.Type != "url" {

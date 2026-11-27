@@ -33,6 +33,7 @@ func requireStageNameTaken(t *testing.T, err error, what string) {
 }
 
 func TestAPipelineNameIsHeldOnce(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	ctx := e.as()
 	suffix := ids.NewV7().String()[24:]
@@ -58,6 +59,7 @@ func TestAPipelineNameIsHeldOnce(t *testing.T) {
 }
 
 func TestAStageNameIsHeldOncePerPipeline(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	ctx := e.as()
 	discovery := e.seedStage(ctx, t, "Discovery", 20)
@@ -104,6 +106,7 @@ var errSeedRolledBack = errors.New("the seeded ladder was read")
 // A configured open stage named like the closing pair does not stop bootstrap:
 // the pair the seed appends takes the next free name.
 func TestASeededLadderBesideAnOpenStageNamedWonNumbersTheClosingStage(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	ctx := principal.SystemActing(principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.ws), ids.NewV7()), "system:test")
 	var names []string

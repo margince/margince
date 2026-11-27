@@ -244,6 +244,7 @@ func TestTheConfidentialityPassCapIsASettingOnlyTheUpdateGrantChanges(t *testing
 // confidentiality cap. Every role reads the declared default. Only the update
 // grant saves a change. A value past the ceiling is refused.
 func TestTheOtherPassCapsAreSettingsOnlyTheUpdateGrantChanges(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	store := capturemod.NewSettings(compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
 	admin := captureSettingsCtx(e, principal.ObjectGrant{Read: true, Update: true})

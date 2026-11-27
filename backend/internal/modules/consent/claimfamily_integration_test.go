@@ -17,6 +17,7 @@ import (
 //
 // Mutation: answer the claim's own refusal in validateFamily and this fails.
 func TestAnExistingCustomerClaimSettlesOnTheSiblingTheRecordBearsOut(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	company := e.company(t)
 	invoice := e.invoice(t, company, false)
@@ -38,6 +39,7 @@ func TestAnExistingCustomerClaimSettlesOnTheSiblingTheRecordBearsOut(t *testing.
 // A sibling never reaches outside its family: a marketing claim with an
 // invoice behind it stays a marketing claim.
 func TestAMarketingClaimHasNoSiblings(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	company := e.company(t)
 	invoice := e.invoice(t, company, false)
@@ -59,6 +61,7 @@ func TestAMarketingClaimHasNoSiblings(t *testing.T) {
 //
 // Mutation: let validateFamily try every family member and this fails.
 func TestANarrowClaimNeverSettlesOnTheBroadOne(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	company := e.company(t)
 	e.employ(t, company)

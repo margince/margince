@@ -45,6 +45,7 @@ func requireLastClosingRefusal(t *testing.T, err error, field string) {
 }
 
 func TestThePipelinesOnlyClosingStageCannotBeRetyped(t *testing.T) {
+	t.Parallel()
 	for _, kind := range []StageSemantic{SemanticWon, SemanticLost} {
 		for _, wanted := range []StageSemantic{SemanticOpen, SemanticWon, SemanticLost} {
 			if wanted == kind {
@@ -76,6 +77,7 @@ func TestThePipelinesOnlyClosingStageCannotBeRetyped(t *testing.T) {
 }
 
 func TestOneOfTwoLostStagesCanBeRetyped(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	ctx := e.as()
 	stage := e.seedStage(ctx, t, "Second lost", 0)
@@ -90,6 +92,7 @@ func TestOneOfTwoLostStagesCanBeRetyped(t *testing.T) {
 }
 
 func TestANewPipelineIsBornWithAWonAndALostStage(t *testing.T) {
+	t.Parallel()
 	open := StageInput{Name: "Intro", Position: 1, Semantic: string(SemanticOpen), WinProbability: 10}
 	won := StageInput{Name: "Signed", Position: 2, Semantic: string(SemanticWon), WinProbability: 100}
 	for name, tc := range map[string]struct {
@@ -126,6 +129,7 @@ func TestANewPipelineIsBornWithAWonAndALostStage(t *testing.T) {
 }
 
 func TestADealTakesNoStageInARetiredPipeline(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	ctx := e.as()
 	deal, _, to := twoStagePipeline(t, e)
@@ -182,6 +186,7 @@ func liveSemantics(t *testing.T, e *configEnv, pipelineID ids.PipelineID) []stri
 }
 
 func TestAPipelineWithoutAClosingPairIsRepairedWhenRestoredOrEdited(t *testing.T) {
+	t.Parallel()
 	want := []string{"lost", "open", "open", "won"}
 	t.Run("restoring", func(t *testing.T) {
 		e := setupConfigEnv(t)
@@ -222,6 +227,7 @@ func TestAPipelineWithoutAClosingPairIsRepairedWhenRestoredOrEdited(t *testing.T
 // A repair beside an open stage named like the missing closing one numbers the
 // stage it adds. The stage name index then has nothing to refuse.
 func TestARepairBesideAnOpenStageNamedWonNumbersTheAddedStage(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	_, from, _ := twoStagePipeline(t, e)
 	var pipelineID ids.PipelineID

@@ -51,6 +51,7 @@ func assertFound(t *testing.T, e *integration.Env, id ids.UUID, word string, wan
 }
 
 func TestMailSearchReadsTheSendersWordsAndNotTheMailTheyQuote(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	mail := logMail(t, e, "Re: Cabinets", ownWords+quotedReply)
 
@@ -74,6 +75,7 @@ func TestMailSearchReadsTheSendersWordsAndNotTheMailTheyQuote(t *testing.T) {
 // An Outlook forward and reply carry the same header block. Only the subject
 // tells search whether the mail under it is passed on or quoted.
 func TestAForwardIsFoundByTheMailItPassesOn(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	body := "Zur Info.\n\nVon: Max Muster <max@kunde.de>\nGesendet: Dienstag, 12. August 2026 09:14\nAn: Vertrieb\nBetreff: Schrank\n\nDer Nussbaum passt.\n"
 	forward := logMail(t, e, "WG: Schrank", body)
@@ -92,6 +94,7 @@ func TestAForwardIsFoundByTheMailItPassesOn(t *testing.T) {
 // The database cuts by characters, as Go counted them. The words above this
 // quote hold letters of two and three bytes, and the stored words lose accents.
 func TestTheEndCutsAMailWithLettersOfSeveralBytesAtTheQuote(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	mail := logMail(t, e, "Trả lời", "Bên em đồng ý với điều khoản. Grüße aus Köln.\n\n> Thứ Sáu giao tủ óc chó được không?\n")
 	assertFound(t, e, mail, "koln", true)
@@ -103,6 +106,7 @@ func TestTheEndCutsAMailWithLettersOfSeveralBytesAtTheQuote(t *testing.T) {
 // A language with no dictionary of its own reads the body once, and one with a
 // dictionary reads it a second time as written. Both find the word.
 func TestTheBodyIsReadOnceWhenTheLanguageHasNoDictionary(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	mail := logMail(t, e, "Cabinets", "Walnut cabinets arriving.")
 	const weights = `SELECT (search_tsv::text LIKE '%C%')::int FROM activity WHERE id = $1`
@@ -119,6 +123,7 @@ func TestTheBodyIsReadOnceWhenTheLanguageHasNoDictionary(t *testing.T) {
 }
 
 func TestANoteIsSearchedWhole(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	subject, body := "Call notes", "They said:\n> walnut is too dark\n"
 	note, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{Kind: "note", Source: "manual", Subject: &subject, Body: &body})
@@ -132,6 +137,7 @@ func TestANoteIsSearchedWhole(t *testing.T) {
 }
 
 func TestTheSearchValueFollowsEveryWriteOfItsSources(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	mail := logMail(t, e, "Re: Cabinets", ownWords+quotedReply)
 	for _, write := range []string{
@@ -155,6 +161,7 @@ func TestTheSearchValueFollowsEveryWriteOfItsSources(t *testing.T) {
 // the search value again. Both are long enough here to be stored out of line,
 // so a second copy shows as rows written to the table's out-of-line store.
 func TestAWriteThatLeavesTheTextAloneLeavesTheSearchValueAlone(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	var words strings.Builder
 	for range 3000 {
@@ -195,6 +202,7 @@ func TestAWriteThatLeavesTheTextAloneLeavesTheSearchValueAlone(t *testing.T) {
 }
 
 func TestAnErasedMailKeepsNoEndAndNoSearchableWord(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Selma Subject", nil)
 	mail := logMail(t, e, "Re: Cabinets", ownWords+quotedReply,

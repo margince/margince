@@ -798,6 +798,7 @@ const casinoNamesItself = `{"fields":[{"f":"display_name","v":"Lucky Spin Casino
 
 // Nothing the casino says or shows lands on Acme, and the dossier says why.
 func TestADeepReadOfAnotherBusinessOnTheDomainAppliesNothing(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := insertCompany(t, e, e.Rep1, "acme.example", "")
 	if done := readTheCasinoOnAcmesDomain(t, e, company, "human:"+e.Rep1.String(), casinoNamesItself, ""); !slices.Contains(done.Warnings, siteAnotherBusinessWarning) {
@@ -812,6 +813,7 @@ func TestADeepReadOfAnotherBusinessOnTheDomainAppliesNothing(t *testing.T) {
 
 // The automatic read closes its cursor as a read that landed nothing.
 func TestAnAutomaticReadOfAnotherBusinessClosesItsCursorEmpty(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := insertCompany(t, e, e.Rep1, "acme.example", "")
 	e.WsExec(t, `INSERT INTO capture_auto_enrich_state (company_id) VALUES ($1)`, company)
@@ -827,6 +829,7 @@ func TestAnAutomaticReadOfAnotherBusinessClosesItsCursorEmpty(t *testing.T) {
 // With no name from the model, the page title names the site. With none at all
 // the findings land, but the logo is nobody's to wear.
 func TestASiteTheModelDidNotNameIsJudgedByItsTitle(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := insertCompany(t, e, e.Rep1, "acme.example", "")
 	unnamed := `{"fields":[{"f":"value_proposition","v":"Slots","e":"s0","c":0.9}]}`

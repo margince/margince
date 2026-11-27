@@ -47,7 +47,7 @@ func AutoApplyEnabledTx(ctx context.Context, tx pgx.Tx) (bool, error) {
 	if err := settings.ShareLockForDecision(ctx, tx, AutoApplyEnabled.Key()); err != nil {
 		return false, err
 	}
-	return config.StoredApplyTx(ctx, tx, config.Bound(), AutoApplyEnabled)
+	return config.StoredApplyTx(ctx, tx, config.Bound(ctx), AutoApplyEnabled)
 }
 
 // SetAutoApplyEnabled switches automatic application for the installation. An

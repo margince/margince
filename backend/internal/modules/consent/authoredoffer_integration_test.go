@@ -39,6 +39,7 @@ func replyTo(anchor ids.UUID, body string) commsauthz.Request {
 // One sender, anchor and recipient; only the authored words and the record
 // differ. An offer written into a reply is judged as what it is.
 func TestAnOfferWrittenIntoAReplyIsJudgedAsAnOffer(t *testing.T) {
+	t.Parallel()
 	t.Run("a reschedule is a reply", func(t *testing.T) {
 		e, anchor := offerEnv(t)
 		d := e.decide(t, replyTo(anchor, rescheduleReply))
@@ -89,6 +90,7 @@ func TestAnOfferWrittenIntoAReplyIsJudgedAsAnOffer(t *testing.T) {
 // Transmit has no authored text. It judges the words staging judged, so a
 // reply stays a reply and an offer stays refused.
 func TestTransmitJudgesTheWordsStagingJudged(t *testing.T) {
+	t.Parallel()
 	for name, c := range map[string]struct {
 		body     string
 		allowed  bool
@@ -160,6 +162,7 @@ func (e *resolveEnv) deliveryOnThread(t *testing.T, threadKey string) ids.UUID {
 // contact's own mail stands, the reply goes as a reply. Archived in between,
 // the subject is the rep's offer and transmit refuses it.
 func TestTransmitAsksAgainWhoWroteAQuotedSubject(t *testing.T) {
+	t.Parallel()
 	for name, archive := range map[string]bool{"the anchor stands": false, "the anchor was archived": true} {
 		t.Run(name, func(t *testing.T) {
 			e, anchor := offerEnv(t)

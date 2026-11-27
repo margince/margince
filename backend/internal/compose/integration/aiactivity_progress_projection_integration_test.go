@@ -83,6 +83,7 @@ func (p *progressProbe) want(processed *int, lease time.Duration) {
 }
 
 func TestADelayedLeaseRenewalKeepsNewerProgress(t *testing.T) {
+	t.Parallel()
 	p := newProgressProbe(t)
 	p.apply(1, "running", time.Minute, new(3), nil)
 	if !p.apply(1, "running", time.Hour, nil, nil) {
@@ -92,6 +93,7 @@ func TestADelayedLeaseRenewalKeepsNewerProgress(t *testing.T) {
 }
 
 func TestADelayedProgressEventKeepsTheLongerLease(t *testing.T) {
+	t.Parallel()
 	p := newProgressProbe(t)
 	p.apply(1, "running", time.Hour, nil, nil)
 	if !p.apply(1, "running", time.Minute, new(3), nil) {
@@ -101,6 +103,7 @@ func TestADelayedProgressEventKeepsTheLongerLease(t *testing.T) {
 }
 
 func TestAnExactReplayAndALowerCountChangeNothing(t *testing.T) {
+	t.Parallel()
 	p := newProgressProbe(t)
 	p.apply(1, "running", time.Hour, new(5), nil)
 	if p.apply(1, "running", time.Hour, new(5), nil) {
@@ -113,6 +116,7 @@ func TestAnExactReplayAndALowerCountChangeNothing(t *testing.T) {
 }
 
 func TestSettlingClearsTheCountsAndANewAttemptStartsWithNone(t *testing.T) {
+	t.Parallel()
 	p := newProgressProbe(t)
 	p.apply(1, "running", time.Hour, new(5), new(10))
 	p.apply(1, "done", 0, nil, nil)

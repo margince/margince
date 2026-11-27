@@ -54,6 +54,7 @@ func seedPlainLead(t *testing.T, env *sarIdentifierEnv, name string) ids.UUID {
 }
 
 func TestAnonymizingALeadRemovesTheOriginalsFiledOnItByChoice(t *testing.T) {
+	t.Parallel()
 	env := setupSARIdentifiers(t)
 	lead := seedPlainLead(t, env, "Aged")
 	key := chosenKey("anon")
@@ -69,6 +70,7 @@ func TestAnonymizingALeadRemovesTheOriginalsFiledOnItByChoice(t *testing.T) {
 }
 
 func TestDeletingAnUntoldLeadRemovesTheOriginalsFiledOnItByChoice(t *testing.T) {
+	t.Parallel()
 	env := setupSARIdentifiers(t)
 	lead := seedPlainLead(t, env, "Untold")
 	mustExec(context.Background(), t, env.owner,
@@ -90,6 +92,7 @@ func TestDeletingAnUntoldLeadRemovesTheOriginalsFiledOnItByChoice(t *testing.T) 
 // A message filed on a lead and a live contact keeps its original when only
 // the lead is erased.
 func TestAnOriginalFiledOnALeadAndAContactSurvivesTheLeadsErasure(t *testing.T) {
+	t.Parallel()
 	env := setupSARIdentifiers(t)
 	lead := seedPlainLead(t, env, "Shared")
 	contact := ids.NewV7()

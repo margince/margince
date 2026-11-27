@@ -170,7 +170,7 @@ func startEventLanes(laneCtx context.Context, background *sync.WaitGroup, cfg wo
 		return lanes, err
 	}
 	// What a unit's Models and Objects reach on a job tick or a bus delivery.
-	compose.BindExtensionModels(modelPath.ExtensionTasks)
+	cfg.extensions.BindModels(modelPath.ExtensionTasks)
 	laneCtx = originalstore.Bind(laneCtx, compose.InstallationDB(pool), blob)
 	lanes.ctx = laneCtx
 

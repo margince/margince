@@ -35,6 +35,7 @@ func doneEntities(t *testing.T, e *Env, reader ids.UUID, teams []ids.UUID, perms
 }
 
 func TestDoneForYouLeavesOutAnotherTeamsDeal(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	theirs := seedMachineAction(t, e, e.Rep3, "agent", "agent:auto-apply", "advance_stage")
 
@@ -46,6 +47,7 @@ func TestDoneForYouLeavesOutAnotherTeamsDeal(t *testing.T) {
 }
 
 func TestDoneForYouShowsATeammatesDeal(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	teammates := seedMachineAction(t, e, e.Rep2, "agent", "agent:auto-apply", "advance_stage")
 
@@ -55,6 +57,7 @@ func TestDoneForYouShowsATeammatesDeal(t *testing.T) {
 }
 
 func TestDoneForYouShowsADealSharedWithTheReader(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	shared := seedMachineAction(t, e, e.Rep3, "agent", "agent:auto-apply", "advance_stage")
 	e.WsExec(t, `INSERT INTO record_grant (record_type, record_id, subject_type, subject_id, access, granted_by)
@@ -66,6 +69,7 @@ func TestDoneForYouShowsADealSharedWithTheReader(t *testing.T) {
 }
 
 func TestDoneForYouShowsOnlyMailOnTheReadersRecordsAndNamesIt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	mineContact, theirContact := e.SeedContact(t, "Ana Mine", &e.Rep1), e.SeedContact(t, "Tom Theirs", &e.Rep3)
 	savedMail := func(contact ids.UUID, kind string) ids.UUID {

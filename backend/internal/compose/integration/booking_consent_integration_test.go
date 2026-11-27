@@ -256,6 +256,7 @@ var registerRequestFirstCountry sync.Once
 // is that user asking, so under that rule its newsletter tick mints no link. As
 // with every other refused question, the meeting is still booked.
 func TestARepsBookingCannotAskForConsentNobodyRequested(t *testing.T) {
+	t.Parallel()
 	registerRequestFirstCountry.Do(func() {
 		messagingrules.Register(messagingrules.Rules{
 			Jurisdiction: requestFirstCountry, Version: 1, ConsentConfirmationNeedsRequest: true,

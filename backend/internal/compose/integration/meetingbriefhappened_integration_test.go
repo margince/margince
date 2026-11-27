@@ -117,6 +117,7 @@ func TestABriefTakesNoDayMeetingDatedTodayAsWhenWeLastSpoke(t *testing.T) {
 // An internal note is no conversation.
 // The brief lists it in no arc and still calls the room a first contact.
 func TestABriefCountsNoInternalNoteAsAConversation(t *testing.T) {
+	t.Parallel()
 	now := time.Date(2026, 8, 4, 13, 0, 0, 0, time.UTC)
 	room := newBriefRoom(t, "UTC", now, now.Add(48*time.Hour))
 	note := room.log(t, "note", now.Add(-time.Hour), activities.PrecisionInstant)
@@ -133,6 +134,7 @@ func TestABriefCountsNoInternalNoteAsAConversation(t *testing.T) {
 // That holds for the arc, the last-spoke line and the attendee's last touch.
 // The rows are a voicemail, a system-sent mail, a newsletter and a note with a participant row.
 func TestABriefCountsNoRowTheContactPageRefusesAsAnExchange(t *testing.T) {
+	t.Parallel()
 	now := time.Date(2026, 8, 4, 13, 0, 0, 0, time.UTC)
 	room := newBriefRoom(t, "UTC", now, now.Add(48*time.Hour))
 	at := now.Add(-time.Hour)

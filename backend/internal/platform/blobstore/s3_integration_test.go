@@ -217,6 +217,7 @@ func TestS3StoreDeletePrefixRemovesOnlyThatPrefix(t *testing.T) {
 // enabling versioning on the shared test bucket would change what every other
 // test in the lane leaves behind.
 func TestS3StoreDeletePrefixLeavesNoVersionOnAVersionedBucket(t *testing.T) {
+	t.Parallel()
 	ctx := t.Context()
 	endpoint := os.Getenv("MARGINCE_TEST_BLOBSTORE_ENDPOINT")
 	if endpoint == "" {

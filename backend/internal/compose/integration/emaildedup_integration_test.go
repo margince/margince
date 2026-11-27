@@ -334,6 +334,7 @@ func TestTheOfflineDemoLandsBothItsKindsThroughTheSameDoor(t *testing.T) {
 // it files the message nowhere. The seat's mailbox joins the same row and files
 // it under the seat's contact, once however often the seat syncs.
 func TestAColleaguesMailCopyingTheSeatIsFiledUnderTheSeatsPrivateContact(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const seatAddr, colleagueAddr, customer = "rep1@ws.example", "rep2@ws.example", "ada@private-customer.example"
 	claimOwnAddress(t, e, e.Rep1, seatAddr)

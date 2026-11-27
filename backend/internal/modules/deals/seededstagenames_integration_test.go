@@ -21,6 +21,7 @@ import (
 // one shows the admin's name in every language. The same words an admin typed
 // on a stage of their own survive a rename.
 func TestANewPipelinesClosingStagesAreTranslatedUntilRenamed(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	ctx := e.as()
 	pipeline, err := e.store.CreatePipeline(ctx, CreatePipelineInput{Name: "Sales " + ids.NewV7().String()})
@@ -54,6 +55,7 @@ func TestANewPipelinesClosingStagesAreTranslatedUntilRenamed(t *testing.T) {
 // added, renamed away and back, or translated is untouched, as is a stage of a
 // pipeline an admin created. A second run changes nothing.
 func TestTheRepairTranslatesOnlyTheStagesTheProductSeeded(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	olderSeed, err := e.store.CreatePipeline(e.system(), CreatePipelineInput{Name: "Sales " + ids.NewV7().String(), Stages: []StageInput{
 		{Name: "Qualified", Position: 1, Semantic: string(DealOpen), WinProbability: 10},

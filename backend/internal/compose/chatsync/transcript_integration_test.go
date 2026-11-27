@@ -79,6 +79,7 @@ func requireMarked(t *testing.T, prompt, marker, attribute string) {
 }
 
 func TestThePulledTalkPlacesEachAuthorAndKeepsTheirEmailOut(t *testing.T) {
+	t.Parallel()
 	e := setupPull(t)
 	e.exec(t, `INSERT INTO workspace_email_domain (domain, source, verified) VALUES ('gradion.test', 'admin', true)`)
 	e.exec(t, `INSERT INTO app_user (id, email, display_name, status) VALUES (uuidv7(), 'dee@gradion.test', 'Dee Departed', 'deactivated')`)
@@ -121,6 +122,7 @@ func TestThePulledTalkPlacesEachAuthorAndKeepsTheirEmailOut(t *testing.T) {
 }
 
 func TestThePulledTalkKeepsTheThreadAndNamesTheFiles(t *testing.T) {
+	t.Parallel()
 	e := setupPull(t)
 	talkWithAThread(e)
 
@@ -140,6 +142,7 @@ func TestThePulledTalkKeepsTheThreadAndNamesTheFiles(t *testing.T) {
 }
 
 func TestTheChatsOwnLinesNeverReachTheModel(t *testing.T) {
+	t.Parallel()
 	e := setupPull(t)
 	talkWithAThread(e)
 
@@ -151,6 +154,7 @@ func TestTheChatsOwnLinesNeverReachTheModel(t *testing.T) {
 // A member filing one thread, or one shared file, gets the same transcript as
 // a pull.
 func TestAFiledThreadAndAFiledFileShareAreSentAsTheyWereWritten(t *testing.T) {
+	t.Parallel()
 	e := setupPull(t)
 	rec := &recordingSummary{}
 	e.filer.Lane = rec

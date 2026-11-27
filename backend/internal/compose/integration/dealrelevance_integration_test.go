@@ -68,6 +68,7 @@ func (w dealEvidenceWorld) wantClock(t *testing.T, want time.Time, why string) {
 // A dinner marked not about the deal stops warming it. The clock moves back to
 // the business meeting, a forum ahead defers nothing, and health cites it. The mark is one audited write with its event. Undo restores all.
 func TestAMeetingMarkedNotAboutTheDealStopsWarmingIt(t *testing.T) {
+	t.Parallel()
 	w := newDealEvidenceWorld(t)
 	reviewAt, dinnerAt := w.now.AddDate(0, 0, -10), w.now.AddDate(0, 0, -2)
 	review := w.meeting(t, "budget review", reviewAt, false)
@@ -111,6 +112,7 @@ func TestAMeetingMarkedNotAboutTheDealStopsWarmingIt(t *testing.T) {
 // A link the classifier is unsure of keeps the deal no warmer than one marked
 // unrelated. A colleague's "about this deal" makes it count.
 func TestALinkTheClassifierDoubtsDoesNotWarmTheDeal(t *testing.T) {
+	t.Parallel()
 	w := newDealEvidenceWorld(t)
 	reviewAt, dinnerAt := w.now.AddDate(0, 0, -10), w.now.AddDate(0, 0, -2)
 	w.meeting(t, "budget review", reviewAt, false)
@@ -133,6 +135,7 @@ func TestALinkTheClassifierDoubtsDoesNotWarmTheDeal(t *testing.T) {
 // A second pull of the same calendar entry is a re-import. It keeps the
 // colleague's mark and adds no second link.
 func TestAReimportKeepsAColleaguesMark(t *testing.T) {
+	t.Parallel()
 	w := newDealEvidenceWorld(t)
 	reviewAt := w.now.AddDate(0, 0, -10)
 	w.meeting(t, "budget review", reviewAt, false)
@@ -158,6 +161,7 @@ func TestAReimportKeepsAColleaguesMark(t *testing.T) {
 // refused, and none changes the mark. One may change the activity but not the
 // deal, one lacks the deal grant, and one sits in another workspace.
 func TestADealMarkAnswersByTheCallersRights(t *testing.T) {
+	t.Parallel()
 	w := newDealEvidenceWorld(t)
 	w.contact = w.e.SeedContact(t, "Ada Shared", &w.e.Rep3)
 	dinner := w.meeting(t, "dinner", w.now.AddDate(0, 0, -2), false)
@@ -218,6 +222,7 @@ func (w dealEvidenceWorld) otherWorkspace(t *testing.T) (context.Context, ids.UU
 // A deal link inserted already marked moves the deal clock no further, though
 // the activity's contact link would. The insert's advance reads that one link.
 func TestADealLinkInsertedAlreadyMarkedMovesNoClock(t *testing.T) {
+	t.Parallel()
 	w := newDealEvidenceWorld(t)
 	dinner := CalendarMeeting{
 		Event: "dinner-" + ids.NewV7().String(), At: w.now.AddDate(0, 0, -2), Seat: w.e.Rep1, DeliveredTo: w.calendar,

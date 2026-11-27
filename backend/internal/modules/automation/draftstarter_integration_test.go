@@ -103,6 +103,7 @@ func TestAStageNoticeStartsPausedAndRequiresStageSelectionBeforeEnabling(t *test
 }
 
 func TestSeedingEnablesAStarterOnlyWhenItsSetupIsComplete(t *testing.T) {
+	t.Parallel()
 	fx := setupAutomationDB(t)
 	db := database.BindTo(fx.pool, ids.From[ids.WorkspaceKind](fx.ws))
 	ctx := fx.humanCtx(fx.rep1, principal.RowScopeAll)

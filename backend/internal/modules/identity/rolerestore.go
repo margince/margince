@@ -27,13 +27,13 @@ var errNotSystemRole = fmt.Errorf("%w: only a role the product ships has shipped
 // installation. It holds the seeded core grants and each registered extension
 // default for that role. The seed writes the same set, so a restore ends where
 // a new installation begins.
-func shippedObjects(roleKey string) map[string]storedGrant {
+func shippedObjects(rbac RbacObjects, roleKey string) map[string]storedGrant {
 	core, _ := policy.ShippedGrants(roleKey)
 	out := make(map[string]storedGrant, len(core))
 	for object, g := range core {
 		out[object] = storedGrant(g)
 	}
-	for _, d := range registeredRbacDefaults() {
+	for _, d := range rbac.defaults {
 		if d.Role != roleKey {
 			continue
 		}
@@ -64,11 +64,11 @@ func (s *Service) RestoreRoleGrants(ctx context.Context, actor Identity, roleKey
 	}
 	var restored roleRow
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		live, err := lockAsRoleAdmin(ctx, tx, actor, principal.ActionUpdate)
+		live, err := lockAsRoleAdmin(ctx, tx, s.rbac, actor, principal.ActionUpdate)
 		if err != nil {
 			return err
 		}
-		if restored, err = restoreShippedGrants(ctx, tx, live, roleKey, ifVersion); err != nil {
+		if restored, err = restoreShippedGrants(ctx, tx, s.rbac, live, roleKey, ifVersion); err != nil {
 			return err
 		}
 		return s.recheckRoleHoldersTx(ctx, tx, roleKey)
@@ -82,7 +82,7 @@ func (s *Service) RestoreRoleGrants(ctx context.Context, actor Identity, roleKey
 // restoreShippedGrants locks the role, checks If-Match and the caller's
 // authority, replaces the whole grant map and audits what moved. Objects the
 // installation cannot name are replaced too: they are not part of what shipped.
-func restoreShippedGrants(ctx context.Context, tx pgx.Tx, actor Identity, roleKey string, ifVersion *int64) (roleRow, error) {
+func restoreShippedGrants(ctx context.Context, tx pgx.Tx, rbac RbacObjects, actor Identity, roleKey string, ifVersion *int64) (roleRow, error) {
 	var roleID ids.UUID
 	var version int64
 	var isSystem bool
@@ -106,7 +106,7 @@ func restoreShippedGrants(ctx context.Context, tx pgx.Tx, actor Identity, roleKe
 	if err != nil {
 		return roleRow{}, err
 	}
-	shipped := shippedObjects(roleKey)
+	shipped := shippedObjects(rbac, roleKey)
 	widens := false
 	for object, g := range shipped {
 		widens = widens || grantAdded(before[object], g) != storedGrant{}

@@ -144,6 +144,7 @@ func (r *unheldRecordingStager) RecordUnheldRefusalTx(_ context.Context, _ pgx.T
 // Mutation: return the refusal from meetingReminderNotSent, or drop the
 // recordUnheldRefusalTx call, and this fails.
 func TestARefusedMeetingReminderTellsItsHost(t *testing.T) {
+	t.Parallel()
 	f, meeting, _ := reminderFixture(t)
 	told := &attentionRecorder{}
 	f.store = f.store.WithInvitationAttention(told)

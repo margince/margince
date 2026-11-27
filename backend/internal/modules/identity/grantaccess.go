@@ -34,7 +34,7 @@ const (
 // A team keeps what was asked: each member's write is judged by their own role.
 // A stored write grant the role cannot use is inert, because every use asks
 // the role at write time. So a role change needs no rewrite of grants.
-func grantAccessFor(ctx context.Context, tx pgx.Tx, in CreateGrantInput) (string, grantCut, error) {
+func grantAccessFor(ctx context.Context, tx pgx.Tx, rbac RbacObjects, in CreateGrantInput) (string, grantCut, error) {
 	if in.Access != GrantAccessWrite || in.SubjectType == grantSubjectTeam {
 		return in.Access, grantCutNone, nil
 	}
@@ -53,7 +53,7 @@ func grantAccessFor(ctx context.Context, tx pgx.Tx, in CreateGrantInput) (string
 		}
 		return grantAccessRead, grantCutSeat, nil
 	}
-	usable, err := roleUsesWriteShare(ctx, tx, in.RecordType, in.SubjectID)
+	usable, err := roleUsesWriteShare(ctx, tx, rbac, in.RecordType, in.SubjectID)
 	if err != nil {
 		return "", grantCutNone, err
 	}
@@ -67,13 +67,13 @@ func grantAccessFor(ctx context.Context, tx pgx.Tx, in CreateGrantInput) (string
 // roleUsesWriteShare is whether a member's role can use a write share on a
 // record type. Changing the record needs update on it. Attaching an activity
 // to it needs the role's activity create.
-func roleUsesWriteShare(ctx context.Context, tx pgx.Tx, recordType string, member ids.UUID) (bool, error) {
+func roleUsesWriteShare(ctx context.Context, tx pgx.Tx, rbac RbacObjects, recordType string, member ids.UUID) (bool, error) {
 	seat := ids.From[ids.UserKind](member)
-	changes, err := SeatAllows(ctx, tx, seat, recordType, principal.ActionUpdate)
+	changes, err := SeatAllows(ctx, tx, rbac, seat, recordType, principal.ActionUpdate)
 	if err != nil || changes {
 		return changes, err
 	}
-	return SeatAllows(ctx, tx, seat, "activity", principal.ActionCreate)
+	return SeatAllows(ctx, tx, rbac, seat, "activity", principal.ActionCreate)
 }
 
 // grantCutEvidence is the audit evidence of a cut share, nil when nothing cut.

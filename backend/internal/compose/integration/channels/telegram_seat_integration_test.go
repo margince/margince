@@ -68,6 +68,7 @@ func (c *telegramEnv) seats(t *testing.T) []seatRow {
 }
 
 func TestApprovingALinkMakesOneHeldTeamSeatAndAnotherApprovalMakesNoSecond(t *testing.T) {
+	t.Parallel()
 	c := setupTelegramConnected(t)
 	runner, sub := newTelegramWorker(t, c, compose.JobRunnerConfig{})
 	startTelegramWorker(t, runner)
@@ -117,6 +118,7 @@ func TestApprovingALinkMakesOneHeldTeamSeatAndAnotherApprovalMakesNoSecond(t *te
 }
 
 func TestDisconnectingALinkEndsItsSeatAndALaterApprovalReusesIt(t *testing.T) {
+	t.Parallel()
 	c := setupTelegramConnected(t)
 	runner, sub := newTelegramWorker(t, c, compose.JobRunnerConfig{})
 	startTelegramWorker(t, runner)
@@ -148,6 +150,7 @@ func TestDisconnectingALinkEndsItsSeatAndALaterApprovalReusesIt(t *testing.T) {
 }
 
 func TestAMessageOnAHeldAccountStaysFromAnOutsiderAndASharedAccountOpensIt(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct{ posture, audience string }{{"held", "participants"}, {"shared", "workspace"}} {
 		t.Run(tc.posture, func(t *testing.T) {
 			c := setupTelegramConnected(t)

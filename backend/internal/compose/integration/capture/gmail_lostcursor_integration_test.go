@@ -97,6 +97,7 @@ func unreadPeriod(t *testing.T, e *integration.SearchEnv, connection ids.UUID) (
 // Gmail keeps a history cursor for about a week. A mailbox that synced nothing
 // for longer comes back with its cursor gone, and reads only its newest mail.
 func TestAGmailSyncThatLostItsCursorRecordsTheMailItLeftOut(t *testing.T) {
+	t.Parallel()
 	const owner = "rep@ws.example"
 	connected := time.Date(2026, 6, 1, 9, 0, 0, 0, time.UTC)
 	resumed := connected.AddDate(0, 0, 14)

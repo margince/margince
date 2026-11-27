@@ -184,6 +184,7 @@ func requireLiveRefusal(t *testing.T, err error) {
 }
 
 func TestAStatusChangeWebhookCarriesStatusAndItsVersionOneName(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	id := e.companyAtStage(ctx, t, "Webhook GmbH", "prospect")

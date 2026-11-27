@@ -387,6 +387,7 @@ func httpCorpus(ctx context.Context, t *testing.T, h *knowledgeHTTP) crmcontract
 // A program renamed to .md is refused with 415, like any file that is not
 // text. Nothing is queued for ingest.
 func TestUploadingAProgramNamedMarkdownOverHTTPIs415(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	h := newKnowledgeHTTP(e)
 	ctx := e.As(e.Rep1, nil, corpusAdminPerms)

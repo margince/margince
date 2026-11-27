@@ -47,7 +47,7 @@ func TestAPostponementWaitsWithinTheRescheduleBounds(t *testing.T) {
 		"budget window next month":   {now.Add(11 * 24 * time.Hour), maxRescheduleDelay},
 		"moment already past":        {now.Add(-time.Minute), minRescheduleDelay},
 	} {
-		err := FaultForKind(context.Background(), "k", fmt.Errorf("reading: %w", notNow{at: tc.at}))
+		err := FaultForKind(context.Background(), Composed{}, "k", fmt.Errorf("reading: %w", notNow{at: tc.at}))
 		snooze, ok := errors.AsType[*river.JobSnoozeError](err)
 		if !ok || snooze.Duration != tc.want {
 			t.Errorf("%s: err = %v, want a snooze of %s", name, err, tc.want)
@@ -61,7 +61,7 @@ func TestAPostponementWaitsWithinTheRescheduleBounds(t *testing.T) {
 // A call that was made and failed is a failure, however it is typed: it
 // spends a try instead of waiting.
 func TestACallThatTrippedTheProviderIsNoWait(t *testing.T) {
-	err := FaultForKind(context.Background(), "k", notNow{called: true})
+	err := FaultForKind(context.Background(), Composed{}, "k", notNow{called: true})
 	if _, snoozed := errors.AsType[*river.JobSnoozeError](err); snoozed {
 		t.Errorf("err = %v, want a failed try, not a wait", err)
 	}

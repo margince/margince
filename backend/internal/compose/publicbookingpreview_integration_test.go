@@ -48,6 +48,7 @@ func fetchBookingPreview(t *testing.T, server http.Handler, method, slug string)
 }
 
 func TestALengthLinkPreviewNamesItsLengthThroughTheRealRoute(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	slug := hostWithBookingPage(t, e, true)
 	store := e.Activities.WithPublicBaseURL(previewOrigin).WithSchedulingCalendar(privateCalendar{}).WithSchedulingBrand(e.Contacts)
@@ -59,7 +60,7 @@ func TestALengthLinkPreviewNamesItsLengthThroughTheRealRoute(t *testing.T) {
 	if _, err := store.SaveSchedulingProfile(e.Admin(), profile); err != nil {
 		t.Fatal(err)
 	}
-	server := New(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), withConnectedCalendar(), WithPublicBaseURL(previewOrigin))
+	server := New(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), nil, withConnectedCalendar(), WithPublicBaseURL(previewOrigin))
 	page := previewOrigin + "/book/" + slug
 	for query, want := range map[string][]string{
 		"?l=15": {"a 15-minute meeting", `href="/#/book/` + slug + `?l=15"`, `<link rel="canonical" href="` + page + `?l=15">`, `<meta property="og:url" content="` + page + `?l=15">`},
@@ -238,10 +239,11 @@ func TestRevokedAndMissingBookingPreviewsAre404WithNoHost(t *testing.T) {
 }
 
 func TestAGuestTokenRouteHasNoPreviewCard(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	theCompanyExists(t, e)
 	hostWithBookingPage(t, e, true)
-	server := New(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), withConnectedCalendar(), WithPublicBaseURL(previewOrigin))
+	server := New(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), nil, withConnectedCalendar(), WithPublicBaseURL(previewOrigin))
 	for _, path := range []string{"/v1/public/meeting/private-token/preview", "/v1/public/proposal/private-token/preview"} {
 		response := httptest.NewRecorder()
 		server.ServeHTTP(response, httptest.NewRequest(http.MethodGet, path, nil))

@@ -82,8 +82,9 @@ func (s *systemReadEnv) traceRows(t *testing.T, read string, actAs ids.UUID) int
 }
 
 func TestASeatReadIsRefusedForAnyoneButTheUnitsServiceMember(t *testing.T) {
+	t.Parallel()
 	s := setupSystemRead(t)
-	composeReader(t, extension.SystemReadCompanies, extension.SystemReadMailContent, extension.SystemReadDirectory)
+	s.declare(extension.SystemReadCompanies, extension.SystemReadMailContent, extension.SystemReadDirectory)
 	company := s.company(t, "Shown GmbH", s.Rep1)
 	mail := s.email(t, "workspace", "")
 	s.connect(t, s.Rep1)
@@ -116,8 +117,9 @@ func TestASeatReadIsRefusedForAnyoneButTheUnitsServiceMember(t *testing.T) {
 }
 
 func TestALimitedSeatSeesOnlyTheCompaniesTheAppShowsIt(t *testing.T) {
+	t.Parallel()
 	s := setupSystemRead(t)
-	composeReader(t, extension.SystemReadCompanies)
+	s.declare(extension.SystemReadCompanies)
 	seat := s.serviceSeat(t, seatOwnGrants)
 	mine, theirs := s.company(t, "Mine GmbH", seat), s.company(t, "Theirs GmbH", s.Rep1)
 	as := extension.UserID(seat.String())
@@ -148,8 +150,9 @@ func TestALimitedSeatSeesOnlyTheCompaniesTheAppShowsIt(t *testing.T) {
 }
 
 func TestMailContentAnswersAsTheSeatMayReadTheMail(t *testing.T) {
+	t.Parallel()
 	s := setupSystemRead(t)
-	composeReader(t, extension.SystemReadMailContent)
+	s.declare(extension.SystemReadMailContent)
 	seat := s.serviceSeat(t, seatReaderGrants)
 	open := s.email(t, "workspace", "body = repeat('x', 9000)")
 	refused := map[string]ids.UUID{
@@ -207,8 +210,9 @@ func TestMailContentAnswersAsTheSeatMayReadTheMail(t *testing.T) {
 }
 
 func TestMailContentIsHiddenFromASeatWithoutTheActivityGrant(t *testing.T) {
+	t.Parallel()
 	s := setupSystemRead(t)
-	composeReader(t, extension.SystemReadMailContent)
+	s.declare(extension.SystemReadMailContent)
 	seat := s.serviceSeat(t, `{"objects":{"company":{"read":true}},"row_scope":"all"}`)
 	mail := s.email(t, "workspace", "")
 	var err error
@@ -222,8 +226,9 @@ func TestMailContentIsHiddenFromASeatWithoutTheActivityGrant(t *testing.T) {
 }
 
 func TestTheRoleReadNeedsTheRosterAndHidesWhichRolesExist(t *testing.T) {
+	t.Parallel()
 	s := setupSystemRead(t)
-	composeReader(t, extension.SystemReadDirectory)
+	s.declare(extension.SystemReadDirectory)
 	s.WsExec(t, `INSERT INTO role (key, name) VALUES ('reviewer', 'Reviewer')`)
 	s.WsExec(t, `INSERT INTO role_assignment (role_id, user_id) SELECT r.id, $1 FROM role r WHERE r.key = 'reviewer'`, s.Rep1)
 	reader := s.serviceSeat(t, seatReaderGrants)

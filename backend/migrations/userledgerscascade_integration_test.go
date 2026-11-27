@@ -14,6 +14,7 @@ import (
 // non-null. Nothing sweeps a row that names nobody. So deleting the member must
 // succeed and take those rows along, never refuse or orphan them.
 func TestDeletingAMemberTakesTheirRunLedgersWithThem(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	headSchema(t, conn)

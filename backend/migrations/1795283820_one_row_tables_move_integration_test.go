@@ -16,6 +16,7 @@ import (
 // The upgrade keeps what the five one-row tables and the bar table held.
 // A rollback returns each row to its table.
 func TestTheOneRowTablesAndTheBarsMoveAndComeBack(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	resetSchema(t, conn)

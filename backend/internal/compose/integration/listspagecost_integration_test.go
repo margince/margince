@@ -72,6 +72,7 @@ func (f *listsPageFixture) readPage(t *testing.T) ([]crmcontracts.List, int64) {
 }
 
 func TestTheListLibraryReadsAnyNumberOfListsInTheSameStatements(t *testing.T) {
+	t.Parallel()
 	f := newListsPageFixture(t)
 	f.addLists(t, 2)
 	few, fewStatements := f.readPage(t)
@@ -99,6 +100,7 @@ func TestTheListLibraryReadsAnyNumberOfListsInTheSameStatements(t *testing.T) {
 }
 
 func TestALiveListThatNoLongerCompilesLeavesTheOthersCounted(t *testing.T) {
+	t.Parallel()
 	f := newListsPageFixture(t)
 	f.addLists(t, 2)
 	f.e.WsExec(t, `UPDATE list SET definition = '{"field": "no_such_field", "op": "eq", "value": "x"}' WHERE id = $1`, f.list)
@@ -118,6 +120,7 @@ func TestALiveListThatNoLongerCompilesLeavesTheOthersCounted(t *testing.T) {
 }
 
 func TestABrokenLiveListIsRefusedToAReaderWhoMayNotReadItsRecords(t *testing.T) {
+	t.Parallel()
 	f := newListsPageFixture(t)
 	f.e.WsExec(t, `UPDATE list SET definition = '{"field": "no_such_field", "op": "eq", "value": "x"}' WHERE id = $1`, f.list)
 	perms := liveListReaderPerms()
@@ -133,6 +136,7 @@ func TestABrokenLiveListIsRefusedToAReaderWhoMayNotReadItsRecords(t *testing.T) 
 }
 
 func TestTheListLibraryUsesTheSameCountsAsOneList(t *testing.T) {
+	t.Parallel()
 	f := newListsPageFixture(t)
 	f.addLists(t, 1)
 	lists, _ := f.readPage(t)

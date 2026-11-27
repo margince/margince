@@ -24,6 +24,7 @@ import (
 // the provider attested. After the task Rep2 is credited with nothing. Rep1 and
 // Rep3 still are, and the role mailbox's answer stays on the meeting.
 func TestTheTaskTakesTheSeatOffARoleMailboxAnswerAndLeavesTheRest(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	meeting := ids.NewV7()
 	e.WsExec(t, `INSERT INTO activity (id, kind, direction, meeting_status, subject, occurred_at, thread_key, source, captured_by)

@@ -912,6 +912,7 @@ func TestAnAgentsAskRecordsItsNoteAsModelProse(t *testing.T) {
 // A message cited as proof of an introduction must be about the ask's own
 // contact; one filed under nobody proves nothing and is refused.
 func TestAnIntroductionCannotRestOnAMessageNotAboutItsContact(t *testing.T) {
+	t.Parallel()
 	e := setupIntro(t)
 	id, err := e.store.Create(e.asUser(e.requester), e.ask())
 	if err != nil {

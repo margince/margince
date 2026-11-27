@@ -239,6 +239,7 @@ func (e *qualifyingEnv) relinkedMeeting(t *testing.T, offset time.Duration) {
 // Mutation: drop the `p.relinked_at IS NULL` guard from meetingQualifyingEvent
 // and this fails, the verdict allowed on a meeting the contact never sat in.
 func TestARelinkedMeetingParticipantIsNoGround(t *testing.T) {
+	t.Parallel()
 	e := setupQualifying(t)
 
 	e.relinkedMeeting(t, -24*time.Hour)

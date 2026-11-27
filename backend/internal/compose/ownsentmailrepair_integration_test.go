@@ -150,6 +150,7 @@ func TestMailTheSeatWroteFromAFormerAddressIsReadAgainAsTheirs(t *testing.T) {
 // clears it. Leaving it would break the check that ties a verdict to inbound
 // and fail the whole capture.
 func TestTheOwnSentMailClaimClearsTheReplyVerdict(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedRepairSeat(t, e)
 	id := seedReceivedMail(t, e, "verdict@previous-employer.example")

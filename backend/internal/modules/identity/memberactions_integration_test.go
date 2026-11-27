@@ -257,6 +257,7 @@ func TestTheRosterOffersTheSoleAdminARoleChangeThatKeepsAdmin(t *testing.T) {
 // blocks it on anyone else, and an offer there opens a dialog that cannot
 // confirm.
 func TestTheRosterOffersRemovalOnlyOnADeactivatedMember(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "allowed-remove")
 	h := NewHandlers(e.svc)
 	active := e.seat(t, "remove-active", "rep")

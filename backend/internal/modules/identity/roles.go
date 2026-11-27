@@ -171,7 +171,7 @@ func (s *Service) SetRoleObjectGrant(ctx context.Context, actor Identity, roleKe
 	}
 	var updated roleRow
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		live, err := lockAsRoleAdmin(ctx, tx, actor, principal.ActionUpdate)
+		live, err := lockAsRoleAdmin(ctx, tx, s.rbac, actor, principal.ActionUpdate)
 		if err != nil {
 			return err
 		}
@@ -319,13 +319,13 @@ func grantAdded(before, after storedGrant) storedGrant {
 // now and asks the admission again. The request's identity was read before the
 // lock, so a demotion that committed in between is only seen here. It returns
 // the caller as the database holds them, and the widening checks use that one.
-func lockAsRoleAdmin(ctx context.Context, tx pgx.Tx, actor Identity, action principal.Action) (Identity, error) {
+func lockAsRoleAdmin(ctx context.Context, tx pgx.Tx, rbac RbacObjects, actor Identity, action principal.Action) (Identity, error) {
 	if err := lockAuthorization(ctx, tx); err != nil {
 		return actor, err
 	}
 	live := actor
 	var err error
-	if live.Roles, live.Teams, live.Permissions, err = loadGrants(ctx, tx, actor.UserID); err != nil {
+	if live.Roles, live.Teams, live.Permissions, err = loadGrants(ctx, tx, rbac, actor.UserID); err != nil {
 		return actor, err
 	}
 	if err := requireRoleAdmin(actorCtx(ctx, live), action); err != nil {

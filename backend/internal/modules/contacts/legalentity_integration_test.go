@@ -357,6 +357,7 @@ func TestTheDefaultEntityReadsTheAnchorCompany(t *testing.T) {
 //
 // Mutation: drop the nil in scanLegalEntity and this fails.
 func TestAStoredDefaultCountryIsNeverRead(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	id := defaultEntity(t, e)
 	ctx := context.Background()
@@ -384,6 +385,7 @@ func TestAStoredDefaultCountryIsNeverRead(t *testing.T) {
 // The jurisdiction is stored apart from the address country and refused on the
 // default entity. A change of it carries the floor of the old one.
 func TestAnEntityStoresItsJurisdictionApartFromItsCountry(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	admin := actingAs(e, "admin", entityAdmin)
 	created, err := e.store.CreateLegalEntity(admin, LegalEntityInput{

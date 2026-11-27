@@ -197,6 +197,7 @@ func sentCarrying(prompts []string, text string) int {
 // A message whose solo answer stays below the floor is asked in one batch and
 // once alone. It is not asked again under the same prompt.
 func TestTheClassifyPassAsksAnUnsureMessageOnceAcrossPasses(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	unsure := seedUnlabeledEmail(t, e, "Note "+unsureMarker)
 	ordinary := seedUnlabeledEmail(t, e, "please send the offer")
@@ -219,6 +220,7 @@ func TestTheClassifyPassAsksAnUnsureMessageOnceAcrossPasses(t *testing.T) {
 }
 
 func TestTheOwedPassAsksAnUnsureMessageOnceAcrossPasses(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	unsure := seedWaitingMail(t, e, "Note "+unsureMarker)
 	ordinary := seedWaitingMail(t, e, "Monatsreporting Juli")
@@ -244,6 +246,7 @@ func TestTheOwedPassAsksAnUnsureMessageOnceAcrossPasses(t *testing.T) {
 // A full batch of unsure messages at the head of the backlog does not end the
 // pass. Once they are stamped, the newer message behind them is labeled.
 func TestTenUnsureMessagesDoNotHoldBackANewerOne(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	brain := &scriptedClassifyBrain{confidence: map[string]float64{}, soloStaysLow: true}
 	for i := range classifyBatchSize {
@@ -264,6 +267,7 @@ func TestTenUnsureMessagesDoNotHoldBackANewerOne(t *testing.T) {
 // A verdict reached under a retired prompt is re-judged once. An unsure answer
 // under the current one leaves the old verdict standing and is not asked again.
 func TestTheRejudgeSweepAsksAnUnsureMessageOnce(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	stale := seedWaitingMail(t, e, "Note "+unsureMarker)
 	store := activities.NewStore(InstallationDB(e.Pool))
@@ -285,6 +289,7 @@ func TestTheRejudgeSweepAsksAnUnsureMessageOnce(t *testing.T) {
 // A stamp answers for the text the model read. Once a member edits the
 // subject, both sweeps ask about the message again.
 func TestAnEditedMessageIsAskedAgainAfterAnUnsureAnswer(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	unlabeled := seedUnlabeledEmail(t, e, "FYI "+unsureMarker)
 	waiting := seedWaitingMail(t, e, "FYI "+unsureMarker)

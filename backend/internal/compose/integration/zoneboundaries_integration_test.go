@@ -43,6 +43,7 @@ func inWorkspaceTx(t *testing.T, e *Env, fn func(ctx context.Context, tx pgx.Tx)
 // A pause ends at the start of the picked day in the owner's own zone, and in
 // the installation's zone when the owner has none.
 func TestAPauseEndsAtTheStartOfItsDayInTheOwnersZone(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	useInstallationZone(t, e, losAngeles)
 	pipeline, open, _ := DealFixture(t, e)
@@ -97,6 +98,7 @@ func TestAPauseEndsAtTheStartOfItsDayInTheOwnersZone(t *testing.T) {
 // Kiritimati is ahead of UTC and Pago Pago behind it. One of the two always
 // sits on another day, whatever time the suite runs at.
 func TestADepartureDayIsJudgedInTheInstallationZone(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	// The predicate reads the database clock. So the zone and its day come from
 	// that clock, with plain AT TIME ZONE.
@@ -129,6 +131,7 @@ func TestADepartureDayIsJudgedInTheInstallationZone(t *testing.T) {
 // One instant names one rate day, the installation's, in the lookup that
 // converts a figure and in the SQL that converts a list.
 func TestARateIsReadAtTheInstallationDayOfAnInstant(t *testing.T) {
+	t.Parallel()
 	west := time.Date(2026, 8, 20, 6, 30, 0, 0, time.UTC)
 	east := time.Date(2026, 8, 19, 18, 30, 0, 0, time.UTC)
 	for _, tc := range []struct {
@@ -180,6 +183,7 @@ func TestARateIsReadAtTheInstallationDayOfAnInstant(t *testing.T) {
 // A price takes effect on the installation's day, so one entered "today" is
 // accepted and yesterday's is refused, wherever that day sits against UTC.
 func TestAModelRateIsEffectiveOnTheInstallationDay(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name, zone string
 		at         time.Time
@@ -222,6 +226,7 @@ func TestAModelRateIsEffectiveOnTheInstallationDay(t *testing.T) {
 
 // The day an instant falls on is cut by one function in SQL, the installation's.
 func TestTheInstallationDayOfAnInstantWestAndEastOfUTC(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	for _, tc := range []struct{ zone, at, day string }{
 		{losAngeles, "2026-08-20T06:30:00Z", "2026-08-19"},

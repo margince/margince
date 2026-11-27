@@ -403,6 +403,7 @@ func TestAbsorbLeavesTheEchosDealLinkBehindWhenTheSurvivorHasOne(t *testing.T) {
 // The echo's deal link comes over with its mark, so a colleague's "not about
 // this deal" on the echo still holds on the survivor.
 func TestAbsorbCarriesTheMarkOnTheEchosDealLink(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	survivor := e.seedSentEmail(t, mintedIdentity)
 	echo := e.seedCapturedEcho(t)

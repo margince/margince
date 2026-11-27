@@ -116,7 +116,7 @@ func TestCommsAdapterSharesTheGovernedPaths(t *testing.T) {
 	// The REAL delivery machinery, because this suite asserts that an
 	// unconsented send is refused and the engine refuses at staging — inside
 	// commsStager, which a double replaces.
-	adapter := newCommsAdapter(e.Pool, nil, SendPath{Delivery: realDeliveryStager(t, e)})
+	adapter := newCommsAdapter(e.Pool, nil, nil, SendPath{Delivery: realDeliveryStager(t, e)})
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.SchedulerPerms)
 
 	anchorID := ids.NewV7()

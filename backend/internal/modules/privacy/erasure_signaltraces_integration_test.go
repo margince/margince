@@ -93,6 +93,7 @@ func (f signalTraceFixture) text(t *testing.T, sql string, args ...any) string {
 }
 
 func TestScrubbingASubjectsSignalsReplacesTheDedupeKeyAndKeepsOthers(t *testing.T) {
+	t.Parallel()
 	for _, cause := range scrubCauses {
 		t.Run(cause, func(t *testing.T) {
 			f := seedSignalTraces(t)
@@ -115,6 +116,7 @@ func TestScrubbingASubjectsSignalsReplacesTheDedupeKeyAndKeepsOthers(t *testing.
 }
 
 func TestScrubbingASubjectReplacesTheReasonOfTheSuggestionsNamingThem(t *testing.T) {
+	t.Parallel()
 	for _, cause := range scrubCauses {
 		t.Run(cause, func(t *testing.T) {
 			f := seedSignalTraces(t)
@@ -132,6 +134,7 @@ func TestScrubbingASubjectReplacesTheReasonOfTheSuggestionsNamingThem(t *testing
 }
 
 func TestErasingMessagesReplacesTheReasonOfTheSuggestionsOnThem(t *testing.T) {
+	t.Parallel()
 	f := seedSignalTraces(t)
 	if err := redactLinkSuggestionReasons(f.ctx, f.tx, nil, []ids.UUID{f.activity}); err != nil {
 		t.Fatal(err)
@@ -145,6 +148,7 @@ func TestErasingMessagesReplacesTheReasonOfTheSuggestionsOnThem(t *testing.T) {
 }
 
 func TestScrubbingASubjectWithholdsTheAuditImagesOfTheirCorrectedSignals(t *testing.T) {
+	t.Parallel()
 	for _, cause := range scrubCauses {
 		t.Run(cause, func(t *testing.T) {
 			f := seedSignalTraces(t)
@@ -170,6 +174,7 @@ func TestScrubbingASubjectWithholdsTheAuditImagesOfTheirCorrectedSignals(t *test
 }
 
 func TestErasureLeavesTheLinkSecretsForThePassAfterTheCommit(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	tx := subjectColumnsTx(ctx, t)
 	ws, user, activity, delivery := ids.NewV7(), ids.NewV7(), ids.NewV7(), ids.NewV7()
@@ -198,6 +203,7 @@ func TestErasureLeavesTheLinkSecretsForThePassAfterTheCommit(t *testing.T) {
 }
 
 func TestScrubbingASubjectEmptiesTheEvidenceOfOrdinarySignalsAboutThem(t *testing.T) {
+	t.Parallel()
 	for _, cause := range scrubCauses {
 		t.Run(cause, func(t *testing.T) {
 			f := seedSignalTraces(t)
@@ -218,6 +224,7 @@ func TestScrubbingASubjectEmptiesTheEvidenceOfOrdinarySignalsAboutThem(t *testin
 }
 
 func TestScrubbingASubjectEmptiesDerivedSignalsOnOtherRecordsThatCiteThem(t *testing.T) {
+	t.Parallel()
 	for _, cause := range scrubCauses {
 		t.Run(cause, func(t *testing.T) {
 			f := seedSignalTraces(t)

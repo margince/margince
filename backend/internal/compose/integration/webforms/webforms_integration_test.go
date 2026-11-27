@@ -397,6 +397,7 @@ func TestABrowserFormRefusesWhatItShouldNotLand(t *testing.T) {
 }
 
 func TestAPostWithTextThatIsNotValidUTF8IsRefusedAndLandsNothing(t *testing.T) {
+	t.Parallel()
 	e := setupFormsApp(t)
 	form := createForm(t, e, integration.AnyMap{"name": "Contact", "sender": "browser", "allowed_origins": []string{siteOrigin}})
 	const email = "broken-text@visitor.example"
@@ -565,6 +566,7 @@ func TestAPausedFormIsGoneAndAnArchivedOneIsAbsent(t *testing.T) {
 // A form left on a German page after it was archived answers the visitor's
 // browser with a page they can read. A script still gets the problem.
 func TestAPlainPostToAnArchivedFormGetsAPageInTheVisitorsLanguage(t *testing.T) {
+	t.Parallel()
 	e := setupFormsApp(t)
 	form := createForm(t, e, integration.AnyMap{"name": "Contact", "sender": "browser", "allowed_origins": []string{siteOrigin}})
 	if status := e.Call(t, "DELETE", "/v1/web-forms/"+form.ID, nil, nil, nil); status != http.StatusOK {
@@ -733,6 +735,7 @@ func TestAFormKnowsWhenItLastLandedAPost(t *testing.T) {
 // A visitor's name, company and title past their columns' limit land cut on the
 // lead; the note keeps what they typed. A form post never fails on its length.
 func TestAFormPostWithLongNameCompanyAndTitleLandsTheLeadCut(t *testing.T) {
+	t.Parallel()
 	e := setupFormsApp(t)
 	form := createForm(t, e, integration.AnyMap{"name": "Contact", "sender": "browser", "allowed_origins": []string{siteOrigin}})
 	long := strings.Repeat("y", 200)

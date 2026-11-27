@@ -129,7 +129,7 @@ func (s *Service) ResendInvite(ctx context.Context, actor Identity, userID ids.U
 	var member userRow
 	raw, _, err := s.issueSetPasswordToken(ctx, actor, userID, resendTarget, true, func(tx pgx.Tx) error {
 		var err error
-		member, err = readMemberTx(ctx, tx, actor, userID)
+		member, err = readMemberTx(ctx, tx, s.rbac, actor, userID)
 		return err
 	})
 	if err != nil {

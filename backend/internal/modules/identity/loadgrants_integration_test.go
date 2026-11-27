@@ -26,12 +26,12 @@ func (e *revocationEnv) authorMasks(t *testing.T, key string, masks ...principal
 			t.Fatalf("masking %s on %s: %v", m.Field, key, err)
 		}
 	}
-	e.dropMasksAfter(t, key)
 }
 
 // A seat resolved with others in one call gets the union of its roles' masks,
 // distinct and ordered. That is what loadFieldMasks answers for those roles.
 func TestASeatWithTwoRolesHoldsTheUnionOfTheirMasks(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "mask-union")
 	first := e.customRole(t, "Masked first", "rep", nil)
 	second := e.customRole(t, "Masked second", "rep", nil)
@@ -60,7 +60,7 @@ func TestASeatWithTwoRolesHoldsTheUnionOfTheirMasks(t *testing.T) {
 	var wantBoth, wantSecond []principal.FieldMask
 	err := e.svc.db.Tx(e.wsCtx(e.admin), func(tx pgx.Tx) error {
 		var err error
-		if got, err = loadGrantsFor(context.Background(), tx, []ids.UUID{both.UUID, onlySecond.UUID, e.member.UserID.UUID}); err != nil {
+		if got, err = loadGrantsFor(context.Background(), tx, e.svc.rbac, []ids.UUID{both.UUID, onlySecond.UUID, e.member.UserID.UUID}); err != nil {
 			return err
 		}
 		if wantBoth, err = loadFieldMasks(context.Background(), tx, []string{first, second}); err != nil {

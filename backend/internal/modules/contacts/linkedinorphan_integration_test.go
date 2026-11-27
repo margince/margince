@@ -58,6 +58,7 @@ func (e *dedupeEnv) statusOf(t *testing.T, id ids.UUID) (string, *ids.UUID) {
 }
 
 func TestASuggestionWhoseContactIsArchivedIsReleasedToUnmatched(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	e.seedSuggestedAndreas(t)
 	_, contact := e.ghostStatus(t, suggestedGhost)
@@ -95,6 +96,7 @@ func TestASuggestionWhoseContactIsArchivedIsReleasedToUnmatched(t *testing.T) {
 }
 
 func TestAMergeMovesASuggestionToTheSurvivor(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	e.seedSuggestedAndreas(t)
 	ghost := e.ghostID(t)
@@ -115,6 +117,7 @@ func TestAMergeMovesASuggestionToTheSurvivor(t *testing.T) {
 }
 
 func TestReleasingOrphansLeavesConfirmedAndRefusedRowsAlone(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	e.seedSuggestedAndreas(t)
 	_, contact := e.ghostStatus(t, suggestedGhost)

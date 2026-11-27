@@ -86,6 +86,7 @@ func TestTheAccountReachWalkNeverScansEveryActivity(t *testing.T) {
 }
 
 func TestCollapsedCompanyHistoryDoesNotRescanTheActivityTableForEachGroup(t *testing.T) {
+	t.Parallel()
 	e := setupPromises(t)
 	ctx := e.as()
 	tx, err := e.owner.Begin(ctx)

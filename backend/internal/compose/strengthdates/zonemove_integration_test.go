@@ -36,6 +36,7 @@ func shiftedDay(now time.Time) (zone string, entry time.Time) {
 }
 
 func TestAZoneMoveLeavesNoStoredStrengthDateTheHistoryWouldNotGive(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	admin := e.Admin()
 	now := time.Now().UTC().Truncate(time.Microsecond)

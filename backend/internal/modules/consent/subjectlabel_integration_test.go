@@ -38,6 +38,7 @@ func (e *capEnv) advertising(subject string) commsauthz.Request {
 var errRolledBack = errors.New("rolled back")
 
 func TestStagingRefusesAnAdvertisingSubjectWithoutItsLabel(t *testing.T) {
+	t.Parallel()
 	e, gate := labelledRecipient(t)
 	for subject, want := range map[string]string{
 		"Our offer":      commsauthz.ReasonSubjectLabelMissing,
@@ -60,6 +61,7 @@ func TestStagingRefusesAnAdvertisingSubjectWithoutItsLabel(t *testing.T) {
 }
 
 func TestThePreviewRefusesAnAdvertisingSubjectWithoutItsLabel(t *testing.T) {
+	t.Parallel()
 	e, gate := labelledRecipient(t)
 	set, err := gate.Preview(e.ctx, e.advertising("Our offer"))
 	if err != nil {

@@ -31,6 +31,7 @@ func connectForProbe(t *testing.T) *pgx.Conn {
 // A statement stalled on a lock is named with its lock wait and the session
 // that holds the lock. The report then tells it from one that is slow to run.
 func TestTheLongestRunningStatementSaysWhatItWaitsOn(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	holder, waiter, probe := connectForProbe(t), connectForProbe(t), connectForProbe(t)
 	if _, err := LongestRunning(ctx, probe, time.Millisecond); !errors.Is(err, pgx.ErrNoRows) {
@@ -77,6 +78,7 @@ func TestTheLongestRunningStatementSaysWhatItWaitsOn(t *testing.T) {
 // A probe asked inside a transaction still ages a statement by the moment it
 // looks, not by when its own transaction began.
 func TestTheLongestRunningStatementIsSeenFromInsideATransaction(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	holder, waiter, probeConn := connectForProbe(t), connectForProbe(t), connectForProbe(t)
 	probe, err := probeConn.Begin(ctx)

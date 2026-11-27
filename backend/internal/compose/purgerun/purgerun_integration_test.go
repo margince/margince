@@ -131,6 +131,7 @@ func sweep(t *testing.T, e *integration.Env) purgerun.SweepResult {
 // Rows without a receipt get one receipt, written from the rows, and another
 // rule's certified purge is left as it was.
 func TestTheSweepWritesTheMissingReceiptOnce(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	first := seedMail(t, e, address, "Eins")
 	rule := seedRule(t, e, address)
@@ -164,6 +165,7 @@ func TestTheSweepWritesTheMissingReceiptOnce(t *testing.T) {
 // Two purges of one rule run one after the other, and each certifies only what
 // it destroyed.
 func TestTwoConcurrentPurgesOfOneRuleGetTheirOwnReceipts(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedMail(t, e, address, "Eins")
 	seedMail(t, e, address, "Zwei")
@@ -193,6 +195,7 @@ func TestTwoConcurrentPurgesOfOneRuleGetTheirOwnReceipts(t *testing.T) {
 // A row that commits after another run's receipt belongs to its own run's
 // receipt, and to no other.
 func TestARowCommittedAfterAnotherRunsReceiptIsCountedByItsOwnRun(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	a, b := seedMail(t, e, address, "Eins"), seedMail(t, e, address, "Zwei")
 	rule := seedRule(t, e, address)
@@ -213,6 +216,7 @@ func TestARowCommittedAfterAnotherRunsReceiptIsCountedByItsOwnRun(t *testing.T) 
 
 // Removing a rule after a purge that stopped leaves the receipt behind.
 func TestRemovingARuleAfterAStoppedPurgeLeavesItsReceipt(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	mail := seedMail(t, e, address, "Eins")
 	rule := seedRule(t, e, address)
@@ -232,6 +236,7 @@ func TestRemovingARuleAfterAStoppedPurgeLeavesItsReceipt(t *testing.T) {
 
 // A rule purged again after new mail arrived gets a second receipt of its own.
 func TestASecondPurgeOfOneRuleGetsItsOwnReceipt(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedMail(t, e, address, "Eins")
 	rule := seedRule(t, e, address)
@@ -251,6 +256,7 @@ func TestASecondPurgeOfOneRuleGetsItsOwnReceipt(t *testing.T) {
 // The sweep leaves a run alone while it holds its lock, and certifies it once
 // the run is over without a receipt.
 func TestTheSweepLeavesARunInFlightAlone(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	mail := seedMail(t, e, address, "Eins")
 	rule := seedRule(t, e, address)
@@ -273,6 +279,7 @@ func TestTheSweepLeavesARunInFlightAlone(t *testing.T) {
 
 // A seat's personal-mail pass that stopped gets its receipt the same way.
 func TestTheSweepCertifiesAStoppedPersonalPass(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	mail := seedMail(t, e, address, "Eins")
 	err := purgerun.Hold(ctxFor(e, e.Rep1), e.Pool, purgerun.Seat(e.Rep1), func(ctx context.Context, _ ids.UUID) error {
@@ -292,6 +299,7 @@ func TestTheSweepCertifiesAStoppedPersonalPass(t *testing.T) {
 // A redaction can strip what a release row carried, so a release is counted by
 // its run and not by what the row says.
 func TestAReleaseIsStillCountedAfterItsMessageIsErased(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	shared := seedMail(t, e, address, "Geteilt")
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {

@@ -188,6 +188,7 @@ func TestCustomFieldRetire_PreservesColumnAndValues(t *testing.T) {
 }
 
 func TestCustomFieldCreate_OntoARetiredFieldsName_TakesAFreeColumnAndLeavesTheOldDataAlone(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	svc := customfieldsmod.NewService(e.Pool, integration.SchemaPool(t))
@@ -252,6 +253,7 @@ func TestCustomFieldCreate_OntoARetiredFieldsName_TakesAFreeColumnAndLeavesTheOl
 }
 
 func TestCustomFieldRename_OntoARetiredFieldsName_IsAllowedButOntoALiveOneIsRefused(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := customfieldsmod.NewService(e.Pool, integration.SchemaPool(t))
 	ctx := e.As(e.Rep1, nil, integration.CustomFieldAdminPerms)
@@ -466,6 +468,7 @@ func TestCustomFieldRBAC_ReadGrantCannotChangeSchema(t *testing.T) {
 // Removing a choice changes records, so it needs the grant to update the
 // field's object as well as custom_field. Adding one changes no record.
 func TestRemovingAChoiceNeedsTheGrantToUpdateTheRecords(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := customfieldsmod.NewService(e.Pool, integration.SchemaPool(t))
 	ctx := e.As(e.Rep1, nil, integration.CustomFieldAdminPerms)

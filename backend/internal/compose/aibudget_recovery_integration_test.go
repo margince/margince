@@ -220,6 +220,7 @@ func setRecoveryAllowance(t *testing.T, e *integration.Env, tokens int64) {
 // A step the router declines reaches the runner as the runner's own refusal,
 // so the run says why no provider was called. A call that was made is not one.
 func TestAnAgentStepTheRouterDeclinedReachesTheRunnerAsItsReason(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.WithWorkspaceID(t.Context(), e.WS)
 	meter := ai.NewMeter(InstallationDB(e.Pool))

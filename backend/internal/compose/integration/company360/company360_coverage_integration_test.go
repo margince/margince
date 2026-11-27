@@ -137,6 +137,7 @@ func TestCoverageReportsAChampionGapOnACompleteCommittee(t *testing.T) {
 // A stored role is free text, so " Economic_Buyer " holds the economic buyer
 // seat and only the champion is a gap.
 func TestCoverageReadsAHeldRoleInAnyCase(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := e.SeedCompany(t, "Brandt GmbH", nil)
 	pipeline, openStage, _ := integration.DealFixture(t, e)

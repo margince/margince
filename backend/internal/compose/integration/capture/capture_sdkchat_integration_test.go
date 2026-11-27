@@ -91,6 +91,7 @@ func unitChat(
 // the contact's sharing, through the real publish and patch paths, changes who
 // reads both in the same way.
 func TestAUnitsChatMessageFollowsItsContactsSharingExactlyAsMailDoes(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
@@ -155,6 +156,7 @@ func TestAUnitsChatMessageFollowsItsContactsSharingExactlyAsMailDoes(t *testing.
 // keeps one copy. Erasing the contact removes the file rows, queues the object
 // for deletion, and removes the original even though its payload names nothing about the contact.
 func TestAFileOnAUnitsMessageIsKeptOnceAndErasedWithItsContact(t *testing.T) {
+	t.Parallel()
 	blob := blobstore.NewMemory()
 	env := newCaptureEnvWithBlob(t, captureNow, blob)
 	e := env.e
@@ -252,6 +254,7 @@ func seedContactNamed(t *testing.T, e *integration.SearchEnv, name string) ids.U
 // payload names neither. Erasing one keeps the original for the other, and
 // erasing the second removes it.
 func TestAMessageFiledOnTwoSubjectsIsExportedForBothAndErasedWithTheLast(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnvWithBlob(t, captureNow, blobstore.NewMemory())
 	e := env.e
 	first, second := seedContactNamed(t, e, "First Subject"), seedContactNamed(t, e, "Second Subject")
@@ -306,6 +309,7 @@ func TestAMessageFiledOnTwoSubjectsIsExportedForBothAndErasedWithTheLast(t *test
 // An archived second subject still holds its link and its export, so erasing
 // the first keeps the original for it.
 func TestAnOriginalIsKeptForAnArchivedSecondSubject(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnvWithBlob(t, captureNow, blobstore.NewMemory())
 	e := env.e
 	first, second := seedContactNamed(t, e, "First"), seedContactNamed(t, e, "Archived")

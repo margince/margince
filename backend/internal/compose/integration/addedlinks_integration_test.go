@@ -36,6 +36,7 @@ func linkBody(company ids.UUID, url, extra string) string {
 }
 
 func TestAUserListsALinkOnACompanysDocuments(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	h := activities.NewHandlers(e.DB()).WithUploadLimit(uploadCeiling)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
@@ -91,6 +92,7 @@ func TestAUserListsALinkOnACompanysDocuments(t *testing.T) {
 }
 
 func TestALinkIsRefusedWhereItWouldMislead(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	h := activities.NewHandlers(e.DB()).WithUploadLimit(uploadCeiling)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)

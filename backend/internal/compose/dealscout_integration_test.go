@@ -444,6 +444,7 @@ func TestEvidenceFromAWithheldConversationIsIgnored(t *testing.T) {
 }
 
 func TestTheInstallationSwitchStopsOpeningAndReviving(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	e.GrantRole(t, e.AdminUser, "admin")
 	fresh, lost := e.SeedCompany(t, "Globex", &e.AdminUser), e.SeedCompany(t, "Initech", &e.AdminUser)

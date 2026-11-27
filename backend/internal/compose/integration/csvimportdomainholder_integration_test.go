@@ -47,6 +47,7 @@ func companyFacts(t *testing.T, e *apptest.AppEnv, id string) []string {
 }
 
 func TestACompanyRowOnAHeldDomainKeepsItsContactsLinkAndOnlyFillsEmptyFields(t *testing.T) {
+	t.Parallel()
 	stored := []string{"Example Telecom", "Example Telecom GmbH", "Fibre and mobile"}
 	for _, tc := range []struct {
 		name, fileName, fileLegal, warning string
@@ -100,6 +101,7 @@ func TestACompanyRowOnAHeldDomainKeepsItsContactsLinkAndOnlyFillsEmptyFields(t *
 // A domain held by a company the caller cannot see is still refused. The
 // contact's link to the row reports what it could not reach.
 func TestACompanyRowOnAHiddenHeldDomainStaysRefused(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	e.DescribeCompany(t)
 	colleague := createdID(t, e, "/v1/users", AnyMap{
@@ -134,6 +136,7 @@ func hasReasonCode(report importReportDTO, code string) bool {
 // A domain held by a company the importer may read but not change is refused
 // too. Filing the row onto it would edit a colleague's record.
 func TestACompanyRowOnADomainTheImporterCannotChangeStaysRefused(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	e.DescribeCompany(t)
 	var role struct {
@@ -164,6 +167,7 @@ func TestACompanyRowOnADomainTheImporterCannotChangeStaysRefused(t *testing.T) {
 // A row naming its company by id still overwrites the stored name. Only a
 // domain match the file did not ask for fills empty fields alone.
 func TestARowNamingItsCompanyByIDStillOverwritesItsName(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	named := createdID(t, e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Named Works"})
 	approveAndRead(t, e, namedCompanyZip(t, e, "ref,id,name,domain\nCO-7,"+named+",Renamed Works,\n").ID)
@@ -175,6 +179,7 @@ func TestARowNamingItsCompanyByIDStillOverwritesItsName(t *testing.T) {
 // A ref whose earlier run was undone binds nothing. Its row is filed onto the
 // company now holding its domain, and fills only empty fields there.
 func TestARefFromAnUndoneRunFillsOnlyEmptyFieldsOfTheDomainsHolder(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	files := map[string]string{"companies.csv": "ref,name,domain\nSRC-1,First Name,undone-ref.test\n"}
 	first := stageBundle(t, e, uploadZip(t, e, "undone.zip", zipBytes(t, files)).SourceRef, "undone", companyDomainParts)
@@ -200,6 +205,7 @@ func TestARefFromAnUndoneRunFillsOnlyEmptyFieldsOfTheDomainsHolder(t *testing.T)
 // An importer who may read companies but not update them files no row onto a
 // domain's holder. The row stays refused.
 func TestACompanyRowOnAHeldDomainNeedsTheCompanyUpdateGrant(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	e.DescribeCompany(t)
 	var role struct {
@@ -229,6 +235,7 @@ func TestACompanyRowOnAHeldDomainNeedsTheCompanyUpdateGrant(t *testing.T) {
 // A holder whose domain the store keeps in its Unicode spelling still takes a
 // row that writes the ASCII spelling.
 func TestACompanyRowFindsTheHolderOfAnotherSpellingOfItsDomain(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	holder := createdID(t, e, "/v1/companies", AnyMap{
 		"source": "manual", "display_name": "Bücher Haus", "domains": []AnyMap{{"domain": "idn-placeholder.test", "is_primary": true}},
@@ -255,6 +262,7 @@ func TestACompanyRowFindsTheHolderOfAnotherSpellingOfItsDomain(t *testing.T) {
 // The holder of a domain may appear after the test run. The import then
 // reports the match it meets and the values it kept.
 func TestTheImportReportsAMatchItMeetsAfterTheTestRun(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	run := heldDomainZip(t, e, "Example Telco Ltd", "")
 	if predicted := readImportReport(t, e, run.ID); predicted.Disposition.Created != 2 {
