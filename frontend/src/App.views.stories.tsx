@@ -40,8 +40,8 @@ export const Onboarding: Story = {
           tasks_enabled: false,
           onboarding_enabled: false,
         }),
-      "GET /company": () => jsonResponse({}, 404),
-      "GET /onboarding/state": () => jsonResponse({}, 404),
+      "GET /company": () => new Response(null, { status: 204 }),
+      "GET /onboarding/state": () => new Response(null, { status: 204 }),
       "GET /voice-profiles": () => jsonResponse({ data: [], page: {} }),
     });
     return (

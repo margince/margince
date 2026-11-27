@@ -486,7 +486,9 @@ describe("a saved draft", () => {
       let reads = 0;
       const sent = routes({
         "GET /mail-drafts": () =>
-          reads++ === 0 ? jsonResponse(SAVED) : problem("not_found", 404),
+          reads++ === 0
+            ? jsonResponse(SAVED)
+            : new Response(null, { status: 204 }),
       });
       const hook = hookFor(restored);
       await deleteThenUndo(user, hook, () => {

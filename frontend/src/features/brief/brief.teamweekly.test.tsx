@@ -103,10 +103,8 @@ function stubWeekly(
         ],
         page: { next_cursor: null, has_more: false },
       }),
-    "GET /weekly-reviews/latest": () =>
-      jsonResponse({ title: "Not Found" }, 404),
-    "GET /weekly-plans/current": () =>
-      jsonResponse({ title: "Not Found" }, 404),
+    "GET /weekly-reviews/latest": () => new Response(null, { status: 204 }),
+    "GET /weekly-plans/current": () => new Response(null, { status: 204 }),
     "GET /weekly-reviews/team": team,
   });
 }
@@ -227,10 +225,8 @@ describe("the team week's states", () => {
     ).toBeTruthy();
   });
 
-  it("says a team has no closed week yet on a 404", async () => {
-    stubWeekly("teams_led", [NORD], () =>
-      jsonResponse({ title: "Not Found" }, 404),
-    );
+  it("says a team has no closed week yet on a 204", async () => {
+    stubWeekly("teams_led", [NORD], () => new Response(null, { status: 204 }));
     render(<BriefScreen />);
 
     expect(await screen.findByText(en["teamweekly.noSnapshot"])).toBeTruthy();

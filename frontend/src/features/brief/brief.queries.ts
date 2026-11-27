@@ -44,7 +44,7 @@ export const morningBriefOptions = queryOptions({
   queryFn: async (): Promise<MorningBrief | null> => {
     const { data, error, response } = await api.GET("/brief");
     // No run yet is not a failure: it is a page that offers to make one.
-    if (response.status === 404) {
+    if (response.status === 204) {
       return null;
     }
     if (error) {
@@ -152,7 +152,7 @@ export function useBriefItemMark() {
 /**
  * The rep's weekly retrospective — the most recent, or a named week.
  *
- * `404` is not a failure. A rep whose first Monday has not come round yet has
+ * `204` is not a failure. A rep whose first Monday has not come round yet has
  * no review, and the page says so rather than showing an error.
  * `enabled` is false where nothing on screen reads the review, as on Today.
  */
@@ -170,7 +170,7 @@ export function useWeeklyReview(
           params: { query: week === undefined ? {} : { week } },
         },
       );
-      if (response.status === 404) {
+      if (response.status === 204) {
         return null;
       }
       if (error) {

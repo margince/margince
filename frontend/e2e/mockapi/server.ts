@@ -49,6 +49,10 @@ export function reply(body: unknown, status = 200): Handler {
   return ({ json }) => json(body, status);
 }
 
+// The answer of a read that finds nothing yet, as the app asks for it.
+export const nothingYet: Handler = ({ route }) =>
+  route.fulfill({ status: 204 });
+
 export const notFound = {
   type: "about:blank",
   title: "Not Found",

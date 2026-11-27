@@ -83,14 +83,14 @@ function readings(over: Partial<Readings> = {}): Readings {
 }
 
 // The section's own two reads, plus the session probe every screen makes. The
-// assurance read answers 404 — "nothing has looked yet" is that endpoint's
+// assurance read answers 204. "Nothing has looked yet" is that endpoint's
 // answer rather than its failure, and it is the ordinary state of a story.
 function routes(data: Readings): RouteMap {
   return {
     ...reportingStoryRoutes(forecastEvaluation),
     "GET /me": meRoute({ report_definition: ["read"] }),
     "GET /forecast": () => jsonResponse(data),
-    "GET /forecast/assurance": () => jsonResponse({}, 404),
+    "GET /forecast/assurance": () => new Response(null, { status: 204 }),
     "GET /forecast/assurance/preview": () =>
       jsonResponse({
         started: false,

@@ -22,7 +22,7 @@ import { phoneRowOf, stubWindowWidth } from "../../testing/phonerow.testkit";
 import { pretendReaderZone } from "../../testing/readerzone.testkit";
 import { PartnersScreen, PartnerTab } from "./partners";
 
-// The Partner tab on a company and the #/partners list. The tab reads a 404
+// The Partner tab on a company and the #/partners list. The tab reads a 204
 // from GET /companies/{id}/partner as "not a partner yet" and shows the set-up
 // form, never an error. The list reads GET /partners with kind, stage and cert
 // filters, and a row click opens that company.
@@ -133,7 +133,7 @@ describe("PartnerTab — not yet a partner", () => {
     let putHeader: string | null = null;
     stubFetch(async (url, method, request) => {
       if (url.includes("/companies/o-1/partner") && method === "GET") {
-        return jsonResponse({ title: "Not found", detail: "no partner" }, 404);
+        return new Response(null, { status: 204 });
       }
       if (url.includes("/companies/o-1/partner") && method === "PUT") {
         putHeader = request.headers.get("If-Match");
@@ -170,7 +170,7 @@ describe("PartnerTab — not yet a partner", () => {
   it("says what the margin tier pays and gives an example segment", async () => {
     stubFetch(async (url, method) => {
       if (url.includes("/companies/o-1/partner") && method === "GET") {
-        return jsonResponse({ title: "Not found", detail: "no partner" }, 404);
+        return new Response(null, { status: 204 });
       }
       throw new Error(`unexpected request ${method} ${url}`);
     });
@@ -197,7 +197,7 @@ describe("PartnerTab — a company editor without the partner grant", () => {
     let putBody: Record<string, unknown> | null = null;
     stubFetch(async (url, method, request) => {
       if (url.includes("/companies/o-1/partner") && method === "GET") {
-        return jsonResponse({ title: "Not found", detail: "no partner" }, 404);
+        return new Response(null, { status: 204 });
       }
       if (url.includes("/companies/o-1/partner") && method === "PUT") {
         putBody = JSON.parse(await request.text());
@@ -252,7 +252,7 @@ describe("PartnerTab — a seat without the company grant", () => {
   it("offers no set-up form, and says why", async () => {
     stubFetch(async (url, method) => {
       if (url.includes("/companies/o-1/partner") && method === "GET") {
-        return jsonResponse({ title: "Not found", detail: "no partner" }, 404);
+        return new Response(null, { status: 204 });
       }
       throw new Error(`unexpected request ${method} ${url}`);
     }, PARTNER_ONLY);

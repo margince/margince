@@ -82,9 +82,8 @@ function stubBrief(
         truncated: false,
       }),
     "GET /weekly-reviews/latest": () =>
-      review ? jsonResponse(review) : jsonResponse({ title: "Not Found" }, 404),
-    "GET /weekly-plans/current": () =>
-      jsonResponse({ title: "Not Found" }, 404),
+      review ? jsonResponse(review) : new Response(null, { status: 204 }),
+    "GET /weekly-plans/current": () => new Response(null, { status: 204 }),
     "GET /teams": () =>
       jsonResponse({ data: [], page: { next_cursor: null, has_more: false } }),
   });
