@@ -14,6 +14,8 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const (
@@ -34,7 +36,7 @@ var (
 
 func TestTheAIAccessPageAndTheSkillReadmeOfferTheSameConnections(t *testing.T) {
 	t.Parallel()
-	module := tsWithoutComments(readGateFile(t, aiConnectModule))
+	module := gatekit.TSWithoutComments(readGateFile(t, aiConnectModule))
 	paths := connectPathHelps(t, module)
 	readme := readGateFile(t, skillReadme)
 

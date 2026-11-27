@@ -75,11 +75,14 @@ it("says once, inside Done for you, that recent changes did not load, and Retry 
   answer = () => jsonResponse(night);
   await user.click(retry[0]);
   expect(await within(done).findByText("1 small change")).toBeTruthy();
-  const waiting = await screen.findByRole("region", {
-    name: en["magic.heading.firstBrief"],
+  // The decision waiting joins the day's own cards under Needs you.
+  const needsYou = await screen.findByRole("region", {
+    name: en["brief.first.title"],
   });
   expect(
-    within(waiting).getByRole("list", { name: en["magic.lane.needsYou"] }),
+    await within(needsYou).findByRole("list", {
+      name: en["magic.lane.needsYou"],
+    }),
   ).toBeTruthy();
   expect(screen.queryByText(en["magic.failed"])).toBeNull();
 });
@@ -175,4 +178,19 @@ it("reads the receipt again when the reader comes back to Home after a failure",
   expect(
     await within(await doneForYou()).findByText(en["magic.failed"]),
   ).toBeTruthy();
+});
+
+it("never calls the day caught up while a decision waits on the reader", async () => {
+  stubApi({ "GET /magic": () => jsonResponse(night) });
+  render(<BriefScreen />);
+  const needsYou = await screen.findByRole("region", {
+    name: en["brief.first.title"],
+  });
+  const waiting = await within(needsYou).findByRole("list", {
+    name: en["magic.lane.needsYou"],
+  });
+  expect(
+    within(waiting).getByRole("link", { name: en["magic.decide"] }),
+  ).toBeTruthy();
+  expect(screen.queryByText(en["brief.feed.caughtUp"])).toBeNull();
 });

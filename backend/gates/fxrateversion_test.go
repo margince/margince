@@ -77,6 +77,36 @@ func fxVersionStatementsIn(file *ast.File) []fxStatement {
 	return out
 }
 
+// flattenConcatenation joins the string operands of one `+` chain and marks
+// each literal it consumed, so the walk does not read it again on its own. A
+// non-literal operand becomes a space, so two words it separates stay apart.
+func flattenConcatenation(expr *ast.BinaryExpr, joined map[ast.Node]bool) (string, bool) {
+	var parts []string
+	var walk func(ast.Expr)
+	walk = func(node ast.Expr) {
+		switch typed := node.(type) {
+		case *ast.BinaryExpr:
+			if typed.Op == token.ADD {
+				walk(typed.X)
+				walk(typed.Y)
+				return
+			}
+			parts = append(parts, " ")
+		case *ast.BasicLit:
+			if text, isText := gatekit.LiteralText(typed); isText {
+				joined[typed] = true
+				parts = append(parts, text)
+				return
+			}
+			parts = append(parts, " ")
+		default:
+			parts = append(parts, " ")
+		}
+	}
+	walk(expr)
+	return strings.Join(parts, ""), len(parts) > 0
+}
+
 // buildsVersionRule reports whether the expression contains a call to the
 // version rule.
 func buildsVersionRule(node ast.Node) bool {

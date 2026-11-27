@@ -19,10 +19,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-// localDaySpellings are the ways code resolves a calendar day or zone.
+// localDaySpellings are the ways code resolves a calendar day or zone in text.
+// A hand floor to a day is the other way, read from the syntax by
+// isHandDayFloor, which the day-count zone gate asks too.
 var localDaySpellings = regexp.MustCompile(
 	`installationZone\(|TaskDue(Before|From|Order)SQL\(|InstallationZoneSQL|CURRENT_DATE|now\(\)::date|AT TIME ZONE|` +
-		`date_trunc\('day'|Truncate\(24 ?\* ?time\.Hour\)|TimezoneAppliedTx|ZoneAppliedTx|TodaySQL\(`)
+		`date_trunc\('day'|TimezoneAppliedTx|ZoneAppliedTx|TodaySQL\(`)
 
 // localDayWords holds a word of every localDaySpellings match, so a file with
 // none of them is skipped unscanned.
@@ -123,7 +125,8 @@ func TestEveryLocalDayComputationGoesThroughTheRuleOrIsDeclared(t *testing.T) {
 		if strings.HasSuffix(path, "_test.go") || strings.HasPrefix(path, "internal/contracts/") {
 			return
 		}
-		if !mayHoldFolded(text, localDayWords...) || !localDaySpellings.MatchString(text) {
+		spelling, computes := localDayComputation(t, path, text)
+		if !computes {
 			return
 		}
 		found++
@@ -136,7 +139,7 @@ func TestEveryLocalDayComputationGoesThroughTheRuleOrIsDeclared(t *testing.T) {
 		if !ok {
 			t.Errorf("%s works out a local day or zone (%s) without the day rule. Go through compose/dayrule or "+
 				"occurredday, or add it to the allow-list with the reason it is a combined surface",
-				path, localDaySpellings.FindString(text))
+				path, spelling)
 			return
 		}
 		allowed.Waived(t, prefix)
@@ -145,6 +148,40 @@ func TestEveryLocalDayComputationGoesThroughTheRuleOrIsDeclared(t *testing.T) {
 		t.Fatalf("found %d files that compute a local day, want at least %d: the census is too short", found, minimumLocalDayFiles)
 	}
 	allowed.AssertAllMatched(t)
+}
+
+// localDayComputation names how a file works out a local day or zone. That is
+// a spelling in its text, or a Truncate by a day in its syntax.
+func localDayComputation(t *testing.T, path, text string) (string, bool) {
+	t.Helper()
+	if mayHoldFolded(text, localDayWords...) {
+		if spelling := localDaySpellings.FindString(text); spelling != "" {
+			return spelling, true
+		}
+	}
+	if !strings.Contains(text, "Truncate") {
+		return "", false
+	}
+	file, err := gatekit.ParseFile(path, 0)
+	if err != nil {
+		t.Fatalf("parsing %s: %v", path, err)
+	}
+	return "a Truncate by a day", holdsAHandDayFloor(file)
+}
+
+// TestTheLocalDayCensusSeesAHandFloorInAnySpelling plants the floors the old
+// text spelling missed: a named hours constant, and the hours written first.
+func TestTheLocalDayCensusSeesAHandFloorInAnySpelling(t *testing.T) {
+	t.Parallel()
+	for _, floor := range []string{"24 * time.Hour", "24*time.Hour", "hoursPerDay * time.Hour", "time.Hour * 24"} {
+		file := parseGateFixture(t, "package p\nfunc f(a time.Time) time.Time { return a.UTC().Truncate("+floor+") }\n")
+		if !holdsAHandDayFloor(file) {
+			t.Errorf("the census does not see Truncate(%s) as a day floor", floor)
+		}
+	}
+	if holdsAHandDayFloor(parseGateFixture(t, "package p\nfunc f(a time.Time) time.Time { return a.Truncate(time.Hour) }\n")) {
+		t.Error("the census reads an hour floor as a day floor")
+	}
 }
 
 // Files that serve a member's own list and a combined screen from one path must

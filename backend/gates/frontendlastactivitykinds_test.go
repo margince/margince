@@ -55,7 +55,7 @@ func tsLastActivityKinds(t *testing.T) []string {
 	if end < 0 {
 		t.Fatalf("%s: LAST_ACTIVITY_KINDS is not closed by `] as const`", frontendLastActivity)
 	}
-	body = tsCommentInAcquisitionKinds.ReplaceAllString(body[:end], " ")
+	body = gatekit.TSWithoutComments(body[:end])
 	var kinds []string
 	for _, match := range tsQuotedEntry.FindAllStringSubmatch(body, -1) {
 		kinds = append(kinds, match[1]+match[2]+match[3])
