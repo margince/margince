@@ -50,9 +50,9 @@ func TestRefusedLeadFiltersNamesTheDialsASeatCannotRead(t *testing.T) {
 		}), []string{filterPartnerAccepted, leadPartnerField}},
 		{"a seat reading leads and partners", leadTeamReader(map[string]principal.ObjectGrant{
 			leadEntity: {Read: true}, partnerMaskObject: {Read: true},
-		}), []string{filterCountry, filterIndustry, filterPartnerAccepted, leadPartnerField, filterSizeBand}},
+		}), []string{filterCompanyID, filterCountry, filterIndustry, filterPartnerAccepted, leadPartnerField, filterSizeBand}},
 		{"a seat reading leads alone", leadTeamReader(leadReadOnly), []string{
-			filterCountry, filterIndustry, filterPartnerAccepted, leadPartnerField, filterSizeBand,
+			filterCompanyID, filterCountry, filterIndustry, filterPartnerAccepted, leadPartnerField, filterSizeBand,
 		}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
