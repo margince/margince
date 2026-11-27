@@ -23,7 +23,6 @@ import (
 	"fmt"
 	"go/ast"
 	"go/token"
-	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
@@ -151,12 +150,9 @@ func TestEveryRowScopeSpellingSaysWhichTableItBounds(t *testing.T) {
 // `partner_company` and no such table exists.
 func referenceColumns(t *testing.T, tables map[string]bool) map[string]string {
 	t.Helper()
-	catalog, err := gatekit.ReadFile(filepath.Join(repoRoot, headCatalogPath))
-	if err != nil {
-		t.Fatalf("reading the schema catalog this census derives its columns from: %v", err)
-	}
+	catalog := headCatalog(t)
 	columns := map[string]string{}
-	for _, at := range foreignKeyDeclaration.FindAllStringSubmatch(string(catalog), -1) {
+	for _, at := range foreignKeyDeclaration.FindAllStringSubmatch(catalog, -1) {
 		column, table := at[1], at[2]
 		// Composite keys carry a comma and reference a pair; no reference this
 		// census is about is one, and half of a composite is not a reference.
@@ -167,8 +163,6 @@ func referenceColumns(t *testing.T, tables map[string]bool) map[string]string {
 	}
 	return columns
 }
-
-const headCatalogPath = "backend/migrations/testdata/head_catalog.txt"
 
 // foreignKeyDeclaration reads one single-column FK out of the catalog line that
 // declares it.

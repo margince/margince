@@ -91,6 +91,8 @@ Each line holds a position, a description, a unit, a quantity, a unit price, a d
 
 You can edit the header and the lines **only while it is a draft**. After that the offer is a record of what you sent.
 
+To change the order of the lines, drag a line by its handle, or select the handle and press the up or down arrow. The other lines move to make room, and the lines are numbered from 1 again.
+
 ## How the money is worked out
 
 Margince works out offer totals in whole units of the currency's smallest unit (such as the cent). The only rounding is the one on each line, below.

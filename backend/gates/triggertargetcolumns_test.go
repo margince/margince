@@ -8,8 +8,6 @@ import (
 	"sort"
 	"strings"
 	"testing"
-
-	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // A touch trigger may only sit on a table that has every column it writes.
@@ -22,14 +20,11 @@ import (
 // CI's empty one.
 func TestEveryTouchTriggerTableHasTheColumnsItsTriggerWrites(t *testing.T) {
 	t.Parallel()
-	raw, err := gatekit.ReadFile("migrations/testdata/head_catalog.txt")
-	if err != nil {
-		t.Fatalf("reading the head catalog: %v", err)
-	}
+	raw := headCatalog(t)
 	// A column line is `public.<table>.<column> <type> … gen=…`; constraint,
 	// index and trigger lines share the prefix but never carry gen=.
 	columns := map[string]bool{}
-	for line := range strings.SplitSeq(string(raw), "\n") {
+	for line := range strings.SplitSeq(raw, "\n") {
 		name, rest, found := strings.Cut(strings.TrimSpace(line), " ")
 		if found && strings.HasPrefix(name, "public.") && strings.Contains(rest, " gen=") {
 			columns[name] = true

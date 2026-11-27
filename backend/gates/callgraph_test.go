@@ -21,9 +21,12 @@ package gates
 import (
 	"go/ast"
 	"go/token"
+	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
@@ -135,7 +138,45 @@ func declaredNames(fn *ast.FuncDecl) map[string]bool {
 // closure is a real limit, and the honest thing to say about it is that it can
 // hide a statement from whichever caller takes that route — never that the
 // route carries nothing.
+//
+// The graph is SHARED by every gate that asks for the same directory: read it,
+// never change it. A caller that must change it works on cloneCallGraph's copy.
 func packageCallGraph(t *testing.T, dir string) map[string]*graphFunc {
+	t.Helper()
+	// A fixture under the temp directory can change between two calls; the
+	// product tree holds still for the whole run.
+	if gatekit.Under(filepath.ToSlash(filepath.Clean(dir)), filepath.ToSlash(filepath.Clean(os.TempDir()))) {
+		return buildPackageCallGraph(t, dir)
+	}
+	callGraphs.Lock()
+	slot := callGraphs.byDir[dir]
+	if slot == nil {
+		slot = &callGraphSlot{}
+		callGraphs.byDir[dir] = slot
+	}
+	callGraphs.Unlock()
+	// A build that fails stops its caller's test and leaves graph nil, so the
+	// next caller builds again and reports the same failure.
+	slot.Lock()
+	defer slot.Unlock()
+	if slot.graph == nil {
+		slot.graph = buildPackageCallGraph(t, dir)
+	}
+	return slot.graph
+}
+
+// callGraphSlot holds one directory's graph once a caller has built it.
+type callGraphSlot struct {
+	sync.Mutex
+	graph map[string]*graphFunc
+}
+
+var callGraphs = struct {
+	sync.Mutex
+	byDir map[string]*callGraphSlot
+}{byDir: map[string]*callGraphSlot{}}
+
+func buildPackageCallGraph(t *testing.T, dir string) map[string]*graphFunc {
 	t.Helper()
 	files := parsePackageFiles(t, dir)
 	held := packageLevelStatements(files)
@@ -201,6 +242,9 @@ func packageCallGraph(t *testing.T, dir string) map[string]*graphFunc {
 	bindings := packageBindingNames(files)
 	for _, entry := range graph {
 		includeBindingReads(entry, bindings)
+		// Clipped, so an append by a reader copies instead of writing past the
+		// shared slice's end.
+		entry.statements, entry.hidden = slices.Clip(entry.statements), slices.Clip(entry.hidden)
 	}
 	return graph
 }

@@ -158,9 +158,9 @@ var tsVocabularyComment = regexp.MustCompile(`(?s)//[^\n]*|/\*.*?\*/`)
 
 func TestTheBrowserSpellsTheWholeProfileVocabulary(t *testing.T) {
 	t.Parallel()
-	admitted := tableCheckSets(t)[theProfileVocabulary]
+	admitted := checkVocabularies(t)[theProfileVocabulary]
 	if len(admitted) < 10 {
-		t.Fatalf("only %d value(s) derived for %s — the migration scan has stopped reading it",
+		t.Fatalf("only %d value(s) derived for %s — the catalog reader has stopped reading it",
 			len(admitted), theProfileVocabulary)
 	}
 

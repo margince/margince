@@ -40,12 +40,9 @@ var (
 // lower case. It reads the committed schema, so a new one enrols itself.
 func lowerCaseColumns(t *testing.T) map[string]map[string]bool {
 	t.Helper()
-	raw, err := gatekit.ReadFile("migrations/testdata/head_catalog.txt")
-	if err != nil {
-		t.Fatalf("reading the head catalog: %v", err)
-	}
+	raw := headCatalog(t)
 	columns := map[string]map[string]bool{}
-	for line := range strings.SplitSeq(string(raw), "\n") {
+	for line := range strings.SplitSeq(raw, "\n") {
 		m := lowerCaseCheck.FindStringSubmatch(line)
 		if m == nil || m[2] != m[3] {
 			continue

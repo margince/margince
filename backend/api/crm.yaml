@@ -10175,6 +10175,40 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /activities/{id}/task-explanation:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Activities]
+      operationId: getTaskExplanation
+      x-waits-on-model: on-miss
+      x-agent-access: human-only
+      x-human-only-reason: covered   # an agent reads the task and its contact through read_record and read_context
+      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      summary: Why one task is on the reader's list, written from that task's own records.
+      description: |
+        What happened, what it costs if nothing is done, and what to do, for one open task. A
+        sentence's `nature` says which: a `fact` is what happened, an `assessment` is what is at
+        stake, a `recommendation` is the one next step.
+
+        Written from the task, the message it came from, and the relationship with its contact
+        as the CALLER sees them, so it describes only records that caller could open. Cached per
+        reader on a fingerprint of those inputs and rewritten before the answer when they move.
+
+        Degrades rather than fails: with no model lane, the sentences are the facts alone,
+        each citing its message, and `generated_by` says so. It never falls back to a sentence
+        that would fit any task.
+      responses:
+        '200':
+          description: The task's explanation.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TaskExplanation' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /activities/{id}/reader-rendering:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -36209,7 +36243,17 @@ paths:
                 entity_type: { type: string, enum: [contact, company, deal, activity, lead, project] }
                 entity_id: { type: string, format: uuid }
                 file: { type: string, format: binary }
+                reuse_identical:
+                  type: boolean
+                  description: 'When true, a live file with the same bytes already filed on this record, against the same agreement, is answered with 200 instead of storing a copy.'
       responses:
+        '200':
+          description: The identical file the record already held, answered for `reuse_identical`. Nothing was stored.
+          headers:
+            Location: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Attachment' }
         '201':
           description: The stored attachment metadata.
           headers:
@@ -52948,6 +52992,9 @@ components:
           format: date-time
           description: The instant the assembling transaction read. Sections are consistent to this moment under Read Committed.
         company: { $ref: '#/components/schemas/Company' }
+        standing_line:
+          $ref: '#/components/schemas/StandingLine'
+          description: Absent until an activity was read, or when this reader may not open one it was written from.
         moment:
           description: >-
             The ONE thing this account needs today, selected server-side by the same rule the
@@ -53382,6 +53429,9 @@ components:
           format: date-time
           description: The assembly clock. Mail coverage carries its own evaluation time; Read Committed does not promise one snapshot across sections.
         contact: { $ref: '#/components/schemas/Contact' }
+        standing_line:
+          $ref: '#/components/schemas/StandingLine'
+          description: Absent until an activity was read, or when this reader may not open one it was written from.
         created_by:
           allOf: [{ $ref: '#/components/schemas/PrincipalAttribution' }]
           description: |
@@ -54428,6 +54478,42 @@ components:
             or risk. A sentence whose citations cannot be resolved is dropped whole rather than
             shown uncited.
           items: { $ref: '#/components/schemas/CompanyBriefSentence' }
+
+    TaskExplanation:
+      type: object
+      description: |
+        Why one task is on the reader's list, from that task's own records. Per reader, cached
+        on its inputs, every sentence cited. `generated_by` says whether the model or the
+        facts-only floor wrote it.
+      required: [task_id, generated_at, generated_by, sentences]
+      properties:
+        task_id: { type: string, format: uuid }
+        generated_at: { type: string, format: date-time }
+        generated_by: { $ref: '#/components/schemas/WrittenBy' }
+        sentences:
+          type: array
+          description: >-
+            Facts say what happened, an assessment what is at stake if nothing is done, a
+            recommendation the one next step. A sentence whose citations cannot be resolved is
+            dropped whole rather than shown uncited.
+          items: { $ref: '#/components/schemas/CompanyBriefSentence' }
+
+    StandingLine:
+      type: object
+      description: |
+        Where a record stands after its latest activity, in one sentence the model wrote in
+        the background when that activity landed. Shared by the record's readers, and served
+        only to a reader who may open every activity it cites.
+      required: [text, activity_ids, written_at]
+      properties:
+        text: { type: string }
+        activity_ids:
+          type: array
+          description: |
+            The activities the sentence rests on, as the model cited them. The page opens
+            each one, so a reader can check the line against what was said.
+          items: { type: string, format: uuid }
+        written_at: { type: string, format: date-time }
 
     ContactConsentGuard:
       type: object
@@ -59237,6 +59323,9 @@ components:
           format: date-time
           description: The instant the assembling transaction read. Sections are consistent to this moment under Read Committed.
         project: { $ref: '#/components/schemas/Project' }
+        standing_line:
+          $ref: '#/components/schemas/StandingLine'
+          description: Absent until an activity was read, or when this reader may not open one it was written from.
         sections_omitted:
           type: array
           description: The sections withheld for lack of a grant — so a client can say "you can't see this" instead of "there is none".
@@ -81162,7 +81251,7 @@ components:
       type: object
       description: Any subset; omit a field to leave it unchanged. Totals are derived and not settable (422).
       properties:
-        position: { type: integer, minimum: 1 }
+        position: { type: integer, minimum: 1, description: 'Moves the line to this place in the offer. The lines between shift to make room, and the offer''s lines are numbered from 1 again. A place past the last line puts it last.' }
         description: { type: string }
         unit: { type: string }
         quantity: { type: number, format: double }

@@ -36,8 +36,6 @@ import (
 	"sort"
 	"strings"
 	"testing"
-
-	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // retentionActionCheck reads the values the database admits, out of the schema
@@ -45,13 +43,9 @@ import (
 // narrowed the CHECK, and the head is what a running installation has.
 func retentionActionCheck(t *testing.T) []string {
 	t.Helper()
-	const catalog = "migrations/testdata/head_catalog.txt"
 	const constraint = "public.retention_policy.retention_policy_action_check "
-	raw, err := gatekit.ReadFile(catalog)
-	if err != nil {
-		t.Fatalf("reading the schema head: %v", err)
-	}
-	for line := range strings.SplitSeq(string(raw), "\n") {
+	raw := headCatalog(t)
+	for line := range strings.SplitSeq(raw, "\n") {
 		if !strings.HasPrefix(line, constraint) {
 			continue
 		}
