@@ -15,8 +15,6 @@ import (
 	"strings"
 	"testing"
 
-	"gopkg.in/yaml.v3"
-
 	"github.com/margince/margince/backend/internal/platform/database/textbounds"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
@@ -81,7 +79,7 @@ func TestCompanyAndDealDescriptionsShareTheDocumentLimit(t *testing.T) {
 		t.Fatal(err)
 	}
 	var contract map[string]any
-	if err := yaml.Unmarshal(raw, &contract); err != nil {
+	if err := unmarshalYAML(raw, &contract); err != nil {
 		t.Fatal(err)
 	}
 	for _, schema := range []string{"CreateCompanyRequest", "UpdateCompanyRequest", "CreateDealRequest", "UpdateDealRequest"} {
@@ -309,7 +307,7 @@ func TestEveryDisplayNameBodyPublishesItsOwnersLimit(t *testing.T) {
 		t.Fatal(err)
 	}
 	var contract map[string]any
-	if err := yaml.Unmarshal(raw, &contract); err != nil {
+	if err := unmarshalYAML(raw, &contract); err != nil {
 		t.Fatal(err)
 	}
 	schemas, ok := contract["components"].(map[string]any)["schemas"].(map[string]any)

@@ -78,7 +78,7 @@ type declaredEndpoint struct {
 // inboundEndpoints reads every endpoint a unit's non-test code declares.
 func inboundEndpoints(t *testing.T, dir string) []declaredEndpoint {
 	t.Helper()
-	files, err := filepath.Glob(filepath.Join(dir, "*.go"))
+	files, err := gatekit.Glob(filepath.Join(dir, "*.go"))
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -63,7 +63,7 @@ Raise a finding ONLY in these kinds:
 - Promises belong to the recorded commitment decisions in each message and the account’s open commitments and tasks. Never raise commitment_unmet or prepare add_task for a promise. Never infer its owner from message direction or the reader of this account.
 - question_unanswered — THEY asked something, in an inbound message, and no later outbound message answers it.
 - risk_raised — they wrote something that puts the relationship or a deal at risk: a budget cut, a competitor, a decision-maker leaving, a delay on their side.
-- need_raised — they wrote about a need, a plan or a purchase that nothing in the account has picked up: no open deal about it, no task.
+- need_raised — they wrote about a need, a plan or a purchase that no open deal or task you were given picks up. Judge it only from what you were given: an omitted section or withheld work never stops the finding, and a reason never says whether a deal or task exists.
 
 Return ONLY a JSON object: {"findings":[{"kind":"question_unanswered|risk_raised|need_raised","title":"...","reason":"...","message_id":"...","quote":"...","action":"draft_reply|none"}]}.
 

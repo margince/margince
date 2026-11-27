@@ -86,7 +86,7 @@ export function callServerTool(
   if (!declared.has(name)) {
     return Promise.resolve({
       ok: false,
-      reason: `This view may not run "${name}".`,
+      reason: `This view may not run “${name}”.`,
     });
   }
   if (!hostProxiesTools) {

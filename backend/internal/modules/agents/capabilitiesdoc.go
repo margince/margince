@@ -88,7 +88,7 @@ func (CapabilitiesResource) Resources(context.Context) []mcp.Resource {
 		// runs that had no use for them, which is why the two tools that
 		// used to do it stopped.
 		Description: "The verbs this passport may call, which of them execute directly and which " +
-			"stage for a human decision, and the scopes it holds. Names and governance only — " +
+			"stage for a human decision, and the scopes it holds. Names and governance only; " +
 			"the input schemas live in tools/list.",
 	}}
 }
@@ -153,7 +153,7 @@ func (c CapabilitiesResource) document(ctx context.Context) capabilitiesDoc {
 			ScopesHeld: scopesHeld(ctx),
 			Model: "A call either executes under this passport's authority or stages an approval a " +
 				"human decides. An agent can never exceed the human who granted the passport, and " +
-				"every call is re-authorised at the moment it runs, so a revoked grant binds mid-session.",
+				"every call is re-authorized at the moment it runs, so a revoked grant binds mid-session.",
 			HostConfirmation: "A confirmation your own client shows the user is NOT one of these approvals. " +
 				"A staged call is decided in Margince and returns its outcome here.",
 		},
@@ -165,7 +165,7 @@ func (c CapabilitiesResource) document(ctx context.Context) capabilitiesDoc {
 // verbs groups what this caller is offered by tier.
 func (c CapabilitiesResource) verbs(ctx context.Context) capabilitiesVerbs {
 	out := capabilitiesVerbs{
-		DecidedPerCallReason: "The tier depends on the arguments — the same verb can execute or stage " +
+		DecidedPerCallReason: "The tier depends on the arguments: the same verb can execute or stage " +
 			"depending on what it is asked to do.",
 	}
 	for _, spec := range c.registry.Offered(ctx) {

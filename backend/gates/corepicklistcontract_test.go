@@ -37,8 +37,6 @@ import (
 	"strings"
 	"testing"
 
-	"gopkg.in/yaml.v3"
-
 	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
@@ -253,7 +251,7 @@ func loadOpenAPIDocument(t *testing.T, path string) map[string]any {
 		t.Fatalf("reading %s: %v", path, err)
 	}
 	var doc map[string]any
-	if err := yaml.Unmarshal(raw, &doc); err != nil {
+	if err := unmarshalYAML(raw, &doc); err != nil {
 		t.Fatalf("parsing %s: %v", path, err)
 	}
 	return doc

@@ -44,8 +44,6 @@ import (
 	"sort"
 	"testing"
 
-	"gopkg.in/yaml.v3"
-
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
@@ -221,7 +219,7 @@ func crmSchemaProperty(t *testing.T, schema, property string) crmProperty {
 	if err != nil {
 		t.Fatalf("reading the contract: %v", err)
 	}
-	if err := yaml.Unmarshal(raw, &doc); err != nil {
+	if err := unmarshalYAML(raw, &doc); err != nil {
 		t.Fatalf("parsing the contract: %v", err)
 	}
 	found, ok := doc.Components.Schemas[schema]

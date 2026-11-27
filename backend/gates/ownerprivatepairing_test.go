@@ -29,9 +29,11 @@ package gates
 
 import (
 	"bufio"
-	"os"
+	"bytes"
 	"regexp"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const ownerPairingCatalog = "migrations/testdata/head_catalog.txt"
@@ -56,13 +58,11 @@ func TestEveryOwnerPrivateTableNamesItsOwner(t *testing.T) {
 	t.Parallel()
 	admitsOwner, pairs, owned := map[string]bool{}, map[string]bool{}, map[string]bool{}
 
-	file, err := os.Open(ownerPairingCatalog)
+	body, err := gatekit.ReadFile(ownerPairingCatalog)
 	if err != nil {
-		t.Fatalf("opening %s: %v", ownerPairingCatalog, err)
+		t.Fatalf("reading %s: %v", ownerPairingCatalog, err)
 	}
-	//craft:ignore swallowed-errors a read-only close on a file this test is finished with; the read itself is asserted above
-	defer func() { _ = file.Close() }()
-	scanner := bufio.NewScanner(file)
+	scanner := bufio.NewScanner(bytes.NewReader(body))
 	scanner.Buffer(make([]byte, 0, 64*1024), 4*1024*1024)
 	for scanner.Scan() {
 		line := scanner.Text()

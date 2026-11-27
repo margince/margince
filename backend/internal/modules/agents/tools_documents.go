@@ -123,7 +123,7 @@ func (t attachDocument) Spec() mcp.ToolSpec {
 			"required":["entity_type","entity_id","filename","content_type"],
 			"properties":{` + documentParentSchema() + `,
 			"filename":{"type":"string","description":"The file's name, with its extension"},
-			"content_type":{"type":"string","description":"The file's media type, e.g. application/pdf"},
+			"content_type":{"type":"string","description":"The file's media type, for example application/pdf"},
 			"content_base64":` + contentBase64Schema + `,
 			"content_text":` + contentTextSchema + `,
 			"contract_id":{"type":"string","format":"uuid","description":"The agreement this file is paper for, when it is one"}},

@@ -178,18 +178,18 @@ function SalesReviewBody({
                   onEvidence={openEvidence}
                 />
               )}
+              <SalesFigures
+                dated={validDates}
+                query={query}
+                invalid={invalid}
+                forecastHref={forecastHref}
+                charts={charts}
+                onApply={apply}
+                onEvidence={openEvidence}
+                targetSetup={targetSetup}
+              />
+              {/* Its own read, so it stands whatever the sales read does. */}
               <AnalyticsSheet>
-                <SalesFigures
-                  dated={validDates}
-                  query={query}
-                  invalid={invalid}
-                  forecastHref={forecastHref}
-                  charts={charts}
-                  onApply={apply}
-                  onEvidence={openEvidence}
-                  targetSetup={targetSetup}
-                />
-                {/* Its own read, so it stands whatever the sales read does. */}
                 <SinceLastReview
                   catalog={catalog}
                   scope={selection.scope}

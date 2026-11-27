@@ -8,8 +8,8 @@ import "github.com/margince/margince/backend/internal/platform/httperr"
 // Without this tool an agent handed a PDF saved its text as a note.
 var attachDocumentCopy = toolCopy{
 	Purpose: "Put a file the user gave you on a company, contact, deal, lead or project, where it " +
-		"appears on the record's Documents tab, or on one activity such as the meeting it came from " +
-		"— use it whenever the user wants a file kept on a record, and never save a file's text as " +
+		"appears on the record's Documents tab, or on one activity such as the meeting it came from. " +
+		"Use it whenever the user wants a file kept on a record, and never save a file's text as " +
 		"a note instead.",
 	Limits: "Up to " + httperr.Megabytes(MaxInlineFileBytes) + " per file, or less where the " +
 		"workspace sets a smaller upload limit. Send a text file's contents as content_text, as they " +

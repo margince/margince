@@ -7,7 +7,6 @@ package gates
 
 import (
 	"go/ast"
-	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -69,7 +68,7 @@ func TestEveryMemberForeignKeyHasARetirementPolicy(t *testing.T) {
 
 func memberPolicyConstants(t *testing.T) map[string]string {
 	t.Helper()
-	files, err := filepath.Glob("internal/compose/*.go")
+	files, err := gatekit.Glob("internal/compose/*.go")
 	if err != nil {
 		t.Fatal(err)
 	}

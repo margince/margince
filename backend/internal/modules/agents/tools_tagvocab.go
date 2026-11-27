@@ -81,7 +81,7 @@ type updateTag struct{ tags Tags }
 
 func (t updateTag) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
-		Name: "update_tag", Title: "Rename or recolour a tag", Version: toolVersionV1,
+		Name: "update_tag", Title: "Rename or recolor a tag", Version: toolVersionV1,
 		Description:   updateTagCopy.render(),
 		Instead:       updateTagCopy.Instead,
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute, Unlisted: true,

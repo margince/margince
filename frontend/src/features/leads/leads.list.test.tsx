@@ -712,7 +712,7 @@ describe("LeadsScreen — the one ownership dial (DM-VOCAB-OWN-1)", () => {
 
     const owner = await screen.findByRole("group", { name: /Owner:/ });
     const valueButton = within(owner)
-      .getAllByRole("button", { name: "Owned by you" })
+      .getAllByRole("button", { name: "You" })
       .find((button) => button.hasAttribute("aria-expanded"));
     if (!valueButton) throw new Error("owner value control is missing");
     await user.click(valueButton);

@@ -296,7 +296,7 @@ export interface paths {
         put?: never;
         /**
          * Redeem a reset token and set a new password.
-         * @description Validates the single-use token (`auth_token` purpose=`password_reset`), sets the new password, marks the token used, and invalidates existing sessions. An expired, consumed, or unknown token produces one neutral error. Audited.
+         * @description Validates the single-use token, sets the new password, marks the token used, and invalidates existing sessions. An expired, consumed, or unknown token produces one neutral error. Audited.
          */
         post: operations["resetPassword"];
         delete?: never;
@@ -15668,13 +15668,9 @@ export interface paths {
         /**
          * The calling user's morning digest — what capture did overnight.
          * @deprecated
-         * @description Reads the CAP-DDL-6 payload built by the nightly suite (CAP-WIRE-6): capture totals,
-         *     review counts (open dedupe candidates, pending 🟡 approvals, the classify summary), and
-         *     the connector health strip. `404 no_digest_yet` before the first nightly run — the
-         *     client renders the honest empty state. A `date` the nightly run has not reached
-         *     answers `404 no_digest_for_date`, which is a different state: digests exist, that day
-         *     has none. An empty `date=` is refused as `422 invalid_date` rather than read as the
-         *     year one. v1 delivery is in-app; email is delivery-only later, same object.
+         * @description Retired. The behaviour behind this operation is gone. Calls that pass
+         *     the route's authentication and parameter checks answer `410 endpoint_retired`.
+         *     The operation stays declared until the notice window allows its removal.
          */
         get: operations["getMorningDigest"];
         put?: never;
@@ -27273,30 +27269,9 @@ export interface paths {
         /**
          * Take back a stage move the product made by itself.
          * @deprecated
-         * @description Undo for an AUTOMATICALLY applied stage move, inside the window the
-         *     transition's rule allows (`undo_window_hours`, default 72).
-         *
-         *     It is a separate verb rather than the general undo path because a stage
-         *     move is not restorable by writing the field back: it wrote
-         *     `deal_stage_history` and the progression ledger beside the column, so
-         *     restoring `stage_id` alone would leave the history saying the deal is
-         *     somewhere it is not. The general replay engine refuses `advance_stage`
-         *     for exactly this reason.
-         *
-         *     What it does: moves the deal back to the stage it came from, appends a
-         *     new `deal_stage_history` row for the move back (history is append-only;
-         *     nothing is erased), and marks the progression ledger row `reversed` with
-         *     who did it and when.
-         *
-         *     **A reversal does not refute the evidence.** Taking a move back says the
-         *     deal should not have moved, which is a different claim from "the
-         *     criteria were wrongly read" — a rep may agree with every observation and
-         *     still want the deal where it was. Evidence is withdrawn only through its
-         *     own correction path.
-         *
-         *     Refused after the window closes: the move stands, the audit trail keeps
-         *     it, and moving the deal back by hand is the remaining route — which is
-         *     counted as a reversal too, on the same ledger.
+         * @description Retired. The behaviour behind this operation is gone. Calls that pass
+         *     the route's authentication and parameter checks answer `410 endpoint_retired`.
+         *     The operation stays declared until the notice window allows its removal.
          */
         post: operations["revertStageProgression"];
         delete?: never;
@@ -27315,29 +27290,9 @@ export interface paths {
         /**
          * What each stage transition has earned.
          * @deprecated
-         * @description Every from→to transition in one pipeline, with what happened to the moves
-         *     the product proposed on it. This is the evidence behind letting a
-         *     transition move deals by itself: it reports, and decides nothing.
-         *
-         *     Every rate is a fraction of `reviewed` — proposals a human actually
-         *     answered. A card nobody opened is not evidence that anyone agreed with
-         *     it, so `proposed`, `expired` and `superseded` are counted and reported
-         *     but kept OUT of the denominator. They are reported because their absence
-         *     would hide the case that matters most: a transition whose cards are
-         *     mostly ignored, whose acceptance rate is then computed over the few
-         *     somebody happened to open.
-         *
-         *     `expired` is not `rejected`. Both are refusals, and the product's answer
-         *     to each is opposite — a rejected transition needs a better proposal, an
-         *     expired one needs somebody to look.
-         *
-         *     `unsafe_rate` is a union, not a sum: a move that was reversed AND whose
-         *     evidence a human corrected is one mistake, and counting it twice would
-         *     put a transition over a ceiling it had not crossed.
-         *
-         *     `observation_days` is the span from the first answered proposal to the
-         *     last, rounded DOWN — a fine acceptance rate earned entirely on one
-         *     afternoon has not been observed, however many proposals it saw.
+         * @description Retired. The behaviour behind this operation is gone. Calls that pass
+         *     the route's authentication and parameter checks answer `410 endpoint_retired`.
+         *     The operation stays declared until the notice window allows its removal.
          */
         get: operations["getStageAutomationReport"];
         put?: never;
@@ -27361,39 +27316,17 @@ export interface paths {
         /**
          * What each transition in this pipeline is allowed to do.
          * @deprecated
-         * @description One rule per from→to transition an admin has decided about. A transition
-         *     absent from this list has no rule, which is the default state of every
-         *     transition in the product and means it proposes.
-         *
-         *     A rule saying `auto` does NOT mean moves are applying. Asking is not
-         *     being allowed: the thresholds are re-checked in the transaction that
-         *     would apply each move, so a transition can be turned on before it has
-         *     earned the bar and start applying by itself the day its record clears —
-         *     without anybody coming back. Read `/stage-automation/report` to see
-         *     whether it has.
-         *
-         *     `suspended_at` is the product's own act, not an admin's. A rule the
-         *     product turned off went off for a measured reason and comes back only
-         *     through a deliberate resume; the admin's `mode` survives underneath it,
-         *     so resuming returns the transition to what was actually asked for.
+         * @description Retired. The behaviour behind this operation is gone. Calls that pass
+         *     the route's authentication and parameter checks answer `410 endpoint_retired`.
+         *     The operation stays declared until the notice window allows its removal.
          */
         get: operations["listTransitionPolicies"];
         /**
          * Decide what one transition may do.
          * @deprecated
-         * @description Records what an admin wants for ONE transition, named in the body rather
-         *     than the path because a pipeline has many and each is decided
-         *     separately.
-         *
-         *     Every threshold is optional and omitting one KEEPS what the rule has,
-         *     or takes the product default on a first write. A caller who only means
-         *     to turn a transition on does not have to restate four thresholds, and
-         *     cannot silently reset them by leaving one out.
-         *
-         *     It does not clear a suspension. A rule the product turned off went off
-         *     for a measured reason, and letting an ordinary save clear it would make
-         *     the safety mechanism a checkbox — `POST .../resume` is the separate,
-         *     deliberate act.
+         * @description Retired. The behaviour behind this operation is gone. Calls that pass
+         *     the route's authentication and parameter checks answer `410 endpoint_retired`.
+         *     The operation stays declared until the notice window allows its removal.
          */
         put: operations["setTransitionPolicy"];
         post?: never;
@@ -27418,15 +27351,9 @@ export interface paths {
         /**
          * Lift a suspension the product put on a transition.
          * @deprecated
-         * @description A separate verb from saving a rule, so lifting a safety stop is
-         *     something an admin does on purpose rather than a side effect of editing
-         *     a threshold.
-         *
-         *     It does NOT re-enable. The rule comes back to whatever mode it was in,
-         *     and if that is `auto` the thresholds still have to hold in the
-         *     transaction that would apply — a resumed rule on a record that is still
-         *     bad simply proposes. Resuming a rule that is not suspended does
-         *     nothing and is not an error.
+         * @description Retired. The behaviour behind this operation is gone. Calls that pass
+         *     the route's authentication and parameter checks answer `410 endpoint_retired`.
+         *     The operation stays declared until the notice window allows its removal.
          */
         post: operations["resumeTransitionPolicy"];
         delete?: never;
@@ -27445,29 +27372,17 @@ export interface paths {
         /**
          * Whether the qualified forecast applies the viability reviews.
          * @deprecated
-         * @description `state` is `not_enrolled` before the input check has ever run, `observing` once it
-         *     runs and raises reviews and tasks but the forecast figures are unchanged, and
-         *     `enforcing` once an admin switched enforcement on. Only while `enforcing` does a
-         *     forecast reading carry `qualified`, and only then does the close-date sweep stop
-         *     lowering forecast categories.
+         * @description Retired. The behaviour behind this operation is gone. Calls that pass
+         *     the route's authentication and parameter checks answer `410 endpoint_retired`.
+         *     The operation stays declared until the notice window allows its removal.
          */
         get: operations["getForecastAssuranceEnforcement"];
         /**
          * Switch the qualified forecast's enforcement on or off.
          * @deprecated
-         * @description Admin only. A setting fixed by the environment is refused with
-         *     `409 setting_locked_by_boot_source`.
-         *
-         *     Switching on changes the qualified forecast figures for every reader. It sends
-         *     `preview_digest`, the `digest` of the preview the admin saw, and is refused with
-         *     `409 preview_stale` when the deals' treatment changed since, so nobody switches
-         *     on a picture that is no longer true. It is then refused with
-         *     `409 input_check_not_started` until a check has judged a deal: before that the
-         *     qualified forecast would count nothing.
-         *
-         *     Switching off takes effect at once. The reviews, their tasks and their history
-         *     stay; only the qualified readings disappear, and the baseline readings never
-         *     changed.
+         * @description Retired. The behaviour behind this operation is gone. Calls that pass
+         *     the route's authentication and parameter checks answer `410 endpoint_retired`.
+         *     The operation stays declared until the notice window allows its removal.
          */
         put: operations["setForecastAssuranceEnforcement"];
         post?: never;
@@ -27489,12 +27404,9 @@ export interface paths {
         /**
          * Answer a customer review with the day the customer asked you to wait until.
          * @deprecated
-         * @description For a `deal_viability` review only. One transaction records the customer's wait on
-         *     the deal (`wait_until`) and answers the review `remind_later` for the same day. The
-         *     review stays open and the deal stays out of the qualified forecast while it waits:
-         *     a wait is not support. The review comes back on that day.
-         *
-         *     404 when the finding is not an open customer review.
+         * @description Retired. The behaviour behind this operation is gone. Calls that pass
+         *     the route's authentication and parameter checks answer `410 endpoint_retired`.
+         *     The operation stays declared until the notice window allows its removal.
          */
         post: operations["waitInputCheck"];
         delete?: never;
@@ -27515,12 +27427,9 @@ export interface paths {
         /**
          * Answer a customer review by closing its deal as lost.
          * @deprecated
-         * @description For a `deal_viability` review only. One transaction moves the deal to its pipeline's
-         *     lost stage with the reason given, and answers the review `not_relevant` with that
-         *     reason. A review is never answered `not_relevant` while its deal is still open.
-         *
-         *     404 when the finding is not an open customer review. 422 when the pipeline has no
-         *     lost stage.
+         * @description Retired. The behaviour behind this operation is gone. Calls that pass
+         *     the route's authentication and parameter checks answer `410 endpoint_retired`.
+         *     The operation stays declared until the notice window allows its removal.
          */
         post: operations["closeLostInputCheck"];
         delete?: never;
@@ -27542,17 +27451,9 @@ export interface paths {
         /**
          * Whether the customer still supports this deal, and the review behind the answer.
          * @deprecated
-         * @description The deal's treatment in the qualified forecast and what it rests on: the input check's
-         *     last receipt and its reasons, the close date's standing, the stage chance, and the open
-         *     `deal_viability` review with its task. The review is shown while it is open, even when
-         *     its task is done: completing the task does not answer the review.
-         *
-         *     Needs `forecast:read` and the deal under the caller's row scope, checked in the same
-         *     transaction as the read; a deal outside it answers 404. The review's task is shown only
-         *     while it is still linked to this deal and the caller may discover it. Carries no amount,
-         *     so nothing here needs masking.
-         *     `qualification` is computed whether or not the installation enforces it;
-         *     `qualification_mode` says whether the qualified forecast applies it.
+         * @description Retired. The behaviour behind this operation is gone. Calls that pass
+         *     the route's authentication and parameter checks answer `410 endpoint_retired`.
+         *     The operation stays declared until the notice window allows its removal.
          */
         get: operations["getDealViability"];
         put?: never;
@@ -60597,6 +60498,11 @@ export interface components {
             connection?: components["schemas"]["PassportConnection"];
             /** Format: date-time */
             created_at: string;
+            /**
+             * Format: uuid
+             * @description The member who granted the passport its authority. A server built before this field omits it.
+             */
+            granted_by?: string;
             /** Format: date-time */
             expires_at?: string | null;
             /** Format: date-time */
@@ -65641,6 +65547,15 @@ export interface components {
         };
         /** @description No such resource in this workspace (or out of RBAC scope). */
         NotFound: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
+        /** @description The operation is retired and its behaviour is gone (`code: endpoint_retired`). A call that passes the route's authentication and parameter checks answers 410 with that code, until the notice window allows its removal. */
+        Retired: {
             headers: {
                 [name: string]: unknown;
             };
@@ -91282,6 +91197,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            410: components["responses"]["Retired"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -107983,6 +107899,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            410: components["responses"]["Retired"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -108006,6 +107923,7 @@ export interface operations {
             };
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            410: components["responses"]["Retired"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -108032,6 +107950,7 @@ export interface operations {
             };
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            410: components["responses"]["Retired"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -108071,6 +107990,7 @@ export interface operations {
                 };
             };
             409: components["responses"]["Conflict"];
+            410: components["responses"]["Retired"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -108101,6 +108021,7 @@ export interface operations {
             };
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            410: components["responses"]["Retired"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -108124,6 +108045,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
+            410: components["responses"]["Retired"];
         };
     };
     setForecastAssuranceEnforcement: {
@@ -108155,6 +108077,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
             409: components["responses"]["SettingLocked"];
+            410: components["responses"]["Retired"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -108186,6 +108109,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            410: components["responses"]["Retired"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -108218,6 +108142,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            410: components["responses"]["Retired"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -108245,6 +108170,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            410: components["responses"]["Retired"];
             422: components["responses"]["ValidationError"];
         };
     };

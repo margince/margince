@@ -51,8 +51,9 @@ func TestEverySettingReadThroughApplyIsDeclaredMachineryApplied(t *testing.T) {
 	// segment, because those differ in this tree (contracts declares
 	// crmcontracts).
 	packageOfDir := map[string]string{}
+	parsed := parsedByPath(files, fset)
 	for _, path := range goFilePaths(t, "internal") {
-		if file, ok := parsedByPath(files, fset, path); ok && file.Name != nil {
+		if file, ok := parsed[path]; ok && file.Name != nil {
 			packageOfDir[filepath.ToSlash(filepath.Dir(path))] = file.Name.Name
 		}
 	}
@@ -414,15 +415,17 @@ func goFilePaths(t *testing.T, dir string) []string {
 	return paths
 }
 
-// parsedByPath finds the already-parsed file for one path, so the walk is not
-// repeated just to learn package names.
-func parsedByPath(files []*ast.File, fset *token.FileSet, path string) (*ast.File, bool) {
+// parsedByPath indexes the already-parsed files by name, so the walk is not
+// repeated just to learn package names. The first file wins a shared name.
+func parsedByPath(files []*ast.File, fset *token.FileSet) map[string]*ast.File {
+	out := make(map[string]*ast.File, len(files))
 	for _, file := range files {
-		if fset.Position(file.Pos()).Filename == path {
-			return file, true
+		name := fset.Position(file.Pos()).Filename
+		if _, seen := out[name]; !seen {
+			out[name] = file
 		}
 	}
-	return nil, false
+	return out
 }
 
 // machineryEntryArgs answers the ENTRY arguments of an ungated setting read, or

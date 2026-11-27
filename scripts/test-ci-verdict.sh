@@ -16,10 +16,11 @@ verdict="$root/scripts/ci-verdict.sh"
 failures=0
 
 # case_is <name> <event> <needs-json> <expected-exit> [substring the output must carry]
+# PROVEN, when set, is passed as CI_VERDICT_PROVEN.
 case_is() {
 	local name="$1" event="$2" needs="$3" want="$4" must_say="${5:-}"
 	local out status=0
-	out="$(CI_VERDICT_EVENT="$event" CI_VERDICT_NEEDS="$needs" "$verdict" 2>&1)" || status=$?
+	out="$(CI_VERDICT_EVENT="$event" CI_VERDICT_NEEDS="$needs" CI_VERDICT_PROVEN="${PROVEN:-}" "$verdict" 2>&1)" || status=$?
 	if [[ "$status" -ne "$want" ]]; then
 		echo "FAIL: $name — expected exit $want, got $status" >&2
 		printf '%s\n' "$out" >&2
@@ -63,6 +64,12 @@ case_is "pr, all green" pull_request "$all_green" 0
 # The whole point. A skip is a verdict about nothing.
 case_is "queue rejects a skip" merge_group "$one_skip" 1 "$probe_job"
 case_is "pr admits a skip" pull_request "$one_skip" 0
+
+# A skip an earlier run proved on the same tree passes; only for that job, and
+# never a failure.
+PROVEN="$probe_job" case_is "queue admits a proven skip" merge_group "$one_skip" 0 "$probe_job"
+PROVEN="deterministic-gates" case_is "queue rejects a skip proven for another job" merge_group "$one_skip" 1 "$probe_job"
+PROVEN="$probe_job" case_is "queue rejects a proven job's failure" merge_group "$one_fail" 1 "$probe_job"
 
 case_is "queue rejects a failure" merge_group "$one_fail" 1 "$probe_job"
 case_is "pr rejects a failure" pull_request "$one_fail" 1 "$probe_job"

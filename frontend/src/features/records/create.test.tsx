@@ -797,7 +797,10 @@ describe("the record dialog's shape", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(trigger.closest("button")?.getAttribute("aria-busy")).toBe("true");
     answer(
-      jsonResponse({ data: [customField("tier"), customField("region")] }),
+      jsonResponse({
+        page: { has_more: false },
+        data: [customField("tier"), customField("region")],
+      }),
     );
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByLabelText("tier")).toBeTruthy();
@@ -809,6 +812,7 @@ describe("the record dialog's shape", () => {
     stubApi({
       "GET /custom-fields": () =>
         jsonResponse({
+          page: { has_more: false },
           data: [
             customField("tier"),
             { ...customField("previous_owner"), show_in_create: false },
@@ -844,6 +848,7 @@ describe("the record dialog's shape", () => {
               fail = () => resolve(jsonResponse({ title: "Busy" }, 503));
             })
           : jsonResponse({
+              page: { has_more: false },
               data: [customField("tier"), customField("region")],
             }),
     });

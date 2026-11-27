@@ -303,14 +303,14 @@ func railAttempt(ctx context.Context, tx pgx.Tx, c Call) (attempt int, finished 
 
 // railState reads the occurrence's settled state off the terminal attempt.
 //
-// An errored call is failed even when it also degraded: degraded means partial
-// state was kept and MUST NOT read as done, but a call that ended on a sentinel
-// kept nothing at all.
+// An errored call is failed even when it also degraded: a call that ended on a
+// sentinel kept nothing at all. The one exception is a site that served its
+// floor: the reader got a plainer answer, which is degraded and not done.
 func railState(c Call) string {
 	switch {
-	case c.ErrorSentinel != "":
+	case c.ErrorSentinel != "" && !c.FloorServed:
 		return railStateFailed
-	case c.Degraded:
+	case c.ErrorSentinel != "", c.Degraded:
 		return railStateDegraded
 	default:
 		return railStateDone
