@@ -82,7 +82,7 @@ func schedulingHost(ctx context.Context) (ids.UserID, error) {
 func defaultSchedulingProfile() crmcontracts.SchedulingProfile {
 	return crmcontracts.SchedulingProfile{
 		CalendarId: "primary", DurationMinutes: 30, UseDefaultTitle: new(true),
-		NoticeMinutes: 120, HorizonDays: 30, BufferMinutes: 10, Title: systemtext.Literal("booking.lets_meet"),
+		NoticeMinutes: 120, HorizonDays: 30, BufferMinutes: 10, Title: systemtext.Literal("booking.meeting"),
 	}
 }
 
@@ -130,7 +130,7 @@ func (s *Store) hostSchedulingProfile(ctx context.Context, host ids.UserID) (crm
 	})
 	profile.UseDefaultTitle = new(defaultTitle)
 	if defaultTitle {
-		profile.Title = systemtext.Copy("booking.lets_meet", systemtext.Locale(ctx))
+		profile.Title = systemtext.Copy("booking.meeting", systemtext.Locale(ctx))
 	}
 	profile.HostName = &name
 
@@ -422,7 +422,7 @@ func schedulingAccountName(ctx context.Context, tx pgx.Tx, host ids.UserID) (str
 }
 
 func (s *Store) persistSchedulingProfile(ctx context.Context, host ids.UserID, profile crmcontracts.SchedulingProfile) error {
-	canonicalDefault := systemtext.Copy("booking.lets_meet", s.footerLanguage(ctx, "", ""))
+	canonicalDefault := systemtext.Copy("booking.meeting", s.footerLanguage(ctx, "", ""))
 	return s.tx(ctx, func(tx pgx.Tx) error {
 		if err := storekit.LockWriteIdentity(ctx, tx, "booking_page", host.String()); err != nil {
 			return err
@@ -444,7 +444,7 @@ func (s *Store) persistSchedulingProfile(ctx context.Context, host ids.UserID, p
 		profile.Slug, profile.Alias, profile.PublicUrl, profile.ReplaceLink = nil, nil, nil, nil
 		profile.HostName, profile.Blocker = nil, nil
 		profile.TeamMembers = mergeTeam(before, profile.TeamMembers)
-		stored := schedulingProfileToStore(ctx, profile, before, canonicalDefault)
+		stored := schedulingProfileToStore(profile, before, canonicalDefault)
 		// The page saved as it stands moves nothing and tells nobody.
 		if !replaced && before != nil && reflect.DeepEqual(*before, stored) {
 			return nil

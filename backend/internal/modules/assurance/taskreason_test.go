@@ -39,7 +39,7 @@ func TestTheForecastTaskLeadsWithItsMostMaterialFinding(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if want := "Margince's nightly forecast check found that the close date has already passed, plus 1 more on this deal."; got != want {
+	if want := "Margince’s nightly forecast check found that the close date has already passed, plus 1 more on this deal."; got != want {
 		t.Fatalf("got %q, want %q", got, want)
 	}
 	if TaskReason([]Exception{{Type: TypeBuyerSilent}}) != nil {

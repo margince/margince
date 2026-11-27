@@ -355,7 +355,7 @@ func TestARestartedUndoDoesNotKeepTheCauseOfTheStopBeforeIt(t *testing.T) {
 func TestUndoRefusesEveryConnectorButCSV(t *testing.T) {
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
-	run, err := s.Create(ctx, CreateRunInput{Connector: connectorSalesforce, SourceRef: "portal", Source: "import_api"})
+	run, err := s.Create(ctx, CreateRunInput{Connector: connectorSalesforce, SourceRef: "portal"})
 	if err != nil {
 		t.Fatalf("Create: %v", err)
 	}

@@ -48,7 +48,7 @@ func TestASystemMintedReminderIsNeverTheOwedPromise(t *testing.T) {
 	promised := logTaskDueAt(t, e, contact, "Send the signed contract",
 		now.Add(24*time.Hour), now.Add(-48*time.Hour))
 	logSystemReminderFor(t, e, contact, "system",
-		"Check in — no activity since 2026-09-08", now.Add(-24*time.Hour))
+		"Check in: no activity since 2026-09-08", now.Add(-24*time.Hour))
 	logSystemReminderFor(t, e, contact, "system:time-scan",
 		"Renewal comes up on 2026-10-01", now.Add(-12*time.Hour))
 
@@ -115,7 +115,7 @@ func TestAPageOfRemindersDoesNotBuryTheOnePromise(t *testing.T) {
 	// them due before the promise, under the id the workflow engine binds.
 	for i := range 28 {
 		logSystemReminderFor(t, e, contact, "system",
-			fmt.Sprintf("Check in — no activity since day %02d", i+1),
+			fmt.Sprintf("Check in: no activity since day %02d", i+1),
 			now.Add(-time.Duration(i+1)*24*time.Hour))
 	}
 
@@ -146,7 +146,7 @@ func TestAPageOfRemindersDoesNotBuryTheOnePromise(t *testing.T) {
 	var subjects []string
 	for _, c := range sweep.Commitments {
 		subjects = append(subjects, c.Subject)
-		if strings.HasPrefix(c.Subject, "Check in — no activity since") {
+		if strings.HasPrefix(c.Subject, "Check in: no activity since") {
 			t.Errorf("review_commitments reports %q as an open commitment — the tool is "+
 				"telling the reader they promised a check-in the clock minted", c.Subject)
 		}

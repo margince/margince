@@ -19,9 +19,8 @@ const emailField = "email"
 // (RFC 5321 §4.5.3.1.3 less the angle brackets), so a longer one cannot be delivered.
 const MaxEmailLength = 254
 
-// Email is a normalized address: parsed once, stored lowercased — the
-// same convention the schema enforces (contact_email_norm/lead_email_norm
-// CHECKs), so dedupe by address can never miss on case.
+// Email keeps the lowercase spelling the schema's address checks require,
+// so dedupe and identity locks agree on the address.
 type Email struct{ s string }
 
 // ParseEmail accepts a bare addr-spec and returns it lowercased; "Ada <a@b.de>"
@@ -31,7 +30,7 @@ type Email struct{ s string }
 //
 // Scan does not parse, so a row stored before a refusal still reads.
 func ParseEmail(raw string) (Email, error) {
-	parsed, err := parseAddress(raw)
+	parsed, err := ParseEmailReference(raw)
 	if err != nil {
 		return Email{}, err
 	}
@@ -47,6 +46,16 @@ func ParseEmail(raw string) (Email, error) {
 			Message: "the part after the @ must be a domain such as example.com",
 		}
 	}
+	return parsed, nil
+}
+
+// ParseEmailReference normalizes an address stored under older write rules.
+// New or changed addresses use ParseEmail for delivery-shape and size checks.
+func ParseEmailReference(raw string) (Email, error) {
+	parsed, err := parseAddress(raw)
+	if err != nil {
+		return Email{}, err
+	}
 	if parsed.s == ErasedEmail {
 		return Email{}, &ParseError{
 			Field: emailField, Code: "email_reserved",
@@ -56,15 +65,10 @@ func ParseEmail(raw string) (Email, error) {
 	return parsed, nil
 }
 
-// parseAddress is ParseEmail without the reserved-address refusal: the shape of an
-// address, which is a different question from whether a record may hold it.
-//
-// IsReservedAddress asks the shape question — it classifies a DOMAIN, including for
-// rows that already hold the erasure's own address — so it cannot go through the
-// constructor that refuses that address, or every legacy tombstone would read as an
-// ordinary one and the sweeps that skip reserved domains would stop skipping them.
+// Reserved-domain classification includes old tombstones, so it needs syntax
+// without the write bound or refusal of the erasure's own address.
 func parseAddress(raw string) (Email, error) {
-	trimmed := strings.TrimSpace(raw)
+	trimmed := IdentifierText(raw)
 	if trimmed == "" {
 		return Email{}, &ParseError{Field: emailField, Code: "email_empty", Message: "an email address is required"}
 	}

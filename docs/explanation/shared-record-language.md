@@ -63,6 +63,8 @@ fit retains its original summary and full preview, with a generic localized prop
 
 Metadata binds each component to its canonical text digest. A real edit retires that component;
 an unrelated update keeps it. Activity and notice triggers enforce this for direct SQL writers too.
+A phrase that is reworded keeps its earlier words in `Definition.Retired`, newest first. Text a row stored in those
+words still binds to its code and recovers. Retired words are matched and never shown.
 Unknown codes, incompatible metadata and old rows without positive provenance show the original.
 English-looking text alone never establishes that the product wrote it. Private descriptors are
 not public API input and their arguments are not returned in display responses.
@@ -151,3 +153,4 @@ made before a language change must still hold after it; undo must restore the sa
 Booking profiles record whether the host chose the built-in title. A custom title remains custom
 when it happens to match a translated default. The booking command and approval preview use the
 same installation-language resolver for an omitted meeting subject.
+The built-in title is `booking.meeting`. A page on it shows today's words, even when its row stores an earlier wording.
