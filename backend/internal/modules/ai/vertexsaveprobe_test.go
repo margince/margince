@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"github.com/margince/margince/backend/internal/platform/googlejwt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -15,6 +14,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/platform/googlejwt"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 

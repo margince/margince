@@ -54,7 +54,7 @@ function magicReads(calls: readonly Call[]): number {
 }
 
 function waitingSection(): HTMLElement | null {
-  return screen.queryByRole("region", { name: en["magic.heading.brief"] });
+  return screen.queryByRole("region", { name: en["magic.heading.firstBrief"] });
 }
 
 it("says once, inside Done for you, that recent changes did not load, and Retry brings them back", async () => {
@@ -76,7 +76,7 @@ it("says once, inside Done for you, that recent changes did not load, and Retry 
   await user.click(retry[0]);
   expect(await within(done).findByText("1 small change")).toBeTruthy();
   const waiting = await screen.findByRole("region", {
-    name: en["magic.heading.brief"],
+    name: en["magic.heading.firstBrief"],
   });
   expect(
     within(waiting).getByRole("list", { name: en["magic.lane.needsYou"] }),

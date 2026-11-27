@@ -1,26 +1,27 @@
-import { type ReactNode, useId, useRef, useState } from "react";
+import { ChevronDown } from "lucide-react";
+import {
+  type ReactNode,
+  type RefCallback,
+  useId,
+  useRef,
+  useState,
+} from "react";
 import type { components } from "../api/schema";
 import {
-  Badge,
   Button,
   Checkbox,
   Modal,
+  OverflowMenu,
   PendingBody,
 } from "../design-system/atoms";
 import { focusableWithin } from "../design-system/dialogfocus";
 import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
-import { provenanceOf } from "../design-system/provenanceof";
 import { SourceEvidence } from "../design-system/sourceevidence";
 import { formatActivityWhen } from "../format/activitywhen";
-import { calendarDay } from "../format/calendarday";
-import { formatDue } from "../format/format";
-import { startOfDayInZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
-import { taskDueChoice, taskDueFields } from "../lib/activitybody";
 import { useCanWriteRecord } from "../lib/capability";
 import { isWebsiteInquiryTask } from "../lib/websiteinquiries";
-import { mostSpecificFirst, RecordLinkChips } from "./recordlinks";
 import { TaskAssignee } from "./taskassignee";
 import { TaskDetailReading, TaskDetailTitle } from "./taskdetailtext";
 import "./taskactions.css";
@@ -32,15 +33,11 @@ import { useTaskContact } from "../lib/taskcontact";
 import { useViewerZone } from "../lib/viewerzone";
 import { CallLogInline, useCallLogFor } from "./calllog.host";
 import { useCompleteTask } from "./taskcomplete";
-import {
-  currentDueFields,
-  TaskDueDatePick,
-  useMoveTask,
-} from "./taskduedatepick";
+import { TaskDetailMeta } from "./taskdetailmeta";
 import { TaskNextStepsPending, useTaskNextSteps } from "./tasknextsteps";
 import { taskOriginKey } from "./taskorigin";
 import { TaskOutcomeForm } from "./taskoutcome";
-import { TaskRemindMenu } from "./taskreminder";
+import { TaskQuickActions } from "./taskquickactions";
 import type { useTaskUpdate } from "./taskwrite";
 import { TaskWriteFailure } from "./taskwritefailure";
 
@@ -61,29 +58,10 @@ export {
   useNoticeRead,
 } from "./taskactions.rowwrites";
 export { TaskDueDatePick } from "./taskduedatepick";
+export { snoozedDueAt, TaskQuickActions } from "./taskquickactions";
 export { useTaskDone, useTaskUpdate } from "./taskwrite";
 
 type Activity = components["schemas"]["Activity"];
-
-/** Keep the agreed wall time while moving at least as far as tomorrow. */
-export function snoozedDueAt(
-  dueAt: string | null | undefined,
-  hasTime: boolean | undefined,
-  zone: string,
-  now = new Date(),
-  intent?: components["schemas"]["IntentTime"],
-): ReturnType<typeof taskDueFields> | null {
-  if (!dueAt) return null;
-  const choice = taskDueChoice(dueAt, hasTime, zone, intent);
-  const dueDay = choice.day;
-  const today = calendarDay(now, choice.zone);
-  const base = dueDay > today ? dueDay : today;
-  const next = calendarDay(
-    new Date(startOfDayInZone(base, choice.zone, 1)),
-    choice.zone,
-  );
-  return taskDueFields(next, choice.time, choice.zone);
-}
 
 /**
  * TaskCompleteCheck is the tick itself: a checkbox for a row that names its
@@ -125,86 +103,13 @@ export function TaskCompleteCheck({
   );
 }
 
-/** Complete, or snooze a dated task. */
-export function TaskQuickActions({
-  activityId,
-  version,
-  dueAt,
-  dueHasTime,
-  dueIntent,
-  update,
-  showComplete = true,
-  completeLabel,
-  quiet = false,
-}: Readonly<{
-  activityId: string;
-  version: number | undefined;
-  dueAt?: string | null;
-  /** The task's `due_has_time`: whether `dueAt` is a time of day. */
-  dueHasTime?: boolean;
-  dueIntent?: components["schemas"]["IntentTime"];
-  update: ReturnType<typeof useTaskUpdate>;
-  showComplete?: boolean;
-  completeLabel?: string;
-  /** Done steps back to a plain button beside another filled verb. */
-  quiet?: boolean;
-}>) {
-  const t = useT();
-  const readerZone = useViewerZone();
-  // Any task write through this `update` holds every verb. The page draws the
-  // old next task until the reads land; a press then acts on a stale row.
-  const pending = update.isPending;
-  const complete = useCompleteTask(update);
-  const move = useMoveTask(update);
-  return (
-    <>
-      {showComplete && (
-        <Button
-          variant={quiet ? undefined : "primary"}
-          disabled={pending}
-          onClick={() => complete(activityId, version)}
-        >
-          {completeLabel ?? t("tasks.complete")}
-        </Button>
-      )}
-      {dueAt && (
-        <Button
-          disabled={pending}
-          onClick={() => {
-            const nextDue = snoozedDueAt(
-              dueAt,
-              dueHasTime,
-              readerZone,
-              new Date(),
-              dueIntent,
-            );
-            if (nextDue)
-              void move({
-                id: activityId,
-                version,
-                to: nextDue,
-                back: currentDueFields(
-                  dueAt,
-                  dueHasTime,
-                  readerZone,
-                  dueIntent,
-                ),
-              });
-          }}
-        >
-          {t("tasks.snooze")}
-        </Button>
-      )}
-    </>
-  );
-}
-
 /**
  * TaskDetailDialog opens one task where it was listed.
  *
- * A task has no screen of its own — it lives in a timeline, not on a record
- * page — so the detail comes to the reader rather than routing them away from
- * the account they are reading.
+ * A task has no screen of its own; it lives in a timeline. So the detail comes
+ * to the reader, who stays on the account they are reading. The head says what
+ * the task is and holds its verbs. The body opens on why it is on the list,
+ * then what it came from.
  */
 export function TaskDetailDialog({
   activityId,
@@ -230,25 +135,34 @@ export function TaskDetailDialog({
   title?: string;
 }>) {
   const t = useT();
-  const { locale } = useLocale();
-  const readerZone = useViewerZone();
   const titleId = useId();
   const query = useActivity(activityId);
   const task: Activity | undefined = query.data;
-  const origin = task ? taskOriginKey(task) : null;
   // The fetched activity carries the server's per-row answer, so the dialog
   // decides for every host whether its changes would be admitted.
   const rowWritable = useCanWriteRecord("activity", task);
   // Logged here rather than in the shell's drawer, which would cover the task.
   const callLog = useCallLogFor(useTaskContact(task).contact?.id);
+  const [logging, setLogging] = useState(false);
   const body = useRef<HTMLDivElement>(null);
-  const verbs = useRef<HTMLDivElement>(null);
-  // The task's own verbs, else the box: Enter on a first-focused link or Call
-  // would leave the dialog or start a call.
+  const own = useRef<HTMLSpanElement>(null);
+  const canAct = Boolean(task && !task.is_done && !readOnly && rowWritable);
+  // Done, else the box: Enter on a first-focused step could send mail or
+  // start a call, and on More it would open a menu.
   const firstFocus = () =>
-    (verbs.current && focusableWithin(verbs.current)[0]) ??
+    (own.current && focusableWithin(own.current)[0]) ??
     body.current?.closest<HTMLElement>('[role="dialog"]') ??
     null;
+  // Opening the log form unmounts the verbs that held focus, and closing it
+  // unmounts the form. Each move puts focus where the reader now is; the
+  // microtask waits for the verbs the close brings back.
+  const closeLog = () => setLogging(false);
+  const formMounted: RefCallback<HTMLDivElement> = (el) => {
+    if (el) {
+      const controls = focusableWithin(el);
+      (controls.find((c) => c.tagName !== "BUTTON") ?? controls[0])?.focus();
+    } else queueMicrotask(() => firstFocus()?.focus());
+  };
   return (
     <Modal
       open
@@ -257,82 +171,43 @@ export function TaskDetailDialog({
       intent="drawer"
       initialFocusTo={firstFocus}
     >
-      <DrawerHead className="task-detail-head">
-        <Heading size="large" id={titleId} className="t-h2">
-          {title ?? <TaskDetailTitle task={task} />}
-        </Heading>
-      </DrawerHead>
-      <DrawerBody ref={body}>
-        <CallStartProvider start={callLog.start}>
+      <CallStartProvider start={callLog.start}>
+        <DrawerHead className="task-detail-head">
+          <Heading size="medium" as="h2" id={titleId}>
+            {title ?? <TaskDetailTitle task={task} />}
+          </Heading>
+          {task && (
+            <>
+              <TaskDetailMeta task={task} update={update} canAct={canAct} />
+              {!logging && (
+                <TaskDetailVerbs
+                  task={task}
+                  canAct={canAct}
+                  update={update}
+                  own={own}
+                  onLog={() => setLogging(true)}
+                />
+              )}
+              {!logging && (
+                <TaskWriteFailure taskId={task.id} update={update} />
+              )}
+            </>
+          )}
+        </DrawerHead>
+        <DrawerBody ref={body}>
           {query.isPending && <PendingBody label={t("tasks.detailLoading")} />}
           <ErrorLine error={query.error} />
           {task && (
-            <div className="form-stack">
-              {origin && <p className="t-body">{t(origin)}</p>}
-              <TaskDetailReading task={task} />
-              <div className="t-caption task-detail-meta">
-                {/* In the same tab: the reader opened the panel to learn what the
-                  task is about, and following its record is leaving for it. */}
-                {task.links && task.links.length > 0 && (
-                  <span className="task-detail-records">
-                    <RecordLinkChips links={mostSpecificFirst(task.links)} />
-                  </span>
-                )}
-                {task.due_at ? (
-                  <span>
-                    {t("co.next.due", {
-                      // The record's own clock, like every other date on this
-                      // surface. A deadline is a fact colleagues read back, so its
-                      // day cannot depend on where the reader sits. `dueInstant`
-                      // mints the picked day's end in this zone; the browser's
-                      // zone would show an approved 9 September as due the 10th.
-                      when: formatDue(
-                        task.due_at,
-                        task.due_has_time,
-                        locale,
-                        readerZone,
-                        task.due_intent,
-                      ),
-                    })}
-                  </span>
-                ) : (
-                  <span>{t("co.next.undated")}</span>
-                )}
-                <span>
-                  {t("tasks.logged")}{" "}
-                  {formatActivityWhen(
-                    task.occurred_at,
-                    task.occurred_precision,
-                    locale,
-                    readerZone,
-                  )}
-                </span>
-                {task.is_done && (
-                  <Badge tone="success">{t("tasks.isDone")}</Badge>
-                )}
-                {/* A held task names its holder after a label, as Logged
-                  names its time; an unheld one reads Unassigned alone. */}
-                {task.assignee_id ? (
-                  <span>
-                    {t("tasks.heldBy")} <TaskAssignee id={task.assignee_id} />
-                  </span>
-                ) : (
-                  <TaskAssignee id={task.assignee_id} />
-                )}
-                {/* A task an agent wrote says so, so a reader knows it was
-                  read out of a conversation rather than typed by a colleague. */}
-                {provenanceOf(task.captured_by).kind === "agent" && (
-                  <Badge tone="ai">{t("co.assistant.aiTag")}</Badge>
-                )}
-              </div>
-              {why}
-              <TaskDetailActions
-                task={task}
-                readOnly={readOnly}
-                writable={rowWritable}
-                update={update}
-                verbs={verbs}
-              />
+            <div className="form-stack task-detail-sections">
+              {logging && (
+                <div ref={formMounted}>
+                  <TaskOutcomeForm
+                    task={task}
+                    onLogged={closeLog}
+                    onBack={closeLog}
+                  />
+                </div>
+              )}
               {callLog.call && (
                 <CallLogInline
                   key={callLog.call.entityId}
@@ -340,93 +215,121 @@ export function TaskDetailDialog({
                   onClose={callLog.close}
                 />
               )}
-              {/* The evidence last, under the verbs. A task's own verbs are what
-                the reader came to press, and a message long enough to scroll
-                would otherwise push them off the panel. */}
-              {task.source_activity_id && (
-                <SourceEvidence
-                  activityId={task.source_activity_id}
-                  openerFor={openerFor}
-                />
-              )}
+              {why}
+              <TaskDetailContext task={task} openerFor={openerFor} />
+              <TaskDetailFootnote task={task} />
             </div>
           )}
-        </CallStartProvider>
-      </DrawerBody>
+        </DrawerBody>
+      </CallStartProvider>
     </Modal>
   );
 }
 
-function TaskDetailActions({
+/**
+ * At most three verbs: the type's own step, Done, and More. More holds the rest
+ * in one order: log what happened, the other way to reach them, open them.
+ */
+function TaskDetailVerbs({
   task,
-  readOnly,
-  writable,
+  canAct,
   update,
-  verbs,
+  own,
+  onLog,
 }: Readonly<{
   task: Activity;
-  readOnly: boolean;
-  writable: boolean;
+  canAct: boolean;
   update: ReturnType<typeof useTaskUpdate>;
-  verbs: React.RefObject<HTMLDivElement | null>;
+  own: React.RefObject<HTMLSpanElement | null>;
+  onLog: () => void;
 }>) {
   const t = useT();
-  const [logging, setLogging] = useState(false);
-  const canAct = !task.is_done && !readOnly && writable && !logging;
   // The type's own step is the panel's one filled verb, so Done steps back.
-  const next = useTaskNextSteps(task, true);
+  const next = useTaskNextSteps(task, false, true);
+  if (!canAct && next.steps === null && !next.others) return null;
   return (
-    <>
-      {!logging && (next.steps !== null || next.others) && (
-        <div className="task-detail-actions">
-          {next.steps}
-          {next.others}
-        </div>
-      )}
+    <div className="task-detail-verbs">
+      {/* Done's weight waits on the contact read, so its place is held. */}
+      {canAct && next.pending && <TaskNextStepsPending />}
+      {next.steps}
       {canAct && (
-        <div ref={verbs} className="task-detail-verbs">
-          <div className="task-detail-buttons">
-            {/* Done's weight waits on the contact read, so its place is held. */}
-            {next.pending && <TaskNextStepsPending />}
-            <TaskQuickActions
-              showComplete={!next.pending}
-              completeLabel={
-                isWebsiteInquiryTask(task)
-                  ? t("inquiry.markHandled")
-                  : undefined
-              }
-              activityId={task.id}
-              version={task.version}
-              dueAt={task.due_at}
-              dueHasTime={task.due_has_time}
-              dueIntent={task.due_intent}
-              update={update}
-              quiet={next.fills}
-            />
-            <Button onClick={() => setLogging(true)}>
-              {t("tasks.log.action")}
-            </Button>
-            <TaskRemindMenu task={task} update={update} />
-          </div>
-          {/* After the buttons in reading order, as on screen. */}
-          <TaskDueDatePick
+        <span ref={own} className="task-detail-own">
+          <TaskQuickActions
+            showComplete={!next.pending}
+            completeLabel={
+              isWebsiteInquiryTask(task) ? t("inquiry.markHandled") : undefined
+            }
             activityId={task.id}
             version={task.version}
-            dueAt={task.due_at}
-            dueHasTime={task.due_has_time}
-            dueIntent={task.due_intent}
             update={update}
+            quiet={next.fills}
           />
-        </div>
+        </span>
       )}
-      {!logging && <TaskWriteFailure taskId={task.id} update={update} />}
-      {logging && (
-        <TaskOutcomeForm
-          task={task}
-          onLogged={() => setLogging(false)}
-          onBack={() => setLogging(false)}
+      <OverflowMenu
+        label={t("tasks.more")}
+        text={t("tasks.more")}
+        face="button"
+        icon={<ChevronDown aria-hidden="true" />}
+      >
+        {canAct && <Button onClick={onLog}>{t("tasks.log.action")}</Button>}
+        {next.others}
+      </OverflowMenu>
+    </div>
+  );
+}
+
+/** What the task came from: how it was made, its note, and its source. */
+function TaskDetailContext({
+  task,
+  openerFor,
+}: Readonly<{ task: Activity; openerFor: SourceOpenerFor }>) {
+  const t = useT();
+  const headingId = useId();
+  const origin = taskOriginKey(task);
+  if (!origin && !task.body && !task.source_activity_id) return null;
+  return (
+    <section className="task-detail-context" aria-labelledby={headingId}>
+      <Heading size="medium" as="h3" id={headingId}>
+        {t("tasks.context")}
+      </Heading>
+      {origin && <p className="t-body">{t(origin)}</p>}
+      {task.body && <TaskDetailReading task={task} />}
+      {task.source_activity_id && (
+        <SourceEvidence
+          activityId={task.source_activity_id}
+          openerFor={openerFor}
         />
       )}
-    </>
+    </section>
+  );
+}
+
+/** When the task was logged and who holds it, as the pane's last line. */
+function TaskDetailFootnote({ task }: Readonly<{ task: Activity }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const readerZone = useViewerZone();
+  return (
+    <p className="t-caption task-detail-foot">
+      <span>
+        {t("tasks.logged")}{" "}
+        {formatActivityWhen(
+          task.occurred_at,
+          task.occurred_precision,
+          locale,
+          readerZone,
+        )}
+      </span>
+      {/* A held task names its holder after a label, as Logged names its
+          time; an unheld one reads Unassigned alone. */}
+      {task.assignee_id ? (
+        <span>
+          {t("tasks.heldBy")} <TaskAssignee id={task.assignee_id} />
+        </span>
+      ) : (
+        <TaskAssignee id={task.assignee_id} />
+      )}
+    </p>
   );
 }

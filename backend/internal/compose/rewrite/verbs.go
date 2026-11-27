@@ -40,7 +40,7 @@ var envelopeRules = map[Envelope]string{
 	EnvelopeEmail: `The words are the body of an email the salesperson is about to send. There is no subject to rewrite: return an empty subject.
 Keep the greeting line as its own line, then a blank line. Write plain text, with a blank line between paragraphs. Write no sign-off and no signature: sending adds the sender's own.`,
 	EnvelopeNote: `The words are a task or note the salesperson typed into a CRM, so a colleague reads it clearly at a glance.
-Add no greeting, no sign-off and no comment on the text. The subject is one short line. The body is markdown: keep its lists, emphasis and links as markdown.`,
+Add no greeting, no sign-off and no comment on the text. The subject is one short line, and an empty subject stays empty. The body is markdown: keep its lists, emphasis and links as markdown.`,
 }
 
 // Admits reports whether the envelope offers the verb. A note offers Polish

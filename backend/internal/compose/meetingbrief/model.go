@@ -104,7 +104,7 @@ func Write(ctx context.Context, lane Completer, in Input, lang string) ([]Sectio
 	if lane == nil {
 		return floor, crmcontracts.WrittenByDeterministic
 	}
-	written, err := writeWithModel(ctx, lane, in, lang)
+	written, err := writeWithModel(ai.WithFloor(ctx), lane, in, lang)
 	if err != nil {
 		// The declared degrade posture, not a swallowed error. A model that is
 		// unavailable, over budget or answering unparseable JSON must not take

@@ -295,6 +295,29 @@ describe("the tag page names what carries the word", () => {
     expect(screen.queryByText(en["tagResult.noneLeft"])).toBeNull();
   });
 
+  it("totals the records a live word is on", async () => {
+    installFetchStub({
+      "GET /me": meRoute({
+        contact: ["read"],
+        company: ["read"],
+        deal: ["read"],
+        lead: ["read"],
+      }),
+      [`GET /tags/${TAG}`]: tagRead({ contacts: 1, companies: 0, deals: 0 }),
+      "GET /contacts": () =>
+        jsonResponse({ data: [{ id: "p-1", full_name: "Katrin Hofmann" }] }),
+      "GET /companies": () => jsonResponse({ data: [] }),
+      "GET /deals": () => jsonResponse({ data: [] }),
+    });
+    render(
+      <StoryProviders>
+        <TagResultScreen tagID={TAG} />
+      </StoryProviders>,
+    );
+
+    expect(await screen.findByText("1 tagged record")).toBeInTheDocument();
+  });
+
   // Every record list requires the tag to be LIVE, so a retired word reaches
   // none of them. The header total would be the last line on the page still
   // promising rows the groups correctly do not show.
@@ -328,7 +351,7 @@ describe("the tag page names what carries the word", () => {
     expect(
       await screen.findByText("Automation World 2026"),
     ).toBeInTheDocument();
-    expect(screen.queryByText(/6 visible assignments/)).toBeNull();
+    expect(screen.queryByText(/tagged record/)).toBeNull();
   });
 
   it("says so when the word is on nothing at all", async () => {

@@ -102,6 +102,14 @@ func TestNoFixturePicksASeatAnOrderingDoesNotDecide(t *testing.T) {
 		if filepath.Base(path) == "seatfixturepick_test.go" {
 			continue
 		}
+		src, err := gatekit.ReadFile(path)
+		if err != nil {
+			t.Fatalf("reading %s: %v", path, err)
+		}
+		// appUserSQL keeps only statements naming app_user, so a file without the word gives none.
+		if !mayHoldFolded(string(src), "app_user") {
+			continue
+		}
 		file, err := gatekit.ParseFile(path, 0)
 		if err != nil {
 			t.Fatalf("parsing %s: %v", path, err)

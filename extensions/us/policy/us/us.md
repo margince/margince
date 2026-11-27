@@ -2,15 +2,22 @@
 jurisdiction: us
 version: 2
 created: 2026-11-24
+source-checked: 2026-11-25
 instruments:
   - name: "CAN-SPAM Act of 2003 (15 U.S.C. 7701 et seq.)"
     effective: 2004-01-01
     provision: "15 U.S.C. 7704(a)(3), (a)(4) and (a)(5)"
     source-url: https://uscode.house.gov/view.xhtml?req=granuleid:USC-prelim-title15-section7704&num=0&edition=prelim
+    text-url: "https://www.govinfo.gov/link/uscode/15/7704?type=usc&year=mostrecent&link-type=html"
+    text-digest: 6c95bd853551c56281aee1f2285e61a1572ce2dd388df7ba1303088ae6c37f3f
+    text-fetched: 2026-11-25
   - name: "CAN-SPAM Rule (16 CFR Part 316)"
     effective: 2008-07-07
     provision: "16 CFR 316.5"
     source-url: https://www.ecfr.gov/current/title-16/chapter-I/subchapter-C/part-316
+    text-url: "https://www.ecfr.gov/api/renderer/v1/content/enhanced/current/title-16?part=316"
+    text-digest: 191be6209091480fd834d97a1accba754589d43003e5537ec2f2c6c57c2acf12
+    text-fetched: 2026-11-25
 reply-window: 8760h
 deal-follow-up-window: 4368h
 marketing-mode: opt_out

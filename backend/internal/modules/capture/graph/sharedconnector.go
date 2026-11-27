@@ -100,7 +100,7 @@ func (a *httpAPI) userID(ctx context.Context, access string) (string, error) {
 //
 //nolint:ireturn // implements connector.SharedMailboxReader, whose contract returns the Connector seam
 func (c *Connector) OpenShared(auth connector.Auth) (connector.Connector, connector.Auth, error) {
-	return c.openShared(auth, nil)
+	return c.openSharedGranted(auth, nil)
 }
 
 // SharedSendScope is Microsoft's name for the permission to send as a shared
@@ -115,7 +115,7 @@ func (c *Connector) SharedSendScope() string { return SendScope }
 //
 //nolint:ireturn // implements connector.SharedMailboxSender, whose contract returns the EmailSender seam
 func (c *Connector) OpenSharedSender(auth connector.Auth) (connector.EmailSender, connector.Auth, error) {
-	opened, state, err := c.openShared(auth, []string{SendScope})
+	opened, state, err := c.openSharedGranted(auth, []string{SendScope})
 	if err != nil {
 		return nil, nil, err
 	}
@@ -127,7 +127,7 @@ func (c *Connector) OpenSharedSender(auth connector.Auth) (connector.EmailSender
 }
 
 //nolint:ireturn // returns the Connector seam, as OpenShared does
-func (c *Connector) openShared(auth connector.Auth, granted []string) (connector.Connector, connector.Auth, error) {
+func (c *Connector) openSharedGranted(auth connector.Auth, granted []string) (connector.Connector, connector.Auth, error) {
 	if c.shared == nil {
 		return nil, nil, errNoSharedReader
 	}

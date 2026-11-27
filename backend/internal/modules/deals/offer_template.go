@@ -47,8 +47,8 @@ var languageShape = regexp.MustCompile(`^[a-z]{2}$`)
 
 var templateLocaleShape = regexp.MustCompile(`^[a-z]{2}(-[A-Z]{2})?$`)
 
-// templateLocaleFault is the one refusal of a locale the shape check would stop.
-var templateLocaleFault = &values.ParseError{Field: "locale", Code: "invalid_locale",
+// templateLocaleFault refuses a locale the shape check would stop.
+var templateLocaleFault = &values.ParseError{Field: "locale", Code: "invalid_locale", //nolint:goconst // the wire field, not the column constant
 	Message: "locale is a language and an optional region, for example de-DE or de"}
 
 // checkTemplateLocale is the one locale check that create, preview and update share.

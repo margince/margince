@@ -387,7 +387,9 @@ func awaitJobFailure(t *testing.T, failed <-chan *river.Event, kind string) {
 // about a filing. The audit log and the event outbox are counted for the connector
 // alone, which is the actor of a filing. The audit log leaves out the
 // connection's own rows, which the Zalo token renewal writes on start-up.
-var runnerBookkeeping = []string{"brief_run", "capture_sweep_run", "data_task_run", "installation_state", "system_log"}
+// activity_participant_replay is the periodic participant backfill's own mark,
+// which lands after a filing or not, as that pass's schedule falls.
+var runnerBookkeeping = []string{"activity_participant_replay", "brief_run", "capture_sweep_run", "data_task_run", "installation_state", "system_log"}
 
 // tableCounts counts the rows a filing could write, in every table apart from
 // the job queue's own and the runner's bookkeeping.

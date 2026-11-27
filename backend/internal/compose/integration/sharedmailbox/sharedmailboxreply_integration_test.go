@@ -43,14 +43,12 @@ func (m *replyingMailbox) ProbeShared(_ context.Context, auth connector.Auth) (c
 	return auth, nil
 }
 
-//nolint:ireturn // implements connector.SharedMailboxReader
 func (m *replyingMailbox) OpenShared(auth connector.Auth) (connector.Connector, connector.Auth, error) {
 	return m, auth, nil
 }
 
 func (m *replyingMailbox) SharedSendScope() string { return replyScope }
 
-//nolint:ireturn // implements connector.SharedMailboxSender
 func (m *replyingMailbox) OpenSharedSender(auth connector.Auth) (connector.EmailSender, connector.Auth, error) {
 	m.opened = append(m.opened, auth)
 	return m, connector.Auth("sender-state"), nil
@@ -63,7 +61,7 @@ func (m *replyingMailbox) SendEmail(context.Context, connector.Auth, connector.E
 // connectReplying connects sales@ over a provider that can send as it, read by team.
 func (s *sharedMailboxSuite) connectReplying(t *testing.T, team ids.UUID) (ids.UUID, *replyingMailbox) {
 	t.Helper()
-	provider := &replyingMailbox{deliveringMailbox: deliveringMailbox{name: "graph", address: salesMailbox}}
+	provider := &replyingMailbox{name: "graph", address: salesMailbox}
 	s.registry.Register(provider)
 	id, err := s.registry.ConnectShared(withReadScope(s.admin()), capture.SharedConnect{
 		Provider: "graph", Address: salesMailbox, ReaderTeam: team, Auth: connector.Auth("app-credential"),

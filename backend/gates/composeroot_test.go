@@ -35,7 +35,8 @@ const composeRootDir = "internal/compose"
 // stayed under its own ceilings, and the two sets of additions sum to these.
 const (
 	// Raised by 1 for the history-narrowing fleet worker, which binds each
-	// workspace through this package's unexported job helpers.
+	// workspace through this package's unexported job helpers. Raised by 1 for
+	// main's managed corpus port, which wraps the unexported call runtime.
 	// Raised by 1 production file for agentfor.go, the one seam that binds the
 	// product acting for a named colleague, split out of the deal-owner seam.
 	// Raised by 1 for the Zalo ingest and token renewal job args, which the
@@ -43,7 +44,7 @@ const (
 	// Raised by 1 for reportexactrange.go, which withholds a report number past the
 	// exact range at every scan that puts report numbers on the wire.
 	// Raised by 1 for the seat-bound deal reads a unit asks as its own user.
-	composeRootProductionFiles = 1389
+	composeRootProductionFiles = 1390
 	// Raised by 2 files for the extension mail-file read cases and the purge
 	// receipt cases, which drive this package's unexported seams. Raised by 1
 	// production and 1 test file for the series-split fold and its cases.
@@ -56,7 +57,8 @@ const (
 	// They drive unexported readers of the kind.
 	// Raised by 2 test files for the agent seam's id check and for the billing case.
 	// That case drives the unexported finance billing adapter, so the finance
-	// card and the company page withhold the same billing contacts.
+	// card and the company page withhold the same billing contacts. Raised by 1
+	// test file for main's managed corpus port cases, met with develop's in the sync.
 	// Raised by 2 test files for the seat-bound deal reads and the stored-object
 	// count, whose cases drive the unexported seat and ledger wiring. Raised by 1
 	// for the exact-range cases, which drive the unexported report scan.
@@ -64,7 +66,7 @@ const (
 	// jobs, which drive the unexported job and effect wiring.
 	// Raised by 1 test file for the link suggestion tools an agent reads and
 	// answers through, which read the unexported tool registry.
-	composeRootTestFiles = 1933
+	composeRootTestFiles = 1934
 	// Raised by 107 for the floor of a figure every reader is shown alike. Raised
 	// by 1 for the import that binds one zone lookup to each attention read.
 	// Raised by 249 production and 62 test lines for the full-path certification
@@ -97,6 +99,8 @@ const (
 	// Raised by 12 production and 73 test lines for the reading refusal that
 	// names its cause per question. Its cases drive the unexported document
 	// extractor and transcript proposer.
+	// Raised by 49 test lines for the gate that keeps an agent's offered text from
+	// naming a tool it is not offered. It drives the unexported scheduled catalog.
 	// Raised by 244 test lines for the data reset cases of an event the sweep
 	// orphaned, which drive the unexported reset handlers.
 	// Raised by 21 test lines when main's root compose cases met develop's in the
@@ -127,6 +131,8 @@ const (
 	// Raised by 76 production and 459 test lines for the row scope of an owned
 	// extension kind and its cases. They drive the unexported report runner,
 	// History query, boot owner check and filter preview handler.
+	// Raised by 63 production and 31 test lines when main's managed corpus port
+	// and its cases met develop in the sync. The port wraps the unexported call runtime.
 	// Raised by 44 production and 99 test lines for the agent-for-a-colleague
 	// seam, the finance card's hidden billing count and their cases.
 	// Raised by 94 production lines for the Zalo ingest and token renewal job args.
@@ -138,11 +144,21 @@ const (
 	// and the stored-object ledger wiring, and the cases that drive them.
 	// Raised by 14 production and 14 test lines for the date-only precision the
 	// close silence and the customer-progress reads carry, and their case.
+	// Raised by 1 production line for the retain policy of a link suggestion's
+	// colleague in the member reference registry.
 	// Raised by 153 production and 829 test lines for the jobs that run as an agent
 	// for a named colleague, and their cases.
-	composeRootProductionLines = 232_142
+	// Raised by 1 production and 27 test lines for main's unread mail notice
+	// and its cases, met with develop's in the sync.
+	// Raised by 64 production lines and 1 test line when develop's chat
+	// clarification ask met the sync; develop's own ceiling already covers them.
+	composeRootProductionLines = 232_131
 	// Raised by 18 test lines for the link suggestion tool cases.
-	composeRootTestLines = 363_698
+	// Raised by 2 test lines for the actor census waivers of the two jobs that
+	// bind their colleague inside a method.
+	// Raised by 48 test lines for main's gate that keeps an agent's offered text
+	// from naming a tool it is not offered.
+	composeRootTestLines = 363_792
 )
 
 // A read under these floors stopped early or read the wrong place, and would

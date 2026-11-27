@@ -105,7 +105,7 @@ func agentToolLists(t *testing.T) map[string][]string {
 			Sites []yaml.Node `yaml:"sites"`
 		} `yaml:"tasks"`
 	}
-	if err := yaml.Unmarshal([]byte(readFile(t, filepath.Join("api", "ai-tasks.yaml"))), &contract); err != nil {
+	if err := unmarshalYAML([]byte(readFile(t, filepath.Join("api", "ai-tasks.yaml"))), &contract); err != nil {
 		t.Fatalf("parsing api/ai-tasks.yaml: %v", err)
 	}
 	out := map[string][]string{}

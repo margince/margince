@@ -184,8 +184,8 @@ func seedProfileFieldWrittenAt(
 ) {
 	t.Helper()
 	if _, err := e.Owner.Exec(context.Background(), `
-		INSERT INTO company_profile_field (id, company_id, field, value, source, evidence_snippet, source_url, confidence, captured_by, updated_at)
-		VALUES ($1, $2, $3, $4, 'site_read', $5, 'https://voltaq.example/about', 0.9,
+		INSERT INTO field_provenance (object_type, id, object_id, field_name, value, source, evidence_snippet, evidence_ref, confidence, captured_by, updated_at)
+		VALUES ('company', $1, $2, $3, $4, 'site_read', $5, 'https://voltaq.example/about', 0.9,
 		        'site_read:seed', $6)`,
 		ids.NewV7(), companyID, field, value, value, written); err != nil {
 		t.Fatalf("seed profile field %s: %v", field, err)

@@ -33,8 +33,6 @@ import (
 	"strconv"
 	"testing"
 
-	"gopkg.in/yaml.v3"
-
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
@@ -75,7 +73,7 @@ func publishedWonReasonDetailBound(t *testing.T) int {
 			} `yaml:"schemas"`
 		} `yaml:"components"`
 	}
-	if err := yaml.Unmarshal(raw, &doc); err != nil {
+	if err := unmarshalYAML(raw, &doc); err != nil {
 		t.Fatalf("parsing the contract: %v", err)
 	}
 	// The REQUEST schema, not Deal. Deal declares the field readOnly, which

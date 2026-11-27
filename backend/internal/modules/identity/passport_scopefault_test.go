@@ -90,7 +90,7 @@ func TestARefreshThatRepeatsAScopeAsksForItOnce(t *testing.T) {
 	t.Parallel()
 	read, write := string(principal.ScopeRead), string(principal.ScopeWrite)
 
-	got, err := narrowedScopes([]string{read, scopeOfflineAccess, read}, []string{read, write})
+	got, err := narrowedScopes([]string{read, ScopeOfflineAccess, read}, []string{read, write})
 	if err != nil {
 		t.Fatalf("narrowedScopes: %v", err)
 	}

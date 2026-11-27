@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { MessageSquare } from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { AppLink } from "../../design-system/applink";
@@ -19,6 +20,7 @@ import {
   searchHitRoute,
 } from "../../lib/searchkinds";
 import { useViewerZone } from "../../lib/viewerzone";
+import { DealHit } from "./searchdealhit";
 import type { OpenHit } from "./searchpanels";
 
 type SearchResult = components["schemas"]["SearchResult"];
@@ -64,20 +66,32 @@ export function SearchHit({
   const isTag = hit.type === "tag";
   const route = searchHitRoute(type, hit.id, hit.deal_id);
   const opensPanel = !route && type === "activity";
-  const go = route
-    ? () => navigate(route)
-    : opensPanel && (() => onOpen(hit.id, "activity"));
+  // A deal and an activity are records too, and stand in the same box, with
+  // what the hit carries to tell one from its look-alikes.
+  if (type === "deal" && route) {
+    return (
+      <DealHit hit={hit} href={routeHash(route)} marks={hitMarks(hit, t)} />
+    );
+  }
+  if (opensPanel) {
+    return (
+      <ActivityHit
+        hit={hit}
+        marks={hitMarks(hit, t)}
+        onOpen={() => onOpen(hit.id, "activity")}
+      />
+    );
+  }
   return (
     <li className="search-hit">
       <div className="search-hit-title">
-        {go ? (
+        {route ? (
           // The hit's own `title`, not EntityRef: that would re-fetch each
           // record (one GET per hit) for a name the search already returned.
           <button
             type="button"
             className="entity-link"
-            aria-haspopup={opensPanel ? "dialog" : undefined}
-            onClick={go}
+            onClick={() => navigate(route)}
           >
             {hit.title ?? hit.id}
           </button>
@@ -101,16 +115,10 @@ export function SearchHit({
           })}
         </p>
       )}
-      {/* Quoted only when the excerpt is PROSE the record actually contains —
-          an activity's body slice, which is a passage lifted out of a message
-          and reads as one. Every other branch's excerpt is a structured
-          identifier the record carries in a field: a project's key and company,
-          a lead's company, a product's sku. Quoting “KAR-9910” claims somebody wrote that
-          sentence, and the marks are what a reader would have to type to search
-          for it. */}
-      {hit.snippet && (
-        <p>{hit.type === "activity" ? `“${hit.snippet}”` : hit.snippet}</p>
-      )}
+      {/* Not quoted: an excerpt here is a structured identifier the record
+          carries in a field (a project's key, a product's sku), not prose
+          somebody wrote. An activity's passage is quoted in ActivityHit. */}
+      {hit.snippet && <p>{hit.snippet}</p>}
     </li>
   );
 }
@@ -144,6 +152,34 @@ function RecordHit({
         identity={hit.id}
         href={routeHash(ENTITY[type].route(hit.id))}
         logo={hit.logo_url}
+        position={facts}
+      />
+    </li>
+  );
+}
+
+// An activity with no message row: its title, the passage that matched, and
+// the marks that say where a connector row came from.
+function ActivityHit({
+  hit,
+  marks,
+  onOpen,
+}: Readonly<{ hit: SearchResult; marks: ReactNode[]; onOpen: () => void }>) {
+  const passage = hit.snippet ? `“${hit.snippet}”` : undefined;
+  const facts = (passage || marks.length > 0) && (
+    <span className="search-hit-marks">
+      {passage && <span>{passage}</span>}
+      {marks}
+    </span>
+  );
+  return (
+    <li className="search-hit">
+      <RecordCard
+        kind="activity"
+        icon={MessageSquare}
+        name={hit.title ?? hit.id}
+        identity={hit.id}
+        onOpen={onOpen}
         position={facts}
       />
     </li>

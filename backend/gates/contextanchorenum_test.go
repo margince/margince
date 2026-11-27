@@ -27,8 +27,6 @@ import (
 	"strconv"
 	"testing"
 
-	"gopkg.in/yaml.v3"
-
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
@@ -87,7 +85,7 @@ func contextAnchorEnum(t *testing.T) []string {
 			} `yaml:"parameters"`
 		} `yaml:"paths"`
 	}
-	if err := yaml.Unmarshal(raw, &doc); err != nil {
+	if err := unmarshalYAML(raw, &doc); err != nil {
 		t.Fatalf("parsing %s: %v", contractFile, err)
 	}
 	path, ok := doc.Paths[contextPath]

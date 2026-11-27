@@ -11,6 +11,7 @@ package gates
 // schema describing a product that no longer exists.
 
 import (
+	"bytes"
 	"encoding/json"
 	"os"
 	"os/exec"
@@ -18,7 +19,6 @@ import (
 	"testing"
 
 	"github.com/santhosh-tekuri/jsonschema/v6"
-	"gopkg.in/yaml.v3"
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/platform/config"
@@ -48,7 +48,7 @@ func TestGeneratedConfigurationFilesAreCurrent(t *testing.T) {
 func TestEveryShippedConfigValidatesAgainstTheSchema(t *testing.T) {
 	t.Parallel()
 	schema := compiledConfigSchema(t)
-	paths, err := filepath.Glob("../config/margince*.yaml")
+	paths, err := gatekit.Glob("../config/margince*.yaml")
 	if err != nil {
 		t.Fatalf("globbing the shipped configs: %v", err)
 	}
@@ -97,16 +97,11 @@ func TestTheSchemaAcceptsAnExplicitNullWhereTheLoaderDoes(t *testing.T) {
 
 func compiledConfigSchema(t *testing.T) *jsonschema.Schema {
 	t.Helper()
-	raw, err := os.Open("../config/margince.schema.json")
+	raw, err := gatekit.ReadFile("../config/margince.schema.json")
 	if err != nil {
-		t.Fatalf("open schema: %v", err)
+		t.Fatalf("read schema: %v", err)
 	}
-	defer func() {
-		if cerr := raw.Close(); cerr != nil {
-			t.Errorf("close schema: %v", cerr)
-		}
-	}()
-	doc, err := jsonschema.UnmarshalJSON(raw)
+	doc, err := jsonschema.UnmarshalJSON(bytes.NewReader(raw))
 	if err != nil {
 		t.Fatalf("parse schema: %v", err)
 	}
@@ -128,7 +123,7 @@ func compiledConfigSchema(t *testing.T) *jsonschema.Schema {
 func asJSONValue(t *testing.T, name string, raw []byte) any {
 	t.Helper()
 	var doc any
-	if err := yaml.Unmarshal(raw, &doc); err != nil {
+	if err := unmarshalYAML(raw, &doc); err != nil {
 		t.Fatalf("%s is not parseable yaml: %v", name, err)
 	}
 	encoded, err := json.Marshal(doc)

@@ -93,7 +93,10 @@ runs:
     # The entry holds exactly what install-deps downloaded on this runner image
     # for this Playwright version, so it installs with no mirror at all. An empty
     # entry means the image already had every library. Any dpkg failure falls
-    # through to install-deps below.
+    # through to install-deps below. --auto-deconfigure lets the newer libasound2-data
+    # replace the older one the runner image ships while libasound2t64 is upgraded in
+    # the same call; without it dpkg refuses and leaves libasound2t64 unconfigured,
+    # which also makes the install-deps fallback fail.
     - name: Install the cached system libraries without the mirror
       id: offline
       if: steps.apt-cache.outputs.cache-hit == 'true'
@@ -104,7 +107,7 @@ runs:
         debs=("$HOME"/playwright-apt-archives/*.deb)
         echo "installing ${#debs[@]} cached package(s)"
         if [ "${#debs[@]}" -gt 0 ]; then
-          sudo DEBIAN_FRONTEND=noninteractive timeout --kill-after=30s 2m dpkg -i "${debs[@]}"
+          sudo DEBIAN_FRONTEND=noninteractive timeout --kill-after=30s 2m dpkg -i --auto-deconfigure "${debs[@]}"
         fi
 
     - name: Install the system libraries the browsers need

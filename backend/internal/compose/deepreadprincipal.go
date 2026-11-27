@@ -4,8 +4,8 @@
 package compose
 
 // Who a deep read acts as. The dossier row is the authority on who asked, not
-// the job payload that travelled beside it. A read a person asked for writes
-// its findings as that person's agent, under their live grants. A read
+// the job payload that travelled beside it. A read a colleague asked for writes
+// its findings as that colleague's agent, under their live grants. A read
 // Margince started itself runs as system:deep_read. Either way the dossier
 // row's own bookkeeping is system:deep_read.
 
@@ -55,7 +55,7 @@ func withClaimedRequester(ctx context.Context, requestedBy string, readID ids.UU
 }
 
 // deepReader is a deep read's two principals. The agent reads the site and
-// writes the findings for the person who asked. The system keeps the dossier
+// writes the findings for the colleague who asked. The system keeps the dossier
 // row, and runs a read Margince started itself.
 var deepReader = colleagueJob{work: "agent:deepread", books: deepReadSystemID}
 
@@ -64,7 +64,7 @@ const deepReadSystemID = "system:deep_read"
 
 // readPrincipals binds the claimed read's work onto ctx, with its bookkeeping
 // carried beside it (runBooks). A read nobody asked for, or one whose
-// requester names no person, is the system's throughout. A requester who left
+// requester names no colleague, is the system's throughout. A requester who left
 // or lost their seat answers workRefused.
 func readPrincipals(ctx context.Context, users *identity.Service, requestedBy string, readID ids.UUID) (context.Context, error) {
 	books := withClaimedRequester(ctx, requestedBy, readID)

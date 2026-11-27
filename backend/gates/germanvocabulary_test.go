@@ -341,7 +341,7 @@ func embeddedGerman(path string, file *ast.File) ([]germanString, error) {
 // embeddedGermanLines globs one pattern, and walks a matched folder the way
 // //go:embed takes it whole.
 func embeddedGermanLines(pattern string) ([]germanString, error) {
-	matches, err := filepath.Glob(pattern)
+	matches, err := gatekit.Glob(pattern)
 	if err != nil {
 		return nil, err
 	}

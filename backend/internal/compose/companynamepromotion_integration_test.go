@@ -59,8 +59,8 @@ func seedSigningEmployee(t *testing.T, e *integration.Env, company ids.UUID, ful
 			return err
 		}
 		_, err := tx.Exec(ctx, `
-			INSERT INTO contact_profile_field (contact_id, field, value, evidence_snippet, source_ref, confidence, source, captured_by)
-			VALUES ($1, 'company_name', $2, $2, 'activity:seed', 0.9, 'capture_enrich', 'agent:enrich')`, contact, signedName)
+			INSERT INTO field_provenance (object_type, object_id, field_name, value, evidence_snippet, evidence_ref, confidence, source, captured_by)
+			VALUES ('contact', $1, 'company_name', $2, $2, 'activity:seed', 0.9, 'capture_enrich', 'agent:enrich')`, contact, signedName)
 		return err
 	})
 	if err != nil {
@@ -75,8 +75,8 @@ func seedSigningEmployee(t *testing.T, e *integration.Env, company ids.UUID, ful
 func seedDossierName(t *testing.T, e *integration.Env, company ids.UUID, legalName string) {
 	t.Helper()
 	e.WsExec(t, `
-		INSERT INTO company_profile_field (company_id, field, value, evidence_snippet, source_url, confidence, source, captured_by)
-		VALUES ($1, 'legal_name', $2, $2, 'https://gitex.example', 0.9, 'site_read', 'connector:siteread')`,
+		INSERT INTO field_provenance (object_type, object_id, field_name, value, evidence_snippet, evidence_ref, confidence, source, captured_by)
+		VALUES ('company', $1, 'legal_name', $2, $2, 'https://gitex.example', 0.9, 'site_read', 'connector:siteread')`,
 		company, legalName)
 }
 

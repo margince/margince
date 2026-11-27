@@ -42,6 +42,8 @@ type ConnectionView struct {
 	// HistoryNarrowing is nil unless earlier mail is still being narrowed.
 	HistoryNarrowing *HistoryNarrowing
 	narrowingHeld    *bool
+	// UnreadFrom and UnreadTo bound the mail no sync read, both or neither.
+	UnreadFrom, UnreadTo *time.Time
 	// A missing signature choice follows the workspace setting.
 	SignatureEnrichEnabled *bool
 	HistoryBaseline        *HistoryBaseline

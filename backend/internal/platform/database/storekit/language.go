@@ -16,8 +16,8 @@ type rowQuerier interface {
 	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
 }
 
-// LanguageRegistered reports whether the language table holds a code. The table
-// is the one source. A code stays in it after its unit is gone, and a code
+// LanguageRegistered reports whether the language table holds a code, read from
+// the table on each call. A code stays in it after its unit is gone, and a code
 // another process wrote is seen without a restart.
 func LanguageRegistered(ctx context.Context, q rowQuerier, code string) (bool, error) {
 	var held bool
@@ -33,6 +33,8 @@ func CheckLanguage(ctx context.Context, q rowQuerier, field, code string) error 
 	if err != nil || held {
 		return err
 	}
-	return &values.ParseError{Field: field, Code: "invalid_language",
-		Message: field + " is a language this installation offers, for example de"}
+	return &values.ParseError{
+		Field: field, Code: "invalid_language",
+		Message: field + " is a language this installation offers, for example de",
+	}
 }

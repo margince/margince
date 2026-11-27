@@ -197,20 +197,26 @@ func changeSharedMailboxTx(ctx context.Context, tx pgx.Tx, id ids.UUID, in Share
 			return prior, err
 		}
 	}
-	// Asked whether or not the visibility moved: an admin may narrow the
-	// history of a mailbox that is already held.
-	if in.ApplyToHistory && in.Posture != nil {
-		if err := requestHistoryNarrowingTx(ctx, tx, sharedConnection(next.ID), next.Posture); err != nil {
-			return prior, err
-		}
-		if next, err = sharedMailboxTx(ctx, tx, next.ID, ""); err != nil {
-			return prior, err
-		}
+	if next, err = narrowSharedHistoryTx(ctx, tx, next, in); err != nil {
+		return prior, err
 	}
 	if err := next.withNarrowingTx(ctx, tx); err != nil {
 		return prior, err
 	}
 	return next, nil
+}
+
+// narrowSharedHistoryTx asks for the earlier mail to be narrowed when the change
+// says so, whether or not the visibility moved. An admin may narrow the history
+// of a mailbox that is already held. It answers the mailbox as stored after.
+func narrowSharedHistoryTx(ctx context.Context, tx pgx.Tx, next SharedMailboxView, in SharedChange) (SharedMailboxView, error) {
+	if !in.ApplyToHistory || in.Posture == nil {
+		return next, nil
+	}
+	if err := requestHistoryNarrowingTx(ctx, tx, sharedConnection(next.ID), next.Posture); err != nil {
+		return next, err
+	}
+	return sharedMailboxTx(ctx, tx, next.ID, "")
 }
 
 // moveSharedReadersTx hands the mailbox to another reader team, and drops a

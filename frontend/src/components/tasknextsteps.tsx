@@ -76,29 +76,41 @@ export function TaskNextSteps({
 }
 
 /** The type's step, and whether it is a filled button, so Done can step back
- *  and the card keeps one filled verb. While `pending`, that is not known yet. */
+ *  and the card keeps one filled verb. While `pending`, that is not known yet.
+ *  `folded` keeps the type's one way in view and hands every other way, and
+ *  Open contact, to `others` as menu lines. */
 export function useTaskNextSteps(
   task: Activity | undefined,
   offerOpen: boolean,
+  folded = false,
 ): Steps {
   const { contact, pending } = useTaskContact(task);
   const writeTo = useWriteTo();
   if (!task) return NO_STEP;
-  const ways = taskWays(task, contact, pending, offerOpen, writeTo !== null);
+  const ways = taskWays(task, {
+    contact,
+    pending,
+    offerOpen,
+    folded,
+    composes: writeTo !== null,
+  });
   const shown = shownWays(ways);
   const target = task.email_target;
   const mail = !shown.includes("mail") && Boolean(target && !target.refusal);
   const call = !shown.includes("call") && ways.phone !== undefined;
+  const open = folded ? contact : undefined;
   return {
     ...typedSteps(ways),
     pending: pending && CONTACT_STEPS.has(taskTypeOf(task)),
     others:
-      mail || call ? (
+      mail || call || open ? (
         <OtherWays
           task={task}
           contact={ways.reachable}
           phone={call ? ways.phone : undefined}
           mail={mail}
+          menu={folded}
+          open={open}
         />
       ) : null,
   };
@@ -106,16 +118,26 @@ export function useTaskNextSteps(
 
 function taskWays(
   task: Activity,
-  contact: Contact | undefined,
-  pending: boolean,
-  offerOpen: boolean,
-  composes: boolean,
+  {
+    contact,
+    pending,
+    offerOpen,
+    folded,
+    composes,
+  }: Readonly<{
+    contact: Contact | undefined;
+    pending: boolean;
+    offerOpen: boolean;
+    folded: boolean;
+    composes: boolean;
+  }>,
 ): Ways {
   const reachable = contact && !contact.archived_at ? contact : undefined;
   const target = task.email_target;
   return {
     task,
     offerOpen,
+    folded,
     pending,
     reachable,
     mailFills: Boolean(target && (composes || target.refusal)),
@@ -128,8 +150,17 @@ type Way = "mail" | "call";
 
 const BOTH_WAYS: readonly Way[] = ["mail", "call"];
 
-/** The ways a task's own step offers, which its menu leaves out. */
+/** The ways a task's own step offers, which its menu leaves out. Folded, one
+ *  way stays in view: a draft that works, else the call. A refused draft stays
+ *  beside the call, since its reason is news. */
 function shownWays(ways: Ways): readonly Way[] {
+  const shown = typeWays(ways);
+  if (!ways.folded || shown.length < 2) return shown;
+  if (ways.mailWorks) return ["mail"];
+  return ways.phone && !ways.mailFills ? ["call"] : shown;
+}
+
+function typeWays(ways: Ways): readonly Way[] {
   const { task } = ways;
   switch (taskTypeOf(task)) {
     case "reply":
@@ -199,6 +230,7 @@ type TypedStep = Pick<Steps, "steps" | "fills">;
 type Ways = Readonly<{
   task: Activity;
   offerOpen: boolean;
+  folded: boolean;
   pending: boolean;
   reachable: Contact | undefined;
   mailFills: boolean;
@@ -241,18 +273,23 @@ function bothWaysSteps(ways: Ways): TypedStep {
 }
 
 /** The ways the type's step leaves out, as menu lines: a mail to draft when
- *  one can be, and the call. */
+ *  one can be, the call, and in a `menu` the contact to open. */
 function OtherWays({
   task,
   contact,
   phone,
   mail,
+  menu,
+  open,
 }: Readonly<{
   task: Activity;
   // The contact that can still be reached: an archived one offers no mail.
   contact: Contact | undefined;
   phone: Contact | undefined;
   mail: boolean;
+  menu: boolean;
+  // In a menu, the contact to open: archived or not, it can still be read.
+  open: Contact | undefined;
 }>) {
   const t = useT();
   const target = task.email_target;
@@ -264,7 +301,12 @@ function OtherWays({
         target &&
         (target.entity_type === "contact" ? (
           contact && (
-            <EmailVerb contact={contact} intent={intent} reasonId={undefined} />
+            <EmailVerb
+              contact={contact}
+              intent={intent}
+              reasonId={undefined}
+              bare={menu}
+            />
           )
         ) : (
           <RecordDraftStep target={target} intent={intent} />
@@ -272,11 +314,18 @@ function OtherWays({
       {phone && number && (
         <CallAction
           appearance="button"
+          bare={menu}
           label={t("record.verb.call")}
           number={number}
           record={{ entityType: "contact", entityId: phone.id }}
         />
       )}
+      {open &&
+        linkVerb(
+          routeHash(ENTITY.contact.route(open.id)),
+          null,
+          t("task.next.openContact"),
+        )}
     </>
   );
 }

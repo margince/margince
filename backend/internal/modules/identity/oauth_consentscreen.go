@@ -114,7 +114,7 @@ func consentHandoffParams(req authorizeRequest, nonce string) url.Values {
 func formScope(req authorizeRequest) string {
 	scope := strings.Join(req.Scopes, " ")
 	if req.Offline {
-		return strings.TrimSpace(scope + " " + scopeOfflineAccess)
+		return strings.TrimSpace(scope + " " + ScopeOfflineAccess)
 	}
 	return scope
 }

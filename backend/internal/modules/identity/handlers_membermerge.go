@@ -51,7 +51,7 @@ func (h Handlers) RequestMemberMerge(w http.ResponseWriter, r *http.Request, id 
 		httperr.Write(w, r, refusal)
 		return
 	}
-	links, err := h.svc.RequestMemberMerge(r.Context(), actor, source, target, req.PreviewToken)
+	links, err := h.svc.RequestMemberMerge(ctx, actor, source, target, req.PreviewToken)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -59,7 +59,7 @@ func (h Handlers) RequestMemberMerge(w http.ResponseWriter, r *http.Request, id 
 	for _, link := range links {
 		h.sendMergeConfirmation(r, actor, link.RawToken)
 	}
-	preview, err := h.svc.PreviewMemberRetirement(r.Context(), actor, source, &target, true)
+	preview, err := h.svc.PreviewMemberRetirement(ctx, actor, source, &target, true)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return

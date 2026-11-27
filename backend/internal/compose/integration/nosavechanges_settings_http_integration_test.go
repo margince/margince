@@ -102,30 +102,38 @@ func TestSettingsSavedAsTheyAlreadyAreChangeNothing(t *testing.T) {
 		var view versionedWire
 		mustCall(t, e.AppEnv, "POST", "/v1/views", AnyMap{"resource": "contacts", "name": "Probe view", "query": query},
 			http.StatusCreated, &view)
-		assertResendChangesNothing(t, e.AppEnv, resend{method: "PATCH", path: "/v1/views/" + view.ID,
-			body: AnyMap{"name": "Probe view", "query": query}, version: view.Version, about: []string{view.ID}})
+		assertResendChangesNothing(t, e.AppEnv, resend{
+			method: "PATCH", path: "/v1/views/" + view.ID,
+			body: AnyMap{"name": "Probe view", "query": query}, version: view.Version, about: []string{view.ID},
+		})
 	})
 	t.Run("automation", func(t *testing.T) {
 		var rule versionedWire
 		mustCall(t, e.AppEnv, "POST", "/v1/automations", AnyMap{"key": "assign_lead_owner", "name": "Probe rule", "params": AnyMap{}},
 			http.StatusCreated, &rule)
-		assertResendChangesNothing(t, e.AppEnv, resend{method: "PATCH", path: "/v1/automations/" + rule.ID,
-			body: AnyMap{"name": "Probe rule"}, version: rule.Version, about: []string{rule.ID}})
+		assertResendChangesNothing(t, e.AppEnv, resend{
+			method: "PATCH", path: "/v1/automations/" + rule.ID,
+			body: AnyMap{"name": "Probe rule"}, version: rule.Version, about: []string{rule.ID},
+		})
 	})
 	t.Run("signal", func(t *testing.T) {
 		var signal versionedWire
 		mustCall(t, e.AppEnv, "POST", "/v1/signals", AnyMap{
 			"kind": "reengagement", "summary": "They wrote back", "source": "manual", "entity_type": "company", "entity_id": e.companyID,
 		}, http.StatusCreated, &signal)
-		assertResendChangesNothing(t, e.AppEnv, resend{method: "PATCH", path: "/v1/signals/" + signal.ID,
-			body: AnyMap{"kind": "reengagement"}, version: signal.Version, about: []string{signal.ID}})
+		assertResendChangesNothing(t, e.AppEnv, resend{
+			method: "PATCH", path: "/v1/signals/" + signal.ID,
+			body: AnyMap{"kind": "reengagement"}, version: signal.Version, about: []string{signal.ID},
+		})
 	})
 	t.Run("sales initiative", func(t *testing.T) {
 		definition := AnyMap{"name": "Probe drive", "objective_metric": "bookings_won", "deadline": "2099-12-31"}
 		var drive versionedWire
 		mustCall(t, e.AppEnv, "POST", "/v1/analytics/initiatives", definition, http.StatusCreated, &drive)
-		assertResendChangesNothing(t, e.AppEnv, resend{method: "PATCH", path: "/v1/analytics/initiatives/" + drive.ID,
-			body: definition, version: drive.Version, about: []string{drive.ID}})
+		assertResendChangesNothing(t, e.AppEnv, resend{
+			method: "PATCH", path: "/v1/analytics/initiatives/" + drive.ID,
+			body: definition, version: drive.Version, about: []string{drive.ID},
+		})
 	})
 }
 
@@ -156,16 +164,22 @@ func probeStageSaves(t *testing.T, e *apptest.AppEnv) {
 	if talking.ID == "" {
 		t.Fatalf("the probe ladder has no Talking stage: %+v", ladder.Stages)
 	}
-	assertResendChangesNothing(t, e, resend{method: "PATCH", path: "/v1/stages/" + talking.ID,
-		body: AnyMap{"name": "Talking"}, version: talking.Version, about: []string{talking.ID}})
-	assertResendChangesNothing(t, e, resend{method: "PUT", path: "/v1/pipelines/" + pipeline.ID + "/stage-order",
-		body: AnyMap{"stage_ids": order}, version: ladder.Version, about: []string{pipeline.ID}})
+	assertResendChangesNothing(t, e, resend{
+		method: "PATCH", path: "/v1/stages/" + talking.ID,
+		body: AnyMap{"name": "Talking"}, version: talking.Version, about: []string{talking.ID},
+	})
+	assertResendChangesNothing(t, e, resend{
+		method: "PUT", path: "/v1/pipelines/" + pipeline.ID + "/stage-order",
+		body: AnyMap{"stage_ids": order}, version: ladder.Version, about: []string{pipeline.ID},
+	})
 
 	var criterion versionedWire
 	mustCall(t, e, "POST", "/v1/stages/"+talking.ID+"/exit-criteria",
 		AnyMap{"key": "budget_named", "label": "Budget named", "kind": "custom"}, http.StatusCreated, &criterion)
-	assertResendChangesNothing(t, e, resend{method: "PATCH", path: "/v1/stages/" + talking.ID + "/exit-criteria/" + criterion.ID,
-		body: AnyMap{"label": "Budget named"}, version: criterion.Version, about: []string{criterion.ID}})
+	assertResendChangesNothing(t, e, resend{
+		method: "PATCH", path: "/v1/stages/" + talking.ID + "/exit-criteria/" + criterion.ID,
+		body: AnyMap{"label": "Budget named"}, version: criterion.Version, about: []string{criterion.ID},
+	})
 }
 
 func probeRoleSaves(t *testing.T, e *apptest.AppEnv) {
@@ -176,8 +190,10 @@ func probeRoleSaves(t *testing.T, e *apptest.AppEnv) {
 	}
 	mustCall(t, e, "POST", "/v1/roles", AnyMap{"copy_from": "rep", "name": "Probe role"}, http.StatusCreated, &role)
 	roleID := rowIDOf(t, e, `SELECT id::text FROM role WHERE key = $1`, role.Key)
-	assertResendChangesNothing(t, e, resend{method: "PATCH", path: "/v1/roles/" + role.Key,
-		body: AnyMap{"name": "Probe role"}, version: role.Version, about: []string{roleID}})
+	assertResendChangesNothing(t, e, resend{
+		method: "PATCH", path: "/v1/roles/" + role.Key,
+		body: AnyMap{"name": "Probe role"}, version: role.Version, about: []string{roleID},
+	})
 
 	grant := AnyMap{"create": false, "read": true, "update": false, "delete": false}
 	var granted versionedWire
@@ -185,8 +201,10 @@ func probeRoleSaves(t *testing.T, e *apptest.AppEnv) {
 		withIfMatch(nil, role.Version), &granted); status != http.StatusOK {
 		t.Fatalf("narrowing the role's contact grant -> %d", status)
 	}
-	assertResendChangesNothing(t, e, resend{method: "PATCH", path: "/v1/roles/" + role.Key + "/objects/contact",
-		body: grant, version: granted.Version, about: []string{roleID}})
+	assertResendChangesNothing(t, e, resend{
+		method: "PATCH", path: "/v1/roles/" + role.Key + "/objects/contact",
+		body: grant, version: granted.Version, about: []string{roleID},
+	})
 }
 
 func TestACustomFieldSavedAsItAlreadyIsChangesNothing(t *testing.T) {
@@ -195,8 +213,10 @@ func TestACustomFieldSavedAsItAlreadyIsChangesNothing(t *testing.T) {
 	var field versionedWire
 	mustCall(t, e, "POST", "/v1/custom-fields", AnyMap{"object": "deal", "label": "Briefing", "type": "text", "source": "manual"},
 		http.StatusCreated, &field)
-	assertResendChangesNothing(t, e, resend{method: "PATCH", path: "/v1/custom-fields/" + field.ID,
-		body: AnyMap{"label": "Briefing"}, version: field.Version, about: []string{field.ID}})
+	assertResendChangesNothing(t, e, resend{
+		method: "PATCH", path: "/v1/custom-fields/" + field.ID,
+		body: AnyMap{"label": "Briefing"}, version: field.Version, about: []string{field.ID},
+	})
 }
 
 // A voice is the owner's own words and switches, saved from one settings page.
@@ -210,8 +230,10 @@ func TestAVoiceSavedAsItAlreadyIsChangesNothing(t *testing.T) {
 	if status := e.Call(t, "PATCH", path, preferences, withIfMatch(nil, profile.Version), &styled); status != http.StatusOK {
 		t.Fatalf("writing the preferences -> %d", status)
 	}
-	assertResendChangesNothing(t, e.AppEnv, resend{method: "PATCH", path: path, body: preferences,
-		version: styled.Version, about: []string{profile.ID}})
+	assertResendChangesNothing(t, e.AppEnv, resend{
+		method: "PATCH", path: path, body: preferences,
+		version: styled.Version, about: []string{profile.ID},
+	})
 
 	var filed struct {
 		Source versionedWire `json:"source"`
@@ -220,8 +242,10 @@ func TestAVoiceSavedAsItAlreadyIsChangesNothing(t *testing.T) {
 		"kind": "other", "source_label": "A note", "register": "general", "source_ref": "probe", "format": "text",
 		"content": "These are the words I wrote myself and want kept exactly so.",
 	}, http.StatusCreated, &filed)
-	assertResendChangesNothing(t, e.AppEnv, resend{method: "PATCH", path: path + "/sources/" + filed.Source.ID,
-		body: AnyMap{"included": true}, version: filed.Source.Version, nested: "source", about: []string{filed.Source.ID}})
+	assertResendChangesNothing(t, e.AppEnv, resend{
+		method: "PATCH", path: path + "/sources/" + filed.Source.ID,
+		body: AnyMap{"included": true}, version: filed.Source.Version, nested: "source", about: []string{filed.Source.ID},
+	})
 }
 
 // A correction that sends a claim back as a human already stated it verifies
@@ -240,8 +264,10 @@ func TestACompanyClaimResentAsItStandsChangesNothing(t *testing.T) {
 		t.Fatalf("correcting the fact -> %d", status)
 	}
 	factID := rowIDOf(t, e.AppEnv, `SELECT id::text FROM company_fact WHERE company_id = $1 AND field = 'employee_range'`, e.companyID)
-	assertResendChangesNothing(t, e.AppEnv, resend{method: "PATCH", path: factPath, body: AnyMap{"value": "51-200"},
-		version: corrected.Version, about: []string{factID, e.companyID}})
+	assertResendChangesNothing(t, e.AppEnv, resend{
+		method: "PATCH", path: factPath, body: AnyMap{"value": "51-200"},
+		version: corrected.Version, about: []string{factID, e.companyID},
+	})
 
 	fieldPath := "/v1/companies/" + e.companyID + "/profile-fields/legal_form"
 	var stated versionedWire
@@ -249,8 +275,10 @@ func TestACompanyClaimResentAsItStandsChangesNothing(t *testing.T) {
 		t.Fatalf("stating the legal form -> %d", status)
 	}
 	fieldID := rowIDOf(t, e.AppEnv, `SELECT id::text FROM company_profile_field WHERE company_id = $1 AND field = 'legal_form'`, e.companyID)
-	assertResendChangesNothing(t, e.AppEnv, resend{method: "PATCH", path: fieldPath, body: AnyMap{"value": "GmbH"},
-		version: stated.Version, about: []string{fieldID, e.companyID}})
+	assertResendChangesNothing(t, e.AppEnv, resend{
+		method: "PATCH", path: fieldPath, body: AnyMap{"value": "GmbH"},
+		version: stated.Version, about: []string{fieldID, e.companyID},
+	})
 }
 
 func TestADealRoomAndAnOfferSavedAsTheyAlreadyAreChangeNothing(t *testing.T) {
@@ -258,21 +286,27 @@ func TestADealRoomAndAnOfferSavedAsTheyAlreadyAreChangeNothing(t *testing.T) {
 	e := apptest.SetupAppWithOptions(t, compose.WithBlobstore(blob))
 	e.BootstrapWorkspace(t)
 	dealID, roomID, version := openRoomOnANewDeal(t, e, "Probe agreement")
-	assertResendChangesNothing(t, e, resend{method: "PATCH", path: "/v1/deal-rooms/" + roomID,
-		body: AnyMap{"title": "Probe agreement"}, version: version, about: []string{roomID}})
+	assertResendChangesNothing(t, e, resend{
+		method: "PATCH", path: "/v1/deal-rooms/" + roomID,
+		body: AnyMap{"title": "Probe agreement"}, version: version, about: []string{roomID},
+	})
 
 	_, attachmentID := captureFileOnEmail(t, e, blob, dealID)
 	var document versionedWire
 	mustCall(t, e, "POST", "/v1/deal-rooms/"+roomID+"/documents",
 		AnyMap{"attachment_id": attachmentID, "group_key": "legal", "source": "manual"}, http.StatusCreated, &document)
-	assertResendChangesNothing(t, e, resend{method: "PATCH", path: "/v1/deal-rooms/" + roomID + "/documents/" + document.ID,
-		body: AnyMap{"group_key": "legal"}, version: document.Version, about: []string{document.ID}})
+	assertResendChangesNothing(t, e, resend{
+		method: "PATCH", path: "/v1/deal-rooms/" + roomID + "/documents/" + document.ID,
+		body: AnyMap{"group_key": "legal"}, version: document.Version, about: []string{document.ID},
+	})
 
 	offerID := offerValidUntil(t, e, offerFixture(t, e), "2099-12-31")
 	var offer versionedWire
 	mustCall(t, e, "GET", "/v1/offers/"+offerID, nil, http.StatusOK, &offer)
-	assertResendChangesNothing(t, e, resend{method: "PATCH", path: "/v1/offers/" + offerID,
-		body: AnyMap{"currency": "EUR", "valid_until": "2099-12-31"}, version: offer.Version, about: []string{offerID}})
+	assertResendChangesNothing(t, e, resend{
+		method: "PATCH", path: "/v1/offers/" + offerID,
+		body: AnyMap{"currency": "EUR", "valid_until": "2099-12-31"}, version: offer.Version, about: []string{offerID},
+	})
 }
 
 // A composer saves the whole message every few seconds, and a rep may move a
@@ -295,9 +329,11 @@ func TestAMessageSavedAsItAlreadyIsChangesNothing(t *testing.T) {
 		id := p.scheduleFor(t, at)
 		var waiting versionedWire
 		mustCall(t, p.AppEnv, "GET", "/v1/scheduled-sends/"+id.String(), nil, http.StatusOK, &waiting)
-		assertResendChangesNothing(t, p.AppEnv, resend{method: "PATCH", path: "/v1/scheduled-sends/" + id.String(),
+		assertResendChangesNothing(t, p.AppEnv, resend{
+			method: "PATCH", path: "/v1/scheduled-sends/" + id.String(),
 			body:    AnyMap{"scheduled_at": at.UTC().Format(time.RFC3339), "scheduled_tz": "Europe/Berlin"},
-			version: waiting.Version, about: []string{id.String()}})
+			version: waiting.Version, about: []string{id.String()},
+		})
 	})
 	t.Run("audience, its members named in another order", func(t *testing.T) { probeAudienceSave(t, p) })
 }

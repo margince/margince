@@ -445,8 +445,7 @@ func (c *chatPackages) markInterfaceSends(p *typedPackage, names map[string][]ty
 		if !ok {
 			continue
 		}
-		for i := range iface.NumExplicitMethods() {
-			m := iface.ExplicitMethod(i)
+		for m := range iface.ExplicitMethods() {
 			if strings.HasPrefix(strings.ToLower(m.Name()), "send") && !takesChannelMessage(m) &&
 				slices.ContainsFunc(names[p.path+"."+m.Name()], func(o types.Object) bool { return c.ioFuncs[o] }) {
 				c.sends[m] = true
@@ -457,8 +456,8 @@ func (c *chatPackages) markInterfaceSends(p *typedPackage, names map[string][]ty
 
 func takesChannelMessage(fn *types.Func) bool {
 	params := fn.Type().(*types.Signature).Params()
-	for i := range params.Len() {
-		if n, ok := params.At(i).Type().(*types.Named); ok && n.Obj().Name() == "ChannelMessage" {
+	for param := range params.Variables() {
+		if n, ok := param.Type().(*types.Named); ok && n.Obj().Name() == "ChannelMessage" {
 			return true
 		}
 	}
@@ -481,8 +480,8 @@ func (c *chatPackages) deriveWriters() {
 		return
 	}
 	ms := types.NewMethodSet(types.NewPointer(store.Type()))
-	for i := range ms.Len() {
-		fn, ok := ms.At(i).Obj().(*types.Func)
+	for sel := range ms.Methods() {
+		fn, ok := sel.Obj().(*types.Func)
 		if ok && fn.Exported() && slices.ContainsFunc(activityWriterPrefixes, func(pre string) bool { return strings.HasPrefix(fn.Name(), pre) }) {
 			c.writers[fn.Origin()] = true
 		}
@@ -872,8 +871,8 @@ func (c *chatPackages) returnsSender(p typedPackage, fd *ast.FuncDecl) bool {
 		return false
 	}
 	results := obj.Type().(*types.Signature).Results()
-	for i := 0; i < results.Len(); i++ {
-		if c.isSenderType(results.At(i).Type()) {
+	for result := range results.Variables() {
+		if c.isSenderType(result.Type()) {
 			return true
 		}
 	}

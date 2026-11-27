@@ -416,6 +416,23 @@ export const SETTINGS_SECTIONS = {
   readonly MessageKey[] | Readonly<Record<string, readonly MessageKey[]>>
 >;
 
+// Settings a tab draws as the column heads of a table whose rows each set
+// them. A column that only heads a list of records does not belong here.
+export const SETTINGS_COLUMNS: Partial<
+  Record<SettingsPageId, Readonly<Record<string, readonly MessageKey[]>>>
+> = {
+  deals: { pipelines: ["stage.winProb", "stage.criteria.title"] },
+};
+
+// Every key search offers for one tab: its sections, then its column settings.
+const tabKeys = (
+  page: SettingsPageId,
+  [tab, sections]: readonly [string, readonly MessageKey[]],
+): readonly MessageKey[] => [
+  ...sections,
+  ...(SETTINGS_COLUMNS[page]?.[tab] ?? []),
+];
+
 /**
  * The section keys one page draws, flat. On a tabbed page, only the tabs
  * `opensTab` lets through, so search never offers a part the reader cannot
@@ -431,7 +448,7 @@ export function settingsSectionKeys(
   if (Array.isArray(sections)) return sections;
   return Object.entries(sections)
     .filter(([tab]) => opensTab(tab))
-    .flatMap(([, keys]) => keys);
+    .flatMap((entry) => tabKeys(page, entry));
 }
 
 /** The tab or sub-address of `page` that draws the section `key`, if any. */
@@ -445,7 +462,9 @@ export function settingsSectionTab(
   const parts = Array.isArray(sections)
     ? (SUBPAGE_SECTIONS[page] ?? {})
     : sections;
-  return Object.entries(parts).find(([, keys]) => keys.includes(key))?.[0];
+  return Object.entries(parts).find((entry) =>
+    tabKeys(page, entry).includes(key),
+  )?.[0];
 }
 
 // The company-context card's names, drawn where `companyContextShown` says.

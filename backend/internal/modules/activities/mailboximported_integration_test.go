@@ -43,7 +43,7 @@ func (e *loadEnv) chatSeat(seat ids.UUID, update bool, seatType principal.SeatTy
 
 type importFacts struct{ imported, yours *bool }
 
-func (e *loadEnv) factsAs(t *testing.T, ctx context.Context) map[ids.UUID]importFacts {
+func (e *loadEnv) factsAs(ctx context.Context, t *testing.T) map[ids.UUID]importFacts {
 	t.Helper()
 	rows, _, err := handledStore(e).ListActivities(ctx, ListActivitiesInput{})
 	if err != nil {
@@ -73,7 +73,7 @@ func TestAListedChatRowSaysWhetherTheCallerMayChangeItsThreadAudience(t *testing
 	orphan := e.chatRow(t, "workspace")
 	hidden := e.chatRow(t, "participants", e.other)
 
-	asRep := e.factsAs(t, e.chatSeat(e.rep, true, principal.SeatFull))
+	asRep := e.factsAs(e.chatSeat(e.rep, true, principal.SeatFull), t)
 	if !asRep[mine].reads(importedAndYours) {
 		t.Errorf("the importer's own row reads %+v, want imported and yours", asRep[mine])
 	}
@@ -86,7 +86,7 @@ func TestAListedChatRowSaysWhetherTheCallerMayChangeItsThreadAudience(t *testing
 	if got, listed := asRep[hidden]; !listed || got.imported != nil || got.yours != nil {
 		t.Errorf("a withheld row reads %+v (listed %v), want neither field", got, listed)
 	}
-	if !e.factsAs(t, e.chatSeat(e.other, true, principal.SeatFull))[theirs].reads(importedAndYours) {
+	if !e.factsAs(e.chatSeat(e.other, true, principal.SeatFull), t)[theirs].reads(importedAndYours) {
 		t.Error("the colleague who imported the row is not told it is theirs")
 	}
 }
@@ -113,7 +113,7 @@ func TestTheThreadControlIsOfferedOnlyWhereTheWriteWouldRun(t *testing.T) {
 		VALUES ($1, 'imap', 'connected', $2, 'ops@example.test', 'held')`, connection, team)
 	e.exec(t, `INSERT INTO capture_import (activity_id, connection_id) VALUES ($1, $2)`, sharedBox, connection)
 
-	full := e.factsAs(t, e.chatSeat(e.rep, true, principal.SeatFull))
+	full := e.factsAs(e.chatSeat(e.rep, true, principal.SeatFull), t)
 	if !full[mine].reads(importedAndYours) {
 		t.Fatalf("the importer's live threaded row reads %+v, want yours", full[mine])
 	}
@@ -129,7 +129,7 @@ func TestTheThreadControlIsOfferedOnlyWhereTheWriteWouldRun(t *testing.T) {
 		"a read-only seat":                 e.chatSeat(e.rep, true, principal.SeatRead),
 		"a caller without activity:update": e.chatSeat(e.rep, false, principal.SeatFull),
 	} {
-		if f := e.factsAs(t, ctx)[mine]; !f.reads(importedNotYours) {
+		if f := e.factsAs(ctx, t)[mine]; !f.reads(importedNotYours) {
 			t.Errorf("%s reads %+v, want imported and not yours", name, f)
 		}
 	}

@@ -189,8 +189,9 @@ func unlessStoredQuestions(ctx context.Context, tx pgx.Tx, id ids.UUID, raw []by
 	if err := tx.QueryRow(ctx, `SELECT questions FROM activity_review_template WHERE id = $1`, id).Scan(&stored); err != nil {
 		return nil, fmt.Errorf("compare template questions: %w", err)
 	}
-	var held []ReviewQuestion
-	if err := json.Unmarshal(stored, &held); err != nil {
+	held, readable := storedQuestions(stored)
+	if !readable {
+		// Questions this shape cannot read are not the ones being saved.
 		return raw, nil
 	}
 	// The catalog key is the table trigger's to name, and a save never carries it.
@@ -216,4 +217,11 @@ func reviewQuestionsFromWire(wire []crmcontracts.ReviewQuestion) []ReviewQuestio
 		}
 	}
 	return questions
+}
+
+// storedQuestions reads a template's stored questions, and reports whether they
+// were in the question shape at all.
+func storedQuestions(stored []byte) ([]ReviewQuestion, bool) {
+	var held []ReviewQuestion
+	return held, json.Unmarshal(stored, &held) == nil
 }

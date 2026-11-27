@@ -312,7 +312,7 @@ func refileAttachment(ctx context.Context, tx pgx.Tx, attachmentID, activityID i
 		return err
 	}
 	if _, err := tx.Exec(ctx,
-		`UPDATE attachment SET entity_type = $2, entity_id = $3, company_id = NULL WHERE id = $1`,
+		`UPDATE attachment SET entity_type = $2, entity_id = $3 WHERE id = $1`,
 		attachmentID, linkEntityActivity, activityID); err != nil {
 		return err
 	}

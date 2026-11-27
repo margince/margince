@@ -2,11 +2,15 @@
 jurisdiction: au
 version: 1
 created: 2026-11-19
+source-checked: 2026-11-25
 instruments:
   - name: Spam Act 2003 (Cth)
     effective: 2004-04-10
     provision: "ss. 16-18"
     source-url: https://www.legislation.gov.au/C2004A01214/latest/text
+    text-url: https://www.legislation.gov.au/C2004A01214/2016-03-10/2016-03-10/text/original/epub/OEBPS/document_1/document_1.html
+    text-digest: 013e7d926da51b0284bd80138e13247344f07c7a32057b79b39acdd3b1bf019b
+    text-fetched: 2026-11-25
   - name: Spam Regulations 2021 (Cth)
   - name: "Privacy Act 1988 (Cth), Schedule 1"
     effective: 2014-03-12

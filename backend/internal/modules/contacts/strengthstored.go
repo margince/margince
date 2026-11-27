@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // strengthPresentSlack is how far the caller's now may trail the database's
@@ -145,4 +146,41 @@ func UnfoldedContactsTx(ctx context.Context, tx pgx.Tx, limit int) ([]ids.UUID, 
 		return nil, fmt.Errorf("contacts: reading unfolded strength dates: %w", err)
 	}
 	return pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+}
+
+// DirectionlessSendersPageTx reads the next limit contacts after `after`, in
+// id order. It answers every id it inspected, for the cursor. It also answers
+// the live ones who wrote a message stored with no direction.
+func DirectionlessSendersPageTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit int) (inspected, selected []ids.UUID, err error) {
+	if err := auth.RequireSystem(ctx); err != nil {
+		return nil, nil, err
+	}
+	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
+		return nil, nil, err
+	}
+	rows, err := tx.Query(ctx, `
+		SELECT p.id, p.archived_at IS NULL AND EXISTS (
+		       SELECT 1 FROM activity_link l JOIN activity a ON a.id = l.activity_id
+		        WHERE l.contact_id = p.id AND a.direction IS NULL AND `+relstrength.TheyWroteSQL("p.id", "a")+`)
+		  FROM contact p WHERE p.id > $1 ORDER BY p.id LIMIT $2`, after, limit)
+	if err != nil {
+		return nil, nil, fmt.Errorf("contacts: reading senders of direction-less mail: %w", err)
+	}
+	page, err := pgx.CollectRows(rows, pgx.RowToStructByPos[senderPageRow])
+	if err != nil {
+		return nil, nil, fmt.Errorf("contacts: reading senders of direction-less mail: %w", err)
+	}
+	for _, c := range page {
+		inspected = append(inspected, c.ID)
+		if c.Wrote {
+			selected = append(selected, c.ID)
+		}
+	}
+	return inspected, selected, nil
+}
+
+// senderPageRow is one contact of a DirectionlessSendersPageTx page.
+type senderPageRow struct {
+	ID    ids.UUID
+	Wrote bool
 }

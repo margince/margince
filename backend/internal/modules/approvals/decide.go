@@ -154,7 +154,7 @@ func (s *Service) recordDecision(ctx context.Context, id ids.ApprovalID, approve
 			// that is not a dead end. The work is the approver's, whoever
 			// asked for it again.
 			if a.DecidedBy == nil {
-				return a, fmt.Errorf("approved, but the person who approved it has left, so its work does not run: %w",
+				return a, fmt.Errorf("approved, but the colleague who approved it has left, so its work does not run: %w",
 					apperrors.ErrPermissionDenied)
 			}
 			return a, s.runDecisionEffect(withReleasedBy(ctx, a.DecidedBy.UUID), id, a, approve)

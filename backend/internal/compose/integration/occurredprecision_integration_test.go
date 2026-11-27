@@ -387,7 +387,7 @@ func TestAnUncountedActivityAtTheClocksInstantDecidesNoPrecision(t *testing.T) {
 		"occurred_at": "2025-03-09T12:00:00Z", "occurred_precision": "day",
 		"links": []AnyMap{{"entity_type": "company", "entity_id": company}, {"entity_type": "project", "entity_id": project}},
 	}, nil, http.StatusCreated)
-	// A meeting is with a person, never filed against a company, so it reaches
+	// A meeting is with a contact, never filed against a company, so it reaches
 	// the company through an employee whose job had begun by then.
 	buyer := createdID(t, e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Tied Buyer", "source": "manual"})
 	callShowingBody(t, e, "POST", "/v1/relationships", AnyMap{
