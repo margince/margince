@@ -220,6 +220,7 @@ func TestContactEmailReplacementMirrorsTheCreateShape(t *testing.T) {
 
 //craft:ignore naked-any JSON Schema validates decoded request bodies
 func TestContactAddressContractAdmitsLegacyReplacementAndBoundsCreation(t *testing.T) {
+	t.Parallel()
 	raw, err := gatekit.ReadFile("api/crm.yaml")
 	if err != nil {
 		t.Fatal(err)
