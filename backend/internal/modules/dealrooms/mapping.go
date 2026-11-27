@@ -29,7 +29,7 @@ func createInput(req crmcontracts.CreateDealRoomRequest) (CreateRoomInput, error
 		return CreateRoomInput{}, err
 	}
 	req.Source = source
-	if err := provenance.Refuse("source", req.Source); err != nil {
+	if err := provenance.RefuseSource(req.Source); err != nil {
 		return CreateRoomInput{}, err
 	}
 	if err := httperr.RequireBodyID("deal_id", ids.UUID(req.DealId)); err != nil {
@@ -94,7 +94,7 @@ func inviteInput(req crmcontracts.InviteDealRoomParticipantRequest) (InviteInput
 		return InviteInput{}, err
 	}
 	req.Source = source
-	if err := provenance.Refuse("source", req.Source); err != nil {
+	if err := provenance.RefuseSource(req.Source); err != nil {
 		return InviteInput{}, err
 	}
 	// Validated HERE rather than trusted from the binding: openapi_types.Email

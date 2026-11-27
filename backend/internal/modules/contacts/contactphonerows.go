@@ -122,12 +122,18 @@ func replaceContactPhones(ctx context.Context, tx pgx.Tx, contactID ids.ContactI
 	// Normalized to E.164 BEFORE anything is compared or written: the held-set
 	// below matches on the stored form, and comparing a raw "+49 30 1234" to a
 	// stored "+49301234" would re-insert a number the contact already holds.
-	if err := parseContactContacts(nil, phones); err != nil {
-		return err
-	}
-
 	held, err := heldContactPhones(ctx, tx, contactID)
 	if err != nil {
+		return err
+	}
+	heldRows := 0
+	for _, rows := range held {
+		heldRows += len(rows)
+	}
+	if err := refuseLongerList(contactPhonesField, "numbers", maxContactPhones, len(phones), heldRows); err != nil {
+		return err
+	}
+	if err := parseContactContacts(nil, phones); err != nil {
 		return err
 	}
 	updates, fresh, archive := reconcilePhonePlacements(held, phones)

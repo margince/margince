@@ -36477,11 +36477,31 @@ export interface components {
              */
             action: "imported" | "replaced" | "kept" | "not_in_card";
         };
-        /**
-         * @description One address on a contact, as a writer supplies it. One schema for create and update,
-         *     so the two cannot describe an address differently.
-         */
+        /** @description One address supplied when creating a contact. */
         ContactEmailInput: {
+            /**
+             * Format: email
+             * @description An address whose local part names a sending system (noreply@, notifications@, receipts@ and the like) is refused with 422 `email_names_no_one`: nobody answers there, so it names no contact.
+             */
+            email: string;
+            /**
+             * @default work
+             * @enum {string}
+             */
+            email_type: "work" | "personal" | "other";
+            /**
+             * @description The one primary address of the contact, whatever its type. More than one row marked primary is refused with 409 `multiple_primary`. A new contact whose rows name none gets its first row as primary.
+             * @default false
+             */
+            is_primary: boolean;
+            /** @default 0 */
+            position: number;
+        };
+        /**
+         * @description Mirrors ContactEmailInput except for the state-dependent address ceiling.
+         *     A held legacy address may remain unchanged; a new address must fit the write limit.
+         */
+        ContactEmailReplacementInput: {
             /**
              * Format: email
              * @description An address whose local part names a sending system (noreply@, notifications@, receipts@ and the like) is refused with 422 `email_names_no_one`: nobody answers there, so it names no contact.
@@ -36577,8 +36597,13 @@ export interface components {
              *     Omitting the field leaves the addresses untouched, like every other field
              *     here. Sending an empty array removes them all, which is a real answer — a
              *     contact who no longer has a working address is a fact worth recording.
+             *
+             *     A list past 25 addresses is 422 `too_many`, unless the contact already
+             *     holds at least as many: a longer stored list may be sent back, and not grown.
+             *     Held legacy addresses may remain unchanged. New addresses must fit the
+             *     normalized 254-byte ceiling and name a dotted domain.
              */
-            emails?: components["schemas"]["ContactEmailInput"][];
+            emails?: components["schemas"]["ContactEmailReplacementInput"][];
             /**
              * @description REPLACES the contact's numbers with exactly this list, the same way `emails`
              *     replaces addresses. A number that has been reassigned is corrected by sending
@@ -36586,7 +36611,8 @@ export interface components {
              *     that now reaches somebody else.
              *
              *     Omitting the field leaves the numbers untouched. Sending an empty array
-             *     removes them all.
+             *     removes them all. A list past 25 numbers is 422 `too_many`, unless the
+             *     contact already holds at least as many.
              *
              *     `Contact360.dead_addresses` already names which address bounced; until now the
              *     contract's own remedy for that was to visit the contact page, because the write
@@ -36879,7 +36905,7 @@ export interface components {
              *     archived answers 422 naming this field. Absent leaves it untouched.
              */
             assess_against_entity_id?: string | null;
-            /** @description Replace-set of the company's live domains (add new, archive removed, flip is_primary). Absent = untouched; an empty array clears all domains. */
+            /** @description Replace-set of the company's live domains (add new, archive removed, flip is_primary). Absent = untouched; an empty array clears all domains. A list past 100 domains is 422 `too_many`, unless the company already holds at least as many. */
             domains?: components["schemas"]["CompanyDomainInput"][];
             /**
              * @description Who may see this company: `workspace` for everyone holding the read grant, `owner` for
@@ -51883,6 +51909,7 @@ export interface components {
         CreateSavedViewRequest: {
             resource: components["schemas"]["SavedViewTarget"];
             name: string;
+            /** @description At most 65536 bytes as JSON; a larger one is 422 `too_large` on `query`. */
             query: {
                 [key: string]: unknown;
             };
@@ -51890,6 +51917,7 @@ export interface components {
         /** @description A partial update; omitted fields keep their stored value. */
         UpdateSavedViewRequest: {
             name?: string;
+            /** @description Replaces the stored query whole. At most 65536 bytes as JSON; a larger one is 422 `too_large` on `query`. */
             query?: {
                 [key: string]: unknown;
             };
@@ -51926,7 +51954,7 @@ export interface components {
             display_name: string;
             /**
              * Format: email
-             * @description May change only before the account has been used to sign in.
+             * @description May change only before the account has been used to sign in. A new address holds at most 254 characters; an unchanged stored address may be longer.
              */
             email: string;
             /** @description Omit to keep the current roles. */
@@ -52141,7 +52169,7 @@ export interface components {
         FormerMemberRequest: {
             /**
              * Format: email
-             * @description Their work address as the source system spelled it. It is the identity the seat is keyed on, so a second record for the same address is refused.
+             * @description Their work address as the source system spelled it. It is the identity the seat is keyed on, so a second record for the same address is refused. A new address holds at most 254 characters. A longer stored address may still resolve a merged member to its survivor.
              */
             email: string;
             display_name: string;
@@ -60697,7 +60725,10 @@ export interface components {
             expires_at: string;
         };
         DealRoomLinkRequest: {
-            /** Format: email */
+            /**
+             * Format: email
+             * @description Looks up an existing participant; stored addresses past the current write limit are accepted.
+             */
             email: string;
         };
         /**

@@ -939,6 +939,7 @@ test("AC-filters-and-views-6: a new condition names no field, and each picker it
   );
   await page.goto("/#/filters/contacts");
   await expectShellRendered(page);
+  await settleAnimations(page);
   await page.getByRole("button", { name: de["filters.addClause"] }).click();
 
   const field = page.getByRole("combobox", { name: de["filters.field"] });
