@@ -10,19 +10,14 @@ import (
 	"regexp"
 	"strings"
 	"testing"
-
-	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 var localTimestampColumn = regexp.MustCompile(`^public\.([a-z_][a-z0-9_]*)\.([a-z_][a-z0-9_]*) timestamp without time zone\b`)
 
 func TestEveryLocalTimestampHasACheckedTimezonePair(t *testing.T) {
 	t.Parallel()
-	raw, err := gatekit.ReadFile("migrations/testdata/head_catalog.txt")
-	if err != nil {
-		t.Fatal(err)
-	}
-	catalog := string(raw)
+	raw := headCatalog(t)
+	catalog := raw
 	failures, count := localTimestampPairErrors(catalog)
 	for _, failure := range failures {
 		t.Error(failure)

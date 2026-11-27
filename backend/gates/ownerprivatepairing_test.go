@@ -29,14 +29,10 @@ package gates
 
 import (
 	"bufio"
-	"bytes"
 	"regexp"
+	"strings"
 	"testing"
-
-	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
-
-const ownerPairingCatalog = "migrations/testdata/head_catalog.txt"
 
 // visibilityAdmitsOwner matches the enum CHECK a visibility column carries, and
 // only when 'owner' is one of the values it admits.
@@ -58,11 +54,8 @@ func TestEveryOwnerPrivateTableNamesItsOwner(t *testing.T) {
 	t.Parallel()
 	admitsOwner, pairs, owned := map[string]bool{}, map[string]bool{}, map[string]bool{}
 
-	body, err := gatekit.ReadFile(ownerPairingCatalog)
-	if err != nil {
-		t.Fatalf("reading %s: %v", ownerPairingCatalog, err)
-	}
-	scanner := bufio.NewScanner(bytes.NewReader(body))
+	body := headCatalog(t)
+	scanner := bufio.NewScanner(strings.NewReader(body))
 	scanner.Buffer(make([]byte, 0, 64*1024), 4*1024*1024)
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -77,7 +70,7 @@ func TestEveryOwnerPrivateTableNamesItsOwner(t *testing.T) {
 		}
 	}
 	if err := scanner.Err(); err != nil {
-		t.Fatalf("reading %s: %v", ownerPairingCatalog, err)
+		t.Fatalf("reading %s: %v", headCatalogPath, err)
 	}
 
 	// A census that recognised no owner-private table would report the tree

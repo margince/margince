@@ -122,6 +122,11 @@ func (h Handlers) LinkFinanceSourceCustomer(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	customer, err := h.store.LinkCustomer(r.Context(), externalID, companyID)
+	// A new link's invoices arrive only with the next pass, so the link queues
+	// one rather than leave the company empty until the six-hourly sweep.
+	if err == nil && h.queue != nil {
+		err = h.queue.QueueSync(r.Context())
+	}
 	if err != nil {
 		httperr.Write(w, r, err)
 		return

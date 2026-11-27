@@ -107,6 +107,15 @@
 }
 /* The newest thing said on the record, in a recess under the call so it reads
    as the record's own words, not the card's. */
+.standing-sheet-citations {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-2);
+  margin: 0;
+  font: var(--fontBodySmall);
+  color: var(--textSecondary);
+}
 .standing-sheet-latest {
   display: flex;
   flex-direction: column;
