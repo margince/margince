@@ -191,9 +191,11 @@ const (
 	// transcript read now takes. Raised by 1 test line for the second staged
 	// approval in the site-read finish case, which checks a repeated id keeps
 	// its first place.
+	// Raised by 21 test lines for the case that reads a timeline entry's request
+	// state into the deal status input, which is unexported.
 	// Raised by 2 test lines for the company list's status_any entry in the MCP
 	// path census, which reads the unexported route table.
-	composeRootTestLines = 364_317
+	composeRootTestLines = 364_341
 )
 
 // A read under these floors stopped early or read the wrong place, and would
