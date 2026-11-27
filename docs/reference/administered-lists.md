@@ -7,7 +7,7 @@ and what names an entry from outside decides the shape.
 
 | Shape | Use it when | No two entries share | Tables |
 |---|---|---|---|
-| Keyed | Code, a filter or another table names an entry by a fixed text | `key` | `record_role`, `lead_source`, `deal_acquisition_source` |
+| Keyed | Code, a filter or another table names an entry by a fixed text | `key` | `record_role`, `lead_origin`, `deal_acquisition_source` |
 | Label-only | Other tables name an entry by `id`, and nothing names it by a fixed text | The label, compared in lower case with the spaces at its ends removed | `sdr_handoff_reason`, `lead_disqualify_reason` |
 
 A keyed list lets an admin change a label and keep each reference, because the
