@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"go/ast"
 	"go/parser"
+	"go/token"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -215,4 +216,61 @@ func TestAFileThatDoesNotParseIsNeverHeld(t *testing.T) {
 	if entry.value.tree.Value() != nil {
 		t.Error("a tree that failed to parse is held, so its error would not be reported again")
 	}
+}
+
+const factsFixture = "package facts\n\nconst listQuery = `SELECT id FROM contact`\n\n" +
+	"func update() string { return \"UPDATE contact \" + \"SET name = $1\" }\n"
+
+// A shared tree's statements and literals are what a fresh walk reads. A
+// change to one caller's answer leaves the next caller's as it was.
+func TestASharedTreesFactsMatchAFreshWalkAndStayWithEachCaller(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "facts.go")
+	writeSource(t, path, factsFixture, time.Unix(1_700_000_000, 0))
+	tree, err := ParseFile(path, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, shared := factsOf(tree); !shared {
+		t.Fatal("a tree ParseFile shares has no facts held for it")
+	}
+	private, err := parser.ParseFile(token.NewFileSet(), path, factsFixture, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, shared := factsOf(private); shared {
+		t.Error("a tree its caller parsed is held as shared, so a change to it would be served stale")
+	}
+	fresh := sqlStatements(private, nil)
+	first := SQLStatementsOf(tree)
+	if !slices.Equal(first, fresh) || len(fresh) != 2 {
+		t.Fatalf("the shared tree's statements are %q, a fresh walk reads %q", first, fresh)
+	}
+	first[0] = "DELETE FROM planted"
+	if again := SQLStatementsOf(tree); !slices.Equal(again, fresh) {
+		t.Errorf("a caller's change to its statements reached the next caller: %q", again)
+	}
+	contact := TableReadPattern("contact")
+	if !FileReadsTable(path, tree, contact) || FileReadsTable(path, tree, TableReadPattern("planted")) {
+		t.Error("the shared tree's literals answer a table read differently from its source")
+	}
+	if got, want := literalsOf(tree), stringLiterals(private); !slices.Equal(got, want) {
+		t.Errorf("the shared tree's literals are %q, a fresh walk reads %q", got, want)
+	}
+}
+
+// The facts go with their tree: holding them does not keep the tree alive.
+func TestASharedTreesFactsLetTheTreeBeCollected(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "collected_facts.go")
+	writeSource(t, path, factsFixture, time.Unix(1_700_000_000, 0))
+	readFacts := func() int {
+		tree, err := ParseFile(path, 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return len(SQLStatementsOf(tree)) + len(literalsOf(tree))
+	}
+	if readFacts() == 0 {
+		t.Fatal("the fixture's facts are empty, so nothing was held")
+	}
+	waitUntilCollected(t, path, parser.ParseComments)
 }

@@ -2117,6 +2117,23 @@ kinds:
       forever; registered it fails with a message that says the installation has
       no model configured.
 
+  standing_line_check:
+    role: worker
+    go_type: StandingLineCheckArgs
+    queue: ai_capture
+    timeout: 4m
+    opts_owner: caller
+    registration: {when: [StandingLineBrain], absent: registers_nothing}
+    args:
+      Workspace: id
+      ActivityID: id
+    reason: >-
+      One model call per record the activity is filed on, at most three, each
+      with the structured lane's retry headroom. Skipped without a model lane:
+      an activity landing queues it and nobody waits on the row, so How it
+      stands keeps the reading the page derives. Unique on the activity while
+      one waits or runs, so a redelivered event is one check.
+
   stage_evidence_read:
     role: worker
     go_type: StageEvidenceReadArgs

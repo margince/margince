@@ -73,6 +73,7 @@ var (
 	ContactAutoEnrichTypes     = NewTypeSet("contact.created", "contact.updated", "contact.restored", "contact.merged")
 	CohortPromoteTypes         = NewTypeSet("contact.created", "contact.updated", "contact.restored", "contact.merged")
 	CaptureEnrichTypes         = NewTypeSet("activity.captured", "activity.updated", "contact.created")
+	StandingLineTypes          = NewTypeSet("activity.captured", "activity.updated")
 	StageEvidenceTypes         = NewTypeSet("contract.status_changed", "activity.captured", "activity.updated", "offer.sent", "deal.stage_changed")
 	// ActivityNarrowingTypes leave fewer members able to read an activity:
 	// archived, restricted, or its audience changed.

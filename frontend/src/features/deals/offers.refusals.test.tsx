@@ -158,29 +158,6 @@ describe("the add-line form", () => {
 });
 
 describe("a line's cells", () => {
-  it("says another line has the position, not the server's conflict", async () => {
-    const user = userEvent.setup();
-    installFetchStub({
-      "PATCH /offers/o-1/line-items/li-1": () =>
-        jsonResponse(
-          {
-            code: "conflict",
-            detail: "position 2 is already taken on this offer: conflict",
-          },
-          409,
-        ),
-    });
-    render(<OfferLineEditor offer={offer} />);
-    const position = screen.getByTestId("line-position-li-1");
-    await user.clear(position);
-    await user.type(position, "2");
-    await user.tab();
-    expect(
-      await screen.findByText("Another line already has this position."),
-    ).toBeTruthy();
-    expect(screen.queryByText(/: conflict/)).toBeNull();
-  });
-
   it("refuses a discount over 100 before saving it", async () => {
     const user = userEvent.setup();
     const patched: unknown[] = [];

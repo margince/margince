@@ -44,7 +44,7 @@ const (
 	// Raised by 1 for reportexactrange.go, which withholds a report number past the
 	// exact range at every scan that puts report numbers on the wire.
 	// Raised by 1 for the seat-bound deal reads a unit asks as its own user.
-	composeRootProductionFiles = 1390
+	composeRootProductionFiles = 1392
 	// Raised by 2 files for the extension mail-file read cases and the purge
 	// receipt cases, which drive this package's unexported seams. Raised by 1
 	// production and 1 test file for the series-split fold and its cases.
@@ -66,7 +66,10 @@ const (
 	// jobs, which drive the unexported job and effect wiring.
 	// Raised by 1 test file for the link suggestion tools an agent reads and
 	// answers through, which read the unexported tool registry.
-	composeRootTestFiles = 1934
+	// Raised by 2 production and 2 test files for the How it stands job and the
+	// task explanation's certification case, which reuses the unexported contact
+	// brief fixture.
+	composeRootTestFiles = 1936
 	// Raised by 107 for the floor of a figure every reader is shown alike. Raised
 	// by 1 for the import that binds one zone lookup to each attention read.
 	// Raised by 249 production and 62 test lines for the full-path certification
@@ -158,7 +161,11 @@ const (
 	// drives through its unexported statement recorder and partial index check.
 	// Raised by 1 production line when main's forecast scope label met develop
 	// in the sync.
-	composeRootProductionLines = 232_132
+	// Raised by 231 production and 190 test lines. They hold
+	// the How it stands job and its page case, and the task explanation's
+	// certification case and its test. The job needs the unexported job
+	// context; the cases drive the contact page.
+	composeRootProductionLines = 232_395
 	// Raised by 18 test lines for the link suggestion tool cases.
 	// Raised by 2 test lines for the actor census waivers of the two jobs that
 	// bind their colleague inside a method.
@@ -170,7 +177,7 @@ const (
 	// in the sync.
 	// Raised by 11 test lines for develop's shared-calendar meeting party cases.
 	// Raised by 5 test lines for the full seat a take test now binds.
-	composeRootTestLines = 363_846
+	composeRootTestLines = 364_044
 )
 
 // A read under these floors stopped early or read the wrong place, and would

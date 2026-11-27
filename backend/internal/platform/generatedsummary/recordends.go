@@ -14,6 +14,8 @@ import (
 
 // ForgetContacts deletes what was written about these contacts, for all
 // readers. An erased or merged contact keeps its row, so no cascade fires.
+// Every task explanation goes too: any of them may quote these contacts, and
+// each is rebuilt on its next open. So do the status lines that may quote them.
 func ForgetContacts(ctx context.Context, tx pgx.Tx, contacts ...ids.ContactID) error {
 	keys := make([]ids.UUID, len(contacts))
 	for i, contact := range contacts {
@@ -23,7 +25,10 @@ func ForgetContacts(ctx context.Context, tx pgx.Tx, contacts ...ids.ContactID) e
 		`DELETE FROM generated_summary WHERE contact_id = ANY($1)`, keys); err != nil {
 		return fmt.Errorf("delete the generated summaries of a contact: %w", err)
 	}
-	return nil
+	if _, err := tx.Exec(ctx, `DELETE FROM task_explanation`); err != nil {
+		return fmt.Errorf("delete the task explanations that may quote a contact: %w", err)
+	}
+	return forgetStandingLinesTx(ctx, tx, keys)
 }
 
 // ForgetRecords deletes every reader's summaries of these companies and deals.
@@ -54,6 +59,11 @@ func CarryCompany(ctx context.Context, tx pgx.Tx, source, target ids.CompanyID) 
 	if _, err := tx.Exec(ctx,
 		`DELETE FROM generated_summary WHERE company_id = @source`, moved); err != nil {
 		return fmt.Errorf("delete the merged-away generated summaries of a company: %w", err)
+	}
+	// The survivor's line is rewritten when its next activity lands.
+	if _, err := tx.Exec(ctx, `DELETE FROM standing_line
+		 WHERE entity_type = 'company' AND entity_id = ANY(ARRAY[@source, @target]::uuid[])`, moved); err != nil {
+		return fmt.Errorf("delete the status lines of merged companies: %w", err)
 	}
 	return nil
 }

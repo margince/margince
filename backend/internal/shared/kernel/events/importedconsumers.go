@@ -50,6 +50,7 @@ var importedDecisions = map[string]ImportedDecision{
 	"cg:commissions":        {SkipImported, "a sale an import brings in was priced and paid in the system it came from"},
 	"cg:partner-activation": {SkipImported, "a sale an import brings in happened in the past, and activation is a fact of today"},
 	"cg:stage-evidence":     {SkipImported, "evidence settles what happened now, and imported history is not a new fact"},
+	"cg:standing-line":      {SkipImported, "a status line says where things stand now, and imported history is not news"},
 	"cg:deal-room-timeline": {SkipImported, "writes a note about a room that is live today"},
 	"cg:chat-links":         {SkipImported, "posts what changes today into a live chat channel"},
 	"cg:overnight-agent":    {SkipImported, "plans work against the live pipeline, and closed history is not work"},

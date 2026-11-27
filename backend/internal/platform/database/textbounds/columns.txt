@@ -1350,6 +1350,10 @@ public.stage_exit_criterion.hint line
 public.stage_exit_criterion.key document
 public.stage_exit_criterion.kind document
 public.stage_exit_criterion.label label
+public.standing_line.entity_type document
+public.standing_line.fingerprint document
+public.standing_line.language document
+public.standing_line.text note
 public.stored_object_intent.kind document
 public.stored_object_intent.storage_key document
 public.suggestion_dismissal.fingerprint document
@@ -1365,6 +1369,8 @@ public.tag_suggestion.captured_by document
 public.tag_suggestion.state document
 public.taggable.assigned_by_kind document
 public.taggable.entity_type document
+public.task_explanation.fingerprint document
+public.task_explanation.generated_by document
 public.tax_rate.captured_by document
 public.tax_rate.category document
 public.tax_rate.country document

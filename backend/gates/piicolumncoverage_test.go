@@ -29,7 +29,6 @@ package gates
 
 import (
 	"bufio"
-	"bytes"
 	"go/ast"
 	"go/token"
 	"path/filepath"
@@ -333,17 +332,13 @@ var catalogColumnRe = regexp.MustCompile(`^public\.([a-z_][a-z0-9_]*)\.([a-z_][a
 // the file its own gate already forces to be regenerated.
 func catalogTextColumns(t *testing.T) map[string]map[string]string {
 	t.Helper()
-	const catalog = "migrations/testdata/head_catalog.txt"
-	body, err := gatekit.ReadFile(catalog)
-	if err != nil {
-		t.Fatalf("reading %s: %v", catalog, err)
-	}
+	body := headCatalog(t)
 	// Keyed to the column's TYPE, not merely its presence: both text and jsonb
 	// are collected here, and a failure that calls a jsonb column a text one
 	// sends the reader to check the wrong thing and to doubt the finding while
 	// they do it.
 	out := map[string]map[string]string{}
-	scanner := bufio.NewScanner(bytes.NewReader(body))
+	scanner := bufio.NewScanner(strings.NewReader(body))
 	scanner.Buffer(make([]byte, 0, 64*1024), 4*1024*1024)
 	for scanner.Scan() {
 		m := catalogColumnRe.FindStringSubmatch(scanner.Text())
@@ -356,10 +351,10 @@ func catalogTextColumns(t *testing.T) map[string]map[string]string {
 		out[m[1]][m[2]] = m[3]
 	}
 	if err := scanner.Err(); err != nil {
-		t.Fatalf("reading %s: %v", catalog, err)
+		t.Fatalf("reading %s: %v", headCatalogPath, err)
 	}
 	if len(out) == 0 {
-		t.Fatalf("%s yielded no columns — the catalog format moved and this census now reads an empty schema", catalog)
+		t.Fatalf("%s yielded no columns — the catalog format moved and this census now reads an empty schema", headCatalogPath)
 	}
 	return out
 }

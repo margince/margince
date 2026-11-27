@@ -11,7 +11,7 @@ import (
 // jobContractHash is the sha256 of api/jobs.yaml this file was generated
 // from — the same fingerprint jobs.JobContractHash carries, so a stale
 // half of the pair is visible without diffing the two tables.
-const jobContractHash = "d37be303bd7365871c0d702a01453fec176e75c6cbffde37f0dcf5898ad9f5cf"
+const jobContractHash = "2f631b585c4b0546e11d61e0487bb7c11e5621eec117672bf57b7db1fdc5bad2"
 
 // declaredJobArgs requires the generated registration marker for the exact args type.
 // Handwritten markers are refused by the registration census.
@@ -117,6 +117,7 @@ func (SignalScanArgs) declaredJobType(SignalScanArgs)                           
 func (SiteDeepReadArgs) declaredJobType(SiteDeepReadArgs)                             {}
 func (StageEvidenceReadArgs) declaredJobType(StageEvidenceReadArgs)                   {}
 func (StageEvidenceRereadArgs) declaredJobType(StageEvidenceRereadArgs)               {}
+func (StandingLineCheckArgs) declaredJobType(StandingLineCheckArgs)                   {}
 func (StoredObjectReapArgs) declaredJobType(StoredObjectReapArgs)                     {}
 func (SuppressionJournalArgs) declaredJobType(SuppressionJournalArgs)                 {}
 func (TagScoutArgs) declaredJobType(TagScoutArgs)                                     {}
@@ -243,6 +244,7 @@ var (
 	_ jobs.WorkspaceScoped = SiteDeepReadArgs{}
 	_ jobs.WorkspaceScoped = StageEvidenceReadArgs{}
 	_ jobs.WorkspaceScoped = StageEvidenceRereadArgs{}
+	_ jobs.WorkspaceScoped = StandingLineCheckArgs{}
 	_ jobs.WorkspaceScoped = TechnicalEnrichCompanyArgs{}
 	_ jobs.WorkspaceScoped = TelegramIngestArgs{}
 	_ jobs.WorkspaceScoped = TelegramPollArgs{}

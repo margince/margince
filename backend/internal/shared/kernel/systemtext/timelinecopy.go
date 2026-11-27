@@ -11,8 +11,8 @@ var timelineDefinitions = map[string]Definition{
 	"activity.html_alternative_marker": {Words: langcopy.Phrase{En: bracketedText, De: bracketedText, Vi: bracketedText}, Arguments: []string{argumentText}},
 
 	"activity.access_requested":   {Words: langcopy.Phrase{En: "Access requested: %s", De: "Zugriff angefordert: %s", Vi: "Đã yêu cầu quyền truy cập: %s"}, Arguments: []string{argumentText}},
-	"commitment.transcript_line":  {Words: langcopy.Phrase{En: "Promiser: %s. Commitment in the meeting transcript (line %s).", De: "Zugesagt von: %s. Zusage im Besprechungsprotokoll (Zeile %s).", Vi: "Người cam kết: %s. Cam kết trong bản ghi cuộc họp (dòng %s)."}, Arguments: []string{argumentText, argumentText}},
-	"commitment.transcript_lines": {Words: langcopy.Phrase{En: "Promiser: %s. Commitment in the meeting transcript (lines %s).", De: "Zugesagt von: %s. Zusage im Besprechungsprotokoll (Zeilen %s).", Vi: "Người cam kết: %s. Cam kết trong bản ghi cuộc họp (các dòng %s)."}, Arguments: []string{argumentText, argumentText}},
+	"commitment.transcript_line":  {Words: langcopy.Phrase{En: "%s promised this in the meeting transcript (line %s).", De: "%s hat das im Besprechungsprotokoll zugesagt (Zeile %s).", Vi: "%s đã hứa điều này trong bản ghi cuộc họp (dòng %s)."}, Arguments: []string{argumentText, argumentText}},
+	"commitment.transcript_lines": {Words: langcopy.Phrase{En: "%s promised this in the meeting transcript (lines %s).", De: "%s hat das im Besprechungsprotokoll zugesagt (Zeilen %s).", Vi: "%s đã hứa điều này trong bản ghi cuộc họp (các dòng %s)."}, Arguments: []string{argumentText, argumentText}},
 
 	"room.seller":           {Words: langcopy.Phrase{En: "The seller", De: "Die Anbieterseite", Vi: "Bên bán"}, Arguments: []string{}},
 	"room.buyer":            {Words: langcopy.Phrase{En: "The buyer", De: "Die Käuferseite", Vi: "Bên mua"}, Arguments: []string{}},

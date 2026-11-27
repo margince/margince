@@ -43,6 +43,7 @@ var modelHandlersThatDegrade = gatekit.Waive(map[string]string{
 	"(compose/briefs.briefL2Ranker).reorder":               "the model re-rank is advisory over the deterministic composite order, which the brief keeps when the lane fails, with a warning logged",
 	"compose/company360.writeIntroRequest":                 "the template floor states every fact of the ask honestly, so the reader gets a sendable message and generated_by says the floor wrote it",
 	"(*compose.salesAssessments).write":                    "the floor is an assessment with no sentences and generated_by deterministic, which the page fills with its own written summary; the lane's error is logged",
+	"compose/taskexplain.Write":                            "the floor names the task's own facts, generated_by says the floor wrote it, and the lane failure keeps it out of the cache so the next open asks again",
 	"compose/companybrief.Answer":                          "the deterministic answer is the interactive degrade posture; generated_by tells the reader the floor answered",
 	"compose/companybrief.Write":                           "the deterministic card is the interactive degrade posture; generated_by tells the reader the floor wrote it",
 	"compose/companydossier.WriteDossier":                  "the floor dossier is the declared degrade, labelled as the floor's, and the lane-failed flag stops it overwriting a written dossier",

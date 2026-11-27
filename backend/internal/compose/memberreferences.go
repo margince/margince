@@ -188,6 +188,7 @@ var memberReferences = map[string]memberReference{
 	"worklist_snapshot.reader_id":              {disposition: referenceRetain},
 	"home_read_cache.reader_id":                {disposition: referenceRetain},
 	"home_read_forgotten.reader_id":            {disposition: referenceRetain},
+	"task_explanation.user_id":                 {disposition: referenceRetain},
 }
 
 // memberRetirementBlockers reads every resolve reference to the member. A record

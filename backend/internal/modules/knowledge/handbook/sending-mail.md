@@ -97,10 +97,11 @@ To attach a file to an email in Margince, press **Attach** beside the text forma
 
 **Attach from this record** shows the 25 newest files filed on the record. **Upload
 file** first files the upload on the record, then attaches it, so the history
-keeps every file you sent.
+keeps every file you sent. A file the record already holds is not filed a second
+time: the upload attaches the one that is there.
 
-One message carries at most 10 files. Past that, the composer asks you to send
-the rest in a second message. A reply does not offer back the files that came in
+One message carries at most 10 files. With 10 attached, **Upload file** is off,
+and the composer asks you to send the rest in a second message. A reply does not offer back the files that came in
 with the message you answer.
 Also called: add an attachment, send a document, attach a PDF.
 

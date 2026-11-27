@@ -431,8 +431,8 @@ var (
 	readOnlyWriteAuthorityIndexValue map[string]map[string]map[string]*writeAuthorityFn
 )
 
-// readOnlyWriteAuthorityIndex is built once for the gates that only read it. The
-// spelling gate marks preview admissions on its index, so it builds its own.
+// readOnlyWriteAuthorityIndex is built once and shared: read it, never change
+// it. The spelling gate marks preview admissions on its own copy.
 func readOnlyWriteAuthorityIndex(t *testing.T) map[string]map[string]map[string]*writeAuthorityFn {
 	t.Helper()
 	readOnlyWriteAuthorityIndexOnce.Do(func() {

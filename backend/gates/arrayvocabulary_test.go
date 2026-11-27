@@ -18,7 +18,6 @@ package gates
 
 import (
 	"bufio"
-	"bytes"
 	"regexp"
 	"slices"
 	"strings"
@@ -139,12 +138,9 @@ type arrayCatalog struct {
 
 func readArrayCatalog(t *testing.T) arrayCatalog {
 	t.Helper()
-	raw, err := gatekit.ReadFile(vocabularyCatalog)
-	if err != nil {
-		t.Fatal(err)
-	}
+	raw := headCatalog(t)
 	out := arrayCatalog{contained: map[string][]string{}, shaped: map[string]bool{}}
-	scanner := bufio.NewScanner(bytes.NewReader(raw))
+	scanner := bufio.NewScanner(strings.NewReader(raw))
 	scanner.Buffer(make([]byte, 0, 64*1024), 4*1024*1024)
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -172,7 +168,7 @@ func readArrayCatalog(t *testing.T) arrayCatalog {
 	}
 	if len(out.columns) < textArrayColumnFloor {
 		t.Fatalf("read %d text array columns from %s, fewer than the %d the schema carries: the catalog format moved",
-			len(out.columns), vocabularyCatalog, textArrayColumnFloor)
+			len(out.columns), headCatalogPath, textArrayColumnFloor)
 	}
 	return out
 }

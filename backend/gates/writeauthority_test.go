@@ -343,8 +343,7 @@ func TestEveryMutationOfAShareableRecordProbesForWriteAuthority(t *testing.T) {
 	t.Parallel()
 	defer readAuthorityOnAWritePath.AssertAllMatched(t)
 
-	tables := shareableTables(t)
-	pkgs := writeAuthorityIndex(t, tables)
+	pkgs := cloneWriteAuthorityIndex(readOnlyWriteAuthorityIndex(t))
 	classifyReadOnlyPreviewAdmissions(t, pkgs)
 
 	// DISTINCT sites, deduplicated by where they are. The walk reaches one probe
