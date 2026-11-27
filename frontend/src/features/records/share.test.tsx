@@ -42,7 +42,7 @@ describe("ShareScreen", () => {
       screen.getByRole("button", { name: "Write", pressed: true }),
     ).toBeTruthy();
     expect(screen.getByLabelText("Expiry").textContent).toContain("No expiry");
-    await user.clear(screen.getByLabelText("Person or team"));
+    await user.clear(screen.getByLabelText(en["share.subject"]));
     await user.click(await screen.findByRole("button", { name: /Priya Shah/ }));
     expect(
       screen.getByRole("button", { name: "Read", pressed: true }),
@@ -63,11 +63,11 @@ describe("ShareScreen", () => {
     await user.click(await screen.findByRole("button", { name: /Deal Desk/ }));
     await user.click(screen.getByTestId("share-grant-submit"));
     const confirm = await screen.findByRole("dialog", {
-      name: "Share these contacts?",
+      name: en["share.bulkConfirmTitle"],
     });
     expect(posts).toEqual([]);
     await user.click(
-      within(confirm).getByRole("button", { name: "Grant access" }),
+      within(confirm).getByRole("button", { name: en["share.grantAccess"] }),
     );
     expect(await screen.findByRole("status")).toHaveProperty(
       "textContent",
@@ -125,15 +125,15 @@ describe("ShareScreen", () => {
     render(<ShareScreen recordType="company-contacts" recordId="co-1" />);
     const user = userEvent.setup();
     await user.click(await screen.findByRole("button", { name: /Deal Desk/ }));
-    await user.clear(screen.getByLabelText("Person or team"));
+    await user.clear(screen.getByLabelText(en["share.subject"]));
     await user.click(await screen.findByRole("button", { name: /Priya Shah/ }));
     await user.click(screen.getByRole("button", { name: "Write" }));
     await user.click(screen.getByTestId("share-grant-submit"));
     const confirm = await screen.findByRole("dialog", {
-      name: "Share these contacts?",
+      name: en["share.bulkConfirmTitle"],
     });
     await user.click(
-      within(confirm).getByRole("button", { name: "Grant access" }),
+      within(confirm).getByRole("button", { name: en["share.grantAccess"] }),
     );
 
     expect(
@@ -462,7 +462,7 @@ describe("ShareScreen", () => {
     // would restart the surface for anyone not using a pointer.
     await waitFor(() =>
       expect(document.activeElement).toBe(
-        screen.getByLabelText("Person or team"),
+        screen.getByLabelText(en["share.subject"]),
       ),
     );
   });
@@ -700,10 +700,10 @@ describe("ShareScreen", () => {
     const user = userEvent.setup();
     await screen.findByRole("button", { name: /Priya Shah/ });
 
-    await user.type(screen.getByLabelText("Person or team"), "zzzz");
+    await user.type(screen.getByLabelText(en["share.subject"]), "zzzz");
 
     expect(screen.getByTestId("share-roster-empty").textContent).toBe(
-      "No member or team matches your search.",
+      en["share.rosterNoMatch"],
     );
   });
 
@@ -858,7 +858,7 @@ describe("ShareScreen", () => {
     render(<ShareScreen recordType="project" recordId="pr-1" />);
 
     expect(await screen.findByTestId("share-acl-list")).toBeTruthy();
-    expect(screen.queryByText("This record cannot be shared.")).toBeNull();
+    expect(screen.queryByText(en["share.unknownRecord"])).toBeNull();
   });
 });
 

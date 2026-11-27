@@ -136,7 +136,7 @@ describe("the wait for the assessment", () => {
     });
     const live = container.querySelector("[role='status'][aria-busy='true']");
     expect(live?.textContent).toContain("Assessing this company");
-    expect(screen.queryByText("Not enough data")).toBeNull();
+    expect(screen.queryByText(en["co.growthFit.band.unknown"])).toBeNull();
   });
 
   it("stamps a stored assessment with its age and a new one as just written", async () => {
@@ -153,11 +153,11 @@ describe("how well this company fits what we sell", () => {
   it("says it could not judge, rather than showing a low score", async () => {
     await show(ABSTAINED);
 
-    expect(screen.getByText("Not enough data")).toBeTruthy();
+    expect(screen.getByText(en["co.growthFit.band.unknown"])).toBeTruthy();
     // The three real bands are verdicts. None of them may appear beside an
     // abstention, because a reader scanning for a verdict would take it.
     expect(screen.queryByText("Weak fit")).toBeNull();
-    expect(screen.queryByText("Moderate fit")).toBeNull();
+    expect(screen.queryByText(en["co.growthFit.band.moderate"])).toBeNull();
     expect(screen.queryByText("Strong fit")).toBeNull();
   });
 
@@ -214,7 +214,7 @@ describe("how well this company fits what we sell", () => {
       },
     });
 
-    expect(screen.getByText("Moderate fit")).toBeTruthy();
+    expect(screen.getByText(en["co.growthFit.band.moderate"])).toBeTruthy();
     // A band lowered without a reason is a number the reader cannot argue
     // with, which is the one thing a capped band must never be.
     expect(
@@ -248,7 +248,7 @@ describe("how well this company fits what we sell", () => {
       ],
     });
 
-    expect(screen.getByText("Supporting factors")).toBeTruthy();
+    expect(screen.getByText(en["co.growthFit.positive"])).toBeTruthy();
     // A judgment that read as a stored fact would be the one claim the reader
     // could not check, so only the assessment carries a label. The nature word
     // sits in the sentence's own line with a trailing colon
@@ -323,7 +323,7 @@ describe("Assess again", () => {
     );
     const { rerender } = render(panel("o-1"));
     await screen.findByText(/as of /i);
-    screen.getByRole("button", { name: "Assess again" }).click();
+    screen.getByRole("button", { name: en["co.growthFit.reassess"] }).click();
     expect(await announced()).toMatch(/Result unchanged/);
     serving({ ...ABSTAINED, company_id: "o-2" });
     rerender(panel("o-2"));
@@ -333,7 +333,7 @@ describe("Assess again", () => {
 
   it("says the result did not change when the same reading comes back", async () => {
     await show(ABSTAINED);
-    screen.getByRole("button", { name: "Assess again" }).click();
+    screen.getByRole("button", { name: en["co.growthFit.reassess"] }).click();
     expect(await announced()).toBe(
       "Assessed again. Result unchanged: Not enough data, 2 of 7 inputs recorded.",
     );
@@ -342,7 +342,7 @@ describe("Assess again", () => {
   it("calls a reading unchanged when only the run's time moved", async () => {
     await show(ABSTAINED);
     serving({ ...ABSTAINED, generated_at: "2026-08-09T10:00:00Z" });
-    screen.getByRole("button", { name: "Assess again" }).click();
+    screen.getByRole("button", { name: en["co.growthFit.reassess"] }).click();
     expect(await announced()).toMatch(/Result unchanged/);
   });
 
@@ -358,7 +358,7 @@ describe("Assess again", () => {
         missing: ["industry", "technology"],
       },
     });
-    screen.getByRole("button", { name: "Assess again" }).click();
+    screen.getByRole("button", { name: en["co.growthFit.reassess"] }).click();
     expect(await announced()).toMatch(/^Assessed again\. New result: /);
   });
 
@@ -376,7 +376,7 @@ describe("Assess again", () => {
       },
       next_step: undefined,
     });
-    screen.getByRole("button", { name: "Assess again" }).click();
+    screen.getByRole("button", { name: en["co.growthFit.reassess"] }).click();
     expect(await announced()).toMatch(
       /^Assessed again\. New result: .+, 5 of 7 inputs recorded\.$/,
     );
@@ -499,7 +499,7 @@ describe("what the fit is judged on", () => {
       screen.getByText("At least 4 of 7 inputs are needed to judge the fit."),
     ).toBeTruthy();
     // Technology has no form: it comes from reading the site.
-    expect(screen.getByText("Found when the website is read.")).toBeTruthy();
+    expect(screen.getByText(en["co.growthFit.fromSiteRead"])).toBeTruthy();
     // A gap opens the Profile tab's own editor for that field.
     await user.click(
       await screen.findByRole("button", { name: /Ideal customer profile/ }),

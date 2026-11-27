@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -87,9 +88,13 @@ function routes(list: () => Response): RouteMap {
 
 async function openDrawer(canvasElement: HTMLElement) {
   await userEvent.click(
-    await within(canvasElement).findByRole("button", { name: "Shared links" }),
+    await within(canvasElement).findByRole("button", {
+      name: englishCopy["analytics.share.listOpen"],
+    }),
   );
-  await screen.findByRole("dialog", { name: "Your shared links" });
+  await screen.findByRole("dialog", {
+    name: englishCopy["analytics.share.listTitle"],
+  });
 }
 
 const meta: Meta<typeof SharedLinksButton> = {
@@ -161,7 +166,9 @@ export const CloseLinkConfirm: Story = {
         description: /Team North$/,
       }),
     );
-    await screen.findByRole("dialog", { name: "Close this link?" });
+    await screen.findByRole("dialog", {
+      name: englishCopy["analytics.share.closeTitle"],
+    });
   },
 };
 

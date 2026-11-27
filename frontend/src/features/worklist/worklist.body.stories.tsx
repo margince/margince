@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import {
   jsonResponse,
   StoryProviders,
@@ -86,9 +87,11 @@ export const EmptyPageWithContinuation: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(
-      canvas.getByText("Nothing in this batch yet. More loads as you scroll."),
+      canvas.getByText(englishCopy["worklist.emptyPage"]),
     ).toBeVisible();
-    await expect(canvas.getByText("Loading more…")).toBeVisible();
+    await expect(
+      canvas.getByText(englishCopy["scrollSentinel.loading"]),
+    ).toBeVisible();
   },
 };
 export const EmptyPageDark: Story = {
@@ -123,7 +126,7 @@ export const DecisionsView: Story = {
   },
   play: async ({ canvasElement }) => {
     await expect(
-      within(canvasElement).getByText("All decisions loaded."),
+      within(canvasElement).getByText(englishCopy["worklist.end.decisions"]),
     ).toBeVisible();
   },
 };
@@ -139,7 +142,9 @@ export const DecisionsViewNotWhole: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(canvas.getAllByRole("listitem").length).toBeGreaterThan(0);
-    await expect(canvas.queryByText("All decisions loaded.")).toBeNull();
+    await expect(
+      canvas.queryByText(englishCopy["worklist.end.decisions"]),
+    ).toBeNull();
   },
 };
 
@@ -153,7 +158,9 @@ export const NextBatchFailed: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(canvas.getByText("Could not load more.")).toBeVisible();
+    await expect(
+      canvas.getByText(englishCopy["scrollSentinel.failed"]),
+    ).toBeVisible();
     await expect(canvas.getByRole("button", { name: "Retry" })).toBeVisible();
   },
 };
@@ -167,7 +174,7 @@ export const SystemViewClear: Story = {
   args: { view: "system" },
   play: async ({ canvasElement }) => {
     await expect(
-      within(canvasElement).getByText("No unresolved issues."),
+      within(canvasElement).getByText(englishCopy["worklist.clear.system"]),
     ).toBeVisible();
   },
 };
@@ -192,7 +199,7 @@ export const TodayWithUpcoming: Story = {
   },
   play: async ({ canvasElement }) => {
     await expect(
-      within(canvasElement).getByText("Upcoming and backlog"),
+      within(canvasElement).getByText(englishCopy["worklist.filter.upcoming"]),
     ).toBeVisible();
   },
 };
@@ -233,12 +240,14 @@ export const OptionalReconnections: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(canvas.getByText("Optional reconnections")).toBeVisible();
+    await expect(
+      canvas.getByText(englishCopy["worklist.relationships.optional"]),
+    ).toBeVisible();
     await expect(
       canvas.getByText("No recent contact with Demo contact"),
     ).toBeVisible();
     await expect(
-      canvas.getByText("More optional contacts are outside this view."),
+      canvas.getByText(englishCopy["worklist.relationships.more"]),
     ).toBeVisible();
   },
 };

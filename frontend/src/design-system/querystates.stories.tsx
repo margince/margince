@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useQuery } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { expect, screen, userEvent, waitFor, within } from "storybook/test";
+import { en as englishCopy } from "../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -191,7 +192,7 @@ export const RefusedInADialog: Story = {
   tags: ["uat-phone"],
   play: async () => {
     const dialog = await screen.findByRole("dialog", {
-      name: "Edit signature",
+      name: englishCopy["settings.signatureEdit"],
     });
     const actions = dialog.querySelector<HTMLElement>(":scope > .actions");
     await userEvent.click(within(dialog).getByRole("button", { name: "Save" }));

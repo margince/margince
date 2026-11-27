@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
+import { en as englishCopy } from "../../i18n/en";
 import {
   jsonResponse,
   type RouteMap,
@@ -148,6 +149,6 @@ export const AlreadyInTheRoom: Story = {
       await screen.findByRole("option", { name: "Commercial terms v4" }),
     );
     await userEvent.click(canvas.getByRole("button", { name: "Add to room" }));
-    await canvas.findByText("This file is already in the room.");
+    await canvas.findByText(englishCopy["room.docs.alreadyPresent"]);
   },
 };

@@ -6,7 +6,7 @@ package agents
 // The tag verbs. Short on purpose: four tools ride every listing, and the tag
 // vocabulary is the simplest thing on this surface.
 var listTagsCopy = toolCopy{
-	Purpose: "The workspace's words for grouping records, with the tag_id apply_tag takes.",
+	Purpose: "The company's words for grouping records, with the tag_id apply_tag takes.",
 	Limits: "Archived words come only on request and cannot be applied. `truncated` means the " +
 		"list was cut, so a word missing from it may still exist.",
 }
@@ -26,7 +26,7 @@ var getRecordTagsCopy = toolCopy{
 
 var applyTagCopy = toolCopy{
 	Purpose: "Tag a contact, company, deal, lead or project by tag_id, or by tag_name, which must " +
-		"name a tag the workspace already has.",
+		"name a tag the company already has.",
 	Limits: "This tool never creates a tag: an unknown name is refused, and only an admin or ops " +
 		"seat can add a word to the vocabulary. A name matches case-insensitively; an archived " +
 		"word is refused as archived rather than as unknown. Prefer a tag_id from list_tags. " +
@@ -42,8 +42,8 @@ var removeTagCopy = toolCopy{
 // seeded roles give Admin and Ops alone, so the copy says what the tool does
 // rather than warning about an authority the store already enforces.
 var createTagCopy = toolCopy{
-	Purpose: "Coin a new word in the workspace vocabulary, so records can be grouped by it.",
-	Limits: "list_tags FIRST: a workspace with \"Key Customer\" does not want \"key customers\" " +
+	Purpose: "Coin a new word in the company vocabulary, so records can be grouped by it.",
+	Limits: "list_tags FIRST: a company with \"Key Customer\" does not want \"key customers\" " +
 		"beside it, and the two then split the records that belong together. A name already " +
 		"taken is a conflict, matched case-insensitively, including a RETIRED word holding " +
 		"it, which change_tags restores. Needs the tag.create grant, " +
@@ -54,7 +54,7 @@ var createTagCopy = toolCopy{
 // and says what cannot be walked back, because a model that reads "merge" as
 // the reversible record merge will propose one casually.
 var mergeTagsCopy = toolCopy{
-	Purpose: "Fold a duplicate word into the one the workspace keeps, moving every record that " +
+	Purpose: "Fold a duplicate word into the one the company keeps, moving every record that " +
 		"carries it.",
 	// The governance sentence the surface appends already says a human approves
 	// this, so that is not repeated. What only this copy can say is that the act
@@ -80,7 +80,7 @@ var archiveTagCopy = toolCopy{
 }
 
 var readTagsCopy = toolCopy{
-	Purpose: "Read the workspace's tags. list: every word, with the tag_id the other tag calls " +
+	Purpose: "Read the company's tags. list: every word, with the tag_id the other tag calls " +
 		"take. get: one tag and how many contacts, companies, deals and leads carry it (the " +
 		"records themselves come from list_records). record: " +
 		"the tags on one contact, company, deal or lead, with who applied each and when.",
@@ -93,7 +93,7 @@ var readTagsCopy = toolCopy{
 }
 
 var changeTagsCopy = toolCopy{
-	Purpose: "Change the workspace's tags: the words themselves, and which records carry them.",
+	Purpose: "Change the company's tags: the words themselves, and which records carry them.",
 	Limits: "apply never creates a tag: an unknown name is refused, a name matches " +
 		"case-insensitively, an archived word is refused as archived, and the same tag twice is a " +
 		"conflict. Before create, read the list: a near-duplicate splits records that belong " +

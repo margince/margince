@@ -11,6 +11,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -271,6 +272,8 @@ describe("the research drawer mapping claims to profile fields", () => {
     rerender(ui(true));
 
     await screen.findByText(acmeClaim.body);
-    expect(field().textContent).toContain("Select field");
+    expect(field().textContent).toContain(
+      englishCopy["contact.research.mapFieldPlaceholder"],
+    );
   });
 });

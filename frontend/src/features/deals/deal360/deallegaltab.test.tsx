@@ -135,7 +135,9 @@ describe("a deal's legal review tab", () => {
     mount(<DealLegalTab deal={legalDeal} />);
     const table = await screen.findByRole("table", { name: "Reviews" });
     expect(within(table).getByText("Note: Check the cap")).toBeInTheDocument();
-    expect(within(table).queryByText("Former colleague")).toBeNull();
+    expect(
+      within(table).queryByText(en["legalReview.someoneShort"]),
+    ).toBeNull();
   });
 });
 

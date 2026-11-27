@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -49,9 +50,7 @@ export const ReadOnly: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(
-      await canvas.findByText(
-        "Only an administrator or operations user can change these settings.",
-      ),
+      await canvas.findByText(englishCopy["installationSettings.readOnly"]),
     ).toBeVisible();
     await expect(canvas.getByTestId("follow-up-after-days")).toBeDisabled();
   },

@@ -7,6 +7,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { ProblemError } from "../../lib/problem";
 import { StoryProviders } from "../../testing/story-utils";
 import type { CompanyInput } from "./company-context";
@@ -64,11 +65,13 @@ describe("CompanyProfileDialog", () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn();
     render(<Dialog onSubmit={onSubmit} />);
-    const name = await screen.findByRole("textbox", { name: "Company name" });
+    const name = await screen.findByRole("textbox", {
+      name: englishCopy["ob.field.display_name"],
+    });
     expect(name).toBeRequired();
     await user.clear(name);
     await user.click(
-      screen.getByRole("button", { name: "Save company context" }),
+      screen.getByRole("button", { name: englishCopy["settings.companySave"] }),
     );
     expect(await screen.findByText("Company name is required.")).toBeVisible();
     await waitFor(() => expect(name).toHaveFocus());
@@ -79,7 +82,9 @@ describe("CompanyProfileDialog", () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn();
     const view = render(<Dialog onSubmit={onSubmit} />);
-    const name = await screen.findByRole("textbox", { name: "Company name" });
+    const name = await screen.findByRole("textbox", {
+      name: englishCopy["ob.field.display_name"],
+    });
     view.rerender(<Dialog onSubmit={onSubmit} refused={TOO_LONG} />);
     expect(name).toHaveAttribute("data-character-limit", "120");
     expect(

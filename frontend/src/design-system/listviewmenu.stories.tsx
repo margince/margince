@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { type ReactNode, useState } from "react";
 import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { viewMenuName } from "../testing/listview.names";
 import { playOpenView, playOpenViewStep } from "../testing/listview.play";
 import { Button, SegmentedControl } from "./atoms";
@@ -228,7 +229,7 @@ export const ArchivedPressed: Story = {
   play: async ({ canvasElement }) => {
     const panel = await playOpenView(canvasElement);
     const archived = within(panel).getByRole("button", {
-      name: "Show archived",
+      name: englishCopy["list.showArchived"],
     });
     await userEvent.click(archived);
     await waitFor(() =>
@@ -269,7 +270,7 @@ async function openAppliedOwner(canvasElement: HTMLElement) {
     values.getByRole("radio", { name: "Lena Brandt" }),
   ).toBeChecked();
   await expect(
-    values.getByRole("button", { name: "Delete filter" }),
+    values.getByRole("button", { name: englishCopy["table.deleteFilter"] }),
   ).toBeVisible();
 }
 

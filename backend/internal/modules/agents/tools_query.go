@@ -124,7 +124,7 @@ type queryWorkspace struct {
 
 func (t queryWorkspace) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
-		Name: "query_workspace", Title: "Query the workspace", Version: toolVersionV1,
+		Name: "query_workspace", Title: "Query the company", Version: toolVersionV1,
 		Description:   queryWorkspaceCopy.render(),
 		Instead:       queryWorkspaceCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
@@ -136,7 +136,7 @@ func (t queryWorkspace) Spec() mcp.ToolSpec {
 		// would be a hand-maintained list of exactly the thing that is derived,
 		// and it would go stale the first time a workspace added a field.
 		InputSchema: schema(`{"type":"object","required":["plan"],"properties":{` + compactRecordsProperty + `
-			"plan":{"type":"object","description":"A query plan, in the grammar published at margince://schema/query. That document, not this description, holds the record types, fields, operators and relationships this workspace admits: a name outside it is refused by name, never guessed at."}},
+			"plan":{"type":"object","description":"A query plan, in the grammar published at margince://schema/query. That document, not this description, holds the record types, fields, operators and relationships this company admits: a name outside it is refused by name, never guessed at."}},
 			"additionalProperties":false}`),
 		UnkeyedArguments: map[string]string{
 			"$.plan": "the plan is a document in a grammar derived per caller from the live column catalog",

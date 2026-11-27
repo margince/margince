@@ -127,7 +127,7 @@ describe("a refused file says what is wrong in the reader's words", () => {
 
   it("says a file that could not be read at all, with no line", () => {
     refused({ field: "file", code: "unreadable" });
-    expect(body()).toBe("The file could not be read. Upload it again.");
+    expect(body()).toBe(en["import.refusal.unreadable"]);
   });
 
   it("names a column the header gives twice", () => {
@@ -249,9 +249,7 @@ describe("a refused file says what is wrong in the reader's words", () => {
 
   it("lists every type an import takes", () => {
     refused({ field: "object", code: "unsupported" });
-    expect(body()).toBe(
-      "An import takes companies, contacts, leads, deals or activities. Choose the type the file holds.",
-    );
+    expect(body()).toBe(en["import.refusal.unsupported"]);
   });
 
   it("names two columns mapped to one field by the field's label", () => {

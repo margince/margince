@@ -7,6 +7,7 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { browserZone, UTC_ZONE } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { useKeptDraft } from "./composeautosave";
 import { type SavedDraft, useSavedDraft } from "./composesaveddraft";
 import type { SavedDraftFields } from "./composesaveddraftcalls";
@@ -286,7 +287,7 @@ describe("a refused save", () => {
     await pass(PAUSE_MS);
     await vi.waitFor(() =>
       expect(view.result.current.error).toBe(
-        "The draft was not saved. Retry, or keep writing to try again.",
+        englishCopy["compose.savedDraftAutosaveRefused"],
       ),
     );
 
@@ -359,7 +360,7 @@ describe("a refused save", () => {
     expect(written).toHaveLength(2);
     await vi.waitFor(() =>
       expect(view.result.current.error).toBe(
-        "The draft was not saved. Retry, or close again to discard the text.",
+        englishCopy["compose.savedDraftFailed"],
       ),
     );
     expect(view.onClose).not.toHaveBeenCalled();
@@ -679,7 +680,7 @@ describe("a close after a refused close", () => {
     await pass(0);
     await vi.waitFor(() =>
       expect(view.result.current.error).toBe(
-        "The draft was not saved. Retry, or close again to discard the text.",
+        englishCopy["compose.savedDraftFailed"],
       ),
     );
 
@@ -742,7 +743,7 @@ describe("a close pressed while a quiet save is out", () => {
 
     await vi.waitFor(() =>
       expect(view.result.current.error).toBe(
-        "The draft was not saved. Retry, or close again to discard the text.",
+        englishCopy["compose.savedDraftFailed"],
       ),
     );
     expect(out.written).toHaveLength(2);

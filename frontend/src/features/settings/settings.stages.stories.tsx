@@ -11,6 +11,7 @@ import { unwrap } from "../../lib/problem";
 import { SETTINGS_PIPELINES } from "./settings.pipelineorder";
 import { StageLadderEditor } from "./settings.stages";
 import "./settings.pipelines.css";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -269,7 +270,7 @@ export const CriteriaReadOnly: Story = {
       await canvas.findByText("Buyer confirmed the budget"),
     ).toBeInTheDocument();
     await expect(
-      canvas.queryByRole("button", { name: "Add criterion" }),
+      canvas.queryByRole("button", { name: englishCopy["stage.criteria.add"] }),
     ).toBeNull();
     await expect(canvas.queryByRole("button", { name: /^Remove / })).toBeNull();
   },
@@ -300,7 +301,9 @@ export const OneStageOpen: Story = {
     );
     if (!menu) throw new Error("the row menu named no panel");
     await userEvent.click(
-      within(menu).getByRole("button", { name: "Add criterion" }),
+      within(menu).getByRole("button", {
+        name: englishCopy["stage.criteria.add"],
+      }),
     );
     await expect(discovery).toHaveAttribute("aria-expanded", "true");
     await expect(proposal).toHaveAttribute("aria-expanded", "false");

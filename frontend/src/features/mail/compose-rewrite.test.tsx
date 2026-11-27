@@ -6,6 +6,7 @@ import {
   messageText,
   writeMessage,
 } from "../../design-system/richtext-testing";
+import { en as englishCopy } from "../../i18n/en";
 import { REWRITE_MAX_CHARACTERS } from "../../lib/rewrites";
 import { draftButton } from "../../testing/composedraft.testkit";
 import {
@@ -166,9 +167,7 @@ describe("ComposeWindow rewrites over the rep's words", () => {
       true,
     );
     expect(
-      screen.getByText(
-        "Rewrites work on plain text. Remove the formatting and links to use them.",
-      ),
+      screen.getByText(englishCopy["compose.rewriteFormatted"]),
     ).toBeTruthy();
     expect(calls()).toHaveLength(0);
   });
@@ -180,7 +179,9 @@ describe("ComposeWindow rewrites over the rep's words", () => {
 
     writeMessage("Body", "😀".repeat(REWRITE_MAX_CHARACTERS + 1));
     await waitFor(() => expect(polish()).toHaveProperty("disabled", true));
-    expect(screen.getByText("This mail is too long to rewrite.")).toBeTruthy();
+    expect(
+      screen.getByText(englishCopy["compose.rewriteTooLong"]),
+    ).toBeTruthy();
     expect(calls()).toHaveLength(0);
   });
 
@@ -205,7 +206,7 @@ describe("ComposeWindow rewrites over the rep's words", () => {
     await user.click(polish());
 
     expect(
-      await screen.findByText("This mail is too long to rewrite."),
+      await screen.findByText(englishCopy["compose.rewriteTooLong"]),
     ).toBeTruthy();
     expect(messageText("Body")).toBe("hi anna, price next week");
   });

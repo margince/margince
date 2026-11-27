@@ -8,6 +8,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { pickSuggestion } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { AiProviderKeysCard } from "./ai-provider-keys";
 import { providerState } from "./ai-provider-sheet";
@@ -198,10 +199,14 @@ describe("the Providers list", () => {
     const row = (provider: string) =>
       screen.findByTestId(`ai-provider-row-${provider}`);
     const gemini = await row("gemini");
-    await within(gemini).findByText("Everyday cloud");
-    expect(within(gemini).getByText("Embedding model")).toBeTruthy();
+    await within(gemini).findByText(englishCopy["aiTier.cheap_cloud"]);
+    expect(
+      within(gemini).getByText(englishCopy["aiTier.embeddings"]),
+    ).toBeTruthy();
     // The vendor's key belongs to its sheet, not to the row.
-    expect(within(gemini).getByText("Google Gemini")).toBeTruthy();
+    expect(
+      within(gemini).getByText(englishCopy["aiProviders.name.gemini"]),
+    ).toBeTruthy();
     expect(within(gemini).queryByText("gemini")).toBeNull();
     expect(within(gemini).queryByText("Active")).toBeNull();
     expect((await row("anthropic")).textContent).toContain("Ready");
@@ -214,7 +219,7 @@ describe("the Providers list", () => {
     mount();
     await within(
       await screen.findByTestId("ai-provider-row-gemini"),
-    ).findByText("Everyday cloud");
+    ).findByText(englishCopy["aiTier.cheap_cloud"]);
     const order = screen
       .getAllByTestId(/^ai-provider-row-/)
       .map((row) => row.dataset.testid?.replace("ai-provider-row-", ""));
@@ -225,9 +230,13 @@ describe("the Providers list", () => {
     const user = userEvent.setup();
     mount();
     const gemini = await screen.findByTestId("ai-provider-row-gemini");
-    await user.click(await within(gemini).findByText("Everyday cloud"));
+    await user.click(
+      await within(gemini).findByText(englishCopy["aiTier.cheap_cloud"]),
+    );
     expect(
-      await screen.findByRole("dialog", { name: "Google Gemini" }),
+      await screen.findByRole("dialog", {
+        name: englishCopy["aiProviders.name.gemini"],
+      }),
     ).toBeTruthy();
   });
 
@@ -494,7 +503,9 @@ describe("a provider's sheet", () => {
       within(sheet).queryByRole("button", { name: /Add price|Edit|Remove/ }),
     ).toBeNull();
     expect(
-      screen.queryByRole("button", { name: "Refresh model prices" }),
+      screen.queryByRole("button", {
+        name: englishCopy["aiRates.refresh.button"],
+      }),
     ).toBeNull();
   });
 

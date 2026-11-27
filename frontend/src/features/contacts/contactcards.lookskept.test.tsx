@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
 import { UTC_ZONE } from "../../format/timezone";
+import { en as englishCopy } from "../../i18n/en";
 import { pretendReaderZone } from "../../testing/readerzone.testkit";
 import {
   installFetchStub,
@@ -170,7 +171,9 @@ describe("a promise Margince closed itself", () => {
       "GET /me": meRoute({ activity: ["read"], contact: ["read"] }),
     });
     renderCard([{ ...AUTO_KEPT, auto_kept: {} }]);
-    expect(await screen.findByText("Margince marked this kept.")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["commitment.autoKeptPlain"]),
+    ).toBeTruthy();
     await act(async () => {});
     expect(screen.queryByRole("button", { name: "Undo" })).toBeNull();
   });

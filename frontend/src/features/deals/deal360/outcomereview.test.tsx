@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { type Locale, LocaleProvider } from "../../../i18n";
+import { en as englishCopy } from "../../../i18n/en";
 import { meFixture } from "../../../testing/mefixture";
 import { OutcomeReviewPanel } from "./outcomereview";
 
@@ -218,7 +219,7 @@ it("says which question went unanswered rather than dropping the row", async () 
     />,
   );
   expect(await screen.findByText("Who else?")).toBeTruthy();
-  expect(screen.getByText("Not answered")).toBeTruthy();
+  expect(screen.getByText(englishCopy["outcomeReview.noAnswer"])).toBeTruthy();
 });
 
 it("shows a review the reader just wrote, without a reload", async () => {

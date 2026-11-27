@@ -5,6 +5,7 @@
 import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { render } from "./analytics.testkit";
 import { sellerMarch, teamMarch } from "./progress.fixtures";
 import { ProgressMembers, ProgressMonths } from "./progress.tables";
@@ -35,9 +36,7 @@ describe("ProgressMembers", () => {
     );
     expect(screen.queryByRole("table")).toBeNull();
     expect(
-      screen.getByText(
-        "Some members are hidden, so the team goal is hidden too.",
-      ),
+      screen.getByText(englishCopy["progress.membersWithheld"]),
     ).toBeTruthy();
   });
 });

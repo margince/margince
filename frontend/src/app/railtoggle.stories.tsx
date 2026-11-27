@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useRef, useState } from "react";
 import { expect, waitFor, within } from "storybook/test";
+import { en as englishCopy } from "../i18n/en";
 import { StoryProviders } from "../testing/story-utils";
 import { useNavTip } from "./navtip";
 import { NavRailToggle } from "./railtoggle";
@@ -50,7 +51,7 @@ export const Collapsed: Story = {
   render: () => <RailFoot startCollapsed />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    canvas.getByRole("button", { name: "Expand sidebar" }).focus();
+    canvas.getByRole("button", { name: englishCopy["shell.expand"] }).focus();
     await waitFor(() =>
       expect(canvas.getByRole("tooltip").textContent).toMatch(
         /^Expand sidebar · (⌘|Ctrl) B$/,

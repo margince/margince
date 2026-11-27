@@ -13,6 +13,7 @@ import (
 	"sync"
 
 	"github.com/margince/margince/backend/internal/compose/agentloope2e"
+	"github.com/margince/margince/backend/internal/compose/aitasks"
 	"github.com/margince/margince/backend/internal/modules/agents/runner"
 	"github.com/margince/margince/backend/internal/modules/ai"
 )
@@ -46,14 +47,15 @@ func (r *Recorder) Calls() []ai.Call {
 // everything the run touched, so it goes under the gitignored .tmp folder and
 // never into a commit.
 type Trace struct {
-	Scenario string                 `json:"scenario"`
-	Binding  agentloope2e.Binding   `json:"binding"`
-	Run      int                    `json:"run"`
-	Status   string                 `json:"status"`
-	Steps    []runner.Step          `json:"steps"`
-	Calls    []ai.Call              `json:"model_calls"`
-	Failures []agentloope2e.Failure `json:"failures"`
-	Writes   []agentloope2e.Write   `json:"writes"`
+	Recovery *aitasks.LoopRecoveryMeasure `json:"recovery,omitempty"`
+	Scenario string                       `json:"scenario"`
+	Binding  agentloope2e.Binding         `json:"binding"`
+	Run      int                          `json:"run"`
+	Status   string                       `json:"status"`
+	Steps    []runner.Step                `json:"steps"`
+	Calls    []ai.Call                    `json:"model_calls"`
+	Failures []agentloope2e.Failure       `json:"failures"`
+	Writes   []agentloope2e.Write         `json:"writes"`
 }
 
 // Write files the trace under dir and answers its path.

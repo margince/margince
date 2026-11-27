@@ -5,7 +5,9 @@ package finance
 
 import (
 	"math"
+	"slices"
 	"testing"
+	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -32,8 +34,8 @@ func TestCustomerPaymentTotalsKeepEachCurrencyAndCountACompanyOnce(t *testing.T)
 		out.Totals[1].Currency != "USD" || out.Totals[1].AmountMinor != 1700 {
 		t.Fatalf("currencies or distinct customer count merged: %+v", out)
 	}
-	if len(out.Customers) != 2 || out.Customers[0].OldestDays != 8 {
-		t.Fatalf("oldest customer group is not first: %+v", out.Customers)
+	if len(out.Customers) != 2 || out.Customers[0].OldestDays != 4 {
+		t.Fatalf("recent customer group is not first: %+v", out.Customers)
 	}
 }
 
@@ -46,7 +48,7 @@ func TestCustomerPaymentPreviewsStopAtThreeButTotalsCountEveryInvoice(t *testing
 	}
 	out := crmcontracts.CustomerPayments{}
 	fold.fill(&out, ids.NewV7())
-	if out.InvoiceCount != 5 || out.CompanyCount != 5 || out.Totals[0].AmountMinor != 500 || len(out.Customers) != 3 || out.Customers[0].OldestDays != 5 || out.Customers[2].OldestDays != 3 {
+	if out.InvoiceCount != 5 || out.CompanyCount != 5 || out.Totals[0].AmountMinor != 500 || len(out.Customers) != 3 || out.Customers[0].OldestDays != 1 || out.Customers[2].OldestDays != 3 {
 		t.Fatalf("preview cap changed the totals or order: %+v", out)
 	}
 }
@@ -60,5 +62,92 @@ func TestCustomerPaymentTotalsRefuseOverflow(t *testing.T) {
 	invoice.OpenMinor = 1
 	if err := fold.add(invoice); err == nil {
 		t.Fatal("overflow wrapped a complete financial total")
+	}
+}
+
+func TestPaymentAgeGroupsOnlyOlderInvoicesAndKeepsCompleteTotals(t *testing.T) {
+	for _, age := range []int{30, 365, 1000} {
+		fold := newPaymentFold()
+		fold.age = age
+		company := openapi_types.UUID(ids.NewV7())
+		for _, days := range []int{30, 365, 366, 1000} {
+			if err := fold.add(crmcontracts.CustomerPaymentInvoice{CompanyId: company, Currency: "EUR", OpenMinor: 100, DaysOverdue: days}); err != nil {
+				t.Fatal(err)
+			}
+		}
+		out := crmcontracts.CustomerPayments{}
+		fold.fill(&out, ids.NewV7())
+		expected := 0
+		for _, days := range []int{30, 365, 366, 1000} {
+			if days > age {
+				expected++
+			}
+		}
+		if out.InvoiceCount != 4 || out.CompanyCount != 1 || out.Totals[0].AmountMinor != 400 || out.LongOverdue == nil || out.LongOverdue.InvoiceCount != expected {
+			t.Fatalf("age%d changed totals or group: %+v", age, out)
+		}
+		for _, customer := range out.Customers {
+			if customer.OldestDays > age {
+				t.Fatalf("age%d leaked old invoice into active group: %+v", age, customer)
+			}
+		}
+	}
+}
+
+func TestPaymentCursorFollowsRecentInvoicesAndLargeSameDayAmounts(t *testing.T) {
+	due := time.Date(2026, 11, 1, 0, 0, 0, 0, time.UTC)
+	cursor := paymentPosition{Connection: ids.NewV7(), Due: due, Invoice: ids.NewV7(), Currency: "EUR", Amount: 200}
+	for _, tc := range []struct {
+		name    string
+		invoice crmcontracts.CustomerPaymentInvoice
+		want    bool
+	}{
+		{"older", crmcontracts.CustomerPaymentInvoice{DueAt: openapi_types.Date{Time: due.AddDate(0, 0, -1)}}, true},
+		{"newer", crmcontracts.CustomerPaymentInvoice{DueAt: openapi_types.Date{Time: due.AddDate(0, 0, 1)}}, false},
+		{"smaller", crmcontracts.CustomerPaymentInvoice{DueAt: openapi_types.Date{Time: due}, Currency: "EUR", OpenMinor: 100}, true},
+		{"larger", crmcontracts.CustomerPaymentInvoice{DueAt: openapi_types.Date{Time: due}, Currency: "EUR", OpenMinor: 300}, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := followsPayment(tc.invoice, cursor); got != tc.want {
+				t.Fatalf("follows=%v want%v", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestSameDayCustomerPaymentsHaveOneOrderAcrossCurrenciesAndAgeGroups(t *testing.T) {
+	a, b, c := openapi_types.UUID(ids.NewV7()), openapi_types.UUID(ids.NewV7()), openapi_types.UUID(ids.NewV7())
+	invoices := []crmcontracts.CustomerPaymentInvoice{
+		{CompanyId: a, Currency: "EUR", OpenMinor: 5},
+		{CompanyId: b, Currency: "EUR", OpenMinor: 10},
+		{CompanyId: c, Currency: "USD", OpenMinor: 100},
+	}
+	for _, days := range []int{4, 400} {
+		for _, order := range [][]int{{0, 1, 2}, {0, 2, 1}, {1, 0, 2}, {1, 2, 0}, {2, 0, 1}, {2, 1, 0}} {
+			for range 10 {
+				fold := newPaymentFold()
+				fold.age = 365
+				for _, at := range order {
+					invoice := invoices[at]
+					invoice.DaysOverdue = days
+					if err := fold.add(invoice); err != nil {
+						t.Fatal(err)
+					}
+				}
+				out := crmcontracts.CustomerPayments{}
+				fold.fill(&out, ids.NewV7())
+				customers := out.Customers
+				if days > 365 {
+					customers = out.LongOverdue.Customers
+				}
+				var got []openapi_types.UUID
+				for _, customer := range customers {
+					got = append(got, customer.CompanyId)
+				}
+				if !slices.Equal(got, []openapi_types.UUID{b, a, c}) {
+					t.Fatalf("currency/amount order changed with insertion order %v: %v", order, got)
+				}
+			}
+		}
 	}
 }

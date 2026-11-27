@@ -1,4 +1,4 @@
-import type { components } from "../../api/schema";
+import type { components } from "../api/schema";
 
 /**
  * The cached surfaces whose text is written by a model in the installation's

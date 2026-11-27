@@ -4,6 +4,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { steppedClock } from "../../testing/steppedclock";
 import {
   ImportedEmploymentHistory,
@@ -94,16 +95,30 @@ it.each(["keep", "Current", "Former"])(
     const user = steppedClock();
     const writes = serve("buyer.example");
     await user.click(
-      await screen.findByRole("button", { name: "Match company" }),
+      await screen.findByRole("button", {
+        name: englishCopy["employment.resolve"],
+      }),
     );
-    await screen.findByRole("dialog", { name: "Match company" });
-    const status = screen.getByRole("combobox", { name: "Employment status" });
-    expect(status.textContent).toContain("Keep imported status");
+    await screen.findByRole("dialog", {
+      name: englishCopy["employment.resolve"],
+    });
+    const status = screen.getByRole("combobox", {
+      name: englishCopy["employment.statusLabel"],
+    });
+    expect(status.textContent).toContain(
+      englishCopy["employment.keepImportedStatus"],
+    );
     await user.click(status);
-    expect(screen.queryByRole("option", { name: "Status unknown" })).toBeNull();
+    expect(
+      screen.queryByRole("option", {
+        name: englishCopy["employment.status.unknown"],
+      }),
+    ).toBeNull();
     if (choice === "keep") await user.keyboard("{Escape}");
     else await user.click(screen.getByRole("option", { name: choice }));
-    await user.click(screen.getByRole("button", { name: "Save company link" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["employment.saveMatch"] }),
+    );
     await waitFor(() => expect(writes).toHaveLength(1));
     expect(writes[0]).toMatchObject({
       action: "resolve",
@@ -120,10 +135,16 @@ it("says the website is required with no company picked, and sends nothing", asy
   const user = steppedClock();
   const writes = serve("");
   await user.click(
-    await screen.findByRole("button", { name: "Match company" }),
+    await screen.findByRole("button", {
+      name: englishCopy["employment.resolve"],
+    }),
   );
-  await screen.findByRole("dialog", { name: "Match company" });
-  await user.click(screen.getByRole("button", { name: "Save company link" }));
+  await screen.findByRole("dialog", {
+    name: englishCopy["employment.resolve"],
+  });
+  await user.click(
+    screen.getByRole("button", { name: englishCopy["employment.saveMatch"] }),
+  );
   expect(
     screen.getByText("Confirmed company website is required."),
   ).toBeTruthy();

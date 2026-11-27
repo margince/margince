@@ -7,6 +7,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { navigate, parseHash, useRoute } from "../../lib/router";
 import {
   IMPORT_RUN_SUBPAGE,
@@ -41,7 +42,7 @@ const DRAFT_CLOSED =
 // for rather than looked up.
 async function openWizard() {
   navigate({ ...settingsHref("import"), id2: IMPORT_RUN_SUBPAGE });
-  await screen.findByRole("link", { name: "Back to data import" });
+  await screen.findByRole("link", { name: englishCopy["import.back"] });
 }
 
 // One CSV dropped on the run page, its type kept, and the Map step open.
@@ -49,7 +50,7 @@ async function toTheMap(user: UserEvent, file = "leads.csv") {
   globalThis.location.hash = RUN_PAGE;
   render(<RoutedImport />);
   await user.upload(
-    await screen.findByLabelText("Upload your data"),
+    await screen.findByLabelText(englishCopy["import.hub.uploadLabel"]),
     new File(["Email\na@x.test\n"], file),
   );
   await user.click(await screen.findByRole("button", { name: /Next: map/ }));
@@ -114,7 +115,9 @@ describe("one CSV through the run page", () => {
     await user.click(
       screen.getByRole("combobox", { name: "Field for Full Name" }),
     );
-    await user.click(screen.getByRole("option", { name: "Do not import" }));
+    await user.click(
+      screen.getByRole("option", { name: englishCopy["import.dontImport"] }),
+    );
     await user.click(screen.getByRole("button", { name: "Run test" }));
 
     await waitFor(() =>
@@ -169,7 +172,9 @@ describe("one CSV through the run page", () => {
     // "1 rows" is how a machine counts. This button is the last thing a human
     // reads before the least reversible write in the product.
     expect(
-      await screen.findByRole("button", { name: "Import 1 row" }),
+      await screen.findByRole("button", {
+        name: englishCopy["import.test.import_one"],
+      }),
     ).toBeInTheDocument();
   });
 
@@ -179,7 +184,7 @@ describe("one CSV through the run page", () => {
     globalThis.location.hash = RUN_PAGE;
     render(<RoutedImport />);
     await user.upload(
-      await screen.findByLabelText("Upload your data"),
+      await screen.findByLabelText(englishCopy["import.hub.uploadLabel"]),
       new File(["Email\n"], "leads.csv"),
     );
     await user.click(
@@ -226,11 +231,13 @@ describe("one CSV through the run page", () => {
     globalThis.location.hash = RUN_PAGE;
     render(<RoutedImport />);
     await user.upload(
-      await screen.findByLabelText("Upload your data"),
+      await screen.findByLabelText(englishCopy["import.hub.uploadLabel"]),
       new File([""], "leads.csv"),
     );
 
-    expect(await screen.findByText("File could not be read")).toBeVisible();
+    expect(
+      await screen.findByText(englishCopy["import.uploadFailed"]),
+    ).toBeVisible();
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
   });
 
@@ -259,19 +266,17 @@ describe("one CSV through the run page", () => {
     globalThis.location.hash = RUN_PAGE;
     render(<RoutedImport />);
     await user.upload(
-      await screen.findByLabelText("Upload your data"),
+      await screen.findByLabelText(englishCopy["import.hub.uploadLabel"]),
       new File(["Email\na@x.test\n"], "leads.csv"),
     );
 
     expect(
-      await screen.findByText("File is too long for one test run"),
+      await screen.findByText(englishCopy["import.upload.tooManyRowsTitle"]),
     ).toBeVisible();
     expect(
-      screen.getByText(
-        "This file has more rows than one test run can read. Split it into smaller files and import each one.",
-      ),
+      screen.getByText(englishCopy["import.upload.tooManyRows"]),
     ).toBeVisible();
-    expect(screen.queryByText("File could not be read")).toBeNull();
+    expect(screen.queryByText(englishCopy["import.uploadFailed"])).toBeNull();
   });
 
   it("refuses an upload answer that names no run", async () => {
@@ -281,11 +286,13 @@ describe("one CSV through the run page", () => {
     globalThis.location.hash = RUN_PAGE;
     render(<RoutedImport />);
     await user.upload(
-      await screen.findByLabelText("Upload your data"),
+      await screen.findByLabelText(englishCopy["import.hub.uploadLabel"]),
       new File(["Email\na@x.test\n"], "leads.csv"),
     );
 
-    expect(await screen.findByText("File could not be read")).toBeVisible();
+    expect(
+      await screen.findByText(englishCopy["import.uploadFailed"]),
+    ).toBeVisible();
   });
 });
 
@@ -341,7 +348,9 @@ describe("a run named by the address", () => {
     renderAtImport("r1");
 
     expect(
-      await screen.findByRole("button", { name: "Undo this import" }),
+      await screen.findByRole("button", {
+        name: englishCopy["import.result.undo"],
+      }),
     ).toBeInTheDocument();
     // Read back, not re-uploaded: nothing about the file is on this machine
     // any more, and the reader chose no file this time.
@@ -388,7 +397,9 @@ describe("a run named by the address", () => {
     });
     renderAtImport("r1");
 
-    expect(await screen.findByText("1 row reversed.")).toBeVisible();
+    expect(
+      await screen.findByText(englishCopy["import.undoReversed_one"]),
+    ).toBeVisible();
     // Neither record comes back with a name, so each keeps its id.
     expect((await screen.findByTitle("l-1")).closest("li")).toHaveTextContent(
       "Leads: l-1",
@@ -397,7 +408,7 @@ describe("a run named by the address", () => {
       "Companies — c-1: A contact still references this company.",
     );
     expect(
-      screen.queryByRole("button", { name: "Undo this import" }),
+      screen.queryByRole("button", { name: englishCopy["import.result.undo"] }),
     ).toBeNull();
   });
 
@@ -405,7 +416,9 @@ describe("a run named by the address", () => {
     const sent = stubRoutes(undoneWithLeftovers);
     renderAtImport("r1");
 
-    expect(await screen.findByText("1 row reversed.")).toBeVisible();
+    expect(
+      await screen.findByText(englishCopy["import.undoReversed_one"]),
+    ).toBeVisible();
     const lines = screen.getAllByRole("listitem").map((li) => li.textContent);
     expect(lines).toContain("Leads: l-1");
     expect(lines).toContain(
@@ -423,9 +436,15 @@ describe("a run named by the address", () => {
     });
     renderAtImport("r1");
 
-    expect(await screen.findByText("This import was canceled")).toBeVisible();
-    await user.click(screen.getByRole("button", { name: "Upload a file" }));
-    expect(await screen.findByLabelText("Upload your data")).toBeVisible();
+    expect(
+      await screen.findByText(englishCopy["import.closed.cancelled"]),
+    ).toBeVisible();
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["import.closed.upload"] }),
+    );
+    expect(
+      await screen.findByLabelText(englishCopy["import.hub.uploadLabel"]),
+    ).toBeVisible();
     expect(globalThis.location.hash).not.toContain("run=");
   });
 
@@ -456,7 +475,7 @@ describe("a run named by the address", () => {
 
     expect(await screen.findByText(DRAFT_CLOSED)).toBeVisible();
     expect(
-      screen.getByText("This import stopped before anything was imported."),
+      screen.getByText(englishCopy["import.closed.stopped"]),
     ).toBeVisible();
   });
 
@@ -471,7 +490,7 @@ describe("a run named by the address", () => {
     renderAtImport("r9");
 
     expect(
-      await screen.findByText("This import does not exist or was removed."),
+      await screen.findByText(englishCopy["import.missing.body"]),
     ).toBeVisible();
     expect(screen.queryByText("No such import run.")).toBeNull();
   });
@@ -505,7 +524,7 @@ describe("the import page", () => {
     render(tabContent("import", "", route));
 
     expect(
-      await screen.findByRole("link", { name: "Back to data import" }),
+      await screen.findByRole("link", { name: englishCopy["import.back"] }),
     ).toBeInTheDocument();
   });
 
@@ -514,9 +533,11 @@ describe("the import page", () => {
     stubRoutes();
     render(<RoutedImport />);
 
-    expect(await screen.findByLabelText("Upload your data")).toBeVisible();
     expect(
-      screen.getByRole("link", { name: "Back to data import" }),
+      await screen.findByLabelText(englishCopy["import.hub.uploadLabel"]),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("link", { name: englishCopy["import.back"] }),
     ).toHaveAttribute("href", "/#/settings/import");
     expect(screen.queryByText("New import")).toBeNull();
   });
@@ -541,14 +562,16 @@ describe("the import page", () => {
     const sent = stubRoutes();
     render(<RoutedImport />);
     await user.upload(
-      await screen.findByLabelText("Upload your data"),
+      await screen.findByLabelText(englishCopy["import.hub.uploadLabel"]),
       new File(["Email\na@x.test\n"], "leads.csv"),
     );
 
     const title = await screen.findByRole("heading", {
-      name: "Check your files",
+      name: englishCopy["import.step.title.files"],
     });
-    expect(within(title).getByText("Check your files")).toHaveFocus();
+    expect(
+      within(title).getByText(englishCopy["import.step.title.files"]),
+    ).toHaveFocus();
     await waitFor(() =>
       expect(
         sent.find((s) => s.path === "POST /imports/sources")?.body,

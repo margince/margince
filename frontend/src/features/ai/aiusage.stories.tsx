@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import {
   installFetchStub,
@@ -76,7 +77,7 @@ export const WithPricesLink: Story = {
   play: async ({ canvasElement }) => {
     await expect(
       await within(canvasElement).findByRole("link", {
-        name: "Prices are set on AI models",
+        name: englishCopy["aiusage.pricesLink"],
       }),
     ).toHaveAttribute("href", "/#/settings/models/prices");
   },

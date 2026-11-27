@@ -6,6 +6,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useRef, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../i18n/en";
 import { ConfirmModal } from "./confirmmodal";
 import { ConfirmPhraseBox, phraseMatches } from "./confirmphrase";
 
@@ -96,7 +97,7 @@ describe("ConfirmPhraseBox", () => {
     expect(status.textContent).toBe("");
 
     await user.type(screen.getByRole("textbox"), " GmbH");
-    expect(status.textContent).toBe("Phrase matches");
+    expect(status.textContent).toBe(englishCopy["confirmPhrase.matches"]);
   });
 });
 

@@ -31,14 +31,14 @@
   "catalog": {
     "tools": 48,
     "system_frame_tokens": 730,
-    "tokens": 54095,
-    "median_tool_tokens": 806,
+    "tokens": 54080,
+    "median_tool_tokens": 807,
     "mean_tool_tokens": 1126
   },
   "agents": [
     {
       "name": "morning_brief",
-      "goal": "Prepare the existing Morning Brief of the user this run acts for. First call read_brief. Its items are the queue already ranked for them; do not assemble a workspace-wide list. Read every record an item cites in its evidence_ids, its activities as well as its deal, then call annotate_brief ONCE, with one concise narrative and a grounded finding for every item in that same call: why it matters, what changed and the next move. An item with a previous_rank was already on this queue on the run's previous_local_day: say what has changed since then rather than reporting it as new. An item without one may simply not have ranked that day, so do not call it new either. Use each returned item_id unchanged, never its deal_id, and cite only that item's evidence_ids. Keep the existing order. If there are no items, finish without inventing a brief. A tool refusal means the findings were not saved: correct it before claiming completion.",
+      "goal": "Prepare the existing Morning Brief of the user this run acts for. First call read_brief. Its items are the queue already ranked for them; do not assemble a company-wide list. Read every record an item cites in its evidence_ids, its activities as well as its deal, then call annotate_brief ONCE, with one concise narrative and a grounded finding for every item in that same call: why it matters, what changed and the next move. An item with a previous_rank was already on this queue on the run's previous_local_day: say what has changed since then rather than reporting it as new. An item without one may simply not have ranked that day, so do not call it new either. Use each returned item_id unchanged, never its deal_id, and cite only that item's evidence_ids. Keep the existing order. If there are no items, finish without inventing a brief. A tool refusal means the findings were not saved: correct it before claiming completion.",
       "tools": [
         "annotate_brief",
         "catch_me_up_on",
@@ -47,11 +47,11 @@
         "read_record"
       ],
       "of_served_tools": 48,
-      "tokens": 4436,
-      "listing_tokens": 2052,
+      "tokens": 4434,
+      "listing_tokens": 2051,
       "step_schema_tokens": 1653,
       "percent_of_ceiling": 13,
-      "headroom_tokens": 11948,
+      "headroom_tokens": 11950,
       "dangling_cross_references": [],
       "temptation_weight": 4
     },
@@ -68,11 +68,11 @@
         "whats_slipping_this_week"
       ],
       "of_served_tools": 48,
-      "tokens": 6731,
-      "listing_tokens": 3364,
+      "tokens": 6734,
+      "listing_tokens": 3367,
       "step_schema_tokens": 2636,
       "percent_of_ceiling": 20,
-      "headroom_tokens": 9653,
+      "headroom_tokens": 9650,
       "dangling_cross_references": [
         "at_risk_relationships → read_relationships",
         "log_activity → draft_outbound",
@@ -85,31 +85,31 @@
   "tool_cost": [
     {
       "name": "read_details",
-      "tokens": 4606
+      "tokens": 4605
     },
     {
       "name": "read_reports",
-      "tokens": 3353
+      "tokens": 3352
     },
     {
       "name": "change_settings",
-      "tokens": 3261
+      "tokens": 3259
     },
     {
       "name": "change_activities",
-      "tokens": 3063
+      "tokens": 3062
     },
     {
       "name": "read_workspace",
-      "tokens": 3012
+      "tokens": 3011
     },
     {
       "name": "change_state",
-      "tokens": 2362
+      "tokens": 2360
     },
     {
       "name": "find_records",
-      "tokens": 2060
+      "tokens": 2059
     },
     {
       "name": "change_reports",
@@ -117,15 +117,15 @@
     },
     {
       "name": "change_capture",
-      "tokens": 1986
+      "tokens": 1987
     },
     {
       "name": "read_view",
-      "tokens": 1921
+      "tokens": 1920
     },
     {
       "name": "change_attention",
-      "tokens": 1833
+      "tokens": 1832
     },
     {
       "name": "send_outbound",
@@ -133,11 +133,11 @@
     },
     {
       "name": "run_research",
-      "tokens": 1421
+      "tokens": 1420
     },
     {
       "name": "read_analytics",
-      "tokens": 1373
+      "tokens": 1372
     },
     {
       "name": "change_compliance",
@@ -145,18 +145,18 @@
     },
     {
       "name": "change_access",
-      "tokens": 1152
+      "tokens": 1151
     },
     {
       "name": "change_offers",
       "tokens": 1068
     },
     {
-      "name": "preview_import",
-      "tokens": 1018
+      "name": "change_record_parts",
+      "tokens": 1017
     },
     {
-      "name": "change_record_parts",
+      "name": "preview_import",
       "tokens": 1017
     },
     {
@@ -165,11 +165,11 @@
     },
     {
       "name": "bulk_update_records",
-      "tokens": 894
+      "tokens": 893
     },
     {
       "name": "create_record",
-      "tokens": 893
+      "tokens": 892
     },
     {
       "name": "change_my_settings",
@@ -177,7 +177,7 @@
     },
     {
       "name": "change_relationships",
-      "tokens": 816
+      "tokens": 818
     },
     {
       "name": "read_lists",
@@ -189,7 +189,7 @@
     },
     {
       "name": "change_tags",
-      "tokens": 650
+      "tokens": 647
     },
     {
       "name": "change_lists",
@@ -201,7 +201,7 @@
     },
     {
       "name": "schedule_meeting",
-      "tokens": 527
+      "tokens": 526
     },
     {
       "name": "draft_outbound",
@@ -213,11 +213,11 @@
     },
     {
       "name": "decide_approvals",
-      "tokens": 463
+      "tokens": 464
     },
     {
       "name": "enrich",
-      "tokens": 446
+      "tokens": 445
     },
     {
       "name": "annotate_brief",
@@ -225,18 +225,18 @@
     },
     {
       "name": "read_context",
-      "tokens": 413
+      "tokens": 412
     },
     {
       "name": "check_availability",
       "tokens": 375
     },
     {
-      "name": "read_relationships",
-      "tokens": 366
+      "name": "read_attention",
+      "tokens": 368
     },
     {
-      "name": "read_attention",
+      "name": "read_relationships",
       "tokens": 365
     },
     {
@@ -249,7 +249,7 @@
     },
     {
       "name": "read_project",
-      "tokens": 316
+      "tokens": 315
     },
     {
       "name": "archive_record",
@@ -261,7 +261,7 @@
     },
     {
       "name": "commit_import",
-      "tokens": 275
+      "tokens": 274
     },
     {
       "name": "read_import",

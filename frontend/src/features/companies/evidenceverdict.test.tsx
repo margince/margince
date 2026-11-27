@@ -288,7 +288,7 @@ describe("a human's verdict on a machine's claim", () => {
 
     await waitFor(() =>
       expect(screen.getByRole("alert").textContent).toBe(
-        "The request failed. No cause reported.",
+        en["common.errorNoCause"],
       ),
     );
     expect(calls).toEqual([]);
@@ -351,7 +351,7 @@ describe("a human's verdict on a machine's claim", () => {
 
     await waitFor(() => expect(screen.getByRole("alert")).toBeTruthy());
     expect(screen.getByRole("alert").textContent).toBe(
-      "You do not have permission for this action. Ask an administrator, or the user who shared this record, to extend your access.",
+      en["common.permissionDenied"],
     );
   });
 
@@ -484,7 +484,9 @@ describe("the correction opens in a dialog", () => {
     );
 
     await user.click(screen.getByRole("button", { name: "Correct" }));
-    const dialog = screen.getByRole("dialog", { name: "Corrected value" });
+    const dialog = screen.getByRole("dialog", {
+      name: en["evidence.correctedValue"],
+    });
     const input = within(dialog).getByRole("textbox");
     await user.clear(input);
     await user.type(input, "Automotive");

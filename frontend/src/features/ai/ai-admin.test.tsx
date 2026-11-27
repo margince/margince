@@ -17,6 +17,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { UnsavedGuard, useHasUnsavedChanges } from "../../components/unsaved";
 import { PageSaveBar, SavePageProvider } from "../../design-system/savepage";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { allowance, feature, status } from "../../testing/ai-admin.testkit";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { AiBudgetCard } from "./ai-admin";
@@ -105,9 +106,9 @@ function UnsavedProbe() {
 
 async function openEditor(user: ReturnType<typeof userEvent.setup>) {
   await user.click(
-    await screen.findByRole("button", { name: "Edit allowance" }),
+    await screen.findByRole("button", { name: englishCopy["aiAdmin.edit"] }),
   );
-  return screen.getByLabelText("Tokens per full user per month");
+  return screen.getByLabelText(englishCopy["aiAdmin.perUser"]);
 }
 it("explains pooled tokens, UTC reset and unchanged model selection", async () => {
   mount();
@@ -123,11 +124,7 @@ it("explains pooled tokens, UTC reset and unchanged model selection", async () =
 });
 it("states the band only once it is off normal, and never the spend in money", async () => {
   mount();
-  expect(
-    await screen.findByText(
-      "80% threshold reached: reduced-tier routing is active",
-    ),
-  ).toBeTruthy();
+  expect(await screen.findByText(englishCopy["aiAdmin.degraded"])).toBeTruthy();
   expect(document.body.textContent).not.toMatch(/[$€£]\s?\d/);
   cleanup();
   mount(undefined, false, {
@@ -146,24 +143,30 @@ it("previews both fields before writing the allowance with its revision", async 
   const user = userEvent.setup({ delay: null });
   const { writes } = mount();
   await user.click(
-    await screen.findByRole("button", { name: "Edit allowance" }),
+    await screen.findByRole("button", { name: englishCopy["aiAdmin.edit"] }),
   );
   expect(
-    screen.getByRole("dialog", { name: "Monthly AI allowance" }),
+    screen.getByRole("dialog", { name: englishCopy["aiAdmin.allowance"] }),
   ).toBeTruthy();
-  const field = screen.getByLabelText("Tokens per full user per month");
+  const field = screen.getByLabelText(englishCopy["aiAdmin.perUser"]);
   await user.clear(field);
   await user.type(field, "20000000");
-  expect(screen.getByRole("button", { name: "Save allowance" })).toBeDisabled();
-  await user.click(screen.getByRole("button", { name: "Preview effects" }));
+  expect(
+    screen.getByRole("button", { name: englishCopy["aiAdmin.save"] }),
+  ).toBeDisabled();
+  await user.click(
+    screen.getByRole("button", { name: englishCopy["aiAdmin.preview"] }),
+  );
   await waitFor(() =>
     expect(
-      screen.getByRole("button", { name: "Save allowance" }),
+      screen.getByRole("button", { name: englishCopy["aiAdmin.save"] }),
     ).not.toBeDisabled(),
   );
   expect(writes).toHaveLength(0);
-  await user.click(screen.getByRole("button", { name: "Save allowance" }));
-  await screen.findByText("Allowance saved");
+  await user.click(
+    screen.getByRole("button", { name: englishCopy["aiAdmin.save"] }),
+  );
+  await screen.findByText(englishCopy["aiAdmin.saved"]);
   expect(screen.queryByRole("dialog")).toBeNull();
   expect(writes).toEqual([
     {
@@ -176,17 +179,19 @@ it("says at the field what is wrong with an allowance, and why Preview is held",
   const user = userEvent.setup({ delay: null });
   const { mock } = mount();
   await user.click(
-    await screen.findByRole("button", { name: "Edit allowance" }),
+    await screen.findByRole("button", { name: englishCopy["aiAdmin.edit"] }),
   );
-  const field = screen.getByLabelText("Tokens per full user per month");
+  const field = screen.getByLabelText(englishCopy["aiAdmin.perUser"]);
   await user.clear(field);
   await user.type(field, "1.5");
   expect(field).toHaveAccessibleDescription(
     /Enter a whole number for Tokens per full user per month\./,
   );
-  expect(screen.getByText("Fix the marked fields to preview.")).toBeTruthy();
-  await user.click(screen.getByRole("button", { name: "Preview effects" }));
-  const company = screen.getByLabelText("Fixed company total (optional)");
+  expect(screen.getByText(englishCopy["aiAdmin.fixToPreview"])).toBeTruthy();
+  await user.click(
+    screen.getByRole("button", { name: englishCopy["aiAdmin.preview"] }),
+  );
+  const company = screen.getByLabelText(englishCopy["aiAdmin.company"]);
   await user.type(company, "-1");
   expect(company).toHaveAccessibleDescription(
     /Fixed company total must be from 1 to 1,000,000,000,000\./,
@@ -195,8 +200,10 @@ it("says at the field what is wrong with an allowance, and why Preview is held",
   await user.clear(field);
   await user.type(field, " 5 ");
   await user.clear(company);
-  expect(screen.queryByText("Fix the marked fields to preview.")).toBeNull();
-  await user.click(screen.getByRole("button", { name: "Preview effects" }));
+  expect(screen.queryByText(englishCopy["aiAdmin.fixToPreview"])).toBeNull();
+  await user.click(
+    screen.getByRole("button", { name: englishCopy["aiAdmin.preview"] }),
+  );
   await waitFor(() =>
     expect(
       mock.mock.calls.filter(
@@ -225,12 +232,12 @@ it("names a carrier the preview could not count as unavailable", async () => {
   const user = userEvent.setup({ delay: null });
   mount();
   await user.click(
-    await screen.findByRole("button", { name: "Edit allowance" }),
+    await screen.findByRole("button", { name: englishCopy["aiAdmin.edit"] }),
   );
-  await user.click(screen.getByRole("button", { name: "Preview effects" }));
-  const waiting = await screen.findByText(
-    "Recorded work waiting on the allowance",
+  await user.click(
+    screen.getByRole("button", { name: englishCopy["aiAdmin.preview"] }),
   );
+  const waiting = await screen.findByText(englishCopy["aiAdmin.waiting"]);
   const list = waiting.closest("details");
   if (!(list instanceof HTMLElement)) {
     throw new Error("the deferred work is not a disclosure");
@@ -244,12 +251,12 @@ it("shows the provider wait beside the carrier's budget count", async () => {
   const user = userEvent.setup({ delay: null });
   mount();
   await user.click(
-    await screen.findByRole("button", { name: "Edit allowance" }),
+    await screen.findByRole("button", { name: englishCopy["aiAdmin.edit"] }),
   );
-  await user.click(screen.getByRole("button", { name: "Preview effects" }));
-  const waiting = await screen.findByText(
-    "Recorded work waiting on the allowance",
+  await user.click(
+    screen.getByRole("button", { name: englishCopy["aiAdmin.preview"] }),
   );
+  const waiting = await screen.findByText(englishCopy["aiAdmin.waiting"]);
   const list = waiting.closest("details");
   if (!(list instanceof HTMLElement)) {
     throw new Error("the deferred work is not a disclosure");
@@ -264,24 +271,30 @@ it("keeps a rejected draft visible after a concurrent edit", async () => {
   const user = userEvent.setup({ delay: null });
   mount(undefined, true);
   await user.click(
-    await screen.findByRole("button", { name: "Edit allowance" }),
+    await screen.findByRole("button", { name: englishCopy["aiAdmin.edit"] }),
   );
-  await user.click(screen.getByRole("button", { name: "Preview effects" }));
+  await user.click(
+    screen.getByRole("button", { name: englishCopy["aiAdmin.preview"] }),
+  );
   await waitFor(() =>
     expect(
-      screen.getByRole("button", { name: "Save allowance" }),
+      screen.getByRole("button", { name: englishCopy["aiAdmin.save"] }),
     ).not.toBeDisabled(),
   );
-  await user.click(screen.getByRole("button", { name: "Save allowance" }));
-  expect(await screen.findByText("Change not applied")).toBeTruthy();
-  expect(screen.getByLabelText("Tokens per full user per month")).toHaveValue(
+  await user.click(
+    screen.getByRole("button", { name: englishCopy["aiAdmin.save"] }),
+  );
+  expect(await screen.findByText(englishCopy["aiAdmin.failed"])).toBeTruthy();
+  expect(screen.getByLabelText(englishCopy["aiAdmin.perUser"])).toHaveValue(
     "12000000",
   );
 });
 it("allows management to read without offering an editor", async () => {
   mount({ ai_budget: ["read"], ai_diagnostics: ["read"] });
   await screen.findByText(/22\.5M of 24M tokens/);
-  expect(screen.queryByRole("button", { name: "Edit allowance" })).toBeNull();
+  expect(
+    screen.queryByRole("button", { name: englishCopy["aiAdmin.edit"] }),
+  ).toBeNull();
 });
 
 // A task's tier is fixed by the task contract, and what the tier is bound to
@@ -375,20 +388,24 @@ it("saves a fixed company override without discarding the per-user value", async
   const user = userEvent.setup({ delay: null });
   const { writes } = mount();
   await user.click(
-    await screen.findByRole("button", { name: "Edit allowance" }),
+    await screen.findByRole("button", { name: englishCopy["aiAdmin.edit"] }),
   );
   await user.type(
-    screen.getByLabelText("Fixed company total (optional)"),
+    screen.getByLabelText(englishCopy["aiAdmin.company"]),
     "35000000",
   );
-  await user.click(screen.getByRole("button", { name: "Preview effects" }));
+  await user.click(
+    screen.getByRole("button", { name: englishCopy["aiAdmin.preview"] }),
+  );
   await waitFor(() =>
     expect(
-      screen.getByRole("button", { name: "Save allowance" }),
+      screen.getByRole("button", { name: englishCopy["aiAdmin.save"] }),
     ).not.toBeDisabled(),
   );
-  await user.click(screen.getByRole("button", { name: "Save allowance" }));
-  await screen.findByText("Allowance saved");
+  await user.click(
+    screen.getByRole("button", { name: englishCopy["aiAdmin.save"] }),
+  );
+  await screen.findByText(englishCopy["aiAdmin.saved"]);
   expect(writes).toEqual([
     {
       config: {
@@ -445,9 +462,10 @@ it("puts decision-first rows on top, then rows that declare a skip, then the res
     ["Activity a_plain", false],
   ] as const) {
     const details = await openTaskDetails(user, name);
-    expect(within(details).queryByText("Decision model first") !== null).toBe(
-      first,
-    );
+    expect(
+      within(details).queryByText(englishCopy["aiTasks.decisionFirst"]) !==
+        null,
+    ).toBe(first);
   }
 });
 
@@ -514,11 +532,11 @@ it("shows a badge only for a departure, and no disclosure for a single candidate
     </LocaleProvider>,
   );
   expect(await openTaskDetails(user, "Embed")).toHaveTextContent(
-    "Continues beyond allowance",
+    englishCopy["aiAdmin.impact.exempt"],
   );
   const quiet = await openTaskDetails(user, feature.display_name);
-  expect(quiet).not.toHaveTextContent("Continues beyond allowance");
-  expect(quiet).not.toHaveTextContent("Decision model first");
+  expect(quiet).not.toHaveTextContent(englishCopy["aiAdmin.impact.exempt"]);
+  expect(quiet).not.toHaveTextContent(englishCopy["aiTasks.decisionFirst"]);
   expect(screen.queryAllByRole("group")).toHaveLength(0);
 });
 
@@ -574,7 +592,9 @@ it("the task table says decision model first, and why another feature skips it",
 
   // The row names the model that answers; the decision model in front of it
   // is in the task's details, with its provider.
-  const decisionRow = screen.getByText("Message classification").closest("tr");
+  const decisionRow = screen
+    .getByText(englishCopy["aiTask.name.capture_classify"])
+    .closest("tr");
   expect(decisionRow?.querySelector("td:nth-child(3)")?.textContent).toBe(
     "Google Geminiexample-model",
   );
@@ -584,7 +604,7 @@ it("the task table says decision model first, and why another feature skips it",
   );
   // A feature the lane does not serve says why, in its own details.
   expect(await openTaskDetails(user, "Triage a site")).toHaveTextContent(
-    "Decision model not used: none is bound.",
+    englishCopy["aiAdmin.decisionSkip.unbound"],
   );
 });
 
@@ -614,20 +634,20 @@ it("offers to reload the values when the allowance changed under the editor", as
   };
   await client.invalidateQueries({ queryKey: ["ai-budget"] });
   expect(
-    await screen.findByText("This allowance changed while you were editing"),
+    await screen.findByText(englishCopy["aiAdmin.stale"]),
   ).toBeInTheDocument();
   expect(
-    screen.getByRole("button", { name: "Preview effects" }),
+    screen.getByRole("button", { name: englishCopy["aiAdmin.preview"] }),
   ).toBeDisabled();
 
-  await user.click(screen.getByRole("button", { name: "Reload values" }));
+  await user.click(
+    screen.getByRole("button", { name: englishCopy["aiAdmin.reload"] }),
+  );
   expect(field).toHaveValue("15000000");
   expect(field).toHaveFocus();
+  expect(screen.queryByText(englishCopy["aiAdmin.stale"])).toBeNull();
   expect(
-    screen.queryByText("This allowance changed while you were editing"),
-  ).toBeNull();
-  expect(
-    screen.getByRole("button", { name: "Preview effects" }),
+    screen.getByRole("button", { name: englishCopy["aiAdmin.preview"] }),
   ).not.toBeDisabled();
 });
 
@@ -642,7 +662,7 @@ it("holds no draft when another admin saves under an untouched editor", async ()
   };
   await client.invalidateQueries({ queryKey: ["ai-budget"] });
   expect(
-    await screen.findByText("This allowance changed while you were editing"),
+    await screen.findByText(englishCopy["aiAdmin.stale"]),
   ).toBeInTheDocument();
   expect(screen.getByTestId("unsaved")).toHaveTextContent("clean");
 });
@@ -653,21 +673,27 @@ it("hands focus back to Edit when the editor closes", async () => {
   await openEditor(user);
   await user.click(screen.getByRole("button", { name: "Cancel" }));
   expect(
-    await screen.findByRole("button", { name: "Edit allowance" }),
+    await screen.findByRole("button", { name: englishCopy["aiAdmin.edit"] }),
   ).toHaveFocus();
 
   const field = await openEditor(user);
   await user.clear(field);
   await user.type(field, "20000000");
-  await user.click(screen.getByRole("button", { name: "Preview effects" }));
+  await user.click(
+    screen.getByRole("button", { name: englishCopy["aiAdmin.preview"] }),
+  );
   await waitFor(() =>
     expect(
-      screen.getByRole("button", { name: "Save allowance" }),
+      screen.getByRole("button", { name: englishCopy["aiAdmin.save"] }),
     ).not.toBeDisabled(),
   );
-  await user.click(screen.getByRole("button", { name: "Save allowance" }));
-  await screen.findByText("Allowance saved");
-  expect(screen.getByRole("button", { name: "Edit allowance" })).toHaveFocus();
+  await user.click(
+    screen.getByRole("button", { name: englishCopy["aiAdmin.save"] }),
+  );
+  await screen.findByText(englishCopy["aiAdmin.saved"]);
+  expect(
+    screen.getByRole("button", { name: englishCopy["aiAdmin.edit"] }),
+  ).toHaveFocus();
 });
 
 const savedRules = {
@@ -726,7 +752,7 @@ it("saves the team rules against the version the editor read", async () => {
   const user = userEvent.setup();
   const { writes } = mountTeamRules({ ai_team_rules: ["read", "update"] });
   const box = await screen.findByRole("textbox", {
-    name: "Rules for every draft",
+    name: englishCopy["teamRules.label"],
   });
   expect(box).toHaveValue("Never quote a discount.");
   expect(screen.getByText(/Last saved by Ada Admin/)).toBeInTheDocument();
@@ -746,7 +772,9 @@ it("saves the team rules against the version the editor read", async () => {
 it("shows the team rules read-only to a seat that cannot update them", async () => {
   mountTeamRules({ ai_team_rules: ["read"] });
   expect(
-    await screen.findByRole("textbox", { name: "Rules for every draft" }),
+    await screen.findByRole("textbox", {
+      name: englishCopy["teamRules.label"],
+    }),
   ).toBeDisabled();
 });
 
@@ -762,7 +790,7 @@ it("shows a conflict when the server changes under a draft, saves against the ve
     ai_team_rules: ["read", "update"],
   });
   const box = await screen.findByRole("textbox", {
-    name: "Rules for every draft",
+    name: englishCopy["teamRules.label"],
   });
   await waitFor(() => expect(box).toBeEnabled());
   await user.type(box, " Mine.");
@@ -797,7 +825,7 @@ it("shows the conflict after a refused save, and Keep my text saves over the fre
     ai_team_rules: ["read", "update"],
   });
   const box = await screen.findByRole("textbox", {
-    name: "Rules for every draft",
+    name: englishCopy["teamRules.label"],
   });
   await waitFor(() => expect(box).toBeEnabled());
   await user.type(box, " Mine.");
@@ -809,7 +837,9 @@ it("shows the conflict after a refused save, and Keep my text saves over the fre
   ).toBeInTheDocument();
 
   server.skew = false;
-  await user.click(screen.getByRole("button", { name: "Keep my text" }));
+  await user.click(
+    screen.getByRole("button", { name: englishCopy["teamRules.keepMine"] }),
+  );
   await user.click(screen.getByRole("button", { name: "Save" }));
   await waitFor(() =>
     expect(writes.at(-1)).toEqual({

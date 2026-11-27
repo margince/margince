@@ -187,7 +187,7 @@ Everything below is the detail behind the two tables above: which tools each job
 | … some case requires as one of a set | 0 |
 | … **no case requires** | 6 |
 | … of those, permitted somewhere but never required | 1 |
-| Prompt tokens spent on tools no case requires | 3685 |
+| Prompt tokens spent on tools no case requires | 3686 |
 | Use cases | 83 |
 | Acceptance criteria the cases declare, each with a statement | 133 |
 
@@ -794,9 +794,9 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 | Tool | Tokens | Graded by | Near miss in | Permitted in | Attached to |
 |---|---:|---|---|---|---|
 | `change_record_parts` | 1017 | - | - | - | - |
-| `change_relationships` | 816 | - | - | - | - |
-| `schedule_meeting` | 527 | - | - | - | - |
-| `decide_approvals` | 463 | - | - | `case126_file_it_i_approve` | - |
-| `enrich` | 446 | - | - | - | - |
+| `change_relationships` | 818 | - | - | - | - |
+| `schedule_meeting` | 526 | - | - | - | - |
+| `decide_approvals` | 464 | - | - | `case126_file_it_i_approve` | - |
+| `enrich` | 445 | - | - | - | - |
 | `annotate_brief` | 416 | `agent_loop` | `agent_loop` | - | `morning_brief` |
 

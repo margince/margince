@@ -25,6 +25,7 @@ import "./App.settings";
 import "./features/settings/settings";
 import "./features/sign-in/forcedmfa";
 import "./features/voice-knowledge/search";
+import { en as englishCopy } from "./i18n/en";
 
 // B-EP09.17: the locale switch flips the whole UI between DE and EN. With the
 // browser asking for a language we don't ship, the app mounts in the A100
@@ -200,7 +201,10 @@ describe("the custom-fields admin, at its address inside settings", () => {
     // the PAGE — "Data model" — so anchoring at level 1 would pass even if this
     // section never mounted.
     expect(
-      await screen.findByRole("heading", { level: 2, name: "Custom fields" }),
+      await screen.findByRole("heading", {
+        level: 2,
+        name: englishCopy["cf.formSection"],
+      }),
     ).toBeTruthy();
   });
 });
@@ -342,7 +346,9 @@ describe("auth boundary states (login spec §4)", () => {
     vi.stubGlobal("fetch", probe(401, "unauthorized"));
     mount();
     expect(
-      await screen.findByRole("heading", { name: "Sign in to Margince" }),
+      await screen.findByRole("heading", {
+        name: englishCopy["auth.loginTitle"],
+      }),
     ).toBeTruthy();
   });
 
@@ -350,7 +356,7 @@ describe("auth boundary states (login spec §4)", () => {
     vi.stubGlobal("fetch", probe(500, "internal"));
     mount();
     expect(
-      await screen.findByText("Margince could not be reached"),
+      await screen.findByText(englishCopy["auth.connectionTitle"]),
     ).toBeTruthy();
     expect(screen.queryByLabelText("Email")).toBeNull();
   });
@@ -359,7 +365,9 @@ describe("auth boundary states (login spec §4)", () => {
     const fetchMock = probe(503, "service_unavailable");
     vi.stubGlobal("fetch", fetchMock);
     mount();
-    expect(await screen.findByText("Installation not ready")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["auth.unavailableTitle"]),
+    ).toBeTruthy();
     const before = fetchMock.mock.calls.length;
     await userEvent.click(screen.getByRole("button", { name: "Retry" }));
     await waitFor(() =>
@@ -391,10 +399,10 @@ describe("auth boundary states (login spec §4)", () => {
     );
     mount();
     expect(
-      await screen.findByRole("heading", { name: "Claim this installation" }),
+      await screen.findByRole("heading", { name: englishCopy["setup.title"] }),
     ).toBeTruthy();
     // The availability message is REPLACED, not stacked beside it.
-    expect(screen.queryByText("Installation not ready")).toBeNull();
+    expect(screen.queryByText(englishCopy["auth.unavailableTitle"])).toBeNull();
   });
 
   it("keeps the availability message when the setup probe cannot answer", async () => {
@@ -415,9 +423,11 @@ describe("auth boundary states (login spec §4)", () => {
       }),
     );
     mount();
-    expect(await screen.findByText("Installation not ready")).toBeTruthy();
     expect(
-      screen.queryByRole("heading", { name: "Claim this installation" }),
+      await screen.findByText(englishCopy["auth.unavailableTitle"]),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("heading", { name: englishCopy["setup.title"] }),
     ).toBeNull();
   });
 
@@ -449,10 +459,12 @@ describe("auth boundary states (login spec §4)", () => {
       }),
     );
     mount();
-    expect(await screen.findByText("Installation not ready")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["auth.unavailableTitle"]),
+    ).toBeTruthy();
     await userEvent.click(screen.getByRole("button", { name: "Retry" }));
     expect(
-      await screen.findByRole("heading", { name: "Claim this installation" }),
+      await screen.findByRole("heading", { name: englishCopy["setup.title"] }),
     ).toBeTruthy();
   });
 
@@ -477,12 +489,14 @@ describe("auth boundary states (login spec §4)", () => {
     );
     mount();
     expect(
-      await screen.findByRole("heading", { name: "Set your own password" }),
+      await screen.findByRole("heading", {
+        name: englishCopy["forcedPassword.title"],
+      }),
     ).toBeTruthy();
     // Not the login screen: the password they have is correct, and being asked
     // for it again explains nothing.
     expect(
-      screen.queryByRole("heading", { name: "Sign in to Margince" }),
+      screen.queryByRole("heading", { name: englishCopy["auth.loginTitle"] }),
     ).toBeNull();
   });
 
@@ -505,10 +519,12 @@ describe("auth boundary states (login spec §4)", () => {
     );
     mount();
     expect(
-      await screen.findByRole("heading", { name: "Set up two-step sign-in" }),
+      await screen.findByRole("heading", {
+        name: englishCopy["forcedMfa.pageTitle"],
+      }),
     ).toBeTruthy();
     expect(
-      screen.queryByRole("heading", { name: "Sign in to Margince" }),
+      screen.queryByRole("heading", { name: englishCopy["auth.loginTitle"] }),
     ).toBeNull();
   });
 
@@ -548,7 +564,9 @@ describe("auth boundary states (login spec §4)", () => {
       "a password{enter}",
     );
     expect(
-      await screen.findByRole("heading", { name: "Set up two-step sign-in" }),
+      await screen.findByRole("heading", {
+        name: englishCopy["forcedMfa.pageTitle"],
+      }),
     ).toBeTruthy();
     expect(screen.queryByText(/could not be reached/i)).toBeNull();
   });
@@ -571,7 +589,9 @@ describe("auth boundary states (login spec §4)", () => {
     );
     mount();
     expect(
-      await screen.findByRole("heading", { name: "Sign in to Margince" }),
+      await screen.findByRole("heading", {
+        name: englishCopy["auth.loginTitle"],
+      }),
     ).toBeTruthy();
   });
 
@@ -584,7 +604,7 @@ describe("auth boundary states (login spec §4)", () => {
     );
     mount();
     expect(
-      await screen.findByText("Margince could not be reached"),
+      await screen.findByText(englishCopy["auth.connectionTitle"]),
     ).toBeTruthy();
   });
 });
@@ -647,14 +667,16 @@ describe("a session confined while it is open", () => {
           </LocaleProvider>
         </QueryClientProvider>,
       );
-      await screen.findByText("Two-step sign-in");
+      await screen.findByText(englishCopy["mfa.title"]);
       const readsBefore = meReads;
 
       confined = true;
       await client.invalidateQueries({ queryKey: ["me"] });
 
       expect(
-        await screen.findByRole("heading", { name: "Set up two-step sign-in" }),
+        await screen.findByRole("heading", {
+          name: englishCopy["forcedMfa.pageTitle"],
+        }),
       ).toBeTruthy();
       expect(meReads - readsBefore).toBe(1);
     } finally {
@@ -699,18 +721,16 @@ describe("a session that ends while it is open", () => {
         </LocaleProvider>
       </QueryClientProvider>,
     );
-    await screen.findByText("Two-step sign-in");
+    await screen.findByText(englishCopy["mfa.title"]);
 
     ended = true;
     await client.invalidateQueries({ queryKey: ["me"] });
 
     expect(
-      await screen.findByText(
-        "The session expired. Sign in again to continue.",
-      ),
+      await screen.findByText(englishCopy["auth.noticeSessionExpired"]),
     ).toBeTruthy();
     expect(
-      screen.getByRole("heading", { name: "Sign in to Margince" }),
+      screen.getByRole("heading", { name: englishCopy["auth.loginTitle"] }),
     ).toBeTruthy();
   });
 });
@@ -794,12 +814,14 @@ describe("the forced two-step setup, held at the boundary", () => {
     focusManager.setFocused(undefined);
 
     expect(
-      screen.getByRole("textbox", { name: "Recovery codes" }),
+      screen.getByRole("textbox", { name: englishCopy["mfa.codesLabel"] }),
     ).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Done" }));
     await waitFor(() =>
       expect(
-        screen.queryByRole("heading", { name: "Set up two-step sign-in" }),
+        screen.queryByRole("heading", {
+          name: englishCopy["forcedMfa.pageTitle"],
+        }),
       ).toBeNull(),
     );
   });
@@ -811,7 +833,9 @@ describe("the forced two-step setup, held at the boundary", () => {
 
     await user.click(await screen.findByRole("button", { name: "Sign out" }));
     expect(
-      await screen.findByRole("heading", { name: "Sign in to Margince" }),
+      await screen.findByRole("heading", {
+        name: englishCopy["auth.loginTitle"],
+      }),
     ).toBeTruthy();
   });
 
@@ -842,7 +866,9 @@ describe("the forced two-step setup, held at the boundary", () => {
       );
       await user.click(screen.getByRole("button", { name: "Turn on" }));
       expect(
-        await screen.findByRole("heading", { name: "Sign in to Margince" }),
+        await screen.findByRole("heading", {
+          name: englishCopy["auth.loginTitle"],
+        }),
       ).toBeTruthy();
     } finally {
       api.eject(watch);

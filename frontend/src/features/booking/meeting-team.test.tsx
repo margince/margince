@@ -6,6 +6,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -58,7 +59,9 @@ it("renders no card while no link names the colleague", async () => {
     "GET /scheduling/team-requests": () => jsonResponse([]),
   });
   await waitFor(() =>
-    expect(screen.queryByText("Colleagues’ links that name you")).toBeNull(),
+    expect(
+      screen.queryByText(englishCopy["scheduling.team.requestsTitle"]),
+    ).toBeNull(),
   );
 });
 
@@ -102,8 +105,10 @@ it("shows each team link with its colleagues and where they stand", async () => 
     await screen.findByText("Meet Ada Lovelace and Grace Hopper"),
   ).toBeTruthy();
   expect(screen.getByText("Grace Hopper")).toBeTruthy();
-  expect(screen.getByText("Waiting for confirmation")).toBeTruthy();
-  expect(screen.getByText("Waiting for colleagues")).toBeTruthy();
+  expect(screen.getByText(englishCopy["scheduling.team.pending"])).toBeTruthy();
+  expect(
+    screen.getByText(englishCopy["scheduling.teamLinks.waiting"]),
+  ).toBeTruthy();
 });
 
 it("shows a switched-off link as off, not as taking bookings", async () => {
@@ -112,8 +117,12 @@ it("shows a switched-off link as off, not as taking bookings", async () => {
       jsonResponse([{ ...link, enabled: false, blocker: "none" }]),
     "GET /scheduling/team-candidates": () => jsonResponse(candidates),
   });
-  expect(await screen.findByText("Off: takes no bookings")).toBeTruthy();
-  expect(screen.queryByText("Takes bookings")).toBeNull();
+  expect(
+    await screen.findByText(englishCopy["scheduling.teamLinks.off"]),
+  ).toBeTruthy();
+  expect(
+    screen.queryByText(englishCopy["scheduling.teamLinks.ready"]),
+  ).toBeNull();
 });
 
 it("creates a team link named for the host and the chosen colleague", async () => {
@@ -128,7 +137,7 @@ it("creates a team link named for the host and the chosen colleague", async () =
     },
   });
   const picker = await screen.findByRole("combobox", {
-    name: "New team link with",
+    name: englishCopy["scheduling.teamLinks.create"],
   });
   await waitFor(() => expect(picker.hasAttribute("disabled")).toBe(false));
   await user.click(picker);
@@ -155,7 +164,7 @@ it("adds a colleague to a team link by id alone, and the default name follows", 
     },
   });
   const picker = await screen.findByRole("combobox", {
-    name: "Add a colleague",
+    name: englishCopy["scheduling.team.add"],
   });
   await waitFor(() => expect(picker.hasAttribute("disabled")).toBe(false));
   await user.click(picker);

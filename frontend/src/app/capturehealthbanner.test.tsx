@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { formatDateTime } from "../format/format";
 import { browserZone } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { CaptureHealthBanner } from "./capturehealthbanner";
 
 function mount(
@@ -92,10 +93,14 @@ it("names the stalled mailbox and opens its connection", async () => {
     await screen.findByText("mailbox@example.test: Sync has stopped"),
   ).toBeTruthy();
   expect(
-    screen.getByRole("link", { name: "Open connection" }).getAttribute("href"),
+    screen
+      .getByRole("link", { name: englishCopy["captureConcern.open"] })
+      .getAttribute("href"),
   ).toBe("/#/settings/connections");
   expect(
-    screen.queryByRole("button", { name: "Dismiss silence warning" }),
+    screen.queryByRole("button", {
+      name: englishCopy["captureConcern.dismiss"],
+    }),
   ).toBeNull();
 });
 it("dismisses only the observed silence and refreshes the shared read", async () => {
@@ -103,7 +108,9 @@ it("dismisses only the observed silence and refreshes the shared read", async ()
   const { client } = mount("capture_silent");
   client.setQueryData(["system-health", "reader"], { assessment: "attention" });
   await user.click(
-    await screen.findByRole("button", { name: "Dismiss silence warning" }),
+    await screen.findByRole("button", {
+      name: englishCopy["captureConcern.dismiss"],
+    }),
   );
   await waitFor(() =>
     expect(
@@ -143,7 +150,9 @@ it("shows the worst mailbox first and names one extra connection", async () => {
   ).toBeTruthy();
   expect(screen.getByText("1 more connection needs attention")).toBeTruthy();
   expect(
-    screen.queryByRole("button", { name: "Dismiss silence warning" }),
+    screen.queryByRole("button", {
+      name: englishCopy["captureConcern.dismiss"],
+    }),
   ).toBeNull();
 });
 
@@ -151,7 +160,9 @@ it("shows a refused dismissal and refreshes its health evidence", async () => {
   const user = userEvent.setup();
   const { fetch } = mount("capture_silent", false, undefined, true);
   await user.click(
-    await screen.findByRole("button", { name: "Dismiss silence warning" }),
+    await screen.findByRole("button", {
+      name: englishCopy["captureConcern.dismiss"],
+    }),
   );
   expect(await screen.findByRole("alert")).toBeTruthy();
   await waitFor(() =>
@@ -199,7 +210,9 @@ describe("a rate-limited sync", () => {
       last_sync_error_class: "rate_limited",
       next_sync_due_at: retry,
     });
-    expect(await screen.findByText("Trying again now")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["captureConcern.tryingNow"]),
+    ).toBeTruthy();
     expect(screen.queryByText(/^Next try at /)).toBeNull();
   });
 });

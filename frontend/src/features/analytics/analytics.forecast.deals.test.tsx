@@ -4,6 +4,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { REPORTING_FIXTURE_ZONE } from "../../testing/reporting.fixtures";
 import {
   FORECAST_DEALS_ANCHOR,
@@ -85,7 +86,7 @@ async function openDeals() {
     </QueryClientProvider>,
   );
   await userEvent.click(
-    await screen.findByText("Show each open deal and its chance"),
+    await screen.findByText(englishCopy["forecast.deals.open"]),
   );
 }
 
@@ -130,7 +131,7 @@ describe("ForecastDeals", () => {
     expect(row("Unpriced")).toContain("No amount");
     expect(row("Unpriced")).toContain("— weighted");
     expect(row("Unpriced")).not.toContain("€0");
-    expect(row("Foreign")).toContain("Exchange rate missing");
+    expect(row("Foreign")).toContain(englishCopy["forecast.fxMissing"]);
     expect(row("Foreign")).not.toContain("€0");
     expect(row("Masked")).toContain("Amount —");
     expect(row("Masked")).toContain("€6,000 weighted");
@@ -174,8 +175,12 @@ describe("ForecastDeals", () => {
     expect(
       await screen.findByText("Typed 20% · 20 recorded outcomes · uses 60%"),
     ).toBeTruthy();
-    expect(screen.getByText("No next step booked")).toBeTruthy();
-    expect(screen.queryByText("Only your own deals are listed")).toBeNull();
+    expect(
+      screen.getByText(englishCopy["forecast.signal.no_next_step"]),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText(englishCopy["forecast.deals.limitedTitle"]),
+    ).toBeNull();
     expect(screen.queryByText("Already won")).toBeNull();
     expect(fetchMock.mock.calls[0]?.[0].url).toContain("contributions=true");
   });
@@ -205,7 +210,7 @@ describe("ForecastDeals", () => {
     });
     await openDeals();
     expect(
-      await screen.findByText("Only your own deals are listed"),
+      await screen.findByText(englishCopy["forecast.deals.limitedTitle"]),
     ).toBeTruthy();
     expect(screen.getByText(reason)).toBeTruthy();
   });
@@ -272,9 +277,7 @@ describe("ForecastDeals", () => {
     });
     await openDeals();
     expect(
-      await screen.findByText(
-        "Each deal counts at the chance typed on its stage. Self-correction is off.",
-      ),
+      await screen.findByText(englishCopy["forecast.deals.introOff"]),
     ).toBeTruthy();
     expect(screen.getByText("Typed 20% · uses 20%")).toBeTruthy();
   });

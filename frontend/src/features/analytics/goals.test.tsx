@@ -5,6 +5,7 @@
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { installFetchStub, jsonResponse } from "../../testing/story-utils";
 import { render } from "./analytics.testkit";
 import { SalesGoalsScreen } from "./goals";
@@ -61,7 +62,9 @@ describe("SalesGoalsScreen", () => {
       [`GET ${PLAN}`]: () => jsonResponse(draftPlan),
     });
     render(<SalesGoalsScreen />);
-    const roster = await screen.findByRole("table", { name: "Team members" });
+    const roster = await screen.findByRole("table", {
+      name: englishCopy["goals.roster"],
+    });
     expect(within(roster).getByText("Sam Okafor")).toBeTruthy();
     expect(within(roster).getByText("€1,140,000")).toBeTruthy();
     expect(within(roster).getAllByText("Not set")).toHaveLength(2);
@@ -145,7 +148,9 @@ describe("SalesGoalsScreen", () => {
       [`GET ${PLAN}`]: () => jsonResponse(draftPlan),
     });
     render(<SalesGoalsScreen />);
-    const roster = await screen.findByRole("table", { name: "Team members" });
+    const roster = await screen.findByRole("table", {
+      name: englishCopy["goals.roster"],
+    });
     expect(within(roster).getByText("€1,200,000 draft")).toBeTruthy();
   });
 
@@ -162,7 +167,7 @@ describe("SalesGoalsScreen", () => {
       await screen.findByText("2026 so far: €60,000 of €100,000 (60%)"),
     ).toBeTruthy();
     await user.click(
-      await screen.findByRole("button", { name: "Change goals" }),
+      await screen.findByRole("button", { name: englishCopy["goals.change"] }),
     );
     expect(screen.getByRole("button", { name: "Publish" })).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Cancel" }));
@@ -186,7 +191,9 @@ describe("SalesGoalsScreen", () => {
     expect(await screen.findByRole("button", { name: "Publish" })).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Cancel" }));
     expect(screen.queryByRole("button", { name: "Publish" })).toBeNull();
-    await user.click(screen.getByRole("button", { name: "Change goals" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["goals.change"] }),
+    );
     expect(screen.getByRole("button", { name: "Publish" })).toBeTruthy();
   });
 
@@ -199,9 +206,11 @@ describe("SalesGoalsScreen", () => {
     });
     render(<SalesGoalsScreen />);
     expect(await screen.findByText(/^Read-only\./)).toBeTruthy();
-    expect(screen.queryByRole("table", { name: "Team members" })).toBeNull();
+    expect(
+      screen.queryByRole("table", { name: englishCopy["goals.roster"] }),
+    ).toBeNull();
     expect(screen.queryByRole("button", { name: "Save draft" })).toBeNull();
-    const months = screen.getByLabelText("Monthly goals");
+    const months = screen.getByLabelText(englishCopy["goals.months"]);
     expect(within(months).getByText("January")).toBeTruthy();
     expect(within(months).getByText("Year total")).toBeTruthy();
     expect(screen.getByText("Published")).toBeTruthy();
@@ -217,7 +226,9 @@ describe("GoalEditor", () => {
     const yearly = screen.getByLabelText("Yearly goal in EUR");
     await user.clear(yearly);
     await user.type(yearly, "120000");
-    await user.click(screen.getByRole("button", { name: "Spread equally" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["goals.spread"] }),
+    );
     expect(
       await screen.findByText("The months add up to €120,000."),
     ).toBeTruthy();
@@ -295,7 +306,9 @@ describe("GoalEditor", () => {
     const sent = stubWrites(draftPlan);
     const user = userEvent.setup();
     render(<GoalEditor plan={draftPlan} />);
-    await user.click(screen.getByRole("button", { name: "Discard draft" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["goals.discard"] }),
+    );
     await waitFor(() =>
       expect(sent).toEqual([expect.objectContaining({ method: "DELETE" })]),
     );
@@ -312,7 +325,7 @@ describe("GoalEditor", () => {
       confirm.getAttribute("aria-disabled") ?? confirm.hasAttribute("disabled"),
     ).toBeTruthy();
     await user.click(
-      within(dialog).getByLabelText("These goals were agreed together."),
+      within(dialog).getByLabelText(englishCopy["goals.agreed"]),
     );
     await user.click(within(dialog).getByRole("button", { name: "Publish" }));
     await waitFor(() =>
@@ -390,17 +403,21 @@ describe("GoalProposalStep", () => {
     });
     const user = userEvent.setup();
     render(<GoalEditor plan={{ ...draftPlan, draft: undefined }} />);
-    await user.click(screen.getByRole("button", { name: "Propose months" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["goals.propose"] }),
+    );
     expect(
       await screen.findByText("Proposed: €1,200,000 for the year"),
     ).toBeTruthy();
     expect(asked[0]).toEqual({});
     expect(screen.getByText("12 months are not set.")).toBeTruthy();
-    await user.click(screen.getByRole("button", { name: "Use these months" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["goals.propose.apply"] }),
+    );
     expect(
       await screen.findByText("The months add up to €1,200,000."),
     ).toBeTruthy();
-    expect(screen.getByText("Proposed by Margince")).toBeTruthy();
+    expect(screen.getByText(englishCopy["goals.proposedByAi"])).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Save draft" }));
     await waitFor(() => expect(sent).toHaveLength(1));
     expect(sent[0]?.body).toMatchObject({
@@ -421,9 +438,13 @@ describe("GoalProposalStep", () => {
     });
     const user = userEvent.setup();
     render(<GoalEditor plan={draftPlan} />);
-    await user.click(screen.getByRole("button", { name: "Propose months" }));
     await user.click(
-      await screen.findByRole("button", { name: "Use these months" }),
+      screen.getByRole("button", { name: englishCopy["goals.propose"] }),
+    );
+    await user.click(
+      await screen.findByRole("button", {
+        name: englishCopy["goals.propose.apply"],
+      }),
     );
     expect(asked[0]).toEqual({ yearly_total_minor: 120000000 });
     expect(screen.getByLabelText("Reason")).toHaveProperty(
@@ -436,11 +457,13 @@ describe("GoalProposalStep", () => {
     installFetchStub({ [PROPOSAL]: () => jsonResponse(goalProposal) });
     const user = userEvent.setup();
     render(<GoalEditor plan={{ ...draftPlan, draft: undefined }} />);
-    await user.click(screen.getByRole("button", { name: "Propose months" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["goals.propose"] }),
+    );
     await user.click(await screen.findByRole("button", { name: "Dismiss" }));
     expect(screen.queryByText(/^Proposed:/)).toBeNull();
     expect(screen.getByText("12 months are not set.")).toBeTruthy();
-    expect(screen.queryByText("Proposed by Margince")).toBeNull();
+    expect(screen.queryByText(englishCopy["goals.proposedByAi"])).toBeNull();
   });
 
   it("says so when there is no model or nothing won to read", async () => {
@@ -449,7 +472,9 @@ describe("GoalProposalStep", () => {
     installFetchStub({ [PROPOSAL]: refuse("no_sales_history") });
     const user = userEvent.setup();
     const { unmount } = render(<GoalEditor plan={draftPlan} />);
-    await user.click(screen.getByRole("button", { name: "Propose months" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["goals.propose"] }),
+    );
     expect(
       await screen.findByText(
         /^Alex Brandt has no finished month with sales won in 2026 or the year before/,
@@ -458,10 +483,14 @@ describe("GoalProposalStep", () => {
     unmount();
     installFetchStub({ [PROPOSAL]: refuse("ai_not_configured") });
     render(<GoalEditor plan={draftPlan} />);
-    await user.click(screen.getByRole("button", { name: "Propose months" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["goals.propose"] }),
+    );
     expect(
       await screen.findByText(/^Proposing months needs an AI model/),
     ).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Propose months" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: englishCopy["goals.propose"] }),
+    ).toBeNull();
   });
 });

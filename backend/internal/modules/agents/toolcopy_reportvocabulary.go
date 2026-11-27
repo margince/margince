@@ -15,7 +15,7 @@ var describeReportVocabularyCopy = toolCopy{
 		"that. It is NOT a prerequisite: run_report with `report` alone answers that report's " +
 		"default question and needs nothing from here, so reach for this only when a plan has to " +
 		"name a grouping, a filter or a measure. The names are the same for every caller, because " +
-		"a report's vocabulary is the engine's and not a workspace's.",
+		"a report's vocabulary is the engine's and not a company's.",
 	Instead: "Call run_report directly when the report's default answer is the answer wanted, and " +
 		"read its refusal when a name is wrong: it carries that argument's accepted list. This " +
 		"tool answers the same document as the margince://schema/reports resource, for a caller " +

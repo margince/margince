@@ -7,6 +7,7 @@ import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en } from "../i18n/en";
 import { PLAIN_SUMMARY_WORDS } from "./approvalsummary.testkit";
 import {
   type DecisionApproval,
@@ -239,7 +240,9 @@ describe("DecisionCard — a kind that says what it shows", () => {
     expect(screen.getByText("Proposed date")).toBeInTheDocument();
     expect(screen.getByText("01.10.2026")).toBeInTheDocument();
     expect(screen.getByText("Issues")).toBeInTheDocument();
-    expect(screen.getByText("no recent progress")).toBeInTheDocument();
+    expect(
+      screen.getByText(en["approval.field.closeDateFlag.unrealistic_stale"]),
+    ).toBeInTheDocument();
     // Never the wire.
     expect(screen.queryByText("deal_id")).not.toBeInTheDocument();
     expect(
@@ -715,8 +718,6 @@ describe("DecisionCard at list density", () => {
     expect(await screen.findByText("Message")).toBeInTheDocument();
   });
 
-  // Escape closes it and the trigger takes its focus back. A panel a keyboard
-  // can open and not leave is a trap.
   it("closes the proposal on Escape and hands the focus back", async () => {
     const user = userEvent.setup();
     render(card({ layout: "row", compact: COMPACT }));
@@ -751,7 +752,6 @@ describe("DecisionCard at list density", () => {
     expect(screen.getByRole("button", { name: "Edit" })).toBeInTheDocument();
   });
 
-  // A menu over no verbs is a control that opens nothing.
   it("draws no menu when the caller offered neither later nor edit", () => {
     render(
       card({
@@ -767,9 +767,6 @@ describe("DecisionCard at list density", () => {
     ).not.toBeInTheDocument();
   });
 
-  // The DECK form is the one place the whole payload belongs, so the density is
-  // the row's alone. A tall card that hid its proposal would be the one thing a
-  // whole plate exists not to do.
   it("ignores the density in the deck layout", () => {
     render(card({ layout: "deck", compact: COMPACT }));
 
@@ -779,8 +776,6 @@ describe("DecisionCard at list density", () => {
     ).not.toBeInTheDocument();
   });
 
-  // Past the deadline the verbs are gone, and the row says so where they were
-  // rather than in a fold nobody opened.
   it("says a lapsed row ran out of time on the line itself", () => {
     const { container } = render(
       card({
@@ -807,8 +802,6 @@ describe("DecisionToolChip", () => {
     expect(screen.getByText("via send_email")).toBeInTheDocument();
   });
 
-  // The kind→verb catalogue is the screen's; a kind it cannot map yields no
-  // verb, and naming a tool nobody can check would be worse than saying nothing.
   it("stays silent when the caller could not map the kind to a verb", () => {
     const { container } = render(
       <DecisionToolChip verb={undefined} label={(v) => `via ${v}`} />,
@@ -891,7 +884,9 @@ it.each(["row", "deck"] as const)(
     );
     expect(screen.getByText("Account stage")).toBeInTheDocument();
     expect(screen.getByText("Customer")).toBeInTheDocument();
-    expect(screen.getByText("Former customer")).toBeInTheDocument();
+    expect(
+      screen.getByText(en["company.lifecycle.former_customer"]),
+    ).toBeInTheDocument();
     expect(screen.queryByText("raw_before")).not.toBeInTheDocument();
     expect(screen.queryByText("raw_after")).not.toBeInTheDocument();
   },

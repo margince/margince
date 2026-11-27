@@ -15,6 +15,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ContactLink } from "../../design-system/contactlink";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { WriteToHost } from "./writetohost";
 
 // An address pressed anywhere under the shell opens the product's composer on
@@ -176,6 +177,8 @@ describe("WriteToHost", () => {
     );
 
     await waitFor(() => expect(drafts).toHaveLength(1));
-    expect(drafts[0]).toMatchObject({ intent: "deliver on a commitment" });
+    expect(drafts[0]).toMatchObject({
+      intent: englishCopy["contact.composer.intentCommitment"],
+    });
   });
 });

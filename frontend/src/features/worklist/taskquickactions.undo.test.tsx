@@ -11,6 +11,7 @@ import {
   useTaskUpdate,
 } from "../../components/taskactions";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
+import { en as englishCopy } from "../../i18n/en";
 import { ViewerZoneProvider } from "../../lib/viewerzone";
 import { FIXTURE_TIMEZONE } from "../../testing/mefixture";
 import {
@@ -122,7 +123,9 @@ describe("the Done verb beside a task", () => {
     const user = userEvent.setup();
 
     await user.click(screen.getByRole("button", { name: "Done" }));
-    expect(await screen.findByText("Task completed")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["worklist.verb.completed"]),
+    ).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Undo" }));
 
     await waitFor(() => expect(writes).toHaveLength(2));
@@ -139,7 +142,9 @@ describe("moving a task's deadline", () => {
     renderDated();
     const user = userEvent.setup();
 
-    await user.click(screen.getByRole("button", { name: "Snooze 1 day" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["tasks.snooze"] }),
+    );
     expect(await screen.findByText("Moved to 2 Sept, 15:00")).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Undo" }));
 
@@ -162,7 +167,9 @@ describe("moving a task's deadline", () => {
     await user.tripleClick(day);
     await user.keyboard("01/11/2026");
     await user.tab();
-    const time = screen.getByRole("textbox", { name: "Time (optional)" });
+    const time = screen.getByRole("textbox", {
+      name: englishCopy["log.dueTime"],
+    });
     await user.clear(time);
     await user.type(time, "07:15");
     await user.tab();

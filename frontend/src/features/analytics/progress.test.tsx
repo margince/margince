@@ -6,6 +6,7 @@ import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
+import { en as englishCopy } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import { REPORTING_FIXTURE_ZONE } from "../../testing/reporting.fixtures";
 import {
@@ -142,7 +143,11 @@ describe("ProgressResult", () => {
         goalsHref="#/goals"
       />,
     );
-    await user.click(screen.getByRole("button", { name: "View won deals" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: englishCopy["progress.viewClosedDeals"],
+      }),
+    );
     expect(onEvidence).toHaveBeenCalledWith({
       metric: "bookings_won",
       context_id: "interval",
@@ -161,7 +166,7 @@ describe("ProgressReadings", () => {
     expect(
       screen.getByText("Fleet Suite, Telematics, Driver App and 1 more"),
     ).toBeTruthy();
-    expect(screen.getByText("Unclassified")).toBeTruthy();
+    expect(screen.getByText(englishCopy["progress.unclassified"])).toBeTruthy();
   });
 
   it("opens the sales behind a category, and shows no split while it is hidden", async () => {
@@ -185,7 +190,7 @@ describe("ProgressReadings", () => {
         onEvidence={onEvidence}
       />,
     );
-    expect(screen.queryByText("Unclassified")).toBeNull();
+    expect(screen.queryByText(englishCopy["progress.unclassified"])).toBeNull();
     expect(screen.getAllByText("Hidden").length).toBeGreaterThan(0);
   });
 });
@@ -204,7 +209,7 @@ describe("GoalEditor", () => {
     const january = screen.getByLabelText("January");
     await user.clear(january);
     await user.type(january, "5");
-    expect(screen.getByText("Save the draft first.")).toBeTruthy();
+    expect(screen.getByText(englishCopy["goals.saveFirst"])).toBeTruthy();
   });
 });
 
@@ -310,13 +315,17 @@ describe("ProgressWork", () => {
       await screen.findByRole("button", { name: /^Deals\W*3$/ }),
     );
     expect(await screen.findByText("Fleet rollout")).toBeTruthy();
-    expect(screen.getByText("Product and service")).toBeTruthy();
+    expect(
+      screen.getByText(englishCopy["progress.work.saleBoth"]),
+    ).toBeTruthy();
     expect(screen.getByText("Overdue")).toBeTruthy();
     expect(screen.getByText("Send the offer")).toBeTruthy();
-    expect(screen.getByText("Unclassified")).toBeTruthy();
-    expect(screen.getByText("Outside the period")).toBeTruthy();
+    expect(screen.getByText(englishCopy["progress.unclassified"])).toBeTruthy();
+    expect(screen.getByText(englishCopy["progress.work.outside"])).toBeTruthy();
     expect(screen.getByText("No date")).toBeTruthy();
-    expect(screen.getAllByText("No next task")).toHaveLength(2);
+    expect(
+      screen.getAllByText(englishCopy["progress.work.noNextTask"]),
+    ).toHaveLength(2);
   });
 
   it("names each deal's owner on a team and hides an amount the reader may not see", async () => {
@@ -390,7 +399,9 @@ describe("ProgressScreen", () => {
     const user = userEvent.setup();
     await pickOption(
       user,
-      await screen.findByRole("combobox", { name: "Team member or team" }),
+      await screen.findByRole("combobox", {
+        name: englishCopy["progress.scope"],
+      }),
       "Colleague without a team",
     );
     expect(window.location.hash).toContain(`scope=owner%3A${seller}`);

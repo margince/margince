@@ -15,6 +15,7 @@ import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { SEARCH_DEBOUNCE_MS } from "../design-system/debouncedsearch";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { AddDocumentDialog } from "./adddocument";
 
 // Adding a link is one request: the address, the record and what the user
@@ -201,7 +202,9 @@ describe("adding a link to a record's documents", () => {
     show(onClose);
     await chooseLink(user, "https://acme.example/brief");
     await pressAdd(user);
-    expect(await screen.findByText("Link not added")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["docs.add.linkFailedTitle"]),
+    ).toBeTruthy();
     expect(onClose).not.toHaveBeenCalled();
   });
 });

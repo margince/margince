@@ -6,6 +6,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { forgetSeat } from "../../lib/storage";
 import { openView } from "../../testing/listview.testkit";
 import { reportingFixtureFrames } from "../../testing/reporting.fixtures";
@@ -42,12 +43,18 @@ function openScenario(name: ScenarioName, address = overviewAddress("sales")) {
 
 async function actionList() {
   return within(
-    await screen.findByRole("region", { name: "Needs your attention" }),
+    await screen.findByRole("region", {
+      name: englishCopy["analytics.attention"],
+    }),
   );
 }
 
 const hero = () =>
-  within(screen.getByRole("region", { name: "Opening readings" }));
+  within(
+    screen.getByRole("region", {
+      name: englishCopy["analytics.overview.readings"],
+    }),
+  );
 
 describe("the controls", () => {
   it("keeps the pipeline, close window and filters under View, each showing what it holds", async () => {
@@ -71,11 +78,17 @@ describe("the controls", () => {
   it("puts the templates and the export under View", async () => {
     openScenario("populated");
     await readings();
-    expect(screen.queryByRole("link", { name: "Report templates" })).toBeNull();
+    expect(
+      screen.queryByRole("link", {
+        name: englishCopy["analytics.overview.templates"],
+      }),
+    ).toBeNull();
     const user = userEvent.setup({ delay: null });
     const panel = await openView(user);
     expect(
-      within(panel).getByRole("link", { name: "Report templates" }),
+      within(panel).getByRole("link", {
+        name: englishCopy["analytics.overview.templates"],
+      }),
     ).toBeVisible();
     expect(
       within(panel).getByRole("button", { name: "Export CSV" }),
@@ -113,11 +126,11 @@ describe("the lead and its readings", () => {
     openScenario("wrongTargetScope");
     await readings();
     expect(
-      hero().getByText("Pick one team to compare with a goal"),
+      hero().getByText(englishCopy["reporting.compare.incompatible.scope"]),
     ).toBeVisible();
     expect(hero().queryByText(/still to win/)).toBeNull();
     expect(
-      screen.getAllByText("Pick one team to compare with a goal"),
+      screen.getAllByText(englishCopy["reporting.compare.incompatible.scope"]),
     ).toHaveLength(1);
   });
 });
@@ -162,7 +175,11 @@ describe("the action list", () => {
     const [group] = list.getAllByRole("link", { name: "Show" });
     expect(dials(group).get("check")).toBe("no_economic_buyer");
     expect(dials(group).get("scope")).toBe(dials(first).get("scope"));
-    expect(list.getByRole("link", { name: "View all checks" })).toBeVisible();
+    expect(
+      list.getByRole("link", {
+        name: englishCopy["analytics.intervention.viewAll"],
+      }),
+    ).toBeVisible();
   });
 
   it("says who owns a finding, or that nobody does, and never invents a date", async () => {
@@ -185,9 +202,13 @@ describe("the action list", () => {
     openScenario("sourceUnavailable");
     await readings();
     expect(
-      await screen.findByRole("region", { name: "Needs your attention" }),
+      await screen.findByRole("region", {
+        name: englishCopy["analytics.attention"],
+      }),
     ).toBeVisible();
-    expect(screen.getByText("Connection maintenance")).toBeVisible();
+    expect(
+      screen.getByText(englishCopy["analytics.intervention.maintenance"]),
+    ).toBeVisible();
   });
 });
 
@@ -214,7 +235,9 @@ describe("quiet reporting states", () => {
     });
     await readings();
     expect(
-      screen.queryByRole("region", { name: "Needs your attention" }),
+      screen.queryByRole("region", {
+        name: englishCopy["analytics.attention"],
+      }),
     ).toBeNull();
     expect(screen.queryByText(/Forecast checks are not available/)).toBeNull();
   });
@@ -245,7 +268,7 @@ describe("the composition of the expected finish", () => {
     const summary = await readings();
     expect(await summary.findByText(/15 of 18 valued/)).toBeVisible();
     const pipeline = summary
-      .getByText("Pipeline due this quarter")
+      .getByText(englishCopy["analytics.outlook.periodPipeline"])
       .closest<HTMLElement>(".stat-card");
     if (!pipeline) throw new Error("missing pipeline card");
     await userEvent
@@ -295,7 +318,9 @@ describe("individual performance off", () => {
     // Responsibility for a finding is not a performance comparison.
     expect(await list.findAllByText(/ · Owner a1 · Found/)).toHaveLength(3);
     const chart = within(
-      screen.getByRole("region", { name: "Sales won by team member" }),
+      screen.getByRole("region", {
+        name: englishCopy["reporting.owner_attainment"],
+      }),
     );
     expect(chart.queryByText(/Owner a/)).toBeNull();
   });
@@ -304,7 +329,9 @@ describe("individual performance off", () => {
     openScenario("individualPerformanceOff");
     await readings();
     expect(
-      await screen.findByRole("heading", { name: "Sales won by team member" }),
+      await screen.findByRole("heading", {
+        name: englishCopy["reporting.owner_attainment"],
+      }),
     ).toBeVisible();
     expect(screen.queryByText(/Maya|Jordan|Priya/)).toBeNull();
   });

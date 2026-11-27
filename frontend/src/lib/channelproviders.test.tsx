@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { components } from "../api/schema";
+import { en as englishCopy } from "../i18n/en";
 import { useProviderLabel } from "./channelproviders";
 
 // The directory names a transport for a human. What matters is not that it
@@ -103,8 +104,10 @@ describe("useProviderLabel", () => {
     });
 
     await waitFor(() => expect(result.current("gmail")).toBe("Gmail"));
-    expect(result.current("imap")).toBe("IMAP mailbox");
-    expect(result.current("test_mailbox")).toBe("Test mailbox");
+    expect(result.current("imap")).toBe(englishCopy["connectors.provImap"]);
+    expect(result.current("test_mailbox")).toBe(
+      englishCopy["connectors.provTestMailbox"],
+    );
   });
 
   // The defect this closes: a unit's channel messages resolved to "Dispact"

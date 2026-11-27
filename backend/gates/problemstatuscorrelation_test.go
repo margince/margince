@@ -9,7 +9,7 @@ import (
 )
 
 func helperSourceKey(source codeSource) string {
-	parts := []string{strconv.Itoa(source.index), strconv.FormatBool(source.field), strconv.Itoa(source.fixedStatus)}
+	parts := []string{strconv.Itoa(source.index), strconv.FormatBool(source.field), strconv.Itoa(source.fixedStatus), strconv.FormatBool(source.array), strconv.FormatBool(source.rest)}
 	parts = append(parts, source.path...)
 	if source.status != nil {
 		parts = append(parts, "status", strconv.Itoa(source.status.index))
@@ -49,13 +49,17 @@ func (r *problemFileReader) statusFromPath(span tsSpan, path []string, code, fal
 	if span.to <= span.from {
 		return fallback, false
 	}
-	read, ok := r.resolve(span, path, 0)
+	r.statusVariants = nil
+	old := r.flowCode
+	r.flowCode = code
+	read, ok := r.finiteStatus(span, path, 0)
+	defer func() { r.flowCode = old }()
 	if !ok || read.helper != "" {
 		return fallback, fallback == 0
 	}
 	var numbers []int
 	for _, literal := range read.literals {
-		if _, number := unquotedNumber(r.tree.tokens[literal]); number {
+		if number, known := unquotedNumber(r.tree.tokens[literal]); known && refusalStatus(number) && r.statusFitsCode(span, number) {
 			numbers = append(numbers, literal)
 		}
 	}
@@ -69,6 +73,28 @@ func (r *problemFileReader) statusFromPath(span tsSpan, path []string, code, fal
 			number, _ := unquotedNumber(r.tree.tokens[literal])
 			return number, false
 		}
+	}
+	unique := numbers[:0]
+	seen := map[int]bool{}
+	for _, literal := range numbers {
+		number, _ := unquotedNumber(r.tree.tokens[literal])
+		if !seen[number] {
+			seen[number] = true
+			unique = append(unique, literal)
+		}
+	}
+	numbers = unique
+	if len(numbers) == 1 {
+		n, _ := unquotedNumber(r.tree.tokens[numbers[0]])
+		return n, false
+	}
+	if len(numbers) > 1 {
+		for _, literal := range numbers[1:] {
+			n, _ := unquotedNumber(r.tree.tokens[literal])
+			r.statusVariants = append(r.statusVariants, n)
+		}
+		n, _ := unquotedNumber(r.tree.tokens[numbers[0]])
+		return n, false
 	}
 	return 0, true
 }

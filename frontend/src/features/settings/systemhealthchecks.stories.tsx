@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   meRoute,
@@ -32,15 +33,17 @@ export const WithInformation: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(
-      canvas.getByRole("list", { name: "Not set up yet" }),
+      canvas.getByRole("list", { name: englishCopy["health.group.setup"] }),
     ).toBeVisible();
-    const information = canvas.getByRole("list", { name: "For information" });
+    const information = canvas.getByRole("list", {
+      name: englishCopy["health.group.information"],
+    });
     await expect(
-      within(information).getByText("Changes Home leaves out"),
+      within(information).getByText(englishCopy["health.source.unplaced"]),
     ).toBeVisible();
     await expect(
       within(canvas.getByRole("list", { name: "Passing" })).queryByText(
-        "Changes Home leaves out",
+        englishCopy["health.source.unplaced"],
       ),
     ).toBeNull();
   },

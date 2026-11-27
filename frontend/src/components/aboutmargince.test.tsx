@@ -14,6 +14,7 @@ import {
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { stubClipboard } from "../design-system/clipboard-testing";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import type { BuildRelease } from "../lib/buildrelease";
 import { AboutMargince } from "./aboutmargince";
 
@@ -198,7 +199,7 @@ describe("the license, the copyright and the links", () => {
       "Copyright",
       "Links",
     ]);
-    expect(facts()[2]).toEqual(["Copyright", "© 2026 Gradion"]);
+    expect(facts()[2]).toEqual(["Copyright", englishCopy["about.copyright"]]);
   });
 
   it("names the license, when it converts, and where its terms are", () => {
@@ -211,9 +212,7 @@ describe("the license, the copyright and the links", () => {
       "https://github.com/margince/margince/blob/main/LICENSING.md",
     );
     expect(
-      screen.getByText(
-        "Each release converts to the Apache License 2.0 no later than two years after it ships.",
-      ),
+      screen.getByText(englishCopy["about.licenseConversion"]),
     ).toBeVisible();
   });
 

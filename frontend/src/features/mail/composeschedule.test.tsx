@@ -8,6 +8,7 @@ import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { browserZone } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { ScheduleMenu } from "./composeschedule";
 import { ScheduleDialog } from "./composescheduledialog";
 
@@ -58,7 +59,7 @@ async function openPicker(
   const onChoose = vi.fn();
   render(<Dialog now={now} onChoose={onChoose} {...props} />);
   await user.click(
-    screen.getByRole("button", { name: "Select date and time" }),
+    screen.getByRole("button", { name: englishCopy["compose.schedulePick"] }),
   );
   return { user, onChoose };
 }
@@ -95,7 +96,7 @@ describe("the zone the dialog names", () => {
     expect(screen.getByText(away.name)).toBeTruthy();
 
     await user.click(
-      screen.getByRole("button", { name: "Select date and time" }),
+      screen.getByRole("button", { name: englishCopy["compose.schedulePick"] }),
     );
     expect(
       screen.getByText(
@@ -136,7 +137,7 @@ describe("choosing a date and time to send", () => {
   it("refuses the hours already past today and says why", async () => {
     await openPicker(AFTERNOON);
 
-    const reason = screen.getByText("Times that have passed cannot be chosen.");
+    const reason = screen.getByText(englishCopy["compose.scheduleHoursPast"]);
     for (const past of ["08:00", "09:00", "13:00"]) {
       expect(hour(past).disabled).toBe(true);
       expect(hour(past).getAttribute("aria-describedby")).toBe(reason.id);
@@ -197,9 +198,11 @@ describe("choosing a date and time to send", () => {
       vi.advanceTimersByTime(60 * 60_000);
     });
 
-    const confirm = screen.getByRole("button", { name: "Schedule send" });
+    const confirm = screen.getByRole("button", {
+      name: englishCopy["compose.scheduleSend"],
+    });
     expect(confirm).toHaveProperty("disabled", true);
-    const line = screen.getByText("Choose a time in the future.");
+    const line = screen.getByText(englishCopy["compose.schedulePast"]);
     expect(confirm.getAttribute("aria-describedby")).toContain(line.id);
     await user.click(confirm);
     expect(onChoose).not.toHaveBeenCalled();
@@ -215,10 +218,12 @@ describe("choosing a date and time to send", () => {
     act(() => {
       vi.advanceTimersByTime(30_000);
     });
-    await user.click(screen.getByRole("button", { name: "Schedule send" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["compose.scheduleSend"] }),
+    );
 
     expect(onChoose).not.toHaveBeenCalled();
-    expect(screen.getByText("Choose a time in the future.")).toBeTruthy();
+    expect(screen.getByText(englishCopy["compose.schedulePast"])).toBeTruthy();
     expect(screen.getByRole("dialog")).toBeTruthy();
   });
 
@@ -235,7 +240,7 @@ describe("choosing a date and time to send", () => {
     });
     render(<Dialog now={sampled} sampledAt={sampled.getTime()} />);
     await user.click(
-      screen.getByRole("button", { name: "Select date and time" }),
+      screen.getByRole("button", { name: englishCopy["compose.schedulePick"] }),
     );
 
     // 17:00 has passed, so today is refused and the picker opens tomorrow.
@@ -251,15 +256,17 @@ describe("choosing a date and time to send", () => {
     await openPicker(AFTERNOON, { sendAt: "2026-09-14T09:00" });
 
     expect(
-      screen.getByRole("button", { name: "Schedule send" }),
+      screen.getByRole("button", { name: englishCopy["compose.scheduleSend"] }),
     ).toHaveProperty("disabled", true);
-    expect(screen.getByText("Choose a time in the future.")).toBeTruthy();
+    expect(screen.getByText(englishCopy["compose.schedulePast"])).toBeTruthy();
   });
 
   it("schedules the hour it opened on", async () => {
     const { user, onChoose } = await openPicker(AFTERNOON);
 
-    await user.click(screen.getByRole("button", { name: "Schedule send" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["compose.scheduleSend"] }),
+    );
     expect(onChoose).toHaveBeenCalledWith("2026-09-14T17:00");
   });
 });
@@ -275,15 +282,21 @@ describe("the schedule send menu", () => {
     );
 
     await user.click(
-      screen.getByRole("button", { name: "Other ways to send" }),
+      screen.getByRole("button", { name: englishCopy["compose.sendOptions"] }),
     );
-    await user.click(screen.getByRole("button", { name: "Schedule send" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["compose.scheduleSend"] }),
+    );
 
     expect(onOpen).toHaveBeenCalledTimes(1);
-    expect(screen.queryByRole("button", { name: "Schedule send" })).toBeNull();
+    expect(
+      screen.queryByRole("button", {
+        name: englishCopy["compose.scheduleSend"],
+      }),
+    ).toBeNull();
     expect(
       screen
-        .getByRole("button", { name: "Other ways to send" })
+        .getByRole("button", { name: englishCopy["compose.sendOptions"] })
         .getAttribute("aria-expanded"),
     ).toBe("false");
   });
@@ -296,10 +309,16 @@ describe("the schedule send menu", () => {
     const user = userEvent.setup();
     render(<MenuAndDialog />);
 
-    const trigger = screen.getByRole("button", { name: "Other ways to send" });
+    const trigger = screen.getByRole("button", {
+      name: englishCopy["compose.sendOptions"],
+    });
     await user.click(trigger);
-    await user.click(screen.getByRole("button", { name: "Schedule send" }));
-    await screen.findByRole("dialog", { name: "Schedule send" });
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["compose.scheduleSend"] }),
+    );
+    await screen.findByRole("dialog", {
+      name: englishCopy["compose.scheduleSend"],
+    });
     await user.keyboard("{Escape}");
 
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
@@ -317,11 +336,19 @@ describe("opening the dialog again", () => {
     render(<MenuAndDialog />);
     const pickAgain = async () => {
       await user.click(
-        screen.getByRole("button", { name: "Other ways to send" }),
+        screen.getByRole("button", {
+          name: englishCopy["compose.sendOptions"],
+        }),
       );
-      await user.click(screen.getByRole("button", { name: "Schedule send" }));
       await user.click(
-        await screen.findByRole("button", { name: "Select date and time" }),
+        screen.getByRole("button", {
+          name: englishCopy["compose.scheduleSend"],
+        }),
+      );
+      await user.click(
+        await screen.findByRole("button", {
+          name: englishCopy["compose.schedulePick"],
+        }),
       );
     };
 

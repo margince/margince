@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn, screen, userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import { bookingConnection, bookingProfile } from "../../testing/book.testkit";
 import { jsonResponse } from "../../testing/story-utils";
 import { bookingFrame } from "./book.storykit";
@@ -113,7 +114,7 @@ export const InvalidAdditionalLengths: Story = {
   play: async ({ canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body);
     const field = await body.findByRole("textbox", {
-      name: "Additional meeting lengths",
+      name: englishCopy["scheduling.offeredLengths"],
     });
     await userEvent.clear(field);
     await userEvent.type(field, "10");

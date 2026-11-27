@@ -393,8 +393,8 @@ func (s *Dispatcher) call(ctx context.Context, params json.RawMessage, fr framin
 		// credential no longer works.
 		s.log.Warn("mcp: authentication failed", "tool", p.Name, "err", err)
 		return toolError("authentication failed: the passport for this session was not accepted " +
-			"(it may be revoked, expired, or bound to another workspace). Nothing was changed. " +
-			"Mint a new passport or contact the workspace admin.")
+			"(it may be revoked, expired, or bound to another company). Nothing was changed. " +
+			"Mint a new passport or contact the company admin.")
 	}
 	callCtx = s.withChatInput(callCtx, fr, p.Name, p.Arguments, params)
 	callCtx = withConversationConfirm(callCtx, conversationConfirm{signer: s.inputState, guard: s.replayGuard, now: time.Now})

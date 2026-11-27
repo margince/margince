@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
@@ -110,7 +111,8 @@ type Registry struct {
 	// the behaviour this field exists to end.
 	closeTasks DealTaskSettler
 	// recordSidecars reads what read_record adds beside a record's own fields.
-	recordSidecars RecordSidecarsFor
+	recordSidecars    RecordSidecarsFor
+	readRecordFailure func(context.Context, datasource.EntityRef) error
 	// seats names the owner every served record row carries (queryowner.go).
 	// Nil leaves owners unnamed but still disclosed.
 	seats SeatNamer

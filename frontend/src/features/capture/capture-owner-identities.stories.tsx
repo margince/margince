@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -141,8 +142,6 @@ export const UndoRefused: Story = {
   play: async ({ canvasElement }) => {
     const body = await removeLearned(canvasElement);
     await userEvent.click(await body.findByRole("button", { name: "Undo" }));
-    await body.findByText(
-      "This address can no longer be put back. Add it again instead.",
-    );
+    await body.findByText(englishCopy["ownerIdentities.restoreGone"]);
   },
 };

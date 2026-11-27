@@ -4,6 +4,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { ProjectHealthModal } from "./projecthealthmodal";
 
 afterEach(() => {
@@ -23,7 +24,11 @@ it("says the note is required for an at-risk reading on Save, and sends nothing"
   );
   const user = userEvent.setup();
   await user.click(screen.getByText("At risk"));
-  await user.click(screen.getByRole("button", { name: "Record reading" }));
+  await user.click(
+    screen.getByRole("button", {
+      name: englishCopy["projectHealth.saveReading"],
+    }),
+  );
   expect(screen.getByText("Note is required.")).toBeTruthy();
   expect(document.activeElement).toBe(
     screen.getByRole("textbox", { name: /^Note/ }),

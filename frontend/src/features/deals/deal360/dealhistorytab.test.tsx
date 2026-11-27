@@ -9,6 +9,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../../api/schema";
 import { LocaleProvider, translate } from "../../../i18n";
+import { en as englishCopy } from "../../../i18n/en";
 import { jsonResponse, stubWithSession } from "../../../testing/story-utils";
 import { DealHistoryTab } from "./dealhistorytab";
 
@@ -108,7 +109,9 @@ describe("DealHistoryTab", () => {
 
     await waitFor(() => expect(screen.getByText(CHANGE_LINE)).toBeTruthy());
     expect(screen.queryByText("Renewal check-in")).toBeNull();
-    expect(screen.queryByLabelText("Activity kind")).toBeNull();
+    expect(
+      screen.queryByLabelText(englishCopy["timeline.filters.kind"]),
+    ).toBeNull();
   });
 
   // Mail is answered. Any other row is written about where the server can fill
@@ -241,7 +244,7 @@ describe("DealHistoryTab", () => {
     withProviders(<DealHistoryTab deal={DEAL} onOpenEmail={() => {}} />);
 
     expect(
-      await screen.findByText("No activity on this deal yet."),
+      await screen.findByText(englishCopy["deal.timeline.empty"]),
     ).toBeTruthy();
   });
 });

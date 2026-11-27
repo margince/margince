@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -57,12 +58,12 @@ export const MailboxOwners: Story = {
   play: async ({ canvasElement }) => {
     await userEvent.click(
       await within(canvasElement).findByRole("button", {
-        name: "Ask a mailbox owner",
+        name: englishCopy["health.askOwner"],
       }),
     );
     const dialog = await within(canvasElement.ownerDocument.body).findByRole(
       "dialog",
-      { name: "Mailbox decisions" },
+      { name: englishCopy["health.mailReviewOwners"] },
     );
     await waitFor(() => expect(within(dialog).getByText("Maya")).toBeVisible());
   },

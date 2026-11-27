@@ -189,7 +189,7 @@ describe("WebFormsCard", () => {
     expect(await screen.findByText("Contact page")).toBeTruthy();
     expect(screen.getByText("https://www.acme.test")).toBeTruthy();
     expect(screen.getByText("Active")).toBeTruthy();
-    expect(screen.getByText("Your website")).toBeTruthy();
+    expect(screen.getByText(en["webForms.sender.browser"])).toBeTruthy();
   });
 
   it("marks a Webflow form that is still waiting for Webflow's secret", async () => {
@@ -201,7 +201,9 @@ describe("WebFormsCard", () => {
     };
     vi.stubGlobal("fetch", backendFor(OPERATOR, [waiting]).fetch);
     render(<WebFormsCard />);
-    expect(await screen.findByText("Waiting for its secret")).toBeTruthy();
+    expect(
+      await screen.findByText(en["webForms.row.secretMissing"]),
+    ).toBeTruthy();
   });
 
   it("names the form in the heading of its Archive dialog", async () => {
@@ -209,7 +211,7 @@ describe("WebFormsCard", () => {
     const user = userEvent.setup();
     render(<WebFormsCard />);
     await user.click(
-      await screen.findByRole("button", { name: "More actions" }),
+      await screen.findByRole("button", { name: en["record.moreActions"] }),
     );
     await user.click(await screen.findByTestId("archive-record"));
     expect(
@@ -363,7 +365,7 @@ describe("WebFormsCard", () => {
     );
     render(<WebFormsCard />);
     expect(await screen.findByText(/^Last post /)).toBeTruthy();
-    expect(screen.getByText("No post recorded yet")).toBeTruthy();
+    expect(screen.getByText(en["webForms.row.noPost"])).toBeTruthy();
   });
 
   it("tells the admin when the intake refuses posts, and why", async () => {
@@ -393,9 +395,7 @@ describe("WebFormsCard", () => {
       await screen.findByText(/^Throttled since .+, too many submissions$/),
     ).toBeTruthy();
     expect(screen.getByText(/^Blocked until /)).toBeTruthy();
-    expect(
-      screen.getByText("Paused for all forms: too much traffic"),
-    ).toBeTruthy();
+    expect(screen.getByText(en["webForms.row.intake.pausedAll"])).toBeTruthy();
   });
 
   it("says nothing about the intake while it takes posts as usual", async () => {
@@ -571,7 +571,7 @@ describe("WebFormsCard", () => {
     const user = userEvent.setup();
     render(<WebFormsCard />);
     await user.click(
-      await screen.findByRole("button", { name: "More actions" }),
+      await screen.findByRole("button", { name: en["record.moreActions"] }),
     );
     await user.click(await screen.findByTestId("toggle-web-form"));
 
@@ -600,12 +600,12 @@ describe("WebFormsCard actions", () => {
     const user = userEvent.setup();
     render(<WebFormsCard />);
     await user.click(
-      await screen.findByRole("button", { name: "More actions" }),
+      await screen.findByRole("button", { name: en["record.moreActions"] }),
     );
     await user.click(await screen.findByTestId("rotate-web-form-secret"));
     expect(backend.sent).toHaveLength(0);
     const confirm = await screen.findAllByRole("button", {
-      name: "Make a new secret",
+      name: en["webForms.rotate"],
     });
     await user.click(confirm[confirm.length - 1] as HTMLElement);
 

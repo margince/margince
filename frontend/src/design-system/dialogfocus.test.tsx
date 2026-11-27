@@ -3,6 +3,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../i18n/en";
 import { Button, Modal } from "./atoms";
 import { ConfirmModal } from "./confirmmodal";
 import { Heading } from "./heading";
@@ -67,7 +68,9 @@ describe("a dialog on its way out hands the keyboard to the one below", () => {
 
   it("keeps Tab inside the drawer while the confirmation is still leaving", async () => {
     const { user } = await dismissConfirmation();
-    const drawer = screen.getByRole("dialog", { name: "Shared links" });
+    const drawer = screen.getByRole("dialog", {
+      name: englishCopy["analytics.share.listOpen"],
+    });
     expect(document.activeElement).toBe(
       screen.getByRole("button", { name: "End link" }),
     );

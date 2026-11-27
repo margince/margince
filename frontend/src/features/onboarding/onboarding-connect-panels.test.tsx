@@ -57,7 +57,9 @@ describe("ImapConnectPanel", () => {
       screen.getByText(en["connectors.imapSecretHint"]),
     ).toBeInTheDocument();
     expect(screen.getByLabelText("Port")).toHaveValue("993");
-    expect(screen.getByLabelText("Messages per sync")).toHaveValue("50");
+    expect(screen.getByLabelText(en["connectors.imapMaxMessages"])).toHaveValue(
+      "50",
+    );
   });
 
   it("connects IMAP through the typed client, not a raw fetch to a bespoke path", async () => {
@@ -259,7 +261,7 @@ describe("OAuthReturnPanel confirming a granted mailbox", () => {
     installFetchStub({ "GET /connectors": () => jsonResponse({ data: [] }) });
     render(<OAuthReturnPanel outcome="ok" onDone={vi.fn()} />);
 
-    await screen.findByText("The connection could not be confirmed.");
+    await screen.findByText(en["ob.s4.connectConfirmFailed"]);
     expect(screen.getByRole("button", { name: /^done$/i })).toBeInTheDocument();
   });
 
@@ -275,7 +277,7 @@ describe("OAuthReturnPanel confirming a granted mailbox", () => {
     });
     render(<OAuthReturnPanel outcome="ok" onDone={vi.fn()} />);
 
-    await screen.findByText("The connection could not be confirmed.");
+    await screen.findByText(en["ob.s4.connectConfirmFailed"]);
     expect(
       screen.queryByRole("button", { name: /^done$/i }),
     ).not.toBeInTheDocument();
@@ -298,7 +300,7 @@ describe("OAuthReturnPanel confirming a granted mailbox", () => {
     });
     render(<OAuthReturnPanel outcome="ok" onDone={vi.fn()} />);
 
-    await screen.findByText("Confirming connection…");
+    await screen.findByText(en["ob.s4.connectVerifying"]);
     expect(
       screen.queryByRole("button", { name: /^done$/i }),
     ).not.toBeInTheDocument();
@@ -329,11 +331,9 @@ describe("OAuthReturnPanel reading a reader-typed outcome", () => {
     render(<OAuthReturnPanel outcome={outcome} onDone={vi.fn()} />);
 
     expect(
-      await screen.findByText("The connection could not be confirmed."),
+      await screen.findByText(en["ob.s4.connectConfirmFailed"]),
     ).toBeInTheDocument();
-    expect(
-      screen.getByText("Select the account again below."),
-    ).toBeInTheDocument();
+    expect(screen.getByText(en["ob.s4.connectRetry"])).toBeInTheDocument();
   });
 });
 

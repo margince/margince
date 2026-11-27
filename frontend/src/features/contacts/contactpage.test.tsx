@@ -209,7 +209,7 @@ describe("the Data & tools tab's added capabilities", () => {
       ],
     };
     mount("research", withEnrichment);
-    expect(await screen.findByText("Captured details")).toBeTruthy();
+    expect(await screen.findByText(en["contact.research.fields"])).toBeTruthy();
     expect(screen.getByText("Head of Procurement")).toBeTruthy();
     // The heading and the value alone don't prove the page reaches the
     // control the ticket was about — the confirm/correct buttons themselves
@@ -219,7 +219,9 @@ describe("the Data & tools tab's added capabilities", () => {
     // (/me) than the field's own read — findByRole waits it out rather than
     // catching the render before that query has settled.
     expect(
-      await screen.findByRole("button", { name: "Confirm value" }),
+      await screen.findByRole("button", {
+        name: en["contact.enriched.confirm"],
+      }),
     ).toBeTruthy();
     expect(screen.getByRole("button", { name: "Edit" })).toBeTruthy();
   });
@@ -250,7 +252,7 @@ describe("a moment action that opens the composer", () => {
       await screen.findByRole("button", { name: "Draft a follow-up" }),
     );
 
-    expect(await intentValue()).toBe("follow up after a quiet period");
+    expect(await intentValue()).toBe(en["contact.composer.intentFollowUp"]);
   });
 
   it("opens the same drawer for the generic verb, carrying no reason", async () => {
@@ -719,7 +721,9 @@ describe("a live contact that is not the viewer's to change", () => {
     mount("overview", notMine);
 
     expect(await screen.findByText(sentence)).toBeTruthy();
-    await user.click(screen.getByRole("button", { name: "More actions" }));
+    await user.click(
+      screen.getByRole("button", { name: en["record.moreActions"] }),
+    );
     const share = await screen.findByTestId("share-record");
     expect(share.hasAttribute("disabled")).toBe(true);
     expect(
@@ -731,7 +735,9 @@ describe("a live contact that is not the viewer's to change", () => {
   it("refuses the upload on the Documents tab from the same sentence", async () => {
     mount("documents", notMine);
 
-    const add = await screen.findByRole("button", { name: "Add document" });
+    const add = await screen.findByRole("button", {
+      name: en["docs.add.action"],
+    });
     expect(add.hasAttribute("disabled")).toBe(true);
     expect(
       document.getElementById(add.getAttribute("aria-describedby") ?? "")
@@ -773,14 +779,18 @@ describe("the consent panel names the purpose behind each answer", () => {
     // Both named, whichever order the server listed them in — the old reader
     // took entries[0] and would have painted Email with the newsletter's
     // unknown here.
-    expect(await screen.findByText("Business correspondence")).not.toBeNull();
+    expect(
+      await screen.findByText(
+        en["consent.purposeName.business_correspondence"],
+      ),
+    ).not.toBeNull();
     expect(screen.getByText("Newsletter")).not.toBeNull();
   });
 
   it("does not report a marketing purpose's verdict against correspondence", async () => {
     mount("research", view, [newsletter, correspondence]);
 
-    await screen.findByText("Business correspondence");
+    await screen.findByText(en["consent.purposeName.business_correspondence"]);
     // The correspondence row is the allowed one; the newsletter row is not.
     const rows = screen.getAllByText(
       /Permission to write recorded|Nothing recorded yet/,
@@ -805,9 +815,7 @@ describe("the consent panel names the purpose behind each answer", () => {
     mount("research", view, [objected, correspondence]);
 
     expect(
-      await screen.findByText(
-        "They asked not to be contacted, and a rep recorded it",
-      ),
+      await screen.findByText(en["consent.reason.suppressed_subject_request"]),
     ).not.toBeNull();
   });
 
@@ -818,7 +826,7 @@ describe("the consent panel names the purpose behind each answer", () => {
     mount("research", view, [newsletter, correspondence]);
 
     expect(
-      await screen.findByText("They agreed to be written to"),
+      await screen.findByText(en["consent.reason.said_we_may_write"]),
     ).not.toBeNull();
   });
 });
@@ -844,6 +852,6 @@ describe("a contact imported from somewhere else", () => {
     expect(
       await screen.findByText("Logged in HubSpot by Mutaz Suleiman"),
     ).toBeTruthy();
-    expect(screen.queryByText("Typed by you")).toBeNull();
+    expect(screen.queryByText(en["trust.typedByYou"])).toBeNull();
   });
 });

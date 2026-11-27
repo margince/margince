@@ -8,6 +8,7 @@ import { useState } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { TokenSuggestion } from "../../design-system/tokeninput";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import type { Locale } from "../../i18n/locale";
 import { AddressBlock, type AddressLine } from "./composehead";
 
@@ -192,9 +193,7 @@ describe("the blind copy", () => {
   it("says the other recipients do not see its addresses", () => {
     render(<Head openCopies />);
     expect(line("Bcc").getAttribute("aria-describedby")).toBeTruthy();
-    expect(
-      screen.getByText("Other recipients do not see these addresses."),
-    ).toBeTruthy();
+    expect(screen.getByText(englishCopy["compose.bccHint"])).toBeTruthy();
   });
 });
 

@@ -13,6 +13,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import { RecordShell } from "../../testing/recordshell.testkit";
 import { jsonResponse } from "../../testing/story-utils";
@@ -140,7 +141,9 @@ describe("a lead's identity is typed, never offered from the contacts", () => {
     );
 
     await user.click(
-      await screen.findByRole("button", { name: "More actions" }),
+      await screen.findByRole("button", {
+        name: englishCopy["record.moreActions"],
+      }),
     );
     await screen.findByRole("button", { name: "Share" });
     expect(

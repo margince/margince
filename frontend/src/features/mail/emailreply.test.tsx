@@ -16,6 +16,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { EmailDrawerActions, replyAnchor } from "./emailreply";
 
 type EmailPresentation = components["schemas"]["EmailPresentation"];
@@ -178,9 +179,11 @@ describe("answering the message the drawer is showing", () => {
 
     expect(reply()).toBeNull();
     expect(screen.getByRole("button", { name: "Forward" })).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "More actions" }));
     fireEvent.click(
-      screen.getByRole("button", { name: "File under another record…" }),
+      screen.getByRole("button", { name: englishCopy["record.moreActions"] }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: englishCopy["email.fileUnder"] }),
     );
     expect(onRelink).toHaveBeenCalledTimes(1);
   });
@@ -218,7 +221,9 @@ describe("answering the message the drawer is showing", () => {
   it("hides More when the message may not be moved", () => {
     draw(actions({ can_relink: false }));
 
-    expect(screen.queryByRole("button", { name: "More actions" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: englishCopy["record.moreActions"] }),
+    ).toBeNull();
   });
 });
 

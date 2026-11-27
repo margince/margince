@@ -3,6 +3,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import {
   installFetchStub,
@@ -84,7 +85,9 @@ it("names each device, marks this one and offers no sign out for it", async () =
 it("says unknown device when the session sent no user agent", async () => {
   serve([session(THIS_ID, null, true)]);
   draw();
-  expect(await screen.findByText("Unknown device")).toBeInTheDocument();
+  expect(
+    await screen.findByText(englishCopy["account.devicesUnknown"]),
+  ).toBeInTheDocument();
 });
 
 it("ends one other session and drops its row", async () => {
@@ -113,7 +116,9 @@ it("signs out all others without ending this session", async () => {
   ]);
   draw();
   await user.click(
-    await screen.findByRole("button", { name: "Sign out all others" }),
+    await screen.findByRole("button", {
+      name: englishCopy["account.devicesSignOutOthers"],
+    }),
   );
   await vi.waitFor(() => expect(ended).toEqual([PHONE_ID, LAPTOP_ID]));
   expect(ended).not.toContain(THIS_ID);
@@ -124,7 +129,9 @@ it("offers no sign out all others when this is the only session", async () => {
   draw();
   await screen.findByText("Chrome on macOS");
   expect(
-    screen.queryByRole("button", { name: "Sign out all others" }),
+    screen.queryByRole("button", {
+      name: englishCopy["account.devicesSignOutOthers"],
+    }),
   ).toBeNull();
 });
 
@@ -194,7 +201,9 @@ it("tries every other session and says how many could not be signed out", async 
   });
   draw();
   await user.click(
-    await screen.findByRole("button", { name: "Sign out all others" }),
+    await screen.findByRole("button", {
+      name: englishCopy["account.devicesSignOutOthers"],
+    }),
   );
   expect(await screen.findByRole("alert")).toHaveTextContent(
     "1 device was not signed out. Retry.",

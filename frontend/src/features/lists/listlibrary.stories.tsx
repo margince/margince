@@ -4,7 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { Panel } from "../../design-system/panel";
-import { en } from "../../i18n/en";
+import { en as englishCopy } from "../../i18n/en";
 import type { SavedView } from "../../lib/savedviews.queries";
 import {
   listsMe,
@@ -86,7 +86,7 @@ const captionOf = (item: LibraryItem) => {
     case "list":
       return item.list.purpose ?? "";
     case "listView":
-      return en[`filters.library.savedOn.${item.type}`];
+      return englishCopy[`filters.library.savedOn.${item.type}`];
     case "view":
       return "City is Berlin";
   }
@@ -224,7 +224,7 @@ export const StartingAShortlist: Story = {
   play: async ({ canvasElement }) => {
     await userEvent.click(
       await within(canvasElement).findByRole("button", {
-        name: "New Shortlist",
+        name: englishCopy["lists.newShortlist"],
       }),
     );
     await within(document.body).findByRole("dialog");

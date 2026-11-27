@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { OfferScreen } from "./offers";
 
 afterEach(() => {
@@ -97,7 +98,9 @@ describe("regenerating a sent offer", () => {
     await regenerate();
     await waitFor(() => {
       movedToCopy();
-      expect(screen.getByText("Copied without AI changes.")).toBeTruthy();
+      expect(
+        screen.getByText(englishCopy["offer.regeneratedPlain"]),
+      ).toBeTruthy();
     });
   });
 
@@ -112,6 +115,8 @@ describe("regenerating a sent offer", () => {
     });
     await regenerate();
     await waitFor(movedToCopy);
-    expect(screen.queryByText("Copied without AI changes.")).toBeNull();
+    expect(
+      screen.queryByText(englishCopy["offer.regeneratedPlain"]),
+    ).toBeNull();
   });
 });

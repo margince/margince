@@ -14,6 +14,7 @@ import type { components } from "../api/schema";
 import { formatDateTime } from "../format/format";
 import { browserZone } from "../format/timezone";
 import { type Locale, LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { meFixture } from "../testing/mefixture";
 import { NotificationBell } from "./notificationbell";
 
@@ -248,7 +249,11 @@ describe("NotificationBell", () => {
     // The values come from the parts, so a comma inside one stays inside it.
     expect(within(row).getByText(/Smith, Jones & Co$/)).toBeTruthy();
     expect(within(row).queryByText(/amount_minor=/)).toBeNull();
-    expect(within(row).queryByText("Approvals waiting on you")).toBeNull();
+    expect(
+      within(row).queryByText(
+        englishCopy["notifications.class.approval_pending.label"],
+      ),
+    ).toBeNull();
   });
 
   it("says when each notice was raised", async () => {
@@ -451,12 +456,14 @@ describe("NotificationBell", () => {
     expect(verb(0, "Open lead").getAttribute("href")).toBe(
       "/#/leads/11111111-1111-4111-8111-111111111111",
     );
-    expect(verb(1, "Review request").getAttribute("href")).toBe(
-      "/#/home?approval=22222222-2222-4222-8222-222222222222",
-    );
-    expect(verb(2, "Open System health").getAttribute("href")).toBe(
-      "/#/settings/system-health/diagnostics?section=dataTasks.title",
-    );
+    expect(
+      verb(1, englishCopy["notifications.action.review"]).getAttribute("href"),
+    ).toBe("/#/home?approval=22222222-2222-4222-8222-222222222222");
+    expect(
+      verb(2, englishCopy["notifications.action.systemHealth"]).getAttribute(
+        "href",
+      ),
+    ).toBe("/#/settings/system-health/diagnostics?section=dataTasks.title");
     for (const row of rows) {
       expect(
         within(row).getByRole("button", { name: "Mark read" }),

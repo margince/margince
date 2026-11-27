@@ -92,7 +92,10 @@ describe("the calm start", () => {
 
     expect(await screen.findByRole("button", { name: ADD })).toBeTruthy();
     expect(
-      screen.getByRole("heading", { level: 1, name: "New contact filter" }),
+      screen.getByRole("heading", {
+        level: 1,
+        name: en["filters.new.contacts"],
+      }),
     ).toBeTruthy();
     expect(recordType().textContent).toContain("Contacts");
     expect(
@@ -103,14 +106,14 @@ describe("the calm start", () => {
     ).toBeTruthy();
     expect(screen.getByText(en["filters.startOr"])).toBeTruthy();
     expect(
-      screen.getByRole("heading", { name: "Build it condition by condition" }),
+      screen.getByRole("heading", { name: en["filters.start.buildTitle"] }),
     ).toBeTruthy();
     // The one accent control on the page.
     expect(document.querySelectorAll(".btn-primary")).toHaveLength(1);
     expect(screen.getByText(START_HINT)).toBeTruthy();
     // No count, no rows, no save and no export before a condition exists —
     // and the empty tree is not worth a request.
-    expect(screen.queryByText("Matching records")).toBeNull();
+    expect(screen.queryByText(en["filters.resultsTitle"])).toBeNull();
     expect(screen.queryByRole("status")).toBeNull();
     expect(screen.queryByRole("button", { name: SAVE })).toBeNull();
     expect(
@@ -147,7 +150,7 @@ describe("the calm start", () => {
       false,
     );
     expect(
-      screen.getByRole("heading", { level: 1, name: "New deal filter" }),
+      screen.getByRole("heading", { level: 1, name: en["filters.new.deals"] }),
     ).toBeTruthy();
   });
 
@@ -158,7 +161,7 @@ describe("the calm start", () => {
     expect(
       await screen.findByRole("heading", {
         level: 1,
-        name: "New contact filter",
+        name: en["filters.new.contacts"],
       }),
     ).toBeTruthy();
     expect(screen.queryByRole("button", { name: ADD })).toBeNull();
@@ -183,14 +186,17 @@ describe("growing the filter", () => {
     // The row alone: a clause with an empty value is nothing to count yet.
     expect(screen.getByLabelText("Value")).toBeTruthy();
     expect(screen.getByText(FINISH_HINT)).toBeTruthy();
-    expect(screen.queryByText("Matching records")).toBeNull();
+    expect(screen.queryByText(en["filters.resultsTitle"])).toBeNull();
     expect(previews(seen)).toHaveLength(0);
 
     await user.type(screen.getByLabelText("Value"), "ann");
 
     expect(await screen.findByText("12 contacts match")).toBeTruthy();
     expect(
-      screen.getByRole("heading", { level: 2, name: "Matching records" }),
+      screen.getByRole("heading", {
+        level: 2,
+        name: en["filters.resultsTitle"],
+      }),
     ).toBeTruthy();
     expect(screen.getByText(en["filters.resultsCaption"])).toBeTruthy();
     expect(screen.queryByText(FINISH_HINT)).toBeNull();
@@ -217,14 +223,14 @@ describe("growing the filter", () => {
       await user.click(remove);
     }
     expect(await screen.findByText(START_HINT)).toBeTruthy();
-    expect(screen.queryByText("Matching records")).toBeNull();
+    expect(screen.queryByText(en["filters.resultsTitle"])).toBeNull();
 
     // The preview cache still holds the answer for "ann", and an unfinished
     // condition must not bring it back.
     const asked = previews(seen).length;
     await user.click(screen.getByRole("button", { name: ADD }));
     expect(screen.getByText(FINISH_HINT)).toBeTruthy();
-    expect(screen.queryByText("Matching records")).toBeNull();
+    expect(screen.queryByText(en["filters.resultsTitle"])).toBeNull();
     expect(screen.queryByText("12 contacts match")).toBeNull();
     expect(previews(seen)).toHaveLength(asked);
   });
@@ -278,7 +284,7 @@ describe("growing the filter", () => {
     // The results are waiting, and nothing claims there is no count or asks
     // the reader to add what they just finished.
     expect(
-      screen.getByRole("heading", { name: "Matching records" }),
+      screen.getByRole("heading", { name: en["filters.resultsTitle"] }),
     ).toBeTruthy();
     expect(screen.queryByText(/contacts match/)).toBeNull();
     expect(screen.queryByText(FINISH_HINT)).toBeNull();
@@ -346,7 +352,7 @@ describe("paging the rows", () => {
     await screen.findByText("Contact 24");
     await pickOption(
       user,
-      screen.getByRole("combobox", { name: "Rows per page" }),
+      screen.getByRole("combobox", { name: en["table.rowsPerPage"] }),
       "100 per page",
     );
     await user.click(screen.getByRole("button", { name: "Next" }));
@@ -417,7 +423,7 @@ describe("switching the record type", () => {
 
     await pickOption(user, recordType(), "Companies");
     await user.click(
-      await screen.findByRole("button", { name: "Switch and clear" }),
+      await screen.findByRole("button", { name: en["filters.switch.confirm"] }),
     );
     expect(window.location.hash).toBe("#/filters/companies");
     // The address names the new type, and the page it opens starts calm.
@@ -487,7 +493,9 @@ describe("keeping and exporting", () => {
 
   /** The results panel's head, where the count and the export stand. */
   const resultsHead = () =>
-    screen.getByRole("heading", { name: "Matching records" }).closest("header");
+    screen
+      .getByRole("heading", { name: en["filters.resultsTitle"] })
+      .closest("header");
 
   it("exports the filter on screen from beside the count, under the name the server gave it", async () => {
     const { anchors, written, answer } = mountHeldExport();
@@ -647,12 +655,14 @@ describe("leaving a filter", () => {
     await complete(user);
     await pickOption(user, recordType(), "Companies");
     expect(screen.getAllByRole("dialog")).toHaveLength(1);
-    await user.click(screen.getByRole("button", { name: "Switch and clear" }));
+    await user.click(
+      screen.getByRole("button", { name: en["filters.switch.confirm"] }),
+    );
 
     expect(
       await screen.findByRole("heading", {
         level: 1,
-        name: "New company filter",
+        name: en["filters.new.companies"],
       }),
     ).toBeTruthy();
     expect(screen.queryByRole("dialog", { name: ASKS })).toBeNull();
@@ -721,14 +731,16 @@ describe("a refused count", () => {
 
     // Not a hint to finish a condition: two complete conditions are on
     // screen, and blaming the reader for the server's refusal hides it.
-    expect(await screen.findByText("Count unavailable")).toBeTruthy();
+    expect(
+      await screen.findByText(en["filters.countUnavailable"]),
+    ).toBeTruthy();
     expect(screen.queryByText(en["filters.hint.update"])).toBeNull();
     expect(
-      screen.getByRole("heading", { name: "Matching records" }),
+      screen.getByRole("heading", { name: en["filters.resultsTitle"] }),
     ).toBeTruthy();
     expect(screen.getByRole("button", { name: "Retry" })).toBeTruthy();
     expect((await screen.findByRole("alert")).textContent).toContain(
-      "The request failed. No cause reported.",
+      en["common.errorNoCause"],
     );
   });
 
@@ -767,7 +779,7 @@ describe("a refused count", () => {
       "Ask an administrator to upgrade the seat.",
     );
     expect(alert.textContent).not.toContain("seat tier insufficient");
-    expect(screen.getByText("Count unavailable")).toBeTruthy();
+    expect(screen.getByText(en["filters.countUnavailable"])).toBeTruthy();
   });
 });
 

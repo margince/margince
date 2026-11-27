@@ -17,6 +17,7 @@ import {
 import type { components } from "../../api/schema";
 import { stable } from "../../format/collate";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import {
   CUSTOMER_FIELDS,
@@ -405,10 +406,14 @@ const DOSSIER_TEST_MS =
  */
 async function openTheEditingBoard(): Promise<void> {
   await userEvent.click(
-    await screen.findByRole("button", { name: "Read full profile" }),
+    await screen.findByRole("button", {
+      name: englishCopy["ob.deck.readWhole"],
+    }),
   );
   await userEvent.click(
-    await screen.findByRole("button", { name: "Choose facts to keep" }),
+    await screen.findByRole("button", {
+      name: englishCopy["ob.digest.pickFacts"],
+    }),
   );
 }
 
@@ -634,7 +639,7 @@ describe("the conversational company act", () => {
     // labelled one, so this stays a test of "the cost is disclosed" rather than
     // of how many places repeat it.
     const costRow = screen
-      .getByText("Estimated provider cost")
+      .getByText(englishCopy["ob.ai.estimatedCost"])
       .closest(".mw-aistat-r");
     expect(costRow?.querySelector("dd")?.textContent).toContain("$0.079529");
     // The rail takes no free text — this transparency lives beside a chip
@@ -678,7 +683,7 @@ describe("the mandatory company minimum", () => {
     await screen.findByLabelText(/Website address/);
     await chooseManual();
 
-    expect(screen.getByText("Legal company")).toBeTruthy();
+    expect(screen.getByText(englishCopy["ob.manualChapterLegal"])).toBeTruthy();
     // Past the six optional legal facts to display_name, the one question in
     // this chapter that blocks the interview until it is answered.
     await skipManual();
@@ -691,7 +696,7 @@ describe("the mandatory company minimum", () => {
     await userEvent.click(
       screen.getByRole("button", { name: /Next question/ }),
     );
-    expect(screen.getByText("This field is required.")).toBeTruthy();
+    expect(screen.getByText(englishCopy["record.fieldRequired"])).toBeTruthy();
     expect(document.activeElement).toBe(answer);
     expect(requestTo(calls, "/company", "PUT")).toBeUndefined();
   });

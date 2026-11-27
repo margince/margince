@@ -107,8 +107,9 @@ func TestEveryCertificationCaseHasAShippedScenario(t *testing.T) {
 				t.Errorf("certification case %s has no scenario under scenarios/", name)
 			}
 		case aitasks.RefusalRecoveryBand:
-			if named[name] {
-				t.Errorf("%s claims a live database scenario for a fixture-seeded failure", name)
+			liveCases++
+			if !named[name] {
+				t.Errorf("recovery case %s has no live-worker scenario", name)
 			}
 		default:
 			t.Errorf("%s names an unknown certification band %q", name, header.Fixture.Band)

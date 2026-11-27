@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { EnrichedFields } from "./contactcorrections";
 
 // The card where the page stops asserting and starts asking. Three things it
@@ -115,7 +116,11 @@ describe("who may correct what a machine read", () => {
     renderFields([field({})]);
 
     expect(await screen.findByRole("button", { name: "Edit" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Confirm value" })).toBeTruthy();
+    expect(
+      screen.getByRole("button", {
+        name: englishCopy["contact.enriched.confirm"],
+      }),
+    ).toBeTruthy();
   });
 
   it("shows the evidence but no controls to a reader without the grant", async () => {
@@ -128,7 +133,11 @@ describe("who may correct what a machine read", () => {
     await waitFor(() =>
       expect(screen.queryByRole("button", { name: "Edit" })).toBeNull(),
     );
-    expect(screen.queryByRole("button", { name: "Confirm value" })).toBeNull();
+    expect(
+      screen.queryByRole("button", {
+        name: englishCopy["contact.enriched.confirm"],
+      }),
+    ).toBeNull();
   });
 
   it("shows no controls on a read seat, whatever the grant says", async () => {
@@ -142,7 +151,11 @@ describe("who may correct what a machine read", () => {
     await waitFor(() =>
       expect(screen.queryByRole("button", { name: "Edit" })).toBeNull(),
     );
-    expect(screen.queryByRole("button", { name: "Confirm value" })).toBeNull();
+    expect(
+      screen.queryByRole("button", {
+        name: englishCopy["contact.enriched.confirm"],
+      }),
+    ).toBeNull();
   });
 });
 
@@ -160,7 +173,9 @@ describe("which verdicts are still open", () => {
     // longer shows is asking about something that is not there.
     await waitFor(() =>
       expect(
-        screen.getAllByRole("button", { name: "Confirm value" }),
+        screen.getAllByRole("button", {
+          name: englishCopy["contact.enriched.confirm"],
+        }),
       ).toHaveLength(1),
     );
     // Correct stays on every field: a value already settled once can still be

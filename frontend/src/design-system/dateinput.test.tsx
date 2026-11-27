@@ -15,6 +15,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { weekdayInitial } from "../format/format";
 import { setDateTimePreferences } from "../format/preferences";
 import { type Locale, LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { Button } from "./button";
 import { DateInput, type DateInputProps, type ISODate } from "./dateinput";
 import { Field } from "./field";
@@ -725,7 +726,7 @@ describe("the calendar", () => {
     await user.tab();
 
     expect(document.activeElement?.getAttribute("aria-label")).toBe(
-      "Previous month",
+      englishCopy["calendar.previousMonth"],
     );
     expect(dialog.contains(document.activeElement)).toBe(true);
   });
@@ -780,7 +781,11 @@ describe("the calendar", () => {
 
     expect(screen.queryByRole("dialog", { name: CHOOSE })).toBeNull();
     expect(closeDialog).not.toHaveBeenCalled();
-    expect(screen.getByRole("dialog", { name: "Log activity" })).toBeTruthy();
+    expect(
+      screen.getByRole("dialog", {
+        name: englishCopy["shell.shortcuts.logActivity"],
+      }),
+    ).toBeTruthy();
   });
 
   it("names its button and its calendar after the field, and plainly without a label", async () => {

@@ -339,7 +339,7 @@ describe("ExtensionAccessCard", () => {
     // What the unit brings, each family named rather than lumped together, and
     // its objects by the names the grid uses.
     const objects = screen
-      .getByText("Permission objects")
+      .getByText(en["extAccess.brings.objects"])
       .closest(".factlist-row");
     expect(
       [...(objects?.querySelectorAll("li") ?? [])].map((item) => [
@@ -354,13 +354,13 @@ describe("ExtensionAccessCard", () => {
 
     // What it borrows from the core, with the author's reason beside each, and
     // what of captured mail its hooks read, with the server's count.
-    expect(rowItems("Uses from the core")).toEqual([
+    expect(rowItems(en["extAccess.brings.needs"])).toEqual([
       "AI models — Writes the one-line summaries.",
       "File storage — Keeps the summaries it writes.",
     ]);
-    expect(rowItems("Reads from captured mail")).toEqual([
+    expect(rowItems(en["extAccess.brings.mail"])).toEqual([
       "The subject",
-      "The participants' addresses",
+      en["extAccess.mail.addresses"],
       "The first 1,234 characters of the text",
     ]);
 
@@ -407,7 +407,7 @@ describe("ExtensionAccessCard", () => {
     expect(
       within(unit).getByRole("link", { name: "Go to Notes" }),
     ).toBeTruthy();
-    expect(within(unit).getByText("What this unit adds")).toBeTruthy();
+    expect(within(unit).getByText(en["extAccess.brings.heading"])).toBeTruthy();
     // One grid for the unit, its column heads said once, and each registered
     // object a run of rows under a group row naming it.
     expect(within(unit).getAllByRole("table")).toEqual([notesMatrix()]);
@@ -761,11 +761,7 @@ describe("ExtensionAccessCard", () => {
     // Once for the eye, in the block that holds the matrices — not on the card
     // above them, where a reader looking at dead toggles had to leave the card
     // to find out why.
-    expect(
-      screen.getAllByText(
-        "Your role can read this page. Changing a grant requires a full seat.",
-      )[0],
-    ).toBeTruthy();
+    expect(screen.getAllByText(en["extAccess.readOnly"])[0]).toBeTruthy();
     const denied = cell("ext_notes_note", "Admin", "Read");
     expect(denied.disabled).toBe(true);
     // The state is still legible — a read seat sees what is granted.

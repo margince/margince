@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -177,7 +178,11 @@ async function openPreview(canvasElement: HTMLElement) {
 async function askAndSend({ canvasElement }: { canvasElement: HTMLElement }) {
   const dialog = await openPreview(canvasElement);
   await dialog.findByText("Ihre Kontaktdaten prüfen");
-  await userEvent.click(dialog.getByRole("button", { name: "Send request" }));
+  await userEvent.click(
+    dialog.getByRole("button", {
+      name: englishCopy["controllerMail.confirmSend"],
+    }),
+  );
   await within(canvasElement).findByTestId("confirm-details-sent");
 }
 

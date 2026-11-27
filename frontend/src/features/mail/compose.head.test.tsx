@@ -15,6 +15,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { messageBox, writeMessage } from "../../design-system/richtext-testing";
 import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { contactDocuments } from "../../testing/contactdocuments";
 import { CONNECTED_ROSTER } from "../../testing/mailroster.testkit";
 import { meFixture } from "../../testing/mefixture";
@@ -193,7 +194,7 @@ async function fillAndSend(user: ReturnType<typeof userEvent.setup>) {
   writeMessage("Body", "Attached.");
   await pickOption(
     user,
-    screen.getByLabelText("Reason for contact"),
+    screen.getByLabelText(englishCopy["compose.why"]),
     "They asked for it",
   );
   await pressSend(user);
@@ -420,9 +421,7 @@ describe("an address line pasted or typed as a list", () => {
 
     expect(send().disabled).toBe(true);
     expect(
-      screen.getByText(
-        "Correct or remove the text that is not an email address.",
-      ),
+      screen.getByText(englishCopy["compose.sendWaitsForAddress"]),
     ).toBeTruthy();
 
     await user.clear(to);

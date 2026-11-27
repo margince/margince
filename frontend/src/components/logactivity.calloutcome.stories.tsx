@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { expect, userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../i18n/en";
 import type { CallOutcome } from "../lib/activitybody";
 import { CallOutcomeField } from "./logactivity.calloutcome";
 
@@ -28,7 +29,7 @@ export const Picked: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const answer = await canvas.findByRole("radio", {
-      name: "Left a voicemail",
+      name: englishCopy["activity.callOutcome.voicemail"],
     });
     await userEvent.click(answer);
     await expect(answer).toBeChecked();

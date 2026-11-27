@@ -73,7 +73,9 @@ async function chooseStatus(
   user: ReturnType<typeof openAddCompany>,
   name: string,
 ) {
-  await user.click(screen.getByRole("combobox", { name: "Employment status" }));
+  await user.click(
+    screen.getByRole("combobox", { name: en["employment.statusLabel"] }),
+  );
   await user.click(screen.getByRole("option", { name }));
 }
 
@@ -137,7 +139,7 @@ it("adds a past job as former, with the end date it was given", async () => {
   // A former job cannot be the primary employer, so the box says no.
   expect(
     within(dialog).getByRole("checkbox", {
-      name: "This is their primary employer",
+      name: en["contact.rail.isPrimaryEmployer"],
     }),
   ).toHaveProperty("checked", false);
   await user.click(within(dialog).getByRole("button", { name: "Create" }));

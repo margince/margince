@@ -2,6 +2,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { ListTable } from "./listtable";
 
 afterEach(cleanup);
@@ -83,7 +84,9 @@ describe("ListTable alternate body paging ownership", () => {
 
     expect(screen.getByText("Empty board")).toBeTruthy();
     expect(screen.getByText(/No rows match these filters\./)).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: englishCopy["table.clearFilters"] }),
+    );
     expect(cleared).toEqual([""]);
   });
 });

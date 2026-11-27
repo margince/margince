@@ -9,6 +9,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../design-system/select-testing";
+import { en as englishCopy } from "../i18n/en";
 import {
   emptyPage,
   ListTableHarness,
@@ -341,7 +342,7 @@ describe("useListQuery — the page size is part of the server query", () => {
 
     await pickOption(
       user,
-      screen.getByRole("combobox", { name: "Rows per page" }),
+      screen.getByRole("combobox", { name: englishCopy["table.rowsPerPage"] }),
       "50 per page",
     );
 

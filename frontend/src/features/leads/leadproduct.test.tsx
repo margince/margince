@@ -6,6 +6,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { LeadScreen } from "./leads";
 import {
   editSection,
@@ -76,7 +77,9 @@ describe("a lead's product", () => {
       within(about).getByRole("button", { name: "Change Product" }),
     );
     const dialog = within(
-      await screen.findByRole("dialog", { name: "Change product" }),
+      await screen.findByRole("dialog", {
+        name: englishCopy["lead.product.change"],
+      }),
     );
     await user.type(dialog.getByRole("combobox"), "Onb");
     await user.click(await dialog.findByRole("option", { name: "Onboarding" }));
@@ -94,12 +97,16 @@ describe("a lead's product", () => {
       within(about).getByRole("button", { name: "Change Product" }),
     );
     await user.click(
-      await screen.findByRole("button", { name: "Clear the product" }),
+      await screen.findByRole("button", {
+        name: englishCopy["lead.product.clear"],
+      }),
     );
     await waitFor(() => expect(patches).toEqual([{ product_id: null }]));
     await waitFor(() =>
       expect(
-        screen.queryByRole("dialog", { name: "Change product" }),
+        screen.queryByRole("dialog", {
+          name: englishCopy["lead.product.change"],
+        }),
       ).toBeNull(),
     );
   });

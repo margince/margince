@@ -14,6 +14,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import { ContactsScreen } from "./contacts";
 
@@ -112,9 +113,7 @@ describe("Quick capture's company box", () => {
     await user.click(offers[1]);
 
     expect(box).toHaveValue("Acme GmbH");
-    expect(
-      screen.getByText("Adds the contact to this existing company."),
-    ).toBeTruthy();
+    expect(screen.getByText(englishCopy["create.companyPicked"])).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Create" }));
 
     await waitFor(() => expect(posted).toHaveLength(1));
@@ -133,11 +132,7 @@ describe("Quick capture's company box", () => {
       screen.getByRole("combobox", { name: "Company" }),
       "Nordwand AG",
     );
-    expect(
-      screen.getByText(
-        "Links the company with this name, or creates it if there is none.",
-      ),
-    ).toBeTruthy();
+    expect(screen.getByText(englishCopy["create.companyNew"])).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Create" }));
 
     await waitFor(() => expect(posted).toHaveLength(1));

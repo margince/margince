@@ -15,6 +15,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { ConfirmDetailsScreen } from "./confirm";
 
 // What the public confirm pages say under the statutory wording. That covers
@@ -152,13 +153,15 @@ describe("a contact typed in by hand names its source", () => {
     render(<ConfirmDetailsScreen token="tok-stated" />);
 
     expect(
-      await screen.findByText("You gave us your business card."),
+      await screen.findByText(
+        englishCopy["privacynotice.source.stated.businessCard"],
+      ),
     ).toBeInTheDocument();
     expect(
       screen.getByText("In our words: Trade fair in Hanoi"),
     ).toBeInTheDocument();
     expect(
-      screen.queryByText("We cannot say how your details reached us."),
+      screen.queryByText(englishCopy["privacynotice.source.unknown"]),
     ).toBeNull();
   });
 
@@ -168,7 +171,7 @@ describe("a contact typed in by hand names its source", () => {
     render(<ConfirmDetailsScreen token="tok-unstated" />);
 
     expect(
-      await screen.findByText("We cannot say how your details reached us."),
+      await screen.findByText(englishCopy["privacynotice.source.unknown"]),
     ).toBeInTheDocument();
   });
 });

@@ -16,6 +16,7 @@ import { meFixture, READS_RECORDS } from "./testing/mefixture";
 // The screens these cases open, loaded while the file is collected. A screen's
 // first import costs seconds; inside a case it races the case's own waiters.
 import "./features/contacts/contacts";
+import { en as englishCopy } from "./i18n/en";
 
 // The import writes contacts, so the seat holds the two grants it asks.
 const IMPORTER = meFixture({
@@ -83,7 +84,7 @@ describe("the vCard import address", () => {
       expect(
         await screen.findByRole(
           "heading",
-          { level: 1, name: "Import business cards" },
+          { level: 1, name: englishCopy["vcardImport.title"] },
           { timeout: SETTLE_MS },
         ),
       ).toBeInTheDocument();
@@ -123,7 +124,7 @@ describe("the vCard import address", () => {
       window.location.hash = "#/contacts/import";
       await screen.findByRole(
         "heading",
-        { level: 1, name: "Import business cards" },
+        { level: 1, name: englishCopy["vcardImport.title"] },
         { timeout: SETTLE_MS },
       );
 
@@ -137,7 +138,9 @@ describe("the vCard import address", () => {
       );
       expect(window.location.hash.split("?")[0]).toBe("#/contacts");
       expect(
-        screen.queryByRole("heading", { name: "Import business cards" }),
+        screen.queryByRole("heading", {
+          name: englishCopy["vcardImport.title"],
+        }),
       ).not.toBeInTheDocument();
     },
     SETTLE_MS * 3,

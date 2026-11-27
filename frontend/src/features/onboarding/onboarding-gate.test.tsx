@@ -16,6 +16,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { OnboardingGate, ReadTheatre } from "./onboarding-gate";
 
 // The label useConfiguredModel() hands the gate in the real screen.
@@ -133,10 +134,12 @@ describe("OnboardingGate", () => {
     );
 
     await userEvent.type(
-      screen.getByLabelText("Website address"),
+      screen.getByLabelText(englishCopy["ob.gate.field"]),
       "https://x.co/path",
     );
-    await userEvent.click(screen.getByRole("button", { name: "Read website" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: englishCopy["ob.gate.submit"] }),
+    );
 
     expect(onSubmit).toHaveBeenCalledWith("x.co");
   });
@@ -153,17 +156,19 @@ describe("OnboardingGate", () => {
     );
 
     await userEvent.type(
-      screen.getByLabelText("Website address"),
+      screen.getByLabelText(englishCopy["ob.gate.field"]),
       "notadomain",
     );
-    await userEvent.click(screen.getByRole("button", { name: "Read website" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: englishCopy["ob.gate.submit"] }),
+    );
 
     expect(screen.getByRole("alert")).toHaveTextContent(
-      "This is not a valid web address. Enter it as yourcompany.com.",
+      englishCopy["ob.gate.invalidUrl"],
     );
     expect(onSubmit).not.toHaveBeenCalled();
     // The field is marked invalid and points at the message.
-    expect(screen.getByLabelText("Website address")).toHaveAttribute(
+    expect(screen.getByLabelText(englishCopy["ob.gate.field"])).toHaveAttribute(
       "aria-invalid",
       "true",
     );
@@ -181,7 +186,7 @@ describe("OnboardingGate", () => {
     );
 
     await userEvent.type(
-      screen.getByLabelText("Website address"),
+      screen.getByLabelText(englishCopy["ob.gate.field"]),
       "gradion.com{Enter}",
     );
 
@@ -212,7 +217,10 @@ describe("OnboardingGate", () => {
       />,
     );
     expect(
-      screen.getByRole("heading", { level: 1, name: "Welcome to Margince" }),
+      screen.getByRole("heading", {
+        level: 1,
+        name: englishCopy["ob.gate.titleAnonymous"],
+      }),
     ).toBeInTheDocument();
   });
 
@@ -228,7 +236,7 @@ describe("OnboardingGate", () => {
     );
 
     await userEvent.click(
-      screen.getByRole("button", { name: "Enter details manually" }),
+      screen.getByRole("button", { name: englishCopy["ob.gate.altAction"] }),
     );
 
     expect(onManual).toHaveBeenCalledTimes(1);
@@ -252,9 +260,11 @@ describe("OnboardingGate", () => {
     expect(screen.queryByText(MODEL)).toBeNull();
     expect(screen.getByText(/cannot read your website/)).toBeInTheDocument();
     await user.click(
-      screen.getByRole("button", { name: "Enter details manually" }),
+      screen.getByRole("button", { name: englishCopy["ob.gate.altAction"] }),
     );
-    await user.click(screen.getByRole("button", { name: "Add an AI key" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["ob.gate.addModel"] }),
+    );
 
     expect(onManual).toHaveBeenCalledTimes(1);
     expect(onAddModel).toHaveBeenCalledTimes(1);
@@ -274,7 +284,9 @@ describe("OnboardingGate", () => {
     expect(screen.getByRole("alert")).toHaveTextContent(
       "I could not read that site. The host did not answer. Try another address, or enter the details yourself.",
     );
-    expect(screen.getByRole("button", { name: "Read website" })).toBeEnabled();
+    expect(
+      screen.getByRole("button", { name: englishCopy["ob.gate.submit"] }),
+    ).toBeEnabled();
   });
 
   // A deferral is the server shelving the work, not the reader getting it
@@ -321,11 +333,13 @@ describe("OnboardingGate", () => {
     );
 
     await userEvent.type(
-      screen.getByLabelText("Website address"),
+      screen.getByLabelText(englishCopy["ob.gate.field"]),
       "gradion.com{Enter}",
     );
 
-    expect(screen.getByRole("button", { name: "Read website" })).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: englishCopy["ob.gate.submit"] }),
+    ).toBeDisabled();
     expect(onSubmit).not.toHaveBeenCalled();
   });
 });
@@ -396,7 +410,7 @@ describe("the gate-to-read handoff", () => {
     // Only the tail changed: the question is gone, the read's regions are there.
     expect(screen.queryByLabelText(/Website address/)).toBeNull();
     expect(
-      screen.getByRole("list", { name: "Pages read so far" }),
+      screen.getByRole("list", { name: englishCopy["ob.scan.pageStripLabel"] }),
     ).toBeInTheDocument();
     expect(title).toHaveTextContent("Reading gradion.com");
   });
@@ -498,7 +512,9 @@ describe("ReadTheatre page list", () => {
       />,
     );
 
-    const strip = screen.getByRole("list", { name: "Pages read so far" });
+    const strip = screen.getByRole("list", {
+      name: englishCopy["ob.scan.pageStripLabel"],
+    });
     expect(strip.querySelectorAll("li")).toHaveLength(4);
 
     expect(screen.getByText("https://gradion.com: read")).toBeInTheDocument();
@@ -526,7 +542,9 @@ describe("ReadTheatre page list", () => {
     );
 
     expect(screen.getByText("1 skipped")).toBeInTheDocument();
-    expect(screen.getByText("still reading")).toBeInTheDocument();
+    expect(
+      screen.getByText(englishCopy["ob.scan.stillReading"]),
+    ).toBeInTheDocument();
     // The two figures the read is earning, each under its own label and each
     // open: a denominator anywhere here would be a total nobody can check.
     expect(screen.getByText("pages read")).toBeInTheDocument();
@@ -563,7 +581,7 @@ describe("ReadTheatre page list", () => {
       />,
     );
 
-    expect(screen.queryByText("still reading")).toBeNull();
+    expect(screen.queryByText(englishCopy["ob.scan.stillReading"])).toBeNull();
   });
 });
 
@@ -779,7 +797,7 @@ describe("ReadTheatre page ticker", () => {
     // ticker, because the screen-reader list beside the crawl picture names
     // every page by its full url on purpose, and that is a different job.
     const ticker = screen.getByRole("list", {
-      name: "Pages read, newest first",
+      name: englishCopy["ob.scan.logLabel"],
     });
     expect(within(ticker).getByText("/legal")).toBeInTheDocument();
     expect(
@@ -813,7 +831,9 @@ describe("ReadTheatre cost strip", () => {
       />,
     );
 
-    expect(screen.getByText("Transparency")).toBeInTheDocument();
+    expect(
+      screen.getByText(englishCopy["ob.scan.transparency"]),
+    ).toBeInTheDocument();
     // Fractions of a cent stay visible rather than rounding to US$0.00.
     //
     // "US$" and not "$": unconfigured English is en-GB here (A100), and en-GB
@@ -887,7 +907,9 @@ describe("ReadTheatre cost strip", () => {
       />,
     );
 
-    expect(screen.getByText("no billed model calls yet")).toBeInTheDocument();
+    expect(
+      screen.getByText(englishCopy["ob.scan.costPending"]),
+    ).toBeInTheDocument();
     expect(screen.queryByText(/\$/)).toBeNull();
   });
 
@@ -945,7 +967,9 @@ describe("ReadTheatre cost strip", () => {
     const head = document.querySelector(".ob-scan-cost-head");
     expect(head).not.toBeNull();
     expect(
-      within(head as HTMLElement).getByText("Transparency"),
+      within(head as HTMLElement).getByText(
+        englishCopy["ob.scan.transparency"],
+      ),
     ).toBeInTheDocument();
     expect(
       within(head as HTMLElement).getByText(/40 calls/),

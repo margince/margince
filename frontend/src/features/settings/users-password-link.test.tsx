@@ -12,6 +12,7 @@ import { type ReactNode, StrictMode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { stubClipboard } from "../../design-system/clipboard-testing";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { SEEDED_ASSIGNABLE_ROLES } from "../../testing/roles.testkit";
 import { UsersAdminCard } from "./users-admin";
 
@@ -308,7 +309,9 @@ describe("admin-issued set-password link", () => {
 
     // Copying by hand has to work from the keyboard too.
     await user.tab({ shift: true });
-    const link = screen.getByRole("textbox", { name: "Set-password link" });
+    const link = screen.getByRole("textbox", {
+      name: englishCopy["users.link.urlLabel"],
+    });
     expect(document.activeElement).toBe(link);
     expect(document.getSelection()?.toString()).toBe(LINK_URL);
   });

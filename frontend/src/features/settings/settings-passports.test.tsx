@@ -14,6 +14,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { stubClipboard } from "../../design-system/clipboard-testing";
 import { UTC_ZONE } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { busyUsage } from "../../testing/agentallowances.fixtures";
 import { pretendReaderZone } from "../../testing/readerzone.testkit";
 import { SettingsScreen, settingsAddress } from "./settings";
@@ -164,7 +165,11 @@ function mintBackend(
 // every assertion below name the button it means.
 async function openUnnamedMintDialog(user: ReturnType<typeof userEvent.setup>) {
   render("agents");
-  await user.click(await screen.findByRole("button", { name: "New passport" }));
+  await user.click(
+    await screen.findByRole("button", {
+      name: englishCopy["settings.mintOpen"],
+    }),
+  );
   return screen.findByRole("dialog");
 }
 
@@ -181,13 +186,13 @@ describe("PassportCard — minting", () => {
     vi.stubGlobal("fetch", mintBackend());
     const dialog = await openUnnamedMintDialog(user);
     const submit = within(dialog).getByRole("button", {
-      name: "Create passport",
+      name: englishCopy["settings.mint"],
     });
     expect(submit).toBeDisabled();
     expect(
       document.getElementById(submit.getAttribute("aria-describedby") ?? "")
         ?.textContent,
-    ).toBe("Give the agent a name");
+    ).toBe(englishCopy["settings.passportNameRequired"]);
 
     const name = within(dialog).getByLabelText(/^Agent name/);
     await user.type(name, "   ");
@@ -203,7 +208,7 @@ describe("PassportCard — minting", () => {
     vi.stubGlobal("fetch", mintBackend());
     const dialog = await openUnnamedMintDialog(user);
     const submit = within(dialog).getByRole("button", {
-      name: "Create passport",
+      name: englishCopy["settings.mint"],
     });
     const name = within(dialog).getByLabelText(/^Agent name/);
     fireEvent.change(name, { target: { value: `  ${"😀".repeat(120)}  ` } });
@@ -212,12 +217,12 @@ describe("PassportCard — minting", () => {
     fireEvent.change(name, { target: { value: `  ${"😀".repeat(121)}  ` } });
     expect(submit).toBeDisabled();
     expect(
-      within(dialog).getAllByText("Use at most 120 characters."),
+      within(dialog).getAllByText(englishCopy["settings.passportNameTooLong"]),
     ).toBeTruthy();
     expect(
       document.getElementById(submit.getAttribute("aria-describedby") ?? "")
         ?.textContent,
-    ).toBe("Use at most 120 characters.");
+    ).toBe(englishCopy["settings.passportNameTooLong"]);
   });
 
   it("puts the form in a form-width dialog, with the scopes as a named group", async () => {
@@ -255,7 +260,7 @@ describe("PassportCard — minting", () => {
     }
 
     const submit = within(dialog).getByRole("button", {
-      name: "Create passport",
+      name: englishCopy["settings.mint"],
     });
     expect(submit).toBeDisabled();
     // Refused, and the reason is attached to the control rather than left in a
@@ -272,7 +277,9 @@ describe("PassportCard — minting", () => {
     vi.stubGlobal("fetch", mintBackend());
     const dialog = await openMintDialog(user);
     await user.click(
-      within(dialog).getByRole("button", { name: "Create passport" }),
+      within(dialog).getByRole("button", {
+        name: englishCopy["settings.mint"],
+      }),
     );
 
     const token = await within(dialog).findByText("mgp_live_0f3a91c4");
@@ -291,7 +298,9 @@ describe("PassportCard — minting", () => {
     vi.stubGlobal("fetch", mintBackend({ refuse: true }));
     const dialog = await openMintDialog(user);
     await user.click(
-      within(dialog).getByRole("button", { name: "Create passport" }),
+      within(dialog).getByRole("button", {
+        name: englishCopy["settings.mint"],
+      }),
     );
 
     const alert = await within(dialog).findByRole("alert");
@@ -337,7 +346,9 @@ describe("PassportCard — minting", () => {
     // through `openMintDialog`, because it reads the cache the mint is supposed to
     // drop.
     await user.click(
-      await screen.findByRole("button", { name: "New passport" }),
+      await screen.findByRole("button", {
+        name: englishCopy["settings.mintOpen"],
+      }),
     );
     const dialog = await screen.findByRole("dialog");
     await user.type(within(dialog).getByLabelText(/^Agent name/), "Scout");
@@ -351,7 +362,9 @@ describe("PassportCard — minting", () => {
     ).length;
 
     await user.click(
-      within(dialog).getByRole("button", { name: "Create passport" }),
+      within(dialog).getByRole("button", {
+        name: englishCopy["settings.mint"],
+      }),
     );
 
     // The refusal is still shown where every other mint failure is shown.
@@ -382,7 +395,9 @@ describe("PassportCard — minting", () => {
     vi.stubGlobal("fetch", mintBackend({ hang: true }));
     const dialog = await openMintDialog(user);
     await user.click(
-      within(dialog).getByRole("button", { name: "Create passport" }),
+      within(dialog).getByRole("button", {
+        name: englishCopy["settings.mint"],
+      }),
     );
 
     const cancel = await within(dialog).findByRole("button", {
@@ -401,7 +416,9 @@ describe("PassportCard — minting", () => {
     vi.stubGlobal("fetch", mintBackend());
     const dialog = await openMintDialog(user);
     await user.click(
-      within(dialog).getByRole("button", { name: "Create passport" }),
+      within(dialog).getByRole("button", {
+        name: englishCopy["settings.mint"],
+      }),
     );
     await within(dialog).findByText("mgp_live_0f3a91c4");
 
@@ -424,14 +441,20 @@ describe("PassportCard — minting", () => {
     vi.stubGlobal("fetch", mintBackend());
     const dialog = await openMintDialog(user);
     await user.click(
-      within(dialog).getByRole("button", { name: "Create passport" }),
+      within(dialog).getByRole("button", {
+        name: englishCopy["settings.mint"],
+      }),
     );
     await within(dialog).findByText("mgp_live_0f3a91c4");
     await user.click(within(dialog).getByRole("button", { name: "Done" }));
 
-    await screen.findByRole("button", { name: "New passport" });
+    await screen.findByRole("button", {
+      name: englishCopy["settings.mintOpen"],
+    });
     expect(screen.queryByRole("dialog")).toBeNull();
-    await user.click(screen.getByRole("button", { name: "New passport" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["settings.mintOpen"] }),
+    );
     const reopened = await screen.findByRole("dialog");
     expect(reopened).toBeTruthy();
     expect(within(reopened).queryByText("mgp_live_0f3a91c4")).toBeNull();
@@ -474,10 +497,16 @@ describe("PassportCard — using a passport", () => {
     expect(
       await screen.findByText(/a passport is for scripts and your own code/i),
     ).toBeTruthy();
-    expect(screen.getByText("In a script or another AI tool")).toBeTruthy();
-    expect(await screen.findByText("In your own code")).toBeTruthy();
     expect(
-      screen.getByRole("heading", { name: "Your passports" }),
+      screen.getByText(englishCopy["settings.passportUseAi"]),
+    ).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["settings.passportUseCode"]),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("heading", {
+        name: englishCopy["settings.passportsYours"],
+      }),
     ).toBeTruthy();
     expect(screen.getByText(/listed under Your connections/)).toBeTruthy();
   });
@@ -486,9 +515,11 @@ describe("PassportCard — using a passport", () => {
     vi.stubGlobal("fetch", mintBackend({ listHangs: true }));
     render("agents");
     expect(
-      await screen.findByText("In a script or another AI tool"),
+      await screen.findByText(englishCopy["settings.passportUseAi"]),
     ).toBeTruthy();
-    expect(screen.queryByText("In your own code")).toBeNull();
+    expect(
+      screen.queryByText(englishCopy["settings.passportUseCode"]),
+    ).toBeNull();
   });
 
   it("downloads the skill as margince-skill.zip with no passport minted", async () => {
@@ -498,7 +529,9 @@ describe("PassportCard — using a passport", () => {
     const saved = captureDownloads();
     render("agents");
     await user.click(
-      await screen.findByRole("button", { name: "Download skill" }),
+      await screen.findByRole("button", {
+        name: englishCopy["settings.skillDownload"],
+      }),
     );
     await vi.waitFor(() => expect(saved).toEqual(["margince-skill.zip"]));
     expect(bundleRequests(backend)).toBe(1);
@@ -510,11 +543,13 @@ describe("PassportCard — using a passport", () => {
     const saved = captureDownloads();
     render("agents");
     await user.click(
-      await screen.findByRole("button", { name: "Download skill" }),
+      await screen.findByRole("button", {
+        name: englishCopy["settings.skillDownload"],
+      }),
     );
     const cause = await screen.findByText(/MARGINCE_PUBLIC_BASE_URL/);
     expect(cause.closest('[role="alert"]')).toHaveTextContent(
-      "Skill not downloaded",
+      englishCopy["settings.skillDownloadFailed"],
     );
     expect(saved).toEqual([]);
   });
@@ -533,7 +568,9 @@ describe("PassportCard — using a passport", () => {
     expect(snippet).toHaveTextContent("process.env.MARGINCE_PASSPORT");
     expect(snippet).toHaveTextContent(`${API_BASE}/companies?limit=5`);
 
-    await user.click(screen.getByRole("button", { name: "Copy example" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["settings.snippetCopy"] }),
+    );
     await vi.waitFor(() => expect(clipboard.written).toHaveLength(1));
     expect(clipboard.written[0]).toBe(snippet.textContent);
     expect(clipboard.written[0]).toContain("fetch(");
@@ -545,7 +582,9 @@ describe("PassportCard — using a passport", () => {
     vi.stubGlobal("fetch", mintBackend());
     const dialog = await openMintDialog(user);
     await user.click(
-      within(dialog).getByRole("button", { name: "Create passport" }),
+      within(dialog).getByRole("button", {
+        name: englishCopy["settings.mint"],
+      }),
     );
     await within(dialog).findByText("mgp_live_0f3a91c4");
 
@@ -558,7 +597,9 @@ describe("PassportCard — using a passport", () => {
     expect(snippet.textContent).not.toContain("mgp_");
 
     await user.click(
-      within(dialog).getByRole("button", { name: "Copy passport" }),
+      within(dialog).getByRole("button", {
+        name: englishCopy["settings.tokenCopy"],
+      }),
     );
     await vi.waitFor(() =>
       expect(clipboard.written).toEqual(["mgp_live_0f3a91c4"]),
@@ -572,11 +613,15 @@ describe("PassportCard — using a passport", () => {
     const saved = captureDownloads();
     const dialog = await openMintDialog(user);
     await user.click(
-      within(dialog).getByRole("button", { name: "Create passport" }),
+      within(dialog).getByRole("button", {
+        name: englishCopy["settings.mint"],
+      }),
     );
     await within(dialog).findByText("mgp_live_0f3a91c4");
     await user.click(
-      within(dialog).getByRole("button", { name: "Download skill" }),
+      within(dialog).getByRole("button", {
+        name: englishCopy["settings.skillDownload"],
+      }),
     );
     await vi.waitFor(() => expect(saved).toEqual(["margince-skill.zip"]));
     expect(within(dialog).getByText("mgp_live_0f3a91c4")).toBeTruthy();
@@ -640,7 +685,9 @@ describe("PassportCard: the list", () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", listBackend([{ ...UNUSED, label: "  " }]));
     render("agents");
-    const row = (await screen.findByText("Unnamed passport")).closest("tr");
+    const row = (
+      await screen.findByText(englishCopy["settings.passportUnnamed"])
+    ).closest("tr");
     if (!row) throw new Error("the passport row is not rendered");
 
     await user.click(
@@ -652,7 +699,9 @@ describe("PassportCard: the list", () => {
       await screen.findByRole("button", { name: "Revoke Unnamed passport" }),
     );
     const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getByText("Unnamed passport")).toBeTruthy();
+    expect(
+      within(dialog).getByText(englishCopy["settings.passportUnnamed"]),
+    ).toBeTruthy();
   });
 
   it("shows when each passport was last used, and says Never for one no agent has used", async () => {
@@ -749,7 +798,7 @@ describe("PassportCard: this window", () => {
     if (!card?.contains(toggle)) {
       throw new Error("the toggle is not inside the passports card");
     }
-    expect(within(card).queryByText("Nothing here yet.")).toBeNull();
+    expect(within(card).queryByText(englishCopy["common.empty"])).toBeNull();
   });
 
   it("keeps revoked passports out of sight until asked for", async () => {
@@ -766,7 +815,11 @@ describe("PassportCard: this window", () => {
     );
     expect(screen.getByText("Night runner")).toBeTruthy();
 
-    await user.click(screen.getByRole("button", { name: "Hide revoked" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: englishCopy["settings.passportsHideRevoked"],
+      }),
+    );
     expect(screen.queryByText("Night runner")).toBeNull();
   });
 });

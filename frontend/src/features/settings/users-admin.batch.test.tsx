@@ -5,6 +5,7 @@
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { MEMBER_BATCH, UsersAdminCard } from "./users-admin";
 import { backend, jsonResponse, ROSTER, render } from "./users-admin.testkit";
 
@@ -68,7 +69,7 @@ describe("a large members list", () => {
 
     const user = userEvent.setup();
     await user.type(
-      screen.getByRole("searchbox", { name: "Search members" }),
+      screen.getByRole("searchbox", { name: englishCopy["users.search"] }),
       "Roster Member 321",
     );
     await waitFor(() => expect(drawnNames()).toBe(1));
@@ -93,7 +94,9 @@ describe("a search changed and cleared", () => {
     await user.click(screen.getByRole("button", { name: "Load more" }));
     await waitFor(() => expect(drawnNames()).toBe(2 * MEMBER_BATCH));
 
-    const search = screen.getByRole("searchbox", { name: "Search members" });
+    const search = screen.getByRole("searchbox", {
+      name: englishCopy["users.search"],
+    });
     await user.type(search, "Roster Member 3");
     await waitFor(() => expect(drawnNames()).toBeLessThan(MEMBER_BATCH + 1));
     await user.clear(search);

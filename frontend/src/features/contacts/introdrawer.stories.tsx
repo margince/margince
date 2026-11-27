@@ -11,6 +11,7 @@ import {
 } from "../../testing/story-utils";
 import { IntroDrawer } from "./introdrawer";
 import "./contactnetwork.css";
+import { en as englishCopy } from "../../i18n/en";
 
 // The requester's side of an introduction: pick the route, say why, write the
 // note.
@@ -58,7 +59,7 @@ const meta: Meta<typeof IntroDrawer> = {
   component: IntroDrawer,
   play: async () => {
     const drawer = within(await screen.findByRole("dialog"));
-    await drawer.findByText("Reason for request");
+    await drawer.findByText(englishCopy["contact.intro.reasonLabel"]);
   },
 };
 export default meta;

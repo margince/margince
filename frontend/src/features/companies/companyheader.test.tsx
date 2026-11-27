@@ -224,7 +224,7 @@ describe("who owns this record", () => {
     // A refused read excludes nobody. Reading it as "no longer in the user
     // list" turns a 403 into a fact about who owns this account, which is the
     // one thing this control is here to get right.
-    expect(await screen.findByText("Name did not load")).toBeTruthy();
+    expect(await screen.findByText(en["ref.nameLoadFailed"])).toBeTruthy();
     expect(
       screen.queryByText("Current owner (no longer in the user list)"),
     ).toBeNull();
@@ -383,7 +383,7 @@ describe("an archived account's verbs", () => {
     );
 
     await user.click(
-      await screen.findByRole("button", { name: "More actions" }),
+      await screen.findByRole("button", { name: en["record.moreActions"] }),
     );
     // Each WAITED for. Only the first was, so the three below were read in
     // the tick it arrived in — and a menu whose items mount a beat apart threw
@@ -400,7 +400,7 @@ describe("an archived account's verbs", () => {
       // sentence the control does not point at reaches no reader who needed it.
       const describedBy = control.getAttribute("aria-describedby");
       expect(document.getElementById(describedBy ?? "")?.textContent).toBe(
-        "This company is archived and takes no changes.",
+        en["record.archivedReadOnly"],
       );
     }
     // The reads next to them are untouched: what happened to a record is
@@ -450,7 +450,7 @@ describe("merging an account into another", () => {
     renderInApp(<MenuHost company={COMPANY} />, client);
 
     await user.click(
-      await screen.findByRole("button", { name: "More actions" }),
+      await screen.findByRole("button", { name: en["record.moreActions"] }),
     );
     await user.click(await screen.findByTestId("merge-record"));
     await user.type(screen.getByRole("searchbox"), "Brandt");
@@ -493,7 +493,7 @@ describe("merging an account into another", () => {
     );
 
     await user.click(
-      await screen.findByRole("button", { name: "More actions" }),
+      await screen.findByRole("button", { name: en["record.moreActions"] }),
     );
     await user.click(await screen.findByTestId("merge-record"));
     await user.type(screen.getByRole("searchbox"), "Brandt");
@@ -614,7 +614,7 @@ describe("setting up a partner program", () => {
     const user = userEvent.setup();
     renderInApp(<MenuHost company={COMPANY} />);
     await user.click(
-      await screen.findByRole("button", { name: "More actions" }),
+      await screen.findByRole("button", { name: en["record.moreActions"] }),
     );
     return screen.findByRole("button", { name: en["company.partnerSetUp"] });
   }
@@ -644,7 +644,7 @@ describe("the shape of the header's verbs", () => {
     renderInApp(<MenuHost company={COMPANY} />);
 
     await user.click(
-      await screen.findByRole("button", { name: "More actions" }),
+      await screen.findByRole("button", { name: en["record.moreActions"] }),
     );
     // Waited for by its own handle first: the panel mounts its children on the
     // open, so reading the whole list in the tick the click returned in would
@@ -677,7 +677,7 @@ describe("the shape of the header's verbs", () => {
     renderInApp(<MenuHost company={COMPANY} />);
 
     await user.click(
-      await screen.findByRole("button", { name: "More actions" }),
+      await screen.findByRole("button", { name: en["record.moreActions"] }),
     );
     await screen.findByTestId("archive-record");
     const panel = document.querySelector(".overflow-menu-items");

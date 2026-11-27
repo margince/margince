@@ -5,6 +5,7 @@
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { renderWithQueryClient } from "../../testing/queryrender";
 import { installFetchStub, jsonResponse } from "../../testing/story-utils";
 import type { DealCommercial } from "./deal360/deallinestotal";
@@ -68,10 +69,12 @@ describe("an offer made from the deal", () => {
   it("names its source and offers no line editing while the deal stands still", async () => {
     show(OFFER, 1);
     expect(
-      await screen.findByText("Made from the deal’s products"),
+      await screen.findByText(englishCopy["offer.fromDeal.title"]),
     ).toBeTruthy();
     expect(
-      screen.queryByRole("button", { name: "Refresh from deal" }),
+      screen.queryByRole("button", {
+        name: englishCopy["offer.fromDeal.refresh"],
+      }),
     ).toBeNull();
   });
 
@@ -79,11 +82,13 @@ describe("an offer made from the deal", () => {
     const posted: unknown[] = [];
     show(OFFER, 3, posted);
     expect(
-      await screen.findByText("The deal changed since this offer was created"),
+      await screen.findByText(englishCopy["offer.fromDeal.stale"]),
     ).toBeTruthy();
-    await userEvent
-      .setup()
-      .click(screen.getByRole("button", { name: "Refresh from deal" }));
+    await userEvent.setup().click(
+      screen.getByRole("button", {
+        name: englishCopy["offer.fromDeal.refresh"],
+      }),
+    );
     await waitFor(() => expect(posted).toEqual([{ expected_revision: 3 }]));
   });
 
@@ -93,7 +98,9 @@ describe("an offer made from the deal", () => {
       await screen.findByText(/Regenerate a revision to offer the new terms/),
     ).toBeTruthy();
     expect(
-      screen.queryByRole("button", { name: "Refresh from deal" }),
+      screen.queryByRole("button", {
+        name: englishCopy["offer.fromDeal.refresh"],
+      }),
     ).toBeNull();
   });
 

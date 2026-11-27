@@ -13,6 +13,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { installFetchStub, jsonResponse } from "../../testing/story-utils";
 import { BotConnectForm } from "./telegram-connect-form";
 
@@ -153,7 +154,9 @@ describe("BotConnectForm", () => {
     });
     const user = userEvent.setup();
     const { rerender } = render(<BotConnectForm open onClose={() => {}} />);
-    expect(screen.queryByLabelText("Events secret")).toBeNull();
+    expect(
+      screen.queryByLabelText(englishCopy["connectors.bot.eventsSecret"]),
+    ).toBeNull();
     rerender(<BotConnectForm provider="dispact" open onClose={() => {}} />);
     expect(
       screen.getByText(/checks every channel each minute/),
@@ -163,7 +166,10 @@ describe("BotConnectForm", () => {
       screen.getByLabelText("Chat address *"),
       "https://chat.example.com",
     );
-    await user.type(screen.getByLabelText("Events secret"), "whsec_c2VjcmV0");
+    await user.type(
+      screen.getByLabelText(englishCopy["connectors.bot.eventsSecret"]),
+      "whsec_c2VjcmV0",
+    );
     await user.click(screen.getByRole("button", { name: "Connect" }));
     await waitFor(() => expect(calls).toHaveLength(1));
     expect(calls[0]).toEqual({
@@ -200,7 +206,11 @@ describe("BotConnectForm", () => {
     );
     expect(screen.getByText(/keep the events secret/)).toBeInTheDocument();
     await user.type(screen.getByLabelText("Bot token *"), "gwapp_rotated");
-    await user.click(screen.getByRole("button", { name: "Replace token" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: englishCopy["connectors.telegramReplaceCta"],
+      }),
+    );
     await waitFor(() => expect(calls).toHaveLength(1));
     expect(calls[0]).toEqual({ botToken: "gwapp_rotated" });
   });
@@ -242,7 +252,9 @@ describe("BotConnectForm", () => {
       "555000111:BBH-rotated-token",
     );
     await userEvent.click(
-      screen.getByRole("button", { name: "Replace token" }),
+      screen.getByRole("button", {
+        name: englishCopy["connectors.telegramReplaceCta"],
+      }),
     );
     await waitFor(() => expect(calls.length).toBe(1));
     // Replacing the token is a PATCH against the existing connection id —

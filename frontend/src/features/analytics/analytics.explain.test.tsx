@@ -471,7 +471,11 @@ describe("what the explanation owns up to", () => {
     const headers = within(drawer)
       .getAllByRole("columnheader")
       .map((header) => header.textContent);
-    expect(headers).toEqual(["Deal", "Company", "Partner company"]);
+    expect(headers).toEqual([
+      "Deal",
+      "Company",
+      en["analytics.field.partner_company_id"],
+    ]);
   });
 
   // The row's `currency` is the deal's own, so a converted column says it is not.

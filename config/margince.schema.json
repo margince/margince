@@ -1781,6 +1781,14 @@
           "maximum": 129600,
           "default": 43200
         },
+        "payment_long_overdue_days": {
+          "description": "Days past the due date before Home groups invoices at the end. Company totals stay the same.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "default": 365
+        },
         "retention_sweep_interval_seconds": {
           "description": "Seconds between the retention sweeps.",
           "type": [

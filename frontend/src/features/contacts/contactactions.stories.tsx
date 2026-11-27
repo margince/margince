@@ -147,7 +147,9 @@ export const MenuOpen: Story = {
   play: async () => {
     // The panel portals to the body, so it is reached through `screen` and
     // never through a canvas-scoped query.
-    await userEvent.click(screen.getByRole("button", { name: "More actions" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: en["record.moreActions"] }),
+    );
     await screen.findByTestId("archive-record");
   },
 };
@@ -173,7 +175,9 @@ export const RefusedWrites: Story = {
     );
   },
   play: async () => {
-    await userEvent.click(screen.getByRole("button", { name: "More actions" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: en["record.moreActions"] }),
+    );
     await screen.findByTestId("archive-record");
   },
 };

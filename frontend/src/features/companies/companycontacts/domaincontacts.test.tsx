@@ -17,6 +17,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../../api/schema";
 import { ToastProvider, ToastRegion } from "../../../design-system/toast";
 import { LocaleProvider } from "../../../i18n";
+import { en as englishCopy } from "../../../i18n/en";
 import { resetToSignedOut } from "../../../lib/session";
 import { type GrantSpec, meFixture } from "../../../testing/mefixture";
 import { CompaniesScreen } from "../companies";
@@ -187,7 +188,9 @@ describe("Contacts on a new company’s domain", () => {
       within(dialog).getByText("anja.petersen@nordlicht-logistik.de"),
     ).toBeVisible();
     expect(
-      within(dialog).getByRole("button", { name: "Link contacts" }),
+      within(dialog).getByRole("button", {
+        name: englishCopy["co.domainContacts.linkNone"],
+      }),
     ).toBeDisabled();
 
     await user.click(within(dialog).getByRole("checkbox", { name: /Anja/ }));
@@ -277,7 +280,11 @@ describe("The Contacts tab’s domain callout", () => {
     expect(
       await screen.findByText("3 contacts on this domain are not linked"),
     ).toBeVisible();
-    await user.click(screen.getByRole("button", { name: "Review contacts" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: englishCopy["co.domainContacts.review"],
+      }),
+    );
 
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getAllByRole("checkbox")).toHaveLength(3);
@@ -290,13 +297,13 @@ describe("The Contacts tab’s domain callout", () => {
     mount(<CompanyContactsList companyId={COMPANY_ID} />);
     const user = userEvent.setup();
     const review = await screen.findByRole("button", {
-      name: "Review contacts",
+      name: englishCopy["co.domainContacts.review"],
     });
     await user.click(review);
 
     const dialog = await screen.findByRole("dialog");
     const group = within(dialog).getByRole("group", {
-      name: "Who works here?",
+      name: englishCopy["co.domainContacts.legend"],
     });
     const anja = within(group).getByRole("checkbox", { name: /Anja/ });
     for (
@@ -328,7 +335,11 @@ describe("The Contacts tab’s domain callout", () => {
         "More than 50 contacts on this domain are not linked",
       ),
     ).toBeVisible();
-    await user.click(screen.getByRole("button", { name: "Review contacts" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: englishCopy["co.domainContacts.review"],
+      }),
+    );
     const dialog = await screen.findByRole("dialog");
     expect(
       within(dialog).getByText("Only the first 50 contacts are listed."),
@@ -343,7 +354,9 @@ describe("The Contacts tab’s domain callout", () => {
 
     await waitFor(() => expect(reads).toHaveLength(1));
     expect(
-      screen.queryByRole("button", { name: "Review contacts" }),
+      screen.queryByRole("button", {
+        name: englishCopy["co.domainContacts.review"],
+      }),
     ).toBeNull();
     expect(screen.queryByText(/on this domain/)).toBeNull();
   });
@@ -354,7 +367,9 @@ describe("The Contacts tab’s domain callout", () => {
 
     await waitFor(() => expect(reads).toHaveLength(1));
     expect(
-      screen.queryByRole("button", { name: "Review contacts" }),
+      screen.queryByRole("button", {
+        name: englishCopy["co.domainContacts.review"],
+      }),
     ).toBeNull();
     expect(screen.queryByRole("alert")).toBeNull();
   });
@@ -385,7 +400,9 @@ describe("A refused link", () => {
     mount(<CompanyContactsList companyId={COMPANY_ID} />);
     const user = userEvent.setup();
     await user.click(
-      await screen.findByRole("button", { name: "Review contacts" }),
+      await screen.findByRole("button", {
+        name: englishCopy["co.domainContacts.review"],
+      }),
     );
     const dialog = await screen.findByRole("dialog");
     await user.click(within(dialog).getByRole("checkbox", { name: /Anja/ }));
@@ -395,9 +412,7 @@ describe("A refused link", () => {
     );
 
     expect(
-      await within(dialog).findByText(
-        "The list changed while it was open. Check the ticks and link again.",
-      ),
+      await within(dialog).findByText(englishCopy["co.domainContacts.changed"]),
     ).toBeVisible();
     await waitFor(() =>
       expect(within(dialog).queryByText("Anja Petersen")).toBeNull(),
@@ -430,7 +445,9 @@ describe("A refused link", () => {
     mount(<CompanyContactsList companyId={COMPANY_ID} />);
     const user = userEvent.setup();
     await user.click(
-      await screen.findByRole("button", { name: "Review contacts" }),
+      await screen.findByRole("button", {
+        name: englishCopy["co.domainContacts.review"],
+      }),
     );
     const dialog = await screen.findByRole("dialog");
     await user.click(within(dialog).getByRole("checkbox", { name: /Anja/ }));
@@ -458,7 +475,9 @@ describe("A refused link", () => {
     mount(<CompanyContactsList companyId={COMPANY_ID} />);
     const user = userEvent.setup();
     await user.click(
-      await screen.findByRole("button", { name: "Review contacts" }),
+      await screen.findByRole("button", {
+        name: englishCopy["co.domainContacts.review"],
+      }),
     );
     const dialog = await screen.findByRole("dialog");
     await user.click(within(dialog).getByRole("checkbox", { name: /Mira/ }));

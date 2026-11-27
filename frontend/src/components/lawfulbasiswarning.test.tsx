@@ -6,6 +6,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider, translate } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { LawfulBasisCallout, useLawfulBasisGate } from "./lawfulbasiswarning";
 
 type Preview = components["schemas"]["SendAuthorizationPreview"];
@@ -144,15 +145,15 @@ describe("the no-lawful-basis warning", () => {
     await userEvent.click(screen.getByRole("button", { name: "Send" }));
 
     expect(
-      screen.getAllByText("No valid basis recorded").length,
+      screen.getAllByText(englishCopy["lawfulBasis.title"]).length,
     ).toBeGreaterThan(0);
     expect(
-      screen.getAllByText(
-        "No valid basis under Vietnamese law is recorded for this contact: neither their consent nor a case where the law allows processing without it. Sending is at your own risk.",
-      ).length,
+      screen.getAllByText(englishCopy["lawfulBasis.body"]).length,
     ).toBeGreaterThan(0);
     expect(
-      screen.getByRole("button", { name: "Ask for consent" }),
+      screen.getByRole("button", {
+        name: englishCopy["lawfulBasis.askConsent"],
+      }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Send anyway" }),
@@ -263,7 +264,9 @@ describe("the no-lawful-basis warning", () => {
       screen.getByRole("button", { name: "Send anyway" }),
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: "Ask for consent" }),
+      screen.queryByRole("button", {
+        name: englishCopy["lawfulBasis.askConsent"],
+      }),
     ).not.toBeInTheDocument();
   });
 

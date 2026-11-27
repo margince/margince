@@ -9,6 +9,7 @@ import {
   reportingCatalogClient,
   reportingLeadsEvaluation,
 } from "../features/analytics/reporting.story-fixtures";
+import { en as englishCopy } from "../i18n/en";
 import { navigate } from "../lib/router";
 import { StoryProviders } from "../testing/story-utils";
 import { PaletteDataAnswer } from "./palettedata";
@@ -50,7 +51,9 @@ it("shows the reporting record count when its money value is withheld", () => {
     </StoryProviders>,
   );
   expect(screen.getByText("7")).toBeInTheDocument();
-  fireEvent.click(screen.getByRole("button", { name: "Open in Analytics" }));
+  fireEvent.click(
+    screen.getByRole("button", { name: englishCopy["palette.openAnalytics"] }),
+  );
   expect(leave).toHaveBeenCalledOnce();
   expect(navigate).toHaveBeenCalledWith(
     expect.objectContaining({ screen: "analytics" }),

@@ -8,7 +8,7 @@
 
 import ts from "typescript";
 import { resolveRelative } from "../../scripts/lib/source-tree";
-import { LANGUAGE_DEPENDENT_QUERY_PREFIXES } from "../../src/features/sign-in/aicaches";
+import { LANGUAGE_DEPENDENT_QUERY_PREFIXES } from "../../src/lib/aicaches";
 import { SCREEN_ROOTS } from "../../src/testing/screenfiles";
 import type { CensusFile, CensusRule, CensusTree } from "../tree";
 
@@ -262,7 +262,7 @@ export const rule: CensusRule = {
   },
   advice:
     "Changing the installation's base language invalidates the caches in " +
-    "LANGUAGE_DEPENDENT_QUERY_PREFIXES (src/features/sign-in/aicaches.ts). " +
+    "LANGUAGE_DEPENDENT_QUERY_PREFIXES (src/lib/aicaches.ts). " +
     "Add a model-written surface to that list, or add it to NOT_PROSE with " +
     "what it returns; drop a prefix no screen queries any more.",
 };

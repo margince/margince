@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../../api/schema";
+import { en as englishCopy } from "../../i18n/en";
 import { recordNamesRoutes } from "../../testing/recordnames.testkit";
 import {
   installFetchStub,
@@ -136,7 +137,7 @@ export const RelationshipTypesDialog: Story = {
       }),
     );
     const dialog = await screen.findByRole("dialog", {
-      name: "Relationship type",
+      name: englishCopy["company.relationshipTypes"],
     });
     await waitFor(() => expect(dialog).toBeVisible());
   },

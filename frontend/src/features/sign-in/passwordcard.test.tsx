@@ -11,6 +11,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { ChangePasswordCard } from "./passwordcard";
 
 // What this card must not do is let someone press submit into a request the
@@ -128,7 +129,7 @@ describe("ChangePasswordCard", () => {
     const user = userEvent.setup();
     const dialog = await openForm(user);
     const warning = within(dialog).getByText(
-      "Everything else signed in as you stops",
+      englishCopy["account.passwordWarnTitle"],
     );
     const firstField = within(dialog).getByLabelText(/current password/i);
     expect(
@@ -320,7 +321,7 @@ describe("ChangePasswordCard", () => {
     // Which of the two fields was wrong is the whole value of the message;
     // a generic "couldn't be changed" would send someone re-typing both.
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "The current password did not match. Check it, then enter it again.",
+      englishCopy["password.currentWrong"],
     );
   });
 

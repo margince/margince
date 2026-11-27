@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -109,7 +110,9 @@ export const NewEntityRefused: Story = {
   play: async ({ canvasElement }) => {
     const page = within(canvasElement.ownerDocument.body);
     await userEvent.click(
-      await page.findByRole("button", { name: "New legal entity" }),
+      await page.findByRole("button", {
+        name: englishCopy["legalEntities.addOpen"],
+      }),
     );
     const dialog = within(await page.findByRole("dialog"));
     await userEvent.type(
@@ -117,7 +120,9 @@ export const NewEntityRefused: Story = {
       "Acme Wien GmbH",
     );
     await userEvent.click(
-      dialog.getByRole("button", { name: "Add legal entity" }),
+      dialog.getByRole("button", {
+        name: englishCopy["legalEntities.addConfirm"],
+      }),
     );
   },
 };

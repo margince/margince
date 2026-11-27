@@ -6,6 +6,7 @@ import "@testing-library/jest-dom/vitest";
 
 import { cleanup, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import { jsonResponse, render } from "../../testing/settings.testkit";
 import { RecoveryHealthCard } from "./recoveryhealth";
@@ -110,10 +111,14 @@ it("says outright that no drill was ever recorded", async () => {
   expect(
     screen.getByText(/When the restore from backup/).parentElement,
   ).toContainElement(never);
-  expect(screen.queryByText("Last restore drill")).not.toBeInTheDocument();
+  expect(
+    screen.queryByText(englishCopy["recoveryHealth.lastDrill"]),
+  ).not.toBeInTheDocument();
   // Backups are not something Margince can see, and the card says so rather
   // than inventing a time.
-  expect(screen.getByText("Not observed by Margince")).toBeInTheDocument();
+  expect(
+    screen.getByText(englishCopy["recoveryHealth.backupNotObserved"]),
+  ).toBeInTheDocument();
 });
 
 it("reads a report with no last_drill field as an error, not as never drilled", async () => {

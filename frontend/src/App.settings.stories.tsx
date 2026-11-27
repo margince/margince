@@ -9,6 +9,7 @@ import { SettingsScreen } from "./App.settings";
 import { runningDataTask } from "./features/settings/datataskshealth.fixtures";
 import { settingsAddress } from "./features/settings/settings";
 import { healthReport } from "./features/settings/systemhealth.fixtures";
+import { en as englishCopy } from "./i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -74,7 +75,7 @@ export const ReviewedWork: Story = {
   play: async ({ canvasElement }) => {
     await expect(
       await within(canvasElement).findByRole("button", {
-        name: "Preview items",
+        name: englishCopy["homeRepair.preview"],
       }),
     ).toBeInTheDocument();
   },

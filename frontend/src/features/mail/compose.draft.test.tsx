@@ -8,6 +8,7 @@ import {
   messageText,
   writeMessage,
 } from "../../design-system/richtext-testing";
+import { en as englishCopy } from "../../i18n/en";
 import {
   pressDraft,
   purposeField,
@@ -149,7 +150,9 @@ describe("ComposeWindow draft binding", () => {
 
     await pressDraft(user);
     await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
-    const ask = screen.getByRole("textbox", { name: "Purpose of the reply" });
+    const ask = screen.getByRole("textbox", {
+      name: englishCopy["compose.replyIntent"],
+    });
     expect(screen.queryByRole("button", { name: "Redraft" })).toBeNull();
     await user.clear(ask);
     await user.type(ask, "Offer Tuesday instead");
@@ -449,7 +452,9 @@ describe("ComposeWindow draft binding", () => {
 
     await pressDraft(user);
     await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
-    await user.click(screen.getByRole("button", { name: "Discard draft" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["compose.discardDraft"] }),
+    );
 
     await waitFor(() => expect(messageText("Body")).not.toBe("Draft A body."));
     const rejections = sent.filter(
@@ -490,7 +495,9 @@ describe("ComposeWindow draft binding", () => {
       screen.getByRole("button", { name: "Send" }).hasAttribute("disabled"),
     ).toBe(false);
 
-    await user.click(screen.getByRole("button", { name: "Discard draft" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["compose.discardDraft"] }),
+    );
     await waitFor(() =>
       expect(
         screen.getByRole("button", { name: "Send" }).hasAttribute("disabled"),
@@ -529,7 +536,9 @@ describe("ComposeWindow draft binding", () => {
 
     await pressDraft(user);
     await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
-    await user.click(screen.getByRole("button", { name: "Discard draft" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["compose.discardDraft"] }),
+    );
     expect(await screen.findByText(/boom/i)).toBeTruthy();
 
     await pickWhy(user, WHY_LABEL.requestedFollowup);
@@ -563,9 +572,13 @@ describe("ComposeWindow draft binding", () => {
 
     await pressDraft(user);
     await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
-    await user.click(screen.getByRole("button", { name: "Discard draft" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["compose.discardDraft"] }),
+    );
 
-    expect(await screen.findByText("The request failed. Retry.")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["compose.actionFailed"]),
+    ).toBeTruthy();
     expect(messageText("Body")).toBe("Draft A body.");
 
     await pickWhy(user, WHY_LABEL.requestedFollowup);
@@ -598,7 +611,9 @@ describe("ComposeWindow draft binding", () => {
 
     await pressDraft(user);
     await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
-    await user.click(screen.getByRole("button", { name: "Discard draft" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["compose.discardDraft"] }),
+    );
 
     const announced = await screen.findAllByRole("alert");
     expect(announced.map((node) => node.textContent)).toContain("boom");
@@ -651,7 +666,9 @@ describe("ComposeWindow draft binding", () => {
     // rather than by the `disabled` attribute an input carries.
     expect(bodyField.getAttribute("aria-disabled")).toBeNull();
 
-    await user.click(screen.getByRole("button", { name: "Discard draft" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["compose.discardDraft"] }),
+    );
     await waitFor(() =>
       expect(bodyField.getAttribute("aria-disabled")).toBe("true"),
     );
@@ -801,7 +818,9 @@ describe("ComposeWindow draft provenance", () => {
 
     await pressDraft(user);
 
-    await screen.findByRole("heading", { name: "AI-assisted draft" });
-    expect(screen.queryByText("Provisional voice")).toBeNull();
+    await screen.findByRole("heading", {
+      name: englishCopy["compose.aiDisclosureTitle"],
+    });
+    expect(screen.queryByText(englishCopy["compose.provisional"])).toBeNull();
   });
 });

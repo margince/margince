@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent } from "storybook/test";
 import type { components } from "../../api/schema";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -98,11 +99,13 @@ export const ReadOnly: Story = { args: { canEdit: false } };
 export const MatchingACompany: Story = {
   play: async () => {
     const [match] = await screen.findAllByRole("button", {
-      name: "Match company",
+      name: englishCopy["employment.resolve"],
     });
     if (!match) throw new Error("no row offers Match company");
     await userEvent.click(match);
-    await screen.findByRole("dialog", { name: "Match company" });
+    await screen.findByRole("dialog", {
+      name: englishCopy["employment.resolve"],
+    });
   },
 };
 

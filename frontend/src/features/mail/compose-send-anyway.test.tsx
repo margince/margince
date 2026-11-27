@@ -11,6 +11,7 @@ import {
 } from "../../../vitest.budget";
 import { writeMessage } from "../../design-system/richtext-testing";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
+import { en as englishCopy } from "../../i18n/en";
 import { isPreviewDoor } from "../../testing/sendpermission.testkit";
 import {
   activity202,
@@ -187,7 +188,7 @@ describe("the email composer that decides at Send", () => {
     await fillMessage(user);
     await pressSend(user);
     expect(
-      await screen.findByText("Email scheduled. It has not been sent yet."),
+      await screen.findByText(englishCopy["compose.scheduledQueued"]),
     ).toBeTruthy();
   });
 
@@ -221,10 +222,10 @@ describe("the email composer that decides at Send", () => {
     expect(reason.getAttribute("aria-describedby")).toContain(warning?.id);
     expect(count(sent, "GET /communication-reviews/r-1")).toBe(0);
     expect(
-      screen.queryByRole("dialog", { name: "Send email with reason?" }),
+      screen.queryByRole("dialog", { name: englishCopy["directSend.title"] }),
     ).toBeNull();
     expect(
-      screen.queryByRole("button", { name: "Send with a recorded exception" }),
+      screen.queryByRole("button", { name: englishCopy["directSend.open"] }),
     ).toBeNull();
   });
 
@@ -292,7 +293,7 @@ describe("the email composer that decides at Send", () => {
       shown_reasons: ["marketing_objection", "no_compatible_evidence"],
       acknowledged: true,
     });
-    expect(screen.getByText("Queued as a recorded exception.")).toBeTruthy();
+    expect(screen.getByText(englishCopy["directSend.queued"])).toBeTruthy();
   });
 
   it("closes and says so when another tab already sent the message", async () => {
@@ -314,7 +315,9 @@ describe("the email composer that decides at Send", () => {
     await user.click(await sendAnyway());
 
     await waitFor(() => expect(onClose).toHaveBeenCalled());
-    expect(screen.getByText("This message was already sent.")).toBeTruthy();
+    expect(
+      screen.getByText(englishCopy["directSend.alreadySent"]),
+    ).toBeTruthy();
   });
 
   // Each stray event alone, since the button's own press latch would hold
@@ -497,7 +500,7 @@ describe("the email composer that decides at Send", () => {
       answer(jsonResponse({ ...activity202, id: "act-9" }, 201));
 
       expect(
-        await screen.findByText("Queued as a recorded exception."),
+        await screen.findByText(englishCopy["directSend.queued"]),
       ).toBeTruthy();
       expect(count(sent, "PUT /mail-drafts")).toBe(writesBefore);
       expect(
@@ -710,7 +713,7 @@ describe("the email composer that decides at Send", () => {
       "POST /emails": refused,
     });
     await openComposer();
-    await screen.findByText("Saved draft restored");
+    await screen.findByText(englishCopy["compose.savedDraftRestored"]);
     await pressSend(user);
     const reason = await reasonField();
     expect(reason).toHaveProperty("value", "They asked on the phone.");
@@ -735,9 +738,7 @@ describe("the email composer that decides at Send", () => {
     await fillMessage(user);
     await pressSend(user);
     expect(
-      await screen.findByText(
-        "Edit the message or remove this recipient to send it.",
-      ),
+      await screen.findByText(englishCopy["compose.sendAnyway.editOnly"]),
     ).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Send anyway" })).toBeNull();
     expect(

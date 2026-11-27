@@ -13,6 +13,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { RelationshipsTab } from "../../components/relationshiprows";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 
 // A deal's stakeholders were readable on three surfaces — the rail's seats, the
@@ -141,10 +142,12 @@ describe("the stakeholders on a deal", () => {
     stubFetch([stakeholder]);
     renderPanel();
 
-    expect(await screen.findByText("Stakeholders")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["rel.dealStakeholders"]),
+    ).toBeTruthy();
     // "People and companies" is the contact and company panel's heading, and it
     // sends a reader on a deal looking for a control this page does not have.
-    expect(screen.queryByText("People and companies")).toBeNull();
+    expect(screen.queryByText(englishCopy["tab.relationships"])).toBeNull();
   });
 
   // A deal anchors one kind, so a Kind column repeats one badge down every row
@@ -155,7 +158,9 @@ describe("the stakeholders on a deal", () => {
     renderPanel();
 
     await screen.findByTestId("remove-relationship");
-    expect(screen.queryByText("Deal stakeholder")).toBeNull();
+    expect(
+      screen.queryByText(englishCopy["rel.kind.dealStakeholder"]),
+    ).toBeNull();
     await user.click(screen.getByTestId("add-relationship"));
     expect(
       within(screen.getByRole("dialog")).queryByLabelText("Kind"),
@@ -194,7 +199,7 @@ describe("the stakeholders on a deal", () => {
     renderPanel();
 
     expect(
-      await screen.findByText("No stakeholders on this deal"),
+      await screen.findByText(englishCopy["rel.dealStakeholdersEmpty"]),
     ).toBeTruthy();
   });
 

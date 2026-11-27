@@ -181,7 +181,9 @@ it("still lets the reader skip once the roster fetch has failed", async () => {
     await screen.findByText(en["ob.conv.connect.rosterFailedTitle"]),
   ).toBeTruthy();
   expect(screen.getByRole("button", { name: "Retry" })).toBeTruthy();
-  const skip = screen.getByRole("button", { name: "Skip for now" });
+  const skip = screen.getByRole("button", {
+    name: en["ob.conv.voice.skipped"],
+  });
   expect(skip).not.toBeDisabled();
   await userEvent.click(skip);
   await waitFor(() =>
@@ -212,7 +214,7 @@ it("says mail capture is off on an installation that never wired it", async () =
     screen.getByText(en["ob.conv.connect.skipCaptionNotConfigured"]),
   ).toBeTruthy();
   expect(
-    screen.getByRole("button", { name: "Skip for now" }),
+    screen.getByRole("button", { name: en["ob.conv.voice.skipped"] }),
   ).not.toBeDisabled();
 });
 
@@ -237,7 +239,7 @@ it("marks this tab's own attempt before the real redirect fires", async () => {
   );
   await user.click(screen.getByRole("radio", { name: /Microsoft/ }));
   await user.click(
-    screen.getByRole("button", { name: "Connect mail and calendar" }),
+    screen.getByRole("button", { name: en["ob.conv.connect.connectBoth"] }),
   );
   await waitFor(() => expect(assign).toHaveBeenCalled());
   expect(sessionStorage.getItem("ob.connect.oauthAttempt")).toBe("graph");
@@ -270,7 +272,9 @@ it("renders the provider-agnostic return view on OAuth return", async () => {
 it("offers to skip before any consent round trip", () => {
   stubWithSession({ "GET /connectors": () => jsonResponse({ data: [] }) }, {});
   renderConnectAct();
-  expect(screen.getByRole("button", { name: "Skip for now" })).toBeTruthy();
+  expect(
+    screen.getByRole("button", { name: en["ob.conv.voice.skipped"] }),
+  ).toBeTruthy();
 });
 
 // The voice step stays reachable from here, by the same move the browser's
@@ -311,7 +315,9 @@ it("stops offering the skip once consent has returned", async () => {
   );
   renderConnectAct("ok");
   await screen.findByText(en["connectors.svc.newMail"]);
-  expect(screen.queryByRole("button", { name: "Skip for now" })).toBeNull();
+  expect(
+    screen.queryByRole("button", { name: en["ob.conv.voice.skipped"] }),
+  ).toBeNull();
 });
 
 // A returning "ok" whose provider the roster never confirms is NOT a
@@ -322,9 +328,9 @@ it("stops offering the skip once consent has returned", async () => {
 it("keeps the skip open when consent returned but no mailbox could be confirmed", async () => {
   stubWithSession({ "GET /connectors": () => jsonResponse({ data: [] }) }, {});
   renderConnectAct("ok");
-  await screen.findByText("The connection could not be confirmed.");
+  await screen.findByText(en["ob.s4.connectConfirmFailed"]);
   expect(
-    screen.getByRole("button", { name: "Skip for now" }),
+    screen.getByRole("button", { name: en["ob.conv.voice.skipped"] }),
   ).toBeInTheDocument();
 });
 
@@ -337,7 +343,9 @@ describe("the way onward", () => {
       {},
     );
     renderConnectAct();
-    const onward = screen.getByRole("button", { name: "Skip for now" });
+    const onward = screen.getByRole("button", {
+      name: en["ob.conv.voice.skipped"],
+    });
     expect(onward.closest(".ob-stage-acts")).toBeTruthy();
   });
 
@@ -355,7 +363,9 @@ describe("the way onward", () => {
       undefined,
       false,
     );
-    const onward = screen.getByRole("button", { name: "Skip for now" });
+    const onward = screen.getByRole("button", {
+      name: en["ob.conv.voice.skipped"],
+    });
     await waitFor(() => expect(onward).not.toBeDisabled());
     await userEvent.click(onward);
 
@@ -380,7 +390,7 @@ describe("the IMAP form", () => {
     );
 
     const form = await screen.findByRole("region", {
-      name: "Connect mail host",
+      name: en["ob.conv.connect.dialogHeadlineImap"],
     });
     expect(screen.getByLabelText("IMAP server *")).toBeTruthy();
     expect(screen.getByLabelText("Port")).toBeTruthy();
@@ -510,7 +520,7 @@ it("says why every account is disabled when the roster read fails, and offers a 
   renderConnectAct();
 
   expect(
-    await screen.findByText("Mailboxes could not be checked"),
+    await screen.findByText(en["ob.conv.connect.rosterFailedTitle"]),
   ).toBeInTheDocument();
   expect(screen.getByRole("radio", { name: /Google/ })).toBeDisabled();
 
@@ -520,7 +530,7 @@ it("says why every account is disabled when the roster read fails, and offers a 
     expect(screen.getByRole("radio", { name: /Google/ })).not.toBeDisabled(),
   );
   expect(
-    screen.queryByText("Mailboxes could not be checked"),
+    screen.queryByText(en["ob.conv.connect.rosterFailedTitle"]),
   ).not.toBeInTheDocument();
 });
 
@@ -543,7 +553,9 @@ it("grants nothing when the reader skips connecting a mailbox", async () => {
   );
   const { dispatch } = renderConnectAct();
 
-  const without = screen.getByRole("button", { name: "Skip for now" });
+  const without = screen.getByRole("button", {
+    name: en["ob.conv.voice.skipped"],
+  });
   await waitFor(() => expect(without).not.toBeDisabled());
   await userEvent.click(without);
   // The agent reads their mail to build the brief. Authority over a mailbox

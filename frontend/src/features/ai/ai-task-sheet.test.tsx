@@ -7,6 +7,7 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { en as englishCopy } from "../../i18n/en";
 import { feature } from "../../testing/ai-admin.testkit";
 import { meFixture } from "../../testing/mefixture";
 import { jsonResponse, render } from "./ai-routing.testkit";
@@ -196,7 +197,9 @@ describe("TaskSheet", () => {
     );
 
     const sheet = await screen.findByRole("dialog");
-    const save = within(sheet).getByRole("button", { name: "Save settings" });
+    const save = within(sheet).getByRole("button", {
+      name: englishCopy["aiTaskSheet.save"],
+    });
     expect(save).toBeDisabled();
     await user.click(
       within(sheet).getByRole("combobox", { name: /Decision model timeout/ }),
@@ -234,7 +237,7 @@ describe("TaskSheet", () => {
     await user.keyboard("{Escape}");
 
     expect(
-      screen.getByRole("dialog", { name: "Discard unsaved changes?" }),
+      screen.getByRole("dialog", { name: englishCopy["unsaved.title"] }),
     ).toBeTruthy();
     expect(onClose).not.toHaveBeenCalled();
   });
@@ -262,12 +265,16 @@ describe("TaskSheet", () => {
       ).toHaveTextContent("60 s"),
     );
     await user.click(
-      within(sheet).getByRole("button", { name: "Reset to defaults" }),
+      within(sheet).getByRole("button", {
+        name: englishCopy["aiTaskSheet.reset"],
+      }),
     );
     expect(
       within(sheet).getByRole("combobox", { name: /Model call timeout/ }),
     ).toHaveTextContent("300 s (default)");
-    expect(within(sheet).getByText("Unsaved changes")).toBeTruthy();
+    expect(
+      within(sheet).getByText(englishCopy["aiTaskSheet.unsaved"]),
+    ).toBeTruthy();
   });
 
   it("says a colleague saved first rather than overwriting them", async () => {
@@ -288,13 +295,13 @@ describe("TaskSheet", () => {
     );
     await user.click(screen.getByRole("option", { name: "low" }));
     await user.click(
-      within(sheet).getByRole("button", { name: "Save settings" }),
+      within(sheet).getByRole("button", {
+        name: englishCopy["aiTaskSheet.save"],
+      }),
     );
 
     expect(
-      await within(sheet).findByText(
-        "Someone saved these settings while you were editing",
-      ),
+      await within(sheet).findByText(englishCopy["aiTaskSheet.conflict"]),
     ).toBeTruthy();
   });
 
@@ -392,7 +399,9 @@ describe("TaskSheet", () => {
         }}
       />,
     );
-    expect(await screen.findByText("Everyday cloud")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["aiTier.cheap_cloud"]),
+    ).toBeTruthy();
     expect(screen.queryByText("cheap_cloud")).toBeNull();
     expect(screen.getByText("0 answered in 140 tries")).toBeTruthy();
     expect(
@@ -412,12 +421,12 @@ describe("TaskSheet", () => {
       />,
     );
     expect(
-      await screen.findByText("The saved settings could not be read"),
+      await screen.findByText(englishCopy["aiTaskSheet.readFailed"]),
     ).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Retry" }));
     await waitFor(() =>
       expect(
-        screen.queryByText("The saved settings could not be read"),
+        screen.queryByText(englishCopy["aiTaskSheet.readFailed"]),
       ).toBeNull(),
     );
   });
@@ -438,7 +447,9 @@ describe("TaskSheet", () => {
       within(sheet).getByRole("combobox", { name: /Thinking level/ }),
     ).toBeDisabled();
     expect(
-      within(sheet).getByRole("button", { name: "Save settings" }),
+      within(sheet).getByRole("button", {
+        name: englishCopy["aiTaskSheet.save"],
+      }),
     ).toBeDisabled();
   });
 });
@@ -489,7 +500,9 @@ describe("TaskSheet under a boot source", () => {
       );
     }
     expect(
-      within(sheet).getByRole("button", { name: "Save settings" }),
+      within(sheet).getByRole("button", {
+        name: englishCopy["aiTaskSheet.save"],
+      }),
     ).toBeDisabled();
   });
 });

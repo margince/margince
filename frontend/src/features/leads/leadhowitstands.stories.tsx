@@ -6,6 +6,7 @@ import { expect, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import type { RecordTimeline } from "../../design-system/recordtimeline";
 import type { Locale } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -123,9 +124,12 @@ export default meta;
 type Story = StoryObj;
 
 async function nextMeetingCard(canvasElement: HTMLElement) {
-  const label = await within(canvasElement).findByText("Next meeting", {
-    selector: ".stat-card-label-text",
-  });
+  const label = await within(canvasElement).findByText(
+    englishCopy["lead.figure.nextMeeting"],
+    {
+      selector: ".stat-card-label-text",
+    },
+  );
   return label.closest(".stat-card");
 }
 

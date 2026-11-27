@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, waitFor, within } from "storybook/test";
+import { en as englishCopy } from "../i18n/en";
 import {
   AccountMenuFrame,
   openMenu,
@@ -167,7 +168,7 @@ export const TopBarMenuNoBookingLink: Story = {
   play: async (context) => {
     await openMenu(context);
     await within(document.body).findByRole("menuitem", {
-      name: "Set up my booking link",
+      name: englishCopy["scheduling.setUpMyLink"],
     });
   },
   render: () => {

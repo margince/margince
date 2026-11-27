@@ -65,7 +65,7 @@ func (readAttention) Spec() mcp.ToolSpec {
 		Name: readAttentionToolName, Title: "See what needs attention", Version: toolVersionV1,
 		Description: readAttentionCopy.render(), Instead: readAttentionCopy.Instead,
 		InputSchema: schema(`{"type":"object","properties":{
-			"view":{"description":"slipping: deals at risk this week; at_risk: relationships going cold; commitments: promises still open"}}}`),
+			"view":{"description":"slipping: deals at risk this week; at_risk: relationships going cold; commitments: commitments still open"}}}`),
 		UI: &mcp.ToolUI{ResourceURI: apps.AttentionURI, Visibility: []string{mcp.VisibilityModel}},
 	}
 }

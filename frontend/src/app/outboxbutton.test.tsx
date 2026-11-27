@@ -9,6 +9,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { OutboxButton } from "./outboxbutton";
 
 // The clock beside the bell: what is waiting in the sender's own queue, and the
@@ -67,7 +68,7 @@ it("names how many are waiting and how many are held, so the count is not left t
 it("draws no figure when nothing is queued, and still offers the way in", async () => {
   mount([{ ...base, id: "d", status: "sent" }]);
   const button = await screen.findByRole("button", {
-    name: "Scheduled messages",
+    name: englishCopy["outbox.name"],
   });
   expect(button.textContent).toBe("");
 });

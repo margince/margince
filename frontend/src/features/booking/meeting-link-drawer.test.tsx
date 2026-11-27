@@ -13,6 +13,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { pickOption } from "../../design-system/select-testing";
+import { en as englishCopy } from "../../i18n/en";
 import {
   bookingConnection,
   bookingHours,
@@ -125,7 +126,9 @@ it("offers Teams only to a host whose bookings go to a Microsoft calendar", asyn
   expect(teams).toHaveProperty("disabled", true);
   expect(screen.getByText(/Needs a Microsoft 365 calendar/)).toBeTruthy();
   expect(
-    screen.getByRole("link", { name: "Connect Microsoft 365" }),
+    screen.getByRole("link", {
+      name: englishCopy["scheduling.connectMicrosoft"],
+    }),
   ).toBeTruthy();
   expect(screen.getByRole("radio", { name: /Google Meet/ })).toHaveProperty(
     "disabled",
@@ -143,9 +146,13 @@ it("saves the host's own address over the latest profile", async () => {
   const save = screen.getByRole("button", { name: "Save link" });
   await user.click(save);
   expect(writes).toHaveLength(0);
-  expect(screen.getByText("Enter a link or an address.")).toBeTruthy();
+  expect(
+    screen.getByText(englishCopy["scheduling.locationRequired"]),
+  ).toBeTruthy();
   await user.type(
-    screen.getByRole("textbox", { name: "Link or address" }),
+    screen.getByRole("textbox", {
+      name: englishCopy["scheduling.locationLabel"],
+    }),
     "https://zoom.example/ada",
   );
   await user.click(save);
@@ -165,7 +172,9 @@ it("takes any other length from 15 minutes to 8 hours and nothing outside it", a
   const length = await screen.findByRole("combobox", { name: "Length" });
   expect(length.textContent).toBe("30 min");
   await pickOption(user, length, "Other");
-  const minutes = screen.getByRole("spinbutton", { name: "Length in minutes" });
+  const minutes = screen.getByRole("spinbutton", {
+    name: englishCopy["scheduling.lengthMinutes"],
+  });
   const save = screen.getByRole("button", { name: "Save link" });
   for (const outside of ["10", "481"]) {
     await user.clear(minutes);
@@ -173,7 +182,7 @@ it("takes any other length from 15 minutes to 8 hours and nothing outside it", a
     await user.click(save);
     expect(writes).toHaveLength(0);
     expect(
-      screen.getByText("Enter a length from 15 to 480 minutes."),
+      screen.getByText(englishCopy["scheduling.lengthInvalid"]),
     ).toBeTruthy();
   }
   await user.clear(minutes);
@@ -188,14 +197,18 @@ it("replaces the address only after the confirmation", async () => {
   const user = userEvent.setup();
   const { writes } = mount(legacy);
   await user.click(
-    await screen.findByRole("button", { name: "Replace address" }),
+    await screen.findByRole("button", {
+      name: englishCopy["scheduling.replaceAddress"],
+    }),
   );
   expect(writes).toHaveLength(0);
   const confirm = screen.getByRole("dialog", {
-    name: "Replace link address?",
+    name: englishCopy["scheduling.replaceConfirmTitle"],
   });
   await user.click(
-    within(confirm).getByRole("button", { name: "Replace address" }),
+    within(confirm).getByRole("button", {
+      name: englishCopy["scheduling.replaceAddress"],
+    }),
   );
   await waitFor(() => expect(writes).toHaveLength(1));
   expect(writes[0]).toMatchObject({ replace_link: true, slug: legacy.slug });
@@ -210,7 +223,7 @@ it("saves a removal from the existing additional meeting lengths", async () => {
     offered_lengths: [15, 30, 45, 60, 90],
   });
   const offered = await screen.findByRole("textbox", {
-    name: "Additional meeting lengths",
+    name: englishCopy["scheduling.offeredLengths"],
   });
   await user.clear(offered);
   await user.type(offered, "15, 45, 60, 90");
@@ -229,7 +242,7 @@ it("saves the visible additional lengths even when no change event reached React
     offered_lengths: [15, 30, 45, 60, 90],
   });
   const offered = await screen.findByRole<HTMLInputElement>("textbox", {
-    name: "Additional meeting lengths",
+    name: englishCopy["scheduling.offeredLengths"],
   });
   offered.value = "15, 45, 60, 90";
   await user.click(screen.getByRole("button", { name: "Save link" }));
@@ -256,7 +269,7 @@ it.each([
       offered_lengths: [15, 30],
     });
     const offered = await screen.findByRole<HTMLInputElement>("textbox", {
-      name: "Additional meeting lengths",
+      name: englishCopy["scheduling.offeredLengths"],
     });
     offered.value = value;
     await user.click(screen.getByRole("button", { name: "Save link" }));
@@ -280,7 +293,7 @@ it("clears every additional length when the visible field is empty", async () =>
     offered_lengths: [15, 45],
   });
   const offered = await screen.findByRole<HTMLInputElement>("textbox", {
-    name: "Additional meeting lengths",
+    name: englishCopy["scheduling.offeredLengths"],
   });
   offered.value = "";
   await user.click(screen.getByRole("button", { name: "Save link" }));
@@ -292,7 +305,7 @@ it("keeps live validation when additional lengths are typed", async () => {
   const user = userEvent.setup();
   mount({ ...legacy, video_call: true, location: "" });
   const offered = await screen.findByRole("textbox", {
-    name: "Additional meeting lengths",
+    name: englishCopy["scheduling.offeredLengths"],
   });
   await user.type(offered, "10");
   expect(offered.getAttribute("aria-invalid")).toBe("true");
@@ -311,14 +324,14 @@ it("saves the visible title, custom minutes and location with the lengths", asyn
     duration_minutes: 75,
   });
   const title = await screen.findByRole<HTMLInputElement>("textbox", {
-    name: "Meeting name",
+    name: englishCopy["scheduling.meetingName"],
   });
   title.value = "Discovery";
   screen.getByRole<HTMLInputElement>("spinbutton", {
-    name: "Length in minutes",
+    name: englishCopy["scheduling.lengthMinutes"],
   }).value = "120";
   screen.getByRole<HTMLInputElement>("textbox", {
-    name: "Link or address",
+    name: englishCopy["scheduling.locationLabel"],
   }).value = "Room 2";
   await user.click(screen.getByRole("button", { name: "Save link" }));
   await waitFor(() => expect(writes).toHaveLength(1));
@@ -372,7 +385,7 @@ it("keeps corrected values and clears the old length error when the server refus
     { "PUT /scheduling/profile": request },
   );
   const offered = await screen.findByRole<HTMLInputElement>("textbox", {
-    name: "Additional meeting lengths",
+    name: englishCopy["scheduling.offeredLengths"],
   });
   offered.value = "10";
   await user.click(screen.getByRole("button", { name: "Save link" }));

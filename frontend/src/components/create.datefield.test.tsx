@@ -7,6 +7,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { throwProblem } from "../lib/problem";
 import { seedWriter } from "../testing/mefixture";
 import { CreateAction } from "./create";
@@ -62,8 +63,9 @@ describe("a date field in a create form", () => {
       await screen.findByRole("button", { name: "Friday, 22 May 2026" }),
     );
     expect(
-      screen.getByRole<HTMLInputElement>("textbox", { name: "Expected close" })
-        .value,
+      screen.getByRole<HTMLInputElement>("textbox", {
+        name: englishCopy["create.expectedClose"],
+      }).value,
     ).toBe("22/05/2026");
     await user.click(screen.getByRole("button", { name: "Create" }));
 
@@ -79,7 +81,9 @@ describe("a date field in a create form", () => {
     await user.click(screen.getByText("New deal"));
     await user.type(screen.getByLabelText(/Deal name/i), "Probe");
     await user.type(
-      screen.getByRole("textbox", { name: "Expected close" }),
+      screen.getByRole("textbox", {
+        name: englishCopy["create.expectedClose"],
+      }),
       "3/6/2026",
     );
     await user.click(screen.getByRole("button", { name: "Create" }));
@@ -95,7 +99,7 @@ describe("a date field in a create form", () => {
     renderNewDeal();
     await user.click(screen.getByText("New deal"));
     const close = screen.getByRole<HTMLInputElement>("textbox", {
-      name: "Expected close",
+      name: englishCopy["create.expectedClose"],
     });
     await user.type(close, "01/03/2027");
 
@@ -120,7 +124,9 @@ describe("a date field in a create form", () => {
 
     await waitFor(() => expect(calendar.isConnected).toBe(false));
     expect(
-      screen.getByRole("textbox", { name: "Expected close" }),
+      screen.getByRole("textbox", {
+        name: englishCopy["create.expectedClose"],
+      }),
     ).toBeTruthy();
   });
 
@@ -129,7 +135,9 @@ describe("a date field in a create form", () => {
     const { create } = renderNewDeal();
     await user.click(screen.getByText("New deal"));
     await user.type(screen.getByLabelText(/Deal name/i), "Probe");
-    const close = screen.getByRole("textbox", { name: "Expected close" });
+    const close = screen.getByRole("textbox", {
+      name: englishCopy["create.expectedClose"],
+    });
     await user.type(close, "31/12/9999");
     await user.tab();
 
@@ -165,7 +173,9 @@ describe("a date field in a create form", () => {
     );
     await user.click(screen.getByText("New deal"));
     await user.type(screen.getByLabelText(/Deal name/i), "Probe");
-    const close = screen.getByRole("textbox", { name: "Expected close" });
+    const close = screen.getByRole("textbox", {
+      name: englishCopy["create.expectedClose"],
+    });
     await user.type(close, "3/6/2026");
     await user.click(screen.getByRole("button", { name: "Create" }));
 

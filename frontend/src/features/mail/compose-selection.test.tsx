@@ -16,6 +16,7 @@ import {
   writeMessage,
 } from "../../design-system/richtext-testing";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { draftButton } from "../../testing/composedraft.testkit";
 import { CONNECTED_ROSTER } from "../../testing/mailroster.testkit";
 import {
@@ -170,7 +171,7 @@ it("requires a purpose for a new AI email, then sends that purpose to the contac
   const draft = draftButton();
   expect(draft.hasAttribute("disabled")).toBe(true);
   await user.type(
-    screen.getByPlaceholderText("Purpose of the email"),
+    screen.getByPlaceholderText(englishCopy["compose.newIntent"]),
     "Offer a discovery call",
   );
   await user.click(draft);
@@ -286,7 +287,7 @@ it("keeps edits made while the selected email's AI draft is in flight", async ()
   await waitFor(() => expect(finish).toBeTypeOf("function"));
   writeMessage("Body", "My answer written while waiting");
   finish?.(json({ subject: "Re: Pricing", body: "Late generated text" }));
-  await screen.findByText("Your edits were kept. Draft again when ready.");
+  await screen.findByText(englishCopy["compose.draftKept"]);
   expect(messageText("Body")).toBe("My answer written while waiting");
 });
 
@@ -325,7 +326,7 @@ it("preserves recipient choices and instructions separately for each reply", asy
   );
   draftButton();
   await user.type(
-    screen.getByPlaceholderText("Purpose of the reply"),
+    screen.getByPlaceholderText(englishCopy["compose.replyIntent"]),
     "Confirm the price",
   );
   await pick(user, /Re: Delivery/);
@@ -368,7 +369,7 @@ it("retries a failed selected-message read before enabling reply drafting", asyn
   });
   await pick(user, /Pricing/);
   const menu = await threadMenu(user);
-  await menu.findByText("This section did not load.");
+  await menu.findByText(englishCopy["state.failed"]);
   expect(draftButton().hasAttribute("disabled")).toBe(true);
   await user.click(menu.getByRole("button", { name: "Retry" }));
   await screen.findByDisplayValue("Re: Pricing");

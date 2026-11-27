@@ -7,6 +7,7 @@ import { Panel } from "../../design-system/panel";
 import { SettingList } from "../../design-system/settingrow";
 import { useToast } from "../../design-system/toast";
 import { type Locale, translate } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -67,7 +68,7 @@ export const TemplateEditor: Story = {
   play: async ({ canvasElement }) => {
     await userEvent.click(
       await within(canvasElement).findByRole("button", {
-        name: "Edit signature",
+        name: englishCopy["settings.signatureEdit"],
       }),
     );
   },

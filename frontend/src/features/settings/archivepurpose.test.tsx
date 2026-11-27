@@ -9,6 +9,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { PageSaveBar, SavePageProvider } from "../../design-system/savepage";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import { ArchivePurposeCard } from "./archivepurpose";
 import { ControllerParticularsCard } from "./controllerparticulars";
@@ -103,7 +104,7 @@ it("saves the Vietnamese purpose and sends every other particular back unchanged
   const { puts } = show("purpose");
   const vietnamese = await ready("Purpose of the archive in Vietnamese");
   expect(
-    screen.getByRole("textbox", { name: "Purpose of the archive" }),
+    screen.getByRole("textbox", { name: englishCopy["archivePurpose.label"] }),
   ).toHaveValue("keep business records");
   await user.type(vietnamese, "lưu giữ hồ sơ kinh doanh");
   await user.click(screen.getByRole("button", { name: "Save" }));

@@ -41,7 +41,7 @@ import (
 // and only reports a blocking statement aimed at a table it did not.
 var (
 	// createsTable names a table this file brings into existence.
-	createsTable = regexp.MustCompile(`(?is)\bCREATE\s+TABLE\s+(IF\s+NOT\s+EXISTS\s+)?([\w".]+)`)
+	createsTable = regexp.MustCompile(`(?is)\bCREATE\s+(?:(?:TEMP|TEMPORARY)\s+)?TABLE\s+(IF\s+NOT\s+EXISTS\s+)?([\w".]+)`)
 
 	// blockingStatements: the statement forms that take a lock conflicting with
 	// ordinary INSERT/UPDATE/DELETE, each paired with the group that names the

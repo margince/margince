@@ -272,6 +272,8 @@ export const SETTINGS_SECTIONS = {
     accounting: [
       "settings.part.integrations.accounting",
       "financeSource.title",
+      "payments.ageTitle",
+      "payments.ageLabel",
     ],
     webhooks: ["settings.part.integrations.webhooks", "webhooks.title"],
     telegram: [

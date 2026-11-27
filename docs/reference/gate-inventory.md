@@ -643,6 +643,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `calendarday_test.go` | H2 | A calendar day is one derivation, and this is the census that keeps it one. |
 | `calendarverbseat_test.go` | H2 | A calendar verb acting on a row it found by the provider's event id proves the acting seat holds that row. |
 | `capabilitypathlog_test.go` | H2 | A request path reaches a log line through capabilitypath.Redact, never raw. |
+| `catalogcopyvocabulary_test.go` | H2 | _(no doc comment)_ |
 | `catalogrequirementcodes_test.go` | H2 | No internal requirement code reaches the copy a model reads. |
 | `catalogvocabulary_test.go` | H2 | The tool catalog calls the record a company, and the other word for it fails here. |
 | `claimpickonce_test.go` | H2 | A claim query picks its rows once, in a MATERIALIZED CTE, and never in an IN subquery. |
@@ -794,6 +795,8 @@ The eight shapes, what each is for, and how each one silently passes:
 | `frontendobjectkeys_test.go` | H2 | The word map reader reads each shape a frontend map is declared in, and fails one it cannot read. |
 | `geministrictwire_test.go` | H2 | Each tool's arguments and the runner's step schema go through the Gemini rewrite. |
 | `historyfieldlabelsfalsify_test.go` | H3 | The label census, falsified. |
+| `historyimagestoredfield_falsify_test.go` | H3 | _(no doc comment)_ |
+| `historylabelconsumers_test.go` | H3 | History also reads stored column labels, the address dialog and company profile. |
 | `individualperformancereachfixtures_test.go` | H2 | The individual-performance path walk read against planted packages, one shape per package, each of which an any-path reading of the switch accepts. |
 | `jobfleetwideshapes_test.go` | H2 | The FleetWide gate's own falsification: every dispatch shape the tree uses is proven accepted, and the shapes it exists to reject (a dispatcher doing a tenant's work, and a fan-out built around the chokepoints) are proven rejected. |
 | `jobkindgate_test.go` | H2 | Registration probes compile the real generated constraint through a source overlay. |
@@ -802,6 +805,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `noopprobematch_test.go` | H2 | noOpProbeHelpers are the helpers that send a save of the stored values and check nothing moved, with where each takes its method and path. |
 | `piicolumnreading_test.go` | H3 | Which way the PII census fails when it cannot read a statement. |
 | `piisqlreader_test.go` | H2 | Reading the SQL the PII census judges: where one statement ends and the next begins, which table a write lands on, which columns its SET clause names, and which of those the reader could not read at all. |
+| `problemarrayflow_test.go` | H3 | An unreadable array is a census finding, even when its body code is readable. |
 | `rbacbaselineerafixture_test.go` | H3 | The pre-state the RBAC composition gate replays over must not be hand-editable. |
 | `retainedcolumncases_test.go` | H1 | The retention sweep's two SQL claims, driven with synthetic statements rather than the tree, for the reason extensionsqlscopecases\_test.go gives for its own cases. |
 | `retentionconstants_test.go` | H2 | _(no doc comment)_ |

@@ -12,6 +12,7 @@ import {
   writeMessage,
 } from "../../design-system/richtext-testing";
 import { pickOption } from "../../design-system/select-testing";
+import { en as englishCopy } from "../../i18n/en";
 import { draftButton, redraft } from "../../testing/composedraft.testkit";
 import {
   jsonResponse,
@@ -75,7 +76,9 @@ function contactComposer(): ReactNode {
 }
 
 function languagePicker() {
-  return screen.getByRole("combobox", { name: "Draft language" });
+  return screen.getByRole("combobox", {
+    name: englishCopy["compose.draftLanguage"],
+  });
 }
 
 function draftCalls(sent: Sent[], route: string) {
@@ -323,9 +326,11 @@ describe("the language of an AI draft", () => {
 
     await firstDraft(user, "Hello Dana,");
 
-    expect(screen.queryByRole("combobox", { name: "Draft language" })).toBe(
-      null,
-    );
+    expect(
+      screen.queryByRole("combobox", {
+        name: englishCopy["compose.draftLanguage"],
+      }),
+    ).toBe(null);
   });
 
   it("is held while its draft is out", async () => {
@@ -468,9 +473,11 @@ describe("the language of an AI draft", () => {
     render(contactComposer());
     await firstDraft(user, "Bonjour Dana,");
 
-    expect(screen.queryByRole("combobox", { name: "Draft language" })).toBe(
-      null,
-    );
+    expect(
+      screen.queryByRole("combobox", {
+        name: englishCopy["compose.draftLanguage"],
+      }),
+    ).toBe(null);
     await user.click(screen.getByRole("button", { name: "Shorter" }));
     await waitFor(() => expect(messageText("Body")).toBe("Bonjour,"));
     for (const call of draftCalls(sent, CONTACT_ROUTE)) {
@@ -570,7 +577,7 @@ describe("the picked language in a saved draft", () => {
       [REWRITE_ROUTE]: () => rewrittenBody("Hallo Dana, Dienstag?", "de"),
     });
     render(contactComposer());
-    await screen.findByText("Saved draft restored");
+    await screen.findByText(englishCopy["compose.savedDraftRestored"]);
 
     expect(languagePicker().textContent).toContain("Deutsch");
     await user.click(screen.getByRole("button", { name: "Shorter" }));
@@ -600,11 +607,13 @@ describe("the picked language in a saved draft", () => {
       [REWRITE_ROUTE]: () => rewrittenBody("Hallo Dana, Dienstag?", "de"),
     });
     render(contactComposer());
-    await screen.findByText("Saved draft restored");
+    await screen.findByText(englishCopy["compose.savedDraftRestored"]);
 
-    expect(screen.queryByRole("combobox", { name: "Draft language" })).toBe(
-      null,
-    );
+    expect(
+      screen.queryByRole("combobox", {
+        name: englishCopy["compose.draftLanguage"],
+      }),
+    ).toBe(null);
     await user.click(screen.getByRole("button", { name: "Shorter" }));
     await waitFor(() =>
       expect(messageText("Body")).toBe("Hallo Dana, Dienstag?"),

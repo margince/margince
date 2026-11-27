@@ -108,7 +108,7 @@ describe("a receipt line is one row", () => {
   ])("shows the reason a line gives: $key", async ({ key, values, text }) => {
     stub(receipt({ done: [line({ entity: fleet, reason: { key, values } })] }));
     renderMagic();
-    expect(rowOf(await onlyLine("Done for you")).detail).toContain(text);
+    expect(rowOf(await onlyLine(en["magic.lane.done"])).detail).toContain(text);
   });
 
   it("prints what happened, its record and the reason visibly", async () => {
@@ -130,7 +130,7 @@ describe("a receipt line is one row", () => {
     renderMagic();
     const row = rowOf(await onlyLine("Done for you"));
     expect(row.mark).toBe("agent");
-    expect(row.sentence).toBe("A deal moved to its next stage");
+    expect(row.sentence).toBe(en["magic.action.advance_stage"]);
     expect(row.subject).toBe("Fleet retrofit");
     expect(row.detail).toBe(
       "Overnight agent This kind of change cannot be undone.",
@@ -154,7 +154,7 @@ describe("a receipt line is one row", () => {
       }),
     );
     renderMagic();
-    expect(rowOf(await onlyLine("Done for you")).when?.textContent).toBe(
+    expect(rowOf(await onlyLine(en["magic.lane.done"])).when?.textContent).toBe(
       formatDayMonth("2026-09-09T14:00:00Z", "en", browserZone()),
     );
   });
@@ -182,7 +182,7 @@ describe("a receipt line is one row", () => {
     );
     renderMagic();
     const done = await screen.findByRole("list", {
-      name: "Done for you",
+      name: en["magic.lane.done"],
       hidden: true,
     });
     expect(
@@ -218,10 +218,10 @@ describe("a receipt line is one row", () => {
     );
     renderMagic();
     const row = rowOf(await onlyLine("Done for you"));
-    expect(row.sentence).toBe("Created contact");
+    expect(row.sentence).toBe(en["magic.action.create_contact"]);
     expect(row.subject).toBe("Anna Weber and 2,145 more");
     const done = await screen.findByRole("list", {
-      name: "Done for you",
+      name: en["magic.lane.done"],
       hidden: true,
     });
     // One press that archived 2,146 contacts nobody had looked at would be the
@@ -248,7 +248,9 @@ describe("a receipt line is one row", () => {
       }),
     );
     renderMagic();
-    expect(rowOf(await onlyLine("Needs restoring")).mark).toBe("restore");
+    expect(rowOf(await onlyLine(en["magic.lane.watching"])).mark).toBe(
+      "restore",
+    );
   });
 
   it("names a failing connector by its readable name, never its provider id", async () => {
@@ -275,7 +277,7 @@ describe("a receipt line is one row", () => {
     );
     renderMagic();
     const watching = await screen.findByRole("list", {
-      name: "Needs restoring",
+      name: en["magic.lane.watching"],
       hidden: true,
     });
     const text = watching.textContent ?? "";

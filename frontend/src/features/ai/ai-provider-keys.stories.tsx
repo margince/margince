@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import {
   installFetchStub,
@@ -117,7 +118,7 @@ export const InUse: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await canvas.findByRole("table");
-    await canvas.findByText("Everyday cloud");
+    await canvas.findByText(englishCopy["aiTier.cheap_cloud"]);
   },
 };
 
@@ -270,7 +271,7 @@ export const AnsweringFromTestProvider: Story = {
   },
   play: async ({ canvasElement }) => {
     await within(canvasElement).findByText(
-      "answering from the built-in test provider",
+      englishCopy["aiSettings.providers.standIn"],
     );
   },
 };

@@ -12,6 +12,7 @@ import { type ReactNode, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { UnsavedGuard } from "../../components/unsaved";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { SEEDED_ASSIGNABLE_ROLES } from "../../testing/roles.testkit";
 import { GroupRoleGrants } from "./group-role-grants";
 
@@ -83,12 +84,14 @@ describe("the group roles admin confirmation", () => {
       await screen.findByRole("combobox", { name: "Role for the sales group" }),
       "Admin",
     );
-    await user.click(screen.getByRole("button", { name: "Save group roles" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["groupRoles.save"] }),
+    );
     const dialog = await screen.findByRole("dialog", {
       name: "Make every member of sales an admin?",
     });
     const confirm = within(dialog).getByRole("button", {
-      name: "Save and grant admin",
+      name: englishCopy["groupRoles.adminConfirm"],
     });
     expect(confirm).toHaveProperty("disabled", true);
     expect(calls).toEqual([]);
@@ -110,13 +113,17 @@ describe("the group roles admin confirmation", () => {
     const user = userEvent.setup();
     const { calls } = mount({ admins: "admin" });
     await user.click(await screen.findByRole("button", { name: "Add group" }));
-    const groups = screen.getAllByRole("textbox", { name: "Directory group" });
+    const groups = screen.getAllByRole("textbox", {
+      name: englishCopy["groupRoles.group"],
+    });
     const added = groups[groups.length - 1];
     if (!added) {
       throw new Error("the added row rendered no group input");
     }
     await user.type(added, "support");
-    await user.click(screen.getByRole("button", { name: "Save group roles" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["groupRoles.save"] }),
+    );
     await waitFor(() =>
       expect(calls).toEqual([
         { oidc_group_role_map: { admins: "admin", support: "read_only" } },
@@ -147,14 +154,14 @@ describe("an unsaved group mapping", () => {
     mount({}, (grants) => <GuardedPage grants={grants} />);
     await user.click(await screen.findByRole("button", { name: "Add group" }));
     await user.type(
-      screen.getByRole("textbox", { name: "Directory group" }),
+      screen.getByRole("textbox", { name: englishCopy["groupRoles.group"] }),
       "sales",
     );
     await user.click(
       screen.getByRole("button", { name: "go to notifications" }),
     );
 
-    await screen.findByRole("dialog", { name: "Discard unsaved changes?" });
-    expect(screen.queryByText("Notifications")).toBeNull();
+    await screen.findByRole("dialog", { name: englishCopy["unsaved.title"] });
+    expect(screen.queryByText(englishCopy["notifications.bell"])).toBeNull();
   });
 });

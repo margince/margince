@@ -6,6 +6,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { forgetSeat, STORAGE_KEYS, writeStored } from "../../lib/storage";
 import { reportingStoryEvaluation } from "../../testing/reporting.fixtures";
 import { jsonResponse } from "../../testing/story-utils";
@@ -33,11 +34,15 @@ describe("where Analytics opens", () => {
   it("opens Overview first, as the first tab", async () => {
     open("#/analytics", bySeat("leader"));
     await screen.findByRole("button", { name: "Overview" });
-    const row = screen.getByRole("group", { name: "Analytics sections" });
+    const row = screen.getByRole("group", {
+      name: englishCopy["analytics.sections"],
+    });
     const tabs = within(row).getAllByRole("button");
     expect(tabs[0]).toHaveTextContent("Overview");
     expect(tabs[0]).toHaveAttribute("aria-pressed", "true");
-    expect(await screen.findByText("Won + Likely deals")).toBeVisible();
+    expect(
+      await screen.findByText(englishCopy["forecast.basis.likely"]),
+    ).toBeVisible();
   });
 
   it.each([
@@ -50,7 +55,9 @@ describe("where Analytics opens", () => {
     await waitFor(() =>
       expect(
         within(
-          screen.getByRole("group", { name: "Analytics sections" }),
+          screen.getByRole("group", {
+            name: englishCopy["analytics.sections"],
+          }),
         ).getByRole("button", { name: tab }),
       ).toHaveAttribute("aria-pressed", "true"),
     );
@@ -59,14 +66,18 @@ describe("where Analytics opens", () => {
   it("recommends My prospecting to a reader measuring their own work in an SDR team", async () => {
     open("#/analytics", bySeat("sdr"), { seat: "sdr" });
     expect(
-      await screen.findByRole("button", { name: "My prospecting" }),
+      await screen.findByRole("button", {
+        name: englishCopy["analytics.overview.prospecting"],
+      }),
     ).toHaveAttribute("aria-pressed", "true");
   });
 
   it("recommends Sales review to the same team's manager", async () => {
     open("#/analytics", bySeat("leader"), { template: "sdr" });
     expect(
-      await screen.findByRole("button", { name: "Sales review" }),
+      await screen.findByRole("button", {
+        name: englishCopy["analytics.overview.sales"],
+      }),
     ).toHaveAttribute("aria-pressed", "true");
   });
 
@@ -76,7 +87,9 @@ describe("where Analytics opens", () => {
       seat: "sdr",
     });
     expect(
-      await screen.findByRole("button", { name: "My prospecting" }),
+      await screen.findByRole("button", {
+        name: englishCopy["analytics.overview.prospecting"],
+      }),
     ).toHaveAttribute("aria-pressed", "true");
   });
 
@@ -84,7 +97,9 @@ describe("where Analytics opens", () => {
     const user = userEvent.setup({ delay: null });
     open("#/analytics?period=this_month", bySeat("leader"));
     await user.click(
-      await screen.findByRole("button", { name: "My prospecting" }),
+      await screen.findByRole("button", {
+        name: englishCopy["analytics.overview.prospecting"],
+      }),
     );
     expect(window.location.hash).toContain("overview=prospecting");
     // The sales period does not follow into the other view.
@@ -92,7 +107,9 @@ describe("where Analytics opens", () => {
     cleanup();
     open("#/analytics", bySeat("leader"));
     expect(
-      await screen.findByRole("button", { name: "My prospecting" }),
+      await screen.findByRole("button", {
+        name: englishCopy["analytics.overview.prospecting"],
+      }),
     ).toHaveAttribute("aria-pressed", "true");
   });
 });
@@ -102,7 +119,9 @@ describe("Sales review", () => {
     open("#/analytics", bySeat("leader"));
     const strip = await readings();
     const hero = within(
-      screen.getByRole("region", { name: "Opening readings" }),
+      screen.getByRole("region", {
+        name: englishCopy["analytics.overview.readings"],
+      }),
     );
     expect(hero.getByText("€420,000")).toBeVisible();
     expect(strip.getByText("€420,000")).toBeVisible();
@@ -110,7 +129,9 @@ describe("Sales review", () => {
     // The shortfall stands under the projection, short, as a warning.
     expect(hero.getByText("€40k short of goal")).toBeVisible();
     expect(hero.getByText("of €800,000 goal")).toBeVisible();
-    expect(strip.getByText("Pipeline due this quarter")).toBeVisible();
+    expect(
+      strip.getByText(englishCopy["analytics.outlook.periodPipeline"]),
+    ).toBeVisible();
 
     expect(screen.queryByRole("region", { name: "Summary" })).toBeNull();
   });
@@ -122,10 +143,14 @@ describe("Sales review", () => {
         : salesEvaluation({ charts: reportingStoryEvaluation.charts }),
     );
     expect(
-      await screen.findByRole("heading", { name: "Open pipeline by stage" }),
+      await screen.findByRole("heading", {
+        name: englishCopy["reporting.stage_distribution"],
+      }),
     ).toBeVisible();
     expect(
-      screen.getByRole("heading", { name: "Sales won by team member" }),
+      screen.getByRole("heading", {
+        name: englishCopy["reporting.owner_attainment"],
+      }),
     ).toBeVisible();
     const reads = asked.filter(
       ({ url }) =>
@@ -165,7 +190,9 @@ describe("Sales review", () => {
     const strip = await readings();
     expect(strip.queryByText("Closed win rate")).toBeNull();
     expect(strip.queryByText("Gap to goal")).toBeNull();
-    expect(screen.getByRole("link", { name: "Set sales goals" })).toBeVisible();
+    expect(
+      screen.getByRole("link", { name: englishCopy["progress.setGoals"] }),
+    ).toBeVisible();
     expect(screen.queryByText(/No sales target is set for/)).toBeNull();
   });
 
@@ -180,7 +207,9 @@ describe("Sales review", () => {
     expect(
       await screen.findByText(/A colleague who manages sales goals/),
     ).toBeVisible();
-    expect(screen.queryByRole("link", { name: "Set sales goals" })).toBeNull();
+    expect(
+      screen.queryByRole("link", { name: englishCopy["progress.setGoals"] }),
+    ).toBeNull();
   });
 
   it("offers one click to the quarter on another period", async () => {
@@ -191,7 +220,9 @@ describe("Sales review", () => {
         : salesEvaluation({ metrics: [metric("bookings_won", 1_000_000)] }),
     );
     await user.click(
-      await screen.findByRole("button", { name: "Show this quarter" }),
+      await screen.findByRole("button", {
+        name: englishCopy["reporting.compare.apply.period"],
+      }),
     );
     expect(window.location.hash).toContain("period=this_quarter");
   });
@@ -216,7 +247,9 @@ describe("Sales review", () => {
           }),
     );
     await readings();
-    expect(screen.getByText("Could not be calculated")).toBeVisible();
+    expect(
+      screen.getByText(englishCopy["reporting.status.failed"]),
+    ).toBeVisible();
     expect(
       screen.queryByText(/Some figures could not be read just now/),
     ).toBeNull();
@@ -293,7 +326,9 @@ describe("Sales review", () => {
     );
     expect(line).toBeVisible();
     expect(
-      screen.queryByRole("region", { name: "Since the last capture" }),
+      screen.queryByRole("region", {
+        name: englishCopy["analytics.overview.sinceTitle"],
+      }),
     ).toBeNull();
   });
 
@@ -318,7 +353,7 @@ describe("Sales review", () => {
     );
     await readings();
     expect(
-      screen.getByText("Part of this figure is hidden from you"),
+      screen.getByText(englishCopy["analytics.overview.partlyHidden"]),
     ).toBeVisible();
     // The withheld figure is never stated as the whole in words.
     expect(screen.queryByText(/Won in/)).toBeNull();
@@ -342,7 +377,9 @@ describe("Sales review", () => {
       await screen.findByText(/switched off individual performance/),
     ).toBeVisible();
     expect(
-      screen.queryByRole("region", { name: "Opening readings" }),
+      screen.queryByRole("region", {
+        name: englishCopy["analytics.overview.readings"],
+      }),
     ).toBeNull();
   });
 });
@@ -357,7 +394,9 @@ describe("Sales review gap", () => {
     );
     const strip = await readings();
     const hero = within(
-      screen.getByRole("region", { name: "Opening readings" }),
+      screen.getByRole("region", {
+        name: englishCopy["analytics.overview.readings"],
+      }),
     );
     expect(
       hero.queryByText("The comparison came back without a gap."),
