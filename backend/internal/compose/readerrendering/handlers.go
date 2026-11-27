@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/margince/margince/backend/internal/compose/modelfailure"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -86,6 +87,10 @@ func (h Handlers) SuggestLabelTranslation(w http.ResponseWriter, r *http.Request
 	}
 	if strings.TrimSpace(req.Text) == "" {
 		httperr.Write(w, r, httperr.Validation("text", "required", "send the label to translate"))
+		return
+	}
+	if utf8.RuneCountInString(req.Text) > MaxLabelRunes {
+		httperr.Write(w, r, httperr.Validation("text", codeTooLong, fmt.Sprintf("a label is at most %d characters", MaxLabelRunes)))
 		return
 	}
 	if !req.Language.Valid() {

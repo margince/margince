@@ -6870,8 +6870,9 @@ export interface paths {
          *     Needs `pipeline:update` or `custom_field:update`, the grants that edit the labels this
          *     serves; without either it answers 403. When the label is already in the target language
          *     the answer is `unchanged: true` and the label itself, with no model call. With no AI
-         *     model it answers 409 `ai_not_configured`. An empty `text` is 422 `required`. A model that
-         *     was asked and did not answer is 503 `assistant_unavailable`.
+         *     model it answers 409 `ai_not_configured`. An empty `text` is 422 `required`, and one past
+         *     200 characters is 422 `too_long`. A model that was asked and did not answer is 503
+         *     `assistant_unavailable`.
          */
         post: operations["suggestLabelTranslation"];
         delete?: never;

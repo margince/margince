@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"unicode/utf8"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -15,6 +16,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
+
+// MaxLabelRunes is the longest label a suggestion takes, the length a stored
+// label translation may have (LabelTranslations in api/crm.yaml).
+const MaxLabelRunes = 200
 
 // labelEditors are the objects whose labels carry translations: a stage name
 // and a custom field's name and options. Editing either is what a suggestion
@@ -30,6 +35,9 @@ func (s *Service) SuggestLabel(ctx context.Context, text string, target textlang
 	}
 	if !editsALabel(ctx) {
 		return crmcontracts.LabelTranslation{}, apperrors.ErrPermissionDenied
+	}
+	if utf8.RuneCountInString(text) > MaxLabelRunes {
+		return crmcontracts.LabelTranslation{}, ErrTooLong
 	}
 	in := Input{Subject: strings.TrimSpace(text), Target: target, Source: textlang.OfMessage("", text)}
 	out := crmcontracts.LabelTranslation{Text: in.Subject, Language: crmcontracts.LabelTranslationLanguage(target)}

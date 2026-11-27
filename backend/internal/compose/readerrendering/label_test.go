@@ -6,6 +6,7 @@ package readerrendering
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -75,5 +76,16 @@ func TestAModelThatChangedTheLabelsFiguresIsRefused(t *testing.T) {
 func TestASuggestionWithNoModelSaysSo(t *testing.T) {
 	if _, err := labelService(t, nil).SuggestLabel(labelEditor("pipeline"), "Proposal sent", textlang.German); !errors.Is(err, ErrNoModel) {
 		t.Fatalf("got %v, want ErrNoModel", err)
+	}
+}
+
+func TestALabelPastTheStoredLimitAsksNoModel(t *testing.T) {
+	lane := &recordingLane{reply: `{"already_in_target": false, "subject": "x", "body": ""}`}
+	long := strings.Repeat("a", MaxLabelRunes+1)
+	if _, err := labelService(t, lane).SuggestLabel(labelEditor("pipeline"), long, textlang.German); !errors.Is(err, ErrTooLong) {
+		t.Fatalf("got %v, want ErrTooLong", err)
+	}
+	if len(lane.sent) != 0 {
+		t.Fatalf("a label past the limit reached the model")
 	}
 }
