@@ -30,7 +30,7 @@ import (
 // Rolling idle window capped by the absolute expiry; both are documented
 // operational defaults, not spec-ratified numbers.
 const (
-	idleTTL     = 24 * time.Hour
+	idleTTL     = 14 * 24 * time.Hour
 	absoluteTTL = 30 * 24 * time.Hour
 )
 
