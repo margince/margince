@@ -19,7 +19,7 @@ func TestALabelReadsTheSameWhicheverWayItsAccentIsEncoded(t *testing.T) {
 }
 
 // Case maps up, then folds. A capital word reads as the same word with its
-// final sigma or its sharp s, either capital of it, and a dotless i reads as an i.
+// final sigma or its sharp s, whichever capital. A dotless i reads as an i.
 func TestALabelReadsTheSameInCapitals(t *testing.T) {
 	t.Parallel()
 	for _, pair := range [][2]string{{"Όρος", "ΌΡΟΣ"}, {"Straße", "STRASSE"}, {"Straße", "STRAẞE"}, {"Kilavuz", "Kılavuz"}} {
