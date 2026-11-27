@@ -285,24 +285,12 @@
   color: var(--warningText);
 }
 
-/* Sales goals: the sellers beside the one plan in hand. */
-.goals-board {
-  display: grid;
-  grid-template-columns: minmax(16rem, 20rem) minmax(0, 1fr);
-  align-items: start;
-  gap: var(--gapCards);
-  column-gap: var(--gapPanes);
-}
+/* Sales goals: the plan in hand and its history, one card under the other. */
 .goals-board-plan {
   display: flex;
   flex-direction: column;
   gap: var(--gapCards);
   min-width: 0;
-}
-@media (max-width: 1000px) {
-  .goals-board {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }
 .goals-seller {
   display: inline-flex;

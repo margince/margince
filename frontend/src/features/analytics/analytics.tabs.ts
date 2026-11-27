@@ -13,7 +13,6 @@ import { useCan } from "../../lib/capability";
 import { useRoute } from "../../lib/router";
 import { useMe } from "../../lib/session";
 import { useUrlParams } from "../../lib/urlstate";
-import { useDataCoverage } from "./analytics.coverage";
 import { overviewViews, readsOverview } from "./analytics.overview.choice";
 import { useReportingCatalog } from "./reporting.queries";
 import { readableViews, VIEW_SHAPE, viewOfSection } from "./reporting.views";
@@ -45,7 +44,6 @@ export function useAnalyticsSections(defaultScope: ScopeKind | undefined) {
   // bare address would land on Forecast and ask its figures first.
   const grantsKnown = useMe().data !== undefined;
   const catalog = useReportingCatalog(readsViews);
-  const coverageProbe = useDataCoverage();
   const requested = sectionFromAddress(segment, "overview", params.get("view"));
   const views = readsViews ? viewTabs(catalog.data) : [];
   const opens = readsViews && opensOverview(catalog.data);
@@ -55,7 +53,6 @@ export function useAnalyticsSections(defaultScope: ScopeKind | undefined) {
       views,
       can,
       ownLens: defaultScope === "owner",
-      coverageAnswered: coverageProbe.isSuccess,
     }),
   );
   const section = landOn(requested, available, {
@@ -91,7 +88,6 @@ function admits(
     views: readonly Section[];
     can: Grants;
     ownLens: boolean;
-    coverageAnswered: boolean;
   }>,
 ): boolean {
   if (viewOfSection(candidate)) return seat.views.includes(candidate);
@@ -108,10 +104,10 @@ function admits(
       return seat.ownLens;
     case "accounts":
       return seat.can.deal && seat.can.company;
-    // The read starts only with the ops grant; the tab appears after the
-    // server has answered.
+    // The grant alone, the one the server checks. Reading the coverage here
+    // would ask on every section, and before the first check it answers 404.
     case "coverage":
-      return seat.can.coverage && seat.coverageAnswered;
+      return seat.can.coverage;
     default:
       return true;
   }

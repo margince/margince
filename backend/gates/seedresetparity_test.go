@@ -3,7 +3,7 @@
 
 //gate:kind parity H3
 
-package gates_test
+package gates
 
 // "What survives a reset" is one decision, and it is written down twice: the
 // in-product data reset applies it in Go (internal/compose/datasweep.go's
@@ -50,6 +50,7 @@ const (
 var preservedArrayEntry = regexp.MustCompile(`'([a-z0-9_]+)'`)
 
 func TestTheTwoResetsPreserveTheSameTables(t *testing.T) {
+	t.Parallel()
 	fromGo := goPreservedTables(t)
 	fromSQL := sqlPreservedTables(t)
 
@@ -144,7 +145,7 @@ func preservedKeyName(t *testing.T, key ast.Expr) string {
 		}
 		return name
 	case *ast.Ident:
-		value := constantString(t, k.Name)
+		value := composeConstString(t, k.Name)
 		if value == "" {
 			t.Fatalf("%s is keyed by constant %s, whose value this gate cannot resolve", preservedIdent, k.Name)
 		}
@@ -154,8 +155,8 @@ func preservedKeyName(t *testing.T, key ast.Expr) string {
 	return ""
 }
 
-// constantString finds a `const <name> = "..."` in the compose package.
-func constantString(t *testing.T, name string) string {
+// composeConstString finds a `const <name> = "..."` in the compose package.
+func composeConstString(t *testing.T, name string) string {
 	t.Helper()
 	entries, err := gatekit.ReadDir("internal/compose")
 	if err != nil {

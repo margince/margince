@@ -18,6 +18,7 @@ import {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  window.location.hash = "";
 });
 
 it("draws the tabs in the row's own order, whatever order the sections are listed in", () => {
@@ -166,6 +167,27 @@ describe("the data coverage section", () => {
         "Start the input check in Forecast to see source coverage.",
       ),
     ).toBeTruthy();
+  });
+
+  it("offers the section from the ops grant and asks for coverage only once it opens", async () => {
+    const fetch = reportsStub({ coverage: { status: 404 } });
+    vi.stubGlobal("fetch", fetch);
+    const askedCoverage = () =>
+      fetch.mock.calls.some(([input]) =>
+        String(input instanceof Request ? input.url : input).includes(
+          "/analytics/coverage",
+        ),
+      );
+    window.location.hash = "#/analytics/pipeline";
+    render(<AnalyticsScreen />);
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "Setup" }));
+    expect(
+      await screen.findByRole("button", { name: "Data coverage" }),
+    ).toBeTruthy();
+    expect(askedCoverage()).toBe(false);
+    await user.click(screen.getByRole("button", { name: "Data coverage" }));
+    await waitFor(() => expect(askedCoverage()).toBe(true));
   });
 
   it("does not request coverage without the ops grant", async () => {

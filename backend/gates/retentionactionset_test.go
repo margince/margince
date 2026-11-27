@@ -26,9 +26,10 @@ package gates
 //     refused by a constraint, with the caller told nothing useful.
 //
 // The gate is what makes the third copy safe to have. Deriving one from another
-// was the alternative, and there is nowhere to derive from: the CHECK is SQL in
+// was the alternative, and there is nowhere to derive from. The CHECK is SQL in
 // a shipped migration, and the two contracts are read by generators that resolve
-// no cross-document reference.
+// no cross-document reference. The API's RetentionAction is held to the CHECK
+// in enumsync_test.go. This file holds the event's copy.
 
 import (
 	"regexp"
@@ -89,33 +90,23 @@ func retentionActionCheck(t *testing.T) []string {
 // that reports agreement over a divergence.
 var quotedSQLText = regexp.MustCompile(`'((?:''|[^'])*)'::text`)
 
-// TestTheRetentionActionSetIsOneSet holds the three spellings together.
+// TestTheRetentionActionSetIsOneSet holds the event's spelling to the CHECK.
 func TestTheRetentionActionSetIsOneSet(t *testing.T) {
 	t.Parallel()
 	database := retentionActionCheck(t)
-	for _, spelling := range []struct {
-		what     string
-		path     string
-		schema   string
-		property string
-	}{
-		{"the API's RetentionAction", "api/crm.yaml", "RetentionAction", ""},
-		{"retention.applied's action", "api/public-events.yaml", "PublicEventRetentionApplied", "action"},
-	} {
-		doc := loadOpenAPIDocument(t, spelling.path)
-		published := contractEnum(t, doc, spelling.schema, spelling.property)
-		if len(published) == 0 {
-			t.Errorf("%s declares no enum — an open field is what this gate exists to find", spelling.what)
-			continue
-		}
-		names := make([]string, 0, len(published))
-		for value := range published {
-			names = append(names, value)
-		}
-		sort.Strings(names)
-		if strings.Join(names, ",") != strings.Join(database, ",") {
-			t.Errorf("%s publishes %v and retention_policy.action admits %v — one set, and the two ends of it disagree",
-				spelling.what, names, database)
-		}
+	const what = "retention.applied's action"
+	doc := loadOpenAPIDocument(t, "api/public-events.yaml")
+	published := contractEnum(t, doc, "PublicEventRetentionApplied", "action")
+	if len(published) == 0 {
+		t.Fatalf("%s declares no enum — an open field is what this gate exists to find", what)
+	}
+	names := make([]string, 0, len(published))
+	for value := range published {
+		names = append(names, value)
+	}
+	sort.Strings(names)
+	if strings.Join(names, ",") != strings.Join(database, ",") {
+		t.Errorf("%s publishes %v and retention_policy.action admits %v — one set, and the two ends of it disagree",
+			what, names, database)
 	}
 }

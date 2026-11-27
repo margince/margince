@@ -5733,6 +5733,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.tech.laneFailed":
     "{lane} hat nicht geantwortet. Das vorherige Ergebnis ist unverändert.",
   "co.tech.laneRefused": "Die Website hat die Analyse blockiert.",
+  "co.tech.laneFailedFirst":
+    "{lane} hat nicht geantwortet, daher liegt noch kein Ergebnis vor.",
   "co.tech.lane.dns": "DNS",
   "co.tech.lane.certlog": "Zertifikate",
   "co.tech.lane.homepage": "Startseite",
@@ -5981,16 +5983,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.project": "Projekt",
 
   "lead.source.manual": "Manuell erstellt",
-  "lead.source.inbound": "Eingehend",
+  "lead.source.siteread": "Von der Unternehmenswebsite",
   "lead.source.webform": "Webformular",
   "lead.source.webformNamed": "Webformular „{name}“",
-  "lead.source.referral": "Empfehlung",
   "lead.source.import": "Import",
-  "lead.source.crawl": "Webrecherche",
   "lead.source.api": "Integration",
   "lead.source.automation": "Automatisierung",
   "lead.source.capture": "Aus einer Unterhaltung erfasst",
-  "lead.source.siteread": "Von der Unternehmenswebsite",
   "lead.source.unknown": "Unbekannte Quelle",
   "leadSources.removeOnlyTitle":
     "Deine Rolle darf Einträge entfernen, aber nicht hinzufügen oder ändern",
@@ -6135,8 +6134,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Es wird keine Anzahl angezeigt, da sich die Anzahlen nicht nach Branche, Land oder Unternehmensgröße eingrenzen lassen.",
   "lead.boardCountsNoOtherFilter":
     "Es wird keine Anzahl angezeigt, da die Anzahlen nicht jeden Filter dieser Liste berücksichtigen können.",
-  "lead.boardCountsNoConnectorSource":
-    "Es wird keine Anzahl angezeigt, da sich die Anzahlen nicht auf alle Leads eines Connectors eingrenzen lassen.",
   "lead.boardCountsOwnerNotMeasurable":
     "Keine Anzahl für die Leads dieser verantwortlichen Person. Nur Admins können dir erlauben, diese Anzahl auszuwerten.",
   "lead.boardTerminalRowsUnavailable":
@@ -7657,6 +7654,24 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deepread.statusFailed": "Fehlgeschlagen",
   "deepread.statusCancelled": "Abgebrochen",
   "deepread.resumesAt": "Wird am {when} automatisch fortgesetzt.",
+  "deepread.failure.bot_blocked":
+    "Der Bot-Schutz der Website hat das Lesen abgelehnt.",
+  "deepread.failure.http_server_error":
+    "Die Website hat mit einem Serverfehler geantwortet.",
+  "deepread.failure.timeout": "Die Website hat nicht rechtzeitig geantwortet.",
+  "deepread.failure.http_client_error":
+    "Die Startseite der Website wurde nicht gefunden.",
+  "deepread.failure.dns": "Die Domain verweist auf keinen Server.",
+  "deepread.failure.tls":
+    "Das HTTPS-Zertifikat der Website ließ sich nicht prüfen.",
+  "deepread.failure.robots_disallowed":
+    "Die Website bittet Crawler, sie nicht zu lesen.",
+  "deepread.failure.unreadable":
+    "Die Website hat geantwortet, aber nichts Lesbares geliefert.",
+  "deepread.failure.internal":
+    "Margince konnte das Lesen nicht abschließen. Die Ursache liegt bei dieser Installation, nicht bei der Website. Ein Admin findet sie im Serverprotokoll.",
+  "deepread.failure.stale_reclaim":
+    "Das Lesen hat sich nicht mehr gemeldet und wurde beendet.",
   "deepread.pagesSoFar_one": "Bisher {count} Seite analysiert",
   "deepread.pagesSoFar_other": "Bisher {count} Seiten analysiert",
   "deepread.stoppedEarly": "Vorzeitig beendet: {reason}",
@@ -9587,6 +9602,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Zahlen zum Zeitpunkt des Snapshots. Die Zahlen ändern sich nicht, und der Link nennt den Zeitpunkt der Aufnahme.",
   "analytics.share.snapshotUnavailable":
     "Für diesen Zeitraum gibt es noch keinen Snapshot.",
+  "analytics.share.quarterOnly":
+    "Geteilt wird immer das Quartal. Wähle Quartal, um diese Ansicht zu teilen.",
   "analytics.share.expiryNote":
     "Der Link funktioniert nach 30 Tagen nicht mehr.",
   "analytics.share.create": "Link erstellen",
@@ -9789,6 +9806,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "forecast.period.quarter": "Quartal",
   "forecast.period.month": "Monat",
   "forecast.period.week": "Woche",
+  "forecast.quarterCards":
+    "Die beiden Pipeline-Karten unten gelten für das Quartal.",
   "forecast.receipt": "Daten und Belege geprüft",
   "forecast.eligible": "Berücksichtigte Deals",
   "forecast.priced": "Bepreist",
@@ -15269,7 +15288,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "audit.kind.lead_disqualify_reason": "Disqualifizierungsgrund",
   "audit.kind.lead_origin": "Lead-Herkunft",
   "audit.kind.lead_privacy_notice": "Datenschutzhinweis zum Lead",
-  "audit.kind.lead_source": "Lead-Quelle",
   "audit.kind.legal_entity": "Rechtsträger",
   "audit.kind.legal_review": "Rechtliche Prüfung",
   "audit.kind.license": "Lizenzeinstellungen",
@@ -19549,9 +19567,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "webhooks.event.lead.sla_breached.label": "Erste Antwort überfällig",
   "webhooks.event.lead.sla_breached.when":
     "Eine Prüfung stellt fest, dass die Frist für die erste Antwort auf einen Lead ohne Antwort verstrichen ist.",
-  "webhooks.event.lead_source.changed.label": "Lead-Quellen geändert",
-  "webhooks.event.lead_source.changed.when":
-    "Eine Lead-Quelle wird in den Einstellungen hinzugefügt, bearbeitet oder entfernt.",
   "webhooks.event.lead_disqualify_reason.changed.label":
     "Disqualifizierungsgründe geändert",
   "webhooks.event.lead_disqualify_reason.changed.when":

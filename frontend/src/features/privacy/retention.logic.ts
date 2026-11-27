@@ -173,7 +173,7 @@ export function isDuplicateScope(error: unknown): boolean {
 
 // The window the server stores: at least a day, at most a century
 // (`RetainDaysCeiling` in backend/internal/modules/privacy/retentionpolicystore.go,
-// held equal by backend/gates/frontendretaindays_test.go).
+// held equal by backend/gates/frontendlimits_test.go).
 export const RETAIN_DAYS = { min: 1, max: 36500 } as const;
 
 /**

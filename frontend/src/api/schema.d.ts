@@ -9736,71 +9736,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/lead-sources": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List lead sources, active and inactive, in display order.
-         * @deprecated
-         * @description Deprecated: the list says how a row reached Margince, which nothing scores any more.
-         *     Use `/lead-origins` for where a lead came from.
-         *
-         *     `data` is the administered list. `discovered` names source values that
-         *     live on leads but are not in the list — connector-written keys such as
-         *     `connector:apollo:…` grouped by their connector prefix, seed values,
-         *     imports — with how many live leads carry each. Adding one as a source
-         *     (POST with that key) makes it administrable.
-         */
-        get: operations["listLeadSources"];
-        put?: never;
-        /**
-         * Add a lead source.
-         * @deprecated
-         */
-        post: operations["createLeadSource"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/lead-sources/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /**
-         * Remove a lead source nothing uses.
-         * @deprecated
-         * @description 409 when the source is built-in or any live lead still carries it —
-         *     deactivate it instead, which hides it from the create form and the
-         *     filter while every existing lead keeps its value.
-         */
-        delete: operations["deleteLeadSource"];
-        options?: never;
-        head?: never;
-        /**
-         * Rename, reorder, re-weight or (de)activate a lead source.
-         * @deprecated
-         * @description Changing `intent` does not rescore existing leads; each lead picks the
-         *     new weight up on its next recompute. A built-in (`system`) source
-         *     accepts every field here — it only refuses deletion.
-         */
-        patch: operations["updateLeadSource"];
-        trace?: never;
-    };
     "/lead-origins": {
         parameters: {
             query?: never;
@@ -9864,9 +9799,8 @@ export interface paths {
         /**
          * List deal acquisition sources, active and retired, in display order.
          * @description The administered business channels a deal can be attributed to. This list is
-         *     deliberately separate from `/lead-sources`: that one also models how a RECORD
-         *     reached Margince (connector, import, crawl) and scores lead intent, while this
-         *     one only names how an OPPORTUNITY reached the business. Retired entries are
+         *     deliberately separate from `/lead-origins`, which names where a LEAD came from;
+         *     this one only names how an OPPORTUNITY reached the business. Retired entries are
          *     returned so a deal still carrying one renders its label and a filter can still
          *     find it; they cannot be newly assigned.
          */
@@ -47243,10 +47177,8 @@ export interface components {
             readonly next_task_due_intent?: components["schemas"]["IntentTime"];
             /** @description The highest-impact factor in the retained current score explanation, for a compact queue reason. */
             readonly score_reason?: string | null;
-            /** @description How the row reached Margince: `manual` for a typed lead, or the value an import, connector or capture wrote (`connector:<name>:<id>`). It never scores and never feeds the origin filter or report; use `origin` for where the lead came from. The `lead_source` list that administered it is deprecated. */
+            /** @description The channel this lead arrived by: `api`, `automation`, `capture`, `import`, `manual` or `webform`. An older lead can show another value until the background correction reaches it. It never scores; use `origin` for where the lead came from. */
             source: string;
-            /** @description The label the deprecated lead_source list gives `source`; null for connector, seed and other free values. */
-            readonly source_label?: string | null;
             /** @description The current name of the website form this lead came through; null for every other lead, and for one whose form was deleted. */
             readonly web_form_name?: string | null;
             /** @description Where the lead came from, a key from `/lead-origins`. Null when nobody has classified the lead; such a lead scores neutral. Set by a human, an importer or capture, and the only lead fact the score and the origin filter read. */
@@ -47347,8 +47279,11 @@ export interface components {
             /** @description The source system's own spelling of who wrote this record. Same door as source_author_id: a declared importer only, beside a source_system. Kept when a seat is also named, so the name survives the seat. */
             source_author_name?: string | null;
             source_id?: string | null;
-            /** @description How the row was written. Optional: the server writes `manual` when none is sent. Never scored; send `origin` for where the lead came from. */
-            source?: string;
+            /**
+             * @description The channel this lead arrived by. Optional: the server writes `manual` when none is sent, and an integration sends `api`. The other system and the lead's id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`. Never scored; send `origin` for where the lead came from.
+             * @enum {string}
+             */
+            source?: "api" | "automation" | "capture" | "import" | "manual" | "webform";
             /** @description Where the lead came from: an ACTIVE key from `/lead-origins` (422 `unknown_lead_origin` or `inactive_lead_origin` otherwise). Omit for an unclassified lead, which scores neutral. */
             origin?: string | null;
             /** @description A short note beside `origin`. */
@@ -47600,7 +47535,7 @@ export interface components {
             page: components["schemas"]["PageInfo"];
         };
         /**
-         * @description What the scorer makes of a lead from this origin (the deprecated lead source list carries the same field, which nothing reads): high adds the high-intent points, low subtracts the low-intent penalty, neutral does neither.
+         * @description What the scorer makes of a lead from this origin (lead origins carry it): high adds the high-intent points, low subtracts the low-intent penalty, neutral does neither.
          * @enum {string}
          */
         LeadSourceIntent: "high" | "neutral" | "low";
@@ -48011,53 +47946,6 @@ export interface components {
             sort_order?: number;
         };
         UpdateLeadOriginRequest: {
-            label?: string;
-            intent?: components["schemas"]["LeadSourceIntent"];
-            sort_order?: number;
-            active?: boolean;
-        };
-        /**
-         * @deprecated
-         * @description Deprecated: how a row reached Margince is no longer scored. One administered lead source. `key` is the value stored on `lead.source`; `label` is what a user sees.
-         */
-        LeadSource: {
-            /** Format: uuid */
-            id: string;
-            /** @description Lowercase stable key, the stored value. Never changes after creation. */
-            key: string;
-            label: string;
-            intent: components["schemas"]["LeadSourceIntent"];
-            sort_order: number;
-            /** @description Inactive sources leave the create form and the filter; leads carrying them keep the value. */
-            active: boolean;
-            /** @description Built-in. Can be renamed, re-weighted and deactivated, never deleted. */
-            readonly system: boolean;
-            /** @description Live leads carrying this key. */
-            readonly lead_count: number;
-            version: components["schemas"]["RowVersion"];
-            /** Format: date-time */
-            created_at: string;
-            /** Format: date-time */
-            updated_at: string;
-        };
-        /** @description A source value present on leads but absent from the administered list — a connector family, a seed, an import. */
-        DiscoveredLeadSource: {
-            /** @description The stored value, or for `connector:<name>:<id>` values the `connector:<name>` family. */
-            key: string;
-            lead_count: number;
-        };
-        LeadSourceListResponse: {
-            data: components["schemas"]["LeadSource"][];
-            discovered: components["schemas"]["DiscoveredLeadSource"][];
-        };
-        CreateLeadSourceRequest: {
-            label: string;
-            /** @description Optional; derived from the label (lowercased, non-alphanumerics collapsed to `_`) when absent. Must be unique. */
-            key?: string;
-            intent?: components["schemas"]["LeadSourceIntent"];
-            sort_order?: number;
-        };
-        UpdateLeadSourceRequest: {
             label?: string;
             intent?: components["schemas"]["LeadSourceIntent"];
             sort_order?: number;
@@ -52346,6 +52234,8 @@ export interface components {
              * @description The instant a snapshot share's state describes. Absent on a live share.
              */
             as_of?: string;
+            /** @description The name of the population the readings cover, as this reader's own lens names it: the team, the team member, or the whole company. Absent when that lens does not reach the team member or team, so a link never names a subject its reader could not choose; `readings.scope_kind` still says which kind it is. */
+            scope_label?: string;
             readings: components["schemas"]["ForecastReadings"];
             /** @description Whether anything was kept back from this reader. A boolean and never a count: a count of what somebody may not see states how much of it there is. */
             withheld: boolean;
@@ -80731,8 +80621,8 @@ export interface operations {
                  *     Mutually exclusive with `owner_id` and `owner_team_id`; combining them is `422`.
                  */
                 unassigned?: boolean;
-                /** @description Filter by how the row was written (import, crawl, manual, `connector:<name>`, ...). Not the origin; use `origin` to filter by where the lead came from. */
-                source?: string;
+                /** @description Filter by the channel the lead arrived by. Not the origin; use `origin` to filter by where the lead came from. */
+                source?: "api" | "automation" | "capture" | "import" | "manual" | "webform";
                 /** @description Filter by origin, an exact key from `/lead-origins`. Matched literally; `unset` names the leads with no origin. */
                 origin?: string;
                 /** @description Triage by first-response SLA state (formulas §18.1). `breached` is the overdue queue. */
@@ -81821,166 +81711,6 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
-            422: components["responses"]["ValidationError"];
-        };
-    };
-    listLeadSources: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description The lead source list. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["LeadSourceListResponse"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-        };
-    };
-    createLeadSource: {
-        parameters: {
-            query?: never;
-            header?: {
-                /**
-                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
-                 *     create (API-CC-6). **Scope:** the key is unique within
-                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. A connected agent's principal is its connection, so a
-                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
-                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
-                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running and carries `Retry-After`;
-                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
-                 *     request under the key failed after it had started, so check whether it took effect before
-                 *     retrying under a new key.
-                 *     A request the server stopped for time answers `503 code: request_timed_out` with
-                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
-                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
-                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
-                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
-                 *     attempt already bumped the version.
-                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
-                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
-                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
-                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
-                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
-                 *     to retry blind.
-                 */
-                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateLeadSourceRequest"];
-            };
-        };
-        responses: {
-            /** @description Created lead source. */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["LeadSource"];
-                };
-            };
-            403: components["responses"]["Forbidden"];
-            409: components["responses"]["Conflict"];
-            422: components["responses"]["ValidationError"];
-        };
-    };
-    deleteLeadSource: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Removed. */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
-            422: components["responses"]["ValidationError"];
-        };
-    };
-    updateLeadSource: {
-        parameters: {
-            query?: never;
-            header?: {
-                /**
-                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
-                 *     create (API-CC-6). **Scope:** the key is unique within
-                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. A connected agent's principal is its connection, so a
-                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
-                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
-                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running and carries `Retry-After`;
-                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
-                 *     request under the key failed after it had started, so check whether it took effect before
-                 *     retrying under a new key.
-                 *     A request the server stopped for time answers `503 code: request_timed_out` with
-                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
-                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
-                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
-                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
-                 *     attempt already bumped the version.
-                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
-                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
-                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
-                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
-                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
-                 *     to retry blind.
-                 */
-                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
-            };
-            path: {
-                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateLeadSourceRequest"];
-            };
-        };
-        responses: {
-            /** @description Updated lead source. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["LeadSource"];
-                };
-            };
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };

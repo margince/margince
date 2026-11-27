@@ -5579,6 +5579,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Chưa có dữ liệu kỹ thuật. Tự động điền và cập nhật khi đọc trang web của công ty.",
   "co.tech.laneFailed": "{lane} không phản hồi. Kết quả trước vẫn giữ nguyên.",
   "co.tech.laneRefused": "Trang web đã chặn truy cập.",
+  "co.tech.laneFailedFirst": "{lane} không phản hồi nên chưa có kết quả nào.",
   "co.tech.lane.dns": "DNS",
   "co.tech.lane.certlog": "Chứng chỉ",
   "co.tech.lane.homepage": "Trang chủ",
@@ -5821,16 +5822,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lead.project": "Dự án",
 
   "lead.source.manual": "Tạo thủ công",
-  "lead.source.inbound": "Khách tự liên hệ",
+  "lead.source.siteread": "Từ trang web công ty",
   "lead.source.webform": "Biểu mẫu web",
   "lead.source.webformNamed": "Biểu mẫu web “{name}”",
-  "lead.source.referral": "Giới thiệu",
   "lead.source.import": "Nhập dữ liệu",
-  "lead.source.crawl": "Tìm hiểu trên web",
   "lead.source.api": "Tích hợp",
   "lead.source.automation": "Tự động hóa",
   "lead.source.capture": "Ghi nhận từ một cuộc trao đổi",
-  "lead.source.siteread": "Từ trang web công ty",
   "lead.source.unknown": "Nguồn không rõ",
   "leadSources.removeOnlyTitle":
     "Vai trò hiện tại chỉ xóa được mục, không thêm hay thay đổi được mục nào",
@@ -5971,8 +5969,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Số lượng không thể lọc theo ngành, quốc gia hay quy mô công ty nên không hiển thị.",
   "lead.boardCountsNoOtherFilter":
     "Số lượng không thể áp dụng mọi bộ lọc của danh sách này nên không hiển thị.",
-  "lead.boardCountsNoConnectorSource":
-    "Số lượng không thể lọc theo mọi lead từ một trình kết nối nên không hiển thị.",
   "lead.boardCountsOwnerNotMeasurable":
     "Không hiển thị số lượng lead của người chịu trách nhiệm này. Chỉ quản trị viên cấp được quyền xem số liệu này.",
   "lead.boardTerminalRowsUnavailable":
@@ -7468,6 +7464,21 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deepread.statusFailed": "Bị lỗi",
   "deepread.statusCancelled": "Đã hủy",
   "deepread.resumesAt": "Tự động chạy tiếp {when}.",
+  "deepread.failure.bot_blocked":
+    "Cơ chế chống bot của trang web đã từ chối việc đọc.",
+  "deepread.failure.http_server_error": "Trang web trả về lỗi máy chủ.",
+  "deepread.failure.timeout": "Trang web không phản hồi kịp.",
+  "deepread.failure.http_client_error":
+    "Không tìm thấy trang chủ của trang web.",
+  "deepread.failure.dns": "Tên miền không trỏ tới máy chủ nào.",
+  "deepread.failure.tls": "Không xác minh được chứng chỉ HTTPS của trang web.",
+  "deepread.failure.robots_disallowed":
+    "Trang web yêu cầu trình thu thập không đọc trang.",
+  "deepread.failure.unreadable":
+    "Trang web có phản hồi nhưng không có nội dung đọc được.",
+  "deepread.failure.internal":
+    "Margince không hoàn tất được việc đọc. Nguyên nhân nằm ở bản cài đặt này, không phải ở trang web. Quản trị viên xem trong nhật ký máy chủ.",
+  "deepread.failure.stale_reclaim": "Lượt đọc ngừng báo cáo nên đã bị dừng.",
   "deepread.pagesSoFar_one": "Đến nay đã đọc {count} trang",
   "deepread.pagesSoFar_other": "Đến nay đã đọc {count} trang",
   "deepread.stoppedEarly": "Dừng sớm: {reason}",
@@ -9327,6 +9338,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.share.snapshotHelp":
     "Số liệu tại thời điểm chụp. Số liệu không thay đổi, và liên kết ghi rõ thời điểm chụp.",
   "analytics.share.snapshotUnavailable": "Chưa có ảnh chụp nào cho kỳ này.",
+  "analytics.share.quarterOnly":
+    "Chia sẻ luôn tính theo quý. Hãy chọn Quý để chia sẻ chế độ xem này.",
   "analytics.share.expiryNote": "Liên kết ngừng hoạt động sau 30 ngày.",
   "analytics.share.create": "Tạo liên kết",
   "analytics.share.linkTitle": "Liên kết đã tạo",
@@ -9525,6 +9538,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "forecast.period.quarter": "Quý",
   "forecast.period.month": "Tháng",
   "forecast.period.week": "Tuần",
+  "forecast.quarterCards": "Hai thẻ pipeline bên dưới tính cho cả quý.",
   "forecast.receipt": "Đã kiểm tra dữ liệu và bằng chứng",
   "forecast.eligible": "Deal được tính",
   "forecast.priced": "Có giá",
@@ -14848,7 +14862,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "audit.kind.lead_disqualify_reason": "Lý do loại lead",
   "audit.kind.lead_origin": "Nguồn gốc lead",
   "audit.kind.lead_privacy_notice": "Thông báo quyền riêng tư cho lead",
-  "audit.kind.lead_source": "Nguồn lead",
   "audit.kind.legal_entity": "Pháp nhân",
   "audit.kind.legal_review": "Xem xét pháp lý",
   "audit.kind.license": "Cài đặt giấy phép",
@@ -19020,9 +19033,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "webhooks.event.lead.sla_breached.label": "Quá hạn phản hồi đầu tiên",
   "webhooks.event.lead.sla_breached.when":
     "Lần kiểm tra phát hiện lead đã quá hạn phản hồi đầu tiên mà chưa có câu trả lời.",
-  "webhooks.event.lead_source.changed.label": "Đã đổi danh sách nguồn lead",
-  "webhooks.event.lead_source.changed.when":
-    "Nguồn lead được thêm, sửa hoặc gỡ trong Cài đặt.",
   "webhooks.event.lead_disqualify_reason.changed.label":
     "Đã đổi lý do loại lead",
   "webhooks.event.lead_disqualify_reason.changed.when":

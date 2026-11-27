@@ -26,8 +26,8 @@ import (
 
 // NarrowingReason is the closed vocabulary of contact.narrowing_reason.
 //
-// Held by: TestTheNarrowingReasonVocabularyIsTheCatalogsCheck
-// (backend/gates/narrowingreasonvocabulary_test.go), which fails when this set
+// Held by: TestEveryListedVocabularyIsItsColumnsCheck
+// (backend/gates/enumsync_test.go), which fails when this set
 // and the column's CHECK stop naming the same values.
 type NarrowingReason string
 

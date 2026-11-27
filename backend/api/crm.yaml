@@ -13579,8 +13579,8 @@ paths:
             Mutually exclusive with `owner_id` and `owner_team_id`; combining them is `422`.
         - name: source
           in: query
-          schema: { type: string }
-          description: Filter by how the row was written (import, crawl, manual, `connector:<name>`, ...). Not the origin; use `origin` to filter by where the lead came from.
+          schema: { type: string, enum: [api, automation, capture, import, manual, webform], x-go-type: string }
+          description: Filter by the channel the lead arrived by. Not the origin; use `origin` to filter by where the lead came from.
         - name: origin
           in: query
           schema: { type: string }
@@ -14515,106 +14515,10 @@ paths:
         '422': { $ref: '#/components/responses/ValidationError' }
 
   # -------------------------- /relationships --------------------------------
-  # ------------------------------ /lead-sources -----------------------------
+  # ------------------------------ /lead-origins -----------------------------
   # The installation's lead vocabularies. Installation-scoped configuration
   # like pipelines: read by everyone, written by a human session holding the
   # custom_field object (the same posture as the custom-field catalog).
-  /lead-sources:
-    get:
-      tags: [Leads]
-      operationId: listLeadSources
-      deprecated: true
-      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
-      summary: List lead sources, active and inactive, in display order.
-      description: |
-        Deprecated: the list says how a row reached Margince, which nothing scores any more.
-        Use `/lead-origins` for where a lead came from.
-
-        `data` is the administered list. `discovered` names source values that
-        live on leads but are not in the list — connector-written keys such as
-        `connector:apollo:…` grouped by their connector prefix, seed values,
-        imports — with how many live leads carry each. Adding one as a source
-        (POST with that key) makes it administrable.
-      responses:
-        '200':
-          description: The lead source list.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/LeadSourceListResponse' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-    post:
-      tags: [Leads]
-      operationId: createLeadSource
-      deprecated: true
-      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
-      x-mcp-tool: { verb: create_lead_source, router: change_settings, action: create_lead_source, tier: auto_execute, scope: write, served_by: route }
-      summary: Add a lead source.
-      parameters:
-        - $ref: '#/components/parameters/IdempotencyKey'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/CreateLeadSourceRequest' }
-      responses:
-        '201':
-          description: Created lead source.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/LeadSource' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '409': { $ref: '#/components/responses/Conflict' }
-        '422': { $ref: '#/components/responses/ValidationError' }
-
-  /lead-sources/{id}:
-    parameters:
-      - $ref: '#/components/parameters/Id'
-    patch:
-      tags: [Leads]
-      operationId: updateLeadSource
-      deprecated: true
-      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
-      x-mcp-tool: { verb: update_lead_source, router: change_settings, action: update_lead_source, tier: auto_execute, scope: write, served_by: route }
-      summary: Rename, reorder, re-weight or (de)activate a lead source.
-      description: |
-        Changing `intent` does not rescore existing leads; each lead picks the
-        new weight up on its next recompute. A built-in (`system`) source
-        accepts every field here — it only refuses deletion.
-      parameters:
-        - $ref: '#/components/parameters/IdempotencyKey'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/UpdateLeadSourceRequest' }
-      responses:
-        '200':
-          description: Updated lead source.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/LeadSource' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '409': { $ref: '#/components/responses/Conflict' }
-        '422': { $ref: '#/components/responses/ValidationError' }
-    delete:
-      tags: [Leads]
-      operationId: deleteLeadSource
-      deprecated: true
-      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
-      x-mcp-tool: { verb: delete_lead_source, router: change_settings, action: delete_lead_source, tier: auto_execute, scope: write, served_by: route }
-      summary: Remove a lead source nothing uses.
-      description: |
-        409 when the source is built-in or any live lead still carries it —
-        deactivate it instead, which hides it from the create form and the
-        filter while every existing lead keeps its value.
-      responses:
-        '204': { description: Removed. }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '409': { $ref: '#/components/responses/Conflict' }
-        '422': { $ref: '#/components/responses/ValidationError' }
-
   /lead-origins:
     get:
       tags: [Leads]
@@ -14709,9 +14613,8 @@ paths:
       summary: List deal acquisition sources, active and retired, in display order.
       description: |
         The administered business channels a deal can be attributed to. This list is
-        deliberately separate from `/lead-sources`: that one also models how a RECORD
-        reached Margince (connector, import, crawl) and scores lead intent, while this
-        one only names how an OPPORTUNITY reached the business. Retired entries are
+        deliberately separate from `/lead-origins`, which names where a LEAD came from;
+        this one only names how an OPPORTUNITY reached the business. Retired entries are
         returned so a deal still carrying one renders its label and a filter can still
         find it; they cannot be newly assigned.
       responses:
@@ -64804,8 +64707,7 @@ components:
         next_task_due_has_time: { type: boolean, readOnly: true, description: 'True when next_task_due_at names a time of day; false when the next task is due on a date with no time.' }
         next_task_due_intent: { allOf: [{ $ref: '#/components/schemas/IntentTime' }], readOnly: true, description: 'The date and clock the next task was set for, in the zone it was chosen in. A task with only a date is due on this date for every reader.' }
         score_reason: { type: [string, 'null'], readOnly: true, description: 'The highest-impact factor in the retained current score explanation, for a compact queue reason.' }
-        source: { type: string, description: 'How the row reached Margince: `manual` for a typed lead, or the value an import, connector or capture wrote (`connector:<name>:<id>`). It never scores and never feeds the origin filter or report; use `origin` for where the lead came from. The `lead_source` list that administered it is deprecated.' }
-        source_label: { type: [string, 'null'], readOnly: true, description: 'The label the deprecated lead_source list gives `source`; null for connector, seed and other free values.' }
+        source: { type: string, description: 'The channel this lead arrived by: `api`, `automation`, `capture`, `import`, `manual` or `webform`. An older lead can show another value until the background correction reaches it. It never scores; use `origin` for where the lead came from.' }
         web_form_name: { type: [string, 'null'], readOnly: true, description: 'The current name of the website form this lead came through; null for every other lead, and for one whose form was deleted.' }
         origin: { type: [string, 'null'], description: 'Where the lead came from, a key from `/lead-origins`. Null when nobody has classified the lead; such a lead scores neutral. Set by a human, an importer or capture, and the only lead fact the score and the origin filter read.' }
         origin_label: { type: [string, 'null'], readOnly: true, description: 'The label `/lead-origins` gives `origin`; null when `origin` is null.' }
@@ -64902,7 +64804,7 @@ components:
         source_author_id: { type: [string, 'null'], format: uuid, description: 'Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat''s current name wins on read. captured_by still names the caller.' }
         source_author_name: { type: [string, 'null'], maxLength: 200, description: 'The source system''s own spelling of who wrote this record. Same door as source_author_id: a declared importer only, beside a source_system. Kept when a seat is also named, so the name survives the seat.' }
         source_id: { type: [string, 'null'] }
-        source: { type: string, description: 'How the row was written. Optional: the server writes `manual` when none is sent. Never scored; send `origin` for where the lead came from.' }
+        source: { type: string, enum: [api, automation, capture, import, manual, webform], x-go-type: string, description: 'The channel this lead arrived by. Optional: the server writes `manual` when none is sent, and an integration sends `api`. The other system and the lead''s id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`. Never scored; send `origin` for where the lead came from.' }
         origin: { type: [string, 'null'], description: 'Where the lead came from: an ACTIVE key from `/lead-origins` (422 `unknown_lead_origin` or `inactive_lead_origin` otherwise). Omit for an unclassified lead, which scores neutral.' }
         origin_detail: { type: [string, 'null'], maxLength: 500, description: 'A short note beside `origin`.' }
       additionalProperties: true
@@ -65160,13 +65062,13 @@ components:
         data: { type: array, items: { $ref: '#/components/schemas/Lead' } }
         page: { $ref: '#/components/schemas/PageInfo' }
 
-    # ---- Lead vocabularies (sources, disqualification reasons) ----
+    # ---- Lead vocabularies (origins, disqualification reasons) ----
     LeadSourceIntent:
       type: string
       enum: [high, neutral, low]
       x-extensible-enum: true
       x-enum-varnames: [LeadSourceIntentHigh, LeadSourceIntentNeutral, LeadSourceIntentLow]
-      description: 'What the scorer makes of a lead from this origin (the deprecated lead source list carries the same field, which nothing reads): high adds the high-intent points, low subtracts the low-intent penalty, neutral does neither.'
+      description: 'What the scorer makes of a lead from this origin (lead origins carry it): high adds the high-intent points, low subtracts the low-intent penalty, neutral does neither.'
 
     ReviewQuestion:
       type: object
@@ -65655,56 +65557,6 @@ components:
       type: object
       properties:
         label: { x-single-line: true, type: string, minLength: 1, maxLength: 120 }
-        intent: { $ref: '#/components/schemas/LeadSourceIntent' }
-        sort_order: { type: integer }
-        active: { type: boolean }
-
-    LeadSource:
-      type: object
-      deprecated: true
-      description: 'Deprecated: how a row reached Margince is no longer scored. One administered lead source. `key` is the value stored on `lead.source`; `label` is what a user sees.'
-      required: [id, key, label, intent, sort_order, active, system, lead_count, version, created_at, updated_at]
-      properties:
-        id: { type: string, format: uuid }
-        key: { type: string, description: 'Lowercase stable key, the stored value. Never changes after creation.' }
-        label: { type: string }
-        intent: { $ref: '#/components/schemas/LeadSourceIntent' }
-        sort_order: { type: integer }
-        active: { type: boolean, description: 'Inactive sources leave the create form and the filter; leads carrying them keep the value.' }
-        system: { type: boolean, readOnly: true, description: 'Built-in. Can be renamed, re-weighted and deactivated, never deleted.' }
-        lead_count: { type: integer, readOnly: true, description: 'Live leads carrying this key.' }
-        version: { $ref: '#/components/schemas/RowVersion' }
-        created_at: { type: string, format: date-time }
-        updated_at: { type: string, format: date-time }
-
-    DiscoveredLeadSource:
-      type: object
-      description: A source value present on leads but absent from the administered list — a connector family, a seed, an import.
-      required: [key, lead_count]
-      properties:
-        key: { type: string, description: 'The stored value, or for `connector:<name>:<id>` values the `connector:<name>` family.' }
-        lead_count: { type: integer }
-
-    LeadSourceListResponse:
-      type: object
-      required: [data, discovered]
-      properties:
-        data: { type: array, items: { $ref: '#/components/schemas/LeadSource' } }
-        discovered: { type: array, items: { $ref: '#/components/schemas/DiscoveredLeadSource' } }
-
-    CreateLeadSourceRequest:
-      type: object
-      required: [label]
-      properties:
-        label: { x-single-line: true, type: string, minLength: 1 }
-        key: { type: string, description: 'Optional; derived from the label (lowercased, non-alphanumerics collapsed to `_`) when absent. Must be unique.' }
-        intent: { $ref: '#/components/schemas/LeadSourceIntent' }
-        sort_order: { type: integer }
-
-    UpdateLeadSourceRequest:
-      type: object
-      properties:
-        label: { x-single-line: true, type: string, minLength: 1 }
         intent: { $ref: '#/components/schemas/LeadSourceIntent' }
         sort_order: { type: integer }
         active: { type: boolean }
@@ -71604,6 +71456,13 @@ components:
           type: string
           format: date-time
           description: The instant a snapshot share's state describes. Absent on a live share.
+        scope_label:
+          type: string
+          description: >-
+            The name of the population the readings cover, as this reader's own lens names
+            it: the team, the team member, or the whole company. Absent when that lens does
+            not reach the team member or team, so a link never names a subject its reader
+            could not choose; `readings.scope_kind` still says which kind it is.
         readings: { $ref: '#/components/schemas/ForecastReadings' }
         withheld:
           type: boolean

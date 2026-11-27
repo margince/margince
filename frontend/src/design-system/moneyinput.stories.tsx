@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { expect, userEvent, within } from "storybook/test";
-import { formatAnalyticsMoney, formatNumber } from "../format/format";
+import { formatMoneyWhole, formatNumber } from "../format/format";
 import { LocaleProvider, useLocale } from "../i18n";
 import { MoneyInput } from "./moneyinput";
 
@@ -45,7 +45,7 @@ function DisplayDemo() {
         currency="EUR"
         valueMinor={minor}
         onChangeMinor={setMinor}
-        display={(amount) => formatAnalyticsMoney(amount, "EUR", locale)}
+        display={(amount) => formatMoneyWhole(amount, "EUR", locale)}
         aria-label="Monthly goal"
       />
     </div>
