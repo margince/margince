@@ -370,7 +370,6 @@ func fetchRound(s Seat, base string, calls []dailyCall, parallel bool) ([]dailyR
 //
 // gatekit:fixture the unwired routes and the note each prints on its no-data row
 var dailyUnwiredRoutes = map[string]string{
-	"/v1/digest":                        "answers 501 until a mail connector is configured",
 	"/v1/connectors":                    "answers 501 until a mail connector is configured",
 	"/v1/embeddings/reindex/identities": "answers 501 until an embedding model is bound",
 	"/v1/installation/license":          "answers 501: this composition serves no license entitlement",

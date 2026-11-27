@@ -451,9 +451,9 @@ func TestOnlyAnOptionalCallsNotFoundIsNoData(t *testing.T) {
 func TestOnlyAnAllowlistedRouteMayAnswerNotImplemented(t *testing.T) {
 	unwired := []byte(`{"code":"not_implemented","message":"not wired"}`)
 	for path, want := range map[string]bool{
-		"/v1/digest":                true,
 		"/v1/connectors":            true,
-		"/v1/digest?since=1":        true,
+		"/v1/connectors?since=1":    true,
+		"/v1/digest":                false,
 		"/v1/deals/1":               false,
 		"/v1/analytics/framework":   false,
 		"/v1/connectors/1/messages": false,
