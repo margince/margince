@@ -42,9 +42,16 @@ type gatedEmbedder struct {
 	inputs  atomic.Int64
 	entered chan struct{}
 	release chan struct{}
+	// identity is the binding it answers under, fake/embed@8 when empty.
+	identity string
 }
 
-func (*gatedEmbedder) EmbedIdentity() (string, int) { return "fake/embed@8", 8 }
+func (e *gatedEmbedder) EmbedIdentity() (string, int) {
+	if e.identity == "" {
+		return "fake/embed@8", 8
+	}
+	return e.identity, 8
+}
 
 func (e *gatedEmbedder) Embed(_ context.Context, req model.EmbedRequest) (model.Embeddings, error) {
 	if e.inputs.Add(int64(len(req.Inputs))) == int64(len(req.Inputs)) && e.entered != nil {
@@ -75,9 +82,7 @@ type orphanIngest struct {
 func newOrphanIngest(t *testing.T, embedder *gatedEmbedder) *orphanIngest {
 	t.Helper()
 	e := integration.Setup(t)
-	all := principal.ObjectGrant{Create: true, Read: true, Update: true, Delete: true}
-	grants := map[string]principal.ObjectGrant{"knowledge_corpus": all, "knowledge_document": all}
-	uploader := e.As(e.Rep1, nil, principal.Permissions{RoleKeys: []string{"admin"}, Objects: grants, RowScope: principal.RowScopeAll})
+	uploader := corpusUploader(e)
 	blob := blobstore.NewMemory()
 	worker := newKnowledgeIngestWorker(e.Pool, blob, embedder, slog.Default())
 	corpus, err := worker.store.CreateCorpus(uploader, knowledge.NewCorpus{Name: "How-to", TopicStatement: "How this product is operated."})
@@ -91,6 +96,13 @@ func newOrphanIngest(t *testing.T, embedder *gatedEmbedder) *orphanIngest {
 		t.Fatalf("upload: %v", err)
 	}
 	return &orphanIngest{e: e, worker: worker, doc: ids.UUID(doc.Id), passages: len(knowledge.ChunkText(body)), blob: blob}
+}
+
+// corpusUploader is an admin who may file and remove corpus documents.
+func corpusUploader(e *integration.Env) context.Context {
+	all := principal.ObjectGrant{Create: true, Read: true, Update: true, Delete: true}
+	grants := map[string]principal.ObjectGrant{"knowledge_corpus": all, "knowledge_document": all}
+	return e.As(e.Rep1, nil, principal.Permissions{RoleKeys: []string{"admin"}, Objects: grants, RowScope: principal.RowScopeAll})
 }
 
 func (o *orphanIngest) work(t *testing.T) error {

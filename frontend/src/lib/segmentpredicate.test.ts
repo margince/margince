@@ -192,6 +192,7 @@ describe("knowing when a tree is worth sending", () => {
   // exists to prevent.
   it.each([
     ["contains with nothing typed", newLeaf("name", "contains", "")],
+    ["contains with spaces alone", newLeaf("name", "contains", "   ")],
     ["in with an empty list", newLeaf("cf_tier", "in", [])],
     ["a comparison with an empty box", newLeaf("city", "eq", "")],
     ["a comparison handed a list", newLeaf("city", "eq", ["Berlin"])],
