@@ -18,7 +18,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/standingline"
 	"github.com/margince/margince/backend/internal/modules/activities"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -88,5 +87,5 @@ func NewStandingLineTrigger(pool *pgxpool.Pool, queue StandingLineEnqueuer, log 
 		return queue.EnqueueTx(ctx, tx, StandingLineCheckArgs{Workspace: ws.UUID, ActivityID: activity},
 			standingLineCheckInsertOpts())
 	}
-	return standingline.NewTrigger(pool, enqueue, identity.NewService(pool).InstallationWorkspace, log)
+	return standingline.NewTrigger(pool, enqueue, IdentityService(pool).InstallationWorkspace, log)
 }

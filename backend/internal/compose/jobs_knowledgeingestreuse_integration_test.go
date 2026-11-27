@@ -39,7 +39,6 @@ var (
 	policyRevised = policyOpening + policyMiddle + policyReworded
 )
 
-// countedIngest is the real worker over one document, counting what it sends the embed lane.
 type countedIngest struct {
 	*orphanIngest
 	uploader context.Context
@@ -57,7 +56,6 @@ func newCountedIngest(t *testing.T) *countedIngest {
 	}
 }
 
-// newSyncedIngest files body as a synced document and ingests it once.
 func newSyncedIngest(t *testing.T, body string) *countedIngest {
 	t.Helper()
 	s := newCountedIngest(t)
@@ -79,8 +77,6 @@ func (s *countedIngest) file(t *testing.T, body string, want knowledge.ExternalO
 	return ids.UUID(doc.Id)
 }
 
-// embedInputs runs one ingest to done and returns how many passages it sent the
-// embed lane.
 func (s *countedIngest) embedInputs(t *testing.T) int {
 	t.Helper()
 	before := s.embedder.inputs.Load()
@@ -111,6 +107,7 @@ func (s *countedIngest) requireEveryPassageVectored(t *testing.T) {
 }
 
 func TestARetriedIngestOfAnUnchangedDocumentCallsTheEmbedLaneZeroTimes(t *testing.T) {
+	t.Parallel()
 	s := newSyncedIngest(t, policy)
 
 	s.reopen(t)
@@ -121,6 +118,7 @@ func TestARetriedIngestOfAnUnchangedDocumentCallsTheEmbedLaneZeroTimes(t *testin
 }
 
 func TestAReplacementThatRewordsOnePassageEmbedsOnlyThatPassage(t *testing.T) {
+	t.Parallel()
 	s := newSyncedIngest(t, policy)
 	if changed := newPassages(policy, policyRevised); changed != 1 {
 		t.Fatalf("the fixture rewords %d passages, want exactly one", changed)
@@ -139,6 +137,7 @@ func TestAReplacementThatRewordsOnePassageEmbedsOnlyThatPassage(t *testing.T) {
 // A release whose page differs from the row's leaves the row's vectors on the
 // passages it kept, whatever bytes around them moved.
 func TestAHandbookPageAReleaseReplacesReusesTheVectorsOfItsKeptPassages(t *testing.T) {
+	t.Parallel()
 	s := newCountedIngest(t)
 	s.doc = s.boot(t, nil)[0]
 	if sent := s.embedInputs(t); sent == 0 {
@@ -159,6 +158,7 @@ func TestAHandbookPageAReleaseReplacesReusesTheVectorsOfItsKeptPassages(t *testi
 }
 
 func TestAChangedEmbeddingModelReEmbedsEveryPassage(t *testing.T) {
+	t.Parallel()
 	s := newSyncedIngest(t, policy)
 
 	s.embedder.identity = "fake/other@8"

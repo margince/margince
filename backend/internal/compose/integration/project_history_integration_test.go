@@ -111,6 +111,7 @@ func TestProjectHistoryListsThePhaseTransitionAndWhoMadeIt(t *testing.T) {
 // The reason rides with the phase it explains: a role that does not read the
 // phase reads no reason for moving it.
 func TestAMaskedPhaseHidesTheReasonForTheMove(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Elbe Kälte", nil)
 	p := seedProject(e.Admin(), t, e, "Cold-room rollout", company, &e.Rep1)

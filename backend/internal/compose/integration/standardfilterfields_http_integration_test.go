@@ -124,6 +124,7 @@ func TestTheStandardContactFieldsSelectTheirRecords(t *testing.T) {
 // A text condition ignores capitals, the spaces around the value and accents
 // whichever operator asks, as the list's search box does.
 func TestATextConditionIgnoresCapitalsSpacesAndAccents(t *testing.T) {
+	t.Parallel()
 	e, _ := listsApp(t, true)
 	jorg := createdID(t, e, "/v1/contacts", AnyMap{
 		"full_name": "Jörg Müller", "source": "manual", "title": "CTO",

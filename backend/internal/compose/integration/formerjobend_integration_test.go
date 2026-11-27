@@ -18,6 +18,7 @@ import (
 // A former job has ended, so its end day is today or earlier. A current job
 // may end ahead, which is a notice period, and only marking it former is refused.
 func TestAFormerJobCannotEndAfterToday(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contactID := ids.From[ids.ContactKind](e.SeedContact(t, "Ann Former", &e.Rep1))
 	companyID := ids.From[ids.CompanyKind](e.SeedCompany(t, "Former employer", nil))
