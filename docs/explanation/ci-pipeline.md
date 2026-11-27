@@ -24,7 +24,7 @@ Five lanes run without blocking: `vuln`, the SonarCloud scan, `live-boot`, `home
 [the workflows beside the merge gate](../reference/ci-workflows.md) for why a gate that does not block needs that
 second check. Why they do not block yet is under [The `ci` aggregate](#the-ci-aggregate-is-the-only-required-build-context).
 
-`scheduled.yml` also renders every story on `main` once a day (`make fe-uat ARGS=--all-stories`). On a branch,
+`scheduled.yml` also runs the story render gate on every story of `main` once a day (`make fe-uat ARGS=--all-stories`). On a branch,
 `make fe-uat` renders only the stories the diff reaches, so a story that fails on `main` stays hidden until
 some change reaches it.
 
@@ -190,7 +190,7 @@ What follows from this:
     every merge saved. And the compile that catches nearly all of that class already runs in
     `deterministic-gates`. What is left with no cover is a source change that builds and then fails to
     package, which the release still finds.
-- A **PR that only changes the backend** skips the frontend + UAT lanes; a **PR that only changes the
+- A **PR that only changes the backend** skips the frontend and `uat` lanes. A **PR that only changes the
   frontend** skips the integration lane. `frontend/src/mcp-apps/forbidden.json` is the exception. It is
   written under `frontend/`, but copied into a Go package under a test that checks the bytes are equal.
   So it counts as backend too.
@@ -277,7 +277,7 @@ aggregate is the single required build check. Two callers would mean two copies 
 byte for byte, or the two events gate in different ways. That is two lists kept by hand, guarding the
 check everything depends on.
 
-The Playwright `uat` lane runs **beside** `frontend`, not behind it. It builds the SPA itself and shares
+The Playwright `uat` lane, the screen tests on a fake API, runs **beside** `frontend`, not behind it. It builds the SPA itself and shares
 no artifact with the lane. So starting it only once biome, vitest and tsc were green would buy nothing but
 waiting. It would sit 9 minutes in the queue behind a unit job of 17 minutes. Running it behind `fe-quality` would
 save its runner minutes only on a change that `fe-quality` refuses. That is about one frontend run in

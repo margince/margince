@@ -3,7 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { extensionFilesMatching } from "./source-tree";
 
-// The files the design-system conformance tests read: src/, index.html and
+// The files the conformance censuses read: src/, index.html and
 // every unit's frontend.
 
 export const frontendRoot = join(
