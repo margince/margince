@@ -83,7 +83,7 @@ function isFrequency(value: string): value is Frequency {
 
 // The key as the server stores and compares it: trimmed, in lower case.
 function purposeKey(typed: string): string {
-  return typed.trim().toLowerCase();
+  return serverTrim(typed.toLowerCase());
 }
 
 // What a key may hold once trimmed and lower-cased; the server's own rule,
@@ -102,10 +102,18 @@ function keyFromLabel(label: string): string {
     .replace(/^_|_$/g, "");
 }
 
-// The characters the server's strings.Fields splits a label on (Go's
-// unicode.IsSpace). JavaScript's \s would add U+FEFF and leave out U+0085.
-const LABEL_SPACES =
-  /[\t\n\v\f\r \u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]+/;
+// The characters the server's strings.Fields splits a label on and
+// strings.TrimSpace trims (Go's unicode.IsSpace). JavaScript's \s and trim()
+// would add U+FEFF and leave out U+0085.
+const SERVER_SPACE =
+  "[\\t\\n\\v\\f\\r \\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000]";
+const LABEL_SPACES = new RegExp(`${SERVER_SPACE}+`);
+const EDGE_SPACES = new RegExp(`^${SERVER_SPACE}+|${SERVER_SPACE}+$`, "g");
+
+// A key or label with its ends trimmed as the server trims them.
+function serverTrim(text: string): string {
+  return text.replace(EDGE_SPACES, "");
+}
 
 // A label or key as a reader tells it apart: case, spacing, underscores and the
 // encoding of its accents aside. Case maps up, then down with ß as ss, which
@@ -140,8 +148,8 @@ function PurposeCreateForm({
       return unwrap(
         await api.POST("/consent-purposes", {
           body: {
-            key: purpose.key.trim(),
-            label: purpose.label.trim(),
+            key: serverTrim(purpose.key),
+            label: serverTrim(purpose.label),
             requires_double_opt_in: purpose.requiresDoi,
             frequency: purpose.frequency,
           },
@@ -196,14 +204,14 @@ function PurposeCreateForm({
 
   function checked(): ReadonlyMap<string, string> {
     const checks = new Map<string, string>();
-    if (draft.key.trim() === "") {
+    if (serverTrim(draft.key) === "") {
       checks.set("key", fieldCheckSentence("required", locale, labels.key));
     } else if (holder) {
       checks.set("key", conflict.sentence);
     } else if (!PURPOSE_KEY_PATTERN.test(purposeKey(draft.key))) {
       checks.set("key", t("privacy.purposeKeyShape"));
     }
-    if (draft.label.trim() === "") {
+    if (serverTrim(draft.label) === "") {
       checks.set("label", fieldCheckSentence("required", locale, labels.label));
     } else if (lookalike) {
       checks.set(

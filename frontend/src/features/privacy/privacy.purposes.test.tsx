@@ -305,6 +305,26 @@ describe("Add purpose", () => {
     await waitFor(() => expect(posted).toHaveLength(1));
   });
 
+  // The ends trim as the server trims them, so a zero-width no-break space at
+  // either end stays in the label that is sent. Mutation: trim() strips it.
+  it.each([["\ufeffMail digest"], ["Mail digest\ufeff"]])(
+    "keeps a zero-width no-break space at an end of %j, as the server does",
+    async (label) => {
+      const listed = {
+        ...NEWSLETTER,
+        id: "p5",
+        key: "digest",
+        label: "Mail digest",
+      };
+      const created = { ...listed, id: "p7", key: "weekly", label };
+      const posted = stub(() => json(created, 201), [TRANSACTIONAL, listed]);
+      await addPurpose(created.key, label);
+
+      await waitFor(() => expect(posted).toHaveLength(1));
+      expect(posted[0]).toMatchObject({ label });
+    },
+  );
+
   it("sends a label whose accent is another one", async () => {
     const created = {
       ...NEWSLETTER,
