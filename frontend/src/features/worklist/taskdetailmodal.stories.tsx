@@ -60,7 +60,7 @@ export const AutomaticReminderFromRow: Story = {
           id: "reminder-1",
           kind: "task",
           writable: true,
-          subject: "Check in — no activity since 2026-06-30",
+          subject: "Check in: no activity since 2026-06-30",
           body: null,
           due_at: "2026-09-10T21:59:59Z",
           occurred_at: "2026-09-06T13:42:00Z",

@@ -50,7 +50,7 @@ func TestEveryGoQuotedCodeStillQuotesAValue(t *testing.T) {
 			continue
 		}
 		for _, lang := range textlang.Shipped {
-			if wordsIn(code, definition, lang, goQuoted) == wordsIn(code, definition, lang, ownMarks) {
+			if goQuoting.Replace(definition.Words.In(lang)) == definition.Words.In(lang) {
 				t.Errorf("%s in %s quotes no value, so it has no old spelling to keep", code, lang)
 			}
 		}

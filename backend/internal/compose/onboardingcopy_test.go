@@ -148,3 +148,11 @@ func TestTheGermanOnboardingFollowsTheGermanStylePage(t *testing.T) {
 		langcopytest.GermanText(t, field.name, field.text)
 	}
 }
+
+func TestTheLanguageKeyedCopyFollowsTheStylePages(t *testing.T) {
+	langcopytest.StyleByLanguage(t, signalSummaryByLang)
+	langcopytest.StyleByLanguage(t, technicalSummaryByLang)
+	langcopytest.StyleByLanguage(t, projectHealthByLang)
+	langcopytest.StyleByLanguage(t, importProblemsHeaders)
+	langcopytest.StyleByLanguage(t, onboardingCopyByLang, langcopytest.Agent("the onboarding conversation is an agent speaking in a chat bubble, which may say I"))
+}

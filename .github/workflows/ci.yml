@@ -515,8 +515,9 @@ jobs:
         with:
           persist-credentials: false
           # Every commit and ref, for the gates that diff against the merge base
-          # with origin/main (contract-breaking, migration-versions, pkg-freeze,
-          # citations) and the RBAC gate that reads a fixture at an old commit.
+          # with origin/main (contract-breaking, migration-versions,
+          # style-baseline-shrinks, pkg-freeze, citations) and the RBAC gate
+          # that reads a fixture at an old commit.
           # Blobless: only HEAD's files come down, and git fetches an old file
           # the first time a gate asks for it.
           fetch-depth: 0
@@ -561,6 +562,7 @@ jobs:
           # In CI a missing base ref is a broken checkout, never a skip.
           CONTRACT_BREAKING_REQUIRE_BASE: "1"
           MIGRATION_VERSIONS_REQUIRE_BASE: "1"
+          STYLE_BASELINE_REQUIRE_BASE: "1"
           CITATION_SCOPE_REQUIRE_BASE: "1"
           # A migration baseline consolidation reuses a namespace's lowest
           # versions under new names, which check-migration-versions.sh cannot

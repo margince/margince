@@ -6,6 +6,7 @@ package langcopytest
 import (
 	"reflect"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
@@ -50,6 +51,8 @@ func Sentences(t reporter, record any, excluded ...string) map[string]string {
 
 // CensusByLanguage holds legacy language-keyed tables to their call sites'
 // placeholders, while also requiring every translation to differ from English.
+// Like Census, it holds the English and Vietnamese sentences to their style
+// pages as member copy.
 func CensusByLanguage[T any](t reporter, table map[textlang.Lang]T, holes map[string][]string, excluded ...string) {
 	t.Helper()
 	english, ok := table[textlang.English]
@@ -84,6 +87,39 @@ func CensusByLanguage[T any](t reporter, table map[textlang.Lang]T, holes map[st
 			if lang != textlang.English && sentence == baseline[name] {
 				t.Errorf("%s.%s repeats English", lang, name)
 			}
+			judge(t, member, lang, name, sentence, baseline[name])
 		}
 	}
+}
+
+// StyleByLanguage holds each shipped language's sentences to its style page, as
+// member copy or in the one register named. An entry is a struct or a list.
+func StyleByLanguage[T any](t reporter, table map[textlang.Lang]T, register ...Register) {
+	t.Helper()
+	speaker := named(t, register)
+	english := entrySentences(t, table[textlang.English])
+	for _, lang := range textlang.Shipped {
+		entry, ok := table[lang]
+		if !ok {
+			t.Errorf("copy has no %s entry", lang)
+			continue
+		}
+		for name, sentence := range entrySentences(t, entry) {
+			judge(t, speaker, lang, name, sentence, english[name])
+		}
+	}
+}
+
+//craft:ignore naked-any an entry is a struct of sentences or a list of them
+func entrySentences(t reporter, entry any) map[string]string {
+	t.Helper()
+	list, isList := entry.([]string)
+	if !isList {
+		return Sentences(t, entry)
+	}
+	sentences := make(map[string]string, len(list))
+	for i, sentence := range list {
+		sentences[strconv.Itoa(i)] = sentence
+	}
+	return sentences
 }

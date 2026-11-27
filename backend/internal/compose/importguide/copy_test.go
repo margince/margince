@@ -25,12 +25,15 @@ func TestEveryShippedLanguageWritesTheImportGuide(t *testing.T) {
 	for i, rule := range KeyRules {
 		phrases[fmt.Sprintf("key_rule[%d]", i)] = rule
 	}
-	langcopytest.Census(t, phrases)
 	langcopytest.Census(t, Template)
 	langcopytest.GermanStyle(t, Template)
 	// An example is a sample cell, where a semicolon separates list values.
 	sentences := maps.Clone(phrases)
 	maps.DeleteFunc(sentences, func(key string, _ langcopy.Phrase) bool { return strings.HasSuffix(key, ".example") })
+	examples := maps.Clone(phrases)
+	maps.DeleteFunc(examples, func(key string, _ langcopy.Phrase) bool { return !strings.HasSuffix(key, ".example") })
+	langcopytest.Census(t, sentences)
+	langcopytest.Census(t, examples, langcopytest.Verbatim("an example is a sample cell the reader copies into a file as it stands"))
 	langcopytest.GermanStyle(t, sentences)
 }
 
