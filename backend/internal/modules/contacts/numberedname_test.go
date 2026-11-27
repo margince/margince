@@ -5,7 +5,7 @@ package contacts
 
 import "testing"
 
-// Two numbered records at one mail domain are two people, however alike the
+// Two numbered records at one mail domain are two contacts, however alike the
 // rest of the name reads.
 func TestNamesThatDisagreeOnANumberAreNotOfferedForMerging(t *testing.T) {
 	t.Parallel()
