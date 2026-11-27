@@ -1305,6 +1305,24 @@ func (e EmailSummaryMove) Valid() bool {
 	}
 }
 
+// Defines values for LinkFilerHook.
+const (
+	LinkFilerHookDeal    LinkFilerHook = "deal"
+	LinkFilerHookParties LinkFilerHook = "parties"
+)
+
+// Valid indicates whether the value is a known member of the LinkFilerHook enum.
+func (e LinkFilerHook) Valid() bool {
+	switch e {
+	case LinkFilerHookDeal:
+		return true
+	case LinkFilerHookParties:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MeetingResponse.
 const (
 	Accepted    MeetingResponse = "accepted"
@@ -2010,6 +2028,9 @@ type Activity struct {
 	// Links Every record this activity is filed under that the caller may read; a link to a record they cannot read is left out. One activity may link to several, a contact and a deal say. Every read that returns an activity answers the same links: the list, one activity, and a contact's 360.
 	Links *[]ActivityLink `json:"links,omitempty"`
 
+	// MailboxImported Whether an import brought this in; the per-message audience write refuses it.
+	MailboxImported *bool `json:"mailbox_imported,omitempty"`
+
 	// MeetingIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
 	MeetingIntent *IntentTime `json:"meeting_intent,omitempty"`
 
@@ -2062,6 +2083,9 @@ type Activity struct {
 
 	// TaskType Task only, absent on every other kind. The type a human, an agent or the AI gave the task when it was made. A task made before types existed, or by a product rule that sets none, reads the type of its rule: an answer owed to a request is `reply`, a lead to qualify is `review`, a mail to file is `decide`. A task with neither reads `reach_out` when a human or an agent made it, else `do`. `offers_email` is false for every type but `reply` and `reach_out`.
 	TaskType *TaskType `json:"task_type,omitempty"`
+
+	// ThreadAudienceYours Whether the thread audience write acts on this row for the caller.
+	ThreadAudienceYours *bool `json:"thread_audience_yours,omitempty"`
 
 	// ThreadKey The provider's own conversation id (Gmail threadId, Graph conversationId, the RFC822 References root), stamped by capture. It is what makes a thread a thread: grouping by subject would merge two unrelated "Re: Update" exchanges and split one that was renamed mid-conversation. Null on anything capture did not thread — a note, a task, a message whose provider offered none.
 	ThreadKey *string   `json:"thread_key,omitempty"`
@@ -2197,7 +2221,10 @@ type ActivityLink struct {
 	DealRelevance *ActivityLinkDealRelevance `json:"deal_relevance,omitempty"`
 	EntityId      string                     `json:"entity_id"`
 	EntityType    ActivityLinkEntityType     `json:"entity_type"`
-	Id            *string                    `json:"id,omitempty"`
+
+	// FiledBy On a deal link only, and only when no human or agent chose it: who filed the activity on the deal, read from the latest filing of it there. The actor is `core` for the installation's own rule, or the name of the extension whose hook filed it. Marking the link `unrelated` takes the filing back, and no automatic pass files the activity there again.
+	FiledBy *LinkFiler `json:"filed_by,omitempty"`
+	Id      *string    `json:"id,omitempty"`
 
 	// RelevanceSource Who set `deal_relevance`. The classifier never changes a mark a human set.
 	RelevanceSource *ActivityLinkRelevanceSource `json:"relevance_source,omitempty"`
@@ -2377,6 +2404,7 @@ type Company struct {
 	ComputedFields *[]ComputedField `json:"computed_fields,omitempty"`
 
 	// ContactCount How many distinct live contacts THE CALLER MAY SEE hold a current job at this account (PO-EXT-10; AC-companies-2/3's Contacts column). Counted under the caller's contact row scope, exactly as the contact list is: a count is a read, and a number that moved when a colleague captured a private contact would disclose that contact. Present, zero included, on `listCompanies` and `getCompany` — the reads that render the column, and ABSENT entirely for a role without `contact:read` OR without `relationship:read` (the object grants come first, as on the contact list) — the number is a fact about the employment PAIRS, so the edge grant governs it exactly as it governs the employment list; write responses (create, update, archive, merge) omit it. Never client-supplied.
+	// A count of 0 means "no contacts YOU can see", never "no contacts": read it with `hidden_contact_holders`. Say "no contacts you can see" and name those colleagues when the list is not empty.
 	ContactCount *int      `json:"contact_count,omitempty" minimum:"0"`
 	CreatedAt    time.Time `json:"created_at"`
 
@@ -2398,7 +2426,10 @@ type Company struct {
 
 	// ExtensionRelationshipTypes The types an installed extension adds, as `ext:<unit>:<type>`. Kept apart from `relationship_types`, whose list stays the closed set above. Each value is declared by the extension it names; a value no extension declares is refused (422, `invalid_enum`).
 	ExtensionRelationshipTypes *[]string `json:"extension_relationship_types,omitempty"`
-	Id                         string    `json:"id"`
+
+	// HiddenContactHolders The live colleagues who own at least one current contact at this account that the caller may not see, each once, so the reader knows whom to ask for an introduction ("Dana and Minh have contacts here you can't see"). It names who to ask and nothing else: no contact's name, role or id, and no count per colleague or in total. Empty when nothing is hidden, and a colleague who left or an agent seat is never listed. It reads the same employment set as `contact_count` with the contact scope turned around, so the two never describe different populations. Present exactly when `contact_count` is, and absent entirely on a write response. Never client-supplied.
+	HiddenContactHolders *[]HiddenRecordHolder `json:"hidden_contact_holders,omitempty"`
+	Id                   string                `json:"id"`
 
 	// ImportedFrom Which import wrote this record, so a screen can say "Imported from <name>" instead of "Typed by you". Null when no import wrote it. The name is the source the import was run for (`bundle`); an empty string is an import that was given none. Derived from `source_system`, whose reserved `mirror:` prefix is never shown.
 	ImportedFrom *string `json:"imported_from,omitempty"`
@@ -2415,6 +2446,9 @@ type Company struct {
 	// LastActivityAt When something last happened with this account: the newest `occurred_at` at or before now of a workspace-audience activity linked to it, so a booked meeting counts once it starts. A task never counts, whoever filed it, and neither does a canceled or no-show meeting. It is maintained on the activity write as `deal.last_activity_at` is (a read accelerator that a rebuild must reproduce). NULL until the first such activity. Sortable (DM-VOCAB-2).
 	// A message limited to its participants does NOT move this date, even for a reader who may read that message. The value is one number every reader sees, so it can only count what every reader may see.
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
+
+	// LastActivityPrecision How to read `last_activity_at`, from the activity it names. A day entry counts its days from its own date. Absent when that is null.
+	LastActivityPrecision *OccurredPrecision `json:"last_activity_precision,omitempty"`
 
 	// LegalHold True while a litigation or investigation hold is preserving this record. A held record is never acted on by a retention sweep and an Art. 17 erasure against it is refused, so a screen that offers either action has to know. Placed and lifted through /retention/legal-holds, never by an ordinary edit.
 	LegalHold *bool   `json:"legal_hold,omitempty"`
@@ -2448,6 +2482,9 @@ type Company struct {
 	// partner fit, next step, and served segments. Behavior is Fast-follow, but the V1 schema is
 	// forward-compatible.
 	Partner *Partner `json:"partner,omitempty"`
+
+	// PartnerProgramEnded An ended partner program has commission and deal history. Omitted without partner read permission.
+	PartnerProgramEnded *bool `json:"partner_program_ended,omitempty"`
 
 	// Phone The company's main number, in E.164 form (for example +49301234567). It is never a contact's own number.
 	Phone *string                 `json:"phone,omitempty"`
@@ -2751,6 +2788,9 @@ type Deal struct {
 	// LastActivityAt The newest `occurred_at` at or before now of an activity filed under the deal, so a booked meeting counts once it starts. A task never counts, whoever filed it, and neither does a canceled or no-show meeting. Drives the deterministic stalled flag. A message limited to its participants counts by its date alone, so a deal worked through private mail does not read as stalled. The deal timeline already lists such a message to every reader of the deal with its time, so its date reveals nothing new; its text and sender stay with its audience, a message limited to a chosen audience does not count, and no contact or company date moves for it.
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
 
+	// LastActivityPrecision How to read `last_activity_at`, from the activity it names. A day entry counts its quiet days from its own date. Absent when that is null.
+	LastActivityPrecision *OccurredPrecision `json:"last_activity_precision,omitempty"`
+
 	// LastEmail The newest email on this deal that the whole workspace may see — what a board card states as "last mail, N days ago" beside the deal, so a rep reads the silence without opening every card. Null on a deal nobody has mailed about. Counts what `last_activity_at` counts, narrowed to mail: workspace-audience rows only, and never the product's own system writing — a message limited to its participants must not move a date every colleague reads, and a mail the installation sent itself is not the buyer engaging. The rows a reader may discover through `GET /activities` can therefore be newer than this instant.
 	LastEmail *DealLastEmail `json:"last_email,omitempty"`
 
@@ -3018,6 +3058,11 @@ type EmailCalendarInvitationResponse string
 // the bot, or because the credential was rejected rendered exactly like one the provider
 // confirmed. The rep was told their message went.
 type EmailDelivery struct {
+	// CanSendAgain True when the reader may send this bounced message again to a corrected address,
+	// by the same rule as the Worklist bounce row's `send_again`. Only the sender's own
+	// message that bounced hard qualifies, once, and not one an agent wrote.
+	CanSendAgain *bool `json:"can_send_again,omitempty"`
+
 	// DeliveredAt When the provider accepted it. Null unless the state is `sent`.
 	DeliveredAt *time.Time `json:"delivered_at,omitempty"`
 
@@ -3175,6 +3220,12 @@ type EmailSummaryDirection string
 // The message stays on the timeline; `none` does not mean it was answered.
 type EmailSummaryMove string
 
+// HiddenRecordHolder defines model for HiddenRecordHolder.
+type HiddenRecordHolder struct {
+	DisplayName string `json:"display_name"`
+	UserId      string `json:"user_id"`
+}
+
 // IntentTime A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
 type IntentTime struct {
 	// Timezone IANA zone name.
@@ -3183,6 +3234,20 @@ type IntentTime struct {
 	// WallClock Local date and time, no offset.
 	WallClock string `json:"wall_clock"`
 }
+
+// LinkFiler On a deal link only, and only when no human or agent chose it: who filed the activity on the deal, read from the latest filing of it there. The actor is `core` for the installation's own rule, or the name of the extension whose hook filed it. Marking the link `unrelated` takes the filing back, and no automatic pass files the activity there again.
+type LinkFiler struct {
+	Actor string `json:"actor"`
+
+	// Hook Which hook point filed it, for an extension actor. Absent for `core`.
+	Hook *LinkFilerHook `json:"hook,omitempty"`
+
+	// Reason For an extension, a key the extension declared for its hook. Read it together with the actor: the label comes from that extension's own translations. Absent for `core`.
+	Reason *string `json:"reason,omitempty"`
+}
+
+// LinkFilerHook Which hook point filed it, for an extension actor. Absent for `core`.
+type LinkFilerHook string
 
 // MeetingAttendeeResponse The answer one colleague or linked contact on a meeting gave its invitation. Exactly one of `user_id` and `contact_id` is set.
 type MeetingAttendeeResponse struct {
@@ -4175,6 +4240,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "links")
 	}
 
+	if raw, found := object["mailbox_imported"]; found {
+		err = json.Unmarshal(raw, &a.MailboxImported)
+		if err != nil {
+			return fmt.Errorf("error reading 'mailbox_imported': %w", err)
+		}
+		delete(object, "mailbox_imported")
+	}
+
 	if raw, found := object["meeting_intent"]; found {
 		err = json.Unmarshal(raw, &a.MeetingIntent)
 		if err != nil {
@@ -4325,6 +4398,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'task_type': %w", err)
 		}
 		delete(object, "task_type")
+	}
+
+	if raw, found := object["thread_audience_yours"]; found {
+		err = json.Unmarshal(raw, &a.ThreadAudienceYours)
+		if err != nil {
+			return fmt.Errorf("error reading 'thread_audience_yours': %w", err)
+		}
+		delete(object, "thread_audience_yours")
 	}
 
 	if raw, found := object["thread_key"]; found {
@@ -4715,6 +4796,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.MailboxImported != nil {
+		object["mailbox_imported"], err = json.Marshal(a.MailboxImported)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'mailbox_imported': %w", err)
+		}
+	}
+
 	if a.MeetingIntent != nil {
 		object["meeting_intent"], err = json.Marshal(a.MeetingIntent)
 		if err != nil {
@@ -4837,6 +4925,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["task_type"], err = json.Marshal(a.TaskType)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'task_type': %w", err)
+		}
+	}
+
+	if a.ThreadAudienceYours != nil {
+		object["thread_audience_yours"], err = json.Marshal(a.ThreadAudienceYours)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'thread_audience_yours': %w", err)
 		}
 	}
 
@@ -5185,6 +5280,14 @@ func (a *Company) UnmarshalJSON(b []byte) error {
 		delete(object, "extension_relationship_types")
 	}
 
+	if raw, found := object["hidden_contact_holders"]; found {
+		err = json.Unmarshal(raw, &a.HiddenContactHolders)
+		if err != nil {
+			return fmt.Errorf("error reading 'hidden_contact_holders': %w", err)
+		}
+		delete(object, "hidden_contact_holders")
+	}
+
 	if raw, found := object["id"]; found {
 		err = json.Unmarshal(raw, &a.Id)
 		if err != nil {
@@ -5223,6 +5326,14 @@ func (a *Company) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'last_activity_at': %w", err)
 		}
 		delete(object, "last_activity_at")
+	}
+
+	if raw, found := object["last_activity_precision"]; found {
+		err = json.Unmarshal(raw, &a.LastActivityPrecision)
+		if err != nil {
+			return fmt.Errorf("error reading 'last_activity_precision': %w", err)
+		}
+		delete(object, "last_activity_precision")
 	}
 
 	if raw, found := object["legal_hold"]; found {
@@ -5295,6 +5406,14 @@ func (a *Company) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'partner': %w", err)
 		}
 		delete(object, "partner")
+	}
+
+	if raw, found := object["partner_program_ended"]; found {
+		err = json.Unmarshal(raw, &a.PartnerProgramEnded)
+		if err != nil {
+			return fmt.Errorf("error reading 'partner_program_ended': %w", err)
+		}
+		delete(object, "partner_program_ended")
 	}
 
 	if raw, found := object["phone"]; found {
@@ -5534,6 +5653,13 @@ func (a Company) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.HiddenContactHolders != nil {
+		object["hidden_contact_holders"], err = json.Marshal(a.HiddenContactHolders)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'hidden_contact_holders': %w", err)
+		}
+	}
+
 	object["id"], err = json.Marshal(a.Id)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'id': %w", err)
@@ -5564,6 +5690,13 @@ func (a Company) MarshalJSON() ([]byte, error) {
 		object["last_activity_at"], err = json.Marshal(a.LastActivityAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'last_activity_at': %w", err)
+		}
+	}
+
+	if a.LastActivityPrecision != nil {
+		object["last_activity_precision"], err = json.Marshal(a.LastActivityPrecision)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'last_activity_precision': %w", err)
 		}
 	}
 
@@ -5627,6 +5760,13 @@ func (a Company) MarshalJSON() ([]byte, error) {
 		object["partner"], err = json.Marshal(a.Partner)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'partner': %w", err)
+		}
+	}
+
+	if a.PartnerProgramEnded != nil {
+		object["partner_program_ended"], err = json.Marshal(a.PartnerProgramEnded)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'partner_program_ended': %w", err)
 		}
 	}
 
@@ -6629,6 +6769,14 @@ func (a *Deal) UnmarshalJSON(b []byte) error {
 		delete(object, "last_activity_at")
 	}
 
+	if raw, found := object["last_activity_precision"]; found {
+		err = json.Unmarshal(raw, &a.LastActivityPrecision)
+		if err != nil {
+			return fmt.Errorf("error reading 'last_activity_precision': %w", err)
+		}
+		delete(object, "last_activity_precision")
+	}
+
 	if raw, found := object["last_email"]; found {
 		err = json.Unmarshal(raw, &a.LastEmail)
 		if err != nil {
@@ -7071,6 +7219,13 @@ func (a Deal) MarshalJSON() ([]byte, error) {
 		object["last_activity_at"], err = json.Marshal(a.LastActivityAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'last_activity_at': %w", err)
+		}
+	}
+
+	if a.LastActivityPrecision != nil {
+		object["last_activity_precision"], err = json.Marshal(a.LastActivityPrecision)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'last_activity_precision': %w", err)
 		}
 	}
 

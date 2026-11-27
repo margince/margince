@@ -251,3 +251,16 @@ func gateMetricInt16(f float64, field string, low, high int16) (int16, error) {
 	}
 	return int16(f), nil
 }
+
+// EndPartnerProgram retires a company's partner extension and keeps the company.
+func (h Handlers) EndPartnerProgram(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.EndPartnerProgramParams) {
+	version, ok := httperr.IfMatchVersion(w, r)
+	if !ok {
+		return
+	}
+	if err := h.store.EndPartnerProgram(r.Context(), pathID[ids.CompanyKind](id), version); err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}

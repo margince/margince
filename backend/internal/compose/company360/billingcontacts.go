@@ -32,6 +32,12 @@ func (a *assembly) readBillingContacts() error {
 	}
 	payload := BillingContactPayload(rows)
 	a.out.BillingContacts = &payload
+	withheld, err := a.svc.contacts.HiddenBillingContactsFor(a.ctx, a.tx, a.companyID)
+	if err != nil {
+		return err
+	}
+	hidden := withheld.Wire()
+	a.out.BillingContactsHidden = &hidden
 	return nil
 }
 

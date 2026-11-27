@@ -11,99 +11,20 @@ package privacy
 // sections.
 
 import (
-	"fmt"
-
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // sarMessagingSections gather both directions of the messaging boundary: what
 // capture decided about mail arriving from the subject, and what this
 // installation sent out about or to them.
-func sarMessagingSections(pkg *SARPackage, contactID ids.ContactID, emails []string, leads []ids.UUID) []sarSection {
+func sarMessagingSections(pkg *SARPackage, contactID ids.ContactID, emails, ownEmails []string, leads, messages []ids.UUID) []sarSection {
 	sections := []sarSection{
 		sarPartySourceSection(pkg, emails),
 		{&pkg.CaptureDispositions, `SELECT p.email, p.display_name, p.status, p.disposition_reason, p.created_at, p.resolved_at
 		   FROM capture_pending_counterparty p
 		   WHERE p.email IN (SELECT email FROM contact_email WHERE contact_id = $1)`, nil},
-		// The governed outbound messages this installation sent about or to the
-		// subject. Reached BOTH ways on purpose, unlike the erasure cascade: a
-		// send whose activity was never linked to their record still went to
-		// their address, and one addressed to a third party but filed on their
-		// timeline is still a message about them.
-		//
-		// The two arms err in OPPOSITE directions and both are deliberate.
-		// Reaching by address alone would miss the timeline; reaching by link
-		// alone would miss the unlinked send.
-		//
-		// The PROJECTION is deliberate too: recipients and cc are returned
-		// whole, so a message the subject shared with other contacts hands the
-		// export those contacts's addresses as well — whichever arm matched the
-		// row. Narrowing the arrays to the subject's own address would be the
-		// safer default in a self-serve export, and it is rejected here for two
-		// reasons. An address list is part of what the message WAS, and Art. 15
-		// owes the subject the data held about them rather than a redraft of
-		// it. And this assembly is admin-mediated (AssembleSAR demands the
-		// contact.delete grant and an unbounded scope, above), so the disclosure
-		// is a human handing a package to a subject, not an endpoint answering
-		// one — the same posture, and the same tolerated over-inclusion, as the
-		// Activities and Attachments sections, whose free text and filenames
-		// name third parties for exactly the same reason. It is what separates
-		// this from the erasure cascade, which must refuse the equivalent
-		// reach: a disclosure to an admin-mediated export is recoverable, and
-		// destroying another subject's evidence is not.
-		//
-		// It spans BOTH shapes the row admits (comms_outbound_shape, 0155): a
-		// channel delivery leaves subject/recipients/cc null and names its
-		// addressee in channel_user_id, so a mail-only projection would hand a
-		// channel-only subject a message with no addressee — withholding the
-		// account id the row holds about them.
-		// html_body rides beside body rather than instead of it: a message
-		// carrying both is ONE message the subject received in two renderings,
-		// and disclosing only the plain one withholds markup the system still
-		// holds about them. from_name joins them for the same reason: this
-		// projection discloses the message AS THE SUBJECT RECEIVED IT, and who
-		// it appeared to be from is part of what they were shown.
-		//
-		// The address match spans bcc, and the DISCLOSURE of it is narrowed to
-		// the subject's own address.
-		//
-		// Both halves are required and they pull opposite ways. A contact bcc'd
-		// on a message with no activity link would otherwise be absent from
-		// their own export of a message they received — and exporting the
-		// whole bcc array would hand one subject every other blind recipient's
-		// address, which is the disclosure a blind copy exists to prevent. So
-		// the row is FOUND on any addressee and the blind list is REDUCED to
-		// the asker. The three bounce facts follow the same rule: the report
-		// named ONE addressee, so a bounce is another addressee's fact on a
-		// shared message and all three columns disclose only to the one the
-		// report named.
-		//
-		// attachments too, and it is not covered by the attachment query
-		// below: that one finds files hanging off the subject or an activity
-		// linked to them, while a send may carry any file its sender could see
-		// — one attached to a company or a deal reaches the subject
-		// without ever being attached TO them.
-		{&pkg.SentMessages, `SELECT o.subject, o.body, o.html_body, o.from_name, o.attachments, o.recipients, o.cc,
-		      (SELECT coalesce(jsonb_agg(addr), '[]'::jsonb)
-		         FROM jsonb_array_elements_text(coalesce(o.bcc, '[]'::jsonb)) AS addr
-		        WHERE lower(addr) IN (SELECT email FROM contact_email WHERE contact_id = $1)) AS bcc,
-		      o.consent_purpose,
-		      o.provider, o.channel_user_id, o.status, o.sent_at, o.created_at,
-		      CASE WHEN lower(coalesce(o.bounce_recipient, '')) IN (
-		             SELECT email FROM contact_email WHERE contact_id = $1)
-		           THEN o.bounced_at END AS bounced_at,
-		      CASE WHEN lower(coalesce(o.bounce_recipient, '')) IN (
-		             SELECT email FROM contact_email WHERE contact_id = $1)
-		           THEN o.bounce_kind END AS bounce_kind,
-		      CASE WHEN lower(coalesce(o.bounce_recipient, '')) IN (
-		             SELECT email FROM contact_email WHERE contact_id = $1)
-		           THEN o.bounce_recipient END AS bounce_recipient
-		   FROM comms_outbound o
-		   WHERE o.activity_id IN (SELECT l.activity_id FROM activity_link l WHERE l.contact_id = $1)
-		      OR EXISTS (
-		           SELECT 1 FROM jsonb_array_elements_text(
-		                          o.recipients || o.cc || coalesce(o.bcc, '[]'::jsonb)) AS addr
-		           WHERE lower(addr) IN (SELECT email FROM contact_email WHERE contact_id = $1))`, nil},
+		sarSentSection(pkg, ownEmails, messages),
 		// The messages nobody has sent yet. They hold the subject's address and
 		// the body BEFORE any activity exists, so none of the three routes the
 		// query above takes can reach them — and a message written to this
@@ -221,18 +142,19 @@ func sarMessagingSections(pkg *SARPackage, contactID ids.ContactID, emails []str
 			&pkg.StagedMessages, `SELECT id, kind, status, summary, proposed_change,
 		      (SELECT coalesce(jsonb_agg(item), '[]'::jsonb)
 		         FROM jsonb_array_elements(` + evidenceArray + `) AS item
-		        WHERE item->>'source_id' IN (
-		                SELECT l.activity_id::text FROM activity_link l WHERE l.contact_id = $1)
-		           OR item->>'evidence_snippet' ~* ANY($3::text[])) AS evidence,
+		        WHERE (item->>'source_type' IS DISTINCT FROM 'activity' OR EXISTS (
+		                SELECT 1 FROM activity a WHERE a.id = ` + storekit.CitedActivityID("item") + ` AND ` + sarContentDisclosed + `))
+		          AND (item->>'source_id' IN (SELECT m::text FROM unnest($4::uuid[]) AS m)
+		               OR item->>'evidence_snippet' ~* ANY($5::text[]))) AS evidence,
 		      created_at, expires_at, decided_at
 		   FROM approval
 		   WHERE (` + subjectApprovalMatch + `)
 		      OR evidence::text ~* ANY($3::text[])
 		      OR ` + evidenceCitesSubjectActivity,
-			[]any{contactID.UUID, leads, addressPatterns(emails)},
+			[]any{contactID.UUID, leads, addressPatterns(emails), messages, addressPatterns(ownEmails)},
 		},
 	}
-	return append(append(sections, sarMeetingSections(pkg, contactID)...), sarDraftSection(pkg, contactID, emails, leads))
+	return append(append(sections, sarMeetingSections(pkg, messages)...), sarDraftSection(pkg, contactID, emails, leads))
 }
 
 // sarDraftSection exports the drafts subjectDraftMatch names — the same rows
@@ -264,11 +186,17 @@ func sarDraftSection(pkg *SARPackage, contactID ids.ContactID, emails []string, 
 	}
 }
 
-func sarMeetingSections(pkg *SARPackage, contact ids.ContactID) []sarSection {
-	args := []any{contact.UUID}
+func sarMeetingSections(pkg *SARPackage, messages []ids.UUID) []sarSection {
+	args := []any{messages}
 	return []sarSection{
-		{&pkg.MeetingProposals, fmt.Sprintf(`SELECT DISTINCT p.request,p.expires_at,p.used_at,p.created_at FROM meeting_proposal p JOIN activity_link l ON l.activity_id=p.activity_id WHERE l.contact_id=$%d`, len(args)), args},
-		{&pkg.MeetingInvitations, fmt.Sprintf(`SELECT DISTINCT i.appointment-'PassportID'-'RequestID'-'EventID'-'CalendarID' AS appointment,i.status,i.command,i.created_at,i.updated_at FROM meeting_invitation i JOIN activity_link l ON l.activity_id=i.activity_id WHERE l.contact_id=$%d`, len(args)), args},
+		{&pkg.MeetingProposals, `SELECT DISTINCT ` + sarActivityDisclosed("p.activity_id") + ` AS content_disclosed,
+ CASE WHEN ` + sarActivityDisclosed("p.activity_id") + ` THEN p.request END AS request,p.expires_at,p.used_at,p.created_at
+ FROM meeting_proposal p WHERE p.activity_id = ANY($1)`, args},
+		{&pkg.MeetingInvitations, `SELECT DISTINCT ` + sarActivityDisclosed("i.activity_id") + ` AS content_disclosed,
+ CASE WHEN ` + sarActivityDisclosed("i.activity_id") + ` THEN i.appointment-'PassportID'-'RequestID'-'EventID'-'CalendarID' END AS appointment,
+ i.status,
+ CASE WHEN ` + sarActivityDisclosed("i.activity_id") + ` THEN i.command END AS command,i.created_at,i.updated_at
+ FROM meeting_invitation i WHERE i.activity_id = ANY($1)`, args},
 	}
 }
 
@@ -278,4 +206,43 @@ func sarPartySourceSection(pkg *SARPackage, emails []string) sarSection {
  ARRAY(SELECT address FROM unnest(ps.policy_addresses) address WHERE lower(address)=ANY(ARRAY(SELECT lower(btrim(subject_address)) FROM unnest($1::text[]) subject_address))) AS policy_addresses
  FROM capture_party_source ps JOIN activity a ON a.id=ps.activity_id
  WHERE (ps.recipients && ARRAY(SELECT lower(btrim(subject_address)) FROM unnest($1::text[]) subject_address) OR ps.policy_addresses && ARRAY(SELECT lower(btrim(subject_address)) FROM unnest($1::text[]) subject_address)) AND ` + sarContentDisclosed, []any{emails}}
+}
+
+// sarSentSection exports the governed sends about or to the subject. Any
+// addressee finds a send, a blind copy included. The bcc list and the bounce
+// facts are reduced to the subject's own address, so no other blind recipient
+// is disclosed. Content follows the audience rule of the send's activity.
+func sarSentSection(pkg *SARPackage, ownEmails []string, messages []ids.UUID) sarSection {
+	return sarSection{&pkg.SentMessages, `SELECT ` + sarActivityDisclosed("o.activity_id") + ` AS content_disclosed,
+		      CASE WHEN ` + sarActivityDisclosed("o.activity_id") + ` THEN o.subject END AS subject,
+		      CASE WHEN ` + sarActivityDisclosed("o.activity_id") + ` THEN o.body END AS body,
+		      CASE WHEN ` + sarActivityDisclosed("o.activity_id") + ` THEN o.html_body END AS html_body,
+		      o.from_name,
+		      CASE WHEN ` + sarActivityDisclosed("o.activity_id") + ` THEN o.attachments END AS attachments,
+		      CASE WHEN ` + sarActivityDisclosed("o.activity_id") + ` THEN o.recipients END AS recipients,
+		      CASE WHEN ` + sarActivityDisclosed("o.activity_id") + ` THEN o.cc END AS cc,
+		      CASE WHEN ` + sarActivityDisclosed("o.activity_id") + ` THEN (SELECT coalesce(jsonb_agg(addr), '[]'::jsonb)
+		         FROM jsonb_array_elements_text(coalesce(o.bcc, '[]'::jsonb)) AS addr
+		        WHERE lower(addr) = ANY($2::text[])) END AS bcc,
+		      o.consent_purpose,
+		      o.provider, o.channel_user_id, o.status, o.sent_at, o.created_at,
+		      CASE WHEN lower(coalesce(o.bounce_recipient, '')) = ANY($2::text[])
+		           THEN o.bounced_at END AS bounced_at,
+		      CASE WHEN lower(coalesce(o.bounce_recipient, '')) = ANY($2::text[])
+		           THEN o.bounce_kind END AS bounce_kind,
+		      CASE WHEN lower(coalesce(o.bounce_recipient, '')) = ANY($2::text[])
+		           THEN o.bounce_recipient END AS bounce_recipient
+		   FROM comms_outbound o
+		   WHERE o.activity_id = ANY($1)
+		      OR EXISTS (
+		           SELECT 1 FROM jsonb_array_elements_text(
+		                          o.recipients || o.cc || coalesce(o.bcc, '[]'::jsonb)) AS addr
+		           WHERE lower(addr) = ANY($2::text[]))`, []any{messages, loweredAddresses(ownEmails)}}
+}
+
+// sarActivityDisclosed asks sarContentDisclosed of the activity a section row
+// belongs to. Every section that lists a row through the subject's message set
+// withholds content by this rule, as Activities does.
+func sarActivityDisclosed(activityID string) string {
+	return `EXISTS (SELECT 1 FROM activity a WHERE a.id = ` + activityID + ` AND ` + sarContentDisclosed + `)`
 }

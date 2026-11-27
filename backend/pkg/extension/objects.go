@@ -10,12 +10,25 @@ package extension
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 )
 
 // MaxObjectBytes is the most one object holds: what an inbound file may hold.
 const MaxObjectBytes = MaxInboundFileBytes
+
+// MaxObjectsPerUnit is the most objects one unit keeps in one workspace.
+const MaxObjectsPerUnit = 10_000
+
+// MaxObjectBytesPerUnit is the most bytes one unit's objects hold together in
+// one workspace.
+const MaxObjectBytesPerUnit = 1 << 30
+
+// ErrObjectQuotaReached is a Put past MaxObjectsPerUnit or
+// MaxObjectBytesPerUnit. Deleting objects the unit no longer needs makes room;
+// replacing an object counts only the change in its size.
+var ErrObjectQuotaReached = errors.New("extension: this unit holds as many objects or bytes as it may; delete some before storing more")
 
 // maxObjectNameLen keeps a name well inside a storage key.
 const maxObjectNameLen = 128
@@ -48,7 +61,9 @@ type Object struct {
 // CapabilityObjects.
 type Objects interface {
 	// Put stores content under name, replacing an object of that name. More than
-	// MaxObjectBytes, or a bad name, answers ErrInvalid.
+	// MaxObjectBytes, or a bad name, answers ErrInvalid. Past the unit's quota it
+	// answers ErrObjectQuotaReached. The core logs each Put and Delete with the
+	// object's name, so a name must not hold personal data.
 	Put(ctx context.Context, name string, content []byte) error
 
 	// Get reads the object, or answers ErrNotFound.

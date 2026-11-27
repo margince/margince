@@ -32,6 +32,7 @@ Settings in Margince, by page:
 - How do I change my password, display name, language or theme? → [Your own settings](your-own-settings.md)
 - How do I add an email signature or set up my writing voice? → [Your own settings](your-own-settings.md)
 - How do I connect my mailbox or calendar? → [Connecting your mailbox and calendar](connecting-mail-and-calendars.md)
+- Who can read my company's WhatsApp or Zalo chats, and can I reply from Margince? → [Connecting WhatsApp and Zalo](connecting-whatsapp-and-zalo.md)
 - How do I get the leads from my website's contact form into Margince? → [Connecting your website](connect-your-website.md)
 - How do I post to a chat channel when a deal is won? → [Sending events to other tools](sending-events-to-other-tools.md)
 - How do I book a meeting with a contact, move or cancel it, or fix an invitation that needs attention? → [Meetings and booking](meetings-and-booking.md)
@@ -67,6 +68,7 @@ Records, deals and mail in Margince, by page:
 - How do I link a deal to another deal, a company or a contact? → [Links between records](deal-links.md)
 - How do I merge two deals that are one opportunity? → [Merging two deals](merging-deals.md)
 - How do I give a deal or project its own channel in the team chat? → [Team chat channels](chat-channels.md)
+- How do I confirm my own chat account? → [Your chat accounts](chat-accounts.md)
 - How do I attach or upload a file to a contact, company or deal? → [Documents and files](documents-and-files.md)
 - How do I import, export, archive or delete? → [What is kept, what is destroyed](retention-exports-and-deletion.md)
 - Why does the archive keep old mail, and how do I delete what it no longer needs? → [The archive and its purpose](the-archive.md)
@@ -177,6 +179,7 @@ Records, deals and mail in Margince, by page:
 - [Contracts and invoices](contracts-and-invoices.md): the two value bases, and
   why they are never added up. Why a status is never guessed from a date.
   Renewing and cancelling, what counts as a signed win, and the finance mirror.
+- [Your chat accounts](chat-accounts.md): confirm your own account so a customer message you pass on is filed for the customer
 - [Team chat channels](chat-channels.md): a private Dispact channel for a deal
   or project, what Margince posts there, and why private mail never reaches it.
 - [Deal Rooms](deal-rooms.md): the page for one deal that the buyer sees. What

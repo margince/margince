@@ -96,6 +96,7 @@ A request names the core records its text was built from in `About`, or says in 
 | The request or the name is wrong in form, or an object is over the size cap | `ErrInvalid` |
 | The request names a contact under a restriction of processing | `ErrForbidden` |
 | `Get` of an object that is not there | `ErrNotFound` |
+| `Put` past the unit's object count or byte quota | `ErrObjectQuotaReached` |
 | The model or the store fails, or this process has none bound | an error with no detail, so no provider or path shows |
 
 A scheduled job or a bus delivery has nobody waiting, so it may call `background` tasks only. A `background` task queues when the budget runs out, and an `interactive` task degrades. When `NoContactData` is set, the core writes its reason to the log.
@@ -112,18 +113,24 @@ Each unit has a key prefix of its own in each workspace: `<workspace>/ext/<unit>
 |---|---|
 | Name characters | lower-case letters, digits, `.`, `-`, `_`; at most 128; no leading dot |
 | Size of one object | `extension.MaxObjectBytes`, the same cap as an inbound file |
+| Objects of one unit | `extension.MaxObjectsPerUnit` |
+| Bytes of one unit's objects together | `extension.MaxObjectBytesPerUnit` |
 | Content type | found by the core from the bytes, never taken from the unit |
 | Core attachments | not readable by a unit |
+
+The core counts each unit's objects and bytes in the table `extension_object_usage`. A `Put` that replaces an object counts only the change in its size. So a unit at its quota can still replace or shrink an object.
+
+Each `Put` and `Delete` writes an audit row on that table in the same transaction, before the bytes are stored or deleted. The row names the unit, the call, the object's name and its size. A call whose audit row cannot be written stores nothing and answers an error with no detail. The audit log keeps these rows, so an object's name must not hold personal data.
 
 An object is deleted when:
 
 | Event | How |
 |---|---|
 | An admin runs the data reset | the reset deletes the whole workspace prefix, and `ext/` is under it |
-| The unit is removed from the composed set | each boot deletes the prefix of every unit recorded earlier and no longer composed. A boot with no file store, or a failed delete, leaves it for the next boot and does not stop the start |
+| The unit is removed from the composed set | each boot deletes the prefix of every unit recorded earlier and no longer composed, and then that unit's count. A boot with no file store, or a failed delete, leaves it for the next boot and does not stop the start |
 | The unit deletes it | `Objects().Delete` |
 
-Erasing one contact deletes none of a unit's objects, because no object is tied to a contact. A unit that stores personal data in an object deletes it with `Delete`. No object is deleted by age. The core keeps no index of a unit's objects, so a unit that wants an object removed after a time deletes it itself.
+Erasing one contact deletes none of a unit's objects, because no object is tied to a contact. A unit that stores personal data in an object deletes it with `Delete`. No object is deleted by age. The core keeps a count of a unit's objects and no list of them. A unit that wants an object removed after a time deletes it itself.
 
 ## How to read this page
 

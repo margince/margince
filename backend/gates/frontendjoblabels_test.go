@@ -56,6 +56,9 @@ type principalLabels struct {
 	unlabelled string
 	// refuse rejects a message before the parity is asked, with the reason.
 	refuse func(name string) (string, bool)
+	// retired names the principals no code stamps any more, keyed by label key.
+	// Rows written under them keep the id, so the catalogue keeps their message.
+	retired *gatekit.Waivers[string]
 }
 
 // assertPrincipalLabels holds one kind's principals and its catalogue messages
@@ -86,9 +89,22 @@ func assertPrincipalLabels(t *testing.T, row principalLabels) {
 				continue
 			}
 		}
-		if _, ok := row.bound[name]; !ok {
+		if _, ok := row.bound[name]; !ok && (row.retired == nil || !row.retired.Waived(t, name)) {
 			t.Errorf("%s labels %s.%s, which no %s principal in the backend names — delete the message or "+
 				"name the principal", frontendCatalogue, row.keyPrefix, name, row.kind)
+		}
+	}
+	if row.retired == nil {
+		return
+	}
+	for _, name := range row.retired.Subjects() {
+		if !labelled[name] {
+			t.Errorf("%s.%s names a retired actor id, so rows written under it still need %s's \"%s.%s\" message to name them in History",
+				row.keyPrefix, name, frontendCatalogue, row.keyPrefix, name)
+		}
+		if path, ok := row.bound[name]; ok {
+			t.Errorf("%s names the %s principal behind %s.%s again, so it is not retired — remove it from the retired list",
+				path, row.kind, row.keyPrefix, name)
 		}
 	}
 }

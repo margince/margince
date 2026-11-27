@@ -2,8 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 /** @vitest-environment happy-dom */
+import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
@@ -13,6 +14,17 @@ import { en } from "../../i18n/en";
 import { jsonResponse } from "../../testing/company.fixtures";
 import { meFixture } from "../../testing/mefixture";
 import { TimelineActions } from "./timelineactions";
+
+// A unit's copy as gen-composition merges it, so its title and reason resolve.
+vi.mock("@composition/copy", () => ({
+  extensionCopy: {
+    en: {
+      "extDealRules.title": "Deal rules",
+      "extDealRules.captureReason.names_reporting": "the mail names reporting",
+    },
+  },
+  extensionOverrides: {},
+}));
 
 type Activity = components["schemas"]["Activity"];
 type DealRelevance = components["schemas"]["ActivityDealRelevance"];
@@ -202,5 +214,46 @@ describe("whether a row is about the deal", () => {
     expect(
       screen.queryByRole("button", { name: en["dealDecline.action"] }),
     ).toBeNull();
+  });
+});
+
+function filedBy(
+  filer: NonNullable<components["schemas"]["ActivityLink"]["filed_by"]>,
+): Activity {
+  return {
+    ...MAIL,
+    links: [{ entity_type: "deal", entity_id: "deal-1", filed_by: filer }],
+  };
+}
+
+describe("who filed a row on the deal", () => {
+  it("names the unit and its reason in the unit's copy, and its Undo marks the row not about the deal", async () => {
+    const user = userEvent.setup();
+    const { marks } = show(
+      filedBy({ actor: "deal-rules", hook: "deal", reason: "names_reporting" }),
+      "deal",
+    );
+    expect(
+      screen.getByText("Filed here by Deal rules: the mail names reporting"),
+    ).toBeTruthy();
+    const undo = () => screen.getByRole("button", { name: en["common.undo"] });
+    // The button is refused, and drawn anew, once the reader's grants load.
+    await waitFor(() => expect(undo()).toBeEnabled());
+    await user.click(undo());
+    expect(await screen.findByText(en["dealDecline.done"])).toBeTruthy();
+    expect(marks).toEqual([{ deal_id: "deal-1", deal_relevance: "unrelated" }]);
+  });
+
+  it("falls back to the unit's name and reason key when it ships no copy", () => {
+    show(
+      filedBy({ actor: "other-unit", hook: "deal", reason: "stale" }),
+      "deal",
+    );
+    expect(screen.getByText("Filed here by other-unit: stale")).toBeTruthy();
+  });
+
+  it("says nothing when core filed the row", () => {
+    show(filedBy({ actor: "core" }), "deal");
+    expect(screen.queryByText(/Filed here by/)).toBeNull();
   });
 });

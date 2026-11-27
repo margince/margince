@@ -76,11 +76,46 @@ func (c *Connector) OpenShared(auth connector.Auth) (connector.Connector, connec
 	return &opened, state, nil
 }
 
+// SharedSendScope is Google's name for the permission to send as a shared
+// mailbox under delegation.
+func (c *Connector) SharedSendScope() string { return SendScope }
+
+// OpenSharedSender returns the shared mailbox as a sender. Its token carries
+// the send scope beside the read one. Its state names the send scope as
+// granted, which the send path checks before it reaches Google. A delegation
+// without the send scope is refused at the token, and the delivery parks with
+// that reason.
+//
+//nolint:ireturn // implements connector.SharedMailboxSender, whose contract returns the EmailSender seam
+func (c *Connector) OpenSharedSender(auth connector.Auth) (connector.EmailSender, connector.Auth, error) {
+	if c.shared == nil {
+		return nil, nil, errNoSharedReader
+	}
+	cred, err := ReadShared(auth)
+	if err != nil {
+		return nil, nil, err
+	}
+	mailbox, err := oauthflow.MailboxAddress(cred.Mailbox)
+	if err != nil {
+		return nil, nil, fmt.Errorf("gmail: %w: %w", err, ErrAuthRejected)
+	}
+	//nolint:gosec // G117: the state carries no refresh token; the field stays empty for a shared mailbox
+	state, err := json.Marshal(authState{Owner: mailbox, Scopes: scopeStrings(c.Descriptor().Scopes), Granted: []string{SendScope}})
+	if err != nil {
+		return nil, nil, fmt.Errorf("gmail: encoding the shared mailbox state: %w", err)
+	}
+	opened := *c
+	opened.oauth = timedAuthorizer{delegatedToken{tokens: c.shared, bundle: auth, send: true}}
+	return &opened, state, nil
+}
+
 // delegatedToken is the Authorizer of one opened shared mailbox. It ignores
 // the refresh token a personal call passes, and mints from the sealed bundle.
 type delegatedToken struct {
 	tokens *SharedAuthorizer
 	bundle connector.Auth
+	// send asks for the token that also carries the send scope.
+	send bool
 }
 
 func (t delegatedToken) Exchange(context.Context, string, string) (oauthflow.TokenGrant, error) {
@@ -88,5 +123,8 @@ func (t delegatedToken) Exchange(context.Context, string, string) (oauthflow.Tok
 }
 
 func (t delegatedToken) AccessToken(ctx context.Context, _ string) (string, error) {
+	if t.send {
+		return t.tokens.SendAccessToken(ctx, t.bundle)
+	}
 	return t.tokens.AccessToken(ctx, t.bundle)
 }

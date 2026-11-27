@@ -3,11 +3,11 @@
 
 import { type ExtensionDescriptor, extensions } from "@composition/extensions";
 import type { ComponentType } from "react";
-import {
-  composedPanels,
-  type ExtensionPanelProps,
-  type ExtensionPanelRegistry,
+import type {
+  ExtensionPanelProps,
+  ExtensionPanelRegistry,
 } from "../lib/extensions";
+import { composedPanels } from "../lib/extensionscreens";
 
 // A unit's panels: its own components, drawn inline where a core page offers a
 // slot. The unit declares the slot and the RBAC object; the page decides where

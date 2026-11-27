@@ -96,7 +96,7 @@ func (e *revocationEnv) enrolMemberMFA(t *testing.T) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := e.svc.ConfirmTOTP(ctx, code, ""); err != nil {
+	if _, err := e.svc.ConfirmTOTP(ctx, memberPassword, code, ""); err != nil {
 		t.Fatalf("confirm enrolment: %v", err)
 	}
 	return secret

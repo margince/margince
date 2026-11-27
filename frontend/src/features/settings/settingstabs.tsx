@@ -90,6 +90,7 @@ const TAB_LABELS: {
     tiers: "settings.part.models.tiers",
     tasks: "settings.part.models.tasks",
     prices: "settings.part.models.prices",
+    rules: "settings.part.models.rules",
   },
   usage: {
     allowance: "settings.part.usage.allowance",

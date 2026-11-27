@@ -497,7 +497,7 @@ func TestHeldMeetingAmongColleaguesReachesNoCompany(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("employing the colleague at Acme: %v", err)
 	}
-	room := addressedContact(t, e, "Boardroom", "room@resource.calendar.google.com")
+	room := legacyCalendarContact(t, e, "Boardroom", "room@resource.calendar.google.com")
 	if _, err := e.Contacts.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{Kind: "employment", ContactID: ptrContact(room), CompanyID: &acmeID, Source: "manual"}); err != nil {
 		t.Fatal(err)
 	}

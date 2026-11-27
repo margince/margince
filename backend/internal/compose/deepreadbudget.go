@@ -56,7 +56,7 @@ func (w *siteDeepReadWorker) deferForBudget(ctx context.Context, readID ids.UUID
 	if !deferred {
 		return false, nil
 	}
-	tctx, cancel := terminalCtx(ctx)
+	tctx, cancel := terminalCtx(runBooks(ctx))
 	defer cancel()
 	detail := contacts.SiteReadBudgetDetail
 	if errors.Is(cause, ai.ErrProviderDown) {

@@ -118,8 +118,9 @@ type Event struct {
 	Entity      datasource.EntityRef
 	Payload     json.RawMessage
 
-	AutomationID ids.UUID
-	Params       json.RawMessage
+	AutomationID   ids.UUID
+	AutomationName string
+	Params         json.RawMessage
 
 	// EnabledFrom is set for a reviewed event rule that only acts on new work.
 	EnabledFrom time.Time
@@ -149,6 +150,7 @@ type Event struct {
 // free-form side effects: each action is a declared variant so dry-run,
 // audit, and the 🟡 gate can reason about it.
 type Effect struct {
+	Why     *systemtext.Component `json:"-"`
 	Actions []Action
 
 	// Handler and OccurrenceKey scope the effect-level idempotency claim
@@ -207,7 +209,8 @@ func AllActionKinds() []ActionKind {
 }
 
 type Action struct {
-	SystemText *systemtext.Message `json:"system_text,omitempty"`
+	Why        *systemtext.Component `json:"-"`
+	SystemText *systemtext.Message   `json:"system_text,omitempty"`
 	Kind       ActionKind
 	Target     datasource.EntityRef
 	Args       json.RawMessage

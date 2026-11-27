@@ -16,6 +16,7 @@ import { useCompanyZone } from "../../lib/companyzone";
 import { coverageOfWire, hasGap } from "../../lib/moneycoverage";
 import { problemMessageOf, throwProblem } from "../../lib/problem";
 import {
+  periodWords,
   type RollupPeriod,
   RollupPeriodControl,
   rollupQuery,
@@ -108,7 +109,7 @@ export function HierarchyRollupPanel({
           <div>
             <dt className="t-eyebrow">
               {won.chosen
-                ? t("rollup.wonIn", { period: won.label })
+                ? t("rollup.wonIn", { period: periodWords(won.label, t) })
                 : t("rollup.closedWon")}
             </dt>
             <dd className="t-num">
@@ -138,7 +139,7 @@ export function HierarchyRollupPanel({
           </p>
         )}
         <p className="t-caption co-rollup-note">
-          {t("rollup.periodNote", { period: won.label })}
+          {t("rollup.periodNote", { period: periodWords(won.label, t) })}
         </p>
         <p className="t-caption co-rollup-note">
           {t("rollup.computedAt", {

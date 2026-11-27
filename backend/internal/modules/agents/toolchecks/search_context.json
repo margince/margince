@@ -3,6 +3,7 @@
   "checks": [
     "activity.read",
     "company.read",
+    "deal.read",
     "relationship.read"
   ]
 }

@@ -98,29 +98,6 @@ func (r *Registry) ReconnectedSince(ctx context.Context, userID ids.UserID, prov
 	return connected.After(since), nil
 }
 
-// SenderFor resolves the user's transmitting connection that mailbox names:
-// the EmailSender seam, its unsealed credential, and the provider's scopes. A
-// delivery staged before deliveries named a mailbox names the provider alone.
-// It goes out from the default.
-//
-//nolint:ireturn // returns the optional connector.EmailSender seam by design (the same posture Registry.connector takes for connector.Connector)
-func (r *Registry) SenderFor(ctx context.Context, userID ids.UserID, mailbox Mailbox) (connector.EmailSender, connector.Auth, []string, error) {
-	// Two-value form: EmailSender is optional (connector.go), so a capture-only
-	// connector is reported rather than silently treated as absent.
-	var sender connector.EmailSender
-	auth, granted, err := r.liveConnection(ctx, userID, mailbox, func(c connector.Connector) error {
-		var sends bool
-		if sender, sends = c.(connector.EmailSender); !sends {
-			return fmt.Errorf("capture: connector %q: %w", mailbox.Provider, ErrConnectorCannotSend)
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, nil, nil, err
-	}
-	return sender, auth, granted, nil
-}
-
 // liveConnection is the user's live connection to provider: its unsealed
 // credential and granted scopes. admit refuses a connector that lacks the
 // caller's capability before any credential is opened, so a permanent
@@ -184,7 +161,7 @@ func (r *Registry) connectionViews(ctx context.Context, includeBackfill bool) ([
 			       c.history_baseline_date, c.history_baseline_tz, c.history_baseline_set_by, c.history_baseline_set_at,
 			       t.id, t.name, t.archived_at IS NOT NULL,
 			       s.last_synced_at, s.last_success_at, s.last_error_class, s.next_sync_at, s.failing_since,
- c.connected_at, c.silence_dismissed_since, s.last_delivery_at, c.unread_from, c.unread_to, `+notesCalendarAccountSQL+`
+ c.connected_at, c.silence_dismissed_since, s.last_delivery_at, c.unread_from, c.unread_to, `+notesCalendarAccountSQL+`, c.history_narrowing_held
 			FROM capture_connection c
 			LEFT JOIN capture_sync_state s ON s.connection_id = c.id
 			-- The word's own row, so the connection reports the name the
@@ -209,7 +186,7 @@ func (r *Registry) connectionViews(ctx context.Context, includeBackfill bool) ([
 				&v.AccountLabel, &v.SignatureEnrichEnabled, &v.MailPosture, &v.DefaultSender,
 				&baseline.date, &baseline.timezone, &baseline.setBy, &baseline.setAt,
 				&tagID, &tagName, &tagArchived,
-				&v.LastSyncedAt, &v.LastSuccessAt, &v.LastErrorClass, &v.NextSyncDueAt, &v.FailingSince, &v.ConnectedAt, &v.SilenceDismissedSince, &v.LastDeliveryAt, &v.UnreadFrom, &v.UnreadTo, &v.CalendarAccountLabel); err != nil {
+				&v.LastSyncedAt, &v.LastSuccessAt, &v.LastErrorClass, &v.NextSyncDueAt, &v.FailingSince, &v.ConnectedAt, &v.SilenceDismissedSince, &v.LastDeliveryAt, &v.UnreadFrom, &v.UnreadTo, &v.CalendarAccountLabel, &v.narrowingHeld); err != nil {
 				return err
 			}
 			v.ContextTag = contextTagOf(tagID, tagName, tagArchived)
@@ -217,6 +194,9 @@ func (r *Registry) connectionViews(ctx context.Context, includeBackfill bool) ([
 			out = append(out, v)
 		}
 		if err := rows.Err(); err != nil {
+			return err
+		}
+		if err := seatNarrowingsTx(ctx, tx, out); err != nil {
 			return err
 		}
 		if !includeBackfill {

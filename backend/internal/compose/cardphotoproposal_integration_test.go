@@ -53,7 +53,7 @@ func TestPhotoCardsBecomeApprovalsAndCreateNothingUntilApproved(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	stage := vcardCreateStager(e.Pool)
+	stage := VCardCreateStager(e.Pool)
 	for _, r := range results {
 		if !r.Outcome.AwaitsApproval() {
 			t.Fatalf("card %d outcome = %s, want one that awaits approval", r.Index, r.Outcome)
@@ -103,7 +103,7 @@ func stagePhotoCard(ctx context.Context, t *testing.T, e *integration.Env, entry
 	if err != nil || len(results) != 1 || !results[0].Outcome.AwaitsApproval() {
 		t.Fatalf("proposing the card: results %+v, err %v", results, err)
 	}
-	if err := vcardCreateStager(e.Pool)(ctx, entry, results[0].ContactID); err != nil {
+	if err := VCardCreateStager(e.Pool)(ctx, entry, results[0].ContactID); err != nil {
 		t.Fatal(err)
 	}
 	status, kind := "pending", vcardCreateKind

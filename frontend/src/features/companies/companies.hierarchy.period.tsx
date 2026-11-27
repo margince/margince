@@ -2,7 +2,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { components } from "../../api/schema";
 import { IconAction } from "../../design-system/iconaction";
 import { Select } from "../../design-system/select";
-import { useT } from "../../i18n";
+import { type Translator, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 
 type CompanyHierarchyRollup = components["schemas"]["CompanyHierarchyRollup"];
@@ -86,7 +86,9 @@ export function RollupPeriodControl({
         }
       />
       <IconAction
-        label={t("rollup.period.show", { period: won.previous })}
+        label={t("rollup.period.show", {
+          period: periodWords(won.previous, t),
+        })}
         icon={<ChevronLeft aria-hidden />}
         pending={loading}
         onClick={() => onChange({ field, label: won.previous })}
@@ -94,7 +96,7 @@ export function RollupPeriodControl({
       <IconAction
         label={
           next
-            ? t("rollup.period.show", { period: next })
+            ? t("rollup.period.show", { period: periodWords(next, t) })
             : t("rollup.period.nextNotBegun")
         }
         icon={<ChevronRight aria-hidden />}
@@ -108,4 +110,19 @@ export function RollupPeriodControl({
       />
     </>
   );
+}
+
+/**
+ * A period label as a reader says it. The server sends the bucket key it
+ * groups by (`2026-Q4`, `FY2025/26-Q4`). A quarter becomes a sentence in the
+ * reader's language, and a year passes through as it is.
+ */
+export function periodWords(label: string, t: Translator): string {
+  const quarter = /^(.+)-Q([1-4])$/.exec(label);
+  return quarter
+    ? t("rollup.quarterOf", {
+        quarter: quarter[2] ?? "",
+        year: quarter[1] ?? "",
+      })
+    : label;
 }

@@ -16,7 +16,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -119,9 +118,47 @@ type telegramMessage struct {
 	Chat                 telegramChat `json:"chat"`
 	From                 telegramUser `json:"from"`
 	Date                 int64        `json:"date"`
-	Text                 string       `json:"text"`
-	Caption              string       `json:"caption"`
+	// EditDate is when Telegram says the message was last edited. It is zero
+	// for a message that was never edited.
+	EditDate int64  `json:"edit_date"`
+	Text     string `json:"text"`
+	Caption  string `json:"caption"`
+	// ForwardOrigin is set when the sender forwarded a message written elsewhere.
+	ForwardOrigin *telegramForwardOrigin `json:"forward_origin"`
+	// ReplyToMessage is the message this one answers, when it answers one.
+	ReplyToMessage *struct {
+		MessageID int64 `json:"message_id"`
+	} `json:"reply_to_message"`
 	telegramMedia
+}
+
+// telegramForwardOrigin is where a forwarded message came from. Only a `user`
+// origin names the author by account. A `hidden_user` origin, a channel and a
+// chat carry no user id this connector could file the message under.
+type telegramForwardOrigin struct {
+	Type       string       `json:"type"`
+	Date       int64        `json:"date"`
+	SenderUser telegramUser `json:"sender_user"`
+}
+
+// chatForward is what Telegram said about the forward, or nil for a message
+// written by its sender.
+func chatForward(origin *telegramForwardOrigin) *connector.ChatForward {
+	if origin == nil {
+		return nil
+	}
+	forward := &connector.ChatForward{}
+	if origin.Date > 0 {
+		forward.OriginalAt = time.Unix(origin.Date, 0).UTC()
+	}
+	if origin.Type == "user" && origin.SenderUser.ID > 0 {
+		forward.Author = &connector.ChatParty{
+			UserID:      fmt.Sprintf("%d", origin.SenderUser.ID),
+			DisplayName: telegramDisplayName(origin.SenderUser),
+			Username:    origin.SenderUser.Username,
+		}
+	}
+	return forward
 }
 
 // telegramUpdate is Telegram's own update envelope. Message is a pointer
@@ -129,9 +166,20 @@ type telegramMessage struct {
 // the block/unblock signal) carries none; a nil Message is how Normalize tells
 // "not a message" from "a message with no text".
 type telegramUpdate struct {
-	UpdateID        int64            `json:"update_id"`
-	Message         *telegramMessage `json:"message"`
-	BusinessMessage *telegramMessage `json:"business_message"`
+	UpdateID              int64                    `json:"update_id"`
+	Message               *telegramMessage         `json:"message"`
+	BusinessMessage       *telegramMessage         `json:"business_message"`
+	EditedMessage         *telegramMessage         `json:"edited_message"`
+	EditedBusinessMessage *telegramMessage         `json:"edited_business_message"`
+	DeletedBusiness       *deletedBusinessMessages `json:"deleted_business_messages"`
+}
+
+// deletedBusinessMessages is Telegram's report that messages of a business
+// chat were deleted, by either side. It carries the ids and no content.
+type deletedBusinessMessages struct {
+	BusinessConnectionID string       `json:"business_connection_id"`
+	Chat                 telegramChat `json:"chat"`
+	MessageIDs           []int64      `json:"message_ids"`
 }
 
 // ingestEnvelope is the raw record Normalize actually maps: the connected
@@ -148,15 +196,7 @@ type ingestEnvelope struct {
 // BusinessLink is what the capture side knows about the approved Telegram
 // Business link a business_message arrived through. The poller resolved it from
 // the message's connection id before anything was stored.
-type BusinessLink struct {
-	// AccountID is the owner's Telegram user id, the stable account. The
-	// connection id changes whenever the owner links the bot again.
-	AccountID   string
-	Ownership   connector.ChatOwnership
-	OwnerUserID ids.UUID
-	// SeatID is the seat the link's messages file through.
-	SeatID ids.UUID
-}
+type BusinessLink = connector.ChatLink
 
 // ParseChatMessage maps one raw envelope (connector.go's BuildRawEnvelope) to the
 // chat message it carries and the binding it files under. link is nil for a
@@ -165,31 +205,108 @@ type BusinessLink struct {
 // A shape this function does not map (an edited_message, or a message kind that
 // does not match link) answers ErrSkip.
 func ParseChatMessage(raw connector.RawRecord, link *BusinessLink) (connector.ChatBinding, connector.ChatMessage, error) {
+	update, binding, err := decodeChatUpdate(raw, link)
+	if err != nil {
+		return connector.ChatBinding{}, connector.ChatMessage{}, err
+	}
+	msg := update.Message
+	if link != nil {
+		msg = update.BusinessMessage
+	}
+	chat, err := chatMessageOf(msg, update.UpdateID, link)
+	if err != nil {
+		return connector.ChatBinding{}, connector.ChatMessage{}, err
+	}
+	return binding, chat, nil
+}
+
+// ParseChatChanges maps one raw envelope that reports an edit or a deletion
+// to the changes capture.ChangeChatMessage applies and the binding they apply
+// under. link is nil for an update to the bot itself and set for one that
+// arrived through a business link. An edit restates the whole message, so it
+// can file a message whose original has not arrived. A deletion carries the
+// ids of every message it removes. Any other shape answers ErrSkip.
+func ParseChatChanges(raw connector.RawRecord, link *BusinessLink) (connector.ChatBinding, []connector.ChatChange, error) {
+	update, binding, err := decodeChatUpdate(raw, link)
+	if err != nil {
+		return connector.ChatBinding{}, nil, err
+	}
+	if link != nil && update.DeletedBusiness != nil {
+		changes, err := deletionChanges(update.DeletedBusiness, update.UpdateID)
+		return binding, changes, err
+	}
+	msg := update.EditedMessage
+	if link != nil {
+		msg = update.EditedBusinessMessage
+	}
+	chat, err := chatMessageOf(msg, update.UpdateID, link)
+	if err != nil {
+		return connector.ChatBinding{}, nil, err
+	}
+	if msg.EditDate <= 0 {
+		return connector.ChatBinding{}, nil, fmt.Errorf("telegram: update %d is an edit that names no edit time: %w", update.UpdateID, connector.ErrSkip)
+	}
+	edited := time.Unix(msg.EditDate, 0).UTC()
+	chat.Revision, chat.RevisionSeq = edited, update.UpdateID
+	return binding, []connector.ChatChange{{
+		Kind: connector.ChatEdited, ConversationID: chat.ConversationID, IdempotencyKey: chat.IdempotencyKey,
+		Body: chat.Body, Revision: edited, RevisionSeq: update.UpdateID, Restated: &chat,
+	}}, nil
+}
+
+// deletionChanges is one deletion per message id a deleted_business_messages
+// update names. The chat is the customer's, whoever typed the message.
+func deletionChanges(deleted *deletedBusinessMessages, updateID int64) ([]connector.ChatChange, error) {
+	if !deleted.Chat.isPrivate() {
+		return nil, fmt.Errorf("telegram: update %d deletes messages of a %q chat, not a private one: %w",
+			updateID, deleted.Chat.Type, connector.ErrSkip)
+	}
+	changes := make([]connector.ChatChange, 0, len(deleted.MessageIDs))
+	for _, id := range deleted.MessageIDs {
+		changes = append(changes, connector.ChatChange{
+			Kind: connector.ChatDeleted, ConversationID: fmt.Sprintf("%d", deleted.Chat.ID), IdempotencyKey: fmt.Sprintf("%d", id),
+		})
+	}
+	if len(changes) == 0 {
+		return nil, fmt.Errorf("telegram: update %d deletes no message: %w", updateID, connector.ErrSkip)
+	}
+	return changes, nil
+}
+
+// decodeChatUpdate decodes the envelope and picks the binding its link names.
+func decodeChatUpdate(raw connector.RawRecord, link *BusinessLink) (telegramUpdate, connector.ChatBinding, error) {
 	var env ingestEnvelope
 	if err := json.Unmarshal(raw, &env); err != nil {
-		return connector.ChatBinding{}, connector.ChatMessage{}, fmt.Errorf("telegram: decoding the ingest envelope: %w", err)
+		return telegramUpdate{}, connector.ChatBinding{}, fmt.Errorf("telegram: decoding the ingest envelope: %w", err)
 	}
 	if env.BotID == "" {
-		return connector.ChatBinding{}, connector.ChatMessage{}, errors.New("telegram: normalize envelope carries no bot id")
+		return telegramUpdate{}, connector.ChatBinding{}, errors.New("telegram: normalize envelope carries no bot id")
 	}
 	var update telegramUpdate
 	if err := json.Unmarshal(env.Update, &update); err != nil {
-		return connector.ChatBinding{}, connector.ChatMessage{}, fmt.Errorf("telegram: decoding the update: %w", err)
+		return telegramUpdate{}, connector.ChatBinding{}, fmt.Errorf("telegram: decoding the update: %w", err)
 	}
 	if strings.Contains(env.BotID, ":") || (link != nil && (link.AccountID == "" || strings.Contains(link.AccountID, ":"))) {
-		return connector.ChatBinding{}, connector.ChatMessage{}, errors.New("telegram: a bot or account id is empty or holds a colon, so the message key would be ambiguous")
+		return telegramUpdate{}, connector.ChatBinding{}, errors.New("telegram: a bot or account id is empty or holds a colon, so the message key would be ambiguous")
 	}
-	msg, binding := update.Message, botBinding(env.BotID)
+	binding := botBinding(env.BotID)
 	if link != nil {
-		msg, binding = update.BusinessMessage, businessBinding(env.BotID, *link)
+		binding = businessBinding(env.BotID, *link)
 	}
+	return update, binding, nil
+}
+
+// chatMessageOf maps one Telegram message to the chat message it states. A
+// missing message, one outside a private chat and one with no addressable
+// sender answer ErrSkip.
+func chatMessageOf(msg *telegramMessage, updateID int64, link *BusinessLink) (connector.ChatMessage, error) {
 	if msg == nil {
-		return connector.ChatBinding{}, connector.ChatMessage{}, fmt.Errorf("telegram: update %d carries no message of the kind its link names: %w",
-			update.UpdateID, connector.ErrSkip)
+		return connector.ChatMessage{}, fmt.Errorf("telegram: update %d carries no message of the kind its link names: %w",
+			updateID, connector.ErrSkip)
 	}
 	if !msg.Chat.isPrivate() {
-		return connector.ChatBinding{}, connector.ChatMessage{}, fmt.Errorf("telegram: update %d is in a %q chat, not a private one: %w",
-			update.UpdateID, msg.Chat.Type, connector.ErrSkip)
+		return connector.ChatMessage{}, fmt.Errorf("telegram: update %d is in a %q chat, not a private one: %w",
+			updateID, msg.Chat.Type, connector.ErrSkip)
 	}
 	// A Telegram account id is positive. A message with no `from` (an anonymous
 	// group admin posts under `sender_chat`) decodes to sender id 0. Every such
@@ -197,8 +314,8 @@ func ParseChatMessage(raw connector.RawRecord, link *BusinessLink) (connector.Ch
 	// a chat, not a user. The chat-scope gate above does not decide whether the
 	// sender is addressable.
 	if msg.From.ID <= 0 {
-		return connector.ChatBinding{}, connector.ChatMessage{}, fmt.Errorf("telegram: update %d carries no addressable sender: %w",
-			update.UpdateID, connector.ErrSkip)
+		return connector.ChatMessage{}, fmt.Errorf("telegram: update %d carries no addressable sender: %w",
+			updateID, connector.ErrSkip)
 	}
 	chat := connector.ChatMessage{
 		ConversationID: fmt.Sprintf("%d", msg.Chat.ID),
@@ -211,7 +328,12 @@ func ParseChatMessage(raw connector.RawRecord, link *BusinessLink) (connector.Ch
 		},
 		Body:       messageBody(msg),
 		OccurredAt: time.Unix(msg.Date, 0).UTC(),
+		Forward:    chatForward(msg.ForwardOrigin),
 	}
+	if msg.ReplyToMessage != nil && msg.ReplyToMessage.MessageID > 0 {
+		chat.ReplyToID = fmt.Sprintf("%d", msg.ReplyToMessage.MessageID)
+	}
+	chat.SharedContact = sharedContactOf(msg.Contact)
 	if link != nil {
 		// Through a business link the other end of the private chat is the chat
 		// itself, whoever typed. The customer typed, or the owner did in their
@@ -219,11 +341,37 @@ func ParseChatMessage(raw connector.RawRecord, link *BusinessLink) (connector.Ch
 		chat.Counterparty.UserID = chat.ConversationID
 		if fmt.Sprintf("%d", msg.From.ID) == link.AccountID {
 			chat.Direction = connector.DirectionOutbound
+			chat.Forward = nil
 			chat.Counterparty.DisplayName = chatDisplayName(msg.Chat)
 			chat.Counterparty.Username = msg.Chat.Username
 		}
 	}
-	return binding, chat, nil
+	return chat, nil
+}
+
+// sharedContactOf reads the card of a contact message. A card for someone who
+// is not on Telegram carries a phone number and no account id.
+func sharedContactOf(raw json.RawMessage) *connector.ChatSharedContact {
+	if len(raw) == 0 {
+		return nil
+	}
+	var card struct {
+		PhoneNumber string `json:"phone_number"`
+		FirstName   string `json:"first_name"`
+		LastName    string `json:"last_name"`
+		UserID      int64  `json:"user_id"`
+	}
+	if err := json.Unmarshal(raw, &card); err != nil {
+		return nil
+	}
+	out := &connector.ChatSharedContact{DisplayName: strings.TrimSpace(card.FirstName + " " + card.LastName)}
+	if card.PhoneNumber != "" {
+		out.Phones = []string{card.PhoneNumber}
+	}
+	if card.UserID > 0 {
+		out.UserID = fmt.Sprintf("%d", card.UserID)
+	}
+	return out
 }
 
 // messageBody is what the timeline shows for one message. Telegram carries a

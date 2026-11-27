@@ -68,7 +68,7 @@ func draftSystemFor(fence promptfence.Fence, voiced bool) string {
 	if voiced {
 		system += "\n\n" + draftvoice.SystemRule
 	}
-	return system + "\n" + fence.Rule("contact summary")
+	return system + "\n" + fence.Rule("contact summary") + "\n" + fence.PolicyRule()
 }
 
 // reasonKinds is the contract's closed vocabulary as this surface serves it.

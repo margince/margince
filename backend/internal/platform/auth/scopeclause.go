@@ -14,6 +14,8 @@ package auth
 import (
 	"context"
 	"fmt"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // ScopeClause renders the own/team/all row-visibility predicate over an
@@ -47,6 +49,38 @@ func ScopeClauseFor(ctx context.Context, table, alias string, arg func(any) int)
 	return clauseFor(ctx, table, alias, arg, anyShare)
 }
 
+// RowScopeClauseFor is ScopeClauseFor without what an agent is never shown
+// (ExclusionClauseFor). A count of what row scope withheld inverts this part
+// only: inverting the exclusion too would tell an agent that a restricted
+// contact exists.
+func RowScopeClauseFor(ctx context.Context, table, alias string, arg func(any) int) (string, error) {
+	if !ownerScopedTables[table] {
+		return "", fmt.Errorf("auth: %q is not a row-scoped table", table)
+	}
+	p, err := rbacActor(ctx)
+	if err != nil {
+		return "", err
+	}
+	if UnboundedFor(p, table) {
+		return "", nil
+	}
+	return scopedPredicate(p, table, arg, withCapturePrivacy, asClassified, anyShare)(alias), nil
+}
+
+// ExclusionClauseFor is the part of ScopeClauseFor that no principal may learn
+// the existence of what it hides: "" when the caller is held to none. A hidden
+// count applies it to both what is listed and what is counted.
+func ExclusionClauseFor(ctx context.Context, table, alias string) (string, error) {
+	p, err := rbacActor(ctx)
+	if err != nil {
+		return "", err
+	}
+	if exclude := agentExclusion(p, table); exclude != nil {
+		return exclude(alias), nil
+	}
+	return "", nil
+}
+
 // clauseFor is the body both spellings share: the table check, the unbounded
 // shortcut and the predicate call, written where the read direction and the
 // attach one read the same one.
@@ -62,4 +96,26 @@ func clauseFor(ctx context.Context, table, alias string, arg func(any) int, shar
 		return "", nil
 	}
 	return predicateFor(p, table, arg, withCapturePrivacy, asClassified, share)(alias), nil
+}
+
+// DealChildScopeClause renders the row scope of a record that has no owner and
+// is seen when its deal is. The room list, the single room read, search and the
+// retirement preview all render it, so they show a caller the same rooms.
+//
+// The deal is an `EXISTS` and not a `JOIN`. That keeps one `id` and one
+// `created_at` in the caller's keyset. An unbounded caller still gets a clause.
+func DealChildScopeClause(ctx context.Context, childAlias string, arg func(any) int) (string, error) {
+	// The deal's object grant comes first: a seat that may not read deals reads
+	// no row that is seen through one.
+	if err := Require(ctx, tableDeal, principal.ActionRead); err != nil {
+		return "", err
+	}
+	scope, err := ScopeClauseFor(ctx, tableDeal, "d", arg)
+	if err != nil {
+		return "", err
+	}
+	if scope == "" {
+		scope = truePredicate
+	}
+	return fmt.Sprintf(`EXISTS (SELECT 1 FROM deal d WHERE d.id = %s.deal_id AND (%s))`, childAlias, scope), nil
 }

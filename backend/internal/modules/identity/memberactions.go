@@ -62,12 +62,22 @@ type memberTarget struct {
 	hasFactor         bool
 }
 
+// memberOffer is what the roster row says about the verbs: those admitted and
+// those the caller holds but the member refuses.
+type memberOffer struct {
+	Allowed []memberAction
+	Refused []memberRefusal
+	// MergeNeedsConfirmation is set when merge is offered on a used account,
+	// whose merge waits for the holders to confirm.
+	MergeNeedsConfirmation bool
+}
+
 // allowedMemberActions answers, per member, the verbs this caller would be
 // admitted to right now. Read in the caller's transaction, without the locks
 // the writes take.
 func (s *Service) allowedMemberActions(
 	ctx context.Context, tx pgx.Tx, actor Identity, rows []userRow, grants map[ids.UUID]seatGrants,
-) (map[ids.UUID][]memberAction, error) {
+) (map[ids.UUID]memberOffer, error) {
 	ctx = actorCtx(ctx, actor)
 	archived, err := archivedRoleHolders(ctx, tx, rowIDs(rows))
 	if err != nil {
@@ -81,7 +91,7 @@ func (s *Service) allowedMemberActions(
 	if err != nil {
 		return nil, err
 	}
-	out := make(map[ids.UUID][]memberAction, len(rows))
+	out := make(map[ids.UUID]memberOffer, len(rows))
 	for _, row := range rows {
 		target := memberTarget{
 			row: row, grants: grants[row.ID], holdsArchivedRole: archived[row.ID], hasFactor: factors[row.ID],
@@ -93,7 +103,11 @@ func (s *Service) allowedMemberActions(
 				return nil, err
 			}
 		}
-		out[row.ID] = memberActionsOn(ctx, actor, target, seatLeft)
+		allowed := memberActionsOn(ctx, actor, target, seatLeft)
+		out[row.ID] = memberOffer{
+			Allowed: allowed, Refused: refusedMemberActions(ctx, actor, target),
+			MergeNeedsConfirmation: slices.Contains(allowed, actionMerge) && !row.Usage.unused(),
+		}
 	}
 	return out, nil
 }
@@ -104,7 +118,7 @@ func memberActionsOn(ctx context.Context, actor Identity, target memberTarget, s
 	status, userID := target.row.Status, ids.UserID{UUID: target.row.ID}
 	admitted := map[memberAction]bool{
 		actionEdit:  !target.row.IsAgent && callerOutranks(actor, target.grants, reachTakeover) == nil,
-		actionMerge: target.row.Unused && actor.hasRole(roleAdmin) && !target.row.IsAgent && userID != actor.UserID && !target.soleAdmin,
+		actionMerge: actor.hasRole(roleAdmin) && len(mergeRefusals(actor, target)) == 0,
 		// Removal asks for a deactivated member, as the retirement preview does.
 		actionRemove: actor.hasRole(roleAdmin) && !target.row.IsAgent && userID != actor.UserID && !target.soleAdmin &&
 			refuseUnlessDeactivated(status) == nil,
@@ -136,6 +150,54 @@ func memberActionsOn(ctx context.Context, actor Identity, target memberTarget, s
 		if admitted[action] && callerMay(ctx, actor, action) {
 			out = append(out, action)
 		}
+	}
+	return out
+}
+
+// memberRefusal is a verb the caller holds the grant for and the target
+// refuses, with the reason the roster shows in place of the button.
+type memberRefusal struct {
+	Action memberAction
+	Reason string
+}
+
+// The reasons a merge is refused, as the contract spells them.
+const (
+	reasonSoleAdmin = "sole_admin"
+	reasonSelf      = "self"
+	reasonAgentSeat = "agent_seat"
+)
+
+// mergeRefusals lists every reason this target cannot be merged away by this
+// caller, in the order the roster shows them. Empty means merge is admitted.
+// A used account is admitted: its merge waits for the holders' confirmation,
+// which the preview asks for, so use is no refusal.
+// The merge offer is decided here alone, so a reason shown is always a reason
+// the offer lacks.
+func mergeRefusals(actor Identity, target memberTarget) []string {
+	var out []string
+	if target.row.IsAgent {
+		return append(out, reasonAgentSeat)
+	}
+	if target.row.ID == actor.UserID.UUID {
+		return append(out, reasonSelf)
+	}
+	if target.soleAdmin {
+		out = append(out, reasonSoleAdmin)
+	}
+	return out
+}
+
+// refusedMemberActions names what the caller may do in principle on this
+// member and may not right now. Only an administrator sees merge, and only
+// with the grant, so a refusal never discloses a verb the caller lacks.
+func refusedMemberActions(ctx context.Context, actor Identity, target memberTarget) []memberRefusal {
+	if !actor.hasRole(roleAdmin) || !callerMay(ctx, actor, actionMerge) {
+		return nil
+	}
+	var out []memberRefusal
+	for _, reason := range mergeRefusals(actor, target) {
+		out = append(out, memberRefusal{Action: actionMerge, Reason: reason})
 	}
 	return out
 }

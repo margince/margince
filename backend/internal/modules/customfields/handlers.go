@@ -15,6 +15,7 @@ import (
 	"net/http"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -94,6 +95,9 @@ func (h Handlers) CreateCustomField(w http.ResponseWriter, r *http.Request, _ cr
 	if req.ActivityKinds != nil {
 		spec.ActivityKinds = kindStrings(*req.ActivityKinds)
 	}
+	if req.PipelineIds != nil {
+		spec.PipelineIDs = pipelineIDs(*req.PipelineIds)
+	}
 	field, err := h.svc.Create(r.Context(), spec)
 	if err != nil {
 		writeCustomFieldErr(w, r, err)
@@ -125,12 +129,25 @@ func (h Handlers) RenameCustomField(w http.ResponseWriter, r *http.Request, id c
 		kinds := kindStrings(*req.ActivityKinds)
 		patch.ActivityKinds = &kinds
 	}
+	if req.PipelineIds != nil {
+		pipelines := pipelineIDs(*req.PipelineIds)
+		patch.PipelineIDs = &pipelines
+	}
 	field, err := h.svc.Update(r.Context(), ids.UUID(id), patch, ifVersion)
 	if err != nil {
 		writeCustomFieldErr(w, r, err)
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, field)
+}
+
+// pipelineIDs is a wire pipeline list as the engine reads it.
+func pipelineIDs(wire []openapi_types.UUID) []ids.UUID {
+	out := make([]ids.UUID, len(wire))
+	for i, id := range wire {
+		out[i] = ids.UUID(id)
+	}
+	return out
 }
 
 // kindStrings is a wire kind list as the engine reads it. The engine checks

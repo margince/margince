@@ -28,15 +28,6 @@ import (
 // when the test ran.
 var lookupObservedAt = time.Date(2026, 10, 1, 12, 0, 0, 0, time.UTC)
 
-func technicalUndoCompany(t *testing.T, e *integration.Env, name string) ids.CompanyID {
-	t.Helper()
-	company, err := e.Contacts.CreateCompany(e.Admin(), contacts.CreateCompanyInput{DisplayName: name, Source: "manual"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	return ids.From[ids.CompanyKind](ids.UUID(company.Id))
-}
-
 // applyUndoLookup runs one DNS lookup through the real writer and answers its
 // audit row.
 func applyUndoLookup(t *testing.T, e *integration.Env, company ids.CompanyID, observations ...contacts.TechnicalObservation) ids.UUID {
@@ -120,7 +111,7 @@ func sameFacts(t *testing.T, a, b []map[string]any) bool {
 
 func TestTechnicalUndoPutsBackTheReplacedFactsOnceWithTheirSource(t *testing.T) {
 	e := integration.Setup(t)
-	company := technicalUndoCompany(t, e, "Lookup Undo GmbH")
+	company := mergeTestCompany(t, e, "Lookup Undo GmbH")
 	applyUndoLookup(t, e, company, undoObservation("mail_provider", "old", "Old mail"), undoObservation("hosting_provider", "host", "Old host"))
 	before := technicalUndoFacts(t, e, company)
 	receipt := applyUndoLookup(t, e, company, undoObservation("mail_provider", "new", "New mail"))
@@ -155,7 +146,7 @@ func TestTechnicalUndoPutsBackTheReplacedFactsOnceWithTheirSource(t *testing.T) 
 
 func TestTwoUndosOfOneLookupPutItBackOnce(t *testing.T) {
 	e := integration.Setup(t)
-	company := technicalUndoCompany(t, e, "Concurrent Undo GmbH")
+	company := mergeTestCompany(t, e, "Concurrent Undo GmbH")
 	applyUndoLookup(t, e, company, undoObservation("mail_provider", "old", "Old mail"))
 	receipt := applyUndoLookup(t, e, company, undoObservation("mail_provider", "new", "New mail"))
 	version := currentVersion(t, e, "company", company.UUID)
@@ -217,7 +208,7 @@ func TestTechnicalUndoRefusesAfterALaterCompanyOrFactWrite(t *testing.T) {
 	for name, later := range cases {
 		t.Run(name, func(t *testing.T) {
 			e := integration.Setup(t)
-			company := technicalUndoCompany(t, e, "Later Write GmbH")
+			company := mergeTestCompany(t, e, "Later Write GmbH")
 			applyUndoLookup(t, e, company, undoObservation("mail_provider", "old", "Old mail"), undoObservation("hosting_provider", "host", "Old host"))
 			receipt := applyUndoLookup(t, e, company, undoObservation("mail_provider", "new", "New mail"))
 			later(t, e, company)
@@ -244,7 +235,7 @@ func TestTechnicalUndoRefusesAfterALaterCompanyOrFactWrite(t *testing.T) {
 // and nothing else. It has no event and no snapshot to offer back.
 func TestASameValueRefreshIsAnObservationAndNotAChange(t *testing.T) {
 	e := integration.Setup(t)
-	company := technicalUndoCompany(t, e, "Refresh GmbH")
+	company := mergeTestCompany(t, e, "Refresh GmbH")
 	applyUndoLookup(t, e, company, undoObservation("mail_provider", "mail", "Mail"))
 	refresh := applyUndoLookup(t, e, company, undoObservation("mail_provider", "mail", "Mail"))
 	var changes float64
@@ -269,7 +260,7 @@ func TestASameValueRefreshIsAnObservationAndNotAChange(t *testing.T) {
 
 func TestTechnicalUndoRefusesAnArchivedOrMergedCompany(t *testing.T) {
 	e := integration.Setup(t)
-	archived := technicalUndoCompany(t, e, "Archived Lookup GmbH")
+	archived := mergeTestCompany(t, e, "Archived Lookup GmbH")
 	receipt := applyUndoLookup(t, e, archived, undoObservation("mail_provider", "mail", "Mail"))
 	if _, err := e.Contacts.ArchiveCompany(e.Admin(), archived, nil); err != nil {
 		t.Fatal(err)
@@ -278,8 +269,8 @@ func TestTechnicalUndoRefusesAnArchivedOrMergedCompany(t *testing.T) {
 		t.Fatalf("an archived company's lookup answered %s, want %s", reason, ReasonRecordArchived)
 	}
 
-	merged := technicalUndoCompany(t, e, "Merged Lookup GmbH")
-	survivor := technicalUndoCompany(t, e, "Survivor GmbH")
+	merged := mergeTestCompany(t, e, "Merged Lookup GmbH")
+	survivor := mergeTestCompany(t, e, "Survivor GmbH")
 	mergedReceipt := applyUndoLookup(t, e, merged, undoObservation("mail_provider", "mail", "Mail"))
 	survivorReceipt := applyUndoLookup(t, e, survivor, undoObservation("hosting_provider", "host", "Host"))
 	if _, err := e.Contacts.MergeCompany(e.Admin(), merged, survivor, nil); err != nil {
@@ -302,7 +293,7 @@ func TestTechnicalUndoRefusesAnArchivedOrMergedCompany(t *testing.T) {
 // written.
 func TestTechnicalUndoOfAHiddenCompanyIsNotFound(t *testing.T) {
 	e := integration.Setup(t)
-	company := technicalUndoCompany(t, e, "Hidden Lookup GmbH")
+	company := mergeTestCompany(t, e, "Hidden Lookup GmbH")
 	applyUndoLookup(t, e, company, undoObservation("mail_provider", "old", "Old mail"))
 	receipt := applyUndoLookup(t, e, company, undoObservation("mail_provider", "new", "New mail"))
 	held := technicalUndoFacts(t, e, company)
@@ -327,7 +318,7 @@ func TestTechnicalUndoOfAHiddenCompanyIsNotFound(t *testing.T) {
 // is invented for it.
 func TestALegacyLookupReceiptSaysItHasNoSnapshot(t *testing.T) {
 	e := integration.Setup(t)
-	company := technicalUndoCompany(t, e, "Legacy Lookup GmbH")
+	company := mergeTestCompany(t, e, "Legacy Lookup GmbH")
 	var answer Undoability
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var err error
@@ -360,7 +351,7 @@ func TestTechnicalUndoRefusesALaterWriteThatBeganBeforeTheLookup(t *testing.T) {
 	for name, write := range cases {
 		t.Run(name, func(t *testing.T) {
 			e := integration.Setup(t)
-			company := technicalUndoCompany(t, e, "Early Writer GmbH")
+			company := mergeTestCompany(t, e, "Early Writer GmbH")
 			applyUndoLookup(t, e, company, undoObservation("mail_provider", "old", "Old mail"))
 			began, release, done := make(chan struct{}), make(chan struct{}), make(chan error, 1)
 			go func() {
@@ -406,8 +397,8 @@ func TestTechnicalUndoRefusesALaterWriteThatBeganBeforeTheLookup(t *testing.T) {
 // retired company is archived with no counter left.
 func TestAMergeRefusesTheUndoOfALookupOnEitherCompany(t *testing.T) {
 	e := integration.Setup(t)
-	survivor := technicalUndoCompany(t, e, "Merge Survivor GmbH")
-	retired := technicalUndoCompany(t, e, "Merge Retired GmbH")
+	survivor := mergeTestCompany(t, e, "Merge Survivor GmbH")
+	retired := mergeTestCompany(t, e, "Merge Retired GmbH")
 	survivorLookup := applyUndoLookup(t, e, survivor, undoObservation("hosting_provider", "host", "Host"))
 	retiredLookup := applyUndoLookup(t, e, retired, undoObservation("hosting_provider", "host", "Host"))
 	if _, err := e.Contacts.MergeCompany(e.Admin(), retired, survivor, nil); err != nil {

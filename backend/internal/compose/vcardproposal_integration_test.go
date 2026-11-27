@@ -68,7 +68,7 @@ func TestAVCardNearMatchBecomesOneDurableProposal(t *testing.T) {
 		t.Fatal("the import named no visible candidate for an admin importer")
 	}
 
-	stage := vcardCreateStager(e.Pool)
+	stage := VCardCreateStager(e.Pool)
 	if err := stage(ctx, reviewedCard(), candidate); err != nil {
 		t.Fatalf("staging the review: %v", err)
 	}
@@ -144,7 +144,7 @@ func TestACardNamingNoCompanyCanStillBeStaged(t *testing.T) {
 	ctx := e.Admin()
 	candidate := seedNearMatch(ctx, t, e, companyLessReviewedCard())
 
-	stage := vcardCreateStager(e.Pool)
+	stage := VCardCreateStager(e.Pool)
 	if err := stage(ctx, companyLessReviewedCard(), candidate); err != nil {
 		t.Fatalf("staging a card naming no company: %v", err)
 	}
@@ -224,7 +224,7 @@ func TestAVacuousCardDoesNotSupersedeAnotherSubjectsPendingReview(t *testing.T) 
 	}
 	adminCandidateID := ids.From[ids.ContactKind](ids.UUID(adminCandidate.Id))
 
-	stage := vcardCreateStager(e.Pool)
+	stage := VCardCreateStager(e.Pool)
 	if err := stage(adminCtx, vacuousReviewedCard(), &adminCandidateID); err != nil {
 		t.Fatalf("admin staging the vacuous card: %v", err)
 	}
@@ -262,7 +262,7 @@ func TestATwoMembersCardsWithNoCandidateDoNotJoinIntoOneReview(t *testing.T) {
 	adminCtx := e.Admin()
 	repCtx := e.As(e.Rep1, nil, integration.AdminPerms)
 
-	stage := vcardCreateStager(e.Pool)
+	stage := VCardCreateStager(e.Pool)
 	if err := stage(adminCtx, coworkerNamedCard(), nil); err != nil {
 		t.Fatalf("admin staging their card: %v", err)
 	}
@@ -314,7 +314,7 @@ func TestATwoFieldCardDoesNotSupersedeAnotherSubjectsPendingReview(t *testing.T)
 	}
 	adminCandidateID := ids.From[ids.ContactKind](ids.UUID(adminCandidate.Id))
 
-	stage := vcardCreateStager(e.Pool)
+	stage := VCardCreateStager(e.Pool)
 	if err := stage(adminCtx, coworkerNamedCard(), &adminCandidateID); err != nil {
 		t.Fatalf("admin staging their card: %v", err)
 	}
@@ -345,7 +345,7 @@ func TestADeclinedVCardReviewIsNotReAsked(t *testing.T) {
 	ctx := e.Admin()
 	candidate := seedNearMatch(ctx, t, e, reviewedCard())
 
-	stage := vcardCreateStager(e.Pool)
+	stage := VCardCreateStager(e.Pool)
 	if err := stage(ctx, reviewedCard(), candidate); err != nil {
 		t.Fatalf("staging the review: %v", err)
 	}
@@ -382,7 +382,7 @@ func TestAnEditThatDropsTheCardIsRefusedWhileStillPending(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	candidate := seedNearMatch(ctx, t, e, reviewedCard())
-	stage := vcardCreateStager(e.Pool)
+	stage := VCardCreateStager(e.Pool)
 	if err := stage(ctx, reviewedCard(), candidate); err != nil {
 		t.Fatalf("staging the review: %v", err)
 	}
@@ -419,7 +419,7 @@ func TestAcceptingAVCardReviewForSomebodyWhoBecameALeadCreatesNothing(t *testing
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	candidate := seedNearMatch(ctx, t, e, reviewedCard())
-	if err := vcardCreateStager(e.Pool)(ctx, reviewedCard(), candidate); err != nil {
+	if err := VCardCreateStager(e.Pool)(ctx, reviewedCard(), candidate); err != nil {
 		t.Fatalf("staging the review: %v", err)
 	}
 	// The lead arrives while the review waits on its decider.

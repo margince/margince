@@ -168,7 +168,7 @@ func (s *systemReadEnv) canRead(t *testing.T, user ids.UUID, fields ...string) b
 	var shown bool
 	s.onDelivery(t, func(ctx context.Context, rt extension.Runtime) error {
 		var err error
-		shown, err = rt.Authority().CanRead(ctx, extension.UserID(user.String()),
+		shown, err = rt.Authority().CanRead(ctx, extension.UserID(user.String()), //nolint:staticcheck // this suite holds the deprecated system-actor form
 			extension.EntityRef{Type: "deal", ID: s.deal.String()}, fields)
 		return err
 	})
@@ -180,7 +180,7 @@ func (s *systemReadEnv) responsible(t *testing.T) []extension.Responsible {
 	var got []extension.Responsible
 	s.onDelivery(t, func(ctx context.Context, rt extension.Runtime) error {
 		var err error
-		got, err = rt.Deals().Responsible(ctx, s.deal.String())
+		got, err = rt.Deals().Responsible(ctx, s.deal.String()) //nolint:staticcheck // this suite holds the deprecated system-actor form
 		return err
 	})
 	return got
@@ -203,7 +203,7 @@ func TestADeliveryReadsTheDealItHeardAbout(t *testing.T) {
 	var got extension.DealSummary
 	s.onDelivery(t, func(ctx context.Context, rt extension.Runtime) error {
 		var err error
-		got, err = rt.Deals().Get(ctx, s.deal.String())
+		got, err = rt.Deals().Get(ctx, s.deal.String()) //nolint:staticcheck // this suite holds the deprecated system-actor form
 		return err
 	})
 	if got.ID != s.deal.String() || got.Name != "Fleet renewal" || got.StageName != "Qualified" || got.Status != "open" {
@@ -225,7 +225,7 @@ func TestADeliveryReadsTheDealItHeardAbout(t *testing.T) {
 	}
 	s.onDelivery(t, func(ctx context.Context, rt extension.Runtime) error {
 		var err error
-		got, err = rt.Deals().Get(ctx, s.deal.String())
+		got, err = rt.Deals().Get(ctx, s.deal.String()) //nolint:staticcheck // this suite holds the deprecated system-actor form
 		return err
 	})
 	if !got.Archived {
@@ -240,7 +240,7 @@ func TestAZeroDecimalAmountIsShownWithoutDecimals(t *testing.T) {
 	for currency, want := range map[string]string{"JPY": "1,200,000 JPY", "VND": "1,200,000 VND"} {
 		s.WsExec(t, `UPDATE deal SET currency = $2 WHERE id = $1`, s.deal, currency)
 		s.onDelivery(t, func(ctx context.Context, rt extension.Runtime) error {
-			got, err := rt.Deals().Get(ctx, s.deal.String())
+			got, err := rt.Deals().Get(ctx, s.deal.String()) //nolint:staticcheck // this suite holds the deprecated system-actor form
 			if err == nil && got.AmountDisplay != want {
 				t.Errorf("%s: shown as %q, want %q", currency, got.AmountDisplay, want)
 			}
@@ -249,7 +249,7 @@ func TestAZeroDecimalAmountIsShownWithoutDecimals(t *testing.T) {
 	}
 	s.WsExec(t, `UPDATE deal SET amount_minor = NULL, currency = NULL WHERE id = $1`, s.deal)
 	s.onDelivery(t, func(ctx context.Context, rt extension.Runtime) error {
-		got, err := rt.Deals().Get(ctx, s.deal.String())
+		got, err := rt.Deals().Get(ctx, s.deal.String()) //nolint:staticcheck // this suite holds the deprecated system-actor form
 		if err == nil && got.AmountDisplay != "" {
 			t.Errorf("a deal with no amount is shown as %q", got.AmountDisplay)
 		}
@@ -263,17 +263,17 @@ func TestADealThatIsGoneReadsAsNotFound(t *testing.T) {
 	s.WsExec(t, `DELETE FROM deal WHERE id = $1`, erased)
 	for name, id := range map[string]string{"never existed": ids.NewV7().String(), "erased": erased.String()} {
 		s.onDelivery(t, func(ctx context.Context, rt extension.Runtime) error {
-			if _, err := rt.Deals().Get(ctx, id); !errors.Is(err, extension.ErrNotFound) {
+			if _, err := rt.Deals().Get(ctx, id); !errors.Is(err, extension.ErrNotFound) { //nolint:staticcheck // this suite holds the deprecated system-actor form
 				t.Errorf("%s: Get err = %v, want ErrNotFound", name, err)
 			}
-			if _, err := rt.Deals().Responsible(ctx, id); !errors.Is(err, extension.ErrNotFound) {
+			if _, err := rt.Deals().Responsible(ctx, id); !errors.Is(err, extension.ErrNotFound) { //nolint:staticcheck // this suite holds the deprecated system-actor form
 				t.Errorf("%s: Responsible err = %v, want ErrNotFound", name, err)
 			}
 			return nil
 		})
 	}
 	s.onDelivery(t, func(ctx context.Context, rt extension.Runtime) error {
-		if _, err := rt.Deals().Get(ctx, "not-a-deal"); !errors.Is(err, extension.ErrInvalid) {
+		if _, err := rt.Deals().Get(ctx, "not-a-deal"); !errors.Is(err, extension.ErrInvalid) { //nolint:staticcheck // this suite holds the deprecated system-actor form
 			t.Errorf("a malformed id: err = %v, want ErrInvalid", err)
 		}
 		return nil
@@ -372,7 +372,7 @@ func TestCanReadRefusesAQuestionItCannotAnswer(t *testing.T) {
 			"another type":     {extension.EntityRef{Type: "contact", ID: s.deal.String()}, []string{"name"}},
 			"a malformed id":   {extension.EntityRef{Type: "deal", ID: "deal-1"}, []string{"name"}},
 		} {
-			if _, err := rt.Authority().CanRead(ctx, asUser(s.Rep1), ask.record, ask.fields); !errors.Is(err, extension.ErrInvalid) {
+			if _, err := rt.Authority().CanRead(ctx, asUser(s.Rep1), ask.record, ask.fields); !errors.Is(err, extension.ErrInvalid) { //nolint:staticcheck // this suite holds the deprecated system-actor form
 				t.Errorf("%s: err = %v, want ErrInvalid", name, err)
 			}
 		}
@@ -396,7 +396,7 @@ func TestColleaguesTheProbeRefusesDoNotCrowdOutOneItAdmits(t *testing.T) {
 
 	var invited []extension.UserID
 	s.onDelivery(t, func(ctx context.Context, rt extension.Runtime) error {
-		responsible, err := rt.Deals().Responsible(ctx, s.deal.String())
+		responsible, err := rt.Deals().Responsible(ctx, s.deal.String()) //nolint:staticcheck // this suite holds the deprecated system-actor form
 		if err != nil {
 			return err
 		}
@@ -404,7 +404,7 @@ func TestColleaguesTheProbeRefusesDoNotCrowdOutOneItAdmits(t *testing.T) {
 			if len(invited) == invitesPerCall {
 				break
 			}
-			shown, err := rt.Authority().CanRead(ctx, r.UserID, extension.EntityRef{Type: "deal", ID: s.deal.String()}, dealCardFields)
+			shown, err := rt.Authority().CanRead(ctx, r.UserID, extension.EntityRef{Type: "deal", ID: s.deal.String()}, dealCardFields) //nolint:staticcheck // this suite holds the deprecated system-actor form
 			if err != nil {
 				return err
 			}
@@ -427,7 +427,7 @@ func TestEmailsAnswerActiveHumanMembersOnly(t *testing.T) {
 	var got map[extension.UserID]string
 	s.onDelivery(t, func(ctx context.Context, rt extension.Runtime) error {
 		var err error
-		got, err = rt.Directory().Emails(ctx,
+		got, err = rt.Directory().Emails(ctx, //nolint:staticcheck // this suite holds the deprecated system-actor form
 			[]extension.UserID{asUser(s.Rep1), asUser(s.Rep2), asUser(agent), asUser(ids.NewV7())})
 		return err
 	})
@@ -440,7 +440,7 @@ func TestEmailsAnswerActiveHumanMembersOnly(t *testing.T) {
 		tooMany[i] = asUser(ids.NewV7())
 	}
 	s.onDelivery(t, func(ctx context.Context, rt extension.Runtime) error {
-		if _, err := rt.Directory().Emails(ctx, tooMany); !errors.Is(err, extension.ErrInvalid) {
+		if _, err := rt.Directory().Emails(ctx, tooMany); !errors.Is(err, extension.ErrInvalid) { //nolint:staticcheck // this suite holds the deprecated system-actor form
 			t.Errorf("%d users: err = %v, want ErrInvalid", len(tooMany), err)
 		}
 		return nil
@@ -456,10 +456,10 @@ func TestASystemReadIsRefusedOnACallThatHasACaller(t *testing.T) {
 	ctx := context.Background()
 	deal := extension.EntityRef{Type: "deal", ID: s.deal.String()}
 	refusals := map[string]error{}
-	_, refusals["Deals().Get"] = rt.Deals().Get(ctx, s.deal.String())
-	_, refusals["Deals().Responsible"] = rt.Deals().Responsible(ctx, s.deal.String())
-	_, refusals["Authority().CanRead"] = rt.Authority().CanRead(ctx, asUser(s.Rep1), deal, []string{"name"})
-	_, refusals["Directory().Emails"] = rt.Directory().Emails(ctx, []extension.UserID{asUser(s.Rep1)})
+	_, refusals["Deals().Get"] = rt.Deals().Get(ctx, s.deal.String())                                        //nolint:staticcheck // this suite holds the deprecated system-actor form
+	_, refusals["Deals().Responsible"] = rt.Deals().Responsible(ctx, s.deal.String())                        //nolint:staticcheck // this suite holds the deprecated system-actor form
+	_, refusals["Authority().CanRead"] = rt.Authority().CanRead(ctx, asUser(s.Rep1), deal, []string{"name"}) //nolint:staticcheck // this suite holds the deprecated system-actor form
+	_, refusals["Directory().Emails"] = rt.Directory().Emails(ctx, []extension.UserID{asUser(s.Rep1)})       //nolint:staticcheck // this suite holds the deprecated system-actor form
 	for read, err := range refusals {
 		if !errors.Is(err, extension.ErrAttendedRead) {
 			t.Errorf("%s on an attended call: err = %v, want ErrAttendedRead", read, err)
@@ -474,7 +474,7 @@ func TestAnAttendedCanReadAnswersTheCallerUnderTheirOwnGrants(t *testing.T) {
 	deal := extension.EntityRef{Type: "deal", ID: s.deal.String()}
 	for user, want := range map[ids.UUID]bool{s.Rep1: true, s.Rep2: false} {
 		rt := runtimeFor(s.As(user, nil, integration.AdminPerms), "dealmirror", "1.0.0", "tool/probe", boundExtensionRuntime())
-		shown, err := rt.Authority().CanRead(context.Background(), asUser(user), deal, []string{"name"})
+		shown, err := rt.Authority().CanRead(context.Background(), asUser(user), deal, []string{"name"}) //nolint:staticcheck // this suite holds the deprecated system-actor form
 		rt.release()
 		if err != nil {
 			t.Fatalf("CanRead about the caller: %v", err)
@@ -492,7 +492,7 @@ func TestCanReadAnswersNoForADealThatDoesNotExist(t *testing.T) {
 	var shown bool
 	s.onDelivery(t, func(ctx context.Context, rt extension.Runtime) error {
 		var err error
-		shown, err = rt.Authority().CanRead(ctx, asUser(s.Rep1),
+		shown, err = rt.Authority().CanRead(ctx, asUser(s.Rep1), //nolint:staticcheck // this suite holds the deprecated system-actor form
 			extension.EntityRef{Type: "deal", ID: ids.NewV7().String()}, []string{"name"})
 		return err
 	})
@@ -509,7 +509,7 @@ func (s *systemReadEnv) canWrite(t *testing.T, user ids.UUID, deal ids.UUID) boo
 	var writable bool
 	s.onDelivery(t, func(ctx context.Context, rt extension.Runtime) error {
 		var err error
-		writable, err = rt.Authority().CanWrite(ctx, asUser(user), extension.EntityRef{Type: "deal", ID: deal.String()})
+		writable, err = rt.Authority().CanWrite(ctx, asUser(user), extension.EntityRef{Type: "deal", ID: deal.String()}) //nolint:staticcheck // this suite holds the deprecated system-actor form
 		return err
 	})
 	return writable
@@ -575,7 +575,7 @@ func TestAnAttendedCanWriteAnswersTheCaller(t *testing.T) {
 	deal := extension.EntityRef{Type: "deal", ID: s.deal.String()}
 	for user, want := range map[ids.UUID]bool{writer: true, s.Rep1: false} {
 		rt := runtimeFor(s.As(user, nil, integration.AdminPerms), "dealmirror", "1.0.0", "tool/probe", boundExtensionRuntime())
-		writable, err := rt.Authority().CanWrite(context.Background(), asUser(user), deal)
+		writable, err := rt.Authority().CanWrite(context.Background(), asUser(user), deal) //nolint:staticcheck // this suite holds the deprecated system-actor form
 		rt.release()
 		if err != nil {
 			t.Fatalf("CanWrite about the caller: %v", err)
@@ -586,7 +586,7 @@ func TestAnAttendedCanWriteAnswersTheCaller(t *testing.T) {
 	}
 	rt := runtimeFor(s.As(writer, nil, integration.AdminPerms), "dealmirror", "1.0.0", "tool/probe", boundExtensionRuntime())
 	defer rt.release()
-	if _, err := rt.Authority().CanWrite(context.Background(), asUser(s.Rep1), deal); !errors.Is(err, extension.ErrAttendedRead) {
+	if _, err := rt.Authority().CanWrite(context.Background(), asUser(s.Rep1), deal); !errors.Is(err, extension.ErrAttendedRead) { //nolint:staticcheck // this suite holds the deprecated system-actor form
 		t.Errorf("CanWrite about a colleague on an attended call: err = %v, want ErrAttendedRead", err)
 	}
 }
@@ -653,6 +653,7 @@ func TestARemovedUnitsObjectsAreSweptByALaterBootIfTheFirstHadNoStore(t *testing
 	both := []extension.Extension{{Name: "keeper", Version: "1"}, {Name: "leaver", Version: "1"}}
 	observe(both)
 	keeper, leaver := put("keeper"), put("leaver")
+	e.WsExec(t, `INSERT INTO extension_object_usage (id, unit, objects, bytes) VALUES ($1, 'keeper', 1, 1), ($2, 'leaver', 1, 1)`, ids.NewV7(), ids.NewV7())
 	BindExtensionObjects(nil)
 	observe(both[:1])
 	if !present(leaver) {
@@ -665,5 +666,8 @@ func TestARemovedUnitsObjectsAreSweptByALaterBootIfTheFirstHadNoStore(t *testing
 	}
 	if !present(keeper) {
 		t.Error("a unit still composed lost its object")
+	}
+	if counted := e.WsScalar(t, `SELECT string_agg(unit, ',' ORDER BY unit) FROM extension_object_usage`); counted != "keeper" {
+		t.Errorf("units still counted after the sweep = %q, want keeper alone", counted)
 	}
 }

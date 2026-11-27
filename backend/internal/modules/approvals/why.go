@@ -10,6 +10,8 @@ import (
 	"strings"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
@@ -65,11 +67,19 @@ func readWhy(ctx context.Context, stored json.RawMessage) *crmcontracts.WorkGrou
 		return nil
 	}
 	text := envelope.Why.Text
-	if envelope.Why.Sentence != nil {
-		if localized, err := envelope.Why.Sentence.Render(systemtext.Locale(ctx)); err == nil {
+	if sentence := envelope.Why.Sentence; sentence != nil {
+		if sentence.Code == "automation.rule_trigger" && !auth.Allows(ctx, "automation", principal.ActionRead) {
+			if len(sentence.Args) != 3 {
+				return nil
+			}
+			sentence = systemtext.Sentence("automation.rule_trigger_hidden", sentence.Args[1:]...)
+			text = ""
+		}
+		if localized, err := sentence.Render(systemtext.Locale(ctx)); err == nil {
 			text = localized
 		}
 	}
+	text = cleanCaption(text)
 	if text == "" {
 		return nil
 	}

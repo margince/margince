@@ -22,6 +22,7 @@ func TestOneWorkstreamOrUnknownScopeDoesNotProposeEndingTheAccount(t *testing.T)
 	for _, scope := range []string{"workstream", "unknown", ""} {
 		t.Run(scope, func(t *testing.T) {
 			e := integration.Setup(t)
+			e.GrantRole(t, e.Rep1, "admin")
 			company := seedAccountAtStage(t, e, "customer")
 			signal := seedScopedContractEnded(t, e, company, scope, "We are ending the Atlas pilot.")
 			if staged := proposePass(t, e); staged != 0 {
@@ -36,6 +37,7 @@ func TestOneWorkstreamOrUnknownScopeDoesNotProposeEndingTheAccount(t *testing.T)
 
 func TestChangedSourceCannotReleaseACompanyTermination(t *testing.T) {
 	e := integration.Setup(t)
+	e.GrantRole(t, e.Rep1, "admin")
 	company := seedAccountAtStage(t, e, "customer")
 	signal := seedOpenContractEnded(t, e, company)
 	if proposePass(t, e) != 1 {
@@ -81,6 +83,7 @@ func TestLifecycleUsesSourceOrderInsteadOfExtractionOrder(t *testing.T) {
 	for _, scope := range []string{"company", "workstream", "unknown"} {
 		t.Run(scope, func(t *testing.T) {
 			e := integration.Setup(t)
+			e.GrantRole(t, e.Rep1, "admin")
 			company := seedAccountAtStage(t, e, "customer")
 			older := time.Date(2026, 7, 1, 12, 0, 0, 0, time.UTC)
 			newer := older.AddDate(0, 0, 10)
@@ -106,6 +109,7 @@ func TestLifecycleUsesSourceOrderInsteadOfExtractionOrder(t *testing.T) {
 
 func TestSimultaneousConflictingScopesNeedReview(t *testing.T) {
 	e := integration.Setup(t)
+	e.GrantRole(t, e.Rep1, "admin")
 	company := seedAccountAtStage(t, e, "customer")
 	at := time.Date(2026, 7, 1, 12, 0, 0, 0, time.UTC)
 	seedScopedContractEndedAt(t, e, company, "company", "We are ending all work.", at, at)
@@ -123,6 +127,7 @@ func TestAnActiveAgreementPreventsEndingTheAccount(t *testing.T) {
 		}
 		t.Run(name, func(t *testing.T) {
 			e := integration.Setup(t)
+			e.GrantRole(t, e.Rep1, "admin")
 			company := seedAccountAtStage(t, e, "customer")
 			signal := seedOpenContractEnded(t, e, company)
 			if stagedFirst && proposePass(t, e) != 1 {
@@ -172,6 +177,7 @@ func TestOnlyProjectDeliveryBlocksEndingTheAccount(t *testing.T) {
 	for _, phase := range []string{projects.PhaseInitiative, projects.PhasePursuing, projects.PhaseDelivering, projects.PhaseClosed} {
 		t.Run(phase, func(t *testing.T) {
 			e := integration.Setup(t)
+			e.GrantRole(t, e.Rep1, "admin")
 			company := seedAccountAtStage(t, e, "customer")
 			seedOpenContractEnded(t, e, company)
 			project, err := e.Projects.CreateProject(e.Admin(), projects.CreateProjectInput{

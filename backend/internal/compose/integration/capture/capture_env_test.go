@@ -53,6 +53,10 @@ type mailBatchConnector struct {
 	// connection is keyed on (user_id, provider).
 	name string
 
+	// parseAs is the address the fake reads each message as the mailbox owner's.
+	// Empty means the workspace owner; a seat with its own address sets it.
+	parseAs string
+
 	raws [][]byte
 	sent map[string]bool // Message-IDs the provider filed as the owner's own sent mail
 	// deals are the deal ids a connector files a message under, by Message-ID.
@@ -99,7 +103,11 @@ func (m *mailBatchConnector) Authenticate(context.Context, connector.AuthRequest
 
 func (m *mailBatchConnector) Sync(ctx context.Context, _ connector.Auth, _ connector.Cursor, sink connector.Sink) (connector.Cursor, error) {
 	for _, raw := range m.raws {
-		msg, err := mailmap.Parse(raw, captureOwner)
+		owner := captureOwner
+		if m.parseAs != "" {
+			owner = m.parseAs
+		}
+		msg, err := mailmap.Parse(raw, owner)
 		if err != nil {
 			return nil, err
 		}

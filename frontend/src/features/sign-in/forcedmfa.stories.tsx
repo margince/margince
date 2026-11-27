@@ -76,9 +76,14 @@ export const RecoveryCodes: Story = {
   play: async () => {
     await startSetup();
     await userEvent.type(
-      screen.getByRole("textbox", { name: /code from the app/i }),
-      "123456{Enter}",
+      screen.getByLabelText(/current password/i),
+      "own password",
     );
+    await userEvent.type(
+      screen.getByRole("textbox", { name: /code from the app/i }),
+      "123456",
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Turn on" }));
     const codes = await screen.findByRole("textbox", {
       name: "Recovery codes",
     });

@@ -58,6 +58,10 @@ import (
 //     is the owner saying this sender is a counterparty, and no classifier
 //     verdict outranks it.
 //
+// A contact with no owner, which is what a chat channel creates, is retracted
+// by the same rules. It first takes ownerID as its owner, so that narrowing it
+// to its owner alone leaves it readable by that seat only.
+//
 // Returns whether a row was actually archived, so the caller can tell a
 // retraction from a no-op rather than assuming one happened.
 func (s *Store) RetractCaptureOnlyContactTx(
@@ -95,7 +99,7 @@ func (s *Store) RetractCaptureOnlyContactTx(
 		  SELECT 1 FROM contact p
 		   WHERE p.id = $1
 		     AND p.archived_at IS NULL
-		     AND p.owner_id = $2
+		     AND (p.owner_id = $2 OR p.owner_id IS NULL)
 		     AND (p.captured_by LIKE 'connector:%' OR p.captured_by LIKE 'agent:%')
 		     AND `+contactNotWorkedOnSQL("p")+`
 		     AND NOT EXISTS (
@@ -107,6 +111,9 @@ func (s *Store) RetractCaptureOnlyContactTx(
 	}
 	if !eligible {
 		return false, nil
+	}
+	if err := adoptOwnerlessTx(ctx, tx, id, ownerID); err != nil {
+		return false, err
 	}
 	// NARROW BEFORE ARCHIVING, and it is not cosmetic. The contacts list honours
 	// `include_archived` under a row scope that admits any workspace-visible

@@ -191,6 +191,9 @@ func (s *Service) expireOne(ctx context.Context, id ids.ApprovalID) (bool, error
 			  WHERE id = $1`, id, StatusExpired, footprint); err != nil {
 			return fmt.Errorf("crmapprovals: recording an expiry: %w", err)
 		}
+		if err := clearExpiredCards(ctx, tx, []ids.UUID{id.UUID}); err != nil {
+			return err
+		}
 
 		// decided_by stays NULL and the actor is the system: nobody decided
 		// this, and naming a human would put a human's name on a refusal they

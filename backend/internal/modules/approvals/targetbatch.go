@@ -171,7 +171,11 @@ func targetsExist(ctx context.Context, tx pgx.Tx, targetType string, rowIDs []id
 	query, ok := existenceProbes[targetType]
 	if !ok {
 		if ext, registered := extensionTarget(targetType); registered {
-			query, ok = extensionExistenceQuery(ext.TargetTable), true
+			extQuery, more, err := extensionExistenceQuery(ctx, ext.TargetTable)
+			if err != nil {
+				return nil, err
+			}
+			return idsAmong(ctx, tx, extQuery, rowIDs, more...)
 		}
 	}
 	if !ok {

@@ -340,7 +340,7 @@ describe("zoneNameAllYear", () => {
       "Mitteleuropäische Zeit",
     );
     expect(zoneNameAllYear(july, "Asia/Ho_Chi_Minh", "vi")).toBe(
-      "Giờ Đông Dương",
+      "Giờ Việt Nam",
     );
   });
 
@@ -365,7 +365,7 @@ describe("zoneNameAndOffset", () => {
       "Indochina Time · UTC+7",
     );
     expect(zoneNameAndOffset("vi", at, "Asia/Bangkok")).toBe(
-      "Giờ Đông Dương · UTC+7",
+      "Giờ Thái Lan · UTC+7",
     );
   });
 
@@ -401,4 +401,17 @@ describe("wallClockIntent", () => {
       wallClockIntent("2026-10-05T23:30:00Z", "Asia/Bangkok").wall_clock,
     ).toBe("2026-10-06T06:30:00.000");
   });
+});
+
+it("names a zone by its country in Vietnamese, and keeps the long name where Intl has only an abbreviation", () => {
+  const at = new Date("2026-11-26T10:00:00Z");
+  expect(zoneNameAndOffset("vi", at, "Asia/Ho_Chi_Minh")).toBe(
+    "Giờ Việt Nam · UTC+7",
+  );
+  expect(zoneNameAndOffset("vi", at, "America/New_York")).toContain(
+    "Giờ chuẩn miền Đông",
+  );
+  expect(zoneNameAndOffset("en", at, "Asia/Ho_Chi_Minh")).toBe(
+    "Indochina Time · UTC+7",
+  );
 });

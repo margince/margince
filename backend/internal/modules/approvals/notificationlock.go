@@ -46,8 +46,14 @@ func PendingNoticeTx(ctx context.Context, tx pgx.Tx, id ids.ApprovalID, clock fu
 	}
 	request := MovedRequest{ID: id}
 	var stored json.RawMessage
-	if err := tx.QueryRow(ctx, `SELECT summary_parts, coalesce(summary,''), coalesce(target_entity_type,''), target_entity_id FROM approval WHERE id=@id`, pgx.StrictNamedArgs{"id": id}).Scan(&stored, &request.Summary, &request.TargetType, &request.TargetID); err != nil {
+	var kind string
+	if err := tx.QueryRow(ctx, `SELECT kind, summary_parts, coalesce(summary,''), coalesce(target_entity_type,''), target_entity_id FROM approval WHERE id=@id`, pgx.StrictNamedArgs{"id": id}).Scan(&kind, &stored, &request.Summary, &request.TargetType, &request.TargetID); err != nil {
 		return nil, nil, nil, fmt.Errorf("approvals: reading the request a notice shows: %w", err)
+	}
+	if payloadClearedOnExpiry[kind] {
+		// The notice outlives the expiry, so it carries no card text.
+		request.Summary = requestedSummary(StageInput{Kind: kind})
+		return &request, nil, nil, nil
 	}
 	parts := readSummaryParts(stored)
 	message := SummarySystemText(stored)

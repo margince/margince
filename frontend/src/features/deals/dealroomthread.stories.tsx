@@ -27,6 +27,7 @@ function thread(over: Partial<DealRoomThread> = {}): DealRoomThread {
   return {
     id,
     room_id: "room-1",
+    visible_to_buyer: true,
     document_id: "doc-1",
     required_change: false,
     state: "open",

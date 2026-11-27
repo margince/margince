@@ -85,7 +85,7 @@ func TestAnUnchangedGuardComparesEveryFoldedFact(t *testing.T) {
 		t.Fatal("a fold that advances the snapshot must write")
 	}
 	guard := unchangedEdgeGuard(false, contactEdgeFacts)
-	for _, want := range []string{"(e.last_at, e.count_90d, e.count_total)", "IS DISTINCT FROM (EXCLUDED.last_at, EXCLUDED.count_90d, EXCLUDED.count_total)"} {
+	for _, want := range []string{"(e.last_at, e.last_precision, e.count_90d, e.count_total)", "IS DISTINCT FROM (EXCLUDED.last_at, EXCLUDED.last_precision, EXCLUDED.count_90d, EXCLUDED.count_total)"} {
 		if !strings.Contains(guard, want) {
 			t.Errorf("guard %q lacks %q", guard, want)
 		}

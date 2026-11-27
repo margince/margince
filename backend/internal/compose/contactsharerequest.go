@@ -33,9 +33,9 @@ import (
 const (
 	contactShareKind = approvalsubject.KindContactShare
 	// contactShareActor stages the request, which the server files for the
-	// requester. Staged under an agent working for the requester, a proposal
-	// for a different member is refused (payloadNamesItsOwner).
-	contactShareActor = "agent:" + contactShareKind
+	// requester. It acts for no one: staged for the requester, a proposal for a
+	// different member is refused (payloadNamesItsOwner).
+	contactShareActor = "system:" + contactShareKind
 )
 
 // contactShareRequests is the approvals queue behind contacts' share

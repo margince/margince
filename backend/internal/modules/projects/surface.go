@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
@@ -46,7 +47,8 @@ const projectSurfaceCap = 25
 func projectCardColumns(quietDaysPos int) string {
 	return `p.id, p.name, p.key, p.phase, p.last_activity_at, p.target_end_date, p.owner_id,
 	coalesce(u.display_name, ''),
-	` + ProjectInFlightSQL("p") + ` AND ` + ProjectQuietSQL("p", "now()", quietDaysPos)
+	` + ProjectInFlightSQL("p") + ` AND ` + ProjectQuietSQL("p", "now()", quietDaysPos) + `,
+	` + LastActivityDaySQL("p")
 }
 
 // phaseRank is where a phase sits when the work is arranged by how live it is:
@@ -220,8 +222,9 @@ func scanProjectCard(row pgx.CollectableRow) (ProjectCard, error) {
 	var ownerID *ids.UUID
 	var phase, ownerName string
 	var targetEnd *time.Time
+	var lastActivityDay bool
 	if err := row.Scan(&id, &card.Name, &card.Key, &phase, &card.LastActivityAt,
-		&targetEnd, &ownerID, &ownerName, &card.Quiet); err != nil {
+		&targetEnd, &ownerID, &ownerName, &card.Quiet, &lastActivityDay); err != nil {
 		return ProjectCard{}, err
 	}
 	card.ProjectId = openapi_types.UUID(id)
@@ -230,6 +233,7 @@ func scanProjectCard(row pgx.CollectableRow) (ProjectCard, error) {
 		card.TargetEndDate = &openapi_types.Date{Time: *targetEnd}
 	}
 	card.OwnerId = uuidPtr(ownerID)
+	card.LastActivityPrecision = occurredday.ClockPrecision[crmcontracts.OccurredPrecision](card.LastActivityAt, lastActivityDay)
 	// An empty name is "no active owner", which the wire says as null rather
 	// than as a member with no name.
 	if ownerName != "" {

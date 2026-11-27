@@ -64,7 +64,7 @@ export function SearchHit({
   // Where this kind goes, asked of the one place that knows. An activity has
   // no page, so it opens in the panel beside the email one.
   const isTag = hit.type === "tag";
-  const route = searchHitRoute(type, hit.id);
+  const route = searchHitRoute(type, hit.id, hit.deal_id);
   const opensPanel = !route && type === "activity";
   // A deal and an activity are records too, and stand in the same box, with
   // what the hit carries to tell one from its look-alikes.

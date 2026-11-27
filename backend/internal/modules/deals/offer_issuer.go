@@ -270,25 +270,15 @@ func joinNonEmpty(sep string, parts ...string) string {
 
 // sendSnapshots captures the buyer and issuer legal blocks at send time:
 // the sent document stays truthful even when the company or workspace is
-// later renamed.
+// later renamed. A buyer the caller may not read refuses the send, as it
+// refuses the render. The snapshot then never holds a name the document
+// could not print for the same caller.
 func (s *Store) sendSnapshots(ctx context.Context, tx pgx.Tx, baseCurrency string,
 	offer crmcontracts.Offer,
 ) (buyer, issuer map[string]any, err error) {
-	if offer.BuyerCompanyId != nil {
-		var displayName string
-		var legalName *string
-		err := tx.QueryRow(ctx,
-			`SELECT display_name, legal_name FROM company WHERE id = $1`, offer.BuyerCompanyId).
-			Scan(&displayName, &legalName)
-		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-			return nil, nil, fmt.Errorf("snapshot buyer company: %w", err)
-		}
-		if err == nil {
-			buyer = map[string]any{filterCompanyID: offer.BuyerCompanyId, "display_name": displayName}
-			if legalName != nil {
-				buyer["legal_name"] = *legalName
-			}
-		}
+	buyer, err = readReadableBuyer(ctx, tx, offer)
+	if err != nil {
+		return nil, nil, err
 	}
 	// The currency is the caller's resolved base, not a second read: the
 	// snapshot must record the basis this offer was actually priced in.
@@ -309,7 +299,7 @@ func (s *Store) sendSnapshots(ctx context.Context, tx pgx.Tx, baseCurrency strin
 // asked for, else the issuing entity's, else its template's.
 func (s *Store) offerLanguage(ctx context.Context, tx pgx.Tx, entity ids.LegalEntityID, template *ids.OfferTemplateID, asked *string) (string, error) {
 	if asked != nil {
-		return *asked, checkLanguage(*asked)
+		return *asked, checkLanguage(ctx, tx, *asked)
 	}
 	issuer, err := s.installation.IssuerEntity(ctx, tx, &entity)
 	if err != nil {
@@ -327,15 +317,23 @@ func (s *Store) offerLanguage(ctx context.Context, tx pgx.Tx, entity ids.LegalEn
 	if err != nil {
 		return "", err
 	}
-	return languageOfLocale(locale), nil
+	language := languageOfLocale(locale)
+	held, err := storekit.LanguageRegistered(ctx, tx, language)
+	if err != nil {
+		return "", err
+	}
+	if !held {
+		return languageOfLocale(defaultOfferTemplateLocale), nil
+	}
+	return language, nil
 }
 
 // languageOfLocale is the language part of a template locale, with `-` or
-// `_` as the separator. A locale whose language part is no ISO 639-1 code
+// `_` as the separator. A locale whose language part is no two-letter code
 // takes the default template locale's language instead.
 func languageOfLocale(locale string) string {
 	part, _, _ := strings.Cut(strings.ReplaceAll(locale, "_", "-"), "-")
-	if language := strings.ToLower(part); checkLanguage(language) == nil {
+	if language := strings.ToLower(part); languageShape.MatchString(language) {
 		return language
 	}
 	fallback, _, _ := strings.Cut(defaultOfferTemplateLocale, "-")
@@ -359,7 +357,7 @@ func (s *Store) issuerPatch(ctx context.Context, tx pgx.Tx, p *storekit.Patch, c
 	in UpdateOfferInput, dropped *string,
 ) (*string, error) {
 	if in.Language != nil && (current.Language == nil || *current.Language != *in.Language) {
-		if err := checkLanguage(*in.Language); err != nil {
+		if err := checkLanguage(ctx, tx, *in.Language); err != nil {
 			return dropped, err
 		}
 		p.Set(languageField, current.Language, *in.Language)

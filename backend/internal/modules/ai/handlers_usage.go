@@ -20,6 +20,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -250,6 +251,13 @@ func (h Handlers) WithBoundModels(bound func() map[Tier]ModelRef) Handlers {
 // WithTaskOrder reads a task's rung order from the router's own binding.
 func (h Handlers) WithTaskOrder(order func(Task) []Tier) Handlers {
 	h.ladderOf = order
+	return h
+}
+
+// WithRoutingSettings grades the model a provider switched a step to against
+// the stored routing settings.
+func (h Handlers) WithRoutingSettings(cfg *config.Config) Handlers {
+	h.routing = func(ctx context.Context) (RoutingConfig, error) { return config.StoredVal(ctx, cfg, Routing) }
 	return h
 }
 

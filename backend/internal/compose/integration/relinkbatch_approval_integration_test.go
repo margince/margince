@@ -35,7 +35,7 @@ func relinkAgentCtx(e *Env, passport ids.UUID) context.Context {
 	})
 }
 
-func TestAutomaticWorkIsRefusedABatchRelinkOntoAProject(t *testing.T) {
+func TestAutomaticWorkStagesABatchRelinkOntoAProjectForItsColleague(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)
 	f := seedThreadFixture(t, e, owner)
@@ -55,19 +55,18 @@ func TestAutomaticWorkIsRefusedABatchRelinkOntoAProject(t *testing.T) {
 		t.Fatalf("relink_thread onto a project → %v, want a refusal naming relink_activities", err)
 	}
 
-	// The named set would need an approval, which automatic work may not stage.
+	// The named set needs an approval, which automatic work stages for the
+	// colleague it acts for.
 	args := `{"activity_ids":["` + f.mine[0].String() + `","` + f.mine[1].String() +
 		`"],"entity_type":"project","entity_id":"` + f.project.String() + `"}`
 	_, err = registry.Invoke(agent, "relink_activities", json.RawMessage(args))
-	if !isPassportlessStagingRefusal(err) {
-		t.Fatalf("relink_activities onto a project → %v, want the refusal that automatic work cannot stage", err)
-	}
-	if n := e.WsCount(t, `SELECT count(*) FROM approval`); n != 0 {
-		t.Errorf("automatic work left %d approval(s), want none", n)
+	stagedForTheColleague(t, owner, err)
+	if n := e.WsCount(t, `SELECT count(*) FROM approval WHERE on_behalf_of = $1 AND passport_id IS NULL`, e.Rep1); n != 1 {
+		t.Errorf("automatic work left %d approval(s) for its colleague, want one", n)
 	}
 	for _, id := range f.mine {
 		if projectLinks(t, e, id, f.project) != 0 {
-			t.Errorf("activity %s was filed under the project by a refused call", id)
+			t.Errorf("activity %s was filed under the project before the colleague answered", id)
 		}
 	}
 }

@@ -97,7 +97,7 @@ func readEmailAccess(
 		// A captured message: the caller changes their own contribution to the
 		// thread, and only their own. Every importing seat holds one, so this
 		// is offered to an importer rather than to a writer of the row.
-		sender, err := callerIsSenderSeat(ctx, tx, id)
+		sender, err := callerHoldsThreadWrite(ctx, tx, id)
 		if err != nil {
 			return crmcontracts.EmailAccess{}, false, err
 		}

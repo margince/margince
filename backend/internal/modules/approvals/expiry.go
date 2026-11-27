@@ -12,8 +12,14 @@ package approvals
 // one that can drift into stamping a row non-expiring and reading it expired.
 
 import (
+	"context"
+	"fmt"
 	"sort"
 	"time"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // stagingTTL bounds how long an unactioned staging stays approvable; a
@@ -102,3 +108,51 @@ func neverExpiringKinds() []string {
 // read. NOT a TTL: ExpiresNever is what makes these rows non-expiring, and this
 // value exists only because the column cannot be null.
 const unusedExpiryPlaceholder = 100 * 365 * 24 * time.Hour
+
+// KindVCardCreate is the staged question a vCard import files when a card
+// resembles a contact the importer already holds.
+const KindVCardCreate = "vcard_create"
+
+// payloadClearedOnExpiry names the kinds whose staging holds personal data of
+// somebody who has no record in the product. The data waits only while a human
+// can still answer, and a closed row must not keep it. Every write that turns
+// such a row expired follows with clearExpiredCards.
+var payloadClearedOnExpiry = map[string]bool{KindVCardCreate: true}
+
+// clearExpiredCards empties the columns an expired staging carries its payload
+// in, for the rows among ids whose kind asks for it. The caller has just
+// written those rows expired in the same transaction and holds their locks.
+func clearExpiredCards(ctx context.Context, tx pgx.Tx, expired []ids.UUID) error {
+	kinds := make([]string, 0, len(payloadClearedOnExpiry))
+	for kind := range payloadClearedOnExpiry {
+		kinds = append(kinds, kind)
+	}
+	sort.Strings(kinds)
+	if _, err := tx.Exec(ctx,
+		`UPDATE approval SET proposed_change = '{}'::jsonb, summary = NULL, summary_parts = NULL, evidence = NULL
+		  WHERE id = ANY($1) AND kind = ANY($2) AND status = 'expired'`, expired, kinds); err != nil {
+		return fmt.Errorf("crmapprovals: clearing the card of an expired staging: %w", err)
+	}
+	return nil
+}
+
+// createdEvidence is what the audit row of a new staging says about it. The
+// trail is append-only and outlives the expiry, so a kind that clears its card
+// on expiry leaves the card's summary out.
+func createdEvidence(in StageInput) map[string]any {
+	evidence := map[string]any{approvalKeyKind: in.Kind, "diff_hash": in.DiffHash}
+	if !payloadClearedOnExpiry[in.Kind] {
+		evidence["summary"] = in.Summary
+	}
+	return evidence
+}
+
+// requestedSummary is the summary the approval.requested event and the notices
+// built from it carry. Both outlive the expiry, so a kind that clears its card
+// states only that a card waits.
+func requestedSummary(in StageInput) string {
+	if payloadClearedOnExpiry[in.Kind] {
+		return "A vCard waits for an answer"
+	}
+	return in.Summary
+}

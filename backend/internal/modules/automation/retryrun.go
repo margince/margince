@@ -121,7 +121,7 @@ WITH target AS (
          ` + baseRunKeySQL("") + ` AS base_key
     FROM workflow_run WHERE id = $1
 )
-SELECT t.status, t.handler, a.id, a.params, a.owner_id, o.envelope,
+SELECT t.status, t.handler, a.id, a.params, a.owner_id, o.envelope, a.name,
        (SELECT ` + retryOrdinalSQL("prior") + ` FROM workflow_run prior
          WHERE prior.handler = t.handler
            AND prior.idempotency_key <> t.base_key
@@ -192,14 +192,14 @@ func (e *WorkflowEngine) retryCandidateFor(ctx context.Context, runID ids.UUID) 
 			runID); lockErr != nil {
 			return lockErr
 		}
-		var status, handlerName string
+		var status, handlerName, automationName string
 		var automationID ids.UUID
 		var params json.RawMessage
 		var owner *ids.UUID
 		var envelope []byte
 		var priorAttempts int
 		scanErr := tx.QueryRow(ctx, retryCandidateSQL, runID).Scan(
-			&status, &handlerName, &automationID, &params, &owner, &envelope, &priorAttempts)
+			&status, &handlerName, &automationID, &params, &owner, &envelope, &automationName, &priorAttempts)
 		if errors.Is(scanErr, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
 		}
@@ -226,6 +226,7 @@ func (e *WorkflowEngine) retryCandidateFor(ctx context.Context, runID ids.UUID) 
 			return decodeErr
 		}
 		event.AutomationID = automationID
+		event.AutomationName = automationName
 		event.Params = params
 		// Retention may remove older attempts, so advance the greatest stored ordinal.
 		event.RetryAttempt = priorAttempts + 1

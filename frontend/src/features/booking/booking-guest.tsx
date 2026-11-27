@@ -41,6 +41,7 @@ import {
   PreviewNotice,
   videoAppOf,
 } from "./booking-guest-parts";
+import { bookingConsentWording } from "./booking-privacy";
 import "./booking-guest.css";
 import {
   UnreadableCalendarLine,
@@ -391,6 +392,7 @@ export function BookingGuestScreen({
                       <section className="bookguest-times">
                         {selected ? (
                           <GuestDetailsForm
+                            privacyInformation={host.privacy_information}
                             selected={selected}
                             zone={zone}
                             personal={Boolean(proposalToken)}
@@ -409,7 +411,10 @@ export function BookingGuestScreen({
                                   email: details.email,
                                   topic: details.topic,
                                   ...selected,
-                                  wording: t("book.consentWording"),
+                                  wording: bookingConsentWording(
+                                    t,
+                                    host.privacy_information,
+                                  ),
                                 });
                             }}
                           />

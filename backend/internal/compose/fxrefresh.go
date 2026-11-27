@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/webread"
@@ -45,17 +46,12 @@ func (FxRateRefreshArgs) Kind() string { return "fx_rate_refresh" }
 // same name; the wire key stays workspace_id.
 func (a FxRateRefreshArgs) WorkspaceID() ids.UUID { return a.Workspace }
 
-// rateRefreshWorkerCtx binds the system principal a refresh producer runs
-// under (bypasses auth.Require), on the requesting admin's workspace, with a
-// fresh correlation id for the staged approvals' write shape.
-func rateRefreshWorkerCtx(ctx context.Context, ws ids.UUID, requestedBy string) context.Context {
-	requester := requestedByUserID(requestedBy)
-	ctx = principal.WithWorkspaceID(ctx, ws)
-	ctx = principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalSystem, ID: "agent:rate-refresh",
-		UserID: requester, OnBehalfOf: requester,
-	})
-	return principal.WithCorrelationID(ctx, ids.NewV7())
+// rateRefreshWorkerCtx binds the agent a refresh runs as, acting for the admin
+// who asked under that admin's live grants. The refresh keeps no run row. An
+// admin who left or lost the rate sheet fails the job itself.
+func rateRefreshWorkerCtx(ctx context.Context, users *identity.Service, ws ids.UUID, requestedBy string) (context.Context, error) {
+	ctx = principal.WithCorrelationID(principal.WithWorkspaceID(ctx, ws), ids.NewV7())
+	return agentFor(ctx, users, requestedByUserID(requestedBy), rateRefreshAgentID)
 }
 
 // fxRefresh is the FX producer: fetch the configured rates page, AI-extract the
@@ -135,12 +131,12 @@ func (f fxRefresh) run(ctx context.Context) error {
 			was = said.fxNoRateInForce
 		}
 		summary := fmt.Sprintf(said.fxRateChanged, cur, base, newRate, was)
-		identity, err := json.Marshal(map[string]string{"from_currency": cur})
+		sheetRow, err := json.Marshal(map[string]string{"from_currency": cur})
 		if err != nil {
 			return fmt.Errorf("fx refresh: identity %s: %w", cur, err)
 		}
 		if err := stageRateProposal(ctx, f.svc, fxRateProposalKind, fxRateTargetType, ws,
-			fxRateProposal{FromCurrency: cur, Rate: newRate, ExpectedPriorRate: prior}, identity, summary, fxSummaryMetadata(cur, base, newRate, prior)); err != nil {
+			fxRateProposal{FromCurrency: cur, Rate: newRate, ExpectedPriorRate: prior}, sheetRow, summary, fxSummaryMetadata(cur, base, newRate, prior)); err != nil {
 			return fmt.Errorf("fx refresh: stage %s: %w", cur, err)
 		}
 		staged++
@@ -301,17 +297,22 @@ func (f fxRefresh) plan(ctx context.Context, current []deals.FxRateRow) (base st
 
 type fxRefreshWorker struct {
 	refresh fxRefresh
+	users   *identity.Service
 }
 
 func (w *fxRefreshWorker) Work(ctx context.Context, job *river.Job[FxRateRefreshArgs]) error {
 	if _, err := workspaceJobCtx(ctx, job.Args); err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
-	return jobs.FaultContext(ctx, w.refresh.run(rateRefreshWorkerCtx(ctx, job.Args.Workspace, job.Args.RequestedBy)))
+	asAdmin, err := rateRefreshWorkerCtx(ctx, w.users, job.Args.Workspace, job.Args.RequestedBy)
+	if err != nil {
+		return jobs.FaultContext(ctx, fmt.Errorf("fx refresh: the admin who asked cannot act: %w", err))
+	}
+	return jobs.FaultContext(ctx, w.refresh.run(asAdmin))
 }
 
 func newFxRefreshWorker(pool *pgxpool.Pool, brain completer, url string, bootstrapCurrencies []string, log *slog.Logger) *fxRefreshWorker {
-	return &fxRefreshWorker{refresh: fxRefresh{
+	return &fxRefreshWorker{users: identity.NewService(pool), refresh: fxRefresh{
 		store:               deals.NewStore(InstallationDB(pool), DealsInstallation()),
 		svc:                 NewApprovalsService(InstallationDB(pool)),
 		fetcher:             webread.New(),

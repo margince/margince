@@ -277,8 +277,8 @@ func (r *Registry) InvokeServing(ctx context.Context, name string, in json.RawMe
 		}
 	}
 	ctx = admitted
-	if stepUp := releasableVolumeRefusal(err); stepUp != nil && !spec.ConfirmsInConversation {
-		return nil, 0, r.stageStepUp(ctx, stepUp)
+	if asked, applies := r.AskToContinue(ctx, spec, err); applies {
+		return nil, 0, asked
 	}
 	// The call ceiling is charged where the call is known to RUN, and only
 	// there. A refusal, a staged 🟡, and a token that fails redemption all

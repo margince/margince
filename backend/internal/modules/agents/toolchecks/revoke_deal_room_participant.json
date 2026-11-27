@@ -1,6 +1,7 @@
 {
   "verb": "revoke_deal_room_participant",
   "checks": [
+    "deal.read",
     "deal_room.update"
   ],
   "takes": [

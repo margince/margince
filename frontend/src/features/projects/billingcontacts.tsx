@@ -4,6 +4,10 @@ import { Badge, Button } from "../../design-system/atoms";
 import { ContactLink } from "../../design-system/contactlink";
 import { ErrorLine } from "../../design-system/errorline";
 import { Panel, PanelBody } from "../../design-system/panel";
+import {
+  type HiddenRecords,
+  HiddenRecordsFoot,
+} from "../../design-system/surfacestate";
 import { useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { billingRoleLabel } from "../../lib/recordlabels";
@@ -23,9 +27,12 @@ export type BillingContactRole = components["schemas"]["BillingContactRole"];
 // a gap somebody should close.
 export function BillingContactsPanel({
   contacts,
+  hidden,
   companyId,
 }: Readonly<{
   contacts?: readonly BillingContact[];
+  // What the reader's contact scope withheld from `contacts`.
+  hidden?: HiddenRecords;
   companyId: string;
 }>) {
   const t = useT();
@@ -84,6 +91,7 @@ export function BillingContactsPanel({
             ))}
           </ul>
         )}
+        <HiddenRecordsFoot hidden={hidden} />
       </PanelBody>
       <BillingContactModal
         open={editing !== null}

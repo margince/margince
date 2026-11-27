@@ -155,7 +155,13 @@ function reachPeek(
         }),
         colleague.last_at
           ? t("standing.peek.lastInTouch", {
-              date: formatDayMonth(colleague.last_at, locale, zone),
+              date: activityDay(
+                colleague.last_at,
+                colleague.last_precision ?? "instant",
+                locale,
+                zone,
+                formatDayMonth,
+              ),
             })
           : undefined,
       ]

@@ -54,7 +54,16 @@ function recordedVerdict(
     return {
       word: t("deal.verdict.goneQuiet"),
       sentence: deal.last_activity_at
-        ? t("deal.verdict.goneQuietSince", { date: day(deal.last_activity_at) })
+        ? t("deal.verdict.goneQuietSince", {
+            date: activityDay(
+              deal.last_activity_at,
+              deal.last_activity_precision ?? "instant",
+              locale,
+              zone,
+              (at, locale, zone) =>
+                formatDayMonthNearYear(at, locale, zone, new Date(asOf)),
+            ),
+          })
         : t("deal.verdict.nothingFiled"),
       tone: "danger",
     };

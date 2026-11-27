@@ -45,6 +45,9 @@ func New() extension.Extension {
 		// The reference for a company type: an account whose invoices this
 		// source's ledger holds.
 		CompanyTypes: []extension.CompanyType{{Type: "ledger_customer", Label: "Ledger customer"}},
+		// The reference for a language: stored data may carry Italian beside the
+		// three core ships, and the screens fall back to English for it.
+		Languages: []extension.Language{{Code: "it", Label: "Italian"}},
 		// The reference for a link type: a deal that carries on an earlier one,
 		// stored as ext:finance-demo:follow_up_of.
 		LinkTypes: []extension.LinkType{{Type: "follow_up_of", Label: "Follow-up of", From: []string{"deal"}, To: []string{"deal"}}},

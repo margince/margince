@@ -30,19 +30,17 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// agentOfferDraftCtx binds the acting principal the compose orchestrator
-// uses when it calls AddStagedOfferLines: a system-type actor carrying
-// the agent:offer-drafting identity, exactly like deals' own overnight
-// reconciler (reconcile.go) and contacts's coldstart/enrich approval
-// effects (compose/coldstartaccept.go) — auth.Require's RBAC check is a
-// no-op for a system principal, and storekit.Audit/Emit stamp this
-// identity onto the audit_log row automatically, which is the only place
-// offer_line_item's AI provenance lands (the table itself carries no
-// captured_by column).
+// agentOfferDraftCtx binds the principal the compose orchestrator uses when
+// it calls AddStagedOfferLines: agent:offer-drafting acting for Rep1 with
+// Rep1's grants. The audit row is the only place offer_line_item's AI
+// provenance lands, as the table has no captured_by column.
 func agentOfferDraftCtx(e *Env) context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
-	return principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: "agent:offer-drafting"})
+	return principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalAgent, ID: "agent:offer-drafting", UserID: e.Rep1, OnBehalfOf: e.Rep1,
+		TeamIDs: []ids.UUID{e.Team1}, Permissions: OfferDeskPerms, Scopes: principal.NewScopeSet(principal.ScopeWrite),
+	})
 }
 
 // baseDraftOffer seeds a deal and a draft offer carrying one human-entered
@@ -338,7 +336,7 @@ func TestAddStagedOfferLinesAuditCarriesTheAgentProvenance(t *testing.T) {
 	if n := e.WsCount(t,
 		`SELECT count(*) FROM audit_log
 		 WHERE entity_type = 'offer' AND entity_id = $1 AND action = 'update'
-		   AND actor_type = 'system' AND actor_id = 'agent:offer-drafting'`,
+		   AND actor_type = 'agent' AND actor_id = 'agent:offer-drafting'`,
 		offerID.UUID); n != 1 {
 		t.Fatalf("staged-lines audit row does not carry the agent:offer-drafting provenance")
 	}

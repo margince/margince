@@ -84,9 +84,9 @@ async function openQueue(page: Page, wide: string) {
 }
 
 for (const { name, wide } of WIDTHS) {
-  test(`a row menu opens above the drawer and a line runs, ${name}`, async ({
-    page,
-  }) => {
+  test(`a row menu opens above the drawer and a line runs, ${name}`, {
+    tag: wide === "0" ? "@smoke" : [],
+  }, async ({ page }) => {
     await openQueue(page, wide);
     const drawer = page.getByRole("dialog");
     const menus = drawer.getByRole("button", { name: /Weitere Aktionen für/ });
@@ -165,10 +165,12 @@ test("a row menu with little room below opens upward at full height", async ({
   for (const line of shape.lines) {
     expect(line).toBeGreaterThanOrEqual(30);
   }
-  await expect.poll(() => openPanelShape(page)).toMatchObject({
-    scrolls: false,
-    inside: true,
-  });
+  await expect
+    .poll(() => openPanelShape(page))
+    .toMatchObject({
+      scrolls: false,
+      inside: true,
+    });
 });
 
 // No room for the whole menu on either side: the lines keep their height and

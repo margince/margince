@@ -12,6 +12,7 @@ import { toggleOptions } from "../../design-system/select-testing";
 import { ToastProvider } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
+import { pipelinesOptions } from "../../lib/pipelines.queries";
 import { FieldBuilder } from "./customfields.builder";
 import { activityKindsOf } from "./customfields.kinds";
 import { FieldTable } from "./customfields.table";
@@ -104,6 +105,7 @@ it("writes the types a listed activity field shows on", async () => {
           onArchive={noop}
           onSetting={noop}
           onKinds={onKinds}
+          onPipelines={noop}
         />
       </LocaleProvider>
     </QueryClientProvider>,
@@ -153,6 +155,7 @@ it("shows an email-only field as Email and lets the admin clear it", async () =>
           onArchive={noop}
           onSetting={noop}
           onKinds={onKinds}
+          onPipelines={noop}
         />
       </LocaleProvider>
     </QueryClientProvider>,
@@ -161,4 +164,117 @@ it("shows an email-only field as Email and lets the admin clear it", async () =>
   expect(control).toHaveTextContent("Email");
   await toggleOptions(user, control, ["Email"]);
   expect(onKinds).toHaveBeenCalledWith(mailed, []);
+});
+
+it("writes the pipelines a deal field shows in", async () => {
+  const user = userEvent.setup();
+  const onPipelines = vi.fn();
+  const tier: CustomField = {
+    id: "tier",
+    object: "deal",
+    label: "Partner tier",
+    slug: "partner_tier",
+    type: "text",
+    status: "active",
+    column_name: "cf_partner_tier",
+    show_in_create: true,
+    reportable: false,
+    pipeline_ids: ["pipe-a"],
+    created_by: "u1",
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+  };
+  const queries = client();
+  queries.setQueryData(pipelinesOptions.queryKey, [
+    { id: "pipe-a", name: "Sales", is_default: true, position: 0 },
+    { id: "pipe-b", name: "Partners", is_default: false, position: 1 },
+  ]);
+  render(
+    <QueryClientProvider client={queries}>
+      <LocaleProvider initial="en">
+        <FieldTable
+          object="deal"
+          fields={[tier]}
+          canEdit
+          meUserId="u1"
+          onRename={noop}
+          onArchive={noop}
+          onSetting={noop}
+          onKinds={noop}
+          onPipelines={onPipelines}
+        />
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+  await toggleOptions(
+    user,
+    screen.getByLabelText("Pipelines “Partner tier” shows in"),
+    ["Partners"],
+  );
+  expect(onPipelines).toHaveBeenCalledWith(tier, ["pipe-a", "pipe-b"]);
+});
+
+it("asks no pipelines of a field on another object", () => {
+  render(
+    <QueryClientProvider client={client()}>
+      <LocaleProvider initial="en">
+        <ToastProvider>
+          <FieldBuilder
+            object="contact"
+            pending={false}
+            error={null}
+            onSubmit={noop}
+            onCancel={noop}
+          />
+        </ToastProvider>
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+  expect(screen.queryByLabelText(en["cf.pipelines"])).toBeNull();
+});
+
+it("shows a field scoped only to an archived pipeline and lets the admin remove it", async () => {
+  const user = userEvent.setup();
+  const onPipelines = vi.fn();
+  const tier: CustomField = {
+    id: "tier",
+    object: "deal",
+    label: "Partner tier",
+    slug: "partner_tier",
+    type: "text",
+    status: "active",
+    column_name: "cf_partner_tier",
+    show_in_create: true,
+    reportable: false,
+    pipeline_ids: ["pipe-gone"],
+    created_by: "u1",
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+  };
+  const queries = client();
+  queries.setQueryData(pipelinesOptions.queryKey, [
+    { id: "pipe-a", name: "Sales", is_default: true, position: 0 },
+  ]);
+  render(
+    <QueryClientProvider client={queries}>
+      <LocaleProvider initial="en">
+        <FieldTable
+          object="deal"
+          fields={[tier]}
+          canEdit
+          meUserId="u1"
+          onRename={noop}
+          onArchive={noop}
+          onSetting={noop}
+          onKinds={noop}
+          onPipelines={onPipelines}
+        />
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+  const control = screen.getByLabelText("Pipelines “Partner tier” shows in");
+  expect(control).toHaveTextContent("Archived pipeline");
+  expect(control).not.toHaveTextContent("Every pipeline");
+  await toggleOptions(user, control, ["Archived pipeline"]);
+  expect(onPipelines).toHaveBeenCalledWith(tier, []);
 });

@@ -1,4 +1,6 @@
+import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
+import { EntityRef } from "../../components/entityref";
 import { StatCard } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { Panel, PanelBody } from "../../design-system/panel";
@@ -11,6 +13,7 @@ import {
   formatDateAbbrev,
   formatPercent,
 } from "../../format/format";
+import { addMinor } from "../../format/minorsum";
 import { formatMoneyOrWord } from "../../format/moneyword";
 import { type Locale, useT } from "../../i18n";
 import {
@@ -35,8 +38,12 @@ function callDetail(
   // The day the call was authored, in the period's own zone: a figure and the
   // date beside it are bucketed on one calendar.
   const date = formatDateAbbrev(call.created_at, locale, readings.timezone);
+  const evidence = addMinor(readings.won_minor, readings.evidence_minor);
   const difference =
-    call.amount_minor - (readings.won_minor + readings.evidence_minor);
+    evidence === undefined ? undefined : addMinor(call.amount_minor, -evidence);
+  if (difference === undefined) {
+    return t("format.someTooLargeExact");
+  }
   if (difference === 0) {
     return t("forecast.currentCallDetailEven", { date });
   }
@@ -62,7 +69,8 @@ function answerSentence(
   money: (minor: number) => string,
   t: ReturnType<typeof useT>,
 ): string {
-  const evidence = money(readings.won_minor + readings.evidence_minor);
+  const sum = addMinor(readings.won_minor, readings.evidence_minor);
+  const evidence = sum === undefined ? t("format.tooLargeExact") : money(sum);
   const call = readings.current_call;
   if (call) {
     return t("forecast.answerWithCall", {
@@ -85,6 +93,7 @@ export function ForecastAnswer({
   onOpenDeals,
   landing = true,
   density,
+  callHistory,
 }: Readonly<{
   readings: Readings;
   locale: Locale;
@@ -95,6 +104,7 @@ export function ForecastAnswer({
   // False when the page places the landing readings elsewhere, beside these.
   landing?: boolean;
   density?: "plate";
+  callHistory?: ReactNode;
 }>) {
   const t = useT();
   const currency = readings.base_currency;
@@ -159,6 +169,14 @@ export function ForecastAnswer({
                 ` ${t("forecast.callHistoryUnavailable")}`}
             </p>
           )}
+          {call && (
+            <p className="t-caption">
+              {t("forecast.callAuthor")}{" "}
+              <EntityRef kind="user" id={call.author_id} />
+            </p>
+          )}
+          {call?.note && <p>{call.note}</p>}
+          {callHistory}
         </PanelBody>
       </Panel>
 

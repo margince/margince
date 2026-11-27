@@ -137,8 +137,7 @@ A unit may import only `backend/pkg/**`, and only the packages that carry the ma
   each call gets. It also carries the file types a unit and a core connector must share: `InboundFile`,
   `FileDrop`, `OutboundFile` and the four `MaxInbound*` limits. Last, it holds the two helpers
   `SniffContentType` and `SafeFilename` that every producer of an inbound file calls. So what a file is,
-  what it is called and how large it may be are decided once for every producer. The package has many
-  files; the mark is per package.
+  what it is called and how large it may be are decided once for every producer.
 - **`pkg/extension/jurisdiction`**: the jurisdiction pack contract (`Pack`, `Retention`,
   `RetentionClass`, the closed lists of values a pack may use, the calendar `Period`).
 - **`pkg/extension/crm`**: the shapes a unit passes to `tx.Core()` and gets back from it. `tx.Core()` is
@@ -153,6 +152,7 @@ A unit may import only `backend/pkg/**`, and only the packages that carry the ma
 - **`pkg/extension/accounting`**: the records a finance source hands the core: a customer, an invoice,
   money paid in, and the connection they are read for. The core uses these same types, so a unit's
   invoice and the mirror's input are one type.
+- **`pkg/extension/extensiontest`**: the boot step's checks on a unit's kinds, links and signals, for its tests.
 
 Being in `backend/pkg` grants nothing on its own. A package is extension surface only when its package
 line carries the mark `//margince:extension-surface`. The allowlist is *derived from the tree*. A fitness
@@ -161,9 +161,8 @@ public API cannot drift from what the gate enforces.
 
 The small **value types** on the surface check their own values (`Name.Validate`, `Period.Validate`,
 `RetentionClassName.Validate`, …) with the same checks the boot step runs. A writer who tests against
-them catches a wrong field at test time. But there is no `Extension.Validate` for the whole value. Checks
-on the whole declaration and between units (a duplicate name, a code a core pack already holds) still
-first run at boot.
+them catches a wrong field at test time, and `Extension.ValidateDeclarations` checks a unit's kinds, links
+and signals. Other whole-unit checks, and those between units, still first run at boot.
 
 ### 3. The composition build: `gen-composition`
 

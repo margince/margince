@@ -37,7 +37,9 @@ package capture
 
 import (
 	"fmt"
+	"strings"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/threadverdict"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -67,6 +69,9 @@ const (
 // The message names the field and the bound but never the value: it reaches an
 // operator's log, and the value is somebody's mail.
 func admitIndexableKeys(rec connector.NormalizedRecord) error {
+	if strings.HasPrefix(rec.ThreadKey, threadverdict.BurstKeyPrefix) {
+		return fmt.Errorf("capture: the record's thread key starts with the prefix reserved for chat bursts: %w", connector.ErrSkip)
+	}
 	for _, field := range []struct {
 		name  string
 		value string

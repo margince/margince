@@ -118,6 +118,7 @@ func redactDeliveries(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID, to
 		   SET recipients = '[]'::jsonb, cc = '[]'::jsonb, bcc = '[]'::jsonb, subject = $2,
 		       body = '', html_body = NULL, attachments = '[]'::jsonb,
 		       list_unsubscribe = NULL, bounce_recipient = NULL, bounce_reason = NULL,
+		       send_claims = NULL, authored_body_len = NULL, authored_html_len = NULL,
 		       redacted_fields = redacted_fields || ARRAY(SELECT c FROM unnest(ARRAY[
 		           CASE WHEN bounce_recipient IS NOT NULL THEN 'bounce_recipient' END,
 		           CASE WHEN bounce_reason IS NOT NULL THEN 'bounce_reason' END,
