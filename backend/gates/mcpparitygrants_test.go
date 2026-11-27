@@ -65,6 +65,9 @@ func loadGrantSource(t *testing.T) *grantSource {
 }
 
 // grantSourceFrom type-checks parsed files, keyed by the directory each one names.
+//
+// It is not typedModule: imports of backend/pkg/extension* and
+// backend/migrations stand in empty, so the graph does not follow a call into them.
 func grantSourceFrom(t *testing.T, fset *token.FileSet, files []*ast.File) *grantSource {
 	t.Helper()
 	byDir := map[string][]*ast.File{}
