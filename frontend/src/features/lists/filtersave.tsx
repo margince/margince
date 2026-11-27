@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { viewNameConflict } from "./viewnamerefusal";
 // "Save this filter": one question with two answers. A saved view is the
 // reader's own way of looking, counted again on each opening; a Live List is
 // a shared set whose members join and leave as their records change, checked
@@ -89,8 +90,11 @@ export function SaveFilterModal({
   const purposeLabel = t("filters.purpose");
   // A refused name or purpose is said on its field, which the sentence names.
   const labels = { name: nameLabel, purpose: purposeLabel };
-  const refused = (error: unknown) =>
-    faults.show(refusalSentences(error, t, labels).byField);
+  const refusal = (error: unknown) =>
+    refusalSentences(error, t, labels, {
+      conflict: viewNameConflict(t),
+    });
+  const refused = (error: unknown) => faults.show(refusal(error).byField);
   // Every opening starts from what the caller offers and nothing typed
   // before: a create that offers the last name again is how a duplicate gets
   // made. Reset as it opens rather than as it closes, so the closing dialog
@@ -164,7 +168,7 @@ export function SaveFilterModal({
       confirmLabel={t(asList ? "filters.saveListConfirm" : "views.save")}
       bodyRef={faultsRoot}
       pending={busy}
-      error={refusalSentences(run.error, t, labels).rest}
+      error={refusal(run.error).rest}
       onConfirm={save}
     >
       <Field label={nameLabel} required error={faults.of("name")}>

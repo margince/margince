@@ -51,6 +51,14 @@ func New(oauth googleconn.Authorizer, api API) *Connector {
 	return &Connector{oauth: oauth, api: api, now: time.Now}
 }
 
+// WithClock returns a copy that reads the time from now, the clock the capture
+// horizon and the list's age are dated by.
+func (c *Connector) WithClock(now func() time.Time) *Connector {
+	copied := *c
+	copied.now = now
+	return &copied
+}
+
 var (
 	_ connector.Connector      = (*Connector)(nil)
 	_ connector.GrantedScoper  = (*Connector)(nil)

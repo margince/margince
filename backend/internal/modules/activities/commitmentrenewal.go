@@ -63,7 +63,7 @@ func (s *Store) MutableCommitmentTaskTx(ctx context.Context, tx pgx.Tx, locator 
 		return ids.Nil, err
 	}
 	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalSystem {
+	if !ok || storekit.StampIsForAUser(actor.ID) {
 		return ids.Nil, nil
 	}
 	target, err := s.OpenCommitmentTaskTx(ctx, tx, locator, privateTo)

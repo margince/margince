@@ -94,7 +94,7 @@ func runReading(t *testing.T, store *fakeReadStore, brain documentCompleter) err
 		store.claimedAt = time.Date(2026, 8, 15, 9, 0, 0, 0, time.UTC)
 	}
 	d := NewDocumentExtractor(nil, brain, discardLogger())
-	return d.Read(t.Context(), store, ids.NewV7(), ids.NewV7())
+	return d.Read(t.Context(), t.Context(), store, ids.NewV7(), ids.NewV7())
 }
 
 // scriptedBrain answers with one reply and declares the carriage it is given.

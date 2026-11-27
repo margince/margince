@@ -21,7 +21,7 @@ var moveWords = struct {
 	To:     langcopy.Phrase{En: "Since then the deal moved to %s.", De: "Seitdem ist der Deal in die Phase %s gewechselt.", Vi: "Kể từ đó, giao dịch đã chuyển sang %s."},
 	FromTo: langcopy.Phrase{En: "Since then the deal moved from %s to %s.", De: "Seitdem ist der Deal von %s nach %s gewechselt.", Vi: "Kể từ đó, giao dịch đã chuyển từ %s sang %s."},
 	Offer:  langcopy.Phrase{En: "Since then offer %s revision %d was %s.", De: "Seitdem hat das Angebot %s (Version %d) den Status %s.", Vi: "Kể từ đó, báo giá %s phiên bản %d có trạng thái %s."},
-	Buyer:  langcopy.Phrase{En: "the buyer", De: "der Käufer", Vi: "người mua"},
+	Buyer:  langcopy.Phrase{En: "the buyer", De: "die Käuferseite", Vi: "người mua"},
 	Room:   langcopy.Phrase{En: "Since then %s commented in the Deal Room.", De: "Seitdem hat %s im Deal Room kommentiert.", Vi: "Kể từ đó, %s đã bình luận trong Deal Room."},
 }
 

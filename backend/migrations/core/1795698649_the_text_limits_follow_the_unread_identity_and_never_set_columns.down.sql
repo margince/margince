@@ -1,9 +1,5 @@
 -- pgmigrate:no-transaction
 SET lock_timeout = '2s';
-CREATE OR REPLACE TRIGGER "text_bound_insert" AFTER INSERT ON "public"."auth_token" FOR EACH ROW
-WHEN (public.text_row_exceeds_bounds(to_jsonb(NEW), NULL, '{"purpose":20000,"token_hash":20000}')) EXECUTE FUNCTION public.refuse_oversized_text('{"purpose":20000,"token_hash":20000}');
-CREATE OR REPLACE TRIGGER "text_bound_update" AFTER UPDATE ON "public"."auth_token" FOR EACH ROW
-WHEN (public.text_row_exceeds_bounds(to_jsonb(NEW), to_jsonb(OLD), '{"purpose":20000,"token_hash":20000}')) EXECUTE FUNCTION public.refuse_oversized_text('{"purpose":20000,"token_hash":20000}');
 CREATE OR REPLACE TRIGGER "text_bound_insert" AFTER INSERT ON "public"."federated_identity" FOR EACH ROW
 WHEN (public.text_row_exceeds_bounds(to_jsonb(NEW), NULL, '{"email_at_link":20000,"provider":20000}')) EXECUTE FUNCTION public.refuse_oversized_text('{"email_at_link":20000,"provider":20000}');
 CREATE OR REPLACE TRIGGER "text_bound_update" AFTER UPDATE ON "public"."federated_identity" FOR EACH ROW

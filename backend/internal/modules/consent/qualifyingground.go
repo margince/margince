@@ -411,6 +411,13 @@ func capturedMeetingSQL(asOf string) string {
 		  AND ` + relstrength.MeetingInTouchSQL("a", asOf)
 }
 
+// subjectAgreedMeetingSQL is shared by appointment authorization and privacy
+// notice settlement. A relink or a meeting typed by a member cannot claim the
+// contact accepted it. Each caller applies its own past/future time window.
+func subjectAgreedMeetingSQL(activity, party string) string {
+	return activity + `.kind = 'meeting' AND ` + activity + `.archived_at IS NULL AND ` + activity + `.counterparty_email IS NULL AND ` + activity + `.captured_by LIKE 'connector:%' AND ` + party + `.relinked_at IS NULL AND (` + party + `.response = 'accepted' OR ` + party + `.role = 'organizer')`
+}
+
 // agreedAppointment reports whether the subject accepted or organised a
 // calendar meeting still to come that nobody called off. A message about moving
 // it continues something they agreed to. A named meeting must be that meeting;
@@ -427,10 +434,7 @@ func agreedAppointment(ctx context.Context, tx pgx.Tx, contactID string, named *
 		SELECT EXISTS (
 		  SELECT 1 FROM activity a
 		  JOIN activity_participant p ON p.activity_id = a.id AND p.contact_id = $1::uuid
-		       AND (p.response = 'accepted' OR p.role = 'organizer') AND p.relinked_at IS NULL
-		  WHERE a.kind = 'meeting' AND a.archived_at IS NULL
-		    AND a.counterparty_email IS NULL
-		    AND a.captured_by LIKE 'connector:%'
+		  WHERE `+subjectAgreedMeetingSQL("a", "p")+`
 		    AND `+relstrength.MeetingAheadSQL("a", "$2")+`
 		    AND ($4::uuid IS NULL OR a.id = $4::uuid)
 		    AND `+visible+`)`, args...).Scan(&found)

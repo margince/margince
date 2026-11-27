@@ -1,7 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { depthBackOutOf, hashAt, traverseTo } from "./historydepth";
+import {
+  depthBackOutOf,
+  hashAt,
+  traversalInFlight,
+  traverseTo,
+} from "./historydepth";
 import { routeIdentity } from "./routeidentity";
 import {
   navigate,
@@ -68,8 +73,11 @@ export function closeOnto(route: Route, dials?: UrlParams): void {
   );
   const behind = at === undefined ? undefined : hashAt(at);
   if (at !== undefined && behind !== undefined && samePage(behind, target)) {
-    // Refused while any traversal is still in flight.
-    traverseTo(at);
+    // A step the browser refuses, or never carries out, closes by replacing
+    // the entry. Should the step still land late, it lands on this same page.
+    if (traversalInFlight()) return;
+    const replace = () => navigateReplacing(route, dials);
+    if (!traverseTo(at, replace)) replace();
     return;
   }
   navigateReplacing(route, dials);

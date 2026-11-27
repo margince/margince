@@ -26,7 +26,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/claims"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/generatedsummary"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -183,7 +182,9 @@ func (s *Service) Get(ctx context.Context, companyID ids.CompanyID, force bool) 
 	if err != nil {
 		return zero, err
 	}
-	lang := identity.BaseLanguageForPrompt(ctx, s.pool)
+	// Written in the reader's language: the cache is per reader and its
+	// fingerprint names the language, so another language writes it again.
+	lang := readerLanguage(ctx, s.pool)
 	fingerprint, err := Fingerprint(in, s.routingVersion(), lang)
 	if err != nil {
 		return zero, err

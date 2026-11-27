@@ -70,9 +70,9 @@ func (s *Store) RecordConversationClaimTx(
 	if err := validateClaim(in); err != nil {
 		return crmcontracts.ConversationClaim{}, false, err
 	}
-	// Admits a user, their agent, and the product's own passes, which is what
-	// an extractor runs as.
-	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
+	// Admits a user, their agent, and the product's own passes. An extractor
+	// runs as one of those, for no one or for the colleague who asked.
+	if err := auth.RequireHumanOrAgentFor(ctx); err != nil {
 		return crmcontracts.ConversationClaim{}, false, err
 	}
 	if err := auth.Require(ctx, "contact", principal.ActionUpdate); err != nil {

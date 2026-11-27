@@ -94,6 +94,15 @@
   background: var(--groundHover);
   color: var(--textPrimary);
 }
+/* A tab that opens another page trails an arrow, a caret's size. */
+.lt-vtab-link {
+  gap: var(--space-1);
+}
+.lt-vtab-link svg {
+  inline-size: 12px;
+  block-size: 12px;
+  flex: none;
+}
 /* The view in use, and a toggle row while on, take the pressed filter pill's
    neutral pair (filterpills.css): the accent is kept for the row's action. */
 .lt-vtab.on,

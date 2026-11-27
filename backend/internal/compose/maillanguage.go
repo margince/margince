@@ -8,11 +8,9 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 )
 
@@ -32,20 +30,6 @@ func recipientLanguage(ctx context.Context, pool *pgxpool.Pool) string {
 		return identity.BaseLanguageForPrompt(ctx, pool)
 	}
 	return profile.Locale
-}
-
-func roomInviteIdentity(ctx context.Context, pool *pgxpool.Pool) (string, string, error) {
-	name, _, err := identity.NewService(pool).ActorIdentity(ctx)
-	if err != nil {
-		return "", "", err
-	}
-	var company string
-	err = InstallationDB(pool).Tx(ctx, func(tx pgx.Tx) error {
-		var err error
-		company, err = config.StoredApplyTx(ctx, tx, loadedConfig(), identity.Name)
-		return err
-	})
-	return name, company, err
 }
 
 func recipientDeadline(ctx context.Context, pool *pgxpool.Pool, at time.Time) time.Time {

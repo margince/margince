@@ -14,6 +14,7 @@ import {
   useSaveView,
   viewNameTaken,
 } from "../../lib/savedviews.queries";
+import { viewNameRefusal } from "./viewnamerefusal";
 import "./savedviews.css";
 
 // Renaming and deleting the reader's own saved views. One dialog listing every
@@ -81,7 +82,10 @@ function ManageViewsList({ views }: Readonly<{ views: readonly SavedView[] }>) {
   if (views.length === 0) {
     return <p className="surfacestate-empty">{t("views.none")}</p>;
   }
-  const problem = rename.error ?? remove.error;
+  const renameRefused = viewNameRefusal(rename.error, t);
+  const problem = renameRefused.nameProblem
+    ? remove.error
+    : (rename.error ?? remove.error);
   return (
     <ul className="savedviews-manage">
       {views.map((view) => (
@@ -103,7 +107,14 @@ function ManageViewsList({ views }: Readonly<{ views: readonly SavedView[] }>) {
                 }
                 rename.mutate(
                   { id: view.id, name, version: mode.version },
-                  { onSuccess: () => setMode(null) },
+                  {
+                    onSuccess: () => setMode(null),
+                    onError: (error) => {
+                      const refused = viewNameRefusal(error, t);
+                      if (refused.nameProblem)
+                        faults.show(new Map([["name", refused.nameProblem]]));
+                    },
+                  },
                 );
               })}
             >

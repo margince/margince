@@ -141,8 +141,8 @@ func TestAnInviteRefusesAnUnboundedName(t *testing.T) {
 
 func TestAttributionFailureDoesNotDiscardABuyersAccessLink(t *testing.T) {
 	relay := &invitationMailCapture{}
-	handler := Handlers{}.WithInviteMailer(relay).WithInviteLinkBase("https://example.test").WithInviteContext(func(context.Context) (string, string, error) {
-		return "", "", errors.New("company settings unavailable")
+	handler := Handlers{}.WithInviteMailer(relay).WithInviteLinkBase("https://example.test").WithInviteContext(func(context.Context) (string, error) {
+		return "", errors.New("company settings unavailable")
 	})
 	invitation := IssuedInvitation{RoomTitle: "Northstar proposal", Credential: "fictional", ExpiresAt: time.Date(2026, 11, 15, 12, 37, 0, 0, time.UTC), Participant: crmcontracts.DealRoomParticipant{Email: openapi_types.Email("buyer@example.test")}}
 	if err := handler.sendInvite(context.Background(), invitation); err != nil {

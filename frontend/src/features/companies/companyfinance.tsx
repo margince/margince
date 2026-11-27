@@ -197,6 +197,7 @@ export function CompanyFinanceCard({
           source connected", which says nothing about the recipient. */}
       <BillingContactsPanel
         contacts={summary.billing_contacts}
+        hidden={summary.billing_contacts_hidden}
         companyId={companyId}
       />
     </div>

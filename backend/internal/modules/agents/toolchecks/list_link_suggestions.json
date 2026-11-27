@@ -1,0 +1,6 @@
+{
+  "verb": "list_link_suggestions",
+  "checks": [
+    "activity.read"
+  ]
+}

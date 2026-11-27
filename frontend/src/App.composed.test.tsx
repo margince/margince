@@ -19,7 +19,8 @@ import {
 // way to render a composed unit from a suite that must also pass in a tree
 // where build/composition/ does not exist. The descriptor shape below is
 // pinned on the generator side by emit_frontend_test.go.
-vi.mock("@composition/extensions", () => ({
+vi.mock("@composition/extensions", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@composition/extensions")>()),
   extensions: [
     {
       name: "notes",

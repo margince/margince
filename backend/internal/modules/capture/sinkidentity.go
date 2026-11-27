@@ -238,6 +238,24 @@ func (s *Sink) activityHoldingIdentity(
 	return s.resolveIdentity(ctx, tx, s.mailIdentityKind, key)
 }
 
+// activityFiledElsewhere is activityHoldingIdentity, and then for a meeting the
+// row this seat's calendar delivered the event as. A one-off this calendar
+// matched onto another door's row states a new identity once it moves, so only
+// that delivery still names the row.
+func (s *Sink) activityFiledElsewhere(
+	ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, fields ActivityFields,
+) (ids.ActivityID, bool, error) {
+	known, found, err := s.activityHoldingIdentity(ctx, tx, rec)
+	if err != nil || found || fields.Kind != meetingKind {
+		return known, found, err
+	}
+	delivered, held, err := s.meetingOfOwnDelivery(ctx, tx, rec.NaturalKey)
+	if err != nil || !held {
+		return ids.ActivityID{}, false, err
+	}
+	return delivered, true, nil
+}
+
 // claimSeatCopy files a new row under its seatCopyKey, so the other copies
 // resolve onto it. A lost claim leaves the row as it is.
 func (s *Sink) claimSeatCopy(ctx context.Context, tx pgx.Tx, id ids.ActivityID, rec connector.NormalizedRecord) error {

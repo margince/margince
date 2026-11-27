@@ -23,6 +23,7 @@ import { appsFor } from "../lib/extensionapps";
 import { useReadsTeamProgress } from "../lib/progressreader";
 import { navigate, type Route, routeHash } from "../lib/router";
 import { useMe } from "../lib/session";
+import { useUrlParams } from "../lib/urlstate";
 import {
   currentClaim,
   entryLabel,
@@ -155,7 +156,8 @@ export function useNavLevel(
   const disabled = useHiddenCoreFeatures();
   const readsTeam = useReadsTeamProgress();
   const apps = appsFor(useMe().data);
-  const trail = railTrail(route, section, disabled, readsTeam, apps);
+  const [params] = useUrlParams();
+  const trail = railTrail(route, section, disabled, readsTeam, apps, params);
   const depth = trail.length - 1;
   const shown = trail[depth];
   if (shown === undefined)

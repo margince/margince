@@ -42,6 +42,16 @@ func (t LinkType) Validate() error {
 	return nil
 }
 
+// Joins reports whether a link of the type may start on from and end on to. An
+// empty list on either side allows every end.
+func (t LinkType) Joins(from, to string) bool {
+	return endAllowed(t.From, from) && endAllowed(t.To, to)
+}
+
+func endAllowed(declared []string, end string) bool {
+	return slices.Contains(LinkEnds, end) && (len(declared) == 0 || slices.Contains(declared, end))
+}
+
 // LinkTypeValue is the stored and wire form of a unit's type. It is the one
 // place the form is built, so a unit can only ever name a value under its own
 // name.

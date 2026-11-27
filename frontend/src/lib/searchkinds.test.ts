@@ -40,6 +40,15 @@ describe("searchHitRoute", () => {
 
   // An activity has no page. Which panel it opens in is a question about the
   // hit, which searchHitDestination answers.
+  it("opens a deal room through its deal, on the room page", () => {
+    expect(searchHitRoute("deal_room", "r1", "d1")).toEqual({
+      screen: "deals",
+      id: "d1",
+      id2: "room",
+    });
+    expect(searchHitRoute("deal_room", "r1")).toBeNull();
+  });
+
   it("gives an activity no page of its own", () => {
     expect(searchHitRoute("activity", "a1")).toBeNull();
   });
@@ -122,6 +131,15 @@ describe("searchHitDestination", () => {
     expect(
       searchHitDestination({ type: "activity", id: "a2" }, "renewal"),
     ).toEqual({ screen: "search", id: "renewal", id2: "a2", id3: "activity" });
+  });
+
+  it("sends a room hit to its deal's room page", () => {
+    expect(
+      searchHitDestination(
+        { type: "deal_room", id: "r1", deal_id: "d1" },
+        "harbour",
+      ),
+    ).toEqual({ screen: "deals", id: "d1", id2: "room" });
   });
 
   it("leaves every other type on the destination it had", () => {

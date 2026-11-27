@@ -98,7 +98,8 @@ var ceilings = map[string]int{
 	//
 	// +3 for the paid-lane rule. Without it an agent stops to ask before a
 	// paid run. An agent in a loop then waits for an answer that never comes.
-	"AGENTS.md": 378,
+	// +3 so an issue decision is checked against current code and every affected reader and writer.
+	"AGENTS.md": 381,
 	// Raised from 160 for the AI-hue rule: indigo marks agent-authored content,
 	// and a reader who does not know that paints the meaning onto a decoration.
 	// The reasoning lives in the design-system README; what is here is the twelve

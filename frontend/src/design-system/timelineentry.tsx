@@ -146,6 +146,13 @@ export type TimelineEntry = {
    */
   qualifier?: string;
   /**
+   * The name of the channel that carried this message, as a reader says it:
+   * "Email", "LinkedIn", "WhatsApp". Each message of a thread names its own,
+   * because one conversation can move between channels. The caller resolves
+   * it, since the names of the installation's channels are a server read.
+   */
+  channel?: string;
+  /**
    * The provider's own conversation id, when capture stamped one. It is what
    * makes a thread a thread. A subject match would merge two unrelated
    * "Re: Update" exchanges and split one renamed mid-conversation.

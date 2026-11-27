@@ -42,5 +42,6 @@ func businessBinding(botID string, link BusinessLink) connector.ChatBinding {
 		Ownership:   link.Ownership,
 		OwnerUserID: link.OwnerUserID,
 		SeatID:      link.SeatID,
+		Connection:  link.ConnectionID,
 	}
 }

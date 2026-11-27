@@ -84,9 +84,10 @@ func (h Handlers) ImportCardPhoto(w http.ResponseWriter, r *http.Request) {
 		writeStoreErr(w, r, err)
 		return
 	}
-	h.stageVCardReviews(r.Context(), entries, results)
+	staged := h.stageVCardReviews(r.Context(), entries, results)
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.VCardImportReport{
-		Results: toContractVCardResults(results),
+		Results:         toContractVCardResults(results),
+		StagedForReview: staged,
 	})
 }
 

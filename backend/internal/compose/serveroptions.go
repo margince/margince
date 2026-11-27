@@ -61,7 +61,10 @@ func WithOperatorMail(m mailer.Mailer) Option {
 // The configured public origin keeps personal links independent of request headers.
 func WithDealRoomInviteMail(m mailer.Mailer) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
-		s.dealroomsHandlers = s.WithInviteMailer(m).WithMailLanguage(func(ctx context.Context) string { return string(identity.BaseLanguageForPrompt(ctx, pool)) }).WithInviteContext(func(ctx context.Context) (string, string, error) { return roomInviteIdentity(ctx, pool) })
+		s.dealroomsHandlers = s.WithInviteMailer(m).WithMailLanguage(func(ctx context.Context) string { return string(identity.BaseLanguageForPrompt(ctx, pool)) }).WithInviteContext(func(ctx context.Context) (string, error) {
+			name, _, err := identity.NewService(pool).ActorIdentity(ctx)
+			return name, err
+		})
 	}
 }
 
@@ -228,12 +231,12 @@ func WithKeyvault(vault keyvault.Vault) Option {
 		s.webFormsHandlers = s.WithFormSecrets(vault)
 		// The confirm link is sealed in the same vault (controllermailwiring.go).
 		s.rewireConfirmationLane(pool)
-		// The BYOK credential surface exists only where there is somewhere to
-		// seal a key. Wired here rather than in the AI block so a role that
-		// composes no vault serves 501 on those routes instead of recording a
-		// reference to a blob nothing wrote.
+		// The BYOK credential surface exists only where a key can be sealed.
+		// A role with no vault serves 501 on those routes instead of recording
+		// a reference to a blob nothing wrote.
 		sealed := WithVault(StoredConfig(pool), vault, s.log)
 		keys := ai.NewProviderKeyStore(sealed)
+		s.authHandlers = s.WithGoogleDirectory(sealed)
 		s.voiceHandlers = s.WithProviderKeys(keys)
 		// The routing store gets the same vault, for the ONE read that calls a
 		// vendor rather than describing it: asking a vendor what it serves needs

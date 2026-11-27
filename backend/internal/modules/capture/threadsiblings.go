@@ -20,6 +20,7 @@ package capture
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -33,6 +34,9 @@ type ThreadOutcome struct {
 	// recomputes each one's audience: capture may not reach the activities
 	// module, so the recompute is compose's to run.
 	Stamped []ids.UUID
+	// Moved are the messages of a chat burst the answer did not read, which now
+	// form a burst of their own. They need their audience recomputed too.
+	Moved []ids.UUID
 	// Reopened names the sibling the ledger now points at, or Nil.
 	//
 	// Set only for an OPENING verdict that found a message from a sender it
@@ -40,6 +44,24 @@ type ThreadOutcome struct {
 	// else's mail; the thread goes back to pending pointing at it, and the
 	// classifier reads it next.
 	Reopened ids.UUID
+}
+
+// Touched lists the messages whose audience the outcome may have changed.
+func (o ThreadOutcome) Touched() []ids.UUID { return append(slices.Clone(o.Stamped), o.Moved...) }
+
+// RecordOutcomeOnRowTx writes the answer to a question onto its messages. A
+// mail question reaches the message the model read and the thread's others. A
+// chat question reaches the burst's messages.
+func (s *ThreadVerdictStore) RecordOutcomeOnRowTx(
+	ctx context.Context, tx pgx.Tx, row PendingThread, status, kind string, seen []string,
+) (ThreadOutcome, error) {
+	if row.IsBurst() {
+		return s.recordOutcomeOnBurstTx(ctx, tx, row, status, kind)
+	}
+	if err := s.RecordOutcomeTx(ctx, tx, row, status, kind); err != nil {
+		return ThreadOutcome{}, err
+	}
+	return s.RecordOutcomeOnWholeThreadTx(ctx, tx, row.ThreadKey, row.UserID, status, kind, seen)
 }
 
 // RecordOutcomeOnThreadTx stamps this seat's verdict onto the messages of the

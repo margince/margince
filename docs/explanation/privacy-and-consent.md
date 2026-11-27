@@ -89,8 +89,7 @@ its **proof**, and records a **decision** per recipient:
   no template makes an address that bounces work.
 - **Every category ships enforcing, even when left out.** `consent.authorization_modes` can move one
   to `observe` or `warn`. Those record the engine's answer without binding it. That is an operator's
-  way back; the shipped mode is enforcing. A category the stored map does not name
-  enforces.
+  way back; the shipped mode is enforcing. A category the stored map does not name enforces.
 
   A map with entries that leaves out any category is refused at write time, naming the ones
   it missed. So a half-written setting cannot leave mail with no check. An empty map is accepted and every
@@ -172,8 +171,7 @@ Using an instruction checks these facts:
 
 - **The decision is still live.** A revoked decision, one marked expired or one already used
   allows no send.
-- **It is this message.** An instruction is made against one review, and that review holds one
-  message.
+- **It is this message.** An instruction is made against one review, and that review holds one message.
 - **The scope still fits.** New instructions freeze the recipients, sender, purpose, attachments
   and other message context. A change to that scope needs a new decision.
 - **The wording is approved**, where there is a fingerprint to check. After an approved send fails,
@@ -242,8 +240,7 @@ one quote does not lift an opt-out for another.
 
 ## Reaching the subject without the message that carried the link
 
-Three records exist so a subject's own acts do not rest on a mailbox, a session or a token that has
-since rotated.
+Three records exist so a subject's own acts do not rest on a mailbox, a session or a token that has since rotated.
 
 - **A withdrawal credential lives longer than its mail.** `withdrawal_credential` is separate from
   `preference_token` because the two allow different things. The token to read and edit the profile
@@ -351,7 +348,7 @@ into consent's handlers.
 - **The suppression list** hashes each erased address and handle. Capture, import and typed creates
   refuse a later match. Public booking can still create one; refusal there would reveal erasures.
 - **Article 15 subject access** (`AssembleSAR`) requires `contact.delete` and full row scope.
-  One audited export (`action=export`) includes the subject's records, mail, consent and kept copies.
+  One audited export (`action=export`) includes the subject's records, consent, kept copies and mail sent or received, not mail filed on their employer alone.
   Held mail can supply the subject's verdict and party facts; its content audience still applies.
   The contact who made the link gets their role and state, with the target's notes and id left out.
   Each weekly-plan audit image must prove its own subject link; a later link proves no earlier label.
@@ -393,8 +390,7 @@ Four of those show *why* nothing else can reach them:
   the `contact_email` delete and would keep the erased address open to a new match.
 
 A data-subject duty must reach **every** store that holds the subject, in that one transaction per
-record. To route each delete through the module that owns the table would give up the all-or-nothing
-promise.
+record. To route each delete through the module that owns the table would give up the all-or-nothing promise.
 
 Privacy's deletes are one of the agreed cross-writer exceptions to "a module writes only its own
 tables." Every such write is **agreed per table** in `backend/gates/tableownershipwaivers_test.go`, with a
@@ -527,7 +523,7 @@ a decision only a human makes: a named user who holds `activity.update`, with a 
   no project link left. The declared undo may delete project-filing proof and nothing else. Every other
   change to the class or its timestamp is still refused.
 - An agent never decides it, even with an admin's passport. It can stage the new link that files an
-  activity under a project, and release it on an attended call. It can do so only while the undo could
+  activity under a project, and release it outside a built-in scheduled run. It can do so only while the undo could
   still take the filing back. In three cases a member releases the new link in the CRM. The activity is restricted, held
   through a link, or covered by an open erasure request. There, that filing would
   last for good.
@@ -575,7 +571,7 @@ before a decision and the accept step all ask `siteLeadLaneRefusal`.
 `TestSiteLeadCaptureOpensOnlyWithAReviewedNotice` fails when the accept path stops calling the
 notice step. It also fails when the reviewed version is not the version the build sends.
 
-## Mail from the contact
+## A contact who reaches out
 
 Mail from a contact shows that they gave their own details; for `bulk_mail_attested`,
 `inbound_sender_authenticated` must also be true. Before closing old cases, the data task reads
@@ -596,7 +592,10 @@ missing one uses the capture date as a bound. The clock never starts again at re
 
 A data task moves live cases with an unknown source to review. It keeps their audit history,
 finished decisions and mail already on its way. If a send fails, the source is checked again.
-Later mail capture and data tasks keep a user's confirmed source decision.
+
+When a contact writes to us or books a meeting, every still-owed notice duty closes. The same holds when they send or accept a meeting request. This holds for every original source. The confirmed source stays recorded. The closure and audit name the mail or meeting.
+
+Queued disclosures and finished outcomes stay as they were. The opener, source preview, event consumer, failed-delivery handler and repair task use one evidence rule.
 
 ## Where the code lives
 

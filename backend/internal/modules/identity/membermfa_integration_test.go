@@ -39,7 +39,7 @@ func (e *revocationEnv) enrolMember(t *testing.T) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := e.svc.ConfirmTOTP(ctx, code, hashToken(before)); err != nil {
+	if _, err := e.svc.ConfirmTOTP(ctx, memberPassword, code, hashToken(before)); err != nil {
 		t.Fatalf("confirm: %v", err)
 	}
 	return before

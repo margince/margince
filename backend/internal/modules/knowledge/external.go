@@ -37,18 +37,19 @@ import (
 // files into. The schema's CHECK holds the same set.
 const GDocsSource = "gdocs"
 
-// The bounds on what a source may say about a document. The meta is shown beside
-// a citation, so it is kept short and flat.
 // MetaKeys is the closed set of fields a source may state about a document.
+// The meta is shown beside a citation, so it is kept short and flat.
 // "missing" lists, comma separated, the stated fields the source did not carry,
 // so a reader sees the gap rather than a guess. "path" is the folders the source
 // keeps the document under; the source states it, a document's own header cannot.
 var MetaKeys = []string{"owner", "department", "country", "type", "effective", "review", "audience", "version", "path", "missing"}
 
 const (
-	maxExternalID    = 256
-	maxMetaKeys      = 16
-	maxMetaValueRune = 500
+	externalCorpusNameKey  = "name"
+	externalCorpusTopicKey = "topic_statement"
+	maxExternalID          = 256
+	maxMetaKeys            = 16
+	maxMetaValueRune       = 500
 )
 
 // ManagedCorpus names the corpus a source files into, for the first filing.
@@ -171,11 +172,8 @@ func (s *Store) UpsertExternal(
 	id := ids.NewV7()
 	key := blobstore.WorkspaceKey(ids.From[ids.WorkspaceKind](storekit.MustWorkspace(ctx)),
 		string(storedobjects.KindKnowledge), id.String())
-	if err := storedobjects.NewLedger(s.db).Record(ctx, storedobjects.KindKnowledge, key); err != nil {
+	if err := s.storeExternalBytes(ctx, key, in, size, media); err != nil {
 		return none, "", err
-	}
-	if err := s.blob.Put(ctx, key, in.Content, size, media); err != nil {
-		return none, "", fmt.Errorf("store the external document: %w", err)
 	}
 
 	var out crmcontracts.KnowledgeDocument
@@ -207,6 +205,16 @@ func (s *Store) UpsertExternal(
 		return none, "", errors.Join(err, s.dropUnreferenced(ctx, key))
 	}
 	return out, outcome, s.deleteSuperseded(ctx, outcome, key, oldKey)
+}
+
+func (s *Store) storeExternalBytes(ctx context.Context, key string, in ExternalDocument, size int64, media string) error {
+	if err := storedobjects.NewLedger(s.db).Record(ctx, storedobjects.KindKnowledge, key); err != nil {
+		return err
+	}
+	if err := s.blob.Put(ctx, key, in.Content, size, media); err != nil {
+		return fmt.Errorf("store the external document: %w", err)
+	}
+	return nil
 }
 
 // deleteSuperseded removes the bytes the filing left unreferenced. An identical
@@ -377,7 +385,7 @@ func ensureManagedCorpus(ctx context.Context, tx pgx.Tx, c ManagedCorpus, by str
 		}
 		if tag.RowsAffected() == 1 {
 			if _, err := storekit.Audit(ctx, tx, "create", "knowledge_corpus", newID, nil, map[string]any{
-				"name": c.Name, "topic_statement": c.Topic, managedSourceKey: c.Source,
+				externalCorpusNameKey: c.Name, externalCorpusTopicKey: c.Topic, managedSourceKey: c.Source,
 			}); err != nil {
 				return ids.Nil, fmt.Errorf("audit the managed corpus: %w", err)
 			}

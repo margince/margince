@@ -14,7 +14,6 @@ import (
 	"errors"
 	"log/slog"
 	"strings"
-	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -184,7 +183,10 @@ func (d replyDrafter) DraftEmailWithProvenance(ctx context.Context, anchor ids.U
 		RewriteOf:         textcut.Runes(steering.RewriteOf, replyActivityMaxRunes),
 	}
 
-	voice := d.loadVoice(ctx)
+	voice, err := d.loadVoice(ctx)
+	if err != nil {
+		return activities.DraftResult{}, err
+	}
 	draft, voiceVersion, draftRef, err := d.completeVoiced(ai.WithFloor(ctx), anchor, data, voice)
 	if err != nil {
 		// Drafting is an assistive read, not the authority to send. Preserve
@@ -276,14 +278,11 @@ func (d replyDrafter) recipientFor(ctx context.Context, anchor ids.ActivityID) a
 // reading that assumes least about them.
 func (d replyDrafter) conversationState(ctx context.Context, activity crmcontracts.Activity) convstate.State {
 	zone := d.envelope.Zone(ctx)
-	occurred := activity.OccurredAt
-	if occurredday.IsDay(activity.OccurredPrecision) {
-		occurred = occurredday.Begins(occurred, zone)
-	}
+	occurred := activitywhen.MomentOf(activity)
 	if draftcore.FromThem(activity) {
-		return convstate.Classify(d.envelope.Now(), occurred, time.Time{}, zone)
+		return convstate.Classify(d.envelope.Now(), occurred, occurredday.Moment{}, zone)
 	}
-	return convstate.Classify(d.envelope.Now(), time.Time{}, occurred, zone)
+	return convstate.Classify(d.envelope.Now(), occurredday.Moment{}, occurred, zone)
 }
 
 // threadFlag spells the thread state for the flat payload. A named value rather

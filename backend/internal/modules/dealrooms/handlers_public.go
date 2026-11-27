@@ -190,7 +190,7 @@ func (h Handlers) GetBuyerRoom(w http.ResponseWriter, r *http.Request) {
 		httperr.Unauthorized(w, r, NoSessionDetail)
 		return
 	}
-	view, err := h.store.BuyerView(r.Context(), sess)
+	view, err := h.store.BuyerView(r.Context(), sess, h.companyName)
 	if err != nil {
 		writeBuyerFault(w, r, err)
 		return
@@ -282,12 +282,14 @@ func (h Handlers) ListBuyerRoomThreads(w http.ResponseWriter, r *http.Request, p
 		httperr.Unauthorized(w, r, NoSessionDetail)
 		return
 	}
-	threads, err := h.store.BuyerThreads(r.Context(), sess, optionalUUID(params.DocumentId))
+	list, err := h.store.BuyerThreads(r.Context(), sess, optionalUUID(params.DocumentId))
 	if err != nil {
 		writeBuyerFault(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, crmcontracts.DealRoomThreadListResponse{Data: threads})
+	httperr.WriteJSON(w, http.StatusOK, crmcontracts.BuyerRoomThreadListResponse{
+		Data: list.Threads, HiddenOwnConversations: list.HiddenOwn,
+	})
 }
 
 // OpenBuyerRoomThread opens a thread as the buyer.

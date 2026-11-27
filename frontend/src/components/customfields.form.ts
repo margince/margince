@@ -395,11 +395,11 @@ const EMPTY_CUSTOM_FIELDS: CustomField[] = [];
 // that exists must stay readable and editable where the record is.
 export type CustomFieldSurface = "create" | "record";
 
-// Which activity a form's fields are for. A field narrowed to other kinds stays
-// out. The exception is a value in `held`, the row the form opened on: the form
-// shows that field so the reader can clear it.
-export type ActivityNarrowing = Readonly<{
-  kind: string;
+// The activity kind or deal pipeline a form is for. A field held in `held` still
+// shows, so the reader can clear a value the record already has.
+export type RecordNarrowing = Readonly<{
+  kind?: string;
+  pipelineId?: string;
   held?: Record<string, unknown>;
 }>;
 
@@ -411,21 +411,38 @@ export function appliesToKind(field: CustomField, kind: string): boolean {
   );
 }
 
+// No pipelines is every pipeline. An archived pipeline stays in the list and
+// matches no deal, because the server keeps deals out of archived pipelines.
+export function appliesToPipeline(field: CustomField, pipelineId: string) {
+  return !field.pipeline_ids || field.pipeline_ids.includes(pipelineId);
+}
+
+export function dealNarrowing(deal: Readonly<Record<string, unknown>>) {
+  const pipelineId = deal.pipeline_id;
+  return typeof pipelineId === "string"
+    ? ({ pipelineId, held: { ...deal } } satisfies RecordNarrowing)
+    : undefined;
+}
+
+function appliesToRecord(field: CustomField, n: RecordNarrowing) {
+  if ((n.held?.[field.column_name] ?? null) !== null) return true;
+  if (n.kind !== undefined && !appliesToKind(field, n.kind)) return false;
+  return n.pipelineId === undefined || appliesToPipeline(field, n.pipelineId);
+}
+
 // The active fields one surface offers. `!== false` rather than a truthy check:
 // a server older than the setting sends no `show_in_create`, and every field
 // showed in create dialogs then.
 export function fieldsForSurface(
   fields: CustomField[],
   surface: CustomFieldSurface,
-  activity?: ActivityNarrowing,
+  narrowing?: RecordNarrowing,
 ): CustomField[] {
   return fields.filter(
     (field) =>
       field.status === "active" &&
       (surface === "record" || field.show_in_create !== false) &&
-      (activity === undefined ||
-        appliesToKind(field, activity.kind) ||
-        (activity.held?.[field.column_name] ?? null) !== null),
+      (narrowing === undefined || appliesToRecord(field, narrowing)),
   );
 }
 
@@ -435,7 +452,7 @@ export function fieldsForSurface(
 export function useObjectCustomFields(
   object: CfObject,
   surface: CustomFieldSurface = "record",
-  activity?: ActivityNarrowing,
+  narrowing?: RecordNarrowing,
 ): ObjectCustomFields {
   const t = useT();
   const { locale } = useLocale();
@@ -444,7 +461,7 @@ export function useObjectCustomFields(
   const fields = fieldsForSurface(
     query.data?.data ?? EMPTY_CUSTOM_FIELDS,
     surface,
-    activity,
+    narrowing,
   );
   const boolLabels = { yes: t("field.yes"), no: t("field.no") };
   // Asked only when a field points at a record, and kept for the session.

@@ -25,9 +25,9 @@ func Unattended(ctx context.Context) bool {
 	return ctx.Value(unattendedKey{}) != nil
 }
 
-// ConversationUser is the colleague whose live conversation this call comes
-// from, or zero. That is an AI client connected on their own passport, outside
-// an unattended run. A passport minted without a connection is unattended.
+// ConversationUser is the user of an OAuth-connected credential, or zero.
+// Chat clients and automatic clients on that credential have the same answer.
+// A minted passport has no conversation; the built-in runner is also excluded.
 func ConversationUser(ctx context.Context, p Principal) ids.UUID {
 	connected := p.Type == PrincipalAgent && !p.PassportID.IsZero() && !p.ConnectionID.IsZero()
 	if Unattended(ctx) || !connected || p.OnBehalfOf.IsZero() {

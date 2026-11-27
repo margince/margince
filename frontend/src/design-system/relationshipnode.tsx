@@ -1,6 +1,7 @@
 import type { RelationshipMapLabels } from "./relationshipmap";
 import {
   fitLabel,
+  fitPhrase,
   type MapNode,
   NAME_CHARS,
   NODE_INSET,
@@ -80,11 +81,13 @@ export function Node({
         rx={placed.kind === "company" ? 12 : 8}
       />
       <text className="rmap-name" x={textX} y={placed.y + 22}>
+        <title>{node.label}</title>
         {fitLabel(node.label, room, measures.name, NAME_CHARS)}
       </text>
       {node.sublabel && (
         <text className="rmap-sub" x={textX} y={placed.y + 38}>
-          {fitLabel(node.sublabel, room, measures.sub, SUB_CHARS)}
+          <title>{node.sublabel}</title>
+          {fitPhrase(node.sublabel, room, measures.sub, SUB_CHARS)}
         </text>
       )}
       {node.engagementLabel && (

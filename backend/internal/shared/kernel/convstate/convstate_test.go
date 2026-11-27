@@ -8,19 +8,20 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // A fixed instant, so every case reads as a date rather than as arithmetic
 // against whatever today happens to be.
 var now = time.Date(2026, time.August, 11, 9, 0, 0, 0, time.UTC)
 
-func daysAgo(n int) time.Time { return now.AddDate(0, 0, -n) }
+func daysAgo(n int) occurredday.Moment { return occurredday.Moment{At: now.AddDate(0, 0, -n)} }
 
 func TestClassifyPlacesACorrespondenceOnTheAxis(t *testing.T) {
 	cases := []struct {
 		name          string
-		lastIn        time.Time
-		lastOut       time.Time
+		lastIn        occurredday.Moment
+		lastOut       occurredday.Moment
 		wantBand      convstate.Band
 		wantDays      int
 		wantDirection convstate.Direction
@@ -98,7 +99,7 @@ func TestTheBandBoundariesAreExactlyWhereTheyAreWritten(t *testing.T) {
 		{days: convstate.WeeksMaxDays + 1, want: convstate.BandMonths},
 	}
 	for _, c := range cases {
-		got := convstate.Classify(now, daysAgo(c.days), time.Time{}, time.UTC)
+		got := convstate.Classify(now, daysAgo(c.days), occurredday.Moment{}, time.UTC)
 		if got.Band != c.want {
 			t.Errorf("at %d days of silence Band = %q, want %q", c.days, got.Band, c.want)
 		}
@@ -108,7 +109,7 @@ func TestTheBandBoundariesAreExactlyWhereTheyAreWritten(t *testing.T) {
 // Clock skew between a mail host and this one is ordinary. A message dated in
 // the future just arrived; it is not negative silence.
 func TestAMessageDatedInTheFutureIsTreatedAsJustArrived(t *testing.T) {
-	got := convstate.Classify(now, now.AddDate(0, 0, 2), time.Time{}, time.UTC)
+	got := convstate.Classify(now, occurredday.Moment{At: now.AddDate(0, 0, 2)}, occurredday.Moment{}, time.UTC)
 
 	if got.SilenceDays != 0 {
 		t.Errorf("SilenceDays = %d, want 0", got.SilenceDays)
@@ -151,8 +152,26 @@ func TestSilenceUsesTheInstallationCalendar(t *testing.T) {
 	}
 	at := time.Date(2026, 3, 28, 11, 0, 0, 0, time.UTC)
 	now := time.Date(2026, 3, 29, 10, 0, 0, 0, time.UTC)
-	got := convstate.Classify(now, at, time.Time{}, zone)
+	got := convstate.Classify(now, occurredday.Moment{At: at}, occurredday.Moment{}, zone)
 	if got.SilenceDays != 1 {
 		t.Fatalf("silence = %d, want 1 across the short day", got.SilenceDays)
+	}
+}
+
+// A date-only message counts its silence from its own date. Its noon-UTC
+// anchor is already the next day at UTC+14, so counting from the instant read
+// the conversation a day fresher than it is.
+func TestADateOnlyMessageCountsSilenceFromItsOwnDate(t *testing.T) {
+	kiritimati, err := time.LoadLocation("Pacific/Kiritimati")
+	if err != nil {
+		t.Fatal(err)
+	}
+	met := time.Date(2026, 11, 20, 12, 0, 0, 0, time.UTC)
+	asOf := time.Date(2026, 11, 25, 10, 30, 0, 0, time.UTC)
+	day := convstate.Classify(asOf, occurredday.Moment{At: met, DateOnly: true}, occurredday.Moment{}, kiritimati)
+	instant := convstate.Classify(asOf, occurredday.Moment{At: met}, occurredday.Moment{}, kiritimati)
+	if day.SilenceDays != 6 || instant.SilenceDays != 5 {
+		t.Errorf("silence = %d for the date-only message and %d for the instant, want 6 and 5",
+			day.SilenceDays, instant.SilenceDays)
 	}
 }

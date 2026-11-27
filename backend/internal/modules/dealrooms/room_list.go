@@ -62,7 +62,7 @@ var roomSortFields = map[string]storekit.SortField{
 
 // ListRooms pages the Deal Rooms whose deals the caller can see.
 func (s *Store) ListRooms(ctx context.Context, in ListRoomsInput) ([]crmcontracts.DealRoom, storekit.Page, error) {
-	if err := auth.Require(ctx, roomObject, principal.ActionRead); err != nil {
+	if err := requireRoomRead(ctx); err != nil {
 		return nil, storekit.Page{}, err
 	}
 	var (
@@ -92,18 +92,11 @@ func roomPage(ctx context.Context, tx pgx.Tx, in ListRoomsInput) ([]crmcontracts
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}
-	scope, err := dealScopeClause(ctx, arg)
+	scope, err := auth.DealChildScopeClause(ctx, "r", arg)
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}
-	// The deal is an EXISTS rather than a JOIN, and that is what lets the house
-	// keyset name its columns: `deal` carries a `created_at` and an `id` of its
-	// own, so with it in the FROM list the cursor tuple — alias-free by design,
-	// since every other list it serves reads one table — is ambiguous and
-	// Postgres refuses the statement. Nothing outside selects a deal column;
-	// the join was only ever the room's row scope.
-	where := []string{storekit.SQLf(
-		`EXISTS (SELECT 1 FROM deal d WHERE d.id = r.deal_id AND (%s))`, scope)}
+	where := []string{scope}
 	if !in.IncludeArchived {
 		where = append(where, "r.archived_at IS NULL")
 	}

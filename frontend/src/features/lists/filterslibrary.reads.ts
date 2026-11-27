@@ -8,9 +8,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { SEARCH_DEBOUNCE_MS } from "../../design-system/debouncedsearch";
 import { formatNumber } from "../../format/format";
-import { useLocale } from "../../i18n";
+import { useLocale, useT } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
 import { type FilterResource, useFilterVocabulary } from "../../lib/filterdata";
-import { LIBRARY_TYPES } from "../../lib/filtersaddress";
+import { type CoreLibraryType, LIBRARY_TYPES } from "../../lib/filtersaddress";
 import { useLists } from "../../lib/lists.queries";
 import { useAllSavedViews } from "../../lib/savedviews.queries";
 import type { UrlParams } from "../../lib/urlstate";
@@ -163,14 +164,24 @@ function usePaused(value: string): string {
   return paused;
 }
 
+const SAVED_ON_LABEL: Record<CoreLibraryType, MessageKey> = {
+  contacts: "filters.library.savedOn.contacts",
+  companies: "filters.library.savedOn.companies",
+  deals: "filters.library.savedOn.deals",
+  leads: "filters.library.savedOn.leads",
+  projects: "filters.library.savedOn.projects",
+};
+
 /**
- * What each row says under its name: a list's purpose, else the filter as a
- * sentence. A vocabulary is read only for a record type some row needs words
- * for, and until it answers the filter is counted rather than named.
+ * What each row says under its name: a list's purpose, the list a view was
+ * saved on, else the filter as a sentence. A vocabulary is read only for a
+ * record type some row needs words for, and until it answers the filter is
+ * counted rather than named.
  */
 export function useCaptions(
   items: readonly LibraryItem[],
 ): (item: LibraryItem) => string {
+  const t = useT();
   const wanted = new Set<FilterResource>(
     items
       .filter((item) => treeOf(item) !== null && !purposeOf(item))
@@ -199,6 +210,9 @@ export function useCaptions(
     ),
   );
   return (item) => {
+    if (item.kind === "listView") {
+      return t(SAVED_ON_LABEL[item.type]);
+    }
     const purpose = purposeOf(item);
     if (purpose) {
       return purpose;

@@ -6,10 +6,12 @@ package approvals
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/approvalsubject"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
@@ -44,6 +46,11 @@ func resolveDecider(ctx context.Context, tx pgx.Tx, p principal.Principal, in St
 	if approvalsubject.PayloadOwned(in.Kind) {
 		return firstAskable(ctx, tx, []deciderCandidate{{approvalsubject.Owner(in.Kind, in.ProposedChange), deciderPayloadOwner}})
 	}
+	if p.Type == principal.PrincipalAgent && actsForItsOwnColleague(p) {
+		// The product's own job answers to the colleague it acts for, and to
+		// nobody else: a colleague who left makes no proposal.
+		return passportlessAgentsColleague(ctx, tx, p)
+	}
 	candidates := []deciderCandidate{{p.OnBehalfOf, deciderOnBehalfOf}}
 	if p.Type == principal.PrincipalHuman {
 		candidates = append(candidates, deciderCandidate{p.UserID, deciderStager})
@@ -54,6 +61,20 @@ func resolveDecider(ctx context.Context, tx pgx.Tx, p principal.Principal, in St
 	}
 	candidates = append(candidates, deciderCandidate{owner, deciderRecordOwner})
 	return firstAskable(ctx, tx, candidates)
+}
+
+// passportlessAgentsColleague is the decider of a job agent's proposal: the colleague
+// it acts for, while that colleague is still a member.
+func passportlessAgentsColleague(ctx context.Context, tx pgx.Tx, p principal.Principal) (deciderCandidate, error) {
+	askable, err := CanBeAsked(ctx, tx, p.OnBehalfOf)
+	if err != nil {
+		return deciderCandidate{}, err
+	}
+	if !askable {
+		return deciderCandidate{}, fmt.Errorf("the colleague this job acts for is no longer a member: %w",
+			apperrors.ErrPermissionDenied)
+	}
+	return deciderCandidate{p.OnBehalfOf, deciderOnBehalfOf}, nil
 }
 
 func firstAskable(ctx context.Context, tx pgx.Tx, candidates []deciderCandidate) (deciderCandidate, error) {
