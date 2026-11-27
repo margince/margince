@@ -12276,8 +12276,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Sie können der Nutzung Ihrer Daten, die auf unserem berechtigten Interesse beruht, jederzeit widersprechen. Wir hören dann damit auf, es sei denn, wir haben zwingende Gründe weiterzumachen. Widersprechen Sie Werbung, senden wir keine mehr, und Sie müssen keinen Grund nennen.",
   "privacynotice.objection.how": "So widersprechen Sie: {route}",
   "notice.ownerOf": "Zuständig für {duty}",
-  "notice.excuse": "Ohne Versand beenden",
-  "notice.excuseTitle": "Pflicht ohne Versand der Information beenden",
+  "notice.excuse": "Schließen, ohne zu senden",
+  "notice.excuseTitle": "Schließen, ohne zu senden",
   "notice.excuseWhich": "Art des Grunds",
   "notice.excuseProvided": "Bereits anderweitig informiert",
   "notice.excuseExempt": "Pflicht gilt nicht",
@@ -22836,16 +22836,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "noticeDuty.what":
     "Prüfen, woher die Kontaktdaten stammen und ob die erfasste Informationspflicht noch besteht.",
   "noticeDuty.how":
-    "Sende den Datenschutzhinweis, frage nach einer Bestätigung der Daten (das informiert ebenfalls) oder beende die Pflicht, wenn der Kontakt schon informiert ist oder eine Ausnahme gilt.",
+    "Sende den Datenschutzhinweis, frage nach einer Bestätigung der Daten (das informiert ebenfalls) oder schließe, ohne zu senden, wenn der Kontakt schon informiert ist oder eine Ausnahme gilt.",
   "noticeDuty.sendNotice": "Datenschutzhinweis senden",
   "noticeDuty.askConfirm": "Bestätigung der Angaben anfordern",
-  "noticeDuty.end": "Pflicht beenden…",
+  "noticeDuty.end": "Schließen, ohne zu senden…",
   "noticeDuty.sent":
     "An {address} gesendet. Der Eintrag verschwindet aus deiner Worklist, bleibt in der Compliance-Warteschlange aber ausstehend, bis die Nachricht zugestellt ist. Kommt die Nachricht nicht an, erscheint der Eintrag wieder hier.",
   "noticeDuty.notSent":
     "Nicht gesendet: Diese Installation kann keine E-Mail an {address} senden.",
-  "noticeDuty.ended":
-    "Die Pflicht ist beendet. Deine Begründung ist gespeichert.",
+  "noticeDuty.ended": "Ohne Versand geschlossen. Der Grund ist vermerkt.",
   "noticeDuty.obtainedAs": "Erhalten als",
   "noticeDuty.obtainedOn": "Erhalten am",
   "noticeDuty.dateUnknown": "Datum unbekannt",

@@ -132,7 +132,7 @@ describe("a privacy-notice duty on the Focus card", () => {
         name: "Ask them to confirm their details",
       }),
     ).toBeTruthy();
-    expect(screen.getByRole("button", { name: "End the duty…" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: en["noticeDuty.end"] })).toBeTruthy();
 
     await user.click(
       screen.getByRole("button", { name: "Send privacy notice" }),

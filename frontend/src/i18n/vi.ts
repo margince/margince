@@ -11942,8 +11942,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Quý khách có thể phản đối việc xử lý dữ liệu cá nhân hoặc rút lại sự đồng ý bất cứ lúc nào. Chúng tôi phản hồi trong 02 ngày làm việc và ngừng xử lý trong 15 ngày, trừ trường hợp pháp luật cho phép xử lý không cần sự đồng ý của quý khách. Nếu quý khách từ chối nhận quảng cáo, chúng tôi ngừng gửi quảng cáo ngay mà không cần quý khách nêu lý do.",
   "privacynotice.objection.how": "Cách phản đối: {route}",
   "notice.ownerOf": "Phụ trách {duty}",
-  "notice.excuse": "Kết thúc mà không gửi",
-  "notice.excuseTitle": "Kết thúc nghĩa vụ mà không gửi thông báo",
+  "notice.excuse": "Đóng mà không gửi",
+  "notice.excuseTitle": "Đóng mà không gửi",
   "notice.excuseWhich": "Loại lý do",
   "notice.excuseProvided": "Đã được thông báo ở nơi khác",
   "notice.excuseExempt": "Nghĩa vụ không áp dụng",
@@ -22229,15 +22229,15 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "noticeDuty.what":
     "Kiểm tra nguồn thông tin liên hệ và xem nghĩa vụ thông báo đã ghi nhận còn áp dụng hay không.",
   "noticeDuty.how":
-    "Gửi thông báo quyền riêng tư, đề nghị họ xác nhận thông tin (việc này cũng thông báo cho họ), hoặc kết thúc nghĩa vụ nếu họ đã biết hoặc có ngoại lệ áp dụng.",
+    "Gửi thông báo quyền riêng tư, đề nghị họ xác nhận thông tin (việc này cũng thông báo cho họ), hoặc đóng mà không gửi nếu họ đã biết hoặc có ngoại lệ áp dụng.",
   "noticeDuty.sendNotice": "Gửi thông báo quyền riêng tư",
   "noticeDuty.askConfirm": "Đề nghị xác nhận thông tin",
-  "noticeDuty.end": "Kết thúc nghĩa vụ…",
+  "noticeDuty.end": "Đóng mà không gửi…",
   "noticeDuty.sent":
     "Đã gửi tới {address}. Việc này rời khỏi Danh sách công việc nhưng vẫn còn trong hàng đợi tuân thủ cho đến khi gửi thành công, và sẽ quay lại đây nếu thư bị trả về.",
   "noticeDuty.notSent":
     "Chưa gửi: bản cài đặt này không thể gửi thư tới {address}.",
-  "noticeDuty.ended": "Đã kết thúc nghĩa vụ và ghi nhận lý do.",
+  "noticeDuty.ended": "Đã đóng mà không gửi và ghi nhận lý do.",
   "noticeDuty.obtainedAs": "Thu thập qua",
   "noticeDuty.obtainedOn": "Ngày thu thập",
   "noticeDuty.dateUnknown": "Không rõ ngày",

@@ -12208,8 +12208,8 @@ export const en = {
     "You can object at any time to our use of your data that rests on our legitimate interest. We then stop, unless we have compelling reasons to go on. If you object to advertising, we stop sending it, and you need not give a reason.",
   "privacynotice.objection.how": "To object: {route}",
   "notice.ownerOf": "Owner of {duty}",
-  "notice.excuse": "End without sending",
-  "notice.excuseTitle": "End duty without sending disclosure",
+  "notice.excuse": "Close without sending",
+  "notice.excuseTitle": "Close without sending",
   "notice.excuseWhich": "Reason type",
   "notice.excuseProvided": "Already informed elsewhere",
   "notice.excuseExempt": "Duty does not apply",
@@ -22479,15 +22479,15 @@ export const en = {
   "noticeDuty.what":
     "Review how this contact’s details were obtained and whether the recorded disclosure duty still applies.",
   "noticeDuty.how":
-    "Send the privacy notice, ask them to confirm their details (which tells them too), or end the duty if they already know or an exemption applies.",
+    "Send the privacy notice, ask them to confirm their details (which tells them too), or close without sending if they already know or an exemption applies.",
   "noticeDuty.sendNotice": "Send privacy notice",
   "noticeDuty.askConfirm": "Ask them to confirm their details",
-  "noticeDuty.end": "End the duty…",
+  "noticeDuty.end": "Close without sending…",
   "noticeDuty.sent":
     "Sent to {address}. It leaves your Worklist but stays owed on the compliance queue until delivered, and comes back here if it bounces.",
   "noticeDuty.notSent":
     "Not sent: this installation cannot send mail to {address}.",
-  "noticeDuty.ended": "The duty is ended, with your ground on record.",
+  "noticeDuty.ended": "Closed without sending, with the reason on record.",
   "noticeDuty.obtainedAs": "Obtained as",
   "noticeDuty.obtainedOn": "Obtained on",
   "noticeDuty.dateUnknown": "Date unknown",
