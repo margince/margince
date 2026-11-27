@@ -32,6 +32,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/partnersteps"
 	"github.com/margince/margince/backend/internal/compose/requesttask"
 	"github.com/margince/margince/backend/internal/compose/salesprogress"
+	"github.com/margince/margince/backend/internal/compose/tasktaken"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
@@ -97,7 +98,7 @@ func newActivitiesHandlers(pool *pgxpool.Pool) activitiesHandlers {
 		WithTaskRecommendation(taskRecommendationReader(pool)).
 		WithInquiryAssignment(newInquiryAssignment(InstallationDB(pool))).
 		WithLeadQualifyTasks(newLeadWorkTasks(InstallationDB(pool), slog.Default())).
-		WithTeamRequestNotice(teamRequestNotice{}).
+		WithTeamRequestNotice(teamRequestNotice{}).WithTaskTaken(tasktaken.Hook()).
 		WithFieldCatalog(customfields.NewService(pool, nil)).
 		WithRecordZone(installationZoneTx).
 		WithSettings(StoredConfig(pool)).

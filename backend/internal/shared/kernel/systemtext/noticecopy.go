@@ -24,4 +24,7 @@ var noticeDefinitions = map[string]Definition{
 
 	"notice.deal_net_value.subject": {Words: langcopy.Phrase{En: "A deal's value now leaves out tax", De: "Der Wert eines Deals enthält jetzt keine Steuer mehr", Vi: "Giá trị của một deal nay không còn gồm thuế"}},
 	"notice.deal_net_value.body":    {Words: langcopy.Phrase{En: "The value of %s now leaves out tax: %s became %s. The accepted offer's tax had been counted in it.", De: "Der Wert von %s enthält jetzt keine Steuer mehr: aus %s wurde %s. Die Steuer des angenommenen Angebots war darin enthalten.", Vi: "Giá trị của %s nay không còn gồm thuế: %s đã thành %s. Thuế của báo giá đã chấp nhận từng được tính trong đó."}, Arguments: []string{argumentText, argumentText, argumentText}},
+
+	"notice.task_taken.subject": {Words: langcopy.Phrase{En: "%s took a task on %s", De: "%s hat eine Aufgabe zu %s übernommen", Vi: "%s đã nhận một công việc của %s"}, Arguments: []string{argumentText, argumentText}},
+	"notice.task_taken.body":    {Words: langcopy.Phrase{En: "Nobody held the task, so it is now theirs. Open the record to give it to someone else.", De: "Niemand hatte die Aufgabe, jetzt gehört sie ihm oder ihr. Öffne den Datensatz, um sie jemand anderem zu geben.", Vi: "Công việc này chưa có ai phụ trách nên nay thuộc về họ. Mở hồ sơ để giao cho đồng nghiệp khác."}},
 }

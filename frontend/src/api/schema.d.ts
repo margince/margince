@@ -6637,6 +6637,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/activities/{id}/take": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Take an open task nobody holds.
+         * @description Makes the caller the assignee of an open task that has no assignee. Anyone who can see the task and may change tasks can take it, whether or not they could change this task before: a task nobody holds has no owner to protect. The owner of each record the task is filed under is told, and can give the task to someone else with `PATCH /activities/{id}`. The write is pinned with `If-Match`. A task someone took first, a task that is done, a task that is not a task and a website-inquiry task (which has its own take through `POST /activities/{id}/inquiry-assignment`) answer `409`. A caller who may not change tasks answers `403`, and a task the caller cannot see `404`.
+         */
+        post: operations["takeTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/activities/{id}/disposition": {
         parameters: {
             query?: never;
@@ -77590,6 +77613,43 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WebsiteInquiryAssignment"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["VersionConflict"];
+            422: components["responses"]["ValidationError"];
+            423: components["responses"]["RetentionHeld"];
+        };
+    };
+    takeTask: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+                 *     the last-seen entity `version`. If the row's current `version` differs, the write is
+                 *     rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+                 *     re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+                 *     Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+                 */
+                "If-Match"?: components["parameters"]["IfMatch"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The task, now assigned to the caller. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Activity"];
                 };
             };
             403: components["responses"]["Forbidden"];

@@ -167,6 +167,10 @@ func (stubs) SendMessage(w nethttp.ResponseWriter, r *nethttp.Request, id crmcon
 	httperr.NotImplemented(w, r, "SendMessage")
 }
 
+func (stubs) TakeTask(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.TakeTaskParams) {
+	httperr.NotImplemented(w, r, "TakeTask")
+}
+
 func (stubs) ReadTranscriptForNextSteps(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "ReadTranscriptForNextSteps")
 }

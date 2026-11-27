@@ -176,6 +176,7 @@ var noticeSiteWaivers = gatekit.Waive(map[string]string{
 	"internal/compose/notificationdigestrender.go: targetType":         "a key of a lookup built from a stored notice's own target type; it writes no notice",
 	"internal/compose/ownershiptransfernotice.go: transfer.RecordType": "company or contact, the two record types an ownership transfer moves",
 	"internal/compose/privacyreview/review.go: source.Kind":            "the kind of a privacy.ErasureReviewSource, read by the scan of that literal and by the SQL kinds this test reads",
+	"internal/compose/tasktaken/tasktaken.go: n.recordType":            "the entity type of a task's link, filtered by recordowner.Known to the contract's record types, all of them in targettype.Type",
 	"internal/compose/receiptalarm.go: missed.SubjectType":             "contact or lead, the subject types a missed opt-out receipt names",
 	"internal/modules/notices/centre.go: *targetType":                  "reads a stored notice target; it writes no notice",
 	"internal/modules/notices/digestclaim.go: *targetType":             "reads a stored notice target; it writes no notice",
