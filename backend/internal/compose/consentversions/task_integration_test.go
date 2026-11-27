@@ -22,20 +22,23 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-func seedConsentVersion(t *testing.T, e *integration.Env, lead, withdrawn bool) ids.UUID {
+type consentVersionSeed struct{ Lead, Withdrawn bool }
+
+func seedConsentVersion(t *testing.T, e *integration.Env, seed consentVersionSeed) ids.UUID {
 	t.Helper()
 	subject := e.SeedContact(t, "Consent subject", nil)
 	column := "contact_id"
-	if lead {
+	if seed.Lead {
 		subject = ids.NewV7()
 		e.WsExec(t, `INSERT INTO lead (id, source, captured_by) VALUES ($1, 'manual', 'human:test')`, subject)
 		column = "lead_id"
 	}
+	e.WsExec(t, `INSERT INTO consent_purpose (id, key, label, requires_double_opt_in) VALUES ($1, 'business_correspondence', 'Business correspondence', false) ON CONFLICT (key) DO NOTHING`, ids.NewV7())
 	purpose := ids.MustParse(e.WsScalar(t, `SELECT id::text FROM consent_purpose WHERE key = 'business_correspondence'`))
 	id, at := ids.NewV7(), clocktest.Now(t).UTC()
 	state := "granted"
 	var text, version *string
-	if withdrawn {
+	if seed.Withdrawn {
 		state = "withdrawn"
 	} else {
 		text, version = new("The wording shown"), new("policy-1")
@@ -55,21 +58,21 @@ func consentVersion(t *testing.T, e *integration.Env, id ids.UUID) string {
 func TestConsentVersionTaskUsesOnlyTheMatchingLatestProof(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
-	contact, lead := seedConsentVersion(t, e, false, false), seedConsentVersion(t, e, true, false)
-	withdrawal := seedConsentVersion(t, e, false, true)
-	untouched := seedConsentVersion(t, e, false, false)
+	contact, lead := seedConsentVersion(t, e, consentVersionSeed{}), seedConsentVersion(t, e, consentVersionSeed{Lead: true})
+	withdrawal := seedConsentVersion(t, e, consentVersionSeed{Withdrawn: true})
+	untouched := seedConsentVersion(t, e, consentVersionSeed{})
 	e.WsExec(t, `UPDATE contact_consent SET policy_version = 'already-recorded' WHERE id = $1`, untouched)
 	var unknown []ids.UUID
 	for _, change := range []string{"source = 'different'", "lawful_basis = 'contract'", "captured_at = captured_at + interval '1 second'", "state = 'withdrawn'"} {
-		id := seedConsentVersion(t, e, false, false)
+		id := seedConsentVersion(t, e, consentVersionSeed{})
 		e.WsExec(t, `UPDATE contact_consent SET `+change+` WHERE id = $1`, id)
 		unknown = append(unknown, id)
 	}
-	tied := seedConsentVersion(t, e, true, false)
+	tied := seedConsentVersion(t, e, consentVersionSeed{Lead: true})
 	e.WsExec(t, `INSERT INTO consent_event (id, lead_id, purpose_id, new_state, source, captured_at, captured_by, policy_text, policy_version)
   SELECT 'ffffffff-ffff-4fff-bfff-ffffffffffff', lead_id, purpose_id, state, source, captured_at, 'human:test', 'Later wording', 'policy-2'
     FROM contact_consent WHERE id = $1`, tied)
-	stale := seedConsentVersion(t, e, false, false)
+	stale := seedConsentVersion(t, e, consentVersionSeed{})
 	e.WsExec(t, `INSERT INTO consent_event (contact_id, purpose_id, new_state, source, captured_at, captured_by)
   SELECT contact_id, purpose_id, 'withdrawn', source, captured_at + interval '1 second', 'human:test'
     FROM contact_consent WHERE id = $1`, stale)
@@ -123,7 +126,7 @@ func TestConsentVersionTaskUsesOnlyTheMatchingLatestProof(t *testing.T) {
 func TestConsentVersionTaskRollsBackWithItsExecutorTransaction(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
-	id := seedConsentVersion(t, e, false, false)
+	id := seedConsentVersion(t, e, consentVersionSeed{})
 	abort := errors.New("abort the batch")
 	task := consentversions.DataTask()
 	batch := task.Steps[0].Batch
@@ -157,9 +160,9 @@ func TestConsentVersionTaskBoundsItsEstimateAndPagesPastUnknownProof(t *testing.
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	for range 3 {
-		seedConsentVersion(t, e, false, true)
+		seedConsentVersion(t, e, consentVersionSeed{Withdrawn: true})
 	}
-	seedConsentVersion(t, e, true, false)
+	seedConsentVersion(t, e, consentVersionSeed{Lead: true})
 	step := consentversions.DataTask().Steps[0]
 	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		count, more, err := step.Estimate(ctx, tx, 2)

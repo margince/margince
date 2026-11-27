@@ -492,7 +492,7 @@ func TestAMultiselectListFilterComparesSetsWithOneTypedParameter(t *testing.T) {
 	if !reflect.DeepEqual(args, []any{[]string{"North", "West"}}) {
 		t.Fatalf("args=%#v", args)
 	}
-	for _, bad := range []string{`North`, `null`, `[1]`, `{"North":true}`} {
+	for _, bad := range []string{`North`, `null`, `[]`, `[1]`, `{"North":true}`} {
 		if _, err := CustomFilterClauses(columns, map[string]string{"cf_tags": bad}, arg); err == nil {
 			t.Errorf("accepted %s", bad)
 		}

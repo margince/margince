@@ -348,105 +348,98 @@ export function ContactDetails({
   const linkedin =
     typeof contact.social?.linkedin === "string" ? contact.social.linkedin : "";
   return (
-    <>
-      <RecordFields
-        title={t("contact.rail.detailsTitle")}
-        kind="contact"
-        renderValues={{
-          // Each handle with its kind beside it (work, mobile, personal), the
-          // same words the edit form offers, so a reader with two numbers
-          // knows which one rings a desk.
-          emails: contact.emails?.length
-            ? contact.emails.map((email) => (
-                <span key={email.email} className="fieldgrid-handle">
-                  <ContactLink
-                    kind="email"
-                    value={email.email}
-                    record={{ entityType: "contact", entityId: contact.id }}
-                    readOnly={Boolean(contact.archived_at)}
-                  />
-                  <span className="t-caption">
-                    {t(labelFor(EMAIL_TYPE_LABEL, email.email_type ?? "work"))}
-                  </span>
-                  <BoughtMark
-                    bought={bought.get(`email:${email.id}`)}
-                    subject={email.email}
-                  />
+    <RecordFields
+      title={t("contact.rail.detailsTitle")}
+      kind="contact"
+      renderValues={{
+        // Handle kinds distinguish a work number from a personal one.
+        emails: contact.emails?.length
+          ? contact.emails.map((email) => (
+              <span key={email.email} className="fieldgrid-handle">
+                <ContactLink
+                  kind="email"
+                  value={email.email}
+                  record={{ entityType: "contact", entityId: contact.id }}
+                  readOnly={Boolean(contact.archived_at)}
+                />
+                <span className="t-caption">
+                  {t(labelFor(EMAIL_TYPE_LABEL, email.email_type ?? "work"))}
                 </span>
-              ))
-            : undefined,
-          phones: contact.phones?.length
-            ? contact.phones.map((phone) => (
-                <span key={phone.phone} className="fieldgrid-handle">
-                  <ContactLink
-                    kind="phone"
-                    value={phone.phone}
-                    record={{ entityType: "contact", entityId: contact.id }}
-                  />
-                  <span className="t-caption">
-                    {t(labelFor(PHONE_TYPE_LABEL, phone.phone_type ?? "work"))}
-                  </span>
-                  <BoughtMark
-                    bought={bought.get(`phone:${phone.id}`)}
-                    subject={phone.phone}
-                  />
+                <BoughtMark
+                  bought={bought.get(`email:${email.id}`)}
+                  subject={email.email}
+                />
+              </span>
+            ))
+          : undefined,
+        phones: contact.phones?.length
+          ? contact.phones.map((phone) => (
+              <span key={phone.phone} className="fieldgrid-handle">
+                <ContactLink
+                  kind="phone"
+                  value={phone.phone}
+                  record={{ entityType: "contact", entityId: contact.id }}
+                />
+                <span className="t-caption">
+                  {t(labelFor(PHONE_TYPE_LABEL, phone.phone_type ?? "work"))}
                 </span>
-              ))
-            : undefined,
-        }}
-        // The label claims the destination is LinkedIn, and a crawl or a
-        // connector writes this value, so another host gets no link.
-        links={
-          linkedinUrl(linkedin)
-            ? {
-                "social.linkedin": {
-                  href: linkedin,
-                  label: t("record.openProfile"),
-                },
-              }
-            : undefined
-        }
-        marks={{
-          title: (
-            <BoughtMark
-              bought={bought.get("title")}
-              subject={contact.title ?? ""}
-            />
-          ),
-          "social.linkedin": (
-            <BoughtMark bought={bought.get("linkedin")} subject={linkedin} />
-          ),
-        }}
-        canEdit={edit.canEdit}
-        extraRows={
-          <>
-            {/* What a provider sold that no field holds: shown as bought facts
+                <BoughtMark
+                  bought={bought.get(`phone:${phone.id}`)}
+                  subject={phone.phone}
+                />
+              </span>
+            ))
+          : undefined,
+      }}
+      // The label claims the destination is LinkedIn, and a crawl or a
+      // connector writes this value, so another host gets no link.
+      links={
+        linkedinUrl(linkedin)
+          ? {
+              "social.linkedin": {
+                href: linkedin,
+                label: t("record.openProfile"),
+              },
+            }
+          : undefined
+      }
+      marks={{
+        title: (
+          <BoughtMark
+            bought={bought.get("title")}
+            subject={contact.title ?? ""}
+          />
+        ),
+        "social.linkedin": (
+          <BoughtMark bought={bought.get("linkedin")} subject={linkedin} />
+        ),
+      }}
+      canEdit={edit.canEdit}
+      extraRows={
+        <>
+          {/* What a provider sold that no field holds: shown as bought facts
                 beside the record, never copied into the address. */}
-            <BoughtAttributes
-              profiles={profiles}
-              runs={contact.bought_fields}
-            />
-            <FieldRow label={t("list.created")}>
-              {formatDateAbbrev(contact.created_at, locale, zone)}
-            </FieldRow>
-            <FieldRow label={t("history.field.source")} align="middle">
-              <ContactSource contact={contact} />
-            </FieldRow>
-          </>
-        }
-        fields={[...edit.fields]}
-        groups={[
-          {
-            label: t("co.address.summary"),
-            keys: [...ADDRESS_KEYS],
-          },
-        ]}
-        record={edit.record}
-        resolveExisting={edit.resolveExisting}
-        refusalNotice={leadHeldNoticeFor}
-        save={edit.save}
-      />
-    </>
+          <BoughtAttributes profiles={profiles} runs={contact.bought_fields} />
+          <FieldRow label={t("list.created")}>
+            {formatDateAbbrev(contact.created_at, locale, zone)}
+          </FieldRow>
+          <FieldRow label={t("history.field.source")} align="middle">
+            <ContactSource contact={contact} />
+          </FieldRow>
+        </>
+      }
+      fields={[...edit.fields]}
+      groups={[
+        {
+          label: t("co.address.summary"),
+          keys: [...ADDRESS_KEYS],
+        },
+      ]}
+      record={edit.record}
+      resolveExisting={edit.resolveExisting}
+      refusalNotice={leadHeldNoticeFor}
+      save={edit.save}
+    />
   );
 }
 

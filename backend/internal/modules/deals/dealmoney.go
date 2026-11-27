@@ -243,7 +243,7 @@ func amountSetError(amount *int64) error {
 	if amount != nil && *amount < 0 {
 		return &NegativeAmountError{}
 	}
-	return nil
+	return dealAmountUpperBound(amountField, amount)
 }
 
 // NegativeAmountError refuses a one-off amount below zero. A negative deal

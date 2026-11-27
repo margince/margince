@@ -89,7 +89,8 @@ function readings(
     const display = read(field, record[field.column_name]);
     if (!display) continue;
     displayValues[field.column_name] = display;
-    renderValues[field.column_name] = renderCustomFieldValue(field, display);
+    const rendered = renderCustomFieldValue(field, display);
+    if (rendered !== undefined) renderValues[field.column_name] = rendered;
   }
   return { displayValues, renderValues };
 }
@@ -105,5 +106,5 @@ export function renderCustomFieldValue(
   if (href && (field.type === "text" || field.type === "url")) {
     return <OffsiteLink href={href}>{display}</OffsiteLink>;
   }
-  return display;
+  return undefined;
 }

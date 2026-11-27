@@ -1,7 +1,8 @@
 /** @vitest-environment happy-dom */
+import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, expect, it } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 import { en } from "../i18n/en";
 import { openViewStep } from "../testing/listview.testkit";
 import {
@@ -16,7 +17,10 @@ import {
 } from "./listcustomfields.stories";
 
 afterEach(cleanup);
-function show(masked = false) {
+function show(
+  masked = false,
+  onFilters?: (filters: Readonly<Record<string, string>>) => void,
+) {
   installFetchStub({
     "GET /me": meRoute({ contact: ["read"] }),
     "GET /custom-fields": () =>
@@ -24,7 +28,7 @@ function show(masked = false) {
   });
   render(
     <StoryProviders>
-      <CustomFieldListExample masked={masked} />
+      <CustomFieldListExample masked={masked} onFilters={onFilters} />
     </StoryProviders>,
   );
 }
@@ -60,13 +64,16 @@ it("keeps a masked custom value hidden after the reader shows its column", async
 
 it("applies a catalog picklist filter using its real column key", async () => {
   const user = userEvent.setup();
-  show();
+  const onFilters = vi.fn();
+  show(false, onFilters);
   await openViewStep(user, "Filters");
   await user.click(
     await screen.findByRole("button", { name: "Customer tier" }),
   );
-  await user.click(screen.getByRole("combobox"));
+  await user.click(screen.getByRole("combobox", { name: "Customer tier" }));
   await user.click(await screen.findByRole("option", { name: "Gold" }));
   await user.click(screen.getByRole("button", { name: en["cf.filterApply"] }));
-  await waitFor(() => expect(window.location.hash).toContain("cf_tier=Gold"));
+  await waitFor(() =>
+    expect(onFilters).toHaveBeenLastCalledWith({ cf_tier: "Gold" }),
+  );
 });

@@ -81,6 +81,9 @@ func TestEachEntityIsOfferedItsOwnVocabulary(t *testing.T) {
 			"sla_state", "sort", "source", "status", "tag_id", "tag_mode", "unassigned",
 		}},
 	} {
+		if tc.entity != datasource.EntityPartner {
+			tc.want = append(tc.want, datasource.CustomFieldPrefix)
+		}
 		if got := p.ListFilters(tc.entity); !slices.Equal(got, tc.want) {
 			t.Errorf("%s is offered %v, want %v", tc.entity, got, tc.want)
 		}

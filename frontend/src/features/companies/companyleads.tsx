@@ -4,7 +4,7 @@
 import type { components } from "../../api/schema";
 import { EntityRef } from "../../components/entityref";
 import { AppLink } from "../../design-system/applink";
-import { Panel, PanelBody } from "../../design-system/panel";
+import { RecordDetails } from "../../design-system/recorddetails";
 import { SurfaceState, sectionState } from "../../design-system/surfacestate";
 import { useT } from "../../i18n";
 import { leadIdentityName } from "../../lib/leadname";
@@ -27,33 +27,36 @@ export function CompanyLeads({
     loading,
   );
   const href = `${routeHash({ screen: "leads" })}?${new URLSearchParams({ company_id: companyId }).toString()}`;
+  const children = (
+    <>
+      <SurfaceState
+        state={state === "ready" && leads?.page.has_more ? "partial" : state}
+        emptyLabel={t("co.leads.empty")}
+        loadingLabel={t("co.leads.title")}
+      >
+        <ul>
+          {leads?.data.map((lead) => (
+            <li key={lead.id}>
+              <EntityRef
+                kind="lead"
+                id={lead.id}
+                name={leadIdentityName(lead)}
+                archived={Boolean(lead.archived_at)}
+              />
+            </li>
+          ))}
+        </ul>
+      </SurfaceState>
+      {state === "ready" && (
+        <AppLink href={href}>
+          {t(leads?.page.has_more ? "co.leads.more" : "co.leads.list")}
+        </AppLink>
+      )}
+    </>
+  );
   return (
-    <Panel title={t("co.leads.title")}>
-      <PanelBody>
-        <SurfaceState
-          state={state === "ready" && leads?.page.has_more ? "partial" : state}
-          emptyLabel={t("co.leads.empty")}
-          loadingLabel={t("co.leads.title")}
-        >
-          <ul>
-            {leads?.data.map((lead) => (
-              <li key={lead.id}>
-                <EntityRef
-                  kind="lead"
-                  id={lead.id}
-                  name={leadIdentityName(lead)}
-                  archived={Boolean(lead.archived_at)}
-                />
-              </li>
-            ))}
-          </ul>
-        </SurfaceState>
-        {state === "ready" && (
-          <AppLink href={href}>
-            {t(leads?.page.has_more ? "co.leads.more" : "co.leads.list")}
-          </AppLink>
-        )}
-      </PanelBody>
-    </Panel>
+    <RecordDetails
+      sections={[{ key: "leads", label: t("co.leads.title"), children }]}
+    />
   );
 }

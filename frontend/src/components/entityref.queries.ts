@@ -115,6 +115,16 @@ function nameReadQuery(
     : entityNameQuery(kind, id);
 }
 
+export function entityNameObserverQuery(
+  kind: EntityKind,
+  id: string,
+): UseQueryOptions<EntityReference | string | null, Error, string | null> {
+  return {
+    ...nameReadQuery(kind, id),
+    select: (value) => answerOf(value).name,
+  };
+}
+
 export function entityReferenceObserverQuery(
   kind: EntityKind,
   id: string,

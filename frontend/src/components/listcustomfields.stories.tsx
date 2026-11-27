@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { expect, userEvent, within } from "storybook/test";
 import {
   installFetchStub,
@@ -48,7 +48,11 @@ export const LIST_FIELDS: CustomField[] = [
 
 export function CustomFieldListExample({
   masked = false,
-}: Readonly<{ masked?: boolean }>) {
+  onFilters,
+}: Readonly<{
+  masked?: boolean;
+  onFilters?: (filters: Readonly<Record<string, string>>) => void;
+}>) {
   const [query, setQuery] = useState<ListQuery>({
     q: "",
     sort: "",
@@ -56,6 +60,7 @@ export function CustomFieldListExample({
     includeArchived: false,
     perPage: 25,
   });
+  useEffect(() => onFilters?.(query.filters), [onFilters, query.filters]);
   const row = {
     id: "contact1",
     name: "Dana Buyer",
@@ -71,7 +76,7 @@ export function CustomFieldListExample({
         { key: "name", header: "Name", fixed: true, cell: (r) => r.name },
       ]}
       rowKey={(r) => r.id}
-      unit="contacts"
+      unit="unit.contacts"
       state={{
         rows: [row],
         query,
@@ -88,7 +93,7 @@ export function CustomFieldListExample({
 }
 
 const meta: Meta<typeof CustomFieldListExample> = {
-  title: "Components/Lists/Custom fields",
+  title: "Records/Record 360/Custom list fields",
   component: CustomFieldListExample,
   excludeStories: ["LIST_FIELDS", "CustomFieldListExample"],
   decorators: [

@@ -23,7 +23,6 @@ func TestCompanyLeadsUseConfirmedLinksAndKeepTheReadersScope(t *testing.T) {
 	e := integration.Setup(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Company from leads", &e.Rep1))
 	other := ids.From[ids.CompanyKind](e.SeedCompany(t, "Another company", &e.Rep1))
-	var linked []ids.UUID
 	for i := range 7 {
 		owner := ids.From[ids.UserKind](e.Rep1)
 		if i == 6 {
@@ -37,7 +36,6 @@ func TestCompanyLeadsUseConfirmedLinksAndKeepTheReadersScope(t *testing.T) {
 		if _, err := e.Contacts.LinkLeadCompany(e.Admin(), id, company); err != nil {
 			t.Fatal(err)
 		}
-		linked = append(linked, id.UUID)
 	}
 	unlinked, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{FullName: new("Only a name match"), CompanyName: new("Company from leads"), Source: "manual"})
 	if err != nil {
@@ -81,8 +79,8 @@ func TestCompanyLeadsUseConfirmedLinksAndKeepTheReadersScope(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(data) != 6 {
-		t.Fatalf("own scope has %d leads, want 6", len(data))
+	if len(data) != 7 {
+		t.Fatalf("a permitted identity read has %d linked leads, want 7 across owners", len(data))
 	}
 	now := clocktest.Now(t)
 	service := company360.NewService(e.Pool, e.Contacts, e.Deals, e.Projects, approvals.NewService(e.DB()), func() time.Time { return now })

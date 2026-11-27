@@ -259,12 +259,13 @@ only when it applies to the deal's pipeline or the deal holds a value for it. Th
 
 Company, contact, lead, deal and project lists offer active custom fields in **View → Columns**.
 They start hidden. **View → Filters** offers the same fields by their catalog labels. The filter
-uses the field's form control and stored type, including the currency's minor-unit scale.
-Multiselect filters compare the selected set, regardless of choice order; they have no sort control.
-Masked values stay hidden when their column is shown. A retired field leaves the offered columns and
-filters; an existing saved filter remains subject to the server's catalog rules.
+uses the field's form control and stored type, including the currency's scale.
+Filters for fields with several choices compare the selected set in any choice order. They have no sort control.
 
-Contact custom fields appear in the details column beside the standard record fields.
+Masked values stay hidden when their column is shown. A retired field leaves the offered columns and
+filters; an existing saved filter still follows the server's catalog rules.
+
+Company and contact custom fields appear in the details column beside the standard record fields.
 
 ## No `cf_*` column is indexed
 

@@ -159,10 +159,10 @@ func (h Handlers) UpsertPartner(w http.ResponseWriter, r *http.Request, id crmco
 	in.Cleared = httperr.ClearedFields(r)
 	if req.GateMetrics != nil {
 		if req.GateMetrics.CertifiedStaff != nil {
-			in.CertifiedStaff = new(int16(*req.GateMetrics.CertifiedStaff))
+			in.CertifiedStaff = new(int16(*req.GateMetrics.CertifiedStaff)) // #nosec G115 -- DecodeClosed enforces the generated 0..32767 bound.
 		}
 		if req.GateMetrics.RetentionRate != nil {
-			in.RetentionRate = new(int16(*req.GateMetrics.RetentionRate))
+			in.RetentionRate = new(int16(*req.GateMetrics.RetentionRate)) // #nosec G115 -- DecodeClosed enforces the generated 0..100 bound.
 		}
 	}
 	partner, err := h.store.UpsertPartner(r.Context(), in)

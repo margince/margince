@@ -22069,7 +22069,24 @@
                 "type": "string"
               },
               "gate_metrics": {
-                "additionalProperties": true,
+                "additionalProperties": false,
+                "description": "The two recorded program gate metrics. Unknown keys are refused by name.",
+                "properties": {
+                  "certified_staff": {
+                    "description": "Number of certified staff.",
+                    "format": "int32",
+                    "maximum": 32767,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "retention_rate": {
+                    "description": "Whole percentage of customers retained. Omitted when unknown.",
+                    "format": "int32",
+                    "maximum": 100,
+                    "minimum": 0,
+                    "type": "integer"
+                  }
+                },
                 "type": "object"
               },
               "margin_tier": {

@@ -5,6 +5,8 @@ import type { MessageKey } from "./en";
 // build without typechecking still fails loudly. Every value is translated from
 // en.ts and written to docs/reference/ui-copy-style-de.md.
 export const de: Readonly<Record<MessageKey, string>> = {
+  "systemJob.website_lead_owner":
+    "Website-Lead-Verantwortliche benachrichtigen",
   "systemJob.proposal_stage":
     "Fragen, ob ein gesendetes Angebot den Deal verschiebt",
   "systemJob.google_directory": "Google-Gruppen eines Mitglieds lesen",
@@ -5597,7 +5599,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.narrative.add": "Hinzufügen",
   "co.narrative.notOnSite": "Nicht auf ihrer Website",
   "co.narrative.notReadYet": "Website noch nicht analysiert",
-  "co.leads.title": "Offene Leads",
+  "co.leads.title": "Verknüpfte Leads",
   "co.leads.empty":
     "Mit diesem Unternehmen sind keine offenen Leads verknüpft.",
   "co.leads.more": "Alle verknüpften Leads anzeigen",

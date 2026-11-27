@@ -6052,6 +6052,7 @@ const (
 	Company360SectionsOmittedDeals            Company360SectionsOmitted = "deals"
 	Company360SectionsOmittedHealth           Company360SectionsOmitted = "health"
 	Company360SectionsOmittedLastTouch        Company360SectionsOmitted = "last_touch"
+	Company360SectionsOmittedLeads            Company360SectionsOmitted = "leads"
 	Company360SectionsOmittedListMemberships  Company360SectionsOmitted = "list_memberships"
 	Company360SectionsOmittedMoments          Company360SectionsOmitted = "moments"
 	Company360SectionsOmittedNextMeeting      Company360SectionsOmitted = "next_meeting"
@@ -6081,6 +6082,8 @@ func (e Company360SectionsOmitted) Valid() bool {
 	case Company360SectionsOmittedHealth:
 		return true
 	case Company360SectionsOmittedLastTouch:
+		return true
+	case Company360SectionsOmittedLeads:
 		return true
 	case Company360SectionsOmittedListMemberships:
 		return true
@@ -42767,6 +42770,9 @@ type Company360 struct {
 	// LastOutboundPrecision How to read `last_outbound_at`, from the row it names. Absent when that is null or absent.
 	LastOutboundPrecision *OccurredPrecision `json:"last_outbound_precision,omitempty"`
 
+	// Leads A bounded page of leads explicitly linked to this company, under the caller's lead row scope. Continue with GET /leads and company_id using the returned cursor.
+	Leads *LeadListResponse `json:"leads,omitempty"`
+
 	// ListMemberships The Shortlists this company is on that the caller may find. Absent while the installation has not switched lists on.
 	ListMemberships *[]List `json:"list_memberships,omitempty"`
 
@@ -62455,8 +62461,8 @@ type Partner struct {
 	CompanyId openapi_types.UUID `json:"company_id"`
 	CreatedAt time.Time          `json:"created_at"`
 
-	// GateMetrics Program gate metrics (certified seats, CSAT, ...).
-	GateMetrics *map[string]interface{} `json:"gate_metrics,omitempty"`
+	// GateMetrics The two recorded program gate metrics. Unknown keys are refused by name.
+	GateMetrics *PartnerGateMetrics `json:"gate_metrics,omitempty"`
 
 	// LastContactAt Never set; always null. Kept so existing clients keep compiling.
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
@@ -62522,6 +62528,15 @@ type PartnerMarginTier string
 
 // PartnerPartnerRole Deprecated: read `partner_kinds`. The first of hosting, consulting and strategic the partner holds; absent when it holds none of them.
 type PartnerPartnerRole string
+
+// PartnerGateMetrics The two recorded program gate metrics. Unknown keys are refused by name.
+type PartnerGateMetrics struct {
+	// CertifiedStaff Number of certified staff.
+	CertifiedStaff *int32 `json:"certified_staff,omitempty" maximum:"32767" minimum:"0"`
+
+	// RetentionRate Whole percentage of customers retained. Omitted when unknown.
+	RetentionRate *int32 `json:"retention_rate,omitempty" maximum:"100" minimum:"0"`
+}
 
 // PartnerKind What a partner does with us. Implementation and development work is never a partner kind.
 type PartnerKind string
@@ -73959,8 +73974,10 @@ type UpdateWebhookSubscriptionRequestState string
 // UpsertPartnerRequest Send `partner_kinds`, or the deprecated `partner_role`; one of the two is required (422
 // `partner_kinds_required` otherwise). `partner_kinds` wins when both are sent.
 type UpsertPartnerRequest struct {
-	CertStatus  *UpsertPartnerRequestCertStatus `json:"cert_status,omitempty"`
-	GateMetrics *map[string]interface{}         `json:"gate_metrics,omitempty"`
+	CertStatus *UpsertPartnerRequestCertStatus `json:"cert_status,omitempty"`
+
+	// GateMetrics The two recorded program gate metrics. Unknown keys are refused by name.
+	GateMetrics *PartnerGateMetrics             `json:"gate_metrics,omitempty"`
 	MarginTier  *UpsertPartnerRequestMarginTier `json:"margin_tier,omitempty"`
 
 	// NextStep Deprecated as stored text: a value sent here is written as a task on the partner's company, held by the caller (or the human an agent acts for), and is not stored on the partner. Text stored before stays readable.
@@ -83671,6 +83688,9 @@ type ListLeadsParams struct {
 	//
 	// Ignored when no `tag_id` is given — a mode with nothing to combine is not a filter.
 	TagMode *ListLeadsParamsTagMode `form:"tag_mode,omitempty" json:"tag_mode,omitempty"`
+
+	// CompanyId Leads explicitly linked to this company. A company the caller cannot read matches no leads.
+	CompanyId *openapi_types.UUID `form:"company_id,omitempty" json:"company_id,omitempty"`
 
 	// FromContactId Only older leads that retain this historical contact link. New leads cannot be
 	// created from contacts.
@@ -145145,6 +145165,19 @@ func (siw *ServerInterfaceWrapper) ListLeads(w http.ResponseWriter, r *http.Requ
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "tag_mode"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tag_mode", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "company_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "company_id", r.URL.Query(), &params.CompanyId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "company_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "company_id", Err: err})
 		}
 		return
 	}

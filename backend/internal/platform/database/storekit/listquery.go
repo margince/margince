@@ -349,7 +349,7 @@ func parsesAsKind(kind, value string) bool {
 	switch kind {
 	case fieldcatalog.TypeMultiselect:
 		var selected []string
-		return strings.HasPrefix(strings.TrimSpace(value), "[") && json.Unmarshal([]byte(value), &selected) == nil
+		return strings.HasPrefix(strings.TrimSpace(value), "[") && json.Unmarshal([]byte(value), &selected) == nil && len(selected) > 0
 	case fieldcatalog.TypeNumber:
 		_, err := strconv.ParseFloat(value, 64)
 		return err == nil

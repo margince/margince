@@ -14,8 +14,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// ConsentVersionPage advances over every inspected state, including unknown proof.
-type ConsentVersionPage struct {
+// VersionPage advances over every inspected state, including unknown proof.
+type VersionPage struct {
 	Scanned []ids.UUID
 	Changed int
 }
@@ -23,26 +23,26 @@ type ConsentVersionPage struct {
 // BackfillConsentVersionsTx copies only the version of the latest matching proof.
 // Locking the page before reading proofs keeps a concurrent withdrawal from
 // receiving the earlier grant's version. No consent decision or proof is written.
-func BackfillConsentVersionsTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit int) (ConsentVersionPage, error) {
+func BackfillConsentVersionsTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit int) (VersionPage, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
-		return ConsentVersionPage{}, err
+		return VersionPage{}, err
 	}
 	rows, err := tx.Query(ctx, `SELECT id FROM contact_consent WHERE id > $1 ORDER BY id LIMIT $2 FOR UPDATE`, after, limit)
 	if err != nil {
-		return ConsentVersionPage{}, fmt.Errorf("consent: paging wording versions: %w", err)
+		return VersionPage{}, fmt.Errorf("consent: paging wording versions: %w", err)
 	}
-	var page ConsentVersionPage
+	var page VersionPage
 	for rows.Next() {
 		var id ids.UUID
 		if err := rows.Scan(&id); err != nil {
 			rows.Close()
-			return ConsentVersionPage{}, err
+			return VersionPage{}, err
 		}
 		page.Scanned = append(page.Scanned, id)
 	}
 	rows.Close()
 	if err := rows.Err(); err != nil {
-		return ConsentVersionPage{}, err
+		return VersionPage{}, err
 	}
 	if len(page.Scanned) == 0 {
 		return page, nil
@@ -66,7 +66,7 @@ func BackfillConsentVersionsTx(ctx context.Context, tx pgx.Tx, after ids.UUID, l
  UPDATE contact_consent c SET policy_version = matches.policy_version
    FROM matches WHERE c.id = matches.id AND c.policy_version IS NULL`, page.Scanned)
 	if err != nil {
-		return ConsentVersionPage{}, fmt.Errorf("consent: copying proven wording versions: %w", err)
+		return VersionPage{}, fmt.Errorf("consent: copying proven wording versions: %w", err)
 	}
 	page.Changed = int(result.RowsAffected())
 	return page, nil

@@ -51,17 +51,46 @@ func TestSchemaRefusalsNameTheFieldThroughTheRealWriteRoutes(t *testing.T) {
 	}, nil, "billing_interval_months")
 }
 
+func TestOtherSchemaRefusalsNameTheFieldThroughTheRealWriteRoutes(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	var contact struct {
+		ID string `json:"id"`
+	}
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"full_name": "Field refusal contact", "source": "manual", "emails": []AnyMap{{"email": "refusal@example.test", "is_primary": true}}}, nil, &contact); status != http.StatusCreated {
+		t.Fatalf("create contact: %d", status)
+	}
+	assertSchemaFieldRefusal(t, e, "PATCH", "/v1/contacts/"+contact.ID, AnyMap{"visibility": "bogus"}, map[string]string{"If-Match": "1"}, "visibility")
+	var tag struct {
+		ID string `json:"id"`
+	}
+	if status := e.Call(t, "POST", "/v1/tags", AnyMap{"name": "Refusal tag"}, nil, &tag); status != http.StatusCreated {
+		t.Fatalf("create tag: %d", status)
+	}
+	assertSchemaFieldRefusal(t, e, "PATCH", "/v1/tags/"+tag.ID, AnyMap{"color": "bogus"}, map[string]string{"If-Match": "1"}, "color")
+	assertSchemaFieldRefusal(t, e, "POST", "/v1/views", AnyMap{"name": "No resource", "query": AnyMap{}}, nil, "resource")
+	var company struct {
+		ID string `json:"id"`
+	}
+	if status := e.Call(t, "POST", "/v1/companies", AnyMap{"display_name": "Own parent", "source": "manual"}, nil, &company); status != http.StatusCreated {
+		t.Fatalf("create company: %d", status)
+	}
+	assertSchemaFieldRefusal(t, e, "PATCH", "/v1/companies/"+company.ID, AnyMap{"parent_company_id": company.ID}, map[string]string{"If-Match": "1"}, "parent_company_id")
+}
+
 func assertSchemaFieldRefusal(t *testing.T, e *apptest.AppEnv, method, path string, body AnyMap, headers map[string]string, field string) {
 	t.Helper()
 	var problem struct {
-		Detail string               `json:"detail"`
-		Fields []httperr.FieldError `json:"fields"`
+		Detail  string `json:"detail"`
+		Details struct {
+			Errors []httperr.FieldError `json:"errors"`
+		} `json:"details"`
 	}
 	status := e.Call(t, method, path, body, headers, &problem)
 	if status != http.StatusUnprocessableEntity {
 		t.Fatalf("%s %s: %d %+v", method, path, status, problem)
 	}
-	for _, fault := range problem.Fields {
+	for _, fault := range problem.Details.Errors {
 		if fault.Field == field {
 			return
 		}

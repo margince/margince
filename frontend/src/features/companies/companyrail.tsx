@@ -13,6 +13,7 @@ import {
   SIZE_BAND_OPTIONS,
 } from "../../components/companylookups";
 import { type RailEdit, RailField } from "../../components/railfield";
+import { RecordCustomFields } from "../../components/recordcustomfields";
 import { useSectionEdit } from "../../components/sectionedit";
 import { useViewOnlyAccess } from "../../components/viewonly";
 import { Badge } from "../../design-system/atoms";
@@ -75,6 +76,7 @@ export function CompanyRail(props: RailProps) {
       ) : (
         <RailBody {...props} />
       )}
+      <RecordCustomFields kind="company" record={props.company} />
       {!props.company.archived_at && (
         <CompanyLeads
           companyId={props.company.id}

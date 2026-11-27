@@ -24,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/mailquote"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptref"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
 const system = `You read captured business correspondence (mail, meeting notes and call notes) and say which of the
@@ -120,11 +121,7 @@ func newText(item Item) string {
 }
 
 func boundText(text string, limit int) string {
-	runes := []rune(text)
-	if len(runes) <= limit {
-		return text
-	}
-	return string(runes[:limit])
+	return textcut.Runes(text, limit)
 }
 
 // Fixed in every field so the digest is a property of the code, never of a

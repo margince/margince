@@ -11,7 +11,9 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
 func TestMultiselectPreservesChoicesAndRefusesUnknownOnes(t *testing.T) {
@@ -46,23 +48,56 @@ func TestMultiselectPreservesChoicesAndRefusesUnknownOnes(t *testing.T) {
 }
 
 func TestMultiselectListFiltersCompareTheSelectedSetWithoutDependingOnOrder(t *testing.T) {
-	e := schemaWiredEnv(t)
-	status, field, problem := createCustomField(t, e, integration.AnyMap{"object": "company", "label": "Capabilities", "type": "multiselect", "options": []string{"Fit, scope", "C++", "Other"}, "source": "manual"})
-	if status != http.StatusCreated {
-		t.Fatalf("create field: %d %v", status, problem)
-	}
-	_, id := createWithCF(t, e, "/v1/companies", integration.AnyMap{"display_name": "Both choices", "source": "manual", field.ColumnName: []string{"Fit, scope", "C++"}})
-	createWithCF(t, e, "/v1/companies", integration.AnyMap{"display_name": "One choice", "source": "manual", field.ColumnName: []string{"C++"}})
-	query := url.Values{field.ColumnName: {`["C++","Fit, scope"]`}}
-	var result struct {
-		Data []struct {
-			ID string `json:"id"`
-		} `json:"data"`
-	}
-	if status := e.Call(t, "GET", "/v1/companies?"+query.Encode(), nil, nil, &result); status != http.StatusOK {
-		t.Fatalf("filter: %d", status)
-	}
-	if len(result.Data) != 1 || result.Data[0].ID != id {
-		t.Fatalf("filtered companies=%+v", result.Data)
+	for _, object := range []string{"company", "lead"} {
+		t.Run(object, func(t *testing.T) {
+			doors := apptest.SetupTwoDoors(t, "multiselect-"+object, []compose.Option{compose.WithSchemaPool(integration.SchemaPool(t))}, "read")
+			e := doors.E
+			status, field, problem := createCustomField(t, e, integration.AnyMap{"object": object, "label": "Capabilities", "type": "multiselect", "options": []string{"Fit, scope", "C++", "Other"}, "source": "manual"})
+			if status != http.StatusCreated {
+				t.Fatalf("create field: %d %v", status, problem)
+			}
+			path := "/v1/companies"
+			body := integration.AnyMap{"display_name": "Both choices", "source": "manual", field.ColumnName: []string{"Fit, scope", "C++"}}
+			if object == "lead" {
+				path = "/v1/leads"
+				delete(body, "display_name")
+				body["full_name"] = "Both choices"
+			}
+			_, id := createWithCF(t, e, path, body)
+			body[field.ColumnName] = []string{"C++"}
+			if object == "lead" {
+				body["full_name"] = "One choice"
+			} else {
+				body["display_name"] = "One choice"
+			}
+			createWithCF(t, e, path, body)
+			for _, sort := range []string{"", "-created_at"} {
+				query := url.Values{field.ColumnName: {`["C++","Fit, scope"]`}}
+				if sort != "" {
+					query.Set("sort", sort)
+				}
+				var result struct {
+					Data []struct {
+						ID string `json:"id"`
+					} `json:"data"`
+				}
+				if status := e.Call(t, "GET", path+"?"+query.Encode(), nil, nil, &result); status != http.StatusOK {
+					t.Fatalf("filter: %d", status)
+				}
+				if len(result.Data) != 1 || result.Data[0].ID != id {
+					t.Fatalf("filtered %s sort %q=%+v", object, sort, result.Data)
+				}
+			}
+			answer := doors.MCP.CallOK(t, "list_records", integration.AnyMap{"record_type": object, "filters": integration.AnyMap{field.ColumnName: `["C++","Fit, scope"]`}})
+			var listed struct {
+				Records []struct {
+					ID string `json:"id"`
+				} `json:"records"`
+			}
+			answer.JSON(t, &listed)
+			if len(listed.Records) != 1 || listed.Records[0].ID != id {
+				t.Fatalf("MCP %s filter=%+v", object, listed)
+			}
+		})
 	}
 }

@@ -39,7 +39,7 @@ Each cell counts the calls in the group that ran for the role, and those a gate 
 
 | Group | Calls | admin | management | manager | ops | read_only | rep |
 |---|---:|---|---|---|---|---|---|
-| [Business operations](#business-operations) | 399 | 397✓ 2✗ | 370✓ 29✗ | 372✓ 27✗ | 370✓ 29✗ | 185✓ 214✗ | 341✓ 58✗ |
+| [Business operations](#business-operations) | 399 | 397✓ 2✗ | 381✓ 18✗ | 383✓ 16✗ | 370✓ 29✗ | 185✓ 214✗ | 352✓ 47✗ |
 | [Compliance and privacy](#compliance-and-privacy) | 47 | 47✓ 0✗ | 27✓ 20✗ | 27✓ 20✗ | 32✓ 15✗ | 11✓ 36✗ | 26✓ 21✗ |
 | [Capture and connectors](#capture-and-connectors) | 44 | 44✓ 0✗ | 38✓ 6✗ | 38✓ 6✗ | 44✓ 0✗ | 28✓ 16✗ | 37✓ 7✗ |
 | [Workspace settings a non-admin can reach](#workspace-settings-a-non-admin-can-reach) | 40 | 40✓ 0✗ | 40✓ 0✗ | 40✓ 0✗ | 40✓ 0✗ | 35✓ 5✗ | 40✓ 0✗ |
@@ -500,17 +500,17 @@ Each cell counts the calls in the group that ran for the role, and those a gate 
 
 | Call | admin | management | manager | ops | read_only | rep |
 |---|---|---|---|---|---|---|
-| `change_capture.cancel_import_run` | ✓ | ✗ | ✗ | ✓ | ✗ | ✗ |
-| `change_capture.undo_import_run` | ✓ | ✗ | ✗ | ✓ | ✗ | ✗ |
-| `change_capture.update_import_run` | ✓ | ✗ | ✗ | ✓ | ✗ | ✗ |
-| `change_capture.validate_import_run` | ✓ | ✗ | ✗ | ✓ | ✗ | ✗ |
-| `commit_import` | ✓ | ✗ | ✗ | ✓ | ✗ | ✗ |
-| `preview_import` | ✓ | ✗ | ✗ | ✓ | ✗ | ✗ |
-| `read_details.import_problems` | ✓ | ✗ | ✗ | ✓ | ✗ | ✗ |
-| `read_details.import_template` | ✓ | ✗ | ✗ | ✓ | ✗ | ✗ |
-| `read_import.format` | ✓ | ✗ | ✗ | ✓ | ✗ | ✗ |
-| `read_import.report` | ✓ | ✗ | ✗ | ✓ | ✗ | ✗ |
-| `read_workspace.import_runs` | ✓ | ✗ | ✗ | ✓ | ✗ | ✗ |
+| `change_capture.cancel_import_run` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
+| `change_capture.undo_import_run` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
+| `change_capture.update_import_run` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
+| `change_capture.validate_import_run` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
+| `commit_import` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
+| `preview_import` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
+| `read_details.import_problems` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
+| `read_details.import_template` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
+| `read_import.format` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
+| `read_import.report` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
+| `read_workspace.import_runs` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 
 ### Knowledge library
 
@@ -1141,7 +1141,7 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Companies | `change_settings.upsert_partner` | `upsert_partner` | `company.update` |
 | Companies | `change_state.set_up_partner` | `set_up_partner` | `company.read` `company.update` `partner.read` |
 | Companies | `read_details.capture_triage` | `get_company_capture_triage` | `company.read` |
-| Companies | `read_details.company_brief` | `get_company_brief` | `activity.read` `company.read` `contact.read` `deal.read` `list.read` `project.read` `relationship.read` `tag.read` |
+| Companies | `read_details.company_brief` | `get_company_brief` | `activity.read` `company.read` `contact.read` `deal.read` `lead.read` `list.read` `project.read` `relationship.read` `tag.read` |
 | Companies | `read_details.company_for_address` | `get_company_for_address` | `company.read` |
 | Companies | `read_details.company_logo` | `get_company_logo` | `company.read` |
 | Companies | `read_details.company_logo_icon` | `get_company_logo_icon` | `company.read` |
@@ -1153,12 +1153,12 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Companies | `read_details.offered_values` | `list_company_offered_values` | `company.read` |
 | Companies | `read_relationships.company_id` | `intro_path_to` | `company.read` `contact.read` `relationship.read` |
 | Companies | `read_workspace.company_types` | `read_company_types` |  |
-| Companies | `run_research.ask_about_company` | `ask_about_company` | `activity.read` `company.read` `contact.read` `deal.read` `list.read` `project.read` `relationship.read` `tag.read` |
+| Companies | `run_research.ask_about_company` | `ask_about_company` | `activity.read` `company.read` `contact.read` `deal.read` `lead.read` `list.read` `project.read` `relationship.read` `tag.read` |
 | Companies | `run_research.draft_intro_request` | `draft_intro_request` | `activity.read` `company.read` `contact.read` `relationship.read` |
-| Companies | `run_research.refresh_company_brief` | `regenerate_company_brief` | `activity.read` `company.read` `contact.read` `deal.read` `list.read` `project.read` `relationship.read` `tag.read` |
+| Companies | `run_research.refresh_company_brief` | `regenerate_company_brief` | `activity.read` `company.read` `contact.read` `deal.read` `lead.read` `list.read` `project.read` `relationship.read` `tag.read` |
 | Companies | `run_research.refresh_dossier` | `refresh_company_dossier` | `company.read` `contact.read` `relationship.read` |
 | Companies | `run_research.refresh_growth_fit` | `refresh_company_growth_fit` | `company.read` `contact.read` `relationship.read` |
-| Companies | `run_research.refresh_scan` | `ensure_company_scan` | `activity.read` `company.read` `contact.read` `deal.read` `installation_settings.read` `list.read` `partner.read` `project.read` `relationship.read` `tag.read` |
+| Companies | `run_research.refresh_scan` | `ensure_company_scan` | `activity.read` `company.read` `contact.read` `deal.read` `installation_settings.read` `lead.read` `list.read` `partner.read` `project.read` `relationship.read` `tag.read` |
 | Deals | `change_attention.accept_applied_change` | `accept_applied_deal_change` | `deal.update` |
 | Deals | `change_attention.accept_deal_suggestion` | `accept_deal_suggestion` | `company.read` `deal.create` `deal.read` `pipeline.read` `project.read` |
 | Deals | `change_attention.clear_deal_manager_request` | `clear_deal_manager_request` | `deal.read` `deal.update` `scope:team` `team_oversight.read,team_lead.read` |
@@ -1444,10 +1444,10 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Documents | `list_documents.list` | `list_record_documents` | `activity.read,lead.read` |
 | Documents | `read_details.document_extraction` | `get_attachment_extraction` | `deal.read` |
 | Imports | `change_capture.cancel_import_run` | `cancel_import_run` | `import_run.read` `import_run.update` |
-| Imports | `change_capture.undo_import_run` | `undo_import_run` | `company.create` `custom_field.read` `import_run.read` `import_run.update` |
+| Imports | `change_capture.undo_import_run` | `undo_import_run` | `contact.create` `custom_field.read` `import_run.read` `import_run.update` |
 | Imports | `change_capture.update_import_run` | `update_import_run` | `import_run.read` `import_run.update` |
 | Imports | `change_capture.validate_import_run` | `validate_import_run` | `custom_field.read` `import_run.read` `import_run.update` |
-| Imports | `commit_import` | `commit_import` | `company.create` `custom_field.read` `import_run.read` `import_run.update` |
+| Imports | `commit_import` | `commit_import` | `contact.create` `custom_field.read` `import_run.read` `import_run.update` |
 | Imports | `preview_import` | `preview_import` | `custom_field.read` `import_run.create` `import_run.read` `import_run.update` |
 | Imports | `read_details.import_problems` | `download_import_problems` | `import_run.read` |
 | Imports | `read_details.import_template` | `download_import_template` | `custom_field.read` `deal.read` `import_run.read` `pipeline.read` |

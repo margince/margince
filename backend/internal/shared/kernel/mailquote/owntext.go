@@ -25,14 +25,8 @@ func Preamble(body string) (preamble, text string) {
 	return preamble, body[len(preamble):]
 }
 
-// OwnTextEnd is the index of the first line of quoted or forwarded mail, or
-// len(lines) when the sender wrote every line.
-//
-// A line a mail program writes above such mail ends the text. A quote marked
-// with ">" ends it only when nothing follows, so an inline reply stays whole.
-//
-// A forward passes its first quoted mail on as its own text. Outlook writes a
-// forward and a reply alike, so only the subject tells them apart.
+// OwnTextEnd keeps forwarded messages while cutting ordinary reply history.
+// Marked inline replies stay visible when new text follows.
 func OwnTextEnd(lines []string, subject string) int {
 	end, _ := readOwnText(lines, subject)
 	return end

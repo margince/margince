@@ -1,7 +1,7 @@
 {
   "verb": "undo_import_run",
   "checks": [
-    "company.create",
+    "contact.create",
     "custom_field.read",
     "import_run.read",
     "import_run.update"

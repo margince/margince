@@ -3320,8 +3320,8 @@ type Partner struct {
 	CompanyId string    `json:"company_id"`
 	CreatedAt time.Time `json:"created_at"`
 
-	// GateMetrics Program gate metrics (certified seats, CSAT, ...).
-	GateMetrics *map[string]interface{} `json:"gate_metrics,omitempty"`
+	// GateMetrics The two recorded program gate metrics. Unknown keys are refused by name.
+	GateMetrics *PartnerGateMetrics `json:"gate_metrics,omitempty"`
 
 	// LastContactAt Never set; always null. Kept so existing clients keep compiling.
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
@@ -3387,6 +3387,15 @@ type PartnerMarginTier string
 
 // PartnerPartnerRole Deprecated: read `partner_kinds`. The first of hosting, consulting and strategic the partner holds; absent when it holds none of them.
 type PartnerPartnerRole string
+
+// PartnerGateMetrics The two recorded program gate metrics. Unknown keys are refused by name.
+type PartnerGateMetrics struct {
+	// CertifiedStaff Number of certified staff.
+	CertifiedStaff *int32 `json:"certified_staff,omitempty" maximum:"32767" minimum:"0"`
+
+	// RetentionRate Whole percentage of customers retained. Omitted when unknown.
+	RetentionRate *int32 `json:"retention_rate,omitempty" maximum:"100" minimum:"0"`
+}
 
 // PartnerKind What a partner does with us. Implementation and development work is never a partner kind.
 type PartnerKind string

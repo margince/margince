@@ -175,6 +175,8 @@ Also called: turn off form, disable form, delete form.
 
 ### Can the owner get a notice for each post?
 
-Turn on **Tell the owner about each new post** beside **Owner of new leads**. This starts off. The owner chooses email, in-app notices, the daily digest or off under **New website leads** in their notification settings. A handling plan tells the owner it assigns. An existing lead or contact keeps its own owner. An unassigned record waits for an owner. Inactive owners raise no notice.
+Turn on **Tell the owner about each new post** beside **Owner of new leads**. This starts off. The owner chooses email, in-app notices, the daily digest or off under **New website leads** in their notification settings. A handling plan tells the owner it assigns. An existing lead or contact keeps its own owner. An unassigned record waits for an owner.
 
-An existing contact still gets its usual task for the post. This switch adds a notice; it creates no second task. Without a handling plan, the notice goes to the owner the record has when the post lands. If lead routing assigns a previously unowned lead later, it sends the notice for the post that created that lead. Later owner changes do not resend that notice.
+Inactive owners raise no notice.
+
+An existing contact still gets its usual task for the post. This switch adds a notice; it creates no second task. Without a handling plan, the notice goes to the owner the record has when the post lands. If lead routing assigns a lead with no owner later, it sends the notice for the post that created that lead. Later owner changes do not resend that notice.

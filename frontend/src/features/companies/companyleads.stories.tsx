@@ -12,7 +12,7 @@ import { CompanyLeads } from "./companyleads";
 import { COMPANY_LEADS_VIEW } from "./companyleads.fixtures";
 
 const meta: Meta<typeof CompanyLeads> = {
-  title: "Companies/Linked leads",
+  title: "Records/Company 360/Linked leads",
   component: CompanyLeads,
   args: { companyId: "company-1", view: COMPANY_LEADS_VIEW, loading: false },
   decorators: [

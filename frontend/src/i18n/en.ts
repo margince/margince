@@ -3,6 +3,7 @@
 // use {name} and are filled by t(key, params).
 // Every value is written to docs/reference/ui-copy-style.md.
 export const en = {
+  "systemJob.website_lead_owner": "Telling the website lead owner",
   "systemJob.proposal_stage": "Asking whether a sent proposal moves the deal",
   "systemJob.google_directory": "Reading a member’s Google groups",
   "systemJob.legal_review_desk": "Legal review desk",
@@ -5532,8 +5533,8 @@ export const en = {
   "co.narrative.add": "Add",
   "co.narrative.notOnSite": "Not on their website",
   "co.narrative.notReadYet": "Not read from their website yet",
-  "co.leads.title": "Open leads",
-  "co.leads.empty": "No open leads are linked to this company.",
+  "co.leads.title": "Linked leads",
+  "co.leads.empty": "No leads are linked to this company.",
   "co.leads.more": "Show all linked leads",
   "co.leads.list": "Open lead list",
   "co.contacts.engagement": "Engagement",

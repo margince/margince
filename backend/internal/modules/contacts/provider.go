@@ -148,7 +148,7 @@ func (p *Provider) SearchEntity(ctx context.Context, t datasource.EntityType, te
 	switch t {
 	case datasource.EntityContact:
 		in := ListContactsInput{Query: text, Limit: &limit, Cursor: cursor}
-		if err := contactListFilters.Apply(&in, filters); err != nil {
+		if err := contactListFilters.ApplyCustom(&in, filters, func(in *ListContactsInput, custom map[string]string) { in.CustomFilters = custom }); err != nil {
 			return nil, "", false, err
 		}
 		membership, err := storekit.ResolveListMembership(ctx, in.MemberOf, p.listMembers, contactEntity)
@@ -162,7 +162,7 @@ func (p *Provider) SearchEntity(ctx context.Context, t datasource.EntityType, te
 		})
 	case datasource.EntityCompany:
 		in := ListCompaniesInput{Query: text, Limit: &limit, Cursor: cursor}
-		if err := companyListFilters.Apply(&in, filters); err != nil {
+		if err := companyListFilters.ApplyCustom(&in, filters, func(in *ListCompaniesInput, custom map[string]string) { in.CustomFilters = custom }); err != nil {
 			return nil, "", false, err
 		}
 		membership, err := storekit.ResolveListMembership(ctx, in.MemberOf, p.listMembers, companyEntity)
@@ -175,7 +175,7 @@ func (p *Provider) SearchEntity(ctx context.Context, t datasource.EntityType, te
 			func(v crmcontracts.Company) (openapi_types.UUID, *int64) { return v.Id, v.Version })
 	case datasource.EntityLead:
 		in := ListLeadsInput{Query: text, Limit: &limit, Cursor: cursor}
-		if err := leadListFilters.Apply(&in, filters); err != nil {
+		if err := leadListFilters.ApplyCustom(&in, filters, func(in *ListLeadsInput, custom map[string]string) { in.CustomFilters = custom }); err != nil {
 			return nil, "", false, err
 		}
 		membership, err := storekit.ResolveListMembership(ctx, in.MemberOf, p.listMembers, leadEntity)

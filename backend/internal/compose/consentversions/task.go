@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+// Package consentversions repairs historical consent wording versions from matching proof.
 package consentversions
 
 import (

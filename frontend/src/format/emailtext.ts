@@ -280,6 +280,8 @@ function headerAt(lines: readonly string[], index: number): number {
  */
 type ForwardedBlock = { header: number; body: number };
 
+const FORWARD_SUBJECT_LABELS = ["subject", "betreff"];
+
 function forwardedSubject(
   lines: readonly string[],
   header: number,
@@ -288,8 +290,10 @@ function forwardedSubject(
   for (const line of lines.slice(header, end)) {
     const [label, ...value] = line.split(":");
     if (
-      ["subject", "betreff"].includes(
-        (label ?? "").toLowerCase().replaceAll("*", "").trim(),
+      FORWARD_SUBJECT_LABELS.some(
+        (subjectLabel) =>
+          subjectLabel ===
+          (label ?? "").toLowerCase().replaceAll("*", "").trim(),
       )
     ) {
       return value.join(":").replaceAll("*", "").trim();

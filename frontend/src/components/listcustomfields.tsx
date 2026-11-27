@@ -51,7 +51,9 @@ export function useListCustomFields<Row>(
         return t("record.notShown");
       }
       const display = read(field, row[field.column_name]);
-      return display ? renderCustomFieldValue(field, display) : null;
+      return display
+        ? (renderCustomFieldValue(field, display) ?? display)
+        : null;
     },
   }));
   const chips: ListChip[] = fields.map((field) => {
@@ -120,7 +122,7 @@ function CustomFieldFilter({
     locale,
   )[field.column_name];
   const wire =
-    stored == null
+    stored == null || (Array.isArray(stored) && stored.length === 0)
       ? ""
       : Array.isArray(stored)
         ? JSON.stringify(stored)

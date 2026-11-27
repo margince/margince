@@ -13,6 +13,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -60,29 +61,16 @@ func TestConsentVersionRepairWaitsForAnUncommittedWithdrawal(t *testing.T) {
 		t.Fatal(ctx.Err())
 	}
 	repairDone := make(chan error, 1)
+	repairReturned := make(chan struct{})
 	system := principal.SystemActing(ctx, "system:consent-version-test")
 	go func() {
+		defer close(repairReturned)
 		repairDone <- e.store.db.Tx(system, func(tx pgx.Tx) error {
 			_, err := BackfillConsentVersionsTx(system, tx, ids.Nil, 100)
 			return err
 		})
 	}()
-	for {
-		select {
-		case err := <-repairDone:
-			t.Fatalf("repair did not wait for the current decision: %v", err)
-		default:
-		}
-		var blocked bool
-		if err := e.owner.QueryRow(ctx, `SELECT EXISTS (
-   SELECT 1 FROM pg_stat_activity WHERE datname = current_database()
-     AND $1::integer = ANY(pg_blocking_pids(pid)))`, writerPID).Scan(&blocked); err != nil {
-			t.Fatal(err)
-		}
-		if blocked {
-			break
-		}
-	}
+	testdb.AwaitQueuedBehind(t, e.owner, int32(writerPID), 1, repairReturned, "consent version repair")
 	finish()
 	if err := <-writerDone; err != nil {
 		t.Fatal(err)

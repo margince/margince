@@ -178,6 +178,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "contact.card.committee_other",
   ],
   de: [
+    "webForms.field.notifyOwnerHint",
     // Automation authority and assignments name human account holders.
     "auto.setup.noAuthorizer",
     "auto.setup.inactive",
@@ -352,6 +353,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "create.addressErased",
   ],
   vi: [
+    "webForms.field.notifyOwnerHint",
     "webForms.field.notifyOwner",
     // "Người phụ trách" is the person responsible for a record, and "mọi
     // người" is everyone: both are human beings.

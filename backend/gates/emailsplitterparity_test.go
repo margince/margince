@@ -54,6 +54,7 @@ var splitterTables = []struct {
 	{goName: "signOffLines", tsName: "SIGN_OFF_LINES", patterns: true},
 	{goName: "attributionPatterns", tsName: "ATTRIBUTION", patterns: true},
 	{goName: "forwardAttribution", tsName: "FORWARD_ATTRIBUTION", patterns: true},
+	{goName: "subjectLabels", tsName: "FORWARD_SUBJECT_LABELS"},
 	// The four single patterns. Each is one entry rather than a list, and they
 	// are compared the same way — a preamble the server peels and the browser
 	// does not is the same class of drift as a missing sign-off.

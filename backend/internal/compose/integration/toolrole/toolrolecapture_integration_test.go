@@ -177,7 +177,8 @@ func captureSeeders(s sweepSeed) map[string]func() string {
 			return s.ownerScalar(`SELECT id::text FROM channel_connection WHERE provider = 'telegram' AND archived_at IS NULL`)
 		},
 		"draft_import_run": s.alone(func() string {
-			profile, status := importjobtest.UploadCSV(s.t, s.e, "company", "display_name\nSweep "+ids.NewV7().String()+"\n")
+			defer s.asRoles("rep")()
+			profile, status := importjobtest.UploadCSV(s.t, s.e, "contact", "email,full_name\n"+ids.NewV7().String()+"@role-sweep.test,Sweep\n")
 			if status != http.StatusOK || profile.RunID == "" {
 				s.t.Fatalf("uploading an import's file → %d %+v", status, profile)
 			}
@@ -186,11 +187,12 @@ func captureSeeders(s sweepSeed) map[string]func() string {
 		// The run is tested, approved, and its commit job worked, as the
 		// worker leaves it complete.
 		"complete_import_run": s.alone(func() string {
-			profile, status := importjobtest.UploadCSV(s.t, s.e, "company", "display_name\nSweep "+ids.NewV7().String()+"\n")
+			defer s.asRoles("rep")()
+			profile, status := importjobtest.UploadCSV(s.t, s.e, "contact", "email,full_name\n"+ids.NewV7().String()+"@role-sweep.test,Sweep\n")
 			if status != http.StatusOK {
 				s.t.Fatalf("uploading an import's file → %d", status)
 			}
-			run, status := importjobtest.CreateRunWithMapping(s.t, s.e, "company", profile.SourceRef, map[string]string{"display_name": "display_name"})
+			run, status := importjobtest.CreateRunWithMapping(s.t, s.e, "contact", profile.SourceRef, map[string]string{"email": "email", "full_name": "full_name"})
 			if status != http.StatusAccepted && status != http.StatusCreated {
 				s.t.Fatalf("starting the import → %d", status)
 			}

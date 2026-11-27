@@ -6,7 +6,6 @@ package webformlead
 import (
 	"context"
 	"errors"
-	"fmt"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -31,21 +30,31 @@ type websiteLeadRouting struct {
 }
 
 // RoutingWithArrival adds the accepted post's owner notice to lead assignment.
+//
+//nolint:ireturn // Workflow registration accepts handlers; the wrapper keeps its delegate private.
 func RoutingWithArrival(db *database.DB, handler workflow.Handler, arrival func(context.Context, *database.DB, ids.UUID, ids.UUID, notices.Target) error) workflow.Handler {
 	return websiteLeadRouting{Handler: handler, db: db, arrival: arrival}
 }
 
 func (w websiteLeadRouting) Apply(ctx context.Context, ev workflow.Event, eff workflow.Effect, token *workflow.ApprovalToken) (workflow.RunResult, error) {
 	var out workflow.RunResult
+	var declined error
 	err := database.WithWorkspaceWriteTx(ctx, w.db.Pool(), func(bound context.Context) error {
 		var err error
 		out, err = w.Handler.Apply(bound, ev, eff, token)
+		if _, ok := errors.AsType[*workflow.DeclinedError](err); ok {
+			declined = err
+			return nil
+		}
 		if err != nil {
 			return err
 		}
 		return w.tellRoutedWebsiteLeadOwner(bound, ev.Entity.ID)
 	})
-	return out, err
+	if err != nil {
+		return out, err
+	}
+	return out, declined
 }
 
 func (w websiteLeadRouting) tellRoutedWebsiteLeadOwner(ctx context.Context, leadID ids.UUID) error {
@@ -72,11 +81,11 @@ func (w websiteLeadRouting) tellRoutedWebsiteLeadOwner(ctx context.Context, lead
 	}
 	formText, submission, found := strings.Cut(*lead.SourceId, ":")
 	if !found || submission == "" {
-		return fmt.Errorf("compose: website lead has no submission identity")
+		return nil
 	}
 	formID, err := ids.Parse(formText)
 	if err != nil {
-		return fmt.Errorf("compose: reading a routed website form identity: %w", err)
+		return nil //nolint:nilerr // Malformed historical source ids have no arrival notice to send.
 	}
 	err = w.arrival(lookup, db, formID, ids.UUID(notes[0].Id), notices.Target{Type: "lead", ID: leadID})
 	if errors.Is(err, apperrors.ErrNotFound) {
