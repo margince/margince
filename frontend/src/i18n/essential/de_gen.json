@@ -2152,6 +2152,7 @@
   "approval.linkedin.useAsTitle": "Als Jobtitel übernehmen",
   "approval.linkedin.useAsEmployer": "{company} als Arbeitgeber übernehmen",
   "approval.linkedin.employerNow": "Arbeitet jetzt bei {company}",
+  "approval.vcard.mergeInto": "In {contact} zusammenführen, statt einen neuen Kontakt zu erstellen",
   "approval.responsibility.requestedFrom": "Entscheidung angefragt bei",
   "approval.commitment.promiser": "Zugesagt von",
   "approval.commitment.effect": "Bei Freigabe",

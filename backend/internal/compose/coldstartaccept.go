@@ -85,7 +85,7 @@ func approvalsServiceTelling(pool *pgxpool.Pool, notices *siteLeadNoticeLane) *a
 	svc.WithEffect(ownershipTransferKind, ownershipTransferAcceptEffect(svc, transfers))
 	svc.WithPrecheck(ownershipTransferKind, transfers.transferPrecheck())
 	svc.WithDeclinedEffect(ownershipTransferKind, declineTransferEffect())
-	svc.WithPrecheck(vcardCreateKind, vcardCreatePrecheck())
+	svc.WithPrecheck(vcardCreateKind, vcardCreatePrecheck(newContactsStore(InstallationDB(pool))))
 	// A held message registers both halves, because its subject is already
 	// waiting. Accept re-arms it and Reject abandons it; a dismissal alone would
 	// report a decision the message never heard.

@@ -294,6 +294,11 @@ func writeErr(w http.ResponseWriter, r *http.Request, err error) {
 // wire maps the store row onto the contract shape; effectiveStatus folds
 // lazy expiry in so a stale pending row never reads as approvable.
 func wire(ctx context.Context, a row, now time.Time) crmcontracts.Approval {
+	if a.effectiveStatus(now) == StatusExpired && payloadClearedOnExpiry[a.Kind] {
+		// Past its window the sweep has not reached yet: the row already holds
+		// the card, and no reader is shown it.
+		a.Summary, a.SummaryParts, a.ProposedChange, a.Evidence = nil, nil, nil, nil
+	}
 	out := crmcontracts.Approval{
 		Id:         openapi_types.UUID(a.ID.UUID),
 		Kind:       a.Kind,

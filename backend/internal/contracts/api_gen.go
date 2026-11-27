@@ -73822,6 +73822,11 @@ type VCardImportFieldField string
 // VCardImportReport One entry per card in the file, in the order the file listed them.
 type VCardImportReport struct {
 	Results []VCardImportResult `json:"results"`
+
+	// StagedForReview How many cards were staged as a review in the approvals inbox, so
+	// the reader knows how many answers are waiting. An undecided one
+	// expires after 30 days, and the expiry deletes the card's data.
+	StagedForReview int `json:"staged_for_review" minimum:"0"`
 }
 
 // VCardImportResult defines model for VCardImportResult.
@@ -73849,7 +73854,8 @@ type VCardImportResult struct {
 	// Outcome `created` — nobody matched, so the card became a contact, their company and the edge
 	// between them. `updated` — an exact match: what the card states replaces an older value, which
 	// stays in `superseded_value`, and a field a human corrected stands.
-	// `needs_review` — a resemblance, written nowhere; open the candidate and decide.
+	// `needs_review` — a resemblance, so nothing was written; the card waits in the approvals
+	// inbox, where whoever uploaded it merges it into the candidate or keeps it separate.
 	// `proposed` — a card read from a photo that nobody matched, waiting on an approval.
 	// `skipped` — the card states no name or one over 120 characters, carries a sending
 	// system's address, holds a value that is not readable text or cannot be stored, or
@@ -73864,7 +73870,8 @@ type VCardImportResult struct {
 // VCardImportResultOutcome `created` — nobody matched, so the card became a contact, their company and the edge
 // between them. `updated` — an exact match: what the card states replaces an older value, which
 // stays in `superseded_value`, and a field a human corrected stands.
-// `needs_review` — a resemblance, written nowhere; open the candidate and decide.
+// `needs_review` — a resemblance, so nothing was written; the card waits in the approvals
+// inbox, where whoever uploaded it merges it into the candidate or keeps it separate.
 // `proposed` — a card read from a photo that nobody matched, waiting on an approval.
 // `skipped` — the card states no name or one over 120 characters, carries a sending
 // system's address, holds a value that is not readable text or cannot be stored, or

@@ -5044,6 +5044,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.linkedin.useAsTitle": "Als Jobtitel übernehmen",
   "approval.linkedin.useAsEmployer": "{company} als Arbeitgeber übernehmen",
   "approval.linkedin.employerNow": "Arbeitet jetzt bei {company}",
+  "approval.vcard.mergeInto":
+    "In {contact} zusammenführen, statt einen neuen Kontakt zu erstellen",
   "approval.responsibility.requestedFrom": "Entscheidung angefragt bei",
   "approval.commitment.promiser": "Zugesagt von",
   "approval.commitment.effect": "Bei Freigabe",
@@ -7808,6 +7810,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "vcardImport.field.kept": "Wert im Datensatz behalten",
   "vcardImport.field.notInCard": "Nicht auf der Karte",
   "vcardImport.next": "Nächste vCard",
+  "vcardImport.staged_one":
+    "{count} Karte wartet in der Worklist auf deine Antwort und läuft nach 30 Tagen ab.",
+  "vcardImport.staged_other":
+    "{count} Karten warten in der Worklist auf deine Antwort und laufen nach 30 Tagen ab.",
+  "vcardImport.staged.open": "Worklist öffnen",
   "vcardImport.forCompany": "Aus diesen Karten angelegte Kontakte arbeiten bei",
   "vcardImport.companyPhotoTitle": "Fotos werden keinem Unternehmen zugeordnet",
   "vcardImport.companyPhoto":
