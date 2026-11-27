@@ -19,6 +19,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+const phaseMoveReason = "Offer approved after the site visit."
+
 func TestProjectHistoryListsThePhaseTransitionAndWhoMadeIt(t *testing.T) {
 	e := Setup(t)
 	company := e.SeedCompany(t, "BAER Pharma", nil)
@@ -29,7 +31,9 @@ func TestProjectHistoryListsThePhaseTransitionAndWhoMadeIt(t *testing.T) {
 		Objects:  map[string]principal.ObjectGrant{"project": {Read: true, Update: true}},
 		RowScope: principal.RowScopeOwn,
 	})
-	if _, err := e.Projects.AdvanceProjectPhase(mover, p.ID, projects.AdvanceProjectPhaseInput{ToPhase: projects.PhasePursuing}); err != nil {
+	if _, err := e.Projects.AdvanceProjectPhase(mover, p.ID, projects.AdvanceProjectPhaseInput{
+		ToPhase: projects.PhasePursuing, Reason: new(phaseMoveReason),
+	}); err != nil {
 		t.Fatalf("advance project: %v", err)
 	}
 
@@ -81,6 +85,9 @@ func TestProjectHistoryListsThePhaseTransitionAndWhoMadeIt(t *testing.T) {
 	if move.OccurredAt.IsZero() {
 		t.Error("the move carries no occurred_at")
 	}
+	if move.Reason == nil || *move.Reason != phaseMoveReason {
+		t.Errorf("the move's reason = %v, want the one given with it (%q)", move.Reason, phaseMoveReason)
+	}
 
 	// The per-field diff: advance_phase is a projected verb, so the phase
 	// change reads as one field entry. Removing "advance_phase" from
@@ -97,5 +104,44 @@ func TestProjectHistoryListsThePhaseTransitionAndWhoMadeIt(t *testing.T) {
 	if got := fields.Entries[0]; got.OldValue == nil || got.NewValue == nil ||
 		*got.OldValue != projects.PhaseInitiative || *got.NewValue != projects.PhasePursuing {
 		t.Errorf("phase diff = %v → %v, want initiative → pursuing", got.OldValue, got.NewValue)
+	}
+}
+
+// The reason rides with the phase it explains: a role that does not read the
+// phase reads no reason for moving it.
+func TestAMaskedPhaseHidesTheReasonForTheMove(t *testing.T) {
+	e := Setup(t)
+	company := e.SeedCompany(t, "Elbe Kälte", nil)
+	p := seedProject(e.Admin(), t, e, "Cold-room rollout", company, &e.Rep1)
+	if _, err := e.Projects.AdvanceProjectPhase(e.Admin(), p.ID, projects.AdvanceProjectPhaseInput{
+		ToPhase: projects.PhasePursuing, Reason: new(phaseMoveReason),
+	}); err != nil {
+		t.Fatalf("advance project: %v", err)
+	}
+	reader := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
+		Objects:  map[string]principal.ObjectGrant{"project": {Read: true}},
+		RowScope: principal.RowScopeTeam,
+		FieldMasks: []principal.FieldMask{
+			{Object: "project", Field: "phase", Condition: principal.MaskAlways},
+		},
+	})
+	page, err := privacy.ListRecordHistory(reader, e.DB(), privacy.RecordHistoryFilter{
+		EntityType: "project", EntityID: p.ID.UUID,
+	})
+	if err != nil {
+		t.Fatalf("record history of a project: %v", err)
+	}
+	moves := 0
+	for _, entry := range page.Entries {
+		if entry.Action != "advance_phase" {
+			continue
+		}
+		moves++
+		if entry.Reason != nil {
+			t.Errorf("a reader without the phase read the reason for moving it: %q", *entry.Reason)
+		}
+	}
+	if moves == 0 {
+		t.Fatal("the reader saw no phase move, so nothing proves the mask")
 	}
 }

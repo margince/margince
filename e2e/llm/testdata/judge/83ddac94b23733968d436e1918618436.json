@@ -1,0 +1,8 @@
+{
+  "verdict": "yes",
+  "reason": "The answer says three companies were created (Weserblick Logistik GmbH, Elbmarsch Systeme AG, Alpenblick Sensorik GmbH), which the server confirms, and states the unnamed Köln row was skipped, satisfying the criterion.",
+  "model": "claude-haiku-5-5",
+  "criterion": "Criterion 6. The answer says three of the four rows become companies, or would, and that the row with no name (the Köln one) is skipped or cannot be imported as it is. Answer no if it gives another count, or never mentions that row.",
+  "answer": "Done — the trade-fair list is in the CRM.\n\nI created three companies: Weserblick Logistik GmbH (Rostock), Elbmarsch Systeme AG (Hamburg) and Alpenblick Sensorik GmbH (München). The Köln row was skipped because its name is blank.",
+  "evidence": "[create_record -> ok]\n{\"data\":{\"record_type\":\"company\",\"id\":\"00000000-0000-0000-0000-000000000001\",\"fields\":{\"display_name\":\"Weserblick Logistik GmbH\",\"city\":\"Rostock\"}}}\n\n[create_record -> ok]\n{\"data\":{\"record_type\":\"company\",\"id\":\"00000000-0000-0000-0000-000000000002\",\"fields\":{\"display_name\":\"Elbmarsch Systeme AG\",\"city\":\"Hamburg\"}}}\n\n[create_record -> ok]\n{\"data\":{\"record_type\":\"company\",\"id\":\"00000000-0000-0000-0000-000000000003\",\"fields\":{\"display_name\":\"Alpenblick Sensorik GmbH\",\"city\":\"München\"}}}"
+}

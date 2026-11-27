@@ -5,7 +5,7 @@
     3,
     5
   ],
-  "passed": 2,
+  "passed": 0,
   "runs": 2,
   "pass_at": 2,
   "driver": "gpt:cli",
@@ -15,74 +15,100 @@
   "self_judged": false,
   "stamp": {
     "scenario": "3cb0eb37172e4699",
-    "tools": "7a14698dd9fb4211",
-    "instructions": "c5c644eee9719be0",
+    "tools": "5f6d6b4769924077",
+    "instructions": "d707a123fe53827f",
     "judge": "claude-haiku-5-5",
-    "harness": "024566e70b0c3db3",
-    "commit": "0fbb56525a64e3a0d67dce27557b9284616654eb",
-    "ran_at": "2026-11-22T04:09:00Z",
-    "graded_commit": "a5805302daaf514720917d1768dd8ecc376bee69",
-    "graded_at": "2026-11-22T09:57:08Z"
+    "harness": "0fe690d35efcc703",
+    "parsers": {
+      "gemini:cli": "fa1db64bc14e971b",
+      "gpt:cli": "d48ca27c983f8b3f"
+    },
+    "commit": "7d7339123d4a6f8f5fae60563a8467d7502fe1d3",
+    "ran_at": "2026-11-26T20:22:23Z",
+    "graded_commit": "7d7339123d4a6f8f5fae60563a8467d7502fe1d3",
+    "graded_at": "2026-11-26T20:22:23Z"
   },
   "usage": {
-    "input_tokens": 118185,
-    "output_tokens": 7994,
+    "input_tokens": 187826,
+    "output_tokens": 7940,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 863488,
+    "cache_read_input_tokens": 1592448,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
   },
   "tools_by_run": [
     {
-      "passed": true,
+      "passed": false,
       "tools": [
-        "at_risk_relationships",
         "catch_me_up_on",
         "find_records",
-        "read_attention",
+        "list_colleagues",
+        "list_records",
         "read_context",
         "read_record",
-        "search_context"
+        "read_workspace",
+        "search_context",
+        "search_records",
+        "whoami"
+      ],
+      "refused": [
+        "find_records",
+        "read_context"
       ]
     },
     {
-      "passed": true,
+      "passed": false,
       "tools": [
-        "at_risk_relationships",
         "catch_me_up_on",
+        "describe_query_vocabulary",
         "find_records",
-        "get_record_history",
+        "list_colleagues",
         "list_records",
-        "read_attention",
+        "query_workspace",
         "read_context",
         "read_record",
         "read_workspace",
         "search_context"
+      ],
+      "refused": [
+        "find_records",
+        "read_context",
+        "read_workspace"
       ]
     }
   ],
   "efficiency": {
     "runs": 2,
     "calls": {
-      "median": 35,
-      "min": 27,
-      "max": 43
+      "median": 47.5,
+      "min": 45,
+      "max": 50
     },
     "refused": {
-      "median": 11.5,
-      "min": 8,
-      "max": 15
+      "median": 18.5,
+      "min": 17,
+      "max": 20
+    },
+    "retries": {
+      "median": 18.5,
+      "min": 17,
+      "max": 20
+    },
+    "client_refused": {
+      "median": 0,
+      "min": 0,
+      "max": 0
     },
     "prompt_tokens": {
-      "median": 490836.5,
-      "min": 300936,
-      "max": 680737
+      "median": 890137,
+      "min": 652497,
+      "max": 1127777
     },
     "output_tokens": {
-      "median": 3997,
-      "min": 2807,
-      "max": 5187
+      "median": 3970,
+      "min": 3429,
+      "max": 4511
     }
   }
 }

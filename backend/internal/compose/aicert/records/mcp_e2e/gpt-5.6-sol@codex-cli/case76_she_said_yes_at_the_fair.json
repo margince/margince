@@ -4,7 +4,7 @@
     1
   ],
   "passed": 2,
-  "runs": 3,
+  "runs": 2,
   "pass_at": 2,
   "driver": "gpt:cli",
   "effort": "reasoning medium",
@@ -13,21 +13,25 @@
   "self_judged": false,
   "stamp": {
     "scenario": "22fad93ffe20de9f",
-    "tools": "45943c69262917af",
-    "instructions": "c5c644eee9719be0",
+    "tools": "8ca0ae01b8014eba",
+    "instructions": "d707a123fe53827f",
     "judge": "",
-    "harness": "024566e70b0c3db3",
-    "commit": "0fbb56525a64e3a0d67dce27557b9284616654eb",
-    "ran_at": "2026-11-22T04:33:48Z",
-    "graded_commit": "a5805302daaf514720917d1768dd8ecc376bee69",
-    "graded_at": "2026-11-22T09:56:43Z"
+    "harness": "0fe690d35efcc703",
+    "parsers": {
+      "gemini:cli": "fa1db64bc14e971b",
+      "gpt:cli": "d48ca27c983f8b3f"
+    },
+    "commit": "7d7339123d4a6f8f5fae60563a8467d7502fe1d3",
+    "ran_at": "2026-11-26T20:47:51Z",
+    "graded_commit": "7d7339123d4a6f8f5fae60563a8467d7502fe1d3",
+    "graded_at": "2026-11-26T20:47:51Z"
   },
   "usage": {
-    "input_tokens": 72866,
-    "output_tokens": 5025,
+    "input_tokens": 56314,
+    "output_tokens": 3131,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 789888,
-    "runs_measured": 3,
+    "cache_read_input_tokens": 592640,
+    "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
   },
@@ -35,64 +39,71 @@
     {
       "passed": true,
       "tools": [
+        "catch_me_up_on",
         "describe_router_actions",
         "find_records",
         "get_contact_consent",
-        "get_contact_consent_guard",
-        "read_details",
-        "read_record",
-        "read_workspace",
-        "resolve_entities",
-        "search_records"
-      ]
-    },
-    {
-      "passed": false,
-      "tools": [
-        "describe_router_actions",
-        "find_records",
-        "get_contact_consent",
+        "read_context",
         "read_details",
         "read_record",
         "read_workspace",
         "search_records"
+      ],
+      "refused": [
+        "find_records",
+        "read_details"
       ]
     },
     {
       "passed": true,
       "tools": [
+        "catch_me_up_on",
         "describe_router_actions",
         "find_records",
         "get_contact_consent",
         "get_contact_consent_guard",
+        "read_context",
         "read_details",
+        "read_record",
         "read_workspace",
-        "resolve_entities",
         "search_records"
+      ],
+      "refused": [
+        "read_details"
       ]
     }
   ],
   "efficiency": {
-    "runs": 3,
+    "runs": 2,
     "calls": {
       "median": 10,
-      "min": 9,
-      "max": 11
+      "min": 10,
+      "max": 10
     },
     "refused": {
-      "median": 3,
+      "median": 2.5,
       "min": 2,
-      "max": 4
+      "max": 3
+    },
+    "retries": {
+      "median": 2.5,
+      "min": 2,
+      "max": 3
+    },
+    "client_refused": {
+      "median": 0,
+      "min": 0,
+      "max": 0
     },
     "prompt_tokens": {
-      "median": 282131,
-      "min": 195795,
-      "max": 384828
+      "median": 324477,
+      "min": 309878,
+      "max": 339076
     },
     "output_tokens": {
-      "median": 1564,
-      "min": 1531,
-      "max": 1930
+      "median": 1565.5,
+      "min": 1436,
+      "max": 1695
     }
   }
 }

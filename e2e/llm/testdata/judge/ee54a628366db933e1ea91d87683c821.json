@@ -1,0 +1,7 @@
+{
+  "verdict": "no",
+  "reason": "The answer says it set Mai Nguyen's marketing email consent to opted out, which is a marketing opt-out alone and a field change, the exact alternative the criterion says should be graded no.",
+  "model": "claude-haiku-5-5",
+  "criterion": "Criterion 1. The answer either reports a stop recorded on Mai Nguyen because she asked us to stop writing, or proposes recording that stop and asks the user's yes first. Answer no if it offers a tag, a note, a marketing opt-out alone or a field change instead, or says it cannot stop mail to her.",
+  "answer": "I found Mai Nguyen. I have set her marketing email consent to opted out, so she will no longer get newsletters or campaigns."
+}
