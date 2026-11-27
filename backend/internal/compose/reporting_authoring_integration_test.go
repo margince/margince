@@ -137,6 +137,7 @@ func TestReportingSharedManagersCanReviseOnlyVisibleReports(t *testing.T) {
 }
 
 func TestReportingWritesNameTheirNestedScope(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	for _, scope := range []crmcontracts.ReportingScope{
 		{Kind: "owner"}, {Kind: "team"}, {Kind: "unknown"}, {Kind: "workspace", Id: ptrUUID(f.env.Rep1)},
@@ -254,8 +255,7 @@ func TestReportingStoredTargetOnAnUnfilteredPipelineStaysRevisableAndRetirable(t
 	requireRefusedField(t, err, "pipeline_id")
 }
 
-// requireRefusedField holds the 422 shape the contract lists: a refusal that
-// names the field to fix, not a bare invalid argument.
+// A 422 must name the input the caller can fix.
 func requireRefusedField(t *testing.T, err error, field string) {
 	t.Helper()
 	fault, ok := httperr.Classify(err)

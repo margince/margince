@@ -31,6 +31,7 @@ var sentinelTail = regexp.MustCompile(`: (not found|conflict|invalid argument|pe
 // Each refusal names the input that is wrong, with the code the same mistake
 // gets on other routes. No detail ends in a sentinel's words.
 func TestEveryRefusalNamesTheFaultTheCallerMade(t *testing.T) {
+	t.Parallel()
 	e, _ := listsApp(t, true)
 	stages := apptest.DiscoverSeededPipeline(t, e)
 	contact := createdRecord(t, e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Named Fault"})
@@ -85,6 +86,7 @@ func TestEveryRefusalNamesTheFaultTheCallerMade(t *testing.T) {
 // A duplicate tag name answers with the tag that holds it, so a caller can
 // apply that one.
 func TestATakenTagNameNamesTheTagThatHoldsIt(t *testing.T) {
+	t.Parallel()
 	e, _ := listsApp(t, true)
 	held := createdRecord(t, e, "/v1/tags", AnyMap{"name": "Partner"})
 	var problem struct {
