@@ -24,3 +24,20 @@ func TestTheDefaultEntityTakesNoCountryOfItsOwn(t *testing.T) {
 		t.Errorf("a country on a further entity answered %v, changed %v; want it stored", err, changed)
 	}
 }
+
+// A document language names a language: "zz" has the shape and names none.
+func TestAnEntityDocumentLanguageIsOneTheRegistryAssigns(t *testing.T) {
+	t.Parallel()
+	for raw, want := range map[string]string{"DE": "de", "vi": "vi", "zz": "", "xx": "", "deu": ""} {
+		got, err := cleanEntityLanguage(raw)
+		if want == "" {
+			if fault, ok := errors.AsType[*values.ParseError](err); !ok || fault.Field != wireDefaultLanguage {
+				t.Errorf("default_language %q answered %q, %v; want a refusal on %s", raw, got, err, wireDefaultLanguage)
+			}
+			continue
+		}
+		if err != nil || got != want {
+			t.Errorf("default_language %q answered %q, %v; want %q", raw, got, err, want)
+		}
+	}
+}
