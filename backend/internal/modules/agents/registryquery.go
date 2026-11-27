@@ -120,6 +120,7 @@ func (r *Registry) Specs() []mcp.ToolSpec {
 	for _, spec := range r.specs {
 		served := copySchemas(spec)
 		served.InsteadTools = r.insteadTools(spec)
+		served.NamedTools = r.namedTools(spec)
 		out = append(out, served)
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
@@ -134,6 +135,21 @@ func (r *Registry) insteadTools(spec mcp.ToolSpec) []string {
 	for _, word := range strings.FieldsFunc(spec.Instead, outsideToolName) {
 		if _, registered := r.specs[word]; registered && word != spec.Name && !slices.Contains(named, word) {
 			named = append(named, word)
+		}
+	}
+	return named
+}
+
+// namedTools lists the other registered tools the description or the input
+// schema names, read at listing time for the reason insteadTools is. The
+// caller holds r.mu.
+func (r *Registry) namedTools(spec mcp.ToolSpec) []string {
+	var named []string
+	for _, text := range []string{spec.Description, string(spec.InputSchema)} {
+		for _, word := range strings.FieldsFunc(text, outsideToolName) {
+			if _, registered := r.specs[word]; registered && word != spec.Name && !slices.Contains(named, word) {
+				named = append(named, word)
+			}
 		}
 	}
 	return named
