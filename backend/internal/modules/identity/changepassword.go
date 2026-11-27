@@ -190,8 +190,8 @@ func (s *Service) proveCurrentPassword(ctx context.Context, tx pgx.Tx, userID id
 // reader finds later.
 const passwordChangeRevokeReason = "password changed by its owner"
 
-// recordFailedPasswordProof folds a wrong current password into the SAME §27
-// lockout the login path counts against, and leaves the evidence under action.
+// recordFailedPasswordProof folds a wrong current password into the lockout the
+// login path counts against, and leaves the evidence under action.
 //
 // In its OWN transaction, because the caller's has already rolled back by the
 // time this runs — that is the whole reason recordFailedLogin does the same.
@@ -335,7 +335,7 @@ func (s *Service) rejectEmailPassword(ctx context.Context, tx pgx.Tx, userID ids
 
 // admitPasswordProof screens a request whose authority is the caller's current
 // password: the field must be present, and the account must have failure budget
-// left. The cap is per ACCOUNT and runs before the verify. Every such route tests
+// left. The cap is per account and runs before the verify. Every such route tests
 // the secret login tests, so uncapped it is a guessing oracle behind any borrowed
 // session. Each attempt also costs an Argon2 verification.
 func (h Handlers) admitPasswordProof(w http.ResponseWriter, r *http.Request, current string) bool {
@@ -357,7 +357,7 @@ func (h Handlers) admitPasswordProof(w http.ResponseWriter, r *http.Request, cur
 func (h Handlers) writePasswordProofRefusal(w http.ResponseWriter, r *http.Request, err error) bool {
 	switch {
 	case errors.Is(err, errAccountLocked):
-		// Disclosing the lock is safe HERE, unlike on login. The caller already
+		// Disclosing the lock is safe here, unlike on login. The caller already
 		// holds a session for this account, and silence would leave them
 		// retyping a correct password.
 		httperr.Write(w, r, &httperr.DetailedError{
@@ -366,8 +366,8 @@ func (h Handlers) writePasswordProofRefusal(w http.ResponseWriter, r *http.Reque
 		})
 		return true
 	case errors.Is(err, ErrCurrentPasswordWrong):
-		// Only a FAILURE spends a token, so a successful proof is never
-		// throttled. The §27 counter and the evidence row are the service's job.
+		// Only a failure spends a token, so a successful proof is never
+		// throttled. The lockout counter and the evidence row are the service's job.
 		if caller, ok := callerUserID(r.Context()); ok {
 			h.changeFailures.Record(caller.String())
 		}

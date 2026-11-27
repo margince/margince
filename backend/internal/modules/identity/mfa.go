@@ -151,11 +151,6 @@ func (s *Service) StartTOTPEnrolment(ctx context.Context) (string, error) {
 // sitting on, which the member enrolling a factor is often reacting to. The
 // accepted step is recorded so the confirmation code cannot be replayed at the
 // first login.
-//
-// The caller's current password authorizes the confirmation, as it authorizes
-// ChangePassword. Every later password sign-in demands a confirmed factor, so a
-// borrowed session alone must not install one. A wrong password counts toward
-// the login lockout.
 func (s *Service) ConfirmTOTP(ctx context.Context, currentPassword, code, keepTokenHash string) ([]string, error) {
 	human, wsID, err := s.selfWorkspace(ctx)
 	if err != nil {
@@ -163,6 +158,8 @@ func (s *Service) ConfirmTOTP(ctx context.Context, currentPassword, code, keepTo
 	}
 	var recovery []string
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
+		// Every later password sign-in demands the confirmed factor, so a session
+		// alone must not install one: the current password authorizes it.
 		if err := s.proveCurrentPassword(ctx, tx, human, currentPassword); err != nil {
 			return err
 		}
