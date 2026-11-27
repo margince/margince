@@ -209,6 +209,18 @@ func EngineTaskSources() []string {
 // EngineTaskSource reports whether source is one of EngineTaskSources.
 func EngineTaskSource(source string) bool { return slices.Contains(EngineTaskSources(), source) }
 
+// RoutedTaskSource reports whether the writer that filed a task of this source
+// system routes it. It goes to a privacy operator, a lead's owner, a promise's
+// claim or an assurance bundle. Nobody else may take such a task.
+func RoutedTaskSource(source string) bool {
+	switch source {
+	case PrivacyRequestTaskSource, LeadSLATaskSource, LeadQualifyTaskSource, AssuranceTaskSource,
+		OvernightReconcileSource, LeadRepliedSource, CommitmentTaskSource:
+		return true
+	}
+	return EngineTaskSource(source)
+}
+
 // RetiredTaskSources are automatic task families whose writers were removed.
 // Their rows remain current until a user completes them.
 func RetiredTaskSources() []string { return []string{LeadQualifyTaskSource} }

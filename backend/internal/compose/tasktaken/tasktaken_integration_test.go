@@ -95,3 +95,88 @@ func TestATaskOnARecordWithNoOwnerTellsNobody(t *testing.T) {
 		t.Errorf("%d notices for a record nobody owns, want none", got)
 	}
 }
+
+func takeAsRep2(t *testing.T, e *integration.Env, task ids.ActivityID) {
+	t.Helper()
+	version := int64(e.WsCount(t, `SELECT version FROM activity WHERE id = $1`, task.UUID))
+	if _, err := e.Activities.TakeTask(seatOf(e, e.Rep2), task, version); err != nil {
+		t.Fatalf("taking the task: %v", err)
+	}
+}
+
+func linkTask(t *testing.T, e *integration.Env, task ids.ActivityID, contact ids.UUID) {
+	t.Helper()
+	e.WsExec(t, `INSERT INTO activity_link (id, activity_id, entity_type, contact_id) VALUES ($1, $2, 'contact', $3)`, ids.NewV7(), task.UUID, contact)
+}
+
+func noticesTo(t *testing.T, e *integration.Env, user ids.UUID) int {
+	t.Helper()
+	return e.WsCount(t, `SELECT count(*) FROM notice WHERE kind = 'task_taken' AND recipient_user_id = $1`, user)
+}
+
+// The taker sees the task through one record only. The owner of the record they
+// cannot read is still told, as is the owner of the one they can.
+func TestEveryLinkedRecordsOwnerIsToldNotOnlyThoseTheTakerCanRead(t *testing.T) {
+	e := integration.Setup(t)
+	e.Activities.WithTaskTaken(tasktaken.Hook())
+	seen := e.SeedContact(t, "Ada Example", &e.Rep1)
+	hidden := e.SeedContact(t, "Bo Private", &e.Rep3)
+	e.MakeCapturePrivate(t, "contact", hidden, e.Rep3)
+	task := unassignedTaskOn(t, e, seen)
+	linkTask(t, e, task, hidden)
+
+	takeAsRep2(t, e, task)
+
+	for name, owner := range map[string]ids.UUID{"the visible record's owner": e.Rep1, "the private record's owner": e.Rep3} {
+		if got := noticesTo(t, e, owner); got != 1 {
+			t.Errorf("%s got %d notices, want 1", name, got)
+		}
+	}
+	if got := e.WsCount(t, `SELECT count(*) FROM notice WHERE kind = 'task_taken' AND (subject LIKE '%price list%' OR body LIKE '%price list%')`); got != 0 {
+		t.Errorf("%d stored notices carry the task's text", got)
+	}
+}
+
+func TestAnOwnerOfTwoLinkedRecordsIsToldOnce(t *testing.T) {
+	e := integration.Setup(t)
+	e.Activities.WithTaskTaken(tasktaken.Hook())
+	first := e.SeedContact(t, "Ada Example", &e.Rep1)
+	second := e.SeedContact(t, "Bo Example", &e.Rep1)
+	task := unassignedTaskOn(t, e, first)
+	linkTask(t, e, task, second)
+
+	takeAsRep2(t, e, task)
+
+	if got := noticesTo(t, e, e.Rep1); got != 1 {
+		t.Errorf("the shared owner got %d notices, want 1", got)
+	}
+}
+
+func TestAnOwnerWhoLeftIsToldNothing(t *testing.T) {
+	e := integration.Setup(t)
+	e.Activities.WithTaskTaken(tasktaken.Hook())
+	left := e.SeedContact(t, "Ada Example", &e.Rep3)
+	task := unassignedTaskOn(t, e, left)
+	e.WsExec(t, `UPDATE app_user SET status = 'deactivated', removed_at = now() WHERE id = $1`, e.Rep3)
+
+	takeAsRep2(t, e, task)
+
+	if got := noticesTo(t, e, e.Rep3); got != 0 {
+		t.Errorf("a departed owner got %d notices, want none", got)
+	}
+}
+
+func TestAnOwnerOutsideASelectedAudienceLearnsNothing(t *testing.T) {
+	e := integration.Setup(t)
+	e.Activities.WithTaskTaken(tasktaken.Hook())
+	contact := e.SeedContact(t, "Ada Example", &e.Rep1)
+	task := unassignedTaskOn(t, e, contact)
+	e.WsExec(t, `UPDATE activity SET audience = 'selected' WHERE id = $1`, task.UUID)
+	e.WsExec(t, `INSERT INTO activity_audience_member (activity_id, subject_type, subject_id, created_by) VALUES ($1, 'user', $2, 'test')`, task.UUID, e.Rep2)
+
+	takeAsRep2(t, e, task)
+
+	if got := noticesTo(t, e, e.Rep1); got != 0 {
+		t.Errorf("an owner outside the task's audience got %d notices, want none", got)
+	}
+}

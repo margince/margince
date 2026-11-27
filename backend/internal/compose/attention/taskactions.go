@@ -7,7 +7,7 @@ import crmcontracts "github.com/margince/margince/backend/internal/contracts"
 
 // taskActions offers the changes permitted for this task. Claiming its unowned
 // lead can make an inquiry task writable in the same transaction. Anyone who
-// sees a task nobody holds may take it, so take does not wait on write access.
+// sees a task nobody holds may take it, so take waits on the take rule and not on write access.
 func taskActions(task Task) []crmcontracts.AttentionItemActions {
 	actions := []crmcontracts.AttentionItemActions{}
 	if !task.ReadOnly {
@@ -17,7 +17,7 @@ func taskActions(task Task) []crmcontracts.AttentionItemActions {
 		if task.Inquiry != nil && task.Inquiry.CanTake != nil && *task.Inquiry.CanTake {
 			actions = append(actions, "take")
 		}
-	} else if task.AssigneeID == nil {
+	} else if task.Takeable {
 		actions = append(actions, "take")
 	}
 	return actions

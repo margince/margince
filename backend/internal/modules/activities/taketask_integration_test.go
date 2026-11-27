@@ -146,11 +146,9 @@ func TestTwoTakersOfOneTaskLeaveExactlyOneWinner(t *testing.T) {
 	errs := make([]error, len(takers))
 	var wg sync.WaitGroup
 	for i, user := range takers {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			_, errs[i] = store.TakeTask(e.seatWithGrant(user, principal.ObjectGrant{Read: true, Update: true}), id, version)
-		}()
+		})
 	}
 	wg.Wait()
 
@@ -184,6 +182,8 @@ func TestATakeRefusesWhatIsNotAnOpenUnheldTask(t *testing.T) {
 		"a task a colleague holds": {`UPDATE activity SET assignee_id = $2 WHERE id = $1`, apperrors.ErrConflict},
 		"a task already done":      {`UPDATE activity SET is_done = true, done_at = now() WHERE id = $1 AND $2::uuid IS NOT NULL`, apperrors.ErrConflict},
 		"a website inquiry task":   {`UPDATE activity SET source_system = 'website_inquiry', source_id = 'submission-1' WHERE id = $1 AND $2::uuid IS NOT NULL`, apperrors.ErrConflict},
+		"a privacy request task":   {`UPDATE activity SET source_system = 'privacy_request', source_id = 'access:1' WHERE id = $1 AND $2::uuid IS NOT NULL`, apperrors.ErrConflict},
+		"a lead SLA task":          {`UPDATE activity SET source_system = 'lead_sla', source_id = 'l1' WHERE id = $1 AND $2::uuid IS NOT NULL`, apperrors.ErrConflict},
 		"a note":                   {`UPDATE activity SET kind = 'note' WHERE id = $1 AND $2::uuid IS NOT NULL`, apperrors.ErrConflict},
 	} {
 		task := e.seedUnassignedTask(t, e.other)
@@ -224,5 +224,31 @@ func TestATakeIsRefusedWithoutTheUpdateGrantOrSight(t *testing.T) {
 		if got := e.assigneeOf(t, task); got != nil {
 			t.Errorf("a refused take left assignee %v on %s", got, task)
 		}
+	}
+}
+
+// Only a human on a full seat takes a task. An agent or a connector acting for
+// a human is refused, and so is a read seat.
+func TestOnlyAHumanOnAFullSeatTakesATask(t *testing.T) {
+	e := setupPromises(t)
+	task := e.seedUnassignedTask(t, e.other)
+	store := e.takeStore(nil)
+	human := e.seatWithGrant(e.rep, principal.ObjectGrant{Read: true, Update: true})
+	actor, _ := principal.Actor(human)
+	for name, mutate := range map[string]func(*principal.Principal){
+		"an agent":      func(p *principal.Principal) { p.Type, p.OnBehalfOf = principal.PrincipalAgent, e.rep },
+		"a connector":   func(p *principal.Principal) { p.Type, p.OnBehalfOf = principal.PrincipalConnector, e.rep },
+		"a read seat":   func(p *principal.Principal) { p.SeatType = principal.SeatRead },
+		"an unset seat": func(p *principal.Principal) { p.SeatType = "" },
+	} {
+		p := actor
+		mutate(&p)
+		_, err := store.TakeTask(principal.WithActor(human, p), ids.From[ids.ActivityKind](task), e.versionOf(t, task))
+		if !errors.Is(err, apperrors.ErrPermissionDenied) {
+			t.Errorf("%s: err = %v, want permission denied", name, err)
+		}
+	}
+	if got := e.assigneeOf(t, task); got != nil {
+		t.Errorf("a refused take left assignee %v", got)
 	}
 }

@@ -15,34 +15,50 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/recordowner"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
+// linkedRecords are the records a task is filed under, as the record types
+// recordowner reads. The task's own links are read here and not
+// taken from the answer to the taker, which leaves out records the taker
+// cannot read.
+const linkedRecords = `SELECT entity_type, coalesce(contact_id, company_id, deal_id, lead_id, project_id)
+	FROM activity_link WHERE activity_id = $1 ORDER BY created_at, id`
+
+type linkedRecord struct {
+	recordType string
+	id         ids.UUID
+}
+
 // Hook writes one notice per distinct owner of the records the task is filed
-// under, apart from the taker. A record with no owner, or whose owner can no
-// longer hold work, tells nobody: automatic work has no fallback owner.
+// under, apart from the taker. Four cases tell nobody.
+// The owner has left. The owner can no longer hold work. The record has no
+// owner, since automatic work has no fallback owner. The owner is outside the
+// task's audience, so the task is not theirs to see.
 func Hook() activities.TaskTakenHook {
 	store := notices.NewStore(nil)
 	return func(ctx context.Context, tx pgx.Tx, taken activities.TaskTaken) error {
-		if taken.Task.Links == nil || taken.Task.Version == nil {
+		if taken.Task.Version == nil {
 			return nil
+		}
+		records, err := linkedRecordsOf(ctx, tx, ids.UUID(taken.Task.Id))
+		if err != nil {
+			return err
 		}
 		taker, err := recordowner.ColleagueNameTx(ctx, tx, taken.Taker.UUID)
 		if err != nil {
 			return err
 		}
 		told := map[ids.UUID]bool{taken.Taker.UUID: true}
-		for _, link := range *taken.Task.Links {
-			recordType := string(link.EntityType)
-			if !recordowner.Known(recordType) {
-				continue
-			}
-			owner, name, err := recordowner.ReadTx(ctx, tx, recordType, ids.UUID(link.EntityId))
+		for _, record := range records {
+			owner, name, err := recordowner.ReadTx(ctx, tx, record.recordType, record.id)
 			if errors.Is(err, apperrors.ErrNotFound) {
 				continue
 			}
@@ -53,19 +69,63 @@ func Hook() activities.TaskTakenHook {
 				continue
 			}
 			told[*owner] = true
-			err = auth.EnsureAssignee(ctx, tx, *owner)
-			if errors.As(err, new(*auth.AssigneeNotAllowedError)) {
-				continue
-			}
+			may, err := mayBeTold(ctx, tx, *owner, ids.UUID(taken.Task.Id))
 			if err != nil {
 				return err
 			}
-			if err := tell(ctx, tx, store, taken, *owner, notice{recordType: recordType, record: ids.UUID(link.EntityId), recordName: name, taker: taker}); err != nil {
+			if !may {
+				continue
+			}
+			if err := tell(ctx, tx, store, taken, *owner, notice{recordType: record.recordType, record: record.id, recordName: name, taker: taker}); err != nil {
 				return err
 			}
 		}
 		return nil
 	}
+}
+
+func linkedRecordsOf(ctx context.Context, tx pgx.Tx, task ids.UUID) ([]linkedRecord, error) {
+	rows, err := tx.Query(ctx, linkedRecords, task)
+	if err != nil {
+		return nil, fmt.Errorf("tasktaken: reading what the task is filed under: %w", err)
+	}
+	defer rows.Close()
+	var out []linkedRecord
+	for rows.Next() {
+		var record linkedRecord
+		if err := rows.Scan(&record.recordType, &record.id); err != nil {
+			return nil, fmt.Errorf("tasktaken: reading what the task is filed under: %w", err)
+		}
+		if recordowner.Known(record.recordType) {
+			out = append(out, record)
+		}
+	}
+	return out, rows.Err()
+}
+
+// mayBeTold is whether the owner holds a seat that can hold work. It also asks
+// the task's content gate as that owner would read it.
+func mayBeTold(ctx context.Context, tx pgx.Tx, owner, task ids.UUID) (bool, error) {
+	err := auth.EnsureAssignee(ctx, tx, owner)
+	if errors.As(err, new(*auth.AssigneeNotAllowedError)) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	members, err := identity.MemberPrincipalsTx(ctx, tx, []ids.UUID{owner})
+	if err != nil {
+		return false, err
+	}
+	reader, live := members[owner]
+	if !live {
+		return false, nil
+	}
+	err = auth.EnsureActivityContentVisibleLive(principal.WithActor(ctx, reader), tx, task)
+	if errors.Is(err, apperrors.ErrNotFound) {
+		return false, nil
+	}
+	return err == nil, err
 }
 
 type notice struct {

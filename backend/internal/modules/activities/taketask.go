@@ -55,16 +55,10 @@ func (h Handlers) WithTaskTaken(hook TaskTakenHook) Handlers {
 // Two takers of one version are serialized by the row lock. The second finds
 // the task held and is refused with a conflict.
 func (s *Store) TakeTask(ctx context.Context, id ids.ActivityID, version int64) (crmcontracts.Activity, error) {
-	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
+	if err := MayTakeTasks(ctx); err != nil {
 		return crmcontracts.Activity{}, err
 	}
-	if err := auth.RequireHuman(ctx); err != nil {
-		return crmcontracts.Activity{}, err
-	}
-	actor, ok := principal.Actor(ctx)
-	if !ok {
-		return crmcontracts.Activity{}, apperrors.ErrPermissionDenied
-	}
+	actor, _ := principal.Actor(ctx)
 	taker := new(ids.From[ids.UserKind](actor.UserID))
 	at := s.now()
 	in := UpdateActivityInput{AssigneeID: taker, IfVersion: &version, takesUnassigned: true, recordedAt: &at, recordZone: s.recordZone}
@@ -112,13 +106,39 @@ func admitTake(ctx context.Context, tx pgx.Tx, id ids.ActivityID) error {
 	return refuseUntakeable(current)
 }
 
-// refuseUntakeable answers a take of anything but an open task with no holder.
-// A website-inquiry task keeps its own flow, which also hands on its lead.
-func refuseUntakeable(current crmcontracts.Activity) error {
-	if current.Kind != crmcontracts.ActivityKindTask || current.AssigneeId != nil || (current.IsDone != nil && *current.IsDone) {
-		return apperrors.ErrConflict
+// TakeableTask reports whether a stored activity is an open task nobody holds
+// and no writer routes. A website-inquiry task keeps its own flow, which also
+// hands on its lead. The Worklist offers "Take it" by this same rule.
+func TakeableTask(task crmcontracts.Activity) bool {
+	if task.Kind != crmcontracts.ActivityKindTask || task.AssigneeId != nil || (task.IsDone != nil && *task.IsDone) {
+		return false
 	}
-	if current.SourceSystem != nil && current.SourceId != nil && provenance.IsWebsiteInquiryTask(*current.SourceSystem, *current.SourceId) {
+	if task.SourceSystem == nil {
+		return true
+	}
+	if provenance.RoutedTaskSource(*task.SourceSystem) {
+		return false
+	}
+	return task.SourceId == nil || !provenance.IsWebsiteInquiryTask(*task.SourceSystem, *task.SourceId)
+}
+
+// MayTakeTasks is the seat rule of a take, shared by the endpoint and the
+// Worklist's offer. It asks for a human on a full seat whose role may change
+// tasks. It skips the row-write check, because a task nobody holds has no
+// owner to protect.
+func MayTakeTasks(ctx context.Context) error {
+	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
+		return err
+	}
+	actor, ok := principal.Actor(ctx)
+	if !ok || actor.Type != principal.PrincipalHuman || !actor.SeatType.CanMutate() {
+		return apperrors.ErrPermissionDenied
+	}
+	return nil
+}
+
+func refuseUntakeable(current crmcontracts.Activity) error {
+	if !TakeableTask(current) {
 		return apperrors.ErrConflict
 	}
 	return nil
