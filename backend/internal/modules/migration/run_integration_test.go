@@ -127,7 +127,7 @@ func TestRunStoreLifecycleWithAuditAndResume(t *testing.T) {
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 
-	run, err := s.Create(ctx, CreateRunInput{Connector: connectorSalesforce, SourceRef: "portal-test", Source: "import_api"})
+	run, err := s.Create(ctx, CreateRunInput{Connector: connectorSalesforce, SourceRef: "portal-test"})
 	if err != nil {
 		t.Fatalf("Create: %v", err)
 	}
@@ -206,7 +206,7 @@ func TestRunStoreLifecycleWithAuditAndResume(t *testing.T) {
 func TestIdentityMapIsIdempotentAndRefusesAnUnknownRun(t *testing.T) {
 	ctxA, dbA := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(dbA)
-	run, err := s.Create(ctxA, CreateRunInput{Connector: connectorSalesforce, SourceRef: "portal-a", Source: "import_api"})
+	run, err := s.Create(ctxA, CreateRunInput{Connector: connectorSalesforce, SourceRef: "portal-a"})
 	if err != nil {
 		t.Fatalf("Create: %v", err)
 	}

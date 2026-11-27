@@ -12,6 +12,7 @@ import (
 	"context"
 	"errors"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -215,5 +216,19 @@ func TestACatalogueFailureIsNotDressedAsAFieldFault(t *testing.T) {
 	}
 	if bad, ok := errors.AsType[*BadInputError](err); ok {
 		t.Errorf("a failed catalogue read was reported as a bad %q", bad.Field)
+	}
+}
+
+func TestASavedViewQueryPastItsSizeIsRefused(t *testing.T) {
+	if err := checkViewQuerySize(map[string]any{"list": map[string]any{"q": "acme"}}); err != nil {
+		t.Fatalf("a small query = %v, want admitted", err)
+	}
+	err := checkViewQuerySize(map[string]any{"blob": strings.Repeat("x", maxViewQueryBytes)})
+	refused, ok := errors.AsType[*BadInputError](err)
+	if !ok {
+		t.Fatalf("err = %v, want a BadInputError", err)
+	}
+	if field, code, _ := refused.FieldFault(); field != viewQueryField || code != "too_large" {
+		t.Errorf("refused as %s/%s, want query/too_large", field, code)
 	}
 }

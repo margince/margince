@@ -11,6 +11,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -25,13 +26,17 @@ func StopOnAddressesSQL(alias, lowered, hashes string) string {
 }
 
 // StopAddressArgs answers the parameters of StopOnAddressesSQL. They are each
-// address lowercased, and every SuppressionForms of each spelling EmailLookups
-// knows, the hash an anonymize writes. An empty address matches nothing.
+// address lowercased and in its correspondence.Fold spelling, and every
+// SuppressionForms of each spelling EmailLookups knows, the hash an anonymize
+// writes. An empty address matches nothing.
 func StopAddressArgs(addresses ...string) (lowered, hashes []string) {
-	lowered = make([]string, 0, len(addresses))
+	lowered = make([]string, 0, 2*len(addresses))
 	for _, address := range addresses {
 		if trimmed := strings.ToLower(strings.TrimSpace(address)); trimmed != "" {
 			lowered = append(lowered, trimmed)
+		}
+		if folded := correspondence.Fold(address); folded != "" && folded != strings.ToLower(strings.TrimSpace(address)) {
+			lowered = append(lowered, folded)
 		}
 	}
 	return lowered, SuppressionForms(EmailLookups(addresses...)...)

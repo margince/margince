@@ -133,7 +133,7 @@ func sourceFor(given *string, sellerSide bool) (string, error) {
 	if given == nil {
 		return "", &fieldError{field: "source", code: codeRequired, msg: "source is required"}
 	}
-	if err := provenance.Refuse("source", *given); err != nil {
+	if err := provenance.RefuseSource(*given); err != nil {
 		return "", err
 	}
 	return *given, nil

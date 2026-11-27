@@ -59,6 +59,14 @@ func WithNegativeCountFloorsLifted(t *testing.T, mutate func(pgx.Tx) error) {
 	withChecksLifted(t, floors, mutate)
 }
 
+// WithParticipantSpellingCheckLifted runs mutate with the spelling check on
+// activity_participant.address dropped, then adds it back. The rows it plants
+// hold an address as capture stored it before the fold cleaned it.
+func WithParticipantSpellingCheckLifted(t *testing.T, mutate func(pgx.Tx) error) {
+	t.Helper()
+	withChecksLifted(t, []string{"activity_participant_address_one_spelling"}, mutate)
+}
+
 // withChecksLifted runs mutate with the named checks dropped, then adds each
 // back from its own catalog definition, in one owner transaction.
 func withChecksLifted(t *testing.T, names []string, mutate func(pgx.Tx) error) {

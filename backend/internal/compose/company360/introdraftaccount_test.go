@@ -82,5 +82,6 @@ func TestEveryFunctionIsNamedInEveryLanguage(t *testing.T) {
 		}
 	}
 	langcopytest.Census(t, reachFunctionNames)
-	langcopytest.Census(t, accountIntroWording)
+	langcopytest.Census(t, accountIntroWording,
+		langcopytest.OwnVoice("the ask is a note the member sends a colleague as themselves, so I and mình are theirs"))
 }

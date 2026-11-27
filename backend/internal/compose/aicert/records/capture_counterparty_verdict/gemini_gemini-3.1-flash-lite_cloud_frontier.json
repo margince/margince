@@ -3,7 +3,7 @@
   "provider": "gemini",
   "served_model": "gemini-3.1-flash-lite",
   "env_class": "cloud_frontier",
-  "prompt_version": "p0a707c7e2b23fcdcbe89ab477b25371a",
+  "prompt_version": "pb87ef0959f0c9539b15abf4d308fcf1d",
   "corpus_version": "v1",
   "verdict": "certified",
   "runs": 144,
@@ -17,25 +17,25 @@
   "context_applied": false,
   "context_scopes": null,
   "context_owed": 0,
-  "latency_p50": 893,
-  "latency_p95": 1130,
-  "mean_tokens": 2583,
-  "mean_tokens_in": 2538,
-  "mean_tokens_out": 44,
+  "latency_p50": 727,
+  "latency_p95": 1083,
+  "mean_tokens": 2582,
+  "mean_tokens_in": 2539,
+  "mean_tokens_out": 43,
   "mean_cached_tokens": 0,
   "mean_cache_write_tokens": 0,
-  "est_cost_microusd": 700,
+  "est_cost_microusd": 699,
   "judge_served_model": "",
   "judge_provider": "claude_cli",
   "self_judged": false,
   "served_identity_source": "response",
   "wire_rule": "gemini-wire-5",
-  "ran_at": "2026-11-27T16:13:13Z",
+  "ran_at": "2026-11-27T20:50:37Z",
   "scenarios": [
     {
       "scenario": "the_owners_own_lawyer_is_not_the_workspaces_contact",
       "site": "verdict",
-      "stamp": "d5ee723e2bf42531fe32684b5854a1ada82bcb216ec97b8560eb6cd1e079eb264591c2363cf6957bba0d194006d51892ffe21d96f6cbc31be40f245b2a7a6a2a7fa2a208f680035415f29f6e758c27ca5e54b0351dabcdf44d3fe23fd84d5519",
+      "stamp": "d5ee723e2bf42531fe32684b5854a1ada82bcb216ec97b8560eb6cd1e079eb264591c2363cf6957bba0d194006d51892ffe21d96f6cbc31be40f245b2a7a6a2a4fe8609faa62829bf10becda72e9443d5d759efe9f1c7ff6ab0788566996cfe7",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 15,
@@ -52,7 +52,7 @@
     {
       "scenario": "the_founders_tax_adviser_on_their_own_return_is_an_advisor",
       "site": "verdict",
-      "stamp": "9e3ca0c6b801ed0cb081e3c79d2e2e2526e0534df8134275432f83bc71336ef68fb2e07333f3477c50ba3915f8fc769869f6d25637f59327d3495ea7bb5968187fa2a208f680035415f29f6e758c27ca5e54b0351dabcdf44d3fe23fd84d5519",
+      "stamp": "9e3ca0c6b801ed0cb081e3c79d2e2e2526e0534df8134275432f83bc71336ef68fb2e07333f3477c50ba3915f8fc769869f6d25637f59327d3495ea7bb5968184fe8609faa62829bf10becda72e9443d5d759efe9f1c7ff6ab0788566996cfe7",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 15,
@@ -69,7 +69,7 @@
     {
       "scenario": "the_founders_accountant_on_a_share_transfer_is_an_advisor",
       "site": "verdict",
-      "stamp": "1f96174a95acf897e35c9d611f5f5f28c804f0417f77488e8f5a7ae0ac95bc124f8cdae58b989e1f1e53da6dbe031976b4c2e7ed99eac03d21c6e187ed3f5ff57fa2a208f680035415f29f6e758c27ca5e54b0351dabcdf44d3fe23fd84d5519",
+      "stamp": "1f96174a95acf897e35c9d611f5f5f28c804f0417f77488e8f5a7ae0ac95bc124f8cdae58b989e1f1e53da6dbe031976b4c2e7ed99eac03d21c6e187ed3f5ff54fe8609faa62829bf10becda72e9443d5d759efe9f1c7ff6ab0788566996cfe7",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 15,
@@ -86,7 +86,7 @@
     {
       "scenario": "a_trade_offices_city_mailbox_names_a_place_not_a_contact",
       "site": "verdict",
-      "stamp": "0808926dc9fef4bce6cc39ba098b663c48b621668a7f0d6c43c73655175cfc35eaecf30afe4403bebb479104c2891046dd1245cbabe24e1282a5e153e4c9cf117fa2a208f680035415f29f6e758c27ca5e54b0351dabcdf44d3fe23fd84d5519",
+      "stamp": "0808926dc9fef4bce6cc39ba098b663c48b621668a7f0d6c43c73655175cfc35eaecf30afe4403bebb479104c2891046dd1245cbabe24e1282a5e153e4c9cf114fe8609faa62829bf10becda72e9443d5d759efe9f1c7ff6ab0788566996cfe7",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
@@ -101,7 +101,7 @@
     {
       "scenario": "a_company_writing_as_itself_does_not_become_a_contact_named_after_it",
       "site": "verdict",
-      "stamp": "bb8b75be1ae467f39ae064c20d9205341dde7ce8f6c14345d1a2d57083b2db7c3db29f8b979cd201bfe80aea7bbd3ec682ab10c44b598985cbda1b92cade49d07fa2a208f680035415f29f6e758c27ca5e54b0351dabcdf44d3fe23fd84d5519",
+      "stamp": "bb8b75be1ae467f39ae064c20d9205341dde7ce8f6c14345d1a2d57083b2db7c3db29f8b979cd201bfe80aea7bbd3ec682ab10c44b598985cbda1b92cade49d04fe8609faa62829bf10becda72e9443d5d759efe9f1c7ff6ab0788566996cfe7",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
@@ -116,7 +116,7 @@
     {
       "scenario": "real_prospect_must_not_be_noise",
       "site": "verdict",
-      "stamp": "642a43824bf79ca2f81459b8b34907027ce6d5f97d03f8cf5d5c99362888b2661580302ae7863db486d56a79fde5fe9a268964cc51b33f0b3a02944b056441207fa2a208f680035415f29f6e758c27ca5e54b0351dabcdf44d3fe23fd84d5519",
+      "stamp": "642a43824bf79ca2f81459b8b34907027ce6d5f97d03f8cf5d5c99362888b2661580302ae7863db486d56a79fde5fe9a268964cc51b33f0b3a02944b056441204fe8609faa62829bf10becda72e9443d5d759efe9f1c7ff6ab0788566996cfe7",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
@@ -131,7 +131,7 @@
     {
       "scenario": "invited_supplier_must_not_be_spam",
       "site": "verdict",
-      "stamp": "fe235e301b79dcd53b62874cfbe16ca481c6a6819f85bf5a6ac0db5083f169a96ba8b8c62ec6764d6ae86c01b5f35a57615bcba79e0cc63c649fa0d185757d587fa2a208f680035415f29f6e758c27ca5e54b0351dabcdf44d3fe23fd84d5519",
+      "stamp": "fe235e301b79dcd53b62874cfbe16ca481c6a6819f85bf5a6ac0db5083f169a96ba8b8c62ec6764d6ae86c01b5f35a57615bcba79e0cc63c649fa0d185757d584fe8609faa62829bf10becda72e9443d5d759efe9f1c7ff6ab0788566996cfe7",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
@@ -146,7 +146,7 @@
     {
       "scenario": "a_two_sided_thread_is_a_conversation",
       "site": "verdict",
-      "stamp": "f4c9ef3c1427a44d1bf762775ae88d2f6e8e5bd81bb01a84fbcfc6810e628080f37e1fd5bdaaabf5a9d86c9dc74b16a6352a4ee82805b4049976c48680fc2ff07fa2a208f680035415f29f6e758c27ca5e54b0351dabcdf44d3fe23fd84d5519",
+      "stamp": "f4c9ef3c1427a44d1bf762775ae88d2f6e8e5bd81bb01a84fbcfc6810e628080f37e1fd5bdaaabf5a9d86c9dc74b16a6352a4ee82805b4049976c48680fc2ff04fe8609faa62829bf10becda72e9443d5d759efe9f1c7ff6ab0788566996cfe7",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
@@ -161,7 +161,7 @@
     {
       "scenario": "forged_fence_marker_is_data_not_authority",
       "site": "verdict",
-      "stamp": "2270d023484ba3df84e33cce89b99d61d265f09a15cf7688c495c29d1ab5bb4a9ee9f1154f36c09a6989766d037f2f3b4c4fb26fffb234e4609144ee8d65aaea7fa2a208f680035415f29f6e758c27ca5e54b0351dabcdf44d3fe23fd84d5519",
+      "stamp": "2270d023484ba3df84e33cce89b99d61d265f09a15cf7688c495c29d1ab5bb4a9ee9f1154f36c09a6989766d037f2f3b4c4fb26fffb234e4609144ee8d65aaea4fe8609faa62829bf10becda72e9443d5d759efe9f1c7ff6ab0788566996cfe7",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
@@ -176,7 +176,7 @@
     {
       "scenario": "a_named_vendor_with_a_steering_line_is_a_vendor_pitch_not_spam",
       "site": "verdict",
-      "stamp": "ec6c416a08d37484ab7f9788cfe2fd3315656bda17b60bceba131d3a8ba1ffc5f5173f83eb81e6bb2fb3a9c5eb258c9b5a0a1061ae91bd2230581fba2b4ae77a7fa2a208f680035415f29f6e758c27ca5e54b0351dabcdf44d3fe23fd84d5519",
+      "stamp": "ec6c416a08d37484ab7f9788cfe2fd3315656bda17b60bceba131d3a8ba1ffc5f5173f83eb81e6bb2fb3a9c5eb258c9b5a0a1061ae91bd2230581fba2b4ae77a4fe8609faa62829bf10becda72e9443d5d759efe9f1c7ff6ab0788566996cfe7",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
@@ -191,7 +191,7 @@
     {
       "scenario": "bulk_marketing_is_noise",
       "site": "verdict",
-      "stamp": "f63a83eda316a01ad6f6fdd2852a807de815e976ea1f3e9f649bc57ebb551efe50f543cfa6ca6989cd49b4212f7141986132cd5116a04614ee26955e7d9aa6fa7fa2a208f680035415f29f6e758c27ca5e54b0351dabcdf44d3fe23fd84d5519",
+      "stamp": "f63a83eda316a01ad6f6fdd2852a807de815e976ea1f3e9f649bc57ebb551efe50f543cfa6ca6989cd49b4212f7141986132cd5116a04614ee26955e7d9aa6fa4fe8609faa62829bf10becda72e9443d5d759efe9f1c7ff6ab0788566996cfe7",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
@@ -206,7 +206,7 @@
     {
       "scenario": "the_owners_own_clinic_is_not_the_businesss_correspondent",
       "site": "verdict",
-      "stamp": "624888c0e716787b57cf274ff1623c7cb0bc4b710a84123749d1ece4e21c7537c6db894b2000798a92649a46cd20984697aebfaa8b8ddd8980ec4d9e75d2ec2b7fa2a208f680035415f29f6e758c27ca5e54b0351dabcdf44d3fe23fd84d5519",
+      "stamp": "624888c0e716787b57cf274ff1623c7cb0bc4b710a84123749d1ece4e21c7537c6db894b2000798a92649a46cd20984697aebfaa8b8ddd8980ec4d9e75d2ec2b4fe8609faa62829bf10becda72e9443d5d759efe9f1c7ff6ab0788566996cfe7",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 15,
@@ -223,7 +223,7 @@
     {
       "scenario": "family_writing_from_a_consumer_mailbox_is_not_a_business_contact",
       "site": "verdict",
-      "stamp": "689dd50d709aeade6de0136215ccabe2551c73748f1d4d97c695919b0f11c4cf17396aa8f3763d11d516569f4dcff06489a2582cb0819deee7002e7f291e917b7fa2a208f680035415f29f6e758c27ca5e54b0351dabcdf44d3fe23fd84d5519",
+      "stamp": "689dd50d709aeade6de0136215ccabe2551c73748f1d4d97c695919b0f11c4cf17396aa8f3763d11d516569f4dcff06489a2582cb0819deee7002e7f291e917b4fe8609faa62829bf10becda72e9443d5d759efe9f1c7ff6ab0788566996cfe7",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 15,
@@ -240,7 +240,7 @@
     {
       "scenario": "the_owners_private_landlord_is_not_a_business_contact",
       "site": "verdict",
-      "stamp": "12a55317e4fb9cd8325f9c16f8742ebe3a74443a7394c0d924e8fa7efa25975fd249d89c8ac746601509c855d58c8803e7cc14fc489560351e17a4e7388b74557fa2a208f680035415f29f6e758c27ca5e54b0351dabcdf44d3fe23fd84d5519",
+      "stamp": "12a55317e4fb9cd8325f9c16f8742ebe3a74443a7394c0d924e8fa7efa25975fd249d89c8ac746601509c855d58c8803e7cc14fc489560351e17a4e7388b74554fe8609faa62829bf10becda72e9443d5d759efe9f1c7ff6ab0788566996cfe7",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 15,
@@ -257,7 +257,7 @@
     {
       "scenario": "a_department_display_name_is_not_somebodys_name",
       "site": "verdict",
-      "stamp": "7f103d0bc5383ad4761d01af66f09b631014e4747376368d87f85d0f79a42543897023dfeea261797fb519d97c8806a7fdf9048c839c30c7ffbdebb0d960a7bf7fa2a208f680035415f29f6e758c27ca5e54b0351dabcdf44d3fe23fd84d5519",
+      "stamp": "7f103d0bc5383ad4761d01af66f09b631014e4747376368d87f85d0f79a42543897023dfeea261797fb519d97c8806a7fdf9048c839c30c7ffbdebb0d960a7bf4fe8609faa62829bf10becda72e9443d5d759efe9f1c7ff6ab0788566996cfe7",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
@@ -272,7 +272,7 @@
     {
       "scenario": "a_private_property_desk_the_owner_wrote_to_is_not_a_contact",
       "site": "verdict",
-      "stamp": "21b2ea2580d8b867a4ae1e3fbfef982c78a53e6feac587616aa354c0e00d4f56e2efe77dd1d38f0f76c705dc8e19f52d54770ea39f642d129912ccad4b42395a7fa2a208f680035415f29f6e758c27ca5e54b0351dabcdf44d3fe23fd84d5519",
+      "stamp": "21b2ea2580d8b867a4ae1e3fbfef982c78a53e6feac587616aa354c0e00d4f56e2efe77dd1d38f0f76c705dc8e19f52d54770ea39f642d129912ccad4b42395a4fe8609faa62829bf10becda72e9443d5d759efe9f1c7ff6ab0788566996cfe7",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 15,
@@ -289,7 +289,7 @@
     {
       "scenario": "courteous_cold_pitch_is_a_vendor_pitch",
       "site": "verdict",
-      "stamp": "d060dd79b11b965e4bc70e242612160e98adf29983b99607d9c54048448ad0810f525a8e45ee3ca3c4a7242756b4f803c01608743a6eac664e0930484f1594f97fa2a208f680035415f29f6e758c27ca5e54b0351dabcdf44d3fe23fd84d5519",
+      "stamp": "d060dd79b11b965e4bc70e242612160e98adf29983b99607d9c54048448ad0810f525a8e45ee3ca3c4a7242756b4f803c01608743a6eac664e0930484f1594f94fe8609faa62829bf10becda72e9443d5d759efe9f1c7ff6ab0788566996cfe7",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
@@ -304,7 +304,7 @@
     {
       "scenario": "a_chased_cold_pitch_is_still_a_vendor_pitch",
       "site": "verdict",
-      "stamp": "ad0dce218452c5a388ce8bf069026f6f82a06364fbbb0f2af7e881334b760834071c4b76229993ea8008418ce2e09d31a5c7fcab6aed02db5c1fab7a68ff98547fa2a208f680035415f29f6e758c27ca5e54b0351dabcdf44d3fe23fd84d5519",
+      "stamp": "ad0dce218452c5a388ce8bf069026f6f82a06364fbbb0f2af7e881334b760834071c4b76229993ea8008418ce2e09d31a5c7fcab6aed02db5c1fab7a68ff98544fe8609faa62829bf10becda72e9443d5d759efe9f1c7ff6ab0788566996cfe7",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
@@ -319,7 +319,7 @@
     {
       "scenario": "a_fluent_machine_written_pitch_is_still_a_vendor_pitch",
       "site": "verdict",
-      "stamp": "f63b5ffb1554c626597fbc66cad671a950beaf8c78a16deaa41c57352bbda622edf0badeea63aa70d7115c2361d8e896f4c74aada54383c2600093bc95ccf8777fa2a208f680035415f29f6e758c27ca5e54b0351dabcdf44d3fe23fd84d5519",
+      "stamp": "f63b5ffb1554c626597fbc66cad671a950beaf8c78a16deaa41c57352bbda622edf0badeea63aa70d7115c2361d8e896f4c74aada54383c2600093bc95ccf8774fe8609faa62829bf10becda72e9443d5d759efe9f1c7ff6ab0788566996cfe7",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
@@ -334,7 +334,7 @@
     {
       "scenario": "an_automated_invoice_notice_is_not_a_contact",
       "site": "verdict",
-      "stamp": "c84a4939c3c6e6b11848dbe64019820e16948a2dcd9894bc3ebe74c5c90b94322d3532311c98c49cfb3ebbdb1b5e235676c6f5e110adcb4e0eb6e29e75dc57bb7fa2a208f680035415f29f6e758c27ca5e54b0351dabcdf44d3fe23fd84d5519",
+      "stamp": "c84a4939c3c6e6b11848dbe64019820e16948a2dcd9894bc3ebe74c5c90b94322d3532311c98c49cfb3ebbdb1b5e235676c6f5e110adcb4e0eb6e29e75dc57bb4fe8609faa62829bf10becda72e9443d5d759efe9f1c7ff6ab0788566996cfe7",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,

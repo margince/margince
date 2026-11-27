@@ -12,7 +12,6 @@ package gates
 // holds the trigger, the mapping function and the contract to it.
 
 import (
-	"bufio"
 	"regexp"
 	"slices"
 	"strings"
@@ -55,8 +54,6 @@ var (
 	recordSourceTriggerRE = regexp.MustCompile(
 		`^public\.([a-z_]+)\.([a-z_]+)_source_channel CREATE TRIGGER .*new\.source <> ALL \(ARRAY\[([^\]]*)\]`)
 	recordSourceFunctionRE = regexp.MustCompile(`(?m)^ +WHEN source IN \(([^)]*)\) THEN source$`)
-	contractSchemaRE       = regexp.MustCompile(`^    ([A-Za-z0-9]+):$`)
-	contractSourceRE       = regexp.MustCompile(`^        source:(?: \{ type: string, enum: \[([^\]]*)\])?`)
 )
 
 // recordSourceLists reads every spelling of the list the head catalog holds:
@@ -79,31 +76,33 @@ func recordSourceLists(catalog string) (checks, triggers map[string][]string, ma
 
 // contractSourceRequests reads each create request that has a source property,
 // with its enum; a free-text source has none.
-func contractSourceRequests(contract string) map[string][]string {
-	requests := map[string][]string{}
-	schema := ""
-	scanner := bufio.NewScanner(strings.NewReader(contract))
-	scanner.Buffer(make([]byte, 0, 1<<20), 1<<24)
-	for scanner.Scan() {
-		line := scanner.Text()
-		if match := contractSchemaRE.FindStringSubmatch(line); match != nil {
-			schema = match[1]
-			continue
-		}
-		match := contractSourceRE.FindStringSubmatch(line)
-		if match == nil || !strings.HasPrefix(schema, "Create") || !strings.HasSuffix(schema, "Request") {
-			continue
-		}
-		var values []string
-		for value := range strings.SplitSeq(match[1], ",") {
-			if value = strings.TrimSpace(value); value != "" {
-				values = append(values, value)
-			}
-		}
-		slices.Sort(values)
-		requests[schema] = values
+func contractSourceRequests(contract string) (map[string][]string, error) {
+	var doc struct {
+		Components struct {
+			Schemas map[string]struct {
+				Properties map[string]struct {
+					Enum []string `yaml:"enum"`
+				} `yaml:"properties"`
+			} `yaml:"schemas"`
+		} `yaml:"components"`
 	}
-	return requests
+	if err := unmarshalYAML([]byte(contract), &doc); err != nil {
+		return nil, err
+	}
+	requests := map[string][]string{}
+	for name, schema := range doc.Components.Schemas {
+		if !strings.HasPrefix(name, "Create") || !strings.HasSuffix(name, "Request") {
+			continue
+		}
+		source, ok := schema.Properties["source"]
+		if !ok {
+			continue
+		}
+		values := slices.Clone(source.Enum)
+		slices.Sort(values)
+		requests[name] = values
+	}
+	return requests, nil
 }
 
 // recordSourceFindings names each place the list is spelled differently. It
@@ -156,7 +155,10 @@ func TestTheRecordSourceVocabularyIsTheCatalogsCheck(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading the contract: %v", err)
 	}
-	requests := contractSourceRequests(string(contract))
+	requests, err := contractSourceRequests(string(contract))
+	if err != nil {
+		t.Fatalf("parsing the contract: %v", err)
+	}
 	if len(requests) < wantMinimumSourceRequests {
 		t.Fatalf("the contract scan found %d create requests with a source, under the floor of %d", len(requests), wantMinimumSourceRequests)
 	}
@@ -239,17 +241,60 @@ func TestTheRecordSourceReadersParseTheCommittedSpellings(t *testing.T) {
 	if !equalSets(mapping, []string{"api", "manual"}) {
 		t.Errorf("mapping = %v, want the pass-through list", mapping)
 	}
-	requests := contractSourceRequests(strings.Join([]string{
-		"    CreateDealRequest:",
-		"        source: { type: string, enum: [manual, api], x-go-type: string }",
-		"    CreateLeadRequest:",
-		"        source: { type: string }",
-		"    Deal:",
-		"        source: { type: string }",
-		"    CreateNoteRequest:",
-		"        source_system: { type: string }",
-	}, "\n"))
+	requests, err := contractSourceRequests(`components:
+  schemas:
+    CreateDealRequest:
+      properties:
+        source: { type: string, enum: [manual, api], x-go-type: string }
+    CreateLeadRequest:
+      properties:
+        source: { type: string }
+    Deal:
+      properties:
+        source: { type: string }
+    CreateNoteRequest:
+      properties:
+        source_system: { type: string }
+`)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if len(requests) != 2 || !equalSets(requests["CreateDealRequest"], []string{"api", "manual"}) || len(requests["CreateLeadRequest"]) != 0 {
 		t.Errorf("requests = %v, want the deal enum and a free lead source", requests)
+	}
+}
+
+func TestTheRecordSourceReaderSeesEachYAMLShape(t *testing.T) {
+	t.Parallel()
+	for name, schema := range map[string]string{
+		"an intervening bound": `    CreateExampleRequest:
+      properties:
+        source: {type: string, maxLength: 128, enum: [manual, api]}`,
+		"a block mapping": `    CreateExampleRequest:
+      properties:
+        source:
+          maxLength: 128
+          enum:
+            - manual
+            - api
+          type: string`,
+		"a flow mapping": `    CreateExampleRequest: {properties: {source: {enum: [manual, api], type: string}}}`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			requests, err := contractSourceRequests("components:\n  schemas:\n" + schema)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(requests) != 1 || !equalSets(requests["CreateExampleRequest"], []string{"api", "manual"}) {
+				t.Errorf("requests = %v, want the declared source enum", requests)
+			}
+		})
+	}
+}
+
+func TestTheRecordSourceReaderRefusesMalformedYAML(t *testing.T) {
+	t.Parallel()
+	if _, err := contractSourceRequests("components: ["); err == nil {
+		t.Error("malformed YAML was read as an empty contract")
 	}
 }

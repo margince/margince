@@ -34,8 +34,8 @@ func noticesLaneService(n Notices) *Service {
 func TestANoticeCarriesItsOwnWordsAndItsOneVerb(t *testing.T) {
 	svc := noticesLaneService(&stubNotices{rows: []UnreadNotice{
 		{
-			ID: ids.NewV7(), Kind: "lead_sla", Subject: "SLA breach — first response overdue",
-			Body: "A lead's first response is overdue.", CreatedAt: readInstant,
+			ID: ids.NewV7(), Kind: "lead_sla", Subject: "SLA breach: first response overdue",
+			Body: "A lead’s first response is overdue.", CreatedAt: readInstant,
 		},
 	}})
 	out, err := svc.Assemble(pageReader())
@@ -46,10 +46,10 @@ func TestANoticeCarriesItsOwnWordsAndItsOneVerb(t *testing.T) {
 		t.Fatalf("notices carries %v, want one", out.Notices)
 	}
 	notice := (*out.Notices)[0]
-	if notice.Title == nil || *notice.Title != "SLA breach — first response overdue" {
+	if notice.Title == nil || *notice.Title != "SLA breach: first response overdue" {
 		t.Errorf("title = %v, want the notice's own subject", notice.Title)
 	}
-	if notice.Detail == nil || *notice.Detail != "A lead's first response is overdue." {
+	if notice.Detail == nil || *notice.Detail != "A lead’s first response is overdue." {
 		t.Errorf("detail = %v, want the notice's body", notice.Detail)
 	}
 	if !slices.Contains(notice.Actions, crmcontracts.AttentionItemActions("acknowledge")) {

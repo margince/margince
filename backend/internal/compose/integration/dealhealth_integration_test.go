@@ -296,8 +296,8 @@ func TestAStintEndsAtTheMoveWrittenFirstInItsInstant(t *testing.T) {
 	}
 }
 
-const healthImportRunSQL = `INSERT INTO import_run (id, connector, status, source_ref, source, captured_by)
-	VALUES ($1, 'csv', 'running', 'deals.csv', 'upload', 'human:test')`
+const healthImportRunSQL = `INSERT INTO import_run (id, connector, status, source_ref, captured_by)
+	VALUES ($1, 'csv', 'running', 'deals.csv', 'human:test')`
 
 // seedFourDayWins wins ten deals that spent four days in the open stage, with
 // moves saved before provenance was kept.

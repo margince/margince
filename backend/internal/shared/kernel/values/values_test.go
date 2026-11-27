@@ -32,6 +32,8 @@ func TestParseEmail(t *testing.T) {
 		{in: "not-an-email", code: "email_malformed"},
 		{in: "", code: "email_empty"},
 		{in: "a@b@c", code: "email_malformed"},
+		{in: strings.Repeat("é", 121) + "@example.com", want: strings.Repeat("é", 121) + "@example.com"},
+		{in: strings.Repeat("é", 122) + "@example.com", code: "too_long"},
 		{in: "a@b", code: "email_malformed"},
 		{in: "a@localhost", code: "email_malformed"},
 		{in: "a@b.", code: "email_malformed"},

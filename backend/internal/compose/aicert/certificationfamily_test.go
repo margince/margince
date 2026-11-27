@@ -307,8 +307,9 @@ func writeAICertFamilySummary(page *strings.Builder, families []aiCertFamily) {
 			"answer is, and two judges do not score on one scale. Until one judge has scored them all, compare families on\n" +
 			"*Tries right*: how often the answer passed its mechanical check, which no judge decides.\n\n")
 	}
-	fmt.Fprintf(page, "A family rated **Yes** is ready in every place we tested. One rated **Mostly** has at least %d in every 100 "+
-		"tested places ready or working with a check, and one rated **Not yet** has fewer. We say **Not enough tested yet** "+
+	fmt.Fprintf(page, "A family rated **Yes** is ready in every place we graded. One rated **Mostly** has at least %d in every 100 "+
+		"graded places ready or working with a check, and one rated **Not yet** has fewer. A place with too few tries to "+
+		"grade alone counts as tested but not as graded. We say **Not enough tested yet** "+
 		"when we tested it in under half of the places. A family is judged on its best "+
 		"model for each place, and only on the models a model setup uses, each in the places that setup "+
 		"sends to it.\n\n", familyMostlyPercent)

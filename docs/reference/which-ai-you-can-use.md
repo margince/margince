@@ -20,8 +20,8 @@ Also called: which model should I use, best model, recommended model, which LLM,
 
 | Model setup | Where your data goes | Ready | Usable with care | Not reliable yet | Not measured |
 |---|---|---:|---:|---:|---:|
-| Google Gemini | global cloud | 30 | 5 | 3 | 0 |
-| Google Gemini in the EU, through Vertex AI | EU-hosted cloud | 30 | 5 | 3 | 0 |
+| Google Gemini | global cloud | 31 | 6 | 1 | 0 |
+| Google Gemini in the EU, through Vertex AI | EU-hosted cloud | 31 | 6 | 1 | 0 |
 | Anthropic Claude | global cloud | 34 | 3 | 0 | 1 |
 | OpenAI GPT-6, through OpenRouter | global cloud | 19 | 3 | 3 | 13 |
 | Open models from OpenAI and Mistral, through OpenRouter | global cloud | 12 | 12 | 7 | 7 |
@@ -41,8 +41,8 @@ Also called: grade, rating, certified, how reliable is the AI.
 
 | Model setup | Not reliable yet |
 |---|---|
-| Google Gemini | Deal status card<br>Reply drafting<br>Record summary |
-| Google Gemini in the EU, through Vertex AI | Deal status card<br>Reply drafting<br>Record summary |
+| Google Gemini | Deal status card |
+| Google Gemini in the EU, through Vertex AI | Deal status card |
 | Anthropic Claude | none |
 | OpenAI GPT-6, through OpenRouter | Thread confidentiality check<br>First-time sender check<br>Meeting follow-up extraction |
 | Open models from OpenAI and Mistral, through OpenRouter | Message classification<br>First-time sender check<br>Buying-role reading<br>Website research<br>Stage evidence extraction<br>Tag suggestions<br>Meeting follow-up extraction |
