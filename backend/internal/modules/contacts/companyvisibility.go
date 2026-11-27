@@ -109,6 +109,9 @@ func refuseStaleCompanyVisibility(
 // cannot give: a check violation reaches a client as a server fault naming a
 // constraint, where this names the field the caller has to supply.
 func refuseUnreadableCompany(current crmcontracts.Company, in UpdateCompanyInput) error {
+	if err := refuseUnknownVisibility(in.Visibility); err != nil {
+		return err
+	}
 	private := current.Visibility != nil && string(*current.Visibility) == visibilityOwner
 	if in.Visibility != nil {
 		private = *in.Visibility == visibilityOwner
