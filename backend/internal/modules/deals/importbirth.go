@@ -81,10 +81,10 @@ func (s *Store) ImportDealTx(
 }
 
 // RefuseImportBirth asks, without writing, the refusals an import birth meets
-// outside the row's own cells: no open stage, a stage past a legal gate, a
-// closing with no FX rate, and a custom value outside the field's pipelines.
-// It answers the birth stage. ImportDealTx runs it before writing and the dry
-// run runs it alone, so the preview and the commit refuse the same rows.
+// outside the row's own cells. They are no open stage, a stage past a legal
+// gate, a closing with no FX rate, and a custom value outside the field's
+// pipelines. It answers the birth stage. ImportDealTx runs it before writing
+// and the dry run runs it alone, so the preview and the commit refuse the same rows.
 func (s *Store) RefuseImportBirth(
 	ctx context.Context, tx pgx.Tx, in CreateDealInput, terminal *ImportTerminal, cols CustomColumns,
 ) (ids.StageID, error) {
