@@ -29,15 +29,17 @@ import (
 
 // InstallationSettings is the installation's identity and reporting basis.
 type InstallationSettings struct {
-	Name         string
-	Timezone     string
-	BaseCurrency string
-	BaseLanguage string
-	DateFormat   string
-	TimeFormat   string
-	CallWhatsApp bool
-	CallTelegram bool
-	CallZalo     bool
+	// MemberLanguages are the UI languages active members chose, unattributed.
+	MemberLanguages []string
+	Name            string
+	Timezone        string
+	BaseCurrency    string
+	BaseLanguage    string
+	DateFormat      string
+	TimeFormat      string
+	CallWhatsApp    bool
+	CallTelegram    bool
+	CallZalo        bool
 	// The switches of settingsindividualperformance.go and its forecast sibling.
 	IndividualPerformance, ForecastSelfCorrecting bool
 	// ForecastLikelyThreshold is the probability from which a deal is Likely.
@@ -251,6 +253,7 @@ func (s *InstallationSettingsStore) GetInstallation(ctx context.Context) (Instal
 	}
 	for _, read := range []func(context.Context, *InstallationSettings) error{
 		s.readCallMessengers, s.readIndividualPerformance, s.readForecastSelfCorrecting, s.readForecastLikelyThreshold,
+		s.readMemberLanguages,
 	} {
 		if err := read(ctx, &out); err != nil {
 			return InstallationSettings{}, err

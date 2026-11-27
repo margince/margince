@@ -25,7 +25,6 @@ describe("the nesting ladder has one painter", () => {
   it("reads the theme roots and the rungs off the token sheets", () => {
     expect([...THEME_ROOTS].sort(stable)).toEqual([
       ":root",
-      ":root:lang(vi)",
       ':root:not([data-theme="light"])',
       '[data-theme="dark"]',
     ]);

@@ -12589,6 +12589,15 @@ export const en = {
   "translation.nameIn.en": "Name in English",
   "translation.nameIn.de": "Name in German",
   "translation.nameIn.vi": "Name in Vietnamese",
+  "translation.missing.en": "No name in English",
+  "translation.missing.de": "No name in German",
+  "translation.missing.vi": "No name in Vietnamese",
+  "translation.suggest": "Suggest translation",
+  "translation.suggestNeedsName":
+    "Type the name first, then a translation can be suggested.",
+  "translation.suggesting": "Suggesting…",
+  "translation.suggestFailed":
+    "No suggestion came back. Type the name, or try again.",
   "translation.given": "{language}: {name}",
   "stage.name": "Name",
   "stage.nameTaken":

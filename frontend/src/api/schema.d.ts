@@ -6852,6 +6852,35 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/label-translations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Suggest a stage or custom field name in another UI language.
+         * @description Writes one admin-named label, a stage name or a custom field name or option, in the
+         *     language `language` names. It is a suggestion for the editor: nothing is stored, and
+         *     the admin saves it with the stage or field as any typed name.
+         *
+         *     Needs `pipeline:update` or `custom_field:update`, the grants that edit the labels this
+         *     serves; without either it answers 403. When the label is already in the target language
+         *     the answer is `unchanged: true` and the label itself, with no model call. With no AI
+         *     model it answers 409 `ai_not_configured`. An empty `text` is 422 `required`, and one past
+         *     200 characters is 422 `too_long`. A model that was asked and did not answer is 503
+         *     `assistant_unavailable`.
+         */
+        post: operations["suggestLabelTranslation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/rewrites": {
         parameters: {
             query?: never;
@@ -29193,6 +29222,11 @@ export interface components {
             /** @description ISO-4217 code every money roll-up converts to. */
             base_currency: string;
             /**
+             * @description The UI languages active members chose, each once and with no member named. Stage
+             *     settings mark an admin-named label with no name in one of them.
+             */
+            member_languages?: ("en" | "de" | "vi")[];
+            /**
              * @description The language AI writes in when what it writes is read by the whole team — claims,
              *     signals, extracted facts, agent answers. Not a user's display language, which is
              *     per-user.
@@ -50144,6 +50178,26 @@ export interface components {
             voice_profile_version?: number | null;
             /** @description True when the sender's voice could not be looked up for an email rewrite, so it may lack a voice its sender built. */
             voice_degraded?: boolean;
+        };
+        LabelTranslationRequest: {
+            /** @description The label as stored. */
+            text: string;
+            /**
+             * @description The UI language to write the label in.
+             * @enum {string}
+             */
+            language: "en" | "de" | "vi";
+        };
+        /** @description One label in one UI language, a suggestion stored nowhere. */
+        LabelTranslation: {
+            /** @description The label in the target language. */
+            text: string;
+            /** @enum {string} */
+            language: "en" | "de" | "vi";
+            /** @description True when the label is already in the target language; `text` is then the label itself. */
+            unchanged: boolean;
+            /** @description The model that wrote the suggestion. Absent when no model was asked. */
+            model_used?: string;
         };
         ActivityReaderRenderingRequest: {
             /** @enum {string} */
@@ -77905,6 +77959,43 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+            /** @description The model was asked and did not answer (`code: assistant_unavailable`). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    suggestLabelTranslation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LabelTranslationRequest"];
+            };
+        };
+        responses: {
+            /** @description The label in the target language. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LabelTranslation"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
             /** @description The model was asked and did not answer (`code: assistant_unavailable`). */
