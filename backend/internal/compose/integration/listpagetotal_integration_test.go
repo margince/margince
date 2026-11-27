@@ -21,7 +21,7 @@ import (
 )
 
 // pagedAsk is one deal or project list read: its size, where it starts, its
-// order and the one owner it narrows to.
+// order and the owner it narrows to.
 type pagedAsk struct {
 	limit  int
 	offset *int

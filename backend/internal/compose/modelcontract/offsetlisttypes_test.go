@@ -9,12 +9,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/offsetlists"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
 // list_records tells a model which lists take an offset. The search seam
-// decides it from compose.OffsetListTypes, so the two must name the same types.
+// decides it from offsetlists.Types, so the two must name the same types.
 func TestTheListRecordsOffsetCopyNamesTheTypesSearchPagesByOffset(t *testing.T) {
 	specs := servedSpecs()
 	at := slices.IndexFunc(specs, func(spec mcp.ToolSpec) bool { return spec.Name == "list_records" })
@@ -39,7 +39,7 @@ func TestTheListRecordsOffsetCopyNamesTheTypesSearchPagesByOffset(t *testing.T) 
 	})
 	named = slices.DeleteFunc(named, func(word string) bool { return word == "and" })
 	var paged []string
-	for _, et := range compose.OffsetListTypes() {
+	for _, et := range offsetlists.Types() {
 		paged = append(paged, string(et))
 	}
 	slices.Sort(named)

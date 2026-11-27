@@ -157,7 +157,7 @@ func TestAnOffsetIsRefusedBesideACursorAndPastTheCap(t *testing.T) {
 }
 
 // An offset page runs the COUNT, so the count carries the reader's scope. A
-// capture-private contact counts for its owner and for no other reader.
+// capture-private contact counts for its owner, and another reader's total leaves it out.
 func TestAnOffsetPageCountsOnlyTheRowsTheReaderMaySee(t *testing.T) {
 	e := setupCapturePrivacy(t)
 	owner := e.as(e.owner, principal.RowScopeAll)

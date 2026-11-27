@@ -25,6 +25,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/compose/offsetlists"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -148,11 +149,11 @@ func TestListRecordsAtAnOffsetAnswersTheRowsTheHTTPListAnswersThere(t *testing.T
 	}
 }
 
-// Every type outside compose.OffsetListTypes is refused an offset before a
+// Every type outside offsetlists.Types is refused an offset before a
 // module is asked, and every type inside it opens its list at one.
 func TestSearchRefusesAnOffsetOnEveryOtherType(t *testing.T) {
 	for _, et := range datasource.EntityTypes() {
-		if slices.Contains(compose.OffsetListTypes(), et) {
+		if slices.Contains(offsetlists.Types(), et) {
 			continue
 		}
 		_, err := (&compose.Provider{}).Search(t.Context(), datasource.SearchQuery{EntityTypes: []datasource.EntityType{et}, Offset: new(1)})
@@ -181,7 +182,7 @@ func TestEveryOffsetListTypePagesByOffset(t *testing.T) {
 		datasource.EntityProject: func(i int) { seedProject(e.Admin(), t, e, fmt.Sprintf("Offset project %d", i), company, &e.Rep1) },
 	}
 	provider := compose.NewProvider(e.Pool)
-	for _, et := range compose.OffsetListTypes() {
+	for _, et := range offsetlists.Types() {
 		create, known := seed[et]
 		if !known {
 			t.Errorf("%s pages by offset and this test cannot seed it: add its seeder", et)

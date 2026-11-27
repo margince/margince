@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/capturehealth"
+	"github.com/margince/margince/backend/internal/compose/offsetlists"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/commissions"
@@ -182,8 +183,8 @@ func (p *Provider) searchOneType(ctx context.Context, t datasource.EntityType, t
 	if cursor != "" {
 		inner = &cursor
 	}
-	if offset != nil && !offsetListTypes[t] {
-		return nil, "", &datasource.OffsetUnsupportedError{Type: t}
+	if err := offsetlists.Refuse(t, offset); err != nil {
+		return nil, "", err
 	}
 	var (
 		records []datasource.Record
@@ -208,24 +209,6 @@ func (p *Provider) searchOneType(ctx context.Context, t datasource.EntityType, t
 		return nil, "", &datasource.UnsupportedEntityError{Type: string(t)}
 	}
 	return records, next, err
-}
-
-// offsetListTypes are the record types whose list pages by offset as well as
-// cursor. Every other type's offset is refused here, before its module is asked.
-var offsetListTypes = map[datasource.EntityType]bool{
-	datasource.EntityContact: true, datasource.EntityCompany: true, datasource.EntityLead: true,
-	datasource.EntityDeal: true, datasource.EntityProject: true,
-}
-
-// OffsetListTypes are the record types Search pages by offset.
-func OffsetListTypes() []datasource.EntityType {
-	out := make([]datasource.EntityType, 0, len(offsetListTypes))
-	for _, t := range datasource.EntityTypes() {
-		if offsetListTypes[t] {
-			out = append(out, t)
-		}
-	}
-	return out
 }
 
 func (p *Provider) Create(ctx context.Context, in datasource.CreateInput) (datasource.EntityRef, error) {
