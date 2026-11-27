@@ -202,11 +202,14 @@ A tag publishes to the test service only. Once the test release works, publish t
 gh workflow run release.yml --ref main -f tag=v1.0.0 -f target=production
 ```
 
-If the run of a tag failed before its draft, start it again with `-f target=test`. Each target has its own
-publisher tokens. Test uses the repository secrets `MARGINCE_DIST_PUBLISHER_TOKEN` and
-`MARGINCE_AUTH_PUBLISHER_TOKEN`. Production uses `MARGINCE_PRODUCTION_DIST_PUBLISHER_TOKEN` and
-`MARGINCE_PRODUCTION_AUTH_PUBLISHER_TOKEN`, set only in the `dist-production` environment, so no test run gets
-them. A run whose tokens are missing stops before it drafts, and never uses the tokens of the other target.
+A production run waits for approval. Its jobs pause until a reviewer of the `dist-production` environment
+approves them on the run page. The one who started the run cannot approve it. The jobs ask in turn, so approve
+each time the run stops.
+
+If the run of a tag failed before its draft, start it again with `-f target=test`. Each target keeps its own
+publisher tokens in its environment, `dist-test` or `dist-production`, under the same two names:
+`MARGINCE_DIST_PUBLISHER_TOKEN` and `MARGINCE_AUTH_PUBLISHER_TOKEN`. The repository holds neither. So no test run
+gets a production token, and a run whose tokens are missing stops before it drafts.
 
 The run builds the commit the tag names, never the tip of `main`, so the dist release describes the
 same source as the GitHub release. `--ref main` only picks the copy of the workflow that runs.
