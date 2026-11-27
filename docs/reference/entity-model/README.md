@@ -32,7 +32,7 @@ module to put a change in, read [modules.md](../modules.md).
 |---|--:|
 | Tables | 357 |
 | Columns | 4395 |
-| Foreign keys | 632 |
+| Foreign keys | 633 |
 | Owning areas | 40 |
 
 ## The 12 records everything else hangs off
@@ -49,10 +49,10 @@ Ranked by how many foreign keys point at them.
 | [`lead`](contacts.md#lead) | [contacts](contacts.md) | 50 | 20 |
 | [`project`](projects.md#project) | [projects](projects.md) | 24 | 13 |
 | [`team`](identity.md#team) | [identity](identity.md) | 6 | 11 |
+| [`language`](compose.md#language) | [compose](compose.md) | 3 | 9 |
 | [`legal_entity`](contacts.md#legal_entity) | [contacts](contacts.md) | 30 | 9 |
 | [`passport`](identity.md#passport) | [identity](identity.md) | 14 | 9 |
 | [`consent_purpose`](consent.md#consent_purpose) | [consent](consent.md) | 8 | 8 |
-| [`language`](compose.md#language) | [compose](compose.md) | 3 | 8 |
 
 ```mermaid
 erDiagram
@@ -343,7 +343,7 @@ erDiagram
 | [`knowledge_chunk`](knowledge.md#knowledge_chunk) | knowledge | 10 | 0 |
 | [`knowledge_corpus`](knowledge.md#knowledge_corpus) | knowledge | 11 | 1 |
 | [`knowledge_document`](knowledge.md#knowledge_document) | knowledge | 17 | 1 |
-| [`language`](compose.md#language) | compose | 3 | 8 |
+| [`language`](compose.md#language) | compose | 3 | 9 |
 | [`lawful_basis_confirmation`](consent.md#lawful_basis_confirmation) | consent | 9 | 0 |
 | [`lead`](contacts.md#lead) | contacts | 50 | 20 |
 | [`lead_disqualify_reason`](contacts.md#lead_disqualify_reason) | contacts | 11 | 1 |

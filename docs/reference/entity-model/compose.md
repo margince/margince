@@ -776,7 +776,7 @@ The 44 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 ## language
 
-3 columns · primary key `(code)` · referenced by 8 foreign keys
+3 columns · primary key `(code)` · referenced by 9 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
