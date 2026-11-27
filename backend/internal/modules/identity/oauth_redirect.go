@@ -3,15 +3,15 @@
 
 package identity
 
-// Where an authorization may be sent back to, and how. Three rules, and the
-// first two are the difference between a working native client and an open
-// redirect: what a client may REGISTER (validRedirectURI), what a registered
-// URI MATCHES at authorize time (redirectURIMatches), and how a decision is
-// actually delivered to the address that survived both (redirectToClient).
-// Split out of oauth.go so each file stays one concept —
-// oauth_redirect_test.go is this file's suite.
+// Where an authorization may be sent back to, and how. There are three rules.
+// redirectURIFault says what a client may register. redirectURIMatches says
+// what a registered URI matches at authorize time. redirectToClient delivers a
+// decision to the address that passed both. The first two separate a
+// working native client from an open redirect. oauth_redirect_test.go is this
+// file's suite.
 
 import (
+	"errors"
 	"fmt"
 	"maps"
 	"net/http"
@@ -20,28 +20,30 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httperr"
 )
 
-// validRedirectURI admits https anywhere and plain http only on
-// loopback (native-app dev flows).
-//
-// A query is allowed — a client may legitimately register one — but only one
-// this server can reproduce verbatim when it delivers a response there. An
-// undecodable query is refused HERE, where a client developer sees it at
-// registration, rather than at the redirect that follows a human's consent.
-func validRedirectURI(raw string) bool {
+// A redirect URI's query must survive delivery verbatim, so malformed escapes
+// are refused at registration while the client can still fix them.
+func redirectURIFault(raw string) string {
+	const schemeRule = "a redirect URI must be https, or http on localhost"
 	u, err := url.Parse(raw)
-	if err != nil || u.Fragment != "" {
-		return false
+	switch {
+	case err != nil:
+		if _, malformedEscape := errors.AsType[url.EscapeError](err); malformedEscape {
+			return "a redirect URI must use valid percent-escapes"
+		}
+		return "a redirect URI must be an absolute URL"
+	case u.Fragment != "":
+		return "a redirect URI must not carry a fragment"
 	}
 	if _, err := url.ParseQuery(u.RawQuery); err != nil {
-		return false
+		return "a redirect URI's query must be well formed"
 	}
-	switch u.Scheme {
-	case "https":
-		return u.Host != ""
-	case "http":
-		return isLoopbackHost(u.Hostname())
+	switch {
+	case u.Scheme == "https" && u.Host != "":
+		return ""
+	case u.Scheme == "http" && isLoopbackHost(u.Hostname()):
+		return ""
 	default:
-		return false
+		return schemeRule
 	}
 }
 
@@ -117,10 +119,9 @@ func clientResponseURI(req authorizeRequest, answer url.Values) (string, error) 
 		// contradicting itself rather than anything the caller sent.
 		return "", fmt.Errorf("oauth: redirect_uri does not parse: %w", err)
 	}
-	// A query we cannot parse is refused rather than delivered: the alternative
-	// is silently dropping the pair that failed to decode, which hands the
-	// client a callback URL it did not register. validRedirectURI refuses such
-	// a registration, so this is the closed door behind that one.
+	// A query we cannot parse is refused, not delivered. Dropping the pair that
+	// failed to decode would hand the client a callback URL it did not register.
+	// redirectURIFault refuses such a registration; this is the door behind it.
 	params, err := url.ParseQuery(location.RawQuery)
 	if err != nil {
 		return "", fmt.Errorf("oauth: redirect_uri query does not parse: %w", err)
@@ -135,10 +136,9 @@ func clientResponseURI(req authorizeRequest, answer url.Values) (string, error) 
 		params.Set(oauthParamState, req.State)
 	}
 	location.RawQuery = params.Encode()
-	// validRedirectURI refuses a fragment at registration; the same rule holds
-	// at delivery, so a fragment smuggled onto a presented loopback URI cannot
-	// ride into the Location. URL.String() emits a fragment only when Fragment
-	// is set, which is why clearing that one field is enough.
+	// redirectURIFault refuses a fragment at registration. The same rule holds
+	// at delivery, so a fragment added to a presented loopback URI stays out of
+	// the Location. URL.String() emits a fragment only when Fragment is set.
 	location.Fragment = ""
 	return location.String(), nil
 }

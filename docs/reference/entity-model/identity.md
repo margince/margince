@@ -644,7 +644,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## role_assignment
 
-6 columns · primary key `(id)` · referenced by 0 foreign keys
+5 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -653,7 +653,6 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 | `team_id` | `uuid` |  | Points at `team.id`. |
 | `user_id` | `uuid` | yes | Points at `app_user.id`. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
-| `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 
 **Points at**
 
@@ -673,7 +672,6 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 **Triggers**
 
 - `report_authority_role_assignment`: `BEFORE INSERT OR DELETE OR UPDATE FOR EACH STATEMENT EXECUTE FUNCTION advance_report_projection_authority()`
-- `trg_role_assignment_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at()`
 
 ## session
 
@@ -778,7 +776,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## team_membership
 
-5 columns · primary key `(id)` · referenced by 0 foreign keys
+4 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -786,7 +784,6 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 | `team_id` | `uuid` | yes | Points at `team.id`. |
 | `user_id` | `uuid` | yes | Points at `app_user.id`. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
-| `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 
 **Points at**
 
@@ -810,7 +807,6 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 - `home_read_fence_team_membership_moved`: `AFTER UPDATE OF team_id, user_id FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence()`
 - `home_read_fence_team_membership_removed`: `AFTER DELETE FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence()`
 - `report_authority_team_membership`: `BEFORE INSERT OR DELETE OR UPDATE FOR EACH STATEMENT EXECUTE FUNCTION advance_report_projection_authority()`
-- `trg_team_membership_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at()`
 
 ## user_mfa
 
@@ -841,19 +837,14 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## workspace
 
-4 columns · primary key `(id)` · referenced by 0 foreign keys
+3 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
-| `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 
 **Indexes**
 
 - `workspace_pkey`: `unique, btree (id)`
-
-**Triggers**
-
-- `trg_workspace_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at()`

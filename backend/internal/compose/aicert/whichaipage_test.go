@@ -189,7 +189,7 @@ func writeWhichAIModels(p *strings.Builder, cert whichAICert, handbook bool) {
 		fmt.Fprintf(p, "| %s | %s | %d | %d | %d | %d |\n", s.Title, s.WhereDataGoes,
 			s.Bands.Ready, s.Bands.UsableWithCare, s.Bands.NotReliableYet, s.NotMeasured)
 	}
-	writeWhichAIRecheck(p, cert)
+	writeWhichAIRecheck(p, cert, handbook)
 	p.WriteString("\n### What does a grade of a Margince AI feature mean?\n")
 	fmt.Fprintf(p, "A grade of a Margince AI feature says how often it was right. **Ready** means right in at least "+
 		"%d of every 100 tries: turn it on. **Usable with care** means right in most tries: have someone look over "+
@@ -203,7 +203,7 @@ func writeWhichAIModels(p *strings.Builder, cert whichAICert, handbook bool) {
 
 // writeWhichAIRecheck says how many grades were measured on an older version
 // of the product, so the counts above never read as all current.
-func writeWhichAIRecheck(p *strings.Builder, cert whichAICert) {
+func writeWhichAIRecheck(p *strings.Builder, cert whichAICert, handbook bool) {
 	measured, older := 0, 0
 	for _, s := range cert.Presets {
 		for _, task := range s.Tasks {
@@ -216,13 +216,17 @@ func writeWhichAIRecheck(p *strings.Builder, cert whichAICert) {
 			}
 		}
 	}
+	results := "ai-certification.md#stale-records-and-why"
+	if handbook {
+		results = "https://github.com/margince/margince/blob/main/docs/reference/" + results
+	}
 	switch older {
 	case 0:
 	case measured:
-		fmt.Fprintf(p, "\nAll %d of these grades were measured on an older version of Margince and wait for a re-check.\n", measured)
+		fmt.Fprintf(p, "\nAll [%d of these grades](%s) were measured on an older version of Margince and wait for a re-check.\n", measured, results)
 	default:
-		fmt.Fprintf(p, "\n%d of these %d grades were measured on an older version of Margince and wait for a re-check.\n",
-			older, measured)
+		fmt.Fprintf(p, "\n[%d of these %d grades](%s) were measured on an older version of Margince and wait for a re-check.\n",
+			older, measured, results)
 	}
 }
 

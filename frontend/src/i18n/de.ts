@@ -3154,7 +3154,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "amount.refused.grouping":
     "Gib den Betrag ohne Tausendertrennzeichen ein, etwa {example}.",
   "amount.refused.notNumber": "Gib den Betrag in Ziffern ein, etwa {example}.",
-  "amount.refused.tooLarge": "Dieser Betrag ist zu groß zum Speichern.",
+  "amount.refused.tooLarge": "Gib einen Betrag von höchstens {max} ein.",
   "amount.refused.noCurrency": "Dieser Betrag braucht zuerst eine Währung.",
   "amount.waitsForCurrency": "Eingabe möglich, sobald eine Währung feststeht.",
   "amount.currencyUnread":
@@ -18759,6 +18759,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "operations.technical.label": "Technische Abfragen",
   "operations.technical.help":
     "Wie oft Unternehmensdomains ohne technische Angaben nachgeschlagen werden. 0 deaktiviert die Abfragen.",
+  "operations.captureCounterparty.label": "Prüfung neuer Absendeadressen",
+  "operations.captureCounterparty.help":
+    "Wie oft neue Absendeadressen vom Modell geprüft werden.",
+  "operations.captureConfidentiality.label": "Vertraulichkeits-Beurteilung",
+  "operations.captureConfidentiality.help":
+    "Wie oft erfasste Threads daraufhin geprüft werden, ob Mitglieder sie lesen dürfen.",
   "operations.gmailWatchScan.label": "Gmail-Push-Prüfung",
   "operations.gmailWatchScan.help":
     "Wie oft Gmail-Push-Abos auf Erneuerung geprüft werden.",

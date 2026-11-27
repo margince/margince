@@ -45,8 +45,30 @@ func TestWrite_craftedDomainDetailFlows(t *testing.T) {
 	if status != http.StatusConflict {
 		t.Fatalf("status = %d, want 409", status)
 	}
-	if detail := body["detail"]; detail != err.Error() {
-		t.Errorf("detail = %q, want the crafted domain message %q", detail, err.Error())
+	if detail := body["detail"]; detail != "approval expired 15m0s after decision" {
+		t.Errorf("detail = %q, want the crafted domain message without the sentinel's words", detail)
+	}
+}
+
+// Every sentinel's own words are dropped from the end of a detail and of a
+// field message. The code already says them, however deep the wrap.
+func TestNoDetailEndsInTheWordsOfASentinel(t *testing.T) {
+	if fault, _ := Classify(fmt.Errorf("the record is not on this list: %w", apperrors.ErrNotFound)); fault.Detail != "the record is not on this list" {
+		t.Errorf("detail = %q, want the sentence alone", fault.Detail)
+	}
+	for _, m := range mapping {
+		wrapped := fmt.Errorf("the record is not on this list: %w", fmt.Errorf("%w", m.sentinel))
+		fault, ok := Classify(wrapped)
+		if !ok || strings.HasSuffix(fault.Detail, ": "+m.sentinel.Error()) {
+			t.Errorf("%v: detail = %q, want it without the sentinel's words", m.sentinel, fault.Detail)
+		}
+		named := Validation("name", "invalid", fmt.Errorf("a list needs a name: %w", m.sentinel).Error())
+		if fault, _ := Classify(named); fault.Fields[0].Message != "a list needs a name" {
+			t.Errorf("%v: field message = %q, want the sentence alone", m.sentinel, fault.Fields[0].Message)
+		}
+		if named.Fields[0].Message == "a list needs a name" {
+			t.Errorf("%v: Classify changed the caller's own error", m.sentinel)
+		}
 	}
 }
 
@@ -120,8 +142,15 @@ func TestWrite_datasourceSeamRefusalsAreClientFaults(t *testing.T) {
 			name:  "a write payload the seam could not decode",
 			err:   &datasource.FieldDecodeError{Cause: &datasource.UnknownFieldError{Fields: []string{"naem"}}},
 			field: "fields",
-			code:  "invalid_field",
+			code:  "unknown_field",
 			wants: "naem",
+		},
+		{
+			name:  "a value the seam could not hold names its own field",
+			err:   &datasource.FieldDecodeError{Cause: &datasource.FieldShapeError{Field: "quantity", Want: "a number", Got: "a string"}},
+			field: "quantity",
+			code:  "invalid_type",
+			wants: "`quantity` must be a number, not a string",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
