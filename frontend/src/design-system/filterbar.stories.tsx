@@ -127,7 +127,7 @@ export const InASettingsColumn: Story = {
       <FilterBar
         label="Filters"
         actions={<Button>Clear filters</Button>}
-        caption="1 to 25 of 25 calls loaded"
+        caption="1-25 of 25 loaded"
       >
         <Field label="Search calls">
           {(field) => <SearchField {...field} value="" onChange={() => {}} />}

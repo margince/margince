@@ -72,7 +72,6 @@ export function ListTable<Row>({
   rowKey,
   rowRoute,
   unit,
-  unitOne,
   layoutKey = unit,
   chips = [],
   dataChips = [],
@@ -133,10 +132,8 @@ export function ListTable<Row>({
    * a new tab. Declaring them separately is how the two drift apart.
    */
   rowRoute?: (row: Row) => Route;
-  /** Message key for the plural noun in the count and the empty state. */
+  /** Message key for the plural noun in the empty state. */
   unit: MessageKey;
-  /** The noun for a list that holds one row: "1 to 1 of 1 lead". */
-  unitOne?: MessageKey;
   /**
    * Names the table for the column widths and order it remembers. Defaults to
    * `unit`; two tables that share a unit pass keys of their own.
@@ -416,7 +413,6 @@ export function ListTable<Row>({
       onRowClick={rowRoute ? (row) => navigate(rowRoute(row)) : undefined}
       rowHref={rowRoute ? (row) => routeHash(rowRoute(row)) : undefined}
       unit={t(unit)}
-      unitOne={unitOne && t(unitOne)}
       emptyNote={emptyNote}
       emptyLine={emptyLine}
       action={action}
@@ -467,6 +463,7 @@ export function ListTable<Row>({
       hideShortChrome={hideShortChrome}
       onLoadMore={state.loadMore}
       total={state.total}
+      jumped={state.jumped}
       // The page size is part of the server query. Changing it re-asks the
       // server, so it lives in the ListQuery the fetchers read their `limit`
       // from, with no second slice on top.

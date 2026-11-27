@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/capturehealth"
+	"github.com/margince/margince/backend/internal/compose/offsetlists"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/commissions"
@@ -154,7 +155,7 @@ func (p *Provider) Search(ctx context.Context, q datasource.SearchQuery) (dataso
 	if limit <= 0 {
 		limit = defaultSearchPageSize
 	}
-	records, next, err := p.searchOneType(ctx, et, text, limit, position.Inner, q.Filters)
+	records, next, err := p.searchOneType(ctx, et, text, limit, position.Inner, q.Offset, q.Filters)
 	if err != nil {
 		return datasource.SearchResult{}, err
 	}
@@ -176,11 +177,14 @@ func (p *Provider) Search(ctx context.Context, q datasource.SearchQuery) (dataso
 // searchOneType pages one entity type through the module that owns it. A
 // denied type is the caller's to hear: an empty page would say it holds nothing.
 func (p *Provider) searchOneType(ctx context.Context, t datasource.EntityType, text *string, limit int,
-	cursor string, filters map[string]string,
+	cursor string, offset *int, filters map[string]string,
 ) ([]datasource.Record, string, error) {
 	var inner *string
 	if cursor != "" {
 		inner = &cursor
+	}
+	if err := offsetlists.Refuse(t, offset); err != nil {
+		return nil, "", err
 	}
 	var (
 		records []datasource.Record
@@ -190,15 +194,15 @@ func (p *Provider) searchOneType(ctx context.Context, t datasource.EntityType, t
 	switch t {
 	case datasource.EntityContact, datasource.EntityCompany, datasource.EntityLead,
 		datasource.EntityPartner:
-		records, next, _, err = p.contacts.SearchEntity(ctx, t, text, limit, inner, filters)
+		records, next, _, err = p.contacts.SearchEntity(ctx, t, text, limit, inner, offset, filters)
 	case datasource.EntityDeal, datasource.EntityProduct, datasource.EntityOfferTemplate, datasource.EntityOffer:
-		records, next, _, err = p.deals.SearchEntity(ctx, t, text, limit, inner, filters)
+		records, next, _, err = p.deals.SearchEntity(ctx, t, text, limit, inner, offset, filters)
 	case datasource.EntityCommission:
 		records, next, _, err = p.commissions.SearchEntity(ctx, t, text, limit, inner, filters)
 	case datasource.EntityDealRoom, datasource.EntityDealRoomThread, datasource.EntityDealRoomComment, datasource.EntityDealRoomDocument, datasource.EntityDealRoomParticipant:
 		records, next, _, err = p.dealRooms.SearchEntity(ctx, t, text, limit, inner, filters)
 	case datasource.EntityProject:
-		records, next, _, err = p.projects.SearchEntity(ctx, t, text, limit, inner, filters)
+		records, next, _, err = p.projects.SearchEntity(ctx, t, text, limit, inner, offset, filters)
 	case datasource.EntityActivity:
 		records, next, _, err = p.activities.SearchEntity(ctx, t, text, limit, inner, filters)
 	default:

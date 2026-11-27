@@ -4,12 +4,18 @@
 import { infiniteQueryOptions } from "@tanstack/react-query";
 import { FIRST_PAGE } from "../api/client";
 import type { ListPage } from "./listquery";
-import { LIST_PAGE_SIZES, type ListQuery } from "./listqueryparams";
+import {
+  LIST_PAGE_SIZES,
+  type ListQuery,
+  type ListReach,
+} from "./listqueryparams";
 
+/** One read; `reach` is set for a page opened at an offset rather than by cursor. */
 export type ListFetchPage<Row> = (
   query: ListQuery,
   cursor: string | null,
   signal: AbortSignal,
+  reach?: ListReach,
 ) => Promise<ListPage<Row>>;
 
 /** The state a list opens on before a reader has turned any dial. */

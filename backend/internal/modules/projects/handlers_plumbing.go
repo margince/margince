@@ -120,7 +120,7 @@ func idArg[K ids.EntityKind](u *openapi_types.UUID) *ids.ID[K] {
 }
 
 func pageInfo(p storekit.Page) crmcontracts.PageInfo {
-	info := crmcontracts.PageInfo{HasMore: p.HasMore}
+	info := crmcontracts.PageInfo{HasMore: p.HasMore, Total: p.Total}
 	if p.NextCursor != "" {
 		info.NextCursor = &p.NextCursor
 	}

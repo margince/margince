@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 48,
     "system_frame_tokens": 730,
-    "tokens": 54073,
+    "tokens": 54122,
     "median_tool_tokens": 806,
-    "mean_tool_tokens": 1126
+    "mean_tool_tokens": 1127
   },
   "agents": [
     {
@@ -47,11 +47,11 @@
         "read_record"
       ],
       "of_served_tools": 48,
-      "tokens": 4384,
-      "listing_tokens": 2008,
-      "step_schema_tokens": 1646,
+      "tokens": 4494,
+      "listing_tokens": 2071,
+      "step_schema_tokens": 1692,
       "percent_of_ceiling": 13,
-      "headroom_tokens": 12000,
+      "headroom_tokens": 11890,
       "dangling_cross_references": [],
       "temptation_weight": 4
     },
@@ -68,11 +68,11 @@
         "whats_slipping_this_week"
       ],
       "of_served_tools": 48,
-      "tokens": 6515,
-      "listing_tokens": 3156,
-      "step_schema_tokens": 2628,
-      "percent_of_ceiling": 19,
-      "headroom_tokens": 9869,
+      "tokens": 6625,
+      "listing_tokens": 3220,
+      "step_schema_tokens": 2674,
+      "percent_of_ceiling": 20,
+      "headroom_tokens": 9759,
       "dangling_cross_references": [],
       "temptation_weight": 5
     }
@@ -104,7 +104,7 @@
     },
     {
       "name": "find_records",
-      "tokens": 2053
+      "tokens": 2102
     },
     {
       "name": "change_reports",
