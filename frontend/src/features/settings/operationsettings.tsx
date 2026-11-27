@@ -38,6 +38,8 @@ const OPERATION_BOUNDS = {
   retention_sweep_interval_seconds: { min: 3_600, max: 604_800 },
   geocode_backfill_interval_seconds: { min: 0, max: 604_800 },
   technical_backfill_interval_seconds: { min: 0, max: 604_800 },
+  capture_counterparty_verdict_interval_seconds: { min: 60, max: 86_400 },
+  capture_confidentiality_verdict_interval_seconds: { min: 60, max: 86_400 },
   gmail_watch_scan_interval_seconds: { min: 600, max: 43_200 },
   graph_watch_scan_interval_seconds: { min: 600, max: 43_200 },
   gmail_watch_renew_within_hours: { min: 24, max: 144 },
@@ -60,6 +62,8 @@ type OperationRow = Readonly<{
     | "retention"
     | "geocode"
     | "technical"
+    | "captureCounterparty"
+    | "captureConfidentiality"
     | "gmailWatchScan"
     | "graphWatchScan"
     | "gmailWatchRenew"
@@ -87,6 +91,14 @@ const SCHEDULE_ROWS: readonly OperationRow[] = [
     property: "technical_backfill_interval_seconds",
     copy: "technical",
     lowestOn: 300,
+  },
+  {
+    property: "capture_counterparty_verdict_interval_seconds",
+    copy: "captureCounterparty",
+  },
+  {
+    property: "capture_confidentiality_verdict_interval_seconds",
+    copy: "captureConfidentiality",
   },
   { property: "gmail_watch_scan_interval_seconds", copy: "gmailWatchScan" },
   { property: "gmail_watch_renew_within_hours", copy: "gmailWatchRenew" },

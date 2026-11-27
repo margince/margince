@@ -42328,6 +42328,8 @@ components:
         retention_sweep_interval_seconds: { type: integer, minimum: 3600, maximum: 604800, description: 'Set the value `OperationSettings.retention_sweep_interval_seconds` describes.' }
         geocode_backfill_interval_seconds: { type: integer, minimum: 0, maximum: 604800, description: 'Set the value `OperationSettings.geocode_backfill_interval_seconds` describes.' }
         technical_backfill_interval_seconds: { type: integer, minimum: 0, maximum: 604800, description: 'Set the value `OperationSettings.technical_backfill_interval_seconds` describes.' }
+        capture_counterparty_verdict_interval_seconds: { type: integer, minimum: 60, maximum: 86400, description: 'Set the value `OperationSettings.capture_counterparty_verdict_interval_seconds` describes.' }
+        capture_confidentiality_verdict_interval_seconds: { type: integer, minimum: 60, maximum: 86400, description: 'Set the value `OperationSettings.capture_confidentiality_verdict_interval_seconds` describes.' }
         gmail_watch_scan_interval_seconds: { type: integer, minimum: 600, maximum: 43200, description: 'Set the value `OperationSettings.gmail_watch_scan_interval_seconds` describes.' }
         graph_watch_scan_interval_seconds: { type: integer, minimum: 600, maximum: 43200, description: 'Set the value `OperationSettings.graph_watch_scan_interval_seconds` describes.' }
         gmail_watch_renew_within_hours: { type: integer, minimum: 24, maximum: 144, description: 'Set the value `OperationSettings.gmail_watch_renew_within_hours` describes.' }
@@ -44057,7 +44059,7 @@ components:
         The worker's operating values: how often each background pass runs, how far ahead a
         mailbox subscription is renewed, and how fast one mailbox sends. A running worker reads
         them again within a minute of a change, so none needs a restart.
-      required: [agent_runner_interval_seconds, webhook_retry_interval_seconds, time_scan_interval_seconds, close_date_sweep_interval_seconds, follow_up_reconcile_interval_seconds, retention_sweep_interval_seconds, geocode_backfill_interval_seconds, technical_backfill_interval_seconds, gmail_watch_scan_interval_seconds, graph_watch_scan_interval_seconds, gmail_watch_renew_within_hours, graph_watch_renew_within_hours, send_rate_limit, send_rate_window_seconds, send_max_age_hours]
+      required: [agent_runner_interval_seconds, webhook_retry_interval_seconds, time_scan_interval_seconds, close_date_sweep_interval_seconds, follow_up_reconcile_interval_seconds, retention_sweep_interval_seconds, geocode_backfill_interval_seconds, technical_backfill_interval_seconds, capture_counterparty_verdict_interval_seconds, capture_confidentiality_verdict_interval_seconds, gmail_watch_scan_interval_seconds, graph_watch_scan_interval_seconds, gmail_watch_renew_within_hours, graph_watch_renew_within_hours, send_rate_limit, send_rate_window_seconds, send_max_age_hours]
       properties:
         agent_runner_interval_seconds: { type: integer, minimum: 10, maximum: 3600, description: 'How often scheduled agents are checked for a run that is due, in seconds. Default 30.' }
         webhook_retry_interval_seconds: { type: integer, minimum: 10, maximum: 3600, description: 'How often failed webhook deliveries are retried, in seconds. Default 30.' }
@@ -44067,6 +44069,8 @@ components:
         retention_sweep_interval_seconds: { type: integer, minimum: 3600, maximum: 604800, description: 'How often data past its retention period is removed, in seconds. Default 86400. It cannot be switched off.' }
         geocode_backfill_interval_seconds: { type: integer, minimum: 0, maximum: 604800, description: 'How often addresses without coordinates are looked up, in seconds, from 300; 0 switches the sweep off. Default 3600.' }
         technical_backfill_interval_seconds: { type: integer, minimum: 0, maximum: 604800, description: 'How often company domains without technical facts are looked up, in seconds, from 300; 0 switches the sweep off. Default 21600.' }
+        capture_counterparty_verdict_interval_seconds: { type: integer, minimum: 60, maximum: 86400, description: 'How often new senders are judged by the model, in seconds. Default 600.' }
+        capture_confidentiality_verdict_interval_seconds: { type: integer, minimum: 60, maximum: 86400, description: 'How often captured threads are judged for whether colleagues may read them, in seconds. Default 600.' }
         gmail_watch_scan_interval_seconds: { type: integer, minimum: 600, maximum: 43200, description: 'How often Gmail push subscriptions are checked for renewal, in seconds. Default 21600.' }
         graph_watch_scan_interval_seconds: { type: integer, minimum: 600, maximum: 43200, description: 'How often Microsoft 365 mail subscriptions are checked for renewal, in seconds. Default 21600.' }
         gmail_watch_renew_within_hours: { type: integer, minimum: 24, maximum: 144, description: 'How far ahead of expiry a Gmail push subscription is renewed, in hours. A watch lasts seven days. Default 48.' }
