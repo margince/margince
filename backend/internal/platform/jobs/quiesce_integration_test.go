@@ -6,7 +6,7 @@
 package jobs_test
 
 // Real-Postgres lane for the reset's queue control: pause/resume round-trips
-// through river_queue, and the purge's workspace filter.
+// through river_queue, and the purge.
 
 import (
 	"context"
@@ -23,35 +23,21 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-func TestPurgeWorkspaceKeepsAnotherWorkspacesRows(t *testing.T) {
+func TestPurgeJobsRemovesEveryRowWhateverItsArgsCarry(t *testing.T) {
 	ctx, pool := quiesceTestPool(t)
-	mine, theirs := ids.NewV7(), ids.NewV7()
-	insertJobRow(ctx, t, pool, "reset.probe", mine)
-	insertJobRow(ctx, t, pool, "reset.probe", theirs)
+	insertJobRow(ctx, t, pool, "reset.probe", ids.NewV7()) // an envelope queued with a workspace_id key
+	insertDispatcherRow(ctx, t, pool, "reset.dispatcher")  // args with no workspace_id key
 
-	deleted, err := jobs.PurgeWorkspace(ctx, pool, mine)
+	deleted, err := jobs.PurgeJobs(ctx, pool)
 	if err != nil {
-		t.Fatalf("PurgeWorkspace: %v", err)
+		t.Fatalf("PurgeJobs: %v", err)
 	}
-	if deleted != 1 {
-		t.Errorf("deleted = %d, want 1", deleted)
+	if deleted != 2 {
+		t.Errorf("deleted = %d, want both rows: the installation holds one company, so every row is its work", deleted)
 	}
-	if got := countJobRows(ctx, t, pool, theirs); got != 1 {
-		t.Errorf("another workspace lost %d rows; a reset must never cross the tenant boundary", 1-got)
-	}
-}
-
-func TestPurgeWorkspaceRemovesFleetDispatchers(t *testing.T) {
-	ctx, pool := quiesceTestPool(t)
-	ws := ids.NewV7()
-	insertDispatcherRow(ctx, t, pool, "reset.dispatcher") // args with no workspace_id key
-
-	deleted, err := jobs.PurgeWorkspace(ctx, pool, ws)
-	if err != nil {
-		t.Fatalf("PurgeWorkspace: %v", err)
-	}
-	if deleted != 1 {
-		t.Errorf("deleted = %d, want the NULL-args dispatcher row removed; periodic ticks re-insert it", deleted)
+	var left int
+	if err := pool.QueryRow(ctx, `SELECT count(*)::int FROM river_job`).Scan(&left); err != nil || left != 0 {
+		t.Errorf("%d job rows left after a purge (err %v)", left, err)
 	}
 }
 
@@ -191,17 +177,4 @@ func insertRunningJobRow(ctx context.Context, t *testing.T, pool *pgxpool.Pool, 
 		kind); err != nil {
 		t.Fatalf("seeding a running %s row: %v", kind, err)
 	}
-}
-
-// countJobRows reports how many river_job rows carry the given workspace —
-// the read PurgeWorkspace's tenant-boundary assertion checks.
-func countJobRows(ctx context.Context, t *testing.T, pool *pgxpool.Pool, ws ids.UUID) int {
-	t.Helper()
-	var n int
-	if err := pool.QueryRow(ctx,
-		`SELECT count(*)::int FROM river_job WHERE args->>'workspace_id' = $1`,
-		ws.String()).Scan(&n); err != nil {
-		t.Fatalf("counting rows for workspace: %v", err)
-	}
-	return n
 }

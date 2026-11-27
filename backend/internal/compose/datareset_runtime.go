@@ -30,10 +30,10 @@ type ResetRuntime struct {
 	QuiesceQueues func(ctx context.Context) (drained bool, err error)
 	// ResumeQueues lifts the pause. Called from a deferred path.
 	ResumeQueues func(ctx context.Context) error
-	// PurgeQueue deletes this workspace's job rows in every state — pending
-	// work and retained history alike — plus the fleet dispatchers, returning
+	// PurgeQueue deletes the installation's job rows in every state — pending
+	// work and retained history alike, returning
 	// rows deleted.
-	PurgeQueue func(ctx context.Context, ws ids.UUID) (int, error)
+	PurgeQueue func(ctx context.Context) (int, error)
 	// PurgeBus empties the event streams and the dedupe marks, returning
 	// stream keys deleted and cache keys unlinked.
 	PurgeBus func(ctx context.Context) (streams int, keys int, err error)
@@ -90,7 +90,7 @@ func (h dataResetHandlers) runRuntimePhase(ctx context.Context, rt ResetRuntime,
 		return counts, err
 	}
 	if rt.PurgeQueue != nil {
-		n, err := rt.PurgeQueue(ctx, ws)
+		n, err := rt.PurgeQueue(ctx)
 		if err != nil {
 			return counts, err
 		}

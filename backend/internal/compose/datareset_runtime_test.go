@@ -45,7 +45,7 @@ func TestPurgeFailureAbortsBeforeAnyDataIsSweptAndStillResumesTheFleet(t *testin
 	rt := ResetRuntime{
 		QuiesceQueues: func(context.Context) (bool, error) { return true, nil },
 		ResumeQueues:  func(context.Context) error { resumed = true; return nil },
-		PurgeQueue:    func(context.Context, ids.UUID) (int, error) { return 0, errors.New("queue purge exploded") },
+		PurgeQueue:    func(context.Context) (int, error) { return 0, errors.New("queue purge exploded") },
 		PurgeBus:      func(context.Context) (int, int, error) { return 0, 0, nil },
 		SignalReset:   func(context.Context, ids.UUID) error { return nil },
 	}
@@ -141,7 +141,7 @@ func TestAFailedQuiesceStillLiftsTheResetsOwnFleetPause(t *testing.T) {
 			return false, errors.New("counting running jobs failed after the pause landed")
 		},
 		ResumeQueues: func(context.Context) error { resumed, paused = true, false; return nil },
-		PurgeQueue:   func(context.Context, ids.UUID) (int, error) { return 0, nil },
+		PurgeQueue:   func(context.Context) (int, error) { return 0, nil },
 	}
 
 	_, err := resetHandlers(rt).runQuiesced(context.Background(), ids.NewV7(), noOutbox, func(*resetCounts) error {
@@ -260,7 +260,7 @@ func TestADrainTimeoutRefusesTheResetBeforeAnythingIsDeleted(t *testing.T) {
 	rt := ResetRuntime{
 		QuiesceQueues: func(context.Context) (bool, error) { return false, nil },
 		ResumeQueues:  func(context.Context) error { resumed = true; return nil },
-		PurgeQueue:    func(context.Context, ids.UUID) (int, error) { deleted = append(deleted, "jobs"); return 3, nil },
+		PurgeQueue:    func(context.Context) (int, error) { deleted = append(deleted, "jobs"); return 3, nil },
 		PurgeBus:      func(context.Context) (int, int, error) { deleted = append(deleted, "bus"); return 12, 41, nil },
 		SignalReset:   func(context.Context, ids.UUID) error { deleted = append(deleted, "signal"); return nil },
 	}
@@ -343,7 +343,7 @@ func TestAResetWithoutARuntimeStillSweepsPostgres(t *testing.T) {
 // one struct is the single tally behind the response, the evidence and the log.
 func TestResetSweepSeesThePurgeTalliesAndReportsItsOwn(t *testing.T) {
 	rt := ResetRuntime{
-		PurgeQueue: func(context.Context, ids.UUID) (int, error) { return 7, nil },
+		PurgeQueue: func(context.Context) (int, error) { return 7, nil },
 		PurgeBus:   func(context.Context) (int, int, error) { return 1, 2, nil },
 	}
 
@@ -369,7 +369,7 @@ func TestResetSweepSeesThePurgeTalliesAndReportsItsOwn(t *testing.T) {
 func TestResetRuntimeReachesTheHandlerInEitherOptionOrder(t *testing.T) {
 	const purged = 9
 	runtime := WithResetRuntime(ResetRuntime{
-		PurgeQueue: func(context.Context, ids.UUID) (int, error) { return purged, nil },
+		PurgeQueue: func(context.Context) (int, error) { return purged, nil },
 	})
 	reset := WithDataReset(nil, deployconfig.Seeds{}, true)
 
@@ -390,7 +390,7 @@ func TestResetRuntimeReachesTheHandlerInEitherOptionOrder(t *testing.T) {
 			if rt == nil || rt.PurgeQueue == nil {
 				t.Fatal("the handler cannot reach the wired runtime — the reset would sweep tables and leave the queue full")
 			}
-			n, err := rt.PurgeQueue(context.Background(), ids.NewV7())
+			n, err := rt.PurgeQueue(context.Background())
 			if err != nil || n != purged {
 				t.Errorf("PurgeQueue = (%d, %v); want (%d, nil) — the handler reached a different runtime", n, err, purged)
 			}

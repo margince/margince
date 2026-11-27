@@ -153,15 +153,16 @@ func kindOf(report jobHealthDTO, kind string) (int, bool) {
 	return 0, false
 }
 
-// TestJobHealthReportsThisWorkspacesDeadWorkAndNotAnotherWorkspacesAnything
-// is the case that matters most. The scope is imposed by the handler
-// because river_job has no RLS to impose it, so a second workspace has to
-// be present or the test proves nothing.
-func TestJobHealthReportsThisWorkspacesDeadWorkAndNotAnotherWorkspacesAnything(t *testing.T) {
+// TestJobHealthReportsEveryRowWhateverWorkspaceIdItsArgsCarry holds that the
+// read no longer selects on args->>'workspace_id': an installation holds one
+// company, so a row queued with the key (an envelope from before the key was
+// dropped), a row queued without it and a dispatcher are all this
+// installation's work.
+func TestJobHealthReportsEveryRowWhateverWorkspaceIdItsArgsCarry(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	mine := callerWorkspace(t, e)
-	theirs := ids.NewV7().String()
+	queuedBefore := ids.NewV7().String()
 
 	seedRiverRow(t, e, riverRow{
 		kind: "idempotency_retention_workspace", state: "discarded",
@@ -169,22 +170,14 @@ func TestJobHealthReportsThisWorkspacesDeadWorkAndNotAnotherWorkspacesAnything(t
 	})
 	seedRiverRow(t, e, riverRow{
 		kind: "idempotency_retention_workspace", state: "available",
-		workspace: mine,
 	})
-	// Another tenant's dead work, of a DIFFERENT kind so its presence would
-	// be unmistakable rather than folded into a count.
 	seedRiverRow(t, e, riverRow{
-		kind: "someone_elses_pass", state: "discarded",
-		workspace: theirs, attempt: 3, errorText: "another tenant's failure",
+		kind: "queued_before_the_key_was_dropped", state: "discarded",
+		workspace: queuedBefore, attempt: 3, errorText: "an old envelope's failure",
 	})
-	// A dispatcher: no workspace at all, and a kind the closed untenanted
-	// arm declares.
 	seedRiverRow(t, e, riverRow{
 		kind: "idempotency_retention", state: "available",
 	})
-	// An untenanted row whose kind is NOT a declared dispatcher. The arm is
-	// fail-closed, so it must be omitted rather than shared with every admin.
-	seedRiverRow(t, e, riverRow{kind: "not_a_declared_dispatcher", state: "discarded", attempt: 3})
 
 	var report jobHealthDTO
 	if status := e.Call(t, "GET", "/v1/admin/job-health", nil, nil, &report); status != http.StatusOK {
@@ -193,40 +186,24 @@ func TestJobHealthReportsThisWorkspacesDeadWorkAndNotAnotherWorkspacesAnything(t
 
 	i, ok := kindOf(report, "idempotency_retention_workspace")
 	if !ok {
-		t.Fatalf("the caller's own failing kind is missing from %+v", report.Kinds)
+		t.Fatalf("the failing kind is missing from %+v", report.Kinds)
 	}
-	if report.Kinds[i].Dead != 1 {
-		t.Errorf("dead = %d, want 1", report.Kinds[i].Dead)
-	}
-	if report.Kinds[i].Waiting != 1 {
-		t.Errorf("waiting = %d, want 1", report.Kinds[i].Waiting)
+	if report.Kinds[i].Dead != 1 || report.Kinds[i].Waiting != 1 {
+		t.Errorf("dead = %d, waiting = %d, want 1 and 1: the row without the key and the row with it are one kind",
+			report.Kinds[i].Dead, report.Kinds[i].Waiting)
 	}
 	if report.Kinds[i].FleetWide {
-		t.Error("a workspace-scoped kind was reported as fleet-wide")
+		t.Error("a per-record kind was reported as fleet-wide")
 	}
-
-	if _, ok := kindOf(report, "someone_elses_pass"); ok {
-		t.Error("another workspace's job kind reached this workspace's admin — river_job has " +
-			"no RLS, so nothing but this handler was ever going to stop that")
+	if _, ok := kindOf(report, "queued_before_the_key_was_dropped"); !ok {
+		t.Error("a row whose args carry another workspace id was hidden; the installation's one company owns every row")
 	}
-	if _, ok := kindOf(report, "not_a_declared_dispatcher"); ok {
-		t.Error("an untenanted row of an undeclared kind was admitted; the arm must be " +
-			"closed against the declared dispatcher kinds, not open to every null")
-	}
-
 	d, ok := kindOf(report, "idempotency_retention")
 	if !ok {
-		t.Fatal("the dispatcher is missing: a dispatcher that is not running means no " +
-			"workspace is being swept at all, which is what an admin comes here to see")
+		t.Fatal("the dispatcher is missing")
 	}
 	if !report.Kinds[d].FleetWide {
-		t.Error("the dispatcher was not reported as fleet-wide")
-	}
-
-	for _, f := range report.RecentFailures {
-		if f.Kind == "someone_elses_pass" {
-			t.Error("another workspace's failure reached the failure list")
-		}
+		t.Error("a declared dispatcher kind was not reported as fleet-wide")
 	}
 }
 

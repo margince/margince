@@ -24,33 +24,6 @@ import (
 // work nobody has done is waiting, whatever River calls the state.
 const waitingStates = `('available','scheduled','pending')`
 
-// healthScope is the row filter this read imposes for itself.
-//
-// river_job has no workspace_id COLUMN, so it has no RLS and no row-scope
-// clause can be inherited from platform/auth. An admin of one workspace
-// reading another's failures would be a cross-tenant read that nothing
-// authorized — the singleton company is a boot-time admission policy,
-// not permission to stop scoping.
-//
-// The untenanted arm is CLOSED against the caller's declared dispatcher
-// kinds rather than admitting every null. A dispatcher does no tenant work
-// and its health is what an admin needs — a dispatcher that is not running
-// means no workspace is being swept at all — but "the workspace key is
-// null" is a property held by source-shape tests, not by a database
-// constraint, and this table has no RLS while the app role holds direct
-// CRUD on it. A malformed or externally inserted tenant row would otherwise
-// land in a global arm and carry its kind, counts and failure class to
-// every workspace's admin. An unrecognised untenanted row is omitted
-// instead.
-//
-// $1 is bound as TEXT: ->> yields text, and binding a uuid-typed value
-// gives pgx the uuid OID and Postgres "operator does not exist: text =
-// uuid".
-const healthScope = `(
-	args->>'workspace_id' = $1
-	OR (args->>'workspace_id' IS NULL AND kind = ANY($2))
-)`
-
 // KindHealth is one kind's live state under the caller's scope.
 type KindHealth struct {
 	Kind          string
@@ -95,10 +68,8 @@ type Failure struct {
 	// the full errors array say, is it still retrying — is keyed by it. A
 	// failure list that pointed at the process log while naming no id was
 	// pointing at a log nobody could search.
-	ID   int64
-	Kind string
-	// WorkspaceID is nil for a dispatcher.
-	WorkspaceID *string
+	ID          int64
+	Kind        string
 	State       string
 	Attempt     int
 	MaxAttempts int
@@ -130,7 +101,7 @@ type Failure struct {
 	StoredReason string
 }
 
-// Health is one scoped read of the job table for one workspace's admin.
+// Health is one read of the installation's job table for its admin.
 type Health struct {
 	Kinds    []KindHealth
 	Failures []Failure
@@ -141,51 +112,39 @@ type Health struct {
 // over a table River retains for days is a different product.
 const recentFailureLimit = 50
 
-// WorkspaceHealth reads the job table for ONE workspace's admin: that
-// workspace's own rows plus the untenanted rows of the named dispatcher
-// kinds, and nothing else.
+// ReadHealth reads the installation's job table for its admin: every row,
+// because an installation holds one company and so every job is its work.
 //
 // dispatcherKinds is supplied by the caller rather than read off the
-// declaration in this package. This table has no RLS, so the untenanted arm
-// IS the scope — and a scope the calling surface states for itself is one
-// that surface can be gated on, which is where the gate for it lives.
+// declaration in this package: it marks which kinds the page reports as
+// fleet-wide, and a list the calling surface states for itself is one that
+// surface can be gated on.
 //
 // `recent` bounds DeadRecent, and arrives from the caller for the same reason:
 // it is an installation setting, and this package holds no settings reader.
-func WorkspaceHealth(
-	ctx context.Context, pool *pgxpool.Pool, workspaceID string,
-	dispatcherKinds []string, recent time.Duration,
-) (Health, error) {
-	kinds, err := healthByKind(ctx, pool, workspaceID, dispatcherKinds, recent)
+func ReadHealth(ctx context.Context, pool *pgxpool.Pool, dispatcherKinds []string, recent time.Duration) (Health, error) {
+	kinds, err := healthByKind(ctx, pool, dispatcherKinds, recent)
 	if err != nil {
 		return Health{}, err
 	}
-	failures, err := recentFailures(ctx, pool, workspaceID, dispatcherKinds)
+	failures, err := recentFailures(ctx, pool)
 	if err != nil {
 		return Health{}, err
 	}
 	return Health{Kinds: kinds, Failures: failures}, nil
 }
 
-// WorkspaceKindHealth omits the failure sample and the windowed DeadRecent count.
-func WorkspaceKindHealth(ctx context.Context, pool *pgxpool.Pool, workspaceID string, dispatcherKinds []string) ([]KindHealth, error) {
-	return healthByKind(ctx, pool, workspaceID, dispatcherKinds, 0)
+// ReadKindHealth omits the failure sample and the windowed DeadRecent count.
+func ReadKindHealth(ctx context.Context, pool *pgxpool.Pool, dispatcherKinds []string) ([]KindHealth, error) {
+	return healthByKind(ctx, pool, dispatcherKinds, 0)
 }
 
-// healthByKind groups the caller's live rows by kind and queue.
-//
-// It groups by whether the workspace key is null as well, so a kind that
-// somehow holds BOTH tenant and untenanted rows appears twice rather than
-// being silently attributed to one side. That would be the workspace
-// invariant breaking, and this endpoint should be the thing that shows it.
-func healthByKind(
-	ctx context.Context, pool *pgxpool.Pool, workspaceID string,
-	dispatcherKinds []string, recent time.Duration,
-) ([]KindHealth, error) {
+// healthByKind groups the installation's live rows by kind and queue.
+func healthByKind(ctx context.Context, pool *pgxpool.Pool, dispatcherKinds []string, recent time.Duration) ([]KindHealth, error) {
 	const q = `
 		SELECT kind,
 		       queue,
-		       (args->>'workspace_id' IS NULL) AS fleet_wide,
+		       coalesce(kind = ANY($1::text[]), false) AS fleet_wide,
 		       count(*) FILTER (WHERE state::text IN ` + waitingStates + `)::bigint,
 		       count(*) FILTER (WHERE state::text = 'running')::bigint,
 		       count(*) FILTER (WHERE state::text = 'retryable')::bigint,
@@ -201,7 +160,7 @@ func healthByKind(
 		       -- Postgres does not admit a row to reach.
 		       -- Held by: TestATerminalRowMustCarryTheMomentItDied
 		       count(*) FILTER (WHERE state::text IN ` + terminalBadStates + `
-		                          AND finalized_at >= now() - $3::interval)::bigint,
+		                          AND finalized_at >= now() - $2::interval)::bigint,
 		       count(*) FILTER (WHERE state::text IN ` + runnableStates + ` AND scheduled_at <= now())::bigint,
 		       count(*) FILTER (WHERE state::text = 'retryable' AND scheduled_at > now())::bigint,
 		       count(*) FILTER (WHERE state::text = 'discarded')::bigint,
@@ -211,11 +170,11 @@ func healthByKind(
 		           FILTER (WHERE state::text IN ` + runnableStates + `
 		                     AND scheduled_at <= now())::double precision
 		FROM river_job
-		WHERE state <> 'completed' AND ` + healthScope + `
+		WHERE state <> 'completed'
 		GROUP BY 1, 2, 3
 		ORDER BY 1, 2, 3`
 
-	rows, err := pool.Query(ctx, q, workspaceID, dispatcherKinds, recent)
+	rows, err := pool.Query(ctx, q, dispatcherKinds, recent)
 	if err != nil {
 		return nil, fmt.Errorf("jobs: reading job health by kind: %w", err)
 	}
@@ -280,11 +239,10 @@ func healthByKind(
 // errors is a jsonb[], not a jsonb, so it is subscripted 1-based; the
 // jsonb path operators (errors->-1 and friends) do not apply to it at all
 // and would not compile against this column.
-func recentFailures(ctx context.Context, pool *pgxpool.Pool, workspaceID string, dispatcherKinds []string) ([]Failure, error) {
+func recentFailures(ctx context.Context, pool *pgxpool.Pool) ([]Failure, error) {
 	q := `
 		SELECT id,
 		       kind,
-		       args->>'workspace_id',
 		       state::text,
 		       attempt::int,
 		       max_attempts::int,
@@ -293,11 +251,10 @@ func recentFailures(ctx context.Context, pool *pgxpool.Pool, workspaceID string,
 		       errors[cardinality(errors)]->>'error'
 		FROM river_job
 		WHERE state::text IN ('retryable','discarded','cancelled')
-		  AND ` + healthScope + `
 		ORDER BY coalesce(finalized_at, attempted_at, created_at) DESC, id DESC
 		LIMIT ` + fmt.Sprint(recentFailureLimit)
 
-	rows, err := pool.Query(ctx, q, workspaceID, dispatcherKinds)
+	rows, err := pool.Query(ctx, q)
 	if err != nil {
 		return nil, fmt.Errorf("jobs: reading recent job failures: %w", err)
 	}
@@ -311,7 +268,7 @@ func recentFailures(ctx context.Context, pool *pgxpool.Pool, workspaceID string,
 			firstAt    *string
 			stored     *string
 		)
-		if err := rows.Scan(&f.ID, &f.Kind, &f.WorkspaceID, &f.State, &f.Attempt,
+		if err := rows.Scan(&f.ID, &f.Kind, &f.State, &f.Attempt,
 			&f.MaxAttempts, &fallbackAt, &firstAt, &stored); err != nil {
 			return nil, fmt.Errorf("jobs: scanning recent job failures: %w", err)
 		}

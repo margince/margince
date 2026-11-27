@@ -276,10 +276,9 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	// would excuse the writers that DO need judging along with it.
 	//
 	// The lock this names is the COMPANY row's, not the workspace row's.
-	// SaveCompany also takes lockCompanyState — `SELECT id FROM workspace … FOR
-	// UPDATE` — and that one is deliberately not what ratifies this: it names a
-	// different table from the one being written, which is exactly the free
-	// credit the table-scoped witness was narrowed to stop giving.
+	// SaveCompany also takes lockCompanyState, an advisory lock — and that one is
+	// deliberately not what ratifies this: it names no table at all, which is
+	// exactly the free credit the table-scoped witness was narrowed to stop giving.
 })
 
 // guardMarkers are the identifiers whose presence in the same function

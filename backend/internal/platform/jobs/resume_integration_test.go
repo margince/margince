@@ -19,8 +19,7 @@ import (
 )
 
 type resumeProbe struct {
-	Workspace ids.UUID `json:"workspace_id"`
-	Carrier   ids.UUID `json:"carrier_id"`
+	Carrier ids.UUID `json:"carrier_id"`
 }
 
 func (resumeProbe) Kind() string { return "budget_resume_probe" }
@@ -30,7 +29,7 @@ func TestBudgetRecoveryPreservesJobAttemptsAndIsolation(t *testing.T) {
 	runner := quiesceTestRunner(t, pool)
 	for _, state := range []string{"scheduled", "retryable", "available", "running", "completed", "cancelled", "discarded"} {
 		t.Run(state, func(t *testing.T) {
-			args := resumeProbe{Workspace: ids.NewV7(), Carrier: ids.NewV7()}
+			args := resumeProbe{Carrier: ids.NewV7()}
 			if err := runner.Enqueue(ctx, args, &river.InsertOpts{ScheduledAt: time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC), MaxAttempts: 3}); err != nil {
 				t.Fatal(err)
 			}
@@ -39,19 +38,16 @@ func TestBudgetRecoveryPreservesJobAttemptsAndIsolation(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			resume := func(workspace ids.UUID) (bool, error) {
+			resume := func() (bool, error) {
 				var woke bool
 				err := pgx.BeginFunc(ctx, pool, func(tx pgx.Tx) error {
 					var err error
-					woke, err = runner.ResumeScheduledTx(ctx, tx, args.Kind(), "carrier_id", args.Carrier, workspace)
+					woke, err = runner.ResumeScheduledTx(ctx, tx, args.Kind(), "carrier_id", args.Carrier)
 					return err
 				})
 				return woke, err
 			}
-			if woke, err := resume(ids.NewV7()); err == nil || woke {
-				t.Fatal("another workspace resumed this job")
-			}
-			woke, err := resume(args.Workspace)
+			woke, err := resume()
 			terminal := state == "completed" || state == "cancelled" || state == "discarded"
 			if terminal {
 				if err == nil || woke {
@@ -79,14 +75,14 @@ func TestBudgetRecoveryPreservesJobAttemptsAndIsolation(t *testing.T) {
 func TestBudgetJobRecoveryRollsBackWithItsCarrier(t *testing.T) {
 	ctx, pool := quiesceTestPool(t)
 	runner := quiesceTestRunner(t, pool)
-	args := resumeProbe{Workspace: ids.NewV7(), Carrier: ids.NewV7()}
+	args := resumeProbe{Carrier: ids.NewV7()}
 	future := time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC)
 	if err := runner.Enqueue(ctx, args, &river.InsertOpts{ScheduledAt: future, MaxAttempts: 3}); err != nil {
 		t.Fatal(err)
 	}
 	forced := errors.New("carrier could not commit")
 	err := pgx.BeginFunc(ctx, pool, func(tx pgx.Tx) error {
-		if _, err := runner.ResumeScheduledTx(ctx, tx, args.Kind(), "carrier_id", args.Carrier, args.Workspace); err != nil {
+		if _, err := runner.ResumeScheduledTx(ctx, tx, args.Kind(), "carrier_id", args.Carrier); err != nil {
 			return err
 		}
 		return forced
@@ -106,11 +102,10 @@ func TestBudgetJobRecoveryRollsBackWithItsCarrier(t *testing.T) {
 func TestFailedCarrierSavepointRollsBackOnlyItsRetriedJob(t *testing.T) {
 	ctx, pool := quiesceTestPool(t)
 	runner := quiesceTestRunner(t, pool)
-	workspace := ids.NewV7()
 	carriers := []ids.UUID{ids.NewV7(), ids.NewV7()}
 	next := time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC)
 	for _, id := range carriers {
-		if err := runner.Enqueue(ctx, resumeProbe{Workspace: workspace, Carrier: id}, &river.InsertOpts{ScheduledAt: next, MaxAttempts: 3}); err != nil {
+		if err := runner.Enqueue(ctx, resumeProbe{Carrier: id}, &river.InsertOpts{ScheduledAt: next, MaxAttempts: 3}); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -118,7 +113,7 @@ func TestFailedCarrierSavepointRollsBackOnlyItsRetriedJob(t *testing.T) {
 	err := storekit.RecoverPages(ctx, func(ctx context.Context, visit func(pgx.Tx) error) error { return pgx.BeginFunc(ctx, pool, visit) },
 		func(pgx.Tx, ids.UUID) ([]ids.UUID, error) { return carriers, nil }, func(id ids.UUID) ids.UUID { return id },
 		func(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
-			woke, err := runner.ResumeScheduledTx(ctx, tx, resumeProbe{}.Kind(), "carrier_id", id, workspace)
+			woke, err := runner.ResumeScheduledTx(ctx, tx, resumeProbe{}.Kind(), "carrier_id", id)
 			if err != nil {
 				return err
 			}
