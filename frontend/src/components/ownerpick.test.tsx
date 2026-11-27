@@ -182,10 +182,11 @@ describe("OwnerPick", () => {
     render();
 
     const panel = await openPicker(user);
-    await panel.findByRole("option", { name: "Omar Haddad" });
-    expect(
-      panel.getAllByRole("option").map((option) => option.textContent),
-    ).toEqual(["Omar Haddad", "Anna Berg", "Jane Doe", "Zoe Weber"]);
+    await waitFor(() =>
+      expect(
+        panel.getAllByRole("option").map((option) => option.textContent),
+      ).toEqual(["Omar Haddad", "Anna Berg", "Jane Doe", "Zoe Weber"]),
+    );
   });
 
   it("offers Unassigned first where the record may go back to the queue, and a pick clears the owner", async () => {
@@ -196,10 +197,11 @@ describe("OwnerPick", () => {
     render({ ownerId: "u-7", assign, unassign });
 
     const panel = await openPicker(user);
-    await panel.findByRole("option", { name: "Jane Doe" });
-    expect(
-      panel.getAllByRole("option").map((option) => option.textContent),
-    ).toEqual(["Unassigned", "Omar Haddad", "Jane Doe"]);
+    await waitFor(() =>
+      expect(
+        panel.getAllByRole("option").map((option) => option.textContent),
+      ).toEqual(["Unassigned", "Omar Haddad", "Jane Doe"]),
+    );
     await user.click(panel.getByRole("option", { name: "Unassigned" }));
 
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
