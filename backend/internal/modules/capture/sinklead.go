@@ -151,13 +151,15 @@ func (s *Sink) upsertLead(ctx context.Context, tx pgx.Tx, rec connector.Normaliz
 			return ids.LeadID{}, false, fmt.Errorf("capture: score new lead: %w", err)
 		}
 	}
-	// arrival_owner_id repeats owner_id: a captured lead arrives at created_at,
-	// and the owner it arrived with stays its attribution after a reassignment.
+	// arrival_owner_id and arrival_origin repeat owner_id and origin, because a
+	// captured lead arrives at created_at. They keep its attribution after a
+	// reassignment or an edit. An empty arrival_origin says it arrived with none.
 	err := tx.QueryRow(ctx, `
 		INSERT INTO lead (full_name, email, company_name, title, source_system, source_id, source, captured_by, owner_id,
-		                  origin, origin_detail, score, email_domain_folded, arrival_owner_id)
+		                  origin, origin_detail, score, email_domain_folded, arrival_owner_id, arrival_origin)
 		VALUES (NULLIF($1, ''), NULLIF(lower($2), ''), NULLIF($3, ''), NULLIF($4, ''), $5, $6, $7, $8, $9,
-		        (SELECT key FROM lead_origin WHERE key = $10 AND active), NULLIF($11, ''), $12, $13, $9)
+		        (SELECT key FROM lead_origin WHERE key = $10 AND active), NULLIF($11, ''), $12, $13, $9,
+		        COALESCE((SELECT key FROM lead_origin WHERE key = $10 AND active), ''))
 		ON CONFLICT (source_system, source_id) WHERE source_system IS NOT NULL AND source_id IS NOT NULL
 		DO NOTHING
 		RETURNING id`,

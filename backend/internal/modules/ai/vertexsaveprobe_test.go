@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/platform/googlejwt"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
@@ -252,7 +253,7 @@ func TestARefusedKeyRefusesTheSaveAndAnOutageDoesNot(t *testing.T) {
 		http.StatusBadRequest: true, http.StatusUnauthorized: true, http.StatusForbidden: true,
 		http.StatusTooManyRequests: false, http.StatusServiceUnavailable: false,
 	} {
-		err := refuseUnserved(p, tokenExchangeRefused(status, "invalid_grant"))
+		err := refuseUnserved(p, tokenExchangeRefused(googlejwt.ErrExchangeRefused{Status: status, Code: "invalid_grant"}))
 		if got := err != nil; got != refused {
 			t.Errorf("a token exchange answered %d: refused = %v, want %v (%v)", status, got, refused, err)
 		}

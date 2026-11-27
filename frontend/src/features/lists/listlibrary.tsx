@@ -24,25 +24,26 @@ import { useTruncationTooltip } from "../../design-system/tooltip";
 import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import {
-  listEntityTypeOf,
-  RECORDS_COUNT_LABEL,
-} from "../../lib/filtersaddress";
+import { RECORDS_COUNT_LABEL, viewOf } from "../../lib/filtersaddress";
+import { leadsOpeningFilters } from "../../lib/leads.address";
 import { fromHere } from "../../lib/navigatefrom";
 import { blankRequired, refusalSentences } from "../../lib/problem";
 import { recordKindLabel, useRecordKindDirectory } from "../../lib/recordkinds";
-import { routeHash } from "../../lib/router";
+import { useMe } from "../../lib/session";
 import { EditFilterAction, mayEditFilter } from "./filterlistedit";
 import {
+  hrefOf,
   isArchived,
   keyOf,
   type LibraryGroup,
   type LibraryItem,
   nameOf,
+  resourceOf,
 } from "./library";
 import "../voice-knowledge/library.css";
 import { labelFor } from "../../lib/labelfor";
 import {
+  isCoreListType,
   type List,
   type ListRecordType,
   useCreateList,
@@ -141,6 +142,8 @@ export function LibraryTable({
 }>) {
   const t = useT();
   const audienceOf = useListAudienceLabel();
+  const reader = useMe().data;
+  const leadsOpening = reader && leadsOpeningFilters(reader);
   const name: DataTableColumn<LibraryItem> = {
     key: "name",
     header: t("lists.col.name"),
@@ -148,6 +151,7 @@ export function LibraryTable({
     render: (item) => (
       <LibraryName
         item={item}
+        href={hrefOf(item, leadsOpening)}
         caption={captionOf(item)}
         facts={folded ? <LibraryFacts item={item} group={group} /> : null}
       />
@@ -188,36 +192,39 @@ export function LibraryTable({
         more,
       ];
   return (
-    <div className="library-table">
-      <DataTable
-        label={label}
-        rows={[...items]}
-        rowKey={keyOf}
-        columns={columns}
-      />
-    </div>
+    <DataTable
+      label={label}
+      rows={[...items]}
+      rowKey={keyOf}
+      columns={columns}
+      bleed
+    />
   );
-}
-
-function hrefOf(item: LibraryItem): string {
-  return item.kind === "view"
-    ? routeHash({ screen: "filters", id: item.tab, id2: item.view.id })
-    : routeHash({ screen: "lists", id: item.list.id });
 }
 
 function LibraryName({
   item,
+  href,
   caption,
   facts,
-}: Readonly<{ item: LibraryItem; caption: string; facts: ReactNode }>) {
+}: Readonly<{
+  item: LibraryItem;
+  href: string | undefined;
+  caption: string;
+  facts: ReactNode;
+}>) {
   const t = useT();
   const tip = useTruncationTooltip<HTMLSpanElement>(caption);
   return (
     <span className="library-name-cell">
       <span className="library-name-line">
-        <AppLink className="library-name" href={hrefOf(item)}>
-          {nameOf(item)}
-        </AppLink>
+        {href ? (
+          <AppLink className="library-name" href={href}>
+            {nameOf(item)}
+          </AppLink>
+        ) : (
+          <span className="library-name">{nameOf(item)}</span>
+        )}
         {item.kind === "list" && <ListHealthBadge list={item.list} />}
         {isArchived(item) && <Badge>{t("record.archived")}</Badge>}
       </span>
@@ -255,10 +262,10 @@ function LibraryFacts({
 
 function LibraryKind({ item }: Readonly<{ item: LibraryItem }>) {
   const t = useT();
-  return item.kind === "view" ? (
-    <Badge>{t("filters.library.kindView")}</Badge>
-  ) : (
+  return item.kind === "list" ? (
     <ListKindBadge list={item.list} />
+  ) : (
+    <Badge>{t("filters.library.kindView")}</Badge>
   );
 }
 
@@ -298,13 +305,13 @@ export function ListRecordsCount({
 function LibraryRecords({ item }: Readonly<{ item: LibraryItem }>) {
   const t = useT();
   const directory = useRecordKindDirectory().data?.data ?? [];
-  if (item.kind === "view") {
-    const type = listEntityTypeOf(item.tab);
+  if (item.kind !== "list") {
+    const type = resourceOf(item);
     return (
       <span>
-        {type
+        {isCoreListType(type)
           ? t(RECORD_TYPE_LABEL[type])
-          : recordKindLabel(item.tab, directory)}
+          : recordKindLabel(type, directory)}
       </span>
     );
   }
@@ -329,11 +336,14 @@ function LibraryRowMenu({
 }>) {
   const t = useT();
   const label = t("filters.library.rowMore", { name: nameOf(item) });
-  if (item.kind === "view") {
+  if (item.kind !== "list") {
     return (
       <span className="library-more">
         <OverflowMenu label={label}>
-          <RenameViewAction view={item.view} />
+          <RenameViewAction
+            view={item.view}
+            resource={item.kind === "view" ? viewOf(item.tab) : item.type}
+          />
           <DeleteViewAction view={item.view} returnFocusTo={returnFocusTo} />
         </OverflowMenu>
       </span>

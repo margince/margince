@@ -135,6 +135,8 @@ const NO_JURISDICTION: Schemas["InstallationJurisdiction"] = {
 const UNUSED_AI: RouteMap = {
   "GET /ai/budget": () => jsonResponse(allowance),
   "GET /ai/status": () => jsonResponse(status),
+  "GET /ai/team-rules": () =>
+    jsonResponse({ text: "" } satisfies Schemas["AiTeamRules"]),
   "GET /ai/provider-keys": () =>
     jsonResponse({ providers: [] } satisfies Schemas["AiProviderKeyList"]),
   "GET /ai/health": () =>

@@ -26,6 +26,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 )
 
+// activitySourceSystemKey is the key an activity row of the package names its
+// source system under.
+const activitySourceSystemKey = "source_system"
+
 // NoticeSubject is the contact or the website lead a notice link names.
 type NoticeSubject struct {
 	ContactID ids.ContactID
@@ -101,13 +105,21 @@ func readContactNotice(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, 
 	}
 	wanted := []*[]map[string]any{
 		&pkg.Emails, &pkg.Phones, &pkg.ChannelIdentities, &pkg.LinkedInConnections, &pkg.Relationships,
-		&pkg.Deals, &pkg.Activities, &pkg.RawCapture, &pkg.Consent, &pkg.CommunicationBases,
+		&pkg.Deals, &pkg.RawCapture, &pkg.Consent, &pkg.CommunicationBases,
+	}
+	hasMail, err := subjectHasMessage(ctx, tx, contactID, emails, identities, "")
+	if err != nil {
+		return nil, err
+	}
+	hasTranscript, err := subjectHasMessage(ctx, tx, contactID, emails, identities, meetingoutcome.TranscriptSourceSystem)
+	if err != nil {
+		return nil, err
 	}
 	external, err := subjectExternalOriginalsTx(ctx, tx, contactID, emails)
 	if err != nil {
 		return nil, err
 	}
-	sections, err := sarSections(ctx, &pkg, contactID, emails, leads, identities, nil, external)
+	sections, err := sarSections(ctx, &pkg, contactID, emails, nil, leads, identities, nil, nil, external)
 	if err != nil {
 		return nil, err
 	}
@@ -122,6 +134,14 @@ func readContactNotice(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, 
 		if *section.dest, err = rowMaps(ctx, tx, section.query, args...); err != nil {
 			return nil, fmt.Errorf("privacy: reading what a notice discloses: %w", err)
 		}
+	}
+	// Only whether mail exists, and whether any is a transcript, leaves the
+	// page. A stand-in row for each answer spares loading every message.
+	if hasMail {
+		pkg.Activities = append(pkg.Activities, map[string]any{})
+	}
+	if hasTranscript {
+		pkg.Activities = append(pkg.Activities, map[string]any{activitySourceSystemKey: meetingoutcome.TranscriptSourceSystem})
 	}
 	held, err := rowMaps(ctx, tx, sarSubjectQuery, contactID)
 	if err != nil || len(held) == 0 {
@@ -253,7 +273,9 @@ func contactScopes(pkg SARPackage) []string {
 	if len(pkg.Activities) > 0 {
 		scopes = append(scopes, "activity")
 	}
-	if slices.ContainsFunc(pkg.Activities, func(row map[string]any) bool { return row["source_system"] == meetingoutcome.TranscriptSourceSystem }) {
+	if slices.ContainsFunc(pkg.Activities, func(row map[string]any) bool {
+		return row[activitySourceSystemKey] == meetingoutcome.TranscriptSourceSystem
+	}) {
 		scopes = append(scopes, "activity/transcript")
 	}
 	if len(pkg.RawCapture) > 0 {

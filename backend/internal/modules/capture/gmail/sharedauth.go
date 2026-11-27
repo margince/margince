@@ -89,6 +89,17 @@ func NewSharedAuthorizer(cfg SharedAuthConfig) *SharedAuthorizer {
 // delegation (unauthorized_client) or an unusable key fails as
 // ErrAuthRejected, which parks the connection rather than retrying it.
 func (s *SharedAuthorizer) AccessToken(ctx context.Context, auth connector.Auth) (string, error) {
+	return s.token(ctx, auth, sharedScope)
+}
+
+// SendAccessToken returns a token that reads and sends as the sealed mailbox.
+// It is a separate grant from AccessToken. A delegation that never included the
+// send scope refuses it. That parks a send and never the mailbox's read sync.
+func (s *SharedAuthorizer) SendAccessToken(ctx context.Context, auth connector.Auth) (string, error) {
+	return s.token(ctx, auth, sharedScope+" "+SendScope)
+}
+
+func (s *SharedAuthorizer) token(ctx context.Context, auth connector.Auth, scope string) (string, error) {
 	cred, err := ReadShared(auth)
 	if err != nil {
 		return "", err
@@ -105,10 +116,10 @@ func (s *SharedAuthorizer) AccessToken(ctx context.Context, auth connector.Auth)
 		Provider: "gmail", TokenURL: s.tokenURL,
 		AuthRejected: ErrAuthRejected, Unreachable: ErrUnreachable, HTTPClient: s.http,
 	})
-	key := oauthflow.CacheKey(cred.ServiceAccountKey, mailbox)
+	key := oauthflow.CacheKey(cred.ServiceAccountKey, mailbox, scope)
 	return s.tokens.Token(ctx, key, func(ctx context.Context) (oauthflow.MintedToken, error) {
 		assertion, err := account.Assertion(googlejwt.Claims{
-			Scope: sharedScope, Subject: mailbox, IssuedAt: s.now(), TTL: sharedAssertionTTL,
+			Scope: scope, Subject: mailbox, IssuedAt: s.now(), TTL: sharedAssertionTTL,
 		})
 		if err != nil {
 			return oauthflow.MintedToken{}, fmt.Errorf("gmail: %w", err)

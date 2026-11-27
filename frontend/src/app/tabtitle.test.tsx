@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 /** @vitest-environment happy-dom */
-import { cleanup } from "@testing-library/react";
+import { cleanup, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   fixtureSection,
@@ -14,13 +14,15 @@ import {
 import { PageTitle } from "./shelltitle";
 
 // One composed unit, so the unit's branch has a unit to name.
-vi.mock("@composition/extensions", () => ({
+vi.mock("@composition/extensions", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@composition/extensions")>()),
   extensions: [{ name: "notes", verbs: [] }],
 }));
 
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  window.location.hash = "";
 });
 
 // A contact id in the form the server reads.
@@ -37,6 +39,16 @@ describe("the browser tab title", () => {
       />,
     );
     expect(document.title).toBe("Account · Settings · Margince");
+  });
+
+  it("names Home with the Worklist panel closed, and the Worklist when it is open", () => {
+    window.location.hash = "#/home";
+    render(<PageTitle route={{ screen: "home" }} />);
+    expect(document.title).toBe("Home · Margince");
+    cleanup();
+    window.location.hash = "#/home?queue=1";
+    render(<PageTitle route={{ screen: "home" }} />);
+    expect(document.title).toBe("Worklist · Margince");
   });
 
   it("names a record by its name once it has been read", () => {
@@ -67,6 +79,36 @@ describe("the browser tab title", () => {
       <PageTitle route={{ screen: "contacts", id: ANNA_ID }} />,
     );
     expect(document.title).toBe("Anna Weber · Contacts · Margince");
+  });
+
+  it("names an offer and links its deal in the breadcrumb", () => {
+    const client = newClient();
+    client.setQueryData(["offer", "offer-1"], {
+      offer_number: "ANG-2026-0007",
+      deal_id: ANNA_ID,
+      ai_generated: true,
+    });
+    client.setQueryData(["deal", "ref", ANNA_ID], "Warehouse rollout");
+    renderWith(
+      client,
+      <PageTitle route={{ screen: "offers", id: "offer-1" }} />,
+    );
+    expect(document.title).toBe(
+      "ANG-2026-0007 · Warehouse rollout · Deals · Margince",
+    );
+    expect(
+      screen.getByRole("link", { name: "Deals" }).getAttribute("href"),
+    ).toBe("/#/deals");
+    expect(
+      screen
+        .getByRole("link", { name: "Warehouse rollout" })
+        .getAttribute("href"),
+    ).toContain(`#/deals/${ANNA_ID}`);
+    expect(
+      screen
+        .getAllByText("ANG-2026-0007")
+        .some((item) => item.closest("[aria-current]")),
+    ).toBeTruthy();
   });
 
   it("names a composed unit before Settings", () => {

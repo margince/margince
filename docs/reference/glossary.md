@@ -18,6 +18,7 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | backend | The Go server code under `backend/`. |
 | Beschäftigteninformation | The German notice each employee gets before their mailbox is read (Art. 13 GDPR). |
 | breakdown | A count of one population split by one field, which an extension can add. |
+| burst | The chat messages of one thread that follow one another with short gaps, judged together. |
 | BUSL | The Business Source License 1.1, the license Margince uses. |
 | capability | A core feature an extension can ask to use, such as its AI models or file store. |
 | challenge | A check a WAF puts to the browser in the app's place, which only a page load can pass. |

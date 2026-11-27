@@ -14,8 +14,8 @@ import { OverflowMenu } from "../../design-system/overflowmenu";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { ProviderList, ProviderRow } from "../../design-system/providerrow";
 import { QueryStates } from "../../design-system/querystates";
-import { formatDateTime } from "../../format/format";
-import { useLocale, useT } from "../../i18n";
+import { formatDateTime, formatNumber } from "../../format/format";
+import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { statusLabel, statusTone } from "../../lib/connector-status";
 import { labelFor } from "../../lib/labelfor";
@@ -50,6 +50,13 @@ function useSharedMailboxes() {
         throwProblem(error);
       }
       return { allowed: true, items: data.items };
+    },
+    // The server narrows earlier mail one batch every ten seconds.
+    refetchInterval: (query) => {
+      const answer = query.state.data;
+      return answer?.allowed && answer.items.some((m) => m.history_narrowing)
+        ? 10_000
+        : false;
     },
   });
 }
@@ -156,10 +163,12 @@ function SharedMailboxRow({
   onOpen: (kind: "change" | "history" | "disconnect") => void;
 }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const zone = useViewerZone();
   const connected = mailbox.status !== "disconnected";
   const unread = mailbox.unread_period;
+  const narrowing = mailbox.history_narrowing;
   // A span no sync read is what the row needs an admin for, so the import
   // that recovers it takes the visible verb.
   const importFirst = connected && unread != null;
@@ -188,12 +197,23 @@ function SharedMailboxRow({
           visibility: t(labelFor(VISIBILITY_LABEL, mailbox.mail_visibility)),
         })}
         reason={
-          unread
-            ? t("captureHealth.unreadPeriodFolded", {
+          [
+            unread &&
+              t("captureHealth.unreadPeriodFolded", {
                 from: formatDateTime(unread.from, locale, zone),
                 to: formatDateTime(unread.to, locale, zone),
-              })
-            : undefined
+              }),
+            narrowing &&
+              plural(
+                "connectors.mailPosture.historyNarrowing",
+                narrowing.remaining,
+                {
+                  count: formatNumber(narrowing.remaining, locale),
+                },
+              ),
+          ]
+            .filter(Boolean)
+            .join(" ") || undefined
         }
         action={importFirst ? importHistory : change}
         menu={

@@ -67,7 +67,12 @@ import {
   useHeldRejection,
 } from "./heldrejection";
 import { LegalReviewRequestRow } from "./legalreviewrequestrow";
-import { LinkedInMatchChoice, useLinkedInChoice } from "./linkedinmatchchoice";
+import {
+  LinkedInMatchChoice,
+  useLinkedInChoice,
+  useVCardMergeChoice,
+  VCardMergeChoice,
+} from "./linkedinmatchchoice";
 import "./approvalrow.css";
 
 // One staged proposal as a decidable row, and the screen-level sink that
@@ -243,6 +248,7 @@ function DecidableApprovalRow({
 
   const change = approval.proposed_change ?? {};
   const linkedIn = useLinkedInChoice(approval);
+  const vcardMerge = useVCardMergeChoice(approval);
   const strings = editableStrings(approval.kind, change);
   const display = useApprovalDisplay(
     approval,
@@ -412,7 +418,7 @@ function DecidableApprovalRow({
                 held.announce();
                 decide.mutate({
                   verdict: "approve",
-                  editedPayload: linkedIn?.edited,
+                  editedPayload: linkedIn?.edited ?? vcardMerge?.edited,
                 });
               })
           : undefined
@@ -434,6 +440,11 @@ function DecidableApprovalRow({
               contact, recorded against their own name. */}
           <LinkedInMatchChoice
             offer={linkedIn}
+            decided={decided}
+            disabled={decide.isPending}
+          />
+          <VCardMergeChoice
+            offer={vcardMerge}
             decided={decided}
             disabled={decide.isPending}
           />

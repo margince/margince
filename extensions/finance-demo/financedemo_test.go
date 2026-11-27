@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/pkg/extension/accounting"
+	"github.com/margince/margince/backend/pkg/extension/extensiontest"
 )
 
 // epoch is a fixed anchor, so the assertions measure the generator rather than
@@ -54,14 +55,11 @@ func TestTheDeclarationIsAValidFinanceSource(t *testing.T) {
 	}
 }
 
-func TestTheDeclaredRecordKindIsValidForThisUnit(t *testing.T) {
+func TestCoreAcceptsTheDeclaredKindsLinksAndSignals(t *testing.T) {
 	ext := New()
-	if len(ext.RecordKinds) != 1 {
-		t.Fatalf("declares %d record kinds, want 1", len(ext.RecordKinds))
-	}
-	if err := ext.RecordKinds[0].Validate(ext.Name); err != nil {
-		t.Fatal(err)
-	}
+	extensiontest.Check(t, ext)
+	extensiontest.CheckLink(t, ext, "follow_up_of", "deal", "deal")
+	extensiontest.CheckSignal(t, ext, "ledger_loss", map[string]any{"amount": 120.0, "reporter": "Finance"})
 }
 
 func TestTheDeclarationIsAValidOAuthApp(t *testing.T) {

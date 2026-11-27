@@ -357,3 +357,21 @@ export const Phone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
 };
+
+export const TeamPageWithColleagues: Story = {
+  render: () => {
+    installFetchStub({
+      ...WORK_ROUTES,
+      "GET /me": meRoute({ lead: ["read"], sales_target: ["read"] }),
+      "GET /analytics/context": () => jsonResponse(CONTEXTS.leader),
+      "GET /analytics/sales-goals": () => jsonResponse(goalRoster),
+      "GET /analytics/progress": () => jsonResponse(teamMarch),
+    });
+    window.location.hash = "#/progress?year=2026&month=3";
+    return (
+      <StoryProviders>
+        <ProgressScreen />
+      </StoryProviders>
+    );
+  },
+};

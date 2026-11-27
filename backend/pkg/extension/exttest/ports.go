@@ -23,6 +23,14 @@ func (deals) Responsible(context.Context, string) ([]extension.Responsible, erro
 	return nil, extension.ErrAttendedRead
 }
 
+func (deals) GetAs(context.Context, extension.UserID, string) (extension.DealSummary, error) {
+	return extension.DealSummary{}, extension.ErrAttendedRead
+}
+
+func (deals) ResponsibleAs(context.Context, extension.UserID, string) ([]extension.Responsible, error) {
+	return nil, extension.ErrAttendedRead
+}
+
 type authority struct{}
 
 func (authority) CanRead(context.Context, extension.UserID, extension.EntityRef, []string) (bool, error) {
@@ -33,9 +41,21 @@ func (authority) CanWrite(context.Context, extension.UserID, extension.EntityRef
 	return false, extension.ErrAttendedRead
 }
 
+func (authority) CanReadAs(context.Context, extension.UserID, extension.UserID, extension.EntityRef, []string) (bool, error) {
+	return false, extension.ErrAttendedRead
+}
+
+func (authority) CanWriteAs(context.Context, extension.UserID, extension.UserID, extension.EntityRef) (bool, error) {
+	return false, extension.ErrAttendedRead
+}
+
 type directory struct{}
 
 func (directory) Emails(context.Context, []extension.UserID) (map[extension.UserID]string, error) {
+	return nil, extension.ErrAttendedRead
+}
+
+func (directory) EmailsAs(context.Context, extension.UserID, []extension.UserID) (map[extension.UserID]string, error) {
 	return nil, extension.ErrAttendedRead
 }
 
@@ -102,7 +122,9 @@ type knowledgeStub struct{}
 func (knowledgeStub) UpsertDocument(context.Context, extension.KnowledgeDocument) (extension.KnowledgeResult, error) {
 	return extension.KnowledgeResult{}, extension.ErrNotDeclared
 }
+
 func (knowledgeStub) DeleteDocument(context.Context, string) error { return extension.ErrNotDeclared }
+
 func (knowledgeStub) ExternalIDs(context.Context) ([]string, error) {
 	return nil, extension.ErrNotDeclared
 }

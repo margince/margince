@@ -30,7 +30,7 @@ import (
 // reviveOne reopens one lost deal from one suggestion as the deal owner's
 // agent. An owner who left answers not found, and the suggestion stays.
 func (o scoutDealOpener) reviveOne(ctx context.Context, suggestionID ids.UUID, deal ids.DealID, owner ids.UUID) (bool, error) {
-	ownerCtx, err := ownersAgent(ctx, o.users, owner, marginceActorID)
+	ownerCtx, err := agentFor(ctx, o.users, owner, marginceActorID)
 	if errors.Is(err, apperrors.ErrNotFound) {
 		return false, nil
 	}
@@ -53,7 +53,7 @@ func (o scoutDealOpener) reviveOne(ctx context.Context, suggestionID ids.UUID, d
 			return mode == approvals.ModeAuto, err
 		},
 		Record:  o.recordRevivalOnTimeline,
-		AsOwner: ownersAgentTx(o.users, owner, marginceActorID),
+		AsOwner: agentForTx(o.users, owner, marginceActorID),
 	})
 }
 

@@ -35,6 +35,7 @@ func buildCatalog() map[Language]Copy {
 	unsubscribeLines(line)
 	resetLines(line)
 	inviteLines(line)
+	mergeLines(line)
 	returnLines(line)
 	weeklyLines(line)
 	morningLines(line)

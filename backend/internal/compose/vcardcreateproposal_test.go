@@ -50,7 +50,7 @@ func TestACardCarryingAnUnstorableContactIsRefusedWhileItIsStillDecidable(t *tes
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := vcardCreatePrecheck()(context.Background(), stagedCard(t, tc.entry), nil)
+			err := vcardCreatePrecheck(nil)(context.Background(), stagedCard(t, tc.entry), nil)
 			if err == nil {
 				t.Fatal("the precheck admitted a card the create will refuse, so the failure moves to after the decision")
 			}
@@ -79,7 +79,7 @@ func TestTheCheckLeavesTheStagedCardExactlyAsItWas(t *testing.T) {
 	staged := stagedCard(t, entry)
 	before := append(json.RawMessage(nil), staged...)
 
-	if err := vcardCreatePrecheck()(context.Background(), staged, nil); err != nil {
+	if err := vcardCreatePrecheck(nil)(context.Background(), staged, nil); err != nil {
 		t.Fatalf("a storable card was refused: %v", err)
 	}
 
@@ -97,7 +97,7 @@ func TestAnEditedCardIsTheOneChecked(t *testing.T) {
 		Phones:   []contacts.VCardChannel{{Value: "not a phone number", Kind: "work"}},
 	})
 
-	if err := vcardCreatePrecheck()(context.Background(), good, edited); err == nil {
+	if err := vcardCreatePrecheck(nil)(context.Background(), good, edited); err == nil {
 		t.Fatal("the precheck read the staged card and ignored the edit that broke it")
 	}
 }

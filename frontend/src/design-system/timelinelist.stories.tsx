@@ -94,6 +94,7 @@ const threadMembers = [
     threadKey: "t-fleet",
     direction: "inbound",
     counterparts: "Dana Buyer",
+    channel: "LinkedIn",
     body: "Friday works. Send the revised quote.",
   }),
   entry("t2", "2026-08-13T11:10:00Z", {
@@ -101,12 +102,14 @@ const threadMembers = [
     direction: "outbound",
     counterparts: "Dana Buyer",
     provenance: { kind: "human", self: true },
+    channel: "LinkedIn",
     body: "We can hold it until Friday.",
   }),
   entry("t1", "2026-08-12T08:55:00Z", {
     threadKey: "t-fleet",
     direction: "inbound",
     counterparts: "Dana Buyer",
+    channel: "WhatsApp",
     body: "Can you hold the price until Friday?",
   }),
 ];

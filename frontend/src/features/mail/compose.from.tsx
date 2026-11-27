@@ -6,7 +6,11 @@ import { Field } from "../../design-system/atoms";
 import { Select } from "../../design-system/select";
 import { providerName } from "../../format/connectorprovider";
 import { useT } from "../../i18n";
-import { sendingMailboxes, useConnectors } from "../../lib/connectors";
+import {
+  sendingMailboxes,
+  useConnectors,
+  useReplyableSharedMailboxes,
+} from "../../lib/connectors";
 
 /** The sender's mailbox the mail goes out from, the composer's own field.
  *  Empty leaves the choice to the server. */
@@ -16,7 +20,8 @@ export function useFromMailbox() {
 }
 
 /** Which of the sender's mailboxes the mail goes out from. Shown only when
- *  more than one can send. The empty choice leaves it to the server: a reply
+ *  more than one can send, or when a shared mailbox may be written as. A shared
+ *  mailbox is only ever chosen here, never the automatic choice. The empty choice leaves it to the server: a reply
  *  goes out from the mailbox the conversation arrived in, a new mail from
  *  the default. */
 export function FromMailboxRow({
@@ -26,7 +31,8 @@ export function FromMailboxRow({
   const t = useT();
   const connectors = useConnectors();
   const mailboxes = sendingMailboxes(connectors.data?.data ?? []);
-  if (mailboxes.length < 2) {
+  const shared = useReplyableSharedMailboxes().data ?? [];
+  if (mailboxes.length + shared.length < 2) {
     return null;
   }
   const options = [
@@ -34,6 +40,10 @@ export function FromMailboxRow({
     ...mailboxes.map((mailbox) => ({
       value: mailbox.id,
       label: mailbox.account_label ?? providerName(mailbox.provider, t),
+    })),
+    ...shared.map((mailbox) => ({
+      value: mailbox.id,
+      label: `${mailbox.address} · ${t("compose.from.shared")}`,
     })),
   ];
   return (

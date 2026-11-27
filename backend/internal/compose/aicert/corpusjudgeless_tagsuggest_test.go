@@ -35,6 +35,7 @@ func tagPicks(picks ...[]int) func([]string) string {
 func tagSuggestProofs() map[string]judgelessProof {
 	none := []int{}
 	return map[string]judgelessProof{
+		"a_forwarded_customer_request_is_interest_but_our_quoted_offer_is_not": {correct: tagPicks([]int{0}, none), wrong: tagPicks(none, none), alsoWrong: []func([]string) string{tagPicks([]int{0}, []int{0})}, wantWrong: aitasks.OutcomeWrongAnswer},
 		"interest_in_words_the_description_does_not_use": {
 			correct: tagPicks([]int{0}, []int{0}), wrong: tagPicks(none, []int{0}),
 			alsoWrong: []func([]string) string{tagPicks([]int{0}, none)}, wantWrong: aitasks.OutcomeWrongAnswer,

@@ -12,6 +12,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/mailidentity"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
@@ -21,16 +22,19 @@ import (
 // names a sending system. Doors that name the address differently read it.
 const MachineAddressCode = "email_names_no_one"
 
-// refuseMachineAddress refuses an address nobody answers at, by the same
-// local-part rule capture applies before it mints a contact from mail.
+// refuseMachineAddress refuses an address nobody answers at: a calendar or room
+// Google names, or a sending system by the local-part rule capture applies.
 func refuseMachineAddress(email string) error {
-	if !mailidentity.HasMachineLocalpart(email) {
+	message := ""
+	switch {
+	case values.IsCalendarResourceDomain(owndomain.OfAddress(email)):
+		message = "this address is a calendar or a room, not a human; add the contact's own address"
+	case mailidentity.HasMachineLocalpart(email):
+		message = "this address belongs to a sending system, not a human; add the contact's own address"
+	default:
 		return nil
 	}
-	return &values.ParseError{
-		Field: "emails", Code: MachineAddressCode,
-		Message: "this address belongs to a sending system, not a human; add the contact's own address",
-	}
+	return &values.ParseError{Field: auditKeyEmails, Code: MachineAddressCode, Message: message}
 }
 
 const vcardMachineAddress = "the card's address belongs to a sending system, not a human"

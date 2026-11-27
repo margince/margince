@@ -32,6 +32,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/partnersteps"
 	"github.com/margince/margince/backend/internal/compose/requesttask"
 	"github.com/margince/margince/backend/internal/compose/salesprogress"
+	"github.com/margince/margince/backend/internal/compose/tasktaken"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
@@ -70,7 +71,7 @@ func newContactsHandlers(pool *pgxpool.Pool) contactsHandlers {
 		WithFloorCarry(EntityFloorCarry(pool)).
 		WithFieldCatalog(customfields.NewService(pool, nil)).
 		WithMatchStager(linkedInMatchStager(pool)).
-		WithVCardReviewStager(vcardCreateStager(pool)).
+		WithVCardReviewStager(VCardCreateStager(pool)).
 		WithSettings(StoredConfig(pool)).
 		WithLocks(loadedLocks).
 		WithSeatReadsLeads(seatReadsLeads(pool)).
@@ -97,7 +98,7 @@ func newActivitiesHandlers(pool *pgxpool.Pool) activitiesHandlers {
 		WithTaskRecommendation(taskRecommendationReader(pool)).
 		WithInquiryAssignment(newInquiryAssignment(InstallationDB(pool))).
 		WithLeadQualifyTasks(newLeadWorkTasks(InstallationDB(pool), slog.Default())).
-		WithTeamRequestNotice(teamRequestNotice{}).
+		WithTeamRequestNotice(teamRequestNotice{}).WithTaskTaken(tasktaken.Hook()).
 		WithFieldCatalog(customfields.NewService(pool, nil)).
 		WithRecordZone(installationZoneTx).
 		WithSettings(StoredConfig(pool)).
@@ -313,6 +314,7 @@ func (s *Server) wireCaptureSettingsSurface(pool *pgxpool.Pool, log *slog.Logger
 	// which rebuilds the sync over the vault it brings.
 	s.voiceHandlers = s.WithPriceSync(newAIPriceSync(pool, s.vault, log, s.priceCatalogues))
 	s.aiAdminHandlers = aiAdminHandlers{store: ai.NewAdminStore(InstallationDB(pool), NewSettingsStore(pool), StoredConfig(pool), budgetFullUsers, aiDeferredWork(pool))}
+	s.teamRulesHandlers = teamRulesHandlers{Store: s.aiAdminHandlers.store}
 	s.ownDomainHandlers = ownDomainHandlers{
 		store:    capture.NewOwnDomainStore(InstallationDB(pool)).WithRemoved(queueStageEvidenceReread),
 		evidence: deals.NewStore(InstallationDB(pool), DealsInstallation()), log: log,

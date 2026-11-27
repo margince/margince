@@ -3278,6 +3278,7 @@ const (
 	AttentionItemActionsReopen       AttentionItemActions = "reopen"
 	AttentionItemActionsReply        AttentionItemActions = "reply"
 	AttentionItemActionsRetry        AttentionItemActions = "retry"
+	AttentionItemActionsSendAgain    AttentionItemActions = "send_again"
 	AttentionItemActionsSetAside     AttentionItemActions = "set_aside"
 	AttentionItemActionsSnooze       AttentionItemActions = "snooze"
 	AttentionItemActionsTake         AttentionItemActions = "take"
@@ -3314,6 +3315,8 @@ func (e AttentionItemActions) Valid() bool {
 	case AttentionItemActionsReply:
 		return true
 	case AttentionItemActionsRetry:
+		return true
+	case AttentionItemActionsSendAgain:
 		return true
 	case AttentionItemActionsSetAside:
 		return true
@@ -5084,6 +5087,7 @@ func (e CaptureProviderAvailabilityReason) Valid() bool {
 const (
 	CaptureSenderDecisionDecisionBusiness CaptureSenderDecisionDecision = "business"
 	CaptureSenderDecisionDecisionKeepOut  CaptureSenderDecisionDecision = "keep_out"
+	CaptureSenderDecisionDecisionPersonal CaptureSenderDecisionDecision = "personal"
 )
 
 // Valid indicates whether the value is a known member of the CaptureSenderDecisionDecision enum.
@@ -5092,6 +5096,8 @@ func (e CaptureSenderDecisionDecision) Valid() bool {
 	case CaptureSenderDecisionDecisionBusiness:
 		return true
 	case CaptureSenderDecisionDecisionKeepOut:
+		return true
+	case CaptureSenderDecisionDecisionPersonal:
 		return true
 	default:
 		return false
@@ -5473,6 +5479,27 @@ func (e ChannelVerbosity) Valid() bool {
 	case ChannelVerbosityMilestones:
 		return true
 	case ChannelVerbositySilent:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ChatNetwork.
+const (
+	ChatNetworkTelegram ChatNetwork = "telegram"
+	ChatNetworkWhatsapp ChatNetwork = "whatsapp"
+	ChatNetworkZalo     ChatNetwork = "zalo"
+)
+
+// Valid indicates whether the value is a known member of the ChatNetwork enum.
+func (e ChatNetwork) Valid() bool {
+	switch e {
+	case ChatNetworkTelegram:
+		return true
+	case ChatNetworkWhatsapp:
+		return true
+	case ChatNetworkZalo:
 		return true
 	default:
 		return false
@@ -14581,6 +14608,57 @@ func (e GmailSignatureImportState) Valid() bool {
 	}
 }
 
+// Defines values for GoogleDirectoryStatusLastReason.
+const (
+	GoogleDirectoryStatusLastReasonBadAnswer         GoogleDirectoryStatusLastReason = "bad_answer"
+	GoogleDirectoryStatusLastReasonDelegationRefused GoogleDirectoryStatusLastReason = "delegation_refused"
+	GoogleDirectoryStatusLastReasonKeyInvalid        GoogleDirectoryStatusLastReason = "key_invalid"
+	GoogleDirectoryStatusLastReasonMemberNotFound    GoogleDirectoryStatusLastReason = "member_not_found"
+	GoogleDirectoryStatusLastReasonPermissionDenied  GoogleDirectoryStatusLastReason = "permission_denied"
+	GoogleDirectoryStatusLastReasonTimeout           GoogleDirectoryStatusLastReason = "timeout"
+	GoogleDirectoryStatusLastReasonUnavailable       GoogleDirectoryStatusLastReason = "unavailable"
+)
+
+// Valid indicates whether the value is a known member of the GoogleDirectoryStatusLastReason enum.
+func (e GoogleDirectoryStatusLastReason) Valid() bool {
+	switch e {
+	case GoogleDirectoryStatusLastReasonBadAnswer:
+		return true
+	case GoogleDirectoryStatusLastReasonDelegationRefused:
+		return true
+	case GoogleDirectoryStatusLastReasonKeyInvalid:
+		return true
+	case GoogleDirectoryStatusLastReasonMemberNotFound:
+		return true
+	case GoogleDirectoryStatusLastReasonPermissionDenied:
+		return true
+	case GoogleDirectoryStatusLastReasonTimeout:
+		return true
+	case GoogleDirectoryStatusLastReasonUnavailable:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GoogleDirectoryStatusLastResult.
+const (
+	GoogleDirectoryStatusLastResultFailed GoogleDirectoryStatusLastResult = "failed"
+	GoogleDirectoryStatusLastResultOk     GoogleDirectoryStatusLastResult = "ok"
+)
+
+// Valid indicates whether the value is a known member of the GoogleDirectoryStatusLastResult enum.
+func (e GoogleDirectoryStatusLastResult) Valid() bool {
+	switch e {
+	case GoogleDirectoryStatusLastResultFailed:
+		return true
+	case GoogleDirectoryStatusLastResultOk:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for GrowthFitBand.
 const (
 	GrowthFitBandModerate GrowthFitBand = "moderate"
@@ -15506,6 +15584,7 @@ const (
 	ImportReasonCodeCurrencyUnset                 ImportReasonCode = "currency_unset"
 	ImportReasonCodeDealAlreadyClosed             ImportReasonCode = "deal_already_closed"
 	ImportReasonCodeDealCompanyHasContracts       ImportReasonCode = "deal_company_has_contracts"
+	ImportReasonCodeDealFieldNotForPipeline       ImportReasonCode = "deal_field_not_for_pipeline"
 	ImportReasonCodeDealLegalGate                 ImportReasonCode = "deal_legal_gate"
 	ImportReasonCodeDealNotFound                  ImportReasonCode = "deal_not_found"
 	ImportReasonCodeDealNotFoundDropped           ImportReasonCode = "deal_not_found_dropped"
@@ -15697,6 +15776,8 @@ func (e ImportReasonCode) Valid() bool {
 	case ImportReasonCodeDealAlreadyClosed:
 		return true
 	case ImportReasonCodeDealCompanyHasContracts:
+		return true
+	case ImportReasonCodeDealFieldNotForPipeline:
 		return true
 	case ImportReasonCodeDealLegalGate:
 		return true
@@ -17458,6 +17539,24 @@ func (e LinkChannelRequestMode) Valid() bool {
 	}
 }
 
+// Defines values for LinkFilerHook.
+const (
+	LinkFilerHookDeal    LinkFilerHook = "deal"
+	LinkFilerHookParties LinkFilerHook = "parties"
+)
+
+// Valid indicates whether the value is a known member of the LinkFilerHook enum.
+func (e LinkFilerHook) Valid() bool {
+	switch e {
+	case LinkFilerHookDeal:
+		return true
+	case LinkFilerHookParties:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for LinkSuggestionEntityType.
 const (
 	LinkSuggestionEntityTypeCompany LinkSuggestionEntityType = "company"
@@ -18127,6 +18226,24 @@ func (e MailDraftEditorStateLanguage) Valid() bool {
 	}
 }
 
+// Defines values for MailHistoryNarrowingPosture.
+const (
+	MailHistoryNarrowingPostureClassified MailHistoryNarrowingPosture = "classified"
+	MailHistoryNarrowingPostureHeld       MailHistoryNarrowingPosture = "held"
+)
+
+// Valid indicates whether the value is a known member of the MailHistoryNarrowingPosture enum.
+func (e MailHistoryNarrowingPosture) Valid() bool {
+	switch e {
+	case MailHistoryNarrowingPostureClassified:
+		return true
+	case MailHistoryNarrowingPostureHeld:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MailLanguage.
 const (
 	MailLanguageDe MailLanguage = "de"
@@ -18574,6 +18691,48 @@ func (e MeetingResponse) Valid() bool {
 	}
 }
 
+// Defines values for MemberMergeConfirmationSide.
+const (
+	MemberMergeConfirmationSideSource   MemberMergeConfirmationSide = "source"
+	MemberMergeConfirmationSideSurvivor MemberMergeConfirmationSide = "survivor"
+)
+
+// Valid indicates whether the value is a known member of the MemberMergeConfirmationSide enum.
+func (e MemberMergeConfirmationSide) Valid() bool {
+	switch e {
+	case MemberMergeConfirmationSideSource:
+		return true
+	case MemberMergeConfirmationSideSurvivor:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MemberMergeConfirmationState.
+const (
+	MemberMergeConfirmationStateConfirmed    MemberMergeConfirmationState = "confirmed"
+	MemberMergeConfirmationStateNotNeeded    MemberMergeConfirmationState = "not_needed"
+	MemberMergeConfirmationStateNotRequested MemberMergeConfirmationState = "not_requested"
+	MemberMergeConfirmationStateRequested    MemberMergeConfirmationState = "requested"
+)
+
+// Valid indicates whether the value is a known member of the MemberMergeConfirmationState enum.
+func (e MemberMergeConfirmationState) Valid() bool {
+	switch e {
+	case MemberMergeConfirmationStateConfirmed:
+		return true
+	case MemberMergeConfirmationStateNotNeeded:
+		return true
+	case MemberMergeConfirmationStateNotRequested:
+		return true
+	case MemberMergeConfirmationStateRequested:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MemberRetirementBlocker.
 const (
 	MemberRetirementBlockerAnalyticsShares        MemberRetirementBlocker = "analytics_shares"
@@ -18582,6 +18741,7 @@ const (
 	MemberRetirementBlockerBookingPages           MemberRetirementBlocker = "booking_pages"
 	MemberRetirementBlockerChooseReceiver         MemberRetirementBlocker = "choose_receiver"
 	MemberRetirementBlockerChooseSurvivor         MemberRetirementBlocker = "choose_survivor"
+	MemberRetirementBlockerConfirmationMissing    MemberRetirementBlocker = "confirmation_missing"
 	MemberRetirementBlockerDataRequests           MemberRetirementBlocker = "data_requests"
 	MemberRetirementBlockerDeactivateFirst        MemberRetirementBlocker = "deactivate_first"
 	MemberRetirementBlockerDealRooms              MemberRetirementBlocker = "deal_rooms"
@@ -18599,9 +18759,9 @@ const (
 	MemberRetirementBlockerSavedViews             MemberRetirementBlocker = "saved_views"
 	MemberRetirementBlockerScheduledMail          MemberRetirementBlocker = "scheduled_mail"
 	MemberRetirementBlockerSelfSurvivor           MemberRetirementBlocker = "self_survivor"
-	MemberRetirementBlockerSourceUsed             MemberRetirementBlocker = "source_used"
 	MemberRetirementBlockerStateChanged           MemberRetirementBlocker = "state_changed"
 	MemberRetirementBlockerStewardedLists         MemberRetirementBlocker = "stewarded_lists"
+	MemberRetirementBlockerSuspendedSide          MemberRetirementBlocker = "suspended_side"
 	MemberRetirementBlockerVoiceProfiles          MemberRetirementBlocker = "voice_profiles"
 	MemberRetirementBlockerWebForms               MemberRetirementBlocker = "web_forms"
 	MemberRetirementBlockerWebhooks               MemberRetirementBlocker = "webhooks"
@@ -18623,6 +18783,8 @@ func (e MemberRetirementBlocker) Valid() bool {
 	case MemberRetirementBlockerChooseReceiver:
 		return true
 	case MemberRetirementBlockerChooseSurvivor:
+		return true
+	case MemberRetirementBlockerConfirmationMissing:
 		return true
 	case MemberRetirementBlockerDataRequests:
 		return true
@@ -18658,11 +18820,11 @@ func (e MemberRetirementBlocker) Valid() bool {
 		return true
 	case MemberRetirementBlockerSelfSurvivor:
 		return true
-	case MemberRetirementBlockerSourceUsed:
-		return true
 	case MemberRetirementBlockerStateChanged:
 		return true
 	case MemberRetirementBlockerStewardedLists:
+		return true
+	case MemberRetirementBlockerSuspendedSide:
 		return true
 	case MemberRetirementBlockerVoiceProfiles:
 		return true
@@ -18687,6 +18849,7 @@ const (
 	MemberRetirementConsequenceOriginalAttribution      MemberRetirementConsequence = "original_attribution"
 	MemberRetirementConsequencePrivateAlertsArchived    MemberRetirementConsequence = "private_alerts_archived"
 	MemberRetirementConsequencePrivateAudiencesRetained MemberRetirementConsequence = "private_audiences_retained"
+	MemberRetirementConsequenceSignInDropped            MemberRetirementConsequence = "sign_in_dropped"
 	MemberRetirementConsequenceSourceSignedOut          MemberRetirementConsequence = "source_signed_out"
 	MemberRetirementConsequenceSurvivorAccess           MemberRetirementConsequence = "survivor_access"
 	MemberRetirementConsequenceSurvivorInactive         MemberRetirementConsequence = "survivor_inactive"
@@ -18707,11 +18870,49 @@ func (e MemberRetirementConsequence) Valid() bool {
 		return true
 	case MemberRetirementConsequencePrivateAudiencesRetained:
 		return true
+	case MemberRetirementConsequenceSignInDropped:
+		return true
 	case MemberRetirementConsequenceSourceSignedOut:
 		return true
 	case MemberRetirementConsequenceSurvivorAccess:
 		return true
 	case MemberRetirementConsequenceSurvivorInactive:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MemberUnavailableActionAction.
+const (
+	MemberUnavailableActionActionMerge MemberUnavailableActionAction = "merge"
+)
+
+// Valid indicates whether the value is a known member of the MemberUnavailableActionAction enum.
+func (e MemberUnavailableActionAction) Valid() bool {
+	switch e {
+	case MemberUnavailableActionActionMerge:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MemberUnavailableActionReason.
+const (
+	MemberUnavailableActionReasonAgentSeat MemberUnavailableActionReason = "agent_seat"
+	MemberUnavailableActionReasonSelf      MemberUnavailableActionReason = "self"
+	MemberUnavailableActionReasonSoleAdmin MemberUnavailableActionReason = "sole_admin"
+)
+
+// Valid indicates whether the value is a known member of the MemberUnavailableActionReason enum.
+func (e MemberUnavailableActionReason) Valid() bool {
+	switch e {
+	case MemberUnavailableActionReasonAgentSeat:
+		return true
+	case MemberUnavailableActionReasonSelf:
+		return true
+	case MemberUnavailableActionReasonSoleAdmin:
 		return true
 	default:
 		return false
@@ -21610,6 +21811,24 @@ func (e ReopenCondition) Valid() bool {
 	case ReopenConditionReopenOnReply:
 		return true
 	case ReopenConditionReopenOnTime:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReplyableSharedMailboxProvider.
+const (
+	ReplyableSharedMailboxProviderGmail ReplyableSharedMailboxProvider = "gmail"
+	ReplyableSharedMailboxProviderGraph ReplyableSharedMailboxProvider = "graph"
+)
+
+// Valid indicates whether the value is a known member of the ReplyableSharedMailboxProvider enum.
+func (e ReplyableSharedMailboxProvider) Valid() bool {
+	switch e {
+	case ReplyableSharedMailboxProviderGmail:
+		return true
+	case ReplyableSharedMailboxProviderGraph:
 		return true
 	default:
 		return false
@@ -28672,6 +28891,42 @@ func (e WeeklyReviewOutlookPeriodKind) Valid() bool {
 	}
 }
 
+// Defines values for WhatsAppConnectionMailVisibility.
+const (
+	WhatsAppConnectionMailVisibilityHeld   WhatsAppConnectionMailVisibility = "held"
+	WhatsAppConnectionMailVisibilityShared WhatsAppConnectionMailVisibility = "shared"
+)
+
+// Valid indicates whether the value is a known member of the WhatsAppConnectionMailVisibility enum.
+func (e WhatsAppConnectionMailVisibility) Valid() bool {
+	switch e {
+	case WhatsAppConnectionMailVisibilityHeld:
+		return true
+	case WhatsAppConnectionMailVisibilityShared:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WhatsAppConnectionStatus.
+const (
+	WhatsAppConnectionStatusConnected    WhatsAppConnectionStatus = "connected"
+	WhatsAppConnectionStatusDisconnected WhatsAppConnectionStatus = "disconnected"
+)
+
+// Valid indicates whether the value is a known member of the WhatsAppConnectionStatus enum.
+func (e WhatsAppConnectionStatus) Valid() bool {
+	switch e {
+	case WhatsAppConnectionStatusConnected:
+		return true
+	case WhatsAppConnectionStatusDisconnected:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for WorkArea.
 const (
 	WorkAreaAdminSettings     WorkArea = "admin_settings"
@@ -29027,6 +29282,7 @@ const (
 	WorklistItemActionsReopen       WorklistItemActions = "reopen"
 	WorklistItemActionsReply        WorklistItemActions = "reply"
 	WorklistItemActionsRetry        WorklistItemActions = "retry"
+	WorklistItemActionsSendAgain    WorklistItemActions = "send_again"
 	WorklistItemActionsSetAside     WorklistItemActions = "set_aside"
 	WorklistItemActionsSnooze       WorklistItemActions = "snooze"
 	WorklistItemActionsTake         WorklistItemActions = "take"
@@ -29063,6 +29319,8 @@ func (e WorklistItemActions) Valid() bool {
 	case WorklistItemActionsReply:
 		return true
 	case WorklistItemActionsRetry:
+		return true
+	case WorklistItemActionsSendAgain:
 		return true
 	case WorklistItemActionsSetAside:
 		return true
@@ -29863,6 +30121,45 @@ func (e WrittenBy) Valid() bool {
 	case WrittenByDeterministic:
 		return true
 	case WrittenByModel:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ZaloOAConnectionMailVisibility.
+const (
+	ZaloOAConnectionMailVisibilityHeld   ZaloOAConnectionMailVisibility = "held"
+	ZaloOAConnectionMailVisibilityShared ZaloOAConnectionMailVisibility = "shared"
+)
+
+// Valid indicates whether the value is a known member of the ZaloOAConnectionMailVisibility enum.
+func (e ZaloOAConnectionMailVisibility) Valid() bool {
+	switch e {
+	case ZaloOAConnectionMailVisibilityHeld:
+		return true
+	case ZaloOAConnectionMailVisibilityShared:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ZaloOAConnectionStatus.
+const (
+	ZaloOAConnectionStatusConnected      ZaloOAConnectionStatus = "connected"
+	ZaloOAConnectionStatusDisconnected   ZaloOAConnectionStatus = "disconnected"
+	ZaloOAConnectionStatusReauthRequired ZaloOAConnectionStatus = "reauth_required"
+)
+
+// Valid indicates whether the value is a known member of the ZaloOAConnectionStatus enum.
+func (e ZaloOAConnectionStatus) Valid() bool {
+	switch e {
+	case ZaloOAConnectionStatusConnected:
+		return true
+	case ZaloOAConnectionStatusDisconnected:
+		return true
+	case ZaloOAConnectionStatusReauthRequired:
 		return true
 	default:
 		return false
@@ -34001,6 +34298,9 @@ type Activity struct {
 	// Links Every record this activity is filed under that the caller may read; a link to a record they cannot read is left out. One activity may link to several, a contact and a deal say. Every read that returns an activity answers the same links: the list, one activity, and a contact's 360.
 	Links *[]ActivityLink `json:"links,omitempty"`
 
+	// MailboxImported Whether an import brought this in; the per-message audience write refuses it.
+	MailboxImported *bool `json:"mailbox_imported,omitempty"`
+
 	// MeetingIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
 	MeetingIntent *IntentTime `json:"meeting_intent,omitempty"`
 
@@ -34053,6 +34353,9 @@ type Activity struct {
 
 	// TaskType Task only, absent on every other kind. The type a human, an agent or the AI gave the task when it was made. A task made before types existed, or by a product rule that sets none, reads the type of its rule: an answer owed to a request is `reply`, a lead to qualify is `review`, a mail to file is `decide`. A task with neither reads `reach_out` when a human or an agent made it, else `do`. `offers_email` is false for every type but `reply` and `reach_out`.
 	TaskType *TaskType `json:"task_type,omitempty"`
+
+	// ThreadAudienceYours Whether the thread audience write acts on this row for the caller.
+	ThreadAudienceYours *bool `json:"thread_audience_yours,omitempty"`
 
 	// ThreadKey The provider's own conversation id (Gmail threadId, Graph conversationId, the RFC822 References root), stamped by capture. It is what makes a thread a thread: grouping by subject would merge two unrelated "Re: Update" exchanges and split one that was renamed mid-conversation. Null on anything capture did not thread — a note, a task, a message whose provider offered none.
 	ThreadKey *string   `json:"thread_key,omitempty"`
@@ -34151,7 +34454,7 @@ type ActivityDealDecline struct {
 	// ProjectUnfiled The project link that came from a declined deal came off the message.
 	ProjectUnfiled bool `json:"project_unfiled"`
 
-	// QuestionsClosed The open deal questions of the conversation this call marked done.
+	// QuestionsClosed The messages of the conversation whose open deal question this call closed.
 	QuestionsClosed int `json:"questions_closed" minimum:"0"`
 
 	// Unlinked Always false. A declined deal link stays on the message, marked `unrelated`; `marked_unrelated` says so.
@@ -34246,7 +34549,10 @@ type ActivityLink struct {
 	DealRelevance *ActivityLinkDealRelevance `json:"deal_relevance,omitempty"`
 	EntityId      openapi_types.UUID         `json:"entity_id"`
 	EntityType    ActivityLinkEntityType     `json:"entity_type"`
-	Id            *openapi_types.UUID        `json:"id,omitempty"`
+
+	// FiledBy On a deal link only, and only when no human or agent chose it: who filed the activity on the deal, read from the latest filing of it there. The actor is `core` for the installation's own rule, or the name of the extension whose hook filed it. Marking the link `unrelated` takes the filing back, and no automatic pass files the activity there again.
+	FiledBy *LinkFiler          `json:"filed_by,omitempty"`
+	Id      *openapi_types.UUID `json:"id,omitempty"`
 
 	// RelevanceSource Who set `deal_relevance`. The classifier never changes a mark a human set.
 	RelevanceSource *ActivityLinkRelevanceSource `json:"relevance_source,omitempty"`
@@ -35756,9 +36062,12 @@ type AiFlowStep struct {
 	// Switched Calls this step answered with another model than the one bound, by the provider's own report; out of `answered`.
 	Switched int64 `json:"switched"`
 
-	// SwitchedTo The model the provider named most often on those calls; absent when switched is 0.
+	// SwitchedTo The model the provider named most often on those calls; absent when switched is 0. `switched_to_certification` grades it for this task with the step's own binding settings, and is absent on a decision step, when no record measured it, and for a reader without `ai_routing` read.
 	SwitchedTo *string `json:"switched_to,omitempty"`
-	Tier       string  `json:"tier"`
+
+	// SwitchedToCertification What the certification records say about this model for this task, read by the same rule as the feature's `certification` grade, so the lead candidate and the feature never disagree. Absent on a candidate that grade calls not_measured.
+	SwitchedToCertification *AiRouteCertification `json:"switched_to_certification,omitempty"`
+	Tier                    string                `json:"tier"`
 }
 
 // AiHealth defines model for AiHealth.
@@ -36497,6 +36806,24 @@ type AiTaskSettings struct {
 	Thinking *string `json:"thinking,omitempty"`
 }
 
+// AiTeamRules defines model for AiTeamRules.
+type AiTeamRules struct {
+	Text string `json:"text"`
+
+	// UpdatedAt When the text was last saved. Left out while none was saved.
+	UpdatedAt *time.Time `json:"updated_at,omitempty"`
+
+	// UpdatedBy Who saved it last. Left out while none was saved.
+	UpdatedBy *string `json:"updated_by,omitempty"`
+}
+
+// AiTeamRulesChange defines model for AiTeamRulesChange.
+type AiTeamRulesChange struct {
+	// ExpectedUpdatedAt The updated_at the editor read. Left out when the editor read no saved version.
+	ExpectedUpdatedAt *time.Time `json:"expected_updated_at,omitempty"`
+	Text              string     `json:"text"`
+}
+
 // AiTierBinding One tier's binding. A key this schema does not declare is refused with a 422 naming its
 // path, on every routing write.
 type AiTierBinding struct {
@@ -36638,6 +36965,7 @@ type AnalyticsAnswer struct {
 	RateDate *time.Time `json:"rate_date,omitempty"`
 
 	// Rows One object per group, marked `_withheld` when the floor kept it back. A row holding a sum over a converted amount that adds only the deals that convert also carries `_coverage` (ReportRowCoverage), naming those sums in its `aggregates` and counting the deals it leaves out: no value, no exchange rate, and the currencies without one. A sum that no deal converts into is null, and its `_coverage` says why. A withheld row carries no `_coverage`. A withheld row carries null for every column INCLUDING its group keys: keeping the keys turned a grouping by identity into a paginated dump of every record's identity with only the measures blanked. The row itself stays so the answer's row count is not a signal of its own.
+	// A number past ±(2^53−1) is null, and `_out_of_range` lists the columns it was withheld from: a JSON reader parses every number as a float64, which would turn that total into another number. The rest of the row is answered.
 	Rows []map[string]interface{} `json:"rows"`
 
 	// RunId Where this answer was saved, present only when the query asked for it. A report block cites this id plus a cell's coordinates instead of carrying the number.
@@ -38425,6 +38753,10 @@ type AttentionItem struct {
 	// domain. Reopening retries identification without settling identity. These verbs route
 	// to `/capture/domain-questions/{domain}/…`.
 	//
+	// `send_again` is offered on a bounced message that may be sent once more. The reader
+	// types a corrected address and the same message goes out to it, through
+	// `POST /attention/bounces/{id}/send-again`.
+	//
 	// `act`, `dismiss` and `set_aside` are the briefing queue's three, and they route
 	// to `/brief/items/{itemId}/…`. `acknowledge` is a notice's one verb and routes
 	// to `/notices/{id}/read` — the reader has seen it, and it leaves the lane. `set_aside` rather than reusing `snooze`: a task's
@@ -39891,6 +40223,12 @@ type BoughtField struct {
 	Trigger ProviderRunTrigger `json:"trigger"`
 }
 
+// BounceSendAgainRequest defines model for BounceSendAgainRequest.
+type BounceSendAgainRequest struct {
+	// Address The corrected address. It replaces the address that refused, and it must differ from it.
+	Address openapi_types.Email `json:"address"`
+}
+
 // BriefDelivery What one member wants delivered. Every field is optional in BOTH directions: absent
 // on a read means they have never chosen, absent on a write means leave it alone.
 type BriefDelivery struct {
@@ -40320,6 +40658,12 @@ type BulkUndoRequest struct {
 // `settleConversationClaim` with `outcome: done` does.
 type BulkVerb string
 
+// BuyerEngagementNotice defines model for BuyerEngagementNotice.
+type BuyerEngagementNotice struct {
+	// Company The seller's company, as the invitation mail names it.
+	Company string `json:"company"`
+}
+
 // BuyerRoomAccess Whether the session admits the caller to content right now. `live` — the room
 // is open and the list can be worked. `closed` — the deal is done; everything
 // reads, nothing writes. `paused` — the seller has paused access; the link
@@ -40384,6 +40728,14 @@ type BuyerRoomParticipant struct {
 	Id         openapi_types.UUID            `json:"id"`
 }
 
+// BuyerRoomThreadListResponse defines model for BuyerRoomThreadListResponse.
+type BuyerRoomThreadListResponse struct {
+	Data []DealRoomThread `json:"data"`
+
+	// HiddenOwnConversations True when a conversation this buyer wrote in is withheld because its file is no longer shared. No count and no file.
+	HiddenOwnConversations bool `json:"hidden_own_conversations"`
+}
+
 // BuyerRoomView defines model for BuyerRoomView.
 type BuyerRoomView struct {
 	// Access Whether the session admits the caller to content right now. `live` — the room
@@ -40396,6 +40748,9 @@ type BuyerRoomView struct {
 	// siblings give: the same four words generated as package-scope constants
 	// would collide with the lifecycle's.
 	Access BuyerRoomAccess `json:"access"`
+
+	// EngagementNotice Present on a seat's first sign-in, and on a seller preview so the seller sees what the buyer will see. Tells the buyer that the seller's company can see the sign-in and the downloads. It has no action.
+	EngagementNotice *BuyerEngagementNotice `json:"engagement_notice,omitempty"`
 
 	// Participant The caller, as the room knows them. Nothing about anyone else in the room.
 	Participant BuyerRoomParticipant `json:"participant"`
@@ -40556,7 +40911,12 @@ type CaptureConnection struct {
 	// owner chose none, which keeps the normal policy. Set and cleared through
 	// PUT /connectors/{provider}/history-baseline.
 	HistoryBaseline *MailHistoryBaseline `json:"history_baseline,omitempty"`
-	Id              openapi_types.UUID   `json:"id"`
+
+	// HistoryNarrowing Earlier mail of this mailbox that a background job is still narrowing, after a change
+	// asked for `apply_to_history`. Absent when nothing is pending. Mail the job has not reached
+	// yet keeps the audience it had.
+	HistoryNarrowing *MailHistoryNarrowing `json:"history_narrowing,omitempty"`
+	Id               openapi_types.UUID    `json:"id"`
 
 	// LastSuccessAt Last successful sync for this mailbox; null before one succeeds.
 	LastSuccessAt *time.Time `json:"last_success_at,omitempty"`
@@ -41034,7 +41394,8 @@ type CaptureSenderDecision struct {
 	// contact. Present exactly when `contact_id` is.
 	ContactName *string `json:"contact_name,omitempty"`
 
-	// Decision What YOU decided instead, absent when you have not.
+	// Decision What YOU decided instead, absent when you have not. `personal` is the standing decision a
+	// private verdict leaves; only the classifier writes it, and withdrawing it lifts it.
 	Decision *CaptureSenderDecisionDecision `json:"decision,omitempty"`
 
 	// DeletesAt When this sender's oldest message is destroyed. Present only for a `personal` verdict
@@ -41073,7 +41434,8 @@ type CaptureSenderDecision struct {
 	Status *string `json:"status,omitempty"`
 }
 
-// CaptureSenderDecisionDecision What YOU decided instead, absent when you have not.
+// CaptureSenderDecisionDecision What YOU decided instead, absent when you have not. `personal` is the standing decision a
+// private verdict leaves; only the classifier writes it, and withdrawing it lifts it.
 type CaptureSenderDecisionDecision string
 
 // CaptureSenderListResponse defines model for CaptureSenderListResponse.
@@ -41572,6 +41934,35 @@ type ChatEpisode struct {
 	Url string `json:"url"`
 }
 
+// ChatIdentity defines model for ChatIdentity.
+type ChatIdentity struct {
+	// AccountHint The confirmed account with all but its last digits hidden. Absent while only a code waits.
+	AccountHint *string `json:"account_hint,omitempty"`
+
+	// ExpiresAt When the waiting code stops working.
+	ExpiresAt *time.Time  `json:"expires_at,omitempty"`
+	Network   ChatNetwork `json:"network"`
+
+	// VerifiedAt When the account was confirmed.
+	VerifiedAt *time.Time `json:"verified_at,omitempty"`
+}
+
+// ChatIdentityList defines model for ChatIdentityList.
+type ChatIdentityList struct {
+	Data []ChatIdentity `json:"data"`
+}
+
+// ChatNetwork defines model for ChatNetwork.
+type ChatNetwork string
+
+// ChatVerificationStarted defines model for ChatVerificationStarted.
+type ChatVerificationStarted struct {
+	// Code Shown once. Send it as a message from your own account.
+	Code      string      `json:"code"`
+	ExpiresAt time.Time   `json:"expires_at"`
+	Network   ChatNetwork `json:"network"`
+}
+
 // CitedProvision The law a finding or refusal rests on, as a jurisdiction pack binding the message cites it
 // for the sending legal entity: the recipient's own, or the sending entity's for a finding its
 // data-protection law settles. Shown beside the engine's sentence; it decides nothing.
@@ -42016,6 +42407,7 @@ type Company struct {
 	ComputedFields *[]ComputedField `json:"computed_fields,omitempty"`
 
 	// ContactCount How many distinct live contacts THE CALLER MAY SEE hold a current job at this account (PO-EXT-10; AC-companies-2/3's Contacts column). Counted under the caller's contact row scope, exactly as the contact list is: a count is a read, and a number that moved when a colleague captured a private contact would disclose that contact. Present, zero included, on `listCompanies` and `getCompany` — the reads that render the column, and ABSENT entirely for a role without `contact:read` OR without `relationship:read` (the object grants come first, as on the contact list) — the number is a fact about the employment PAIRS, so the edge grant governs it exactly as it governs the employment list; write responses (create, update, archive, merge) omit it. Never client-supplied.
+	// A count of 0 means "no contacts YOU can see", never "no contacts": read it with `hidden_contact_holders`. Say "no contacts you can see" and name those colleagues when the list is not empty.
 	ContactCount *int      `json:"contact_count,omitempty" minimum:"0"`
 	CreatedAt    time.Time `json:"created_at"`
 
@@ -42036,8 +42428,11 @@ type Company struct {
 	Email *openapi_types.Email `json:"email,omitempty"`
 
 	// ExtensionRelationshipTypes The types an installed extension adds, as `ext:<unit>:<type>`. Kept apart from `relationship_types`, whose list stays the closed set above. Each value is declared by the extension it names; a value no extension declares is refused (422, `invalid_enum`).
-	ExtensionRelationshipTypes *[]string          `json:"extension_relationship_types,omitempty"`
-	Id                         openapi_types.UUID `json:"id"`
+	ExtensionRelationshipTypes *[]string `json:"extension_relationship_types,omitempty"`
+
+	// HiddenContactHolders The live colleagues who own at least one current contact at this account that the caller may not see, each once, so the reader knows whom to ask for an introduction ("Dana and Minh have contacts here you can't see"). It names who to ask and nothing else: no contact's name, role or id, and no count per colleague or in total. Empty when nothing is hidden, and a colleague who left or an agent seat is never listed. It reads the same employment set as `contact_count` with the contact scope turned around, so the two never describe different populations. Present exactly when `contact_count` is, and absent entirely on a write response. Never client-supplied.
+	HiddenContactHolders *[]HiddenRecordHolder `json:"hidden_contact_holders,omitempty"`
+	Id                   openapi_types.UUID    `json:"id"`
 
 	// ImportedFrom Which import wrote this record, so a screen can say "Imported from <name>" instead of "Typed by you". Null when no import wrote it. The name is the source the import was run for (`bundle`); an empty string is an import that was given none. Derived from `source_system`, whose reserved `mirror:` prefix is never shown.
 	ImportedFrom *string `json:"imported_from,omitempty"`
@@ -42054,6 +42449,9 @@ type Company struct {
 	// LastActivityAt When something last happened with this account: the newest `occurred_at` at or before now of a workspace-audience activity linked to it, so a booked meeting counts once it starts. A task never counts, whoever filed it, and neither does a canceled or no-show meeting. It is maintained on the activity write as `deal.last_activity_at` is (a read accelerator that a rebuild must reproduce). NULL until the first such activity. Sortable (DM-VOCAB-2).
 	// A message limited to its participants does NOT move this date, even for a reader who may read that message. The value is one number every reader sees, so it can only count what every reader may see.
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
+
+	// LastActivityPrecision How to read `last_activity_at`, from the activity it names. A day entry counts its days from its own date. Absent when that is null.
+	LastActivityPrecision *OccurredPrecision `json:"last_activity_precision,omitempty"`
 
 	// LegalHold True while a litigation or investigation hold is preserving this record. A held record is never acted on by a retention sweep and an Art. 17 erasure against it is refused, so a screen that offers either action has to know. Placed and lifted through /retention/legal-holds, never by an ordinary edit.
 	LegalHold *bool   `json:"legal_hold,omitempty"`
@@ -42087,6 +42485,9 @@ type Company struct {
 	// partner fit, next step, and served segments. Behavior is Fast-follow, but the V1 schema is
 	// forward-compatible.
 	Partner *Partner `json:"partner,omitempty"`
+
+	// PartnerProgramEnded An ended partner program has commission and deal history. Omitted without partner read permission.
+	PartnerProgramEnded *bool `json:"partner_program_ended,omitempty"`
 
 	// Phone The company's main number, in E.164 form (for example +49301234567). It is never a contact's own number.
 	Phone *string                 `json:"phone,omitempty"`
@@ -42153,8 +42554,11 @@ type Company360 struct {
 	// AttentionWithheld The reader may not read this account's activities, so no `attention` was derived on any deal or project row. The rows themselves are still listed and still true — this says the reasons behind them are missing, which a card must show rather than let an unexplained row read as a settled one.
 	AttentionWithheld *bool `json:"attention_withheld,omitempty"`
 
-	// BillingContacts Who handles this account's invoices, ordered by capacity: addressed, approved, paid. Each entry is one edge, so the panel can change or archive a single role without touching the others. Empty means nobody is named — which for a paying customer is a gap worth showing, not a blank. Absent when the caller lacks the contact or relationship grant, named in `sections_omitted` as `billing_contacts`; a contact outside the caller's row scope is simply not listed, and no count states how many were withheld.
+	// BillingContacts Who handles this account's invoices, ordered by capacity: addressed, approved, paid. Each entry is one edge, so the panel can change or archive a single role without touching the others. Empty means nobody is named — which for a paying customer is a gap worth showing, not a blank. Absent when the caller lacks the contact or relationship grant, named in `sections_omitted` as `billing_contacts`. A contact outside the caller's row scope is not listed; `billing_contacts_hidden` says how many entries were withheld and who owns them.
 	BillingContacts *[]BillingContact `json:"billing_contacts,omitempty"`
+
+	// BillingContactsHidden The billing entries the caller's contact row scope withheld from `billing_contacts`. Absent exactly when `billing_contacts` is.
+	BillingContactsHidden *HiddenRecords `json:"billing_contacts_hidden,omitempty"`
 
 	// Company A company. Mirrors the `company` table.
 	Company  Company `json:"company"`
@@ -42162,6 +42566,9 @@ type Company360 struct {
 		Data []Company360Contact `json:"data"`
 		Page PageInfo            `json:"page"`
 	} `json:"contacts,omitempty"`
+
+	// ContactsHidden The account's current employees the caller may not see, by the contact row scope or by the employment tie's own read scope. Absent exactly when `contacts` is.
+	ContactsHidden *HiddenRecords `json:"contacts_hidden,omitempty"`
 
 	// Deals The account's open deals plus the two lifetime figures the header needs.
 	Deals *Company360Deals `json:"deals,omitempty"`
@@ -42600,10 +43007,13 @@ type Company360Project struct {
 	Attention *Company360WorkAttention `json:"attention,omitempty"`
 
 	// Key The subject-line handle, when the project has one.
-	Key            *string             `json:"key,omitempty"`
-	LastActivityAt *time.Time          `json:"last_activity_at,omitempty"`
-	Name           string              `json:"name"`
-	OwnerId        *openapi_types.UUID `json:"owner_id,omitempty"`
+	Key            *string    `json:"key,omitempty"`
+	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
+
+	// LastActivityPrecision How to read `last_activity_at`, from the activity it names. A day entry counts its days from its own date. Absent when that is null.
+	LastActivityPrecision *OccurredPrecision  `json:"last_activity_precision,omitempty"`
+	Name                  string              `json:"name"`
+	OwnerId               *openapi_types.UUID `json:"owner_id,omitempty"`
 
 	// OwnerName The owner's display name; null when the project has no owner or the owner is no longer an active member.
 	OwnerName *string `json:"owner_name,omitempty"`
@@ -42624,6 +43034,9 @@ type Company360ProjectPhase string
 type Company360Route struct {
 	DisplayName       string     `json:"display_name"`
 	LastInteractionAt *time.Time `json:"last_interaction_at,omitempty"`
+
+	// LastInteractionPrecision How to read `last_interaction_at`, from the activity it names. Absent when that is null.
+	LastInteractionPrecision *OccurredPrecision `json:"last_interaction_precision,omitempty"`
 
 	// StrengthBucket The band, never the number — the score is a decayed count, and showing it invites a precision it does not have.
 	StrengthBucket Company360RouteStrengthBucket `json:"strength_bucket"`
@@ -43616,9 +44029,12 @@ type CompanyFactListResponse struct {
 // account is healthy on the strength of a missing connector.
 type CompanyFinanceSummary struct {
 	// BillingContacts Who to send this customer's invoices to, beside the figures — the one question a reader of this card asks that the accounting mirror cannot answer. Read from the installation's own relationships, NOT from the accounting source: it states who we record as handling the invoices, which the connector neither supplies nor is told.
-	// Absent when the caller lacks the contact or relationship grant, so an empty array means nobody is named rather than nobody may be seen. Contacts outside the caller's row scope are not listed, and no count says how many were withheld.
-	BillingContacts *[]BillingContact  `json:"billing_contacts,omitempty"`
-	CompanyId       openapi_types.UUID `json:"company_id"`
+	// Absent when the caller lacks the contact or relationship grant, so an empty array means nobody is named rather than nobody may be seen. Contacts outside the caller's row scope are not listed; `billing_contacts_hidden` says how many entries were withheld and who owns them.
+	BillingContacts *[]BillingContact `json:"billing_contacts,omitempty"`
+
+	// BillingContactsHidden The billing entries the caller's contact row scope withheld from `billing_contacts`, the same answer the company page gives. Absent exactly when `billing_contacts` is.
+	BillingContactsHidden *HiddenRecords     `json:"billing_contacts_hidden,omitempty"`
+	CompanyId             openapi_types.UUID `json:"company_id"`
 
 	// CoverageEnd The issue date of the NEWEST mirrored invoice. On a live account it is recent and the trailing windows below mean what they say; on an account that stopped buying it is the answer to "when did this end", and it is what makes a 365-day figure readable as the historical number it is.
 	CoverageEnd *openapi_types.Date `json:"coverage_end,omitempty"`
@@ -46372,8 +46788,11 @@ type ContactGraphEdge struct {
 	Interactions90d int    `json:"interactions_90d"`
 
 	// LastAt The newest `occurred_at` among the activities the edge counts. A client orders edges by it.
-	LastAt      *time.Time `json:"last_at,omitempty"`
-	Outbound90d *int       `json:"outbound_90d,omitempty"`
+	LastAt *time.Time `json:"last_at,omitempty"`
+
+	// LastPrecision How to read `last_at`, from the activity it names. Absent when that is null.
+	LastPrecision *OccurredPrecision `json:"last_precision,omitempty"`
+	Outbound90d   *int               `json:"outbound_90d,omitempty"`
 
 	// Receipts The actual messages behind this edge, each individually visibility-checked before it is named. Present on `direct` edges only: pooled counts are disclosable where the correspondence itself is not, so an `account` edge carries the numbers and no rows.
 	Receipts *[]ContactGraphReceipt `json:"receipts,omitempty"`
@@ -46501,7 +46920,10 @@ type ContactGraphRouteEvidence struct {
 	Inbound90d      *int       `json:"inbound_90d,omitempty"`
 	Interactions90d int        `json:"interactions_90d"`
 	LastAt          *time.Time `json:"last_at,omitempty"`
-	Outbound90d     *int       `json:"outbound_90d,omitempty"`
+
+	// LastPrecision How to read `last_at`, from the activity it names. Absent when that is null.
+	LastPrecision *OccurredPrecision `json:"last_precision,omitempty"`
+	Outbound90d   *int               `json:"outbound_90d,omitempty"`
 
 	// Sent90d Messages in the last 90 days the colleague sent to the contact as the sender (participant role `from`). Being copied does not count. Absent for a reader without activity read, and on an edge folded before the count existed. The two-way reading then falls back to `outbound_90d`, which also counts mail the colleague was copied on.
 	Sent90d *int `json:"sent_90d,omitempty" minimum:"0"`
@@ -46758,6 +47180,9 @@ type ContactNetworkColleague struct {
 
 	// LastOutboundAt When this colleague last wrote to them.
 	LastOutboundAt *time.Time `json:"last_outbound_at,omitempty"`
+
+	// LastPrecision How to read `last_at`, from the activity it names. Absent when that is null.
+	LastPrecision *OccurredPrecision `json:"last_precision,omitempty"`
 
 	// Outbound90d Outbound interactions in the last 90 days this colleague was on, as sender or copied. sent_90d counts only what they sent.
 	Outbound90d *int `json:"outbound_90d,omitempty" minimum:"0"`
@@ -47992,6 +48417,9 @@ type CreateCustomFieldRequest struct {
 	Object        CreateCustomFieldRequestObject           `json:"object"`
 	Options       *[]string                                `json:"options,omitempty"`
 
+	// PipelineIds The pipelines the field applies to. Only a deal field may name any; omitted or empty means every pipeline. An id that is not a live pipeline, or ids on another object's field, is refused with a 422.
+	PipelineIds *[]openapi_types.UUID `json:"pipeline_ids,omitempty"`
+
 	// ShowInCreate Whether the field is offered in create dialogs. Omitted means true. An import that keeps provenance from a previous system creates its field with this off.
 	ShowInCreate *bool                        `json:"show_in_create,omitempty"`
 	Source       string                       `json:"source"`
@@ -48916,6 +49344,21 @@ type CreateWebhookSubscriptionRequest struct {
 	TargetUrl string `json:"target_url"`
 }
 
+// CreateWhatsAppConnectionRequest defines model for CreateWhatsAppConnectionRequest.
+type CreateWhatsAppConnectionRequest struct {
+	// AccessToken The system-user access token for the WhatsApp Business Account. Sealed into the credential store on arrival and never echoed back.
+	AccessToken string `json:"accessToken"`
+
+	// AppSecret The Meta app's secret, which signs each webhook delivery. Sealed into the credential store on arrival and never echoed back.
+	AppSecret          string `json:"appSecret"`
+	DisplayPhoneNumber string `json:"displayPhoneNumber"`
+	PhoneNumberId      string `json:"phoneNumberId"`
+
+	// ReaderTeamId The team that reads the number's messages. The number's seat starts `held`: only this team reads them until an admin shares them.
+	ReaderTeamId openapi_types.UUID `json:"readerTeamId"`
+	WabaId       string             `json:"wabaId"`
+}
+
 // CreateWorkspaceEmailDomainRequest defines model for CreateWorkspaceEmailDomainRequest.
 type CreateWorkspaceEmailDomainRequest struct {
 	// Domain A bare domain: no scheme and no path. A leading `@` is accepted and stripped,
@@ -48927,6 +49370,27 @@ type CreateWorkspaceEmailDomainRequest struct {
 	// 253 characters and the optional `@` is one more. The stored domain is checked
 	// against 253 after the prefix is stripped.
 	Domain string `json:"domain"`
+}
+
+// CreateZaloOAConnectionRequest defines model for CreateZaloOAConnectionRequest.
+type CreateZaloOAConnectionRequest struct {
+	// AccessToken The Official Account's access token. Sealed into the credential store on arrival and never echoed back.
+	AccessToken string `json:"accessToken"`
+	AppId       string `json:"appId"`
+
+	// AppSecret The Zalo app's secret key, used to renew the tokens. Sealed into the credential store on arrival and never echoed back.
+	AppSecret   string `json:"appSecret"`
+	DisplayName string `json:"displayName"`
+	OaId        string `json:"oaId"`
+
+	// OaSecretKey The OA secret key that signs each webhook event. Sealed into the credential store on arrival and never echoed back.
+	OaSecretKey string `json:"oaSecretKey"`
+
+	// ReaderTeamId The team that reads the account's messages. The account's seat starts `held`: only this team reads them until an admin shares them.
+	ReaderTeamId openapi_types.UUID `json:"readerTeamId"`
+
+	// RefreshToken The Official Account's refresh token. It is single use; the renewal job replaces it. Sealed into the credential store on arrival and never echoed back.
+	RefreshToken string `json:"refreshToken"`
 }
 
 // CustomField A workspace-defined runtime field on an existing core object. Mirrors the
@@ -48973,6 +49437,9 @@ type CustomField struct {
 
 	// Options Allowed picklist values; present (non-empty) when `type=picklist`, null otherwise.
 	Options *[]string `json:"options,omitempty"`
+
+	// PipelineIds The pipelines a deal field applies to; null means every pipeline, and every other object's field is null. A created or edited deal of another pipeline refuses a value for the field with `422 field_not_valid_for_pipeline`. A pipeline that is archived matches nothing. A value stored before the field was narrowed, or on a deal that moved pipeline, stays stored and readable, and sending null clears it.
+	PipelineIds *[]openapi_types.UUID `json:"pipeline_ids,omitempty"`
 
 	// RecordsChanged Only on the answer to `updateCustomFieldOptions`: how many records held a choice the edit removed and had it cleared.
 	RecordsChanged *int `json:"records_changed,omitempty" minimum:"0"`
@@ -49366,6 +49833,9 @@ type Deal struct {
 	// LastActivityAt The newest `occurred_at` at or before now of an activity filed under the deal, so a booked meeting counts once it starts. A task never counts, whoever filed it, and neither does a canceled or no-show meeting. Drives the deterministic stalled flag. A message limited to its participants counts by its date alone, so a deal worked through private mail does not read as stalled. The deal timeline already lists such a message to every reader of the deal with its time, so its date reveals nothing new; its text and sender stay with its audience, a message limited to a chosen audience does not count, and no contact or company date moves for it.
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
 
+	// LastActivityPrecision How to read `last_activity_at`, from the activity it names. A day entry counts its quiet days from its own date. Absent when that is null.
+	LastActivityPrecision *OccurredPrecision `json:"last_activity_precision,omitempty"`
+
 	// LastEmail The newest email on this deal that the whole workspace may see — what a board card states as "last mail, N days ago" beside the deal, so a rep reads the silence without opening every card. Null on a deal nobody has mailed about. Counts what `last_activity_at` counts, narrowed to mail: workspace-audience rows only, and never the product's own system writing — a message limited to its participants must not move a date every colleague reads, and a mail the installation sent itself is not the buyer engaging. The rows a reader may discover through `GET /activities` can therefore be newer than this instant.
 	LastEmail *DealLastEmail `json:"last_email,omitempty"`
 
@@ -49544,6 +50014,9 @@ type DealAdvanced struct {
 
 	// LastActivityAt The newest `occurred_at` at or before now of an activity filed under the deal, so a booked meeting counts once it starts. A task never counts, whoever filed it, and neither does a canceled or no-show meeting. Drives the deterministic stalled flag. A message limited to its participants counts by its date alone, so a deal worked through private mail does not read as stalled. The deal timeline already lists such a message to every reader of the deal with its time, so its date reveals nothing new; its text and sender stay with its audience, a message limited to a chosen audience does not count, and no contact or company date moves for it.
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
+
+	// LastActivityPrecision How to read `last_activity_at`, from the activity it names. A day entry counts its quiet days from its own date. Absent when that is null.
+	LastActivityPrecision *OccurredPrecision `json:"last_activity_precision,omitempty"`
 
 	// LastEmail The newest email on this deal that the whole workspace may see — what a board card states as "last mail, N days ago" beside the deal, so a rep reads the silence without opening every card. Null on a deal nobody has mailed about. Counts what `last_activity_at` counts, narrowed to mail: workspace-audience rows only, and never the product's own system writing — a message limited to its participants must not move a date every colleague reads, and a mail the installation sent itself is not the buyer engaging. The rows a reader may discover through `GET /activities` can therefore be newer than this instant.
 	LastEmail *DealLastEmail `json:"last_email,omitempty"`
@@ -50591,7 +51064,8 @@ type DealRoomThread struct {
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
 	// (ErrVersionSkew) so the client re-reads before retrying.
-	Version *RowVersion `json:"version,omitempty" minimum:"1"`
+	Version        *RowVersion `json:"version,omitempty" minimum:"1"`
+	VisibleToBuyer bool        `json:"visible_to_buyer"`
 }
 
 // DealRoomThreadListResponse defines model for DealRoomThreadListResponse.
@@ -51411,6 +51885,9 @@ type DormancyReading struct {
 	// LastActivityAt The account's stored last activity the rung is counted from. Null when it has none.
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
 
+	// LastActivityPrecision How to read `last_activity_at`, from the activity it names. A day entry counts its days from its own date. Absent when that is null.
+	LastActivityPrecision *OccurredPrecision `json:"last_activity_precision,omitempty"`
+
 	// NoActivity True when the account has no activity recorded at all, which is why it reads as `stale`.
 	NoActivity bool `json:"no_activity"`
 
@@ -51695,6 +52172,11 @@ type EmailCalendarInvitationResponse string
 // the bot, or because the credential was rejected rendered exactly like one the provider
 // confirmed. The rep was told their message went.
 type EmailDelivery struct {
+	// CanSendAgain True when the reader may send this bounced message again to a corrected address,
+	// by the same rule as the Worklist bounce row's `send_again`. Only the sender's own
+	// message that bounced hard qualifies, once, and not one an agent wrote.
+	CanSendAgain *bool `json:"can_send_again,omitempty"`
+
 	// DeliveredAt When the provider accepted it. Null unless the state is `sent`.
 	DeliveredAt *time.Time `json:"delivered_at,omitempty"`
 
@@ -53759,6 +54241,36 @@ type GmailSignatureImport struct {
 // GmailSignatureImportState defines model for GmailSignatureImport.State.
 type GmailSignatureImportState string
 
+// GoogleDirectoryInput defines model for GoogleDirectoryInput.
+type GoogleDirectoryInput struct {
+	// AdminSubject The Workspace admin the service account acts for. The Directory API refuses a delegated read that names no admin.
+	AdminSubject *openapi_types.Email `json:"admin_subject,omitempty"`
+
+	// ServiceAccountJson The service account's JSON key file, as Google issues it.
+	ServiceAccountJson *string `json:"service_account_json,omitempty"`
+}
+
+// GoogleDirectoryStatus Whether the Google directory credential is stored and how the newest check went. Carries neither the key nor the admin address.
+type GoogleDirectoryStatus struct {
+	// Configured A credential is stored, or a boot source sets one.
+	Configured bool `json:"configured"`
+
+	// LastCheckedAt When the newest check ran. Absent before any check.
+	LastCheckedAt *time.Time `json:"last_checked_at,omitempty"`
+
+	// LastReason Why the newest check failed, present only when `last_result` is `failed`. A closed vocabulary, never Google's own words. `delegation_refused` is the common setup mistake: the service account's client ID has no domain-wide delegation for the read-only group scope, or the admin address is wrong.
+	LastReason *GoogleDirectoryStatusLastReason `json:"last_reason,omitempty"`
+
+	// LastResult How the newest check ended. Absent before any check.
+	LastResult *GoogleDirectoryStatusLastResult `json:"last_result,omitempty"`
+}
+
+// GoogleDirectoryStatusLastReason Why the newest check failed, present only when `last_result` is `failed`. A closed vocabulary, never Google's own words. `delegation_refused` is the common setup mistake: the service account's client ID has no domain-wide delegation for the read-only group scope, or the admin address is wrong.
+type GoogleDirectoryStatusLastReason string
+
+// GoogleDirectoryStatusLastResult How the newest check ended. Absent before any check.
+type GoogleDirectoryStatusLastResult string
+
 // GrowthFitBand How well this company fits what we sell (DOSS-PARAM-8).
 //
 // `unknown` is the ABSTENTION, not a low score. It says the assembly did not have
@@ -54345,6 +54857,21 @@ type HiddenBacklogRows struct {
 
 // HiddenBacklogRowsRule Which rule these rows are behind, echoed so a client holding several reads cannot mix them up.
 type HiddenBacklogRowsRule string
+
+// HiddenRecordHolder defines model for HiddenRecordHolder.
+type HiddenRecordHolder struct {
+	DisplayName string             `json:"display_name"`
+	UserId      openapi_types.UUID `json:"user_id"`
+}
+
+// HiddenRecords What the caller's row scope withheld from one list on a record page, so a short list never reads as the whole one. It states how many entries were withheld and which live colleagues own them, so the reader knows whom to ask. A withheld record's name, value and every other field stay withheld. Count 0 with no holders when nothing was withheld.
+type HiddenRecords struct {
+	// Count How many entries the list would have shown under an unbounded scope and did not. It includes entries owned by a colleague who has left, who is not in `holders`.
+	Count int `json:"count" minimum:"0"`
+
+	// Holders The live colleagues who own at least one withheld entry, each once, by name.
+	Holders []HiddenRecordHolder `json:"holders"`
+}
 
 // HistoryEdge Set when this history entry changed a LINK between two records rather than a field
 // of this one, and null on every ordinary row.
@@ -56223,7 +56750,7 @@ type InviteUserRequest struct {
 	DisplayName string              `json:"display_name"`
 	Email       openapi_types.Email `json:"email"`
 
-	// GreetingName The name the member's greetings use, when the first word of `display_name` is not it. Optional; absent, empty or null leaves it unset.
+	// GreetingName The name the member's greetings use, when the given name read off `display_name` is not it. Optional; absent, empty or null leaves it unset.
 	GreetingName *string `json:"greeting_name,omitempty"`
 
 	// LegalEntityId The legal entity the member works for, from `listLegalEntities`, written in the same transaction as the seat. Omitted, the member works for the default entity. Naming one needs the grants `assignLegalEntityMember` needs: `legal_entity` update and `user_admin` update. An unknown or archived entity is refused as 422.
@@ -56621,8 +57148,10 @@ type KnowledgeClaimSection struct {
 
 // KnowledgeCorpus defines model for KnowledgeCorpus.
 type KnowledgeCorpus struct {
-	Coverage  KnowledgeCoverage `json:"coverage"`
-	CreatedAt time.Time         `json:"created_at"`
+	// ArchivedAt When the set was archived; absent or null while it is live. Only `include_archived` lists an archived set, and it takes the `knowledge_corpus` delete grant that archives and restores one.
+	ArchivedAt *time.Time        `json:"archived_at,omitempty"`
+	Coverage   KnowledgeCoverage `json:"coverage"`
+	CreatedAt  time.Time         `json:"created_at"`
 
 	// DefaultAsk The corpus the command palette's ask lands on. At most one per workspace.
 	DefaultAsk  bool               `json:"default_ask"`
@@ -57980,6 +58509,20 @@ type LinkContactEmployerResult struct {
 	RelationshipId openapi_types.UUID `json:"relationship_id"`
 }
 
+// LinkFiler On a deal link only, and only when no human or agent chose it: who filed the activity on the deal, read from the latest filing of it there. The actor is `core` for the installation's own rule, or the name of the extension whose hook filed it. Marking the link `unrelated` takes the filing back, and no automatic pass files the activity there again.
+type LinkFiler struct {
+	Actor string `json:"actor"`
+
+	// Hook Which hook point filed it, for an extension actor. Absent for `core`.
+	Hook *LinkFilerHook `json:"hook,omitempty"`
+
+	// Reason For an extension, a key the extension declared for its hook. Read it together with the actor: the label comes from that extension's own translations. Absent for `core`.
+	Reason *string `json:"reason,omitempty"`
+}
+
+// LinkFilerHook Which hook point filed it, for an extension actor. Absent for `core`.
+type LinkFilerHook string
+
 // LinkFinanceSourceCustomerRequest defines model for LinkFinanceSourceCustomerRequest.
 type LinkFinanceSourceCustomerRequest struct {
 	CompanyId openapi_types.UUID `json:"company_id"`
@@ -57996,22 +58539,31 @@ type LinkSuggestion struct {
 	ActivityId openapi_types.UUID `json:"activity_id"`
 
 	// ActivitySubject The subject of the message. Empty when the message has none.
-	ActivitySubject *string            `json:"activity_subject,omitempty"`
-	CreatedAt       time.Time          `json:"created_at"`
-	EntityId        openapi_types.UUID `json:"entity_id"`
+	ActivitySubject *string   `json:"activity_subject,omitempty"`
+	CreatedAt       time.Time `json:"created_at"`
+
+	// DealAmountMinor For a suggested deal, its value in minor units of `deal_currency`, to help pick. Null when the deal has none or the caller's role withholds it. Absent on a decision's answer.
+	DealAmountMinor *int64 `json:"deal_amount_minor,omitempty"`
+
+	// DealCurrency The currency of `deal_amount_minor`, withheld with it.
+	DealCurrency *string `json:"deal_currency,omitempty"`
+
+	// DealExpectedCloseDate For a suggested deal, when it is expected to close. Absent on a decision's answer.
+	DealExpectedCloseDate *openapi_types.Date `json:"deal_expected_close_date,omitempty"`
+	EntityId              openapi_types.UUID  `json:"entity_id"`
 
 	// EntityName The name of the suggested record, for the screen. Absent on a decision's answer.
 	EntityName *string                  `json:"entity_name,omitempty"`
 	EntityType LinkSuggestionEntityType `json:"entity_type"`
 	Id         openapi_types.UUID       `json:"id"`
 
-	// Reason One short sentence from the extension on why.
+	// Reason One short sentence from the extension on why, or Margince's own question.
 	Reason string               `json:"reason"`
 	Score  float32              `json:"score" maximum:"1" minimum:"0"`
 	Status LinkSuggestionStatus `json:"status"`
 
-	// Unit The extension that proposed it.
-	Unit string `json:"unit"`
+	// Unit The extension that proposed it. Null when Margince itself asks which deal a mail is about.
+	Unit *string `json:"unit"`
 }
 
 // LinkSuggestionEntityType defines model for LinkSuggestion.EntityType.
@@ -59069,6 +59621,20 @@ type MailHistoryBaseline struct {
 	Timezone string `json:"timezone"`
 }
 
+// MailHistoryNarrowing Earlier mail of this mailbox that a background job is still narrowing, after a change
+// asked for `apply_to_history`. Absent when nothing is pending. Mail the job has not reached
+// yet keeps the audience it had.
+type MailHistoryNarrowing struct {
+	// Posture What the earlier mail is narrowed to.
+	Posture MailHistoryNarrowingPosture `json:"posture"`
+
+	// Remaining Messages still to narrow.
+	Remaining int `json:"remaining" minimum:"0"`
+}
+
+// MailHistoryNarrowingPosture What the earlier mail is narrowed to.
+type MailHistoryNarrowingPosture string
+
 // MailLanguage A language this build writes the installation's own mail in.
 type MailLanguage string
 
@@ -59778,6 +60344,22 @@ type MeetingRecordLinkEntityType string
 // MeetingResponse A guest's answer to a calendar invitation. `needs_action` is an invitation not answered yet.
 type MeetingResponse string
 
+// MemberMergeConfirmation defines model for MemberMergeConfirmation.
+type MemberMergeConfirmation struct {
+	DisplayName string                      `json:"display_name"`
+	Side        MemberMergeConfirmationSide `json:"side"`
+
+	// State `confirmed` once the holder used the mailed link; `requested` while a link is out; `not_requested` when none was sent yet; `not_needed` for a deactivated account, whose holder cannot confirm, and for a merge whose source was never used.
+	State  MemberMergeConfirmationState `json:"state"`
+	UserId openapi_types.UUID           `json:"user_id"`
+}
+
+// MemberMergeConfirmationSide defines model for MemberMergeConfirmation.Side.
+type MemberMergeConfirmationSide string
+
+// MemberMergeConfirmationState `confirmed` once the holder used the mailed link; `requested` while a link is out; `not_requested` when none was sent yet; `not_needed` for a deactivated account, whose holder cannot confirm, and for a merge whose source was never used.
+type MemberMergeConfirmationState string
+
 // MemberRetirementBlocker defines model for MemberRetirementBlocker.
 type MemberRetirementBlocker string
 
@@ -59810,7 +60392,10 @@ type MemberRetirementPreview struct {
 	// BlockingRecords The records behind each blocker that is about records, such as `deal_rooms` or
 	// `webhooks`. A blocker that is a state, such as `deactivate_first`, has no entry.
 	BlockingRecords *[]MemberRetirementBlockingRecords `json:"blocking_records,omitempty"`
-	Consequences    []MemberRetirementConsequence      `json:"consequences"`
+
+	// Confirmations Present for a merge whose source account has been used: one entry per side, saying whether that side's holder has confirmed. `confirmation_missing` is in `blockers` while any side is `requested` or `not_requested`.
+	Confirmations *[]MemberMergeConfirmation    `json:"confirmations,omitempty"`
+	Consequences  []MemberRetirementConsequence `json:"consequences"`
 
 	// Owned Live records per kind.
 	Owned         HandoverCounts       `json:"owned"`
@@ -59821,6 +60406,20 @@ type MemberRetirementPreview struct {
 	SurvivorName  *string              `json:"survivor_name,omitempty"`
 	Token         string               `json:"token"`
 }
+
+// MemberUnavailableAction One member verb the caller holds the grant for and this member refuses, with why.
+type MemberUnavailableAction struct {
+	Action MemberUnavailableActionAction `json:"action"`
+
+	// Reason Why the verb is refused. `sole_admin` is the last active administrator, `self` is the caller's own account and `agent_seat` is an agent. A used account is not refused: see `merge_needs_confirmation`.
+	Reason MemberUnavailableActionReason `json:"reason"`
+}
+
+// MemberUnavailableActionAction defines model for MemberUnavailableAction.Action.
+type MemberUnavailableActionAction string
+
+// MemberUnavailableActionReason Why the verb is refused. `sole_admin` is the last active administrator, `self` is the caller's own account and `agent_seat` is an agent. A used account is not refused: see `merge_needs_confirmation`.
+type MemberUnavailableActionReason string
 
 // MergeMembersRequest defines model for MergeMembersRequest.
 type MergeMembersRequest struct {
@@ -60584,7 +61183,10 @@ type NoticeSourcePreview struct {
 	NoticeRequired       bool                    `json:"notice_required"`
 	PreviewToken         string                  `json:"preview_token"`
 	Rule                 NoticeSourcePreviewRule `json:"rule"`
-	Timezone             string                  `json:"timezone"`
+
+	// SubjectReachedOut The contact's own mail or meeting removes the duty, regardless of the source selected. Does not disclose unreadable activity identifiers.
+	SubjectReachedOut *bool  `json:"subject_reached_out,omitempty"`
+	Timezone          string `json:"timezone"`
 }
 
 // NoticeSourcePreviewRule defines model for NoticeSourcePreview.Rule.
@@ -62361,6 +62963,9 @@ type Project struct {
 	// LastActivityAt The newest workspace-audience activity filed under the project, maintained from the timeline on link write. A task never counts, whoever filed it. It is a read accelerator that a rebuild must reproduce. A message limited to its participants does not move it, even for a reader who may read that message: one number every reader sees can only count what every reader may see.
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
 
+	// LastActivityPrecision How to read `last_activity_at`, from the activity it names. A day entry counts its quiet days from its own date. Absent when that is null.
+	LastActivityPrecision *OccurredPrecision `json:"last_activity_precision,omitempty"`
+
 	// LegalHold True while a litigation or investigation hold is preserving this record. A held record is never acted on by a retention sweep and an Art. 17 erasure against it is refused, so a screen that offers either action has to know. Placed and lifted through /retention/legal-holds, never by an ordinary edit.
 	LegalHold *bool `json:"legal_hold,omitempty"`
 
@@ -62579,6 +63184,9 @@ type Project360Rollups struct {
 
 	// LastActivityAt The newest WORKSPACE-AUDIENCE activity filed under the project, a task never counting; null when nothing is filed yet. A message limited to its participants does not move it, even for a reader who may read that message.
 	LastActivityAt *time.Time `json:"last_activity_at"`
+
+	// LastActivityPrecision How to read `last_activity_at`, from the activity it names. A day entry counts its quiet days from its own date. Absent when that is null.
+	LastActivityPrecision *OccurredPrecision `json:"last_activity_precision,omitempty"`
 
 	// OpenCommitments Open tasks filed under the project, whole lifecycle.
 	OpenCommitments int `json:"open_commitments" minimum:"0"`
@@ -63277,8 +63885,11 @@ type PublicSchedulingProfile struct {
 	OfferedLengths *[]int `json:"offered_lengths,omitempty"`
 
 	// Paused True when the page takes no bookings now: the host turned bookings off, or the calendar behind it cannot take them. The availability and booking calls then answer as for an unknown page.
-	Paused bool   `json:"paused"`
-	Title  string `json:"title"`
+	Paused bool `json:"paused"`
+
+	// PrivacyInformation The installation's privacy page, falling back to its privacy contact. Absent when neither is stated.
+	PrivacyInformation *string `json:"privacy_information,omitempty"`
+	Title              string  `json:"title"`
 
 	// VideoApp Present when new meetings get a video call link from the host's calendar.
 	VideoApp *PublicSchedulingProfileVideoApp `json:"video_app,omitempty"`
@@ -64536,7 +65147,7 @@ type RemoveMemberRequest struct {
 	ToUserId     *openapi_types.UUID `json:"to_user_id,omitempty"`
 }
 
-// RenameCustomFieldRequest Merge-PATCH of the settings a live field may change: `label`, `label_translations`, `option_translations`, `show_in_create`, `reportable` and `activity_kinds`. At least one is required. `column_name`, `object`, and `type` are absent from this request schema entirely (immutable, not just ignored if sent). `reportable` true on a field that is not a picklist or boolean is refused. `activity_kinds` replaces the kinds an activity field applies to, and an empty array means every kind again; it is refused on another object's field.
+// RenameCustomFieldRequest Merge-PATCH of the settings a live field may change: `label`, `label_translations`, `option_translations`, `show_in_create`, `reportable`, `activity_kinds` and `pipeline_ids`. At least one is required. `column_name`, `object`, and `type` are absent from this request schema entirely (immutable, not just ignored if sent). `reportable` true on a field that is not a picklist or boolean is refused. `activity_kinds` replaces the kinds an activity field applies to, and an empty array means every kind again; it is refused on another object's field. `pipeline_ids` does the same for the pipelines a deal field applies to.
 type RenameCustomFieldRequest struct {
 	ActivityKinds *[]RenameCustomFieldRequestActivityKinds `json:"activity_kinds,omitempty"`
 	Label         *string                                  `json:"label,omitempty"`
@@ -64551,9 +65162,10 @@ type RenameCustomFieldRequest struct {
 	// stored option stays the value written on records; only its display changes. On a write
 	// the map replaces the stored one, and an option the field does not offer is 422
 	// `invalid_translation`.
-	OptionTranslations *OptionTranslations `json:"option_translations,omitempty"`
-	Reportable         *bool               `json:"reportable,omitempty"`
-	ShowInCreate       *bool               `json:"show_in_create,omitempty"`
+	OptionTranslations *OptionTranslations   `json:"option_translations,omitempty"`
+	PipelineIds        *[]openapi_types.UUID `json:"pipeline_ids,omitempty"`
+	Reportable         *bool                 `json:"reportable,omitempty"`
+	ShowInCreate       *bool                 `json:"show_in_create,omitempty"`
 }
 
 // RenameCustomFieldRequestActivityKinds defines model for RenameCustomFieldRequest.ActivityKinds.
@@ -64686,6 +65298,24 @@ type ReplyRecipient struct {
 	ViewerOnConversation bool `json:"viewer_on_conversation"`
 }
 
+// ReplyableSharedMailbox A shared mailbox the signed-in member may reply as.
+type ReplyableSharedMailbox struct {
+	// Address The mailbox address, which is the From address of a reply.
+	Address string `json:"address"`
+
+	// Id The mailbox id, sent as `from_connection_id`.
+	Id       openapi_types.UUID             `json:"id"`
+	Provider ReplyableSharedMailboxProvider `json:"provider"`
+}
+
+// ReplyableSharedMailboxProvider defines model for ReplyableSharedMailbox.Provider.
+type ReplyableSharedMailboxProvider string
+
+// ReplyableSharedMailboxList defines model for ReplyableSharedMailboxList.
+type ReplyableSharedMailboxList struct {
+	Items []ReplyableSharedMailbox `json:"items"`
+}
+
 // ReportBlock One element of a report. What fields are legal is decided by `kind`.
 type ReportBlock struct {
 	// Cells The figures this block shows, in render order. Required for a block whose purpose is to display a number; refused on one that renders none, where the figure would be silently unshown.
@@ -64743,7 +65373,7 @@ type ReportCell2 = interface{}
 // the exact filter+group+aggregate plus the underlying source rows, which reconcile
 // exactly to the explained aggregate (AC-X1).
 type ReportDerivation struct {
-	// Aggregates The requested aggregates recomputed over exactly these source rows — equals the explained cell.
+	// Aggregates The requested aggregates recomputed over exactly these source rows — equals the explained cell. A total past ±(2^53−1) is null and named in `_out_of_range`, as on the report row.
 	Aggregates *map[string]interface{} `json:"aggregates,omitempty"`
 
 	// AsOf The instant these figures were computed at — the moment any currency conversion read the
@@ -64865,7 +65495,7 @@ type ReportResult struct {
 	PopulationNarrowed *PopulationNarrowed `json:"population_narrowed,omitempty"`
 	Report             string              `json:"report"`
 
-	// Rows Aggregate rows; each carries its own `derivation_url` handle for the exact cell (group keys bound to the row's values). A row holding a sum that adds only the deals that convert also carries `coverage` (ReportRowCoverage), for every plan that asks such a sum.
+	// Rows Aggregate rows; each carries its own `derivation_url` handle for the exact cell (group keys bound to the row's values). A row holding a sum that adds only the deals that convert also carries `coverage` (ReportRowCoverage), for every plan that asks such a sum. A total past ±(2^53−1) is null, and the row's `_out_of_range` lists the columns it was withheld from: a JSON reader parses every number as a float64, which would turn that total into another number. The rest of the report is answered.
 	Rows []map[string]interface{} `json:"rows"`
 
 	// ScopeHoldsDeals Whether the population this answer measured holds any deal, archived ones included, computed with the same population clause as the figures. Absent when unknown (a stored edition captured before the field existed) or when the answer is not about deals. False means the scope is empty, which is different from a scope with no wins.
@@ -67644,8 +68274,11 @@ type SchedulingProfile struct {
 	NoticeMinutes int     `json:"notice_minutes" maximum:"10080" minimum:"0"`
 
 	// OfferedLengths Additional meeting lengths offered by this host. The default duration is always offered.
-	OfferedLengths *[]int                    `json:"offered_lengths,omitempty" unique:"items"`
-	Provider       SchedulingProfileProvider `json:"provider"`
+	OfferedLengths *[]int `json:"offered_lengths,omitempty" unique:"items"`
+
+	// PrivacyInformation The installation's privacy page, falling back to its privacy contact. Absent when neither is stated.
+	PrivacyInformation *string                   `json:"privacy_information,omitempty"`
+	Provider           SchedulingProfileProvider `json:"provider"`
 
 	// PublicUrl The address to share: `/book/{alias}` when an alias is set, else `/book/{slug}`, on the configured public origin. Absent when no usable public origin is configured.
 	PublicUrl   *string `json:"public_url,omitempty"`
@@ -68133,6 +68766,9 @@ type SearchHitStanding struct {
 	// LastActivityAt When the record was last in touch: its newest logged call, mail, meeting or note. Set on a contact, a company and a deal.
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
 
+	// LastActivityPrecision How to read `last_activity_at`, from the activity it names. Absent when that is null.
+	LastActivityPrecision *OccurredPrecision `json:"last_activity_precision,omitempty"`
+
 	// MaskedFields The fields above a field mask withheld from this caller, by their wire names.
 	MaskedFields *[]string `json:"masked_fields,omitempty"`
 
@@ -68175,6 +68811,9 @@ type SearchResponse struct {
 type SearchResult struct {
 	// CarriedBy For a `tag` hit only: how many contacts, companies, deals and leads carry this word, as THIS caller may see them — the same types the tag page counts and the filters offer, not every type `taggable` admits. It is what tells a searcher whether the word is worth opening before they open it. Null on every other hit type, and null when no count was taken.
 	CarriedBy *int `json:"carried_by,omitempty" minimum:"0"`
+
+	// DealId For a `deal_room` hit only: the deal the room belongs to, which is the record a client opens to reach the room. Absent on every other hit type.
+	DealId *openapi_types.UUID `json:"deal_id,omitempty"`
 
 	// EmailSummary The canonical email row, on an `activity` hit whose activity is an email THIS caller may read. Null on every other hit type, and null for a non-email activity — a call, a note, a task and a meeting are activities too, and each keeps its generic hit. An email whose content is not this caller's produces no hit at all, because the activity branch is content-gated. A client renders the canonical row when this is present and falls back to `title`/`snippet` when it is not.
 	EmailSummary *EmailSummary      `json:"email_summary,omitempty"`
@@ -68695,7 +69334,8 @@ type SendEmailRequest struct {
 	// `CaptureConnection`s that can send. Omitted, a reply goes out from the mailbox the
 	// conversation arrived in, and a new message from the sender's default mailbox. A mailbox
 	// that is not the sender's, or cannot send, is refused with 422
-	// `mailbox_not_send_capable`.
+	// `mailbox_not_send_capable`. A shared mailbox with `reply_enabled` can be named here by
+	// its id, and only by a member of its reader team.
 	FromConnectionId *openapi_types.UUID `json:"from_connection_id,omitempty"`
 
 	// HtmlBody The same message as markup, or omitted for a plain-text send. It never
@@ -69127,7 +69767,8 @@ type SetMailPostureRequest struct {
 	// ApplyToHistory Also narrow the mail this mailbox ALREADY brought in, to match the new posture. Only
 	// narrows: a move towards `shared` leaves history where it is, because opening what was
 	// captured under a stricter answer is a separate decision from what to do next. Rows a
-	// human set to `selected` are never touched.
+	// human set to `selected` are never touched. A background job does the narrowing after
+	// the answer; a narrowing to `held` still pending is never loosened to `classified`.
 	ApplyToHistory *bool `json:"apply_to_history,omitempty"`
 
 	// DefaultSender `true` makes this mailbox the one the caller's new mail goes out from, and unmarks the
@@ -69410,6 +70051,11 @@ type SharedMailbox struct {
 	// ConnectedBy The admin who last connected it.
 	ConnectedBy *openapi_types.UUID `json:"connected_by,omitempty"`
 
+	// HistoryNarrowing Earlier mail of this mailbox that a background job is still narrowing, after a change
+	// asked for `apply_to_history`. Absent when nothing is pending. Mail the job has not reached
+	// yet keeps the audience it had.
+	HistoryNarrowing *MailHistoryNarrowing `json:"history_narrowing,omitempty"`
+
 	// Id The connection id. It stays the same across a disconnect and a reconnect.
 	Id openapi_types.UUID `json:"id"`
 
@@ -69418,7 +70064,10 @@ type SharedMailbox struct {
 	Provider       SharedMailboxProvider       `json:"provider"`
 
 	// ReaderTeamId The team that reads every message this mailbox captured.
-	ReaderTeamId openapi_types.UUID  `json:"reader_team_id"`
+	ReaderTeamId openapi_types.UUID `json:"reader_team_id"`
+
+	// ReplyEnabled True when an admin let the reader team reply as this mailbox. A member then names the mailbox id as `from_connection_id` of a send. Always false for an `imap` mailbox, which only captures.
+	ReplyEnabled bool                `json:"reply_enabled"`
 	Status       SharedMailboxStatus `json:"status"`
 
 	// UnreadPeriod A period no sync read: a first sync failed for longer than its held point, or the mailbox held more mail than one round can read. Importing the mailbox's history over it clears it. Absent when there is none.
@@ -71162,6 +71811,9 @@ type ThreadAudienceOutcome struct {
 type TotpConfirmRequest struct {
 	// Code The current code from the authenticator being enrolled.
 	Code string `json:"code"`
+
+	// CurrentPassword The caller's current password, which authorizes the confirmation.
+	CurrentPassword string `json:"current_password"`
 }
 
 // TotpEnrolment A pending TOTP enrolment, returned once. Never retrievable again.
@@ -72815,6 +73467,9 @@ type UpdateSharedMailboxRequest struct {
 
 	// ReaderTeamId The team that reads the mailbox from now on, its whole history included.
 	ReaderTeamId *openapi_types.UUID `json:"reader_team_id,omitempty"`
+
+	// ReplyEnabled True lets every live member of the reader team send mail with this mailbox as its From address. The installation's own grant must already allow it: an application permission to send for a Microsoft mailbox, a delegation that includes the send scope for a Google one. False ends it. An `imap` mailbox is refused with `422` `shared_mailbox_cannot_send`.
+	ReplyEnabled *bool `json:"reply_enabled,omitempty"`
 }
 
 // UpdateSharedMailboxRequestMailVisibility `classified` is refused with `422`.
@@ -73041,7 +73696,7 @@ type User struct {
 	// EmailEditable Whether this unused member's sign-in email can still be corrected. Present only on the administration view.
 	EmailEditable *bool `json:"email_editable,omitempty"`
 
-	// GreetingName The name a colleague's greeting uses ("Hi Sofia,"), absent or null when nobody has said. Read through one rule on both sides: this when set, else the first word of `display_name`. Present on the caller's own seat; absent on the roster.
+	// GreetingName The name a colleague's greeting uses ("Hi Sofia,"), absent or null when nobody has said. Read through one rule on both sides: this when set, else the given name of `display_name` (the last word after a Vietnamese family name, else the first). Present on the caller's own seat; absent on the roster.
 	GreetingName *string            `json:"greeting_name,omitempty"`
 	Id           openapi_types.UUID `json:"id"`
 
@@ -73061,6 +73716,9 @@ type User struct {
 	// Locale The language this contact chose for their own interface, absent when they never chose one. Distinct from the installation's `base_language`, which is what AI writes in for the whole team: this one changes only what THIS contact sees.
 	// Absent is not the same as `en`. A contact who never chose follows their browser, and storing a choice they did not make would freeze whatever their browser said on the day they signed up.
 	Locale *UserLocale `json:"locale,omitempty"`
+
+	// MergeNeedsConfirmation True when `merge` is in `allowed_actions` and this account has been used (a password, a sign-in or a linked provider), so merging it waits for the holder of each side that can still sign in to confirm. Absent otherwise, and on the same views as `allowed_actions`.
+	MergeNeedsConfirmation *bool `json:"merge_needs_confirmation,omitempty"`
 
 	// MergedFrom Original account identities consolidated into this member, present only on the administration view.
 	MergedFrom *[]SeatName `json:"merged_from,omitempty"`
@@ -73085,8 +73743,11 @@ type User struct {
 	TimezoneChosen *bool `json:"timezone_chosen,omitempty"`
 
 	// TimezoneSetBy The agent that set `timezone` for this user, as its `captured_by` stamp. Present on the caller's own seat while the zone is the agent's; absent once the user chooses, and on the roster.
-	TimezoneSetBy *string    `json:"timezone_set_by,omitempty"`
-	UpdatedAt     *time.Time `json:"updated_at,omitempty"`
+	TimezoneSetBy *string `json:"timezone_set_by,omitempty"`
+
+	// UnavailableActions The member verbs the caller holds the `user_admin` grant for and this member refuses, each with the reason, so a client explains the missing button instead of hiding it. An action never appears here and in `allowed_actions`. Present wherever `allowed_actions` is; empty when nothing is refused.
+	UnavailableActions *[]MemberUnavailableAction `json:"unavailable_actions,omitempty"`
+	UpdatedAt          *time.Time                 `json:"updated_at,omitempty"`
 }
 
 // UserAllowedActions defines model for User.AllowedActions.
@@ -73184,6 +73845,11 @@ type VCardImportFieldField string
 // VCardImportReport One entry per card in the file, in the order the file listed them.
 type VCardImportReport struct {
 	Results []VCardImportResult `json:"results"`
+
+	// StagedForReview How many cards were staged as a review in the approvals inbox, so
+	// the reader knows how many answers are waiting. An undecided one
+	// expires after 30 days, and the expiry deletes the card's data.
+	StagedForReview int `json:"staged_for_review" minimum:"0"`
 }
 
 // VCardImportResult defines model for VCardImportResult.
@@ -73211,7 +73877,8 @@ type VCardImportResult struct {
 	// Outcome `created` — nobody matched, so the card became a contact, their company and the edge
 	// between them. `updated` — an exact match: what the card states replaces an older value, which
 	// stays in `superseded_value`, and a field a human corrected stands.
-	// `needs_review` — a resemblance, written nowhere; open the candidate and decide.
+	// `needs_review` — a resemblance, so nothing was written; the card waits in the approvals
+	// inbox, where whoever uploaded it merges it into the candidate or keeps it separate.
 	// `proposed` — a card read from a photo that nobody matched, waiting on an approval.
 	// `skipped` — the card states no name or one over 120 characters, carries a sending
 	// system's address, holds a value that is not readable text or cannot be stored, or
@@ -73226,7 +73893,8 @@ type VCardImportResult struct {
 // VCardImportResultOutcome `created` — nobody matched, so the card became a contact, their company and the edge
 // between them. `updated` — an exact match: what the card states replaces an older value, which
 // stays in `superseded_value`, and a field a human corrected stands.
-// `needs_review` — a resemblance, written nowhere; open the candidate and decide.
+// `needs_review` — a resemblance, so nothing was written; the card waits in the approvals
+// inbox, where whoever uploaded it merges it into the candidate or keeps it separate.
 // `proposed` — a card read from a photo that nobody matched, waiting on an approval.
 // `skipped` — the card states no name or one over 120 characters, carries a sending
 // system's address, holds a value that is not readable text or cannot be stored, or
@@ -74847,6 +75515,68 @@ type WeeklyScorecardLeadBlock struct {
 	// are a floor, and a reader should say so.
 	MeetingsPartialHistory int `json:"meetings_partial_history" minimum:"0"`
 	Promoted               int `json:"promoted" minimum:"0"`
+}
+
+// WhatsAppConnection One WhatsApp Business phone number connected to the workspace. No secret is part of it.
+type WhatsAppConnection struct {
+	ConnectedAt time.Time `json:"connectedAt"`
+
+	// DisplayPhoneNumber The number in the form WhatsApp shows it. Display only.
+	DisplayPhoneNumber string             `json:"displayPhoneNumber"`
+	Id                 openapi_types.UUID `json:"id"`
+
+	// MailVisibility What the seat asks of the number's messages. Changed with `PATCH /channel-connections/whatsapp/{id}/visibility`.
+	MailVisibility *WhatsAppConnectionMailVisibility `json:"mailVisibility,omitempty"`
+
+	// PhoneNumberId Meta's id of the phone number, the key a webhook item is matched to its connection by.
+	PhoneNumberId string `json:"phoneNumberId"`
+
+	// ReaderTeamId The team that reads the number's messages.
+	ReaderTeamId *openapi_types.UUID `json:"readerTeamId,omitempty"`
+
+	// SeatId The seat the number's messages file through.
+	SeatId *openapi_types.UUID      `json:"seatId,omitempty"`
+	Status WhatsAppConnectionStatus `json:"status"`
+
+	// WabaId The WhatsApp Business Account id.
+	WabaId string `json:"wabaId"`
+}
+
+// WhatsAppConnectionMailVisibility What the seat asks of the number's messages. Changed with `PATCH /channel-connections/whatsapp/{id}/visibility`.
+type WhatsAppConnectionMailVisibility string
+
+// WhatsAppConnectionStatus defines model for WhatsAppConnection.Status.
+type WhatsAppConnectionStatus string
+
+// WhatsAppConnectionCreated defines model for WhatsAppConnectionCreated.
+type WhatsAppConnectionCreated struct {
+	// Connection One WhatsApp Business phone number connected to the workspace. No secret is part of it.
+	Connection WhatsAppConnection `json:"connection"`
+
+	// VerifyToken The token Meta sends in the webhook subscription check. Made by the server and shown only in this response.
+	VerifyToken string `json:"verifyToken"`
+}
+
+// WhatsAppConnectionListResponse defines model for WhatsAppConnectionListResponse.
+type WhatsAppConnectionListResponse struct {
+	Data []WhatsAppConnection `json:"data"`
+}
+
+// WhatsAppWebhookDelivery One batch of changes from Meta, as the signature covers it. The route reads the raw body, so the items inside `entry` are decoded by the server and not described here.
+type WhatsAppWebhookDelivery struct {
+	Entry []map[string]interface{} `json:"entry"`
+
+	// Object Always `whatsapp_business_account`.
+	Object string `json:"object"`
+}
+
+// WhatsAppWebhookReceipt defines model for WhatsAppWebhookReceipt.
+type WhatsAppWebhookReceipt struct {
+	// Skipped Items not kept: a number that is not connected, a field not handled, or an item that could not be decoded.
+	Skipped int `json:"skipped" minimum:"0"`
+
+	// Stored Items kept and queued for filing. A redelivered item counts again and is stored once.
+	Stored int `json:"stored" minimum:"0"`
 }
 
 // WordingCorrectionContext The current approved wording, visible only to its original human approver while the
@@ -76812,6 +77542,61 @@ type WorkspaceQueryResult struct {
 // deciding how much to trust a sentence needs to know which wrote it.
 type WrittenBy string
 
+// ZaloOAConnection One Zalo Official Account connected to the workspace. No secret is part of it.
+type ZaloOAConnection struct {
+	// AppId The Zalo app that serves the Official Account.
+	AppId       string             `json:"appId"`
+	ConnectedAt time.Time          `json:"connectedAt"`
+	DisplayName string             `json:"displayName"`
+	Id          openapi_types.UUID `json:"id"`
+
+	// MailVisibility What the seat asks of the account's messages. Changed with `PATCH /channel-connections/zalo-oa/{id}/visibility`.
+	MailVisibility *ZaloOAConnectionMailVisibility `json:"mailVisibility,omitempty"`
+
+	// OaId Zalo's id of the Official Account, the key a webhook event is matched to its connection by.
+	OaId string `json:"oaId"`
+
+	// ReaderTeamId The team that reads the account's messages.
+	ReaderTeamId *openapi_types.UUID `json:"readerTeamId,omitempty"`
+
+	// SeatId The seat the account's messages file through.
+	SeatId *openapi_types.UUID `json:"seatId,omitempty"`
+
+	// Status `reauth_required` when Zalo refused the refresh token, so the Official Account must be disconnected and connected again with fresh tokens.
+	Status ZaloOAConnectionStatus `json:"status"`
+}
+
+// ZaloOAConnectionMailVisibility What the seat asks of the account's messages. Changed with `PATCH /channel-connections/zalo-oa/{id}/visibility`.
+type ZaloOAConnectionMailVisibility string
+
+// ZaloOAConnectionStatus `reauth_required` when Zalo refused the refresh token, so the Official Account must be disconnected and connected again with fresh tokens.
+type ZaloOAConnectionStatus string
+
+// ZaloOAConnectionListResponse defines model for ZaloOAConnectionListResponse.
+type ZaloOAConnectionListResponse struct {
+	Data []ZaloOAConnection `json:"data"`
+}
+
+// ZaloWebhookEvent One event from Zalo, as the signature covers it. The route reads the raw body and the server decodes it, so only the fields every event carries are named here.
+type ZaloWebhookEvent struct {
+	AppId *string `json:"app_id,omitempty"`
+
+	// EventName For example `user_send_text` or `oa_send_text`.
+	EventName string `json:"event_name"`
+
+	// Timestamp Milliseconds since the epoch, as the text the signature covers.
+	Timestamp string `json:"timestamp"`
+}
+
+// ZaloWebhookReceipt defines model for ZaloWebhookReceipt.
+type ZaloWebhookReceipt struct {
+	// Skipped Events not kept: a follow, unfollow, seen or reaction event, an Official Account that is not connected, an erased customer, or an event that could not be decoded.
+	Skipped int `json:"skipped" minimum:"0"`
+
+	// Stored Messages kept and queued for filing. A retried delivery counts again and is stored once.
+	Stored int `json:"stored" minimum:"0"`
+}
+
 // AiWritten defines model for AiWritten.
 type AiWritten = bool
 
@@ -77442,6 +78227,16 @@ type SendMessageParams struct {
 	// `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
 	// human's direct call is itself the approval.
 	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
+}
+
+// TakeTaskParams defines parameters for TakeTask.
+type TakeTaskParams struct {
+	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+	// the last-seen entity `version`. If the row's current `version` differs, the write is
+	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+	IfMatch *IfMatch `json:"If-Match,omitempty"`
 }
 
 // GetLatestTranscriptReadParams defines parameters for GetLatestTranscriptRead.
@@ -78472,6 +79267,11 @@ type ChangePasswordJSONBody struct {
 	NewPassword     string `json:"new_password"`
 }
 
+// ConfirmMemberMergeJSONBody defines parameters for ConfirmMemberMerge.
+type ConfirmMemberMergeJSONBody struct {
+	Token string `json:"token"`
+}
+
 // RequestPasswordResetJSONBody defines parameters for RequestPasswordReset.
 type RequestPasswordResetJSONBody struct {
 	Email openapi_types.Email `json:"email"`
@@ -78842,6 +79642,14 @@ type CatchUpOnRecordParams struct {
 // CatchUpOnRecordParamsRecordType defines parameters for CatchUpOnRecord.
 type CatchUpOnRecordParamsRecordType string
 
+// VerifyWhatsAppWebhookParams defines parameters for VerifyWhatsAppWebhook.
+type VerifyWhatsAppWebhookParams struct {
+	// HubMode Always `subscribe`.
+	HubMode        *string `form:"hub.mode,omitempty" json:"hub.mode,omitempty"`
+	HubVerifyToken *string `form:"hub.verify_token,omitempty" json:"hub.verify_token,omitempty"`
+	HubChallenge   *string `form:"hub.challenge,omitempty" json:"hub.challenge,omitempty"`
+}
+
 // ListCommissionEntriesParams defines parameters for ListCommissionEntries.
 type ListCommissionEntriesParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
@@ -79027,7 +79835,7 @@ type ListCompaniesParams struct {
 	// RelationshipType Accounts carrying this relationship type. Multi-valued per account, so this selects accounts that are AT LEAST this — a partner that is also a customer matches both.
 	RelationshipType *ListCompaniesParamsRelationshipType `form:"relationship_type,omitempty" json:"relationship_type,omitempty"`
 
-	// ExtensionRelationshipType Accounts carrying this extension type (`ext:<unit>:<type>`, from `extension_relationship_types`). It is a separate parameter so the closed `relationship_type` list stays as it is. A value no installed extension declares answers 422. Both parameters together select accounts that carry both.
+	// ExtensionRelationshipType Accounts carrying this extension type (`ext:<unit>:<type>`, from `extension_relationship_types`). It is a separate parameter so the closed `relationship_type` list stays as it is. A value no installed extension declares answers 422. Both parameters together select accounts that carry both. `listCompanyTypes` lists the values, and an agent reads them with the `read_workspace` action `company_types`.
 	ExtensionRelationshipType *string `form:"extension_relationship_type,omitempty" json:"extension_relationship_type,omitempty"`
 
 	// OwnerTeamId Rows owned by any member of this team. NARROWS the caller's row scope, never widens it:
@@ -79635,6 +80443,16 @@ type MergeCompanyParams struct {
 	// human's direct call is itself the approval.
 	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
 
+	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+	// the last-seen entity `version`. If the row's current `version` differs, the write is
+	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+	IfMatch *IfMatch `json:"If-Match,omitempty"`
+}
+
+// EndPartnerProgramParams defines parameters for EndPartnerProgram.
+type EndPartnerProgramParams struct {
 	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
 	// the last-seen entity `version`. If the row's current `version` differs, the write is
 	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
@@ -81393,7 +82211,7 @@ type ListDealsParams struct {
 	// AcquisitionSource An acquisition-source key, or `unset` for unclassified deals. A retired key still filters, so history stays reachable after the source leaves the picker.
 	AcquisitionSource *string `form:"acquisition_source,omitempty" json:"acquisition_source,omitempty"`
 
-	// LinkType A link type, core's or an extension's `ext:<unit>:<type>`. Keeps the deals that hold at least one link of that type to another live deal, from either end. Links to a company or a contact are not read by this filter.
+	// LinkType A link type, core's or an extension's `ext:<unit>:<type>`. Keeps the deals that hold at least one link of that type to another live deal, from either end. Links to a company or a contact are not read by this filter. `listLinkTypes` lists the values, and an agent reads them with the `read_workspace` action `link_types`.
 	LinkType *string `form:"link_type,omitempty" json:"link_type,omitempty"`
 
 	// TagId Narrow to the records carrying these tags. Repeat the parameter for several.
@@ -81971,7 +82789,7 @@ type GetFieldHistoryParamsActorType string
 
 // GetFilterVocabularyParams defines parameters for GetFilterVocabulary.
 type GetFilterVocabularyParams struct {
-	// Resource The record type whose vocabulary to read, or `ext:<unit>:<kind>` for a kind an extension declared.
+	// Resource The record type whose vocabulary to read, or `ext:<unit>:<kind>` for a kind an extension declared. `listRecordKinds` lists the kinds the caller may read, and an agent reads them with the `read_workspace` action `record_kinds`.
 	Resource FilterResource `form:"resource" json:"resource"`
 }
 
@@ -82240,6 +83058,12 @@ type ListAgentClientsParams struct {
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
+}
+
+// ListCorporaParams defines parameters for ListCorpora.
+type ListCorporaParams struct {
+	// IncludeArchived Include soft-deleted (archived) rows. Default false.
+	IncludeArchived *IncludeArchived `form:"include_archived,omitempty" json:"include_archived,omitempty"`
 }
 
 // CreateCorpusJSONBody defines parameters for CreateCorpus.
@@ -86749,6 +87573,9 @@ type ReplaceAiTaskOverridesJSONRequestBody = AiTaskOverrides
 // PreviewAiTaskOverridesJSONRequestBody defines body for PreviewAiTaskOverrides for application/json ContentType.
 type PreviewAiTaskOverridesJSONRequestBody = AiTaskOverrides
 
+// ReplaceAiTeamRulesJSONRequestBody defines body for ReplaceAiTeamRules for application/json ContentType.
+type ReplaceAiTeamRulesJSONRequestBody = AiTeamRulesChange
+
 // AssessSalesReviewJSONRequestBody defines body for AssessSalesReview for application/json ContentType.
 type AssessSalesReviewJSONRequestBody = SalesAssessmentRequest
 
@@ -86866,8 +87693,14 @@ type FileChatCaptureJSONRequestBody = FileChatCaptureRequest
 // UpdateAttachmentMetadataJSONRequestBody defines body for UpdateAttachmentMetadata for application/json ContentType.
 type UpdateAttachmentMetadataJSONRequestBody = UpdateAttachmentMetadataRequest
 
+// SendBouncedMessageAgainJSONRequestBody defines body for SendBouncedMessageAgain for application/json ContentType.
+type SendBouncedMessageAgainJSONRequestBody = BounceSendAgainRequest
+
 // ChangePasswordJSONRequestBody defines body for ChangePassword for application/json ContentType.
 type ChangePasswordJSONRequestBody ChangePasswordJSONBody
+
+// ConfirmMemberMergeJSONRequestBody defines body for ConfirmMemberMerge for application/json ContentType.
+type ConfirmMemberMergeJSONRequestBody ConfirmMemberMergeJSONBody
 
 // RequestPasswordResetJSONRequestBody defines body for RequestPasswordReset for application/json ContentType.
 type RequestPasswordResetJSONRequestBody RequestPasswordResetJSONBody
@@ -86950,11 +87783,29 @@ type ApproveTelegramBusinessConnectionJSONRequestBody = ApproveTelegramBusinessC
 // UpdateTelegramBusinessConnectionVisibilityJSONRequestBody defines body for UpdateTelegramBusinessConnectionVisibility for application/json ContentType.
 type UpdateTelegramBusinessConnectionVisibilityJSONRequestBody = UpdateTelegramBusinessConnectionVisibilityRequest
 
+// CreateWhatsAppConnectionJSONRequestBody defines body for CreateWhatsAppConnection for application/json ContentType.
+type CreateWhatsAppConnectionJSONRequestBody = CreateWhatsAppConnectionRequest
+
+// UpdateWhatsAppConnectionVisibilityJSONRequestBody defines body for UpdateWhatsAppConnectionVisibility for application/json ContentType.
+type UpdateWhatsAppConnectionVisibilityJSONRequestBody = UpdateTelegramBusinessConnectionVisibilityRequest
+
+// CreateZaloOAConnectionJSONRequestBody defines body for CreateZaloOAConnection for application/json ContentType.
+type CreateZaloOAConnectionJSONRequestBody = CreateZaloOAConnectionRequest
+
+// UpdateZaloOAConnectionVisibilityJSONRequestBody defines body for UpdateZaloOAConnectionVisibility for application/json ContentType.
+type UpdateZaloOAConnectionVisibilityJSONRequestBody = UpdateTelegramBusinessConnectionVisibilityRequest
+
 // ReplaceChannelTokenJSONRequestBody defines body for ReplaceChannelToken for application/json ContentType.
 type ReplaceChannelTokenJSONRequestBody = ReplaceChannelTokenRequest
 
 // ReceiveDispactChannelEventJSONRequestBody defines body for ReceiveDispactChannelEvent for application/json ContentType.
 type ReceiveDispactChannelEventJSONRequestBody = DispactChannelEvent
+
+// ReceiveWhatsAppWebhookJSONRequestBody defines body for ReceiveWhatsAppWebhook for application/json ContentType.
+type ReceiveWhatsAppWebhookJSONRequestBody = WhatsAppWebhookDelivery
+
+// ReceiveZaloOAWebhookJSONRequestBody defines body for ReceiveZaloOAWebhook for application/json ContentType.
+type ReceiveZaloOAWebhookJSONRequestBody = ZaloWebhookEvent
 
 // SetChannelVerbosityJSONRequestBody defines body for SetChannelVerbosity for application/json ContentType.
 type SetChannelVerbosityJSONRequestBody = SetChannelVerbosityRequest
@@ -87387,6 +88238,9 @@ type RegisterAgentClientJSONRequestBody = RegisterAgentClientRequest
 
 // UpdateAgentClientJSONRequestBody defines body for UpdateAgentClient for application/json ContentType.
 type UpdateAgentClientJSONRequestBody = UpdateAgentClientRequest
+
+// SetGoogleDirectoryJSONRequestBody defines body for SetGoogleDirectory for application/json ContentType.
+type SetGoogleDirectoryJSONRequestBody = GoogleDirectoryInput
 
 // SetOauthAppJSONRequestBody defines body for SetOauthApp for application/json ContentType.
 type SetOauthAppJSONRequestBody = ConnectorAppInput
@@ -87925,6 +88779,9 @@ type HandOverUserWorkJSONRequestBody = HandOverUserWorkRequest
 // MergeMembersJSONRequestBody defines body for MergeMembers for application/json ContentType.
 type MergeMembersJSONRequestBody = MergeMembersRequest
 
+// RequestMemberMergeJSONRequestBody defines body for RequestMemberMerge for application/json ContentType.
+type RequestMemberMergeJSONRequestBody = MergeMembersRequest
+
 // RemoveMemberJSONRequestBody defines body for RemoveMember for application/json ContentType.
 type RemoveMemberJSONRequestBody = RemoveMemberRequest
 
@@ -88419,6 +89276,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "links")
 	}
 
+	if raw, found := object["mailbox_imported"]; found {
+		err = json.Unmarshal(raw, &a.MailboxImported)
+		if err != nil {
+			return fmt.Errorf("error reading 'mailbox_imported': %w", err)
+		}
+		delete(object, "mailbox_imported")
+	}
+
 	if raw, found := object["meeting_intent"]; found {
 		err = json.Unmarshal(raw, &a.MeetingIntent)
 		if err != nil {
@@ -88569,6 +89434,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'task_type': %w", err)
 		}
 		delete(object, "task_type")
+	}
+
+	if raw, found := object["thread_audience_yours"]; found {
+		err = json.Unmarshal(raw, &a.ThreadAudienceYours)
+		if err != nil {
+			return fmt.Errorf("error reading 'thread_audience_yours': %w", err)
+		}
+		delete(object, "thread_audience_yours")
 	}
 
 	if raw, found := object["thread_key"]; found {
@@ -88959,6 +89832,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.MailboxImported != nil {
+		object["mailbox_imported"], err = json.Marshal(a.MailboxImported)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'mailbox_imported': %w", err)
+		}
+	}
+
 	if a.MeetingIntent != nil {
 		object["meeting_intent"], err = json.Marshal(a.MeetingIntent)
 		if err != nil {
@@ -89081,6 +89961,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["task_type"], err = json.Marshal(a.TaskType)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'task_type': %w", err)
+		}
+	}
+
+	if a.ThreadAudienceYours != nil {
+		object["thread_audience_yours"], err = json.Marshal(a.ThreadAudienceYours)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'thread_audience_yours': %w", err)
 		}
 	}
 
@@ -89429,6 +90316,14 @@ func (a *Company) UnmarshalJSON(b []byte) error {
 		delete(object, "extension_relationship_types")
 	}
 
+	if raw, found := object["hidden_contact_holders"]; found {
+		err = json.Unmarshal(raw, &a.HiddenContactHolders)
+		if err != nil {
+			return fmt.Errorf("error reading 'hidden_contact_holders': %w", err)
+		}
+		delete(object, "hidden_contact_holders")
+	}
+
 	if raw, found := object["id"]; found {
 		err = json.Unmarshal(raw, &a.Id)
 		if err != nil {
@@ -89467,6 +90362,14 @@ func (a *Company) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'last_activity_at': %w", err)
 		}
 		delete(object, "last_activity_at")
+	}
+
+	if raw, found := object["last_activity_precision"]; found {
+		err = json.Unmarshal(raw, &a.LastActivityPrecision)
+		if err != nil {
+			return fmt.Errorf("error reading 'last_activity_precision': %w", err)
+		}
+		delete(object, "last_activity_precision")
 	}
 
 	if raw, found := object["legal_hold"]; found {
@@ -89539,6 +90442,14 @@ func (a *Company) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'partner': %w", err)
 		}
 		delete(object, "partner")
+	}
+
+	if raw, found := object["partner_program_ended"]; found {
+		err = json.Unmarshal(raw, &a.PartnerProgramEnded)
+		if err != nil {
+			return fmt.Errorf("error reading 'partner_program_ended': %w", err)
+		}
+		delete(object, "partner_program_ended")
 	}
 
 	if raw, found := object["phone"]; found {
@@ -89778,6 +90689,13 @@ func (a Company) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.HiddenContactHolders != nil {
+		object["hidden_contact_holders"], err = json.Marshal(a.HiddenContactHolders)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'hidden_contact_holders': %w", err)
+		}
+	}
+
 	object["id"], err = json.Marshal(a.Id)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'id': %w", err)
@@ -89808,6 +90726,13 @@ func (a Company) MarshalJSON() ([]byte, error) {
 		object["last_activity_at"], err = json.Marshal(a.LastActivityAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'last_activity_at': %w", err)
+		}
+	}
+
+	if a.LastActivityPrecision != nil {
+		object["last_activity_precision"], err = json.Marshal(a.LastActivityPrecision)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'last_activity_precision': %w", err)
 		}
 	}
 
@@ -89871,6 +90796,13 @@ func (a Company) MarshalJSON() ([]byte, error) {
 		object["partner"], err = json.Marshal(a.Partner)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'partner': %w", err)
+		}
+	}
+
+	if a.PartnerProgramEnded != nil {
+		object["partner_program_ended"], err = json.Marshal(a.PartnerProgramEnded)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'partner_program_ended': %w", err)
 		}
 	}
 
@@ -94012,6 +94944,14 @@ func (a *Deal) UnmarshalJSON(b []byte) error {
 		delete(object, "last_activity_at")
 	}
 
+	if raw, found := object["last_activity_precision"]; found {
+		err = json.Unmarshal(raw, &a.LastActivityPrecision)
+		if err != nil {
+			return fmt.Errorf("error reading 'last_activity_precision': %w", err)
+		}
+		delete(object, "last_activity_precision")
+	}
+
 	if raw, found := object["last_email"]; found {
 		err = json.Unmarshal(raw, &a.LastEmail)
 		if err != nil {
@@ -94454,6 +95394,13 @@ func (a Deal) MarshalJSON() ([]byte, error) {
 		object["last_activity_at"], err = json.Marshal(a.LastActivityAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'last_activity_at': %w", err)
+		}
+	}
+
+	if a.LastActivityPrecision != nil {
+		object["last_activity_precision"], err = json.Marshal(a.LastActivityPrecision)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'last_activity_precision': %w", err)
 		}
 	}
 
@@ -94900,6 +95847,14 @@ func (a *DealAdvanced) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'last_activity_at': %w", err)
 		}
 		delete(object, "last_activity_at")
+	}
+
+	if raw, found := object["last_activity_precision"]; found {
+		err = json.Unmarshal(raw, &a.LastActivityPrecision)
+		if err != nil {
+			return fmt.Errorf("error reading 'last_activity_precision': %w", err)
+		}
+		delete(object, "last_activity_precision")
 	}
 
 	if raw, found := object["last_email"]; found {
@@ -95352,6 +96307,13 @@ func (a DealAdvanced) MarshalJSON() ([]byte, error) {
 		object["last_activity_at"], err = json.Marshal(a.LastActivityAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'last_activity_at': %w", err)
+		}
+	}
+
+	if a.LastActivityPrecision != nil {
+		object["last_activity_precision"], err = json.Marshal(a.LastActivityPrecision)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'last_activity_precision': %w", err)
 		}
 	}
 
@@ -98442,6 +99404,14 @@ func (a *Project) UnmarshalJSON(b []byte) error {
 		delete(object, "last_activity_at")
 	}
 
+	if raw, found := object["last_activity_precision"]; found {
+		err = json.Unmarshal(raw, &a.LastActivityPrecision)
+		if err != nil {
+			return fmt.Errorf("error reading 'last_activity_precision': %w", err)
+		}
+		delete(object, "last_activity_precision")
+	}
+
 	if raw, found := object["legal_hold"]; found {
 		err = json.Unmarshal(raw, &a.LegalHold)
 		if err != nil {
@@ -98632,6 +99602,13 @@ func (a Project) MarshalJSON() ([]byte, error) {
 		object["last_activity_at"], err = json.Marshal(a.LastActivityAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'last_activity_at': %w", err)
+		}
+	}
+
+	if a.LastActivityPrecision != nil {
+		object["last_activity_precision"], err = json.Marshal(a.LastActivityPrecision)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'last_activity_precision': %w", err)
 		}
 	}
 
@@ -101826,6 +102803,9 @@ type ServerInterface interface {
 	// Reply on a captured messaging-channel conversation — runs directly, consent-gated.
 	// (POST /activities/{id}/send-message)
 	SendMessage(w http.ResponseWriter, r *http.Request, id Id, params SendMessageParams)
+	// Take an open task nobody holds.
+	// (POST /activities/{id}/take)
+	TakeTask(w http.ResponseWriter, r *http.Request, id Id, params TakeTaskParams)
 	// Why one task is on the reader's list, written from that task's own records.
 	// (GET /activities/{id}/task-explanation)
 	GetTaskExplanation(w http.ResponseWriter, r *http.Request, id Id)
@@ -102000,6 +102980,12 @@ type ServerInterface interface {
 	// Judge a draft of the overrides without saving it (ai_routing read and update).
 	// (POST /ai/task-overrides/preview)
 	PreviewAiTaskOverrides(w http.ResponseWriter, r *http.Request)
+	// Read the team rules every AI draft follows (ai_team_rules read).
+	// (GET /ai/team-rules)
+	GetAiTeamRules(w http.ResponseWriter, r *http.Request)
+	// Replace the team rules every AI draft follows (ai_team_rules update).
+	// (PUT /ai/team-rules)
+	ReplaceAiTeamRules(w http.ResponseWriter, r *http.Request)
 	// AI usage + budget — the spend is never invisible.
 	// (GET /ai/usage)
 	GetAiUsage(w http.ResponseWriter, r *http.Request, params GetAiUsageParams)
@@ -102309,6 +103295,9 @@ type ServerInterface interface {
 	// Everything waiting on the acting rep, in one read, tiered by whether it needs a decision.
 	// (GET /attention)
 	GetAttention(w http.ResponseWriter, r *http.Request)
+	// Send a bounced message again to a corrected address.
+	// (POST /attention/bounces/{id}/send-again)
+	SendBouncedMessageAgain(w http.ResponseWriter, r *http.Request, id Id)
 	// Read the human+agent-attributable audit log (Settings governance view).
 	// (GET /audit-log)
 	ListAuditLog(w http.ResponseWriter, r *http.Request, params ListAuditLogParams)
@@ -102318,6 +103307,9 @@ type ServerInterface interface {
 	// Change your own password.
 	// (POST /auth/change-password)
 	ChangePassword(w http.ResponseWriter, r *http.Request)
+	// Confirm that this account may be merged into another, from the mailed link.
+	// (POST /auth/confirm-member-merge)
+	ConfirmMemberMerge(w http.ResponseWriter, r *http.Request)
 	// Request a password-reset email.
 	// (POST /auth/forgot-password)
 	RequestPasswordReset(w http.ResponseWriter, r *http.Request)
@@ -102555,6 +103547,30 @@ type ServerInterface interface {
 	// Change who may read a business account's messages.
 	// (PATCH /channel-connections/telegram-business/{id}/visibility)
 	UpdateTelegramBusinessConnectionVisibility(w http.ResponseWriter, r *http.Request, id Id)
+	// List the WhatsApp Business numbers connected to the workspace.
+	// (GET /channel-connections/whatsapp)
+	ListWhatsAppConnections(w http.ResponseWriter, r *http.Request)
+	// Connect a WhatsApp Business number to the workspace.
+	// (POST /channel-connections/whatsapp)
+	CreateWhatsAppConnection(w http.ResponseWriter, r *http.Request)
+	// Disconnect a WhatsApp Business number from the workspace.
+	// (DELETE /channel-connections/whatsapp/{id})
+	DisconnectWhatsAppConnection(w http.ResponseWriter, r *http.Request, id Id)
+	// Change who may read a WhatsApp number's messages.
+	// (PATCH /channel-connections/whatsapp/{id}/visibility)
+	UpdateWhatsAppConnectionVisibility(w http.ResponseWriter, r *http.Request, id Id)
+	// List the Zalo Official Accounts connected to the workspace.
+	// (GET /channel-connections/zalo-oa)
+	ListZaloOAConnections(w http.ResponseWriter, r *http.Request)
+	// Connect a Zalo Official Account to the workspace.
+	// (POST /channel-connections/zalo-oa)
+	CreateZaloOAConnection(w http.ResponseWriter, r *http.Request)
+	// Disconnect a Zalo Official Account from the workspace.
+	// (DELETE /channel-connections/zalo-oa/{id})
+	DisconnectZaloOAConnection(w http.ResponseWriter, r *http.Request, id Id)
+	// Change who may read a Zalo Official Account's messages.
+	// (PATCH /channel-connections/zalo-oa/{id}/visibility)
+	UpdateZaloOAConnectionVisibility(w http.ResponseWriter, r *http.Request, id Id)
 	// Disconnect a messaging channel (archives the binding and destroys the credential).
 	// (DELETE /channel-connections/{id})
 	DisconnectChannel(w http.ResponseWriter, r *http.Request, id Id)
@@ -102564,6 +103580,15 @@ type ServerInterface interface {
 	// Take a signed notice of new talk in a linked Dispact channel (anonymous).
 	// (POST /channel-events/dispact)
 	ReceiveDispactChannelEvent(w http.ResponseWriter, r *http.Request)
+	// Answer Meta's webhook subscription check (anonymous).
+	// (GET /channel-events/whatsapp)
+	VerifyWhatsAppWebhook(w http.ResponseWriter, r *http.Request, params VerifyWhatsAppWebhookParams)
+	// Take a signed WhatsApp Business webhook delivery (anonymous).
+	// (POST /channel-events/whatsapp)
+	ReceiveWhatsAppWebhook(w http.ResponseWriter, r *http.Request)
+	// Take a signed Zalo Official Account webhook event (anonymous).
+	// (POST /channel-events/zalo-oa)
+	ReceiveZaloOAWebhook(w http.ResponseWriter, r *http.Request)
 	// Stop syncing a record with its chat channel.
 	// (DELETE /channel-links/{record_type}/{id})
 	UnlinkChannel(w http.ResponseWriter, r *http.Request, recordType ChannelLinkRecordType, id Id)
@@ -102750,6 +103775,9 @@ type ServerInterface interface {
 	// What each source last offered for the company's fields, to show beside the value on the record.
 	// (GET /companies/{id}/offered-values)
 	ListCompanyOfferedValues(w http.ResponseWriter, r *http.Request, id Id)
+	// End the partner program while keeping the company and commission history.
+	// (DELETE /companies/{id}/partner)
+	EndPartnerProgram(w http.ResponseWriter, r *http.Request, id Id, params EndPartnerProgramParams)
 	// Read the partner extension on a company (404 if the company is not a partner).
 	// (GET /companies/{id}/partner)
 	GetPartner(w http.ResponseWriter, r *http.Request, id Id, params GetPartnerParams)
@@ -103641,6 +104669,15 @@ type ServerInterface interface {
 	// Which sign-in methods this installation offers.
 	// (GET /installation/authentication-policy)
 	GetAuthenticationPolicy(w http.ResponseWriter, r *http.Request)
+	// Remove the Google directory credential.
+	// (DELETE /installation/authentication-policy/google-directory)
+	DeleteGoogleDirectory(w http.ResponseWriter, r *http.Request)
+	// Whether the Google directory connection is set up, and how its last check went.
+	// (GET /installation/authentication-policy/google-directory)
+	GetGoogleDirectory(w http.ResponseWriter, r *http.Request)
+	// Store or replace the Google directory credential.
+	// (PUT /installation/authentication-policy/google-directory)
+	SetGoogleDirectory(w http.ResponseWriter, r *http.Request)
 	// Every setting the programs read, with its value and source (admin/ops).
 	// (GET /installation/configuration)
 	GetInstallationConfiguration(w http.ResponseWriter, r *http.Request)
@@ -103706,7 +104743,7 @@ type ServerInterface interface {
 	ReplaceIntroRequest(w http.ResponseWriter, r *http.Request, id Id)
 	// The document corpora this workspace has defined.
 	// (GET /knowledge/corpora)
-	ListCorpora(w http.ResponseWriter, r *http.Request)
+	ListCorpora(w http.ResponseWriter, r *http.Request, params ListCorporaParams)
 	// Define a document corpus.
 	// (POST /knowledge/corpora)
 	CreateCorpus(w http.ResponseWriter, r *http.Request)
@@ -103728,6 +104765,9 @@ type ServerInterface interface {
 	// Add a document to this corpus.
 	// (POST /knowledge/corpora/{id}/documents)
 	UploadCorpusDocument(w http.ResponseWriter, r *http.Request, id Id)
+	// Bring an archived corpus back with everything filed in it.
+	// (POST /knowledge/corpora/{id}/restore)
+	RestoreCorpus(w http.ResponseWriter, r *http.Request, id Id)
 	// Delete a document, its chunks, its vectors and its stored file.
 	// (DELETE /knowledge/documents/{id})
 	DeleteCorpusDocument(w http.ResponseWriter, r *http.Request, id Id)
@@ -103887,10 +104927,10 @@ type ServerInterface interface {
 	// Take back an open request.
 	// (POST /legal-reviews/{id}/withdraw)
 	WithdrawLegalReview(w http.ResponseWriter, r *http.Request, id Id)
-	// The records an extension suggests messages belong to, waiting for a reader to decide.
+	// The link suggestions waiting for the caller to decide.
 	// (GET /link-suggestions)
 	ListLinkSuggestions(w http.ResponseWriter, r *http.Request)
-	// Accept a suggestion, which files the message under the record it names.
+	// Accept a suggestion, filing the message under its record.
 	// (POST /link-suggestions/{id}/accept)
 	AcceptLinkSuggestion(w http.ResponseWriter, r *http.Request, id Id)
 	// Reject a suggestion. The message stays where it is, and the suggestion is not offered again.
@@ -104004,6 +105044,15 @@ type ServerInterface interface {
 	// Choose what the product may send you.
 	// (PUT /me/brief-delivery)
 	SaveMyBriefDelivery(w http.ResponseWriter, r *http.Request)
+	// Your own chat accounts that are confirmed, or waiting for their code.
+	// (GET /me/chat-identities)
+	ListMyChatIdentities(w http.ResponseWriter, r *http.Request)
+	// Forget your confirmed account and any waiting code on one network.
+	// (DELETE /me/chat-identities/{network})
+	RemoveMyChatIdentity(w http.ResponseWriter, r *http.Request, network string)
+	// Get a code that confirms your account on one chat network.
+	// (POST /me/chat-identities/{network})
+	StartMyChatVerification(w http.ResponseWriter, r *http.Request, network string)
 	// Change the name colleagues see you by.
 	// (PUT /me/display-name)
 	SaveMyDisplayName(w http.ResponseWriter, r *http.Request)
@@ -104715,6 +105764,9 @@ type ServerInterface interface {
 	// Connect a shared mailbox, or reconnect the one stored for this address.
 	// (POST /shared-mailboxes)
 	ConnectSharedMailbox(w http.ResponseWriter, r *http.Request)
+	// The shared mailboxes the signed-in member may reply as.
+	// (GET /shared-mailboxes/replyable)
+	ListReplyableSharedMailboxes(w http.ResponseWriter, r *http.Request)
 	// Change who reads a shared mailbox, or its mail visibility.
 	// (PATCH /shared-mailboxes/{id})
 	UpdateSharedMailbox(w http.ResponseWriter, r *http.Request, id Id)
@@ -104904,6 +105956,9 @@ type ServerInterface interface {
 	// Merge a duplicate into the selected surviving member.
 	// (POST /users/{id}/merge)
 	MergeMembers(w http.ResponseWriter, r *http.Request, id Id, params MergeMembersParams)
+	// Ask the holders of two accounts to confirm merging them. Admin-only, human-only.
+	// (POST /users/{id}/merge-requests)
+	RequestMemberMerge(w http.ResponseWriter, r *http.Request, id Id)
 	// Remove a member's second factor. Admin-only, human-only.
 	// (DELETE /users/{id}/mfa)
 	RemoveUserMfa(w http.ResponseWriter, r *http.Request, id Id)
@@ -105369,6 +106424,12 @@ func (_ Unimplemented) SendMessage(w http.ResponseWriter, r *http.Request, id Id
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Take an open task nobody holds.
+// (POST /activities/{id}/take)
+func (_ Unimplemented) TakeTask(w http.ResponseWriter, r *http.Request, id Id, params TakeTaskParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Why one task is on the reader's list, written from that task's own records.
 // (GET /activities/{id}/task-explanation)
 func (_ Unimplemented) GetTaskExplanation(w http.ResponseWriter, r *http.Request, id Id) {
@@ -105714,6 +106775,18 @@ func (_ Unimplemented) ReplaceAiTaskOverrides(w http.ResponseWriter, r *http.Req
 // Judge a draft of the overrides without saving it (ai_routing read and update).
 // (POST /ai/task-overrides/preview)
 func (_ Unimplemented) PreviewAiTaskOverrides(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Read the team rules every AI draft follows (ai_team_rules read).
+// (GET /ai/team-rules)
+func (_ Unimplemented) GetAiTeamRules(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Replace the team rules every AI draft follows (ai_team_rules update).
+// (PUT /ai/team-rules)
+func (_ Unimplemented) ReplaceAiTeamRules(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -106335,6 +107408,12 @@ func (_ Unimplemented) GetAttention(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Send a bounced message again to a corrected address.
+// (POST /attention/bounces/{id}/send-again)
+func (_ Unimplemented) SendBouncedMessageAgain(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Read the human+agent-attributable audit log (Settings governance view).
 // (GET /audit-log)
 func (_ Unimplemented) ListAuditLog(w http.ResponseWriter, r *http.Request, params ListAuditLogParams) {
@@ -106350,6 +107429,12 @@ func (_ Unimplemented) GetAuthCapabilities(w http.ResponseWriter, r *http.Reques
 // Change your own password.
 // (POST /auth/change-password)
 func (_ Unimplemented) ChangePassword(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Confirm that this account may be merged into another, from the mailed link.
+// (POST /auth/confirm-member-merge)
+func (_ Unimplemented) ConfirmMemberMerge(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -106827,6 +107912,54 @@ func (_ Unimplemented) UpdateTelegramBusinessConnectionVisibility(w http.Respons
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// List the WhatsApp Business numbers connected to the workspace.
+// (GET /channel-connections/whatsapp)
+func (_ Unimplemented) ListWhatsAppConnections(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Connect a WhatsApp Business number to the workspace.
+// (POST /channel-connections/whatsapp)
+func (_ Unimplemented) CreateWhatsAppConnection(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Disconnect a WhatsApp Business number from the workspace.
+// (DELETE /channel-connections/whatsapp/{id})
+func (_ Unimplemented) DisconnectWhatsAppConnection(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Change who may read a WhatsApp number's messages.
+// (PATCH /channel-connections/whatsapp/{id}/visibility)
+func (_ Unimplemented) UpdateWhatsAppConnectionVisibility(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List the Zalo Official Accounts connected to the workspace.
+// (GET /channel-connections/zalo-oa)
+func (_ Unimplemented) ListZaloOAConnections(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Connect a Zalo Official Account to the workspace.
+// (POST /channel-connections/zalo-oa)
+func (_ Unimplemented) CreateZaloOAConnection(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Disconnect a Zalo Official Account from the workspace.
+// (DELETE /channel-connections/zalo-oa/{id})
+func (_ Unimplemented) DisconnectZaloOAConnection(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Change who may read a Zalo Official Account's messages.
+// (PATCH /channel-connections/zalo-oa/{id}/visibility)
+func (_ Unimplemented) UpdateZaloOAConnectionVisibility(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Disconnect a messaging channel (archives the binding and destroys the credential).
 // (DELETE /channel-connections/{id})
 func (_ Unimplemented) DisconnectChannel(w http.ResponseWriter, r *http.Request, id Id) {
@@ -106842,6 +107975,24 @@ func (_ Unimplemented) ReplaceChannelToken(w http.ResponseWriter, r *http.Reques
 // Take a signed notice of new talk in a linked Dispact channel (anonymous).
 // (POST /channel-events/dispact)
 func (_ Unimplemented) ReceiveDispactChannelEvent(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Answer Meta's webhook subscription check (anonymous).
+// (GET /channel-events/whatsapp)
+func (_ Unimplemented) VerifyWhatsAppWebhook(w http.ResponseWriter, r *http.Request, params VerifyWhatsAppWebhookParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Take a signed WhatsApp Business webhook delivery (anonymous).
+// (POST /channel-events/whatsapp)
+func (_ Unimplemented) ReceiveWhatsAppWebhook(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Take a signed Zalo Official Account webhook event (anonymous).
+// (POST /channel-events/zalo-oa)
+func (_ Unimplemented) ReceiveZaloOAWebhook(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -107214,6 +108365,12 @@ func (_ Unimplemented) MergeCompany(w http.ResponseWriter, r *http.Request, id I
 // What each source last offered for the company's fields, to show beside the value on the record.
 // (GET /companies/{id}/offered-values)
 func (_ Unimplemented) ListCompanyOfferedValues(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// End the partner program while keeping the company and commission history.
+// (DELETE /companies/{id}/partner)
+func (_ Unimplemented) EndPartnerProgram(w http.ResponseWriter, r *http.Request, id Id, params EndPartnerProgramParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -108999,6 +110156,24 @@ func (_ Unimplemented) GetAuthenticationPolicy(w http.ResponseWriter, r *http.Re
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Remove the Google directory credential.
+// (DELETE /installation/authentication-policy/google-directory)
+func (_ Unimplemented) DeleteGoogleDirectory(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Whether the Google directory connection is set up, and how its last check went.
+// (GET /installation/authentication-policy/google-directory)
+func (_ Unimplemented) GetGoogleDirectory(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Store or replace the Google directory credential.
+// (PUT /installation/authentication-policy/google-directory)
+func (_ Unimplemented) SetGoogleDirectory(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Every setting the programs read, with its value and source (admin/ops).
 // (GET /installation/configuration)
 func (_ Unimplemented) GetInstallationConfiguration(w http.ResponseWriter, r *http.Request) {
@@ -109127,7 +110302,7 @@ func (_ Unimplemented) ReplaceIntroRequest(w http.ResponseWriter, r *http.Reques
 
 // The document corpora this workspace has defined.
 // (GET /knowledge/corpora)
-func (_ Unimplemented) ListCorpora(w http.ResponseWriter, r *http.Request) {
+func (_ Unimplemented) ListCorpora(w http.ResponseWriter, r *http.Request, params ListCorporaParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -109170,6 +110345,12 @@ func (_ Unimplemented) ListCorpusDocuments(w http.ResponseWriter, r *http.Reques
 // Add a document to this corpus.
 // (POST /knowledge/corpora/{id}/documents)
 func (_ Unimplemented) UploadCorpusDocument(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Bring an archived corpus back with everything filed in it.
+// (POST /knowledge/corpora/{id}/restore)
+func (_ Unimplemented) RestoreCorpus(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -109491,13 +110672,13 @@ func (_ Unimplemented) WithdrawLegalReview(w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// The records an extension suggests messages belong to, waiting for a reader to decide.
+// The link suggestions waiting for the caller to decide.
 // (GET /link-suggestions)
 func (_ Unimplemented) ListLinkSuggestions(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Accept a suggestion, which files the message under the record it names.
+// Accept a suggestion, filing the message under its record.
 // (POST /link-suggestions/{id}/accept)
 func (_ Unimplemented) AcceptLinkSuggestion(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -109722,6 +110903,24 @@ func (_ Unimplemented) GetMyBriefDelivery(w http.ResponseWriter, r *http.Request
 // Choose what the product may send you.
 // (PUT /me/brief-delivery)
 func (_ Unimplemented) SaveMyBriefDelivery(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Your own chat accounts that are confirmed, or waiting for their code.
+// (GET /me/chat-identities)
+func (_ Unimplemented) ListMyChatIdentities(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Forget your confirmed account and any waiting code on one network.
+// (DELETE /me/chat-identities/{network})
+func (_ Unimplemented) RemoveMyChatIdentity(w http.ResponseWriter, r *http.Request, network string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get a code that confirms your account on one chat network.
+// (POST /me/chat-identities/{network})
+func (_ Unimplemented) StartMyChatVerification(w http.ResponseWriter, r *http.Request, network string) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -111147,6 +112346,12 @@ func (_ Unimplemented) ConnectSharedMailbox(w http.ResponseWriter, r *http.Reque
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// The shared mailboxes the signed-in member may reply as.
+// (GET /shared-mailboxes/replyable)
+func (_ Unimplemented) ListReplyableSharedMailboxes(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Change who reads a shared mailbox, or its mail visibility.
 // (PATCH /shared-mailboxes/{id})
 func (_ Unimplemented) UpdateSharedMailbox(w http.ResponseWriter, r *http.Request, id Id) {
@@ -111522,6 +112727,12 @@ func (_ Unimplemented) HandOverUserWork(w http.ResponseWriter, r *http.Request, 
 // Merge a duplicate into the selected surviving member.
 // (POST /users/{id}/merge)
 func (_ Unimplemented) MergeMembers(w http.ResponseWriter, r *http.Request, id Id, params MergeMembersParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Ask the holders of two accounts to confirm merging them. Admin-only, human-only.
+// (POST /users/{id}/merge-requests)
+func (_ Unimplemented) RequestMemberMerge(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -113891,6 +115102,62 @@ func (siw *ServerInterfaceWrapper) SendMessage(w http.ResponseWriter, r *http.Re
 	handler.ServeHTTP(w, r)
 }
 
+// TakeTask operation middleware
+func (siw *ServerInterfaceWrapper) TakeTask(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params TakeTaskParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch IfMatch
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.TakeTask(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetTaskExplanation operation middleware
 func (siw *ServerInterfaceWrapper) GetTaskExplanation(w http.ResponseWriter, r *http.Request) {
 
@@ -115815,6 +117082,46 @@ func (siw *ServerInterfaceWrapper) PreviewAiTaskOverrides(w http.ResponseWriter,
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PreviewAiTaskOverrides(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAiTeamRules operation middleware
+func (siw *ServerInterfaceWrapper) GetAiTeamRules(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAiTeamRules(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ReplaceAiTeamRules operation middleware
+func (siw *ServerInterfaceWrapper) ReplaceAiTeamRules(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReplaceAiTeamRules(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -121551,6 +122858,38 @@ func (siw *ServerInterfaceWrapper) GetAttention(w http.ResponseWriter, r *http.R
 	handler.ServeHTTP(w, r)
 }
 
+// SendBouncedMessageAgain operation middleware
+func (siw *ServerInterfaceWrapper) SendBouncedMessageAgain(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SendBouncedMessageAgain(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListAuditLog operation middleware
 func (siw *ServerInterfaceWrapper) ListAuditLog(w http.ResponseWriter, r *http.Request) {
 
@@ -121721,6 +123060,20 @@ func (siw *ServerInterfaceWrapper) ChangePassword(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ChangePassword(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ConfirmMemberMerge operation middleware
+func (siw *ServerInterfaceWrapper) ConfirmMemberMerge(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ConfirmMemberMerge(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -124563,6 +125916,214 @@ func (siw *ServerInterfaceWrapper) UpdateTelegramBusinessConnectionVisibility(w 
 	handler.ServeHTTP(w, r)
 }
 
+// ListWhatsAppConnections operation middleware
+func (siw *ServerInterfaceWrapper) ListWhatsAppConnections(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListWhatsAppConnections(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateWhatsAppConnection operation middleware
+func (siw *ServerInterfaceWrapper) CreateWhatsAppConnection(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateWhatsAppConnection(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DisconnectWhatsAppConnection operation middleware
+func (siw *ServerInterfaceWrapper) DisconnectWhatsAppConnection(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DisconnectWhatsAppConnection(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateWhatsAppConnectionVisibility operation middleware
+func (siw *ServerInterfaceWrapper) UpdateWhatsAppConnectionVisibility(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateWhatsAppConnectionVisibility(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListZaloOAConnections operation middleware
+func (siw *ServerInterfaceWrapper) ListZaloOAConnections(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListZaloOAConnections(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateZaloOAConnection operation middleware
+func (siw *ServerInterfaceWrapper) CreateZaloOAConnection(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateZaloOAConnection(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DisconnectZaloOAConnection operation middleware
+func (siw *ServerInterfaceWrapper) DisconnectZaloOAConnection(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DisconnectZaloOAConnection(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateZaloOAConnectionVisibility operation middleware
+func (siw *ServerInterfaceWrapper) UpdateZaloOAConnectionVisibility(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateZaloOAConnectionVisibility(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // DisconnectChannel operation middleware
 func (siw *ServerInterfaceWrapper) DisconnectChannel(w http.ResponseWriter, r *http.Request) {
 
@@ -124634,6 +126195,93 @@ func (siw *ServerInterfaceWrapper) ReceiveDispactChannelEvent(w http.ResponseWri
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ReceiveDispactChannelEvent(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// VerifyWhatsAppWebhook operation middleware
+func (siw *ServerInterfaceWrapper) VerifyWhatsAppWebhook(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params VerifyWhatsAppWebhookParams
+
+	// ------------- Optional query parameter "hub.mode" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "hub.mode", r.URL.Query(), &params.HubMode, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "hub.mode"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "hub.mode", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "hub.verify_token" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "hub.verify_token", r.URL.Query(), &params.HubVerifyToken, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "hub.verify_token"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "hub.verify_token", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "hub.challenge" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "hub.challenge", r.URL.Query(), &params.HubChallenge, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "hub.challenge"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "hub.challenge", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.VerifyWhatsAppWebhook(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ReceiveWhatsAppWebhook operation middleware
+func (siw *ServerInterfaceWrapper) ReceiveWhatsAppWebhook(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReceiveWhatsAppWebhook(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ReceiveZaloOAWebhook operation middleware
+func (siw *ServerInterfaceWrapper) ReceiveZaloOAWebhook(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReceiveZaloOAWebhook(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -128011,6 +129659,64 @@ func (siw *ServerInterfaceWrapper) ListCompanyOfferedValues(w http.ResponseWrite
 	handler.ServeHTTP(w, r)
 }
 
+// EndPartnerProgram operation middleware
+func (siw *ServerInterfaceWrapper) EndPartnerProgram(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params EndPartnerProgramParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch IfMatch
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.EndPartnerProgram(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetPartner operation middleware
 func (siw *ServerInterfaceWrapper) GetPartner(w http.ResponseWriter, r *http.Request) {
 
@@ -129161,6 +130867,8 @@ func (siw *ServerInterfaceWrapper) PutAnchorCompany(w http.ResponseWriter, r *ht
 func (siw *ServerInterfaceWrapper) ListCompanyTypes(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -141460,6 +143168,66 @@ func (siw *ServerInterfaceWrapper) GetAuthenticationPolicy(w http.ResponseWriter
 	handler.ServeHTTP(w, r)
 }
 
+// DeleteGoogleDirectory operation middleware
+func (siw *ServerInterfaceWrapper) DeleteGoogleDirectory(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteGoogleDirectory(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetGoogleDirectory operation middleware
+func (siw *ServerInterfaceWrapper) GetGoogleDirectory(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetGoogleDirectory(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetGoogleDirectory operation middleware
+func (siw *ServerInterfaceWrapper) SetGoogleDirectory(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetGoogleDirectory(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetInstallationConfiguration operation middleware
 func (siw *ServerInterfaceWrapper) GetInstallationConfiguration(w http.ResponseWriter, r *http.Request) {
 
@@ -141991,6 +143759,9 @@ func (siw *ServerInterfaceWrapper) ReplaceIntroRequest(w http.ResponseWriter, r 
 // ListCorpora operation middleware
 func (siw *ServerInterfaceWrapper) ListCorpora(w http.ResponseWriter, r *http.Request) {
 
+	var err error
+	_ = err
+
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -141999,8 +143770,24 @@ func (siw *ServerInterfaceWrapper) ListCorpora(w http.ResponseWriter, r *http.Re
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListCorporaParams
+
+	// ------------- Optional query parameter "include_archived" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "include_archived", r.URL.Query(), &params.IncludeArchived, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "include_archived"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "include_archived", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListCorpora(w, r)
+		siw.Handler.ListCorpora(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -142227,6 +144014,40 @@ func (siw *ServerInterfaceWrapper) UploadCorpusDocument(w http.ResponseWriter, r
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UploadCorpusDocument(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RestoreCorpus operation middleware
+func (siw *ServerInterfaceWrapper) RestoreCorpus(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RestoreCorpus(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -144749,6 +146570,8 @@ func (siw *ServerInterfaceWrapper) ListLinkSuggestions(w http.ResponseWriter, r 
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -144780,6 +146603,8 @@ func (siw *ServerInterfaceWrapper) AcceptLinkSuggestion(w http.ResponseWriter, r
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -144813,6 +146638,8 @@ func (siw *ServerInterfaceWrapper) RejectLinkSuggestion(w http.ResponseWriter, r
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -144832,6 +146659,8 @@ func (siw *ServerInterfaceWrapper) RejectLinkSuggestion(w http.ResponseWriter, r
 func (siw *ServerInterfaceWrapper) ListLinkTypes(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -146239,6 +148068,90 @@ func (siw *ServerInterfaceWrapper) SaveMyBriefDelivery(w http.ResponseWriter, r 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.SaveMyBriefDelivery(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListMyChatIdentities operation middleware
+func (siw *ServerInterfaceWrapper) ListMyChatIdentities(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListMyChatIdentities(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RemoveMyChatIdentity operation middleware
+func (siw *ServerInterfaceWrapper) RemoveMyChatIdentity(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "network" -------------
+	var network string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "network", chi.URLParam(r, "network"), &network, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "network", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RemoveMyChatIdentity(w, r, network)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// StartMyChatVerification operation middleware
+func (siw *ServerInterfaceWrapper) StartMyChatVerification(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "network" -------------
+	var network string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "network", chi.URLParam(r, "network"), &network, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "network", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.StartMyChatVerification(w, r, network)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -152757,6 +154670,8 @@ func (siw *ServerInterfaceWrapper) ListRecordKinds(w http.ResponseWriter, r *htt
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -156590,6 +158505,26 @@ func (siw *ServerInterfaceWrapper) ConnectSharedMailbox(w http.ResponseWriter, r
 	handler.ServeHTTP(w, r)
 }
 
+// ListReplyableSharedMailboxes operation middleware
+func (siw *ServerInterfaceWrapper) ListReplyableSharedMailboxes(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListReplyableSharedMailboxes(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // UpdateSharedMailbox operation middleware
 func (siw *ServerInterfaceWrapper) UpdateSharedMailbox(w http.ResponseWriter, r *http.Request) {
 
@@ -159262,6 +161197,38 @@ func (siw *ServerInterfaceWrapper) MergeMembers(w http.ResponseWriter, r *http.R
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.MergeMembers(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RequestMemberMerge operation middleware
+func (siw *ServerInterfaceWrapper) RequestMemberMerge(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RequestMemberMerge(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -163041,6 +165008,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/activities/{id}/send-message", wrapper.SendMessage)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/activities/{id}/take", wrapper.TakeTask)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/activities/{id}/task-explanation", wrapper.GetTaskExplanation)
 	})
 	r.Group(func(r chi.Router) {
@@ -163213,6 +165183,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/ai/task-overrides/preview", wrapper.PreviewAiTaskOverrides)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/ai/team-rules", wrapper.GetAiTeamRules)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/ai/team-rules", wrapper.ReplaceAiTeamRules)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/ai/usage", wrapper.GetAiUsage)
@@ -163524,6 +165500,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/attention", wrapper.GetAttention)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/attention/bounces/{id}/send-again", wrapper.SendBouncedMessageAgain)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/audit-log", wrapper.ListAuditLog)
 	})
 	r.Group(func(r chi.Router) {
@@ -163531,6 +165510,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/auth/change-password", wrapper.ChangePassword)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/auth/confirm-member-merge", wrapper.ConfirmMemberMerge)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/auth/forgot-password", wrapper.RequestPasswordReset)
@@ -163770,6 +165752,30 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Patch(options.BaseURL+"/channel-connections/telegram-business/{id}/visibility", wrapper.UpdateTelegramBusinessConnectionVisibility)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/channel-connections/whatsapp", wrapper.ListWhatsAppConnections)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/channel-connections/whatsapp", wrapper.CreateWhatsAppConnection)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/channel-connections/whatsapp/{id}", wrapper.DisconnectWhatsAppConnection)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/channel-connections/whatsapp/{id}/visibility", wrapper.UpdateWhatsAppConnectionVisibility)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/channel-connections/zalo-oa", wrapper.ListZaloOAConnections)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/channel-connections/zalo-oa", wrapper.CreateZaloOAConnection)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/channel-connections/zalo-oa/{id}", wrapper.DisconnectZaloOAConnection)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/channel-connections/zalo-oa/{id}/visibility", wrapper.UpdateZaloOAConnectionVisibility)
+	})
+	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/channel-connections/{id}", wrapper.DisconnectChannel)
 	})
 	r.Group(func(r chi.Router) {
@@ -163777,6 +165783,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/channel-events/dispact", wrapper.ReceiveDispactChannelEvent)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/channel-events/whatsapp", wrapper.VerifyWhatsAppWebhook)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/channel-events/whatsapp", wrapper.ReceiveWhatsAppWebhook)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/channel-events/zalo-oa", wrapper.ReceiveZaloOAWebhook)
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/channel-links/{record_type}/{id}", wrapper.UnlinkChannel)
@@ -163963,6 +165978,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/companies/{id}/offered-values", wrapper.ListCompanyOfferedValues)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/companies/{id}/partner", wrapper.EndPartnerProgram)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/companies/{id}/partner", wrapper.GetPartner)
@@ -164856,6 +166874,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/installation/authentication-policy", wrapper.GetAuthenticationPolicy)
 	})
 	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/installation/authentication-policy/google-directory", wrapper.DeleteGoogleDirectory)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/installation/authentication-policy/google-directory", wrapper.GetGoogleDirectory)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/installation/authentication-policy/google-directory", wrapper.SetGoogleDirectory)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/installation/configuration", wrapper.GetInstallationConfiguration)
 	})
 	r.Group(func(r chi.Router) {
@@ -164941,6 +166968,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/knowledge/corpora/{id}/documents", wrapper.UploadCorpusDocument)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/knowledge/corpora/{id}/restore", wrapper.RestoreCorpus)
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/knowledge/documents/{id}", wrapper.DeleteCorpusDocument)
@@ -165217,6 +167247,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/me/brief-delivery", wrapper.SaveMyBriefDelivery)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/me/chat-identities", wrapper.ListMyChatIdentities)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/me/chat-identities/{network}", wrapper.RemoveMyChatIdentity)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/me/chat-identities/{network}", wrapper.StartMyChatVerification)
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/me/display-name", wrapper.SaveMyDisplayName)
@@ -165930,6 +167969,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/shared-mailboxes", wrapper.ConnectSharedMailbox)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/shared-mailboxes/replyable", wrapper.ListReplyableSharedMailboxes)
+	})
+	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/shared-mailboxes/{id}", wrapper.UpdateSharedMailbox)
 	})
 	r.Group(func(r chi.Router) {
@@ -166117,6 +168159,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/users/{id}/merge", wrapper.MergeMembers)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/users/{id}/merge-requests", wrapper.RequestMemberMerge)
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/users/{id}/mfa", wrapper.RemoveUserMfa)

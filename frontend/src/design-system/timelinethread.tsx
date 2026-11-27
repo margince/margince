@@ -3,7 +3,7 @@ import { useId, useState } from "react";
 import { formatNumber } from "../format/format";
 import { type Locale, translatePlural, useLocale, useT } from "../i18n";
 import { reveal } from "../lib/reveal";
-import { Avatar, Button } from "./atoms";
+import { Avatar, Badge, Button } from "./atoms";
 import { attachmentCount, EmailFiles, EmailWords } from "./emailentry";
 import { Eyebrow } from "./eyebrow";
 import { type ContactOn, withWhom } from "./participants";
@@ -251,6 +251,7 @@ function ThreadMessage({
         <span className="tl-msg-lead">
           <b className="tl-msg-who">{lead.actor}</b>
           {lead.verb && <span>{lead.verb}</span>}
+          {entry.channel && <Badge>{entry.channel}</Badge>}
           {visibility && <VisibilityBadge state={visibility} />}
           {entry.emailSummary && (
             <EmailFiles summaries={[entry.emailSummary]} />

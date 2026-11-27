@@ -21,7 +21,8 @@ import { Callout } from "../../design-system/callout";
 import { FileDropzone } from "../../design-system/filedropzone";
 import { Heading } from "../../design-system/heading";
 import { Panel, PanelBody } from "../../design-system/panel";
-import { useT } from "../../i18n";
+import { formatNumber } from "../../format/format";
+import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import type { ACCEPTED_ATTACHMENT_EXTENSIONS } from "../../lib/attachmentupload";
 import { companyContactsListKey } from "../../lib/companycontacts.keys";
@@ -302,30 +303,56 @@ function ImportReport({ report }: Readonly<{ report: VCardReport }>) {
     return <p className="t-sub">{t("vcardImport.noCards")}</p>;
   }
   return (
-    <ul className="vcard-import-report" data-testid="vcard-import-report">
-      {cards.map((card) => {
-        const outcome = OUTCOMES[card.outcome];
-        return (
-          <li key={card.index}>
-            <span>{card.full_name}</span>
-            <span
-              className={
-                outcome?.tone === "warning" ? "vcard-import-warning" : "t-sub"
-              }
-            >
-              {/* An outcome this build has no name for is a server newer than
+    <>
+      <StagedForReview count={report.staged_for_review ?? 0} />
+      <ul className="vcard-import-report" data-testid="vcard-import-report">
+        {cards.map((card) => {
+          const outcome = OUTCOMES[card.outcome];
+          return (
+            <li key={card.index}>
+              <span>{card.full_name}</span>
+              <span
+                className={
+                  outcome?.tone === "warning" ? "vcard-import-warning" : "t-sub"
+                }
+              >
+                {/* An outcome this build has no name for is a server newer than
                   this tab. The word it sent is still worth showing. */}
-              {outcome ? t(outcome.label) : card.outcome}
-            </span>
-            {card.reason && <span className="t-sub">{card.reason}</span>}
-            {card.lead_id && <HeldLeadVerbs leadId={card.lead_id} />}
-            {card.fields && card.fields.length > 0 && (
-              <CardFields fields={card.fields} />
-            )}
-          </li>
-        );
-      })}
-    </ul>
+                {outcome ? t(outcome.label) : card.outcome}
+              </span>
+              {card.reason && <span className="t-sub">{card.reason}</span>}
+              {card.lead_id && <HeldLeadVerbs leadId={card.lead_id} />}
+              {card.fields && card.fields.length > 0 && (
+                <CardFields fields={card.fields} />
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </>
+  );
+}
+
+/** StagedForReview says how many cards wait for an answer in the inbox, and
+ * opens it. A card the import did not write waits there for 30 days. */
+function StagedForReview({ count }: Readonly<{ count: number }>) {
+  const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
+  if (count === 0) return null;
+  return (
+    <p data-testid="vcard-import-staged">
+      {plural("vcardImport.staged", count, {
+        count: formatNumber(count, locale),
+      })}{" "}
+      <Button
+        type="button"
+        variant="link"
+        onClick={() => navigate({ screen: "worklist" })}
+      >
+        {t("vcardImport.staged.open")}
+      </Button>
+    </p>
   );
 }
 

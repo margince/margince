@@ -44,8 +44,6 @@ func (s *Dispatcher) explain(tool string, err error) string {
 	var (
 		badArgs        *BadArgsError
 		unknownTool    *UnknownToolError
-		steppedUp      *StepUpStagedError
-		overQuota      *auth.VolumeExceededError
 		staged         *workflow.StagedApprovalError
 		confirmAsk     *ConfirmInConversationError
 		skew           *apperrors.VersionSkewError
@@ -53,51 +51,15 @@ func (s *Dispatcher) explain(tool string, err error) string {
 		archiveRefusal *auth.ArchiveAuthorityError
 	)
 	switch {
-	case errors.As(err, &steppedUp):
-		// A step-up that reached a human. It is its own branch rather than a
-		// wording variant of the one below because the INSTRUCTION differs: wait
-		// for the contact who connected this agent, then repeat the call
-		// unchanged — and specifically do not present an approval_id, which is
-		// the 🟡 loop's move and cannot work for a kind no tool redeems.
-		// The approval id is deliberately NOT quoted. It is the one identifier a
-		// caller told "do not send an approval_id" would reach for, and it opens
-		// nothing here: a step-up is released by the human, not redeemed by the
-		// agent. The human finds it in their own inbox.
-		return "This agent has reached its " + string(steppedUp.Counter) + " limit for this window, and the contact " +
-			"who connected it has been asked whether it may continue. Do not send an approval_id: once they approve, " +
-			"repeat this call unchanged."
-	case errors.As(err, &overQuota) && overQuota.Releasable():
-		// A releasable counter with NO question open: the human already declined
-		// one, or this surface has no inbox to ask through. The branch above
-		// would have matched if one were open, so reaching here means asking is
-		// not the next move — and saying "no approval lifts it" would contradict
-		// the refusal quoted beside it, which correctly says a release WOULD end
-		// this. What is true of both is that nothing is pending.
-		return "This agent has reached a volume limit for this window, and no request to continue is open: " +
-			"the contact who connected it has already declined one, or cannot be asked from here. Stop calling this " +
-			"tool and tell the user what is blocking it; the same call can succeed after the window rolls. (" +
-			overQuota.Error() + ")"
-	case errors.As(err, &overQuota):
-		// A hard stop. Naming the window as the only thing that ends it is the
-		// whole value of this branch: an agent told to "ask a human" about a
-		// send ceiling waits for an approval nobody can grant.
-		return "This agent has reached a volume limit for this window that no approval lifts. Stop calling this tool " +
-			"and tell the user what is blocking it; the same call can succeed after the window rolls. (" +
-			overQuota.Error() + ")"
+	case isVolumeRefusal(err):
+		return volumeExplanation(err)
 	case errors.As(err, &confirmAsk):
 		return confirmInConversationExplanation(confirmAsk)
 	case errors.As(err, &staged):
-		// A 🟡 call that reached the inbox, and the branch that says WHAT is
-		// waiting there. The contact answers it — in the CRM, or through this
-		// credential when the change can be undone and the call is attended
-		// (stagedReleasePath) — so the caller's job is to relay, and it can only
-		// relay a description it was given: an agent sent
-		// to read_approval for the sentence tells the user a change is pending
-		// and cannot say which.
-		//
-		// Composed here rather than through refusalDetail. The summary carries a
-		// caller-chosen field name and a workspace-authored record label, so it is
-		// escaped and bounded at workflow.MaxStagedSummary on the way out.
+		// The caller needs the staged change's description to relay it to the user.
+		// A separate read_approval would leave the first answer without that detail.
+		// The summary includes caller-chosen fields and workspace record labels.
+		// stagedExplanation escapes and bounds it at workflow.MaxStagedSummary.
 		return stagedExplanation(staged)
 	case errors.Is(err, errDeclinedInChat):
 		return "The user said no in the chat, so nothing was changed. Do not repeat the call unless they ask again."

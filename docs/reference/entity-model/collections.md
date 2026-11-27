@@ -286,8 +286,8 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 
 **Indexes**
 
-- `idx_saved_view_owner`: `btree (owner_id, resource) WHERE (archived_at IS NULL)`
 - `idx_saved_view_owner_cascade`: `btree (owner_id)`
+- `saved_view_name_once`: `unique, btree (owner_id, resource, lower(btrim(name))) WHERE (archived_at IS NULL)`
 - `saved_view_pkey`: `unique, btree (id)`
 
 **Triggers**

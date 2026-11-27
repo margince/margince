@@ -25,11 +25,6 @@ ALTER TABLE report_edition
         CONSTRAINT report_edition_report_revision_js_safe CHECK (((report_revision >= '-9007199254740991'::bigint) AND (report_revision <= '9007199254740991'::bigint)));
 ALTER TABLE report_edition ALTER COLUMN report_revision DROP DEFAULT;
 
-ALTER TABLE auth_token
-    ADD COLUMN IF NOT EXISTS purpose text NOT NULL DEFAULT 'password_reset'
-        CONSTRAINT auth_token_purpose_check CHECK ((purpose = ANY (ARRAY['password_reset'::text, 'email_verify'::text, 'invite'::text])));
-ALTER TABLE auth_token ALTER COLUMN purpose DROP DEFAULT;
-
 ALTER TABLE finance_connection ADD COLUMN IF NOT EXISTS archived_at timestamptz;
 
 ALTER TABLE voice_learning_signal

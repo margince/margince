@@ -73,9 +73,9 @@ func extensionBranch(t *testing.T, kind recordkinds.Declared, query string) (str
 	var args []any
 	arg := func(value any) int { args = append(args, value); return len(args) }
 	head := arg(query)
-	branches := admittedExtensionSQL(readerFor(kind.Object), []string{kind.Name}, query, head, 0, arg)
-	if len(branches) != 1 {
-		t.Fatalf("got %d branches for the kind, want 1", len(branches))
+	branches, err := admittedExtensionSQL(readerFor(kind.Object), []string{kind.Name}, query, head, 0, arg)
+	if err != nil || len(branches) != 1 {
+		t.Fatalf("got %d branches for the kind (%v), want 1", len(branches), err)
 	}
 	return branches[0], args
 }

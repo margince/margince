@@ -128,6 +128,7 @@ func (e *reportEngine) fetchDerivation(ctx context.Context, report string, spec 
 		for i, name := range plan.aggColumns {
 			out.Aggregates[name] = rowvalue.Document(values[i+1])
 		}
+		withholdBeyondExactRange(out.Aggregates, plan.aggColumns)
 		return nil
 	})
 }

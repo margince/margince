@@ -17,13 +17,14 @@ import (
 )
 
 // seatExempt are the reads published before v1.0.0. They keep their shape, and
-// E7 adds seat-bound variants of the ones without actAs. SetAside answers about
-// the member's own choice, so it names that member as user. Mail takes actAs
-// already and binds any member who connected the unit, under the earlier rule.
-// gatekit:fixture the frozen reads, each with the follow-up that will change it
+// the five without actAs are deprecated for the seat-bound form named here.
+// SetAside answers about the member's own choice, so it names that member as
+// user. Mail takes actAs already and binds any member who connected the unit,
+// under the earlier rule.
+// gatekit:fixture the frozen reads, each with the reason it keeps its shape
 var seatExempt = map[string]string{
-	"Deals.Get": "E7", "Deals.Responsible": "E7", "Authority.CanRead": "E7", "Authority.CanWrite": "E7",
-	"Directory.Emails": "E7", "SetAside.Contact": "own choice", "SetAside.Contacts": "own choice", "Activities.Mail": "connected member",
+	"Deals.Get": "GetAs", "Deals.Responsible": "ResponsibleAs", "Authority.CanRead": "CanReadAs", "Authority.CanWrite": "CanWriteAs",
+	"Directory.Emails": "EmailsAs", "SetAside.Contact": "own choice", "SetAside.Contacts": "own choice", "Activities.Mail": "connected member",
 }
 
 // systemReadMethod is one method of a system-read port, as the source declares it.

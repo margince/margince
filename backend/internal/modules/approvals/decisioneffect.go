@@ -280,3 +280,19 @@ func redeemerFor(ctx context.Context, a row, p principal.Principal) principal.Pr
 	}
 	return p
 }
+
+// releasedByKey carries the member who approved the work an effect releases.
+type releasedByKey struct{}
+
+// withReleasedBy names the member an effect acts for: the one who approved
+// it, also when somebody else re-drives a failed effect.
+func withReleasedBy(ctx context.Context, member ids.UUID) context.Context {
+	return context.WithValue(ctx, releasedByKey{}, member)
+}
+
+// ReleasedBy is the member who approved the work the running effect releases.
+// An effect acts for that member and never for whoever re-drove it.
+func ReleasedBy(ctx context.Context) (ids.UUID, bool) {
+	member, ok := ctx.Value(releasedByKey{}).(ids.UUID)
+	return member, ok && !member.IsZero()
+}

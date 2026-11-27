@@ -285,11 +285,10 @@ func TestACredentialReleasesOnlyTheUndoableProposalItMade(t *testing.T) {
 		Type: principal.PrincipalAgent, ID: "agent:test", UserID: lender, OnBehalfOf: lender,
 		PassportID: mine, Scopes: principal.NewScopeSet(principal.ScopeWrite),
 	}
-	// A staging carries BOTH halves, because an agent one always does:
-	// attributableStager refuses a passport-less agent staging, and
-	// insertProposalInTx writes on_behalf_of from the same principal. A fixture
-	// omitting the human is a shape production cannot produce, and it is the
-	// shape under which a rule about that human passes without being asked.
+	// A credential's staging carries both halves. AgentIdentity.Principal always
+	// sets the passport. insertProposalInTx writes on_behalf_of from the same
+	// principal. A fixture omitting the human is a shape production cannot
+	// produce. Under it, a rule about that human passes without being asked.
 	stagedBy := func(passportID, human ids.UUID) row {
 		passport := ids.From[ids.PassportKind](passportID)
 		on := ids.From[ids.UserKind](human)

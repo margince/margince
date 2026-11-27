@@ -388,15 +388,15 @@ func TestServeCountsItsHitsAndMissesOnMetrics(t *testing.T) {
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
 	fresh := func(context.Context) (crmcontracts.MagicReceipt, error) { return crmcontracts.MagicReceipt{}, nil }
 	noWalk := homecache.NoWalk[crmcontracts.MagicReceipt]()
-	hits, misses := homeCacheReads(t, homecache.Magic, "hit"), homeCacheReads(t, homecache.Magic, "miss")
+	hits, firsts := homeCacheReads(t, homecache.Magic, "hit"), homeCacheReads(t, homecache.Magic, "first")
 
 	for range 2 {
 		if _, _, err := homecache.Serve(ctx, c, e.Rep1, homecache.Magic, "home", fresh, noWalk); err != nil {
 			t.Fatal(err)
 		}
 	}
-	if got := homeCacheReads(t, homecache.Magic, "miss") - misses; got != 1 {
-		t.Errorf("misses grew by %d, want 1: the first read found nothing kept", got)
+	if got := homeCacheReads(t, homecache.Magic, "first") - firsts; got != 1 {
+		t.Errorf("first reads grew by %d, want 1: the first read found nothing kept", got)
 	}
 	if got := homeCacheReads(t, homecache.Magic, "hit") - hits; got != 1 {
 		t.Errorf("hits grew by %d, want 1: the second read was served the kept answer", got)

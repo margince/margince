@@ -35,14 +35,14 @@ function accountTrigger(page: Page) {
 
 // The translated destinations are an acceptance expectation, independent of
 // NAV_GROUPS: importing production's list would only prove it renders itself.
-// Home owns the work queue; the queue opens in a drawer rather than occupying
-// a second sidebar destination.
+// The Worklist row opens the work queue as a drawer over Home.
 const primaryDestinations = [
   "Home",
   "Kontakte",
   "Unternehmen",
   "Leads",
   "Deals",
+  "Worklist",
   "Projekte",
   "Filter und Ansichten",
   "Analytics",
@@ -84,9 +84,9 @@ test("the settle waits for an animation already in flight to land", async ({
   await settleAnimations(page);
 });
 
-test("AC-shell-1: the rail renders the primary destinations in order", async ({
-  page,
-}) => {
+test("AC-shell-1: the rail renders the primary destinations in order", {
+  tag: "@smoke",
+}, async ({ page }) => {
   await page.goto("/#/home");
   // evaluateAll never waits. Anchor on the rendered count first, or the read
   // races the auth splash and sees an empty rail.

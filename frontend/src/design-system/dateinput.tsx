@@ -62,6 +62,8 @@ export type DateInputProps = Omit<
     min?: ISODate;
     max?: ISODate;
     today?: ISODate;
+    /** The calendar button's name, where "choose a date: {label}" reads badly. */
+    calendarLabel?: string;
   }>;
 
 // `holds` is the caller's value the text sits over: a move to any other value
@@ -83,6 +85,7 @@ export function DateInput({
   min,
   max,
   today,
+  calendarLabel,
   className,
   disabled,
   readOnly,
@@ -111,7 +114,8 @@ export function DateInput({
   const refusedId = useId();
   const refusal = (day: ISODate) => outsideRange(day, min, max, pattern, t);
   const patternText = placeholderOf(pattern, t);
-  const chooseName = calendarName(box["aria-label"] ?? labelText, t);
+  const chooseName =
+    calendarLabel ?? calendarName(box["aria-label"] ?? labelText, t);
 
   const problem = draft
     ? readTyped(draft.text, pattern, refusal, t).problem

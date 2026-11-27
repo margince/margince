@@ -61,6 +61,12 @@ func (h Handlers) GetPublicSchedulingProfile(w http.ResponseWriter, r *http.Requ
 	profile = h.store.brandSchedulingProfile(r.Context(), page.HostUserID, profile)
 	out := publicProfile(bookingLength(profile, params.L), nil)
 	out.OfferedLengths = new(bookingLengths(profile))
+	out.PrivacyInformation, err = h.bookingPrivacyInformation(r.Context())
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+
 	httperr.WriteJSON(w, http.StatusOK, out)
 }
 

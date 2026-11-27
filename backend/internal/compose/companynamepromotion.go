@@ -45,8 +45,11 @@ const (
 	// whose name is in question, so the target's own visibility decides who
 	// may see and decide the offer.
 	companyNameTargetType = "company"
-	// companyNamePromotionActor is the principal the sweep and the accept write as.
+	// companyNamePromotionActor is the agent an accepted rename is written by,
+	// for the decider. The sweep that offers the rename acts for no one, and
+	// keeps its own system name.
 	companyNamePromotionActor = "agent:" + companyNameProposalKind
+	companyNameSweepActor     = "system:" + companyNameProposalKind
 	// companyNamePromotionPageSize bounds ONE page of candidates — a memory bound,
 	// not a work bound: the pass reads every candidate, a page at a time.
 	companyNamePromotionPageSize = 200
@@ -148,7 +151,7 @@ func NewCompanyNamePromoter(pool *pgxpool.Pool, log *slog.Logger) *CompanyNamePr
 func (p *CompanyNamePromoter) RunWorkspace(ctx context.Context, ws ids.UUID) error {
 	// The promotion writes an audit row and a company.updated event,
 	// so the pass binds the system actor like every worker job.
-	wsCtx := principal.SystemActing(ctx, companyNamePromotionActor)
+	wsCtx := principal.SystemActing(ctx, companyNameSweepActor)
 	return p.sweepWorkspace(wsCtx, ws)
 }
 
@@ -385,22 +388,11 @@ func companyNameAcceptEffect(svc *approvals.Service, store *contacts.Store) appr
 		if err := json.Unmarshal(proposedChange, &proposal); err != nil {
 			return fmt.Errorf("compose: decoding the company-name proposal: %w", err)
 		}
-		decider, ok := principal.Actor(ctx)
-		if !ok {
-			return errors.New("compose: company-name accept without a deciding principal")
-		}
-		// The write carries the machine provenance — the name came from a
-		// signature, not from someone typing it — while the human's approval
-		// is on the decision's own audit row. That is also why the accepted
-		// name stamps name_source='signature' and not 'human': a later human
-		// edit must still win over it.
-		execCtx := principal.WithActor(ctx, principal.Principal{
-			Type:       principal.PrincipalSystem,
-			ID:         companyNamePromotionActor,
-			UserID:     decider.UserID,
-			OnBehalfOf: decider.UserID,
-		})
-		return svc.RedeemAndApply(ctx, approvalID, companyNameProposalKind, diffHash, func(tx pgx.Tx) error {
+		// The write carries the machine provenance, since the name came from a
+		// signature, and runs under the decider's grants. That is also why the
+		// accepted name stamps name_source='signature' and not 'human': a later
+		// human edit must still win over it.
+		return redeemForApprover(ctx, svc, approvalID, companyNameProposalKind, diffHash, companyNamePromotionActor, func(execCtx context.Context, tx pgx.Tx) error {
 			// A false here is the company having been renamed by a
 			// stronger source while the offer waited: the approval is spent,
 			// nothing is written, and the record keeps the better name.

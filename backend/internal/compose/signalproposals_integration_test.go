@@ -151,6 +151,7 @@ func signalStatus(t *testing.T, e *integration.Env, signal ids.UUID) string {
 // human is asked, and their yes moves the account and settles the signal.
 func TestAcceptingTheOfferMovesTheAccountAndSettlesTheSignal(t *testing.T) {
 	e := integration.Setup(t)
+	e.GrantRole(t, e.Rep1, "admin")
 	company := seedAccountAtStage(t, e, "prospect")
 	signal := seedOpenContractEnded(t, e, company)
 
@@ -171,6 +172,10 @@ func TestAcceptingTheOfferMovesTheAccountAndSettlesTheSignal(t *testing.T) {
 	if stage := accountStage(t, e, company); stage != "former_customer" {
 		t.Errorf("the account reads %q after the accept, want former_customer", stage)
 	}
+	if n := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'company' AND entity_id = $1
+		AND actor_type = 'agent' AND actor_id = $2 AND on_behalf_of = $3`, company, lifecycleProposalActor, e.Rep1); n != 1 {
+		t.Errorf("%d stage moves by %s for the decider, want 1", n, lifecycleProposalActor)
+	}
 	if status := signalStatus(t, e, signal); status != "acknowledged" {
 		t.Errorf("the signal reads %q after the accept, want acknowledged — a page that "+
 			"moved the account while still shouting the signal that moved it contradicts itself",
@@ -184,6 +189,7 @@ func TestAContractEndedMailOffersTheEndToAnAccountWeDeliverFor(t *testing.T) {
 	for _, stage := range []string{"onboarding", "live"} {
 		t.Run(stage, func(t *testing.T) {
 			e := integration.Setup(t)
+			e.GrantRole(t, e.Rep1, "admin")
 			company := seedAccountAtStage(t, e, stage)
 			seedOpenContractEnded(t, e, company)
 
@@ -206,6 +212,7 @@ func TestAContractEndedMailOffersTheEndToAnAccountWeDeliverFor(t *testing.T) {
 // the system, and only a signed-in user may say the first scope is in use.
 func TestAnOfferEditedToLiveIsRefusedWhenTheSystemAppliesIt(t *testing.T) {
 	e := integration.Setup(t)
+	e.GrantRole(t, e.Rep1, "admin")
 	company := seedAccountAtStage(t, e, "onboarding")
 	seedOpenContractEnded(t, e, company)
 	proposePass(t, e)
@@ -231,6 +238,7 @@ func TestAnOfferEditedToLiveIsRefusedWhenTheSystemAppliesIt(t *testing.T) {
 // memory of the refusal the same question comes back every hour.
 func TestARefusedOfferIsNotAskedAgain(t *testing.T) {
 	e := integration.Setup(t)
+	e.GrantRole(t, e.Rep1, "admin")
 	company := seedAccountAtStage(t, e, "customer")
 	signal := seedOpenContractEnded(t, e, company)
 
@@ -264,6 +272,7 @@ func TestARefusedOfferIsNotAskedAgain(t *testing.T) {
 // An hourly reconciler must not stack the same question in the inbox.
 func TestTheSameContradictionIsOfferedOnce(t *testing.T) {
 	e := integration.Setup(t)
+	e.GrantRole(t, e.Rep1, "admin")
 	company := seedAccountAtStage(t, e, "opportunity")
 	seedOpenContractEnded(t, e, company)
 
@@ -288,6 +297,7 @@ func TestTheSameContradictionIsOfferedOnce(t *testing.T) {
 // under them, which is the one thing they need to know before deciding again.
 func TestAnAcceptOverACorrectedRecordIsRefused(t *testing.T) {
 	e := integration.Setup(t)
+	e.GrantRole(t, e.Rep1, "admin")
 	company := seedAccountAtStage(t, e, "prospect")
 	seedOpenContractEnded(t, e, company)
 	proposePass(t, e)
@@ -319,6 +329,7 @@ func TestAnAcceptOverACorrectedRecordIsRefused(t *testing.T) {
 // so, and there is nothing to offer.
 func TestNoOfferIsMadeOnAnAccountAlreadyFiledAsOver(t *testing.T) {
 	e := integration.Setup(t)
+	e.GrantRole(t, e.Rep1, "admin")
 	company := seedAccountAtStage(t, e, "former_customer")
 	seedOpenContractEnded(t, e, company)
 
@@ -329,6 +340,7 @@ func TestNoOfferIsMadeOnAnAccountAlreadyFiledAsOver(t *testing.T) {
 
 func TestAcceptingSettlesOnlyTheCitedContradiction(t *testing.T) {
 	e := integration.Setup(t)
+	e.GrantRole(t, e.Rep1, "admin")
 	company := seedAccountAtStage(t, e, "customer")
 	first := seedOpenContractEnded(t, e, company)
 	second := seedOpenContractEnded(t, e, company)
@@ -375,6 +387,7 @@ var teamScopedDecider = principal.Permissions{
 
 func TestHiddenContradictionBlocksAccountLifecycleDecision(t *testing.T) {
 	e := integration.Setup(t)
+	e.GrantRole(t, e.Rep1, "admin")
 	company := seedAccountAtStage(t, e, "customer")
 	e.WsExec(t, "UPDATE company SET owner_id = $1 WHERE id = $2", e.Rep1, company)
 	mine := seedOpenContractEnded(t, e, company)
@@ -430,6 +443,7 @@ func seedOpenContractEndedOnContact(t *testing.T, e *integration.Env, company, c
 
 func TestNewEvidenceSupersedesThePendingLifecycleDecision(t *testing.T) {
 	e := integration.Setup(t)
+	e.GrantRole(t, e.Rep1, "admin")
 	company := seedAccountAtStage(t, e, "customer")
 	firstAt := time.Date(2026, 7, 1, 12, 0, 0, 0, time.UTC)
 	seedScopedContractEndedAt(t, e, company, "company", "We ended all business.", firstAt, firstAt)
@@ -452,6 +466,7 @@ func TestNewEvidenceSupersedesThePendingLifecycleDecision(t *testing.T) {
 
 func TestWhitespaceNormalizedSourceProofAllowsTheDecision(t *testing.T) {
 	e := integration.Setup(t)
+	e.GrantRole(t, e.Rep1, "admin")
 	company := seedAccountAtStage(t, e, "customer")
 	signal := seedScopedContractEnded(t, e, company, "company", "We are ending\nall business\twith your company.")
 	if proposePass(t, e) != 1 {
@@ -468,6 +483,7 @@ func TestWhitespaceNormalizedSourceProofAllowsTheDecision(t *testing.T) {
 
 func TestLifecycleProposalKeepsSourceWordsBehindTheSourceReader(t *testing.T) {
 	e := integration.Setup(t)
+	e.GrantRole(t, e.Rep1, "admin")
 	company := seedAccountAtStage(t, e, "customer")
 	quote := "We are ending all business, including Atlas support, with your company."
 	at := time.Date(2026, 7, 31, 12, 0, 0, 0, time.UTC)

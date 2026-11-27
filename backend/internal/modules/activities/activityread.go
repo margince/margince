@@ -361,8 +361,9 @@ func attachLinksFrom(ctx context.Context, tx pgx.Tx, activities []crmcontracts.A
 		visible = "TRUE"
 	}
 	rows, err := tx.Query(ctx, `
-		SELECT al.id, al.activity_id, al.entity_type, `+linkIDCoalesceQualified("al")+`, al.deal_relevance, al.relevance_source
-		FROM activity_link al
+		SELECT al.id, al.activity_id, al.entity_type, `+linkIDCoalesceQualified("al")+`, al.deal_relevance, al.relevance_source,
+		       `+dealFilerColumns+`
+		FROM activity_link al`+dealFilerJoin("al")+`
 		WHERE al.activity_id = ANY($1) AND `+visible+`
 		ORDER BY al.activity_id, al.entity_type, al.id`, args...)
 	if err != nil {
@@ -374,7 +375,9 @@ func attachLinksFrom(ctx context.Context, tx pgx.Tx, activities []crmcontracts.A
 		var entityType string
 		var relevance *crmcontracts.ActivityLinkDealRelevance
 		var source *crmcontracts.ActivityLinkRelevanceSource
-		if err := rows.Scan(&linkID, &activityID, &entityType, &entityID, &relevance, &source); err != nil {
+		var filerType, filerUnit, filerHook, filerReason *string
+		if err := rows.Scan(&linkID, &activityID, &entityType, &entityID, &relevance, &source,
+			&filerType, &filerUnit, &filerHook, &filerReason); err != nil {
 			return err
 		}
 		i, ok := owner[activityID]
@@ -388,6 +391,7 @@ func attachLinksFrom(ctx context.Context, tx pgx.Tx, activities []crmcontracts.A
 			EntityId:        openapi_types.UUID(entityID),
 			DealRelevance:   relevance,
 			RelevanceSource: source,
+			FiledBy:         dealFiler(filerType, filerUnit, filerHook, filerReason),
 		}
 		if activities[i].Links == nil {
 			activities[i].Links = &[]crmcontracts.ActivityLink{}

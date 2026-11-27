@@ -190,6 +190,11 @@ type AttachmentAuthority interface {
 // staged against. There is nothing to retry against, so it parks.
 var ErrNoMailbox = errors.New("comms: no mailbox is connected for this provider")
 
+// ErrNotMailboxReader marks a delivery staged as a shared mailbox by a seat
+// that no longer reads it, or for a mailbox that no longer replies. The reply
+// is parked, since no retry returns the seat to the team.
+var ErrNotMailboxReader = errors.New("comms: the sender may no longer reply as this shared mailbox")
+
 // ErrCannotSend marks a connected provider whose connector cannot transmit —
 // it implements capture only. No retry turns a capture-only connector into a
 // sender, so this parks too.
@@ -232,6 +237,16 @@ type ConnectionResolver interface {
 	// is transient, including a workspace holding two live bindings, which is a
 	// fault an operator repairs.
 	ResolveChannel(ctx context.Context, userID ids.UserID, provider string) (connector.MessageSender, connector.Auth, error)
+}
+
+// ReplyRechecker is the optional half of a ConnectionResolver. It asks again,
+// right before the provider call, whether a seat may still send through a
+// mailbox that is not its own. The credential lookup ran earlier, and a team
+// change or an admin's switch may have committed since. A connection a member
+// owns answers nil. No lock can be held across the provider call, so this is
+// the latest the question can be asked.
+type ReplyRechecker interface {
+	RecheckReply(ctx context.Context, userID ids.UserID, connection ids.UUID) error
 }
 
 // consentRecipients is every subject this delivery reaches, in the vocabulary

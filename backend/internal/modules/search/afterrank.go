@@ -14,7 +14,7 @@ import (
 
 // decorate adds what a hit carries beyond its rank. That is tag reach, the
 // reader's words for an activity Margince wrote, an email's summary, the
-// partner mark and the company logo.
+// partner mark, the company logo and a room's deal.
 func (s *Store) decorate(ctx context.Context, tx pgx.Tx, hits []Hit) error {
 	if err := s.countTagReach(ctx, tx, hits); err != nil {
 		return err
@@ -29,6 +29,9 @@ func (s *Store) decorate(ctx context.Context, tx pgx.Tx, hits []Hit) error {
 		return err
 	}
 	if err := s.attachCompanyLogos(ctx, tx, hits); err != nil {
+		return err
+	}
+	if err := attachRoomDeals(ctx, tx, hits); err != nil {
 		return err
 	}
 	return s.attachStandings(ctx, tx, hits)
