@@ -195,10 +195,10 @@ func withNamedChains(keyed map[string]bool, namedAs map[string]string) {
 	}
 }
 
-// TestTheLanguageTableArmSeesATableAndItsWalk is the vacuity check. Shown six
+// TestTheLanguageTableArmSeesATableAndItsWalk is the vacuity check. Shown eight
 // tables, two eliding a language map's type and one of a renamed one, the arm
-// finds all six and the four walked. A local named like a table holds none, nor
-// does a helper no Test runs, nor a test that calls no style check.
+// finds all eight and the five walked. A local named like a table holds none, nor
+// does a helper no Test runs, nor a test that calls no style check of langcopytest.
 func TestTheLanguageTableArmSeesATableAndItsWalk(t *testing.T) {
 	t.Parallel()
 	source := `package copy
@@ -217,6 +217,8 @@ var messages = copyTable{tl.English: "We saved it"}
 type looped looping
 type looping looped
 var cycled = looped{}
+var notices = map[tl.Lang]string{tl.English: "We saved it"}
+var greetings = map[tl.Lang]string{tl.English: "Hello"}
 `
 	walk := `package copy
 import "github.com/margince/margince/backend/internal/shared/kernel/langcopy/langcopytest"
@@ -228,6 +230,15 @@ func TestMessages(t *testing.T) { langcopytest.Outsider("x").VietnameseText(t, "
 func TestShadowed(t *testing.T) { check(t); unwalked := struct{ unwalked int }{unwalked: 1}; _ = unwalked.unwalked }
 func unusedCheck(t langcopytest.T) { langcopytest.EnglishText(t, "x", orphaned[0]) }
 func TestLocal(t *testing.T) { unusedCheck := func() {}; unusedCheck(); _ = orphaned }
+type otherChecker struct{}
+func (otherChecker) EnglishText() {}
+func TestNotices(t *testing.T) {
+	var _ langcopytest.Register
+	otherChecker{}.EnglishText()
+	_ = notices
+}
+func reader() (langcopytest.Register, string) { return langcopytest.Agent("x"), "" }
+func TestGreetings(t *testing.T) { register, _ := reader(); register.EnglishText(t, "x", greetings["en"]) }
 `
 	pkg := &languagePackage{tables: map[string]string{}, literalIn: map[string]bool{}}
 	for name, text := range map[string]string{"copy.go": source, "copy_test.go": walk} {
@@ -238,12 +249,13 @@ func TestLocal(t *testing.T) { unusedCheck := func() {}; unusedCheck(); _ = orph
 		pkg.add(name, file)
 	}
 	pkg.resolve()
-	want := []string{"buildShown", "messages", "nested", "orphaned", "unwalked", "walked"}
+	want := []string{"buildShown", "greetings", "messages", "nested", "notices", "orphaned", "unwalked", "walked"}
 	if got := slices.Sorted(maps.Keys(pkg.tables)); !slices.Equal(got, want) {
 		t.Errorf("the arm read the tables %v, want %v", got, want)
 	}
 	held := pkg.held(langcopytestChecks(t))
-	if !held["walked"] || !held["buildShown"] || !held["nested"] || !held["messages"] || held["unwalked"] || held["orphaned"] {
+	if !held["walked"] || !held["buildShown"] || !held["nested"] || !held["messages"] || !held["greetings"] ||
+		held["unwalked"] || held["orphaned"] || held["notices"] {
 		t.Errorf("the arm read the walked tables as %v", held)
 	}
 	chained := []byte("type raw map[textlang.Lang]string\ntype copyTable raw\ntype looped looping\ntype looping looped\n")
@@ -567,7 +579,7 @@ func textlangQualifier(file *ast.File) string {
 // directory's own test helpers. A helper no Test runs checks nothing.
 func namedByStyleTests(tests []*ast.File, checks styleChecks) []string {
 	reaches, calls, names := map[string]bool{}, map[string][]string{}, map[string][]string{}
-	spelled := map[string][]string{}
+	spelled, values := map[string][]string{}, langcopytestValuesOf(tests)
 	for _, file := range tests {
 		qualifier, _ := gatekit.ImportedAs(file, langcopytestImport)
 		for _, decl := range file.Decls {
@@ -587,7 +599,7 @@ func namedByStyleTests(tests []*ast.File, checks styleChecks) []string {
 					if callee, isIdent := n.Fun.(*ast.Ident); isIdent && !local[callee.Name] {
 						calls[fn.Name.Name] = append(calls[fn.Name.Name], callee.Name)
 					}
-					if checks.calledBy(n, qualifier) {
+					if checks.calledBy(n, qualifier, values) {
 						reaches[fn.Name.Name] = true
 					}
 				}
@@ -676,21 +688,143 @@ func langcopytestChecks(t *testing.T) styleChecks {
 }
 
 // calledBy reports whether call runs a style check: a langcopytest function, or
-// a method of a value it returns, such as a Register.
-func (c styleChecks) calledBy(call *ast.CallExpr, qualifier string) bool {
-	callee := ast.Unparen(call.Fun)
-	switch generic := callee.(type) {
-	case *ast.IndexExpr:
-		callee = generic.X
-	case *ast.IndexListExpr:
-		callee = generic.X
-	}
-	selector, ok := callee.(*ast.SelectorExpr)
+// a check method of a value langcopytest gave, such as a Register.
+func (c styleChecks) calledBy(call *ast.CallExpr, qualifier string, values langcopytestValues) bool {
+	selector, ok := uninstantiated(call).(*ast.SelectorExpr)
 	if !ok || qualifier == "" {
 		return false
 	}
 	if x, isIdent := selector.X.(*ast.Ident); isIdent && x.Name == qualifier {
 		return c.funcs[selector.Sel.Name]
 	}
-	return c.methods[selector.Sel.Name]
+	return c.methods[selector.Sel.Name] && values.holds(selector.X, qualifier)
+}
+
+func uninstantiated(call *ast.CallExpr) ast.Expr {
+	switch generic := ast.Unparen(call.Fun).(type) {
+	case *ast.IndexExpr:
+		return generic.X
+	case *ast.IndexListExpr:
+		return generic.X
+	}
+	return ast.Unparen(call.Fun)
+}
+
+// langcopytestValues are the names in a directory's tests that may hold a
+// langcopytest value, and per test function which of its results is one.
+type langcopytestValues struct {
+	names   map[string]bool
+	returns map[string][]bool
+}
+
+// langcopytestValuesOf runs to a fixed point, since a name may be assigned from
+// one declared later in the file or in another file.
+func langcopytestValuesOf(tests []*ast.File) langcopytestValues {
+	values := langcopytestValues{names: map[string]bool{}, returns: map[string][]bool{}}
+	for grew := true; grew; {
+		before := len(values.names) + len(values.returns)
+		for _, file := range tests {
+			qualifier, _ := gatekit.ImportedAs(file, langcopytestImport)
+			ast.Inspect(file, func(node ast.Node) bool {
+				values.read(node, qualifier)
+				return true
+			})
+		}
+		grew = len(values.names)+len(values.returns) > before
+	}
+	return values
+}
+
+func (v langcopytestValues) read(node ast.Node, qualifier string) {
+	switch n := node.(type) {
+	case *ast.FuncDecl:
+		if n.Type.Results != nil {
+			var results []bool
+			for _, field := range n.Type.Results.List {
+				for range max(len(field.Names), 1) {
+					results = append(results, typedBy(field.Type, qualifier))
+				}
+			}
+			v.returns[n.Name.Name] = results
+		}
+	case *ast.Field:
+		if typedBy(n.Type, qualifier) {
+			v.mark(n.Names...)
+		}
+	case *ast.ValueSpec:
+		names := make([]ast.Expr, len(n.Names))
+		for i, name := range n.Names {
+			names[i] = name
+		}
+		if n.Type != nil && typedBy(n.Type, qualifier) {
+			v.mark(n.Names...)
+		}
+		v.assign(names, n.Values, qualifier)
+	case *ast.AssignStmt:
+		v.assign(n.Lhs, n.Rhs, qualifier)
+	}
+}
+
+func (v langcopytestValues) assign(lhs, rhs []ast.Expr, qualifier string) {
+	results := make([]bool, len(rhs))
+	for i, value := range rhs {
+		results[i] = v.holds(value, qualifier)
+	}
+	if call, isCall := singleCall(rhs); isCall && len(lhs) > 1 {
+		if callee, isIdent := call.Fun.(*ast.Ident); isIdent {
+			results = v.returns[callee.Name]
+		}
+	}
+	for i, target := range lhs {
+		if ident, isIdent := target.(*ast.Ident); isIdent && i < len(results) && results[i] {
+			v.mark(ident)
+		}
+	}
+}
+
+func (v langcopytestValues) mark(names ...*ast.Ident) {
+	for _, name := range names {
+		if name.Name != "_" {
+			v.names[name.Name] = true
+		}
+	}
+}
+
+// holds reports whether expr is a langcopytest value. A call into langcopytest
+// gives one, as does a name or field typed or assigned one.
+func (v langcopytestValues) holds(expr ast.Expr, qualifier string) bool {
+	switch e := ast.Unparen(expr).(type) {
+	case *ast.CallExpr:
+		switch callee := uninstantiated(e).(type) {
+		case *ast.SelectorExpr:
+			x, isIdent := callee.X.(*ast.Ident)
+			return isIdent && qualifier != "" && x.Name == qualifier
+		case *ast.Ident:
+			results := v.returns[callee.Name]
+			return len(results) > 0 && results[0]
+		}
+	case *ast.Ident:
+		return v.names[e.Name]
+	case *ast.SelectorExpr:
+		return v.names[e.Sel.Name]
+	case *ast.IndexExpr:
+		return v.holds(e.X, qualifier)
+	case *ast.CompositeLit:
+		return typedBy(e.Type, qualifier)
+	}
+	return false
+}
+
+// typedBy reports whether a type expression names a langcopytest type anywhere,
+// as in langcopytest.Register or []langcopytest.Register.
+func typedBy(typ ast.Expr, qualifier string) bool {
+	found := false
+	ast.Inspect(typ, func(node ast.Node) bool {
+		if selector, isSelector := node.(*ast.SelectorExpr); isSelector {
+			x, isIdent := selector.X.(*ast.Ident)
+			found = found || (isIdent && qualifier != "" && x.Name == qualifier)
+		}
+		return !found
+	})
+	return found
 }
