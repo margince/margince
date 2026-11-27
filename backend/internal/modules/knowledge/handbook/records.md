@@ -284,7 +284,7 @@ Also called: just in, new mail on a record, email with no reply, website form le
 When you wrote last and the contact has not answered, the contact's **Next** bar says **Waiting for their reply**. From day 7 it says they have gone quiet. **Done** says you need no answer to that message. It hides both cards, and the Worklist row for the same message. It is your choice alone: colleagues still see the card.
 Also called: no reply needed, stop waiting, mark answered.
 
-A message a colleague sent shows no **Done**. A new message from either side brings the card back, and **Undo** brings it back at once. **Done** shows only where it changes something. **Not now** hides the card you see until what it shows changes.
+A message a colleague sent shows no **Done**. A new message from either side brings the card back, and **Undo** brings it back at once. **Done** shows only where it changes something. **Not now** hides the card for you alone until what it shows changes. Where you cannot edit the record, it reads **Hide for me**.
 
 One activity can link to many records at once, such as a contact and a deal. Everyone can see one you log with no links. A *captured* message with nothing to link to stays held, because nothing has judged who it belongs to. A call or meeting logged from a contact or company also goes on the company's one open deal. With several open deals, choose one or **No deal**. A call with an outcome counts as contact only for **Reached** and **Put through**; a call with no outcome also counts.
 

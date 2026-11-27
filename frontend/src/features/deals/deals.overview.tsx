@@ -245,6 +245,7 @@ export function DealOverviewPane({
           deal={deal}
           onOpenEmail={onOpenEmail}
           more={more}
+          viewOnly={readOnly}
           renderStanding={(head) => (
             <DealHowItStands
               head={head}

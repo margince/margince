@@ -116,6 +116,34 @@ export const LatePromise: Story = {
   },
 };
 
+/** A reader who may not change the record: the verb is locked, and the
+ *  set-aside says on hover and focus that it hides the move for them alone. */
+export const SetAsideForMe: Story = {
+  args: {
+    title: "Dana has gone quiet",
+    sub: "Your last message went out 40 days ago.",
+    action: (
+      <Button
+        variant="ai"
+        reason="Only Lena Fischer can act on Dana. Ask Lena for edit access."
+      >
+        Draft email
+      </Button>
+    ),
+    snooze: {
+      onSnooze: noop,
+      label: "Hide for me",
+      hint: "Hides this card only for you. The owner and your team still see it.",
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(
+      canvas.getByRole("button", { name: "Hide for me" }),
+    ).toBeEnabled();
+  },
+};
+
 /** A lead ready to qualify: a good tag and an outlined verb, nothing to
  *  snooze. */
 export const ReadyToQualify: Story = {

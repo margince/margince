@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
+import { armHoverIntent } from "../../design-system/hoverintent-testing";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
@@ -81,7 +82,7 @@ it("sets the move aside, and the Undo puts it back", async () => {
 
   await screen.findByText(REASON);
   await user.click(
-    screen.getByRole("button", { name: en["standing.next.snooze"] }),
+    screen.getByRole("button", { name: en["record.setAside.verb"] }),
   );
 
   await waitFor(() => expect(screen.queryByText(REASON)).toBeNull());
@@ -91,4 +92,59 @@ it("sets the move aside, and the Undo puts it back", async () => {
 
   await screen.findByText(REASON);
   expect(restored).toEqual([FINGERPRINT]);
+});
+
+it("tells a reader who may not change the deal that the set-aside is theirs alone", async () => {
+  armHoverIntent();
+  installFetchStub({
+    [`GET /deals/${DEAL}/status`]: () =>
+      jsonResponse({
+        deal_id: DEAL,
+        story: { sentences: [] },
+        generated_at: "2026-08-24T00:00:00Z",
+        generated_by: "deterministic",
+        next: {
+          action: "draft_email",
+          reason: REASON,
+          evidence: [],
+          fingerprint: FINGERPRINT,
+        },
+      }),
+    [`GET /deals/${DEAL}/coverage`]: () =>
+      jsonResponse({
+        deal_id: DEAL,
+        stakeholders: [],
+        risks: [],
+        sections_omitted: [],
+      }),
+  });
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <LocaleProvider initial="en">
+        <ToastProvider>
+          <DealStatusCardPanel
+            deal={{ id: DEAL, name: "PIM rollout" }}
+            viewOnly
+          />
+        </ToastProvider>
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+  const user = userEvent.setup();
+
+  await screen.findByText(REASON);
+  expect(
+    screen.queryByRole("button", { name: en["record.setAside.verb"] }),
+  ).toBeNull();
+  await user.hover(
+    screen.getByRole("button", { name: en["record.setAside.forMe"] }),
+  );
+
+  expect((await screen.findByRole("tooltip")).textContent).toBe(
+    en["record.setAside.forMeHint"],
+  );
 });

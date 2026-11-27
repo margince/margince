@@ -5044,6 +5044,10 @@ export const en = {
   "co.suggest.dismiss": "Not now",
   "record.setAside.done": "Set aside. It comes back when something changes.",
   "record.setAside.restored": "Back on the card.",
+  "record.setAside.verb": "Not now",
+  "record.setAside.forMe": "Hide for me",
+  "record.setAside.forMeHint":
+    "Hides this card only for you. The owner and your team still see it.",
   "co.suggest.byline": "Margince suggests",
   "co.suggest.dismissFailed": "Suggestion was not dismissed. Retry.",
   // Said plainly, because the reader's next move depends on it: a step they

@@ -201,7 +201,7 @@ export const LockedButtons: Story = {
         <Button variant="primary" reasonId="view-only-reason">
           Log a call
         </Button>
-        <Button>Not now</Button>
+        <Button>Hide for me</Button>
       </div>
     </StoryProviders>
   ),

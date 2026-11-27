@@ -5107,6 +5107,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "record.setAside.done":
     "Zurückgestellt. Es kommt wieder, sobald sich etwas ändert.",
   "record.setAside.restored": "Wieder auf der Karte.",
+  "record.setAside.verb": "Nicht jetzt",
+  "record.setAside.forMe": "Nur für dich ausblenden",
+  "record.setAside.forMeHint":
+    "Blendet diese Karte nur für dich aus. Die verantwortliche Person und dein Team sehen sie weiter.",
   "co.suggest.byline": "Margince schlägt vor",
   "co.suggest.dismissFailed":
     "Der Vorschlag konnte nicht ausgeblendet werden. Bitte versuche es erneut.",

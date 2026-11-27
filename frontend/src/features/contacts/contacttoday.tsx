@@ -25,6 +25,7 @@ import { ActionVerb } from "./contactmomentverb";
 import { owedLateness, recordsTheMoveNames } from "./contactowed";
 import "../records/record360/record360.css";
 import { useCompanyZone } from "../../lib/companyzone";
+import { useReadsOnly, useSetAsideWords } from "../../lib/setasidewords";
 import { useViewerZone } from "../../lib/viewerzone";
 import { openContactTab } from "../worklist/worklist.return";
 
@@ -175,6 +176,7 @@ function MomentBar({
   const late = owedLateness(moment, view, zone, { t, plural, locale });
   const notNow = useMomentSetAside(view.contact.id);
   const defer = notNow.deferOf(moment);
+  const words = useSetAsideWords(useReadsOnly("contact", view.contact));
   // Writing stays one press away when the server leads with the call.
   const writing =
     moment.recommended_action.kind === "call"
@@ -257,7 +259,7 @@ function MomentBar({
               pending: defer.pending,
               // The dismissal holds until the card's evidence changes, not to
               // a date, so it is no snooze.
-              label: t("worklist.disposition.verb.notNow"),
+              ...words,
             }
       }
       more={more}

@@ -55,7 +55,12 @@ const MOMENT: ContactMoment = {
 function view(moment?: ContactMoment): Contact360 {
   return {
     as_of: "2026-08-13T09:00:00Z",
-    contact: { id: "p-1", full_name: "Dana Buyer", ...CAPTURED },
+    contact: {
+      id: "p-1",
+      full_name: "Dana Buyer",
+      writable: true,
+      ...CAPTURED,
+    },
     sections_omitted: [],
     next_steps: { data: [], page: { has_more: false } },
     moment,
@@ -78,7 +83,10 @@ it("sets the moment aside, and the Undo puts it back", async () => {
   let setAside = false;
   const sent: unknown[] = [];
   installFetchStub({
-    "GET /me": meRoute({ activity: ["read", "create"] }),
+    "GET /me": meRoute({
+      activity: ["read", "create"],
+      contact: ["read", "update"],
+    }),
     "GET /contacts/p-1/360": () =>
       jsonResponse(view(setAside ? undefined : MOMENT)),
     "POST /contacts/p-1/moment/dismiss": (body) => {
@@ -169,7 +177,10 @@ it("marks our message done, and the Undo picks it back up", async () => {
   let handled = false;
   const sent: unknown[] = [];
   installFetchStub({
-    "GET /me": meRoute({ activity: ["read", "create"] }),
+    "GET /me": meRoute({
+      activity: ["read", "create"],
+      contact: ["read", "update"],
+    }),
     "GET /contacts/p-1/360": () =>
       jsonResponse(view(handled ? undefined : WAITING)),
     "PUT /activities/a-sent/disposition": (body) => {
@@ -216,7 +227,10 @@ it("marks our message done, and the Undo picks it back up", async () => {
 
 it("offers no Done where the server named nothing a press would change", async () => {
   installFetchStub({
-    "GET /me": meRoute({ activity: ["read", "create"] }),
+    "GET /me": meRoute({
+      activity: ["read", "create"],
+      contact: ["read", "update"],
+    }),
     "GET /contacts/p-1/360": () =>
       jsonResponse(view({ ...WAITING, done: undefined })),
   });
@@ -233,4 +247,39 @@ it("offers no Done where the server named nothing a press would change", async (
       name: en["worklist.disposition.verb.notNow"],
     }),
   ).not.toBeNull();
+});
+
+it("names the set-aside for a reader who may not change the contact", async () => {
+  const theirs = view(MOMENT);
+  installFetchStub({
+    "GET /me": meRoute({
+      activity: ["read", "create"],
+      contact: ["read", "update"],
+    }),
+    "GET /contacts/p-1/360": () =>
+      jsonResponse({
+        ...theirs,
+        contact: { ...theirs.contact, writable: false },
+      }),
+  });
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <LocaleProvider initial="en">
+        <ToastProvider>
+          <Page />
+        </ToastProvider>
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+
+  expect(
+    await screen.findByRole("button", { name: en["record.setAside.forMe"] }),
+  ).toBeTruthy();
+  expect(
+    screen.queryByRole("button", { name: en["record.setAside.verb"] }),
+  ).toBeNull();
 });
