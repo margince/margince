@@ -70,6 +70,12 @@ describe("CompaniesScreen — the Customers tab", () => {
         }),
       ).toBe(true),
     );
+    // The picked tab claims no order, so it stays lit over the reader's sort.
+    expect(
+      screen
+        .getByRole("button", { name: "Customers" })
+        .getAttribute("aria-pressed"),
+    ).toBe("true");
   });
 
   it("keeps the order on Prospects as well", async () => {
