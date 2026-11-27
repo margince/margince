@@ -409,7 +409,7 @@ func endCredentialAuthority(ctx context.Context, tx pgx.Tx, userID ids.UserID, r
 	// prompted their alarm stayed live until its TTL.
 	_, err := tx.Exec(ctx,
 		`UPDATE auth_token SET used_at = now()
-		  WHERE user_id = $1 AND purpose = 'password_reset' AND used_at IS NULL`,
+		  WHERE user_id = $1 AND used_at IS NULL`,
 		userID)
 	return err
 }

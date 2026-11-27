@@ -25,6 +25,7 @@ package gates
 // takes its row with it.
 
 import (
+	"bytes"
 	"os"
 	"regexp"
 	"strings"
@@ -58,6 +59,10 @@ var typedHeader = regexp.MustCompile(`(counter|histogram)Header\((?:[a-zA-Z0-9_.
 // carries so ordinary deletions do not trip it.
 const minFamilies = 20
 
+// metricFamilyPrefix opens the family name each pattern above captures, so a
+// file without it declares no family.
+const metricFamilyPrefix = "margince_"
+
 func TestOnlyACounterCarriesTheTotalSuffix(t *testing.T) {
 	t.Parallel()
 	families := map[string]string{}
@@ -66,7 +71,7 @@ func TestOnlyACounterCarriesTheTotalSuffix(t *testing.T) {
 			return err
 		}
 		body, err := gatekit.ReadFile(path)
-		if err != nil {
+		if err != nil || !bytes.Contains(body, []byte(metricFamilyPrefix)) {
 			return err
 		}
 		for _, m := range typeLine.FindAllStringSubmatch(string(body), -1) {

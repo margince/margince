@@ -64,6 +64,7 @@ const (
 func TestOnlyTheMailMapperMintsTheOutboundAttestation(t *testing.T) {
 	t.Parallel()
 	var offenders []string
+	minted, reattested := 0, 0
 	err := gatekit.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -96,8 +97,12 @@ func TestOnlyTheMailMapperMintsTheOutboundAttestation(t *testing.T) {
 			if !isSel {
 				return true
 			}
-			if (sel.Sel.Name == attestationCall && !minterFile) ||
-				(sel.Sel.Name == reattestationCall && slashed != reattestationSite) {
+			switch {
+			case sel.Sel.Name == attestationCall && minterFile:
+				minted++
+			case sel.Sel.Name == reattestationCall && slashed == reattestationSite:
+				reattested++
+			case sel.Sel.Name == attestationCall, sel.Sel.Name == reattestationCall:
 				offenders = append(offenders, fset.Position(sel.Pos()).String())
 			}
 			return true
@@ -106,6 +111,13 @@ func TestOnlyTheMailMapperMintsTheOutboundAttestation(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatalf("walking the backend tree: %v", err)
+	}
+	// The sanctioned calls are the proof the walk reached its subject: a walk
+	// that sees neither reports no offender for a tree it never read.
+	if minted == 0 || reattested == 0 {
+		t.Fatalf("the walk saw %d %s call(s) under %s and %d %s call(s) at %s; it is not reaching "+
+			"the code this rule is about", minted, attestationCall, attestationMinter,
+			reattested, reattestationCall, reattestationSite)
 	}
 	if len(offenders) > 0 {
 		t.Errorf("%s is called outside %s, or %s outside %s:\n  %s\n\n"+

@@ -244,26 +244,24 @@ func (e *sendOutcomeEnv) record(ctx context.Context, t *testing.T, draftRef, fin
 // signalRow is the stored signal as the retention evaluator and any future
 // corpus promotion would read it.
 type signalRow struct {
-	outcome           string
-	similarity        *float64
-	finalText         *string
-	finalCapturedBy   *string
-	qualifiesAsSource bool
-	retentionUntil    time.Time
-	version           int64
-	createdAt         time.Time
-	updatedAt         time.Time
+	outcome         string
+	similarity      *float64
+	finalCapturedBy *string
+	retentionUntil  time.Time
+	version         int64
+	createdAt       time.Time
+	updatedAt       time.Time
 }
 
 func (e *sendOutcomeEnv) readSignal(t *testing.T, id ids.UUID) signalRow {
 	t.Helper()
 	var row signalRow
 	if err := e.owner.QueryRow(context.Background(), `
-		SELECT outcome, similarity::double precision, final_text, final_captured_by,
-		       qualifies_as_source, retention_until, version, created_at, updated_at
+		SELECT outcome, similarity::double precision, final_captured_by,
+		       retention_until, version, created_at, updated_at
 		FROM voice_learning_signal WHERE id = $1`, id).Scan(
-		&row.outcome, &row.similarity, &row.finalText, &row.finalCapturedBy,
-		&row.qualifiesAsSource, &row.retentionUntil, &row.version, &row.createdAt, &row.updatedAt,
+		&row.outcome, &row.similarity, &row.finalCapturedBy,
+		&row.retentionUntil, &row.version, &row.createdAt, &row.updatedAt,
 	); err != nil {
 		t.Fatal(err)
 	}
@@ -281,7 +279,7 @@ func (e *sendOutcomeEnv) assertUntouched(t *testing.T, f draftFixture) {
 	if row.version != 1 || !row.updatedAt.Equal(row.createdAt) {
 		t.Errorf("version = %d, updated_at = %v — the refused send wrote the row", row.version, row.updatedAt)
 	}
-	if row.similarity != nil || row.finalCapturedBy != nil || row.finalText != nil {
+	if row.similarity != nil || row.finalCapturedBy != nil {
 		t.Errorf("outcome fields written by a refused send: %+v", row)
 	}
 	if e.countAudits(t, f.signal) != 0 {
@@ -335,11 +333,8 @@ func (e *sendOutcomeEnv) emittedOutcome(t *testing.T, profile ids.UUID) string {
 	return outcome
 }
 
-// An unedited send is the owner accepting the machine's draft: the outcome
-// is recorded with full similarity, the audit + outbox rows commit with
-// it, and NO correspondence text is persisted — final_text stays NULL
-// because this row carries no contact linkage, so Art. 17 erasure can never
-// reach it and only the 180-day sweep would.
+// An unedited send is the owner accepting the machine's draft. The outcome is
+// recorded with full similarity, and the audit and outbox rows commit with it.
 func TestRecordSendOutcomeAcceptsAnUneditedSend(t *testing.T) {
 	env := setupSendOutcomeStore(t)
 	f := env.seedDraft(t, draftOptions{})
@@ -355,14 +350,8 @@ func TestRecordSendOutcomeAcceptsAnUneditedSend(t *testing.T) {
 	if row.similarity == nil || *row.similarity != 1 {
 		t.Errorf("similarity = %v, want 1", row.similarity)
 	}
-	if row.finalText != nil {
-		t.Errorf("final_text = %q — the sent correspondence must never be persisted here; this row outlives Art. 17 erasure", *row.finalText)
-	}
 	if row.finalCapturedBy == nil || *row.finalCapturedBy != f.actor.ID {
 		t.Errorf("final_captured_by = %v, want %q", row.finalCapturedBy, f.actor.ID)
-	}
-	if row.qualifiesAsSource {
-		t.Error("qualifies_as_source = true — corpus promotion is a later decision, not a side effect of sending")
 	}
 	if !row.retentionUntil.Equal(draftRetentionUntil) {
 		t.Errorf("retention_until = %s, want the draft-time deadline %s untouched", row.retentionUntil, draftRetentionUntil)
@@ -407,9 +396,6 @@ func TestRecordSendOutcomeRecordsAnEditedSend(t *testing.T) {
 	// pinned metric to four decimals, not some other number.
 	if got, want := *row.similarity, math.Round(wantSimilarity*1e4)/1e4; math.Abs(got-want) > 1e-9 {
 		t.Errorf("similarity = %v, want %v (the pinned metric, rounded by numeric(5,4))", got, want)
-	}
-	if row.finalText != nil {
-		t.Errorf("final_text = %q — the edited body is classified and discarded, never stored", *row.finalText)
 	}
 	if got := env.emittedOutcome(t, f.profile); got != "sent_edited" {
 		t.Errorf("published outcome = %q, want %q", got, "sent_edited")

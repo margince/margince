@@ -63,7 +63,7 @@ func resolveAnchor(
 	switch len(page.Hits) {
 	case 0:
 		return ids.UUID{}, &BadArgsError{Cause: fmt.Errorf(
-			"no %s matches `record_name` %q — search_records ranks the same words the same way, so try other words there",
+			"no %s matches `record_name` %q; search_records ranks the same words the same way, so try other words there",
 			args.RecordType, args.RecordName)}
 	case 1:
 		return page.Hits[0].Ref.ID, nil
@@ -72,7 +72,7 @@ func resolveAnchor(
 			return picked, err
 		}
 		return ids.UUID{}, &BadArgsError{Cause: fmt.Errorf(
-			"`record_name` %q matches %d %s records — name one by `record_id`: %s",
+			"`record_name` %q matches %d %s records. Name one by `record_id`: %s",
 			args.RecordName, len(page.Hits), args.RecordType, candidateIDs(page.Hits))}
 	}
 }

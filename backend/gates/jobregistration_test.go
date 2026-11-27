@@ -31,7 +31,7 @@ func TestJobRegistrationMarkersComeOnlyFromTheCatalog(t *testing.T) {
 	}
 	matched := map[string]int{}
 	// The unexported marker can be implemented only in compose, including its tests.
-	paths, err := filepath.Glob(filepath.Join(root, "*.go"))
+	paths, err := gatekit.Glob(filepath.Join(root, "*.go"))
 	if err != nil {
 		t.Fatal(err)
 	}

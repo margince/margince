@@ -6,7 +6,6 @@ package gatekit
 import (
 	"go/ast"
 	"go/parser"
-	"go/token"
 	"os"
 	"path"
 	"path/filepath"
@@ -185,13 +184,12 @@ func packageClauseIn(dir string) (string, bool) {
 	if err != nil {
 		return "", false
 	}
-	fset := token.NewFileSet()
 	for _, entry := range entries {
 		name := entry.Name()
 		if entry.IsDir() || !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
 			continue
 		}
-		file, perr := parser.ParseFile(fset, filepath.Join(dir, name), nil, parser.PackageClauseOnly)
+		file, perr := ParseFile(filepath.Join(dir, name), parser.PackageClauseOnly)
 		if perr != nil || file.Name == nil {
 			continue
 		}

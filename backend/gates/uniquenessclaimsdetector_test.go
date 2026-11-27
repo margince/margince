@@ -16,7 +16,6 @@ import (
 	"go/ast"
 	"go/parser"
 	"io/fs"
-	"maps"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -356,6 +355,7 @@ func (c claim) key() string { return c.path + "#" + c.decl }
 func findClaims(root string) ([]claim, error) {
 	var found []claim
 	fset := gatekit.SourceFileSet()
+	shapes := sortedShapes()
 	err := gatekit.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
@@ -406,40 +406,22 @@ func findClaims(root string) ([]claim, error) {
 			// paragraph changes no meaning, and it would have taken a live
 			// claim out of the register with nothing failing to say so.
 			text := flattenWraps(doc.Text())
-			shapes := sortedShapes()
-			patterns := make(map[string]*regexp.Regexp, len(claimShapes)+1)
-			maps.Copy(patterns, claimShapes)
-			// The derived shape's idiom rule travels WITH its pattern rather
-			// than being applied once here, so the two readings of the same
-			// text cannot disagree about which match is the claim.
-			rejects := map[string]func(string) bool{}
-			// The named pattern needs "every", and each one is compiled and held per name.
-			if mayHoldFolded(text, "every") {
-				if named := namedExhaustiveness(decl); named != nil && claimPhrase(named, text, intensifier) != "" {
-					shapes = append(shapes, namedShape)
-					patterns[namedShape] = named
-					rejects[namedShape] = intensifier
-				}
-			}
-			for _, shape := range shapes {
-				phrase := claimPhrase(patterns[shape], text, rejects[shape])
-				if phrase == "" {
-					continue
-				}
-				c := claim{
-					path:   rel,
-					decl:   decl,
-					shape:  shape,
-					phrase: phrase,
-					line:   fset.Position(doc.Pos()).Line,
-				}
-				if binding := heldBy.FindStringSubmatch(text); binding != nil {
-					c.held, c.heldIn = binding[1], strings.TrimSpace(binding[2])
-					c.bindingOpens = strings.HasPrefix(strings.TrimSpace(text), "Held by:")
-				}
-				found = append(found, c)
+			shape, phrase := firstClaim(text, decl, shapes)
+			if phrase == "" {
 				return
 			}
+			c := claim{
+				path:   rel,
+				decl:   decl,
+				shape:  shape,
+				phrase: phrase,
+				line:   fset.Position(doc.Pos()).Line,
+			}
+			if binding := heldBy.FindStringSubmatch(text); binding != nil {
+				c.held, c.heldIn = binding[1], strings.TrimSpace(binding[2])
+				c.bindingOpens = strings.HasPrefix(strings.TrimSpace(text), "Held by:")
+			}
+			found = append(found, c)
 		}
 		record(file.Doc, "package "+file.Name.Name)
 		for _, decl := range file.Decls {
@@ -454,6 +436,45 @@ func findClaims(root string) ([]claim, error) {
 	})
 	return found, err
 }
+
+// firstClaim attributes a doc comment to the first shape that reads a claim in
+// it: the fixed shapes in sorted order, then the derived one.
+//
+// A shape is asked only when the text holds a word every match of it holds.
+// The word check is cheap, and the regex is not.
+func firstClaim(text, decl string, shapes []string) (shape, phrase string) {
+	for _, shape := range shapes {
+		words := claimShapeWords[shape]
+		if words != nil && !mayHoldFolded(text, words...) {
+			continue
+		}
+		if phrase := claimPhrase(claimShapes[shape], text, nil); phrase != "" {
+			return shape, phrase
+		}
+	}
+	// The named pattern needs "every", and each one is compiled and held per name.
+	if !mayHoldFolded(text, "every") {
+		return "", ""
+	}
+	named := namedExhaustiveness(decl)
+	if named == nil {
+		return "", ""
+	}
+	if phrase := claimPhrase(named, text, intensifier); phrase != "" {
+		return namedShape, phrase
+	}
+	return "", ""
+}
+
+// claimShapeWords holds, per shape, the words every match of it contains.
+// Derived from the pattern, so an edit to one cannot leave a stale list beside it.
+var claimShapeWords = func() map[string][]string {
+	words := make(map[string][]string, len(claimShapes))
+	for shape, pattern := range claimShapes {
+		words[shape] = requiredWords(pattern)
+	}
+	return words
+}()
 
 // recordFields reports a claim written on a struct field or an interface
 // method, keyed by the type it belongs to so two fields called `ID` on
