@@ -179,12 +179,11 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## federated_identity
 
-6 columns · primary key `(id)` · referenced by 0 foreign keys
+5 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
-| `email_at_link` | `text` | yes |  |
 | `provider` | `text` | yes |  |
 | `subject` | `text` | yes |  |
 | `user_id` | `uuid` | yes | Points at `app_user.id`. |
@@ -209,8 +208,8 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 **Triggers**
 
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"provider": 20000, "email_at_link": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"email_at_link":20000,"provider":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"provider": 20000, "email_at_link": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"email_at_link":20000,"provider":20000}')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"provider": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"provider":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"provider": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"provider":20000}')`
 
 ## field_mask
 

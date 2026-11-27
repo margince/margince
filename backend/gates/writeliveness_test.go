@@ -69,9 +69,11 @@ var (
 	// archivedColumnLine marks a CREATE TABLE block's table as retirable;
 	// addedArchivedColumn catches the tables that grew the column later. Both,
 	// because a census that read only one of them would judge a smaller tree and
-	// still report PASS.
-	archivedColumnLine  = regexp.MustCompile(`(?i)^\s*archived_at\s`)
-	addedArchivedColumn = regexp.MustCompile(`(?is)ALTER TABLE\s+(?:IF EXISTS\s+)?([a-z_]+).{0,400}?ADD COLUMN\s+(?:IF NOT EXISTS\s+)?archived_at`)
+	// still report PASS. droppedArchivedColumn takes a table out again once a
+	// later migration drops the column, since no row of it can be archived.
+	archivedColumnLine    = regexp.MustCompile(`(?i)^\s*archived_at\s`)
+	addedArchivedColumn   = regexp.MustCompile(`(?is)ALTER TABLE\s+(?:IF EXISTS\s+)?([a-z_]+).{0,400}?ADD COLUMN\s+(?:IF NOT EXISTS\s+)?archived_at`)
+	droppedArchivedColumn = regexp.MustCompile(`(?i)ALTER TABLE\s+(?:IF EXISTS\s+)?([a-z_]+)\s+DROP COLUMN\s+(?:IF EXISTS\s+)?archived_at\b`)
 )
 
 // livenessMarkers are the spellings that discharge the obligation in Go, by the
@@ -237,23 +239,7 @@ func retirableTables(t *testing.T) map[string]bool {
 			if err != nil {
 				return err
 			}
-			current := ""
-			for line := range strings.SplitSeq(withCurrentNames(string(raw)), "\n") {
-				if m := createTableLine.FindStringSubmatch(line); m != nil {
-					current = m[1]
-					continue
-				}
-				if strings.HasPrefix(line, ");") {
-					current = ""
-					continue
-				}
-				if current != "" && archivedColumnLine.MatchString(line) {
-					tables[current] = true
-				}
-			}
-			for _, m := range addedArchivedColumn.FindAllStringSubmatch(string(raw), -1) {
-				tables[m[1]] = true
-			}
+			readRetirable(string(raw), tables)
 			return nil
 		})
 		if err != nil {
@@ -265,6 +251,31 @@ func retirableTables(t *testing.T) map[string]bool {
 			"the derivation is broken, not the schema", len(tables), retirableTableFloor)
 	}
 	return tables
+}
+
+// readRetirable applies one migration to the set of tables that carry
+// archived_at. The walk reads the files in version order, so a later drop wins.
+func readRetirable(migration string, tables map[string]bool) {
+	current := ""
+	for line := range strings.SplitSeq(withCurrentNames(migration), "\n") {
+		if m := createTableLine.FindStringSubmatch(line); m != nil {
+			current = m[1]
+			continue
+		}
+		if strings.HasPrefix(line, ");") {
+			current = ""
+			continue
+		}
+		if current != "" && archivedColumnLine.MatchString(line) {
+			tables[current] = true
+		}
+	}
+	for _, m := range addedArchivedColumn.FindAllStringSubmatch(migration, -1) {
+		tables[m[1]] = true
+	}
+	for _, m := range droppedArchivedColumn.FindAllStringSubmatch(migration, -1) {
+		delete(tables, m[1])
+	}
 }
 
 // byIDWritesIn names the retirable tables these statements write one row of by

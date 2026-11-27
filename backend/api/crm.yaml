@@ -602,7 +602,7 @@ paths:
       security: []
       x-agent-access: human-only
       summary: Redeem a reset token and set a new password.
-      description: 'Validates the single-use token (`auth_token` purpose=`password_reset`), sets the new password, marks the token used, and invalidates existing sessions. An expired, consumed, or unknown token produces one neutral error. Audited.'
+      description: 'Validates the single-use token, sets the new password, marks the token used, and invalidates existing sessions. An expired, consumed, or unknown token produces one neutral error. Audited.'
       requestBody:
         required: true
         content:
@@ -83045,6 +83045,10 @@ components:
             `oauth:` label prefix, is what tells the two kinds apart: a label is display text a human
             can also type.
         created_at: { type: string, format: date-time }
+        granted_by:
+          type: string
+          format: uuid
+          description: The member who granted the passport its authority. A server built before this field omits it.
         expires_at: { type: [string, 'null'], format: date-time }
         last_used_at: { type: [string, 'null'], format: date-time }
         revoked_at: { type: [string, 'null'], format: date-time }

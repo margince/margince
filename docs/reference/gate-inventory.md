@@ -541,7 +541,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `systemtextproducer_test.go` | H2 | _(no doc comment)_ |
 | `tablelistpointer_test.go` | H1 | Every module names its entity-model page as its table list, and no Go comment copies that list. |
 | `tableownershipdiscovery_test.go` | H2 | Which packages the ownership gate walks, derived rather than remembered. |
-| `taskdeadlinereaders_test.go` | H2 | _(no doc comment)_ |
+| `taskdeadlinereaders_test.go` | H2 | A reader of an activity's deadline asks storekit.TaskDueSQL, never the stored due\_at, so every screen and job agrees on when a task is due. |
 | `textbounds_test.go` | H2 | The column must sit in the condition's bounds and in the refusal's. |
 | `tokenhashformat_test.go` | H2 | A column that stores the hash of a token states its format with a CHECK. |
 | `toolongcarriesmax_test.go` | H2 | Every too\_long field refusal states the limit it refused at, so the screen can say "at most 2,000 characters" in the reader's language. |
@@ -720,7 +720,6 @@ The eight shapes, what each is for, and how each one silently passes:
 | `onecurrencyconversion_test.go` | H2 | Converting money to the base currency has one implementation. |
 | `onedomainfold_test.go` | H2 | One domain fold. |
 | `owndomainpredicate_test.go` | H2 | Every own-domain decision compares one folded form of a domain. |
-| `phasehistoryattribution_test.go` | H2 | A history table that links its audit row names who acted through that row. |
 | `pipefailgrepq_test.go` | H2 | A shell gate does not decide its verdict through a pipe that can break. |
 | `promptexcerpt_test.go` | H2 | A prompt built from a crawled page is bounded by this product, not by the site. |
 | `promptfence_test.go` | H1 | No prompt may declare a data boundary the writer of that data can spell. |

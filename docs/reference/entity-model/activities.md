@@ -879,7 +879,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## activity_review_template
 
-16 columns · primary key `(id)` · referenced by 0 foreign keys
+15 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -893,7 +893,6 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 | `shipped_label` | `text` |  |  |
 | `shipped_label_key` | `text` |  |  |
 | `system` | `boolean`, default `false` | yes | Shipped with the product. |
-| `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `source` | `text` | yes | Which internal channel the record arrived by. |
@@ -909,8 +908,8 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 
 **Indexes**
 
-- `activity_review_template_live_key`: `unique, btree (key) WHERE (archived_at IS NULL)`
-- `activity_review_template_one_active_per_outcome`: `unique, btree (outcome) WHERE (active AND (archived_at IS NULL))`
+- `activity_review_template_one_asked_per_outcome`: `unique, btree (outcome) WHERE active`
+- `activity_review_template_one_per_key`: `unique, btree (key)`
 - `activity_review_template_pkey`: `unique, btree (id)`
 
 **Triggers**

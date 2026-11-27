@@ -131,7 +131,7 @@ func (s *Store) UpdateReviewTemplate(ctx context.Context, id ids.UUID, req crmco
 	}
 	var result crmcontracts.ActivityReviewTemplate
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		before, err := scanReviewTemplate(tx.QueryRow(ctx, `SELECT `+reviewTemplateColumns+` FROM activity_review_template WHERE id=$1 AND archived_at IS NULL FOR UPDATE`, id))
+		before, err := scanReviewTemplate(tx.QueryRow(ctx, `SELECT `+reviewTemplateColumns+` FROM activity_review_template WHERE id=$1 FOR UPDATE`, id))
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
 		}

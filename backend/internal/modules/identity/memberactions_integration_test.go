@@ -316,7 +316,7 @@ func TestTheRosterOffersMergeOnAUsedMemberAndSaysItNeedsConfirmation(t *testing.
 	if _, err := e.owner.Exec(context.Background(), `UPDATE app_user SET password_hash = 'x' WHERE id = $1`, passworded.UserID); err != nil {
 		t.Fatal(err)
 	}
-	linkFederatedIdentityRow(t, e.owner, linked.UserID, "refused-linked-subject", "refused-linked@"+e.slug+".test")
+	linkFederatedIdentityRow(t, e.owner, linked.UserID, "refused-linked-subject")
 
 	offers := rosterActions(t, e, h, e.admin)
 	refusals := rosterRefusals(t, e, h, e.admin)

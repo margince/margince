@@ -144,7 +144,7 @@ func sameMailbox(a, b string) bool {
 // transfers the subject to the user the caller already decided to sign in,
 // rather than refusing a login on an internal constraint the caller never
 // sees.
-func linkFederatedIdentity(ctx context.Context, tx pgx.Tx, userID ids.UserID, provider, subject, email string) (wasRelink bool, err error) {
+func linkFederatedIdentity(ctx context.Context, tx pgx.Tx, userID ids.UserID, provider, subject string) (wasRelink bool, err error) {
 	var existingSubject string
 	scanErr := tx.QueryRow(ctx,
 		`SELECT subject FROM federated_identity WHERE user_id = $1 AND provider = $2`,
@@ -165,11 +165,11 @@ func linkFederatedIdentity(ctx context.Context, tx pgx.Tx, userID ids.UserID, pr
 	}
 
 	_, err = tx.Exec(ctx,
-		`INSERT INTO federated_identity (user_id, provider, subject, email_at_link)
-		 VALUES ($1, $2, $3, $4)
+		`INSERT INTO federated_identity (user_id, provider, subject)
+		 VALUES ($1, $2, $3)
 		 ON CONFLICT (user_id, provider)
-		 DO UPDATE SET subject = EXCLUDED.subject, email_at_link = EXCLUDED.email_at_link`,
-		userID, provider, subject, email)
+		 DO UPDATE SET subject = EXCLUDED.subject`,
+		userID, provider, subject)
 	if err != nil {
 		return false, fmt.Errorf("identity: link federated identity: %w", err)
 	}
@@ -212,7 +212,7 @@ func (s *Service) LoginViaFederatedIdentity(ctx context.Context, provider string
 			return resolveErr
 		}
 		signedIn = userID
-		wasRelink, linkErr := linkFederatedIdentity(ctx, tx, userID, provider, subject, email)
+		wasRelink, linkErr := linkFederatedIdentity(ctx, tx, userID, provider, subject)
 		if linkErr != nil {
 			return linkErr
 		}

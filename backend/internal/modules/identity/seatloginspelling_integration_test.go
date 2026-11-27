@@ -160,8 +160,8 @@ func TestADisabledSeatsLinkDoesNotSignInItsOtherSpelling(t *testing.T) {
 		t.Fatalf("an unlinked subject resolved %v, %v; want the punycode seat", got, err)
 	}
 
-	if _, err := e.owner.Exec(ctx, `INSERT INTO federated_identity (user_id, provider, subject, email_at_link)
-		VALUES ($1, 'google', 'subject-linked', $2)`, disabled, unicodeAddress); err != nil {
+	if _, err := e.owner.Exec(ctx, `INSERT INTO federated_identity (user_id, provider, subject)
+		VALUES ($1, 'google', 'subject-linked')`, disabled); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := e.owner.Exec(ctx, `UPDATE app_user SET status = 'suspended' WHERE id = $1`, disabled); err != nil {
