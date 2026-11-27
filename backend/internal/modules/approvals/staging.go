@@ -441,7 +441,7 @@ func (s *Service) insertProposalInTx(ctx context.Context, tx pgx.Tx, in StageInp
 	}
 	requested := crmcontracts.PublicEventApprovalRequested{
 		Kind:             in.Kind,
-		Summary:          in.Summary,
+		Summary:          requestedSummary(in),
 		TargetEntityType: in.TargetType,
 		TargetEntityId:   optionalTargetID(in.TargetID),
 		ExpiresAt:        expiresAt,

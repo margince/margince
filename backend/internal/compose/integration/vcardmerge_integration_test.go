@@ -19,10 +19,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+	"github.com/riverqueue/river"
+
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -324,5 +329,83 @@ func TestAnExpiredVCardReviewIsStagedAnewNotRemembered(t *testing.T) {
 	rows, _, err := r.svc.ListWire(r.decider, approvals.ListInput{Status: &status, Kind: &kind, Limit: 10})
 	if err != nil || len(rows) != 1 {
 		t.Errorf("pending reviews after re-importing an expired card = %d (err %v), want 1: expiry is not a decline", len(rows), err)
+	}
+}
+
+// noMail stands in for the mail queue: the notices are what is under test.
+type noMail struct{}
+
+func (noMail) EnqueueTx(context.Context, pgx.Tx, river.JobArgs, *river.InsertOpts) error {
+	return nil
+}
+
+// announce runs the review's approval.requested event through the consumer that
+// writes the Worklist notices, as the worker does. The decider first gets the
+// role that makes them a seat that may decide it.
+func (r mergeReview) announce(t *testing.T) {
+	t.Helper()
+	r.e.WsExec(t, `INSERT INTO role (key, name, permissions) VALUES ('card-decider', 'Card decider', $1::jsonb)
+		ON CONFLICT (key) DO NOTHING`,
+		`{"objects":{"contact":{"create":true,"read":true,"update":true},"company":{"create":true,"read":true,"update":true},`+
+			`"relationship":{"create":true,"read":true,"update":true}},"row_scope":"own"}`)
+	r.e.WsExec(t, `INSERT INTO role_assignment (role_id, user_id) SELECT id, $1 FROM role WHERE key = 'card-decider'`, r.e.Rep1)
+	var raw []byte
+	if err := r.e.Pool.QueryRow(context.Background(), `SELECT envelope::text FROM event_outbox
+		WHERE envelope #>> '{entity,id}' = $1::text AND envelope ->> 'type' = 'approval.requested'`, r.approval.String()).Scan(&raw); err != nil {
+		t.Fatal(err)
+	}
+	var env events.Envelope
+	if err := json.Unmarshal(raw, &env); err != nil {
+		t.Fatal(err)
+	}
+	notify := compose.NewApprovalNotify(r.e.Pool, compose.InstallationDB(r.e.Pool), noMail{})
+	if err := notify.HandleEvent(context.Background(), env); err != nil {
+		t.Fatalf("announcing the review: %v", err)
+	}
+}
+
+func TestAVCardReviewNeverPutsTheCardInItsEventOrItsNotice(t *testing.T) {
+	r := stagedMergeReview(t)
+	r.announce(t)
+	if n := r.count(t, `SELECT count(*) FROM notice WHERE kind = 'approval_pending'`); n == 0 {
+		t.Fatal("the review raised no notice, so this test would prove nothing")
+	}
+	r.e.WsExec(t, `UPDATE approval SET expires_at = now() - interval '1 minute' WHERE id = $1`, r.approval)
+	sweep := principal.SystemActing(principal.WithWorkspaceID(context.Background(), r.e.WS), approvals.ExpiryActor)
+	if _, err := compose.NewApprovalsService(r.e.DB()).ExpireDue(sweep); err != nil {
+		t.Fatalf("sweeping: %v", err)
+	}
+	if n := r.count(t, `SELECT count(*) FROM event_outbox WHERE envelope #>> '{entity,id}' = $1::text
+		AND envelope::text ILIKE '%Weber%'`, r.approval.String()); n != 0 {
+		t.Errorf("the review's events name the card: %d", n)
+	}
+	if n := r.count(t, `SELECT count(*) FROM notice n WHERE n::text ILIKE '%Weber%'`); n != 0 {
+		t.Errorf("a notice about the review names the card: %d", n)
+	}
+}
+
+func TestMergingIsRefusedForAResembledContactTheDeciderMaySeeButNotChange(t *testing.T) {
+	r := stagedMergeReview(t)
+	r.e.WsExec(t, `UPDATE contact SET owner_id = $2 WHERE id = $1`, r.candidate, r.e.Rep2)
+	r.e.WsExec(t, `INSERT INTO record_grant (id, record_type, record_id, subject_type, subject_id, access, granted_by)
+		VALUES (uuidv7(), 'contact', $1, 'user', $2, 'read', $3)`, r.candidate, r.e.Rep1, r.e.Rep2)
+	if _, err := r.e.Contacts.GetContact(r.decider, r.candidate, storekit.LiveOnly); err != nil {
+		t.Fatalf("the decider cannot read the shared contact, so this test would prove nothing: %v", err)
+	}
+	before := r.count(t, `SELECT count(*) FROM contact`)
+	changes := `SELECT count(*) FROM audit_log WHERE entity_id = $1 AND action = 'update'`
+	events := `SELECT count(*) FROM event_outbox WHERE envelope #>> '{entity,id}' = $1::text AND envelope ->> 'type' = 'contact.updated'`
+	auditBefore, eventsBefore := r.count(t, changes, r.candidate), r.count(t, events, r.candidate.String())
+
+	_, err := r.svc.DecideEdited(r.decider, r.approval, r.mergeChoice(t))
+	if !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("merging into a contact the decider may only read = %v, want not found", err)
+	}
+	r.assertNothingHappened(t, before)
+	if n := r.count(t, changes, r.candidate); n != auditBefore {
+		t.Errorf("contact audit rows changed from %d to %d", auditBefore, n)
+	}
+	if n := r.count(t, events, r.candidate.String()); n != eventsBefore {
+		t.Errorf("contact update events changed from %d to %d", eventsBefore, n)
 	}
 }

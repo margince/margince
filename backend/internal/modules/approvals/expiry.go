@@ -146,3 +146,13 @@ func createdEvidence(in StageInput) map[string]any {
 	}
 	return evidence
 }
+
+// requestedSummary is the summary the approval.requested event and the notices
+// built from it carry. Both outlive the expiry, so a kind that clears its card
+// states only that a card waits.
+func requestedSummary(in StageInput) string {
+	if payloadClearedOnExpiry[in.Kind] {
+		return "A vCard waits for an answer"
+	}
+	return in.Summary
+}
