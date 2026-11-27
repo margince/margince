@@ -2871,8 +2871,6 @@ export const en = {
   "locale.name.vi": "Tiếng Việt",
   "locale.switchLabel": "Language",
 
-  "screen.pending": "This screen is not available yet.",
-
   // The composed extension tier (ADR-0120): #/ext/<unit>. The registry is
   // generated per installation, so these strings are the only part of a
   // unit surface the core catalogs own.
@@ -14483,7 +14481,7 @@ export const en = {
   "book.name": "Your name",
   "book.email": "Your email",
   "book.privacyInformation": "Privacy information",
-  "book.privacyMissing":
+  "scheduling.privacyMissing":
     "Your booking page has no privacy information link. Ask an administrator to fill in “Data protection contact” under Settings → Company → Company details in mail.",
   "book.consentWording":
     "I agree that my name and email are stored to arrange and follow up on this meeting.",

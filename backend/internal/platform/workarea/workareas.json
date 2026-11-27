@@ -259,6 +259,7 @@
     "draftIntroNote": "business",
     "draftIntroRequest": "business",
     "editWeeklyPlanCommitment": "business",
+    "endPartnerProgram": "business",
     "ensureCompanyScan": "business",
     "evaluateReporting": "business",
     "evaluateReportingReport": "business",
@@ -1223,6 +1224,7 @@
     "draftIntroRequest": "companies",
     "draftLeadEmail": "leads",
     "editWeeklyPlanCommitment": "worklist",
+    "endPartnerProgram": "companies",
     "ensureCompanyScan": "companies",
     "evaluateReporting": "reports",
     "evaluateReportingReport": "reports",
@@ -2679,6 +2681,9 @@
     ],
     "embed_reindex_status": [
       "search_index"
+    ],
+    "end_partner_program": [
+      "companies"
     ],
     "enrich": [
       "companies"
@@ -4843,6 +4848,9 @@
     ],
     "embed_reindex_status": [
       "operator"
+    ],
+    "end_partner_program": [
+      "business"
     ],
     "enrich": [
       "business"

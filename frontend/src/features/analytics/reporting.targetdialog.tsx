@@ -71,7 +71,7 @@ export function ReportingTargetDialog({
   const [periodStart, setPeriodStart] = useState(
     initialTargetPeriod(target, context),
   );
-  const people = useMeasurableScopes(
+  const measurable = useMeasurableScopes(
     context.allowed_scopes.filter((scope) => scope.kind !== "managed_teams"),
     Number(context.as_of.slice(0, 4)),
     !target,
@@ -186,9 +186,9 @@ export function ReportingTargetDialog({
             <p>{scopeName(scope, t)}</p>
           ) : (
             <>
-              <MeasurableRosterState read={people} />
+              <MeasurableRosterState read={measurable} />
               <AnalyticsScopePicker
-                scopes={people.scopes}
+                scopes={measurable.scopes}
                 selected={{ ...scope, label: scope.label ?? "" }}
                 onSelect={(scope) =>
                   setScope({ ...scope, id: scope.id ?? undefined })

@@ -105,7 +105,9 @@ describe("the browser tab title", () => {
         .getAttribute("href"),
     ).toContain(`#/deals/${ANNA_ID}`);
     expect(
-      screen.getAllByText("ANG-2026-0007").some((item) => item.closest("[aria-current]")),
+      screen
+        .getAllByText("ANG-2026-0007")
+        .some((item) => item.closest("[aria-current]")),
     ).toBeTruthy();
   });
 

@@ -25,9 +25,11 @@ func TestAStagedActionKeepsTheRuleAndTriggerInEveryLanguage(t *testing.T) {
 		fake := &fakeApprovals{id: ids.New[ids.ApprovalKind]()}
 		_, err := ApplyActions(context.Background(), Executors{Approvals: fake}, workflow.Effect{
 			Why: why,
-			Actions: []workflow.Action{{Kind: workflow.ActionEmitFlowEvent,
+			Actions: []workflow.Action{{
+				Kind:   workflow.ActionEmitFlowEvent,
 				Target: datasource.EntityRef{Type: datasource.EntityDeal, ID: ids.NewV7()},
-				Args:   json.RawMessage(`{"question":"Has the account review been completed?"}`)}},
+				Args:   json.RawMessage(`{"question":"Has the account review been completed?"}`),
+			}},
 		})
 		var staged *workflow.StagedApprovalError
 		if !errors.As(err, &staged) || len(fake.calls) != 1 || fake.calls[0].Why == nil {

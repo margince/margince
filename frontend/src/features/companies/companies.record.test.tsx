@@ -799,7 +799,9 @@ describe("CompanyScreen — the Partner tab is scoped to the account being read"
       return emptyPage();
     });
     render(<CompanyScreen id="o-1" />);
-    await userEvent.click(await screen.findByRole("button", { name: "Partner" }));
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Partner" }),
+    );
     await userEvent.click(screen.getByRole("button", { name: "Overview" }));
     expect(screen.getByRole("button", { name: "Partner" })).toBeTruthy();
   });

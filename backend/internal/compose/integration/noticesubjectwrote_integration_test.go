@@ -344,5 +344,4 @@ func TestTheirMailBeforeAReferralPreventsOpeningTheDuty(t *testing.T) {
 	if proof != mail {
 		t.Fatal("skipped duty did not record the original mail as evidence")
 	}
-
 }

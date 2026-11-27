@@ -32,7 +32,7 @@ func (tool *userAuthorityTool) Handle(ctx context.Context, _ json.RawMessage) (j
 func TestMCPClientsKeepTheUsersAuthorityWhetherChattingOrAutomatic(t *testing.T) {
 	actor := principal.Principal{Type: principal.PrincipalAgent, ID: "agent:external", OnBehalfOf: ids.NewV7(), UserID: ids.NewV7(), PassportID: ids.NewV7(), ConnectionID: ids.NewV7(), SeatType: principal.SeatFull, Permissions: everyRecordedGrant(), Scopes: principal.NewScopeSet(principal.ScopeSend)}
 	ctx := principal.WithActor(principal.WithWorkspaceID(context.Background(), ids.NewV7()), actor)
-	tool := &userAuthorityTool{fakeTool: fakeTool{spec: mcp.ToolSpec{Name: "user_change", Title: "Change a record", Version: testToolVersion, Description: "Change the user record.", RequiredScope: principal.ScopeSend, Tier: mcp.TierAutoExecute, InputSchema: json.RawMessage(`{"type":"object"}`)}}, seen: make(chan context.Context, 3)}
+	tool := &userAuthorityTool{spec: mcp.ToolSpec{Name: "user_change", Title: "Change a record", Version: testToolVersion, Description: "Change the user record.", RequiredScope: principal.ScopeSend, Tier: mcp.TierAutoExecute, InputSchema: json.RawMessage(`{"type":"object"}`)}, seen: make(chan context.Context, 3)}
 	registry := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}))
 	registry.Register(tool)
 	handler := NewHTTPHandler(registry, func(*http.Request) (context.Context, error) { return ctx, nil }, func(*http.Request) string { return "" }, "margince-crm", "test", discardLog())

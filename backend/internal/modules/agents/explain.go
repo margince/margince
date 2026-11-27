@@ -87,17 +87,10 @@ func (s *Dispatcher) explain(tool string, err error) string {
 	case errors.As(err, &confirmAsk):
 		return confirmInConversationExplanation(confirmAsk)
 	case errors.As(err, &staged):
-		// A 🟡 call that reached the inbox, and the branch that says WHAT is
-		// waiting there. The contact answers it — in the CRM, or through this
-		// credential when the change can be undone outside a built-in scheduled run
-		// (stagedReleasePath) — so the caller's job is to relay, and it can only
-		// relay a description it was given: an agent sent
-		// to read_approval for the sentence tells the user a change is pending
-		// and cannot say which.
-		//
-		// Composed here rather than through refusalDetail. The summary carries a
-		// caller-chosen field name and a workspace-authored record label, so it is
-		// escaped and bounded at workflow.MaxStagedSummary on the way out.
+		// The caller needs the staged change's description to relay it to the user.
+		// A separate read_approval would leave the first answer without that detail.
+		// The summary includes caller-chosen fields and workspace record labels.
+		// stagedExplanation escapes and bounds it at workflow.MaxStagedSummary.
 		return stagedExplanation(staged)
 	case errors.Is(err, errDeclinedInChat):
 		return "The user said no in the chat, so nothing was changed. Do not repeat the call unless they ask again."

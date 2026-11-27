@@ -10,6 +10,7 @@ import "github.com/margince/margince/backend/internal/shared/gatekit"
 const activityCorrectionMetadata = "system data-task progress counts only a capped primary-key page, never content. Immutable IDs stay in that scan so progress advances across every inspected record; the domain corrections exclude restricted rows before reading their content or writing them"
 
 var restrictedReadersAdmitted = gatekit.Waive(map[string]string{
+	"internal/modules/capture/chatclarifyreply.go:Sink.consumeEcho":                     "matches only the current connector and thread identity to consume our own echo; no held content is returned or disclosed. Filtering held rows would ingest our outgoing echo as a new customer message",
 	"internal/modules/capture/chatclarify.go:FormClarifyBatchesTx":                      "reads held forwards, whose predicate (pendingforward.Predicate) names only unarchived, unrestricted rows, to group them into batches. It returns no content to anyone.",
 	"internal/modules/capture/chatclarify.go:dueBatchSQL":                               "the batches of held forwards that have not been asked about, selected through pendingforward.Predicate, which excludes archived and restricted rows. It names the colleague, the channel and a count, and no content.",
 	"internal/modules/capture/chatclarify.go:ClaimClarifyBatchTx":                       "claims the held forwards of one batch before a question is sent. The predicate it composes (pendingforward.Predicate) excludes archived and restricted rows.",

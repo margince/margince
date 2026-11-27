@@ -596,7 +596,10 @@ missing one uses the capture date as a bound. The clock never starts again at re
 
 A data task moves live cases with an unknown source to review. It keeps their audit history,
 finished decisions and mail already on its way. If a send fails, the source is checked again.
-When a contact writes to us, books a meeting, organizes one or accepts its invitation, every still-owed notice duty closes regardless of the original source. The confirmed source remains recorded. The closure and audit name the mail or meeting. Queued disclosures and finished outcomes stay intact. The opener, source preview, event consumer, failed-delivery handler and repair task use one evidence rule.
+
+When a contact writes to us or books a meeting, every still-owed notice duty closes. The same holds when they send or accept a meeting request. This holds for every original source. The confirmed source stays recorded. The closure and audit name the mail or meeting.
+
+Queued disclosures and finished outcomes stay as they were. The opener, source preview, event consumer, failed-delivery handler and repair task use one evidence rule.
 
 ## Where the code lives
 

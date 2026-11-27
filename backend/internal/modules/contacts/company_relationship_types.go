@@ -12,9 +12,8 @@ package contacts
 // a client. The single enum could hold one of those and silently erased the
 // rest.
 //
-// The rows are an owned child of the company, written only through the
-// company's own gated paths — the patch below, the partner upsert and EndPartnerProgram —
-// which is the visibility decision the schema fitness gate records.
+// These rows belong to the company. Its gated patch, partner upsert and
+// EndPartnerProgram are their only writers. The schema gate records that boundary.
 
 import (
 	"context"

@@ -1,13 +1,15 @@
--- Saved views are personal settings entered by hand. Only later live twins
--- change; the oldest keeps its spelling, and archived views release names.
+-- SPDX-License-Identifier: BUSL-1.1
+-- SPDX-FileCopyrightText: 2026 Gradion
+
+-- Rename only later live twins before the concurrent unique index is built.
 SET LOCAL lock_timeout = '3s';
-LOCK TABLE saved_view IN SHARE ROW EXCLUSIVE MODE;
 DO $twins$
 DECLARE
  twin record;
  suffix bigint;
  candidate text;
 BEGIN
+ LOCK TABLE saved_view IN SHARE ROW EXCLUSIVE MODE;
  FOR twin IN
   SELECT * FROM (
    SELECT id, owner_id, resource, btrim(name) AS base,
@@ -35,4 +37,3 @@ BEGIN
  END LOOP;
 END
 $twins$;
-CREATE UNIQUE INDEX saved_view_name_once ON saved_view (owner_id, resource, lower(btrim(name))) WHERE archived_at IS NULL;

@@ -7,17 +7,31 @@ package migrations_test
 
 import (
 	"context"
+	"os"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/platform/dbmigrate"
 )
 
-const savedViewNameMigration = "core/1795740696_a_saved_view_name_is_unique_for_its_owner_and_resource"
+const savedViewNameMigration = "core/1795740697_a_saved_view_name_has_one_live_owner"
 
 func TestSavedViewTwinsKeepTheOldestNameAndSkipExistingSuffixes(t *testing.T) {
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	headSchema(t, conn)
 	ctx := context.Background()
-	applyMigrationFile(t, conn, savedViewNameMigration+".down.sql")
+	down, err := os.ReadFile(savedViewNameMigration + ".down.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	up, err := os.ReadFile(savedViewNameMigration + ".up.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ns := dbmigrate.Namespace{Name: "saved_view_names_test", Migrations: []dbmigrate.Migration{{Version: "0001", Name: "names", UpSQL: string(down), DownSQL: string(up)}}}
+	if _, err := dbmigrate.Up(ctx, conn, ns); err != nil {
+		t.Fatal(err)
+	}
 	owner := seedAppUserForConnection(t, conn, "view-name-twins@example.test")
 	seed := func(name, at string) string {
 		t.Helper()
@@ -43,7 +57,12 @@ func TestSavedViewTwinsKeepTheOldestNameAndSkipExistingSuffixes(t *testing.T) {
 	if _, err := conn.Exec(ctx, `UPDATE app_user SET status = 'deactivated', removed_at = now() WHERE id = $1`, retiredOwner); err != nil {
 		t.Fatal(err)
 	}
-	applyMigrationFile(t, conn, savedViewNameMigration+".up.sql")
+	applyMigrationFile(t, conn, "core/1795740696_a_saved_view_name_is_unique_for_its_owner_and_resource.up.sql")
+	ns.Name = "saved_view_names_restore"
+	ns.Migrations[0].UpSQL = string(up)
+	if _, err := dbmigrate.Up(ctx, conn, ns); err != nil {
+		t.Fatal(err)
+	}
 
 	var retired bool
 	if err := conn.QueryRow(ctx, `SELECT archived_at IS NOT NULL FROM saved_view WHERE id = $1`, retiredDuplicate).Scan(&retired); err != nil {

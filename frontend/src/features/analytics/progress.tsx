@@ -80,12 +80,12 @@ export function ProgressScreen() {
   const [now] = useState(() => new Date());
   const context = useAnalyticsContext();
   const dials = readDials(params, now);
-  const people = useMeasurableScopes(
+  const measurable = useMeasurableScopes(
     progressScopes(context.data?.allowed_scopes ?? []),
     dials.year,
     context.isSuccess,
   );
-  const scopes = people.scopes;
+  const scopes = measurable.scopes;
   const named =
     scopes.find((scope) => scopeKey(scope) === params.get("scope")) ??
     sellerFromKey(params.get("scope"));
@@ -186,7 +186,7 @@ export function ProgressScreen() {
           </Field>
         )}
       </FilterBar>
-      <MeasurableRosterState read={people} />
+      <MeasurableRosterState read={measurable} />
       <QueryGate query={progress} pendingLabel={t("progress.reading")}>
         {(data) => <ProgressBody progress={data} />}
       </QueryGate>

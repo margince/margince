@@ -10,7 +10,7 @@ import {
   StoryProviders,
 } from "../../testing/story-utils";
 import { EndPartnerProgramAction } from "./partners.end";
-import { PartnerTab } from "./partners.form";
+import { PartnerTab } from "./partners.tab";
 
 const meta: Meta = {
   title: "Records/Partner setup form",

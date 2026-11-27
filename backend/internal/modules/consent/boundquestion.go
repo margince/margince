@@ -215,8 +215,9 @@ func frequencyName(frequency string, words mailcopy.Copy) string {
 }
 
 // privacyPageFields is where a subscription question points its reader for
-// their rights, including on the booking form, first stated wins: the privacy page, then the privacy contact,
-// then nothing. frontend/src/features/privacy/privacypage.ts mirrors it.
+// their rights, including on the booking form. The first stated value wins:
+// privacy page, then privacy contact, then nothing.
+// frontend/src/features/privacy/privacypage.ts mirrors it.
 //
 // Held by: TestThePrivacyPageFallbackIsOneOnBothSides
 // (backend/gates/privacypagefallback_test.go)

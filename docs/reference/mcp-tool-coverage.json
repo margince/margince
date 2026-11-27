@@ -11640,7 +11640,7 @@
     },
     {
       "name": "change_settings",
-      "tokens": 3309,
+      "tokens": 3348,
       "agents": [],
       "required_by_cases": [
         "case116_the_rate_and_the_logo",

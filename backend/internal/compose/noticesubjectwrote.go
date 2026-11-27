@@ -24,13 +24,11 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
-	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
-
-// capturedAcquisition identifies provenance for the historical capture-only repairs.
-var capturedAcquisition = correspondence.CapturedAcquisitionSQL("e")
 
 // contactWroteToUsTx reports that a mail this contact wrote has been captured.
 func contactWroteToUsTx(ctx context.Context, tx pgx.Tx, contactID ids.UUID) (bool, error) {
@@ -104,6 +102,12 @@ func (n *NoticeCaseOpen) settleSender(ctx context.Context, tx pgx.Tx, contactID,
 }
 
 func settleSenderCasesTx(ctx context.Context, tx pgx.Tx, contactID, mail ids.UUID, sent, now time.Time) (int, error) {
+	if err := auth.RequireSystem(ctx); err != nil {
+		return 0, err
+	}
+	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
+		return 0, err
+	}
 	// Match the opener's lock order: contact, acquisitions, then cases. Recording
 	// the new proof takes a foreign-key lock on the contact too.
 	var held ids.UUID

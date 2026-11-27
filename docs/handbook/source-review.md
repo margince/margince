@@ -12,6 +12,6 @@ Answer how you received the details and check the preview before confirming. It 
 
 **Met face to face** needs the day of the meeting. It records the meeting and supports personal follow-up mail inside the reply window, never marketing or a newsletter. No privacy notice is due. Other source answers grant no permission to send mail.
 
-If the contact sends you a captured email, books a meeting on your booking page, organizes a meeting or accepts an invitation, no separate privacy notice is owed. This holds for every original source, including a referral or a bought list. An open duty closes with the mail or meeting named as its ground. An invitation you sent without an answer leaves the duty open.
+If the contact sends you email or books a meeting, no separate privacy notice is owed. The same holds when they send or accept a meeting invitation. This holds for every original source, including a referral or an imported list. An open duty closes and names the email or meeting as its reason. An invitation you sent without an answer leaves the duty open.
 
 The contact's **What was said** card also shows recent notes you may read, with who wrote them when recorded. A note gives context and creates no task.

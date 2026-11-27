@@ -25,13 +25,13 @@ func SubjectMailFromSQL(contact string) string {
 
 // SubjectReachedOutSQL names evidence of this contact's own approach. An
 // unanswered invitation or mail we sent provides no such evidence. A public
-// booking names only its booker, never the other people invited to the room.
+// booking names only its booker, never the other guests invited to the room.
 func SubjectReachedOutSQL(activity, contact string) string {
 	party := relstrength.ParticipantRowsOfContactSQL(contact)
 	mail := `EXISTS (SELECT 1 FROM ` + party + ` sp WHERE sp.activity_id = ` + activity + `.id AND sp.role = 'from')`
 	meeting := `EXISTS (SELECT 1 FROM ` + party + ` sp WHERE sp.activity_id = ` + activity + `.id AND sp.user_id IS NULL AND ` + subjectAgreedMeetingSQL(activity, "sp") + `)`
 	// The captured inquiry belongs to the actual booker and follows merges. A
-	// public booking is deliberately counted without a mailbox challenge (#13650).
+	// public booking is counted without a mailbox challenge (#13650).
 	booking := `EXISTS (SELECT 1 FROM consent_qualifying_event qi WHERE qi.contact_id = ` + contact + ` AND qi.source_entity_type = 'activity' AND qi.source_entity_id = ` + activity + `.id AND qi.kind = 'inquiry' AND qi.source = 'captured')`
 	return `(` + activity + `.archived_at IS NULL AND ((` + correspondence.SubjectMailSQL(activity) + ` AND ` + mail + `) OR (` + activity + `.kind = 'meeting' AND (` + meeting + ` OR (` + activity + `.source = 'public_booking' AND ` + booking + `)))))`
 }
@@ -127,9 +127,9 @@ func closeNoticeCasesTx(ctx context.Context, tx pgx.Tx, caseIDs []ids.UUID, note
 			UPDATE privacy_notice_case
 			   SET state = $2, rule = 'none', due_at = NULL, allowed_routes = '{}', resolution_note = $3, completed_at = $4,
 			       blocked_reason = NULL, updated_at = now()
-			 WHERE id = $1
+			 WHERE id = $1 AND state = ANY($5)
 			RETURNING`+noticeCaseColumns,
-			id, string(NoticeExemptWithReason), note, now))
+			id, string(NoticeExemptWithReason), note, now, SettleableNoticeStates()))
 		if err != nil {
 			return closed, fmt.Errorf("close a duty that ended without a notice: %w", err)
 		}

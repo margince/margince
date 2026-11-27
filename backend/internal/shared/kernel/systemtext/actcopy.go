@@ -11,6 +11,7 @@ import (
 )
 
 var actDefinitions = map[string]Definition{
+	"act.verbs.end_partner_program":                {Words: langcopy.Phrase{En: "End partner program", De: "Partnerprogramm beenden", Vi: "Kết thúc chương trình đối tác"}},
 	"act.verbs.assign_website_inquiry":             {Words: langcopy.Phrase{En: "Assign website inquiry", De: "Website-Anfrage zuweisen", Vi: "Giao yêu cầu từ website"}},
 	"act.verbs.preview_website_inquiry_assignment": {Words: langcopy.Phrase{En: "Preview inquiry assignment", De: "Zuweisung der Website-Anfrage prüfen", Vi: "Xem trước người nhận yêu cầu từ website"}},
 	"act.verbs.preview_website_inquiries":          {Words: langcopy.Phrase{En: "Preview website inquiries", De: "Website-Anfragen prüfen", Vi: "Xem trước các yêu cầu từ website"}},

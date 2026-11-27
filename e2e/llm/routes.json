@@ -320,6 +320,7 @@
         "delete_lead_source": "delete_lead_source",
         "disconnect_finance_source": "disconnect_finance_source",
         "disconnect_provider": "disconnect_provider",
+        "end_partner_program": "end_partner_program",
         "handle_website_inquiries": "handle_website_inquiries",
         "link_finance_customer": "link_finance_customer",
         "mark_booking_page_shared": "mark_booking_page_shared",

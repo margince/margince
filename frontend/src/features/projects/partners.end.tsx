@@ -26,7 +26,13 @@ export function EndPartnerProgramAction({
   const [open, setOpen] = useState(false);
   const [readVersion, setReadVersion] = useState(version);
   const mutation = useMutation({
-    mutationFn: async ({ id, version }: { id: string; version: number }) => {
+    mutationFn: async ({
+      id,
+      version,
+    }: {
+      id: string;
+      version: number | undefined;
+    }) => {
       unwrap(
         await api.DELETE("/companies/{id}/partner", {
           params: { path: { id }, ...ifMatch(requireVersion(version)) },

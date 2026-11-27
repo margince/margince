@@ -1,28 +1,20 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+import { useMutation } from "@tanstack/react-query";
 import { type FormEvent, useId, useState } from "react";
 import { api } from "../../api/client";
 import { ifMatch, requireVersion } from "../../api/version";
 import { SUBMIT_COPY, type SubmitIntent } from "../../components/create";
-import {
-  Button,
-  EmptyState,
-  Field,
-  SectionHeader,
-  TextInput,
-} from "../../design-system/atoms";
+import { Button, Field, TextInput } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { refuseUnreadableField } from "../../design-system/formvalidity";
 import { Panel, PanelBody } from "../../design-system/panel";
-import { QueryGate } from "../../design-system/querystates";
 import { RecordFormDialog } from "../../design-system/recordformdialog";
 import { useFieldFaults } from "../../design-system/savepage";
 import { MultiSelect, Select } from "../../design-system/select";
 import { useLocale, useT } from "../../i18n";
-import {
-  useCanWrite,
-  useGrantRefused,
-  useWriteRefusal,
-} from "../../lib/capability";
+import { useCanWrite, useGrantRefused } from "../../lib/capability";
 import { labelFor } from "../../lib/labelfor";
 import { isOption } from "../../lib/options";
 import {
@@ -34,11 +26,8 @@ import {
   partnerStageLabel,
   usePartnerStages,
 } from "../../lib/partnerstages.queries";
-import { blankRequired, throwProblem, unwrap } from "../../lib/problem";
-import { useMe } from "../../lib/session";
+import { blankRequired, unwrap } from "../../lib/problem";
 import { useViewerZone } from "../../lib/viewerzone";
-import { PartnerCommissions } from "./partnercommissions";
-import { PartnerDeals } from "./partnerdeals";
 import { ActivationNote, MarginTierRow } from "./partners.detailrows";
 import { EndPartnerProgramAction } from "./partners.end";
 import { PartnerNextStep } from "./partners.nextstep";
@@ -52,19 +41,6 @@ import {
   type Partner,
   type UpsertPartnerRequest,
 } from "./partners.vocab";
-
-async function fetchPartner(companyId: string): Promise<Partner | null> {
-  const { data, error, response } = await api.GET("/companies/{id}/partner", {
-    params: { path: { id: companyId } },
-  });
-  if (response.status === 404) {
-    return null;
-  }
-  if (error) {
-    throwProblem(error);
-  }
-  return data ?? null;
-}
 
 type PartnerFormValues = {
   partner_kinds: PartnerKind[];
@@ -108,7 +84,7 @@ function buildUpsertBody(
 // The one form both "make this a partner" and "edit partner" render. They
 // differ only in the record they prefill from and whether the PUT carries
 // If-Match. First creation has no prior version to pin, so it sends none.
-function PartnerForm({
+export function PartnerForm({
   companyId,
   partner,
   onSaved,
@@ -348,7 +324,7 @@ function PartnerForm({
   );
 }
 
-function PartnerDetail({
+export function PartnerDetail({
   companyId,
   partner,
   refusal,
@@ -427,85 +403,5 @@ function PartnerDetail({
         />
       )}
     </Panel>
-  );
-}
-
-// The Partner tab. A company is a partner when it has a `partner` row, so a 404
-// from GET /companies/{id}/partner means "not a partner yet", not an error. It
-// renders the setup form instead of the shared error state. Setup and edit
-// both PUT the same UpsertPartnerRequest. The first creation carries no
-// If-Match, since there is no prior version; an edit carries the partner's
-// own `version`.
-export function PartnerTab({
-  companyId,
-  programEnded,
-}: Readonly<{ companyId: string; programEnded?: boolean }>) {
-  const t = useT();
-  const queryClient = useQueryClient();
-  // Every partner write needs the company grant; the tier alone also needs
-  // the partner grant, which the form asks for itself.
-  const writeRefusal = useWriteRefusal("company", "update", {
-    seat: t("settings.seatRefused"),
-    grant: t("partner.writeRefused"),
-  });
-  const refusal = useMe().data?.authorization ? writeRefusal : undefined;
-  const query = useQuery({
-    queryKey: ["partner", companyId],
-    queryFn: () => fetchPartner(companyId),
-  });
-
-  function invalidateAfterSave() {
-    queryClient.invalidateQueries({ queryKey: ["partner", companyId] });
-    queryClient.invalidateQueries({
-      queryKey: ["company", companyId],
-    });
-    queryClient.invalidateQueries({ queryKey: ["companies"] });
-    // The deal form asks this list whether a partner programme exists at all,
-    // so making the first partner has to reach it. Otherwise its fields stay
-    // absent there until the cache goes stale, and the setting looks lost.
-    queryClient.invalidateQueries({ queryKey: ["partners"] });
-  }
-
-  return (
-    <QueryGate query={query} pendingLabel={t("nav.partners")}>
-      {(partner) => (
-        <div className="record-stack">
-          {partner ? (
-            <PartnerDetail
-              companyId={companyId}
-              partner={partner}
-              refusal={refusal}
-              onSaved={invalidateAfterSave}
-            />
-          ) : (
-            // Two bodies: the panel's own seam divides what there is none of
-            // from how the first one is made.
-            <Panel title={t("tab.partner")}>
-              <PanelBody>
-                <EmptyState>{t("partner.none")}</EmptyState>
-              </PanelBody>
-              <PanelBody>
-                <SectionHeader title={t("partner.setup")} />
-                {refusal ? (
-                  <p>{refusal}</p>
-                ) : (
-                  <PartnerForm
-                    companyId={companyId}
-                    intent="create"
-                    onSaved={invalidateAfterSave}
-                  />
-                )}
-              </PanelBody>
-            </Panel>
-          )}
-          {(partner || programEnded) && (
-            <>
-              <PartnerDeals companyId={companyId} />
-              <PartnerCommissions companyId={companyId} />
-            </>
-          )}
-        </div>
-      )}
-    </QueryGate>
   );
 }

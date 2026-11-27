@@ -2877,8 +2877,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "locale.name.vi": "Tiếng Việt",
   "locale.switchLabel": "Ngôn ngữ",
 
-  "screen.pending": "Màn hình này chưa khả dụng.",
-
   "ext.panels.label": "Tiện ích mở rộng",
   "ext.notFound":
     "Bản cài đặt này không bật tiện ích mở rộng nào tên “{name}”.",
@@ -11686,7 +11684,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "notice.source.moreEvidence": "Xem thêm bằng chứng",
   "notice.source.preview": "Trước khi xác nhận",
   "notice.source.previewReachedOut":
-    "Người liên hệ đã chủ động liên lạc qua email hoặc cuộc họp nên không còn nghĩa vụ thông báo quyền riêng tư riêng.",
+    "Liên hệ đã chủ động liên lạc qua email hoặc cuộc họp nên không còn nghĩa vụ thông báo quyền riêng tư riêng.",
   "notice.source.previewNone": "Nguồn này không tạo nghĩa vụ thông báo riêng.",
   "notice.source.previewOwed": "Vẫn phải thông báo chậm nhất ngày {date}.",
   "notice.source.previewLatest":
@@ -14151,8 +14149,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "book.name": "Họ và tên",
   "book.email": "Email",
   "book.privacyInformation": "Thông tin về quyền riêng tư",
-  "book.privacyMissing":
-    "Trang đặt lịch chưa có liên kết đến thông tin về quyền riêng tư. Hãy nhờ quản trị viên điền “Liên hệ về bảo vệ dữ liệu” trong Cài đặt → Công ty → Thông tin công ty trong email.",
+  "scheduling.privacyMissing":
+    "Trang đặt lịch chưa có liên kết đến thông tin về quyền riêng tư. Liên hệ quản trị viên để điền “Liên hệ về bảo vệ dữ liệu” trong Cài đặt → Công ty → Thông tin công ty trong email.",
   "book.consentWording":
     "Tôi đồng ý cho lưu tên và email của mình để sắp xếp và liên hệ sau cuộc họp này.",
 

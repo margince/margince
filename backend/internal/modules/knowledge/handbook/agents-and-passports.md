@@ -216,7 +216,7 @@ in these cases:
 So an agent may answer a card staged for the colleague it acts for, its own
 proposal included, within the rules above. That is what the colleague could
 have answered in the app, and could put back later. A built-in scheduled agent run
-cannot approve a card. It can still reject a proposal. An external MCP client keeps
+cannot approve a card. It can still reject a proposal. An MCP client keeps
 the same authority whether it is chatting with you or runs automatically.
 
 **Raising its own allowance.** An agent can never answer a request to raise its

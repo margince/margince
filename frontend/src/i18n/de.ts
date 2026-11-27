@@ -2971,8 +2971,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "locale.name.vi": "Tiếng Việt",
   "locale.switchLabel": "Sprache",
 
-  "screen.pending": "Diese Ansicht ist noch nicht verfügbar.",
-
   "ext.panels.label": "Erweiterungen",
   "ext.notFound":
     "In dieser Installation ist keine Erweiterung namens „{name}“ aktiviert.",
@@ -3467,7 +3465,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "partner.endProgramHelp":
     "Das Unternehmen, die vereinbarten Konditionen und der Provisionsverlauf bleiben erhalten. Der Beziehungstyp Partner wird entfernt.",
   "partner.stageNeedsActivation":
-    "Aktivieren Sie den Partner, bevor Sie eine aktive Stufe wählen.",
+    "Aktiviere den Partner, bevor du eine aktive Phase wählst.",
   "partner.stageAll": "Alle Phasen",
   "partner.stageMeaning": "Bedeutung der Phase",
   "partner.stageMeaningAll": "Alle Bedeutungen",
@@ -14541,8 +14539,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "book.name": "Name",
   "book.email": "E-Mail-Adresse",
   "book.privacyInformation": "Datenschutzhinweise",
-  "book.privacyMissing":
-    "Auf Ihrer Buchungsseite fehlt ein Link zu den Datenschutzhinweisen. Bitten Sie einen Administrator, unter Einstellungen → Unternehmen → Firmenangaben in E-Mails das Feld „Kontakt zum Datenschutz“ auszufüllen.",
+  "scheduling.privacyMissing":
+    "Auf deiner Buchungsseite fehlt ein Link zu den Datenschutzhinweisen. Wende dich an einen Admin. Das Feld „Kontakt zum Datenschutz“ steht unter Einstellungen → Unternehmen → Firmenangaben in E-Mails.",
   "book.consentWording":
     "Ich bin einverstanden, dass mein Name und meine E-Mail-Adresse gespeichert werden, um diesen Termin zu vereinbaren und im Anschluss daran nachzufassen.",
 

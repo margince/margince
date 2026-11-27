@@ -136,13 +136,13 @@ func (s *Sink) consumeEcho(ctx context.Context, binding connector.ChatBinding, m
 		if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM raw_capture r
 			 JOIN activity a ON a.raw_capture_id = r.id
 			 WHERE r.held_by IS NOT NULL AND r.held_connection IS NOT DISTINCT FROM @connection
-			   AND (@question = ANY(r.ask_message_ids) OR (@legacy = ANY(r.ask_message_ids) AND a.thread_key = @thread))
+			   AND (@question = ANY(r.ask_message_ids) OR (@legacy = ANY(r.ask_message_ids) AND a.thread_key = @echo_thread))
 			   AND coalesce(r.ask_sent_at, r.ask_claimed_at) > now() - make_interval(secs => @window))`,
 			pgx.StrictNamedArgs{
 				"connection": nullable(binding.Connection),
 				"question":   clarifyMessageKey(binding.Provider, chatKeys(binding, msg).ThreadKey, msg.IdempotencyKey),
 				"window":     pendingforward.Window.Seconds(), "legacy": msg.IdempotencyKey,
-				"thread": chatKeys(binding, msg).ThreadKey,
+				"echo_thread": chatKeys(binding, msg).ThreadKey,
 			}).Scan(&echoed); err != nil {
 			return fmt.Errorf("capture: looking for the question an echo copies: %w", err)
 		}

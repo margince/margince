@@ -42,6 +42,6 @@ export function BookingPrivacyWarning({
 }: Readonly<{ address?: string }>) {
   const t = useT();
   return address ? null : (
-    <Callout kind="standing" title={t("book.privacyMissing")} />
+    <Callout kind="standing" title={t("scheduling.privacyMissing")} />
   );
 }

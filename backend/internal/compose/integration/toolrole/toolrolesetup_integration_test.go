@@ -122,6 +122,7 @@ var setupFixtures = map[string]func(p *recordPool) map[string]any{
 	"update_partner_stage": func(p *recordPool) map[string]any {
 		return unversioned(p, "partner_stage", map[string]any{"label": uniqueName()})
 	},
+	"end_partner_program": byID("live_partner"),
 	"upsert_partner": func(p *recordPool) map[string]any {
 		return map[string]any{"id": p.take("live_partner"), "request_body": map[string]any{"partner_kinds": []any{"referral"}}}
 	},

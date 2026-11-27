@@ -362,17 +362,8 @@ func corpusGradedTools(dir string, names []string, routes map[string]string) (co
 	return grades, nil
 }
 
-// writeCoverageSurfaces is the section this page did not have, and the reason
-// its headline number was unreadable.
-//
-// There are TWO menus and they are not comparable. Your AI assistant is
-// offered the whole MCP catalog under its user grant, whether chatting or
-// automatic. A night helper gets its declared allowlist of five to seven tools.
-// Its run is unattended, and every listed tool is paid for on every step.
-// One coverage number over both reports a menu nobody is served.
-//
-// It also states what this page CANNOT see, rather than leaving the reader to
-// infer that silence means zero: the units' tools, and the scope filter.
+// MCP clients use their user's full tool catalog. Scheduled helpers have a
+// smaller declared menu. Separate counts keep the coverage report useful.
 func writeCoverageSurfaces(p *strings.Builder, r mcpToolCoverage) {
 	p.WriteString("## Your AI assistant and the night helpers\n\n")
 	p.WriteString("A tool being \"untried\" means something different for each, so the numbers above " +

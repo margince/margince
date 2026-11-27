@@ -17,6 +17,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+const partnerRelationshipTypesField = "relationship_types"
+
 // EndPartnerProgram retires the extension without archiving its company or
 // deleting terms and commission history. A later setup can revive the same row.
 func (s *Store) EndPartnerProgram(ctx context.Context, company ids.CompanyID, ifVersion *int64) error {
@@ -60,11 +62,11 @@ func (s *Store) EndPartnerProgram(ctx context.Context, company ids.CompanyID, if
 		if _, err := reconcileCompanyRelationshipTypes(ctx, tx, company, "manual", by, desired, false); err != nil {
 			return err
 		}
-		before, after := map[string]any{"partner_archived_at": nil, "relationship_types": core}, map[string]any{"partner_archived_at": retired.ArchivedAt, "relationship_types": desired}
+		before, after := map[string]any{"partner_archived_at": nil, partnerRelationshipTypesField: core}, map[string]any{"partner_archived_at": retired.ArchivedAt, partnerRelationshipTypesField: desired}
 		audit, err := storekit.Audit(ctx, tx, "update", "company", company.UUID, before, after)
 		if err != nil {
 			return err
 		}
-		return storekit.EmitEvent(ctx, tx, audit, company.UUID, crmcontracts.PublicEventCompanyUpdated{ChangedFields: map[string]any{eventKeyDelta: map[string]any{eventKeyPartner: nil, "relationship_types": desired}}})
+		return storekit.EmitEvent(ctx, tx, audit, company.UUID, crmcontracts.PublicEventCompanyUpdated{ChangedFields: map[string]any{eventKeyDelta: map[string]any{eventKeyPartner: nil, partnerRelationshipTypesField: desired}}})
 	})
 }

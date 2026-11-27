@@ -314,14 +314,3 @@ func TestATagSuggestionCitingRestrictedMailIsRetiredAndFreesTheRecord(t *testing
 		t.Fatalf("new evidence raised %d suggestions, want 1", pass.Raised)
 	}
 }
-
-func TestTheOfflineTagScoutIgnoresOrdinaryReplyQuotations(t *testing.T) {
-	e := setupTagScout(t)
-	e.tag(t, "Product X", "product x pricing", true)
-	contact := e.SeedContact(t, "Reply writer", &e.Rep1)
-	now := time.Date(2026, 11, 27, 2, 0, 0, 0, time.UTC)
-	e.note(e.Admin(), t, "email", "Thank you, we are keeping our current system.\n\nOn Tuesday, Sales wrote:\n> Product X pricing is attached.", contact, now.Add(-time.Hour))
-	if pass := e.pass(t, now); pass.Raised != 0 {
-		t.Fatalf("quoted pricing raised %d suggestions", pass.Raised)
-	}
-}

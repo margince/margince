@@ -78,7 +78,10 @@ type Write = Readonly<{
 }>;
 
 // A /views that answers `views`, and records each write it is sent.
-function stubViews(views: unknown[], refuseWrites: boolean | string = false) {
+function stubViews(
+  views: unknown[],
+  refuseWrites: boolean | "view_name_taken" = false,
+) {
   const writes: Write[] = [];
   vi.stubGlobal(
     "fetch",
@@ -95,18 +98,19 @@ function stubViews(views: unknown[], refuseWrites: boolean | string = false) {
         ifMatch: request.headers.get("If-Match"),
         body: await request.clone().json(),
       });
-      return refuseWrites
-        ? Response.json(
-            {
-              code:
-                typeof refuseWrites === "string"
-                  ? refuseWrites
-                  : "version_skew",
-              detail: "The view changed.",
-            },
-            { status: 409 },
-          )
-        : Response.json(VIP);
+      if (refuseWrites === "view_name_taken") {
+        return Response.json(
+          { code: "view_name_taken", detail: "The name is taken." },
+          { status: 409 },
+        );
+      }
+      if (refuseWrites) {
+        return Response.json(
+          { code: "version_skew", detail: "The view changed." },
+          { status: 409 },
+        );
+      }
+      return Response.json(VIP);
     }),
   );
   return writes;
