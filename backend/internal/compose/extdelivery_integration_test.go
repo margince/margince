@@ -110,7 +110,7 @@ func TestADeliverySetsACustomFieldAndKeepsOneAUserEdited(t *testing.T) {
 	column := e.companyField(t, "Segment", customfields.TypeText)
 	made := e.mustIngest(t, companyRecord("acct-1", extension.CompanyFields{DisplayName: "Acme"}))
 	company := ids.From[ids.CompanyKind](ids.MustParse(made.Ref.ID))
-	store := newContactsStore(InstallationDB(e.Pool))
+	store := newContactsStore(InstallationDB(e.Pool)).WithFieldCatalog(customfields.NewService(e.Pool, integration.SchemaPool(t)))
 
 	set := func(value string) []string {
 		var withheld []string
