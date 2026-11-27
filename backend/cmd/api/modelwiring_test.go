@@ -256,7 +256,7 @@ func TestResolveModelPathBoundArmBindsEveryLane(t *testing.T) {
 var coldStartSurfaces = []string{
 	"cold-start", "scrape", "morning brief", "account brief", "company dossier",
 	"growth fit", "reply draft", "account draft", "contact draft", "lead draft",
-	"next move", "meeting brief", "relationship brief", "room brief", "role proposals",
+	"next move", "meeting brief", "relationship brief", "task explanation", "room brief", "role proposals",
 	"plain-words filter", "intro request", "intro note", "card photo", "reviewed message classification",
 	"sales assessment", "report setup", "reader rendering", "polish wording", "chat tasks",
 }

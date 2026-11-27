@@ -36,7 +36,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -243,7 +242,7 @@ func TestAUnitsRecordLandsAsAnActivityWithEvidenceAndTheWriteShape(t *testing.T)
 			   FROM activity WHERE id = $1`, activityID).Scan(&source, &capturedBy, &threadKey, &subject)
 	})
 	switch {
-	case source != provenance.RecordSourceImport:
+	case source != "import":
 		t.Errorf("source = %q, want the import channel a unit's feed arrives by", source)
 	// The CONNECTOR and the member behind it, which is more than the record
 	// carried: the unit hands over `connector:ext:<unit>` — the equality the
@@ -361,7 +360,7 @@ func TestAUnitsChannelMessageLandsAsARepliableConversation(t *testing.T) {
 	id := ids.MustParse(result.Ref.ID)
 	for column, want := range map[string]string{
 		"kind": extension.ActivityKindMessage, "channel_provider": ingressProbeProvider, "audience": "workspace",
-		"source_system": ingressProbeSource, "source_id": "ws-7:3001", "source": provenance.RecordSourceImport,
+		"source_system": ingressProbeSource, "source_id": "ws-7:3001", "source": "import",
 	} {
 		var got string
 		e.readAsWorkspace(t, func(ctx context.Context, tx pgx.Tx) error {

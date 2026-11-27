@@ -27,7 +27,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
@@ -272,7 +271,7 @@ func (c silentDealCloser) recordOfferedBack(ctx context.Context, tx pgx.Tx, deal
 	_, _, err := c.activities.LogActivityTx(ctx, tx, activities.LogActivityInput{
 		SystemText: &systemtext.Message{Subject: systemtext.Sentence("deal.lost_reoffered"), Body: component},
 		Kind:       string(crmcontracts.ActivityKindNote), Subject: &subject, Body: &body, Origin: activities.OriginSystemRemediation,
-		Source: provenance.RecordSourceAutomation, Links: []activities.ActivityLinkInput{{EntityType: entityTypeDeal, EntityID: deal.UUID}},
+		Links: []activities.ActivityLinkInput{{EntityType: entityTypeDeal, EntityID: deal.UUID}},
 	})
 	if err != nil {
 		return fmt.Errorf("compose: writing the offered-back close on the deal's timeline: %w", err)

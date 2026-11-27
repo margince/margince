@@ -39,7 +39,6 @@ gates/aitaskrailcensus_test.go#var carrierSources
 gates/consumermailonelist_test.go#var baselineDomains
 gates/edgereaders_test.go#const edgeTable
 gates/edgereaders_test.go#var edgeReaderScope
-gates/enumsync_test.go#func recordChecks
 gates/envcontract_test.go#func liveEnvVars
 gates/extensioncapabilitycensus_test.go#var surfaceConstants
 gates/fieldnames_test.go#const internalTree

@@ -25,7 +25,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
@@ -220,7 +219,7 @@ func (p dealVerdictPass) recordOnTimeline(
 	note, _, err := p.notes.LogActivityTx(ctx, tx, activities.LogActivityInput{
 		SystemText: &systemtext.Message{Subject: systemtext.Sentence("deal.updated"), Body: metadata},
 		Kind:       string(crmcontracts.ActivityKindNote), Subject: &subject, Body: &body, Origin: activities.OriginSystemRemediation,
-		Source: provenance.RecordSourceAutomation, Links: []activities.ActivityLinkInput{{EntityType: entityTypeDeal, EntityID: c.deal}},
+		Links: []activities.ActivityLinkInput{{EntityType: entityTypeDeal, EntityID: c.deal}},
 	})
 	if err != nil {
 		return ids.Nil, fmt.Errorf("compose: writing the verdict on the deal's timeline: %w", err)

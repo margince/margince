@@ -22,8 +22,6 @@ import (
 	"sort"
 	"strings"
 	"testing"
-
-	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // dayCalendar names the calendar a stored day was cut in.
@@ -136,12 +134,9 @@ var dateColumnCalendars = map[string]dateColumnCalendar{
 // "table.column", through the same line shape the undo gate reads.
 func schemaDateColumns(t *testing.T) []string {
 	t.Helper()
-	raw, err := gatekit.ReadFile("migrations/testdata/head_catalog.txt")
-	if err != nil {
-		t.Fatalf("reading the head catalog: %v", err)
-	}
+	raw := headCatalog(t)
 	var columns []string
-	for line := range strings.SplitSeq(string(raw), "\n") {
+	for line := range strings.SplitSeq(raw, "\n") {
 		if m := dateColumnLine.FindStringSubmatch(strings.TrimSpace(line)); m != nil {
 			columns = append(columns, m[1]+"."+m[2])
 		}

@@ -9,6 +9,7 @@
 package gates
 
 import (
+	"fmt"
 	"slices"
 	"testing"
 )
@@ -48,6 +49,22 @@ func TestTheWriteReaderKeepsEachStatementsOwnTargets(t *testing.T) {
 				t.Fatalf("tables=%v columns=%v; expected %v %v", tables, columns, test.tables, test.columns)
 			}
 		})
+	}
+}
+
+// Every caller reads a statement's writes as a fresh read gives them, whatever
+// an earlier caller did to its own answer.
+func TestACallersChangeToAStatementsWritesStaysItsOwn(t *testing.T) {
+	t.Parallel()
+	const statement = `UPDATE planted SET name=@name, currency=@currency WHERE id=@id`
+	want := fmt.Sprint(readSQLWrites(statement))
+	first := sqlWrites(statement)
+	if fmt.Sprint(first) != want || len(first) != 1 || len(first[0].cols) != 2 {
+		t.Fatalf("the held writes %v differ from a fresh read %s", first, want)
+	}
+	first[0].table, first[0].cols[0] = "changed", "changed"
+	if again := fmt.Sprint(sqlWrites(statement)); again != want {
+		t.Errorf("a caller's change reached the next caller: %s, want %s", again, want)
 	}
 }
 

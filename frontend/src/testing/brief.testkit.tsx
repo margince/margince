@@ -172,6 +172,15 @@ const DEFAULTS: Routes = {
   "GET /users/names": () => jsonResponse({ data: [] }),
   // The focus card reads the task it holds. Linked to no contact, it offers no
   // next steps.
+  // Task details explain the task when they open. An empty answer shows the
+  // panel's own facts.
+  "GET /activities/{id}/task-explanation": () =>
+    jsonResponse({
+      task_id: "00000000-0000-7000-8000-00000000a001",
+      sentences: [],
+      generated_by: "deterministic",
+      generated_at: "2026-09-13T08:00:00Z",
+    }),
   "GET /activities/{id}": () =>
     jsonResponse({
       id: "00000000-0000-7000-8000-00000000a001",
@@ -183,7 +192,12 @@ const DEFAULTS: Routes = {
 };
 
 function activityRoute(route: string): string {
-  return route.replace(/^GET \/activities\/[^/]+$/, "GET /activities/{id}");
+  return route
+    .replace(/^GET \/activities\/[^/]+$/, "GET /activities/{id}")
+    .replace(
+      /^GET \/activities\/[^/]+\/task-explanation$/,
+      "GET /activities/{id}/task-explanation",
+    );
 }
 
 /**

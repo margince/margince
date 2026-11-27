@@ -310,6 +310,11 @@ describe("a promise read out of a message nobody answered", () => {
     await waitFor(() =>
       expect(asked.some((url) => url.includes(MESSAGE_ID))).toBe(true),
     );
-    expect(asked.some((url) => url.includes(promise.id))).toBe(false);
+    // The task's own explanation may load beside it; no draft is asked of the task.
+    expect(
+      asked.some(
+        (url) => url.includes(promise.id) && !url.endsWith("/task-explanation"),
+      ),
+    ).toBe(false);
   });
 });

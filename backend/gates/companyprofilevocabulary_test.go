@@ -107,12 +107,12 @@ var mirrorsExemptFromDisplayName = map[string]bool{
 
 func TestTheCompanyProfileVocabularyIsSpelledOnceEverywhere(t *testing.T) {
 	t.Parallel()
-	admitted := tableCheckSets(t)[theProfileVocabulary]
+	admitted := checkVocabularies(t)[theProfileVocabulary]
 	// A census that judged nothing certifies nothing. This column has carried
 	// a CHECK since the baseline, so an empty set means the derivation stopped
 	// working rather than the vocabulary having emptied.
 	if len(admitted) < 10 {
-		t.Fatalf("only %d value(s) derived for %s — the migration scan has stopped reading it",
+		t.Fatalf("only %d value(s) derived for %s — the catalog reader has stopped reading it",
 			len(admitted), theProfileVocabulary)
 	}
 	want := map[string]bool{}
@@ -272,9 +272,9 @@ func declMentions(decl *ast.GenDecl, name string) bool {
 // the next. The generated client for the short enum cannot even name it.
 func TestEveryContractEnumCarriesTheWholeProfileVocabulary(t *testing.T) {
 	t.Parallel()
-	admitted := tableCheckSets(t)[theProfileVocabulary]
+	admitted := checkVocabularies(t)[theProfileVocabulary]
 	if len(admitted) < 10 {
-		t.Fatalf("only %d value(s) derived for %s — the migration scan has stopped reading it",
+		t.Fatalf("only %d value(s) derived for %s — the catalog reader has stopped reading it",
 			len(admitted), theProfileVocabulary)
 	}
 	wholeVocabulary := map[string]bool{}

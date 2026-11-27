@@ -23,7 +23,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
@@ -107,7 +106,7 @@ func (o scoutDealOpener) recordRevivalOnTimeline(ctx context.Context, tx pgx.Tx,
 	note, _, err := o.activities.LogActivityTx(ctx, tx, activities.LogActivityInput{
 		SystemText: &systemtext.Message{Subject: systemtext.Sentence("deal.reopened", systemtext.Text(name)), Body: systemtext.Sentence("deal.reopened_body")},
 		Kind:       string(crmcontracts.ActivityKindNote), Subject: &subject, Body: &body, Origin: activities.OriginSystemRemediation,
-		Source: provenance.RecordSourceAutomation, Links: []activities.ActivityLinkInput{{EntityType: entityTypeDeal, EntityID: deal.UUID}},
+		Links: []activities.ActivityLinkInput{{EntityType: entityTypeDeal, EntityID: deal.UUID}},
 	})
 	if err != nil {
 		return ids.Nil, fmt.Errorf("compose: writing the reopen on the deal's timeline: %w", err)

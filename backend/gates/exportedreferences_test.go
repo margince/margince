@@ -51,11 +51,8 @@ func TestEveryExportedReferenceToARowScopedTableIsWithheld(t *testing.T) {
 	}
 
 	want := map[string][]string{}
-	catalog, err := gatekit.ReadFile("migrations/testdata/head_catalog.txt")
-	if err != nil {
-		t.Fatalf("reading the head catalog: %v", err)
-	}
-	for _, line := range strings.Split(string(catalog), "\n") {
+	catalog := headCatalog(t)
+	for _, line := range strings.Split(catalog, "\n") {
 		m := foreignKeyToRowScoped.FindStringSubmatch(line)
 		if m == nil {
 			continue
