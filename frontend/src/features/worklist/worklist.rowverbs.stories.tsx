@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, fn, userEvent, within } from "storybook/test";
+import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 import { Button } from "../../design-system/atoms";
 import { Panel, PanelRow } from "../../design-system/panel";
 import { useT } from "../../i18n";
@@ -488,11 +488,10 @@ export const ABounceThatMayBeSentAgain: Story = {
     await userEvent.click(
       await within(canvasElement).findByRole("button", { name: "Send again" }),
     );
-    await expect(
-      await within(document.body).findByRole("textbox", {
-        name: en["worklist.verb.sendAgainAddress"],
-      }),
-    ).toBeVisible();
+    const address = await within(document.body).findByRole("textbox", {
+      name: en["worklist.verb.sendAgainAddress"],
+    });
+    await waitFor(() => expect(address).toBeVisible());
   },
 };
 
