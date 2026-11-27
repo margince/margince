@@ -8,7 +8,7 @@ import "github.com/margince/margince/backend/internal/shared/kernel/langcopy"
 var agentDefinitions = map[string]Definition{
 	"stage.open": {Words: langcopy.Phrase{En: "open", De: "offen", Vi: "mở"}},
 	"stage.won":  {Words: langcopy.Phrase{En: "won", De: "gewonnen", Vi: "thắng"}},
-	"stage.lost": {Words: langcopy.Phrase{En: "lost", De: "verloren", Vi: "thất bại"}},
+	"stage.lost": {Words: langcopy.Phrase{En: "lost", De: "verloren", Vi: "thua"}},
 
 	"agent.fieldListMore": {Words: langcopy.Phrase{En: commaSeparatedPair, De: commaSeparatedPair, Vi: commaSeparatedPair}, Arguments: []string{argumentText, argumentText}},
 
