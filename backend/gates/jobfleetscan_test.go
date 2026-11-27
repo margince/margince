@@ -80,10 +80,6 @@ type ratifiedFleetScan struct {
 // worker, and a waiver granted on that basis would already have waved it
 // through.
 var ratifiedFleetScans = map[string]ratifiedFleetScan{
-	"internal/compose/installtrial/installtrial.go": {
-		1,
-		"reads the earliest workspace creation time once, as the start of the installation's trial; it does no tenant work and enqueues nothing",
-	},
 	"internal/platform/database/workspaces.go": {
 		2,
 		"the one fleet scan: LiveWorkspaces is what every dispatcher, per-workspace pass, due-scan and tenant resolution starts from, and EveryWorkspace is the archived-inclusive spelling BOTH retention passes need, because archiving a workspace does not un-store the data inside it. Both read the fleet and do no tenant work themselves",
@@ -91,10 +87,6 @@ var ratifiedFleetScans = map[string]ratifiedFleetScan{
 	"internal/modules/identity/installation.go": {
 		1,
 		"boot path: resolves the singleton company and refuses to serve when a second exists (ADR-0061 §3) — it IS the workspace authority, not a consumer of it",
-	},
-	"internal/compose/archivedpredecessor.go": {
-		1,
-		"boot path, and it counts ARCHIVED workspaces rather than enumerating live ones: an archived company's rows merged into this installation when ADR-0091 §8 phase D took the tenant column, and that row is the only surviving evidence a merge happened. It reads the count to say so once and does no tenant work at all",
 	},
 }
 
