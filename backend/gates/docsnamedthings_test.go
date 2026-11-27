@@ -89,6 +89,18 @@ func sourceEnvNames(t *testing.T) map[string]bool {
 	return names
 }
 
+// ownedByTheEnvContract reports a page whose variables envcontract_test.go
+// holds to the ones the product reads. That bar is stricter than a name any
+// source spells, so this arm leaves those pages to it rather than answer twice.
+func ownedByTheEnvContract(rel string) bool {
+	for _, page := range []string{configurationDoc, programsDoc, workerDoc} {
+		if rel == strings.TrimPrefix(page, docsTreeRoot+"/") {
+			return true
+		}
+	}
+	return false
+}
+
 func envKnown(name string, known map[string]bool) bool {
 	if known[name] {
 		return true
@@ -112,7 +124,7 @@ func TestDocsNameOnlyThingsThatExist(t *testing.T) {
 		if err != nil {
 			t.Fatalf("read %s: %v", rel, err)
 		}
-		inFence, shellFence := false, false
+		inFence, shellFence, envOwned := false, false, ownedByTheEnvContract(rel)
 		for i, line := range strings.Split(string(raw), "\n") {
 			if trimmed := strings.TrimSpace(line); barFence.MatchString(trimmed) {
 				inFence = !inFence
@@ -131,7 +143,7 @@ func TestDocsNameOnlyThingsThatExist(t *testing.T) {
 				}
 			}
 			for _, m := range namedEnv.FindAllStringSubmatch(line, -1) {
-				if name := strings.TrimRight(m[0], "*_<"); m[1] == "" && !envKnown(name, envs) {
+				if name := strings.TrimRight(m[0], "*_<"); m[1] == "" && !envOwned && !envKnown(name, envs) {
 					t.Errorf("%s:%d names %s, which no source reads or sets", rel, i+1, name)
 				}
 			}
@@ -157,5 +169,8 @@ func TestDocsNamedThingsSeePlantedClaims(t *testing.T) {
 	}
 	if retiredInstructions[0].pattern.MatchString("Type your sign-off in **Sign-off**.") {
 		t.Error("an email sign-off was read as the retired commit rule")
+	}
+	if !ownedByTheEnvContract("docs/reference/programs.md") || ownedByTheEnvContract("docs/how-to/deploy.md") {
+		t.Error("the env arm no longer leaves exactly envcontract_test.go's pages to it")
 	}
 }

@@ -152,10 +152,6 @@ func onlyTheLegalBlockOmits() map[string]string {
 //     mutation-checked entry by entry rather than trusted to the pattern.
 var tsVocabularyField = regexp.MustCompile(`(?m)(?:^|[\s,{[])["']?([a-z][a-z_]*[a-z])["']?\s*(?::|,|$|])`)
 
-// tsVocabularyComment strips comments before the fields are read, so a field
-// NAMED in prose beside the literal cannot stand in for a real entry.
-var tsVocabularyComment = regexp.MustCompile(`(?s)//[^\n]*|/\*.*?\*/`)
-
 func TestTheBrowserSpellsTheWholeProfileVocabulary(t *testing.T) {
 	t.Parallel()
 	admitted := checkVocabularies(t)[theProfileVocabulary]
@@ -211,7 +207,7 @@ func literalAfter(source, opens, closes string) (string, error) {
 	if end < 0 {
 		return "", errUnterminated(opens)
 	}
-	return tsVocabularyComment.ReplaceAllString(source[start:start+end], " "), nil
+	return gatekit.TSWithoutComments(source[start : start+end]), nil
 }
 
 type errNoSuchDeclaration string

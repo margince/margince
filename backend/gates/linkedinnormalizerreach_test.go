@@ -51,7 +51,7 @@ func TestEveryLinkedInWriteGoesThroughTheOneNormalizer(t *testing.T) {
 	t.Parallel()
 	packages := map[string][]*ast.FuncDecl{}
 	fileOf := map[*ast.FuncDecl]string{}
-	constants := map[string]map[string]string{}
+	sources := map[string][]*ast.File{}
 	var writers []linkedInWriter
 	for _, path := range handWrittenGoSources(t) {
 		where := filepath.ToSlash(path)
@@ -64,10 +64,7 @@ func TestEveryLinkedInWriteGoesThroughTheOneNormalizer(t *testing.T) {
 			t.Fatalf("parsing %s: %v", where, err)
 		}
 		dir := filepath.Dir(where)
-		if constants[dir] == nil {
-			constants[dir] = map[string]string{}
-		}
-		collectStringConstants(file, constants[dir])
+		sources[dir] = append(sources[dir], file)
 		for _, decl := range file.Decls {
 			if fn, isFunc := decl.(*ast.FuncDecl); isFunc && fn.Body != nil {
 				packages[dir] = append(packages[dir], fn)
@@ -76,8 +73,9 @@ func TestEveryLinkedInWriteGoesThroughTheOneNormalizer(t *testing.T) {
 		}
 	}
 	for dir, funcs := range packages {
+		constants := gatekit.StringConstantsOf(t, sources[dir])
 		for _, fn := range funcs {
-			writers = append(writers, linkedInWritesOf(fileOf[fn], fn, constants[dir])...)
+			writers = append(writers, linkedInWritesOf(fileOf[fn], fn, constants)...)
 		}
 	}
 
@@ -129,7 +127,7 @@ func linkedInWritesOf(where string, fn *ast.FuncDecl, constants map[string]strin
 		if column == nil || copiesStoredLinkedIn(value) {
 			return true
 		}
-		if name, known := resolveString(column, constants); !known || name != linkedInColumn {
+		if name, known := gatekit.StringExpr(column, constants, gatekit.FoldStrict); !known || name != linkedInColumn {
 			return true
 		}
 		out = append(out, linkedInWriter{file: where, kind: "patch", fn: fn})

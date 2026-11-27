@@ -178,6 +178,8 @@ func GuardNotFirst(t *testing.T) { x(); if !*update { t.Parallel() } }`
 // disagree by that many whenever the integration tag is set — and this census
 // would then judge functions the build does not contain, reporting a serial
 // test that Go never runs. go/build answers the question the compiler answered.
+// Not laneContexts: that is the CI lane's platform, and this must match the
+// build that is running, whatever its platform.
 func activeGateSources(t *testing.T) []string {
 	t.Helper()
 	ctx := build.Default

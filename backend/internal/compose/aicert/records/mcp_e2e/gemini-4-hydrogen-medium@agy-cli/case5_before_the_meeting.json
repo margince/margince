@@ -7,7 +7,7 @@
     5
   ],
   "passed": 2,
-  "runs": 3,
+  "runs": 2,
   "pass_at": 2,
   "driver": "gemini:cli",
   "effort": "reasoning medium",
@@ -15,48 +15,48 @@
   "search": "semantic",
   "self_judged": false,
   "stamp": {
-    "scenario": "d27e96ea330020e6",
-    "tools": "c5bb9b7f8af233aa",
-    "instructions": "4eab26d5fff0793f",
+    "scenario": "7f9423abdc578829",
+    "tools": "61f542b10384c4bb",
+    "instructions": "d707a123fe53827f",
     "judge": "claude-haiku-5-5",
-    "harness": "ae24b6799c8461d2",
+    "harness": "0fe690d35efcc703",
     "parsers": {
       "gemini:cli": "fa1db64bc14e971b",
       "gpt:cli": "d48ca27c983f8b3f"
     },
-    "commit": "6d3a5be8c69b862c6c7db3c3534ac5fd705dd41e",
-    "ran_at": "2026-11-25T10:10:07Z",
-    "graded_commit": "6d3a5be8c69b862c6c7db3c3534ac5fd705dd41e",
-    "graded_at": "2026-11-25T10:10:07Z"
+    "commit": "a5f6802afc1a7e5f4866815ad6591da3623364cf",
+    "ran_at": "2026-11-26T16:38:39Z",
+    "graded_commit": "a5f6802afc1a7e5f4866815ad6591da3623364cf",
+    "graded_at": "2026-11-26T16:38:39Z"
   },
   "usage": {
-    "input_tokens": 190359,
-    "output_tokens": 29030,
+    "input_tokens": 101712,
+    "output_tokens": 17465,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 542336,
-    "runs_measured": 3,
+    "cache_read_input_tokens": 265354,
+    "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
   },
   "tools_by_run": [
     {
-      "passed": false,
+      "passed": true,
       "tools": [
         "catch_me_up_on",
         "find_records",
-        "get_company_dossier",
-        "get_contact_brief",
-        "get_worklist",
         "list_meeting_proposals",
         "list_records",
         "prep_for_meeting",
         "read_context",
         "read_details",
         "read_view",
-        "read_workspace",
         "search_context",
         "search_records",
         "whoami"
+      ],
+      "refused": [
+        "read_context",
+        "read_details"
       ]
     },
     {
@@ -72,61 +72,49 @@
         "read_workspace",
         "search_records",
         "whoami"
-      ]
-    },
-    {
-      "passed": true,
-      "tools": [
-        "catch_me_up_on",
-        "describe_router_actions",
-        "find_records",
-        "get_company_brief",
-        "get_company_dossier",
-        "get_contact_brief",
-        "get_worklist",
-        "list_channel_connections",
-        "list_company_contracts",
-        "list_records",
-        "prep_for_meeting",
-        "read_attention",
+      ],
+      "refused": [
         "read_context",
-        "read_details",
-        "read_record",
-        "read_relationships",
-        "read_workspace",
-        "review_commitments",
-        "search_context",
-        "search_records",
-        "whoami"
+        "read_record"
       ]
     }
   ],
   "efficiency": {
-    "runs": 3,
+    "runs": 2,
     "calls": {
-      "median": 18,
-      "min": 14,
-      "max": 30
+      "median": 15,
+      "min": 13,
+      "max": 17
     },
     "turns": {
-      "median": 8,
-      "min": 7,
-      "max": 8
+      "median": 6.5,
+      "min": 6,
+      "max": 7
     },
     "refused": {
       "median": 2,
-      "min": 1,
-      "max": 4
+      "min": 2,
+      "max": 2
+    },
+    "retries": {
+      "median": 0.5,
+      "min": 0,
+      "max": 1
+    },
+    "client_refused": {
+      "median": 0,
+      "min": 0,
+      "max": 0
     },
     "prompt_tokens": {
-      "median": 260811,
-      "min": 184886,
-      "max": 286998
+      "median": 183533,
+      "min": 159068,
+      "max": 207998
     },
     "output_tokens": {
-      "median": 9822,
-      "min": 7960,
-      "max": 11248
+      "median": 8732.5,
+      "min": 8383,
+      "max": 9082
     }
   }
 }

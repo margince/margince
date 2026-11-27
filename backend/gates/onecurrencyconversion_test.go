@@ -28,9 +28,7 @@ package gates
 // outside the module that owns it, and an arithmetic conversion spelled in SQL.
 
 import (
-	"go/ast"
 	"go/parser"
-	"go/token"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -104,7 +102,7 @@ func TestMoneyConvertsToTheBaseCurrencyInOnePlace(t *testing.T) {
 		if err != nil {
 			t.Fatalf("parsing %s: %v", path, err)
 		}
-		statements := fxSQLStatementsIn(file)
+		statements := gatekit.SQLStatementsOf(file)
 		namesFXRate := false
 		for _, sql := range statements {
 			if strings.Contains(strings.ToLower(sql), "fx_rate") {
@@ -172,86 +170,6 @@ func conversionIn(where, sql string, fileNamesFXRate bool) (bool, string) {
 		"answers the same rate the other surface converts at"
 }
 
-// fxSQLStatementsIn returns the statements a file holds, with CONCATENATIONS
-// FLATTENED.
-//
-// Flattened, because a statement is routinely assembled — `"SELECT … FROM " +
-// table` is the shape in this tree — and a scan over bare literals sees each
-// half alone: neither fragment carries both the FROM and the table name, so a
-// second engine built that way is invisible. Under-recognition is the one
-// direction a prohibition may not fail in, and this is the shape it fails in.
-//
-// A concatenation contributes its joined text ONCE: the walk does not descend
-// into a chain it has already flattened, and the literals it consumed are
-// marked so a fragment is not also read as a statement of its own.
-func fxSQLStatementsIn(file *ast.File) []string {
-	var out []string
-	joined := map[ast.Node]bool{}
-	ast.Inspect(file, func(node ast.Node) bool {
-		switch typed := node.(type) {
-		case *ast.BinaryExpr:
-			if typed.Op != token.ADD {
-				return true
-			}
-			text, ok := flattenConcatenation(typed, joined)
-			if ok {
-				out = append(out, text)
-			}
-			// Do NOT descend. Go parses `a + b + c` left-nested as
-			// `(a + b) + c`, so the walk would meet the inner ADD next and
-			// flatten it again — emitting the truncated prefix as a second
-			// statement, and reporting the same offence twice. The whole chain
-			// was just read; there is nothing left inside it to find.
-			return false
-		case *ast.BasicLit:
-			if joined[typed] {
-				return true
-			}
-			if text, isText := gatekit.LiteralText(typed); isText {
-				out = append(out, text)
-			}
-		}
-		return true
-	})
-	return out
-}
-
-// flattenConcatenation joins the string operands of one `+` chain, marking each
-// literal it consumed so the walk does not report it a second time on its own.
-//
-// The CHAIN, not the node: it recurses through nested ADDs itself, which is why
-// the caller must not descend into them afterwards.
-//
-// A non-literal operand — a variable, a call — contributes a space rather than
-// nothing: it stands where text the gate cannot see would be, and joining
-// around it would fuse two words that are not adjacent in the statement.
-func flattenConcatenation(expr *ast.BinaryExpr, joined map[ast.Node]bool) (string, bool) {
-	var parts []string
-	var walk func(ast.Expr)
-	walk = func(node ast.Expr) {
-		switch typed := node.(type) {
-		case *ast.BinaryExpr:
-			if typed.Op == token.ADD {
-				walk(typed.X)
-				walk(typed.Y)
-				return
-			}
-			parts = append(parts, " ")
-		case *ast.BasicLit:
-			if text, isText := gatekit.LiteralText(typed); isText {
-				joined[typed] = true
-				parts = append(parts, text)
-				return
-			}
-			parts = append(parts, " ")
-		default:
-			parts = append(parts, " ")
-		}
-	}
-	walk(expr)
-	return strings.Join(parts, ""), len(parts) > 0
-}
-
 // TestTheDetectorSeesEachShapeAConversionIsWrittenIn is the positive control.
 //
 // The census above passes identically over a clean tree and over a detector
@@ -307,6 +225,13 @@ func TestTheDetectorSeesEachShapeAConversionIsWrittenIn(t *testing.T) {
 			false,
 		},
 		{
+			// A `+` chain hides nothing inside an operand it cannot fold: the
+			// Sprintf's own literal is still read as a statement.
+			"a read inside a formatted operand of a concatenation",
+			"package p\nvar q = `SELECT x ` + fmt.Sprintf(`FROM fx_rate WHERE %s`, cond)\n",
+			true,
+		},
+		{
 			"a concatenation whose halves are both literal",
 			"package p\nvar q = `SELECT rate ` + `FROM fx_rate WHERE from_currency = $1`\n",
 			true,
@@ -331,7 +256,7 @@ func TestTheDetectorSeesEachShapeAConversionIsWrittenIn(t *testing.T) {
 			if err != nil {
 				t.Fatalf("parsing the probe: %v", err)
 			}
-			statements := fxSQLStatementsIn(file)
+			statements := gatekit.SQLStatementsOf(file)
 			namesRate := false
 			for _, sql := range statements {
 				if strings.Contains(strings.ToLower(sql), "fx_rate") {

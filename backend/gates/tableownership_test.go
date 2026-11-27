@@ -127,15 +127,15 @@ var storekitTableArg = map[string]bool{
 }
 
 // stringConstsByPackage maps each walked directory to the string constants its
-// own files declare. A table name spelled as a package constant is the tree's
-// normal style — `entityLead`, `projectObject` — and a walker that reads only
+// own production files declare. This tree names a table with a package
+// constant (`entityLead`, `projectObject`), and a walker that reads only
 // literals attributes none of those writes to anybody.
-func stringConstsByPackage(t *testing.T, fset *token.FileSet, roots []string) map[string]map[string]string {
+func stringConstsByPackage(t *testing.T, roots []string) map[string]map[string]string {
 	t.Helper()
-	consts := map[string]map[string]string{}
+	sources := map[string][]*ast.File{}
 	for _, root := range roots {
 		err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
-			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") {
+			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 				return err
 			}
 			file, err := gatekit.ParseFile(filepath.ToSlash(path), 0)
@@ -143,40 +143,16 @@ func stringConstsByPackage(t *testing.T, fset *token.FileSet, roots []string) ma
 				return err
 			}
 			dir := filepath.ToSlash(filepath.Dir(path))
-			for _, decl := range file.Decls {
-				gen, ok := decl.(*ast.GenDecl)
-				if !ok || gen.Tok != token.CONST {
-					continue
-				}
-				for _, spec := range gen.Specs {
-					value, ok := spec.(*ast.ValueSpec)
-					if !ok {
-						continue
-					}
-					for i, name := range value.Names {
-						if i >= len(value.Values) {
-							continue
-						}
-						lit, ok := value.Values[i].(*ast.BasicLit)
-						if !ok || lit.Kind != token.STRING {
-							continue
-						}
-						text, err := strconv.Unquote(lit.Value)
-						if err != nil {
-							continue
-						}
-						if consts[dir] == nil {
-							consts[dir] = map[string]string{}
-						}
-						consts[dir][name.Name] = text
-					}
-				}
-			}
+			sources[dir] = append(sources[dir], file)
 			return nil
 		})
 		if err != nil {
 			t.Fatal(err)
 		}
+	}
+	consts := make(map[string]map[string]string, len(sources))
+	for dir, files := range sources {
+		consts[dir] = gatekit.StringConstantsOf(t, files)
 	}
 	return consts
 }
@@ -277,7 +253,7 @@ func buildTableWrites(t *testing.T) (map[string][]tableWrite, []string) {
 	storekitWrites := 0
 	fset := gatekit.SourceFileSet()
 	roots := append([]string{"internal/modules", "internal/compose"}, platformStoreDirs(t)...)
-	consts := stringConstsByPackage(t, fset, roots)
+	consts := stringConstsByPackage(t, roots)
 	for _, root := range roots {
 		err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") ||

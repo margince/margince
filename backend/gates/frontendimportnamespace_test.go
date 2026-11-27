@@ -44,7 +44,7 @@ func importerGrammar(t *testing.T) (connector string, objects []string) {
 	t.Helper()
 	fset := token.NewFileSet()
 	files := parsePackageDir(t, fset, migrationModuleDir)
-	consts := stringConsts(t, fset, files)
+	consts := gatekit.StringConstantsOf(t, files)
 	connector, found := consts["ConnectorCSV"]
 	if !found || connector == "" {
 		t.Fatalf("%s declares no string constant ConnectorCSV: the importer's connector moved, so check the browser's IMPORT_CONNECTOR moved with it", migrationModuleDir)
@@ -113,7 +113,7 @@ func stringSliceElements(expr ast.Expr, name string, consts map[string]string) (
 func tsStringConst(source, name string) []string {
 	decl := regexp.MustCompile(`const ` + name + "\\s*=\\s*[\"'`]([^\"'`]*)[\"'`]")
 	var values []string
-	for _, m := range decl.FindAllStringSubmatch(tsComment.ReplaceAllString(source, " "), -1) {
+	for _, m := range decl.FindAllStringSubmatch(gatekit.TSWithoutComments(source), -1) {
 		values = append(values, m[1])
 	}
 	return values
@@ -128,7 +128,7 @@ var (
 // not a quoted word (a spread, a constant) is refused. A member this reader
 // cannot see is one the comparison would silently agree with.
 func tsImportObjectSet(source string) ([]string, error) {
-	matches := tsImportObjects.FindAllStringSubmatch(tsComment.ReplaceAllString(source, " "), -1)
+	matches := tsImportObjects.FindAllStringSubmatch(gatekit.TSWithoutComments(source), -1)
 	if len(matches) != 1 {
 		return nil, fmt.Errorf("IMPORT_OBJECTS declared %d times as new Set([...]), want once", len(matches))
 	}
@@ -154,7 +154,7 @@ func namespaceCopies(source, prefix string) int {
 	}
 	word := regexp.QuoteMeta(bare)
 	copyOf := regexp.MustCompile("[\"'`/]\\^?" + word + "(?:" + regexp.QuoteMeta(":") + "|[\"'`/])")
-	return len(copyOf.FindAllStringIndex(tsComment.ReplaceAllString(source, " "), -1))
+	return len(copyOf.FindAllStringIndex(gatekit.TSWithoutComments(source), -1))
 }
 
 // isProductTypeScript keeps tests and stories out of the census. Both may hold

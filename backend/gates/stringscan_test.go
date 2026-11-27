@@ -57,18 +57,17 @@ type scannedSource struct {
 	imports map[string]string
 }
 
-// constConversion is a constant declared as string(Const) or string(pkg.Const): its
-// value is that of the named constant, which can sit in a file read later.
+// constConversion is a constant declared as string(pkg.Const): its value is
+// that of the named constant, which can sit in a package read later.
 type constConversion struct {
 	dir, name, from string
-	// sameDir is set when from is a constant of the declaring package.
-	sameDir bool
 }
 
 func readScannedTree(t *testing.T) scannedTree {
 	t.Helper()
 	tree := scannedTree{byDir: map[string]map[string]map[string]bool{}, global: map[string]map[string]bool{}}
 	var pending []constConversion
+	packages := map[string][]*ast.File{}
 	err := gatekit.WalkDir("internal", func(p string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(p, ".go") || strings.HasSuffix(p, "_test.go") ||
 			strings.Contains(p, "internal/contracts/") {
@@ -79,11 +78,7 @@ func readScannedTree(t *testing.T) scannedTree {
 			return err
 		}
 		dir := path.Dir(p)
-		if tree.byDir[dir] == nil {
-			tree.byDir[dir] = map[string]map[string]bool{}
-		}
-		recordStringConsts(tree.byDir[dir], file)
-		recordStringConsts(tree.global, file)
+		packages[dir] = append(packages[dir], file)
 		pending = append(pending, constConversions(dir, file)...)
 		tree.sources = append(tree.sources, scannedSource{file, p, scanImportNames(file)})
 		return nil
@@ -91,12 +86,21 @@ func readScannedTree(t *testing.T) scannedTree {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, c := range pending {
-		values := tree.global[c.from]
-		if c.sameDir {
-			values = tree.byDir[c.dir][c.from]
+	for dir, files := range packages {
+		tree.byDir[dir] = map[string]map[string]bool{}
+		for name, values := range gatekit.StringConstantValues(t, files) {
+			tree.byDir[dir][name] = map[string]bool{}
+			if tree.global[name] == nil {
+				tree.global[name] = map[string]bool{}
+			}
+			for _, value := range values {
+				tree.byDir[dir][name][value] = true
+				tree.global[name][value] = true
+			}
 		}
-		if len(values) == 1 {
+	}
+	for _, c := range pending {
+		if values := tree.global[c.from]; len(values) == 1 {
 			tree.byDir[c.dir][c.name] = values
 			tree.global[c.name] = values
 		}
@@ -228,44 +232,13 @@ func constConversions(dir string, file *ast.File) []constConversion {
 				if fn, ok := call.Fun.(*ast.Ident); !ok || fn.Name != "string" {
 					continue
 				}
-				switch arg := call.Args[0].(type) {
-				case *ast.SelectorExpr:
-					out = append(out, constConversion{dir, name.Name, arg.Sel.Name, false})
-				case *ast.Ident:
-					out = append(out, constConversion{dir, name.Name, arg.Name, true})
+				if arg, ok := call.Args[0].(*ast.SelectorExpr); ok {
+					out = append(out, constConversion{dir, name.Name, arg.Sel.Name})
 				}
 			}
 		}
 	}
 	return out
-}
-
-// recordStringConsts maps each constant name in file to the string literals it
-// is declared with. One name may mean two values in one map.
-func recordStringConsts(out map[string]map[string]bool, file *ast.File) {
-	for _, decl := range file.Decls {
-		gd, ok := decl.(*ast.GenDecl)
-		if !ok || gd.Tok != token.CONST {
-			continue
-		}
-		for _, spec := range gd.Specs {
-			vs, ok := spec.(*ast.ValueSpec)
-			if !ok {
-				continue
-			}
-			for i, name := range vs.Names {
-				if i >= len(vs.Values) {
-					continue
-				}
-				if value, ok := gatekit.StringExpr(vs.Values[i], nil, gatekit.FoldStrict); ok {
-					if out[name.Name] == nil {
-						out[name.Name] = map[string]bool{}
-					}
-					out[name.Name][value] = true
-				}
-			}
-		}
-	}
 }
 
 // scanImportNames maps each name a file can qualify an identifier with to the

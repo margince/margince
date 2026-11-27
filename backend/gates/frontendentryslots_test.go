@@ -136,7 +136,7 @@ func tsLiteral(t *testing.T, path, open, closing string) string {
 	if !found {
 		t.Fatalf("%s: the literal after %q is unterminated", path, open)
 	}
-	return tsComment.ReplaceAllString(body, " ")
+	return gatekit.TSWithoutComments(body)
 }
 
 func compareSets(t *testing.T, what string, inGo, inTS []string) {
