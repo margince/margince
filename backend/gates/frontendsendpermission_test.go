@@ -189,7 +189,9 @@ func (s sendDoorScan) doors() []string {
 // written with backticks would otherwise be invisible and report PASS.
 func namesADoor(source string, doors []string) bool {
 	for _, door := range doors {
-		if regexp.MustCompile("[\"'`]" + regexp.QuoteMeta(door) + "[\"'`]").MatchString(source) {
+		// The pattern quotes the door verbatim, so a source without it cannot match.
+		if strings.Contains(source, door) &&
+			regexp.MustCompile("[\"'`]"+regexp.QuoteMeta(door)+"[\"'`]").MatchString(source) {
 			return true
 		}
 	}
@@ -213,6 +215,10 @@ var clientPostPath = regexp.MustCompile("api\\.POST\\(\\s*[\"'`]([^\"'`]+)")
 // sits under one. The prefix half is what catches the surface namesADoor cannot
 // see: a longer path through the same door.
 func postsThroughADoor(source string, doors []string) bool {
+	// Every match opens with this call, spelled in the pattern's own case.
+	if !strings.Contains(source, "api.POST(") {
+		return false
+	}
 	for _, m := range clientPostPath.FindAllStringSubmatch(source, -1) {
 		for _, door := range doors {
 			if m[1] == door || strings.HasPrefix(m[1], door+"/") {
@@ -255,6 +261,10 @@ var importStatement = regexp.MustCompile(`(?s)\bimport\s+(type\s+)?[^;]*?\bfrom\
 // importsValueFrom reports whether source imports a value from the module
 // named base. A type-only import carries nothing that can send.
 func importsValueFrom(source, base string) bool {
+	// An import it counts names a module whose path ends in base.
+	if !strings.Contains(source, base) {
+		return false
+	}
 	for _, m := range importStatement.FindAllStringSubmatch(source, -1) {
 		if m[1] == "" && path.Base(m[2]) == base {
 			return true

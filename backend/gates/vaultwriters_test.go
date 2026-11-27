@@ -40,6 +40,9 @@ import (
 // selector is what identifies it.
 var vaultPut = regexp.MustCompile(`\bvault\.Put\(`)
 
+// vaultPutWords holds a word of every vaultPut match, so a file without one is not scanned.
+var vaultPutWords = requiredWords(vaultPut)
+
 // vaultWriters records, for each non-test caller that seals a secret, the ledger
 // its act lands in. TestEveryKeyVaultWriterHasAVerdict below is what holds it
 // complete — a path here with no call, or a call with no path here, both fail,
@@ -112,7 +115,7 @@ func TestEveryKeyVaultWriterHasAVerdict(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		if vaultPut.Match(body) {
+		if mayHoldFolded(string(body), vaultPutWords...) && vaultPut.Match(body) {
 			found[filepath.ToSlash(path)] = true
 		}
 		return nil

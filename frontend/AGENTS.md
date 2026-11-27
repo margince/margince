@@ -62,7 +62,7 @@ Sparkles. No `uppercase`, no click; `census/rules/badge-spelling.census.ts` fail
 look for one.
 
 **A settings `Panel` has no `tone`** and at most one primary. System health may tint its one leading action panel with its result tone. A page saves through one `PageSaveBar`
-(`useSaveDraft`); no card or row has its own "Save". A `Switch` alone writes when turned.
+(`useSaveDraft`); no card or row has its own "Save". A `Switch` alone writes when turned (`census/rules/settings-instant-write.census.ts`).
 
 ### Indigo is a claim about the source
 

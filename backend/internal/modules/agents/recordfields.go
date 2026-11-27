@@ -148,12 +148,12 @@ func acceptedFieldNames(shape reflect.Type, parents, withheld []string) []string
 // disprove, which costs more than the silence it replaced.
 const recordFieldsDescription = "The crm.yaml body for the record_type. The fields each " +
 	"record_type takes, which of them are REQUIRED, and their shapes are published at " +
-	RecordFieldsURI + ", and answered by describe_record_fields — that document, not this " +
+	RecordFieldsURI + ", and answered by describe_record_fields. That document, not this " +
 	"description, is what says what a write may name. An extra key must be cf_<slug> for a " +
 	"custom field; any other key is refused BY NAME " +
 	"and never dropped in silence, so a wrong guess is answered with the vocabulary rather than lost. " +
 	"An rfc3339 value carries Z or the offset the user gave. " +
-	"Any field holding a sentence — a description, a summary, a note — is written in whoami's " +
+	"Any field holding a sentence (a description, a summary, a note) is written in whoami's " +
 	"prose_language, whatever language this conversation is in."
 
 // rejectUnknownFields refuses a `fields` payload carrying keys the record type
@@ -303,7 +303,7 @@ const proseLanguageSeeSubject = `"Prose a colleague reads. Same language rule as
 // semantic half is here because it is what decides the tier — a caller that
 // picks a stage without reading it cannot tell an immediate move from one that
 // will wait on a human.
-const stageIDNote = `,"description":"The target stage, by id — obtain it from ` + pipelinesSource + `, since a deal you have read carries only the stage it is already IN. That stage's semantic decides what happens next: open executes immediately, won or lost is staged for a human's approval."`
+const stageIDNote = `,"description":"The target stage, by id. Obtain it from ` + pipelinesSource + `, since a deal you have read carries only the stage it is already IN. That stage's semantic decides what happens next: open executes immediately, won or lost is staged for a human's approval."`
 
 // jsonString renders s as a JSON string literal so a description built at init
 // time can be spliced into a hand-written schema literal safely.

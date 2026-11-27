@@ -28,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/aiactivity"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/provider"
@@ -203,8 +204,7 @@ func TestEveryDeclaringHandlerStartsWithItsGroupsTypeTest(t *testing.T) {
 		if !sameTypeSet(group.Types, guard.set) {
 			t.Errorf("%s declares a set other than events.%s", group.Name, guard.setName)
 		}
-		fset := token.NewFileSet()
-		file, err := parser.ParseFile(fset, filepath.Join(repoRoot, "backend", "internal", filepath.FromSlash(guard.file)), nil, 0)
+		file, err := gatekit.ParseFile(filepath.Join("internal", filepath.FromSlash(guard.file)), 0)
 		if err != nil {
 			t.Fatalf("parsing %s: %v", guard.file, err)
 		}

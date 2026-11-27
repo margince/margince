@@ -7,13 +7,13 @@ package agents
 // field answers.
 
 var queryWorkspaceCopy = toolCopy{
-	Purpose: "Answer a question that has STRUCTURE — a record type, conditions on its fields, a " +
-		"hop to a related record, or a likeness to describe — by sending a plan and reading back " +
+	Purpose: "Answer a question that has STRUCTURE (a record type, conditions on its fields, a " +
+		"hop to a related record, or a likeness to describe) by sending a plan and reading back " +
 		"the records that satisfy it, together with what kind of answer it is. It also finds " +
 		"where records are: an address is filtered by its city (address.city) or by distance " +
 		"(within_radius).",
 	Limits: "Every name in a plan comes from the published vocabulary; one outside it is refused " +
-		"by name. The margince://schema/query resource — not this description — says which " +
+		"by name. The margince://schema/query resource, not this description, says which " +
 		"record types, fields, operators and relationships can be asked about. At most one " +
 		"similarity clause and one hop. It cannot group, count or total, and has no cursor: an " +
 		"answer that hit its limit says so.",
@@ -22,8 +22,8 @@ var queryWorkspaceCopy = toolCopy{
 		"records themselves.",
 	Retain: "Read `coverage` before you use the rows: `complete_exact` means every record matching " +
 		"the plan is here, `ranked_semantic` means these ranked highest and others may match, and " +
-		"`partial_degraded` means something in the plan could not be answered as asked — `notes` " +
-		"says which. Keep each row's record_type and id for any follow-up call, and its `evidence` " +
+		"`partial_degraded` means something in the plan could not be answered as asked (`notes` " +
+		"says which). Keep each row's record_type and id for any follow-up call, and its `evidence` " +
 		"for the related record that admitted it. A row's `owner` is the colleague who holds that " +
 		"company: rows come back from across the whole workspace, so most of them belong to " +
 		"someone other than the contact asking. " + sayWhoseItIs,

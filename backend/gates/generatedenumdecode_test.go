@@ -32,7 +32,7 @@ func TestNoGeneratedClientRefusesAnUnknownEnumValueOnDecode(t *testing.T) {
 	t.Parallel()
 	enums := 0
 	for _, dir := range generatedClients {
-		files, err := filepath.Glob(filepath.Join(dir, "*_gen.go"))
+		files, err := gatekit.Glob(filepath.Join(dir, "*_gen.go"))
 		if err != nil || len(files) == 0 {
 			t.Fatalf("no generated file under %s (%v), so this gate read nothing", dir, err)
 		}

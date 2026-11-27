@@ -215,7 +215,7 @@ test("the complete outlook stays readable on a phone with keyboard evidence acce
 
 const WIDE = { width: 1440, height: 900 };
 
-test("a click in the middle of a plate reading opens its records at 1440×900", async ({
+test("the chart's foot opens the shown reading's records at 1440×900", async ({
   page,
 }) => {
   await openSalesReview(page);
@@ -237,13 +237,10 @@ test("a click in the middle of a plate reading opens its records at 1440×900", 
     }),
   );
   await page.setViewportSize(WIDE);
-  const salesWon = page
-    .getByRole("region", { name: de["analytics.overview.readings"] })
-    .locator("section.stat-card")
-    .filter({ hasText: "Sales won" });
-  const box = await salesWon.boundingBox();
-  if (!box) throw new Error("the Sales won reading has no box");
-  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+  await page
+    .getByRole("region", { name: de["analytics.hero.chart.won"] })
+    .getByRole("button", { name: de["reporting.viewRecords"], exact: true })
+    .click();
   await expect(
     page.getByRole("dialog").getByText("Harbourline depot retrofit"),
   ).toBeVisible();

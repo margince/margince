@@ -17,9 +17,8 @@ package gates
 // makes sure every caller has one, naming the expression it actually passes.
 
 import (
+	"bytes"
 	"go/ast"
-	"go/parser"
-	"go/token"
 	"io/fs"
 	"path/filepath"
 	"regexp"
@@ -101,9 +100,12 @@ func quickFindSites(t *testing.T, root string) (map[string][]quickFindSite, int)
 		if err != nil {
 			return err
 		}
+		// Every counted match and every judged call names QuickFindClause.
+		if !bytes.Contains(src, []byte("QuickFindClause")) {
+			return nil
+		}
 		textual += len(quickFindCallText.FindAll(src, -1))
-		fset := token.NewFileSet()
-		file, err := parser.ParseFile(fset, path, src, 0)
+		file, err := gatekit.ParseFile(path, 0)
 		if err != nil {
 			return err
 		}
@@ -114,7 +116,7 @@ func quickFindSites(t *testing.T, root string) (map[string][]quickFindSite, int)
 				return true
 			}
 			dir := filepath.Dir(path)
-			site := quickFindSite{pos: fset.Position(call.Pos()).String()}
+			site := quickFindSite{pos: gatekit.SourceFileSet().Position(call.Pos()).String()}
 			switch arg := call.Args[1].(type) {
 			case *ast.Ident:
 				site.names = []string{arg.Name}
@@ -139,19 +141,8 @@ func quickFindSites(t *testing.T, root string) (map[string][]quickFindSite, int)
 // so a plan test that runs those builders explains what production passes.
 func literalBuilders(t *testing.T, dir, field string) []string {
 	t.Helper()
-	paths, err := filepath.Glob(filepath.Join(dir, "*.go"))
-	if err != nil {
-		t.Fatalf("listing %s: %v", dir, err)
-	}
 	var names []string
-	for _, path := range paths {
-		if strings.HasSuffix(path, "_test.go") {
-			continue
-		}
-		file, err := parser.ParseFile(token.NewFileSet(), path, nil, 0)
-		if err != nil {
-			t.Fatalf("parsing %s: %v", path, err)
-		}
+	for _, file := range parsePackageFiles(t, dir) {
 		for _, decl := range file.Decls {
 			fn, ok := decl.(*ast.FuncDecl)
 			if ok && fn.Body != nil && setsField(fn.Body, field) {
@@ -184,13 +175,17 @@ func setsField(body ast.Node, field string) bool {
 // are not identifiers, so a mention there counts for nothing.
 func planTestNames(t *testing.T, dir string) map[string]bool {
 	t.Helper()
-	files, err := filepath.Glob(filepath.Join(dir, "*_integration_test.go"))
+	entries, err := gatekit.ReadDir(dir)
 	if err != nil {
 		t.Fatalf("listing integration tests in %s: %v", dir, err)
 	}
 	names := map[string]bool{}
-	for _, path := range files {
-		file, err := parser.ParseFile(token.NewFileSet(), path, nil, 0)
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), "_integration_test.go") {
+			continue
+		}
+		path := filepath.Join(dir, entry.Name())
+		file, err := gatekit.ParseFile(path, 0)
 		if err != nil {
 			t.Fatalf("parsing %s: %v", path, err)
 		}
