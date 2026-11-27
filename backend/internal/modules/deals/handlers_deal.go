@@ -43,6 +43,7 @@ func dayArg(day *openapi_types.Date) *time.Time {
 func (h Handlers) ListDeals(w http.ResponseWriter, r *http.Request, params crmcontracts.ListDealsParams) {
 	in := ListDealsInput{
 		Cursor:          params.Cursor,
+		Offset:          params.Offset,
 		Limit:           params.Limit,
 		IncludeArchived: params.IncludeArchived != nil && *params.IncludeArchived,
 		Sort:            params.Sort,

@@ -547,6 +547,7 @@ paths:
         `relationship_mark`. A text search (`q`) still finds a marked contact. Leads never appear here.
       parameters:
         - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Offset'
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/ListMembershipFilter'
         - $ref: '#/components/parameters/Sort'
@@ -1888,6 +1889,7 @@ paths:
       summary: List companies (live by default; cursor-paginated).
       parameters:
         - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Offset'
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/ListMembershipFilter'
         - $ref: '#/components/parameters/Sort'
@@ -4295,6 +4297,7 @@ paths:
       summary: List deals (live by default; cursor-paginated). Supports Kanban-by-stage reads.
       parameters:
         - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Offset'
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/ListMembershipFilter'
         - $ref: '#/components/parameters/Sort'
@@ -5415,6 +5418,7 @@ paths:
       summary: List projects (live by default; cursor-paginated).
       parameters:
         - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Offset'
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/Sort'
         - $ref: '#/components/parameters/IncludeArchived'
@@ -8939,6 +8943,7 @@ paths:
         Explicit sort values retain their documented field ordering.
       parameters:
         - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Offset'
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/ListMembershipFilter'
         - $ref: '#/components/parameters/Sort'
@@ -13424,7 +13429,9 @@ paths:
       description: |-
         The undo for a retirement somebody regrets. It refuses when a LIVE tag has taken the
         name in the meantime: two words a reader cannot tell apart is the exact state the
-        vocabulary exists to prevent, and the caller has to rename one of them first.
+        vocabulary exists to prevent, and the caller has to rename one of them first. It also
+        refuses a tag that carries `merged_into`: the merge moved its records to the survivor,
+        and a restore would not move them back.
 
         Needs the passport permission Change records.
 
@@ -27366,11 +27373,18 @@ components:
         Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
         effective `sort` of the originating request (field + direction) plus the last row's keyset
         (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-        under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+        under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+        to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
         together with a `sort` that differs from the one the cursor was minted under returns
         `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
         **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
         remaining pages see, so re-issue the query without the cursor when changing filters.
+    Offset:
+      name: offset
+      in: query
+      schema: {type: integer, minimum: 0, maximum: 10000}
+      description: >-
+        Rows to skip in the list's own order (its filters, row scope and `sort`), to open a page without walking the cursor to it. The answer carries `page.next_cursor`, so reading on from there uses the keyset. Refused with `422` (`field: offset`) together with `cursor`, and past 10000; a deeper page is reached through the cursor.
     Limit:
       name: limit
       in: query
@@ -32355,11 +32369,18 @@ components:
       description: |-
         The calling seat's whole set — one entry per class the product sends, always all of them,
         so a screen rendering one row per class never has to take the others from its own memory.
-      required: [items]
+      required: [items, email_delivery_available]
       properties:
         items:
           type: array
           items: {$ref: '#/components/schemas/NotificationPreference'}
+        email_delivery_available:
+          type: boolean
+          description: |-
+            Whether this installation sends its own mail. False means `email` and `digest` reach
+            no mailbox: the notice still lands in the app, and no message leaves. A screen says
+            so beside the choices rather than offering mail that will not arrive. It answers the
+            caller's own delivery, so every seat that reads its settings is told.
     NotificationItem:
       type: object
       description: |-
@@ -32496,7 +32517,7 @@ components:
           type: integer
           minimum: 0
           description: >-
-            How many rows match this request in total, ignoring the cursor and the page size — what the reader is told the list holds. Optional because a keyset page does not need one: a list that omits it says it does not count, never that it counted zero, so a client reads absence as unknown and falls back to how many rows it has loaded. Where it is sent it is exact rather than an estimate, counted over the same filters and the same row scope as the page beside it, in the same transaction, so the two cannot disagree about what matching means. The contact, company and lead lists count on the first page only and send no total with a cursor, so a client keeps the first page's total while it loads further pages.
+            How many rows match this request in total, ignoring the cursor and the page size — what the reader is told the list holds. Optional because a keyset page does not need one: a list that omits it says it does not count, never that it counted zero, so a client reads absence as unknown and falls back to how many rows it has loaded. Where it is sent it is exact rather than an estimate, counted over the same filters and the same row scope as the page beside it, in the same transaction, so the two cannot disagree about what matching means. The contact, company, lead, deal and project lists count on a page read without a cursor, which is the first page or a page opened by `offset`, and send no total with a cursor, so a client keeps that total while it loads further pages.
     Address:
       type: [object, 'null']
       description: Structured postal address.
@@ -46206,6 +46227,13 @@ components:
         created_at: {type: string, format: date-time}
         updated_at: {type: string, format: date-time}
         archived_at: {type: [string, 'null'], format: date-time}
+        merged_into:
+          allOf: [{$ref: '#/components/schemas/RowTag'}]
+          description: |-
+            The tag a merge folded this one into, named as it reads now. Present only on a tag
+            archived by a merge, and such a tag cannot be restored. The named tag is the next merge
+            destination and may itself have been merged since; follow each `merged_into` until a tag
+            has none to find the tag that carries the records now.
         carried_by:
           type: integer
           readOnly: true
@@ -46279,6 +46307,13 @@ components:
         created_at: {type: string, format: date-time}
         updated_at: {type: string, format: date-time}
         archived_at: {type: [string, 'null'], format: date-time}
+        merged_into:
+          allOf: [{$ref: '#/components/schemas/RowTag'}]
+          description: |-
+            The tag a merge folded this one into, named as it reads now. Present only on a tag
+            archived by a merge, and such a tag cannot be restored. The named tag is the next merge
+            destination and may itself have been merged since; follow each `merged_into` until a tag
+            has none to find the tag that carries the records now.
         usage: {$ref: '#/components/schemas/TagUsage'}
     TagSuggestion:
       type: object

@@ -108,10 +108,10 @@ describe("a long problem list", () => {
   it("pages in the design system's page size and counts what it shows", async () => {
     const user = userEvent.setup();
     show(<ProblemTable issues={many} />, "en");
-    expect(screen.getByText("1 to 25 of 60 issues")).toBeVisible();
+    expect(screen.getByText("1-25 of 60")).toBeVisible();
     expect(screen.getAllByText(/^Row \d+$/)).toHaveLength(25);
     await user.click(screen.getByRole("button", { name: "Page 2" }));
-    expect(screen.getByText("26 to 50 of 60 issues")).toBeVisible();
+    expect(screen.getByText("26-50 of 60")).toBeVisible();
     expect(screen.getByText("Row 27")).toBeVisible();
   });
 
@@ -124,7 +124,7 @@ describe("a long problem list", () => {
         <ProblemTable issues={many.slice(0, 55)} />
       </StoryProviders>,
     );
-    expect(screen.getByText("1 to 25 of 55 issues")).toBeVisible();
+    expect(screen.getByText("1-25 of 55")).toBeVisible();
   });
 
   it("draws no pager for a list that fits one page", () => {

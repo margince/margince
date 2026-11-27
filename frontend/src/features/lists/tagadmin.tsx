@@ -194,14 +194,20 @@ function TagTable({
 }
 
 // A retired word keeps its place so it can be restored, and drops its colour
-// because it is no longer offered.
+// because it is no longer offered. A merged one names the word that took over.
 function TagName({ tag }: Readonly<{ tag: Tag }>) {
   const t = useT();
   const archived = Boolean(tag.archived_at);
   return (
     <span className="tagadmin-name">
       <TagPill name={tag.name} tone={archived ? null : tag.color} />
-      {archived && <Badge>{t("tagAdmin.retired")}</Badge>}
+      {tag.merged_into ? (
+        <Badge>
+          {t("tagAdmin.mergedInto", { name: tag.merged_into.name })}
+        </Badge>
+      ) : (
+        archived && <Badge>{t("tagAdmin.retired")}</Badge>
+      )}
     </span>
   );
 }
@@ -221,7 +227,8 @@ function TagMenu({
   const { archive, restore } = useTagLifecycle(tag.name);
   const archived = Boolean(tag.archived_at);
   const edits = verbs.canEdit && !archived;
-  if (!edits && !verbs.canArchive) {
+  // A merge cannot be undone, so a merged word offers no Restore.
+  if (tag.merged_into || (!edits && !verbs.canArchive)) {
     return null;
   }
   return (

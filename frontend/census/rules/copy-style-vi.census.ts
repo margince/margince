@@ -300,7 +300,8 @@ export function copyFindings(
     ...matching(
       "uses no en dash, em dash, double hyphen or spaced hyphen",
       /[–—]|--|\s-\s/,
-      { text: (value) => ` ${prose(value)} ` },
+      // A placeholder stands for a figure, so "{first}-{last}" reads as a range.
+      { text: (value) => ` ${value.replace(/\{[^}]*\}/g, "0")} ` },
     ),
     ...matching("spells an ellipsis as the one character …", /\.\.\./),
     ...matching("uses no exclamation mark", /!/),

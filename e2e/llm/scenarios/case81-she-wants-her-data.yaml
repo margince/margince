@@ -8,10 +8,10 @@ prompt: |
   Katrin Sommer (katrin.sommer@reply.test) wrote asking which personal data we hold about her. Open a data
   subject access request for it, received today.
 
+# A note beside the act is no fault: the end state finds the act or fails the run.
 must_not_call_with:
   - create_record~.
-  - change_activities~.
-  - log_activity~.
+  - change_activities~"action": "(?!log")[a-z_]+"
 
 may_call:
   - find_records
