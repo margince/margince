@@ -16,6 +16,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/margince/margince/backend/internal/compose/importwire"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/migration"
@@ -206,6 +207,9 @@ func (w *csvWriters) reconcilePrediction(
 	current, err := w.read(ctx, id)
 	if err != nil {
 		return predictCreate, migration.Reason{}, err
+	}
+	if why, err := importwire.NotYourRecord(current, migration.OwnSeat(ctx)); err != nil || why.Code != "" {
+		return predictUnwritable, why, err
 	}
 	changed, kept, err := w.landingChanges(ctx, row, current, typed)
 	if err != nil {

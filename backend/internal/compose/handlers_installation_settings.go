@@ -257,6 +257,7 @@ func (h installationSettingsHandlers) toContract(s identity.InstallationSettings
 		Timezone:             s.Timezone,
 		BaseCurrency:         s.BaseCurrency,
 		BaseLanguage:         crmcontracts.InstallationSettingsBaseLanguage(s.BaseLanguage),
+		MemberLanguages:      memberLanguages(s.MemberLanguages),
 		FiscalYearStartMonth: s.FiscalYearStartMonth,
 		DeadWorkBannerHours:  s.DeadWorkBannerHours,
 		ForecastForwardMeasure: crmcontracts.InstallationSettingsForecastForwardMeasure(
@@ -360,4 +361,12 @@ func enumText[T ~string](value *T) *string {
 	}
 	text := string(*value)
 	return &text
+}
+
+func memberLanguages(languages []string) *[]crmcontracts.InstallationSettingsMemberLanguages {
+	out := make([]crmcontracts.InstallationSettingsMemberLanguages, 0, len(languages))
+	for _, language := range languages {
+		out = append(out, crmcontracts.InstallationSettingsMemberLanguages(language))
+	}
+	return &out
 }

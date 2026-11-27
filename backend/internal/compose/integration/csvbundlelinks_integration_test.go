@@ -329,7 +329,7 @@ func failAfterTheCompanyRow(t *testing.T, e *apptest.AppEnv, runID, named string
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,
 		Permissions: principal.Permissions{
-			Objects:  map[string]principal.ObjectGrant{migration.ImportRunObject: {Create: true}},
+			Objects:  map[string]principal.ObjectGrant{migration.ImportRunObject: {Create: true, Read: true, Update: true, Delete: true}},
 			RowScope: principal.RowScopeAll,
 		},
 	})

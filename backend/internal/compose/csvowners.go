@@ -66,6 +66,7 @@ func foldedEmail(email string) string {
 
 // ownerResolver holds the seat of every owner address a run names, read once.
 type ownerResolver struct {
+	own   *ids.UserID // an own import's importer, who owns every row it imports
 	seats map[string]ids.UUID
 	// refused are addresses whose seat the importer may not name; the test run
 	// reports each once, and its rows keep the importer as owner.
@@ -84,6 +85,7 @@ func (o *ownerResolver) refuse(email string) {
 // newOwnerResolver resolves every distinct owner address of the run.
 func newOwnerResolver(ctx context.Context, pool *pgxpool.Pool, emails []string) (*ownerResolver, error) {
 	o := &ownerResolver{seats: map[string]ids.UUID{}}
+	o.own = migration.OwnSeat(ctx)
 	if len(emails) == 0 {
 		return o, nil
 	}
@@ -114,6 +116,9 @@ func (o *ownerResolver) ownerFor(raw string) (*ids.UserID, *migration.SkippedRow
 // ownerOf resolves a row's owner cell, with the warning placed on the row's
 // own line and column.
 func (w *csvWriters) ownerOf(row migration.Row) (*ids.UserID, *migration.SkippedRow) {
+	if w.owners != nil && w.owners.own != nil {
+		return w.owners.own, nil
+	}
 	raw := strings.TrimSpace(textFields(row.Fields)[csvTargetOwner])
 	if raw == "" {
 		return nil, nil

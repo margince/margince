@@ -11280,6 +11280,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "„{value}“ ist keine Datensatz-ID. Exportiere die Liste, um die IDs zu erhalten, oder lasse die Spalte leer, um die Zeile als neuen Datensatz zu importieren.",
   "import.reason.id_record_not_visible":
     "Kein Datensatz, den du sehen kannst, hat die ID „{value}“. Er kann archiviert oder zusammengeführt worden sein oder aus einem anderen System stammen.",
+  "import.reason.not_your_record":
+    "Diese Zeile passt zu einem Datensatz, der einem anderen Mitglied gehört. Dein Import ändert nur deine eigenen Datensätze, daher wird die Zeile nicht übernommen.",
   "import.reason.ref_taken_by_another_record":
     "Die Referenz „{ref}“ steht bereits für einen anderen Datensatz aus einem früheren Import, daher wird diese Zeile nicht übernommen. Verwende eine neue Referenz für diese Zeile oder korrigiere die ID-Spalte.",
   "import.reason.id_not_visible":
@@ -12666,6 +12668,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "translation.nameIn.en": "Name auf Englisch",
   "translation.nameIn.de": "Name auf Deutsch",
   "translation.nameIn.vi": "Name auf Vietnamesisch",
+  "translation.missing.en": "Kein Name auf Englisch",
+  "translation.missing.de": "Kein Name auf Deutsch",
+  "translation.missing.vi": "Kein Name auf Vietnamesisch",
+  "translation.suggest": "Übersetzung vorschlagen",
+  "translation.suggestNeedsName":
+    "Gib zuerst den Namen ein, dann kann eine Übersetzung vorgeschlagen werden.",
+  "translation.suggesting": "Wird vorgeschlagen…",
+  "translation.suggestFailed":
+    "Es kam kein Vorschlag zurück. Gib den Namen ein oder versuche es noch einmal.",
   "translation.given": "{language}: {name}",
   "stage.name": "Name",
   "stage.nameTaken":

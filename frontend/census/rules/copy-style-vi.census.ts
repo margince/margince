@@ -125,6 +125,8 @@ function escaped(text: string): string {
 }
 
 const WEB_ADDRESS = /[a-z][a-z\d+.-]*:\/\/[^\s“”()]+/gu;
+// A key that names a lost deal, whose outcome word is "Thất bại".
+const LOST_DEAL_KEY = /lost|loss/i;
 const FILE_NAME = /[^\s“”(),]+\.[a-z][a-z\d]{0,4}(?![\p{L}\d])/gu;
 
 // A file name or a URL keeps the spelling the reader must type.
@@ -397,10 +399,15 @@ export function copyFindings(
       wording: true,
     }),
     // A short value is a title, label, status or counter, where a failure is
-    // "bị lỗi" or "không thành công".
+    // "bị lỗi" or "không thành công". A lost deal is the one exception: its
+    // outcome reads "Thất bại", so a key or placeholder that names it is kept.
     ...offenders(
       "says thất bại only in a sentence, never in a short value",
-      ([, , value]) => word("thất bại").test(value) && wordsIn(value) <= 8,
+      ([, key, value]) =>
+        word("thất bại").test(value) &&
+        wordsIn(value) <= 8 &&
+        !LOST_DEAL_KEY.test(key) &&
+        !value.includes("{lost}"),
     ),
     ...copies
       .filter(({ catalog }) => Object.keys(catalog).length === 0)

@@ -2799,6 +2799,10 @@ func (stubs) DownloadCorpusDocument(w nethttp.ResponseWriter, r *nethttp.Request
 	httperr.NotImplemented(w, r, "DownloadCorpusDocument")
 }
 
+func (stubs) SuggestLabelTranslation(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "SuggestLabelTranslation")
+}
+
 func (stubs) ConfirmSendWithoutLawfulBasis(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ConfirmSendWithoutLawfulBasis")
 }

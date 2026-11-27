@@ -109,10 +109,10 @@ func (s *RunStore) Create(ctx context.Context, in CreateRunInput) (Run, error) {
 	var run Run
 	err = s.tx(ctx, func(tx pgx.Tx) error {
 		row := tx.QueryRow(ctx, `
-			INSERT INTO import_run (connector, status, source_ref, source, captured_by)
-			VALUES ($1, $2, $3, $4, $5)
+			INSERT INTO import_run (connector, status, source_ref, source, captured_by, own_seat)
+			VALUES ($1, $2, $3, $4, $5, $6)
 			RETURNING id, connector, status, source_ref, checkpoint, created_at, updated_at`,
-			in.Connector, StatusRunning, in.SourceRef, in.Source, capturedBy)
+			in.Connector, StatusRunning, in.SourceRef, in.Source, capturedBy, ownSeatArg(ctx))
 		if err := scanRun(row, &run); err != nil {
 			return fmt.Errorf("creating import run: %w", err)
 		}
@@ -134,9 +134,11 @@ func (s *RunStore) Get(ctx context.Context, id RunID) (Run, error) {
 	}
 	var run Run
 	err := s.tx(ctx, func(tx pgx.Tx) error {
+		args := []any{id}
+		scope := ownRunScope(ctx, "own_seat", func(v any) int { args = append(args, v); return len(args) })
 		row := tx.QueryRow(ctx, `
 			SELECT id, connector, status, source_ref, checkpoint, created_at, updated_at, report, error
-			FROM import_run WHERE id = $1`, id)
+			FROM import_run WHERE id = $1`+scope, args...)
 		var report []byte
 		var runErr *string
 		if err := row.Scan(&run.ID, &run.Connector, &run.Status, &run.SourceRef, &run.Checkpoint,
@@ -171,11 +173,13 @@ func (s *RunStore) Latest(ctx context.Context, connector string) (Run, error) {
 	}
 	var run Run
 	err := s.tx(ctx, func(tx pgx.Tx) error {
+		args := []any{connector}
+		scope := ownRunScope(ctx, "own_seat", func(v any) int { args = append(args, v); return len(args) })
 		row := tx.QueryRow(ctx, `
 			SELECT id, connector, status, source_ref, checkpoint, created_at, updated_at
 			FROM import_run
-			 WHERE connector = $1
-			 ORDER BY created_at DESC LIMIT 1`, connector)
+			 WHERE connector = $1`+scope+`
+			 ORDER BY created_at DESC LIMIT 1`, args...)
 		if err := scanRun(row, &run); err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				return apperrors.ErrNotFound

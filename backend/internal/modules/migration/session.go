@@ -158,10 +158,12 @@ type sessionState struct {
 // decision a move makes on it cannot be overtaken by another writer.
 func lockSession(ctx context.Context, tx pgx.Tx, id RunID) (sessionState, error) {
 	var state sessionState
+	args := []any{id}
+	scope := ownRunScope(ctx, "own_seat", func(v any) int { args = append(args, v); return len(args) })
 	err := tx.QueryRow(ctx, `
 		SELECT status, connector, source_name, source_ref, coalesce(draft_step, ''), version, job_attempt,
 		       approved_at IS NOT NULL, source_released_at IS NOT NULL, superseded_by, mapping
-		  FROM import_run WHERE id = $1 FOR UPDATE`, id).Scan(
+		  FROM import_run WHERE id = $1`+scope+` FOR UPDATE`, args...).Scan(
 		&state.status, &state.connector, &state.sourceName, &state.sourceRef, &state.draftStep,
 		&state.version, &state.jobAttempt, &state.approved, &state.released, &state.supersededBy, &state.mapping)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -426,6 +428,7 @@ func nameHolder(ctx context.Context, tx pgx.Tx, id RunID) error {
 	err := tx.QueryRow(ctx, `
 		SELECT other.id FROM import_run run
 		  JOIN import_run other ON other.connector = run.connector AND other.source_name = run.source_name
+		   AND other.own_seat IS NOT DISTINCT FROM run.own_seat
 		 WHERE run.id = $1 AND other.id <> run.id AND other.status = ANY($2)
 		 LIMIT 1`, id, nameHeldBy).Scan(&holder)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -442,7 +445,8 @@ var nameHeldBy = []string{StatusValidating, StatusAwaitingApproval, StatusRunnin
 
 // supersedeName makes way for id on its source name. It cancels every other
 // run of the name that wrote nothing, with cause. A run that is writing
-// refuses it with SourceBusyError.
+// refuses it with SourceBusyError. An own import's name is its seat's alone,
+// so it never meets a workspace run or another seat's run.
 func supersedeName(ctx context.Context, tx pgx.Tx, id RunID, sourceName, cause string) error {
 	if sourceName == "" {
 		return nil
@@ -451,6 +455,7 @@ func supersedeName(ctx context.Context, tx pgx.Tx, id RunID, sourceName, cause s
 	err := tx.QueryRow(ctx, `
 		SELECT id FROM import_run
 		 WHERE connector = $1 AND source_name = $2 AND id <> $3 AND status = ANY($4)
+		   AND own_seat IS NOT DISTINCT FROM (SELECT own_seat FROM import_run WHERE id = $3)
 		 LIMIT 1`, ConnectorCSV, sourceName, id, []string{StatusRunning, StatusUndoing}).Scan(&busy)
 	if err == nil {
 		return &SourceBusyError{RunID: busy}
@@ -461,6 +466,7 @@ func supersedeName(ctx context.Context, tx pgx.Tx, id RunID, sourceName, cause s
 	rows, err := tx.Query(ctx, `
 		SELECT id FROM import_run
 		 WHERE connector = $1 AND source_name = $2 AND id <> $3 AND status = ANY($4)
+		   AND own_seat IS NOT DISTINCT FROM (SELECT own_seat FROM import_run WHERE id = $3)
 		 ORDER BY id`, ConnectorCSV, sourceName, id, sessionMoves[moveSupersede].from)
 	if err != nil {
 		return fmt.Errorf("finding the runs a new test run replaces: %w", err)

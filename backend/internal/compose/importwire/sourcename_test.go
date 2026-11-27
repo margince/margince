@@ -4,6 +4,7 @@
 package importwire
 
 import (
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"strings"
 	"testing"
 
@@ -24,13 +25,13 @@ func TestTheSuggestedSourceNameIsOneTheStageAccepts(t *testing.T) {
 }
 
 func TestAnEmptySourceNameKeepsTheNamespaceEarlierRunsUsed(t *testing.T) {
-	if got := SourceSystem(""); got != provenance.ReservedSourceSystemPrefix+migration.ConnectorCSV {
+	if got := SourceSystem("", nil); got != provenance.ReservedSourceSystemPrefix+migration.ConnectorCSV {
 		t.Fatalf("got %q: a single CSV re-uploaded after this change would stop finding what it landed", got)
 	}
 }
 
 func TestTwoSourceNamesAreTwoNamespaces(t *testing.T) {
-	if SourceSystem("hubspot") == SourceSystem("pipedrive") {
+	if SourceSystem("hubspot", nil) == SourceSystem("pipedrive", nil) {
 		t.Fatal("ref 1 from two old CRMs would land on one record")
 	}
 }
@@ -38,9 +39,23 @@ func TestTwoSourceNamesAreTwoNamespaces(t *testing.T) {
 // The read wire names a CSV run by its source name. That holds only while the
 // provenance package and the importer spell the connector segment alike.
 func TestAnImportedRowReadsAsItsSourceName(t *testing.T) {
-	stored := SourceSystem("bundle")
+	stored := SourceSystem("bundle", nil)
 	if got := provenance.ImportedFrom(&stored); got == nil || *got != "bundle" {
 		t.Fatalf("ImportedFrom(%q) = %v, want bundle", stored, got)
+	}
+}
+
+func TestASeatsOwnImportIsANamespaceOfItsOwnThatReadsAsItsName(t *testing.T) {
+	seat := ids.New[ids.UserKind]()
+	other := ids.New[ids.UserKind]()
+	own := SourceSystem("hubspot", &seat)
+	if own == SourceSystem("hubspot", nil) || own == SourceSystem("hubspot", &other) {
+		t.Fatalf("%q shares a namespace: a rep's ref would reach a record another import bound", own)
+	}
+	for name, stored := range map[string]string{"hubspot": own, "": SourceSystem("", &seat)} {
+		if got := provenance.ImportedFrom(&stored); got == nil || *got != name {
+			t.Errorf("ImportedFrom(%q) = %v, want %q", stored, got, name)
+		}
 	}
 }
 

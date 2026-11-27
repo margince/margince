@@ -29,6 +29,7 @@ import {
   submittedValues,
   visibleFields,
 } from "./create.fields";
+import { FillButton } from "./create.fill";
 import {
   OfferedNameControl,
   offeredHint,
@@ -300,7 +301,9 @@ export function RecordFormBody({
                     t,
                     Object.hasOwn(prefilled, field.key),
                   )
-                : field.hint
+                : withFill(field, values, (next, latest) =>
+                    setVisibleValues({ ...latest, [field.key]: next }),
+                  )
             }
             error={said(field.key)}
           >
@@ -451,4 +454,19 @@ function ownCheck(
   return field.type === "date"
     ? dayOutOfRange(value, locale, label)
     : undefined;
+}
+
+// A field's hint with its fill button below it, when it has one.
+function withFill(
+  field: CreateField,
+  values: Record<string, string>,
+  setValue: (next: string, latest: Record<string, string>) => void,
+) {
+  if (!field.fill) return field.hint;
+  return (
+    <>
+      {field.hint}
+      <FillButton fill={field.fill} values={values} setValue={setValue} />
+    </>
+  );
 }

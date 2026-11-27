@@ -11237,6 +11237,8 @@ export const en = {
     "“{value}” is not a record id. Export the list to get the ids, or leave the column empty to import this row as a new record.",
   "import.reason.id_record_not_visible":
     "No record you can see has the id “{value}”. It may have been archived or merged away, or come from a different system.",
+  "import.reason.not_your_record":
+    "This row matches a record another member owns. Your import changes only records you own, so the row is not applied.",
   "import.reason.ref_taken_by_another_record":
     "The reference “{ref}” already stands for another record from an earlier import, so this row is not applied. Use a new reference for this row or fix the id column.",
   "import.reason.id_not_visible":
@@ -12590,6 +12592,15 @@ export const en = {
   "translation.nameIn.en": "Name in English",
   "translation.nameIn.de": "Name in German",
   "translation.nameIn.vi": "Name in Vietnamese",
+  "translation.missing.en": "No name in English",
+  "translation.missing.de": "No name in German",
+  "translation.missing.vi": "No name in Vietnamese",
+  "translation.suggest": "Suggest translation",
+  "translation.suggestNeedsName":
+    "Type the name first, then a translation can be suggested.",
+  "translation.suggesting": "Suggesting…",
+  "translation.suggestFailed":
+    "No suggestion came back. Type the name, or try again.",
   "translation.given": "{language}: {name}",
   "stage.name": "Name",
   "stage.nameTaken":

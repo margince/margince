@@ -333,3 +333,5 @@
 1795775200_only_unused_consent_purposes_can_change.down.sql | * | the procedural block defines or removes schema checks, functions and triggers; it rewrites no existing records
 1795775200_only_unused_consent_purposes_can_change.up.sql | * | the procedural block defines or removes schema checks, functions and triggers; it rewrites no existing records
 1795775300_source_changes_reach_the_write_history.up.sql | * | the procedural block defines or removes schema checks, functions and triggers; it rewrites no existing records
+1795777013_a_rep_imports_their_own_leads_and_contacts.up.sql | role | one UPDATE of the three fixed system roles rep, manager and management
+1795777013_a_rep_imports_their_own_leads_and_contacts.down.sql | role | one UPDATE of the three fixed system roles rep, manager and management

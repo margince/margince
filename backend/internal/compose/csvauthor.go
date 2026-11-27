@@ -66,7 +66,7 @@ func refuseAuthorFromNonImporter(ctx context.Context, mapping migration.RunMappi
 			if target == csvTargetAuthor || (part.Object == migration.ObjectActivity && target == csvTargetOwner) {
 				return &provenance.AuthorError{
 					Field: "mapping", Code: "reserved_source_author",
-					Message: "the author column, and an activity's owner column, are imported only by a signed-in person holding import_run:create; unmap it",
+					Message: "the author column, and an activity's owner column, are imported only by a signed-in person holding import_run:create and import_run:delete; unmap it",
 				}
 			}
 		}
