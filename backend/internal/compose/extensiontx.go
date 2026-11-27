@@ -110,7 +110,7 @@ func (r *callRuntime) Models() extension.Models {
 func (r *callRuntime) Objects() extension.Objects {
 	return extcapability.Objects{
 		Store: r.deps.blob, Ledger: extcapability.PoolLedger(r.deps.pool), Unit: r.unit,
-		Workspace: extcapability.StoredWorkspace(r.deps.pool),
+		Workspace: r.deps.storedWorkspace(),
 		Gate:      func(ctx context.Context) (context.Context, error) { return r.needed(ctx, extension.CapabilityObjects) },
 	}
 }

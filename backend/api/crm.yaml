@@ -973,12 +973,11 @@ paths:
       x-mcp-tool: { verb: read_job_health, router: read_workspace, action: job_health, tier: auto_execute, scope: read, served_by: route }
       summary: What the background system is holding, and whose work failed.
       description: >
-        Gated by the `job_health` read grant (admin and ops hold it by default). Reports the caller's own company's background jobs by kind — waiting,
-        running, retrying, and dead — plus the untenanted dispatcher rows that fan work out
-        to every company. Another company's jobs are never included: river_job carries no
-        company column and therefore no RLS, so this endpoint imposes the scope itself.
+        Gated by the `job_health` read grant (admin and ops hold it by default). Reports every row of the
+        installation's job table by kind (waiting, running, retrying and dead), dispatcher rows included.
+        An installation holds one company, so every job row is that company's work.
         Failure text is the job layer's own vetted sentence, never a worker's raw cause
-        (that column is fleet-visible and has no redaction path).
+        (that column has no redaction path).
       responses:
         '200':
           description: The company's background-job health.

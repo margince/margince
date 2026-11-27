@@ -59,8 +59,12 @@ var extensionRuntimeDeps struct {
 // The core port needs no binding of its own. Its store and its read of the
 // record mode come from the pool at the call, so no role wires it half-way.
 type extensionRuntimeBinding struct {
-	pool  *pgxpool.Pool
-	vault keyvault.Vault
+	pool *pgxpool.Pool
+	// objectsWorkspace answers the id a unit's objects are stored under. Nil
+	// reads it from the installation through the pool; a fixture without a
+	// database sets it.
+	objectsWorkspace func(context.Context) (ids.WorkspaceID, error)
+	vault            keyvault.Vault
 	// captureSink is the ONE fully-guarded capture pipeline a unit's ingress
 	// lands through, bound separately by BindExtensionCapture.
 	//
@@ -464,4 +468,11 @@ func BindExtensionObjectsFromConfig(ctx context.Context, settings *config.Config
 	}
 	BindExtensionObjects(store)
 	return nil
+}
+
+func (b extensionRuntimeBinding) storedWorkspace() func(context.Context) (ids.WorkspaceID, error) {
+	if b.objectsWorkspace != nil {
+		return b.objectsWorkspace
+	}
+	return extcapability.StoredWorkspace(b.pool)
 }

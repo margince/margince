@@ -364,9 +364,13 @@ func (h dataResetHandlers) purgeUnjoinableSurfaces(ctx context.Context, logger *
 		}
 	}
 	if h.blob != nil {
-		// The prefix must end at the key separator or the store refuses it:
-		// "<ws>" alone would reach into a sibling tenant whose id extends it.
-		n, err := h.blob.DeletePrefix(ctx, wsID.String()+"/")
+		// Under the stored-key id, the one every writer names. The prefix must
+		// end at the key separator or the store refuses it.
+		keyed, err := storekit.ReadStoredKeyWorkspace(ctx, h.pool)
+		if err != nil {
+			return err
+		}
+		n, err := h.blob.DeletePrefix(ctx, keyed.String()+"/")
 		if err != nil {
 			return err
 		}
