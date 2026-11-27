@@ -71,6 +71,8 @@ public.activity.activity_sent_by_colleague_fkey FOREIGN KEY (sent_by_colleague) 
 public.activity.activity_source_activity_id_fkey FOREIGN KEY (source_activity_id) REFERENCES activity(id) ON DELETE SET NULL
 public.activity.activity_source_author_id_fkey FOREIGN KEY (source_author_id) REFERENCES app_user(id) ON DELETE SET NULL
 public.activity.activity_source_author_needs_a_source CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL)))
+public.activity.activity_source_channel CREATE TRIGGER activity_source_channel BEFORE INSERT OR UPDATE ON public.activity FOR EACH ROW WHEN ((new.source <> ALL (ARRAY['api'::text, 'automation'::text, 'capture'::text, 'import'::text, 'manual'::text, 'webform'::text]))) EXECUTE FUNCTION move_activity_source_onto_its_channel()
+public.activity.activity_source_check CHECK ((source = ANY (ARRAY['api'::text, 'automation'::text, 'capture'::text, 'import'::text, 'manual'::text, 'webform'::text]))) NOT VALID
 public.activity.activity_strength_dates CREATE TRIGGER activity_strength_dates AFTER UPDATE ON public.activity REFERENCING OLD TABLE AS changed_from NEW TABLE AS changed_to FOR EACH STATEMENT EXECUTE FUNCTION trg_activity_strength_dates()
 public.activity.activity_system_text_retire CREATE TRIGGER activity_system_text_retire BEFORE UPDATE ON public.activity FOR EACH ROW EXECUTE FUNCTION retire_changed_system_text()
 public.activity.activity_system_text_shape CHECK (((system_text IS NULL) OR ((jsonb_typeof(system_text) = 'object'::text) AND (((system_text ->> 'schema_version'::text) = '1'::text) IS TRUE) AND (octet_length((system_text)::text) <= 8192))))
@@ -946,6 +948,29 @@ public.activity_sales_state.text_bound_update CREATE TRIGGER text_bound_update A
 public.activity_sales_state.thread_key text NOT NULL gen=- def=-
 public.activity_sales_state_pkey CREATE UNIQUE INDEX activity_sales_state_pkey ON public.activity_sales_state USING btree (thread_key, kind, channel_provider)
 public.activity_search_tsv(subject text, body text, body_own_end integer, language text) secdef=false cfg=- acl=- 
+public.activity_source_channel(source text, captured_by text) secdef=false cfg=- acl=- 
+ SELECT CASE
+  WHEN record_source_channel(source) IN (source, 'import') THEN record_source_channel(source)
+  WHEN source IN ('chat_screenshot', 'meeting_notes', 'meeting_notes_mail') OR captured_by LIKE 'connector:%' THEN 'capture'
+  WHEN source IN ('public_booking', 'web_form') THEN 'webform'
+  WHEN source IN ('', 'system') OR activity_source_producer(source) IS NOT NULL THEN 'automation'
+  ELSE record_source_channel(source)
+ END
+
+public.activity_source_producer(source text) secdef=false cfg=- acl=- 
+ SELECT CASE
+  WHEN source IN ('attachment_access_request', 'attachment_extraction_accept', 'chat_links', 'chat_screenshot',
+                  'commitment', 'deal_room', 'email_request', 'meeting_notes', 'meeting_notes_mail',
+                  'overnight-reconcile', 'privacy_request', 'public_booking', 'web_form', 'which_deal')
+   THEN source
+ END
+
+public.activity_source_system(source text, source_system text, source_id text, kind text) secdef=false cfg=- acl=- 
+ SELECT CASE
+  WHEN source_system IS NULL AND source_id IS NULL AND kind <> 'task' THEN activity_source_producer(source)
+  ELSE source_system
+ END
+
 public.activity_ts_config(lang text) secdef=false cfg=- acl=- 
 public.activity_unfolded_counterparty(address text) secdef=false cfg=- acl=- 
     SELECT CASE WHEN address <> lower(address) THEN lower(address) END
@@ -7146,6 +7171,7 @@ public.idx_stage_pipeline CREATE INDEX idx_stage_pipeline ON public.stage USING 
 public.idx_system_log_action CREATE INDEX idx_system_log_action ON public.system_log USING btree (action, occurred_at DESC)
 public.idx_system_log_time CREATE INDEX idx_system_log_time ON public.system_log USING btree (occurred_at DESC)
 public.idx_system_log_unkeyed_email CREATE INDEX idx_system_log_unkeyed_email ON public.system_log USING btree (id) WHERE ((action = 'login'::text) AND (detail ? 'email_hash'::text) AND (NOT (detail ? 'email_key_id'::text)))
+public.idx_tag_merged_into CREATE INDEX idx_tag_merged_into ON public.tag USING btree (merged_into_id) WHERE (merged_into_id IS NOT NULL)
 public.idx_tag_search CREATE INDEX idx_tag_search ON public.tag USING gin (search_tsv)
 public.idx_tag_suggestion_company CREATE INDEX idx_tag_suggestion_company ON public.tag_suggestion USING btree (company_id, tag_id, decided_at) WHERE (company_id IS NOT NULL)
 public.idx_tag_suggestion_contact CREATE INDEX idx_tag_suggestion_contact ON public.tag_suggestion USING btree (contact_id, tag_id, decided_at) WHERE (contact_id IS NOT NULL)
@@ -8346,6 +8372,13 @@ public.mfa_recovery_code.used_at timestamp with time zone gen=- def=-
 public.mfa_recovery_code.user_id uuid NOT NULL gen=- def=-
 public.mfa_recovery_code_hash_key CREATE UNIQUE INDEX mfa_recovery_code_hash_key ON public.mfa_recovery_code USING btree (code_hash)
 public.mfa_recovery_code_pkey CREATE UNIQUE INDEX mfa_recovery_code_pkey ON public.mfa_recovery_code USING btree (id)
+public.move_activity_source_onto_its_channel() secdef=false cfg=- acl=- 
+BEGIN
+ NEW.source_system := activity_source_system(NEW.source, NEW.source_system, NEW.source_id, NEW.kind);
+ NEW.source := activity_source_channel(NEW.source, NEW.captured_by);
+ RETURN NEW;
+END;
+
 public.move_last_activity(tbl regclass, rid uuid) secdef=false cfg=- acl=- 
 DECLARE
   v timestamptz;
@@ -10939,10 +10972,12 @@ public.tag.color text gen=- def=-
 public.tag.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.tag.description text gen=- def=-
 public.tag.id uuid NOT NULL gen=- def=uuidv7()
+public.tag.merged_into_id uuid gen=- def=-
 public.tag.name text NOT NULL gen=- def=-
 public.tag.search_tsv tsvector gen=s def=(setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(name, ''::text))), 'A'::"char") || setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(name, ''::text))), 'A'::"char"))
 public.tag.suggestible boolean NOT NULL gen=- def=false
 public.tag.tag_color_check CHECK (((color IS NULL) OR (color = ANY (ARRAY['teal'::text, 'amber'::text, 'rose'::text, 'slate'::text, 'sky'::text, 'violet'::text, 'lime'::text, 'orange'::text]))))
+public.tag.tag_merged_into_id_fkey FOREIGN KEY (merged_into_id) REFERENCES tag(id) ON DELETE SET NULL (merged_into_id)
 public.tag.tag_pkey PRIMARY KEY (id)
 public.tag.tag_suggestible_is_described CHECK (((NOT suggestible) OR ((description IS NOT NULL) AND (btrim(description) <> ''::text))))
 public.tag.tag_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))

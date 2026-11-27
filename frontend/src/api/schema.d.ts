@@ -12567,7 +12567,9 @@ export interface paths {
          * Bring an archived tag back into the vocabulary.
          * @description The undo for a retirement somebody regrets. It refuses when a LIVE tag has taken the
          *     name in the meantime: two words a reader cannot tell apart is the exact state the
-         *     vocabulary exists to prevent, and the caller has to rename one of them first.
+         *     vocabulary exists to prevent, and the caller has to rename one of them first. It also
+         *     refuses a tag that carries `merged_into`: the merge moved its records to the survivor,
+         *     and a restore would not move them back.
          */
         post: operations["restoreTag"];
         delete?: never;
@@ -35311,6 +35313,13 @@ export interface components {
          */
         NotificationPreferenceList: {
             items: components["schemas"]["NotificationPreference"][];
+            /**
+             * @description Whether this installation sends its own mail. False means `email` and `digest` reach
+             *     no mailbox: the notice still lands in the app, and no message leaves. A screen says
+             *     so beside the choices rather than offering mail that will not arrive. It answers the
+             *     caller's own delivery, so every seat that reads its settings is told.
+             */
+            email_delivery_available: boolean;
         };
         /**
          * @description One line of the notification centre: a durable notice addressed to the caller, and
@@ -45421,7 +45430,7 @@ export interface components {
              */
             readonly reply_channel?: "email" | "call" | "message" | null;
             email_target?: components["schemas"]["ActivityEmailTarget"];
-            /** @description Where the row came from. `manual` is anything typed, by a member or by an assistant working for one, so it never says who typed it: `captured_by` and `recorded_by_agent` do. */
+            /** @description The channel the row arrived by: `api`, `automation`, `capture`, `import`, `manual` or `webform`. `manual` is anything typed, by a member or by an assistant working for one, so it never says who typed it: `captured_by` and `recorded_by_agent` do. `source_system` names the connector or the product's own writer when there is one. An older row can show another value until the background correction reaches it. */
             source: string;
             /** @description Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied. */
             readonly captured_by: string;
@@ -45741,7 +45750,11 @@ export interface components {
                 /** Format: uuid */
                 entity_id: string;
             }[];
-            source: string;
+            /**
+             * @description The channel this task arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. Any other value is 422 `invalid_source`.
+             * @enum {string}
+             */
+            source: "api" | "automation" | "capture" | "import" | "manual" | "webform";
         };
         /** @enum {string} */
         ActivityDealFilingRecordType: "contact" | "company";
@@ -45872,7 +45885,11 @@ export interface components {
                 /** Format: uuid */
                 entity_id: string;
             }[];
-            source: string;
+            /**
+             * @description The channel this activity arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. The other system and the activity's id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`.
+             * @enum {string}
+             */
+            source: "api" | "automation" | "capture" | "import" | "manual" | "webform";
             /** @description Provenance an importer keeps with the record — the source system's own representation of this activity. Stored verbatim and returned by `getActivity`. It is content: a reader who may not read this activity's subject and body does not receive it either, and the retention and noise-redaction paths destroy it with the rest of the text. */
             raw?: {
                 [key: string]: unknown;
@@ -50188,6 +50205,13 @@ export interface components {
             updated_at?: string;
             /** Format: date-time */
             archived_at?: string | null;
+            /**
+             * @description The tag a merge folded this one into, named as it reads now. Present only on a tag
+             *     archived by a merge, and such a tag cannot be restored. The named tag is the next merge
+             *     destination and may itself have been merged since; follow each `merged_into` until a tag
+             *     has none to find the tag that carries the records now.
+             */
+            merged_into?: components["schemas"]["RowTag"];
             /** @description How many live contacts, companies, deals and leads carry this tag, as THIS caller may see them: a type the caller may not read counts nothing, and within a readable type only the rows the caller's scope admits are counted. The sum of the tag page's `usage`. Set on the list read that asks `with_carried_by`; absent otherwise. */
             readonly carried_by?: number;
         };
@@ -50261,6 +50285,13 @@ export interface components {
             updated_at?: string;
             /** Format: date-time */
             archived_at?: string | null;
+            /**
+             * @description The tag a merge folded this one into, named as it reads now. Present only on a tag
+             *     archived by a merge, and such a tag cannot be restored. The named tag is the next merge
+             *     destination and may itself have been merged since; follow each `merged_into` until a tag
+             *     has none to find the tag that carries the records now.
+             */
+            merged_into?: components["schemas"]["RowTag"];
             usage: components["schemas"]["TagUsage"];
         };
         /**

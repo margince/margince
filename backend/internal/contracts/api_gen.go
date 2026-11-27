@@ -34337,7 +34337,7 @@ type Activity struct {
 	// ReplyChannel Task only. For a `reply` or `reach_out` task, the kind of the activity it follows (`source_activity_id`), so the answer goes back the way the conversation went: a promise made in a mail is kept by mail. Null for every other type, and for a task with no source of one of these kinds.
 	ReplyChannel *ActivityReplyChannel `json:"reply_channel,omitempty"`
 
-	// Source Where the row came from. `manual` is anything typed, by a member or by an assistant working for one, so it never says who typed it: `captured_by` and `recorded_by_agent` do.
+	// Source The channel the row arrived by: `api`, `automation`, `capture`, `import`, `manual` or `webform`. `manual` is anything typed, by a member or by an assistant working for one, so it never says who typed it: `captured_by` and `recorded_by_agent` do. `source_system` names the connector or the product's own writer when there is one. An older row can show another value until the background correction reaches it.
 	Source string `json:"source"`
 
 	// SourceActivityId The conversation or note this task follows from, whether added by a human or read from a conversation. Opening the source requires current source access. A task cannot grant access to its source or disclose content from a withheld source. On a transcript created with `records_meeting_id`, the meeting it records.
@@ -48137,7 +48137,9 @@ type CreateActivityRequest struct {
 
 	// SenderContactId Inbound message, call, meeting or email only: the linked contact who wrote or said it. Set it whenever one contact sent the message, for example the one member of a group chat who asked for a follow-up. Only that contact counts as its author, so only they asked to hear from us. Without it, an inbound activity linked to one contact names that contact as the sender. One linked to two or more contacts names no sender, and each contact is kept as copied. The stated `participants` of an email win over this field. A contact that is not in `links` returns `422 code: sender_not_linked`. Any other kind, or a direction other than `inbound`, returns `422 code: field_not_valid_for_kind`.
 	SenderContactId *openapi_types.UUID `json:"sender_contact_id,omitempty"`
-	Source          string              `json:"source"`
+
+	// Source The channel this activity arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. The other system and the activity's id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`.
+	Source string `json:"source"`
 
 	// SourceActivityId For a task, the conversation or note it follows from. The caller and assignee need access to that source. The task preserves its audience and inherits its visible links when no links are supplied. For a logged note, call or meeting, the task whose outcome is being recorded; a meeting transcript naming one needs `meeting_status`. This reference alone does not complete that task or accept a request.
 	SourceActivityId *openapi_types.UUID `json:"source_activity_id,omitempty"`
@@ -49263,7 +49265,9 @@ type CreateTaskRequest struct {
 
 	// RequestActivityId Accept this inbound request for the authenticated human, with activity read and create authority. Task only; agents cannot accept and assignee_id must name the caller when provided. The server verifies source access and copies its links instead of caller-supplied links. Subject and body are honored on creation. Retries return the same personal reminder without changing it. Explicit acceptance can restore an archived unfinished reminder with update authority. Completion settles the source request; automatic reconciliation never restores a reminder.
 	RequestActivityId *openapi_types.UUID `json:"request_activity_id,omitempty"`
-	Source            string              `json:"source"`
+
+	// Source The channel this task arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. Any other value is 422 `invalid_source`.
+	Source string `json:"source"`
 
 	// SourceActivityId The non-task activity this task follows from, including email and messages. The caller and assignee need access to the source content. The task preserves its audience and inherits its visible links when no links are supplied. This reference does not accept or settle a request.
 	SourceActivityId *openapi_types.UUID `json:"source_activity_id,omitempty"`
@@ -61327,7 +61331,12 @@ type NotificationPreference struct {
 // NotificationPreferenceList The calling seat's whole set — one entry per class the product sends, always all of them,
 // so a screen rendering one row per class never has to take the others from its own memory.
 type NotificationPreferenceList struct {
-	Items []NotificationPreference `json:"items"`
+	// EmailDeliveryAvailable Whether this installation sends its own mail. False means `email` and `digest` reach
+	// no mailbox: the notice still lands in the app, and no message leaves. A screen says
+	// so beside the choices rather than offering mail that will not arrive. It answers the
+	// caller's own delivery, so every seat that reads its settings is told.
+	EmailDeliveryAvailable bool                     `json:"email_delivery_available"`
+	Items                  []NotificationPreference `json:"items"`
 }
 
 // OccurredPrecision How much of an activity's time is known. `instant` is a real moment. `day` is a date with no time of day: the stored instant is noon UTC of that date, so its date is the UTC date, whatever the installation's zone. A meeting of this precision never holds its host's calendar slot.
@@ -70933,7 +70942,13 @@ type Tag struct {
 	CreatedAt   *time.Time         `json:"created_at,omitempty"`
 	Description *string            `json:"description,omitempty"`
 	Id          openapi_types.UUID `json:"id"`
-	Name        string             `json:"name"`
+
+	// MergedInto The tag a merge folded this one into, named as it reads now. Present only on a tag
+	// archived by a merge, and such a tag cannot be restored. The named tag is the next merge
+	// destination and may itself have been merged since; follow each `merged_into` until a tag
+	// has none to find the tag that carries the records now.
+	MergedInto *RowTag `json:"merged_into,omitempty"`
+	Name       string  `json:"name"`
 
 	// Suggestible Whether captured mail and meeting notes may suggest this tag. A suggestible tag
 	// carries a description of what interest looks like, and that description is what
@@ -70953,7 +70968,13 @@ type TagDetail struct {
 	CreatedAt   *time.Time         `json:"created_at,omitempty"`
 	Description *string            `json:"description,omitempty"`
 	Id          openapi_types.UUID `json:"id"`
-	Name        string             `json:"name"`
+
+	// MergedInto The tag a merge folded this one into, named as it reads now. Present only on a tag
+	// archived by a merge, and such a tag cannot be restored. The named tag is the next merge
+	// destination and may itself have been merged since; follow each `merged_into` until a tag
+	// has none to find the tag that carries the records now.
+	MergedInto *RowTag `json:"merged_into,omitempty"`
+	Name       string  `json:"name"`
 
 	// Suggestible Whether captured mail and meeting notes may suggest this tag. A suggestible tag
 	// carries a description of what interest looks like, and that description is what

@@ -55,7 +55,7 @@ func TestAnApprovedFollowUpIsTheDealOwnersOwnTask(t *testing.T) {
 			}
 			got := e.WsScalar(t, `SELECT coalesce(a.assignee_id::text, '') FROM activity a
 				JOIN activity_link l ON l.activity_id = a.id AND l.deal_id = $1
-				WHERE a.kind = 'task' AND a.source = 'overnight-reconcile'`, deal)
+				WHERE a.kind = 'task' AND a.source_system = 'overnight-reconcile'`, deal)
 			if got != c.want(e) {
 				t.Fatalf("the approved follow-up is assigned to %q, want %q", got, c.want(e))
 			}

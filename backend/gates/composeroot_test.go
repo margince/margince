@@ -169,7 +169,9 @@ const (
 	// the How it stands job and its page case, and the task explanation's
 	// certification case and its test. The job needs the unexported job
 	// context; the cases drive the contact page.
-	composeRootProductionLines = 232_389
+	// Raised by 1 production line for the notices handlers' mail delivery, set on
+	// the unexported server options.
+	composeRootProductionLines = 232_390
 	// Raised by 18 test lines for the link suggestion tool cases.
 	// Raised by 2 test lines for the actor census waivers of the two jobs that
 	// bind their colleague inside a method.
