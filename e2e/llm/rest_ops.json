@@ -2482,6 +2482,7 @@
       "cursor",
       "filters",
       "limit",
+      "offset",
       "q",
       "record_type"
     ],

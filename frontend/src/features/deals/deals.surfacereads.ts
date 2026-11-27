@@ -1,10 +1,18 @@
-import { listFetchLimit } from "../../components/listquery";
+import { listFetchLimit, listPageOf } from "../../components/listquery";
+import { useJumpedList } from "../../components/listquery.jump";
+import { CLOSE_DAY_DIAL } from "../../lib/dealranges";
 import {
   type DealFilters,
+  type DealListPage,
+  dealsListKey,
+  readDealsAt,
+  useCloseDay,
   useDeals,
   useStageTotals,
 } from "../../lib/deals.queries";
+import { useHealthScope } from "../../lib/healthscope";
 import type { usePipelines } from "../../lib/pipelines.queries";
+import { useUrlParams } from "../../lib/urlstate";
 import { useStageColumns } from "./dealboard.queries";
 import type { Stage } from "./deals";
 
@@ -21,11 +29,8 @@ export function useSurfaceReads(
   perPage: number,
 ) {
   const scopeKnown = pipelinesQuery.data !== undefined;
-  const dealsQuery = useDeals(
-    f,
-    view === "table" && !refused && scopeKnown,
-    listFetchLimit(perPage),
-  );
+  const tableReads = view === "table" && !refused && scopeKnown;
+  const dealsQuery = useDeals(f, tableReads, listFetchLimit(perPage));
   const stageColumns = useStageColumns(
     f,
     stages.map((stage) => stage.id),
@@ -41,5 +46,83 @@ export function useSurfaceReads(
   );
   const readError = view === "board" ? stageColumns.error : dealsQuery.error;
   const listRead = scopeKnown ? dealsQuery : pipelinesQuery;
-  return { dealsQuery, stageColumns, stageTotalsQuery, readError, listRead };
+  const tableRead = useDealsTable(f, perPage, dealsQuery, listRead, tableReads);
+  return { stageColumns, stageTotalsQuery, readError, tableRead };
+}
+
+// The table's list state: its cursor read, and the page the address names read
+// at its offset beside it. Deals carry no `paramScope`, so the page is the
+// unscoped one the table writes.
+function useDealsTable(
+  f: DealFilters,
+  perPage: number,
+  dealsQuery: ReturnType<typeof useDeals>,
+  listRead: ReturnType<typeof useDeals> | ReturnType<typeof usePipelines>,
+  enabled: boolean,
+) {
+  const [params] = useUrlParams();
+  const closeDay = useCloseDay(f.filters[CLOSE_DAY_DIAL]);
+  const readerScope = useHealthScope();
+  const pages = dealsQuery.data?.pages ?? [];
+  const rows = pages.flatMap((page) => page.data);
+  const list = useJumpedList({
+    prefixKey: dealsListKey(
+      readerScope ?? "",
+      f,
+      closeDay,
+      listFetchLimit(perPage),
+    ),
+    read: async (cursor, reach, signal) =>
+      listPageOfDeals(
+        await readDealsAt(
+          f,
+          closeDay,
+          {
+            cursor: cursor ?? undefined,
+            offset: reach.offset,
+            limit: listFetchLimit(perPage, reach),
+          },
+          signal,
+        ),
+      ),
+    enabled: enabled && readerScope !== undefined,
+    page: listPageOf(params),
+    perPage,
+    rowKey: (deal) => deal.id,
+    cursor: {
+      rows,
+      hasMore: dealsQuery.hasNextPage,
+      pending: dealsQuery.isPending,
+      total: pages.findLast((page) => page.page?.total !== undefined)?.page
+        ?.total,
+      isError: listRead.isError,
+      error: listRead.error,
+      refetch: () => listRead.refetch(),
+    },
+  });
+  return {
+    rows,
+    held: list.held,
+    jumped: list.jumped,
+    total: list.total,
+    isPending: listRead.isPending,
+    isError: list.isError,
+    error: list.error,
+    refetch: list.refetch,
+    hasMore: dealsQuery.hasNextPage,
+    loadMore: () => {
+      dealsQuery.fetchNextPage();
+    },
+  };
+}
+
+function listPageOfDeals(page: DealListPage) {
+  return {
+    data: page.data,
+    page: {
+      next_cursor: page.page?.next_cursor ?? null,
+      has_more: page.page?.has_more ?? false,
+      total: page.page?.total,
+    },
+  };
 }

@@ -46,6 +46,19 @@ describe("the vi copy checks, over planted catalogs", () => {
     expect(findings({ "a.b": "Lưu thay đổi" })).toEqual([]);
   });
 
+  it("passes a range of figures joined by a hyphen", () => {
+    expect(findings({ "a.b": "{first}-{last} trong {count}" })).toEqual([]);
+  });
+
+  it("refuses a range whose hyphen is spaced", () => {
+    expect(
+      check(
+        findings({ "a.b": "{first} - {last} trong {count}" }),
+        "uses no en dash, em dash, double hyphen or spaced hyphen",
+      ),
+    ).toHaveLength(1);
+  });
+
   it.each([
     ["is NFC", "Lưu thay đổi".normalize("NFD")],
     ["marks the tone of an open oa, oe and uy on the first vowel", "Hoà"],

@@ -35,6 +35,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
@@ -133,7 +134,8 @@ func (t listRecords) Spec() mcp.ToolSpec {
 			t.filtersProperty() + compactRecordsProperty + `
 			"q":{"type":"string","description":"Text match beside filters; a type without text search refuses it."},
 			"limit":{"type":"integer","minimum":1,"maximum":50},
-			"cursor":{"type":"string","description":"The previous page's next_cursor"}},
+			"cursor":{"type":"string","description":"The previous page's next_cursor"},
+			"offset":{"type":"integer","minimum":0,"maximum":` + strconv.Itoa(storekit.MaxListOffset) + `,"description":"Skips rows in the list's order; cannot be sent with cursor. Contact, company, deal, lead and project lists only."}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[ListRecordsResult](),
 	}
@@ -223,6 +225,7 @@ func (t listRecords) Handle(ctx context.Context, in json.RawMessage) (json.RawMe
 		Q          string            `json:"q"`
 		Limit      json.RawMessage   `json:"limit"`
 		Cursor     string            `json:"cursor"`
+		Offset     *int              `json:"offset"`
 		Compact    bool              `json:"compact"`
 	}
 	if err := decodeArgs(in, &args); err != nil {
@@ -239,12 +242,17 @@ func (t listRecords) Handle(ctx context.Context, in json.RawMessage) (json.RawMe
 	if err := t.refuseUnaskableFilters(args.RecordType, args.Filters); err != nil {
 		return nil, err
 	}
+	// Checked before the seam, whose cursor decode and per-type refusal would otherwise answer first.
+	if _, err := storekit.ListOffset(args.Offset, &args.Cursor); err != nil {
+		return nil, err
+	}
 	res, err := t.p.Search(ctx, datasource.SearchQuery{
 		EntityTypes: []datasource.EntityType{datasource.EntityType(args.RecordType)},
 		Filters:     args.Filters,
 		Text:        args.Q,
 		Limit:       limit,
 		Cursor:      args.Cursor,
+		Offset:      args.Offset,
 	})
 	if err != nil {
 		return nil, err

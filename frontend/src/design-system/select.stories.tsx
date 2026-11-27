@@ -439,6 +439,40 @@ export const CompactDark: Story = {
   render: () => <CardHeadFilter />,
 };
 
+// The page size on a phone. The face says the number, and the list and the
+// box's name say what it counts.
+const PAGE_SIZE_OPTIONS: readonly SelectOption[] = [25, 50, 100].map(
+  (size) => ({
+    value: String(size),
+    label: `${size} per page`,
+    faceLabel: String(size),
+  }),
+);
+
+/** A face shorter than the label: `faceLabel` on each option. */
+export const ShortFace: Story = {
+  render: () => {
+    function PageSize() {
+      const [value, setValue] = useState("25");
+      return (
+        <Select
+          aria-label="Rows per page"
+          value={value}
+          onChange={setValue}
+          options={PAGE_SIZE_OPTIONS}
+        />
+      );
+    }
+    return <PageSize />;
+  },
+  play: async ({ canvasElement }) => {
+    const face = within(canvasElement).getByRole("combobox", {
+      name: "Rows per page",
+    });
+    await expect(face).toHaveTextContent(/^25$/);
+  },
+};
+
 /**
  * An option can carry a mark before its label. The tag picker's colour dots are
  * the case this exists for, where the swatch IS what a reader picks by and the
