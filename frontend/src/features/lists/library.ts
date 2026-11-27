@@ -4,6 +4,8 @@
 // The Filters and views library as data. Pure, so the rules the page draws by
 // are proved here without a page.
 
+import { listOpening } from "../../components/listquery.options";
+import { paramsFromListQuery } from "../../components/listqueryparams";
 import {
   forReader,
   holdsEveryWord,
@@ -11,10 +13,12 @@ import {
   stable,
 } from "../../format/collate";
 import type { Locale } from "../../i18n";
+import { VIEW_PARAM } from "../../lib/deals.queries";
 import { isExtensionEntityKind } from "../../lib/entity";
 import type { FilterResource } from "../../lib/filterdata";
 import {
   type CoreLibraryType,
+  LIBRARY_TYPES,
   type LibraryType,
   libraryTypeOfList,
   type ObjectTab,
@@ -22,11 +26,23 @@ import {
   tabOfViewResource,
 } from "../../lib/filtersaddress";
 import type { List } from "../../lib/lists.queries";
+import { routeHash } from "../../lib/router";
 import { filterTreeOf, type SavedView } from "../../lib/savedviews.queries";
 import { decode, type Node, rootGroup } from "../../lib/segmentpredicate";
+import { hashWithParams } from "../../lib/urlstate";
+import { listStateOf, type SavedListState } from "./savedviews";
+
+/** A view saved on a list screen, which opens on that list. */
+export type ListViewItem = Readonly<{
+  kind: "listView";
+  view: SavedView;
+  state: SavedListState;
+  type: CoreLibraryType;
+}>;
 
 export type LibraryItem =
   | Readonly<{ kind: "view"; view: SavedView; tree: Node; tab: ObjectTab }>
+  | ListViewItem
   | Readonly<{ kind: "list"; list: List }>;
 
 /** `mine`: what the reader owns. `shared`: what someone else or nobody owns. */
@@ -40,10 +56,11 @@ export type LibraryCut = Readonly<{
 }>;
 
 /**
- * Saved views and lists as one set of rows. A view whose filter this build
- * cannot read, or that keeps a list's dials rather than a filter, is left out:
- * a row that opens onto nothing is worse than no row. A stored single clause
- * is wrapped in a group, the shape every editor of it expects.
+ * Saved views and lists as one set of rows. A view with a filter the builder
+ * reads opens in the builder, even when it also keeps a list's dials. One
+ * with only a list's dials opens on that list. Any other view is left out: a
+ * row that opens onto nothing is worse than no row. A stored single clause is
+ * wrapped in a group, the shape every editor of it expects.
  */
 export function libraryItems(
   views: readonly SavedView[],
@@ -52,9 +69,12 @@ export function libraryItems(
   const fromViews = views.flatMap((view): LibraryItem[] => {
     const tab = tabOfViewResource(view.resource);
     const tree = filterTreeOf(view);
-    return tab && tree
-      ? [{ kind: "view", view, tree: rootGroup(tree), tab }]
-      : [];
+    if (tab && tree) {
+      return [{ kind: "view", view, tree: rootGroup(tree), tab }];
+    }
+    const type = LIBRARY_TYPES.find((known) => known === view.resource);
+    const state = listStateOf(view);
+    return type && state ? [{ kind: "listView", view, state, type }] : [];
   });
   const fromLists = lists.map((list): LibraryItem => ({ kind: "list", list }));
   return [...fromViews, ...fromLists];
@@ -73,33 +93,72 @@ export function withFound(
 }
 
 export function nameOf(item: LibraryItem): string {
-  return item.kind === "view" ? item.view.name : item.list.name;
+  return item.kind === "list" ? item.list.name : item.view.name;
 }
 
 /** Unique across both kinds, since a view and a list may share an id. */
 export function keyOf(item: LibraryItem): string {
-  return item.kind === "view" ? `v:${item.view.id}` : `l:${item.list.id}`;
+  return item.kind === "list" ? `l:${item.list.id}` : `v:${item.view.id}`;
 }
 
 export function typeOf(item: LibraryItem): LibraryType {
-  return item.kind === "view"
-    ? item.tab
-    : libraryTypeOfList(item.list.entity_type);
+  switch (item.kind) {
+    case "view":
+      return item.tab;
+    case "listView":
+      return item.type;
+    case "list":
+      return libraryTypeOfList(item.list.entity_type);
+  }
 }
 
 /** The record type whose vocabulary names this row's fields. */
 export function resourceOf(item: LibraryItem): FilterResource {
-  return item.kind === "view" ? resourceOfTab(item.tab) : item.list.entity_type;
+  switch (item.kind) {
+    case "view":
+      return resourceOfTab(item.tab);
+    case "listView":
+      return item.type === "projects" ? "project" : resourceOfTab(item.type);
+    case "list":
+      return item.list.entity_type;
+  }
 }
 
-/** The filter a row selects by, or null for a Shortlist or an unreadable one. */
+/** The filter a row selects by, or null for a Shortlist, a list's view or an unreadable one. */
 export function treeOf(item: LibraryItem): Node | null {
-  if (item.kind === "view") {
-    return item.tree;
+  switch (item.kind) {
+    case "view":
+      return item.tree;
+    case "listView":
+      return null;
+    case "list":
+      return item.list.list_type === "dynamic"
+        ? decode(item.list.definition)
+        : null;
   }
-  return item.list.list_type === "dynamic"
-    ? decode(item.list.definition)
-    : null;
+}
+
+/**
+ * Where a view saved on a list opens: that list, its dials in the address the
+ * list writes itself. The view's tab then lights there. `openingFilters` are
+ * the filters that list opens on for this reader.
+ */
+export function listViewHref(
+  item: ListViewItem,
+  openingFilters: Readonly<Record<string, string>>,
+): string {
+  const opening = listOpening(undefined, openingFilters);
+  const dials = new Map(
+    paramsFromListQuery(
+      { ...item.state, perPage: item.state.perPage ?? opening.perPage },
+      opening,
+    ),
+  );
+  if (item.type === "deals") {
+    // Deals saves a view from its table alone, so the view opens there.
+    dials.set(VIEW_PARAM, "table");
+  }
+  return hashWithParams(routeHash({ screen: item.type }), dials);
 }
 
 export function isArchived(item: LibraryItem): boolean {
@@ -122,7 +181,7 @@ export function groupOf(
   item: LibraryItem,
   readerId: string | undefined,
 ): LibraryGroup {
-  if (item.kind === "view") {
+  if (item.kind !== "list") {
     return "mine";
   }
   return ownedByReader(item.list, readerId) ? "mine" : "shared";

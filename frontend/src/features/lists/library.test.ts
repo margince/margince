@@ -3,6 +3,7 @@
 
 import { describe, expect, it } from "vitest";
 import type { List } from "../../lib/lists.queries";
+import type { SavedView } from "../../lib/savedviews.queries";
 import { isGroup } from "../../lib/segmentpredicate";
 import {
   liveList,
@@ -19,10 +20,12 @@ import {
   type LibraryItem,
   libraryItems,
   listsLanding,
+  listViewHref,
   nameOf,
   ownedByReader,
   pillCounts,
   sortForReader,
+  typeOf,
   visibleGroups,
   withFound,
 } from "./library";
@@ -56,25 +59,63 @@ const ALL: LibraryCut = { q: "", type: "all", archived: false };
 const captionOf = (item: LibraryItem) =>
   item.kind === "list" ? (item.list.purpose ?? "") : "City is Berlin";
 
+/** A view saved on a list screen: its dials, and no filter tree. */
+function listView(
+  id: string,
+  name: string,
+  resource: string,
+  list: unknown,
+): SavedView {
+  return { ...filterView(id, name, resource, null), query: { list } };
+}
+
+const byName = listView("v-name", "By name", "contacts", {
+  q: "",
+  sort: "name",
+  includeArchived: false,
+  filters: {},
+});
+
 describe("the merged library", () => {
-  it("keeps only views whose filter this build can open", () => {
+  it("keeps the views whose filter or list state this build can open", () => {
     const items = libraryItems(
       [
         view,
         filterView("v-old", "Stale", "contacts", {
           and: [{ field: "c", op: "like", value: "x" }],
         }),
-        {
-          ...filterView("v-list", "List state", "contacts", null),
-          query: { list: {} },
-        },
+        listView("v-list", "List state", "contacts", {}),
+        listView("v-junk", "Junk", "contacts", "sort=name"),
         filterView("v-act", "Calls", "activities", { and: [BERLIN] }),
+        listView("v-act-list", "Call list", "activities", {}),
         filterView("v-par", "Resellers", "partners", { and: [BERLIN] }),
+        listView("v-par-list", "Reseller list", "partners", {}),
         filterView("v-pro", "Builds", "projects", { and: [BERLIN] }),
       ],
       [],
     );
-    expect(items.map(nameOf)).toEqual(["Berlin contacts"]);
+    expect(items.map(nameOf)).toEqual(["Berlin contacts", "List state"]);
+    expect(items.map((item) => item.kind)).toEqual(["view", "listView"]);
+  });
+
+  it("files a view saved on the Projects list under the projects pill", () => {
+    const items = libraryItems(
+      [listView("v-pro-list", "Stalled builds", "projects", { sort: "name" })],
+      [],
+    );
+    expect(items.map(typeOf)).toEqual(["projects"]);
+    expect(pillCounts(items, false, false)?.projects).toBe(1);
+    expect(groupOf(items[0], READER_ID)).toBe("mine");
+  });
+
+  it("opens a view holding both a filter and list state in the builder, once", () => {
+    const both: SavedView = {
+      ...view,
+      query: { ...view.query, list: { sort: "name" } },
+    };
+    const items = libraryItems([both], []);
+    expect(items).toHaveLength(1);
+    expect(items[0]?.kind).toBe("view");
   });
 
   it("wraps a stored single clause in a group, the shape every editor expects", () => {
@@ -235,6 +276,41 @@ describe("the groups drawn", () => {
     expect(
       visibleGroups(both, [], READER_ID, true, (group) => group === "shared"),
     ).toEqual(["shared"]);
+  });
+});
+
+describe("where a view saved on a list opens", () => {
+  const [item] = libraryItems([byName], []);
+  const href = (openingFilters: Readonly<Record<string, string>>) =>
+    item?.kind === "listView" ? listViewHref(item, openingFilters) : "";
+
+  it("is that list, with the view's dials as the list writes them", () => {
+    expect(href({})).toBe("#/contacts?sort=name");
+  });
+
+  it("spells out a filter the list opens on and the view leaves off", () => {
+    const [allLeads] = libraryItems(
+      [listView("v-all", "All leads", "leads", { sort: "", filters: {} })],
+      [],
+    );
+    expect(
+      allLeads?.kind === "listView" &&
+        listViewHref(allLeads, { owner_id: READER_ID }),
+    ).toBe("#/leads?owner_id=all");
+  });
+
+  it("opens a deals view on the table it was saved from", () => {
+    const [deals] = libraryItems(
+      [
+        listView("v-deal", "Stalled", "deals", {
+          filters: { stalled: "true", pipeline_id: "pl" },
+        }),
+      ],
+      [],
+    );
+    expect(deals?.kind === "listView" && listViewHref(deals, {})).toBe(
+      "#/deals?pipeline_id=pl&stalled=true&view=table",
+    );
   });
 });
 

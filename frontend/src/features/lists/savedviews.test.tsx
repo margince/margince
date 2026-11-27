@@ -15,6 +15,11 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ListQuery } from "../../components/listquery";
 import { LocaleProvider } from "../../i18n";
+import {
+  emptyPage,
+  ListTableHarness,
+  render as renderList,
+} from "../../testing/listquery.testkit";
 import { meFixture } from "../../testing/mefixture";
 import {
   listStateOf,
@@ -409,5 +414,62 @@ describe("saved views", () => {
         { name: "Save view" },
       ),
     ).toBeNull();
+  });
+});
+
+/** The contacts rail as a list screen draws it, from the reader's views. */
+function ContactsRail() {
+  const tabs = useSavedViewTabs("contacts");
+  return (
+    <ListTableHarness
+      fetchPage={async () => emptyPage()}
+      views={[{ label: "list.viewAll" }]}
+      dataViews={tabs}
+    />
+  );
+}
+
+describe("a view built in Filters and views, on its list's rail", () => {
+  const berlin = { and: [{ field: "city", op: "eq", value: "Berlin" }] };
+  const views = [
+    {
+      id: "v-both",
+      owner_id: "u-1",
+      resource: "contacts",
+      name: "Both",
+      version: 1,
+      query: { filter: berlin, list: { sort: "full_name" } },
+    },
+    {
+      id: "v-vip",
+      owner_id: "u-1",
+      resource: "contacts",
+      name: "VIP in Berlin",
+      version: 2,
+      query: { filter: berlin },
+    },
+  ];
+
+  it("is a tab that opens the view there, and a view holding list state too is one list tab", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          data: views,
+          page: { next_cursor: null, has_more: false },
+        }),
+      ),
+    );
+    renderList(<ContactsRail />);
+
+    const link = await screen.findByRole("link", {
+      name: "VIP in Berlin, opens in Filters and views",
+    });
+    expect(
+      link.getAttribute("href")?.endsWith("#/filters/contacts/v-vip"),
+    ).toBe(true);
+    expect(link.hasAttribute("aria-pressed")).toBe(false);
+    expect(screen.getByRole("button", { name: "Both" })).toBeTruthy();
+    expect(screen.queryByRole("link", { name: /^Both/ })).toBeNull();
   });
 });

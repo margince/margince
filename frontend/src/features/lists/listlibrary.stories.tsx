@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
+import { en } from "../../i18n/en";
 import type { SavedView } from "../../lib/savedviews.queries";
 import {
   listsMe,
@@ -80,8 +81,37 @@ const shared = libraryItems(
 );
 
 /** The caption a row carries: a list's purpose, a view's filter as words. */
-const captionOf = (item: LibraryItem) =>
-  item.kind === "list" ? (item.list.purpose ?? "") : "City is Berlin";
+const captionOf = (item: LibraryItem) => {
+  switch (item.kind) {
+    case "list":
+      return item.list.purpose ?? "";
+    case "listView":
+      return en[`filters.library.savedOn.${item.type}`];
+    case "view":
+      return "City is Berlin";
+  }
+};
+
+/** Views saved on the Contacts and Projects lists, beside one built here. */
+const savedOnLists = libraryItems(
+  [
+    BERLIN,
+    {
+      ...BERLIN,
+      id: "v-name",
+      name: "By name",
+      query: { list: { sort: "full_name" } },
+    },
+    {
+      ...BERLIN,
+      id: "v-stalled",
+      resource: "projects",
+      name: "Stalled builds",
+      query: { list: { filters: { status: "on_hold" } } },
+    },
+  ],
+  [],
+);
 
 function table(
   items: readonly LibraryItem[],
@@ -107,6 +137,17 @@ function table(
 
 export const MineRowsWithWho: Story = {
   render: () => table(mine, "mine"),
+};
+
+// A view saved on a list says which list, and opens there; its ⋯ still
+// renames and deletes it.
+export const ViewsSavedOnLists: Story = {
+  render: () => table(savedOnLists, "mine"),
+};
+
+export const ViewsSavedOnListsDark: Story = {
+  globals: { theme: "dark" },
+  render: () => table(savedOnLists, "mine"),
 };
 
 export const SharedRowsWithWho: Story = {

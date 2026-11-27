@@ -18,9 +18,14 @@ import { ErrorLine } from "../../design-system/errorline";
 import { NamePrompt } from "../../design-system/nameprompt";
 import { useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
-import type { ViewResource } from "../../lib/filtersaddress";
+import {
+  tabOfViewResource,
+  type ViewResource,
+  viewPageHref,
+} from "../../lib/filtersaddress";
 import { problemMessageOf } from "../../lib/problem";
 import {
+  openableTree,
   type SavedView,
   useSavedViews,
   useSaveView,
@@ -54,7 +59,7 @@ import { ManageViewsButton } from "./savedviews.manage";
  */
 const LIST_STATE_KEY = "list";
 
-type SavedListState = Pick<
+export type SavedListState = Pick<
   ListQuery,
   "q" | "sort" | "includeArchived" | "filters"
 > & {
@@ -122,8 +127,9 @@ function listStateFrom(query: ListQuery): Record<string, unknown> {
  * The saved views of one resource, as view tabs the list can render beside its
  * built-in presets.
  *
- * A view whose stored state cannot be read is dropped rather than shown: a tab
- * that lights up and restores nothing is worse than a tab that is not there.
+ * A view with only a builder filter cannot be applied here, so its tab links
+ * to its page in Filters and views. Any other unreadable view is dropped: a
+ * tab that restores nothing is worse than none.
  *
  * Everything the view claims travels with the tab, not just the sort and the
  * filters: the search, the archived toggle and the page size were saved too, and
@@ -136,20 +142,39 @@ function listStateFrom(query: ListQuery): Record<string, unknown> {
  * only answer with tabs.
  */
 export function useSavedViewTabs(resource: ViewResource): SavedViewTab[] {
+  const t = useT();
   const views = useSavedViews(resource);
-  return (views.data ?? []).flatMap((view) => {
+  return (views.data ?? []).flatMap((view): SavedViewTab[] => {
     const state = listStateOf(view);
-    return state
+    if (state) {
+      return [
+        {
+          id: view.id,
+          label: view.name,
+          q: state.q,
+          sort: state.sort,
+          filters: state.filters,
+          includeArchived: state.includeArchived,
+          perPage: state.perPage,
+          version: view.version,
+        },
+      ];
+    }
+    const tab = tabOfViewResource(view.resource);
+    return tab && openableTree(view)
       ? [
           {
             id: view.id,
             label: view.name,
-            q: state.q,
-            sort: state.sort,
-            filters: state.filters,
-            includeArchived: state.includeArchived,
-            perPage: state.perPage,
+            q: "",
+            sort: "",
+            filters: {},
+            includeArchived: false,
             version: view.version,
+            link: {
+              href: viewPageHref(tab, view.id),
+              name: t("views.opensInFilters", { name: view.name }),
+            },
           },
         ]
       : [];

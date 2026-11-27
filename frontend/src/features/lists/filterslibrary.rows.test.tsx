@@ -326,7 +326,77 @@ describe("a row", () => {
   });
 });
 
+/** A view saved on a list screen: its dials, and no filter tree. */
+const listView = (
+  id: string,
+  name: string,
+  resource: string,
+  list: Readonly<Record<string, unknown>>,
+) => ({ ...filterView(id, name, resource, null), query: { list } });
+
+const BY_NAME = listView("v-name", "By name", "contacts", { sort: "name" });
+
+describe("a view saved on a list", () => {
+  it("opens on that list with its dials, says which list, and keeps its ⋯", async () => {
+    const { wrapper } = mountFilters({
+      views: [
+        BY_NAME,
+        listView("v-pro", "Stalled builds", "projects", {
+          filters: { status: "on_hold" },
+        }),
+      ],
+    });
+    const user = userEvent.setup();
+    render(<FiltersScreen />, { wrapper });
+    const row = await rowOf(BY_NAME.name);
+    expect(
+      within(row).getByRole("link", { name: BY_NAME.name }),
+    ).toHaveAttribute("href", "/#/contacts?sort=name");
+    expect(
+      within(row).getByText(en["filters.library.savedOn.contacts"]),
+    ).toBeInTheDocument();
+    const projects = await rowOf("Stalled builds");
+    expect(
+      within(projects).getByRole("link", { name: "Stalled builds" }),
+    ).toHaveAttribute("href", "/#/projects?status=on_hold");
+    expect(
+      within(projects).getByText(en["filters.library.savedOn.projects"]),
+    ).toBeInTheDocument();
+    await user.click(
+      within(row).getByRole("button", { name: "More actions for By name" }),
+    );
+    expect(
+      screen.getByRole("button", { name: en["views.rename"] }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: en["views.deleteConfirm"] }),
+    ).toBeInTheDocument();
+  });
+});
+
 describe("a saved view's ⋯", () => {
+  it("refuses a name another view of its records holds", async () => {
+    const { written, wrapper } = mountFilters({ views: [BERLIN, BY_NAME] });
+    const user = userEvent.setup();
+    render(<FiltersScreen />, { wrapper });
+    await user.click(
+      within(await rowOf(BERLIN.name)).getByRole("button", {
+        name: "More actions for Berlin contacts",
+      }),
+    );
+    await user.click(screen.getByRole("button", { name: en["views.rename"] }));
+    const field = screen.getByRole("textbox", { name: en["views.name"] });
+    await user.clear(field);
+    await user.type(field, "by NAME");
+    await user.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: en["views.rename"],
+      }),
+    );
+    expect(await screen.findByText(en["views.nameTaken"])).toBeInTheDocument();
+    expect(written.filter((sent) => sent.method === "PATCH")).toEqual([]);
+  });
+
   it("renames it in place against the version it was read at", async () => {
     const { written, wrapper } = mountFilters({ views: [BERLIN] });
     const user = userEvent.setup();

@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { loadLocale } from "../src/i18n/catalogs";
 import { de } from "../src/i18n/de";
 import { expectNoAaViolations, settleAnimations } from "./a11y";
-import { brandt } from "./mockapi/fixtures";
+import { brandt, seededViews } from "./mockapi/fixtures";
 import { page as listPage } from "./mockapi/server";
 import {
   CORE_SCREENS,
@@ -978,4 +978,54 @@ test("AC-filters-and-views-6: a new condition names no field, and each picker it
   await expect(
     page.getByRole("button", { name: de["filters.changeRecord"] }),
   ).toBeFocused();
+});
+
+// A list's view opens its list from the library. A view built in the library
+// has a tab on its list, and the tab opens it there.
+test("AC-filters-and-views-9: a list's view opens on its list from the library, and a built view's tab opens it in the library", async ({
+  page,
+}) => {
+  const byName = {
+    id: "v-by-name",
+    resource: "contacts",
+    name: "Nach Name",
+    owner_id: "u1",
+    shared_scope: "private",
+    query: { list: { q: "", sort: "full_name", filters: {} } },
+    version: 1,
+  };
+  await page.route(/\/v1\/views(\?.*)?$/, (route) => {
+    if (route.request().method() !== "GET") return route.fallback();
+    const resource = new URL(route.request().url()).searchParams.get(
+      "resource",
+    );
+    const views = [...seededViews, byName].filter(
+      (view) => resource === null || view.resource === resource,
+    );
+    return route.fulfill({
+      json: { data: views, page: { next_cursor: null, has_more: false } },
+    });
+  });
+  await page.goto("/#/filters");
+  const row = page.getByRole("row").filter({ hasText: "Nach Name" });
+  await expect(
+    row.getByText(de["filters.library.savedOn.contacts"]),
+  ).toBeVisible();
+  await row.getByRole("link", { name: "Nach Name" }).click();
+  await expect(page).toHaveURL(/#\/contacts\?sort=full_name$/);
+  await expect(
+    page.getByRole("button", { name: "Nach Name", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+
+  const built = page.getByRole("link", {
+    name: de["views.opensInFilters"].replace("{name}", "Contacts I own"),
+  });
+  await expect(built).not.toHaveAttribute("aria-pressed");
+  await expectNoAaViolations(page, "contacts — a link tab on the rail");
+  await built.focus();
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(/#\/filters\/contacts\/v-owned$/);
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Contacts I own" }),
+  ).toBeVisible();
 });

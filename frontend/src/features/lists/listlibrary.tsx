@@ -25,24 +25,30 @@ import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import {
-  listEntityTypeOf,
   RECORDS_COUNT_LABEL,
+  viewOf,
+  viewPageHref,
 } from "../../lib/filtersaddress";
+import { leadsOpeningFilters } from "../../lib/leads.address";
 import { fromHere } from "../../lib/navigatefrom";
 import { blankRequired, refusalSentences } from "../../lib/problem";
 import { recordKindLabel, useRecordKindDirectory } from "../../lib/recordkinds";
 import { routeHash } from "../../lib/router";
+import { useMe } from "../../lib/session";
 import { EditFilterAction, mayEditFilter } from "./filterlistedit";
 import {
   isArchived,
   keyOf,
   type LibraryGroup,
   type LibraryItem,
+  listViewHref,
   nameOf,
+  resourceOf,
 } from "./library";
 import "../voice-knowledge/library.css";
 import { labelFor } from "../../lib/labelfor";
 import {
+  isCoreListType,
   type List,
   type ListRecordType,
   useCreateList,
@@ -199,10 +205,22 @@ export function LibraryTable({
   );
 }
 
-function hrefOf(item: LibraryItem): string {
-  return item.kind === "view"
-    ? routeHash({ screen: "filters", id: item.tab, id2: item.view.id })
-    : routeHash({ screen: "lists", id: item.list.id });
+/** Where each row opens; a view saved on the leads queue needs the reader's opening. */
+function useHrefOf(): (item: LibraryItem) => string {
+  const reader = useMe().data;
+  return (item) => {
+    switch (item.kind) {
+      case "view":
+        return viewPageHref(item.tab, item.view.id);
+      case "listView":
+        return listViewHref(
+          item,
+          item.type === "leads" && reader ? leadsOpeningFilters(reader) : {},
+        );
+      case "list":
+        return routeHash({ screen: "lists", id: item.list.id });
+    }
+  };
 }
 
 function LibraryName({
@@ -211,6 +229,7 @@ function LibraryName({
   facts,
 }: Readonly<{ item: LibraryItem; caption: string; facts: ReactNode }>) {
   const t = useT();
+  const hrefOf = useHrefOf();
   const tip = useTruncationTooltip<HTMLSpanElement>(caption);
   return (
     <span className="library-name-cell">
@@ -255,10 +274,10 @@ function LibraryFacts({
 
 function LibraryKind({ item }: Readonly<{ item: LibraryItem }>) {
   const t = useT();
-  return item.kind === "view" ? (
-    <Badge>{t("filters.library.kindView")}</Badge>
-  ) : (
+  return item.kind === "list" ? (
     <ListKindBadge list={item.list} />
+  ) : (
+    <Badge>{t("filters.library.kindView")}</Badge>
   );
 }
 
@@ -298,13 +317,13 @@ export function ListRecordsCount({
 function LibraryRecords({ item }: Readonly<{ item: LibraryItem }>) {
   const t = useT();
   const directory = useRecordKindDirectory().data?.data ?? [];
-  if (item.kind === "view") {
-    const type = listEntityTypeOf(item.tab);
+  if (item.kind !== "list") {
+    const type = resourceOf(item);
     return (
       <span>
-        {type
+        {isCoreListType(type)
           ? t(RECORD_TYPE_LABEL[type])
-          : recordKindLabel(item.tab, directory)}
+          : recordKindLabel(type, directory)}
       </span>
     );
   }
@@ -329,11 +348,14 @@ function LibraryRowMenu({
 }>) {
   const t = useT();
   const label = t("filters.library.rowMore", { name: nameOf(item) });
-  if (item.kind === "view") {
+  if (item.kind !== "list") {
     return (
       <span className="library-more">
         <OverflowMenu label={label}>
-          <RenameViewAction view={item.view} />
+          <RenameViewAction
+            view={item.view}
+            resource={item.kind === "view" ? viewOf(item.tab) : item.type}
+          />
           <DeleteViewAction view={item.view} returnFocusTo={returnFocusTo} />
         </OverflowMenu>
       </span>
