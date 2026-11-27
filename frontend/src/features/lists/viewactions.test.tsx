@@ -201,7 +201,7 @@ describe("renaming a view", () => {
 });
 
 describe("renaming a view after a taken name", () => {
-  it("saves a free name typed next, and no longer says the first was taken", async () => {
+  it("saves a free name typed next, and drops the taken notice", async () => {
     const patches = stubViews(VIEW, [
       { ...VIEW, id: "v2", name: "Munich contacts", version: 1 },
     ]);

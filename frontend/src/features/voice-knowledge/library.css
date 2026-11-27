@@ -69,17 +69,17 @@ tbody tr:has(> td .library-name) {
   text-decoration: none;
 }
 
-.library-name::after {
+a.library-name::after {
   content: "";
   position: absolute;
   inset: 0;
 }
 
-.library-name:hover {
+a.library-name:hover {
   text-decoration: underline;
 }
 
-.library-name:focus-visible {
+a.library-name:focus-visible {
   outline: var(--focus-ring);
   outline-offset: var(--space-1);
   border-radius: var(--r-sm);

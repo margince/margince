@@ -38,6 +38,7 @@ import {
   useLeadOrigins,
 } from "../../lib/leadorigins";
 import { leadsOpeningFilters, leadsOpenOnAll } from "../../lib/leads.address";
+import { LEADS_INITIAL_SORT } from "../../lib/listopenings";
 import { unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
 import { readStored, STORAGE_KEYS, writeStored } from "../../lib/storage";
@@ -176,7 +177,7 @@ function LeadsWorkbench({
   const withheld = useWithheldLeadDials();
   const listQuery = useListQuery<Lead>({
     key: "leads",
-    initialSort: "",
+    initialSort: LEADS_INITIAL_SORT,
     initialFilters: openingFilters,
     fetchPage: fetchLeadsPage,
     // A refused dial the list can name is not asked for; it is named instead.

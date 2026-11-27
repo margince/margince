@@ -5,6 +5,13 @@ import { describe, expect, it } from "vitest";
 import { listOpening } from "../../components/listquery.options";
 import { listQueryFromParams } from "../../components/listqueryparams";
 import { matchesView } from "../../components/listqueryviews";
+import { leadsOpeningFilters } from "../../lib/leads.address";
+import {
+  COMPANIES_INITIAL_SORT,
+  CONTACTS_INITIAL_SORT,
+  LEADS_INITIAL_SORT,
+  PROJECTS_INITIAL_SORT,
+} from "../../lib/listopenings";
 import type { List } from "../../lib/lists.queries";
 import type { SavedView } from "../../lib/savedviews.queries";
 import { isGroup } from "../../lib/segmentpredicate";
@@ -19,6 +26,7 @@ import { filterView } from "./filters.testkit";
 import {
   cutLibrary,
   groupOf,
+  hrefOf,
   isFirstRun,
   type LibraryCut,
   type LibraryItem,
@@ -303,6 +311,20 @@ describe("where a view saved on a list opens", () => {
     ).toBe("#/leads?owner_id=all&per=25");
   });
 
+  it("waits for the reader before a view saved on the leads queue opens", () => {
+    const [leads] = libraryItems(
+      [listView("v-hot", "Hot", "leads", { sort: "-score" })],
+      [],
+    );
+    if (leads === undefined) {
+      throw new Error("no row for the leads view");
+    }
+    expect(hrefOf(leads, undefined)).toBeUndefined();
+    expect(hrefOf(leads, { owner_id: READER_ID })).toBe(
+      "#/leads?owner_id=all&per=25&sort=-score",
+    );
+  });
+
   it("opens a deals view on the table it was saved from", () => {
     const [deals] = libraryItems(
       [
@@ -319,12 +341,15 @@ describe("where a view saved on a list opens", () => {
 });
 
 describe("a view saved on a list, arriving at that list", () => {
-  // Each list's own opening: its sort, and the leads queue's owner filter.
   const openings = [
-    { resource: "contacts", sort: "-created_at", filters: {} },
-    { resource: "companies", sort: "-created_at", filters: {} },
-    { resource: "projects", sort: "-last_activity_at", filters: {} },
-    { resource: "leads", sort: "", filters: { owner_id: READER_ID } },
+    { resource: "contacts", sort: CONTACTS_INITIAL_SORT, filters: {} },
+    { resource: "companies", sort: COMPANIES_INITIAL_SORT, filters: {} },
+    { resource: "projects", sort: PROJECTS_INITIAL_SORT, filters: {} },
+    {
+      resource: "leads",
+      sort: LEADS_INITIAL_SORT,
+      filters: leadsOpeningFilters({ user: { id: READER_ID } }),
+    },
   ];
   const stored = [
     {},
