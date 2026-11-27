@@ -562,7 +562,7 @@ run_binary() {
   printf '%s\t%s\t%ss\n' "$verdict" "$rel" "$(lane_elapsed "$t0" "$t1")"
   return "$st"
 }
-export -f run_one run_binary lane_elapsed lane_micros owner_clone_dsn app_clone_dsn make_clone drop_clone db_admin bucket_for
+export -f run_one run_binary lane_elapsed lane_micros owner_clone_dsn app_clone_dsn make_clone drop_clone db_admin migrate_cmd bucket_for
 # The workers run in re-exec'd shells, so a variable run_one reads must be
 # exported and not merely set. REDIS_DBS is the only one: unexported it expands
 # to empty, and `% ` is a division by zero rather than a wrong db.
@@ -753,10 +753,10 @@ if [[ -s "$DB_ADMIN_LOG" ]]; then
   while read -r _ began ended; do
     admin_us=$(( admin_us + $(lane_micros "$ended") - $(lane_micros "$began") ))
   done < "$DB_ADMIN_LOG"
-  printf 'test-integration-parallel: db_admin — %d calls (%s), %d.%03ds summed over the slots\n' \
+  printf 'test-integration-parallel: db_admin — %d calls (%s), %d.%03ds summed over the slots, through %s\n' \
     "$(wc -l < "$DB_ADMIN_LOG" | tr -d ' ')" \
     "$(cut -d' ' -f1 "$DB_ADMIN_LOG" | LC_ALL=C sort | uniq -c | awk '{ printf "%s%s %s", sep, $1, $2; sep = ", " }')" \
-    $(( admin_us / 1000000 )) $(( admin_us % 1000000 / 1000 ))
+    $(( admin_us / 1000000 )) $(( admin_us % 1000000 / 1000 )) "${MARGINCE_MIGRATE_BIN:-go run ./cmd/migrate}"
 fi
 
 # Leave the durations behind for the next run to dispatch by. Full runs only: a

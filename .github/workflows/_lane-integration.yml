@@ -208,15 +208,26 @@ jobs:
           cache-dependency-path: backend/go.sum
       # The test binaries come from the build job, but a shard still needs Go and
       # this cache. It checks the binaries against its checkout with `go list`
-      # and the toolchain's version, and it `go run`s gen-composition,
-      # cmd/migrate (794 packages, for the template and every clone) and
-      # tools/sql-census. Those builds are in the `integration` flavour that
+      # and the toolchain's version, it `go run`s gen-composition and
+      # tools/sql-census, and it builds cmd/migrate (794 packages, for the
+      # template and every clone). Those builds are in the `integration` flavour that
       # cache-warm.yml writes; without it each shard compiles them from cold.
       - name: Restore the Go build cache
         id: go-cache
         uses: ./.github/actions/go-build-cache
         with:
           flavor: integration
+      # One link from the warm cache, in place of the `go run` each of the
+      # shard's ~200 clone and drop calls paid (scripts/lib-testdb.sh
+      # migrate_cmd). Before the template step, which runs cmd/migrate too.
+      # Composed workspace, as `make test-db-up` and the lane run it.
+      - name: Build cmd/migrate for the lane's database admin
+        run: |
+          make composition
+          started=$SECONDS
+          GOWORK="$GITHUB_WORKSPACE/build/composition/go.work" go build -o "$RUNNER_TEMP/cmd-migrate" ./cmd/migrate
+          echo "built cmd/migrate in $(( SECONDS - started ))s"
+          echo "MARGINCE_MIGRATE_BIN=$RUNNER_TEMP/cmd-migrate" >> "$GITHUB_ENV"
       - name: Expose the results service to the next steps
         uses: ./.github/actions/results-service-env
       # The same compose stack dev machines use (docker-compose.dev.yml:

@@ -121,6 +121,22 @@ parse_test_dsn() {
   export O_PREFIX O_QUERY A_PREFIX A_QUERY
 }
 
+# migrate_cmd args… — cmd/migrate, run from backend/: the binary
+# MARGINCE_MIGRATE_BIN names, else `go run`. A CI shard builds that binary once
+# from its own checkout, so each of the lane's ~200 calls skips the build check
+# `go run` pays. It must be built from this tree; unset, nothing changes.
+migrate_cmd() {
+  if [[ -n "${MARGINCE_MIGRATE_BIN:-}" ]]; then
+    [[ "$MARGINCE_MIGRATE_BIN" == /* && -x "$MARGINCE_MIGRATE_BIN" ]] || {
+      echo "MARGINCE_MIGRATE_BIN must be the absolute path of a built cmd/migrate, not '$MARGINCE_MIGRATE_BIN'" >&2
+      return 1
+    }
+    "$MARGINCE_MIGRATE_BIN" "$@"
+  else
+    go run ./cmd/migrate "$@"
+  fi
+}
+
 # db_admin verb [flags…] — create/drop/probe databases through cmd/migrate's
 # db verbs, over the SAME owner DSN the migrations and tests use. psql is NOT
 # a host requirement (hosts need Go + Docker only), and an overridden
@@ -132,7 +148,7 @@ parse_test_dsn() {
 # so the parallel lane can say what its database admin cost.
 db_admin() {
   local t0="${EPOCHREALTIME:-$(date +%s)}" rc=0
-  ( cd backend && MARGINCE_OWNER_DSN="${O_PREFIX}/postgres${O_QUERY:+?$O_QUERY}" go run ./cmd/migrate "$@" ) || rc=$?
+  ( cd backend && MARGINCE_OWNER_DSN="${O_PREFIX}/postgres${O_QUERY:+?$O_QUERY}" migrate_cmd "$@" ) || rc=$?
   [[ -z "${DB_ADMIN_LOG:-}" ]] || printf '%s %s %s\n' "${1:-}" "$t0" "${EPOCHREALTIME:-$(date +%s)}" >> "$DB_ADMIN_LOG"
   return "$rc"
 }
@@ -315,7 +331,7 @@ migrate_template() {
   # front of the summary this classifies on and report a template at head as
   # behind. Left alone it goes to the terminal, which is where a real failure
   # belongs anyway.
-  out="$( cd backend && MARGINCE_OWNER_DSN="$(owner_clone_dsn "$TEMPLATE_NAME")" go run ./cmd/migrate up )" || rc=$?
+  out="$( cd backend && MARGINCE_OWNER_DSN="$(owner_clone_dsn "$TEMPLATE_NAME")" migrate_cmd up )" || rc=$?
   if (( rc != 0 )); then
     return "$rc"
   fi
@@ -576,5 +592,5 @@ run_integration_packages() {
 # The migrator holds the composed set; test packages receive that exact source manifest.
 prepare_test_extension_manifest() {
   export MARGINCE_TEST_EXTENSION_MANIFEST="$1/extension-migrations.json"
-  (cd backend && go run ./cmd/migrate extension-manifest) > "$MARGINCE_TEST_EXTENSION_MANIFEST"
+  (cd backend && migrate_cmd extension-manifest) > "$MARGINCE_TEST_EXTENSION_MANIFEST"
 }
