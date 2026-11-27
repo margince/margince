@@ -15,12 +15,15 @@ import (
 	"errors"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
@@ -170,6 +173,7 @@ func (e *WorkflowEngine) applyClaimed(ctx context.Context, h workflow.Handler, e
 	// automation id, and an instance-scoped claim is exactly what cannot
 	// see two instances minting one record.
 	effect.Handler = h.Spec().Name
+	effect.Why = firingReason(h.Spec(), ev)
 	effect.OccurrenceKey = h.IdempotencyKey(ev)
 	result, applyErr := h.Apply(withSendingOwner(ctx, ev), ev, effect, nil)
 	// The outcome record commits in its OWN transaction before the apply
@@ -472,3 +476,16 @@ func declinedReason(reason string) string {
 // is prose nobody reads on a run row, or a message that came from somewhere
 // other than an author.
 const declinedReasonMax = 160
+
+func firingReason(spec workflow.Spec, ev workflow.Event) *systemtext.Component {
+	name := ev.AutomationName
+	if name == "" {
+		name = spec.Name
+	}
+	trigger := ev.Type
+	if trigger == "" {
+		trigger = spec.Trigger.Schedule
+	}
+	return systemtext.Sentence("automation.rule_trigger", systemtext.Label(textcut.Runes(name, 200)),
+		systemtext.Text(trigger), systemtext.Text(ev.OccurredAt.UTC().Format(time.RFC3339)))
+}

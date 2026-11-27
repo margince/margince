@@ -277,6 +277,12 @@ export function UnknownAddress() {
 // this cannot match its shape. Between a card far too small and a column of
 // roughly the right size, the column is the truer choice. It says "a page is
 // arriving" rather than "here is a page with one sentence on it".
+export function OffersRedirect() {
+  const { navigateReplacing } = useAddressWriters();
+  useEffect(() => navigateReplacing({ screen: "deals" }), [navigateReplacing]);
+  return <ScreenPending />;
+}
+
 export function ScreenPending() {
   const t = useT();
   return (

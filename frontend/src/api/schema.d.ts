@@ -2919,7 +2919,9 @@ export interface paths {
          *     the company carries it. `linkCompanyContacts` accepts exactly these contacts.
          *
          *     A candidate with no current employer is also attached by the daily link reconcile,
-         *     so the list's lasting use is contacts who work elsewhere today.
+         *     so the list's lasting use is contacts who work elsewhere today. The reconcile does not
+         *     re-make a link somebody removed: a contact whose job at this company was ended or
+         *     archived stays unlinked until a user links them again.
          *
          *     Ordered by name, then id. At most 50 candidates; `truncated` is true when more exist.
          *     Needs read on companies, contacts and relationships. A caller without
@@ -3420,7 +3422,11 @@ export interface paths {
          */
         put: operations["upsertPartner"];
         post?: never;
-        delete?: never;
+        /**
+         * End the partner program while keeping the company and commission history.
+         * @description Retires the partner extension. Company update authority is required. Existing terms and commission entries stay on record. The partner relationship type is removed in the same transaction; other relationship types stay.
+         */
+        delete: operations["endPartnerProgram"];
         options?: never;
         head?: never;
         patch?: never;
@@ -3453,7 +3459,7 @@ export interface paths {
          *     is its approval.
          *
          *     A company that already has a live partner program answers 409 `partner_row_exists`.
-         *     A program ends only when the company is archived.
+         *     End the program with `endPartnerProgram` while keeping its company and commission history, or archive the company.
          *
          *     A retry with the same `idempotency_key` answers the first call's result. An
          *     `Idempotency-Key` header is taken as that key.
@@ -6629,6 +6635,29 @@ export interface paths {
          * @description Take an inquiry or hand its lead and this task to a colleague in one transaction. Unrelated tasks stay unchanged. Taking a contact inquiry changes only its task; contact ownership requires a separate authorized handover.
          */
         post: operations["assignWebsiteInquiry"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/activities/{id}/take": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Take an open task nobody holds.
+         * @description Makes the caller the assignee of an open task that has no assignee. Anyone who can see the task and may change tasks can take it, whether or not they could change this task before: a task nobody holds has no owner to protect. The owner of each record the task is filed under is told, and can give the task to someone else with `PATCH /activities/{id}`. The write is pinned with `If-Match`. A task someone took first, a task that is done, a task that is not a task and a website-inquiry task (which has its own take through `POST /activities/{id}/inquiry-assignment`) answer `409`. A caller who may not change tasks answers `403`, and a task the caller cannot see `404`.
+         */
+        post: operations["takeTask"];
         delete?: never;
         options?: never;
         head?: never;
@@ -19228,7 +19257,7 @@ export interface paths {
         /**
          * Rename a custom field or change whether create dialogs offer it (not a schema change).
          * @description CUSTOM-FIELDS-WIRE-3. Audited catalog update of `label`, `show_in_create`, `reportable`
-         *     or `activity_kinds`;
+         *     `activity_kinds` or `pipeline_ids`;
          *     `column_name` never moves — the physical column identity is stable across rename.
          *     Merge-PATCH: `column_name`, `object`, and `type` are absent from the request schema
          *     entirely, and a body with neither setting is refused with a 422. A retired field
@@ -34595,7 +34624,7 @@ export interface components {
          * @description Why a row was skipped or warned about, so a screen can say it in the reader's language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code. `run_in_flight` is the one refusal code: it answers a commit or undo on a run another attempt holds, and no row carries it.
          * @enum {string}
          */
-        ImportReasonCode: "activity_empty" | "activity_held" | "address_erased" | "address_not_split" | "activity_link_ambiguous" | "activity_link_ambiguous_dropped" | "activity_link_ambiguous_will_drop" | "activity_type_unknown" | "activity_type_unnamed" | "activity_unlinked" | "amount_negative" | "amount_needs_currency" | "amount_too_many_decimals" | "author_too_long" | "cannot_create" | "cannot_create_tags" | "cannot_edit" | "cannot_edit_and_tag" | "cannot_link_stakeholders" | "cannot_read_pipelines" | "cannot_read_tags" | "cannot_write_type" | "close_date_far" | "close_date_future" | "close_date_past" | "company_domain_matched" | "company_duplicate_found" | "company_duplicate_skipped" | "company_link_on_meeting" | "company_name_empty" | "contact_duplicate_found" | "contact_duplicate_skipped" | "contact_email_held" | "contact_holds_lead" | "contact_not_found" | "contact_not_found_dropped" | "contact_not_found_will_drop" | "contact_channel_missing" | "contact_unnamed" | "currency_not_a_code" | "currency_not_money" | "currency_unset" | "deal_already_closed" | "deal_company_has_contracts" | "deal_legal_gate" | "deal_not_found" | "deal_not_found_dropped" | "deal_not_found_will_drop" | "deal_pipeline_fixed" | "description_too_long" | "direction_unknown" | "domain_held" | "duplicate_email" | "duration_not_valid_for_kind" | "email_names_no_contact" | "duration_out_of_range" | "employer_column_empty" | "employer_column_empty_dropped" | "employer_column_empty_will_drop" | "employer_not_found" | "employer_not_found_dropped" | "employer_not_found_will_drop" | "employer_refused" | "employer_will_create" | "empty_payload" | "field_inactive" | "fx_rate_missing" | "id_not_a_company_id" | "id_not_a_record_id" | "id_not_visible" | "id_record_not_visible" | "id_on_non_company" | "lead_not_found" | "lead_not_found_dropped" | "lead_not_found_will_drop" | "lead_status_not_importable" | "lead_status_unknown" | "link_ambiguous" | "link_ambiguous_dropped" | "link_ambiguous_will_drop" | "link_contact_not_imported" | "link_edge_unsupported" | "link_malformed" | "link_not_attachable" | "link_not_found" | "link_not_found_dropped" | "link_not_found_will_drop" | "link_row_not_imported" | "link_row_skipped" | "link_row_skipped_dropped" | "link_row_skipped_will_drop" | "link_type_unknown" | "linkedin_held" | "lost_reason_missing" | "meeting_not_taken_place" | "meeting_status_not_valid_for_kind" | "meeting_status_unknown" | "message_not_importable" | "natural_key_taken" | "not_a_date" | "note_repeated" | "not_a_domain" | "not_a_number" | "not_a_phone" | "not_an_amount" | "not_an_email" | "not_yes_no" | "occurred_at_future" | "occurred_at_unnamed" | "option_not_allowed" | "option_not_in_list" | "options_need_semicolons" | "owner_refused" | "owner_unknown" | "phone_needs_country" | "pipeline_no_open_stage" | "pipeline_unknown" | "pipeline_unnamed" | "record_archived" | "ref_taken_by_another_company" | "ref_taken_by_another_record" | "row_key_empty" | "row_key_repeated" | "run_in_flight" | "size_band_invalid" | "stage_unknown" | "stage_unnamed" | "stored_values_kept" | "tag_created" | "tag_name_invalid" | "tag_new" | "task_not_importable" | "timestamp_needs_zone" | "too_many_links" | "undo_edited" | "undo_failed" | "undo_grant_lost" | "undo_not_visible" | "undo_rule_protects" | "undo_still_referenced" | "value_refused" | "value_too_long" | "value_unreadable";
+        ImportReasonCode: "activity_empty" | "activity_held" | "address_erased" | "address_not_split" | "activity_link_ambiguous" | "activity_link_ambiguous_dropped" | "activity_link_ambiguous_will_drop" | "activity_type_unknown" | "activity_type_unnamed" | "activity_unlinked" | "amount_negative" | "amount_needs_currency" | "amount_too_many_decimals" | "author_too_long" | "cannot_create" | "cannot_create_tags" | "cannot_edit" | "cannot_edit_and_tag" | "cannot_link_stakeholders" | "cannot_read_pipelines" | "cannot_read_tags" | "cannot_write_type" | "close_date_far" | "close_date_future" | "close_date_past" | "company_domain_matched" | "company_duplicate_found" | "company_duplicate_skipped" | "company_link_on_meeting" | "company_name_empty" | "contact_duplicate_found" | "contact_duplicate_skipped" | "contact_email_held" | "contact_holds_lead" | "contact_not_found" | "contact_not_found_dropped" | "contact_not_found_will_drop" | "contact_channel_missing" | "contact_unnamed" | "currency_not_a_code" | "currency_not_money" | "currency_unset" | "deal_already_closed" | "deal_company_has_contracts" | "deal_field_not_for_pipeline" | "deal_legal_gate" | "deal_not_found" | "deal_not_found_dropped" | "deal_not_found_will_drop" | "deal_pipeline_fixed" | "description_too_long" | "direction_unknown" | "domain_held" | "duplicate_email" | "duration_not_valid_for_kind" | "email_names_no_contact" | "duration_out_of_range" | "employer_column_empty" | "employer_column_empty_dropped" | "employer_column_empty_will_drop" | "employer_not_found" | "employer_not_found_dropped" | "employer_not_found_will_drop" | "employer_refused" | "employer_will_create" | "empty_payload" | "field_inactive" | "fx_rate_missing" | "id_not_a_company_id" | "id_not_a_record_id" | "id_not_visible" | "id_record_not_visible" | "id_on_non_company" | "lead_not_found" | "lead_not_found_dropped" | "lead_not_found_will_drop" | "lead_status_not_importable" | "lead_status_unknown" | "link_ambiguous" | "link_ambiguous_dropped" | "link_ambiguous_will_drop" | "link_contact_not_imported" | "link_edge_unsupported" | "link_malformed" | "link_not_attachable" | "link_not_found" | "link_not_found_dropped" | "link_not_found_will_drop" | "link_row_not_imported" | "link_row_skipped" | "link_row_skipped_dropped" | "link_row_skipped_will_drop" | "link_type_unknown" | "linkedin_held" | "lost_reason_missing" | "meeting_not_taken_place" | "meeting_status_not_valid_for_kind" | "meeting_status_unknown" | "message_not_importable" | "natural_key_taken" | "not_a_date" | "note_repeated" | "not_a_domain" | "not_a_number" | "not_a_phone" | "not_an_amount" | "not_an_email" | "not_yes_no" | "occurred_at_future" | "occurred_at_unnamed" | "option_not_allowed" | "option_not_in_list" | "options_need_semicolons" | "owner_refused" | "owner_unknown" | "phone_needs_country" | "pipeline_no_open_stage" | "pipeline_unknown" | "pipeline_unnamed" | "record_archived" | "ref_taken_by_another_company" | "ref_taken_by_another_record" | "row_key_empty" | "row_key_repeated" | "run_in_flight" | "size_band_invalid" | "stage_unknown" | "stage_unnamed" | "stored_values_kept" | "tag_created" | "tag_name_invalid" | "tag_new" | "task_not_importable" | "timestamp_needs_zone" | "too_many_links" | "undo_edited" | "undo_failed" | "undo_grant_lost" | "undo_not_visible" | "undo_rule_protects" | "undo_still_referenced" | "value_refused" | "value_too_long" | "value_unreadable";
         /**
          * @description Exactly one of two shapes: `object` and `mapping` (and optionally
          *     `source_key`) for one CSV, or `parts` for a ZIP, each part with its own
@@ -36653,8 +36682,13 @@ export interface components {
             readonly logo_url?: string | null;
             /** @description Deterministic company-level relationship-strength roll-up (features/07 §4). Read-only derived view; NULL until capture has interactions. */
             readonly strength?: components["schemas"]["RelationshipStrength"];
-            /** @description How many distinct live contacts THE CALLER MAY SEE hold a current job at this account (PO-EXT-10; AC-companies-2/3's Contacts column). Counted under the caller's contact row scope, exactly as the contact list is: a count is a read, and a number that moved when a colleague captured a private contact would disclose that contact. Present, zero included, on `listCompanies` and `getCompany` — the reads that render the column, and ABSENT entirely for a role without `contact:read` OR without `relationship:read` (the object grants come first, as on the contact list) — the number is a fact about the employment PAIRS, so the edge grant governs it exactly as it governs the employment list; write responses (create, update, archive, merge) omit it. Never client-supplied. */
+            /**
+             * @description How many distinct live contacts THE CALLER MAY SEE hold a current job at this account (PO-EXT-10; AC-companies-2/3's Contacts column). Counted under the caller's contact row scope, exactly as the contact list is: a count is a read, and a number that moved when a colleague captured a private contact would disclose that contact. Present, zero included, on `listCompanies` and `getCompany` — the reads that render the column, and ABSENT entirely for a role without `contact:read` OR without `relationship:read` (the object grants come first, as on the contact list) — the number is a fact about the employment PAIRS, so the edge grant governs it exactly as it governs the employment list; write responses (create, update, archive, merge) omit it. Never client-supplied.
+             *     A count of 0 means "no contacts YOU can see", never "no contacts": read it with `hidden_contact_holders`. Say "no contacts you can see" and name those colleagues when the list is not empty.
+             */
             readonly contact_count?: number;
+            /** @description The live colleagues who own at least one current contact at this account that the caller may not see, each once, so the reader knows whom to ask for an introduction ("Dana and Minh have contacts here you can't see"). It names who to ask and nothing else: no contact's name, role or id, and no count per colleague or in total. Empty when nothing is hidden, and a colleague who left or an agent seat is never listed. It reads the same employment set as `contact_count` with the contact scope turned around, so the two never describe different populations. Present exactly when `contact_count` is, and absent entirely on a write response. Never client-supplied. */
+            readonly hidden_contact_holders?: components["schemas"]["HiddenRecordHolder"][];
             /** @description How many open, live deals belong to this account (PO-EXT-10; AC-companies-2/3's Open deals column), counted across the WHOLE workspace — the same population the account's `computed_fields` open-pipeline row sums (founder decision 2026-08-18: a pipeline figure on an account is a fact about the account, not about who may open each deal). The key is ABSENT entirely, not 0, for a role without `deal:read` or without `computed_field:read` (STATE-4, the `computed_fields` gate). Present on `listCompanies` and `getCompany`; write responses omit it. */
             readonly open_deal_count?: number;
             /** @description The channel this company arrived by: `api`, `automation`, `capture`, `import`, `manual` or `webform`. An older company can show another value until the background correction reaches it. */
@@ -36683,6 +36717,8 @@ export interface components {
                 [key: string]: unknown;
             } | null;
             partner?: components["schemas"]["Partner"];
+            /** @description An ended partner program has commission and deal history. Omitted without partner read permission. */
+            readonly partner_program_ended?: boolean;
             version?: components["schemas"]["RowVersion"];
             /**
              * Format: date-time
@@ -44735,6 +44771,8 @@ export interface components {
          *     `video_app`), so the guest learns nothing about the calendar behind the page.
          */
         PublicSchedulingProfile: {
+            /** @description The installation's privacy page, falling back to its privacy contact. Absent when neither is stated. */
+            readonly privacy_information?: string;
             host_name: string;
             company_name: string;
             /** @description Absolute public logo URL when the public origin is configured; otherwise relative to the API origin. */
@@ -44755,6 +44793,8 @@ export interface components {
             video_app?: "google_meet" | "microsoft_teams";
         };
         SchedulingProfile: {
+            /** @description The installation's privacy page, falling back to its privacy contact. Absent when neither is stated. */
+            readonly privacy_information?: string;
             enabled: boolean;
             /** @enum {string} */
             provider: "" | "gcal" | "graphcal";
@@ -54747,6 +54787,8 @@ export interface components {
             reportable: boolean;
             /** @description The activity kinds an activity field applies to; null means every kind, and every other object's field is null. A logged or edited activity of another kind refuses a value for the field with `422 field_not_valid_for_kind`. A value stored before the field was narrowed stays readable, and sending null clears it. */
             activity_kinds?: ("call" | "email" | "meeting" | "message" | "note" | "task")[] | null;
+            /** @description The pipelines a deal field applies to; null means every pipeline, and every other object's field is null. A created or edited deal of another pipeline refuses a value for the field with `422 field_not_valid_for_pipeline`. A pipeline that is archived matches nothing. A value stored before the field was narrowed, or on a deal that moved pipeline, stays stored and readable, and sending null clears it. */
+            pipeline_ids?: string[] | null;
             /** Format: uuid */
             created_by: string;
             /** Format: date-time */
@@ -54812,8 +54854,10 @@ export interface components {
             show_in_create: boolean;
             /** @description The activity kinds the field applies to. Only an activity field may name any; omitted or empty means every kind. An unknown kind, or kinds on another object's field, is refused with a 422. */
             activity_kinds?: ("call" | "email" | "meeting" | "message" | "note" | "task")[];
+            /** @description The pipelines the field applies to. Only a deal field may name any; omitted or empty means every pipeline. An id that is not a live pipeline, or ids on another object's field, is refused with a 422. */
+            pipeline_ids?: string[];
         };
-        /** @description Merge-PATCH of the settings a live field may change: `label`, `label_translations`, `option_translations`, `show_in_create`, `reportable` and `activity_kinds`. At least one is required. `column_name`, `object`, and `type` are absent from this request schema entirely (immutable, not just ignored if sent). `reportable` true on a field that is not a picklist or boolean is refused. `activity_kinds` replaces the kinds an activity field applies to, and an empty array means every kind again; it is refused on another object's field. */
+        /** @description Merge-PATCH of the settings a live field may change: `label`, `label_translations`, `option_translations`, `show_in_create`, `reportable`, `activity_kinds` and `pipeline_ids`. At least one is required. `column_name`, `object`, and `type` are absent from this request schema entirely (immutable, not just ignored if sent). `reportable` true on a field that is not a picklist or boolean is refused. `activity_kinds` replaces the kinds an activity field applies to, and an empty array means every kind again; it is refused on another object's field. `pipeline_ids` does the same for the pipelines a deal field applies to. */
         RenameCustomFieldRequest: {
             label?: string;
             label_translations?: components["schemas"]["LabelTranslations"];
@@ -54821,6 +54865,7 @@ export interface components {
             show_in_create?: boolean;
             reportable?: boolean;
             activity_kinds?: ("call" | "email" | "meeting" | "message" | "note" | "task")[];
+            pipeline_ids?: string[];
         };
         /** @description CUSTOM-FIELDS-PARAM-5. Replaces the picklist's full allowed-option set (ordered); at least one option is required — an empty array is rejected (422). */
         UpdateCustomFieldOptionsRequest: {
@@ -58707,6 +58752,8 @@ export interface components {
             selected_evidence?: components["schemas"]["NoticeSourceEvidenceReference"];
         };
         NoticeSourcePreview: {
+            /** @description The contact's own mail or meeting removes the duty, regardless of the source selected. Does not disclose unreadable activity identifiers. */
+            readonly subject_reached_out?: boolean;
             preview_token: string;
             /** @enum {string} */
             rule: "none" | "art13" | "art14";
@@ -71625,6 +71672,40 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    endPartnerProgram: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+                 *     the last-seen entity `version`. If the row's current `version` differs, the write is
+                 *     rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+                 *     re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+                 *     Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+                 */
+                "If-Match"?: components["parameters"]["IfMatch"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Partner program ended. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     setUpPartner: {
         parameters: {
             query?: never;
@@ -77386,6 +77467,43 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WebsiteInquiryAssignment"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["VersionConflict"];
+            422: components["responses"]["ValidationError"];
+            423: components["responses"]["RetentionHeld"];
+        };
+    };
+    takeTask: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+                 *     the last-seen entity `version`. If the row's current `version` differs, the write is
+                 *     rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+                 *     re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+                 *     Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+                 */
+                "If-Match"?: components["parameters"]["IfMatch"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The task, now assigned to the caller. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Activity"];
                 };
             };
             403: components["responses"]["Forbidden"];
@@ -85939,6 +86057,15 @@ export interface operations {
                     "application/json": components["schemas"]["SavedView"];
                 };
             };
+            /** @description `view_name_taken` — another live view of this resource owned by the caller has this name. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             422: components["responses"]["ValidationError"];
         };
     };
@@ -86027,7 +86154,15 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
+            /** @description `version_skew` — the view changed since it was read; or `view_name_taken` — another live view of this resource owned by the caller has this name. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             422: components["responses"]["ValidationError"];
         };
     };

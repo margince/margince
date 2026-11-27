@@ -6,6 +6,10 @@ import { jsonResponse, type RouteMap } from "../../testing/story-utils";
 import { bookingFrame } from "./book.storykit";
 import { BookingGuestScreen } from "./booking-guest";
 import { GuestDetailsForm } from "./booking-guest-parts";
+import {
+  BookingPrivacyInformation,
+  BookingPrivacyWarning,
+} from "./booking-privacy";
 
 import "./book.css";
 
@@ -159,6 +163,7 @@ export const PreviewSetupPhone: Story = {
 export const PersonalDetails: Story = {
   render: bookingFrame(() => (
     <GuestDetailsForm
+      privacyInformation="https://example.test/privacy"
       selected={{
         start: "2026-10-05T09:00:00Z",
         end: "2026-10-05T09:30:00Z",
@@ -184,4 +189,14 @@ export const PreviewLongName: Story = {
     "GET /availability": () =>
       jsonResponse({ slots: openTimes(), truncated: false }),
   }),
+};
+
+export const PrivacyInformation: Story = {
+  render: bookingFrame(() => (
+    <BookingPrivacyInformation address="https://example.test/privacy" />
+  )),
+};
+
+export const PrivacyMissing: Story = {
+  render: bookingFrame(() => <BookingPrivacyWarning />),
 };

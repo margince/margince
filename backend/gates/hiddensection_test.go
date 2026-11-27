@@ -25,6 +25,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
+// sectionCountMethods are the storekit readers that take a section as their
+// third argument and read what its visibility predicate withheld.
+var sectionCountMethods = []string{"ReadHiddenRows", "ReadHiddenHolders"}
+
 // sectionListMethods are the HiddenSection methods that render the list side.
 var sectionListMethods = []string{"ListSQL", "VisibleFrom"}
 
@@ -129,14 +133,14 @@ func readSectionUses(t *testing.T, fn *ast.FuncDecl, dir string, builders map[st
 			return true
 		}
 		switch {
-		case selector.Sel.Name == "ReadHiddenRows":
+		case slices.Contains(sectionCountMethods, selector.Sel.Name):
 			if len(call.Args) < 3 {
 				return true
 			}
 			name := sectionSource(call.Args[2], dir, bound, builders)
 			if name == "" {
-				t.Errorf("%s: ReadHiddenRows reads a section no builder made. Build it in one function "+
-					"that the list reads too", fn.Name.Name)
+				t.Errorf("%s: %s reads a section no builder made. Build it in one function "+
+					"that the list reads too", fn.Name.Name, selector.Sel.Name)
 				return true
 			}
 			builders[name].counted = true

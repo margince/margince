@@ -1,3 +1,4 @@
+import { en } from "../../i18n/en";
 /** @vitest-environment happy-dom */
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -157,6 +158,20 @@ it("submits a real invitation only after the visitor confirms their details and 
   inBookingMonth();
   const user = userEvent.setup();
   const calls = serve();
+  const fetchBooking = globalThis.fetch;
+  vi.stubGlobal(
+    "fetch",
+    async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input instanceof Request ? input.url : input);
+      const response = await fetchBooking(input, init);
+      return url.includes("/profile")
+        ? Response.json({
+            ...(await response.json()),
+            privacy_information: "https://example.test/privacy",
+          })
+        : response;
+    },
+  );
   window.history.replaceState(null, "", "#/book/ada-lovelace");
   const entries = window.history.length;
   mount("ada-lovelace");
@@ -180,7 +195,10 @@ it("submits a real invitation only after the visitor confirms their details and 
     ...bookingSlots[0],
     delivery: "calendar",
     booker: { name: "Nina Weber", email: "nina@brandt.example" },
-    consent: PUBLIC_BOOKING_CONSENT,
+    consent: {
+      ...PUBLIC_BOOKING_CONSENT,
+      wording: `${en["book.consentWording"]}\n${en["book.privacyInformation"]}: https://example.test/privacy`,
+    },
   });
   expect(posted?.key).toBeTruthy();
 });

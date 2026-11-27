@@ -15584,6 +15584,7 @@ const (
 	ImportReasonCodeCurrencyUnset                 ImportReasonCode = "currency_unset"
 	ImportReasonCodeDealAlreadyClosed             ImportReasonCode = "deal_already_closed"
 	ImportReasonCodeDealCompanyHasContracts       ImportReasonCode = "deal_company_has_contracts"
+	ImportReasonCodeDealFieldNotForPipeline       ImportReasonCode = "deal_field_not_for_pipeline"
 	ImportReasonCodeDealLegalGate                 ImportReasonCode = "deal_legal_gate"
 	ImportReasonCodeDealNotFound                  ImportReasonCode = "deal_not_found"
 	ImportReasonCodeDealNotFoundDropped           ImportReasonCode = "deal_not_found_dropped"
@@ -15775,6 +15776,8 @@ func (e ImportReasonCode) Valid() bool {
 	case ImportReasonCodeDealAlreadyClosed:
 		return true
 	case ImportReasonCodeDealCompanyHasContracts:
+		return true
+	case ImportReasonCodeDealFieldNotForPipeline:
 		return true
 	case ImportReasonCodeDealLegalGate:
 		return true
@@ -42401,6 +42404,7 @@ type Company struct {
 	ComputedFields *[]ComputedField `json:"computed_fields,omitempty"`
 
 	// ContactCount How many distinct live contacts THE CALLER MAY SEE hold a current job at this account (PO-EXT-10; AC-companies-2/3's Contacts column). Counted under the caller's contact row scope, exactly as the contact list is: a count is a read, and a number that moved when a colleague captured a private contact would disclose that contact. Present, zero included, on `listCompanies` and `getCompany` — the reads that render the column, and ABSENT entirely for a role without `contact:read` OR without `relationship:read` (the object grants come first, as on the contact list) — the number is a fact about the employment PAIRS, so the edge grant governs it exactly as it governs the employment list; write responses (create, update, archive, merge) omit it. Never client-supplied.
+	// A count of 0 means "no contacts YOU can see", never "no contacts": read it with `hidden_contact_holders`. Say "no contacts you can see" and name those colleagues when the list is not empty.
 	ContactCount *int      `json:"contact_count,omitempty" minimum:"0"`
 	CreatedAt    time.Time `json:"created_at"`
 
@@ -42421,8 +42425,11 @@ type Company struct {
 	Email *openapi_types.Email `json:"email,omitempty"`
 
 	// ExtensionRelationshipTypes The types an installed extension adds, as `ext:<unit>:<type>`. Kept apart from `relationship_types`, whose list stays the closed set above. Each value is declared by the extension it names; a value no extension declares is refused (422, `invalid_enum`).
-	ExtensionRelationshipTypes *[]string          `json:"extension_relationship_types,omitempty"`
-	Id                         openapi_types.UUID `json:"id"`
+	ExtensionRelationshipTypes *[]string `json:"extension_relationship_types,omitempty"`
+
+	// HiddenContactHolders The live colleagues who own at least one current contact at this account that the caller may not see, each once, so the reader knows whom to ask for an introduction ("Dana and Minh have contacts here you can't see"). It names who to ask and nothing else: no contact's name, role or id, and no count per colleague or in total. Empty when nothing is hidden, and a colleague who left or an agent seat is never listed. It reads the same employment set as `contact_count` with the contact scope turned around, so the two never describe different populations. Present exactly when `contact_count` is, and absent entirely on a write response. Never client-supplied.
+	HiddenContactHolders *[]HiddenRecordHolder `json:"hidden_contact_holders,omitempty"`
+	Id                   openapi_types.UUID    `json:"id"`
 
 	// ImportedFrom Which import wrote this record, so a screen can say "Imported from <name>" instead of "Typed by you". Null when no import wrote it. The name is the source the import was run for (`bundle`); an empty string is an import that was given none. Derived from `source_system`, whose reserved `mirror:` prefix is never shown.
 	ImportedFrom *string `json:"imported_from,omitempty"`
@@ -42475,6 +42482,9 @@ type Company struct {
 	// partner fit, next step, and served segments. Behavior is Fast-follow, but the V1 schema is
 	// forward-compatible.
 	Partner *Partner `json:"partner,omitempty"`
+
+	// PartnerProgramEnded An ended partner program has commission and deal history. Omitted without partner read permission.
+	PartnerProgramEnded *bool `json:"partner_program_ended,omitempty"`
 
 	// Phone The company's main number, in E.164 form (for example +49301234567). It is never a contact's own number.
 	Phone *string                 `json:"phone,omitempty"`
@@ -48394,6 +48404,9 @@ type CreateCustomFieldRequest struct {
 	Object        CreateCustomFieldRequestObject           `json:"object"`
 	Options       *[]string                                `json:"options,omitempty"`
 
+	// PipelineIds The pipelines the field applies to. Only a deal field may name any; omitted or empty means every pipeline. An id that is not a live pipeline, or ids on another object's field, is refused with a 422.
+	PipelineIds *[]openapi_types.UUID `json:"pipeline_ids,omitempty"`
+
 	// ShowInCreate Whether the field is offered in create dialogs. Omitted means true. An import that keeps provenance from a previous system creates its field with this off.
 	ShowInCreate *bool                        `json:"show_in_create,omitempty"`
 	Source       string                       `json:"source"`
@@ -49411,6 +49424,9 @@ type CustomField struct {
 
 	// Options Allowed picklist values; present (non-empty) when `type=picklist`, null otherwise.
 	Options *[]string `json:"options,omitempty"`
+
+	// PipelineIds The pipelines a deal field applies to; null means every pipeline, and every other object's field is null. A created or edited deal of another pipeline refuses a value for the field with `422 field_not_valid_for_pipeline`. A pipeline that is archived matches nothing. A value stored before the field was narrowed, or on a deal that moved pipeline, stays stored and readable, and sending null clears it.
+	PipelineIds *[]openapi_types.UUID `json:"pipeline_ids,omitempty"`
 
 	// RecordsChanged Only on the answer to `updateCustomFieldOptions`: how many records held a choice the edit removed and had it cleared.
 	RecordsChanged *int `json:"records_changed,omitempty" minimum:"0"`
@@ -61154,7 +61170,10 @@ type NoticeSourcePreview struct {
 	NoticeRequired       bool                    `json:"notice_required"`
 	PreviewToken         string                  `json:"preview_token"`
 	Rule                 NoticeSourcePreviewRule `json:"rule"`
-	Timezone             string                  `json:"timezone"`
+
+	// SubjectReachedOut The contact's own mail or meeting removes the duty, regardless of the source selected. Does not disclose unreadable activity identifiers.
+	SubjectReachedOut *bool  `json:"subject_reached_out,omitempty"`
+	Timezone          string `json:"timezone"`
 }
 
 // NoticeSourcePreviewRule defines model for NoticeSourcePreview.Rule.
@@ -63835,8 +63854,11 @@ type PublicSchedulingProfile struct {
 	OfferedLengths *[]int `json:"offered_lengths,omitempty"`
 
 	// Paused True when the page takes no bookings now: the host turned bookings off, or the calendar behind it cannot take them. The availability and booking calls then answer as for an unknown page.
-	Paused bool   `json:"paused"`
-	Title  string `json:"title"`
+	Paused bool `json:"paused"`
+
+	// PrivacyInformation The installation's privacy page, falling back to its privacy contact. Absent when neither is stated.
+	PrivacyInformation *string `json:"privacy_information,omitempty"`
+	Title              string  `json:"title"`
 
 	// VideoApp Present when new meetings get a video call link from the host's calendar.
 	VideoApp *PublicSchedulingProfileVideoApp `json:"video_app,omitempty"`
@@ -65094,7 +65116,7 @@ type RemoveMemberRequest struct {
 	ToUserId     *openapi_types.UUID `json:"to_user_id,omitempty"`
 }
 
-// RenameCustomFieldRequest Merge-PATCH of the settings a live field may change: `label`, `label_translations`, `option_translations`, `show_in_create`, `reportable` and `activity_kinds`. At least one is required. `column_name`, `object`, and `type` are absent from this request schema entirely (immutable, not just ignored if sent). `reportable` true on a field that is not a picklist or boolean is refused. `activity_kinds` replaces the kinds an activity field applies to, and an empty array means every kind again; it is refused on another object's field.
+// RenameCustomFieldRequest Merge-PATCH of the settings a live field may change: `label`, `label_translations`, `option_translations`, `show_in_create`, `reportable`, `activity_kinds` and `pipeline_ids`. At least one is required. `column_name`, `object`, and `type` are absent from this request schema entirely (immutable, not just ignored if sent). `reportable` true on a field that is not a picklist or boolean is refused. `activity_kinds` replaces the kinds an activity field applies to, and an empty array means every kind again; it is refused on another object's field. `pipeline_ids` does the same for the pipelines a deal field applies to.
 type RenameCustomFieldRequest struct {
 	ActivityKinds *[]RenameCustomFieldRequestActivityKinds `json:"activity_kinds,omitempty"`
 	Label         *string                                  `json:"label,omitempty"`
@@ -65109,9 +65131,10 @@ type RenameCustomFieldRequest struct {
 	// stored option stays the value written on records; only its display changes. On a write
 	// the map replaces the stored one, and an option the field does not offer is 422
 	// `invalid_translation`.
-	OptionTranslations *OptionTranslations `json:"option_translations,omitempty"`
-	Reportable         *bool               `json:"reportable,omitempty"`
-	ShowInCreate       *bool               `json:"show_in_create,omitempty"`
+	OptionTranslations *OptionTranslations   `json:"option_translations,omitempty"`
+	PipelineIds        *[]openapi_types.UUID `json:"pipeline_ids,omitempty"`
+	Reportable         *bool                 `json:"reportable,omitempty"`
+	ShowInCreate       *bool                 `json:"show_in_create,omitempty"`
 }
 
 // RenameCustomFieldRequestActivityKinds defines model for RenameCustomFieldRequest.ActivityKinds.
@@ -68220,8 +68243,11 @@ type SchedulingProfile struct {
 	NoticeMinutes int     `json:"notice_minutes" maximum:"10080" minimum:"0"`
 
 	// OfferedLengths Additional meeting lengths offered by this host. The default duration is always offered.
-	OfferedLengths *[]int                    `json:"offered_lengths,omitempty" unique:"items"`
-	Provider       SchedulingProfileProvider `json:"provider"`
+	OfferedLengths *[]int `json:"offered_lengths,omitempty" unique:"items"`
+
+	// PrivacyInformation The installation's privacy page, falling back to its privacy contact. Absent when neither is stated.
+	PrivacyInformation *string                   `json:"privacy_information,omitempty"`
+	Provider           SchedulingProfileProvider `json:"provider"`
 
 	// PublicUrl The address to share: `/book/{alias}` when an alias is set, else `/book/{slug}`, on the configured public origin. Absent when no usable public origin is configured.
 	PublicUrl   *string `json:"public_url,omitempty"`
@@ -78107,6 +78133,16 @@ type SendMessageParams struct {
 	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
 }
 
+// TakeTaskParams defines parameters for TakeTask.
+type TakeTaskParams struct {
+	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+	// the last-seen entity `version`. If the row's current `version` differs, the write is
+	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+	IfMatch *IfMatch `json:"If-Match,omitempty"`
+}
+
 // CreateActivityReviewTemplateParams defines parameters for CreateActivityReviewTemplate.
 type CreateActivityReviewTemplateParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
@@ -80275,6 +80311,16 @@ type MergeCompanyParams struct {
 	// human's direct call is itself the approval.
 	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
 
+	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+	// the last-seen entity `version`. If the row's current `version` differs, the write is
+	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+	IfMatch *IfMatch `json:"If-Match,omitempty"`
+}
+
+// EndPartnerProgramParams defines parameters for EndPartnerProgram.
+type EndPartnerProgramParams struct {
 	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
 	// the last-seen entity `version`. If the row's current `version` differs, the write is
 	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
@@ -89997,6 +90043,14 @@ func (a *Company) UnmarshalJSON(b []byte) error {
 		delete(object, "extension_relationship_types")
 	}
 
+	if raw, found := object["hidden_contact_holders"]; found {
+		err = json.Unmarshal(raw, &a.HiddenContactHolders)
+		if err != nil {
+			return fmt.Errorf("error reading 'hidden_contact_holders': %w", err)
+		}
+		delete(object, "hidden_contact_holders")
+	}
+
 	if raw, found := object["id"]; found {
 		err = json.Unmarshal(raw, &a.Id)
 		if err != nil {
@@ -90115,6 +90169,14 @@ func (a *Company) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'partner': %w", err)
 		}
 		delete(object, "partner")
+	}
+
+	if raw, found := object["partner_program_ended"]; found {
+		err = json.Unmarshal(raw, &a.PartnerProgramEnded)
+		if err != nil {
+			return fmt.Errorf("error reading 'partner_program_ended': %w", err)
+		}
+		delete(object, "partner_program_ended")
 	}
 
 	if raw, found := object["phone"]; found {
@@ -90354,6 +90416,13 @@ func (a Company) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.HiddenContactHolders != nil {
+		object["hidden_contact_holders"], err = json.Marshal(a.HiddenContactHolders)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'hidden_contact_holders': %w", err)
+		}
+	}
+
 	object["id"], err = json.Marshal(a.Id)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'id': %w", err)
@@ -90454,6 +90523,13 @@ func (a Company) MarshalJSON() ([]byte, error) {
 		object["partner"], err = json.Marshal(a.Partner)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'partner': %w", err)
+		}
+	}
+
+	if a.PartnerProgramEnded != nil {
+		object["partner_program_ended"], err = json.Marshal(a.PartnerProgramEnded)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'partner_program_ended': %w", err)
 		}
 	}
 
@@ -102454,6 +102530,9 @@ type ServerInterface interface {
 	// Reply on a captured messaging-channel conversation — runs directly, consent-gated.
 	// (POST /activities/{id}/send-message)
 	SendMessage(w http.ResponseWriter, r *http.Request, id Id, params SendMessageParams)
+	// Take an open task nobody holds.
+	// (POST /activities/{id}/take)
+	TakeTask(w http.ResponseWriter, r *http.Request, id Id, params TakeTaskParams)
 	// Find the next steps this meeting transcript states — a background reading that ends in staged 🟡 proposals.
 	// (POST /activities/{id}/transcript-proposals)
 	ReadTranscriptForNextSteps(w http.ResponseWriter, r *http.Request, id Id)
@@ -103420,6 +103499,9 @@ type ServerInterface interface {
 	// What each source last offered for the company's fields, to show beside the value on the record.
 	// (GET /companies/{id}/offered-values)
 	ListCompanyOfferedValues(w http.ResponseWriter, r *http.Request, id Id)
+	// End the partner program while keeping the company and commission history.
+	// (DELETE /companies/{id}/partner)
+	EndPartnerProgram(w http.ResponseWriter, r *http.Request, id Id, params EndPartnerProgramParams)
 	// Read the partner extension on a company (404 if the company is not a partner).
 	// (GET /companies/{id}/partner)
 	GetPartner(w http.ResponseWriter, r *http.Request, id Id)
@@ -106066,6 +106148,12 @@ func (_ Unimplemented) SendMessage(w http.ResponseWriter, r *http.Request, id Id
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Take an open task nobody holds.
+// (POST /activities/{id}/take)
+func (_ Unimplemented) TakeTask(w http.ResponseWriter, r *http.Request, id Id, params TakeTaskParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Find the next steps this meeting transcript states — a background reading that ends in staged 🟡 proposals.
 // (POST /activities/{id}/transcript-proposals)
 func (_ Unimplemented) ReadTranscriptForNextSteps(w http.ResponseWriter, r *http.Request, id Id) {
@@ -107995,6 +108083,12 @@ func (_ Unimplemented) MergeCompany(w http.ResponseWriter, r *http.Request, id I
 // What each source last offered for the company's fields, to show beside the value on the record.
 // (GET /companies/{id}/offered-values)
 func (_ Unimplemented) ListCompanyOfferedValues(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// End the partner program while keeping the company and commission history.
+// (DELETE /companies/{id}/partner)
+func (_ Unimplemented) EndPartnerProgram(w http.ResponseWriter, r *http.Request, id Id, params EndPartnerProgramParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -114717,6 +114811,62 @@ func (siw *ServerInterfaceWrapper) SendMessage(w http.ResponseWriter, r *http.Re
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.SendMessage(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// TakeTask operation middleware
+func (siw *ServerInterfaceWrapper) TakeTask(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params TakeTaskParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch IfMatch
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.TakeTask(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -129087,6 +129237,64 @@ func (siw *ServerInterfaceWrapper) ListCompanyOfferedValues(w http.ResponseWrite
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListCompanyOfferedValues(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// EndPartnerProgram operation middleware
+func (siw *ServerInterfaceWrapper) EndPartnerProgram(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params EndPartnerProgramParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch IfMatch
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.EndPartnerProgram(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -163979,6 +164187,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/activities/{id}/send-message", wrapper.SendMessage)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/activities/{id}/take", wrapper.TakeTask)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/activities/{id}/transcript-proposals", wrapper.ReadTranscriptForNextSteps)
 	})
 	r.Group(func(r chi.Router) {
@@ -164943,6 +165154,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/companies/{id}/offered-values", wrapper.ListCompanyOfferedValues)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/companies/{id}/partner", wrapper.EndPartnerProgram)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/companies/{id}/partner", wrapper.GetPartner)

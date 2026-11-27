@@ -22,6 +22,7 @@ import {
   MergeConfirmScreen,
   OAuthConsent,
   OfferScreen,
+  OffersRedirect,
   OnboardingScreen,
   PartnersScreen,
   PreferenceCenterScreen,
@@ -133,12 +134,7 @@ const SCREEN_VIEWS: Readonly<Record<Screen, (args: ScreenArgs) => ReactNode>> =
     // into the startup graph. The key is still typed against `Screen`.
     scheduled: () => <ScheduledSendsScreen />,
     "legal-reviews": ({ id }) => <LegalReviewsRoute id={id} />,
-    offers: ({ id }) =>
-      id ? (
-        <OfferScreen id={id} />
-      ) : (
-        <ScreenNotice messageKey="screen.pending" />
-      ),
+    offers: ({ id }) => (id ? <OfferScreen id={id} /> : <OffersRedirect />),
     search: ({ id, id2 }) => (
       <SearchRoute q={id ? safeDecode(id) : ""} openActivityId={id2} />
     ),

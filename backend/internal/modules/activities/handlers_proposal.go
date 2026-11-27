@@ -107,6 +107,12 @@ func (h Handlers) GetPublicMeetingProposal(w http.ResponseWriter, r *http.Reques
 	}
 	profile = h.store.brandSchedulingProfile(r.Context(), row.Host, profile)
 	out := crmcontracts.PublicMeetingProposal{Profile: publicProfile(profile, row.Request.VideoCall), Description: row.Request.Description, ExpiresAt: row.Expires, Used: row.Used != nil, Options: row.Request.Options}
+	out.Profile.PrivacyInformation, err = h.bookingPrivacyInformation(r.Context())
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+
 	out.Profile.Title = row.Request.Subject
 	if out.Profile.VideoApp == nil {
 		out.Profile.Location = row.Request.Location

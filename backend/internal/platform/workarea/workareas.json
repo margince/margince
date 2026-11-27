@@ -257,6 +257,7 @@
     "draftIntroNote": "business",
     "draftIntroRequest": "business",
     "editWeeklyPlanCommitment": "business",
+    "endPartnerProgram": "business",
     "ensureCompanyScan": "business",
     "evaluateReporting": "business",
     "evaluateReportingReport": "business",
@@ -1217,6 +1218,7 @@
     "draftIntroRequest": "companies",
     "draftLeadEmail": "leads",
     "editWeeklyPlanCommitment": "worklist",
+    "endPartnerProgram": "companies",
     "ensureCompanyScan": "companies",
     "evaluateReporting": "reports",
     "evaluateReportingReport": "reports",
@@ -1996,6 +1998,7 @@
     "suppressContact": "consent",
     "syncFinanceSource": "finance_source",
     "takeOverConversationClaim": "contacts",
+    "takeTask": "activities",
     "technicalEnrichCompany": "companies",
     "testAiProviderKey": "ai_models",
     "transferProjectOwnership": "projects",
@@ -2665,6 +2668,9 @@
     ],
     "embed_reindex_status": [
       "search_index"
+    ],
+    "end_partner_program": [
+      "companies"
     ],
     "enrich": [
       "companies"
@@ -4820,6 +4826,9 @@
     ],
     "embed_reindex_status": [
       "operator"
+    ],
+    "end_partner_program": [
+      "business"
     ],
     "enrich": [
       "business"

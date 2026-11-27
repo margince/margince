@@ -267,7 +267,15 @@ func AssembleSARWithExtensions(
 		if err != nil {
 			return err
 		}
-		authored, err := subjectAuthoredMessages(ctx, tx, contactID, emails, identities)
+		reach, err := subjectOwnReach(ctx, tx, contactID, emails, identities)
+		if err != nil {
+			return err
+		}
+		authored, err := reach.activities(ctx, tx, contactID, []string{"from"})
+		if err != nil {
+			return err
+		}
+		messages, err := reach.activities(ctx, tx, contactID, subjectMessageRoles)
 		if err != nil {
 			return err
 		}
@@ -275,7 +283,7 @@ func AssembleSARWithExtensions(
 		if err != nil {
 			return err
 		}
-		sections, err := sarSections(ctx, &pkg, contactID, emails, leads, identities, authored, external)
+		sections, err := sarSections(ctx, &pkg, contactID, emails, reach.emails, leads, identities, authored, messages, external)
 		if err != nil {
 			return err
 		}

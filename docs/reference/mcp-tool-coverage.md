@@ -225,9 +225,9 @@ A tool being "untried" means something different for each, so the numbers above 
 
 | | Your AI assistant, over MCP | The night helpers: scheduled agents of Margince AI |
 |---|---|---|
-| Who drives it | a user, watching | a job on a timer, unattended |
+| Who drives it | a client acting for its user, chatting or automatic | a job on a timer, unattended |
 | Menu | 48 tools, the whole catalog | 5 to 7 tools, declared per agent |
-| A wrong reach | the user corrects it | nobody is there |
+| A wrong reach | the same user grants and credential scopes apply | nobody is there |
 | Graded by | the use-case lane on this page | [ai-certification.md](ai-certification.md) |
 
 ### The night helpers, as the contract declares them

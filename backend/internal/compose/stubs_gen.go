@@ -167,6 +167,10 @@ func (stubs) SendMessage(w nethttp.ResponseWriter, r *nethttp.Request, id crmcon
 	httperr.NotImplemented(w, r, "SendMessage")
 }
 
+func (stubs) TakeTask(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.TakeTaskParams) {
+	httperr.NotImplemented(w, r, "TakeTask")
+}
+
 func (stubs) ReadTranscriptForNextSteps(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "ReadTranscriptForNextSteps")
 }
@@ -1453,6 +1457,10 @@ func (stubs) MergeCompany(w nethttp.ResponseWriter, r *nethttp.Request, id crmco
 
 func (stubs) ListCompanyOfferedValues(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "ListCompanyOfferedValues")
+}
+
+func (stubs) EndPartnerProgram(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.EndPartnerProgramParams) {
+	httperr.NotImplemented(w, r, "EndPartnerProgram")
 }
 
 func (stubs) GetPartner(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {

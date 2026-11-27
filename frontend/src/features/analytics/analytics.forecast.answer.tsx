@@ -1,4 +1,6 @@
+import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
+import { EntityRef } from "../../components/entityref";
 import { StatCard } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { Panel, PanelBody } from "../../design-system/panel";
@@ -91,6 +93,7 @@ export function ForecastAnswer({
   onOpenDeals,
   landing = true,
   density,
+  callHistory,
 }: Readonly<{
   readings: Readings;
   locale: Locale;
@@ -101,6 +104,7 @@ export function ForecastAnswer({
   // False when the page places the landing readings elsewhere, beside these.
   landing?: boolean;
   density?: "plate";
+  callHistory?: ReactNode;
 }>) {
   const t = useT();
   const currency = readings.base_currency;
@@ -165,6 +169,14 @@ export function ForecastAnswer({
                 ` ${t("forecast.callHistoryUnavailable")}`}
             </p>
           )}
+          {call && (
+            <p className="t-caption">
+              {t("forecast.callAuthor")}{" "}
+              <EntityRef kind="user" id={call.author_id} />
+            </p>
+          )}
+          {call?.note && <p>{call.note}</p>}
+          {callHistory}
         </PanelBody>
       </Panel>
 

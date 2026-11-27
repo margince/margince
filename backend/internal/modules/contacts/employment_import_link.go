@@ -15,11 +15,12 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-func (s *Store) linkEmploymentEpisode(ctx context.Context, tx pgx.Tx, contact ids.ContactID, company ids.CompanyID, e employmentEvidence, capturedBy string) (*ids.UUID, string, error) {
+func (s *Store) linkEmploymentEpisode(ctx context.Context, tx pgx.Tx, contact ids.ContactID, company ids.CompanyID, e employmentEvidence, capturedBy string, automatic bool) (*ids.UUID, string, error) {
 	if err := auth.HoldWritableLive(ctx, tx, contactEntity, contact.UUID); err != nil {
 		return nil, "", err
 	}
@@ -39,6 +40,17 @@ func (s *Store) linkEmploymentEpisode(ctx context.Context, tx pgx.Tx, contact id
 	_, started := preciseEmploymentDate(e.Started)
 	_, ended := preciseEmploymentDate(e.Ended)
 	matched, state := matchEmploymentEpisode(relationships, e, started, ended)
+	// Evidence that matches no row would make a new employment. For a pair
+	// somebody ended it waits for a human, who may still resolve it.
+	removed := false
+	if automatic && matched == nil {
+		if err := tx.QueryRow(ctx, "SELECT "+employment.EndedAtCompanySQL("$1::uuid", "$2::uuid"), contact, company).Scan(&removed); err != nil {
+			return nil, "", err
+		}
+		if removed {
+			return nil, employmentNeedsReview, nil
+		}
+	}
 	mayEnd := false
 	if state == employmentNeedsReview && started != nil && e.validDateRange() && undatedEndAt(relationships, *started) {
 		if mayEnd, err = mayEndUndatedTx(ctx, tx, relationships); err != nil {

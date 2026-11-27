@@ -70,7 +70,7 @@ func (a *ChatAsker) sendHint(ctx context.Context, t *hintTarget) error {
 	}
 	return a.DB.Tx(ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `UPDATE raw_capture SET ask_message_ids = array_append(ask_message_ids, $2) WHERE id = ANY($1)`,
-			t.raws, receipt.ProviderMessageID)
+			t.raws, clarifyMessageKey(t.provider, t.thread, receipt.ProviderMessageID))
 		return err
 	})
 }

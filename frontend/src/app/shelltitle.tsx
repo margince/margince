@@ -1,4 +1,5 @@
 import { Badge } from "../design-system/atoms";
+import { Breadcrumb } from "../design-system/breadcrumb";
 import { Heading } from "../design-system/heading";
 import { useSettingsSection } from "../features/settings/settingsnav";
 import { useLocale, useT } from "../i18n";
@@ -14,6 +15,7 @@ import {
   navLabelKey,
   recordKindOf,
 } from "./nav";
+import { useOfferLocation } from "./offerlocation";
 import {
   headsItself,
   PAGE_SUB_KEYS,
@@ -43,7 +45,7 @@ type SlotRef = (slot: HTMLElement | null) => void;
  * and a composed unit names its own screen, so this yields to both. A second
  * name at heading level would leave a screen reader with two page titles.
  */
-export function PageTitle({
+function StandardPageTitle({
   route,
   section,
   actionSlot,
@@ -153,6 +155,33 @@ export function PageTitle({
           )}
         </div>
         {subKey && <p className="pagesub t-sub">{t(subKey)}</p>}
+      </div>
+      <div className="pagehead-action" ref={actionSlot} />
+    </div>
+  );
+}
+
+export function PageTitle(props: Parameters<typeof StandardPageTitle>[0]) {
+  if (props.route.screen === "offers" && props.route.id)
+    return <OfferPageTitle id={props.route.id} actionSlot={props.actionSlot} />;
+  return <StandardPageTitle {...props} />;
+}
+
+function OfferPageTitle({
+  id,
+  actionSlot,
+}: Readonly<{ id: string; actionSlot?: SlotRef }>) {
+  const t = useT();
+  const route = { screen: "offers" as const, id };
+  useTabTitle(route);
+  const location = useOfferLocation(route);
+  return (
+    <div className="pagetitle">
+      <div className="pagetitle-text">
+        {location && (
+          <Breadcrumb label={t("nav.offers")} items={location.crumbs} />
+        )}
+        <Heading size="xlarge">{location?.heading || t("nav.offers")}</Heading>
       </div>
       <div className="pagehead-action" ref={actionSlot} />
     </div>

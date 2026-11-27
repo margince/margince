@@ -90,7 +90,6 @@ export function DealsScreen({
   const pageName = usePageName("deals");
   const { locale } = useLocale();
   const readerZone = useViewerZone();
-  const cf = useObjectCustomFields("deal", "create");
   const pipelinesQuery = usePipelines();
   const ownerChips = useOwnerChips();
   const viewerId = useViewerId();
@@ -107,6 +106,9 @@ export function DealsScreen({
     setView,
     refusedDials,
   } = useDealScreenDials({ pipelines: pipelinesQuery.data });
+  const cf = useObjectCustomFields("deal", "create", {
+    pipelineId: effectivePipeline?.id,
+  });
   const stages = effectivePipeline?.stages ?? [];
   const companiesQuery = useBoardCompanies();
 

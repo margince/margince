@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { viewNameRefusal } from "./viewnamerefusal";
 // Renaming and deleting one saved view, each its own dialog. These serve a
 // row's ⋯ or a page head, where the view stands alone; ManageViewsList edits in
 // place instead, because it is already a dialog listing every view.
@@ -26,6 +27,7 @@ export function RenameViewAction({
   // The view as the dialog opened on it: a refetch while the dialog is open
   // must not lend a stale name a newer If-Match.
   const [read, setRead] = useState(view);
+  const refused = viewNameRefusal(rename.error, t);
   return (
     <>
       <Button
@@ -45,7 +47,8 @@ export function RenameViewAction({
         initial={read.name}
         confirmLabel={t("views.rename")}
         pending={rename.isPending}
-        problem={rename.isError ? problemMessageOf(rename.error, t) : null}
+        problem={refused.problem}
+        nameProblem={refused.nameProblem}
         onSave={(name) =>
           rename.mutate(
             { id: view.id, name, version: read.version },

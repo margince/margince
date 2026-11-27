@@ -2877,8 +2877,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "locale.name.vi": "Tiếng Việt",
   "locale.switchLabel": "Ngôn ngữ",
 
-  "screen.pending": "Màn hình này chưa khả dụng.",
-
   "ext.panels.label": "Tiện ích mở rộng",
   "ext.notFound":
     "Bản cài đặt này không bật tiện ích mở rộng nào tên “{name}”.",
@@ -3361,6 +3359,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "partner.kind.referral": "Giới thiệu",
   "partner.kinds": "Loại đối tác",
   "partner.kindsAll": "Tất cả loại",
+  "partner.endProgram": "Kết thúc chương trình đối tác",
+  "partner.endProgramHelp":
+    "Công ty, các điều khoản đã thống nhất và lịch sử hoa hồng vẫn được lưu. Loại quan hệ Đối tác sẽ được bỏ.",
+  "partner.stageNeedsActivation":
+    "Hãy kích hoạt đối tác trước khi chọn giai đoạn Đang hoạt động.",
   "partner.stageAll": "Tất cả giai đoạn",
   "partner.stageMeaning": "Ý nghĩa giai đoạn",
   "partner.stageMeaningAll": "Tất cả ý nghĩa",
@@ -9545,6 +9548,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "forecast.partialTitle": "Không phải deal nào cũng có giá",
   "forecast.partial":
     "{priced} trên {eligible} deal có giá. Deal chưa có giá không cộng thêm gì vào các tổng ở trên.",
+  "forecast.callHistory": "Lịch sử dự báo",
+  "forecast.callAuthor": "Người gửi",
+  "forecast.noCallHistory": "Chưa có dự báo nào cho kỳ này.",
   "forecast.currentCall": "Nhận định của quản lý",
   "forecast.currentCallDetailOver":
     "Cập nhật {date} · cao hơn {gap} so với đã chốt + khả năng cao",
@@ -11033,6 +11039,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "import.reason.close_date_past":
     "“{value}” đã qua, mà ngày chốt của deal đang mở thì không được ở quá khứ.",
   "import.reason.lost_reason_missing": "Deal đã thua cần có lý do thua.",
+  "import.reason.deal_field_not_for_pipeline":
+    "Trường tùy chỉnh {field} không áp dụng cho deal trong quy trình của deal này nên hàng bị bỏ qua. Hãy để trống ô hoặc nhập deal vào quy trình mà trường áp dụng.",
   "import.reason.deal_pipeline_fixed":
     "Deal này nằm trong quy trình khác với quy trình trong tệp. Nhập không chuyển deal giữa các quy trình nên hàng bị bỏ qua.",
   "companies.contractMergeBlocked":
@@ -11686,6 +11694,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "notice.source.openRecord": "Xem bản ghi",
   "notice.source.moreEvidence": "Xem thêm bằng chứng",
   "notice.source.preview": "Trước khi xác nhận",
+  "notice.source.previewReachedOut":
+    "Liên hệ đã chủ động liên lạc qua email hoặc cuộc họp nên không còn nghĩa vụ thông báo quyền riêng tư riêng.",
   "notice.source.previewNone": "Nguồn này không tạo nghĩa vụ thông báo riêng.",
   "notice.source.previewOwed": "Vẫn phải thông báo chậm nhất ngày {date}.",
   "notice.source.previewLatest":
@@ -11951,8 +11961,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Quý khách có thể phản đối việc xử lý dữ liệu cá nhân hoặc rút lại sự đồng ý bất cứ lúc nào. Chúng tôi phản hồi trong 02 ngày làm việc và ngừng xử lý trong 15 ngày, trừ trường hợp pháp luật cho phép xử lý không cần sự đồng ý của quý khách. Nếu quý khách từ chối nhận quảng cáo, chúng tôi ngừng gửi quảng cáo ngay mà không cần quý khách nêu lý do.",
   "privacynotice.objection.how": "Cách phản đối: {route}",
   "notice.ownerOf": "Phụ trách {duty}",
-  "notice.excuse": "Kết thúc mà không gửi",
-  "notice.excuseTitle": "Kết thúc nghĩa vụ mà không gửi thông báo",
+  "notice.excuse": "Đóng mà không gửi",
+  "notice.excuseTitle": "Đóng mà không gửi",
   "notice.excuseWhich": "Loại lý do",
   "notice.excuseProvided": "Đã được thông báo ở nơi khác",
   "notice.excuseExempt": "Nghĩa vụ không áp dụng",
@@ -14149,6 +14159,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "scheduling.defaultSubject": "Cuộc họp qua Margince",
   "book.name": "Họ và tên",
   "book.email": "Email",
+  "book.privacyInformation": "Thông tin về quyền riêng tư",
+  "scheduling.privacyMissing":
+    "Trang đặt lịch chưa có liên kết đến thông tin về quyền riêng tư. Liên hệ quản trị viên để điền “Liên hệ về bảo vệ dữ liệu” trong Cài đặt → Công ty → Thông tin công ty trong email.",
   "book.consentWording":
     "Tôi đồng ý cho lưu tên và email của mình để sắp xếp và liên hệ sau cuộc họp này.",
 
@@ -14838,6 +14851,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "cf.activityKindsEvery": "Mọi loại",
   "cf.activityKindsFor": "Các loại hiện “{label}”",
   "cf.activityKindsSaved": "“{label}” giờ hiện ở các loại bạn đã chọn",
+  "cf.pipelines": "Hiện trong",
+  "cf.pipelinesHint": "Để trống để hiện trường này ở deal thuộc mọi quy trình.",
+  "cf.pipelinesEvery": "Mọi quy trình",
+  "cf.pipelinesArchived": "Quy trình đã lưu trữ",
+  "cf.pipelinesFor": "Các quy trình hiện “{label}”",
+  "cf.pipelinesSaved": "“{label}” giờ hiện ở deal thuộc các quy trình đã chọn",
   "cf.col.inCreate": "Trong biểu mẫu tạo mới",
   "cf.showInCreateFor": "Hiện “{label}” trong biểu mẫu tạo mới",
   "cf.shownInCreate": "Đã hiện “{label}” trong biểu mẫu tạo mới",
@@ -19966,6 +19985,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.rail.addEmployment": "Thêm công ty",
   "contact.employer.contacts_one": "{count} liên hệ",
   "contact.employer.contacts_other": "{count} liên hệ",
+  "contact.employer.hiddenHolders_one":
+    "{names} có liên hệ ở đây mà bạn không xem được. Hãy nhờ giới thiệu.",
+  "contact.employer.hiddenHolders_other":
+    "{names} có liên hệ ở đây mà bạn không xem được. Hãy nhờ giới thiệu.",
   "contact.employer.openDeals_one": "{count} deal đang mở",
   "contact.employer.openDeals_other": "{count} deal đang mở",
   "contact.employer.noOpenDeals": "không có deal đang mở",
@@ -21761,6 +21784,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.owner.shared": "Cùng phụ trách: {names}",
   "worklist.owner.left":
     "{name} đã nghỉ. Việc này cần người chịu trách nhiệm mới.",
+  "deal.owner.choose": "Chọn thành viên chịu trách nhiệm mới",
   "worklist.owner.sharedCount_one": "{count} bên nhận phụ trách",
   "worklist.owner.sharedCount_other": "{count} bên nhận phụ trách",
   "worklist.owner.visibleLabel": "Đang xem",
@@ -22227,15 +22251,15 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "noticeDuty.what":
     "Kiểm tra nguồn thông tin liên hệ và xem nghĩa vụ thông báo đã ghi nhận còn áp dụng hay không.",
   "noticeDuty.how":
-    "Gửi thông báo quyền riêng tư, đề nghị họ xác nhận thông tin (việc này cũng thông báo cho họ), hoặc kết thúc nghĩa vụ nếu họ đã biết hoặc có ngoại lệ áp dụng.",
+    "Gửi thông báo quyền riêng tư, đề nghị họ xác nhận thông tin (việc này cũng thông báo cho họ), hoặc đóng mà không gửi nếu họ đã biết hoặc có ngoại lệ áp dụng.",
   "noticeDuty.sendNotice": "Gửi thông báo quyền riêng tư",
   "noticeDuty.askConfirm": "Đề nghị xác nhận thông tin",
-  "noticeDuty.end": "Kết thúc nghĩa vụ…",
+  "noticeDuty.end": "Đóng mà không gửi…",
   "noticeDuty.sent":
     "Đã gửi tới {address}. Việc này rời khỏi Danh sách công việc nhưng vẫn còn trong hàng đợi tuân thủ cho đến khi gửi thành công, và sẽ quay lại đây nếu thư bị trả về.",
   "noticeDuty.notSent":
     "Chưa gửi: bản cài đặt này không thể gửi thư tới {address}.",
-  "noticeDuty.ended": "Đã kết thúc nghĩa vụ và ghi nhận lý do.",
+  "noticeDuty.ended": "Đã đóng mà không gửi và ghi nhận lý do.",
   "noticeDuty.obtainedAs": "Thu thập qua",
   "noticeDuty.obtainedOn": "Ngày thu thập",
   "noticeDuty.dateUnknown": "Không rõ ngày",
