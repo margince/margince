@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -101,12 +102,23 @@ func (s *Store) CreateTag(ctx context.Context, name string, color, description *
 	if err != nil {
 		return tagRow{}, err
 	}
+	if err := refuseUnknownColor(color); err != nil {
+		return tagRow{}, err
+	}
 	var out tagRow
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
 		out, err = insertTagTx(ctx, tx, name, color, description)
 		return err
 	})
+	if taken, ok := errors.AsType[*TagNameTakenError](err); ok {
+		holder, live, findErr := s.FindTag(ctx, name)
+		if findErr != nil {
+			slog.WarnContext(ctx, "reading the tag that holds a name failed", "err", findErr)
+		} else if live {
+			taken.ExistingID = holder
+		}
+	}
 	return out, err
 }
 
@@ -119,7 +131,7 @@ func insertTagTx(ctx context.Context, tx pgx.Tx, name string, color, description
 	out, err := scanTag(row)
 	if err != nil {
 		if constraint, ok := storekit.UniqueViolation(err); ok && constraint == uqTagName {
-			return tagRow{}, fmt.Errorf("tag %q: %w", name, apperrors.ErrConflict)
+			return tagRow{}, &TagNameTakenError{}
 		}
 		return tagRow{}, err
 	}
@@ -389,7 +401,7 @@ func NormalizeTagName(name string) string {
 func ValidateTagName(name string) (string, error) {
 	normalized := NormalizeTagName(name)
 	if !values.HasVisibleText(normalized) {
-		return "", &BadInputError{Field: "name", Reason: "must not be empty"}
+		return "", &BadInputError{Field: nameField, Code: codeRequired, Reason: "a tag needs a name"}
 	}
 	if utf8.RuneCountInString(normalized) > maxTagNameRunes {
 		return "", &BadInputError{

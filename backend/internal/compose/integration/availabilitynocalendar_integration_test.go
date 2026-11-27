@@ -27,7 +27,7 @@ func TestReliableAvailabilityWithoutACalendarAsksForOneAtBothDoors(t *testing.T)
 		t.Fatalf("the route answered %d %v, want 422", status, body)
 	}
 	refusal := d.mcp.CallRefused(t, "check_availability", map[string]any{"from": from, "to": to, "reliable": true})
-	if !strings.Contains(refusal, "Connect a calendar") || strings.Contains(refusal, "permission denied") {
+	if !strings.Contains(refusal, "Connect a calendar") || strings.Contains(refusal, "permission_denied") {
 		t.Errorf("the tool answered %q, want the same ask to connect a calendar", refusal)
 	}
 }

@@ -121,8 +121,7 @@ func TestARowAlreadyDoneDoesNotAdmitAForeignRowBesideIt(t *testing.T) {
 	}
 }
 
-// A row in a lane that never offers Done is a fault in the body, answered as
-// the contract's 422 naming `rows`, and nothing is written.
+// A task row keeps its own lifecycle, so Done must not change it.
 func TestDoneOnALaneThatNeverOffersItIsAValidationRefusal(t *testing.T) {
 	t.Parallel()
 	meeting := ids.NewV7()
@@ -133,8 +132,8 @@ func TestDoneOnALaneThatNeverOffersItIsAValidationRefusal(t *testing.T) {
 	err := svc.MarkRowsDone(meetingPrepReader(), []RowRef{{Source: sourceTask, RowID: meeting.String()}})
 
 	fault, ok := httperr.Classify(err)
-	if !ok || fault.Status != http.StatusUnprocessableEntity || len(fault.Fields) != 1 || fault.Fields[0].Field != "rows" {
-		t.Fatalf("answered %+v (classified %v), want a 422 naming rows", fault, ok)
+	if !ok || fault.Status != http.StatusUnprocessableEntity || len(fault.Fields) != 1 || fault.Fields[0].Field != "rows[0].source" {
+		t.Fatalf("answered %+v (classified %v), want a 422 naming rows[0].source", fault, ok)
 	}
 	if len(spy.marked) > 0 {
 		t.Fatalf("wrote %v for a refused batch", spy.marked)
