@@ -126,6 +126,8 @@ function builderBody(
   name: string,
   readModule: ReadModule,
 ): string | undefined {
+  const local = functionBody(source, name);
+  if (local !== undefined) return local;
   const from = new RegExp(
     `import \\{[^}]*\\b${name}\\b[^}]*\\} from "(\\.[^"]+)"`,
   ).exec(source)?.[1];
@@ -186,6 +188,24 @@ export function listFetcherBody(
     : builderBody(file, source, named, readModule);
 }
 
+// The module an imported fetcher lives in, so its own spreads resolve against
+// its own imports. A fetcher declared on the screen lives on the screen.
+function fetcherHome(
+  file: string,
+  source: string,
+  readModule: ReadModule,
+): [string, string] {
+  if (fetcherBody(source) !== undefined) return [file, source];
+  const named = /\bfetchPage: (\w+),/.exec(source)?.[1];
+  const from = named
+    ? new RegExp(
+        `import \\{[^}]*\\b${named}\\b[^}]*\\} from "(\\.[^"]+)"`,
+      ).exec(source)?.[1]
+    : undefined;
+  const module = from ? readModule(file, from) : undefined;
+  return from && module ? [join(dirname(file), from), module] : [file, source];
+}
+
 export function screenSendsSort(
   file: string,
   source: string,
@@ -194,7 +214,8 @@ export function screenSendsSort(
   const body = listFetcherBody(file, source, readModule);
   const wire = body === undefined ? undefined : wireQuery(body);
   if (wire === undefined) return false;
-  const spreads = wireSpreads(file, source, wire, readModule);
+  const [home, homeSource] = fetcherHome(file, source, readModule);
+  const spreads = wireSpreads(home, homeSource, wire, readModule);
   const direct = [...wire.matchAll(SORT_KEY)].some(
     (key) => !overriddenAfter(wire, key.index + key[0].length, spreads),
   );
