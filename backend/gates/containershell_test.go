@@ -20,7 +20,7 @@ import (
 )
 
 // shellDefaults is the `defaults.run` block, at workflow or job level. Run is
-// nil when the block is absent, because a job's block replaces the workflow's.
+// nil when the block is absent, so absent tells apart from a block with no shell.
 type shellDefaults struct {
 	Run *struct {
 		Shell string `yaml:"shell"`
