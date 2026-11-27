@@ -9,16 +9,10 @@ package gates
 
 // A table that declares a lifecycle column has a statement that keeps it.
 //
-// `version` and `updated_at` describe a row that changes. On a table whose rows
-// are only inserted, they repeat the insert forever. And `version` tells the
-// next author that a guarded update path exists when none does.
-//
-// The corpus is every table the head catalog gives one of the two columns.
-// `updated_at` needs a production statement that updates the table: an UPDATE,
-// an upsert that updates, a storekit row writer, or a migration's SQL function.
-// `version` needs a statement that assigns it, or an update the table's trigger
-// answers by assigning NEW.version. A data fix in a migration runs once, so it
-// does not count.
+// On a row that is only inserted, `version` and `updated_at` repeat the insert,
+// and `version` promises a guarded update path that does not exist. updated_at
+// needs a production statement that updates the table. version needs one that
+// assigns it, or an update the table's trigger answers by assigning NEW.version.
 
 import (
 	"go/ast"
