@@ -41,9 +41,9 @@ type Chunk struct {
 	StartLine int
 }
 
-// Hash identifies this span's exact text. It is what decides whether a
-// re-ingest costs a model call: the chunker is pure, so identical prose yields
-// an identical hash, and vectorkit.Unchanged reads it against the stored one.
+// Hash identifies this span's exact text. It decides whether a passage costs a
+// model call. vectorkit.Unchanged reads it against the hash stored beside a
+// vector: the passage's own, or one its document held before a re-ingest.
 //
 // Spelled here rather than at the writer because the value belongs to the span,
 // not to the row — two writers computing it two ways is how a corpus starts
@@ -56,8 +56,8 @@ func (c Chunk) Hash() string {
 // ChunkText splits a document into embeddable spans, preferring paragraph then
 // sentence boundaries and never breaking a word.
 //
-// It is pure: the same text always yields the same chunks, which is what lets
-// the content hash decide whether a re-ingest costs any model calls.
+// It is pure: the same text always yields the same chunks. That is what lets a
+// re-ingest of one document give an unchanged passage back its vector.
 func ChunkText(text string) []Chunk {
 	text = strings.ReplaceAll(text, "\r\n", "\n")
 	text = authorNoteLine.ReplaceAllString(text, "")

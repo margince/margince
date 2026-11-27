@@ -47,7 +47,7 @@ func readFrontendUnitTable(t *testing.T) (spellings map[string]string, keys []st
 	if end < 0 {
 		t.Fatalf("%s's UNIT_SPELLINGS literal is unterminated", frontendUnitTable)
 	}
-	table := tsComment.ReplaceAllString(text[start:start+end], " ")
+	table := gatekit.TSWithoutComments(text[start : start+end])
 	spellings = map[string]string{}
 	for _, m := range tsUnitSpelling.FindAllStringSubmatch(table, -1) {
 		spelling := m[1]

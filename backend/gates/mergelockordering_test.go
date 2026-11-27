@@ -125,7 +125,7 @@ func TestTheMergeLockHasOneSpelling(t *testing.T) {
 		if offsetOfCall(fn, site.coordinator) < 0 {
 			t.Errorf("%s must call the shared %s coordinator", site.function, site.coordinator)
 		}
-		for _, literal := range sqlStringsIn(t, tree+"/"+site.file, mustRead(t, tree+"/"+site.file)) {
+		for _, literal := range gatekit.SQLStatementsIn(t, tree+"/"+site.file, string(mustRead(t, tree+"/"+site.file))) {
 			if strings.Contains(literal, "pg_advisory") {
 				t.Errorf("%s spells a second lock protocol", site.file)
 			}

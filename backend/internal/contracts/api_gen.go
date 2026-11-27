@@ -38925,7 +38925,10 @@ type AuditHistoryEntry struct {
 	// never had one. With `on_behalf_of` set and no `on_behalf_of_name`,
 	// the authority was recorded and the member no longer resolves.
 	PassportId *openapi_types.UUID `json:"passport_id,omitempty"`
-	Summary    string              `json:"summary"`
+
+	// Reason Why a project's phase was moved, in the words given with the move, so a walk through the history says why each move was made. Null on every other row, on a move made without a reason, and for a reader whose role does not read the phase.
+	Reason  *string `json:"reason,omitempty"`
+	Summary string  `json:"summary"`
 
 	// UndidAuditLogId The history entry this one REVERSES, set on a row written by a restore and null on every other row. A reader pairs the two rather than showing a reversal as a fresh change. The opposite direction is deliberately NOT a field here: a row that HAS been reversed already says so through `undoable.reason = already_undone`, which is computed for the whole record rather than for one page, so a second field would be a second answer to a question already asked.
 	UndidAuditLogId *openapi_types.UUID `json:"undid_audit_log_id,omitempty"`

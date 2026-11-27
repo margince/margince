@@ -24,8 +24,6 @@ package gates
 // the product says which languages it speaks, and the other two answer to it.
 
 import (
-	"regexp"
-	"slices"
 	"strings"
 	"testing"
 
@@ -33,49 +31,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
-// onboardingLocaleEnums finds the onboarding locale enums in the contract by
-// the varname prefix each declares, rather than by line number or by the
-// enum's own text: a contract edit that moved either would otherwise take this
-// gate's subject with it and leave the assertion passing over nothing.
-var onboardingLocaleEnums = regexp.MustCompile(
-	`enum: \[([^\]]*)\]\n[^\n]*\n?[^\n]*x-enum-varnames: \[(Onboarding(?:Company|Proposal)Locale[^\]]*)\]`)
-
 func TestTheOnboardingConversationSpeaksEveryShippedLanguage(t *testing.T) {
 	t.Parallel()
 
-	contract, err := gatekit.ReadFile("api/crm.yaml")
-	if err != nil {
-		t.Fatalf("reading the contract: %v", err)
-	}
-	found := onboardingLocaleEnums.FindAllStringSubmatch(string(contract), -1)
-	// Two: the message request's and the proposal parameter's. Pinned, because
-	// a regex that stopped matching one of them would leave this gate green
-	// over an enum nobody is checking.
-	const declared = 2
-	if len(found) != declared {
-		t.Fatalf("found %d onboarding locale enum(s) in the contract, want %d — the pattern has gone "+
-			"blind, and an enum this gate cannot see is one it cannot hold", len(found), declared)
-	}
-
-	want := make([]string, 0, len(textlang.Shipped))
-	for _, lang := range textlang.Shipped {
-		want = append(want, string(lang))
-	}
-	for _, match := range found {
-		got := splitEnum(match[1])
-		if !slices.Equal(got, want) {
-			t.Errorf("the contract's %s enum admits %v, and the product ships %v.\n"+
-				"A language in the shipped set that the enum refuses is one the frontend maps away "+
-				"to English rather than 422s on — so the reader is onboarded in the wrong language "+
-				"and nothing reports it. Widen the enum, its x-enum-varnames and the copy table "+
-				"together.", strings.Split(match[2], ",")[0], got, want)
-		}
-	}
-
-	// And the copy the conversation reads. Held here rather than in compose
-	// because it is the same obligation: a language in the shipped set with no
-	// copy behind it falls back to English, which is exactly the failure the
-	// enum half exists to prevent, one layer in.
+	// TestEveryLanguageEnumInTheContractListsTheShippedLanguages holds the
+	// contract's two onboarding enums. This holds the copy the conversation
+	// reads. A shipped language with no copy falls back to English.
 	for _, lang := range textlang.Shipped {
 		if !onboardingCopyDeclares(t, string(lang)) {
 			t.Errorf("the onboarding copy table has no entry for %q, which the product ships.\n"+
@@ -83,17 +44,6 @@ func TestTheOnboardingConversationSpeaksEveryShippedLanguage(t *testing.T) {
 				"not choose — silently. Add the entry in internal/compose/onboardingcopy.go.", lang)
 		}
 	}
-}
-
-// splitEnum reads a YAML flow sequence's members.
-func splitEnum(raw string) []string {
-	out := []string{}
-	for part := range strings.SplitSeq(raw, ",") {
-		if trimmed := strings.TrimSpace(part); trimmed != "" {
-			out = append(out, trimmed)
-		}
-	}
-	return out
 }
 
 // onboardingCopyDeclares reports whether the copy table names this language.

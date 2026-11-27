@@ -198,7 +198,7 @@ func tsSplitterTables(t *testing.T) map[string][]string {
 	}
 	// Stripped first: a comment MENTIONING a sign-off would keep this gate green
 	// after the real entry is deleted.
-	source := tsWithoutComments(string(raw))
+	source := gatekit.TSWithoutComments(string(raw))
 	out := map[string][]string{}
 	for _, match := range tsDeclaration.FindAllStringSubmatchIndex(source, -1) {
 		name := source[match[2]:match[3]]
@@ -274,7 +274,7 @@ func tsSplitterConst(t *testing.T, name string) int {
 	if err != nil {
 		t.Fatalf("reading %s: %v", tsSplitter, err)
 	}
-	source := tsWithoutComments(string(raw))
+	source := gatekit.TSWithoutComments(string(raw))
 	for _, m := range tsNumber.FindAllStringSubmatch(source, -1) {
 		if m[1] == name {
 			parsed, convErr := strconv.Atoi(m[2])

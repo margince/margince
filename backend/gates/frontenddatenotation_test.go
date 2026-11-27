@@ -41,7 +41,7 @@ func TestTheFrontendDatePatternsMatchTheGoOnes(t *testing.T) {
 		t.Fatalf("reading the frontend date patterns: %v", err)
 	}
 	inTS := map[string]datenotation.Pattern{}
-	for _, m := range tsFixedPattern.FindAllStringSubmatch(tsComment.ReplaceAllString(string(source), " "), -1) {
+	for _, m := range tsFixedPattern.FindAllStringSubmatch(gatekit.TSWithoutComments(string(source)), -1) {
 		inTS[m[1]] = datenotation.Pattern{Order: [3]string{m[2], m[3], m[4]}, Separator: m[5]}
 	}
 	inGo := datenotation.FixedPatterns()

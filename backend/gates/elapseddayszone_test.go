@@ -71,6 +71,7 @@ func TestTheZoneGateSeesEachWayToCountInUTC(t *testing.T) {
 		"time.Local":          `_ = elapsed.Days(a, b, time.Local)`,
 		"hand floor":          `_ = a.UTC().Truncate(24 * time.Hour)`,
 		"named hours floor":   `_ = a.UTC().Truncate(hoursPerDay * time.Hour)`,
+		"hours first floor":   `_ = a.UTC().Truncate(time.Hour * 24)`,
 		"day count in UTC":    `_ = occurredday.DaysSince(m, b, time.UTC)`,
 		"day gap in no zone":  `_ = occurredday.DaysBetween(m, n, nil)`,
 		"date in UTC":         `_ = occurredday.DateIn(m, time.UTC)`,
@@ -156,7 +157,7 @@ func zonelessDayCounts(t *testing.T, path string, src []byte) []string {
 			if len(call.Args) == 0 || isUTCZone(call.Args[len(call.Args)-1]) {
 				out = append(out, where+": "+sel.Sel.Name+" needs the zone the sentence is drawn in as its last argument, not nil, time.UTC or time.Local")
 			}
-		case sel.Sel.Name == "Truncate" && len(call.Args) == 1 && isDayDuration(call.Args[0]):
+		case isHandDayFloor(call):
 			out = append(out, where+": Truncate by a day floors to a UTC day; use elapsed.CalendarDay with the reader's zone")
 		}
 		return true
@@ -177,14 +178,38 @@ func isUTCZone(e ast.Expr) bool {
 	return ok && isIdent(sel.X, "time") && (sel.Sel.Name == "UTC" || sel.Sel.Name == "Local")
 }
 
-// isDayDuration matches `24 * time.Hour` and `hoursPerDay * time.Hour`.
+// isHandDayFloor matches t.Truncate by a day, which floors to a UTC day. This
+// gate and TestEveryLocalDayComputationGoesThroughTheRuleOrIsDeclared both ask it.
+func isHandDayFloor(call *ast.CallExpr) bool {
+	sel, ok := call.Fun.(*ast.SelectorExpr)
+	return ok && sel.Sel.Name == "Truncate" && len(call.Args) == 1 && isDayDuration(call.Args[0])
+}
+
+// isDayDuration matches `24 * time.Hour` and `hoursPerDay * time.Hour`, in
+// either order.
 func isDayDuration(e ast.Expr) bool {
 	mul, ok := e.(*ast.BinaryExpr)
 	if !ok || mul.Op != token.MUL {
 		return false
 	}
-	if lit, ok := mul.X.(*ast.BasicLit); ok && lit.Value == "24" {
+	return isDayCount(mul.X) || isDayCount(mul.Y)
+}
+
+func isDayCount(e ast.Expr) bool {
+	if lit, ok := e.(*ast.BasicLit); ok && lit.Value == "24" {
 		return true
 	}
-	return isIdent(mul.X, "hoursPerDay")
+	return isIdent(e, "hoursPerDay")
+}
+
+// holdsAHandDayFloor reports whether a parsed file floors a time to a UTC day.
+func holdsAHandDayFloor(file *ast.File) bool {
+	found := false
+	ast.Inspect(file, func(n ast.Node) bool {
+		if call, ok := n.(*ast.CallExpr); ok && isHandDayFloor(call) {
+			found = true
+		}
+		return !found
+	})
+	return found
 }

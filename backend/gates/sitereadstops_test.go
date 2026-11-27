@@ -52,7 +52,7 @@ func TestTheFrontendCeilingStopsMatchTheGoOnes(t *testing.T) {
 
 	// Stripped first: a comment inside the array MENTIONING a reason would keep
 	// this gate green after the real entry is deleted.
-	literal := tsWithoutComments(string(source)[start : start+end])
+	literal := gatekit.TSWithoutComments(string(source)[start : start+end])
 	inTS := []string{}
 	for _, m := range tsStopReason.FindAllStringSubmatch(literal, -1) {
 		inTS = append(inTS, m[1])

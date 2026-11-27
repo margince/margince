@@ -44,17 +44,13 @@ const frontendIdleBase = "../frontend/src/lib/idlebase.ts"
 // than passing it, which is the direction a parity check must fail in.
 var tsIdleFallback = regexp.MustCompile(`\.\s*([a-z_]+)\s*\?\?\s*[A-Za-z_$]+\s*\.\s*([a-z_]+)`)
 
-// tsComment strips comments before the expression is read, so prose naming a
-// column cannot stand in for the code that reads it.
-var tsIdleComment = regexp.MustCompile(`(?s)//[^\n]*|/\*.*?\*/`)
-
 func TestTheDealBoardMeasuresIdleTheWayTheServerDoes(t *testing.T) {
 	t.Parallel()
 	source, err := gatekit.ReadFile(frontendIdleBase)
 	if err != nil {
 		t.Fatalf("reading the frontend idle-base helper: %v", err)
 	}
-	body := tsIdleComment.ReplaceAllString(string(source), " ")
+	body := gatekit.TSWithoutComments(string(source))
 	match := tsIdleFallback.FindStringSubmatch(body)
 	if match == nil {
 		t.Fatalf("%s no longer spells the fallback as `record.<column> ?? record.<column>` — this gate is "+

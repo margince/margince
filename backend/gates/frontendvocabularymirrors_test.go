@@ -201,7 +201,7 @@ func tsArrayStrings(t *testing.T, path, marker string) []string {
 	if err != nil {
 		t.Fatalf("reading %s: %v", path, err)
 	}
-	text := tsWithoutComments(string(source))
+	text := gatekit.TSWithoutComments(string(source))
 	at := indexAfter(text, marker)
 	if at < 0 {
 		t.Fatalf("%s no longer declares %q as an array literal, so this gate reads a shape that is gone", path, marker)

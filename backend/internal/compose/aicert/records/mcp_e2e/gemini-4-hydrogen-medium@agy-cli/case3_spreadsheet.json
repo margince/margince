@@ -13,8 +13,8 @@
   "search": "semantic",
   "self_judged": false,
   "stamp": {
-    "scenario": "e1c9569edeb78e20",
-    "tools": "3ebb3e959a71d194",
+    "scenario": "5844eabe055d09d2",
+    "tools": "83d093ee63b2fa90",
     "instructions": "d707a123fe53827f",
     "judge": "claude-haiku-5-5",
     "harness": "0fe690d35efcc703",
@@ -22,16 +22,16 @@
       "gemini:cli": "fa1db64bc14e971b",
       "gpt:cli": "d48ca27c983f8b3f"
     },
-    "commit": "aa66c929ba42ef19f95fafeacc2474255696c429",
-    "ran_at": "2026-11-26T04:38:34Z",
-    "graded_commit": "aa66c929ba42ef19f95fafeacc2474255696c429",
-    "graded_at": "2026-11-26T04:38:34Z"
+    "commit": "fa61379763f60caf6ce3095dd03882714d22e306",
+    "ran_at": "2026-11-26T15:27:27Z",
+    "graded_commit": "fa61379763f60caf6ce3095dd03882714d22e306",
+    "graded_at": "2026-11-26T15:27:27Z"
   },
   "usage": {
-    "input_tokens": 46795,
-    "output_tokens": 8374,
+    "input_tokens": 48867,
+    "output_tokens": 8685,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 92460,
+    "cache_read_input_tokens": 113531,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
@@ -52,7 +52,8 @@
       "tools": [
         "describe_import_format",
         "preview_import",
-        "read_import"
+        "read_import",
+        "read_import_report"
       ],
       "refused": []
     }
@@ -60,14 +61,14 @@
   "efficiency": {
     "runs": 2,
     "calls": {
-      "median": 2.5,
-      "min": 2,
+      "median": 3,
+      "min": 3,
       "max": 3
     },
     "turns": {
-      "median": 6,
+      "median": 6.5,
       "min": 6,
-      "max": 6
+      "max": 7
     },
     "refused": {
       "median": 0,
@@ -85,14 +86,14 @@
       "max": 0
     },
     "prompt_tokens": {
-      "median": 69627.5,
-      "min": 64660,
-      "max": 74595
+      "median": 81199,
+      "min": 66495,
+      "max": 95903
     },
     "output_tokens": {
-      "median": 4187,
-      "min": 3712,
-      "max": 4662
+      "median": 4342.5,
+      "min": 3726,
+      "max": 4959
     }
   }
 }

@@ -46,7 +46,9 @@ const (
 	// Raised by 2 production and 2 test files for the How it stands job and the
 	// task explanation's certification case, which reuses the unexported contact
 	// brief fixture.
-	composeRootTestFiles = 1922
+	// Raised by 1 test file for the re-ingest vector reuse cases, which drive the
+	// unexported knowledge ingest worker.
+	composeRootTestFiles = 1923
 	// Raised by 107 for the floor of a figure every reader is shown alike. Raised
 	// by 1 for the import that binds one zone lookup to each attention read.
 	// Raised by 249 production and 62 test lines for the full-path certification
@@ -116,8 +118,10 @@ const (
 	// the How it stands job and its page case, and the task explanation's
 	// certification case and its test. The job needs the unexported job
 	// context; the cases drive the contact page.
+	// Raised by 197 test lines for the re-ingest vector reuse cases, which drive
+	// the unexported knowledge ingest worker and its embedder fixture.
 	composeRootProductionLines = 231_477
-	composeRootTestLines       = 362_217
+	composeRootTestLines       = 362_414
 )
 
 // A read under these floors stopped early or read the wrong place, and would
