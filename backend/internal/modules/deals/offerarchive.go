@@ -46,6 +46,15 @@ func (s *Store) ArchiveOfferAt(ctx context.Context, id ids.OfferID, ifVersion *i
 	}
 	var out crmcontracts.Offer
 	err := s.Tx(ctx, func(tx pgx.Tx) error {
+		if _, err := writableOffer(ctx, tx, id, storekit.IncludeArchived); err != nil {
+			return err
+		}
+		if archived, err := auth.ArchivedAlready(ctx, tx, "offer", id.UUID); err != nil || archived {
+			if err == nil {
+				out, err = readOfferWithLines(ctx, tx, id, storekit.IncludeArchived)
+			}
+			return err
+		}
 		current, _, err := visibleOfferLocked(ctx, tx, id, storekit.LiveOnly)
 		if err != nil {
 			return err

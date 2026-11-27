@@ -44,6 +44,7 @@ var mapping = []struct {
 	{apperrors.ErrNotFound, http.StatusNotFound, "not_found"},
 	{apperrors.ErrInvalidArgument, http.StatusBadRequest, "invalid_argument"},
 	{apperrors.ErrVersionSkew, http.StatusConflict, "version_skew"},
+	{apperrors.ErrArchived, http.StatusConflict, "record_archived"},
 	{apperrors.ErrConflict, http.StatusConflict, "conflict"},
 	{apperrors.ErrPermissionDenied, http.StatusForbidden, "permission_denied"},
 	{apperrors.ErrScopeExceeded, http.StatusForbidden, "scope_exceeds_grantor"},

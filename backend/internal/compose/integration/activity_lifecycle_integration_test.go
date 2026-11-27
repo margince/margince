@@ -77,8 +77,8 @@ func TestActivityUpdateArchiveRelink(t *testing.T) {
 	if status := e.Call(t, "GET", "/v1/activities/"+taskID, nil, nil, &archived); status != http.StatusOK || archived.ArchivedAt == nil {
 		t.Fatalf("archive did not stamp: %d %+v", status, archived)
 	}
-	if status := e.Call(t, "PATCH", "/v1/activities/"+taskID, AnyMap{"subject": "zombie"}, nil, nil); status != http.StatusNotFound {
-		t.Fatalf("mutating an archived activity → %d, want 404", status)
+	if status := e.Call(t, "PATCH", "/v1/activities/"+taskID, AnyMap{"subject": "zombie"}, nil, nil); status != http.StatusConflict {
+		t.Fatalf("mutating an archived activity → %d, want 409", status)
 	}
 }
 

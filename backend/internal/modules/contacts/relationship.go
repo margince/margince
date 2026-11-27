@@ -304,6 +304,12 @@ func (s *Store) updateRelationshipInTx(
 	if err := lockContactForEmployment(ctx, tx, id); err != nil {
 		return relationshipRow{}, err
 	}
+	if _, err := s.visibleRelationship(ctx, tx, id); err != nil {
+		return relationshipRow{}, err
+	}
+	if err := auth.RefuseArchived(ctx, tx, "relationship", id); err != nil {
+		return relationshipRow{}, err
+	}
 	if _, err := storekit.LockRow(ctx, tx, "relationship", id, storekit.LiveOnly); err != nil {
 		return relationshipRow{}, err
 	}

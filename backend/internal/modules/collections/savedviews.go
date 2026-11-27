@@ -301,11 +301,9 @@ func (s *Store) UpdateSavedView(ctx context.Context, id ids.SavedViewID, in Upda
 		if err != nil {
 			return savedViewRow{}, err
 		}
-		// The write below answers not-found for an archived view, so this check
-		// has to come BEFORE the filter is judged: a 422 for a view the caller
-		// is not entitled to see would be an existence oracle for archived ones.
+		// An archived view takes no edit, so its filter is not judged either.
 		if current.ArchivedAt != nil {
-			return savedViewRow{}, apperrors.ErrNotFound
+			return savedViewRow{}, apperrors.ErrArchived
 		}
 		// The stored resource, never a caller-supplied one: a view's resource is
 		// immutable (this input carries no Resource), so the vocabulary a filter
@@ -316,12 +314,11 @@ func (s *Store) UpdateSavedView(ctx context.Context, id ids.SavedViewID, in Upda
 	}
 	var out savedViewRow
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		current, err := scanSavedView(tx.QueryRow(ctx,
-			selectSavedView+"id = $1 AND owner_id = $2 AND archived_at IS NULL", id, owner))
-		if errors.Is(err, pgx.ErrNoRows) {
-			return apperrors.ErrNotFound
-		}
+		current, err := ownedSavedView(ctx, tx, id, owner)
 		if err != nil {
+			return err
+		}
+		if err := auth.RefuseArchived(ctx, tx, "saved_view", id.UUID); err != nil {
 			return err
 		}
 		p := storekit.NewPatch()
@@ -372,7 +369,24 @@ func (s *Store) ArchiveSavedView(ctx context.Context, id ids.SavedViewID) (saved
 	return out, err
 }
 
+// ownedSavedView reads one of the caller's views, archived or live. Another
+// user's view is ErrNotFound.
+func ownedSavedView(ctx context.Context, tx pgx.Tx, id ids.SavedViewID, owner ids.UserID) (savedViewRow, error) {
+	out, err := scanSavedView(tx.QueryRow(ctx, selectSavedView+"id = $1 AND owner_id = $2", id, owner))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return out, apperrors.ErrNotFound
+	}
+	return out, err
+}
+
 func archiveSavedViewTx(ctx context.Context, tx pgx.Tx, id ids.SavedViewID, owner ids.UserID) (savedViewRow, error) {
+	current, err := ownedSavedView(ctx, tx, id, owner)
+	if err != nil {
+		return current, err
+	}
+	if archived, err := auth.ArchivedAlready(ctx, tx, "saved_view", id.UUID); err != nil || archived {
+		return current, err
+	}
 	row := tx.QueryRow(ctx,
 		"UPDATE saved_view SET archived_at = now() WHERE id = @id AND owner_id = @owner AND archived_at IS NULL RETURNING "+savedViewColumns,
 		pgx.StrictNamedArgs{"id": id, "owner": owner})

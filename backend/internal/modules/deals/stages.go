@@ -57,6 +57,9 @@ func (s *Store) UpdatePipeline(ctx context.Context, id ids.PipelineID, in Update
 	}
 	var out crmcontracts.Pipeline
 	err := s.Tx(ctx, func(tx pgx.Tx) error {
+		if err := auth.RefuseArchived(ctx, tx, "pipeline", id.UUID); err != nil {
+			return err
+		}
 		if in.IsDefault != nil && *in.IsDefault {
 			if err := lockPromotion(ctx, tx, id); err != nil {
 				return err
@@ -301,6 +304,9 @@ func (s *Store) UpdateStage(ctx context.Context, id ids.StageID, in UpdateStageI
 	}
 	var out crmcontracts.Stage
 	err := s.Tx(ctx, func(tx pgx.Tx) error {
+		if err := auth.RefuseArchived(ctx, tx, "stage", id.UUID); err != nil {
+			return err
+		}
 		// The pipeline row first, then the stage's own: a reorder and a
 		// removal both reshape this list, and taking the same row first
 		// on both paths is what keeps them queueing rather than

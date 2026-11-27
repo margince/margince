@@ -44,7 +44,8 @@ func RecoverPages[T any](ctx context.Context, transaction func(context.Context, 
 					return errors.New("recovery page did not advance its cursor")
 				}
 				if err := pgx.BeginFunc(ctx, tx, func(savepoint pgx.Tx) error { return resume(principal.WithCorrelationID(ctx, next), savepoint, row) }); err != nil {
-					if errors.Is(err, apperrors.ErrPermissionDenied) || errors.Is(err, apperrors.ErrNotFound) {
+					if errors.Is(err, apperrors.ErrPermissionDenied) || errors.Is(err, apperrors.ErrNotFound) ||
+						errors.Is(err, apperrors.ErrArchived) {
 						// Eligibility can change again: keep this carrier parked, without
 						// turning ordinary access revocation into a failed sweep every minute.
 						slog.DebugContext(ctx, "recovery left an ineligible request parked", "record", next, "reason", err)

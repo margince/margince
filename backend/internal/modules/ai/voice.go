@@ -297,6 +297,9 @@ func validateVoiceProfileUpdate(in UpdateVoiceProfileInput) error {
 }
 
 func (s *VoiceStore) updateVoiceProfile(ctx context.Context, tx pgx.Tx, id ids.UUID, in UpdateVoiceProfileInput) (VoiceProfile, error) {
+	if err := auth.RefuseArchived(ctx, tx, "voice_profile", id); err != nil {
+		return VoiceProfile{}, err
+	}
 	// The row lock makes the state read and the update below one race-free unit.
 	if _, err := storekit.LockRow(ctx, tx, "voice_profile", id, storekit.LiveOnly); err != nil {
 		return VoiceProfile{}, err
@@ -399,6 +402,13 @@ func (s *VoiceStore) ArchiveProfile(ctx context.Context, id ids.UUID, ifVersion 
 	}
 	var archived VoiceProfile
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		if repeat, err := auth.ArchivedAlready(ctx, tx, "voice_profile", id); err != nil || repeat {
+			if err == nil {
+				archived, err = scanVoiceProfile(tx.QueryRow(ctx,
+					storekit.SQLf(`SELECT %s FROM voice_profile WHERE id = $1`, voiceProfileColumns), id))
+			}
+			return err
+		}
 		if _, err := storekit.LockRow(ctx, tx, "voice_profile", id, storekit.LiveOnly); err != nil {
 			return err
 		}

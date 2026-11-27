@@ -201,8 +201,12 @@ func (s *Store) ArchiveProject(ctx context.Context, id ids.ProjectID, ifVersion 
 		if err != nil {
 			return err
 		}
-		if err := auth.EnsureWritable(ctx, tx, projectObject, id.UUID); err != nil {
+		archived, err := auth.ArchivedAlready(ctx, tx, projectObject, id.UUID)
+		if err != nil {
 			return err
+		}
+		if archived {
+			return s.readArchivedProject(ctx, tx, id, active, &out)
 		}
 		// A liveness probe, not a wire read — no custom columns needed.
 		current, err := readProject(ctx, tx, id, storekit.LiveOnly, nil)
@@ -248,14 +252,21 @@ func (s *Store) ArchiveProject(ctx context.Context, id ids.ProjectID, ifVersion 
 		if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventProjectArchived{}); err != nil {
 			return fmt.Errorf("emit project.archived: %w", err)
 		}
-		archivedRow, err := readProject(ctx, tx, id, storekit.IncludeArchived, active)
-		if err != nil {
-			return fmt.Errorf("read archived project: %w", err)
-		}
-		out, err = s.maskProjectForCaller(ctx, tx, archivedRow)
-		return err
+		return s.readArchivedProject(ctx, tx, id, active, &out)
 	})
 	return out, err
+}
+
+// readArchivedProject reads the archived project back as the caller may see it.
+func (s *Store) readArchivedProject(
+	ctx context.Context, tx pgx.Tx, id ids.ProjectID, active []fieldcatalog.Column, out *crmcontracts.Project,
+) error {
+	archivedRow, err := readProject(ctx, tx, id, storekit.IncludeArchived, active)
+	if err != nil {
+		return fmt.Errorf("read archived project: %w", err)
+	}
+	*out, err = s.maskProjectForCaller(ctx, tx, archivedRow)
+	return err
 }
 
 // keyRaceLost answers whether this insert failed because another transaction

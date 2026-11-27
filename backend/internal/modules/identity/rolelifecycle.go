@@ -23,6 +23,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -207,6 +208,9 @@ func applyRoleChange(ctx context.Context, tx pgx.Tx, actor Identity, key string,
 	if err != nil {
 		return roleRow{}, err
 	}
+	if err := auth.RefuseArchived(ctx, tx, roleEntity, roleID); err != nil {
+		return roleRow{}, err
+	}
 	if _, err := storekit.LockRow(ctx, tx, roleEntity, roleID, storekit.LiveOnly); err != nil {
 		return roleRow{}, unknownRoleIfMissing(err)
 	}
@@ -296,7 +300,10 @@ func archiveRoleTx(ctx context.Context, tx pgx.Tx, key string) (roleRow, error) 
 		return roleRow{}, unknownRoleIfMissing(err)
 	}
 	row, err := readRole(ctx, tx, roleID)
-	if err != nil || row.ArchivedAt != nil {
+	if err != nil {
+		return row, err
+	}
+	if archived, err := auth.ArchivedAlready(ctx, tx, roleEntity, roleID); err != nil || archived {
 		return row, err
 	}
 	if row.IsSystem {

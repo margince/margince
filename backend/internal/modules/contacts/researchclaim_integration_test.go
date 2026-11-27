@@ -316,8 +316,8 @@ func TestAnArchivedContactTakesNoResearchClaim(t *testing.T) {
 	if _, err := e.store.SaveResearchClaims(ctx, contactID, []ResearchClaimInput{{
 		Field: "title", Value: "Owner",
 		Quote: "Elke Braun owns the company.", SourceURL: "https://archived.test/about",
-	}}); !errors.Is(err, apperrors.ErrNotFound) {
-		t.Fatalf("SaveResearchClaims on an archived contact = %v, want ErrNotFound", err)
+	}}); !errors.Is(err, apperrors.ErrArchived) {
+		t.Fatalf("SaveResearchClaims on an archived contact = %v, want ErrArchived", err)
 	}
 }
 

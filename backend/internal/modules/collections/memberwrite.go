@@ -226,8 +226,8 @@ func admitShortlistChange(ctx context.Context, tx pgx.Tx, listID ids.ListID, ent
 	if err != nil {
 		return err
 	}
-	if list.ArchivedAt != nil {
-		return ErrListArchived
+	if err := auth.RefuseArchived(ctx, tx, listObject, listID.UUID); err != nil {
+		return err
 	}
 	if list.ListType != listTypeStatic {
 		return &BadInputError{Field: "list", Reason: "a Live List's members follow its filter; only a Shortlist takes members by hand"}

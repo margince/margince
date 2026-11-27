@@ -36,10 +36,6 @@ type UpdateListInput struct {
 	IfVersion    *int64
 }
 
-// ErrListArchived is a change to an archived list, which is read-only until
-// it is restored.
-var ErrListArchived = fmt.Errorf("an archived list is read-only: restore it first: %w", apperrors.ErrConflict)
-
 // UpdateList changes a list's name, purpose, filter, sharing, team or steward,
 // and records the new definition as a revision.
 func (s *Store) UpdateList(ctx context.Context, id ids.ListID, in UpdateListInput) (listRow, error) {
@@ -52,8 +48,8 @@ func (s *Store) UpdateList(ctx context.Context, id ids.ListID, in UpdateListInpu
 		if err != nil {
 			return err
 		}
-		if current.ArchivedAt != nil {
-			return ErrListArchived
+		if err := auth.RefuseArchived(ctx, tx, listObject, id.UUID); err != nil {
+			return err
 		}
 		p := listPatch(current, in)
 		if p.Empty() {
@@ -178,10 +174,12 @@ func (s *Store) setArchived(ctx context.Context, id ids.ListID, archive bool) (l
 		if err != nil {
 			return err
 		}
-		if (current.ArchivedAt != nil) == archive {
-			if archive {
-				return apperrors.ErrNotFound
+		if archive {
+			if archived, err := auth.ArchivedAlready(ctx, tx, listObject, id.UUID); err != nil || archived {
+				out = current
+				return err
 			}
+		} else if current.ArchivedAt == nil {
 			return fmt.Errorf("the list is not archived: %w", apperrors.ErrConflict)
 		}
 		p := storekit.NewPatch()

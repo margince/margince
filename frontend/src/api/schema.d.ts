@@ -10297,7 +10297,7 @@ export interface paths {
          * Change a list's name, purpose, filter, sharing, team or steward.
          * @description Needs list authority: the list's steward, or a seat with the list update grant that reads
          *     every row. `version` must be the one the caller read; a list changed since answers `409`.
-         *     An archived list is read-only (`409`). Every change is recorded as a revision.
+         *     An archived list is read-only (`409 record_archived`). Every change is recorded as a revision.
          */
         patch: operations["updateList"];
         trace?: never;
@@ -13282,7 +13282,7 @@ export interface paths {
          *     signs with the workspace's template (`/email-signature-template`). Its `country`,
          *     `default_language`, bank details and `imprint` are its own.
          *
-         *     An archived entity is refused as 404.
+         *     An archived entity is refused as `409 record_archived`.
          */
         patch: operations["updateLegalEntity"];
         trace?: never;
@@ -20707,7 +20707,8 @@ export interface paths {
          *     Offboarding a colleague never does this. A feed stops only when somebody archives its
          *     member. Publishes `user.deactivated`.
          *
-         *     Answers 404 for an id that is not a live service member, including one already archived.
+         *     Answers 404 for an id that is not a service member. Archiving an archived one changes
+         *     nothing and answers 204 again.
          */
         post: operations["archiveServiceMember"];
         delete?: never;
@@ -26080,7 +26081,8 @@ export interface paths {
          * @description Soft-deletes the attachment: the row is archived and it disappears from
          *     listings and downloads. The object bytes are retained and purged by the
          *     Art. 17 erasure / retention path, matching how every archived record's
-         *     data persists until erasure. Already-archived or invisible → 404.
+         *     data persists until erasure. Archiving an archived attachment changes
+         *     nothing and answers 204 again; an invisible one is 404.
          */
         delete: operations["deleteAttachment"];
         options?: never;
@@ -65580,7 +65582,7 @@ export interface components {
                 "application/problem+json": components["schemas"]["Problem"];
             };
         };
-        /** @description State conflict (duplicate key, concurrent edit, already-decided, default-pipeline collision). */
+        /** @description State conflict (duplicate key, concurrent edit, already-decided, default-pipeline collision, or `record_archived`, a change to an archived record). */
         Conflict: {
             headers: {
                 [name: string]: unknown;
@@ -102441,6 +102443,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };

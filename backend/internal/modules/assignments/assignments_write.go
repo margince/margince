@@ -19,6 +19,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -115,6 +116,9 @@ func (s *Store) UpdateAssignment(ctx context.Context, id ids.UUID, in UpdateAssi
 		if err != nil {
 			return err
 		}
+		if err := auth.RefuseArchived(ctx, tx, assignmentTable, before.ID); err != nil {
+			return err
+		}
 		out, err = updateAssignmentTx(ctx, tx, before, in)
 		return err
 	})
@@ -187,9 +191,9 @@ func (s *Store) ArchiveAssignment(ctx context.Context, id ids.UUID) error {
 }
 
 func archiveAssignmentTx(ctx context.Context, tx pgx.Tx, before assignmentRow, evidence map[string]any) error {
-	// Repeated archives must preserve the moment responsibility ended.
-	if before.ArchivedAt != nil {
-		return apperrors.ErrConflict
+	// A repeat leaves the moment responsibility ended as it was.
+	if archived, err := auth.ArchivedAlready(ctx, tx, assignmentTable, before.ID); err != nil || archived {
+		return err
 	}
 	patch := storekit.NewPatch()
 	patch.Set("archived_at", nil, time.Now())

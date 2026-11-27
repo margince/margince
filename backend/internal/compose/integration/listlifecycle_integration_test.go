@@ -62,11 +62,11 @@ func TestAnArchivedListIsReadOnlyUntilItIsRestored(t *testing.T) {
 		t.Fatalf("archive: %v", err)
 	}
 	name := "Revived"
-	if _, err := store.UpdateList(rep1, list.ID, collections.UpdateListInput{Name: &name, IfVersion: &archived.Version}); !errors.Is(err, collections.ErrListArchived) {
+	if _, err := store.UpdateList(rep1, list.ID, collections.UpdateListInput{Name: &name, IfVersion: &archived.Version}); !errors.Is(err, apperrors.ErrArchived) {
 		t.Fatalf("renaming an archived list answered %v, want it refused as archived", err)
 	}
 	add := collections.MemberChange{EntityType: "contact", EntityID: contact, Reason: collections.ReasonChosen}
-	if _, err := store.AddMember(rep1, list.ID, add); !errors.Is(err, collections.ErrListArchived) {
+	if _, err := store.AddMember(rep1, list.ID, add); !errors.Is(err, apperrors.ErrArchived) {
 		t.Fatalf("adding to an archived list answered %v, want it refused as archived", err)
 	}
 	if _, err := store.RestoreList(rep1, list.ID); err != nil {

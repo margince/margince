@@ -37,7 +37,7 @@ func (s *Store) RetractOwnAddressContactTx(ctx context.Context, tx pgx.Tx, id id
 	if err := auth.Require(ctx, contactEntity, principal.ActionRead); err != nil {
 		return false, leftWhenRefused(err)
 	}
-	if err := lockThenEnsureArchivable(ctx, tx, contactEntity, auth.ContactArchive, id.UUID); err != nil {
+	if archived, err := lockThenEnsureArchivable(ctx, tx, contactEntity, auth.ContactArchive, id.UUID); err != nil || archived {
 		return false, leftWhenRefused(err)
 	}
 	var eligible bool

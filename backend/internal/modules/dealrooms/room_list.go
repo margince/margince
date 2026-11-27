@@ -199,12 +199,9 @@ func (s *Store) ArchiveRoom(ctx context.Context, id ids.DealRoomID, ifVersion *i
 		if err := ensureDealRetractable(ctx, tx, current); err != nil {
 			return err
 		}
-		if current.ArchivedAt != nil {
-			if err := storekit.EnsureIfMatchIn(ctx, tx, roomObject, id.UUID, ifVersion, storekit.IncludeArchived); err != nil {
-				return err
-			}
+		if archived, err := auth.ArchivedAlready(ctx, tx, roomObject, id.UUID); err != nil || archived {
 			out = current
-			return nil
+			return err
 		}
 		if err := archiveRoomTx(ctx, tx, current, ifVersion); err != nil {
 			return err

@@ -645,8 +645,8 @@ func TestAnArchivedDealIsNotHandedOver(t *testing.T) {
 	}
 	next := ids.From[ids.UserKind](e.Rep2)
 	_, err := e.Deals.UpdateDeal(e.Admin(), ids.From[ids.DealKind](deal), deals.UpdateDealInput{OwnerID: &next})
-	if !errors.Is(err, apperrors.ErrNotFound) {
-		t.Fatalf("reassigning an archived deal → %v, want ErrNotFound", err)
+	if !errors.Is(err, apperrors.ErrArchived) {
+		t.Fatalf("reassigning an archived deal → %v, want ErrArchived", err)
 	}
 	wantSeat(t, "the archived deal's card", e.seatOf(t, id), &e.Rep1)
 }

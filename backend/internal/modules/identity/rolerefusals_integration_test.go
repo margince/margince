@@ -67,8 +67,8 @@ func TestTheRoleLifecycleRejectsANameOrScopeItCannotStore(t *testing.T) {
 	}
 }
 
-// A key nobody defines, and a role that is archived, are not roles the editor
-// can change.
+// A key nobody defines is not a role the editor can change, and an archived
+// role is one it must restore first.
 func TestTheRoleLifecycleAnswersUnknownForARoleItCannotEdit(t *testing.T) {
 	e := setupRevocationEnv(t, "role-unknown")
 	ctx := e.wsCtx(e.admin)
@@ -82,16 +82,15 @@ func TestTheRoleLifecycleAnswersUnknownForARoleItCannotEdit(t *testing.T) {
 			_, err := e.svc.UpdateRole(ctx, e.admin, "custom_nobody", RoleChange{Name: &name}, nil)
 			return err
 		}(),
-		"update an archived role": func() error {
-			_, err := e.svc.UpdateRole(ctx, e.admin, archived, RoleChange{Name: &name}, nil)
-			return err
-		}(),
 		"archive an unknown key": func() error { _, err := e.svc.ArchiveRole(ctx, e.admin, "custom_nobody"); return err }(),
 		"restore an unknown key": func() error { _, err := e.svc.RestoreRole(ctx, e.admin, "custom_nobody"); return err }(),
 	} {
 		if !errors.Is(err, errUnknownRole) {
 			t.Errorf("%s: %v, want errUnknownRole", verb, err)
 		}
+	}
+	if _, err := e.svc.UpdateRole(ctx, e.admin, archived, RoleChange{Name: &name}, nil); !errors.Is(err, apperrors.ErrArchived) {
+		t.Errorf("update an archived role: %v, want ErrArchived", err)
 	}
 }
 

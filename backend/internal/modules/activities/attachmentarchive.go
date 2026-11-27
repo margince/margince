@@ -16,6 +16,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -28,8 +29,11 @@ import (
 // scope). Archived/invisible reads as ErrNotFound.
 func (s *Store) ArchiveAttachment(ctx context.Context, id ids.UUID) error {
 	return s.tx(ctx, func(tx pgx.Tx) error {
-		entityType, err := resolveAttachmentParent(ctx, tx, id, principal.ActionUpdate)
+		entityType, err := resolveAttachmentParentIn(ctx, tx, id, principal.ActionUpdate, storekit.IncludeArchived)
 		if err != nil {
+			return err
+		}
+		if archived, err := auth.ArchivedAlready(ctx, tx, "attachment", id); err != nil || archived {
 			return err
 		}
 		// Taken by name, and the liveness re-checked UNDER it, the same prelude

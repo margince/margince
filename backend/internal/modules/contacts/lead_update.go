@@ -12,7 +12,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/platform/database/textbounds"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
@@ -171,6 +170,9 @@ func (s *Store) FillEmptyLeadFieldsTx(ctx context.Context, tx pgx.Tx, id ids.Lea
 	if err := auth.EnsureWritable(ctx, tx, "lead", id.UUID); err != nil {
 		return err
 	}
+	if err := auth.RefuseArchived(ctx, tx, "lead", id.UUID); err != nil {
+		return err
+	}
 	// And the LOCK comes before the decision read, which is the rule for every
 	// internal multi-step flow (storekit.ApplyGuarded's own comment states it).
 	// Deciding which fields are empty from an unlocked read leaves an interval
@@ -190,29 +192,6 @@ func (s *Store) FillEmptyLeadFieldsTx(ctx context.Context, tx pgx.Tx, id ids.Lea
 	_, err = s.lockAndWriteLeadInTx(ctx, tx, id, patch, active.cols)
 	return err
 }
-
-// emptyFieldPatch is the sparse patch: a captured value, cut to its column's
-// limit, for every field the lead lacks, and nothing for the rest.
-//
-// Email is deliberately absent. It is the lead's dedupe key and the reason this
-// collision was detected at all, so the incumbent necessarily has one — a
-// captured address could only ever be a second address, which is an employment
-// question rather than a blank to fill.
-func emptyFieldPatch(current crmcontracts.Lead, in CapturedLeadFields) UpdateLeadInput {
-	var patch UpdateLeadInput
-	if name := textbounds.Fit("public.lead.full_name", strings.TrimSpace(in.FullName)); name != "" && blank(current.FullName) {
-		patch.FullName = &name
-	}
-	if company := textbounds.Fit("public.lead.company_name", in.CompanyName); company != "" && blank(current.CompanyName) {
-		patch.CompanyName = &company
-	}
-	if title := textbounds.Fit("public.lead.title", in.Title); title != "" && blank(current.Title) {
-		patch.Title = &title
-	}
-	return patch
-}
-
-func blank(value *string) bool { return value == nil || *value == "" }
 
 // updateLeadInTx is the lead update on the caller's transaction, then the lead
 // as it now stands.

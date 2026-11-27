@@ -109,18 +109,18 @@ func TestATagWriteOnAnArchivedRecordIsRefused(t *testing.T) {
 	}
 
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
-	if _, err := tags.ApplyTag(rep, tagID, "contact", own); !errors.Is(err, apperrors.ErrNotFound) {
-		t.Errorf("applying a tag to an archived record this seat owns → %v, want ErrNotFound", err)
+	if _, err := tags.ApplyTag(rep, tagID, "contact", own); !errors.Is(err, apperrors.ErrArchived) {
+		t.Errorf("applying a tag to an archived record this seat owns → %v, want ErrArchived", err)
 	}
-	if err := tags.EnsureTaggable(rep, "contact", own); !errors.Is(err, apperrors.ErrNotFound) {
-		t.Errorf("EnsureTaggable on an archived record → %v, want ErrNotFound", err)
+	if err := tags.EnsureTaggable(rep, "contact", own); !errors.Is(err, apperrors.ErrArchived) {
+		t.Errorf("EnsureTaggable on an archived record → %v, want ErrArchived", err)
 	}
 
 	// Removal must refuse the same way, not treat "already gone" as the
 	// idempotent no-tagging-here case: the record is frozen, and that is a
 	// different fact than the tagging never having existed.
-	if _, err := tags.RemoveTag(e.Admin(), tagID, "contact", own); !errors.Is(err, apperrors.ErrNotFound) {
-		t.Errorf("removing from an archived record → %v, want ErrNotFound", err)
+	if _, err := tags.RemoveTag(e.Admin(), tagID, "contact", own); !errors.Is(err, apperrors.ErrArchived) {
+		t.Errorf("removing from an archived record → %v, want ErrArchived", err)
 	}
 }
 

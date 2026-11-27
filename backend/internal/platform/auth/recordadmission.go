@@ -98,6 +98,7 @@ func Admitted(refusal error) (bool, error) {
 		return true, nil
 	case errors.Is(refusal, apperrors.ErrNotFound),
 		errors.Is(refusal, apperrors.ErrPermissionDenied),
+		errors.Is(refusal, apperrors.ErrArchived),
 		errors.Is(refusal, apperrors.ErrSeatTierInsufficient):
 		return false, nil
 	}
@@ -105,8 +106,9 @@ func Admitted(refusal error) (bool, error) {
 }
 
 // AdmitChangers answers EnsureChangeable for each principal. The row halves are
-// EnsureWritableLive's: visible and live, then the write arm, which an
-// unbounded principal or a table no share can name skips.
+// EnsureWritableLive's: visible, then live, then the write arm, which an
+// unbounded principal or a table no share can name skips. An archived row the
+// principal can see is apperrors.ErrArchived, one it cannot see ErrNotFound.
 func AdmitChangers(ctx context.Context, tx pgx.Tx, table string, id ids.UUID, ps []principal.Principal) ([]error, error) {
 	if !ownerScopedTables[table] {
 		return nil, fmt.Errorf("auth: %q is not a row-scoped table", table)
@@ -120,11 +122,12 @@ func AdmitChangers(ctx context.Context, tx pgx.Tx, table string, id ids.UUID, ps
 		if err != nil {
 			return nil, err
 		}
-		live := "archived_at IS NULL"
+		seen := "TRUE"
 		if clause != "" {
-			live += " AND " + clause
+			seen = clause
 		}
-		visible := st.probe(table, live)
+		visible := st.probe(table, seen)
+		live := st.probe(table, "archived_at IS NULL")
 		write := -1
 		if !Unbounded(p) && shareableTables[table] && !admittedCaseMemberFor(ctx, p, table, id) {
 			write = st.probe(table, writeAuthorityPredicate(p, table, st.arg))
@@ -132,6 +135,9 @@ func AdmitChangers(ctx context.Context, tx pgx.Tx, table string, id ids.UUID, ps
 		return func(answers []bool) error {
 			if err := notFoundUnless(answers[visible]); err != nil {
 				return err
+			}
+			if !answers[live] {
+				return apperrors.ErrArchived
 			}
 			if write >= 0 && !answers[write] {
 				return refuseRowChange(pctx, table)

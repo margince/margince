@@ -31,8 +31,8 @@ func (s *Service) editableReport(ctx context.Context, tx pgx.Tx, id ids.UUID, ve
 	if err := s.canEditReport(ctx, tx, report); err != nil {
 		return report, err
 	}
-	if report.ArchivedAt != nil {
-		return report, apperrors.ErrNotFound
+	if err := auth.RefuseArchived(ctx, tx, "report_definition", id); err != nil {
+		return report, err
 	}
 	if report.Version != version {
 		return report, apperrors.ErrVersionSkew

@@ -133,9 +133,16 @@ func (s *Store) ArchiveTag(ctx context.Context, id ids.TagID) (tagRow, error) {
 	}
 	var out tagRow
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		archived, err := auth.ArchivedAlready(ctx, tx, "tag", id.UUID)
+		if err != nil {
+			return err
+		}
+		if archived {
+			out, err = scanTag(tx.QueryRow(ctx, "SELECT "+tagColumns+" FROM tag WHERE id = $1", id))
+			return err
+		}
 		row := tx.QueryRow(ctx,
 			"UPDATE tag SET archived_at = now() WHERE id = $1 AND archived_at IS NULL RETURNING "+tagColumns, id)
-		var err error
 		if out, err = scanTag(row); errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
 		} else if err != nil {
@@ -331,10 +338,10 @@ func applyTagWithRemovalPolicyTx(ctx context.Context, tx pgx.Tx, tagID ids.TagID
 // colleague tagged it, then anonymises it. A tagging that held nothing could
 // commit between that question and the scrub, and be erased with the record.
 func holdTagTarget(ctx context.Context, tx pgx.Tx, entityType string, entityID ids.UUID) error {
-	if err := auth.EnsureLinkTarget(ctx, tx, entityType, entityID); err != nil {
+	if err := auth.EnsureWritableLive(ctx, tx, entityType, entityID); err != nil {
 		return err
 	}
-	return auth.EnsureWritableLive(ctx, tx, entityType, entityID)
+	return auth.EnsureLinkTarget(ctx, tx, entityType, entityID)
 }
 
 // The keys a tag audit row files a tagging under.

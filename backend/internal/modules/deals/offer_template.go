@@ -320,6 +320,9 @@ func (s *Store) UpdateOfferTemplate(ctx context.Context, id ids.OfferTemplateID,
 
 	var out crmcontracts.OfferTemplate
 	err := s.Tx(ctx, func(tx pgx.Tx) error {
+		if err := auth.RefuseArchived(ctx, tx, "offer_template", id.UUID); err != nil {
+			return err
+		}
 		// Locked before the read: the empty-patch answer and a write without
 		// an If-Match both decide from the row as it stands when this lands.
 		if _, err := storekit.LockRow(ctx, tx, "offer_template", id.UUID, storekit.LiveOnly); err != nil {
@@ -384,12 +387,9 @@ func (s *Store) ArchiveOfferTemplateAt(ctx context.Context, id ids.OfferTemplate
 		if err != nil {
 			return err
 		}
-		if current.ArchivedAt != nil {
-			if err := storekit.EnsureIfMatchIn(ctx, tx, "offer_template", id.UUID, ifVersion, storekit.IncludeArchived); err != nil {
-				return err
-			}
+		if archived, err := auth.ArchivedAlready(ctx, tx, "offer_template", id.UUID); err != nil || archived {
 			out = current
-			return nil
+			return err
 		}
 		patch := storekit.NewPatch()
 		patch.Set("archived_at", nil, time.Now().UTC())

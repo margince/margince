@@ -320,6 +320,9 @@ func (s *Store) UpdateSubscription(ctx context.Context, id ids.UUID, in UpdateSu
 	}
 	var out Subscription
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		if err := auth.RefuseArchived(ctx, tx, "webhook_subscription", id); err != nil {
+			return err
+		}
 		// Locked before the reads: kept header values and the If-Match check
 		// both decide from the row as it stands when this write lands.
 		lock, err := storekit.LockRow(ctx, tx, "webhook_subscription", id, storekit.LiveOnly)
@@ -431,10 +434,17 @@ func (s *Store) ArchiveSubscription(ctx context.Context, id ids.UUID) (Subscript
 	}
 	var out Subscription
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		archived, err := auth.ArchivedAlready(ctx, tx, "webhook_subscription", id)
+		if err != nil {
+			return err
+		}
+		if archived {
+			out, err = scanSubscription(tx.QueryRow(ctx, "SELECT "+subscriptionColumns+" FROM webhook_subscription WHERE id = $1", id))
+			return err
+		}
 		row := tx.QueryRow(ctx,
 			"UPDATE webhook_subscription SET archived_at = now() WHERE id = $1 AND archived_at IS NULL RETURNING "+subscriptionColumns,
 			id)
-		var err error
 		if out, err = scanSubscription(row); errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
 		} else if err != nil {

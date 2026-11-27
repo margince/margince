@@ -230,7 +230,9 @@ func scanNoopExits(body *ast.BlockStmt) noopScan {
 }
 
 // noteCall files EnsureIfMatch as a guard, and any other call handed the
-// If-Match as both a guard and the latest write. A helper handed the pointer
+// If-Match as both a guard and the latest write. auth.ArchivedAlready is a guard
+// too: a second archive answers without the If-Match, because a retry carries
+// the version the first archive moved past. A helper handed the pointer
 // is where the compare moved to. The last such call is the write the early
 // answers skip.
 func (s *noopScan) noteCall(call *ast.CallExpr) {
@@ -241,7 +243,7 @@ func (s *noopScan) noteCall(call *ast.CallExpr) {
 	case *ast.Ident:
 		name = fun.Name
 	}
-	if name == "EnsureIfMatch" {
+	if name == "EnsureIfMatch" || name == "ArchivedAlready" {
 		s.guards = append(s.guards, call)
 		return
 	}

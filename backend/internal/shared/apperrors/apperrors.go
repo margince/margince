@@ -87,6 +87,10 @@ var (
 	// path (data-model §3.2).
 	ErrConflict = errors.New("conflict")
 
+	// ErrArchived: a change to an archived record the caller can read (409
+	// record_archived). A record the caller cannot read stays ErrNotFound.
+	ErrArchived = errors.New("this record is archived: restore it before you change it")
+
 	// ErrInvalidArgument: the request contains invalid or malformed input that
 	// the caller must correct (400 invalid_argument).
 	ErrInvalidArgument = errors.New("invalid argument")

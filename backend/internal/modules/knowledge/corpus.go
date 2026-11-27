@@ -184,6 +184,9 @@ func (s *Store) EditCorpus(ctx context.Context, id ids.UUID, in UpdateCorpus) (c
 	}
 	var out crmcontracts.KnowledgeCorpus
 	err := s.tx(ctx, func(tx pgx.Tx) error {
+		if err := auth.RefuseArchived(ctx, tx, "knowledge_corpus", id); err != nil {
+			return err
+		}
 		lock, err := storekit.LockRow(ctx, tx, "knowledge_corpus", id, storekit.LiveOnly)
 		if err != nil {
 			return err
@@ -323,8 +326,8 @@ func (s *Store) ArchiveCorpus(ctx context.Context, id ids.UUID) error {
 		if err != nil {
 			return err
 		}
-		if current.ArchivedAt() != nil {
-			return nil
+		if archived, err := auth.ArchivedAlready(ctx, tx, "knowledge_corpus", id); err != nil || archived {
+			return err
 		}
 		if current.corpus.Shipped {
 			return errArchiveShippedCorpus

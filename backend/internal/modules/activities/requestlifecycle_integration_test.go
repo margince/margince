@@ -219,16 +219,13 @@ func TestArchivingAStaleTaskRefusesRatherThanHidingTheAnswer(t *testing.T) {
 	}
 }
 
-// TestArchivingATaskSomebodyAlreadyArchivedSaysItIsGone.
+// TestArchivingATaskSomebodyAlreadyArchivedChangesNothing.
 //
 // The other half of what the compose-side sweep tolerates. A duplicate it read
-// a moment ago can be archived or erased by anyone before the sweep reaches it,
-// and a second archive answers ErrNotFound rather than skew — the row is no
-// longer one this call can find. That is the outcome the sweep wanted, so it
-// reads the refusal as settled and moves on; without this the pin's answer and
-// the vanished row's answer would be one indistinguishable error and the sweep
-// would have to abort a whole pass on either.
-func TestArchivingATaskSomebodyAlreadyArchivedSaysItIsGone(t *testing.T) {
+// a moment ago can be archived by anyone before the sweep reaches it. A second
+// archive is then a no-op, not skew. That holds even for the version the sweep
+// read before the first archive. It is the outcome the sweep wanted.
+func TestArchivingATaskSomebodyAlreadyArchivedChangesNothing(t *testing.T) {
 	e := setupLoad(t)
 	store := storeKnowing(e)
 	actor, ok := principal.Actor(e.as())
@@ -258,8 +255,11 @@ func TestArchivingATaskSomebodyAlreadyArchivedSaysItIsGone(t *testing.T) {
 	if err != nil {
 		t.Fatalf("re-reading the archived task: %v", err)
 	}
-	if _, err := store.ArchiveActivity(reader, id, (*int64)(archived.Version)); !errors.Is(err, apperrors.ErrNotFound) {
-		t.Fatalf("archiving an already-archived task answered %v, want ErrNotFound — the sweep reads "+
-			"that as the duplicate having been settled without it", err)
+	again, err := store.ArchiveActivity(reader, id, (*int64)(task.Version))
+	if err != nil {
+		t.Fatalf("archiving an already-archived task with the sweep's stale version answered %v, want a no-op", err)
+	}
+	if *again.Version != *archived.Version {
+		t.Errorf("the second archive moved the version %d → %d", *archived.Version, *again.Version)
 	}
 }

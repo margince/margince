@@ -68,6 +68,9 @@ func EnsureWritable(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) e
 // puts something NEW on a record needs the record to still be live and not
 // merely visible.
 //
+// An archived record the caller can see answers apperrors.ErrArchived (409).
+// One the caller cannot see stays ErrNotFound.
+//
 // A path that STAGES a proposal and applies it later needs it most: the archive
 // lands inside that window, and the window is the ordinary case rather than a
 // race. Art. 17 erasure is the sharpest form — erasure stamps archived_at and
@@ -96,7 +99,7 @@ func EnsureWritable(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) e
 // writers owe it is derived in backend/liveprobelock_test.go.
 func EnsureWritableLive(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) error {
 	if err := EnsureVisibleLive(ctx, tx, table, id); err != nil {
-		return err
+		return archivedOrHidden(ctx, tx, table, id, err)
 	}
 	return ensureWriteAuthority(ctx, tx, table, id)
 }

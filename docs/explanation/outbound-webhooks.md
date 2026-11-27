@@ -72,9 +72,9 @@ has the **Handlers→Store** CRUD shape: it owns the write shape in one transact
 
 Updates run under a version check (`If-Match` → `version`) and audit the before and after image. An
 empty `PATCH` is refused at run time (422). The contract states `minProperties: 1`, and the REST
-path enforces it instead of committing a write that changes nothing. Archive marks the row, and does
-not delete it. A subscription that is archived, missing or in another workspace reads as `404` on
-every path, so no one learns it exists. Delivery stops at archive.
+path enforces it instead of committing a write that changes nothing. Archive marks the row and stops
+delivery. A missing one is `404`. An archived one is `404` to a read, `409 record_archived` to an
+update and a no-op to a second archive.
 
 **No agent access.** Every webhook operation carries `x-agent-access: human-only`, so the REST gate
 refuses an agent principal whatever its scope. A human in a session registers a subscription

@@ -229,6 +229,9 @@ func (s *Store) UpdateRoom(ctx context.Context, id ids.DealRoomID, in UpdateRoom
 	}
 	var out crmcontracts.DealRoom
 	err := s.tx(ctx, func(tx pgx.Tx) error {
+		if err := refuseArchivedRoom(ctx, tx, id); err != nil {
+			return err
+		}
 		if _, err := storekit.LockRow(ctx, tx, roomObject, id.UUID, storekit.LiveOnly); err != nil {
 			return err
 		}
@@ -458,6 +461,15 @@ func changedFields(p *storekit.Patch) []string {
 	out := slices.Collect(maps.Keys(p.After()))
 	slices.Sort(out)
 	return out
+}
+
+// refuseArchivedRoom answers ErrArchived for an archived room the caller can
+// read, and ErrNotFound for one the caller cannot.
+func refuseArchivedRoom(ctx context.Context, tx pgx.Tx, id ids.DealRoomID) error {
+	if _, err := readRoom(ctx, tx, id); err != nil {
+		return err
+	}
+	return auth.RefuseArchived(ctx, tx, roomObject, id.UUID)
 }
 
 // ensureDealWritable holds the rule that authority over a room follows

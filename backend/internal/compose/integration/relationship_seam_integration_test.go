@@ -181,8 +181,8 @@ func TestAnEmploymentEdgeLivesItsWholeLifeThroughTheToolSurface(t *testing.T) {
 		t.Errorf("reading the archived edge = %v, want ErrNotFound", err)
 	}
 	if _, err := registry.Invoke(ctx, "update_record", json.RawMessage(fmt.Sprintf(
-		`{"why":"A test asks for this change.","record_type":"relationship","id":%q,"fields":{"started_at":"2026-04-01"}}`, edgeID))); !errors.Is(err, apperrors.ErrNotFound) {
-		t.Errorf("patching the archived edge = %v, want ErrNotFound", err)
+		`{"why":"A test asks for this change.","record_type":"relationship","id":%q,"fields":{"started_at":"2026-04-01"}}`, edgeID))); !errors.Is(err, apperrors.ErrArchived) {
+		t.Errorf("patching the archived edge = %v, want ErrArchived", err)
 	}
 }
 

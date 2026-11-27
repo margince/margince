@@ -382,8 +382,8 @@ func TestAnArchivedCompaniesEvidenceIsReadableButNotCorrectable(t *testing.T) {
 		}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			if err := tc.call(); !errors.Is(err, apperrors.ErrNotFound) {
-				t.Fatalf("got %v, want not found", err)
+			if err := tc.call(); !errors.Is(err, apperrors.ErrArchived) {
+				t.Fatalf("got %v, want ErrArchived", err)
 			}
 		})
 	}

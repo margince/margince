@@ -112,6 +112,9 @@ func (s *Store) UpdateDealTx(ctx context.Context, tx pgx.Tx, id ids.DealID,
 // check. A reassignment that commits between the two would otherwise let the
 // former owner write. Writers lock the deal before any stage or ledger row.
 func lockThenEnsureWritable(ctx context.Context, tx pgx.Tx, id ids.DealID) error {
+	if err := auth.RefuseArchived(ctx, tx, dealTable, id.UUID); err != nil {
+		return err
+	}
 	if _, err := storekit.LockRow(ctx, tx, dealTable, id.UUID, storekit.LiveOnly); err != nil {
 		return err
 	}
@@ -175,6 +178,9 @@ type dealUpdated struct {
 func (s *Store) lockAndWriteDealInTx(ctx context.Context, tx pgx.Tx,
 	id ids.DealID, in UpdateDealInput, active []fieldcatalog.Column,
 ) (dealUpdated, error) {
+	if err := auth.RefuseArchived(ctx, tx, dealTable, id.UUID); err != nil {
+		return dealUpdated{}, err
+	}
 	lock, err := storekit.LockRow(ctx, tx, dealTable, id.UUID, storekit.LiveOnly)
 	if err != nil {
 		return dealUpdated{}, err

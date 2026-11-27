@@ -202,6 +202,9 @@ func (s *Store) UpdateStageExitCriterion(
 		if _, err := lockCriteriaList(ctx, tx, stageID); err != nil {
 			return err
 		}
+		if err := auth.RefuseArchived(ctx, tx, criterionEntity, id.UUID); err != nil {
+			return err
+		}
 		lock, err := storekit.LockRow(ctx, tx, criterionEntity, id.UUID, storekit.LiveOnly)
 		if err != nil {
 			return err
@@ -263,6 +266,9 @@ func (s *Store) ArchiveStageExitCriterion(
 	}
 	return s.Tx(ctx, func(tx pgx.Tx) error {
 		if _, err := lockCriteriaList(ctx, tx, stageID); err != nil {
+			return err
+		}
+		if archived, err := auth.ArchivedAlready(ctx, tx, criterionEntity, id.UUID); err != nil || archived {
 			return err
 		}
 		if _, err := storekit.LockRow(ctx, tx, criterionEntity, id.UUID, storekit.LiveOnly); err != nil {

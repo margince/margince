@@ -344,6 +344,9 @@ func visibleOfferLocked(ctx context.Context, tx pgx.Tx, id ids.OfferID, archived
 	if err := lockOfferDeal(ctx, tx, id); err != nil {
 		return crmcontracts.Offer{}, storekit.RowLock{}, err
 	}
+	if err := refuseArchivedOffer(ctx, tx, id); err != nil {
+		return crmcontracts.Offer{}, storekit.RowLock{}, err
+	}
 	lock, err := storekit.LockRow(ctx, tx, "offer", id.UUID, storekit.LiveOnly)
 	if err != nil {
 		return crmcontracts.Offer{}, storekit.RowLock{}, err
@@ -353,6 +356,15 @@ func visibleOfferLocked(ctx context.Context, tx pgx.Tx, id ids.OfferID, archived
 		return crmcontracts.Offer{}, storekit.RowLock{}, err
 	}
 	return offer, lock, nil
+}
+
+// refuseArchivedOffer answers ErrArchived for an archived offer the caller may
+// write, after the offer's own row gate.
+func refuseArchivedOffer(ctx context.Context, tx pgx.Tx, id ids.OfferID) error {
+	if _, err := writableOffer(ctx, tx, id, storekit.IncludeArchived); err != nil {
+		return err
+	}
+	return auth.RefuseArchived(ctx, tx, "offer", id.UUID)
 }
 
 // ensureDraft gates every offer/line edit: mutable only while draft.
