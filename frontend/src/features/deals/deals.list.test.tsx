@@ -683,6 +683,7 @@ describe("DealsScreen", () => {
       status: "won",
       won_without_contract_reason: "purchase_order",
     });
+    expect(await screen.findByText("Closed as won")).toBeTruthy();
   });
 
   it("a deal with a contract is never asked how it was won", async () => {
