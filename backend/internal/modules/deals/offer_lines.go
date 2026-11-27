@@ -269,6 +269,10 @@ func (s *Store) UpdateOfferLineItem(ctx context.Context, offerID ids.OfferID, li
 		if err := validPatchedIntervalCount(ctx, tx, lineID, in); err != nil {
 			return err
 		}
+		// A line sent back as it stands writes no figure; a move still renumbers.
+		if moved, _ := storekit.ChangedColumns(lineBefore, lineAfter); len(moved) == 0 {
+			sets = nil
+		}
 		moves, err := applyOfferLinePatch(ctx, tx, offerID, lineID, in.Position, sets, args)
 		if err != nil {
 			return err

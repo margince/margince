@@ -60,15 +60,15 @@ var probes = map[string]func(ctx context.Context, rt extension.Runtime) error{
 	},
 	"OAuthDisconnect": func(ctx context.Context, rt extension.Runtime) error { return rt.OAuthDisconnect(ctx, "p") },
 	"Deals": func(ctx context.Context, rt extension.Runtime) error {
-		_, err := rt.Deals().Get(ctx, "d")
+		_, err := rt.Deals().GetAs(ctx, "u", "d")
 		return err
 	},
 	"Authority": func(ctx context.Context, rt extension.Runtime) error {
-		_, err := rt.Authority().CanWrite(ctx, "u", extension.EntityRef{})
+		_, err := rt.Authority().CanWriteAs(ctx, "u", "u", extension.EntityRef{})
 		return err
 	},
 	"Directory": func(ctx context.Context, rt extension.Runtime) error {
-		_, err := rt.Directory().Emails(ctx, nil)
+		_, err := rt.Directory().EmailsAs(ctx, "u", nil)
 		return err
 	},
 	"Activities": func(ctx context.Context, rt extension.Runtime) error {

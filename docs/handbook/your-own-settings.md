@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/settings/account-settings.tsx frontend/src/features/settings/signeddevices.tsx frontend/src/features/settings/notification-settings.tsx frontend/src/features/sign-in/mfasetup.tsx frontend/src/features/booking/booking-setup.tsx frontend/src/features/voice-knowledge/voice-dna.tsx frontend/src/features/capture/connection-settings.tsx frontend/src/features/capture/unrouted-mail.tsx backend/internal/modules/identity/mfa.go backend/internal/modules/activities/scheduling_profile.go frontend/src/features/settings/settingssignaturerow.tsx backend/internal/modules/contacts/emailsignature.go backend/internal/modules/activities/signature.go frontend/src/app/setup-reminder.tsx frontend/src/app/account.tsx backend/internal/modules/identity/avatar.go backend/internal/modules/identity/providerpicture.go backend/internal/modules/identity/federatedidentity.go backend/internal/compose/avatarprovider.go backend/internal/compose/connectors_picture.go frontend/src/lib/shortcuts.ts frontend/src/lib/setup-checklist.ts frontend/src/features/onboarding/onboarding-conversation/voice-scenes.tsx frontend/src/features/onboarding/onboarding-conversation/connect-scene.tsx frontend/src/features/onboarding/onboarding-account.tsx frontend/src/app/onboarding-gate.ts frontend/src/features/onboarding/onboarding-journey.ts -->
+<!-- describes: frontend/src/features/settings/account-settings.tsx frontend/src/features/settings/signeddevices.tsx frontend/src/features/settings/notification-settings.tsx frontend/src/features/sign-in/mfasetup.tsx frontend/src/features/booking/booking-setup.tsx frontend/src/features/voice-knowledge/voice-dna.tsx frontend/src/features/capture/connection-settings.tsx frontend/src/features/capture/unrouted-mail.tsx backend/internal/modules/identity/mfa.go backend/internal/modules/activities/scheduling_profile.go frontend/src/features/settings/settingssignaturerow.tsx backend/internal/modules/contacts/emailsignature.go backend/internal/modules/activities/signature.go frontend/src/app/setup-reminder.tsx frontend/src/app/account.tsx backend/internal/modules/identity/avatar.go backend/internal/modules/identity/providerpicture.go backend/internal/modules/identity/federatedidentity.go backend/internal/compose/avatarprovider.go backend/internal/compose/connectors_picture.go frontend/src/lib/shortcuts.ts frontend/src/lib/setup-checklist.ts frontend/src/features/onboarding/onboarding-conversation/voice-scenes.tsx frontend/src/features/onboarding/onboarding-conversation/connect-scene.tsx frontend/src/features/onboarding/onboarding-account.tsx frontend/src/app/onboarding-gate.ts frontend/src/features/onboarding/onboarding-journey.ts backend/internal/modules/ai/teamrules.go frontend/src/features/ai/ai-tasks.tsx -->
 # Your own settings
 
 Your own settings in Margince are the pages under **You** in Settings: **Account**, **Notifications**, **Meetings**, **Writing voice**, **AI assistants** and **Connections**. Everything here changes your own seat and nobody else's.
@@ -102,9 +102,11 @@ To sign out another device in Margince, open Settings → **Account** and find t
 To turn on two-step sign-in in Margince, open Settings → **Account** and choose **Set up** in the **Two-step sign-in** row.
 1. Open an app on your phone that makes sign-in codes, and scan the picture on the screen.
 2. If you cannot scan it, choose **Copy key** and add the **Secret key** to the app instead.
-3. Type the code the app shows into **Code from the app**, and choose **Turn on**.
+3. Type the code the app shows into **Code from the app**, and your password into **Current password**. Choose **Turn on**.
 4. Keep the backup codes under **Recovery codes** in a place only you can reach. **Copy codes** helps.
 5. Choose **Done**.
+
+Margince asks for your password so that someone else at your computer cannot turn it on for you. If your account has no Margince password, you cannot turn it on. Two-step sign-in in Margince protects only signing in with a password. To protect signing in with Google or Microsoft, turn on MFA in that Google or Microsoft account.
 
 Margince shows the backup codes once, and never again. The row then reads "On · 10 recovery codes left". When two or fewer are left, the row warns you. Turning it on signs you out on all your other computers and phones. Also called: MFA, second sign-in step, sign-in code, code app.
 
@@ -292,6 +294,13 @@ To set up your writing voice in Margince, open Settings → **Writing voice**, a
 When a build finishes, read what it learned at the top of the page. Then choose **Use this version** or **Discard this version**. The page has four tabs: **Your voice**, **Writing samples**, **Your rules** and **Builds**. After the first build, **Rebuild Voice DNA** is on the **Builds** tab. Notes on how you want to sound go in **Preferences** on the **Your rules** tab, then **Save preferences**. Also called: tone, writing style, Voice DNA, sound like me, learn from my email.
 
 The best samples are emails you sent, then proposals and posts, then the written record of calls or meetings. Leave out text others wrote, and AI drafts: Margince learns a different voice from them. A read-only seat sees the page and cannot change it.
+
+### What are team rules?
+Team rules are one text for the whole company that every AI draft follows, yours and your colleagues'. It covers what may be said and which wording to use. Where it disagrees with your own **Preferences**, the team rules win. It never lets a draft state a fact the record does not hold. It also covers drafts that an agent or an automation writes for you.
+
+Emails the AI drafts, rewrites of email text and offer lines all follow it. Notes you rewrite do not, because no one outside the team reads them. The text can be up to 20,000 characters, and every draft carries all of it.
+
+Only an administrator or an operations seat can change the text. Open Settings → **AI models** → **Rules**, edit it, then **Save**. The page shows who saved it last and when. If a colleague saved first, your save is refused until you open the page again. Also called: wording rules, style rules for the team.
 
 **Learn from sent mail** reads only mail sent from your own mailbox, never a colleague's mail or a copy of it. It leaves out mail kept private to its participants, and mail whose subject marks it confidential. From each mail it keeps only what you wrote: quoted replies, forwards and signatures are cut. Each mail becomes one sample, named by its subject and date. A sample you remove stays out when you choose the button again.
 

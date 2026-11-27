@@ -101,10 +101,9 @@ func (w *followUpReconcileWorker) Work(ctx context.Context, _ *river.Job[FollowU
 
 func (w *followUpReconcileWorker) reconcileWorkspace(ctx context.Context, workspace ids.UUID) error {
 	wsCtx := principal.WithWorkspaceID(ctx, workspace)
-	// The overnight agent is the acting principal — its writes and stagings
-	// carry agent:overnight provenance (features/07 §8a), and every read the
-	// reconciler makes is scoped by its own query predicate against the
-	// workspace the binding above put on the context.
-	wsCtx = principal.SystemActing(wsCtx, "agent:overnight")
+	// The overnight pass acts for no one. Its writes and stagings carry
+	// system:overnight, and every read the reconciler makes is scoped by its
+	// own query predicate against the workspace bound above.
+	wsCtx = principal.SystemActing(wsCtx, overnightSweep)
 	return jobs.FaultContext(ctx, w.reconciler.ReconcileWorkspace(wsCtx))
 }

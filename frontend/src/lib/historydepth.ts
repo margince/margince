@@ -18,7 +18,7 @@ let depth: number | undefined;
 // The browser's own index of the entry at `depth`, where it reports one.
 let indexAtDepth: number | undefined;
 let traversing = false;
-let unanswered: ReturnType<typeof setTimeout> | undefined;
+let pending: ReturnType<typeof setTimeout> | undefined;
 
 type Stamp = Readonly<{ depth: number; at: string }>;
 
@@ -193,7 +193,10 @@ export function steppedBackOutOf(here: (hash: string) => boolean): boolean {
  * start a second traversal from the same depth, past the entry it means.
  * False when no traversal started, or the browser has no entry there.
  */
-export function traverseTo(targetDepth: number): boolean {
+export function traverseTo(
+  targetDepth: number,
+  unanswered?: () => void,
+): boolean {
   if (
     depth === undefined ||
     targetDepth < 0 ||
@@ -204,11 +207,24 @@ export function traverseTo(targetDepth: number): boolean {
     return false;
   }
   traversing = true;
-  unanswered = globalThis.setTimeout(settleTraversal, UNANSWERED_MS);
+  pending = globalThis.setTimeout(() => {
+    settleTraversal();
+    unanswered?.();
+  }, UNANSWERED_MS);
   browserEntries()?.addEventListener("navigate", holdForDocumentLoad);
   globalThis.addEventListener("pageshow", settleTraversal);
   globalThis.history.go(targetDepth - depth);
   return true;
+}
+
+/**
+ * Move to the entry at `targetDepth`, or call `instead` when the browser
+ * refuses the step. A press while a step is in flight waits for that step, so
+ * it neither moves twice nor renames the entry the step lands on.
+ */
+export function traverseOr(targetDepth: number, instead: () => void): void {
+  if (traversing) return;
+  if (!traverseTo(targetDepth)) instead();
 }
 
 /** Whether a traversal `traverseTo` started has yet to land or be given up. */
@@ -229,7 +245,7 @@ export function stepBackOutOf(
   if (before === undefined) {
     elsewhere();
   } else {
-    traverseTo(before);
+    traverseOr(before, elsewhere);
   }
 }
 
@@ -254,11 +270,11 @@ function holdForDocumentLoad(event: Event): void {
     destination !== null &&
     Reflect.get(destination, "sameDocument") === false
   ) {
-    globalThis.clearTimeout(unanswered);
+    globalThis.clearTimeout(pending);
   }
 }
 
 function settleTraversal(): void {
-  globalThis.clearTimeout(unanswered);
+  globalThis.clearTimeout(pending);
   traversing = false;
 }

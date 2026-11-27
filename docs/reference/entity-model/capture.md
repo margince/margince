@@ -206,7 +206,7 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 ## capture_connection
 
-35 columns · primary key `(id)` · referenced by 6 foreign keys
+36 columns · primary key `(id)` · referenced by 6 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -225,6 +225,7 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 | `history_baseline_set_at` | `timestamp with time zone` |  |  |
 | `history_baseline_set_by` | `text` |  |  |
 | `history_baseline_tz` | `text` |  |  |
+| `history_narrowing_held` | `boolean` |  |  |
 | `keys_by_provider` | `boolean`, default `false` | yes |  |
 | `legal_entity_id` | `uuid` |  | Points at `legal_entity.id`. |
 | `mail_posture` | `text`, default `'classified'::text` | yes | What this mailbox asks of the mail it brings in. |
@@ -388,13 +389,14 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 ## capture_import
 
-15 columns · primary key `(id)` · referenced by 0 foreign keys
+16 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `activity_id` | `uuid` | yes | Points at `activity.id`. |
 | `bcc_only` | `boolean` |  |  |
+| `burst_id` | `uuid` |  |  |
 | `connection_id` | `uuid` |  | Points at `capture_connection.id`. |
 | `delivered_by` | `text[]`, default `'{}'::text[]` | yes |  |
 | `imported_at` | `timestamp with time zone`, default `now()` | yes |  |
@@ -427,6 +429,7 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 **Indexes**
 
 - `capture_import_activity_user_key`: `unique, btree (activity_id, user_id)`
+- `capture_import_burst_idx`: `btree (user_id, burst_id) WHERE (burst_id IS NOT NULL)`
 - `capture_import_connection_activity_key`: `unique, btree (connection_id, activity_id) WHERE (connection_id IS NOT NULL)`
 - `capture_import_pkey`: `unique, btree (id)`
 - `capture_import_user_idx`: `btree (user_id, activity_id)`
@@ -653,7 +656,7 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `address` | `text` | yes |  |
-| `decision` | `text` | yes | One of `business`, `keep_out`. |
+| `decision` | `text` | yes | One of `business`, `keep_out`, `personal`. |
 | `overruled_kind` | `text` |  |  |
 | `user_id` | `uuid` | yes | Points at `app_user.id`. |
 | `captured_by` | `text` |  | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
@@ -667,7 +670,7 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 **Rules**
 
 - `capture_sender_override_address_is_canonical`: `CHECK ((address = lower(btrim(address))))`
-- `capture_sender_override_decision_check`: `CHECK ((decision = ANY (ARRAY['business', 'keep_out'])))`
+- `capture_sender_override_decision_check`: `CHECK ((decision = ANY (ARRAY['business', 'keep_out', 'personal'])))`
 - `capture_sender_override_user_address_key`: `UNIQUE (user_id, address)`
 
 **Indexes**
@@ -936,11 +939,23 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 ## raw_capture
 
-9 columns · primary key `(id)` · referenced by 2 foreign keys
+21 columns · primary key `(id)` · referenced by 2 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
+| `ask_attempts` | `smallint`, default `0` | yes |  |
+| `ask_batch_id` | `uuid` |  |  |
+| `ask_claimed_at` | `timestamp with time zone` |  |  |
+| `ask_followup_at` | `timestamp with time zone` |  |  |
+| `ask_hint_due_at` | `timestamp with time zone` |  |  |
+| `ask_hinted_at` | `timestamp with time zone` |  |  |
+| `ask_message_ids` | `text[]`, default `'{}'::text[]` | yes |  |
+| `ask_next_at` | `timestamp with time zone` |  |  |
+| `ask_sent_at` | `timestamp with time zone` |  |  |
+| `channel_subjects` | `text[]` |  |  |
+| `held_by` | `uuid` |  |  |
+| `held_connection` | `uuid` |  |  |
 | `parts_slim_outcome` | `text` |  | One of `slimmed`, `no_proved_parts`, `unreadable_spelling`, `unrewritable_original`, `nothing_came_out`, `unencodable_result` and 1 more. |
 | `parts_slimmed_at` | `timestamp with time zone` |  |  |
 | `payload` | `jsonb` | yes |  |
@@ -958,6 +973,8 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 **Indexes**
 
+- `raw_capture_channel_subjects`: `gin (channel_subjects) WHERE (channel_subjects IS NOT NULL)`
+- `raw_capture_held_forward_idx`: `btree (held_by, held_connection) WHERE (held_by IS NOT NULL)`
 - `raw_capture_original_legacy_hints`: `btree (id) WHERE ((payload_object IS NOT NULL) AND ((((payload_object -> 'subjects') ->> 'version') IS DISTINCT FROM '1') OR (jsonb_typeof(((payload_object -> 'subjects') -> 'email_bits')) IS DISTINCT FROM 'array') OR (COALESCE(((payload_object -> 'subjects') ->> 'email_saturated'), 'false') <> 'false')))`
 - `raw_capture_original_subject_hints`: `gin (payload_object jsonb_path_ops) WHERE (payload_object IS NOT NULL)`
 - `raw_capture_payload_object_key`: `btree (((payload_object ->> 'key'))) WHERE (payload_object IS NOT NULL)`

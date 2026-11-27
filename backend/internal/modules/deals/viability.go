@@ -8,6 +8,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/margince/margince/backend/internal/shared/kernel/idlebase"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/viability"
 )
 
@@ -18,6 +19,9 @@ type ViabilityInput struct {
 	// LastCustomerProgressAt is when the customer last wrote to us or met with
 	// us. Our own mail, a field edit or a task never moves it.
 	LastCustomerProgressAt *time.Time
+	// LastCustomerProgressDateOnly says that progress names only a date, so the
+	// silence after it counts from that date.
+	LastCustomerProgressDateOnly bool
 	// LastCustomerRefusalAt is when the customer last wrote to refuse. A refusal
 	// is not progress; it only counts while nothing they sent since moved the deal.
 	LastCustomerRefusalAt *time.Time
@@ -59,12 +63,14 @@ func AssessViability(in ViabilityInput, asOf time.Time, zone *time.Location) Via
 	if !in.MailCovered {
 		return Viability{Outcome: viability.OutcomeUnknown, Reasons: []viability.Reason{viability.ReasonCoverageUnknown}}
 	}
+	// A date-only entry is past once its date has begun in zone. Far east of UTC
+	// its stored noon is then still ahead of asOf.
 	progress := in.LastCustomerProgressAt
-	if progress != nil && progress.After(asOf) {
+	if progress != nil && !occurredday.Begun(occurredday.Moment{At: *progress, DateOnly: in.LastCustomerProgressDateOnly}, asOf, zone) {
 		progress = nil
 	}
-	anchor := idlebase.Since(in.CreatedAt, progress)
-	silentDays := elapsed.Days(anchor, asOf, zone)
+	anchor := occurredday.Moment{At: idlebase.Since(in.CreatedAt, progress), DateOnly: progress != nil && in.LastCustomerProgressDateOnly}
+	silentDays := occurredday.DaysSince(anchor, asOf, zone)
 	silent := silentDays > StalledThresholdDays
 
 	out := Viability{SilentDays: silentDays}

@@ -28,6 +28,7 @@ import {
 } from "../../lib/savedviews.queries";
 import { ManageViewsButton } from "./savedviews.manage";
 import { listStateFrom, viewOpening } from "./savedviews.state";
+import { viewNameRefusal } from "./viewnamerefusal";
 
 // A saved view is the reader's own list state, by name: the search, the sort,
 // the filters, the archived toggle and the page size they were looking at.
@@ -125,6 +126,7 @@ function SaveViewButton({
   const toast = useToast();
   const { create } = useSaveView();
   const [nameTaken, setNameTaken] = useState(false);
+  const refused = viewNameRefusal(create.error, t);
 
   return (
     <NamePrompt
@@ -137,8 +139,8 @@ function SaveViewButton({
       // `problemMessageOf`, not `problemMessage`: what a failed mutation carries
       // is a ProblemError, and handing that to the body reader yields the
       // generic "request failed" instead of the reason the server gave.
-      problem={create.isError ? problemMessageOf(create.error, t) : undefined}
-      nameProblem={nameTaken ? t("views.nameTaken") : null}
+      problem={refused.problem}
+      nameProblem={nameTaken ? t("views.nameTaken") : refused.nameProblem}
       onSave={(name, done) => {
         const taken = viewNameTaken(views, name);
         setNameTaken(taken);

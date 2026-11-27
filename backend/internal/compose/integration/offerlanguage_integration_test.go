@@ -94,6 +94,7 @@ func TestAnOfferTakesItsEntitysLanguageAndProductTextInIt(t *testing.T) {
 
 func TestALanguageWithoutATranslationTakesTheProductsName(t *testing.T) {
 	e := Setup(t)
+	declareLanguage(t, "fr")
 	product := seedRetainer(t, e)
 	pipeline, open, _ := DealFixture(t, e)
 	dealID := e.SeedDeal(t, "Fallback deal", pipeline, open, &e.Rep1)
@@ -197,9 +198,9 @@ func TestAChangedLanguageReachesOnlyTheLinesAddedAfterIt(t *testing.T) {
 	}
 }
 
-// A template locale written with `_`, or one with no ISO 639-1 language,
-// still gives the offer a valid language rather than a refused row.
-func TestATemplateLocaleOfAnyShapeGivesAValidLanguage(t *testing.T) {
+// A template locale with a region gives the offer its language. The locale
+// shape check refuses any other spelling before it is stored.
+func TestATemplateLocaleWithARegionGivesItsLanguage(t *testing.T) {
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	dealID := e.SeedDeal(t, "Locale shape deal", pipeline, open, &e.Rep1)
@@ -209,7 +210,7 @@ func TestATemplateLocaleOfAnyShapeGivesAValidLanguage(t *testing.T) {
 		t.Fatalf("create the template: %v", err)
 	}
 	templateID := ids.From[ids.OfferTemplateKind](ids.UUID(tmpl.Id))
-	for locale, want := range map[string]string{"de_AT": "de", "1x_unknown_99": "de", "en_GB": "en"} {
+	for locale, want := range map[string]string{"de-AT": "de", "en-GB": "en", "vi": "vi"} {
 		e.WsExec(t, `UPDATE offer_template SET locale = $2 WHERE id = $1`, templateID, locale)
 		created := renderOneLineOffer(rep, t, e, dealID, deals.CreateOfferInput{Source: "manual", TemplateID: &templateID})
 		if created.Language == nil || *created.Language != want {
@@ -222,6 +223,7 @@ func TestATemplateLocaleOfAnyShapeGivesAValidLanguage(t *testing.T) {
 // audit row's before-image is the text the write replaced.
 func TestConcurrentTranslationWritesAuditTheTextTheyReplaced(t *testing.T) {
 	e := Setup(t)
+	declareLanguage(t, "fr")
 	product := seedRetainer(t, e)
 	desk := e.As(e.AdminUser, nil, offerLanguagePerms)
 	names := []string{"Forfait A", "Forfait B"}

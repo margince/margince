@@ -90,6 +90,14 @@ function routes(data: Readings): RouteMap {
     ...reportingStoryRoutes(forecastEvaluation),
     "GET /me": meRoute({ report_definition: ["read"] }),
     "GET /forecast": () => jsonResponse(data),
+    "GET /users/names": (_body, url) =>
+      jsonResponse({
+        data: url.searchParams
+          .getAll("id")
+          .map((id) => ({ id, display_name: "Alex Quinn" })),
+      }),
+    "GET /forecast/calls": () =>
+      jsonResponse({ calls: data.current_call ? [data.current_call] : [] }),
     "GET /forecast/assurance": () => new Response(null, { status: 204 }),
     "GET /forecast/assurance/preview": () =>
       jsonResponse({
@@ -256,6 +264,12 @@ function recipient(
     } satisfies components["schemas"]["SharedForecastView"];
     installFetchStub({
       "GET /forecast/shared/fixture": () => jsonResponse(view),
+      "GET /users/names": (_body, url) =>
+        jsonResponse({
+          data: url.searchParams
+            .getAll("id")
+            .map((id) => ({ id, display_name: "Alex Quinn" })),
+        }),
     });
     return (
       <StoryProviders>
@@ -268,6 +282,19 @@ export const LiveRecipient: Story = { render: recipient("live") };
 export const SnapshotRecipient: Story = { render: recipient("snapshot") };
 export const SnapshotRecipientBeforeTheLandingWasKept: Story = {
   render: recipient("snapshot", false),
+};
+
+export const CallHistory: Story = {
+  ...EveryDealPriced,
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByText("Call history"),
+    );
+  },
+};
+export const NoCallHistory: Story = {
+  ...NobodyHasCalled,
+  play: CallHistory.play,
 };
 export const TeamRecipient: Story = {
   render: recipient("live", true, { label: "Sales DACH" }),

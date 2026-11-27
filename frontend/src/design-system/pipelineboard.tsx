@@ -91,6 +91,8 @@ export type BoardDeal = BoardRecord & {
   /** Why the deal has that figure, shown on hover over the ring. */
   probabilityReason?: string;
   idleSince: string;
+  /** `day` when idleSince is a date-only activity, which ages from its date. */
+  idleSincePrecision?: "day" | "instant";
   measuredAt: number;
   /**
    * When the deal is expected to close, as the calendar day the record holds.

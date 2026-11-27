@@ -72,6 +72,8 @@ func TestEveryEntryIsFilledIn(t *testing.T) {
 				"ResetAction": words.ResetAction, "ResetIgnore": words.ResetIgnore,
 				"InviteSubject": words.InviteSubject, "InviteIntro": words.InviteIntro,
 				"InviteAction": words.InviteAction, "InviteIgnore": words.InviteIgnore,
+				"MergeSubject": words.MergeSubject, "MergeIntro": words.MergeIntro,
+				"MergeAction": words.MergeAction, "MergeIgnore": words.MergeIgnore,
 				"WeeklySubject": words.WeeklySubject, "WeeklyHeading": words.WeeklyHeading,
 				"WeeklyOfDue": words.WeeklyOfDue, "WeeklyAndMore": words.WeeklyAndMore,
 			} {

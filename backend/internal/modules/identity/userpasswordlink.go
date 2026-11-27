@@ -9,7 +9,8 @@ package identity
 // would otherwise be created active and permanently unable to sign in.
 //
 // The token is the same one the invite mints — same table, same
-// seven-day TTL, redeemed by the same ResetPassword path. Only its delivery differs: the admin receives it once,
+// `password_reset` purpose, same seven-day TTL, redeemed by the same
+// ResetPassword path. Only its delivery differs: the admin receives it once,
 // over the response body, and hands it to the member out of band.
 //
 // A link can be minted for a member who ALREADY has a password, which makes
@@ -129,8 +130,8 @@ func (s *Service) issueSetPasswordToken(
 			return err
 		}
 		if err := tx.QueryRow(ctx,
-			`INSERT INTO auth_token (user_id, token_hash, expires_at, mail_queued_at)
-			 VALUES ($1, $2, now() + $3::interval, CASE WHEN $4 THEN now() END)
+			`INSERT INTO auth_token (user_id, purpose, token_hash, expires_at, mail_queued_at)
+			 VALUES ($1, 'password_reset', $2, now() + $3::interval, CASE WHEN $4 THEN now() END)
 			 RETURNING expires_at`,
 			userID, tokenHash, inviteTokenTTL.String(), mailed).Scan(&expiresAt); err != nil {
 			return err
@@ -200,7 +201,7 @@ func supersedeSetPasswordTokens(
 	}
 	if _, err := tx.Exec(ctx,
 		`SELECT id FROM auth_token
-		 WHERE user_id = $1 AND used_at IS NULL
+		 WHERE user_id = $1 AND purpose = 'password_reset' AND used_at IS NULL
 		 FOR UPDATE`, userID); err != nil {
 		return 0, err
 	}
@@ -220,7 +221,7 @@ func supersedeSetPasswordTokens(
 	}
 	tag, err := tx.Exec(ctx,
 		`UPDATE auth_token SET used_at = now()
-		 WHERE user_id = $1 AND used_at IS NULL`, userID)
+		 WHERE user_id = $1 AND purpose = 'password_reset' AND used_at IS NULL`, userID)
 	if err != nil {
 		return 0, err
 	}

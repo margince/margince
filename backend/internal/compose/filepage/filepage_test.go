@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 func loadContract(t *testing.T) *openapi3.T {
@@ -39,6 +40,12 @@ func servesAFile(contentTypes map[string]bool) bool {
 	return true
 }
 
+// answersAMachine lists the GETs that answer plain text to a calling server.
+// Nobody opens them as a link in a tab, so no refusal page belongs on them.
+var answersAMachine = gatekit.Waive(map[string]string{
+	httpserver.BaseURL + "/channel-events/whatsapp": "Meta's server calls it to check the webhook subscription and reads the echoed challenge; nobody opens it in a browser",
+})
+
 func TestEveryFileRouteIsOneTheContractServesAsAFile(t *testing.T) {
 	doc := loadContract(t)
 	served := map[string]bool{}
@@ -54,10 +61,11 @@ func TestEveryFileRouteIsOneTheContractServesAsAFile(t *testing.T) {
 		for contentType := range ok.Value.Content {
 			contentTypes[contentType] = true
 		}
-		if servesAFile(contentTypes) {
+		if servesAFile(contentTypes) && !answersAMachine.Waived(t, httpserver.BaseURL+path) {
 			served[httpserver.BaseURL+path] = true
 		}
 	}
+	answersAMachine.AssertAllMatched(t)
 	if len(served) == 0 {
 		t.Fatal("the contract declares no GET that answers a file, so this reads nothing")
 	}

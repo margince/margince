@@ -1,0 +1,35 @@
+name: a_forwarded_customer_request_is_interest_but_our_quoted_offer_is_not
+task: tag_suggest
+site: interest
+source: hand_authored
+sanitized_by: hand_authored/codex
+fixture:
+  tags:
+    - key: ledger_migration
+      name: Ledger migration
+      description: wants to move bookkeeping off spreadsheets
+  items:
+    - kind: email
+      subject: 'Fwd: Bookkeeping request'
+      body: |
+        Please review this customer's request.
+
+        ---------- Forwarded message ---------
+        From: Customer <buyer@example.test>
+        Date: 18 November 2026
+        Subject: Bookkeeping request
+        To: Sales <sales@example.test>
+
+        We want to move our bookkeeping off spreadsheets before the next audit.
+    - kind: email
+      subject: 'Re: Ledger migration offer'
+      body: |
+        Thank you. We are keeping our current system.
+
+        On Tuesday, Sales wrote:
+        > Our ledger migration offer moves bookkeeping off spreadsheets.
+expect:
+  outcome: accepted
+  answer: [[ledger_migration], []]
+  judge: none
+  judge_none_reason: The answer is the exact closed set of tag keys for each item.

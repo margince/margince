@@ -4,6 +4,7 @@
 package connector
 
 import (
+	"context"
 	"strings"
 	"time"
 
@@ -62,6 +63,10 @@ type ChatBinding struct {
 	// it files: PostureClassified or PostureHeld, never shared. A seat answers
 	// first. The pin answers for a source with no seat. Empty holds.
 	PinnedPosture string
+	// Connection is the channel_connection row the message arrived through. It
+	// is what a later send from the same account is resolved by. Zero for the
+	// workspace's own bot, which a workspace has one of.
+	Connection ids.UUID
 }
 
 // The postures a member-owned chat source may pin. A pin may only narrow who
@@ -70,6 +75,19 @@ const (
 	ChatPostureClassified = "classified"
 	ChatPostureHeld       = "held"
 )
+
+// ChatLink is what the capture side reads from the approved row of a business
+// chat account when it files a stored message. It names the account, whose it is
+// and the seat it files through.
+type ChatLink struct {
+	// AccountID is the provider's stable id of the account.
+	AccountID   string
+	Ownership   ChatOwnership
+	OwnerUserID ids.UUID
+	SeatID      ids.UUID
+	// ConnectionID is the account's channel_connection row.
+	ConnectionID ids.UUID
+}
 
 // ChatParty is the contact on the other side of a conversation.
 type ChatParty struct {
@@ -84,6 +102,14 @@ type ChatParty struct {
 	// Domain is Email's lower-cased domain, which the internal-domain gates key on.
 	Domain        string
 	EmailMayMatch bool
+	// Alias is a second identity the provider named for the same human in this message.
+	Alias *ChatAlias
+}
+
+// ChatAlias is one more identity of a ChatParty.
+type ChatAlias struct {
+	AccountScope string
+	UserID       string
 }
 
 // ChatOwnKeys are keys a source persisted itself. They are used as given where
@@ -114,6 +140,12 @@ type ChatMessage struct {
 	Body         string
 	// OccurredAt is when the provider says the message was sent.
 	OccurredAt time.Time
+	// Revision is the provider's edit time when this report already carries an
+	// edited text, as a restated message does. It is zero for an original.
+	Revision time.Time
+	// RevisionSeq is the provider's sequence number of the edit report, as
+	// ChatChange.RevisionSeq states it. Zero for an original.
+	RevisionSeq int64
 	// StoredOriginal names the raw_capture row the adapter already wrote. Raw
 	// carries the bytes when it has not.
 	StoredOriginal ids.UUID
@@ -139,10 +171,60 @@ type ChatMessage struct {
 	// message is linked to it directly and its counterparty is not resolved by
 	// identity. The caller has already checked the member may see it.
 	ChosenSubject *datasource.EntityRef
+	// Forward is set when the sender passed on a message someone else wrote. It
+	// states only what the provider said. Whether the sender is a workspace
+	// member, and so whether the message is filed for the original author, is
+	// decided where the message is filed.
+	Forward *ChatForward
+	// ReplyToID is the provider's id of the message this one answers, in the
+	// network's own spelling. Empty when it answers none.
+	ReplyToID string
+	// SharedContact is the contact card the sender attached, when the message
+	// is one.
+	SharedContact *ChatSharedContact
 	// Parts and PartDrops are the files the message carried and the ones the
 	// source refused, already bounded and typed as the mail parser's are.
 	Parts     []Part
 	PartDrops []PartDrop
+}
+
+// ChatForward is what a provider says about a message that was forwarded into
+// the conversation.
+type ChatForward struct {
+	// Author is the original author when the provider names one by account. It
+	// is nil when the provider hides the author or says only a flag, as a
+	// WhatsApp forward does.
+	Author *ChatParty
+	// OriginalAt is when the author wrote the message, if the provider says. Zero when unknown.
+	OriginalAt time.Time
+}
+
+// ChatSharedContact is a contact card a sender shared into a chat. It names a
+// someone by the accounts the provider knows them under. Each network fills only
+// the field its own identities use.
+type ChatSharedContact struct {
+	DisplayName string
+	// Phones are the numbers on the card, as the provider wrote them.
+	Phones []string
+	// UserID is the provider's account id of the one it names. A card carries it
+	// for a Telegram user or a Zalo customer.
+	UserID string
+}
+
+// ChatMemberFinder is implemented by a Sink that can say which workspace
+// member owns a chat account. It is a separate interface so a sink that cannot
+// tell files every forward as ordinary correspondence.
+type ChatMemberFinder interface {
+	// ChatMember returns the member whose verified account on the provider has
+	// this id, and whether there is one.
+	ChatMember(ctx context.Context, provider, scope, channelUserID string) (ids.UUID, bool, error)
+}
+
+// ChatCodeRedeemer is implemented by a Sink that verifies a member's chat
+// account from a one-time code sent as a message. A code that
+// redeems also destroys the stored original named by original.
+type ChatCodeRedeemer interface {
+	RedeemChatCode(ctx context.Context, provider, scope, channelUserID, text string, original ids.UUID) (bool, error)
 }
 
 // CaptureOnlyThreadScope is the thread scope of a conversation that is read and

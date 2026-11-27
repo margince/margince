@@ -30,8 +30,22 @@ const second: CaptureConnection = {
   account_label: "rep@second.test",
 };
 
-function stubRoster(data: CaptureConnection[]) {
-  stubWithSession({ "GET /connectors": () => Response.json({ data }) }, {});
+type SharedChoice = components["schemas"]["ReplyableSharedMailbox"];
+
+const sales: SharedChoice = {
+  id: "018f3a1b-0000-7000-8000-0000000000d1",
+  provider: "graph",
+  address: "sales@acme.test",
+};
+
+function stubRoster(data: CaptureConnection[], shared: SharedChoice[] = []) {
+  stubWithSession(
+    {
+      "GET /connectors": () => Response.json({ data }),
+      "GET /shared-mailboxes/replyable": () => Response.json({ items: shared }),
+    },
+    {},
+  );
 }
 
 /** Says when the roster the row reads from has answered. */
@@ -71,5 +85,32 @@ describe("the From choice", () => {
     );
     await screen.findByText("roster read");
     expect(screen.queryByTestId("compose-from-mailbox")).toBeNull();
+  });
+
+  it("offers a shared mailbox by its address, marked shared, and sends its id once chosen", async () => {
+    const user = userEvent.setup();
+    stubRoster([work], [sales]);
+    const onChange = vi.fn();
+    renderWithQueryClient(<FromMailboxRow value="" onChange={onChange} />);
+    await user.click(await screen.findByTestId("compose-from-mailbox"));
+    expect(onChange).not.toHaveBeenCalled();
+    await user.click(
+      await screen.findByRole("option", {
+        name: "sales@acme.test · Shared mailbox",
+      }),
+    );
+    expect(onChange).toHaveBeenCalledWith(sales.id);
+  });
+
+  it("keeps the automatic choice first, so a shared mailbox is never preselected", async () => {
+    const user = userEvent.setup();
+    stubRoster([work], [sales]);
+    renderWithQueryClient(<FromMailboxRow value="" onChange={vi.fn()} />);
+    await user.click(await screen.findByTestId("compose-from-mailbox"));
+    const options = await screen.findAllByRole("option");
+    expect(options[0]).toHaveTextContent(
+      "Mailbox the conversation arrived in, or your default",
+    );
+    expect(options).toHaveLength(3);
   });
 });

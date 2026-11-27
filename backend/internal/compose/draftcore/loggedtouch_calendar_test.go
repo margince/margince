@@ -9,6 +9,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 func TestDatedNoteSilenceKeepsItsStatedDay(t *testing.T) {
@@ -22,7 +23,7 @@ func TestDatedNoteSilenceKeepsItsStatedDay(t *testing.T) {
 		OccurredAt:        time.Date(2026, 6, 10, 12, 0, 0, 0, time.UTC),
 		OccurredPrecision: "day",
 	}}
-	state := ClassifyWithLogged(now, zone, time.Time{}, time.Time{}, meetings)
+	state := ClassifyWithLogged(now, zone, occurredday.Moment{}, occurredday.Moment{}, meetings)
 	if state.SilenceDays != 2 {
 		t.Fatalf("silence = %d, want 2 from the stated date", state.SilenceDays)
 	}
@@ -38,7 +39,7 @@ func TestLoggedTouchOrderFollowsTheRecordCalendar(t *testing.T) {
 		{Kind: crmcontracts.ActivityKindMeeting, OccurredAt: time.Date(2026, 6, 10, 12, 0, 0, 0, time.UTC), OccurredPrecision: "day"},
 		{Kind: crmcontracts.ActivityKindMeeting, OccurredAt: time.Date(2026, 6, 10, 11, 0, 0, 0, time.UTC), OccurredPrecision: "instant"},
 	}
-	state := ClassifyWithLogged(now, zone, time.Time{}, time.Time{}, meetings)
+	state := ClassifyWithLogged(now, zone, occurredday.Moment{}, occurredday.Moment{}, meetings)
 	if state.SilenceDays != 1 {
 		t.Fatalf("silence = %d, want 1 from the latest local activity day", state.SilenceDays)
 	}
@@ -70,7 +71,7 @@ func TestAPastMeetingNobodyCalledOffIsPriorContact(t *testing.T) {
 		if got := IsLoggedTouch(meeting, now, time.UTC); got != tc.want {
 			t.Errorf("%s: the meeting is a logged touch = %v, want %v", name, got, tc.want)
 		}
-		state := ClassifyWithLogged(now, time.UTC, time.Time{}, time.Time{}, []crmcontracts.Activity{meeting})
+		state := ClassifyWithLogged(now, time.UTC, occurredday.Moment{}, occurredday.Moment{}, []crmcontracts.Activity{meeting})
 		if met := state.Band != convstate.BandNone; met != tc.want {
 			t.Errorf("%s: the meeting is prior contact = %v (state %+v), want %v", name, met, state, tc.want)
 		}
@@ -85,7 +86,7 @@ func TestANoteIsNoPriorContact(t *testing.T) {
 		Kind:       crmcontracts.ActivityKindNote,
 		OccurredAt: now.Add(-time.Hour), OccurredPrecision: "instant",
 	}}
-	state := ClassifyWithLogged(now, time.UTC, time.Time{}, time.Time{}, notes)
+	state := ClassifyWithLogged(now, time.UTC, occurredday.Moment{}, occurredday.Moment{}, notes)
 	if state.Band != convstate.BandNone {
 		t.Fatalf("band = %v after a note and no exchange, want %v", state.Band, convstate.BandNone)
 	}

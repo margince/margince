@@ -30,6 +30,9 @@ type HardBounce struct {
 	// Recipient is the address that refused it, so a reader knows WHICH of a
 	// contact's addresses is dead. Empty when the send carries none.
 	Recipient string
+	// CanSendAgain is true when the caller may send this message again to a
+	// corrected address: see resendable.
+	CanSendAgain bool
 }
 
 // bounceLane is the lane's three words: the receiving side's own refusal, the
@@ -48,12 +51,26 @@ func (s *Store) HardBouncesFor(ctx context.Context, since time.Time, limit int) 
 	if err != nil {
 		return nil, err
 	}
-	bounced := make([]HardBounce, 0, len(sends))
+	bounced := make([]ids.UUID, 0, len(sends))
 	for _, send := range sends {
-		bounced = append(bounced, HardBounce{
+		bounced = append(bounced, send.ID)
+	}
+	owners, err := s.ownersOf(ctx, bounced)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]HardBounce, 0, len(sends))
+	for _, send := range sends {
+		out = append(out, HardBounce{
 			ID: send.ID, Subject: send.Subject, Reason: send.Reason,
 			BouncedAt: send.At, ContactID: send.ContactID, Recipient: send.Recipient,
+			CanSendAgain: owners[send.ID].CanSendAgain,
 		})
+		// The row names the contact "Send again" edits, which is the one whose
+		// address refused the message.
+		if owner := owners[send.ID].ContactID; !owner.IsZero() {
+			out[len(out)-1].ContactID = owner
+		}
 	}
-	return bounced, nil
+	return out, nil
 }

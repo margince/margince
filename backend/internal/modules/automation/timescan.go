@@ -258,14 +258,15 @@ func buildActivityAnchorEvent(wsID ids.UUID, now time.Time, inst automationInsta
 		return workflow.Event{}, fmt.Errorf("automation: encoding the last-touch anchor: %w", err)
 	}
 	return workflow.Event{
-		ID:           ids.NewV7(),
-		WorkspaceID:  wsID,
-		OccurredAt:   now,
-		Entity:       cand.Ref,
-		AutomationID: inst.id.UUID,
-		OwnerID:      inst.owner,
-		Params:       inst.params,
-		Payload:      payload,
+		ID:             ids.NewV7(),
+		WorkspaceID:    wsID,
+		OccurredAt:     now,
+		Entity:         cand.Ref,
+		AutomationID:   inst.id.UUID,
+		AutomationName: inst.name,
+		OwnerID:        inst.owner,
+		Params:         inst.params,
+		Payload:        payload,
 	}, nil
 }
 
@@ -339,13 +340,14 @@ func buildDateFieldAnchorEvent(wsID ids.UUID, now time.Time, inst automationInst
 		return workflow.Event{}, fmt.Errorf("automation: encoding the renewal-date anchor: %w", err)
 	}
 	return workflow.Event{
-		ID:           ids.NewV7(),
-		WorkspaceID:  wsID,
-		OccurredAt:   now,
-		Entity:       cand.Ref,
-		AutomationID: inst.id.UUID,
-		OwnerID:      inst.owner,
-		Params:       inst.params,
-		Payload:      payload,
+		ID:             ids.NewV7(),
+		WorkspaceID:    wsID,
+		OccurredAt:     now,
+		Entity:         cand.Ref,
+		AutomationID:   inst.id.UUID,
+		AutomationName: inst.name,
+		OwnerID:        inst.owner,
+		Params:         inst.params,
+		Payload:        payload,
 	}, nil
 }

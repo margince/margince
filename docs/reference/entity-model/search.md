@@ -63,7 +63,7 @@ The 4 tables owned by `search`, as the migrations build them. [Back to the entit
 
 ## graph_contact_edge
 
-9 columns · primary key `(contact_a, contact_b)` · referenced by 0 foreign keys
+10 columns · primary key `(contact_a, contact_b)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -73,6 +73,7 @@ The 4 tables owned by `search`, as the migrations build them. [Back to the entit
 | `count_total` | `integer`, default `0` | yes |  |
 | `deferred_run_id` | `uuid` |  | Points at `capture_backfill.id`. |
 | `last_at` | `timestamp with time zone` | yes |  |
+| `last_precision` | `text` |  | One of `day`, `instant`. |
 | `processed_generation` | `bigint`, default `0` | yes |  |
 | `read_snapshot` | `pg_snapshot` |  |  |
 | `requested_generation` | `bigint`, default `0` | yes |  |
@@ -85,6 +86,7 @@ The 4 tables owned by `search`, as the migrations build them. [Back to the entit
 
 **Rules**
 
+- `graph_contact_edge_last_precision_check`: `CHECK ((last_precision = ANY (ARRAY['day', 'instant'])))`
 - `graph_contact_edge_ordered`: `CHECK ((contact_a < contact_b))`
 - `graph_contact_edge_work_generations`: `CHECK (((processed_generation >= 0) AND (requested_generation >= processed_generation)))`
 
@@ -97,7 +99,7 @@ The 4 tables owned by `search`, as the migrations build them. [Back to the entit
 
 ## graph_interaction_edge
 
-17 columns · primary key `(user_id, contact_id)` · referenced by 0 foreign keys
+18 columns · primary key `(user_id, contact_id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -110,6 +112,7 @@ The 4 tables owned by `search`, as the migrations build them. [Back to the entit
 | `last_inbound_at` | `timestamp with time zone` |  |  |
 | `last_met_at` | `timestamp with time zone` |  |  |
 | `last_outbound_at` | `timestamp with time zone` |  |  |
+| `last_precision` | `text` |  | One of `day`, `instant`. |
 | `late_count_90d` | `integer` |  |  |
 | `late_out_count_90d` | `integer` |  |  |
 | `out_count_90d` | `integer`, default `0` | yes |  |
@@ -129,6 +132,7 @@ The 4 tables owned by `search`, as the migrations build them. [Back to the entit
 
 **Rules**
 
+- `graph_interaction_edge_last_precision_check`: `CHECK ((last_precision = ANY (ARRAY['day', 'instant'])))`
 - `graph_interaction_edge_work_generations`: `CHECK (((processed_generation >= 0) AND (requested_generation >= processed_generation)))`
 
 **Indexes**

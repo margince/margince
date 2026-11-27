@@ -20,7 +20,11 @@ import {
 } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCan } from "../../lib/capability";
-import { fieldLabel, type VocabularyField } from "../../lib/filterdata";
+import {
+  fieldLabel,
+  optionWords,
+  type VocabularyField,
+} from "../../lib/filterdata";
 import { valueFor } from "../../lib/labelfor";
 import {
   type FilterOp,
@@ -360,7 +364,10 @@ function scalarText(
   if (day) {
     return formatDateAbbrev(operand, locale, zone);
   }
-  return field?.name === INDUSTRY_FIELD ? industryWords(t, operand) : operand;
+  if (field?.name === INDUSTRY_FIELD) return industryWords(t, operand);
+  return field?.options?.includes(operand)
+    ? optionWords(field.name, operand, t)
+    : operand;
 }
 
 /**

@@ -23,7 +23,7 @@ import (
 
 // chatSeatProviders are the capture_connection providers of chat seats. A chat
 // seat has no mail connector, so the mailbox lists and sweeps leave it out.
-const chatSeatProviders = `('telegram_business', 'zalo_oa')`
+const chatSeatProviders = `('telegram_business', 'zalo_oa', 'whatsapp')`
 
 // mailSeatSQL is a shared mailbox row: a team seat that is not a chat seat.
 // Every /shared-mailboxes read and write selects through it, so a chat seat reads

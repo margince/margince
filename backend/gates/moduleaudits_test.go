@@ -44,6 +44,7 @@ import (
 // module's writes are not recorded at all", so the rationale has to explain
 // where the history actually lives.
 var modulesThatWriteNoHistory = gatekit.Waive(map[string]string{
+	"internal/compose/languages":  "the language table is a vocabulary. Core seeds three rows in its migration, and the boot upserts the languages the composed units declare, so the declarations in the units' source are the history. The boot is not a user's act, and a replay of it is a no-op",
 	"internal/compose/extingress": "a unit's saved place in one source is a cursor with no domain meaning. Each record the unit lands carries its own audit row and event in the capture transaction, and a replay of the batch is a no-op by natural key",
 	"internal/platform/datatask":  "release task progress is operational state; each domain writer records its own audit in the batch transaction. Operator controls and failures write system_log in that same transaction; cursor advancement is not a separate record fact.",
 	// The intent ledger holds no history because it holds no state worth one. A row

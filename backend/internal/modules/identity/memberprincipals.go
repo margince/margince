@@ -46,3 +46,14 @@ func MemberPrincipalsTx(ctx context.Context, tx pgx.Tx, users []ids.UUID) (map[i
 	}
 	return out, nil
 }
+
+// MemberPrincipalTx is MemberPrincipalsTx for one member, and false when the
+// member is not live.
+func MemberPrincipalTx(ctx context.Context, tx pgx.Tx, user ids.UUID) (principal.Principal, bool, error) {
+	members, err := MemberPrincipalsTx(ctx, tx, []ids.UUID{user})
+	if err != nil {
+		return principal.Principal{}, false, err
+	}
+	member, live := members[user]
+	return member, live, nil
+}

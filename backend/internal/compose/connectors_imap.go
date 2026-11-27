@@ -87,6 +87,10 @@ func (h connectorHandlers) ListSharedMailboxes(w http.ResponseWriter, r *http.Re
 	h.sharedMailboxes().List(w, r)
 }
 
+func (h connectorHandlers) ListReplyableSharedMailboxes(w http.ResponseWriter, r *http.Request) {
+	h.sharedMailboxes().ListReplyable(w, r)
+}
+
 func (h connectorHandlers) ConnectSharedMailbox(w http.ResponseWriter, r *http.Request) {
 	h.sharedMailboxes().Connect(w, r)
 }

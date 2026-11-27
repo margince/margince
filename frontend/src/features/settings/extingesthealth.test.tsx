@@ -16,7 +16,8 @@ import { ExtensionIngestHealthCard } from "./extingesthealth";
 
 // One composed unit with a title and its copy, so the lookup runs as composed.
 // A refused unit outside the registry keeps its key alone.
-vi.mock("@composition/extensions", () => ({
+vi.mock("@composition/extensions", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@composition/extensions")>()),
   extensions: [
     {
       name: "openchannel",

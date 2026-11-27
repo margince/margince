@@ -155,7 +155,6 @@ vi.retired	"Loại hoạt động: note, call, meeting hoặc email. Tin nhắn 
 vi.retired	"Một khách hàng tiềm năng đã quá hạn phản hồi"
 vi.retired	"Phần tìm hiểu website của tôi đã dừng mà chưa hoàn tất. Chúng ta có thể cùng điền %d thông tin bắt buộc còn thiếu ngay tại đây; hiện chưa có gì được lưu."
 vi.retired	"Trang thông tin pháp lý của website nêu nhiều pháp nhân. Pháp nhân nào là công ty của bạn?"
-vi.retired	"Trong các deal đã thắng hoặc thua có ngày đóng trong khoảng thời gian bạn chọn, phần deal đã thắng, tính cho người đang phụ trách deal. Ví dụ: tháng 3 có 6 deal thắng và 4 deal thua thì tỷ lệ thắng là 60%."
 vi.retired	"Với mỗi nguồn lead, có bao nhiêu lead đến trong khoảng thời gian bạn chọn và bao nhiêu lead trong số đó đã gắn với một deal tại thời điểm số liệu được đọc. Ví dụ: tháng 5 có 20 lead đến từ website và 5 lead đủ điều kiện thành deal, nên website hiển thị 5 trên 20."
 vi.retired	"Website nêu nhiều địa chỉ đăng ký. Địa chỉ nào là của công ty bạn?"
 vi.retired	"khách hàng tiềm năng"

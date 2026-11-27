@@ -106,6 +106,11 @@ func (s *Store) SetAudience(ctx context.Context, id ids.ActivityID, in SetAudien
 		if err != nil {
 			return err
 		}
+		// A held row still answers 423 below, the refusal every write to it owes.
+		if moved, _ := storekit.ChangedColumns(current, audienceImageOf(in.Audience, reason, members)); len(moved) == 0 && !held {
+			out, err = readActivityAt(ctx, tx, id, storekit.LiveOnly, s.now())
+			return err
+		}
 		// The reason moves with the audience, and becomes `manual`.
 		//
 		// Not NULL, and not the previous reason. Leaving the previous one would
@@ -141,19 +146,7 @@ func (s *Store) SetAudience(ctx context.Context, id ids.ActivityID, in SetAudien
 		if !reachable {
 			return &OrphanedAudienceError{Audience: in.Audience}
 		}
-		stored, err := readAudienceImage(ctx, tx, id)
-		if err != nil {
-			return err
-		}
-		before, after := storekit.ChangedColumns(current, stored)
-		auditID, err := storekit.Audit(ctx, tx, "update", "activity", id.UUID, before, after)
-		if err != nil {
-			return err
-		}
-		audience := crmcontracts.PublicEventActivityChangedFieldsAudience(in.Audience)
-		if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventActivityUpdated{
-			ChangedFields: crmcontracts.PublicEventActivityChangedFields{Audience: &audience},
-		}); err != nil {
+		if err := recordAudienceChange(ctx, tx, id, current, in.Audience); err != nil {
 			return err
 		}
 		if err := followRecordedMeetingTx(ctx, tx, id); err != nil {
@@ -166,6 +159,24 @@ func (s *Store) SetAudience(ctx context.Context, id ids.ActivityID, in SetAudien
 		return out, err
 	}
 	return out, s.attachCustomValues(ctx, &out)
+}
+
+// recordAudienceChange audits the audience the write left against current and
+// emits the activity.updated that pairs with that audit row.
+func recordAudienceChange(ctx context.Context, tx pgx.Tx, id ids.ActivityID, current map[string]any, audience string) error {
+	stored, err := readAudienceImage(ctx, tx, id)
+	if err != nil {
+		return err
+	}
+	before, after := storekit.ChangedColumns(current, stored)
+	auditID, err := storekit.Audit(ctx, tx, "update", "activity", id.UUID, before, after)
+	if err != nil {
+		return err
+	}
+	changed := crmcontracts.PublicEventActivityChangedFieldsAudience(audience)
+	return storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventActivityUpdated{
+		ChangedFields: crmcontracts.PublicEventActivityChangedFields{Audience: &changed},
+	})
 }
 
 // readAudienceImage renders one side of the audience audit diff: the column on
@@ -204,12 +215,28 @@ func readAudienceImage(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (map[s
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
-	slices.Sort(members)
 	why := ""
 	if reason != nil {
 		why = *reason
 	}
-	return map[string]any{auditFieldAudience: audience, auditFieldAudienceReason: why, "members": members}, nil
+	return audienceImage(audience, why, members), nil
+}
+
+// audienceImageOf is the image a write of these values would leave, so a
+// save of the stored audience compares equal to readAudienceImage.
+func audienceImageOf(audience, reason string, members []AudienceMember) map[string]any {
+	words := make([]string, 0, len(members))
+	for _, m := range members {
+		if word := m.SubjectType + ":" + m.SubjectID.String(); !slices.Contains(words, word) {
+			words = append(words, word)
+		}
+	}
+	return audienceImage(audience, reason, words)
+}
+
+func audienceImage(audience, reason string, members []string) map[string]any {
+	slices.Sort(members)
+	return map[string]any{auditFieldAudience: audience, auditFieldAudienceReason: reason, "members": members}
 }
 
 // audienceMembersFor validates the member set: read only for `selected`,
@@ -377,21 +404,16 @@ func (e *InvalidAudienceError) FieldFault() (field, code, message string) {
 	return "audience", "invalid_audience", e.Error()
 }
 
-// activityWasImported answers whether a mailbox brought this message in.
+// activityWasImported answers whether any seat has an import row for the
+// message. That is what makes its audience derived: a row with none was
+// hand-logged, and its audience is what somebody set.
 //
-// The test is whether any seat has an import row: that is what makes the
-// audience derived rather than declared. A row with none was hand-logged, and
-// its audience is exactly what somebody set.
-//
-// One definition, because two callers act on it and they must not disagree:
-// refuseCapturedAudienceWrite turns it into the write's refusal, and
-// readEmailAccess turns it into the change_mode the viewer offers. A read that
-// asked the question its own way would offer a control the write then refuses,
-// and the difference would show up as a dialog that does nothing.
+// importRowExistsSQL is shared with the list row's mailbox_imported, so a
+// control is never offered that this write then refuses.
 func activityWasImported(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (bool, error) {
 	var imported bool
 	if err := tx.QueryRow(ctx, `
-		SELECT EXISTS (SELECT 1 FROM capture_import WHERE activity_id = $1)`,
+		SELECT `+importRowExistsSQL("$1"),
 		id.UUID).Scan(&imported); err != nil {
 		return false, fmt.Errorf("activities: reading whether a message was imported: %w", err)
 	}

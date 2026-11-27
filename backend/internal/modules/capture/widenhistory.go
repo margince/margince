@@ -31,8 +31,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// widenBatch matches narrowBatch, and carries the same caveat: it bounds the
-// statement, not the transaction.
+// widenBatch bounds the statement, not the transaction: every pass runs inside
+// the caller's one transaction.
 const widenBatch = 500
 
 // CounterpartyHoldClearer removes the row-level counterparty hold from the

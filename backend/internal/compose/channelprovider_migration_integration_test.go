@@ -53,7 +53,7 @@ func TestActivityKindAndChannelProviderAreSeededByMigration(t *testing.T) {
 	}
 	// Core transports remain seed obligations; the registry also admits later
 	// migrations and unit-owned transports. Core display names must resolve too.
-	required := map[string]bool{"dispact/core": true, "telegram/core": true, "whatsapp/core": true}
+	required := map[string]bool{"dispact/core": true, "telegram/core": true, "whatsapp/core": true, "zalo_oa/core": true}
 	for provider := range coreProviderLabels {
 		required[provider+"/core"] = true
 	}

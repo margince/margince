@@ -7,8 +7,10 @@ import type { MessageKey } from "./en";
 export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.proposal_stage":
     "Fragen, ob ein gesendetes Angebot den Deal verschiebt",
+  "systemJob.google_directory": "Google-Gruppen eines Mitglieds lesen",
   "systemJob.legal_review_desk": "Rechtsprüfung",
   "systemJob.import_identity_links": "Importierte E-Mail verknüpfen",
+  "systemJob.history_narrowing": "Einschränkung früherer E-Mails",
   "systemJob.promise_kept":
     "Eine Zusage schließen, die ein Termin als erfüllt zeigt",
   "systemJob.transcript_audience":
@@ -97,8 +99,32 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Offene Wochenpläne dieses Mitglieds abschließen.",
   "users.retirement.analytics_shares":
     "Aktive geteilte Analytics-Ansichten für dieses Mitglied widerrufen.",
-  "users.retirement.source_used":
-    "Nur ungenutzte importierte oder eingeladene Konten können zusammengeführt werden. Bei eingerichteten Konten Arbeit übergeben und das Mitglied deaktivieren.",
+  "users.retirement.confirmation_missing":
+    "Wer hinter einem Konto steht, das sich noch anmelden kann, muss diese Zusammenführung bestätigen. Fordere unten die Bestätigung an; ein deaktiviertes Konto braucht keine.",
+  "users.retirement.sign_in_dropped":
+    "Passwort, verknüpfte Anmeldeanbieter und zweiter Faktor des zusammengeführten Kontos werden nicht übernommen. Wer das Konto nutzt, meldet sich mit dem Konto an, das bleibt.",
+  "users.merge.confirmTitle": "Bestätigung durch die Kontoinhaber",
+  "users.merge.state.confirmed": "Bestätigt",
+  "users.merge.state.requested": "Link gesendet, Antwort offen",
+  "users.merge.state.not_requested": "Noch nicht angefragt",
+  "users.merge.state.not_needed": "Nicht nötig",
+  "users.merge.ask": "Bestätigung anfordern",
+  "users.merge.askAgain": "Links erneut senden",
+  "users.merge.asked": "Bestätigungslinks gesendet.",
+  "users.mergeConfirm.title": "Zusammenführung deiner Konten bestätigen",
+  "users.mergeConfirm.body":
+    "Ein Admin möchte zwei Konten zusammenführen, die dir gehören. Private E-Mails und Aktivitäten des Kontos, das entfällt, wandern in das Konto, das bleibt. Das meldet dich nicht an.",
+  "users.mergeConfirm.action": "Zusammenführung bestätigen",
+  "users.mergeConfirm.done":
+    "Bestätigt. Der Admin kann die Zusammenführung jetzt abschließen. Du kannst diese Seite schließen.",
+  "users.mergeConfirm.dead":
+    "Dieser Link gilt nicht mehr. Er ist vielleicht abgelaufen, schon benutzt oder ersetzt worden. Wende dich an den Admin, damit er einen neuen sendet.",
+  "users.mergeConfirm.failed":
+    "Die Bestätigung ist nicht durchgegangen. Versuche es gleich noch einmal.",
+  "users.retirement.suspended_side":
+    "Ein gesperrtes Konto kann nicht bestätigen. Aktiviere oder deaktiviere es zuerst.",
+  "users.mergeNeedsConfirmation":
+    "Das Zusammenführen eines benutzten Kontos wartet auf die Nutzenden: Jedes Konto, das sich noch anmelden kann, erhält einen Link zur Bestätigung.",
   "users.retirement.self_survivor":
     "Ein anderes Mitglied als sich selbst als Ziel wählen.",
   "users.retirement.deactivate_first":
@@ -163,6 +189,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "users.editCancel": "Abbrechen",
   "users.editSave": "Mitglied speichern",
   "users.merge": "Duplikat zusammenführen",
+  "users.mergeRefused.sole_admin":
+    "Das ist die einzige Administration, deshalb lässt sich das Konto nicht zusammenführen.",
+  "users.mergeRefused.self":
+    "Das ist dein eigenes Konto, deshalb lässt es sich nicht zusammenführen.",
+  "users.mergeRefused.agent_seat":
+    "Agentenplätze lassen sich nicht zusammenführen.",
+  "users.mergeRefused.other":
+    "Dieses Konto lässt sich im Moment nicht zusammenführen.",
   "users.remove": "Mitglied entfernen",
   "users.mergeTitle": "{name} mit einem anderen Konto zusammenführen?",
   "users.removeTitle": "{name} entfernen?",
@@ -2277,6 +2311,19 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.public_record_preview": "Öffentliche Datensatzvorschau",
   "systemJob.agent_resume": "Fortsetzung von Agentenläufen",
   "systemJob.agent_scheduler": "Geplante Agentenläufe",
+  "systemJob.voice_build": "Ablauf der Schreibstil-Analyse",
+  "systemJob.document_read": "Ablauf des Dokument-Auslesens",
+  "systemJob.extraction_accept": "Notiz zur übernommenen Extraktion",
+  "systemJob.deep_read": "Website-Analyse",
+  "systemJob.transcript_read": "Lesen des Gesprächsprotokolls",
+  "systemJob.company_name_promotion": "Aktualisierung des Firmennamens",
+  "systemJob.contact_share": "Anfrage zum Teilen eines Kontakts",
+  "systemJob.task_due_date": "Frage zum Fälligkeitsdatum",
+  "systemJob.employer_change": "Frage zum Arbeitgeberwechsel",
+  "systemJob.deal_scout": "Deal Scout",
+  "systemJob.overnight": "Nächtlicher Durchlauf",
+  "systemJob.project_health": "Projektzustand-Prüfung",
+  "systemJob.tag_scout": "Tag-Vorschläge",
   "systemJob.forecast_chances": "Prognose-Phasenquoten",
   "systemJob.assurance_freshness": "Aktualität der Prognoseprüfung",
   "systemJob.forecast_call_baseline": "Ausgangsstand einer Prognoseabgabe",
@@ -2311,6 +2358,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.capture_purge_receipt":
     "Fehlende Löschbelege für E-Mails nachtragen",
   "systemJob.capture_part_slim_worker": "Bereinigung des E-Mail-Speichers",
+  "systemJob.chat_clarification": "Frage zu weitergeleiteten Nachrichten",
   "systemJob.capture_trace_sweep": "Bereinigung der E-Mail-Spuren",
   "systemJob.capture_which_deal": "Deal-Frage aus E-Mail",
   "systemJob.close_date": "Prüfung der Abschlussdaten",
@@ -2409,7 +2457,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.technical_lookup": "Technische Abfrage für Unternehmen",
   "systemJob.vatcheck": "Prüfung der Umsatzsteuer-ID",
   "systemJob.weekly_review": "Wochenrückblick",
-  "agentJob.agent_task_retention": "Bereinigung von Agentenaufgaben",
+  "systemJob.agent_task_retention": "Bereinigung von Agentenaufgaben",
   "agentJob.attachment_extractor": "Anhangsanalyse",
   "agentJob.auto_apply": "Automatische Freigabe",
   "agentJob.margince": "Margince",
@@ -2426,7 +2474,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "agentJob.deepread": "Website-Analyse",
   "agentJob.document_extractor": "Dokumentanalyse",
   "agentJob.enrich": "Signaturerkennung",
-  "agentJob.idempotency_retention": "Bereinigung von Anfrageprotokollen",
+  "systemJob.idempotency_retention": "Bereinigung von Anfrageprotokollen",
   "agentJob.knowledge_ingest": "Wissensimport",
   "agentJob.lifecycle_change": "Aktualisierung des Lebenszyklus",
   "agentJob.offer_drafting": "Angebotsentwurf",
@@ -2821,6 +2869,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "autonomy.confirm": "Zuerst bestätigen",
 
   "nav.brief": "Home",
+  "nav.worklist": "Worklist",
   "nav.contacts": "Kontakte",
   "nav.companies": "Unternehmen",
   "nav.leads": "Leads",
@@ -2923,8 +2972,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "locale.name.vi": "Tiếng Việt",
   "locale.switchLabel": "Sprache",
 
-  "screen.pending": "Diese Ansicht ist noch nicht verfügbar.",
-
   "ext.panels.label": "Erweiterungen",
   "ext.notFound":
     "In dieser Installation ist keine Erweiterung namens „{name}“ aktiviert.",
@@ -2940,6 +2987,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "search.group.contact": "Kontakte",
   "search.group.company": "Unternehmen",
   "search.group.deal": "Deals",
+  "search.group.dealRoom": "Deal Rooms",
   "search.group.project": "Projekte",
   "search.group.product": "Produkte",
   "search.group.offerTemplate": "Angebotsvorlagen",
@@ -2951,6 +2999,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "search.kind.contact": "Kontakt",
   "search.kind.company": "Unternehmen",
   "search.kind.deal": "Deal",
+  "search.kind.dealRoom": "Deal Room",
   "search.kind.project": "Projekt",
   "search.kind.product": "Produkt",
   "search.kind.offerTemplate": "Angebotsvorlage",
@@ -3144,6 +3193,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "record.notShown": "Nicht angezeigt",
   "reading.restricted": "Eingeschränkt",
   "format.notForecast": "Nicht prognostiziert",
+  "format.tooLargeExact": "Zu groß für eine exakte Anzeige",
+  "format.someTooLargeExact":
+    "Einige Summen sind zu groß für eine exakte Anzeige und werden deshalb weggelassen.",
   "record.chronologyLoading": "Änderungsverlauf wird geladen…",
   "record.timeline": "Verlauf",
   "record.edit": "Bearbeiten",
@@ -3321,6 +3373,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Summe kann nicht berechnet werden, da ein Wechselkurs fehlt.",
   "rollup.computedAt": "Berechnet am {when}",
   "rollup.wonIn": "Gewonnen in {period}",
+  "rollup.quarterOf": "Q{quarter} {year}",
   "rollup.periodNote":
     "Gewonnene Deals zählen in {period} nach dem Tag, an dem sie gewonnen wurden. Der gewichtete Deal-Wert zeigt die offenen Deals von heute.",
   "rollup.period.label": "Zeitraum für gewonnene Deals",
@@ -3410,6 +3463,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "partner.kind.referral": "Empfehlung",
   "partner.kinds": "Partnerarten",
   "partner.kindsAll": "Alle Arten",
+  "partner.endProgram": "Partnerprogramm beenden",
+  "partner.endProgramHelp":
+    "Das Unternehmen, die vereinbarten Konditionen und der Provisionsverlauf bleiben erhalten. Der Beziehungstyp Partner wird entfernt.",
+  "partner.stageNeedsActivation":
+    "Aktiviere den Partner, bevor du eine aktive Phase wählst.",
   "partner.stageAll": "Alle Phasen",
   "partner.stageMeaning": "Bedeutung der Phase",
   "partner.stageMeaningAll": "Alle Bedeutungen",
@@ -3538,6 +3596,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "common.errorReference": "Referenz",
   "common.assistantUnavailable":
     "Die KI hat nicht geantwortet. Bitte versuche es noch mal, oder frage deinen Admin nach Einstellungen → KI.",
+  "common.teamRulesUnavailable":
+    "Die Teamregeln konnten nicht gelesen werden, deshalb wurde kein Entwurf geschrieben. Bitte versuche es gleich noch mal.",
   "common.providerOutOfCredit":
     "Beim KI-Anbieter ist kein Guthaben mehr vorhanden. Bitte wende dich an die Systemadministration.",
   "common.providerUnauthorized":
@@ -3646,6 +3706,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "state.staleAsOf": "Zuletzt bekannte Werte, Stand {when}",
   "state.partial": "Ein Teil der Liste wird angezeigt",
   "state.partialCount": "Weitere nicht angezeigt: {count}",
+  "state.hidden_one": "{count} weiterer, den du nicht sehen kannst.",
+  "state.hidden_other": "{count} weitere, die du nicht sehen kannst.",
+  "state.hiddenAsk_one":
+    "{count} weiterer, den du nicht sehen kannst. Frage {names}.",
+  "state.hiddenAsk_other":
+    "{count} weitere, die du nicht sehen kannst. Frage {names}.",
   "filePreview.download": "Herunterladen",
   "filePreview.print": "Drucken",
   "filePreview.loading": "Datei wird geladen…",
@@ -4112,6 +4178,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "timeline.filters.search": "Diesen Verlauf durchsuchen",
   "timeline.filters.from": "Von",
   "timeline.filters.to": "Bis",
+  "timeline.filters.pickFrom": "Startdatum wählen",
+  "timeline.filters.pickTo": "Enddatum wählen",
   "timeline.filters.searchOmitsLimited":
     "Die Suche schließt Threads aus, deren Inhalt du nicht öffnen kannst.",
   "tab.contacts": "Kontakte",
@@ -4856,6 +4924,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.evidence.verifiedAt": "Von einer Person bestätigt am {when}",
   "co.evidence.confidence": "Konfidenz des Modells {percent} %",
   "co.evidence.gaps": "Nicht erfasst: {fields}.",
+  "co.evidence.field.source_url": "Quelle",
+  "co.evidence.field.excerpt": "Auszug",
+  "co.evidence.field.actor": "Erfasst von",
+  "co.evidence.field.connector": "Verbindung",
+  "co.evidence.field.import": "Import",
+  "co.evidence.field.produced_by": "Erstellt von",
   "co.evidence.kind.site_read": "Aus der Analyse der Unternehmenswebsite",
   "co.evidence.kind.connector": "Aus einem verbundenen System",
   "co.evidence.kind.human": "Von einer Person eingegeben",
@@ -4990,6 +5064,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.linkedin.useAsTitle": "Als Jobtitel übernehmen",
   "approval.linkedin.useAsEmployer": "{company} als Arbeitgeber übernehmen",
   "approval.linkedin.employerNow": "Arbeitet jetzt bei {company}",
+  "approval.vcard.mergeInto":
+    "In {contact} zusammenführen, statt einen neuen Kontakt zu erstellen",
   "approval.responsibility.requestedFrom": "Entscheidung angefragt bei",
   "approval.commitment.promiser": "Zugesagt von",
   "approval.commitment.effect": "Bei Freigabe",
@@ -5180,6 +5256,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.threadShare": "Mit dem Unternehmen teilen",
   "compose.threadMakePrivate": "Auf privat setzen",
   "compose.threadScope": "Gilt für den gesamten Thread.",
+  "compose.threadAudience": "Sichtbarkeit",
+  "compose.threadAudienceTitle": "Wer darf dieses Gespräch lesen?",
+  "compose.threadAudienceLegend": "Sichtbarkeit des Gesprächs",
+  "compose.threadAudienceNote":
+    "Das ändert, wer das ganze Gespräch lesen darf, nicht nur eine Nachricht.",
   "compose.threadStillHeld_one":
     "{count} weiteres Nutzerkonto hat diesen Thread nicht geteilt",
   "compose.threadStillHeld_other":
@@ -7770,6 +7851,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "vcardImport.field.kept": "Wert im Datensatz behalten",
   "vcardImport.field.notInCard": "Nicht auf der Karte",
   "vcardImport.next": "Nächste vCard",
+  "vcardImport.staged_one":
+    "{count} Karte wartet in der Worklist auf deine Antwort und läuft nach 30 Tagen ab.",
+  "vcardImport.staged_other":
+    "{count} Karten warten in der Worklist auf deine Antwort und laufen nach 30 Tagen ab.",
+  "vcardImport.staged.open": "Worklist öffnen",
   "vcardImport.forCompany": "Aus diesen Karten angelegte Kontakte arbeiten bei",
   "vcardImport.companyPhotoTitle": "Fotos werden keinem Unternehmen zugeordnet",
   "vcardImport.companyPhoto":
@@ -7930,9 +8016,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "task.next.reviewProject": "Projekt prüfen",
   "task.next.reviewContact": "Kontakt prüfen",
   "task.next.reviewCompany": "Unternehmen prüfen",
-  "tasks.whichDeal.legend": "Um welchen Deal geht es in der E-Mail?",
-  "tasks.whichDeal.file": "E-Mail-Thread dem Deal zuordnen",
-  "tasks.whichDeal.filed": "E-Mail-Thread dem Deal zugeordnet",
   "today.withheld":
     "Nicht enthalten: {sections}. Du hast keinen Zugriff darauf.",
   "today.source.moments": "Erkenntnisse von Margince",
@@ -8488,6 +8571,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.relatedToNone": "Nichts Bestimmtes",
   "compose.relatedDeal": "Deal: {name}",
   "compose.aboutDeal": "Deal, um den es geht",
+  "compose.from.shared": "Gemeinsames Postfach",
   "compose.from.label": "Von",
   "compose.from.automatic":
     "Postfach, in dem das Gespräch ankam, sonst dein Standard",
@@ -9016,10 +9100,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "tasks.origin.commitment":
     "Erstellt aus einer Zusage, die aus einem Gespräch gelesen wurde.",
   "tasks.origin.email_request": "Erstellt aus einer Anfrage in einer E-Mail.",
-  "tasks.origin.which_deal":
-    "Erstellt, weil eine erfasste E-Mail zu mehr als einem offenen Deal passt. Wähle den Deal, zu dem sie gehört, oder „Keiner dieser Deals“.",
-  "tasks.whichDeal.none": "Keiner dieser Deals",
-  "tasks.whichDeal.noneDone": "E-Mail keinem dieser Deals zugeordnet",
   "tasks.origin.system":
     "Von einer Automatisierung erstellt, nicht von einem Teammitglied eingegeben.",
 
@@ -9774,6 +9854,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "forecast.partialTitle": "Nicht jeder Deal ist bepreist",
   "forecast.partial":
     "{priced} von {eligible} Deals sind bepreist. Deals ohne Preis tragen nichts zu den Summen oben bei.",
+  "forecast.callHistory": "Bisherige Prognosen",
+  "forecast.callAuthor": "Eingereicht von",
+  "forecast.noCallHistory": "Für diesen Zeitraum liegen keine Prognosen vor.",
   "forecast.currentCall": "Einschätzung",
   "forecast.currentCallDetailOver":
     "Aktualisiert {date} · {gap} über gewonnenen + wahrscheinlichen Deals",
@@ -9989,7 +10072,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Wird im Team an Datensätzen, die du bearbeitest, in Auswahllisten und im Audit-Log angezeigt.",
   "settings.greetingName": "Rufname",
   "settings.greetingNameHelp":
-    "Mit diesem Namen wirst du in entworfenen Nachrichten und Begrüßungen angesprochen. Lässt du das Feld leer, gilt das erste Wort deines Anzeigenamens.",
+    "Mit diesem Namen wirst du in entworfenen Nachrichten und Begrüßungen angesprochen. Lässt du das Feld leer, gilt dein Vorname, bei einem vietnamesischen Familiennamen das letzte Wort.",
   "settings.installApp": "Margince-App",
   "settings.installAppHelp":
     "Margince wird auf diesem Gerät als App mit eigenem Fenster und Symbol installiert.",
@@ -11317,6 +11400,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "„{value}“ liegt in der Vergangenheit, und das Abschlussdatum eines offenen Deals darf das nicht sein.",
   "import.reason.lost_reason_missing":
     "Ein verlorener Deal braucht den Grund, warum er verloren ging.",
+  "import.reason.deal_field_not_for_pipeline":
+    "Das benutzerdefinierte Feld {field} gilt nicht für Deals in der Pipeline dieses Deals, daher wird die Zeile übersprungen. Leere die Zelle oder importiere den Deal in eine Pipeline, für die das Feld gilt.",
   "import.reason.deal_pipeline_fixed":
     "Dieser Deal liegt in einer anderen Pipeline als in der Datei angegeben. Ein Import verschiebt keinen Deal zwischen Pipelines, daher wird die Zeile übersprungen.",
   "companies.contractMergeBlocked":
@@ -11490,6 +11575,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Anreicherung von Unternehmensdaten aus E-Mails",
   "jobs.kind.capture_backfill": "Import des E-Mail-Verlaufs",
   "jobs.kind.capture_backfill_reconcile": "Wiederaufnahme des E-Mail-Imports",
+  "jobs.kind.capture_history_narrowing": "Einschränkung früherer E-Mails",
   "jobs.kind.capture_confidentiality_verdict":
     "Vertraulichkeitsprüfung von E-Mails",
   "jobs.kind.capture_counterparty_verdict": "Prüfung der Absendeadressen",
@@ -11497,6 +11583,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "jobs.kind.captured_deal_refile": "Erfasste Aktivitäten zu Deals zuordnen",
   "jobs.kind.captured_deal_refile_sweep":
     "Zuordnung erfasster Aktivitäten nachholen",
+  "jobs.kind.chat_clarification_sweep":
+    "Teammitglieder fragen, von wem weitergeleitete Chatnachrichten sind",
   "jobs.kind.capture_part_slim": "Bereinigung des E-Mail-Speichers",
   "jobs.kind.capture_sync": "Postfach-Synchronisierung",
   "jobs.kind.check_company_vat": "Prüfung der Umsatzsteuer-ID",
@@ -11559,6 +11647,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "jobs.kind.technical_enrich_backfill": "Nachholen der technischen Abfrage",
   "jobs.kind.technical_enrich_company": "Technische Abfrage für Unternehmen",
   "jobs.kind.telegram_ingest": "Übernahme von Telegram-Nachrichten",
+  "jobs.kind.whatsapp_ingest": "Übernahme von WhatsApp-Nachrichten",
+  "jobs.kind.zalo_oa_ingest": "Übernahme von Zalo-Nachrichten",
+  "jobs.kind.zalo_token_renew": "Erneuerung der Zalo-Zugangstoken",
   "jobs.kind.telegram_poll": "Abruf von Telegram-Nachrichten",
   "jobs.kind.chat_link_flush": "Beiträge in Chat-Kanälen",
   "jobs.kind.chat_pull": "Zusammenfassungen aus Chat-Kanälen",
@@ -11973,6 +12064,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "notice.source.openRecord": "Datensatz ansehen",
   "notice.source.moreEvidence": "Weitere Nachweise anzeigen",
   "notice.source.preview": "Vor der Bestätigung",
+  "notice.source.previewReachedOut":
+    "Der Kontakt hat sich bereits per E-Mail oder über einen Termin gemeldet. Daher ist keine gesonderte Datenschutzinformation geschuldet.",
   "notice.source.previewNone":
     "Aus dieser Quelle folgt keine eigene Informationspflicht.",
   "notice.source.previewOwed": "Ein Datenschutzhinweis ist bis {date} fällig.",
@@ -12244,8 +12337,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Sie können der Nutzung Ihrer Daten, die auf unserem berechtigten Interesse beruht, jederzeit widersprechen. Wir hören dann damit auf, es sei denn, wir haben zwingende Gründe weiterzumachen. Widersprechen Sie Werbung, senden wir keine mehr, und Sie müssen keinen Grund nennen.",
   "privacynotice.objection.how": "So widersprechen Sie: {route}",
   "notice.ownerOf": "Zuständig für {duty}",
-  "notice.excuse": "Ohne Versand beenden",
-  "notice.excuseTitle": "Pflicht ohne Versand der Information beenden",
+  "notice.excuse": "Schließen, ohne zu senden",
+  "notice.excuseTitle": "Schließen, ohne zu senden",
   "notice.excuseWhich": "Art des Grunds",
   "notice.excuseProvided": "Bereits anderweitig informiert",
   "notice.excuseExempt": "Pflicht gilt nicht",
@@ -13075,6 +13168,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "senders.markBusiness": "Als geschäftlich markieren",
   "senders.keepOut": "Ausschließen",
   "senders.withdraw": "Antwort zurückziehen",
+  "senders.liftPrivate": "Aufheben: Kontakte wieder erlauben",
+  "senders.kind.private": "Privat",
+  "senders.privateStands":
+    "Für diese Absendeadresse wird kein Kontakt erstellt",
   "senders.keepOutTitle": "Diese Absendeadresse dauerhaft ausschließen?",
   "senders.keepOutBody":
     "Es wird kein Kontakt erstellt, und E-Mails von dieser Absendeadresse, die bereits in dein Postfach gelangt sind, werden vernichtet. Kopien, die ein Teammitglied importiert hat, bleiben bei diesem Teammitglied.",
@@ -13261,6 +13358,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "connectors.mailPosture.historyBody":
     "Diese Einstellung gilt für E-Mails, die ab jetzt erfasst werden. E-Mails, die bereits im CRM sind, behalten ihre Sichtbarkeit, es sei denn, du schränkst sie entsprechend ein.",
   "connectors.mailPosture.historyApply": "Auch erfasste E-Mails einschränken",
+  "connectors.mailPosture.historyNarrowing_one":
+    "Frühere E-Mails werden im Hintergrund eingeschränkt: noch {count} Nachricht. Jede Nachricht behält ihre Sichtbarkeit, bis sie an der Reihe ist.",
+  "connectors.mailPosture.historyNarrowing_other":
+    "Frühere E-Mails werden im Hintergrund eingeschränkt: noch {count} Nachrichten. Jede Nachricht behält ihre Sichtbarkeit, bis sie an der Reihe ist.",
   "connectors.disconnectBodyGoogleNote":
     "Google führt Margince möglicherweise weiterhin unter den Drittanbieter-Apps mit Zugriff auf dein Konto. Entferne Margince dort, um den Zugriff vollständig zu widerrufen.",
   "connectors.disconnectBodyMicrosoftNote":
@@ -14339,6 +14440,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Der Code wurde nicht akzeptiert. Prüfe ihn und versuche es erneut.",
   "mfa.tooManyCodes":
     "Zu viele falsche Codes. Warte ein paar Minuten und versuche es dann erneut.",
+  "mfa.tooManyPasswords":
+    "Zu viele falsche Passwörter. Warte eine Minute und versuche es dann erneut.",
+  "mfa.passwordHint":
+    "Dein Margince-Passwort, nicht das von Google oder Microsoft.",
   "mfa.confirmFailedTitle": "Zweistufige Anmeldung nicht eingeschaltet",
   "mfa.onTitle": "Zweistufige Anmeldung an",
   "mfa.onBody": "Alle anderen Geräte wurden abgemeldet.",
@@ -14490,6 +14595,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "scheduling.defaultSubject": "Termin über Margince",
   "book.name": "Name",
   "book.email": "E-Mail-Adresse",
+  "book.privacyInformation": "Datenschutzhinweise",
+  "scheduling.privacyMissing":
+    "Auf deiner Buchungsseite fehlt ein Link zu den Datenschutzhinweisen. Wende dich an einen Admin. Das Feld „Kontakt zum Datenschutz“ steht unter Einstellungen → Unternehmen → Firmenangaben in E-Mails.",
   "book.consentWording":
     "Ich bin einverstanden, dass mein Name und meine E-Mail-Adresse gespeichert werden, um diesen Termin zu vereinbaren und im Anschluss daran nachzufassen.",
 
@@ -14568,6 +14676,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "buyer.closedNote": "Dieser Raum ist jetzt schreibgeschützt.",
   "buyer.readOnly": "Sie haben für diesen Raum nur Lesezugriff.",
   "buyer.stewardUnknown": "Ihre Ansprechperson",
+  "buyer.engagementNoticeUnnamed":
+    "Das Unternehmen, das Sie eingeladen hat, sieht, wann Sie sich anmelden und welche Dokumente Sie herunterladen.",
+  "buyer.engagementNotice":
+    "{company} sieht, wann Sie sich anmelden und welche Dokumente Sie herunterladen.",
   "buyer.signOut": "Abmelden",
   "buyer.signedInAs": "Angemeldet als {name}.",
   "buyer.contactEyebrow": "Ihre Ansprechperson",
@@ -14595,6 +14707,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "room.docs.group.delivery_operations": "Umsetzung und Betrieb",
   "buyer.docs.title": "Dokumente",
   "buyer.docs.empty": "Noch keine Dokumente.",
+  "buyer.threads.hiddenOwn":
+    "Eine Unterhaltung über eine Datei, die nicht mehr geteilt wird.",
   "buyer.docs.download": "{title} herunterladen",
   "buyer.docs.downloadFailed":
     "Der Download konnte nicht gestartet werden. Bitte versuchen Sie es erneut oder fragen Sie Ihre Ansprechperson.",
@@ -14653,6 +14767,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "threads.unanswered_other": "{count} unbeantwortet",
   "threads.cancel": "Abbrechen",
   "threads.empty": "Noch keine Nachrichten.",
+  "threads.hiddenFromBuyer":
+    "Die Käuferseite kann diese Unterhaltung nicht mehr sehen",
   "threads.requiredChange": "Änderung erforderlich",
   "threads.resolved": "Erledigt",
   "threads.sideBuyer": "Käuferseite",
@@ -15207,6 +15323,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "cf.activityKindsEvery": "Jeder Typ",
   "cf.activityKindsFor": "Typen, bei denen „{label}“ erscheint",
   "cf.activityKindsSaved": "„{label}“ erscheint jetzt bei den gewählten Typen",
+  "cf.pipelines": "Gezeigt in",
+  "cf.pipelinesHint":
+    "Leer lassen, um das Feld bei Deals in jeder Pipeline zu zeigen.",
+  "cf.pipelinesEvery": "Jede Pipeline",
+  "cf.pipelinesArchived": "Archivierte Pipeline",
+  "cf.pipelinesFor": "Pipelines, in denen „{label}“ erscheint",
+  "cf.pipelinesSaved":
+    "„{label}“ erscheint jetzt bei Deals in den gewählten Pipelines",
   "cf.col.inCreate": "Beim Erstellen",
   "cf.showInCreateFor": "„{label}“ beim Erstellen zeigen",
   "cf.shownInCreate": "„{label}“ beim Erstellen eingeblendet",
@@ -15279,6 +15403,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "audit.kind.deal_suggestion": "Deal-Vorschlag",
   "audit.kind.dedupe_candidate": "Mögliches Duplikat",
   "audit.kind.existing_customer_notice": "Hinweis auf Bestandskunden",
+  "audit.kind.extension_object_usage": "Erweiterungsspeicher",
   "audit.kind.field_provenance": "Herkunft eines Feldes",
   "audit.kind.finance_connection": "Buchhaltungsverbindung",
   "audit.kind.finance_customer_link": "Verknüpfung mit Buchhaltungskunden",
@@ -15353,6 +15478,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "audit.kind.workspace": "Unternehmensprofil",
   "audit.kind.agent_client": "Verbundenes KI-Tool",
   "audit.kind.ai_budget": "KI-Kontingent",
+  "audit.kind.ai_team_rules": "Teamregeln",
   "audit.kind.ai_call_payload": "Inhalt eines KI-Aufrufs",
   "audit.kind.ai_routing": "KI-Modellzuordnung",
   "audit.kind.authentication_policy": "Anmelderichtlinie",
@@ -15622,6 +15748,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "sharedMailboxes.changeConfirm": "Auf alle Mails anwenden",
   "sharedMailboxes.changeWarning":
     "Das gilt für alle Mails, die das Postfach schon erfasst hat, nicht nur für neue.",
+  "sharedMailboxes.replyEnabled":
+    "Mitglieder dürfen als dieses Postfach antworten",
+  "sharedMailboxes.replyGrantGraph":
+    "Braucht die Anwendungsberechtigung Mail.Send in der Microsoft-App. Ohne einen Exchange-Bereich darf die App damit als jedes Postfach des Mandanten senden.",
+  "sharedMailboxes.replyGrantGmail":
+    "Braucht den Scope gmail.send, dem Dienstkonto neben gmail.readonly übertragen.",
+  "sharedMailboxes.replyUnavailableImap":
+    "Nicht verfügbar. Ein IMAP-Postfach erfasst nur Mails. Verbinde es über Microsoft oder Google, um daraus zu antworten.",
   "sharedMailboxes.narrowHistory": "Auch schon erfasste Mails zurückhalten",
   "sharedMailboxes.importHistory": "Ältere Mails importieren",
   "sharedMailboxes.historyTitle": "Ältere Mails in {address} importieren",
@@ -15636,6 +15770,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.part.models.tiers": "Modellstufen",
   "settings.part.models.tasks": "KI-Aufgaben",
   "settings.part.models.prices": "Preise",
+  "settings.part.models.rules": "Regeln",
   "settings.part.usage.allowance": "Kontingent",
   "settings.part.usage.agents": "Agentenlimits",
   "settings.part.usage.spend": "Ausgaben",
@@ -15839,7 +15974,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "knowledge.archive": "Sammlung archivieren",
   "knowledge.archiveConfirm.title": "{name} archivieren?",
   "knowledge.archiveConfirm.body":
-    "Die Sammlung und ihre Dokumente sind nicht mehr durchsuchbar. Es wird nichts gelöscht.",
+    "Die Sammlung und ihre Dokumente sind nicht mehr durchsuchbar. Es wird nichts gelöscht, und „Archivierte Sammlungen zeigen“ holt sie zurück.",
   "knowledge.archiveShipped":
     "Diese Sammlung kann nicht archiviert werden, da sie mit Margince ausgeliefert wird.",
   "knowledge.uploadShipped":
@@ -15872,6 +16007,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Ein Satz. Der Satz wird allen gezeigt, deren Frage diese Sammlung nicht abdeckt.",
   "knowledge.searchable": "Durchsuchbar",
   "knowledge.reindexingBadge": "Wird neu indexiert",
+  "knowledge.edit": "Sammlung bearbeiten",
+  "knowledge.edit.title": "{name} bearbeiten",
+  "knowledge.edit.save": "Speichern",
+  "knowledge.edit.description": "Beschreibung",
+  "knowledge.showArchived": "Archivierte Sammlungen zeigen",
+  "knowledge.archivedBadge": "Archiviert",
+  "knowledge.restore": "Sammlung wiederherstellen",
   "settings.tab.privacy": "Datenschutz und Aufbewahrung",
   "verdictPass.subject.senders": "Absendeadressen",
   "verdictPass.subject.threads": "Threads",
@@ -16324,7 +16466,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Je mehr eigene Texte es liest, desto näher kommt es dir.",
   "settings.voice.rulesTitle": "Deine Regeln",
   "settings.voice.rulesIntro":
-    "Margince überschreibt diese Regeln nie, und jeder Entwurf folgt ihnen.",
+    "Margince überschreibt diese Regeln nie, und jeder Entwurf folgt ihnen. Wo sie den Teamregeln widersprechen, gelten die Teamregeln.",
   "voice.insights.themesLabel": "Darauf kommst du immer wieder",
   "voice.insights.figKept": "Behaltene Entwürfe",
   "voice.insights.figKeptValue": "{kept} von {drafted}",
@@ -16624,6 +16766,22 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "roles.object.voice_profile": "Schreibstil",
   "roles.object.ai_routing": "KI-Routing",
   "roles.object.ai_budget": "KI-Kontingent",
+  "roles.object.ai_team_rules": "Teamregeln",
+  "teamRules.title": "Teamregeln",
+  "teamRules.intro":
+    "Ein Text, dem jeder KI-Entwurf in deinem Unternehmen folgt: was gesagt werden darf und welche Formulierung gilt. Er hat Vorrang vor den eigenen Regeln einzelner Mitglieder in Voice DNA. Er erlaubt nie, dass ein Entwurf eine Tatsache nennt, die der Datensatz nicht enthält.",
+  "teamRules.label": "Regeln für jeden Entwurf",
+  "teamRules.length":
+    "{used} von {max} Zeichen. Jeder Entwurf trägt diesen Text.",
+  "teamRules.savedBy": "Zuletzt gespeichert von {who} am {when}.",
+  "teamRules.unknownEditor": "jemandem",
+  "teamRules.none": "Noch keine Teamregeln gespeichert.",
+  "teamRules.conflictTitle":
+    "Ein Mitglied hat die Teamregeln gespeichert, während du sie bearbeitet hast",
+  "teamRules.conflictBody":
+    "Lade neu, um ihre Fassung zu sehen und deine Änderung zu verwerfen, oder behalte deinen Text und speichere ihn über ihre.",
+  "teamRules.reload": "Neue Fassung laden",
+  "teamRules.keepMine": "Meinen Text behalten",
   "roles.object.ai_diagnostics": "KI-Nutzung",
   "roles.object.ai_model_rate": "Modellpreise",
   "roles.object.embedding_reindex": "Suchindex",
@@ -16837,7 +16995,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "users.namePlaceholder": "Vollständiger Name",
   "users.greetingLabel": "Rufname",
   "users.greetingHint":
-    "Optional. Nur angeben, wenn der Rufname nicht das erste Wort des vollständigen Namens ist.",
+    "Optional. Leer gilt der Vorname, bei einem vietnamesischen Familiennamen das letzte Wort des Namens.",
   "users.deactivateConfirmTitle": "{name} deaktivieren?",
   "users.deactivateConfirmBody":
     "Die Person wird überall abgemeldet, und ihre Agenten-Passports werden sofort widerrufen. Die Person kann später reaktiviert werden und muss sich dann erneut anmelden.",
@@ -17600,7 +17758,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Auch für dieses Konto muss bei der Anmeldung mit Passwort die zweistufige Anmeldung eingerichtet werden.",
   "groupRoles.title": "Rollen aus IdP-Gruppen",
   "groupRoles.sub":
-    "Vergibt bei der Anmeldung über SSO eine Rolle an jedes eingeladene Mitglied einer IdP-Gruppe. Die Gruppe muss genau so geschrieben sein wie im groups-Anspruch des ID-Tokens. Ein Nutzerkonto entsteht dabei nicht: Eine nicht eingeladene E-Mail-Adresse wird abgewiesen, mit oder ohne Gruppen.",
+    "Vergibt bei der Anmeldung über Microsoft eine Rolle an jedes eingeladene Mitglied einer IdP-Gruppe. Die Gruppe muss genau so geschrieben sein wie im groups-Anspruch des ID-Tokens. Google sendet keine Gruppen: Für Google wirkt die Zuordnung erst, wenn die Google-Gruppenabfrage unten verbunden ist. Ein Nutzerkonto entsteht dabei nicht: Eine nicht eingeladene E-Mail-Adresse wird abgewiesen, mit oder ohne Gruppen.",
   "groupRoles.grantOnlyTitle": "Nur Vergabe: Das Verzeichnis entzieht nie",
   "groupRoles.grantOnly":
     "Jede Anmeldung vergibt die zugeordneten Rollen und entfernt keine. Wer aus einer IdP-Gruppe entfernt wird, verliert die Rolle hier nicht: Der Entzug bleibt eine bewusste Admin-Entscheidung am Nutzerkonto des Mitglieds.",
@@ -17621,6 +17779,40 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Ein Gruppenname darf nicht mit einem Leerzeichen beginnen oder enden. Der Gruppenname muss dem ID-Token genau entsprechen.",
   "groupRoles.duplicateGroup": "Jede Gruppe kann nur einmal zugeordnet werden.",
   "groupRoles.tooMany": "Höchstens 64 Gruppen können zugeordnet werden.",
+  "googleDirectory.title": "Google-Gruppenabfrage",
+  "googleDirectory.sub":
+    "Google sendet bei der Anmeldung keine Gruppen des Mitglieds mit. Diese Verbindung liest sie aus dem Verzeichnis deiner Google-Domäne, wenn sich ein Mitglied mit Google anmeldet. Lege ein Dienstkonto an, gib ihm domainweite Delegierung für den schreibgeschützten Verzeichnisbereich für Gruppen und speichere hier seinen Schlüssel zusammen mit der Adresse eines Admins deiner Google-Domäne, für den es handelt. Google benennt eine Gruppe mit ihrer E-Mail-Adresse. Ordne Gruppen oben deshalb genau so zu, wie Google sie auflistet, zum Beispiel sales@example.com. Es zählen nur Gruppen, in denen das Mitglied direkt ist, nicht verschachtelte Gruppen.",
+  "googleDirectory.state.none":
+    "Nicht verbunden. Mitglieder, die sich mit Google anmelden, erhalten keine Rollen aus der Zuordnung.",
+  "googleDirectory.state.unchecked":
+    "Verbunden. Es ist noch keine Abfrage gelaufen.",
+  "googleDirectory.state.ok":
+    "Verbunden. Die letzte Abfrage hat am {time} funktioniert.",
+  "googleDirectory.state.failedTitle":
+    "Die letzte Google-Abfrage ist am {time} fehlgeschlagen",
+  "googleDirectory.state.failedEffect":
+    "Bis das behoben ist, erhalten Mitglieder, die sich mit Google anmelden, keine Rollen aus der Zuordnung. Niemand verliert eine Rolle, die er schon hat.",
+  "googleDirectory.reason.key_invalid":
+    "Mit der gespeicherten Schlüsseldatei lassen sich keine Anfragen signieren. Speichere den Schlüssel neu.",
+  "googleDirectory.reason.delegation_refused":
+    "Google hat die Delegierung abgelehnt. Prüfe, ob die Client-ID des Dienstkontos domainweite Delegierung für den schreibgeschützten Verzeichnisbereich für Gruppen hat und ob die Admin-Adresse stimmt.",
+  "googleDirectory.reason.permission_denied":
+    "Google hat die Gruppenliste verweigert. Die Admin-Adresse muss zu einem Admin der Google-Domäne gehören, der Gruppen lesen darf.",
+  "googleDirectory.reason.member_not_found":
+    "Google kennt die Adresse des Mitglieds nicht, das sich angemeldet hat.",
+  "googleDirectory.reason.timeout": "Google hat nicht rechtzeitig geantwortet.",
+  "googleDirectory.reason.unavailable":
+    "Google war nicht erreichbar oder begrenzt die Anfragen.",
+  "googleDirectory.reason.bad_answer":
+    "Google hat in einer Form geantwortet, die dieser Server nicht lesen kann.",
+  "googleDirectory.admin":
+    "Admin der Google-Domäne, für den der Schlüssel handelt",
+  "googleDirectory.adminHint":
+    "Das Dienstkonto liest das Verzeichnis als dieser Admin. Nimm die Adresse eines echten Admins der Google-Domäne.",
+  "googleDirectory.needBoth":
+    "Füge die Schlüsseldatei und die Admin-Adresse hinzu.",
+  "googleDirectory.save": "Prüfen und speichern",
+  "googleDirectory.remove": "Verbindung entfernen",
   "oauthApp.google.title": "Google-App",
   "oauthApp.google.clientIdPlaceholder":
     "000000000000-xxxx.apps.googleusercontent.com",
@@ -18109,6 +18301,20 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "account.pictureEdit": "Profilbild bearbeiten",
   "account.pictureSaved": "Bild gespeichert",
   "account.pictureRemoved": "Bild entfernt",
+  "account.chatWhatsapp": "WhatsApp-Konto",
+  "account.chatTelegram": "Telegram-Konto",
+  "account.chatZalo": "Zalo-Konto",
+  "account.chatHelp":
+    "Bestätige dein eigenes {network}-Konto. Eine Kundennachricht, die du von dort an ein {network}-Konto des Unternehmens weiterleitest, wird dann für diesen Kunden abgelegt, nie für dich.",
+  "account.chatCode":
+    "Sende diesen Code innerhalb von 10 Minuten als Nachricht von deinem {network}-Konto an ein {network}-Konto des Unternehmens: {code}",
+  "account.chatWaiting":
+    "Ein Code wartet. Sende ihn von deinem {network}-Konto an ein {network}-Konto des Unternehmens, oder starte neu für einen neuen Code.",
+  "account.chatConfirmed": "Bestätigt: {account}",
+  "account.chatConfirm": "Mit Code bestätigen",
+  "account.chatRemove": "Entfernen",
+  "account.chatRemoved": "Konto entfernt",
+  "account.chatFailed": "Das hat nicht geklappt. Versuche es noch einmal.",
   "account.pictureWrongType":
     "Bild nicht hochgeladen. Nimm eine PNG-, JPEG- oder WebP-Datei.",
   "account.pictureTooLarge":
@@ -19615,6 +19821,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Jemand verknüpft einen Deal, ein Unternehmen oder einen Kontakt mit einem anderen Datensatz oder entfernt eine Verknüpfung.",
   "linkSuggestions.title": "Verknüpfungsvorschläge",
   "linkSuggestions.reason": "{unit}: {reason}",
+  "linkSuggestions.byMargince": "Margince",
   "linkSuggestions.target": "{subject} zu {record} ({kind})",
   "linkSuggestions.noSubject": "Eine Nachricht ohne Betreff",
   "linkSuggestions.kind.contact": "Kontakt",
@@ -20400,6 +20607,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.rail.addEmployment": "Unternehmen hinzufügen",
   "contact.employer.contacts_one": "{count} Kontakt",
   "contact.employer.contacts_other": "{count} Kontakte",
+  "contact.employer.hiddenHolders_one":
+    "{names} hat hier Kontakte, die du nicht sehen kannst. Frage nach einer Vorstellung.",
+  "contact.employer.hiddenHolders_other":
+    "{names} haben hier Kontakte, die du nicht sehen kannst. Frage nach einer Vorstellung.",
   "contact.employer.openDeals_one": "{count} offener Deal",
   "contact.employer.openDeals_other": "{count} offene Deals",
   "contact.employer.noOpenDeals": "keine offenen Deals",
@@ -22228,6 +22439,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.owner.shared": "Gemeinsam zuständig: {names}",
   "worklist.owner.left":
     "{name} ist ausgeschieden. Dieser Eintrag braucht ein neues verantwortliches Teammitglied.",
+  "deal.owner.choose": "Neues verantwortliches Teammitglied wählen",
   "worklist.owner.sharedCount_one": "{count} zuständige Empfangende",
   "worklist.owner.sharedCount_other": "{count} zuständige Empfangende",
   "worklist.owner.visibleLabel": "Ansicht",
@@ -22696,16 +22908,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "noticeDuty.what":
     "Prüfen, woher die Kontaktdaten stammen und ob die erfasste Informationspflicht noch besteht.",
   "noticeDuty.how":
-    "Sende den Datenschutzhinweis, frage nach einer Bestätigung der Daten (das informiert ebenfalls) oder beende die Pflicht, wenn der Kontakt schon informiert ist oder eine Ausnahme gilt.",
+    "Sende den Datenschutzhinweis, frage nach einer Bestätigung der Daten (das informiert ebenfalls) oder schließe, ohne zu senden, wenn der Kontakt schon informiert ist oder eine Ausnahme gilt.",
   "noticeDuty.sendNotice": "Datenschutzhinweis senden",
   "noticeDuty.askConfirm": "Bestätigung der Angaben anfordern",
-  "noticeDuty.end": "Pflicht beenden…",
+  "noticeDuty.end": "Schließen, ohne zu senden…",
   "noticeDuty.sent":
     "An {address} gesendet. Der Eintrag verschwindet aus deiner Worklist, bleibt in der Compliance-Warteschlange aber ausstehend, bis die Nachricht zugestellt ist. Kommt die Nachricht nicht an, erscheint der Eintrag wieder hier.",
   "noticeDuty.notSent":
     "Nicht gesendet: Diese Installation kann keine E-Mail an {address} senden.",
-  "noticeDuty.ended":
-    "Die Pflicht ist beendet. Deine Begründung ist gespeichert.",
+  "noticeDuty.ended": "Ohne Versand geschlossen. Der Grund ist vermerkt.",
   "noticeDuty.obtainedAs": "Erhalten als",
   "noticeDuty.obtainedOn": "Erhalten am",
   "noticeDuty.dateUnknown": "Datum unbekannt",
@@ -22804,6 +23015,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Dieser Lauf kann nicht erneut ausgeführt werden, da das auslösende Ereignis nicht mehr existiert. Zeitgesteuerte Regeln prüfen automatisch erneut.",
   "worklist.verb.acknowledgeFailed":
     "Der Eintrag konnte nicht als gesehen markiert werden. Bitte versuche es erneut.",
+  "worklist.verb.sendAgain": "Erneut senden",
+  "worklist.verb.sendAgainAddress": "Korrigierte Adresse",
+  "worklist.verb.sendAgainHint":
+    "Dieselbe Nachricht geht an diese Adresse, sobald du speicherst. Beim Kontakt ersetzt diese Adresse die, die die Nachricht abgelehnt hat.",
+  "worklist.verb.sentAgain":
+    "Die Nachricht wurde erneut an die korrigierte Adresse gesendet.",
   "worklist.verb.approvalRetried": "Genehmigte Änderung ausgeführt",
   "worklist.verb.approvalRetryFailed":
     "Die genehmigte Änderung konnte erneut nicht ausgeführt werden. Bitte versuche es später erneut oder nimm sie zur Kenntnis.",
@@ -23355,6 +23572,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "magic.action.company_profile_read":
     "Technisches Profil des Unternehmens analysiert",
   "magic.action.fields_changed": "{fields} geändert",
+  "magic.action.guests_synced_from_calendar":
+    "Gäste aus dem Kalender aktualisiert",
+  "magic.action.task_done": "Aufgabe als erledigt markiert",
+  "magic.action.task_reopened": "Aufgabe wieder geöffnet",
   "magic.action.retention_lead_anonymize":
     "Nicht konvertierte Leads nach Ablauf der Aufbewahrungsfrist anonymisiert",
   "magic.action.retention_lead_archive":
@@ -23460,6 +23681,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "magic.records.fromTo": "{from} → {to}",
   "magic.records.hidden_value": "verborgen",
   "magic.records.empty_value": "leer",
+  "magic.records.filled_value": "ausgefüllt",
   "magic.records.count_one": "{count} Datensatz",
   "magic.records.count_other": "{count} Datensätze",
   "magic.undoReason.noCompletedChange":
@@ -24080,6 +24302,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiServing.previewFailed":
     "Der Server konnte diesen Wert nicht prüfen: {reason} Speichern bleibt deaktiviert, bis der Server den Wert prüfen kann.",
   "dealDecline.action": "Gehört nicht zu diesem Deal",
+  "dealFiling.byUnit": "Von {unit} hier zugeordnet: {reason}",
+  "dealFiling.byUnitNoReason": "Von {unit} hier zugeordnet",
   "dealDecline.done":
     "Als nicht zu diesem Deal gehörig markiert. Der Eintrag hält den Deal nicht mehr aktiv.",
   "dealDecline.doneProjectKept":

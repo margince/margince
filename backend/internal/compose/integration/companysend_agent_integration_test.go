@@ -223,9 +223,9 @@ func TestTheMCPDoorStagesTheSameShapeAsTheRESTDoor(t *testing.T) {
 	}
 }
 
-// Automatic work with no passport may not stage, so under the floor its account
-// send is refused and nothing leaves.
-func TestAFlooredAccountSendFromAutomaticWorkIsRefusedAndNothingLeaves(t *testing.T) {
+// Under the floor, automatic work with no passport stages its account send for
+// the colleague it acts for, and nothing leaves until that colleague answers.
+func TestAFlooredAccountSendFromAutomaticWorkWaitsForTheColleague(t *testing.T) {
 	a := setupAccountSend(t)
 	args, err := json.Marshal(map[string]any{
 		"to": []string{"buyer@preflight.test"}, "subject": "Hello from an agent",
@@ -239,11 +239,10 @@ func TestAFlooredAccountSendFromAutomaticWorkIsRefusedAndNothingLeaves(t *testin
 		t.Fatal(err)
 	}
 	invoke := a.flooredAccountSendInvoker(t, a.mintAccountSendPassport(t), true)
-	if _, err := invoke(string(args)); !isPassportlessStagingRefusal(err) {
-		t.Fatalf("a floored account send from automatic work answered %v, want the refusal that it cannot stage", err)
-	}
+	_, err = invoke(string(args))
+	stagedForTheColleague(t, a.Owner, err)
 	if n := a.deliveryCount(t); n != 0 {
-		t.Fatalf("%d deliveries after a refused send, want 0", n)
+		t.Fatalf("%d deliveries before the colleague answered the staged send, want 0", n)
 	}
 }
 

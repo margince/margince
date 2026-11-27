@@ -69,6 +69,11 @@ type PendingThread struct {
 	Documents []ThreadDocument
 	// DocumentsOmitted counts the first message's documents past that cap.
 	DocumentsOmitted int
+	// BurstMembers are the chat messages a burst question judges, oldest first;
+	// empty for a mail thread. ChatThread is the chat thread they belong to.
+	// The verdict covers these messages only (see chatburst.go).
+	BurstMembers []ids.UUID
+	ChatThread   string
 	// Claim is the lease token this row was taken under. Every write back to
 	// the row carries it, so a worker that outran its lease cannot overwrite an
 	// answer the row's new holder has since written.
@@ -224,6 +229,9 @@ func (s *ThreadVerdictStore) ClaimDue(ctx context.Context, limit int) ([]Pending
 		}
 		return rows.Err()
 	})
+	if err == nil {
+		out, err = s.readBursts(ctx, out)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("capture: claiming threads awaiting a confidentiality verdict: %w", err)
 	}
@@ -399,7 +407,8 @@ func (s *ThreadVerdictStore) RecordOutcomeTx(
 }
 
 // openConfidentialityQuestionTx schedules the thread this message belongs to
-// for a confidentiality answer, for the seat that just imported it.
+// for a confidentiality answer, for the seat that just imported it. A chat
+// message is scheduled in its burst instead of its thread.
 //
 // Held messages only, and only where the MAILBOX POSTURE is what holds them.
 // A `held` mailbox is never asked: its owner said "hold this whatever a
@@ -419,12 +428,11 @@ func openConfidentialityQuestionTx(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID, owner ids.UUID,
 	rec connector.NormalizedRecord, fields ActivityFields, birth birthDecision,
 ) error {
+	if fields.Kind == ChatMessageKind {
+		return openChatBurstQuestionTx(ctx, tx, id, owner, birth)
+	}
 	if fields.Kind != kindEmail {
-		// The classifier is opened per DELIVERING MAILBOX, and only mail has
-		// one. A member-bound chat is correspondence — the workspace floor, a
-		// counterparty hold and a sender's own marker all reach it — but the
-		// posture that would commission a verdict about it lives on
-		// capture_connection, where no channel transport has a row.
+		// Only mail and chat have a seat whose posture commissions a verdict.
 		return nil
 	}
 	// The posture decides whether this mailbox has a question at all, and it is

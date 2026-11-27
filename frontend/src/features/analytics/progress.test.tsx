@@ -5,6 +5,7 @@
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { pickOption } from "../../design-system/select-testing";
 import { meFixture } from "../../testing/mefixture";
 import { REPORTING_FIXTURE_ZONE } from "../../testing/reporting.fixtures";
 import {
@@ -365,6 +366,36 @@ describe("ProgressWork", () => {
 });
 
 describe("ProgressScreen", () => {
+  it("opens a colleague who is absent from Analytics' team choices", async () => {
+    const seller = "00000000-0000-4000-8000-0000000000b2";
+    installFetchStub({
+      "GET /me": meRoute({ lead: ["read"], sales_target: ["read"] }),
+      "GET /analytics/context": () => jsonResponse(CONTEXTS.leader),
+      "GET /analytics/sales-goals": () =>
+        jsonResponse({
+          year: 2026,
+          currency: "EUR",
+          data: [
+            {
+              owner_id: seller,
+              name: "Colleague without a team",
+              state: "no_goal",
+              can_edit: false,
+            },
+          ],
+        }),
+      "GET /analytics/progress": () => jsonResponse(teamMarch),
+    });
+    render(<ProgressScreen />);
+    const user = userEvent.setup();
+    await pickOption(
+      user,
+      await screen.findByRole("combobox", { name: "Team member or team" }),
+      "Colleague without a team",
+    );
+    expect(window.location.hash).toContain(`scope=owner%3A${seller}`);
+  });
+
   it("reads the seller a team row opened, though the picker never listed them", async () => {
     const seller = "00000000-0000-4000-8000-0000000000b2";
     window.location.hash = `#/progress?scope=owner:${seller}`;

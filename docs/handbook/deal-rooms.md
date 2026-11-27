@@ -216,6 +216,14 @@ The deal's Deal Room tab shows "{invited} invited · {active} signed in" and
 Per seat, the Access panel shows invited / signed in / revoked, when they were
 last seen, and "Documents downloaded: {count}".
 
+The buyer is told this is recorded. On a seat's first sign-in, one line sits
+under the room title: "{Company} can see when you sign in and which documents
+you download." It has no button and asks for nothing. It shows once per seat,
+so a buyer who signs in again, on this device or another, does not see it
+again. Your own preview always shows it, so you read what the buyer reads. The
+room records the act and its time, and the Access panel is the only place it is
+shown.
+
 ## What happens to a room later
 
 Closing, winning or losing the deal **does not change its Deal Room**. The room

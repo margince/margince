@@ -492,9 +492,8 @@ const VERB_LABEL: Record<
   reply: (t) => t("compose.reply"),
   take: (t) => t("worklist.take.action"),
   cancel: (t) => t("worklist.verb.meetingCanceled"),
-  // The record history's own word, for the same reason. `undo` is drawn by
-  // ReceiptUndo on the handled panel, which acts in place, so VERB_DESTINATION
-  // routes it nowhere and this label is never the one a reader sees — it is
-  // here because the map is total over the contract's actions.
+  // The record history's own word. `undo` is drawn in place by ReceiptUndo, so
+  // this label is never the one a reader sees: the map is total.
   undo: (t) => t("history.undo.action"),
+  send_again: (t) => t("worklist.verb.sendAgain"),
 };

@@ -209,6 +209,9 @@ func withdrawInTx(ctx context.Context, tx pgx.Tx, id ids.ApprovalID, reason stri
 	if tag.RowsAffected() == 0 {
 		return false, nil
 	}
+	if err := clearExpiredCards(ctx, tx, []ids.UUID{id.UUID}); err != nil {
+		return false, err
+	}
 	if _, err := storekit.AuditWithEvidence(ctx, tx, "update", entityApproval, id.UUID,
 		map[string]any{approvalKeyStatus: StatusPending},
 		map[string]any{approvalKeyStatus: StatusExpired},

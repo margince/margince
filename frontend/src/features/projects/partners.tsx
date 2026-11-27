@@ -36,9 +36,9 @@ import {
 } from "./partners.vocab";
 
 // #/partners (PartnersScreen) is the flat list, reached from the Companies
-// list header. The Partner tab on a company is in partners.form.tsx.
+// list header. The Partner tab on a company is in partners.tab.tsx.
 
-export { PartnerTab } from "./partners.form";
+export { PartnerTab } from "./partners.tab";
 
 /**
  * One page of partners.

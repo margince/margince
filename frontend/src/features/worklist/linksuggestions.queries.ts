@@ -10,7 +10,7 @@ export type LinkSuggestion = components["schemas"]["LinkSuggestion"];
 
 const linkSuggestionsKey = ["link-suggestions"] as const;
 
-/** The pending suggestions an extension made, oldest first. */
+/** The pending suggestions an extension or Margince made, oldest first. */
 export function useLinkSuggestions() {
   return useQuery({
     queryKey: linkSuggestionsKey,
@@ -26,7 +26,8 @@ export function useLinkSuggestions() {
 
 /**
  * Accept files the message under the suggested record, so the message's own
- * views refresh with the queue. Reject changes nothing but the queue.
+ * views refresh with the queue. Reject of a deal Margince asked about declines
+ * it on the conversation, so those views refresh too.
  */
 export function useDecideLinkSuggestion() {
   const queryClient = useQueryClient();
@@ -45,11 +46,9 @@ export function useDecideLinkSuggestion() {
       }
       return data;
     },
-    onSuccess: (_suggestion, input) => {
+    onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: linkSuggestionsKey });
-      if (input.verb === "accept") {
-        void queryClient.invalidateQueries({ queryKey: ["activities"] });
-      }
+      void queryClient.invalidateQueries({ queryKey: ["activities"] });
     },
   });
 }

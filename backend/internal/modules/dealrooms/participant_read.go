@@ -12,11 +12,9 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // The object a participant read gates on. Deciding who is in a room is part of
@@ -67,7 +65,7 @@ const participantFrom = `deal_room_participant p
 
 // ListParticipants returns a room's roster.
 func (s *Store) ListParticipants(ctx context.Context, roomID ids.DealRoomID, activeOnly bool) ([]crmcontracts.DealRoomParticipant, storekit.Page, error) {
-	if err := auth.Require(ctx, roomObject, principal.ActionRead); err != nil {
+	if err := requireRoomRead(ctx); err != nil {
 		return nil, storekit.Page{}, err
 	}
 	var out []crmcontracts.DealRoomParticipant

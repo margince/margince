@@ -150,33 +150,49 @@ func TestAnAgentCallIsOnlyOfferedApprovalsItsOwnCredentialHolds(t *testing.T) {
 		t.Fatal("a second passport was handed the approval granted to the first")
 	}
 
-	// And a caller presenting NO passport is not offered either row — because it
-	// gets no row at all. This used to be the third arm of the same question:
-	// the redemption checks the binding only against a caller that presents a
-	// passport, so a passport-less one had to be kept away from another
-	// credential's approval by the staging probe. It is now refused the staging
-	// outright, which is the stronger answer and the one that also stops the row
-	// it WOULD have written — a NULL passport_id, indistinguishable from a
-	// server proposal, releasable by the credential that made it.
+	// A caller with no passport, acting for no one, is refused the staging
+	// outright. The redemption checks the binding only against a caller that
+	// presents a passport. The refusal also stops the row it would have written,
+	// which names nobody and reads as a server proposal.
 	if _, _, err := e.svc.StageAgentCall(e.agentWithoutPassport(), in); err == nil {
-		t.Fatal("a passport-less agent staged a call — the row it writes reads as the server's own")
+		t.Fatal("a passport-less agent acting for no one staged a call — the row it writes reads as the server's own")
+	}
+
+	// The product's own job acting for the rep stages a row of its own, naming
+	// the rep and no passport. It is not handed the row a credential was granted.
+	job, jobApproved, err := e.svc.StageAgentCall(e.agentForRep(), in)
+	if err != nil {
+		t.Fatalf("an agent acting for the rep was refused the staging: %v", err)
+	}
+	if job == staged || jobApproved {
+		t.Fatalf("an agent acting for the rep got (%s, approved=%v), want a fresh undecided row of its own", job, jobApproved)
+	}
+	if n := e.count(t, `SELECT count(*) FROM approval WHERE id = $1 AND on_behalf_of = $2 AND passport_id IS NULL`,
+		job, e.rep); n != 1 {
+		t.Error("the job's row does not name the rep it acts for with no passport")
 	}
 }
 
-// agentWithoutPassport is an agent principal carrying no passport.
-//
-// No agent SURFACE builds one: AgentIdentity.Principal is what the REST bearer,
-// both MCP transports and the Surface-B runner arrive as, and it always carries
-// the passport it authenticated. compose/autoapply.go does build one — and only
-// ever DECIDES with it, where the sweep releases under the owner's own policy
-// rather than a credential releasing its own proposal, so the staging guard
-// does not reach it. The shape is planted here because the guard that refuses
-// it has to be exercised by something.
+// agentWithoutPassport is an agent with no passport, acting for no one. No
+// production path builds one. It is planted so the guard that refuses it runs.
 func (e *stagingEnv) agentWithoutPassport() context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
+	return principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalAgent, ID: "agent:sessionbound"})
+}
+
+// agentForRep is the product's own job acting for the rep: no passport, and the
+// rep named as the colleague it acts for.
+func (e *stagingEnv) agentForRep() context.Context {
+	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalAgent, ID: "agent:sessionbound", OnBehalfOf: e.rep,
+		Type: principal.PrincipalAgent, ID: "agent:job", UserID: e.rep, OnBehalfOf: e.rep, SeatType: principal.SeatFull,
+		Scopes: principal.NewScopeSet(principal.ScopeWrite),
+		// The rep's own grants, as agentFor carries them.
+		Permissions: grantsFor(map[string]principal.ObjectGrant{
+			"company": {Read: true, Update: true}, "tag": {Read: true, Update: true},
+		}),
 	})
 }
 
@@ -335,12 +351,27 @@ func TestAnAgentWithNoPassportIsRefusedTheStaging(t *testing.T) {
 
 	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
-	ctx = principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalAgent, ID: "agent:no-passport", OnBehalfOf: e.rep,
-	})
-	if _, _, err := e.svc.StageAgentCall(ctx, e.agentCall(target)); err == nil {
-		t.Fatal("staged an agent call with no passport — the row it wrote is indistinguishable " +
-			"from a server proposal, and the credential could then release it")
+	// Each shape names nobody in particular. One acts for a colleague who is not
+	// its user. One holds a user and grants and acts for no one. One acts for
+	// somebody who is not a member of this workspace.
+	for name, agent := range map[string]principal.Principal{
+		"acting for a colleague it is not": {
+			Type: principal.PrincipalAgent, ID: "agent:no-passport", OnBehalfOf: e.rep,
+		},
+		"holding grants, acting for no one": {
+			Type: principal.PrincipalAgent, ID: "agent:no-passport", UserID: e.rep,
+			Permissions: principal.Permissions{RowScope: principal.RowScopeAll},
+		},
+		"acting for somebody who is not a member": func() principal.Principal {
+			stranger := ids.NewV7()
+			return principal.Principal{
+				Type: principal.PrincipalAgent, ID: "agent:no-passport", UserID: stranger, OnBehalfOf: stranger,
+			}
+		}(),
+	} {
+		if _, _, err := e.svc.StageAgentCall(principal.WithActor(ctx, agent), e.agentCall(target)); err == nil {
+			t.Errorf("%s: staged an agent call with no passport, a row that names nobody to answer it", name)
+		}
 	}
 	var staged int
 	if err := e.owner.QueryRow(context.Background(),

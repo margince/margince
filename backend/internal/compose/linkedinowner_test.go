@@ -55,7 +55,10 @@ func TestOwnersAgentKeepsAReadSeatOwnersSeatAndNamesThem(t *testing.T) {
 	owner := ids.NewV7()
 	viaService, _ := authz.MemberPrincipal(context.Background(), readSeatOwner{}, ids.NewV7(), owner)
 	for name, member := range map[string]principal.Principal{"service": viaService, "transaction": authz.HumanPrincipal(owner, authz.RBAC{}, principal.SeatRead)} {
-		agent := ownersAgentPrincipal(member, marginceActorID)
+		agent, err := agentPrincipalFor(member, marginceActorID)
+		if err != nil {
+			t.Fatal(err)
+		}
 		if _, writes := agent.Scopes[principal.ScopeWrite]; agent.SeatType != principal.SeatRead || agent.Type != principal.PrincipalAgent ||
 			agent.ID != marginceActorID || agent.OnBehalfOf != owner || agent.UserID != owner || !writes || len(agent.Scopes) != 1 {
 			t.Errorf("%s: agent = %+v, want a write-only agent for the owner on a read seat", name, agent)

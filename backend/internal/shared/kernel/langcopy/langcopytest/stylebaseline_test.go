@@ -29,9 +29,9 @@ var recut = flag.Bool("recut", false, "drop the stylebaseline.txt lines whose se
 
 // wantStyleWaivers and wantStyleDigest pin the lines of stylebaseline.txt, so
 // a line added, dropped or swapped by hand moves a value review sees.
-const wantStyleWaivers = 157
+const wantStyleWaivers = 156
 
-const wantStyleDigest = "1725483ded77062584462990b8eca6fe029ea145cb31b304d44510d127bfd313"
+const wantStyleDigest = "c1965916fb8dd1866cd248ce5b3d0fb100833b3d13080ccf8c209c8be10bfef7"
 
 var (
 	styleWaiverPin = regexp.MustCompile(`(?m)^const wantStyleWaivers = \d+$`)

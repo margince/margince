@@ -8,12 +8,13 @@ import { WorklistScreen } from "../features/worklist/worklist";
 import { useT } from "../i18n";
 import { useRoute } from "../lib/router";
 import { useUrlParams } from "../lib/urlstate";
+import { drawerOpen } from "../lib/worklistrouting";
 
 export function HealthSessionPage() {
   const route = useRoute();
   const t = useT();
   const [params] = useUrlParams();
-  if (route.screen === "home" && params.get("queue") === "1")
+  if (route.screen === "home" && drawerOpen(params))
     return <WorklistScreen embedded />;
   return (
     <main>

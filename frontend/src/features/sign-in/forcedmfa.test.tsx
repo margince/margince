@@ -70,10 +70,12 @@ describe("the forced two-step setup", () => {
     expect(
       await screen.findByRole("img", { name: /qr code/i }),
     ).toBeInTheDocument();
+    await user.type(screen.getByLabelText(/current password/i), "own password");
     await user.type(
       screen.getByRole("textbox", { name: /code from the app/i }),
-      "123 456{Enter}",
+      "123 456",
     );
+    await user.click(screen.getByRole("button", { name: "Turn on" }));
     const codes = await screen.findByRole("textbox", {
       name: "Recovery codes",
     });

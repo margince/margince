@@ -1,0 +1,1 @@
+{"app_id":"1111222233334444","event_name":"user_send_file","timestamp":"1764070002000","sender":{"id":"5550001"},"recipient":{"id":"9990001"},"message":{"msg_id":"msg-in-3","attachments":[{"type":"file","payload":{"url":"https://example.test/f.pdf","name":"bao-gia.pdf","size":"20480","checksum":"abc123","type":"pdf"}}]}}

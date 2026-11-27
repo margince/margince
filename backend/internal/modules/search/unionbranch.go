@@ -154,7 +154,11 @@ func searchUnion(ctx context.Context, in Input, query string, types []string, ar
 			branches = append(branches, unionBranch{entity: entityContact, sql: arm, fallbackOf: entityContact})
 		}
 	}
-	for _, extension := range admittedExtensionSQL(ctx, types, query, headPos, tailPos, arg) {
+	extensions, err := admittedExtensionSQL(ctx, types, query, headPos, tailPos, arg)
+	if err != nil {
+		return nil, err
+	}
+	for _, extension := range extensions {
 		branches = append(branches, unionBranch{sql: extension})
 	}
 	return branches, nil

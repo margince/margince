@@ -89,7 +89,7 @@ func TestWorkDoneForAMemberReadsInTheirLanguage(t *testing.T) {
 			t.Errorf("work resumed as %+v reads system text in %q (%v), want vi", stored, got, err)
 		}
 	}
-	owned, err := ownersAgent(ctx, identity.NewService(e.Pool), e.Rep1, marginceActorID)
+	owned, err := agentFor(ctx, identity.NewService(e.Pool), e.Rep1, marginceActorID)
 	if err != nil || systemtext.Locale(owned) != textlang.Vietnamese {
 		t.Errorf("the agent acting for the owner does not read the owner's language vi: %v", err)
 	}

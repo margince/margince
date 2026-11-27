@@ -72,6 +72,7 @@ it("sums the month over every task and tier, and counts the calls with no rate",
     tokensIn: 30,
     tokensOut: 3,
     cost: 200,
+    costTooLarge: false,
     partlyPriced: true,
     unpricedCalls: 4,
   });
@@ -84,7 +85,23 @@ it("leaves the month without a cost when nothing was priced", () => {
     tokensIn: 10,
     tokensOut: 1,
     cost: undefined,
+    costTooLarge: false,
     partlyPriced: false,
     unpricedCalls: 0,
   });
+});
+
+// Each cost the server sends is bounded and their sum is not. Past 2^53 the
+// line says the cost is too large instead of printing another number.
+it("says a cost too large to add is too large, not unpriced", () => {
+  const big = 2 ** 52;
+  expect(
+    monthTotals([line("cheap_cloud", big), line("premium", big)]).costTooLarge,
+  ).toBe(true);
+  show([line("cheap_cloud", big), line("premium", big)]);
+  expect(
+    within(screen.getByTestId("spend-triage")).getByText(
+      "Too large to show exactly",
+    ),
+  ).toBeTruthy();
 });

@@ -219,6 +219,8 @@ deps:
     # xtext: an audience is compared without case or accents, which needs the
     # Unicode normal forms golang.org/x/text owns.
     mayDependOn: [knowledge, contracts, platform]
+    # xtext: an audience is compared without accents, so "Bếp" and "bep" name
+    # one audience.
     canUse: [pgx, oapi, xtext]
   projects:
     mayDependOn: [contracts, platform]

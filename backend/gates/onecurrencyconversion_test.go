@@ -62,6 +62,8 @@ var fxConversionExempt = gatekit.Waive(map[string]string{
 		"caller reaches money conversion through",
 	"internal/modules/deals/fxrate_store.go": "the rate table's own store — reading and writing the rows the " +
 		"engine later looks up is what owning the table means",
+	"internal/modules/deals/fxrate_history.go": "the rate table's own store, split from fxrate_store.go: the " +
+		"day's stored rate a write compares with and the earliest date it may extend history to",
 	"internal/modules/deals/basecurrencyfreeze.go": "the CLOSE-time freeze, which is a different question: a " +
 		"closed deal stores the rate it was converted at, where this engine answers what an OPEN one converts " +
 		"at today",
