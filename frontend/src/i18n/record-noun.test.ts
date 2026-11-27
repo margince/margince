@@ -352,6 +352,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "create.addressErased",
   ],
   vi: [
+    "forecast.callAuthor",
     // "Người tổ chức" is the meeting's organizer, a person.
     "meetingChange.line.details",
     "worklist.ask.changedInvitation",

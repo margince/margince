@@ -2871,8 +2871,6 @@ export const en = {
   "locale.name.vi": "Tiếng Việt",
   "locale.switchLabel": "Language",
 
-  "screen.pending": "This screen is not available yet.",
-
   // The composed extension tier (ADR-0120): #/ext/<unit>. The registry is
   // generated per installation, so these strings are the only part of a
   // unit surface the core catalogs own.
@@ -3364,6 +3362,11 @@ export const en = {
   "partner.kind.referral": "Referral",
   "partner.kinds": "Partner kinds",
   "partner.kindsAll": "All kinds",
+  "partner.endProgram": "End partner program",
+  "partner.endProgramHelp":
+    "The company, agreed terms and commission history stay on record. The Partner relationship type is removed.",
+  "partner.stageNeedsActivation":
+    "Activate the partner before choosing an Active stage.",
   "partner.stageAll": "All stages",
   "partner.stageMeaning": "Stage meaning",
   "partner.stageMeaningAll": "All meanings",
@@ -9745,6 +9748,9 @@ export const en = {
   "forecast.partialTitle": "Not every deal is priced",
   "forecast.partial":
     "{priced} of {eligible} deals are priced. Unpriced deals add nothing to the totals above.",
+  "forecast.callHistory": "Call history",
+  "forecast.callAuthor": "Submitted by",
+  "forecast.noCallHistory": "No forecast calls for this period.",
   "forecast.currentCall": "Manager forecast",
   "forecast.currentCallDetailOver": "Updated {date} · {gap} above won + Likely",
   "forecast.currentCallDetailUnder":
@@ -11957,6 +11963,8 @@ export const en = {
   "notice.source.openRecord": "View record",
   "notice.source.moreEvidence": "Show more evidence",
   "notice.source.preview": "Before you confirm",
+  "notice.source.previewReachedOut":
+    "The contact already reached out by email or a meeting, so no separate privacy notice is owed.",
   "notice.source.previewNone":
     "No separate notice duty follows from this source.",
   "notice.source.previewOwed": "A notice is still owed by {date}.",
@@ -12208,8 +12216,8 @@ export const en = {
     "You can object at any time to our use of your data that rests on our legitimate interest. We then stop, unless we have compelling reasons to go on. If you object to advertising, we stop sending it, and you need not give a reason.",
   "privacynotice.objection.how": "To object: {route}",
   "notice.ownerOf": "Owner of {duty}",
-  "notice.excuse": "End without sending",
-  "notice.excuseTitle": "End duty without sending disclosure",
+  "notice.excuse": "Close without sending",
+  "notice.excuseTitle": "Close without sending",
   "notice.excuseWhich": "Reason type",
   "notice.excuseProvided": "Already informed elsewhere",
   "notice.excuseExempt": "Duty does not apply",
@@ -14472,6 +14480,9 @@ export const en = {
   "scheduling.defaultSubject": "Meeting via Margince",
   "book.name": "Your name",
   "book.email": "Your email",
+  "book.privacyInformation": "Privacy information",
+  "scheduling.privacyMissing":
+    "Your booking page has no privacy information link. Ask an administrator to fill in “Data protection contact” under Settings → Company → Company details in mail.",
   "book.consentWording":
     "I agree that my name and email are stored to arrange and follow up on this meeting.",
 
@@ -22483,15 +22494,15 @@ export const en = {
   "noticeDuty.what":
     "Review how this contact’s details were obtained and whether the recorded disclosure duty still applies.",
   "noticeDuty.how":
-    "Send the privacy notice, ask them to confirm their details (which tells them too), or end the duty if they already know or an exemption applies.",
+    "Send the privacy notice, ask them to confirm their details (which tells them too), or close without sending if they already know or an exemption applies.",
   "noticeDuty.sendNotice": "Send privacy notice",
   "noticeDuty.askConfirm": "Ask them to confirm their details",
-  "noticeDuty.end": "End the duty…",
+  "noticeDuty.end": "Close without sending…",
   "noticeDuty.sent":
     "Sent to {address}. It leaves your Worklist but stays owed on the compliance queue until delivered, and comes back here if it bounces.",
   "noticeDuty.notSent":
     "Not sent: this installation cannot send mail to {address}.",
-  "noticeDuty.ended": "The duty is ended, with your ground on record.",
+  "noticeDuty.ended": "Closed without sending, with the reason on record.",
   "noticeDuty.obtainedAs": "Obtained as",
   "noticeDuty.obtainedOn": "Obtained on",
   "noticeDuty.dateUnknown": "Date unknown",

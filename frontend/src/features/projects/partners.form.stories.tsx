@@ -2,14 +2,15 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { screen } from "storybook/test";
+import { screen, userEvent } from "storybook/test";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
-import { PartnerTab } from "./partners.form";
+import { EndPartnerProgramAction } from "./partners.end";
+import { PartnerTab } from "./partners.tab";
 
 const meta: Meta = {
   title: "Records/Partner setup form",
@@ -33,5 +34,22 @@ export const Setup: Story = {
   },
   play: async () => {
     await screen.findByRole("textbox", { name: "Served segments" });
+  },
+};
+
+export const EndingProgram: Story = {
+  render: () => (
+    <StoryProviders>
+      <EndPartnerProgramAction
+        companyId="o-1"
+        version={3}
+        onEnded={() => undefined}
+      />
+    </StoryProviders>
+  ),
+  play: async () => {
+    await userEvent.click(
+      await screen.findByRole("button", { name: "End partner program" }),
+    );
   },
 };

@@ -149,7 +149,12 @@ export function CompanyRecordBody({
   const dossierNames = recordNamesIn(view);
   return (
     <>
-      {tab === "partner" && <PartnerTab companyId={company.id} />}
+      {tab === "partner" && (
+        <PartnerTab
+          companyId={company.id}
+          programEnded={company.partner_program_ended}
+        />
+      )}
       {/* The partial-read notice stands in the overview's stack, not above it.
           The sentence and the column it qualifies are one body. Above it, the
           notice's card would meet the stack's first pane at the border. */}

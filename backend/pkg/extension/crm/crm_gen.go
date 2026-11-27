@@ -2483,6 +2483,9 @@ type Company struct {
 	// forward-compatible.
 	Partner *Partner `json:"partner,omitempty"`
 
+	// PartnerProgramEnded An ended partner program has commission and deal history. Omitted without partner read permission.
+	PartnerProgramEnded *bool `json:"partner_program_ended,omitempty"`
+
 	// Phone The company's main number, in E.164 form (for example +49301234567). It is never a contact's own number.
 	Phone *string                 `json:"phone,omitempty"`
 	Raw   *map[string]interface{} `json:"raw,omitempty"`
@@ -5405,6 +5408,14 @@ func (a *Company) UnmarshalJSON(b []byte) error {
 		delete(object, "partner")
 	}
 
+	if raw, found := object["partner_program_ended"]; found {
+		err = json.Unmarshal(raw, &a.PartnerProgramEnded)
+		if err != nil {
+			return fmt.Errorf("error reading 'partner_program_ended': %w", err)
+		}
+		delete(object, "partner_program_ended")
+	}
+
 	if raw, found := object["phone"]; found {
 		err = json.Unmarshal(raw, &a.Phone)
 		if err != nil {
@@ -5749,6 +5760,13 @@ func (a Company) MarshalJSON() ([]byte, error) {
 		object["partner"], err = json.Marshal(a.Partner)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'partner': %w", err)
+		}
+	}
+
+	if a.PartnerProgramEnded != nil {
+		object["partner_program_ended"], err = json.Marshal(a.PartnerProgramEnded)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'partner_program_ended': %w", err)
 		}
 	}
 

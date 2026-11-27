@@ -7131,7 +7131,6 @@ public.idx_role_assignment_team CREATE INDEX idx_role_assignment_team ON public.
 public.idx_role_assignment_user CREATE INDEX idx_role_assignment_user ON public.role_assignment USING btree (user_id)
 public.idx_runner_job_due CREATE INDEX idx_runner_job_due ON public.runner_job USING btree (status, due_at)
 public.idx_sales_goal_plan_revision_created_by CREATE INDEX idx_sales_goal_plan_revision_created_by ON public.sales_goal_plan_revision USING btree (created_by)
-public.idx_saved_view_owner CREATE INDEX idx_saved_view_owner ON public.saved_view USING btree (owner_id, resource) WHERE (archived_at IS NULL)
 public.idx_saved_view_owner_cascade CREATE INDEX idx_saved_view_owner_cascade ON public.saved_view USING btree (owner_id)
 public.idx_scheduled_send_anchor CREATE INDEX idx_scheduled_send_anchor ON public.scheduled_send USING btree (anchor_activity_id) WHERE (anchor_activity_id IS NOT NULL)
 public.idx_scheduled_send_due CREATE INDEX idx_scheduled_send_due ON public.scheduled_send USING btree (scheduled_at) WHERE (status = 'scheduled'::text)
@@ -10326,6 +10325,7 @@ public.saved_view.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDAT
 public.saved_view.trg_saved_view_updated CREATE TRIGGER trg_saved_view_updated BEFORE UPDATE ON public.saved_view FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.saved_view.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.saved_view.version bigint NOT NULL gen=- def=1
+public.saved_view_name_once CREATE UNIQUE INDEX saved_view_name_once ON public.saved_view USING btree (owner_id, resource, lower(btrim(name))) WHERE (archived_at IS NULL)
 public.saved_view_pkey CREATE UNIQUE INDEX saved_view_pkey ON public.saved_view USING btree (id)
 public.scheduled_send acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.scheduled_send.activity_id uuid gen=- def=-

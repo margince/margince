@@ -64,21 +64,21 @@ func TestAnAnswerIsBoundToTheBatchItQuotesOrToTheOneThatWaitsAndNeverGuesses(t *
 	}
 	two := []askedMessage{held(newer, "q2", true), held(older, "q1", true), held(older, "q1", true)}
 
-	target, quoted, ambiguous := answeredBatch(two, "q1")
+	target, quoted, ambiguous := answeredBatch(two, "q1", "q1")
 	if len(target) != 2 || !quoted || ambiguous {
 		t.Fatalf("a quoted answer = %d messages, quoted %v, ambiguous %v; want the older batch's two", len(target), quoted, ambiguous)
 	}
-	if _, _, ambiguous := answeredBatch(two, ""); !ambiguous {
+	if _, _, ambiguous := answeredBatch(two, "", ""); !ambiguous {
 		t.Fatal("two waiting batches and no quote must be ambiguous")
 	}
-	if _, _, ambiguous := answeredBatch(two, "something the account never wrote"); !ambiguous {
+	if _, _, ambiguous := answeredBatch(two, "something the account never wrote", "something the account never wrote"); !ambiguous {
 		t.Fatal("a quote of an unknown message must not pick a batch")
 	}
 	one := []askedMessage{held(older, "q1", true), held(newer, "q2", false)}
-	if target, _, ambiguous := answeredBatch(one, ""); len(target) != 1 || ambiguous {
+	if target, _, ambiguous := answeredBatch(one, "", ""); len(target) != 1 || ambiguous {
 		t.Fatalf("one waiting batch and no quote = %d messages, ambiguous %v", len(target), ambiguous)
 	}
-	if target, quoted, _ := answeredBatch(one, "q2"); len(target) != 0 || !quoted {
+	if target, quoted, _ := answeredBatch(one, "q2", "q2"); len(target) != 0 || !quoted {
 		t.Fatalf("a quote of a filed batch = %d messages, quoted %v; want none and quoted", len(target), quoted)
 	}
 }
@@ -99,5 +99,33 @@ func TestTheQuestionIsPutInTheColleaguesLanguageAndAsksForAPhoneOnlyWhereOneWork
 		if !strings.Contains(list, "1. 2026-11-26 09:05 UTC") || !strings.Contains(list, "price for 20 seats?") {
 			t.Errorf("%s follow-up does not list the batch: %q", locale, list)
 		}
+	}
+}
+
+func TestAQuoteSharedByTwoBatchesNeverSelectsOne(t *testing.T) {
+	first, second := ids.NewV7(), ids.NewV7()
+	for _, question := range []string{"42", "chat:42"} {
+		asked := []askedMessage{
+			{batch: first, askIDs: []string{question}, pending: true},
+			{batch: second, askIDs: []string{question}, pending: true},
+		}
+		if target, quoted, ambiguous := answeredBatch(asked, "chat:42", "42"); len(target) != 0 || !quoted || !ambiguous {
+			t.Errorf("shared question %q returned %d messages, quoted=%v, ambiguous=%v", question, len(target), quoted, ambiguous)
+		}
+	}
+}
+
+func TestQuestionKeysDistinguishChatsAndKeepLegacyQuestionsReadable(t *testing.T) {
+	if clarifyMessageKey("telegram", "chat-a", "42") == clarifyMessageKey("telegram", "chat-b", "42") {
+		t.Fatal("two Telegram chats share a question key")
+	}
+	if !hasClarifyQuote([]string{"42"}, "chat-a:42", "42") {
+		t.Fatal("a legacy question in the current chat cannot be answered")
+	}
+	if hasClarifyQuote([]string{"chat-b:42"}, "chat-a:42", "42") {
+		t.Fatal("a question in another chat matched")
+	}
+	if got := clarifyMessageKey("zalo_oa", "zalo_oa:88:user_1", "msg:2"); got != "zalo_oa:88:user_1:msg_2" {
+		t.Fatalf("Zalo question key = %q", got)
 	}
 }

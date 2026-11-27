@@ -564,3 +564,40 @@ it("leaves the source unconfirmed and saves nothing when the reviewer is not sur
   );
   expect(writes).toEqual([]);
 });
+
+it("explains when the contact's own approach removes a referral duty", async () => {
+  const user = userEvent.setup();
+  stubWithSession(
+    {
+      "GET /privacy/notice-case-reviews/case-source": () => jsonResponse(duty),
+      "POST /privacy/notice-case-reviews/case-source/source/preview": () =>
+        jsonResponse({
+          preview_token: PREVIEW_TOKEN,
+          rule: "none",
+          notice_required: false,
+          subject_reached_out: true,
+          timezone: "Europe/Berlin",
+          deadline_is_upper_bound: false,
+        }),
+    },
+    { privacy_request: ["read", "update"], contact: ["read"] },
+  );
+  render(
+    <StoryProviders>
+      <NoticeDuty caseId={duty.id} />
+    </StoryProviders>,
+  );
+  await user.click(
+    await screen.findByRole("button", { name: en["notice.source.review"] }),
+  );
+  const dialog = within(screen.getByRole("dialog"));
+  await user.click(
+    dialog.getByRole("radio", { name: en["notice.source.answer.introduced"] }),
+  );
+  await user.type(
+    dialog.getByRole("textbox", { name: en["notice.source.evidence"] }),
+    "Introduced by a customer",
+  );
+  await dialog.findByText(en["notice.source.previewReachedOut"]);
+  expect(dialog.queryByText(en["notice.source.previewNone"])).toBeNull();
+});

@@ -527,7 +527,7 @@ a decision only a human makes: a named user who holds `activity.update`, with a 
   no project link left. The declared undo may delete project-filing proof and nothing else. Every other
   change to the class or its timestamp is still refused.
 - An agent never decides it, even with an admin's passport. It can stage the new link that files an
-  activity under a project, and release it on an attended call. It can do so only while the undo could
+  activity under a project, and release it outside a built-in scheduled run. It can do so only while the undo could
   still take the filing back. In three cases a member releases the new link in the CRM. The activity is restricted, held
   through a link, or covered by an open erasure request. There, that filing would
   last for good.
@@ -575,7 +575,7 @@ before a decision and the accept step all ask `siteLeadLaneRefusal`.
 `TestSiteLeadCaptureOpensOnlyWithAReviewedNotice` fails when the accept path stops calling the
 notice step. It also fails when the reviewed version is not the version the build sends.
 
-## Mail from the contact
+## A contact who reaches out
 
 Mail from a contact shows that they gave their own details; for `bulk_mail_attested`,
 `inbound_sender_authenticated` must also be true. Before closing old cases, the data task reads
@@ -596,7 +596,10 @@ missing one uses the capture date as a bound. The clock never starts again at re
 
 A data task moves live cases with an unknown source to review. It keeps their audit history,
 finished decisions and mail already on its way. If a send fails, the source is checked again.
-Later mail capture and data tasks keep a user's confirmed source decision.
+
+When a contact writes to us or books a meeting, every still-owed notice duty closes. The same holds when they send or accept a meeting request. This holds for every original source. The confirmed source stays recorded. The closure and audit name the mail or meeting.
+
+Queued disclosures and finished outcomes stay as they were. The opener, source preview, event consumer, failed-delivery handler and repair task use one evidence rule.
 
 ## Where the code lives
 

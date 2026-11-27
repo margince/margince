@@ -15,6 +15,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -23,22 +24,16 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
-	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
-
-// capturedAcquisition is the provenance of an acquisition capture wrote: a
-// connector's, or the counterparty verdict's, which mints contacts from captured
-// mail after the fact. Only those are settled by a later mail: an unknown source
-// a seat or an import stated is a claim about somewhere else, and the contact
-// writing to us later says nothing about where that address came from.
-var capturedAcquisition = correspondence.CapturedAcquisitionSQL("e")
 
 // contactWroteToUsTx reports that a mail this contact wrote has been captured.
 func contactWroteToUsTx(ctx context.Context, tx pgx.Tx, contactID ids.UUID) (bool, error) {
 	var wrote bool
-	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM `+consent.SubjectMailFromSQL("$1::uuid")+`)`,
+	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM `+consent.SubjectReachedOutFromSQL("$1::uuid")+`)`,
 		contactID).Scan(&wrote); err != nil {
 		return false, fmt.Errorf("did this contact write to us: %w", err)
 	}
@@ -62,25 +57,15 @@ func lockAcquisitionsTx(ctx context.Context, tx pgx.Tx, contactID ids.UUID) erro
 	return nil
 }
 
-// settleWhenSubjectWrote reads one captured activity and, when it is a mail a
-// contact sent us, settles the duties that contact was owed only because
-// capture could not say where their address came from.
-//
-// Per contact it writes a subject_initiated acquisition naming the mail — the
-// evidence the closed case rests on — and then closes that contact's cases on
-// capture's own unknown_legacy acquisitions. A duty opened for a referral, a
-// bought list, or an unknown source somebody else stated is not answered by the
-// contact writing later.
-//
-// A redelivered activity.captured finds the cases already closed and the
-// acquisition already there, and does nothing.
+// settleWhenSubjectWrote closes all still-owed sources when a mail or meeting
+// proves the contact approached us. Replays find no open cases to change.
 func (n *NoticeCaseOpen) settleWhenSubjectWrote(ctx context.Context, tx pgx.Tx, activityID ids.UUID) error {
 	rows, err := tx.Query(ctx, `
-		SELECT DISTINCT sender.contact_id, a.occurred_at
+		SELECT DISTINCT sender.contact_id, `+consent.SubjectReachedOutAtSQL("a")+` AS reached_at
 		  FROM activity a
-		  JOIN activity_participant p ON p.activity_id = a.id AND p.role = 'from'
+		  JOIN activity_participant p ON p.activity_id = a.id
 		 CROSS JOIN LATERAL `+relstrength.ParticipantContactsSQL("p")+` sender(contact_id)
-		 WHERE a.id = $1 AND`+correspondence.SubjectMailSQL("a")+` ORDER BY sender.contact_id, a.occurred_at`, activityID)
+		 WHERE a.id = $1 AND`+consent.SubjectReachedOutSQL("a", "sender.contact_id")+` ORDER BY sender.contact_id, reached_at`, activityID)
 	if err != nil {
 		return fmt.Errorf("read the contacts this mail came from: %w", err)
 	}
@@ -104,7 +89,7 @@ func (n *NoticeCaseOpen) settleWhenSubjectWrote(ctx context.Context, tx pgx.Tx, 
 	return nil
 }
 
-// settleSender settles one contact's capture-unknown duties on one mail of theirs.
+// settleSender records one contact’s own approach and closes their open duties.
 func (n *NoticeCaseOpen) settleSender(ctx context.Context, tx pgx.Tx, contactID, mail ids.UUID, sent time.Time) error {
 	closed, err := settleSenderCasesTx(ctx, tx, contactID, mail, sent, n.now())
 	if err != nil {
@@ -117,13 +102,35 @@ func (n *NoticeCaseOpen) settleSender(ctx context.Context, tx pgx.Tx, contactID,
 }
 
 func settleSenderCasesTx(ctx context.Context, tx pgx.Tx, contactID, mail ids.UUID, sent, now time.Time) (int, error) {
+	if err := auth.RequireSystem(ctx); err != nil {
+		return 0, err
+	}
+	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
+		return 0, err
+	}
+	// Match the opener's lock order: contact, acquisitions, then cases. Recording
+	// the new proof takes a foreign-key lock on the contact too.
+	var held ids.UUID
+	if err := tx.QueryRow(ctx, `SELECT id FROM contact WHERE id = $1 AND archived_at IS NULL FOR UPDATE`, contactID).Scan(&held); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return 0, nil
+		}
+		return 0, err
+	}
 	if err := lockAcquisitionsTx(ctx, tx, contactID); err != nil {
 		return 0, err
 	}
+	var current bool
+	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM activity a WHERE a.id = $1 AND `+consent.SubjectReachedOutSQL("a", "$2::uuid")+`)`, mail, contactID).Scan(&current); err != nil {
+		return 0, err
+	}
+	if !current {
+		return 0, nil
+	}
+
 	rows, err := tx.Query(ctx, `
 		SELECT e.id FROM contact_acquisition_evidence e
-		 WHERE e.contact_id = $1 AND e.kind = $2 AND`+capturedAcquisition,
-		contactID, contacts.AcquiredUnknownLegacy)
+		 WHERE e.contact_id = $1`, contactID)
 	if err != nil {
 		return 0, fmt.Errorf("read what capture could not source: %w", err)
 	}
@@ -137,9 +144,24 @@ func settleSenderCasesTx(ctx context.Context, tx pgx.Tx, contactID, mail ids.UUI
 	if err := contacts.RecordSubjectWroteTx(ctx, tx, ids.From[ids.ContactKind](contactID), mail, sent, systemNoticeCaseActor); err != nil {
 		return 0, err
 	}
-	closed, err := consent.SettleWhenSubjectWroteTx(ctx, tx, unknown, now)
+	closed, err := consent.SettleWhenSubjectReachedOutTx(ctx, tx, unknown, mail, now)
 	if err != nil {
 		return 0, err
 	}
 	return closed, nil
+}
+
+// settleContactApproach is reached after merges and address changes, when
+// earlier correspondence may now belong to this contact.
+func (n *NoticeCaseOpen) settleContactApproach(ctx context.Context, tx pgx.Tx, contact ids.UUID) error {
+	var activity ids.UUID
+	var at time.Time
+	err := tx.QueryRow(ctx, `SELECT a.id, `+consent.SubjectReachedOutAtSQL("a")+` FROM `+consent.SubjectReachedOutFromSQL("$1::uuid")+` ORDER BY `+consent.SubjectReachedOutAtSQL("a")+`, a.id LIMIT 1`, contact).Scan(&activity, &at)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	return n.settleSender(ctx, tx, contact, activity, at)
 }

@@ -2971,8 +2971,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "locale.name.vi": "Tiếng Việt",
   "locale.switchLabel": "Sprache",
 
-  "screen.pending": "Diese Ansicht ist noch nicht verfügbar.",
-
   "ext.panels.label": "Erweiterungen",
   "ext.notFound":
     "In dieser Installation ist keine Erweiterung namens „{name}“ aktiviert.",
@@ -3463,6 +3461,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "partner.kind.referral": "Empfehlung",
   "partner.kinds": "Partnerarten",
   "partner.kindsAll": "Alle Arten",
+  "partner.endProgram": "Partnerprogramm beenden",
+  "partner.endProgramHelp":
+    "Das Unternehmen, die vereinbarten Konditionen und der Provisionsverlauf bleiben erhalten. Der Beziehungstyp Partner wird entfernt.",
+  "partner.stageNeedsActivation":
+    "Aktiviere den Partner, bevor du eine aktive Phase wählst.",
   "partner.stageAll": "Alle Phasen",
   "partner.stageMeaning": "Bedeutung der Phase",
   "partner.stageMeaningAll": "Alle Bedeutungen",
@@ -9801,6 +9804,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "forecast.partialTitle": "Nicht jeder Deal ist bepreist",
   "forecast.partial":
     "{priced} von {eligible} Deals sind bepreist. Deals ohne Preis tragen nichts zu den Summen oben bei.",
+  "forecast.callHistory": "Bisherige Prognosen",
+  "forecast.callAuthor": "Eingereicht von",
+  "forecast.noCallHistory": "Für diesen Zeitraum liegen keine Prognosen vor.",
   "forecast.currentCall": "Einschätzung",
   "forecast.currentCallDetailOver":
     "Aktualisiert {date} · {gap} über gewonnenen + wahrscheinlichen Deals",
@@ -12005,6 +12011,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "notice.source.openRecord": "Datensatz ansehen",
   "notice.source.moreEvidence": "Weitere Nachweise anzeigen",
   "notice.source.preview": "Vor der Bestätigung",
+  "notice.source.previewReachedOut":
+    "Der Kontakt hat sich bereits per E-Mail oder über einen Termin gemeldet. Daher ist keine gesonderte Datenschutzinformation geschuldet.",
   "notice.source.previewNone":
     "Aus dieser Quelle folgt keine eigene Informationspflicht.",
   "notice.source.previewOwed": "Ein Datenschutzhinweis ist bis {date} fällig.",
@@ -12276,8 +12284,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Sie können der Nutzung Ihrer Daten, die auf unserem berechtigten Interesse beruht, jederzeit widersprechen. Wir hören dann damit auf, es sei denn, wir haben zwingende Gründe weiterzumachen. Widersprechen Sie Werbung, senden wir keine mehr, und Sie müssen keinen Grund nennen.",
   "privacynotice.objection.how": "So widersprechen Sie: {route}",
   "notice.ownerOf": "Zuständig für {duty}",
-  "notice.excuse": "Ohne Versand beenden",
-  "notice.excuseTitle": "Pflicht ohne Versand der Information beenden",
+  "notice.excuse": "Schließen, ohne zu senden",
+  "notice.excuseTitle": "Schließen, ohne zu senden",
   "notice.excuseWhich": "Art des Grunds",
   "notice.excuseProvided": "Bereits anderweitig informiert",
   "notice.excuseExempt": "Pflicht gilt nicht",
@@ -14530,6 +14538,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "scheduling.defaultSubject": "Termin über Margince",
   "book.name": "Name",
   "book.email": "E-Mail-Adresse",
+  "book.privacyInformation": "Datenschutzhinweise",
+  "scheduling.privacyMissing":
+    "Auf deiner Buchungsseite fehlt ein Link zu den Datenschutzhinweisen. Wende dich an einen Admin. Das Feld „Kontakt zum Datenschutz“ steht unter Einstellungen → Unternehmen → Firmenangaben in E-Mails.",
   "book.consentWording":
     "Ich bin einverstanden, dass mein Name und meine E-Mail-Adresse gespeichert werden, um diesen Termin zu vereinbaren und im Anschluss daran nachzufassen.",
 
@@ -22840,16 +22851,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "noticeDuty.what":
     "Prüfen, woher die Kontaktdaten stammen und ob die erfasste Informationspflicht noch besteht.",
   "noticeDuty.how":
-    "Sende den Datenschutzhinweis, frage nach einer Bestätigung der Daten (das informiert ebenfalls) oder beende die Pflicht, wenn der Kontakt schon informiert ist oder eine Ausnahme gilt.",
+    "Sende den Datenschutzhinweis, frage nach einer Bestätigung der Daten (das informiert ebenfalls) oder schließe, ohne zu senden, wenn der Kontakt schon informiert ist oder eine Ausnahme gilt.",
   "noticeDuty.sendNotice": "Datenschutzhinweis senden",
   "noticeDuty.askConfirm": "Bestätigung der Angaben anfordern",
-  "noticeDuty.end": "Pflicht beenden…",
+  "noticeDuty.end": "Schließen, ohne zu senden…",
   "noticeDuty.sent":
     "An {address} gesendet. Der Eintrag verschwindet aus deiner Worklist, bleibt in der Compliance-Warteschlange aber ausstehend, bis die Nachricht zugestellt ist. Kommt die Nachricht nicht an, erscheint der Eintrag wieder hier.",
   "noticeDuty.notSent":
     "Nicht gesendet: Diese Installation kann keine E-Mail an {address} senden.",
-  "noticeDuty.ended":
-    "Die Pflicht ist beendet. Deine Begründung ist gespeichert.",
+  "noticeDuty.ended": "Ohne Versand geschlossen. Der Grund ist vermerkt.",
   "noticeDuty.obtainedAs": "Erhalten als",
   "noticeDuty.obtainedOn": "Erhalten am",
   "noticeDuty.dateUnknown": "Datum unbekannt",

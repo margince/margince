@@ -155,7 +155,6 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	"internal/modules/agents/runner:SaveOutcome":           "the same claimed run as MarkFailed, and the statement's own comment states that a correction of a settled run is a new attempt rather than an edit of this one",
 	"internal/modules/consent:setNoticeCaseOwner":          "lockNoticeCase reads the case FOR UPDATE first, which the file names as what orders two owners arriving together",
 	"internal/modules/consent:ExcuseNoticeCase":            "the excuse path takes the same lockNoticeCase FOR UPDATE before deciding, so the state it validated is the state it writes",
-	"internal/modules/consent:closeOwedCasesTx":            "closes the cases a subject's own reply settles, under the notice case lock the caller took; the statement names the reply as the cause rather than carrying a state it read",
 	"internal/modules/consent:markResolvedTx":              "the submission is held FOR UPDATE by the review that decides it, so the resolution it writes is the one it read",
 	"internal/modules/consent:applyDSRUpdateTx":            "every column coalesces onto the row's own value, so a field this caller did not set keeps what the row holds rather than what this caller last read",
 	"internal/modules/contacts:recordSiteReadConfirmation": "the confirmation rides the company lock the scan took before reading what to confirm",
