@@ -139,6 +139,9 @@ func TestADeliverySetsACustomFieldAndKeepsOneAUserEdited(t *testing.T) {
 	if withheld := set("mid-market"); len(withheld) != 0 || read() != "mid-market" {
 		t.Errorf("second delivery: withheld %v, value %v, want the same value and nothing withheld", withheld, read())
 	}
+	if withheld := set("smb"); len(withheld) != 0 || read() != "smb" {
+		t.Errorf("a changed value: withheld %v, value %v, want the unit's earlier write replaced", withheld, read())
+	}
 	if _, err := store.UpdateCompany(e.Admin(), company,
 		contacts.UpdateCompanyInput{CustomFields: map[string]any{column: "typed by a user"}}); err != nil {
 		t.Fatalf("editing as a user: %v", err)

@@ -59,9 +59,9 @@ A unit can set a company's custom values and hand an admin a task when a company
 | Read the company | `tx.Core().Companies().Get(ctx, d.Entity.ID)` | A company the member cannot read is `ErrNotFound`. |
 | Set custom values | `tx.Core().Companies().SetCustomFields(ctx, id, values)` | The rules of `CompanyFields.CustomFields`, which are those of a deal: `cf_` keys of active fields, at most 50, and a pick-list value must be an option. A refused key or value is `ErrInvalid`. It returns the names it kept because a user last edited them. |
 | Find an admin | `tx.Core().Members().List(ctx, extension.MemberQuery{Role: "admin"})` | The unit lists `extension.CapabilityMembers` in `Needs` with a reason, else `ErrNotDeclared`. See [extension-capabilities.md](../reference/extension-capabilities.md#read-who-holds-a-role). |
-| File the task | `rt.Ingest(ctx, extension.UserID(rt.Caller().UserID), rec)` with an activity of kind task, outside any `Tx`; or `tx.Core().Activities().Create` | Key an `Ingest` record on your own stable id, such as the company id. Core already refuses a task for an agent seat. |
+| File the task | `rt.Ingest(ctx, extension.UserID(rt.Caller().UserID), rec)` with an activity of kind task, outside any `Tx`; or `tx.Core().Activities().Create` | Key an `Ingest` record on your own stable id, such as the company id; `Create` has no key and files a second task on a redelivery. Core already refuses a task for an agent seat. |
 
-The bus may deliver an event twice. `SetCustomFields` writes the same value again as no change, and a task record with the same key lands once, so a redelivery adds nothing. Skip the agent seats the roster lists with `IsAgent`.
+The bus may deliver an event twice. `SetCustomFields` writes the same value again as no change, and an `Ingest` task record with the same key lands once, so a redelivery of that path adds nothing. A task filed with `Create` has no key, so guard it yourself. The roster lists no agent seats.
 
 ## Let a unit overwrite edited fields
 

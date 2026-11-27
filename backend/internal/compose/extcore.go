@@ -277,6 +277,14 @@ func (c extensionCompanies) SetCustomFields(ctx context.Context, id string, valu
 		return nil, err
 	}
 	tx, unit := c.core.tx, c.core.unit
+	// The write is the unit's, not the member's: audited as the unit's
+	// connector, as Ingest does, so a later delivery may replace it.
+	if acting, ok := principal.Actor(ctx); ok {
+		acting.Type = principal.PrincipalConnector
+		acting.ID = ingressPrincipalPrefix + unit
+		acting.OnBehalfOf = acting.UserID
+		ctx = principal.WithActor(ctx, acting)
+	}
 	return extdelivery.CompanyDoor{
 		Tx: tx, Catalog: c.core.catalog(), Store: c.store(), Refuse: portRefusal,
 		Overwrites: func(ctx context.Context) (bool, error) { return overwritesEditedFieldsIn(ctx, tx, unit) },

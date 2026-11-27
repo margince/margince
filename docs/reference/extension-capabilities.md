@@ -27,7 +27,7 @@ The declared needs are in `manifest.generated.json` and in the `needs` list that
 
 ## Read who holds a role
 
-`tx.Core().Members().List(ctx, extension.MemberQuery{Role: "admin"})` answers the active members who hold the role: `ID`, `DisplayName` and `IsAgent`. An empty `Role` lists every active member. The list is sorted by name and ends at `extension.MaxRosterMembers`. A service member is not listed, because nobody signs in as it. The answer carries no email and no roles.
+`tx.Core().Members().List(ctx, extension.MemberQuery{Role: "admin"})` answers the active members who hold the role: `ID`, `DisplayName` and `IsAgent`, which is always false because agent seats are not listed. An empty `Role` lists every active member. The list is sorted by name and ends at `extension.MaxRosterMembers`. A service member is not listed, because nobody signs in as it, and neither is an agent seat, which cannot take a task. The answer carries no email and no roles.
 
 | Case | Answer |
 |---|---|
