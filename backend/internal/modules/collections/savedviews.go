@@ -195,7 +195,7 @@ func (s *Store) CreateSavedView(ctx context.Context, in CreateSavedViewInput) (s
 		})
 		return err
 	})
-	return out, err
+	return out, savedViewNameError(err)
 }
 
 func (s *Store) GetSavedView(ctx context.Context, id ids.SavedViewID) (savedViewRow, error) {
@@ -352,7 +352,7 @@ func (s *Store) UpdateSavedView(ctx context.Context, id ids.SavedViewID, in Upda
 			selectSavedView+"id = $1", id))
 		return err
 	})
-	return out, err
+	return out, savedViewNameError(err)
 }
 
 func (s *Store) ArchiveSavedView(ctx context.Context, id ids.SavedViewID) (savedViewRow, error) {

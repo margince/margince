@@ -94,11 +94,18 @@ func (fx *autoFixture) failedRunID(t *testing.T, handler string) (ids.UUID, stri
 func TestARetriedRunAppliesOnTheSecondPass(t *testing.T) {
 	fx := setupAutomationDB(t)
 	const handler = "retry_me"
-	fx.seedAutomation(t, handler)
+	id := fx.seedAutomation(t, handler)
+	fx.exec(t, `UPDATE automation SET name = @name WHERE id = @id`, pgx.StrictNamedArgs{"name": "Retry review", "id": id})
 
 	script := &failingOnce{}
 	engine := engineOverScripted(fx, scriptedWorkflow{
 		name: handler, apply: script.apply(), redrivable: true,
+		plan: func(ev workflow.Event) (workflow.Effect, error) {
+			if ev.AutomationName != "Retry review" {
+				t.Errorf("firing lost the stored rule name: %+v", ev)
+			}
+			return workflow.Effect{}, nil
+		},
 	})
 	env := fx.stagedEvent(t, ids.NewV7())
 	if err := engine.HandleEvent(context.Background(), env); err == nil {

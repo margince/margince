@@ -9,6 +9,7 @@ package contacts
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"slices"
@@ -26,7 +27,9 @@ import (
 // is live. It answers 409 with the code partner_row_exists.
 type PartnerAlreadySetUpError struct{}
 
-func (e *PartnerAlreadySetUpError) Error() string { return partnerRowExistsMessage() }
+func (e *PartnerAlreadySetUpError) Error() string {
+	return "This company already has a live partner program; edit that program, or end it with end_partner_program before setting up another"
+}
 
 func (e *PartnerAlreadySetUpError) Unwrap() error { return apperrors.ErrConflict }
 
@@ -136,4 +139,22 @@ func asFreshProgram(in UpsertPartnerInput) UpsertPartnerInput {
 		in.CertStatus = new("applied")
 	}
 	return in
+}
+
+// requirePartnerRestartGrant holds the tier grant when reviving stored terms.
+// The company lock keeps the ended program stable until the upsert finishes.
+func requirePartnerRestartGrant(ctx context.Context, tx pgx.Tx, in UpsertPartnerInput) error {
+	var tier *string
+	err := tx.QueryRow(ctx, `SELECT margin_tier FROM partner WHERE company_id = $1 AND archived_at IS NOT NULL`, in.CompanyID).Scan(&tier)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if tier == nil {
+		return nil
+	}
+	in.MarginTier = tier
+	return requireMarginTierGrant(ctx, in)
 }

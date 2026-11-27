@@ -42479,6 +42479,9 @@ type Company struct {
 	// forward-compatible.
 	Partner *Partner `json:"partner,omitempty"`
 
+	// PartnerProgramEnded An ended partner program has commission and deal history. Omitted without partner read permission.
+	PartnerProgramEnded *bool `json:"partner_program_ended,omitempty"`
+
 	// Phone The company's main number, in E.164 form (for example +49301234567). It is never a contact's own number.
 	Phone *string                 `json:"phone,omitempty"`
 	Raw   *map[string]interface{} `json:"raw,omitempty"`
@@ -61219,7 +61222,10 @@ type NoticeSourcePreview struct {
 	NoticeRequired       bool                    `json:"notice_required"`
 	PreviewToken         string                  `json:"preview_token"`
 	Rule                 NoticeSourcePreviewRule `json:"rule"`
-	Timezone             string                  `json:"timezone"`
+
+	// SubjectReachedOut The contact's own mail or meeting removes the duty, regardless of the source selected. Does not disclose unreadable activity identifiers.
+	SubjectReachedOut *bool  `json:"subject_reached_out,omitempty"`
+	Timezone          string `json:"timezone"`
 }
 
 // NoticeSourcePreviewRule defines model for NoticeSourcePreview.Rule.
@@ -63897,8 +63903,11 @@ type PublicSchedulingProfile struct {
 	OfferedLengths *[]int `json:"offered_lengths,omitempty"`
 
 	// Paused True when the page takes no bookings now: the host turned bookings off, or the calendar behind it cannot take them. The availability and booking calls then answer as for an unknown page.
-	Paused bool   `json:"paused"`
-	Title  string `json:"title"`
+	Paused bool `json:"paused"`
+
+	// PrivacyInformation The installation's privacy page, falling back to its privacy contact. Absent when neither is stated.
+	PrivacyInformation *string `json:"privacy_information,omitempty"`
+	Title              string  `json:"title"`
 
 	// VideoApp Present when new meetings get a video call link from the host's calendar.
 	VideoApp *PublicSchedulingProfileVideoApp `json:"video_app,omitempty"`
@@ -68283,8 +68292,11 @@ type SchedulingProfile struct {
 	NoticeMinutes int     `json:"notice_minutes" maximum:"10080" minimum:"0"`
 
 	// OfferedLengths Additional meeting lengths offered by this host. The default duration is always offered.
-	OfferedLengths *[]int                    `json:"offered_lengths,omitempty" unique:"items"`
-	Provider       SchedulingProfileProvider `json:"provider"`
+	OfferedLengths *[]int `json:"offered_lengths,omitempty" unique:"items"`
+
+	// PrivacyInformation The installation's privacy page, falling back to its privacy contact. Absent when neither is stated.
+	PrivacyInformation *string                   `json:"privacy_information,omitempty"`
+	Provider           SchedulingProfileProvider `json:"provider"`
 
 	// PublicUrl The address to share: `/book/{alias}` when an alias is set, else `/book/{slug}`, on the configured public origin. Absent when no usable public origin is configured.
 	PublicUrl   *string `json:"public_url,omitempty"`
@@ -80363,6 +80375,16 @@ type MergeCompanyParams struct {
 	IfMatch *IfMatch `json:"If-Match,omitempty"`
 }
 
+// EndPartnerProgramParams defines parameters for EndPartnerProgram.
+type EndPartnerProgramParams struct {
+	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+	// the last-seen entity `version`. If the row's current `version` differs, the write is
+	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+	IfMatch *IfMatch `json:"If-Match,omitempty"`
+}
+
 // UpsertPartnerParams defines parameters for UpsertPartner.
 type UpsertPartnerParams struct {
 	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
@@ -90261,6 +90283,14 @@ func (a *Company) UnmarshalJSON(b []byte) error {
 		delete(object, "partner")
 	}
 
+	if raw, found := object["partner_program_ended"]; found {
+		err = json.Unmarshal(raw, &a.PartnerProgramEnded)
+		if err != nil {
+			return fmt.Errorf("error reading 'partner_program_ended': %w", err)
+		}
+		delete(object, "partner_program_ended")
+	}
+
 	if raw, found := object["phone"]; found {
 		err = json.Unmarshal(raw, &a.Phone)
 		if err != nil {
@@ -90598,6 +90628,13 @@ func (a Company) MarshalJSON() ([]byte, error) {
 		object["partner"], err = json.Marshal(a.Partner)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'partner': %w", err)
+		}
+	}
+
+	if a.PartnerProgramEnded != nil {
+		object["partner_program_ended"], err = json.Marshal(a.PartnerProgramEnded)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'partner_program_ended': %w", err)
 		}
 	}
 
@@ -103582,6 +103619,9 @@ type ServerInterface interface {
 	// What each source last offered for the company's fields, to show beside the value on the record.
 	// (GET /companies/{id}/offered-values)
 	ListCompanyOfferedValues(w http.ResponseWriter, r *http.Request, id Id)
+	// End the partner program while keeping the company and commission history.
+	// (DELETE /companies/{id}/partner)
+	EndPartnerProgram(w http.ResponseWriter, r *http.Request, id Id, params EndPartnerProgramParams)
 	// Read the partner extension on a company (404 if the company is not a partner).
 	// (GET /companies/{id}/partner)
 	GetPartner(w http.ResponseWriter, r *http.Request, id Id)
@@ -108175,6 +108215,12 @@ func (_ Unimplemented) MergeCompany(w http.ResponseWriter, r *http.Request, id I
 // What each source last offered for the company's fields, to show beside the value on the record.
 // (GET /companies/{id}/offered-values)
 func (_ Unimplemented) ListCompanyOfferedValues(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// End the partner program while keeping the company and commission history.
+// (DELETE /companies/{id}/partner)
+func (_ Unimplemented) EndPartnerProgram(w http.ResponseWriter, r *http.Request, id Id, params EndPartnerProgramParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -129347,6 +129393,64 @@ func (siw *ServerInterfaceWrapper) ListCompanyOfferedValues(w http.ResponseWrite
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListCompanyOfferedValues(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// EndPartnerProgram operation middleware
+func (siw *ServerInterfaceWrapper) EndPartnerProgram(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params EndPartnerProgramParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch IfMatch
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.EndPartnerProgram(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -165369,6 +165473,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/companies/{id}/offered-values", wrapper.ListCompanyOfferedValues)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/companies/{id}/partner", wrapper.EndPartnerProgram)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/companies/{id}/partner", wrapper.GetPartner)

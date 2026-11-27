@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { MeasurableRosterState, useMeasurableScopes } from "./measurablescopes";
 import "./progress.css";
 import { useState } from "react";
 import { Button, Field, SegmentedControl } from "../../design-system/atoms";
@@ -78,7 +79,13 @@ export function ProgressScreen() {
   const [params] = useUrlParams();
   const [now] = useState(() => new Date());
   const context = useAnalyticsContext();
-  const scopes = progressScopes(context.data?.allowed_scopes ?? []);
+  const dials = readDials(params, now);
+  const measurable = useMeasurableScopes(
+    progressScopes(context.data?.allowed_scopes ?? []),
+    dials.year,
+    context.isSuccess,
+  );
+  const scopes = measurable.scopes;
   const named =
     scopes.find((scope) => scopeKey(scope) === params.get("scope")) ??
     sellerFromKey(params.get("scope"));
@@ -87,7 +94,6 @@ export function ProgressScreen() {
       ? undefined
       : scopes.find((scope) => scope.kind === "team");
   const scope = named ?? defaultScope;
-  const dials = readDials(params, now);
   const ask: ProgressAsk = {
     ...dials,
     scope:
@@ -180,6 +186,7 @@ export function ProgressScreen() {
           </Field>
         )}
       </FilterBar>
+      <MeasurableRosterState read={measurable} />
       <QueryGate query={progress} pendingLabel={t("progress.reading")}>
         {(data) => <ProgressBody progress={data} />}
       </QueryGate>

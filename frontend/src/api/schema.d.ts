@@ -3422,7 +3422,11 @@ export interface paths {
          */
         put: operations["upsertPartner"];
         post?: never;
-        delete?: never;
+        /**
+         * End the partner program while keeping the company and commission history.
+         * @description Retires the partner extension. Company update authority is required. Existing terms and commission entries stay on record. The partner relationship type is removed in the same transaction; other relationship types stay.
+         */
+        delete: operations["endPartnerProgram"];
         options?: never;
         head?: never;
         patch?: never;
@@ -3455,7 +3459,7 @@ export interface paths {
          *     is its approval.
          *
          *     A company that already has a live partner program answers 409 `partner_row_exists`.
-         *     A program ends only when the company is archived.
+         *     End the program with `endPartnerProgram` while keeping its company and commission history, or archive the company.
          *
          *     A retry with the same `idempotency_key` answers the first call's result. An
          *     `Idempotency-Key` header is taken as that key.
@@ -36873,6 +36877,8 @@ export interface components {
                 [key: string]: unknown;
             } | null;
             partner?: components["schemas"]["Partner"];
+            /** @description An ended partner program has commission and deal history. Omitted without partner read permission. */
+            readonly partner_program_ended?: boolean;
             version?: components["schemas"]["RowVersion"];
             /**
              * Format: date-time
@@ -44925,6 +44931,8 @@ export interface components {
          *     `video_app`), so the guest learns nothing about the calendar behind the page.
          */
         PublicSchedulingProfile: {
+            /** @description The installation's privacy page, falling back to its privacy contact. Absent when neither is stated. */
+            readonly privacy_information?: string;
             host_name: string;
             company_name: string;
             /** @description Absolute public logo URL when the public origin is configured; otherwise relative to the API origin. */
@@ -44945,6 +44953,8 @@ export interface components {
             video_app?: "google_meet" | "microsoft_teams";
         };
         SchedulingProfile: {
+            /** @description The installation's privacy page, falling back to its privacy contact. Absent when neither is stated. */
+            readonly privacy_information?: string;
             enabled: boolean;
             /** @enum {string} */
             provider: "" | "gcal" | "graphcal";
@@ -58948,6 +58958,8 @@ export interface components {
             selected_evidence?: components["schemas"]["NoticeSourceEvidenceReference"];
         };
         NoticeSourcePreview: {
+            /** @description The contact's own mail or meeting removes the duty, regardless of the source selected. Does not disclose unreadable activity identifiers. */
+            readonly subject_reached_out?: boolean;
             preview_token: string;
             /** @enum {string} */
             rule: "none" | "art13" | "art14";
@@ -71849,6 +71861,40 @@ export interface operations {
             };
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    endPartnerProgram: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+                 *     the last-seen entity `version`. If the row's current `version` differs, the write is
+                 *     rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+                 *     re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+                 *     Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+                 */
+                "If-Match"?: components["parameters"]["IfMatch"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Partner program ended. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -86363,6 +86409,15 @@ export interface operations {
                     "application/json": components["schemas"]["SavedView"];
                 };
             };
+            /** @description `view_name_taken` — another live view of this resource owned by the caller has this name. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             422: components["responses"]["ValidationError"];
         };
     };
@@ -86451,7 +86506,15 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
+            /** @description `version_skew` — the view changed since it was read; or `view_name_taken` — another live view of this resource owned by the caller has this name. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             422: components["responses"]["ValidationError"];
         };
     };

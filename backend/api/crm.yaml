@@ -5263,6 +5263,22 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+    delete:
+      tags: [Companies, Partners]
+      operationId: endPartnerProgram
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      x-mcp-tool: { verb: end_partner_program, router: change_settings, action: end_partner_program, tier: auto_execute, scope: write, served_by: route, ask_user_first: true }
+      summary: End the partner program while keeping the company and commission history.
+      description: Retires the partner extension. Company update authority is required. Existing terms and commission entries stay on record. The partner relationship type is removed in the same transaction; other relationship types stay.
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+      responses:
+        '204': { description: Partner program ended. }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /companies/{id}/partner/setup:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -5285,7 +5301,7 @@ paths:
         is its approval.
 
         A company that already has a live partner program answers 409 `partner_row_exists`.
-        A program ends only when the company is archived.
+        End the program with `endPartnerProgram` while keeping its company and commission history, or archive the company.
 
         A retry with the same `idempotency_key` answers the first call's result. An
         `Idempotency-Key` header is taken as that key.
@@ -17688,6 +17704,11 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/SavedView' }
+        '409':
+          description: '`view_name_taken` — another live view of this resource owned by the caller has this name.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /views/{id}:
@@ -17727,7 +17748,11 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/SavedView' }
         '404': { $ref: '#/components/responses/NotFound' }
-        '409': { $ref: '#/components/responses/Conflict' }
+        '409':
+          description: '`version_skew` — the view changed since it was read; or `view_name_taken` — another live view of this resource owned by the caller has this name.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
     delete:
       tags: [Views]
@@ -52128,6 +52153,10 @@ components:
             claim one colleague entered a decade of everybody else's records.
         raw: { type: [object, 'null'], additionalProperties: true }
         partner: { $ref: '#/components/schemas/Partner' }
+        partner_program_ended:
+          type: boolean
+          readOnly: true
+          description: An ended partner program has commission and deal history. Omitted without partner read permission.
         version: { $ref: '#/components/schemas/RowVersion' }
         last_activity_at:
           type: [string, 'null']
@@ -61892,6 +61921,10 @@ components:
         every other field holds a neutral value (empty text, zero duration, `enabled: false`, no
         `video_app`), so the guest learns nothing about the calendar behind the page.
       properties:
+        privacy_information:
+          type: string
+          readOnly: true
+          description: The installation's privacy page, falling back to its privacy contact. Absent when neither is stated.
         host_name: { type: string }
         company_name: { type: string }
         logo_url: { type: string, description: Absolute public logo URL when the public origin is configured; otherwise relative to the API origin. }
@@ -61909,6 +61942,10 @@ components:
       type: object
       required: [enabled, provider, calendar_id, duration_minutes, notice_minutes, horizon_days, buffer_minutes, title, location]
       properties:
+        privacy_information:
+          type: string
+          readOnly: true
+          description: The installation's privacy page, falling back to its privacy contact. Absent when neither is stated.
         enabled: { type: boolean }
         provider: { type: string, enum: ['', gcal, graphcal], x-extensible-enum: true }
         calendar_id: { type: string, maxLength: 512 }
@@ -80461,6 +80498,10 @@ components:
       type: object
       required: [preview_token, rule, notice_required, timezone, deadline_is_upper_bound]
       properties:
+        subject_reached_out:
+          type: boolean
+          readOnly: true
+          description: The contact's own mail or meeting removes the duty, regardless of the source selected. Does not disclose unreadable activity identifiers.
         preview_token: { type: string }
         rule: { type: string, enum: [none, art13, art14], x-extensible-enum: true }
         notice_required: { type: boolean }

@@ -18,6 +18,7 @@
     "DELETE /v1/channel-links/{record_type}/{id}": "unlink_channel",
     "DELETE /v1/companies/{id}": "archive_record",
     "DELETE /v1/companies/{id}/facts/{factKey}": "change_record_parts",
+    "DELETE /v1/companies/{id}/partner": "end_partner_program",
     "DELETE /v1/companies/{id}/suggestions/dismiss": "restore_company_suggestion",
     "DELETE /v1/company/logo": "delete_anchor_company_logo",
     "DELETE /v1/company/logo/icon": "delete_anchor_company_logo_icon",
@@ -1758,6 +1759,10 @@
     "embed_reindex_identities": [],
     "embed_reindex_preview": [],
     "embed_reindex_status": [],
+    "end_partner_program": [
+      "id",
+      "if_version"
+    ],
     "enrich": [
       "approval_id",
       "company_id",
