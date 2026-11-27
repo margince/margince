@@ -78,6 +78,7 @@ RUN rm /etc/apt/sources.list.d/ubuntu.sources \
       perl=5.38.2-3.2ubuntu0.6 \
       procps=2:4.0.4-4ubuntu3.3 \
       python3=3.12.3-0ubuntu2.1 \
+      rsync=3.2.7-1ubuntu1.5 \
       shellcheck=0.9.0-1 \
       tzdata=2026e-0ubuntu0.24.04.1 \
       unzip=6.0-28ubuntu4.1 \
