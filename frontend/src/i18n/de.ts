@@ -20537,6 +20537,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.rail.addEmployment": "Unternehmen hinzufügen",
   "contact.employer.contacts_one": "{count} Kontakt",
   "contact.employer.contacts_other": "{count} Kontakte",
+  "contact.employer.hiddenHolders_one":
+    "{names} hat hier Kontakte, die du nicht sehen kannst. Frage nach einer Vorstellung.",
+  "contact.employer.hiddenHolders_other":
+    "{names} haben hier Kontakte, die du nicht sehen kannst. Frage nach einer Vorstellung.",
   "contact.employer.openDeals_one": "{count} offener Deal",
   "contact.employer.openDeals_other": "{count} offene Deals",
   "contact.employer.noOpenDeals": "keine offenen Deals",

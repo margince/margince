@@ -19967,6 +19967,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.rail.addEmployment": "Thêm công ty",
   "contact.employer.contacts_one": "{count} liên hệ",
   "contact.employer.contacts_other": "{count} liên hệ",
+  "contact.employer.hiddenHolders_one":
+    "{names} có liên hệ ở đây mà bạn không xem được. Hãy nhờ giới thiệu.",
+  "contact.employer.hiddenHolders_other":
+    "{names} có liên hệ ở đây mà bạn không xem được. Hãy nhờ giới thiệu.",
   "contact.employer.openDeals_one": "{count} deal đang mở",
   "contact.employer.openDeals_other": "{count} deal đang mở",
   "contact.employer.noOpenDeals": "không có deal đang mở",

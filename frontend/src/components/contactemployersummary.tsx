@@ -4,6 +4,7 @@ import type { components } from "../api/schema";
 import { Avatar } from "../design-system/atoms";
 import { CompanyLogo } from "../design-system/companylogo";
 import { formatNumber } from "../format/format";
+import { listFormat } from "../format/formatters";
 import { type Locale, translatePlural, type useT } from "../i18n";
 import { throwProblem } from "../lib/problem";
 
@@ -45,7 +46,10 @@ export function useEmployerSummary(companyId: string) {
 // gate on `contact_count`/`open_deal_count` being present at all: a company
 // the reader lacks the grants to see either number for renders neither.
 export function employerFacts(
-  company: Pick<Company, "contact_count" | "open_deal_count">,
+  company: Pick<
+    Company,
+    "contact_count" | "open_deal_count" | "hidden_contact_holders"
+  >,
   t: ReturnType<typeof useT>,
   locale: Locale,
 ): string {
@@ -70,6 +74,22 @@ export function employerFacts(
             company.open_deal_count,
             { count: formatNumber(company.open_deal_count, locale) },
           ),
+    );
+  }
+  const holders = company.hidden_contact_holders ?? [];
+  if (holders.length > 0) {
+    const names = listFormat(locale, { type: "conjunction" }).format(
+      holders.map((holder) => holder.display_name),
+    );
+    parts.push(
+      translatePlural(
+        locale,
+        "contact.employer.hiddenHolders",
+        holders.length,
+        {
+          names,
+        },
+      ),
     );
   }
   return parts.join(" · ");

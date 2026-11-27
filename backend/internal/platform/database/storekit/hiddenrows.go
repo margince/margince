@@ -75,44 +75,88 @@ func (s HiddenSection) ListSQL(columns, join string) string {
 // an agent seat, still counts and is never offered as someone to ask.
 func ReadHiddenRows(ctx context.Context, tx pgx.Tx, s HiddenSection, args []any) (HiddenRows, error) {
 	out := HiddenRows{Holders: []HiddenHolder{}}
-	if s.Visible == "" {
-		return out, nil
-	}
-	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT h.owner_id, u.display_name, count(DISTINCT h.entry)::int
-		  FROM (SELECT %[1]s AS entry, %[2]s AS owner_id FROM %[3]s WHERE %[4]s
-		           AND %[1]s NOT IN (SELECT %[1]s FROM %[3]s WHERE %[4]s AND (%[5]s))) h
-		  LEFT JOIN app_user u ON u.id = h.owner_id AND %[6]s
-		 GROUP BY h.owner_id, u.display_name
-		 ORDER BY u.display_name NULLS LAST, h.owner_id`,
-		s.Entry, s.Owner, s.From, s.Where, s.Visible, workforce.LiveHumanSQL("u")), args...)
+	rows, err := readHidden(ctx, tx, s, "''::text", args)
 	if err != nil {
 		return HiddenRows{}, err
 	}
+	for _, row := range rows {
+		out.Count += row.count
+		if row.owner != nil && row.name != nil {
+			out.Holders = append(out.Holders, HiddenHolder{UserID: *row.owner, DisplayName: *row.name})
+		}
+	}
+	return out, nil
+}
+
+// ReadHiddenHolders is ReadHiddenRows for a page of lists at once: the live
+// colleagues who own a hidden entry, per list. group is the text expression
+// that says which list an entry belongs to. An entry shown in one list is
+// still hidden in another where its row is not visible. It returns who to ask
+// and never how many, so a reader cannot count what row scope withheld.
+func ReadHiddenHolders(ctx context.Context, tx pgx.Tx, s HiddenSection, group string, args []any) (map[string][]HiddenHolder, error) {
+	rows, err := readHidden(ctx, tx, s, group, args)
+	if err != nil {
+		return nil, err
+	}
+	out := map[string][]HiddenHolder{}
+	for _, row := range rows {
+		if row.owner != nil && row.name != nil {
+			out[row.group] = append(out[row.group], HiddenHolder{UserID: *row.owner, DisplayName: *row.name})
+		}
+	}
+	return out, nil
+}
+
+type hiddenRow struct {
+	group string
+	owner *ids.UUID
+	name  *string
+	count int
+}
+
+// readHidden is the one statement behind both readers: per group and owner,
+// how many entries the section holds that its visibility predicate drops.
+func readHidden(ctx context.Context, tx pgx.Tx, s HiddenSection, group string, args []any) ([]hiddenRow, error) {
+	if s.Visible == "" {
+		return nil, nil
+	}
+	rows, err := tx.Query(ctx, fmt.Sprintf(`
+		SELECT h.grp, h.owner_id, u.display_name, count(DISTINCT h.entry)::int
+		  FROM (SELECT %[7]s AS grp, %[1]s AS entry, %[2]s AS owner_id FROM %[3]s WHERE %[4]s
+		           AND (%[7]s, %[1]s) NOT IN (SELECT %[7]s, %[1]s FROM %[3]s WHERE %[4]s AND (%[5]s))) h
+		  LEFT JOIN app_user u ON u.id = h.owner_id AND %[6]s
+		 GROUP BY h.grp, h.owner_id, u.display_name
+		 ORDER BY h.grp, u.display_name NULLS LAST, h.owner_id`,
+		s.Entry, s.Owner, s.From, s.Where, s.Visible, workforce.LiveHumanSQL("u"), group), args...)
+	if err != nil {
+		return nil, err
+	}
 	defer rows.Close()
+	var out []hiddenRow
 	for rows.Next() {
-		var owner *ids.UUID
-		var name *string
-		var count int
-		if err := rows.Scan(&owner, &name, &count); err != nil {
-			return HiddenRows{}, err
+		var row hiddenRow
+		if err := rows.Scan(&row.group, &row.owner, &row.name, &row.count); err != nil {
+			return nil, err
 		}
-		out.Count += count
-		if owner != nil && name != nil {
-			out.Holders = append(out.Holders, HiddenHolder{UserID: *owner, DisplayName: *name})
-		}
+		out = append(out, row)
 	}
 	return out, rows.Err()
 }
 
 // Wire is the contract shape of what was withheld: a count and who to ask.
 func (h HiddenRows) Wire() crmcontracts.HiddenRecords {
-	holders := make([]crmcontracts.HiddenRecordHolder, 0, len(h.Holders))
-	for _, holder := range h.Holders {
-		holders = append(holders, crmcontracts.HiddenRecordHolder{
+	return crmcontracts.HiddenRecords{Count: h.Count, Holders: HoldersWire(h.Holders)}
+}
+
+// HoldersWire is the contract shape of who to ask: never nil, so a reader sees
+// an empty list and not a missing key.
+func HoldersWire(holders []HiddenHolder) []crmcontracts.HiddenRecordHolder {
+	out := make([]crmcontracts.HiddenRecordHolder, 0, len(holders))
+	for _, holder := range holders {
+		out = append(out, crmcontracts.HiddenRecordHolder{
 			UserId:      openapi_types.UUID(holder.UserID),
 			DisplayName: holder.DisplayName,
 		})
 	}
-	return crmcontracts.HiddenRecords{Count: h.Count, Holders: holders}
+	return out
 }

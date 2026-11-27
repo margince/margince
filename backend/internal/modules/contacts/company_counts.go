@@ -98,10 +98,36 @@ func fillContactCounts(ctx context.Context, tx pgx.Tx, idx map[openapi_types.UUI
 	if err != nil {
 		return err
 	}
-	return fillCount(ctx, tx, idx,
+	if err := fillCount(ctx, tx, idx,
 		`SELECT rel.company_id, count(DISTINCT p.id)`+from+`
 		 GROUP BY rel.company_id`, args,
-		func(o *crmcontracts.Company, n int) { o.ContactCount = &n })
+		func(o *crmcontracts.Company, n int) { o.ContactCount = &n }); err != nil {
+		return err
+	}
+	return fillHiddenContactHolders(ctx, tx, idx, companyIDs)
+}
+
+// fillHiddenContactHolders names, per company, the live colleagues who own a
+// current contact there that the caller may not see. It reads the section
+// the count reads (employmentSection), turned around, so the holders and the
+// count cannot describe different people. Only who to ask is carried: no
+// contact and no number.
+func fillHiddenContactHolders(ctx context.Context, tx pgx.Tx, idx map[openapi_types.UUID]*crmcontracts.Company, companyIDs []ids.UUID) error {
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	section, err := employmentSection(ctx, fmt.Sprintf("rel.company_id = ANY($%d)", arg(companyIDs)), arg)
+	if err != nil {
+		return err
+	}
+	holders, err := storekit.ReadHiddenHolders(ctx, tx, section, "rel.company_id::text", args)
+	if err != nil {
+		return err
+	}
+	for id, company := range idx {
+		list := storekit.HoldersWire(holders[id.String()])
+		company.HiddenContactHolders = &list
+	}
+	return nil
 }
 
 // countedEmploymentFrom is the FROM and WHERE of "which contacts work here that
