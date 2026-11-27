@@ -103,8 +103,8 @@ function keyFromLabel(label: string): string {
 }
 
 // A label or key as a reader tells it apart: case, spacing, underscores and the
-// encoding of its accents aside. Upper then lower folds case as the server's
-// purposeReading does, so STRASSE reads as Straße.
+// encoding of its accents aside. Case maps up then down, as the server's
+// purposeReading does, so STRASSE reads as Straße and ı as i.
 function purposeReading(text: string): string {
   return text
     .normalize("NFC")
