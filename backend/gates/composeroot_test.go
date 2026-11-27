@@ -114,8 +114,10 @@ const (
 	// the How it stands job and its page case, and the task explanation's
 	// certification case and its test. The job needs the unexported job
 	// context; the cases drive the contact page.
+	// Raised by 2 test lines for the company list's status_any entry in the MCP
+	// path census, which reads the unexported route table.
 	composeRootProductionLines = 231_477
-	composeRootTestLines       = 362_144
+	composeRootTestLines       = 362_146
 )
 
 // A read under these floors stopped early or read the wrong place, and would
