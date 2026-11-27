@@ -6,7 +6,7 @@
     "required_only_as_one_of_a_set": 0,
     "never_driven": 6,
     "permitted_but_never_required": 1,
-    "tokens_served_but_never_driven": 3690,
+    "tokens_served_but_never_driven": 3685,
     "use_case_cases": 83,
     "acceptance_criteria_named": 133,
     "tools_added_by_shipped_units": 0,
@@ -21,7 +21,7 @@
       "cases_with_a_committed_run": 81,
       "cases_that_reached_their_bar": 81,
       "cases_below_their_bar": 0,
-      "cases_measured_on_an_earlier_listing": 45,
+      "cases_measured_on_an_earlier_listing": 81,
       "runs": 168,
       "passed": 164,
       "reliability": 0.9761904761904762,
@@ -63,10 +63,10 @@
       "cases_with_a_committed_run": 81,
       "cases_that_reached_their_bar": 81,
       "cases_below_their_bar": 0,
-      "cases_measured_on_an_earlier_listing": 16,
-      "runs": 165,
+      "cases_measured_on_an_earlier_listing": 81,
+      "runs": 164,
       "passed": 162,
-      "reliability": 0.9818181818181818,
+      "reliability": 0.9878048780487805,
       "cases_below_their_bar_named": [],
       "route": "Antigravity CLI",
       "self_judged": false,
@@ -82,15 +82,19 @@
       "name": "gpt-5.6-sol",
       "trust": "🟡 Mostly",
       "cases_with_a_committed_run": 82,
-      "cases_that_reached_their_bar": 80,
-      "cases_below_their_bar": 2,
-      "cases_measured_on_an_earlier_listing": 55,
-      "runs": 171,
-      "passed": 160,
-      "reliability": 0.935672514619883,
+      "cases_that_reached_their_bar": 76,
+      "cases_below_their_bar": 6,
+      "cases_measured_on_an_earlier_listing": 82,
+      "runs": 172,
+      "passed": 154,
+      "reliability": 0.8953488372093024,
       "cases_below_their_bar_named": [
         "case107_tidy_up_the_room",
-        "case47_tidy_the_fair_list"
+        "case47_tidy_the_fair_list",
+        "case59_file_it_on_the_meeting_and_the_contract",
+        "case6_ask_the_company",
+        "case99_they_raised_money",
+        "case9_filed_in_the_wrong_place"
       ],
       "route": "Codex CLI",
       "self_judged": false,
@@ -653,6 +657,7 @@
               "retries": null
             },
             "measured_on_an_earlier_listing": [
+              "scenario",
               "tool copy",
               "server instructions and resources",
               "harness"
@@ -1198,6 +1203,7 @@
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
+            "server instructions and resources",
             "harness"
           ]
         },
@@ -1233,7 +1239,8 @@
             }
           },
           "measured_on_an_earlier_listing": [
-            "tool copy"
+            "tool copy",
+            "server instructions and resources"
           ]
         },
         {
@@ -1264,7 +1271,8 @@
             }
           },
           "measured_on_an_earlier_listing": [
-            "tool copy"
+            "tool copy",
+            "server instructions and resources"
           ]
         }
       ]
@@ -1311,7 +1319,11 @@
               "min": 0,
               "max": 0
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1343,7 +1355,11 @@
               "min": 0,
               "max": 0
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -1371,7 +1387,11 @@
               "min": 1,
               "max": 1
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         }
       ]
     },
@@ -1417,6 +1437,7 @@
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
+            "server instructions and resources",
             "harness"
           ]
         },
@@ -1450,7 +1471,11 @@
               "min": 0,
               "max": 0
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -1478,7 +1503,11 @@
               "min": 1,
               "max": 1
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         }
       ]
     },
@@ -1522,6 +1551,7 @@
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
+            "server instructions and resources",
             "harness"
           ]
         },
@@ -1555,7 +1585,11 @@
               "min": 0,
               "max": 0
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -1583,7 +1617,11 @@
               "min": 0,
               "max": 0
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         }
       ]
     },
@@ -1631,7 +1669,11 @@
               "max": 0
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -1663,7 +1705,11 @@
               "min": 1,
               "max": 1
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -1691,7 +1737,11 @@
               "min": 1,
               "max": 2
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         }
       ]
     },
@@ -1739,7 +1789,8 @@
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
-            "tool copy"
+            "tool copy",
+            "server instructions and resources"
           ]
         },
         {
@@ -1774,7 +1825,8 @@
             }
           },
           "measured_on_an_earlier_listing": [
-            "tool copy"
+            "tool copy",
+            "server instructions and resources"
           ]
         },
         {
@@ -1805,7 +1857,8 @@
             }
           },
           "measured_on_an_earlier_listing": [
-            "tool copy"
+            "tool copy",
+            "server instructions and resources"
           ]
         }
       ]
@@ -1850,6 +1903,7 @@
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
+            "server instructions and resources",
             "harness"
           ]
         },
@@ -1885,7 +1939,8 @@
             }
           },
           "measured_on_an_earlier_listing": [
-            "tool copy"
+            "tool copy",
+            "server instructions and resources"
           ]
         },
         {
@@ -1916,7 +1971,8 @@
             }
           },
           "measured_on_an_earlier_listing": [
-            "tool copy"
+            "tool copy",
+            "server instructions and resources"
           ]
         }
       ]
@@ -1965,7 +2021,8 @@
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
-            "tool copy"
+            "tool copy",
+            "server instructions and resources"
           ]
         },
         {
@@ -2000,7 +2057,8 @@
             }
           },
           "measured_on_an_earlier_listing": [
-            "tool copy"
+            "tool copy",
+            "server instructions and resources"
           ]
         },
         {
@@ -2031,7 +2089,8 @@
             }
           },
           "measured_on_an_earlier_listing": [
-            "tool copy"
+            "tool copy",
+            "server instructions and resources"
           ]
         }
       ]
@@ -2078,7 +2137,11 @@
               "max": 4
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -2110,7 +2173,11 @@
               "min": 0,
               "max": 0
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -2138,7 +2205,11 @@
               "min": 2,
               "max": 2
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         }
       ]
     },
@@ -2184,6 +2255,7 @@
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
+            "server instructions and resources",
             "harness"
           ]
         },
@@ -2217,7 +2289,11 @@
               "min": 2,
               "max": 3
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -2245,7 +2321,11 @@
               "min": 1,
               "max": 3
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         }
       ]
     },
@@ -2289,6 +2369,7 @@
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
+            "server instructions and resources",
             "harness"
           ]
         },
@@ -2324,7 +2405,8 @@
             }
           },
           "measured_on_an_earlier_listing": [
-            "tool copy"
+            "tool copy",
+            "server instructions and resources"
           ]
         },
         {
@@ -2355,7 +2437,8 @@
             }
           },
           "measured_on_an_earlier_listing": [
-            "tool copy"
+            "tool copy",
+            "server instructions and resources"
           ]
         }
       ]
@@ -2404,6 +2487,7 @@
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
+            "server instructions and resources",
             "harness"
           ]
         },
@@ -2439,7 +2523,8 @@
             }
           },
           "measured_on_an_earlier_listing": [
-            "tool copy"
+            "tool copy",
+            "server instructions and resources"
           ]
         },
         {
@@ -2470,7 +2555,8 @@
             }
           },
           "measured_on_an_earlier_listing": [
-            "tool copy"
+            "tool copy",
+            "server instructions and resources"
           ]
         }
       ]
@@ -2519,7 +2605,8 @@
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
-            "tool copy"
+            "tool copy",
+            "server instructions and resources"
           ]
         },
         {
@@ -2554,7 +2641,8 @@
             }
           },
           "measured_on_an_earlier_listing": [
-            "tool copy"
+            "tool copy",
+            "server instructions and resources"
           ]
         },
         {
@@ -2585,7 +2673,8 @@
             }
           },
           "measured_on_an_earlier_listing": [
-            "tool copy"
+            "tool copy",
+            "server instructions and resources"
           ]
         }
       ]
@@ -2633,6 +2722,7 @@
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
+            "server instructions and resources",
             "harness"
           ]
         },
@@ -2668,7 +2758,8 @@
             }
           },
           "measured_on_an_earlier_listing": [
-            "tool copy"
+            "tool copy",
+            "server instructions and resources"
           ]
         },
         {
@@ -2699,7 +2790,8 @@
             }
           },
           "measured_on_an_earlier_listing": [
-            "tool copy"
+            "tool copy",
+            "server instructions and resources"
           ]
         }
       ]
@@ -2749,7 +2841,11 @@
               "max": 0
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -2781,7 +2877,11 @@
               "min": 1,
               "max": 1
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -2809,7 +2909,11 @@
               "min": 2,
               "max": 2
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         }
       ]
     },
@@ -2856,6 +2960,7 @@
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
+            "server instructions and resources",
             "harness"
           ]
         },
@@ -2891,7 +2996,8 @@
             }
           },
           "measured_on_an_earlier_listing": [
-            "tool copy"
+            "tool copy",
+            "server instructions and resources"
           ]
         },
         {
@@ -2922,7 +3028,8 @@
             }
           },
           "measured_on_an_earlier_listing": [
-            "tool copy"
+            "tool copy",
+            "server instructions and resources"
           ]
         }
       ]
@@ -2967,6 +3074,7 @@
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
+            "server instructions and resources",
             "harness"
           ]
         },
@@ -3002,7 +3110,8 @@
             }
           },
           "measured_on_an_earlier_listing": [
-            "tool copy"
+            "tool copy",
+            "server instructions and resources"
           ]
         },
         {
@@ -3033,7 +3142,8 @@
             }
           },
           "measured_on_an_earlier_listing": [
-            "tool copy"
+            "tool copy",
+            "server instructions and resources"
           ]
         }
       ]
@@ -3080,7 +3190,11 @@
               "max": 0
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -3112,7 +3226,11 @@
               "min": 0,
               "max": 0
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -3140,7 +3258,11 @@
               "min": 12,
               "max": 12
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         }
       ]
     },
@@ -3186,7 +3308,11 @@
               "max": 2
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -3218,7 +3344,11 @@
               "min": 0,
               "max": 1
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -3246,7 +3376,11 @@
               "min": 8,
               "max": 9
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         }
       ]
     },
@@ -3290,6 +3424,7 @@
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
+            "server instructions and resources",
             "harness"
           ]
         },
@@ -3325,7 +3460,8 @@
             }
           },
           "measured_on_an_earlier_listing": [
-            "tool copy"
+            "tool copy",
+            "server instructions and resources"
           ]
         },
         {
@@ -3356,7 +3492,8 @@
             }
           },
           "measured_on_an_earlier_listing": [
-            "tool copy"
+            "tool copy",
+            "server instructions and resources"
           ]
         }
       ]
@@ -3405,7 +3542,8 @@
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
-            "tool copy"
+            "tool copy",
+            "server instructions and resources"
           ]
         },
         {
@@ -3440,7 +3578,8 @@
             }
           },
           "measured_on_an_earlier_listing": [
-            "tool copy"
+            "tool copy",
+            "server instructions and resources"
           ]
         },
         {
@@ -3471,7 +3610,8 @@
             }
           },
           "measured_on_an_earlier_listing": [
-            "tool copy"
+            "tool copy",
+            "server instructions and resources"
           ]
         }
       ]
@@ -3521,6 +3661,7 @@
           "measured_on_an_earlier_listing": [
             "scenario",
             "tool copy",
+            "server instructions and resources",
             "harness"
           ]
         },
@@ -3554,7 +3695,11 @@
               "min": 0,
               "max": 0
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -3585,7 +3730,8 @@
           },
           "measured_on_an_earlier_listing": [
             "scenario",
-            "tool copy"
+            "tool copy",
+            "server instructions and resources"
           ]
         }
       ]
@@ -3630,6 +3776,7 @@
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
+            "server instructions and resources",
             "harness"
           ]
         },
@@ -3663,7 +3810,11 @@
               "min": 0,
               "max": 0
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -3691,7 +3842,11 @@
               "min": 0,
               "max": 2
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         }
       ]
     },
@@ -3737,7 +3892,11 @@
               "max": 1
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -3769,7 +3928,11 @@
               "min": 0,
               "max": 0
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -3797,7 +3960,11 @@
               "min": 2,
               "max": 3
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         }
       ]
     },
@@ -3848,7 +4015,11 @@
               "max": 0
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -3880,7 +4051,11 @@
               "min": 0,
               "max": 0
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -3908,7 +4083,11 @@
               "min": 1,
               "max": 1
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         }
       ]
     },
@@ -3952,6 +4131,7 @@
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
+            "server instructions and resources",
             "harness"
           ]
         },
@@ -3987,7 +4167,8 @@
             }
           },
           "measured_on_an_earlier_listing": [
-            "tool copy"
+            "tool copy",
+            "server instructions and resources"
           ]
         },
         {
@@ -4016,7 +4197,11 @@
               "min": 0,
               "max": 5
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         }
       ]
     },
@@ -4060,6 +4245,7 @@
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
+            "server instructions and resources",
             "harness"
           ]
         },
@@ -4095,7 +4281,8 @@
             }
           },
           "measured_on_an_earlier_listing": [
-            "tool copy"
+            "tool copy",
+            "server instructions and resources"
           ]
         },
         {
@@ -4124,7 +4311,11 @@
               "min": 0,
               "max": 2
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         }
       ]
     },
@@ -4170,7 +4361,11 @@
               "max": 1
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -4202,7 +4397,11 @@
               "min": 0,
               "max": 0
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -4230,7 +4429,11 @@
               "min": 2,
               "max": 3
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         }
       ]
     },
@@ -4276,7 +4479,11 @@
               "max": 0
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -4308,7 +4515,11 @@
               "min": 0,
               "max": 1
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -4336,7 +4547,11 @@
               "min": 1,
               "max": 1
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         }
       ]
     },
@@ -4380,6 +4595,7 @@
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
+            "server instructions and resources",
             "harness"
           ]
         },
@@ -4415,7 +4631,8 @@
             }
           },
           "measured_on_an_earlier_listing": [
-            "tool copy"
+            "tool copy",
+            "server instructions and resources"
           ]
         },
         {
@@ -4444,7 +4661,11 @@
               "min": 2,
               "max": 2
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         }
       ]
     },
@@ -4490,6 +4711,8 @@
             "retries": null
           },
           "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources",
             "harness"
           ]
         }
@@ -4538,7 +4761,11 @@
               "max": 4
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -4570,7 +4797,11 @@
               "min": 1,
               "max": 3
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -4648,7 +4879,11 @@
               "max": 2
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -4680,7 +4915,11 @@
               "min": 2,
               "max": 2
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -4760,7 +4999,11 @@
               "max": 1
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -4792,7 +5035,11 @@
               "min": 1,
               "max": 2
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -4870,7 +5117,10 @@
               "max": 0
             }
           },
-          "regraded": true
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -4883,14 +5133,14 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 2.5,
-              "min": 2,
+              "median": 3,
+              "min": 3,
               "max": 3
             },
             "turns": {
-              "median": 6,
+              "median": 6.5,
               "min": 6,
-              "max": 6
+              "max": 7
             },
             "refused": {
               "median": 0,
@@ -4902,7 +5152,11 @@
               "min": 0,
               "max": 0
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -4915,25 +5169,25 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 3.5,
+              "median": 3,
               "min": 3,
-              "max": 4
+              "max": 3
             },
             "turns": null,
             "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
+              "median": 2,
+              "min": 2,
+              "max": 2
             },
-            "retries": null
+            "retries": {
+              "median": 2,
+              "min": 2,
+              "max": 2
+            }
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
-            "scenario",
             "tool copy",
-            "server instructions and resources",
-            "harness",
-            "transcript parser"
+            "server instructions and resources"
           ]
         }
       ]
@@ -4981,7 +5235,11 @@
               "max": 4
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -5013,7 +5271,11 @@
               "min": 0,
               "max": 0
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -5091,7 +5353,11 @@
               "max": 1
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -5123,7 +5389,11 @@
               "min": 0,
               "max": 0
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -5205,7 +5475,11 @@
               "max": 0
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -5237,7 +5511,11 @@
               "min": 0,
               "max": 0
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -5320,7 +5598,11 @@
               "max": 0
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -5352,7 +5634,11 @@
               "min": 0,
               "max": 0
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -5430,7 +5716,11 @@
               "max": 4
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -5462,7 +5752,11 @@
               "min": 1,
               "max": 2
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -5490,7 +5784,11 @@
               "min": 6,
               "max": 8
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         }
       ]
     },
@@ -5538,7 +5836,11 @@
               "max": 4
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -5570,7 +5872,11 @@
               "min": 0,
               "max": 0
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -5650,7 +5956,11 @@
               "max": 1
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -5682,7 +5992,11 @@
               "min": 0,
               "max": 0
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -5695,24 +6009,25 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 11.5,
-              "min": 9,
-              "max": 14
+              "median": 14,
+              "min": 13,
+              "max": 15
             },
             "turns": null,
             "refused": {
-              "median": 2,
-              "min": 1,
-              "max": 3
+              "median": 5.5,
+              "min": 5,
+              "max": 6
             },
-            "retries": null
+            "retries": {
+              "median": 4.5,
+              "min": 4,
+              "max": 5
+            }
           },
           "measured_on_an_earlier_listing": [
-            "scenario",
             "tool copy",
-            "server instructions and resources",
-            "harness",
-            "transcript parser"
+            "server instructions and resources"
           ]
         }
       ]
@@ -5763,6 +6078,7 @@
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
+            "server instructions and resources",
             "harness"
           ]
         },
@@ -5796,7 +6112,11 @@
               "min": 0,
               "max": 0
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -5873,7 +6193,11 @@
               "max": 4
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -5905,7 +6229,11 @@
               "min": 0,
               "max": 0
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -5984,6 +6312,7 @@
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
+            "server instructions and resources",
             "harness"
           ]
         },
@@ -6017,7 +6346,11 @@
               "min": 0,
               "max": 0
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -6094,6 +6427,7 @@
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
+            "server instructions and resources",
             "harness"
           ]
         },
@@ -6127,7 +6461,11 @@
               "min": 0,
               "max": 1
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -6155,7 +6493,11 @@
               "min": 1,
               "max": 1
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         }
       ]
     },
@@ -6202,6 +6544,7 @@
           "measured_on_an_earlier_listing": [
             "scenario",
             "tool copy",
+            "server instructions and resources",
             "harness"
           ]
         },
@@ -6216,9 +6559,9 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 12,
-              "min": 12,
-              "max": 12
+              "median": 11,
+              "min": 11,
+              "max": 11
             },
             "turns": {
               "median": 7,
@@ -6237,7 +6580,8 @@
             }
           },
           "measured_on_an_earlier_listing": [
-            "scenario"
+            "tool copy",
+            "server instructions and resources"
           ]
         },
         {
@@ -6266,7 +6610,11 @@
               "min": 1,
               "max": 5
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         }
       ]
     },
@@ -6312,6 +6660,8 @@
           },
           "measured_on_an_earlier_listing": [
             "scenario",
+            "tool copy",
+            "server instructions and resources",
             "harness"
           ]
         },
@@ -6343,7 +6693,9 @@
             }
           },
           "measured_on_an_earlier_listing": [
-            "scenario"
+            "scenario",
+            "tool copy",
+            "server instructions and resources"
           ]
         }
       ]
@@ -6388,6 +6740,7 @@
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
+            "server instructions and resources",
             "harness"
           ]
         },
@@ -6421,7 +6774,11 @@
               "min": 1,
               "max": 1
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -6502,7 +6859,11 @@
               "max": 2
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -6534,7 +6895,11 @@
               "min": 0,
               "max": 0
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -6562,7 +6927,11 @@
               "min": 5,
               "max": 6
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         }
       ]
     },
@@ -6591,14 +6960,14 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 8.5,
-              "min": 8,
-              "max": 9
-            },
-            "turns": {
               "median": 9.5,
               "min": 9,
               "max": 10
+            },
+            "turns": {
+              "median": 10.5,
+              "min": 10,
+              "max": 11
             },
             "refused": {
               "median": 1,
@@ -6606,44 +6975,51 @@
               "max": 1
             },
             "retries": {
-              "median": 0.5,
-              "min": 0,
+              "median": 1,
+              "min": 1,
               "max": 1
             }
           },
-          "regraded": true
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
-          "runs": 3,
+          "runs": 2,
           "passed": 2,
           "pass_at": 2,
           "held": true,
           "driver": "gemini:cli",
           "search": "semantic",
           "efficiency": {
-            "runs": 3,
+            "runs": 2,
             "calls": {
-              "median": 23,
+              "median": 15,
               "min": 13,
-              "max": 23
+              "max": 17
             },
             "turns": {
-              "median": 7,
-              "min": 5,
-              "max": 8
+              "median": 6.5,
+              "min": 6,
+              "max": 7
             },
             "refused": {
-              "median": 4,
+              "median": 2,
               "min": 2,
-              "max": 5
+              "max": 2
             },
             "retries": {
-              "median": 2,
-              "min": 1,
-              "max": 3
+              "median": 0.5,
+              "min": 0,
+              "max": 1
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -6656,23 +7032,25 @@
           "efficiency": {
             "runs": 3,
             "calls": {
-              "median": 20,
-              "min": 16,
-              "max": 24
+              "median": 22,
+              "min": 19,
+              "max": 26
             },
             "turns": null,
             "refused": {
-              "median": 6,
-              "min": 4,
+              "median": 7,
+              "min": 6,
               "max": 10
             },
-            "retries": null
+            "retries": {
+              "median": 6,
+              "min": 6,
+              "max": 10
+            }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources",
-            "harness",
-            "transcript parser"
+            "server instructions and resources"
           ]
         }
       ]
@@ -6721,7 +7099,11 @@
               "max": 0
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -6753,7 +7135,11 @@
               "min": 1,
               "max": 1
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -6766,24 +7152,25 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 10.5,
-              "min": 8,
+              "median": 9.5,
+              "min": 6,
               "max": 13
             },
             "turns": null,
             "refused": {
+              "median": 2.5,
+              "min": 0,
+              "max": 5
+            },
+            "retries": {
               "median": 2,
               "min": 0,
               "max": 4
-            },
-            "retries": null
+            }
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources",
-            "harness",
-            "transcript parser"
+            "server instructions and resources"
           ]
         }
       ]
@@ -6830,7 +7217,11 @@
               "max": 1
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -6862,7 +7253,11 @@
               "min": 0,
               "max": 0
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -6941,6 +7336,7 @@
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
+            "server instructions and resources",
             "harness"
           ]
         },
@@ -6974,7 +7370,11 @@
               "min": 0,
               "max": 0
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -6987,24 +7387,25 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 6.5,
-              "min": 5,
-              "max": 8
+              "median": 7.5,
+              "min": 6,
+              "max": 9
             },
             "turns": null,
             "refused": {
-              "median": 0,
-              "min": 0,
-              "max": 0
+              "median": 2,
+              "min": 1,
+              "max": 3
             },
-            "retries": null
+            "retries": {
+              "median": 2,
+              "min": 1,
+              "max": 3
+            }
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources",
-            "harness",
-            "transcript parser"
+            "server instructions and resources"
           ]
         }
       ]
@@ -7051,7 +7452,11 @@
               "max": 0
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -7083,7 +7488,11 @@
               "min": 0,
               "max": 0
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -7096,24 +7505,25 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 5.5,
-              "min": 3,
-              "max": 8
+              "median": 10.5,
+              "min": 7,
+              "max": 14
             },
             "turns": null,
             "refused": {
-              "median": 0,
+              "median": 2,
               "min": 0,
-              "max": 0
+              "max": 4
             },
-            "retries": null
+            "retries": {
+              "median": 2,
+              "min": 0,
+              "max": 4
+            }
           },
           "measured_on_an_earlier_listing": [
-            "scenario",
             "tool copy",
-            "server instructions and resources",
-            "harness",
-            "transcript parser"
+            "server instructions and resources"
           ]
         }
       ]
@@ -7159,6 +7569,7 @@
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
+            "server instructions and resources",
             "harness"
           ]
         },
@@ -7192,37 +7603,42 @@
               "min": 0,
               "max": 0
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
-          "runs": 2,
-          "passed": 2,
+          "runs": 3,
+          "passed": 1,
           "pass_at": 2,
-          "held": true,
+          "held": false,
           "driver": "gpt:cli",
           "search": "semantic",
           "efficiency": {
-            "runs": 2,
+            "runs": 3,
             "calls": {
-              "median": 21.5,
-              "min": 18,
-              "max": 25
+              "median": 17,
+              "min": 14,
+              "max": 19
             },
             "turns": null,
             "refused": {
-              "median": 7,
-              "min": 6,
-              "max": 8
+              "median": 5,
+              "min": 2,
+              "max": 5
             },
-            "retries": null
+            "retries": {
+              "median": 4,
+              "min": 1,
+              "max": 5
+            }
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources",
-            "harness",
-            "transcript parser"
+            "server instructions and resources"
           ]
         }
       ]
@@ -7271,7 +7687,11 @@
               "max": 3
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -7303,37 +7723,42 @@
               "min": 0,
               "max": 0
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
           "runs": 2,
-          "passed": 2,
+          "passed": 0,
           "pass_at": 2,
-          "held": true,
+          "held": false,
           "driver": "gpt:cli",
           "search": "semantic",
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 35,
-              "min": 27,
-              "max": 43
+              "median": 47.5,
+              "min": 45,
+              "max": 50
             },
             "turns": null,
             "refused": {
-              "median": 11.5,
-              "min": 8,
-              "max": 15
+              "median": 18.5,
+              "min": 17,
+              "max": 20
             },
-            "retries": null
+            "retries": {
+              "median": 18.5,
+              "min": 17,
+              "max": 20
+            }
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources",
-            "harness",
-            "transcript parser"
+            "server instructions and resources"
           ]
         }
       ]
@@ -7386,6 +7811,7 @@
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
+            "server instructions and resources",
             "harness"
           ]
         },
@@ -7419,7 +7845,11 @@
               "min": 0,
               "max": 0
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -7432,24 +7862,25 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 25,
-              "min": 16,
-              "max": 34
+              "median": 24,
+              "min": 18,
+              "max": 30
             },
             "turns": null,
             "refused": {
-              "median": 6.5,
-              "min": 4,
+              "median": 7.5,
+              "min": 6,
               "max": 9
             },
-            "retries": null
+            "retries": {
+              "median": 5,
+              "min": 4,
+              "max": 6
+            }
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources",
-            "harness",
-            "transcript parser"
+            "server instructions and resources"
           ]
         }
       ]
@@ -7496,7 +7927,11 @@
               "max": 0
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -7528,7 +7963,11 @@
               "min": 0,
               "max": 1
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -7541,8 +7980,8 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 6,
-              "min": 5,
+              "median": 6.5,
+              "min": 6,
               "max": 7
             },
             "turns": null,
@@ -7551,14 +7990,15 @@
               "min": 0,
               "max": 1
             },
-            "retries": null
+            "retries": {
+              "median": 0.5,
+              "min": 0,
+              "max": 1
+            }
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources",
-            "harness",
-            "transcript parser"
+            "server instructions and resources"
           ]
         }
       ]
@@ -7610,7 +8050,11 @@
               "max": 1
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -7642,7 +8086,11 @@
               "min": 1,
               "max": 1
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -7655,25 +8103,25 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 4.5,
-              "min": 4,
-              "max": 5
+              "median": 3,
+              "min": 3,
+              "max": 3
             },
             "turns": null,
             "refused": {
-              "median": 0.5,
+              "median": 0,
               "min": 0,
-              "max": 1
+              "max": 0
             },
-            "retries": null
+            "retries": {
+              "median": 0,
+              "min": 0,
+              "max": 0
+            }
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
-            "scenario",
             "tool copy",
-            "server instructions and resources",
-            "harness",
-            "transcript parser"
+            "server instructions and resources"
           ]
         }
       ]
@@ -7720,7 +8168,11 @@
               "max": 0
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -7752,7 +8204,11 @@
               "min": 0,
               "max": 2
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -7765,24 +8221,25 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 7,
-              "min": 6,
-              "max": 8
+              "median": 12,
+              "min": 8,
+              "max": 16
             },
             "turns": null,
             "refused": {
-              "median": 1,
-              "min": 1,
-              "max": 1
+              "median": 5,
+              "min": 2,
+              "max": 8
             },
-            "retries": null
+            "retries": {
+              "median": 5,
+              "min": 2,
+              "max": 8
+            }
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources",
-            "harness",
-            "transcript parser"
+            "server instructions and resources"
           ]
         }
       ]
@@ -7828,7 +8285,11 @@
               "min": 1,
               "max": 1
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -7860,7 +8321,11 @@
               "min": 2,
               "max": 2
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -7873,26 +8338,25 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 16,
-              "min": 14,
-              "max": 18
+              "median": 11.5,
+              "min": 8,
+              "max": 15
             },
             "turns": null,
             "refused": {
-              "median": 3.5,
-              "min": 1,
-              "max": 6
+              "median": 2.5,
+              "min": 2,
+              "max": 3
             },
-            "retries": null
+            "retries": {
+              "median": 2.5,
+              "min": 2,
+              "max": 3
+            }
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
-            "scenario",
             "tool copy",
-            "server instructions and resources",
-            "judge",
-            "harness",
-            "transcript parser"
+            "server instructions and resources"
           ]
         }
       ]
@@ -7939,7 +8403,11 @@
               "max": 1
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -7971,37 +8439,42 @@
               "min": 0,
               "max": 1
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
-          "runs": 3,
+          "runs": 2,
           "passed": 2,
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
           "search": "semantic",
           "efficiency": {
-            "runs": 3,
+            "runs": 2,
             "calls": {
-              "median": 12,
+              "median": 11,
               "min": 10,
-              "max": 14
+              "max": 12
             },
             "turns": null,
             "refused": {
-              "median": 3,
+              "median": 3.5,
               "min": 2,
-              "max": 3
+              "max": 5
             },
-            "retries": null
+            "retries": {
+              "median": 3.5,
+              "min": 2,
+              "max": 5
+            }
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources",
-            "harness",
-            "transcript parser"
+            "server instructions and resources"
           ]
         }
       ]
@@ -8049,7 +8522,11 @@
               "max": 0
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -8081,7 +8558,11 @@
               "min": 0,
               "max": 0
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -8094,25 +8575,25 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 5,
+              "median": 4,
               "min": 4,
-              "max": 6
+              "max": 4
             },
             "turns": null,
             "refused": {
-              "median": 0.5,
-              "min": 0,
-              "max": 1
+              "median": 2,
+              "min": 2,
+              "max": 2
             },
-            "retries": null
+            "retries": {
+              "median": 2,
+              "min": 2,
+              "max": 2
+            }
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
-            "scenario",
             "tool copy",
-            "server instructions and resources",
-            "harness",
-            "transcript parser"
+            "server instructions and resources"
           ]
         }
       ]
@@ -8157,6 +8638,7 @@
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
+            "server instructions and resources",
             "harness"
           ]
         },
@@ -8190,7 +8672,11 @@
               "min": 1,
               "max": 1
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -8218,7 +8704,11 @@
               "min": 1,
               "max": 1
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         }
       ]
     },
@@ -8264,7 +8754,11 @@
               "max": 2
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -8296,37 +8790,42 @@
               "min": 0,
               "max": 1
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
-          "runs": 2,
+          "runs": 3,
           "passed": 2,
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
           "search": "semantic",
           "efficiency": {
-            "runs": 2,
+            "runs": 3,
             "calls": {
-              "median": 7.5,
-              "min": 7,
-              "max": 8
+              "median": 8,
+              "min": 6,
+              "max": 9
             },
             "turns": null,
             "refused": {
-              "median": 1.5,
+              "median": 2,
               "min": 1,
-              "max": 2
+              "max": 3
             },
-            "retries": null
+            "retries": {
+              "median": 2,
+              "min": 1,
+              "max": 3
+            }
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources",
-            "harness",
-            "transcript parser"
+            "server instructions and resources"
           ]
         }
       ]
@@ -8374,7 +8873,8 @@
             }
           },
           "measured_on_an_earlier_listing": [
-            "tool copy"
+            "tool copy",
+            "server instructions and resources"
           ]
         },
         {
@@ -8407,7 +8907,11 @@
               "min": 0,
               "max": 0
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -8421,8 +8925,8 @@
             "runs": 2,
             "calls": {
               "median": 5,
-              "min": 4,
-              "max": 6
+              "min": 5,
+              "max": 5
             },
             "turns": null,
             "refused": {
@@ -8430,15 +8934,15 @@
               "min": 1,
               "max": 1
             },
-            "retries": null
+            "retries": {
+              "median": 1,
+              "min": 1,
+              "max": 1
+            }
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
-            "scenario",
             "tool copy",
-            "server instructions and resources",
-            "harness",
-            "transcript parser"
+            "server instructions and resources"
           ]
         }
       ]
@@ -8487,7 +8991,8 @@
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
-            "tool copy"
+            "tool copy",
+            "server instructions and resources"
           ]
         },
         {
@@ -8520,7 +9025,11 @@
               "min": 0,
               "max": 0
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -8548,7 +9057,11 @@
               "min": 1,
               "max": 2
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         }
       ]
     },
@@ -8592,6 +9105,7 @@
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
+            "server instructions and resources",
             "harness"
           ]
         },
@@ -8625,37 +9139,42 @@
               "min": 0,
               "max": 2
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
-          "runs": 3,
+          "runs": 2,
           "passed": 2,
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
           "search": "semantic",
           "efficiency": {
-            "runs": 3,
+            "runs": 2,
             "calls": {
               "median": 10,
-              "min": 9,
-              "max": 11
+              "min": 10,
+              "max": 10
             },
             "turns": null,
             "refused": {
-              "median": 3,
+              "median": 2.5,
               "min": 2,
-              "max": 4
+              "max": 3
             },
-            "retries": null
+            "retries": {
+              "median": 2.5,
+              "min": 2,
+              "max": 3
+            }
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources",
-            "harness",
-            "transcript parser"
+            "server instructions and resources"
           ]
         }
       ]
@@ -8700,6 +9219,7 @@
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
+            "server instructions and resources",
             "harness"
           ]
         },
@@ -8733,7 +9253,11 @@
               "min": 0,
               "max": 0
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -8746,25 +9270,25 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 14,
-              "min": 13,
-              "max": 15
+              "median": 8.5,
+              "min": 8,
+              "max": 9
             },
             "turns": null,
             "refused": {
-              "median": 6,
-              "min": 6,
-              "max": 6
+              "median": 2.5,
+              "min": 2,
+              "max": 3
             },
-            "retries": null
+            "retries": {
+              "median": 1.5,
+              "min": 1,
+              "max": 2
+            }
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
-            "scenario",
             "tool copy",
-            "server instructions and resources",
-            "harness",
-            "transcript parser"
+            "server instructions and resources"
           ]
         }
       ]
@@ -8814,6 +9338,8 @@
           "regraded": true,
           "measured_on_an_earlier_listing": [
             "scenario",
+            "tool copy",
+            "server instructions and resources",
             "judge"
           ]
         },
@@ -8847,7 +9373,11 @@
               "min": 0,
               "max": 0
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -8875,7 +9405,11 @@
               "min": 1,
               "max": 3
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         }
       ]
     },
@@ -8919,6 +9453,7 @@
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
+            "server instructions and resources",
             "harness"
           ]
         },
@@ -8952,7 +9487,11 @@
               "min": 0,
               "max": 1
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -8965,9 +9504,9 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 5.5,
+              "median": 5,
               "min": 5,
-              "max": 6
+              "max": 5
             },
             "turns": null,
             "refused": {
@@ -8975,16 +9514,15 @@
               "min": 1,
               "max": 1
             },
-            "retries": null
+            "retries": {
+              "median": 0,
+              "min": 0,
+              "max": 0
+            }
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
-            "scenario",
             "tool copy",
-            "server instructions and resources",
-            "judge",
-            "harness",
-            "transcript parser"
+            "server instructions and resources"
           ]
         }
       ]
@@ -9029,6 +9567,7 @@
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
+            "server instructions and resources",
             "harness"
           ]
         },
@@ -9062,7 +9601,11 @@
               "min": 0,
               "max": 0
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -9075,9 +9618,9 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 5.5,
-              "min": 5,
-              "max": 6
+              "median": 3.5,
+              "min": 3,
+              "max": 4
             },
             "turns": null,
             "refused": {
@@ -9085,14 +9628,15 @@
               "min": 0,
               "max": 1
             },
-            "retries": null
+            "retries": {
+              "median": 0.5,
+              "min": 0,
+              "max": 1
+            }
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources",
-            "harness",
-            "transcript parser"
+            "server instructions and resources"
           ]
         }
       ]
@@ -9137,6 +9681,7 @@
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
+            "server instructions and resources",
             "harness"
           ]
         },
@@ -9170,7 +9715,11 @@
               "min": 0,
               "max": 1
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -9183,24 +9732,25 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 6.5,
-              "min": 5,
-              "max": 8
+              "median": 4,
+              "min": 3,
+              "max": 5
             },
             "turns": null,
             "refused": {
-              "median": 2.5,
+              "median": 1,
               "min": 1,
-              "max": 4
+              "max": 1
             },
-            "retries": null
+            "retries": {
+              "median": 1,
+              "min": 1,
+              "max": 1
+            }
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources",
-            "harness",
-            "transcript parser"
+            "server instructions and resources"
           ]
         }
       ]
@@ -9245,6 +9795,7 @@
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
+            "server instructions and resources",
             "harness"
           ]
         },
@@ -9278,7 +9829,11 @@
               "min": 0,
               "max": 0
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -9291,24 +9846,25 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 6,
-              "min": 6,
-              "max": 6
+              "median": 7,
+              "min": 7,
+              "max": 7
             },
             "turns": null,
             "refused": {
-              "median": 1,
+              "median": 1.5,
               "min": 1,
-              "max": 1
+              "max": 2
             },
-            "retries": null
+            "retries": {
+              "median": 1.5,
+              "min": 1,
+              "max": 2
+            }
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources",
-            "harness",
-            "transcript parser"
+            "server instructions and resources"
           ]
         }
       ]
@@ -9357,7 +9913,8 @@
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
-            "tool copy"
+            "tool copy",
+            "server instructions and resources"
           ]
         },
         {
@@ -9390,7 +9947,11 @@
               "min": 2,
               "max": 2
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -9418,7 +9979,11 @@
               "min": 6,
               "max": 8
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         }
       ]
     },
@@ -9466,7 +10031,8 @@
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
-            "tool copy"
+            "tool copy",
+            "server instructions and resources"
           ]
         },
         {
@@ -9499,7 +10065,11 @@
               "min": 0,
               "max": 1
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -9527,7 +10097,11 @@
               "min": 7,
               "max": 8
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         }
       ]
     },
@@ -9578,7 +10152,8 @@
             }
           },
           "measured_on_an_earlier_listing": [
-            "tool copy"
+            "tool copy",
+            "server instructions and resources"
           ]
         },
         {
@@ -9611,39 +10186,42 @@
               "min": 2,
               "max": 2
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
           "runs": 2,
-          "passed": 2,
+          "passed": 0,
           "pass_at": 2,
-          "held": true,
+          "held": false,
           "driver": "gpt:cli",
           "search": "semantic",
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 18.5,
-              "min": 18,
-              "max": 19
+              "median": 18,
+              "min": 14,
+              "max": 22
             },
             "turns": null,
             "refused": {
               "median": 4.5,
-              "min": 3,
-              "max": 6
+              "min": 2,
+              "max": 7
             },
-            "retries": null
+            "retries": {
+              "median": 4.5,
+              "min": 2,
+              "max": 7
+            }
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
-            "scenario",
             "tool copy",
-            "server instructions and resources",
-            "judge",
-            "harness",
-            "transcript parser"
+            "server instructions and resources"
           ]
         }
       ]
@@ -9690,6 +10268,7 @@
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
+            "server instructions and resources",
             "harness"
           ]
         },
@@ -9723,7 +10302,11 @@
               "min": 1,
               "max": 1
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -9736,8 +10319,8 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 7,
-              "min": 7,
+              "median": 6.5,
+              "min": 6,
               "max": 7
             },
             "turns": null,
@@ -9746,14 +10329,15 @@
               "min": 1,
               "max": 1
             },
-            "retries": null
+            "retries": {
+              "median": 1,
+              "min": 1,
+              "max": 1
+            }
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources",
-            "harness",
-            "transcript parser"
+            "server instructions and resources"
           ]
         }
       ]
@@ -9798,6 +10382,7 @@
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
+            "server instructions and resources",
             "harness"
           ]
         },
@@ -9831,7 +10416,11 @@
               "min": 0,
               "max": 0
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -9859,7 +10448,11 @@
               "min": 0,
               "max": 0
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         }
       ]
     },
@@ -9903,6 +10496,7 @@
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
+            "server instructions and resources",
             "harness"
           ]
         },
@@ -9936,7 +10530,11 @@
               "min": 0,
               "max": 0
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -9949,24 +10547,25 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 11,
-              "min": 10,
-              "max": 12
+              "median": 6.5,
+              "min": 4,
+              "max": 9
             },
             "turns": null,
             "refused": {
-              "median": 2,
+              "median": 1,
               "min": 1,
-              "max": 3
+              "max": 1
             },
-            "retries": null
+            "retries": {
+              "median": 1,
+              "min": 1,
+              "max": 1
+            }
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources",
-            "harness",
-            "transcript parser"
+            "server instructions and resources"
           ]
         }
       ]
@@ -10011,6 +10610,7 @@
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
+            "server instructions and resources",
             "harness"
           ]
         },
@@ -10044,7 +10644,11 @@
               "min": 0,
               "max": 1
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
@@ -10057,24 +10661,25 @@
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 3.5,
-              "min": 3,
-              "max": 4
+              "median": 5,
+              "min": 5,
+              "max": 5
             },
             "turns": null,
             "refused": {
-              "median": 1,
-              "min": 1,
-              "max": 1
+              "median": 2,
+              "min": 2,
+              "max": 2
             },
-            "retries": null
+            "retries": {
+              "median": 2,
+              "min": 2,
+              "max": 2
+            }
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources",
-            "harness",
-            "transcript parser"
+            "server instructions and resources"
           ]
         }
       ]
@@ -10121,7 +10726,11 @@
               "max": 2
             }
           },
-          "regraded": true
+          "regraded": true,
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
@@ -10153,37 +10762,42 @@
               "min": 0,
               "max": 0
             }
-          }
+          },
+          "measured_on_an_earlier_listing": [
+            "tool copy",
+            "server instructions and resources"
+          ]
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
-          "runs": 2,
-          "passed": 2,
+          "runs": 3,
+          "passed": 1,
           "pass_at": 2,
-          "held": true,
+          "held": false,
           "driver": "gpt:cli",
           "search": "semantic",
           "efficiency": {
-            "runs": 2,
+            "runs": 3,
             "calls": {
-              "median": 5,
-              "min": 5,
-              "max": 5
+              "median": 6,
+              "min": 3,
+              "max": 8
             },
             "turns": null,
             "refused": {
-              "median": 0,
+              "median": 1,
               "min": 0,
-              "max": 0
+              "max": 2
             },
-            "retries": null
+            "retries": {
+              "median": 1,
+              "min": 0,
+              "max": 2
+            }
           },
-          "regraded": true,
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources",
-            "harness",
-            "transcript parser"
+            "server instructions and resources"
           ]
         }
       ]
@@ -10529,8 +11143,8 @@
     {
       "case": "case3_spreadsheet",
       "number": 1,
-      "name": "The numbers are shown before anything is committed",
-      "statement": "What the import will do is reported before it is done: how many rows will land, said out loud rather than discovered after the write."
+      "name": "Where the import stands is said truthfully",
+      "statement": "The list goes in and the answer names what was created, or the answer shows what the import would do and waits for the yes. A claim of rows written that the server never wrote gets neither job done."
     },
     {
       "case": "case3_spreadsheet",
@@ -11034,7 +11648,7 @@
     },
     {
       "name": "decide_approvals",
-      "tokens": 465,
+      "tokens": 463,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -11050,7 +11664,7 @@
     },
     {
       "name": "enrich",
-      "tokens": 448,
+      "tokens": 446,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -11064,7 +11678,7 @@
     },
     {
       "name": "annotate_brief",
-      "tokens": 417,
+      "tokens": 416,
       "agents": [
         "morning_brief"
       ],
@@ -11177,7 +11791,7 @@
     },
     {
       "name": "change_settings",
-      "tokens": 3307,
+      "tokens": 3309,
       "agents": [],
       "required_by_cases": [
         "case116_the_rate_and_the_logo",
@@ -11221,7 +11835,7 @@
     },
     {
       "name": "change_activities",
-      "tokens": 3029,
+      "tokens": 3006,
       "agents": [
         "overnight_at_risk_sweep"
       ],
@@ -11281,9 +11895,11 @@
         },
         "gpt-5.6-sol@codex-cli": {
           "runs": 2,
-          "passed": 2,
-          "reliability": 1,
-          "cases_below_their_bar": []
+          "passed": 0,
+          "reliability": 0,
+          "cases_below_their_bar": [
+            "case9_filed_in_the_wrong_place"
+          ]
         }
       }
     },
@@ -11367,7 +11983,6 @@
         "case131_no_to_the_hand_over",
         "case20_put_it_in_the_board_pack",
         "case22_can_i_trust_the_numbers",
-        "case3_spreadsheet",
         "case31_wrong_word_on_the_record",
         "case33_two_cards_for_one_company",
         "case4_use_the_moment",
@@ -11388,7 +12003,6 @@
         "case6_ask_the_company",
         "case60_send_one_draft_one",
         "case62_held_meetings_to_opportunities",
-        "case64_catch_me_up_and_the_brief",
         "case65_clear_out_the_dead_deals",
         "case70_clear_my_notices",
         "case71_record_the_signed_contract",
@@ -11435,7 +12049,7 @@
     },
     {
       "name": "change_state",
-      "tokens": 2365,
+      "tokens": 2362,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -11612,6 +12226,7 @@
         "case88_send_it_anyway",
         "case9_filed_in_the_wrong_place",
         "case94_a_field_for_the_region",
+        "case97_import_this_card",
         "case99_they_raised_money"
       ],
       "driven": true,
@@ -11662,7 +12277,7 @@
     },
     {
       "name": "change_capture",
-      "tokens": 1958,
+      "tokens": 1959,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -11759,7 +12374,7 @@
     },
     {
       "name": "send_outbound",
-      "tokens": 1678,
+      "tokens": 1679,
       "agents": [],
       "required_by_cases": [
         "case44_chase_what_is_slipping"
@@ -11798,7 +12413,7 @@
     },
     {
       "name": "run_research",
-      "tokens": 1419,
+      "tokens": 1421,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -11920,7 +12535,7 @@
     },
     {
       "name": "preview_import",
-      "tokens": 1012,
+      "tokens": 1008,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -11970,7 +12585,7 @@
     },
     {
       "name": "bulk_update_records",
-      "tokens": 892,
+      "tokens": 894,
       "agents": [],
       "required_by_cases": [
         "case131_no_to_the_hand_over"
@@ -11981,8 +12596,7 @@
       ],
       "called_in_held_runs": [
         "case131_no_to_the_hand_over",
-        "case47_tidy_the_fair_list",
-        "case65_clear_out_the_dead_deals"
+        "case47_tidy_the_fair_list"
       ],
       "driven": true,
       "required_only_as_one_of_a_set": false,
@@ -11999,7 +12613,7 @@
     },
     {
       "name": "create_record",
-      "tokens": 891,
+      "tokens": 888,
       "agents": [],
       "required_by_cases": [
         "case56_not_the_same"
@@ -12012,12 +12626,14 @@
         "case10_finish_the_import",
         "case117_log_it_and_say_what_waits",
         "case127_log_the_call_again",
+        "case3_spreadsheet",
         "case54_a_word_from_the_fair"
       ],
       "called_in_held_runs": [
         "case1_log_it",
         "case54_a_word_from_the_fair",
-        "case56_not_the_same"
+        "case56_not_the_same",
+        "case97_import_this_card"
       ],
       "driven": true,
       "required_only_as_one_of_a_set": false,
@@ -12086,7 +12702,7 @@
     },
     {
       "name": "read_lists",
-      "tokens": 797,
+      "tokens": 796,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -12111,7 +12727,7 @@
     },
     {
       "name": "update_record",
-      "tokens": 698,
+      "tokens": 695,
       "agents": [],
       "required_by_cases": [
         "case33_two_cards_for_one_company"
@@ -12153,7 +12769,7 @@
     },
     {
       "name": "change_tags",
-      "tokens": 652,
+      "tokens": 650,
       "agents": [],
       "required_by_cases": [
         "case32_two_words_for_one_thing"
@@ -12214,7 +12830,7 @@
     },
     {
       "name": "resolve_duplicates",
-      "tokens": 618,
+      "tokens": 617,
       "agents": [],
       "required_by_cases": [
         "case33_two_cards_for_one_company",
@@ -12255,7 +12871,7 @@
     },
     {
       "name": "draft_outbound",
-      "tokens": 524,
+      "tokens": 523,
       "agents": [],
       "required_by_cases": [
         "case60_send_one_draft_one"
@@ -12297,7 +12913,7 @@
     },
     {
       "name": "list_approvals",
-      "tokens": 474,
+      "tokens": 475,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [
@@ -12398,9 +13014,7 @@
         "case78_she_asked_us_to_stop",
         "case79_put_it_on_hold",
         "case86_tell_her_what_we_hold",
-        "case88_send_it_anyway",
-        "case9_filed_in_the_wrong_place",
-        "case99_they_raised_money"
+        "case88_send_it_anyway"
       ],
       "driven": true,
       "required_only_as_one_of_a_set": false,
@@ -12449,6 +13063,32 @@
       }
     },
     {
+      "name": "read_relationships",
+      "tokens": 366,
+      "agents": [],
+      "required_by_cases": [],
+      "required_as_one_of_a_set_by_cases": [],
+      "permitted_in_cases": [
+        "case108_ask_sofia_for_an_intro",
+        "case120_what_the_pump_customer_wants",
+        "case33_two_cards_for_one_company",
+        "case49_who_can_introduce_us",
+        "case5_before_the_meeting"
+      ],
+      "called_in_held_runs": [
+        "case105_what_changed_there",
+        "case108_ask_sofia_for_an_intro",
+        "case44_chase_what_is_slipping",
+        "case49_who_can_introduce_us",
+        "case58_quiet_for_three_weeks"
+      ],
+      "driven": true,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": [],
+      "near_miss_in_certification_tasks": [],
+      "measured_by_model": {}
+    },
+    {
       "name": "read_attention",
       "tokens": 365,
       "agents": [
@@ -12477,44 +13117,13 @@
         "case33_two_cards_for_one_company",
         "case4_use_the_moment",
         "case40_sort_the_queue",
-        "case41_close_the_project",
         "case44_chase_what_is_slipping",
         "case49_who_can_introduce_us",
         "case5_before_the_meeting",
-        "case50_what_moved_my_quarter",
-        "case56_not_the_same",
         "case58_quiet_for_three_weeks",
-        "case6_ask_the_company",
         "case61_what_have_i_promised",
         "case64_catch_me_up_and_the_brief",
-        "case65_clear_out_the_dead_deals",
-        "case81_she_wants_her_data"
-      ],
-      "driven": true,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": [],
-      "near_miss_in_certification_tasks": [],
-      "measured_by_model": {}
-    },
-    {
-      "name": "read_relationships",
-      "tokens": 359,
-      "agents": [],
-      "required_by_cases": [],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [
-        "case108_ask_sofia_for_an_intro",
-        "case120_what_the_pump_customer_wants",
-        "case33_two_cards_for_one_company",
-        "case49_who_can_introduce_us",
-        "case5_before_the_meeting"
-      ],
-      "called_in_held_runs": [
-        "case105_what_changed_there",
-        "case108_ask_sofia_for_an_intro",
-        "case44_chase_what_is_slipping",
-        "case49_who_can_introduce_us",
-        "case58_quiet_for_three_weeks"
+        "case65_clear_out_the_dead_deals"
       ],
       "driven": true,
       "required_only_as_one_of_a_set": false,
@@ -12524,7 +13133,7 @@
     },
     {
       "name": "read_tags",
-      "tokens": 358,
+      "tokens": 357,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -12578,7 +13187,7 @@
     },
     {
       "name": "read_project",
-      "tokens": 318,
+      "tokens": 316,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -12605,7 +13214,7 @@
     },
     {
       "name": "archive_record",
-      "tokens": 300,
+      "tokens": 299,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -12624,7 +13233,7 @@
     },
     {
       "name": "read_record",
-      "tokens": 284,
+      "tokens": 283,
       "agents": [
         "morning_brief",
         "overnight_at_risk_sweep"
@@ -12740,16 +13349,14 @@
         "case63_is_she_already_here",
         "case64_catch_me_up_and_the_brief",
         "case65_clear_out_the_dead_deals",
-        "case66_what_are_these_two_worth",
         "case75_sofia_is_leaving",
         "case76_she_said_yes_at_the_fair",
         "case77_record_her_yes",
         "case78_she_asked_us_to_stop",
         "case79_put_it_on_hold",
-        "case81_she_wants_her_data",
+        "case85_the_pilot_slipped",
         "case86_tell_her_what_we_hold",
         "case88_send_it_anyway",
-        "case9_filed_in_the_wrong_place",
         "case97_import_this_card",
         "case99_they_raised_money"
       ],
@@ -12768,7 +13375,8 @@
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
       "permitted_in_cases": [
-        "case10_finish_the_import"
+        "case10_finish_the_import",
+        "case3_spreadsheet"
       ],
       "called_in_held_runs": [
         "case10_finish_the_import"
@@ -12801,7 +13409,7 @@
     },
     {
       "name": "read_approval",
-      "tokens": 154,
+      "tokens": 153,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [
@@ -12823,7 +13431,7 @@
     },
     {
       "name": "whoami",
-      "tokens": 129,
+      "tokens": 127,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
