@@ -2,7 +2,6 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import {
@@ -35,7 +34,6 @@ import {
   DSR_STATUS_LABEL,
   type DsrClosing,
   type DsrStatus,
-  ERASURE_ANSWER_LABEL,
   isIllegalTransition,
   isOverdue,
   isTerminal,
@@ -46,6 +44,7 @@ import { RequestProof } from "./privacy.proofreading";
 import "./privacy.css";
 import { labelFor } from "../../lib/labelfor";
 import { useViewerZone } from "../../lib/viewerzone";
+import { answerText, useClosingDraft, writtenAnswer } from "./privacy.answer";
 import {
   DsrDispute,
   DsrProofFields,
@@ -468,44 +467,4 @@ function DsrAssignee({
       )}
     </Field>
   );
-}
-
-// The answer someone recorded, or null when the erasure that retired the
-// case left its placeholder in its place.
-function writtenAnswer(dsr: DataSubjectRequest): string | null {
-  return dsr.resolution_removed ? null : (dsr.resolution ?? null);
-}
-
-// An erasure's answer is a fixed word, shown in the reader's language; the
-// officer's own answer shows as written.
-function answerText(dsr: DataSubjectRequest, t: Translator): string {
-  const written = writtenAnswer(dsr);
-  if (written === null) return t("privacy.answerRemoved");
-  const fixed = ERASURE_ANSWER_LABEL[written];
-  return fixed ? t(fixed) : written;
-}
-
-// An answer drafted before the request was retired may name who asked, so it
-// goes with the retirement. One typed after it is the officer's to send.
-function useClosingDraft(
-  dsr: DataSubjectRequest,
-): readonly [DsrClosing, (change: Partial<DsrClosing>) => void] {
-  const [draft, setDraft] = useState<DsrClosing>(() => requestClosing(dsr));
-  const retired = Boolean(dsr.resolution_removed);
-  const [answerRetired, setAnswerRetired] = useState(retired);
-  const closing =
-    answerRetired === retired ? draft : { ...draft, resolution: "" };
-  function edit(change: Partial<DsrClosing>) {
-    setDraft((current) => ({ ...current, ...change }));
-    if ("resolution" in change) setAnswerRetired(retired);
-  }
-  return [closing, edit];
-}
-
-function requestClosing(dsr: DataSubjectRequest): DsrClosing {
-  return {
-    resolution: writtenAnswer(dsr) ?? "",
-    identityCheck: dsr.identity_verified ? "confirm_link" : "",
-    requesterEmail: "",
-  };
 }

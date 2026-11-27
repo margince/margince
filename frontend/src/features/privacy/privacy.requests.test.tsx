@@ -438,7 +438,7 @@ describe("a request retired while its drawer is open", () => {
         </QueryClientProvider>
       ),
     });
-    return () => view.rerender(drawer(RETIRED));
+    return (next: DataSubjectRequest = RETIRED) => view.rerender(drawer(next));
   }
 
   async function answerBox() {
@@ -479,6 +479,37 @@ describe("a request retired while its drawer is open", () => {
     expect(patched[0]?.body).toEqual({
       status: "in_progress",
       resolution: "Nothing left to send.",
+    });
+  });
+  // Another officer answers the retired case. Their answer, never the one drafted
+  // before the retirement, fills the box, whether or not this drawer saw the
+  // retirement first.
+  //
+  // Mutation: keep the draft once the flag clears and the old answer is sent.
+  it.each([
+    ["after the retirement was seen", [RETIRED]],
+    ["when the first refresh already holds it", []],
+  ])("shows a newer answer %s", async (_case, before) => {
+    const patched: Patched[] = [];
+    stub(undefined, patched);
+    const refresh = renderRetiring();
+    await answerBox();
+
+    for (const dsr of before) refresh(dsr);
+    refresh({
+      ...RETIRED,
+      resolution: "Nothing held.",
+      resolution_removed: false,
+    });
+    expect(await answerBox()).toHaveValue("Nothing held.");
+    await userEvent.click(
+      await screen.findByRole("button", { name: en["privacy.inProgress"] }),
+    );
+
+    await waitFor(() => expect(patched).toHaveLength(1));
+    expect(patched[0]?.body).toEqual({
+      status: "in_progress",
+      resolution: "Nothing held.",
     });
   });
 });
