@@ -3275,6 +3275,7 @@ export const en = {
     "An exchange rate is missing, so the total cannot be calculated.",
   "rollup.computedAt": "Computed at {when}",
   "rollup.wonIn": "Won in {period}",
+  "rollup.quarterOf": "Q{quarter} {year}",
   "rollup.periodNote":
     "Won deals count in {period} by the day they were won. The weighted deal value is the open deals today.",
   "rollup.period.label": "Period for won deals",
@@ -4108,6 +4109,8 @@ export const en = {
   "timeline.filters.search": "Search this timeline",
   "timeline.filters.from": "From",
   "timeline.filters.to": "To",
+  "timeline.filters.pickFrom": "Choose the start date",
+  "timeline.filters.pickTo": "Choose the end date",
   "timeline.filters.searchOmitsLimited":
     "Search excludes threads whose content you cannot open.",
   "tab.contacts": "Contacts",

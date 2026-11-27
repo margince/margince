@@ -14,6 +14,7 @@ import { formatDateTimeAbbrev, formatNumber } from "../../format/format";
 import { type Locale, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { isEntityKind } from "../../lib/entity";
+import { historyFieldLabel } from "../../lib/historyfieldlabels";
 import { labelFor } from "../../lib/labelfor";
 import { unwrap } from "../../lib/problem";
 import { useViewerZone } from "../../lib/viewerzone";
@@ -297,6 +298,7 @@ function isFollowable(url: string): boolean {
 function EvidenceIdentity({
   identity,
 }: Readonly<{ identity?: Record<string, unknown> }>) {
+  const t = useT();
   if (!identity) {
     return null;
   }
@@ -310,7 +312,7 @@ function EvidenceIdentity({
     <dl className="co-evidence-identity">
       {entries.map(([name, value]) => (
         <div key={name}>
-          <dt>{name.replace(/_/g, " ")}</dt>
+          <dt>{historyFieldLabel(name, t)}</dt>
           <dd>
             {name === "source_url" && isFollowable(String(value)) ? (
               <a href={String(value)} target="_blank" rel="noreferrer">

@@ -3372,6 +3372,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Summe kann nicht berechnet werden, da ein Wechselkurs fehlt.",
   "rollup.computedAt": "Berechnet am {when}",
   "rollup.wonIn": "Gewonnen in {period}",
+  "rollup.quarterOf": "Q{quarter} {year}",
   "rollup.periodNote":
     "Gewonnene Deals zählen in {period} nach dem Tag, an dem sie gewonnen wurden. Der gewichtete Deal-Wert zeigt die offenen Deals von heute.",
   "rollup.period.label": "Zeitraum für gewonnene Deals",
@@ -4175,6 +4176,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "timeline.filters.search": "Diesen Verlauf durchsuchen",
   "timeline.filters.from": "Von",
   "timeline.filters.to": "Bis",
+  "timeline.filters.pickFrom": "Startdatum wählen",
+  "timeline.filters.pickTo": "Enddatum wählen",
   "timeline.filters.searchOmitsLimited":
     "Die Suche schließt Threads aus, deren Inhalt du nicht öffnen kannst.",
   "tab.contacts": "Kontakte",

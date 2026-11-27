@@ -524,7 +524,7 @@ describe("the report frame", () => {
     expect(captions).toHaveLength(SECTION_REPORT_COUNT_PIPELINE);
   });
 
-  it("writes the zone as its long name and an offset, never the IANA id", async () => {
+  it("writes the zone as its readable name and an offset, never the IANA id", async () => {
     vi.stubGlobal("fetch", reportsStub());
     render(
       <LocaleProvider initial="vi">
@@ -537,7 +537,7 @@ describe("the report frame", () => {
       }),
     );
     expect(
-      (await screen.findAllByText(/Giờ .* Trung Âu · UTC\+[12]/)).length,
+      (await screen.findAllByText(/Giờ Đức · UTC\+[12]/)).length,
     ).toBeGreaterThan(0);
     expect(screen.queryByText(/Europe\/Berlin/)).toBeNull();
   });

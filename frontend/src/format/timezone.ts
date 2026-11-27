@@ -133,16 +133,36 @@ export function zoneNameAndOffset(
 ): string {
   // A zone the formatters refuse is shown as stored, not dropped.
   if (zone !== undefined && !isRenderableZone(zone)) return zone;
-  const named = (style: "long" | "shortOffset") =>
+  const named = (style: ZoneNameStyle) =>
     (zone === undefined
       ? zonelessDateTimeFormat(locale, { timeZoneName: style })
       : dateTimeFormat(locale, { timeZone: zone, timeZoneName: style })
     )
       .formatToParts(at)
       .find((piece) => piece.type === "timeZoneName")?.value ?? "";
-  return [named("long"), named("shortOffset").replace("GMT", "UTC")]
+  return [
+    readableZoneName(locale, named, "long"),
+    named("shortOffset").replace("GMT", "UTC"),
+  ]
     .filter(Boolean)
     .join(" · ");
+}
+
+type ZoneNameStyle = "long" | "longGeneric" | "shortGeneric" | "shortOffset";
+
+// Vietnamese long zone names are region names a reader does not use ("Giờ Đông
+// Dương" for Vietnam). There the country's name reads better ("Giờ Việt Nam"),
+// unless Intl only has an abbreviation for it ("ET"), which keeps the long one.
+function readableZoneName(
+  locale: Locale,
+  named: (style: ZoneNameStyle) => string,
+  long: "long" | "longGeneric",
+): string {
+  if (locale === "vi") {
+    const country = named("shortGeneric");
+    if (/\p{Ll}/u.test(country)) return country;
+  }
+  return named(long);
 }
 
 /** The zone a wire instant was read on, named and offset in the reader's language. */
@@ -158,13 +178,13 @@ export function zoneNameAllYear(
   locale: Locale,
 ): string {
   if (!isRenderableZone(zone)) return zone;
-  const name = dateTimeFormat(locale, {
-    timeZone: zone,
-    timeZoneName: "longGeneric",
-  })
-    .formatToParts(new Date(at))
-    .find((piece) => piece.type === "timeZoneName")?.value;
-  return name?.replace("GMT", "UTC") ?? zone;
+  const named = (style: ZoneNameStyle) =>
+    dateTimeFormat(locale, { timeZone: zone, timeZoneName: style })
+      .formatToParts(new Date(at))
+      .find((piece) => piece.type === "timeZoneName")?.value ?? "";
+  return (
+    readableZoneName(locale, named, "longGeneric").replace("GMT", "UTC") || zone
+  );
 }
 
 // A function, so a change of zone is read on the next call. A runtime that
