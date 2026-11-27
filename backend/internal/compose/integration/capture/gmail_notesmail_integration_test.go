@@ -87,7 +87,7 @@ func syncedMeetings(t *testing.T, starts map[string]time.Time, title string) not
 
 func notesTranscriptCount(t *testing.T, e *integration.SearchEnv) int {
 	t.Helper()
-	return countRows(t, e, `SELECT count(*) FROM activity WHERE source_system = 'transcript' AND source = 'meeting_notes_mail'`)
+	return countRows(t, e, `SELECT count(*) FROM activity WHERE source_system = 'transcript' AND source = 'capture' AND starts_with(source_id, 'mail:')`)
 }
 
 // contactLinks counts the contact links of the activity captured under sourceID.
@@ -118,7 +118,7 @@ func TestAGeminiNotesMailLandsAsTheTranscriptOfItsMeeting(t *testing.T) {
 	var recorded ids.UUID
 	if err := e.Owner.QueryRow(t.Context(), `
 		SELECT body, source_id, source_activity_id FROM activity
-		 WHERE source_system = 'transcript' AND source = 'meeting_notes_mail'`).Scan(&body, &source, &recorded); err != nil {
+		 WHERE source_system = 'transcript' AND source = 'capture' AND starts_with(source_id, 'mail:')`).Scan(&body, &source, &recorded); err != nil {
 		t.Fatal(err)
 	}
 	if recorded != meeting || source != "mail:notes1@google.com" || body != strings.TrimSuffix(notesBody, "\n") {

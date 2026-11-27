@@ -6,11 +6,11 @@ package ai
 
 var taskGrades = map[CertKey]CertGrade{
 	// records/account_scan/anthropic_claude-haiku-5-5_cloud_frontier.json
-	{Task: "account_scan", Provider: "anthropic", Model: "claude-haiku-5-5", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "current"},
+	{Task: "account_scan", Provider: "anthropic", Model: "claude-haiku-5-5", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "stale"},
 	// records/account_scan/anthropic_claude-sonnet-5-5_cloud_frontier.json
-	{Task: "account_scan", Provider: "anthropic", Model: "claude-sonnet-5-5", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "current"},
+	{Task: "account_scan", Provider: "anthropic", Model: "claude-sonnet-5-5", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "stale"},
 	// records/account_scan/gemini_gemini-3.1-flash-lite_cloud_frontier.json
-	{Task: "account_scan", Provider: "gemini", Model: "gemini-3.1-flash-lite", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "supported_degraded", State: "current"},
+	{Task: "account_scan", Provider: "gemini", Model: "gemini-3.1-flash-lite", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "current"},
 	// records/account_scan/gemini_gemini-3.5-flash_cloud_frontier.json
 	{Task: "account_scan", Provider: "gemini", Model: "gemini-3.5-flash", Profile: "cloud_frontier", ThinkingLevel: "low", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "stale"},
 	// records/account_scan/gemini_gemini-3.5-flash-lite_cloud_frontier.json

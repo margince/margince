@@ -104,14 +104,14 @@ func (s salesDecisions) Record(ctx context.Context, in crmcontracts.SalesDecisio
 			body = &expected
 		}
 		task, _, err := s.activities.LogActivityTx(ctx, tx, activities.LogActivityInput{
-			SystemText:       &systemtext.Message{Subject: systemtext.Prose(systemtext.Quote, ""), Body: systemtext.Prose(systemtext.Quote, "")},
-			Kind:             kind,
-			Subject:          &decision,
-			Body:             body,
-			DueIntent:        &reviewOn,
-			AssigneeID:       &owner,
-			SourceSystem:     &source,
-			SourceID:         &sourceID,
+			SystemText:   &systemtext.Message{Subject: systemtext.Prose(systemtext.Quote, ""), Body: systemtext.Prose(systemtext.Quote, "")},
+			Kind:         kind,
+			Subject:      &decision,
+			Body:         body,
+			DueIntent:    &reviewOn,
+			AssigneeID:   &owner,
+			SourceSystem: &source,
+			SourceID:     &sourceID, Source: provenance.RecordSourceAutomation,
 			Links:            []activities.ActivityLinkInput{{EntityType: "deal", EntityID: deal}},
 			LinksFromRequest: true,
 		})

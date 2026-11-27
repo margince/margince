@@ -202,16 +202,10 @@ func applyCreate(ctx context.Context, ex Executors, eff workflow.Effect, action 
 	if action.Kind == workflow.ActionCreateTask {
 		entity = datasource.EntityActivity
 	}
-	// A record table holds source to the fixed channels. An activity keeps the
-	// engine's own word, which its readers select on.
-	source := systemSource
-	if entity != datasource.EntityActivity {
-		source = provenance.RecordSourceAutomation
-	}
 	created, createErr := ex.Provider.Create(systemtext.WithMessage(ctx, action.SystemText), datasource.CreateInput{
 		EntityType: entity,
 		Fields:     action.Args,
-		Source:     source,
+		Source:     provenance.RecordSourceAutomation,
 	})
 	if createErr == nil && created.ID != ids.Nil {
 		action.Created = &created
