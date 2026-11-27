@@ -14,9 +14,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// What an agent is told it can release is what decide would let it release: the
-// classification says undoable, the session is attended, the credential carries
-// write and the decision grants, and the target is one it may act on.
+// The release hint must agree with decide. The change must be undoable and
+// outside a built-in scheduled run. The credential needs write and decision
+// grants, and it must be allowed to act on the target.
 func TestAStagedCallIsReleasableByTheCallerOnlyWhenDecideWouldAllowIt(t *testing.T) {
 	e := setupStaging(t)
 	target := ids.NewV7()
@@ -43,9 +43,10 @@ func TestAStagedCallIsReleasableByTheCallerOnlyWhenDecideWouldAllowIt(t *testing
 		ctx  context.Context
 		want bool
 	}{
-		{"an undoable call, attended, with write and the grants", e.svc.WithUndoableRelease(undoable), agent, true},
+		{"an undoable MCP call with write and the grants", e.svc.WithUndoableRelease(undoable), agent, true},
 		{"a call that is not undoable", NewService(e.svc.db).WithUndoableRelease(func(context.Context, Queryer, StagedCall) bool { return false }), agent, false},
-		{"an unattended run", NewService(e.svc.db).WithUndoableRelease(undoable), principal.WithAgentRunID(agent, ids.NewV7()), false},
+		{"a built-in scheduled run", NewService(e.svc.db).WithUndoableRelease(undoable), principal.WithAgentRunID(agent, ids.NewV7()), false},
+		{"a built-in runner before a run row exists", NewService(e.svc.db).WithUndoableRelease(undoable), principal.WithUnattended(agent), false},
 		{"no classification installed", NewService(e.svc.db), agent, false},
 		{
 			"a credential without the write cap", NewService(e.svc.db).WithUndoableRelease(undoable),

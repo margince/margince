@@ -130,6 +130,36 @@ describe("traverseTo", () => {
   });
 });
 
+describe("traverseOr", () => {
+  it("calls the fallback when the browser has no entry to step back to", () => {
+    browserEntries(["#/contacts"], () => 0);
+    depth.noteHistoryEntry("start");
+    push("#/contacts/c1");
+    const go = goPending();
+    const instead = vi.fn();
+
+    depth.traverseOr(0, instead);
+
+    expect(go).not.toHaveBeenCalled();
+    expect(instead).toHaveBeenCalledOnce();
+  });
+
+  it("waits for a started step instead of racing it with the fallback", () => {
+    vi.useFakeTimers();
+    depth.noteHistoryEntry("start");
+    push("#/contacts/c1");
+    const go = goPending();
+    const instead = vi.fn();
+
+    depth.traverseOr(0, instead);
+    depth.traverseOr(0, instead);
+    vi.runAllTimers();
+
+    expect(go.mock.calls).toEqual([[-1]]);
+    expect(instead).not.toHaveBeenCalled();
+  });
+});
+
 describe("traverseTo with the browser's entry list", () => {
   it("refuses an entry the browser no longer has", () => {
     let index = 0;

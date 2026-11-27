@@ -56,6 +56,9 @@ type Registry struct {
 	// not-yet-backfilled legacy row still resolves from its auth column with
 	// no vault.
 	vault keyvault.Vault
+	// chatSenders is the resolver of chat accounts' senders, when a test set one.
+	chatSenders    ChatSenders
+	chatSendersSet bool
 
 	// The scheduling state machine's knobs (ADR-0063): now is injected so
 	// the backoff/pacing arithmetic is testable; progressPacing paces the

@@ -11,6 +11,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/dormancy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
@@ -19,7 +20,7 @@ var dormancyNow = time.Date(2026, 11, 20, 15, 0, 0, 0, time.UTC)
 // coldAccount is an account on the dormant rung, 70 days after its last
 // activity, owned by somebody, with the follow-up switched on.
 func coldAccount(owner ids.UUID) suggestionInputs {
-	last := dormancyNow.AddDate(0, 0, -70)
+	last := occurredday.Moment{At: dormancyNow.AddDate(0, 0, -70)}
 	return suggestionInputs{
 		language: textlang.English, companyName: "Acme",
 		dormancy: dormancyInputs{
@@ -48,7 +49,7 @@ func TestADormantAccountSuggestsAFollowUpToItsOwner(t *testing.T) {
 	if assignee := got.Action.Task.AssigneeId; assignee == nil || ids.UUID(*assignee) != owner {
 		t.Errorf("the task is prepared for %v, want the owner %v", assignee, owner)
 	}
-	if got.DueAt == nil || !got.DueAt.Equal(*in.dormancy.lastActivity) {
+	if got.DueAt == nil || !got.DueAt.Equal(in.dormancy.lastActivity.At) {
 		t.Errorf("due_at = %v, want the last activity the silence is counted from", got.DueAt)
 	}
 	if got.Title == nil || *got.Title != "Get back in touch with Acme" {
@@ -70,7 +71,7 @@ func TestOneSilentStretchRaisesTheFollowUpOnce(t *testing.T) {
 		t.Errorf("the stale reading of the same stretch fingerprints as %v, want %q", stale, dormant.Fingerprint)
 	}
 
-	later := in.dormancy.lastActivity.AddDate(0, 0, 5)
+	later := occurredday.Moment{At: in.dormancy.lastActivity.At.AddDate(0, 0, 5)}
 	in.dormancy.lastActivity = &later
 	if again := goneDormantSuggestion(company, in); again == nil || again.Fingerprint == dormant.Fingerprint {
 		t.Errorf("a new silent stretch kept the old fingerprint, so a dismissal would hide it")

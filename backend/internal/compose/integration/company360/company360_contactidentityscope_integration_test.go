@@ -56,7 +56,7 @@ func seedIntroducibleContact(t *testing.T, e *integration.Env, name string) (com
 func draftIntro(as context.Context, t *testing.T, e *integration.Env, company, contact ids.UUID) (string, error) {
 	t.Helper()
 	svc := company360Service(e)
-	draft, err := svc.IntroRequestDraft(as, nil, ids.CompanyID{UUID: company},
+	draft, err := svc.IntroRequestDraft(as, nil, nil, ids.CompanyID{UUID: company},
 		company360svc.IntroRequest{
 			ContactID: new(ids.From[ids.ContactKind](contact)),
 			ViaUserID: ids.From[ids.UserKind](e.Rep2),

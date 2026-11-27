@@ -82,6 +82,7 @@ const ADDRESSED: Readonly<Record<Screen, (route: Route) => Code | undefined>> =
     preferences: () => SCREEN_CODE.preferences,
     unsubscribe: () => SCREEN_CODE.unsubscribe,
     confirm: () => SCREEN_CODE.confirm,
+    "confirm-merge": () => SCREEN_CODE.confirm,
     room: () => SCREEN_CODE.buyerRoom,
     "oauth-consent": () => SCREEN_CODE.oauthConsent,
     "reset-password": () => undefined,

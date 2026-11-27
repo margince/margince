@@ -26,6 +26,7 @@ const (
 	sharedChangeReaders       = "readers_changed"
 	sharedChangeVisibility    = "visibility_changed"
 	sharedChangeBackupOwner   = "backup_owner_changed"
+	sharedChangeReply         = "reply_changed"
 	sharedChangeDisconnected  = "disconnected"
 	sharedChangeHistoryImport = "history_import_started"
 )
@@ -35,6 +36,10 @@ const fieldReaderTeam = "reader_team_id"
 
 // fieldBackupOwner names the backup owner on the wire and on the audit trail.
 const fieldBackupOwner = "backup_owner_id"
+
+// fieldReplyEnabled names the reader team's right to reply as the mailbox on the
+// wire and on the audit trail.
+const fieldReplyEnabled = "reply_enabled"
 
 // The audit verbs a shared mailbox's changes take.
 const (

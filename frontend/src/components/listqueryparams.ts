@@ -393,6 +393,21 @@ export function paramsFromListQuery(
   return params;
 }
 
+/**
+ * The address that opens a list on `query` from another page. It spells the
+ * page size even at its default. So an address of default dials still reads as
+ * the reader's choice, not as a fresh arrival.
+ */
+export function arrivalParams(
+  query: ListQuery,
+  opening: ListQuery,
+  scope?: string,
+): UrlParams {
+  const params = new Map(paramsFromListQuery(query, opening, scope));
+  params.set(scoped(scope, PER_PAGE_PARAM), String(query.perPage));
+  return params;
+}
+
 /** The most rows one list read may ask for (the contract's CAP-PAGE ceiling). */
 const MAX_ROWS_PER_READ = 200;
 

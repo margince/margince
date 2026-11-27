@@ -109,7 +109,6 @@ describe("the address dispatch", () => {
     ["#/scheduled", screens.ScheduledSendsScreen, {}],
     ["#/legal-reviews/r1", screens.LegalReviewsRoute, { id: "r1" }],
     ["#/offers/o1", screens.OfferScreen, { id: "o1" }],
-    ["#/offers", screens.ScreenNotice, { messageKey: "screen.pending" }],
     ["#/tags/t1", screens.TagResultScreen, { tagID: "t1" }],
     ["#/lists/l1", screens.FiltersScreen, { list: "l1" }],
     ["#/share/deal/d1", screens.ShareRoute, { id: "deal", id2: "d1" }],

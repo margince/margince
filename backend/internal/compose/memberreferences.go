@@ -21,13 +21,10 @@ import (
 const (
 	memberScopeColumn    = "scope_id"
 	memberSourceArgument = "source_id"
-)
-
-const (
-	referenceRetain   = "retain"
-	referenceHandover = "handover"
-	referenceResolve  = "resolve"
-	memberLiveRows    = "archived_at IS NULL"
+	referenceRetain      = "retain"
+	referenceHandover    = "handover"
+	referenceResolve     = "resolve"
+	memberLiveRows       = "archived_at IS NULL"
 )
 
 type memberReference struct {
@@ -49,6 +46,7 @@ var memberReferences = map[string]memberReference{
 	"activity_participant.roster_seat":         {disposition: referenceRetain},
 	"activity_participant.user_id":             {disposition: referenceRetain},
 	"activity_reader_state.reader_id":          {disposition: referenceRetain},
+	"activity_link_suggestion.for_user":        {disposition: referenceRetain},
 	"activity_retention_evidence.decided_by":   {disposition: referenceRetain},
 	"agent_standing_grant.user_id":             {disposition: referenceRetain},
 	"ai_task_run.actor_user_id":                {disposition: referenceRetain},
@@ -62,6 +60,7 @@ var memberReferences = map[string]memberReference{
 	"approval_preference.user_id":              {disposition: referenceRetain},
 	"assurance_resolution.actor_id":            {disposition: referenceRetain},
 	"audit_log.on_behalf_of":                   {disposition: referenceRetain},
+	"auth_token.counterpart_user_id":           {disposition: referenceRetain},
 	"auth_token.user_id":                       {disposition: referenceRetain},
 	"automation.owner_id":                      {disposition: referenceResolve, live: `enabled AND archived_at IS NULL`, remedy: "automations"},
 	"booking_page.host_user_id":                {disposition: referenceResolve, live: jsonTrue, remedy: "booking_pages"},

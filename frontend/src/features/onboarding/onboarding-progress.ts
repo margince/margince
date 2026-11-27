@@ -11,11 +11,9 @@ async function loadWizardState(): Promise<
   components["schemas"]["OnboardingState"] | null
 > {
   const { data, error, response } = await api.GET("/onboarding/state");
-  if (error) {
-    if (response.status === 404) return null;
-    throwProblem(error);
-  }
-  return data;
+  if (response.status === 204) return null;
+  if (error) throwProblem(error);
+  return data ?? null;
 }
 
 // The shell gate and checkpoint writer share live state; restore keeps its mount snapshot.

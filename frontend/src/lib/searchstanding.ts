@@ -3,11 +3,11 @@
 
 import type { components } from "../api/schema";
 import type { StatusKind } from "../design-system/statusbadge";
+import { activitySince } from "../format/activitywhen";
 import { formatMoneyWhole } from "../format/format";
 import { formatDayMonthNearYear } from "../format/format.dates";
 import { LEAD_STATUS_LABEL } from "../format/leadstatus";
 import { isProjectPhase, PHASE_LABEL } from "../format/projectphase";
-import { formatRelativeTime } from "../format/relativetime";
 import type { Locale, Translator } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { labelFor } from "./labelfor";
@@ -45,6 +45,24 @@ function leadStatusKind(status: Lead["status"]): StatusKind {
 }
 
 /**
+ * When the record was last in touch. A date-only touch names its date: an age
+ * counted from its stored noon UTC is a day short far east of UTC.
+ */
+function lastContactOf(
+  standing: NonNullable<SearchResult["standing"]>,
+  { t, locale, now }: Reading,
+): string | undefined {
+  const at = standing.last_activity_at;
+  if (!at) return undefined;
+  const precision = standing.last_activity_precision ?? "instant";
+  return t("palette.lastContact", {
+    when: activitySince({ at, precision }, now, locale, (day, locale, zone) =>
+      formatDayMonthNearYear(day, locale, zone, now),
+    ),
+  });
+}
+
+/**
  * The second line and status of one hit, from the standing the search answer
  * carries. `fallback` is the line a hit shows without one: an employer, a
  * partner mark, the server's snippet.
@@ -58,11 +76,7 @@ export function describeHit(
   if (!standing) return { subtitle: fallback };
   const { t, locale, zone, now } = reading;
   const day = (date: string) => formatDayMonthNearYear(date, locale, zone, now);
-  const lastContact = standing.last_activity_at
-    ? t("palette.lastContact", {
-        when: formatRelativeTime(standing.last_activity_at, locale, now),
-      })
-    : undefined;
+  const lastContact = lastContactOf(standing, reading);
   switch (hit.type) {
     case "contact":
       return {

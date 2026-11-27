@@ -22,6 +22,7 @@ import (
 	"context"
 	"os"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 
@@ -45,7 +46,7 @@ var fromJoin = regexp.MustCompile(`(?is)\b(?:from|join)\s+([a-z_][a-z0-9_]*)`)
 func tablesTheExportReaches(t *testing.T) map[string]bool {
 	t.Helper()
 	var pkg SARPackage
-	sections, err := sarSections(principal.SystemActing(context.Background(), "sar_test"), &pkg, ids.New[ids.ContactKind](), []string{"subject@sar.test"}, []ids.UUID{ids.NewV7()}, []ids.UUID{ids.NewV7()}, []ids.UUID{ids.NewV7()}, nil)
+	sections, err := sarSections(principal.SystemActing(context.Background(), "sar_test"), &pkg, ids.New[ids.ContactKind](), []string{"subject@sar.test"}, []string{"subject@sar.test"}, []ids.UUID{ids.NewV7()}, []ids.UUID{ids.NewV7()}, []ids.UUID{ids.NewV7()}, []ids.UUID{ids.NewV7()}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -119,7 +120,7 @@ func TestEveryPromisedTableIsActuallyAssembled(t *testing.T) {
 // first and could fail this.
 func TestTheConfirmLinkSectionCarriesNoCredential(t *testing.T) {
 	var pkg SARPackage
-	sections, err := sarSections(principal.SystemActing(context.Background(), "sar_test"), &pkg, ids.New[ids.ContactKind](), []string{"subject@sar.test"}, []ids.UUID{ids.NewV7()}, []ids.UUID{ids.NewV7()}, []ids.UUID{ids.NewV7()}, nil)
+	sections, err := sarSections(principal.SystemActing(context.Background(), "sar_test"), &pkg, ids.New[ids.ContactKind](), []string{"subject@sar.test"}, []string{"subject@sar.test"}, []ids.UUID{ids.NewV7()}, []ids.UUID{ids.NewV7()}, []ids.UUID{ids.NewV7()}, []ids.UUID{ids.NewV7()}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -149,5 +150,41 @@ func TestTheConfirmLinkSectionCarriesNoCredential(t *testing.T) {
 	if probed == 0 {
 		t.Fatal("no assembled section reads confirm_token, so this check examined nothing — " +
 			"either the section was dropped or it was renamed out of reach")
+	}
+}
+
+// Every section handed the subjectMessages set takes its content gate from the
+// export's audience rule and finds mail through that set alone. Without the
+// gate, a limited mail's content reaches a Cc. A section on the activity_link
+// table drops a mail the subject was only copied on. The staged-approval row
+// match keeps the erasure-shared evidence clause. Sections are found by the set
+// they were handed, so a new one is held to both rules unlisted.
+func TestEverySectionReadingTheMessageSetGatesContentAndSkipsTheLinkTable(t *testing.T) {
+	var pkg SARPackage
+	sentinel := ids.NewV7()
+	messages := []ids.UUID{sentinel}
+	sections, err := sarSections(principal.SystemActing(context.Background(), "sar_test"), &pkg, ids.New[ids.ContactKind](), []string{"subject@sar.test"}, []string{"subject@sar.test"}, []ids.UUID{ids.NewV7()}, []ids.UUID{ids.NewV7()}, []ids.UUID{ids.NewV7()}, messages, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	const atLeast = 7
+	seen := 0
+	for _, section := range sections {
+		if !slices.ContainsFunc(section.args, func(arg any) bool {
+			set, ok := arg.([]ids.UUID)
+			return ok && slices.Contains(set, sentinel)
+		}) {
+			continue
+		}
+		seen++
+		if !strings.Contains(section.query, sarContentDisclosed) {
+			t.Errorf("a section reads the subject's messages without the content gate:\n%s", strings.TrimSpace(section.query))
+		}
+		if strings.Contains(strings.ReplaceAll(section.query, evidenceCitesSubjectActivity, ""), "activity_link") {
+			t.Errorf("a section reads activity_link instead of the subjectMessages set:\n%s", strings.TrimSpace(section.query))
+		}
+	}
+	if seen < atLeast {
+		t.Fatalf("found %d sections reading the message set, fewer than the %d this census assumes", seen, atLeast)
 	}
 }

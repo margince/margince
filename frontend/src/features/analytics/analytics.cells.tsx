@@ -93,6 +93,32 @@ export function rowCurrency(row: ReportRow): string | null {
   return typeof currency === "string" && currency !== "" ? currency : null;
 }
 
+/** The out-of-range marker a report or analytics row carries. */
+const OUT_OF_RANGE = "_out_of_range";
+
+/**
+ * Whether the server withheld this column of the row because its total is
+ * past 2^53, where a number stops holding every integer. Such a cell is null on
+ * the wire and is said as too large, never as zero or as absent.
+ */
+export function beyondExactRange(
+  row: Readonly<Record<string, unknown>>,
+  column: string,
+): boolean {
+  const named = row[OUT_OF_RANGE];
+  return Array.isArray(named) && named.includes(column);
+}
+
+/** Whether any row of an answer had a total withheld as too large. */
+export function anyBeyondExactRange(
+  rows: readonly Readonly<Record<string, unknown>>[],
+): boolean {
+  return rows.some((row) => {
+    const named = row[OUT_OF_RANGE];
+    return Array.isArray(named) && named.length > 0;
+  });
+}
+
 export function rowMoney(row: ReportRow, key: string): number | null {
   const value = row[key];
   return value == null ? null : Number(value);

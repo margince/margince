@@ -28,12 +28,11 @@ import (
 // for every surface composing draftrules.Shared and fails when one of them
 // reaches a model without calling draftvoice.Load.
 //
-// A nil store is a deployment with no voice lane; a lookup failure degrades to
-// the plain draft with the reason logged, because a broken voice read must
-// never take reply drafting down with it.
-func (d replyDrafter) loadVoice(ctx context.Context) draftvoice.Context {
+// A nil store is a deployment with no voice lane. A failed voice read degrades
+// to the plain draft, logged. A failed team-rules read refuses.
+func (d replyDrafter) loadVoice(ctx context.Context) (draftvoice.Context, error) {
 	if d.voice == nil {
-		return draftvoice.Context{}
+		return draftvoice.Context{}, nil
 	}
 	return draftvoice.Load(ctx, d.voice, d.logger())
 }
@@ -77,11 +76,11 @@ func (d replyDrafter) voicedDraft(ctx context.Context, anchor ids.UUID, data rep
 	// subject line names it on the rail, so a failed draft names its thread.
 	ctx = ai.WithSubject(ctx, ids.From[ids.ActivityKind](anchor).Ref(), data.Subject)
 	if !voice.OK {
-		draft, err := d.completeChecked(ctx, data, nil)
+		draft, err := d.completeChecked(ctx, data, voice.TeamRules, nil)
 		return draft, nil, nil, err
 	}
 	block := voice.Block
-	draft, err := d.completeChecked(ctx, data, block)
+	draft, err := d.completeChecked(ctx, data, voice.TeamRules, block)
 	if err != nil {
 		return replyDraft{}, nil, nil, err
 	}
@@ -93,14 +92,11 @@ func (d replyDrafter) voicedDraft(ctx context.Context, anchor ids.UUID, data rep
 		withFeedback := func(fence promptfence.Fence) string {
 			return block(fence) + draftvoice.Feedback(violations)
 		}
-		retried, retryErr := d.complete(ctx, data, withFeedback)
+		retried, retryErr := d.completeWith(ctx, data, voice.TeamRules, withFeedback, "")
 		if retryErr != nil {
-			// This is the one call in the lane that goes to d.complete rather
-			// than completeChecked, so draftRetryLog never sees it: unlogged,
-			// the failure is recorded nowhere at all. Keeping the first draft
-			// is the right answer — the re-check below still decides whether
-			// it may be served — but that decision is then made on a retry
-			// nobody can see happened.
+			// This call bypasses completeChecked, so draftRetryLog never sees it and
+			// the failure would be recorded nowhere. Keeping the first draft is right,
+			// since the re-check below still decides whether it may be served.
 			d.logger().WarnContext(ctx, "voice critic retry failed; keeping the first draft with its violations",
 				"err", retryErr, "violations", len(violations))
 		} else {
@@ -115,7 +111,7 @@ func (d replyDrafter) voicedDraft(ctx context.Context, anchor ids.UUID, data rep
 		// The voice-styled draft kept tripping the floor: serve the plain
 		// draft instead and let the failure feed the learning panel.
 		d.recordVoiceRejection(ctx, voice, anchor, draft)
-		plain, plainErr := d.completeChecked(ctx, data, nil)
+		plain, plainErr := d.completeChecked(ctx, data, voice.TeamRules, nil)
 		return plain, nil, nil, plainErr
 	}
 	ref := voiceDraftRef(voice, anchor, draft)

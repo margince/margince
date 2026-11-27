@@ -48,3 +48,14 @@ type Story = StoryObj<typeof meta>;
 export const Offered: Story = {
   args: { item: unheldTask() },
 };
+
+/** A task nobody holds that the reader may see and not change: only "Take it" is offered. */
+export const OfferedToAReadOnlyReader: Story = {
+  args: {
+    item: {
+      ...unheldTask(),
+      actions: ["take"],
+      because: [{ kind: "unassigned" }, { kind: "read_only" }],
+    },
+  },
+};

@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 func lead(over func(*crmcontracts.Lead)) crmcontracts.Lead {
@@ -195,7 +196,7 @@ func TestTheConversationStateReadsTheSameTwoInstants(t *testing.T) {
 			crmcontracts.ActivityDirectionInbound, "Pricing?", "What would this cost?"),
 	}
 	got := leaddraft.ConversationState(activities, when, time.UTC)
-	want := convstate.Classify(when, when.Add(-2*time.Hour), time.Time{}, time.UTC)
+	want := convstate.Classify(when, occurredday.Moment{At: when.Add(-2 * time.Hour)}, occurredday.Moment{}, time.UTC)
 	if got != want {
 		t.Errorf("state = %v, want %v — the envelope and the recipient read different instants", got, want)
 	}
@@ -204,7 +205,7 @@ func TestTheConversationStateReadsTheSameTwoInstants(t *testing.T) {
 // A lead with no correspondence at all is a first touch, not a failure.
 func TestALeadNobodyHasWrittenToIsAFirstTouch(t *testing.T) {
 	t.Parallel()
-	if got := leaddraft.ConversationState(nil, when, time.UTC); got != convstate.Classify(when, time.Time{}, time.Time{}, time.UTC) {
+	if got := leaddraft.ConversationState(nil, when, time.UTC); got != convstate.Classify(when, occurredday.Moment{}, occurredday.Moment{}, time.UTC) {
 		t.Errorf("state = %v on a lead with no history", got)
 	}
 }

@@ -349,8 +349,7 @@ describe("BriefScreen — the weekly retrospective", () => {
   // an absent week claims a record nobody wrote.
   it("marks nothing frozen when there is no review", async () => {
     stubApi({
-      "GET /weekly-reviews/latest": () =>
-        jsonResponse({ title: "Not Found" }, 404),
+      "GET /weekly-reviews/latest": () => new Response(null, { status: 204 }),
       "GET /weekly-reviews": () => jsonResponse({ weeks: [] }),
       "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
     });
@@ -363,8 +362,7 @@ describe("BriefScreen — the weekly retrospective", () => {
 
   it("says there is no review yet rather than drawing a week of zeroes", async () => {
     stubApi({
-      "GET /weekly-reviews/latest": () =>
-        jsonResponse({ title: "Not Found" }, 404),
+      "GET /weekly-reviews/latest": () => new Response(null, { status: 204 }),
       "GET /weekly-reviews": () => jsonResponse({ weeks: [] }),
       "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
     });

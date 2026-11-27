@@ -166,15 +166,25 @@ Served next to `/v1`:
 
   The Home cache section counts the Home reads a member waited on, in the counter
   `margince_home_cache_reads_total`. Its `read` label is `worklist` or `magic`. Its `outcome` label
-  is `hit` when a kept answer served the read, and `miss` when Home was read fresh. It is `stale`
-  when a kept answer served the read after its five minutes ran out. Home is then read again in the
-  background.
+  is `hit` when a kept answer served the read, and `miss` when Home was read fresh.
+
+  It is `stale` when a kept answer served the read after its five minutes ran out. Home is then read
+  again in the background. It is `first` when Home was read fresh and no answer had been kept for that question
+  yet. The `/v1/worklist` question names the day, so for `read="worklist"` that is a member's first
+  Home read of the day.
 
   A refresh in the background counts as none of them. The share of reads a kept answer served, over 5 minutes:
 
   ```promql
   sum(rate(margince_home_cache_reads_total{outcome=~"hit|stale"}[5m]))
     / sum(rate(margince_home_cache_reads_total[5m]))
+  ```
+
+  The share of `/v1/worklist` reads that were a member's first of the day, built in full, over a day:
+
+  ```promql
+  sum(increase(margince_home_cache_reads_total{read="worklist",outcome="first"}[1d]))
+    / sum(increase(margince_home_cache_reads_total{read="worklist"}[1d]))
   ```
 
   The connection pool section reports the own pool of this process. It publishes every value pgx

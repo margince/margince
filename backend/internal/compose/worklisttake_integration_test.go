@@ -14,10 +14,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // unheldTaskOn writes an overdue task on the contact through the real writer
@@ -51,6 +53,8 @@ func (r reminderEnv) auditRowsOf(t *testing.T, task ids.ActivityID) int {
 func TestAColleagueTakesAnUnheldTaskOnARecordTheyMayChange(t *testing.T) {
 	r := setupReminders(t)
 	e := r.e
+	// A take is offered to a human on a full seat only.
+	r.rep2 = integration.OnSeat(r.rep2, principal.SeatFull)
 	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
 	task := r.unheldTaskOn(t, "Send the renewal terms", contact)
 

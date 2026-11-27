@@ -14,6 +14,7 @@ import {
   RELATIONSHIP_TYPE_LABELS,
   SIZE_BAND_OPTIONS,
 } from "../../components/companylookups";
+import { hiddenHoldersNotice } from "../../components/contactemployersummary";
 import { CreateAction } from "../../components/create";
 import { useObjectCustomFields } from "../../components/customfields.form";
 import {
@@ -40,6 +41,7 @@ import { useToast } from "../../design-system/toast";
 import { useLocale, useT } from "../../i18n";
 import { useCan } from "../../lib/capability";
 import { labelFor } from "../../lib/labelfor";
+import { COMPANIES_INITIAL_SORT } from "../../lib/listopenings";
 import {
   KIND_LABELS,
   MEANING_LABELS,
@@ -111,7 +113,7 @@ export function CompaniesScreen({
   const cf = useObjectCustomFields("company", "create");
   const state = useListQuery<Company>({
     key: "companies",
-    initialSort: "-created_at",
+    initialSort: COMPANIES_INITIAL_SORT,
     fetchPage: fetchCompaniesPage,
   });
   const selection = useBulkSelection({
@@ -286,7 +288,20 @@ export function CompaniesScreen({
             header: t("company.contactCount"),
             initiallyHidden: true,
             numeric: true,
-            cell: (company: Company) => company.contact_count ?? "",
+            cell: (company: Company) => {
+              const notice = hiddenHoldersNotice(
+                company.hidden_contact_holders,
+                locale,
+              );
+              return notice ? (
+                <>
+                  {company.contact_count ?? ""}
+                  <span className="t-sub"> {notice}</span>
+                </>
+              ) : (
+                (company.contact_count ?? "")
+              );
+            },
             // A reader shown no count is ordered by none: such rows go last.
             sort: "contact_count",
           },

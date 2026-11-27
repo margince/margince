@@ -13,11 +13,11 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-func TestOnlyAUserOrTheirAttendedSendingAgentReleasesAHeldMessage(t *testing.T) {
+func TestOnlyAUserOrTheirExternalSendingAgentReleasesAHeldMessage(t *testing.T) {
 	agent := func(scopes ...principal.Scope) principal.Principal {
 		return principal.Principal{Type: principal.PrincipalAgent, ID: "agent:t", OnBehalfOf: ids.NewV7(), Scopes: principal.NewScopeSet(scopes...)}
 	}
-	attended := context.Background()
+	external := context.Background()
 	scheduledRun := principal.WithAgentRunID(context.Background(), ids.NewV7())
 	for _, tc := range []struct {
 		name    string
@@ -25,12 +25,12 @@ func TestOnlyAUserOrTheirAttendedSendingAgentReleasesAHeldMessage(t *testing.T) 
 		actor   principal.Principal
 		release bool
 	}{
-		{"user", attended, principal.Principal{Type: principal.PrincipalHuman, UserID: ids.NewV7()}, true},
-		{"attended agent with send", attended, agent(principal.ScopeWrite, principal.ScopeSend), true},
-		{"attended agent with write only", attended, agent(principal.ScopeWrite), false},
-		{"unattended agent with send", principal.WithUnattended(attended), agent(principal.ScopeWrite, principal.ScopeSend), false},
+		{"user", external, principal.Principal{Type: principal.PrincipalHuman, UserID: ids.NewV7()}, true},
+		{"external agent with send", external, agent(principal.ScopeWrite, principal.ScopeSend), true},
+		{"external agent with write only", external, agent(principal.ScopeWrite), false},
+		{"built-in scheduled agent with send", principal.WithUnattended(external), agent(principal.ScopeWrite, principal.ScopeSend), false},
 		{"scheduled run with send", scheduledRun, agent(principal.ScopeWrite, principal.ScopeSend), false},
-		{"system", attended, principal.Principal{Type: principal.PrincipalSystem}, false},
+		{"system", external, principal.Principal{Type: principal.PrincipalSystem}, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			err := mayReleaseHeld(principal.WithActor(tc.ctx, tc.actor))

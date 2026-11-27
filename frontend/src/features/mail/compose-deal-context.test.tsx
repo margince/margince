@@ -261,7 +261,7 @@ it("saves the chosen deal and uses the same filing after reopening", async () =>
   const sent: Sent = stubRoutes({
     "GET /contacts/c-1/360": () => jsonResponse(contactView()),
     "GET /mail-drafts": () =>
-      saved ? jsonResponse(saved) : jsonResponse({}, 404),
+      saved ? jsonResponse(saved) : new Response(null, { status: 204 }),
     "PUT /mail-drafts": () => {
       const call = sent
         .filter((item) => item.key === "PUT /mail-drafts")

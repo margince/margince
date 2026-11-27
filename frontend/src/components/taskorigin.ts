@@ -28,7 +28,6 @@ export const TASK_ORIGINS: Readonly<Record<string, MessageKey>> = {
   no_activity_reminder: "tasks.origin.no_activity_reminder",
   "overnight-reconcile": "tasks.origin.overnight_reconcile",
   website_inquiry: "tasks.origin.website_inquiry",
-  which_deal: "tasks.origin.which_deal",
   privacy_request: "tasks.origin.privacy_request",
 };
 

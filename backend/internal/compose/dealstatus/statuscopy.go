@@ -103,7 +103,7 @@ var statusWords = struct {
 	DaysAgo:          langcopy.Phrase{En: "%d days ago", De: "vor %d Tagen", Vi: "%d ngày trước"},
 	Open:             langcopy.Phrase{En: "open", De: "offen", Vi: "đang mở"},
 	Won:              langcopy.Phrase{En: "won", De: "gewonnen", Vi: "thành công"},
-	Lost:             langcopy.Phrase{En: "lost", De: "verloren", Vi: "thất bại"},
+	Lost:             langcopy.Phrase{En: "lost", De: "verloren", Vi: "thua"},
 }
 
 func (said statusCopy) dealStatus(value string) string {

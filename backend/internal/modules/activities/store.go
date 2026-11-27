@@ -26,6 +26,7 @@ import (
 type Store struct {
 	meetingNotesAccess MeetingNotesAccessReader
 	inquiryAssignment  InquiryAssignment
+	taskTaken          TaskTakenHook
 	identityProver     AddressProver
 	dealFilingResolver DealFilingResolver
 	taskRecommendation TaskRecommendation

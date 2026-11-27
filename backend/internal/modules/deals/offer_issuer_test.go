@@ -94,15 +94,17 @@ func TestATemplateLocaleGivesItsLanguageOrTheDefault(t *testing.T) {
 	}
 }
 
-// A language about to be stored names a language. One stored before that
-// check still has the shape a delete takes, so it can be removed.
-func TestAStoredLanguageNamesALanguageAndAnOldOneCanStillGo(t *testing.T) {
-	if checkLanguage("zz") == nil || checkLanguage("FR") == nil {
-		t.Error("checkLanguage took a code that names no language")
+func TestATemplateLocaleKeepsItsRegion(t *testing.T) {
+	for locale, want := range map[string]bool{"de-DE": true, "de-AT": true, "de": true, "deutsch": false, "de-at": false, "DE": false, "": false} {
+		if got := templateLocaleShape.MatchString(locale); got != want {
+			t.Errorf("locale %q matches = %v, want %v", locale, got, want)
+		}
 	}
-	if err := checkLanguage("fr"); err != nil {
-		t.Errorf("checkLanguage(fr) = %v", err)
-	}
+}
+
+// A translation stored before the language table existed still has the shape
+// a delete takes, so it can be removed.
+func TestAnOldStoredTranslationCanStillBeNamedForDeletion(t *testing.T) {
 	if err := checkLanguageShape("zz"); err != nil {
 		t.Errorf("a stored zz translation could not be named for deletion: %v", err)
 	}

@@ -255,7 +255,7 @@ func TestEveryCreateDoorAsksTheColleagueWhoHoldsTheAddress(t *testing.T) {
 		"vcard review accept": func(t *testing.T, e *integration.Env) error {
 			reviewer := e.As(e.Rep2, []ids.UUID{e.Team1}, vcardReviewerPerms())
 			card := contacts.VCardEntry{FullName: "Pat Example", Emails: []contacts.VCardChannel{{Value: heldAddress, Kind: "work"}}}
-			if err := vcardCreateStager(e.Pool)(reviewer, card, nil); err != nil {
+			if err := VCardCreateStager(e.Pool)(reviewer, card, nil); err != nil {
 				return err
 			}
 			svc := NewApprovalsServiceWithEffects(e.Pool)

@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
+	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
 // VolumeReleaseRequest is what the surface asks the approvals engine to put in
@@ -59,6 +60,29 @@ func (e *StepUpStagedError) Error() string {
 // Unwrap keeps every budget-aware caller — the REST gate, the transports' error
 // mapping — seeing this for what it is.
 func (e *StepUpStagedError) Unwrap() error { return apperrors.ErrBudgetExceeded }
+
+// StepUpUnavailableError answers a releasable refusal whose question could not be
+// put to a human. It unwraps to the refusal, so budget-aware callers still see
+// a volume refusal, while the agent is not told that somebody declined.
+type StepUpUnavailableError struct {
+	Refusal *auth.VolumeExceededError
+}
+
+func (e *StepUpUnavailableError) Error() string { return e.Refusal.Error() }
+
+func (e *StepUpUnavailableError) Unwrap() error { return e.Refusal }
+
+// AskToContinue puts a releasable volume refusal to the agent's human and
+// answers what the caller is told; applies is false for any other outcome.
+// Every door that admits agent calls asks through it, so a spent write
+// allowance raises the same question on the tool door and on /v1.
+func (r *Registry) AskToContinue(ctx context.Context, spec mcp.ToolSpec, err error) (asked error, applies bool) {
+	stepUp := releasableVolumeRefusal(err)
+	if stepUp == nil || spec.ConfirmsInConversation {
+		return err, false
+	}
+	return r.stageStepUp(ctx, stepUp), true
+}
 
 // releasableVolumeRefusal answers the refusal a human can still say yes to, and
 // nil for every other outcome — including a volume budget refusal on a hard stop, which
@@ -122,7 +146,7 @@ func (r *Registry) stageStepUp(ctx context.Context, refusal *auth.VolumeExceeded
 		// retry it.
 		slog.ErrorContext(ctx, "putting a step-up in front of the connecting human failed",
 			"counter", string(refusal.Reading.Counter), "tool", refusal.Tool, "err", err)
-		return refusal
+		return &StepUpUnavailableError{Refusal: refusal}
 	}
 	if !staged {
 		return refusal
@@ -135,4 +159,48 @@ func (r *Registry) stageStepUp(ctx context.Context, refusal *auth.VolumeExceeded
 // human answering "continue?" with no numbers is answering nothing.
 func stepUpSummary(said summaryCopy, p agentvolume.ReleaseProposal) string {
 	return fmt.Sprintf(said.stepUpChanges, p.Observed, p.Limit, p.Tool, p.Allowance)
+}
+
+// isVolumeRefusal reports a refusal on an agent volume budget, staged or not.
+func isVolumeRefusal(err error) bool {
+	var over *auth.VolumeExceededError
+	var steppedUp *StepUpStagedError
+	return errors.As(err, &over) || errors.As(err, &steppedUp)
+}
+
+// volumeExplanation tells the agent what a volume refusal means and what ends
+// it. Each branch gives a different next move, so none is a wording variant.
+func volumeExplanation(err error) string {
+	var (
+		steppedUp *StepUpStagedError
+		askFailed *StepUpUnavailableError
+		overQuota *auth.VolumeExceededError
+	)
+	switch {
+	case errors.As(err, &steppedUp):
+		// The approval id is left out. A step-up is released by the human, and an
+		// agent handed the id would send it back to redeem it.
+		return "This agent has reached its " + string(steppedUp.Counter) + " limit for this window, and the contact " +
+			"who connected it has been asked whether it may continue. Do not send an approval_id: once they approve, " +
+			"repeat this call unchanged."
+	case errors.As(err, &askFailed):
+		return "This agent has reached a volume limit for this window, and Margince could not ask the contact who " +
+			"connected it whether it may continue. Nobody has declined. Stop calling this tool and tell the user: " +
+			"an administrator can raise the agent allowance, or the same call can succeed after the window rolls. (" +
+			askFailed.Error() + ")"
+	case errors.As(err, &overQuota) && overQuota.Releasable():
+		// No question is open: the human declined one, or this surface has no
+		// inbox. A release would still end the refusal. So "no approval lifts it"
+		// would be false here.
+		return "This agent has reached a volume limit for this window, and no request to continue is open: " +
+			"the contact who connected it has already declined one, or cannot be asked from here. Stop calling this " +
+			"tool and tell the user what is blocking it; the same call can succeed after the window rolls. (" +
+			overQuota.Error() + ")"
+	default:
+		// A hard stop: only the end of the window lifts it, so the agent must not
+		// wait for an approval nobody can grant.
+		return "This agent has reached a volume limit for this window that no approval lifts. Stop calling this tool " +
+			"and tell the user what is blocking it; the same call can succeed after the window rolls. (" +
+			err.Error() + ")"
+	}
 }

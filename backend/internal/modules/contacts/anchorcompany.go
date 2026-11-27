@@ -244,6 +244,9 @@ func (s *Store) GetAnchorCompany(ctx context.Context) (Company, error) {
 	var out Company
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		companyID, err := anchorCompany(ctx, tx, false)
+		if errors.Is(err, apperrors.ErrNotFound) {
+			return apperrors.ErrNothingYet
+		}
 		if err != nil {
 			return err
 		}

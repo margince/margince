@@ -60,3 +60,15 @@ func SeatMayReadMailSQL(alias, seat string) string {
 		ActivityAvailableClause(alias), alias, WorkspaceAudienceSQL(alias),
 		activityMembershipForMemberSQL(alias, memberIdentityExpressionSQL(seat)))
 }
+
+// SeatReadsSharedMailboxSQL is "the seat expression is a live member of the
+// live reader team of the shared mailbox alias". It is the one answer to who a
+// shared mailbox's team is. Every question that lets a member act for the
+// mailbox, and not only read what it captured, asks it.
+func SeatReadsSharedMailboxSQL(alias, seat string) string {
+	return fmt.Sprintf(`EXISTS (SELECT 1 FROM team reader_team
+	  JOIN team_membership reader ON reader.team_id = reader_team.id AND reader.user_id = %[2]s
+	  JOIN app_user reader_seat ON reader_seat.id = reader.user_id AND %[3]s
+	 WHERE reader_team.archived_at IS NULL AND %[1]s)`,
+		SharedMailboxOfTeamSQL(alias, "reader_team.id"), seat, workforce.LiveMemberSQL("reader_seat"))
+}

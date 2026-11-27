@@ -10,7 +10,9 @@ import {
 import { formatNumber, formatPercent } from "../../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../../i18n";
 import { tierLabel } from "../../lib/ai-tier-label";
+import { useCan } from "../../lib/capability";
 import { formatSeconds, switchedSentence } from "./ai-call-figures";
+import { certificationNote } from "./ai-certification-note";
 import { gaveUpLabel } from "./ai-decision-labels";
 import "./ai-settings.css";
 
@@ -102,6 +104,7 @@ function StepCard({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
+  const canRoute = useCan("ai_routing", "read");
   const role = step.decision
     ? t("aiOutcome.role.decision")
     : index === 0
@@ -139,6 +142,17 @@ function StepCard({
                 step.switched_to,
                 plural,
                 locale,
+              )}
+            </span>
+          ) : null}
+          {/* The grade is sent only to a reader of the routing settings; for
+              anyone else its absence means nothing, so no sentence is drawn. */}
+          {step.switched && step.switched_to && !step.decision && canRoute ? (
+            <span className="t-caption">
+              {certificationNote(
+                step.switched_to,
+                step.switched_to_certification,
+                t,
               )}
             </span>
           ) : null}

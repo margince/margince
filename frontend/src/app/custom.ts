@@ -2,6 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import type { ComponentType } from "react";
 import type { Locale } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import type { ExtensionAppGroup } from "../lib/extensionapps";
 
 // The fork seam for UI, mirroring the one the backend already has.
 //
@@ -99,7 +100,7 @@ export type CustomScreen = {
      * and a fork that wanted a fourth is describing a different product rather
      * than an addition to this one.
      */
-    group: "records" | "work" | "intelligence";
+    group: ExtensionAppGroup;
     label: CustomLabel;
     icon: LucideIcon;
   };

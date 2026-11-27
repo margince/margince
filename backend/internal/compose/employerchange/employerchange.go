@@ -30,7 +30,7 @@ import (
 const Kind = approvalsubject.KindEmployerChange
 
 const (
-	actor       = "agent:" + Kind
+	actor       = "system:" + Kind
 	summaryCode = "approval.employerChangeAsked"
 	targetType  = "contact"
 )

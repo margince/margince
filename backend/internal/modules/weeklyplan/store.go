@@ -243,6 +243,9 @@ func (s *Store) planForOwner(ctx context.Context, owner ids.UUID, now time.Time)
 			return err
 		}
 		plan, err = readPlan(ctx, tx, owner, week)
+		if errors.Is(err, apperrors.ErrNotFound) {
+			return apperrors.ErrNothingYet
+		}
 		return err
 	})
 	if err != nil {

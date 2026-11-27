@@ -57,7 +57,7 @@ func readChatScreenshot(t *testing.T, modelReply string) chatFixture {
 		t.Fatal(err)
 	}
 	brain := scriptedBrain{FakeClient: ai.NewFakeClient().Script(modelReply), carriage: carriesImagesOnly}
-	if err := NewDocumentExtractor(env.Pool, brain, discardLogger()).Read(ctx, store, reading.ID, attachment); err != nil {
+	if err := NewDocumentExtractor(env.Pool, brain, discardLogger()).Read(ctx, ctx, store, reading.ID, attachment); err != nil {
 		t.Fatal(err)
 	}
 	return chatFixture{env: env, store: store, blob: blob, contact: contact, attachment: attachment, reading: reading.ID}
@@ -98,6 +98,10 @@ func TestAConfirmedChatScreenshotLandsAsOneMessageWithTheImageAttached(t *testin
 	}
 	if n := f.env.WsCount(t, `SELECT count(*) FROM activity WHERE id = $1 AND captured_by LIKE '%attachment-extractor%'`, filed); n != 1 {
 		t.Fatal("an unedited chat text is not marked as read by the model")
+	}
+	if n := f.env.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'activity' AND entity_id = $1
+		AND actor_type = 'agent' AND actor_id = 'agent:attachment-extractor' AND on_behalf_of IS NOT NULL`, filed); n != 1 {
+		t.Fatal("the unedited chat text is not written by the reader agent for the user")
 	}
 	if n := f.env.WsCount(t, `SELECT count(*) FROM event_outbox o
 		  JOIN audit_log a ON a.id = (o.envelope->'trace'->>'audit_log_id')::uuid

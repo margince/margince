@@ -4,6 +4,7 @@
 package approvals
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -55,7 +56,7 @@ func TestARegisteredExtensionKindIsDecidableInEveryWayAStagedKindMustBe(t *testi
 	if probe := probeFor(kind.TargetTable); probe != probeExistence {
 		t.Errorf("probe = %v, want existence: a unit's store applies no row scope of its own", probe)
 	}
-	if query := extensionExistenceQuery(kind.TargetTable); !strings.Contains(query, `"ext"."ext_notes_note"`) {
+	if query, _, err := extensionExistenceQuery(context.Background(), kind.TargetTable); err != nil || !strings.Contains(query, `"ext"."ext_notes_note"`) {
 		t.Errorf("the existence probe reads %q — it must name the ext schema explicitly rather than "+
 			"resolve through a search path", query)
 	}
