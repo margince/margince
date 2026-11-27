@@ -2747,22 +2747,6 @@ func (stubs) GetLeadSignalCatalog(w nethttp.ResponseWriter, r *nethttp.Request) 
 	httperr.NotImplemented(w, r, "GetLeadSignalCatalog")
 }
 
-func (stubs) ListLeadSources(w nethttp.ResponseWriter, r *nethttp.Request) {
-	httperr.NotImplemented(w, r, "ListLeadSources")
-}
-
-func (stubs) CreateLeadSource(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.CreateLeadSourceParams) {
-	httperr.NotImplemented(w, r, "CreateLeadSource")
-}
-
-func (stubs) DeleteLeadSource(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
-	httperr.NotImplemented(w, r, "DeleteLeadSource")
-}
-
-func (stubs) UpdateLeadSource(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.UpdateLeadSourceParams) {
-	httperr.NotImplemented(w, r, "UpdateLeadSource")
-}
-
 func (stubs) ListLeads(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListLeadsParams) {
 	httperr.NotImplemented(w, r, "ListLeads")
 }

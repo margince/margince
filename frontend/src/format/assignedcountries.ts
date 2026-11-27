@@ -7,7 +7,7 @@ import { jurisdictionName } from "./jurisdiction";
 
 // The ISO 3166-1 alpha-2 codes the server accepts as an address country. A
 // mirror of the contacts module's countrycodes.go;
-// backend/gates/frontendcountries_test.go fails when the two differ.
+// backend/gates/frontendvocabularymirrors_test.go fails when the two differ.
 export const ASSIGNED_COUNTRIES: readonly string[] = [
   "AD",
   "AE",

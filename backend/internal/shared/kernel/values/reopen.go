@@ -37,10 +37,11 @@ const (
 // them: the moment first because it is what a rep already knows, then the two
 // that wait on the world.
 //
-// Held by: TestEveryTableAdmitsExactlyTheConditionsGoCanWrite (backend/gates/reopenconditionparity_test.go),
+// Held by: TestEveryListedVocabularyIsItsColumnsCheck (backend/gates/enumsync_test.go),
 // which derives the same set from both tables' CHECK constraints and requires
-// them equal. Its sibling in that file holds the contract's enum against this
-// set too, so a condition added here and nowhere else fails twice.
+// them equal. TestTheWireOffersExactlyTheConditionsGoCanWrite holds the
+// contract's enum against this set too, so a condition added here and nowhere
+// else fails twice.
 //
 // Returned as a fresh slice because a package-level array would let one caller
 // reorder every other caller's chooser.
