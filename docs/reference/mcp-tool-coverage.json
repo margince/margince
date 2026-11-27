@@ -82,18 +82,15 @@
       "name": "gpt-5.6-sol",
       "trust": "🟡 Mostly",
       "cases_with_a_committed_run": 82,
-      "cases_that_reached_their_bar": 77,
-      "cases_below_their_bar": 5,
+      "cases_that_reached_their_bar": 80,
+      "cases_below_their_bar": 2,
       "cases_measured_on_an_earlier_listing": 82,
-      "runs": 173,
-      "passed": 156,
-      "reliability": 0.9017341040462428,
+      "runs": 172,
+      "passed": 161,
+      "reliability": 0.936046511627907,
       "cases_below_their_bar_named": [
         "case107_tidy_up_the_room",
-        "case59_file_it_on_the_meeting_and_the_contract",
-        "case6_ask_the_company",
-        "case99_they_raised_money",
-        "case9_filed_in_the_wrong_place"
+        "case6_ask_the_company"
       ],
       "route": "Codex CLI",
       "self_judged": false,
@@ -2758,6 +2755,7 @@
             "retries": null
           },
           "measured_on_an_earlier_listing": [
+            "scenario",
             "tool copy",
             "server instructions and resources",
             "harness"
@@ -2795,6 +2793,7 @@
             }
           },
           "measured_on_an_earlier_listing": [
+            "scenario",
             "tool copy",
             "server instructions and resources",
             "harness"
@@ -2828,6 +2827,7 @@
             }
           },
           "measured_on_an_earlier_listing": [
+            "scenario",
             "tool copy",
             "server instructions and resources",
             "harness"
@@ -3001,6 +3001,7 @@
             "retries": null
           },
           "measured_on_an_earlier_listing": [
+            "scenario",
             "tool copy",
             "server instructions and resources",
             "harness"
@@ -3038,6 +3039,7 @@
             }
           },
           "measured_on_an_earlier_listing": [
+            "scenario",
             "tool copy",
             "server instructions and resources",
             "harness"
@@ -3071,6 +3073,7 @@
             }
           },
           "measured_on_an_earlier_listing": [
+            "scenario",
             "tool copy",
             "server instructions and resources",
             "harness"
@@ -7741,35 +7744,34 @@
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
-          "runs": 3,
-          "passed": 1,
+          "runs": 2,
+          "passed": 2,
           "pass_at": 2,
-          "held": false,
+          "held": true,
           "driver": "gpt:cli",
           "search": "semantic",
           "efficiency": {
-            "runs": 3,
+            "runs": 2,
             "calls": {
-              "median": 17,
-              "min": 14,
-              "max": 19
+              "median": 22,
+              "min": 16,
+              "max": 28
             },
             "turns": null,
             "refused": {
-              "median": 5,
-              "min": 2,
-              "max": 5
+              "median": 9.5,
+              "min": 4,
+              "max": 15
             },
             "retries": {
-              "median": 4,
-              "min": 1,
-              "max": 5
+              "median": 8.5,
+              "min": 3,
+              "max": 14
             }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources",
-            "harness"
+            "server instructions and resources"
           ]
         }
       ]
@@ -7864,35 +7866,34 @@
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
-          "runs": 2,
-          "passed": 0,
+          "runs": 3,
+          "passed": 1,
           "pass_at": 2,
           "held": false,
           "driver": "gpt:cli",
           "search": "semantic",
           "efficiency": {
-            "runs": 2,
+            "runs": 3,
             "calls": {
-              "median": 47.5,
-              "min": 45,
-              "max": 50
+              "median": 41,
+              "min": 27,
+              "max": 45
             },
             "turns": null,
             "refused": {
-              "median": 18.5,
-              "min": 17,
-              "max": 20
+              "median": 16,
+              "min": 8,
+              "max": 19
             },
             "retries": {
-              "median": 18.5,
-              "min": 17,
-              "max": 20
+              "median": 16,
+              "min": 8,
+              "max": 19
             }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources",
-            "harness"
+            "server instructions and resources"
           ]
         }
       ]
@@ -9624,6 +9625,7 @@
             "retries": null
           },
           "measured_on_an_earlier_listing": [
+            "scenario",
             "tool copy",
             "server instructions and resources",
             "harness"
@@ -9661,6 +9663,7 @@
             }
           },
           "measured_on_an_earlier_listing": [
+            "scenario",
             "tool copy",
             "server instructions and resources",
             "harness"
@@ -9694,6 +9697,7 @@
             }
           },
           "measured_on_an_earlier_listing": [
+            "scenario",
             "tool copy",
             "server instructions and resources",
             "harness"
@@ -9740,6 +9744,7 @@
             "retries": null
           },
           "measured_on_an_earlier_listing": [
+            "scenario",
             "tool copy",
             "server instructions and resources",
             "harness"
@@ -9777,6 +9782,7 @@
             }
           },
           "measured_on_an_earlier_listing": [
+            "scenario",
             "tool copy",
             "server instructions and resources",
             "harness"
@@ -9810,6 +9816,7 @@
             }
           },
           "measured_on_an_earlier_listing": [
+            "scenario",
             "tool copy",
             "server instructions and resources",
             "harness"
@@ -9972,6 +9979,7 @@
             "retries": null
           },
           "measured_on_an_earlier_listing": [
+            "scenario",
             "tool copy",
             "server instructions and resources",
             "harness"
@@ -10009,6 +10017,7 @@
             }
           },
           "measured_on_an_earlier_listing": [
+            "scenario",
             "tool copy",
             "server instructions and resources",
             "harness"
@@ -10042,6 +10051,7 @@
             }
           },
           "measured_on_an_earlier_listing": [
+            "scenario",
             "tool copy",
             "server instructions and resources",
             "harness"
@@ -10383,34 +10393,33 @@
         {
           "model": "gpt-5.6-sol@codex-cli",
           "runs": 2,
-          "passed": 0,
+          "passed": 2,
           "pass_at": 2,
-          "held": false,
+          "held": true,
           "driver": "gpt:cli",
           "search": "semantic",
           "efficiency": {
             "runs": 2,
             "calls": {
-              "median": 18,
-              "min": 14,
-              "max": 22
+              "median": 22.5,
+              "min": 19,
+              "max": 26
             },
             "turns": null,
             "refused": {
-              "median": 4.5,
-              "min": 2,
+              "median": 7,
+              "min": 7,
               "max": 7
             },
             "retries": {
-              "median": 4.5,
-              "min": 2,
+              "median": 7,
+              "min": 7,
               "max": 7
             }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources",
-            "harness"
+            "server instructions and resources"
           ]
         }
       ]
@@ -10969,35 +10978,34 @@
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
-          "runs": 3,
-          "passed": 1,
+          "runs": 2,
+          "passed": 2,
           "pass_at": 2,
-          "held": false,
+          "held": true,
           "driver": "gpt:cli",
           "search": "semantic",
           "efficiency": {
-            "runs": 3,
+            "runs": 2,
             "calls": {
-              "median": 6,
-              "min": 3,
+              "median": 7,
+              "min": 6,
               "max": 8
             },
             "turns": null,
             "refused": {
-              "median": 1,
-              "min": 0,
-              "max": 2
+              "median": 2,
+              "min": 1,
+              "max": 3
             },
             "retries": {
-              "median": 1,
-              "min": 0,
-              "max": 2
+              "median": 2,
+              "min": 1,
+              "max": 3
             }
           },
           "measured_on_an_earlier_listing": [
             "tool copy",
-            "server instructions and resources",
-            "harness"
+            "server instructions and resources"
           ]
         }
       ]
@@ -12095,11 +12103,9 @@
         },
         "gpt-5.6-sol@codex-cli": {
           "runs": 2,
-          "passed": 0,
-          "reliability": 0,
-          "cases_below_their_bar": [
-            "case9_filed_in_the_wrong_place"
-          ]
+          "passed": 2,
+          "reliability": 1,
+          "cases_below_their_bar": []
         }
       }
     },
@@ -13214,7 +13220,8 @@
         "case78_she_asked_us_to_stop",
         "case79_put_it_on_hold",
         "case86_tell_her_what_we_hold",
-        "case88_send_it_anyway"
+        "case88_send_it_anyway",
+        "case9_filed_in_the_wrong_place"
       ],
       "driven": true,
       "required_only_as_one_of_a_set": false,
@@ -13558,6 +13565,7 @@
         "case85_the_pilot_slipped",
         "case86_tell_her_what_we_hold",
         "case88_send_it_anyway",
+        "case9_filed_in_the_wrong_place",
         "case97_import_this_card",
         "case99_they_raised_money"
       ],
