@@ -16,6 +16,9 @@ import (
 // every refusal, as emailField is for an address.
 const domainField = "domain"
 
+// domainMalformed is the code of every refusal of a domain's shape.
+const domainMalformed = "domain_malformed"
+
 // Domain is a normalized registrable host: lowercased, no scheme, no
 // leading www., no port, no path, no trailing dot — the company
 // domain convention (company_domain_norm), parsed once instead of
@@ -29,7 +32,7 @@ type Domain struct{ s string }
 func ParseDomain(raw string) (Domain, error) {
 	trimmed, visible := typedIdentifier(raw)
 	if !visible {
-		return Domain{}, &ParseError{Field: domainField, Code: "domain_malformed", Message: "the domain holds a character that cannot be seen"}
+		return Domain{}, &ParseError{Field: domainField, Code: domainMalformed, Message: "the domain holds a character that cannot be seen"}
 	}
 	if trimmed == "" {
 		return Domain{}, &ParseError{Field: domainField, Code: "domain_empty", Message: "a domain is required"}
@@ -38,7 +41,7 @@ func ParseDomain(raw string) (Domain, error) {
 	if strings.Contains(host, "://") {
 		u, err := url.Parse(host)
 		if err != nil || u.Hostname() == "" {
-			return Domain{}, &ParseError{Field: domainField, Code: "domain_malformed", Message: "not a resolvable URL or host name"}
+			return Domain{}, &ParseError{Field: domainField, Code: domainMalformed, Message: "not a resolvable URL or host name"}
 		}
 		host = u.Hostname()
 	} else if i := strings.IndexAny(host, "/?#"); i >= 0 {
@@ -53,7 +56,7 @@ func ParseDomain(raw string) (Domain, error) {
 
 	if !validHost(host) {
 		return Domain{}, &ParseError{
-			Field: domainField, Code: "domain_malformed",
+			Field: domainField, Code: domainMalformed,
 			Message: "not a host name (labels of letters, digits and inner hyphens, with a dot)",
 		}
 	}
