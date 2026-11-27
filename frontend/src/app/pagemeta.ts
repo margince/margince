@@ -20,6 +20,7 @@ import {
   recordKindOf,
   reservedPageTitle,
 } from "./nav";
+import { useOfferLocation } from "./offerlocation";
 
 // What the chrome knows about a page before the page renders: its name, its
 // one-line description, and which entry of a section it is.
@@ -206,6 +207,8 @@ export function usePagePath(
   const recordKind = recordKindOf(route);
   const recordId = recordKind && route.id;
   const { name } = useEntityName(recordKind ?? "contact", recordId);
+  const offerLocation = useOfferLocation(route);
+  if (offerLocation) return offerLocation.title;
   if (recordId) {
     return name ? [name, screenTitle] : [screenTitle];
   }

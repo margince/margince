@@ -241,6 +241,7 @@ const RESERVED_PAGE_TITLES: Readonly<Record<ReservedPageScreen, MessageKey>> = {
 // destination, and the tab title names it after the page.
 const PARENT_SCREENS: Readonly<Partial<Record<Screen, Screen>>> = {
   partners: "companies",
+  offers: "deals",
 };
 
 export function parentScreenOf(route: Route): Screen | undefined {

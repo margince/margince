@@ -1,4 +1,10 @@
-import { type ReactNode, Suspense, useDeferredValue, useState } from "react";
+import {
+  type ReactNode,
+  Suspense,
+  useDeferredValue,
+  useEffect,
+  useState,
+} from "react";
 import {
   AnalyticsScreen,
   ArchivedRecordHistory,
@@ -69,7 +75,7 @@ import {
   useLiveHash,
 } from "./lib/router";
 import { ScreenAddress, useReportShownAddress } from "./lib/screenaddress";
-import { parseParams } from "./lib/urlstate";
+import { parseParams, useAddressWriters } from "./lib/urlstate";
 
 type ScreenArgs = Readonly<{ id?: string; id2?: string; id3?: string }>;
 
@@ -133,12 +139,7 @@ const SCREEN_VIEWS: Readonly<Record<Screen, (args: ScreenArgs) => ReactNode>> =
     // into the startup graph. The key is still typed against `Screen`.
     scheduled: () => <ScheduledSendsScreen />,
     "legal-reviews": ({ id }) => <LegalReviewsRoute id={id} />,
-    offers: ({ id }) =>
-      id ? (
-        <OfferScreen id={id} />
-      ) : (
-        <ScreenNotice messageKey="screen.pending" />
-      ),
+    offers: ({ id }) => (id ? <OfferScreen id={id} /> : <OffersRedirect />),
     search: ({ id, id2 }) => (
       <SearchRoute q={id ? safeDecode(id) : ""} openActivityId={id2} />
     ),
@@ -186,6 +187,12 @@ const SCREEN_VIEWS: Readonly<Record<Screen, (args: ScreenArgs) => ReactNode>> =
     // once by the column, and neither claims a page by that name exists.
     "not-found": () => <UnknownAddress />,
   };
+
+function OffersRedirect() {
+  const { navigateReplacing } = useAddressWriters();
+  useEffect(() => navigateReplacing({ screen: "deals" }), [navigateReplacing]);
+  return null;
+}
 
 // Through history, so the entries around the held one are kept. Never a replace
 // while a traversal is under way: that would rename the entry it lands on.
