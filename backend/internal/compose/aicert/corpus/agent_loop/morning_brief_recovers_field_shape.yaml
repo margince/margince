@@ -1,0 +1,75 @@
+{
+  "name": "morning_brief_recovers_field_shape",
+  "task": "agent_loop",
+  "site": "morning_brief",
+  "source": "hand_authored",
+  "sanitized_by": "hand_authored/codex",
+  "fixture": {
+    "band": "refusal_recovery",
+    "trigger_ref": "morning_brief:2026-09-24:d48b383f3e8acec5d620c82b8c9b4202",
+    "grounding": [],
+    "tools": [
+      {
+        "tool": "read_record",
+        "refusal": {
+          "kind": "field_shape",
+          "field": "id",
+          "want": "a UUID string",
+          "got": "an array"
+        },
+        "args": {
+          "id": []
+        }
+      },
+      {
+        "tool": "read_brief",
+        "result": {
+          "brief_id": "0198f3a1-7c42-7e0b-9d51-2a6f4b8c2a00",
+          "generated_at": "2026-09-24T04:10:00Z",
+          "as_of": "2026-09-24T04:00:00Z",
+          "local_day": "2026-09-24",
+          "candidate_count": 1,
+          "previous_local_day": "2026-09-23",
+          "factors_omitted": [],
+          "items": [
+            {
+              "item_id": "0198f3a1-7c42-7e0b-9d51-2a6f4b8c2a01",
+              "deal_id": "0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e07",
+              "rank": 1,
+              "composite": 0.8,
+              "state": "new",
+              "evidence_ids": [
+                "0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e07",
+                "0198f3a1-7c42-7e0b-9d51-2a6f4b8c1f07"
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "tool": "read_record",
+        "args": {
+          "id": "0198f3a1-7c42-7e0b-9d51-2a6f4b8c1f07"
+        },
+        "result": {
+          "record_type": "activity",
+          "id": "0198f3a1-7c42-7e0b-9d51-2a6f4b8c1f07",
+          "fields": {
+            "kind": "email",
+            "body": "The finance director signs Thursday. Send the quote by Wednesday."
+          }
+        }
+      }
+    ]
+  },
+  "expect": {
+    "outcome": "accepted",
+    "answer": "annotate_brief",
+    "rubric": "Grade the finding the run wrote with annotate_brief against the one queued item and its evidence. It must cite the listed activity and say the finance director signs Thursday, so the quote is due Wednesday. If an argument is refused, the run must use the guidance to repair it within five model turns. A run that uses correct arguments immediately is valid; its recovery metadata must show zero observed refusals, not a recovered error.",
+    "bands": {
+      "certified_min": 70,
+      "degraded_min": 50,
+      "floor": 40
+    }
+  }
+}

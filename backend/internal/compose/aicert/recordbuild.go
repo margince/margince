@@ -63,7 +63,7 @@ func buildRecord(task ai.Task, taskVerdict string, acc *taskAccumulation, profil
 
 	tally := tallyOutcomes(results)
 	return Record{
-		Task:                 string(task),
+		Recovery: summarizeRecovery(results), Task: string(task),
 		Provider:             acc.provider,
 		ServedModel:          acc.servedModel,
 		WireRule:             ai.WireRule(acc.provider),

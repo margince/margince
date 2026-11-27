@@ -59,6 +59,7 @@ const agentLoopFinalStep = "final"
 // retrieval returned for it, and what each tool the run calls answers. Everything else the
 // window carries is the agent's own and is looked up, never supplied.
 type agentLoopFixture struct {
+	Band       string                `json:"band,omitempty"`
 	TriggerRef string                `json:"trigger_ref"`
 	Grounding  []agentLoopGrounding  `json:"grounding"`
 	Tools      []agentLoopToolAnswer `json:"tools"`
@@ -111,6 +112,9 @@ func (c agentLoopCases) Prepare(fixture, expected json.RawMessage) (aitasks.Prep
 		Grounding:    agentLoopSeedContext(f.Grounding),
 		LanguageRule: promptlang.Rule(string(textlang.English)),
 	}
+	if err := prepareAgentLoopRecovery(f, &job); err != nil {
+		return nil, err
+	}
 	surface, err := c.toolSurface(f, job.Narrow(agentLoopRegistry()))
 	if err != nil {
 		return nil, err
@@ -123,7 +127,7 @@ func (c agentLoopCases) Prepare(fixture, expected json.RawMessage) (aitasks.Prep
 		return nil, fmt.Errorf("%s/%s: the scenario expects %q, and a run of this agent ends either by writing with %s or as %q",
 			agentLoopSite, c.agent, want, surface.work.write, agentLoopFinalStep)
 	}
-	return &agentLoopCase{job: job, tools: surface, expected: want}, nil
+	return &agentLoopCase{job: job, tools: surface, expected: want, band: f.Band}, nil
 }
 
 // toolSurface binds the fixture's answers to this agent's worklist and write.
@@ -191,6 +195,7 @@ func agentLoopSeedContext(items []agentLoopGrounding) []runner.Grounding {
 // agentLoopCase is one scheduled run ready to be answered. The job carries the
 // agent's allowlist, so the runner narrows the registry to it on every pass.
 type agentLoopCase struct {
+	band     string
 	job      runner.Job
 	tools    agentLoopToolSurface
 	expected string
@@ -199,9 +204,10 @@ type agentLoopCase struct {
 // agentLoopRun is a run as Output carries it: what the judge grades, and the
 // replies Evaluate replays to grade it again.
 type agentLoopRun struct {
-	Steps   []agentLoopRunStep `json:"steps"`
-	Final   json.RawMessage    `json:"final,omitempty"`
-	Replies []string           `json:"replies"`
+	Recovery *agentLoopRecoveryMeasure `json:"recovery,omitempty"`
+	Steps    []agentLoopRunStep        `json:"steps"`
+	Final    json.RawMessage           `json:"final,omitempty"`
+	Replies  []string                  `json:"replies"`
 }
 
 // agentLoopRunStep is one call the run made and what it was told.
@@ -229,7 +235,7 @@ func (c *agentLoopCase) Run(ctx context.Context, completer aitasks.Completer) (a
 	if err != nil {
 		return trace, fmt.Errorf("%s: the run never reached a reply to measure: %w", agentLoopSite, err)
 	}
-	run := agentLoopRun{Final: res.Final, Replies: recorder.replies}
+	run := agentLoopRun{Final: res.Final, Replies: recorder.replies, Recovery: c.recoveryMeasure(res, recorder.replies)}
 	for _, step := range res.Steps {
 		run.Steps = append(run.Steps, agentLoopRunStep{
 			Tool: step.Tool, Args: step.Args, Admission: step.Admission, Observation: step.Observation,
@@ -331,9 +337,9 @@ func (c *agentLoopCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 	if res.Outcome != runner.OutcomeCompleted {
 		// The report is an operator artifact about why the run did not end. So it
 		// takes the detail, not the reason a contact's panel gets.
-		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: "the run did not end: " + res.DegradeDetail()}
+		return c.withRecoveryMeasure(aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: "the run did not end: " + res.DegradeDetail()}, res, recorded.Replies)
 	}
-	return c.gradeRun(res)
+	return c.withRecoveryMeasure(c.gradeRun(res), res, recorded.Replies)
 }
 
 // gradeRun compares what a completed run wrote with what the scenario expects.

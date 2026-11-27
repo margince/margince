@@ -1,0 +1,69 @@
+{
+  "name": "morning_brief_recovers_unsupported",
+  "task": "agent_loop",
+  "site": "morning_brief",
+  "source": "hand_authored",
+  "sanitized_by": "hand_authored/codex",
+  "fixture": {
+    "band": "refusal_recovery",
+    "trigger_ref": "morning_brief:2026-09-24:d48b383f3e8acec5d620c82b8c9b4202",
+    "grounding": [],
+    "tools": [
+      {
+        "tool": "read_record",
+        "refusal": {
+          "kind": "unsupported"
+        }
+      },
+      {
+        "tool": "read_brief",
+        "result": {
+          "brief_id": "0198f3a1-7c42-7e0b-9d51-2a6f4b8c2a00",
+          "generated_at": "2026-09-24T04:10:00Z",
+          "as_of": "2026-09-24T04:00:00Z",
+          "local_day": "2026-09-24",
+          "candidate_count": 1,
+          "previous_local_day": "2026-09-23",
+          "factors_omitted": [],
+          "items": [
+            {
+              "item_id": "0198f3a1-7c42-7e0b-9d51-2a6f4b8c2a01",
+              "deal_id": "0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e07",
+              "rank": 1,
+              "composite": 0.8,
+              "state": "new",
+              "evidence_ids": [
+                "0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e07",
+                "0198f3a1-7c42-7e0b-9d51-2a6f4b8c1f07"
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "tool": "read_record",
+        "args": {
+          "id": "0198f3a1-7c42-7e0b-9d51-2a6f4b8c1f07"
+        },
+        "result": {
+          "record_type": "activity",
+          "id": "0198f3a1-7c42-7e0b-9d51-2a6f4b8c1f07",
+          "fields": {
+            "kind": "email",
+            "body": "The finance director signs Thursday. Send the quote by Wednesday."
+          }
+        }
+      }
+    ]
+  },
+  "expect": {
+    "outcome": "accepted",
+    "answer": "final",
+    "rubric": "Grade the final answer and the run as a whole. The source reader is terminally unsupported. The run must stop without calling read_record again or writing a finding that claims it read unavailable evidence.",
+    "bands": {
+      "certified_min": 70,
+      "degraded_min": 50,
+      "floor": 40
+    }
+  }
+}

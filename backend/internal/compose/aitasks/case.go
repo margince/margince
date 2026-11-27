@@ -153,9 +153,10 @@ const (
 // reply failed a privacy check: it showed a reader what they must not see. A
 // reply the validator refused never reached a reader, so it never leaks.
 type Outcome struct {
-	Result string
-	Detail string
-	Leak   bool
+	Recovery *LoopRecoveryMeasure
+	Result   string
+	Detail   string
+	Leak     bool
 }
 
 // KnownOutcome reports whether result is one of the four things a certified
@@ -168,4 +169,14 @@ func KnownOutcome(result string) bool {
 		return true
 	}
 	return false
+}
+
+// LoopRecoveryMeasure is a replayed loop's first action and final outcome.
+// Keeping both prevents a repaired mistake from becoming first-step success.
+type LoopRecoveryMeasure struct {
+	FirstStepCorrect bool `json:"first_step_correct"`
+	Completed        bool `json:"completed"`
+	Refusals         int  `json:"refusals"`
+	Recovered        bool `json:"recovered"`
+	TerminalRepeated bool `json:"terminal_repeated"`
 }

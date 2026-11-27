@@ -169,3 +169,22 @@ average, and three only on a close score where the two first scores disagree. A 
 can run up to 12 tries, so the judge is still most of the cost. On the default `claude_cli` judge that is
 use of a subscription, not money. The subscription's session limit is shared with all else that uses
 it, so keep a sweep to two or three tasks at the same time.
+
+## Refusal recovery in the scheduled-agent loop
+
+The `refusal_recovery` band adds argument-value, unknown-field, field-shape and
+terminal system-of-record refusal cases to the existing agent-loop corpus. It
+uses the production runner, tool allowlist and refusal explanations. The fixture
+supplies typed backend refusals and the record values; it executes no real writes.
+The ordinary cases keep the scheduled agent's production budget. Recovery cases
+have at most five model turns, including their final answer.
+
+Each run records first-step correctness and completion separately. Its record and
+scenario row keep those counts with the same recovery-run denominator. The report
+prints both rates, the number of runs that encountered a refusal, repaired runs,
+and repeated terminal refusals. A run that avoids malformed arguments can pass,
+but its zero refusal count is no evidence of recovery. A final answer cannot erase
+a repeated call to a tool that returned the terminal unsupported directive.
+
+These are new cases awaiting an explicit certification run. Offline replay tests
+exercise all four refusal types. They do not supply a new model certification.

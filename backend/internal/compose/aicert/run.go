@@ -52,6 +52,7 @@ func scenarioRow(sc Scenario, stamp string, set ScenarioRuns) ScenarioRecord {
 	stats := caseOf(set)
 	row := ScenarioRecord{
 		Scenario:            sc.Name,
+		Recovery:            summarizeRecovery(results),
 		Site:                sc.Site,
 		Stamp:               stamp,
 		Verdict:             caseVerdict(stats),
@@ -255,11 +256,23 @@ func scoreAnswer(ctx context.Context, prepared aitasks.PreparedCase, scope strin
 			return scoredAnswer{}, err
 		}
 	}
+	if validated.recovery == nil {
+		if reporting, ok := prepared.(interface {
+			RecoveryMeasure(aitasks.Trace) *aitasks.LoopRecoveryMeasure
+		}); ok {
+			validated.recovery = reporting.RecoveryMeasure(caseTrace)
+		}
+	}
+	if validated.recovery != nil && (pooled.Withheld != "" || pooled.Abandoned || pooled.Truncated) {
+		validated.recovery.Completed = false
+		validated.recovery.Recovered = false
+	}
 	entry := runEntry(pooled, validated)
 	outcome := candidateSideRun(candidateSide{
 		output: validated.output, outcome: entry.outcome, passed: entry.passed, scope: scope, pooled: pooled,
 	})
 	outcome.Leak = entry.leak
+	outcome.Recovery = validated.recovery
 	outcome.AnswerConfidence = keptConfidence(prepared, caseTrace, entry.passed)
 	if len(caseTrace.Requests) > 0 {
 		outcome.ContextOwed = requestOwesContext(task, caseTrace.Requests[0])
@@ -279,6 +292,7 @@ func scoreAnswer(ctx context.Context, prepared aitasks.PreparedCase, scope strin
 // validation is what the site's own validator and the scenario's caps made of
 // a run's reply.
 type validation struct {
+	recovery        *aitasks.LoopRecoveryMeasure
 	output, outcome string
 	// asExpected is the outcome the scenario named, inside its caps.
 	asExpected bool
@@ -311,12 +325,16 @@ func validateRun(ctx context.Context, prepared aitasks.PreparedCase, caseTrace a
 			"outcome", evaluated.Result, "want_outcome", sc.Expect.Outcome,
 			"detail", evaluated.Detail, "cap_failures", capFailures)
 	}
+	if evaluated.Recovery != nil && !capsOK {
+		evaluated.Recovery.Completed = false
+		evaluated.Recovery.Recovered = false
+	}
 	// The judge reads what production's parsers read: the unfenced text (every
 	// serving path strips markdown fences before json.Unmarshal, so a fence is
 	// presentation, not a defect).
 	return validation{
 		output: ai.Unfence(caseTrace.Output), outcome: evaluated.Result, asExpected: outcomeAsExpected && capsOK,
-		leak: evaluated.Leak,
+		leak: evaluated.Leak, recovery: evaluated.Recovery,
 	}, nil
 }
 
