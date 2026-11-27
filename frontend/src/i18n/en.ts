@@ -5905,16 +5905,13 @@ export const en = {
   "lead.project": "Project",
 
   "lead.source.manual": "Created manually",
-  "lead.source.inbound": "Inbound",
+  "lead.source.siteread": "From company website",
   "lead.source.webform": "Web form",
   "lead.source.webformNamed": "Web form “{name}”",
-  "lead.source.referral": "Referral",
   "lead.source.import": "Import",
-  "lead.source.crawl": "Web research",
   "lead.source.api": "Integration",
   "lead.source.automation": "Automation",
   "lead.source.capture": "Captured from a conversation",
-  "lead.source.siteread": "From company website",
   "lead.source.unknown": "Unknown source",
   "leadSources.removeOnlyTitle":
     "Your role can remove entries but not add or change them",
@@ -6051,8 +6048,6 @@ export const en = {
     "The counts cannot narrow by industry, country or company size, so none is shown.",
   "lead.boardCountsNoOtherFilter":
     "The counts cannot apply every filter on this list, so none is shown.",
-  "lead.boardCountsNoConnectorSource":
-    "The counts cannot narrow to every lead from one connector, so none is shown.",
   "lead.boardCountsOwnerNotMeasurable":
     "No count for this owner’s leads. Only an administrator can let you measure them.",
   "lead.boardTerminalRowsUnavailable":
@@ -9549,6 +9544,8 @@ export const en = {
     "Figures as they stood when the snapshot was taken. They do not change, and the link names the time it was taken.",
   "analytics.share.snapshotUnavailable":
     "No snapshot exists for this period yet.",
+  "analytics.share.quarterOnly":
+    "Sharing covers the quarter. Choose Quarter to share this view.",
   "analytics.share.expiryNote": "The link stops working after 30 days.",
   "analytics.share.create": "Create link",
   "analytics.share.linkTitle": "Your link",
@@ -9745,6 +9742,7 @@ export const en = {
   "forecast.period.quarter": "Quarter",
   "forecast.period.month": "Month",
   "forecast.period.week": "Week",
+  "forecast.quarterCards": "The two pipeline cards below cover the quarter.",
   "forecast.receipt": "Data and evidence checked",
   "forecast.eligible": "Eligible deals",
   "forecast.priced": "Priced",
@@ -15192,7 +15190,6 @@ export const en = {
   "audit.kind.lead_disqualify_reason": "Disqualification reason",
   "audit.kind.lead_origin": "Lead origin",
   "audit.kind.lead_privacy_notice": "Lead privacy notice",
-  "audit.kind.lead_source": "Lead source",
   "audit.kind.legal_entity": "Legal entity",
   "audit.kind.legal_review": "Legal review",
   "audit.kind.license": "License settings",
@@ -19335,9 +19332,6 @@ export const en = {
   "webhooks.event.lead.sla_breached.label": "First response overdue",
   "webhooks.event.lead.sla_breached.when":
     "A check finds a lead’s first-response deadline passed with no answer.",
-  "webhooks.event.lead_source.changed.label": "Lead source list changed",
-  "webhooks.event.lead_source.changed.when":
-    "A lead source is added, edited or removed in Settings.",
   "webhooks.event.lead_disqualify_reason.changed.label":
     "Disqualify reasons changed",
   "webhooks.event.lead_disqualify_reason.changed.when":
