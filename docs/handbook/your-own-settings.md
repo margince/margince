@@ -106,7 +106,7 @@ To turn on two-step sign-in in Margince, open Settings → **Account** and choos
 4. Keep the backup codes under **Recovery codes** in a place only you can reach. **Copy codes** helps.
 5. Choose **Done**.
 
-Margince asks for your password so that someone else at your computer cannot turn it on for you. If you sign in only with Google or Microsoft, you have no Margince password and cannot turn it on. You do not need it: Google and Microsoft manage their own MFA. Margince shows the backup codes once, and never again. The row then reads "On · 10 recovery codes left". When two or fewer are left, the row warns you. Turning it on signs you out on all your other computers and phones. Also called: MFA, second sign-in step, sign-in code, code app.
+Margince asks for your password so that someone else at your computer cannot turn it on for you. If your account has no Margince password, you cannot turn it on. Two-step sign-in in Margince protects only signing in with a password. To protect signing in with Google or Microsoft, turn on MFA in that Google or Microsoft account. Margince shows the backup codes once, and never again. The row then reads "On · 10 recovery codes left". When two or fewer are left, the row warns you. Turning it on signs you out on all your other computers and phones. Also called: MFA, second sign-in step, sign-in code, code app.
 
 A setup you started and did not finish shows **Not finished**. Choose **Remove** in that row, then **Discard setup**, with no code needed.
 
