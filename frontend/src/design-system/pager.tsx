@@ -1,24 +1,24 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { ChevronLeft, ChevronRight, type LucideIcon } from "lucide-react";
 import {
   formatNumber,
   identifierNumber,
   ordinalNumber,
 } from "../format/format";
 import { useLocale, useT } from "../i18n";
+import { usePhoneViewport } from "../lib/viewport";
 import { type PageRange, rangeText } from "./listsurface";
-import { PAGE_SIZES, pagerSlots } from "./listtable.paging";
+import { PAGE_SIZES, PAGER_SLOTS, pagerSlots } from "./listtable.paging";
 import { Select } from "./select";
 
 /**
  * `Pager` is exported for a table of another kind that holds all its rows and
  * pages them in memory, the way a list's own footer does.
  *
- * The pager: the pages as numbers, prev/next either side, the range on screen
- * under them, and the page size on the right. A known end is numbered as the
- * last page, and Next stops there. While the end is not known a gap follows the
- * pages in hand, and Next goes on.
+ * A known end is numbered as the last page, and Next stops there. While the end
+ * is not known a gap follows the pages in hand, and Next goes on.
  */
 export function Pager({
   current,
@@ -39,29 +39,34 @@ export function Pager({
   /** The page being fetched; its number shows as busy until it is drawn. */
   asked?: number;
   perPage: number;
-  /** The rows on screen, said under the pages ("26-50 of 1,024"). */
+  /** The rows on screen, said beside the pages ("26-50 of 1,024"). */
   range: PageRange;
   onGoto: (to: number) => void;
   onPerPage: (next: number) => void;
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const phone = usePhoneViewport();
+  const slots = phone ? PAGER_SLOTS.phone : PAGER_SLOTS.wide;
   return (
     <div className={`lt-foot${lastPage === 1 && endKnown ? " single" : ""}`}>
-      {/* A landmark, because this is navigation and a reader who jumps by region
-          should find it as one. The numbers carry "Page 3" rather than a bare
-          "3": out of the row's context a digit names nothing, and the row's
-          context is exactly what a screen reader does not have. */}
-      <div className="lt-pagerblock">
+      <div className="lt-footrow">
+        {/* A phone has no room for it beside the strip. */}
+        {!phone && range.total > 0 && (
+          <span className="lt-range">{rangeText(t, locale, range)}</span>
+        )}
+        {/* A landmark, because this is navigation and a reader who jumps by region
+            should find it as one. The numbers carry "Page 3" rather than a bare
+            "3": out of the row's context a digit names nothing, and the row's
+            context is exactly what a screen reader does not have. */}
         <nav className="lt-pager" aria-label={t("table.pagination")}>
-          <button
-            type="button"
+          <PageStep
+            label={t("table.prev")}
+            icon={phone ? ChevronLeft : undefined}
             disabled={current === 1}
             onClick={() => onGoto(current - 1)}
-          >
-            {t("table.prev")}
-          </button>
-          {pagerSlots(current, lastPage, !endKnown).map((slot, index) =>
+          />
+          {pagerSlots(current, lastPage, !endKnown, slots).map((slot, index) =>
             typeof slot === "number" ? (
               <button
                 type="button"
@@ -88,31 +93,53 @@ export function Pager({
               </span>
             ),
           )}
-          <button
-            type="button"
+          <PageStep
+            label={t("table.next")}
+            icon={phone ? ChevronRight : undefined}
             disabled={endKnown && current >= lastPage}
             onClick={() => onGoto(current + 1)}
-          >
-            {t("table.next")}
-          </button>
+          />
         </nav>
-        {range.total > 0 && (
-          <span className="lt-range t-caption">
-            {rangeText(t, locale, range)}
-          </span>
-        )}
+        <span className="lt-perpage">
+          <Select
+            aria-label={t("table.rowsPerPage")}
+            value={identifierNumber(perPage)}
+            onChange={(next) => onPerPage(Number(next))}
+            options={PAGE_SIZES.map((size) => ({
+              value: identifierNumber(size),
+              label: t("table.perPage", { count: formatNumber(size, locale) }),
+            }))}
+          />
+        </span>
       </div>
-      <span className="lt-perpage">
-        <Select
-          aria-label={t("table.rowsPerPage")}
-          value={identifierNumber(perPage)}
-          onChange={(next) => onPerPage(Number(next))}
-          options={PAGE_SIZES.map((size) => ({
-            value: identifierNumber(size),
-            label: t("table.perPage", { count: formatNumber(size, locale) }),
-          }))}
-        />
-      </span>
     </div>
+  );
+}
+
+/** Previous or Next: its word, or on a phone its chevron named by the word. */
+function PageStep({
+  label,
+  icon: Icon,
+  disabled,
+  onClick,
+}: Readonly<{
+  label: string;
+  icon?: LucideIcon;
+  disabled: boolean;
+  onClick: () => void;
+}>) {
+  return Icon ? (
+    <button
+      type="button"
+      aria-label={label}
+      disabled={disabled}
+      onClick={onClick}
+    >
+      <Icon size={16} aria-hidden="true" />
+    </button>
+  ) : (
+    <button type="button" disabled={disabled} onClick={onClick}>
+      {label}
+    </button>
   );
 }

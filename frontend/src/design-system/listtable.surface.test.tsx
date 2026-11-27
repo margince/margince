@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { openViewStep, viewButton } from "../testing/listview.testkit";
 import { type ListChip, ListTable, type ListView } from "./listtable";
-import { pagerSlots } from "./listtable.paging";
+import { PAGER_SLOTS, pagerSlots } from "./listtable.paging";
 import { columns, render, testRows } from "./listtable.testkit";
 import { pickOption } from "./select-testing";
 
@@ -304,6 +304,19 @@ describe("pagination", () => {
         });
       }
     }
+  });
+
+  it("narrows a phone's strip to five slots, the window to the current page", () => {
+    const phone = (current: number, open = false) =>
+      pagerSlots(current, 10, open, PAGER_SLOTS.phone);
+    expect(phone(1)).toEqual([1, 2, 3, "gap", 10]);
+    expect(phone(3)).toEqual([1, 2, 3, "gap", 10]);
+    expect(phone(4)).toEqual([1, "gap", 4, "gap", 10]);
+    expect(phone(7)).toEqual([1, "gap", 7, "gap", 10]);
+    expect(phone(8)).toEqual([1, "gap", 8, 9, 10]);
+    expect(phone(10)).toEqual([1, "gap", 8, 9, 10]);
+    expect(pagerSlots(2, 5, false, PAGER_SLOTS.phone)).toEqual([1, 2, 3, 4, 5]);
+    expect(phone(5, true)).toEqual([1, "gap", 5, "gap", 10, "gap"]);
   });
 
   it("shows every page of a list seven pages long or shorter", () => {

@@ -1237,33 +1237,59 @@
 
 /* Centred numbered pager with the page size on the right: the reader's eye goes
  * to the page they are on, and the size control stays out of that path. */
+/* The range, the pages and the page size in one row, the pages in the middle.
+   The foot is a container, so the row folds by its own width, not the window's. */
 .lt-foot {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
+  container: lt-foot / inline-size;
   padding: var(--space-3) var(--space-4);
   border-top: 1px solid var(--borderSubtle);
   flex: none;
 }
 
-/* The pages over the range they show, the range starting at the text of
-   Previous. */
-.lt-pagerblock {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-1);
-  margin: 0 auto;
+.lt-footrow {
+  display: grid;
+  grid-template-columns: minmax(max-content, 1fr) auto minmax(max-content, 1fr);
+  grid-template-areas: "range pages size";
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+}
+
+.lt-range {
+  grid-area: range;
+  justify-self: start;
+  font: var(--fontBody);
+  white-space: nowrap;
 }
 
 .lt-pager {
+  grid-area: pages;
+  justify-self: center;
   display: flex;
   align-items: center;
   gap: 2px;
 }
 
-.lt-range {
-  padding-inline-start: var(--space-2);
+/* Too narrow for one row: the range goes under the pages, centred on them. */
+@container lt-foot (width < 50rem) {
+  .lt-footrow {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "pages size"
+      "range .";
+  }
+  .lt-range {
+    justify-self: center;
+  }
+}
+
+/* A phone draws no range: the pages, and the page size under them. */
+@media (max-width: 700px) {
+  .lt-footrow {
+    grid-template-columns: auto;
+    grid-template-areas:
+      "pages"
+      "size";
+  }
 }
 
 .lt-pager button {
@@ -1314,8 +1340,8 @@
   user-select: none;
 }
 
-/* A phone holds Previous, seven slots and Next in its width: no space between
-   items, and the words pad as tightly as the range under them. */
+/* A folded screen holds Previous, the slots and Next in its width: no space
+   between items, and the words pad tightly. */
 @media (max-width: 720px) {
   .lt-pager {
     gap: 0;
@@ -1323,15 +1349,17 @@
   .lt-pager button {
     padding-inline: var(--space-1);
   }
-  .lt-range {
-    padding-inline-start: var(--space-1);
-  }
 }
 
 /* Colour and corner only. The INSET is the trigger's own (`.select-control` in
  * atoms.css), and the two classes here were beating it with a second answer —
  * the one control in the footer sitting on a different inset from every other
  * trigger in the product. */
+.lt-perpage {
+  grid-area: size;
+  justify-self: end;
+}
+
 .lt-perpage .select-control {
   background: var(--bgField);
   border-radius: var(--r-sm);
@@ -1341,11 +1369,12 @@
 /* A list fills the viewport, so its pager sits where a toast lands. While a list
  * is on screen the toast stands above the pager's row, leaving the pages usable. */
 :root:has(.lt-foot) .toast-region {
-  /* The pages, the range under them (a 16px Body S line), and the padding. */
+  /* The pages, the range under them where the row folds (a 20px body line),
+     and the padding. */
   --lt-foot-height: calc(
     var(--controlHeight) +
     var(--space-1) +
-    var(--space-4) +
+    var(--space-5) +
     2 *
     var(--space-3)
   );
@@ -1645,10 +1674,6 @@
   }
   .lt-empty td::before {
     content: none;
-  }
-
-  .lt-foot {
-    flex-wrap: wrap;
   }
 
   /* At phone width the name takes the whole first line: sharing it with a rail

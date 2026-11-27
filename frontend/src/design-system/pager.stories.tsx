@@ -86,3 +86,19 @@ export const EveryRowInHand: Story = {
 export const ThreePages: Story = {
   args: { ...onPage(2, 70), hasMore: false },
 };
+
+// A phone: five slots, chevrons named Previous and Next, and no range.
+// `uat-phone` drives the capture gate to 390px.
+export const OnAPhone: Story = {
+  name: "phone, five slots and chevrons",
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  args: { ...onPage(5, COUNTED), hasMore: true, endKnown: true },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(
+      canvas.getByRole("button", { name: "Previous" }).querySelector("svg"),
+    ).not.toBeNull();
+    await expect(canvasElement.querySelector(".lt-range")).toBeNull();
+  },
+};
