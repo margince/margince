@@ -54,13 +54,13 @@ func TestAFailedClaimRefusesOnlyAToolsCall(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ran := false
 			mux := chi.NewRouter()
-			mux.With(idempotency(nil, nil, nil)).Post("/v1/lead-sources", func(http.ResponseWriter, *http.Request) { ran = true })
+			mux.With(idempotency(nil, nil, nil)).Post("/v1/lead-origins", func(http.ResponseWriter, *http.Request) { ran = true })
 			ctx := principal.WithActor(context.Background(),
 				principal.Principal{Type: principal.PrincipalAgent, ID: "agent:" + ids.NewV7().String()})
 			if tc.tool {
-				ctx = context.WithValue(ctx, admittedByTheToolKey{}, "POST /v1/lead-sources")
+				ctx = context.WithValue(ctx, admittedByTheToolKey{}, "POST /v1/lead-origins")
 			}
-			req := httptest.NewRequestWithContext(ctx, http.MethodPost, "/v1/lead-sources", strings.NewReader(`{}`))
+			req := httptest.NewRequestWithContext(ctx, http.MethodPost, "/v1/lead-origins", strings.NewReader(`{}`))
 			req.Header.Set(idempotencyKeyHeader, "k1")
 			rec := httptest.NewRecorder()
 			mux.ServeHTTP(rec, req)

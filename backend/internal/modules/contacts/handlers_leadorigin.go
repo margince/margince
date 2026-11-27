@@ -25,8 +25,6 @@ func (h Handlers) ListLeadOrigins(w http.ResponseWriter, r *http.Request) {
 }
 
 // CreateLeadOrigin adds an origin.
-//
-//nolint:dupl // Same shape as CreateLeadSource, a different table and contract type.
 func (h Handlers) CreateLeadOrigin(w http.ResponseWriter, r *http.Request, _ crmcontracts.CreateLeadOriginParams) {
 	var req crmcontracts.CreateLeadOriginRequest
 	if !httperr.Decode(w, r, &req) {

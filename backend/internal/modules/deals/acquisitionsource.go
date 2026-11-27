@@ -32,12 +32,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
-// acquisitionVocabularyObject is the RBAC object this catalog is gated by:
-// the custom-field catalog's posture — everyone reads, admin/ops write —
-// which is exactly this list's posture, and lead_source is gated the same
-// way for the same reason. Adding a policy-matrix object for a list that
-// behaves identically to one already there would be a second answer to a
-// settled question.
+// acquisitionVocabularyObject is the RBAC object this catalog is gated by.
+// It has the custom-field catalog's posture: everyone reads, admin and ops
+// write. lead_origin uses the same object, so the policy matrix needs no
+// second entry for a list that behaves the same.
 const acquisitionVocabularyObject = "custom_field"
 
 // dealAcquisitionSourceConstraint is the FK a deal's acquisition_source
