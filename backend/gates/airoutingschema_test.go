@@ -29,7 +29,6 @@ import (
 	"time"
 
 	"github.com/santhosh-tekuri/jsonschema/v6"
-	"gopkg.in/yaml.v3"
 
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
@@ -112,7 +111,7 @@ func TestTheSchemaAndTheParserAgreeOnEveryInputDeclaration(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			var doc any
-			if err := yaml.Unmarshal([]byte(tc.yaml), &doc); err != nil {
+			if err := unmarshalYAML([]byte(tc.yaml), &doc); err != nil {
 				t.Fatalf("fixture is not yaml: %v", err)
 			}
 			// The validator works on JSON types; yaml.v3 already decodes into
@@ -263,7 +262,7 @@ func TestTheSchemaAndTheParserAgreeOnEveryUpstreamRoutingDeclaration(t *testing.
 	} {
 		t.Run(name, func(t *testing.T) {
 			var doc any
-			if err := yaml.Unmarshal([]byte(tc.yaml), &doc); err != nil {
+			if err := unmarshalYAML([]byte(tc.yaml), &doc); err != nil {
 				t.Fatalf("test yaml is not yaml: %v", err)
 			}
 			schemaAccepts := sch.Validate(doc) == nil
@@ -324,7 +323,7 @@ func TestTheSchemaAndTheParserAgreeOnEveryVertexPlacement(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			var doc any
-			if err := yaml.Unmarshal([]byte(tc.yaml), &doc); err != nil {
+			if err := unmarshalYAML([]byte(tc.yaml), &doc); err != nil {
 				t.Fatalf("test yaml is not yaml: %v", err)
 			}
 			schemaAccepts := sch.Validate(doc) == nil
@@ -374,7 +373,7 @@ func TestTheSchemaAndTheParserAgreeOnEveryThinkingLevel(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			var doc any
-			if err := yaml.Unmarshal([]byte(tc.yaml), &doc); err != nil {
+			if err := unmarshalYAML([]byte(tc.yaml), &doc); err != nil {
 				t.Fatalf("test yaml is not yaml: %v", err)
 			}
 			schemaAccepts := sch.Validate(doc) == nil
@@ -438,7 +437,7 @@ func TestTheTaskOverrideContractIsTheServersBounds(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading the contract: %v", err)
 	}
-	if err := yaml.Unmarshal(raw, &doc); err != nil {
+	if err := unmarshalYAML(raw, &doc); err != nil {
 		t.Fatalf("parsing the contract: %v", err)
 	}
 	props := doc.Components.Schemas["AiTaskOverride"].Properties
@@ -497,7 +496,7 @@ func TestTheSchemaAndTheParserAgreeOnEveryAzurePlacement(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			var doc any
-			if err := yaml.Unmarshal([]byte(tc.yaml), &doc); err != nil {
+			if err := unmarshalYAML([]byte(tc.yaml), &doc); err != nil {
 				t.Fatalf("test yaml is not yaml: %v", err)
 			}
 			schemaAccepts := sch.Validate(doc) == nil

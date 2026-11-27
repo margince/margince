@@ -39,8 +39,6 @@ import (
 	"strings"
 	"testing"
 
-	"gopkg.in/yaml.v3"
-
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
@@ -224,7 +222,7 @@ func readGolangciConfig(t *testing.T, name string) golangciConfig {
 		t.Fatalf("reading %s: %v", path, err)
 	}
 	var cfg golangciConfig
-	if err := yaml.Unmarshal(raw, &cfg); err != nil {
+	if err := unmarshalYAML(raw, &cfg); err != nil {
 		t.Fatalf("parsing %s: %v", path, err)
 	}
 	return cfg

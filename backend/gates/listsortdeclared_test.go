@@ -90,7 +90,7 @@ func operationsDeclaringSort(t *testing.T) []string {
 	var doc struct {
 		Paths map[string]map[string]yaml.Node `yaml:"paths"`
 	}
-	if err := yaml.Unmarshal(raw, &doc); err != nil {
+	if err := unmarshalYAML(raw, &doc); err != nil {
 		t.Fatalf("parsing the contract: %v", err)
 	}
 	shared := sharedSortIdentity(t, raw)
@@ -144,7 +144,7 @@ func sharedSortIdentity(t *testing.T, raw []byte) parameterIdentity {
 			Parameters map[string]parameterIdentity `yaml:"parameters"`
 		} `yaml:"components"`
 	}
-	if err := yaml.Unmarshal(raw, &doc); err != nil {
+	if err := unmarshalYAML(raw, &doc); err != nil {
 		t.Fatalf("parsing the contract's components: %v", err)
 	}
 	shared, declared := doc.Components.Parameters["Sort"]
@@ -440,7 +440,7 @@ func declaresAnHTTPHandler(file *ast.File) bool {
 func TestSharedSortParametersFollowYAMLSequenceAliases(t *testing.T) {
 	t.Parallel()
 	var doc map[string]yaml.Node
-	if err := yaml.Unmarshal([]byte("original: &params\n  - $ref: '#/components/parameters/Sort'\ninherited: *params\n"), &doc); err != nil {
+	if err := unmarshalYAML([]byte("original: &params\n  - $ref: '#/components/parameters/Sort'\ninherited: *params\n"), &doc); err != nil {
 		t.Fatal(err)
 	}
 	if !declaresSharedSort(t, doc["inherited"], parameterIdentity{}) {

@@ -19,8 +19,6 @@ import (
 	"strconv"
 	"testing"
 
-	"gopkg.in/yaml.v3"
-
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
@@ -31,7 +29,7 @@ func TestTheWonReasonDetailBoundIsOneNumber(t *testing.T) {
 		t.Fatalf("reading the contract: %v", err)
 	}
 	var contract map[string]any
-	if err := yaml.Unmarshal(raw, &contract); err != nil {
+	if err := unmarshalYAML(raw, &contract); err != nil {
 		t.Fatalf("parsing the contract: %v", err)
 	}
 	// The request schema, not Deal: Deal declares the field readOnly, and only

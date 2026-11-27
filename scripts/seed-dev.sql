@@ -259,7 +259,7 @@ BEGIN
   END IF;
   SELECT id INTO conn
     FROM finance_connection
-   WHERE provider = 'offline_demo' AND archived_at IS NULL;
+   WHERE provider = 'offline_demo';
 
   IF conn IS NULL THEN
     INSERT INTO finance_connection

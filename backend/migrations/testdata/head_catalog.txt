@@ -905,7 +905,6 @@ public.activity_review_template.activity_review_template_label_shape CHECK ((btr
 public.activity_review_template.activity_review_template_outcome_check CHECK ((outcome = ANY (ARRAY['won'::text, 'lost'::text])))
 public.activity_review_template.activity_review_template_pkey PRIMARY KEY (id)
 public.activity_review_template.activity_review_template_questions_shape CHECK (((jsonb_typeof(questions) = 'array'::text) AND (jsonb_array_length(questions) > 0)))
-public.activity_review_template.archived_at timestamp with time zone gen=- def=-
 public.activity_review_template.captured_by text NOT NULL gen=- def=-
 public.activity_review_template.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.activity_review_template.id uuid NOT NULL gen=- def=uuidv7()
@@ -924,8 +923,8 @@ public.activity_review_template.trg_activity_review_template_question_keys CREAT
 public.activity_review_template.trg_activity_review_template_updated CREATE TRIGGER trg_activity_review_template_updated BEFORE UPDATE ON public.activity_review_template FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.activity_review_template.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.activity_review_template.version integer NOT NULL gen=- def=1
-public.activity_review_template_live_key CREATE UNIQUE INDEX activity_review_template_live_key ON public.activity_review_template USING btree (key) WHERE (archived_at IS NULL)
-public.activity_review_template_one_active_per_outcome CREATE UNIQUE INDEX activity_review_template_one_active_per_outcome ON public.activity_review_template USING btree (outcome) WHERE (active AND (archived_at IS NULL))
+public.activity_review_template_one_asked_per_outcome CREATE UNIQUE INDEX activity_review_template_one_asked_per_outcome ON public.activity_review_template USING btree (outcome) WHERE active
+public.activity_review_template_one_per_key CREATE UNIQUE INDEX activity_review_template_one_per_key ON public.activity_review_template USING btree (key)
 public.activity_review_template_pkey CREATE UNIQUE INDEX activity_review_template_pkey ON public.activity_review_template USING btree (id)
 public.activity_sales_state acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.activity_sales_state.activity_sales_state_pkey PRIMARY KEY (thread_key, kind, channel_provider)
@@ -2020,7 +2019,6 @@ END;
 public.auth_token acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.auth_token.auth_token_expires_after_creation CHECK ((expires_at > created_at))
 public.auth_token.auth_token_pkey PRIMARY KEY (id)
-public.auth_token.auth_token_purpose_check CHECK ((purpose = ANY (ARRAY['password_reset'::text, 'email_verify'::text, 'invite'::text])))
 public.auth_token.auth_token_token_hash_check CHECK ((token_hash ~ '^[0-9a-f]{64}$'::text))
 public.auth_token.auth_token_user_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.auth_token.created_at timestamp with time zone NOT NULL gen=- def=now()
@@ -2029,9 +2027,8 @@ public.auth_token.id uuid NOT NULL gen=- def=uuidv7()
 public.auth_token.mail_failed_at timestamp with time zone gen=- def=-
 public.auth_token.mail_queued_at timestamp with time zone gen=- def=-
 public.auth_token.mail_sent_at timestamp with time zone gen=- def=-
-public.auth_token.purpose text NOT NULL gen=- def=-
-public.auth_token.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.auth_token FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"purpose": 20000, "token_hash": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"purpose":20000,"token_hash":20000}')
-public.auth_token.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.auth_token FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"purpose": 20000, "token_hash": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"purpose":20000,"token_hash":20000}')
+public.auth_token.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.auth_token FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"token_hash": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"token_hash":20000}')
+public.auth_token.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.auth_token FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"token_hash": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"token_hash":20000}')
 public.auth_token.token_hash text NOT NULL gen=- def=-
 public.auth_token.used_at timestamp with time zone gen=- def=-
 public.auth_token.user_id uuid NOT NULL gen=- def=-
@@ -6072,7 +6069,6 @@ public.f_fold_import_name(text) secdef=false cfg=- acl=-
 public.f_unaccent(text) secdef=false cfg=- acl=- 
 public.federated_identity acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.federated_identity.created_at timestamp with time zone NOT NULL gen=- def=now()
-public.federated_identity.email_at_link text NOT NULL gen=- def=-
 public.federated_identity.federated_identity_pkey PRIMARY KEY (id)
 public.federated_identity.federated_identity_provider_subject_key UNIQUE (provider, subject)
 public.federated_identity.federated_identity_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
@@ -6080,8 +6076,8 @@ public.federated_identity.federated_identity_user_provider_key UNIQUE (user_id, 
 public.federated_identity.id uuid NOT NULL gen=- def=uuidv7()
 public.federated_identity.provider text NOT NULL gen=- def=-
 public.federated_identity.subject text NOT NULL gen=- def=-
-public.federated_identity.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.federated_identity FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"provider": 20000, "email_at_link": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"email_at_link":20000,"provider":20000}')
-public.federated_identity.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.federated_identity FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"provider": 20000, "email_at_link": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"email_at_link":20000,"provider":20000}')
+public.federated_identity.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.federated_identity FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"provider": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"provider":20000}')
+public.federated_identity.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.federated_identity FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"provider": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"provider":20000}')
 public.federated_identity.user_id uuid NOT NULL gen=- def=-
 public.federated_identity_pkey CREATE UNIQUE INDEX federated_identity_pkey ON public.federated_identity USING btree (id)
 public.federated_identity_provider_subject_key CREATE UNIQUE INDEX federated_identity_provider_subject_key ON public.federated_identity USING btree (provider, subject)
@@ -6154,7 +6150,6 @@ public.field_provenance.verified_by uuid gen=- def=-
 public.field_provenance.version bigint NOT NULL gen=- def=1
 public.field_provenance_pkey CREATE UNIQUE INDEX field_provenance_pkey ON public.field_provenance USING btree (id)
 public.finance_connection acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.finance_connection.archived_at timestamp with time zone gen=- def=-
 public.finance_connection.captured_by text NOT NULL gen=- def=-
 public.finance_connection.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.finance_connection.finance_connection_pkey PRIMARY KEY (id)
@@ -6774,7 +6769,6 @@ public.idx_audit_on_behalf_of CREATE INDEX idx_audit_on_behalf_of ON public.audi
 public.idx_audit_scrub_boundary CREATE INDEX idx_audit_scrub_boundary ON public.audit_log USING btree (entity_type, entity_id, occurred_at DESC, id DESC) WHERE (action = ANY (ARRAY['erase'::text, 'anonymize'::text, 'restrict'::text]))
 public.idx_audit_time CREATE INDEX idx_audit_time ON public.audit_log USING btree (occurred_at DESC)
 public.idx_auth_token_hash CREATE UNIQUE INDEX idx_auth_token_hash ON public.auth_token USING btree (token_hash)
-public.idx_auth_token_user CREATE INDEX idx_auth_token_user ON public.auth_token USING btree (user_id, purpose) WHERE (used_at IS NULL)
 public.idx_auth_token_user_cascade CREATE INDEX idx_auth_token_user_cascade ON public.auth_token USING btree (user_id)
 public.idx_automation_key_live CREATE INDEX idx_automation_key_live ON public.automation USING btree (key) WHERE (enabled AND (archived_at IS NULL))
 public.idx_booking_page_host_user CREATE INDEX idx_booking_page_host_user ON public.booking_page USING btree (host_user_id)
@@ -7929,11 +7923,10 @@ public.linkedin_connection.normalized_name text NOT NULL gen=- def=-
 public.linkedin_connection.owner_user_id uuid NOT NULL gen=- def=-
 public.linkedin_connection.position text gen=- def=-
 public.linkedin_connection.profile_url text gen=- def=-
-public.linkedin_connection.provider_member_ref text gen=- def=-
 public.linkedin_connection.source text NOT NULL gen=- def=-
 public.linkedin_connection.synced_at timestamp with time zone NOT NULL gen=- def=now()
-public.linkedin_connection.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.linkedin_connection FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"email": 20000, "source": 20000, "position": 20000, "profile_url": 20000, "company_name": 120, "match_status": 20000, "normalized_name": 120, "normalized_company": 20000, "provider_member_ref": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"company_name":120,"email":20000,"match_status":20000,"normalized_company":20000,"normalized_name":120,"position":20000,"profile_url":20000,"provider_member_ref":20000,"source":20000}')
-public.linkedin_connection.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.linkedin_connection FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"email": 20000, "source": 20000, "position": 20000, "profile_url": 20000, "company_name": 120, "match_status": 20000, "normalized_name": 120, "normalized_company": 20000, "provider_member_ref": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"company_name":120,"email":20000,"match_status":20000,"normalized_company":20000,"normalized_name":120,"position":20000,"profile_url":20000,"provider_member_ref":20000,"source":20000}')
+public.linkedin_connection.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.linkedin_connection FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"email": 20000, "source": 20000, "position": 20000, "profile_url": 20000, "company_name": 120, "match_status": 20000, "normalized_name": 120, "normalized_company": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"company_name":120,"email":20000,"match_status":20000,"normalized_company":20000,"normalized_name":120,"position":20000,"profile_url":20000,"source":20000}')
+public.linkedin_connection.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.linkedin_connection FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"email": 20000, "source": 20000, "position": 20000, "profile_url": 20000, "company_name": 120, "match_status": 20000, "normalized_name": 120, "normalized_company": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"company_name":120,"email":20000,"match_status":20000,"normalized_company":20000,"normalized_name":120,"position":20000,"profile_url":20000,"source":20000}')
 public.linkedin_connection.tombstoned_at timestamp with time zone gen=- def=-
 public.linkedin_connection.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.linkedin_connection_pkey CREATE UNIQUE INDEX linkedin_connection_pkey ON public.linkedin_connection USING btree (id)
@@ -8269,13 +8262,16 @@ public.meeting_readiness.text_bound_insert CREATE TRIGGER text_bound_insert AFTE
 public.meeting_readiness.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.meeting_readiness FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"revision": 20000, "agenda_fingerprint": 20000, "participants_fingerprint": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"agenda_fingerprint":20000,"participants_fingerprint":20000,"revision":20000}')
 public.meeting_readiness_pkey CREATE UNIQUE INDEX meeting_readiness_pkey ON public.meeting_readiness USING btree (attendee_id, activity_id)
 public.member_identity_family(member uuid) secdef=false cfg=- acl=- 
-  WITH RECURSIVE member_identities(id) AS (
-    SELECT member
-    UNION
-    SELECT retired.id FROM app_user retired JOIN member_identities survivor
-      ON retired.merged_into_user_id = survivor.id
-     WHERE retired.removed_at IS NOT NULL)
-  SELECT array_agg(id) FROM member_identities
+BEGIN
+  RETURN (
+    WITH RECURSIVE member_identities(id) AS (
+      SELECT member
+      UNION
+      SELECT retired.id FROM app_user retired JOIN member_identities survivor
+        ON retired.merged_into_user_id = survivor.id
+       WHERE retired.removed_at IS NOT NULL)
+    SELECT array_agg(id) FROM member_identities);
+END;
 
 public.mfa_challenge_spent acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.mfa_challenge_spent.expires_at timestamp with time zone NOT NULL gen=- def=-
@@ -8716,14 +8712,12 @@ public.partner.partner_partner_kinds_check CHECK ((partner_kinds <@ ARRAY['hosti
 public.partner.partner_pkey PRIMARY KEY (id)
 public.partner.partner_relationship_stage_fkey FOREIGN KEY (relationship_stage) REFERENCES partner_stage(key) ON UPDATE RESTRICT ON DELETE RESTRICT
 public.partner.partner_retention_rate_check CHECK (((retention_rate IS NULL) OR ((retention_rate >= 0) AND (retention_rate <= 100))))
-public.partner.partner_source_check CHECK ((source = ANY (ARRAY['api'::text, 'automation'::text, 'capture'::text, 'import'::text, 'manual'::text, 'webform'::text])))
 public.partner.partner_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.partner.relationship_stage text NOT NULL gen=- def=-
 public.partner.retention_rate smallint gen=- def=-
 public.partner.served_segments text[] gen=- def=-
-public.partner.source text NOT NULL gen=- def=-
-public.partner.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.partner FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"source": 20000, "next_step": 20000, "captured_by": 20000, "cert_status": 20000, "margin_tier": 20000, "activated_by": 20000, "partner_kinds": 20000, "served_segments": 20000, "activation_basis": 20000, "relationship_stage": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"activated_by":20000,"activation_basis":20000,"captured_by":20000,"cert_status":20000,"margin_tier":20000,"next_step":20000,"partner_kinds":20000,"relationship_stage":20000,"served_segments":20000,"source":20000}')
-public.partner.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.partner FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "next_step": 20000, "captured_by": 20000, "cert_status": 20000, "margin_tier": 20000, "activated_by": 20000, "partner_kinds": 20000, "served_segments": 20000, "activation_basis": 20000, "relationship_stage": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"activated_by":20000,"activation_basis":20000,"captured_by":20000,"cert_status":20000,"margin_tier":20000,"next_step":20000,"partner_kinds":20000,"relationship_stage":20000,"served_segments":20000,"source":20000}')
+public.partner.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.partner FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"next_step": 20000, "captured_by": 20000, "cert_status": 20000, "margin_tier": 20000, "activated_by": 20000, "partner_kinds": 20000, "served_segments": 20000, "activation_basis": 20000, "relationship_stage": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"activated_by":20000,"activation_basis":20000,"captured_by":20000,"cert_status":20000,"margin_tier":20000,"next_step":20000,"partner_kinds":20000,"relationship_stage":20000,"served_segments":20000}')
+public.partner.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.partner FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"next_step": 20000, "captured_by": 20000, "cert_status": 20000, "margin_tier": 20000, "activated_by": 20000, "partner_kinds": 20000, "served_segments": 20000, "activation_basis": 20000, "relationship_stage": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"activated_by":20000,"activation_basis":20000,"captured_by":20000,"cert_status":20000,"margin_tier":20000,"next_step":20000,"partner_kinds":20000,"relationship_stage":20000,"served_segments":20000}')
 public.partner.trg_partner_updated CREATE TRIGGER trg_partner_updated BEFORE UPDATE ON public.partner FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.partner.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.partner.version bigint NOT NULL gen=- def=1
@@ -9071,7 +9065,6 @@ public.project_phase_history acl=margince_owner=arwdDxt/margince_owner,margince_
 public.project_phase_history.audit_log_id uuid gen=- def=-
 public.project_phase_history.cause_deal_id uuid gen=- def=-
 public.project_phase_history.cause_kind text gen=- def=-
-public.project_phase_history.changed_by text NOT NULL gen=- def=-
 public.project_phase_history.from_phase text gen=- def=-
 public.project_phase_history.id uuid NOT NULL gen=- def=uuidv7()
 public.project_phase_history.occurred_at timestamp with time zone NOT NULL gen=- def=now()
@@ -9081,8 +9074,8 @@ public.project_phase_history.project_phase_history_cause_pairs CHECK (((cause_ki
 public.project_phase_history.project_phase_history_pkey PRIMARY KEY (id)
 public.project_phase_history.project_phase_history_project_id_fkey FOREIGN KEY (project_id) REFERENCES project(id) ON DELETE CASCADE
 public.project_phase_history.reason text gen=- def=-
-public.project_phase_history.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.project_phase_history FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"reason": 2000, "to_phase": 20000, "cause_kind": 120, "changed_by": 20000, "from_phase": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"cause_kind":120,"changed_by":20000,"from_phase":20000,"reason":2000,"to_phase":20000}')
-public.project_phase_history.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.project_phase_history FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"reason": 2000, "to_phase": 20000, "cause_kind": 120, "changed_by": 20000, "from_phase": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"cause_kind":120,"changed_by":20000,"from_phase":20000,"reason":2000,"to_phase":20000}')
+public.project_phase_history.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.project_phase_history FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"reason": 2000, "to_phase": 20000, "cause_kind": 120, "from_phase": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"cause_kind":120,"from_phase":20000,"reason":2000,"to_phase":20000}')
+public.project_phase_history.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.project_phase_history FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"reason": 2000, "to_phase": 20000, "cause_kind": 120, "from_phase": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"cause_kind":120,"from_phase":20000,"reason":2000,"to_phase":20000}')
 public.project_phase_history.to_phase text NOT NULL gen=- def=-
 public.project_phase_history_pkey CREATE UNIQUE INDEX project_phase_history_pkey ON public.project_phase_history USING btree (id)
 public.project_pkey CREATE UNIQUE INDEX project_pkey ON public.project USING btree (id)
@@ -9748,9 +9741,7 @@ public.report_edition.report_edition_owner_id_fkey FOREIGN KEY (owner_id) REFERE
 public.report_edition.report_edition_pkey PRIMARY KEY (id)
 public.report_edition.report_edition_publication_team_id_fkey FOREIGN KEY (publication_team_id) REFERENCES team(id) ON DELETE RESTRICT
 public.report_edition.report_edition_report_id_fkey FOREIGN KEY (report_id) REFERENCES report_definition(id) ON DELETE RESTRICT
-public.report_edition.report_edition_report_revision_js_safe CHECK (((report_revision >= '-9007199254740991'::bigint) AND (report_revision <= '9007199254740991'::bigint)))
 public.report_edition.report_id uuid NOT NULL gen=- def=-
-public.report_edition.report_revision bigint NOT NULL gen=- def=-
 public.report_edition.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.report_edition FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"publication_audience": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"publication_audience":20000}')
 public.report_edition.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.report_edition FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"publication_audience": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"publication_audience":20000}')
 public.report_edition_archive CREATE INDEX report_edition_archive ON public.report_edition USING btree (report_id, intended_due_at DESC, id DESC)
@@ -11790,8 +11781,7 @@ public.uq_lead_source_key CREATE UNIQUE INDEX uq_lead_source_key ON public.lead_
 public.uq_legal_entity_default CREATE UNIQUE INDEX uq_legal_entity_default ON public.legal_entity USING btree ((true)) WHERE is_default
 public.uq_legal_entity_live_name CREATE UNIQUE INDEX uq_legal_entity_live_name ON public.legal_entity USING btree (lower(display_name)) WHERE ((archived_at IS NULL) AND (NOT is_default))
 public.uq_legal_review_open_deal CREATE UNIQUE INDEX uq_legal_review_open_deal ON public.legal_review USING btree (deal_id) WHERE (status = 'requested'::text)
-public.uq_linkedin_connection_natural CREATE UNIQUE INDEX uq_linkedin_connection_natural ON public.linkedin_connection USING btree (owner_user_id, normalized_name, normalized_company, connected_on) NULLS NOT DISTINCT WHERE (provider_member_ref IS NULL)
-public.uq_linkedin_connection_provider CREATE UNIQUE INDEX uq_linkedin_connection_provider ON public.linkedin_connection USING btree (owner_user_id, provider_member_ref) WHERE (provider_member_ref IS NOT NULL)
+public.uq_linkedin_connection_natural_key CREATE UNIQUE INDEX uq_linkedin_connection_natural_key ON public.linkedin_connection USING btree (owner_user_id, normalized_name, normalized_company, connected_on) NULLS NOT DISTINCT
 public.uq_notice_dedupe CREATE UNIQUE INDEX uq_notice_dedupe ON public.notice USING btree (recipient_user_id, dedupe_key) WHERE (dedupe_key IS NOT NULL)
 public.uq_offer_template_default CREATE UNIQUE INDEX uq_offer_template_default ON public.offer_template USING btree (locale) WHERE (is_default AND (archived_at IS NULL))
 public.uq_oli_position CREATE UNIQUE INDEX uq_oli_position ON public.offer_line_item USING btree (offer_id, "position")
@@ -11912,7 +11902,6 @@ public.valid_intent_time(wall_clock timestamp without time zone, zone_name text)
 public.vault_secret acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.vault_secret.ciphertext bytea NOT NULL gen=- def=-
 public.vault_secret.created_at timestamp with time zone NOT NULL gen=- def=now()
-public.vault_secret.key_version integer NOT NULL gen=- def=-
 public.vault_secret.ref text NOT NULL gen=- def=-
 public.vault_secret.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.vault_secret FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"ref": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"ref":20000}')
 public.vault_secret.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.vault_secret FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"ref": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"ref":20000}')
@@ -12007,17 +11996,14 @@ public.voice_learning_signal.content_erased_at timestamp with time zone gen=- de
 public.voice_learning_signal.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.voice_learning_signal.draft_ref_hash bytea NOT NULL gen=- def=-
 public.voice_learning_signal.final_captured_by text gen=- def=-
-public.voice_learning_signal.final_text text gen=- def=-
 public.voice_learning_signal.generated_original text gen=- def=-
 public.voice_learning_signal.id uuid NOT NULL gen=- def=uuidv7()
 public.voice_learning_signal.outcome text NOT NULL gen=- def=-
 public.voice_learning_signal.profile_version integer gen=- def=-
-public.voice_learning_signal.qualifies_as_source boolean NOT NULL gen=- def=false
 public.voice_learning_signal.retention_until timestamp with time zone NOT NULL gen=- def=-
 public.voice_learning_signal.similarity numeric(5,4) gen=- def=-
 public.voice_learning_signal.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.voice_learning_signal FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"outcome": 20000, "captured_by": 20000, "final_captured_by": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"final_captured_by":20000,"outcome":20000}')
 public.voice_learning_signal.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.voice_learning_signal FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"outcome": 20000, "captured_by": 20000, "final_captured_by": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"final_captured_by":20000,"outcome":20000}')
-public.voice_learning_signal.transformations jsonb NOT NULL gen=- def='[]'::jsonb
 public.voice_learning_signal.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.voice_learning_signal.uq_voice_learning_signal_draft UNIQUE (draft_ref_hash)
 public.voice_learning_signal.version bigint NOT NULL gen=- def=1
@@ -12026,7 +12012,6 @@ public.voice_learning_signal.voice_learning_signal_outcome_check CHECK ((outcome
 public.voice_learning_signal.voice_learning_signal_pkey PRIMARY KEY (id)
 public.voice_learning_signal.voice_learning_signal_profile_fkey FOREIGN KEY (voice_profile_id) REFERENCES voice_profile(id) ON DELETE CASCADE
 public.voice_learning_signal.voice_learning_signal_profile_version_check CHECK ((profile_version >= 1))
-public.voice_learning_signal.voice_learning_signal_qualifies_check CHECK (((NOT qualifies_as_source) OR ((outcome = 'edited_sent'::text) AND (final_text IS NOT NULL) AND (final_captured_by ~~ 'human:%'::text))))
 public.voice_learning_signal.voice_learning_signal_similarity_check CHECK (((similarity >= (0)::numeric) AND (similarity <= (1)::numeric)))
 public.voice_learning_signal.voice_learning_signal_version_fkey FOREIGN KEY (voice_profile_id, profile_version) REFERENCES voice_profile_version(voice_profile_id, profile_version) ON DELETE RESTRICT
 public.voice_learning_signal.voice_learning_signal_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))

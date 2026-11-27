@@ -157,8 +157,7 @@ func (s *VoiceStore) RecordDraftedSignal(ctx context.Context, profileID ids.UUID
 			return err
 		}
 		// The drafted signal has not yet been sent, so it qualifies as no
-		// learning source and carries no transformations — the accept/edit
-		// feedback that later lands on this row is what sets those.
+		// learning source and carries no transformations.
 		return storekit.EmitEvent(ctx, tx, auditID, profileID,
 			voiceDraftOutcomeRecordedPayload(profileID, voiceOutcomeDrafted))
 	})

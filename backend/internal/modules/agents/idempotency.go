@@ -228,13 +228,13 @@ func firstUse(claim Claim) string {
 func (r *Registry) refuseUnkeyableCall(spec mcp.ToolSpec) error {
 	if spec.ReadOnly() {
 		return &BadArgsError{Cause: fmt.Errorf(
-			"%s only reads, so it takes no `%s` — a read changes nothing there is anything to repeat",
+			"%s only reads, so it takes no `%s`: a read changes nothing, so there is nothing to repeat",
 			spec.Name, idempotencyKeyArg)}
 	}
 	if r.unitOwnedTool(spec.Name) {
 		return &BadArgsError{Cause: fmt.Errorf(
 			"%s is served by an extension, whose records this surface cannot re-check when handing a "+
-				"recorded result back, so it does not offer `%s` and will not pretend to honour one; "+
+				"recorded result back, so it does not offer `%s` and will not pretend to honor one; "+
 				"omit it and check whether the first attempt took effect before repeating the call",
 			spec.Name, idempotencyKeyArg)}
 	}

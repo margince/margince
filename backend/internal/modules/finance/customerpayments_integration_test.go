@@ -200,7 +200,7 @@ func TestCustomerPaymentsDoesNotIncludeTheReplacedConnectionsInvoices(t *testing
   VALUES ($%d,$%d,'active','human:test',now()+interval '1 second')`, replacement, fixtureProviderName)
 	// The package shares one database, and every later test reads the newest connection.
 	t.Cleanup(func() {
-		a.ownerExec(t, `UPDATE finance_connection SET archived_at = now() WHERE id = $1`, replacement)
+		a.ownerExec(t, `UPDATE finance_connection SET status = 'disconnected' WHERE id = $1`, replacement)
 	})
 	got := paymentResponse(a.documentReader(principal.RowScopeAll), t, a, nil, 50)
 	if got.State != crmcontracts.FinanceSummaryStateSyncing || got.LinkedCompanies != 0 || got.InvoiceCount != 0 || len(got.Data) != 0 {

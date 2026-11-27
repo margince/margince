@@ -240,3 +240,20 @@ func TestTheLivenessCensusJudgesAWriteAndCreditsOnlyAnAnswer(t *testing.T) {
 		})
 	}
 }
+
+// A table leaves the retirable set when a later migration drops its
+// archived_at, and joins it when one adds the column.
+func TestTheRetirableCensusFollowsTheArchivedColumnThroughLaterMigrations(t *testing.T) {
+	t.Parallel()
+	tables := map[string]bool{}
+	for _, migration := range []string{
+		"CREATE TABLE ledger (\n    id uuid,\n    archived_at timestamptz\n);",
+		"ALTER TABLE ledger DROP COLUMN IF EXISTS archived_at;",
+		"ALTER TABLE journal ADD COLUMN archived_at timestamptz;",
+	} {
+		readRetirable(migration, tables)
+	}
+	if tables["ledger"] || !tables["journal"] {
+		t.Fatalf("retirable = %v, want journal only", tables)
+	}
+}

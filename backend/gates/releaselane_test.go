@@ -23,8 +23,6 @@ import (
 	"strings"
 	"testing"
 
-	"gopkg.in/yaml.v3"
-
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
@@ -251,7 +249,7 @@ func TestEveryReleaseWorkflowTestsItsScriptsBeforeItCallsThem(t *testing.T) {
 		var parsed struct {
 			Jobs map[string]releaseJob `yaml:"jobs"`
 		}
-		if err := yaml.Unmarshal(body, &parsed); err != nil {
+		if err := unmarshalYAML(body, &parsed); err != nil {
 			t.Fatalf("parsing %s: %v", path, err)
 		}
 		untested, found := untestedReleaseJobs(parsed.Jobs)

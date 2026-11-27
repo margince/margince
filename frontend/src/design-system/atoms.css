@@ -1356,6 +1356,12 @@ span.error-line {
   padding: 0 var(--controlPaddingX);
   font-weight: var(--fontWeightMedium);
 }
+/* The compact face: the same field on the button height, for a view filter in
+   a card head, where it stands beside 32px controls and not in a form column.
+   After `.select-control`, so it wins on source order as that rule does. */
+.select-compact {
+  min-block-size: var(--controlHeight);
+}
 /* Nor is it a well: a face rather than a hole, at the resting depth a button
    takes. Two classes here, for the opposite reason to the rule above — this one
    has to outrank `.input`'s own `--shadow-well` while still losing to the hover
@@ -2180,6 +2186,26 @@ span.error-line {
 .stat-strip[data-lead] > :first-child .stat-card-value {
   font: var(--fontPlateLeadFigure);
   font-variant-numeric: tabular-nums;
+}
+/* A plate of chart tabs heads its chart, so every figure is set large and
+   the shown one stands out by its ink, not its size (statstrip.css). */
+.stat-strip[data-density="plate"]:has(.stat-card-open[aria-pressed])
+.stat-card-value {
+  font: var(--fontHeadingXLarge);
+  font-weight: var(--fontWeightMedium);
+  color: var(--textSecondary);
+}
+.stat-strip[data-density="plate"]
+  > :is(.stat-card, * > .stat-card):has([aria-pressed="true"])
+  .stat-card-value {
+  color: var(--textPrimary);
+}
+/* On a row of chart tabs each figure's receipt waits for the reader: it
+   shows on hover and on focus, so four receipts never crowd the row. */
+.stat-strip[data-density="plate"]:has(.stat-card-open[aria-pressed])
+  .stat-card:not(:hover, :focus-within)
+  :is(.stat-card-source, .stat-card-basis:not([aria-expanded="true"])) {
+  opacity: 0;
 }
 /* A reading that is a word, such as a status, is set as words: it is an
    answer about the figure, not a figure. */

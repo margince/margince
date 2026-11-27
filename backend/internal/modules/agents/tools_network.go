@@ -370,15 +370,15 @@ const atRiskTruncatedMessage = "The scan stopped at its cap, so deals beyond it 
 // the findings were all refused. It names the conclusion NOT to draw, because
 // the answer's own shape — three empty arrays — argues for exactly that
 // conclusion.
-const coverageWithheldMessage = "The stakeholders, our side and the risks were WITHHELD: this " +
+const coverageWithheldMessage = "The `stakeholders`, `our_side` and `risks` sections were WITHHELD: this " +
 	"passport cannot read relationship records. Say the coverage could not be assessed. Do not " +
-	"report the deal as well covered, single-threaded, or clear of risk — none of those were checked."
+	"report the deal as well covered, single-threaded, or clear of risk: none of those were checked."
 
 // atRiskWithheldMessage is the same claim over a sweep, where the absence is a
 // deal missing from a list rather than an empty section.
 const atRiskWithheldMessage = "At least one deal could not be assessed: reading its coverage needs " +
 	"the relationship grant this passport does not hold. Those deals are ABSENT from this report, " +
-	"not clean — report the pipeline as partly unexamined."
+	"not clean. Report the pipeline as partly unexamined."
 
 func (t atRiskTool) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
 	var args struct {
