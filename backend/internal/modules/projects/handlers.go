@@ -23,6 +23,7 @@ import (
 func (h Handlers) ListProjects(w http.ResponseWriter, r *http.Request, params crmcontracts.ListProjectsParams) {
 	in := ListProjectsInput{
 		Cursor:          params.Cursor,
+		Offset:          params.Offset,
 		Limit:           params.Limit,
 		Query:           params.Q,
 		Key:             params.Key,

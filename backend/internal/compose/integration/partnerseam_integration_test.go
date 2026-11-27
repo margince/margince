@@ -102,7 +102,7 @@ func TestPartnerSeamRefusesATextQuery(t *testing.T) {
 	ctx := e.As(e.AdminUser, nil, partnerReader())
 
 	term := "Findable"
-	_, _, _, err := p.SearchEntity(ctx, datasource.EntityPartner, &term, 10, nil, nil)
+	_, _, _, err := p.SearchEntity(ctx, datasource.EntityPartner, &term, 10, nil, nil, nil)
 	if err == nil {
 		t.Fatal("a text query against partner was accepted; it must be refused, not silently dropped")
 	}
@@ -116,7 +116,7 @@ func TestPartnerSeamNarrowsByRole(t *testing.T) {
 	e.SeedPartnerCompany(t, "Consulting GmbH", &tier, nil)
 	ctx := e.As(e.AdminUser, nil, partnerReader())
 
-	records, _, _, err := p.SearchEntity(ctx, datasource.EntityPartner, nil, 10, nil,
+	records, _, _, err := p.SearchEntity(ctx, datasource.EntityPartner, nil, 10, nil, nil,
 		map[string]string{"partner_role": "consulting"})
 	if err != nil {
 		t.Fatalf("listing partners by role: %v", err)
@@ -131,7 +131,7 @@ func TestPartnerSeamNarrowsByRole(t *testing.T) {
 	}
 
 	// A role nobody holds is an empty page, not every partner.
-	none, _, _, err := p.SearchEntity(ctx, datasource.EntityPartner, nil, 10, nil,
+	none, _, _, err := p.SearchEntity(ctx, datasource.EntityPartner, nil, 10, nil, nil,
 		map[string]string{"partner_role": "hosting"})
 	if err != nil {
 		t.Fatalf("listing partners by an unheld role: %v", err)
@@ -148,7 +148,7 @@ func TestPartnerSeamRefusesAnUnknownFilter(t *testing.T) {
 	p := partnerSeamProvider(e)
 	ctx := e.As(e.AdminUser, nil, partnerReader())
 
-	_, _, _, err := p.SearchEntity(ctx, datasource.EntityPartner, nil, 10, nil,
+	_, _, _, err := p.SearchEntity(ctx, datasource.EntityPartner, nil, 10, nil, nil,
 		map[string]string{"owner_id": ids.NewV7().String()})
 	if err == nil {
 		t.Fatal("owner_id was accepted for partner; a filter the type cannot answer must be refused")

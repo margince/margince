@@ -387,7 +387,8 @@ func derefOrNil(v **string) *string {
 	return *v
 }
 
-// RestoreTag brings an archived word back.
+// RestoreTag brings a retired word back. A merged one is refused: the merge
+// moved its records away, and the merge says it cannot be undone.
 //
 // It refuses when a LIVE tag has taken the name meanwhile. uq_tag_name binds
 // live rows only, so the archived row and the new one coexist happily — the
@@ -424,6 +425,12 @@ func restoreTagTx(ctx context.Context, tx pgx.Tx, id ids.TagID) (tagRow, error) 
 	if err != nil {
 		return tagRow{}, err
 	}
+	// A merge moved every record onto the survivor, so a restored word would
+	// come back empty while the merge it reverses stays done.
+	if before.MergedIntoID != nil {
+		return tagRow{}, fmt.Errorf("this tag was merged into another, and a merge cannot be undone: %w",
+			apperrors.ErrConflict)
+	}
 	row := tx.QueryRow(ctx, `
 		UPDATE tag SET archived_at = NULL
 		 WHERE id = $1 AND archived_at IS NOT NULL
@@ -436,7 +443,7 @@ func restoreTagTx(ctx context.Context, tx pgx.Tx, id ids.TagID) (tagRow, error) 
 	} else if err != nil {
 		if constraint, ok := storekit.UniqueViolation(err); ok && constraint == uqTagName {
 			return tagRow{}, fmt.Errorf(
-				"a live tag already holds this name; rename it before restoring this one: %w",
+				"a live tag already holds this name; rename that tag before restoring this one: %w",
 				apperrors.ErrConflict)
 		}
 		return tagRow{}, err

@@ -3,7 +3,7 @@
   "provider": "anthropic",
   "served_model": "claude-haiku-5-5",
   "env_class": "cloud_frontier",
-  "prompt_version": "pc25322beb773767ace41bf29717481c1",
+  "prompt_version": "p294d69272ae21d0d644921170e2f808f",
   "corpus_version": "v1",
   "verdict": "certified",
   "runs": 18,
@@ -18,34 +18,55 @@
   "context_scopes": null,
   "context_owed": 0,
   "judge_score_p50": 100,
-  "judge_score_min": 95,
-  "latency_p50": 9758,
-  "latency_p95": 14286,
-  "mean_tokens": 6372,
-  "mean_tokens_in": 4324,
-  "mean_tokens_out": 2047,
+  "judge_score_min": 90,
+  "latency_p50": 9255,
+  "latency_p95": 12070,
+  "mean_tokens": 6031,
+  "mean_tokens_in": 4326,
+  "mean_tokens_out": 1704,
   "mean_cached_tokens": 2966,
   "mean_cache_write_tokens": 847,
-  "est_cost_microusd": 1210,
+  "est_cost_microusd": 1038,
   "judge_served_model": "gemini-3.1-flash-lite",
   "judge_provider": "gemini",
   "self_judged": false,
   "served_identity_source": "response",
-  "ran_at": "2026-11-25T07:44:03Z",
+  "ran_at": "2026-11-27T14:32:08Z",
   "scenarios": [
+    {
+      "scenario": "deal_status_a_current_request_is_the_blocker",
+      "site": "deal_status",
+      "stamp": "fa8a5a1f639bca2b9f1db2310dcef6f55dca523321f3358bee6b11f42ee9c19877ef5a52b492250cc892b68d50d4f327bcc79477814d2c81f0d579a905c664fc82babaca582f8712672f9c16765e95798856ea573fed8a20a4f52482738ff2e7",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 3,
+      "passed": 3,
+      "judge_scores": [
+        100,
+        100,
+        100
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "context_owed": 0,
+      "reported_accepted": 3,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    },
     {
       "scenario": "deal_status_offer_left_hanging",
       "site": "deal_status",
       "stamp": "65cf19feb85a8c1fef9c5b9ba840b598c352d5e6b157dcc2a10a912d9f90629bab447adb85121c3fd24630cc1aa6044615b824e8a5d8582867743b72fa5ea5eada41e26f53bfcb21682a427b5c3561f94d7f04e2870c50dd982eac8ba7cd67ad",
       "verdict": "certified",
       "judge_band": "certified",
-      "runs": 6,
-      "passed": 6,
+      "runs": 3,
+      "passed": 3,
       "judge_scores": [
-        100,
-        95,
-        100,
-        100,
+        90,
         95,
         100
       ],
@@ -55,7 +76,31 @@
         "floor": 40
       },
       "context_owed": 0,
-      "reported_accepted": 6,
+      "reported_accepted": 3,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    },
+    {
+      "scenario": "deal_status_an_old_request_under_review_is_no_blocker",
+      "site": "deal_status",
+      "stamp": "04905e57114e07d035b4030d4dc7b6dcccbea720893a953fb861f93e41e6a201b4be10d373874ec7b852f97df6d0096e2acbfa417d170d531aafb0f4af048cf7539e9a662ebd5cdc271806b6a9f4d30519e24db9adec32443402316fbbe9dea0",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 3,
+      "passed": 3,
+      "judge_scores": [
+        100,
+        100,
+        90
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "context_owed": 0,
+      "reported_accepted": 3,
       "reported_wrong_answer": 0,
       "reported_invalid": 0,
       "reported_abstained": 0
@@ -69,11 +114,11 @@
       "runs": 6,
       "passed": 5,
       "judge_scores": [
-        95,
         100,
         100,
         100,
-        95,
+        100,
+        100,
         100
       ],
       "bands": {
@@ -93,12 +138,9 @@
       "stamp": "9539ccc4bca3d80343882cfcf5e83846a56cfc60bb0ae42940b8fe868fdffeabc9080836b2ce70386c4ad5fa0f59edfadcb2905ce0abedccf1124505a4ea018f9a2b806352d83d50fbe7bacf6b6b329d015cc79f3f391926dbe8748f3c579217",
       "verdict": "certified",
       "judge_band": "certified",
-      "runs": 6,
-      "passed": 6,
+      "runs": 3,
+      "passed": 3,
       "judge_scores": [
-        100,
-        100,
-        100,
         100,
         100,
         100
@@ -109,7 +151,7 @@
         "floor": 40
       },
       "context_owed": 0,
-      "reported_accepted": 6,
+      "reported_accepted": 3,
       "reported_wrong_answer": 0,
       "reported_invalid": 0,
       "reported_abstained": 0

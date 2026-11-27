@@ -149,3 +149,27 @@ var aboutEveryDeal = dealTopicStub{answer: func(ids []string) string {
 	}
 	return verdictsReply(0.95, verdicts...)(ids)
 }}
+
+// A timeline entry's request state reaches the input under that entry's own id,
+// and an entry with none leaves the input without a request_states map.
+func TestAFixtureEntrysRequestStateReachesTheInput(t *testing.T) {
+	t.Parallel()
+	f := dealStatusFixture{Timeline: []dealStatusActFixture{
+		{Label: "asked", Kind: "email", Direction: "inbound", RequestState: "request_review"},
+		{Label: "plain", Kind: "email", Direction: "outbound"},
+	}}
+	in, label, err := dealStatusInput(f)
+	if err != nil {
+		t.Fatalf("dealStatusInput: %v", err)
+	}
+	if got := in.RequestStates[label["asked"]]; got != "request_review" {
+		t.Errorf("state of the asking entry = %q, want request_review", got)
+	}
+	if len(in.RequestStates) != 1 {
+		t.Errorf("request_states = %v, want only the entry that carries a state", in.RequestStates)
+	}
+	plain, _, err := dealStatusInput(dealStatusFixture{Timeline: []dealStatusActFixture{{Label: "plain", Kind: "email"}}})
+	if err != nil || plain.RequestStates != nil {
+		t.Errorf("an entry with no state left request_states %v (err %v), want nil", plain.RequestStates, err)
+	}
+}

@@ -79,6 +79,9 @@ type dealStatusActFixture struct {
 	// already happened would score green with the field it tests absent.
 	When    string `json:"when"`
 	Excerpt string `json:"excerpt"`
+	// RequestState is what production's request classifier said of this entry:
+	// "current_request" or "request_review", empty for an entry that is no request.
+	RequestState string `json:"request_state"`
 }
 
 type dealStatusCases struct{}
@@ -137,6 +140,12 @@ func dealStatusInput(f dealStatusFixture) (dealstatus.StatusInput, map[string]st
 			ID: id, Kind: act.Kind, Direction: act.Direction,
 			Subject: act.Subject, At: act.At, When: when, Excerpt: act.Excerpt,
 		})
+		if act.RequestState != "" {
+			if in.RequestStates == nil {
+				in.RequestStates = map[string]string{}
+			}
+			in.RequestStates[id] = act.RequestState
+		}
 	}
 	for _, task := range f.OpenTasks {
 		if err := refuseUnnameable(task.Label, "open task", label); err != nil {
