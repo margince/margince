@@ -92,21 +92,41 @@ func TestAHandleAcrossWorkspacesNamesNoWorkspace(t *testing.T) {
 // handle unproven, and an older success must not displace a newer one.
 func TestAnOlderProofNeverOverwritesANewerCheck(t *testing.T) {
 	t.Parallel()
-	var proof atomic.Int64
-	stampProof(&proof, 100)
-	stampProof(&proof, -200)
-	stampProof(&proof, 150)
-	if got := proof.Load(); got != -200 {
+	var held atomic.Pointer[proof]
+	company := ids.From[ids.WorkspaceKind](ids.NewV7())
+	stampProof(&held, proof{at: 100, company: company})
+	stampProof(&held, proof{at: -200})
+	stampProof(&held, proof{at: 150, company: company})
+	if got := held.Load().at; got != -200 {
 		t.Fatalf("an older success after a newer failure left the stamp at %d, want -200", got)
 	}
-	stampProof(&proof, 300)
-	stampProof(&proof, 250)
-	if got := proof.Load(); got != 300 {
-		t.Fatalf("an older success displaced a newer one: stamp %d, want 300", got)
+	stampProof(&held, proof{at: 300, company: company})
+	stampProof(&held, proof{at: 250})
+	if got := held.Load().at; got != 300 {
+		t.Fatalf("an older check displaced a newer one: stamp %d, want 300", got)
 	}
-	db := &DB{installation: true, provenAt: &proof, recheck: time.Hour}
-	proof.Store(-1)
-	if db.recentlyProven() {
+}
+
+// Inside the recheck window the handle answers the proven company with no
+// query, and a failed check ends the window at once.
+func TestTheProvenCompanyIsTrustedOnlyInsideTheWindow(t *testing.T) {
+	t.Parallel()
+	at := time.Unix(1_000, 0)
+	company := ids.From[ids.WorkspaceKind](ids.NewV7())
+	db := (&DB{installation: true, proven: new(atomic.Pointer[proof]), recheck: time.Hour}).
+		WithClock(func() time.Time { return at })
+	stampProof(db.proven, proof{at: at.UnixNano(), company: company})
+	got, err := db.Workspace(context.Background())
+	if err != nil || got != company {
+		t.Fatalf("inside the window Workspace = %v, %v; want %v with no query", got, err, company)
+	}
+	at = at.Add(2 * time.Hour)
+	if _, ok := db.provenCompany(); ok {
+		t.Fatal("a proof older than the window was still trusted")
+	}
+	at = at.Add(time.Minute)
+	stampProof(db.proven, proof{at: -at.UnixNano()})
+	if _, ok := db.provenCompany(); ok {
 		t.Fatal("a handle whose last check failed counted as proven")
 	}
 }

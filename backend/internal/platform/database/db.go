@@ -38,11 +38,37 @@ type DB struct {
 	// on a handle nobody bounded — see Bounded.
 	budget   time.Duration
 	admitted bool
-	// provenAt stamps the newest in-transaction check of the company, as unix
-	// nanoseconds: positive for a live company, negative for none. Copies of a
-	// handle share it. See stampProof.
-	provenAt *atomic.Int64
-	recheck  time.Duration
+	// proven holds the newest check of the company. Copies of a handle share
+	// it. See stampProof.
+	proven  *atomic.Pointer[proof]
+	recheck time.Duration
+	// now dates a check and the window it is trusted for. Nil means time.Now.
+	now func() time.Time
+}
+
+// proof is one check of the installation's company. at is unix nanoseconds,
+// negative when no company was live.
+type proof struct {
+	at      int64
+	company ids.WorkspaceID
+}
+
+func (d *DB) clock() time.Time {
+	if d.now == nil {
+		return time.Now()
+	}
+	return d.now()
+}
+
+// WithClock is this handle dating its checks by now, so a test can freeze the
+// recheck window.
+func (d *DB) WithClock(now func() time.Time) *DB {
+	if d == nil {
+		return nil
+	}
+	dated := *d
+	dated.now = now
+	return &dated
 }
 
 // InstallationRecheck is how long a ForInstallation handle trusts its last
@@ -104,7 +130,7 @@ func (d *DB) Budget() time.Duration {
 // censuses in backend/gates resolve calls by name, and a callee named New
 // collides there.
 func ForInstallation(pool *pgxpool.Pool) *DB {
-	return &DB{pool: pool, installation: true, provenAt: new(atomic.Int64), recheck: InstallationRecheck}
+	return &DB{pool: pool, installation: true, proven: new(atomic.Pointer[proof]), recheck: InstallationRecheck}
 }
 
 // NewAcrossWorkspaces returns a handle whose transactions need no live
@@ -141,8 +167,7 @@ func (d *DB) Workspace(ctx context.Context) (ids.WorkspaceID, error) {
 	}
 	switch {
 	case d.installation:
-		live, err := InstallationWorkspace(ctx, d.pool)
-		return ids.From[ids.WorkspaceKind](live), err
+		return d.installationWorkspace(ctx)
 	case d.workspace != nil:
 		return d.workspace(ctx)
 	}
@@ -218,18 +243,19 @@ func (d *DB) transact(ctx context.Context, opts pgx.TxOptions, fn func(pgx.Tx) e
 		}
 	}
 	_, joined := snapshotOf(ctx)
-	if d.installation && !d.recentlyProven() {
+	if _, proven := d.provenCompany(); d.installation && !proven {
 		body := fn
 		fn = func(tx pgx.Tx) error {
-			started := time.Now().UnixNano()
-			if _, err := InstallationWorkspaceTx(ctx, tx); err != nil {
-				stampProof(d.provenAt, -time.Now().UnixNano())
+			started := d.clock().UnixNano()
+			live, err := InstallationWorkspaceTx(ctx, tx)
+			if err != nil {
+				stampProof(d.proven, proof{at: -d.clock().UnixNano()})
 				return fmt.Errorf("pg: resolving the installation's workspace: %w", err)
 			}
 			// A joined snapshot can be older than this check, so its answer
 			// would stamp a moment it does not describe.
 			if !joined {
-				stampProof(d.provenAt, started)
+				stampProof(d.proven, proof{at: started, company: ids.From[ids.WorkspaceKind](live)})
 			}
 			return body(tx)
 		}
@@ -258,32 +284,53 @@ func (d *DB) transact(ctx context.Context, opts pgx.TxOptions, fn func(pgx.Tx) e
 	return runTxWith(ctx, d.pool, opts, fn)
 }
 
-func (d *DB) recentlyProven() bool {
-	at := d.provenAt.Load()
-	return at > 0 && time.Since(time.Unix(0, at)) < d.recheck
+// provenCompany answers the company the last check found live, while that
+// check is inside the recheck window.
+func (d *DB) provenCompany() (ids.WorkspaceID, bool) {
+	last := d.proven.Load()
+	if last == nil || last.at <= 0 || d.clock().Sub(time.Unix(0, last.at)) >= d.recheck {
+		return ids.WorkspaceID{}, false
+	}
+	return last.company, true
 }
 
-// stampProof records a check taken at |stamp|, negative for a failure. It only
-// moves the stamp forward, so a slow transaction that proved the company live
-// cannot overwrite a newer failure or a newer success.
-func stampProof(proof *atomic.Int64, stamp int64) {
-	at := stamp
-	if at < 0 {
-		at = -at
+// installationWorkspace answers the proven company inside the window and looks
+// it up otherwise.
+func (d *DB) installationWorkspace(ctx context.Context) (ids.WorkspaceID, error) {
+	if company, ok := d.provenCompany(); ok {
+		return company, nil
 	}
+	started := d.clock().UnixNano()
+	live, err := InstallationWorkspace(ctx, d.pool)
+	if err != nil {
+		stampProof(d.proven, proof{at: -d.clock().UnixNano()})
+		return ids.WorkspaceID{}, err
+	}
+	company := ids.From[ids.WorkspaceKind](live)
+	stampProof(d.proven, proof{at: started, company: company})
+	return company, nil
+}
+
+// stampProof records a check, and only ever moves the stamp forward by its
+// absolute time. A slow transaction that proved the company live cannot
+// overwrite a newer failure or a newer success.
+func stampProof(held *atomic.Pointer[proof], next proof) {
 	for {
-		current := proof.Load()
-		known := current
-		if known < 0 {
-			known = -known
-		}
-		if known >= at {
+		current := held.Load()
+		if current != nil && abs64(current.at) >= abs64(next.at) {
 			return
 		}
-		if proof.CompareAndSwap(current, stamp) {
+		if held.CompareAndSwap(current, &next) {
 			return
 		}
 	}
+}
+
+func abs64(n int64) int64 {
+	if n < 0 {
+		return -n
+	}
+	return n
 }
 
 // WithReadAdmission opts expensive reads into the pool's shared allowance.
