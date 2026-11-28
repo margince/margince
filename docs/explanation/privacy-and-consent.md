@@ -105,7 +105,9 @@ its **proof**, and records a **decision** per recipient:
 Marketing consent needs the subject to answer a mail. A double-opt-in purpose needs a confirmed `consent_event`,
 completed **only by the data subject**. They complete it with a single-use link mailed to their own
 live primary address. No operator holds a token, because a token an operator can read and hand back
-proves nothing about the mailbox it should reach.
+proves nothing about the mailbox it should reach. The proof row of that grant keeps the address and
+device the link was answered from (`confirm_ip`, `confirm_user_agent`), with the address resolved by
+`httpserver.ClientIP`. The subject access export leaves both out.
 
 A refusal names only the address and tells nothing new. The engine is written once
 (`consent.NewGate`) and **injected into the send path** (activities) at the composition root. So
