@@ -151,7 +151,7 @@ func TestProjectLastActivity_CountsOnlyDirectlyLinkedActivities(t *testing.T) {
 	when := time.Date(2026, 8, 11, 9, 0, 0, 0, time.UTC)
 	// An assistant's call counts on the deal without inheriting its project.
 	if _, _, err := e.Activities.LogActivity(e.AgentFor(t, e.AdminUser, nil, AdminPerms), activities.LogActivityInput{
-		Kind: "call", Direction: new("inbound"), OccurredAt: &when, Source: "manual",
+		Kind: "call", Subject: new("Phase one call"), Direction: new("inbound"), OccurredAt: &when, Source: "manual",
 		Links: []activities.ActivityLinkInput{{EntityType: "deal", EntityID: ids.UUID(deal.Id)}},
 	}); err != nil {
 		t.Fatalf("logging a deal-only call: %v", err)
