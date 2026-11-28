@@ -411,6 +411,7 @@ func AsOffered(specs []mcp.ToolSpec) []mcp.ToolSpec {
 				break
 			}
 		}
+		spec = withoutSentencesNaming(spec, offered)
 		out = append(out, spec)
 	}
 	return out

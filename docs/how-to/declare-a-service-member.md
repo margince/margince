@@ -43,6 +43,8 @@ The answer is the new member. Keep its `id`.
 
 The call is refused with `409` and the code `company_not_described` until the installation has saved its own company with `PUT /company`. Save the company first, then declare the member.
 
+A bus delivery to the unit's subscriptions runs as the same member, when it holds one of the unit's secrets. See [React to a new company](land-companies-and-deals-from-an-extension.md#react-to-a-new-company).
+
 ## Let the feed run as it
 
 The extension files the feed's secret under the service member with `PutUser`, in a screen or a tool that only an operator reaches. Then the job tick lands records as the member:

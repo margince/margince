@@ -375,6 +375,7 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 **Rules**
 
 - `capture_freemail_domain_domain_check`: `CHECK (((domain = lower(domain)) AND (domain <> '')))`
+- `capture_freemail_domain_domain_one_spelling`: `CHECK (is_identifier_text(domain))`
 - `capture_freemail_domain_kind_check`: `CHECK ((kind = ANY (ARRAY['extra', 'never'])))`
 
 **Indexes**
@@ -628,6 +629,7 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 - `capture_pending_counterparty_confidence_range`: `CHECK (((confidence IS NULL) OR ((confidence >= (0)::numeric) AND (confidence <= (1)::numeric))))`
 - `capture_pending_counterparty_email_is_canonical`: `CHECK ((email = lower(btrim(email))))`
+- `capture_pending_counterparty_email_one_spelling`: `CHECK (is_identifier_text(email))`
 - `capture_pending_counterparty_kind_check`: `CHECK (((kind IS NULL) OR (kind = ANY (ARRAY['contact', 'role_mailbox', 'company_sender', 'newsletter', 'transactional', 'spam', 'personal', 'advisor', 'vendor_pitch']))))`
 - `capture_pending_counterparty_status_check`: `CHECK ((status = ANY (ARRAY['pending', 'unsure', 'real', 'noise', 'suppressed', 'rejected'])))`
 
@@ -670,6 +672,7 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 **Rules**
 
 - `capture_sender_override_address_is_canonical`: `CHECK ((address = lower(btrim(address))))`
+- `capture_sender_override_address_one_spelling`: `CHECK (is_identifier_text(address))`
 - `capture_sender_override_decision_check`: `CHECK ((decision = ANY (ARRAY['business', 'keep_out', 'personal'])))`
 - `capture_sender_override_user_address_key`: `UNIQUE (user_id, address)`
 
@@ -1001,6 +1004,7 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 **Rules**
 
 - `workspace_email_domain_domain_check`: `CHECK (((domain = lower(domain)) AND (domain <> '')))`
+- `workspace_email_domain_domain_one_spelling`: `CHECK (is_identifier_text(domain))`
 - `workspace_email_domain_source_check`: `CHECK ((source = ANY (ARRAY['admin', 'mailbox'])))`
 
 **Indexes**

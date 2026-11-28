@@ -116,6 +116,27 @@ func TestADealsCustomFieldsAreHeldToTheCfKeyGrammarAndCap(t *testing.T) {
 	}
 }
 
+func TestACompanysCustomFieldsAreHeldToTheSameRulesAsADeals(t *testing.T) {
+	ok := aCompanyRecord()
+	ok.Company.CustomFields = map[string]any{"cf_segment": "mid-market"}
+	if err := ok.Validate(); err != nil {
+		t.Fatalf("well-formed custom fields were refused: %v", err)
+	}
+	for name, fields := range map[string]map[string]any{
+		"a core column name": {"name": "x"},
+		"an upper-case key":  {"cf_Segment": "x"},
+	} {
+		rec := aCompanyRecord()
+		rec.Company.CustomFields = fields
+		if err := rec.Validate(); extension.RefusalOf(err) != extension.RefusalActivity {
+			t.Errorf("%s: err = %v, want a payload refusal", name, err)
+		}
+		if err := extension.ValidateCustomFieldKeys(fields); err == nil {
+			t.Errorf("%s: ValidateCustomFieldKeys accepted it", name)
+		}
+	}
+}
+
 func TestASourceMayDeclareCompanyAndDealKinds(t *testing.T) {
 	src := extension.IngressSource{System: "crm-x", Lands: []extension.RecordKind{extension.KindActivity, extension.KindCompany, extension.KindDeal}}
 	if err := src.Validate(); err != nil {

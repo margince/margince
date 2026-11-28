@@ -21,8 +21,9 @@ tree. So a new module comes under the rules as soon as its directory exists, wit
 
 What each directory owns, and the rule that goes with it:
 
-- `internal/shared/`: the leaves of tier 0, which use only the standard library (a test holds this). It
-  holds `kernel/` value packages (`ids`, `events`, `provenance`, `principal`, `values`, `diffhash` and
+- `internal/shared/`: the leaves of tier 0, which use only the standard library and each other. The
+  one exception is `values`, which composes text to NFC with `golang.org/x/text/unicode/norm`. A test
+  holds both. It holds `kernel/` value packages (`ids`, `events`, `provenance`, `principal`, `values`, `diffhash` and
   others).
   - It also holds `apperrors`, the fixed sentinel registry. Add to it only together with the error
     contract it implements, never for one call site.

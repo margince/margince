@@ -68,7 +68,7 @@ func ParseEmailReference(raw string) (Email, error) {
 // Reserved-domain classification includes old tombstones, so it needs syntax
 // without the write bound or refusal of the erasure's own address.
 func parseAddress(raw string) (Email, error) {
-	trimmed := strings.TrimSpace(raw)
+	trimmed := IdentifierText(raw)
 	if trimmed == "" {
 		return Email{}, &ParseError{Field: emailField, Code: "email_empty", Message: "an email address is required"}
 	}

@@ -3,7 +3,7 @@
 
 //go:build integration
 
-package compose
+package integration
 
 // A finding is visible exactly where the deal it is about is.
 //
@@ -28,6 +28,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -134,7 +135,7 @@ func TestAFindingIsVisibleExactlyWhereItsDealIs(t *testing.T) {
 	var found []assuranceExceptionSubject
 	if err := database.WithTx(repCtx, database.BindTo(pool, wsTyped).Pool(),
 		func(tx pgx.Tx) error {
-			rows, err := AssuranceExceptions(repCtx, tx)
+			rows, err := compose.AssuranceExceptions(repCtx, tx)
 			if err != nil {
 				return err
 			}
@@ -196,7 +197,7 @@ func TestAFindingIsVisibleExactlyWhereItsDealIs(t *testing.T) {
 	})
 	if err := database.WithTx(noDealCtx, database.BindTo(pool, wsTyped).Pool(),
 		func(tx pgx.Tx) error {
-			rows, err := AssuranceExceptions(noDealCtx, tx)
+			rows, err := compose.AssuranceExceptions(noDealCtx, tx)
 			if err != nil {
 				return err
 			}

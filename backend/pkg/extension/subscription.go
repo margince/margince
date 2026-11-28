@@ -71,11 +71,13 @@ type Delivery struct {
 // Subscription value sitting in a slice holds no route into the core. The core
 // mints rt for this one delivery and releases it when the handler returns.
 //
-// THERE IS NOBODY BEHIND A DELIVERY. rt.Caller() answers the zero Caller and
-// rt.Tx(…).Core() refuses, for the same reason a job tick's does: a core write
-// is checked against the caller's own permissions and a bus event has no
-// caller. A handler may read and write the unit's OWN tables, audit those
-// writes, and publish — which is what reacting to a fact consists of.
+// A delivery runs as the unit's service account when it has one: the live
+// service member its jobs land records as. rt.Caller() names that member.
+// rt.Tx(…).Core() is checked against the member's permissions and row scope,
+// so a record it cannot read answers ErrNotFound. With no such member the
+// delivery has nobody behind it. Caller answers the zero Caller and Core
+// refuses, as for a job tick. Either way a handler may use the unit's own
+// tables, audit those writes, and publish.
 //
 // THE BUS IS AT-LEAST-ONCE. The core suppresses the redelivery it can see (the
 // same event to the same subscription), but a handler must still be safe to run

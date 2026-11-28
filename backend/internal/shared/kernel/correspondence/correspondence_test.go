@@ -101,3 +101,18 @@ func TestFoldKeepsTheDotsAndDomainOfAGmailAddress(t *testing.T) {
 		}
 	}
 }
+
+// A mail header can carry a character that draws nothing, or an accent typed in
+// two parts. Fold drops the one and composes the other, so the key is one value.
+func TestFoldDropsWhatDrawsNothingAndComposesAccents(t *testing.T) {
+	t.Parallel()
+
+	for raw, want := range map[string]string{
+		"\u200bAnna@Company.example\ufeff": "anna@company.example",
+		"Jose\u0301@company.example":       "jos\u00e9@company.example",
+	} {
+		if got := Fold(raw); got != want {
+			t.Errorf("Fold(%q) = %q, want %q", raw, got, want)
+		}
+	}
+}
