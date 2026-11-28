@@ -32,8 +32,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "tools.name.check_availability": "Freie Kalenderzeiten prüfen",
   "tools.name.commit_import": "Einen Import bestätigen",
   "tools.name.create_record": "Einen Datensatz erstellen",
-  "tools.name.decide_approvals":
-    "Vorgemerkte Aktionen freigeben oder ablehnen",
+  "tools.name.decide_approvals": "Vorgemerkte Aktionen freigeben oder ablehnen",
   "tools.name.draft_outbound": "Eine E-Mail oder Folge-E-Mails entwerfen",
   "tools.name.enrich": "Unternehmensdaten von der Website ergänzen",
   "tools.name.find_records": "Datensätze finden",
