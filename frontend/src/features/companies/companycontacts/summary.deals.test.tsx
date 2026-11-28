@@ -9,6 +9,7 @@ import { afterEach, expect, test, vi } from "vitest";
 import type { components } from "../../../api/schema";
 import { pickOption } from "../../../design-system/select-testing";
 import { LocaleProvider } from "../../../i18n";
+import { en } from "../../../i18n/en";
 import { CoverageBand } from "./summary";
 
 type Coverage = components["schemas"]["CompanyCoverage"];
@@ -102,7 +103,7 @@ test("names the deal whose committee it reads, and switches to another", async (
   await pickOption(
     user,
     screen.getByRole("combobox", {
-      name: "Deal whose buying committee to show",
+      name: en["co.contacts.board.deal"],
     }),
     "Retrofit 2026",
   );
@@ -127,7 +128,7 @@ test("offers no deal picker when the account has one open deal", async () => {
   ).not.toBeNull();
   expect(
     screen.queryByRole("combobox", {
-      name: "Deal whose buying committee to show",
+      name: en["co.contacts.board.deal"],
     }),
   ).toBeNull();
 });
@@ -155,7 +156,7 @@ test("falls back to the newest deal's committee when the picked deal has closed"
   await pickOption(
     user,
     screen.getByRole("combobox", {
-      name: "Deal whose buying committee to show",
+      name: en["co.contacts.board.deal"],
     }),
     "Retrofit 2026",
   );
@@ -165,7 +166,7 @@ test("falls back to the newest deal's committee when the picked deal has closed"
   await waitFor(() =>
     expect(
       screen.queryByRole("combobox", {
-        name: "Deal whose buying committee to show",
+        name: en["co.contacts.board.deal"],
       }),
     ).toBeNull(),
   );

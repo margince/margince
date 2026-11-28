@@ -3,6 +3,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en } from "../../i18n/en";
 import {
   company,
   emptyPage,
@@ -35,7 +36,9 @@ describe("CompaniesScreen — the Lifecycle dial", () => {
     await waitFor(() => expect(urls.length).toBeGreaterThan(0));
 
     const values = within(await openFilterValues(user, "Lifecycle"));
-    expect(values.getByRole("radio", { name: "Any lifecycle" })).toBeTruthy();
+    expect(
+      values.getByRole("radio", { name: en["company.filterLifecycleAll"] }),
+    ).toBeTruthy();
     await user.click(values.getByRole("radio", { name: "Unknown" }));
 
     await waitFor(() =>

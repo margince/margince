@@ -213,7 +213,7 @@ describe("OwnerPick", () => {
     );
     expect(assign).not.toHaveBeenCalled();
     expect(
-      await screen.findByText("Returned to the unassigned queue"),
+      await screen.findByText(englishCopy["ownerPick.cleared"]),
     ).toBeInTheDocument();
   });
 
