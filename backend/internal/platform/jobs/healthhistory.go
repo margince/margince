@@ -48,7 +48,7 @@ func ReadHistory(ctx context.Context, pool *pgxpool.Pool, filter HistoryFilter) 
 		}
 	}()
 	where, args := historyWhere(filter)
-	groups, err := historyGroups(ctx, tx, where, args)
+	groups, err := historyGroups(ctx, tx, where, args, filter.Dispatchers)
 	if err != nil {
 		return History{}, err
 	}
@@ -80,7 +80,7 @@ func ReadHistory(ctx context.Context, pool *pgxpool.Pool, filter HistoryFilter) 
 }
 
 func historyWhere(f HistoryFilter) (string, []any) {
-	args := []any{f.Dispatchers}
+	var args []any
 	add := func(value any) string { args = append(args, value); return fmt.Sprintf("$%d", len(args)) }
 	where := `state::text IN ('retryable','discarded','cancelled')`
 	cutoff, from := add(f.Cutoff), add(f.From)
@@ -94,10 +94,13 @@ func historyWhere(f HistoryFilter) (string, []any) {
 	return where, args
 }
 
-func historyGroups(ctx context.Context, tx pgx.Tx, where string, args []any) ([]HealthGroup, error) {
-	rows, err := tx.Query(ctx, `SELECT kind,state::text,coalesce(kind = ANY($1::text[]), false),count(*)::int,
+// historyGroups binds the dispatcher kinds after the shared filter, because the
+// page query reads the same filter and Postgres refuses a parameter it never sees.
+func historyGroups(ctx context.Context, tx pgx.Tx, where string, args []any, dispatchers []string) ([]HealthGroup, error) {
+	groupArgs := append(append([]any{}, args...), dispatchers)
+	rows, err := tx.Query(ctx, fmt.Sprintf(`SELECT kind,state::text,coalesce(kind = ANY($%d::text[]), false),count(*)::int,
  min(coalesce(finalized_at,attempted_at,created_at)),max(coalesce(finalized_at,attempted_at,created_at))
- FROM river_job WHERE `+where+` GROUP BY 1,2,3 ORDER BY 1,2,3`, args...)
+ FROM river_job WHERE `, len(groupArgs))+where+` GROUP BY 1,2,3 ORDER BY 1,2,3`, groupArgs...)
 	if err != nil {
 		return nil, fmt.Errorf("jobs: grouping history: %w", err)
 	}
