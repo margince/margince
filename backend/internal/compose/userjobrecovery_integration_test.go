@@ -276,7 +276,7 @@ func TestADocumentReadingIsHandedBackAndClosedOnItsLastTry(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		ctx, cancel := context.WithCancel(context.Background())
+		ctx, cancel := context.WithCancel(boundBackground(t))
 		brain := failingDocumentBrain{err: tc.err}
 		if tc.timeout {
 			brain.cancel = cancel

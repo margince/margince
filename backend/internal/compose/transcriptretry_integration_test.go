@@ -40,7 +40,7 @@ func (e *transcriptEnv) tryTranscript(t *testing.T, first int, brains ...complet
 			language: installationLanguage(e.Pool), activities: e.Activities, users: identity.NewService(e.Pool), log: quiet,
 		}
 		worker.proposer = NewTranscriptProposer(e.Pool, brain, e.svc, now, quiet)
-		ctx, cancel := context.WithCancel(context.Background())
+		ctx, cancel := context.WithCancel(boundBackground(t))
 		if hook, ok := brain.(*interruptedBrain); ok && hook.before == nil {
 			hook.before = cancel
 		}
