@@ -1978,12 +1978,8 @@ kinds:
   # geocode_company, which re-asks AddressForGeocode, so the retry ledger
   # and the settled-address rules stay in exactly one place.
   #
-  # NO WORKSPACE ARG, like webhook_retry and for the same reason: a periodic
-  # insert has no tenant to name, and a WorkspaceScoped kind whose args carry
-  # none fails every tick with "declares WorkspaceScoped but carries no
-  # workspace". The pass reads the installation's own companies and stamps the
-  # workspace onto each per-company job it queues, which is where the tenant
-  # actually belongs — that job is the one that reads and writes a row.
+  # It carries no arguments, like every job: a periodic insert names nothing.
+  # The per-company job it queues is the one that reads and writes a row.
   geocode_backfill:
     role: worker
     go_type: GeocodeBackfillArgs
