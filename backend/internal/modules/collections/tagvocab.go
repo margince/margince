@@ -310,11 +310,6 @@ func (s *Store) UpdateTag(ctx context.Context, id ids.TagID, in TagUpdate, expec
 	if err := requireVocabularyAuthority(ctx, principal.ActionUpdate); err != nil {
 		return tagRow{}, err
 	}
-	if in.Color != nil {
-		if err := tagColorError(*in.Color); err != nil {
-			return tagRow{}, err
-		}
-	}
 	var name *string
 	if in.Name != nil {
 		normalized, err := ValidateTagName(*in.Name)
