@@ -56,7 +56,7 @@ func TestTheDirectionlessSenderTaskRefoldsTheContactsItMoves(t *testing.T) {
 	in := datatask.BatchIn{Limit: 200, RunID: ids.NewV7()}
 	for range 1000 {
 		var out datatask.BatchOut
-		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) (err error) {
+		if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) (err error) {
 			out, err = task.Steps[0].Batch(ctx, tx, in)
 			return err
 		}); err != nil {

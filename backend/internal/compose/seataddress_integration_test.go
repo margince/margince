@@ -45,7 +45,7 @@ func seatAddressesNow(t *testing.T, e *integration.Env) (storekit.SeatAddresses,
 	t.Helper()
 	var seats storekit.SeatAddresses
 	var history map[string][]string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var err error
 		if seats, err = storekit.WorkspaceSeatAddresses(context.Background(), tx); err != nil {
 			return err
@@ -194,7 +194,7 @@ func TestAnInvitationsChangedEmailMovesTheInternalAddress(t *testing.T) {
 func answeringSeats(t *testing.T, e *integration.Env) map[string][]string {
 	t.Helper()
 	var seats map[string][]string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var err error
 		seats, err = storekit.UnambiguousMailSeatIdentities(context.Background(), tx)
 		return err
@@ -207,7 +207,7 @@ func answeringSeats(t *testing.T, e *integration.Env) map[string][]string {
 func memberUpdatedAt(t *testing.T, e *integration.Env, member ids.UserID) time.Time {
 	t.Helper()
 	var at time.Time
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT updated_at FROM app_user WHERE id = $1`, member).Scan(&at)
 	}); err != nil {
 		t.Fatal(err)

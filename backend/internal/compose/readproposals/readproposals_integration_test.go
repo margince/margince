@@ -66,7 +66,7 @@ func keyed(t *testing.T, e *integration.Env, table string, read ids.UUID) []ids.
 	t.Helper()
 	column := map[string]string{"site_read_proposal": "site_read_id", "transcript_read_proposal": "transcript_read_id"}[table]
 	var list []ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT ARRAY(SELECT approval_id FROM `+pgx.Identifier{table}.Sanitize()+
 			` WHERE `+pgx.Identifier{column}.Sanitize()+` = $1 ORDER BY position)`, read).Scan(&list)
 	}); err != nil {
@@ -114,7 +114,7 @@ func TestTheTaskKeysEveryOlderListAndReplaysAsANoOp(t *testing.T) {
 	}
 
 	for _, step := range task.Steps {
-		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			out, err := step.Batch(ctx, tx, datatask.BatchIn{Limit: 100})
 			if err == nil && (out.Changed != 0 || !out.Done) {
 				t.Errorf("%s: a replay changed %d read(s), done %v, want none and done", step.Name, out.Changed, out.Done)
@@ -179,7 +179,7 @@ func TestTheTaskRollsBackWithItsBatchAndRefusesAMalformedCursor(t *testing.T) {
 	if got := keyed(t, e, "transcript_read_proposal", read); len(got) != 0 {
 		t.Errorf("the rolled-back batch left keyed rows %v", got)
 	}
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := copyBatch(ctx, tx, datatask.BatchIn{Cursor: []byte(`"bad cursor"`), Limit: 2})
 		return err
 	}); err == nil {
@@ -194,7 +194,7 @@ func TestACopyRefusesAHumanAndAnEstimateRefusesAStranger(t *testing.T) {
 	human := e.As(e.Rep1, nil, integration.AdminPerms)
 	stranger := e.As(e.Rep1, nil, principal.Permissions{})
 	for _, step := range DataTask().Steps {
-		if err := database.WithWorkspaceTx(human, e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(human, e.Pool, func(tx pgx.Tx) error {
 			_, err := step.Batch(human, tx, datatask.BatchIn{Limit: 2})
 			return err
 		}); err == nil {
@@ -217,7 +217,7 @@ func TestACancelledCopyOrCountIsAnError(t *testing.T) {
 		if _, _, err := step.Estimate(cancelled, e.Pool, 10); err == nil {
 			t.Errorf("%s estimated on a cancelled context", step.Name)
 		}
-		if err := database.WithWorkspaceTx(systemCtx(e), e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(systemCtx(e), e.Pool, func(tx pgx.Tx) error {
 			_, err := step.Batch(cancelled, tx, datatask.BatchIn{Limit: 2})
 			return err
 		}); err == nil {

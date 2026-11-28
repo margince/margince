@@ -74,7 +74,7 @@ func seedWaitingMail(t *testing.T, e *integration.Env, subject string) ids.UUID 
 	t.Helper()
 	activity := ids.NewV7()
 	contact := ids.NewV7()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(), `
 			INSERT INTO contact (id, full_name, source, captured_by)
 			VALUES ($1, 'Buyer Contact', 'seed', 'system')`, contact); err != nil {
@@ -106,7 +106,7 @@ func seedWaitingMail(t *testing.T, e *integration.Env, subject string) ids.UUID 
 func verdictOf(t *testing.T, e *integration.Env, id ids.UUID) *string {
 	t.Helper()
 	var verdict *string
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT owed_verdict FROM activity WHERE id = $1`, id).Scan(&verdict)
 	})

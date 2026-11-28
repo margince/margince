@@ -42,7 +42,11 @@ var publicRequests = map[string]map[string]bool{
 	"/v1/status": {http.MethodGet: true, http.MethodHead: true},
 	// Dispact's push receiver: the signature with the sealed events secret is
 	// the credential, and the handler checks it before reading anything.
-	"/v1/channel-events/dispact": {http.MethodPost: true},
+	"/v1/channel-events/dispact":           {http.MethodPost: true},
+	"/v1/channel-events/slack":             {http.MethodPost: true},
+	"/v1/channel-events/teams/bot":         {http.MethodPost: true},
+	"/v1/channel-events/teams/graph":       {http.MethodPost: true},
+	"/v1/channel-providers/slack/callback": {http.MethodGet: true},
 	// Zalo's push receiver: the X-ZEvent-Signature MAC with the sealed OA secret
 	// key is the credential, and the handler checks it before reading anything.
 	"/v1/channel-events/zalo-oa": {http.MethodPost: true},
@@ -111,7 +115,7 @@ func AdmittedWithoutSession(r *http.Request) bool {
 const publicBookingPrefix = "/v1/public/"
 
 func isPublicRequest(r *http.Request) bool {
-	return publicRequests[r.URL.Path][r.Method] || (r.Method == http.MethodGet && isOIDCLoginRequest(r.URL.Path))
+	return publicRequests[r.URL.Path][r.Method] || (r.Method == http.MethodGet && (isOIDCLoginRequest(r.URL.Path) || isOneSegmentCallback(r.URL.Path, "/v1/messenger/")))
 }
 
 // isOIDCLoginRequest matches the Google-sign-in login routes,

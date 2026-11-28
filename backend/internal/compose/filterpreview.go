@@ -150,8 +150,8 @@ func (h filterPreviewHandlers) preview(
 	ctx context.Context, engine storekit.Query, pred storekit.Predicate, scope string, after *ids.UUID, limit int, logged bool,
 ) (crmcontracts.FilterPreview, error) {
 	var out crmcontracts.FilterPreview
-	err := database.WithWorkspaceSnapshot(ctx, h.pool, func(ctx context.Context) error {
-		return database.WithWorkspaceTx(ctx, h.pool, func(tx pgx.Tx) error {
+	err := database.WithSnapshot(ctx, h.pool, func(ctx context.Context) error {
+		return database.WithTx(ctx, h.pool, func(tx pgx.Tx) error {
 			return previewIn(ctx, tx, engine, pred, scope, after, limit, logged, &out)
 		})
 	})

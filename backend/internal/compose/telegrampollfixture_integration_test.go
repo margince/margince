@@ -264,7 +264,7 @@ func telegramStoredPollOffset(t *testing.T, e *integration.Env, conn capture.Cha
 	t.Helper()
 	var offset int64
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `SELECT poll_offset FROM channel_connection WHERE id = $1`, conn.ID).Scan(&offset)
 	}); err != nil {
 		t.Fatalf("reading the stored poll offset: %v", err)
@@ -278,7 +278,7 @@ func telegramConnectionVersion(t *testing.T, e *integration.Env, conn capture.Ch
 	t.Helper()
 	var version int64
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `SELECT version FROM channel_connection WHERE id = $1`, conn.ID).Scan(&version)
 	}); err != nil {
 		t.Fatalf("reading the connection version: %v", err)

@@ -75,7 +75,7 @@ func raiseBacklogNotice(
 func readLatestNotice(ctx context.Context, t *testing.T, pool *pgxpool.Pool, seat ids.UUID) (string, string) {
 	t.Helper()
 	var subject, body string
-	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
 			SELECT subject, body FROM notice
 			 WHERE recipient_user_id = $1

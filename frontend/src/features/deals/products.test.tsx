@@ -12,6 +12,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
 import { type Locale, LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { ProductsAdmin } from "./products";
 
@@ -128,7 +129,9 @@ async function pick(user: User, field: string, choice: string) {
 }
 
 function periodSelect() {
-  return screen.queryByRole("combobox", { name: "Billing period" });
+  return screen.queryByRole("combobox", {
+    name: englishCopy["product.billingInterval"],
+  });
 }
 
 async function fillRequired(user: User) {
@@ -151,13 +154,13 @@ function newButton() {
   return screen.queryByRole("button", { name: "New product" });
 }
 function editButton() {
-  return screen.queryByRole("button", { name: "Edit product" });
+  return screen.queryByRole("button", { name: englishCopy["product.edit"] });
 }
 function archiveButton() {
-  return screen.queryByRole("button", { name: "Archive product" });
+  return screen.queryByRole("button", { name: englishCopy["product.archive"] });
 }
 function postureLine() {
-  return screen.queryByText("Read-only. Your role cannot change products.");
+  return screen.queryByText(englishCopy["product.readOnly"]);
 }
 
 describe("ProductsAdmin", () => {
@@ -225,7 +228,7 @@ describe("ProductsAdmin", () => {
     await user.type(sku, "CONS-DAY");
     await user.click(screen.getByText("Create"));
     expect(
-      await screen.findByText("Another product already has this SKU."),
+      await screen.findByText(englishCopy["product.skuTaken"]),
     ).toBeTruthy();
     expect(sku.getAttribute("aria-invalid")).toBe("true");
     expect(screen.queryByText(/sku already in use/)).toBeNull();
@@ -381,7 +384,7 @@ describe("ProductsAdmin", () => {
     render(<ProductsAdmin />);
     await openRowMenu();
     expect(
-      await screen.findByRole("button", { name: "Edit product" }),
+      await screen.findByRole("button", { name: englishCopy["product.edit"] }),
     ).toBeTruthy();
     expect(screen.getByRole("columnheader", { name: "Actions" })).toBeTruthy();
     expect(newButton()?.hasAttribute("disabled")).toBe(true);
@@ -394,7 +397,9 @@ describe("ProductsAdmin", () => {
     render(<ProductsAdmin />);
     await openRowMenu();
     expect(
-      await screen.findByRole("button", { name: "Archive product" }),
+      await screen.findByRole("button", {
+        name: englishCopy["product.archive"],
+      }),
     ).toBeTruthy();
     expect(newButton()?.hasAttribute("disabled")).toBe(true);
     expect(editButton()).toBeNull();
@@ -453,7 +458,9 @@ describe("ProductsAdmin", () => {
     expect(plan.getByText("Monthly")).toBeTruthy();
     expect(plan.getByText("Inactive")).toBeTruthy();
     const old = await row("Old Workshop");
-    expect(old.getByText("Not specified")).toBeTruthy();
+    expect(
+      old.getByText(englishCopy["product.billingUnclassified"]),
+    ).toBeTruthy();
     expect(old.getByText("Archived")).toBeTruthy();
   });
 
@@ -463,7 +470,7 @@ describe("ProductsAdmin", () => {
     render(<ProductsAdmin />);
     await user.click(await screen.findByTestId("new-record"));
     expect(await offered(user, "Billing")).toEqual([
-      "Not specified",
+      englishCopy["product.billingUnclassified"],
       "One-time",
       "Recurring",
     ]);
@@ -472,12 +479,14 @@ describe("ProductsAdmin", () => {
     await pick(user, "Billing", "One-time");
     expect(periodSelect()).toBeNull();
     await pick(user, "Billing", "Recurring");
-    expect(await offered(user, "Billing period")).toEqual([
-      "Monthly",
-      "Quarterly",
-      "Every six months",
-      "Yearly",
-    ]);
+    expect(await offered(user, englishCopy["product.billingInterval"])).toEqual(
+      [
+        "Monthly",
+        "Quarterly",
+        englishCopy["product.billingHalfYearly"],
+        "Yearly",
+      ],
+    );
     await pick(user, "Billing", "One-time");
     expect(periodSelect()).toBeNull();
   });
@@ -582,7 +591,7 @@ describe("ProductsAdmin", () => {
       await screen.findByRole("button", { name: "Actions for Consulting Day" }),
     );
     await user.click(
-      await screen.findByRole("button", { name: "Edit product" }),
+      await screen.findByRole("button", { name: englishCopy["product.edit"] }),
     );
     expect(
       (await screen.findByRole("combobox", { name: "Unit" })).textContent,
@@ -598,10 +607,10 @@ describe("ProductsAdmin", () => {
     render(<ProductsAdmin />);
     await openRowMenu();
     await userEvent.click(
-      await screen.findByRole("button", { name: "Edit product" }),
+      await screen.findByRole("button", { name: englishCopy["product.edit"] }),
     );
     expect(
-      await screen.findByRole("dialog", { name: "Edit product" }),
+      await screen.findByRole("dialog", { name: englishCopy["product.edit"] }),
     ).toBeTruthy();
     expect(screen.getByRole("textbox", { name: /Name/ })).toHaveProperty(
       "value",
@@ -611,12 +620,12 @@ describe("ProductsAdmin", () => {
     await userEvent.keyboard("{Escape}");
     await userEvent.keyboard("{Enter}");
     await userEvent.click(
-      await screen.findByRole("button", { name: "Archive product" }),
+      await screen.findByRole("button", {
+        name: englishCopy["product.archive"],
+      }),
     );
     expect(
-      await screen.findByText(
-        "Archive this product? Existing offer lines keep their snapshot.",
-      ),
+      await screen.findByText(englishCopy["product.archiveConfirm"]),
     ).toBeTruthy();
   });
 
@@ -636,7 +645,7 @@ describe("ProductsAdmin", () => {
     render(<ProductsAdmin />);
     await openRowMenu();
     await user.click(
-      await screen.findByRole("button", { name: "Edit product" }),
+      await screen.findByRole("button", { name: englishCopy["product.edit"] }),
     );
     const rate = await screen.findByRole("textbox", {
       name: /Default tax rate/,
@@ -669,7 +678,9 @@ describe("ProductsAdmin", () => {
       await screen.findByRole("button", { name: "Actions for Support Plan" }),
     );
     expect(
-      await screen.findByRole("button", { name: "Archive product" }),
+      await screen.findByRole("button", {
+        name: englishCopy["product.archive"],
+      }),
     ).toBeTruthy();
   });
 });

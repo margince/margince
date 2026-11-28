@@ -9,6 +9,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { stubClipboard } from "../../design-system/clipboard-testing";
+import { en as englishCopy } from "../../i18n/en";
 import { jsonResponse, render } from "../../testing/settings.testkit";
 import { InstallationConfigurationPage } from "./installation-configuration";
 
@@ -87,13 +88,19 @@ it("lists every setting with its value, its source and its variable", async () =
 
   await screen.findByText("http.port");
   expect(within(rowOf("http.port")).getByText("8080")).toBeInTheDocument();
-  expect(within(rowOf("http.port")).getByText("Default value")).toBeVisible();
+  expect(
+    within(rowOf("http.port")).getByText(
+      englishCopy["configuration.source.default"],
+    ),
+  ).toBeVisible();
   expect(
     within(rowOf("http.port")).getByText("MARGINCE_HTTP_PORT"),
   ).toBeVisible();
   expect(within(rowOf("company.name")).getByText("Acme")).toBeVisible();
   expect(
-    within(rowOf("company.name")).getByText("Saved in the app"),
+    within(rowOf("company.name")).getByText(
+      englishCopy["configuration.source.database"],
+    ),
   ).toBeVisible();
 });
 
@@ -251,10 +258,16 @@ it("shows a long default whole in the row's detail and copies it", async () => {
     screen.getByRole("button", { name: "Show details for ai.budget" }),
   );
   expect(await screen.findByText(budget)).toBeVisible();
-  expect(screen.getByText("Full default")).toBeVisible();
+  expect(
+    screen.getByText(englishCopy["configuration.detail.fullDefault"]),
+  ).toBeVisible();
   expect(screen.queryByText(/Default:/, { selector: "span" })).toBeNull();
 
-  await user.click(screen.getByRole("button", { name: "Copy default" }));
+  await user.click(
+    screen.getByRole("button", {
+      name: englishCopy["configuration.copyDefault"],
+    }),
+  );
   await waitFor(() => expect(clipboard.written).toEqual([budget]));
   expect(screen.getByRole("button", { name: "Copied" })).toBeVisible();
   // The clipboard holds the default alone, so the value's control still offers its copy.
@@ -262,7 +275,11 @@ it("shows a long default whole in the row's detail and copies it", async () => {
 
   await user.click(screen.getByRole("button", { name: "Copy value" }));
   await waitFor(() => expect(clipboard.written).toEqual([budget, changed]));
-  expect(screen.getByRole("button", { name: "Copy default" })).toBeVisible();
+  expect(
+    screen.getByRole("button", {
+      name: englishCopy["configuration.copyDefault"],
+    }),
+  ).toBeVisible();
 });
 
 const SOURCED: Entry[] = [
@@ -330,7 +347,7 @@ it("narrows by key and by environment variable", async () => {
 
   await screen.findByText("http.port");
   const filter = screen.getByRole("searchbox", {
-    name: "Filter by key or environment variable",
+    name: englishCopy["configuration.search"],
   });
 
   await user.type(filter, "worker.conc");
@@ -353,7 +370,7 @@ it("opens on the filter its address carries", async () => {
   expect(screen.queryByText("http.port")).toBeNull();
   expect(
     screen.getByRole("searchbox", {
-      name: "Filter by key or environment variable",
+      name: englishCopy["configuration.search"],
     }),
   ).toHaveValue("MARGINCE_WORKER");
 });
@@ -367,7 +384,7 @@ it("keeps the filter in its address", async () => {
   await screen.findByText("http.port");
   await user.type(
     screen.getByRole("searchbox", {
-      name: "Filter by key or environment variable",
+      name: englishCopy["configuration.search"],
     }),
     "http",
   );
@@ -383,12 +400,12 @@ it("says so when nothing matches", async () => {
   await screen.findByText("http.port");
   await user.type(
     screen.getByRole("searchbox", {
-      name: "Filter by key or environment variable",
+      name: englishCopy["configuration.search"],
     }),
     "zzz-no-such-setting",
   );
   expect(
-    await screen.findByText("No setting matches this filter."),
+    await screen.findByText(englishCopy["configuration.noMatch"]),
   ).toBeVisible();
 });
 

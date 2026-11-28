@@ -61,7 +61,7 @@ func firstContactID(t *testing.T, e *apptest.AppEnv) string {
 func setRunStatus(t *testing.T, e *apptest.AppEnv, runID, status string) {
 	t.Helper()
 	ctx := e.DealWriterContext(t)
-	err := database.WithWorkspaceTx(ctx, e.DB().Pool(), func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.DB().Pool(), func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `UPDATE import_run SET status = $2 WHERE id = $1`, runID, status)
 		return err
 	})

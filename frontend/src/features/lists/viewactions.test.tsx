@@ -32,7 +32,6 @@ afterEach(() => {
 const VIEW: SavedView = {
   id: "v1",
   owner_id: "u-1",
-  shared_scope: "private",
   resource: "contacts",
   name: "Berlin contacts",
   query: { filter: { and: [{ field: "city", op: "eq", value: "Berlin" }] } },

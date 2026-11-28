@@ -7,6 +7,7 @@ import {
   INQUIRY_FIRST_SOURCE,
   INQUIRY_GRANTS,
 } from "../../components/websiteinquiry.fixtures";
+import { en as englishCopy } from "../../i18n/en";
 import { OpenSourceProvider } from "../../lib/opensource";
 import { ViewerZoneProvider } from "../../lib/viewerzone";
 import {
@@ -51,7 +52,9 @@ export const AcceptedSubmission: Story = {
     const canvas = within(canvasElement);
     await expect(canvas.getByText("Request type: Quote")).toBeVisible();
     await expect(
-      canvas.getByRole("button", { name: "Open submission" }),
+      canvas.getByRole("button", {
+        name: englishCopy["inquiry.openSubmission"],
+      }),
     ).toBeVisible();
   },
 };
@@ -59,9 +62,13 @@ export const SourceUnavailable: Story = {
   args: { facts: {} },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(canvas.getByText("Receipt details unavailable")).toBeVisible();
     await expect(
-      canvas.queryByRole("button", { name: "Open submission" }),
+      canvas.getByText(englishCopy["inquiry.receivedUnavailable"]),
+    ).toBeVisible();
+    await expect(
+      canvas.queryByRole("button", {
+        name: englishCopy["inquiry.openSubmission"],
+      }),
     ).toBeNull();
   },
 };

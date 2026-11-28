@@ -103,16 +103,23 @@ function foldKey<Option extends string>(
     widths.set(tab.dataset.tab ?? "", tab.offsetWidth + missing);
   }
   const widthOf = (option: Option) => widths.get(option) ?? 0;
-  const gap = Number.parseFloat(getComputedStyle(element).columnGap) || 0;
+  const style = getComputedStyle(element);
+  const gap = Number.parseFloat(style.columnGap) || 0;
+  const padding =
+    (Number.parseFloat(style.paddingInlineStart) || 0) +
+    (Number.parseFloat(style.paddingInlineEnd) || 0);
   const more =
     element.querySelector<HTMLElement>(".recordtabs-more")?.offsetWidth ?? 0;
   const folded = foldToFit(options, open, widthOf, {
-    room: element.clientWidth,
+    room: Math.max(0, element.clientWidth - padding),
     more,
     inset,
     gap,
   });
-  const least = options.length > 0 ? widthOf(open) + gap + more : 0;
+  const least =
+    options.length > 0
+      ? Math.max(0, widthOf(open) - inset + gap + more) + padding
+      : 0;
   return [least, ...folded].join(SEPARATOR);
 }
 

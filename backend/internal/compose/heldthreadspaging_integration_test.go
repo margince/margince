@@ -35,7 +35,7 @@ func seedHeldThread(t *testing.T, e *integration.Env, user ids.UUID, key, status
 	if seen == nil {
 		seen = []string{}
 	}
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		var message *ids.UUID
 		if !erased {
@@ -196,7 +196,7 @@ func TestTheLedgerAnswersOnlyForAnErasedMessage(t *testing.T) {
 func TestAnErasedAddressIsNoLongerSearchable(t *testing.T) {
 	e := integration.Setup(t)
 	seedHeldThread(t, e, e.Rep1, "erased", "held", 1, time.Date(2026, 9, 1, 9, 0, 0, 0, time.UTC), true, "Lena@Prospect.test", "sam@northwind.test")
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return capture.NewPendingStore(InstallationDB(e.Pool)).PurgePartySourcesForEmailsTx(e.Admin(), tx, []string{" LENA@PROSPECT.TEST "})
 	}); err != nil {
 		t.Fatalf("erasing the address: %v", err)

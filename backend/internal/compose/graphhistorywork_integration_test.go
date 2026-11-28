@@ -30,7 +30,7 @@ import (
 func historyGraphEvents(t *testing.T, b *backfillWireEnv, run ids.UUID) []events.Envelope {
 	t.Helper()
 	var eventsFound []events.Envelope
-	if err := database.WithWorkspaceTx(b.env.Admin(), b.env.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(b.env.Admin(), b.env.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(context.Background(), `SELECT o.envelope FROM event_outbox o JOIN audit_log a
    ON a.id=(o.envelope->'trace'->>'audit_log_id')::uuid WHERE a.batch_id=@run
    AND o.envelope->>'type'='activity.captured' ORDER BY o.seq`, pgx.NamedArgs{"run": run})
@@ -133,7 +133,7 @@ func TestHistoricalGraphArrivalsCoalesceUntilTheImportEnds(t *testing.T) {
 	if _, err := releaseTerminalImportWork(system, b.env.Pool); err != nil {
 		t.Fatal(err)
 	}
-	if err := database.WithWorkspaceTx(system, graphPool, func(tx pgx.Tx) error {
+	if err := database.WithTx(system, graphPool, func(tx pgx.Tx) error {
 		more, err := search.DrainPendingGraphTx(system, tx, 100)
 		if more {
 			return errors.New("one pair unexpectedly filled the drain cohort")
@@ -156,7 +156,7 @@ func TestHistoricalGraphArrivalsCoalesceUntilTheImportEnds(t *testing.T) {
 	}
 	v := edgeEnv{b.env}
 	drained := v.snapshot(t)
-	if err := database.WithWorkspaceTx(system, b.env.Pool, func(tx pgx.Tx) error { return search.RebuildEdges(system, tx) }); err != nil {
+	if err := database.WithTx(system, b.env.Pool, func(tx pgx.Tx) error { return search.RebuildEdges(system, tx) }); err != nil {
 		t.Fatal(err)
 	}
 	if rebuilt := v.snapshot(t); !equalSnapshots(drained, rebuilt) {

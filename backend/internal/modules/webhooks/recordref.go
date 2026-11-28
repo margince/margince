@@ -11,19 +11,14 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/recordpage"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // recordRoutes is the app's hash route for each record type that has a page,
 // a mirror of frontend/src/lib/entity.ts ENTITY that recordroutes_test.go
 // holds to it.
-var recordRoutes = map[string]string{
-	string(datasource.RecordContact): "contacts",
-	string(datasource.RecordCompany): "companies",
-	string(datasource.RecordDeal):    "deals",
-	string(datasource.RecordLead):    "leads",
-	string(datasource.RecordProject): "projects",
-}
+var recordRoutes = recordpage.Routes()
 
 // namedRecords are the record types whose name and owner a delivery carries,
 // with the table and column that hold the name. Each table keeps its owner in
@@ -47,12 +42,7 @@ const (
 // recordURL links a record to its page, or nil when the type has no page or
 // the installation has no public base URL. baseURL carries no trailing slash.
 func recordURL(baseURL, entityType string, id ids.UUID) *string {
-	route, ok := recordRoutes[entityType]
-	if !ok || baseURL == "" || id.IsZero() {
-		return nil
-	}
-	link := baseURL + "/#/" + route + "/" + id.String()
-	return &link
+	return recordpage.URL(baseURL, entityType, id)
 }
 
 // recordRef is what a delivery says about its record beyond the id.

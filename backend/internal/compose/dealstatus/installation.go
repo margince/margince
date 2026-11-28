@@ -19,7 +19,7 @@ import (
 func (s *Service) gatherInstallation(ctx context.Context, f *facts) error {
 	f.lang = identity.BaseLanguageForPrompt(ctx, s.pool)
 	f.say = identity.ReaderLanguageForPrompt(ctx, s.pool)
-	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		loc, err := identity.ZoneAppliedTx(ctx, tx)
 		f.loc = loc
 		return err

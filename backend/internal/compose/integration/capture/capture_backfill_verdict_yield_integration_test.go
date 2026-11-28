@@ -75,7 +75,7 @@ func TestABackfillCountsTheContactTheVerdictMakesFromItsMail(t *testing.T) {
 	}
 
 	var queuedBy *ids.UUID
-	if err := database.WithWorkspaceTx(wsCtx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(wsCtx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(wsCtx, `SELECT backfill_id FROM capture_pending_counterparty WHERE email = 'zoe@gmail.com'`).
 			Scan(&queuedBy)
 	}); err != nil {

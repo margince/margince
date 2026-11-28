@@ -234,10 +234,10 @@ package name is not enough.
   can use a migration if `backend/migrationrewrites.txt` states its size and why the work fits when
   the API starts. Keep each shipped task in the code for every supported upgrade. See
   [docs/how-to/add-a-data-task.md](docs/how-to/add-a-data-task.md).
-- **The `database.WithWorkspaceTx` contract**: every tenant query goes through it, and no path
-  reaches tenant data without it. `scripts/check-rls-store-path.sh` holds this. No table has
-  row-level security: a unit table declares no `workspace_id` and no policy, and `extmigrategate`
-  refuses one that does.
+- **The `database.WithTx` contract**: every module statement runs in the transaction that also writes
+  its audit and outbox rows. `scripts/check-rls-store-path.sh` holds this; its only waiver is a
+  `// pool-exempt: <reason>` line. No table has row-level security: a unit table declares no
+  `workspace_id` and no policy, and `extmigrategate` refuses one that does.
 - **`internal/shared/apperrors`**: a fixed list of error values. Add to it only together with a
   change to the error contract it serves, never for one call site.
 

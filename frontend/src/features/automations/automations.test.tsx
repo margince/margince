@@ -288,16 +288,12 @@ describe("AutomationsAdmin (B-EP09.15)", () => {
     });
     // The new row lands on the other tab, so the library says where.
     expect(
-      await screen.findByText(
-        "Created paused. Turn it on under Your automations.",
-      ),
+      await screen.findByText(en["auto.createdPausedLibrary"]),
     ).toBeTruthy();
     rerender(<AutomationsAdmin view="mine" />);
     // the honest post-create state: paused until the user enables it
     await waitFor(() =>
-      expect(
-        screen.getByText("Created paused. Nothing runs until it is enabled."),
-      ).toBeTruthy(),
+      expect(screen.getByText(en["auto.createdPaused"])).toBeTruthy(),
     );
     const row = await screen.findByTestId("automation-au-1");
     // The state is the switch's own, announced rather than restated beside it
@@ -338,13 +334,17 @@ describe("AutomationsAdmin (B-EP09.15)", () => {
     );
     const confirmationRequired = screen.getByTestId("automation-au-1");
     const autoExecute = screen.getByTestId("automation-au-2");
-    const badge = within(confirmationRequired).getByText("Needs approval");
+    const badge = within(confirmationRequired).getByText(
+      en["auto.tier.approval"],
+    );
     expect(
       within(confirmationRequired)
         .getByText("Confirmation-required one")
         .parentElement?.contains(badge),
     ).toBe(true);
-    expect(within(autoExecute).queryByText("Needs approval")).toBeNull();
+    expect(
+      within(autoExecute).queryByText(en["auto.tier.approval"]),
+    ).toBeNull();
     expect(screen.queryByRole("columnheader", { name: "Mode" })).toBeNull();
   });
 
@@ -390,11 +390,7 @@ describe("AutomationsAdmin (B-EP09.15)", () => {
     await waitFor(() =>
       expect(screen.getByText("Nudge stalled fleet deals")).toBeTruthy(),
     );
-    expect(
-      screen.getByText(
-        "Read-only: you do not have permission to change automations.",
-      ),
-    ).toBeTruthy();
+    expect(screen.getByText(en["auto.readOnly"])).toBeTruthy();
     expect(screen.queryByRole("button", { name: /^Use template/ })).toBeNull();
     // No switch to flip, and the badge in its place so the state is still a
     // read this row answers.
@@ -468,7 +464,7 @@ describe("AutomationsAdmin (B-EP09.15)", () => {
     // The dialog names the automation and says what pausing would do instead;
     // nothing has been written yet.
     expect(
-      screen.getByRole("heading", { name: "Delete this automation?" }),
+      screen.getByRole("heading", { name: en["auto.deleteTitle"] }),
     ).toBeTruthy();
     expect(calls.filter((call) => call.method === "DELETE")).toHaveLength(0);
   });
@@ -501,17 +497,17 @@ describe("AutomationsAdmin (B-EP09.15)", () => {
     await screen.findByText("Nudge stalled fleet deals");
     expect(
       screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent),
-    ).toEqual(["Configured automations"]);
+    ).toEqual([en["auto.instances"]]);
     expect(
-      screen.getByRole("region", { name: "Configured automations" }),
+      screen.getByRole("region", { name: en["auto.instances"] }),
     ).toBeTruthy();
     rerender(<AutomationsAdmin view="library" />);
     await screen.findByText("Stalled-deal nudge");
     expect(
       screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent),
-    ).toEqual(["Starter library"]);
+    ).toEqual([en["auto.catalog"]]);
     expect(
-      screen.getByRole("region", { name: "Starter library" }),
+      screen.getByRole("region", { name: en["auto.catalog"] }),
     ).toBeTruthy();
   });
 
@@ -530,7 +526,7 @@ describe("AutomationsAdmin (B-EP09.15)", () => {
     expect(stalled).not.toHaveTextContent(/The dialog says|send_email|->/);
     expect(
       within(screen.getByTestId("template-task_on_stage_entry")).getByText(
-        "Deal stage changed",
+        en["auto.trigger.stageChanged"],
       ),
     ).toBeTruthy();
   });
@@ -577,7 +573,7 @@ describe("AutomationsAdmin (B-EP09.15)", () => {
     );
     await userEvent.keyboard("{Escape}");
     expect(
-      screen.getByRole("dialog", { name: "Discard unsaved changes?" }),
+      screen.getByRole("dialog", { name: en["unsaved.title"] }),
     ).toBeTruthy();
   });
 
@@ -633,11 +629,7 @@ describe("AutomationsAdmin (B-EP09.15)", () => {
     await waitFor(() =>
       expect(screen.getByText("Nudge stalled fleet deals")).toBeTruthy(),
     );
-    expect(
-      screen.queryByText(
-        "Read-only: you do not have permission to change automations.",
-      ),
-    ).toBeNull();
+    expect(screen.queryByText(en["auto.readOnly"])).toBeNull();
     expect(screen.getByRole("switch", { name: /is enabled$/ })).toBeTruthy();
     await openRowMenu();
     expect(screen.getByRole("button", { name: "Delete" })).toBeTruthy();
@@ -737,12 +729,10 @@ describe("ConfiguredAutomations — Runs/Preview toggles", () => {
         canDelete
       />,
     );
-    expect(screen.queryByText("This automation has not fired yet.")).toBeNull();
+    expect(screen.queryByText(en["auto.runs.empty"])).toBeNull();
     await openRowMenu();
     await userEvent.click(screen.getByRole("button", { name: "Runs" }));
-    expect(
-      await screen.findByText("This automation has not fired yet."),
-    ).toBeTruthy();
+    expect(await screen.findByText(en["auto.runs.empty"])).toBeTruthy();
     expect(screen.queryByRole("heading")).toBeNull();
     expect(screen.queryByText(/estimate/i)).toBeNull();
   });

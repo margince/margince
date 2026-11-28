@@ -39,6 +39,30 @@ func TestAnImpersonationSignNeedsADomainToJudge(t *testing.T) {
 	}
 }
 
+func TestEmbeddedSenderDomainsStopAtTheirBoundary(t *testing.T) {
+	for _, name := range []string{"@evil.test CEO ceo@acme.test", "x@evil.test via ceo@acme.test"} {
+		if got := impersonationSign(name, "evil.test"); got != impersonationDisplayNameOtherDomain {
+			t.Fatalf("an earlier address hid the different domain in %q: %q", name, got)
+		}
+	}
+	for _, punctuation := range []string{")", "]", "}", ">", ":", ";", ",", "/", "\"", "’", "»", " ", "\t"} {
+		t.Run(punctuation, func(t *testing.T) {
+			for _, domain := range []string{"acme.test", "mail.acme.test", "acme-sales.test"} {
+				name := "Tom (tom@" + domain + punctuation
+				if got := impersonationSign(name, domain); got != "" {
+					t.Fatalf("own domain in %q raised %q", name, got)
+				}
+				if got := impersonationSign(name, "other.test"); got != impersonationDisplayNameOtherDomain {
+					t.Fatalf("foreign domain in %q raised %q", name, got)
+				}
+			}
+		})
+	}
+	if got := impersonationSign("Tom tom@acme.test.evil.test)", "acme.test"); got != impersonationDisplayNameOtherDomain {
+		t.Fatalf("a domain suffix hid the different domain: %q", got)
+	}
+}
+
 // The name a channel record stores when the provider gave a poor one. contact
 // pins full_name NOT NULL and there is no address whose local part could stand
 // in, so the ladder ends at the identity key itself — never at an empty string.

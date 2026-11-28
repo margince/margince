@@ -6,6 +6,7 @@ import "@testing-library/jest-dom/vitest";
 import { QueryClient } from "@tanstack/react-query";
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { steppedClock } from "../../testing/steppedclock";
 import { QualifyDialog } from "./leads.qualify";
 import { jsonResponse, lead, render, stubFetch } from "./leads.testkit";
@@ -52,7 +53,7 @@ async function newDealDialog(
   const de = locale === "de";
   await user.click(
     await screen.findByRole("radio", {
-      name: de ? "Neuen Deal eröffnen" : "Open a new deal",
+      name: de ? "Neuen Deal eröffnen" : englishCopy["lead.qualify.newDeal"],
     }),
   );
   const amount = await screen.findByLabelText(
@@ -65,7 +66,9 @@ it("sends a decimal amount in minor units with its currency", async () => {
   const f = await newDealDialog();
   await f.user.type(f.amount, "1.5");
   await f.user.click(
-    screen.getByRole("button", { name: "Qualify and open deal" }),
+    screen.getByRole("button", {
+      name: englishCopy["lead.qualify.confirmWithDeal"],
+    }),
   );
   await waitFor(() => expect(f.posted).toHaveLength(1));
   expect(f.posted[0]).toMatchObject({
@@ -77,9 +80,11 @@ it("refuses a negative amount beside the field and sends nothing", async () => {
   const f = await newDealDialog();
   await f.user.type(f.amount, "-5");
   expect(
-    await screen.findByText("Enter an amount of zero or more."),
+    await screen.findByText(englishCopy["create.amountNegative"]),
   ).toBeVisible();
-  const confirm = screen.getByRole("button", { name: "Qualify and open deal" });
+  const confirm = screen.getByRole("button", {
+    name: englishCopy["lead.qualify.confirmWithDeal"],
+  });
   expect(confirm).toBeDisabled();
   await f.user.click(confirm);
   expect(f.posted).toHaveLength(0);
@@ -88,7 +93,9 @@ it("refuses a negative amount beside the field and sends nothing", async () => {
 it("refuses a figure finer than the currency beside the field and sends nothing", async () => {
   const f = await newDealDialog(undefined, "VND");
   await f.user.type(f.amount, "1.5");
-  const confirm = screen.getByRole("button", { name: "Qualify and open deal" });
+  const confirm = screen.getByRole("button", {
+    name: englishCopy["lead.qualify.confirmWithDeal"],
+  });
   await f.user.click(confirm);
   expect(
     screen.getByText("This amount has more decimals than VND allows."),
@@ -114,20 +121,28 @@ it("drops a precision refusal when the deal choice takes its editor away", async
   await f.user.tab();
   await f.user.type(await screen.findByLabelText("Amount (VND)"), ".5");
   await f.user.click(
-    screen.getByRole("button", { name: "Qualify and open deal" }),
+    screen.getByRole("button", {
+      name: englishCopy["lead.qualify.confirmWithDeal"],
+    }),
   );
   expect(
     screen.getByText("This amount has more decimals than VND allows."),
   ).toBeVisible();
 
   await f.user.click(
-    screen.getByRole("radio", { name: "Qualify without a deal" }),
+    screen.getByRole("radio", {
+      name: englishCopy["lead.qualify.withoutDeal"],
+    }),
   );
-  await f.user.click(screen.getByRole("radio", { name: "Open a new deal" }));
+  await f.user.click(
+    screen.getByRole("radio", { name: englishCopy["lead.qualify.newDeal"] }),
+  );
   expect(
     screen.queryByText("This amount has more decimals than VND allows."),
   ).toBeNull();
-  const confirm = screen.getByRole("button", { name: "Qualify and open deal" });
+  const confirm = screen.getByRole("button", {
+    name: englishCopy["lead.qualify.confirmWithDeal"],
+  });
   expect(confirm).toBeEnabled();
   await f.user.click(confirm);
   await waitFor(() => expect(f.posted).toHaveLength(1));
@@ -140,7 +155,9 @@ it("drops a precision refusal when the deal choice takes its editor away", async
 it("refuses a figure too large to store and sends nothing", async () => {
   const f = await newDealDialog();
   await f.user.type(f.amount, "99999999999999999999");
-  const confirm = screen.getByRole("button", { name: "Qualify and open deal" });
+  const confirm = screen.getByRole("button", {
+    name: englishCopy["lead.qualify.confirmWithDeal"],
+  });
   expect(confirm).toBeDisabled();
   await f.user.click(confirm);
   expect(
@@ -168,10 +185,12 @@ it("puts the server's amount refusal under the field in the reader's words", asy
   });
   await f.user.type(f.amount, "5");
   await f.user.click(
-    screen.getByRole("button", { name: "Qualify and open deal" }),
+    screen.getByRole("button", {
+      name: englishCopy["lead.qualify.confirmWithDeal"],
+    }),
   );
   expect(
-    await screen.findByText("Enter an amount of zero or more."),
+    await screen.findByText(englishCopy["create.amountNegative"]),
   ).toBeVisible();
   expect(screen.queryByText(/amount_minor/)).toBeNull();
 });
@@ -204,7 +223,9 @@ it("takes no amount before the base currency is known, then keeps the typed amou
     new QueryClient({ defaultOptions: { queries: { retry: false } } }),
   );
   await user.click(
-    await screen.findByRole("radio", { name: "Open a new deal" }),
+    await screen.findByRole("radio", {
+      name: englishCopy["lead.qualify.newDeal"],
+    }),
   );
   const early = await screen.findByLabelText("Amount ()");
   expect(early).toBeDisabled();
@@ -216,7 +237,9 @@ it("takes no amount before the base currency is known, then keeps the typed amou
   expect(amount).toHaveValue("");
   await user.type(amount, "500");
   await user.click(
-    screen.getByRole("button", { name: "Qualify and open deal" }),
+    screen.getByRole("button", {
+      name: englishCopy["lead.qualify.confirmWithDeal"],
+    }),
   );
   await waitFor(() => expect(posted).toHaveLength(1));
   expect(posted[0]).toMatchObject({
@@ -242,12 +265,12 @@ it("says the base currency could not be read and reads it again on Retry", async
     new QueryClient({ defaultOptions: { queries: { retry: false } } }),
   );
   await user.click(
-    await screen.findByRole("radio", { name: "Open a new deal" }),
+    await screen.findByRole("radio", {
+      name: englishCopy["lead.qualify.newDeal"],
+    }),
   );
   expect(
-    await screen.findByText(
-      "The currency could not be read, so no amount can be entered yet.",
-    ),
+    await screen.findByText(englishCopy["amount.currencyUnread"]),
   ).toBeTruthy();
 
   settingsUp = true;

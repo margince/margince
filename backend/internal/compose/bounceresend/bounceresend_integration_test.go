@@ -98,7 +98,7 @@ func newBounceFixtureSending(
 	f.setConsent(t, "granted")
 
 	anchor := ids.NewV7()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(), `
 			INSERT INTO activity (id, kind, direction, subject, occurred_at, source, captured_by)
 			VALUES ($1, 'email', 'inbound', 'Retrofit quote', now(), 'manual', 'human:x')`, anchor); err != nil {
@@ -354,7 +354,7 @@ func (f bounceFixture) linkSecondContact(t *testing.T, address string) ids.UUID 
 	t.Helper()
 	other := ids.MustParse("00000000-0000-7000-8000-000000000001")
 	activity := f.e.WsScalar(t, `SELECT activity_id::text FROM comms_outbound WHERE id = $1`, f.bounceID)
-	if err := database.WithWorkspaceTx(f.e.Admin(), f.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(f.e.Admin(), f.e.Pool, func(tx pgx.Tx) error {
 		for _, statement := range []string{
 			`INSERT INTO contact (id, full_name, source, captured_by, owner_id) VALUES ($1, 'Other Contact', 'test', 'human:x', '` + f.e.Rep1.String() + `')`,
 			`INSERT INTO contact_email (contact_id, email, email_type, is_primary, source, captured_by) VALUES ($1, '` + address + `', 'work', true, 'manual', 'human:x')`,
@@ -560,7 +560,7 @@ func TestTheTimelineOffersSendAgainByTheSameRuleAsTheWorklist(t *testing.T) {
 	activity := ids.MustParse(f.e.WsScalar(t, `SELECT activity_id::text FROM comms_outbound WHERE id = $1`, f.bounceID))
 	offered := func() bool {
 		var states map[ids.UUID]activities.EmailRowState
-		if err := database.WithWorkspaceTx(f.rep, f.e.Pool, func(tx pgx.Tx) (err error) {
+		if err := database.WithTx(f.rep, f.e.Pool, func(tx pgx.Tx) (err error) {
 			states, err = activities.EmailStatesFor(f.rep, tx, []ids.UUID{activity}, clocktest.Now(t))
 			return err
 		}); err != nil {

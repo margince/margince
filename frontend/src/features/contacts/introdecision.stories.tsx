@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import { installFetchStub, StoryProviders } from "../../testing/story-utils";
 import { IntroDecisionDrawer } from "./introdecision";
 import type { IntroRequest } from "./introrequests";
@@ -79,7 +80,7 @@ const meta: Meta<typeof IntroDecisionDrawer> = {
   component: IntroDecisionDrawer,
   play: async () => {
     const drawer = within(await screen.findByRole("dialog"));
-    await drawer.findByText("Forwardable note");
+    await drawer.findByText(englishCopy["contact.intro.noteLabel"]);
   },
 };
 export default meta;

@@ -3,6 +3,7 @@ import { QueryClient } from "@tanstack/react-query";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { InstallationSettingsCard } from "./installation-settings";
 import {
   backendFor,
@@ -43,7 +44,7 @@ describe("a refused installation save", () => {
       refuse: [
         {
           field: "timezone",
-          code: "unknown_zone",
+          code: "setting_invalid",
           message: "Not an IANA time zone.",
         },
       ],
@@ -111,7 +112,9 @@ describe("a refused installation save", () => {
     await user.type(zone, "x");
     await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
 
-    await within(dialog).findByText("Settings not saved");
+    await within(dialog).findByText(
+      englishCopy["installationSettings.saveFailed"],
+    );
     expect(dialog.querySelector('[aria-invalid="true"]')).toBeNull();
   });
 

@@ -165,7 +165,7 @@ func TestEnsureRefusesToCreateARivalDuringErasure(t *testing.T) {
 	in := e.channelEnsureInput(ctx, t, ci, subjectName)
 	bounded := lockWaitBoundedStore(t, e.ws)
 	var ensureErr error
-	if err := database.WithWorkspaceTx(ctx, e.store.db.Pool(), func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.store.db.Pool(), func(tx pgx.Tx) error {
 		if err := storekit.LockChannelIdentities(ctx, tx, []storekit.ChannelIdentityKey{
 			{Provider: ci.Provider, ChannelUserID: ci.ChannelUserID},
 		}); err != nil {

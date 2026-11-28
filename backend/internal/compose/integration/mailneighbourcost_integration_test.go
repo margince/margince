@@ -83,7 +83,7 @@ func TestMailNeighboursSeekPastUnrelatedHistory(t *testing.T) {
 		t.Fatalf("thread_key null fraction=%v want=1", nullFraction)
 	}
 	var candidates []ids.ActivityID
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(e.Admin(), `INSERT INTO activity (kind, source, source_system, source_id, thread_key, captured_by)
    SELECT 'email', 'manual', 'email', 'background-' || n, 'background-' || n, 'test:neighbours' FROM generate_series(1, 10000) n`)
 		if err != nil {
@@ -119,7 +119,7 @@ func TestMailNeighboursSeekPastUnrelatedHistory(t *testing.T) {
 	if _, err := e.Owner.Exec(e.Admin(), "ANALYZE activity,activity_identity,activity_mail_reference"); err != nil {
 		t.Fatal(err)
 	}
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error { return checkNeighbourPlan(t, e, tx, candidates, "fresh") }); err != nil {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error { return checkNeighbourPlan(t, e, tx, candidates, "fresh") }); err != nil {
 		t.Fatal(err)
 	}
 }

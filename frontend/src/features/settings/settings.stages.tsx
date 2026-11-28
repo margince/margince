@@ -11,7 +11,10 @@
 import { ArrowDown, Lock } from "lucide-react";
 import { useId, useRef, useState } from "react";
 import type { components } from "../../api/schema";
-import { TranslationsLine } from "../../components/labeltranslations";
+import {
+  MissingTranslationsLine,
+  TranslationsLine,
+} from "../../components/labeltranslations";
 import { Badge, EmptyState } from "../../design-system/atoms";
 import { CellStack } from "../../design-system/cellstack";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
@@ -39,6 +42,7 @@ import {
   type StageVerbs,
   useStageRemoval,
 } from "./settings.stageverbs";
+import { useTeamLanguages } from "./teamlanguages";
 
 type Pipeline = components["schemas"]["Pipeline"];
 type Stage = components["schemas"]["Stage"];
@@ -128,6 +132,7 @@ type ColumnsOf = Readonly<{
   locale: Locale;
   open: readonly Stage[];
   verbs: StageVerbs;
+  languages: readonly Locale[];
 }>;
 
 function criteriaCell(stage: Stage, { t, plural, locale }: ColumnsOf) {
@@ -158,7 +163,7 @@ function criteriaFolded(stage: Stage, { plural, locale }: ColumnsOf) {
 }
 
 function stageColumns(of: ColumnsOf): DataTableColumn<Stage>[] {
-  const { t, locale, open, verbs, chances } = of;
+  const { t, locale, open, verbs, chances, languages } = of;
   const reading = (stage: Stage) =>
     formatPercent(stage.win_probability / 100, locale);
   return [
@@ -191,6 +196,10 @@ function stageColumns(of: ColumnsOf): DataTableColumn<Stage>[] {
             <ClosingName stage={stage} />
           )}
           <TranslationsLine translations={stage.name_translations} />
+          <MissingTranslationsLine
+            translations={stage.name_translations}
+            languages={languages}
+          />
         </CellStack>
       ),
     },
@@ -257,6 +266,7 @@ export function StageLadderEditor({
   const answered = useMe().isSuccess;
   const ladder = ladderOf(pipeline);
   const open = ladder.filter((stage) => stage.semantic === "open");
+  const languages = useTeamLanguages();
   const orders = writable && open.length > 1;
   const head = useRef<HTMLSpanElement>(null);
   const removal = useStageRemoval(
@@ -335,6 +345,7 @@ export function StageLadderEditor({
             open,
             verbs,
             chances: chances.data,
+            languages,
           })}
           detail={{
             header: t("stage.criteriaDetail"),

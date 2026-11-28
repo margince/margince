@@ -92,7 +92,7 @@ func enqueueNothing(context.Context, pgx.Tx, ids.UUID) error { return nil }
 
 func readBackfillRow(t *testing.T, e *integration.SearchEnv, id ids.UUID) (status string, scanned, captured int, cursor []byte) {
 	t.Helper()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT status, scanned, captured, cursor FROM capture_backfill WHERE id = $1`, id).
 			Scan(&status, &scanned, &captured, &cursor)
@@ -284,7 +284,7 @@ func TestBackfillStepFaultsAreTerminal(t *testing.T) {
 		if err != nil {
 			t.Fatalf("StartBackfillOver: %v", err)
 		}
-		if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			_, execErr := tx.Exec(e.Admin(),
 				`UPDATE capture_backfill SET cursor = $2::jsonb WHERE id = $1`, run.ID, cursorJSON)
 			return execErr
@@ -357,7 +357,7 @@ func TestStartBackfillRollsBackWhenTheJobCannotBeScheduled(t *testing.T) {
 	}
 
 	var rows int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(e.Admin(), `SELECT count(*) FROM capture_backfill`).Scan(&rows)
 	}); err != nil {
 		t.Fatal(err)

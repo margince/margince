@@ -18,7 +18,7 @@ import (
 func graphProjectionSnapshot(ctx context.Context, t *testing.T, pool *pgxpool.Pool) map[string]string {
 	t.Helper()
 	projection := make(map[string]string)
-	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		// A rebuild replaces maintenance state; every derived fact must agree.
 		const facts = `to_jsonb(e)-ARRAY['read_snapshot','requested_generation','processed_generation','deferred_run_id']::text[]`
 		for _, table := range []string{"graph_contact_edge", "graph_interaction_edge"} {

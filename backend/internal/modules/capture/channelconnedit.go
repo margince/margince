@@ -88,7 +88,7 @@ func (s *ChannelStore) ReplaceToken(ctx context.Context, id ids.UUID, token, eve
 			s.destroyDetached(ctx, ws, "channel-replace-lost-race", refs.token, refs.events)
 			return channelUniquenessRefusal(constraint)
 		}
-		if errors.Is(err, apperrors.ErrVersionSkew) || errors.Is(err, apperrors.ErrNotFound) {
+		if errors.Is(err, apperrors.ErrVersionSkew) || errors.Is(err, apperrors.ErrNotFound) || channelAuthorityRefused(err) {
 			s.destroyDetached(ctx, ws, "channel-replace-lost-race", refs.token, refs.events)
 		}
 		return err
@@ -142,6 +142,11 @@ func (s *ChannelStore) confirmReplacement(ctx context.Context, current channelRo
 // with.
 func (s *ChannelStore) repoint(ctx context.Context, current channelRow, bot ChannelBot, refs connectionRefs) error {
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		ctx, err = s.writeAuthority(ctx, tx, principal.ActionUpdate)
+		if err != nil {
+			return err
+		}
 		if _, err := storekit.LockRow(ctx, tx, "channel_connection", current.ID, storekit.LiveOnly); err != nil {
 			return err
 		}

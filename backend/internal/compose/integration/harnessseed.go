@@ -342,7 +342,7 @@ func (e *Env) tryGrantRole(t *testing.T, user ids.UUID, roleKey string) bool {
 func tryGrantSystemRole(admin context.Context, t *testing.T, pool *pgxpool.Pool, user ids.UUID, roleKey string) bool {
 	t.Helper()
 	var assigned int
-	if err := database.WithWorkspaceTx(admin, pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(admin, pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(admin, `
 			WITH granted AS (
 			  INSERT INTO role_assignment (role_id, user_id)
@@ -369,7 +369,7 @@ func (e *Env) holdsRole(t *testing.T, user ids.UUID, roleKey string) bool {
 func holdsSystemRole(admin context.Context, t *testing.T, pool *pgxpool.Pool, user ids.UUID, roleKey string) bool {
 	t.Helper()
 	var held bool
-	if err := database.WithWorkspaceTx(admin, pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(admin, pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(admin, `
 			SELECT EXISTS (
 			  SELECT 1 FROM role_assignment ra JOIN role r ON r.id = ra.role_id

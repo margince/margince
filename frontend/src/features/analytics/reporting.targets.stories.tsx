@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -75,7 +76,7 @@ export const RetiredAllocation: Story = {
   play: async () => {
     await userEvent.click(
       await screen.findByRole("button", {
-        name: "Retired targets",
+        name: englishCopy["reporting.retiredTargets"],
       }),
     );
   },

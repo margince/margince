@@ -115,7 +115,7 @@ func extractedCommitments(
 	}
 	var out []contacts.CompanyCommitment
 	var more bool
-	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		var err error
 		out, more, err = store.OpenCommitmentsAcrossWorkspace(ctx, tx, limit)
 		return err

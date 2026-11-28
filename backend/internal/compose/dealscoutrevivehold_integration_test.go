@@ -107,7 +107,7 @@ func TestEvidenceChangedWhileTheReopenWaitsReopensNothing(t *testing.T) {
 
 	updated, release, writerDone := make(chan struct{}), make(chan struct{}), make(chan error, 1)
 	go func() {
-		writerDone <- database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		writerDone <- database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			if _, err := tx.Exec(e.Admin(), `UPDATE activity SET occurred_at = occurred_at + interval '1 hour' WHERE id = $1`, mail); err != nil {
 				return err
 			}

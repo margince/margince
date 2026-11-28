@@ -21,6 +21,8 @@ const (
 	Email Kind = iota
 	LinkedIn
 	Domain
+	SKU
+	Deal
 )
 
 // Key is one key value and the record type holding it.

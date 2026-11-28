@@ -14,6 +14,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { companyNamesAnswer } from "../../testing/companynames.testkit";
 import { meFixture, READS_RECORDS } from "../../testing/mefixture";
 import { SearchScreen } from "./search";
@@ -198,7 +199,9 @@ describe("SearchScreen — a meeting, call, note or task hit", () => {
     );
 
     const panel = await screen.findByRole("dialog");
-    await within(panel).findByText("Activity content is withheld");
+    await within(panel).findByText(
+      englishCopy["activity.detail.withheldReason"],
+    );
     expect(within(panel).queryByText("agreed")).toBeNull();
     expect(within(panel).queryByText("Colleagues")).toBeNull();
   });

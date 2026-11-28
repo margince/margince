@@ -29,7 +29,7 @@ func TestRetiredSeatsLeaveNewMailClassificationButKeepCalendarAttendance(t *test
 		{"a retired seat", "deactivated", true},
 	} {
 		removed := seatCase.removed
-		if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 			seat := ids.NewV7()
 			email := seat.String() + "@seat.example"
 			if _, err := tx.Exec(ctx, `INSERT INTO app_user (id,email,display_name,status,removed_at)

@@ -63,7 +63,7 @@ func (c *interruptedConnector) BackfillPage(ctx context.Context, auth connector.
 // touch: the connection's watermark and the sidecar's health verdict.
 func readConnectionSyncState(t *testing.T, e *integration.SearchEnv, connID ids.UUID) (status string, cursor []byte, lastSynced *time.Time) {
 	t.Helper()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(e.Admin(), `
 			SELECT c.status, c.sync_cursor, s.last_synced_at
 			FROM capture_connection c

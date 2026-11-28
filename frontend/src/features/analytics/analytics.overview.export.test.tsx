@@ -6,6 +6,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { forgetSeat } from "../../lib/storage";
 import { openView } from "../../testing/listview.testkit";
 import {
@@ -90,7 +91,9 @@ describe("Sales review's export", () => {
       });
     }) as typeof fetch;
     await readings();
-    await screen.findByRole("heading", { name: "Open pipeline by stage" });
+    await screen.findByRole("heading", {
+      name: englishCopy["reporting.stage_distribution"],
+    });
 
     await user.click(
       within(await openView(user)).getByRole("button", { name: "Export CSV" }),

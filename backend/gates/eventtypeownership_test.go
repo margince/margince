@@ -278,6 +278,16 @@ func modulesEmitting(sites []emitSite) []string {
 // module announces a fact that IS the first module's fact. None is a second
 // meaning for one name, which is what the rule protects.
 var sharedEventTypes = gatekit.Waive(map[string]string{
+	"contact.updated <- internal/modules/contacts":            "the module owns ordinary updates; storekit emits the same typed update for a trigger-normalized source in the committing transaction",
+	"contact.updated <- internal/platform/database/storekit":  "the module owns ordinary updates; storekit emits the same typed update for a trigger-normalized source in the committing transaction",
+	"company.updated <- internal/modules/contacts":            "the module owns ordinary updates; storekit emits the same typed update for a trigger-normalized source in the committing transaction",
+	"company.updated <- internal/platform/database/storekit":  "the module owns ordinary updates; storekit emits the same typed update for a trigger-normalized source in the committing transaction",
+	"lead.updated <- internal/modules/contacts":               "the module owns ordinary updates; storekit emits the same typed update for a trigger-normalized source in the committing transaction",
+	"lead.updated <- internal/platform/database/storekit":     "the module owns ordinary updates; storekit emits the same typed update for a trigger-normalized source in the committing transaction",
+	"deal.updated <- internal/platform/database/storekit":     "the module owns ordinary updates; storekit emits the same typed update for a trigger-normalized source in the committing transaction",
+	"offer.updated <- internal/modules/deals":                 "the module owns ordinary updates; storekit emits the same typed update for a trigger-normalized source in the committing transaction",
+	"offer.updated <- internal/platform/database/storekit":    "the module owns ordinary updates; storekit emits the same typed update for a trigger-normalized source in the committing transaction",
+	"project.updated <- internal/platform/database/storekit":  "the module owns ordinary updates; storekit emits the same typed update for a trigger-normalized source in the committing transaction",
 	"reporting.changed <- internal/compose":                   "compose writes down the calendar a saved analytics question's periods keep when the reporting zone or fiscal start moves. report_run is compose's table, and the event says what every reporting.changed says: a reporting object changed, so a consumer re-reads its authorized state",
 	"reporting.changed <- internal/modules/forecasting":       "forecasting records a capture status change on its own capture table. The event carries only the object and the action, as every reporting.changed does, so a consumer re-reads authorized state whichever module wrote it",
 	"reporting.changed <- internal/modules/contacts":          "the partner stage list changes the labels and meanings the partner reads and filters show. The event carries only the object and the action, which is what reporting.changed means wherever it is built: consumers re-read authorized state",

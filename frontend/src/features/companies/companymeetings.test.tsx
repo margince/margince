@@ -14,6 +14,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import {
   company,
   companyBackstop,
@@ -147,7 +148,9 @@ it("says the meetings are withheld when the account read leaves them out", async
   const { asked } = mount(
     view({ sections_omitted: ["activities", "next_meeting"] }),
   );
-  expect((await screen.findAllByText("Hidden for your role")).length).toBe(2);
+  expect(
+    (await screen.findAllByText(englishCopy["co.section.restricted"])).length,
+  ).toBe(2);
   expect(asked().some((url) => url.pathname.endsWith("/activities"))).toBe(
     false,
   );
@@ -160,7 +163,9 @@ it("starts one meeting read while the overview loads and hides rows when it with
   await waitFor(() => expect(reads()).toHaveLength(1));
   expect(reads()[0]?.searchParams.getAll("kind")).toEqual(["meeting"]);
   show(view({ sections_omitted: ["activities", "next_meeting"] }));
-  expect(await screen.findAllByText("Hidden for your role")).toHaveLength(2);
+  expect(
+    await screen.findAllByText(englishCopy["co.section.restricted"]),
+  ).toHaveLength(2);
   expect(screen.queryByText("Quarterly review")).toBeNull();
   expect(reads()).toHaveLength(1);
 });
@@ -195,7 +200,7 @@ describe("on the account's page", () => {
       .map((button) => button.textContent ?? "");
     const at = (label: string) =>
       labels.findIndex((text) => text.startsWith(label));
-    expect(at("Meetings")).toBe(at("Deals and projects") + 1);
+    expect(at("Meetings")).toBe(at(englishCopy["tab.dealsProjects"]) + 1);
     expect(at("Tasks")).toBe(at("Meetings") + 1);
   });
 

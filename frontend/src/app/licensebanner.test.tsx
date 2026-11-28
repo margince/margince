@@ -97,12 +97,8 @@ afterEach(() => {
 
 it("names a refused licence and links to the seats settings", async () => {
   mount(LICENSE_READER, "rejected");
-  expect(await screen.findByText("License refused")).toBeTruthy();
-  expect(
-    screen.getByText(
-      "This installation’s license token was checked and refused.",
-    ),
-  ).toBeTruthy();
+  expect(await screen.findByText(en["shell.license.refused"])).toBeTruthy();
+  expect(screen.getByText(en["licensebanner.body"])).toBeTruthy();
   const link = screen.getByRole("link", {
     name: `Open ${en["settings.tab.seats"]}`,
   });
@@ -111,7 +107,7 @@ it("names a refused licence and links to the seats settings", async () => {
 
 it("offers no way to dismiss a refused licence", async () => {
   mount(LICENSE_READER, "rejected");
-  await screen.findByText("License refused");
+  await screen.findByText(en["shell.license.refused"]);
   expect(screen.queryByRole("button")).toBeNull();
 });
 
@@ -146,7 +142,7 @@ it.each<[LicenseState, string]>([
     expect(settled(client, "installation-license")).toBe(true);
     expect(probe().getAttribute("data-posture")).toBe(posture);
   });
-  expect(screen.queryByText("License refused")).toBeNull();
+  expect(screen.queryByText(en["shell.license.refused"])).toBeNull();
   expect(document.querySelector(".appbanner")).toBeNull();
 });
 

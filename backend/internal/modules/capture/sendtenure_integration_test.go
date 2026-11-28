@@ -57,7 +57,7 @@ func wroteToGiven(t *testing.T, sendAgo time.Duration, history func(context.Cont
 	ctx, pool := meetingTenureEnv(t)
 	address := freshAddress()
 	var wrote bool
-	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		if err := seedAttestedSendTo(ctx, tx, address, "thr-send", sendAgo); err != nil {
 			return err
 		}
@@ -121,7 +121,7 @@ func TestAMeetingAfterTheReleaseCreatesDespiteOlderSends(t *testing.T) {
 	ctx, pool := meetingTenureEnv(t)
 	address := freshAddress()
 	var dealt dealtWith
-	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		for _, thread := range []string{"thr-a", "thr-b"} {
 			if err := seedAttestedSendTo(ctx, tx, address, thread, 60*day); err != nil {
 				return err

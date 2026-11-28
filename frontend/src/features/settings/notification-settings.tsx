@@ -52,12 +52,9 @@ const MAIL_GUIDE =
  * `coach` may not be switched off — a colleague's words are not the product's
  * housekeeping to drop.
  *
- * Only `approval_pending` may be set to `email`. It is the one class with a
- * sending leg: its notice stages a message in the transaction that writes it,
- * and no other producer stages one at all. Offering the word elsewhere would
- * promise mail that was never going to arrive, which is worse than not offering
- * it — the reader stops watching the screen. `digest` reaches every class, so
- * mail is still on the table for every class.
+ * `approval_pending` and `website_lead` may be set to `email`. They are the
+ * classes with a sending leg; offering the word elsewhere would promise mail
+ * that was never going to arrive. `digest` reaches every class.
  *
  * With no mail on this installation, neither mailed choice is offered. The
  * stored and the drafted one stay listed. So the control still shows what the
@@ -71,7 +68,11 @@ function choicesFor(
   return CHOICES.filter(
     (choice) =>
       !(choice === "off" && notificationClass === "coach") &&
-      !(choice === "email" && notificationClass !== "approval_pending") &&
+      !(
+        choice === "email" &&
+        notificationClass !== "approval_pending" &&
+        notificationClass !== "website_lead"
+      ) &&
       (mailSends || !MAILED.includes(choice) || kept.includes(choice)),
   );
 }
@@ -87,6 +88,10 @@ const CLASS_COPY: Readonly<
   approval_pending: {
     label: "notifications.class.approval_pending.label",
     help: "notifications.class.approval_pending.help",
+  },
+  website_lead: {
+    label: "notifications.class.website_lead.label",
+    help: "notifications.class.website_lead.help",
   },
   project_health: {
     label: "notifications.class.project_health.label",

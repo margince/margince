@@ -14,6 +14,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { ArchiveReviewCard } from "./archivereview";
 
@@ -106,7 +107,9 @@ it("deletes only the shown records nothing keeps, and reports what it did", asyn
   const user = userEvent.setup();
   const { deletes } = show({ retention_policy: ["read", "delete"] });
   expect(await screen.findByText("Old offer")).toBeInTheDocument();
-  expect(screen.getByText("Kept: legal hold")).toBeInTheDocument();
+  expect(
+    screen.getByText(englishCopy["archiveReview.kept.legalHold"]),
+  ).toBeInTheDocument();
   await user.click(
     await screen.findByRole("button", { name: "Delete 1 shown record" }),
   );
@@ -150,7 +153,7 @@ it("shows what was done before a later request failed, and reloads the archive",
   await user.click(within(dialog).getByRole("button", { name: "Delete" }));
   await waitFor(() => expect(deletes).toHaveLength(2));
   expect(
-    await within(dialog).findByText("Done before the deletion stopped"),
+    await within(dialog).findByText(englishCopy["archiveReview.partialTitle"]),
   ).toBeInTheDocument();
   expect(within(dialog).getByText("99 records deleted.")).toBeInTheDocument();
   expect(

@@ -42,7 +42,7 @@ import (
 func contactsFiledUnder(t *testing.T, e *integration.SearchEnv, sourceID string) []ids.UUID {
 	t.Helper()
 	var out []ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(context.Background(), `
 			SELECT l.contact_id FROM activity_link l
 			  JOIN activity a ON a.id = l.activity_id

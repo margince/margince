@@ -71,7 +71,7 @@ func TestMergeCompany_enrichmentFollowsTheSurvivor(t *testing.T) {
 	}
 	var wording string
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
 			`SELECT value FROM company_fact WHERE company_id = $1 AND value_key = 'shared key'`, tgt).Scan(&wording)
 	}); err != nil {

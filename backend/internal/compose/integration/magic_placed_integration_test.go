@@ -356,7 +356,7 @@ func TestAPlacedChildLeavesTheUnplacedCount(t *testing.T) {
 	seedUnplaceableMachineAction(t, f.e)
 	// No writer assigns an offer today. The row stands for a verb a future
 	// writer adds before it has a sentence.
-	err = database.WithWorkspaceTx(f.e.Admin(), f.e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(f.e.Admin(), f.e.Pool, func(tx pgx.Tx) error {
 		_, err := storekit.Audit(principal.SystemActing(f.e.Admin(), "offer-sync"), tx, "assign", "offer", ids.UUID(offer.Id), nil, nil)
 		return err
 	})

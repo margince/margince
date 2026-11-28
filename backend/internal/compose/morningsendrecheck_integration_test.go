@@ -86,7 +86,7 @@ func TestAMorningReservationWaitsForAConcurrentChangeToItsWork(t *testing.T) {
 	var holder int32
 	go func() {
 		defer close(written)
-		writer <- database.WithWorkspaceTx(b.Admin(), b.Pool, func(tx pgx.Tx) error {
+		writer <- database.WithTx(b.Admin(), b.Pool, func(tx pgx.Tx) error {
 			if _, err := tx.Exec(context.Background(), `UPDATE activity SET assignee_id = $2 WHERE id = $1`, ids.UUID(task.Id), b.Rep2); err != nil {
 				return err
 			}

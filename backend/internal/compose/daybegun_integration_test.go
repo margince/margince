@@ -74,7 +74,7 @@ func TestADayEntryDatedTodayHasHappenedBeforeItsStoredNoon(t *testing.T) {
 	var account company360.LastTouch
 	var touched contact360.LastTouch
 	var clock *time.Time
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		accounts, err := company360.LastTouchFor(e.Admin(), tx, []ids.CompanyID{companyID}, now, company360.AssembleOptions{})
 		if err != nil {
 			return err

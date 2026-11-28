@@ -188,7 +188,7 @@ func oneProjectCompanyEdge(t *testing.T, e *Env, projectID ids.ProjectID) ids.UU
 	t.Helper()
 	var edge ids.UUID
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
 			`SELECT id FROM relationship WHERE kind = 'project_company' AND project_id = $1
 			  AND archived_at IS NULL ORDER BY created_at, id LIMIT 1`,

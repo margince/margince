@@ -147,6 +147,13 @@ func isSweep(sc agentloope2e.Scenario) bool { return sc.Agent == agentloope2e.Ov
 // nothing. It reaches once_each only by leaving a deal without a note.
 var loopModels = []scriptedModel{
 	{
+		want: loopExpectation{name: "repeats_refused_request", applies: func(sc agentloope2e.Scenario) bool { return sc.Recovery != "" }, wantFailed: []string{agentloope2e.CheckRefusalRecovery}},
+		script: func(t *testing.T, run loopRun) []string {
+			refused := toolStep(t, "read_record", integration.AnyMap{"record_type": "deal", "id": "not-a-record-id"})
+			return append(append([]string{refused}, append(readSteps(t, run), writeSteps(t, run, findingText(run.sc, false))...)...), finalStep)
+		},
+	},
+	{
 		want: loopExpectation{name: "does_the_job", applies: always},
 		script: func(t *testing.T, run loopRun) []string {
 			return append(append(readSteps(t, run), writeSteps(t, run, findingText(run.sc, false))...), finalStep)

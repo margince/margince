@@ -28,7 +28,7 @@ import (
 func (f *authorshipFixture) heldMeeting(seat string, attendees ...string) ids.UUID {
 	f.t.Helper()
 	var id ids.UUID
-	if err := database.WithWorkspaceTx(f.Admin(), f.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(f.Admin(), f.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if err := tx.QueryRow(ctx, `INSERT INTO activity (kind, subject, meeting_status, occurred_at, source, captured_by)
 			VALUES ('meeting', 'Review', 'held', $1, 'gcal:seed', 'connector:gcal') RETURNING id`,
@@ -57,7 +57,7 @@ func (f *authorshipFixture) heldMeeting(seat string, attendees ...string) ids.UU
 func (f *authorshipFixture) buyers(meeting ids.UUID) int {
 	f.t.Helper()
 	var n int
-	if err := database.WithWorkspaceTx(f.Admin(), f.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(f.Admin(), f.Pool, func(tx pgx.Tx) error {
 		facts, err := deals.ReadActivityAuthorship(f.Admin(), tx, meeting, ownDomainReader{store: f.own})
 		n = facts.BuyerParticipants
 		return err

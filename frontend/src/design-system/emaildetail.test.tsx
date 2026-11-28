@@ -24,6 +24,7 @@ import {
 import { type ReactNode, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { Button } from "./atoms";
 import { EmailDetail } from "./emaildetail";
 
@@ -177,7 +178,7 @@ describe("the email drawer's attachments", () => {
     await waitFor(() => expect(screen.getByText("payslip.pdf")).toBeTruthy());
     expect(screen.getByText("payslip.pdf").closest("a")).toBeNull();
     expect(
-      screen.getByText("Not kept, because the message is private."),
+      screen.getByText(englishCopy["email.detail.attachmentWithheld"]),
     ).toBeTruthy();
     expect(screen.getByText("120 kB")).toBeTruthy();
   });
@@ -202,12 +203,10 @@ describe("the email drawer's attachments", () => {
     await waitFor(() => expect(screen.getByText("offer.pdf")).toBeTruthy());
     expect(screen.getByText("offer.pdf").closest("a")).toBeNull();
     expect(
-      screen.getByText(
-        "Not kept, because no colleague here sent this message or was in its To line.",
-      ),
+      screen.getByText(englishCopy["email.detail.attachmentNotAddressed"]),
     ).toBeTruthy();
     expect(
-      screen.queryByText("Not kept, because the message is private."),
+      screen.queryByText(englishCopy["email.detail.attachmentWithheld"]),
     ).toBeNull();
   });
 
@@ -254,7 +253,9 @@ describe("the email drawer's attachments", () => {
     // the fetch resolves, so a wait on it asserts against a loading state and
     // would pass however badly the loaded one behaved.
     await waitFor(() =>
-      expect(screen.getByText("Not shared with you")).toBeTruthy(),
+      expect(
+        screen.getByText(englishCopy["email.withheldSubject"]),
+      ).toBeTruthy(),
     );
     // Asked of document.body, NOT of render()'s container: Modal renders into
     // a PORTAL, so the container is empty and every assertion made against it
@@ -485,7 +486,7 @@ describe("reopening the drawer after access was withdrawn", () => {
     await waitFor(() =>
       expect(screen.queryByText("The signed contract")).toBeNull(),
     );
-    expect(screen.getByText("Loading message…")).toBeTruthy();
+    expect(screen.getByText(englishCopy["email.detail.loading"])).toBeTruthy();
 
     // And when the answer is a refusal, it stays off the screen.
     release(
@@ -495,7 +496,7 @@ describe("reopening the drawer after access was withdrawn", () => {
       }),
     );
     await waitFor(() =>
-      expect(screen.getByText("This section did not load.")).toBeTruthy(),
+      expect(screen.getByText(englishCopy["state.failed"])).toBeTruthy(),
     );
     expect(screen.queryByText("The signed contract")).toBeNull();
   });
@@ -515,10 +516,10 @@ describe("a mail whose text could not be read", () => {
     draw(open());
 
     expect(
-      await screen.findByText("The text of this mail could not be read."),
+      await screen.findByText(englishCopy["email.thread.textUnreadable"]),
     ).toBeTruthy();
     expect(
-      screen.getByText("Open it in your mail program to see it."),
+      screen.getByText(englishCopy["email.thread.textUnreadableHint"]),
     ).toBeTruthy();
   });
 
@@ -527,9 +528,7 @@ describe("a mail whose text could not be read", () => {
     draw(open());
 
     expect(
-      await screen.findByText(
-        "Part of the text of this mail could not be read.",
-      ),
+      await screen.findByText(englishCopy["email.thread.textPartial"]),
     ).toBeTruthy();
     expect(screen.getByText("Attached, as agreed.")).toBeTruthy();
   });
@@ -539,9 +538,7 @@ describe("a mail whose text could not be read", () => {
     draw(open());
 
     expect(
-      await screen.findByText(
-        "The text below is the forwarded mail, not words the sender wrote.",
-      ),
+      await screen.findByText(englishCopy["email.thread.textForwarded"]),
     ).toBeTruthy();
   });
 
@@ -554,14 +551,14 @@ describe("a mail whose text could not be read", () => {
     );
     draw(open());
 
-    expect(await screen.findByText("Email text not verified")).toBeTruthy();
     expect(
-      screen.getByText(
-        "Margince cannot detect requests or commitments here. Read the original in your mail app if text is missing; add any needed task manually.",
-      ),
+      await screen.findByText(englishCopy["email.thread.textUnassessed"]),
     ).toBeTruthy();
     expect(
-      screen.queryByText("Open it in your mail program to see it."),
+      screen.getByText(englishCopy["email.thread.textUnassessedHint"]),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText(englishCopy["email.thread.textUnreadableHint"]),
     ).toBeNull();
   });
 
@@ -577,10 +574,12 @@ describe("a mail whose text could not be read", () => {
     draw(open());
 
     expect(
-      await screen.findByText("This mail’s text can no longer be checked"),
+      await screen.findByText(englishCopy["email.thread.textUnverifiable"]),
     ).toBeTruthy();
     expect(screen.getByText(/Its stored original is gone/)).toBeTruthy();
-    expect(screen.queryByText("Email text not verified")).toBeNull();
+    expect(
+      screen.queryByText(englishCopy["email.thread.textUnassessed"]),
+    ).toBeNull();
   });
 
   // A hostile fixture: the server sends no completeness on a withheld mail,
@@ -599,9 +598,13 @@ describe("a mail whose text could not be read", () => {
     draw(open());
 
     await waitFor(() =>
-      expect(screen.getByText("Not shared with you")).toBeTruthy(),
+      expect(
+        screen.getByText(englishCopy["email.withheldSubject"]),
+      ).toBeTruthy(),
     );
-    expect(screen.queryByText("Email text not verified")).toBeNull();
+    expect(
+      screen.queryByText(englishCopy["email.thread.textUnassessed"]),
+    ).toBeNull();
   });
 
   it("says nothing for a mail that was read", async () => {
@@ -642,7 +645,9 @@ describe("a mail the installation's relay sent for a rep", () => {
     stubRead(relayed("privacy@kps.test"));
     draw(openAs(REP));
 
-    expect(await screen.findByText("Sent by Margince for you")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["trust.relayForYou"]),
+    ).toBeTruthy();
     expect(screen.getByText("From privacy@kps.test")).toBeTruthy();
     await openEnvelope();
     const from = screen.getByText("From", {
@@ -658,16 +663,18 @@ describe("a mail the installation's relay sent for a rep", () => {
     draw(openAs(COLLEAGUE));
 
     expect(
-      await screen.findByText("Sent by Margince for a colleague"),
+      await screen.findByText(englishCopy["trust.relayForColleague"]),
     ).toBeTruthy();
-    expect(screen.queryByText("Sent by Margince for you")).toBeNull();
+    expect(screen.queryByText(englishCopy["trust.relayForYou"])).toBeNull();
   });
 
   it("names no sender address the relay did not record, and still not the rep", async () => {
     stubRead(relayed(null));
     draw(openAs(REP));
 
-    expect(await screen.findByText("Sent by Margince for you")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["trust.relayForYou"]),
+    ).toBeTruthy();
     expect(screen.queryByText(/^From /)).toBeNull();
     await openEnvelope();
     expect(

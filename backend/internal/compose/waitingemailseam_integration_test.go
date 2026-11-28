@@ -42,7 +42,7 @@ func seedWaitingOfKind(
 ) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(), `
 			INSERT INTO activity (id, kind, subject, body, direction, source_system, source_id,
 			                      source, captured_by, audience, occurred_at, thread_key,
@@ -170,7 +170,7 @@ func TestAWaitingBadgeUsesTheReadTimeAcrossTheHorizon(t *testing.T) {
 	if tailCard == nil || tailCard.EmailSummary == nil || tailCard.EmailSummary.Move != crmcontracts.EmailSummaryMoveNeedsReply {
 		t.Fatalf("waiting tail at %v with server clock %v = %+v, want the same needs-reply badge", asOf, serverNow, tailCard)
 	}
-	if err := database.WithWorkspaceSnapshot(e.Admin(), e.Pool, func(ctx context.Context) error {
+	if err := database.WithSnapshot(e.Admin(), e.Pool, func(ctx context.Context) error {
 		return database.ReuseGenericPlans(ctx, func(ctx context.Context) error {
 			cards, err := seam.WaitingAfter(ctx, asOf, attention.WaitingFor{}, "", 10)
 			if err != nil {
@@ -212,7 +212,7 @@ func TestTheWaitingSeamHandsNoRowForAMessageTheReaderCannotRead(t *testing.T) {
 		t.Fatalf("the open mail carried no row to begin with; the held case proves nothing")
 	}
 
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, execErr := tx.Exec(context.Background(),
 			`UPDATE activity SET audience = 'participants' WHERE id = $1`, mail)
 		return execErr
@@ -238,7 +238,7 @@ func TestTheWaitingSeamHandsNoRowForAMessageTheReaderCannotRead(t *testing.T) {
 // Manually logged mail still reaches the seam before machine senders are removed.
 func seedMachineFlood(t *testing.T, e *integration.Env, contact ids.UUID, count int, from time.Time) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			WITH flooded AS (
 			  INSERT INTO activity (id, kind, subject, body, direction, source_system, source_id,

@@ -92,7 +92,7 @@ func (s *Service) ProposeRoles(
 
 	var dealName string
 	var candidates []proposeroles.Candidate
-	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		var err error
 		dealName, candidates, err = s.proposalInput(ctx, tx, dealID, now)
 		return err

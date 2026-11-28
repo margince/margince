@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../../../api/schema";
+import { en as englishCopy } from "../../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -274,7 +275,9 @@ export const OnTrackWithMarginceChange: Story = {
     await expect(
       await card.findByText(/Win probability set to 40%/),
     ).toBeVisible();
-    await expect(card.getByText("Open in History")).toBeVisible();
+    await expect(
+      card.getByText(englishCopy["standing.latest.open"]),
+    ).toBeVisible();
   },
 };
 

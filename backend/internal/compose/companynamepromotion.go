@@ -219,7 +219,7 @@ func (p *CompanyNamePromoter) rule(ctx context.Context, candidates []contacts.Co
 		return nil
 	}
 	var verdicts map[ids.UUID]map[string]ai.Verdict
-	if err := database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, p.pool, func(tx pgx.Tx) error {
 		var err error
 		verdicts, err = p.feedback.VerdictsForManyTx(ctx, tx, "contact", subjects)
 		return err
@@ -306,7 +306,7 @@ func (p *CompanyNamePromoter) applyUnlessDeclined(ctx context.Context, cand cont
 	verdict contacts.CompanyNameVerdict,
 ) error {
 	var promoted bool
-	err := database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, p.pool, func(tx pgx.Tx) error {
 		refused, err := p.approvals.RejectedChangesForTx(ctx, tx, companyNameProposalKind, cand.CompanyID.UUID)
 		if err != nil {
 			return err

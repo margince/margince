@@ -19,6 +19,7 @@ import { BulkUndoProvider } from "../../../components/bulkchange";
 import { pickOption } from "../../../design-system/select-testing";
 import { ToastProvider, ToastRegion } from "../../../design-system/toast";
 import { LocaleProvider } from "../../../i18n";
+import { en as englishCopy } from "../../../i18n/en";
 import { ConfirmAdvanceModal } from "./confirmadvance";
 
 // Closing a deal with open tasks asks what happens to them. Complete all runs
@@ -104,7 +105,7 @@ const LOST_TO_A_RIVAL = {
 async function giveReason(user: ReturnType<typeof userEvent.setup>) {
   await pickOption(
     user,
-    screen.getByRole("combobox", { name: "Why was it lost?" }),
+    screen.getByRole("combobox", { name: englishCopy["deals.lostReasonCode"] }),
     "Chose a competitor",
   );
 }
@@ -328,12 +329,14 @@ it("holds Confirm while the deal's tasks are still loading", async () => {
   const confirm = screen.getByRole("button", { name: "Confirm" });
   expect(confirm).toBeDisabled();
   expect(
-    screen.getByText("Loading the deal’s open tasks…"),
+    screen.getByText(englishCopy["deals.closeTasks.loading"]),
   ).toBeInTheDocument();
 
   answerRead(json({ data: OPEN_TASKS, page: { has_more: false } }));
   await screen.findByRole("list");
-  expect(screen.queryByText("Loading the deal’s open tasks…")).toBeNull();
+  expect(
+    screen.queryByText(englishCopy["deals.closeTasks.loading"]),
+  ).toBeNull();
 });
 
 it("lets the deal close after a failed read and keeps every task", async () => {
@@ -347,7 +350,7 @@ it("lets the deal close after a failed read and keeps every task", async () => {
   const user = userEvent.setup();
   const onConfirm = vi.fn(async () => ({ id: "deal-1", version: 4 }));
   renderClose(onConfirm);
-  await screen.findByText("Closing keeps every task on this deal open.");
+  await screen.findByText(englishCopy["deals.closeTasks.readFailed"]);
   expect(screen.getByRole("alert")).toBeInTheDocument();
   expect(screen.queryByRole("radio")).toBeNull();
 
@@ -376,7 +379,9 @@ it("says so when Complete all could complete none of the tasks", async () => {
   await answer(user, "Complete all");
 
   const note = await screen.findByText(/No task could be completed\./);
-  expect(note.textContent).not.toBe("No task could be completed.");
+  expect(note.textContent).not.toBe(
+    englishCopy["deals.closeTasks.noneCompleted"],
+  );
   expect(sent.map((call) => call.path)).toEqual(["/v1/bulk/preview"]);
 });
 

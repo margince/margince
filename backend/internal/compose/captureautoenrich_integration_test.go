@@ -66,7 +66,7 @@ func TestAutoEnrichLaneAppliesDirectlyInsteadOfStaging(t *testing.T) {
 	// The sweep cursor is terminal: outcome 'applied', never re-enqueued.
 	var outcome string
 	var nextAttempt *time.Time
-	if err := database.WithWorkspaceTx(adminCtx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(adminCtx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT last_outcome, next_attempt_at FROM capture_auto_enrich_state WHERE company_id = $1`,
 			company).Scan(&outcome, &nextAttempt)
@@ -83,7 +83,7 @@ func TestAutoEnrichLaneAppliesDirectlyInsteadOfStaging(t *testing.T) {
 func insertDomainCompany(t *testing.T, e *integration.Env, domain string) ids.CompanyID {
 	t.Helper()
 	companyID := ids.NewV7()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(), `
 			INSERT INTO company (id, owner_id, display_name, name_source, source, captured_by)
 			VALUES ($1, $2, $3, 'domain', 'connector:gmail', 'connector:gmail')`,
@@ -244,7 +244,7 @@ func TestAutoEnrichExpireExhausted(t *testing.T) {
 	}
 	var outcome string
 	var nextAttempt *time.Time
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT last_outcome, next_attempt_at FROM capture_auto_enrich_state WHERE company_id = $1`,
 			company).Scan(&outcome, &nextAttempt)

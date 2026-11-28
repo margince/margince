@@ -29,7 +29,7 @@ func quietProjectPass(t *testing.T, e *Env, now time.Time) compose.GhostedPass {
 	t.Helper()
 	var pass compose.GhostedPass
 	ctx := e.Admin()
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		pass, err = compose.WriteProjectQuietSignals(ctx, tx, now)
 		return err

@@ -50,7 +50,7 @@ func TestTheAccessExportNamesTheDoorThatAttestedAMessage(t *testing.T) {
 		VALUES ($1, 'contact', $2)`, mail, contact)
 	const messageID = "<terms-1@buyer.test>"
 	ctx := e.Admin()
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := activities.ClaimIdentity(ctx, tx, ids.From[ids.ActivityKind](mail),
 			activities.IdentityKindMail, messageID, "connector:gmail")
 		return err

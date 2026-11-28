@@ -31,9 +31,9 @@ func (s *Store) linkEmploymentEpisode(ctx context.Context, tx pgx.Tx, contact id
 	_, started := preciseEmploymentDate(e.Started)
 	_, ended := preciseEmploymentDate(e.Ended)
 	matched, state := matchEmploymentEpisode(relationships, e, started, ended)
-	// Evidence that matches no row would make a new employment. For a pair
-	// somebody ended it waits for a human, who may still resolve it.
-	if automatic && matched == nil {
+	// Current evidence must not revive a link a human ended. Historical or
+	// undated roles remain non-current and can coexist in the imported history.
+	if automatic && matched == nil && e.Status == employmentCurrent {
 		removed, err := pairEndedByHand(ctx, tx, contact, company)
 		if err != nil {
 			return nil, "", err

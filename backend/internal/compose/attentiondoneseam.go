@@ -18,7 +18,7 @@ import (
 // the pins the same store keeps.
 func (p attentionPins) DoneRows(ctx context.Context, among []attention.RowRef) (map[attention.RowRef]time.Time, error) {
 	var out map[attention.RowRef]time.Time
-	err := database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, p.pool, func(tx pgx.Tx) error {
 		done, err := p.store.DoneRows(ctx, tx, worklistRows(among))
 		if err != nil {
 			return err

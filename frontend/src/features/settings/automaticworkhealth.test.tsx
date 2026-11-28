@@ -7,6 +7,7 @@ import "@testing-library/jest-dom/vitest";
 import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import { jsonResponse, render } from "../../testing/settings.testkit";
 import { AutomaticWorkHealthCard } from "./automaticworkhealth";
@@ -125,24 +126,32 @@ it("shows each colleague's counts per kind and flags only a share the server fla
 
   render(<AutomaticWorkHealthCard />);
 
-  const table = await screen.findByRole("table", { name: "Automatic work" });
+  const table = await screen.findByRole("table", {
+    name: englishCopy["settings.automaticWork"],
+  });
   const promise = within(table)
-    .getByText("Task from a commitment")
+    .getByText(englishCopy["automaticWork.kind.promise_task"])
     .closest("tr");
   expect(promise).not.toBeNull();
   const flagged = within(promise as HTMLElement).getByText("20%, needs a look");
   expect(flagged.closest(".badge")).not.toBeNull();
 
   // Half of two items is shown, and said to be too few to judge.
-  const reminder = within(table).getByText("Reply reminder").closest("tr");
+  const reminder = within(table)
+    .getByText(englishCopy["automaticWork.kind.reply_reminder"])
+    .closest("tr");
   expect(
     within(reminder as HTMLElement).getByText("50%, too few items to judge"),
   ).toBeInTheDocument();
 
   // A rejected approval is not a Not mine: its kind has no such choice.
-  const approval = within(table).getByText("Approval request").closest("tr");
+  const approval = within(table)
+    .getByText(englishCopy["automaticWork.kind.approval_request"])
+    .closest("tr");
   expect(
-    within(approval as HTMLElement).getByText("No Not mine choice"),
+    within(approval as HTMLElement).getByText(
+      englishCopy["automaticWork.noNotMine"],
+    ),
   ).toBeInTheDocument();
 
   // A colleague with nothing is counted, not drawn as a row of zeros.
@@ -152,7 +161,7 @@ it("shows each colleague's counts per kind and flags only a share the server fla
   ).toBeInTheDocument();
 
   const waiting = screen.getByRole("table", {
-    name: "Waiting messages marked Not mine",
+    name: englishCopy["automaticWork.waiting"],
   });
   expect(within(waiting).getByText("Ada Rep")).toBeInTheDocument();
 });
@@ -163,7 +172,11 @@ it("asks for thirty days when the reader picks them", async () => {
 
   render(<AutomaticWorkHealthCard />);
 
-  await user.click(await screen.findByRole("button", { name: "Last 30 days" }));
+  await user.click(
+    await screen.findByRole("button", {
+      name: englishCopy["automaticWork.last30"],
+    }),
+  );
 
   await vi.waitFor(() =>
     expect(sent).toContain("GET /admin/automatic-work-health?days=30"),
@@ -182,9 +195,7 @@ it("says so when there was no automatic work at all", async () => {
   render(<AutomaticWorkHealthCard />);
 
   expect(
-    await screen.findByText(
-      "Margince created no automatic work in these days.",
-    ),
+    await screen.findByText(englishCopy["automaticWork.none"]),
   ).toBeInTheDocument();
 });
 

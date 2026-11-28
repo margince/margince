@@ -26,7 +26,7 @@ import (
 func seatEmployee(t *testing.T, e *integration.Env, company ids.UUID, fullName, email string) ids.UUID {
 	t.Helper()
 	contact := ids.NewV7()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO contact (id, full_name, source, captured_by)
@@ -54,7 +54,7 @@ func seatEmployee(t *testing.T, e *integration.Env, company ids.UUID, fullName, 
 func seatedTitle(t *testing.T, e *integration.Env, contact ids.UUID) *string {
 	t.Helper()
 	var title *string
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT title FROM contact WHERE id = $1`, contact).Scan(&title)
 	})
@@ -174,7 +174,7 @@ func TestApplySiteContactFieldsNeverTouchesAHumansAnswer(t *testing.T) {
 	store := contacts.NewStore(e.DB())
 	company := e.SeedCompany(t, "Acme", nil)
 	contact := seatEmployee(t, e, company, "Erin Vance", "erin@acme.example")
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE contact SET title = 'Handwritten Title' WHERE id = $1`, contact)
 		return err
@@ -205,7 +205,7 @@ func TestApplySiteContactFieldsNeverTouchesAHumansAnswer(t *testing.T) {
 func seatEmployeeOwnedBy(t *testing.T, e *integration.Env, company, owner ids.UUID, fullName string) ids.UUID {
 	t.Helper()
 	contact := seatEmployee(t, e, company, fullName, "")
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE contact SET owner_id = $2 WHERE id = $1`, contact, owner)
 		return err

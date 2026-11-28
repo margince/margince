@@ -31,7 +31,7 @@ import (
 // column every downstream reader parses against a fixed set, and be skipped.
 func (e *CounterpartyVerdictEngine) ownerDecided(ctx context.Context, row capture.PendingCounterparty) (bool, string, error) {
 	var decision string
-	if err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.pool, func(tx pgx.Tx) error {
 		var err error
 		decision, err = capture.OverrideForTx(ctx, tx, row.OwnerID, row.Email)
 		return err

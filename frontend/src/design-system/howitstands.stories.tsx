@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
 import { UTC_ZONE } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { expectTextFits, UNBROKEN_SUBJECT } from "../testing/unbrokentext";
 import { StatCard } from "./atoms";
 import { HowItStands } from "./howitstands";
@@ -151,7 +152,7 @@ export const CompanyWithRing: Story = {
       }),
     ).toBeVisible();
     await expect(
-      within(canvasElement).getByText("From CRM records"),
+      within(canvasElement).getByText(englishCopy["standing.sources.records"]),
     ).toBeVisible();
   },
 };

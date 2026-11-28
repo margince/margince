@@ -79,7 +79,7 @@ func (f dealRefileFixture) enqueue(t *testing.T, eventType string, entity ids.UU
 	t.Helper()
 	e := f.o.e
 	var envelope events.Envelope
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(t.Context(), `SELECT envelope FROM event_outbox WHERE envelope->>'type'=$1 AND envelope->'entity'->>'id'=$2 ORDER BY seq DESC LIMIT 1`, eventType, entity.String()).Scan(&envelope)
 	}); err != nil {
 		t.Fatal(err)

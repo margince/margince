@@ -134,7 +134,7 @@ func (a ladderAccount) capture(t *testing.T, sourceID, threadKey, subject string
 func filedUnder(t *testing.T, e *integration.Env, activityID ids.UUID) ids.UUID {
 	t.Helper()
 	var projectID ids.UUID
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT coalesce((SELECT project_id FROM activity_link
 			                  WHERE activity_id = $1 AND entity_type = 'project'),
@@ -154,7 +154,7 @@ func filedUnder(t *testing.T, e *integration.Env, activityID ids.UUID) ids.UUID 
 func pendingApprovalsAbout(t *testing.T, e *integration.Env, activityID ids.UUID) int {
 	t.Helper()
 	var n int
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM approval WHERE target_entity_id = $1 AND status = 'pending'`,
 			activityID).Scan(&n)

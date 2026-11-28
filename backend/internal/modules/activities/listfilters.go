@@ -18,6 +18,7 @@ import (
 const (
 	filterKind             = "kind"
 	filterChannelProvider  = "channel_provider"
+	filterChatProvider     = "chat_provider"
 	filterCallOutcome      = "call_outcome"
 	filterEntityType       = "entity_type"
 	filterEntityID         = "entity_id"
@@ -35,7 +36,14 @@ const (
 )
 
 var activityListFilters = storekit.FilterSet[ListActivitiesInput]{
-	filterKind:            storekit.FilterWord(func(in *ListActivitiesInput, v *string) { in.Kind = v }),
+	filterKind: storekit.FilterWord(func(in *ListActivitiesInput, v *string) { in.Kind = v }),
+	filterChatProvider: func(in *ListActivitiesInput, value string) error {
+		if !crmcontracts.MessengerProvider(value).Valid() {
+			return errors.New("choose a supported messaging provider")
+		}
+		in.ChatProvider = &value
+		return nil
+	},
 	filterChannelProvider: storekit.FilterWord(func(in *ListActivitiesInput, v *string) { in.ChannelProvider = v }),
 	// Checked against the contract's list here: a typo would otherwise answer
 	// an empty list, which reads as "no such calls".

@@ -34,7 +34,7 @@ func (e *Engine) Control(ctx context.Context, taskID, stepName, action string, v
 	if !exists {
 		return apperrors.ErrNotFound
 	}
-	err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.pool, func(tx pgx.Tx) error {
 		if err := database.BoundStatement(ctx, tx, statementLimit); err != nil {
 			return err
 		}

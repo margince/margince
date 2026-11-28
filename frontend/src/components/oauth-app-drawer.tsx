@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { CalendarDays, LogIn, Mail } from "lucide-react";
+import { CalendarDays, LogIn, Mail, MessagesSquare } from "lucide-react";
 import { useId, useRef, useState } from "react";
 import { Button, Field, TextInput } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
@@ -39,6 +39,18 @@ import { useUnsavedGuard } from "./unsaved";
 // The drawer's per-vendor wording, as literal keys for the reason vendorCopy
 // spells its own that way.
 const drawerCopy = {
+  slack: {
+    title: "oauthApp.drawer.slack.title",
+    intro: "oauthApp.drawer.slack.intro",
+    value: "oauthApp.drawer.slack.value",
+    unlockMail: "oauthApp.unlock.slack",
+    save: "oauthApp.slack.save",
+    removeTitle: "oauthApp.slack.removeConfirmTitle",
+    removeSecret: "oauthApp.slack.removeSecret",
+    removeUsedBy: "oauthApp.slack.removeUsedBy",
+    removeOthers: "oauthApp.slack.removeOthers",
+    removeSignIn: "oauthApp.slack.removeOthers",
+  },
   google: {
     title: "oauthApp.drawer.google.title",
     intro: "oauthApp.drawer.google.intro",
@@ -144,6 +156,7 @@ function SetupForm({
   const [clientId, setClientId] = useState<string | undefined>(undefined);
   const [tenant, setTenant] = useState<string | undefined>(undefined);
   const [clientSecret, setClientSecret] = useState("");
+  const [signingSecret, SigningSecret] = useState("");
   const status = app.data;
   // The installation's own app refuses every value, so the form only explains.
   const state = status ? vendorAppState(status, provider, t) : undefined;
@@ -161,7 +174,10 @@ function SetupForm({
   // Held while the PUT is out too: a reload then still warns, and a refused
   // save keeps the draft claimed. The drawer itself will not close meanwhile.
   const dirty =
-    clientId !== undefined || tenant !== undefined || clientSecret !== "";
+    clientId !== undefined ||
+    tenant !== undefined ||
+    clientSecret !== "" ||
+    signingSecret !== "";
   useUnsavedGuard(dirty);
   // Cancel asks as Escape and the X do. A save closes without asking.
   const [asking, setAsking] = useState(false);
@@ -172,12 +188,16 @@ function SetupForm({
       {
         clientId: id.trim(),
         clientSecret: clientSecret.trim(),
+        ...(provider === "slack"
+          ? { signingSecret: signingSecret.trim() }
+          : {}),
         tenant: directory.trim(),
       },
       {
         onSuccess: () => {
           // The field was the only copy of the secret, and it has done its job.
           setClientSecret("");
+          SigningSecret("");
           onSaved();
         },
       },
@@ -189,9 +209,15 @@ function SetupForm({
       <DrawerBody className="oauthapp-drawer-body">
         <p className="t-body">{t(copy.value, { company })}</p>
         <div className="oauthapp-unlocks">
-          <Chip icon={Mail}>{t(copy.unlockMail)}</Chip>
-          <Chip icon={CalendarDays}>{t("oauthApp.unlock.calendar")}</Chip>
-          <Chip icon={LogIn}>{t("oauthApp.unlock.signIn")}</Chip>
+          <Chip icon={provider === "slack" ? MessagesSquare : Mail}>
+            {t(copy.unlockMail)}
+          </Chip>
+          {provider !== "slack" && (
+            <>
+              <Chip icon={CalendarDays}>{t("oauthApp.unlock.calendar")}</Chip>
+              <Chip icon={LogIn}>{t("oauthApp.unlock.signIn")}</Chip>
+            </>
+          )}
         </div>
         <OAuthAppSteps
           provider={provider}
@@ -241,6 +267,23 @@ function SetupForm({
               />
             )}
           </Field>
+          {provider === "slack" && (
+            <Field
+              label={t("messenger.signingSecret")}
+              hint={t("messenger.signingSecretHint")}
+            >
+              {(control) => (
+                <TextInput
+                  {...control}
+                  type="password"
+                  autoComplete="off"
+                  value={signingSecret}
+                  disabled={locked}
+                  onChange={(event) => SigningSecret(event.target.value)}
+                />
+              )}
+            </Field>
+          )}
           {/* Google has no directories, and a field that silently does
                 nothing is worse than none. */}
           {provider === "microsoft" && (
@@ -368,13 +411,17 @@ export function RemoveOAuthAppDialog({
     >
       <ConfirmPhraseBox
         title={t("oauthApp.removeImpactTitle")}
-        impact={[
-          t(copy.removeSecret),
-          t(copy.removeUsedBy),
-          t(copy.removeOthers),
-          t("oauthApp.removeFirstRun"),
-          t(copy.removeSignIn),
-        ]}
+        impact={
+          provider === "slack"
+            ? [t(copy.removeSecret), t(copy.removeUsedBy), t(copy.removeOthers)]
+            : [
+                t(copy.removeSecret),
+                t(copy.removeUsedBy),
+                t(copy.removeOthers),
+                t("oauthApp.removeFirstRun"),
+                t(copy.removeSignIn),
+              ]
+        }
         prompt={t("confirmPhrase.riskPrompt")}
         phrase={phrase}
         value={typed}

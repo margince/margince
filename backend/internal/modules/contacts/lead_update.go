@@ -20,21 +20,19 @@ import (
 )
 
 type UpdateLeadInput struct {
-	// Clear names the wire fields to set to NULL. A JSON null cannot say so —
-	// it decodes to a nil pointer and reads as "not supplied" — so the
-	// reversal path names them here instead.
+	// Clear distinguishes an explicit null from an omitted field.
 	Clear []string
 	// Trail names what the audit trail calls this write; zero is an update.
 	Trail               storekit.AuditTrail
 	FullName            *string
+	Salutation          *crmcontracts.Salutation
 	Email               *string
 	Phone               *string
 	Title               *string
 	CompanyName         *string
 	CandidateCompanyKey *string
 	// Industry is a code or a label of one (leadIndustryWrite); blank clears it.
-	Industry *string
-	// LinkedInURL sets the profile URL in its normalized spelling.
+	Industry    *string
 	LinkedInURL *string
 	Status      *string // only new ↔ working here; terminal states have their own paths
 	// Source is how the row was written. It is deprecated on the wire and no
@@ -401,6 +399,9 @@ func buildLeadPatch(current crmcontracts.Lead, in UpdateLeadInput) (*storekit.Pa
 			return nil, false, err
 		}
 		p.Set(leadPhoneColumn, current.Phone, parsed.String())
+	}
+	if err := patchSalutation(p, current.Salutation, in.Salutation); err != nil {
+		return nil, false, err
 	}
 	if in.Title != nil {
 		p.Set("title", current.Title, *in.Title)

@@ -336,12 +336,14 @@ export const EditProject: Story = {
     const user = userEvent.setup();
     const canvas = within(canvasElement);
     await user.click(
-      await canvas.findByRole("button", { name: "More actions" }),
+      await canvas.findByRole("button", { name: en["record.moreActions"] }),
     );
     await user.click(
-      await screen.findByRole("button", { name: "Edit project" }),
+      await screen.findByRole("button", { name: en["project.edit"] }),
     );
-    const dialog = await screen.findByRole("dialog", { name: "Edit project" });
+    const dialog = await screen.findByRole("dialog", {
+      name: en["project.edit"],
+    });
     await waitFor(() => expect(dialog).toBeVisible());
     await expect(
       within(dialog).getByRole("textbox", { name: /^Project name/ }),

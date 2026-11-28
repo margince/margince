@@ -38,7 +38,7 @@ import (
 // reads as a pass.
 func SetBaseLanguage(ctx context.Context, t *testing.T, pool *pgxpool.Pool, code string) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(ctx,
 			`DELETE FROM setting WHERE key = $1`, identity.BaseLanguage.Key()); err != nil {
 			return err

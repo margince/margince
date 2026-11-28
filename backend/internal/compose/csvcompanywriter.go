@@ -16,6 +16,7 @@ import (
 	"strings"
 
 	"github.com/margince/margince/backend/internal/compose/importkeys"
+	"github.com/margince/margince/backend/internal/compose/importrecords"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -35,6 +36,10 @@ func (w *csvWriters) keysOf(row migration.Row, typed map[string]any) map[importk
 	case migration.ObjectCompany:
 		keys[importkeys.Domain] = canonicalFor(fieldDomain, fields[fieldDomain])
 		keys[importkeys.LinkedIn] = strings.ToLower(keys[importkeys.LinkedIn])
+	case migration.ObjectProduct:
+		keys[importkeys.SKU] = fields[importrecords.ProductSKU]
+	case migration.ObjectProject:
+		keys[importkeys.Deal] = importrecords.ProjectDealKey(fields, typed)
 	}
 	return keys
 }
@@ -48,7 +53,9 @@ func (w *csvWriters) claimRow(row migration.Row, typed map[string]any) {
 }
 
 // movedKeyFields are the columns whose change moves a key.
-var movedKeyFields = map[string]importkeys.Kind{fieldEmail: importkeys.Email, fieldLinkedIn: importkeys.LinkedIn, fieldDomain: importkeys.Domain}
+var movedKeyFields = map[string]importkeys.Kind{
+	fieldEmail: importkeys.Email, fieldLinkedIn: importkeys.LinkedIn, fieldDomain: importkeys.Domain, importrecords.ProductSKU: importkeys.SKU,
+}
 
 // movedKeyRefusal says why an update cannot move a key onto its record, or the
 // zero reason. The test run and the import both ask before they write, so the
@@ -69,6 +76,9 @@ func (w *csvWriters) keyChecks(ctx context.Context, row migration.Row, typed map
 // to call the record by, whatever its keys are.
 func (w *csvWriters) newRecordRefusal(ctx context.Context, row migration.Row, typed map[string]any) (migration.Reason, error) {
 	fields := textFields(row.Fields)
+	if why := w.record.RefuseNew(fields, typed); why.Code != "" {
+		return why, nil
+	}
 	switch {
 	case w.object == migration.ObjectContact && contactFullName(fields) == "":
 		return contactUnnamedWhy, nil

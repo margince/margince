@@ -306,7 +306,7 @@ func (h integrationsHandlers) requireVisibleContact(ctx context.Context, id crmc
 	if h.pool == nil {
 		return apperrors.ErrPermissionDenied
 	}
-	return database.WithWorkspaceTx(ctx, h.pool, func(tx pgx.Tx) error {
+	return database.WithTx(ctx, h.pool, func(tx pgx.Tx) error {
 		return auth.EnsureVisibleLive(ctx, tx, "contact", ids.UUID(id))
 	})
 }

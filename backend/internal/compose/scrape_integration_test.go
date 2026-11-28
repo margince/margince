@@ -57,7 +57,7 @@ const acmeExtraction = `{"fields":[
 func insertCompany(t *testing.T, e *integration.Env, owner ids.UUID, domain, industry string) ids.UUID {
 	t.Helper()
 	companyID := ids.NewV7()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(), `
 			INSERT INTO company (id, owner_id, display_name, industry, source, captured_by)
 			VALUES ($1, $2, 'Acme', NULLIF($3,''), 'manual', 'human:owner')`,
@@ -105,7 +105,7 @@ func TestScrapeStagesEnrichmentBoundToCompany(t *testing.T) {
 	var kind, status, targetType string
 	var targetID ids.UUID
 	var eventCount int
-	err = database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(context.Background(),
 			`SELECT kind, status, coalesce(target_entity_type,''), coalesce(target_entity_id, $2)
 			 FROM approval WHERE id = $1`, ids.From[ids.ApprovalKind](ids.UUID(proposal.ProposalId)), ids.Nil).Scan(&kind, &status, &targetType, &targetID); err != nil {
@@ -190,7 +190,7 @@ func TestScrapeAcceptFillsOnlyEmptyFields(t *testing.T) {
 
 	var industry, capturedBy, source string
 	var profileRows, companies int
-	err = database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(context.Background(),
 			`SELECT industry FROM company WHERE id = $1`, companyID).Scan(&industry); err != nil {
 			return err
@@ -240,7 +240,7 @@ func TestScrapeAcceptFillsOnlyEmptyFields(t *testing.T) {
 		t.Fatalf("reject: %v", err)
 	}
 	var rejectedRows int
-	err = database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM company_profile_field WHERE company_id = $1`, companyID).Scan(&rejectedRows)
 	})

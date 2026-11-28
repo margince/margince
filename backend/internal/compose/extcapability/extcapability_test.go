@@ -14,7 +14,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 	"github.com/margince/margince/backend/pkg/extension"
 )
@@ -137,14 +136,18 @@ func TestPreflightRefusesWhatTheManifestCouldNotPublish(t *testing.T) {
 	}
 }
 
-// inWorkspace is a context carrying a fresh workspace, and that workspace's id.
+// storedWorkspace is the id these tests' installation stores its objects under.
+var storedWorkspace = ids.From[ids.WorkspaceKind](ids.NewV7())
+
+func atStoredWorkspace(context.Context) (ids.WorkspaceID, error) { return storedWorkspace, nil }
+
+// inWorkspace is a context and the id the installation's objects are stored under.
 func inWorkspace() (context.Context, ids.WorkspaceID) {
-	raw := ids.NewV7()
-	return principal.WithWorkspaceID(context.Background(), raw), ids.From[ids.WorkspaceKind](raw)
+	return context.Background(), storedWorkspace
 }
 
 func objectsFor(unit string, store blobstore.Store) extcapability.Objects {
-	return extcapability.Objects{Store: store, Ledger: (&ledger{}).run, Unit: unit, Gate: allow}
+	return extcapability.Objects{Store: store, Ledger: (&ledger{}).run, Unit: unit, Gate: allow, Workspace: atStoredWorkspace}
 }
 
 func TestAnObjectLivesUnderTheUnitsOwnPrefixAndNowhereElse(t *testing.T) {
@@ -234,7 +237,7 @@ func TestRemovingAUnitDeletesItsObjectsAndNoOthers(t *testing.T) {
 	if len(removed) != 1 || removed[0] != "gone" {
 		t.Fatalf("Gone = %v, want [gone]", removed)
 	}
-	if err := extcapability.Sweep(ctx, store, removed); err != nil {
+	if err := extcapability.Sweep(ctx, store, ws, removed); err != nil {
 		t.Fatal(err)
 	}
 	if _, _, err := store.Get(ctx, gone); !errors.Is(err, blobstore.ErrNotFound) {

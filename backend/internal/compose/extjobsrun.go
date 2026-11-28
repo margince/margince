@@ -19,6 +19,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/instrument"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -89,7 +90,7 @@ type extJobDispatcherWorker struct {
 // installation, and there is no per-tenant switch for the tick to consult. When
 // one lands, it belongs in the enumeration below and nowhere else.
 func (w *extJobDispatcherWorker) Work(ctx context.Context, _ *river.Job[extJobDispatcherArgs]) error {
-	workspaces, err := enumerateWorkspaces(ctx, w.pool)
+	workspaces, err := database.LiveWorkspaces(ctx, w.pool)
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}

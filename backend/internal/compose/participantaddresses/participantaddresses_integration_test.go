@@ -230,7 +230,7 @@ func TestBatchesOfTwoReachEveryAddressAndAReplayChangesNothing(t *testing.T) {
 	in := datatask.BatchIn{Limit: 2, RunID: ids.NewV7()}
 	for batches := 1; ; batches++ {
 		var out datatask.BatchOut
-		if err := database.WithWorkspaceTx(ctx, o.e.Pool, func(tx pgx.Tx) (err error) {
+		if err := database.WithTx(ctx, o.e.Pool, func(tx pgx.Tx) (err error) {
 			out, err = lowercase(ctx, tx, in)
 			return err
 		}); err != nil {
@@ -253,7 +253,7 @@ func TestBatchesOfTwoReachEveryAddressAndAReplayChangesNothing(t *testing.T) {
 	if got := o.stored(crowded, "eve@buyer.test"); got.Rows != 1 {
 		t.Errorf("three spellings of one guest left %d row(s), want 1", got.Rows)
 	}
-	if err := database.WithWorkspaceTx(ctx, o.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, o.e.Pool, func(tx pgx.Tx) error {
 		out, err := lowercase(ctx, tx, datatask.BatchIn{Limit: 100, RunID: ids.NewV7()})
 		if err == nil && (out.Changed != 0 || !out.Done) {
 			t.Errorf("a replay changed %d row(s), done %v, want none and done", out.Changed, out.Done)
@@ -293,7 +293,7 @@ func TestTheTaskRollsBackWithItsBatchAndRefusesAMalformedCursor(t *testing.T) {
 	if n := o.e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_id = $1 AND action = 'update'`, meeting); n != 0 {
 		t.Errorf("the rolled-back batch left %d audit row(s)", n)
 	}
-	if err := database.WithWorkspaceTx(ctx, o.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, o.e.Pool, func(tx pgx.Tx) error {
 		_, err := lowercase(ctx, tx, datatask.BatchIn{Cursor: []byte(`"bad cursor"`), Limit: 2})
 		return err
 	}); err == nil {
@@ -302,7 +302,7 @@ func TestTheTaskRollsBackWithItsBatchAndRefusesAMalformedCursor(t *testing.T) {
 	// A batch or an estimate whose context ended reports the failed read.
 	stopped, stop := context.WithCancel(ctx)
 	stop()
-	if err := database.WithWorkspaceTx(ctx, o.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, o.e.Pool, func(tx pgx.Tx) error {
 		_, err := lowercase(stopped, tx, datatask.BatchIn{Limit: 2})
 		return err
 	}); err == nil {
@@ -312,7 +312,7 @@ func TestTheTaskRollsBackWithItsBatchAndRefusesAMalformedCursor(t *testing.T) {
 		t.Fatal("an estimate whose context ended reported a count")
 	}
 	member := o.e.Admin()
-	if err := database.WithWorkspaceTx(member, o.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(member, o.e.Pool, func(tx pgx.Tx) error {
 		_, err := lowercase(member, tx, datatask.BatchIn{Limit: 2})
 		return err
 	}); !errors.Is(err, apperrors.ErrPermissionDenied) {

@@ -40,7 +40,7 @@ func TestAClearedSenderReleaseSkipsAMessageAnEnsureHolds(t *testing.T) {
 	var pid int32
 	started, released, returned := make(chan error, 1), make(chan error, 1), make(chan struct{})
 	go func() {
-		released <- database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		released <- database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			err := tx.QueryRow(e.Admin(), `SELECT pg_backend_pid()`).Scan(&pid)
 			if err == nil {
 				_, err = tx.Exec(e.Admin(), `SELECT id FROM contact WHERE id = $1 FOR UPDATE`, contact)
@@ -76,7 +76,7 @@ func TestAClearedSenderReleaseSkipsAMessageAnEnsureHolds(t *testing.T) {
 	if err := ensure.wait(); err != nil {
 		t.Fatalf("the ensure: %v", err)
 	}
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := capture.WidenClearedSenderTx(e.Admin(), tx, sender, clearedSenderLiveBound, activities.RecomputeAudienceTx)
 		return err
 	}); err != nil {
@@ -105,7 +105,7 @@ func holdMessageForAnEnsure(t *testing.T, e *integration.Env, activity ids.Activ
 	locked := make(chan error, 1)
 	go func() {
 		defer close(h.finished)
-		h.err = database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		h.err = database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			_, err := tx.Exec(e.Admin(), `SELECT id FROM activity WHERE id = $1 FOR UPDATE`, activity)
 			locked <- err
 			if err != nil {

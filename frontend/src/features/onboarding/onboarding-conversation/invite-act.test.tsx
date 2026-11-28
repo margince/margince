@@ -8,6 +8,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../../i18n";
+import { en as englishCopy } from "../../../i18n/en";
 import { installFetchStub, meRoute } from "../../../testing/story-utils";
 import type { ConversationState } from "./conversation-machine";
 import { initialConversationState } from "./conversation-machine";
@@ -50,7 +51,7 @@ describe("InviteAct", () => {
     const dispatch = renderInvite();
     expect(
       await screen.findByRole("heading", {
-        name: "Will you work in Margince yourself?",
+        name: englishCopy["ob.conv.invite.title"],
       }),
     ).toBeInTheDocument();
     expect(
@@ -64,7 +65,7 @@ describe("InviteAct", () => {
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
     expect(dispatch).not.toHaveBeenCalled();
     expect(
-      screen.getByText("Select one of the two options to continue."),
+      screen.getByText(englishCopy["ob.conv.invite.pickOne"]),
     ).toBeInTheDocument();
   });
 

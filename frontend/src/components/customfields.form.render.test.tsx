@@ -10,6 +10,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import type { CreateField } from "./create";
 import {
   type CustomField,
@@ -96,7 +97,7 @@ describe("custom fields on the record edit form", () => {
     await userEvent.click(screen.getByTestId("edit-record"));
 
     // The divider heading sets the custom fields apart.
-    expect(screen.getByText("Custom fields")).toBeTruthy();
+    expect(screen.getByText(englishCopy["cf.formSection"])).toBeTruthy();
     // Currency prefilled from 1250 minor units → "12.50" major units.
     const input = screen.getByLabelText("Budget ceiling") as HTMLInputElement;
     expect(input.value).toBe("12.50");
@@ -170,6 +171,6 @@ describe("custom fields on the record edit form", () => {
       />,
     );
     await userEvent.click(screen.getByTestId("edit-record"));
-    expect(screen.queryByText("Custom fields")).toBeNull();
+    expect(screen.queryByText(englishCopy["cf.formSection"])).toBeNull();
   });
 });

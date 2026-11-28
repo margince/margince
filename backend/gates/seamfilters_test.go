@@ -314,6 +314,13 @@ func returnedFilterSet(body []ast.Stmt) string {
 		if !isCall {
 			continue
 		}
+		if builtin, ok := call.Fun.(*ast.Ident); ok && builtin.Name == "append" && len(call.Args) > 0 {
+			nested, ok := call.Args[0].(*ast.CallExpr)
+			if !ok {
+				continue
+			}
+			call = nested
+		}
 		selector, isSelector := call.Fun.(*ast.SelectorExpr)
 		if !isSelector || selector.Sel.Name != "Names" {
 			continue

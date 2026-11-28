@@ -335,7 +335,7 @@ func TestAPassWithNoProviderBoundDeclinesNothing(t *testing.T) {
 		t.Errorf("the stand-in was asked %d times, want once per pass — nothing it answers is worth a re-ask", brain.calls)
 	}
 	var owedDeclined, labelDeclined bool
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT (SELECT owed_verdict_declined_at IS NOT NULL FROM activity WHERE id = $1),
 			       (SELECT capture_label_declined_at IS NOT NULL FROM activity WHERE id = $2)`,
@@ -377,7 +377,7 @@ func seedAnsweredRequest(t *testing.T, e *integration.Env, subject string) ids.U
 	t.Helper()
 	request := ids.NewV7()
 	thread := "thread-" + request.String()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(), `
 			INSERT INTO activity (id, kind, direction, subject, body, occurred_at, thread_key,
 			  counterparty_email, owed_verdict, owed_verdict_at, source, captured_by)
@@ -401,7 +401,7 @@ func seedAnsweredRequest(t *testing.T, e *integration.Env, subject string) ids.U
 // settlementOf reads the verdict the settlement pass recorded, or empty strings.
 func settlementOf(t *testing.T, e *integration.Env, request ids.UUID) (verdict, decidedBy string) {
 	t.Helper()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT coalesce(max(verdict), ''), coalesce(max(decided_by), '')
 			  FROM activity_request_settlement WHERE request_activity_id = $1`, request).Scan(&verdict, &decidedBy)

@@ -67,7 +67,7 @@ func rewriteAbout(pool *pgxpool.Pool) rewrite.Admit {
 		if err := auth.Require(ctx, ref.Type, principal.ActionRead); err != nil {
 			return nil, err
 		}
-		return about, database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+		return about, database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 			if ref.Type == (ids.ActivityID{}).EntityType() {
 				return auth.EnsureActivityContentVisibleLive(ctx, tx, ref.ID)
 			}

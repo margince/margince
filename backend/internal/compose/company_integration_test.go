@@ -70,7 +70,7 @@ func TestCompanyIsUnsetUntilAHumanSavesIt(t *testing.T) {
 	// The mark is what makes the company findable; without it the row is just
 	// another company.
 	var anchors int
-	err = database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM company
 			  WHERE id = $1 AND is_anchor AND archived_at IS NULL`,
@@ -110,7 +110,7 @@ func TestCompanyIsUnsetUntilAHumanSavesIt(t *testing.T) {
 		t.Fatalf("second SaveCompany: %v", err)
 	}
 	var companies int
-	err = database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT count(*) FROM company`).Scan(&companies)
 	})
 	if err != nil {
@@ -172,7 +172,7 @@ func TestCompanyWebsiteCanBeChangedAfterTheFirstSave(t *testing.T) {
 	// not left alongside as a rival primary.
 	var primaries int
 	var primary string
-	err = database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM company_domain
 			  WHERE company_id = $1 AND is_primary AND archived_at IS NULL`,
@@ -214,7 +214,7 @@ func TestCompanySavedByAHumanSurvivesALaterReadBack(t *testing.T) {
 	// The human's own words carry human provenance — which is exactly what
 	// the read-back's upsert refuses to overwrite.
 	var capturedBy, source string
-	err = database.WithWorkspaceTx(human, e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(human, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT captured_by, source FROM company_profile_field
 			  WHERE company_id = $1 AND field = 'icp'`, saved.CompanyID).Scan(&capturedBy, &source)
@@ -272,7 +272,7 @@ func TestFormResaveDoesNotClobberAHeaderDescriptionEdit(t *testing.T) {
 	}
 	readDescription := func() *string {
 		var description *string
-		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			return tx.QueryRow(context.Background(),
 				`SELECT description FROM company WHERE id = $1`, saved.CompanyID).Scan(&description)
 		}); err != nil {
@@ -326,7 +326,7 @@ func TestAcceptedOfferSummaryRefreshesOnlyTheProfile(t *testing.T) {
 
 	readDescription := func() *string {
 		var description *string
-		if err := database.WithWorkspaceTx(e.As(e.Rep1, nil, integration.AdminPerms), e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(e.As(e.Rep1, nil, integration.AdminPerms), e.Pool, func(tx pgx.Tx) error {
 			return tx.QueryRow(context.Background(),
 				`SELECT description FROM company WHERE id = $1`, companyID).Scan(&description)
 		}); err != nil {
@@ -352,7 +352,7 @@ func TestAcceptedOfferSummaryRefreshesOnlyTheProfile(t *testing.T) {
 		t.Fatalf("reaccepted offer summary wrote a description: %v", got)
 	}
 	var evidenceValue string
-	if err := database.WithWorkspaceTx(e.As(e.Rep1, nil, integration.AdminPerms), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.As(e.Rep1, nil, integration.AdminPerms), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT value FROM company_profile_field
 			  WHERE company_id = $1 AND field = 'offer_summary'`, companyID).Scan(&evidenceValue)
@@ -388,7 +388,7 @@ func TestAnOfferSummaryAtTheDocumentLimitStaysInTheProfile(t *testing.T) {
 		}
 		var description *string
 		var evidenceValue string
-		if err := database.WithWorkspaceTx(e.As(e.Rep1, nil, integration.AdminPerms), e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(e.As(e.Rep1, nil, integration.AdminPerms), e.Pool, func(tx pgx.Tx) error {
 			if err := tx.QueryRow(context.Background(),
 				`SELECT description FROM company WHERE id = $1`, companyID).Scan(&description); err != nil {
 				return err
@@ -437,7 +437,7 @@ func TestColdStartCreateWithoutLegalNameUsesDerivedDomainName(t *testing.T) {
 	}
 
 	var displayName, nameSource string
-	if err := database.WithWorkspaceTx(e.As(e.Rep1, nil, integration.AdminPerms), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.As(e.Rep1, nil, integration.AdminPerms), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT display_name, name_source FROM company WHERE id = $1`, companyID).Scan(&displayName, &nameSource)
 	}); err != nil {

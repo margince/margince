@@ -11,6 +11,8 @@ import (
 	"net/http"
 	"unicode/utf8"
 
+	"github.com/margince/margince/backend/internal/platform/ratelimit"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
@@ -219,7 +221,7 @@ func (h Handlers) IssueUserPasswordLink(w http.ResponseWriter, r *http.Request, 
 	// until they are reactivated anyway.
 	if !h.passwordLinkPerActor.Allow(actor.UserID.String()) {
 		httperr.Write(w, r, tooManyPasswordLinksBy("you have issued too many set-password links in the "+
-			"last hour; wait, or ask another administrator to issue this one"))
+			"last hour; wait, or ask another administrator to issue this one", h.passwordLinkPerActor))
 		return
 	}
 	if !h.passwordLinkPerTarget.Allow(target.String()) {
@@ -227,7 +229,7 @@ func (h Handlers) IssueUserPasswordLink(w http.ResponseWriter, r *http.Request, 
 		// member's ceiling, so that advice would send the operator down a path
 		// guaranteed to refuse.
 		httperr.Write(w, r, tooManyPasswordLinksBy("too many set-password links have been issued for "+
-			"this user in the last hour; wait before issuing another"))
+			"this user in the last hour; wait before issuing another", h.passwordLinkPerTarget))
 		return
 	}
 	rawToken, expiresAt, err := h.svc.IssuePasswordLink(r.Context(), actor, target)
@@ -312,10 +314,8 @@ func refuseAs(err, cause error, status int, code, detail string) error {
 // budget sentinel reads "budget exceeded", which tells an admin neither what
 // happened nor what to do, and the two ceilings need different advice: one is
 // spent by the caller, the other is shared across every administrator.
-func tooManyPasswordLinksBy(detail string) error {
-	return &httperr.DetailedError{
-		Status: http.StatusTooManyRequests, Code: "rate_limited", Detail: detail,
-	}
+func tooManyPasswordLinksBy(detail string, bucket *ratelimit.Limiter) error {
+	return ratelimit.RefusedBecause(bucket, detail)
 }
 
 // passwordLinkRefusal reports why this installation cannot issue set-password

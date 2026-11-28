@@ -2,17 +2,17 @@
 <!-- describes: frontend/src/features/import backend/internal/modules/migration backend/internal/modules/contacts/creatededupe.go backend/internal/modules/contacts/deduperecheck.go backend/internal/modules/contacts/dedupescan.go -->
 # Importing data
 
-**Data import** brings companies, contacts, leads, deals and activities into Margince from CSV files. You find it in Settings, in the **Data** group. Only an admin or ops user can import. Nothing is written until you read the test run and choose to import.
+**Data import** brings companies, contacts, leads, deals, projects, products and activities into Margince from CSV files. You find it in Settings, in the **Data** group. Only an admin or ops user can import. Nothing is written until you read the test run and choose to import.
 
 ### What can I import?
-You can import companies, contacts, leads, deals and activities, from one CSV file or from one ZIP of CSV files.
+You can import companies, contacts, leads, deals, projects, products and activities, from one CSV file or from one ZIP of CSV files.
 
 ### What happens to a vCard that matches a contact I already have?
 **Import vCards** on **Contacts** does not write a card that only looks like a contact you can see. It marks the card **Possible duplicate**, and the card waits in your **Worklist** as **Create contact from card**. Accept it to keep the card as a separate contact. Or tick **Merge into** first, and the card's job title, company, address, link and phone numbers are filed on that contact. A merge needs you to see and change that contact, and without that the card keeps waiting. A card nobody answers expires after 30 days, and Margince deletes its data.
 
-In a ZIP the file name gives the record type: `companies.csv`, `contacts.csv`, `leads.csv`, `deals.csv` or `activities.csv`. Each type takes one file. A ZIP holds at most 20 files and cannot have a password.
+In a ZIP the file name gives the record type: `companies.csv`, `contacts.csv`, `leads.csv`, `deals.csv`, `projects.csv`, `products.csv` or `activities.csv`. Each type takes one file. A ZIP holds at most 20 files and cannot have a password.
 
-Margince imports the files in that order, companies first and activities last. So a contact can name a company from the same ZIP, and a deal can name a company or a contact. An activity can name any of them.
+Margince imports the files in that order, companies first and activities last. So a contact can name a company from the same ZIP. A deal can name a company or a contact, and a project can name a company or a deal. An activity can name a company, a contact, a lead or a deal.
 
 A file in a ZIP whose name gives no record type is listed under **Files left out**. Nothing in it is read. A ZIP with no file named for a record type is refused. So is an Excel file: save the sheet as CSV UTF-8 and upload that.
 
@@ -23,7 +23,7 @@ Also called: bulk import, upload a spreadsheet, move from another CRM, Excel imp
 ### What is in the template?
 **Download template** on **Data import** gives a ZIP with one CSV for each record type. Each file has a column for each field the import takes. A custom field has its label as the column name.
 
-The ZIP holds `companies.csv`, `contacts.csv`, `leads.csv`, `deals.csv` and `activities.csv`.
+The ZIP holds `companies.csv`, `contacts.csv`, `leads.csv`, `deals.csv`, `projects.csv`, `products.csv` and `activities.csv`.
 
 `README.txt` in the ZIP lists every pipeline with its stages, so a deal row can name them as written there. **Preview template** shows the files first. Point at a column to see what goes in it, an example, and whether a new row needs it. A file that needs one column of a few, such as a contact's email or `ref`, says **Needs one of** under its columns.
 
@@ -105,9 +105,9 @@ Also called: re-import a ZIP, upload the export again.
 ### What is the `ref` column?
 `ref` is your own key for a row: the ID from your old CRM, or any text you choose. Files link to each other through it, and a later upload finds the row again by it.
 
-A row is found by its `ref` within its source name and its record type. Company `a1` and contact `a1` are two keys. A deal always needs a `ref`, because two deals can share a name.
+A row is found by its `ref` within its source name and its record type. Company `a1` and contact `a1` are two keys. A deal or a project always needs a `ref`, because two of them can share a name.
 
-A row without a `ref` is matched by a company's display name, or by a contact's or lead's email address.
+A row without a `ref` is matched by a company's display name, by a contact's or lead's email address, or by a product's `sku`.
 
 Also called: ID from another system, key column, record ID from my old system.
 
@@ -157,6 +157,37 @@ A deal row is skipped, with its reason, in four cases. Its stage is not in the p
 A currency with no exchange rate for the close day also skips the row.
 Also called: import opportunities, import closed deals, import pipeline history.
 
+### How do I import projects?
+A `projects.csv` row is one project. A new project needs a `name` and a `company_ref`. A project's `ref` is how a later upload finds it again.
+
+| Column | What goes in it |
+|---|---|
+| `company_ref` | The company the project belongs to, found as a deal's is. A project keeps its company for good. |
+| `deal_ref` | The open deal the project comes from, by `ref` or Margince ID. The deal must belong to the same company and must not have a project yet. Written only when the row creates the project. |
+| `phase` | `initiative`, `pursuing` or `delivering`. Empty means `initiative`. A project is never created closed, and a later file does not move its phase. |
+| `started_at` and `target_end_date` | `YYYY-MM-DD`. The target end cannot be before the start. |
+| `owner_email`, `description`, `tags` | The same as on a company. |
+
+A file from **Export CSV** on **Projects** has an `id` column, and it uploads as the same file. Change a value in it and upload it again, and the project with that `id` is updated. A row that names a different company than the project holds is skipped, with its reason.
+
+Also called: import project list, import engagements.
+
+### How do I import products?
+A `products.csv` row is one product on the price list. A new product needs a `name`, a `unit_price` and a `currency`. Its `sku` is how a later upload finds it again, so upload the same file twice and nothing is added. A product has no owner and no tags.
+
+| Column | What goes in it |
+|---|---|
+| `sku` | The article number. No other live product may have it, and two rows of one file may not share it. |
+| `unit_price` and `currency` | The price of one unit as a plain number, and its three-letter code, written as an amount is on a deal. |
+| `unit` | What the price covers, such as `day`. |
+| `default_tax_rate` and `tax_category` | The rate as a number such as `19`, and `standard`, `reduced` or `exempt`. |
+| `billing_model` and `billing_interval_months` | `one_time` or `recurring`. A recurring price needs the number of months one period spans, and a one-time price has none. |
+| `active` | `yes` or `no`. |
+
+A row without a `sku` needs a `ref` instead.
+
+Also called: import price list, import rate card, import articles.
+
 ### How do I import activities?
 An `activities.csv` row is one note, call, meeting or email, put on the timeline at the day it happened. Every row needs a `ref`, a `type` and an `occurred_at`. An import from the import page also needs at least one entry in `links`.
 
@@ -196,7 +227,7 @@ An employer name that conflicts with the work domain skips that row with a reaso
 Also called: import employers, create a missing company, company name on a contact.
 
 ### What if a link is broken?
-A contact's or deal's `company_ref` names its company. It is the company's `ref` in this upload or an earlier one, its domain, its exact name, or its Margince ID. A row whose link finds no company is skipped and listed as **Broken link**. See **Import anyway** above.
+A contact's, deal's or project's `company_ref` names its company. It is the company's `ref` in this upload or an earlier one, its domain, its exact name, or its Margince ID. A row whose link finds no company is skipped and listed as **Broken link**. See **Import anyway** above.
 
 An activity's `links` name a record the same way, by `ref` or Margince ID, or for a contact by email. A link that finds no record is a **Broken link**. With **Import anyway** the activity keeps its other links, and one with none left is still skipped. A link to a row that this import skipped, such as a deal with no exchange rate, is a broken link too. The problem says the row was skipped.
 
@@ -251,7 +282,7 @@ Importing a file again with the same source name updates the records the file ma
 - **Owners, tags and custom fields:** the same rules hold. An owner email that no user has leaves the owner as it is.
 - **Re-importing after an undo works for every object.** That includes leads, because undo frees the `ref` and the same file creates the records again.
 
-A deal also has its own rules. A re-import moves an open deal to a later stage, but never to another pipeline, and never reopens a closed deal. It writes `lost_reason` only when the row creates the deal. An activity's `direction` and `owner_email` are written only when the row creates it.
+A deal also has its own rules. A re-import moves an open deal to a later stage, but never to another pipeline, and never reopens a closed deal. It writes `lost_reason` only when the row creates the deal. A project's `phase`, `deal_ref` and company are written only when the row creates it. An activity's `direction` and `owner_email` are written only when the row creates it.
 
 An example. ZIP 1 has the contacts `a1`, `a2` and `a3`. ZIP 2, with the same source name, has `a1`, `a2` with a new last name, `a3` and `a4`.
 - `a1` and `a3` are the same, and nothing is written.
@@ -262,7 +293,7 @@ An example. ZIP 1 has the contacts `a1`, `a2` and `a3`. ZIP 2, with the same sou
 Also called: re-import, upload again, update from a spreadsheet, import twice, duplicates after a second upload.
 
 ### What does undo keep?
-Undo reverses one import, in reverse order: activities, then deals, then leads, then contacts, then companies. The steps are in [What is kept, what is destroyed](retention-exports-and-deletion.md). These are the rules:
+Undo reverses one import, in reverse order: activities, then products, then projects, then deals, then leads, then contacts, then companies. The steps are in [What is kept, what is destroyed](retention-exports-and-deletion.md). These are the rules:
 - Undo archives only the records that import created. A lead is disqualified instead.
 - Records the import only updated keep their new values. Undo never puts back the old values.
 - A record someone edited after the import stays. It is listed under "Left in place by the undo:" by its name, which opens the record, with the reason beside it. A record you cannot see is listed by its ID.

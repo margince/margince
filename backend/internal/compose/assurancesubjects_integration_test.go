@@ -128,7 +128,7 @@ func subjectsFor(t *testing.T, e *integration.Env) []assurance.Subject {
 	t.Helper()
 	asOf := clocktest.Now(t)
 	var out []assurance.Subject
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var err error
 		out, err = AssuranceSubjects(context.Background(), tx, asOf, []assurance.SourceCoverage{
 			{Source: sourceMail, State: assurance.CoverageChecked, CheckedThrough: &asOf},
@@ -192,7 +192,7 @@ func TestMailCoverageGradesTheConnectorNotTheTraffic(t *testing.T) {
 	read := func() assurance.SourceCoverage {
 		t.Helper()
 		var out assurance.SourceCoverage
-		if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			for _, c := range AssuranceCoverage(context.Background(), tx, now) {
 				if c.Source == "mail" {
 					out = c
@@ -272,7 +272,7 @@ func TestMailCoverageGradesTheConnectorNotTheTraffic(t *testing.T) {
 // source: it lives in the same database as the run itself.
 func TestAnEmptyOfferTableIsCheckedNotUnavailable(t *testing.T) {
 	e := integration.Setup(t)
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		for _, c := range AssuranceCoverage(context.Background(), tx, time.Now().UTC()) {
 			if c.Source == "offers" && c.State != assurance.CoverageChecked {
 				t.Errorf("an empty offer table reads %q, want checked", c.State)

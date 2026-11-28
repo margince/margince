@@ -5,6 +5,7 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../i18n/en";
 import { renderWithQueryClient } from "../testing/queryrender";
 import {
   installFetchStub,
@@ -62,7 +63,9 @@ describe("recipients copied on inbound correspondence", () => {
     async (type) => {
       const { posted } = setup(type);
       fireEvent.click(
-        await screen.findByRole("button", { name: "Add as contact" }),
+        await screen.findByRole("button", {
+          name: englishCopy["conversationSuggestions.add"],
+        }),
       );
       await waitFor(() =>
         expect(posted).toEqual([
@@ -97,10 +100,14 @@ describe("recipients copied on inbound correspondence", () => {
       ),
     );
     fireEvent.click(
-      await screen.findByRole("button", { name: "Add as contact" }),
+      await screen.findByRole("button", {
+        name: englishCopy["conversationSuggestions.add"],
+      }),
     );
     expect(
-      await screen.findByRole("button", { name: "Open the lead" }),
+      await screen.findByRole("button", {
+        name: englishCopy["contact.leadHeld.open"],
+      }),
     ).toBeInTheDocument();
     expect(screen.getByText("bob@buyer.test")).toBeInTheDocument();
     expect(posted).toHaveLength(1);
@@ -121,7 +128,9 @@ describe("recipients copied on inbound correspondence", () => {
       true,
     );
     fireEvent.click(
-      await screen.findByRole("button", { name: "Add as contact" }),
+      await screen.findByRole("button", {
+        name: englishCopy["conversationSuggestions.add"],
+      }),
     );
     await waitFor(() => expect(posted).toHaveLength(1));
     await waitFor(() =>
@@ -149,5 +158,9 @@ it("keeps a malformed optional response inside its own retryable panel", async (
   expect(
     await screen.findByRole("button", { name: "Retry" }),
   ).toBeInTheDocument();
-  expect(screen.queryByRole("button", { name: "Add as contact" })).toBeNull();
+  expect(
+    screen.queryByRole("button", {
+      name: englishCopy["conversationSuggestions.add"],
+    }),
+  ).toBeNull();
 });

@@ -17,6 +17,7 @@ import {
   customLabels,
   explainGroup,
   fieldsForFn,
+  filterFields,
   fnsFor,
   refusalOf,
   valueControlOp,
@@ -257,5 +258,27 @@ describe("a converted amount with no base currency", () => {
         DEAL_MONEY,
       ),
     ).toEqual({ kind: "noBase" });
+  });
+});
+
+describe("the filter-only fields a population offers", () => {
+  const quiet = {
+    ...deals,
+    filters: [
+      { name: "days_since_activity", shape: "number" as const },
+      { name: "meeting_ahead", shape: "boolean" as const },
+    ],
+  };
+
+  it("offers them to a filter, typed by the shape the server declared", () => {
+    expect(filterFields(quiet)).toEqual(
+      expect.arrayContaining(["days_since_activity", "meeting_ahead"]),
+    );
+    expect(valueShape(quiet, "days_since_activity")).toBe("number");
+    expect(valueShape(quiet, "meeting_ahead")).toBe("boolean");
+  });
+
+  it("does not let an aggregate read them", () => {
+    expect(fieldsForFn(quiet, "min")).not.toContain("days_since_activity");
   });
 });

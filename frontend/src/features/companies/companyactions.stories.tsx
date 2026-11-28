@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../../api/schema";
+import { en as englishCopy } from "../../i18n/en";
 import { healthScope } from "../../lib/healthscopekey";
 import { pipelinesOptions } from "../../lib/pipelines.queries";
 import { meFixture } from "../../testing/mefixture";
@@ -261,11 +262,15 @@ export const NewDealWithAttribution: Story = {
     await NewDealOpen.play?.(context);
     const body = within(context.canvasElement.ownerDocument.body);
     await userEvent.click(
-      await body.findByRole("combobox", { name: "Referring partner" }),
+      await body.findByRole("combobox", {
+        name: englishCopy["deal.partnerCompany"],
+      }),
     );
     await userEvent.click(
       await body.findByRole("option", { name: "Referral partner" }),
     );
-    await body.findByRole("combobox", { name: "Partner attribution" });
+    await body.findByRole("combobox", {
+      name: englishCopy["deal.partnerAttribution"],
+    });
   },
 };

@@ -8,6 +8,7 @@ import {
   type PickableProject,
   ProjectPicker,
 } from "../../design-system/projectpicker";
+import { en as englishCopy } from "../../i18n/en";
 import { StoryProviders } from "../../testing/story-utils";
 import { ReplyStandingNotice, SubjectTagSwitch } from "./compose.head";
 import { SubjectRow } from "./composehead";
@@ -147,7 +148,9 @@ export const NotOnThreadAlone: Story = {
   render: () => <Head offThread owner="Charlotte Weber" />,
   play: async () => {
     await screen.findByRole("switch", SWITCH);
-    await expect(screen.getByText("You are not on this thread")).toBeVisible();
+    await expect(
+      screen.getByText(englishCopy["compose.notOnThreadTitle"]),
+    ).toBeVisible();
     await expect(
       screen.getByText("Charlotte Weber owns this deal."),
     ).toBeVisible();
@@ -160,7 +163,9 @@ export const NotOnThreadOwnerUnknown: Story = {
   render: () => <Head seats={["u-charlotte"]} offThread />,
   play: async () => {
     await screen.findByRole("switch", SWITCH);
-    await expect(screen.getByText("You are not on this thread.")).toBeVisible();
+    await expect(
+      screen.getByText(englishCopy["compose.notOnThread"]),
+    ).toBeVisible();
     await expect(screen.queryByText(/owns this deal|u-charlotte/)).toBeNull();
   },
 };

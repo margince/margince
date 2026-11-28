@@ -36,7 +36,7 @@ type stored struct {
 // The reader key prevents one seat from receiving another seat’s derived content.
 func (s *Service) cached(ctx context.Context, userID ids.UserID, dealID ids.DealID) (stored, bool, error) {
 	var found map[ids.UUID]generatedsummary.Entry
-	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		var err error
 		found, err = readableCards(ctx, tx, userID, []ids.UUID{dealID.UUID})
 		return err

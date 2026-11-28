@@ -401,7 +401,7 @@ Every attempt writes one `ai_call` row (migration `0100`), not one row per final
   90 days. When the installation is set to delete nothing, the check skips an older call that still
   has a payload row, so that row stays.
 
-The write path is the standard one (`ai_call` + `ai_call_payload` in one `WithWorkspaceTx`). So a trace
+The write path is the standard one (`ai_call` + `ai_call_payload` in one `WithTx`). So a trace
 is written and audited like any domain row. See [write-backbone.md](write-backbone.md).
 
 ## Cost — the meter collects tokens, a rate table prices them

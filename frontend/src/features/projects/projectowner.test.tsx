@@ -110,7 +110,7 @@ function stubApi(
 
 async function openPicker(user: ReturnType<typeof userEvent.setup>) {
   await user.click(
-    screen.getByRole("button", { name: "Assign to a colleague" }),
+    screen.getByRole("button", { name: en["project.assignOwner"] }),
   );
   return within(await screen.findByRole("dialog"));
 }

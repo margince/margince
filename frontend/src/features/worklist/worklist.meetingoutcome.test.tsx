@@ -259,7 +259,9 @@ describe("a meeting that owes an answer", () => {
     );
     const dialog = await screen.findByRole("dialog");
     await user.click(
-      within(dialog).getByRole("button", { name: "Skip next step" }),
+      within(dialog).getByRole("button", {
+        name: en["worklist.verb.meetingSkipNextStep"],
+      }),
     );
     expect(await screen.findByText(/Meeting outcome recorded/i)).not.toBeNull();
     expect(sent).toEqual([{ meeting_status: "held" }]);

@@ -91,7 +91,7 @@ func seedLapsedPairAt(t *testing.T, e *Env, colleague, contact ids.UUID, subject
 		folded = append(folded, activity)
 	}
 	wsCtx := principal.WithWorkspaceID(ctx, e.WS)
-	if err := database.WithWorkspaceTx(wsCtx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(wsCtx, e.Pool, func(tx pgx.Tx) error {
 		return search.RecomputeEdgesForActivities(wsCtx, tx, folded)
 	}); err != nil {
 		t.Fatalf("folding the seeded exchange into the projection: %v", err)
@@ -113,7 +113,7 @@ func TestQuietCandidatesCarryOnlyContactsInsideRowScope(t *testing.T) {
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, graphPerms)
 	now := time.Now().UTC()
 	var quiet []search.QuietContact
-	err := database.WithWorkspaceTx(rep, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(rep, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		quiet, err = search.QuietContacts(rep, tx, search.QuietRead{
 			QuietBefore: now.AddDate(0, 0, -relstrength.QuietDays), TouchedAfter: now.AddDate(0, 0, -180), Limit: 10,
@@ -158,7 +158,7 @@ func seedColleagueMessage(t *testing.T, e *Env, colleague, sender, copied ids.UU
 		}
 	}
 	wsCtx := principal.WithWorkspaceID(ctx, e.WS)
-	if err := database.WithWorkspaceTx(wsCtx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(wsCtx, e.Pool, func(tx pgx.Tx) error {
 		return search.RecomputeEdgesForActivities(wsCtx, tx, []ids.UUID{activity})
 	}); err != nil {
 		t.Fatalf("folding the colleague message: %v", err)
@@ -182,7 +182,7 @@ func TestQuietCandidatesIgnoreAColleaguesMailTheContactOnlyReceived(t *testing.T
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, graphPerms)
 	now := clocktest.Now(t).UTC()
 	var quiet []search.QuietContact
-	err := database.WithWorkspaceTx(rep, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(rep, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		quiet, err = search.QuietContacts(rep, tx, search.QuietRead{
 			QuietBefore: now.AddDate(0, 0, -relstrength.QuietDays), TouchedAfter: now.AddDate(0, 0, -180), Limit: 10,
@@ -215,7 +215,7 @@ func TestBatchedChangesAdmitOnlyReadableContacts(t *testing.T) {
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, graphPerms)
 	store := contacts.NewStore(e.DB())
 	var changed []contacts.ContactChanges
-	err := database.WithWorkspaceTx(rep, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(rep, e.Pool, func(tx pgx.Tx) error {
 		candidates := []ids.ContactID{ids.From[ids.ContactKind](mine), ids.From[ids.ContactKind](theirs)}
 		touches, zone, err := contactTouches(rep, tx, candidates...)
 		if err != nil {
@@ -277,7 +277,7 @@ func TestADismissedContactDoesNotSpendACandidateSlot(t *testing.T) {
 
 	now := time.Now().UTC()
 	var quiet []search.QuietContact
-	err := database.WithWorkspaceTx(rep, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(rep, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		quiet, err = search.QuietContacts(rep, tx, search.QuietRead{
 			QuietBefore: now.AddDate(0, 0, -relstrength.QuietDays), TouchedAfter: now.AddDate(0, 0, -180), Limit: 1,
@@ -337,7 +337,7 @@ func seedConnectorMailFrom(t *testing.T, e *Env, contact, colleague ids.UUID, ma
 		}
 	}
 	wsCtx := principal.WithWorkspaceID(ctx, e.WS)
-	if err := database.WithWorkspaceTx(wsCtx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(wsCtx, e.Pool, func(tx pgx.Tx) error {
 		return search.RecomputeEdgesForActivities(wsCtx, tx, []ids.UUID{activity})
 	}); err != nil {
 		t.Fatalf("folding the connector mail: %v", err)
@@ -359,7 +359,7 @@ func TestAGuessedSeatRowDoesNotResetTheQuietClock(t *testing.T) {
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, graphPerms)
 	now := clocktest.Now(t).UTC()
 	var quiet []search.QuietContact
-	err := database.WithWorkspaceTx(rep, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(rep, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		quiet, err = search.QuietContacts(rep, tx, search.QuietRead{
 			QuietBefore: now.AddDate(0, 0, -relstrength.QuietDays), TouchedAfter: now.AddDate(0, 0, -180), Limit: 10,

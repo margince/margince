@@ -53,7 +53,7 @@ func (e *mergeEnv) capturedLeadWithFields(t *testing.T, source, sourceID string,
 func (e *mergeEnv) stagedChange(t *testing.T, leadID ids.UUID) map[string]any {
 	t.Helper()
 	var raw json.RawMessage
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT proposed_change FROM approval WHERE kind = 'merge_records'
 			   AND target_entity_id = $1 AND status = 'pending'`, leadID).Scan(&raw)

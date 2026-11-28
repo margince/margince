@@ -14,6 +14,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/importcells"
 	"github.com/margince/margince/backend/internal/compose/importguide"
+	"github.com/margince/margince/backend/internal/compose/importrecords"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/customfields"
@@ -24,7 +25,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
@@ -46,6 +46,8 @@ type importColumns struct {
 	store   contacts.CustomColumns
 	// deals is the deals store's half, read for a deal part only.
 	deals deals.CustomColumns
+	// records is a project part's half.
+	records importrecords.Columns
 }
 
 // readImportCatalog reads one object's catalog. An object no import lands has
@@ -94,6 +96,10 @@ func readImportColumns(ctx context.Context, db *database.DB, object string) (imp
 	cat, err := readImportCatalog(ctx, db, object)
 	if err != nil {
 		return importColumns{}, err
+	}
+	if importrecords.Is(object) {
+		records, err := importrecords.ReadColumns(ctx, importrecords.Stores{Projects: ProjectsStoreOver(db)}, object)
+		return importColumns{catalog: cat, records: records}, err
 	}
 	if !hasCustomFields(object) {
 		return importColumns{catalog: cat}, nil
@@ -232,19 +238,5 @@ func suggestionsByObject(
 }
 
 // customFieldsFrom picks the checked custom-field values of the targets in
-// fields. Those are the whole row on a create and the changed cells on an
-// update. It is nil when there are none, which a caller-opened create reads
-// as no values.
-func customFieldsFrom(fields map[string]string, typed map[string]any) map[string]any {
-	var out map[string]any
-	for target, value := range typed {
-		if _, given := fields[target]; !given || !datasource.IsCustomFieldKey(target) {
-			continue
-		}
-		if out == nil {
-			out = map[string]any{}
-		}
-		out[target] = value
-	}
-	return out
-}
+// fields.
+var customFieldsFrom = importrecords.CustomFieldsFrom

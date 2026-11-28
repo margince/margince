@@ -12,6 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
 import { createQueryClient } from "./app/queryclient";
 import { LocaleProvider } from "./i18n";
+import { en as englishCopy } from "./i18n/en";
 import { connectivityNow } from "./lib/connectivity";
 import { memoryStorage } from "./testing/appharness";
 import { meFixture } from "./testing/mefixture";
@@ -142,7 +143,9 @@ describe("the connection screen after Margince could not be reached", () => {
     expect(await screen.findByText(CONNECTION_TITLE)).toBeTruthy();
 
     expect(
-      await screen.findByRole("heading", { name: "Sign in to Margince" }),
+      await screen.findByRole("heading", {
+        name: englishCopy["auth.loginTitle"],
+      }),
     ).toBeTruthy();
   });
 });

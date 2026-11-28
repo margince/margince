@@ -131,7 +131,7 @@ func FileThroughLiveChatLink(
 		return false, fmt.Errorf("capture: business link id: %w", err)
 	}
 	live := false
-	err = database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		link, found, err := LockLiveChatLinkTx(ctx, tx, id)
 		if err != nil {
 			return err

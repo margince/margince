@@ -29,11 +29,10 @@ func (unboundEmbedder) EmbedIdentity() (string, int) { return "", 0 }
 // unbound embed lane (identity == "") must make UpsertEmbedding a clean
 // no-op, not the hard error the width guard used to raise (dims==0 vs the
 // fake's own 1024 default). A store with a nil pool and a context
-// carrying no workspace proves the no-op fires BEFORE any DB work is
-// attempted — if the identity=="" guard above WithWorkspaceTx ever
-// regresses, this would surface as a non-nil error (ErrNoWorkspace) or a
-// nil-pool panic instead of the (false, nil) this test requires. This is
-// also the anti-loop pin: search.EmbedGen.HandleEvent treats a non-nil
+// carrying no workspace proves the no-op fires before any DB work is
+// attempted. If the identity=="" guard above WithTx ever regresses, this
+// surfaces as a non-nil error or a nil-pool panic. The test requires
+// (false, nil). This is also the anti-loop pin: search.EmbedGen.HandleEvent treats a non-nil
 // UpsertEmbedding error as unacked, so a regression here reproduces the
 // redelivery loop the fix removed.
 func TestUpsertEmbeddingNoOpsOnUnboundLane(t *testing.T) {

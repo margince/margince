@@ -53,6 +53,6 @@ func refuseAnchorRename(ctx context.Context, rec datasource.Record, fields json.
 	return &BadArgsError{
 		Field: fieldDisplayName,
 		Code:  "anchor_protected",
-		Cause: errors.New("this is the workspace's own company; " + values.AnchorRenameRefusal),
+		Cause: errors.New("this is your company's own record; " + values.AnchorRenameRefusal),
 	}
 }

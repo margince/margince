@@ -68,6 +68,9 @@ func (s *Store) ReleaseArchived(ctx context.Context, kind string, id ids.UUID) e
 // carriesLiveRecordBesides reports whether the link carries a live record
 // other than its record of kind.
 func carriesLiveRecordBesides(ctx context.Context, tx pgx.Tx, link Link, kind string) (bool, error) {
+	if kind == RecordCompany {
+		return false, nil
+	}
 	other, id := RecordProject, link.ProjectID
 	if kind == RecordProject {
 		other, id = RecordDeal, link.DealID

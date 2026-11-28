@@ -105,7 +105,7 @@ func (s *InquiryService) applyTask(ctx context.Context, ex Executors, effect wor
 	var applied []workflow.Action
 	// The local provider joins this transaction, so a failed task cannot leave a fresh claim behind.
 	run := func() error {
-		return database.WithWorkspaceSnapshot(ctx, s.db.Pool(), func(bound context.Context) error {
+		return database.WithSnapshot(ctx, s.db.Pool(), func(bound context.Context) error {
 			var err error
 			applied, err = ApplyActions(bound, ex, effect)
 			return err

@@ -11,6 +11,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { dueInstant } from "../format/calendarday";
 import { browserZone } from "../format/timezone";
+import { en as englishCopy } from "../i18n/en";
 import { ViewerZoneProvider } from "../lib/viewerzone";
 import { meFixture } from "../testing/mefixture";
 import { renderWithQueryClient } from "../testing/queryrender";
@@ -45,7 +46,7 @@ it("saves a note and its undated next step in one request", async () => {
     target: { value: "Pricing discussion" },
   });
   await user.click(
-    screen.getByRole("checkbox", { name: "Add a follow-up task" }),
+    screen.getByRole("checkbox", { name: englishCopy["log.addFollowUp"] }),
   );
   expect(
     screen.getByRole("button", { name: "Log" }).hasAttribute("disabled"),
@@ -89,7 +90,7 @@ it("dates the next step on the day picked from its calendar", async () => {
     "Pricing discussion",
   );
   await user.click(
-    screen.getByRole("checkbox", { name: "Add a follow-up task" }),
+    screen.getByRole("checkbox", { name: englishCopy["log.addFollowUp"] }),
   );
   await user.type(
     screen.getByRole("textbox", { name: "Next step" }),
@@ -141,14 +142,14 @@ it("sends a follow-up's callback time as its due time, flagged as a time", async
     "Spoke to the buyer",
   );
   await user.click(
-    screen.getByRole("checkbox", { name: "Add a follow-up task" }),
+    screen.getByRole("checkbox", { name: englishCopy["log.addFollowUp"] }),
   );
   await user.type(
     screen.getByRole("textbox", { name: "Next step" }),
     "Call back",
   );
   const timeBox = () =>
-    screen.getByRole("textbox", { name: "Time (optional)" });
+    screen.getByRole("textbox", { name: englishCopy["log.dueTime"] });
   expect(timeBox().hasAttribute("disabled")).toBe(true);
   const dueField = screen.getByRole("textbox", {
     name: "Due date",
@@ -198,7 +199,7 @@ it("sends a follow-up with no time as due by its day", async () => {
     "Spoke to the buyer",
   );
   await user.click(
-    screen.getByRole("checkbox", { name: "Add a follow-up task" }),
+    screen.getByRole("checkbox", { name: englishCopy["log.addFollowUp"] }),
   );
   await user.type(
     screen.getByRole("textbox", { name: "Next step" }),
@@ -248,7 +249,7 @@ it("drops a refused follow-up time when its due date is cleared, and saves the s
     "Pricing discussion",
   );
   await user.click(
-    screen.getByRole("checkbox", { name: "Add a follow-up task" }),
+    screen.getByRole("checkbox", { name: englishCopy["log.addFollowUp"] }),
   );
   await user.type(
     screen.getByRole("textbox", { name: "Next step" }),
@@ -264,7 +265,7 @@ it("drops a refused follow-up time when its due date is cleared, and saves the s
     await screen.findByRole("button", { name: "Friday, 10 July 2026" }),
   );
   await user.type(
-    screen.getByRole("textbox", { name: "Time (optional)" }),
+    screen.getByRole("textbox", { name: englishCopy["log.dueTime"] }),
     "abc",
   );
   await user.tab();
@@ -277,7 +278,7 @@ it("drops a refused follow-up time when its due date is cleared, and saves the s
   expect(
     (
       screen.getByRole("textbox", {
-        name: "Time (optional)",
+        name: englishCopy["log.dueTime"],
       }) as HTMLInputElement
     ).value,
   ).toBe("");
@@ -300,7 +301,7 @@ it("forgets a follow-up's accepted time when its due date is cleared", async () 
     </ViewerZoneProvider>,
   );
   await user.click(
-    screen.getByRole("checkbox", { name: "Add a follow-up task" }),
+    screen.getByRole("checkbox", { name: englishCopy["log.addFollowUp"] }),
   );
   const pickFriday = async () => {
     const dueField = screen.getByRole("textbox", {
@@ -316,7 +317,7 @@ it("forgets a follow-up's accepted time when its due date is cleared", async () 
   };
   const timeBox = () =>
     screen.getByRole("textbox", {
-      name: "Time (optional)",
+      name: englishCopy["log.dueTime"],
     }) as HTMLInputElement;
   await pickFriday();
   await user.type(timeBox(), "15:00{Enter}");

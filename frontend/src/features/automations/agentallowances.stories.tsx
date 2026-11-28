@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import {
   defaultAgentAllowances,
   roleAllowance,
@@ -57,7 +58,9 @@ export const EditingAllowances: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByRole("button", { name: "Edit allowances" }),
+      await canvas.findByRole("button", {
+        name: englishCopy["agentAllowances.edit"],
+      }),
     );
     const calls = await canvas.findByTestId("allowance-agent_calls_per_window");
     await userEvent.clear(calls);
@@ -79,7 +82,9 @@ export const EditingARoleAllowance: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByRole("button", { name: "Edit allowances" }),
+      await canvas.findByRole("button", {
+        name: englishCopy["agentAllowances.edit"],
+      }),
     );
     const box = await canvas.findByTestId(
       "role-custom_field_research-agent_calls_per_window",

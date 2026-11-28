@@ -70,7 +70,7 @@ func TestAnUnnarratedWeekIsStillDueForNarration(t *testing.T) {
 func repsDue(t *testing.T, e *integration.Env, week time.Time) []ids.UUID {
 	t.Helper()
 	var due []ids.UUID
-	err := database.WithWorkspaceTx(e.As(e.Rep1, nil, integration.AdminPerms), e.Pool,
+	err := database.WithTx(e.As(e.Rep1, nil, integration.AdminPerms), e.Pool,
 		func(tx pgx.Tx) error {
 			var err error
 			w := &weeklyGenerateWorker{narrator: &weeklyMeasurementProbe{}, learner: &weeklyMeasurementProbe{}, mail: WeeklyMailConfig{Mailer: &countingMailer{}}}

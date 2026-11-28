@@ -279,7 +279,7 @@ func (w *telegramPollWorker) persist(wsCtx context.Context, target capture.Chann
 			"connection", target.ID.String(), "update_id", r.updateID, "because", r.because, "err", r.err)
 	}
 
-	return database.WithWorkspaceTx(wsCtx, w.pool, func(tx pgx.Tx) error {
+	return database.WithTx(wsCtx, w.pool, func(tx pgx.Tx) error {
 		// FIRST statement of the transaction, for the whole batch at once. The
 		// lock is the mutex between this ingest and an erasure of the same human,
 		// and LockChannelIdentities takes its keys in a sorted, deduplicated order

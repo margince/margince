@@ -10,7 +10,9 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/compose/importrecords"
 	"github.com/margince/margince/backend/internal/compose/recordexport"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
@@ -55,6 +57,8 @@ const fieldDomain = "domain"
 // column of the same contact file, whichever object it is imported as.
 const fieldTitle = "title"
 
+const fieldSalutation = "salutation"
+
 // leadStatusNew is where an imported prospect starts: the unworked state a
 // human moves it out of.
 const leadStatusNew = "new"
@@ -67,7 +71,7 @@ const leadTargetStatus = recordexport.LeadStatus
 // writer can both create and update it. A create-only target would stop
 // honouring the file on the second upload. The caller picks `lead` or `contact` per run.
 var csvTargets = map[string][]string{
-	migration.ObjectLead: {fieldFullName, fieldEmail, fieldPhone, fieldTitle, companyNameField, fieldLinkedIn, leadTargetStatus, leadTargetOrigin, leadTargetOriginDetail, csvTargetAuthor, csvTargetOwner, csvTargetTags},
+	migration.ObjectLead: {fieldFullName, fieldEmail, fieldPhone, fieldTitle, fieldSalutation, companyNameField, fieldLinkedIn, leadTargetStatus, leadTargetOrigin, leadTargetOriginDetail, csvTargetAuthor, csvTargetOwner, csvTargetTags},
 	// `domain` is what actually identifies a company. Its absence is why a
 	// spreadsheet's website column had nowhere to go, and why company dedupe
 	// falls back to matching names — which two real companies may legitimately
@@ -76,7 +80,7 @@ var csvTargets = map[string][]string{
 	migration.ObjectCompany: append([]string{fieldDisplayName, fieldLegalName, fieldIndustry, fieldSizeBand, descriptionField, fieldDomain, fieldLinkedIn, fieldPhone, fieldEmail, csvTargetAuthor, csvTargetOwner, csvTargetTags}, recordAddressTargets...),
 	// The owner is named by the seat's email (csvowners.go), never by its id.
 	// `author` is a name (csvauthor.go).
-	migration.ObjectContact: append([]string{fieldFullName, fieldFirstName, fieldLastName, fieldEmail, fieldPhone, fieldLinkedIn, fieldTitle, csvTargetAuthor, csvTargetOwner, csvTargetTags}, recordAddressTargets...),
+	migration.ObjectContact: append([]string{fieldFullName, fieldFirstName, fieldLastName, fieldEmail, fieldPhone, fieldLinkedIn, fieldTitle, fieldSalutation, csvTargetAuthor, csvTargetOwner, csvTargetTags}, recordAddressTargets...),
 	// A stage change is an advance (dealUpdateFrom); the lost reason is written once.
 	migration.ObjectDeal: {
 		dealTargetName, dealTargetPipeline, dealTargetStage, dealTargetAmount, dealTargetCurrency, dealTargetCloseDate,
@@ -88,6 +92,9 @@ var csvTargets = map[string][]string{
 		activityTargetType, activityTargetSubject, activityTargetBody, activityTargetOccurredAt, activityTargetLinks,
 		activityTargetDuration, activityTargetMeetingStatus, activityTargetDirection, csvTargetAuthor, csvTargetOwner,
 	},
+	// A project keeps its company and phase from birth. A product has no owner or tags.
+	migration.ObjectProject: importrecords.ProjectTargets,
+	migration.ObjectProduct: importrecords.ProductTargets,
 }
 
 // csvTargetID is the column that names the record this row IS, by the id the CRM
@@ -147,6 +154,8 @@ var csvSourceKeyDefault = map[string]string{
 	migration.ObjectDeal: csvTargetRef,
 	// An activity has no natural key at all.
 	migration.ObjectActivity: csvTargetRef,
+	migration.ObjectProject:  csvTargetRef,
+	migration.ObjectProduct:  importrecords.ProductSKU,
 }
 
 // rowKeyTargets are the targets partMappingFrom tells an object's rows apart
@@ -191,8 +200,10 @@ func importTargets(object string, cat importCatalog) ([]string, error) {
 }
 
 // hasCustomFields reports whether an object's store takes custom-field cells.
-// The activities store has no member for them.
-func hasCustomFields(object string) bool { return object != migration.ObjectActivity }
+// The activities and products stores have no member for them.
+func hasCustomFields(object string) bool {
+	return object != migration.ObjectActivity && object != migration.ObjectProduct
+}
 
 // selectsByID reports whether an object's rows may name the record they are.
 //
@@ -200,7 +211,7 @@ func hasCustomFields(object string) bool { return object != migration.ObjectActi
 // natural key can be empty or shared.
 func selectsByID(object string) bool {
 	switch object {
-	case migration.ObjectCompany, migration.ObjectContact, migration.ObjectLead, migration.ObjectDeal:
+	case migration.ObjectCompany, migration.ObjectContact, migration.ObjectLead, migration.ObjectDeal, migration.ObjectProject:
 		return true
 	}
 	return false
@@ -226,7 +237,7 @@ func linksEmployer(object string) bool {
 // report every unedited row as changed on each re-import.
 func isNonFieldTarget(field string) bool {
 	return field == csvTargetID || field == csvEmployerName || field == csvTargetRef ||
-		field == csvTargetCompanyRef || field == dealTargetContactRef || field == csvTargetTags
+		field == csvTargetCompanyRef || field == dealTargetContactRef || field == csvTargetTags || field == importrecords.ProjectDealRef
 }
 
 // changedFields reports which mapped values differ from what the stored record
@@ -298,6 +309,9 @@ func storedValue(current map[string]json.RawMessage, field string) json.RawMessa
 	if column, renamed := activityStoredColumns[field]; renamed {
 		return current[column]
 	}
+	if column, renamed := importrecords.StoredColumns[field]; renamed {
+		return current[column]
+	}
 	if field == activityTargetOccurredAt {
 		return storedInstant(current[field])
 	}
@@ -342,6 +356,12 @@ func storedValue(current map[string]json.RawMessage, field string) json.RawMessa
 // forever — every re-import of an unchanged file would rewrite the row, bump
 // its version, and publish an update event for a change nobody made.
 func canonicalFor(field, value string) string {
+	if field == fieldSalutation {
+		if choice := contacts.SubmittedSalutation(value); choice != nil {
+			return string(*choice)
+		}
+		return ""
+	}
 	trimmed := strings.TrimSpace(value)
 	switch field {
 	case fieldIndustry:
@@ -399,6 +419,7 @@ func leadCreateFrom(fields map[string]string, typed map[string]any, sourceSystem
 	in.Phone = checkedString(fields, typed, fieldPhone)
 	in.LinkedInURL = checkedString(fields, typed, fieldLinkedIn)
 	in.Title = importString(fields, fieldTitle)
+	in.Salutation = importSalutation(fields)
 	in.CompanyName = importString(fields, "company_name")
 	in.OriginHint, in.OriginDetail = originFrom(fields)
 	in.CustomFields = customFieldsFrom(fields, typed)
@@ -421,6 +442,7 @@ func leadUpdateFrom(changed map[string]string, typed map[string]any) contacts.Up
 		Phone:        checkedString(changed, typed, fieldPhone),
 		LinkedInURL:  checkedString(changed, typed, fieldLinkedIn),
 		Title:        importString(changed, fieldTitle),
+		Salutation:   importSalutation(changed),
 		CompanyName:  importString(changed, "company_name"),
 		OriginHint:   originHint,
 		OriginDetail: originNote,
@@ -441,28 +463,12 @@ func checkedString(fields map[string]string, typed map[string]any, name string) 
 	return importString(fields, name)
 }
 
-func importString(fields map[string]string, name string) *string {
-	value, ok := fields[name]
-	if !ok {
-		return nil
-	}
-	trimmed := strings.TrimSpace(value)
-	if trimmed == "" {
-		return nil
-	}
-	return &trimmed
-}
-
-// textFields narrows the engine's JSON-shaped row to the text a delimited file
-// actually carried. Every value in it came from a CSV cell, so the map the rest
-// of this file works with says so in its type.
-func textFields(fields map[string]any) map[string]string {
-	out := make(map[string]string, len(fields))
-	for name, value := range fields {
-		out[name] = strings.TrimSpace(fmt.Sprint(value))
-	}
-	return out
-}
+var (
+	importString = importrecords.Text
+	// textFields narrows the engine's JSON-shaped row to the text a delimited
+	// file carried.
+	textFields = importrecords.TextFields
+)
 
 // canonicalIndustry renders an imported industry the way the store holds it.
 // A file that spells the industry another way is then no change. Text that
@@ -472,4 +478,10 @@ func canonicalIndustry(trimmed string) string {
 		return code
 	}
 	return trimmed
+}
+
+// importSalutation carries an explicit CSV value. The store validates the same
+// closed vocabulary as API writes; it never derives a choice from a name.
+func importSalutation(fields map[string]string) *crmcontracts.Salutation {
+	return contacts.SubmittedSalutation(fields[fieldSalutation])
 }

@@ -13,6 +13,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
+import { en as englishCopy } from "../../i18n/en";
 import { SourceHost } from "../../testing/sourcehost";
 import {
   installFetchStub,
@@ -177,7 +178,7 @@ describe("View on the What was said card", () => {
       ]),
     );
 
-    expect(screen.queryByText("Not shared with you")).toBeNull();
+    expect(screen.queryByText(englishCopy["email.withheldSubject"])).toBeNull();
     expect(screen.queryByText(WORDS)).toBeNull();
     expect(screen.queryByRole("button", { name: /^View/ })).toBeNull();
   });

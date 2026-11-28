@@ -97,7 +97,7 @@ func TestAHeldConversationStaysHeldUnderANewTopic(t *testing.T) {
 	e := integration.Setup(t)
 	addr := angebotThread(t, e)
 	owner := e.As(e.Rep1, nil, integration.AccountRepPerms)
-	if err := database.WithWorkspaceTx(owner, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(owner, e.Pool, func(tx pgx.Tx) error {
 		return capture.NewThreadVerdictStore(e.DB()).DecideAsOwner(owner, tx, "opener@counterparty.example", false)
 	}); err != nil {
 		t.Fatalf("holding the conversation: %v", err)

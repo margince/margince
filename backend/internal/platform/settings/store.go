@@ -80,22 +80,21 @@ func (s *Store) RawStored(ctx context.Context, key string) (json.RawMessage, boo
 	if err := RequireRead(ctx, def); err != nil {
 		return nil, false, err
 	}
-	// `setting` is non-tenant and carries no RLS, so the workspace GUC buys
-	// this read nothing directly. It still rides WithWorkspaceTx because the
-	// WRITE path must (its audit row is stamped with the workspace), and one
-	// transaction helper across both keeps the store honest about needing a
-	// resolved principal — a settings read with no workspace bound is a caller
-	// that has not authenticated, which the gate above should be judging.
+	// `setting` carries no RLS, so the workspace buys this read nothing
+	// directly. It still rides WithTx because the write path must, and its audit
+	// row is stamped with the workspace. A settings read with no workspace bound
+	// is a caller that has not authenticated, which the gate above should be
+	// judging.
 
-	// A hit opens no transaction, so the workspace check of WithWorkspaceTx is
-	// made here. A hit and a miss then refuse alike.
+	// A hit opens no transaction, so the workspace is checked here. A hit and a
+	// miss then refuse alike.
 	if _, ok := principal.WorkspaceID(ctx); !ok {
 		return nil, false, fmt.Errorf("settings: reading %s: %w", key, database.ErrNoWorkspace)
 	}
 	read := func() (json.RawMessage, bool, error) {
 		var raw json.RawMessage
 		var found bool
-		err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+		err := database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 			var err error
 			raw, found, err = storedValue(ctx, tx, key, "")
 			return err
@@ -133,7 +132,7 @@ func (s *Store) RawStored(ctx context.Context, key string) (json.RawMessage, boo
 // An unchanged value is a no-op — no write, no audit row — because an
 // idempotent PATCH should not litter the ledger.
 func (s *Store) SetRaw(ctx context.Context, key string, next json.RawMessage) error {
-	return database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	return database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		return s.SetRawTx(ctx, tx, key, next)
 	})
 }
@@ -492,5 +491,5 @@ func SetTx[T any](ctx context.Context, s *Store, tx pgx.Tx, e *Entry[T], v T) er
 // WriteTx runs fn inside one workspace-bound transaction over the store's
 // pool, for a caller composing several SetTx writes into one commit.
 func (s *Store) WriteTx(ctx context.Context, fn func(pgx.Tx) error) error {
-	return database.WithWorkspaceTx(ctx, s.pool, fn)
+	return database.WithTx(ctx, s.pool, fn)
 }

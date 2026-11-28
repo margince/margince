@@ -13,6 +13,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { companyReferenceQuery } from "../../components/entityref.queries";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { companyNamesAnswer } from "../../testing/companynames.testkit";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import {
@@ -116,9 +117,7 @@ describe("LeadCompany", () => {
     render(<LeadCompany lead={{ ...lead, company_match: match }} />);
     expect(screen.getByText("Nordwind Logistik")).toBeTruthy();
     expect(
-      screen.queryByText(
-        "No company linked yet. Qualifying links or creates it.",
-      ),
+      screen.queryByText(englishCopy["lead.company.addedOnQualify"]),
     ).toBeNull();
     fireEvent.click(
       screen.getByRole("button", { name: "Link to Nordwind Logistik GmbH" }),
@@ -134,7 +133,11 @@ describe("LeadCompany", () => {
         "No contact is created now. When you qualify this lead, it becomes a contact at Nordwind Logistik GmbH.",
       ),
     ).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Link company" }));
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: englishCopy["lead.company.linkConfirm"],
+      }),
+    );
     await waitFor(() => expect(posted).toEqual([{ company_id: "c-9" }]));
   });
 
@@ -184,9 +187,7 @@ describe("LeadCompany", () => {
     expect(screen.queryByRole("link")).toBeNull();
     expect(screen.queryByRole("button")).toBeNull();
     expect(
-      screen.queryByText(
-        "No company linked yet. Qualifying links or creates it.",
-      ),
+      screen.queryByText(englishCopy["lead.company.addedOnQualify"]),
     ).toBeNull();
   });
 
@@ -194,9 +195,7 @@ describe("LeadCompany", () => {
     stubServer();
     render(<LeadCompany lead={lead} nameShown />);
     expect(
-      screen.getByText(
-        "No company linked yet. Qualifying links or creates it.",
-      ),
+      screen.getByText(englishCopy["lead.company.addedOnQualify"]),
     ).toBeTruthy();
   });
 
@@ -211,9 +210,7 @@ describe("LeadCompany", () => {
       cleanup();
       render(<LeadCompany lead={{ ...lead, ...over }} nameShown />);
       expect(
-        screen.queryByText(
-          "No company linked yet. Qualifying links or creates it.",
-        ),
+        screen.queryByText(englishCopy["lead.company.addedOnQualify"]),
       ).toBeNull();
     }
   });
@@ -222,9 +219,7 @@ describe("LeadCompany", () => {
     stubServer();
     render(<LeadCompany lead={{ ...lead, company_match: match }} nameShown />);
     expect(
-      screen.queryByText(
-        "No company linked yet. Qualifying links or creates it.",
-      ),
+      screen.queryByText(englishCopy["lead.company.addedOnQualify"]),
     ).toBeNull();
   });
 

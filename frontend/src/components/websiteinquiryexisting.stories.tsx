@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent } from "storybook/test";
+import { en as englishCopy } from "../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -100,9 +101,13 @@ export const ReviewSelection: Story = {
       screen.getByRole("checkbox", { name: "Select ops@example.test" }),
     );
     await user.click(
-      screen.getByRole("button", { name: "Review selected inquiries" }),
+      screen.getByRole("button", {
+        name: englishCopy["inquiry.reviewSelection"],
+      }),
     );
-    await expect(screen.findByText("Ready to handle")).resolves.toBeVisible();
+    await expect(
+      screen.findByText(englishCopy["inquiry.result.eligible"]),
+    ).resolves.toBeVisible();
   },
 };
 export const CreatedTask: Story = {
@@ -115,12 +120,18 @@ export const CreatedTask: Story = {
       }),
     );
     await user.click(
-      screen.getByRole("button", { name: "Review selected inquiries" }),
+      screen.getByRole("button", {
+        name: englishCopy["inquiry.reviewSelection"],
+      }),
     );
     await user.click(
-      await screen.findByRole("button", { name: "Create the reviewed tasks" }),
+      await screen.findByRole("button", {
+        name: englishCopy["inquiry.handleSelected"],
+      }),
     );
-    await expect(screen.findByText("Task created")).resolves.toBeVisible();
+    await expect(
+      screen.findByText(englishCopy["inquiry.result.taskCreated"]),
+    ).resolves.toBeVisible();
   },
 };
 export const PreviewRefused: Story = {
@@ -133,10 +144,14 @@ export const PreviewRefused: Story = {
       }),
     );
     await user.click(
-      screen.getByRole("button", { name: "Review selected inquiries" }),
+      screen.getByRole("button", {
+        name: englishCopy["inquiry.reviewSelection"],
+      }),
     );
     await expect(
-      screen.findByRole("button", { name: "Create the reviewed tasks" }),
+      screen.findByRole("button", {
+        name: englishCopy["inquiry.handleSelected"],
+      }),
     ).resolves.toBeDisabled();
   },
 };

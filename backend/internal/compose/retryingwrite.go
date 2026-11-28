@@ -16,5 +16,5 @@ import (
 // Callbacks contain transaction effects only. A failed attempt is rolled back
 // before the shared retry opens another transaction.
 func withRetryingWorkspaceTx(ctx context.Context, pool *pgxpool.Pool, fn func(pgx.Tx) error) error {
-	return storekit.RetryLockCycles(ctx, func() error { return database.WithWorkspaceTx(ctx, pool, fn) })
+	return storekit.RetryLockCycles(ctx, func() error { return database.WithTx(ctx, pool, fn) })
 }

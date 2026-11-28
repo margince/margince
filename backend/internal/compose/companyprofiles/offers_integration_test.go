@@ -38,7 +38,7 @@ func TestCompanyOfferCorrectionRunsThroughTheExecutor(t *testing.T) {
 		if err := e.Contacts.ApplyDeepRead(ctx, contacts.DeepReadProposal{CompanyID: id, SourceURL: "https://example.test", SiteReadID: ids.NewV7(), Fields: []contacts.DeepReadField{{Field: "offer_summary", Value: summary, EvidenceSnippet: summary, SourceURL: "https://example.test", Confidence: 0.9}}}); err != nil {
 			t.Fatal(err)
 		}
-		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			if _, err := tx.Exec(ctx, `UPDATE company SET description = $2 WHERE id = $1`, id, summary); err != nil {
 				return err
 			}

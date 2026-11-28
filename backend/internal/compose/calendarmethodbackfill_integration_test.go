@@ -83,7 +83,7 @@ func (o *owedEnv) captureRaw(t *testing.T, raw []byte) ids.UUID {
 func (o *owedEnv) calendarMethod(t *testing.T, message ids.UUID) string {
 	t.Helper()
 	var method string
-	if err := database.WithWorkspaceTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT coalesce(calendar_method, '') FROM activity WHERE id = $1`, message).Scan(&method)
 	}); err != nil {
@@ -112,7 +112,7 @@ func runCalendarMethodBackfill(t *testing.T, o *owedEnv, blob blobstore.Store) i
 	settled := 0
 	for {
 		var out datatask.BatchOut
-		if err := database.WithWorkspaceTx(ctx, o.e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, o.e.Pool, func(tx pgx.Tx) error {
 			var err error
 			out, err = step.Batch(principal.WithCorrelationID(ctx, ids.NewV7()), tx, in)
 			return err
@@ -132,7 +132,7 @@ func runCalendarMethodBackfill(t *testing.T, o *owedEnv, blob blobstore.Store) i
 // orders such rows among themselves.
 func (o *owedEnv) asCapturedBeforeTheColumn(t *testing.T, message ids.UUID, age time.Duration) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			UPDATE activity SET calendar_method = NULL,
 			       created_at = (SELECT applied_at FROM schema_migrations_core WHERE version = $2) - $3::interval
@@ -248,7 +248,7 @@ func (o *owedEnv) slimmedOriginalOf(t *testing.T, blob blobstore.Store, message 
 		t.Fatalf("slimming: %v", err)
 	}
 	var payload []byte
-	if err := database.WithWorkspaceTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT rc.payload FROM raw_capture rc
 			JOIN activity a ON `+storekit.StoredOriginalSQL("a", "rc")+`
 			WHERE a.id = $1`, message).Scan(&payload)
@@ -342,7 +342,7 @@ func TestTheBackfillReadsEveryLegacyDeclineButAHeldOne(t *testing.T) {
 // setRow sets one fixture state on an activity row.
 func (o *owedEnv) setRow(t *testing.T, message ids.UUID, assignment string) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `UPDATE activity SET `+assignment+` WHERE id = $1`, message)
 		return err
 	}); err != nil {
@@ -353,7 +353,7 @@ func (o *owedEnv) setRow(t *testing.T, message ids.UUID, assignment string) {
 func (o *owedEnv) messageIDOf(t *testing.T, message ids.UUID) string {
 	t.Helper()
 	var id string
-	if err := database.WithWorkspaceTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT source_id FROM activity WHERE id = $1`, message).Scan(&id)
 	}); err != nil {
 		t.Fatalf("reading the message id: %v", err)

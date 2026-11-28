@@ -209,7 +209,7 @@ describe("the disclosure-duty queue", () => {
     expect(
       within(row).getByText("Purchased or imported on 30/11/2025 · Anna Weber"),
     ).toBeInTheDocument();
-    expect(within(row).getByText("Art. 14 notice")).toHaveAttribute(
+    expect(within(row).getByText(en["notice.rule.art14"])).toHaveAttribute(
       "title",
       en["notice.ruleHint.art14"],
     );

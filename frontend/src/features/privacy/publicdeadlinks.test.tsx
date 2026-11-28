@@ -9,6 +9,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { type Locale, LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { ConfirmDetailsScreen } from "./confirm";
 import { UnsubscribeScreen } from "./unsubscribe";
 
@@ -130,7 +131,7 @@ describe("the unsubscribe page names the purpose in the reader's words", () => {
       <UnsubscribeScreen token="t" purpose="%3Cb%3Ex%3C%2Fb%3E" />,
     );
     expect(
-      await screen.findByText("This link matches no email type"),
+      await screen.findByText(englishCopy["prefs.unsub.unknownPurposeTitle"]),
     ).toBeInTheDocument();
     for (const sentinel of ["%3C", "<b>x</b>", "b>x</b"]) {
       expect(container.textContent).not.toContain(sentinel);
@@ -154,7 +155,7 @@ describe("a link that dies after the first read lands on the dead-link page", ()
     );
     expect(
       await screen.findByRole("heading", {
-        name: "This link is no longer valid",
+        name: englishCopy["prefs.unsub.deadLinkTitle"],
       }),
     ).toBeInTheDocument();
   });
@@ -168,7 +169,7 @@ describe("a link that dies after the first read lands on the dead-link page", ()
     await userEvent.click(await screen.findByRole("button"));
     expect(
       await screen.findByRole("heading", {
-        name: "This link is no longer valid",
+        name: englishCopy["prefs.unsub.deadLinkTitle"],
       }),
     ).toBeInTheDocument();
   });
@@ -187,11 +188,11 @@ describe("the dead-link pages share one layout", () => {
       show(ui());
       expect(
         await screen.findByRole("heading", {
-          name: "This link is no longer valid",
+          name: englishCopy["prefs.unsub.deadLinkTitle"],
         }),
       ).toBeInTheDocument();
       await waitFor(() =>
-        expect(document.title).toBe("This link is no longer valid"),
+        expect(document.title).toBe(englishCopy["prefs.unsub.deadLinkTitle"]),
       );
     },
   );

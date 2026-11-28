@@ -7,6 +7,7 @@ import { App } from "./App";
 import { api } from "./api/client";
 import { createQueryClient } from "./app/queryclient";
 import { LocaleProvider } from "./i18n";
+import { en as englishCopy } from "./i18n/en";
 import { sessionRefusalWatch } from "./lib/session";
 import { memoryStorage } from "./testing/appharness";
 
@@ -80,7 +81,7 @@ describe("a password the server refuses", () => {
       await userEvent.type(screen.getByLabelText("Password"), "wrong{enter}");
 
       const alert = await screen.findByRole("alert");
-      expect(alert.textContent).toContain("Sign-in failed");
+      expect(alert.textContent).toContain(englishCopy["auth.failed"]);
       // The watch leaves a probe that already refused alone.
       expect(probes).toBe(1);
       await act(async () => {
@@ -90,7 +91,9 @@ describe("a password the server refuses", () => {
       // The same input node: a remount would answer a different element.
       expect(screen.getByLabelText("Email")).toBe(email);
       expect(email).toHaveProperty("value", "ada@example.com");
-      expect(screen.getByRole("alert").textContent).toContain("Sign-in failed");
+      expect(screen.getByRole("alert").textContent).toContain(
+        englishCopy["auth.failed"],
+      );
       // The re-ask was still in flight for every assertion above, which is
       // what this case is about. Let it finish so nothing outlives the test.
       releaseProbe();

@@ -42,7 +42,7 @@ func readInFull(text string) string {
 func (o *owedEnv) completeness(t *testing.T, message ids.UUID) string {
 	t.Helper()
 	var got string
-	if err := database.WithWorkspaceTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(o.e.Admin(), `SELECT body_completeness FROM activity WHERE id = $1`, message).Scan(&got)
 	}); err != nil {
 		t.Fatalf("reading body_completeness: %v", err)
@@ -93,7 +93,7 @@ func TestAPromiseReadOnlyInPartIsNotCurrentWork(t *testing.T) {
 			ctx := o.judge()
 			dispatcher := NewCommitmentDispatcher(o.e.Pool, approvals.NewService(o.e.DB()))
 			var outcome CommitmentOutcome
-			if err := database.WithWorkspaceTx(ctx, o.e.Pool, func(tx pgx.Tx) error {
+			if err := database.WithTx(ctx, o.e.Pool, func(tx pgx.Tx) error {
 				var err error
 				outcome, _, err = dispatcher.DispatchTx(ctx, tx, c, ids.NewV7())
 				return err
@@ -274,7 +274,7 @@ func TestTheEventWindowMarksAMessageReadOnlyInPart(t *testing.T) {
 	thread := settledThread{Key: key, Newest: at.Add(time.Minute), Count: 2}
 	var window []threadMessage
 	as := e.Admin()
-	if err := database.WithWorkspaceTx(as, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(as, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		window, err = threadMessages(as, tx, &thread)
 		return err

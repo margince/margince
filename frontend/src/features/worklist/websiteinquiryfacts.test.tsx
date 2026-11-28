@@ -10,6 +10,7 @@ import {
   INQUIRY_FIRST_SOURCE,
   INQUIRY_GRANTS,
 } from "../../components/websiteinquiry.fixtures";
+import { en as englishCopy } from "../../i18n/en";
 import { OpenSourceProvider } from "../../lib/opensource";
 import { renderWithQueryClient } from "../../testing/queryrender";
 import { installFetchStub, meRoute } from "../../testing/story-utils";
@@ -43,19 +44,25 @@ it("shows accepted facts and opens their actual submission", async () => {
     screen.getByText("Initial handling: Coordinator reviews first"),
   ).toBeVisible();
   expect(screen.getByText(/^Received:/)).toBeVisible();
-  await user.click(screen.getByRole("button", { name: "Open submission" }));
+  await user.click(
+    screen.getByRole("button", { name: englishCopy["inquiry.openSubmission"] }),
+  );
   expect(open).toHaveBeenCalledWith(INQUIRY_FIRST_SOURCE.id);
 });
 
 it("keeps unavailable source facts unknown", () => {
   installFetchStub({ "GET /me": meRoute(INQUIRY_GRANTS) });
   renderWithQueryClient(<WebsiteInquiryFacts facts={{}} />);
-  expect(screen.getByText("Receipt details unavailable")).toBeVisible();
+  expect(
+    screen.getByText(englishCopy["inquiry.receivedUnavailable"]),
+  ).toBeVisible();
   expect(screen.getByText("Request type: Not specified")).toBeVisible();
   expect(
     screen.getByText("Initial handling: Reason not recorded"),
   ).toBeVisible();
   expect(
-    screen.queryByRole("button", { name: "Open submission" }),
+    screen.queryByRole("button", {
+      name: englishCopy["inquiry.openSubmission"],
+    }),
   ).not.toBeInTheDocument();
 });

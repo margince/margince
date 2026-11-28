@@ -13,6 +13,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { OfferScreen } from "./offers";
 
 // Task 2.3: the offer 360 skeleton — header (offer_number/revision/status/
@@ -344,13 +345,13 @@ describe("OfferLineEditor (OP-7/OP-13)", () => {
 
     await user.click(screen.getByTestId("add-line"));
     expect(
-      await screen.findByText("Type the unit, or pick one from the list."),
+      await screen.findByText(englishCopy["product.unitOtherRequired"]),
     ).toBeTruthy();
     expect(mutations).toHaveLength(0);
 
     await user.type(screen.getByTestId("new-line-unit-other"), "Seat");
     expect(
-      screen.queryByText("Type the unit, or pick one from the list."),
+      screen.queryByText(englishCopy["product.unitOtherRequired"]),
     ).toBeNull();
     await user.click(screen.getByTestId("add-line"));
     await waitFor(() => expect(mutations).toHaveLength(1));
@@ -530,7 +531,7 @@ describe("OfferLineEditor (OP-7/OP-13)", () => {
     stubOffer({ ...baseOffer, line_items: [unpriced] });
     render(<OfferScreen id="o-1" />);
     await screen.findByText("ANG-2026-0007");
-    expect(screen.getAllByText("unpriced, excluded from total").length).toBe(2);
+    expect(screen.getAllByText(englishCopy["offer.unpriced"]).length).toBe(2);
     expect(screen.queryByText("€0.00")).toBeNull();
   });
 
@@ -630,7 +631,9 @@ describe("AI disclosure/diff banner (OP-11)", () => {
     render(<OfferScreen id="o-1" />);
     await screen.findByText("ANG-2026-0007");
     expect(
-      screen.queryByRole("heading", { name: "AI-assisted offer" }),
+      screen.queryByRole("heading", {
+        name: englishCopy["offer.aiDisclosureTitle"],
+      }),
     ).toBeNull();
   });
 });

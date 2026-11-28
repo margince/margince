@@ -128,7 +128,7 @@ func (w *briefGenerateWorker) mailTheMorning(
 	ctx context.Context, wsID ids.UUID, now time.Time,
 ) error {
 	var awaiting []briefs.BriefRun
-	if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, w.pool, func(tx pgx.Tx) error {
 		var err error
 		awaiting, err = briefs.RunsAwaitingMail(ctx, tx, now)
 		return err
@@ -227,7 +227,7 @@ func (w *briefGenerateWorker) assembleFor(ctx context.Context, wsID, userID ids.
 // morning to prepare. Read seats are excluded because the brief's whole content
 // is deals to act on.
 func (w *briefGenerateWorker) repsDueABrief(ctx context.Context, now time.Time) (reps []ids.UUID, err error) {
-	err = database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, w.pool, func(tx pgx.Tx) error {
 		reps, err = repsWithoutARunFor(ctx, tx, now)
 		return err
 	})

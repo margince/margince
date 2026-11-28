@@ -7,6 +7,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
 import { type Locale, translate, useLocale } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -98,8 +99,14 @@ describe("editing a review's questions", () => {
     await user.click(
       screen.getByRole("button", { name: "Move question 2 up" }),
     );
-    expect(screen.getByText("Unsaved changes")).toBeTruthy();
-    await user.click(screen.getByRole("button", { name: "Save questions" }));
+    expect(
+      screen.getByText(englishCopy["reviewTemplates.unsaved"]),
+    ).toBeTruthy();
+    await user.click(
+      screen.getByRole("button", {
+        name: englishCopy["reviewTemplates.saveQuestions"],
+      }),
+    );
     await vi.waitFor(() => expect(close).toHaveBeenCalled());
     expect(onPatch).toHaveBeenCalledWith({
       version: 4,
@@ -141,7 +148,10 @@ describe("editing a review's questions", () => {
       name: new RegExp(translate("vi", "reviewTemplates.question")),
     });
     if (!why || !lostTo) throw new Error("the drawer shows no question box");
-    expect(why).toHaveProperty("value", "Vì sao deal này thua?");
+    expect(why).toHaveProperty(
+      "value",
+      translate("vi", "reviewTemplates.builtin.question.why_we_lost"),
+    );
     await user.clear(lostTo);
     await user.type(lostTo, "Bên nào thắng?");
     await user.click(
@@ -209,7 +219,11 @@ describe("editing a review's questions", () => {
     const [first] = screen.getAllByRole("textbox", { name: /Question/ });
     if (!first) throw new Error("the drawer shows no question box");
     await user.clear(first);
-    await user.click(screen.getByRole("button", { name: "Save questions" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: englishCopy["reviewTemplates.saveQuestions"],
+      }),
+    );
     expect(screen.getByText("Question is required.")).toBeTruthy();
     expect(document.activeElement).toBe(first);
     expect(onPatch).not.toHaveBeenCalled();
@@ -222,8 +236,12 @@ describe("editing a review's questions", () => {
       name: /Choices, one per line/,
     });
     await user.clear(choices);
-    await user.click(screen.getByRole("button", { name: "Save questions" }));
-    expect(screen.getByText("This field is required.")).toBeTruthy();
+    await user.click(
+      screen.getByRole("button", {
+        name: englishCopy["reviewTemplates.saveQuestions"],
+      }),
+    );
+    expect(screen.getByText(englishCopy["record.fieldRequired"])).toBeTruthy();
     expect(document.activeElement).toBe(choices);
     expect(onPatch).not.toHaveBeenCalled();
   });
@@ -245,7 +263,9 @@ describe("editing a review's questions", () => {
     expect(screen.queryByRole("switch")).toBeNull();
     await user.click(first);
     expect(onPatch).not.toHaveBeenCalled();
-    expect(screen.getByText("Unsaved changes")).toBeTruthy();
+    expect(
+      screen.getByText(englishCopy["reviewTemplates.unsaved"]),
+    ).toBeTruthy();
   });
 });
 
@@ -271,9 +291,13 @@ describe("adding a review template", () => {
     const onPost = vi.fn();
     const { close, user } = openNew(onPost);
     expect(
-      screen.getByRole("heading", { name: "New review template" }),
+      screen.getByRole("heading", {
+        name: englishCopy["reviewTemplates.newTitle"],
+      }),
     ).toBeTruthy();
-    const add = screen.getByRole("button", { name: "Add template" });
+    const add = screen.getByRole("button", {
+      name: englishCopy["reviewTemplates.add"],
+    });
     await user.click(add);
     expect(screen.getByText("Name is required.")).toBeTruthy();
     expect(onPost).not.toHaveBeenCalled();

@@ -122,7 +122,7 @@ func TestDetachedReadDoesNotInheritTheOuterGenericPlanScope(t *testing.T) {
 			if !database.GenericPlansEnabled(ctx) {
 				t.Fatal("outer snapshot did not enable generic plans")
 			}
-			return database.WithWorkspaceSnapshot(database.Detached(ctx), pool, func(detached context.Context) error {
+			return database.WithSnapshot(database.Detached(ctx), pool, func(detached context.Context) error {
 				if database.GenericPlansEnabled(detached) {
 					t.Error("detached snapshot inherited the outer transaction's plan scope")
 				}
@@ -169,7 +169,7 @@ func TestAFailedCallStillRestoresHowTheSnapshotPlans(t *testing.T) {
 func TestExplicitPlanReuseRestoresTheCallerModeAfterARefusal(t *testing.T) {
 	ctx, pool := laneEnv(t)
 	refused := errors.New("refused")
-	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(ctx, `SET LOCAL plan_cache_mode=force_custom_plan`); err != nil {
 			return err
 		}
@@ -195,9 +195,9 @@ func TestExplicitPlanReuseRestoresTheCallerModeAfterARefusal(t *testing.T) {
 // statement, every pooled connection plans as usual for the next request.
 func TestReusedPlansNeverReachTheNextRequestOnTheConnection(t *testing.T) {
 	ctx, pool := laneEnv(t)
-	err := database.WithWorkspaceSnapshot(ctx, pool, func(ctx context.Context) error {
+	err := database.WithSnapshot(ctx, pool, func(ctx context.Context) error {
 		return database.ReuseGenericPlans(ctx, func(ctx context.Context) error {
-			return database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+			return database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 				_, err := tx.Exec(ctx, `SELECT 1/0`)
 				return err
 			})

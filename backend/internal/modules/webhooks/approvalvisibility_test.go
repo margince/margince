@@ -225,11 +225,11 @@ func TestEveryClassifiedApprovalTargetRidesTheObjectReadFloor(t *testing.T) {
 // a grant-holding owner is not refused by the floor and does reach the ownership
 // probe, so the deny above can only have come from the missing grant.
 //
-// Reaching the probe is asserted by a NAMED value rather than by a panic: the
-// probe opens its transaction through WithWorkspaceTx, which refuses an unbound
-// workspace with database.ErrNoWorkspace before it touches the pool. That
-// sentinel can only be produced by the arm having run, and a test that asserts
-// it cannot pass on some unrelated failure the way a bare recover can.
+// Reaching the probe is asserted by a named value rather than by a panic. The
+// probe resolves the workspace before it touches the pool, and refuses an
+// unbound one with database.ErrNoWorkspace. Only the arm having run produces
+// that sentinel, so the test cannot pass on an unrelated failure the way a bare
+// recover can.
 func TestTheOwnerOnlyArmIsReachedWhenTheReadFloorAdmits(t *testing.T) {
 	s := NewStore(nil, nil)
 	viewID := ids.NewV7()

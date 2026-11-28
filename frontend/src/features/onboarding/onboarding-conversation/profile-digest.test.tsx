@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../../i18n";
+import { en as englishCopy } from "../../../i18n/en";
 import type { ReviewRow } from "./company-review-state";
 import { ProfileDigest, type ProfileDigestRead } from "./profile-digest";
 
@@ -51,7 +52,7 @@ describe("the profile digest", () => {
     const onReadWhole = vi.fn();
     mount(<ProfileDigest rows={ROWS} onReadWhole={onReadWhole} />);
     await userEvent.click(
-      screen.getByRole("button", { name: "Read full profile" }),
+      screen.getByRole("button", { name: englishCopy["ob.deck.readWhole"] }),
     );
     expect(onReadWhole).toHaveBeenCalledTimes(1);
   });
@@ -64,13 +65,19 @@ describe("the profile digest", () => {
     await userEvent.click(
       screen.getByRole("button", { name: "Edit Company name" }),
     );
-    const control = screen.getByRole("textbox", { name: "Company name" });
+    const control = screen.getByRole("textbox", {
+      name: englishCopy["ob.field.display_name"],
+    });
     await userEvent.clear(control);
     await userEvent.type(control, "Acme GmbH{Enter}");
     expect(onField).toHaveBeenCalledWith("display_name", "Acme GmbH");
     // Committed: the line is prose again, reading what was typed is the
     // caller's job through `rows`, and the control is gone.
-    expect(screen.queryByRole("textbox", { name: "Company name" })).toBeNull();
+    expect(
+      screen.queryByRole("textbox", {
+        name: englishCopy["ob.field.display_name"],
+      }),
+    ).toBeNull();
   });
 
   it("keeps the line open on an input method's Enter", async () => {
@@ -79,13 +86,19 @@ describe("the profile digest", () => {
     await userEvent.click(
       screen.getByRole("button", { name: "Edit Company name" }),
     );
-    const control = screen.getByRole("textbox", { name: "Company name" });
+    const control = screen.getByRole("textbox", {
+      name: englishCopy["ob.field.display_name"],
+    });
     await userEvent.type(control, " GmbH");
 
     fireEvent.keyDown(control, { key: "Enter", keyCode: 229 });
 
     expect(onField).not.toHaveBeenCalled();
-    expect(screen.getByRole("textbox", { name: "Company name" })).toBeTruthy();
+    expect(
+      screen.getByRole("textbox", {
+        name: englishCopy["ob.field.display_name"],
+      }),
+    ).toBeTruthy();
   });
 
   // Escape is the way out without a change: the value the reader started from

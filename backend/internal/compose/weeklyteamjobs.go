@@ -65,7 +65,7 @@ type liveTeam struct {
 // nothing, which is not what happened.
 func (w *weeklyGenerateWorker) liveTeams(ctx context.Context) ([]liveTeam, error) {
 	var teams []liveTeam
-	err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, w.pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
 			SELECT t.id, t.name, array_agg(u.id::text ORDER BY u.id)
 			  FROM team t
@@ -151,7 +151,7 @@ func (w *weeklyGenerateWorker) teamMembers(
 	ctx context.Context, teamID ids.UUID,
 ) ([]weekly.TeamMember, error) {
 	var members []weekly.TeamMember
-	err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, w.pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
 			SELECT u.id, u.display_name FROM team_membership m
 			  JOIN app_user u ON u.id = m.user_id

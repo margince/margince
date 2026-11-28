@@ -64,7 +64,7 @@ func TestGmailPushWebhookRoutesToTheConnection(t *testing.T) {
 	// The connector's cursor carries the provider-owned mailbox identity —
 	// exactly what a real gmail sync writes — and the pacing clock sits in
 	// the future so only the push can make the connection due.
-	err = database.WithWorkspaceTx(grantCtx, e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(grantCtx, e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(), `
 			UPDATE capture_connection SET sync_cursor = $2 WHERE id = $1`,
 			connID, fmt.Sprintf(`{"history_id":"1000","email":%q}`, mailbox)); err != nil {
@@ -118,7 +118,7 @@ func TestGmailPushWebhookRoutesToTheConnection(t *testing.T) {
 		}
 		var next time.Time
 		var jobRows int
-		err := database.WithWorkspaceTx(grantCtx, e.Pool, func(tx pgx.Tx) error {
+		err := database.WithTx(grantCtx, e.Pool, func(tx pgx.Tx) error {
 			if err := tx.QueryRow(context.Background(), `
 				SELECT next_sync_at FROM capture_sync_state WHERE connection_id = $1`, connID).Scan(&next); err != nil {
 				return err
@@ -145,7 +145,7 @@ func TestGmailPushWebhookRoutesToTheConnection(t *testing.T) {
 			t.Fatalf("status = %d, want 204", code)
 		}
 		var jobRows int
-		err := database.WithWorkspaceTx(grantCtx, e.Pool, func(tx pgx.Tx) error {
+		err := database.WithTx(grantCtx, e.Pool, func(tx pgx.Tx) error {
 			return tx.QueryRow(context.Background(), `
 				SELECT count(*) FROM river_job
 				WHERE kind = 'capture_sync' AND args->>'connection_id' = $1`, connID.String()).Scan(&jobRows)

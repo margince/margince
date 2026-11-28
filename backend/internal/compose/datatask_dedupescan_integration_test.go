@@ -63,7 +63,7 @@ func TestTheDuplicateScanTaskFilesPairsWrittenBeforeTheRuleAndReplaysSafely(t *t
 
 	audits := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'dedupe_candidate'`)
 	for _, step := range dedupeScanDataTask().Steps {
-		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			out, err := step.Batch(ctx, tx, datatask.BatchIn{Limit: 100, RunID: ids.NewV7()})
 			if err == nil && out.Changed != 0 {
 				t.Errorf("a replay of %s from a nil cursor filed %d pairs", step.Name, out.Changed)
@@ -91,7 +91,7 @@ func TestTheDuplicateScanTaskRollsBackWithItsBatch(t *testing.T) {
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	seedPreRuleDuplicates(t, e)
 	rollback := errors.New("roll back after the write")
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		out, err := dedupeScanDataTask().Steps[0].Batch(ctx, tx, datatask.BatchIn{Limit: 10, RunID: ids.NewV7()})
 		if err != nil {
 			return err
@@ -112,7 +112,7 @@ func TestTheDuplicateScanTaskRollsBackWithItsBatch(t *testing.T) {
 func TestTheDuplicateScanTaskRefusesAMalformedCursor(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := dedupeScanDataTask().Steps[1].Batch(ctx, tx, datatask.BatchIn{Cursor: []byte(`"not an id"`), Limit: 10})
 		return err
 	})
@@ -145,7 +145,7 @@ func TestTheGmailScanTaskFilesStoredSpellingsOnceAndReplaysSafely(t *testing.T) 
 	if got := scannedPairs(t, e); got != 1 {
 		t.Fatalf("the task filed %d pairs, want the one Gmail pair", got)
 	}
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		out, err := gmailDedupeScanDataTask().Steps[0].Batch(ctx, tx, datatask.BatchIn{Limit: 100, RunID: ids.NewV7()})
 		if err == nil && out.Changed != 0 {
 			t.Errorf("a replay from a nil cursor filed %d pairs", out.Changed)
@@ -181,7 +181,7 @@ func TestTheGmailScanTaskFilesEveryPairOnABaseCrowdedPastTheRivalCap(t *testing.
 	step := gmailDedupeScanDataTask().Steps[0]
 	var cursor []byte
 	for done := false; !done; {
-		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			out, err := step.Batch(ctx, tx, datatask.BatchIn{Cursor: cursor, Limit: 100, RunID: ids.NewV7()})
 			cursor, done = out.Cursor, out.Done
 			return err

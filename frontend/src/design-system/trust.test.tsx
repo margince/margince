@@ -3,6 +3,7 @@ import { cleanup, render as rtlRender, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import {
   AutonomyDot,
   ConfidenceMeter,
@@ -24,7 +25,7 @@ const render = (ui: ReactNode) =>
 describe("AutonomyDot", () => {
   it("prints the tier in words beside the dot when the dot is the answer", () => {
     render(<AutonomyDot tier="confirm" withLabel />);
-    expect(screen.getByText("Approval first")).toBeTruthy();
+    expect(screen.getByText(englishCopy["autonomy.confirm"])).toBeTruthy();
     expect(screen.queryByRole("img")).toBeNull();
   });
 
@@ -62,7 +63,7 @@ describe("ProvenanceTag", () => {
     render(<ProvenanceTag provenance={{ kind: "agent", agent: "runner" }} />);
     render(<ProvenanceTag provenance={{ kind: "human", self: true }} />);
     expect(claimsAModel("Automated by runner")).toBe(true);
-    expect(claimsAModel("Typed by you")).toBe(false);
+    expect(claimsAModel(englishCopy["trust.typedByYou"])).toBe(false);
   });
 
   // "Typed by you" over a colleague's entry is a false statement about who to
@@ -78,18 +79,18 @@ describe("ProvenanceTag", () => {
     expect(badgeReading("Christian (u-2)").textContent).toBe(
       "Typed by Christian (u-2)",
     );
-    expect(screen.queryByText("Typed by you")).toBeNull();
+    expect(screen.queryByText(englishCopy["trust.typedByYou"])).toBeNull();
   });
 
   it("says a contact entered it when it cannot say which contact", () => {
     render(<ProvenanceTag provenance={{ kind: "human", self: false }} />);
-    expect(claimsAModel("Typed by a person")).toBe(false);
+    expect(claimsAModel(englishCopy["trust.typedByHuman"])).toBe(false);
   });
 
   it("reads an unrecorded source as unknown, not as the reader", () => {
     render(<ProvenanceTag provenance={{ kind: "unknown" }} />);
-    expect(claimsAModel("Source not recorded")).toBe(false);
-    expect(screen.queryByText("Typed by you")).toBeNull();
+    expect(claimsAModel(englishCopy["trust.sourceUnknown"])).toBe(false);
+    expect(screen.queryByText(englishCopy["trust.typedByYou"])).toBeNull();
   });
 
   // A buyer and an unrecorded source are one branch apart, and collapsing the
@@ -100,11 +101,11 @@ describe("ProvenanceTag", () => {
     render(<ProvenanceTag provenance={{ kind: "buyer" }} />);
     render(<ProvenanceTag provenance={{ kind: "unknown" }} />);
 
-    expect(claimsAModel("Typed by a buyer")).toBe(false);
+    expect(claimsAModel(englishCopy["trust.typedByBuyer"])).toBe(false);
     // Not the colleague arm either: a buyer holds no seat, and the colleague
     // arm's "Typed by a person" would send a reader to the member directory.
-    expect(screen.queryByText("Typed by a person")).toBeNull();
-    expect(claimsAModel("Source not recorded")).toBe(false);
+    expect(screen.queryByText(englishCopy["trust.typedByHuman"])).toBeNull();
+    expect(claimsAModel(englishCopy["trust.sourceUnknown"])).toBe(false);
   });
 
   // A connector copies what a mailbox already held, and no model decided it.
@@ -175,7 +176,7 @@ describe("ProvenanceTag", () => {
   it("says the kind and stops when the actor has no name to print", () => {
     render(<ProvenanceTag provenance={{ kind: "agent" }} />);
     render(<ProvenanceTag provenance={{ kind: "system" }} />);
-    expect(claimsAModel("Automated by an agent")).toBe(true);
+    expect(claimsAModel(englishCopy["trust.agentUnnamed"])).toBe(true);
     expect(claimsAModel("System task")).toBe(false);
   });
 
@@ -196,7 +197,7 @@ describe("ProvenanceTag", () => {
       />,
     );
     expect(badgeReading("Logged in HubSpot by Mutaz Suleiman")).toBeTruthy();
-    expect(screen.queryByText("Typed by you")).toBeNull();
+    expect(screen.queryByText(englishCopy["trust.typedByYou"])).toBeNull();
   });
 
   // An author who never held a seat here has a name and nothing else — 36 of
@@ -213,7 +214,7 @@ describe("ProvenanceTag", () => {
       />,
     );
     expect(badgeReading("Logged by Shayne Doherty")).toBeTruthy();
-    expect(screen.queryByText("Typed by you")).toBeNull();
+    expect(screen.queryByText(englishCopy["trust.typedByYou"])).toBeNull();
   });
 
   // The author outranks `renderUser` too. A colleague who still holds a seat
@@ -240,7 +241,7 @@ describe("ProvenanceTag", () => {
   // did before this branch existed.
   it("leaves a row with no author reading as it always did", () => {
     render(<ProvenanceTag provenance={{ kind: "human", self: true }} />);
-    expect(claimsAModel("Typed by you")).toBe(false);
+    expect(claimsAModel(englishCopy["trust.typedByYou"])).toBe(false);
   });
 });
 

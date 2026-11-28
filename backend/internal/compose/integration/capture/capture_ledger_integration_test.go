@@ -37,7 +37,7 @@ func TestCaptureLedgerStopsDeferringAtTheWorkspaceCeiling(t *testing.T) {
 	// synthetic backlog can hang off.
 	sync(t, email("first@stranger.example", "First Stranger", captureOwner, "led1@stranger.example", ""))
 	var activityID, ownerID ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT activity_id, owner_id FROM capture_pending_counterparty
 			 WHERE email = 'first@stranger.example'`).Scan(&activityID, &ownerID)
@@ -135,7 +135,7 @@ func TestCaptureLedgerRefusesAVerdictFromAnExpiredClaim(t *testing.T) {
 func resolveWith(t *testing.T, e *integration.SearchEnv, store *capturemod.PendingStore, p capturemod.PendingCounterparty, status string) bool {
 	t.Helper()
 	var resolved bool
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var err error
 		resolved, err = store.Resolve(context.Background(), tx, p, status, "test verdict")
 		return err
@@ -150,7 +150,7 @@ func resolveWith(t *testing.T, e *integration.SearchEnv, store *capturemod.Pendi
 // a crashed or stalled worker leaves behind.
 func expireClaimLease(t *testing.T, e *integration.SearchEnv, id ids.UUID) {
 	t.Helper()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			UPDATE capture_pending_counterparty
 			   SET claimed_until = now() - interval '1 minute'
@@ -167,7 +167,7 @@ func expireClaimLease(t *testing.T, e *integration.SearchEnv, id ids.UUID) {
 // first one the cap refuses.
 func fillLedgerToCeiling(t *testing.T, e *integration.SearchEnv, activityID, ownerID ids.UUID) {
 	t.Helper()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var live int
 		if err := tx.QueryRow(context.Background(), `
 			SELECT count(*) FROM capture_pending_counterparty
@@ -198,7 +198,7 @@ func TestCaptureLedgerStopsDeferringOneFloodingDomain(t *testing.T) {
 
 	sync(t, email("first@flood.example", "First Flooder", captureOwner, "dom1@flood.example", ""))
 	var activityID, ownerID ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT activity_id, owner_id FROM capture_pending_counterparty
 			 WHERE email = 'first@flood.example'`).Scan(&activityID, &ownerID)
@@ -237,7 +237,7 @@ func TestCaptureLedgerStopsDeferringOneFloodingDomain(t *testing.T) {
 // per-domain cap refuses.
 func fillDomainToShare(t *testing.T, e *integration.SearchEnv, domain string, activityID, ownerID ids.UUID) {
 	t.Helper()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var live int
 		if err := tx.QueryRow(context.Background(), `
 			SELECT count(*) FROM capture_pending_counterparty

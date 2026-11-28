@@ -1,6 +1,7 @@
 /** @vitest-environment happy-dom */
 import { cleanup, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import {
   day,
   renderWorklist,
@@ -109,7 +110,9 @@ it("names the sender behind a deal-filed thread, and which side wrote last", asy
     "/r/contacts/01a05500-0000-7000-8000-000000000009#/contacts/01a05500-0000-7000-8000-000000000009",
   );
   const touch = document.querySelector(".worklist-row-touch");
-  expect(touch?.textContent).toContain("Last from this contact");
+  expect(touch?.textContent).toContain(
+    englishCopy["worklist.pane.lastInbound"],
+  );
   expect(touch?.textContent).toContain("03/09/2026");
   expect(touch?.textContent).toContain(
     "Last to this contact None you can open",
@@ -214,7 +217,9 @@ it("says which side wrote last on a row about an account", async () => {
   await screen.findByText("Send the renewal terms");
   const touch = document.querySelector(".worklist-row-touch");
   expect(touch?.textContent).toContain("Last from this company Never");
-  expect(touch?.textContent).toContain("Last to this company");
+  expect(touch?.textContent).toContain(
+    englishCopy["worklist.pane.lastToCompany"],
+  );
   expect(touch?.textContent).not.toContain("this contact");
   expect(touch?.textContent).toContain("28/08/2026");
 });

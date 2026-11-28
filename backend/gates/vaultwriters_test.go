@@ -52,6 +52,9 @@ var vaultPutWords = requiredWords(vaultPut)
 // tree, not a cost anybody is choosing to pay. The single exception is marked
 // NOTHING and carries its issue on the line above it.
 var vaultWriters = map[string]string{
+	"internal/modules/capture/channelbotrefresh.go": "audit_log through auditLifecycle, recording channel connection images without secret bytes",
+	"internal/modules/chatlinks/membergrants.go":    "audit_log under the member grant create or update; failed row writes destroy the detached credential",
+	"internal/modules/chatlinks/memberrefresh.go":   "audit_log under the member grant update after the held consent generation is verified",
 	// The domain act is connecting or reconnecting a channel, audited under
 	// those verbs by the store that performs it.
 	"internal/modules/capture/registry_grant.go":       "audit_log, under the connect/disconnect verbs",

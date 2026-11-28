@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -107,7 +108,7 @@ export const ReadOnly: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const facts = await canvas.findByRole("region", {
-      name: "Business context",
+      name: englishCopy["settings.companyContextTitle"],
     });
     await within(facts).findByText(/^Read-only\./);
     await expect(canvas.getAllByText(/^Read-only\./)).toHaveLength(1);
@@ -189,14 +190,14 @@ export const NameTooLong: Story = {
   play: async ({ canvasElement }) => {
     await userEvent.click(
       await within(canvasElement).findByRole("button", {
-        name: "Edit business context",
+        name: englishCopy["settings.companyEditContext"],
       }),
     );
     const dialog = within(
       await within(canvasElement.ownerDocument.body).findByRole("dialog"),
     );
     await userEvent.click(
-      dialog.getByRole("button", { name: "Save company context" }),
+      dialog.getByRole("button", { name: englishCopy["settings.companySave"] }),
     );
     await dialog.findByText("Company name: at most 120 characters.");
   },

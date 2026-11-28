@@ -67,7 +67,7 @@ func TestConnectRefusesAGrantFromADeactivatedHuman(t *testing.T) {
 		t.Fatalf("grant from a live human: %v", err)
 	}
 	var status string
-	if err := database.WithWorkspaceTx(grantCtx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(grantCtx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT status FROM capture_connection WHERE id = $1`, connID).Scan(&status)
 	}); err != nil {

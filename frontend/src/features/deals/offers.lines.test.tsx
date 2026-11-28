@@ -3,6 +3,7 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
+import { en as englishCopy } from "../../i18n/en";
 import { installFetchStub, meRoute } from "../../testing/story-utils";
 import { jsonResponse, type Offer, offer, render } from "./deals.testkit";
 import { type OfferLineItem, OfferScreen } from "./offers";
@@ -135,7 +136,9 @@ describe("the Add line form", () => {
     await pickOption(user, billing(), "Recurring");
     await pickOption(
       user,
-      screen.getByRole("combobox", { name: "Billing period" }),
+      screen.getByRole("combobox", {
+        name: englishCopy["product.billingInterval"],
+      }),
       "Yearly",
     );
     await user.type(screen.getByRole("spinbutton", { name: "Periods" }), "2");
@@ -150,9 +153,15 @@ describe("the Add line form", () => {
       billing_interval_months: 12,
       interval_count: 2,
     });
-    await waitFor(() => expect(billing().textContent).toBe("Not specified"));
+    await waitFor(() =>
+      expect(billing().textContent).toBe(
+        englishCopy["product.billingNoInterval"],
+      ),
+    );
     expect(
-      screen.queryByRole("combobox", { name: "Billing period" }),
+      screen.queryByRole("combobox", {
+        name: englishCopy["product.billingInterval"],
+      }),
     ).toBeNull();
     expect(screen.queryByRole("spinbutton", { name: "Periods" })).toBeNull();
   });
@@ -174,7 +183,7 @@ describe("the Add line form's unit price", () => {
     await user.type(screen.getByTestId("new-line-quantity"), "1");
     await user.click(screen.getByTestId("add-line"));
     expect(
-      await screen.findByText("Enter a unit price or pick a product."),
+      await screen.findByText(englishCopy["offer.unitPriceRequired"]),
     ).toBeTruthy();
     expect(calls).toHaveLength(0);
 

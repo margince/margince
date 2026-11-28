@@ -56,7 +56,7 @@ func defineContactFieldPerType(t *testing.T, f cfvFixture) []string {
 // what the DATABASE holds, independent of the record surface's write path.
 func writeSubjectCustomValues(t *testing.T, e *Env, contactID ids.UUID, cols []string) {
 	t.Helper()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), fmt.Sprintf(
 			`UPDATE contact SET %s = 'route-66-secret', %s = 42.5, %s = '2026-01-02',
 			   %s = 199900, %s = 'gold', %s = true WHERE id = $1`,
@@ -78,7 +78,7 @@ func quoted(column string) string { return pgx.Identifier{column}.Sanitize() }
 func catalogColumns(t *testing.T, e *Env, object string) []string {
 	t.Helper()
 	var cols []string
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(context.Background(),
 			`SELECT column_name FROM custom_field WHERE object = $1 ORDER BY column_name`, object)
 		if err != nil {
@@ -97,7 +97,7 @@ func catalogColumns(t *testing.T, e *Env, object string) []string {
 func countStoredCustomValues(t *testing.T, e *Env, table string, rowID ids.UUID, cols []string) int {
 	t.Helper()
 	stored := 0
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		for _, col := range cols {
 			var present bool
 			if err := tx.QueryRow(context.Background(), fmt.Sprintf(
@@ -127,7 +127,7 @@ func TestErasureScrubsCustomFieldColumns(t *testing.T) {
 
 	contactID := seedSubject(t, f.e)
 	leadID := ids.NewV7()
-	err := database.WithWorkspaceTx(f.e.Admin(), f.e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(f.e.Admin(), f.e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), fmt.Sprintf(
 			`INSERT INTO lead (id, full_name, email, source, captured_by, %s)
 			 VALUES ($1,
@@ -150,7 +150,7 @@ func TestErasureScrubsCustomFieldColumns(t *testing.T) {
 		t.Fatalf("defining the to-be-retired field: %v", err)
 	}
 	retiredCol := *retiredField.ColumnName
-	err = database.WithWorkspaceTx(f.e.Admin(), f.e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(f.e.Admin(), f.e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), fmt.Sprintf(
 			`UPDATE contact SET %s = 'legacy-77' WHERE id = $1`, quoted(retiredCol),
 		), contactID)
@@ -190,7 +190,7 @@ func TestErasureScrubsCustomFieldColumns(t *testing.T) {
 // evidence, and no tombstone anywhere re-storing a scrubbed cf_ value.
 func assertEraseTombstoneShape(t *testing.T, e *Env, contactID ids.UUID) {
 	t.Helper()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var tombstones int
 		if err := tx.QueryRow(context.Background(), `
 			SELECT count(*) FROM audit_log
@@ -236,7 +236,7 @@ func TestSARExportsCustomFieldValues(t *testing.T) {
 	legacyCol := *legacyField.ColumnName
 
 	contactID := seedSubject(t, f.e)
-	err = database.WithWorkspaceTx(f.e.Admin(), f.e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(f.e.Admin(), f.e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), fmt.Sprintf(
 			`UPDATE contact SET %s = 'vip', %s = 1234.5, %s = 'legacy-77' WHERE id = $1`,
 			quoted(segmentCol), quoted(volumeCol), quoted(legacyCol),

@@ -39,7 +39,7 @@ func TestBuyerReattributionDoesNotDuplicateTheSourceFinding(t *testing.T) {
 				t.Fatal(err)
 			}
 		}
-		err := database.WithWorkspaceTx(e.system(), e.Pool, func(tx pgx.Tx) error {
+		err := database.WithTx(e.system(), e.Pool, func(tx pgx.Tx) error {
 			raised, err := recordEventSignal(e.system(), tx, thread, event, source, e.now, CommitmentRemembered)
 			if err == nil && raised != (pass == 0) {
 				t.Fatalf("pass %d raised=%v", pass, raised)
@@ -71,7 +71,7 @@ func TestCommercialIntermediariesDoNotCreateBuyingReviewMatters(t *testing.T) {
 				Summary: "A commercial intermediary described work.", Quote: thread.Messages[0].Body,
 				BuyerRef: ref, CommercialRole: role,
 			}
-			err := database.WithWorkspaceTx(e.system(), e.Pool, func(tx pgx.Tx) error {
+			err := database.WithTx(e.system(), e.Pool, func(tx pgx.Tx) error {
 				_, err := recordEventSignal(e.system(), tx, thread, event, source, e.now, CommitmentRemembered)
 				return err
 			})

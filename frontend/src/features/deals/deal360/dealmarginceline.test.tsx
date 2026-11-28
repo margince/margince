@@ -62,7 +62,7 @@ function session() {
 
 it("offers Undo under the header on a deal Margince closed, and presses the restore route Home presses", async () => {
   const calls = session();
-  render(<>{line([closeReceipt()])}</>);
+  render(line([closeReceipt()]));
   expect(
     await screen.findByText(/Margince closed this deal as lost on/),
   ).toBeTruthy();
@@ -79,13 +79,11 @@ it("offers Undo under the header on a deal Margince closed, and presses the rest
 it("offers Reopen and no Undo once the server no longer allows the Undo", async () => {
   session();
   render(
-    <>
-      {marginceLineOf({
-        deal: { id: DEAL, version: 7, closing_occurrence_id: CLOSING } as never,
-        receipts: [closeReceipt({ can_undo: false })],
-        openStages: [{ id: "s-1", name: "Discovery" } as never],
-      })}
-    </>,
+    marginceLineOf({
+      deal: { id: DEAL, version: 7, closing_occurrence_id: CLOSING } as never,
+      receipts: [closeReceipt({ can_undo: false })],
+      openStages: [{ id: "s-1", name: "Discovery" } as never],
+    }),
   );
   expect(await screen.findByRole("button", { name: "Reopen" })).toBeTruthy();
   expect(screen.queryByRole("button", { name: "Undo" })).toBeNull();
@@ -101,7 +99,7 @@ it("shows no line on a deal closed by hand", () => {
 
 it("shows a reader who may not write the line with neither verb", async () => {
   session();
-  render(<>{line([closeReceipt({ writable: false, can_undo: false })])}</>);
+  render(line([closeReceipt({ writable: false, can_undo: false })]));
   expect(
     await screen.findByText(/Margince closed this deal as lost on/),
   ).toBeTruthy();
@@ -122,7 +120,7 @@ function openedReceipt(canUndo: boolean): Receipt {
 
 it("says an opened deal's line only while its Undo is open", async () => {
   session();
-  render(<>{line([openedReceipt(true)], null)}</>);
+  render(line([openedReceipt(true)], null));
   expect(await screen.findByText(/Margince opened this deal on/)).toBeTruthy();
   cleanup();
   expect(line([openedReceipt(false)], null)).toBe(undefined);

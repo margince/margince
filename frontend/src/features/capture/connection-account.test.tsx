@@ -17,6 +17,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { accountsOf } from "../../format/connectorprovider";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import type {
   ConnectAccountInput,
   ImportWindow,
@@ -225,7 +226,9 @@ describe("the past email service", () => {
     renderAccount([{ ...gmail, backfill: { state: "none" } }]);
     const service = await screen.findByTestId("connector-gmail-past-email");
 
-    expect(within(service).getByText("Not imported")).toBeInTheDocument();
+    expect(
+      within(service).getByText(englishCopy["connectors.svc.notImported"]),
+    ).toBeInTheDocument();
     expect(requestsTo(calls, "/backfill/preview", "POST")).toHaveLength(0);
   });
 
@@ -255,7 +258,9 @@ describe("the past email service", () => {
     expect(await preview.clone().json()).toEqual({ window: "12m" });
 
     await userEvent.click(
-      within(service).getByRole("button", { name: "Start import" }),
+      within(service).getByRole("button", {
+        name: englishCopy["backfill.startCta"],
+      }),
     );
     await waitFor(() =>
       expect(requestsTo(calls, "/backfill", "POST")).toHaveLength(1),
@@ -264,7 +269,7 @@ describe("the past email service", () => {
     expect(await start.clone().json()).toEqual({ window: "12m" });
     await waitFor(() =>
       expect(within(service).getByRole("status").textContent).toBe(
-        "Starting soon",
+        englishCopy["connectors.svc.queued"],
       ),
     );
   });
@@ -290,7 +295,9 @@ describe("the past email service", () => {
       await within(service).findByText("8,200 emails in that time."),
     ).toBeInTheDocument();
     await userEvent.click(
-      within(service).getByRole("button", { name: "Start import" }),
+      within(service).getByRole("button", {
+        name: englishCopy["backfill.startCta"],
+      }),
     );
     await waitFor(() =>
       expect(requestsTo(calls, "/backfill", "POST")).toHaveLength(1),
@@ -309,7 +316,9 @@ describe("the past email service", () => {
 
     expect(within(service).getByRole("status").textContent).toBe("Imported");
     expect(
-      within(service).queryByRole("button", { name: "Start import" }),
+      within(service).queryByRole("button", {
+        name: englishCopy["backfill.startCta"],
+      }),
     ).toBeNull();
     expect(requestsTo(calls, "/backfill/preview", "POST")).toHaveLength(0);
   });
@@ -328,7 +337,7 @@ describe("the past email service", () => {
     const service = await screen.findByTestId("connector-gmail-past-email");
 
     expect(within(service).getByRole("status").textContent).toBe(
-      "Mail missing",
+      englishCopy["connectors.svc.mailMissing"],
     );
     expect(within(service).getByTestId("past-email-unread")).toHaveTextContent(
       "Some mail from 01/06/2026, 11:00 to 14/06/2026, 11:06 may be missing. Import older email with a window that reaches back to 01/06/2026, 11:00.",
@@ -349,7 +358,9 @@ describe("the past email service", () => {
     ]);
     const service = await screen.findByTestId("connector-gmail-past-email");
 
-    expect(within(service).getByText("Not imported")).toBeInTheDocument();
+    expect(
+      within(service).getByText(englishCopy["connectors.svc.notImported"]),
+    ).toBeInTheDocument();
     expect(
       within(service).getByTestId("past-email-unread"),
     ).toBeInTheDocument();
@@ -368,7 +379,7 @@ describe("the past email service", () => {
     await chooseAccountVerb("Import older email");
 
     const dialog = await screen.findByRole("dialog", {
-      name: "Import older email",
+      name: englishCopy["connectors.menu.importOlder"],
     });
     expect(
       await within(dialog).findByText("400 emails in that time."),
@@ -387,7 +398,9 @@ describe("each service's health", () => {
     const newMail = await screen.findByTestId("connector-gmail");
     const calendar = screen.getByTestId("connector-gcal");
 
-    expect(within(newMail).getByText("Needs reconnect")).toBeInTheDocument();
+    expect(
+      within(newMail).getByText(englishCopy["connectors.health.reconnect"]),
+    ).toBeInTheDocument();
     expect(within(calendar).getByText("Up to date")).toBeInTheDocument();
     for (const service of [newMail, calendar]) {
       expect(
@@ -396,7 +409,9 @@ describe("each service's health", () => {
     }
     const reconnect = screen.getByRole("button", { name: "Reconnect" });
     expect(reconnect).toHaveClass("btn-primary");
-    expect(screen.getByText("Needs attention")).toBeInTheDocument();
+    expect(
+      screen.getByText(englishCopy["connectors.health.attention"]),
+    ).toBeInTheDocument();
     expect(
       screen.getAllByText(/./, { selector: ".provider-row-reason" }),
     ).toHaveLength(1);
@@ -407,7 +422,9 @@ describe("each service's health", () => {
     renderAccount([{ ...gmail, last_sync_error_class: "rate_limited" }, gcal]);
     await screen.findByTestId("connector-gmail");
 
-    expect(screen.getAllByText("Needs attention")).toHaveLength(2);
+    expect(
+      screen.getAllByText(englishCopy["connectors.health.attention"]),
+    ).toHaveLength(2);
     expect(screen.queryByRole("button", { name: "Reconnect" })).toBeNull();
   });
 
@@ -421,7 +438,9 @@ describe("each service's health", () => {
     const calendar = await screen.findByTestId("connector-calendar-missing");
 
     await userEvent.click(
-      within(calendar).getByRole("button", { name: "Connect calendar" }),
+      within(calendar).getByRole("button", {
+        name: englishCopy["connectors.connectCalendar"],
+      }),
     );
     await waitFor(() =>
       expect(requestsTo(calls, "/gcal/connect", "POST")).toHaveLength(1),
@@ -442,7 +461,9 @@ describe("the meeting notes", () => {
     const notes = await screen.findByTestId("connector-notes-missing");
 
     await userEvent.click(
-      within(notes).getByRole("button", { name: "Connect meeting notes" }),
+      within(notes).getByRole("button", {
+        name: englishCopy["connectors.notes.connect"],
+      }),
     );
     await waitFor(() =>
       expect(requestsTo(calls, "/gdocs/connect", "POST")).toHaveLength(1),
@@ -469,7 +490,7 @@ describe("the meeting notes", () => {
     const notes = await screen.findByTestId("connector-gdocs");
 
     expect(
-      within(notes).getByText("Cannot read meeting notes"),
+      within(notes).getByText(englishCopy["connectors.cannotReadNotes"]),
     ).toBeInTheDocument();
     expect(
       screen.getByText(/Reconnect to read meeting notes/),
@@ -509,10 +530,12 @@ describe("the meeting notes", () => {
     expect(within(notes).getByText("Up to date")).toBeInTheDocument();
 
     await userEvent.click(
-      within(notes).getByRole("button", { name: "Stop reading meeting notes" }),
+      within(notes).getByRole("button", {
+        name: englishCopy["connectors.notes.stop"],
+      }),
     );
     const confirm = await screen.findByRole("dialog", {
-      name: "Stop reading meeting notes?",
+      name: englishCopy["connectors.notes.stopTitle"],
     });
     await userEvent.click(
       within(confirm).getByRole("button", { name: "Disconnect" }),

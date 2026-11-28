@@ -2,6 +2,7 @@
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../../i18n/en";
 import { jsonResponse, StoryProviders } from "../../../testing/story-utils";
 import { ContactMeetingBrief } from "./drawer";
 import { briefReady } from "./fixtures";
@@ -123,7 +124,9 @@ describe("the meeting brief drawer", () => {
     const user = userEvent.setup();
     await user.click(await screen.findByRole("button", { name: "Retry" }));
     await waitFor(() => expect(urls).toHaveLength(2));
-    expect(await screen.findByText("Goal for this meeting")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["contact.meeting.goal"]),
+    ).toBeTruthy();
   });
 
   it("keeps the server's reason when a named project is not the meeting's", async () => {
@@ -170,7 +173,7 @@ describe("the meeting brief drawer", () => {
       ),
     ).toBeTruthy();
     expect(urls[1]).toBe("/activities/a-1/meeting-brief?project_id=p-erp");
-    expect(screen.queryByText("Hidden for your role")).toBeNull();
+    expect(screen.queryByText(englishCopy["state.withheld"])).toBeNull();
     expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
   });
 
@@ -192,7 +195,9 @@ describe("the meeting brief drawer", () => {
           <ContactMeetingBrief activityId="a-1" open onClose={() => {}} />
         </StoryProviders>,
       );
-      expect(await screen.findByText("Hidden for your role")).toBeTruthy();
+      expect(
+        await screen.findByText(englishCopy["state.withheld"]),
+      ).toBeTruthy();
       expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
       expect(attempts).toBe(1);
     },

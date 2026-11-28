@@ -27,11 +27,12 @@ import (
 // exportAll posts the export of every record of one type and answers the file.
 func exportAll(t *testing.T, e *apptest.AppEnv, object string) (body []byte, disposition string) {
 	t.Helper()
-	raw, err := json.Marshal(AnyMap{
-		"object": object,
-		"filter": AnyMap{"field": "created_at", "op": "gte", "value": "2000-01-01"},
-		"format": "csv",
-	})
+	filter := AnyMap{"field": "created_at", "op": "gte", "value": "2000-01-01"}
+	if object == "project" {
+		// The project list is not filterable by its creation day.
+		filter = AnyMap{"field": "phase", "op": "neq", "value": "closed"}
+	}
+	raw, err := json.Marshal(AnyMap{"object": object, "filter": filter, "format": "csv"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -93,11 +94,12 @@ func wantEverythingSame(t *testing.T, object string, report importReportDTO, hea
 		t.Errorf("the id is not the last column: %v", header)
 	}
 	// The other direction: no field the import takes goes missing from the file.
-	// The exceptions are the author, which the import writes on create only, a
-	// deal's stakeholder edge, a contact's employer ref and the custom fields.
-	notStored := map[string]bool{"author": true, "ref": true, "contact_ref": true}
+	// The exceptions are the author, which the import writes on create only, and a
+	// deal's stakeholder edge. A project's deal and tags, a contact's employer ref
+	// and the custom fields are exceptions too.
+	notStored := map[string]bool{"author": true, "ref": true, "contact_ref": true, "deal_ref": true}
 	for _, target := range profile.Targets {
-		if notStored[target] || strings.HasPrefix(target, "cf_") || (object == "contact" && target == "company_ref") {
+		if notStored[target] || strings.HasPrefix(target, "cf_") || (object == "contact" && target == "company_ref") || (object == "project" && target == "tags") {
 			continue
 		}
 		if !slices.Contains(header, target) {

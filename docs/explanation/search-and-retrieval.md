@@ -236,7 +236,7 @@ set:
   is an empty page, never a 403 that would show which types exist.
 - **Row scope goes in the same branch.** `auth.ScopeClauseFor` (or `auth.ActivityContentClause` for
   the link walk of the activity branch) is added to the `WHERE` of that branch, inside the same
-  `database.WithWorkspaceTx` transaction. Both arms use the same helper; the merge adds no
+  `database.WithTx` transaction. Both arms use the same helper; the merge adds no
   visibility of its own.
 - **The context walk gates the same way.** `anchorProfile` is the gate for the whole result. It checks
   both whether the record exists *and* whether the caller can see it: `auth.EnsureVisible`, then a

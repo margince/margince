@@ -153,7 +153,7 @@ func TestTheMailboxPurgeFindsCapturedContactsBeforeAndAfterTheTask(t *testing.T)
 	purgeable := func() []ids.UUID {
 		t.Helper()
 		var found []ids.UUID
-		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) (err error) {
+		if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) (err error) {
 			found, err = contacts.CaptureMintedForSeatTx(ctx, tx, e.Rep1, []ids.UUID{captured, carded})
 			return err
 		}); err != nil {

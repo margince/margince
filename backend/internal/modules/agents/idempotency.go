@@ -18,7 +18,7 @@ package agents
 // window, a digest mismatch refusal and a retention sweep — so this module
 // declares the seam and compose adapts its OWN claim transaction to it. One
 // claim, one window, one sweep, two doors. The claim runs inside the caller's
-// workspace transaction (`database.WithWorkspaceTx`), which keeps it tenant-safe.
+// workspace transaction (`database.WithTx`), which keeps it tenant-safe.
 //
 // AT MOST ONCE IS THE WHOLE PROMISE, so every branch that cannot keep it
 // REFUSES rather than proceeding: no claim store, a claim that errored, a

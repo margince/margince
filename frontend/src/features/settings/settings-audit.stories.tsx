@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import {
   installFetchStub,
@@ -236,7 +237,7 @@ export const Filtered: Story = {
       within(listbox).getByRole("option", { name: "Lars Brandt" }),
     );
     await expect(
-      await canvas.findByText("No recorded actions match these filters."),
+      await canvas.findByText(englishCopy["settings.auditNoMatch"]),
     ).toBeInTheDocument();
   },
 };
@@ -252,9 +253,7 @@ export const ShortIdRefused: Story = {
       "9008eb3f",
     );
     await expect(
-      await canvas.findByText(
-        "Paste the full record ID. Use Copy record ID on a row.",
-      ),
+      await canvas.findByText(englishCopy["settings.auditEntityIdHint"]),
     ).toBeInTheDocument();
   },
 };
@@ -273,7 +272,7 @@ export const RangeReversed: Story = {
     );
     await waitFor(() =>
       expect(
-        canvas.getAllByText("Pick a To date on or after the From date."),
+        canvas.getAllByText(englishCopy["settings.auditRangeReversed"]),
       ).toHaveLength(2),
     );
   },

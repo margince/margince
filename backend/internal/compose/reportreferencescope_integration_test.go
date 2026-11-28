@@ -548,3 +548,33 @@ func TestTheAnalyticsSurfaceScopesAJoinedAttributeToo(t *testing.T) {
 		t.Error("the readable company's band answered nothing; the refusal above would be vacuous")
 	}
 }
+
+// The company threshold of the quiet-deal filters reads an attribute of the
+// deal's company. So it carries the company's row scope on every door, the run
+// and the drill-through that explains it. A deal at a company the asker may not
+// open is neither counted nor opened.
+func TestACompanyThresholdScopesTheRunAndTheDrillThrough(t *testing.T) {
+	e := setupForecast(t)
+	hidden := e.seedID(t, `INSERT INTO company (id, owner_id, display_name, visibility, source, captured_by)
+		VALUES ($1, $2, 'Hidden Quiet', 'owner', 'manual', 'human:x')`, e.Rep3)
+	open := e.seedID(t, `INSERT INTO company (id, display_name, source, captured_by)
+		VALUES ($1, 'Open Quiet', 'manual', 'human:x')`)
+	for _, company := range []ids.UUID{hidden, open} {
+		e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, company_id, amount_minor, currency, source, captured_by)
+			VALUES ($1, 'Quiet deal', $2, $3, $4, 10000, 'EUR', 'manual', 'human:x')`,
+			e.pipeline, e.stages[60], company)
+	}
+	blind := e.dealReadCtx(ids.NewV7(), nil, principal.RowScopeAll)
+
+	run := e.runReport(blind, t, "deals-by-stage",
+		`{"group_by":["currency"],"aggregates":[{"fn":"count","as":"deals"}],"filters":{"company_days_since_activity_at_least":60}}`)
+	if len(run.Rows) != 1 || wireInt(t, run.Rows[0], "deals") != 1 {
+		t.Errorf("the run counted %v, want only the deal at the company the asker may open", run.Rows)
+	}
+	drill := e.explainReport(blind, t, "deals-by-stage",
+		"/v1/reports/deals-by-stage/derivation?agg=count%3A%3Adeals&company_days_since_activity_at_least=60")
+	if drill.TotalRows != 1 {
+		t.Errorf("the drill-through opened %d row(s), want 1: a threshold on the company's quiet days "+
+			"reached the query without the company's row scope", drill.TotalRows)
+	}
+}

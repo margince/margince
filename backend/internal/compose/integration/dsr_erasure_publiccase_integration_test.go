@@ -111,7 +111,7 @@ func TestFulfillingAnErasureCaseTheSubjectOpenedCompletes(t *testing.T) {
 	// survive the erasure still carrying the identity they gave to make it.
 	var subjectRef, status string
 	var resolution, stillLinked *string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT subject_ref, status, resolution, contact_id::text
 			  FROM data_subject_request WHERE id = $1`, caseID).

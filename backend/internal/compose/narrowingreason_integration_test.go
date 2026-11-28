@@ -550,7 +550,7 @@ func requireStillNarrowed(t *testing.T, e *integration.Env, email string, want c
 func narrowingReasonOf(t *testing.T, e *integration.Env, email string) *string {
 	t.Helper()
 	var reason *string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT p.narrowing_reason
 			  FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
@@ -573,7 +573,7 @@ func TestOnlyAContactNobodyHadAnsweredAwaitsAnAnswer(t *testing.T) {
 	awaitsAfter := func(change string, args ...any) bool {
 		t.Helper()
 		var got bool
-		err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			var id ids.ContactID
 			if err := tx.QueryRow(context.Background(),
 				`SELECT contact_id FROM contact_email WHERE email = $1`, email).Scan(&id); err != nil {

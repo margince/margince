@@ -95,7 +95,7 @@ func setupBounce(t *testing.T, address string) *bounceEnv {
 		sender: e.As(e.Rep1, []ids.UUID{e.Team1}, AccountRepPerms),
 	}
 	var deliveryID ids.UUID
-	if err := database.WithWorkspaceTx(env.sender, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(env.sender, e.Pool, func(tx pgx.Tx) error {
 		var txErr error
 		deliveryID, txErr = env.comms.StageTx(env.sender, tx, comms.StageInput{
 			ActivityID: activityID, Provider: "gmail", MessageID: "dead@myco.test",
@@ -228,7 +228,7 @@ func TestARedeliveredReportStopsTheAddressOnce(t *testing.T) {
 	// DIFFERENT message to the same dead address, which is the ordinary case
 	// for a mailbox that is gone.
 	stopAgain := consent.HardBounceFact{Address: b.address, DeliveryID: ids.NewV7()}
-	if err := database.WithWorkspaceTx(b.sender, b.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(b.sender, b.e.Pool, func(tx pgx.Tx) error {
 		return consent.RecordHardBounceTx(b.sender, tx, stopAgain)
 	}); err != nil {
 		t.Fatalf("the second stop: %v", err)
@@ -603,7 +603,7 @@ func TestASecondDeliveryToADeadAddressStillReopensItsDuty(t *testing.T) {
 	owner := OwnerConn(t)
 
 	// The address is already known to be dead.
-	if err := database.WithWorkspaceTx(b.reporter, b.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(b.reporter, b.e.Pool, func(tx pgx.Tx) error {
 		return consent.RecordHardBounceTx(b.reporter, tx, consent.HardBounceFact{
 			Address: b.address, DeliveryID: b.deliveryID,
 		})
@@ -642,7 +642,7 @@ func TestASecondDeliveryToADeadAddressStillReopensItsDuty(t *testing.T) {
 	}
 
 	// The second delivery bounces too. The stop already exists.
-	if err := database.WithWorkspaceTx(b.reporter, b.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(b.reporter, b.e.Pool, func(tx pgx.Tx) error {
 		return consent.RecordHardBounceTx(b.reporter, tx, consent.HardBounceFact{
 			Address: b.address, DeliveryID: second,
 		})

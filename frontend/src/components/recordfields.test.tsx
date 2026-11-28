@@ -253,17 +253,23 @@ it("protects changed Details drafts without blocking an unchanged editor or anot
     </UnsavedGuard>,
     { wrapper },
   );
-  const toggle = await screen.findByRole("button", { name: "Hide details" });
+  const toggle = await screen.findByRole("button", {
+    name: en["record.panel.hideDetails"],
+  });
   await user.click(screen.getByRole("button", { name: /^Change Name/ }));
   expect(toggle).toBeEnabled();
   await user.type(screen.getByRole("textbox", { name: "Name" }), " changed");
-  expect(screen.getByRole("button", { name: "Hide details" })).toBeDisabled();
+  expect(
+    screen.getByRole("button", { name: en["record.panel.hideDetails"] }),
+  ).toBeDisabled();
   await user.keyboard("{Escape}");
   await user.click(
     await screen.findByRole("button", { name: en["unsaved.discard"] }),
   );
   await waitFor(() =>
-    expect(screen.getByRole("button", { name: "Hide details" })).toBeEnabled(),
+    expect(
+      screen.getByRole("button", { name: en["record.panel.hideDetails"] }),
+    ).toBeEnabled(),
   );
 });
 it("refuses an address it cannot read and keeps the dialog open", async () => {
@@ -452,7 +458,9 @@ it("holds a group dialog's corner close and Escape while its save is out", async
   await user.click(
     screen.getByRole("button", { name: /^Change Email addresses/ }),
   );
-  const dialog = await screen.findByRole("dialog", { name: "Email addresses" });
+  const dialog = await screen.findByRole("dialog", {
+    name: en["history.field.emails"],
+  });
   const close = within(dialog).getByRole("button", {
     name: en["common.close"],
   });
@@ -462,7 +470,9 @@ it("holds a group dialog's corner close and Escape while its save is out", async
   await waitFor(() => expect(save).toHaveBeenCalled());
   expect(close).toBeDisabled();
   await user.keyboard("{Escape}");
-  expect(screen.getByRole("dialog", { name: "Email addresses" })).toBe(dialog);
+  expect(screen.getByRole("dialog", { name: en["history.field.emails"] })).toBe(
+    dialog,
+  );
   expect(
     screen.queryByRole("dialog", { name: en["unsaved.title"] }),
   ).toBeNull();

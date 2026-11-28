@@ -62,12 +62,12 @@ var dealReasons = map[ReasonCode]reasonEntry{
 		textlang.German:     "Nennen Sie die Pipeline: Dieses CRM hat keine Standard-Pipeline.",
 		textlang.Vietnamese: "Hãy nêu quy trình bán hàng: CRM này không có quy trình mặc định.",
 	}},
-	ReasonPipelineUnknown: {params: []string{paramValue, "names"}, text: map[textlang.Lang]string{
+	ReasonPipelineUnknown: {params: []string{paramValue, paramNames}, text: map[textlang.Lang]string{
 		textlang.English:    "“{value}” is not a pipeline. The pipelines are: {names}.",
 		textlang.German:     "{value:q} ist keine Pipeline. Es gibt: {names}.",
 		textlang.Vietnamese: "{value:q} không phải quy trình bán hàng. Các quy trình hiện có: {names}.",
 	}},
-	ReasonStageUnknown: {params: []string{paramValue, "pipeline", "names"}, text: map[textlang.Lang]string{
+	ReasonStageUnknown: {params: []string{paramValue, "pipeline", paramNames}, text: map[textlang.Lang]string{
 		textlang.English:    "“{value}” is not a stage of pipeline “{pipeline}”. Its stages are: {names}.",
 		textlang.German:     "{value:q} ist keine Phase der Pipeline {pipeline:q}. Mögliche Phasen: {names}.",
 		textlang.Vietnamese: "{value:q} không phải giai đoạn của quy trình {pipeline:q}. Các giai đoạn: {names}.",

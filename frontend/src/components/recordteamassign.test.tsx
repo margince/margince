@@ -15,6 +15,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import type { RecordAssignment } from "./recordassignments.queries";
 import { RecordTeamAssign } from "./recordteamassign";
 
@@ -199,9 +200,7 @@ it("says who can be assigned when no colleague matches", async () => {
   );
   await search("Find a colleague", "zz");
   expect(
-    await screen.findByText(
-      "No active colleague found. Check the spelling. If the name is right, ask an admin to invite them or to check their account.",
-    ),
+    await screen.findByText(englishCopy["assignments.noColleagueFound"]),
   ).toBeTruthy();
 });
 
@@ -244,7 +243,7 @@ it("says who and which role are required on Assign, and sends nothing", async ()
   expect(screen.getByText("Who is required.")).toBeTruthy();
   expect(screen.getByText("Role is required.")).toBeTruthy();
   expect(document.activeElement).toBe(
-    screen.getByPlaceholderText("Find a colleague"),
+    screen.getByPlaceholderText(englishCopy["assignments.findColleague"]),
   );
   expect(seen.some((url) => url.pathname.includes("assignments"))).toBe(false);
 });

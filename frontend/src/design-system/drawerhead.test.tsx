@@ -2,6 +2,7 @@
 
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { en as englishCopy } from "../i18n/en";
 import { DrawerHead } from "./drawerbands";
 import { Heading } from "./heading";
 
@@ -18,7 +19,9 @@ describe("DrawerHead", () => {
 
     const line = screen.getByText("Research on Anna Brandt").parentElement;
     expect(line?.className).toBe("drawer-head-line");
-    expect(line?.lastElementChild?.textContent).toBe("Public sources only");
+    expect(line?.lastElementChild?.textContent).toBe(
+      englishCopy["contact.research.publicOnly"],
+    );
     expect(screen.getByText("Read on 14 Nov").parentElement?.className).toBe(
       "drawer-head",
     );

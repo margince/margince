@@ -53,7 +53,7 @@ func TestTheImportNameFoldAgreesInBothLanguages(t *testing.T) {
 	for _, c := range names {
 		t.Run(c.what, func(t *testing.T) {
 			var inSQL string
-			if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+			if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 				return tx.QueryRow(context.Background(),
 					`SELECT coalesce(f_fold_import_name($1), '')`, c.name).Scan(&inSQL)
 			}); err != nil {

@@ -30,7 +30,7 @@ func TestEmailDetailsNameTheMailboxAMessageArrivedIn(t *testing.T) {
 	syncSecond(t, email("anna@acme.example", "Anna Acme", mailbox, "second-box@acme.example", ""))
 
 	var login string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT email FROM app_user WHERE id = $1`, e.Rep3).Scan(&login)
 	}); err != nil {
 		t.Fatalf("reading the seat's login: %v", err)

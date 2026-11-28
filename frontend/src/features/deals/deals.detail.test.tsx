@@ -13,6 +13,7 @@ import { pickOption } from "../../design-system/select-testing";
 import { formatDayMonth, formatMoney } from "../../format/format";
 import { UTC_ZONE } from "../../format/timezone";
 import { translate } from "../../i18n";
+import { en } from "../../i18n/en";
 import { openChoiceDialog } from "../../testing/choicedialog.testkit";
 import { companyNamesAnswer } from "../../testing/companynames.testkit";
 import { meFixture } from "../../testing/mefixture";
@@ -118,7 +119,11 @@ function stubDealBackend(
  * So reaching any of them is two presses: the menu, then the row.
  */
 async function openHeaderMenu(user: UserEvent | typeof userEvent = userEvent) {
-  await user.click(await screen.findByRole("button", { name: "More actions" }));
+  await user.click(
+    await screen.findByRole("button", {
+      name: en["list.headActions"],
+    }),
+  );
 }
 
 // The deal's fields are written in the details drawer, behind the overflow.
@@ -536,7 +541,6 @@ describe("DealScreen — the stage stepper advances the deal", () => {
 
   // Reopening is its own action, with a dialog that says the close date and
   // the frozen rate are being cleared. A stepper button that reopened silently
-  // would be a second, quieter door to the same write.
   it("offers no move on a closed deal — reopening has its own action", async () => {
     const d = deal({
       id: "x",
@@ -551,9 +555,6 @@ describe("DealScreen — the stage stepper advances the deal", () => {
     expect(step.hasAttribute("disabled")).toBe(true);
   });
 
-  // The dialog stays mounted between openings. An abandoned reason would
-  // otherwise still sit there the next time a deal is closed, describing a
-  // different deal.
   it("a lost reason typed and then cancelled does not come back", async () => {
     const d = deal({ id: "x", version: 2, stage_id: "s1" });
     vi.stubGlobal(
@@ -587,11 +588,15 @@ describe("DealScreen — the stage stepper advances the deal", () => {
     await user.click(await screen.findByRole("button", { name: "Lost" }));
     await pickOption(
       user,
-      screen.getByRole("combobox", { name: "Why was it lost?" }),
+      screen.getByRole("combobox", {
+        name: en["deals.lostReasonCode"],
+      }),
       "Price",
     );
     await user.type(
-      screen.getByRole("textbox", { name: "Note (optional)" }),
+      screen.getByRole("textbox", {
+        name: en["deals.lostReasonNote"],
+      }),
       "typed then abandoned",
     );
     await user.click(screen.getByRole("button", { name: "Cancel" }));
@@ -600,12 +605,14 @@ describe("DealScreen — the stage stepper advances the deal", () => {
     expect(
       (
         screen.getByRole("textbox", {
-          name: "Note (optional)",
+          name: en["deals.lostReasonNote"],
         }) as HTMLInputElement
       ).value,
     ).toBe("");
     expect(
-      screen.getByRole("combobox", { name: "Why was it lost?" }).textContent,
+      screen.getByRole("combobox", {
+        name: en["deals.lostReasonCode"],
+      }).textContent,
     ).not.toContain("Price");
   });
 
@@ -618,9 +625,6 @@ describe("DealScreen — the stage stepper advances the deal", () => {
     expect(screen.queryByRole("button", { name: "Qualify" })).toBeNull();
   });
 
-  // Terminal stages are the 🟡 confirm (AC-deal-6), and a lost deal must say
-  // why. The board's drop enforces the same rule, because it is the same
-  // dialog.
   it("closing as lost asks for a reason before anything is written", async () => {
     const advances: { body: unknown; ifMatch: string | null }[] = [];
     const d = deal({ id: "x", version: 2, stage_id: "s1" });
@@ -654,7 +658,6 @@ describe("DealScreen — the stage stepper advances the deal", () => {
     render(<DealScreen id="x" />);
 
     await user.click(await screen.findByRole("button", { name: "Lost" }));
-    // Nothing is written while the dialog stands open.
     expect(advances.length).toBe(0);
 
     const confirm = screen.getByRole("button", { name: "Confirm" });
@@ -662,11 +665,15 @@ describe("DealScreen — the stage stepper advances the deal", () => {
 
     await pickOption(
       user,
-      screen.getByRole("combobox", { name: "Why was it lost?" }),
+      screen.getByRole("combobox", {
+        name: en["deals.lostReasonCode"],
+      }),
       "Chose a competitor",
     );
     await user.type(
-      screen.getByRole("textbox", { name: "Note (optional)" }),
+      screen.getByRole("textbox", {
+        name: en["deals.lostReasonNote"],
+      }),
       "went with the incumbent",
     );
     await user.click(screen.getByRole("button", { name: "Confirm" }));
@@ -697,28 +704,20 @@ describe("DealScreen — an archived deal keeps its verbs, refused", () => {
     render(<DealScreen id="x" />);
 
     await openHeaderMenu();
-    // Each is awaited, not read in the tick the first arrived in. The note on
-    // the same list in companies.header.test.tsx says why.
     const refused = [
       await screen.findByTestId("share-record"),
       await screen.findByTestId("reopen-open"),
     ];
     for (const control of refused) {
       expect(control.hasAttribute("disabled")).toBe(true);
-      // The reason has to be reachable from the control. A disabled button
-      // cannot be focused and a `title` on it is announced by nobody. So a
-      // sentence the control does not point at reaches no reader who needs it.
       const describedBy = control.getAttribute("aria-describedby");
       expect(document.getElementById(describedBy ?? "")?.textContent).toBe(
-        "This deal is archived and takes no changes.",
+        en["deal.archivedReadOnly"],
       );
     }
   });
 });
 
-// `writable` is what the server's write gate would answer on a mutation. A
-// reader it refuses is offered none of the deal's changes: each would only
-// fail. What every seat may do on any deal it reads, logging and tasks, stays.
 describe("DealScreen — a live deal that is not the viewer's to change", () => {
   beforeEach(() => localStorage.setItem("margince.workspaceSlug", "acme"));
 
@@ -736,7 +735,6 @@ describe("DealScreen — a live deal that is not the viewer's to change", () => 
     render(<DealScreen id="x" />);
 
     expect(await screen.findByText(sentence)).toBeTruthy();
-    // The ladder still reads where the deal stands, as names only.
     expect(await screen.findByText("Proposal")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Proposal" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Won" })).toBeNull();
@@ -744,7 +742,7 @@ describe("DealScreen — a live deal that is not the viewer's to change", () => 
     expect(screen.queryByRole("button", { name: "New offer" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Write brief" })).toBeNull();
 
-    expect(screen.getByRole("button", { name: "Log activity" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: en["log.title"] })).toBeTruthy();
     await openHeaderMenu(user);
     expect(
       await screen.findByRole("button", { name: "Add task" }),
@@ -770,7 +768,6 @@ describe("DealScreen — a live deal that is not the viewer's to change", () => 
     ).toBeTruthy();
     expect(screen.getByRole("button", { name: "Won" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "New offer" })).toBeTruthy();
-    // The brief writes through the page's one deal edit.
     expect(
       await screen.findByRole("button", { name: "Write brief" }),
     ).toBeTruthy();
@@ -784,8 +781,6 @@ describe("DealScreen — a live deal that is not the viewer's to change", () => 
     ).toBeTruthy();
   });
 
-  // Absent is not "unknown", it is "no". A server too old to send the field
-  // must fail closed, or the guard is only as good as the oldest server.
   it("treats a deal with no writable field as one it may not change", async () => {
     const withoutWritable = deal({ id: "x", owner_id: "u-someone-else" });
     delete (withoutWritable as { writable?: boolean }).writable;
@@ -841,7 +836,9 @@ describe("DealScreen reopen", () => {
     await userEvent.clear(input);
     await userEvent.type(input, "12/08/2026{Enter}");
     await userEvent.click(
-      dialog.getByRole("button", { name: "Save close day" }),
+      dialog.getByRole("button", {
+        name: en["deal.correctCloseDayConfirm"],
+      }),
     );
     await waitFor(() => expect(posts.length).toBe(1));
     expect(posts[0]).toEqual([{ closed_on: "2026-08-12" }, "4"]);
@@ -921,8 +918,6 @@ describe("DealScreen offers panel", () => {
     );
   });
 
-  // A double click lands its second press before the first create is drawn
-  // pending. It must not make a second draft and spend a second offer number.
   it("a double click on New offer posts one draft, under an idempotency key", async () => {
     const keys: (string | null)[] = [];
     const { promise, resolve } = Promise.withResolvers<void>();

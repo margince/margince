@@ -27,7 +27,7 @@ import (
 
 func (v edgeEnv) clearProjection(t *testing.T) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(v.e.Admin(), v.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(v.e.Admin(), v.e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `DELETE FROM graph_interaction_edge; DELETE FROM graph_contact_edge`)
 		return err
 	}); err != nil {
@@ -56,7 +56,7 @@ func TestABatchFoldsLikeOneEventAtATimeAndLikeTheRebuild(t *testing.T) {
 	}
 	relinked := v.interaction(t, v.e.Rep1, was, now.AddDate(0, 0, -2), "inbound", "from")
 	v.recompute(t, append(activityIDs, relinked)...)
-	if err := database.WithWorkspaceTx(v.e.Admin(), v.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(v.e.Admin(), v.e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx,
 			`UPDATE activity_participant SET contact_id = $3 WHERE activity_id = $1 AND contact_id = $2`,
 			relinked, was, c2)
@@ -93,7 +93,7 @@ func TestABatchFoldsLikeOneEventAtATimeAndLikeTheRebuild(t *testing.T) {
 	}
 	oneByOne := v.snapshot(t)
 
-	if err := database.WithWorkspaceTx(v.e.Admin(), v.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(v.e.Admin(), v.e.Pool, func(tx pgx.Tx) error {
 		return search.RebuildEdges(v.e.Admin(), tx)
 	}); err != nil {
 		t.Fatalf("rebuilding: %v", err)

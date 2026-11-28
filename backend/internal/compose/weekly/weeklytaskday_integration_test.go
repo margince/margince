@@ -47,7 +47,7 @@ func TestADateOnlyTaskCountsInTheWeekOfItsPickedDate(t *testing.T) {
 		start time.Time
 		due   int
 	}{"the week of the picked Sunday": {monday, 1}, "the next week": {nextMonday, 1}} {
-		err := database.WithWorkspaceTx(e.repCtx, e.Pool, func(tx pgx.Tx) error {
+		err := database.WithTx(e.repCtx, e.Pool, func(tx pgx.Tx) error {
 			counts, err := countWeek(e.repCtx, tx, e.Rep1, week.start, week.start.AddDate(0, 0, 7))
 			if err == nil && counts.TasksDue != week.due {
 				t.Errorf("%s: %d tasks due, want %d", name, counts.TasksDue, week.due)

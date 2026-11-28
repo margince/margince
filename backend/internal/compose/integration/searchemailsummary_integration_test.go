@@ -271,7 +271,7 @@ func TestTheEmailSummaryBatchRefusesAWithheldRowOnItsOwn(t *testing.T) {
 	read := func(ctx context.Context) map[ids.UUID]crmcontracts.EmailSummary {
 		t.Helper()
 		var got map[ids.UUID]crmcontracts.EmailSummary
-		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			var readErr error
 			got, readErr = activities.EmailSummariesByIDBatch(ctx, tx, []ids.UUID{id}, clocktest.Now(t))
 			return readErr
@@ -323,7 +323,7 @@ func TestASelectedMemberReadsTheLimitedMailsSummaryInFull(t *testing.T) {
 	read := func(ctx context.Context) map[ids.UUID]crmcontracts.EmailSummary {
 		t.Helper()
 		var got map[ids.UUID]crmcontracts.EmailSummary
-		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			var readErr error
 			got, readErr = activities.EmailSummariesByIDBatch(ctx, tx, []ids.UUID{id}, clocktest.Now(t))
 			return readErr

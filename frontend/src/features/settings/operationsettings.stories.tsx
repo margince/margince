@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ComponentType } from "react";
 import { expect, userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import { defaultOperations } from "../../testing/operationsettings.fixtures";
 import {
   installFetchStub,
@@ -71,7 +72,9 @@ export const SchedulesOpenRefused: Story = {
   render: story(BackgroundSchedulesCard, MANAGER),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.click(await canvas.findByText("All schedules"));
+    await userEvent.click(
+      await canvas.findByText(englishCopy["operations.schedules.fold"]),
+    );
     const box = await canvas.findByTestId(
       "operation-close_date_sweep_interval_seconds",
     );

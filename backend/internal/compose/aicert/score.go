@@ -52,9 +52,10 @@ func VerdictRank(verdict string) int {
 // survives a killed process as one of these, and is replayed into the same
 // Record arithmetic a live one feeds.
 type RunResult struct {
-	Output    string `json:"output"`
-	Outcome   string `json:"outcome"`
-	LatencyMS int64  `json:"latency_ms"`
+	Recovery  *aitasks.LoopRecoveryMeasure `json:"recovery,omitempty"`
+	Output    string                       `json:"output"`
+	Outcome   string                       `json:"outcome"`
+	LatencyMS int64                        `json:"latency_ms"`
 	// TokensIn/TokensOut/CachedTokens/CacheWriteTokens are the terminal
 	// attempt's own four token buckets, carried through unsummed (ai.Call's
 	// contract: TokensIn is cache-inclusive, CachedTokens/CacheWriteTokens

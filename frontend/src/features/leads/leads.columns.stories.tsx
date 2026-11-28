@@ -6,6 +6,7 @@ import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { UTC_ZONE } from "../../format/timezone";
 import { LocaleProvider, translate } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { leadColumns } from "./leads.columns";
 
 const meta: Meta = {
@@ -52,7 +53,7 @@ export const NameFallbacks: Story = {
     const canvas = within(canvasElement);
     await expect(canvas.getByText("Vera Lindqvist")).toBeVisible();
     await expect(canvas.getByText("buyer@example.test")).toBeVisible();
-    await expect(canvas.getByText("Unnamed lead")).toBeVisible();
+    await expect(canvas.getByText(englishCopy["lead.unnamed"])).toBeVisible();
   },
 };
 
@@ -85,7 +86,7 @@ export const ScoreWithItsReason: Story = {
     await userEvent.hover(canvas.getByText("72"));
     await expect(
       await within(document.body).findByRole("tooltip"),
-    ).toHaveTextContent("Decision-maker title");
+    ).toHaveTextContent(englishCopy["lead.factor.decision_maker_title"]);
     await expect(canvas.getByText("12")).toBeVisible();
   },
 };

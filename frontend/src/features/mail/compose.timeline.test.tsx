@@ -7,6 +7,7 @@ import {
   messageText,
   writeMessage,
 } from "../../design-system/richtext-testing";
+import { en as englishCopy } from "../../i18n/en";
 import { TimelineActions } from "../records/timelineactions";
 import { ChannelReplyAction } from "./compose.reply";
 import {
@@ -126,7 +127,9 @@ describe("ComposeWindow — channel reply", () => {
 
     // Confirming an irreversible send under the name of a channel this
     // message will never travel on is a lie the rep cannot check.
-    expect(screen.getByText("Send message")).toBeTruthy();
+    expect(
+      screen.getByText(englishCopy["compose.sendMessageConfirmTitle"]),
+    ).toBeTruthy();
     expect(screen.queryByText("Send email")).toBeNull();
     // The heading is the only place the channel is named, so it cannot also
     // be the only place that states the send is irreversible. The modal chrome
@@ -184,9 +187,7 @@ describe("ComposeWindow — channel reply", () => {
     await pressSend(user);
 
     expect(
-      await screen.findByText(
-        "This message was not sent. Your draft is kept. Ask an admin to update Margince, then send again.",
-      ),
+      await screen.findByText(englishCopy["compose.sendAnyway.unreviewed"]),
     ).toBeTruthy();
     // The rep's words survive the refusal, and this test proves that, not only
     // that an error rendered. Losing a written reply to a 409 once makes a rep
@@ -245,7 +246,7 @@ describe("TimelineActions", () => {
       ).toBe(true),
     );
     expect(
-      screen.queryByRole("button", { name: "Change visibility" }),
+      screen.queryByRole("button", { name: englishCopy["compose.audience"] }),
     ).toBeNull();
   });
 
@@ -456,7 +457,7 @@ describe("TimelineActions", () => {
     expect(screen.queryByRole("button", { name: "Share thread" })).toBeNull();
     await relinkSettled();
     expect(
-      screen.queryByRole("button", { name: "Change visibility" }),
+      screen.queryByRole("button", { name: englishCopy["compose.audience"] }),
     ).toBeNull();
     // Relink still draws, so the two absences above are the gate rather than a
     // component that never mounted at all.
@@ -474,7 +475,7 @@ describe("TimelineActions", () => {
     );
     await openRowMenu(user);
     expect(
-      screen.queryByRole("button", { name: "Change visibility" }),
+      screen.queryByRole("button", { name: englishCopy["compose.audience"] }),
     ).toBeNull();
     expect(screen.getByRole("button", { name: "Relink" })).toBeTruthy();
   });
@@ -504,7 +505,7 @@ describe("TimelineActions", () => {
     await openRowMenu(user);
     await relinkSettled();
     expect(
-      screen.queryByRole("button", { name: "Change visibility" }),
+      screen.queryByRole("button", { name: englishCopy["compose.audience"] }),
     ).toBeNull();
     // The row is still actionable: this withholds one control, not the row.
     expect(screen.getByRole("button", { name: "Relink" })).toBeTruthy();
@@ -559,7 +560,9 @@ describe("TimelineActions", () => {
     );
     await openRowMenu(user);
     expect(
-      await screen.findByRole("button", { name: "Change visibility" }),
+      await screen.findByRole("button", {
+        name: englishCopy["compose.audience"],
+      }),
     ).toBeTruthy();
   });
 
@@ -577,7 +580,9 @@ describe("TimelineActions", () => {
     );
     await openRowMenu(user);
     expect(
-      await screen.findByRole("button", { name: "Change visibility" }),
+      await screen.findByRole("button", {
+        name: englishCopy["compose.audience"],
+      }),
     ).toBeTruthy();
   });
 
@@ -593,10 +598,14 @@ describe("TimelineActions", () => {
     );
     await openRowMenu(user);
     await user.click(
-      await screen.findByRole("button", { name: "Change visibility" }),
+      await screen.findByRole("button", {
+        name: englishCopy["compose.audience"],
+      }),
     );
     expect(
-      await screen.findByRole("heading", { name: "Who may read this note?" }),
+      await screen.findByRole("heading", {
+        name: englishCopy["activity.audience.noteTitle"],
+      }),
     ).toBeTruthy();
     expect(screen.queryByText(/this message/)).toBeNull();
   });
@@ -653,7 +662,9 @@ describe("TimelineActions", () => {
     await openRowMenu(user);
 
     await user.click(
-      await screen.findByRole("button", { name: "Change visibility" }),
+      await screen.findByRole("button", {
+        name: englishCopy["compose.audience"],
+      }),
     );
     await user.click(screen.getByLabelText(/Named people/));
 
@@ -663,7 +674,11 @@ describe("TimelineActions", () => {
 
     await user.click(screen.getByLabelText(/Lena Fischer/));
     await user.click(screen.getByLabelText(/Vertrieb/));
-    await user.click(screen.getByRole("button", { name: "Save visibility" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: englishCopy["compose.audienceConfirm"],
+      }),
+    );
 
     const write = sent.find(
       (each) => each.key === "PATCH /activities/a6/audience",
@@ -726,14 +741,16 @@ describe("TimelineActions", () => {
     await openRowMenu(user);
 
     await user.click(
-      await screen.findByRole("button", { name: "Change visibility" }),
+      await screen.findByRole("button", {
+        name: englishCopy["compose.audience"],
+      }),
     );
     await user.click(screen.getByLabelText(/Named people/));
     await screen.findByLabelText(/Lena Fischer/);
 
     expect(
       screen
-        .getByRole("button", { name: "Save visibility" })
+        .getByRole("button", { name: englishCopy["compose.audienceConfirm"] })
         .hasAttribute("disabled"),
     ).toBe(true);
   });
@@ -759,7 +776,7 @@ describe("TimelineActions", () => {
     await openRowMenu(user);
     await relinkSettled();
     expect(
-      screen.queryByRole("button", { name: "Change visibility" }),
+      screen.queryByRole("button", { name: englishCopy["compose.audience"] }),
     ).toBeNull();
     expect(screen.getByRole("button", { name: "Relink" })).toBeTruthy();
   });

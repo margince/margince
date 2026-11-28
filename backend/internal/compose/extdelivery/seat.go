@@ -39,7 +39,7 @@ func ServiceMember(
 		return principal.Principal{}, false, database.ErrNoWorkspace
 	}
 	var member ids.UUID
-	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `SELECT u.id FROM app_user u WHERE u.service_extension = $1 AND `+
 			workforce.LiveMemberSQL("u")+` ORDER BY u.created_at, u.id`, unit)
 		if err != nil {

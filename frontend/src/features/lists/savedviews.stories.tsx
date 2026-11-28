@@ -6,6 +6,7 @@ import { expect, userEvent, within } from "storybook/test";
 import type { ListQuery } from "../../components/listquery";
 import { OpenedViewContext } from "../../components/listqueryviews";
 import { ListSurface } from "../../design-system/listsurface";
+import { en as englishCopy } from "../../i18n/en";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import {
   installFetchStub,
@@ -183,7 +184,7 @@ export const ManagingViews: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByRole("button", { name: "Manage views" }),
+      await canvas.findByRole("button", { name: englishCopy["views.manage"] }),
     );
     const page = within(canvasElement.ownerDocument.body);
     await userEvent.click(
@@ -214,7 +215,7 @@ export const TheRailFailedToLoad: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const failed = await canvas.findByRole("alert");
-    await expect(failed).toHaveTextContent("Saved views did not load.");
+    await expect(failed).toHaveTextContent(englishCopy["views.loadFailed"]);
     await expect(canvas.queryByRole("heading")).toBeNull();
     await expect(failed.closest(".lt-tools")).not.toBeNull();
     await expect(

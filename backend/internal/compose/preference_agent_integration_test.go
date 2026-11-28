@@ -121,7 +121,7 @@ func TestPreferenceCenterOptOutBlocksAgentSend(t *testing.T) {
 func seedReplyAnchor(t *testing.T, e *integration.Env) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
 			VALUES ($1,
@@ -137,7 +137,7 @@ func seedReplyAnchor(t *testing.T, e *integration.Env) ids.UUID {
 // consent gate can resolve a recipient address to the subject.
 func addContactEmail(t *testing.T, e *integration.Env, contactID ids.UUID, email string) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO contact_email (contact_id, email, email_type, is_primary, source, captured_by)
 			VALUES ($1, $2, 'work', true, 'manual', 'human:x')`,

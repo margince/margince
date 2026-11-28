@@ -39,7 +39,7 @@ func TestRecoveryBindingsNameFieldsOfTheRegisteredJobArgs(t *testing.T) {
 			if !ok || method.Sel.Name != "ResumeScheduledTx" {
 				return true
 			}
-			if len(call.Args) != 6 {
+			if len(call.Args) != 5 {
 				t.Fatal("recovery call shape changed; inspect its binding")
 			}
 			literal := func(expr ast.Expr) string {
@@ -68,9 +68,6 @@ func TestRecoveryBindingsNameFieldsOfTheRegisteredJobArgs(t *testing.T) {
 			}
 			if _, ok := fields[field]; !ok {
 				t.Fatalf("%s recovery names absent argument %s", kind, field)
-			}
-			if _, ok := fields["workspace_id"]; !ok {
-				t.Fatalf("%s recovery has no workspace argument", kind)
 			}
 			checked++
 			return true

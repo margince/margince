@@ -63,7 +63,7 @@ func keyedRecipient(t *testing.T, e *integration.Env, name, address string) ids.
 
 func storedAddressRefused(t *testing.T, e *integration.Env, address string) bool {
 	t.Helper()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return storekit.RefuseErasedEmail(e.Admin(), tx, "email", address)
 	})
 	var erased *storekit.ErasedIdentifierError
@@ -107,7 +107,7 @@ func TestAnAddressErasedBeforeTheKeyStaysRefusedThroughTheRekey(t *testing.T) {
 	if !storedAddressRefused(t, e, strings.ToLower(address)) {
 		t.Fatal("the rekey let an erased address be stored again")
 	}
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		out, err := task.Steps[0].Batch(ctx, tx, datatask.BatchIn{Limit: 1000, RunID: ids.NewV7()})
 		if err == nil && out.Changed != 0 {
 			t.Errorf("a replay re-keyed %d rows again", out.Changed)

@@ -272,7 +272,7 @@ func grantIDsFor(t *testing.T, e *Env, record, subject ids.UUID) ids.UUID {
 	t.Helper()
 	var id ids.UUID
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
 			`SELECT id FROM record_grant WHERE record_id = $1 AND subject_id = $2`,
 			record, subject).Scan(&id)

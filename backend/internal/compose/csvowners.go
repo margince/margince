@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/importrecords"
 	"github.com/margince/margince/backend/internal/compose/importwire"
 	"github.com/margince/margince/backend/internal/compose/recordexport"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -65,6 +66,7 @@ func foldedEmail(email string) string {
 
 // ownerResolver holds the seat of every owner address a run names, read once.
 type ownerResolver struct {
+	own   *ids.UserID // an own import's importer, who owns every row it imports
 	seats map[string]ids.UUID
 	// refused are addresses whose seat the importer may not name; the test run
 	// reports each once, and its rows keep the importer as owner.
@@ -83,10 +85,11 @@ func (o *ownerResolver) refuse(email string) {
 // newOwnerResolver resolves every distinct owner address of the run.
 func newOwnerResolver(ctx context.Context, pool *pgxpool.Pool, emails []string) (*ownerResolver, error) {
 	o := &ownerResolver{seats: map[string]ids.UUID{}}
+	o.own = migration.OwnSeat(ctx)
 	if len(emails) == 0 {
 		return o, nil
 	}
-	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		var err error
 		o.seats, err = seatsByEmail(ctx, tx, emails)
 		return err
@@ -113,6 +116,9 @@ func (o *ownerResolver) ownerFor(raw string) (*ids.UserID, *migration.SkippedRow
 // ownerOf resolves a row's owner cell, with the warning placed on the row's
 // own line and column.
 func (w *csvWriters) ownerOf(row migration.Row) (*ids.UserID, *migration.SkippedRow) {
+	if w.owners != nil && w.owners.own != nil {
+		return w.owners.own, nil
+	}
 	raw := strings.TrimSpace(textFields(row.Fields)[csvTargetOwner])
 	if raw == "" {
 		return nil, nil
@@ -144,17 +150,7 @@ func (w *csvWriters) landingCells(row migration.Row) (map[string]any, []migratio
 
 // ownerFrom is the seat a create or an update names, nil when the file named
 // none this run knows.
-func ownerFrom(fields map[string]string, typed map[string]any) *ids.UserID {
-	if _, given := fields[csvTargetOwner]; !given {
-		return nil
-	}
-	seat, known := typed[csvTargetOwner].(ids.UUID)
-	if !known {
-		return nil
-	}
-	owner := ids.From[ids.UserKind](seat)
-	return &owner
-}
+var ownerFrom = importrecords.OwnerFrom
 
 // collapseUnknownOwners folds the unknown-owner warnings of one file that name
 // one address into a single issue. It sits on the first row that names the

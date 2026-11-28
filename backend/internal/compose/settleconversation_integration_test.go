@@ -34,7 +34,7 @@ func seedThreadMessage(t *testing.T, e *integration.Env, thread, direction, body
 ) ids.UUID {
 	t.Helper()
 	activity := ids.NewV7()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO activity (id, kind, direction, subject, body, occurred_at,
 			                      thread_key, counterparty_email, counterparty_outbound_attested,
@@ -54,7 +54,7 @@ func seedThreadMessage(t *testing.T, e *integration.Env, thread, direction, body
 func bodiesRead(t *testing.T, e *integration.Env, request ids.UUID, counterparty string, asOf time.Time) string {
 	t.Helper()
 	var joined strings.Builder
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		messages, err := requestConversation(context.Background(), tx, request, counterparty, asOf)
 		if err != nil {
 			return err

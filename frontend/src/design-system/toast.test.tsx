@@ -10,6 +10,7 @@ import {
 } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 import { steppedClock } from "../testing/steppedclock";
 import { useArrivalFocus } from "./arrivalfocus";
 import { Button } from "./atoms";
@@ -332,7 +333,9 @@ describe("a confirmation carrying a verb", () => {
     });
     await acting.click(press("show"));
     await acting.click(press("show second"));
-    expect(screen.getByRole("status")).toHaveTextContent("Task completed");
+    expect(screen.getByRole("status")).toHaveTextContent(
+      en["worklist.verb.completed"],
+    );
     await acting.click(press("Close"));
     expect(screen.getByRole("status")).toHaveTextContent("Moved to Jana.");
   });
@@ -441,7 +444,7 @@ describe("a refusal", () => {
     expect(screen.getByRole("status")).toHaveTextContent("Not hidden.");
     act(() => toast().dismiss());
     expect(screen.getByRole("status")).toHaveTextContent(
-      "Hidden from this deal",
+      en["dealfiles.hidden"],
     );
     wait(7900);
     expect(press("Undo")).toBeInTheDocument();
@@ -484,7 +487,7 @@ describe("a refusal", () => {
       toast().show("Not saved.", { tone: "danger" });
     });
     expect(screen.getByRole("status")).toHaveTextContent(
-      "Hidden from this deal",
+      en["dealfiles.hidden"],
     );
   });
 
@@ -508,7 +511,7 @@ describe("a refusal", () => {
       toast().show("Hidden from this deal", undo(second));
     });
     expect(screen.getByRole("status")).toHaveTextContent(
-      "Hidden from this deal",
+      en["dealfiles.hidden"],
     );
     await acting.click(press("Undo"));
     expect(second).toHaveBeenCalledOnce();
@@ -528,7 +531,7 @@ describe("a refusal", () => {
     expect(screen.getByRole("status")).toHaveTextContent("Not sent.");
     await acting.click(press("Close"));
     expect(screen.getByRole("status")).toHaveTextContent(
-      "Hidden from this deal",
+      en["dealfiles.hidden"],
     );
   });
 
@@ -654,7 +657,6 @@ describe("the completion mark", () => {
 
   it("leaves a refusal unmarked", async () => {
     // A failure with a green tick beside it says the opposite of what the
-    // sentence says.
     const acting = steppedClock();
     const view = show({
       message: "That did not work.",
@@ -736,8 +738,6 @@ describe("focus after the verb runs", () => {
     );
   }
 
-  // The message is shown first and the row leaves after, handing focus to the
-  // block: the order a write that runs at once produces.
   function Shortlist() {
     const toast = useToast();
     const [onList, setOnList] = useState(true);
@@ -905,8 +905,6 @@ describe("a replacement under the reader's hand", () => {
   });
 
   it("hands focus to nobody when the reader puts the message down", () => {
-    // The next message advancing is not a replacement: the reader closed one
-    // toast and did not ask to be moved into the next.
     steppedClock();
     const toast = controlled();
     act(() => {
@@ -981,8 +979,6 @@ describe("a replacement under the reader's hand", () => {
   });
 
   it("forgets the hold once the region has emptied", async () => {
-    // An unmounted region hears no pointerleave; the next message must not
-    // inherit a hold from a pointer that left with the last one.
     const acting = steppedClock();
     const toast = controlled();
     act(() => {

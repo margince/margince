@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { draftButton } from "../../testing/composedraft.testkit";
 import {
   allowedPreview,
@@ -119,7 +120,9 @@ describe("where a finished draft leaves the reader", () => {
     editor.scrollIntoView = reveal;
 
     await user.click(draftButton());
-    await screen.findByRole("heading", { name: "AI-assisted draft" });
+    await screen.findByRole("heading", {
+      name: englishCopy["compose.aiDisclosureTitle"],
+    });
 
     // The BODY is what is brought back, not the band that displaced it: the
     // band is the notice, and the words are what the press was for.

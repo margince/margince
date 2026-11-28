@@ -44,7 +44,7 @@ func (b *putCountingBlob) Put(ctx context.Context, key string, r io.Reader, size
 func fileKeys(t *testing.T, e *integration.SearchEnv, msgID string) []string {
 	t.Helper()
 	var keys []string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(context.Background(),
 			`SELECT storage_key FROM attachment WHERE activity_id = $1 ORDER BY external_part_id`, activityIDOf(t, e, msgID))
 		if err != nil {
@@ -72,7 +72,7 @@ func eraseMessage(t *testing.T, e *integration.SearchEnv, blob blobstore.Store, 
 // goroutine.
 func eraseActivity(e *integration.SearchEnv, blob blobstore.Store, activity ids.UUID) error {
 	eraser := privacy.NewEraser(e.DB()).WithBlobstore(blob).WithRawCapturePurger(compose.RawCapturePurgerFor(e.DB()))
-	return database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	return database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return eraser.PurgeContentDerivedFromNoiseTx(e.Admin(), tx, []ids.UUID{activity})
 	})
 }
@@ -127,7 +127,7 @@ func TestAnErasureKeepsAnObjectAnotherRowStillNamesAndTakesItWithTheLastRow(t *t
 func queuedForDeletion(t *testing.T, e *integration.SearchEnv, key string) int {
 	t.Helper()
 	var queued int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM stored_object_intent WHERE storage_key = $1 AND reaped_at IS NULL`, key).Scan(&queued)
 	}); err != nil {
@@ -153,7 +153,7 @@ func TestAnErasureWaitingOnACaptureThatReusesItsObjectKeepsTheObject(t *testing.
 	erased := make(chan error, 1)
 	// The copy holds the first row `FOR SHARE` until it commits. The erasure
 	// waits on that lock, then must still see the copy's new row.
-	err = database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if err := store.RecordCapturedFiles(captureSeat(e), tx, second, activities.CapturedFileSource{
 			System: connector.EmailSourceSystem, MessageID: "race-b@globex.example", CapturedBy: "connector:gmail", Category: "email_attachment",
 		}, staged); err != nil {
@@ -190,7 +190,7 @@ func TestAReusedCopyWhoseRowWentAwayBeforeItsOwnRowIsRefusedForARetry(t *testing
 		t.Fatalf("staging the copy: %d staged, %v", len(staged), err)
 	}
 	first, second := activityIDOf(t, e, "gone-a@globex.example"), ids.From[ids.ActivityKind](activityIDOf(t, e, "gone-b@globex.example"))
-	err = database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(), `DELETE FROM attachment WHERE activity_id = $1`, first); err != nil {
 			return err
 		}
@@ -208,7 +208,7 @@ func TestAFileWhoseOnlyCopyWasWithheldIsStoredAfresh(t *testing.T) {
 	env := newCaptureEnvWithBlob(t, captureNow, blob)
 	e := env.e
 	env.sync(t, emailWithFile("her@globex.example", captureOwner, "withheld-a@globex.example", "", "contract.pdf", signedContract))
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `UPDATE attachment SET storage_key = '', checksum = NULL, bytes_withheld = true
 		                                          WHERE activity_id = $1`, activityIDOf(t, e, "withheld-a@globex.example"))
 		return err

@@ -196,7 +196,7 @@ func fleetWideShapesInTheTree() map[string]string {
 			}`,
 		"dispatchWith over an archived-inclusive enumeration": `
 			func (w *sweepWorker) Work(ctx context.Context, _ *river.Job[SweepArgs]) error {
-				workspaces, err := enumerateEveryWorkspace(ctx, w.pool)
+				workspaces, err := database.EveryWorkspace(ctx, w.pool)
 				if err != nil {
 					return jobs.FaultContext(ctx, err)
 				}
@@ -230,7 +230,7 @@ func fleetWideShapesInTheTree() map[string]string {
 			}
 
 			func (w *sweepWorker) fanOut(ctx context.Context, args SweepArgs) error {
-				workspaces, err := enumerateWorkspaces(ctx, w.pool)
+				workspaces, err := database.LiveWorkspaces(ctx, w.pool)
 				if err != nil {
 					return err
 				}

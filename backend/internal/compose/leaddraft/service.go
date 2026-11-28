@@ -148,7 +148,8 @@ func (s *Service) Draft(
 	}
 	envelope := s.envelope.Resolve(ctx,
 		draftfloor.Written{
-			Chosen: req.Language, Thread: draftcore.LanguageEvidenceOf(activities, s.envelope.Now(), zone),
+			Salutation: draftfloor.SalutationValue(lead.Salutation),
+			Chosen:     req.Language, Thread: draftcore.LanguageEvidenceOf(activities, s.envelope.Now(), zone),
 			Rewrite: req.RewriteOf, Purpose: req.Intent, DraftSubject: req.Subject,
 		},
 		ConversationState(activities, s.envelope.Now(), zone, logged...)).InZone(zone)

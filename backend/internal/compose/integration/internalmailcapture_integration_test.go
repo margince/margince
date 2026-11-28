@@ -95,7 +95,7 @@ func TestInternalMailUsesTheSameSourceDecisionInPreflightAndStorage(t *testing.T
 	if result.IsZero() {
 		t.Fatal("no activity captured")
 	}
-	if err := database.WithWorkspaceTx(admin, pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(admin, pool, func(tx pgx.Tx) error {
 		var reason, audience string
 		var marked bool
 		if err := tx.QueryRow(admin, `SELECT audience, audience_reason, internal_mail_authorization IS NOT NULL FROM activity WHERE id = $1`, result).Scan(&audience, &reason, &marked); err != nil {
@@ -158,7 +158,7 @@ func seedInternalMailAnchor(admin context.Context, t *testing.T, pool *pgxpool.P
 	if !ok {
 		t.Fatal("fixture has no actor")
 	}
-	if err := database.WithWorkspaceTx(admin, pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(admin, pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(admin, `UPDATE app_user SET status = 'active' WHERE id = $1`, user); err != nil {
 			return err
 		}

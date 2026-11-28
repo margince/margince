@@ -248,7 +248,7 @@ func clearWorkspaceOutbox(ctx context.Context, tx pgx.Tx) error {
 // fails later has already dropped this workspace's staged events, and they are
 // never delivered.
 func (h dataResetHandlers) clearOutbox(ctx context.Context) error {
-	return database.WithWorkspaceTx(ctx, h.pool, func(tx pgx.Tx) error {
+	return database.WithTx(ctx, h.pool, func(tx pgx.Tx) error {
 		return clearWorkspaceOutbox(ctx, tx)
 	})
 }

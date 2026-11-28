@@ -8,9 +8,9 @@ package compose
 //
 // Store.ListPipelines already carries auth.Require("pipeline", read) and
 // already nests each pipeline's live stages, ordered by position, inside one
-// WithWorkspaceTx. So this adapter is a mapping and nothing more — no SQL of
-// its own, which is what makes the `pipeline` RBAC object apply to the tool for
-// free rather than by a second enforcement that could drift from the first.
+// WithTx. So this adapter is a mapping and nothing more, with no SQL of its
+// own. That makes the `pipeline` RBAC object apply to the tool for free, with
+// no second enforcement that could drift from the first.
 //
 // Pipelines are CONFIG, not records: they deliberately do not travel the
 // datasource record seam, which would put them in the EntityType vocabulary and

@@ -11,7 +11,7 @@ package gates
 // it against the acquirers it knows. That judges the call it can SEE. One hop
 // of indirection walked straight past it:
 //
-//	// inside WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error { … })
+//	// inside WithTx(ctx, pool, func(tx pgx.Tx) error { … })
 //	decorateRows(ctx, e.names, rows)        // an unregistered name: passed
 //
 //	func decorateRows(...) { labelDerivationRows(...) }   // registered, never reached

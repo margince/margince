@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent, waitFor } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import { StoryProviders } from "../../testing/story-utils";
 import { EmploymentEdit } from "./employmentedit";
 
@@ -38,9 +39,15 @@ export const UnknownDates: Story = {
     const refusal = await screen.findByText("Employment status is required.");
     await waitFor(() => expect(refusal).toBeVisible());
     await user.click(
-      screen.getByRole("combobox", { name: "Employment status" }),
+      screen.getByRole("combobox", {
+        name: englishCopy["employment.statusLabel"],
+      }),
     );
-    expect(screen.queryByRole("option", { name: "Status unknown" })).toBeNull();
+    expect(
+      screen.queryByRole("option", {
+        name: englishCopy["employment.status.unknown"],
+      }),
+    ).toBeNull();
     expect(screen.getAllByRole("option")).toHaveLength(2);
   },
 };

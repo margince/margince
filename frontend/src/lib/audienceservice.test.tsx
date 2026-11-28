@@ -13,7 +13,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { type ReactNode, useRef } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-
+import { en as englishCopy } from "../i18n/en";
 import { useMessageAudience, useThreadAudience } from "./audienceservice";
 
 // A thread decision changes several messages at once, and they are filed
@@ -301,7 +301,7 @@ describe("an audience write reports done only once the open message shows it", (
   it("a message's own audience", async () => {
     const server = serverWithAudience("workspace", "participants");
     expect(await shownWhenDone(server, MessageSave)).toEqual({
-      audience: "participants",
+      audience: englishCopy["extIngest.refusal.participants"],
     });
   });
 

@@ -9,6 +9,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { Select } from "../design-system/select";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { meFixture } from "../testing/mefixture";
 import { TaskAssigneeField, useRecordOwnerOptions } from "./assigneepicker";
 
@@ -68,7 +69,7 @@ it.each(["owner", "assignee"])(
     await vi.waitFor(() => expect(client.isFetching()).toBe(0));
     await user.click(screen.getByRole("combobox"));
     await user.type(
-      screen.getByRole("combobox", { name: "Filter the list" }),
+      screen.getByRole("combobox", { name: englishCopy["select.filter"] }),
       "member13@",
     );
     await user.click(screen.getByRole("option", { name: "Member 13" }));

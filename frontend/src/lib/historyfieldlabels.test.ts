@@ -143,11 +143,8 @@ describe("synthetic AuditEvent field labels", () => {
     );
   });
 
-  // "kind" is deliberately NOT a synthetic key: an activity's own audited
-  // create names its kind that way too, on the same projected entity type,
-  // and this lookup carries no entity context to tell the two apart.
-  it("leaves the bare kind field to whichever writer actually owns it", () => {
-    expect(historyFieldLabel("kind", (k) => k)).toBe("kind");
+  it("labels the kind field in a captured activity image", () => {
+    expect(historyFieldLabel("kind", (k) => k)).toBe("history.field.kind");
   });
 
   it("names a lifted suppression's own payload keys in plain English", () => {

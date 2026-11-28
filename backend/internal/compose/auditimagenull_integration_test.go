@@ -36,7 +36,7 @@ import (
 // the whole reason the refusal lives in the table.
 func writeAuditImage(t *testing.T, e *integration.Env, before, after string) error {
 	t.Helper()
-	return database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	return database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id,
 			                       before, after, occurred_at)

@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import { StoryProviders } from "../../testing/story-utils";
 import { ChartBody } from "./reporting.chartbody";
 import type { ReportingEvaluation } from "./reporting.model";
@@ -46,7 +47,9 @@ export const PartnerPipelineTable: Story = {
   ...PartnerPipeline,
   play: async ({ canvasElement }) => {
     const user = userEvent.setup();
-    await user.click(within(canvasElement).getByText("View chart as table"));
+    await user.click(
+      within(canvasElement).getByText(englishCopy["reporting.data"]),
+    );
     const table = canvasElement.querySelector(".report-chart-data table");
     if (!table) throw new Error("the chart has no table");
     const cells = table.querySelectorAll("tbody tr:first-child td");

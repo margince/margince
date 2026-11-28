@@ -38,7 +38,7 @@ func logged(t *testing.T, e *integration.Env, in activities.LogActivityInput) (i
 		t.Fatalf("logging the %s: %v", in.Kind, err)
 	}
 	var at time.Time
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(e.Admin(), `SELECT occurred_at FROM activity WHERE id = $1`, row.Id).Scan(&at)
 	}); err != nil {
 		t.Fatal(err)
@@ -92,7 +92,7 @@ func seedSuggestions(t *testing.T, e *integration.Env, count int, owners ...*ids
 		})
 	}
 	system := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), "system:deal-scout")
-	if err := database.WithWorkspaceTx(system, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(system, e.Pool, func(tx pgx.Tx) error {
 		for i := range count {
 			raised, err := deals.RecordSuggestionTx(system, tx, dealDrafts[i])
 			if err != nil || !raised {

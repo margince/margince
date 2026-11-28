@@ -8,6 +8,7 @@ import type { components, operations } from "../api/schema";
 import { startOfDayInZone } from "../format/timezone";
 import { timelineBaseKey } from "../lib/activitykeys";
 import type { EntityKind } from "../lib/entity";
+import type { MessengerProvider } from "../lib/messagingproviders";
 import { unwrap } from "../lib/problem";
 import { useViewerZone } from "../lib/viewerzone";
 import type { ISODate } from "./dateinput";
@@ -37,6 +38,7 @@ export const ACTIVITY_KINDS: readonly ActivityKind[] = [
  */
 export type TimelineFilters = Readonly<{
   kind?: ActivityKind;
+  chat_provider?: MessengerProvider;
   kinds?: readonly ActivityKind[];
   q?: string;
   after?: ISODate | "";
@@ -47,7 +49,8 @@ export const NO_TIMELINE_FILTERS: TimelineFilters = {};
 
 export function hasTimelineFilters(filters: TimelineFilters): boolean {
   return Boolean(
-    filters.kind ||
+    filters.chat_provider ||
+      filters.kind ||
       filters.kinds?.length ||
       filters.q ||
       filters.after ||
@@ -98,6 +101,7 @@ export function timelineQueryParams(
     // pages that seed this list show it, so page two continues page one.
     collapse_copies: true,
   };
+  if (filters.chat_provider) query.chat_provider = filters.chat_provider;
   if (cursor) query.cursor = cursor;
   const kinds = filters.kind ? [filters.kind] : filters.kinds;
   if (kinds?.length) query.kind = [...kinds];

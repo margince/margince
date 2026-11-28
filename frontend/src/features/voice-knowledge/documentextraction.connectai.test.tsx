@@ -4,6 +4,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { DocumentExtractionPanel } from "./documentextraction";
 
 afterEach(() => {
@@ -79,7 +80,9 @@ describe("Read again with no AI connected", () => {
     const posts = serve(false);
     show();
 
-    const link = await screen.findByRole("link", { name: "Open AI settings" });
+    const link = await screen.findByRole("link", {
+      name: englishCopy["connectAi.link"],
+    });
     expect(link).toBeTruthy();
     await userEvent
       .setup()
@@ -96,6 +99,8 @@ describe("Read again with no AI connected", () => {
       .click(await screen.findByRole("button", { name: "Read again" }));
     expect(posts.length).toBe(1);
     expect(await screen.findByText(/Connect an AI first/)).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Open AI settings" })).toBeTruthy();
+    expect(
+      screen.getByRole("link", { name: englishCopy["connectAi.link"] }),
+    ).toBeTruthy();
   });
 });

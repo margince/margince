@@ -401,3 +401,47 @@ it("names no source when the source declares no name", async () => {
   ).toBeTruthy();
   expect(screen.queryByText(/offline_demo/)).toBeNull();
 });
+
+it("keeps old invoices inside the collapsed group and states its count and currency total", async () => {
+  const current = customerPayments();
+  const recent = current.data[0];
+  if (!recent) throw new Error("the payment fixture needs one invoice");
+  servePayments(
+    customerPayments({
+      invoice_count: 2,
+      long_overdue_days: 365,
+      long_overdue: {
+        invoice_count: 1,
+        totals: [{ currency: "EUR", amount_minor: 3800000 }],
+        customers: [],
+      },
+      data: [
+        recent,
+        {
+          ...recent,
+          invoice_id: "old-invoice",
+          number: "OLD-001",
+          days_overdue: 366,
+          long_overdue: true,
+        },
+      ],
+    }),
+  );
+  const user = userEvent.setup();
+  const shown = render(<CustomerPaymentsCard />);
+  const label = en["payments.longOverdue_one"].replace("{count}", "1");
+  const summary = await screen.findByText(label);
+  expect(summary.closest("details")?.open).toBe(false);
+  expect(summary.closest("summary")?.textContent).toMatch(/38,000/);
+  await user.click(
+    screen.getByRole("button", { name: en["payments.viewInvoices"] }),
+  );
+  const drawer = await screen.findByRole("dialog", {
+    name: en["payments.viewInvoices"],
+  });
+  const old = within(drawer).getByText("OLD-001");
+  expect(old.closest("details")?.open).toBe(false);
+  await user.click(within(drawer).getByText(label));
+  await waitFor(() => expect(old.closest("details")?.open).toBe(true));
+  shown.unmount();
+});

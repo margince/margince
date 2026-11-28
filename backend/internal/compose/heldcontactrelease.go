@@ -141,7 +141,7 @@ func newHeldContactReleaser(pool *pgxpool.Pool, log *slog.Logger) *heldContactRe
 func (r *heldContactReleaser) releaseThread(ctx context.Context, threadKey string) {
 	ctx = principal.SystemActing(ctx, confidentialityActor)
 	var held []ids.ContactID
-	err := database.WithWorkspaceTx(ctx, r.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, r.pool, func(tx pgx.Tx) error {
 		emails, err := capture.WithheldSendersOnThreadTx(ctx, tx, threadKey, heldContactLiveBound)
 		if err != nil {
 			return err
@@ -179,12 +179,9 @@ func (r *heldContactReleaser) releaseOne(ctx context.Context, id ids.ContactID) 
 // reconcileWorkspace releases the next page of held contacts whose hold has
 // ended, in the workspace bound in ctx. It returns how many changed.
 func (r *heldContactReleaser) reconcileWorkspace(ctx context.Context) (int, error) {
-	if _, ok := principal.WorkspaceID(ctx); !ok {
-		return 0, errors.New("confidentiality: releasing held contacts requires a workspace-bound context")
-	}
 	ctx = principal.SystemActing(ctx, confidentialityActor)
 	var held []ids.ContactID
-	err := database.WithWorkspaceTx(ctx, r.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, r.pool, func(tx pgx.Tx) error {
 		var err error
 		held, err = contacts.ReleasableConfidentialityHeldTx(ctx, tx, heldEvidence, heldContactSweepContacts)
 		return err

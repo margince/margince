@@ -13,6 +13,7 @@ import {
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { dropKeptPlace, keepPlaceOnNextMove } from "../lib/scrollmemory";
 import { Button } from "./atoms";
 import { RecordTabs } from "./recordtabs";
@@ -262,12 +263,18 @@ describe("RecordTabs keeps focus on the row as tabs fold", () => {
     act(() => screen.getByRole("button", { name: "Contacts" }).focus());
     resize(150);
 
-    expect(screen.getByRole("button", { name: "More sections" })).toHaveFocus();
+    expect(
+      screen.getByRole("button", {
+        name: englishCopy["record.tabs.moreLabel"],
+      }),
+    ).toHaveFocus();
   });
 
   it("moves focus from More to the open tab", () => {
     const grow = foldedStrip();
-    const more = screen.getByRole("button", { name: "More sections" });
+    const more = screen.getByRole("button", {
+      name: englishCopy["record.tabs.moreLabel"],
+    });
     expect(screen.queryByRole("button", { name: "Contacts" })).toBeNull();
 
     act(() => more.focus());
@@ -278,7 +285,9 @@ describe("RecordTabs keeps focus on the row as tabs fold", () => {
 
   it("moves focus from an entry in the open menu to the open tab", () => {
     const grow = foldedStrip();
-    const more = screen.getByRole("button", { name: "More sections" });
+    const more = screen.getByRole("button", {
+      name: englishCopy["record.tabs.moreLabel"],
+    });
     act(() => more.focus());
     fireEvent.click(more);
     act(() => screen.getByRole("button", { name: "Contacts" }).focus());
@@ -291,6 +300,44 @@ describe("RecordTabs keeps focus on the row as tabs fold", () => {
 // Widths here depend on where a tab stands: the first one drops its start
 // padding. The fold must settle on one row, not flip between two.
 describe("RecordTabs folds to one stable row", () => {
+  it("reserves the strip padding before folding its tabs", () => {
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        observe() {}
+        disconnect() {}
+      },
+    );
+    vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockImplementation(
+      function (this: HTMLElement) {
+        return this.classList.contains("recordtabs-more") ? 32 : 100;
+      },
+    );
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(200);
+    const computed = window.getComputedStyle.bind(window);
+    vi.spyOn(window, "getComputedStyle").mockImplementation((element) => {
+      const style = computed(element);
+      return element.classList.contains("recordtabs-strip")
+        ? {
+            ...style,
+            paddingInlineStart: "8px",
+            paddingInlineEnd: "8px",
+            columnGap: "0px",
+          }
+        : style;
+    });
+    const { container } = strip();
+    expect(screen.queryByRole("button", { name: LABELS.contacts })).toBeNull();
+    expect(
+      screen.getByRole("button", {
+        name: englishCopy["record.tabs.moreLabel"],
+      }),
+    ).toBeVisible();
+    expect(container.querySelector(".recordtabs-strip")).toHaveStyle({
+      minInlineSize: "148px",
+    });
+  });
+
   it("keeps the same tabs when the first tab's padding moves", () => {
     let resized: () => void = () => undefined;
     vi.stubGlobal(

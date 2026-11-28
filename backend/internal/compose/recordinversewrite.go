@@ -51,7 +51,7 @@ func (s RestoreSeam) reverseByVerb(
 	ctx context.Context, entityType string, id ids.UUID, row AuditRow, kind inverse, ifVersion int64,
 ) (privacy.RecordHistoryEntry, error) {
 	var answer Undoability
-	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		if err := recordVersionUnmoved(ctx, tx, entityType, id, ifVersion); err != nil {
 			return err
 		}
@@ -89,7 +89,7 @@ func (r recordInverses) perform(
 	case inverseArchive, inverseRearchive:
 		err = r.archiveCreated(ctx, pool, row, ifVersion)
 	case inverseUnarchive:
-		err = database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+		err = database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 			var err error
 			report, err = r.unarchive(ctx, tx, row, ifVersion)
 			return err
@@ -140,7 +140,7 @@ func (r recordInverses) archiveCreated(ctx context.Context, pool *pgxpool.Pool, 
 	// Asked before the archive, and again after it: a link a colleague added
 	// meanwhile is one the archive retired, and a tag or list they added is
 	// one the archive's own cascade names.
-	return database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	return database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		if err := refuseColleagueWork(ctx, tx, row); err != nil {
 			return err
 		}

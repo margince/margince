@@ -179,7 +179,7 @@ export const WorkQueueControl: Story = {
   render: () => <ControlledQueue />,
   play: async ({ canvasElement }) => {
     const toggle = within(canvasElement).getByRole("button", {
-      name: "Show Worklist",
+      name: en["brief.queue.show"],
     });
     await userEvent.click(toggle);
     await expect(toggle).toHaveAttribute("aria-pressed", "true");

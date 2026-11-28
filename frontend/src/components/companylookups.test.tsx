@@ -12,6 +12,7 @@ import {
   LIFECYCLE_OPTIONS as FORMAT_OPTIONS,
 } from "../format/companylifecycle";
 import { type Locale, LocaleProvider, useT } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { installFetchStub, jsonResponse } from "../testing/story-utils";
 import {
   formatSizeBand,
@@ -104,7 +105,7 @@ describe("usePaymentHealth on overdue money", () => {
   it("is at risk while the figure is current", async () => {
     expect(await healthOf(overdue)).toEqual({
       rating: "at_risk",
-      reason: "Payment is overdue.",
+      reason: englishCopy["co.health.payment.overdue"],
     });
   });
 

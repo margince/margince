@@ -4,6 +4,7 @@
 /** @vitest-environment happy-dom */
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { settingsReach } from "../../lib/settingscatalog";
 import { STORAGE_KEYS, writeStored } from "../../lib/storage";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
@@ -122,7 +123,9 @@ describe("Your setup card", () => {
     expect(within(setup).getByText("4 of 7 done")).not.toBeNull();
     expect(within(setup).getAllByRole("listitem")).toHaveLength(7);
     expect(
-      within(setup).getByRole("button", { name: "Connect calendar" }),
+      within(setup).getByRole("button", {
+        name: englishCopy["setup.action.calendar"],
+      }),
     ).not.toBeNull();
   });
 

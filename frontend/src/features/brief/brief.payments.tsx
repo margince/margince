@@ -7,6 +7,7 @@ import { AppLink } from "../../design-system/applink";
 import { Button, Modal } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
+import { Disclosure } from "../../design-system/disclosure";
 import { DrawerBody, DrawerHead } from "../../design-system/drawerbands";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
@@ -107,7 +108,20 @@ export function CustomerPaymentsCard({
             </Heading>
           </DrawerHead>
           <DrawerBody>
-            <PaymentInvoices rows={pages.flatMap((page) => page.data)} />
+            <PaymentInvoices
+              rows={pages
+                .flatMap((page) => page.data)
+                .filter((invoice) => invoice.long_overdue !== true)}
+            />
+            {(summary?.long_overdue?.invoice_count ?? 0) > 0 && (
+              <Disclosure summary={<LongOverdueSummary summary={summary} />}>
+                <PaymentInvoices
+                  rows={pages
+                    .flatMap((page) => page.data)
+                    .filter((invoice) => invoice.long_overdue === true)}
+                />
+              </Disclosure>
+            )}
             <ErrorLine error={query.isFetchNextPageError && query.error} />
             <LoadMoreButton query={query} />
           </DrawerBody>
@@ -188,6 +202,24 @@ function PaymentOverview({
           <Button id={triggerId} variant="link" onClick={onReview}>
             {t("payments.viewInvoices")}
           </Button>
+        </PanelBody>
+      )}
+      {(summary.long_overdue?.invoice_count ?? 0) > 0 && (
+        <PanelBody>
+          <Disclosure summary={<LongOverdueSummary summary={summary} />}>
+            {summary.long_overdue?.totals.map((total) => (
+              <p key={total.currency} className="t-num">
+                {formatMoney(total.amount_minor, total.currency, locale)}
+              </p>
+            ))}
+            <p>
+              {summary.provider_name
+                ? t("payments.checkWriteOff", {
+                    provider: summary.provider_name,
+                  })
+                : t("payments.checkWriteOffUnknown")}
+            </p>
+          </Disclosure>
         </PanelBody>
       )}
     </>
@@ -274,5 +306,30 @@ function PaymentInvoices({ rows }: Readonly<{ rows: PaymentInvoice[] }>) {
       rows={rows}
       rowKey={(invoice) => invoice.invoice_id}
     />
+  );
+}
+
+function LongOverdueSummary({ summary }: Readonly<{ summary?: Payments }>) {
+  const plural = usePlural();
+  const { locale } = useLocale();
+  return (
+    <>
+      {plural(
+        "payments.longOverdue",
+        summary?.long_overdue?.invoice_count ?? 0,
+        {
+          count: formatNumber(
+            summary?.long_overdue?.invoice_count ?? 0,
+            locale,
+          ),
+        },
+      )}
+      {summary?.long_overdue?.totals.map((total) => (
+        <span className="t-num" key={total.currency}>
+          {" "}
+          · {formatMoney(total.amount_minor, total.currency, locale)}
+        </span>
+      ))}
+    </>
   );
 }

@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -72,7 +73,9 @@ function Step() {
 
 async function ask() {
   await userEvent.click(
-    await screen.findByRole("button", { name: "Suggest filters and charts" }),
+    await screen.findByRole("button", {
+      name: englishCopy["reporting.setup.suggestReport"],
+    }),
   );
 }
 

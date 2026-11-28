@@ -34,6 +34,7 @@ import (
 // a rename cannot leave the two halves disagreeing.
 const (
 	sectionContacts       = crmcontracts.Company360SectionsOmitted("contacts")
+	sectionLeads          = crmcontracts.Company360SectionsOmitted("leads")
 	sectionDeals          = crmcontracts.Company360SectionsOmitted("deals")
 	sectionProjects       = crmcontracts.Company360SectionsOmitted("projects")
 	sectionStrength       = crmcontracts.Company360SectionsOmitted("strength")
@@ -141,8 +142,8 @@ func (s *Service) AssembleScoped(ctx context.Context, companyID ids.CompanyID, o
 		return crmcontracts.Company360{}, err
 	}
 	// One repeatable-read snapshot, so every section reads the same state.
-	err = database.WithWorkspaceSnapshot(ctx, s.pool, func(ctx context.Context) error {
-		return database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err = database.WithSnapshot(ctx, s.pool, func(ctx context.Context) error {
+		return database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 			company, err := s.contacts.GetCompanyTx(ctx, tx, companyID, storekit.LiveOnly, active)
 			if err != nil {
 				return err
@@ -184,6 +185,7 @@ func (s *Service) sections(ctx context.Context, tx pgx.Tx, companyID ids.Company
 		read func() error
 	}{
 		{sectionContacts, a.readContacts},
+		{sectionLeads, a.readLeads},
 		{sectionStrength, a.readStrength},
 		{sectionDeals, a.readDeals},
 		{sectionProjects, a.readProjects},

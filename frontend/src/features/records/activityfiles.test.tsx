@@ -4,6 +4,7 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
+import { en as englishCopy } from "../../i18n/en";
 import { contactDocuments } from "../../testing/contactdocuments";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { renderWithQueryClient } from "../../testing/queryrender";
@@ -82,7 +83,9 @@ const listReads = (calls: Call[]) =>
   calls.filter((call) => call.key === "GET /attachments");
 
 async function uploadThroughDialog(user: ReturnType<typeof userEvent.setup>) {
-  const add = await screen.findByRole("button", { name: "Add document" });
+  const add = await screen.findByRole("button", {
+    name: englishCopy["docs.add.action"],
+  });
   await waitFor(() => expect(add.hasAttribute("disabled")).toBe(false));
   await user.click(add);
   const dialog = await screen.findByRole("dialog");
@@ -149,7 +152,7 @@ describe("ActivityFiles", () => {
     stubApi([]);
     renderWithQueryClient(<ActivityFiles activityId="act-kickoff" writable />);
     expect(
-      await screen.findByText("No files on this activity yet."),
+      await screen.findByText(englishCopy["activity.files.empty"]),
     ).toBeTruthy();
   });
 
@@ -203,17 +206,19 @@ describe("ActivityFiles", () => {
     const user = userEvent.setup();
     renderWithQueryClient(<ActivityFiles activityId="act-kickoff" writable />);
     const dialog = await uploadThroughDialog(user);
-    expect(await within(dialog).findByText("Upload failed")).toBeTruthy();
+    expect(
+      await within(dialog).findByText(englishCopy["docs.add.failedTitle"]),
+    ).toBeTruthy();
     expect(listReads(calls)).toHaveLength(1);
   });
 
   it("says why a seat that may not change activities cannot upload", async () => {
     stubApi([], { activity: ["read"] });
     renderWithQueryClient(<ActivityFiles activityId="act-kickoff" writable />);
-    const reason = await screen.findByText(
-      "You do not have permission to add documents to this record.",
-    );
-    const add = screen.getByRole("button", { name: "Add document" });
+    const reason = await screen.findByText(englishCopy["docs.add.errRefused"]);
+    const add = screen.getByRole("button", {
+      name: englishCopy["docs.add.action"],
+    });
     expect(add.getAttribute("aria-describedby")).toBe(reason.id);
     expect(add.hasAttribute("disabled")).toBe(true);
   });
@@ -223,10 +228,10 @@ describe("ActivityFiles", () => {
     renderWithQueryClient(
       <ActivityFiles activityId="act-kickoff" writable={false} />,
     );
-    const reason = await screen.findByText(
-      "You do not have permission to add documents to this record.",
-    );
-    const add = screen.getByRole("button", { name: "Add document" });
+    const reason = await screen.findByText(englishCopy["docs.add.errRefused"]);
+    const add = screen.getByRole("button", {
+      name: englishCopy["docs.add.action"],
+    });
     expect(add.getAttribute("aria-describedby")).toBe(reason.id);
     expect(add.hasAttribute("disabled")).toBe(true);
   });
@@ -237,7 +242,9 @@ describe("ActivityFiles", () => {
       <ActivityFiles activityId="act-kickoff" writable archived />,
     );
     await screen.findByRole("link", { name: /price-list-2026\.pdf/ });
-    expect(screen.queryByRole("button", { name: "Add document" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: englishCopy["docs.add.action"] }),
+    ).toBeNull();
   });
 });
 

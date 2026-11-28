@@ -160,12 +160,13 @@ func (d replyDrafter) DraftEmailWithProvenance(ctx context.Context, anchor ids.U
 		Body:  body,
 		// The SAME language the model was told, so a model failure changes who
 		// wrote the draft and not what language it is in.
-		Language:  envelope.Lang(),
-		Band:      state.Band,
-		Threaded:  threaded,
-		Recipient: recipient,
-		LastName:  surname,
-		Formal:    envelope.Formal(),
+		Language:   envelope.Lang(),
+		Band:       state.Band,
+		Threaded:   threaded,
+		Recipient:  recipient,
+		LastName:   surname,
+		Formal:     envelope.Formal(),
+		Salutation: envelope.Salutation,
 	})
 	data := replyActivityData{
 		// Already bounded: NewEnvelope caps the two identity fields, which are
@@ -355,6 +356,7 @@ func (d replyDrafter) languageInputs(ctx context.Context, anchor ids.UUID, steer
 		// The contact the mail is delivered to, so a CC or an internal sender
 		// never lends the draft its register.
 		Greeting:     delivery.GreetingRegister,
+		Salutation:   delivery.Salutation,
 		Addressee:    thread.addresseeEvidence(delivery.ContactID),
 		Stored:       activityLanguage(activity),
 		Body:         textlang.MessageOpening(stringValue(activity.Body), draftcore.LanguageEvidenceRunes),

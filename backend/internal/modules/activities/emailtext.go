@@ -122,7 +122,11 @@ func boundaryIndex(lines []string, subject string) (int, EmailBodyTail) {
 	quote := mailquote.OwnTextEnd(lines, subject)
 	signOffFloor := max(0, len(lines)-trailingScanLines)
 	// A sign-off above a forwarded mail closes the note, not the message.
-	for i := mailquote.ForwardedBlockEnd(lines, subject); i < quote; i++ {
+	start := mailquote.ForwardedBlockEnd(lines, subject)
+	if blocks := mailquote.ForwardedBlocks(lines, subject); len(blocks) > 0 {
+		start = blocks[len(blocks)-1].Body
+	}
+	for i := start; i < quote; i++ {
 		line := lines[i]
 		if signatureDelimiter.MatchString(line) || (i >= signOffFloor && isSignOff(line)) {
 			return i, TailSignature

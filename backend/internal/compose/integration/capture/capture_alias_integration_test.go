@@ -52,7 +52,7 @@ func deliveredMail(above, below, from, msgID string) []byte {
 func ownAddresses(t *testing.T, env captureEnv, seat ids.UUID) map[string]string {
 	t.Helper()
 	out := map[string]string{}
-	err := database.WithWorkspaceTx(env.e.Admin(), env.e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(env.e.Admin(), env.e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(context.Background(),
 			`SELECT value, source FROM capture_owner_identity WHERE user_id = $1`, seat)
 		if err != nil {
@@ -160,7 +160,7 @@ func TestAnAddressTheSeatAlreadyHoldsIsNotRediscovered(t *testing.T) {
 	env.sync(t, deliveredMail(captureOwner, "", "other@customer.example", "own-2@customer.example"))
 
 	var sightings int
-	err := database.WithWorkspaceTx(env.e.Admin(), env.e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(env.e.Admin(), env.e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM capture_alias_sighting WHERE value = $1`, captureOwner).Scan(&sightings)
 	})
@@ -182,7 +182,7 @@ func TestAnAddressTheSeatAlreadyHoldsIsNotRediscovered(t *testing.T) {
 func TestAMachineAddressIsNeverClaimedAsTheSeatsOwn(t *testing.T) {
 	env := newCaptureEnv(t)
 	const service = "drive-shares-noreply@google.com"
-	err := database.WithWorkspaceTx(env.e.Admin(), env.e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(env.e.Admin(), env.e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO capture_owner_identity (user_id, kind, value, source, created_by)
 			VALUES ($1, $2, 'esignature-noreply@google.com', $3, 'system:alias_discovery')`,

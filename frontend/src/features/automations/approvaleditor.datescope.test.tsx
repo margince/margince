@@ -9,6 +9,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { NO_TIMELINE_FILTERS } from "../../design-system/recordtimeline";
 import { TimelineFilterBar } from "../../design-system/timelinefilterbar";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { StagedEditor } from "./approvaleditor";
 import type { EditableField } from "./approvalkind";
 
@@ -48,7 +49,9 @@ it("approves past a day the timeline filter cannot read", async () => {
   await user.type(screen.getByRole("textbox", { name: "From" }), "99/99");
   await user.tab();
 
-  await user.click(screen.getByRole("button", { name: "Approve edited" }));
+  await user.click(
+    screen.getByRole("button", { name: englishCopy["decision.approveEdited"] }),
+  );
 
   expect(onApprove).toHaveBeenCalledOnce();
 });
@@ -65,7 +68,9 @@ it("holds the approve while its own date field holds text it cannot read", async
   const due = screen.getByRole("textbox", { name: "due_date" });
   await user.type(due, "99/99");
 
-  await user.click(screen.getByRole("button", { name: "Approve edited" }));
+  await user.click(
+    screen.getByRole("button", { name: englishCopy["decision.approveEdited"] }),
+  );
 
   expect(onApprove).not.toHaveBeenCalled();
   expect(due).toHaveFocus();

@@ -36,6 +36,8 @@ const (
 	ObjectContact  = "contact"
 	ObjectDeal     = "deal"
 	ObjectActivity = "activity"
+	ObjectProject  = "project"
+	ObjectProduct  = "product"
 	// ConnectorCSV is the direct migrate-in connector this source serves
 	// (UC-E11-03). The column's CHECK also admits salesforce — the DDL is the
 	// chapter's pinned arrival shape — but it gets its Go constant when that

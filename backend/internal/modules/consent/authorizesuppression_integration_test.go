@@ -230,7 +230,7 @@ func TestAWithdrawalStopsAThreadEvidencedSend(t *testing.T) {
 // installation did. If the withdrawal read skipped archived purposes, retiring
 // one would silently make everybody who had unsubscribed from it contactable
 // again — on the evidence arms, which never read contact_consent otherwise.
-func TestArchivingAPurposeKeepsItsWithdrawals(t *testing.T) {
+func TestAWithdrawnPurposeCannotBeArchivedAndItsStopRemains(t *testing.T) {
 	e := setupResolve(t)
 	e.seedPurpose(t, "business_correspondence", "business_correspondence")
 	anchor := e.inboundFrom(t, "thread-archived", e.address, time.Now().Add(-24*time.Hour))
@@ -242,8 +242,8 @@ func TestArchivingAPurposeKeepsItsWithdrawals(t *testing.T) {
 		t.Fatalf("recording the withdrawal: %v", err)
 	}
 	if _, err := e.owner.Exec(e.ctx,
-		`UPDATE consent_purpose SET archived_at = now() WHERE key = 'business_correspondence'`); err != nil {
-		t.Fatalf("archiving the purpose: %v", err)
+		`UPDATE consent_purpose SET archived_at = now() WHERE key = 'business_correspondence'`); err == nil {
+		t.Fatal("archiving a purpose with a withdrawal succeeded")
 	}
 
 	d := e.decide(t, commsauthz.Request{AnchorActivityID: anchor})

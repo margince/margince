@@ -8,10 +8,11 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/margince/margince/backend/internal/platform/ratelimit"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
 // The mounted addresses of the routes a member confined by require-MFA may still
@@ -93,7 +94,7 @@ func (h Handlers) DisableMyMfa(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !h.mfaAttempts.Allow(id.UserID.String()) {
-		httperr.Write(w, r, apperrors.ErrBudgetExceeded)
+		httperr.Write(w, r, ratelimit.Refused(h.mfaAttempts))
 		return
 	}
 	if err := h.svc.DisableMFA(r.Context(), req.Code); err != nil {

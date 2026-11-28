@@ -80,7 +80,7 @@ func TestSweepWorkspaceDataClearsDomainKeepsIdentity(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		tables, err := resetTargetTables(ctx, tx)
 		if err != nil {
 			return err
@@ -147,7 +147,7 @@ func TestSweepWorkspaceDataClearsDomainKeepsIdentity(t *testing.T) {
 func TestPreserveSetIntegrity(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.Admin()
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
 			SELECT table_name FROM information_schema.tables
 			WHERE table_schema = 'public' AND table_type = 'BASE TABLE'`)
@@ -200,7 +200,7 @@ func TestClearWorkspaceOutboxEmptiesTheStagedEvents(t *testing.T) {
 	ctx := e.Admin()
 	e.WsExec(t, `INSERT INTO event_outbox (stream, envelope) VALUES ('t', jsonb_build_object('type', 'x'))`)
 
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return clearWorkspaceOutbox(ctx, tx)
 	}); err != nil {
 		t.Fatalf("clear: %v", err)
@@ -220,6 +220,7 @@ func TestResetRunRestoresBootstrapState(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	e.SeedContact(t, "Alice", nil)
+	e.WsExec(t, `INSERT INTO installation_state (key, value) VALUES ('archived_predecessor', '{"archived_companies": 1}')`)
 	// A pre-reset staged event, marked by its stream so the seeders' own outbox
 	// writes cannot be mistaken for it: the run must leave nothing for the relay
 	// to ship into the streams it purges.
@@ -262,6 +263,9 @@ func TestResetRunRestoresBootstrapState(t *testing.T) {
 	}
 	if got := e.WsCount(t, `SELECT count(*) FROM event_outbox WHERE stream = 'pre-reset'`); got != 0 {
 		t.Errorf("pre-reset staged events = %d, want 0 — the relay would ship them into the streams the reset just purged", got)
+	}
+	if got := e.WsCount(t, `SELECT count(*) FROM installation_state WHERE key IN ('stored_key_workspace', 'installation_trial', 'archived_predecessor')`); got != 3 {
+		t.Errorf("installation facts after reset = %d, want 3 — stored keys, the trial start and the archived-company warning outlive a reset", got)
 	}
 }
 
@@ -409,7 +413,7 @@ func TestSweepTargetsCarryNoDeleteBlockingTrigger(t *testing.T) {
 	defer deleteGuardedSweepTargets.AssertAllMatched(t)
 	e := integration.Setup(t)
 	ctx := e.Admin()
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		targets, err := resetTargetTables(ctx, tx)
 		if err != nil {
 			return err
@@ -599,7 +603,7 @@ func TestResetKeepsTheDeploymentCredentialsSealedBeforeIt(t *testing.T) {
 func TestAResetKeepsAConnectedAITool(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.Admin()
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(ctx, `INSERT INTO oauth_client (client_id, client_name, redirect_uris, created_via)
 			VALUES ('reset-kept', 'Gemini', ARRAY['https://x.example/cb'], 'admin')`); err != nil {
 			return err
@@ -689,7 +693,7 @@ func TestAResetLeavesNoFactRevision(t *testing.T) {
 	if got := e.WsCount(t, "SELECT count(*) FROM company_fact_revision"); got == 0 {
 		t.Fatal("the lookup left no fact revision to clear; the fixture proves nothing")
 	}
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		tables, err := resetTargetTables(ctx, tx)
 		if err != nil {
 			return err
@@ -711,8 +715,8 @@ func TestAResetClearsADirectedSendAndKeepsItsAuditRow(t *testing.T) {
 	conn := integration.OwnerConn(t)
 	var review ids.UUID
 	if err := conn.QueryRow(context.Background(), `
-		INSERT INTO communication_review (state, kind, reason_code, refusals, initiated_by)
-		VALUES ('needs_repair', 'single', 'no_marketing_consent',
+		INSERT INTO communication_review (state, reason_code, refusals, initiated_by)
+		VALUES ('needs_repair', 'no_marketing_consent',
 		        '[{"address": "anna@example.test", "reason_code": "no_marketing_consent"}]', $1)
 		RETURNING id`, e.Rep1).Scan(&review); err != nil {
 		t.Fatalf("seeding the refused send: %v", err)
@@ -738,7 +742,7 @@ func TestAResetClearsADirectedSendAndKeepsItsAuditRow(t *testing.T) {
 	}
 
 	ctx := e.Admin()
-	err = database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		tables, err := resetTargetTables(ctx, tx)
 		if err != nil {
 			return err

@@ -81,7 +81,7 @@ describe("importing activities from a contact's page", () => {
       await screen.findByText("Importing into Ada Lovelace"),
     ).toBeVisible();
     await user.upload(
-      await screen.findByLabelText("Upload your data"),
+      await screen.findByLabelText(en["import.hub.uploadLabel"]),
       new File(["subject,occurred_at\nCall,2025-03-02\n"], "calls.csv"),
     );
     await user.click(await screen.findByRole("button", { name: /Next: map/ }));

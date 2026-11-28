@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ReactNode } from "react";
 import { screen, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -72,7 +73,7 @@ export const Bars: Story = {
   ),
   play: async ({ canvasElement }) => {
     await within(canvasElement).findByRole("button", {
-      name: "Close project",
+      name: englishCopy["project.advance.close"],
     });
   },
 };
@@ -114,7 +115,7 @@ export const ClosingNeedsAReason: Story = {
   ),
   play: async () => {
     const dialog = within(await screen.findByRole("dialog"));
-    await dialog.findByText("A closed project needs a reason.");
+    await dialog.findByText(englishCopy["project.advance.reasonRequired"]);
   },
 };
 

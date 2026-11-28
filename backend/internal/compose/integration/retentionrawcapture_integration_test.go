@@ -43,7 +43,7 @@ func TestTheRetentionSweepDestroysTheProviderOriginalToo(t *testing.T) {
 	activity := ids.NewV7()
 	const sourceSystem, sourceID = "gmail", "msg-aged-out"
 
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO retention_policy (object_type, category, retain_days, action)
@@ -86,7 +86,7 @@ func TestTheRetentionSweepDestroysTheProviderOriginalToo(t *testing.T) {
 	var body *string
 	var keptKey bool
 	var originals, provenance int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if err := tx.QueryRow(ctx, `
 			SELECT body, source_system IS NOT DISTINCT FROM $2 AND source_id IS NOT DISTINCT FROM $3
@@ -143,7 +143,7 @@ func TestTheRetentionSweepDestroysTheProviderOriginalToo(t *testing.T) {
 // after the refusal, which is only true while the check precedes the work.
 func TestAPassMissingItsPurgerRefusesBeforeDestroyingAnything(t *testing.T) {
 	e := Setup(t)
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO retention_policy (object_type, category, retain_days, action)
@@ -170,7 +170,7 @@ func TestAPassMissingItsPurgerRefusesBeforeDestroyingAnything(t *testing.T) {
 	}
 
 	var body *string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT body FROM activity WHERE subject = 'Quarterly figures'`).Scan(&body)
 	}); err != nil {

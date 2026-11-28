@@ -6,6 +6,7 @@ import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { messageBox, writeMessage } from "../../design-system/richtext-testing";
+import { en as englishCopy } from "../../i18n/en";
 import {
   fillSendableForm,
   installComposeClock,
@@ -69,7 +70,7 @@ describe("a new message without a reason for contact", () => {
     pressSendKeys();
     await user.click(sendButton());
     expect(
-      await screen.findByText("Select the reason for contact."),
+      await screen.findByText(englishCopy["compose.missingWhy"]),
     ).toBeInTheDocument();
     expect(posted(sent)).toHaveLength(0);
 

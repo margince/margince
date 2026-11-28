@@ -11,6 +11,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { installFetchStub } from "../../testing/story-utils";
 import {
   RetractAcquisitionRequest,
@@ -57,7 +58,9 @@ describe("taking back a recorded request", () => {
     );
 
     await user.click(
-      screen.getByRole("button", { name: "Take back this request" }),
+      screen.getByRole("button", {
+        name: englishCopy["consent.retractRequest"],
+      }),
     );
     expect(retracted).not.toHaveBeenCalled();
     expect(
@@ -112,7 +115,9 @@ describe("taking back the request the acquisition records", () => {
     );
 
     await user.click(
-      screen.getByRole("button", { name: "Take back this request" }),
+      screen.getByRole("button", {
+        name: englishCopy["consent.retractRequest"],
+      }),
     );
     expect(retracted).not.toHaveBeenCalled();
     const dialog = await screen.findByRole("dialog");

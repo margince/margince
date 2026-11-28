@@ -142,7 +142,7 @@ func TestReadStoredOriginalAnswersWhetherTheRowIsOnFile(t *testing.T) {
 		`SELECT id FROM raw_capture WHERE source_id = 'msg-read'`).Scan(&rawID); err != nil {
 		t.Fatalf("reading the seeded original's id: %v", err)
 	}
-	if err := database.WithWorkspaceTx(replayCtx(e), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(replayCtx(e), e.Pool, func(tx pgx.Tx) error {
 		payload, found, err := readStoredOriginal(context.Background(), tx, rawID)
 		if err != nil || !found || len(payload) == 0 {
 			t.Errorf("the seeded original: found=%v len=%d err=%v", found, len(payload), err)

@@ -19,6 +19,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -301,12 +302,7 @@ const staleQueuedAge = time.Minute
 
 // DueDeferredBuilds finds due deferrals, lost queued jobs and running builds with no session owner.
 func (s *VoiceStore) DueDeferredBuilds(ctx context.Context) ([]VoiceBuildRef, error) {
-	// rls-exempt: fleet enumeration — the workspace table is not workspace-scoped; this reads every tenant before entering each workspace's own GUC.
-	rows, err := s.db.Pool().Query(ctx, `SELECT id FROM workspace WHERE archived_at IS NULL ORDER BY created_at`)
-	if err != nil {
-		return nil, fmt.Errorf("voice: listing workspaces for the deferred-build walk: %w", err)
-	}
-	workspaces, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	workspaces, err := database.LiveWorkspaces(ctx, s.db.Pool())
 	if err != nil {
 		return nil, err
 	}

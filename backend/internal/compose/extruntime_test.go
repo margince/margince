@@ -451,7 +451,8 @@ func TestAnUnattendedRuntimeRefusesInteractiveAndUndeclaredTasks(t *testing.T) {
 }
 
 func TestADeclaredCapabilityGrantsOnlyItselfAndRemovingItCutsAccess(t *testing.T) {
-	rt, ctx := composeNeeds(t, extensionRuntimeBinding{models: laneOf(&countingLane{}), blob: blobstore.NewMemory()},
+	rt, ctx := composeNeeds(t, extensionRuntimeBinding{models: laneOf(&countingLane{}), blob: blobstore.NewMemory(),
+		objectsWorkspace: func(context.Context) (ids.WorkspaceID, error) { return ids.New[ids.WorkspaceKind](), nil }},
 		extension.Need{Capability: extension.CapabilityObjects, Reason: "Keeps generated files."})
 	if _, err := rt.Models().Complete(ctx, askTask, oneMessage); !errors.Is(err, extension.ErrNotDeclared) {
 		t.Errorf("Complete with only Objects declared: err = %v, want ErrNotDeclared", err)

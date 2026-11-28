@@ -5,6 +5,7 @@
 import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../i18n/en";
 import { parseHash } from "../lib/router";
 import { readStored, STORAGE_KEYS } from "../lib/storage";
 import { FIXTURE_TIMEZONE, meFixture } from "../testing/mefixture";
@@ -101,7 +102,9 @@ describe("the personal setup steps", () => {
     const { user, panel } = await openPanel(seat());
 
     await user.click(
-      within(panel).getByRole("button", { name: "Choose place" }),
+      within(panel).getByRole("button", {
+        name: englishCopy["setup.action.timezone"],
+      }),
     );
     expect(window.location.hash).toBe(
       "#/settings/account?focus=account-language",
@@ -109,7 +112,9 @@ describe("the personal setup steps", () => {
 
     window.location.hash = "";
     await user.click(
-      within(panel).getByRole("button", { name: "Choose language" }),
+      within(panel).getByRole("button", {
+        name: englishCopy["setup.action.language"],
+      }),
     );
     expect(window.location.hash).toBe(
       "#/settings/account?focus=account-language",
@@ -122,7 +127,7 @@ describe("the personal setup steps", () => {
 
     await user.click(within(panel).getByRole("button", { name: "Review" }));
     const dialog = await screen.findByRole("dialog", {
-      name: "What Margince reads and writes",
+      name: englishCopy["setup.permissions.title"],
     });
     expect(within(dialog).getAllByRole("listitem")).toHaveLength(3);
 
@@ -190,7 +195,9 @@ describe("the personal setup steps", () => {
     const { user, panel } = await openPanel(seat());
 
     await user.click(
-      within(panel).getByRole("button", { name: "Hide until next sign-in" }),
+      within(panel).getByRole("button", {
+        name: englishCopy["setup.reminder.hide"],
+      }),
     );
 
     expect(screen.queryByRole("button", { name: /Finish setup/ })).toBeNull();

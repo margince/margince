@@ -13,9 +13,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// HistoryFilter binds a traversal to its workspace, declared shared kinds and reporting cutoff.
+// HistoryFilter binds a traversal to its declared shared kinds and reporting cutoff.
 type HistoryFilter struct {
-	Workspace    string
 	Dispatchers  []string
 	Kind, State  string
 	From, Cutoff time.Time
@@ -37,8 +36,8 @@ type History struct {
 	More   bool
 }
 
-// WorkspaceHistory reads totals and the page in one read-only repeatable snapshot.
-func WorkspaceHistory(ctx context.Context, pool *pgxpool.Pool, filter HistoryFilter) (History, error) {
+// ReadHistory reads totals and the page in one read-only repeatable snapshot.
+func ReadHistory(ctx context.Context, pool *pgxpool.Pool, filter HistoryFilter) (History, error) {
 	tx, err := pool.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.RepeatableRead, AccessMode: pgx.ReadOnly})
 	if err != nil {
 		return History{}, fmt.Errorf("jobs: opening history read: %w", err)
@@ -59,7 +58,7 @@ func WorkspaceHistory(ctx context.Context, pool *pgxpool.Pool, filter HistoryFil
 		pageWhere += fmt.Sprintf(" AND id < $%d", len(args))
 	}
 	args = append(args, recentFailureLimit+1)
-	q := `SELECT id,kind,args->>'workspace_id',state::text,attempt::int,max_attempts::int,
+	q := `SELECT id,kind,state::text,attempt::int,max_attempts::int,
  coalesce(finalized_at,attempted_at,created_at),errors[1]->>'at',errors[cardinality(errors)]->>'error'
  FROM river_job WHERE ` + pageWhere + fmt.Sprintf(` ORDER BY id DESC LIMIT $%d`, len(args))
 	rows, err := tx.Query(ctx, q, args...)
@@ -81,9 +80,9 @@ func WorkspaceHistory(ctx context.Context, pool *pgxpool.Pool, filter HistoryFil
 }
 
 func historyWhere(f HistoryFilter) (string, []any) {
-	args := []any{f.Workspace, f.Dispatchers}
+	args := []any{f.Dispatchers}
 	add := func(value any) string { args = append(args, value); return fmt.Sprintf("$%d", len(args)) }
-	where := healthScope + ` AND state::text IN ('retryable','discarded','cancelled')`
+	where := `state::text IN ('retryable','discarded','cancelled')`
 	cutoff, from := add(f.Cutoff), add(f.From)
 	where += ` AND created_at <= ` + cutoff + ` AND (state='retryable' OR (coalesce(finalized_at,attempted_at,created_at) >= ` + from + ` AND coalesce(finalized_at,attempted_at,created_at) <= ` + cutoff + `))`
 	if f.Kind != "" {
@@ -96,7 +95,7 @@ func historyWhere(f HistoryFilter) (string, []any) {
 }
 
 func historyGroups(ctx context.Context, tx pgx.Tx, where string, args []any) ([]HealthGroup, error) {
-	rows, err := tx.Query(ctx, `SELECT kind,state::text,args->>'workspace_id' IS NULL,count(*)::int,
+	rows, err := tx.Query(ctx, `SELECT kind,state::text,coalesce(kind = ANY($1::text[]), false),count(*)::int,
  min(coalesce(finalized_at,attempted_at,created_at)),max(coalesce(finalized_at,attempted_at,created_at))
  FROM river_job WHERE `+where+` GROUP BY 1,2,3 ORDER BY 1,2,3`, args...)
 	if err != nil {
@@ -122,7 +121,7 @@ func scanHistory(ctx context.Context, rows pgx.Rows) ([]Failure, error) {
 	for rows.Next() {
 		var f Failure
 		var first, reason *string
-		if err := rows.Scan(&f.ID, &f.Kind, &f.WorkspaceID, &f.State, &f.Attempt, &f.MaxAttempts, &f.FailedAt, &first, &reason); err != nil {
+		if err := rows.Scan(&f.ID, &f.Kind, &f.State, &f.Attempt, &f.MaxAttempts, &f.FailedAt, &first, &reason); err != nil {
 			return nil, fmt.Errorf("jobs: scanning history: %w", err)
 		}
 		f.FailedAt = f.FailedAt.UTC()

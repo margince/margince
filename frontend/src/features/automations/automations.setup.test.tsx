@@ -3,6 +3,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, expect, it } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { AutomationSetup } from "./automations.setup";
 
 afterEach(cleanup);
@@ -25,7 +26,9 @@ it("keeps a failed run separate from healthy configuration", () => {
     </LocaleProvider>,
   );
   expect(screen.getByText("On")).toBeInTheDocument();
-  expect(screen.queryByText("Needs attention")).toBeNull();
+  expect(
+    screen.queryByText(englishCopy["auto.setup.needsAttention"]),
+  ).toBeNull();
 });
 
 it("shows the verified inactive-authorizer reason", () => {
@@ -45,10 +48,10 @@ it("shows the verified inactive-authorizer reason", () => {
       />
     </LocaleProvider>,
   );
-  expect(screen.getByText("Needs attention")).toBeInTheDocument();
   expect(
-    screen.getByText(
-      "The authorizer’s account is inactive. Choose another person.",
-    ),
+    screen.getByText(englishCopy["auto.setup.needsAttention"]),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByText(englishCopy["auto.setup.inactive"]),
   ).toBeInTheDocument();
 });

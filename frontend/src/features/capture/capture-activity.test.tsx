@@ -680,7 +680,9 @@ describe("capture activity", () => {
       ).toBeInTheDocument();
     }
     // The block list a rep reaches for sits on this page.
-    expect(await screen.findByText("Capture exclusions")).toBeInTheDocument();
+    expect(
+      await screen.findByText(en["captureExclusions.title"]),
+    ).toBeInTheDocument();
     const log = await messagesTable();
     const position = counters?.compareDocumentPosition(log) ?? 0;
     expect(position & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -747,7 +749,9 @@ describe("the pipeline drill-down", () => {
     await user.click(screen.getByRole("button", { name: /^captured/i }));
     const list = within(await messagesTable());
     expect(list.getByText("Captured")).toBeInTheDocument();
-    expect(list.queryByText("Dropped as internal")).not.toBeInTheDocument();
+    expect(
+      list.queryByText(en["captureActivity.outcome.internal"]),
+    ).not.toBeInTheDocument();
   });
 
   // Every row's chevron would read alike, so each names its sender and time.

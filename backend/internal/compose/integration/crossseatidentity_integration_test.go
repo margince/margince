@@ -40,7 +40,7 @@ import (
 // The column and its meaning are production's.
 func connectAs(t *testing.T, e *integration.Env, seat ids.UUID, provider, address string) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO capture_connection (provider, user_id, credential_ref, status, account_label)
 			VALUES ($1, $2, 'test-credential', 'connected', $3)
@@ -57,7 +57,7 @@ func connectAs(t *testing.T, e *integration.Env, seat ids.UUID, provider, addres
 // source='user', the weakest of the three provenances the table records.
 func declareOwnAddress(t *testing.T, e *integration.Env, seat ids.UUID, kind, value string) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO capture_owner_identity (user_id, kind, value, source, created_by)
 			VALUES ($1, $2, $3, 'user', 'human:test')
@@ -74,7 +74,7 @@ func declareOwnAddress(t *testing.T, e *integration.Env, seat ids.UUID, kind, va
 // otherwise refuse first and hide whether any domain rule exists at all.
 func proveDomain(t *testing.T, e *integration.Env, seat ids.UUID, value string) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO capture_owner_identity (user_id, kind, value, source, created_by)
 			VALUES ($1, 'domain', $2, 'delivered_to', 'system:test')
@@ -312,7 +312,7 @@ func TestAWithdrawnConnectionDoesNotAttribute(t *testing.T) {
 	const messageID = "withdrawn@counterparty.example"
 
 	connectAs(t, e, e.Rep1, "gmail", ownerAddr)
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			UPDATE capture_connection SET status = 'disconnected', auth = NULL
 			 WHERE user_id = $1 AND provider = 'gmail'`, e.Rep1)

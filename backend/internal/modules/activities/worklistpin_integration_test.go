@@ -49,7 +49,7 @@ func pinStore(e *sendEnv) *Store {
 func pinsNow(ctx context.Context, t *testing.T, e *sendEnv) map[WorklistRowRef]bool {
 	t.Helper()
 	var out map[WorklistRowRef]bool
-	if err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.pool, func(tx pgx.Tx) error {
 		got, err := pinStore(e).PinnedRows(ctx, tx)
 		out = got
 		return err

@@ -25,7 +25,7 @@ import (
 func (e *storeEnv) deadFor(t *testing.T, addresses ...string) map[string]time.Time {
 	t.Helper()
 	var dead map[string]time.Time
-	err := database.WithWorkspaceTx(readerCtx(e.ws, e.user), e.store.db.Pool(), func(tx pgx.Tx) error {
+	err := database.WithTx(readerCtx(e.ws, e.user), e.store.db.Pool(), func(tx pgx.Tx) error {
 		var txErr error
 		dead, txErr = e.store.DeadAddressesTx(readerCtx(e.ws, e.user), tx, addresses)
 		return txErr

@@ -56,7 +56,7 @@ func seedAccountAsCaptureWould(t *testing.T, e *Env) ids.UUID {
 
 	var direct int
 	ctx := e.Admin()
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `SELECT count(*) FROM activity_link
 			 WHERE entity_type = 'company'`).Scan(&direct)
 	}); err != nil {
@@ -126,7 +126,7 @@ func TestTheAccountTimelineCountsMailCaptureLinkedThroughAContact(t *testing.T) 
 
 	var reached int
 	ctx := e.Admin()
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `SELECT count(*) FROM activity a
 			 WHERE a.archived_at IS NULL AND `+activities.CompanyLinkedActivityExists(1),
 			company).Scan(&reached)
@@ -170,7 +170,7 @@ func TestAModelReadOfPrivateMailIsPrivateEvenOnASharedAccount(t *testing.T) {
 	var visibility string
 	var owner ids.UUID
 	ctx := e.Admin()
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `SELECT visibility, owner_id FROM signal
 			 WHERE resolved_company_id = $1 AND kind = 'contract_ended'`, company).Scan(&visibility, &owner)
 	}); err != nil {
@@ -213,7 +213,7 @@ func TestTheGhostedRuleIsSharedAndQuotesNothing(t *testing.T) {
 
 	var visibility, snippet string
 	ctx := e.Admin()
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `SELECT visibility, coalesce(evidence->0->>'snippet', '')
 			 FROM signal WHERE resolved_company_id = $1 AND kind = 'ghosted_thread'`,
 			company).Scan(&visibility, &snippet)
@@ -293,7 +293,7 @@ func TestAPrivateAccountSuppliesTheReaderItsOwnMailAnswersTo(t *testing.T) {
 	var visibility string
 	var owner ids.UUID
 	ctx := e.Admin()
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `SELECT visibility, owner_id FROM signal
 			 WHERE resolved_company_id = $1 AND kind = 'contract_ended'`, company).Scan(&visibility, &owner)
 	}); err != nil {

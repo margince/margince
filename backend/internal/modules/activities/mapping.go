@@ -245,7 +245,7 @@ func LogActivityInputFrom(req crmcontracts.CreateActivityRequest) (LogActivityIn
 }
 
 // LogActivityInputFromImporter is LogActivityInputFrom for a declared
-// importer: a human holding import_run:create, decided by
+// importer: a human holding import_run:create and :delete, decided by
 // auth.DeclaredImporter at the HANDLER and nowhere else.
 //
 // Handler-only is the whole boundary. provider.go, handlers_task.go and

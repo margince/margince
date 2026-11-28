@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import {
   installFetchStub,
@@ -243,7 +244,9 @@ export const SetRateRefused: Story = {
       "GBP",
     );
     await userEvent.type(
-      dialog.getByRole("textbox", { name: "Rate (to base currency)" }),
+      dialog.getByRole("textbox", {
+        name: englishCopy["settings.rates.rateToBase"],
+      }),
       "1.17",
     );
     await userEvent.click(dialog.getByRole("button", { name: "Save" }));

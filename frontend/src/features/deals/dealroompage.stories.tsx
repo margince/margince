@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../../api/schema";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -127,9 +128,13 @@ export const SettingTheEndDate: Story = {
     await userEvent.click(
       await screen.findByRole("button", { name: /Set end date/ }),
     );
-    const dialog = await screen.findByRole("dialog", { name: "Set end date" });
+    const dialog = await screen.findByRole("dialog", {
+      name: englishCopy["roompage.setExpiry"],
+    });
     await expect(
-      within(dialog).getByRole("textbox", { name: "Access ends on" }),
+      within(dialog).getByRole("textbox", {
+        name: englishCopy["roompage.expiryLabel"],
+      }),
     ).toHaveValue("30/11/2026");
   },
 };

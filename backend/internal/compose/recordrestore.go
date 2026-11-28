@@ -140,7 +140,7 @@ func (s RestoreSeam) reverseCorrection(
 		return privacy.RecordHistoryEntry{}, false, nil
 	}
 	var correction deals.DealCorrection
-	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		var err error
 		correction, err = s.corrections.CorrectionForAudit(ctx, tx, row.ID)
 		return err
@@ -192,7 +192,7 @@ func (s RestoreSeam) reverseCorrection(
 // the answer is ErrNotFound, never a 403: a refusal is proof the row exists.
 func (s RestoreSeam) readRow(ctx context.Context, entityType string, id, auditID ids.UUID) (AuditRow, error) {
 	var row AuditRow
-	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		if err := s.visible(ctx, tx, entityType, id); err != nil {
 			return err
 		}
@@ -224,7 +224,7 @@ func (s RestoreSeam) readRow(ctx context.Context, entityType string, id, auditID
 // renders the same word the disabled button showed.
 func (s RestoreSeam) decide(ctx context.Context, row AuditRow) (map[string]json.RawMessage, error) {
 	var answer Undoability
-	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		var err error
 		answer, err = s.evaluator.Evaluate(ctx, tx, row, Binding)
 		return err

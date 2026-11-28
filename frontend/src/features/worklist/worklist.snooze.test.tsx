@@ -295,7 +295,9 @@ describe("how long a row is put down for", () => {
       }),
     );
 
-    expect(await screen.findByText("Back on your list tomorrow.")).toBeTruthy();
+    expect(
+      await screen.findByText(en["worklist.disposition.doneSnooze_one"]),
+    ).toBeTruthy();
   });
 });
 

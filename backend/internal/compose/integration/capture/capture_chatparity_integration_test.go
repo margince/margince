@@ -50,7 +50,7 @@ func readersOf(t *testing.T, e *integration.SearchEnv, activity ids.UUID) []ids.
 				RowScope: principal.RowScopeTeam,
 			},
 		})
-		err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			return auth.EnsureActivityContentVisible(ctx, tx, activity)
 		})
 		if err == nil {
@@ -81,7 +81,7 @@ func chatSeatFor(t *testing.T, e *integration.SearchEnv, posture string, team bo
 	t.Helper()
 	var seat ids.UUID
 	admin := principal.WithCorrelationID(e.Admin(), ids.NewV7())
-	err := database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(admin, e.Pool, func(tx pgx.Tx) error {
 		spec := capturemod.ChatSeat{Provider: "telegram_business", Account: "880001", Owner: e.Rep1, By: e.Rep1}
 		if team {
 			spec.Owner, spec.ReaderTeam = ids.Nil, ids.NewV7()
@@ -122,7 +122,7 @@ func newChatFixture(t *testing.T, posture string, team bool) chatFixture {
 	t.Helper()
 	env := newCaptureEnv(t)
 	e := env.e
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `UPDATE capture_connection SET mail_posture = $2 WHERE user_id = $1`, e.Rep1, posture)
 		return err
 	}); err != nil {
@@ -137,14 +137,14 @@ func newChatFixture(t *testing.T, posture string, team bool) chatFixture {
 	}
 	mail := activityIDOf(t, e, "parity-1@kunde.example")
 	var contactRaw ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT p.id FROM contact p JOIN contact_email pe ON pe.contact_id = p.id WHERE pe.email = $1`, counterparty).Scan(&contactRaw)
 	}); err != nil {
 		t.Fatalf("finding the contact: %v", err)
 	}
 	contact := ids.From[ids.ContactKind](contactRaw)
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO contact_channel_identity (contact_id, provider, channel_user_id, username, source, captured_by)
 			VALUES ($1, 'telegram', '990100', 'buyer', 'telegram', 'connector:telegram')`, contactRaw)

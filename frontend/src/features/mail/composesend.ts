@@ -319,7 +319,6 @@ export function useComposeSend({
     noMailbox ||
     refusal === "mailbox" ||
     refusal === "noMailbox" ||
-    refusal === "sharedUnsubscribe" ||
     shownRefusal === "legacyFooter";
   return {
     send,

@@ -200,7 +200,7 @@ func TestTheDeclaredFilterCensusReadsTheGeneratedShape(t *testing.T) {
 	// The contact list declares these and no others. Every page dial is among them:
 	// the gate judges a dial the same way it judges a filter.
 	want := "ai_written,captured_by_kind,company_id,cursor,include_archived,limit,list_id,offset,owner_id," +
-		"owner_team_id,q,related_to,relationship_mark,shared_with_me,sort,tag_id,tag_mode,unassigned"
+		"owner_team_id,q,related_to,relationship_mark,salutation,shared_with_me,sort,tag_id,tag_mode,unassigned"
 	if got := strings.Join(wire, ","); got != want {
 		t.Errorf("listContacts's narrowing parameters = %q, want %q", got, want)
 	}

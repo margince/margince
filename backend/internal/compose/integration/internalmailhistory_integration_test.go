@@ -165,7 +165,7 @@ func TestInternalHistoryNeedsAdministratorScopeAndSeparateOwnerConsent(t *testin
 		t.Fatalf("captured %d messages, want only the one within the approved bounds", len(f.captured))
 	}
 	assertInternalHistoryWrites(t, f, 2, 1)
-	if err := database.WithWorkspaceTx(f.admin, f.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(f.admin, f.pool, func(tx pgx.Tx) error {
 		var receipt string
 		if err := tx.QueryRow(f.admin, `SELECT internal_mail_authorization->'history'->>'backfill_id' FROM activity WHERE id = $1`, f.captured[0].ID).Scan(&receipt); err != nil {
 			return err
@@ -217,7 +217,7 @@ func TestInternalHistoryRejectsStalePreviewAndRevokedSourceDuringImport(t *testi
 
 func assertInternalHistoryWrites(t *testing.T, f *internalHistoryFixture, runs, consents int) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(f.admin, f.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(f.admin, f.pool, func(tx pgx.Tx) error {
 		var gotRuns, gotConsents int
 		if err := tx.QueryRow(f.admin, `SELECT count(*) FROM capture_backfill`).Scan(&gotRuns); err != nil {
 			return err

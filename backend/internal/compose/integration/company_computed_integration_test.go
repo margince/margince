@@ -62,7 +62,7 @@ func directOpenPipelineReadPriced(
 	// The same instant the reader binds (contacts.rollupAsOf), cut to the
 	// installation's day the way the reader cuts it.
 	asOf := time.Now()
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
 			`SELECT open_pipeline_minor_base, open_deal_count, priced_deal_count
 			 FROM company_open_pipeline_rollup(`+occurredday.TodaySQL("$2::timestamptz")+`) WHERE company_id = $1`,
@@ -461,7 +461,7 @@ func TestCompanyComputed_AnUnrepresentableDeal_RefusesOneFigureNotTheRecord(t *t
 	// column accepts. Neither is a number anyone would type on purpose — which
 	// is the point: a data-entry mistake is precisely the input that must not
 	// be able to take a record offline.
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(e.Admin(), `
 			INSERT INTO fx_rate (from_currency, to_currency, rate, rate_date)
 			VALUES ('JPY', (SELECT (value #>> '{}')::text FROM setting WHERE key = 'installation.base_currency'),
@@ -571,7 +571,7 @@ func TestCompanyComputed_ATotalThatCannotBeRepresented_RefusesTheFigure(t *testi
 	// The rest copy that row rather than repeating the create: what this test
 	// needs is a thousand rows in the view's scan, and the shape of one of them
 	// came from the real writer above.
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(e.Admin(), `
 			INSERT INTO deal (name, amount_minor, currency, status, pipeline_id, stage_id,
 			                  company_id, source, captured_by)

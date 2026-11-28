@@ -57,6 +57,7 @@ type ReplyRecipient struct {
 	// GreetingRegister is the register a rep stored on this contact, empty when
 	// none is set.
 	GreetingRegister greetingregister.Register
+	Salutation       string
 	// WrittenAbout marks a row that records work about a contact rather than
 	// correspondence with one: its To comes from FiledAddress, never the participants.
 	WrittenAbout bool
@@ -158,7 +159,7 @@ func greetingContact(ctx context.Context, tx pgx.Tx, id ids.ActivityID, delivere
 	}
 	q := `
 		SELECT p.full_name, coalesce(p.first_name, ''), coalesce(p.last_name, ''),
-		       coalesce(p.greeting_register, ''),
+		       coalesce(p.greeting_register, ''), coalesce(p.salutation, ''),
 		       coalesce((SELECT pe.email
 		                   FROM contact_email pe
 		                  WHERE pe.contact_id = p.id AND pe.archived_at IS NULL` +
@@ -184,7 +185,7 @@ func greetingContact(ctx context.Context, tx pgx.Tx, id ids.ActivityID, delivere
 
 	var out ReplyRecipient
 	var address string
-	err = tx.QueryRow(ctx, q, args...).Scan(&out.FullName, &out.FirstName, &out.LastName, &out.GreetingRegister, &address)
+	err = tx.QueryRow(ctx, q, args...).Scan(&out.FullName, &out.FirstName, &out.LastName, &out.GreetingRegister, &out.Salutation, &address)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// Linked to nobody, or to a contact out of scope: no name, which the
 		// floor renders as an unnamed greeting rather than a refused draft.

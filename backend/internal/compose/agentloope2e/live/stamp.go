@@ -82,6 +82,12 @@ func harnessDigest(root string) (string, error) {
 		filepath.Join(HarnessDir, "agentloop_*_test.go"),
 		filepath.Join(HarnessDir, "runner_integration_test.go"),
 		filepath.Join(runnerDir, "*.go"),
+		"backend/internal/compose/registry.go",
+		"backend/internal/compose/fortest_integration.go",
+		"backend/internal/compose/loopfault/*.go",
+		"backend/internal/modules/agents/tools.go",
+		"backend/internal/modules/agents/registry.go",
+		"backend/internal/modules/agents/tools_readfailure.go",
 	} {
 		found, err := filepath.Glob(filepath.Join(root, pattern))
 		if err != nil {

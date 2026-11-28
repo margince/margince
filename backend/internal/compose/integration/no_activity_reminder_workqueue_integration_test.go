@@ -138,7 +138,7 @@ func TestNoActivityReminderReachesTheOwnersTasksScreenThroughTheRealRiverJob(t *
 	// create_task, this is where that would surface, rather than as a
 	// mysterious missing task below.
 	var runStatus string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT status FROM workflow_run WHERE handler = 'no_activity_reminder'`).Scan(&runStatus)
 	}); err != nil {
@@ -226,7 +226,7 @@ func reminderTaskID(t *testing.T, e *Env, dealID ids.UUID) ids.UUID {
 		t.Fatalf("reminder tasks on the deal = %d, want exactly 1 before resolving its id", got)
 	}
 	var id ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT a.id FROM activity a
 			JOIN activity_link al ON al.activity_id = a.id

@@ -13,6 +13,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { AiProviderKeysCard } from "./ai-provider-keys";
 import { serviceOf } from "./ai-provider-settings";
@@ -182,11 +183,13 @@ describe("a provider's settings on its sheet", () => {
     render(<AiProviderKeysCard />);
 
     const row = await screen.findByTestId("ai-provider-row-openai_compatible");
-    expect(row).toHaveTextContent("OpenAI-compatible");
+    expect(row).toHaveTextContent(
+      englishCopy["aiProviders.name.openaiCompatible"],
+    );
     expect(within(row).queryByText("OPENAI_COMPATIBLE_API_KEY")).toBeNull();
     expect(
       screen.getByTestId("ai-provider-row-gemini_vertex"),
-    ).toHaveTextContent("Gemini on Vertex AI");
+    ).toHaveTextContent(englishCopy["aiProviders.name.geminiVertex"]);
   });
 
   it("shows the stored host and saves a new one through the provider", async () => {
@@ -202,7 +205,9 @@ describe("a provider's settings on its sheet", () => {
     await user.clear(host);
     await user.type(host, "https://gateway.example");
     await user.click(
-      within(sheet).getByRole("button", { name: "Save connection" }),
+      within(sheet).getByRole("button", {
+        name: englishCopy["aiProviderSettings.save"],
+      }),
     );
 
     await waitFor(() =>
@@ -230,7 +235,9 @@ describe("a provider's settings on its sheet", () => {
       render(<AiProviderKeysCard />);
 
       const sheet = await openSheet(user, provider);
-      expect(within(sheet).getByText("No key needed")).toBeInTheDocument();
+      expect(
+        within(sheet).getByText(englishCopy["aiProviderKeys.keyless"]),
+      ).toBeInTheDocument();
       expect(
         within(sheet).queryByRole("combobox", { name: "Service" }),
       ).toBeNull();
@@ -239,7 +246,9 @@ describe("a provider's settings on its sheet", () => {
       await user.clear(host);
       await user.type(host, address);
       await user.click(
-        within(sheet).getByRole("button", { name: "Save connection" }),
+        within(sheet).getByRole("button", {
+          name: englishCopy["aiProviderSettings.save"],
+        }),
       );
       await waitFor(() =>
         expect(puts).toEqual([{ provider, body: { base_url: address } }]),
@@ -247,7 +256,9 @@ describe("a provider's settings on its sheet", () => {
 
       await user.clear(host);
       await user.click(
-        within(sheet).getByRole("button", { name: "Save connection" }),
+        within(sheet).getByRole("button", {
+          name: englishCopy["aiProviderSettings.save"],
+        }),
       );
       await waitFor(() => expect(puts[1]).toEqual({ provider, body: {} }));
     },
@@ -281,7 +292,9 @@ describe("a provider's settings on its sheet", () => {
       "http://10.0.0.5:11434",
     );
     await user.click(
-      within(sheet).getByRole("button", { name: "Save connection" }),
+      within(sheet).getByRole("button", {
+        name: englishCopy["aiProviderSettings.save"],
+      }),
     );
     await waitFor(() =>
       expect(puts).toEqual([
@@ -328,7 +341,9 @@ describe("a provider's settings on its sheet", () => {
     ).toBeInTheDocument();
     expect(within(sheet).queryByLabelText("Host")).toBeNull();
     await user.click(
-      within(sheet).getByRole("button", { name: "Save connection" }),
+      within(sheet).getByRole("button", {
+        name: englishCopy["aiProviderSettings.save"],
+      }),
     );
 
     await waitFor(() =>
@@ -364,7 +379,9 @@ describe("a provider's settings on its sheet", () => {
       within(sheet).getByText(/Business or Enterprise plan/),
     ).toBeInTheDocument();
     await user.click(
-      within(sheet).getByRole("button", { name: "Save connection" }),
+      within(sheet).getByRole("button", {
+        name: englishCopy["aiProviderSettings.save"],
+      }),
     );
 
     await waitFor(() =>
@@ -393,12 +410,14 @@ describe("a provider's settings on its sheet", () => {
       within(sheet).getByRole("checkbox", { name: /Zero data retention/ }),
     );
     await user.click(
-      within(sheet).getByRole("button", { name: "Save connection" }),
+      within(sheet).getByRole("button", {
+        name: englishCopy["aiProviderSettings.save"],
+      }),
     );
 
     await waitFor(() =>
       expect(puts[0]?.body).toEqual({
-        base_url: "https://openrouter.ai/api",
+        base_url: englishCopy["aiRouting.baseUrl.placeholder"],
         upstream: { zdr: true, only: ["mistral/eu"] },
       }),
     );
@@ -421,7 +440,9 @@ describe("a provider's settings on its sheet", () => {
     const sheet = await openSheet(user, "openai_compatible");
     await pickService(user, sheet, "Mistral");
     await user.click(
-      within(sheet).getByRole("button", { name: "Save connection" }),
+      within(sheet).getByRole("button", {
+        name: englishCopy["aiProviderSettings.save"],
+      }),
     );
 
     await waitFor(() =>
@@ -439,10 +460,12 @@ describe("a provider's settings on its sheet", () => {
     const sheet = await openSheet(user, "openai_compatible");
     expect(
       await within(sheet).findByRole("combobox", { name: "Service" }),
-    ).toHaveTextContent("Choose a service");
+    ).toHaveTextContent(englishCopy["aiProviderSettings.service.choose"]);
     expect(within(sheet).queryByText(/Host: /)).toBeNull();
     expect(
-      within(sheet).getByRole("button", { name: "Save connection" }),
+      within(sheet).getByRole("button", {
+        name: englishCopy["aiProviderSettings.save"],
+      }),
     ).toBeDisabled();
   });
 
@@ -454,7 +477,9 @@ describe("a provider's settings on its sheet", () => {
     const sheet = await openSheet(user, "jev_compatible");
     await pickService(user, sheet, "OpenRouter (EU)");
     await user.click(
-      within(sheet).getByRole("button", { name: "Save connection" }),
+      within(sheet).getByRole("button", {
+        name: englishCopy["aiProviderSettings.save"],
+      }),
     );
 
     await waitFor(() =>
@@ -474,9 +499,13 @@ describe("a provider's settings on its sheet", () => {
     const sheet = await openSheet(user, "gemini");
     expect(
       await within(sheet).findByRole("combobox", { name: "Service" }),
-    ).toHaveTextContent("Google AI Studio");
+    ).toHaveTextContent(
+      englishCopy["aiProviderSettings.service.googleAiStudio"],
+    );
     expect(
-      within(sheet).getByRole("button", { name: "Save connection" }),
+      within(sheet).getByRole("button", {
+        name: englishCopy["aiProviderSettings.save"],
+      }),
     ).toBeDisabled();
   });
 
@@ -504,7 +533,9 @@ describe("a provider's settings on its sheet", () => {
     ).toHaveTextContent("OpenAI");
     await pickService(user, sheet, "Langdock (EU)");
     await user.click(
-      within(sheet).getByRole("button", { name: "Save connection" }),
+      within(sheet).getByRole("button", {
+        name: englishCopy["aiProviderSettings.save"],
+      }),
     );
 
     await waitFor(() =>
@@ -525,7 +556,9 @@ describe("a provider's settings on its sheet", () => {
     const sheet = await openSheet(user, "anthropic");
     await pickService(user, sheet, "Langdock (EU)");
     await user.click(
-      within(sheet).getByRole("button", { name: "Save connection" }),
+      within(sheet).getByRole("button", {
+        name: englishCopy["aiProviderSettings.save"],
+      }),
     );
 
     await waitFor(() =>
@@ -554,7 +587,9 @@ describe("a provider's settings on its sheet", () => {
       await screen.findByRole("option", { name: /europe-west4/ }),
     );
     await user.click(
-      within(sheet).getByRole("button", { name: "Save connection" }),
+      within(sheet).getByRole("button", {
+        name: englishCopy["aiProviderSettings.save"],
+      }),
     );
 
     await waitFor(() =>
@@ -571,17 +606,19 @@ describe("a provider's settings on its sheet", () => {
 
     expect(
       await screen.findByTestId("ai-provider-row-azure_openai"),
-    ).toHaveTextContent("Azure OpenAI");
+    ).toHaveTextContent(englishCopy["aiProviders.name.azureOpenai"]);
     const sheet = await openSheet(user, "azure_openai");
     // The resource is the customer's own: no listed service to pick from.
     const host = await within(sheet).findByLabelText("Host");
     await user.type(host, "https://contoso.openai.azure.com");
     await user.type(
-      within(sheet).getByLabelText("Azure region"),
+      within(sheet).getByLabelText(englishCopy["aiRouting.azureRegion.label"]),
       "Swedencentral",
     );
     await user.click(
-      within(sheet).getByRole("button", { name: "Save connection" }),
+      within(sheet).getByRole("button", {
+        name: englishCopy["aiProviderSettings.save"],
+      }),
     );
 
     await waitFor(() =>
@@ -590,7 +627,7 @@ describe("a provider's settings on its sheet", () => {
           provider: "azure_openai",
           body: {
             base_url: "https://contoso.openai.azure.com",
-            location: "swedencentral",
+            location: englishCopy["aiRouting.azureRegion.placeholder"],
           },
         },
       ]),
@@ -628,7 +665,9 @@ describe("a provider's settings on its sheet", () => {
     const sheet = await openSheet(user, "openai_compatible");
     await user.clear(await within(sheet).findByLabelText("Host"));
     await user.click(
-      within(sheet).getByRole("button", { name: "Save connection" }),
+      within(sheet).getByRole("button", {
+        name: englishCopy["aiProviderSettings.save"],
+      }),
     );
 
     expect(await within(sheet).findByText(/tier premium/)).toBeInTheDocument();
@@ -637,9 +676,12 @@ describe("a provider's settings on its sheet", () => {
 
 describe("serviceOf", () => {
   it("takes a host carrying credentials or a query for no listed service", () => {
-    expect(serviceOf("openai_compatible", "https://openrouter.ai/api")).toBe(
-      "openrouter",
-    );
+    expect(
+      serviceOf(
+        "openai_compatible",
+        englishCopy["aiRouting.baseUrl.placeholder"],
+      ),
+    ).toBe("openrouter");
     expect(
       serviceOf("openai_compatible", "https://team:secret@openrouter.ai/api"),
     ).toBe("other");

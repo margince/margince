@@ -8,6 +8,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { PurgeDialog } from "./capture-purge-dialog";
 
 afterEach(() => {
@@ -115,7 +116,7 @@ it("offers only Close when the check counts nothing to delete", async () => {
 
   expect(await screen.findByText(/0 messages would be/)).toBeInTheDocument();
   expect(
-    screen.queryByRole("button", { name: "Delete permanently" }),
+    screen.queryByRole("button", { name: englishCopy["capturePurge.confirm"] }),
   ).toBeNull();
   expect(screen.getAllByRole("button", { name: "Close" })).toHaveLength(2);
   expect(
@@ -166,7 +167,7 @@ it("rechecks a zero count and then offers the delete for what arrived", async ()
 
   expect(await screen.findByText(/2 messages would be/)).toBeInTheDocument();
   expect(
-    screen.getByRole("button", { name: "Delete permanently" }),
+    screen.getByRole("button", { name: englishCopy["capturePurge.confirm"] }),
   ).toBeInTheDocument();
 });
 
@@ -190,7 +191,9 @@ it("sends the previewed counts and re-checks when the server says they moved", a
   renderPurge();
   await user.click(screen.getByRole("button", { name: "Check first" }));
   await user.click(
-    await screen.findByRole("button", { name: "Delete permanently" }),
+    await screen.findByRole("button", {
+      name: englishCopy["capturePurge.confirm"],
+    }),
   );
 
   expect(await screen.findByText(/3 messages would be/)).toBeInTheDocument();

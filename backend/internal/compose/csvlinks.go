@@ -283,7 +283,7 @@ func (r *linkResolver) visibleByID(ctx context.Context, object, raw string) (lin
 // visible answers the record when it exists, is live and is in the caller's
 // row scope. A miss on any of the three is the same not-found.
 func (r *linkResolver) visible(ctx context.Context, object string, id ids.UUID) (linkAnswer, error) {
-	err := database.WithWorkspaceTx(ctx, r.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, r.pool, func(tx pgx.Tx) error {
 		return auth.EnsureVisibleLive(ctx, tx, object, id)
 	})
 	if errors.Is(err, apperrors.ErrNotFound) {

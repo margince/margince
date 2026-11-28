@@ -100,7 +100,7 @@ func TestAMeetingTheContactAttendedCountsWithoutALink(t *testing.T) {
 	if err != nil {
 		t.Fatalf("logging the meeting: %v", err)
 	}
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(t.Context(), `INSERT INTO activity_participant (activity_id, contact_id, role)
 			VALUES ($1, $2, 'attendee')`, meeting.Id, guest)
 		return err

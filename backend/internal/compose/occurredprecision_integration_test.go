@@ -74,7 +74,7 @@ func readMeetingTime(t *testing.T, e *integration.Env, id ids.UUID) (time.Time, 
 	t.Helper()
 	var start time.Time
 	var precision string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT occurred_at, occurred_precision FROM activity WHERE id = $1`, id).Scan(&start, &precision)
 	}); err != nil {
@@ -157,7 +157,7 @@ func TestAMeetingFollowsItsEventBetweenAnHourAndAWholeDay(t *testing.T) {
 func lastUpdate(t *testing.T, e *integration.Env, id ids.UUID) map[string]any {
 	t.Helper()
 	var raw []byte
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT envelope->'payload'->'changed_fields' FROM event_outbox
 			  WHERE envelope->>'type' = 'activity.updated' AND envelope->'entity'->>'id' = $1::text
@@ -184,7 +184,7 @@ func TestAnAllDayEventIsStoredAtNoonUTCOfItsDate(t *testing.T) {
 	})
 	var start time.Time
 	var precision string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT occurred_at, occurred_precision FROM activity WHERE subject = 'Auckland fair'`).Scan(&start, &precision)
 	}); err != nil {

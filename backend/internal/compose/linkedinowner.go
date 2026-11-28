@@ -58,7 +58,7 @@ import (
 // invisible for the row's lifetime.
 func ghostOwners(ctx context.Context, pool *pgxpool.Pool) ([]ids.UUID, error) {
 	var out []ids.UUID
-	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
 			SELECT DISTINCT owner_user_id FROM linkedin_connection
 			 WHERE match_status IN ('unmatched', 'suggested') AND tombstoned_at IS NULL`)

@@ -40,7 +40,7 @@ func seedInteraction(t *testing.T, e *Env) ids.ActivityID {
 func stampParties(t *testing.T, e *Env, activity ids.ActivityID, trusted bool, parties ...connector.MessageParticipant) {
 	t.Helper()
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return capture.StampFurtherParticipants(ctx, tx, activity, "email", "", trusted, parties)
 	}); err != nil {
 		t.Fatalf("StampFurtherParticipants: %v", err)
@@ -167,7 +167,7 @@ func TestANonInteractionKindStampsNoParties(t *testing.T) {
 		VALUES ($1, 'note', 'thinking', '2026-08-01T09:00:00Z', 'manual', 'human:x')`))
 
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return capture.StampFurtherParticipants(ctx, tx, note, "note", "", true,
 			[]connector.MessageParticipant{{Email: "sam@target.example", Role: connector.ParticipantRoleCC}})
 	}); err != nil {

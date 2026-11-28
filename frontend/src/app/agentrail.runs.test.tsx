@@ -492,6 +492,6 @@ describe("AgentRail", () => {
     expect(panel().textContent).not.toContain("Running now");
     expect(
       panel().querySelector(".aritem:not(.arempty)")?.textContent,
-    ).toContain("Morning brief ready");
+    ).toContain(en["agent.activity.morningBrief.done"]);
   });
 });

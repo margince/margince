@@ -33,7 +33,7 @@ import (
 func seedUnreachableContact(t *testing.T, e *integration.SearchEnv, email string) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(), `
 			INSERT INTO contact (id, full_name, source, captured_by, owner_id, visibility)
 			VALUES ($1, 'Buyer', 'manual', 'human:x', $2, 'owner')`, id, e.Rep3); err != nil {

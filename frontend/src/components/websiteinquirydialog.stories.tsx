@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { screen, userEvent } from "storybook/test";
 import type { components } from "../api/schema";
+import { en as englishCopy } from "../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -95,7 +96,7 @@ export const Review: Story = {
   play: async () => {
     await screen.findByRole("textbox", { name: "Task title" });
     await userEvent.click(
-      screen.getByRole("button", { name: "Review handling" }),
+      screen.getByRole("button", { name: englishCopy["inquiry.review"] }),
     );
     await screen.findByText(/^A question received at /);
   },

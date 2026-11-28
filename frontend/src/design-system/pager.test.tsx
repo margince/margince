@@ -6,6 +6,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 import { PHONE_MAX_WIDTH } from "../lib/viewport";
 import { stubWindowWidth } from "../testing/phonerow.testkit";
 import { Pager } from "./pager";
@@ -71,7 +72,7 @@ describe("the pager on a computer", () => {
       "Next",
     ]);
     expect(
-      screen.getByRole("combobox", { name: "Rows per page" }),
+      screen.getByRole("combobox", { name: en["table.rowsPerPage"] }),
     ).toHaveTextContent("25 per page");
   });
 });
@@ -93,7 +94,7 @@ describe("the pager on a tablet", () => {
       screen.getByRole("button", { name: "Previous" }).querySelector("svg"),
     ).not.toBeNull();
     expect(
-      screen.getByRole("combobox", { name: "Rows per page" }),
+      screen.getByRole("combobox", { name: en["table.rowsPerPage"] }),
     ).toHaveTextContent("25 per page");
   });
 });
@@ -126,7 +127,9 @@ describe("the pager on a phone", () => {
     expect(container.querySelector(".lt-range")).toHaveTextContent(
       "1-25 of 1,204",
     );
-    const size = screen.getByRole("combobox", { name: "Rows per page" });
+    const size = screen.getByRole("combobox", {
+      name: en["table.rowsPerPage"],
+    });
     expect(size).toHaveTextContent(/^25$/);
   });
 });

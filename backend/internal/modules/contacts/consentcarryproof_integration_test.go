@@ -105,6 +105,45 @@ func (e *promoteConsentEnv) assertProofRule(t *testing.T, kind consentCarryKind,
 	}
 }
 
+func TestEachConsentCarryStoresTheWithdrawalProofVersion(t *testing.T) {
+	for kind, spec := range consentCarries {
+		t.Run(spec.name, func(t *testing.T) {
+			e := setupPromoteConsent(t)
+			ctx := context.Background()
+			retiring := e.seedConsentSubject(t, spec.from)
+			survivor := e.seedConsentSubject(t, spec.to)
+			e.seedCarriedConsent(t, spec.from, retiring, e.newsletter)
+			e.seedCarriedConsent(t, spec.to, survivor, e.newsletter)
+			if _, err := e.owner.Exec(ctx, `UPDATE contact_consent SET state = 'withdrawn' WHERE `+string(spec.from)+` = $1`, retiring); err != nil {
+				t.Fatal(err)
+			}
+			tx, err := e.owner.Begin(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer func() {
+				if err := tx.Rollback(ctx); err != nil && err != pgx.ErrTxClosed {
+					t.Error(err)
+				}
+			}()
+			if err := carryConsent(ctx, tx, kind, retiring, survivor, "human:gate"); err != nil {
+				t.Fatal(err)
+			}
+			var stateVersion, proofVersion string
+			if err := tx.QueryRow(ctx, `
+				SELECT c.policy_version, e.policy_version FROM contact_consent c
+				JOIN consent_event e ON e.`+string(spec.to)+` = c.`+string(spec.to)+` AND e.purpose_id = c.purpose_id
+				WHERE c.`+string(spec.to)+` = $1 AND c.purpose_id = $2 AND e.source = $3`,
+				survivor, e.newsletter, spec.source).Scan(&stateVersion, &proofVersion); err != nil {
+				t.Fatal(err)
+			}
+			if stateVersion != carriedWordingVersion || proofVersion != stateVersion {
+				t.Errorf("state=%q proof=%q, want %q", stateVersion, proofVersion, carriedWordingVersion)
+			}
+		})
+	}
+}
+
 // A lead's confirmed double opt-in grant must still authorize mail after
 // promotion. The gate reads the proof off the contact, so the carry copies it.
 // The lead's own events stay in place.

@@ -95,7 +95,7 @@ func (f correspondenceFixture) page(t *testing.T, reader context.Context) crmcon
 func (f correspondenceFixture) worklistTouch(t *testing.T, reader context.Context) contact360.LastTouch {
 	t.Helper()
 	var touch contact360.LastTouch
-	if err := database.WithWorkspaceTx(reader, f.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(reader, f.e.Pool, func(tx pgx.Tx) error {
 		touched, err := contact360.LastTouchFor(reader, tx, []ids.ContactID{ids.From[ids.ContactKind](f.casey)}, contact360.AssembleOptions{AsOf: roomFixedNow})
 		touch = touched[ids.From[ids.ContactKind](f.casey)]
 		return err

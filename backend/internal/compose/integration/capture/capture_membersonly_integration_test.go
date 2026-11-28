@@ -44,7 +44,7 @@ func readsContent(t *testing.T, e *integration.SearchEnv, user, activityID ids.U
 		},
 	})
 	var reads bool
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		args := []any{activityID}
 		clause, err := auth.ActivityContentClause(ctx, "a", func(v any) int { args = append(args, v); return len(args) })
 		if err != nil {
@@ -138,7 +138,7 @@ func TestAProvedMailboxAddressCountsAsAMember(t *testing.T) {
 
 func archiveSeat(t *testing.T, e *integration.SearchEnv, seat ids.UUID) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `UPDATE app_user SET archived_at = now() WHERE id = $1`, seat)
 		return err
 	}); err != nil {
@@ -193,7 +193,7 @@ func TestAnOwnDomainAndADepartedSeatCountAsMembersAndAnArchivedSeatDoesNot(t *te
 		t.Fatalf("mail copied to an address on the workspace's own domain reads %q, want members_only", reason)
 	}
 
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `UPDATE app_user SET status = 'deactivated' WHERE id = $1`, e.Rep3)
 		return err
 	}); err != nil {

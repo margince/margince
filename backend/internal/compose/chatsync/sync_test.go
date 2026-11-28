@@ -99,3 +99,18 @@ func TestAMilestoneLevelPostsOnlyMilestones(t *testing.T) {
 		t.Fatal("deal.created posted, but no channel can exist before the deal")
 	}
 }
+
+func TestAnOfferSourceCorrectionDoesNotPostAnOfferEdit(t *testing.T) {
+	t.Parallel()
+	for _, termsChanged := range []bool{false, true} {
+		fields := `["source"]`
+		if termsChanged {
+			fields = `["source","total"]`
+		}
+		env := events.Envelope{Type: "offer.updated", Payload: json.RawMessage(`{"source":"manual","changed_fields":` + fields + `}`)}
+		_, _, posts := chatTier(env)
+		if posts != termsChanged {
+			t.Fatalf("terms changed=%v, posts=%v", termsChanged, posts)
+		}
+	}
+}

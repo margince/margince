@@ -12,6 +12,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { SEEDED_ASSIGNABLE_ROLES } from "../../testing/roles.testkit";
 import { MAX_GROUP_GRANTS } from "./group-role-grants";
@@ -163,15 +164,17 @@ describe("the sign-in methods card", () => {
     const user = userEvent.setup();
     refusing.writes = true;
     await user.click(await screen.findByRole("switch", { name: /google/i }));
-    expect(await screen.findByText("Change not saved")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["signInMethods.saveFailed"]),
+    ).toBeTruthy();
 
     refusing.reads = true;
     await act(() => qc.refetchQueries());
 
+    expect(await screen.findByText(englishCopy["common.error"])).toBeTruthy();
     expect(
-      await screen.findByText("Could not load this view. Reload the page."),
-    ).toBeTruthy();
-    expect(screen.queryByText("Change not saved")).toBeNull();
+      screen.queryByText(englishCopy["signInMethods.saveFailed"]),
+    ).toBeNull();
   });
 
   // The verdict is the server's sign_in_screen, never worked out here.
@@ -181,11 +184,15 @@ describe("the sign-in methods card", () => {
       app: "stored",
       microsoftTenant: "dir",
     });
-    expect(await screen.findAllByText("On the sign-in screen")).toHaveLength(1);
+    expect(
+      await screen.findAllByText(englishCopy["signInMethods.onScreen"]),
+    ).toHaveLength(1);
     expect(
       await screen.findByText("The Microsoft app cannot be used right now."),
     ).toBeTruthy();
-    expect(screen.getAllByText("Not on the sign-in screen")).toHaveLength(1);
+    expect(
+      screen.getAllByText(englishCopy["signInMethods.offScreen"]),
+    ).toHaveLength(1);
   });
 
   it("says a chosen provider is missing because its app is not set up", async () => {
@@ -193,8 +200,12 @@ describe("the sign-in methods card", () => {
     expect(
       await screen.findByText("The Google app is not set up."),
     ).toBeTruthy();
-    expect(screen.getByText("Not on the sign-in screen")).toBeTruthy();
-    const setUp = screen.getByRole("link", { name: "Set up the Google app" });
+    expect(
+      screen.getByText(englishCopy["signInMethods.offScreen"]),
+    ).toBeTruthy();
+    const setUp = screen.getByRole("link", {
+      name: englishCopy["oauthApp.drawer.google.title"],
+    });
     expect(setUp.getAttribute("href")).toContain(
       "settings/authentication/apps",
     );
@@ -449,11 +460,17 @@ describe("the group role grant editor", () => {
     mountGrants({ engineering: "manager" });
     expect(await screen.findByDisplayValue("engineering")).toBeTruthy();
     // Its own region, with headings that outlast whatever is typed in a row.
-    const panel = screen.getByRole("region", { name: "Group role grants" });
+    const panel = screen.getByRole("region", {
+      name: englishCopy["groupRoles.title"],
+    });
     const headers = within(panel)
       .getAllByRole("columnheader")
       .map((header) => header.textContent);
-    expect(headers).toEqual(["Directory group", "Role they get", "Actions"]);
+    expect(headers).toEqual([
+      englishCopy["groupRoles.group"],
+      englishCopy["groupRoles.role"],
+      "Actions",
+    ]);
     // The role reads under its product name, the same label the roster uses.
     const role = screen.getByRole("combobox", {
       name: /role for the .* group/i,

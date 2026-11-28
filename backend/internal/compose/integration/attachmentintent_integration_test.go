@@ -97,7 +97,7 @@ func TestACapturedFileClearsItsIntentOnlyWithItsRow(t *testing.T) {
 	}
 	captureFails := errors.New("the capture failed after recording its files")
 	record := func(after error) error {
-		return database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		return database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			if err := store.RecordCapturedFiles(ctx, tx, activityID, activities.CapturedFileSource{
 				System: "imap", MessageID: "renewal-" + activityID.String(),
 				CapturedBy: "connector:imap", Category: "email_attachment",

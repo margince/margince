@@ -8,6 +8,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { en as englishCopy } from "../../i18n/en";
 import { WordingCorrectionModal } from "./wordingcorrectionmodal";
 
 const approved: components["schemas"]["WordingCorrectionContext"] = {
@@ -45,7 +46,10 @@ afterEach(() => vi.unstubAllGlobals());
 it("requires an edit and an attestation about the final wording", async () => {
   draw();
   const user = userEvent.setup();
-  const save = () => screen.getByRole("button", { name: "Save correction" });
+  const save = () =>
+    screen.getByRole("button", {
+      name: englishCopy["directSend.correctionSave"],
+    });
   const confirmation = screen.getByRole("checkbox", {
     name: /only spelling or punctuation changed/i,
   });
@@ -87,7 +91,11 @@ it("sends both corrected alternatives with the observed approval fingerprint and
       name: /only spelling or punctuation changed/i,
     }),
   );
-  await user.click(screen.getByRole("button", { name: "Save correction" }));
+  await user.click(
+    screen.getByRole("button", {
+      name: englishCopy["directSend.correctionSave"],
+    }),
+  );
   await waitFor(() => expect(saved).toHaveBeenCalledOnce());
   expect(submitted).toEqual({
     version: 7,
@@ -121,7 +129,11 @@ it("keeps a plain-only message plain after a wording correction", async () => {
       name: /only spelling or punctuation changed/i,
     }),
   );
-  await user.click(screen.getByRole("button", { name: "Save correction" }));
+  await user.click(
+    screen.getByRole("button", {
+      name: englishCopy["directSend.correctionSave"],
+    }),
+  );
   await waitFor(() => expect(saved).toHaveBeenCalledOnce());
   expect(submitted).toMatchObject({ body: "Thank you!", html_body: "" });
 });

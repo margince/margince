@@ -58,9 +58,10 @@ func activityCapturedPayload(ctx context.Context, in LogActivityInput) (crmcontr
 }
 
 type LogActivityInput struct {
-	DueIntent     *crmcontracts.IntentTime
-	RemindIntent  *crmcontracts.IntentTime
-	MeetingIntent *crmcontracts.IntentTime
+	sourceAuthority SourceAuthority
+	DueIntent       *crmcontracts.IntentTime
+	RemindIntent    *crmcontracts.IntentTime
+	MeetingIntent   *crmcontracts.IntentTime
 	// Queued mail keeps its original entity when the sender changes company.
 	correspondenceEntity ids.UUID
 	// statedCountries are the recipient countries the sender stated for this
@@ -313,6 +314,7 @@ func (s *Store) logActivityAndReadTranscript(
 	in.recordedAt = &at
 	in.dealFilingResolver = s.dealFilingResolver
 	in.identityProver = s.identityProver
+	in.sourceAuthority = s.sourceAuthority
 	var recorded crmcontracts.Activity
 	if in.recordsMeeting != nil {
 		// A stored transcript has already marked its meeting held, so a retry

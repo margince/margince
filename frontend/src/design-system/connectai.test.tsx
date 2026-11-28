@@ -4,6 +4,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { ProblemError } from "../lib/problem";
 import { Button } from "./atoms";
 import { ConnectAiFirst, ModelWorkError, useConnectAiGate } from "./connectai";
@@ -60,7 +61,9 @@ describe("a button that asks the AI to work", () => {
     const onPress = vi.fn();
     mount(<AiButton onPress={onPress} />);
 
-    const link = await screen.findByRole("link", { name: "Open AI settings" });
+    const link = await screen.findByRole("link", {
+      name: englishCopy["connectAi.link"],
+    });
     expect(link.getAttribute("href")).toContain("settings/models");
     expect(screen.getByText(/Connect an AI first/)).toBeTruthy();
     const button = screen.getByRole("button", { name: "Draft with AI" });
@@ -114,9 +117,11 @@ describe("the line under a button whose AI work failed", () => {
       />,
     );
     expect(screen.getByRole("alert").textContent).toContain(
-      "Connect an AI first",
+      englishCopy["connectAi.first"],
     );
-    expect(screen.getByRole("link", { name: "Open AI settings" })).toBeTruthy();
+    expect(
+      screen.getByRole("link", { name: englishCopy["connectAi.link"] }),
+    ).toBeTruthy();
   });
 
   it("keeps the server's words for any other problem", () => {
@@ -137,7 +142,9 @@ describe("the line under a button whose AI work failed", () => {
 
   it("renders the sentence on its own", () => {
     mount(<ConnectAiFirst />);
-    expect(screen.getByRole("link", { name: "Open AI settings" })).toBeTruthy();
+    expect(
+      screen.getByRole("link", { name: englishCopy["connectAi.link"] }),
+    ).toBeTruthy();
   });
 });
 
@@ -172,10 +179,14 @@ describe("the transcript card with no model connected", () => {
     mount(<TranscriptReadCard activityId="a-1" />);
 
     expect(await screen.findByText(/Connect an AI first/)).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Open AI settings" })).toBeTruthy();
+    expect(
+      screen.getByRole("link", { name: englishCopy["connectAi.link"] }),
+    ).toBeTruthy();
     await userEvent
       .setup()
-      .click(screen.getByRole("button", { name: "Read transcript" }));
+      .click(
+        screen.getByRole("button", { name: englishCopy["transcriptread.cta"] }),
+      );
     expect(refused).toBe(false);
   });
 });

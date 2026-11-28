@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { browserZone } from "../../format/timezone";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -193,7 +194,7 @@ export const RecordingACall: Story = {
   play: async ({ canvasElement }) => {
     await userEvent.click(
       await within(canvasElement).findByRole("button", {
-        name: "Update forecast",
+        name: englishCopy["forecast.updateCall"],
       }),
     );
   },
@@ -288,7 +289,9 @@ export const CallHistory: Story = {
   ...EveryDealPriced,
   play: async ({ canvasElement }) => {
     await userEvent.click(
-      await within(canvasElement).findByText("Call history"),
+      await within(canvasElement).findByText(
+        englishCopy["forecast.callHistory"],
+      ),
     );
   },
 };

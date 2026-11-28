@@ -6,6 +6,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import {
   type BriefSentence,
   Citations,
@@ -223,7 +224,9 @@ describe("which door a chip opens", () => {
       ["contact", "c-1"],
     ]);
     expect(screen.getByText("fact").tagName).toBe("SPAN");
-    expect(screen.getByText("profile field").tagName).toBe("SPAN");
+    expect(
+      screen.getByText(englishCopy["co.brief.cite.profile_field"]).tagName,
+    ).toBe("SPAN");
     expect(screen.getAllByRole("button")).toHaveLength(2);
   });
 
@@ -234,7 +237,11 @@ describe("which door a chip opens", () => {
     renderDoors({ onOpenRecord, onOpenReceipt });
 
     await user.click(screen.getByRole("button", { name: "fact" }));
-    await user.click(screen.getByRole("button", { name: "profile field" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: englishCopy["co.brief.cite.profile_field"],
+      }),
+    );
     const receipts = [
       { entityType: "fact", entityId: "f-1" },
       { entityType: "profile_field", entityId: "p-1" },

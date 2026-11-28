@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import { AGENT_RULES_SUBPAGE } from "../../lib/settingsrouting";
 import {
   installFetchStub,
@@ -54,7 +55,9 @@ function settings(subpage?: string) {
 // Your agent stands open on the page, so the mutes need no section opened.
 async function showMutes({ canvasElement }: { canvasElement: HTMLElement }) {
   const canvas = within(canvasElement);
-  (await canvas.findByText("Personal approval mutes")).scrollIntoView();
+  (
+    await canvas.findByText(englishCopy["approvalPreferences.title"])
+  ).scrollIntoView();
 }
 export const PersonalReview: Story = {
   render: () => settings(),

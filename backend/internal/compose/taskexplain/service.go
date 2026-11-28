@@ -233,7 +233,7 @@ func (s *Service) save(ctx context.Context, reader ids.UserID, taskID ids.Activi
 	if err != nil {
 		return fmt.Errorf("encode the task explanation: %w", err)
 	}
-	return database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	return database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		return generatedsummary.SaveTaskExplanationTx(ctx, tx, reader, taskID, generatedsummary.Entry{
 			Fingerprint: written.Fingerprint,
 			GeneratedAt: written.GeneratedAt,

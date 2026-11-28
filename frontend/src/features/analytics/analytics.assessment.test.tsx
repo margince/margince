@@ -7,6 +7,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { formatAnalyticsMoney } from "../../format/format";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -98,9 +99,9 @@ it("renders connected paragraphs without observation badges or a second summary"
   // The paragraphs after the first fold behind one door.
   await userEvent
     .setup({ delay: null })
-    .click(screen.getByText("Read the full outlook"));
+    .click(screen.getByText(englishCopy["analytics.outlook.more"]));
   expect(screen.getByText(/^Review the relevant opportunities/)).toBeVisible();
-  expect(screen.getByText("Written by Margince")).toBeVisible();
+  expect(screen.getByText(englishCopy["co.brief.by.model"])).toBeVisible();
   expect(screen.queryByText("Observation")).toBeNull();
   expect(screen.queryByText("No supported decision.")).toBeNull();
   expect(screen.queryByRole("region", { name: "Summary" })).toBeNull();
@@ -187,7 +188,13 @@ it.each([403, 503])(
   "does not treat a %s failure as legacy support",
   async (status) => {
     const { post } = renderPanel(written, "sales", true, () =>
-      jsonResponse({ status, code: "permission_denied" }, status),
+      jsonResponse(
+        {
+          status,
+          code: status === 403 ? "permission_denied" : "service_unavailable",
+        },
+        status,
+      ),
     );
     expect(await screen.findByRole("button", { name: "Retry" })).toBeVisible();
     expect(post).toHaveBeenCalledOnce();
@@ -265,7 +272,9 @@ it("formats raw legacy quantities in both report prose and supporting records", 
     await screen.findByText("Open business is ≈€7,432,190."),
   ).toBeInTheDocument();
   await userEvent.click(
-    screen.getByRole("button", { name: "View supporting records" }),
+    screen.getByRole("button", {
+      name: englishCopy["analytics.outlook.records"],
+    }),
   );
   expect(screen.getAllByText("Open business is ≈€7,432,190.")).toHaveLength(2);
   expect(screen.queryByText(/7432189\.65/)).not.toBeInTheDocument();
@@ -283,7 +292,9 @@ it("omits legacy checking assurances while keeping measured actions", async () =
   ).toBeVisible();
   expect(screen.queryByText(/I checked/)).not.toBeInTheDocument();
   expect(
-    screen.queryByRole("region", { name: "Sales outlook" }),
+    screen.queryByRole("region", {
+      name: englishCopy["analytics.outlook.selectedSales"],
+    }),
   ).not.toBeInTheDocument();
 });
 

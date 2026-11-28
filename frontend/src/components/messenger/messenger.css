@@ -1,0 +1,98 @@
+.record-messenger {
+  display: flex;
+  flex-direction: column;
+  min-block-size: 0;
+  block-size: 100%;
+  gap: var(--space-2);
+  padding: var(--space-3);
+}
+.messenger-conversation {
+  display: flex;
+  flex: 1;
+  min-block-size: 0;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.messenger-transcript {
+  position: relative;
+  flex: 1;
+  min-block-size: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.messenger-message {
+  max-inline-size: 85%;
+  align-self: flex-start;
+  border: 1px solid var(--groundEdge);
+  border-radius: var(--r-sm);
+  background: var(--groundStrip);
+  padding: var(--space-2);
+}
+.messenger-message.is-own {
+  align-self: flex-end;
+}
+.messenger-message-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.messenger-message-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.messenger-compose,
+.messenger-picker,
+.messenger-destinations {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.messenger-picker {
+  position: relative;
+  min-block-size: 0;
+  overflow: auto;
+}
+.messenger-choices,
+.messenger-send-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--gapActions);
+}
+.messenger-send-actions {
+  justify-content: flex-end;
+}
+.messenger-audience-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.messenger-audience-list {
+  position: relative;
+  max-block-size: 50dvh;
+  overflow: auto;
+}
+.messenger-audience-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding-block: var(--space-2);
+}
+.messenger-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.messenger-toolbar > .select-control {
+  flex: 1;
+  min-inline-size: 0;
+}
+.messenger-audience-head > span {
+  flex: 1;
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}

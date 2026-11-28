@@ -122,7 +122,7 @@ func runNotifyProbe(t *testing.T, e *Env, notifier automation.Notifier, recipien
 
 func notifyRunAndNoticeCount(t *testing.T, e *Env, recipient ids.UUID) (status string, notices int) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(context.Background(),
 			`SELECT status FROM workflow_run WHERE handler = $1`, notifyRetryHandler).Scan(&status); err != nil {
 			return err

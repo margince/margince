@@ -12,6 +12,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { RecordHistory } from "./historyentries";
 
 function jsonResponse(body: unknown, status = 200) {
@@ -343,9 +344,7 @@ describe("putting one change back", () => {
 
     const dialog = await screen.findByRole("dialog");
     expect(
-      within(dialog).getByText(
-        "This archives the record. You can bring it back from its history.",
-      ),
+      within(dialog).getByText(englishCopy["history.undo.confirmCreateBody"]),
     ).toBeTruthy();
     expect(restoreCalls(fetchMock)).toHaveLength(0);
     await user.click(within(dialog).getByRole("button", { name: /^undo$/i }));

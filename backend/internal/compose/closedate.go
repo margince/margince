@@ -46,7 +46,7 @@ type closeDatePolicy struct {
 // forecast reader applies whatever the reader's grants.
 func (p closeDatePolicy) LikelyThreshold(ctx context.Context) (int, error) {
 	var threshold int
-	err := database.WithWorkspaceTx(ctx, p.owner.db.Pool(), func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, p.owner.db.Pool(), func(tx pgx.Tx) error {
 		var err error
 		threshold, err = identity.ForecastLikelyThresholdTx(ctx, tx)
 		return err

@@ -273,7 +273,7 @@ one that does stays plain, held by the reviewer in the sense its row gives.
 | Follow-up | việc tiếp theo; the verb follow up is liên hệ lại | `follow-up`; theo dõi for a follow-up (it is watch) |
 | Priced offer, quote | báo giá | `chào giá` |
 | Close date; a closed deal, won or lost; close as an outcome | ngày chốt (ngày chốt dự kiến); đã đóng; kết thúc | `ngày đóng` (ngày đóng cửa keeps it); chốt for a deal closed won or lost |
-| A won deal, won value; the outcome pair; win rate | đã chốt (deal đã chốt, doanh số đã chốt); Thắng and Thua as the outcome or stage-type label; tỷ lệ thắng | đã thắng for a won deal or amount |
+| A won deal, won value; the outcome pair; win rate | đã chốt (deal đã chốt, doanh số đã chốt); Thắng and Thất bại as the outcome or stage-type label; tỷ lệ thắng | đã thắng for a won deal or amount |
 | File | tệp | `file` |
 | Website | trang web | `website` |
 | Server | máy chủ | `server` |
@@ -372,7 +372,7 @@ vocabulary.
 | Outsider address | quý khách or vui lòng outside the outsider families; bạn inside them |
 | Capitals | Bạn or Quý khách capitalised where no sentence opens |
 | Retired vocabulary | A word in code format in the Vocabulary table's Never column, outside the compounds its row keeps |
-| No failure word in a short value | thất bại in a value of at most 8 words: a title, label, status or counter |
+| No failure word in a short value | thất bại in a value of at most 8 words: a title, label, status or counter. A lost deal keeps it: a key that says lost or loss, or a value with `{lost}` |
 
 The prefixes come from the gates that own them: the speaker exemptions from
 `copy-style.test.ts`, the outsider families from `german-catalogs.ts`, the consent keys from `marketingquestion_test.go`, and the

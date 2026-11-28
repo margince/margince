@@ -20,7 +20,7 @@ import (
 // not that member's, so it binds nobody.
 func TestARoleMailboxAnswerOnAMeetingBindsNoSeat(t *testing.T) {
 	ctx, pool := meetingTenureEnv(t)
-	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		seat, login := seedSeat(ctx, t, tx, "active")
 		colleague, _ := seedSeat(ctx, t, tx, "active")
 		role := "sales-" + seat.String() + "@example.test"

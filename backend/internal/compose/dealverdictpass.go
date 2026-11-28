@@ -91,7 +91,7 @@ func (p dealVerdictPass) RunWorkspace(ctx context.Context) error {
 	now := p.now()
 	var due []verdictCandidate
 	night := verdictNight{at: now, lang: identity.BaseLanguageForPrompt(ctx, p.pool)}
-	err := database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, p.pool, func(tx pgx.Tx) error {
 		var err error
 		if night.today, err = installationToday(ctx, tx, now); err != nil {
 			return err

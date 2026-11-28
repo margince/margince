@@ -41,8 +41,8 @@ func newResetRuntime(runner *jobs.Runner, pool *pgxpool.Pool, rdb *redis.Client)
 	return compose.ResetRuntime{
 		QuiesceQueues: q.Quiesce,
 		ResumeQueues:  q.Resume,
-		PurgeQueue: func(ctx context.Context, ws ids.UUID) (int, error) {
-			return jobs.PurgeWorkspace(ctx, pool, ws)
+		PurgeQueue: func(ctx context.Context) (int, error) {
+			return jobs.PurgeJobs(ctx, pool)
 		},
 		PurgeBus: func(ctx context.Context) (int, int, error) {
 			streams, err := events.PurgeStreams(ctx, rdb, kevents.Groups())

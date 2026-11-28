@@ -175,7 +175,7 @@ func withAuditRetryFixture(t *testing.T, e *auditBoundaryEnv, fn func(context.Co
 	t.Helper()
 	rollback := errors.New("rollback audit retry fixture")
 	ctx := principal.SystemActing(e.ctx, "privacy_test")
-	err := database.WithWorkspaceSnapshot(ctx, e.db.Pool(), func(ctx context.Context) error {
+	err := database.WithSnapshot(ctx, e.db.Pool(), func(ctx context.Context) error {
 		fn(ctx)
 		return rollback
 	})

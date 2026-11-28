@@ -59,7 +59,7 @@ func ownersApplier(
 ) (autoApplier, autoApplyDecision) {
 	t.Helper()
 	decision := autoApplyDecision{approval: id, owner: owner}
-	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `SELECT kind, target_entity_type, target_entity_id FROM approval WHERE id = $1`, id).
 			Scan(&decision.target.kind, &decision.target.entityType, &decision.target.entityID)
 	}); err != nil {
@@ -277,7 +277,7 @@ func TestATruncatedPageContinuesWhereItStopped(t *testing.T) {
 			t.Fatal(err)
 		}
 		var audit ids.UUID
-		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			return tx.QueryRow(ctx, `SELECT id FROM audit_log WHERE entity_type='deal' AND entity_id=@deal AND actor_id=@actor AND action='update' ORDER BY occurred_at DESC,id DESC LIMIT 1`, pgx.NamedArgs{"deal": deal, "actor": actor}).Scan(&audit)
 		}); err != nil {
 			t.Fatal(err)

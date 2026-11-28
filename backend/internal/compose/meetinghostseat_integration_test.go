@@ -92,7 +92,7 @@ func TestAFoldedMeetingRowIsOwnedByItsOrganiser(t *testing.T) {
 		t.Errorf("host = %+v, want the organizer %v", row.Host, e.Rep1)
 	}
 	guest := e.As(e.Rep3, []ids.UUID{e.Team2}, integration.RepPerms)
-	if err := database.WithWorkspaceTx(guest, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(guest, e.Pool, func(tx pgx.Tx) error {
 		return auth.EnsureActivityWritableIn(guest, tx, meeting, true)
 	}); err != nil {
 		t.Errorf("the guest whose calendar stored the meeting can no longer change it: %v", err)

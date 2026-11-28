@@ -19,6 +19,7 @@ import { meFixture } from "./testing/mefixture";
 // first import costs seconds; inside a case it races the case's own waiters.
 import "./App.settings";
 import "./features/settings/settings";
+import { en as englishCopy } from "./i18n/en";
 
 // The run page's unsaved guard is the shell's own (App.tsx), which holds the
 // address without its query; a guard wired in the test would prove only itself.
@@ -122,19 +123,25 @@ async function importFetch(input: Request | string | URL, init?: RequestInit) {
 async function arriveAtRunPage() {
   window.location.hash = RUN_PAGE;
   renderApp();
-  return screen.findByLabelText("Upload your data", {}, { timeout: SETTLE_MS });
+  return screen.findByLabelText(
+    englishCopy["import.hub.uploadLabel"],
+    {},
+    { timeout: SETTLE_MS },
+  );
 }
 
 async function profileAFile(user: ReturnType<typeof userEvent.setup>) {
   await user.upload(
-    screen.getByLabelText("Upload your data"),
+    screen.getByLabelText(englishCopy["import.hub.uploadLabel"]),
     new File(["Email\nada@x.test\n"], "estate.csv"),
   );
   await screen.findByRole("combobox", { name: "Record type for estate.csv" });
 }
 
 async function leaveForTheRow(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(screen.getByRole("link", { name: "Back to data import" }));
+  await user.click(
+    screen.getByRole("link", { name: englishCopy["import.back"] }),
+  );
   await waitFor(() => expect(window.location.hash).toBe("#/settings/import"));
 }
 
@@ -204,15 +211,19 @@ describe("the CSV import page in the shell", () => {
       );
       await arriveAtRunPage();
       await user.upload(
-        screen.getByLabelText("Upload your data"),
+        screen.getByLabelText(englishCopy["import.hub.uploadLabel"]),
         new File(["Email\nada@x.test\n"], "estate.csv"),
       );
-      expect(await screen.findByText("Reading file…")).toBeInTheDocument();
+      expect(
+        await screen.findByText(englishCopy["import.upload.reading"]),
+      ).toBeInTheDocument();
 
       await leaveForTheRow(user);
 
       expect(
-        await screen.findByRole("dialog", { name: "Discard unsaved changes?" }),
+        await screen.findByRole("dialog", {
+          name: englishCopy["unsaved.title"],
+        }),
       ).toBeInTheDocument();
     },
     SETTLE_MS * 2,
@@ -243,9 +254,15 @@ describe("the CSV import page in the shell", () => {
       await user.click(screen.getByRole("button", { name: /Next: map/ }));
       await user.click(screen.getByRole("button", { name: "Run test" }));
       await user.click(
-        await screen.findByRole("button", { name: "Import 1 row" }),
+        await screen.findByRole("button", {
+          name: englishCopy["import.test.import_one"],
+        }),
       );
-      await screen.findByText("Import complete", {}, { timeout: SETTLE_MS });
+      await screen.findByText(
+        englishCopy["import.done"],
+        {},
+        { timeout: SETTLE_MS },
+      );
 
       await leaveForTheRow(user);
 
@@ -264,7 +281,7 @@ describe("the CSV import page in the shell", () => {
       renderApp();
       await screen.findByText("New import", {}, { timeout: SETTLE_MS });
       navigate({ screen: "settings", id: "import", id2: "run" });
-      await screen.findByLabelText("Upload your data");
+      await screen.findByLabelText(englishCopy["import.hub.uploadLabel"]);
 
       globalThis.history.back();
       await screen.findByText("New import", {}, { timeout: SETTLE_MS });
@@ -276,7 +293,9 @@ describe("the CSV import page in the shell", () => {
       // have it detached before the assertion reads it.
       await waitFor(
         () => {
-          expect(screen.getByLabelText("Upload your data")).toBeInTheDocument();
+          expect(
+            screen.getByLabelText(englishCopy["import.hub.uploadLabel"]),
+          ).toBeInTheDocument();
           expect(window.location.hash).toBe(RUN_PAGE);
         },
         { timeout: SETTLE_MS },
@@ -293,7 +312,7 @@ describe("the CSV import page in the shell", () => {
 
       expect(
         await screen.findByText(
-          "Settings page not found",
+          englishCopy["settings.boundary.unknownTitle"],
           {},
           { timeout: SETTLE_MS },
         ),

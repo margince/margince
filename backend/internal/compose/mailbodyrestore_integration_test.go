@@ -36,7 +36,7 @@ type storedMail struct {
 func (o *owedEnv) stored(t *testing.T, message ids.UUID) storedMail {
 	t.Helper()
 	var got storedMail
-	if err := database.WithWorkspaceTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT body, body_completeness, occurred_at, owed_verdict_ruleset
 			FROM activity WHERE id = $1`, message).Scan(&got.body, &got.completeness, &got.occurredAt, &got.ruleset)
 	}); err != nil {
@@ -69,7 +69,7 @@ func TestALegacyBodyIsRestoredFromItsOriginal(t *testing.T) {
 	}
 	o.asLegacy(t, edited, headerOnly)
 	var noOriginal ids.UUID
-	if err := database.WithWorkspaceTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `INSERT INTO activity (kind, subject, body, direction, occurred_at,
 			source_system, source_id, source, captured_by, body_completeness)
 			VALUES ('email', 'hi', $1, 'inbound', $2, 'email', 'restore-none@customer.example', 'gmail:seed',
@@ -80,7 +80,7 @@ func TestALegacyBodyIsRestoredFromItsOriginal(t *testing.T) {
 	// A raw capture planted under that mail's Message-ID, with no link to it:
 	// a sender types the Message-ID, so it is no proof of provenance.
 	var planted ids.UUID
-	if err := database.WithWorkspaceTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			WITH rc AS (INSERT INTO raw_capture (source_system, source_id, payload)
 			            VALUES ('email', 'restore-planted@customer.example', to_jsonb($2::text)) RETURNING id)
@@ -100,7 +100,7 @@ func TestALegacyBodyIsRestoredFromItsOriginal(t *testing.T) {
 		t.Fatalf("the verdict read from the short body: applied=%v err=%v", applied, err)
 	}
 	var thread string
-	if err := database.WithWorkspaceTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(context.Background(), `SELECT thread_key FROM activity WHERE id = $1`, lost).Scan(&thread); err != nil {
 			return err
 		}
@@ -116,7 +116,7 @@ func TestALegacyBodyIsRestoredFromItsOriginal(t *testing.T) {
 	task := registeredMailBodyTask(t, o)
 	ctx := repairOperator(t, o.e)
 	var estimate int64
-	if err := database.WithWorkspaceTx(ctx, o.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, o.e.Pool, func(tx pgx.Tx) error {
 		var err error
 		estimate, _, err = task.Steps[0].Estimate(ctx, tx, 100)
 		return err
@@ -203,7 +203,7 @@ func TestTheRestoreWriterRefusesAStaleOrHeldRow(t *testing.T) {
 			restoration := activities.MailBodyRestoration{
 				Activity: message, StoredBody: headerOnly, Body: headerOnly + "\n\n" + ask, Completeness: "complete",
 			}
-			if err := database.WithWorkspaceTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
+			if err := database.WithTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
 				return tx.QueryRow(context.Background(), `SELECT version FROM activity WHERE id = $1`, message).Scan(&restoration.Version)
 			}); err != nil {
 				t.Fatal(err)
@@ -211,7 +211,7 @@ func TestTheRestoreWriterRefusesAStaleOrHeldRow(t *testing.T) {
 			tc.edit(&restoration)
 			system := principal.SystemActing(o.e.Admin(), "system:datatask-test")
 			var restored bool
-			if err := database.WithWorkspaceTx(system, o.e.Pool, func(tx pgx.Tx) error {
+			if err := database.WithTx(system, o.e.Pool, func(tx pgx.Tx) error {
 				var err error
 				restored, _, err = activities.RestoreMailBodyTx(system, tx, restoration)
 				return err
@@ -290,7 +290,7 @@ func TestAVerdictFromTheReplacedBodyIsRefused(t *testing.T) {
 		Body: headerOnly + "\n\n" + ask, Completeness: "complete", Version: readAt,
 	}
 	system := principal.SystemActing(o.e.Admin(), "system:datatask-test")
-	if err := database.WithWorkspaceTx(system, o.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(system, o.e.Pool, func(tx pgx.Tx) error {
 		restored, _, err := activities.RestoreMailBodyTx(system, tx, restoration)
 		if err == nil && !restored {
 			t.Fatal("the restore wrote nothing, so the label question does not arise")
@@ -338,7 +338,7 @@ func TestARestoredBodyGoesBackToTheClassifyBacklog(t *testing.T) {
 	restoration := activities.MailBodyRestoration{
 		Activity: message, StoredBody: headerOnly, Body: headerOnly + "\n\n" + ask, Completeness: "complete",
 	}
-	if err := database.WithWorkspaceTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT version FROM activity WHERE id = $1`, message).Scan(&restoration.Version)
 	}); err != nil {
@@ -346,7 +346,7 @@ func TestARestoredBodyGoesBackToTheClassifyBacklog(t *testing.T) {
 	}
 	system := principal.SystemActing(o.e.Admin(), "system:datatask-test")
 	var restored bool
-	if err := database.WithWorkspaceTx(system, o.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(system, o.e.Pool, func(tx pgx.Tx) error {
 		var err error
 		restored, _, err = activities.RestoreMailBodyTx(system, tx, restoration)
 		return err
@@ -389,7 +389,7 @@ func TestARestoredBodyIsOfferedAgainAfterADecline(t *testing.T) {
 	}
 	system := principal.SystemActing(o.e.Admin(), "system:datatask-test")
 	var restored bool
-	if err := database.WithWorkspaceTx(system, o.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(system, o.e.Pool, func(tx pgx.Tx) error {
 		var err error
 		restored, _, err = activities.RestoreMailBodyTx(system, tx, restoration)
 		return err
@@ -407,7 +407,7 @@ func TestARestoredBodyIsOfferedAgainAfterADecline(t *testing.T) {
 func (o *owedEnv) captureLabel(t *testing.T, message ids.UUID) *string {
 	t.Helper()
 	var label *string
-	if err := database.WithWorkspaceTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT capture_label FROM activity WHERE id = $1`, message).Scan(&label)
 	}); err != nil {
@@ -419,7 +419,7 @@ func (o *owedEnv) captureLabel(t *testing.T, message ids.UUID) *string {
 func (o *owedEnv) captureLabelStamp(t *testing.T, message ids.UUID) *time.Time {
 	t.Helper()
 	var stamped *time.Time
-	if err := database.WithWorkspaceTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT capture_labeled_at FROM activity WHERE id = $1`, message).Scan(&stamped)
 	}); err != nil {
@@ -461,7 +461,7 @@ func TestARestoredBodyIsJudgedAgainForItsReply(t *testing.T) {
 			}
 			system := principal.SystemActing(o.e.Admin(), "system:datatask-test")
 			var restored bool
-			if err := database.WithWorkspaceTx(system, o.e.Pool, func(tx pgx.Tx) error {
+			if err := database.WithTx(system, o.e.Pool, func(tx pgx.Tx) error {
 				var err error
 				restored, _, err = activities.RestoreMailBodyTx(system, tx, restoration)
 				return err

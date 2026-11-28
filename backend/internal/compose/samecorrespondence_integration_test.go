@@ -114,7 +114,7 @@ func TestTheExtractionWindowReadsOneCorrespondence(t *testing.T) {
 				return slices.ContainsFunc(bodies, func(body string) bool { return strings.Contains(body, text) })
 			}
 			as := o.e.Admin()
-			if err := database.WithWorkspaceTx(as, o.e.Pool, func(tx pgx.Tx) error {
+			if err := database.WithTx(as, o.e.Pool, func(tx pgx.Tx) error {
 				window, err := threadMessages(as, tx, &settledThread{Key: key})
 				for _, message := range window {
 					bodies = append(bodies, message.Body)

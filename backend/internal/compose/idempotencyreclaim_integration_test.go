@@ -28,7 +28,7 @@ import (
 func reclaimVerdict(t *testing.T, e *integration.Env, principalID, key, digest string) claimOutcome {
 	t.Helper()
 	var got claimOutcome
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		outcome, _, _, err := resolveClaimRow(context.Background(), tx, principalID, key, "POST /v1/contacts", digest, false)
 		got = outcome
 		return err

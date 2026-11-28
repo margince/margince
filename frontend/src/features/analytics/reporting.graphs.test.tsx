@@ -3,6 +3,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -75,7 +76,9 @@ it("keeps meeting and accepted-handoff evidence distinct in the paired graph", a
     group_key: "week:0",
   });
   expect(
-    screen.getByRole("heading", { name: "Meetings and accepted handoffs" }),
+    screen.getByRole("heading", {
+      name: englishCopy["reporting.sdr_outcomes"],
+    }),
   ).toBeVisible();
 });
 
@@ -116,7 +119,9 @@ it("labels snapshot selection as sharing and keeps the forecast at one quarterly
     </StoryProviders>,
   );
   expect(
-    await screen.findByRole("combobox", { name: "Snapshot to share" }),
+    await screen.findByRole("combobox", {
+      name: englishCopy["reporting.shareSnapshot"],
+    }),
   ).toBeVisible();
   expect(
     screen.queryByRole("combobox", { name: "Pipeline" }),
@@ -144,24 +149,24 @@ it("keeps the quarter's cards and Shared links on a week, and says why Share vie
     </StoryProviders>,
   );
   expect(
-    await screen.findByRole("button", { name: "Shared links" }),
+    await screen.findByRole("button", {
+      name: englishCopy["analytics.share.listOpen"],
+    }),
   ).toBeVisible();
   expect(screen.getByRole("button", { name: "Share view" })).toHaveAttribute(
     "disabled",
   );
   expect(
-    screen.getAllByText(
-      "Sharing covers the quarter. Choose Quarter to share this view.",
-    ).length,
+    screen.getAllByText(englishCopy["analytics.share.quarterOnly"]).length,
   ).toBeGreaterThan(0);
-  expect(
-    screen.getByText("The two pipeline cards below cover the quarter."),
-  ).toBeVisible();
+  expect(screen.getByText(englishCopy["forecast.quarterCards"])).toBeVisible();
   expect(
     await screen.findByRole("button", { name: /Opening.*760/ }),
   ).toBeVisible();
   expect(
-    screen.queryByRole("combobox", { name: "Snapshot to share" }),
+    screen.queryByRole("combobox", {
+      name: englishCopy["reporting.shareSnapshot"],
+    }),
   ).not.toBeInTheDocument();
 });
 
@@ -297,7 +302,9 @@ it("opens the stage-age chart evidence context", async () => {
   expect(
     screen.queryByRole("button", { name: /Open my worklist/ }),
   ).not.toBeInTheDocument();
-  await user.click(screen.getByRole("button", { name: "View records" }));
+  await user.click(
+    screen.getByRole("button", { name: englishCopy["reporting.viewRecords"] }),
+  );
   expect(evidence).toHaveBeenCalledWith({
     metric: evaluation.charts[0].metric,
     context_id: evaluation.charts[0].context_id,
@@ -329,7 +336,9 @@ it("shows accepted handoffs alone and hides targets without an allocation", asyn
   expect(
     document.querySelectorAll(".report-chart-column").length,
   ).toBeGreaterThan(0);
-  expect(screen.queryByText("Progress against target")).not.toBeInTheDocument();
+  expect(
+    screen.queryByText(englishCopy["reporting.target_progress"]),
+  ).not.toBeInTheDocument();
 });
 
 // The delta and the share are the server's; the card only words them.
@@ -449,7 +458,11 @@ it("withholds stage-age marks for a small cohort without printing zero days", as
   ).toBeVisible();
   expect(container.querySelector(".report-chart-range-dot")).toBeNull();
   expect(container.querySelector(".report-chart-range-band")).toBeNull();
-  await user.click(screen.getByRole("button", { name: "Reporting details" }));
+  await user.click(
+    screen.getByRole("button", {
+      name: englishCopy["reporting.contextDetails"],
+    }),
+  );
   expect(
     screen.getByText(/Observations: 2 · Too few observations/),
   ).toBeVisible();
@@ -549,7 +562,9 @@ it("marks one failed chart and keeps drawing the others", () => {
       <ReportingCharts evaluation={evaluation} onEvidence={() => {}} />
     </StoryProviders>,
   );
-  expect(screen.getAllByText("Could not be calculated")).toHaveLength(1);
+  expect(
+    screen.getAllByText(englishCopy["reporting.status.failed"]),
+  ).toHaveLength(1);
   expect(
     screen.getByText("This figure could not be calculated just now."),
   ).toBeInTheDocument();
@@ -577,9 +592,9 @@ it("keeps the accepted-opportunities series when only the meetings reading faile
       <ReportingCharts evaluation={evaluation} onEvidence={() => {}} />
     </StoryProviders>,
   );
-  expect(screen.getAllByText("Could not be calculated").length).toBeGreaterThan(
-    0,
-  );
+  expect(
+    screen.getAllByText(englishCopy["reporting.status.failed"]).length,
+  ).toBeGreaterThan(0);
   expect(screen.getAllByText(/Week 1/).length).toBeGreaterThan(0);
 });
 
@@ -647,7 +662,7 @@ it("says whom an owner chart credits and how much of the target period has passe
     </StoryProviders>,
   );
   expect(
-    screen.getByText("Credited to each deal’s current owner"),
+    screen.getByText(englishCopy["reporting.creditCurrentOwner"]),
   ).toBeInTheDocument();
   expect(
     screen.getByText("50% of the target period has passed"),
@@ -679,12 +694,10 @@ it("credits a saved edition's sales to the owner it captured", () => {
     </StoryProviders>,
   );
   expect(
-    screen.getByText(
-      "Credited to each deal’s owner when this edition was captured",
-    ),
+    screen.getByText(englishCopy["reporting.creditCapturedOwner"]),
   ).toBeInTheDocument();
   expect(
-    screen.queryByText("Credited to each deal’s current owner"),
+    screen.queryByText(englishCopy["reporting.creditCurrentOwner"]),
   ).toBeNull();
 });
 
@@ -722,7 +735,8 @@ it("names the forecast's open pipeline by the quarter its deals close in", async
     </StoryProviders>,
   );
   expect(
-    (await screen.findAllByText("Open pipeline closing this quarter")).length,
+    (await screen.findAllByText(englishCopy["analytics.overview.openClosing"]))
+      .length,
   ).toBeGreaterThan(0);
   expect(screen.queryByText("Open pipeline")).not.toBeInTheDocument();
 });

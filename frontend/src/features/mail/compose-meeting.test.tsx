@@ -6,6 +6,7 @@ import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { writeMessage } from "../../design-system/richtext-testing";
 import { ToastProvider } from "../../design-system/toast";
+import { en as englishCopy } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import {
   installComposeClock,
@@ -144,9 +145,7 @@ describe("we met in person", () => {
     await pressSend(user);
 
     expect(
-      await screen.findByText(
-        "The meeting was not saved, so nothing was sent. Try again.",
-      ),
+      await screen.findByText(englishCopy["compose.met.failed"]),
     ).toBeTruthy();
     expect(count(sent, "POST /emails")).toBe(0);
   });
@@ -157,9 +156,11 @@ describe("we met in person", () => {
     await openAndWrite(user, "company");
     await user.click(screen.getByRole("combobox", { name: WHY_ASK }));
 
-    expect(screen.queryByRole("option", { name: "Met in person" })).toBe(null);
     expect(
-      screen.getByRole("option", { name: "They asked for it" }),
+      screen.queryByRole("option", { name: englishCopy["compose.why.met"] }),
+    ).toBe(null);
+    expect(
+      screen.getByRole("option", { name: englishCopy["compose.why.asked"] }),
     ).toBeTruthy();
   });
 });
@@ -171,7 +172,9 @@ describe("a meeting is noted only on the contact the mail goes to", () => {
     await openAndWrite(user, "contact", "bob@x.com");
     await user.click(screen.getByRole("combobox", { name: WHY_ASK }));
 
-    expect(screen.queryByRole("option", { name: "Met in person" })).toBe(null);
+    expect(
+      screen.queryByRole("option", { name: englishCopy["compose.why.met"] }),
+    ).toBe(null);
   });
 
   it("is not offered once someone else is copied", async () => {
@@ -183,7 +186,9 @@ describe("a meeting is noted only on the contact the mail goes to", () => {
     await user.tab();
     await user.click(screen.getByRole("combobox", { name: WHY_ASK }));
 
-    expect(screen.queryByRole("option", { name: "Met in person" })).toBe(null);
+    expect(
+      screen.queryByRole("option", { name: englishCopy["compose.why.met"] }),
+    ).toBe(null);
   });
 });
 
@@ -202,7 +207,7 @@ describe("what each answer does to the message", () => {
 
     await pickWhy(user, "Existing customer");
     expect(
-      await screen.findByText("Service mail, no unsubscribe link."),
+      await screen.findByText(englishCopy["compose.whyHint.customer"]),
     ).toBeTruthy();
     expect(screen.queryByText(/Adds an unsubscribe link/)).toBe(null);
   });

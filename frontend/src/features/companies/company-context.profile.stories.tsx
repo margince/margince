@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../../api/schema";
+import { en as englishCopy } from "../../i18n/en";
 import { StoryProviders } from "../../testing/story-utils";
 import {
   CompanyProfileDialog,
@@ -35,15 +36,19 @@ export const ManualSetupReady: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.type(
-      canvas.getByRole("textbox", { name: "Company name" }),
+      canvas.getByRole("textbox", {
+        name: englishCopy["ob.field.display_name"],
+      }),
       "Havbris AS",
     );
     await userEvent.type(
-      canvas.getByRole("textbox", { name: "Products and services" }),
+      canvas.getByRole("textbox", {
+        name: englishCopy["ob.field.offer_summary"],
+      }),
       "Coastal ferry maintenance contracts.",
     );
     await userEvent.type(
-      canvas.getByRole("textbox", { name: "Ideal customer" }),
+      canvas.getByRole("textbox", { name: englishCopy["ob.field.icp"] }),
       "Municipal ferry operators.",
     );
   },
@@ -90,7 +95,9 @@ export const EscapeAsksBeforeDiscarding: Story = {
   play: async () => {
     const user = userEvent.setup();
     const drawer = within(await screen.findByRole("dialog"));
-    const name = drawer.getByRole("textbox", { name: "Company name" });
+    const name = drawer.getByRole("textbox", {
+      name: englishCopy["ob.field.display_name"],
+    });
     await user.type(name, " Group");
     // Dispatched by hand: Storybook wraps its key presses in act, and the
     // question opening under one suspends on the copy catalog and warns.
@@ -98,7 +105,7 @@ export const EscapeAsksBeforeDiscarding: Story = {
       new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
     );
     const question = await screen.findByRole("dialog", {
-      name: "Discard unsaved changes?",
+      name: englishCopy["unsaved.title"],
     });
     await waitFor(() => expect(question).toBeVisible());
   },

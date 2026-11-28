@@ -67,7 +67,7 @@ func (o *OutcomeReviews) Write(ctx context.Context, dealID ids.DealID, req crmco
 	}
 
 	var out crmcontracts.OutcomeReview
-	err := database.WithWorkspaceTx(ctx, o.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, o.pool, func(tx pgx.Tx) error {
 		occurrence, err := o.deals.HoldClosingOccurrenceTx(ctx, tx, dealID)
 		if err != nil {
 			return err
@@ -101,7 +101,7 @@ func (o *OutcomeReviews) Write(ctx context.Context, dealID ids.DealID, req crmco
 // earlier closings.
 func (o *OutcomeReviews) List(ctx context.Context, dealID ids.DealID) ([]crmcontracts.OutcomeReview, error) {
 	var out []crmcontracts.OutcomeReview
-	err := database.WithWorkspaceTx(ctx, o.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, o.pool, func(tx pgx.Tx) error {
 		// Read whatever the deal carries, whether or not it is closed RIGHT
 		// NOW. A deal that was closed, reviewed and then reopened still has
 		// that review, and it is still the record of what somebody thought

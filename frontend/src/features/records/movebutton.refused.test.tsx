@@ -11,6 +11,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { sessionOptions } from "../../lib/session";
 import { meFixture } from "../../testing/mefixture";
 import { MoveButton, type PerformableMove } from "./movebutton";
@@ -59,7 +60,7 @@ it("draws a refused task move with the server's reason and writes no task", asyn
     blocked_reason: reason,
   });
   const button = await screen.findByRole("button", {
-    name: "Create follow-up",
+    name: englishCopy["deal360.createTask"],
   });
   expect(button).toBeDisabled();
   expect(button).toHaveAccessibleDescription(reason);
@@ -103,7 +104,7 @@ it("offers a task move the server did not refuse", async () => {
     client,
   );
   const button = await screen.findByRole("button", {
-    name: "Create follow-up",
+    name: englishCopy["deal360.createTask"],
   });
   expect(button).toBeEnabled();
   expect(button).not.toHaveAccessibleDescription();

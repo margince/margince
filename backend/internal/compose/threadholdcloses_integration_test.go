@@ -39,7 +39,7 @@ type reopenedThread struct {
 func classifyRep1sMail(t *testing.T, e *integration.Env) {
 	t.Helper()
 	seatAddress(t, e, e.Rep1)
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE capture_connection SET mail_posture = 'classified' WHERE user_id = $1`, e.Rep1)
 		return err
@@ -57,7 +57,7 @@ func mailFrom(from, to, messageID, at, inReplyTo string, references ...string) [
 func activityOfMessage(t *testing.T, e *integration.Env, messageID string) ids.UUID {
 	t.Helper()
 	var id ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT activity_id FROM activity_identity
 			 WHERE identity_kind = 'mail' AND identity_key = $1`, messageID).Scan(&id)
@@ -78,7 +78,7 @@ func openThenReopen(t *testing.T, e *integration.Env, root string, share bool) r
 	captureThreadMail(t, e, e.Rep1, threadMail(addr, "second-"+root, "Tue, 02 Jun 2026 08:00:00 +0000", root, root))
 	var thread reopenedThread
 	thread.opened = []ids.UUID{activityOfMessage(t, e, root), activityOfMessage(t, e, "second-"+root)}
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT id FROM capture_thread_verdict WHERE thread_key = $1 AND user_id = $2`,
 			root, e.Rep1).Scan(&thread.question)
@@ -162,7 +162,7 @@ func TestAHeldVerdictLeavesAColleaguesOwnClearanceAlone(t *testing.T) {
 	thread := openThenReopen(t, e, "colleague-root@counterparty.example", false)
 	both := thread.opened[0]
 	addImportRowFor(t, e, both, e.Rep2)
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			UPDATE capture_import SET verdict_status = 'cleared'
 			 WHERE activity_id = $1 AND user_id = $2`, both, e.Rep2)
@@ -205,7 +205,7 @@ func TestAHeldVerdictClosesEveryOpenedMessageOfALongThread(t *testing.T) {
 	e := integration.Setup(t)
 	messages := seedOpenedUnderVerdict(t, e, "long-live", capture.VerdictCleared, capture.VerdictCleared, 620)
 	var question ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		// Back to an open question, as a new party's reply leaves it.
 		return tx.QueryRow(context.Background(), `
 			UPDATE capture_thread_verdict
